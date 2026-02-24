@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": true,
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "lib": ["ES2022"],
+    "outDir": "dist-electron"
+  },
+  "include": ["src/main/**/*.ts", "src/shared/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
+}

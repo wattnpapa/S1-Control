@@ -1,0 +1,27 @@
+import { contextBridge, ipcRenderer } from 'electron';
+import { IPC_CHANNEL, type RendererApi } from '../shared/ipc';
+
+const api: RendererApi = {
+  getSession: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SESSION),
+  login: (input) => ipcRenderer.invoke(IPC_CHANNEL.LOGIN, input),
+  logout: () => ipcRenderer.invoke(IPC_CHANNEL.LOGOUT),
+  getSettings: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SETTINGS),
+  setDbPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.SET_DB_PATH, dbPath),
+  listEinsaetze: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_EINSAETZE),
+  createEinsatz: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ, input),
+  archiveEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.ARCHIVE_EINSATZ, einsatzId),
+  listAbschnitte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITTE, einsatzId),
+  createAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_ABSCHNITT, input),
+  listAbschnittDetails: (einsatzId, abschnittId) =>
+    ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITT_DETAILS, einsatzId, abschnittId),
+  createEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINHEIT, input),
+  createFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_FAHRZEUG, input),
+  moveEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.MOVE_EINHEIT, input),
+  moveFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.MOVE_FAHRZEUG, input),
+  splitEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.SPLIT_EINHEIT, input),
+  undoLastCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.UNDO_LAST, einsatzId),
+  hasUndoableCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.HAS_UNDO, einsatzId),
+  exportEinsatzakte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.EXPORT_EINSATZAKTE, einsatzId),
+};
+
+contextBridge.exposeInMainWorld('api', api);

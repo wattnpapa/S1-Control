@@ -1,0 +1,668 @@
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import type { AbschnittDetails, EinsatzListItem, OrganisationKey, SessionUser } from '@shared/types';
+import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
+import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
+import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
+import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
+import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
+import { Topbar } from '@renderer/components/layout/Topbar';
+import { WorkspaceRail } from '@renderer/components/layout/WorkspaceRail';
+import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
+import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
+import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
+import { FuehrungsstrukturView } from '@renderer/components/views/FuehrungsstrukturView';
+import { LoginView } from '@renderer/components/views/LoginView';
+import { SettingsView } from '@renderer/components/views/SettingsView';
+import { StartView } from '@renderer/components/views/StartView';
+import type {
+  CreateEinheitForm,
+  CreateFahrzeugForm,
+  FahrzeugOverviewItem,
+  KraftOverviewItem,
+  MoveDialogState,
+  SplitEinheitForm,
+  TacticalStrength,
+  WorkspaceView,
+} from '@renderer/types/ui';
+import { readError } from '@renderer/utils/error';
+import { parseTaktischeStaerke } from '@renderer/utils/tactical';
+
+const EMPTY_DETAILS: AbschnittDetails = { einheiten: [], fahrzeuge: [] };
+const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 };
+
+export function App() {
+  const [session, setSession] = useState<SessionUser | null>(null);
+  const [loginName, setLoginName] = useState('admin');
+  const [loginPasswort, setLoginPasswort] = useState('admin');
+
+  const [dbPath, setDbPath] = useState('');
+  const [einsaetze, setEinsaetze] = useState<EinsatzListItem[]>([]);
+  const [selectedEinsatzId, setSelectedEinsatzId] = useState<string>('');
+  const [abschnitte, setAbschnitte] = useState([] as Awaited<ReturnType<typeof window.api.listAbschnitte>>);
+  const [selectedAbschnittId, setSelectedAbschnittId] = useState<string>('');
+  const [details, setDetails] = useState<AbschnittDetails>(EMPTY_DETAILS);
+  const [allKraefte, setAllKraefte] = useState<KraftOverviewItem[]>([]);
+  const [allFahrzeuge, setAllFahrzeuge] = useState<FahrzeugOverviewItem[]>([]);
+  const [hasUndo, setHasUndo] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const [moveDialog, setMoveDialog] = useState<MoveDialogState | null>(null);
+  const [moveTarget, setMoveTarget] = useState('');
+
+  const [showCreateEinheitDialog, setShowCreateEinheitDialog] = useState(false);
+  const [createEinheitForm, setCreateEinheitForm] = useState<CreateEinheitForm>({
+    nameImEinsatz: '',
+    organisation: 'THW',
+    fuehrung: '0',
+    unterfuehrung: '1',
+    mannschaft: '8',
+    status: 'AKTIV',
+    abschnittId: '',
+  });
+
+  const [showSplitEinheitDialog, setShowSplitEinheitDialog] = useState(false);
+  const [splitEinheitForm, setSplitEinheitForm] = useState<SplitEinheitForm>({
+    sourceEinheitId: '',
+    nameImEinsatz: '',
+    organisation: 'THW',
+    fuehrung: '0',
+    unterfuehrung: '0',
+    mannschaft: '1',
+    status: 'AKTIV',
+  });
+
+  const [showCreateFahrzeugDialog, setShowCreateFahrzeugDialog] = useState(false);
+  const [createFahrzeugForm, setCreateFahrzeugForm] = useState<CreateFahrzeugForm>({
+    name: '',
+    kennzeichen: '',
+    status: 'AKTIV',
+    einheitId: '',
+  });
+
+  const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('none');
+  const [startOpenEinsatzId, setStartOpenEinsatzId] = useState('');
+  const [startNewEinsatzName, setStartNewEinsatzName] = useState('');
+  const [startNewFuestName, setStartNewFuestName] = useState('FueSt 1');
+
+  const [activeView, setActiveView] = useState<WorkspaceView>('einsatz');
+  const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
+  const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
+  const [now, setNow] = useState<Date>(new Date());
+
+  const selectedEinsatz = useMemo(
+    () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
+    [einsaetze, selectedEinsatzId],
+  );
+
+  const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
+
+  const clearSelectedEinsatz = useCallback(() => {
+    setSelectedEinsatzId('');
+    setAbschnitte([]);
+    setSelectedAbschnittId('');
+    setDetails(EMPTY_DETAILS);
+    setAllKraefte([]);
+    setAllFahrzeuge([]);
+    setHasUndo(false);
+    setGesamtStaerke(EMPTY_STRENGTH);
+  }, []);
+
+  const loadEinsatz = useCallback(async (einsatzId: string, preferredAbschnittId?: string) => {
+    const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
+    setAbschnitte(nextAbschnitte);
+
+    const allDetails = await Promise.all(
+      nextAbschnitte.map((abschnitt) => window.api.listAbschnittDetails(einsatzId, abschnitt.id)),
+    );
+
+    const nextAllKraefte = allDetails.flatMap((d, index) => {
+      const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
+      return d.einheiten.map((einheit) => ({ ...einheit, abschnittName }));
+    });
+    setAllKraefte(nextAllKraefte);
+
+    const einheitNameById = new Map(nextAllKraefte.map((e) => [e.id, e.nameImEinsatz]));
+    const nextAllFahrzeuge = allDetails.flatMap((d, index) => {
+      const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
+      return d.fahrzeuge.map((fahrzeug) => ({
+        ...fahrzeug,
+        abschnittName,
+        einheitName: fahrzeug.aktuelleEinsatzEinheitId
+          ? (einheitNameById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? 'Unbekannt')
+          : '-',
+      }));
+    });
+    setAllFahrzeuge(nextAllFahrzeuge);
+
+    const total = allDetails.reduce<TacticalStrength>((sum, d) => {
+      for (const einheit of d.einheiten) {
+        const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
+        sum.fuehrung += parsed.fuehrung;
+        sum.unterfuehrung += parsed.unterfuehrung;
+        sum.mannschaft += parsed.mannschaft;
+        sum.gesamt += parsed.gesamt;
+      }
+      return sum;
+    }, { ...EMPTY_STRENGTH });
+    setGesamtStaerke(total);
+
+    const effectiveAbschnittId =
+      preferredAbschnittId && nextAbschnitte.some((item) => item.id === preferredAbschnittId)
+        ? preferredAbschnittId
+        : nextAbschnitte[0]?.id || '';
+
+    setSelectedAbschnittId(effectiveAbschnittId);
+    if (effectiveAbschnittId) {
+      setDetails(await window.api.listAbschnittDetails(einsatzId, effectiveAbschnittId));
+    } else {
+      setDetails(EMPTY_DETAILS);
+    }
+
+    setHasUndo(await window.api.hasUndoableCommand(einsatzId));
+  }, []);
+
+  const refreshEinsaetze = useCallback(async () => {
+    const next = await window.api.listEinsaetze();
+    setEinsaetze(next);
+    if (selectedEinsatzId && !next.some((item) => item.id === selectedEinsatzId)) {
+      clearSelectedEinsatz();
+    }
+    return next;
+  }, [clearSelectedEinsatz, selectedEinsatzId]);
+
+  const refreshAll = useCallback(async () => {
+    await refreshEinsaetze();
+    if (selectedEinsatzId) {
+      await loadEinsatz(selectedEinsatzId, selectedAbschnittId);
+    }
+  }, [loadEinsatz, refreshEinsaetze, selectedAbschnittId, selectedEinsatzId]);
+
+  useEffect(() => {
+    void (async () => {
+      try {
+        const [currentSession, settings] = await Promise.all([
+          window.api.getSession(),
+          window.api.getSettings(),
+        ]);
+        setSession(currentSession);
+        setDbPath(settings.dbPath);
+        if (currentSession) {
+          await refreshEinsaetze();
+        }
+      } catch (err) {
+        setError(readError(err));
+      }
+    })();
+    // initial load only
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (!startOpenEinsatzId && einsaetze[0]?.id) {
+      setStartOpenEinsatzId(einsaetze[0].id);
+    }
+  }, [einsaetze, startOpenEinsatzId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 1000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  useEffect(() => {
+    if (!session || !selectedEinsatzId) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void refreshAll();
+    }, 6000);
+    return () => window.clearInterval(timer);
+  }, [refreshAll, selectedEinsatzId, session]);
+
+  useEffect(() => {
+    if (!session || !selectedEinsatzId || !selectedAbschnittId) {
+      return;
+    }
+    void (async () => {
+      try {
+        setDetails(await window.api.listAbschnittDetails(selectedEinsatzId, selectedAbschnittId));
+      } catch (err) {
+        setError(readError(err));
+      }
+    })();
+  }, [selectedAbschnittId, selectedEinsatzId, session]);
+
+  const withBusy = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+    } catch (err) {
+      setError(readError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const doLogin = async () => {
+    await withBusy(async () => {
+      const next = await window.api.login({ name: loginName, passwort: loginPasswort });
+      setSession(next);
+      clearSelectedEinsatz();
+      setStartChoice('none');
+      await refreshEinsaetze();
+    });
+  };
+
+  const doStartOpenExisting = async () => {
+    if (!startOpenEinsatzId) return;
+    await withBusy(async () => {
+      setSelectedEinsatzId(startOpenEinsatzId);
+      await loadEinsatz(startOpenEinsatzId);
+      setStartChoice('none');
+    });
+  };
+
+  const doStartCreateEinsatz = async () => {
+    if (!startNewEinsatzName.trim()) {
+      setError('Bitte Einsatzname eingeben.');
+      return;
+    }
+
+    await withBusy(async () => {
+      const created = await window.api.createEinsatz({
+        name: startNewEinsatzName.trim(),
+        fuestName: startNewFuestName.trim() || 'FueSt 1',
+      });
+      setStartNewEinsatzName('');
+      await refreshEinsaetze();
+      setSelectedEinsatzId(created.id);
+      await loadEinsatz(created.id);
+      setStartChoice('none');
+    });
+  };
+
+  const doCreateEinheit = () => {
+    if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
+    setCreateEinheitForm({
+      nameImEinsatz: '',
+      organisation: 'THW',
+      fuehrung: '0',
+      unterfuehrung: '1',
+      mannschaft: '8',
+      status: 'AKTIV',
+      abschnittId: selectedAbschnittId,
+    });
+    setShowCreateEinheitDialog(true);
+  };
+
+  const doSubmitCreateEinheit = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!createEinheitForm.nameImEinsatz.trim()) {
+      setError('Bitte Namen der Einheit eingeben.');
+      return;
+    }
+    if (!createEinheitForm.abschnittId) {
+      setError('Bitte Abschnitt auswaehlen.');
+      return;
+    }
+
+    const fuehrung = Number(createEinheitForm.fuehrung);
+    const unterfuehrung = Number(createEinheitForm.unterfuehrung);
+    const mannschaft = Number(createEinheitForm.mannschaft);
+    if ([fuehrung, unterfuehrung, mannschaft].some((v) => Number.isNaN(v) || v < 0)) {
+      setError('Taktische Staerke muss aus Zahlen >= 0 bestehen.');
+      return;
+    }
+
+    const gesamt = fuehrung + unterfuehrung + mannschaft;
+    const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
+
+    await withBusy(async () => {
+      await window.api.createEinheit({
+        einsatzId: selectedEinsatzId,
+        nameImEinsatz: createEinheitForm.nameImEinsatz.trim(),
+        organisation: createEinheitForm.organisation,
+        aktuelleStaerke: gesamt,
+        aktuelleStaerkeTaktisch: taktisch,
+        aktuellerAbschnittId: createEinheitForm.abschnittId,
+        status: createEinheitForm.status,
+      });
+      setShowCreateEinheitDialog(false);
+      await refreshAll();
+    });
+  };
+
+  const doCreateFahrzeug = () => {
+    if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
+    if (allKraefte.length === 0) {
+      setError('Bitte zuerst mindestens eine Einheit anlegen, bevor Fahrzeuge zugeordnet werden.');
+      return;
+    }
+    setCreateFahrzeugForm({
+      name: '',
+      kennzeichen: '',
+      status: 'AKTIV',
+      einheitId: allKraefte[0]?.id ?? '',
+    });
+    setShowCreateFahrzeugDialog(true);
+  };
+
+  const doSubmitCreateFahrzeug = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!createFahrzeugForm.name.trim()) {
+      setError('Bitte Fahrzeugname eingeben.');
+      return;
+    }
+    if (!createFahrzeugForm.einheitId) {
+      setError('Bitte zugeordnete Einheit auswaehlen.');
+      return;
+    }
+
+    await withBusy(async () => {
+      await window.api.createFahrzeug({
+        einsatzId: selectedEinsatzId,
+        name: createFahrzeugForm.name.trim(),
+        kennzeichen: createFahrzeugForm.kennzeichen.trim() || undefined,
+        aktuelleEinsatzEinheitId: createFahrzeugForm.einheitId,
+        status: createFahrzeugForm.status,
+      });
+      setShowCreateFahrzeugDialog(false);
+      await refreshAll();
+    });
+  };
+
+  const doOpenSplitEinheitDialog = (sourceEinheitId: string) => {
+    const source = allKraefte.find((e) => e.id === sourceEinheitId);
+    setSplitEinheitForm({
+      sourceEinheitId,
+      nameImEinsatz: source ? `${source.nameImEinsatz} - Teil 1` : '',
+      organisation: source?.organisation ?? 'THW',
+      fuehrung: '0',
+      unterfuehrung: '0',
+      mannschaft: '1',
+      status: source?.status ?? 'AKTIV',
+    });
+    setShowSplitEinheitDialog(true);
+  };
+
+  const doSubmitSplitEinheit = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!splitEinheitForm.sourceEinheitId) {
+      setError('Bitte Quell-Einheit waehlen.');
+      return;
+    }
+    if (!splitEinheitForm.nameImEinsatz.trim()) {
+      setError('Bitte Namen fuer die Teileinheit eingeben.');
+      return;
+    }
+
+    const fuehrung = Number(splitEinheitForm.fuehrung);
+    const unterfuehrung = Number(splitEinheitForm.unterfuehrung);
+    const mannschaft = Number(splitEinheitForm.mannschaft);
+    if ([fuehrung, unterfuehrung, mannschaft].some((v) => Number.isNaN(v) || v < 0)) {
+      setError('Split-Staerke muss aus Zahlen >= 0 bestehen.');
+      return;
+    }
+
+    await withBusy(async () => {
+      await window.api.splitEinheit({
+        einsatzId: selectedEinsatzId,
+        sourceEinheitId: splitEinheitForm.sourceEinheitId,
+        nameImEinsatz: splitEinheitForm.nameImEinsatz.trim(),
+        organisation: splitEinheitForm.organisation,
+        fuehrung,
+        unterfuehrung,
+        mannschaft,
+        status: splitEinheitForm.status,
+      });
+      setShowSplitEinheitDialog(false);
+      await refreshAll();
+    });
+  };
+
+  const doUndo = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    await withBusy(async () => {
+      await window.api.undoLastCommand(selectedEinsatzId);
+      await refreshAll();
+    });
+  };
+
+  const doSaveDbPath = async () => {
+    await withBusy(async () => {
+      await window.api.setDbPath(dbPath);
+      clearSelectedEinsatz();
+      setStartChoice('none');
+      await refreshEinsaetze();
+    });
+  };
+
+  const doMove = async () => {
+    if (!moveDialog || !selectedEinsatzId || !moveTarget) return;
+    await withBusy(async () => {
+      if (moveDialog.type === 'einheit') {
+        await window.api.moveEinheit({
+          einsatzId: selectedEinsatzId,
+          einheitId: moveDialog.id,
+          nachAbschnittId: moveTarget,
+        });
+      } else {
+        await window.api.moveFahrzeug({
+          einsatzId: selectedEinsatzId,
+          fahrzeugId: moveDialog.id,
+          nachAbschnittId: moveTarget,
+        });
+      }
+      setMoveDialog(null);
+      setMoveTarget('');
+      await refreshAll();
+    });
+  };
+
+  const doLogout = () => {
+    void window.api.logout();
+    setSession(null);
+    clearSelectedEinsatz();
+    setStartChoice('none');
+    setActiveView('einsatz');
+  };
+
+  if (!session) {
+    return (
+      <LoginView
+        loginName={loginName}
+        loginPasswort={loginPasswort}
+        busy={busy}
+        error={error}
+        onChangeName={setLoginName}
+        onChangePasswort={setLoginPasswort}
+        onLogin={() => void doLogin()}
+      />
+    );
+  }
+
+  if (!selectedEinsatzId) {
+    return (
+      <StartView
+        startChoice={startChoice}
+        setStartChoice={setStartChoice}
+        busy={busy}
+        error={error}
+        einsaetze={einsaetze}
+        startOpenEinsatzId={startOpenEinsatzId}
+        setStartOpenEinsatzId={setStartOpenEinsatzId}
+        startNewEinsatzName={startNewEinsatzName}
+        setStartNewEinsatzName={setStartNewEinsatzName}
+        startNewFuestName={startNewFuestName}
+        setStartNewFuestName={setStartNewFuestName}
+        onOpenExisting={() => void doStartOpenExisting()}
+        onCreate={() => void doStartCreateEinsatz()}
+        onLogout={doLogout}
+      />
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <Topbar
+        einsatzName={selectedEinsatz?.name ?? '-'}
+        gesamtStaerke={gesamtStaerke}
+        now={now}
+        busy={busy}
+        hasUndo={hasUndo}
+        isArchived={isArchived ?? false}
+        selectedEinsatzId={selectedEinsatzId}
+        onUndo={() => void doUndo()}
+        onLogout={doLogout}
+      />
+
+      {isArchived && <div className="banner">Einsatz ist archiviert (read-only).</div>}
+      {error && <div className="error-banner">{error}</div>}
+
+      <main className="content">
+        <WorkspaceRail activeView={activeView} onSelect={setActiveView} />
+        <AbschnittSidebar
+          abschnitte={abschnitte}
+          selectedId={selectedAbschnittId}
+          einsatzName={selectedEinsatz?.name}
+          onSelect={setSelectedAbschnittId}
+        />
+
+        <section className="main-view">
+          {activeView === 'einsatz' && (
+            <>
+              <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
+                Einheit anlegen
+              </button>
+              <EinsatzOverviewView
+                details={details}
+                selectedEinsatz={selectedEinsatz}
+                isArchived={isArchived ?? false}
+                onMoveEinheit={(id) => {
+                  setMoveDialog({ type: 'einheit', id });
+                  setMoveTarget(selectedAbschnittId);
+                }}
+                onSplitEinheit={doOpenSplitEinheitDialog}
+                onMoveFahrzeug={(id) => {
+                  setMoveDialog({ type: 'fahrzeug', id });
+                  setMoveTarget(selectedAbschnittId);
+                }}
+              />
+            </>
+          )}
+
+          {activeView === 'fuehrung' && <FuehrungsstrukturView abschnitte={abschnitte} kraefte={allKraefte} />}
+
+          {activeView === 'kraefte' && (
+            <>
+              <div className="inline-actions">
+                <select
+                  value={kraefteOrgFilter}
+                  onChange={(e) => setKraefteOrgFilter(e.target.value as OrganisationKey | 'ALLE')}
+                  disabled={busy}
+                >
+                  <option value="ALLE">Alle Organisationen</option>
+                  {ORGANISATION_OPTIONS.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
+                  Einheit anlegen
+                </button>
+              </div>
+              <KraefteOverviewTable
+                einheiten={
+                  kraefteOrgFilter === 'ALLE'
+                    ? allKraefte
+                    : allKraefte.filter((e) => e.organisation === kraefteOrgFilter)
+                }
+                isArchived={isArchived ?? false}
+                onMove={(id) => {
+                  setMoveDialog({ type: 'einheit', id });
+                  setMoveTarget(selectedAbschnittId);
+                }}
+                onSplit={doOpenSplitEinheitDialog}
+              />
+            </>
+          )}
+
+          {activeView === 'fahrzeuge' && (
+            <>
+              <button onClick={doCreateFahrzeug} disabled={busy || !selectedAbschnittId || isArchived}>
+                Fahrzeug anlegen
+              </button>
+              <FahrzeugeOverviewTable
+                fahrzeuge={allFahrzeuge}
+                isArchived={isArchived ?? false}
+                onMove={(id) => {
+                  setMoveDialog({ type: 'fahrzeug', id });
+                  setMoveTarget(selectedAbschnittId);
+                }}
+              />
+            </>
+          )}
+
+          {activeView === 'einstellungen' && (
+            <SettingsView
+              busy={busy}
+              dbPath={dbPath}
+              onChangeDbPath={setDbPath}
+              onSaveDbPath={() => void doSaveDbPath()}
+            />
+          )}
+        </section>
+      </main>
+
+      <MoveDialog
+        visible={Boolean(moveDialog)}
+        type={moveDialog?.type ?? 'einheit'}
+        abschnitte={abschnitte}
+        moveTarget={moveTarget}
+        isArchived={isArchived ?? false}
+        onChangeTarget={setMoveTarget}
+        onConfirm={() => void doMove()}
+        onClose={() => {
+          setMoveDialog(null);
+          setMoveTarget('');
+        }}
+      />
+
+      <CreateEinheitDialog
+        visible={showCreateEinheitDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={createEinheitForm}
+        abschnitte={abschnitte}
+        onChange={setCreateEinheitForm}
+        onSubmit={() => void doSubmitCreateEinheit()}
+        onClose={() => setShowCreateEinheitDialog(false)}
+      />
+
+      <SplitEinheitDialog
+        visible={showSplitEinheitDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={splitEinheitForm}
+        allKraefte={allKraefte}
+        onChange={setSplitEinheitForm}
+        onSubmit={() => void doSubmitSplitEinheit()}
+        onClose={() => setShowSplitEinheitDialog(false)}
+      />
+
+      <CreateFahrzeugDialog
+        visible={showCreateFahrzeugDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={createFahrzeugForm}
+        allKraefte={allKraefte}
+        onChange={setCreateFahrzeugForm}
+        onSubmit={() => void doSubmitCreateFahrzeug()}
+        onClose={() => setShowCreateFahrzeugDialog(false)}
+      />
+    </div>
+  );
+}
