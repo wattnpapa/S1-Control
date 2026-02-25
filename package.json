@@ -33,6 +33,7 @@
       "icon": "assets/branding/app.icns"
     },
     "win": {
+      "icon": "assets/branding/app.ico",
       "target": "nsis"
     },
     "files": [
