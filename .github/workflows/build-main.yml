@@ -22,7 +22,7 @@ jobs:
       - name: Generate NATO version
         id: version
         run: |
-          NATO_VERSION="$(date -u '+%d%H%M%SZ%b%y' | tr '[:lower:]' '[:upper:]')"
+          NATO_VERSION="$(date -u '+%d%H%M%b%y' | tr '[:lower:]' '[:upper:]')"
           echo "nato_version=$NATO_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create Git tag
