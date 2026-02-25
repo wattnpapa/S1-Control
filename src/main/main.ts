@@ -6,6 +6,7 @@ import { registerIpc } from './ipc/register-ipc';
 import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
+import { StrengthDisplayService } from './services/strength-display';
 import { UpdaterService } from './services/updater';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
@@ -109,6 +110,7 @@ async function bootstrap(): Promise<void> {
       win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
     }
   });
+  const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
 
   let currentUser: SessionUser | null = null;
 
@@ -124,6 +126,7 @@ async function bootstrap(): Promise<void> {
     },
     backupCoordinator,
     updater,
+    strengthDisplay,
     settingsStore,
     getDefaultDbPath: () => defaultBaseDir,
     getSessionUser: () => currentUser,

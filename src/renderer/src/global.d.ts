@@ -6,6 +6,9 @@ declare global {
     updaterEvents: {
       onStateChanged: (callback: (state: unknown) => void) => () => void;
     };
+    strengthDisplayEvents: {
+      onStateChanged: (callback: (state: unknown) => void) => () => void;
+    };
   }
 }
 

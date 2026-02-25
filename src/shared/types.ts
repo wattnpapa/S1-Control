@@ -92,6 +92,10 @@ export interface AppSettings {
   dbPath: string;
 }
 
+export interface StrengthDisplayState {
+  taktischeStaerke: string;
+}
+
 export interface ExportResult {
   outputPath: string;
 }

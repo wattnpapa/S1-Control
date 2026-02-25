@@ -230,6 +230,11 @@ select {
   opacity: 0.95;
 }
 
+.topbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .topbar-actions button {
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
@@ -722,6 +727,55 @@ td.tactical-sign-cell {
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, #2352bf, var(--thw-blue));
+}
+
+.strength-display {
+  min-height: 100vh;
+  background: #ffffff;
+  color: #000000;
+  display: grid;
+  place-items: center;
+  user-select: none;
+}
+
+.strength-display.is-inverted {
+  background: #000000;
+  color: #ffffff;
+}
+
+.strength-display-inner {
+  width: 100vw;
+  max-width: 100%;
+  height: 100vh;
+  display: grid;
+  grid-template-rows: 1fr 1fr;
+  align-items: center;
+  justify-items: center;
+  padding: 2vh 2vw;
+  box-sizing: border-box;
+}
+
+.strength-display-value {
+  width: 100%;
+  max-width: 100%;
+  font-size: min(24vw, 36vh);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: 0.04em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.strength-display-time {
+  width: 100%;
+  max-width: 100%;
+  font-size: min(13vw, 22vh);
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
 }
 
 @media (max-width: 900px) {

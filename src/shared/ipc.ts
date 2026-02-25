@@ -4,6 +4,7 @@ import type {
   AppSettings,
   EinsatzListItem,
   ExportResult,
+  StrengthDisplayState,
   TacticalSignConfig,
   OrganisationKey,
   SessionUser,
@@ -109,6 +110,10 @@ export interface RendererApi {
   getTacticalVehicleSvg(input: {
     organisation: OrganisationKey;
   }): Promise<string>;
+  openStrengthDisplayWindow(): Promise<void>;
+  closeStrengthDisplayWindow(): Promise<void>;
+  getStrengthDisplayState(): Promise<StrengthDisplayState>;
+  setStrengthDisplayState(input: StrengthDisplayState): Promise<void>;
 }
 
 export const IPC_CHANNEL = {
@@ -143,4 +148,9 @@ export const IPC_CHANNEL = {
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
+  OPEN_STRENGTH_DISPLAY_WINDOW: 'strength-display:open-window',
+  CLOSE_STRENGTH_DISPLAY_WINDOW: 'strength-display:close-window',
+  GET_STRENGTH_DISPLAY_STATE: 'strength-display:get-state',
+  SET_STRENGTH_DISPLAY_STATE: 'strength-display:set-state',
+  STRENGTH_DISPLAY_STATE_CHANGED: 'strength-display:state-changed',
 } as const;

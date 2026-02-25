@@ -29,6 +29,7 @@ import {
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
 import { getTacticalFormationSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../services/tactical-signs';
+import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 
 interface AppState {
@@ -36,6 +37,7 @@ interface AppState {
   setDbContext: (ctx: DbContext) => void;
   backupCoordinator: BackupCoordinator;
   updater: UpdaterService;
+  strengthDisplay: StrengthDisplayService;
   settingsStore: SettingsStore;
   getDefaultDbPath: () => string;
   getSessionUser: () => SessionUser | null;
@@ -425,5 +427,31 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
       getTacticalVehicleSvgDataUrl(input.organisation),
     ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_STRENGTH_DISPLAY_WINDOW,
+    wrap(async () => {
+      await state.strengthDisplay.openWindow();
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CLOSE_STRENGTH_DISPLAY_WINDOW,
+    wrap(async () => {
+      state.strengthDisplay.closeWindow();
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_STRENGTH_DISPLAY_STATE,
+    wrap(async () => state.strengthDisplay.getState()),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.SET_STRENGTH_DISPLAY_STATE,
+    wrap(async (input: Parameters<RendererApi['setStrengthDisplayState']>[0]) => {
+      state.strengthDisplay.setState(input);
+    }),
   );
 }

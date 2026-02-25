@@ -35,6 +35,10 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG, input),
   getTacticalVehicleSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG, input),
+  openStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_STRENGTH_DISPLAY_WINDOW),
+  closeStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.CLOSE_STRENGTH_DISPLAY_WINDOW),
+  getStrengthDisplayState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_STRENGTH_DISPLAY_STATE),
+  setStrengthDisplayState: (input) => ipcRenderer.invoke(IPC_CHANNEL.SET_STRENGTH_DISPLAY_STATE, input),
 };
 
 contextBridge.exposeInMainWorld('api', api);
@@ -43,5 +47,13 @@ contextBridge.exposeInMainWorld('updaterEvents', {
     const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
     ipcRenderer.on(IPC_CHANNEL.UPDATER_STATE_CHANGED, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNEL.UPDATER_STATE_CHANGED, listener);
+  },
+});
+
+contextBridge.exposeInMainWorld('strengthDisplayEvents', {
+  onStateChanged: (callback: (state: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
+    ipcRenderer.on(IPC_CHANNEL.STRENGTH_DISPLAY_STATE_CHANGED, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNEL.STRENGTH_DISPLAY_STATE_CHANGED, listener);
   },
 });

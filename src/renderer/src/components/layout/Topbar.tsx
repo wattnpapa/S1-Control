@@ -6,6 +6,9 @@ interface TopbarProps {
   einsatzName: string;
   gesamtStaerke: TacticalStrength;
   now: Date;
+  onOpenStrengthDisplay: () => void;
+  onCloseStrengthDisplay: () => void;
+  busy: boolean;
 }
 
 export function Topbar(props: TopbarProps): JSX.Element {
@@ -20,6 +23,14 @@ export function Topbar(props: TopbarProps): JSX.Element {
       <div className="topbar-meta">
         <span>Stärke: {toTaktischeStaerke(props.gesamtStaerke)}</span>
         <span>{toNatoDateTime(props.now)}</span>
+      </div>
+      <div className="topbar-actions">
+        <button onClick={props.onOpenStrengthDisplay} disabled={props.busy}>
+          Stärke-Monitor öffnen
+        </button>
+        <button onClick={props.onCloseStrengthDisplay} disabled={props.busy}>
+          Monitor schließen
+        </button>
       </div>
     </header>
   );

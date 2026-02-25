@@ -27,7 +27,7 @@ import type {
   WorkspaceView,
 } from '@renderer/types/ui';
 import { readError } from '@renderer/utils/error';
-import { parseTaktischeStaerke } from '@renderer/utils/tactical';
+import { parseTaktischeStaerke, toTaktischeStaerke } from '@renderer/utils/tactical';
 
 const EMPTY_DETAILS: AbschnittDetails = { einheiten: [], fahrzeuge: [] };
 const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 };
@@ -602,6 +602,27 @@ export function App() {
     });
   };
 
+  const doOpenStrengthDisplay = async () => {
+    await withBusy(async () => {
+      await window.api.openStrengthDisplayWindow();
+      await window.api.setStrengthDisplayState({
+        taktischeStaerke: toTaktischeStaerke(gesamtStaerke).replace(/\/(\d+)$/, '//$1'),
+      });
+    });
+  };
+
+  const doCloseStrengthDisplay = async () => {
+    await withBusy(async () => {
+      await window.api.closeStrengthDisplayWindow();
+    });
+  };
+
+  useEffect(() => {
+    void window.api.setStrengthDisplayState({
+      taktischeStaerke: toTaktischeStaerke(gesamtStaerke).replace(/\/(\d+)$/, '//$1'),
+    });
+  }, [gesamtStaerke]);
+
   if (!authReady) {
     return (
       <>
@@ -674,6 +695,9 @@ export function App() {
         einsatzName={selectedEinsatz?.name ?? '-'}
         gesamtStaerke={gesamtStaerke}
         now={now}
+        onOpenStrengthDisplay={() => void doOpenStrengthDisplay()}
+        onCloseStrengthDisplay={() => void doCloseStrengthDisplay()}
+        busy={busy}
       />
 
       {renderUpdaterNotices()}
