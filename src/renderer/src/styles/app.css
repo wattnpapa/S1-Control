@@ -297,14 +297,29 @@ select {
   padding: 0;
 }
 
+.rail-button:hover:not(:disabled) {
+  background: #374050;
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
 .rail-button.active {
   background: linear-gradient(145deg, #2352bf, var(--thw-blue));
   color: #fff;
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+.rail-button.active:hover:not(:disabled) {
+  background: linear-gradient(145deg, #2352bf, var(--thw-blue));
+  color: #fff;
+}
+
 .rail-button.secondary {
   background: #1f2430;
+}
+
+.rail-button.secondary:hover:not(:disabled) {
+  background: #2d3542;
 }
 
 .rail-spacer {
