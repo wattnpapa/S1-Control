@@ -1,5 +1,7 @@
 # S1-Control (MVP)
 
+[![codecov](https://codecov.io/gh/wattnpapa/S1-Control/branch/main/graph/badge.svg)](https://codecov.io/gh/wattnpapa/S1-Control)
+
 Offline-first Desktop-App für THW Führungsstelle (S1) Einsatzkräfteverwaltung.
 
 ## Stack

@@ -59,6 +59,13 @@ jobs:
           name: coverage-${{ needs.prepare.outputs.nato_version }}
           path: coverage/
 
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+          token: ${{ secrets.CODECOV_TOKEN }}
+
   build-mac:
     runs-on: macos-latest
     needs:
