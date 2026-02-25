@@ -1,4 +1,3 @@
-provider: github
-owner: wattnpapa
-repo: S1-Control
+provider: generic
+url: https://github.com/wattnpapa/S1-Control/releases/latest/download
 updaterCacheDirName: S1-Control-updater

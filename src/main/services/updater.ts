@@ -64,7 +64,9 @@ export class UpdaterService {
       }
       if (this.isVersionFormatError(message)) {
         await this.checkGitHubReleaseVersion(
-          `In-App-Download nicht möglich: Versionsformat \`${this.resolveDisplayVersion()}\` ist nicht SemVer-kompatibel.`,
+          `In-App-Download nicht möglich: Update-Metadaten sind nicht SemVer-kompatibel (\`${this.normalizeVersion(
+            app.getVersion(),
+          )}\`).`,
         );
         return;
       }
