@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AbschnittDetails, EinsatzListItem, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
@@ -15,6 +16,7 @@ import { FuehrungsstrukturView } from '@renderer/components/views/Fuehrungsstruk
 import { SettingsView } from '@renderer/components/views/SettingsView';
 import { StartView } from '@renderer/components/views/StartView';
 import type {
+  CreateAbschnittForm,
   CreateEinheitForm,
   CreateFahrzeugForm,
   FahrzeugOverviewItem,
@@ -52,6 +54,12 @@ export function App() {
   const [moveTarget, setMoveTarget] = useState('');
 
   const [showCreateEinheitDialog, setShowCreateEinheitDialog] = useState(false);
+  const [showCreateAbschnittDialog, setShowCreateAbschnittDialog] = useState(false);
+  const [createAbschnittForm, setCreateAbschnittForm] = useState<CreateAbschnittForm>({
+    name: '',
+    systemTyp: 'NORMAL',
+    parentId: '',
+  });
   const [createEinheitForm, setCreateEinheitForm] = useState<CreateEinheitForm>({
     nameImEinsatz: '',
     organisation: 'THW',
@@ -342,6 +350,34 @@ export function App() {
       abschnittId: selectedAbschnittId,
     });
     setShowCreateEinheitDialog(true);
+  };
+
+  const doCreateAbschnitt = () => {
+    if (!selectedEinsatzId || isArchived) return;
+    setCreateAbschnittForm({
+      name: '',
+      systemTyp: 'NORMAL',
+      parentId: selectedAbschnittId || '',
+    });
+    setShowCreateAbschnittDialog(true);
+  };
+
+  const doSubmitCreateAbschnitt = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!createAbschnittForm.name.trim()) {
+      setError('Bitte Namen für den Abschnitt eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      const created = await window.api.createAbschnitt({
+        einsatzId: selectedEinsatzId,
+        name: createAbschnittForm.name.trim(),
+        systemTyp: createAbschnittForm.systemTyp,
+        parentId: createAbschnittForm.parentId || null,
+      });
+      setShowCreateAbschnittDialog(false);
+      await loadEinsatz(selectedEinsatzId, created.id);
+    });
   };
 
   const doSubmitCreateEinheit = async () => {
@@ -651,7 +687,16 @@ export function App() {
             </>
           )}
 
-          {activeView === 'fuehrung' && <FuehrungsstrukturView abschnitte={abschnitte} kraefte={allKraefte} />}
+          {activeView === 'fuehrung' && (
+            <>
+              <div className="inline-actions">
+                <button onClick={doCreateAbschnitt} disabled={busy || !selectedEinsatzId || isArchived}>
+                  Abschnitt anlegen
+                </button>
+              </div>
+              <FuehrungsstrukturView abschnitte={abschnitte} kraefte={allKraefte} />
+            </>
+          )}
 
           {activeView === 'kraefte' && (
             <>
@@ -668,6 +713,9 @@ export function App() {
                     </option>
                   ))}
                 </select>
+                <button onClick={doCreateAbschnitt} disabled={busy || !selectedEinsatzId || isArchived}>
+                  Abschnitt anlegen
+                </button>
                 <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
                   Einheit anlegen
                 </button>
@@ -740,6 +788,17 @@ export function App() {
         onChange={setCreateEinheitForm}
         onSubmit={() => void doSubmitCreateEinheit()}
         onClose={() => setShowCreateEinheitDialog(false)}
+      />
+
+      <CreateAbschnittDialog
+        visible={showCreateAbschnittDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={createAbschnittForm}
+        abschnitte={abschnitte}
+        onChange={setCreateAbschnittForm}
+        onSubmit={() => void doSubmitCreateAbschnitt()}
+        onClose={() => setShowCreateAbschnittDialog(false)}
       />
 
       <SplitEinheitDialog
