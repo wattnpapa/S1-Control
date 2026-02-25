@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const hoisted = vi.hoisted(() => {
-  let appVersion = '251538feb26';
+  let appVersion = '2026.2.25-16.38';
   const appMock = {
     getVersion: vi.fn(() => appVersion),
   };
@@ -55,7 +55,7 @@ import { UpdaterService } from '../src/main/services/updater';
 describe('updater service', () => {
   beforeEach(() => {
     (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath = '/tmp';
-    hoisted.setAppVersion('251538feb26');
+    hoisted.setAppVersion('2026.2.25-16.38');
     hoisted.appMock.getVersion.mockImplementation(() => hoisted.getAppVersion());
     hoisted.existsSyncMock.mockReset();
     hoisted.existsSyncMock.mockReturnValue(false);
@@ -74,20 +74,20 @@ describe('updater service', () => {
     const states: Array<ReturnType<UpdaterService['getState']>> = [];
     const service = new UpdaterService((state) => states.push(state));
 
-    expect(service.getState().currentVersion).toBe('251538feb26');
+    expect(service.getState().currentVersion).toBe('2026.02.25.16.38');
     expect(hoisted.autoUpdaterMock.autoDownload).toBe(false);
     expect(hoisted.autoUpdaterMock.autoInstallOnAppQuit).toBe(false);
 
     hoisted.autoUpdaterMock.emit('update-not-available');
-    hoisted.autoUpdaterMock.emit('update-available', { version: '251600feb26' });
+    hoisted.autoUpdaterMock.emit('update-available', { version: '2026.2.25-16.40' });
     hoisted.autoUpdaterMock.emit('download-progress', { percent: 42 });
-    hoisted.autoUpdaterMock.emit('update-downloaded', { version: '251600feb26' });
+    hoisted.autoUpdaterMock.emit('update-downloaded', { version: '2026.2.25-16.40' });
 
     expect(states.at(-1)).toMatchObject({
       stage: 'downloaded',
-      latestVersion: '251600feb26',
+      latestVersion: '2026.02.25.16.40',
       progressPercent: 100,
-      currentVersion: '251538feb26',
+      currentVersion: '2026.02.25.16.38',
     });
   });
 
@@ -98,28 +98,28 @@ describe('updater service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ tag_name: '251600feb26' }),
+        json: async () => ({ tag_name: '2026.02.25.16.40' }),
       })),
     );
 
     await service.checkForUpdates();
     expect(states.at(-1)).toMatchObject({
       stage: 'available',
-      latestVersion: '251600feb26',
+      latestVersion: '2026.02.25.16.40',
     });
 
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ tag_name: '251526feb26' }),
+        json: async () => ({ tag_name: '2026.02.25.16.26' }),
       })),
     );
 
     await service.checkForUpdates();
     expect(states.at(-1)).toMatchObject({
       stage: 'not-available',
-      latestVersion: '251526feb26',
+      latestVersion: '2026.02.25.16.26',
     });
   });
 
@@ -132,7 +132,7 @@ describe('updater service', () => {
       'fetch',
       vi.fn(async () => ({
         ok: true,
-        json: async () => ({ tag_name: '251526feb26' }),
+        json: async () => ({ tag_name: '2026.02.25.16.26' }),
       })),
     );
     await service.checkForUpdates();

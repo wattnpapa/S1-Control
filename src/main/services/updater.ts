@@ -15,6 +15,7 @@ export class UpdaterService {
   private readonly notify: (state: UpdaterState) => void;
 
   public constructor(notify: (state: UpdaterState) => void) {
+    this.state.currentVersion = this.resolveDisplayVersion();
     this.notify = notify;
     this.configureAutoUpdater();
   }
@@ -37,7 +38,7 @@ export class UpdaterService {
       this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
       if (latestVersion) {
-        this.setState({ latestVersion });
+        this.setState({ latestVersion: this.toDisplayVersion(latestVersion) });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -81,7 +82,7 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-available', (info) => {
-        this.setState({ stage: 'available', latestVersion: info.version });
+        this.setState({ stage: 'available', latestVersion: this.toDisplayVersion(info.version) });
       });
 
       autoUpdater.on('update-not-available', () => {
@@ -106,7 +107,11 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-downloaded', (info) => {
-        this.setState({ stage: 'downloaded', latestVersion: info.version, progressPercent: 100 });
+        this.setState({
+          stage: 'downloaded',
+          latestVersion: this.toDisplayVersion(info.version),
+          progressPercent: 100,
+        });
       });
 
       this.autoUpdaterEnabled = true;
@@ -146,7 +151,7 @@ export class UpdaterService {
 
       const payload = (await response.json()) as { tag_name?: string; name?: string };
       const latestVersion = this.normalizeVersion(payload.tag_name || payload.name || '');
-      const currentVersion = this.normalizeVersion(app.getVersion());
+      const currentVersion = this.resolveDisplayVersion();
 
       if (!latestVersion) {
         this.setState({ stage: 'not-available' });
@@ -187,7 +192,7 @@ export class UpdaterService {
   }
 
   private isSemverVersion(version: string): boolean {
-    return /^\d+\.\d+\.\d+([-.+].+)?$/.test(version.trim());
+    return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/.test(version.trim());
   }
 
   private isVersionFormatError(message: string): boolean {
@@ -195,16 +200,26 @@ export class UpdaterService {
     return lower.includes('semver') || lower.includes('version') || lower.includes('invalid version');
   }
 
-  private isNatoVersionTag(version: string): boolean {
-    return /^\d{2}\d{2}\d{2}[a-z]{3}\d{2}$/i.test(version.trim());
+  private isBuildVersion(version: string): boolean {
+    return /^\d{4}\.\d{2}\.\d{2}\.\d{2}\.\d{2}$/.test(version.trim());
   }
 
   private compareVersions(current: string, latest: string): number | null {
     if (this.isSemverVersion(current) && this.isSemverVersion(latest)) {
       return this.compareSemver(current, latest);
     }
-    if (this.isNatoVersionTag(current) && this.isNatoVersionTag(latest)) {
-      return this.compareNatoTags(current, latest);
+    if (this.isBuildVersion(current) && this.isBuildVersion(latest)) {
+      return this.compareBuildVersions(current, latest);
+    }
+    if (this.isSemverVersion(current) && this.isBuildVersion(latest)) {
+      const currentDate = this.parseSemverDate(current);
+      const latestDate = this.parseBuildVersionDate(latest);
+      if (currentDate === null || latestDate === null) {
+        return null;
+      }
+      if (currentDate < latestDate) return -1;
+      if (currentDate > latestDate) return 1;
+      return 0;
     }
     return null;
   }
@@ -228,9 +243,9 @@ export class UpdaterService {
     return 0;
   }
 
-  private compareNatoTags(current: string, latest: string): number | null {
-    const currentDate = this.parseNatoTag(current);
-    const latestDate = this.parseNatoTag(latest);
+  private compareBuildVersions(current: string, latest: string): number | null {
+    const currentDate = this.parseBuildVersionDate(current);
+    const latestDate = this.parseBuildVersionDate(latest);
     if (!currentDate || !latestDate) {
       return null;
     }
@@ -239,38 +254,18 @@ export class UpdaterService {
     return 0;
   }
 
-  private parseNatoTag(version: string): number | null {
-    const match = /^(\d{2})(\d{2})(\d{2})([a-z]{3})(\d{2})$/i.exec(version.trim());
+  private parseBuildVersionDate(version: string): number | null {
+    const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(version.trim());
     if (!match) {
       return null;
     }
 
-    const dd = Number(match[1]);
-    const hh = Number(match[2]);
-    const mm = Number(match[3]);
-    const mon = (match[4] ?? '').toLowerCase();
-    const yy = Number(match[5]);
-    const months: Record<string, number> = {
-      jan: 0,
-      feb: 1,
-      mar: 2,
-      apr: 3,
-      may: 4,
-      jun: 5,
-      jul: 6,
-      aug: 7,
-      sep: 8,
-      oct: 9,
-      nov: 10,
-      dec: 11,
-    };
-    const month = months[mon];
-    if (month === undefined) {
-      return null;
-    }
-
-    const year = 2000 + yy;
-    const timestamp = Date.UTC(year, month, dd, hh, mm, 0, 0);
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const timestamp = Date.UTC(year, month, day, hour, minute, 0, 0);
     if (Number.isNaN(timestamp)) {
       return null;
     }
@@ -278,13 +273,53 @@ export class UpdaterService {
     if (
       check.getUTCFullYear() !== year ||
       check.getUTCMonth() !== month ||
-      check.getUTCDate() !== dd ||
-      check.getUTCHours() !== hh ||
-      check.getUTCMinutes() !== mm
+      check.getUTCDate() !== day ||
+      check.getUTCHours() !== hour ||
+      check.getUTCMinutes() !== minute
     ) {
       return null;
     }
     return timestamp;
+  }
+
+  private parseSemverDate(version: string): number | null {
+    const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(version.trim());
+    if (!match) {
+      return null;
+    }
+    const year = Number(match[1]);
+    const month = Number(match[2]) - 1;
+    const day = Number(match[3]);
+    const hour = Number(match[4]);
+    const minute = Number(match[5]);
+    const timestamp = Date.UTC(year, month, day, hour, minute, 0, 0);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+    return timestamp;
+  }
+
+  private resolveDisplayVersion(): string {
+    const envVersion = process.env.S1_APP_VERSION?.trim();
+    if (envVersion) {
+      return envVersion;
+    }
+    return this.toDisplayVersion(app.getVersion());
+  }
+
+  private toDisplayVersion(version: string): string {
+    const normalized = this.normalizeVersion(version);
+    const parsed = this.parseSemverDate(normalized);
+    if (parsed === null) {
+      return normalized;
+    }
+    const date = new Date(parsed);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    const hour = String(date.getUTCHours()).padStart(2, '0');
+    const minute = String(date.getUTCMinutes()).padStart(2, '0');
+    return `${year}.${month}.${day}.${hour}.${minute}`;
   }
 
   private isOfflineLikeError(message: string): boolean {
@@ -305,7 +340,7 @@ export class UpdaterService {
     this.state = {
       ...this.state,
       ...next,
-      currentVersion: app.getVersion(),
+      currentVersion: this.resolveDisplayVersion(),
     };
     this.notify(this.state);
   }

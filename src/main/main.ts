@@ -10,18 +10,38 @@ import { UpdaterService } from './services/updater';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
-function toNatoVersionTag(date: Date): string {
-  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
-  const dd = String(date.getUTCDate()).padStart(2, '0');
-  const hh = String(date.getUTCHours()).padStart(2, '0');
-  const mm = String(date.getUTCMinutes()).padStart(2, '0');
-  const mon = months[date.getUTCMonth()] ?? 'jan';
-  const yy = String(date.getUTCFullYear()).slice(-2);
-  return `${dd}${hh}${mm}${mon}${yy}`;
+function toBuildVersion(date: Date): string {
+  const year = date.getUTCFullYear();
+  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(date.getUTCDate()).padStart(2, '0');
+  const hour = String(date.getUTCHours()).padStart(2, '0');
+  const minute = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${year}.${month}.${day}.${hour}.${minute}`;
+}
+
+function fromSemverToBuildVersion(value: string): string | null {
+  const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(value.trim());
+  if (!match) {
+    return null;
+  }
+  const [, year, month, day, hour, minute] = match;
+  return `${year}.${month.padStart(2, '0')}.${day.padStart(2, '0')}.${hour.padStart(2, '0')}.${minute.padStart(2, '0')}`;
 }
 
 function resolveAppVersionLabel(): string {
-  return process.env.S1_APP_VERSION || app.getVersion() || toNatoVersionTag(new Date());
+  const envVersion = process.env.S1_APP_VERSION;
+  if (envVersion) {
+    return envVersion;
+  }
+  const semverVersion = process.env.S1_APP_SEMVER || app.getVersion();
+  const mapped = fromSemverToBuildVersion(semverVersion);
+  if (mapped) {
+    return mapped;
+  }
+  if (semverVersion && semverVersion !== '0.1.0') {
+    return semverVersion;
+  }
+  return toBuildVersion(new Date());
 }
 
 function withVersion(details: string): string {
@@ -39,9 +59,9 @@ function resolveRendererUrl(): string {
 
 async function bootstrap(): Promise<void> {
   await app.whenReady();
-  const envVersion = process.env.S1_APP_VERSION;
-  if (envVersion) {
-    app.setVersion(envVersion);
+  const envSemver = process.env.S1_APP_SEMVER;
+  if (envSemver) {
+    app.setVersion(envSemver);
   }
   const versionLabel = resolveAppVersionLabel();
 

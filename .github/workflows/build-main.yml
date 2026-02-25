@@ -12,27 +12,30 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      nato_version: ${{ steps.version.outputs.nato_version }}
+      build_version: ${{ steps.version.outputs.build_version }}
+      build_semver: ${{ steps.version.outputs.build_semver }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Generate NATO version
+      - name: Generate build version
         id: version
         run: |
-          NATO_VERSION="$(LC_TIME=C date -u '+%d%H%M%b%y' | tr '[:upper:]' '[:lower:]')"
-          echo "nato_version=$NATO_VERSION" >> "$GITHUB_OUTPUT"
+          BUILD_VERSION="$(date -u '+%Y.%m.%d.%H.%M')"
+          BUILD_SEMVER="$(date -u '+%Y.%-m.%-d-%-H.%-M')"
+          echo "build_version=$BUILD_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_semver=$BUILD_SEMVER" >> "$GITHUB_OUTPUT"
 
       - name: Create Git tag
         env:
-          NATO_VERSION: ${{ steps.version.outputs.nato_version }}
+          BUILD_VERSION: ${{ steps.version.outputs.build_version }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag "$NATO_VERSION" "$GITHUB_SHA"
-          git push origin "$NATO_VERSION"
+          git tag "$BUILD_VERSION" "$GITHUB_SHA"
+          git push origin "$BUILD_VERSION"
 
   test:
     runs-on: ubuntu-latest
@@ -66,7 +69,7 @@ jobs:
       - name: Upload coverage reports
         uses: actions/upload-artifact@v4
         with:
-          name: coverage-${{ needs.prepare.outputs.nato_version }}
+          name: coverage-${{ needs.prepare.outputs.build_version }}
           path: coverage/
 
       - name: Upload coverage to Codecov
@@ -90,8 +93,9 @@ jobs:
       - prepare
       - test
     env:
-      NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
-      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
       CSC_LINK: ${{ secrets.CSC_LINK }}
       CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
       APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
@@ -142,12 +146,12 @@ jobs:
           npm run -s build:renderer
           npm run -s build:main
           npm run -s rebuild:native
-          node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: s1-control-mac-${{ env.NATO_VERSION }}
+          name: s1-control-mac-${{ env.BUILD_VERSION }}
           path: |
             dist/*.dmg
             dist/*.zip
@@ -159,8 +163,9 @@ jobs:
       - prepare
       - test
     env:
-      NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
-      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -189,13 +194,13 @@ jobs:
           npm run -s build:renderer
           npm run -s build:main
           npm run -s rebuild:native
-          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
-          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
+          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: s1-control-win-${{ env.NATO_VERSION }}
+          name: s1-control-win-${{ env.BUILD_VERSION }}
           path: |
             dist/*.exe
             dist/*.blockmap
@@ -207,8 +212,9 @@ jobs:
       - prepare
       - test
     env:
-      NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
-      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -237,12 +243,12 @@ jobs:
           npm run -s build:renderer
           npm run -s build:main
           npm run -s rebuild:native
-          node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: s1-control-linux-${{ env.NATO_VERSION }}
+          name: s1-control-linux-${{ env.BUILD_VERSION }}
           path: |
             dist/*.deb
             dist/latest-linux.yml
@@ -258,26 +264,26 @@ jobs:
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
         with:
-          name: s1-control-mac-${{ needs.prepare.outputs.nato_version }}
+          name: s1-control-mac-${{ needs.prepare.outputs.build_version }}
           path: artifacts/mac
 
       - name: Download Windows artifacts
         uses: actions/download-artifact@v4
         with:
-          name: s1-control-win-${{ needs.prepare.outputs.nato_version }}
+          name: s1-control-win-${{ needs.prepare.outputs.build_version }}
           path: artifacts/win
 
       - name: Download Linux artifacts
         uses: actions/download-artifact@v4
         with:
-          name: s1-control-linux-${{ needs.prepare.outputs.nato_version }}
+          name: s1-control-linux-${{ needs.prepare.outputs.build_version }}
           path: artifacts/linux
 
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ needs.prepare.outputs.nato_version }}
-          name: ${{ needs.prepare.outputs.nato_version }}
+          tag_name: ${{ needs.prepare.outputs.build_version }}
+          name: ${{ needs.prepare.outputs.build_version }}
           files: |
             artifacts/mac/*
             artifacts/win/*
