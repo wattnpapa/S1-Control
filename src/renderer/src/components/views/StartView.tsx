@@ -12,6 +12,7 @@ interface StartViewProps {
   setStartNewFuestName: (value: string) => void;
   appVersion?: string;
   onOpenExisting: () => void;
+  onOpenKnownEinsatz: (einsatzId: string) => void;
   onCreate: () => void;
 }
 
@@ -45,7 +46,18 @@ export function StartView(props: StartViewProps): JSX.Element {
             <button onClick={props.onOpenExisting} disabled={props.busy}>
               Einsatz-Datei auswählen und öffnen
             </button>
-            {props.einsaetze.length > 0 && <p className="hint">Zuletzt erkannt im Standardpfad: {props.einsaetze.length}</p>}
+            {props.einsaetze.length > 0 && (
+              <>
+                <p className="hint">Erkannte Einsätze im Standardpfad:</p>
+                <div className="quick-einsatz-list">
+                  {props.einsaetze.map((item) => (
+                    <button key={item.id} onClick={() => props.onOpenKnownEinsatz(item.id)} disabled={props.busy}>
+                      {item.name} ({item.status})
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 

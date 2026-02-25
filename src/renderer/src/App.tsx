@@ -326,6 +326,18 @@ export function App() {
     });
   };
 
+  const doStartOpenKnownEinsatz = async (einsatzId: string) => {
+    await withBusy(async () => {
+      const opened = await window.api.openEinsatz(einsatzId);
+      if (!opened) {
+        throw new Error('Einsatz konnte im Standardpfad nicht geöffnet werden.');
+      }
+      setSelectedEinsatzId(einsatzId);
+      await loadEinsatz(einsatzId);
+      setStartChoice('open');
+    });
+  };
+
   const doStartCreateEinsatz = async () => {
     if (!startNewEinsatzName.trim()) {
       setError('Bitte Einsatzname eingeben.');
@@ -650,6 +662,7 @@ export function App() {
           setStartNewFuestName={setStartNewFuestName}
           appVersion={updaterState.currentVersion}
           onOpenExisting={() => void doStartOpenExisting()}
+          onOpenKnownEinsatz={(einsatzId) => void doStartOpenKnownEinsatz(einsatzId)}
           onCreate={() => void doStartCreateEinsatz()}
         />
         {renderUpdaterOverlay()}
