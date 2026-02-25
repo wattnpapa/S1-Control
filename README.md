@@ -1,6 +1,6 @@
 # S1-Control (MVP)
 
-Offline-first Desktop-App fuer THW Fuehrungsstelle (S1) Einsatzkraefteverwaltung.
+Offline-first Desktop-App für THW Führungsstelle (S1) Einsatzkräfteverwaltung.
 
 ## Stack
 
@@ -34,12 +34,18 @@ Standard-Login: `admin` / `admin`
 - `npm run build:win:zip`: Windows ZIP-Paket (x64)
 - `npm run build:win:exe`: Windows Installer als `.exe` (NSIS, x64)
 - `npm run build:win:portable`: Portable `.exe` ohne Installation (x64)
-  - Hinweis: Mit `better-sqlite3` funktioniert das zuverlaessig auf einem Windows-Host (oder via GitHub Actions `build-windows.yml`), nicht als nativer Cross-Build von macOS.
+  - Hinweis: Mit `better-sqlite3` funktioniert das zuverlässig auf einem Windows-Host (oder via GitHub Actions `build-main.yml`), nicht als nativer Cross-Build von macOS.
+
+## CI/CD
+
+- Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS- und Windows-Artefakte.
+- Die Release-Tag/Versionskennung wird als NATO-Zeit erzeugt: `DDHHMMSSZMONYY` (UTC), z.B. `25153045ZFEB26`.
+- Workflow: `.github/workflows/build-main.yml`
 
 ## DB-Pfad / Fileshare
 
 - DB-Pfad ist in der App konfigurierbar (Settings-Bereich).
-- Alternativ ueber ENV: `S1_DB_PATH=/pfad/zur/einsatz.sqlite`
+- Alternativ über ENV: `S1_DB_PATH=/pfad/zur/einsatz.sqlite`
 - Beim DB-Open werden gesetzt:
   - `PRAGMA journal_mode=WAL`
   - `PRAGMA synchronous=NORMAL`
@@ -48,15 +54,15 @@ Standard-Login: `admin` / `admin`
 - App arbeitet ohne Cloud/Server.
 - Bei Fileshare-Nutzung:
   - Nur DB-Datei teilen (WAL-Modus aktiv)
-  - Gleichzeitige Zugriffe werden ueber busy timeout/retry abgefedert
+  - Gleichzeitige Zugriffe werden über busy timeout/retry abgefedert
   - Daten werden im laufenden Einsatz automatisch periodisch aktualisiert
 
 ## Architekturregeln
 
 - Kein DB-Zugriff im Renderer
 - Alle Writes laufen im Main-Prozess, jeweils in Transaktionen
-- Archivierte Einsaetze (`status=ARCHIVIERT`) sind schreibgeschuetzt (Main enforced)
-- Undo fuer `MOVE_EINHEIT` und `MOVE_FAHRZEUG` via `einsatz_command_log`
+- Archivierte Einsätze (`status=ARCHIVIERT`) sind schreibgeschützt (Main enforced)
+- Undo für `MOVE_EINHEIT` und `MOVE_FAHRZEUG` via `einsatz_command_log`
 
 ## Export (MVP)
 
@@ -67,4 +73,4 @@ Standard-Login: `admin` / `admin`
 - `einheiten.csv`
 - `bewegungen.csv`
 
-Struktur ist vorbereitet, um spaeter PDF-Erzeugung (z.B. Puppeteer) zu ergaenzen.
+Struktur ist vorbereitet, um später PDF-Erzeugung (z.B. Puppeteer) zu ergänzen.
