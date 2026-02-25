@@ -3,8 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  createEinsatzDbFileName,
   createEinsatzInOwnDatabase,
   findDbPathForEinsatz,
+  listEinsaetzeFromDbPaths,
   listEinsaetzeFromDirectory,
   resolveEinsatzBaseDir,
   resolveSystemDbPath,
@@ -33,5 +35,28 @@ describe('einsatz file service', () => {
       created.ctx.sqlite.close();
     }
   });
-});
 
+  it('handles missing/invalid db files and explicit db path', () => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-einsatz-files-'));
+    const user = { id: 'u1', name: 'u', rolle: 'S1' as const };
+    const explicitPath = path.join(baseDir, 'custom.sqlite');
+    const created = createEinsatzInOwnDatabase(baseDir, { name: 'Übung 2', fuestName: 'FüSt 2' }, user, explicitPath);
+
+    try {
+      expect(createEinsatzDbFileName('Übung Test').endsWith('.sqlite')).toBe(true);
+      expect(resolveSystemDbPath(baseDir)).toBe(path.join(baseDir, '_system.sqlite'));
+      expect(findDbPathForEinsatz(baseDir, 'does-not-exist')).toBeNull();
+
+      const missingPath = path.join(baseDir, 'missing.sqlite');
+      const invalidPath = path.join(baseDir, 'invalid.sqlite');
+      fs.writeFileSync(invalidPath, 'not-a-db');
+
+      const list = listEinsaetzeFromDbPaths([missingPath, invalidPath, explicitPath]);
+      expect(list).toHaveLength(1);
+      expect(list[0]?.id).toBe(created.einsatz.id);
+      expect(list[0]?.dbPath).toBe(explicitPath);
+    } finally {
+      created.ctx.sqlite.close();
+    }
+  });
+});

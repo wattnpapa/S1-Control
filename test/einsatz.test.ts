@@ -7,6 +7,7 @@ import {
   einsatzCommandLog,
   einsatzEinheit,
   einsatzFahrzeug,
+  stammdatenFahrzeug,
 } from '../src/main/db/schema';
 import { AppError } from '../src/main/services/errors';
 import {
@@ -353,6 +354,153 @@ describe('einsatz service', () => {
       });
       const inDb = ctx.db.select().from(einsatzAbschnitt).where(eq(einsatzAbschnitt.id, child.id)).get();
       expect(inDb?.parentId).toBe(root.id);
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('supports explicit tactical-sign config and source fallback during split', () => {
+    const ctx = createTestDb('s1-control-einsatz-sign-config-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'Basis',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/0/4/4',
+        tacticalSignConfigJson: '{"unit":"X"}',
+        aktuellerAbschnittId: root.id,
+      });
+
+      const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+      expect(source.tacticalSignConfigJson).toContain('"unit":"X"');
+
+      splitEinheit(ctx, {
+        einsatzId: created.id,
+        sourceEinheitId: source.id,
+        nameImEinsatz: 'Teil A',
+        fuehrung: 0,
+        unterfuehrung: 0,
+        mannschaft: 1,
+      });
+
+      splitEinheit(ctx, {
+        einsatzId: created.id,
+        sourceEinheitId: source.id,
+        nameImEinsatz: 'Teil B',
+        fuehrung: 0,
+        unterfuehrung: 0,
+        mannschaft: 1,
+        tacticalSignConfigJson: '{"unit":"Y"}',
+      });
+
+      const children = ctx.db
+        .select()
+        .from(einsatzEinheit)
+        .where(and(eq(einsatzEinheit.parentEinsatzEinheitId, source.id), eq(einsatzEinheit.einsatzId, created.id)))
+        .all();
+
+      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"unit":"X"'))).toBe(true);
+      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"unit":"Y"'))).toBe(true);
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('validates split source existence, non-zero split and non-negative values', () => {
+    const ctx = createTestDb('s1-control-einsatz-split-edge-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'Basis',
+        organisation: 'THW',
+        aktuelleStaerke: 2,
+        aktuelleStaerkeTaktisch: '0/0/2/2',
+        aktuellerAbschnittId: root.id,
+      });
+
+      expect(() =>
+        splitEinheit(ctx, {
+          einsatzId: created.id,
+          sourceEinheitId: 'missing',
+          nameImEinsatz: 'Teil',
+          fuehrung: 0,
+          unterfuehrung: 0,
+          mannschaft: 1,
+        }),
+      ).toThrow('Quell-Einheit nicht gefunden');
+
+      const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+      expect(() =>
+        splitEinheit(ctx, {
+          einsatzId: created.id,
+          sourceEinheitId: source.id,
+          nameImEinsatz: 'Teil',
+          fuehrung: 0,
+          unterfuehrung: 0,
+          mannschaft: 0,
+        }),
+      ).toThrow('größer 0');
+
+      expect(() =>
+        splitEinheit(ctx, {
+          einsatzId: created.id,
+          sourceEinheitId: source.id,
+          nameImEinsatz: 'Teil',
+          fuehrung: -1,
+          unterfuehrung: 0,
+          mannschaft: 0,
+        }),
+      ).toThrow('>= 0');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('creates fahrzeug with existing stammdaten id without creating duplicates', () => {
+    const ctx = createTestDb('s1-control-einsatz-fahrzeug-stammdaten-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'Basis',
+        organisation: 'THW',
+        aktuelleStaerke: 2,
+        aktuelleStaerkeTaktisch: '0/0/2/2',
+        aktuellerAbschnittId: root.id,
+      });
+      const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+      ctx.db.insert(stammdatenFahrzeug).values({
+        id: 'stamm-1',
+        stammdatenEinheitId: null,
+        name: 'MTW',
+        kennzeichen: 'THW-1',
+        standardPiktogrammKey: 'mtw',
+      }).run();
+
+      createFahrzeug(ctx, {
+        einsatzId: created.id,
+        name: 'MTW',
+        aktuelleEinsatzEinheitId: source.id,
+        stammdatenFahrzeugId: 'stamm-1',
+      });
+      createFahrzeug(ctx, {
+        einsatzId: created.id,
+        name: 'MTW 2',
+        aktuelleEinsatzEinheitId: source.id,
+        stammdatenFahrzeugId: 'stamm-1',
+      });
+
+      const rows = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.einsatzId, created.id)).all();
+      expect(rows).toHaveLength(2);
+      expect(rows.every((row) => row.stammdatenFahrzeugId === 'stamm-1')).toBe(true);
     } finally {
       ctx.sqlite.close();
     }

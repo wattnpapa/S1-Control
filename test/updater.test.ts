@@ -213,4 +213,143 @@ describe('updater service', () => {
     await service.checkForUpdates();
     expect(service.getState()).toMatchObject({ stage: 'error', message: 'boom' });
   });
+
+  it('uses github fallback with clear reason when app-update.yml is missing', async () => {
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(false);
+    const service = new UpdaterService(() => undefined);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ tag_name: '1.2.4' }),
+      })),
+    );
+
+    await service.checkForUpdates();
+    expect(service.getState()).toMatchObject({
+      stage: 'available',
+      source: 'github-release',
+      inAppDownloadSupported: false,
+    });
+    expect(service.getState().inAppDownloadReason).toContain('app-update.yml');
+  });
+
+  it('falls back to github when updater returns invalid version format', async () => {
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockRejectedValue(new Error('invalid version'));
+    const service = new UpdaterService(() => undefined);
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({ tag_name: '1.2.4' }),
+      })),
+    );
+
+    await service.checkForUpdates();
+    expect(service.getState()).toMatchObject({
+      stage: 'available',
+      source: 'github-release',
+      inAppDownloadSupported: false,
+    });
+  });
+
+  it('marks not-available when github response has no release version', async () => {
+    hoisted.existsSyncMock.mockReturnValue(false);
+    const service = new UpdaterService(() => undefined);
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({
+        ok: true,
+        json: async () => ({}),
+      })),
+    );
+
+    await service.checkForUpdates();
+    expect(service.getState()).toMatchObject({
+      stage: 'not-available',
+      source: 'github-release',
+      inAppDownloadSupported: false,
+    });
+  });
+
+  it('marks idle on offline updater-check error in electron-updater path', async () => {
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockRejectedValue(new Error('net::ERR_INTERNET_DISCONNECTED'));
+    const service = new UpdaterService(() => undefined);
+
+    await service.checkForUpdates();
+    expect(service.getState()).toMatchObject({ stage: 'idle' });
+  });
+
+  it('does not install when auto-updater is not configured', () => {
+    const service = new UpdaterService(() => undefined);
+    service.installDownloadedUpdate();
+    expect(hoisted.autoUpdaterMock.quitAndInstall).not.toHaveBeenCalled();
+  });
+
+  it('sets unsupported state on download when updater was not checked', async () => {
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    const service = new UpdaterService(() => undefined);
+
+    await service.downloadUpdate();
+    expect(service.getState()).toMatchObject({ stage: 'unsupported' });
+    expect(hoisted.autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
+  });
+
+  it('covers internal version helpers for semver/build/date comparison', () => {
+    const service = new UpdaterService(() => undefined) as never as {
+      normalizeVersion: (v: string) => string;
+      isSemverVersion: (v: string) => boolean;
+      isBuildVersion: (v: string) => boolean;
+      compareVersions: (a: string, b: string) => number | null;
+      compareSemver: (a: string, b: string) => number;
+      compareBuildVersions: (a: string, b: string) => number | null;
+      parseBuildVersionDate: (v: string) => number | null;
+      parseSemverDate: (v: string) => number | null;
+      toDisplayVersion: (v: string) => string;
+      isVersionFormatError: (v: string) => boolean;
+      isOfflineLikeError: (v: string) => boolean;
+    };
+
+    expect(service.normalizeVersion('v1.2.3')).toBe('1.2.3');
+    expect(service.isSemverVersion('1.2.3')).toBe(true);
+    expect(service.isSemverVersion('2026.02.25.16.40')).toBe(false);
+    expect(service.isBuildVersion('2026.02.25.16.40')).toBe(true);
+    expect(service.isBuildVersion('2026.2.25.16.40')).toBe(false);
+
+    expect(service.compareSemver('1.2.3', '1.2.4')).toBe(-1);
+    expect(service.compareSemver('1.2.4', '1.2.3')).toBe(1);
+    expect(service.compareSemver('1.2.3', '1.2.3')).toBe(0);
+
+    expect(service.compareBuildVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(service.compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.38')).toBe(1);
+    expect(service.compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.40')).toBe(0);
+    expect(service.compareBuildVersions('x', '2026.02.25.16.40')).toBeNull();
+
+    expect(service.compareVersions('1.2.3', '1.2.4')).toBe(-1);
+    expect(service.compareVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(service.compareVersions('2026.2.25-16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(service.compareVersions('weird', '2026.02.25.16.40')).toBeNull();
+
+    expect(service.parseBuildVersionDate('2026.02.25.16.40')).not.toBeNull();
+    expect(service.parseBuildVersionDate('2026.13.25.16.40')).toBeNull();
+    expect(service.parseBuildVersionDate('nope')).toBeNull();
+    expect(service.parseSemverDate('2026.2.25-16.38')).not.toBeNull();
+    expect(service.parseSemverDate('1.2.3')).toBeNull();
+
+    expect(service.toDisplayVersion('2026.2.25-16.38')).toBe('2026.02.25.16.38');
+    expect(service.toDisplayVersion('v1.2.3')).toBe('1.2.3');
+
+    expect(service.isVersionFormatError('invalid version')).toBe(true);
+    expect(service.isVersionFormatError('ok')).toBe(false);
+    expect(service.isOfflineLikeError('ENOTFOUND github.com')).toBe(true);
+    expect(service.isOfflineLikeError('some unknown failure')).toBe(false);
+  });
 });

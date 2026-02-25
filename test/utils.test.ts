@@ -38,6 +38,30 @@ describe('renderer utils', () => {
       mannschaft: 1,
       gesamt: 3,
     });
+    expect(parseTaktischeStaerke(null, -3)).toEqual({
+      fuehrung: 0,
+      unterfuehrung: 0,
+      mannschaft: 0,
+      gesamt: 0,
+    });
+    expect(parseTaktischeStaerke('1/1/NaN/3', 2)).toEqual({
+      fuehrung: 0,
+      unterfuehrung: 0,
+      mannschaft: 2,
+      gesamt: 2,
+    });
+    expect(parseTaktischeStaerke('1/1/-1/1', 2)).toEqual({
+      fuehrung: 0,
+      unterfuehrung: 0,
+      mannschaft: 2,
+      gesamt: 2,
+    });
+    expect(parseTaktischeStaerke('1/2/3/7', 0)).toEqual({
+      fuehrung: 1,
+      unterfuehrung: 2,
+      mannschaft: 3,
+      gesamt: 7,
+    });
   });
 
   it('formats NATO date-time string', () => {

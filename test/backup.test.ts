@@ -98,4 +98,44 @@ describe('backup service', () => {
     a.stop();
     b.stop();
   });
+
+  it('recovers stale lock and writes backup', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
+    const dbPath = path.join(dir, 'einsatz.sqlite');
+    fs.writeFileSync(dbPath, 'db');
+    const backupDir = resolveBackupDir(dbPath);
+    fs.mkdirSync(backupDir, { recursive: true });
+    const lockPath = path.join(backupDir, 'einsatz.backup.lock');
+    fs.writeFileSync(lockPath, 'stale');
+    const stale = new Date(Date.now() - 20 * 60 * 1000);
+    fs.utimesSync(lockPath, stale, stale);
+
+    const backup = vi.fn(async (target: string) => {
+      fs.writeFileSync(target, 'backup');
+    });
+    const c = new BackupCoordinator();
+    c.start({ path: dbPath, sqlite: { backup } } as never);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    const files = fs.readdirSync(backupDir);
+    expect(backup).toHaveBeenCalled();
+    expect(files.some((name) => name.endsWith('.sqlite'))).toBe(true);
+    c.stop();
+  });
+
+  it('keeps running when backup write throws', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
+    const dbPath = path.join(dir, 'einsatz.sqlite');
+    fs.writeFileSync(dbPath, 'db');
+
+    const backup = vi.fn(async () => {
+      throw new Error('disk full');
+    });
+    const c = new BackupCoordinator();
+    c.start({ path: dbPath, sqlite: { backup } } as never);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+
+    expect(backup).toHaveBeenCalled();
+    c.stop();
+  });
 });

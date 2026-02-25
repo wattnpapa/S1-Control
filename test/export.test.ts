@@ -94,4 +94,24 @@ describe('export service', () => {
       ctx.sqlite.close();
     }
   });
+
+  it('exports valid report even without einheiten and fahrzeuge', async () => {
+    const ctx = createTestDb('s1-control-export-empty-');
+    try {
+      const created = createEinsatz(ctx, { name: 'A & B <Test>', fuestName: 'FüSt "Zentral"' });
+      const outPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-export-empty-out-')), 'einsatzakte-empty.zip');
+
+      await exportEinsatzakte(ctx, created.id, outPath);
+
+      const zip = await JSZip.loadAsync(fs.readFileSync(outPath));
+      const html = (await zip.file('einsatzakte/report.html')?.async('string')) ?? '';
+      const bewegungenCsv = (await zip.file('einsatzakte/bewegungen.csv')?.async('string')) ?? '';
+
+      expect(html).toContain('A &amp; B &lt;Test&gt;');
+      expect(html).toContain('FüSt &quot;Zentral&quot;');
+      expect(bewegungenCsv.trim().split('\n')).toHaveLength(1);
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
 });
