@@ -6,11 +6,6 @@ interface TopbarProps {
   einsatzName: string;
   gesamtStaerke: TacticalStrength;
   now: Date;
-  busy: boolean;
-  hasUndo: boolean;
-  isArchived: boolean;
-  selectedEinsatzId: string;
-  onUndo: () => void;
 }
 
 export function Topbar(props: TopbarProps): JSX.Element {
@@ -25,14 +20,6 @@ export function Topbar(props: TopbarProps): JSX.Element {
       <div className="topbar-meta">
         <span>Stärke: {toTaktischeStaerke(props.gesamtStaerke)}</span>
         <span>{toNatoDateTime(props.now)}</span>
-      </div>
-      <div className="topbar-actions">
-        <button
-          onClick={props.onUndo}
-          disabled={props.busy || !props.hasUndo || props.isArchived || !props.selectedEinsatzId}
-        >
-          Undo
-        </button>
       </div>
     </header>
   );

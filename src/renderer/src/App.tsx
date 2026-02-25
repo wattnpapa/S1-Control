@@ -46,7 +46,6 @@ export function App() {
   const [details, setDetails] = useState<AbschnittDetails>(EMPTY_DETAILS);
   const [allKraefte, setAllKraefte] = useState<KraftOverviewItem[]>([]);
   const [allFahrzeuge, setAllFahrzeuge] = useState<FahrzeugOverviewItem[]>([]);
-  const [hasUndo, setHasUndo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [updaterState, setUpdaterState] = useState<UpdaterState>(DEFAULT_UPDATER_STATE);
@@ -161,7 +160,6 @@ export function App() {
     setDetails(EMPTY_DETAILS);
     setAllKraefte([]);
     setAllFahrzeuge([]);
-    setHasUndo(false);
     setGesamtStaerke(EMPTY_STRENGTH);
   }, []);
 
@@ -216,7 +214,6 @@ export function App() {
       setDetails(EMPTY_DETAILS);
     }
 
-    setHasUndo(await window.api.hasUndoableCommand(einsatzId));
   }, []);
 
   const refreshEinsaetze = useCallback(async () => {
@@ -530,14 +527,6 @@ export function App() {
     });
   };
 
-  const doUndo = async () => {
-    if (!selectedEinsatzId || isArchived) return;
-    await withBusy(async () => {
-      await window.api.undoLastCommand(selectedEinsatzId);
-      await refreshAll();
-    });
-  };
-
   const doSaveDbPath = async () => {
     await withBusy(async () => {
       await window.api.setDbPath(dbPath);
@@ -676,11 +665,6 @@ export function App() {
         einsatzName={selectedEinsatz?.name ?? '-'}
         gesamtStaerke={gesamtStaerke}
         now={now}
-        busy={busy}
-        hasUndo={hasUndo}
-        isArchived={isArchived ?? false}
-        selectedEinsatzId={selectedEinsatzId}
-        onUndo={() => void doUndo()}
       />
 
       {renderUpdaterNotices()}
