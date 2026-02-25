@@ -109,11 +109,17 @@ export function App() {
     <>
       {updaterState.stage === 'available' && (
         <div className="update-banner">
-          Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}.
+          <span>
+            Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Quelle:{' '}
+            {updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release'}.
+            {updaterState.message ? ` ${updaterState.message}` : ''}
+          </span>
           <div className="update-actions">
-            <button onClick={() => void doDownloadUpdate()} disabled={busy}>
-              Update herunterladen
-            </button>
+            {updaterState.inAppDownloadSupported && (
+              <button onClick={() => void doDownloadUpdate()} disabled={busy}>
+                Update herunterladen
+              </button>
+            )}
             <button onClick={() => void doOpenReleasePage()} disabled={busy}>
               Release-Seite öffnen
             </button>
@@ -178,11 +184,13 @@ export function App() {
     setAllKraefte(nextAllKraefte);
 
     const einheitNameById = new Map(nextAllKraefte.map((e) => [e.id, e.nameImEinsatz]));
+    const einheitOrgById = new Map(nextAllKraefte.map((e) => [e.id, e.organisation]));
     const nextAllFahrzeuge = allDetails.flatMap((d, index) => {
       const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
       return d.fahrzeuge.map((fahrzeug) => ({
         ...fahrzeug,
         abschnittName,
+        organisation: fahrzeug.organisation ?? (fahrzeug.aktuelleEinsatzEinheitId ? (einheitOrgById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? null) : null),
         einheitName: fahrzeug.aktuelleEinsatzEinheitId
           ? (einheitNameById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? 'Unbekannt')
           : '-',
@@ -650,6 +658,7 @@ export function App() {
           startNewFuestName={startNewFuestName}
           setStartNewFuestName={setStartNewFuestName}
           appVersion={updaterState.currentVersion}
+          updaterState={updaterState}
           onOpenExisting={() => void doStartOpenExisting()}
           onOpenKnownEinsatz={(einsatzId) => void doStartOpenKnownEinsatz(einsatzId)}
           onCreate={() => void doStartCreateEinsatz()}

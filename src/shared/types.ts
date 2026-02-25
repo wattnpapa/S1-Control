@@ -19,6 +19,22 @@ export type OrganisationKey =
   | 'RETTUNGSDIENST_KOMMUNAL'
   | 'SONSTIGE';
 
+export interface TacticalSignConfig {
+  grundform?: string;
+  fachaufgabe?: string;
+  organisation?: string;
+  einheit?: string;
+  verwaltungsstufe?: string;
+  symbol?: string;
+  text?: string;
+  name?: string;
+  organisationsname?: string;
+  typ?: 'platoon' | 'group' | 'squad' | 'zugtrupp';
+  unit?: string;
+  denominator?: string;
+  strokeWidth?: number;
+}
+
 export interface SessionUser {
   id: string;
   name: string;
@@ -52,6 +68,7 @@ export interface EinheitListItem {
   aktuelleStaerkeTaktisch: string | null;
   status: EinheitStatus;
   piktogrammKey: string | null;
+  tacticalSignConfigJson: string | null;
   aktuellerAbschnittId: string;
 }
 
@@ -61,6 +78,7 @@ export interface FahrzeugListItem {
   kennzeichen: string | null;
   status: FahrzeugStatus;
   piktogrammKey: string | null;
+  organisation: OrganisationKey | null;
   aktuelleEinsatzEinheitId: string | null;
   aktuellerAbschnittId: string | null;
 }
@@ -95,6 +113,9 @@ export interface UpdaterState {
   progressPercent?: number;
   message?: string;
   lastCheckedAt?: string;
+  source?: 'electron-updater' | 'github-release';
+  inAppDownloadSupported?: boolean;
+  inAppDownloadReason?: string;
 }
 
 export interface ApiError {

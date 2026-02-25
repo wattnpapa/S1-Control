@@ -52,6 +52,7 @@ export const einsatzEinheit = sqliteTable('einsatz_einheit', {
   aktuelleStaerkeTaktisch: text('aktuelle_staerke_taktisch'),
   aktuellerAbschnittId: text('aktueller_abschnitt_id').notNull().references(() => einsatzAbschnitt.id),
   status: text('status', { enum: einheitStatusValues }).notNull().default('AKTIV'),
+  tacticalSignConfigJson: text('tactical_sign_config_json'),
   erstellt: text('erstellt').notNull(),
   aufgeloest: text('aufgeloest'),
 });

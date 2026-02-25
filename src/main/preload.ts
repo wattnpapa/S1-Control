@@ -31,6 +31,10 @@ const api: RendererApi = {
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
+  getTacticalFormationSvg: (input) =>
+    ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG, input),
+  getTacticalVehicleSvg: (input) =>
+    ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG, input),
 };
 
 contextBridge.exposeInMainWorld('api', api);

@@ -4,6 +4,8 @@ import type {
   AppSettings,
   EinsatzListItem,
   ExportResult,
+  TacticalSignConfig,
+  OrganisationKey,
   SessionUser,
   UpdaterState,
 } from './types';
@@ -34,6 +36,7 @@ export interface CreateEinheitInput {
   aktuellerAbschnittId: string;
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
   stammdatenEinheitId?: string;
+  tacticalSignConfigJson?: string;
 }
 
 export interface CreateFahrzeugInput {
@@ -67,6 +70,7 @@ export interface SplitEinheitInput {
   unterfuehrung: number;
   mannschaft: number;
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
+  tacticalSignConfigJson?: string;
 }
 
 export interface RendererApi {
@@ -98,6 +102,13 @@ export interface RendererApi {
   downloadUpdate(): Promise<void>;
   installDownloadedUpdate(): Promise<void>;
   openExternalUrl(url: string): Promise<void>;
+  getTacticalFormationSvg(input: {
+    organisation: OrganisationKey;
+    tacticalSignConfig?: TacticalSignConfig | null;
+  }): Promise<string>;
+  getTacticalVehicleSvg(input: {
+    organisation: OrganisationKey;
+  }): Promise<string>;
 }
 
 export const IPC_CHANNEL = {
@@ -130,4 +141,6 @@ export const IPC_CHANNEL = {
   INSTALL_UPDATE: 'updater:install',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
+  GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
+  GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
 } as const;

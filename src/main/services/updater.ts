@@ -8,7 +8,13 @@ const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 
 export class UpdaterService {
-  private state: UpdaterState = { stage: 'idle', currentVersion: app.getVersion() };
+  private state: UpdaterState = {
+    stage: 'idle',
+    currentVersion: app.getVersion(),
+    source: 'github-release',
+    inAppDownloadSupported: false,
+    inAppDownloadReason: 'Noch nicht geprüft.',
+  };
   private autoUpdaterEnabled = false;
   private canDownloadInApp = false;
 
@@ -29,8 +35,13 @@ export class UpdaterService {
     this.canDownloadInApp = false;
 
     try {
-      if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
-        await this.checkGitHubReleaseVersion();
+      if (!this.autoUpdaterEnabled) {
+        await this.checkGitHubReleaseVersion('Auto-Updater ist im aktuellen Build nicht aktiv.');
+        return;
+      }
+
+      if (!this.isAutoUpdaterConfigured()) {
+        await this.checkGitHubReleaseVersion('`app-update.yml` fehlt. In-App-Download ist daher nicht möglich.');
         return;
       }
 
@@ -38,7 +49,12 @@ export class UpdaterService {
       this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
       if (latestVersion) {
-        this.setState({ latestVersion: this.toDisplayVersion(latestVersion) });
+        this.setState({
+          latestVersion: this.toDisplayVersion(latestVersion),
+          source: 'electron-updater',
+          inAppDownloadSupported: true,
+          inAppDownloadReason: 'In-App-Download ist verfügbar.',
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -47,7 +63,9 @@ export class UpdaterService {
         return;
       }
       if (this.isVersionFormatError(message)) {
-        await this.checkGitHubReleaseVersion();
+        await this.checkGitHubReleaseVersion(
+          `In-App-Download nicht möglich: Versionsformat \`${this.resolveDisplayVersion()}\` ist nicht SemVer-kompatibel.`,
+        );
         return;
       }
       this.setState({ stage: 'error', message });
@@ -58,7 +76,9 @@ export class UpdaterService {
     if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured() || !this.canDownloadInApp) {
       this.setState({
         stage: 'unsupported',
-        message: 'In-App-Download nicht verfügbar. Bitte über die Release-Seite aktualisieren.',
+        source: 'github-release',
+        inAppDownloadSupported: false,
+        message: this.state.inAppDownloadReason ?? 'In-App-Download nicht verfügbar. Bitte über die Release-Seite aktualisieren.',
       });
       return;
     }
@@ -82,11 +102,22 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-available', (info) => {
-        this.setState({ stage: 'available', latestVersion: this.toDisplayVersion(info.version) });
+        this.setState({
+          stage: 'available',
+          latestVersion: this.toDisplayVersion(info.version),
+          source: 'electron-updater',
+          inAppDownloadSupported: true,
+          inAppDownloadReason: 'In-App-Download ist verfügbar.',
+        });
       });
 
       autoUpdater.on('update-not-available', () => {
-        this.setState({ stage: 'not-available' });
+        this.setState({
+          stage: 'not-available',
+          source: 'electron-updater',
+          inAppDownloadSupported: true,
+          inAppDownloadReason: 'In-App-Download ist verfügbar.',
+        });
       });
 
       autoUpdater.on('error', (error) => {
@@ -111,6 +142,9 @@ export class UpdaterService {
           stage: 'downloaded',
           latestVersion: this.toDisplayVersion(info.version),
           progressPercent: 100,
+          source: 'electron-updater',
+          inAppDownloadSupported: true,
+          inAppDownloadReason: 'Update wurde in der App heruntergeladen.',
         });
       });
 
@@ -134,7 +168,7 @@ export class UpdaterService {
     return true;
   }
 
-  private async checkGitHubReleaseVersion(): Promise<void> {
+  private async checkGitHubReleaseVersion(reason: string): Promise<void> {
     const endpoint = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 
     try {
@@ -154,7 +188,12 @@ export class UpdaterService {
       const currentVersion = this.resolveDisplayVersion();
 
       if (!latestVersion) {
-        this.setState({ stage: 'not-available' });
+        this.setState({
+          stage: 'not-available',
+          source: 'github-release',
+          inAppDownloadSupported: false,
+          inAppDownloadReason: reason,
+        });
         return;
       }
 
@@ -164,6 +203,9 @@ export class UpdaterService {
           stage: 'not-available',
           latestVersion,
           message: 'Versionsvergleich nicht eindeutig möglich.',
+          source: 'github-release',
+          inAppDownloadSupported: false,
+          inAppDownloadReason: reason,
         });
         return;
       }
@@ -172,10 +214,19 @@ export class UpdaterService {
         this.setState({
           stage: 'available',
           latestVersion,
-          message: 'Lokaler Build ohne Auto-Update-Datei. Download/Install manuell über GitHub Release.',
+          message: reason,
+          source: 'github-release',
+          inAppDownloadSupported: false,
+          inAppDownloadReason: reason,
         });
       } else {
-        this.setState({ stage: 'not-available', latestVersion });
+        this.setState({
+          stage: 'not-available',
+          latestVersion,
+          source: 'github-release',
+          inAppDownloadSupported: false,
+          inAppDownloadReason: reason,
+        });
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

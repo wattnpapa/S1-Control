@@ -1,4 +1,4 @@
-import type { EinsatzListItem } from '@shared/types';
+import type { EinsatzListItem, UpdaterState } from '@shared/types';
 
 interface StartViewProps {
   startChoice: 'none' | 'open' | 'create';
@@ -11,6 +11,7 @@ interface StartViewProps {
   startNewFuestName: string;
   setStartNewFuestName: (value: string) => void;
   appVersion?: string;
+  updaterState: UpdaterState;
   onOpenExisting: () => void;
   onOpenKnownEinsatz: (einsatzId: string) => void;
   onCreate: () => void;
@@ -28,6 +29,13 @@ export function StartView(props: StartViewProps): JSX.Element {
           <p className="login-version">Version {props.appVersion ?? '-'}</p>
           <p className="login-license">Lizenz: GPL-3.0</p>
           <p className="login-license">Copyright © {new Date().getFullYear()} Johannes Rudolph</p>
+          <p className="update-status-line">
+            Update-Status: Quelle {props.updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release'} | In-App-Download{' '}
+            {props.updaterState.inAppDownloadSupported ? 'aktiv' : 'nicht verfügbar'}
+          </p>
+          {props.updaterState.inAppDownloadReason && (
+            <p className="update-status-reason">{props.updaterState.inAppDownloadReason}</p>
+          )}
         </div>
         <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
 

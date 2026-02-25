@@ -1,5 +1,5 @@
 import type { FahrzeugListItem } from '@shared/types';
-import { iconPath } from '@renderer/utils/assets';
+import { TaktischesZeichenFahrzeug } from '@renderer/components/common/TaktischesZeichenFahrzeug';
 
 interface FahrzeugeTableProps {
   fahrzeuge: FahrzeugListItem[];
@@ -24,8 +24,8 @@ export function FahrzeugeTable(props: FahrzeugeTableProps): JSX.Element {
         <tbody>
           {props.fahrzeuge.map((item) => (
             <tr key={item.id}>
-              <td>
-                <img src={iconPath('fahrzeug', item.piktogrammKey)} alt="fahrzeug" className="icon" />
+              <td className="tactical-sign-cell">
+                <TaktischesZeichenFahrzeug organisation={item.organisation} />
               </td>
               <td>{item.name}</td>
               <td>{item.kennzeichen || '-'}</td>

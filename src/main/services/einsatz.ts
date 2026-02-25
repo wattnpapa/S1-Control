@@ -46,6 +46,24 @@ function formatTaktisch(f: number, uf: number, m: number): string {
   return `${f}/${uf}/${m}/${gesamt}`;
 }
 
+function defaultTacticalSignConfigJson(
+  organisation: EinheitListItem['organisation'],
+  nameImEinsatz: string,
+): string {
+  return JSON.stringify({
+    grundform: 'taktische_formation',
+    fachaufgabe: 'keine',
+    organisation,
+    einheit: 'keine',
+    verwaltungsstufe: 'keine',
+    symbol: 'keines',
+    text: '',
+    name: nameImEinsatz,
+    organisationsname: organisation,
+    unit: '',
+  });
+}
+
 const ORGANISATIONS: OrganisationKey[] = [
   'THW',
   'FEUERWEHR',
@@ -156,6 +174,7 @@ export function listAbschnittDetails(
       aktuelleStaerkeTaktisch: einsatzEinheit.aktuelleStaerkeTaktisch,
       status: einsatzEinheit.status,
       piktogrammKey: sql<string | null>`coalesce(${stammdatenEinheit.standardPiktogrammKey}, null)`,
+      tacticalSignConfigJson: einsatzEinheit.tacticalSignConfigJson,
       aktuellerAbschnittId: einsatzEinheit.aktuellerAbschnittId,
     })
     .from(einsatzEinheit)
@@ -172,11 +191,13 @@ export function listAbschnittDetails(
       kennzeichen: stammdatenFahrzeug.kennzeichen,
       status: einsatzFahrzeug.status,
       piktogrammKey: sql<string | null>`coalesce(${stammdatenFahrzeug.standardPiktogrammKey}, null)`,
+      organisation: einsatzEinheit.organisation,
       aktuelleEinsatzEinheitId: einsatzFahrzeug.aktuelleEinsatzEinheitId,
       aktuellerAbschnittId: einsatzFahrzeug.aktuellerAbschnittId,
     })
     .from(einsatzFahrzeug)
     .leftJoin(stammdatenFahrzeug, eq(einsatzFahrzeug.stammdatenFahrzeugId, stammdatenFahrzeug.id))
+    .leftJoin(einsatzEinheit, eq(einsatzFahrzeug.aktuelleEinsatzEinheitId, einsatzEinheit.id))
     .where(
       and(eq(einsatzFahrzeug.einsatzId, einsatzId), eq(einsatzFahrzeug.aktuellerAbschnittId, abschnittId)),
     )
@@ -190,6 +211,7 @@ export function listAbschnittDetails(
   const fahrzeuge: FahrzeugListItem[] = fahrzeugeRows.map((row) => ({
     ...row,
     status: row.status as FahrzeugListItem['status'],
+    organisation: (row.organisation as FahrzeugListItem['organisation']) ?? null,
   }));
 
   return { einheiten, fahrzeuge };
@@ -206,6 +228,7 @@ export function createEinheit(
     status?: EinheitListItem['status'];
     aktuelleStaerkeTaktisch?: string;
     stammdatenEinheitId?: string;
+    tacticalSignConfigJson?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -235,6 +258,8 @@ export function createEinheit(
     organisation: input.organisation,
     aktuelleStaerke: input.aktuelleStaerke,
     aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
+    tacticalSignConfigJson:
+      input.tacticalSignConfigJson ?? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz),
     aktuellerAbschnittId: input.aktuellerAbschnittId,
     status: input.status ?? 'AKTIV',
     erstellt: nowIso(),
@@ -314,6 +339,7 @@ export function splitEinheit(
     unterfuehrung: number;
     mannschaft: number;
     status?: EinheitListItem['status'];
+    tacticalSignConfigJson?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -373,6 +399,10 @@ export function splitEinheit(
         organisation,
         aktuelleStaerke: splitGesamt,
         aktuelleStaerkeTaktisch: formatTaktisch(input.fuehrung, input.unterfuehrung, input.mannschaft),
+        tacticalSignConfigJson:
+          input.tacticalSignConfigJson ??
+          source.tacticalSignConfigJson ??
+          defaultTacticalSignConfigJson(organisation, input.nameImEinsatz.trim()),
         aktuellerAbschnittId: source.aktuellerAbschnittId,
         status: input.status ?? source.status,
         erstellt: nowIso(),

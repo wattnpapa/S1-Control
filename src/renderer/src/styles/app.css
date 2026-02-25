@@ -104,6 +104,19 @@ select {
   color: var(--muted);
 }
 
+.update-status-line {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #2b3f66;
+  font-weight: 600;
+}
+
+.update-status-reason {
+  margin: 0;
+  font-size: 11px;
+  color: #4f5f7a;
+}
+
 .login-logo-wrap {
   width: 66px;
   height: 66px;
@@ -549,21 +562,32 @@ th {
 }
 
 .tactical-sign-badge {
-  --org-color: #4b5566;
-  display: inline-flex;
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1px solid color-mix(in srgb, var(--org-color) 45%, #a9b4c9);
-  background: color-mix(in srgb, var(--org-color) 15%, #ffffff);
+  width: 100%;
+  height: 100%;
+  background: transparent;
 }
 
 .tactical-sign {
-  width: 28px;
-  height: 20px;
+  width: 100%;
+  height: auto;
+  max-height: 44px;
+  object-fit: contain;
   display: block;
+}
+
+.tactical-sign-fallback {
+  font-size: 10px;
+  font-weight: 700;
+  color: #1f2937;
+}
+
+td.tactical-sign-cell {
+  width: 96px;
+  min-width: 96px;
+  padding: 4px 6px;
 }
 
 .modal-backdrop {

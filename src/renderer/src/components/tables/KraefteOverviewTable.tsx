@@ -30,8 +30,11 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
         <tbody>
           {props.einheiten.map((item) => (
             <tr key={item.id} className={item.parentEinsatzEinheitId ? 'split-row' : undefined}>
-              <td>
-                <TaktischesZeichenEinheit organisation={item.organisation} />
+              <td className="tactical-sign-cell">
+                <TaktischesZeichenEinheit
+                  organisation={item.organisation}
+                  tacticalSignConfigJson={item.tacticalSignConfigJson}
+                />
               </td>
               <td>
                 <div className={item.parentEinsatzEinheitId ? 'split-name' : undefined}>

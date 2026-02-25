@@ -28,6 +28,7 @@ import {
   listAbschnitte,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
+import { getTacticalFormationSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../services/tactical-signs';
 import { UpdaterService } from '../services/updater';
 
 interface AppState {
@@ -410,5 +411,19 @@ export function registerIpc(state: AppState): void {
       }
       await shell.openExternal(url);
     }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG,
+    wrap(async (input: Parameters<RendererApi['getTacticalFormationSvg']>[0]) =>
+      getTacticalFormationSvgDataUrl(input.organisation, input.tacticalSignConfig ?? null),
+    ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG,
+    wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
+      getTacticalVehicleSvgDataUrl(input.organisation),
+    ),
   );
 }

@@ -29,8 +29,11 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
         <tbody>
           {props.einheiten.map((item) => (
             <tr key={item.id} className={item.parentEinsatzEinheitId ? 'split-row' : undefined}>
-              <td>
-                <TaktischesZeichenEinheit organisation={item.organisation} />
+              <td className="tactical-sign-cell">
+                <TaktischesZeichenEinheit
+                  organisation={item.organisation}
+                  tacticalSignConfigJson={item.tacticalSignConfigJson}
+                />
               </td>
               <td>
                 <div className={item.parentEinsatzEinheitId ? 'split-name' : undefined}>
