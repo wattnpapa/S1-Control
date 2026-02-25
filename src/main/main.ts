@@ -149,4 +149,14 @@ process.on('uncaughtException', (error) => {
   dialog.showErrorBox('Unerwarteter Fehler im Main-Prozess', error?.stack || String(error));
 });
 
-void bootstrap();
+process.on('unhandledRejection', (reason) => {
+  const message = reason instanceof Error ? reason.stack || reason.message : String(reason);
+  dialog.showErrorBox('Unerwarteter Initialisierungsfehler', message);
+});
+
+void bootstrap().catch((error) => {
+  dialog.showErrorBox(
+    'Startfehler',
+    error instanceof Error ? error.stack || error.message : String(error),
+  );
+});
