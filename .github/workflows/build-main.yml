@@ -92,7 +92,8 @@ jobs:
           npm run typecheck
           npm run build:renderer
           npm run build:main
-          npx electron-builder --win --x64 -c.win.target=portable -c.win.target=nsis --publish never
+          npx electron-builder --win --x64 --config.win.target=portable --publish never
+          npx electron-builder --win --x64 --config.win.target=nsis --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -102,12 +103,46 @@ jobs:
             dist/*.exe
             dist/*.blockmap
 
+  build-linux:
+    runs-on: ubuntu-latest
+    needs: prepare
+    env:
+      NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Linux artifacts
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run build:renderer
+          npm run build:main
+          npx electron-builder --linux --x64 --config.linux.target=deb --publish never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: s1-control-linux-${{ env.NATO_VERSION }}
+          path: |
+            dist/*.deb
+
   release:
     runs-on: ubuntu-latest
     needs:
       - prepare
       - build-mac
       - build-win
+      - build-linux
     steps:
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
@@ -121,6 +156,12 @@ jobs:
           name: s1-control-win-${{ needs.prepare.outputs.nato_version }}
           path: artifacts/win
 
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: s1-control-linux-${{ needs.prepare.outputs.nato_version }}
+          path: artifacts/linux
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -129,3 +170,4 @@ jobs:
           files: |
             artifacts/mac/*
             artifacts/win/*
+            artifacts/linux/*

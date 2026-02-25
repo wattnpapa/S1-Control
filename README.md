@@ -34,11 +34,12 @@ Standard-Login: `admin` / `admin`
 - `npm run build:win:zip`: Windows ZIP-Paket (x64)
 - `npm run build:win:exe`: Windows Installer als `.exe` (NSIS, x64)
 - `npm run build:win:portable`: Portable `.exe` ohne Installation (x64)
+- `npm run build:linux:deb`: Linux `.deb` Paket (x64)
   - Hinweis: Mit `better-sqlite3` funktioniert das zuverlässig auf einem Windows-Host (oder via GitHub Actions `build-main.yml`), nicht als nativer Cross-Build von macOS.
 
 ## CI/CD
 
-- Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS- und Windows-Artefakte.
+- Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS-, Windows- und Linux-Artefakte.
 - Die Release-Tag/Versionskennung wird als NATO-Zeit erzeugt: `DDHHMMSSZMONYY` (UTC), z.B. `25153045ZFEB26`.
 - Workflow: `.github/workflows/build-main.yml`
 

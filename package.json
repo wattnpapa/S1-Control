@@ -16,9 +16,10 @@
     "dev:electron": "wait-on tcp:5173 file:dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .",
     "build": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --dir",
     "build:win": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --dir",
-    "build:win:zip": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 -c.win.target=zip",
-    "build:win:exe": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 -c.win.target=nsis",
-    "build:win:portable": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 -c.win.target=portable",
+    "build:win:zip": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=zip",
+    "build:win:exe": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=nsis",
+    "build:win:portable": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=portable",
+    "build:linux:deb": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --linux --x64 --config.linux.target=deb",
     "build:renderer": "vite build",
     "build:main": "tsup src/main/main.ts src/main/preload.ts --format cjs --out-dir dist-electron --clean --external electron",
     "typecheck": "tsc --noEmit",
@@ -35,6 +36,10 @@
     "win": {
       "icon": "assets/branding/app.ico",
       "target": "nsis"
+    },
+    "linux": {
+      "target": "deb",
+      "category": "Utility"
     },
     "files": [
       "dist-electron/**/*",
