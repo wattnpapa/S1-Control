@@ -75,13 +75,22 @@ export function login(ctx: DbContext, name: string, passwort: string): SessionUs
   };
 }
 
-export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): void {
-  const existing = ctx.db.select().from(benutzer).where(eq(benutzer.id, user.id)).get();
-  if (existing) {
-    return;
+export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): SessionUser {
+  const existingById = ctx.db.select().from(benutzer).where(eq(benutzer.id, user.id)).get();
+  if (existingById) {
+    return user;
   }
 
-  // Keep session user ID available for FK references in command log entries.
+  const existingByName = ctx.db.select().from(benutzer).where(eq(benutzer.name, user.name)).get();
+  if (existingByName) {
+    return {
+      id: existingByName.id,
+      name: existingByName.name,
+      rolle: existingByName.rolle as BenutzerRolle,
+    };
+  }
+
+  // Keep session user available for FK references in command log entries.
   ctx.db.insert(benutzer).values({
     id: user.id,
     name: user.name,
@@ -89,4 +98,5 @@ export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): void
     passwortHash: hashPassword(crypto.randomUUID()),
     aktiv: true,
   }).run();
+  return user;
 }

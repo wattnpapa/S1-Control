@@ -44,7 +44,12 @@ export function registerIpc(state: AppState): void {
       try {
         return await handler(...args);
       } catch (error) {
-        throw toSafeError(error);
+        const safe = toSafeError(error);
+        const wrapped = new Error(safe.message);
+        if (safe.code) {
+          (wrapped as Error & { code?: string }).code = safe.code;
+        }
+        throw wrapped;
       }
     };
   };
@@ -116,7 +121,8 @@ export function registerIpc(state: AppState): void {
       }
       const nextContext = openDatabaseWithRetry(dbPath);
       ensureDefaultAdmin(nextContext);
-      ensureSessionUserRecord(nextContext, user);
+      const dbUser = ensureSessionUserRecord(nextContext, user);
+      state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.backupCoordinator.start(nextContext);
       return true;
@@ -128,6 +134,8 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['createEinsatz']>[0]) => {
       const user = requireUser();
       const created = createEinsatzInOwnDatabase(getBaseDir(), input, user);
+      const dbUser = ensureSessionUserRecord(created.ctx, user);
+      state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.backupCoordinator.start(created.ctx);
       return created.einsatz;
@@ -240,7 +248,8 @@ export function registerIpc(state: AppState): void {
       await state.backupCoordinator.restoreBackup(dbPath, selected);
       const nextContext = openDatabaseWithRetry(dbPath);
       ensureDefaultAdmin(nextContext);
-      ensureSessionUserRecord(nextContext, user);
+      const dbUser = ensureSessionUserRecord(nextContext, user);
+      state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.backupCoordinator.start(nextContext);
       return true;

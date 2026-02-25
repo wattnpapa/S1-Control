@@ -90,4 +90,3 @@ export function createEinsatzInOwnDatabase(
   const einsatz = createEinsatz(ctx, input);
   return { einsatz, ctx };
 }
-
