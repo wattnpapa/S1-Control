@@ -125,10 +125,6 @@ export function App() {
       )}
       {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
       {updaterState.stage === 'unsupported' && <div className="banner">{updaterState.message}</div>}
-      <div className="banner">
-        Update-Debug: Status `{updaterState.stage}` | Lokal `{updaterState.currentVersion ?? '-'}` | GitHub
-        `{updaterState.latestVersion ?? '-'}` | Letzte Prüfung `{updaterState.lastCheckedAt ?? '-'}`
-      </div>
     </>
   );
 
