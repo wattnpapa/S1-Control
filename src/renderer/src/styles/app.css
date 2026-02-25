@@ -756,8 +756,8 @@ td.tactical-sign-cell {
 }
 
 .strength-display-value {
-  width: 100%;
-  max-width: 100%;
+  width: 95%;
+  max-width: 95%;
   font-size: min(24vw, 36vh);
   font-weight: 800;
   line-height: 0.9;
@@ -768,8 +768,8 @@ td.tactical-sign-cell {
 }
 
 .strength-display-time {
-  width: 100%;
-  max-width: 100%;
+  width: 95%;
+  max-width: 95%;
   font-size: min(13vw, 22vh);
   font-weight: 800;
   letter-spacing: 0.05em;
