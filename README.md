@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 
-Standard-Login: `admin` / `admin`
+Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (`admin`).
 
 ## Wichtige Skripte
 
@@ -43,6 +43,13 @@ Standard-Login: `admin` / `admin`
 - Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS-, Windows- und Linux-Artefakte.
 - Die Release-Tag/Versionskennung wird als NATO-Zeit ohne Zeitzonenangabe erzeugt: `DDHHMMmonYY`, z.B. `251530feb26`.
 - Workflow: `.github/workflows/build-main.yml`
+- macOS-Artefakte werden mit **Developer ID Application** signiert und notarisiert.
+- Benötigte GitHub Secrets für macOS-Signing/Notarisierung:
+  - `CSC_LINK` (Base64 der `.p12` Developer-ID-Zertifikatsdatei)
+  - `CSC_KEY_PASSWORD` (Passwort der `.p12`)
+  - `APPLE_API_KEY_ID` (App Store Connect API Key ID)
+  - `APPLE_API_ISSUER` (App Store Connect Issuer ID)
+  - `APPLE_API_KEY_BASE64` (Base64-Inhalt der `AuthKey_*.p8`)
 
 ## Auto-Update
 

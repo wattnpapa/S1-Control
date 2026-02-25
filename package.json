@@ -32,7 +32,9 @@
     "appId": "de.thw.s1control",
     "productName": "S1-Control",
     "mac": {
-      "icon": "assets/branding/app.icns"
+      "icon": "assets/branding/app.icns",
+      "hardenedRuntime": true,
+      "notarize": true
     },
     "win": {
       "icon": "assets/branding/app.ico",
