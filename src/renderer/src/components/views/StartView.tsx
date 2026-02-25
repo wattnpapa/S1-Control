@@ -14,13 +14,18 @@ interface StartViewProps {
   setStartNewFuestName: (value: string) => void;
   onOpenExisting: () => void;
   onCreate: () => void;
-  onLogout: () => void;
 }
 
 export function StartView(props: StartViewProps): JSX.Element {
   return (
     <div className="login-page">
       <div className="panel start-screen-panel">
+        <div className="login-header">
+          <span className="login-logo-wrap">
+            <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
+          </span>
+          <h1 className="login-title">S1-Control</h1>
+        </div>
         <h1>Startbildschirm</h1>
         <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
 
@@ -77,8 +82,6 @@ export function StartView(props: StartViewProps): JSX.Element {
             </button>
           </div>
         )}
-
-        <button onClick={props.onLogout}>Abmelden</button>
 
         {props.error && <p className="error">{props.error}</p>}
       </div>

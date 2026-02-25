@@ -12,7 +12,6 @@ import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOve
 import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
 import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
 import { FuehrungsstrukturView } from '@renderer/components/views/FuehrungsstrukturView';
-import { LoginView } from '@renderer/components/views/LoginView';
 import { SettingsView } from '@renderer/components/views/SettingsView';
 import { StartView } from '@renderer/components/views/StartView';
 import type {
@@ -34,8 +33,7 @@ const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
 
 export function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
-  const [loginName, setLoginName] = useState('admin');
-  const [loginPasswort, setLoginPasswort] = useState('admin');
+  const [authReady, setAuthReady] = useState(false);
 
   const [dbPath, setDbPath] = useState('');
   const [einsaetze, setEinsaetze] = useState<EinsatzListItem[]>([]);
@@ -220,19 +218,25 @@ export function App() {
   useEffect(() => {
     void (async () => {
       try {
-        const [currentSession, settings] = await Promise.all([
-          window.api.getSession(),
-          window.api.getSettings(),
-        ]);
-        setSession(currentSession);
+        const [currentSession, settings] = await Promise.all([window.api.getSession(), window.api.getSettings()]);
         setDbPath(settings.dbPath);
         setUpdaterState(await window.api.getUpdaterState());
         void window.api.checkForUpdates();
         if (currentSession) {
+          setSession(currentSession);
+        } else {
+          const autoSession = await window.api.login({ name: 'admin', passwort: 'admin' });
+          setSession(autoSession);
+        }
+        if (currentSession) {
+          await refreshEinsaetze();
+        } else {
           await refreshEinsaetze();
         }
       } catch (err) {
         setError(readError(err));
+      } finally {
+        setAuthReady(true);
       }
     })();
     // initial load only
@@ -290,16 +294,6 @@ export function App() {
     } finally {
       setBusy(false);
     }
-  };
-
-  const doLogin = async () => {
-    await withBusy(async () => {
-      const next = await window.api.login({ name: loginName, passwort: loginPasswort });
-      setSession(next);
-      clearSelectedEinsatz();
-      setStartChoice('none');
-      await refreshEinsaetze();
-    });
   };
 
   const doStartOpenExisting = async () => {
@@ -530,14 +524,6 @@ export function App() {
     });
   };
 
-  const doLogout = () => {
-    void window.api.logout();
-    setSession(null);
-    clearSelectedEinsatz();
-    setStartChoice('none');
-    setActiveView('einsatz');
-  };
-
   const doDownloadUpdate = async () => {
     await withBusy(async () => {
       await window.api.downloadUpdate();
@@ -550,19 +536,42 @@ export function App() {
     });
   };
 
+  if (!authReady) {
+    return (
+      <>
+        {renderUpdaterNotices()}
+        <div className="login-page">
+          <div className="panel start-screen-panel">
+            <div className="login-header">
+              <span className="login-logo-wrap">
+                <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
+              </span>
+              <h1 className="login-title">S1-Control</h1>
+            </div>
+            <p className="hint">Initialisiere Anwendung …</p>
+            {error && <p className="error">{error}</p>}
+          </div>
+        </div>
+        {renderUpdaterOverlay()}
+      </>
+    );
+  }
+
   if (!session) {
     return (
       <>
         {renderUpdaterNotices()}
-        <LoginView
-          loginName={loginName}
-          loginPasswort={loginPasswort}
-          busy={busy}
-          error={error}
-          onChangeName={setLoginName}
-          onChangePasswort={setLoginPasswort}
-          onLogin={() => void doLogin()}
-        />
+        <div className="login-page">
+          <div className="panel start-screen-panel">
+            <div className="login-header">
+              <span className="login-logo-wrap">
+                <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
+              </span>
+              <h1 className="login-title">S1-Control</h1>
+            </div>
+            <p className="error">{error || 'Automatische Anmeldung fehlgeschlagen.'}</p>
+          </div>
+        </div>
         {renderUpdaterOverlay()}
       </>
     );
@@ -586,7 +595,6 @@ export function App() {
           setStartNewFuestName={setStartNewFuestName}
           onOpenExisting={() => void doStartOpenExisting()}
           onCreate={() => void doStartCreateEinsatz()}
-          onLogout={doLogout}
         />
         {renderUpdaterOverlay()}
       </>
@@ -604,7 +612,6 @@ export function App() {
         isArchived={isArchived ?? false}
         selectedEinsatzId={selectedEinsatzId}
         onUndo={() => void doUndo()}
-        onLogout={doLogout}
       />
 
       {renderUpdaterNotices()}

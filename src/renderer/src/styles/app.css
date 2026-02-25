@@ -74,6 +74,35 @@ select {
   box-shadow: 0 16px 42px rgba(20, 28, 45, 0.12);
 }
 
+.login-header {
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+}
+
+.login-title {
+  margin: 0;
+  text-align: center;
+}
+
+.login-logo-wrap {
+  width: 66px;
+  height: 66px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.96);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.15);
+}
+
+.login-logo {
+  width: 54px;
+  height: 54px;
+  object-fit: contain;
+  display: block;
+}
+
 .start-screen-panel {
   width: min(680px, 90vw);
 }

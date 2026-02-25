@@ -12,14 +12,17 @@ function toNatoVersionTag(date) {
 
 const version = process.env.S1_APP_VERSION || toNatoVersionTag(new Date());
 const args = process.argv.slice(2);
-const versionConfigArgs = [
-  `--config.mac.extendInfo.CFBundleShortVersionString=${version}`,
-  `--config.mac.extendInfo.CFBundleVersion=${version}`,
-];
+const targetsMac = args.some((arg) => arg === '--mac' || arg.startsWith('--mac='));
+const versionConfigArgs = targetsMac
+  ? [
+      `--config.mac.extendInfo.CFBundleShortVersionString=${version}`,
+      `--config.mac.extendInfo.CFBundleVersion=${version}`,
+    ]
+  : [];
 
 const result = spawnSync(
-  process.platform === 'win32' ? 'npx.cmd' : 'npx',
-  ['electron-builder', ...args, ...versionConfigArgs],
+  process.platform === 'win32' ? 'npm.cmd' : 'npm',
+  ['exec', 'electron-builder', '--', ...args, ...versionConfigArgs],
   {
     stdio: 'inherit',
     env: {
@@ -28,5 +31,9 @@ const result = spawnSync(
     },
   },
 );
+
+if (result.error) {
+  console.error(result.error);
+}
 
 process.exit(result.status ?? 1);

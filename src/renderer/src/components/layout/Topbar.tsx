@@ -11,7 +11,6 @@ interface TopbarProps {
   isArchived: boolean;
   selectedEinsatzId: string;
   onUndo: () => void;
-  onLogout: () => void;
 }
 
 export function Topbar(props: TopbarProps): JSX.Element {
@@ -34,7 +33,6 @@ export function Topbar(props: TopbarProps): JSX.Element {
         >
           Undo
         </button>
-        <button onClick={props.onLogout}>Abmelden</button>
       </div>
     </header>
   );

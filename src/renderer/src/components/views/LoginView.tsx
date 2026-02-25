@@ -12,7 +12,12 @@ export function LoginView(props: LoginViewProps): JSX.Element {
   return (
     <div className="login-page">
       <div className="panel">
-        <h1>S1 Control Login</h1>
+        <div className="login-header">
+          <span className="login-logo-wrap">
+            <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
+          </span>
+          <h1 className="login-title">S1-Control Login</h1>
+        </div>
         <label>
           Benutzer
           <input value={props.loginName} onChange={(e) => props.onChangeName(e.target.value)} />
