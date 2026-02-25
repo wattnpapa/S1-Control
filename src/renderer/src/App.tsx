@@ -32,6 +32,7 @@ import { parseTaktischeStaerke } from '@renderer/utils/tactical';
 const EMPTY_DETAILS: AbschnittDetails = { einheiten: [], fahrzeuge: [] };
 const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 };
 const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
+const RELEASES_URL = 'https://github.com/wattnpapa/S1-Control/releases/latest';
 
 export function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
@@ -110,9 +111,14 @@ export function App() {
       {updaterState.stage === 'available' && (
         <div className="update-banner">
           Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}.
-          <button onClick={() => void doDownloadUpdate()} disabled={busy}>
-            Update herunterladen
-          </button>
+          <div className="update-actions">
+            <button onClick={() => void doDownloadUpdate()} disabled={busy}>
+              Update herunterladen
+            </button>
+            <button onClick={() => void doOpenReleasePage()} disabled={busy}>
+              Release-Seite öffnen
+            </button>
+          </div>
         </div>
       )}
       {updaterState.stage === 'downloaded' && (
@@ -124,7 +130,14 @@ export function App() {
         </div>
       )}
       {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
-      {updaterState.stage === 'unsupported' && <div className="banner">{updaterState.message}</div>}
+      {updaterState.stage === 'unsupported' && (
+        <div className="update-banner">
+          <span>{updaterState.message}</span>
+          <button onClick={() => void doOpenReleasePage()} disabled={busy}>
+            Release-Seite öffnen
+          </button>
+        </div>
+      )}
     </>
   );
 
@@ -571,6 +584,12 @@ export function App() {
   const doInstallUpdate = async () => {
     await withBusy(async () => {
       await window.api.installDownloadedUpdate();
+    });
+  };
+
+  const doOpenReleasePage = async () => {
+    await withBusy(async () => {
+      await window.api.openExternalUrl(RELEASES_URL);
     });
   };
 

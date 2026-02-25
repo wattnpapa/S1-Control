@@ -97,6 +97,7 @@ export interface RendererApi {
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installDownloadedUpdate(): Promise<void>;
+  openExternalUrl(url: string): Promise<void>;
 }
 
 export const IPC_CHANNEL = {
@@ -128,4 +129,5 @@ export const IPC_CHANNEL = {
   DOWNLOAD_UPDATE: 'updater:download',
   INSTALL_UPDATE: 'updater:install',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
+  OPEN_EXTERNAL_URL: 'app:open-external-url',
 } as const;

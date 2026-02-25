@@ -30,6 +30,7 @@ const api: RendererApi = {
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
+  openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
 };
 
 contextBridge.exposeInMainWorld('api', api);

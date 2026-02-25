@@ -233,6 +233,11 @@ select {
   gap: 12px;
 }
 
+.update-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .banner {
   background: #fff6d6;
 }

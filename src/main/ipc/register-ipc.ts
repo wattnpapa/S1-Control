@@ -1,5 +1,5 @@
 import path from 'node:path';
-import { dialog, ipcMain } from 'electron';
+import { dialog, ipcMain, shell } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
 import type { SessionUser } from '../../shared/types';
 import type { DbContext } from '../db/connection';
@@ -362,6 +362,16 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.INSTALL_UPDATE,
     wrap(async () => {
       state.updater.installDownloadedUpdate();
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_EXTERNAL_URL,
+    wrap(async (url: string) => {
+      if (!/^https:\/\//i.test(url)) {
+        throw new Error('Nur HTTPS-URLs sind erlaubt.');
+      }
+      await shell.openExternal(url);
     }),
   );
 }
