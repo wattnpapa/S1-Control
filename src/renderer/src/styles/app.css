@@ -548,6 +548,24 @@ th {
   color: #123f78;
 }
 
+.tactical-sign-badge {
+  --org-color: #4b5566;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid color-mix(in srgb, var(--org-color) 45%, #a9b4c9);
+  background: color-mix(in srgb, var(--org-color) 15%, #ffffff);
+}
+
+.tactical-sign {
+  width: 28px;
+  height: 20px;
+  display: block;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

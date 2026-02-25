@@ -1,6 +1,6 @@
 import { prettyOrganisation } from '@renderer/constants/organisation';
+import { TaktischesZeichenEinheit } from '@renderer/components/common/TaktischesZeichenEinheit';
 import type { KraftOverviewItem } from '@renderer/types/ui';
-import { iconPath } from '@renderer/utils/assets';
 
 interface KraefteOverviewTableProps {
   einheiten: KraftOverviewItem[];
@@ -31,7 +31,7 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
           {props.einheiten.map((item) => (
             <tr key={item.id} className={item.parentEinsatzEinheitId ? 'split-row' : undefined}>
               <td>
-                <img src={iconPath('einheit', item.piktogrammKey)} alt="einheit" className="icon" />
+                <TaktischesZeichenEinheit organisation={item.organisation} />
               </td>
               <td>
                 <div className={item.parentEinsatzEinheitId ? 'split-name' : undefined}>
