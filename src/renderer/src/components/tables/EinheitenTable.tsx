@@ -21,7 +21,7 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
             <th></th>
             <th>Name</th>
             <th>Organisation</th>
-            <th>Staerke (taktisch)</th>
+            <th>Stärke (taktisch)</th>
             <th>Status</th>
             <th>Aktion</th>
           </tr>

@@ -14,7 +14,7 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
 
   return (
     <>
-      <h2>Alle Kraefte im Einsatz</h2>
+      <h2>Alle Kräfte im Einsatz</h2>
       <table>
         <thead>
           <tr>
@@ -22,7 +22,7 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
             <th>Name</th>
             <th>Organisation</th>
             <th>Abschnitt</th>
-            <th>Staerke (taktisch)</th>
+            <th>Stärke (taktisch)</th>
             <th>Status</th>
             <th>Aktion</th>
           </tr>

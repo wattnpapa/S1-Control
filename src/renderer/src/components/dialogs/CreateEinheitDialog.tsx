@@ -44,7 +44,7 @@ export function CreateEinheitDialog(props: CreateEinheitDialogProps): JSX.Elemen
           </select>
         </label>
         <label>
-          Fuehrung
+          Führung
           <input
             type="number"
             min={0}
@@ -53,7 +53,7 @@ export function CreateEinheitDialog(props: CreateEinheitDialogProps): JSX.Elemen
           />
         </label>
         <label>
-          Unterfuehrung
+          Unterführung
           <input
             type="number"
             min={0}

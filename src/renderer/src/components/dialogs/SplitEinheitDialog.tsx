@@ -28,7 +28,7 @@ export function SplitEinheitDialog(props: SplitEinheitDialogProps): JSX.Element 
             value={props.form.sourceEinheitId}
             onChange={(e) => props.onChange({ ...props.form, sourceEinheitId: e.target.value })}
           >
-            <option value="">Bitte waehlen</option>
+            <option value="">Bitte wählen</option>
             {props.allKraefte.map((einheit) => (
               <option key={einheit.id} value={einheit.id}>
                 {einheit.nameImEinsatz} ({einheit.abschnittName}) [
@@ -58,7 +58,7 @@ export function SplitEinheitDialog(props: SplitEinheitDialogProps): JSX.Element 
           </select>
         </label>
         <label>
-          Fuehrung
+          Führung
           <input
             type="number"
             min={0}
@@ -67,7 +67,7 @@ export function SplitEinheitDialog(props: SplitEinheitDialogProps): JSX.Element 
           />
         </label>
         <label>
-          Unterfuehrung
+          Unterführung
           <input
             type="number"
             min={0}

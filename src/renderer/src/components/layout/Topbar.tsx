@@ -24,7 +24,7 @@ export function Topbar(props: TopbarProps): JSX.Element {
         <span>S1-Control - {props.einsatzName}</span>
       </h1>
       <div className="topbar-meta">
-        <span>Staerke: {toTaktischeStaerke(props.gesamtStaerke)}</span>
+        <span>Stärke: {toTaktischeStaerke(props.gesamtStaerke)}</span>
         <span>{toNatoDateTime(props.now)}</span>
       </div>
       <div className="topbar-actions">

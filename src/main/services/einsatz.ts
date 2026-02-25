@@ -210,19 +210,19 @@ export function createEinheit(
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
   if (!ORGANISATIONS.includes(input.organisation)) {
-    throw new AppError('Organisation ist ungueltig', 'VALIDATION');
+    throw new AppError('Organisation ist ungültig', 'VALIDATION');
   }
   if (input.aktuelleStaerke < 0) {
-    throw new AppError('Staerke muss >= 0 sein', 'VALIDATION');
+    throw new AppError('Stärke muss >= 0 sein', 'VALIDATION');
   }
   if (input.aktuelleStaerkeTaktisch) {
     const parts = input.aktuelleStaerkeTaktisch.split('/').map((p) => Number(p));
     if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0)) {
-      throw new AppError('Taktische Staerke ist ungueltig', 'VALIDATION');
+      throw new AppError('Taktische Stärke ist ungültig', 'VALIDATION');
     }
     const calculated = (parts[0] ?? 0) + (parts[1] ?? 0) + (parts[2] ?? 0);
     if ((parts[3] ?? 0) !== calculated || input.aktuelleStaerke !== calculated) {
-      throw new AppError('Taktische Staerke und Gesamtstaerke sind inkonsistent', 'VALIDATION');
+      throw new AppError('Taktische Stärke und Gesamtstärke sind inkonsistent', 'VALIDATION');
     }
   }
 
@@ -321,7 +321,7 @@ export function splitEinheit(
     throw new AppError('Name der Teileinheit ist erforderlich', 'VALIDATION');
   }
   if (input.fuehrung < 0 || input.unterfuehrung < 0 || input.mannschaft < 0) {
-    throw new AppError('Split-Staerke muss >= 0 sein', 'VALIDATION');
+    throw new AppError('Split-Stärke muss >= 0 sein', 'VALIDATION');
   }
 
   ctx.db.transaction((tx) => {
@@ -337,12 +337,12 @@ export function splitEinheit(
 
     const splitGesamt = input.fuehrung + input.unterfuehrung + input.mannschaft;
     if (splitGesamt <= 0) {
-      throw new AppError('Split-Staerke muss groesser 0 sein', 'VALIDATION');
+      throw new AppError('Split-Stärke muss größer 0 sein', 'VALIDATION');
     }
 
     const [srcF, srcUf, srcM] = parseTaktisch(source.aktuelleStaerkeTaktisch, source.aktuelleStaerke);
     if (input.fuehrung > srcF || input.unterfuehrung > srcUf || input.mannschaft > srcM) {
-      throw new AppError('Split uebersteigt verfuegbare Teilstaerken der Quell-Einheit', 'VALIDATION');
+      throw new AppError('Split übersteigt verfügbare Teilstärken der Quell-Einheit', 'VALIDATION');
     }
 
     const newSourceF = srcF - input.fuehrung;
@@ -360,7 +360,7 @@ export function splitEinheit(
 
     const organisation = input.organisation ?? (source.organisation as EinheitListItem['organisation']);
     if (!ORGANISATIONS.includes(organisation)) {
-      throw new AppError('Organisation ist ungueltig', 'VALIDATION');
+      throw new AppError('Organisation ist ungültig', 'VALIDATION');
     }
 
     tx.insert(einsatzEinheit)

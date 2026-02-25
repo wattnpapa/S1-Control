@@ -22,11 +22,11 @@ export function StartView(props: StartViewProps): JSX.Element {
     <div className="login-page">
       <div className="panel start-screen-panel">
         <h1>Startbildschirm</h1>
-        <p className="hint">Moechtest du einen bestehenden Einsatz oeffnen oder einen neuen anlegen?</p>
+        <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
 
         <div className="start-options">
           <button onClick={() => props.setStartChoice('open')} disabled={props.busy}>
-            Bestehenden Einsatz oeffnen
+            Bestehenden Einsatz öffnen
           </button>
           <button onClick={() => props.setStartChoice('create')} disabled={props.busy}>
             Neuen Einsatz anlegen
@@ -50,10 +50,10 @@ export function StartView(props: StartViewProps): JSX.Element {
               </select>
             </label>
             <button onClick={props.onOpenExisting} disabled={props.busy || !props.startOpenEinsatzId}>
-              Einsatz oeffnen
+              Einsatz öffnen
             </button>
             {props.einsaetze.length === 0 && (
-              <p className="hint">Noch keine Einsaetze vorhanden. Bitte neuen Einsatz anlegen.</p>
+              <p className="hint">Noch keine Einsätze vorhanden. Bitte neuen Einsatz anlegen.</p>
             )}
           </div>
         )}
@@ -69,11 +69,11 @@ export function StartView(props: StartViewProps): JSX.Element {
               />
             </label>
             <label>
-              FueSt Name
+              FüSt Name
               <input value={props.startNewFuestName} onChange={(e) => props.setStartNewFuestName(e.target.value)} />
             </label>
             <button onClick={props.onCreate} disabled={props.busy || !props.startNewEinsatzName.trim()}>
-              Einsatz anlegen und oeffnen
+              Einsatz anlegen und öffnen
             </button>
           </div>
         )}

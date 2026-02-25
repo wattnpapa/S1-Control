@@ -30,7 +30,7 @@ async function bootstrap(): Promise<void> {
       return openDatabaseWithRetry(configuredPath);
     } catch (initialError) {
       const initialMessage = initialError instanceof Error ? initialError.message : String(initialError);
-      startupWarning = `Konfigurierter DB-Pfad konnte nicht geoeffnet werden (${configuredPath}).\n${initialMessage}`;
+      startupWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${configuredPath}).\n${initialMessage}`;
 
       try {
         settingsStore.set({ dbPath: defaultDbPath });
@@ -38,7 +38,7 @@ async function bootstrap(): Promise<void> {
       } catch (fallbackError) {
         const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
         const tempPath = path.join(app.getPath('temp'), 's1-control-fallback.sqlite');
-        startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultDbPath}).\n${fallbackMessage}\nEs wird eine temporaere DB genutzt (${tempPath}).`;
+        startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`;
         return openDatabaseWithRetry(tempPath);
       }
     }

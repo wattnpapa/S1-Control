@@ -56,7 +56,7 @@ export function CreateFahrzeugDialog(props: CreateFahrzeugDialogProps): JSX.Elem
             onChange={(e) => props.onChange({ ...props.form, einheitId: e.target.value })}
             disabled={props.allKraefte.length === 0}
           >
-            <option value="">Bitte waehlen</option>
+            <option value="">Bitte wählen</option>
             {props.allKraefte.map((einheit) => (
               <option key={einheit.id} value={einheit.id}>
                 {einheit.nameImEinsatz} ({einheit.abschnittName})

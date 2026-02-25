@@ -15,7 +15,7 @@ interface EinsatzOverviewViewProps {
 export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Element {
   return (
     <>
-      <h2>Einsatz Uebersicht</h2>
+      <h2>Einsatz Übersicht</h2>
       <div className="summary-grid">
         <div className="summary-card">
           <p>Einheiten im Abschnitt</p>

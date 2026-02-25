@@ -65,7 +65,7 @@ export function login(ctx: DbContext, name: string, passwort: string): SessionUs
   }
 
   if (!verifyPassword(passwort, row.passwortHash)) {
-    throw new AppError('Passwort ist ungueltig', 'AUTH_FAILED');
+    throw new AppError('Passwort ist ungültig', 'AUTH_FAILED');
   }
 
   return {

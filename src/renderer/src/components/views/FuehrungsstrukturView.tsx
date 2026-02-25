@@ -86,7 +86,7 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
                   <span>{node.systemTyp}</span>
                 </header>
                 <p>
-                  Fuehrungsstaerke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
+                  Führungsstärke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
                 </p>
                 <p>
                   Einheiten gesamt: <strong>{stats.taktisch.gesamt}</strong>
@@ -113,8 +113,8 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
 
   return (
     <div className="fuehrung-view">
-      <h2>Fuehrungsstruktur und Organisation</h2>
-      <p>Hierarchische Sicht auf Abschnitte mit aggregierter Fuehrungsstaerke und Organisationen.</p>
+      <h2>Führungsstruktur und Organisation</h2>
+      <p>Hierarchische Sicht auf Abschnitte mit aggregierter Führungsstärke und Organisationen.</p>
       {renderNodes(null)}
     </div>
   );

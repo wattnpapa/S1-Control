@@ -29,7 +29,7 @@ export function MoveDialog(props: MoveDialogProps): JSX.Element | null {
         </select>
         <div className="modal-actions">
           <button onClick={props.onConfirm} disabled={!props.moveTarget || props.isArchived}>
-            Bestaetigen
+            Bestätigen
           </button>
           <button onClick={props.onClose}>Abbrechen</button>
         </div>

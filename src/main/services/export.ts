@@ -96,10 +96,10 @@ export async function exportEinsatzakte(
 </head>
 <body>
   <h1>Einsatzakte: ${escapeHtml(einsatzRow.name)}</h1>
-  <p>FueSt: ${escapeHtml(einsatzRow.fuestName)} | Status: ${escapeHtml(einsatzRow.status)}</p>
-  <h2>Kraefteuebersicht Einheiten</h2>
+  <p>FüSt: ${escapeHtml(einsatzRow.fuestName)} | Status: ${escapeHtml(einsatzRow.status)}</p>
+  <h2>Kräfteübersicht Einheiten</h2>
   <table>
-    <thead><tr><th>Name</th><th>Organisation</th><th>Staerke</th><th>Staerke taktisch</th><th>Status</th><th>Abschnitt</th></tr></thead>
+    <thead><tr><th>Name</th><th>Organisation</th><th>Stärke</th><th>Stärke taktisch</th><th>Status</th><th>Abschnitt</th></tr></thead>
     <tbody>
       ${einheiten
         .map(

@@ -17,14 +17,14 @@ export function WorkspaceRail(props: WorkspaceRailProps): JSX.Element {
       </button>
       <button
         className={props.activeView === 'fuehrung' ? 'rail-button active' : 'rail-button'}
-        title="Fuehrungsstruktur"
+        title="Führungsstruktur"
         onClick={() => props.onSelect('fuehrung')}
       >
         G
       </button>
       <button
         className={props.activeView === 'kraefte' ? 'rail-button active' : 'rail-button'}
-        title="Kraefte"
+        title="Kräfte"
         onClick={() => props.onSelect('kraefte')}
       >
         K

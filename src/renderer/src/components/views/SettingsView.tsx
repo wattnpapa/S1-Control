@@ -17,7 +17,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         DB-Pfad speichern
       </button>
       <p>
-        Hinweis: Bei Aenderung wird die Datenbank neu verbunden. Bei Fehlern erfolgt Fallback auf lokale sichere
+        Hinweis: Bei Änderung wird die Datenbank neu verbunden. Bei Fehlern erfolgt Fallback auf lokale sichere
         Pfade.
       </p>
     </div>

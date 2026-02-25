@@ -84,7 +84,7 @@ export function App() {
   const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('none');
   const [startOpenEinsatzId, setStartOpenEinsatzId] = useState('');
   const [startNewEinsatzName, setStartNewEinsatzName] = useState('');
-  const [startNewFuestName, setStartNewFuestName] = useState('FueSt 1');
+  const [startNewFuestName, setStartNewFuestName] = useState('FüSt 1');
 
   const [activeView, setActiveView] = useState<WorkspaceView>('einsatz');
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
@@ -273,7 +273,7 @@ export function App() {
     await withBusy(async () => {
       const created = await window.api.createEinsatz({
         name: startNewEinsatzName.trim(),
-        fuestName: startNewFuestName.trim() || 'FueSt 1',
+        fuestName: startNewFuestName.trim() || 'FüSt 1',
       });
       setStartNewEinsatzName('');
       await refreshEinsaetze();
@@ -304,7 +304,7 @@ export function App() {
       return;
     }
     if (!createEinheitForm.abschnittId) {
-      setError('Bitte Abschnitt auswaehlen.');
+      setError('Bitte Abschnitt auswählen.');
       return;
     }
 
@@ -312,7 +312,7 @@ export function App() {
     const unterfuehrung = Number(createEinheitForm.unterfuehrung);
     const mannschaft = Number(createEinheitForm.mannschaft);
     if ([fuehrung, unterfuehrung, mannschaft].some((v) => Number.isNaN(v) || v < 0)) {
-      setError('Taktische Staerke muss aus Zahlen >= 0 bestehen.');
+      setError('Taktische Stärke muss aus Zahlen >= 0 bestehen.');
       return;
     }
 
@@ -356,7 +356,7 @@ export function App() {
       return;
     }
     if (!createFahrzeugForm.einheitId) {
-      setError('Bitte zugeordnete Einheit auswaehlen.');
+      setError('Bitte zugeordnete Einheit auswählen.');
       return;
     }
 
@@ -390,11 +390,11 @@ export function App() {
   const doSubmitSplitEinheit = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!splitEinheitForm.sourceEinheitId) {
-      setError('Bitte Quell-Einheit waehlen.');
+      setError('Bitte Quell-Einheit wählen.');
       return;
     }
     if (!splitEinheitForm.nameImEinsatz.trim()) {
-      setError('Bitte Namen fuer die Teileinheit eingeben.');
+      setError('Bitte Namen für die Teileinheit eingeben.');
       return;
     }
 
@@ -402,7 +402,7 @@ export function App() {
     const unterfuehrung = Number(splitEinheitForm.unterfuehrung);
     const mannschaft = Number(splitEinheitForm.mannschaft);
     if ([fuehrung, unterfuehrung, mannschaft].some((v) => Number.isNaN(v) || v < 0)) {
-      setError('Split-Staerke muss aus Zahlen >= 0 bestehen.');
+      setError('Split-Stärke muss aus Zahlen >= 0 bestehen.');
       return;
     }
 
@@ -518,7 +518,7 @@ export function App() {
         onLogout={doLogout}
       />
 
-      {isArchived && <div className="banner">Einsatz ist archiviert (read-only).</div>}
+      {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
       {error && <div className="error-banner">{error}</div>}
 
       <main className="content">

@@ -49,5 +49,5 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
   }
 
   const reason = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new Error(`Datenbank konnte nicht geoeffnet werden: ${reason}`);
+  throw new Error(`Datenbank konnte nicht geöffnet werden: ${reason}`);
 }

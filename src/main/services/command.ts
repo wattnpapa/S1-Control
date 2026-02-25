@@ -200,7 +200,7 @@ export function undoLastCommand(ctx: DbContext, einsatzId: string, user: Session
         })
         .run();
     } else {
-      throw new AppError('Undo fuer diesen Command-Typ noch nicht implementiert', 'UNSUPPORTED');
+      throw new AppError('Undo für diesen Command-Typ noch nicht implementiert', 'UNSUPPORTED');
     }
 
     tx.update(einsatzCommandLog).set({ undone: true }).where(eq(einsatzCommandLog.id, command.id)).run();
