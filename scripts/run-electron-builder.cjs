@@ -20,9 +20,11 @@ const versionConfigArgs = targetsMac
     ]
   : [];
 
+const electronBuilderCli = require.resolve('electron-builder/out/cli/cli.js');
+
 const result = spawnSync(
-  process.platform === 'win32' ? 'npm.cmd' : 'npm',
-  ['exec', 'electron-builder', '--', ...args, ...versionConfigArgs],
+  process.execPath,
+  [electronBuilderCli, ...args, ...versionConfigArgs],
   {
     stdio: 'inherit',
     env: {
