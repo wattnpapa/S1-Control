@@ -64,6 +64,19 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
     return result;
   };
 
+  const systemTypLabel = (systemTyp: AbschnittNode['systemTyp']): string => {
+    switch (systemTyp) {
+      case 'FUEST':
+        return 'FüSt';
+      case 'ANFAHRT':
+        return 'Anfahrt';
+      case 'LOGISTIK':
+        return 'Logistik';
+      default:
+        return 'Abschnitt';
+    }
+  };
+
   const renderNodes = (parentId: string | null): JSX.Element | null => {
     const nodes = byParent.get(parentId) ?? [];
     if (nodes.length === 0) {
@@ -71,39 +84,50 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
     }
 
     return (
-      <div className="fuehrung-level">
+      <div className="fuehr-org-children">
         {nodes.map((node) => {
           const stats = collectStats(node.id);
           const organisations = Array.from(stats.organisations.entries())
             .sort((a, b) => b[1] - a[1])
             .slice(0, 4);
+          const children = byParent.get(node.id) ?? [];
 
           return (
-            <div key={node.id} className="fuehrung-node-wrap">
-              <article className="fuehrung-node">
-                <header>
-                  <h3>{node.name}</h3>
-                  <span>{node.systemTyp}</span>
-                </header>
-                <p>
-                  Führungsstärke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
-                </p>
-                <p>
-                  Einheiten gesamt: <strong>{stats.taktisch.gesamt}</strong>
-                </p>
-                <div className="org-chips">
-                  {organisations.length > 0 ? (
-                    organisations.map(([org, count]) => (
-                      <span key={org} className="org-chip">
-                        {prettyOrganisation(org)} ({count})
-                      </span>
-                    ))
-                  ) : (
-                    <span className="org-chip">Keine Einheiten</span>
-                  )}
+            <div key={node.id} className="fuehr-org-child">
+              <div className="fuehr-org-node">
+                <article className={`fuehr-org-card ${node.systemTyp === 'FUEST' ? 'is-command' : ''}`}>
+                  <div className="fuehr-org-sign">{systemTypLabel(node.systemTyp)}</div>
+                  <div className="fuehr-org-body">
+                    <header>
+                      <h3>{node.name}</h3>
+                      <span>{node.systemTyp}</span>
+                    </header>
+                    <p>
+                      Führungsstärke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
+                    </p>
+                    <p>
+                      Einheiten gesamt: <strong>{stats.taktisch.gesamt}</strong>
+                    </p>
+                    <div className="org-chips">
+                      {organisations.length > 0 ? (
+                        organisations.map(([org, count]) => (
+                          <span key={org} className="org-chip">
+                            {prettyOrganisation(org)} ({count})
+                          </span>
+                        ))
+                      ) : (
+                        <span className="org-chip">Keine Einheiten</span>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              </div>
+              {children.length > 0 && (
+                <div className="fuehr-org-branch">
+                  <div className="fuehr-org-branch-down" />
+                  {renderNodes(node.id)}
                 </div>
-              </article>
-              {renderNodes(node.id)}
+              )}
             </div>
           );
         })}
@@ -114,8 +138,8 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
   return (
     <div className="fuehrung-view">
       <h2>Führungsstruktur und Organisation</h2>
-      <p>Hierarchische Sicht auf Abschnitte mit aggregierter Führungsstärke und Organisationen.</p>
-      {renderNodes(null)}
+      <p>Hierarchische Darstellung angelehnt an DV102 mit Führungsstärke und Organisationsanteilen.</p>
+      <div className="fuehr-org-canvas">{renderNodes(null)}</div>
     </div>
   );
 }

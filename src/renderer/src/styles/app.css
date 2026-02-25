@@ -407,29 +407,69 @@ select {
   color: var(--muted);
 }
 
-.fuehrung-level {
-  margin-left: 18px;
-  padding-left: 18px;
-  border-left: 2px solid #c9d6ef;
-  display: grid;
-  gap: 10px;
+.fuehr-org-canvas {
+  border: 1px solid #bfd0ec;
+  border-radius: 12px;
+  background: #f7f9ff;
+  padding: 14px;
+  overflow: auto;
 }
 
-.fuehrung-node-wrap {
-  display: grid;
-  gap: 8px;
+.fuehr-org-children {
+  display: flex;
+  justify-content: center;
+  gap: 24px;
+  position: relative;
 }
 
-.fuehrung-node {
+.fuehr-org-child {
+  display: grid;
+  justify-items: center;
+  min-width: 320px;
+  position: relative;
+}
+
+.fuehr-org-node {
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+.fuehr-org-card {
+  width: min(420px, 100%);
   border: 1px solid var(--border);
-  border-left: 4px solid var(--thw-blue);
   border-radius: 10px;
   background: #fff;
-  padding: 10px 12px;
+  display: grid;
+  grid-template-columns: 88px 1fr;
   box-shadow: 0 6px 16px rgba(20, 28, 45, 0.06);
+  overflow: hidden;
 }
 
-.fuehrung-node header {
+.fuehr-org-card.is-command .fuehr-org-sign {
+  background: #fff100;
+  color: #101010;
+}
+
+.fuehr-org-sign {
+  background: #e8eefc;
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+.fuehr-org-body {
+  padding: 10px 12px;
+}
+
+.fuehr-org-body header {
   display: flex;
   justify-content: space-between;
   align-items: baseline;
@@ -437,19 +477,59 @@ select {
   margin-bottom: 4px;
 }
 
-.fuehrung-node h3 {
+.fuehr-org-body h3 {
   margin: 0;
   font-size: 17px;
 }
 
-.fuehrung-node header span {
+.fuehr-org-body header span {
   font-size: 12px;
   color: #31508f;
   font-weight: 700;
 }
 
-.fuehrung-node p {
+.fuehr-org-body p {
   margin: 4px 0;
+}
+
+.fuehr-org-branch {
+  width: 100%;
+  display: grid;
+  justify-items: center;
+  padding-top: 20px;
+  position: relative;
+}
+
+.fuehr-org-branch-down {
+  width: 2px;
+  height: 20px;
+  background: #9caecf;
+  position: absolute;
+  top: 0;
+}
+
+.fuehr-org-branch > .fuehr-org-children {
+  padding-top: 18px;
+}
+
+.fuehr-org-branch > .fuehr-org-children::before {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  top: 0;
+  border-top: 2px solid #9caecf;
+}
+
+.fuehr-org-branch > .fuehr-org-children > .fuehr-org-child::before {
+  content: '';
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 2px;
+  height: 18px;
+  background: #9caecf;
+  transform: translateX(-50%);
 }
 
 .org-chips {
@@ -681,5 +761,25 @@ td.tactical-sign-cell {
   .topbar-meta {
     width: 100%;
     justify-content: space-between;
+  }
+
+  .fuehr-org-children {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .fuehr-org-child {
+    min-width: min(420px, 100%);
+    width: 100%;
+  }
+
+  .fuehr-org-branch > .fuehr-org-children::before {
+    left: 50%;
+    right: auto;
+    width: 0;
+    height: 100%;
+    border-top: 0;
+    border-left: 2px solid #9caecf;
+    transform: translateX(-50%);
   }
 }
