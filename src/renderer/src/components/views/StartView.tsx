@@ -48,7 +48,7 @@ export function StartView(props: StartViewProps): JSX.Element {
             </button>
             {props.einsaetze.length > 0 && (
               <>
-                <p className="hint">Erkannte Einsätze im Standardpfad:</p>
+                <p className="hint">Zuletzt verwendete Einsätze:</p>
                 <div className="quick-einsatz-list">
                   {props.einsaetze.map((item) => (
                     <button key={item.id} onClick={() => props.onOpenKnownEinsatz(item.id)} disabled={props.busy}>

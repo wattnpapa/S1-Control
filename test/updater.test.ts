@@ -182,7 +182,10 @@ describe('updater service', () => {
     expect(hoisted.autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
     expect(service.getState().stage).toBe('unsupported');
 
+    hoisted.setAppVersion('1.2.3');
     hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockResolvedValue({ updateInfo: { version: '1.2.4' } });
+    await service.checkForUpdates();
     await service.downloadUpdate();
     expect(hoisted.autoUpdaterMock.downloadUpdate).toHaveBeenCalledTimes(1);
 

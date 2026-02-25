@@ -12,8 +12,7 @@ import { toSafeError } from '../services/errors';
 import {
   createEinsatzDbFileName,
   createEinsatzInOwnDatabase,
-  findDbPathForEinsatz,
-  listEinsaetzeFromDirectory,
+  listEinsaetzeFromDbPaths,
   readPrimaryEinsatzFromDbFile,
   resolveEinsatzBaseDir,
   resolveSystemDbPath,
@@ -67,6 +66,41 @@ export function registerIpc(state: AppState): void {
   };
 
   const getBaseDir = (): string => resolveEinsatzBaseDir(state.settingsStore.get().dbPath ?? state.getDefaultDbPath());
+  const getRecentDbPaths = (): string[] => state.settingsStore.get().recentEinsatzDbPaths ?? [];
+
+  const persistRecentDbPaths = (dbPaths: string[]): void => {
+    const unique = Array.from(new Set(dbPaths)).slice(0, 5);
+    state.settingsStore.set({ recentEinsatzDbPaths: unique });
+  };
+
+  const rememberRecentDbPath = (dbPath: string): void => {
+    const next = [dbPath, ...getRecentDbPaths().filter((item) => item !== dbPath)];
+    persistRecentDbPaths(next);
+  };
+
+  const getValidRecentDbPaths = (): string[] => {
+    const valid: string[] = [];
+    for (const dbPath of getRecentDbPaths()) {
+      if (!readPrimaryEinsatzFromDbFile(dbPath)) {
+        continue;
+      }
+      valid.push(dbPath);
+    }
+    if (valid.length !== getRecentDbPaths().length) {
+      persistRecentDbPaths(valid);
+    }
+    return valid;
+  };
+
+  const resolveRecentDbPathByEinsatzId = (einsatzId: string): string | null => {
+    for (const dbPath of getValidRecentDbPaths()) {
+      const einsatz = readPrimaryEinsatzFromDbFile(dbPath);
+      if (einsatz?.id === einsatzId) {
+        return dbPath;
+      }
+    }
+    return null;
+  };
 
   ipcMain.handle(IPC_CHANNEL.GET_SESSION, wrap(async () => state.getSessionUser()));
 
@@ -111,7 +145,7 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.LIST_EINSAETZE,
     wrap(async () => {
-      return listEinsaetzeFromDirectory(getBaseDir());
+      return listEinsaetzeFromDbPaths(getValidRecentDbPaths());
     }),
   );
 
@@ -119,7 +153,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.OPEN_EINSATZ,
     wrap(async (einsatzId: string) => {
       const user = requireUser();
-      const dbPath = findDbPathForEinsatz(getBaseDir(), einsatzId);
+      const dbPath = resolveRecentDbPathByEinsatzId(einsatzId);
       if (!dbPath) {
         return false;
       }
@@ -129,6 +163,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.backupCoordinator.start(nextContext);
+      rememberRecentDbPath(dbPath);
       return true;
     }),
   );
@@ -160,6 +195,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.backupCoordinator.start(nextContext);
+      rememberRecentDbPath(selected);
       state.settingsStore.set({ dbPath: path.dirname(selected) });
       return einsatzMeta;
     }),
@@ -200,6 +236,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.backupCoordinator.start(created.ctx);
+      rememberRecentDbPath(normalized);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
       return created.einsatz;
     }),
@@ -290,7 +327,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.RESTORE_BACKUP,
     wrap(async (einsatzId: string) => {
       const user = requireUser();
-      const dbPath = findDbPathForEinsatz(getBaseDir(), einsatzId);
+      const dbPath = resolveRecentDbPathByEinsatzId(einsatzId);
       if (!dbPath) {
         return false;
       }

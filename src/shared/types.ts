@@ -32,6 +32,7 @@ export interface EinsatzListItem {
   start: string;
   end: string | null;
   status: EinsatzStatus;
+  dbPath?: string;
 }
 
 export interface AbschnittNode {

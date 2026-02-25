@@ -3,6 +3,7 @@ import path from 'node:path';
 
 interface SettingsFile {
   dbPath?: string;
+  recentEinsatzDbPaths?: string[];
 }
 
 export class SettingsStore {
@@ -22,7 +23,11 @@ export class SettingsStore {
   }
 
   public set(next: SettingsFile): void {
+    const merged: SettingsFile = {
+      ...this.get(),
+      ...next,
+    };
     fs.mkdirSync(path.dirname(this.filePath), { recursive: true });
-    fs.writeFileSync(this.filePath, JSON.stringify(next, null, 2));
+    fs.writeFileSync(this.filePath, JSON.stringify(merged, null, 2));
   }
 }

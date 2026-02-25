@@ -73,6 +73,18 @@ export function listEinsaetzeFromDirectory(baseDir: string): EinsatzListItem[] {
   return rows.sort((a, b) => b.start.localeCompare(a.start));
 }
 
+export function listEinsaetzeFromDbPaths(dbPaths: string[]): EinsatzListItem[] {
+  const rows: EinsatzListItem[] = [];
+  for (const dbPath of dbPaths) {
+    const primary = readPrimaryEinsatzFromDbFile(dbPath);
+    if (!primary) {
+      continue;
+    }
+    rows.push({ ...primary, dbPath });
+  }
+  return rows.sort((a, b) => b.start.localeCompare(a.start));
+}
+
 export function findDbPathForEinsatz(baseDir: string, einsatzId: string): string | null {
   for (const dbPath of listEinsatzDbFiles(baseDir)) {
     const rows = readEinsaetzeFromDbFile(dbPath);
