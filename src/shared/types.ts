@@ -77,6 +77,23 @@ export interface ExportResult {
   outputPath: string;
 }
 
+export type UpdaterStage =
+  | 'idle'
+  | 'checking'
+  | 'available'
+  | 'not-available'
+  | 'downloading'
+  | 'downloaded'
+  | 'error'
+  | 'unsupported';
+
+export interface UpdaterState {
+  stage: UpdaterStage;
+  version?: string;
+  progressPercent?: number;
+  message?: string;
+}
+
 export interface ApiError {
   message: string;
   code?: string;

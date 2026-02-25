@@ -5,6 +5,7 @@ import type {
   EinsatzListItem,
   ExportResult,
   SessionUser,
+  UpdaterState,
 } from './types';
 
 export interface LoginInput {
@@ -90,6 +91,10 @@ export interface RendererApi {
   hasUndoableCommand(einsatzId: string): Promise<boolean>;
   exportEinsatzakte(einsatzId: string): Promise<ExportResult | null>;
   restoreBackup(einsatzId: string): Promise<boolean>;
+  getUpdaterState(): Promise<UpdaterState>;
+  checkForUpdates(): Promise<void>;
+  downloadUpdate(): Promise<void>;
+  installDownloadedUpdate(): Promise<void>;
 }
 
 export const IPC_CHANNEL = {
@@ -114,4 +119,9 @@ export const IPC_CHANNEL = {
   HAS_UNDO: 'command:has-undo',
   EXPORT_EINSATZAKTE: 'einsatz:export',
   RESTORE_BACKUP: 'einsatz:restore-backup',
+  GET_UPDATER_STATE: 'updater:get-state',
+  CHECK_UPDATES: 'updater:check',
+  DOWNLOAD_UPDATE: 'updater:download',
+  INSTALL_UPDATE: 'updater:install',
+  UPDATER_STATE_CHANGED: 'updater:state-changed',
 } as const;

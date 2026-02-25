@@ -27,11 +27,13 @@ import {
   listAbschnitte,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
+import { UpdaterService } from '../services/updater';
 
 interface AppState {
   getDbContext: () => DbContext;
   setDbContext: (ctx: DbContext) => void;
   backupCoordinator: BackupCoordinator;
+  updater: UpdaterService;
   settingsStore: SettingsStore;
   getDefaultDbPath: () => string;
   getSessionUser: () => SessionUser | null;
@@ -273,6 +275,32 @@ export function registerIpc(state: AppState): void {
 
       await exportEinsatzakte(state.getDbContext(), einsatzId, result.filePath);
       return { outputPath: result.filePath };
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_UPDATER_STATE,
+    wrap(async () => state.updater.getState()),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CHECK_UPDATES,
+    wrap(async () => {
+      await state.updater.checkForUpdates();
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.DOWNLOAD_UPDATE,
+    wrap(async () => {
+      await state.updater.downloadUpdate();
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.INSTALL_UPDATE,
+    wrap(async () => {
+      state.updater.installDownloadedUpdate();
     }),
   );
 }

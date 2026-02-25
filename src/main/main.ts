@@ -6,7 +6,23 @@ import { registerIpc } from './ipc/register-ipc';
 import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
+import { UpdaterService } from './services/updater';
 import type { SessionUser } from '../shared/types';
+import { IPC_CHANNEL } from '../shared/ipc';
+
+function toNatoVersionTag(date: Date): string {
+  const months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+  const dd = String(date.getUTCDate()).padStart(2, '0');
+  const hh = String(date.getUTCHours()).padStart(2, '0');
+  const mm = String(date.getUTCMinutes()).padStart(2, '0');
+  const mon = months[date.getUTCMonth()] ?? 'jan';
+  const yy = String(date.getUTCFullYear()).slice(-2);
+  return `${dd}${hh}${mm}${mon}${yy}`;
+}
+
+function resolveAppVersionLabel(): string {
+  return process.env.S1_APP_VERSION || app.getVersion() || toNatoVersionTag(new Date());
+}
 
 function resolveRendererUrl(): string {
   const devServer = process.env.VITE_DEV_SERVER_URL;
@@ -19,6 +35,18 @@ function resolveRendererUrl(): string {
 
 async function bootstrap(): Promise<void> {
   await app.whenReady();
+  const envVersion = process.env.S1_APP_VERSION;
+  if (envVersion) {
+    app.setVersion(envVersion);
+  }
+  const versionLabel = resolveAppVersionLabel();
+
+  app.setAboutPanelOptions({
+    applicationName: 'S1-Control',
+    applicationVersion: versionLabel,
+    version: versionLabel,
+    copyright: `Copyright © ${new Date().getFullYear()} Johannes Rudolph`,
+  });
 
   const settingsStore = new SettingsStore(app.getPath('userData'));
   const envPath = process.env.S1_DB_PATH;
@@ -52,6 +80,11 @@ async function bootstrap(): Promise<void> {
   let dbContext = openWithFallback();
   ensureDefaultAdmin(dbContext);
   const backupCoordinator = new BackupCoordinator();
+  const updater = new UpdaterService((state) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
+    }
+  });
 
   let currentUser: SessionUser | null = null;
 
@@ -66,6 +99,7 @@ async function bootstrap(): Promise<void> {
       dbContext = ctx;
     },
     backupCoordinator,
+    updater,
     settingsStore,
     getDefaultDbPath: () => defaultBaseDir,
     getSessionUser: () => currentUser,
@@ -90,6 +124,7 @@ async function bootstrap(): Promise<void> {
   };
 
   await createWindow();
+  void updater.checkForUpdates();
   if (startupWarning) {
     dialog.showMessageBox({
       type: 'warning',

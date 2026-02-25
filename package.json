@@ -14,12 +14,12 @@
     "dev:renderer": "vite",
     "dev:main": "tsup src/main/main.ts src/main/preload.ts --format cjs --out-dir dist-electron --clean --watch --external electron",
     "dev:electron": "wait-on tcp:5173 file:dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .",
-    "build": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --dir",
-    "build:win": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --dir",
-    "build:win:zip": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=zip",
-    "build:win:exe": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=nsis",
-    "build:win:portable": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --win --x64 --config.win.target=portable",
-    "build:linux:deb": "npm run lint && npm run typecheck && npm run build:renderer && npm run build:main && electron-builder --linux --x64 --config.linux.target=deb",
+    "build": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --dir",
+    "build:win": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --win --x64 --dir",
+    "build:win:zip": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --win --x64 --config.win.target=zip",
+    "build:win:exe": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis",
+    "build:win:portable": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable",
+    "build:linux:deb": "npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb",
     "build:renderer": "vite build",
     "build:main": "tsup src/main/main.ts src/main/preload.ts --format cjs --out-dir dist-electron --clean --external electron",
     "typecheck": "tsc --noEmit",
@@ -42,6 +42,13 @@
       "target": "deb",
       "category": "Utility"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "wattnpapa",
+        "repo": "S1-Control"
+      }
+    ],
     "files": [
       "dist-electron/**/*",
       "dist-renderer/**/*",
@@ -56,6 +63,7 @@
   "dependencies": {
     "better-sqlite3": "^11.8.1",
     "drizzle-orm": "^0.39.3",
+    "electron-updater": "^6.8.3",
     "jszip": "^3.10.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

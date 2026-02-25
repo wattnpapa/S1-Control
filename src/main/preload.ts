@@ -24,6 +24,17 @@ const api: RendererApi = {
   hasUndoableCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.HAS_UNDO, einsatzId),
   exportEinsatzakte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.EXPORT_EINSATZAKTE, einsatzId),
   restoreBackup: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.RESTORE_BACKUP, einsatzId),
+  getUpdaterState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_UPDATER_STATE),
+  checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
+  downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
+  installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
 };
 
 contextBridge.exposeInMainWorld('api', api);
+contextBridge.exposeInMainWorld('updaterEvents', {
+  onStateChanged: (callback: (state: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
+    ipcRenderer.on(IPC_CHANNEL.UPDATER_STATE_CHANGED, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNEL.UPDATER_STATE_CHANGED, listener);
+  },
+});

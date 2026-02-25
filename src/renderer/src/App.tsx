@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AbschnittDetails, EinsatzListItem, OrganisationKey, SessionUser } from '@shared/types';
+import type { AbschnittDetails, EinsatzListItem, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
@@ -30,6 +30,7 @@ import { parseTaktischeStaerke } from '@renderer/utils/tactical';
 
 const EMPTY_DETAILS: AbschnittDetails = { einheiten: [], fahrzeuge: [] };
 const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 };
+const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
 
 export function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
@@ -47,6 +48,7 @@ export function App() {
   const [hasUndo, setHasUndo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [updaterState, setUpdaterState] = useState<UpdaterState>(DEFAULT_UPDATER_STATE);
 
   const [moveDialog, setMoveDialog] = useState<MoveDialogState | null>(null);
   const [moveTarget, setMoveTarget] = useState('');
@@ -97,6 +99,42 @@ export function App() {
   );
 
   const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
+
+  const renderUpdaterNotices = () => (
+    <>
+      {updaterState.stage === 'available' && (
+        <div className="update-banner">
+          Update verfügbar {updaterState.version ? `(${updaterState.version})` : ''}.
+          <button onClick={() => void doDownloadUpdate()} disabled={busy}>
+            Update herunterladen
+          </button>
+        </div>
+      )}
+      {updaterState.stage === 'downloaded' && (
+        <div className="update-banner">
+          Update heruntergeladen {updaterState.version ? `(${updaterState.version})` : ''}.
+          <button onClick={() => void doInstallUpdate()} disabled={busy}>
+            Jetzt neu starten
+          </button>
+        </div>
+      )}
+      {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
+      {updaterState.stage === 'unsupported' && <div className="banner">{updaterState.message}</div>}
+    </>
+  );
+
+  const renderUpdaterOverlay = () =>
+    updaterState.stage === 'downloading' ? (
+      <div className="overlay-backdrop">
+        <div className="overlay-panel">
+          <h3>Update wird heruntergeladen</h3>
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, updaterState.progressPercent ?? 0))}%` }} />
+          </div>
+          <p>{Math.round(updaterState.progressPercent ?? 0)}%</p>
+        </div>
+      </div>
+    ) : null;
 
   const clearSelectedEinsatz = useCallback(() => {
     setSelectedEinsatzId('');
@@ -188,6 +226,8 @@ export function App() {
         ]);
         setSession(currentSession);
         setDbPath(settings.dbPath);
+        setUpdaterState(await window.api.getUpdaterState());
+        void window.api.checkForUpdates();
         if (currentSession) {
           await refreshEinsaetze();
         }
@@ -197,6 +237,13 @@ export function App() {
     })();
     // initial load only
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.updaterEvents.onStateChanged((state) => {
+      setUpdaterState(state as UpdaterState);
+    });
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -491,38 +538,58 @@ export function App() {
     setActiveView('einsatz');
   };
 
+  const doDownloadUpdate = async () => {
+    await withBusy(async () => {
+      await window.api.downloadUpdate();
+    });
+  };
+
+  const doInstallUpdate = async () => {
+    await withBusy(async () => {
+      await window.api.installDownloadedUpdate();
+    });
+  };
+
   if (!session) {
     return (
-      <LoginView
-        loginName={loginName}
-        loginPasswort={loginPasswort}
-        busy={busy}
-        error={error}
-        onChangeName={setLoginName}
-        onChangePasswort={setLoginPasswort}
-        onLogin={() => void doLogin()}
-      />
+      <>
+        {renderUpdaterNotices()}
+        <LoginView
+          loginName={loginName}
+          loginPasswort={loginPasswort}
+          busy={busy}
+          error={error}
+          onChangeName={setLoginName}
+          onChangePasswort={setLoginPasswort}
+          onLogin={() => void doLogin()}
+        />
+        {renderUpdaterOverlay()}
+      </>
     );
   }
 
   if (!selectedEinsatzId) {
     return (
-      <StartView
-        startChoice={startChoice}
-        setStartChoice={setStartChoice}
-        busy={busy}
-        error={error}
-        einsaetze={einsaetze}
-        startOpenEinsatzId={startOpenEinsatzId}
-        setStartOpenEinsatzId={setStartOpenEinsatzId}
-        startNewEinsatzName={startNewEinsatzName}
-        setStartNewEinsatzName={setStartNewEinsatzName}
-        startNewFuestName={startNewFuestName}
-        setStartNewFuestName={setStartNewFuestName}
-        onOpenExisting={() => void doStartOpenExisting()}
-        onCreate={() => void doStartCreateEinsatz()}
-        onLogout={doLogout}
-      />
+      <>
+        {renderUpdaterNotices()}
+        <StartView
+          startChoice={startChoice}
+          setStartChoice={setStartChoice}
+          busy={busy}
+          error={error}
+          einsaetze={einsaetze}
+          startOpenEinsatzId={startOpenEinsatzId}
+          setStartOpenEinsatzId={setStartOpenEinsatzId}
+          startNewEinsatzName={startNewEinsatzName}
+          setStartNewEinsatzName={setStartNewEinsatzName}
+          startNewFuestName={startNewFuestName}
+          setStartNewFuestName={setStartNewFuestName}
+          onOpenExisting={() => void doStartOpenExisting()}
+          onCreate={() => void doStartCreateEinsatz()}
+          onLogout={doLogout}
+        />
+        {renderUpdaterOverlay()}
+      </>
     );
   }
 
@@ -539,6 +606,8 @@ export function App() {
         onUndo={() => void doUndo()}
         onLogout={doLogout}
       />
+
+      {renderUpdaterNotices()}
 
       {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
       {error && <div className="error-banner">{error}</div>}
@@ -687,6 +756,7 @@ export function App() {
         onSubmit={() => void doSubmitCreateFahrzeug()}
         onClose={() => setShowCreateFahrzeugDialog(false)}
       />
+      {renderUpdaterOverlay()}
     </div>
   );
 }

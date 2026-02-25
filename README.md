@@ -44,6 +44,14 @@ Standard-Login: `admin` / `admin`
 - Die Release-Tag/Versionskennung wird als NATO-Zeit ohne Zeitzonenangabe erzeugt: `DDHHMMmonYY`, z.B. `251530feb26`.
 - Workflow: `.github/workflows/build-main.yml`
 
+## Auto-Update
+
+- In gebauten macOS/Windows-Versionen prüft die App beim Start auf neue GitHub-Releases.
+- Bei verfügbarem Update erscheint oben eine Leiste mit Download-Button.
+- Während des Downloads wird ein Overlay mit Fortschrittsbalken angezeigt.
+- Nach Download kann das Update per Button installiert werden (App-Neustart).
+- Die App-Version in Metadaten/Info (z.B. macOS Info.plist) wird beim Build auf den NATO-Tag gesetzt.
+
 ## DB-Pfad / Fileshare
 
 - DB-Pfad ist in der App als **Einsatz-Verzeichnis** konfigurierbar (Settings-Bereich).

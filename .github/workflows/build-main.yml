@@ -66,6 +66,7 @@ jobs:
       - test
     env:
       NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -81,11 +82,11 @@ jobs:
 
       - name: Build macOS artifacts
         run: |
-          npm run lint
-          npm run typecheck
-          npm run build:renderer
-          npm run build:main
-          npx electron-builder --mac --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          npm run -s lint
+          npm run -s typecheck
+          npm run -s build:renderer
+          npm run -s build:main
+          node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -94,6 +95,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
+            dist/*.yml
 
   build-win:
     runs-on: windows-latest
@@ -102,6 +104,7 @@ jobs:
       - test
     env:
       NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -117,12 +120,12 @@ jobs:
 
       - name: Build Windows artifacts
         run: |
-          npm run lint
-          npm run typecheck
-          npm run build:renderer
-          npm run build:main
-          npx electron-builder --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
-          npx electron-builder --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          npm run -s lint
+          npm run -s typecheck
+          npm run -s build:renderer
+          npm run -s build:main
+          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -131,6 +134,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.blockmap
+            dist/*.yml
 
   build-linux:
     runs-on: ubuntu-latest
@@ -139,6 +143,7 @@ jobs:
       - test
     env:
       NATO_VERSION: ${{ needs.prepare.outputs.nato_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.nato_version }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -154,11 +159,11 @@ jobs:
 
       - name: Build Linux artifacts
         run: |
-          npm run lint
-          npm run typecheck
-          npm run build:renderer
-          npm run build:main
-          npx electron-builder --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          npm run -s lint
+          npm run -s typecheck
+          npm run -s build:renderer
+          npm run -s build:main
+          node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -166,6 +171,7 @@ jobs:
           name: s1-control-linux-${{ env.NATO_VERSION }}
           path: |
             dist/*.deb
+            dist/*.yml
 
   release:
     runs-on: ubuntu-latest
