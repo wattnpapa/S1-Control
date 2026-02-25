@@ -10,6 +10,7 @@ const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 export class UpdaterService {
   private state: UpdaterState = { stage: 'idle', currentVersion: app.getVersion() };
   private autoUpdaterEnabled = false;
+  private canDownloadInApp = false;
 
   private readonly notify: (state: UpdaterState) => void;
 
@@ -24,13 +25,16 @@ export class UpdaterService {
 
   public async checkForUpdates(): Promise<void> {
     this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
+    this.canDownloadInApp = false;
 
     try {
-    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured() || !this.isSemverVersion(app.getVersion())) {
+      if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
         await this.checkGitHubReleaseVersion();
         return;
       }
+
       const result = await autoUpdater.checkForUpdates();
+      this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
       if (latestVersion) {
         this.setState({ latestVersion });
@@ -41,15 +45,19 @@ export class UpdaterService {
         this.setState({ stage: 'idle' });
         return;
       }
+      if (this.isVersionFormatError(message)) {
+        await this.checkGitHubReleaseVersion();
+        return;
+      }
       this.setState({ stage: 'error', message });
     }
   }
 
   public async downloadUpdate(): Promise<void> {
-    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
+    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured() || !this.canDownloadInApp) {
       this.setState({
         stage: 'unsupported',
-        message: 'Update-Download ist nur in signierten Release-Builds verfügbar.',
+        message: 'In-App-Download nicht verfügbar. Bitte über die Release-Seite aktualisieren.',
       });
       return;
     }
@@ -180,6 +188,11 @@ export class UpdaterService {
 
   private isSemverVersion(version: string): boolean {
     return /^\d+\.\d+\.\d+([-.+].+)?$/.test(version.trim());
+  }
+
+  private isVersionFormatError(message: string): boolean {
+    const lower = message.toLowerCase();
+    return lower.includes('semver') || lower.includes('version') || lower.includes('invalid version');
   }
 
   private isNatoVersionTag(version: string): boolean {

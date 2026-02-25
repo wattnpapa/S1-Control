@@ -58,6 +58,12 @@
       "assets/**/*",
       "package.json"
     ],
+    "extraResources": [
+      {
+        "from": "build-resources/app-update.yml",
+        "to": "app-update.yml"
+      }
+    ],
     "extraMetadata": {
       "main": "dist-electron/main.js"
     }

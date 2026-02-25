@@ -1,0 +1,4 @@
+provider: github
+owner: wattnpapa
+repo: S1-Control
+updaterCacheDirName: S1-Control-updater
