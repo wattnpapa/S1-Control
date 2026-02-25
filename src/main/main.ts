@@ -141,9 +141,7 @@ async function bootstrap(): Promise<void> {
 
   app.on('window-all-closed', () => {
     backupCoordinator.stop();
-    if (process.platform !== 'darwin') {
-      app.quit();
-    }
+    app.quit();
   });
 }
 
