@@ -29,6 +29,7 @@ Standard-Login: `admin` / `admin`
 
 - `npm run dev`: Vite + Electron mit Live-Reload
 - `npm run test`: Vitest (DB/Command)
+- `npm run test:coverage`: Tests mit Coverage-Report (text, html, lcov, json-summary)
 - `npm run build`: Lint + Typecheck + Build + Electron distributable (`--dir`)
 - `npm run build:win`: Windows Build (`win-unpacked`, x64)
 - `npm run build:win:zip`: Windows ZIP-Paket (x64)
@@ -64,6 +65,15 @@ Standard-Login: `admin` / `admin`
 - Alle Writes laufen im Main-Prozess, jeweils in Transaktionen
 - Archivierte Einsätze (`status=ARCHIVIERT`) sind schreibgeschützt (Main enforced)
 - Undo für `MOVE_EINHEIT` und `MOVE_FAHRZEUG` via `einsatz_command_log`
+
+## Teststrategie
+
+- Neue Features müssen mit Tests ausgeliefert werden.
+- Mindestabdeckung: 75% (Lines/Functions/Branches/Statements).
+- Coverage-Reports liegen in `coverage/`:
+  - `coverage/index.html`
+  - `coverage/lcov.info`
+  - `coverage/coverage-summary.json`
 
 ## Export (MVP)
 

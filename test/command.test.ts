@@ -1,6 +1,3 @@
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
 import crypto from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { eq } from 'drizzle-orm';
@@ -16,13 +13,9 @@ import {
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../src/main/services/command';
 import { hashPassword } from '../src/main/services/auth';
 import { AppError } from '../src/main/services/errors';
+import { createDbPath } from './helpers/db';
 
 const user = { id: crypto.randomUUID(), name: 'tester', rolle: 'S1' as const };
-
-function createDbPath(): string {
-  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-test-'));
-  return path.join(dir, 'test.sqlite');
-}
 
 describe('command service', () => {
   let dbPath: string;
@@ -98,6 +91,7 @@ describe('command service', () => {
 
     const command = ctx.db.select().from(einsatzCommandLog).where(eq(einsatzCommandLog.einsatzId, einsatzId)).get();
     expect(command?.undone).toBe(true);
+    ctx.sqlite.close();
   });
 
   it('blocks writes on archived einsatz', () => {
@@ -146,5 +140,150 @@ describe('command service', () => {
     expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittB }, user)).toThrow(
       AppError,
     );
+    ctx.sqlite.close();
+  });
+
+  it('returns false when undo has no commands', () => {
+    const ctx = openDatabaseWithRetry(dbPath);
+    const einsatzId = crypto.randomUUID();
+
+    ctx.db
+      .insert(benutzer)
+      .values({
+        id: user.id,
+        name: user.name,
+        rolle: user.rolle,
+        passwortHash: hashPassword('x'),
+        aktiv: true,
+      })
+      .run();
+
+    ctx.db
+      .insert(einsatz)
+      .values({
+        id: einsatzId,
+        name: 'No-Commands',
+        fuestName: 'FüSt',
+        start: new Date().toISOString(),
+        end: null,
+        status: 'AKTIV',
+        uebergeordneteFuestName: null,
+      })
+      .run();
+
+    expect(undoLastCommand(ctx, einsatzId, user)).toBe(false);
+    ctx.sqlite.close();
+  });
+
+  it('moves and undoes fahrzeug move', () => {
+    const ctx = openDatabaseWithRetry(dbPath);
+    const einsatzId = crypto.randomUUID();
+    const abschnittA = crypto.randomUUID();
+    const abschnittB = crypto.randomUUID();
+    const fahrzeugId = crypto.randomUUID();
+
+    ctx.db
+      .insert(benutzer)
+      .values({
+        id: user.id,
+        name: user.name,
+        rolle: user.rolle,
+        passwortHash: hashPassword('x'),
+        aktiv: true,
+      })
+      .run();
+
+    ctx.db
+      .insert(einsatz)
+      .values({
+        id: einsatzId,
+        name: 'Fahrzeug-Test',
+        fuestName: 'FüSt',
+        start: new Date().toISOString(),
+        end: null,
+        status: 'AKTIV',
+        uebergeordneteFuestName: null,
+      })
+      .run();
+
+    ctx.db
+      .insert(einsatzAbschnitt)
+      .values([
+        { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' },
+        { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL' },
+      ])
+      .run();
+
+    ctx.db
+      .insert(einsatzFahrzeug)
+      .values({
+        id: fahrzeugId,
+        einsatzId,
+        stammdatenFahrzeugId: null,
+        parentEinsatzFahrzeugId: null,
+        aktuelleEinsatzEinheitId: null,
+        aktuellerAbschnittId: abschnittA,
+        status: 'AKTIV',
+        erstellt: new Date().toISOString(),
+        entfernt: null,
+      })
+      .run();
+
+    moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittB }, user);
+    expect(undoLastCommand(ctx, einsatzId, user)).toBe(true);
+
+    const reverted = ctx.db
+      .select({ abschnittId: einsatzFahrzeug.aktuellerAbschnittId })
+      .from(einsatzFahrzeug)
+      .where(eq(einsatzFahrzeug.id, fahrzeugId))
+      .get();
+
+    expect(reverted?.abschnittId).toBe(abschnittA);
+    ctx.sqlite.close();
+  });
+
+  it('throws for unsupported undo command type', () => {
+    const ctx = openDatabaseWithRetry(dbPath);
+    const einsatzId = crypto.randomUUID();
+
+    ctx.db
+      .insert(benutzer)
+      .values({
+        id: user.id,
+        name: user.name,
+        rolle: user.rolle,
+        passwortHash: hashPassword('x'),
+        aktiv: true,
+      })
+      .run();
+
+    ctx.db
+      .insert(einsatz)
+      .values({
+        id: einsatzId,
+        name: 'Undo-Test',
+        fuestName: 'FüSt',
+        start: new Date().toISOString(),
+        end: null,
+        status: 'AKTIV',
+        uebergeordneteFuestName: null,
+      })
+      .run();
+
+    ctx.db
+      .insert(einsatzCommandLog)
+      .values({
+        id: crypto.randomUUID(),
+        einsatzId,
+        benutzerId: user.id,
+        commandTyp: 'UNKNOWN',
+        payloadJson: '{}',
+        timestamp: new Date().toISOString(),
+        undone: false,
+      })
+      .run();
+
+    expect(() => undoLastCommand(ctx, einsatzId, user)).toThrow('noch nicht implementiert');
+    ctx.sqlite.close();
   });
 });

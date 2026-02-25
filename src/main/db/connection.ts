@@ -24,12 +24,29 @@ function openDatabase(dbPath: string): DbContext {
   const sqlite = new Database(dbPath);
   applyPragmas(sqlite);
 
-  // dist-electron and drizzle are siblings in dev and in packaged app.asar.
-  const migrationsDir = path.resolve(__dirname, '../drizzle');
+  const migrationsDir = resolveMigrationsDir();
   runMigrations(sqlite, migrationsDir);
 
   const db = drizzle(sqlite, { schema });
   return { sqlite, db, path: dbPath };
+}
+
+function resolveMigrationsDir(): string {
+  const candidates = [
+    // dist-electron and drizzle are siblings in dev and in packaged app.asar.
+    path.resolve(__dirname, '../drizzle'),
+    // tests run directly from src/main/db.
+    path.resolve(__dirname, '../../../drizzle'),
+    path.resolve(process.cwd(), 'drizzle'),
+  ];
+
+  for (const candidate of candidates) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+
+  return candidates[0]!;
 }
 
 export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
