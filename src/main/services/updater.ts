@@ -145,7 +145,17 @@ export class UpdaterService {
         return;
       }
 
-      if (latestVersion !== currentVersion) {
+      const compare = this.compareVersions(currentVersion, latestVersion);
+      if (compare === null) {
+        this.setState({
+          stage: 'not-available',
+          latestVersion,
+          message: 'Versionsvergleich nicht eindeutig möglich.',
+        });
+        return;
+      }
+
+      if (compare < 0) {
         this.setState({
           stage: 'available',
           latestVersion,
@@ -170,6 +180,98 @@ export class UpdaterService {
 
   private isSemverVersion(version: string): boolean {
     return /^\d+\.\d+\.\d+([-.+].+)?$/.test(version.trim());
+  }
+
+  private isNatoVersionTag(version: string): boolean {
+    return /^\d{2}\d{2}\d{2}[a-z]{3}\d{2}$/i.test(version.trim());
+  }
+
+  private compareVersions(current: string, latest: string): number | null {
+    if (this.isSemverVersion(current) && this.isSemverVersion(latest)) {
+      return this.compareSemver(current, latest);
+    }
+    if (this.isNatoVersionTag(current) && this.isNatoVersionTag(latest)) {
+      return this.compareNatoTags(current, latest);
+    }
+    return null;
+  }
+
+  private compareSemver(current: string, latest: string): number {
+    const toParts = (value: string) =>
+      value
+        .split(/[.-]/)
+        .slice(0, 3)
+        .map((part) => Number(part));
+
+    const currentParts = toParts(current);
+    const latestParts = toParts(latest);
+
+    for (let i = 0; i < 3; i += 1) {
+      const a = currentParts[i] ?? 0;
+      const b = latestParts[i] ?? 0;
+      if (a < b) return -1;
+      if (a > b) return 1;
+    }
+    return 0;
+  }
+
+  private compareNatoTags(current: string, latest: string): number | null {
+    const currentDate = this.parseNatoTag(current);
+    const latestDate = this.parseNatoTag(latest);
+    if (!currentDate || !latestDate) {
+      return null;
+    }
+    if (currentDate < latestDate) return -1;
+    if (currentDate > latestDate) return 1;
+    return 0;
+  }
+
+  private parseNatoTag(version: string): number | null {
+    const match = /^(\d{2})(\d{2})(\d{2})([a-z]{3})(\d{2})$/i.exec(version.trim());
+    if (!match) {
+      return null;
+    }
+
+    const dd = Number(match[1]);
+    const hh = Number(match[2]);
+    const mm = Number(match[3]);
+    const mon = (match[4] ?? '').toLowerCase();
+    const yy = Number(match[5]);
+    const months: Record<string, number> = {
+      jan: 0,
+      feb: 1,
+      mar: 2,
+      apr: 3,
+      may: 4,
+      jun: 5,
+      jul: 6,
+      aug: 7,
+      sep: 8,
+      oct: 9,
+      nov: 10,
+      dec: 11,
+    };
+    const month = months[mon];
+    if (month === undefined) {
+      return null;
+    }
+
+    const year = 2000 + yy;
+    const timestamp = Date.UTC(year, month, dd, hh, mm, 0, 0);
+    if (Number.isNaN(timestamp)) {
+      return null;
+    }
+    const check = new Date(timestamp);
+    if (
+      check.getUTCFullYear() !== year ||
+      check.getUTCMonth() !== month ||
+      check.getUTCDate() !== dd ||
+      check.getUTCHours() !== hh ||
+      check.getUTCMinutes() !== mm
+    ) {
+      return null;
+    }
+    return timestamp;
   }
 
   private isOfflineLikeError(message: string): boolean {
