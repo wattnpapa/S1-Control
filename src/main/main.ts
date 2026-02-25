@@ -24,6 +24,10 @@ function resolveAppVersionLabel(): string {
   return process.env.S1_APP_VERSION || app.getVersion() || toNatoVersionTag(new Date());
 }
 
+function withVersion(details: string): string {
+  return `Version: ${resolveAppVersionLabel()}\n\n${details}`;
+}
+
 function resolveRendererUrl(): string {
   const devServer = process.env.VITE_DEV_SERVER_URL;
   if (devServer) {
@@ -146,17 +150,20 @@ async function bootstrap(): Promise<void> {
 }
 
 process.on('uncaughtException', (error) => {
-  dialog.showErrorBox('Unerwarteter Fehler im Main-Prozess', error?.stack || String(error));
+  dialog.showErrorBox(
+    'Unerwarteter Fehler im Main-Prozess',
+    withVersion(error?.stack || String(error)),
+  );
 });
 
 process.on('unhandledRejection', (reason) => {
   const message = reason instanceof Error ? reason.stack || reason.message : String(reason);
-  dialog.showErrorBox('Unerwarteter Initialisierungsfehler', message);
+  dialog.showErrorBox('Unerwarteter Initialisierungsfehler', withVersion(message));
 });
 
 void bootstrap().catch((error) => {
   dialog.showErrorBox(
     'Startfehler',
-    error instanceof Error ? error.stack || error.message : String(error),
+    withVersion(error instanceof Error ? error.stack || error.message : String(error)),
   );
 });

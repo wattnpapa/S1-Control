@@ -141,6 +141,7 @@ jobs:
           npm run -s typecheck
           npm run -s build:renderer
           npm run -s build:main
+          npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload macOS artifacts
@@ -187,6 +188,7 @@ jobs:
           npm run -s typecheck
           npm run -s build:renderer
           npm run -s build:main
+          npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
           node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
@@ -234,6 +236,7 @@ jobs:
           npm run -s typecheck
           npm run -s build:renderer
           npm run -s build:main
+          npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Linux artifacts
