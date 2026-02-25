@@ -48,7 +48,17 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            if [ "$i" -eq 3 ]; then
+              exit 1
+            fi
+            echo "npm ci fehlgeschlagen, Retry $i/3 ..."
+            sleep 10
+          done
 
       - name: Run tests with coverage
         run: npm run test:coverage
@@ -96,7 +106,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            if [ "$i" -eq 3 ]; then
+              exit 1
+            fi
+            echo "npm ci fehlgeschlagen, Retry $i/3 ..."
+            sleep 10
+          done
 
       - name: Validate macOS signing secrets
         run: |
@@ -152,7 +170,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        shell: pwsh
+        run: |
+          for ($i = 1; $i -le 3; $i++) {
+            npm ci
+            if ($LASTEXITCODE -eq 0) { break }
+            if ($i -eq 3) { exit $LASTEXITCODE }
+            Write-Host "npm ci fehlgeschlagen, Retry $i/3 ..."
+            Start-Sleep -Seconds 10
+          }
 
       - name: Build Windows artifacts
         run: |
@@ -191,7 +217,15 @@ jobs:
           cache: npm
 
       - name: Install dependencies
-        run: npm ci
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            if [ "$i" -eq 3 ]; then
+              exit 1
+            fi
+            echo "npm ci fehlgeschlagen, Retry $i/3 ..."
+            sleep 10
+          done
 
       - name: Build Linux artifacts
         run: |
