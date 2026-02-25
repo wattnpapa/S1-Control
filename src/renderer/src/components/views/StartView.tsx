@@ -51,7 +51,12 @@ export function StartView(props: StartViewProps): JSX.Element {
                 <p className="hint">Zuletzt verwendete Einsätze:</p>
                 <div className="quick-einsatz-list">
                   {props.einsaetze.map((item) => (
-                    <button key={item.id} onClick={() => props.onOpenKnownEinsatz(item.id)} disabled={props.busy}>
+                    <button
+                      key={item.id}
+                      title={item.dbPath ?? ''}
+                      onClick={() => props.onOpenKnownEinsatz(item.id)}
+                      disabled={props.busy}
+                    >
                       {item.name} ({item.status})
                     </button>
                   ))}
