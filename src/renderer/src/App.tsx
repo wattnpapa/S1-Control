@@ -82,7 +82,6 @@ export function App() {
   });
 
   const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('none');
-  const [startOpenEinsatzId, setStartOpenEinsatzId] = useState('');
   const [startNewEinsatzName, setStartNewEinsatzName] = useState('');
   const [startNewFuestName, setStartNewFuestName] = useState('FüSt 1');
 
@@ -251,12 +250,6 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    if (!startOpenEinsatzId && einsaetze[0]?.id) {
-      setStartOpenEinsatzId(einsaetze[0].id);
-    }
-  }, [einsaetze, startOpenEinsatzId]);
-
-  useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
@@ -297,14 +290,17 @@ export function App() {
   };
 
   const doStartOpenExisting = async () => {
-    if (!startOpenEinsatzId) return;
     await withBusy(async () => {
-      const opened = await window.api.openEinsatz(startOpenEinsatzId);
+      const opened = await window.api.openEinsatzWithDialog();
       if (!opened) {
-        throw new Error('Einsatz konnte nicht geöffnet werden.');
+        return;
       }
-      setSelectedEinsatzId(startOpenEinsatzId);
-      await loadEinsatz(startOpenEinsatzId);
+      setEinsaetze((prev) => {
+        const rest = prev.filter((item) => item.id !== opened.id);
+        return [opened, ...rest];
+      });
+      setSelectedEinsatzId(opened.id);
+      await loadEinsatz(opened.id);
       setStartChoice('none');
     });
   };
@@ -316,12 +312,18 @@ export function App() {
     }
 
     await withBusy(async () => {
-      const created = await window.api.createEinsatz({
+      const created = await window.api.createEinsatzWithDialog({
         name: startNewEinsatzName.trim(),
         fuestName: startNewFuestName.trim() || 'FüSt 1',
       });
+      if (!created) {
+        return;
+      }
       setStartNewEinsatzName('');
-      await refreshEinsaetze();
+      setEinsaetze((prev) => {
+        const rest = prev.filter((item) => item.id !== created.id);
+        return [created, ...rest];
+      });
       setSelectedEinsatzId(created.id);
       await loadEinsatz(created.id);
       setStartChoice('none');
@@ -587,8 +589,6 @@ export function App() {
           busy={busy}
           error={error}
           einsaetze={einsaetze}
-          startOpenEinsatzId={startOpenEinsatzId}
-          setStartOpenEinsatzId={setStartOpenEinsatzId}
           startNewEinsatzName={startNewEinsatzName}
           setStartNewEinsatzName={setStartNewEinsatzName}
           startNewFuestName={startNewFuestName}

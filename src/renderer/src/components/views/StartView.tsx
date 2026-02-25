@@ -6,8 +6,6 @@ interface StartViewProps {
   busy: boolean;
   error: string | null;
   einsaetze: EinsatzListItem[];
-  startOpenEinsatzId: string;
-  setStartOpenEinsatzId: (value: string) => void;
   startNewEinsatzName: string;
   setStartNewEinsatzName: (value: string) => void;
   startNewFuestName: string;
@@ -40,26 +38,11 @@ export function StartView(props: StartViewProps): JSX.Element {
 
         {props.startChoice === 'open' && (
           <div className="start-form">
-            <label>
-              Einsatz
-              <select
-                value={props.startOpenEinsatzId}
-                onChange={(e) => props.setStartOpenEinsatzId(e.target.value)}
-                disabled={props.busy || props.einsaetze.length === 0}
-              >
-                {props.einsaetze.map((item) => (
-                  <option key={item.id} value={item.id}>
-                    {item.name} ({item.status})
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button onClick={props.onOpenExisting} disabled={props.busy || !props.startOpenEinsatzId}>
-              Einsatz öffnen
+            <p className="hint">Wähle eine bestehende Einsatz-Datei (`.sqlite`) aus.</p>
+            <button onClick={props.onOpenExisting} disabled={props.busy}>
+              Einsatz-Datei auswählen und öffnen
             </button>
-            {props.einsaetze.length === 0 && (
-              <p className="hint">Noch keine Einsätze vorhanden. Bitte neuen Einsatz anlegen.</p>
-            )}
+            {props.einsaetze.length > 0 && <p className="hint">Zuletzt erkannt im Standardpfad: {props.einsaetze.length}</p>}
           </div>
         )}
 

@@ -10,9 +10,11 @@ import { BackupCoordinator, resolveBackupDir } from '../services/backup';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command';
 import { toSafeError } from '../services/errors';
 import {
+  createEinsatzDbFileName,
   createEinsatzInOwnDatabase,
   findDbPathForEinsatz,
   listEinsaetzeFromDirectory,
+  readPrimaryEinsatzFromDbFile,
   resolveEinsatzBaseDir,
   resolveSystemDbPath,
 } from '../services/einsatz-files';
@@ -132,6 +134,38 @@ export function registerIpc(state: AppState): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ_DIALOG,
+    wrap(async () => {
+      const user = requireUser();
+      const result = await dialog.showOpenDialog({
+        title: 'Einsatz-Datei öffnen',
+        defaultPath: getBaseDir(),
+        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+        properties: ['openFile'],
+      });
+
+      const selected = result.filePaths[0];
+      if (result.canceled || !selected) {
+        return null;
+      }
+
+      const einsatzMeta = readPrimaryEinsatzFromDbFile(selected);
+      if (!einsatzMeta) {
+        throw new Error('Die gewählte Datei enthält keinen gültigen Einsatz.');
+      }
+
+      const nextContext = openDatabaseWithRetry(selected);
+      ensureDefaultAdmin(nextContext);
+      const dbUser = ensureSessionUserRecord(nextContext, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(nextContext);
+      state.backupCoordinator.start(nextContext);
+      state.settingsStore.set({ dbPath: path.dirname(selected) });
+      return einsatzMeta;
+    }),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.CREATE_EINSATZ,
     wrap(async (input: Parameters<RendererApi['createEinsatz']>[0]) => {
       const user = requireUser();
@@ -140,6 +174,33 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.backupCoordinator.start(created.ctx);
+      return created.einsatz;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CREATE_EINSATZ_DIALOG,
+    wrap(async (input: Parameters<RendererApi['createEinsatzWithDialog']>[0]) => {
+      const user = requireUser();
+      const baseDir = getBaseDir();
+      const saveResult = await dialog.showSaveDialog({
+        title: 'Einsatz-Datei speichern',
+        defaultPath: path.join(baseDir, createEinsatzDbFileName(input.name)),
+        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+      });
+
+      const selected = saveResult.filePath;
+      if (saveResult.canceled || !selected) {
+        return null;
+      }
+
+      const normalized = selected.toLowerCase().endsWith('.sqlite') ? selected : `${selected}.sqlite`;
+      const created = createEinsatzInOwnDatabase(path.dirname(normalized), input, user, normalized);
+      const dbUser = ensureSessionUserRecord(created.ctx, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(created.ctx);
+      state.backupCoordinator.start(created.ctx);
+      state.settingsStore.set({ dbPath: path.dirname(normalized) });
       return created.einsatz;
     }),
   );

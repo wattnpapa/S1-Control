@@ -76,8 +76,10 @@ export interface RendererApi {
   getSettings(): Promise<AppSettings>;
   setDbPath(path: string): Promise<AppSettings>;
   openEinsatz(einsatzId: string): Promise<boolean>;
+  openEinsatzWithDialog(): Promise<EinsatzListItem | null>;
   listEinsaetze(): Promise<EinsatzListItem[]>;
   createEinsatz(input: CreateEinsatzInput): Promise<EinsatzListItem>;
+  createEinsatzWithDialog(input: CreateEinsatzInput): Promise<EinsatzListItem | null>;
   archiveEinsatz(einsatzId: string): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
@@ -104,8 +106,10 @@ export const IPC_CHANNEL = {
   GET_SETTINGS: 'settings:get',
   SET_DB_PATH: 'settings:set-db-path',
   OPEN_EINSATZ: 'einsatz:open',
+  OPEN_EINSATZ_DIALOG: 'einsatz:open-dialog',
   LIST_EINSAETZE: 'einsatz:list',
   CREATE_EINSATZ: 'einsatz:create',
+  CREATE_EINSATZ_DIALOG: 'einsatz:create-dialog',
   ARCHIVE_EINSATZ: 'einsatz:archive',
   LIST_ABSCHNITTE: 'abschnitt:list',
   CREATE_ABSCHNITT: 'abschnitt:create',

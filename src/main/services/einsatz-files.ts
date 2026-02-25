@@ -18,6 +18,11 @@ function sanitizeFileName(value: string): string {
     .slice(0, 40) || 'einsatz';
 }
 
+export function createEinsatzDbFileName(einsatzName: string): string {
+  const stamp = Date.now();
+  return `${sanitizeFileName(einsatzName)}-${stamp}${SQLITE_EXT}`;
+}
+
 export function resolveEinsatzBaseDir(configuredPath: string): string {
   if (configuredPath.toLowerCase().endsWith(SQLITE_EXT)) {
     return path.dirname(configuredPath);
@@ -55,6 +60,14 @@ function readEinsaetzeFromDbFile(dbPath: string): Array<EinsatzListItem & { dbPa
   }
 }
 
+export function readPrimaryEinsatzFromDbFile(dbPath: string): EinsatzListItem | null {
+  const rows = readEinsaetzeFromDbFile(dbPath);
+  if (!rows.length) {
+    return null;
+  }
+  return rows.sort((a, b) => b.start.localeCompare(a.start))[0] ?? null;
+}
+
 export function listEinsaetzeFromDirectory(baseDir: string): EinsatzListItem[] {
   const rows = listEinsatzDbFiles(baseDir).flatMap((dbPath) => readEinsaetzeFromDbFile(dbPath));
   return rows.sort((a, b) => b.start.localeCompare(a.start));
@@ -74,12 +87,11 @@ export function createEinsatzInOwnDatabase(
   baseDir: string,
   input: CreateEinsatzInput,
   sessionUser: SessionUser | null,
+  explicitDbPath?: string,
 ): { einsatz: EinsatzListItem; ctx: DbContext } {
   fs.mkdirSync(baseDir, { recursive: true });
 
-  const stamp = Date.now();
-  const fileBase = `${sanitizeFileName(input.name)}-${stamp}${SQLITE_EXT}`;
-  const dbPath = path.join(baseDir, fileBase);
+  const dbPath = explicitDbPath ?? path.join(baseDir, createEinsatzDbFileName(input.name));
   const ctx = openDatabaseWithRetry(dbPath);
 
   ensureDefaultAdmin(ctx);
