@@ -7,6 +7,7 @@ const api: RendererApi = {
   logout: () => ipcRenderer.invoke(IPC_CHANNEL.LOGOUT),
   getSettings: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SETTINGS),
   setDbPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.SET_DB_PATH, dbPath),
+  openEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ, einsatzId),
   listEinsaetze: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_EINSAETZE),
   createEinsatz: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ, input),
   archiveEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.ARCHIVE_EINSATZ, einsatzId),
@@ -22,6 +23,7 @@ const api: RendererApi = {
   undoLastCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.UNDO_LAST, einsatzId),
   hasUndoableCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.HAS_UNDO, einsatzId),
   exportEinsatzakte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.EXPORT_EINSATZAKTE, einsatzId),
+  restoreBackup: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.RESTORE_BACKUP, einsatzId),
 };
 
 contextBridge.exposeInMainWorld('api', api);

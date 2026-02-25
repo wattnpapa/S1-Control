@@ -4,6 +4,8 @@ import { openDatabaseWithRetry } from './db/connection';
 import { SettingsStore } from './db/settings-store';
 import { registerIpc } from './ipc/register-ipc';
 import { ensureDefaultAdmin } from './services/auth';
+import { BackupCoordinator } from './services/backup';
+import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
 import type { SessionUser } from '../shared/types';
 
 function resolveRendererUrl(): string {
@@ -20,25 +22,28 @@ async function bootstrap(): Promise<void> {
 
   const settingsStore = new SettingsStore(app.getPath('userData'));
   const envPath = process.env.S1_DB_PATH;
-  const defaultDbPath = path.join(app.getPath('userData'), 's1-control.sqlite');
-  const configuredPath = settingsStore.get().dbPath ?? envPath ?? defaultDbPath;
+  const defaultBaseDir = path.join(app.getPath('userData'), 'einsaetze');
+  const configuredRawPath = settingsStore.get().dbPath ?? envPath ?? defaultBaseDir;
+  const configuredBaseDir = resolveEinsatzBaseDir(configuredRawPath);
+  const defaultSystemDbPath = resolveSystemDbPath(defaultBaseDir);
+  const configuredSystemDbPath = resolveSystemDbPath(configuredBaseDir);
 
   let startupWarning: string | null = null;
 
   const openWithFallback = () => {
     try {
-      return openDatabaseWithRetry(configuredPath);
+      return openDatabaseWithRetry(configuredSystemDbPath);
     } catch (initialError) {
       const initialMessage = initialError instanceof Error ? initialError.message : String(initialError);
-      startupWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${configuredPath}).\n${initialMessage}`;
+      startupWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${configuredSystemDbPath}).\n${initialMessage}`;
 
       try {
-        settingsStore.set({ dbPath: defaultDbPath });
-        return openDatabaseWithRetry(defaultDbPath);
+        settingsStore.set({ dbPath: defaultBaseDir });
+        return openDatabaseWithRetry(defaultSystemDbPath);
       } catch (fallbackError) {
         const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        const tempPath = path.join(app.getPath('temp'), 's1-control-fallback.sqlite');
-        startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`;
+        const tempPath = path.join(app.getPath('temp'), '_system-fallback.sqlite');
+        startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultSystemDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`;
         return openDatabaseWithRetry(tempPath);
       }
     }
@@ -46,17 +51,23 @@ async function bootstrap(): Promise<void> {
 
   let dbContext = openWithFallback();
   ensureDefaultAdmin(dbContext);
+  const backupCoordinator = new BackupCoordinator();
 
   let currentUser: SessionUser | null = null;
 
   registerIpc({
-    dbContext,
+    getDbContext: () => dbContext,
     setDbContext: (ctx) => {
-      dbContext.sqlite.close();
+      try {
+        dbContext.sqlite.close();
+      } catch {
+        // already closed
+      }
       dbContext = ctx;
     },
+    backupCoordinator,
     settingsStore,
-    getDefaultDbPath: () => defaultDbPath,
+    getDefaultDbPath: () => defaultBaseDir,
     getSessionUser: () => currentUser,
     setSessionUser: (user) => {
       currentUser = user;
@@ -94,6 +105,7 @@ async function bootstrap(): Promise<void> {
   });
 
   app.on('window-all-closed', () => {
+    backupCoordinator.stop();
     if (process.platform !== 'darwin') {
       app.quit();
     }

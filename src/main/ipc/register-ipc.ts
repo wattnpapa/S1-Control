@@ -5,26 +5,33 @@ import type { SessionUser } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import { openDatabaseWithRetry } from '../db/connection';
 import { SettingsStore } from '../db/settings-store';
-import { ensureDefaultAdmin, login } from '../services/auth';
+import { ensureDefaultAdmin, ensureSessionUserRecord, login } from '../services/auth';
+import { BackupCoordinator, resolveBackupDir } from '../services/backup';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command';
 import { toSafeError } from '../services/errors';
+import {
+  createEinsatzInOwnDatabase,
+  findDbPathForEinsatz,
+  listEinsaetzeFromDirectory,
+  resolveEinsatzBaseDir,
+  resolveSystemDbPath,
+} from '../services/einsatz-files';
 import {
   archiveEinsatz,
   createAbschnitt,
   createEinheit,
-  createEinsatz,
   createFahrzeug,
   splitEinheit,
   hasUndoableCommand,
   listAbschnittDetails,
   listAbschnitte,
-  listEinsaetze,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
 
 interface AppState {
-  dbContext: DbContext;
+  getDbContext: () => DbContext;
   setDbContext: (ctx: DbContext) => void;
+  backupCoordinator: BackupCoordinator;
   settingsStore: SettingsStore;
   getDefaultDbPath: () => string;
   getSessionUser: () => SessionUser | null;
@@ -50,12 +57,14 @@ export function registerIpc(state: AppState): void {
     return user;
   };
 
+  const getBaseDir = (): string => resolveEinsatzBaseDir(state.settingsStore.get().dbPath ?? state.getDefaultDbPath());
+
   ipcMain.handle(IPC_CHANNEL.GET_SESSION, wrap(async () => state.getSessionUser()));
 
   ipcMain.handle(
     IPC_CHANNEL.LOGIN,
     wrap(async (input: Parameters<RendererApi['login']>[0]) => {
-      const user = login(state.dbContext, input.name, input.passwort);
+      const user = login(state.getDbContext(), input.name, input.passwort);
       state.setSessionUser(user);
       return user;
     }),
@@ -64,6 +73,7 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.LOGOUT,
     wrap(async () => {
+      state.backupCoordinator.stop();
       state.setSessionUser(null);
     }),
   );
@@ -79,21 +89,48 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.SET_DB_PATH,
     wrap(async (dbPath: string) => {
-      const nextContext = openDatabaseWithRetry(dbPath);
+      const baseDir = resolveEinsatzBaseDir(dbPath);
+      const nextContext = openDatabaseWithRetry(resolveSystemDbPath(baseDir));
       ensureDefaultAdmin(nextContext);
+      state.backupCoordinator.stop();
       state.setDbContext(nextContext);
-      state.settingsStore.set({ dbPath });
-      return { dbPath };
+      state.settingsStore.set({ dbPath: baseDir });
+      return { dbPath: baseDir };
     }),
   );
 
-  ipcMain.handle(IPC_CHANNEL.LIST_EINSAETZE, wrap(async () => listEinsaetze(state.dbContext)));
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_EINSAETZE,
+    wrap(async () => {
+      return listEinsaetzeFromDirectory(getBaseDir());
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ,
+    wrap(async (einsatzId: string) => {
+      const user = requireUser();
+      const dbPath = findDbPathForEinsatz(getBaseDir(), einsatzId);
+      if (!dbPath) {
+        return false;
+      }
+      const nextContext = openDatabaseWithRetry(dbPath);
+      ensureDefaultAdmin(nextContext);
+      ensureSessionUserRecord(nextContext, user);
+      state.setDbContext(nextContext);
+      state.backupCoordinator.start(nextContext);
+      return true;
+    }),
+  );
 
   ipcMain.handle(
     IPC_CHANNEL.CREATE_EINSATZ,
     wrap(async (input: Parameters<RendererApi['createEinsatz']>[0]) => {
-      requireUser();
-      return createEinsatz(state.dbContext, input);
+      const user = requireUser();
+      const created = createEinsatzInOwnDatabase(getBaseDir(), input, user);
+      state.setDbContext(created.ctx);
+      state.backupCoordinator.start(created.ctx);
+      return created.einsatz;
     }),
   );
 
@@ -101,27 +138,27 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.ARCHIVE_EINSATZ,
     wrap(async (einsatzId: string) => {
       requireUser();
-      archiveEinsatz(state.dbContext, einsatzId);
+      archiveEinsatz(state.getDbContext(), einsatzId);
     }),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITTE,
-    wrap(async (einsatzId: string) => listAbschnitte(state.dbContext, einsatzId)),
+    wrap(async (einsatzId: string) => listAbschnitte(state.getDbContext(), einsatzId)),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.CREATE_ABSCHNITT,
     wrap(async (input: Parameters<RendererApi['createAbschnitt']>[0]) => {
       requireUser();
-      return createAbschnitt(state.dbContext, input);
+      return createAbschnitt(state.getDbContext(), input);
     }),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS,
     wrap(async (einsatzId: string, abschnittId: string) =>
-      listAbschnittDetails(state.dbContext, einsatzId, abschnittId),
+      listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
     ),
   );
 
@@ -129,7 +166,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.CREATE_EINHEIT,
     wrap(async (input: Parameters<RendererApi['createEinheit']>[0]) => {
       requireUser();
-      createEinheit(state.dbContext, input);
+      createEinheit(state.getDbContext(), input);
     }),
   );
 
@@ -137,7 +174,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.CREATE_FAHRZEUG,
     wrap(async (input: Parameters<RendererApi['createFahrzeug']>[0]) => {
       requireUser();
-      createFahrzeug(state.dbContext, input);
+      createFahrzeug(state.getDbContext(), input);
     }),
   );
 
@@ -145,7 +182,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.SPLIT_EINHEIT,
     wrap(async (input: Parameters<RendererApi['splitEinheit']>[0]) => {
       requireUser();
-      splitEinheit(state.dbContext, input);
+      splitEinheit(state.getDbContext(), input);
     }),
   );
 
@@ -153,7 +190,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.MOVE_EINHEIT,
     wrap(async (input: Parameters<RendererApi['moveEinheit']>[0]) => {
       const user = requireUser();
-      moveEinheit(state.dbContext, input, user);
+      moveEinheit(state.getDbContext(), input, user);
     }),
   );
 
@@ -161,7 +198,7 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.MOVE_FAHRZEUG,
     wrap(async (input: Parameters<RendererApi['moveFahrzeug']>[0]) => {
       const user = requireUser();
-      moveFahrzeug(state.dbContext, input, user);
+      moveFahrzeug(state.getDbContext(), input, user);
     }),
   );
 
@@ -169,13 +206,45 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.UNDO_LAST,
     wrap(async (einsatzId: string) => {
       const user = requireUser();
-      return undoLastCommand(state.dbContext, einsatzId, user);
+      return undoLastCommand(state.getDbContext(), einsatzId, user);
     }),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.HAS_UNDO,
-    wrap(async (einsatzId: string) => hasUndoableCommand(state.dbContext, einsatzId)),
+    wrap(async (einsatzId: string) => hasUndoableCommand(state.getDbContext(), einsatzId)),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.RESTORE_BACKUP,
+    wrap(async (einsatzId: string) => {
+      const user = requireUser();
+      const dbPath = findDbPathForEinsatz(getBaseDir(), einsatzId);
+      if (!dbPath) {
+        return false;
+      }
+
+      const result = await dialog.showOpenDialog({
+        title: 'Backup laden',
+        defaultPath: resolveBackupDir(dbPath),
+        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+        properties: ['openFile'],
+      });
+      const selected = result.filePaths[0];
+      if (result.canceled || !selected) {
+        return false;
+      }
+
+      const activeContext = state.getDbContext();
+      activeContext.sqlite.close();
+      await state.backupCoordinator.restoreBackup(dbPath, selected);
+      const nextContext = openDatabaseWithRetry(dbPath);
+      ensureDefaultAdmin(nextContext);
+      ensureSessionUserRecord(nextContext, user);
+      state.setDbContext(nextContext);
+      state.backupCoordinator.start(nextContext);
+      return true;
+    }),
   );
 
   ipcMain.handle(
@@ -193,7 +262,7 @@ export function registerIpc(state: AppState): void {
         return null;
       }
 
-      await exportEinsatzakte(state.dbContext, einsatzId, result.filePath);
+      await exportEinsatzakte(state.getDbContext(), einsatzId, result.filePath);
       return { outputPath: result.filePath };
     }),
   );

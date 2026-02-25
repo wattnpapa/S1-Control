@@ -74,6 +74,7 @@ export interface RendererApi {
   logout(): Promise<void>;
   getSettings(): Promise<AppSettings>;
   setDbPath(path: string): Promise<AppSettings>;
+  openEinsatz(einsatzId: string): Promise<boolean>;
   listEinsaetze(): Promise<EinsatzListItem[]>;
   createEinsatz(input: CreateEinsatzInput): Promise<EinsatzListItem>;
   archiveEinsatz(einsatzId: string): Promise<void>;
@@ -88,6 +89,7 @@ export interface RendererApi {
   undoLastCommand(einsatzId: string): Promise<boolean>;
   hasUndoableCommand(einsatzId: string): Promise<boolean>;
   exportEinsatzakte(einsatzId: string): Promise<ExportResult | null>;
+  restoreBackup(einsatzId: string): Promise<boolean>;
 }
 
 export const IPC_CHANNEL = {
@@ -96,6 +98,7 @@ export const IPC_CHANNEL = {
   LOGOUT: 'auth:logout',
   GET_SETTINGS: 'settings:get',
   SET_DB_PATH: 'settings:set-db-path',
+  OPEN_EINSATZ: 'einsatz:open',
   LIST_EINSAETZE: 'einsatz:list',
   CREATE_EINSATZ: 'einsatz:create',
   ARCHIVE_EINSATZ: 'einsatz:archive',
@@ -110,4 +113,5 @@ export const IPC_CHANNEL = {
   UNDO_LAST: 'command:undo-last',
   HAS_UNDO: 'command:has-undo',
   EXPORT_EINSATZAKTE: 'einsatz:export',
+  RESTORE_BACKUP: 'einsatz:restore-backup',
 } as const;

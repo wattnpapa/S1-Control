@@ -258,6 +258,10 @@ export function App() {
   const doStartOpenExisting = async () => {
     if (!startOpenEinsatzId) return;
     await withBusy(async () => {
+      const opened = await window.api.openEinsatz(startOpenEinsatzId);
+      if (!opened) {
+        throw new Error('Einsatz konnte nicht geöffnet werden.');
+      }
       setSelectedEinsatzId(startOpenEinsatzId);
       await loadEinsatz(startOpenEinsatzId);
       setStartChoice('none');
@@ -439,6 +443,24 @@ export function App() {
     });
   };
 
+  const doRestoreBackup = async () => {
+    if (!selectedEinsatzId) {
+      setError('Bitte zuerst einen Einsatz auswählen.');
+      return;
+    }
+    await withBusy(async () => {
+      const restored = await window.api.restoreBackup(selectedEinsatzId);
+      if (!restored) {
+        return;
+      }
+      const reopened = await window.api.openEinsatz(selectedEinsatzId);
+      if (!reopened) {
+        throw new Error('Einsatz konnte nach Backup-Wiederherstellung nicht geöffnet werden.');
+      }
+      await loadEinsatz(selectedEinsatzId, selectedAbschnittId);
+    });
+  };
+
   const doMove = async () => {
     if (!moveDialog || !selectedEinsatzId || !moveTarget) return;
     await withBusy(async () => {
@@ -610,8 +632,10 @@ export function App() {
             <SettingsView
               busy={busy}
               dbPath={dbPath}
+              selectedEinsatzId={selectedEinsatzId}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}
+              onRestoreBackup={() => void doRestoreBackup()}
             />
           )}
         </section>

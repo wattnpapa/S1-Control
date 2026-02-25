@@ -46,8 +46,9 @@ Standard-Login: `admin` / `admin`
 
 ## DB-Pfad / Fileshare
 
-- DB-Pfad ist in der App konfigurierbar (Settings-Bereich).
-- Alternativ über ENV: `S1_DB_PATH=/pfad/zur/einsatz.sqlite`
+- DB-Pfad ist in der App als **Einsatz-Verzeichnis** konfigurierbar (Settings-Bereich).
+- Alternativ über ENV: `S1_DB_PATH=/pfad/zum/einsatz-verzeichnis`
+- Jeder Einsatz wird als eigene SQLite-Datei im Einsatz-Verzeichnis angelegt (atomar pro Einsatz).
 - Beim DB-Open werden gesetzt:
   - `PRAGMA journal_mode=WAL`
   - `PRAGMA synchronous=NORMAL`
@@ -58,6 +59,8 @@ Standard-Login: `admin` / `admin`
   - Nur DB-Datei teilen (WAL-Modus aktiv)
   - Gleichzeitige Zugriffe werden über busy timeout/retry abgefedert
   - Daten werden im laufenden Einsatz automatisch periodisch aktualisiert
+  - Automatische Backups alle 5 Minuten in `<einsatz-verzeichnis>/backup`
+  - Bei mehreren offenen Clients schreibt nur ein Client Backups (Lock-Datei)
 
 ## Architekturregeln
 

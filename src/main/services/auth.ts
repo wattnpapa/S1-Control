@@ -74,3 +74,19 @@ export function login(ctx: DbContext, name: string, passwort: string): SessionUs
     rolle: row.rolle as BenutzerRolle,
   };
 }
+
+export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): void {
+  const existing = ctx.db.select().from(benutzer).where(eq(benutzer.id, user.id)).get();
+  if (existing) {
+    return;
+  }
+
+  // Keep session user ID available for FK references in command log entries.
+  ctx.db.insert(benutzer).values({
+    id: user.id,
+    name: user.name,
+    rolle: user.rolle,
+    passwortHash: hashPassword(crypto.randomUUID()),
+    aktiv: true,
+  }).run();
+}
