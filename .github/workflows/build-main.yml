@@ -22,7 +22,7 @@ jobs:
       - name: Generate NATO version
         id: version
         run: |
-          NATO_VERSION="$(date -u '+%d%H%M%b%y' | tr '[:lower:]' '[:upper:]')"
+          NATO_VERSION="$(LC_TIME=C date -u '+%d%H%M%b%y' | tr '[:upper:]' '[:lower:]')"
           echo "nato_version=$NATO_VERSION" >> "$GITHUB_OUTPUT"
 
       - name: Create Git tag
@@ -58,7 +58,7 @@ jobs:
           npm run typecheck
           npm run build:renderer
           npm run build:main
-          npx electron-builder --mac --publish never
+          npx electron-builder --mac --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -92,8 +92,8 @@ jobs:
           npm run typecheck
           npm run build:renderer
           npm run build:main
-          npx electron-builder --win --x64 --config.win.target=portable --publish never
-          npx electron-builder --win --x64 --config.win.target=nsis --publish never
+          npx electron-builder --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
+          npx electron-builder --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -127,7 +127,7 @@ jobs:
           npm run typecheck
           npm run build:renderer
           npm run build:main
-          npx electron-builder --linux --x64 --config.linux.target=deb --publish never
+          npx electron-builder --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.NATO_VERSION }}-${os}-${arch}.${ext}'
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

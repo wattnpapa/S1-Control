@@ -40,7 +40,7 @@ Standard-Login: `admin` / `admin`
 ## CI/CD
 
 - Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS-, Windows- und Linux-Artefakte.
-- Die Release-Tag/Versionskennung wird als NATO-Zeit erzeugt: `DDHHMMSSZMONYY` (UTC), z.B. `25153045ZFEB26`.
+- Die Release-Tag/Versionskennung wird als NATO-Zeit ohne Zeitzonenangabe erzeugt: `DDHHMMmonYY`, z.B. `251530feb26`.
 - Workflow: `.github/workflows/build-main.yml`
 
 ## DB-Pfad / Fileshare
