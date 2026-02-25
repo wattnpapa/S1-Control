@@ -9,46 +9,13 @@ const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 
 export class UpdaterService {
   private state: UpdaterState = { stage: 'idle', currentVersion: app.getVersion() };
+  private autoUpdaterEnabled = false;
 
   private readonly notify: (state: UpdaterState) => void;
 
   public constructor(notify: (state: UpdaterState) => void) {
     this.notify = notify;
-    autoUpdater.autoDownload = false;
-    autoUpdater.autoInstallOnAppQuit = false;
-
-    autoUpdater.on('checking-for-update', () => {
-      this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
-    });
-
-    autoUpdater.on('update-available', (info) => {
-      this.setState({ stage: 'available', latestVersion: info.version });
-    });
-
-    autoUpdater.on('update-not-available', () => {
-      this.setState({ stage: 'not-available' });
-    });
-
-    autoUpdater.on('error', (error) => {
-      const message = error.message || 'Update-Fehler';
-      if (this.isOfflineLikeError(message)) {
-        // Offlinebetrieb: kein Fehlerbanner erzwingen.
-        this.setState({ stage: 'idle' });
-        return;
-      }
-      this.setState({ stage: 'error', message });
-    });
-
-    autoUpdater.on('download-progress', (progress) => {
-      this.setState({
-        stage: 'downloading',
-        progressPercent: progress.percent,
-      });
-    });
-
-    autoUpdater.on('update-downloaded', (info) => {
-      this.setState({ stage: 'downloaded', latestVersion: info.version, progressPercent: 100 });
-    });
+    this.configureAutoUpdater();
   }
 
   public getState(): UpdaterState {
@@ -59,7 +26,7 @@ export class UpdaterService {
     this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
 
     try {
-      if (!this.isAutoUpdaterConfigured() || !this.isSemverVersion(app.getVersion())) {
+    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured() || !this.isSemverVersion(app.getVersion())) {
         await this.checkGitHubReleaseVersion();
         return;
       }
@@ -79,7 +46,7 @@ export class UpdaterService {
   }
 
   public async downloadUpdate(): Promise<void> {
-    if (!this.isAutoUpdaterConfigured()) {
+    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
       this.setState({
         stage: 'unsupported',
         message: 'Update-Download ist nur in signierten Release-Builds verfügbar.',
@@ -90,10 +57,59 @@ export class UpdaterService {
   }
 
   public installDownloadedUpdate(): void {
-    if (!this.isAutoUpdaterConfigured()) {
+    if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
       return;
     }
     autoUpdater.quitAndInstall();
+  }
+
+  private configureAutoUpdater(): void {
+    try {
+      autoUpdater.autoDownload = false;
+      autoUpdater.autoInstallOnAppQuit = false;
+
+      autoUpdater.on('checking-for-update', () => {
+        this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
+      });
+
+      autoUpdater.on('update-available', (info) => {
+        this.setState({ stage: 'available', latestVersion: info.version });
+      });
+
+      autoUpdater.on('update-not-available', () => {
+        this.setState({ stage: 'not-available' });
+      });
+
+      autoUpdater.on('error', (error) => {
+        const message = error.message || 'Update-Fehler';
+        if (this.isOfflineLikeError(message)) {
+          // Offlinebetrieb: kein Fehlerbanner erzwingen.
+          this.setState({ stage: 'idle' });
+          return;
+        }
+        this.setState({ stage: 'error', message });
+      });
+
+      autoUpdater.on('download-progress', (progress) => {
+        this.setState({
+          stage: 'downloading',
+          progressPercent: progress.percent,
+        });
+      });
+
+      autoUpdater.on('update-downloaded', (info) => {
+        this.setState({ stage: 'downloaded', latestVersion: info.version, progressPercent: 100 });
+      });
+
+      this.autoUpdaterEnabled = true;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.autoUpdaterEnabled = false;
+      this.setState({
+        stage: 'idle',
+        message: `Auto-Updater deaktiviert: ${message}`,
+      });
+    }
   }
 
   private isAutoUpdaterConfigured(): boolean {
