@@ -89,9 +89,11 @@ export type UpdaterStage =
 
 export interface UpdaterState {
   stage: UpdaterStage;
-  version?: string;
+  currentVersion?: string;
+  latestVersion?: string;
   progressPercent?: number;
   message?: string;
+  lastCheckedAt?: string;
 }
 
 export interface ApiError {

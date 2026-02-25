@@ -109,7 +109,7 @@ export function App() {
     <>
       {updaterState.stage === 'available' && (
         <div className="update-banner">
-          Update verfügbar {updaterState.version ? `(${updaterState.version})` : ''}.
+          Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}.
           <button onClick={() => void doDownloadUpdate()} disabled={busy}>
             Update herunterladen
           </button>
@@ -117,7 +117,7 @@ export function App() {
       )}
       {updaterState.stage === 'downloaded' && (
         <div className="update-banner">
-          Update heruntergeladen {updaterState.version ? `(${updaterState.version})` : ''}.
+          Update heruntergeladen {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}.
           <button onClick={() => void doInstallUpdate()} disabled={busy}>
             Jetzt neu starten
           </button>
@@ -125,6 +125,10 @@ export function App() {
       )}
       {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
       {updaterState.stage === 'unsupported' && <div className="banner">{updaterState.message}</div>}
+      <div className="banner">
+        Update-Debug: Status `{updaterState.stage}` | Lokal `{updaterState.currentVersion ?? '-'}` | GitHub
+        `{updaterState.latestVersion ?? '-'}` | Letzte Prüfung `{updaterState.lastCheckedAt ?? '-'}`
+      </div>
     </>
   );
 

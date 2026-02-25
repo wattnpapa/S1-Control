@@ -5,7 +5,7 @@ import path from 'node:path';
 import type { UpdaterState } from '../../shared/types';
 
 export class UpdaterService {
-  private state: UpdaterState = { stage: 'idle' };
+  private state: UpdaterState = { stage: 'idle', currentVersion: app.getVersion() };
 
   private readonly notify: (state: UpdaterState) => void;
 
@@ -15,11 +15,11 @@ export class UpdaterService {
     autoUpdater.autoInstallOnAppQuit = false;
 
     autoUpdater.on('checking-for-update', () => {
-      this.setState({ stage: 'checking' });
+      this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
     });
 
     autoUpdater.on('update-available', (info) => {
-      this.setState({ stage: 'available', version: info.version });
+      this.setState({ stage: 'available', latestVersion: info.version });
     });
 
     autoUpdater.on('update-not-available', () => {
@@ -44,7 +44,7 @@ export class UpdaterService {
     });
 
     autoUpdater.on('update-downloaded', (info) => {
-      this.setState({ stage: 'downloaded', version: info.version, progressPercent: 100 });
+      this.setState({ stage: 'downloaded', latestVersion: info.version, progressPercent: 100 });
     });
   }
 
@@ -56,7 +56,11 @@ export class UpdaterService {
     if (!this.isUpdateConfigured()) {
       return;
     }
-    await autoUpdater.checkForUpdates();
+    const result = await autoUpdater.checkForUpdates();
+    const latestVersion = result?.updateInfo?.version;
+    if (latestVersion) {
+      this.setState({ latestVersion });
+    }
   }
 
   public async downloadUpdate(): Promise<void> {
@@ -105,8 +109,12 @@ export class UpdaterService {
     );
   }
 
-  private setState(next: UpdaterState): void {
-    this.state = next;
+  private setState(next: Partial<UpdaterState> & Pick<UpdaterState, 'stage'> | Partial<UpdaterState>): void {
+    this.state = {
+      ...this.state,
+      ...next,
+      currentVersion: app.getVersion(),
+    };
     this.notify(this.state);
   }
 }

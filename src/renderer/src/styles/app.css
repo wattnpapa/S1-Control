@@ -67,7 +67,7 @@ select {
   position: relative;
   background:
     linear-gradient(rgba(6, 17, 40, 0.5), rgba(6, 17, 40, 0.5)),
-    url("branding/start-background.png") center center / cover no-repeat;
+    url("../branding/start-background.png") center center / cover no-repeat;
 }
 
 .panel {
