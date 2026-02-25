@@ -26,6 +26,7 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:behavior": "vitest run test/behavior*.test.ts test/behavior/**/*.test.ts",
     "test:coverage": "vitest run --coverage"
   },
   "build": {
