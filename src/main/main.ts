@@ -124,7 +124,7 @@ async function bootstrap(): Promise<void> {
   };
 
   await createWindow();
-  void updater.checkForUpdates();
+  void updater.checkForUpdates().catch(() => undefined);
   if (startupWarning) {
     dialog.showMessageBox({
       type: 'warning',

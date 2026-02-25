@@ -10,6 +10,7 @@ interface StartViewProps {
   setStartNewEinsatzName: (value: string) => void;
   startNewFuestName: string;
   setStartNewFuestName: (value: string) => void;
+  appVersion?: string;
   onOpenExisting: () => void;
   onCreate: () => void;
 }
@@ -23,6 +24,7 @@ export function StartView(props: StartViewProps): JSX.Element {
             <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
           </span>
           <h1 className="login-title">S1-Control</h1>
+          <p className="login-version">Version {props.appVersion ?? '-'}</p>
         </div>
         <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
 

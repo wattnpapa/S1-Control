@@ -4,6 +4,9 @@ import { existsSync } from 'node:fs';
 import path from 'node:path';
 import type { UpdaterState } from '../../shared/types';
 
+const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
+const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
+
 export class UpdaterService {
   private state: UpdaterState = { stage: 'idle', currentVersion: app.getVersion() };
 
@@ -53,46 +56,104 @@ export class UpdaterService {
   }
 
   public async checkForUpdates(): Promise<void> {
-    if (!this.isUpdateConfigured()) {
-      return;
-    }
-    const result = await autoUpdater.checkForUpdates();
-    const latestVersion = result?.updateInfo?.version;
-    if (latestVersion) {
-      this.setState({ latestVersion });
+    this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
+
+    try {
+      if (!this.isAutoUpdaterConfigured() || !this.isSemverVersion(app.getVersion())) {
+        await this.checkGitHubReleaseVersion();
+        return;
+      }
+      const result = await autoUpdater.checkForUpdates();
+      const latestVersion = result?.updateInfo?.version;
+      if (latestVersion) {
+        this.setState({ latestVersion });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (this.isOfflineLikeError(message)) {
+        this.setState({ stage: 'idle' });
+        return;
+      }
+      this.setState({ stage: 'error', message });
     }
   }
 
   public async downloadUpdate(): Promise<void> {
-    if (!this.isUpdateConfigured()) {
+    if (!this.isAutoUpdaterConfigured()) {
+      this.setState({
+        stage: 'unsupported',
+        message: 'Update-Download ist nur in signierten Release-Builds verfügbar.',
+      });
       return;
     }
     await autoUpdater.downloadUpdate();
   }
 
   public installDownloadedUpdate(): void {
-    if (!this.isUpdateConfigured()) {
+    if (!this.isAutoUpdaterConfigured()) {
       return;
     }
     autoUpdater.quitAndInstall();
   }
 
-  private isUpdateConfigured(): boolean {
-    if (!app.isPackaged) {
-      this.setState({ stage: 'unsupported', message: 'Auto-Update ist nur in einer Release-App verfügbar.' });
-      return false;
-    }
-
+  private isAutoUpdaterConfigured(): boolean {
     const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
     if (!existsSync(updateConfigPath)) {
-      this.setState({
-        stage: 'unsupported',
-        message: 'Auto-Update ist in dieser Build-Variante nicht verfügbar (kein app-update.yml).',
-      });
       return false;
     }
 
     return true;
+  }
+
+  private async checkGitHubReleaseVersion(): Promise<void> {
+    const endpoint = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+
+    try {
+      const response = await fetch(endpoint, {
+        headers: {
+          Accept: 'application/vnd.github+json',
+          'User-Agent': 'S1-Control-Updater',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`GitHub Update-Check fehlgeschlagen (${response.status})`);
+      }
+
+      const payload = (await response.json()) as { tag_name?: string; name?: string };
+      const latestVersion = this.normalizeVersion(payload.tag_name || payload.name || '');
+      const currentVersion = this.normalizeVersion(app.getVersion());
+
+      if (!latestVersion) {
+        this.setState({ stage: 'not-available' });
+        return;
+      }
+
+      if (latestVersion !== currentVersion) {
+        this.setState({
+          stage: 'available',
+          latestVersion,
+          message: 'Lokaler Build ohne Auto-Update-Datei. Download/Install manuell über GitHub Release.',
+        });
+      } else {
+        this.setState({ stage: 'not-available', latestVersion });
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (this.isOfflineLikeError(message)) {
+        this.setState({ stage: 'idle' });
+        return;
+      }
+      this.setState({ stage: 'error', message });
+    }
+  }
+
+  private normalizeVersion(version: string): string {
+    return version.trim().replace(/^v/i, '');
+  }
+
+  private isSemverVersion(version: string): boolean {
+    return /^\d+\.\d+\.\d+([-.+].+)?$/.test(version.trim());
   }
 
   private isOfflineLikeError(message: string): boolean {

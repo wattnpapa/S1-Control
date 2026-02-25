@@ -92,6 +92,12 @@ select {
   text-align: center;
 }
 
+.login-version {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .login-logo-wrap {
   width: 66px;
   height: 66px;

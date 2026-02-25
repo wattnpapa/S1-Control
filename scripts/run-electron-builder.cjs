@@ -19,12 +19,13 @@ const versionConfigArgs = targetsMac
       `--config.mac.extendInfo.CFBundleVersion=${version}`,
     ]
   : [];
+const metadataVersionArgs = [`--config.extraMetadata.version=${version}`];
 
 const electronBuilderCli = require.resolve('electron-builder/out/cli/cli.js');
 
 const result = spawnSync(
   process.execPath,
-  [electronBuilderCli, ...args, ...versionConfigArgs],
+  [electronBuilderCli, ...args, ...versionConfigArgs, ...metadataVersionArgs],
   {
     stdio: 'inherit',
     env: {
