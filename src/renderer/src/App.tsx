@@ -89,7 +89,7 @@ export function App() {
     einheitId: '',
   });
 
-  const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('none');
+  const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('open');
   const [startNewEinsatzName, setStartNewEinsatzName] = useState('');
   const [startNewFuestName, setStartNewFuestName] = useState('FüSt 1');
 
@@ -309,7 +309,7 @@ export function App() {
       });
       setSelectedEinsatzId(opened.id);
       await loadEinsatz(opened.id);
-      setStartChoice('none');
+      setStartChoice('open');
     });
   };
 
@@ -334,7 +334,7 @@ export function App() {
       });
       setSelectedEinsatzId(created.id);
       await loadEinsatz(created.id);
-      setStartChoice('none');
+      setStartChoice('open');
     });
   };
 
@@ -517,7 +517,7 @@ export function App() {
     await withBusy(async () => {
       await window.api.setDbPath(dbPath);
       clearSelectedEinsatz();
-      setStartChoice('none');
+      setStartChoice('open');
       await refreshEinsaetze();
     });
   };

@@ -16,7 +16,7 @@ interface StartViewProps {
 
 export function StartView(props: StartViewProps): JSX.Element {
   return (
-    <div className="login-page">
+    <div className="login-page start-page">
       <div className="panel start-screen-panel">
         <div className="login-header">
           <span className="login-logo-wrap">
@@ -24,7 +24,6 @@ export function StartView(props: StartViewProps): JSX.Element {
           </span>
           <h1 className="login-title">S1-Control</h1>
         </div>
-        <h1>Startbildschirm</h1>
         <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
 
         <div className="start-options">
