@@ -272,6 +272,62 @@ jobs:
             dist/*.deb
             dist/latest*.yml
 
+  build-linux-arch:
+    runs-on: ubuntu-latest
+    needs:
+      - prepare
+      - test
+    env:
+      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            if [ "$i" -eq 3 ]; then
+              exit 1
+            fi
+            echo "npm ci fehlgeschlagen, Retry $i/3 ..."
+            sleep 10
+          done
+
+      - name: Build Arch Linux artifacts (pacman)
+        run: |
+          npm run -s lint
+          npm run -s typecheck
+          npm run -s build:renderer
+          npm run -s build:main
+          npm run -s rebuild:native
+          node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=pacman --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
+
+      - name: Verify Arch Linux artifacts
+        run: |
+          if compgen -G "dist/*.pacman" > /dev/null || compgen -G "dist/*.pkg.tar.zst" > /dev/null; then
+            exit 0
+          fi
+          echo "Missing Arch Linux package (expected .pacman or .pkg.tar.zst in dist/)"
+          ls -la dist || true
+          exit 1
+
+      - name: Upload Arch Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: s1-control-linux-arch-${{ env.BUILD_VERSION }}
+          path: |
+            dist/*.pacman
+            dist/*.pkg.tar.zst
+
   release:
     runs-on: ubuntu-latest
     needs:
@@ -279,6 +335,7 @@ jobs:
       - build-mac
       - build-win
       - build-linux
+      - build-linux-arch
     steps:
       - name: Download macOS artifacts
         uses: actions/download-artifact@v4
@@ -298,6 +355,12 @@ jobs:
           name: s1-control-linux-${{ needs.prepare.outputs.build_version }}
           path: artifacts/linux
 
+      - name: Download Arch Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: s1-control-linux-arch-${{ needs.prepare.outputs.build_version }}
+          path: artifacts/linux-arch
+
       - name: Create GitHub release
         uses: softprops/action-gh-release@v2
         with:
@@ -307,3 +370,4 @@ jobs:
             artifacts/mac/*
             artifacts/win/*
             artifacts/linux/*
+            artifacts/linux-arch/*
