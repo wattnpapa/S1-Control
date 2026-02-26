@@ -1128,7 +1128,6 @@ export function App() {
           startNewFuestName={startNewFuestName}
           setStartNewFuestName={setStartNewFuestName}
           appVersion={updaterState.currentVersion}
-          updaterState={updaterState}
           onOpenExisting={() => void doStartOpenExisting()}
           onOpenKnownEinsatz={(einsatzId) => void doStartOpenKnownEinsatz(einsatzId)}
           onCreate={() => void doStartCreateEinsatz()}
