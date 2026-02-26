@@ -117,7 +117,12 @@ export class UpdaterService {
       const maybeSetFeedUrl = (autoUpdater as unknown as { setFeedURL?: (options: { provider: 'generic'; url: string }) => void })
         .setFeedURL;
       if (typeof maybeSetFeedUrl === 'function') {
-        maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
+        try {
+          // Prefer bundled app-update.yml; setFeedURL can fail on some runtime combinations.
+          maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
+        } catch {
+          // Ignore and continue with app-update.yml based configuration.
+        }
       }
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
