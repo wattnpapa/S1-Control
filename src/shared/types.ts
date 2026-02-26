@@ -70,6 +70,19 @@ export interface EinheitListItem {
   piktogrammKey: string | null;
   tacticalSignConfigJson: string | null;
   aktuellerAbschnittId: string;
+  grFuehrerName: string | null;
+  ovName: string | null;
+  ovTelefon: string | null;
+  ovFax: string | null;
+  rbName: string | null;
+  rbTelefon: string | null;
+  rbFax: string | null;
+  lvName: string | null;
+  lvTelefon: string | null;
+  lvFax: string | null;
+  bemerkung: string | null;
+  vegetarierVorhanden: boolean | null;
+  erreichbarkeiten: string | null;
 }
 
 export interface FahrzeugListItem {
@@ -81,6 +94,10 @@ export interface FahrzeugListItem {
   organisation: OrganisationKey | null;
   aktuelleEinsatzEinheitId: string | null;
   aktuellerAbschnittId: string | null;
+  funkrufname: string | null;
+  stanKonform: boolean | null;
+  sondergeraet: string | null;
+  nutzlast: string | null;
 }
 
 export interface AbschnittDetails {

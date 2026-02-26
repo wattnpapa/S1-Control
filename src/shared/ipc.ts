@@ -46,6 +46,19 @@ export interface CreateEinheitInput {
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
   stammdatenEinheitId?: string;
   tacticalSignConfigJson?: string;
+  grFuehrerName?: string;
+  ovName?: string;
+  ovTelefon?: string;
+  ovFax?: string;
+  rbName?: string;
+  rbTelefon?: string;
+  rbFax?: string;
+  lvName?: string;
+  lvTelefon?: string;
+  lvFax?: string;
+  bemerkung?: string;
+  vegetarierVorhanden?: boolean | null;
+  erreichbarkeiten?: string;
 }
 
 export interface UpdateEinheitInput {
@@ -57,6 +70,19 @@ export interface UpdateEinheitInput {
   aktuelleStaerkeTaktisch?: string;
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
   tacticalSignConfigJson?: string;
+  grFuehrerName?: string;
+  ovName?: string;
+  ovTelefon?: string;
+  ovFax?: string;
+  rbName?: string;
+  rbTelefon?: string;
+  rbFax?: string;
+  lvName?: string;
+  lvTelefon?: string;
+  lvFax?: string;
+  bemerkung?: string;
+  vegetarierVorhanden?: boolean | null;
+  erreichbarkeiten?: string;
 }
 
 export interface CreateFahrzeugInput {
@@ -66,6 +92,10 @@ export interface CreateFahrzeugInput {
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
   kennzeichen?: string;
   stammdatenFahrzeugId?: string;
+  funkrufname?: string;
+  stanKonform?: boolean | null;
+  sondergeraet?: string;
+  nutzlast?: string;
 }
 
 export interface UpdateFahrzeugInput {
@@ -75,6 +105,10 @@ export interface UpdateFahrzeugInput {
   aktuelleEinsatzEinheitId: string;
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
   kennzeichen?: string;
+  funkrufname?: string;
+  stanKonform?: boolean | null;
+  sondergeraet?: string;
+  nutzlast?: string;
 }
 
 export interface MoveEinheitInput {

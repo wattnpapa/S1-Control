@@ -24,6 +24,11 @@ function nowIso(): string {
   return new Date().toISOString();
 }
 
+function normalizeOptionalText(value?: string): string | null {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : null;
+}
+
 function parseTaktisch(taktisch: string | null, fallbackGesamt: number): [number, number, number, number] {
   if (!taktisch) {
     const safe = Math.max(0, Math.round(fallbackGesamt));
@@ -242,6 +247,19 @@ export function listAbschnittDetails(
       piktogrammKey: sql<string | null>`coalesce(${stammdatenEinheit.standardPiktogrammKey}, null)`,
       tacticalSignConfigJson: einsatzEinheit.tacticalSignConfigJson,
       aktuellerAbschnittId: einsatzEinheit.aktuellerAbschnittId,
+      grFuehrerName: einsatzEinheit.grFuehrerName,
+      ovName: einsatzEinheit.ovName,
+      ovTelefon: einsatzEinheit.ovTelefon,
+      ovFax: einsatzEinheit.ovFax,
+      rbName: einsatzEinheit.rbName,
+      rbTelefon: einsatzEinheit.rbTelefon,
+      rbFax: einsatzEinheit.rbFax,
+      lvName: einsatzEinheit.lvName,
+      lvTelefon: einsatzEinheit.lvTelefon,
+      lvFax: einsatzEinheit.lvFax,
+      bemerkung: einsatzEinheit.bemerkung,
+      vegetarierVorhanden: einsatzEinheit.vegetarierVorhanden,
+      erreichbarkeiten: einsatzEinheit.erreichbarkeiten,
     })
     .from(einsatzEinheit)
     .leftJoin(stammdatenEinheit, eq(einsatzEinheit.stammdatenEinheitId, stammdatenEinheit.id))
@@ -260,6 +278,10 @@ export function listAbschnittDetails(
       organisation: einsatzEinheit.organisation,
       aktuelleEinsatzEinheitId: einsatzFahrzeug.aktuelleEinsatzEinheitId,
       aktuellerAbschnittId: einsatzFahrzeug.aktuellerAbschnittId,
+      funkrufname: einsatzFahrzeug.funkrufname,
+      stanKonform: einsatzFahrzeug.stanKonform,
+      sondergeraet: einsatzFahrzeug.sondergeraet,
+      nutzlast: einsatzFahrzeug.nutzlast,
     })
     .from(einsatzFahrzeug)
     .leftJoin(stammdatenFahrzeug, eq(einsatzFahrzeug.stammdatenFahrzeugId, stammdatenFahrzeug.id))
@@ -295,6 +317,19 @@ export function createEinheit(
     aktuelleStaerkeTaktisch?: string;
     stammdatenEinheitId?: string;
     tacticalSignConfigJson?: string;
+    grFuehrerName?: string;
+    ovName?: string;
+    ovTelefon?: string;
+    ovFax?: string;
+    rbName?: string;
+    rbTelefon?: string;
+    rbFax?: string;
+    lvName?: string;
+    lvTelefon?: string;
+    lvFax?: string;
+    bemerkung?: string;
+    vegetarierVorhanden?: boolean | null;
+    erreichbarkeiten?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -326,6 +361,19 @@ export function createEinheit(
     aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
     tacticalSignConfigJson:
       input.tacticalSignConfigJson ?? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz),
+    grFuehrerName: normalizeOptionalText(input.grFuehrerName),
+    ovName: normalizeOptionalText(input.ovName),
+    ovTelefon: normalizeOptionalText(input.ovTelefon),
+    ovFax: normalizeOptionalText(input.ovFax),
+    rbName: normalizeOptionalText(input.rbName),
+    rbTelefon: normalizeOptionalText(input.rbTelefon),
+    rbFax: normalizeOptionalText(input.rbFax),
+    lvName: normalizeOptionalText(input.lvName),
+    lvTelefon: normalizeOptionalText(input.lvTelefon),
+    lvFax: normalizeOptionalText(input.lvFax),
+    bemerkung: normalizeOptionalText(input.bemerkung),
+    vegetarierVorhanden: input.vegetarierVorhanden ?? null,
+    erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
     aktuellerAbschnittId: input.aktuellerAbschnittId,
     status: input.status ?? 'AKTIV',
     erstellt: nowIso(),
@@ -344,6 +392,19 @@ export function updateEinheit(
     status?: EinheitListItem['status'];
     aktuelleStaerkeTaktisch?: string;
     tacticalSignConfigJson?: string;
+    grFuehrerName?: string;
+    ovName?: string;
+    ovTelefon?: string;
+    ovFax?: string;
+    rbName?: string;
+    rbTelefon?: string;
+    rbFax?: string;
+    lvName?: string;
+    lvTelefon?: string;
+    lvFax?: string;
+    bemerkung?: string;
+    vegetarierVorhanden?: boolean | null;
+    erreichbarkeiten?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -384,6 +445,19 @@ export function updateEinheit(
       ...(input.tacticalSignConfigJson === undefined
         ? {}
         : { tacticalSignConfigJson: input.tacticalSignConfigJson }),
+      grFuehrerName: normalizeOptionalText(input.grFuehrerName),
+      ovName: normalizeOptionalText(input.ovName),
+      ovTelefon: normalizeOptionalText(input.ovTelefon),
+      ovFax: normalizeOptionalText(input.ovFax),
+      rbName: normalizeOptionalText(input.rbName),
+      rbTelefon: normalizeOptionalText(input.rbTelefon),
+      rbFax: normalizeOptionalText(input.rbFax),
+      lvName: normalizeOptionalText(input.lvName),
+      lvTelefon: normalizeOptionalText(input.lvTelefon),
+      lvFax: normalizeOptionalText(input.lvFax),
+      bemerkung: normalizeOptionalText(input.bemerkung),
+      vegetarierVorhanden: input.vegetarierVorhanden ?? null,
+      erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
     })
     .where(eq(einsatzEinheit.id, input.einheitId))
     .run();
@@ -398,6 +472,10 @@ export function createFahrzeug(
     status?: FahrzeugListItem['status'];
     kennzeichen?: string;
     stammdatenFahrzeugId?: string;
+    funkrufname?: string;
+    stanKonform?: boolean | null;
+    sondergeraet?: string;
+    nutzlast?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -442,6 +520,10 @@ export function createFahrzeug(
         parentEinsatzFahrzeugId: null,
         aktuelleEinsatzEinheitId: einheit.id,
         aktuellerAbschnittId: einheit.aktuellerAbschnittId,
+        funkrufname: normalizeOptionalText(input.funkrufname),
+        stanKonform: input.stanKonform ?? null,
+        sondergeraet: normalizeOptionalText(input.sondergeraet),
+        nutzlast: normalizeOptionalText(input.nutzlast),
         status: input.status ?? 'AKTIV',
         erstellt: nowIso(),
         entfernt: null,
@@ -459,6 +541,10 @@ export function updateFahrzeug(
     aktuelleEinsatzEinheitId: string;
     status?: FahrzeugListItem['status'];
     kennzeichen?: string;
+    funkrufname?: string;
+    stanKonform?: boolean | null;
+    sondergeraet?: string;
+    nutzlast?: string;
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -524,6 +610,10 @@ export function updateFahrzeug(
       .set({
         aktuelleEinsatzEinheitId: einheit.id,
         aktuellerAbschnittId: einheit.aktuellerAbschnittId,
+        funkrufname: normalizeOptionalText(input.funkrufname),
+        stanKonform: input.stanKonform ?? null,
+        sondergeraet: normalizeOptionalText(input.sondergeraet),
+        nutzlast: normalizeOptionalText(input.nutzlast),
         status: input.status ?? 'AKTIV',
       })
       .where(eq(einsatzFahrzeug.id, input.fahrzeugId))

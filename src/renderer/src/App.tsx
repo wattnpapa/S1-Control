@@ -81,6 +81,19 @@ export function App() {
     mannschaft: '8',
     status: 'AKTIV',
     abschnittId: '',
+    grFuehrerName: '',
+    ovName: '',
+    ovTelefon: '',
+    ovFax: '',
+    rbName: '',
+    rbTelefon: '',
+    rbFax: '',
+    lvName: '',
+    lvTelefon: '',
+    lvFax: '',
+    bemerkung: '',
+    vegetarierVorhanden: false,
+    erreichbarkeiten: '',
   });
   const [showEditEinheitDialog, setShowEditEinheitDialog] = useState(false);
   const [editEinheitForm, setEditEinheitForm] = useState<EditEinheitForm>({
@@ -91,6 +104,19 @@ export function App() {
     unterfuehrung: '0',
     mannschaft: '0',
     status: 'AKTIV',
+    grFuehrerName: '',
+    ovName: '',
+    ovTelefon: '',
+    ovFax: '',
+    rbName: '',
+    rbTelefon: '',
+    rbFax: '',
+    lvName: '',
+    lvTelefon: '',
+    lvFax: '',
+    bemerkung: '',
+    vegetarierVorhanden: false,
+    erreichbarkeiten: '',
   });
 
   const [showSplitEinheitDialog, setShowSplitEinheitDialog] = useState(false);
@@ -110,6 +136,10 @@ export function App() {
     kennzeichen: '',
     status: 'AKTIV',
     einheitId: '',
+    funkrufname: '',
+    stanKonform: 'UNBEKANNT',
+    sondergeraet: '',
+    nutzlast: '',
   });
   const [showEditFahrzeugDialog, setShowEditFahrzeugDialog] = useState(false);
   const [editFahrzeugForm, setEditFahrzeugForm] = useState<EditFahrzeugForm>({
@@ -118,6 +148,10 @@ export function App() {
     kennzeichen: '',
     status: 'AKTIV',
     einheitId: '',
+    funkrufname: '',
+    stanKonform: 'UNBEKANNT',
+    sondergeraet: '',
+    nutzlast: '',
   });
 
   const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('open');
@@ -410,6 +444,19 @@ export function App() {
       mannschaft: '8',
       status: 'AKTIV',
       abschnittId: selectedAbschnittId,
+      grFuehrerName: '',
+      ovName: '',
+      ovTelefon: '',
+      ovFax: '',
+      rbName: '',
+      rbTelefon: '',
+      rbFax: '',
+      lvName: '',
+      lvTelefon: '',
+      lvFax: '',
+      bemerkung: '',
+      vegetarierVorhanden: false,
+      erreichbarkeiten: '',
     });
     setShowCreateEinheitDialog(true);
   };
@@ -508,6 +555,19 @@ export function App() {
         aktuelleStaerkeTaktisch: taktisch,
         aktuellerAbschnittId: createEinheitForm.abschnittId,
         status: createEinheitForm.status,
+        grFuehrerName: createEinheitForm.grFuehrerName,
+        ovName: createEinheitForm.ovName,
+        ovTelefon: createEinheitForm.ovTelefon,
+        ovFax: createEinheitForm.ovFax,
+        rbName: createEinheitForm.rbName,
+        rbTelefon: createEinheitForm.rbTelefon,
+        rbFax: createEinheitForm.rbFax,
+        lvName: createEinheitForm.lvName,
+        lvTelefon: createEinheitForm.lvTelefon,
+        lvFax: createEinheitForm.lvFax,
+        bemerkung: createEinheitForm.bemerkung,
+        vegetarierVorhanden: createEinheitForm.vegetarierVorhanden,
+        erreichbarkeiten: createEinheitForm.erreichbarkeiten,
       });
       setShowCreateEinheitDialog(false);
       await refreshAll();
@@ -529,6 +589,19 @@ export function App() {
       unterfuehrung: String(parsed.unterfuehrung),
       mannschaft: String(parsed.mannschaft),
       status: einheit.status,
+      grFuehrerName: einheit.grFuehrerName ?? '',
+      ovName: einheit.ovName ?? '',
+      ovTelefon: einheit.ovTelefon ?? '',
+      ovFax: einheit.ovFax ?? '',
+      rbName: einheit.rbName ?? '',
+      rbTelefon: einheit.rbTelefon ?? '',
+      rbFax: einheit.rbFax ?? '',
+      lvName: einheit.lvName ?? '',
+      lvTelefon: einheit.lvTelefon ?? '',
+      lvFax: einheit.lvFax ?? '',
+      bemerkung: einheit.bemerkung ?? '',
+      vegetarierVorhanden: einheit.vegetarierVorhanden ?? false,
+      erreichbarkeiten: einheit.erreichbarkeiten ?? '',
     });
     setShowEditEinheitDialog(true);
   };
@@ -558,6 +631,19 @@ export function App() {
         aktuelleStaerke: gesamt,
         aktuelleStaerkeTaktisch: taktisch,
         status: editEinheitForm.status,
+        grFuehrerName: editEinheitForm.grFuehrerName,
+        ovName: editEinheitForm.ovName,
+        ovTelefon: editEinheitForm.ovTelefon,
+        ovFax: editEinheitForm.ovFax,
+        rbName: editEinheitForm.rbName,
+        rbTelefon: editEinheitForm.rbTelefon,
+        rbFax: editEinheitForm.rbFax,
+        lvName: editEinheitForm.lvName,
+        lvTelefon: editEinheitForm.lvTelefon,
+        lvFax: editEinheitForm.lvFax,
+        bemerkung: editEinheitForm.bemerkung,
+        vegetarierVorhanden: editEinheitForm.vegetarierVorhanden,
+        erreichbarkeiten: editEinheitForm.erreichbarkeiten,
       });
       setShowEditEinheitDialog(false);
       await refreshAll();
@@ -575,6 +661,10 @@ export function App() {
       kennzeichen: '',
       status: 'AKTIV',
       einheitId: allKraefte[0]?.id ?? '',
+      funkrufname: '',
+      stanKonform: 'UNBEKANNT',
+      sondergeraet: '',
+      nutzlast: '',
     });
     setShowCreateFahrzeugDialog(true);
   };
@@ -597,6 +687,13 @@ export function App() {
         kennzeichen: createFahrzeugForm.kennzeichen.trim() || undefined,
         aktuelleEinsatzEinheitId: createFahrzeugForm.einheitId,
         status: createFahrzeugForm.status,
+        funkrufname: createFahrzeugForm.funkrufname,
+        stanKonform:
+          createFahrzeugForm.stanKonform === 'UNBEKANNT'
+            ? null
+            : createFahrzeugForm.stanKonform === 'JA',
+        sondergeraet: createFahrzeugForm.sondergeraet,
+        nutzlast: createFahrzeugForm.nutzlast,
       });
       setShowCreateFahrzeugDialog(false);
       await refreshAll();
@@ -615,6 +712,10 @@ export function App() {
       kennzeichen: fahrzeug.kennzeichen ?? '',
       status: fahrzeug.status,
       einheitId: fahrzeug.aktuelleEinsatzEinheitId ?? '',
+      funkrufname: fahrzeug.funkrufname ?? '',
+      stanKonform: fahrzeug.stanKonform === null ? 'UNBEKANNT' : fahrzeug.stanKonform ? 'JA' : 'NEIN',
+      sondergeraet: fahrzeug.sondergeraet ?? '',
+      nutzlast: fahrzeug.nutzlast ?? '',
     });
     setShowEditFahrzeugDialog(true);
   };
@@ -637,6 +738,13 @@ export function App() {
         kennzeichen: editFahrzeugForm.kennzeichen.trim() || undefined,
         status: editFahrzeugForm.status,
         aktuelleEinsatzEinheitId: editFahrzeugForm.einheitId,
+        funkrufname: editFahrzeugForm.funkrufname,
+        stanKonform:
+          editFahrzeugForm.stanKonform === 'UNBEKANNT'
+            ? null
+            : editFahrzeugForm.stanKonform === 'JA',
+        sondergeraet: editFahrzeugForm.sondergeraet,
+        nutzlast: editFahrzeugForm.nutzlast,
       });
       setShowEditFahrzeugDialog(false);
       await refreshAll();

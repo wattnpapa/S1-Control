@@ -31,6 +31,19 @@ export interface CreateEinheitForm {
   mannschaft: string;
   status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
   abschnittId: string;
+  grFuehrerName: string;
+  ovName: string;
+  ovTelefon: string;
+  ovFax: string;
+  rbName: string;
+  rbTelefon: string;
+  rbFax: string;
+  lvName: string;
+  lvTelefon: string;
+  lvFax: string;
+  bemerkung: string;
+  vegetarierVorhanden: boolean;
+  erreichbarkeiten: string;
 }
 
 export interface CreateFahrzeugForm {
@@ -38,6 +51,10 @@ export interface CreateFahrzeugForm {
   kennzeichen: string;
   status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
   einheitId: string;
+  funkrufname: string;
+  stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+  sondergeraet: string;
+  nutzlast: string;
 }
 
 export interface EditAbschnittForm {
@@ -55,6 +72,19 @@ export interface EditEinheitForm {
   unterfuehrung: string;
   mannschaft: string;
   status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
+  grFuehrerName: string;
+  ovName: string;
+  ovTelefon: string;
+  ovFax: string;
+  rbName: string;
+  rbTelefon: string;
+  rbFax: string;
+  lvName: string;
+  lvTelefon: string;
+  lvFax: string;
+  bemerkung: string;
+  vegetarierVorhanden: boolean;
+  erreichbarkeiten: string;
 }
 
 export interface EditFahrzeugForm {
@@ -63,6 +93,10 @@ export interface EditFahrzeugForm {
   kennzeichen: string;
   status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
   einheitId: string;
+  funkrufname: string;
+  stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+  sondergeraet: string;
+  nutzlast: string;
 }
 
 export interface SplitEinheitForm {

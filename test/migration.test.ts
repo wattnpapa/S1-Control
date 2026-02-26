@@ -31,6 +31,32 @@ describe('migrations', () => {
           parent_id TEXT REFERENCES einsatz_abschnitt(id),
           system_typ TEXT NOT NULL CHECK (system_typ IN ('FUEST', 'ANFAHRT', 'LOGISTIK', 'NORMAL')) DEFAULT 'NORMAL'
         );
+        CREATE TABLE einsatz_einheit (
+          id TEXT PRIMARY KEY NOT NULL,
+          einsatz_id TEXT NOT NULL REFERENCES einsatz(id),
+          stammdaten_einheit_id TEXT,
+          parent_einsatz_einheit_id TEXT REFERENCES einsatz_einheit(id),
+          name_im_einsatz TEXT NOT NULL,
+          organisation TEXT NOT NULL DEFAULT 'THW',
+          aktuelle_staerke INTEGER NOT NULL DEFAULT 0,
+          aktuelle_staerke_taktisch TEXT,
+          aktueller_abschnitt_id TEXT NOT NULL REFERENCES einsatz_abschnitt(id),
+          status TEXT NOT NULL DEFAULT 'AKTIV',
+          tactical_sign_config_json TEXT,
+          erstellt TEXT NOT NULL,
+          aufgeloest TEXT
+        );
+        CREATE TABLE einsatz_fahrzeug (
+          id TEXT PRIMARY KEY NOT NULL,
+          einsatz_id TEXT NOT NULL REFERENCES einsatz(id),
+          stammdaten_fahrzeug_id TEXT,
+          parent_einsatz_fahrzeug_id TEXT REFERENCES einsatz_fahrzeug(id),
+          aktuelle_einsatz_einheit_id TEXT REFERENCES einsatz_einheit(id),
+          aktueller_abschnitt_id TEXT REFERENCES einsatz_abschnitt(id),
+          status TEXT NOT NULL DEFAULT 'AKTIV',
+          erstellt TEXT NOT NULL,
+          entfernt TEXT
+        );
       `);
       const now = new Date().toISOString();
       const insert = sqlite.prepare('INSERT INTO __migrations (name, applied_at) VALUES (?, ?)');

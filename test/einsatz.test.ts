@@ -615,4 +615,54 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+
+  it('stores person and reachability fields for units', () => {
+    const ctx = createTestDb('s1-control-einsatz-person-fields-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Personen-Test', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK OL',
+        organisation: 'THW',
+        aktuelleStaerke: 9,
+        aktuelleStaerkeTaktisch: '0/1/8/9',
+        aktuellerAbschnittId: root.id,
+        vegetarierVorhanden: true,
+        erreichbarkeiten: '2m-Funk, Mobiltelefon GrFü',
+      });
+
+      const einheit = ctx.db
+        .select()
+        .from(einsatzEinheit)
+        .where(and(eq(einsatzEinheit.einsatzId, created.id), eq(einsatzEinheit.nameImEinsatz, 'FK OL')))
+        .get();
+      expect(einheit?.vegetarierVorhanden).toBe(true);
+      expect(einheit?.erreichbarkeiten).toBe('2m-Funk, Mobiltelefon GrFü');
+
+      updateEinheit(ctx, {
+        einsatzId: created.id,
+        einheitId: einheit!.id,
+        nameImEinsatz: 'FK OL',
+        organisation: 'THW',
+        aktuelleStaerke: 9,
+        aktuelleStaerkeTaktisch: '0/1/8/9',
+        status: 'AKTIV',
+        vegetarierVorhanden: false,
+        erreichbarkeiten: 'Nur 2m-Funk',
+      });
+
+      const updated = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, einheit!.id)).get();
+      expect(updated?.vegetarierVorhanden).toBe(false);
+      expect(updated?.erreichbarkeiten).toBe('Nur 2m-Funk');
+
+      const details = listAbschnittDetails(ctx, created.id, root.id);
+      const listed = details.einheiten.find((row) => row.id === einheit!.id);
+      expect(listed?.vegetarierVorhanden).toBe(false);
+      expect(listed?.erreichbarkeiten).toBe('Nur 2m-Funk');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
 });
