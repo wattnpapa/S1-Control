@@ -18,6 +18,7 @@ export class UpdaterService {
   };
   private autoUpdaterEnabled = false;
   private canDownloadInApp = false;
+  private autoUpdaterInitError: string | null = null;
 
   private readonly notify: (state: UpdaterState) => void;
 
@@ -37,7 +38,11 @@ export class UpdaterService {
 
     try {
       if (!this.autoUpdaterEnabled) {
-        await this.checkGitHubReleaseVersion('Auto-Updater ist im aktuellen Build nicht aktiv.');
+        await this.checkGitHubReleaseVersion(
+          this.autoUpdaterInitError
+            ? `Auto-Updater ist im aktuellen Build nicht aktiv (${this.autoUpdaterInitError}).`
+            : 'Auto-Updater ist im aktuellen Build nicht aktiv.',
+        );
         return;
       }
 
@@ -100,6 +105,14 @@ export class UpdaterService {
   }
 
   private configureAutoUpdater(): void {
+    const hasCheckFn =
+      typeof (autoUpdater as unknown as { checkForUpdates?: unknown }).checkForUpdates === 'function';
+    if (!hasCheckFn) {
+      this.autoUpdaterEnabled = false;
+      this.autoUpdaterInitError = 'electron-updater API nicht verfügbar';
+      return;
+    }
+
     try {
       const maybeSetFeedUrl = (autoUpdater as unknown as { setFeedURL?: (options: { provider: 'generic'; url: string }) => void })
         .setFeedURL;
@@ -170,9 +183,11 @@ export class UpdaterService {
       });
 
       this.autoUpdaterEnabled = true;
+      this.autoUpdaterInitError = null;
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       this.autoUpdaterEnabled = false;
+      this.autoUpdaterInitError = message;
       this.setState({
         stage: 'idle',
         message: `Auto-Updater deaktiviert: ${message}`,
