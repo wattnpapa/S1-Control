@@ -5,7 +5,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMars, faVenus } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import type { EditEinheitForm, EditFahrzeugForm, FahrzeugOverviewItem, KraftOverviewItem } from '@renderer/types/ui';
-import type { EinheitHelfer, HelferGeschlecht, HelferRolle, OrganisationKey } from '@shared/types';
+import type { AbschnittNode, EinheitHelfer, HelferGeschlecht, HelferRolle, OrganisationKey } from '@shared/types';
 
 interface InlineEinheitEditorProps {
   visible: boolean;
@@ -60,6 +60,37 @@ interface InlineEinheitEditorProps {
     sondergeraet: string;
     nutzlast: string;
   }) => Promise<void>;
+}
+
+interface InlineCreateEinheitEditorProps {
+  visible: boolean;
+  busy: boolean;
+  isArchived: boolean;
+  form: {
+    nameImEinsatz: string;
+    organisation: OrganisationKey;
+    fuehrung: string;
+    unterfuehrung: string;
+    mannschaft: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
+    abschnittId: string;
+    grFuehrerName: string;
+    ovName: string;
+    ovTelefon: string;
+    ovFax: string;
+    rbName: string;
+    rbTelefon: string;
+    rbFax: string;
+    lvName: string;
+    lvTelefon: string;
+    lvFax: string;
+    bemerkung: string;
+    erreichbarkeiten: string;
+  };
+  abschnitte: AbschnittNode[];
+  onChange: (next: InlineCreateEinheitEditorProps['form']) => void;
+  onSubmit: () => void;
+  onCancel: () => void;
 }
 
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
@@ -635,6 +666,125 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                   </tr>
                 </tbody>
               </table>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+export function InlineCreateEinheitEditor(props: InlineCreateEinheitEditorProps): JSX.Element | null {
+  if (!props.visible) {
+    return null;
+  }
+
+  return (
+    <section className="inline-editor">
+      <header className="inline-editor-header">
+        <h3>Einheit anlegen</h3>
+        <div className="inline-editor-actions">
+          <button onClick={props.onSubmit} disabled={props.busy || props.isArchived}>
+            Anlegen
+          </button>
+          <button onClick={props.onCancel} disabled={props.busy}>
+            Abbrechen
+          </button>
+        </div>
+      </header>
+      <table className="inline-form-table">
+        <tbody>
+          <tr>
+            <th>Name im Einsatz</th>
+            <td colSpan={3}>
+              <input value={props.form.nameImEinsatz} onChange={(e) => props.onChange({ ...props.form, nameImEinsatz: e.target.value })} />
+            </td>
+          </tr>
+          <tr>
+            <th>Organisation</th>
+            <td>
+              <select value={props.form.organisation} onChange={(e) => props.onChange({ ...props.form, organisation: e.target.value as OrganisationKey })}>
+                {ORGANISATION_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </td>
+            <th>Status</th>
+            <td>
+              <select value={props.form.status} onChange={(e) => props.onChange({ ...props.form, status: e.target.value as InlineCreateEinheitEditorProps['form']['status'] })}>
+                <option value="AKTIV">AKTIV</option>
+                <option value="IN_BEREITSTELLUNG">IN_BEREITSTELLUNG</option>
+                <option value="ABGEMELDET">ABGEMELDET</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>Abschnitt</th>
+            <td colSpan={3}>
+              <select value={props.form.abschnittId} onChange={(e) => props.onChange({ ...props.form, abschnittId: e.target.value })}>
+                <option value="">Bitte wählen</option>
+                {props.abschnitte.map((abschnitt) => (
+                  <option key={abschnitt.id} value={abschnitt.id}>
+                    {abschnitt.name} [{abschnitt.systemTyp}]
+                  </option>
+                ))}
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <th>Führung</th>
+            <td><input type="number" min={0} value={props.form.fuehrung} onChange={(e) => props.onChange({ ...props.form, fuehrung: e.target.value })} /></td>
+            <th>Unterführung</th>
+            <td><input type="number" min={0} value={props.form.unterfuehrung} onChange={(e) => props.onChange({ ...props.form, unterfuehrung: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>Mannschaft</th>
+            <td><input type="number" min={0} value={props.form.mannschaft} onChange={(e) => props.onChange({ ...props.form, mannschaft: e.target.value })} /></td>
+            <th />
+            <td />
+          </tr>
+          <tr>
+            <th>GrFü</th>
+            <td><input value={props.form.grFuehrerName} onChange={(e) => props.onChange({ ...props.form, grFuehrerName: e.target.value })} /></td>
+            <th>OV</th>
+            <td><input value={props.form.ovName} onChange={(e) => props.onChange({ ...props.form, ovName: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>OV Telefon</th>
+            <td><input value={props.form.ovTelefon} onChange={(e) => props.onChange({ ...props.form, ovTelefon: e.target.value })} /></td>
+            <th>OV Fax</th>
+            <td><input value={props.form.ovFax} onChange={(e) => props.onChange({ ...props.form, ovFax: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>RB</th>
+            <td><input value={props.form.rbName} onChange={(e) => props.onChange({ ...props.form, rbName: e.target.value })} /></td>
+            <th>RB Telefon</th>
+            <td><input value={props.form.rbTelefon} onChange={(e) => props.onChange({ ...props.form, rbTelefon: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>RB Fax</th>
+            <td><input value={props.form.rbFax} onChange={(e) => props.onChange({ ...props.form, rbFax: e.target.value })} /></td>
+            <th>LV</th>
+            <td><input value={props.form.lvName} onChange={(e) => props.onChange({ ...props.form, lvName: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>LV Telefon</th>
+            <td><input value={props.form.lvTelefon} onChange={(e) => props.onChange({ ...props.form, lvTelefon: e.target.value })} /></td>
+            <th>LV Fax</th>
+            <td><input value={props.form.lvFax} onChange={(e) => props.onChange({ ...props.form, lvFax: e.target.value })} /></td>
+          </tr>
+          <tr>
+            <th>Erreichbarkeiten</th>
+            <td colSpan={3}>
+              <textarea rows={2} value={props.form.erreichbarkeiten} onChange={(e) => props.onChange({ ...props.form, erreichbarkeiten: e.target.value })} />
+            </td>
+          </tr>
+          <tr>
+            <th>Bemerkung</th>
+            <td colSpan={3}>
+              <textarea rows={2} value={props.form.bemerkung} onChange={(e) => props.onChange({ ...props.form, bemerkung: e.target.value })} />
             </td>
           </tr>
         </tbody>

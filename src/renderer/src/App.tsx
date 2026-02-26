@@ -2,12 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { AbschnittDetails, EinsatzListItem, EinheitHelfer, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
-import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
 import { EditAbschnittDialog } from '@renderer/components/dialogs/EditAbschnittDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
-import { InlineEinheitEditor, InlineFahrzeugEditor } from '@renderer/components/editor/InlineEditors';
+import { InlineCreateEinheitEditor, InlineEinheitEditor, InlineFahrzeugEditor } from '@renderer/components/editor/InlineEditors';
 import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
 import { Topbar } from '@renderer/components/layout/Topbar';
 import { WorkspaceRail } from '@renderer/components/layout/WorkspaceRail';
@@ -476,6 +475,8 @@ export function App() {
 
   const doCreateEinheit = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
+    setShowEditEinheitDialog(false);
+    setEditEinheitHelfer([]);
     setCreateEinheitForm({
       nameImEinsatz: '',
       organisation: 'THW',
@@ -617,6 +618,7 @@ export function App() {
 
   const doOpenEditEinheitDialog = (einheitId: string) => {
     void (async () => {
+    setShowCreateEinheitDialog(false);
     const einheit = allKraefte.find((item) => item.id === einheitId);
     if (!einheit) {
       setError('Einheit nicht gefunden.');
@@ -1188,6 +1190,16 @@ export function App() {
                 onCreateFahrzeug={doCreateEinheitFahrzeug}
                 onUpdateFahrzeug={doUpdateEinheitFahrzeug}
               />
+              <InlineCreateEinheitEditor
+                visible={showCreateEinheitDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={createEinheitForm}
+                abschnitte={abschnitte}
+                onChange={setCreateEinheitForm}
+                onSubmit={() => void doSubmitCreateEinheit()}
+                onCancel={() => setShowCreateEinheitDialog(false)}
+              />
               <InlineFahrzeugEditor
                 visible={showEditFahrzeugDialog}
                 busy={busy}
@@ -1251,6 +1263,16 @@ export function App() {
                 fahrzeuge={allFahrzeuge}
                 onCreateFahrzeug={doCreateEinheitFahrzeug}
                 onUpdateFahrzeug={doUpdateEinheitFahrzeug}
+              />
+              <InlineCreateEinheitEditor
+                visible={showCreateEinheitDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={createEinheitForm}
+                abschnitte={abschnitte}
+                onChange={setCreateEinheitForm}
+                onSubmit={() => void doSubmitCreateEinheit()}
+                onCancel={() => setShowCreateEinheitDialog(false)}
               />
               <div className="inline-actions">
                 <select
@@ -1341,17 +1363,6 @@ export function App() {
           setMoveDialog(null);
           setMoveTarget('');
         }}
-      />
-
-      <CreateEinheitDialog
-        visible={showCreateEinheitDialog}
-        busy={busy}
-        isArchived={isArchived ?? false}
-        form={createEinheitForm}
-        abschnitte={abschnitte}
-        onChange={setCreateEinheitForm}
-        onSubmit={() => void doSubmitCreateEinheit()}
-        onClose={() => setShowCreateEinheitDialog(false)}
       />
 
       <CreateAbschnittDialog
