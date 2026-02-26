@@ -2,24 +2,56 @@
 
 [![codecov](https://codecov.io/gh/wattnpapa/S1-Control/branch/main/graph/badge.svg)](https://codecov.io/gh/wattnpapa/S1-Control)
 
-Offline-first Desktop-App für THW Führungsstelle (S1) Einsatzkräfteverwaltung.
+Offline-first Desktop-App für die THW-Führungsstelle (S1) zur Kräfteverwaltung im Einsatz.
 
-## Stack
+## Für Anwender
+
+### Was die Software macht
+
+S1-Control unterstützt dich bei der Lageführung im Einsatz:
+
+- Einsätze anlegen und bestehende Einsatzdateien öffnen
+- Abschnitte hierarchisch verwalten
+- Einheiten und Fahrzeuge erfassen, verschieben und nachträglich bearbeiten
+- Taktische Stärken automatisch zusammenfassen
+- Führungsstruktur-Ansicht und Gesamtübersichten für Kräfte/Fahrzeuge
+- Live-Anzeige der Gesamtstärke und NATO-Zeit im separaten Vollbildfenster (Monitoransicht)
+
+### Offline- und Fileshare-Betrieb
+
+- Kein Cloud-Zwang, kein externer Server
+- Jeder Einsatz liegt in einer eigenen SQLite-Datei (`.sqlite`)
+- Mehrere Clients können dieselbe Einsatzdatei auf einem Share nutzen (WAL-Modus)
+- Automatische Backups alle 5 Minuten nach `<einsatz-verzeichnis>/backup`
+- Nur ein Client erstellt Backups (Lock-Mechanismus), um Konflikte zu vermeiden
+
+### Updates
+
+- Beim Start prüft die App auf neue Releases
+- Verfügbares Update wird als Banner angezeigt
+- Download mit Fortschrittsanzeige, anschließend Neustart zur Installation
+- Falls In-App-Download nicht möglich ist, kann direkt die Release-Seite geöffnet werden
+
+---
+
+## Technische Details
+
+### Stack
 
 - Electron (Main + Preload)
 - React + TypeScript (Renderer)
 - Vite (Renderer bundling)
-- SQLite (WAL, busy_timeout)
+- SQLite (WAL + busy timeout)
 - Drizzle ORM + better-sqlite3
 - IPC via `contextBridge`
 
-## Setup
+### Setup
 
 ```bash
 npm install
 ```
 
-## Entwicklung
+### Entwicklung
 
 ```bash
 npm run dev
@@ -27,7 +59,7 @@ npm run dev
 
 Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (`admin`).
 
-## Wichtige Skripte
+### Wichtige Skripte
 
 - `npm run dev`: Vite + Electron mit Live-Reload
 - `npm run test`: Vitest (DB/Command)
@@ -40,7 +72,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 - `npm run build:linux:deb`: Linux `.deb` Paket (x64)
   - Hinweis: Mit `better-sqlite3` funktioniert das zuverlässig auf einem Windows-Host (oder via GitHub Actions `build-main.yml`), nicht als nativer Cross-Build von macOS.
 
-## CI/CD
+### CI/CD
 
 - Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS-, Windows- und Linux-Artefakte.
 - Die Release-Tag/Versionskennung wird als NATO-Zeit ohne Zeitzonenangabe erzeugt: `DDHHMMmonYY`, z.B. `251530feb26`.
@@ -53,40 +85,25 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
   - `APPLE_API_ISSUER` (App Store Connect Issuer ID)
   - `APPLE_API_KEY_BASE64` (Base64-Inhalt der `AuthKey_*.p8`)
 
-## Auto-Update
+### Datenhaltung / DB
 
-- In gebauten macOS/Windows-Versionen prüft die App beim Start auf neue GitHub-Releases.
-- Bei verfügbarem Update erscheint oben eine Leiste mit Download-Button.
-- Während des Downloads wird ein Overlay mit Fortschrittsbalken angezeigt.
-- Nach Download kann das Update per Button installiert werden (App-Neustart).
-- Die App-Version in Metadaten/Info (z.B. macOS Info.plist) wird beim Build auf den NATO-Tag gesetzt.
-
-## DB-Pfad / Fileshare
-
-- DB-Pfad ist in der App als **Einsatz-Verzeichnis** konfigurierbar (Settings-Bereich).
-- Alternativ über ENV: `S1_DB_PATH=/pfad/zum/einsatz-verzeichnis`
-- Jeder Einsatz wird als eigene SQLite-Datei im Einsatz-Verzeichnis angelegt (atomar pro Einsatz).
+- DB-Pfad ist als Einsatz-Verzeichnis konfigurierbar (Settings) oder per ENV:
+  - `S1_DB_PATH=/pfad/zum/einsatz-verzeichnis`
+- Jeder Einsatz wird als eigene SQLite-Datei angelegt (atomar pro Einsatz)
 - Beim DB-Open werden gesetzt:
   - `PRAGMA journal_mode=WAL`
   - `PRAGMA synchronous=NORMAL`
   - `PRAGMA foreign_keys=ON`
   - `PRAGMA busy_timeout=5000`
-- App arbeitet ohne Cloud/Server.
-- Bei Fileshare-Nutzung:
-  - Nur DB-Datei teilen (WAL-Modus aktiv)
-  - Gleichzeitige Zugriffe werden über busy timeout/retry abgefedert
-  - Daten werden im laufenden Einsatz automatisch periodisch aktualisiert
-  - Automatische Backups alle 5 Minuten in `<einsatz-verzeichnis>/backup`
-  - Bei mehreren offenen Clients schreibt nur ein Client Backups (Lock-Datei)
 
-## Architekturregeln
+### Architekturregeln
 
 - Kein DB-Zugriff im Renderer
 - Alle Writes laufen im Main-Prozess, jeweils in Transaktionen
 - Archivierte Einsätze (`status=ARCHIVIERT`) sind schreibgeschützt (Main enforced)
 - Undo für `MOVE_EINHEIT` und `MOVE_FAHRZEUG` via `einsatz_command_log`
 
-## Teststrategie
+### Teststrategie
 
 - Neue Features müssen mit Tests ausgeliefert werden.
 - Mindestabdeckung: 75% (Lines/Functions/Branches/Statements).
@@ -95,7 +112,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
   - `coverage/lcov.info`
   - `coverage/coverage-summary.json`
 
-## Export (MVP)
+### Export (MVP)
 
 `Einsatzakte exportieren` erzeugt ZIP mit:
 
