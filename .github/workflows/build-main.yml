@@ -302,6 +302,11 @@ jobs:
             sleep 10
           done
 
+      - name: Install Arch packaging tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libarchive-tools
+
       - name: Build Arch Linux artifacts (pacman)
         run: |
           npm run -s lint
