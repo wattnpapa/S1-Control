@@ -581,6 +581,7 @@ export function App() {
 
     const gesamt = fuehrung + unterfuehrung + mannschaft;
     const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
+    const vegetarierVorhanden = false;
 
     await withBusy(async () => {
       await window.api.createEinheit({
@@ -602,7 +603,7 @@ export function App() {
         lvTelefon: createEinheitForm.lvTelefon,
         lvFax: createEinheitForm.lvFax,
         bemerkung: createEinheitForm.bemerkung,
-        vegetarierVorhanden: createEinheitForm.vegetarierVorhanden,
+        vegetarierVorhanden,
         erreichbarkeiten: createEinheitForm.erreichbarkeiten,
       });
       setShowCreateEinheitDialog(false);
@@ -662,6 +663,7 @@ export function App() {
     }
     const gesamt = fuehrung + unterfuehrung + mannschaft;
     const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
+    const vegetarierVorhanden = editEinheitHelfer.some((h) => h.vegetarisch);
 
     await withBusy(async () => {
       await window.api.updateEinheit({
@@ -683,7 +685,7 @@ export function App() {
         lvTelefon: editEinheitForm.lvTelefon,
         lvFax: editEinheitForm.lvFax,
         bemerkung: editEinheitForm.bemerkung,
-        vegetarierVorhanden: editEinheitForm.vegetarierVorhanden,
+        vegetarierVorhanden,
         erreichbarkeiten: editEinheitForm.erreichbarkeiten,
       });
       setShowEditEinheitDialog(false);

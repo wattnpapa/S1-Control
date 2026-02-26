@@ -171,17 +171,8 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
             <td>
               <input type="number" min={0} value={props.form.mannschaft} readOnly />
             </td>
-            <th>Vegetarier</th>
-            <td>
-              <label className="inline-checkbox">
-                <input
-                  type="checkbox"
-                  checked={props.form.vegetarierVorhanden}
-                  onChange={(e) => props.onChange({ ...props.form, vegetarierVorhanden: e.target.checked })}
-                />
-                vorhanden
-              </label>
-            </td>
+            <th />
+            <td />
           </tr>
           <tr>
             <th>GrFü</th>

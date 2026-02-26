@@ -181,6 +181,9 @@ export class UpdaterService {
         this.setState({
           stage: 'downloading',
           progressPercent: progress.percent,
+          progressTransferredBytes: progress.transferred,
+          progressTotalBytes: progress.total,
+          progressBytesPerSecond: progress.bytesPerSecond,
         });
       });
 
@@ -189,6 +192,7 @@ export class UpdaterService {
           stage: 'downloaded',
           latestVersion: this.toDisplayVersion(info.version),
           progressPercent: 100,
+          progressTransferredBytes: this.state.progressTotalBytes ?? this.state.progressTransferredBytes,
           source: 'electron-updater',
           inAppDownloadSupported: true,
           inAppDownloadReason: 'Update wurde in der App heruntergeladen.',

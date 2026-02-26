@@ -150,14 +150,6 @@ export function CreateEinheitDialog(props: CreateEinheitDialogProps): JSX.Elemen
           />
         </label>
         <label>
-          <input
-            type="checkbox"
-            checked={props.form.vegetarierVorhanden}
-            onChange={(e) => props.onChange({ ...props.form, vegetarierVorhanden: e.target.checked })}
-          />
-          Vegetarier in der Einheit
-        </label>
-        <label>
           Erreichbarkeiten
           <textarea
             rows={2}
