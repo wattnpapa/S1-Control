@@ -58,6 +58,12 @@ export class UpdaterService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      if (this.isNoPublishedVersionsError(message)) {
+        await this.checkGitHubReleaseVersion(
+          'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
+        );
+        return;
+      }
       if (this.isOfflineLikeError(message)) {
         this.setState({ stage: 'idle' });
         return;
@@ -122,6 +128,15 @@ export class UpdaterService {
 
       autoUpdater.on('error', (error) => {
         const message = error.message || 'Update-Fehler';
+        if (this.isNoPublishedVersionsError(message)) {
+          this.setState({
+            stage: 'not-available',
+            source: 'github-release',
+            inAppDownloadSupported: false,
+            inAppDownloadReason: 'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
+          });
+          return;
+        }
         if (this.isOfflineLikeError(message)) {
           // Offlinebetrieb: kein Fehlerbanner erzwingen.
           this.setState({ stage: 'idle' });
@@ -259,6 +274,10 @@ export class UpdaterService {
 
   private isBuildVersion(version: string): boolean {
     return /^\d{4}\.\d{2}\.\d{2}\.\d{2}\.\d{2}$/.test(version.trim());
+  }
+
+  private isNoPublishedVersionsError(message: string): boolean {
+    return message.toLowerCase().includes('no published versions on github');
   }
 
   private compareVersions(current: string, latest: string): number | null {

@@ -24,7 +24,7 @@ export interface CreateEinsatzInput {
 export interface CreateAbschnittInput {
   einsatzId: string;
   name: string;
-  systemTyp: 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'NORMAL';
+  systemTyp: 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'BEREITSTELLUNGSRAUM' | 'NORMAL';
   parentId?: string | null;
 }
 
@@ -32,7 +32,7 @@ export interface UpdateAbschnittInput {
   einsatzId: string;
   abschnittId: string;
   name: string;
-  systemTyp: 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'NORMAL';
+  systemTyp: 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'BEREITSTELLUNGSRAUM' | 'NORMAL';
   parentId?: string | null;
 }
 

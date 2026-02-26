@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS einsatz_abschnitt (
   einsatz_id TEXT NOT NULL REFERENCES einsatz(id),
   name TEXT NOT NULL,
   parent_id TEXT REFERENCES einsatz_abschnitt(id),
-  system_typ TEXT NOT NULL CHECK (system_typ IN ('FUEST', 'ANFAHRT', 'LOGISTIK', 'NORMAL')) DEFAULT 'NORMAL'
+  system_typ TEXT NOT NULL CHECK (system_typ IN ('FUEST', 'ANFAHRT', 'LOGISTIK', 'BEREITSTELLUNGSRAUM', 'NORMAL')) DEFAULT 'NORMAL'
 );
 
 CREATE TABLE IF NOT EXISTS stammdaten_einheit (

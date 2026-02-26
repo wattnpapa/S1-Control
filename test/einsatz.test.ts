@@ -362,6 +362,26 @@ describe('einsatz service', () => {
     }
   });
 
+  it('supports abschnitt type BEREITSTELLUNGSRAUM', () => {
+    const ctx = createTestDb('s1-control-einsatz-bereitstellungsraum-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      const abschnitt = createAbschnitt(ctx, {
+        einsatzId: created.id,
+        name: 'BR Nord',
+        parentId: root.id,
+        systemTyp: 'BEREITSTELLUNGSRAUM',
+      });
+
+      const row = ctx.db.select().from(einsatzAbschnitt).where(eq(einsatzAbschnitt.id, abschnitt.id)).get();
+      expect(row?.systemTyp).toBe('BEREITSTELLUNGSRAUM');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
   it('supports explicit tactical-sign config and source fallback during split', () => {
     const ctx = createTestDb('s1-control-einsatz-sign-config-');
     try {

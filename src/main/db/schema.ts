@@ -1,7 +1,7 @@
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
 
 export const einsatzStatusValues = ['AKTIV', 'BEENDET', 'ARCHIVIERT'] as const;
-export const abschnittSystemTypValues = ['FUEST', 'ANFAHRT', 'LOGISTIK', 'NORMAL'] as const;
+export const abschnittSystemTypValues = ['FUEST', 'ANFAHRT', 'LOGISTIK', 'BEREITSTELLUNGSRAUM', 'NORMAL'] as const;
 export const einheitStatusValues = ['AKTIV', 'IN_BEREITSTELLUNG', 'ABGEMELDET'] as const;
 export const fahrzeugStatusValues = ['AKTIV', 'IN_BEREITSTELLUNG', 'AUSSER_BETRIEB'] as const;
 export const benutzerRolleValues = ['ADMIN', 'S1', 'FUE_ASS', 'VIEWER'] as const;

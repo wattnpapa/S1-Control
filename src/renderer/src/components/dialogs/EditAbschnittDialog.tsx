@@ -38,6 +38,7 @@ export function EditAbschnittDialog(props: EditAbschnittDialogProps): JSX.Elemen
             <option value="FUEST">FUEST</option>
             <option value="ANFAHRT">ANFAHRT</option>
             <option value="LOGISTIK">LOGISTIK</option>
+            <option value="BEREITSTELLUNGSRAUM">BEREITSTELLUNGSRAUM</option>
           </select>
         </label>
         <label>

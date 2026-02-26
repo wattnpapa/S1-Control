@@ -72,6 +72,8 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
         return 'Anfahrt';
       case 'LOGISTIK':
         return 'Logistik';
+      case 'BEREITSTELLUNGSRAUM':
+        return 'Bereitstellungsraum';
       default:
         return 'Abschnitt';
     }
