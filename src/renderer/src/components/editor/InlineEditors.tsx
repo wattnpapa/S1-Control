@@ -7,6 +7,18 @@ import { useEffect, useState } from 'react';
 import type { EditEinheitForm, EditFahrzeugForm, FahrzeugOverviewItem, KraftOverviewItem } from '@renderer/types/ui';
 import type { AbschnittNode, EinheitHelfer, HelferGeschlecht, HelferRolle, OrganisationKey } from '@shared/types';
 
+const DEFAULT_HELFER_DRAFT = {
+  name: '',
+  rolle: 'HELFER' as HelferRolle,
+  geschlecht: 'MAENNLICH' as HelferGeschlecht,
+  anzahl: 1,
+  funktion: '',
+  telefon: '',
+  erreichbarkeit: '',
+  vegetarisch: false,
+  bemerkung: '',
+};
+
 interface InlineEinheitEditorProps {
   visible: boolean;
   busy: boolean;
@@ -96,19 +108,8 @@ interface InlineCreateEinheitEditorProps {
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
   const helferRows = props.helfer;
   const form = props.form;
-  const onFormChange = props.onChange;
-  const [newHelfer, setNewHelfer] = useState({
-    name: '',
-    rolle: 'HELFER' as HelferRolle,
-    geschlecht: 'MAENNLICH' as HelferGeschlecht,
-    anzahl: 1,
-    funktion: '',
-    telefon: '',
-    erreichbarkeit: '',
-    vegetarisch: false,
-    bemerkung: '',
-  });
-  const [editRows, setEditRows] = useState<Record<string, typeof newHelfer>>({});
+  const [editRows, setEditRows] = useState<Record<string, typeof DEFAULT_HELFER_DRAFT>>({});
+  const [autoRows, setAutoRows] = useState<Record<string, typeof DEFAULT_HELFER_DRAFT>>({});
   const [newFahrzeug, setNewFahrzeug] = useState({
     name: '',
     kennzeichen: '',
@@ -121,7 +122,7 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   const [editFahrzeuge, setEditFahrzeuge] = useState<Record<string, typeof newFahrzeug>>({});
 
   useEffect(() => {
-    const next: Record<string, typeof newHelfer> = {};
+    const next: Record<string, typeof DEFAULT_HELFER_DRAFT> = {};
     for (const row of helferRows) {
       next[row.id] = {
         name: row.name,
@@ -155,36 +156,44 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   }, [props.fahrzeuge, form.einheitId]);
 
   useEffect(() => {
-    const totals = helferRows.reduce(
+    const countByRole = helferRows.reduce(
       (acc, item) => {
         const amount = Math.max(1, Math.round(item.anzahl ?? 1));
-        if (item.rolle === 'FUEHRER') {
-          acc.fuehrung += amount;
-        } else if (item.rolle === 'UNTERFUEHRER') {
-          acc.unterfuehrung += amount;
-        } else {
-          acc.mannschaft += amount;
-        }
+        if (item.rolle === 'FUEHRER') acc.FUEHRER += amount;
+        else if (item.rolle === 'UNTERFUEHRER') acc.UNTERFUEHRER += amount;
+        else acc.HELFER += amount;
         return acc;
       },
-      { fuehrung: 0, unterfuehrung: 0, mannschaft: 0 },
+      { FUEHRER: 0, UNTERFUEHRER: 0, HELFER: 0 },
     );
-    const nextFuehrung = String(totals.fuehrung);
-    const nextUnterfuehrung = String(totals.unterfuehrung);
-    const nextMannschaft = String(totals.mannschaft);
-    if (
-      form.fuehrung !== nextFuehrung ||
-      form.unterfuehrung !== nextUnterfuehrung ||
-      form.mannschaft !== nextMannschaft
-    ) {
-      onFormChange({
-        ...form,
-        fuehrung: nextFuehrung,
-        unterfuehrung: nextUnterfuehrung,
-        mannschaft: nextMannschaft,
-      });
-    }
-  }, [form, helferRows, onFormChange]);
+    const desired = {
+      FUEHRER: Math.max(0, Number(form.fuehrung) || 0),
+      UNTERFUEHRER: Math.max(0, Number(form.unterfuehrung) || 0),
+      HELFER: Math.max(0, Number(form.mannschaft) || 0),
+    };
+    const deficits = {
+      FUEHRER: Math.max(0, desired.FUEHRER - countByRole.FUEHRER),
+      UNTERFUEHRER: Math.max(0, desired.UNTERFUEHRER - countByRole.UNTERFUEHRER),
+      HELFER: Math.max(0, desired.HELFER - countByRole.HELFER),
+    };
+    const keys: string[] = [];
+    for (let i = 0; i < deficits.FUEHRER; i += 1) keys.push(`auto:FUEHRER:${i}`);
+    for (let i = 0; i < deficits.UNTERFUEHRER; i += 1) keys.push(`auto:UNTERFUEHRER:${i}`);
+    for (let i = 0; i < deficits.HELFER; i += 1) keys.push(`auto:HELFER:${i}`);
+
+    setAutoRows((prev) => {
+      const next: Record<string, typeof DEFAULT_HELFER_DRAFT> = {};
+      for (const key of keys) {
+        const rolle = key.includes('FUEHRER:') ? 'FUEHRER' : key.includes('UNTERFUEHRER:') ? 'UNTERFUEHRER' : 'HELFER';
+        next[key] = prev[key] ?? {
+          ...DEFAULT_HELFER_DRAFT,
+          rolle,
+          anzahl: 1,
+        };
+      }
+      return next;
+    });
+  }, [form.fuehrung, form.mannschaft, form.unterfuehrung, helferRows]);
 
   if (!props.visible) {
     return null;
@@ -243,17 +252,32 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
           <tr>
             <th>Führung</th>
             <td>
-              <input type="number" min={0} value={props.form.fuehrung} readOnly />
+              <input
+                type="number"
+                min={0}
+                value={props.form.fuehrung}
+                onChange={(e) => props.onChange({ ...props.form, fuehrung: e.target.value })}
+              />
             </td>
             <th>Unterführung</th>
             <td>
-              <input type="number" min={0} value={props.form.unterfuehrung} readOnly />
+              <input
+                type="number"
+                min={0}
+                value={props.form.unterfuehrung}
+                onChange={(e) => props.onChange({ ...props.form, unterfuehrung: e.target.value })}
+              />
             </td>
           </tr>
           <tr>
             <th>Mannschaft</th>
             <td>
-              <input type="number" min={0} value={props.form.mannschaft} readOnly />
+              <input
+                type="number"
+                min={0}
+                value={props.form.mannschaft}
+                onChange={(e) => props.onChange({ ...props.form, mannschaft: e.target.value })}
+              />
             </td>
             <th />
             <td />
@@ -588,82 +612,69 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                       </tr>
                     );
                   })}
-                  <tr>
-                    <td>
-                      <select
-                        value={newHelfer.rolle}
-                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, rolle: e.target.value as HelferRolle }))}
-                      >
-                        <option value="FUEHRER">Führer</option>
-                        <option value="UNTERFUEHRER">Unterführer</option>
-                        <option value="HELFER">Helfer</option>
-                      </select>
-                    </td>
-                    <td>
-                      <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
-                        <button
-                          type="button"
-                          className={`gender-toggle ${newHelfer.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
-                          onClick={() => setNewHelfer((prev) => ({ ...prev, geschlecht: 'MAENNLICH' }))}
-                          title="Männlich"
+                  {Object.entries(autoRows).map(([autoKey, row]) => (
+                    <tr key={autoKey}>
+                      <td>
+                        <select
+                          value={row.rolle}
+                          onChange={(e) =>
+                            setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, rolle: e.target.value as HelferRolle } }))
+                          }
                         >
-                          <FontAwesomeIcon icon={faMars} />
+                          <option value="FUEHRER">Führer</option>
+                          <option value="UNTERFUEHRER">Unterführer</option>
+                          <option value="HELFER">Helfer</option>
+                        </select>
+                      </td>
+                      <td>
+                        <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
+                          <button
+                            type="button"
+                            className={`gender-toggle ${row.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
+                            onClick={() => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, geschlecht: 'MAENNLICH' } }))}
+                            title="Männlich"
+                          >
+                            <FontAwesomeIcon icon={faMars} />
+                          </button>
+                          <button
+                            type="button"
+                            className={`gender-toggle ${row.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
+                            onClick={() => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, geschlecht: 'WEIBLICH' } }))}
+                            title="Weiblich"
+                          >
+                            <FontAwesomeIcon icon={faVenus} />
+                          </button>
+                        </div>
+                      </td>
+                      <td className="helper-name-cell">
+                        <TaktischesZeichenPerson organisation={props.form.organisation} rolle={row.rolle} />
+                        <input
+                          value={row.name}
+                          onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, name: e.target.value } }))}
+                          placeholder="optional"
+                        />
+                      </td>
+                      <td>
+                        <input type="number" min={1} value={1} readOnly />
+                      </td>
+                      <td><input value={row.funktion} onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, funktion: e.target.value } }))} /></td>
+                      <td><input value={row.telefon} onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, telefon: e.target.value } }))} /></td>
+                      <td><input value={row.erreichbarkeit} onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, erreichbarkeit: e.target.value } }))} /></td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={row.vegetarisch}
+                          onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, vegetarisch: e.target.checked } }))}
+                        />
+                      </td>
+                      <td><input value={row.bemerkung} onChange={(e) => setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, bemerkung: e.target.value } }))} /></td>
+                      <td className="inline-subtable-actions">
+                        <button onClick={() => void props.onCreateHelfer({ ...row, anzahl: 1 })} disabled={props.busy || props.isArchived}>
+                          Hinzufügen
                         </button>
-                        <button
-                          type="button"
-                          className={`gender-toggle ${newHelfer.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
-                          onClick={() => setNewHelfer((prev) => ({ ...prev, geschlecht: 'WEIBLICH' }))}
-                          title="Weiblich"
-                        >
-                          <FontAwesomeIcon icon={faVenus} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="helper-name-cell">
-                      <TaktischesZeichenPerson organisation={props.form.organisation} rolle={newHelfer.rolle} />
-                      <input
-                        value={newHelfer.name}
-                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, name: e.target.value }))}
-                        placeholder="optional"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min={1}
-                        value={newHelfer.anzahl}
-                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, anzahl: Math.max(1, Math.round(Number(e.target.value) || 1)) }))}
-                      />
-                    </td>
-                    <td><input value={newHelfer.funktion} onChange={(e) => setNewHelfer((prev) => ({ ...prev, funktion: e.target.value }))} /></td>
-                    <td><input value={newHelfer.telefon} onChange={(e) => setNewHelfer((prev) => ({ ...prev, telefon: e.target.value }))} /></td>
-                    <td><input value={newHelfer.erreichbarkeit} onChange={(e) => setNewHelfer((prev) => ({ ...prev, erreichbarkeit: e.target.value }))} /></td>
-                    <td>
-                      <input type="checkbox" checked={newHelfer.vegetarisch} onChange={(e) => setNewHelfer((prev) => ({ ...prev, vegetarisch: e.target.checked }))} />
-                    </td>
-                    <td><input value={newHelfer.bemerkung} onChange={(e) => setNewHelfer((prev) => ({ ...prev, bemerkung: e.target.value }))} /></td>
-                    <td className="inline-subtable-actions">
-                      <button
-                        onClick={async () => {
-                          await props.onCreateHelfer(newHelfer);
-                          setNewHelfer({
-                            name: '',
-                            rolle: 'HELFER',
-                            geschlecht: 'MAENNLICH',
-                            anzahl: 1,
-                            funktion: '',
-                            telefon: '',
-                            erreichbarkeit: '',
-                            vegetarisch: false,
-                            bemerkung: '',
-                          });
-                        }}
-                        disabled={props.busy || props.isArchived}
-                      >
-                        Hinzufügen
-                      </button>
-                    </td>
-                  </tr>
+                      </td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </td>
