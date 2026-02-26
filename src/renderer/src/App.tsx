@@ -300,7 +300,11 @@ export function App() {
     });
     setAllFahrzeuge(nextAllFahrzeuge);
 
-    const total = allDetails.reduce<TacticalStrength>((sum, d) => {
+    const total = allDetails.reduce<TacticalStrength>((sum, d, index) => {
+      const abschnitt = nextAbschnitte[index];
+      if (abschnitt?.systemTyp === 'ANFAHRT') {
+        return sum;
+      }
       for (const einheit of d.einheiten) {
         const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
         sum.fuehrung += parsed.fuehrung;

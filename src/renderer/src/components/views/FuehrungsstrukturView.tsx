@@ -37,15 +37,19 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
       taktisch: { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 },
       organisations: new Map<OrganisationKey, number>(),
     };
+    const abschnitt = props.abschnitte.find((item) => item.id === abschnittId);
+    const countDirect = abschnitt?.systemTyp !== 'ANFAHRT';
 
-    const direct = kraefteByAbschnitt.get(abschnittId) ?? [];
-    for (const kraft of direct) {
-      const p = parseTaktischeStaerke(kraft.aktuelleStaerkeTaktisch, kraft.aktuelleStaerke);
-      result.taktisch.fuehrung += p.fuehrung;
-      result.taktisch.unterfuehrung += p.unterfuehrung;
-      result.taktisch.mannschaft += p.mannschaft;
-      result.taktisch.gesamt += p.gesamt;
-      result.organisations.set(kraft.organisation, (result.organisations.get(kraft.organisation) ?? 0) + 1);
+    if (countDirect) {
+      const direct = kraefteByAbschnitt.get(abschnittId) ?? [];
+      for (const kraft of direct) {
+        const p = parseTaktischeStaerke(kraft.aktuelleStaerkeTaktisch, kraft.aktuelleStaerke);
+        result.taktisch.fuehrung += p.fuehrung;
+        result.taktisch.unterfuehrung += p.unterfuehrung;
+        result.taktisch.mannschaft += p.mannschaft;
+        result.taktisch.gesamt += p.gesamt;
+        result.organisations.set(kraft.organisation, (result.organisations.get(kraft.organisation) ?? 0) + 1);
+      }
     }
 
     for (const child of byParent.get(abschnittId) ?? []) {
