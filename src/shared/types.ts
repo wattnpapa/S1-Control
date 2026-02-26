@@ -163,3 +163,12 @@ export interface ApiError {
   message: string;
   code?: string;
 }
+
+export interface ActiveClientInfo {
+  clientId: string;
+  computerName: string;
+  ipAddress: string;
+  lastSeen: string;
+  isMaster: boolean;
+  isSelf: boolean;
+}

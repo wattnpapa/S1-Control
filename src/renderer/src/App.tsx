@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AbschnittDetails, EinsatzListItem, EinheitHelfer, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
+import type { ActiveClientInfo, AbschnittDetails, EinsatzListItem, EinheitHelfer, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
@@ -182,6 +182,7 @@ export function App() {
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
   const [now, setNow] = useState<Date>(new Date());
+  const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
 
   const selectedEinsatz = useMemo(
     () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
@@ -268,6 +269,7 @@ export function App() {
     setAllKraefte([]);
     setAllFahrzeuge([]);
     setGesamtStaerke(EMPTY_STRENGTH);
+    setActiveClients([]);
   }, []);
 
   const loadEinsatz = useCallback(async (einsatzId: string, preferredAbschnittId?: string) => {
@@ -407,6 +409,24 @@ export function App() {
       }
     })();
   }, [selectedAbschnittId, selectedEinsatzId, session]);
+
+  useEffect(() => {
+    if (!session || !selectedEinsatzId || activeView !== 'einstellungen') {
+      return;
+    }
+    const loadClients = async () => {
+      try {
+        setActiveClients(await window.api.listActiveClients());
+      } catch (err) {
+        setError(readError(err));
+      }
+    };
+    void loadClients();
+    const timer = window.setInterval(() => {
+      void loadClients();
+    }, 5000);
+    return () => window.clearInterval(timer);
+  }, [activeView, selectedEinsatzId, session]);
 
   const withBusy = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -1343,6 +1363,7 @@ export function App() {
               busy={busy}
               dbPath={dbPath}
               selectedEinsatzId={selectedEinsatzId}
+              activeClients={activeClients}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}
               onRestoreBackup={() => void doRestoreBackup()}

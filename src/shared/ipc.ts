@@ -10,6 +10,7 @@ import type {
   SessionUser,
   EinheitHelfer,
   UpdaterState,
+  ActiveClientInfo,
 } from './types';
 
 export interface LoginInput {
@@ -196,6 +197,7 @@ export interface RendererApi {
   hasUndoableCommand(einsatzId: string): Promise<boolean>;
   exportEinsatzakte(einsatzId: string): Promise<ExportResult | null>;
   restoreBackup(einsatzId: string): Promise<boolean>;
+  listActiveClients(): Promise<ActiveClientInfo[]>;
   getUpdaterState(): Promise<UpdaterState>;
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
@@ -249,6 +251,7 @@ export const IPC_CHANNEL = {
   HAS_UNDO: 'command:has-undo',
   EXPORT_EINSATZAKTE: 'einsatz:export',
   RESTORE_BACKUP: 'einsatz:restore-backup',
+  LIST_ACTIVE_CLIENTS: 'clients:list-active',
   GET_UPDATER_STATE: 'updater:get-state',
   CHECK_UPDATES: 'updater:check',
   DOWNLOAD_UPDATE: 'updater:download',

@@ -33,6 +33,7 @@ const api: RendererApi = {
   hasUndoableCommand: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.HAS_UNDO, einsatzId),
   exportEinsatzakte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.EXPORT_EINSATZAKTE, einsatzId),
   restoreBackup: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.RESTORE_BACKUP, einsatzId),
+  listActiveClients: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_ACTIVE_CLIENTS),
   getUpdaterState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_UPDATER_STATE),
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),

@@ -1,10 +1,9 @@
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
 import type { DbContext } from '../db/connection';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
-const STALE_LOCK_MS = 12 * 60 * 1000;
+const BACKUP_LOOP_MS = 10 * 1000;
 
 function nowStamp(): string {
   const d = new Date();
@@ -21,35 +20,31 @@ export function resolveBackupDir(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'backup');
 }
 
-function lockFilePathForDb(dbPath: string): string {
-  const base = path.basename(dbPath, path.extname(dbPath));
-  return path.join(resolveBackupDir(dbPath), `${base}.backup.lock`);
-}
-
 export class BackupCoordinator {
   private interval: NodeJS.Timeout | null = null;
 
-  private lockedFd: number | null = null;
-
-  private lockPath: string | null = null;
-
   private activeDbPath: string | null = null;
+
+  private lastBackupAt = 0;
+
+  constructor(private readonly canWriteBackup: () => boolean = () => true) {}
 
   public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
       this.interval = null;
     }
-    this.releaseLock();
     this.activeDbPath = null;
+    this.lastBackupAt = 0;
   }
 
   public start(ctx: DbContext): void {
     this.stop();
     this.activeDbPath = ctx.path;
+    this.lastBackupAt = 0;
     this.interval = setInterval(() => {
       void this.runOnce(ctx);
-    }, FIVE_MINUTES);
+    }, BACKUP_LOOP_MS);
     void this.runOnce(ctx);
   }
 
@@ -70,7 +65,11 @@ export class BackupCoordinator {
     if (this.activeDbPath !== ctx.path) {
       return;
     }
-    if (!this.acquireLock(ctx.path)) {
+    if (!this.canWriteBackup()) {
+      return;
+    }
+    const now = Date.now();
+    if (now - this.lastBackupAt < FIVE_MINUTES) {
       return;
     }
 
@@ -81,66 +80,9 @@ export class BackupCoordinator {
 
     try {
       await ctx.sqlite.backup(target);
-      if (this.lockPath) {
-        const now = new Date();
-        fs.utimesSync(this.lockPath, now, now);
-      }
+      this.lastBackupAt = now;
     } catch {
       // best effort backup in background
-    }
-  }
-
-  private acquireLock(dbPath: string): boolean {
-    const lockPath = lockFilePathForDb(dbPath);
-    this.lockPath = lockPath;
-    fs.mkdirSync(path.dirname(lockPath), { recursive: true });
-
-    if (this.lockedFd !== null) {
-      return true;
-    }
-
-    try {
-      this.lockedFd = fs.openSync(lockPath, 'wx');
-      fs.writeFileSync(
-        this.lockedFd,
-        JSON.stringify({ pid: process.pid, host: os.hostname(), since: new Date().toISOString() }),
-      );
-      return true;
-    } catch {
-      try {
-        const stat = fs.statSync(lockPath);
-        if (Date.now() - stat.mtimeMs > STALE_LOCK_MS) {
-          fs.rmSync(lockPath, { force: true });
-          this.lockedFd = fs.openSync(lockPath, 'wx');
-          fs.writeFileSync(
-            this.lockedFd,
-            JSON.stringify({ pid: process.pid, host: os.hostname(), since: new Date().toISOString() }),
-          );
-          return true;
-        }
-      } catch {
-        return false;
-      }
-      return false;
-    }
-  }
-
-  private releaseLock(): void {
-    if (this.lockedFd !== null) {
-      try {
-        fs.closeSync(this.lockedFd);
-      } catch {
-        // noop
-      }
-      this.lockedFd = null;
-    }
-    if (this.lockPath) {
-      try {
-        fs.rmSync(this.lockPath, { force: true });
-      } catch {
-        // noop
-      }
-      this.lockPath = null;
     }
   }
 }

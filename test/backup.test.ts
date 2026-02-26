@@ -43,7 +43,7 @@ describe('backup service', () => {
     expect(fs.readFileSync(dbPath, 'utf8')).toBe('new');
   });
 
-  it('creates periodic backups and clears lock on stop', async () => {
+  it('creates periodic backups', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.sqlite');
     fs.writeFileSync(dbPath, 'db');
@@ -63,15 +63,12 @@ describe('backup service', () => {
     const backupDir = resolveBackupDir(dbPath);
     const files = fs.readdirSync(backupDir);
     expect(files.some((name) => name.endsWith('.sqlite'))).toBe(true);
-    expect(files.some((name) => name.endsWith('.backup.lock'))).toBe(true);
     expect(backupMock).toHaveBeenCalled();
 
     coordinator.stop();
-    const filesAfterStop = fs.readdirSync(backupDir);
-    expect(filesAfterStop.some((name) => name.endsWith('.backup.lock'))).toBe(false);
   });
 
-  it('allows only one backup writer per db lock', async () => {
+  it('allows only configured master to write backup', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.sqlite');
     fs.writeFileSync(dbPath, 'db');
@@ -83,8 +80,8 @@ describe('backup service', () => {
       fs.writeFileSync(target, 'backup-b');
     });
 
-    const a = new BackupCoordinator();
-    const b = new BackupCoordinator();
+    const a = new BackupCoordinator(() => true);
+    const b = new BackupCoordinator(() => false);
 
     a.start({ path: dbPath, sqlite: { backup: backupA } } as never);
     await new Promise((resolve) => setTimeout(resolve, 30));
@@ -92,32 +89,32 @@ describe('backup service', () => {
     b.start({ path: dbPath, sqlite: { backup: backupB } } as never);
     await new Promise((resolve) => setTimeout(resolve, 30));
 
-    expect(backupA).toHaveBeenCalled();
+    expect(backupA).toHaveBeenCalledTimes(1);
     expect(backupB).not.toHaveBeenCalled();
 
     a.stop();
     b.stop();
   });
 
-  it('recovers stale lock and writes backup', async () => {
+  it('hands over backup writing when master changes', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.sqlite');
     fs.writeFileSync(dbPath, 'db');
-    const backupDir = resolveBackupDir(dbPath);
-    fs.mkdirSync(backupDir, { recursive: true });
-    const lockPath = path.join(backupDir, 'einsatz.backup.lock');
-    fs.writeFileSync(lockPath, 'stale');
-    const stale = new Date(Date.now() - 20 * 60 * 1000);
-    fs.utimesSync(lockPath, stale, stale);
-
+    let isMaster = false;
     const backup = vi.fn(async (target: string) => {
-      fs.writeFileSync(target, 'backup');
+      fs.writeFileSync(target, 'backup-next');
     });
-    const c = new BackupCoordinator();
+    const c = new BackupCoordinator(() => isMaster);
+    c.start({ path: dbPath, sqlite: { backup } } as never);
+    await new Promise((resolve) => setTimeout(resolve, 30));
+    expect(backup).not.toHaveBeenCalled();
+
+    isMaster = true;
+    c.stop();
     c.start({ path: dbPath, sqlite: { backup } } as never);
     await new Promise((resolve) => setTimeout(resolve, 30));
 
-    const files = fs.readdirSync(backupDir);
+    const files = fs.readdirSync(resolveBackupDir(dbPath));
     expect(backup).toHaveBeenCalled();
     expect(files.some((name) => name.endsWith('.sqlite'))).toBe(true);
     c.stop();

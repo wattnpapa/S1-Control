@@ -7,6 +7,7 @@ import { openDatabaseWithRetry } from '../db/connection';
 import { SettingsStore } from '../db/settings-store';
 import { ensureDefaultAdmin, ensureSessionUserRecord, login } from '../services/auth';
 import { BackupCoordinator, resolveBackupDir } from '../services/backup';
+import { ClientPresenceService } from '../services/clients';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command';
 import { toSafeError } from '../services/errors';
 import {
@@ -47,6 +48,7 @@ interface AppState {
   getDbContext: () => DbContext;
   setDbContext: (ctx: DbContext) => void;
   backupCoordinator: BackupCoordinator;
+  clientPresence: ClientPresenceService;
   updater: UpdaterService;
   strengthDisplay: StrengthDisplayService;
   settingsStore: SettingsStore;
@@ -151,6 +153,7 @@ export function registerIpc(state: AppState): void {
       ensureDefaultAdmin(nextContext);
       state.backupCoordinator.stop();
       state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
       state.settingsStore.set({ dbPath: baseDir });
       return { dbPath: baseDir };
     }),
@@ -176,6 +179,7 @@ export function registerIpc(state: AppState): void {
       const dbUser = ensureSessionUserRecord(nextContext, user);
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(dbPath);
       return true;
@@ -208,6 +212,7 @@ export function registerIpc(state: AppState): void {
       const dbUser = ensureSessionUserRecord(nextContext, user);
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(selected);
       state.settingsStore.set({ dbPath: path.dirname(selected) });
@@ -223,6 +228,7 @@ export function registerIpc(state: AppState): void {
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
+      state.clientPresence.start(created.ctx);
       state.backupCoordinator.start(created.ctx);
       return created.einsatz;
     }),
@@ -249,6 +255,7 @@ export function registerIpc(state: AppState): void {
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
+      state.clientPresence.start(created.ctx);
       state.backupCoordinator.start(created.ctx);
       rememberRecentDbPath(normalized);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
@@ -418,9 +425,15 @@ export function registerIpc(state: AppState): void {
       const dbUser = ensureSessionUserRecord(nextContext, user);
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
       state.backupCoordinator.start(nextContext);
       return true;
     }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_ACTIVE_CLIENTS,
+    wrap(async () => state.clientPresence.listActiveClients()),
   );
 
   ipcMain.handle(

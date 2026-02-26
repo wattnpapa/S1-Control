@@ -148,3 +148,12 @@ export const einsatzEinheitHelfer = sqliteTable('einsatz_einheit_helfer', {
   erstellt: text('erstellt').notNull(),
   aktualisiert: text('aktualisiert').notNull(),
 });
+
+export const activeClient = sqliteTable('active_client', {
+  clientId: text('client_id').primaryKey(),
+  computerName: text('computer_name').notNull(),
+  ipAddress: text('ip_address').notNull(),
+  lastSeen: text('last_seen').notNull(),
+  startedAt: text('started_at').notNull(),
+  isMaster: integer('is_master', { mode: 'boolean' }).notNull().default(false),
+});

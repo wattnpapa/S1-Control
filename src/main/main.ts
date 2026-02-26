@@ -5,6 +5,7 @@ import { SettingsStore } from './db/settings-store';
 import { registerIpc } from './ipc/register-ipc';
 import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
+import { ClientPresenceService } from './services/clients';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
 import { StrengthDisplayService } from './services/strength-display';
 import { UpdaterService } from './services/updater';
@@ -104,7 +105,9 @@ async function bootstrap(): Promise<void> {
 
   let dbContext = openWithFallback();
   ensureDefaultAdmin(dbContext);
-  const backupCoordinator = new BackupCoordinator();
+  const clientPresence = new ClientPresenceService();
+  clientPresence.start(dbContext);
+  const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
   const updater = new UpdaterService((state) => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
@@ -125,6 +128,7 @@ async function bootstrap(): Promise<void> {
       dbContext = ctx;
     },
     backupCoordinator,
+    clientPresence,
     updater,
     strengthDisplay,
     settingsStore,
@@ -168,7 +172,13 @@ async function bootstrap(): Promise<void> {
 
   app.on('window-all-closed', () => {
     backupCoordinator.stop();
+    clientPresence.stop(true);
     app.quit();
+  });
+
+  app.on('before-quit', () => {
+    backupCoordinator.stop();
+    clientPresence.stop(true);
   });
 }
 
