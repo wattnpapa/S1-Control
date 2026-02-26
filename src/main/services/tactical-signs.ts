@@ -72,7 +72,7 @@ function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 
     case 'BUNDESWEHR':
       return { color_primary: '#7a6230', color_text: '#FFFFFF' };
     case 'REGIE':
-      return { color_primary: '#5e6675', color_text: '#FFFFFF' };
+      return { color_primary: '#f39200', color_text: '#000000' };
     case 'DRK':
       return { color_primary: '#FFFFFF', color_text: '#000000' };
     case 'ASB':
