@@ -298,9 +298,16 @@ select {
 
 .content {
   display: grid;
-  grid-template-columns: 72px 320px 1fr;
   flex: 1;
   min-height: 0;
+}
+
+.content-with-sidebar {
+  grid-template-columns: 72px 320px 1fr;
+}
+
+.content-no-sidebar {
+  grid-template-columns: 72px 1fr;
 }
 
 .workspace-rail {

@@ -64,9 +64,7 @@ export class UpdaterService {
       }
       if (this.isVersionFormatError(message)) {
         await this.checkGitHubReleaseVersion(
-          `In-App-Download nicht möglich: Update-Metadaten sind nicht SemVer-kompatibel (\`${this.normalizeVersion(
-            app.getVersion(),
-          )}\`).`,
+          `In-App-Download nicht möglich: ${message}`,
         );
         return;
       }
@@ -250,7 +248,13 @@ export class UpdaterService {
 
   private isVersionFormatError(message: string): boolean {
     const lower = message.toLowerCase();
-    return lower.includes('semver') || lower.includes('version') || lower.includes('invalid version');
+    return (
+      lower.includes('semver') ||
+      lower.includes('invalid version') ||
+      lower.includes('not a valid semver') ||
+      lower.includes('is not valid semver') ||
+      lower.includes('version is not valid')
+    );
   }
 
   private isBuildVersion(version: string): boolean {

@@ -135,6 +135,7 @@ export function App() {
   );
 
   const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
+  const showAbschnittSidebar = activeView === 'einsatz';
 
   const renderUpdaterNotices = () => (
     <>
@@ -861,16 +862,18 @@ export function App() {
       {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
       {error && <div className="error-banner">{error}</div>}
 
-      <main className="content">
+      <main className={showAbschnittSidebar ? 'content content-with-sidebar' : 'content content-no-sidebar'}>
         <WorkspaceRail activeView={activeView} onSelect={setActiveView} />
-        <AbschnittSidebar
-          abschnitte={abschnitte}
-          selectedId={selectedAbschnittId}
-          einsatzName={selectedEinsatz?.name}
-          onSelect={setSelectedAbschnittId}
-          onEditSelected={doEditSelectedAbschnitt}
-          editDisabled={busy || !selectedAbschnittId || isArchived}
-        />
+        {showAbschnittSidebar && (
+          <AbschnittSidebar
+            abschnitte={abschnitte}
+            selectedId={selectedAbschnittId}
+            einsatzName={selectedEinsatz?.name}
+            onSelect={setSelectedAbschnittId}
+            onEditSelected={doEditSelectedAbschnitt}
+            editDisabled={busy || !selectedAbschnittId || isArchived}
+          />
+        )}
 
         <section className="main-view">
           {activeView === 'einsatz' && (
