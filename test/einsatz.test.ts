@@ -739,4 +739,151 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+
+  it('validates updateFahrzeug and creates stammdaten when missing', () => {
+    const ctx = createTestDb('s1-control-einsatz-update-fahrzeug-edge-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Fahrzeug Update', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK OL',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/1/3/4',
+        aktuellerAbschnittId: root.id,
+      });
+      const einheit = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+
+      expect(() =>
+        updateFahrzeug(ctx, {
+          einsatzId: created.id,
+          fahrzeugId: 'missing',
+          name: 'ELW 1',
+          aktuelleEinsatzEinheitId: einheit.id,
+        }),
+      ).toThrow('Fahrzeug nicht gefunden');
+
+      expect(() =>
+        updateFahrzeug(ctx, {
+          einsatzId: created.id,
+          fahrzeugId: 'missing',
+          name: 'ELW 1',
+          aktuelleEinsatzEinheitId: '',
+        }),
+      ).toThrow('Zugeordnete Einheit ist erforderlich');
+
+      const fahrzeugId = 'fahrzeug-ohne-stamm';
+      ctx.db
+        .insert(einsatzFahrzeug)
+        .values({
+          id: fahrzeugId,
+          einsatzId: created.id,
+          stammdatenFahrzeugId: null,
+          parentEinsatzFahrzeugId: null,
+          nameImEinsatz: 'Alt',
+          kennzeichen: null,
+          funkrufname: null,
+          stanKonform: null,
+          sondergeraet: null,
+          nutzlast: null,
+          aktuelleEinsatzEinheitId: einheit.id,
+          aktuellerAbschnittId: root.id,
+          status: 'AKTIV',
+          erstellt: new Date().toISOString(),
+          entfernt: null,
+        })
+        .run();
+
+      updateFahrzeug(ctx, {
+        einsatzId: created.id,
+        fahrzeugId,
+        name: 'ELW Neu',
+        kennzeichen: 'THW-999',
+        aktuelleEinsatzEinheitId: einheit.id,
+        status: 'AKTIV',
+      });
+
+      const updated = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.id, fahrzeugId)).get()!;
+      expect(updated.stammdatenFahrzeugId).toBeTruthy();
+      const stamm = ctx.db
+        .select()
+        .from(stammdatenFahrzeug)
+        .where(eq(stammdatenFahrzeug.id, updated.stammdatenFahrzeugId!))
+        .get();
+      expect(stamm?.name).toBe('ELW Neu');
+      expect(stamm?.kennzeichen).toBe('THW-999');
+
+      expect(() =>
+        updateFahrzeug(ctx, {
+          einsatzId: created.id,
+          fahrzeugId,
+          name: 'ELW Neu',
+          aktuelleEinsatzEinheitId: 'missing-unit',
+        }),
+      ).toThrow('Zugeordnete Einheit nicht gefunden');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('uses default tactical config on split when none exists in source or input', () => {
+    const ctx = createTestDb('s1-control-einsatz-split-default-sign-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+      const sourceId = 'source-ohne-sign-config';
+      ctx.db
+        .insert(einsatzEinheit)
+        .values({
+          id: sourceId,
+          einsatzId: created.id,
+          stammdatenEinheitId: null,
+          parentEinsatzEinheitId: null,
+          nameImEinsatz: 'Basis',
+          organisation: 'THW',
+          aktuelleStaerke: 3,
+          aktuelleStaerkeTaktisch: '0/0/3/3',
+          tacticalSignConfigJson: null,
+          grFuehrerName: null,
+          ovName: null,
+          ovTelefon: null,
+          ovFax: null,
+          rbName: null,
+          rbTelefon: null,
+          rbFax: null,
+          lvName: null,
+          lvTelefon: null,
+          lvFax: null,
+          bemerkung: null,
+          vegetarierVorhanden: null,
+          erreichbarkeiten: null,
+          aktuellerAbschnittId: root.id,
+          status: 'AKTIV',
+          erstellt: new Date().toISOString(),
+          aufgeloest: null,
+        })
+        .run();
+
+      splitEinheit(ctx, {
+        einsatzId: created.id,
+        sourceEinheitId: sourceId,
+        nameImEinsatz: 'Teil',
+        fuehrung: 0,
+        unterfuehrung: 0,
+        mannschaft: 1,
+      });
+
+      const child = ctx.db
+        .select()
+        .from(einsatzEinheit)
+        .where(and(eq(einsatzEinheit.parentEinsatzEinheitId, sourceId), eq(einsatzEinheit.einsatzId, created.id)))
+        .get();
+      expect(child?.tacticalSignConfigJson).toContain('"name":"Teil"');
+      expect(child?.tacticalSignConfigJson).toContain('"organisationsname":"THW"');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
 });

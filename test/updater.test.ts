@@ -311,6 +311,58 @@ describe('updater service', () => {
     expect(hoisted.autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
   });
 
+  it('uses environment display version when provided', () => {
+    process.env.S1_APP_VERSION = '2026.02.26.23.59';
+    const service = new UpdaterService(() => undefined);
+    expect(service.getState().currentVersion).toBe('2026.02.26.23.59');
+    delete process.env.S1_APP_VERSION;
+  });
+
+  it('falls back when electron-updater API is unavailable', async () => {
+    hoisted.setAppVersion('1.2.3');
+    const originalCheck = hoisted.autoUpdaterMock.checkForUpdates;
+    // simulate broken runtime where API is missing
+    (hoisted.autoUpdaterMock as unknown as { checkForUpdates?: unknown }).checkForUpdates = undefined;
+
+    try {
+      const service = new UpdaterService(() => undefined);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn(async () => ({
+          ok: true,
+          json: async () => ({ tag_name: '1.2.4' }),
+        })),
+      );
+
+      await service.checkForUpdates();
+      expect(service.getState()).toMatchObject({
+        stage: 'available',
+        source: 'github-release',
+        inAppDownloadSupported: false,
+      });
+    } finally {
+      (hoisted.autoUpdaterMock as unknown as { checkForUpdates?: unknown }).checkForUpdates = originalCheck;
+    }
+  });
+
+  it('handles auto-updater init exceptions', () => {
+    const originalOn = hoisted.autoUpdaterMock.on;
+    try {
+      hoisted.autoUpdaterMock.on = vi.fn(() => {
+        throw new Error('listener registration failed');
+      }) as never;
+
+      const states: Array<ReturnType<UpdaterService['getState']>> = [];
+      new UpdaterService((state) => states.push(state));
+      expect(states.at(-1)).toMatchObject({
+        stage: 'idle',
+        message: 'Auto-Updater deaktiviert: listener registration failed',
+      });
+    } finally {
+      hoisted.autoUpdaterMock.on = originalOn;
+    }
+  });
+
   it('covers internal version helpers for semver/build/date comparison', () => {
     const service = new UpdaterService(() => undefined) as never as {
       normalizeVersion: (v: string) => string;

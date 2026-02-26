@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { getTacticalFormationSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../src/main/services/tactical-signs';
+import {
+  getTacticalFormationSvgDataUrl,
+  getTacticalPersonSvgDataUrl,
+  getTacticalVehicleSvgDataUrl,
+} from '../src/main/services/tactical-signs';
 import type { OrganisationKey } from '../src/shared/types';
 
 function decodeSvg(dataUrl: string): string {
@@ -96,5 +100,23 @@ describe('tactical signs service', () => {
     expect(squad).toContain('1/2');
     expect(squad).toContain('stroke-width="7"');
     expect(zugtrupp).toContain('cy="86"');
+  });
+
+  it('renders person symbols for helper roles and caches per role', () => {
+    const leader = getTacticalPersonSvgDataUrl('FEUERWEHR', 'FUEHRER');
+    const leaderAgain = getTacticalPersonSvgDataUrl('FEUERWEHR', 'FUEHRER');
+    const helper = getTacticalPersonSvgDataUrl('FEUERWEHR', 'HELFER');
+
+    expect(leader).toBe(leaderAgain);
+    expect(leader.startsWith('data:image/svg+xml;base64,')).toBe(true);
+    expect(helper.startsWith('data:image/svg+xml;base64,')).toBe(true);
+
+    const leaderSvg = decodeSvg(leader);
+    const helperSvg = decodeSvg(helper);
+
+    expect(leaderSvg).toContain('<svg');
+    expect(helperSvg).toContain('<svg');
+    expect(leaderSvg).toContain('fill="#d61a1f"');
+    expect(helperSvg).toContain('fill="#d61a1f"');
   });
 });
