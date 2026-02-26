@@ -702,6 +702,11 @@ td.tactical-sign-cell {
   padding: 4px 6px;
 }
 
+td.tactical-sign-cell.compact-sign-cell {
+  width: 56px;
+  min-width: 56px;
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

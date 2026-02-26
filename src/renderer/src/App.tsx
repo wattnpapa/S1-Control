@@ -767,6 +767,68 @@ export function App() {
     });
   };
 
+  const doCreateEinheitFahrzeug = async (input: {
+    name: string;
+    kennzeichen: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+    funkrufname: string;
+    stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+    sondergeraet: string;
+    nutzlast: string;
+  }) => {
+    if (!selectedEinsatzId || !editEinheitForm.einheitId || isArchived) return;
+    if (!input.name.trim()) {
+      setError('Bitte Fahrzeugname eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.createFahrzeug({
+        einsatzId: selectedEinsatzId,
+        name: input.name.trim(),
+        kennzeichen: input.kennzeichen.trim() || undefined,
+        aktuelleEinsatzEinheitId: editEinheitForm.einheitId,
+        status: input.status,
+        funkrufname: input.funkrufname,
+        stanKonform: input.stanKonform === 'UNBEKANNT' ? null : input.stanKonform === 'JA',
+        sondergeraet: input.sondergeraet,
+        nutzlast: input.nutzlast,
+      });
+      await refreshAll();
+    });
+  };
+
+  const doUpdateEinheitFahrzeug = async (input: {
+    fahrzeugId: string;
+    name: string;
+    kennzeichen: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+    funkrufname: string;
+    stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+    sondergeraet: string;
+    nutzlast: string;
+  }) => {
+    if (!selectedEinsatzId || !editEinheitForm.einheitId || isArchived) return;
+    if (!input.name.trim()) {
+      setError('Bitte Fahrzeugname eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.updateFahrzeug({
+        einsatzId: selectedEinsatzId,
+        fahrzeugId: input.fahrzeugId,
+        name: input.name.trim(),
+        kennzeichen: input.kennzeichen.trim() || undefined,
+        aktuelleEinsatzEinheitId: editEinheitForm.einheitId,
+        status: input.status,
+        funkrufname: input.funkrufname,
+        stanKonform: input.stanKonform === 'UNBEKANNT' ? null : input.stanKonform === 'JA',
+        sondergeraet: input.sondergeraet,
+        nutzlast: input.nutzlast,
+      });
+      await refreshAll();
+    });
+  };
+
   const doCreateFahrzeug = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
     if (allKraefte.length === 0) {
@@ -1119,6 +1181,9 @@ export function App() {
                 onCreateHelfer={doCreateEinheitHelfer}
                 onUpdateHelfer={doUpdateEinheitHelfer}
                 onDeleteHelfer={doDeleteEinheitHelfer}
+                fahrzeuge={allFahrzeuge}
+                onCreateFahrzeug={doCreateEinheitFahrzeug}
+                onUpdateFahrzeug={doUpdateEinheitFahrzeug}
               />
               <InlineFahrzeugEditor
                 visible={showEditFahrzeugDialog}
@@ -1180,6 +1245,9 @@ export function App() {
                 onCreateHelfer={doCreateEinheitHelfer}
                 onUpdateHelfer={doUpdateEinheitHelfer}
                 onDeleteHelfer={doDeleteEinheitHelfer}
+                fahrzeuge={allFahrzeuge}
+                onCreateFahrzeug={doCreateEinheitFahrzeug}
+                onUpdateFahrzeug={doUpdateEinheitFahrzeug}
               />
               <div className="inline-actions">
                 <select

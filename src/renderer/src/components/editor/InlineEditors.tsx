@@ -1,9 +1,10 @@
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { TaktischesZeichenPerson } from '@renderer/components/common/TaktischesZeichenPerson';
+import { TaktischesZeichenFahrzeug } from '@renderer/components/common/TaktischesZeichenFahrzeug';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faMars, faVenus } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
-import type { EditEinheitForm, EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
+import type { EditEinheitForm, EditFahrzeugForm, FahrzeugOverviewItem, KraftOverviewItem } from '@renderer/types/ui';
 import type { EinheitHelfer, HelferGeschlecht, HelferRolle, OrganisationKey } from '@shared/types';
 
 interface InlineEinheitEditorProps {
@@ -39,6 +40,26 @@ interface InlineEinheitEditorProps {
     bemerkung: string;
   }) => Promise<void>;
   onDeleteHelfer: (helferId: string) => Promise<void>;
+  fahrzeuge: FahrzeugOverviewItem[];
+  onCreateFahrzeug: (input: {
+    name: string;
+    kennzeichen: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+    funkrufname: string;
+    stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+    sondergeraet: string;
+    nutzlast: string;
+  }) => Promise<void>;
+  onUpdateFahrzeug: (input: {
+    fahrzeugId: string;
+    name: string;
+    kennzeichen: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+    funkrufname: string;
+    stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+    sondergeraet: string;
+    nutzlast: string;
+  }) => Promise<void>;
 }
 
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
@@ -57,6 +78,16 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
     bemerkung: '',
   });
   const [editRows, setEditRows] = useState<Record<string, typeof newHelfer>>({});
+  const [newFahrzeug, setNewFahrzeug] = useState({
+    name: '',
+    kennzeichen: '',
+    status: 'AKTIV' as const,
+    funkrufname: '',
+    stanKonform: 'UNBEKANNT' as const,
+    sondergeraet: '',
+    nutzlast: '',
+  });
+  const [editFahrzeuge, setEditFahrzeuge] = useState<Record<string, typeof newFahrzeug>>({});
 
   useEffect(() => {
     const next: Record<string, typeof newHelfer> = {};
@@ -75,6 +106,22 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
     }
     setEditRows(next);
   }, [helferRows]);
+
+  useEffect(() => {
+    const next: Record<string, typeof newFahrzeug> = {};
+    for (const row of props.fahrzeuge.filter((item) => item.aktuelleEinsatzEinheitId === form.einheitId)) {
+      next[row.id] = {
+        name: row.name,
+        kennzeichen: row.kennzeichen ?? '',
+        status: row.status,
+        funkrufname: row.funkrufname ?? '',
+        stanKonform: row.stanKonform === null ? 'UNBEKANNT' : row.stanKonform ? 'JA' : 'NEIN',
+        sondergeraet: row.sondergeraet ?? '',
+        nutzlast: row.nutzlast ?? '',
+      };
+    }
+    setEditFahrzeuge(next);
+  }, [props.fahrzeuge, form.einheitId]);
 
   useEffect(() => {
     const totals = helferRows.reduce(
@@ -220,6 +267,179 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
             <th>Bemerkung</th>
             <td colSpan={3}>
               <textarea rows={2} value={props.form.bemerkung} onChange={(e) => props.onChange({ ...props.form, bemerkung: e.target.value })} />
+            </td>
+          </tr>
+          <tr>
+            <th colSpan={4}>Fahrzeuge</th>
+          </tr>
+          <tr>
+            <td colSpan={4}>
+              <table className="inline-subtable">
+                <thead>
+                  <tr>
+                    <th />
+                    <th>Name</th>
+                    <th>Kennzeichen</th>
+                    <th>FuRn</th>
+                    <th>STAN</th>
+                    <th>Sondergerät</th>
+                    <th>Nutzlast</th>
+                    <th>Status</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {props.fahrzeuge
+                    .filter((item) => item.aktuelleEinsatzEinheitId === form.einheitId)
+                    .map((row) => {
+                      const edit = editFahrzeuge[row.id];
+                      if (!edit) return null;
+                      return (
+                        <tr key={row.id}>
+                          <td className="tactical-sign-cell compact-sign-cell">
+                            <TaktischesZeichenFahrzeug organisation={row.organisation} />
+                          </td>
+                          <td>
+                            <input
+                              value={edit.name}
+                              onChange={(e) => setEditFahrzeuge((prev) => ({ ...prev, [row.id]: { ...edit, name: e.target.value } }))}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              value={edit.kennzeichen}
+                              onChange={(e) => setEditFahrzeuge((prev) => ({ ...prev, [row.id]: { ...edit, kennzeichen: e.target.value } }))}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              value={edit.funkrufname}
+                              onChange={(e) => setEditFahrzeuge((prev) => ({ ...prev, [row.id]: { ...edit, funkrufname: e.target.value } }))}
+                            />
+                          </td>
+                          <td>
+                            <select
+                              value={edit.stanKonform}
+                              onChange={(e) =>
+                                setEditFahrzeuge((prev) => ({
+                                  ...prev,
+                                  [row.id]: { ...edit, stanKonform: e.target.value as 'JA' | 'NEIN' | 'UNBEKANNT' },
+                                }))
+                              }
+                            >
+                              <option value="UNBEKANNT">unbekannt</option>
+                              <option value="JA">ja</option>
+                              <option value="NEIN">nein</option>
+                            </select>
+                          </td>
+                          <td>
+                            <input
+                              value={edit.sondergeraet}
+                              onChange={(e) => setEditFahrzeuge((prev) => ({ ...prev, [row.id]: { ...edit, sondergeraet: e.target.value } }))}
+                            />
+                          </td>
+                          <td>
+                            <input
+                              value={edit.nutzlast}
+                              onChange={(e) => setEditFahrzeuge((prev) => ({ ...prev, [row.id]: { ...edit, nutzlast: e.target.value } }))}
+                            />
+                          </td>
+                          <td>
+                            <select
+                              value={edit.status}
+                              onChange={(e) =>
+                                setEditFahrzeuge((prev) => ({
+                                  ...prev,
+                                  [row.id]: { ...edit, status: e.target.value as 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB' },
+                                }))
+                              }
+                            >
+                              <option value="AKTIV">AKTIV</option>
+                              <option value="IN_BEREITSTELLUNG">IN_BEREITSTELLUNG</option>
+                              <option value="AUSSER_BETRIEB">AUSSER BETRIEB</option>
+                            </select>
+                          </td>
+                          <td className="inline-subtable-actions">
+                            <button
+                              onClick={() =>
+                                void props.onUpdateFahrzeug({
+                                  fahrzeugId: row.id,
+                                  ...edit,
+                                })
+                              }
+                              disabled={props.busy || props.isArchived}
+                            >
+                              Speichern
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  <tr>
+                    <td className="tactical-sign-cell compact-sign-cell">
+                      <TaktischesZeichenFahrzeug organisation={form.organisation} />
+                    </td>
+                    <td>
+                      <input
+                        value={newFahrzeug.name}
+                        onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, name: e.target.value }))}
+                        placeholder="Neues Fahrzeug"
+                      />
+                    </td>
+                    <td>
+                      <input value={newFahrzeug.kennzeichen} onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, kennzeichen: e.target.value }))} />
+                    </td>
+                    <td>
+                      <input value={newFahrzeug.funkrufname} onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, funkrufname: e.target.value }))} />
+                    </td>
+                    <td>
+                      <select
+                        value={newFahrzeug.stanKonform}
+                        onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, stanKonform: e.target.value as 'JA' | 'NEIN' | 'UNBEKANNT' }))}
+                      >
+                        <option value="UNBEKANNT">unbekannt</option>
+                        <option value="JA">ja</option>
+                        <option value="NEIN">nein</option>
+                      </select>
+                    </td>
+                    <td>
+                      <input value={newFahrzeug.sondergeraet} onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, sondergeraet: e.target.value }))} />
+                    </td>
+                    <td>
+                      <input value={newFahrzeug.nutzlast} onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, nutzlast: e.target.value }))} />
+                    </td>
+                    <td>
+                      <select
+                        value={newFahrzeug.status}
+                        onChange={(e) => setNewFahrzeug((prev) => ({ ...prev, status: e.target.value as 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB' }))}
+                      >
+                        <option value="AKTIV">AKTIV</option>
+                        <option value="IN_BEREITSTELLUNG">IN_BEREITSTELLUNG</option>
+                        <option value="AUSSER_BETRIEB">AUSSER BETRIEB</option>
+                      </select>
+                    </td>
+                    <td className="inline-subtable-actions">
+                      <button
+                        onClick={async () => {
+                          await props.onCreateFahrzeug(newFahrzeug);
+                          setNewFahrzeug({
+                            name: '',
+                            kennzeichen: '',
+                            status: 'AKTIV',
+                            funkrufname: '',
+                            stanKonform: 'UNBEKANNT',
+                            sondergeraet: '',
+                            nutzlast: '',
+                          });
+                        }}
+                        disabled={props.busy || props.isArchived}
+                      >
+                        Hinzufügen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </td>
           </tr>
           <tr>
