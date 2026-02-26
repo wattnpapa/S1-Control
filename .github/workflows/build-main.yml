@@ -148,6 +148,13 @@ jobs:
           npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
+      - name: Normalize macOS update metadata filename
+        run: |
+          ls -la dist
+          if [ ! -f dist/latest-mac.yml ] && [ -f dist/latest.yml ]; then
+            cp dist/latest.yml dist/latest-mac.yml
+          fi
+
       - name: Verify macOS update metadata
         run: |
           test -f dist/latest-mac.yml || (echo "Missing dist/latest-mac.yml" && exit 1)
@@ -159,7 +166,7 @@ jobs:
           path: |
             dist/*.dmg
             dist/*.zip
-            dist/latest-mac.yml
+            dist/latest*.yml
 
   build-win:
     runs-on: windows-latest
@@ -203,6 +210,13 @@ jobs:
 
       - name: Verify Windows update metadata
         run: |
+          Get-ChildItem dist -Filter "*latest*.yml" | ForEach-Object { Write-Host $_.FullName }
+          if (!(Test-Path dist/latest.yml)) {
+            $candidate = Get-ChildItem dist -Filter "*latest*.yml" | Select-Object -First 1
+            if ($null -ne $candidate) {
+              Copy-Item $candidate.FullName dist/latest.yml
+            }
+          }
           if (!(Test-Path dist/latest.yml)) { Write-Error "Missing dist/latest.yml"; exit 1 }
         shell: pwsh
 
@@ -213,7 +227,7 @@ jobs:
           path: |
             dist/*.exe
             dist/*.blockmap
-            dist/latest.yml
+            dist/latest*.yml
 
   build-linux:
     runs-on: ubuntu-latest
@@ -256,6 +270,13 @@ jobs:
 
       - name: Verify Linux update metadata
         run: |
+          ls -la dist
+          if [ ! -f dist/latest-linux.yml ]; then
+            candidate="$(ls dist/latest*.yml 2>/dev/null | head -n 1 || true)"
+            if [ -n "$candidate" ]; then
+              cp "$candidate" dist/latest-linux.yml
+            fi
+          fi
           test -f dist/latest-linux.yml || (echo "Missing dist/latest-linux.yml" && exit 1)
 
       - name: Upload Linux artifacts
@@ -264,7 +285,7 @@ jobs:
           name: s1-control-linux-${{ env.BUILD_VERSION }}
           path: |
             dist/*.deb
-            dist/latest-linux.yml
+            dist/latest*.yml
 
   release:
     runs-on: ubuntu-latest
