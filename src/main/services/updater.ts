@@ -6,6 +6,7 @@ import type { UpdaterState } from '../../shared/types';
 
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
+const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
 
 export class UpdaterService {
   private state: UpdaterState = {
@@ -100,6 +101,11 @@ export class UpdaterService {
 
   private configureAutoUpdater(): void {
     try {
+      const maybeSetFeedUrl = (autoUpdater as unknown as { setFeedURL?: (options: { provider: 'generic'; url: string }) => void })
+        .setFeedURL;
+      if (typeof maybeSetFeedUrl === 'function') {
+        maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
+      }
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
 

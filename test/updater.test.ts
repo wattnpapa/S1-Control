@@ -10,6 +10,7 @@ const hoisted = vi.hoisted(() => {
   const autoUpdaterMock = {
     autoDownload: true,
     autoInstallOnAppQuit: true,
+    setFeedURL: vi.fn(() => undefined),
     checkForUpdates: vi.fn(async () => ({ updateInfo: { version: '0.0.0' } })),
     downloadUpdate: vi.fn(async () => undefined),
     quitAndInstall: vi.fn(() => undefined),
@@ -64,6 +65,7 @@ describe('updater service', () => {
     hoisted.autoUpdaterMock.autoInstallOnAppQuit = true;
     hoisted.autoUpdaterMock.checkForUpdates.mockReset();
     hoisted.autoUpdaterMock.checkForUpdates.mockResolvedValue({ updateInfo: { version: '0.0.0' } });
+    hoisted.autoUpdaterMock.setFeedURL.mockReset();
     hoisted.autoUpdaterMock.downloadUpdate.mockReset();
     hoisted.autoUpdaterMock.downloadUpdate.mockResolvedValue(undefined);
     hoisted.autoUpdaterMock.quitAndInstall.mockReset();
