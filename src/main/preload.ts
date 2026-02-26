@@ -42,6 +42,8 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG, input),
   getTacticalVehicleSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG, input),
+  getTacticalPersonSvg: (input) =>
+    ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_PERSON_SVG, input),
   openStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_STRENGTH_DISPLAY_WINDOW),
   closeStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.CLOSE_STRENGTH_DISPLAY_WINDOW),
   getStrengthDisplayState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_STRENGTH_DISPLAY_STATE),

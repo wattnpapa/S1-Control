@@ -689,7 +689,9 @@ describe('einsatz service', () => {
       createEinheitHelfer(ctx, {
         einsatzId: created.id,
         einsatzEinheitId: einheit.id,
-        name: 'Max Muster',
+        name: '',
+        rolle: 'FUEHRER',
+        anzahl: 2,
         funktion: 'Truppführer',
         telefon: '0151-123',
         erreichbarkeit: 'Funk',
@@ -698,12 +700,17 @@ describe('einsatz service', () => {
 
       let helfer = listEinheitHelfer(ctx, einheit.id);
       expect(helfer).toHaveLength(1);
+      expect(helfer[0]?.name).toBe('N.N.');
+      expect(helfer[0]?.rolle).toBe('FUEHRER');
+      expect(helfer[0]?.anzahl).toBe(2);
       expect(helfer[0]?.vegetarisch).toBe(true);
 
       updateEinheitHelfer(ctx, {
         einsatzId: created.id,
         helferId: helfer[0]!.id,
-        name: 'Max Muster',
+        name: '',
+        rolle: 'UNTERFUEHRER',
+        anzahl: 3,
         funktion: 'Gruppenführer',
         telefon: '0151-456',
         erreichbarkeit: 'Telefon',
@@ -712,6 +719,9 @@ describe('einsatz service', () => {
       });
 
       helfer = listEinheitHelfer(ctx, einheit.id);
+      expect(helfer[0]?.name).toBe('N.N.');
+      expect(helfer[0]?.rolle).toBe('UNTERFUEHRER');
+      expect(helfer[0]?.anzahl).toBe(3);
       expect(helfer[0]?.funktion).toBe('Gruppenführer');
       expect(helfer[0]?.vegetarisch).toBe(false);
       expect(helfer[0]?.bemerkung).toBe('Schicht A');

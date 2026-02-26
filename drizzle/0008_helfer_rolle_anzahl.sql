@@ -1,0 +1,2 @@
+ALTER TABLE einsatz_einheit_helfer ADD COLUMN rolle TEXT NOT NULL DEFAULT 'HELFER';
+ALTER TABLE einsatz_einheit_helfer ADD COLUMN anzahl INTEGER NOT NULL DEFAULT 1;

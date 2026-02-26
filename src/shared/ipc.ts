@@ -129,6 +129,8 @@ export interface CreateEinheitHelferInput {
   einsatzId: string;
   einsatzEinheitId: string;
   name: string;
+  rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+  anzahl?: number;
   funktion?: string;
   telefon?: string;
   erreichbarkeit?: string;
@@ -140,6 +142,8 @@ export interface UpdateEinheitHelferInput {
   einsatzId: string;
   helferId: string;
   name: string;
+  rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+  anzahl?: number;
   funktion?: string;
   telefon?: string;
   erreichbarkeit?: string;
@@ -202,6 +206,10 @@ export interface RendererApi {
   getTacticalVehicleSvg(input: {
     organisation: OrganisationKey;
   }): Promise<string>;
+  getTacticalPersonSvg(input: {
+    organisation: OrganisationKey;
+    rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+  }): Promise<string>;
   openStrengthDisplayWindow(): Promise<void>;
   closeStrengthDisplayWindow(): Promise<void>;
   getStrengthDisplayState(): Promise<StrengthDisplayState>;
@@ -247,6 +255,7 @@ export const IPC_CHANNEL = {
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
+  GET_TACTICAL_PERSON_SVG: 'taktisches-zeichen:person-svg',
   OPEN_STRENGTH_DISPLAY_WINDOW: 'strength-display:open-window',
   CLOSE_STRENGTH_DISPLAY_WINDOW: 'strength-display:close-window',
   GET_STRENGTH_DISPLAY_STATE: 'strength-display:get-state',

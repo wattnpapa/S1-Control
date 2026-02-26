@@ -541,6 +541,8 @@ export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHel
       einsatzId: einsatzEinheitHelfer.einsatzId,
       einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId,
       name: einsatzEinheitHelfer.name,
+      rolle: einsatzEinheitHelfer.rolle as EinheitHelfer['rolle'],
+      anzahl: einsatzEinheitHelfer.anzahl,
       funktion: einsatzEinheitHelfer.funktion,
       telefon: einsatzEinheitHelfer.telefon,
       erreichbarkeit: einsatzEinheitHelfer.erreichbarkeit,
@@ -559,6 +561,8 @@ export function createEinheitHelfer(
     einsatzId: string;
     einsatzEinheitId: string;
     name: string;
+    rolle: EinheitHelfer['rolle'];
+    anzahl?: number;
     funktion?: string;
     telefon?: string;
     erreichbarkeit?: string;
@@ -567,8 +571,9 @@ export function createEinheitHelfer(
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
-  if (!input.name.trim()) {
-    throw new AppError('Name des Helfers ist erforderlich', 'VALIDATION');
+  const anzahl = Math.max(1, Math.round(input.anzahl ?? 1));
+  if (!['FUEHRER', 'UNTERFUEHRER', 'HELFER'].includes(input.rolle)) {
+    throw new AppError('Rolle des Helfers ist ungültig', 'VALIDATION');
   }
   const einheit = ctx.db
     .select({ id: einsatzEinheit.id })
@@ -584,7 +589,9 @@ export function createEinheitHelfer(
     id: crypto.randomUUID(),
     einsatzId: input.einsatzId,
     einsatzEinheitId: input.einsatzEinheitId,
-    name: input.name.trim(),
+    name: input.name.trim() || 'N.N.',
+    rolle: input.rolle,
+    anzahl,
     funktion: normalizeOptionalText(input.funktion),
     telefon: normalizeOptionalText(input.telefon),
     erreichbarkeit: normalizeOptionalText(input.erreichbarkeit),
@@ -601,6 +608,8 @@ export function updateEinheitHelfer(
     einsatzId: string;
     helferId: string;
     name: string;
+    rolle: EinheitHelfer['rolle'];
+    anzahl?: number;
     funktion?: string;
     telefon?: string;
     erreichbarkeit?: string;
@@ -609,8 +618,9 @@ export function updateEinheitHelfer(
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
-  if (!input.name.trim()) {
-    throw new AppError('Name des Helfers ist erforderlich', 'VALIDATION');
+  const anzahl = Math.max(1, Math.round(input.anzahl ?? 1));
+  if (!['FUEHRER', 'UNTERFUEHRER', 'HELFER'].includes(input.rolle)) {
+    throw new AppError('Rolle des Helfers ist ungültig', 'VALIDATION');
   }
   const row = ctx.db
     .select({ id: einsatzEinheitHelfer.id })
@@ -624,7 +634,9 @@ export function updateEinheitHelfer(
   ctx.db
     .update(einsatzEinheitHelfer)
     .set({
-      name: input.name.trim(),
+      name: input.name.trim() || 'N.N.',
+      rolle: input.rolle,
+      anzahl,
       funktion: normalizeOptionalText(input.funktion),
       telefon: normalizeOptionalText(input.telefon),
       erreichbarkeit: normalizeOptionalText(input.erreichbarkeit),

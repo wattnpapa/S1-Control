@@ -39,6 +39,27 @@ const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannsc
 const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
 const RELEASES_URL = 'https://github.com/wattnpapa/S1-Control/releases/latest';
 
+function formatBytesToMb(bytes?: number): string {
+  if (!bytes || bytes < 0) return '-';
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function formatSpeedMb(bytesPerSecond?: number): string {
+  if (!bytesPerSecond || bytesPerSecond <= 0) return '-';
+  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
+}
+
+function formatEtaSeconds(seconds?: number): string {
+  if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return '-';
+  const rounded = Math.max(1, Math.round(seconds));
+  const mins = Math.floor(rounded / 60);
+  const secs = rounded % 60;
+  if (mins > 0) {
+    return `${mins}m ${String(secs).padStart(2, '0')}s`;
+  }
+  return `${secs}s`;
+}
+
 export function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -221,6 +242,21 @@ export function App() {
             <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, updaterState.progressPercent ?? 0))}%` }} />
           </div>
           <p>{Math.round(updaterState.progressPercent ?? 0)}%</p>
+          <p>
+            {formatBytesToMb(updaterState.progressTransferredBytes)} / {formatBytesToMb(updaterState.progressTotalBytes)}
+          </p>
+          <p>Geschwindigkeit: {formatSpeedMb(updaterState.progressBytesPerSecond)}</p>
+          <p>
+            Restzeit:{' '}
+            {formatEtaSeconds(
+              updaterState.progressTransferredBytes !== undefined &&
+                updaterState.progressTotalBytes !== undefined &&
+                updaterState.progressBytesPerSecond
+                ? (updaterState.progressTotalBytes - updaterState.progressTransferredBytes) /
+                    updaterState.progressBytesPerSecond
+                : undefined,
+            )}
+          </p>
         </div>
       </div>
     ) : null;
@@ -658,6 +694,8 @@ export function App() {
 
   const doCreateEinheitHelfer = async (input: {
     name: string;
+    rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+    anzahl: number;
     funktion: string;
     telefon: string;
     erreichbarkeit: string;
@@ -665,15 +703,13 @@ export function App() {
     bemerkung: string;
   }) => {
     if (!selectedEinsatzId || !editEinheitForm.einheitId || isArchived) return;
-    if (!input.name.trim()) {
-      setError('Bitte Namen des Helfers eingeben.');
-      return;
-    }
     await withBusy(async () => {
       await window.api.createEinheitHelfer({
         einsatzId: selectedEinsatzId,
         einsatzEinheitId: editEinheitForm.einheitId,
         name: input.name.trim(),
+        rolle: input.rolle,
+        anzahl: input.anzahl,
         funktion: input.funktion,
         telefon: input.telefon,
         erreichbarkeit: input.erreichbarkeit,
@@ -687,6 +723,8 @@ export function App() {
   const doUpdateEinheitHelfer = async (input: {
     helferId: string;
     name: string;
+    rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+    anzahl: number;
     funktion: string;
     telefon: string;
     erreichbarkeit: string;
@@ -694,15 +732,13 @@ export function App() {
     bemerkung: string;
   }) => {
     if (!selectedEinsatzId || isArchived) return;
-    if (!input.name.trim()) {
-      setError('Bitte Namen des Helfers eingeben.');
-      return;
-    }
     await withBusy(async () => {
       await window.api.updateEinheitHelfer({
         einsatzId: selectedEinsatzId,
         helferId: input.helferId,
         name: input.name.trim(),
+        rolle: input.rolle,
+        anzahl: input.anzahl,
         funktion: input.funktion,
         telefon: input.telefon,
         erreichbarkeit: input.erreichbarkeit,

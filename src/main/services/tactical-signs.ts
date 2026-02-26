@@ -28,8 +28,14 @@ const vehicleTemplatePath = path.join(
   'templates',
   'Fahrzeug.svg',
 );
+const personTemplatePath = path.join(
+  path.dirname(require.resolve('taktische-zeichen/package.json')),
+  'templates',
+  'Person.svg',
+);
 const template = Handlebars.compile(readFileSync(templatePath, 'utf8'));
 const vehicleTemplate = Handlebars.compile(readFileSync(vehicleTemplatePath, 'utf8'));
+const personTemplate = Handlebars.compile(readFileSync(personTemplatePath, 'utf8'));
 const cache = new Map<string, string>();
 
 function organisationShortName(organisation: OrganisationKey): string {
@@ -173,6 +179,38 @@ export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey): str
     organization: organisationShortName(organisation),
     unit: '',
     two_wheels: true,
+  });
+  const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+  cache.set(cacheKey, dataUrl);
+  return dataUrl;
+}
+
+export function getTacticalPersonSvgDataUrl(
+  organisation: OrganisationKey,
+  rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER',
+): string {
+  const cacheKey = `person:${organisation}:${rolle}`;
+  const existing = cache.get(cacheKey);
+  if (existing) {
+    return existing;
+  }
+
+  const colors = organisationColors(organisation);
+  const flags: Pick<TemplateInput, 'platoon' | 'group' | 'squad' | 'zugtrupp'> = {
+    platoon: rolle === 'FUEHRER',
+    group: rolle === 'UNTERFUEHRER',
+    squad: false,
+    zugtrupp: false,
+  };
+
+  const svg = personTemplate({
+    color_primary: colors.color_primary,
+    color_secondary: '#FFFFFF',
+    stroke_color: '#000000',
+    color_text: colors.color_text,
+    organization: organisationShortName(organisation),
+    unit: '',
+    ...flags,
   });
   const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
   cache.set(cacheKey, dataUrl);

@@ -137,6 +137,8 @@ export const einsatzEinheitHelfer = sqliteTable('einsatz_einheit_helfer', {
   einsatzId: text('einsatz_id').notNull().references(() => einsatz.id),
   einsatzEinheitId: text('einsatz_einheit_id').notNull().references(() => einsatzEinheit.id),
   name: text('name').notNull(),
+  rolle: text('rolle').notNull().default('HELFER'),
+  anzahl: integer('anzahl').notNull().default(1),
   funktion: text('funktion'),
   telefon: text('telefon'),
   erreichbarkeit: text('erreichbarkeit'),

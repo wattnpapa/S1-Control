@@ -3,6 +3,7 @@ export type AbschnittSystemTyp = 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'BEREITSTELL
 export type EinheitStatus = 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
 export type FahrzeugStatus = 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
 export type BenutzerRolle = 'ADMIN' | 'S1' | 'FUE_ASS' | 'VIEWER';
+export type HelferRolle = 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
 export type OrganisationKey =
   | 'THW'
   | 'FEUERWEHR'
@@ -105,6 +106,8 @@ export interface EinheitHelfer {
   einsatzId: string;
   einsatzEinheitId: string;
   name: string;
+  rolle: HelferRolle;
+  anzahl: number;
   funktion: string | null;
   telefon: string | null;
   erreichbarkeit: string | null;
@@ -144,6 +147,9 @@ export interface UpdaterState {
   currentVersion?: string;
   latestVersion?: string;
   progressPercent?: number;
+  progressTransferredBytes?: number;
+  progressTotalBytes?: number;
+  progressBytesPerSecond?: number;
   message?: string;
   lastCheckedAt?: string;
   source?: 'electron-updater' | 'github-release';

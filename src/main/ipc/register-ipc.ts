@@ -35,7 +35,11 @@ import {
   listEinheitHelfer,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
-import { getTacticalFormationSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../services/tactical-signs';
+import {
+  getTacticalFormationSvgDataUrl,
+  getTacticalPersonSvgDataUrl,
+  getTacticalVehicleSvgDataUrl,
+} from '../services/tactical-signs';
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 
@@ -486,6 +490,13 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG,
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
       getTacticalVehicleSvgDataUrl(input.organisation),
+    ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_TACTICAL_PERSON_SVG,
+    wrap(async (input: Parameters<RendererApi['getTacticalPersonSvg']>[0]) =>
+      getTacticalPersonSvgDataUrl(input.organisation, input.rolle),
     ),
   );
 

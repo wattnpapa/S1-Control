@@ -1,7 +1,8 @@
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { TaktischesZeichenPerson } from '@renderer/components/common/TaktischesZeichenPerson';
 import { useEffect, useState } from 'react';
 import type { EditEinheitForm, EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
-import type { EinheitHelfer, OrganisationKey } from '@shared/types';
+import type { EinheitHelfer, HelferRolle, OrganisationKey } from '@shared/types';
 
 interface InlineEinheitEditorProps {
   visible: boolean;
@@ -14,6 +15,8 @@ interface InlineEinheitEditorProps {
   helfer: EinheitHelfer[];
   onCreateHelfer: (input: {
     name: string;
+    rolle: HelferRolle;
+    anzahl: number;
     funktion: string;
     telefon: string;
     erreichbarkeit: string;
@@ -23,6 +26,8 @@ interface InlineEinheitEditorProps {
   onUpdateHelfer: (input: {
     helferId: string;
     name: string;
+    rolle: HelferRolle;
+    anzahl: number;
     funktion: string;
     telefon: string;
     erreichbarkeit: string;
@@ -33,8 +38,13 @@ interface InlineEinheitEditorProps {
 }
 
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
+  const helferRows = props.helfer;
+  const form = props.form;
+  const onFormChange = props.onChange;
   const [newHelfer, setNewHelfer] = useState({
     name: '',
+    rolle: 'HELFER' as HelferRolle,
+    anzahl: 1,
     funktion: '',
     telefon: '',
     erreichbarkeit: '',
@@ -45,9 +55,11 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
 
   useEffect(() => {
     const next: Record<string, typeof newHelfer> = {};
-    for (const row of props.helfer) {
+    for (const row of helferRows) {
       next[row.id] = {
         name: row.name,
+        rolle: row.rolle,
+        anzahl: row.anzahl,
         funktion: row.funktion ?? '',
         telefon: row.telefon ?? '',
         erreichbarkeit: row.erreichbarkeit ?? '',
@@ -56,7 +68,39 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
       };
     }
     setEditRows(next);
-  }, [props.helfer]);
+  }, [helferRows]);
+
+  useEffect(() => {
+    const totals = helferRows.reduce(
+      (acc, item) => {
+        const amount = Math.max(1, Math.round(item.anzahl ?? 1));
+        if (item.rolle === 'FUEHRER') {
+          acc.fuehrung += amount;
+        } else if (item.rolle === 'UNTERFUEHRER') {
+          acc.unterfuehrung += amount;
+        } else {
+          acc.mannschaft += amount;
+        }
+        return acc;
+      },
+      { fuehrung: 0, unterfuehrung: 0, mannschaft: 0 },
+    );
+    const nextFuehrung = String(totals.fuehrung);
+    const nextUnterfuehrung = String(totals.unterfuehrung);
+    const nextMannschaft = String(totals.mannschaft);
+    if (
+      form.fuehrung !== nextFuehrung ||
+      form.unterfuehrung !== nextUnterfuehrung ||
+      form.mannschaft !== nextMannschaft
+    ) {
+      onFormChange({
+        ...form,
+        fuehrung: nextFuehrung,
+        unterfuehrung: nextUnterfuehrung,
+        mannschaft: nextMannschaft,
+      });
+    }
+  }, [form, helferRows, onFormChange]);
 
   if (!props.visible) {
     return null;
@@ -115,22 +159,17 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
           <tr>
             <th>Führung</th>
             <td>
-              <input type="number" min={0} value={props.form.fuehrung} onChange={(e) => props.onChange({ ...props.form, fuehrung: e.target.value })} />
+              <input type="number" min={0} value={props.form.fuehrung} readOnly />
             </td>
             <th>Unterführung</th>
             <td>
-              <input
-                type="number"
-                min={0}
-                value={props.form.unterfuehrung}
-                onChange={(e) => props.onChange({ ...props.form, unterfuehrung: e.target.value })}
-              />
+              <input type="number" min={0} value={props.form.unterfuehrung} readOnly />
             </td>
           </tr>
           <tr>
             <th>Mannschaft</th>
             <td>
-              <input type="number" min={0} value={props.form.mannschaft} onChange={(e) => props.onChange({ ...props.form, mannschaft: e.target.value })} />
+              <input type="number" min={0} value={props.form.mannschaft} readOnly />
             </td>
             <th>Vegetarier</th>
             <td>
@@ -194,7 +233,9 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
               <table className="inline-subtable">
                 <thead>
                   <tr>
+                    <th>Typ</th>
                     <th>Name</th>
+                    <th>Anzahl</th>
                     <th>Funktion</th>
                     <th>Telefon</th>
                     <th>Erreichbarkeit</th>
@@ -211,7 +252,39 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                     }
                     return (
                       <tr key={row.id}>
-                        <td><input value={edit.name} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, name: e.target.value } }))} /></td>
+                        <td>
+                          <select
+                            value={edit.rolle}
+                            onChange={(e) =>
+                              setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, rolle: e.target.value as HelferRolle } }))
+                            }
+                          >
+                            <option value="FUEHRER">Führer</option>
+                            <option value="UNTERFUEHRER">Unterführer</option>
+                            <option value="HELFER">Helfer</option>
+                          </select>
+                        </td>
+                        <td className="helper-name-cell">
+                          <TaktischesZeichenPerson organisation={props.form.organisation} rolle={edit.rolle} />
+                          <input
+                            value={edit.name}
+                            onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, name: e.target.value } }))}
+                            placeholder="optional"
+                          />
+                        </td>
+                        <td>
+                          <input
+                            type="number"
+                            min={1}
+                            value={edit.anzahl}
+                            onChange={(e) =>
+                              setEditRows((prev) => ({
+                                ...prev,
+                                [row.id]: { ...edit, anzahl: Math.max(1, Math.round(Number(e.target.value) || 1)) },
+                              }))
+                            }
+                          />
+                        </td>
                         <td><input value={edit.funktion} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, funktion: e.target.value } }))} /></td>
                         <td><input value={edit.telefon} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, telefon: e.target.value } }))} /></td>
                         <td><input value={edit.erreichbarkeit} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, erreichbarkeit: e.target.value } }))} /></td>
@@ -243,7 +316,32 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                     );
                   })}
                   <tr>
-                    <td><input value={newHelfer.name} onChange={(e) => setNewHelfer((prev) => ({ ...prev, name: e.target.value }))} placeholder="Neuer Helfer" /></td>
+                    <td>
+                      <select
+                        value={newHelfer.rolle}
+                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, rolle: e.target.value as HelferRolle }))}
+                      >
+                        <option value="FUEHRER">Führer</option>
+                        <option value="UNTERFUEHRER">Unterführer</option>
+                        <option value="HELFER">Helfer</option>
+                      </select>
+                    </td>
+                    <td className="helper-name-cell">
+                      <TaktischesZeichenPerson organisation={props.form.organisation} rolle={newHelfer.rolle} />
+                      <input
+                        value={newHelfer.name}
+                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, name: e.target.value }))}
+                        placeholder="optional"
+                      />
+                    </td>
+                    <td>
+                      <input
+                        type="number"
+                        min={1}
+                        value={newHelfer.anzahl}
+                        onChange={(e) => setNewHelfer((prev) => ({ ...prev, anzahl: Math.max(1, Math.round(Number(e.target.value) || 1)) }))}
+                      />
+                    </td>
                     <td><input value={newHelfer.funktion} onChange={(e) => setNewHelfer((prev) => ({ ...prev, funktion: e.target.value }))} /></td>
                     <td><input value={newHelfer.telefon} onChange={(e) => setNewHelfer((prev) => ({ ...prev, telefon: e.target.value }))} /></td>
                     <td><input value={newHelfer.erreichbarkeit} onChange={(e) => setNewHelfer((prev) => ({ ...prev, erreichbarkeit: e.target.value }))} /></td>
@@ -257,6 +355,8 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                           await props.onCreateHelfer(newHelfer);
                           setNewHelfer({
                             name: '',
+                            rolle: 'HELFER',
+                            anzahl: 1,
                             funktion: '',
                             telefon: '',
                             erreichbarkeit: '',
