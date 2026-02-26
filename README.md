@@ -25,6 +25,12 @@ S1-Control unterstützt dich bei der Lageführung im Einsatz:
 - Automatische Backups alle 5 Minuten nach `<einsatz-verzeichnis>/backup`
 - Nur ein Client erstellt Backups (Lock-Mechanismus), um Konflikte zu vermeiden
 
+### Startmenü / Launcher
+
+- **Windows**: Der NSIS-Installer legt einen Startmenü-Eintrag unter `Sonstige` und einen Desktop-Shortcut an.
+- **Linux**: Installierte Pakete (`.deb`, `.pacman`) legen einen Anwendungsstarter (`.desktop`) im Systemmenü an.
+- **Portable Builds** (z.B. Windows Portable EXE) haben keinen festen Startmenü-Eintrag ohne Installation.
+
 ### Updates
 
 - Beim Start prüft die App auf neue Releases

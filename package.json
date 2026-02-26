@@ -47,9 +47,19 @@
       "icon": "assets/branding/app.ico",
       "target": "nsis"
     },
+    "nsis": {
+      "createStartMenuShortcut": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "S1-Control",
+      "menuCategory": "Sonstige"
+    },
     "linux": {
       "target": "deb",
-      "category": "Utility"
+      "category": "Utility",
+      "desktop": {
+        "Name": "S1-Control",
+        "Categories": "Utility;"
+      }
     },
     "publish": [
       {
