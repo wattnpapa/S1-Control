@@ -26,7 +26,8 @@ body {
 
 button,
 input,
-select {
+select,
+textarea {
   font: inherit;
 }
 
@@ -50,11 +51,16 @@ button:disabled {
 }
 
 input,
-select {
+select,
+textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 8px 10px;
   background: #fff;
+}
+
+textarea {
+  resize: vertical;
 }
 
 .login-page {
@@ -717,6 +723,53 @@ td.tactical-sign-cell {
   display: flex;
   gap: 8px;
   justify-content: end;
+}
+
+.inline-editor {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  padding: 10px;
+  margin-bottom: 12px;
+}
+
+.inline-editor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.inline-editor-header h3 {
+  margin: 0;
+}
+
+.inline-editor-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.inline-form-table {
+  margin: 0;
+  box-shadow: none;
+}
+
+.inline-form-table th {
+  width: 160px;
+  white-space: nowrap;
+}
+
+.inline-form-table td input,
+.inline-form-table td select,
+.inline-form-table td textarea {
+  width: 100%;
+}
+
+.inline-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .overlay-backdrop {

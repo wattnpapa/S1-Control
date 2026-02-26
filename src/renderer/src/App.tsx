@@ -5,10 +5,9 @@ import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschn
 import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
 import { EditAbschnittDialog } from '@renderer/components/dialogs/EditAbschnittDialog';
-import { EditEinheitDialog } from '@renderer/components/dialogs/EditEinheitDialog';
-import { EditFahrzeugDialog } from '@renderer/components/dialogs/EditFahrzeugDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
+import { InlineEinheitEditor, InlineFahrzeugEditor } from '@renderer/components/editor/InlineEditors';
 import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
 import { Topbar } from '@renderer/components/layout/Topbar';
 import { WorkspaceRail } from '@renderer/components/layout/WorkspaceRail';
@@ -603,6 +602,7 @@ export function App() {
       vegetarierVorhanden: einheit.vegetarierVorhanden ?? false,
       erreichbarkeiten: einheit.erreichbarkeiten ?? '',
     });
+    setShowEditFahrzeugDialog(false);
     setShowEditEinheitDialog(true);
   };
 
@@ -717,6 +717,7 @@ export function App() {
       sondergeraet: fahrzeug.sondergeraet ?? '',
       nutzlast: fahrzeug.nutzlast ?? '',
     });
+    setShowEditEinheitDialog(false);
     setShowEditFahrzeugDialog(true);
   };
 
@@ -986,6 +987,25 @@ export function App() {
         <section className="main-view">
           {activeView === 'einsatz' && (
             <>
+              <InlineEinheitEditor
+                visible={showEditEinheitDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={editEinheitForm}
+                onChange={setEditEinheitForm}
+                onSubmit={() => void doSubmitEditEinheit()}
+                onCancel={() => setShowEditEinheitDialog(false)}
+              />
+              <InlineFahrzeugEditor
+                visible={showEditFahrzeugDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={editFahrzeugForm}
+                allKraefte={allKraefte}
+                onChange={setEditFahrzeugForm}
+                onSubmit={() => void doSubmitEditFahrzeug()}
+                onCancel={() => setShowEditFahrzeugDialog(false)}
+              />
               <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
                 Einheit anlegen
               </button>
@@ -1021,6 +1041,15 @@ export function App() {
 
           {activeView === 'kraefte' && (
             <>
+              <InlineEinheitEditor
+                visible={showEditEinheitDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={editEinheitForm}
+                onChange={setEditEinheitForm}
+                onSubmit={() => void doSubmitEditEinheit()}
+                onCancel={() => setShowEditEinheitDialog(false)}
+              />
               <div className="inline-actions">
                 <select
                   value={kraefteOrgFilter}
@@ -1060,6 +1089,16 @@ export function App() {
 
           {activeView === 'fahrzeuge' && (
             <>
+              <InlineFahrzeugEditor
+                visible={showEditFahrzeugDialog}
+                busy={busy}
+                isArchived={isArchived ?? false}
+                form={editFahrzeugForm}
+                allKraefte={allKraefte}
+                onChange={setEditFahrzeugForm}
+                onSubmit={() => void doSubmitEditFahrzeug()}
+                onCancel={() => setShowEditFahrzeugDialog(false)}
+              />
               <button onClick={doCreateFahrzeug} disabled={busy || !selectedAbschnittId || isArchived}>
                 Fahrzeug anlegen
               </button>
@@ -1157,26 +1196,6 @@ export function App() {
         onClose={() => setShowCreateFahrzeugDialog(false)}
       />
 
-      <EditEinheitDialog
-        visible={showEditEinheitDialog}
-        busy={busy}
-        isArchived={isArchived ?? false}
-        form={editEinheitForm}
-        onChange={setEditEinheitForm}
-        onSubmit={() => void doSubmitEditEinheit()}
-        onClose={() => setShowEditEinheitDialog(false)}
-      />
-
-      <EditFahrzeugDialog
-        visible={showEditFahrzeugDialog}
-        busy={busy}
-        isArchived={isArchived ?? false}
-        form={editFahrzeugForm}
-        allKraefte={allKraefte}
-        onChange={setEditFahrzeugForm}
-        onSubmit={() => void doSubmitEditFahrzeug()}
-        onClose={() => setShowEditFahrzeugDialog(false)}
-      />
       {renderUpdaterOverlay()}
     </div>
   );
