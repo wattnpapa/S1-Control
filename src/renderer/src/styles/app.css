@@ -632,6 +632,15 @@ th {
   color: #3a4560;
 }
 
+.table-icon-button {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .split-row {
   background: #f9fbff;
 }

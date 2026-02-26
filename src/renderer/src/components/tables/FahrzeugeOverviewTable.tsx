@@ -1,4 +1,6 @@
 import type { FahrzeugOverviewItem } from '@renderer/types/ui';
+import { faArrowsUpDownLeftRight, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
 import { TaktischesZeichenFahrzeug } from '@renderer/components/common/TaktischesZeichenFahrzeug';
 
 interface FahrzeugeOverviewTableProps {
@@ -36,12 +38,18 @@ export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.
               <td>{item.abschnittName}</td>
               <td>{item.status}</td>
               <td>
-                <button onClick={() => props.onMove(item.id)} disabled={props.isArchived}>
-                  Verschieben
-                </button>
-                <button onClick={() => props.onEdit(item.id)} disabled={props.isArchived}>
-                  Bearbeiten
-                </button>
+                <ActionIconButton
+                  label="Verschieben"
+                  icon={faArrowsUpDownLeftRight}
+                  onClick={() => props.onMove(item.id)}
+                  disabled={props.isArchived}
+                />
+                <ActionIconButton
+                  label="Bearbeiten"
+                  icon={faPenToSquare}
+                  onClick={() => props.onEdit(item.id)}
+                  disabled={props.isArchived}
+                />
               </td>
             </tr>
           ))}

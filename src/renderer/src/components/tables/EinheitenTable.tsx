@@ -1,4 +1,6 @@
 import type { EinheitListItem } from '@shared/types';
+import { faArrowsUpDownLeftRight, faCodeBranch, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import { TaktischesZeichenEinheit } from '@renderer/components/common/TaktischesZeichenEinheit';
 
@@ -50,15 +52,24 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
               <td>{item.aktuelleStaerkeTaktisch ?? `0/0/${item.aktuelleStaerke}/${item.aktuelleStaerke}`}</td>
               <td>{item.status}</td>
               <td>
-                <button onClick={() => props.onMove(item.id)} disabled={props.isArchived}>
-                  Verschieben
-                </button>
-                <button onClick={() => props.onEdit(item.id)} disabled={props.isArchived}>
-                  Bearbeiten
-                </button>
-                <button onClick={() => props.onSplit(item.id)} disabled={props.isArchived}>
-                  Splitten
-                </button>
+                <ActionIconButton
+                  label="Verschieben"
+                  icon={faArrowsUpDownLeftRight}
+                  onClick={() => props.onMove(item.id)}
+                  disabled={props.isArchived}
+                />
+                <ActionIconButton
+                  label="Bearbeiten"
+                  icon={faPenToSquare}
+                  onClick={() => props.onEdit(item.id)}
+                  disabled={props.isArchived}
+                />
+                <ActionIconButton
+                  label="Splitten"
+                  icon={faCodeBranch}
+                  onClick={() => props.onSplit(item.id)}
+                  disabled={props.isArchived}
+                />
               </td>
             </tr>
           ))}
