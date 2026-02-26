@@ -148,6 +148,10 @@ jobs:
           npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --mac --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
+      - name: Verify macOS update metadata
+        run: |
+          test -f dist/latest-mac.yml || (echo "Missing dist/latest-mac.yml" && exit 1)
+
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -197,6 +201,11 @@ jobs:
           node scripts/run-electron-builder.cjs --win --x64 --config.win.target=portable --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
           node scripts/run-electron-builder.cjs --win --x64 --config.win.target=nsis --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
 
+      - name: Verify Windows update metadata
+        run: |
+          if (!(Test-Path dist/latest.yml)) { Write-Error "Missing dist/latest.yml"; exit 1 }
+        shell: pwsh
+
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
         with:
@@ -244,6 +253,10 @@ jobs:
           npm run -s build:main
           npm run -s rebuild:native
           node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb --publish never --config.artifactName='S1-Control-${{ env.BUILD_VERSION }}-${os}-${arch}.${ext}'
+
+      - name: Verify Linux update metadata
+        run: |
+          test -f dist/latest-linux.yml || (echo "Missing dist/latest-linux.yml" && exit 1)
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4

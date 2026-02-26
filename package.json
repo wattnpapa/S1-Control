@@ -37,7 +37,11 @@
     "mac": {
       "icon": "assets/branding/app.icns",
       "hardenedRuntime": true,
-      "notarize": true
+      "notarize": true,
+      "target": [
+        "dmg",
+        "zip"
+      ]
     },
     "win": {
       "icon": "assets/branding/app.ico",
@@ -68,7 +72,8 @@
     ],
     "extraMetadata": {
       "main": "dist-electron/main.js"
-    }
+    },
+    "generateUpdatesFilesForAllChannels": true
   },
   "dependencies": {
     "@fortawesome/fontawesome-svg-core": "^7.2.0",
