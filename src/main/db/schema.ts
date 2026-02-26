@@ -131,3 +131,17 @@ export const einsatzEinheitStaerkeLog = sqliteTable('einsatz_einheit_staerke_log
   zeitpunkt: text('zeitpunkt').notNull(),
   benutzer: text('benutzer').notNull(),
 });
+
+export const einsatzEinheitHelfer = sqliteTable('einsatz_einheit_helfer', {
+  id: text('id').primaryKey(),
+  einsatzId: text('einsatz_id').notNull().references(() => einsatz.id),
+  einsatzEinheitId: text('einsatz_einheit_id').notNull().references(() => einsatzEinheit.id),
+  name: text('name').notNull(),
+  funktion: text('funktion'),
+  telefon: text('telefon'),
+  erreichbarkeit: text('erreichbarkeit'),
+  vegetarisch: integer('vegetarisch', { mode: 'boolean' }).notNull().default(false),
+  bemerkung: text('bemerkung'),
+  erstellt: text('erstellt').notNull(),
+  aktualisiert: text('aktualisiert').notNull(),
+});

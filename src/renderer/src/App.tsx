@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { AbschnittDetails, EinsatzListItem, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
+import type { AbschnittDetails, EinsatzListItem, EinheitHelfer, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
@@ -95,6 +95,7 @@ export function App() {
     erreichbarkeiten: '',
   });
   const [showEditEinheitDialog, setShowEditEinheitDialog] = useState(false);
+  const [editEinheitHelfer, setEditEinheitHelfer] = useState<EinheitHelfer[]>([]);
   const [editEinheitForm, setEditEinheitForm] = useState<EditEinheitForm>({
     einheitId: '',
     nameImEinsatz: '',
@@ -574,11 +575,14 @@ export function App() {
   };
 
   const doOpenEditEinheitDialog = (einheitId: string) => {
+    void (async () => {
     const einheit = allKraefte.find((item) => item.id === einheitId);
     if (!einheit) {
       setError('Einheit nicht gefunden.');
       return;
     }
+    const helfer = await window.api.listEinheitHelfer(einheitId);
+    setEditEinheitHelfer(helfer);
     const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
     setEditEinheitForm({
       einheitId,
@@ -604,6 +608,7 @@ export function App() {
     });
     setShowEditFahrzeugDialog(false);
     setShowEditEinheitDialog(true);
+    })().catch((err) => setError(readError(err)));
   };
 
   const doSubmitEditEinheit = async () => {
@@ -646,7 +651,77 @@ export function App() {
         erreichbarkeiten: editEinheitForm.erreichbarkeiten,
       });
       setShowEditEinheitDialog(false);
+      setEditEinheitHelfer([]);
       await refreshAll();
+    });
+  };
+
+  const doCreateEinheitHelfer = async (input: {
+    name: string;
+    funktion: string;
+    telefon: string;
+    erreichbarkeit: string;
+    vegetarisch: boolean;
+    bemerkung: string;
+  }) => {
+    if (!selectedEinsatzId || !editEinheitForm.einheitId || isArchived) return;
+    if (!input.name.trim()) {
+      setError('Bitte Namen des Helfers eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.createEinheitHelfer({
+        einsatzId: selectedEinsatzId,
+        einsatzEinheitId: editEinheitForm.einheitId,
+        name: input.name.trim(),
+        funktion: input.funktion,
+        telefon: input.telefon,
+        erreichbarkeit: input.erreichbarkeit,
+        vegetarisch: input.vegetarisch,
+        bemerkung: input.bemerkung,
+      });
+      setEditEinheitHelfer(await window.api.listEinheitHelfer(editEinheitForm.einheitId));
+    });
+  };
+
+  const doUpdateEinheitHelfer = async (input: {
+    helferId: string;
+    name: string;
+    funktion: string;
+    telefon: string;
+    erreichbarkeit: string;
+    vegetarisch: boolean;
+    bemerkung: string;
+  }) => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!input.name.trim()) {
+      setError('Bitte Namen des Helfers eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.updateEinheitHelfer({
+        einsatzId: selectedEinsatzId,
+        helferId: input.helferId,
+        name: input.name.trim(),
+        funktion: input.funktion,
+        telefon: input.telefon,
+        erreichbarkeit: input.erreichbarkeit,
+        vegetarisch: input.vegetarisch,
+        bemerkung: input.bemerkung,
+      });
+      if (editEinheitForm.einheitId) {
+        setEditEinheitHelfer(await window.api.listEinheitHelfer(editEinheitForm.einheitId));
+      }
+    });
+  };
+
+  const doDeleteEinheitHelfer = async (helferId: string) => {
+    if (!selectedEinsatzId || isArchived) return;
+    await withBusy(async () => {
+      await window.api.deleteEinheitHelfer({ einsatzId: selectedEinsatzId, helferId });
+      if (editEinheitForm.einheitId) {
+        setEditEinheitHelfer(await window.api.listEinheitHelfer(editEinheitForm.einheitId));
+      }
     });
   };
 
@@ -994,7 +1069,14 @@ export function App() {
                 form={editEinheitForm}
                 onChange={setEditEinheitForm}
                 onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={() => setShowEditEinheitDialog(false)}
+                onCancel={() => {
+                  setShowEditEinheitDialog(false);
+                  setEditEinheitHelfer([]);
+                }}
+                helfer={editEinheitHelfer}
+                onCreateHelfer={doCreateEinheitHelfer}
+                onUpdateHelfer={doUpdateEinheitHelfer}
+                onDeleteHelfer={doDeleteEinheitHelfer}
               />
               <InlineFahrzeugEditor
                 visible={showEditFahrzeugDialog}
@@ -1048,7 +1130,14 @@ export function App() {
                 form={editEinheitForm}
                 onChange={setEditEinheitForm}
                 onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={() => setShowEditEinheitDialog(false)}
+                onCancel={() => {
+                  setShowEditEinheitDialog(false);
+                  setEditEinheitHelfer([]);
+                }}
+                helfer={editEinheitHelfer}
+                onCreateHelfer={doCreateEinheitHelfer}
+                onUpdateHelfer={doUpdateEinheitHelfer}
+                onDeleteHelfer={doDeleteEinheitHelfer}
               />
               <div className="inline-actions">
                 <select

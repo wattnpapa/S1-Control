@@ -8,6 +8,7 @@ import type {
   TacticalSignConfig,
   OrganisationKey,
   SessionUser,
+  EinheitHelfer,
   UpdaterState,
 } from './types';
 
@@ -124,6 +125,28 @@ export interface MoveFahrzeugInput {
   nachAbschnittId: string;
 }
 
+export interface CreateEinheitHelferInput {
+  einsatzId: string;
+  einsatzEinheitId: string;
+  name: string;
+  funktion?: string;
+  telefon?: string;
+  erreichbarkeit?: string;
+  vegetarisch?: boolean;
+  bemerkung?: string;
+}
+
+export interface UpdateEinheitHelferInput {
+  einsatzId: string;
+  helferId: string;
+  name: string;
+  funktion?: string;
+  telefon?: string;
+  erreichbarkeit?: string;
+  vegetarisch?: boolean;
+  bemerkung?: string;
+}
+
 export interface SplitEinheitInput {
   einsatzId: string;
   sourceEinheitId: string;
@@ -156,6 +179,10 @@ export interface RendererApi {
   updateEinheit(input: UpdateEinheitInput): Promise<void>;
   createFahrzeug(input: CreateFahrzeugInput): Promise<void>;
   updateFahrzeug(input: UpdateFahrzeugInput): Promise<void>;
+  listEinheitHelfer(einheitId: string): Promise<EinheitHelfer[]>;
+  createEinheitHelfer(input: CreateEinheitHelferInput): Promise<void>;
+  updateEinheitHelfer(input: UpdateEinheitHelferInput): Promise<void>;
+  deleteEinheitHelfer(input: { einsatzId: string; helferId: string }): Promise<void>;
   moveEinheit(input: MoveEinheitInput): Promise<void>;
   moveFahrzeug(input: MoveFahrzeugInput): Promise<void>;
   splitEinheit(input: SplitEinheitInput): Promise<void>;
@@ -201,6 +228,10 @@ export const IPC_CHANNEL = {
   UPDATE_EINHEIT: 'einheit:update',
   CREATE_FAHRZEUG: 'fahrzeug:create',
   UPDATE_FAHRZEUG: 'fahrzeug:update',
+  LIST_EINHEIT_HELFER: 'einheit-helfer:list',
+  CREATE_EINHEIT_HELFER: 'einheit-helfer:create',
+  UPDATE_EINHEIT_HELFER: 'einheit-helfer:update',
+  DELETE_EINHEIT_HELFER: 'einheit-helfer:delete',
   MOVE_EINHEIT: 'command:move-einheit',
   MOVE_FAHRZEUG: 'command:move-fahrzeug',
   SPLIT_EINHEIT: 'einheit:split',

@@ -100,6 +100,18 @@ export interface FahrzeugListItem {
   nutzlast: string | null;
 }
 
+export interface EinheitHelfer {
+  id: string;
+  einsatzId: string;
+  einsatzEinheitId: string;
+  name: string;
+  funktion: string | null;
+  telefon: string | null;
+  erreichbarkeit: string | null;
+  vegetarisch: boolean;
+  bemerkung: string | null;
+}
+
 export interface AbschnittDetails {
   einheiten: EinheitListItem[];
   fahrzeuge: FahrzeugListItem[];

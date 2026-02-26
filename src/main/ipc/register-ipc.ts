@@ -21,14 +21,18 @@ import {
   archiveEinsatz,
   createAbschnitt,
   createEinheit,
+  createEinheitHelfer,
   createFahrzeug,
+  deleteEinheitHelfer,
   updateAbschnitt,
   updateEinheit,
+  updateEinheitHelfer,
   updateFahrzeug,
   splitEinheit,
   hasUndoableCommand,
   listAbschnittDetails,
   listAbschnitte,
+  listEinheitHelfer,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
 import { getTacticalFormationSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../services/tactical-signs';
@@ -313,6 +317,35 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['updateFahrzeug']>[0]) => {
       requireUser();
       updateFahrzeug(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_EINHEIT_HELFER,
+    wrap(async (einheitId: string) => listEinheitHelfer(state.getDbContext(), einheitId)),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CREATE_EINHEIT_HELFER,
+    wrap(async (input: Parameters<RendererApi['createEinheitHelfer']>[0]) => {
+      requireUser();
+      createEinheitHelfer(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.UPDATE_EINHEIT_HELFER,
+    wrap(async (input: Parameters<RendererApi['updateEinheitHelfer']>[0]) => {
+      requireUser();
+      updateEinheitHelfer(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.DELETE_EINHEIT_HELFER,
+    wrap(async (input: Parameters<RendererApi['deleteEinheitHelfer']>[0]) => {
+      requireUser();
+      deleteEinheitHelfer(state.getDbContext(), input);
     }),
   );
 

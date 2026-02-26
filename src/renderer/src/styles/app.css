@@ -766,6 +766,26 @@ td.tactical-sign-cell {
   width: 100%;
 }
 
+.inline-subtable {
+  margin: 0;
+  box-shadow: none;
+}
+
+.inline-subtable th,
+.inline-subtable td {
+  padding: 4px;
+  font-size: 12px;
+}
+
+.inline-subtable-actions {
+  white-space: nowrap;
+}
+
+.inline-subtable-actions button {
+  margin-right: 6px;
+  padding: 4px 8px;
+}
+
 .inline-checkbox {
   display: inline-flex;
   align-items: center;

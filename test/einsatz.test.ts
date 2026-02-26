@@ -6,6 +6,7 @@ import {
   einsatzAbschnitt,
   einsatzCommandLog,
   einsatzEinheit,
+  einsatzEinheitHelfer,
   einsatzFahrzeug,
   stammdatenFahrzeug,
 } from '../src/main/db/schema';
@@ -14,16 +15,20 @@ import {
   archiveEinsatz,
   createAbschnitt,
   createEinheit,
+  createEinheitHelfer,
   createEinsatz,
   createFahrzeug,
+  deleteEinheitHelfer,
   ensureNotArchived,
   hasUndoableCommand,
   listAbschnittDetails,
   listAbschnitte,
+  listEinheitHelfer,
   listEinsaetze,
   splitEinheit,
   updateAbschnitt,
   updateEinheit,
+  updateEinheitHelfer,
   updateFahrzeug,
 } from '../src/main/services/einsatz';
 import { createTestDb } from './helpers/db';
@@ -661,6 +666,61 @@ describe('einsatz service', () => {
       const listed = details.einheiten.find((row) => row.id === einheit!.id);
       expect(listed?.vegetarierVorhanden).toBe(false);
       expect(listed?.erreichbarkeiten).toBe('Nur 2m-Funk');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('creates, updates, lists and deletes helpers per unit', () => {
+    const ctx = createTestDb('s1-control-einsatz-helfer-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Helfer', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK OL',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/1/3/4',
+        aktuellerAbschnittId: root.id,
+      });
+      const einheit = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+
+      createEinheitHelfer(ctx, {
+        einsatzId: created.id,
+        einsatzEinheitId: einheit.id,
+        name: 'Max Muster',
+        funktion: 'Truppführer',
+        telefon: '0151-123',
+        erreichbarkeit: 'Funk',
+        vegetarisch: true,
+      });
+
+      let helfer = listEinheitHelfer(ctx, einheit.id);
+      expect(helfer).toHaveLength(1);
+      expect(helfer[0]?.vegetarisch).toBe(true);
+
+      updateEinheitHelfer(ctx, {
+        einsatzId: created.id,
+        helferId: helfer[0]!.id,
+        name: 'Max Muster',
+        funktion: 'Gruppenführer',
+        telefon: '0151-456',
+        erreichbarkeit: 'Telefon',
+        vegetarisch: false,
+        bemerkung: 'Schicht A',
+      });
+
+      helfer = listEinheitHelfer(ctx, einheit.id);
+      expect(helfer[0]?.funktion).toBe('Gruppenführer');
+      expect(helfer[0]?.vegetarisch).toBe(false);
+      expect(helfer[0]?.bemerkung).toBe('Schicht A');
+
+      const helperRow = ctx.db.select().from(einsatzEinheitHelfer).where(eq(einsatzEinheitHelfer.id, helfer[0]!.id)).get();
+      expect(helperRow).toBeTruthy();
+
+      deleteEinheitHelfer(ctx, { einsatzId: created.id, helferId: helfer[0]!.id });
+      expect(listEinheitHelfer(ctx, einheit.id)).toHaveLength(0);
     } finally {
       ctx.sqlite.close();
     }

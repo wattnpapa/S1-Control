@@ -1,6 +1,7 @@
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { useEffect, useState } from 'react';
 import type { EditEinheitForm, EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
-import type { OrganisationKey } from '@shared/types';
+import type { EinheitHelfer, OrganisationKey } from '@shared/types';
 
 interface InlineEinheitEditorProps {
   visible: boolean;
@@ -10,9 +11,53 @@ interface InlineEinheitEditorProps {
   onChange: (next: EditEinheitForm) => void;
   onSubmit: () => void;
   onCancel: () => void;
+  helfer: EinheitHelfer[];
+  onCreateHelfer: (input: {
+    name: string;
+    funktion: string;
+    telefon: string;
+    erreichbarkeit: string;
+    vegetarisch: boolean;
+    bemerkung: string;
+  }) => Promise<void>;
+  onUpdateHelfer: (input: {
+    helferId: string;
+    name: string;
+    funktion: string;
+    telefon: string;
+    erreichbarkeit: string;
+    vegetarisch: boolean;
+    bemerkung: string;
+  }) => Promise<void>;
+  onDeleteHelfer: (helferId: string) => Promise<void>;
 }
 
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
+  const [newHelfer, setNewHelfer] = useState({
+    name: '',
+    funktion: '',
+    telefon: '',
+    erreichbarkeit: '',
+    vegetarisch: false,
+    bemerkung: '',
+  });
+  const [editRows, setEditRows] = useState<Record<string, typeof newHelfer>>({});
+
+  useEffect(() => {
+    const next: Record<string, typeof newHelfer> = {};
+    for (const row of props.helfer) {
+      next[row.id] = {
+        name: row.name,
+        funktion: row.funktion ?? '',
+        telefon: row.telefon ?? '',
+        erreichbarkeit: row.erreichbarkeit ?? '',
+        vegetarisch: row.vegetarisch,
+        bemerkung: row.bemerkung ?? '',
+      };
+    }
+    setEditRows(next);
+  }, [props.helfer]);
+
   if (!props.visible) {
     return null;
   }
@@ -139,6 +184,94 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
             <th>Bemerkung</th>
             <td colSpan={3}>
               <textarea rows={2} value={props.form.bemerkung} onChange={(e) => props.onChange({ ...props.form, bemerkung: e.target.value })} />
+            </td>
+          </tr>
+          <tr>
+            <th colSpan={4}>Helfer</th>
+          </tr>
+          <tr>
+            <td colSpan={4}>
+              <table className="inline-subtable">
+                <thead>
+                  <tr>
+                    <th>Name</th>
+                    <th>Funktion</th>
+                    <th>Telefon</th>
+                    <th>Erreichbarkeit</th>
+                    <th>Vegetarisch</th>
+                    <th>Bemerkung</th>
+                    <th>Aktion</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {props.helfer.map((row) => {
+                    const edit = editRows[row.id];
+                    if (!edit) {
+                      return null;
+                    }
+                    return (
+                      <tr key={row.id}>
+                        <td><input value={edit.name} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, name: e.target.value } }))} /></td>
+                        <td><input value={edit.funktion} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, funktion: e.target.value } }))} /></td>
+                        <td><input value={edit.telefon} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, telefon: e.target.value } }))} /></td>
+                        <td><input value={edit.erreichbarkeit} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, erreichbarkeit: e.target.value } }))} /></td>
+                        <td>
+                          <input
+                            type="checkbox"
+                            checked={edit.vegetarisch}
+                            onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, vegetarisch: e.target.checked } }))}
+                          />
+                        </td>
+                        <td><input value={edit.bemerkung} onChange={(e) => setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, bemerkung: e.target.value } }))} /></td>
+                        <td className="inline-subtable-actions">
+                          <button
+                            onClick={() =>
+                              void props.onUpdateHelfer({
+                                helferId: row.id,
+                                ...edit,
+                              })
+                            }
+                            disabled={props.busy || props.isArchived}
+                          >
+                            Speichern
+                          </button>
+                          <button onClick={() => void props.onDeleteHelfer(row.id)} disabled={props.busy || props.isArchived}>
+                            Löschen
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  <tr>
+                    <td><input value={newHelfer.name} onChange={(e) => setNewHelfer((prev) => ({ ...prev, name: e.target.value }))} placeholder="Neuer Helfer" /></td>
+                    <td><input value={newHelfer.funktion} onChange={(e) => setNewHelfer((prev) => ({ ...prev, funktion: e.target.value }))} /></td>
+                    <td><input value={newHelfer.telefon} onChange={(e) => setNewHelfer((prev) => ({ ...prev, telefon: e.target.value }))} /></td>
+                    <td><input value={newHelfer.erreichbarkeit} onChange={(e) => setNewHelfer((prev) => ({ ...prev, erreichbarkeit: e.target.value }))} /></td>
+                    <td>
+                      <input type="checkbox" checked={newHelfer.vegetarisch} onChange={(e) => setNewHelfer((prev) => ({ ...prev, vegetarisch: e.target.checked }))} />
+                    </td>
+                    <td><input value={newHelfer.bemerkung} onChange={(e) => setNewHelfer((prev) => ({ ...prev, bemerkung: e.target.value }))} /></td>
+                    <td className="inline-subtable-actions">
+                      <button
+                        onClick={async () => {
+                          await props.onCreateHelfer(newHelfer);
+                          setNewHelfer({
+                            name: '',
+                            funktion: '',
+                            telefon: '',
+                            erreichbarkeit: '',
+                            vegetarisch: false,
+                            bemerkung: '',
+                          });
+                        }}
+                        disabled={props.busy || props.isArchived}
+                      >
+                        Hinzufügen
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
             </td>
           </tr>
         </tbody>

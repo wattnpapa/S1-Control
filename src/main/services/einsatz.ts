@@ -5,6 +5,7 @@ import {
   einsatz,
   einsatzAbschnitt,
   einsatzEinheit,
+  einsatzEinheitHelfer,
   einsatzFahrzeug,
   einsatzCommandLog,
   stammdatenEinheit,
@@ -15,6 +16,7 @@ import type {
   AbschnittNode,
   EinsatzListItem,
   EinheitListItem,
+  EinheitHelfer,
   FahrzeugListItem,
   OrganisationKey,
 } from '../../shared/types';
@@ -530,6 +532,122 @@ export function createFahrzeug(
       })
       .run();
   });
+}
+
+export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHelfer[] {
+  return ctx.db
+    .select({
+      id: einsatzEinheitHelfer.id,
+      einsatzId: einsatzEinheitHelfer.einsatzId,
+      einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId,
+      name: einsatzEinheitHelfer.name,
+      funktion: einsatzEinheitHelfer.funktion,
+      telefon: einsatzEinheitHelfer.telefon,
+      erreichbarkeit: einsatzEinheitHelfer.erreichbarkeit,
+      vegetarisch: einsatzEinheitHelfer.vegetarisch,
+      bemerkung: einsatzEinheitHelfer.bemerkung,
+    })
+    .from(einsatzEinheitHelfer)
+    .where(eq(einsatzEinheitHelfer.einsatzEinheitId, einheitId))
+    .orderBy(einsatzEinheitHelfer.name)
+    .all();
+}
+
+export function createEinheitHelfer(
+  ctx: DbContext,
+  input: {
+    einsatzId: string;
+    einsatzEinheitId: string;
+    name: string;
+    funktion?: string;
+    telefon?: string;
+    erreichbarkeit?: string;
+    vegetarisch?: boolean;
+    bemerkung?: string;
+  },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  if (!input.name.trim()) {
+    throw new AppError('Name des Helfers ist erforderlich', 'VALIDATION');
+  }
+  const einheit = ctx.db
+    .select({ id: einsatzEinheit.id })
+    .from(einsatzEinheit)
+    .where(and(eq(einsatzEinheit.id, input.einsatzEinheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
+    .get();
+  if (!einheit) {
+    throw new AppError('Einheit für Helfer nicht gefunden', 'NOT_FOUND');
+  }
+
+  const now = nowIso();
+  ctx.db.insert(einsatzEinheitHelfer).values({
+    id: crypto.randomUUID(),
+    einsatzId: input.einsatzId,
+    einsatzEinheitId: input.einsatzEinheitId,
+    name: input.name.trim(),
+    funktion: normalizeOptionalText(input.funktion),
+    telefon: normalizeOptionalText(input.telefon),
+    erreichbarkeit: normalizeOptionalText(input.erreichbarkeit),
+    vegetarisch: input.vegetarisch ?? false,
+    bemerkung: normalizeOptionalText(input.bemerkung),
+    erstellt: now,
+    aktualisiert: now,
+  }).run();
+}
+
+export function updateEinheitHelfer(
+  ctx: DbContext,
+  input: {
+    einsatzId: string;
+    helferId: string;
+    name: string;
+    funktion?: string;
+    telefon?: string;
+    erreichbarkeit?: string;
+    vegetarisch?: boolean;
+    bemerkung?: string;
+  },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  if (!input.name.trim()) {
+    throw new AppError('Name des Helfers ist erforderlich', 'VALIDATION');
+  }
+  const row = ctx.db
+    .select({ id: einsatzEinheitHelfer.id })
+    .from(einsatzEinheitHelfer)
+    .where(and(eq(einsatzEinheitHelfer.id, input.helferId), eq(einsatzEinheitHelfer.einsatzId, input.einsatzId)))
+    .get();
+  if (!row) {
+    throw new AppError('Helfer nicht gefunden', 'NOT_FOUND');
+  }
+
+  ctx.db
+    .update(einsatzEinheitHelfer)
+    .set({
+      name: input.name.trim(),
+      funktion: normalizeOptionalText(input.funktion),
+      telefon: normalizeOptionalText(input.telefon),
+      erreichbarkeit: normalizeOptionalText(input.erreichbarkeit),
+      vegetarisch: input.vegetarisch ?? false,
+      bemerkung: normalizeOptionalText(input.bemerkung),
+      aktualisiert: nowIso(),
+    })
+    .where(eq(einsatzEinheitHelfer.id, input.helferId))
+    .run();
+}
+
+export function deleteEinheitHelfer(
+  ctx: DbContext,
+  input: { einsatzId: string; helferId: string },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  const result = ctx.db
+    .delete(einsatzEinheitHelfer)
+    .where(and(eq(einsatzEinheitHelfer.id, input.helferId), eq(einsatzEinheitHelfer.einsatzId, input.einsatzId)))
+    .run();
+  if (!result.changes) {
+    throw new AppError('Helfer nicht gefunden', 'NOT_FOUND');
+  }
 }
 
 export function updateFahrzeug(
