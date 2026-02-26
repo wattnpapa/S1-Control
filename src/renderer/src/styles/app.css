@@ -199,10 +199,11 @@ textarea {
 
 .topbar h1 {
   margin: 0;
-  font-size: 18px;
+  font-size: 30px;
   display: flex;
   align-items: center;
   gap: 10px;
+  line-height: 1;
 }
 
 .topbar-logo {
@@ -230,10 +231,30 @@ textarea {
 
 .topbar-meta {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   font-weight: 700;
   font-size: 14px;
   opacity: 0.95;
+  align-items: center;
+}
+
+.topbar-meta-item {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.topbar-meta-label {
+  font-size: 12px;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.topbar-meta-value {
+  font-size: clamp(56px, 6.4vw, 80px);
+  line-height: 1;
+  letter-spacing: 0.01em;
 }
 
 .topbar-actions {
@@ -969,6 +990,15 @@ td.tactical-sign-cell.compact-sign-cell {
   .topbar-meta {
     width: 100%;
     justify-content: space-between;
+    gap: 12px;
+  }
+
+  .topbar-meta-item {
+    min-width: 0;
+  }
+
+  .topbar-meta-value {
+    font-size: clamp(36px, 12vw, 56px);
   }
 
   .fuehr-org-children {
