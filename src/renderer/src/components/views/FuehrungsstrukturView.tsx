@@ -140,7 +140,6 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
   return (
     <div className="fuehrung-view">
       <h2>Führungsstruktur und Organisation</h2>
-      <p>Hierarchische Darstellung angelehnt an DV102 mit Führungsstärke und Organisationsanteilen.</p>
       <div className="fuehr-org-canvas">{renderNodes(null)}</div>
     </div>
   );
