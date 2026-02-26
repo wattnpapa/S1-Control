@@ -15,9 +15,7 @@ export function runMigrations(sqlite: Database.Database, migrationsDir: string):
   const appliedRows = sqlite.prepare('SELECT name FROM __migrations').all() as Array<{ name: string }>;
   const applied = new Set(appliedRows.map((row) => row.name));
 
-  const insertMigration = sqlite.prepare(
-    'INSERT INTO __migrations (name, applied_at) VALUES (?, ?)',
-  );
+  const insertMigration = sqlite.prepare('INSERT INTO __migrations (name, applied_at) VALUES (?, ?)');
 
   for (const file of files) {
     if (applied.has(file)) {
@@ -27,9 +25,7 @@ export function runMigrations(sqlite: Database.Database, migrationsDir: string):
     const sql = fs.readFileSync(path.join(migrationsDir, file), 'utf8');
     const now = new Date().toISOString();
 
-    sqlite.transaction(() => {
-      sqlite.exec(sql);
-      insertMigration.run(file, now);
-    })();
+    sqlite.exec(sql);
+    insertMigration.run(file, now);
   }
 }

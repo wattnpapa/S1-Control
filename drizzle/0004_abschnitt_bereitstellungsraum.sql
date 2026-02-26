@@ -1,5 +1,7 @@
 PRAGMA foreign_keys = OFF;
 
+BEGIN;
+
 CREATE TABLE einsatz_abschnitt_new (
   id TEXT PRIMARY KEY NOT NULL,
   einsatz_id TEXT NOT NULL REFERENCES einsatz(id),
@@ -14,5 +16,7 @@ FROM einsatz_abschnitt;
 
 DROP TABLE einsatz_abschnitt;
 ALTER TABLE einsatz_abschnitt_new RENAME TO einsatz_abschnitt;
+
+COMMIT;
 
 PRAGMA foreign_keys = ON;
