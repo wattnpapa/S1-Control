@@ -691,6 +691,7 @@ describe('einsatz service', () => {
         einsatzEinheitId: einheit.id,
         name: '',
         rolle: 'FUEHRER',
+        geschlecht: 'WEIBLICH',
         anzahl: 2,
         funktion: 'Truppführer',
         telefon: '0151-123',
@@ -702,6 +703,7 @@ describe('einsatz service', () => {
       expect(helfer).toHaveLength(1);
       expect(helfer[0]?.name).toBe('N.N.');
       expect(helfer[0]?.rolle).toBe('FUEHRER');
+      expect(helfer[0]?.geschlecht).toBe('WEIBLICH');
       expect(helfer[0]?.anzahl).toBe(2);
       expect(helfer[0]?.vegetarisch).toBe(true);
 
@@ -710,6 +712,7 @@ describe('einsatz service', () => {
         helferId: helfer[0]!.id,
         name: '',
         rolle: 'UNTERFUEHRER',
+        geschlecht: 'MAENNLICH',
         anzahl: 3,
         funktion: 'Gruppenführer',
         telefon: '0151-456',
@@ -721,6 +724,7 @@ describe('einsatz service', () => {
       helfer = listEinheitHelfer(ctx, einheit.id);
       expect(helfer[0]?.name).toBe('N.N.');
       expect(helfer[0]?.rolle).toBe('UNTERFUEHRER');
+      expect(helfer[0]?.geschlecht).toBe('MAENNLICH');
       expect(helfer[0]?.anzahl).toBe(3);
       expect(helfer[0]?.funktion).toBe('Gruppenführer');
       expect(helfer[0]?.vegetarisch).toBe(false);

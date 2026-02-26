@@ -4,6 +4,7 @@ export type EinheitStatus = 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
 export type FahrzeugStatus = 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
 export type BenutzerRolle = 'ADMIN' | 'S1' | 'FUE_ASS' | 'VIEWER';
 export type HelferRolle = 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+export type HelferGeschlecht = 'MAENNLICH' | 'WEIBLICH';
 export type OrganisationKey =
   | 'THW'
   | 'FEUERWEHR'
@@ -107,6 +108,7 @@ export interface EinheitHelfer {
   einsatzEinheitId: string;
   name: string;
   rolle: HelferRolle;
+  geschlecht: HelferGeschlecht;
   anzahl: number;
   funktion: string | null;
   telefon: string | null;

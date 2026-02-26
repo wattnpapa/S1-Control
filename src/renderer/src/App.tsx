@@ -697,6 +697,7 @@ export function App() {
   const doCreateEinheitHelfer = async (input: {
     name: string;
     rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+    geschlecht: 'MAENNLICH' | 'WEIBLICH';
     anzahl: number;
     funktion: string;
     telefon: string;
@@ -711,6 +712,7 @@ export function App() {
         einsatzEinheitId: editEinheitForm.einheitId,
         name: input.name.trim(),
         rolle: input.rolle,
+        geschlecht: input.geschlecht,
         anzahl: input.anzahl,
         funktion: input.funktion,
         telefon: input.telefon,
@@ -726,6 +728,7 @@ export function App() {
     helferId: string;
     name: string;
     rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+    geschlecht: 'MAENNLICH' | 'WEIBLICH';
     anzahl: number;
     funktion: string;
     telefon: string;
@@ -740,6 +743,7 @@ export function App() {
         helferId: input.helferId,
         name: input.name.trim(),
         rolle: input.rolle,
+        geschlecht: input.geschlecht,
         anzahl: input.anzahl,
         funktion: input.funktion,
         telefon: input.telefon,

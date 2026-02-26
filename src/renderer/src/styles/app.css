@@ -817,6 +817,30 @@ td.tactical-sign-cell {
   color: #1f2937;
 }
 
+.gender-toggle-group {
+  display: inline-flex;
+  gap: 4px;
+}
+
+.gender-toggle {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #fff;
+  color: #3d4a67;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.gender-toggle.active {
+  border-color: #2d5db5;
+  background: #e9f1ff;
+  color: #123f78;
+}
+
 .inline-checkbox {
   display: inline-flex;
   align-items: center;

@@ -130,6 +130,7 @@ export interface CreateEinheitHelferInput {
   einsatzEinheitId: string;
   name: string;
   rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+  geschlecht?: 'MAENNLICH' | 'WEIBLICH';
   anzahl?: number;
   funktion?: string;
   telefon?: string;
@@ -143,6 +144,7 @@ export interface UpdateEinheitHelferInput {
   helferId: string;
   name: string;
   rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
+  geschlecht?: 'MAENNLICH' | 'WEIBLICH';
   anzahl?: number;
   funktion?: string;
   telefon?: string;

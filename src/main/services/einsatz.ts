@@ -542,6 +542,7 @@ export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHel
       einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId,
       name: einsatzEinheitHelfer.name,
       rolle: einsatzEinheitHelfer.rolle as EinheitHelfer['rolle'],
+      geschlecht: einsatzEinheitHelfer.geschlecht as EinheitHelfer['geschlecht'],
       anzahl: einsatzEinheitHelfer.anzahl,
       funktion: einsatzEinheitHelfer.funktion,
       telefon: einsatzEinheitHelfer.telefon,
@@ -562,6 +563,7 @@ export function createEinheitHelfer(
     einsatzEinheitId: string;
     name: string;
     rolle: EinheitHelfer['rolle'];
+    geschlecht?: EinheitHelfer['geschlecht'];
     anzahl?: number;
     funktion?: string;
     telefon?: string;
@@ -574,6 +576,10 @@ export function createEinheitHelfer(
   const anzahl = Math.max(1, Math.round(input.anzahl ?? 1));
   if (!['FUEHRER', 'UNTERFUEHRER', 'HELFER'].includes(input.rolle)) {
     throw new AppError('Rolle des Helfers ist ungültig', 'VALIDATION');
+  }
+  const geschlecht = input.geschlecht ?? 'MAENNLICH';
+  if (!['MAENNLICH', 'WEIBLICH'].includes(geschlecht)) {
+    throw new AppError('Geschlecht des Helfers ist ungültig', 'VALIDATION');
   }
   const einheit = ctx.db
     .select({ id: einsatzEinheit.id })
@@ -591,6 +597,7 @@ export function createEinheitHelfer(
     einsatzEinheitId: input.einsatzEinheitId,
     name: input.name.trim() || 'N.N.',
     rolle: input.rolle,
+    geschlecht,
     anzahl,
     funktion: normalizeOptionalText(input.funktion),
     telefon: normalizeOptionalText(input.telefon),
@@ -609,6 +616,7 @@ export function updateEinheitHelfer(
     helferId: string;
     name: string;
     rolle: EinheitHelfer['rolle'];
+    geschlecht?: EinheitHelfer['geschlecht'];
     anzahl?: number;
     funktion?: string;
     telefon?: string;
@@ -621,6 +629,10 @@ export function updateEinheitHelfer(
   const anzahl = Math.max(1, Math.round(input.anzahl ?? 1));
   if (!['FUEHRER', 'UNTERFUEHRER', 'HELFER'].includes(input.rolle)) {
     throw new AppError('Rolle des Helfers ist ungültig', 'VALIDATION');
+  }
+  const geschlecht = input.geschlecht ?? 'MAENNLICH';
+  if (!['MAENNLICH', 'WEIBLICH'].includes(geschlecht)) {
+    throw new AppError('Geschlecht des Helfers ist ungültig', 'VALIDATION');
   }
   const row = ctx.db
     .select({ id: einsatzEinheitHelfer.id })
@@ -636,6 +648,7 @@ export function updateEinheitHelfer(
     .set({
       name: input.name.trim() || 'N.N.',
       rolle: input.rolle,
+      geschlecht,
       anzahl,
       funktion: normalizeOptionalText(input.funktion),
       telefon: normalizeOptionalText(input.telefon),

@@ -1,8 +1,10 @@
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { TaktischesZeichenPerson } from '@renderer/components/common/TaktischesZeichenPerson';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faMars, faVenus } from '@fortawesome/free-solid-svg-icons';
 import { useEffect, useState } from 'react';
 import type { EditEinheitForm, EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
-import type { EinheitHelfer, HelferRolle, OrganisationKey } from '@shared/types';
+import type { EinheitHelfer, HelferGeschlecht, HelferRolle, OrganisationKey } from '@shared/types';
 
 interface InlineEinheitEditorProps {
   visible: boolean;
@@ -16,6 +18,7 @@ interface InlineEinheitEditorProps {
   onCreateHelfer: (input: {
     name: string;
     rolle: HelferRolle;
+    geschlecht: HelferGeschlecht;
     anzahl: number;
     funktion: string;
     telefon: string;
@@ -27,6 +30,7 @@ interface InlineEinheitEditorProps {
     helferId: string;
     name: string;
     rolle: HelferRolle;
+    geschlecht: HelferGeschlecht;
     anzahl: number;
     funktion: string;
     telefon: string;
@@ -44,6 +48,7 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   const [newHelfer, setNewHelfer] = useState({
     name: '',
     rolle: 'HELFER' as HelferRolle,
+    geschlecht: 'MAENNLICH' as HelferGeschlecht,
     anzahl: 1,
     funktion: '',
     telefon: '',
@@ -59,6 +64,7 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
       next[row.id] = {
         name: row.name,
         rolle: row.rolle,
+        geschlecht: row.geschlecht,
         anzahl: row.anzahl,
         funktion: row.funktion ?? '',
         telefon: row.telefon ?? '',
@@ -225,6 +231,7 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                 <thead>
                   <tr>
                     <th>Typ</th>
+                    <th>G</th>
                     <th>Name</th>
                     <th>Anzahl</th>
                     <th>Funktion</th>
@@ -254,6 +261,30 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                             <option value="UNTERFUEHRER">Unterführer</option>
                             <option value="HELFER">Helfer</option>
                           </select>
+                        </td>
+                        <td>
+                          <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
+                            <button
+                              type="button"
+                              className={`gender-toggle ${edit.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
+                              onClick={() =>
+                                setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, geschlecht: 'MAENNLICH' } }))
+                              }
+                              title="Männlich"
+                            >
+                              <FontAwesomeIcon icon={faMars} />
+                            </button>
+                            <button
+                              type="button"
+                              className={`gender-toggle ${edit.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
+                              onClick={() =>
+                                setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, geschlecht: 'WEIBLICH' } }))
+                              }
+                              title="Weiblich"
+                            >
+                              <FontAwesomeIcon icon={faVenus} />
+                            </button>
+                          </div>
                         </td>
                         <td className="helper-name-cell">
                           <TaktischesZeichenPerson organisation={props.form.organisation} rolle={edit.rolle} />
@@ -317,6 +348,26 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                         <option value="HELFER">Helfer</option>
                       </select>
                     </td>
+                    <td>
+                      <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
+                        <button
+                          type="button"
+                          className={`gender-toggle ${newHelfer.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
+                          onClick={() => setNewHelfer((prev) => ({ ...prev, geschlecht: 'MAENNLICH' }))}
+                          title="Männlich"
+                        >
+                          <FontAwesomeIcon icon={faMars} />
+                        </button>
+                        <button
+                          type="button"
+                          className={`gender-toggle ${newHelfer.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
+                          onClick={() => setNewHelfer((prev) => ({ ...prev, geschlecht: 'WEIBLICH' }))}
+                          title="Weiblich"
+                        >
+                          <FontAwesomeIcon icon={faVenus} />
+                        </button>
+                      </div>
+                    </td>
                     <td className="helper-name-cell">
                       <TaktischesZeichenPerson organisation={props.form.organisation} rolle={newHelfer.rolle} />
                       <input
@@ -347,6 +398,7 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                           setNewHelfer({
                             name: '',
                             rolle: 'HELFER',
+                            geschlecht: 'MAENNLICH',
                             anzahl: 1,
                             funktion: '',
                             telefon: '',
