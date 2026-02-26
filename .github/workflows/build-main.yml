@@ -150,10 +150,7 @@ jobs:
 
       - name: Normalize macOS update metadata filename
         run: |
-          ls -la dist
-          if [ ! -f dist/latest-mac.yml ] && [ -f dist/latest.yml ]; then
-            cp dist/latest.yml dist/latest-mac.yml
-          fi
+          node scripts/ensure-update-metadata.cjs mac
 
       - name: Verify macOS update metadata
         run: |
@@ -210,13 +207,7 @@ jobs:
 
       - name: Verify Windows update metadata
         run: |
-          Get-ChildItem dist -Filter "*latest*.yml" | ForEach-Object { Write-Host $_.FullName }
-          if (!(Test-Path dist/latest.yml)) {
-            $candidate = Get-ChildItem dist -Filter "*latest*.yml" | Select-Object -First 1
-            if ($null -ne $candidate) {
-              Copy-Item $candidate.FullName dist/latest.yml
-            }
-          }
+          node scripts/ensure-update-metadata.cjs win
           if (!(Test-Path dist/latest.yml)) { Write-Error "Missing dist/latest.yml"; exit 1 }
         shell: pwsh
 
@@ -270,13 +261,7 @@ jobs:
 
       - name: Verify Linux update metadata
         run: |
-          ls -la dist
-          if [ ! -f dist/latest-linux.yml ]; then
-            candidate="$(ls dist/latest*.yml 2>/dev/null | head -n 1 || true)"
-            if [ -n "$candidate" ]; then
-              cp "$candidate" dist/latest-linux.yml
-            fi
-          fi
+          node scripts/ensure-update-metadata.cjs linux
           test -f dist/latest-linux.yml || (echo "Missing dist/latest-linux.yml" && exit 1)
 
       - name: Upload Linux artifacts
