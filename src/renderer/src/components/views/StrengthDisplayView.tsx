@@ -49,16 +49,18 @@ export function StrengthDisplayView(): JSX.Element {
     maxWidthRatio: number,
     maxHeightRatio: number,
     charWidthEm: number,
+    letterSpacingEm = 0,
   ): number => {
     const safeTextLength = Math.max(1, text.trim().length);
-    const byWidth = (viewport.width * maxWidthRatio) / (safeTextLength * charWidthEm);
+    const widthUnits = safeTextLength * (charWidthEm + letterSpacingEm);
+    const byWidth = (viewport.width * maxWidthRatio) / widthUnits;
     const byHeight = viewport.height * maxHeightRatio;
     return Math.max(24, Math.floor(Math.min(byWidth, byHeight)));
   };
 
-  const strengthFontSize = calcFitFontSize(state.taktischeStaerke, 0.95, 0.42, 0.62);
+  const strengthFontSize = calcFitFontSize(state.taktischeStaerke, 0.95, 0.42, 0.62, 0.04);
   const timeLabel = toNatoDateTime(now);
-  const timeFontSize = calcFitFontSize(timeLabel, 0.95, 0.24, 0.58);
+  const timeFontSize = calcFitFontSize(timeLabel, 0.95, 0.24, 0.7, 0.05);
 
   return (
     <div className={containerClass}>
