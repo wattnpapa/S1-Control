@@ -10,6 +10,8 @@ const hoisted = vi.hoisted(() => {
   const autoUpdaterMock = {
     autoDownload: true,
     autoInstallOnAppQuit: true,
+    channel: '',
+    allowPrerelease: true,
     setFeedURL: vi.fn(() => undefined),
     checkForUpdates: vi.fn(async () => ({ updateInfo: { version: '0.0.0' } })),
     downloadUpdate: vi.fn(async () => undefined),
@@ -63,6 +65,8 @@ describe('updater service', () => {
     hoisted.autoUpdaterMock.removeAllListeners();
     hoisted.autoUpdaterMock.autoDownload = true;
     hoisted.autoUpdaterMock.autoInstallOnAppQuit = true;
+    hoisted.autoUpdaterMock.channel = '';
+    hoisted.autoUpdaterMock.allowPrerelease = true;
     hoisted.autoUpdaterMock.checkForUpdates.mockReset();
     hoisted.autoUpdaterMock.checkForUpdates.mockResolvedValue({ updateInfo: { version: '0.0.0' } });
     hoisted.autoUpdaterMock.setFeedURL.mockReset();
@@ -79,6 +83,8 @@ describe('updater service', () => {
     expect(service.getState().currentVersion).toBe('2026.02.25.16.38');
     expect(hoisted.autoUpdaterMock.autoDownload).toBe(false);
     expect(hoisted.autoUpdaterMock.autoInstallOnAppQuit).toBe(false);
+    expect(hoisted.autoUpdaterMock.channel).toBe('latest');
+    expect(hoisted.autoUpdaterMock.allowPrerelease).toBe(false);
 
     hoisted.autoUpdaterMock.emit('update-not-available');
     hoisted.autoUpdaterMock.emit('update-available', { version: '2026.2.25-16.40' });

@@ -114,6 +114,14 @@ export class UpdaterService {
     }
 
     try {
+      const updaterWithChannel = autoUpdater as unknown as {
+        channel?: string;
+        allowPrerelease?: boolean;
+      };
+      // Force stable metadata channel name regardless of app version format.
+      updaterWithChannel.channel = 'latest';
+      updaterWithChannel.allowPrerelease = false;
+
       const maybeSetFeedUrl = (autoUpdater as unknown as { setFeedURL?: (options: { provider: 'generic'; url: string }) => void })
         .setFeedURL;
       if (typeof maybeSetFeedUrl === 'function') {
