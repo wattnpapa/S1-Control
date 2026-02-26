@@ -22,6 +22,9 @@ import {
   createAbschnitt,
   createEinheit,
   createFahrzeug,
+  updateAbschnitt,
+  updateEinheit,
+  updateFahrzeug,
   splitEinheit,
   hasUndoableCommand,
   listAbschnittDetails,
@@ -267,6 +270,14 @@ export function registerIpc(state: AppState): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.UPDATE_ABSCHNITT,
+    wrap(async (input: Parameters<RendererApi['updateAbschnitt']>[0]) => {
+      requireUser();
+      updateAbschnitt(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS,
     wrap(async (einsatzId: string, abschnittId: string) =>
       listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
@@ -282,10 +293,26 @@ export function registerIpc(state: AppState): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.UPDATE_EINHEIT,
+    wrap(async (input: Parameters<RendererApi['updateEinheit']>[0]) => {
+      requireUser();
+      updateEinheit(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.CREATE_FAHRZEUG,
     wrap(async (input: Parameters<RendererApi['createFahrzeug']>[0]) => {
       requireUser();
       createFahrzeug(state.getDbContext(), input);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.UPDATE_FAHRZEUG,
+    wrap(async (input: Parameters<RendererApi['updateFahrzeug']>[0]) => {
+      requireUser();
+      updateFahrzeug(state.getDbContext(), input);
     }),
   );
 

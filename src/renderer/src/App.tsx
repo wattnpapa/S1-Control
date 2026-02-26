@@ -4,6 +4,9 @@ import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateEinheitDialog } from '@renderer/components/dialogs/CreateEinheitDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
+import { EditAbschnittDialog } from '@renderer/components/dialogs/EditAbschnittDialog';
+import { EditEinheitDialog } from '@renderer/components/dialogs/EditEinheitDialog';
+import { EditFahrzeugDialog } from '@renderer/components/dialogs/EditFahrzeugDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
 import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
@@ -19,6 +22,9 @@ import type {
   CreateAbschnittForm,
   CreateEinheitForm,
   CreateFahrzeugForm,
+  EditAbschnittForm,
+  EditEinheitForm,
+  EditFahrzeugForm,
   FahrzeugOverviewItem,
   KraftOverviewItem,
   MoveDialogState,
@@ -60,6 +66,13 @@ export function App() {
     systemTyp: 'NORMAL',
     parentId: '',
   });
+  const [showEditAbschnittDialog, setShowEditAbschnittDialog] = useState(false);
+  const [editAbschnittForm, setEditAbschnittForm] = useState<EditAbschnittForm>({
+    abschnittId: '',
+    name: '',
+    systemTyp: 'NORMAL',
+    parentId: '',
+  });
   const [createEinheitForm, setCreateEinheitForm] = useState<CreateEinheitForm>({
     nameImEinsatz: '',
     organisation: 'THW',
@@ -68,6 +81,16 @@ export function App() {
     mannschaft: '8',
     status: 'AKTIV',
     abschnittId: '',
+  });
+  const [showEditEinheitDialog, setShowEditEinheitDialog] = useState(false);
+  const [editEinheitForm, setEditEinheitForm] = useState<EditEinheitForm>({
+    einheitId: '',
+    nameImEinsatz: '',
+    organisation: 'THW',
+    fuehrung: '0',
+    unterfuehrung: '0',
+    mannschaft: '0',
+    status: 'AKTIV',
   });
 
   const [showSplitEinheitDialog, setShowSplitEinheitDialog] = useState(false);
@@ -83,6 +106,14 @@ export function App() {
 
   const [showCreateFahrzeugDialog, setShowCreateFahrzeugDialog] = useState(false);
   const [createFahrzeugForm, setCreateFahrzeugForm] = useState<CreateFahrzeugForm>({
+    name: '',
+    kennzeichen: '',
+    status: 'AKTIV',
+    einheitId: '',
+  });
+  const [showEditFahrzeugDialog, setShowEditFahrzeugDialog] = useState(false);
+  const [editFahrzeugForm, setEditFahrzeugForm] = useState<EditFahrzeugForm>({
+    fahrzeugId: '',
     name: '',
     kennzeichen: '',
     status: 'AKTIV',
@@ -392,6 +423,22 @@ export function App() {
     setShowCreateAbschnittDialog(true);
   };
 
+  const doEditSelectedAbschnitt = () => {
+    if (!selectedAbschnittId || isArchived) return;
+    const current = abschnitte.find((item) => item.id === selectedAbschnittId);
+    if (!current) {
+      setError('Abschnitt nicht gefunden.');
+      return;
+    }
+    setEditAbschnittForm({
+      abschnittId: current.id,
+      name: current.name,
+      systemTyp: current.systemTyp,
+      parentId: current.parentId ?? '',
+    });
+    setShowEditAbschnittDialog(true);
+  };
+
   const doSubmitCreateAbschnitt = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!createAbschnittForm.name.trim()) {
@@ -407,6 +454,25 @@ export function App() {
       });
       setShowCreateAbschnittDialog(false);
       await loadEinsatz(selectedEinsatzId, created.id);
+    });
+  };
+
+  const doSubmitEditAbschnitt = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!editAbschnittForm.name.trim()) {
+      setError('Bitte Namen für den Abschnitt eingeben.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.updateAbschnitt({
+        einsatzId: selectedEinsatzId,
+        abschnittId: editAbschnittForm.abschnittId,
+        name: editAbschnittForm.name.trim(),
+        systemTyp: editAbschnittForm.systemTyp,
+        parentId: editAbschnittForm.parentId || null,
+      });
+      setShowEditAbschnittDialog(false);
+      await loadEinsatz(selectedEinsatzId, editAbschnittForm.abschnittId);
     });
   };
 
@@ -447,6 +513,56 @@ export function App() {
     });
   };
 
+  const doOpenEditEinheitDialog = (einheitId: string) => {
+    const einheit = allKraefte.find((item) => item.id === einheitId);
+    if (!einheit) {
+      setError('Einheit nicht gefunden.');
+      return;
+    }
+    const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
+    setEditEinheitForm({
+      einheitId,
+      nameImEinsatz: einheit.nameImEinsatz,
+      organisation: einheit.organisation,
+      fuehrung: String(parsed.fuehrung),
+      unterfuehrung: String(parsed.unterfuehrung),
+      mannschaft: String(parsed.mannschaft),
+      status: einheit.status,
+    });
+    setShowEditEinheitDialog(true);
+  };
+
+  const doSubmitEditEinheit = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!editEinheitForm.nameImEinsatz.trim()) {
+      setError('Bitte Namen der Einheit eingeben.');
+      return;
+    }
+    const fuehrung = Number(editEinheitForm.fuehrung);
+    const unterfuehrung = Number(editEinheitForm.unterfuehrung);
+    const mannschaft = Number(editEinheitForm.mannschaft);
+    if ([fuehrung, unterfuehrung, mannschaft].some((v) => Number.isNaN(v) || v < 0)) {
+      setError('Taktische Stärke muss aus Zahlen >= 0 bestehen.');
+      return;
+    }
+    const gesamt = fuehrung + unterfuehrung + mannschaft;
+    const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
+
+    await withBusy(async () => {
+      await window.api.updateEinheit({
+        einsatzId: selectedEinsatzId,
+        einheitId: editEinheitForm.einheitId,
+        nameImEinsatz: editEinheitForm.nameImEinsatz.trim(),
+        organisation: editEinheitForm.organisation,
+        aktuelleStaerke: gesamt,
+        aktuelleStaerkeTaktisch: taktisch,
+        status: editEinheitForm.status,
+      });
+      setShowEditEinheitDialog(false);
+      await refreshAll();
+    });
+  };
+
   const doCreateFahrzeug = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
     if (allKraefte.length === 0) {
@@ -482,6 +598,46 @@ export function App() {
         status: createFahrzeugForm.status,
       });
       setShowCreateFahrzeugDialog(false);
+      await refreshAll();
+    });
+  };
+
+  const doOpenEditFahrzeugDialog = (fahrzeugId: string) => {
+    const fahrzeug = allFahrzeuge.find((item) => item.id === fahrzeugId);
+    if (!fahrzeug) {
+      setError('Fahrzeug nicht gefunden.');
+      return;
+    }
+    setEditFahrzeugForm({
+      fahrzeugId,
+      name: fahrzeug.name,
+      kennzeichen: fahrzeug.kennzeichen ?? '',
+      status: fahrzeug.status,
+      einheitId: fahrzeug.aktuelleEinsatzEinheitId ?? '',
+    });
+    setShowEditFahrzeugDialog(true);
+  };
+
+  const doSubmitEditFahrzeug = async () => {
+    if (!selectedEinsatzId || isArchived) return;
+    if (!editFahrzeugForm.name.trim()) {
+      setError('Bitte Fahrzeugname eingeben.');
+      return;
+    }
+    if (!editFahrzeugForm.einheitId) {
+      setError('Bitte zugeordnete Einheit auswählen.');
+      return;
+    }
+    await withBusy(async () => {
+      await window.api.updateFahrzeug({
+        einsatzId: selectedEinsatzId,
+        fahrzeugId: editFahrzeugForm.fahrzeugId,
+        name: editFahrzeugForm.name.trim(),
+        kennzeichen: editFahrzeugForm.kennzeichen.trim() || undefined,
+        status: editFahrzeugForm.status,
+        aktuelleEinsatzEinheitId: editFahrzeugForm.einheitId,
+      });
+      setShowEditFahrzeugDialog(false);
       await refreshAll();
     });
   };
@@ -712,6 +868,8 @@ export function App() {
           selectedId={selectedAbschnittId}
           einsatzName={selectedEinsatz?.name}
           onSelect={setSelectedAbschnittId}
+          onEditSelected={doEditSelectedAbschnitt}
+          editDisabled={busy || !selectedAbschnittId || isArchived}
         />
 
         <section className="main-view">
@@ -728,11 +886,13 @@ export function App() {
                   setMoveDialog({ type: 'einheit', id });
                   setMoveTarget(selectedAbschnittId);
                 }}
+                onEditEinheit={doOpenEditEinheitDialog}
                 onSplitEinheit={doOpenSplitEinheitDialog}
                 onMoveFahrzeug={(id) => {
                   setMoveDialog({ type: 'fahrzeug', id });
                   setMoveTarget(selectedAbschnittId);
                 }}
+                onEditFahrzeug={doOpenEditFahrzeugDialog}
               />
             </>
           )}
@@ -781,6 +941,7 @@ export function App() {
                   setMoveDialog({ type: 'einheit', id });
                   setMoveTarget(selectedAbschnittId);
                 }}
+                onEdit={doOpenEditEinheitDialog}
                 onSplit={doOpenSplitEinheitDialog}
               />
             </>
@@ -798,6 +959,7 @@ export function App() {
                   setMoveDialog({ type: 'fahrzeug', id });
                   setMoveTarget(selectedAbschnittId);
                 }}
+                onEdit={doOpenEditFahrzeugDialog}
               />
             </>
           )}
@@ -851,6 +1013,17 @@ export function App() {
         onClose={() => setShowCreateAbschnittDialog(false)}
       />
 
+      <EditAbschnittDialog
+        visible={showEditAbschnittDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={editAbschnittForm}
+        abschnitte={abschnitte}
+        onChange={setEditAbschnittForm}
+        onSubmit={() => void doSubmitEditAbschnitt()}
+        onClose={() => setShowEditAbschnittDialog(false)}
+      />
+
       <SplitEinheitDialog
         visible={showSplitEinheitDialog}
         busy={busy}
@@ -871,6 +1044,27 @@ export function App() {
         onChange={setCreateFahrzeugForm}
         onSubmit={() => void doSubmitCreateFahrzeug()}
         onClose={() => setShowCreateFahrzeugDialog(false)}
+      />
+
+      <EditEinheitDialog
+        visible={showEditEinheitDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={editEinheitForm}
+        onChange={setEditEinheitForm}
+        onSubmit={() => void doSubmitEditEinheit()}
+        onClose={() => setShowEditEinheitDialog(false)}
+      />
+
+      <EditFahrzeugDialog
+        visible={showEditFahrzeugDialog}
+        busy={busy}
+        isArchived={isArchived ?? false}
+        form={editFahrzeugForm}
+        allKraefte={allKraefte}
+        onChange={setEditFahrzeugForm}
+        onSubmit={() => void doSubmitEditFahrzeug()}
+        onClose={() => setShowEditFahrzeugDialog(false)}
       />
       {renderUpdaterOverlay()}
     </div>

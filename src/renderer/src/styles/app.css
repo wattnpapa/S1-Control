@@ -566,6 +566,11 @@ select {
   font-size: 13px;
 }
 
+.sidebar-edit-button {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
 .tree {
   display: grid;
   gap: 4px;

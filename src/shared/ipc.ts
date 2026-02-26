@@ -28,6 +28,14 @@ export interface CreateAbschnittInput {
   parentId?: string | null;
 }
 
+export interface UpdateAbschnittInput {
+  einsatzId: string;
+  abschnittId: string;
+  name: string;
+  systemTyp: 'FUEST' | 'ANFAHRT' | 'LOGISTIK' | 'NORMAL';
+  parentId?: string | null;
+}
+
 export interface CreateEinheitInput {
   einsatzId: string;
   nameImEinsatz: string;
@@ -40,6 +48,17 @@ export interface CreateEinheitInput {
   tacticalSignConfigJson?: string;
 }
 
+export interface UpdateEinheitInput {
+  einsatzId: string;
+  einheitId: string;
+  nameImEinsatz: string;
+  organisation: 'THW' | 'FEUERWEHR' | 'POLIZEI' | 'BUNDESWEHR' | 'REGIE' | 'DRK' | 'ASB' | 'JOHANNITER' | 'MALTESER' | 'DLRG' | 'BERGWACHT' | 'MHD' | 'RETTUNGSDIENST_KOMMUNAL' | 'SONSTIGE';
+  aktuelleStaerke: number;
+  aktuelleStaerkeTaktisch?: string;
+  status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
+  tacticalSignConfigJson?: string;
+}
+
 export interface CreateFahrzeugInput {
   einsatzId: string;
   name: string;
@@ -47,6 +66,15 @@ export interface CreateFahrzeugInput {
   status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
   kennzeichen?: string;
   stammdatenFahrzeugId?: string;
+}
+
+export interface UpdateFahrzeugInput {
+  einsatzId: string;
+  fahrzeugId: string;
+  name: string;
+  aktuelleEinsatzEinheitId: string;
+  status?: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+  kennzeichen?: string;
 }
 
 export interface MoveEinheitInput {
@@ -88,9 +116,12 @@ export interface RendererApi {
   archiveEinsatz(einsatzId: string): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
+  updateAbschnitt(input: UpdateAbschnittInput): Promise<void>;
   listAbschnittDetails(einsatzId: string, abschnittId: string): Promise<AbschnittDetails>;
   createEinheit(input: CreateEinheitInput): Promise<void>;
+  updateEinheit(input: UpdateEinheitInput): Promise<void>;
   createFahrzeug(input: CreateFahrzeugInput): Promise<void>;
+  updateFahrzeug(input: UpdateFahrzeugInput): Promise<void>;
   moveEinheit(input: MoveEinheitInput): Promise<void>;
   moveFahrzeug(input: MoveFahrzeugInput): Promise<void>;
   splitEinheit(input: SplitEinheitInput): Promise<void>;
@@ -130,9 +161,12 @@ export const IPC_CHANNEL = {
   ARCHIVE_EINSATZ: 'einsatz:archive',
   LIST_ABSCHNITTE: 'abschnitt:list',
   CREATE_ABSCHNITT: 'abschnitt:create',
+  UPDATE_ABSCHNITT: 'abschnitt:update',
   LIST_ABSCHNITT_DETAILS: 'abschnitt:details',
   CREATE_EINHEIT: 'einheit:create',
+  UPDATE_EINHEIT: 'einheit:update',
   CREATE_FAHRZEUG: 'fahrzeug:create',
+  UPDATE_FAHRZEUG: 'fahrzeug:update',
   MOVE_EINHEIT: 'command:move-einheit',
   MOVE_FAHRZEUG: 'command:move-fahrzeug',
   SPLIT_EINHEIT: 'einheit:split',

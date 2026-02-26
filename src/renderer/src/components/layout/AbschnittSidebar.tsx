@@ -5,6 +5,8 @@ interface AbschnittSidebarProps {
   selectedId: string;
   einsatzName?: string;
   onSelect: (id: string) => void;
+  onEditSelected?: () => void;
+  editDisabled?: boolean;
 }
 
 export function AbschnittSidebar(props: AbschnittSidebarProps): JSX.Element {
@@ -12,6 +14,11 @@ export function AbschnittSidebar(props: AbschnittSidebarProps): JSX.Element {
     <aside className="sidebar">
       <h2>Abschnitte</h2>
       <p className="sidebar-subtitle">{props.einsatzName}</p>
+      {props.onEditSelected && (
+        <button className="sidebar-edit-button" onClick={props.onEditSelected} disabled={props.editDisabled}>
+          Abschnitt bearbeiten
+        </button>
+      )}
       <AbschnittTree nodes={props.abschnitte} selectedId={props.selectedId} onSelect={props.onSelect} />
     </aside>
   );

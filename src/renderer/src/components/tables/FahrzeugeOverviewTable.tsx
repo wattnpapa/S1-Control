@@ -5,6 +5,7 @@ interface FahrzeugeOverviewTableProps {
   fahrzeuge: FahrzeugOverviewItem[];
   isArchived: boolean;
   onMove: (id: string) => void;
+  onEdit: (id: string) => void;
 }
 
 export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.Element {
@@ -37,6 +38,9 @@ export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.
               <td>
                 <button onClick={() => props.onMove(item.id)} disabled={props.isArchived}>
                   Verschieben
+                </button>
+                <button onClick={() => props.onEdit(item.id)} disabled={props.isArchived}>
+                  Bearbeiten
                 </button>
               </td>
             </tr>

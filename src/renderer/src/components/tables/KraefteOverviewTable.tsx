@@ -7,6 +7,7 @@ interface KraefteOverviewTableProps {
   isArchived: boolean;
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
+  onEdit: (id: string) => void;
 }
 
 export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Element {
@@ -53,6 +54,9 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
               <td>
                 <button onClick={() => props.onMove(item.id)} disabled={props.isArchived}>
                   Verschieben
+                </button>
+                <button onClick={() => props.onEdit(item.id)} disabled={props.isArchived}>
+                  Bearbeiten
                 </button>
                 <button onClick={() => props.onSplit(item.id)} disabled={props.isArchived}>
                   Splitten

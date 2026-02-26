@@ -8,8 +8,10 @@ interface EinsatzOverviewViewProps {
   selectedEinsatz: EinsatzListItem | null;
   isArchived: boolean;
   onMoveEinheit: (id: string) => void;
+  onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
+  onEditFahrzeug: (id: string) => void;
 }
 
 export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Element {
@@ -34,12 +36,14 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
         einheiten={props.details.einheiten}
         isArchived={props.isArchived}
         onMove={props.onMoveEinheit}
+        onEdit={props.onEditEinheit}
         onSplit={props.onSplitEinheit}
       />
       <FahrzeugeTable
         fahrzeuge={props.details.fahrzeuge}
         isArchived={props.isArchived}
         onMove={props.onMoveFahrzeug}
+        onEdit={props.onEditFahrzeug}
       />
     </>
   );

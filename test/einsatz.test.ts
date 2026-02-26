@@ -22,6 +22,9 @@ import {
   listAbschnitte,
   listEinsaetze,
   splitEinheit,
+  updateAbschnitt,
+  updateEinheit,
+  updateFahrzeug,
 } from '../src/main/services/einsatz';
 import { createTestDb } from './helpers/db';
 import { hashPassword } from '../src/main/services/auth';
@@ -501,6 +504,93 @@ describe('einsatz service', () => {
       const rows = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.einsatzId, created.id)).all();
       expect(rows).toHaveLength(2);
       expect(rows.every((row) => row.stammdatenFahrzeugId === 'stamm-1')).toBe(true);
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('updates abschnitt, einheit and fahrzeug in-place', () => {
+    const ctx = createTestDb('s1-control-einsatz-update-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Update-Test', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      const abschnitt = createAbschnitt(ctx, {
+        einsatzId: created.id,
+        name: 'EA Nord',
+        systemTyp: 'NORMAL',
+        parentId: root.id,
+      });
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK Nord',
+        organisation: 'THW',
+        aktuelleStaerke: 9,
+        aktuelleStaerkeTaktisch: '0/1/8/9',
+        aktuellerAbschnittId: abschnitt.id,
+      });
+      const einheit = ctx.db
+        .select()
+        .from(einsatzEinheit)
+        .where(and(eq(einsatzEinheit.einsatzId, created.id), eq(einsatzEinheit.nameImEinsatz, 'FK Nord')))
+        .get()!;
+
+      createFahrzeug(ctx, {
+        einsatzId: created.id,
+        name: 'MTW Nord',
+        kennzeichen: 'THW-1',
+        aktuelleEinsatzEinheitId: einheit.id,
+      });
+      const fahrzeug = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.einsatzId, created.id)).get()!;
+
+      updateAbschnitt(ctx, {
+        einsatzId: created.id,
+        abschnittId: abschnitt.id,
+        name: 'EA Nord Neu',
+        systemTyp: 'LOGISTIK',
+        parentId: null,
+      });
+      updateEinheit(ctx, {
+        einsatzId: created.id,
+        einheitId: einheit.id,
+        nameImEinsatz: 'FK Nord Neu',
+        organisation: 'FEUERWEHR',
+        aktuelleStaerke: 6,
+        aktuelleStaerkeTaktisch: '0/1/5/6',
+        status: 'IN_BEREITSTELLUNG',
+      });
+      updateFahrzeug(ctx, {
+        einsatzId: created.id,
+        fahrzeugId: fahrzeug.id,
+        name: 'ELW Nord',
+        kennzeichen: 'HH-1234',
+        aktuelleEinsatzEinheitId: einheit.id,
+        status: 'IN_BEREITSTELLUNG',
+      });
+
+      const updatedAbschnitt = ctx.db.select().from(einsatzAbschnitt).where(eq(einsatzAbschnitt.id, abschnitt.id)).get();
+      expect(updatedAbschnitt?.name).toBe('EA Nord Neu');
+      expect(updatedAbschnitt?.systemTyp).toBe('LOGISTIK');
+      expect(updatedAbschnitt?.parentId).toBeNull();
+
+      const updatedEinheit = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, einheit.id)).get();
+      expect(updatedEinheit?.nameImEinsatz).toBe('FK Nord Neu');
+      expect(updatedEinheit?.organisation).toBe('FEUERWEHR');
+      expect(updatedEinheit?.aktuelleStaerkeTaktisch).toBe('0/1/5/6');
+      expect(updatedEinheit?.status).toBe('IN_BEREITSTELLUNG');
+
+      const updatedVehicle = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.id, fahrzeug.id)).get();
+      expect(updatedVehicle?.status).toBe('IN_BEREITSTELLUNG');
+      expect(updatedVehicle?.aktuelleEinsatzEinheitId).toBe(einheit.id);
+
+      const vehicleMaster = ctx.db
+        .select()
+        .from(stammdatenFahrzeug)
+        .where(eq(stammdatenFahrzeug.id, updatedVehicle!.stammdatenFahrzeugId!))
+        .get();
+      expect(vehicleMaster?.name).toBe('ELW Nord');
+      expect(vehicleMaster?.kennzeichen).toBe('HH-1234');
     } finally {
       ctx.sqlite.close();
     }

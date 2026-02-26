@@ -7,6 +7,7 @@ interface EinheitenTableProps {
   isArchived: boolean;
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
+  onEdit: (id: string) => void;
 }
 
 export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
@@ -51,6 +52,9 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
               <td>
                 <button onClick={() => props.onMove(item.id)} disabled={props.isArchived}>
                   Verschieben
+                </button>
+                <button onClick={() => props.onEdit(item.id)} disabled={props.isArchived}>
+                  Bearbeiten
                 </button>
                 <button onClick={() => props.onSplit(item.id)} disabled={props.isArchived}>
                   Splitten

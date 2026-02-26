@@ -159,6 +159,72 @@ export function createAbschnitt(
   return item;
 }
 
+function validateAbschnittParent(
+  ctx: DbContext,
+  input: { einsatzId: string; abschnittId: string; parentId: string | null },
+): void {
+  if (!input.parentId) {
+    return;
+  }
+  if (input.parentId === input.abschnittId) {
+    throw new AppError('Abschnitt kann nicht sein eigener Parent sein', 'VALIDATION');
+  }
+
+  const parent = ctx.db
+    .select({ id: einsatzAbschnitt.id, parentId: einsatzAbschnitt.parentId, einsatzId: einsatzAbschnitt.einsatzId })
+    .from(einsatzAbschnitt)
+    .where(eq(einsatzAbschnitt.id, input.parentId))
+    .get();
+  if (!parent || parent.einsatzId !== input.einsatzId) {
+    throw new AppError('Parent-Abschnitt nicht gefunden', 'NOT_FOUND');
+  }
+
+  let cursor: string | null = parent.parentId;
+  while (cursor) {
+    if (cursor === input.abschnittId) {
+      throw new AppError('Parent-Abschnitt würde einen Zyklus erzeugen', 'VALIDATION');
+    }
+    const next = ctx.db
+      .select({ parentId: einsatzAbschnitt.parentId })
+      .from(einsatzAbschnitt)
+      .where(eq(einsatzAbschnitt.id, cursor))
+      .get();
+    cursor = next?.parentId ?? null;
+  }
+}
+
+export function updateAbschnitt(
+  ctx: DbContext,
+  input: { einsatzId: string; abschnittId: string; name: string; parentId?: string | null; systemTyp: AbschnittNode['systemTyp'] },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  const current = ctx.db
+    .select({ id: einsatzAbschnitt.id })
+    .from(einsatzAbschnitt)
+    .where(and(eq(einsatzAbschnitt.id, input.abschnittId), eq(einsatzAbschnitt.einsatzId, input.einsatzId)))
+    .get();
+  if (!current) {
+    throw new AppError('Abschnitt nicht gefunden', 'NOT_FOUND');
+  }
+
+  const nextParentId = input.parentId ?? null;
+  validateAbschnittParent(ctx, {
+    einsatzId: input.einsatzId,
+    abschnittId: input.abschnittId,
+    parentId: nextParentId,
+  });
+
+  ctx.db
+    .update(einsatzAbschnitt)
+    .set({
+      name: input.name,
+      parentId: nextParentId,
+      systemTyp: input.systemTyp,
+    })
+    .where(eq(einsatzAbschnitt.id, input.abschnittId))
+    .run();
+}
+
 export function listAbschnittDetails(
   ctx: DbContext,
   einsatzId: string,
@@ -267,6 +333,62 @@ export function createEinheit(
   }).run();
 }
 
+export function updateEinheit(
+  ctx: DbContext,
+  input: {
+    einsatzId: string;
+    einheitId: string;
+    nameImEinsatz: string;
+    organisation: EinheitListItem['organisation'];
+    aktuelleStaerke: number;
+    status?: EinheitListItem['status'];
+    aktuelleStaerkeTaktisch?: string;
+    tacticalSignConfigJson?: string;
+  },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  if (!ORGANISATIONS.includes(input.organisation)) {
+    throw new AppError('Organisation ist ungültig', 'VALIDATION');
+  }
+  if (input.aktuelleStaerke < 0) {
+    throw new AppError('Stärke muss >= 0 sein', 'VALIDATION');
+  }
+  if (input.aktuelleStaerkeTaktisch) {
+    const parts = input.aktuelleStaerkeTaktisch.split('/').map((p) => Number(p));
+    if (parts.length !== 4 || parts.some((n) => Number.isNaN(n) || n < 0)) {
+      throw new AppError('Taktische Stärke ist ungültig', 'VALIDATION');
+    }
+    const calculated = (parts[0] ?? 0) + (parts[1] ?? 0) + (parts[2] ?? 0);
+    if ((parts[3] ?? 0) !== calculated || input.aktuelleStaerke !== calculated) {
+      throw new AppError('Taktische Stärke und Gesamtstärke sind inkonsistent', 'VALIDATION');
+    }
+  }
+
+  const row = ctx.db
+    .select({ id: einsatzEinheit.id })
+    .from(einsatzEinheit)
+    .where(and(eq(einsatzEinheit.id, input.einheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
+    .get();
+  if (!row) {
+    throw new AppError('Einheit nicht gefunden', 'NOT_FOUND');
+  }
+
+  ctx.db
+    .update(einsatzEinheit)
+    .set({
+      nameImEinsatz: input.nameImEinsatz,
+      organisation: input.organisation,
+      aktuelleStaerke: input.aktuelleStaerke,
+      aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
+      status: input.status ?? 'AKTIV',
+      ...(input.tacticalSignConfigJson === undefined
+        ? {}
+        : { tacticalSignConfigJson: input.tacticalSignConfigJson }),
+    })
+    .where(eq(einsatzEinheit.id, input.einheitId))
+    .run();
+}
+
 export function createFahrzeug(
   ctx: DbContext,
   input: {
@@ -324,6 +446,87 @@ export function createFahrzeug(
         erstellt: nowIso(),
         entfernt: null,
       })
+      .run();
+  });
+}
+
+export function updateFahrzeug(
+  ctx: DbContext,
+  input: {
+    einsatzId: string;
+    fahrzeugId: string;
+    name: string;
+    aktuelleEinsatzEinheitId: string;
+    status?: FahrzeugListItem['status'];
+    kennzeichen?: string;
+  },
+): void {
+  ensureNotArchived(ctx, input.einsatzId);
+  if (!input.aktuelleEinsatzEinheitId) {
+    throw new AppError('Zugeordnete Einheit ist erforderlich', 'VALIDATION');
+  }
+  if (!input.name.trim()) {
+    throw new AppError('Fahrzeugname ist erforderlich', 'VALIDATION');
+  }
+
+  ctx.db.transaction((tx) => {
+    const fahrzeug = tx
+      .select({
+        id: einsatzFahrzeug.id,
+        stammdatenFahrzeugId: einsatzFahrzeug.stammdatenFahrzeugId,
+      })
+      .from(einsatzFahrzeug)
+      .where(and(eq(einsatzFahrzeug.id, input.fahrzeugId), eq(einsatzFahrzeug.einsatzId, input.einsatzId)))
+      .get();
+    if (!fahrzeug) {
+      throw new AppError('Fahrzeug nicht gefunden', 'NOT_FOUND');
+    }
+
+    const einheit = tx
+      .select({
+        id: einsatzEinheit.id,
+        aktuellerAbschnittId: einsatzEinheit.aktuellerAbschnittId,
+      })
+      .from(einsatzEinheit)
+      .where(and(eq(einsatzEinheit.id, input.aktuelleEinsatzEinheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
+      .get();
+    if (!einheit) {
+      throw new AppError('Zugeordnete Einheit nicht gefunden', 'NOT_FOUND');
+    }
+
+    const stammdatenId = fahrzeug.stammdatenFahrzeugId ?? crypto.randomUUID();
+    if (!fahrzeug.stammdatenFahrzeugId) {
+      tx.insert(stammdatenFahrzeug)
+        .values({
+          id: stammdatenId,
+          name: input.name.trim(),
+          kennzeichen: input.kennzeichen?.trim() || null,
+          standardPiktogrammKey: 'mtw',
+          stammdatenEinheitId: null,
+        })
+        .run();
+
+      tx.update(einsatzFahrzeug)
+        .set({ stammdatenFahrzeugId: stammdatenId })
+        .where(eq(einsatzFahrzeug.id, input.fahrzeugId))
+        .run();
+    } else {
+      tx.update(stammdatenFahrzeug)
+        .set({
+          name: input.name.trim(),
+          kennzeichen: input.kennzeichen?.trim() || null,
+        })
+        .where(eq(stammdatenFahrzeug.id, stammdatenId))
+        .run();
+    }
+
+    tx.update(einsatzFahrzeug)
+      .set({
+        aktuelleEinsatzEinheitId: einheit.id,
+        aktuellerAbschnittId: einheit.aktuellerAbschnittId,
+        status: input.status ?? 'AKTIV',
+      })
+      .where(eq(einsatzFahrzeug.id, input.fahrzeugId))
       .run();
   });
 }

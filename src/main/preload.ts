@@ -15,10 +15,13 @@ const api: RendererApi = {
   archiveEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.ARCHIVE_EINSATZ, einsatzId),
   listAbschnitte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITTE, einsatzId),
   createAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_ABSCHNITT, input),
+  updateAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_ABSCHNITT, input),
   listAbschnittDetails: (einsatzId, abschnittId) =>
     ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITT_DETAILS, einsatzId, abschnittId),
   createEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINHEIT, input),
+  updateEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_EINHEIT, input),
   createFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_FAHRZEUG, input),
+  updateFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_FAHRZEUG, input),
   moveEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.MOVE_EINHEIT, input),
   moveFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.MOVE_FAHRZEUG, input),
   splitEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.SPLIT_EINHEIT, input),
