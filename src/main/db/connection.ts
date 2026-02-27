@@ -19,7 +19,15 @@ function applyPragmas(sqlite: Database.Database): void {
 }
 
 function openDatabase(dbPath: string): DbContext {
-  fs.mkdirSync(path.dirname(dbPath), { recursive: true });
+  const dir = path.dirname(dbPath);
+  fs.mkdirSync(dir, { recursive: true });
+  fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
+
+  // SMB shares can report directory existence before the file handle is fully ready.
+  // Touching the target file first reduces "unable to open database file" races.
+  const fd = fs.openSync(dbPath, 'a');
+  fs.closeSync(fd);
+  fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
 
   const sqlite = new Database(dbPath);
   applyPragmas(sqlite);
@@ -57,7 +65,9 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
-      if (!message.includes('SQLITE_BUSY') || attempt === retries) {
+      const isBusy = message.includes('SQLITE_BUSY');
+      const isOpenRace = message.includes('unable to open database file');
+      if ((!isBusy && !isOpenRace) || attempt === retries) {
         break;
       }
       const waitMs = 250 * (attempt + 1);
@@ -66,5 +76,5 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
   }
 
   const reason = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new Error(`Datenbank konnte nicht geöffnet werden: ${reason}`);
+  throw new Error(`Datenbank konnte nicht geöffnet werden (${dbPath}): ${reason}`);
 }
