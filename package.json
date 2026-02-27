@@ -67,6 +67,14 @@
         "url": "https://github.com/wattnpapa/S1-Control/releases/latest/download"
       }
     ],
+    "fileAssociations": [
+      {
+        "ext": "s1control",
+        "name": "S1-Control Einsatzdatei",
+        "description": "Einsatzdatenbank für S1-Control",
+        "role": "Editor"
+      }
+    ],
     "files": [
       "dist-electron/**/*",
       "dist-renderer/**/*",

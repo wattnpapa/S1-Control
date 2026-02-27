@@ -6,13 +6,13 @@ import { BackupCoordinator, resolveBackupDir } from '../src/main/services/backup
 
 describe('backup service', () => {
   it('resolves backup directory next to db', () => {
-    expect(resolveBackupDir('/tmp/einsatz.sqlite')).toBe('/tmp/backup');
+    expect(resolveBackupDir('/tmp/einsatz.s1control')).toBe('/tmp/backup');
   });
 
   it('restores backup file contents to target db path', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
-    const backupPath = path.join(dir, 'einsatz-backup.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
+    const backupPath = path.join(dir, 'einsatz-backup.s1control');
 
     fs.writeFileSync(dbPath, 'old');
     fs.writeFileSync(backupPath, 'new');
@@ -25,8 +25,8 @@ describe('backup service', () => {
 
   it('removes wal/shm files during restore', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
-    const backupPath = path.join(dir, 'einsatz-backup.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
+    const backupPath = path.join(dir, 'einsatz-backup.s1control');
     const walPath = `${dbPath}-wal`;
     const shmPath = `${dbPath}-shm`;
 
@@ -45,7 +45,7 @@ describe('backup service', () => {
 
   it('creates periodic backups', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
     fs.writeFileSync(dbPath, 'db');
 
     const backupMock = vi.fn(async (target: string) => {
@@ -62,7 +62,7 @@ describe('backup service', () => {
 
     const backupDir = resolveBackupDir(dbPath);
     const files = fs.readdirSync(backupDir);
-    expect(files.some((name) => name.endsWith('.sqlite'))).toBe(true);
+    expect(files.some((name) => name.endsWith('.s1control'))).toBe(true);
     expect(backupMock).toHaveBeenCalled();
 
     coordinator.stop();
@@ -70,7 +70,7 @@ describe('backup service', () => {
 
   it('allows only configured master to write backup', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
     fs.writeFileSync(dbPath, 'db');
 
     const backupA = vi.fn(async (target: string) => {
@@ -98,7 +98,7 @@ describe('backup service', () => {
 
   it('hands over backup writing when master changes', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
     fs.writeFileSync(dbPath, 'db');
     let isMaster = false;
     const backup = vi.fn(async (target: string) => {
@@ -116,13 +116,13 @@ describe('backup service', () => {
 
     const files = fs.readdirSync(resolveBackupDir(dbPath));
     expect(backup).toHaveBeenCalled();
-    expect(files.some((name) => name.endsWith('.sqlite'))).toBe(true);
+    expect(files.some((name) => name.endsWith('.s1control'))).toBe(true);
     c.stop();
   });
 
   it('keeps running when backup write throws', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.sqlite');
+    const dbPath = path.join(dir, 'einsatz.s1control');
     fs.writeFileSync(dbPath, 'db');
 
     const backup = vi.fn(async () => {

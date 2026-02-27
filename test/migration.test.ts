@@ -9,7 +9,7 @@ import { createAbschnitt, createEinsatz, listAbschnitte } from '../src/main/serv
 describe('migrations', () => {
   it('migrates old abschnitt schema and allows BEREITSTELLUNGSRAUM', () => {
     const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-migration-'));
-    const dbPath = path.join(baseDir, 'einsatz.sqlite');
+    const dbPath = path.join(baseDir, 'einsatz.s1control');
 
     const sqlite = new Database(dbPath);
     try {

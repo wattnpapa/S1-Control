@@ -25,8 +25,8 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
         Backup laden
       </button>
       <p>
-        Für jeden Einsatz wird eine eigene SQLite-Datei erstellt. Backups liegen alle 5 Minuten im Unterordner
-        <code>backup</code> neben der Einsatzdatei.
+        Für jeden Einsatz wird eine eigene SQLite-Datei mit der Endung <code>.s1control</code> erstellt. Backups
+        liegen alle 5 Minuten im Unterordner <code>backup</code> neben der Einsatzdatei.
       </p>
 
       <h3>Aktive Clients</h3>

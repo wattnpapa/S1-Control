@@ -9,6 +9,9 @@ declare global {
     strengthDisplayEvents: {
       onStateChanged: (callback: (state: unknown) => void) => () => void;
     };
+    appEvents: {
+      onPendingOpenFile: (callback: (dbPath: string) => void) => () => void;
+    };
   }
 }
 

@@ -53,6 +53,7 @@ interface AppState {
   strengthDisplay: StrengthDisplayService;
   settingsStore: SettingsStore;
   getDefaultDbPath: () => string;
+  consumePendingOpenFilePath: () => string | null;
   getSessionUser: () => SessionUser | null;
   setSessionUser: (user: SessionUser | null) => void;
 }
@@ -116,6 +117,24 @@ export function registerIpc(state: AppState): void {
       }
     }
     return null;
+  };
+
+  const openEinsatzByPathForUser = (selected: string, user: SessionUser): EinsatzListItem => {
+    const einsatzMeta = readPrimaryEinsatzFromDbFile(selected);
+    if (!einsatzMeta) {
+      throw new Error('Die gewählte Datei enthält keinen gültigen Einsatz.');
+    }
+
+    const nextContext = openDatabaseWithRetry(selected);
+    ensureDefaultAdmin(nextContext);
+    const dbUser = ensureSessionUserRecord(nextContext, user);
+    state.setSessionUser(dbUser);
+    state.setDbContext(nextContext);
+    state.clientPresence.start(nextContext);
+    state.backupCoordinator.start(nextContext);
+    rememberRecentDbPath(selected);
+    state.settingsStore.set({ dbPath: path.dirname(selected) });
+    return einsatzMeta;
   };
 
   ipcMain.handle(IPC_CHANNEL.GET_SESSION, wrap(async () => state.getSessionUser()));
@@ -187,13 +206,24 @@ export function registerIpc(state: AppState): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ_BY_PATH,
+    wrap(async (dbPath: string) => {
+      const user = requireUser();
+      return openEinsatzByPathForUser(dbPath, user);
+    }),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.OPEN_EINSATZ_DIALOG,
     wrap(async () => {
       const user = requireUser();
       const result = await dialog.showOpenDialog({
         title: 'Einsatz-Datei öffnen',
         defaultPath: getBaseDir(),
-        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
         properties: ['openFile'],
       });
 
@@ -202,22 +232,13 @@ export function registerIpc(state: AppState): void {
         return null;
       }
 
-      const einsatzMeta = readPrimaryEinsatzFromDbFile(selected);
-      if (!einsatzMeta) {
-        throw new Error('Die gewählte Datei enthält keinen gültigen Einsatz.');
-      }
-
-      const nextContext = openDatabaseWithRetry(selected);
-      ensureDefaultAdmin(nextContext);
-      const dbUser = ensureSessionUserRecord(nextContext, user);
-      state.setSessionUser(dbUser);
-      state.setDbContext(nextContext);
-      state.clientPresence.start(nextContext);
-      state.backupCoordinator.start(nextContext);
-      rememberRecentDbPath(selected);
-      state.settingsStore.set({ dbPath: path.dirname(selected) });
-      return einsatzMeta;
+      return openEinsatzByPathForUser(selected, user);
     }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CONSUME_PENDING_OPEN_FILE,
+    wrap(async () => state.consumePendingOpenFilePath()),
   );
 
   ipcMain.handle(
@@ -242,7 +263,10 @@ export function registerIpc(state: AppState): void {
       const saveResult = await dialog.showSaveDialog({
         title: 'Einsatz-Datei speichern',
         defaultPath: path.join(baseDir, createEinsatzDbFileName(input.name)),
-        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
       });
 
       const selected = saveResult.filePath;
@@ -250,7 +274,10 @@ export function registerIpc(state: AppState): void {
         return null;
       }
 
-      const normalized = selected.toLowerCase().endsWith('.sqlite') ? selected : `${selected}.sqlite`;
+      const normalized =
+        selected.toLowerCase().endsWith('.s1control') || selected.toLowerCase().endsWith('.sqlite')
+          ? selected
+          : `${selected}.s1control`;
       const created = createEinsatzInOwnDatabase(path.dirname(normalized), input, user, normalized);
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
@@ -409,7 +436,10 @@ export function registerIpc(state: AppState): void {
       const result = await dialog.showOpenDialog({
         title: 'Backup laden',
         defaultPath: resolveBackupDir(dbPath),
-        filters: [{ name: 'SQLite', extensions: ['sqlite'] }],
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
         properties: ['openFile'],
       });
       const selected = result.filePaths[0];

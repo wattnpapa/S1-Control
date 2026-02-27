@@ -181,7 +181,7 @@ export async function exportEinsatzakte(
   zip.file('einsatzakte/report.html', html);
   zip.file('einsatzakte/einheiten.csv', einheitenCsv);
   zip.file('einsatzakte/bewegungen.csv', bewegungenCsv);
-  zip.file('einsatzakte/einsatz.sqlite', fs.readFileSync(ctx.path));
+  zip.file('einsatzakte/einsatz.s1control', fs.readFileSync(ctx.path));
 
   const buffer = await zip.generateAsync({ type: 'nodebuffer' });
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });

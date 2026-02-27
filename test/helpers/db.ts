@@ -6,10 +6,9 @@ import { openDatabaseWithRetry } from '../../src/main/db/connection';
 
 export function createDbPath(prefix = 's1-control-test-'): string {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
-  return path.join(dir, 'test.sqlite');
+  return path.join(dir, 'test.s1control');
 }
 
 export function createTestDb(prefix?: string): DbContext {
   return openDatabaseWithRetry(createDbPath(prefix));
 }
-

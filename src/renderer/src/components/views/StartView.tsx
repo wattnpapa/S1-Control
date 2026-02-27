@@ -42,7 +42,7 @@ export function StartView(props: StartViewProps): JSX.Element {
 
         {props.startChoice === 'open' && (
           <div className="start-form">
-            <p className="hint">Wähle eine bestehende Einsatz-Datei (`.sqlite`) aus.</p>
+            <p className="hint">Wähle eine bestehende Einsatz-Datei (`.s1control`) aus.</p>
             <button onClick={props.onOpenExisting} disabled={props.busy}>
               Einsatz-Datei auswählen und öffnen
             </button>

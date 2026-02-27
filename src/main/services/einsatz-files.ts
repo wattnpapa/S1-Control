@@ -7,8 +7,15 @@ import { openDatabaseWithRetry, type DbContext } from '../db/connection';
 import { ensureDefaultAdmin, ensureSessionUserRecord } from './auth';
 import { createEinsatz } from './einsatz';
 
-const SQLITE_EXT = '.sqlite';
-const SYSTEM_DB_NAME = '_system.sqlite';
+export const EINSATZ_DB_EXT = '.s1control';
+const LEGACY_EINSATZ_DB_EXT = '.sqlite';
+const SYSTEM_DB_NAME = `_system${EINSATZ_DB_EXT}`;
+const LEGACY_SYSTEM_DB_NAME = '_system.sqlite';
+
+function isEinsatzDbFileName(name: string): boolean {
+  const lower = name.toLowerCase();
+  return lower.endsWith(EINSATZ_DB_EXT) || lower.endsWith(LEGACY_EINSATZ_DB_EXT);
+}
 
 function sanitizeFileName(value: string): string {
   return value
@@ -20,11 +27,11 @@ function sanitizeFileName(value: string): string {
 
 export function createEinsatzDbFileName(einsatzName: string): string {
   const stamp = Date.now();
-  return `${sanitizeFileName(einsatzName)}-${stamp}${SQLITE_EXT}`;
+  return `${sanitizeFileName(einsatzName)}-${stamp}${EINSATZ_DB_EXT}`;
 }
 
 export function resolveEinsatzBaseDir(configuredPath: string): string {
-  if (configuredPath.toLowerCase().endsWith(SQLITE_EXT)) {
+  if (isEinsatzDbFileName(configuredPath)) {
     return path.dirname(configuredPath);
   }
   return configuredPath;
@@ -41,7 +48,7 @@ export function listEinsatzDbFiles(baseDir: string): string[] {
 
   return fs
     .readdirSync(baseDir)
-    .filter((name) => name.toLowerCase().endsWith(SQLITE_EXT) && name !== SYSTEM_DB_NAME)
+    .filter((name) => isEinsatzDbFileName(name) && name !== SYSTEM_DB_NAME && name !== LEGACY_SYSTEM_DB_NAME)
     .map((name) => path.join(baseDir, name));
 }
 

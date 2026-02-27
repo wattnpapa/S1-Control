@@ -20,7 +20,7 @@ S1-Control unterstützt dich bei der Lageführung im Einsatz:
 ### Offline- und Fileshare-Betrieb
 
 - Kein Cloud-Zwang, kein externer Server
-- Jeder Einsatz liegt in einer eigenen SQLite-Datei (`.sqlite`)
+- Jeder Einsatz liegt in einer eigenen SQLite-Datei (`.s1control`)
 - Mehrere Clients können dieselbe Einsatzdatei auf einem Share nutzen (WAL-Modus)
 - Automatische Backups alle 5 Minuten nach `<einsatz-verzeichnis>/backup`
 - Nur ein Client erstellt Backups (Lock-Mechanismus), um Konflikte zu vermeiden
@@ -95,7 +95,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 
 - DB-Pfad ist als Einsatz-Verzeichnis konfigurierbar (Settings) oder per ENV:
   - `S1_DB_PATH=/pfad/zum/einsatz-verzeichnis`
-- Jeder Einsatz wird als eigene SQLite-Datei angelegt (atomar pro Einsatz)
+- Jeder Einsatz wird als eigene SQLite-Datei angelegt (atomar pro Einsatz, Endung `.s1control`)
 - Beim DB-Open werden gesetzt:
   - `PRAGMA journal_mode=WAL`
   - `PRAGMA synchronous=NORMAL`
@@ -122,7 +122,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 
 `Einsatzakte exportieren` erzeugt ZIP mit:
 
-- DB-Kopie (`einsatz.sqlite`)
+- DB-Kopie (`einsatz.s1control`)
 - `report.html`
 - `einheiten.csv`
 - `bewegungen.csv`

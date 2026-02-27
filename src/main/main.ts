@@ -12,6 +12,39 @@ import { UpdaterService } from './services/updater';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
+const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
+let pendingOpenFilePath: string | null = null;
+
+function isEinsatzFilePath(filePath: string): boolean {
+  const lower = filePath.toLowerCase();
+  return EINSATZ_FILE_EXTENSIONS.some((ext) => lower.endsWith(ext));
+}
+
+function setPendingOpenFilePath(filePath: string): void {
+  if (!isEinsatzFilePath(filePath)) {
+    return;
+  }
+  pendingOpenFilePath = filePath;
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send(IPC_CHANNEL.PENDING_OPEN_FILE, filePath);
+  }
+}
+
+function consumePendingOpenFilePath(): string | null {
+  const next = pendingOpenFilePath;
+  pendingOpenFilePath = null;
+  return next;
+}
+
+function findOpenFilePathInArgv(argv: string[]): string | null {
+  for (const arg of argv) {
+    if (isEinsatzFilePath(arg)) {
+      return arg;
+    }
+  }
+  return null;
+}
+
 function toBuildVersion(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -60,6 +93,36 @@ function resolveRendererUrl(): string {
 }
 
 async function bootstrap(): Promise<void> {
+  const initialOpenFilePath = findOpenFilePathInArgv(process.argv.slice(1));
+  if (initialOpenFilePath) {
+    setPendingOpenFilePath(initialOpenFilePath);
+  }
+
+  const singleInstanceLock = app.requestSingleInstanceLock();
+  if (!singleInstanceLock) {
+    app.quit();
+    return;
+  }
+
+  app.on('second-instance', (_event, argv) => {
+    const openPath = findOpenFilePathInArgv(argv);
+    if (openPath) {
+      setPendingOpenFilePath(openPath);
+    }
+    const win = BrowserWindow.getAllWindows()[0];
+    if (win) {
+      if (win.isMinimized()) {
+        win.restore();
+      }
+      win.focus();
+    }
+  });
+
+  app.on('open-file', (event, filePath) => {
+    event.preventDefault();
+    setPendingOpenFilePath(filePath);
+  });
+
   await app.whenReady();
   const envSemver = process.env.S1_APP_SEMVER;
   if (envSemver) {
@@ -96,7 +159,7 @@ async function bootstrap(): Promise<void> {
         return openDatabaseWithRetry(defaultSystemDbPath);
       } catch (fallbackError) {
         const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        const tempPath = path.join(app.getPath('temp'), '_system-fallback.sqlite');
+        const tempPath = path.join(app.getPath('temp'), '_system-fallback.s1control');
         startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultSystemDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`;
         return openDatabaseWithRetry(tempPath);
       }
@@ -133,6 +196,7 @@ async function bootstrap(): Promise<void> {
     strengthDisplay,
     settingsStore,
     getDefaultDbPath: () => defaultBaseDir,
+    consumePendingOpenFilePath,
     getSessionUser: () => currentUser,
     setSessionUser: (user) => {
       currentUser = user;

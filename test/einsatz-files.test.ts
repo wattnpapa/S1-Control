@@ -13,7 +13,8 @@ import {
 } from '../src/main/services/einsatz-files';
 
 describe('einsatz file service', () => {
-  it('resolves base dir from sqlite path and directory path', () => {
+  it('resolves base dir from einsatz db path and directory path', () => {
+    expect(resolveEinsatzBaseDir('/tmp/x.s1control')).toBe('/tmp');
     expect(resolveEinsatzBaseDir('/tmp/x.sqlite')).toBe('/tmp');
     expect(resolveEinsatzBaseDir('/tmp/data')).toBe('/tmp/data');
   });
@@ -30,7 +31,7 @@ describe('einsatz file service', () => {
 
       const dbPath = findDbPathForEinsatz(baseDir, created.einsatz.id);
       expect(dbPath).toBeTruthy();
-      expect(resolveSystemDbPath(baseDir).endsWith('_system.sqlite')).toBe(true);
+      expect(resolveSystemDbPath(baseDir).endsWith('_system.s1control')).toBe(true);
     } finally {
       created.ctx.sqlite.close();
     }
@@ -39,16 +40,16 @@ describe('einsatz file service', () => {
   it('handles missing/invalid db files and explicit db path', () => {
     const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-einsatz-files-'));
     const user = { id: 'u1', name: 'u', rolle: 'S1' as const };
-    const explicitPath = path.join(baseDir, 'custom.sqlite');
+    const explicitPath = path.join(baseDir, 'custom.s1control');
     const created = createEinsatzInOwnDatabase(baseDir, { name: 'Übung 2', fuestName: 'FüSt 2' }, user, explicitPath);
 
     try {
-      expect(createEinsatzDbFileName('Übung Test').endsWith('.sqlite')).toBe(true);
-      expect(resolveSystemDbPath(baseDir)).toBe(path.join(baseDir, '_system.sqlite'));
+      expect(createEinsatzDbFileName('Übung Test').endsWith('.s1control')).toBe(true);
+      expect(resolveSystemDbPath(baseDir)).toBe(path.join(baseDir, '_system.s1control'));
       expect(findDbPathForEinsatz(baseDir, 'does-not-exist')).toBeNull();
 
-      const missingPath = path.join(baseDir, 'missing.sqlite');
-      const invalidPath = path.join(baseDir, 'invalid.sqlite');
+      const missingPath = path.join(baseDir, 'missing.s1control');
+      const invalidPath = path.join(baseDir, 'invalid.s1control');
       fs.writeFileSync(invalidPath, 'not-a-db');
 
       const list = listEinsaetzeFromDbPaths([missingPath, invalidPath, explicitPath]);

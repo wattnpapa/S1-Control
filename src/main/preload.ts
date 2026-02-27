@@ -8,7 +8,9 @@ const api: RendererApi = {
   getSettings: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SETTINGS),
   setDbPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.SET_DB_PATH, dbPath),
   openEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ, einsatzId),
+  openEinsatzByPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ_BY_PATH, dbPath),
   openEinsatzWithDialog: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ_DIALOG),
+  consumePendingOpenFilePath: () => ipcRenderer.invoke(IPC_CHANNEL.CONSUME_PENDING_OPEN_FILE),
   listEinsaetze: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_EINSAETZE),
   createEinsatz: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ, input),
   createEinsatzWithDialog: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ_DIALOG, input),
@@ -65,5 +67,13 @@ contextBridge.exposeInMainWorld('strengthDisplayEvents', {
     const listener = (_event: Electron.IpcRendererEvent, state: unknown) => callback(state);
     ipcRenderer.on(IPC_CHANNEL.STRENGTH_DISPLAY_STATE_CHANGED, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNEL.STRENGTH_DISPLAY_STATE_CHANGED, listener);
+  },
+});
+
+contextBridge.exposeInMainWorld('appEvents', {
+  onPendingOpenFile: (callback: (dbPath: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, dbPath: string) => callback(dbPath);
+    ipcRenderer.on(IPC_CHANNEL.PENDING_OPEN_FILE, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNEL.PENDING_OPEN_FILE, listener);
   },
 });

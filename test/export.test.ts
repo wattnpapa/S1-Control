@@ -13,7 +13,7 @@ import { exportEinsatzakte } from '../src/main/services/export';
 import { createTestDb } from './helpers/db';
 
 describe('export service', () => {
-  it('exports einsatzakte zip with html/csv/sqlite', async () => {
+  it('exports einsatzakte zip with html/csv/s1control', async () => {
     const ctx = createTestDb('s1-control-export-');
     try {
       const created = createEinsatz(ctx, { name: 'Übung Nord', fuestName: 'FüSt 1' });
@@ -73,7 +73,7 @@ describe('export service', () => {
       const html = await zip.file('einsatzakte/report.html')?.async('string');
       const einheitenCsv = await zip.file('einsatzakte/einheiten.csv')?.async('string');
       const bewegungenCsv = await zip.file('einsatzakte/bewegungen.csv')?.async('string');
-      const dbCopy = await zip.file('einsatzakte/einsatz.sqlite')?.async('nodebuffer');
+      const dbCopy = await zip.file('einsatzakte/einsatz.s1control')?.async('nodebuffer');
 
       expect(html).toContain('Einsatzakte: Übung Nord');
       expect(html).toContain('Kräfteübersicht Einheiten');

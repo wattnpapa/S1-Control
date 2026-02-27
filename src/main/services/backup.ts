@@ -76,7 +76,7 @@ export class BackupCoordinator {
     const backupDir = resolveBackupDir(ctx.path);
     fs.mkdirSync(backupDir, { recursive: true });
     const baseName = path.basename(ctx.path, path.extname(ctx.path));
-    const target = path.join(backupDir, `${baseName}-${nowStamp()}.sqlite`);
+    const target = path.join(backupDir, `${baseName}-${nowStamp()}.s1control`);
 
     try {
       await ctx.sqlite.backup(target);

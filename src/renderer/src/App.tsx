@@ -177,6 +177,7 @@ export function App() {
   const [startChoice, setStartChoice] = useState<'none' | 'open' | 'create'>('open');
   const [startNewEinsatzName, setStartNewEinsatzName] = useState('');
   const [startNewFuestName, setStartNewFuestName] = useState('FüSt 1');
+  const [queuedOpenFilePath, setQueuedOpenFilePath] = useState<string | null>(null);
 
   const [activeView, setActiveView] = useState<WorkspaceView>('einsatz');
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
@@ -376,6 +377,22 @@ export function App() {
   }, []);
 
   useEffect(() => {
+    if (!authReady) {
+      return;
+    }
+    void (async () => {
+      try {
+        const pendingPath = await window.api.consumePendingOpenFilePath();
+        if (pendingPath) {
+          setQueuedOpenFilePath(pendingPath);
+        }
+      } catch (err) {
+        setError(readError(err));
+      }
+    })();
+  }, [authReady]);
+
+  useEffect(() => {
     const unsubscribe = window.updaterEvents.onStateChanged((state) => {
       setUpdaterState(state as UpdaterState);
     });
@@ -427,6 +444,31 @@ export function App() {
     }, 5000);
     return () => window.clearInterval(timer);
   }, [activeView, selectedEinsatzId, session]);
+
+  useEffect(() => {
+    if (!session || !authReady || busy || !queuedOpenFilePath) {
+      return;
+    }
+    const dbPath = queuedOpenFilePath;
+    setQueuedOpenFilePath(null);
+    void withBusy(async () => {
+      const opened = await window.api.openEinsatzByPath(dbPath);
+      setEinsaetze((prev) => {
+        const rest = prev.filter((item) => item.id !== opened.id);
+        return [opened, ...rest];
+      });
+      setSelectedEinsatzId(opened.id);
+      await loadEinsatz(opened.id);
+      setStartChoice('open');
+    });
+  }, [authReady, busy, loadEinsatz, queuedOpenFilePath, session]);
+
+  useEffect(() => {
+    const unsubscribe = window.appEvents.onPendingOpenFile((dbPath) => {
+      setQueuedOpenFilePath(dbPath);
+    });
+    return () => unsubscribe();
+  }, []);
 
   const withBusy = async (fn: () => Promise<void>) => {
     setBusy(true);

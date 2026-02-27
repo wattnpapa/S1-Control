@@ -173,7 +173,9 @@ export interface RendererApi {
   getSettings(): Promise<AppSettings>;
   setDbPath(path: string): Promise<AppSettings>;
   openEinsatz(einsatzId: string): Promise<boolean>;
+  openEinsatzByPath(dbPath: string): Promise<EinsatzListItem>;
   openEinsatzWithDialog(): Promise<EinsatzListItem | null>;
+  consumePendingOpenFilePath(): Promise<string | null>;
   listEinsaetze(): Promise<EinsatzListItem[]>;
   createEinsatz(input: CreateEinsatzInput): Promise<EinsatzListItem>;
   createEinsatzWithDialog(input: CreateEinsatzInput): Promise<EinsatzListItem | null>;
@@ -227,7 +229,9 @@ export const IPC_CHANNEL = {
   GET_SETTINGS: 'settings:get',
   SET_DB_PATH: 'settings:set-db-path',
   OPEN_EINSATZ: 'einsatz:open',
+  OPEN_EINSATZ_BY_PATH: 'einsatz:open-by-path',
   OPEN_EINSATZ_DIALOG: 'einsatz:open-dialog',
+  CONSUME_PENDING_OPEN_FILE: 'app:consume-pending-open-file',
   LIST_EINSAETZE: 'einsatz:list',
   CREATE_EINSATZ: 'einsatz:create',
   CREATE_EINSATZ_DIALOG: 'einsatz:create-dialog',
@@ -257,6 +261,7 @@ export const IPC_CHANNEL = {
   DOWNLOAD_UPDATE: 'updater:download',
   INSTALL_UPDATE: 'updater:install',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
+  PENDING_OPEN_FILE: 'app:pending-open-file',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
