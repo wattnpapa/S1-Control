@@ -904,6 +904,22 @@ td.tactical-sign-cell.compact-sign-cell {
   background: linear-gradient(90deg, #2352bf, var(--thw-blue));
 }
 
+.update-install-spinner {
+  width: 38px;
+  height: 38px;
+  margin: 10px auto 12px;
+  border-radius: 50%;
+  border: 4px solid #dbe5f7;
+  border-top-color: var(--thw-blue);
+  animation: update-spinner 0.8s linear infinite;
+}
+
+@keyframes update-spinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .strength-display {
   min-height: 100vh;
   background: #ffffff;

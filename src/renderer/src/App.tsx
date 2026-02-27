@@ -214,12 +214,6 @@ export function App() {
           </div>
         </div>
       )}
-      {updaterState.stage === 'downloaded' && (
-        <div className="update-banner">
-          Update heruntergeladen {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Anwendung
-          wird neu gestartet.
-        </div>
-      )}
       {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
       {updaterState.stage === 'unsupported' && (
         <div className="update-banner">
@@ -232,33 +226,50 @@ export function App() {
     </>
   );
 
-  const renderUpdaterOverlay = () =>
-    updaterState.stage === 'downloading' ? (
-      <div className="overlay-backdrop">
-        <div className="overlay-panel">
-          <h3>Update wird heruntergeladen</h3>
-          <div className="progress-bar">
-            <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, updaterState.progressPercent ?? 0))}%` }} />
+  const renderUpdaterOverlay = () => {
+    if (updaterState.stage === 'downloading') {
+      return (
+        <div className="overlay-backdrop">
+          <div className="overlay-panel">
+            <h3>Update wird heruntergeladen</h3>
+            <div className="progress-bar">
+              <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, updaterState.progressPercent ?? 0))}%` }} />
+            </div>
+            <p>{Math.round(updaterState.progressPercent ?? 0)}%</p>
+            <p>
+              {formatBytesToMb(updaterState.progressTransferredBytes)} / {formatBytesToMb(updaterState.progressTotalBytes)}
+            </p>
+            <p>Geschwindigkeit: {formatSpeedMb(updaterState.progressBytesPerSecond)}</p>
+            <p>
+              Restzeit:{' '}
+              {formatEtaSeconds(
+                updaterState.progressTransferredBytes !== undefined &&
+                  updaterState.progressTotalBytes !== undefined &&
+                  updaterState.progressBytesPerSecond
+                  ? (updaterState.progressTotalBytes - updaterState.progressTransferredBytes) /
+                      updaterState.progressBytesPerSecond
+                  : undefined,
+              )}
+            </p>
           </div>
-          <p>{Math.round(updaterState.progressPercent ?? 0)}%</p>
-          <p>
-            {formatBytesToMb(updaterState.progressTransferredBytes)} / {formatBytesToMb(updaterState.progressTotalBytes)}
-          </p>
-          <p>Geschwindigkeit: {formatSpeedMb(updaterState.progressBytesPerSecond)}</p>
-          <p>
-            Restzeit:{' '}
-            {formatEtaSeconds(
-              updaterState.progressTransferredBytes !== undefined &&
-                updaterState.progressTotalBytes !== undefined &&
-                updaterState.progressBytesPerSecond
-                ? (updaterState.progressTotalBytes - updaterState.progressTransferredBytes) /
-                    updaterState.progressBytesPerSecond
-                : undefined,
-            )}
-          </p>
         </div>
-      </div>
-    ) : null;
+      );
+    }
+
+    if (updaterState.stage === 'downloaded') {
+      return (
+        <div className="overlay-backdrop">
+          <div className="overlay-panel">
+            <h3>Update wird durchgeführt</h3>
+            <div className="update-install-spinner" aria-label="Update wird durchgeführt" />
+            <p>Die Anwendung wird jetzt automatisch neu gestartet.</p>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
 
   const clearSelectedEinsatz = useCallback(() => {
     setSelectedEinsatzId('');

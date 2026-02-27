@@ -200,7 +200,7 @@ export class UpdaterService {
         // Vorgabe: Nach abgeschlossenem Download ohne zusätzliche Rückfrage neu starten.
         setTimeout(() => {
           autoUpdater.quitAndInstall();
-        }, 300);
+        }, 1800);
       });
 
       this.autoUpdaterEnabled = true;
