@@ -216,10 +216,8 @@ export function App() {
       )}
       {updaterState.stage === 'downloaded' && (
         <div className="update-banner">
-          Update heruntergeladen {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}.
-          <button onClick={() => void doInstallUpdate()} disabled={busy}>
-            Jetzt neu starten
-          </button>
+          Update heruntergeladen {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Anwendung
+          wird neu gestartet.
         </div>
       )}
       {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
@@ -1100,12 +1098,6 @@ export function App() {
   const doDownloadUpdate = async () => {
     await withBusy(async () => {
       await window.api.downloadUpdate();
-    });
-  };
-
-  const doInstallUpdate = async () => {
-    await withBusy(async () => {
-      await window.api.installDownloadedUpdate();
     });
   };
 

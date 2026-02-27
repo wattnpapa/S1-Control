@@ -195,8 +195,12 @@ export class UpdaterService {
           progressTransferredBytes: this.state.progressTotalBytes ?? this.state.progressTransferredBytes,
           source: 'electron-updater',
           inAppDownloadSupported: true,
-          inAppDownloadReason: 'Update wurde in der App heruntergeladen.',
+          inAppDownloadReason: 'Update wurde in der App heruntergeladen. Neustart wird ausgeführt.',
         });
+        // Vorgabe: Nach abgeschlossenem Download ohne zusätzliche Rückfrage neu starten.
+        setTimeout(() => {
+          autoUpdater.quitAndInstall();
+        }, 300);
       });
 
       this.autoUpdaterEnabled = true;
