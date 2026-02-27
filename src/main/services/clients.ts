@@ -124,6 +124,7 @@ export class ClientPresenceService {
       const leader = tx
         .select({ clientId: activeClient.clientId })
         .from(activeClient)
+        .where(gte(activeClient.lastSeen, staleCutoff))
         .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
         .get();
       const leaderId = leader?.clientId ?? this.clientId;
@@ -134,6 +135,11 @@ export class ClientPresenceService {
         .set({ isMaster: true })
         .where(eq(activeClient.clientId, leaderId))
         .run();
+      if (leaderId === this.clientId) {
+        tx.delete(activeClient)
+          .where(lt(activeClient.lastSeen, staleCutoff))
+          .run();
+      }
       this.isMaster = leaderId === this.clientId;
     });
   }
