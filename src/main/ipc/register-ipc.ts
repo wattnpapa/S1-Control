@@ -31,6 +31,7 @@ import {
   updateFahrzeug,
   splitEinheit,
   hasUndoableCommand,
+  listEinsaetze as listEinsaetzeFromContext,
   listAbschnittDetails,
   listAbschnitte,
   listEinheitHelfer,
@@ -137,21 +138,36 @@ export function registerIpc(state: AppState): void {
   };
 
   const openEinsatzByPathForUser = (selected: string, user: SessionUser): EinsatzListItem => {
-    const einsatzMeta = readPrimaryEinsatzFromDbFile(selected);
-    if (!einsatzMeta) {
-      throw new Error('Die gewählte Datei enthält keinen gültigen Einsatz.');
-    }
-
     const nextContext = openDatabaseWithRetry(selected);
-    ensureDefaultAdmin(nextContext);
-    const dbUser = ensureSessionUserRecord(nextContext, user);
-    state.setSessionUser(dbUser);
-    state.setDbContext(nextContext);
-    state.clientPresence.start(nextContext);
-    state.backupCoordinator.start(nextContext);
-    rememberRecentDbPath(selected, einsatzMeta.id);
-    state.settingsStore.set({ dbPath: path.dirname(selected) });
-    return einsatzMeta;
+    try {
+      ensureDefaultAdmin(nextContext);
+      const einsatzMeta = listEinsaetzeFromContext(nextContext)[0] ?? readPrimaryEinsatzFromDbFile(selected);
+      if (!einsatzMeta) {
+        const fileName = path.basename(selected).toLowerCase();
+        if (fileName.startsWith('_system.')) {
+          throw new Error('Die gewählte Datei ist die Systemdatenbank (_system). Bitte eine Einsatzdatei öffnen.');
+        }
+        throw new Error(
+          'Die gewählte Datei enthält keinen gültigen Einsatz. Bitte die originale Einsatzdatei (.s1control) auswählen.',
+        );
+      }
+
+      const dbUser = ensureSessionUserRecord(nextContext, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
+      state.backupCoordinator.start(nextContext);
+      rememberRecentDbPath(selected, einsatzMeta.id);
+      state.settingsStore.set({ dbPath: path.dirname(selected) });
+      return einsatzMeta;
+    } catch (error) {
+      try {
+        nextContext.sqlite.close();
+      } catch {
+        // ignore close errors on failed open flow
+      }
+      throw error;
+    }
   };
 
   ipcMain.handle(IPC_CHANNEL.GET_SESSION, wrap(async () => state.getSessionUser()));
