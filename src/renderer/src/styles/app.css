@@ -191,7 +191,7 @@ textarea {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 16px;
+  padding: 8px 14px;
   background: linear-gradient(90deg, var(--thw-blue-dark), var(--thw-blue));
   color: #fff;
   border-bottom: 1px solid rgba(255, 255, 255, 0.18);
@@ -199,10 +199,10 @@ textarea {
 
 .topbar h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: 20px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   line-height: 1;
 }
 
@@ -231,9 +231,9 @@ textarea {
 
 .topbar-meta {
   display: flex;
-  gap: 20px;
+  gap: 14px;
   font-weight: 700;
-  font-size: 14px;
+  font-size: 12px;
   opacity: 0.95;
   align-items: center;
 }
@@ -241,18 +241,18 @@ textarea {
 .topbar-meta-item {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: 6px;
 }
 
 .topbar-meta-label {
-  font-size: 12px;
+  font-size: 11px;
   opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .topbar-meta-value {
-  font-size: clamp(56px, 6.4vw, 80px);
+  font-size: clamp(42px, 4.8vw, 62px);
   line-height: 1;
   letter-spacing: 0.01em;
 }
