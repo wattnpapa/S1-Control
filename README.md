@@ -21,9 +21,22 @@ S1-Control unterstützt dich bei der Lageführung im Einsatz:
 
 - Kein Cloud-Zwang, kein externer Server
 - Jeder Einsatz liegt in einer eigenen SQLite-Datei (`.s1control`)
+- Legacy-Dateien mit Endung `.sqlite` können weiterhin geöffnet werden
 - Mehrere Clients können dieselbe Einsatzdatei auf einem Share nutzen (WAL-Modus)
 - Automatische Backups alle 5 Minuten nach `<einsatz-verzeichnis>/backup`
 - Nur ein Client erstellt Backups (Lock-Mechanismus), um Konflikte zu vermeiden
+
+### Startbildschirm / Letzte Einsätze
+
+- Die letzten Einsätze werden auf dem Startbildschirm angezeigt
+- Sortierung: absteigend nach Zeitpunkt der letzten Nutzung (zuletzt geöffnet zuerst)
+- Die App merkt sich den zuletzt geöffneten Einsatz lokal in den Einstellungen
+
+### Dateiverknüpfung (`.s1control`)
+
+- Build-Pakete registrieren die Endung `.s1control` für S1-Control
+- Doppelklick auf eine `.s1control`-Datei öffnet die App und lädt den Einsatz direkt
+- Wird die App bereits ausgeführt, wird der Einsatz in der laufenden Instanz geöffnet
 
 ### Startmenü / Launcher
 
@@ -81,7 +94,8 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 ### CI/CD
 
 - Bei jedem Commit auf `main` baut GitHub Actions automatisch macOS-, Windows- und Linux-Artefakte.
-- Die Release-Tag/Versionskennung wird als NATO-Zeit ohne Zeitzonenangabe erzeugt: `DDHHMMmonYY`, z.B. `251530feb26`.
+- Die Release-Tag/Versionskennung wird in UTC erzeugt: `YYYY.MM.DD.HH.MM`, z.B. `2026.02.27.14.30`.
+- Zusätzlich wird für den Auto-Updater eine SemVer-kompatible Build-Version (`YYYY.M.D-H.M`) verwendet.
 - Workflow: `.github/workflows/build-main.yml`
 - macOS-Artefakte werden mit **Developer ID Application** signiert und notarisiert.
 - Benötigte GitHub Secrets für macOS-Signing/Notarisierung:
@@ -96,6 +110,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 - DB-Pfad ist als Einsatz-Verzeichnis konfigurierbar (Settings) oder per ENV:
   - `S1_DB_PATH=/pfad/zum/einsatz-verzeichnis`
 - Jeder Einsatz wird als eigene SQLite-Datei angelegt (atomar pro Einsatz, Endung `.s1control`)
+- Systemdatenbank im Einsatz-Verzeichnis: `_system.s1control`
 - Beim DB-Open werden gesetzt:
   - `PRAGMA journal_mode=WAL`
   - `PRAGMA synchronous=NORMAL`
