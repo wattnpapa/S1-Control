@@ -29,6 +29,7 @@ describe('client presence service', () => {
       expect(list).toHaveLength(1);
       expect(list[0]?.computerName).toBe('client-a');
       expect(list[0]?.ipAddress).toBe('10.10.10.5');
+      expect(typeof list[0]?.dbPath).toBe('string');
       expect(list[0]?.isSelf).toBe(true);
       expect(list[0]?.isMaster).toBe(true);
       expect(service.canWriteBackups()).toBe(true);
@@ -44,13 +45,14 @@ describe('client presence service', () => {
   it('cleans stale clients and elects new master after old one stops', () => {
     const ctx = createTestDb('s1-control-clients-');
     try {
-      const staleTs = new Date(Date.now() - 60_000).toISOString();
+      const staleTs = new Date(Date.now() - 5 * 60_000).toISOString();
       ctx.db
         .insert(activeClient)
         .values({
           clientId: 'stale-client',
           computerName: 'stale-host',
           ipAddress: '10.0.0.99',
+          dbPath: '/tmp/stale.s1control',
           lastSeen: staleTs,
           startedAt: staleTs,
           isMaster: false,
@@ -130,7 +132,7 @@ describe('client presence service', () => {
   it('ignores delete errors on shutdown and no-ops heartbeat without ctx', async () => {
     const service = new ClientPresenceService() as unknown as {
       stop: (removeEntry?: boolean) => void;
-      heartbeat: () => Promise<void>;
+      heartbeat: () => void;
       ctx: unknown;
       clientId: string;
     };
@@ -150,6 +152,6 @@ describe('client presence service', () => {
     expect(run).toHaveBeenCalledTimes(1);
 
     service.ctx = null;
-    await service.heartbeat();
+    service.heartbeat();
   });
 });

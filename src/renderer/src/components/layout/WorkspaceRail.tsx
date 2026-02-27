@@ -1,3 +1,5 @@
+import { faGear } from '@fortawesome/free-solid-svg-icons';
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { WorkspaceView } from '@renderer/types/ui';
 
 interface WorkspaceRailProps {
@@ -42,7 +44,7 @@ export function WorkspaceRail(props: WorkspaceRailProps): JSX.Element {
         title="Einstellungen"
         onClick={() => props.onSelect('einstellungen')}
       >
-        S
+        <FontAwesomeIcon icon={faGear} />
       </button>
     </aside>
   );

@@ -168,6 +168,7 @@ export interface ActiveClientInfo {
   clientId: string;
   computerName: string;
   ipAddress: string;
+  dbPath: string;
   lastSeen: string;
   isMaster: boolean;
   isSelf: boolean;

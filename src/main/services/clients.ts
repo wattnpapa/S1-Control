@@ -6,7 +6,8 @@ import type { DbContext } from '../db/connection';
 import { activeClient } from '../db/schema';
 
 const HEARTBEAT_MS = 5 * 1000;
-const STALE_MS = 30 * 1000;
+// A stricter 30s window causes false stale detection when client clocks drift.
+const STALE_MS = 2 * 60 * 1000;
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -42,9 +43,9 @@ export class ClientPresenceService {
   public start(ctx: DbContext): void {
     this.stop(true);
     this.ctx = ctx;
-    void this.heartbeat();
+    this.heartbeat();
     this.timer = setInterval(() => {
-      void this.heartbeat();
+      this.heartbeat();
     }, HEARTBEAT_MS);
   }
 
@@ -72,7 +73,7 @@ export class ClientPresenceService {
     if (!this.ctx) {
       return [];
     }
-    void this.heartbeat();
+    this.heartbeat();
     const rows = this.ctx.db
       .select()
       .from(activeClient)
@@ -83,13 +84,14 @@ export class ClientPresenceService {
       clientId: row.clientId,
       computerName: row.computerName,
       ipAddress: row.ipAddress,
+      dbPath: row.dbPath,
       lastSeen: row.lastSeen,
       isMaster: row.isMaster,
       isSelf: row.clientId === this.clientId,
     }));
   }
 
-  private async heartbeat(): Promise<void> {
+  private heartbeat(): void {
     if (!this.ctx) {
       return;
     }
@@ -107,6 +109,7 @@ export class ClientPresenceService {
           clientId: this.clientId,
           computerName,
           ipAddress,
+          dbPath: ctx.path,
           lastSeen: now,
           startedAt: this.startedAt,
           isMaster: false,
@@ -116,6 +119,7 @@ export class ClientPresenceService {
           set: {
             computerName,
             ipAddress,
+            dbPath: ctx.path,
             lastSeen: now,
           },
         })

@@ -37,6 +37,7 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
               <th>Rolle</th>
               <th>Computer</th>
               <th>IP-Adresse</th>
+              <th>DB-Pfad</th>
               <th>Zuletzt gesehen</th>
             </tr>
           </thead>
@@ -46,12 +47,13 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 <td>{client.isMaster ? 'MASTER' : 'STANDBY'}{client.isSelf ? ' (dieser Client)' : ''}</td>
                 <td>{client.computerName}</td>
                 <td>{client.ipAddress}</td>
+                <td>{client.dbPath || '-'}</td>
                 <td>{new Date(client.lastSeen).toLocaleTimeString('de-DE')}</td>
               </tr>
             ))}
             {props.activeClients.length === 0 && (
               <tr>
-                <td colSpan={4}>Keine aktiven Clients gefunden.</td>
+                <td colSpan={5}>Keine aktiven Clients gefunden.</td>
               </tr>
             )}
           </tbody>

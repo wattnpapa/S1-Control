@@ -1,0 +1,1 @@
+ALTER TABLE active_client ADD COLUMN db_path TEXT NOT NULL DEFAULT '';

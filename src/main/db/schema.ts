@@ -153,6 +153,7 @@ export const activeClient = sqliteTable('active_client', {
   clientId: text('client_id').primaryKey(),
   computerName: text('computer_name').notNull(),
   ipAddress: text('ip_address').notNull(),
+  dbPath: text('db_path').notNull().default(''),
   lastSeen: text('last_seen').notNull(),
   startedAt: text('started_at').notNull(),
   isMaster: integer('is_master', { mode: 'boolean' }).notNull().default(false),
