@@ -4,6 +4,8 @@ import path from 'node:path';
 interface SettingsFile {
   dbPath?: string;
   recentEinsatzDbPaths?: string[];
+  recentEinsatzUsageByPath?: Record<string, string>;
+  lastOpenedEinsatzId?: string;
 }
 
 export class SettingsStore {

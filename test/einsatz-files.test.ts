@@ -7,6 +7,7 @@ import {
   createEinsatzInOwnDatabase,
   findDbPathForEinsatz,
   listEinsaetzeFromDbPaths,
+  listEinsaetzeFromDbPathsWithUsage,
   listEinsaetzeFromDirectory,
   resolveEinsatzBaseDir,
   resolveSystemDbPath,
@@ -58,6 +59,27 @@ describe('einsatz file service', () => {
       expect(list[0]?.dbPath).toBe(explicitPath);
     } finally {
       created.ctx.sqlite.close();
+    }
+  });
+
+  it('sorts known einsaetze by last usage descending', () => {
+    const baseDir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-einsatz-files-'));
+    const user = { id: 'u1', name: 'u', rolle: 'S1' as const };
+    const firstPath = path.join(baseDir, 'a.s1control');
+    const secondPath = path.join(baseDir, 'b.s1control');
+    const first = createEinsatzInOwnDatabase(baseDir, { name: 'Erster', fuestName: 'FüSt 1' }, user, firstPath);
+    const second = createEinsatzInOwnDatabase(baseDir, { name: 'Zweiter', fuestName: 'FüSt 2' }, user, secondPath);
+
+    try {
+      const sorted = listEinsaetzeFromDbPathsWithUsage([firstPath, secondPath], {
+        [firstPath]: '2026-02-26T10:00:00.000Z',
+        [secondPath]: '2026-02-26T11:00:00.000Z',
+      });
+      expect(sorted[0]?.id).toBe(second.einsatz.id);
+      expect(sorted[1]?.id).toBe(first.einsatz.id);
+    } finally {
+      first.ctx.sqlite.close();
+      second.ctx.sqlite.close();
     }
   });
 });

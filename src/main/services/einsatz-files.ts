@@ -81,6 +81,13 @@ export function listEinsaetzeFromDirectory(baseDir: string): EinsatzListItem[] {
 }
 
 export function listEinsaetzeFromDbPaths(dbPaths: string[]): EinsatzListItem[] {
+  return listEinsaetzeFromDbPathsWithUsage(dbPaths);
+}
+
+export function listEinsaetzeFromDbPathsWithUsage(
+  dbPaths: string[],
+  usageByPath?: Record<string, string>,
+): EinsatzListItem[] {
   const rows: EinsatzListItem[] = [];
   for (const dbPath of dbPaths) {
     const primary = readPrimaryEinsatzFromDbFile(dbPath);
@@ -89,7 +96,20 @@ export function listEinsaetzeFromDbPaths(dbPaths: string[]): EinsatzListItem[] {
     }
     rows.push({ ...primary, dbPath });
   }
-  return rows.sort((a, b) => b.start.localeCompare(a.start));
+  return rows.sort((a, b) => {
+    const aUsage = a.dbPath ? usageByPath?.[a.dbPath] : undefined;
+    const bUsage = b.dbPath ? usageByPath?.[b.dbPath] : undefined;
+    if (aUsage && bUsage) {
+      return bUsage.localeCompare(aUsage);
+    }
+    if (aUsage) {
+      return -1;
+    }
+    if (bUsage) {
+      return 1;
+    }
+    return b.start.localeCompare(a.start);
+  });
 }
 
 export function findDbPathForEinsatz(baseDir: string, einsatzId: string): string | null {

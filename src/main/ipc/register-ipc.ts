@@ -13,7 +13,7 @@ import { toSafeError } from '../services/errors';
 import {
   createEinsatzDbFileName,
   createEinsatzInOwnDatabase,
-  listEinsaetzeFromDbPaths,
+  listEinsaetzeFromDbPathsWithUsage,
   readPrimaryEinsatzFromDbFile,
   resolveEinsatzBaseDir,
   resolveSystemDbPath,
@@ -84,15 +84,24 @@ export function registerIpc(state: AppState): void {
 
   const getBaseDir = (): string => resolveEinsatzBaseDir(state.settingsStore.get().dbPath ?? state.getDefaultDbPath());
   const getRecentDbPaths = (): string[] => state.settingsStore.get().recentEinsatzDbPaths ?? [];
+  const getUsageByPath = (): Record<string, string> => state.settingsStore.get().recentEinsatzUsageByPath ?? {};
 
   const persistRecentDbPaths = (dbPaths: string[]): void => {
     const unique = Array.from(new Set(dbPaths)).slice(0, 5);
     state.settingsStore.set({ recentEinsatzDbPaths: unique });
   };
 
-  const rememberRecentDbPath = (dbPath: string): void => {
+  const rememberRecentDbPath = (dbPath: string, einsatzId?: string): void => {
     const next = [dbPath, ...getRecentDbPaths().filter((item) => item !== dbPath)];
     persistRecentDbPaths(next);
+    const nextUsage = {
+      ...getUsageByPath(),
+      [dbPath]: new Date().toISOString(),
+    };
+    state.settingsStore.set({
+      recentEinsatzUsageByPath: nextUsage,
+      lastOpenedEinsatzId: einsatzId,
+    });
   };
 
   const getValidRecentDbPaths = (): string[] => {
@@ -105,6 +114,14 @@ export function registerIpc(state: AppState): void {
     }
     if (valid.length !== getRecentDbPaths().length) {
       persistRecentDbPaths(valid);
+      const usage = getUsageByPath();
+      const nextUsage: Record<string, string> = {};
+      for (const dbPath of valid) {
+        if (usage[dbPath]) {
+          nextUsage[dbPath] = usage[dbPath];
+        }
+      }
+      state.settingsStore.set({ recentEinsatzUsageByPath: nextUsage });
     }
     return valid;
   };
@@ -132,7 +149,7 @@ export function registerIpc(state: AppState): void {
     state.setDbContext(nextContext);
     state.clientPresence.start(nextContext);
     state.backupCoordinator.start(nextContext);
-    rememberRecentDbPath(selected);
+    rememberRecentDbPath(selected, einsatzMeta.id);
     state.settingsStore.set({ dbPath: path.dirname(selected) });
     return einsatzMeta;
   };
@@ -181,7 +198,7 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.LIST_EINSAETZE,
     wrap(async () => {
-      return listEinsaetzeFromDbPaths(getValidRecentDbPaths());
+      return listEinsaetzeFromDbPathsWithUsage(getValidRecentDbPaths(), getUsageByPath());
     }),
   );
 
@@ -200,7 +217,7 @@ export function registerIpc(state: AppState): void {
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
       state.backupCoordinator.start(nextContext);
-      rememberRecentDbPath(dbPath);
+      rememberRecentDbPath(dbPath, einsatzId);
       return true;
     }),
   );
@@ -251,6 +268,9 @@ export function registerIpc(state: AppState): void {
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
       state.backupCoordinator.start(created.ctx);
+      if (created.einsatz.dbPath) {
+        rememberRecentDbPath(created.einsatz.dbPath, created.einsatz.id);
+      }
       return created.einsatz;
     }),
   );
@@ -284,7 +304,7 @@ export function registerIpc(state: AppState): void {
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
       state.backupCoordinator.start(created.ctx);
-      rememberRecentDbPath(normalized);
+      rememberRecentDbPath(normalized, created.einsatz.id);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
       return created.einsatz;
     }),
