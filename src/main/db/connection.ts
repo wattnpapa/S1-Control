@@ -23,13 +23,19 @@ function openDatabase(dbPath: string): DbContext {
   fs.mkdirSync(dir, { recursive: true });
   fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
 
-  // SMB shares can report directory existence before the file handle is fully ready.
-  // Touching the target file first reduces "unable to open database file" races.
-  const fd = fs.openSync(dbPath, 'a');
-  fs.closeSync(fd);
-  fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+  const fileExists = fs.existsSync(dbPath);
+  if (fileExists) {
+    // For existing files (especially on SMB), avoid touching content and enforce "must exist".
+    fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+  } else {
+    // SMB shares can report directory existence before the file handle is fully ready.
+    // Touching the target file first reduces create/open races.
+    const fd = fs.openSync(dbPath, 'a');
+    fs.closeSync(fd);
+    fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
+  }
 
-  const sqlite = new Database(dbPath);
+  const sqlite = new Database(dbPath, fileExists ? { fileMustExist: true } : undefined);
   applyPragmas(sqlite);
 
   const migrationsDir = resolveMigrationsDir();
@@ -76,5 +82,9 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
   }
 
   const reason = lastError instanceof Error ? lastError.message : String(lastError);
-  throw new Error(`Datenbank konnte nicht geöffnet werden (${dbPath}): ${reason}`);
+  const normalized = dbPath.toLowerCase();
+  const shareHint = normalized.startsWith('/volumes/')
+    ? ' Hinweis: SMB-Share muss fuer beide Clients mit Lese/Schreibrechten gemountet sein.'
+    : '';
+  throw new Error(`Datenbank konnte nicht geöffnet werden (${dbPath}): ${reason}${shareHint}`);
 }
