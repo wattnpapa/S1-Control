@@ -44,10 +44,16 @@ interface PendingQuery {
   timer: NodeJS.Timeout;
 }
 
+/**
+ * Handles Now Iso.
+ */
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Handles Parse Wire.
+ */
 function parseWire(input: Buffer): WireMessage | null {
   try {
     const parsed = JSON.parse(input.toString('utf8')) as WireMessage;
@@ -60,6 +66,9 @@ function parseWire(input: Buffer): WireMessage | null {
   }
 }
 
+/**
+ * Handles Detect Primary Ip.
+ */
 function detectPrimaryIp(): string {
   const interfaces = os.networkInterfaces();
   for (const entries of Object.values(interfaces)) {
@@ -72,6 +81,9 @@ function detectPrimaryIp(): string {
   return '127.0.0.1';
 }
 
+/**
+ * Handles Sha512 File.
+ */
 function sha512File(filePath: string): string {
   const hash = crypto.createHash('sha512');
   const file = fs.readFileSync(filePath);
@@ -79,6 +91,9 @@ function sha512File(filePath: string): string {
   return hash.digest('base64');
 }
 
+/**
+ * Handles Select Best Offer Internal.
+ */
 function selectBestOfferInternal(offers: PeerOffer[]): PeerOffer[] {
   return [...offers].sort((a, b) => {
     const tA = Date.parse(a.freshnessTs);
@@ -91,10 +106,16 @@ function selectBestOfferInternal(offers: PeerOffer[]): PeerOffer[] {
   });
 }
 
+/**
+ * Handles Select Best Offers.
+ */
 export function selectBestOffers(offers: PeerOffer[]): PeerOffer[] {
   return selectBestOfferInternal(offers);
 }
 
+/**
+ * Handles Decode Peer Message.
+ */
 export function decodePeerMessage(input: Buffer): WireMessage | null {
   return parseWire(input);
 }
@@ -122,11 +143,17 @@ export class UpdatePeerService {
 
   private lastTransfer: PeerTransferStats | null = null;
 
+  /**
+   * Creates an instance of this class.
+   */
   public constructor(cacheDir: string, enabled: boolean) {
     this.cacheDir = cacheDir;
     this.enabled = enabled;
   }
 
+  /**
+   * Handles Get Status.
+   */
   public getStatus(): PeerUpdateStatus {
     return {
       enabled: this.enabled,
@@ -138,6 +165,9 @@ export class UpdatePeerService {
     };
   }
 
+  /**
+   * Handles Start Peer Services.
+   */
   public startPeerServices(): void {
     if (!this.enabled || this.socket) {
       return;
@@ -162,6 +192,9 @@ export class UpdatePeerService {
     });
   }
 
+  /**
+   * Handles Stop Peer Services.
+   */
   public stopPeerServices(): void {
     for (const pending of this.pendingQueries.values()) {
       clearTimeout(pending.timer);
@@ -175,6 +208,9 @@ export class UpdatePeerService {
     this.httpPort = null;
   }
 
+  /**
+   * Handles Announce Local Artifacts.
+   */
   public announceLocalArtifacts(artifacts: PeerArtifact[]): void {
     for (const artifact of artifacts) {
       if (!fs.existsSync(artifact.filePath)) {
@@ -188,6 +224,9 @@ export class UpdatePeerService {
     });
   }
 
+  /**
+   * Handles Query Peers For Version.
+   */
   public async queryPeersForVersion(query: PeerQuery): Promise<PeerOffer[]> {
     if (!this.enabled || !this.socket || !this.httpPort) {
       return [];
@@ -348,10 +387,16 @@ export class UpdatePeerService {
     });
   }
 
+  /**
+   * Handles Verify File Sha512.
+   */
   public static verifyFileSha512(filePath: string, expected: string): boolean {
     return sha512File(filePath) === expected;
   }
 
+  /**
+   * Handles Handle Http.
+   */
   private handleHttp(req: http.IncomingMessage, res: http.ServerResponse): void {
     const requestUrl = req.url ? decodeURIComponent(req.url) : '/';
     const artifactName = requestUrl.replace(/^\/update\//, '');
@@ -389,6 +434,9 @@ export class UpdatePeerService {
     stream.pipe(res);
   }
 
+  /**
+   * Handles Handle Udp.
+   */
   private handleUdp(msg: Buffer, sourceHost: string, sourcePort: number): void {
     const parsed = parseWire(msg);
     if (!parsed) return;
@@ -417,6 +465,9 @@ export class UpdatePeerService {
     });
   }
 
+  /**
+   * Handles Handle Udp Query.
+   */
   private handleUdpQuery(query: PeerQuery, sourceHost: string, sourcePort: number): void {
     if (!this.socket || !this.httpPort) {
       return;

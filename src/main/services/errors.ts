@@ -1,12 +1,18 @@
 export class AppError extends Error {
   public readonly code: string;
 
+  /**
+   * Creates an instance of this class.
+   */
   public constructor(message: string, code = 'APP_ERROR') {
     super(message);
     this.code = code;
   }
 }
 
+/**
+ * Handles To Safe Error.
+ */
 export function toSafeError(error: unknown): { message: string; code?: string } {
   if (error instanceof AppError) {
     return { message: error.message, code: error.code };

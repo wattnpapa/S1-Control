@@ -12,6 +12,9 @@ interface SettingsViewProps {
   onRestoreBackup: () => void;
 }
 
+/**
+ * Handles Settings View.
+ */
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   return (
     <div className="export-panel settings-panel">

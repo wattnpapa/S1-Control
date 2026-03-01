@@ -11,6 +11,9 @@ interface MoveDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Move Dialog.
+ */
 export function MoveDialog(props: MoveDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

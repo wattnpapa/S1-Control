@@ -11,6 +11,9 @@ interface TopbarProps {
   busy: boolean;
 }
 
+/**
+ * Handles Topbar.
+ */
 export function Topbar(props: TopbarProps): JSX.Element {
   return (
     <header className="topbar">

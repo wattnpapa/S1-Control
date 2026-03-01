@@ -12,6 +12,9 @@ import type { SessionUser } from '../../shared/types';
 import { AppError } from './errors';
 import { ensureNotArchived } from './einsatz';
 
+/**
+ * Handles Now Iso.
+ */
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -29,6 +32,9 @@ interface MoveFahrzeugPayload {
   nachAbschnittId: string;
 }
 
+/**
+ * Handles Move Einheit.
+ */
 export function moveEinheit(
   ctx: DbContext,
   input: { einsatzId: string; einheitId: string; nachAbschnittId: string; kommentar?: string },
@@ -89,6 +95,9 @@ export function moveEinheit(
   });
 }
 
+/**
+ * Handles Move Fahrzeug.
+ */
 export function moveFahrzeug(
   ctx: DbContext,
   input: { einsatzId: string; fahrzeugId: string; nachAbschnittId: string },
@@ -151,6 +160,9 @@ export function moveFahrzeug(
   });
 }
 
+/**
+ * Handles Undo Last Command.
+ */
 export function undoLastCommand(ctx: DbContext, einsatzId: string, user: SessionUser): boolean {
   ensureNotArchived(ctx, einsatzId);
 

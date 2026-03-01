@@ -12,6 +12,9 @@ const SCRYPT_PARAMS = {
   keylen: 64,
 };
 
+/**
+ * Handles Hash Password.
+ */
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto
@@ -25,6 +28,9 @@ export function hashPassword(password: string): string {
   return `scrypt$${salt}$${hash}`;
 }
 
+/**
+ * Handles Verify Password.
+ */
 export function verifyPassword(password: string, stored: string): boolean {
   const [algo, salt, hash] = stored.split('$');
   if (algo !== 'scrypt' || !salt || !hash) {
@@ -42,6 +48,9 @@ export function verifyPassword(password: string, stored: string): boolean {
   return crypto.timingSafeEqual(Buffer.from(calculated, 'hex'), Buffer.from(hash, 'hex'));
 }
 
+/**
+ * Handles Ensure Default Admin.
+ */
 export function ensureDefaultAdmin(ctx: DbContext): void {
   const existing = ctx.db.select().from(benutzer).where(eq(benutzer.name, 'admin')).get();
   if (existing) {
@@ -57,6 +66,9 @@ export function ensureDefaultAdmin(ctx: DbContext): void {
   }).run();
 }
 
+/**
+ * Handles Login.
+ */
 export function login(ctx: DbContext, name: string, passwort: string): SessionUser {
   const row = ctx.db.select().from(benutzer).where(eq(benutzer.name, name)).get();
 
@@ -75,6 +87,9 @@ export function login(ctx: DbContext, name: string, passwort: string): SessionUs
   };
 }
 
+/**
+ * Handles Ensure Session User Record.
+ */
 export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): SessionUser {
   const existingById = ctx.db.select().from(benutzer).where(eq(benutzer.id, user.id)).get();
   if (existingById) {

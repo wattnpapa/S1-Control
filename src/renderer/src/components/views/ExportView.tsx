@@ -8,6 +8,9 @@ interface ExportViewProps {
   onExport: () => void;
 }
 
+/**
+ * Handles Export View.
+ */
 export function ExportView(props: ExportViewProps): JSX.Element {
   return (
     <div className="export-panel">

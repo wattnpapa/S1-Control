@@ -8,6 +8,9 @@ interface TaktischesZeichenPersonProps {
 
 const personCache = new Map<string, string>();
 
+/**
+ * Handles Taktisches Zeichen Person.
+ */
 export function TaktischesZeichenPerson(props: TaktischesZeichenPersonProps): JSX.Element {
   const cacheKey = `${props.organisation}:${props.rolle}`;
   const [src, setSrc] = useState<string>(personCache.get(cacheKey) ?? '');

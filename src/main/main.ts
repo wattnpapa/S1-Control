@@ -16,11 +16,17 @@ import { IPC_CHANNEL } from '../shared/ipc';
 const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
 let pendingOpenFilePath: string | null = null;
 
+/**
+ * Handles Is Einsatz File Path.
+ */
 function isEinsatzFilePath(filePath: string): boolean {
   const lower = filePath.toLowerCase();
   return EINSATZ_FILE_EXTENSIONS.some((ext) => lower.endsWith(ext));
 }
 
+/**
+ * Handles Set Pending Open File Path.
+ */
 function setPendingOpenFilePath(filePath: string): void {
   if (!isEinsatzFilePath(filePath)) {
     return;
@@ -31,12 +37,18 @@ function setPendingOpenFilePath(filePath: string): void {
   }
 }
 
+/**
+ * Handles Consume Pending Open File Path.
+ */
 function consumePendingOpenFilePath(): string | null {
   const next = pendingOpenFilePath;
   pendingOpenFilePath = null;
   return next;
 }
 
+/**
+ * Handles Find Open File Path In Argv.
+ */
 function findOpenFilePathInArgv(argv: string[]): string | null {
   for (const arg of argv) {
     if (isEinsatzFilePath(arg)) {
@@ -46,6 +58,9 @@ function findOpenFilePathInArgv(argv: string[]): string | null {
   return null;
 }
 
+/**
+ * Handles To Build Version.
+ */
 function toBuildVersion(date: Date): string {
   const year = date.getUTCFullYear();
   const month = String(date.getUTCMonth() + 1).padStart(2, '0');
@@ -55,6 +70,9 @@ function toBuildVersion(date: Date): string {
   return `${year}.${month}.${day}.${hour}.${minute}`;
 }
 
+/**
+ * Handles From Semver To Build Version.
+ */
 function fromSemverToBuildVersion(value: string): string | null {
   const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(value.trim());
   if (!match) {
@@ -64,6 +82,9 @@ function fromSemverToBuildVersion(value: string): string | null {
   return `${year}.${month.padStart(2, '0')}.${day.padStart(2, '0')}.${hour.padStart(2, '0')}.${minute.padStart(2, '0')}`;
 }
 
+/**
+ * Handles Resolve App Version Label.
+ */
 function resolveAppVersionLabel(): string {
   const envVersion = process.env.S1_APP_VERSION;
   if (envVersion) {
@@ -80,10 +101,16 @@ function resolveAppVersionLabel(): string {
   return toBuildVersion(new Date());
 }
 
+/**
+ * Handles With Version.
+ */
 function withVersion(details: string): string {
   return `Version: ${resolveAppVersionLabel()}\n\n${details}`;
 }
 
+/**
+ * Handles Resolve Renderer Url.
+ */
 function resolveRendererUrl(): string {
   const devServer = process.env.VITE_DEV_SERVER_URL;
   if (devServer) {
@@ -93,6 +120,9 @@ function resolveRendererUrl(): string {
   return `file://${path.join(__dirname, '../dist-renderer/index.html')}`;
 }
 
+/**
+ * Handles Bootstrap.
+ */
 async function bootstrap(): Promise<void> {
   const initialOpenFilePath = findOpenFilePathInArgv(process.argv.slice(1));
   if (initialOpenFilePath) {
@@ -148,6 +178,9 @@ async function bootstrap(): Promise<void> {
 
   let startupWarning: string | null = null;
 
+  /**
+   * Handles Open With Fallback.
+   */
   const openWithFallback = () => {
     try {
       return openDatabaseWithRetry(configuredSystemDbPath);

@@ -11,6 +11,9 @@ interface EditFahrzeugDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Edit Fahrzeug Dialog.
+ */
 export function EditFahrzeugDialog(props: EditFahrzeugDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

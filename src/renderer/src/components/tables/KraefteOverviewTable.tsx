@@ -12,6 +12,9 @@ interface KraefteOverviewTableProps {
   onEdit: (id: string) => void;
 }
 
+/**
+ * Handles Kraefte Overview Table.
+ */
 export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Element {
   const nameById = new Map(props.einheiten.map((e) => [e.id, e.nameImEinsatz]));
 

@@ -12,6 +12,9 @@ interface EinheitenTableProps {
   onEdit: (id: string) => void;
 }
 
+/**
+ * Handles Einheiten Table.
+ */
 export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
   const nameById = new Map(props.einheiten.map((e) => [e.id, e.nameImEinsatz]));
 

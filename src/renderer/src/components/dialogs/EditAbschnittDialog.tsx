@@ -12,6 +12,9 @@ interface EditAbschnittDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Edit Abschnitt Dialog.
+ */
 export function EditAbschnittDialog(props: EditAbschnittDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

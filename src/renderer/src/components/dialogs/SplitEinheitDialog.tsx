@@ -13,6 +13,9 @@ interface SplitEinheitDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Split Einheit Dialog.
+ */
 export function SplitEinheitDialog(props: SplitEinheitDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

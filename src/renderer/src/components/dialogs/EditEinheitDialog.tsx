@@ -12,6 +12,9 @@ interface EditEinheitDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Edit Einheit Dialog.
+ */
 export function EditEinheitDialog(props: EditEinheitDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

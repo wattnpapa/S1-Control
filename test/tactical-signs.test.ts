@@ -6,6 +6,9 @@ import {
 } from '../src/main/services/tactical-signs';
 import type { OrganisationKey } from '../src/shared/types';
 
+/**
+ * Handles Decode Svg.
+ */
 function decodeSvg(dataUrl: string): string {
   const payload = dataUrl.split(',')[1] ?? '';
   return Buffer.from(payload, 'base64').toString('utf8');

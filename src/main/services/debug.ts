@@ -4,6 +4,9 @@ const MAX_LOG_LINES = 400;
 const logLines: string[] = [];
 const listeners = new Set<DebugListener>();
 
+/**
+ * Handles Should Enable Debug.
+ */
 function shouldEnableDebug(): boolean {
   const value = process.env.S1_DEBUG_SYNC?.trim().toLowerCase();
   if (!value) {
@@ -14,6 +17,9 @@ function shouldEnableDebug(): boolean {
 
 const ENABLED = shouldEnableDebug();
 
+/**
+ * Handles Safe Json.
+ */
 function safeJson(meta: DebugMeta): string {
   if (!meta) {
     return '';
@@ -25,6 +31,9 @@ function safeJson(meta: DebugMeta): string {
   }
 }
 
+/**
+ * Handles Debug Sync.
+ */
 export function debugSync(scope: string, message: string, meta?: DebugMeta): void {
   if (!ENABLED) {
     return;
@@ -41,10 +50,16 @@ export function debugSync(scope: string, message: string, meta?: DebugMeta): voi
   }
 }
 
+/**
+ * Handles Get Debug Sync Log Lines.
+ */
 export function getDebugSyncLogLines(): string[] {
   return [...logLines];
 }
 
+/**
+ * Handles On Debug Sync Log.
+ */
 export function onDebugSyncLog(listener: DebugListener): () => void {
   listeners.add(listener);
   return () => {

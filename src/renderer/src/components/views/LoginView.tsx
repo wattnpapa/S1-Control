@@ -8,6 +8,9 @@ interface LoginViewProps {
   onLogin: () => void;
 }
 
+/**
+ * Handles Login View.
+ */
 export function LoginView(props: LoginViewProps): JSX.Element {
   return (
     <div className="login-page">

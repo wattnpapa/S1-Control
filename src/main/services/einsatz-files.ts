@@ -12,11 +12,17 @@ const LEGACY_EINSATZ_DB_EXT = '.sqlite';
 const SYSTEM_DB_NAME = `_system${EINSATZ_DB_EXT}`;
 const LEGACY_SYSTEM_DB_NAME = '_system.sqlite';
 
+/**
+ * Handles Is Einsatz Db File Name.
+ */
 function isEinsatzDbFileName(name: string): boolean {
   const lower = name.toLowerCase();
   return lower.endsWith(EINSATZ_DB_EXT) || lower.endsWith(LEGACY_EINSATZ_DB_EXT);
 }
 
+/**
+ * Handles Sanitize File Name.
+ */
 function sanitizeFileName(value: string): string {
   return value
     .toLowerCase()
@@ -25,11 +31,17 @@ function sanitizeFileName(value: string): string {
     .slice(0, 40) || 'einsatz';
 }
 
+/**
+ * Handles Create Einsatz Db File Name.
+ */
 export function createEinsatzDbFileName(einsatzName: string): string {
   const stamp = Date.now();
   return `${sanitizeFileName(einsatzName)}-${stamp}${EINSATZ_DB_EXT}`;
 }
 
+/**
+ * Handles Resolve Einsatz Base Dir.
+ */
 export function resolveEinsatzBaseDir(configuredPath: string): string {
   if (isEinsatzDbFileName(configuredPath)) {
     return path.dirname(configuredPath);
@@ -37,10 +49,16 @@ export function resolveEinsatzBaseDir(configuredPath: string): string {
   return configuredPath;
 }
 
+/**
+ * Handles Resolve System Db Path.
+ */
 export function resolveSystemDbPath(baseDir: string): string {
   return path.join(baseDir, SYSTEM_DB_NAME);
 }
 
+/**
+ * Handles List Einsatz Db Files.
+ */
 export function listEinsatzDbFiles(baseDir: string): string[] {
   if (!fs.existsSync(baseDir)) {
     return [];
@@ -52,6 +70,9 @@ export function listEinsatzDbFiles(baseDir: string): string[] {
     .map((name) => path.join(baseDir, name));
 }
 
+/**
+ * Handles Read Einsaetze From Db File.
+ */
 function readEinsaetzeFromDbFile(dbPath: string): Array<EinsatzListItem & { dbPath: string }> {
   let sqlite: Database.Database | null = null;
   try {
@@ -67,6 +88,9 @@ function readEinsaetzeFromDbFile(dbPath: string): Array<EinsatzListItem & { dbPa
   }
 }
 
+/**
+ * Handles Read Primary Einsatz From Db File.
+ */
 export function readPrimaryEinsatzFromDbFile(dbPath: string): EinsatzListItem | null {
   const rows = readEinsaetzeFromDbFile(dbPath);
   if (!rows.length) {
@@ -75,15 +99,24 @@ export function readPrimaryEinsatzFromDbFile(dbPath: string): EinsatzListItem | 
   return rows.sort((a, b) => b.start.localeCompare(a.start))[0] ?? null;
 }
 
+/**
+ * Handles List Einsaetze From Directory.
+ */
 export function listEinsaetzeFromDirectory(baseDir: string): EinsatzListItem[] {
   const rows = listEinsatzDbFiles(baseDir).flatMap((dbPath) => readEinsaetzeFromDbFile(dbPath));
   return rows.sort((a, b) => b.start.localeCompare(a.start));
 }
 
+/**
+ * Handles List Einsaetze From Db Paths.
+ */
 export function listEinsaetzeFromDbPaths(dbPaths: string[]): EinsatzListItem[] {
   return listEinsaetzeFromDbPathsWithUsage(dbPaths);
 }
 
+/**
+ * Handles List Einsaetze From Db Paths With Usage.
+ */
 export function listEinsaetzeFromDbPathsWithUsage(
   dbPaths: string[],
   usageByPath?: Record<string, string>,
@@ -112,6 +145,9 @@ export function listEinsaetzeFromDbPathsWithUsage(
   });
 }
 
+/**
+ * Handles Find Db Path For Einsatz.
+ */
 export function findDbPathForEinsatz(baseDir: string, einsatzId: string): string | null {
   for (const dbPath of listEinsatzDbFiles(baseDir)) {
     const rows = readEinsaetzeFromDbFile(dbPath);
@@ -122,6 +158,9 @@ export function findDbPathForEinsatz(baseDir: string, einsatzId: string): string
   return null;
 }
 
+/**
+ * Handles Create Einsatz In Own Database.
+ */
 export function createEinsatzInOwnDatabase(
   baseDir: string,
   input: CreateEinsatzInput,

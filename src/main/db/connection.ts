@@ -12,6 +12,9 @@ export interface DbContext {
   path: string;
 }
 
+/**
+ * Handles Apply Pragmas.
+ */
 function applyPragmas(sqlite: Database.Database): void {
   sqlite.pragma('journal_mode = WAL');
   sqlite.pragma('synchronous = NORMAL');
@@ -19,6 +22,9 @@ function applyPragmas(sqlite: Database.Database): void {
   sqlite.pragma('busy_timeout = 5000');
 }
 
+/**
+ * Handles Open Database.
+ */
 function openDatabase(dbPath: string): DbContext {
   const dir = path.dirname(dbPath);
   debugSync('db', 'open:start', { dbPath, dir });
@@ -48,6 +54,9 @@ function openDatabase(dbPath: string): DbContext {
   return { sqlite, db, path: dbPath };
 }
 
+/**
+ * Handles Resolve Migrations Dir.
+ */
 function resolveMigrationsDir(): string {
   const candidates = [
     // dist-electron and drizzle are siblings in dev and in packaged app.asar.
@@ -66,6 +75,9 @@ function resolveMigrationsDir(): string {
   return candidates[0]!;
 }
 
+/**
+ * Handles Open Database With Retry.
+ */
 export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt += 1) {

@@ -8,6 +8,9 @@ interface FuehrungsstrukturViewProps {
   kraefte: KraftOverviewItem[];
 }
 
+/**
+ * Handles Fuehrungsstruktur View.
+ */
 export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.Element {
   const byParent = new Map<string | null, AbschnittNode[]>();
   for (const abschnitt of props.abschnitte) {

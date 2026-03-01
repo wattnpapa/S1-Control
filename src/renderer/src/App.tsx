@@ -47,16 +47,25 @@ const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannsc
 const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
 const RELEASES_URL = 'https://github.com/wattnpapa/S1-Control/releases/latest';
 
+/**
+ * Handles Format Bytes To Mb.
+ */
 function formatBytesToMb(bytes?: number): string {
   if (!bytes || bytes < 0) return '-';
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+/**
+ * Handles Format Speed Mb.
+ */
 function formatSpeedMb(bytesPerSecond?: number): string {
   if (!bytesPerSecond || bytesPerSecond <= 0) return '-';
   return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
 }
 
+/**
+ * Handles Format Eta Seconds.
+ */
 function formatEtaSeconds(seconds?: number): string {
   if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return '-';
   const rounded = Math.max(1, Math.round(seconds));
@@ -68,6 +77,9 @@ function formatEtaSeconds(seconds?: number): string {
   return `${secs}s`;
 }
 
+/**
+ * Handles App.
+ */
 export function App() {
   const [session, setSession] = useState<SessionUser | null>(null);
   const [authReady, setAuthReady] = useState(false);
@@ -241,6 +253,9 @@ export function App() {
     </>
   );
 
+  /**
+   * Handles Render Updater Overlay.
+   */
   const renderUpdaterOverlay = () => {
     if (updaterState.stage === 'downloading') {
       return (
@@ -455,6 +470,9 @@ export function App() {
     if (!session || !selectedEinsatzId || activeView !== 'einstellungen') {
       return;
     }
+    /**
+     * Handles Load Clients.
+     */
     const loadClients = async () => {
       try {
         const [clients, settings, peerStatus] = await Promise.all([
@@ -525,6 +543,9 @@ export function App() {
     })();
   }, [activeView, session]);
 
+  /**
+   * Handles With Busy.
+   */
   const withBusy = async (fn: () => Promise<void>) => {
     setBusy(true);
     setError(null);
@@ -537,6 +558,9 @@ export function App() {
     }
   };
 
+  /**
+   * Handles Do Start Open Existing.
+   */
   const doStartOpenExisting = async () => {
     await withBusy(async () => {
       const opened = await window.api.openEinsatzWithDialog();
@@ -553,6 +577,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Start Open Known Einsatz.
+   */
   const doStartOpenKnownEinsatz = async (einsatzId: string) => {
     await withBusy(async () => {
       const opened = await window.api.openEinsatz(einsatzId);
@@ -565,6 +592,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Start Create Einsatz.
+   */
   const doStartCreateEinsatz = async () => {
     if (!startNewEinsatzName.trim()) {
       setError('Bitte Einsatzname eingeben.');
@@ -590,6 +620,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Create Einheit.
+   */
   const doCreateEinheit = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
     setShowEditEinheitDialog(false);
@@ -619,6 +652,9 @@ export function App() {
     setShowCreateEinheitDialog(true);
   };
 
+  /**
+   * Handles Do Create Abschnitt.
+   */
   const doCreateAbschnitt = () => {
     if (!selectedEinsatzId || isArchived) return;
     setCreateAbschnittForm({
@@ -629,6 +665,9 @@ export function App() {
     setShowCreateAbschnittDialog(true);
   };
 
+  /**
+   * Handles Do Edit Selected Abschnitt.
+   */
   const doEditSelectedAbschnitt = () => {
     if (!selectedAbschnittId || isArchived) return;
     const current = abschnitte.find((item) => item.id === selectedAbschnittId);
@@ -645,6 +684,9 @@ export function App() {
     setShowEditAbschnittDialog(true);
   };
 
+  /**
+   * Handles Do Submit Create Abschnitt.
+   */
   const doSubmitCreateAbschnitt = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!createAbschnittForm.name.trim()) {
@@ -663,6 +705,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Submit Edit Abschnitt.
+   */
   const doSubmitEditAbschnitt = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!editAbschnittForm.name.trim()) {
@@ -682,6 +727,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Submit Create Einheit.
+   */
   const doSubmitCreateEinheit = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!createEinheitForm.nameImEinsatz.trim()) {
@@ -733,6 +781,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Open Edit Einheit Dialog.
+   */
   const doOpenEditEinheitDialog = (einheitId: string) => {
     void (async () => {
     setShowCreateEinheitDialog(false);
@@ -771,6 +822,9 @@ export function App() {
     })().catch((err) => setError(readError(err)));
   };
 
+  /**
+   * Handles Do Submit Edit Einheit.
+   */
   const doSubmitEditEinheit = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!editEinheitForm.nameImEinsatz.trim()) {
@@ -880,6 +934,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Delete Einheit Helfer.
+   */
   const doDeleteEinheitHelfer = async (helferId: string) => {
     if (!selectedEinsatzId || isArchived) return;
     await withBusy(async () => {
@@ -952,6 +1009,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Create Fahrzeug.
+   */
   const doCreateFahrzeug = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
     if (allKraefte.length === 0) {
@@ -971,6 +1031,9 @@ export function App() {
     setShowCreateFahrzeugDialog(true);
   };
 
+  /**
+   * Handles Do Submit Create Fahrzeug.
+   */
   const doSubmitCreateFahrzeug = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!createFahrzeugForm.name.trim()) {
@@ -1002,6 +1065,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Open Edit Fahrzeug Dialog.
+   */
   const doOpenEditFahrzeugDialog = (fahrzeugId: string) => {
     const fahrzeug = allFahrzeuge.find((item) => item.id === fahrzeugId);
     if (!fahrzeug) {
@@ -1023,6 +1089,9 @@ export function App() {
     setShowEditFahrzeugDialog(true);
   };
 
+  /**
+   * Handles Do Submit Edit Fahrzeug.
+   */
   const doSubmitEditFahrzeug = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!editFahrzeugForm.name.trim()) {
@@ -1054,6 +1123,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Open Split Einheit Dialog.
+   */
   const doOpenSplitEinheitDialog = (sourceEinheitId: string) => {
     const source = allKraefte.find((e) => e.id === sourceEinheitId);
     setSplitEinheitForm({
@@ -1068,6 +1140,9 @@ export function App() {
     setShowSplitEinheitDialog(true);
   };
 
+  /**
+   * Handles Do Submit Split Einheit.
+   */
   const doSubmitSplitEinheit = async () => {
     if (!selectedEinsatzId || isArchived) return;
     if (!splitEinheitForm.sourceEinheitId) {
@@ -1103,6 +1178,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Save Db Path.
+   */
   const doSaveDbPath = async () => {
     await withBusy(async () => {
       await window.api.setDbPath(dbPath);
@@ -1112,6 +1190,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Restore Backup.
+   */
   const doRestoreBackup = async () => {
     if (!selectedEinsatzId) {
       setError('Bitte zuerst einen Einsatz auswählen.');
@@ -1130,6 +1211,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Move.
+   */
   const doMove = async () => {
     if (!moveDialog || !selectedEinsatzId || !moveTarget) return;
     await withBusy(async () => {
@@ -1152,18 +1236,27 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Download Update.
+   */
   const doDownloadUpdate = async () => {
     await withBusy(async () => {
       await window.api.downloadUpdate();
     });
   };
 
+  /**
+   * Handles Do Open Release Page.
+   */
   const doOpenReleasePage = async () => {
     await withBusy(async () => {
       await window.api.openExternalUrl(RELEASES_URL);
     });
   };
 
+  /**
+   * Handles Do Open Strength Display.
+   */
   const doOpenStrengthDisplay = async () => {
     await withBusy(async () => {
       await window.api.openStrengthDisplayWindow();
@@ -1173,6 +1266,9 @@ export function App() {
     });
   };
 
+  /**
+   * Handles Do Close Strength Display.
+   */
   const doCloseStrengthDisplay = async () => {
     await withBusy(async () => {
       await window.api.closeStrengthDisplayWindow();

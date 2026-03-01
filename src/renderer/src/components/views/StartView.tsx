@@ -16,6 +16,9 @@ interface StartViewProps {
   onCreate: () => void;
 }
 
+/**
+ * Handles Start View.
+ */
 export function StartView(props: StartViewProps): JSX.Element {
   return (
     <div className="login-page start-page">

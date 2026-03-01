@@ -22,15 +22,24 @@ import type {
 } from '../../shared/types';
 import { AppError } from './errors';
 
+/**
+ * Handles Now Iso.
+ */
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Handles Normalize Optional Text.
+ */
 function normalizeOptionalText(value?: string): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
 }
 
+/**
+ * Handles Parse Taktisch.
+ */
 function parseTaktisch(taktisch: string | null, fallbackGesamt: number): [number, number, number, number] {
   if (!taktisch) {
     const safe = Math.max(0, Math.round(fallbackGesamt));
@@ -48,11 +57,17 @@ function parseTaktisch(taktisch: string | null, fallbackGesamt: number): [number
   return [fuehrung, unterfuehrung, mannschaft, gesamt];
 }
 
+/**
+ * Handles Format Taktisch.
+ */
 function formatTaktisch(f: number, uf: number, m: number): string {
   const gesamt = f + uf + m;
   return `${f}/${uf}/${m}/${gesamt}`;
 }
 
+/**
+ * Handles Default Tactical Sign Config Json.
+ */
 function defaultTacticalSignConfigJson(
   organisation: EinheitListItem['organisation'],
   nameImEinsatz: string,
@@ -88,10 +103,16 @@ const ORGANISATIONS: OrganisationKey[] = [
   'SONSTIGE',
 ];
 
+/**
+ * Handles List Einsaetze.
+ */
 export function listEinsaetze(ctx: DbContext): EinsatzListItem[] {
   return ctx.db.select().from(einsatz).orderBy(desc(einsatz.start)).all();
 }
 
+/**
+ * Handles Create Einsatz.
+ */
 export function createEinsatz(ctx: DbContext, input: { name: string; fuestName: string }): EinsatzListItem {
   const created = {
     id: crypto.randomUUID(),
@@ -118,6 +139,9 @@ export function createEinsatz(ctx: DbContext, input: { name: string; fuestName: 
   return created;
 }
 
+/**
+ * Handles Archive Einsatz.
+ */
 export function archiveEinsatz(ctx: DbContext, einsatzId: string): void {
   const updated = ctx.db
     .update(einsatz)
@@ -130,6 +154,9 @@ export function archiveEinsatz(ctx: DbContext, einsatzId: string): void {
   }
 }
 
+/**
+ * Handles Ensure Not Archived.
+ */
 export function ensureNotArchived(ctx: DbContext, einsatzId: string): void {
   const row = ctx.db.select({ status: einsatz.status }).from(einsatz).where(eq(einsatz.id, einsatzId)).get();
   if (!row) {
@@ -140,6 +167,9 @@ export function ensureNotArchived(ctx: DbContext, einsatzId: string): void {
   }
 }
 
+/**
+ * Handles List Abschnitte.
+ */
 export function listAbschnitte(ctx: DbContext, einsatzId: string): AbschnittNode[] {
   return ctx.db
     .select()
@@ -148,6 +178,9 @@ export function listAbschnitte(ctx: DbContext, einsatzId: string): AbschnittNode
     .all();
 }
 
+/**
+ * Handles Create Abschnitt.
+ */
 export function createAbschnitt(
   ctx: DbContext,
   input: { einsatzId: string; name: string; parentId?: string | null; systemTyp: AbschnittNode['systemTyp'] },
@@ -166,6 +199,9 @@ export function createAbschnitt(
   return item;
 }
 
+/**
+ * Handles Validate Abschnitt Parent.
+ */
 function validateAbschnittParent(
   ctx: DbContext,
   input: { einsatzId: string; abschnittId: string; parentId: string | null },
@@ -200,6 +236,9 @@ function validateAbschnittParent(
   }
 }
 
+/**
+ * Handles Update Abschnitt.
+ */
 export function updateAbschnitt(
   ctx: DbContext,
   input: { einsatzId: string; abschnittId: string; name: string; parentId?: string | null; systemTyp: AbschnittNode['systemTyp'] },
@@ -232,6 +271,9 @@ export function updateAbschnitt(
     .run();
 }
 
+/**
+ * Handles List Abschnitt Details.
+ */
 export function listAbschnittDetails(
   ctx: DbContext,
   einsatzId: string,
@@ -307,6 +349,9 @@ export function listAbschnittDetails(
   return { einheiten, fahrzeuge };
 }
 
+/**
+ * Handles Create Einheit.
+ */
 export function createEinheit(
   ctx: DbContext,
   input: {
@@ -383,6 +428,9 @@ export function createEinheit(
   }).run();
 }
 
+/**
+ * Handles Update Einheit.
+ */
 export function updateEinheit(
   ctx: DbContext,
   input: {
@@ -465,6 +513,9 @@ export function updateEinheit(
     .run();
 }
 
+/**
+ * Handles Create Fahrzeug.
+ */
 export function createFahrzeug(
   ctx: DbContext,
   input: {
@@ -534,6 +585,9 @@ export function createFahrzeug(
   });
 }
 
+/**
+ * Handles List Einheit Helfer.
+ */
 export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHelfer[] {
   return ctx.db
     .select({
@@ -556,6 +610,9 @@ export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHel
     .all();
 }
 
+/**
+ * Handles Create Einheit Helfer.
+ */
 export function createEinheitHelfer(
   ctx: DbContext,
   input: {
@@ -609,6 +666,9 @@ export function createEinheitHelfer(
   }).run();
 }
 
+/**
+ * Handles Update Einheit Helfer.
+ */
 export function updateEinheitHelfer(
   ctx: DbContext,
   input: {
@@ -661,6 +721,9 @@ export function updateEinheitHelfer(
     .run();
 }
 
+/**
+ * Handles Delete Einheit Helfer.
+ */
 export function deleteEinheitHelfer(
   ctx: DbContext,
   input: { einsatzId: string; helferId: string },
@@ -675,6 +738,9 @@ export function deleteEinheitHelfer(
   }
 }
 
+/**
+ * Handles Update Fahrzeug.
+ */
 export function updateFahrzeug(
   ctx: DbContext,
   input: {
@@ -764,6 +830,9 @@ export function updateFahrzeug(
   });
 }
 
+/**
+ * Handles Split Einheit.
+ */
 export function splitEinheit(
   ctx: DbContext,
   input: {
@@ -848,6 +917,9 @@ export function splitEinheit(
   });
 }
 
+/**
+ * Handles Has Undoable Command.
+ */
 export function hasUndoableCommand(ctx: DbContext, einsatzId: string): boolean {
   const row = ctx.db
     .select({ id: einsatzCommandLog.id })

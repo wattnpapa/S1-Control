@@ -17,11 +17,17 @@ export const ORGANISATION_OPTIONS: Array<{ value: OrganisationKey; label: string
   { value: 'SONSTIGE', label: 'Sonstige' },
 ];
 
+/**
+ * Handles Pretty Organisation.
+ */
 export function prettyOrganisation(org: OrganisationKey): string {
   const found = ORGANISATION_OPTIONS.find((o) => o.value === org);
   return found?.label ?? org;
 }
 
+/**
+ * Handles Organisation Color.
+ */
 export function organisationColor(org: OrganisationKey): string {
   switch (org) {
     case 'THW':

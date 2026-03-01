@@ -12,6 +12,9 @@ interface CreateAbschnittDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Create Abschnitt Dialog.
+ */
 export function CreateAbschnittDialog(props: CreateAbschnittDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

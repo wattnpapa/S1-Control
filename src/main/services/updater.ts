@@ -23,6 +23,9 @@ interface UpdateArtifactMeta {
   size: number;
 }
 
+/**
+ * Handles Now Iso.
+ */
 function nowIso(): string {
   return new Date().toISOString();
 }
@@ -46,6 +49,9 @@ export class UpdaterService {
 
   private readonly notify: (state: UpdaterState) => void;
 
+  /**
+   * Creates an instance of this class.
+   */
   public constructor(notify: (state: UpdaterState) => void) {
     this.state.currentVersion = this.resolveDisplayVersion();
     this.notify = notify;
@@ -58,10 +64,16 @@ export class UpdaterService {
     this.configureAutoUpdater();
   }
 
+  /**
+   * Handles Get State.
+   */
   public getState(): UpdaterState {
     return this.state;
   }
 
+  /**
+   * Handles Get Peer Update Status.
+   */
   public getPeerUpdateStatus(): PeerUpdateStatus {
     return (
       this.peerService?.getStatus() ?? {
@@ -75,6 +87,9 @@ export class UpdaterService {
     );
   }
 
+  /**
+   * Handles Check For Updates.
+   */
   public async checkForUpdates(): Promise<void> {
     this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
     this.canDownloadInApp = false;
@@ -133,6 +148,9 @@ export class UpdaterService {
     }
   }
 
+  /**
+   * Handles Download Update.
+   */
   public async downloadUpdate(): Promise<void> {
     if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured() || !this.canDownloadInApp) {
       this.setState({
@@ -159,6 +177,9 @@ export class UpdaterService {
     await autoUpdater.downloadUpdate();
   }
 
+  /**
+   * Handles Install Downloaded Update.
+   */
   public installDownloadedUpdate(): void {
     if (!this.autoUpdaterEnabled || !this.isAutoUpdaterConfigured()) {
       return;
@@ -166,10 +187,16 @@ export class UpdaterService {
     autoUpdater.quitAndInstall();
   }
 
+  /**
+   * Handles Shutdown.
+   */
   public shutdown(): void {
     this.peerService?.stopPeerServices();
   }
 
+  /**
+   * Handles Configure Auto Updater.
+   */
   private configureAutoUpdater(): void {
     const hasCheckFn =
       typeof (autoUpdater as unknown as { checkForUpdates?: unknown }).checkForUpdates === 'function';
@@ -298,6 +325,9 @@ export class UpdaterService {
     }
   }
 
+  /**
+   * Handles Is Auto Updater Configured.
+   */
   private isAutoUpdaterConfigured(): boolean {
     const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
     if (!existsSync(updateConfigPath)) {
@@ -307,6 +337,9 @@ export class UpdaterService {
     return true;
   }
 
+  /**
+   * Handles Check Git Hub Release Version.
+   */
   private async checkGitHubReleaseVersion(reason: string): Promise<void> {
     const endpoint = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 
@@ -377,6 +410,9 @@ export class UpdaterService {
     }
   }
 
+  /**
+   * Handles Try Peer First Download.
+   */
   private async tryPeerFirstDownload(): Promise<boolean> {
     if (!this.peerService || !this.pendingArtifact) {
       return false;
@@ -452,6 +488,9 @@ export class UpdaterService {
     return false;
   }
 
+  /**
+   * Handles Download Via Local Feed.
+   */
   private async downloadViaLocalFeed(artifact: PeerArtifact): Promise<void> {
     if (!this.peerService) {
       throw new Error('Peer-Service nicht verfügbar');
@@ -527,14 +566,23 @@ export class UpdaterService {
     return null;
   }
 
+  /**
+   * Handles Normalize Version.
+   */
   private normalizeVersion(version: string): string {
     return version.trim().replace(/^v/i, '');
   }
 
+  /**
+   * Handles Is Semver Version.
+   */
   private isSemverVersion(version: string): boolean {
     return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/.test(version.trim());
   }
 
+  /**
+   * Handles Is Version Format Error.
+   */
   private isVersionFormatError(message: string): boolean {
     const lower = message.toLowerCase();
     return (
@@ -546,14 +594,23 @@ export class UpdaterService {
     );
   }
 
+  /**
+   * Handles Is Build Version.
+   */
   private isBuildVersion(version: string): boolean {
     return /^\d{4}\.\d{2}\.\d{2}\.\d{2}\.\d{2}$/.test(version.trim());
   }
 
+  /**
+   * Handles Is No Published Versions Error.
+   */
   private isNoPublishedVersionsError(message: string): boolean {
     return message.toLowerCase().includes('no published versions on github');
   }
 
+  /**
+   * Handles Compare Versions.
+   */
   private compareVersions(current: string, latest: string): number | null {
     if (this.isSemverVersion(current) && this.isSemverVersion(latest)) {
       return this.compareSemver(current, latest);
@@ -574,7 +631,13 @@ export class UpdaterService {
     return null;
   }
 
+  /**
+   * Handles Compare Semver.
+   */
   private compareSemver(current: string, latest: string): number {
+    /**
+     * Handles To Parts.
+     */
     const toParts = (value: string) =>
       value
         .split(/[.-]/)
@@ -593,6 +656,9 @@ export class UpdaterService {
     return 0;
   }
 
+  /**
+   * Handles Compare Build Versions.
+   */
   private compareBuildVersions(current: string, latest: string): number | null {
     const currentDate = this.parseBuildVersionDate(current);
     const latestDate = this.parseBuildVersionDate(latest);
@@ -604,6 +670,9 @@ export class UpdaterService {
     return 0;
   }
 
+  /**
+   * Handles Parse Build Version Date.
+   */
   private parseBuildVersionDate(version: string): number | null {
     const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(version.trim());
     if (!match) {
@@ -632,6 +701,9 @@ export class UpdaterService {
     return timestamp;
   }
 
+  /**
+   * Handles Parse Semver Date.
+   */
   private parseSemverDate(version: string): number | null {
     const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(version.trim());
     if (!match) {
@@ -649,6 +721,9 @@ export class UpdaterService {
     return timestamp;
   }
 
+  /**
+   * Handles Resolve Display Version.
+   */
   private resolveDisplayVersion(): string {
     const envVersion = process.env.S1_APP_VERSION?.trim();
     if (envVersion) {
@@ -657,6 +732,9 @@ export class UpdaterService {
     return this.toDisplayVersion(app.getVersion());
   }
 
+  /**
+   * Handles To Display Version.
+   */
   private toDisplayVersion(version: string): string {
     const normalized = this.normalizeVersion(version);
     const parsed = this.parseSemverDate(normalized);
@@ -672,6 +750,9 @@ export class UpdaterService {
     return `${year}.${month}.${day}.${hour}.${minute}`;
   }
 
+  /**
+   * Handles Is Offline Like Error.
+   */
   private isOfflineLikeError(message: string): boolean {
     const lower = message.toLowerCase();
     return (
@@ -686,6 +767,9 @@ export class UpdaterService {
     );
   }
 
+  /**
+   * Handles Set State.
+   */
   private setState(next: Partial<UpdaterState> & Pick<UpdaterState, 'stage'> | Partial<UpdaterState>): void {
     this.state = {
       ...this.state,

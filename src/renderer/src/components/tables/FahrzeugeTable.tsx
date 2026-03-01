@@ -10,6 +10,9 @@ interface FahrzeugeTableProps {
   onEdit: (id: string) => void;
 }
 
+/**
+ * Handles Fahrzeuge Table.
+ */
 export function FahrzeugeTable(props: FahrzeugeTableProps): JSX.Element {
   return (
     <>

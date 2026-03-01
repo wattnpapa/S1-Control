@@ -105,6 +105,9 @@ interface InlineCreateEinheitEditorProps {
   onCancel: () => void;
 }
 
+/**
+ * Handles Inline Einheit Editor.
+ */
 export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Element | null {
   const helferRows = props.helfer;
   const form = props.form;
@@ -685,6 +688,9 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   );
 }
 
+/**
+ * Handles Inline Create Einheit Editor.
+ */
 export function InlineCreateEinheitEditor(props: InlineCreateEinheitEditorProps): JSX.Element | null {
   if (!props.visible) {
     return null;
@@ -815,6 +821,9 @@ interface InlineFahrzeugEditorProps {
   onCancel: () => void;
 }
 
+/**
+ * Handles Inline Fahrzeug Editor.
+ */
 export function InlineFahrzeugEditor(props: InlineFahrzeugEditorProps): JSX.Element | null {
   if (!props.visible) {
     return null;

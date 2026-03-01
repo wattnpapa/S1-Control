@@ -10,14 +10,23 @@ const HEARTBEAT_MS = 5 * 1000;
 // A stricter 30s window causes false stale detection when client clocks drift.
 const STALE_MS = 2 * 60 * 1000;
 
+/**
+ * Handles Now Iso.
+ */
 function nowIso(): string {
   return new Date().toISOString();
 }
 
+/**
+ * Handles Stale Cutoff Iso.
+ */
 function staleCutoffIso(): string {
   return new Date(Date.now() - STALE_MS).toISOString();
 }
 
+/**
+ * Handles Detect Primary Ip.
+ */
 function detectPrimaryIp(): string {
   const interfaces = os.networkInterfaces();
   for (const entries of Object.values(interfaces)) {
@@ -41,6 +50,9 @@ export class ClientPresenceService {
 
   private isMaster = false;
 
+  /**
+   * Handles Start.
+   */
   public start(ctx: DbContext): void {
     this.stop(true);
     this.ctx = ctx;
@@ -51,6 +63,9 @@ export class ClientPresenceService {
     }, HEARTBEAT_MS);
   }
 
+  /**
+   * Handles Stop.
+   */
   public stop(removeEntry = true): void {
     if (this.timer) {
       clearInterval(this.timer);
@@ -68,10 +83,16 @@ export class ClientPresenceService {
     this.isMaster = false;
   }
 
+  /**
+   * Handles Can Write Backups.
+   */
   public canWriteBackups(): boolean {
     return this.isMaster;
   }
 
+  /**
+   * Handles List Active Clients.
+   */
   public listActiveClients(): ActiveClientInfo[] {
     if (!this.ctx) {
       return [];
@@ -99,6 +120,9 @@ export class ClientPresenceService {
     }));
   }
 
+  /**
+   * Handles Heartbeat.
+   */
   private heartbeat(): void {
     if (!this.ctx) {
       return;

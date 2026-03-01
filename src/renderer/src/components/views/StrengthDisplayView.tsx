@@ -4,6 +4,9 @@ import type { StrengthDisplayState } from '@shared/types';
 
 const DEFAULT_STATE: StrengthDisplayState = { taktischeStaerke: '0/0/0//0' };
 
+/**
+ * Handles Strength Display View.
+ */
 export function StrengthDisplayView(): JSX.Element {
   const [state, setState] = useState<StrengthDisplayState>(DEFAULT_STATE);
   const [now, setNow] = useState(new Date());
@@ -29,6 +32,9 @@ export function StrengthDisplayView(): JSX.Element {
   }, []);
 
   useEffect(() => {
+    /**
+     * Handles On Resize.
+     */
     const onResize = () => {
       setViewport({
         width: window.innerWidth,

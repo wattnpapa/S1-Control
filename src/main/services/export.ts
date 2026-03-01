@@ -12,6 +12,9 @@ import {
 } from '../db/schema';
 import { AppError } from './errors';
 
+/**
+ * Handles Escape Html.
+ */
 function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')
@@ -21,6 +24,9 @@ function escapeHtml(text: string): string {
     .replaceAll("'", '&#039;');
 }
 
+/**
+ * Handles To Csv Row.
+ */
 function toCsvRow(values: Array<string | number | null>): string {
   return values
     .map((value) => {
@@ -30,6 +36,9 @@ function toCsvRow(values: Array<string | number | null>): string {
     .join(';');
 }
 
+/**
+ * Handles Export Einsatzakte.
+ */
 export async function exportEinsatzakte(
   ctx: DbContext,
   einsatzId: string,

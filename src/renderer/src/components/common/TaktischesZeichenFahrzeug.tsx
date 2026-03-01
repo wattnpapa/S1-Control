@@ -7,6 +7,9 @@ interface TaktischesZeichenFahrzeugProps {
 
 const vehicleCache = new Map<OrganisationKey, string>();
 
+/**
+ * Handles Taktisches Zeichen Fahrzeug.
+ */
 export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps): JSX.Element {
   const organisation = props.organisation ?? 'SONSTIGE';
   const [src, setSrc] = useState<string>(vehicleCache.get(organisation) ?? '');

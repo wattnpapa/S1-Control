@@ -14,19 +14,31 @@ export class StrengthDisplayService {
 
   private readonly resolveRendererUrl: () => string;
 
+  /**
+   * Creates an instance of this class.
+   */
   public constructor(resolveRendererUrl: () => string) {
     this.resolveRendererUrl = resolveRendererUrl;
   }
 
+  /**
+   * Handles Get State.
+   */
   public getState(): StrengthDisplayState {
     return this.state;
   }
 
+  /**
+   * Handles Set State.
+   */
   public setState(next: StrengthDisplayState): void {
     this.state = next;
     this.pushState();
   }
 
+  /**
+   * Handles Open Window.
+   */
   public async openWindow(): Promise<void> {
     if (this.window && !this.window.isDestroyed()) {
       this.window.show();
@@ -68,6 +80,9 @@ export class StrengthDisplayService {
     await this.window.loadURL(url);
   }
 
+  /**
+   * Handles Close Window.
+   */
   public closeWindow(): void {
     if (this.window && !this.window.isDestroyed()) {
       this.window.close();
@@ -75,6 +90,9 @@ export class StrengthDisplayService {
     }
   }
 
+  /**
+   * Handles Push State.
+   */
   private pushState(): void {
     if (!this.window || this.window.isDestroyed()) {
       return;

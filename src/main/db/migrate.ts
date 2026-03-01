@@ -2,6 +2,9 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type Database from 'better-sqlite3';
 
+/**
+ * Handles Run Migrations.
+ */
 export function runMigrations(sqlite: Database.Database, migrationsDir: string): void {
   sqlite.exec(
     'CREATE TABLE IF NOT EXISTS __migrations (name TEXT PRIMARY KEY, applied_at TEXT NOT NULL)',

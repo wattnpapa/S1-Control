@@ -9,6 +9,9 @@ interface AbschnittSidebarProps {
   editDisabled?: boolean;
 }
 
+/**
+ * Handles Abschnitt Sidebar.
+ */
 export function AbschnittSidebar(props: AbschnittSidebarProps): JSX.Element {
   return (
     <aside className="sidebar">
@@ -24,6 +27,9 @@ export function AbschnittSidebar(props: AbschnittSidebarProps): JSX.Element {
   );
 }
 
+/**
+ * Handles Abschnitt Tree.
+ */
 function AbschnittTree(props: {
   nodes: AbschnittNode[];
   selectedId: string;

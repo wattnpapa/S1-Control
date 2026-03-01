@@ -60,6 +60,9 @@ interface AppState {
   setSessionUser: (user: SessionUser | null) => void;
 }
 
+/**
+ * Handles Register Ipc.
+ */
 export function registerIpc(state: AppState): void {
   const wrap = <T extends unknown[], R>(handler: (...args: T) => R | Promise<R>) => {
     return async (_event: Electron.IpcMainInvokeEvent, ...args: T): Promise<R> => {

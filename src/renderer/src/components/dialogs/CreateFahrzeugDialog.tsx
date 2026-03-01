@@ -11,6 +11,9 @@ interface CreateFahrzeugDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Create Fahrzeug Dialog.
+ */
 export function CreateFahrzeugDialog(props: CreateFahrzeugDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

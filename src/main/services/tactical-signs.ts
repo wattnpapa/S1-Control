@@ -38,6 +38,9 @@ const vehicleTemplate = Handlebars.compile(readFileSync(vehicleTemplatePath, 'ut
 const personTemplate = Handlebars.compile(readFileSync(personTemplatePath, 'utf8'));
 const cache = new Map<string, string>();
 
+/**
+ * Handles Organisation Short Name.
+ */
 function organisationShortName(organisation: OrganisationKey): string {
   switch (organisation) {
     case 'FEUERWEHR':
@@ -67,6 +70,9 @@ function organisationShortName(organisation: OrganisationKey): string {
   }
 }
 
+/**
+ * Handles Organisation Colors.
+ */
 function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 'color_primary' | 'color_text'> {
   switch (organisation) {
     case 'THW':
@@ -102,6 +108,9 @@ function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 
   }
 }
 
+/**
+ * Handles Normalize Type.
+ */
 function normalizeType(type: unknown): NonNullable<TacticalSignConfig['typ']> | 'none' {
   if (type === 'group' || type === 'squad' || type === 'zugtrupp') {
     return type;
@@ -110,6 +119,9 @@ function normalizeType(type: unknown): NonNullable<TacticalSignConfig['typ']> | 
   return 'none';
 }
 
+/**
+ * Handles Normalize Config.
+ */
 function normalizeConfig(config: TacticalSignConfig | null | undefined): TacticalSignConfig {
   if (!config) {
     return {};
@@ -117,10 +129,16 @@ function normalizeConfig(config: TacticalSignConfig | null | undefined): Tactica
   return config;
 }
 
+/**
+ * Handles Parse Config.
+ */
 function parseConfig(config: TacticalSignConfig | null): TacticalSignConfig {
   return normalizeConfig(config);
 }
 
+/**
+ * Handles Get Tactical Formation Svg Data Url.
+ */
 export function getTacticalFormationSvgDataUrl(
   organisation: OrganisationKey,
   tacticalSignConfig: TacticalSignConfig | null,
@@ -163,6 +181,9 @@ export function getTacticalFormationSvgDataUrl(
   return dataUrl;
 }
 
+/**
+ * Handles Get Tactical Vehicle Svg Data Url.
+ */
 export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey): string {
   const cacheKey = `vehicle:${organisation}`;
   const existing = cache.get(cacheKey);
@@ -185,6 +206,9 @@ export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey): str
   return dataUrl;
 }
 
+/**
+ * Handles Get Tactical Person Svg Data Url.
+ */
 export function getTacticalPersonSvgDataUrl(
   organisation: OrganisationKey,
   rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER',

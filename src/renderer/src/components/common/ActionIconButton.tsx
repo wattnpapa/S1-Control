@@ -8,6 +8,9 @@ interface ActionIconButtonProps {
   onClick: () => void;
 }
 
+/**
+ * Handles Action Icon Button.
+ */
 export function ActionIconButton(props: ActionIconButtonProps): JSX.Element {
   return (
     <button

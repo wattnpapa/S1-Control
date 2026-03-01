@@ -11,10 +11,16 @@ interface SettingsFile {
 export class SettingsStore {
   private readonly filePath: string;
 
+  /**
+   * Creates an instance of this class.
+   */
   public constructor(baseDir: string) {
     this.filePath = path.join(baseDir, 'settings.json');
   }
 
+  /**
+   * Handles Get.
+   */
   public get(): SettingsFile {
     try {
       const raw = fs.readFileSync(this.filePath, 'utf8');
@@ -24,6 +30,9 @@ export class SettingsStore {
     }
   }
 
+  /**
+   * Handles Set.
+   */
   public set(next: SettingsFile): void {
     const merged: SettingsFile = {
       ...this.get(),

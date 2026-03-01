@@ -5,6 +5,9 @@ import type { DbContext } from '../db/connection';
 const FIVE_MINUTES = 5 * 60 * 1000;
 const BACKUP_LOOP_MS = 10 * 1000;
 
+/**
+ * Handles Now Stamp.
+ */
 function nowStamp(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -16,6 +19,9 @@ function nowStamp(): string {
   return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
 }
 
+/**
+ * Handles Resolve Backup Dir.
+ */
 export function resolveBackupDir(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'backup');
 }
@@ -29,6 +35,9 @@ export class BackupCoordinator {
 
   constructor(private readonly canWriteBackup: () => boolean = () => true) {}
 
+  /**
+   * Handles Stop.
+   */
   public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
@@ -38,6 +47,9 @@ export class BackupCoordinator {
     this.lastBackupAt = 0;
   }
 
+  /**
+   * Handles Start.
+   */
   public start(ctx: DbContext): void {
     this.stop();
     this.activeDbPath = ctx.path;
@@ -48,6 +60,9 @@ export class BackupCoordinator {
     void this.runOnce(ctx);
   }
 
+  /**
+   * Handles Restore Backup.
+   */
   public async restoreBackup(dbPath: string, backupFilePath: string): Promise<void> {
     this.stop();
     const walPath = `${dbPath}-wal`;
@@ -61,6 +76,9 @@ export class BackupCoordinator {
     fs.copyFileSync(backupFilePath, dbPath);
   }
 
+  /**
+   * Handles Run Once.
+   */
   private async runOnce(ctx: DbContext): Promise<void> {
     if (this.activeDbPath !== ctx.path) {
       return;

@@ -14,6 +14,9 @@ interface EinsatzOverviewViewProps {
   onEditFahrzeug: (id: string) => void;
 }
 
+/**
+ * Handles Einsatz Overview View.
+ */
 export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Element {
   return (
     <>

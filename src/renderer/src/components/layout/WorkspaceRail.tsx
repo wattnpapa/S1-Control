@@ -7,6 +7,9 @@ interface WorkspaceRailProps {
   onSelect: (view: WorkspaceView) => void;
 }
 
+/**
+ * Handles Workspace Rail.
+ */
 export function WorkspaceRail(props: WorkspaceRailProps): JSX.Element {
   return (
     <aside className="workspace-rail">

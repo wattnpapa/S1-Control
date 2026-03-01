@@ -1,9 +1,15 @@
 import type { TacticalStrength } from '@renderer/types/ui';
 
+/**
+ * Handles To Taktische Staerke.
+ */
 export function toTaktischeStaerke(value: TacticalStrength): string {
   return `${value.fuehrung}/${value.unterfuehrung}/${value.mannschaft}/${value.gesamt}`;
 }
 
+/**
+ * Handles Parse Taktische Staerke.
+ */
 export function parseTaktischeStaerke(taktisch: string | null, fallbackGesamt: number): TacticalStrength {
   if (!taktisch) {
     const safe = Math.max(0, Math.round(fallbackGesamt));

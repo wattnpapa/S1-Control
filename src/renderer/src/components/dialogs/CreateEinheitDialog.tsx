@@ -13,6 +13,9 @@ interface CreateEinheitDialogProps {
   onClose: () => void;
 }
 
+/**
+ * Handles Create Einheit Dialog.
+ */
 export function CreateEinheitDialog(props: CreateEinheitDialogProps): JSX.Element | null {
   if (!props.visible) {
     return null;

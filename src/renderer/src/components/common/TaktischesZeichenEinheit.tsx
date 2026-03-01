@@ -9,6 +9,9 @@ interface TaktischesZeichenEinheitProps {
 
 const iconCache = new Map<string, string>();
 
+/**
+ * Handles Taktisches Zeichen Einheit.
+ */
 export function TaktischesZeichenEinheit(props: TaktischesZeichenEinheitProps): JSX.Element {
   const cacheKey = `${props.organisation}:${props.tacticalSignConfigJson ?? ''}`;
   const [src, setSrc] = useState<string>(iconCache.get(cacheKey) ?? '');
