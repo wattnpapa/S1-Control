@@ -443,7 +443,9 @@ export function App() {
     }
     const loadClients = async () => {
       try {
-        setActiveClients(await window.api.listActiveClients());
+        const [clients, settings] = await Promise.all([window.api.listActiveClients(), window.api.getSettings()]);
+        setActiveClients(clients);
+        setDbPath(settings.dbPath);
       } catch (err) {
         setError(readError(err));
       }

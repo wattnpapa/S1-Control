@@ -241,6 +241,7 @@ export function registerIpc(state: AppState): void {
       state.clientPresence.start(nextContext);
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(dbPath, einsatzId);
+      state.settingsStore.set({ dbPath: path.dirname(dbPath) });
       return true;
     }),
   );

@@ -13,7 +13,7 @@ interface SettingsViewProps {
 
 export function SettingsView(props: SettingsViewProps): JSX.Element {
   return (
-    <div className="export-panel">
+    <div className="export-panel settings-panel">
       <h2>Einstellungen</h2>
       <label>
         Einsatz-Verzeichnis

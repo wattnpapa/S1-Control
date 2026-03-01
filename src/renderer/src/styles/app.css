@@ -427,6 +427,11 @@ textarea {
   max-width: 680px;
 }
 
+.settings-panel {
+  width: min(1280px, 100%);
+  max-width: 100%;
+}
+
 .export-panel p {
   margin: 0;
 }
