@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import eslintConfigPrettier from 'eslint-config-prettier';
+import sonarjs from 'eslint-plugin-sonarjs';
 
 export default tseslint.config(
   {
@@ -11,6 +12,21 @@ export default tseslint.config(
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  {
+    files: ['**/*.{ts,tsx}'],
+    plugins: {
+      sonarjs,
+    },
+    rules: {
+      'max-lines': ['warn', { max: 400, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 80, skipBlankLines: true, skipComments: true }],
+      complexity: ['warn', 10],
+      'max-params': ['warn', 4],
+      'sonarjs/cognitive-complexity': ['warn', 15],
+      'sonarjs/max-switch-cases': ['warn', 10],
+      'sonarjs/no-identical-functions': 'warn',
+    },
+  },
   {
     files: ['src/renderer/src/**/*.{ts,tsx}'],
     languageOptions: {
