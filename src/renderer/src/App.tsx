@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { ActiveClientInfo, AbschnittDetails, EinsatzListItem, EinheitHelfer, OrganisationKey, SessionUser, UpdaterState } from '@shared/types';
+import type {
+  ActiveClientInfo,
+  AbschnittDetails,
+  EinsatzListItem,
+  EinheitHelfer,
+  OrganisationKey,
+  PeerUpdateStatus,
+  SessionUser,
+  UpdaterState,
+} from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
@@ -184,6 +193,7 @@ export function App() {
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
   const [now, setNow] = useState<Date>(new Date());
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
+  const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
 
   const selectedEinsatz = useMemo(
@@ -201,6 +211,10 @@ export function App() {
           <span>
             Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Quelle:{' '}
             {updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release'}.
+            {updaterState.downloadSource === 'peer-lan' && updaterState.peerHost
+              ? ` LAN-Peer: ${updaterState.peerHost}.`
+              : ''}
+            {updaterState.downloadSource === 'internet' ? ' Fallback: Internet.' : ''}
             {updaterState.message ? ` ${updaterState.message}` : ''}
           </span>
           <div className="update-actions">
@@ -443,9 +457,14 @@ export function App() {
     }
     const loadClients = async () => {
       try {
-        const [clients, settings] = await Promise.all([window.api.listActiveClients(), window.api.getSettings()]);
+        const [clients, settings, peerStatus] = await Promise.all([
+          window.api.listActiveClients(),
+          window.api.getSettings(),
+          window.api.getPeerUpdateStatus(),
+        ]);
         setActiveClients(clients);
         setDbPath(settings.dbPath);
+        setPeerUpdateStatus(peerStatus);
       } catch (err) {
         setError(readError(err));
       }
@@ -1436,6 +1455,7 @@ export function App() {
               dbPath={dbPath}
               selectedEinsatzId={selectedEinsatzId}
               activeClients={activeClients}
+              peerUpdateStatus={peerUpdateStatus}
               debugSyncLogs={debugSyncLogs}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}

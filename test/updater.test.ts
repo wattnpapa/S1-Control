@@ -4,6 +4,7 @@ const hoisted = vi.hoisted(() => {
   let appVersion = '2026.2.25-16.38';
   const appMock = {
     getVersion: vi.fn(() => appVersion),
+    getPath: vi.fn((name: string) => (name === 'userData' ? '/tmp/s1-test-userdata' : '/tmp')),
   };
   const existsSyncMock = vi.fn(() => false);
   const listeners = new Map<string, Array<(...args: unknown[]) => void>>();
@@ -49,9 +50,13 @@ vi.mock('electron-updater', () => ({
   autoUpdater: hoisted.autoUpdaterMock,
 }));
 
-vi.mock('node:fs', () => ({
-  existsSync: hoisted.existsSyncMock,
-}));
+vi.mock('node:fs', async () => {
+  const actual = await vi.importActual<typeof import('node:fs')>('node:fs');
+  return {
+    ...actual,
+    existsSync: hoisted.existsSyncMock,
+  };
+});
 
 import { UpdaterService } from '../src/main/services/updater';
 

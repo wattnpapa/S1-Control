@@ -157,6 +157,9 @@ export interface UpdaterState {
   source?: 'electron-updater' | 'github-release';
   inAppDownloadSupported?: boolean;
   inAppDownloadReason?: string;
+  downloadSource?: 'peer-lan' | 'internet';
+  peerHost?: string;
+  peerModeStage?: 'idle' | 'discovering' | 'downloading' | 'verifying' | 'fallback';
 }
 
 export interface ApiError {
@@ -172,4 +175,49 @@ export interface ActiveClientInfo {
   lastSeen: string;
   isMaster: boolean;
   isSelf: boolean;
+}
+
+export interface PeerOffer {
+  peerId: string;
+  host: string;
+  httpPort: number;
+  version: string;
+  artifactName: string;
+  sha512: string;
+  size: number;
+  freshnessTs: string;
+  rttMs?: number;
+}
+
+export interface PeerTransferStats {
+  direction: 'download' | 'upload';
+  peerId: string;
+  host: string;
+  artifactName: string;
+  bytes: number;
+  durationMs: number;
+  at: string;
+  ok: boolean;
+  reason?: string;
+}
+
+export interface PeerArtifact {
+  version: string;
+  platform: string;
+  arch: string;
+  channel: string;
+  artifactName: string;
+  sha512: string;
+  size: number;
+  filePath: string;
+  freshnessTs: string;
+}
+
+export interface PeerUpdateStatus {
+  enabled: boolean;
+  seederActive: boolean;
+  discoveryPort: number;
+  httpPort: number | null;
+  offeredArtifacts: PeerArtifact[];
+  lastTransfer: PeerTransferStats | null;
 }

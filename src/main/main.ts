@@ -244,12 +244,14 @@ async function bootstrap(): Promise<void> {
   app.on('window-all-closed', () => {
     backupCoordinator.stop();
     clientPresence.stop(true);
+    updater.shutdown();
     app.quit();
   });
 
   app.on('before-quit', () => {
     backupCoordinator.stop();
     clientPresence.stop(true);
+    updater.shutdown();
   });
 }
 

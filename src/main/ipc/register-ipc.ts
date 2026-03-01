@@ -549,6 +549,11 @@ export function registerIpc(state: AppState): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.GET_PEER_UPDATE_STATUS,
+    wrap(async () => state.updater.getPeerUpdateStatus()),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.CHECK_UPDATES,
     wrap(async () => {
       await state.updater.checkForUpdates();

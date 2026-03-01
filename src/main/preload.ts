@@ -37,6 +37,7 @@ const api: RendererApi = {
   restoreBackup: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.RESTORE_BACKUP, einsatzId),
   listActiveClients: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_ACTIVE_CLIENTS),
   getDebugSyncLogLines: () => ipcRenderer.invoke(IPC_CHANNEL.GET_DEBUG_SYNC_LOGS),
+  getPeerUpdateStatus: () => ipcRenderer.invoke(IPC_CHANNEL.GET_PEER_UPDATE_STATUS),
   getUpdaterState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_UPDATER_STATE),
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),

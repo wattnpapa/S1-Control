@@ -1,10 +1,11 @@
-import type { ActiveClientInfo } from '@shared/types';
+import type { ActiveClientInfo, PeerUpdateStatus } from '@shared/types';
 
 interface SettingsViewProps {
   busy: boolean;
   dbPath: string;
   selectedEinsatzId: string;
   activeClients: ActiveClientInfo[];
+  peerUpdateStatus: PeerUpdateStatus | null;
   debugSyncLogs: string[];
   onChangeDbPath: (value: string) => void;
   onSaveDbPath: () => void;
@@ -62,6 +63,40 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       ) : (
         <p>Client-Übersicht ist verfügbar, sobald ein Einsatz geöffnet ist.</p>
       )}
+
+      <h3>Peer Update Status</h3>
+      <table>
+        <tbody>
+          <tr>
+            <th>Feature</th>
+            <td>{props.peerUpdateStatus?.enabled ? 'Aktiv' : 'Inaktiv (S1_UPDATER_LAN_PEER=1 setzen)'}</td>
+          </tr>
+          <tr>
+            <th>Seeder</th>
+            <td>{props.peerUpdateStatus?.seederActive ? 'Ja' : 'Nein'}</td>
+          </tr>
+          <tr>
+            <th>Discovery Port</th>
+            <td>{props.peerUpdateStatus?.discoveryPort ?? '-'}</td>
+          </tr>
+          <tr>
+            <th>HTTP Port</th>
+            <td>{props.peerUpdateStatus?.httpPort ?? '-'}</td>
+          </tr>
+          <tr>
+            <th>Angebotene Artefakte</th>
+            <td>{props.peerUpdateStatus?.offeredArtifacts.length ?? 0}</td>
+          </tr>
+          <tr>
+            <th>Letzter Transfer</th>
+            <td>
+              {props.peerUpdateStatus?.lastTransfer
+                ? `${props.peerUpdateStatus.lastTransfer.direction.toUpperCase()} ${props.peerUpdateStatus.lastTransfer.artifactName} (${Math.round(props.peerUpdateStatus.lastTransfer.bytes / (1024 * 1024))} MB)`
+                : '-'}
+            </td>
+          </tr>
+        </tbody>
+      </table>
 
       <h3>Debug Sync Logs</h3>
       <div className="debug-log-panel">

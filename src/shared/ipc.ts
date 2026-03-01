@@ -11,6 +11,7 @@ import type {
   EinheitHelfer,
   UpdaterState,
   ActiveClientInfo,
+  PeerUpdateStatus,
 } from './types';
 
 export interface LoginInput {
@@ -201,6 +202,7 @@ export interface RendererApi {
   restoreBackup(einsatzId: string): Promise<boolean>;
   listActiveClients(): Promise<ActiveClientInfo[]>;
   getDebugSyncLogLines(): Promise<string[]>;
+  getPeerUpdateStatus(): Promise<PeerUpdateStatus>;
   getUpdaterState(): Promise<UpdaterState>;
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
@@ -259,6 +261,7 @@ export const IPC_CHANNEL = {
   LIST_ACTIVE_CLIENTS: 'clients:list-active',
   GET_DEBUG_SYNC_LOGS: 'debug:sync-logs:get',
   DEBUG_SYNC_LOG_ADDED: 'debug:sync-log:added',
+  GET_PEER_UPDATE_STATUS: 'updater:peer-status',
   GET_UPDATER_STATE: 'updater:get-state',
   CHECK_UPDATES: 'updater:check',
   DOWNLOAD_UPDATE: 'updater:download',

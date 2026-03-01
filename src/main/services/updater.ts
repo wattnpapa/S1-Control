@@ -1,12 +1,31 @@
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'node:fs';
+import os from 'node:os';
+import crypto from 'node:crypto';
 import path from 'node:path';
-import type { UpdaterState } from '../../shared/types';
+import type { PeerArtifact, PeerOffer, PeerUpdateStatus, UpdaterState } from '../../shared/types';
+import { debugSync } from './debug';
+import { UpdatePeerService, selectBestOffers } from './update-peer';
 
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
+const LAN_PEER_ENABLED = process.env.S1_UPDATER_LAN_PEER === '1';
+
+interface UpdateArtifactMeta {
+  version: string;
+  platform: string;
+  arch: string;
+  channel: string;
+  artifactName: string;
+  sha512: string;
+  size: number;
+}
+
+function nowIso(): string {
+  return new Date().toISOString();
+}
 
 export class UpdaterService {
   private state: UpdaterState = {
@@ -19,17 +38,41 @@ export class UpdaterService {
   private autoUpdaterEnabled = false;
   private canDownloadInApp = false;
   private autoUpdaterInitError: string | null = null;
+  private readonly peerEnabled = LAN_PEER_ENABLED;
+  private readonly peerService: UpdatePeerService | null = null;
+  private pendingArtifact: UpdateArtifactMeta | null = null;
+  private lastPeerOffer: PeerOffer | null = null;
+  private readonly updateCacheDir: string;
 
   private readonly notify: (state: UpdaterState) => void;
 
   public constructor(notify: (state: UpdaterState) => void) {
     this.state.currentVersion = this.resolveDisplayVersion();
     this.notify = notify;
+    this.updateCacheDir = path.join(app.getPath('userData'), 'update-cache');
+    if (this.peerEnabled) {
+      this.peerService = new UpdatePeerService(this.updateCacheDir, true);
+      this.peerService.startPeerServices();
+      debugSync('peer-service', 'enabled', { cacheDir: this.updateCacheDir });
+    }
     this.configureAutoUpdater();
   }
 
   public getState(): UpdaterState {
     return this.state;
+  }
+
+  public getPeerUpdateStatus(): PeerUpdateStatus {
+    return (
+      this.peerService?.getStatus() ?? {
+        enabled: false,
+        seederActive: false,
+        discoveryPort: Number(process.env.S1_UPDATER_PEER_PORT || '41234'),
+        httpPort: null,
+        offeredArtifacts: [],
+        lastTransfer: null,
+      }
+    );
   }
 
   public async checkForUpdates(): Promise<void> {
@@ -54,12 +97,18 @@ export class UpdaterService {
       const result = await autoUpdater.checkForUpdates();
       this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
+      this.pendingArtifact = this.toArtifactMeta(
+        result?.updateInfo as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
+      );
       if (latestVersion) {
         this.setState({
           latestVersion: this.toDisplayVersion(latestVersion),
           source: 'electron-updater',
           inAppDownloadSupported: true,
           inAppDownloadReason: 'In-App-Download ist verfügbar.',
+          peerModeStage: 'idle',
+          downloadSource: undefined,
+          peerHost: undefined,
         });
       }
     } catch (error) {
@@ -94,6 +143,19 @@ export class UpdaterService {
       });
       return;
     }
+    if (this.peerEnabled && this.peerService) {
+      const usedPeer = await this.tryPeerFirstDownload();
+      if (usedPeer) {
+        return;
+      }
+      this.setState({
+        stage: 'downloading',
+        peerModeStage: 'fallback',
+        downloadSource: 'internet',
+        message: 'Fallback: Internet-Download wird verwendet.',
+      });
+      debugSync('peer-fallback', 'internet-download');
+    }
     await autoUpdater.downloadUpdate();
   }
 
@@ -102,6 +164,10 @@ export class UpdaterService {
       return;
     }
     autoUpdater.quitAndInstall();
+  }
+
+  public shutdown(): void {
+    this.peerService?.stopPeerServices();
   }
 
   private configureAutoUpdater(): void {
@@ -140,6 +206,9 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-available', (info) => {
+        this.pendingArtifact = this.toArtifactMeta(
+          info as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
+        );
         this.setState({
           stage: 'available',
           latestVersion: this.toDisplayVersion(info.version),
@@ -188,6 +257,19 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-downloaded', (info) => {
+        const localArtifact = this.resolveDownloadedArtifactPath(
+          this.pendingArtifact?.artifactName,
+          info as { downloadedFile?: string },
+        );
+        if (this.pendingArtifact && localArtifact) {
+          this.peerService?.announceLocalArtifacts([
+            {
+              ...this.pendingArtifact,
+              filePath: localArtifact,
+              freshnessTs: nowIso(),
+            },
+          ]);
+        }
         this.setState({
           stage: 'downloaded',
           latestVersion: this.toDisplayVersion(info.version),
@@ -293,6 +375,156 @@ export class UpdaterService {
       }
       this.setState({ stage: 'error', message });
     }
+  }
+
+  private async tryPeerFirstDownload(): Promise<boolean> {
+    if (!this.peerService || !this.pendingArtifact) {
+      return false;
+    }
+    this.setState({
+      stage: 'downloading',
+      peerModeStage: 'discovering',
+      downloadSource: 'peer-lan',
+      message: 'Suche Update-Peer im lokalen Netzwerk ...',
+    });
+    const requestId = crypto.randomUUID();
+    const offers = await this.peerService.queryPeersForVersion({
+      requestId,
+      versionWanted: this.pendingArtifact.version,
+      platform: this.pendingArtifact.platform,
+      arch: this.pendingArtifact.arch,
+      channel: this.pendingArtifact.channel,
+    });
+    if (offers.length === 0) {
+      return false;
+    }
+    const sorted = selectBestOffers(offers);
+    const maxTries = Math.min(2, sorted.length);
+    for (let idx = 0; idx < maxTries; idx += 1) {
+      const offer = sorted[idx]!;
+      try {
+        this.lastPeerOffer = offer;
+        this.setState({
+          stage: 'downloading',
+          peerModeStage: 'downloading',
+          downloadSource: 'peer-lan',
+          peerHost: offer.host,
+          message: `Quelle: LAN-Peer ${offer.host}`,
+        });
+        const targetPath = path.join(this.updateCacheDir, this.pendingArtifact.artifactName);
+        await this.peerService.downloadFromPeer(
+          offer,
+          targetPath,
+          this.pendingArtifact.sha512,
+          (transferred, total) => {
+            const percent = total > 0 ? (transferred / total) * 100 : 0;
+            this.setState({
+              stage: 'downloading',
+              peerModeStage: 'downloading',
+              downloadSource: 'peer-lan',
+              peerHost: offer.host,
+              progressTransferredBytes: transferred,
+              progressTotalBytes: total,
+              progressPercent: percent,
+            });
+          },
+        );
+        this.setState({
+          stage: 'downloading',
+          peerModeStage: 'verifying',
+          downloadSource: 'peer-lan',
+          peerHost: offer.host,
+          message: 'Peer-Download abgeschlossen, starte verifizierte Installation ...',
+        });
+        const artifact: PeerArtifact = {
+          ...this.pendingArtifact,
+          filePath: targetPath,
+          freshnessTs: nowIso(),
+        };
+        this.peerService.announceLocalArtifacts([artifact]);
+        await this.downloadViaLocalFeed(artifact);
+        return true;
+      } catch (error) {
+        const reason = error instanceof Error ? error.message : String(error);
+        debugSync('peer-download', 'candidate-failed', { offer, reason });
+      }
+    }
+    return false;
+  }
+
+  private async downloadViaLocalFeed(artifact: PeerArtifact): Promise<void> {
+    if (!this.peerService) {
+      throw new Error('Peer-Service nicht verfügbar');
+    }
+    const localFeed = await this.peerService.createLocalFeedServer({
+      platform: artifact.platform,
+      version: artifact.version,
+      artifactName: artifact.artifactName,
+      sha512: artifact.sha512,
+      size: artifact.size,
+      filePath: artifact.filePath,
+    });
+    const maybeSetFeedUrl = (autoUpdater as unknown as {
+      setFeedURL?: (options: { provider: 'generic'; url: string }) => void;
+    }).setFeedURL;
+    try {
+      if (typeof maybeSetFeedUrl === 'function') {
+        maybeSetFeedUrl({ provider: 'generic', url: localFeed.feedUrl });
+      }
+      await autoUpdater.checkForUpdates();
+      await autoUpdater.downloadUpdate();
+    } finally {
+      await localFeed.close();
+      if (typeof maybeSetFeedUrl === 'function') {
+        maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
+      }
+    }
+  }
+
+  private toArtifactMeta(
+    info?: { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
+  ): UpdateArtifactMeta | null {
+    const version = info?.version ? this.normalizeVersion(info.version) : '';
+    const file = info?.files?.[0];
+    const fileUrl = file?.url ?? '';
+    const artifactName = fileUrl ? path.basename(fileUrl.split('?')[0] || '') : '';
+    const sha512 = file?.sha512 ?? '';
+    if (!version || !artifactName || !sha512) {
+      return null;
+    }
+    return {
+      version,
+      platform: process.platform,
+      arch: process.arch,
+      channel: 'latest',
+      artifactName,
+      sha512,
+      size: Number(file?.size ?? 0),
+    };
+  }
+
+  private resolveDownloadedArtifactPath(
+    artifactName: string | undefined,
+    info?: { downloadedFile?: string },
+  ): string | null {
+    const direct = info?.downloadedFile;
+    if (direct && existsSync(direct)) {
+      return direct;
+    }
+    if (!artifactName) {
+      return null;
+    }
+    const candidates = [
+      path.join(this.updateCacheDir, artifactName),
+      path.join(app.getPath('userData'), 'pending', artifactName),
+      path.join(os.tmpdir(), artifactName),
+    ];
+    for (const candidate of candidates) {
+      if (existsSync(candidate)) {
+        return candidate;
+      }
+    }
+    return null;
   }
 
   private normalizeVersion(version: string): string {
