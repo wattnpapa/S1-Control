@@ -36,6 +36,7 @@ const api: RendererApi = {
   exportEinsatzakte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.EXPORT_EINSATZAKTE, einsatzId),
   restoreBackup: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.RESTORE_BACKUP, einsatzId),
   listActiveClients: () => ipcRenderer.invoke(IPC_CHANNEL.LIST_ACTIVE_CLIENTS),
+  getDebugSyncLogLines: () => ipcRenderer.invoke(IPC_CHANNEL.GET_DEBUG_SYNC_LOGS),
   getUpdaterState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_UPDATER_STATE),
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
@@ -75,5 +76,10 @@ contextBridge.exposeInMainWorld('appEvents', {
     const listener = (_event: Electron.IpcRendererEvent, dbPath: string) => callback(dbPath);
     ipcRenderer.on(IPC_CHANNEL.PENDING_OPEN_FILE, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNEL.PENDING_OPEN_FILE, listener);
+  },
+  onDebugSyncLog: (callback: (line: string) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, line: string) => callback(line);
+    ipcRenderer.on(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, listener);
   },
 });

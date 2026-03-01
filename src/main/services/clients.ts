@@ -4,6 +4,7 @@ import { asc, eq, gte, lt } from 'drizzle-orm';
 import type { ActiveClientInfo } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import { activeClient } from '../db/schema';
+import { debugSync } from './debug';
 
 const HEARTBEAT_MS = 5 * 1000;
 // A stricter 30s window causes false stale detection when client clocks drift.
@@ -43,6 +44,7 @@ export class ClientPresenceService {
   public start(ctx: DbContext): void {
     this.stop(true);
     this.ctx = ctx;
+    debugSync('clients', 'start', { clientId: this.clientId, dbPath: ctx.path });
     this.heartbeat();
     this.timer = setInterval(() => {
       this.heartbeat();
@@ -57,6 +59,7 @@ export class ClientPresenceService {
     if (removeEntry && this.ctx) {
       try {
         this.ctx.db.delete(activeClient).where(eq(activeClient.clientId, this.clientId)).run();
+        debugSync('clients', 'stop:removed-self', { clientId: this.clientId, dbPath: this.ctx.path });
       } catch {
         // ignore shutdown errors
       }
@@ -80,6 +83,11 @@ export class ClientPresenceService {
       .where(gte(activeClient.lastSeen, staleCutoffIso()))
       .orderBy(asc(activeClient.computerName), asc(activeClient.startedAt))
       .all();
+    debugSync('clients', 'list', {
+      clientId: this.clientId,
+      dbPath: this.ctx.path,
+      visibleClients: rows.length,
+    });
     return rows.map((row) => ({
       clientId: row.clientId,
       computerName: row.computerName,
@@ -145,6 +153,12 @@ export class ClientPresenceService {
           .run();
       }
       this.isMaster = leaderId === this.clientId;
+      debugSync('clients', 'heartbeat', {
+        clientId: this.clientId,
+        dbPath: ctx.path,
+        leaderId,
+        isMaster: this.isMaster,
+      });
     });
   }
 }

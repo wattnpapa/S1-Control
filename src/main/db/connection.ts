@@ -4,6 +4,7 @@ import Database from 'better-sqlite3';
 import { drizzle, type BetterSQLite3Database } from 'drizzle-orm/better-sqlite3';
 import * as schema from './schema';
 import { runMigrations } from './migrate';
+import { debugSync } from '../services/debug';
 
 export interface DbContext {
   sqlite: Database.Database;
@@ -20,6 +21,7 @@ function applyPragmas(sqlite: Database.Database): void {
 
 function openDatabase(dbPath: string): DbContext {
   const dir = path.dirname(dbPath);
+  debugSync('db', 'open:start', { dbPath, dir });
   fs.mkdirSync(dir, { recursive: true });
   fs.accessSync(dir, fs.constants.R_OK | fs.constants.W_OK);
 
@@ -42,6 +44,7 @@ function openDatabase(dbPath: string): DbContext {
   runMigrations(sqlite, migrationsDir);
 
   const db = drizzle(sqlite, { schema });
+  debugSync('db', 'open:ok', { dbPath, fileExists, migrationsDir });
   return { sqlite, db, path: dbPath };
 }
 
@@ -67,10 +70,12 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
+      debugSync('db', 'open:attempt', { dbPath, attempt, retries });
       return openDatabase(dbPath);
     } catch (error) {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
+      debugSync('db', 'open:failed', { dbPath, attempt, message });
       const isBusy = message.includes('SQLITE_BUSY');
       const isOpenRace = message.includes('unable to open database file');
       if ((!isBusy && !isOpenRace) || attempt === retries) {

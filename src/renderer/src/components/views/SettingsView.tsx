@@ -5,6 +5,7 @@ interface SettingsViewProps {
   dbPath: string;
   selectedEinsatzId: string;
   activeClients: ActiveClientInfo[];
+  debugSyncLogs: string[];
   onChangeDbPath: (value: string) => void;
   onSaveDbPath: () => void;
   onRestoreBackup: () => void;
@@ -61,6 +62,11 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       ) : (
         <p>Client-Übersicht ist verfügbar, sobald ein Einsatz geöffnet ist.</p>
       )}
+
+      <h3>Debug Sync Logs</h3>
+      <div className="debug-log-panel">
+        <pre>{props.debugSyncLogs.length ? props.debugSyncLogs.join('\n') : 'Noch keine Debug-Ausgaben.'}</pre>
+      </div>
     </div>
   );
 }

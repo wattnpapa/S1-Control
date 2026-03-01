@@ -9,6 +9,7 @@ import { ClientPresenceService } from './services/clients';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
 import { StrengthDisplayService } from './services/strength-display';
 import { UpdaterService } from './services/updater';
+import { onDebugSyncLog } from './services/debug';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
@@ -201,6 +202,12 @@ async function bootstrap(): Promise<void> {
     setSessionUser: (user) => {
       currentUser = user;
     },
+  });
+
+  onDebugSyncLog((line) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, line);
+    }
   });
 
   const createWindow = async (): Promise<void> => {

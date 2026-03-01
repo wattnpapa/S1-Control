@@ -184,6 +184,7 @@ export function App() {
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
   const [now, setNow] = useState<Date>(new Date());
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
+  const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
 
   const selectedEinsatz = useMemo(
     () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
@@ -478,6 +479,30 @@ export function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.appEvents.onDebugSyncLog((line) => {
+      setDebugSyncLogs((prev) => {
+        const next = [...prev, line];
+        return next.slice(-400);
+      });
+    });
+    return () => unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!session || activeView !== 'einstellungen') {
+      return;
+    }
+    void (async () => {
+      try {
+        const logs = await window.api.getDebugSyncLogLines();
+        setDebugSyncLogs(logs.slice(-400));
+      } catch (err) {
+        setError(readError(err));
+      }
+    })();
+  }, [activeView, session]);
 
   const withBusy = async (fn: () => Promise<void>) => {
     setBusy(true);
@@ -1409,6 +1434,7 @@ export function App() {
               dbPath={dbPath}
               selectedEinsatzId={selectedEinsatzId}
               activeClients={activeClients}
+              debugSyncLogs={debugSyncLogs}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}
               onRestoreBackup={() => void doRestoreBackup()}

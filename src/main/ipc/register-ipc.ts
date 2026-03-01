@@ -9,6 +9,7 @@ import { ensureDefaultAdmin, ensureSessionUserRecord, login } from '../services/
 import { BackupCoordinator, resolveBackupDir } from '../services/backup';
 import { ClientPresenceService } from '../services/clients';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command';
+import { debugSync, getDebugSyncLogLines } from '../services/debug';
 import { toSafeError } from '../services/errors';
 import {
   createEinsatzDbFileName,
@@ -138,6 +139,7 @@ export function registerIpc(state: AppState): void {
   };
 
   const openEinsatzByPathForUser = (selected: string, user: SessionUser): EinsatzListItem => {
+    debugSync('einsatz', 'open-by-path:start', { selected, user: user.name });
     const nextContext = openDatabaseWithRetry(selected);
     try {
       ensureDefaultAdmin(nextContext);
@@ -159,6 +161,11 @@ export function registerIpc(state: AppState): void {
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(selected, einsatzMeta.id);
       state.settingsStore.set({ dbPath: path.dirname(selected) });
+      debugSync('einsatz', 'open-by-path:ok', {
+        selected,
+        einsatzId: einsatzMeta.id,
+        dbPath: nextContext.path,
+      });
       return einsatzMeta;
     } catch (error) {
       try {
@@ -262,8 +269,10 @@ export function registerIpc(state: AppState): void {
 
       const selected = result.filePaths[0];
       if (result.canceled || !selected) {
+        debugSync('einsatz', 'open-dialog:cancel');
         return null;
       }
+      debugSync('einsatz', 'open-dialog:selected', { selected });
 
       return openEinsatzByPathForUser(selected, user);
     }),
@@ -307,6 +316,7 @@ export function registerIpc(state: AppState): void {
 
       const selected = saveResult.filePath;
       if (saveResult.canceled || !selected) {
+        debugSync('einsatz', 'create-dialog:cancel');
         return null;
       }
 
@@ -314,6 +324,7 @@ export function registerIpc(state: AppState): void {
         selected.toLowerCase().endsWith('.s1control') || selected.toLowerCase().endsWith('.sqlite')
           ? selected
           : `${selected}.s1control`;
+      debugSync('einsatz', 'create-dialog:selected', { selected, normalized });
       const created = createEinsatzInOwnDatabase(path.dirname(normalized), input, user, normalized);
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
@@ -322,6 +333,10 @@ export function registerIpc(state: AppState): void {
       state.backupCoordinator.start(created.ctx);
       rememberRecentDbPath(normalized, created.einsatz.id);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
+      debugSync('einsatz', 'create-dialog:ok', {
+        einsatzId: created.einsatz.id,
+        dbPath: normalized,
+      });
       return created.einsatz;
     }),
   );
@@ -500,6 +515,11 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.LIST_ACTIVE_CLIENTS,
     wrap(async () => state.clientPresence.listActiveClients()),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_DEBUG_SYNC_LOGS,
+    wrap(async () => getDebugSyncLogLines()),
   );
 
   ipcMain.handle(

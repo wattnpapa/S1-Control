@@ -436,6 +436,25 @@ textarea {
   gap: 6px;
 }
 
+.debug-log-panel {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: #0f1420;
+  color: #d8e4ff;
+  padding: 8px;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.debug-log-panel pre {
+  margin: 0;
+  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 12px;
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .fuehrung-view {
   display: grid;
   gap: 12px;

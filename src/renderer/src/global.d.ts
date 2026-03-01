@@ -11,6 +11,7 @@ declare global {
     };
     appEvents: {
       onPendingOpenFile: (callback: (dbPath: string) => void) => () => void;
+      onDebugSyncLog: (callback: (line: string) => void) => () => void;
     };
   }
 }
