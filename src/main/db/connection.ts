@@ -13,13 +13,50 @@ export interface DbContext {
 }
 
 /**
+ * Handles Is Network Share Path.
+ */
+function isNetworkSharePath(dbPath: string): boolean {
+  const normalized = dbPath.replace(/\\/g, '/').toLowerCase();
+  if (normalized.startsWith('/volumes/')) {
+    return true;
+  }
+  if (dbPath.startsWith('\\\\')) {
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Handles Should Use Network Safe SQLite Mode.
+ */
+function shouldUseNetworkSafeMode(dbPath: string): boolean {
+  const forced = process.env.S1_SQLITE_NETWORK_SHARE;
+  if (forced === '1' || forced === 'true') {
+    return true;
+  }
+  if (forced === '0' || forced === 'false') {
+    return false;
+  }
+  return isNetworkSharePath(dbPath);
+}
+
+/**
  * Handles Apply Pragmas.
  */
-function applyPragmas(sqlite: Database.Database): void {
-  sqlite.pragma('journal_mode = WAL');
-  sqlite.pragma('synchronous = NORMAL');
+function applyPragmas(sqlite: Database.Database, dbPath: string): void {
+  const networkSafeMode = shouldUseNetworkSafeMode(dbPath);
+  if (networkSafeMode) {
+    // WAL is not reliable across many SMB/NAS setups with multiple hosts.
+    sqlite.pragma('journal_mode = DELETE');
+    sqlite.pragma('synchronous = FULL');
+    sqlite.pragma('busy_timeout = 10000');
+  } else {
+    sqlite.pragma('journal_mode = WAL');
+    sqlite.pragma('synchronous = NORMAL');
+    sqlite.pragma('busy_timeout = 5000');
+  }
   sqlite.pragma('foreign_keys = ON');
-  sqlite.pragma('busy_timeout = 5000');
+  debugSync('db', 'pragmas', { dbPath, networkSafeMode });
 }
 
 /**
@@ -44,7 +81,7 @@ function openDatabase(dbPath: string): DbContext {
   }
 
   const sqlite = new Database(dbPath, fileExists ? { fileMustExist: true } : undefined);
-  applyPragmas(sqlite);
+  applyPragmas(sqlite, dbPath);
 
   const migrationsDir = resolveMigrationsDir();
   runMigrations(sqlite, migrationsDir);
@@ -78,7 +115,7 @@ function resolveMigrationsDir(): string {
 /**
  * Handles Open Database With Retry.
  */
-export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
+export function openDatabaseWithRetry(dbPath: string, retries = 12): DbContext {
   let lastError: unknown;
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
@@ -88,7 +125,10 @@ export function openDatabaseWithRetry(dbPath: string, retries = 4): DbContext {
       lastError = error;
       const message = error instanceof Error ? error.message : String(error);
       debugSync('db', 'open:failed', { dbPath, attempt, message });
-      const isBusy = message.includes('SQLITE_BUSY');
+      const isBusy =
+        message.includes('SQLITE_BUSY') ||
+        message.includes('SQLITE_LOCKED') ||
+        message.includes('database is locked');
       const isOpenRace = message.includes('unable to open database file');
       if ((!isBusy && !isOpenRace) || attempt === retries) {
         break;
