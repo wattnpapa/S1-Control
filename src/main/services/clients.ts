@@ -11,6 +11,19 @@ const HEARTBEAT_MS = 5 * 1000;
 const STALE_MS = 2 * 60 * 1000;
 
 /**
+ * Handles Is Lock Contention Error.
+ */
+function isLockContentionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return (
+    message.includes('database is locked') ||
+    message.includes('SQLITE_BUSY') ||
+    message.includes('SQLITE_LOCKED') ||
+    message.includes('locking protocol')
+  );
+}
+
+/**
  * Handles Now Iso.
  */
 function nowIso(): string {
@@ -133,56 +146,69 @@ export class ClientPresenceService {
     const computerName = os.hostname();
     const ipAddress = detectPrimaryIp();
 
-    ctx.db.transaction((tx) => {
-      tx.delete(activeClient).where(lt(activeClient.lastSeen, staleCutoff)).run();
+    try {
+      ctx.db.transaction((tx) => {
+        tx.delete(activeClient).where(lt(activeClient.lastSeen, staleCutoff)).run();
 
-      tx.insert(activeClient)
-        .values({
-          clientId: this.clientId,
-          computerName,
-          ipAddress,
-          dbPath: ctx.path,
-          lastSeen: now,
-          startedAt: this.startedAt,
-          isMaster: false,
-        })
-        .onConflictDoUpdate({
-          target: activeClient.clientId,
-          set: {
+        tx.insert(activeClient)
+          .values({
+            clientId: this.clientId,
             computerName,
             ipAddress,
             dbPath: ctx.path,
             lastSeen: now,
-          },
-        })
-        .run();
-
-      const leader = tx
-        .select({ clientId: activeClient.clientId })
-        .from(activeClient)
-        .where(gte(activeClient.lastSeen, staleCutoff))
-        .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
-        .get();
-      const leaderId = leader?.clientId ?? this.clientId;
-      tx.update(activeClient)
-        .set({ isMaster: false })
-        .run();
-      tx.update(activeClient)
-        .set({ isMaster: true })
-        .where(eq(activeClient.clientId, leaderId))
-        .run();
-      if (leaderId === this.clientId) {
-        tx.delete(activeClient)
-          .where(lt(activeClient.lastSeen, staleCutoff))
+            startedAt: this.startedAt,
+            isMaster: false,
+          })
+          .onConflictDoUpdate({
+            target: activeClient.clientId,
+            set: {
+              computerName,
+              ipAddress,
+              dbPath: ctx.path,
+              lastSeen: now,
+            },
+          })
           .run();
-      }
-      this.isMaster = leaderId === this.clientId;
-      debugSync('clients', 'heartbeat', {
-        clientId: this.clientId,
-        dbPath: ctx.path,
-        leaderId,
-        isMaster: this.isMaster,
+
+        const leader = tx
+          .select({ clientId: activeClient.clientId })
+          .from(activeClient)
+          .where(gte(activeClient.lastSeen, staleCutoff))
+          .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
+          .get();
+        const leaderId = leader?.clientId ?? this.clientId;
+        tx.update(activeClient)
+          .set({ isMaster: false })
+          .run();
+        tx.update(activeClient)
+          .set({ isMaster: true })
+          .where(eq(activeClient.clientId, leaderId))
+          .run();
+        if (leaderId === this.clientId) {
+          tx.delete(activeClient)
+            .where(lt(activeClient.lastSeen, staleCutoff))
+            .run();
+        }
+        this.isMaster = leaderId === this.clientId;
+        debugSync('clients', 'heartbeat', {
+          clientId: this.clientId,
+          dbPath: ctx.path,
+          leaderId,
+          isMaster: this.isMaster,
+        });
       });
-    });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isLockContentionError(error)) {
+        debugSync('clients', 'heartbeat:skipped-lock', {
+          clientId: this.clientId,
+          dbPath: ctx.path,
+          message,
+        });
+        return;
+      }
+      throw error;
+    }
   }
 }
