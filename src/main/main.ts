@@ -8,6 +8,7 @@ import { BackupCoordinator } from './services/backup';
 import { ClientPresenceService } from './services/clients';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
 import { StrengthDisplayService } from './services/strength-display';
+import { EinsatzSyncService } from './services/einsatz-sync';
 import { UpdaterService } from './services/updater';
 import { onDebugSyncLog } from './services/debug';
 import type { SessionUser } from '../shared/types';
@@ -205,6 +206,12 @@ async function bootstrap(): Promise<void> {
   const clientPresence = new ClientPresenceService();
   clientPresence.start(dbContext);
   const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
+  const einsatzSync = new EinsatzSyncService((signal) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(IPC_CHANNEL.EINSATZ_CHANGED, signal);
+    }
+  });
+  einsatzSync.start(dbContext.path);
   const updater = new UpdaterService((state) => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
@@ -226,6 +233,7 @@ async function bootstrap(): Promise<void> {
     },
     backupCoordinator,
     clientPresence,
+    einsatzSync,
     updater,
     strengthDisplay,
     settingsStore,
@@ -277,6 +285,7 @@ async function bootstrap(): Promise<void> {
   app.on('window-all-closed', () => {
     backupCoordinator.stop();
     clientPresence.stop(true);
+    einsatzSync.stop();
     updater.shutdown();
     app.quit();
   });
@@ -284,6 +293,7 @@ async function bootstrap(): Promise<void> {
   app.on('before-quit', () => {
     backupCoordinator.stop();
     clientPresence.stop(true);
+    einsatzSync.stop();
     updater.shutdown();
   });
 }

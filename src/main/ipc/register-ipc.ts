@@ -45,12 +45,14 @@ import {
 } from '../services/tactical-signs';
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
+import { EinsatzSyncService } from '../services/einsatz-sync';
 
 interface AppState {
   getDbContext: () => DbContext;
   setDbContext: (ctx: DbContext) => void;
   backupCoordinator: BackupCoordinator;
   clientPresence: ClientPresenceService;
+  einsatzSync: EinsatzSyncService;
   updater: UpdaterService;
   strengthDisplay: StrengthDisplayService;
   settingsStore: SettingsStore;
@@ -161,6 +163,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
+      state.einsatzSync.setDbPath(nextContext.path);
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(selected, einsatzMeta.id);
       state.settingsStore.set({ dbPath: path.dirname(selected) });
@@ -178,6 +181,10 @@ export function registerIpc(state: AppState): void {
       }
       throw error;
     }
+  };
+
+  const notifyEinsatzChanged = (einsatzId: string, reason: string, dbPath = state.getDbContext().path): void => {
+    state.einsatzSync.broadcastChange({ einsatzId, dbPath, reason });
   };
 
   ipcMain.handle(IPC_CHANNEL.GET_SESSION, wrap(async () => state.getSessionUser()));
@@ -216,6 +223,7 @@ export function registerIpc(state: AppState): void {
       state.backupCoordinator.stop();
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
+      state.einsatzSync.setDbPath(nextContext.path);
       state.settingsStore.set({ dbPath: baseDir });
       return { dbPath: baseDir };
     }),
@@ -242,6 +250,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
+      state.einsatzSync.setDbPath(nextContext.path);
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(dbPath, einsatzId);
       state.settingsStore.set({ dbPath: path.dirname(dbPath) });
@@ -296,6 +305,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
+      state.einsatzSync.setDbPath(created.ctx.path);
       state.backupCoordinator.start(created.ctx);
       if (created.einsatz.dbPath) {
         rememberRecentDbPath(created.einsatz.dbPath, created.einsatz.id);
@@ -334,6 +344,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
+      state.einsatzSync.setDbPath(created.ctx.path);
       state.backupCoordinator.start(created.ctx);
       rememberRecentDbPath(normalized, created.einsatz.id);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
@@ -350,6 +361,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (einsatzId: string) => {
       requireUser();
       archiveEinsatz(state.getDbContext(), einsatzId);
+      notifyEinsatzChanged(einsatzId, 'archive-einsatz');
     }),
   );
 
@@ -362,7 +374,9 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.CREATE_ABSCHNITT,
     wrap(async (input: Parameters<RendererApi['createAbschnitt']>[0]) => {
       requireUser();
-      return createAbschnitt(state.getDbContext(), input);
+      const abschnitt = createAbschnitt(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
+      return abschnitt;
     }),
   );
 
@@ -371,6 +385,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['updateAbschnitt']>[0]) => {
       requireUser();
       updateAbschnitt(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
     }),
   );
 
@@ -386,6 +401,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['createEinheit']>[0]) => {
       requireUser();
       createEinheit(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'create-einheit');
     }),
   );
 
@@ -394,6 +410,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['updateEinheit']>[0]) => {
       requireUser();
       updateEinheit(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'update-einheit');
     }),
   );
 
@@ -402,6 +419,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['createFahrzeug']>[0]) => {
       requireUser();
       createFahrzeug(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'create-fahrzeug');
     }),
   );
 
@@ -410,6 +428,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['updateFahrzeug']>[0]) => {
       requireUser();
       updateFahrzeug(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'update-fahrzeug');
     }),
   );
 
@@ -423,6 +442,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['createEinheitHelfer']>[0]) => {
       requireUser();
       createEinheitHelfer(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'create-helfer');
     }),
   );
 
@@ -431,6 +451,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['updateEinheitHelfer']>[0]) => {
       requireUser();
       updateEinheitHelfer(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'update-helfer');
     }),
   );
 
@@ -439,6 +460,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['deleteEinheitHelfer']>[0]) => {
       requireUser();
       deleteEinheitHelfer(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'delete-helfer');
     }),
   );
 
@@ -447,6 +469,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['splitEinheit']>[0]) => {
       requireUser();
       splitEinheit(state.getDbContext(), input);
+      notifyEinsatzChanged(input.einsatzId, 'split-einheit');
     }),
   );
 
@@ -455,6 +478,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['moveEinheit']>[0]) => {
       const user = requireUser();
       moveEinheit(state.getDbContext(), input, user);
+      notifyEinsatzChanged(input.einsatzId, 'move-einheit');
     }),
   );
 
@@ -463,6 +487,7 @@ export function registerIpc(state: AppState): void {
     wrap(async (input: Parameters<RendererApi['moveFahrzeug']>[0]) => {
       const user = requireUser();
       moveFahrzeug(state.getDbContext(), input, user);
+      notifyEinsatzChanged(input.einsatzId, 'move-fahrzeug');
     }),
   );
 
@@ -470,7 +495,11 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.UNDO_LAST,
     wrap(async (einsatzId: string) => {
       const user = requireUser();
-      return undoLastCommand(state.getDbContext(), einsatzId, user);
+      const undone = undoLastCommand(state.getDbContext(), einsatzId, user);
+      if (undone) {
+        notifyEinsatzChanged(einsatzId, 'undo-command');
+      }
+      return undone;
     }),
   );
 
@@ -511,7 +540,9 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
+      state.einsatzSync.setDbPath(nextContext.path);
       state.backupCoordinator.start(nextContext);
+      notifyEinsatzChanged(einsatzId, 'restore-backup', dbPath);
       return true;
     }),
   );

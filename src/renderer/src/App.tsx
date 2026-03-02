@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
   ActiveClientInfo,
   AbschnittDetails,
@@ -207,6 +207,7 @@ export function App() {
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
+  const lastRemoteRefreshAtRef = useRef(0);
 
   const selectedEinsatz = useMemo(
     () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
@@ -528,6 +529,23 @@ export function App() {
     });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    const unsubscribe = window.appEvents.onEinsatzChanged((signal) => {
+      if (!session || !selectedEinsatzId || signal.einsatzId !== selectedEinsatzId) {
+        return;
+      }
+      const nowTs = Date.now();
+      if (nowTs - lastRemoteRefreshAtRef.current < 800) {
+        return;
+      }
+      lastRemoteRefreshAtRef.current = nowTs;
+      void refreshAll().catch((err: unknown) => {
+        setError(readError(err));
+      });
+    });
+    return () => unsubscribe();
+  }, [refreshAll, selectedEinsatzId, session]);
 
   useEffect(() => {
     if (!session || activeView !== 'einstellungen') {

@@ -221,3 +221,11 @@ export interface PeerUpdateStatus {
   offeredArtifacts: PeerArtifact[];
   lastTransfer: PeerTransferStats | null;
 }
+
+export interface EinsatzChangedSignal {
+  einsatzId: string;
+  dbPath: string;
+  sourceClientId: string;
+  changedAt: string;
+  reason: string;
+}

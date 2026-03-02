@@ -12,6 +12,7 @@ import type {
   UpdaterState,
   ActiveClientInfo,
   PeerUpdateStatus,
+  EinsatzChangedSignal,
 } from './types';
 
 export interface LoginInput {
@@ -268,6 +269,7 @@ export const IPC_CHANNEL = {
   INSTALL_UPDATE: 'updater:install',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',
+  EINSATZ_CHANGED: 'einsatz:changed',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
@@ -278,3 +280,5 @@ export const IPC_CHANNEL = {
   SET_STRENGTH_DISPLAY_STATE: 'strength-display:set-state',
   STRENGTH_DISPLAY_STATE_CHANGED: 'strength-display:state-changed',
 } as const;
+
+export type EinsatzChangedEventPayload = EinsatzChangedSignal;

@@ -1,4 +1,5 @@
 import type { RendererApi } from '../../shared/ipc';
+import type { EinsatzChangedSignal } from '../../shared/types';
 
 declare global {
   interface Window {
@@ -12,6 +13,7 @@ declare global {
     appEvents: {
       onPendingOpenFile: (callback: (dbPath: string) => void) => () => void;
       onDebugSyncLog: (callback: (line: string) => void) => () => void;
+      onEinsatzChanged: (callback: (signal: EinsatzChangedSignal) => void) => () => void;
     };
   }
 }

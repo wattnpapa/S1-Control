@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../shared/ipc';
+import type { EinsatzChangedSignal } from '../shared/types';
 
 const api: RendererApi = {
   getSession: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SESSION),
@@ -82,5 +83,11 @@ contextBridge.exposeInMainWorld('appEvents', {
     const listener = (_event: Electron.IpcRendererEvent, line: string) => callback(line);
     ipcRenderer.on(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, listener);
     return () => ipcRenderer.removeListener(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, listener);
+  },
+  onEinsatzChanged: (callback: (signal: EinsatzChangedSignal) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, signal: EinsatzChangedSignal) =>
+      callback(signal);
+    ipcRenderer.on(IPC_CHANNEL.EINSATZ_CHANGED, listener);
+    return () => ipcRenderer.removeListener(IPC_CHANNEL.EINSATZ_CHANGED, listener);
   },
 });
