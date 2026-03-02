@@ -13,23 +13,9 @@ export interface DbContext {
 }
 
 /**
- * Handles Is Network Share Path.
- */
-function isNetworkSharePath(dbPath: string): boolean {
-  const normalized = dbPath.replace(/\\/g, '/').toLowerCase();
-  if (normalized.startsWith('/volumes/')) {
-    return true;
-  }
-  if (dbPath.startsWith('\\\\')) {
-    return true;
-  }
-  return false;
-}
-
-/**
  * Handles Should Use Network Safe SQLite Mode.
  */
-function shouldUseNetworkSafeMode(dbPath: string): boolean {
+function shouldUseNetworkSafeMode(): boolean {
   const forced = process.env.S1_SQLITE_NETWORK_SHARE;
   if (forced === '1' || forced === 'true') {
     return true;
@@ -37,14 +23,16 @@ function shouldUseNetworkSafeMode(dbPath: string): boolean {
   if (forced === '0' || forced === 'false') {
     return false;
   }
-  return isNetworkSharePath(dbPath);
+  // Default to network-safe mode for robustness in mixed local/share setups
+  // (including mapped drives where share detection is unreliable).
+  return true;
 }
 
 /**
  * Handles Apply Pragmas.
  */
 function applyPragmas(sqlite: Database.Database, dbPath: string): void {
-  const networkSafeMode = shouldUseNetworkSafeMode(dbPath);
+  const networkSafeMode = shouldUseNetworkSafeMode();
   if (networkSafeMode) {
     // WAL is not reliable across many SMB/NAS setups with multiple hosts.
     sqlite.pragma('journal_mode = DELETE');
