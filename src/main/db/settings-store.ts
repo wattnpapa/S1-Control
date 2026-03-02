@@ -3,6 +3,7 @@ import path from 'node:path';
 
 interface SettingsFile {
   dbPath?: string;
+  lanPeerUpdatesEnabled?: boolean;
   recentEinsatzDbPaths?: string[];
   recentEinsatzUsageByPath?: Record<string, string>;
   lastOpenedEinsatzId?: string;

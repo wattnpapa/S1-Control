@@ -8,6 +8,8 @@ const api: RendererApi = {
   logout: () => ipcRenderer.invoke(IPC_CHANNEL.LOGOUT),
   getSettings: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SETTINGS),
   setDbPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.SET_DB_PATH, dbPath),
+  setLanPeerUpdatesEnabled: (enabled) =>
+    ipcRenderer.invoke(IPC_CHANNEL.SET_LAN_PEER_UPDATES_ENABLED, enabled),
   openEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ, einsatzId),
   openEinsatzByPath: (dbPath) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ_BY_PATH, dbPath),
   openEinsatzWithDialog: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EINSATZ_DIALOG),

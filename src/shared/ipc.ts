@@ -174,6 +174,7 @@ export interface RendererApi {
   logout(): Promise<void>;
   getSettings(): Promise<AppSettings>;
   setDbPath(path: string): Promise<AppSettings>;
+  setLanPeerUpdatesEnabled(enabled: boolean): Promise<AppSettings>;
   openEinsatz(einsatzId: string): Promise<boolean>;
   openEinsatzByPath(dbPath: string): Promise<EinsatzListItem>;
   openEinsatzWithDialog(): Promise<EinsatzListItem | null>;
@@ -232,6 +233,7 @@ export const IPC_CHANNEL = {
   LOGOUT: 'auth:logout',
   GET_SETTINGS: 'settings:get',
   SET_DB_PATH: 'settings:set-db-path',
+  SET_LAN_PEER_UPDATES_ENABLED: 'settings:set-lan-peer-updates-enabled',
   OPEN_EINSATZ: 'einsatz:open',
   OPEN_EINSATZ_BY_PATH: 'einsatz:open-by-path',
   OPEN_EINSATZ_DIALOG: 'einsatz:open-dialog',

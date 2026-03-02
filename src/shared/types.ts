@@ -124,6 +124,7 @@ export interface AbschnittDetails {
 
 export interface AppSettings {
   dbPath: string;
+  lanPeerUpdatesEnabled: boolean;
 }
 
 export interface StrengthDisplayState {

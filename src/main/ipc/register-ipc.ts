@@ -210,7 +210,10 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.GET_SETTINGS,
     wrap(async () => {
       const stored = state.settingsStore.get();
-      return { dbPath: stored.dbPath ?? state.getDefaultDbPath() };
+      return {
+        dbPath: stored.dbPath ?? state.getDefaultDbPath(),
+        lanPeerUpdatesEnabled: stored.lanPeerUpdatesEnabled ?? false,
+      };
     }),
   );
 
@@ -225,7 +228,23 @@ export function registerIpc(state: AppState): void {
       state.clientPresence.start(nextContext);
       state.einsatzSync.setDbPath(nextContext.path);
       state.settingsStore.set({ dbPath: baseDir });
-      return { dbPath: baseDir };
+      return {
+        dbPath: baseDir,
+        lanPeerUpdatesEnabled: state.settingsStore.get().lanPeerUpdatesEnabled ?? false,
+      };
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.SET_LAN_PEER_UPDATES_ENABLED,
+    wrap(async (enabled: boolean) => {
+      state.settingsStore.set({ lanPeerUpdatesEnabled: enabled });
+      state.updater.setLanPeerEnabled(enabled);
+      const stored = state.settingsStore.get();
+      return {
+        dbPath: stored.dbPath ?? state.getDefaultDbPath(),
+        lanPeerUpdatesEnabled: stored.lanPeerUpdatesEnabled ?? false,
+      };
     }),
   );
 

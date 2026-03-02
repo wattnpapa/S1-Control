@@ -85,6 +85,7 @@ export function App() {
   const [authReady, setAuthReady] = useState(false);
 
   const [dbPath, setDbPath] = useState('');
+  const [lanPeerUpdatesEnabled, setLanPeerUpdatesEnabled] = useState(false);
   const [einsaetze, setEinsaetze] = useState<EinsatzListItem[]>([]);
   const [selectedEinsatzId, setSelectedEinsatzId] = useState<string>('');
   const [abschnitte, setAbschnitte] = useState([] as Awaited<ReturnType<typeof window.api.listAbschnitte>>);
@@ -393,6 +394,7 @@ export function App() {
       try {
         const [currentSession, settings] = await Promise.all([window.api.getSession(), window.api.getSettings()]);
         setDbPath(settings.dbPath);
+        setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
         setUpdaterState(await window.api.getUpdaterState());
         void window.api.checkForUpdates();
         if (currentSession) {
@@ -483,6 +485,7 @@ export function App() {
         ]);
         setActiveClients(clients);
         setDbPath(settings.dbPath);
+        setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
         setPeerUpdateStatus(peerStatus);
       } catch (err) {
         setError(readError(err));
@@ -1209,6 +1212,18 @@ export function App() {
   };
 
   /**
+   * Handles Do Toggle Lan Peer Updates.
+   */
+  const doToggleLanPeerUpdates = async (enabled: boolean) => {
+    await withBusy(async () => {
+      const settings = await window.api.setLanPeerUpdatesEnabled(enabled);
+      setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
+      setDbPath(settings.dbPath);
+      setPeerUpdateStatus(await window.api.getPeerUpdateStatus());
+    });
+  };
+
+  /**
    * Handles Do Restore Backup.
    */
   const doRestoreBackup = async () => {
@@ -1568,12 +1583,14 @@ export function App() {
               busy={busy}
               dbPath={dbPath}
               selectedEinsatzId={selectedEinsatzId}
+              lanPeerUpdatesEnabled={lanPeerUpdatesEnabled}
               activeClients={activeClients}
               peerUpdateStatus={peerUpdateStatus}
               debugSyncLogs={debugSyncLogs}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}
               onRestoreBackup={() => void doRestoreBackup()}
+              onToggleLanPeerUpdates={(enabled) => void doToggleLanPeerUpdates(enabled)}
             />
           )}
         </section>

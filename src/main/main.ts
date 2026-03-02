@@ -206,6 +206,7 @@ async function bootstrap(): Promise<void> {
   const clientPresence = new ClientPresenceService();
   clientPresence.start(dbContext);
   const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
+  const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
   const einsatzSync = new EinsatzSyncService((signal) => {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(IPC_CHANNEL.EINSATZ_CHANGED, signal);
@@ -216,7 +217,7 @@ async function bootstrap(): Promise<void> {
     for (const win of BrowserWindow.getAllWindows()) {
       win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
     }
-  });
+  }, lanPeerUpdatesEnabled);
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
 
   let currentUser: SessionUser | null = null;

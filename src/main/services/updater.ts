@@ -11,7 +11,7 @@ import { UpdatePeerService, selectBestOffers } from './update-peer';
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
-const LAN_PEER_ENABLED = process.env.S1_UPDATER_LAN_PEER === '1';
+const LAN_PEER_ENABLED_DEFAULT = process.env.S1_UPDATER_LAN_PEER === '1';
 
 interface UpdateArtifactMeta {
   version: string;
@@ -41,8 +41,8 @@ export class UpdaterService {
   private autoUpdaterEnabled = false;
   private canDownloadInApp = false;
   private autoUpdaterInitError: string | null = null;
-  private readonly peerEnabled = LAN_PEER_ENABLED;
-  private readonly peerService: UpdatePeerService | null = null;
+  private peerEnabled = LAN_PEER_ENABLED_DEFAULT;
+  private peerService: UpdatePeerService | null = null;
   private pendingArtifact: UpdateArtifactMeta | null = null;
   private lastPeerOffer: PeerOffer | null = null;
   private readonly updateCacheDir: string;
@@ -52,10 +52,11 @@ export class UpdaterService {
   /**
    * Creates an instance of this class.
    */
-  public constructor(notify: (state: UpdaterState) => void) {
+  public constructor(notify: (state: UpdaterState) => void, peerEnabled = LAN_PEER_ENABLED_DEFAULT) {
     this.state.currentVersion = this.resolveDisplayVersion();
     this.notify = notify;
     this.updateCacheDir = path.join(app.getPath('userData'), 'update-cache');
+    this.peerEnabled = peerEnabled;
     if (this.peerEnabled) {
       this.peerService = new UpdatePeerService(this.updateCacheDir, true);
       this.peerService.startPeerServices();
@@ -77,7 +78,7 @@ export class UpdaterService {
   public getPeerUpdateStatus(): PeerUpdateStatus {
     return (
       this.peerService?.getStatus() ?? {
-        enabled: false,
+        enabled: this.peerEnabled,
         seederActive: false,
         discoveryPort: Number(process.env.S1_UPDATER_PEER_PORT || '41234'),
         httpPort: null,
@@ -85,6 +86,26 @@ export class UpdaterService {
         lastTransfer: null,
       }
     );
+  }
+
+  /**
+   * Handles Set Lan Peer Enabled.
+   */
+  public setLanPeerEnabled(enabled: boolean): void {
+    if (enabled === this.peerEnabled) {
+      return;
+    }
+    this.peerEnabled = enabled;
+    if (enabled) {
+      if (!this.peerService) {
+        this.peerService = new UpdatePeerService(this.updateCacheDir, true);
+      }
+      this.peerService.startPeerServices();
+      debugSync('peer-service', 'enabled', { cacheDir: this.updateCacheDir });
+      return;
+    }
+    this.peerService?.stopPeerServices();
+    debugSync('peer-service', 'disabled');
   }
 
   /**

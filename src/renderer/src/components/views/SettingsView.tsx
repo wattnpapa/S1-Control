@@ -4,12 +4,14 @@ interface SettingsViewProps {
   busy: boolean;
   dbPath: string;
   selectedEinsatzId: string;
+  lanPeerUpdatesEnabled: boolean;
   activeClients: ActiveClientInfo[];
   peerUpdateStatus: PeerUpdateStatus | null;
   debugSyncLogs: string[];
   onChangeDbPath: (value: string) => void;
   onSaveDbPath: () => void;
   onRestoreBackup: () => void;
+  onToggleLanPeerUpdates: (enabled: boolean) => void;
 }
 
 /**
@@ -29,6 +31,15 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       <button onClick={props.onRestoreBackup} disabled={props.busy || !props.selectedEinsatzId}>
         Backup laden
       </button>
+      <label className="settings-toggle">
+        LAN-Peer-Updates
+        <input
+          type="checkbox"
+          checked={props.lanPeerUpdatesEnabled}
+          onChange={(event) => props.onToggleLanPeerUpdates(event.target.checked)}
+          disabled={props.busy}
+        />
+      </label>
       <p>
         Für jeden Einsatz wird eine eigene SQLite-Datei mit der Endung <code>.s1control</code> erstellt. Backups
         liegen alle 5 Minuten im Unterordner <code>backup</code> neben der Einsatzdatei.
