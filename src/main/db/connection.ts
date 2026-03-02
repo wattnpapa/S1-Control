@@ -68,7 +68,10 @@ function openDatabase(dbPath: string): DbContext {
     fs.accessSync(dbPath, fs.constants.R_OK | fs.constants.W_OK);
   }
 
-  const sqlite = new Database(dbPath, fileExists ? { fileMustExist: true } : undefined);
+  const sqliteOptions: Database.Options = fileExists
+    ? { fileMustExist: true, timeout: 15000 }
+    : { timeout: 15000 };
+  const sqlite = new Database(dbPath, sqliteOptions);
   applyPragmas(sqlite, dbPath);
 
   const migrationsDir = resolveMigrationsDir();
