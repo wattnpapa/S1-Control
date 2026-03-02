@@ -136,17 +136,29 @@ export class EinsatzSyncService {
   private handleMessage(message: Buffer, host: string): void {
     const parsed = parseWireMessage(message);
     if (!parsed) {
+      debugSync('einsatz-sync', 'received:invalid', { clientId: this.clientId, from: host, size: message.length });
       return;
     }
+    const incomingPath = toNormalizedPath(parsed.payload.dbPath);
+    const currentPath = this.currentDbPath ? toNormalizedPath(this.currentDbPath) : null;
+    debugSync('einsatz-sync', 'received', {
+      clientId: this.clientId,
+      from: host,
+      sourceClientId: parsed.payload.sourceClientId,
+      einsatzId: parsed.payload.einsatzId,
+      reason: parsed.payload.reason,
+      sameClient: parsed.payload.sourceClientId === this.clientId,
+      hasCurrentPath: Boolean(currentPath),
+      sameDbPath: currentPath ? incomingPath === currentPath : false,
+    });
     if (parsed.payload.sourceClientId === this.clientId) {
       return;
     }
     if (!this.currentDbPath) {
       return;
     }
-    const incomingPath = toNormalizedPath(parsed.payload.dbPath);
-    const currentPath = toNormalizedPath(this.currentDbPath);
-    if (incomingPath !== currentPath) {
+    const currentPathNormalized = toNormalizedPath(this.currentDbPath);
+    if (incomingPath !== currentPathNormalized) {
       return;
     }
     debugSync('einsatz-sync', 'remote-change', {

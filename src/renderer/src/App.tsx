@@ -214,6 +214,13 @@ export function App() {
     () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
     [einsaetze, selectedEinsatzId],
   );
+  const broadcastMonitorLogs = useMemo(
+    () =>
+      debugSyncLogs
+        .filter((line) => line.includes('[einsatz-sync] received') || line.includes('[einsatz-sync] remote-change'))
+        .slice(-120),
+    [debugSyncLogs],
+  );
 
   const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
   const showAbschnittSidebar = activeView === 'einsatz';
@@ -551,7 +558,7 @@ export function App() {
   }, [refreshAll, selectedEinsatzId, session]);
 
   useEffect(() => {
-    if (!session || activeView !== 'einstellungen') {
+    if (!session) {
       return;
     }
     void (async () => {
@@ -562,7 +569,7 @@ export function App() {
         setError(readError(err));
       }
     })();
-  }, [activeView, session]);
+  }, [session]);
 
   /**
    * Handles With Busy.
@@ -1457,6 +1464,7 @@ export function App() {
                 details={details}
                 selectedEinsatz={selectedEinsatz}
                 isArchived={isArchived ?? false}
+                broadcastLogs={broadcastMonitorLogs}
                 onMoveEinheit={(id) => {
                   setMoveDialog({ type: 'einheit', id });
                   setMoveTarget(selectedAbschnittId);
