@@ -83,6 +83,8 @@ export class UpdaterService {
         discoveryPort: Number(process.env.S1_UPDATER_PEER_PORT || '41234'),
         httpPort: null,
         offeredArtifacts: [],
+        discoveredOffers: [],
+        lastDiscoveryAt: null,
         lastTransfer: null,
       }
     );

@@ -103,6 +103,18 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
             <td>{props.peerUpdateStatus?.offeredArtifacts.length ?? 0}</td>
           </tr>
           <tr>
+            <th>Im Netzwerk gesehen</th>
+            <td>{props.peerUpdateStatus?.discoveredOffers.length ?? 0}</td>
+          </tr>
+          <tr>
+            <th>Letzter Netzwerkscan</th>
+            <td>
+              {props.peerUpdateStatus?.lastDiscoveryAt
+                ? new Date(props.peerUpdateStatus.lastDiscoveryAt).toLocaleTimeString('de-DE')
+                : '-'}
+            </td>
+          </tr>
+          <tr>
             <th>Letzter Transfer</th>
             <td>
               {props.peerUpdateStatus?.lastTransfer
@@ -110,6 +122,39 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
                 : '-'}
             </td>
           </tr>
+        </tbody>
+      </table>
+
+      <h3>Peer Artefakte im Netzwerk</h3>
+      <table>
+        <thead>
+          <tr>
+            <th>Peer</th>
+            <th>Host</th>
+            <th>Version</th>
+            <th>Artefakt</th>
+            <th>Größe</th>
+            <th>Freshness</th>
+            <th>RTT</th>
+          </tr>
+        </thead>
+        <tbody>
+          {(props.peerUpdateStatus?.discoveredOffers ?? []).map((offer) => (
+            <tr key={`${offer.peerId}-${offer.artifactName}`}>
+              <td>{offer.peerId.slice(0, 8)}</td>
+              <td>{offer.host}</td>
+              <td>{offer.version}</td>
+              <td>{offer.artifactName}</td>
+              <td>{Math.round(offer.size / (1024 * 1024))} MB</td>
+              <td>{new Date(offer.freshnessTs).toLocaleTimeString('de-DE')}</td>
+              <td>{offer.rttMs ? `${offer.rttMs} ms` : '-'}</td>
+            </tr>
+          ))}
+          {(props.peerUpdateStatus?.discoveredOffers.length ?? 0) === 0 && (
+            <tr>
+              <td colSpan={7}>Noch keine Peer-Artefakte im Netzwerk erkannt.</td>
+            </tr>
+          )}
         </tbody>
       </table>
 

@@ -235,6 +235,8 @@ export interface PeerUpdateStatus {
   discoveryPort: number;
   httpPort: number | null;
   offeredArtifacts: PeerArtifact[];
+  discoveredOffers: PeerOffer[];
+  lastDiscoveryAt: string | null;
   lastTransfer: PeerTransferStats | null;
 }
 

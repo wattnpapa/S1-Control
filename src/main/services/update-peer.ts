@@ -11,6 +11,8 @@ const DISCOVERY_PORT = Number(process.env.S1_UPDATER_PEER_PORT || '41234');
 const DISCOVERY_TIMEOUT_MS = 1500;
 const DOWNLOAD_TIMEOUT_MS = 3000;
 const PEER_BLOCK_MS = 10 * 60 * 1000;
+const DISCOVERY_MONITOR_INTERVAL_MS = 10_000;
+const DISCOVERY_OFFER_TTL_MS = 60_000;
 
 interface PeerQuery {
   requestId: string;
@@ -42,6 +44,10 @@ interface PendingQuery {
   offers: PeerOffer[];
   resolve: (offers: PeerOffer[]) => void;
   timer: NodeJS.Timeout;
+}
+
+interface ObservedPeerOffer extends PeerOffer {
+  seenAt: string;
 }
 
 /**
@@ -135,6 +141,8 @@ export class UpdatePeerService {
 
   private readonly pendingQueries = new Map<string, PendingQuery>();
 
+  private readonly discoveredOffers = new Map<string, ObservedPeerOffer>();
+
   private socket: dgram.Socket | null = null;
 
   private httpServer: http.Server | null = null;
@@ -142,6 +150,10 @@ export class UpdatePeerService {
   private httpPort: number | null = null;
 
   private lastTransfer: PeerTransferStats | null = null;
+
+  private lastDiscoveryAt: string | null = null;
+
+  private discoveryTimer: NodeJS.Timeout | null = null;
 
   /**
    * Creates an instance of this class.
@@ -155,12 +167,15 @@ export class UpdatePeerService {
    * Handles Get Status.
    */
   public getStatus(): PeerUpdateStatus {
+    this.pruneObservedOffers();
     return {
       enabled: this.enabled,
       seederActive: this.enabled && this.httpPort !== null,
       discoveryPort: DISCOVERY_PORT,
       httpPort: this.httpPort,
       offeredArtifacts: [...this.artifacts.values()],
+      discoveredOffers: [...this.discoveredOffers.values()],
+      lastDiscoveryAt: this.lastDiscoveryAt,
       lastTransfer: this.lastTransfer,
     };
   }
@@ -190,6 +205,7 @@ export class UpdatePeerService {
       this.socket?.setBroadcast(true);
       debugSync('peer-service', 'udp-listen', { peerId: this.peerId, port: DISCOVERY_PORT });
     });
+    this.startDiscoveryMonitor();
   }
 
   /**
@@ -201,6 +217,10 @@ export class UpdatePeerService {
       pending.resolve([]);
     }
     this.pendingQueries.clear();
+    if (this.discoveryTimer) {
+      clearInterval(this.discoveryTimer);
+      this.discoveryTimer = null;
+    }
     this.socket?.close();
     this.socket = null;
     this.httpServer?.close();
@@ -235,7 +255,10 @@ export class UpdatePeerService {
       const timer = setTimeout(() => {
         const pending = this.pendingQueries.get(query.requestId);
         this.pendingQueries.delete(query.requestId);
-        resolve(selectBestOfferInternal(pending?.offers ?? []));
+        const offers = selectBestOfferInternal(pending?.offers ?? []);
+        this.observeOffers(offers);
+        this.lastDiscoveryAt = nowIso();
+        resolve(offers);
       }, DISCOVERY_TIMEOUT_MS);
 
       this.pendingQueries.set(query.requestId, {
@@ -472,35 +495,98 @@ export class UpdatePeerService {
     if (!this.socket || !this.httpPort) {
       return;
     }
-    const matching = [...this.artifacts.values()].find(
+    const matches = [...this.artifacts.values()].filter(
       (item) =>
-        item.version === query.versionWanted &&
+        (query.versionWanted === '*' || item.version === query.versionWanted) &&
         item.platform === query.platform &&
         item.arch === query.arch &&
         item.channel === query.channel,
     );
-    if (!matching) {
+    if (matches.length === 0) {
       return;
     }
-    const payload: PeerOfferWire = {
-      requestId: query.requestId,
-      peerId: this.peerId,
-      host: detectPrimaryIp(),
-      httpPort: this.httpPort,
-      version: matching.version,
-      artifactName: matching.artifactName,
-      sha512: matching.sha512,
-      size: matching.size,
-      freshnessTs: matching.freshnessTs,
-      uptimeMs: Date.now() - this.startedAt,
-    };
-    const wire = JSON.stringify({ type: 's1-update-offer', payload } satisfies WireMessage);
-    this.socket.send(wire, sourcePort, sourceHost);
-    debugSync('peer-offer', 'sent', {
-      requestId: query.requestId,
-      to: sourceHost,
-      artifact: matching.artifactName,
-    });
+    for (const matching of matches) {
+      const payload: PeerOfferWire = {
+        requestId: query.requestId,
+        peerId: this.peerId,
+        host: detectPrimaryIp(),
+        httpPort: this.httpPort,
+        version: matching.version,
+        artifactName: matching.artifactName,
+        sha512: matching.sha512,
+        size: matching.size,
+        freshnessTs: matching.freshnessTs,
+        uptimeMs: Date.now() - this.startedAt,
+      };
+      const wire = JSON.stringify({ type: 's1-update-offer', payload } satisfies WireMessage);
+      this.socket.send(wire, sourcePort, sourceHost);
+      debugSync('peer-offer', 'sent', {
+        requestId: query.requestId,
+        to: sourceHost,
+        artifact: matching.artifactName,
+      });
+    }
+  }
+
+  /**
+   * Handles Start Discovery Monitor.
+   */
+  private startDiscoveryMonitor(): void {
+    if (!this.enabled || this.discoveryTimer) {
+      return;
+    }
+    this.discoveryTimer = setInterval(() => {
+      void this.scanNetworkOffers();
+    }, DISCOVERY_MONITOR_INTERVAL_MS);
+    void this.scanNetworkOffers();
+  }
+
+  /**
+   * Handles Scan Network Offers.
+   */
+  private async scanNetworkOffers(): Promise<void> {
+    if (!this.enabled) {
+      return;
+    }
+    try {
+      const offers = await this.queryPeersForVersion({
+        requestId: crypto.randomUUID(),
+        versionWanted: '*',
+        platform: process.platform,
+        arch: process.arch,
+        channel: 'latest',
+      });
+      this.observeOffers(offers);
+      this.lastDiscoveryAt = nowIso();
+      debugSync('peer-discovery', 'monitor-scan', { offers: offers.length });
+    } catch (error) {
+      debugSync('peer-discovery', 'monitor-scan-failed', {
+        message: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
+  /**
+   * Handles Observe Offers.
+   */
+  private observeOffers(offers: PeerOffer[]): void {
+    const seenAt = nowIso();
+    for (const offer of offers) {
+      const key = `${offer.peerId}:${offer.artifactName}`;
+      this.discoveredOffers.set(key, { ...offer, seenAt });
+    }
+    this.pruneObservedOffers();
+  }
+
+  /**
+   * Handles Prune Observed Offers.
+   */
+  private pruneObservedOffers(): void {
+    const threshold = Date.now() - DISCOVERY_OFFER_TTL_MS;
+    for (const [key, offer] of this.discoveredOffers.entries()) {
+      if (Date.parse(offer.seenAt) < threshold) {
+        this.discoveredOffers.delete(key);
+      }
+    }
   }
 }
-
