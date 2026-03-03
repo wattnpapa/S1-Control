@@ -21,7 +21,7 @@ export interface TacticalSignCatalogItem {
   key: string;
   label: string;
   unit: string;
-  typ: 'none' | 'group' | 'squad' | 'zugtrupp';
+  typ: 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp';
   denominator?: string;
 }
 
@@ -72,7 +72,8 @@ function tokenize(value: string): string[] {
 /**
  * Handles Typ From Variant.
  */
-function typFromVariant(variant: string): 'none' | 'group' | 'squad' | 'zugtrupp' {
+function typFromVariant(variant: string): 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp' {
+  if (variant === 'platoon') return 'platoon';
   if (variant === 'group') return 'group';
   if (variant === 'squad') return 'squad';
   if (variant === 'zugtrupp') return 'zugtrupp';
@@ -82,9 +83,13 @@ function typFromVariant(variant: string): 'none' | 'group' | 'squad' | 'zugtrupp
 /**
  * Handles Infer Typ By Name.
  */
-function inferTypByName(name: string, fallback: 'none' | 'group' | 'squad' | 'zugtrupp'): 'none' | 'group' | 'squad' | 'zugtrupp' {
+function inferTypByName(
+  name: string,
+  fallback: 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp',
+): 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp' {
   const normalized = normalizeText(name);
   if (!normalized) return fallback;
+  if (normalized.includes('fachzug') || normalized.includes('technischer zug')) return 'platoon';
   if (normalized.includes('zugtrupp')) return 'zugtrupp';
   if (normalized.includes('trupp')) return 'squad';
   if (normalized.includes('gruppe') || normalized.includes('fgr')) return 'group';
@@ -260,6 +265,89 @@ function inferThwShortcode(nameImEinsatz: string): ShortcodeInference | null {
 }
 
 /**
+ * Handles Has Any Pattern.
+ */
+function hasAnyPattern(normalizedName: string, nameTokens: Set<string>, patterns: string[]): boolean {
+  return patterns.some((pattern) => includesPattern(normalizedName, nameTokens, pattern));
+}
+
+/**
+ * Handles Infer THW Composite Zug.
+ */
+function inferThwCompositeZug(nameImEinsatz: string): ShortcodeInference | null {
+  const normalizedName = normalizeText(nameImEinsatz);
+  const nameTokens = new Set(tokenize(nameImEinsatz));
+  if (!normalizedName || nameTokens.size === 0) {
+    return null;
+  }
+
+  const isTechnischerZug = hasAnyPattern(normalizedName, nameTokens, ['tz', 'technischer zug']);
+  const isFachzug = hasAnyPattern(normalizedName, nameTokens, ['fz', 'fachzug']);
+  if (!isTechnischerZug && !isFachzug) {
+    return null;
+  }
+
+  if (
+    isFachzug &&
+    hasAnyPattern(normalizedName, nameTokens, [
+      'fz fk',
+      'fachzug fuhrung kommunikation',
+      'fachzug fuehrung kommunikation',
+      'fuhrung kommunikation',
+    ])
+  ) {
+    return {
+      rule: {
+        unit: 'FZ-FK',
+        label: 'Fachzug Führung und Kommunikation',
+        typ: 'platoon',
+        patterns: [],
+      },
+      confidence: 0.9,
+    };
+  }
+
+  if (
+    isFachzug &&
+    hasAnyPattern(normalizedName, nameTokens, [
+      'fz log',
+      'fachzug log',
+      'fachzug logistik',
+      'logistikzug',
+    ])
+  ) {
+    return {
+      rule: {
+        unit: 'FZ-Log',
+        label: 'Fachzug Logistik',
+        typ: 'platoon',
+        patterns: [],
+      },
+      confidence: 0.9,
+    };
+  }
+
+  if (isTechnischerZug) {
+    const groupCandidates = THW_SHORTCODE_RULES.filter((rule) => rule.typ === 'group');
+    for (const rule of groupCandidates) {
+      if (hasAnyPattern(normalizedName, nameTokens, [rule.unit, rule.label, ...rule.patterns])) {
+        return {
+          rule: {
+            unit: `TZ-${rule.unit}`,
+            label: `Technischer Zug mit Fachgruppe ${rule.label}`,
+            typ: 'platoon',
+            patterns: [],
+          },
+          confidence: 0.88,
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
  * Handles To Ranked Candidate.
  */
 function toRankedCandidate(item: TacticalSignCatalogItem): RankedCatalogItem {
@@ -277,6 +365,36 @@ function toRankedCandidate(item: TacticalSignCatalogItem): RankedCatalogItem {
  */
 export function inferTacticalSignConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalInferenceResult {
   if (organisation === 'THW') {
+    const composite = inferThwCompositeZug(nameImEinsatz);
+    if (composite) {
+      const matchedKey = `thw-zug-${normalizeText(composite.rule.unit).replace(/\s+/g, '-')}`;
+      return {
+        confidence: composite.confidence,
+        matchedKey,
+        matchedLabel: composite.rule.label,
+        config: {
+          grundform: 'taktische_formation',
+          fachaufgabe: 'keine',
+          organisation,
+          einheit: 'keine',
+          verwaltungsstufe: 'keine',
+          symbol: 'keines',
+          text: '',
+          name: nameImEinsatz,
+          organisationsname: organisation,
+          unit: composite.rule.unit,
+          typ: composite.rule.typ,
+          meta: buildMeta({
+            source: 'auto',
+            rawName: nameImEinsatz,
+            confidence: composite.confidence,
+            matchedKey,
+            matchedLabel: composite.rule.label,
+          }),
+        },
+      };
+    }
+
     const thwShortcode = inferThwShortcode(nameImEinsatz);
     if (thwShortcode) {
       const matchedKey = `thw-shortcode-${normalizeText(thwShortcode.rule.unit).replace(/\s+/g, '-')}`;

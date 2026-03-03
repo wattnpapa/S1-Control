@@ -45,6 +45,23 @@ describe('tactical-sign inference', () => {
     expect(result.config.meta?.source).toBe('auto');
   });
 
+  it('recognizes technical zug with fachgruppe code as platoon', () => {
+    const result = inferTacticalSignConfig('TZ-R Oldenburg', 'THW');
+    expect(result.config.unit).toBe('TZ-R');
+    expect(result.config.typ).toBe('platoon');
+    expect(result.config.meta?.source).toBe('auto');
+  });
+
+  it('recognizes fachzug FK and fachzug log as platoon', () => {
+    const fk = inferTacticalSignConfig('FZ FK', 'THW');
+    expect(fk.config.unit).toBe('FZ-FK');
+    expect(fk.config.typ).toBe('platoon');
+
+    const log = inferTacticalSignConfig('Fachzug Logistik', 'THW');
+    expect(log.config.unit).toBe('FZ-Log');
+    expect(log.config.typ).toBe('platoon');
+  });
+
   it('lists catalog filtered by organisation and query', () => {
     const thwCatalog = listTacticalSignCatalog('THW');
     const fwCatalog = listTacticalSignCatalog('FEUERWEHR', 'löschzug');

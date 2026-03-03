@@ -12,7 +12,7 @@ export interface TacticalSignAlias {
 export interface ThwShortcodeRule {
   unit: string;
   label: string;
-  typ: 'group' | 'squad' | 'zugtrupp';
+  typ: 'group' | 'squad' | 'zugtrupp' | 'platoon';
   patterns: string[];
 }
 
@@ -60,6 +60,7 @@ export const THW_SHORTCODE_RULES: ThwShortcodeRule[] = [
   { unit: 'K', label: 'Kommunikation', typ: 'group', patterns: ['fg k', 'fgr k', 'kommunikation'] },
   { unit: 'Log-MW', label: 'Logistik-Materialwirtschaft', typ: 'group', patterns: ['log mw', 'log-mw', 'logmw', 'materialwirtschaft'] },
   { unit: 'Log-V', label: 'Logistik-Verpflegung', typ: 'group', patterns: ['log v', 'log-v', 'logv', 'verpflegung'] },
+  { unit: 'Log-M', label: 'Logistik-Materialerhaltung', typ: 'group', patterns: ['log m', 'log-m', 'logm', 'materialerhaltung'] },
   {
     unit: 'Log-VG',
     label: 'Logistik-Verbrauchsgüter',

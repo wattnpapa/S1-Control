@@ -277,6 +277,7 @@ function TacticalSignSection(props: {
                 }
               >
                 <option value="none">Keine</option>
+                <option value="platoon">Zug</option>
                 <option value="group">Gruppe</option>
                 <option value="squad">Trupp</option>
                 <option value="zugtrupp">Zugtrupp</option>
