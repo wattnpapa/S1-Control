@@ -22,6 +22,16 @@ export type OrganisationKey =
   | 'RETTUNGSDIENST_KOMMUNAL'
   | 'SONSTIGE';
 
+export interface TacticalSignMeta {
+  source: 'auto' | 'manual';
+  confidence?: number;
+  matchedKey?: string;
+  matchedLabel?: string;
+  rawName?: string;
+  ruleVersion?: number;
+  updatedAt?: string;
+}
+
 export interface TacticalSignConfig {
   grundform?: string;
   fachaufgabe?: string;
@@ -32,10 +42,11 @@ export interface TacticalSignConfig {
   text?: string;
   name?: string;
   organisationsname?: string;
-  typ?: 'platoon' | 'group' | 'squad' | 'zugtrupp';
+  typ?: 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp';
   unit?: string;
   denominator?: string;
   strokeWidth?: number;
+  meta?: TacticalSignMeta;
 }
 
 export interface SessionUser {

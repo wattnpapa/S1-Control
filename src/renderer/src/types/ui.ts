@@ -3,6 +3,7 @@ import type {
   EinheitListItem,
   FahrzeugListItem,
   OrganisationKey,
+  TacticalSignConfig,
 } from '@shared/types';
 
 export interface MoveDialogState {
@@ -44,6 +45,10 @@ export interface CreateEinheitForm {
   bemerkung: string;
   vegetarierVorhanden: boolean;
   erreichbarkeiten: string;
+  tacticalSignMode: 'AUTO' | 'MANUELL';
+  tacticalSignUnit: string;
+  tacticalSignTyp: NonNullable<TacticalSignConfig['typ']>;
+  tacticalSignDenominator: string;
 }
 
 export interface CreateFahrzeugForm {
@@ -85,6 +90,10 @@ export interface EditEinheitForm {
   bemerkung: string;
   vegetarierVorhanden: boolean;
   erreichbarkeiten: string;
+  tacticalSignMode: 'AUTO' | 'MANUELL';
+  tacticalSignUnit: string;
+  tacticalSignTyp: NonNullable<TacticalSignConfig['typ']>;
+  tacticalSignDenominator: string;
 }
 
 export interface EditFahrzeugForm {

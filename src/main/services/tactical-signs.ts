@@ -112,7 +112,7 @@ function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 
  * Handles Normalize Type.
  */
 function normalizeType(type: unknown): NonNullable<TacticalSignConfig['typ']> | 'none' {
-  if (type === 'group' || type === 'squad' || type === 'zugtrupp') {
+  if (type === 'platoon' || type === 'group' || type === 'squad' || type === 'zugtrupp' || type === 'none') {
     return type;
   }
   // Für den aktuellen MVP nur "einfache Einheit" ohne Führungsstärke-Punkte anzeigen.

@@ -45,6 +45,10 @@ import {
   getTacticalPersonSvgDataUrl,
   getTacticalVehicleSvgDataUrl,
 } from '../services/tactical-signs';
+import {
+  inferTacticalSignConfig,
+  listTacticalSignCatalog,
+} from '../services/tactical-sign-inference';
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 import { EinsatzSyncService } from '../services/einsatz-sync';
@@ -748,6 +752,20 @@ export function registerIpc(state: AppState): void {
     IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG,
     wrap(async (input: Parameters<RendererApi['getTacticalFormationSvg']>[0]) =>
       getTacticalFormationSvgDataUrl(input.organisation, input.tacticalSignConfig ?? null),
+    ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.INFER_TACTICAL_SIGN,
+    wrap(async (input: Parameters<RendererApi['inferTacticalSign']>[0]) =>
+      inferTacticalSignConfig(input.nameImEinsatz, input.organisation),
+    ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_TACTICAL_SIGN_CATALOG,
+    wrap(async (input: Parameters<RendererApi['listTacticalSignCatalog']>[0]) =>
+      listTacticalSignCatalog(input.organisation, input.query),
     ),
   );
 

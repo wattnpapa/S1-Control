@@ -48,6 +48,8 @@ const api: RendererApi = {
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG, input),
+  inferTacticalSign: (input) => ipcRenderer.invoke(IPC_CHANNEL.INFER_TACTICAL_SIGN, input),
+  listTacticalSignCatalog: (input) => ipcRenderer.invoke(IPC_CHANNEL.LIST_TACTICAL_SIGN_CATALOG, input),
   getTacticalVehicleSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG, input),
   getTacticalPersonSvg: (input) =>

@@ -438,6 +438,85 @@ describe('einsatz service', () => {
     }
   });
 
+  it('re-infers tactical sign on update when source is auto and name changes', () => {
+    const ctx = createTestDb('s1-control-einsatz-sign-auto-update-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK Oldenburg',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/0/4/4',
+        aktuellerAbschnittId: root.id,
+      });
+
+      const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+      const before = JSON.parse(source.tacticalSignConfigJson ?? '{}') as { meta?: { rawName?: string; source?: string } };
+      expect(before.meta?.source).toBe('auto');
+      expect(before.meta?.rawName).toBe('FK Oldenburg');
+
+      updateEinheit(ctx, {
+        einsatzId: created.id,
+        einheitId: source.id,
+        nameImEinsatz: 'Bergung 1',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/0/4/4',
+        status: 'AKTIV',
+      });
+
+      const updated = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, source.id)).get()!;
+      const parsed = JSON.parse(updated.tacticalSignConfigJson ?? '{}') as { meta?: { rawName?: string; source?: string } };
+      expect(parsed.meta?.source).toBe('auto');
+      expect(parsed.meta?.rawName).toBe('Bergung 1');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('keeps manual tactical-sign config stable on rename without override payload', () => {
+    const ctx = createTestDb('s1-control-einsatz-sign-manual-stable-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Lage', fuestName: 'FüSt' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'Einheit A',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/0/4/4',
+        tacticalSignConfigJson: JSON.stringify({
+          unit: 'MAN',
+          typ: 'group',
+          meta: { source: 'manual' },
+        }),
+        aktuellerAbschnittId: root.id,
+      });
+
+      const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+      updateEinheit(ctx, {
+        einsatzId: created.id,
+        einheitId: source.id,
+        nameImEinsatz: 'Einheit B',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/0/4/4',
+        status: 'AKTIV',
+      });
+
+      const updated = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, source.id)).get()!;
+      const parsed = JSON.parse(updated.tacticalSignConfigJson ?? '{}') as { unit?: string; meta?: { source?: string } };
+      expect(parsed.unit).toBe('MAN');
+      expect(parsed.meta?.source).toBe('manual');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
   it('validates split source existence, non-zero split and non-negative values', () => {
     const ctx = createTestDb('s1-control-einsatz-split-edge-');
     try {

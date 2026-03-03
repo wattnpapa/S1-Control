@@ -216,6 +216,25 @@ export interface RendererApi {
     organisation: OrganisationKey;
     tacticalSignConfig?: TacticalSignConfig | null;
   }): Promise<string>;
+  inferTacticalSign(input: {
+    organisation: OrganisationKey;
+    nameImEinsatz: string;
+  }): Promise<{
+    config: TacticalSignConfig;
+    confidence: number;
+    matchedKey?: string;
+    matchedLabel?: string;
+  }>;
+  listTacticalSignCatalog(input: {
+    organisation: OrganisationKey;
+    query?: string;
+  }): Promise<Array<{
+    key: string;
+    label: string;
+    unit: string;
+    typ: 'none' | 'group' | 'squad' | 'zugtrupp';
+    denominator?: string;
+  }>>;
   getTacticalVehicleSvg(input: {
     organisation: OrganisationKey;
   }): Promise<string>;
@@ -288,6 +307,8 @@ export const IPC_CHANNEL = {
   EINSATZ_CHANGED: 'einsatz:changed',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
+  INFER_TACTICAL_SIGN: 'taktisches-zeichen:infer',
+  LIST_TACTICAL_SIGN_CATALOG: 'taktisches-zeichen:catalog',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
   GET_TACTICAL_PERSON_SVG: 'taktisches-zeichen:person-svg',
   OPEN_STRENGTH_DISPLAY_WINDOW: 'strength-display:open-window',

@@ -915,6 +915,29 @@ td.tactical-sign-cell.compact-sign-cell {
   gap: 8px;
 }
 
+.tactical-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 220px));
+  gap: 8px;
+  align-items: center;
+}
+
+.tactical-editor-meta {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #3d4a67;
+}
+
+.tactical-sign-preview-row {
+  display: flex;
+  align-items: center;
+}
+
+.tactical-sign-preview-box {
+  width: 120px;
+  height: 48px;
+}
+
 .overlay-backdrop {
   position: fixed;
   inset: 0;
@@ -969,6 +992,7 @@ td.tactical-sign-cell.compact-sign-cell {
   display: grid;
   place-items: center;
   user-select: none;
+  position: relative;
 }
 
 .strength-display.is-inverted {
@@ -1009,6 +1033,121 @@ td.tactical-sign-cell.compact-sign-cell {
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
+}
+
+.strength-display-corner {
+  position: fixed;
+  top: 0;
+  width: 180px;
+  height: 120px;
+  z-index: 50;
+  display: flex;
+  align-items: flex-start;
+  pointer-events: auto;
+}
+
+.strength-display-corner-left {
+  left: 0;
+  justify-content: flex-start;
+  padding: 14px;
+}
+
+.strength-display-corner-right {
+  right: 0;
+  justify-content: flex-end;
+  padding: 14px;
+}
+
+.strength-display-corner-button {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 1px solid rgba(120, 138, 173, 0.5);
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  font-size: 24px;
+  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: translateY(-8px);
+  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
+}
+
+.strength-display.is-inverted .strength-display-corner-button {
+  background: rgba(12, 12, 12, 0.92);
+  color: #f8fafc;
+  border-color: rgba(203, 213, 225, 0.5);
+}
+
+.strength-display-corner:hover .strength-display-corner-button,
+.strength-display-corner:focus-within .strength-display-corner-button {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.strength-display-corner-button:hover {
+  background: rgba(235, 241, 255, 0.97);
+}
+
+.strength-display.is-inverted .strength-display-corner-button:hover {
+  background: rgba(32, 32, 32, 0.97);
+}
+
+.strength-display-menu {
+  position: absolute;
+  top: 62px;
+  left: 14px;
+  min-width: 280px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+  padding: 8px;
+}
+
+.strength-display.is-inverted .strength-display-menu {
+  background: rgba(10, 10, 10, 0.97);
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.strength-display-menu-item {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  text-align: left;
+  padding: 10px 12px;
+  font-size: 15px;
+  cursor: pointer;
+}
+
+.strength-display.is-inverted .strength-display-menu-item {
+  background: #111827;
+  color: #f8fafc;
+  border-color: rgba(148, 163, 184, 0.35);
+}
+
+.strength-display-menu-item:hover {
+  background: #e2e8f0;
+}
+
+.strength-display.is-inverted .strength-display-menu-item:hover {
+  background: #1f2937;
+}
+
+.strength-display-menu-hint {
+  margin-top: 8px;
+  padding: 2px 4px 0;
+  font-size: 13px;
+  color: #475569;
+}
+
+.strength-display.is-inverted .strength-display-menu-hint {
+  color: #cbd5e1;
 }
 
 @media (max-width: 900px) {

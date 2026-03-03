@@ -9,6 +9,7 @@ import type {
   RecordEditLockInfo,
   RecordEditLockType,
   SessionUser,
+  TacticalSignConfig,
   UpdaterState,
 } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
@@ -80,6 +81,68 @@ function formatEtaSeconds(seconds?: number): string {
 }
 
 /**
+ * Handles Parse Tactical Sign Config.
+ */
+function parseTacticalSignConfig(
+  value: string | null | undefined,
+): Pick<CreateEinheitForm, 'tacticalSignMode' | 'tacticalSignUnit' | 'tacticalSignTyp' | 'tacticalSignDenominator'> {
+  if (!value) {
+    return {
+      tacticalSignMode: 'AUTO',
+      tacticalSignUnit: '',
+      tacticalSignTyp: 'none',
+      tacticalSignDenominator: '',
+    };
+  }
+  try {
+    const parsed = JSON.parse(value) as TacticalSignConfig;
+    const source = parsed.meta?.source === 'manual' ? 'MANUELL' : 'AUTO';
+    return {
+      tacticalSignMode: source,
+      tacticalSignUnit: parsed.unit ?? '',
+      tacticalSignTyp: parsed.typ ?? 'none',
+      tacticalSignDenominator: parsed.denominator ?? '',
+    };
+  } catch {
+    return {
+      tacticalSignMode: 'AUTO',
+      tacticalSignUnit: '',
+      tacticalSignTyp: 'none',
+      tacticalSignDenominator: '',
+    };
+  }
+}
+
+/**
+ * Handles Build Tactical Sign Config Json.
+ */
+function buildTacticalSignConfigJson(
+  input: Pick<CreateEinheitForm, 'nameImEinsatz' | 'organisation' | 'tacticalSignMode' | 'tacticalSignUnit' | 'tacticalSignTyp' | 'tacticalSignDenominator'>,
+): string {
+  const isManual = input.tacticalSignMode === 'MANUELL';
+  const config: TacticalSignConfig = {
+    grundform: 'taktische_formation',
+    fachaufgabe: 'keine',
+    organisation: input.organisation,
+    einheit: 'keine',
+    verwaltungsstufe: 'keine',
+    symbol: 'keines',
+    text: '',
+    name: input.nameImEinsatz,
+    organisationsname: input.organisation,
+    unit: input.tacticalSignUnit.trim(),
+    typ: input.tacticalSignTyp,
+    denominator: input.tacticalSignDenominator.trim() || undefined,
+    meta: {
+      source: isManual ? 'manual' : 'auto',
+      rawName: input.nameImEinsatz,
+      updatedAt: new Date().toISOString(),
+    },
+  };
+  return JSON.stringify(config);
+}
+
+/**
  * Handles App.
  */
 export function App() {
@@ -137,6 +200,10 @@ export function App() {
     bemerkung: '',
     vegetarierVorhanden: false,
     erreichbarkeiten: '',
+    tacticalSignMode: 'AUTO',
+    tacticalSignUnit: '',
+    tacticalSignTyp: 'none',
+    tacticalSignDenominator: '',
   });
   const [showEditEinheitDialog, setShowEditEinheitDialog] = useState(false);
   const [editEinheitHelfer, setEditEinheitHelfer] = useState<EinheitHelfer[]>([]);
@@ -161,6 +228,10 @@ export function App() {
     bemerkung: '',
     vegetarierVorhanden: false,
     erreichbarkeiten: '',
+    tacticalSignMode: 'AUTO',
+    tacticalSignUnit: '',
+    tacticalSignTyp: 'none',
+    tacticalSignDenominator: '',
   });
 
   const [showSplitEinheitDialog, setShowSplitEinheitDialog] = useState(false);
@@ -839,6 +910,10 @@ export function App() {
       bemerkung: '',
       vegetarierVorhanden: false,
       erreichbarkeiten: '',
+      tacticalSignMode: 'AUTO',
+      tacticalSignUnit: '',
+      tacticalSignTyp: 'none',
+      tacticalSignDenominator: '',
     });
     setShowCreateEinheitDialog(true);
   };
@@ -954,6 +1029,14 @@ export function App() {
     const gesamt = fuehrung + unterfuehrung + mannschaft;
     const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
     const vegetarierVorhanden = false;
+    const tacticalSignConfigJson = buildTacticalSignConfigJson({
+      nameImEinsatz: createEinheitForm.nameImEinsatz.trim(),
+      organisation: createEinheitForm.organisation,
+      tacticalSignMode: createEinheitForm.tacticalSignMode,
+      tacticalSignUnit: createEinheitForm.tacticalSignUnit,
+      tacticalSignTyp: createEinheitForm.tacticalSignTyp,
+      tacticalSignDenominator: createEinheitForm.tacticalSignDenominator,
+    });
 
     await withBusy(async () => {
       await window.api.createEinheit({
@@ -977,6 +1060,7 @@ export function App() {
         bemerkung: createEinheitForm.bemerkung,
         vegetarierVorhanden,
         erreichbarkeiten: createEinheitForm.erreichbarkeiten,
+        tacticalSignConfigJson,
       });
       setShowCreateEinheitDialog(false);
       await refreshAll();
@@ -1006,6 +1090,7 @@ export function App() {
       const helfer = await window.api.listEinheitHelfer(einheitId);
       setEditEinheitHelfer(helfer);
       const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
+      const tactical = parseTacticalSignConfig(einheit.tacticalSignConfigJson);
       setEditEinheitForm({
         einheitId,
         nameImEinsatz: einheit.nameImEinsatz,
@@ -1027,6 +1112,7 @@ export function App() {
         bemerkung: einheit.bemerkung ?? '',
         vegetarierVorhanden: einheit.vegetarierVorhanden ?? false,
         erreichbarkeiten: einheit.erreichbarkeiten ?? '',
+        ...tactical,
       });
       setShowEditFahrzeugDialog(false);
       setShowEditEinheitDialog(true);
@@ -1052,6 +1138,14 @@ export function App() {
     const gesamt = fuehrung + unterfuehrung + mannschaft;
     const taktisch = `${fuehrung}/${unterfuehrung}/${mannschaft}/${gesamt}`;
     const vegetarierVorhanden = editEinheitHelfer.some((h) => h.vegetarisch);
+    const tacticalSignConfigJson = buildTacticalSignConfigJson({
+      nameImEinsatz: editEinheitForm.nameImEinsatz.trim(),
+      organisation: editEinheitForm.organisation,
+      tacticalSignMode: editEinheitForm.tacticalSignMode,
+      tacticalSignUnit: editEinheitForm.tacticalSignUnit,
+      tacticalSignTyp: editEinheitForm.tacticalSignTyp,
+      tacticalSignDenominator: editEinheitForm.tacticalSignDenominator,
+    });
 
     await withBusy(async () => {
       await window.api.updateEinheit({
@@ -1075,6 +1169,7 @@ export function App() {
         bemerkung: editEinheitForm.bemerkung,
         vegetarierVorhanden,
         erreichbarkeiten: editEinheitForm.erreichbarkeiten,
+        tacticalSignConfigJson,
       });
       await releaseEditLock(selectedEinsatzId, 'EINHEIT', editEinheitForm.einheitId);
       setShowEditEinheitDialog(false);

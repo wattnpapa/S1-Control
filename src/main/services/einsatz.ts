@@ -21,6 +21,12 @@ import type {
   OrganisationKey,
 } from '../../shared/types';
 import { AppError } from './errors';
+import {
+  ensureTacticalSignConfigSource,
+  inferTacticalSignConfig,
+  parseTacticalSignConfigJson,
+  toTacticalSignConfigJson,
+} from './tactical-sign-inference';
 
 /**
  * Handles Now Iso.
@@ -72,18 +78,57 @@ function defaultTacticalSignConfigJson(
   organisation: EinheitListItem['organisation'],
   nameImEinsatz: string,
 ): string {
-  return JSON.stringify({
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
-    organisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
-    text: '',
-    name: nameImEinsatz,
-    organisationsname: organisation,
-    unit: '',
-  });
+  return toTacticalSignConfigJson(inferTacticalSignConfig(nameImEinsatz, organisation).config);
+}
+
+/**
+ * Handles Resolve Manual Tactical Sign Config Json.
+ */
+function resolveManualTacticalSignConfigJson(
+  tacticalSignConfigJson: string,
+  nameImEinsatz: string,
+  organisation: EinheitListItem['organisation'],
+): string {
+  const parsed = parseTacticalSignConfigJson(tacticalSignConfigJson);
+  if (!parsed) {
+    throw new AppError('Taktisches Zeichen ist ungültig', 'VALIDATION');
+  }
+  const source = parsed.meta?.source === 'auto' ? 'auto' : 'manual';
+  return toTacticalSignConfigJson(
+    ensureTacticalSignConfigSource(parsed, source, nameImEinsatz, organisation),
+  );
+}
+
+/**
+ * Handles Resolve Updated Tactical Sign Config Json.
+ */
+function resolveUpdatedTacticalSignConfigJson(
+  existingJson: string | null,
+  input: {
+    tacticalSignConfigJson?: string;
+    nameImEinsatz: string;
+    organisation: EinheitListItem['organisation'];
+  },
+): string {
+  if (input.tacticalSignConfigJson !== undefined) {
+    return resolveManualTacticalSignConfigJson(
+      input.tacticalSignConfigJson,
+      input.nameImEinsatz,
+      input.organisation,
+    );
+  }
+
+  const existing = parseTacticalSignConfigJson(existingJson);
+  const existingSource = existing?.meta?.source ?? 'auto';
+  if (existing && existingSource === 'manual') {
+    const preservedName = existing.name ?? input.nameImEinsatz;
+    const preservedOrganisation = (existing.organisation as EinheitListItem['organisation'] | undefined) ?? input.organisation;
+    return toTacticalSignConfigJson(
+      ensureTacticalSignConfigSource(existing, 'manual', preservedName, preservedOrganisation),
+    );
+  }
+
+  return toTacticalSignConfigJson(inferTacticalSignConfig(input.nameImEinsatz, input.organisation).config);
 }
 
 const ORGANISATIONS: OrganisationKey[] = [
@@ -407,7 +452,13 @@ export function createEinheit(
     aktuelleStaerke: input.aktuelleStaerke,
     aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
     tacticalSignConfigJson:
-      input.tacticalSignConfigJson ?? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz),
+      input.tacticalSignConfigJson === undefined
+        ? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz)
+        : resolveManualTacticalSignConfigJson(
+            input.tacticalSignConfigJson,
+            input.nameImEinsatz,
+            input.organisation,
+          ),
     grFuehrerName: normalizeOptionalText(input.grFuehrerName),
     ovName: normalizeOptionalText(input.ovName),
     ovTelefon: normalizeOptionalText(input.ovTelefon),
@@ -476,13 +527,24 @@ export function updateEinheit(
   }
 
   const row = ctx.db
-    .select({ id: einsatzEinheit.id })
+    .select({
+      id: einsatzEinheit.id,
+      tacticalSignConfigJson: einsatzEinheit.tacticalSignConfigJson,
+      nameImEinsatz: einsatzEinheit.nameImEinsatz,
+      organisation: einsatzEinheit.organisation,
+    })
     .from(einsatzEinheit)
     .where(and(eq(einsatzEinheit.id, input.einheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
     .get();
   if (!row) {
     throw new AppError('Einheit nicht gefunden', 'NOT_FOUND');
   }
+
+  const nextTacticalSignConfigJson = resolveUpdatedTacticalSignConfigJson(row.tacticalSignConfigJson, {
+    tacticalSignConfigJson: input.tacticalSignConfigJson,
+    nameImEinsatz: input.nameImEinsatz,
+    organisation: input.organisation,
+  });
 
   ctx.db
     .update(einsatzEinheit)
@@ -492,9 +554,7 @@ export function updateEinheit(
       aktuelleStaerke: input.aktuelleStaerke,
       aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
       status: input.status ?? 'AKTIV',
-      ...(input.tacticalSignConfigJson === undefined
-        ? {}
-        : { tacticalSignConfigJson: input.tacticalSignConfigJson }),
+      tacticalSignConfigJson: nextTacticalSignConfigJson,
       grFuehrerName: normalizeOptionalText(input.grFuehrerName),
       ovName: normalizeOptionalText(input.ovName),
       ovTelefon: normalizeOptionalText(input.ovTelefon),
@@ -905,9 +965,12 @@ export function splitEinheit(
         aktuelleStaerke: splitGesamt,
         aktuelleStaerkeTaktisch: formatTaktisch(input.fuehrung, input.unterfuehrung, input.mannschaft),
         tacticalSignConfigJson:
-          input.tacticalSignConfigJson ??
-          source.tacticalSignConfigJson ??
-          defaultTacticalSignConfigJson(organisation, input.nameImEinsatz.trim()),
+          input.tacticalSignConfigJson === undefined
+            ? resolveUpdatedTacticalSignConfigJson(source.tacticalSignConfigJson, {
+                nameImEinsatz: input.nameImEinsatz.trim(),
+                organisation,
+              })
+            : resolveManualTacticalSignConfigJson(input.tacticalSignConfigJson, input.nameImEinsatz.trim(), organisation),
         aktuellerAbschnittId: source.aktuellerAbschnittId,
         status: input.status ?? source.status,
         erstellt: nowIso(),
