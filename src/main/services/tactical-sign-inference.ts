@@ -1,6 +1,6 @@
 import config from 'taktische-zeichen/config.json';
 import type { OrganisationKey, TacticalSignConfig, TacticalSignMeta } from '../../shared/types';
-import { TACTICAL_SIGN_ALIASES } from './tactical-sign-aliases';
+import { TACTICAL_SIGN_ALIASES, THW_SHORTCODE_RULES, type ThwShortcodeRule } from './tactical-sign-aliases';
 
 const RULE_VERSION = 1;
 const AUTO_THRESHOLD = 0.6;
@@ -30,6 +30,11 @@ interface RankedCatalogItem extends TacticalSignCatalogItem {
   tokens: string[];
   aliasTokens: string[];
   score: number;
+}
+
+interface ShortcodeInference {
+  rule: ThwShortcodeRule;
+  confidence: number;
 }
 
 export interface TacticalInferenceResult {
@@ -217,6 +222,44 @@ function scoreCandidate(name: string, candidate: RankedCatalogItem): number {
 }
 
 /**
+ * Handles Includes Pattern.
+ */
+function includesPattern(normalizedName: string, nameTokens: Set<string>, pattern: string): boolean {
+  const normalizedPattern = normalizeText(pattern);
+  if (!normalizedPattern) {
+    return false;
+  }
+  if (normalizedPattern.includes(' ')) {
+    return normalizedName.includes(normalizedPattern);
+  }
+  return nameTokens.has(normalizedPattern);
+}
+
+/**
+ * Handles Infer THW Shortcode.
+ */
+function inferThwShortcode(nameImEinsatz: string): ShortcodeInference | null {
+  const normalizedName = normalizeText(nameImEinsatz);
+  const nameTokens = new Set(tokenize(nameImEinsatz));
+  if (!normalizedName || nameTokens.size === 0) {
+    return null;
+  }
+
+  let best: ShortcodeInference | null = null;
+  for (const rule of THW_SHORTCODE_RULES) {
+    const matchedPatterns = rule.patterns.filter((pattern) => includesPattern(normalizedName, nameTokens, pattern));
+    if (matchedPatterns.length === 0) {
+      continue;
+    }
+    const score = Math.min(1, 0.72 + matchedPatterns.length * 0.08);
+    if (!best || score > best.confidence) {
+      best = { rule, confidence: score };
+    }
+  }
+  return best;
+}
+
+/**
  * Handles To Ranked Candidate.
  */
 function toRankedCandidate(item: TacticalSignCatalogItem): RankedCatalogItem {
@@ -233,6 +276,38 @@ function toRankedCandidate(item: TacticalSignCatalogItem): RankedCatalogItem {
  * Handles Infer Tactical Sign Config.
  */
 export function inferTacticalSignConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalInferenceResult {
+  if (organisation === 'THW') {
+    const thwShortcode = inferThwShortcode(nameImEinsatz);
+    if (thwShortcode) {
+      const matchedKey = `thw-shortcode-${normalizeText(thwShortcode.rule.unit).replace(/\s+/g, '-')}`;
+      return {
+        confidence: thwShortcode.confidence,
+        matchedKey,
+        matchedLabel: thwShortcode.rule.label,
+        config: {
+          grundform: 'taktische_formation',
+          fachaufgabe: 'keine',
+          organisation,
+          einheit: 'keine',
+          verwaltungsstufe: 'keine',
+          symbol: 'keines',
+          text: '',
+          name: nameImEinsatz,
+          organisationsname: organisation,
+          unit: thwShortcode.rule.unit,
+          typ: thwShortcode.rule.typ,
+          meta: buildMeta({
+            source: 'auto',
+            rawName: nameImEinsatz,
+            confidence: thwShortcode.confidence,
+            matchedKey,
+            matchedLabel: thwShortcode.rule.label,
+          }),
+        },
+      };
+    }
+  }
+
   const catalog = buildCatalogForOrganisation(organisation).map(toRankedCandidate);
   const ranked = catalog
     .map((candidate) => ({ ...candidate, score: scoreCandidate(nameImEinsatz, candidate) }))

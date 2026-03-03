@@ -22,6 +22,29 @@ describe('tactical-sign inference', () => {
     expect(result.config.meta?.source).toBe('auto');
   });
 
+  it('recognizes THW fachgruppen abbreviations with group typ', () => {
+    const result = inferTacticalSignConfig('FGr BrB Oldenburg', 'THW');
+    expect(result.config.unit).toBe('BrB');
+    expect(result.config.typ).toBe('group');
+    expect(result.config.meta?.source).toBe('auto');
+    expect(result.config.meta?.matchedLabel).toContain('Brückenbau');
+    expect(result.confidence).toBeGreaterThanOrEqual(0.6);
+  });
+
+  it('recognizes THW trupp abbreviations with squad typ', () => {
+    const result = inferTacticalSignConfig('ESS 1', 'THW');
+    expect(result.config.unit).toBe('ESS');
+    expect(result.config.typ).toBe('squad');
+    expect(result.config.meta?.source).toBe('auto');
+  });
+
+  it('recognizes THW zugtrupp abbreviation with zugtrupp typ', () => {
+    const result = inferTacticalSignConfig('Ztr OV Oldenburg', 'THW');
+    expect(result.config.unit).toBe('Ztr');
+    expect(result.config.typ).toBe('zugtrupp');
+    expect(result.config.meta?.source).toBe('auto');
+  });
+
   it('lists catalog filtered by organisation and query', () => {
     const thwCatalog = listTacticalSignCatalog('THW');
     const fwCatalog = listTacticalSignCatalog('FEUERWEHR', 'löschzug');
