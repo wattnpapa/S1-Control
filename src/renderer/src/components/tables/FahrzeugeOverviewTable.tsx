@@ -1,3 +1,4 @@
+import type { RecordEditLockInfo } from '@shared/types';
 import type { FahrzeugOverviewItem } from '@renderer/types/ui';
 import { faArrowsUpDownLeftRight, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
@@ -6,6 +7,7 @@ import { TaktischesZeichenFahrzeug } from '@renderer/components/common/Taktische
 interface FahrzeugeOverviewTableProps {
   fahrzeuge: FahrzeugOverviewItem[];
   isArchived: boolean;
+  editLocksById?: Record<string, RecordEditLockInfo | undefined>;
   onMove: (id: string) => void;
   onEdit: (id: string) => void;
 }
@@ -30,12 +32,21 @@ export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.
           </tr>
         </thead>
         <tbody>
-          {props.fahrzeuge.map((item) => (
+          {props.fahrzeuge.map((item) => {
+            const lock = props.editLocksById?.[item.id];
+            const lockedByOther = Boolean(lock && !lock.isSelf);
+            const lockLabel = lockedByOther ? `In Bearbeitung: ${lock?.computerName} (${lock?.userName})` : null;
+            return (
             <tr key={item.id}>
               <td className="tactical-sign-cell">
                 <TaktischesZeichenFahrzeug organisation={item.organisation} />
               </td>
-              <td>{item.name}</td>
+              <td>
+                <div className="split-name">
+                  <span>{item.name}</span>
+                  {lockLabel && <span className="lock-badge">{lockLabel}</span>}
+                </div>
+              </td>
               <td>{item.kennzeichen || '-'}</td>
               <td>{item.einheitName}</td>
               <td>{item.abschnittName}</td>
@@ -45,17 +56,17 @@ export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.
                   label="Verschieben"
                   icon={faArrowsUpDownLeftRight}
                   onClick={() => props.onMove(item.id)}
-                  disabled={props.isArchived}
+                  disabled={props.isArchived || lockedByOther}
                 />
                 <ActionIconButton
-                  label="Bearbeiten"
+                  label={lockedByOther ? `Bearbeiten gesperrt (${lock?.computerName})` : 'Bearbeiten'}
                   icon={faPenToSquare}
                   onClick={() => props.onEdit(item.id)}
-                  disabled={props.isArchived}
+                  disabled={props.isArchived || lockedByOther}
                 />
               </td>
             </tr>
-          ))}
+          )})}
         </tbody>
       </table>
     </>

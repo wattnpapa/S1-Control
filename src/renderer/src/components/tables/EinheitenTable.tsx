@@ -1,4 +1,4 @@
-import type { EinheitListItem } from '@shared/types';
+import type { EinheitListItem, RecordEditLockInfo } from '@shared/types';
 import { faArrowsUpDownLeftRight, faCodeBranch, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
 import { prettyOrganisation } from '@renderer/constants/organisation';
@@ -7,6 +7,7 @@ import { TaktischesZeichenEinheit } from '@renderer/components/common/Taktisches
 interface EinheitenTableProps {
   einheiten: EinheitListItem[];
   isArchived: boolean;
+  editLocksById?: Record<string, RecordEditLockInfo | undefined>;
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
   onEdit: (id: string) => void;
@@ -33,7 +34,11 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
           </tr>
         </thead>
         <tbody>
-          {props.einheiten.map((item) => (
+          {props.einheiten.map((item) => {
+            const lock = props.editLocksById?.[item.id];
+            const lockedByOther = Boolean(lock && !lock.isSelf);
+            const lockLabel = lockedByOther ? `In Bearbeitung: ${lock?.computerName} (${lock?.userName})` : null;
+            return (
             <tr key={item.id} className={item.parentEinsatzEinheitId ? 'split-row' : undefined}>
               <td className="tactical-sign-cell">
                 <TaktischesZeichenEinheit
@@ -49,6 +54,7 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
                       Split von {nameById.get(item.parentEinsatzEinheitId) ?? item.parentEinsatzEinheitId}
                     </span>
                   )}
+                  {lockLabel && <span className="lock-badge">{lockLabel}</span>}
                 </div>
               </td>
               <td>{prettyOrganisation(item.organisation)}</td>
@@ -59,23 +65,23 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
                   label="Verschieben"
                   icon={faArrowsUpDownLeftRight}
                   onClick={() => props.onMove(item.id)}
-                  disabled={props.isArchived}
+                  disabled={props.isArchived || lockedByOther}
                 />
                 <ActionIconButton
-                  label="Bearbeiten"
+                  label={lockedByOther ? `Bearbeiten gesperrt (${lock?.computerName})` : 'Bearbeiten'}
                   icon={faPenToSquare}
                   onClick={() => props.onEdit(item.id)}
-                  disabled={props.isArchived}
+                  disabled={props.isArchived || lockedByOther}
                 />
                 <ActionIconButton
                   label="Splitten"
                   icon={faCodeBranch}
                   onClick={() => props.onSplit(item.id)}
-                  disabled={props.isArchived}
+                  disabled={props.isArchived || lockedByOther}
                 />
               </td>
             </tr>
-          ))}
+          )})}
         </tbody>
       </table>
     </>

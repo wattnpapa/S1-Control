@@ -1,4 +1,4 @@
-import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const einsatzStatusValues = ['AKTIV', 'BEENDET', 'ARCHIVIERT'] as const;
 export const abschnittSystemTypValues = ['FUEST', 'ANFAHRT', 'LOGISTIK', 'BEREITSTELLUNGSRAUM', 'NORMAL'] as const;
@@ -158,3 +158,22 @@ export const activeClient = sqliteTable('active_client', {
   startedAt: text('started_at').notNull(),
   isMaster: integer('is_master', { mode: 'boolean' }).notNull().default(false),
 });
+
+export const recordEditLock = sqliteTable(
+  'record_edit_lock',
+  {
+    id: text('id').primaryKey(),
+    einsatzId: text('einsatz_id').notNull().references(() => einsatz.id),
+    entityType: text('entity_type').notNull(),
+    entityId: text('entity_id').notNull(),
+    clientId: text('client_id').notNull(),
+    computerName: text('computer_name').notNull(),
+    userName: text('user_name').notNull(),
+    acquiredAt: text('acquired_at').notNull(),
+    heartbeatAt: text('heartbeat_at').notNull(),
+    expiresAt: text('expires_at').notNull(),
+  },
+  (table) => ({
+    entityUnique: uniqueIndex('idx_record_edit_lock_entity_unique').on(table.entityType, table.entityId),
+  }),
+);

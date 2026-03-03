@@ -1,9 +1,11 @@
 import path from 'node:path';
+import { eq } from 'drizzle-orm';
 import { dialog, ipcMain, shell } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
 import type { SessionUser } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import { openDatabaseWithRetry } from '../db/connection';
+import { einsatzEinheitHelfer } from '../db/schema';
 import { SettingsStore } from '../db/settings-store';
 import { ensureDefaultAdmin, ensureSessionUserRecord, login } from '../services/auth';
 import { BackupCoordinator, resolveBackupDir } from '../services/backup';
@@ -46,6 +48,13 @@ import {
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 import { EinsatzSyncService } from '../services/einsatz-sync';
+import {
+  acquireRecordEditLock,
+  ensureRecordEditLockOwnership,
+  listRecordEditLocks,
+  refreshRecordEditLock,
+  releaseRecordEditLock,
+} from '../services/record-lock';
 
 interface AppState {
   getDbContext: () => DbContext;
@@ -88,6 +97,12 @@ export function registerIpc(state: AppState): void {
     }
     return user;
   };
+
+  const lockIdentity = (user: SessionUser) => ({
+    clientId: state.clientPresence.getClientId(),
+    computerName: state.clientPresence.getComputerName(),
+    userName: user.name,
+  });
 
   const getBaseDir = (): string => resolveEinsatzBaseDir(state.settingsStore.get().dbPath ?? state.getDefaultDbPath());
   const getRecentDbPaths = (): string[] => state.settingsStore.get().recentEinsatzDbPaths ?? [];
@@ -402,7 +417,12 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.UPDATE_ABSCHNITT,
     wrap(async (input: Parameters<RendererApi['updateAbschnitt']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'ABSCHNITT', entityId: input.abschnittId },
+        lockIdentity(user),
+      );
       updateAbschnitt(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
     }),
@@ -427,7 +447,12 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.UPDATE_EINHEIT,
     wrap(async (input: Parameters<RendererApi['updateEinheit']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einheitId },
+        lockIdentity(user),
+      );
       updateEinheit(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'update-einheit');
     }),
@@ -445,7 +470,12 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.UPDATE_FAHRZEUG,
     wrap(async (input: Parameters<RendererApi['updateFahrzeug']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'FAHRZEUG', entityId: input.fahrzeugId },
+        lockIdentity(user),
+      );
       updateFahrzeug(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'update-fahrzeug');
     }),
@@ -459,7 +489,12 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.CREATE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['createEinheitHelfer']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einsatzEinheitId },
+        lockIdentity(user),
+      );
       createEinheitHelfer(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'create-helfer');
     }),
@@ -468,7 +503,21 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.UPDATE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['updateEinheitHelfer']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      const helfer = state
+        .getDbContext()
+        .db.select({ einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId })
+        .from(einsatzEinheitHelfer)
+        .where(eq(einsatzEinheitHelfer.id, input.helferId))
+        .get();
+      if (!helfer) {
+        throw new Error('Helfer nicht gefunden.');
+      }
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: helfer.einsatzEinheitId },
+        lockIdentity(user),
+      );
       updateEinheitHelfer(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'update-helfer');
     }),
@@ -477,7 +526,21 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.DELETE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['deleteEinheitHelfer']>[0]) => {
-      requireUser();
+      const user = requireUser();
+      const helfer = state
+        .getDbContext()
+        .db.select({ einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId })
+        .from(einsatzEinheitHelfer)
+        .where(eq(einsatzEinheitHelfer.id, input.helferId))
+        .get();
+      if (!helfer) {
+        throw new Error('Helfer nicht gefunden.');
+      }
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: helfer.einsatzEinheitId },
+        lockIdentity(user),
+      );
       deleteEinheitHelfer(state.getDbContext(), input);
       notifyEinsatzChanged(input.einsatzId, 'delete-helfer');
     }),
@@ -563,6 +626,50 @@ export function registerIpc(state: AppState): void {
       state.backupCoordinator.start(nextContext);
       notifyEinsatzChanged(einsatzId, 'restore-backup', dbPath);
       return true;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.ACQUIRE_EDIT_LOCK,
+    wrap(async (input: Parameters<RendererApi['acquireEditLock']>[0]) => {
+      const user = requireUser();
+      return acquireRecordEditLock(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: input.entityType, entityId: input.entityId },
+        lockIdentity(user),
+      );
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.REFRESH_EDIT_LOCK,
+    wrap(async (input: Parameters<RendererApi['refreshEditLock']>[0]) => {
+      const user = requireUser();
+      return refreshRecordEditLock(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: input.entityType, entityId: input.entityId },
+        lockIdentity(user),
+      );
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.RELEASE_EDIT_LOCK,
+    wrap(async (input: Parameters<RendererApi['releaseEditLock']>[0]) => {
+      const user = requireUser();
+      releaseRecordEditLock(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: input.entityType, entityId: input.entityId },
+        lockIdentity(user),
+      );
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_EDIT_LOCKS,
+    wrap(async (einsatzId: string) => {
+      requireUser();
+      return listRecordEditLocks(state.getDbContext(), einsatzId, state.clientPresence.getClientId());
     }),
   );
 

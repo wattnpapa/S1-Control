@@ -1,4 +1,4 @@
-import type { EinsatzListItem } from '@shared/types';
+import type { EinsatzListItem, RecordEditLockInfo } from '@shared/types';
 import { EinheitenTable } from '@renderer/components/tables/EinheitenTable';
 import { FahrzeugeTable } from '@renderer/components/tables/FahrzeugeTable';
 import type { AbschnittDetails } from '@shared/types';
@@ -8,6 +8,8 @@ interface EinsatzOverviewViewProps {
   selectedEinsatz: EinsatzListItem | null;
   isArchived: boolean;
   broadcastLogs: string[];
+  einheitLocksById?: Record<string, RecordEditLockInfo | undefined>;
+  fahrzeugLocksById?: Record<string, RecordEditLockInfo | undefined>;
   onMoveEinheit: (id: string) => void;
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
@@ -39,6 +41,7 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
       <EinheitenTable
         einheiten={props.details.einheiten}
         isArchived={props.isArchived}
+        editLocksById={props.einheitLocksById}
         onMove={props.onMoveEinheit}
         onEdit={props.onEditEinheit}
         onSplit={props.onSplitEinheit}
@@ -46,6 +49,7 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
       <FahrzeugeTable
         fahrzeuge={props.details.fahrzeuge}
         isArchived={props.isArchived}
+        editLocksById={props.fahrzeugLocksById}
         onMove={props.onMoveFahrzeug}
         onEdit={props.onEditFahrzeug}
       />

@@ -5,6 +5,7 @@ export type FahrzeugStatus = 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
 export type BenutzerRolle = 'ADMIN' | 'S1' | 'FUE_ASS' | 'VIEWER';
 export type HelferRolle = 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
 export type HelferGeschlecht = 'MAENNLICH' | 'WEIBLICH';
+export type RecordEditLockType = 'ABSCHNITT' | 'EINHEIT' | 'FAHRZEUG';
 export type OrganisationKey =
   | 'THW'
   | 'FEUERWEHR'
@@ -175,6 +176,20 @@ export interface ActiveClientInfo {
   dbPath: string;
   lastSeen: string;
   isMaster: boolean;
+  isSelf: boolean;
+}
+
+export interface RecordEditLockInfo {
+  id: string;
+  einsatzId: string;
+  entityType: RecordEditLockType;
+  entityId: string;
+  clientId: string;
+  computerName: string;
+  userName: string;
+  acquiredAt: string;
+  heartbeatAt: string;
+  expiresAt: string;
   isSelf: boolean;
 }
 

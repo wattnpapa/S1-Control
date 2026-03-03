@@ -64,6 +64,20 @@ export class ClientPresenceService {
   private isMaster = false;
 
   /**
+   * Handles Get Client Id.
+   */
+  public getClientId(): string {
+    return this.clientId;
+  }
+
+  /**
+   * Handles Get Computer Name.
+   */
+  public getComputerName(): string {
+    return os.hostname();
+  }
+
+  /**
    * Handles Start.
    */
   public start(ctx: DbContext): void {

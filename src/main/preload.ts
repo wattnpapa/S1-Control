@@ -56,6 +56,10 @@ const api: RendererApi = {
   closeStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.CLOSE_STRENGTH_DISPLAY_WINDOW),
   getStrengthDisplayState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_STRENGTH_DISPLAY_STATE),
   setStrengthDisplayState: (input) => ipcRenderer.invoke(IPC_CHANNEL.SET_STRENGTH_DISPLAY_STATE, input),
+  acquireEditLock: (input) => ipcRenderer.invoke(IPC_CHANNEL.ACQUIRE_EDIT_LOCK, input),
+  refreshEditLock: (input) => ipcRenderer.invoke(IPC_CHANNEL.REFRESH_EDIT_LOCK, input),
+  releaseEditLock: (input) => ipcRenderer.invoke(IPC_CHANNEL.RELEASE_EDIT_LOCK, input),
+  listEditLocks: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.LIST_EDIT_LOCKS, einsatzId),
 };
 
 contextBridge.exposeInMainWorld('api', api);

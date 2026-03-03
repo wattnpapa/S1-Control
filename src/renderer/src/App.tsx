@@ -6,6 +6,8 @@ import type {
   EinheitHelfer,
   OrganisationKey,
   PeerUpdateStatus,
+  RecordEditLockInfo,
+  RecordEditLockType,
   SessionUser,
   UpdaterState,
 } from '@shared/types';
@@ -208,6 +210,8 @@ export function App() {
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
+  const [editLocks, setEditLocks] = useState<RecordEditLockInfo[]>([]);
+  const [ownedEditLocks, setOwnedEditLocks] = useState<Array<{ entityType: RecordEditLockType; entityId: string }>>([]);
   const lastRemoteRefreshAtRef = useRef(0);
 
   const selectedEinsatz = useMemo(
@@ -221,6 +225,35 @@ export function App() {
         .slice(-120),
     [debugSyncLogs],
   );
+  const lockByEinheitId = useMemo(
+    () =>
+      Object.fromEntries(
+        editLocks
+          .filter((lock) => lock.entityType === 'EINHEIT')
+          .map((lock) => [lock.entityId, lock] as const),
+      ),
+    [editLocks],
+  );
+  const lockByFahrzeugId = useMemo(
+    () =>
+      Object.fromEntries(
+        editLocks
+          .filter((lock) => lock.entityType === 'FAHRZEUG')
+          .map((lock) => [lock.entityId, lock] as const),
+      ),
+    [editLocks],
+  );
+  const lockByAbschnittId = useMemo(
+    () =>
+      Object.fromEntries(
+        editLocks
+          .filter((lock) => lock.entityType === 'ABSCHNITT')
+          .map((lock) => [lock.entityId, lock] as const),
+      ),
+    [editLocks],
+  );
+  const selectedAbschnittLock = selectedAbschnittId ? lockByAbschnittId[selectedAbschnittId] : undefined;
+  const selectedAbschnittLockedByOther = Boolean(selectedAbschnittLock && !selectedAbschnittLock.isSelf);
 
   const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
   const showAbschnittSidebar = activeView === 'einsatz';
@@ -319,9 +352,93 @@ export function App() {
     setAllFahrzeuge([]);
     setGesamtStaerke(EMPTY_STRENGTH);
     setActiveClients([]);
+    setEditLocks([]);
+    setOwnedEditLocks([]);
   }, []);
 
+  /**
+   * Handles Refresh Edit Locks.
+   */
+  const refreshEditLocks = useCallback(async (einsatzId: string) => {
+    const locks = await window.api.listEditLocks(einsatzId);
+    setEditLocks(locks);
+  }, []);
+
+  /**
+   * Handles Acquire Edit Lock.
+   */
+  const acquireEditLock = useCallback(
+    async (einsatzId: string, entityType: RecordEditLockType, entityId: string): Promise<boolean> => {
+      const result = await window.api.acquireEditLock({ einsatzId, entityType, entityId });
+      await refreshEditLocks(einsatzId);
+      if (!result.acquired) {
+        setError(`Datensatz wird gerade von ${result.lock.computerName} (${result.lock.userName}) bearbeitet.`);
+        return false;
+      }
+      setOwnedEditLocks((prev) => {
+        if (prev.some((item) => item.entityType === entityType && item.entityId === entityId)) {
+          return prev;
+        }
+        return [...prev, { entityType, entityId }];
+      });
+      return true;
+    },
+    [refreshEditLocks],
+  );
+
+  /**
+   * Handles Release Edit Lock.
+   */
+  const releaseEditLock = useCallback(async (einsatzId: string, entityType: RecordEditLockType, entityId: string) => {
+    try {
+      await window.api.releaseEditLock({ einsatzId, entityType, entityId });
+    } finally {
+      setOwnedEditLocks((prev) => prev.filter((item) => !(item.entityType === entityType && item.entityId === entityId)));
+      if (einsatzId) {
+        await refreshEditLocks(einsatzId);
+      }
+    }
+  }, [refreshEditLocks]);
+
+  /**
+   * Handles Close Edit Abschnitt Dialog.
+   */
+  const closeEditAbschnittDialog = useCallback(() => {
+    const abschnittId = editAbschnittForm.abschnittId;
+    setShowEditAbschnittDialog(false);
+    if (!selectedEinsatzId || !abschnittId) {
+      return;
+    }
+    void releaseEditLock(selectedEinsatzId, 'ABSCHNITT', abschnittId).catch(() => undefined);
+  }, [editAbschnittForm.abschnittId, releaseEditLock, selectedEinsatzId]);
+
+  /**
+   * Handles Close Edit Einheit Dialog.
+   */
+  const closeEditEinheitDialog = useCallback(() => {
+    const einheitId = editEinheitForm.einheitId;
+    setShowEditEinheitDialog(false);
+    setEditEinheitHelfer([]);
+    if (!selectedEinsatzId || !einheitId) {
+      return;
+    }
+    void releaseEditLock(selectedEinsatzId, 'EINHEIT', einheitId).catch(() => undefined);
+  }, [editEinheitForm.einheitId, releaseEditLock, selectedEinsatzId]);
+
+  /**
+   * Handles Close Edit Fahrzeug Dialog.
+   */
+  const closeEditFahrzeugDialog = useCallback(() => {
+    const fahrzeugId = editFahrzeugForm.fahrzeugId;
+    setShowEditFahrzeugDialog(false);
+    if (!selectedEinsatzId || !fahrzeugId) {
+      return;
+    }
+    void releaseEditLock(selectedEinsatzId, 'FAHRZEUG', fahrzeugId).catch(() => undefined);
+  }, [editFahrzeugForm.fahrzeugId, releaseEditLock, selectedEinsatzId]);
+
   const loadEinsatz = useCallback(async (einsatzId: string, preferredAbschnittId?: string) => {
+    await refreshEditLocks(einsatzId);
     const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
     setAbschnitte(nextAbschnitte);
 
@@ -378,7 +495,7 @@ export function App() {
       setDetails(EMPTY_DETAILS);
     }
 
-  }, []);
+  }, [refreshEditLocks]);
 
   const refreshEinsaetze = useCallback(async () => {
     const next = await window.api.listEinsaetze();
@@ -462,6 +579,29 @@ export function App() {
     }, 6000);
     return () => window.clearInterval(timer);
   }, [refreshAll, selectedEinsatzId, session]);
+
+  useEffect(() => {
+    if (!session || !selectedEinsatzId || ownedEditLocks.length === 0) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void (async () => {
+        for (const lock of ownedEditLocks) {
+          try {
+            await window.api.refreshEditLock({
+              einsatzId: selectedEinsatzId,
+              entityType: lock.entityType,
+              entityId: lock.entityId,
+            });
+          } catch {
+            // ignore transient refresh errors
+          }
+        }
+        await refreshEditLocks(selectedEinsatzId);
+      })();
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [ownedEditLocks, refreshEditLocks, selectedEinsatzId, session]);
 
   useEffect(() => {
     if (!session || !selectedEinsatzId || !selectedAbschnittId) {
@@ -653,8 +793,7 @@ export function App() {
    */
   const doCreateEinheit = () => {
     if (!selectedEinsatzId || !selectedAbschnittId || isArchived) return;
-    setShowEditEinheitDialog(false);
-    setEditEinheitHelfer([]);
+    closeEditEinheitDialog();
     setCreateEinheitForm({
       nameImEinsatz: '',
       organisation: 'THW',
@@ -697,19 +836,29 @@ export function App() {
    * Handles Do Edit Selected Abschnitt.
    */
   const doEditSelectedAbschnitt = () => {
-    if (!selectedAbschnittId || isArchived) return;
-    const current = abschnitte.find((item) => item.id === selectedAbschnittId);
-    if (!current) {
-      setError('Abschnitt nicht gefunden.');
-      return;
-    }
-    setEditAbschnittForm({
-      abschnittId: current.id,
-      name: current.name,
-      systemTyp: current.systemTyp,
-      parentId: current.parentId ?? '',
-    });
-    setShowEditAbschnittDialog(true);
+    void (async () => {
+      if (!selectedAbschnittId || !selectedEinsatzId || isArchived) return;
+      if (selectedAbschnittLockedByOther) {
+        setError(`Datensatz wird gerade von ${selectedAbschnittLock?.computerName} (${selectedAbschnittLock?.userName}) bearbeitet.`);
+        return;
+      }
+      const current = abschnitte.find((item) => item.id === selectedAbschnittId);
+      if (!current) {
+        setError('Abschnitt nicht gefunden.');
+        return;
+      }
+      const acquired = await acquireEditLock(selectedEinsatzId, 'ABSCHNITT', selectedAbschnittId);
+      if (!acquired) {
+        return;
+      }
+      setEditAbschnittForm({
+        abschnittId: current.id,
+        name: current.name,
+        systemTyp: current.systemTyp,
+        parentId: current.parentId ?? '',
+      });
+      setShowEditAbschnittDialog(true);
+    })().catch((err) => setError(readError(err)));
   };
 
   /**
@@ -750,6 +899,7 @@ export function App() {
         systemTyp: editAbschnittForm.systemTyp,
         parentId: editAbschnittForm.parentId || null,
       });
+      await releaseEditLock(selectedEinsatzId, 'ABSCHNITT', editAbschnittForm.abschnittId);
       setShowEditAbschnittDialog(false);
       await loadEinsatz(selectedEinsatzId, editAbschnittForm.abschnittId);
     });
@@ -814,39 +964,48 @@ export function App() {
    */
   const doOpenEditEinheitDialog = (einheitId: string) => {
     void (async () => {
-    setShowCreateEinheitDialog(false);
-    const einheit = allKraefte.find((item) => item.id === einheitId);
-    if (!einheit) {
-      setError('Einheit nicht gefunden.');
-      return;
-    }
-    const helfer = await window.api.listEinheitHelfer(einheitId);
-    setEditEinheitHelfer(helfer);
-    const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
-    setEditEinheitForm({
-      einheitId,
-      nameImEinsatz: einheit.nameImEinsatz,
-      organisation: einheit.organisation,
-      fuehrung: String(parsed.fuehrung),
-      unterfuehrung: String(parsed.unterfuehrung),
-      mannschaft: String(parsed.mannschaft),
-      status: einheit.status,
-      grFuehrerName: einheit.grFuehrerName ?? '',
-      ovName: einheit.ovName ?? '',
-      ovTelefon: einheit.ovTelefon ?? '',
-      ovFax: einheit.ovFax ?? '',
-      rbName: einheit.rbName ?? '',
-      rbTelefon: einheit.rbTelefon ?? '',
-      rbFax: einheit.rbFax ?? '',
-      lvName: einheit.lvName ?? '',
-      lvTelefon: einheit.lvTelefon ?? '',
-      lvFax: einheit.lvFax ?? '',
-      bemerkung: einheit.bemerkung ?? '',
-      vegetarierVorhanden: einheit.vegetarierVorhanden ?? false,
-      erreichbarkeiten: einheit.erreichbarkeiten ?? '',
-    });
-    setShowEditFahrzeugDialog(false);
-    setShowEditEinheitDialog(true);
+      if (!selectedEinsatzId || isArchived) {
+        return;
+      }
+      setShowCreateEinheitDialog(false);
+      closeEditFahrzeugDialog();
+      const acquired = await acquireEditLock(selectedEinsatzId, 'EINHEIT', einheitId);
+      if (!acquired) {
+        return;
+      }
+      const einheit = allKraefte.find((item) => item.id === einheitId);
+      if (!einheit) {
+        await releaseEditLock(selectedEinsatzId, 'EINHEIT', einheitId);
+        setError('Einheit nicht gefunden.');
+        return;
+      }
+      const helfer = await window.api.listEinheitHelfer(einheitId);
+      setEditEinheitHelfer(helfer);
+      const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
+      setEditEinheitForm({
+        einheitId,
+        nameImEinsatz: einheit.nameImEinsatz,
+        organisation: einheit.organisation,
+        fuehrung: String(parsed.fuehrung),
+        unterfuehrung: String(parsed.unterfuehrung),
+        mannschaft: String(parsed.mannschaft),
+        status: einheit.status,
+        grFuehrerName: einheit.grFuehrerName ?? '',
+        ovName: einheit.ovName ?? '',
+        ovTelefon: einheit.ovTelefon ?? '',
+        ovFax: einheit.ovFax ?? '',
+        rbName: einheit.rbName ?? '',
+        rbTelefon: einheit.rbTelefon ?? '',
+        rbFax: einheit.rbFax ?? '',
+        lvName: einheit.lvName ?? '',
+        lvTelefon: einheit.lvTelefon ?? '',
+        lvFax: einheit.lvFax ?? '',
+        bemerkung: einheit.bemerkung ?? '',
+        vegetarierVorhanden: einheit.vegetarierVorhanden ?? false,
+        erreichbarkeiten: einheit.erreichbarkeiten ?? '',
+      });
+      setShowEditFahrzeugDialog(false);
+      setShowEditEinheitDialog(true);
     })().catch((err) => setError(readError(err)));
   };
 
@@ -893,6 +1052,7 @@ export function App() {
         vegetarierVorhanden,
         erreichbarkeiten: editEinheitForm.erreichbarkeiten,
       });
+      await releaseEditLock(selectedEinsatzId, 'EINHEIT', editEinheitForm.einheitId);
       setShowEditEinheitDialog(false);
       setEditEinheitHelfer([]);
       await refreshAll();
@@ -1021,19 +1181,27 @@ export function App() {
       return;
     }
     await withBusy(async () => {
-      await window.api.updateFahrzeug({
-        einsatzId: selectedEinsatzId,
-        fahrzeugId: input.fahrzeugId,
-        name: input.name.trim(),
-        kennzeichen: input.kennzeichen.trim() || undefined,
-        aktuelleEinsatzEinheitId: editEinheitForm.einheitId,
-        status: input.status,
-        funkrufname: input.funkrufname,
-        stanKonform: input.stanKonform === 'UNBEKANNT' ? null : input.stanKonform === 'JA',
-        sondergeraet: input.sondergeraet,
-        nutzlast: input.nutzlast,
-      });
-      await refreshAll();
+      const acquired = await acquireEditLock(selectedEinsatzId, 'FAHRZEUG', input.fahrzeugId);
+      if (!acquired) {
+        return;
+      }
+      try {
+        await window.api.updateFahrzeug({
+          einsatzId: selectedEinsatzId,
+          fahrzeugId: input.fahrzeugId,
+          name: input.name.trim(),
+          kennzeichen: input.kennzeichen.trim() || undefined,
+          aktuelleEinsatzEinheitId: editEinheitForm.einheitId,
+          status: input.status,
+          funkrufname: input.funkrufname,
+          stanKonform: input.stanKonform === 'UNBEKANNT' ? null : input.stanKonform === 'JA',
+          sondergeraet: input.sondergeraet,
+          nutzlast: input.nutzlast,
+        });
+        await refreshAll();
+      } finally {
+        await releaseEditLock(selectedEinsatzId, 'FAHRZEUG', input.fahrzeugId);
+      }
     });
   };
 
@@ -1097,24 +1265,35 @@ export function App() {
    * Handles Do Open Edit Fahrzeug Dialog.
    */
   const doOpenEditFahrzeugDialog = (fahrzeugId: string) => {
-    const fahrzeug = allFahrzeuge.find((item) => item.id === fahrzeugId);
-    if (!fahrzeug) {
-      setError('Fahrzeug nicht gefunden.');
-      return;
-    }
-    setEditFahrzeugForm({
-      fahrzeugId,
-      name: fahrzeug.name,
-      kennzeichen: fahrzeug.kennzeichen ?? '',
-      status: fahrzeug.status,
-      einheitId: fahrzeug.aktuelleEinsatzEinheitId ?? '',
-      funkrufname: fahrzeug.funkrufname ?? '',
-      stanKonform: fahrzeug.stanKonform === null ? 'UNBEKANNT' : fahrzeug.stanKonform ? 'JA' : 'NEIN',
-      sondergeraet: fahrzeug.sondergeraet ?? '',
-      nutzlast: fahrzeug.nutzlast ?? '',
-    });
-    setShowEditEinheitDialog(false);
-    setShowEditFahrzeugDialog(true);
+    void (async () => {
+      if (!selectedEinsatzId || isArchived) {
+        return;
+      }
+      closeEditEinheitDialog();
+      const acquired = await acquireEditLock(selectedEinsatzId, 'FAHRZEUG', fahrzeugId);
+      if (!acquired) {
+        return;
+      }
+      const fahrzeug = allFahrzeuge.find((item) => item.id === fahrzeugId);
+      if (!fahrzeug) {
+        await releaseEditLock(selectedEinsatzId, 'FAHRZEUG', fahrzeugId);
+        setError('Fahrzeug nicht gefunden.');
+        return;
+      }
+      setEditFahrzeugForm({
+        fahrzeugId,
+        name: fahrzeug.name,
+        kennzeichen: fahrzeug.kennzeichen ?? '',
+        status: fahrzeug.status,
+        einheitId: fahrzeug.aktuelleEinsatzEinheitId ?? '',
+        funkrufname: fahrzeug.funkrufname ?? '',
+        stanKonform: fahrzeug.stanKonform === null ? 'UNBEKANNT' : fahrzeug.stanKonform ? 'JA' : 'NEIN',
+        sondergeraet: fahrzeug.sondergeraet ?? '',
+        nutzlast: fahrzeug.nutzlast ?? '',
+      });
+      setShowEditEinheitDialog(false);
+      setShowEditFahrzeugDialog(true);
+    })().catch((err) => setError(readError(err)));
   };
 
   /**
@@ -1146,6 +1325,7 @@ export function App() {
         sondergeraet: editFahrzeugForm.sondergeraet,
         nutzlast: editFahrzeugForm.nutzlast,
       });
+      await releaseEditLock(selectedEinsatzId, 'FAHRZEUG', editFahrzeugForm.fahrzeugId);
       setShowEditFahrzeugDialog(false);
       await refreshAll();
     });
@@ -1409,9 +1589,10 @@ export function App() {
             abschnitte={abschnitte}
             selectedId={selectedAbschnittId}
             einsatzName={selectedEinsatz?.name}
+            locksByAbschnittId={lockByAbschnittId}
             onSelect={setSelectedAbschnittId}
             onEditSelected={doEditSelectedAbschnitt}
-            editDisabled={busy || !selectedAbschnittId || isArchived}
+            editDisabled={busy || !selectedAbschnittId || isArchived || selectedAbschnittLockedByOther}
           />
         )}
 
@@ -1425,10 +1606,7 @@ export function App() {
                 form={editEinheitForm}
                 onChange={setEditEinheitForm}
                 onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={() => {
-                  setShowEditEinheitDialog(false);
-                  setEditEinheitHelfer([]);
-                }}
+                onCancel={closeEditEinheitDialog}
                 helfer={editEinheitHelfer}
                 onCreateHelfer={doCreateEinheitHelfer}
                 onUpdateHelfer={doUpdateEinheitHelfer}
@@ -1455,7 +1633,7 @@ export function App() {
                 allKraefte={allKraefte}
                 onChange={setEditFahrzeugForm}
                 onSubmit={() => void doSubmitEditFahrzeug()}
-                onCancel={() => setShowEditFahrzeugDialog(false)}
+                onCancel={closeEditFahrzeugDialog}
               />
               <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
                 Einheit anlegen
@@ -1471,11 +1649,13 @@ export function App() {
                 }}
                 onEditEinheit={doOpenEditEinheitDialog}
                 onSplitEinheit={doOpenSplitEinheitDialog}
+                einheitLocksById={lockByEinheitId}
                 onMoveFahrzeug={(id) => {
                   setMoveDialog({ type: 'fahrzeug', id });
                   setMoveTarget(selectedAbschnittId);
                 }}
                 onEditFahrzeug={doOpenEditFahrzeugDialog}
+                fahrzeugLocksById={lockByFahrzeugId}
               />
             </>
           )}
@@ -1500,10 +1680,7 @@ export function App() {
                 form={editEinheitForm}
                 onChange={setEditEinheitForm}
                 onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={() => {
-                  setShowEditEinheitDialog(false);
-                  setEditEinheitHelfer([]);
-                }}
+                onCancel={closeEditEinheitDialog}
                 helfer={editEinheitHelfer}
                 onCreateHelfer={doCreateEinheitHelfer}
                 onUpdateHelfer={doUpdateEinheitHelfer}
@@ -1555,6 +1732,7 @@ export function App() {
                 }}
                 onEdit={doOpenEditEinheitDialog}
                 onSplit={doOpenSplitEinheitDialog}
+                editLocksById={lockByEinheitId}
               />
             </>
           )}
@@ -1569,7 +1747,7 @@ export function App() {
                 allKraefte={allKraefte}
                 onChange={setEditFahrzeugForm}
                 onSubmit={() => void doSubmitEditFahrzeug()}
-                onCancel={() => setShowEditFahrzeugDialog(false)}
+                onCancel={closeEditFahrzeugDialog}
               />
               <button onClick={doCreateFahrzeug} disabled={busy || !selectedAbschnittId || isArchived}>
                 Fahrzeug anlegen
@@ -1582,6 +1760,7 @@ export function App() {
                   setMoveTarget(selectedAbschnittId);
                 }}
                 onEdit={doOpenEditFahrzeugDialog}
+                editLocksById={lockByFahrzeugId}
               />
             </>
           )}
@@ -1637,7 +1816,7 @@ export function App() {
         abschnitte={abschnitte}
         onChange={setEditAbschnittForm}
         onSubmit={() => void doSubmitEditAbschnitt()}
-        onClose={() => setShowEditAbschnittDialog(false)}
+        onClose={closeEditAbschnittDialog}
       />
 
       <SplitEinheitDialog

@@ -13,6 +13,8 @@ import type {
   ActiveClientInfo,
   PeerUpdateStatus,
   EinsatzChangedSignal,
+  RecordEditLockInfo,
+  RecordEditLockType,
 } from './types';
 
 export interface LoginInput {
@@ -225,6 +227,18 @@ export interface RendererApi {
   closeStrengthDisplayWindow(): Promise<void>;
   getStrengthDisplayState(): Promise<StrengthDisplayState>;
   setStrengthDisplayState(input: StrengthDisplayState): Promise<void>;
+  acquireEditLock(input: {
+    einsatzId: string;
+    entityType: RecordEditLockType;
+    entityId: string;
+  }): Promise<{ acquired: boolean; lock: RecordEditLockInfo }>;
+  refreshEditLock(input: {
+    einsatzId: string;
+    entityType: RecordEditLockType;
+    entityId: string;
+  }): Promise<{ refreshed: boolean; lock: RecordEditLockInfo | null }>;
+  releaseEditLock(input: { einsatzId: string; entityType: RecordEditLockType; entityId: string }): Promise<void>;
+  listEditLocks(einsatzId: string): Promise<RecordEditLockInfo[]>;
 }
 
 export const IPC_CHANNEL = {
@@ -281,6 +295,10 @@ export const IPC_CHANNEL = {
   GET_STRENGTH_DISPLAY_STATE: 'strength-display:get-state',
   SET_STRENGTH_DISPLAY_STATE: 'strength-display:set-state',
   STRENGTH_DISPLAY_STATE_CHANGED: 'strength-display:state-changed',
+  ACQUIRE_EDIT_LOCK: 'edit-lock:acquire',
+  REFRESH_EDIT_LOCK: 'edit-lock:refresh',
+  RELEASE_EDIT_LOCK: 'edit-lock:release',
+  LIST_EDIT_LOCKS: 'edit-lock:list',
 } as const;
 
 export type EinsatzChangedEventPayload = EinsatzChangedSignal;
