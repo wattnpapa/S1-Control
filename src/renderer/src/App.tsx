@@ -225,6 +225,30 @@ export function App() {
         .slice(-120),
     [debugSyncLogs],
   );
+  const udpDebugMonitorLogs = useMemo(
+    () =>
+      debugSyncLogs
+        .filter((line) => {
+          const isUdpScope =
+            line.includes('[einsatz-sync]') ||
+            line.includes('[peer-service]') ||
+            line.includes('[peer-discovery]') ||
+            line.includes('[peer-offer]');
+          if (!isUdpScope) {
+            return false;
+          }
+          return (
+            line.includes('udp-') ||
+            line.includes('broadcast') ||
+            line.includes('received') ||
+            line.includes('query') ||
+            line.includes('sent') ||
+            line.includes('remote-change')
+          );
+        })
+        .slice(-250),
+    [debugSyncLogs],
+  );
   const lockByEinheitId = useMemo(
     () =>
       Object.fromEntries(
@@ -1774,6 +1798,7 @@ export function App() {
               activeClients={activeClients}
               peerUpdateStatus={peerUpdateStatus}
               debugSyncLogs={debugSyncLogs}
+              udpDebugLogs={udpDebugMonitorLogs}
               onChangeDbPath={setDbPath}
               onSaveDbPath={() => void doSaveDbPath()}
               onRestoreBackup={() => void doRestoreBackup()}

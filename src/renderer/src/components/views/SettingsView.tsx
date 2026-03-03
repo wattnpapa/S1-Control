@@ -8,6 +8,7 @@ interface SettingsViewProps {
   activeClients: ActiveClientInfo[];
   peerUpdateStatus: PeerUpdateStatus | null;
   debugSyncLogs: string[];
+  udpDebugLogs: string[];
   onChangeDbPath: (value: string) => void;
   onSaveDbPath: () => void;
   onRestoreBackup: () => void;
@@ -115,6 +116,11 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       <h3>Debug Sync Logs</h3>
       <div className="debug-log-panel">
         <pre>{props.debugSyncLogs.length ? props.debugSyncLogs.join('\n') : 'Noch keine Debug-Ausgaben.'}</pre>
+      </div>
+
+      <h3>UDP Debug Monitor</h3>
+      <div className="debug-log-panel">
+        <pre>{props.udpDebugLogs.length ? props.udpDebugLogs.join('\n') : 'Noch keine UDP-Nachrichten empfangen.'}</pre>
       </div>
     </div>
   );
