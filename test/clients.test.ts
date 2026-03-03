@@ -154,4 +154,33 @@ describe('client presence service', () => {
     service.ctx = null;
     service.heartbeat();
   });
+
+  it('disables presence updates when sqlite reports malformed database', () => {
+    const service = new ClientPresenceService() as unknown as {
+      listActiveClients: () => unknown[];
+      canWriteBackups: () => boolean;
+      ctx: unknown;
+      disabled: boolean;
+      timer: NodeJS.Timeout | null;
+      heartbeat: () => void;
+      clientId: string;
+      isMaster: boolean;
+    };
+
+    service.ctx = {
+      path: '/tmp/test.s1control',
+      db: {
+        transaction: () => {
+          throw new Error('database disk image is malformed');
+        },
+      },
+    };
+    service.timer = null;
+    service.disabled = false;
+    service.isMaster = true;
+
+    expect(service.listActiveClients()).toEqual([]);
+    expect(service.canWriteBackups()).toBe(false);
+    expect(service.disabled).toBe(true);
+  });
 });

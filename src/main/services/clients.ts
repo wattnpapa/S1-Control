@@ -24,6 +24,14 @@ function isLockContentionError(error: unknown): boolean {
 }
 
 /**
+ * Handles Is Corruption Error.
+ */
+function isCorruptionError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message : String(error);
+  return message.includes('database disk image is malformed') || message.includes('malformed');
+}
+
+/**
  * Handles Now Iso.
  */
 function nowIso(): string {
@@ -63,6 +71,8 @@ export class ClientPresenceService {
 
   private isMaster = false;
 
+  private disabled = false;
+
   /**
    * Handles Get Client Id.
    */
@@ -83,6 +93,7 @@ export class ClientPresenceService {
   public start(ctx: DbContext): void {
     this.stop(true);
     this.ctx = ctx;
+    this.disabled = false;
     debugSync('clients', 'start', { clientId: this.clientId, dbPath: ctx.path });
     this.heartbeat();
     this.timer = setInterval(() => {
@@ -121,30 +132,42 @@ export class ClientPresenceService {
    * Handles List Active Clients.
    */
   public listActiveClients(): ActiveClientInfo[] {
-    if (!this.ctx) {
+    if (!this.ctx || this.disabled) {
       return [];
     }
-    this.heartbeat();
-    const rows = this.ctx.db
-      .select()
-      .from(activeClient)
-      .where(gte(activeClient.lastSeen, staleCutoffIso()))
-      .orderBy(asc(activeClient.computerName), asc(activeClient.startedAt))
-      .all();
-    debugSync('clients', 'list', {
-      clientId: this.clientId,
-      dbPath: this.ctx.path,
-      visibleClients: rows.length,
-    });
-    return rows.map((row) => ({
-      clientId: row.clientId,
-      computerName: row.computerName,
-      ipAddress: row.ipAddress,
-      dbPath: row.dbPath,
-      lastSeen: row.lastSeen,
-      isMaster: row.isMaster,
-      isSelf: row.clientId === this.clientId,
-    }));
+    try {
+      this.heartbeat();
+      if (this.disabled || !this.ctx) {
+        return [];
+      }
+      const rows = this.ctx.db
+        .select()
+        .from(activeClient)
+        .where(gte(activeClient.lastSeen, staleCutoffIso()))
+        .orderBy(asc(activeClient.computerName), asc(activeClient.startedAt))
+        .all();
+      debugSync('clients', 'list', {
+        clientId: this.clientId,
+        dbPath: this.ctx.path,
+        visibleClients: rows.length,
+      });
+      return rows.map((row) => ({
+        clientId: row.clientId,
+        computerName: row.computerName,
+        ipAddress: row.ipAddress,
+        dbPath: row.dbPath,
+        lastSeen: row.lastSeen,
+        isMaster: row.isMaster,
+        isSelf: row.clientId === this.clientId,
+      }));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isCorruptionError(error)) {
+        this.disablePresence('list:corruption', message);
+        return [];
+      }
+      throw error;
+    }
   }
 
   /**
@@ -222,7 +245,33 @@ export class ClientPresenceService {
         });
         return;
       }
-      throw error;
+      if (isCorruptionError(error)) {
+        this.disablePresence('heartbeat:corruption', message);
+        return;
+      }
+      debugSync('clients', 'heartbeat:failed', {
+        clientId: this.clientId,
+        dbPath: ctx.path,
+        message,
+      });
     }
+  }
+
+  /**
+   * Handles Disable Presence.
+   */
+  private disablePresence(reason: string, message: string): void {
+    this.disabled = true;
+    this.isMaster = false;
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
+    debugSync('clients', 'presence-disabled', {
+      clientId: this.clientId,
+      reason,
+      message,
+      dbPath: this.ctx?.path,
+    });
   }
 }
