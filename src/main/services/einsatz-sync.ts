@@ -57,6 +57,8 @@ export class EinsatzSyncService {
 
   private currentDbPath: string | null = null;
 
+  private currentEinsatzId: string | null = null;
+
   private readonly onRemoteChange: (signal: EinsatzChangedSignal) => void;
 
   public constructor(onRemoteChange: (signal: EinsatzChangedSignal) => void, port = DEFAULT_SYNC_PORT) {
@@ -91,6 +93,7 @@ export class EinsatzSyncService {
    */
   public stop(): void {
     this.currentDbPath = null;
+    this.currentEinsatzId = null;
     if (!this.socket) {
       return;
     }
@@ -106,10 +109,19 @@ export class EinsatzSyncService {
   }
 
   /**
+   * Handles Set Context.
+   */
+  public setContext(input: { dbPath: string; einsatzId?: string | null }): void {
+    this.currentDbPath = input.dbPath;
+    this.currentEinsatzId = input.einsatzId ?? null;
+  }
+
+  /**
    * Handles Broadcast Change.
    */
   public broadcastChange(input: { einsatzId: string; dbPath: string; reason: string }): void {
     this.currentDbPath = input.dbPath;
+    this.currentEinsatzId = input.einsatzId;
     if (!this.socket) {
       return;
     }
@@ -141,6 +153,11 @@ export class EinsatzSyncService {
     }
     const incomingPath = toNormalizedPath(parsed.payload.dbPath);
     const currentPath = this.currentDbPath ? toNormalizedPath(this.currentDbPath) : null;
+    const incomingBaseName = path.basename(parsed.payload.dbPath).toLowerCase();
+    const currentBaseName = this.currentDbPath ? path.basename(this.currentDbPath).toLowerCase() : null;
+    const sameEinsatzId = this.currentEinsatzId ? parsed.payload.einsatzId === this.currentEinsatzId : false;
+    const sameBaseName = currentBaseName ? incomingBaseName === currentBaseName : false;
+    const sameDbPath = currentPath ? incomingPath === currentPath : false;
     debugSync('einsatz-sync', 'received', {
       clientId: this.clientId,
       from: host,
@@ -149,7 +166,9 @@ export class EinsatzSyncService {
       reason: parsed.payload.reason,
       sameClient: parsed.payload.sourceClientId === this.clientId,
       hasCurrentPath: Boolean(currentPath),
-      sameDbPath: currentPath ? incomingPath === currentPath : false,
+      sameDbPath,
+      sameBaseName,
+      sameEinsatzId,
     });
     if (parsed.payload.sourceClientId === this.clientId) {
       return;
@@ -157,8 +176,7 @@ export class EinsatzSyncService {
     if (!this.currentDbPath) {
       return;
     }
-    const currentPathNormalized = toNormalizedPath(this.currentDbPath);
-    if (incomingPath !== currentPathNormalized) {
+    if (!sameDbPath && !sameBaseName && !sameEinsatzId) {
       return;
     }
     debugSync('einsatz-sync', 'remote-change', {

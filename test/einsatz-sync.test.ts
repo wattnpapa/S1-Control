@@ -116,6 +116,7 @@ describe('einsatz sync service', () => {
       ...remotePayload,
       payload: {
         ...remotePayload.payload,
+        einsatzId: 'einsatz-other',
         dbPath: '/share/einsatz-b.s1control',
       },
     };
@@ -134,5 +135,38 @@ describe('einsatz sync service', () => {
     hoisted.emitError(new Error('udp-failed'));
     service.stop();
     expect(hoisted.socketMock.close).toHaveBeenCalledTimes(1);
+  });
+
+  it('accepts remote change by einsatzId when db paths differ across mounts', () => {
+    const onRemoteChange = vi.fn();
+    const service = new EinsatzSyncService(onRemoteChange, 41235);
+    service.start('/Volumes/share/hochwasser-1.s1control');
+    service.setContext({
+      dbPath: '/Volumes/share/hochwasser-1.s1control',
+      einsatzId: 'einsatz-42',
+    });
+
+    service.broadcastChange({
+      einsatzId: 'einsatz-42',
+      dbPath: '/Volumes/share/hochwasser-1.s1control',
+      reason: 'seed-self-id',
+    });
+    const [localWire] = hoisted.socketMock.send.mock.calls[0] as [Buffer];
+    const localPayload = JSON.parse(localWire.toString('utf8')) as {
+      payload: { sourceClientId: string };
+    };
+
+    const remotePayload = {
+      type: 's1-einsatz-changed',
+      payload: {
+        einsatzId: 'einsatz-42',
+        dbPath: 'Z:\\share\\hochwasser-1.s1control',
+        sourceClientId: `${localPayload.payload.sourceClientId}-peer`,
+        changedAt: new Date().toISOString(),
+        reason: 'update-einheit',
+      },
+    };
+    hoisted.emitMessage(Buffer.from(JSON.stringify(remotePayload), 'utf8'), '192.168.1.22', 41235);
+    expect(onRemoteChange).toHaveBeenCalledTimes(1);
   });
 });

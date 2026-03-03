@@ -182,7 +182,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
-      state.einsatzSync.setDbPath(nextContext.path);
+      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: einsatzMeta.id });
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(selected, einsatzMeta.id);
       state.settingsStore.set({ dbPath: path.dirname(selected) });
@@ -245,7 +245,7 @@ export function registerIpc(state: AppState): void {
       state.backupCoordinator.stop();
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
-      state.einsatzSync.setDbPath(nextContext.path);
+      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: null });
       state.settingsStore.set({ dbPath: baseDir });
       return {
         dbPath: baseDir,
@@ -288,7 +288,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
-      state.einsatzSync.setDbPath(nextContext.path);
+      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId });
       state.backupCoordinator.start(nextContext);
       rememberRecentDbPath(dbPath, einsatzId);
       state.settingsStore.set({ dbPath: path.dirname(dbPath) });
@@ -343,7 +343,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
-      state.einsatzSync.setDbPath(created.ctx.path);
+      state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
       state.backupCoordinator.start(created.ctx);
       if (created.einsatz.dbPath) {
         rememberRecentDbPath(created.einsatz.dbPath, created.einsatz.id);
@@ -382,7 +382,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
       state.clientPresence.start(created.ctx);
-      state.einsatzSync.setDbPath(created.ctx.path);
+      state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
       state.backupCoordinator.start(created.ctx);
       rememberRecentDbPath(normalized, created.einsatz.id);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
@@ -626,7 +626,7 @@ export function registerIpc(state: AppState): void {
       state.setSessionUser(dbUser);
       state.setDbContext(nextContext);
       state.clientPresence.start(nextContext);
-      state.einsatzSync.setDbPath(nextContext.path);
+      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId });
       state.backupCoordinator.start(nextContext);
       notifyEinsatzChanged(einsatzId, 'restore-backup', dbPath);
       return true;
