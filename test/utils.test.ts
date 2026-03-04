@@ -4,6 +4,7 @@ import { parseTaktischeStaerke, toTaktischeStaerke } from '../src/renderer/src/u
 import { AppError, toSafeError } from '../src/main/services/errors';
 import { iconPath } from '../src/renderer/src/utils/assets';
 import { readError } from '../src/renderer/src/utils/error';
+import { inferVehicleTacticalUnit } from '../src/renderer/src/utils/tactical-vehicle';
 
 describe('renderer utils', () => {
   it('formats tactical strength', () => {
@@ -92,6 +93,19 @@ describe('renderer utils', () => {
     expect(readError({ message: 'boom' })).toBe('boom');
     expect(readError(null)).toBe('Fehler');
     expect(readError('x')).toBe('Fehler');
+  });
+
+  it('infers tactical vehicle unit codes for THW from free text', () => {
+    expect(inferVehicleTacticalUnit('THW', { name: 'FüKomKW' })).toBe('FüKomKW');
+    expect(inferVehicleTacticalUnit('THW', { name: 'GKW II' })).toBe('GKW II');
+    expect(inferVehicleTacticalUnit('THW', { name: 'LKW Ladebordwand' })).toBe('LKW Lbw');
+    expect(inferVehicleTacticalUnit('THW', { name: 'MLW 3' })).toBe('MLW III');
+    expect(inferVehicleTacticalUnit('THW', { name: 'WLF 1' })).toBe('WLF');
+  });
+
+  it('returns empty vehicle unit for unsupported organisations or unknown names', () => {
+    expect(inferVehicleTacticalUnit('FEUERWEHR', { name: 'LF 8' })).toBe('');
+    expect(inferVehicleTacticalUnit('THW', { name: 'Unbekanntes Fahrzeug' })).toBe('');
   });
 });
 

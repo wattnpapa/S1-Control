@@ -585,7 +585,11 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                       return (
                         <tr key={row.id}>
                           <td className="tactical-sign-cell compact-sign-cell">
-                            <TaktischesZeichenFahrzeug organisation={row.organisation} />
+                            <TaktischesZeichenFahrzeug
+                              organisation={row.organisation}
+                              name={edit.name}
+                              funkrufname={edit.funkrufname}
+                            />
                           </td>
                           <td>
                             <input
@@ -665,7 +669,11 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
                     })}
                   <tr>
                     <td className="tactical-sign-cell compact-sign-cell">
-                      <TaktischesZeichenFahrzeug organisation={form.organisation} />
+                      <TaktischesZeichenFahrzeug
+                        organisation={form.organisation}
+                        name={newFahrzeug.name}
+                        funkrufname={newFahrzeug.funkrufname}
+                      />
                     </td>
                     <td>
                       <input

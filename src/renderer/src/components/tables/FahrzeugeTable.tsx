@@ -36,7 +36,11 @@ export function FahrzeugeTable(props: FahrzeugeTableProps): JSX.Element {
             return (
             <tr key={item.id}>
               <td className="tactical-sign-cell">
-                <TaktischesZeichenFahrzeug organisation={item.organisation} />
+                <TaktischesZeichenFahrzeug
+                  organisation={item.organisation}
+                  name={item.name}
+                  funkrufname={item.funkrufname}
+                />
               </td>
               <td>
                 <div className="split-name">

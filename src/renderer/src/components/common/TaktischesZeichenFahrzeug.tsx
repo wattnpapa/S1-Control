@@ -1,22 +1,30 @@
 import type { OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
+import { inferVehicleTacticalUnit } from '@renderer/utils/tactical-vehicle';
 
 interface TaktischesZeichenFahrzeugProps {
   organisation: OrganisationKey | null;
+  name?: string | null;
+  funkrufname?: string | null;
 }
 
-const vehicleCache = new Map<OrganisationKey, string>();
+const vehicleCache = new Map<string, string>();
 
 /**
  * Handles Taktisches Zeichen Fahrzeug.
  */
 export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps): JSX.Element {
   const organisation = props.organisation ?? 'SONSTIGE';
-  const [src, setSrc] = useState<string>(vehicleCache.get(organisation) ?? '');
+  const inferredUnit = inferVehicleTacticalUnit(organisation, {
+    name: props.name,
+    funkrufname: props.funkrufname,
+  });
+  const cacheKey = `${organisation}:${inferredUnit}`;
+  const [src, setSrc] = useState<string>(vehicleCache.get(cacheKey) ?? '');
 
   useEffect(() => {
     let cancelled = false;
-    const cached = vehicleCache.get(organisation);
+    const cached = vehicleCache.get(cacheKey);
     if (cached) {
       setSrc(cached);
       return () => {
@@ -26,9 +34,9 @@ export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps)
 
     void (async () => {
       try {
-        const dataUrl = await window.api.getTacticalVehicleSvg({ organisation });
+        const dataUrl = await window.api.getTacticalVehicleSvg({ organisation, unit: inferredUnit });
         if (cancelled) return;
-        vehicleCache.set(organisation, dataUrl);
+        vehicleCache.set(cacheKey, dataUrl);
         setSrc(dataUrl);
       } catch {
         if (cancelled) return;
@@ -39,7 +47,7 @@ export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps)
     return () => {
       cancelled = true;
     };
-  }, [organisation]);
+  }, [cacheKey, inferredUnit, organisation]);
 
   return (
     <span className="tactical-sign-badge">

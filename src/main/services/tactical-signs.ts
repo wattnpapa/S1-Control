@@ -184,8 +184,9 @@ export function getTacticalFormationSvgDataUrl(
 /**
  * Handles Get Tactical Vehicle Svg Data Url.
  */
-export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey): string {
-  const cacheKey = `vehicle:${organisation}`;
+export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey, unit?: string): string {
+  const normalizedUnit = unit?.trim() ?? '';
+  const cacheKey = `vehicle:${organisation}:${normalizedUnit}`;
   const existing = cache.get(cacheKey);
   if (existing) {
     return existing;
@@ -198,7 +199,7 @@ export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey): str
     stroke_color: '#000000',
     color_text: colors.color_text,
     organization: organisationShortName(organisation),
-    unit: '',
+    unit: normalizedUnit,
     two_wheels: true,
   });
   const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;

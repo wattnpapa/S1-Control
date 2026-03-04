@@ -772,7 +772,7 @@ export function registerIpc(state: AppState): void {
   ipcMain.handle(
     IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG,
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
-      getTacticalVehicleSvgDataUrl(input.organisation),
+      getTacticalVehicleSvgDataUrl(input.organisation, input.unit),
     ),
   );
 

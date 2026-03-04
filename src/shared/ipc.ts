@@ -237,6 +237,7 @@ export interface RendererApi {
   }>>;
   getTacticalVehicleSvg(input: {
     organisation: OrganisationKey;
+    unit?: string;
   }): Promise<string>;
   getTacticalPersonSvg(input: {
     organisation: OrganisationKey;
