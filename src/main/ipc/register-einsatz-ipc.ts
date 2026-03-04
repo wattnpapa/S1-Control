@@ -1,0 +1,280 @@
+import path from 'node:path';
+import { dialog, ipcMain } from 'electron';
+import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
+import { openDatabaseWithRetry } from '../db/connection';
+import { ensureDefaultAdmin, ensureSessionUserRecord } from '../services/auth';
+import { resolveBackupDir } from '../services/backup';
+import { debugSync } from '../services/debug';
+import {
+  createEinsatzDbFileName,
+  createEinsatzInOwnDatabase,
+} from '../services/einsatz-files';
+import {
+  archiveEinsatz,
+  createAbschnitt,
+  listAbschnittDetails,
+  listAbschnitte,
+  updateAbschnitt,
+} from '../services/einsatz';
+import { exportEinsatzakte } from '../services/export';
+import { ensureRecordEditLockOwnership } from '../services/record-lock';
+import type { EntityIpcHelpers, EinsatzIpcHelpers, RegistrarCommon } from './register-support';
+
+/**
+ * Handles Register Einsatz Ipc.
+ */
+export function registerEinsatzIpc(
+  common: RegistrarCommon,
+  helpers: EinsatzIpcHelpers,
+  entityHelpers: EntityIpcHelpers,
+): void {
+  registerEinsatzOpenHandlers(common, helpers);
+  registerEinsatzCreateHandlers(common, helpers);
+  registerAbschnittHandlers(common, helpers, entityHelpers);
+  registerEinsatzRecoveryHandlers(common, helpers);
+}
+
+/**
+ * Registers handlers for opening existing einsatz files.
+ */
+function registerEinsatzOpenHandlers(
+  common: RegistrarCommon,
+  helpers: EinsatzIpcHelpers,
+): void {
+  const { wrap, requireUser } = common;
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ,
+    wrap(async (einsatzId: string) => {
+      const user = requireUser();
+      const dbPath = helpers.resolveRecentDbPathByEinsatzId(einsatzId);
+      if (!dbPath) {
+        return false;
+      }
+      const einsatz = helpers.openEinsatzByPathForUser(dbPath, user);
+      return einsatz.id === einsatzId;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ_BY_PATH,
+    wrap(async (dbPath: string) => {
+      const user = requireUser();
+      return helpers.openEinsatzByPathForUser(dbPath, user);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.OPEN_EINSATZ_DIALOG,
+    wrap(async () => {
+      const user = requireUser();
+      const result = await dialog.showOpenDialog({
+        title: 'Einsatz-Datei öffnen',
+        defaultPath: helpers.getBaseDir(),
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
+        properties: ['openFile'],
+      });
+      const selected = result.filePaths[0];
+      if (result.canceled || !selected) {
+        debugSync('einsatz', 'open-dialog:cancel');
+        return null;
+      }
+      debugSync('einsatz', 'open-dialog:selected', { selected });
+      return helpers.openEinsatzByPathForUser(selected, user);
+    }),
+  );
+}
+
+/**
+ * Registers handlers for creating new einsatz files.
+ */
+function registerEinsatzCreateHandlers(
+  common: RegistrarCommon,
+  helpers: EinsatzIpcHelpers,
+): void {
+  const { state, wrap, requireUser } = common;
+  ipcMain.handle(
+    IPC_CHANNEL.CREATE_EINSATZ,
+    wrap(async (input: Parameters<RendererApi['createEinsatz']>[0]) => {
+      const user = requireUser();
+      const created = createEinsatzInOwnDatabase(helpers.getBaseDir(), input, user);
+      const dbUser = ensureSessionUserRecord(created.ctx, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(created.ctx);
+      state.clientPresence.start(created.ctx);
+      state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
+      state.backupCoordinator.start(created.ctx);
+      if (created.einsatz.dbPath) {
+        helpers.rememberRecentDbPath(created.einsatz.dbPath, created.einsatz.id);
+      }
+      return created.einsatz;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CREATE_EINSATZ_DIALOG,
+    wrap(async (input: Parameters<RendererApi['createEinsatzWithDialog']>[0]) => {
+      const user = requireUser();
+      const baseDir = helpers.getBaseDir();
+      const saveResult = await dialog.showSaveDialog({
+        title: 'Einsatz-Datei speichern',
+        defaultPath: path.join(baseDir, createEinsatzDbFileName(input.name)),
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
+      });
+      const selected = saveResult.filePath;
+      if (saveResult.canceled || !selected) {
+        debugSync('einsatz', 'create-dialog:cancel');
+        return null;
+      }
+
+      const normalized =
+        selected.toLowerCase().endsWith('.s1control') || selected.toLowerCase().endsWith('.sqlite')
+          ? selected
+          : `${selected}.s1control`;
+      debugSync('einsatz', 'create-dialog:selected', { selected, normalized });
+
+      const created = createEinsatzInOwnDatabase(path.dirname(normalized), input, user, normalized);
+      const dbUser = ensureSessionUserRecord(created.ctx, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(created.ctx);
+      state.clientPresence.start(created.ctx);
+      state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
+      state.backupCoordinator.start(created.ctx);
+      helpers.rememberRecentDbPath(normalized, created.einsatz.id);
+      state.settingsStore.set({ dbPath: path.dirname(normalized) });
+      debugSync('einsatz', 'create-dialog:ok', {
+        einsatzId: created.einsatz.id,
+        dbPath: normalized,
+      });
+      return created.einsatz;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.ARCHIVE_EINSATZ,
+    wrap(async (einsatzId: string) => {
+      requireUser();
+      archiveEinsatz(state.getDbContext(), einsatzId);
+      helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
+    }),
+  );
+}
+
+/**
+ * Registers handlers for abschnitt CRUD and loading.
+ */
+function registerAbschnittHandlers(
+  common: RegistrarCommon,
+  helpers: EinsatzIpcHelpers,
+  entityHelpers: EntityIpcHelpers,
+): void {
+  const { state, wrap, requireUser } = common;
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_ABSCHNITTE,
+    wrap(async (einsatzId: string) => listAbschnitte(state.getDbContext(), einsatzId)),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.CREATE_ABSCHNITT,
+    wrap(async (input: Parameters<RendererApi['createAbschnitt']>[0]) => {
+      requireUser();
+      const abschnitt = createAbschnitt(state.getDbContext(), input);
+      helpers.notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
+      return abschnitt;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.UPDATE_ABSCHNITT,
+    wrap(async (input: Parameters<RendererApi['updateAbschnitt']>[0]) => {
+      const user = requireUser();
+      ensureRecordEditLockOwnership(
+        state.getDbContext(),
+        { einsatzId: input.einsatzId, entityType: 'ABSCHNITT', entityId: input.abschnittId },
+        entityHelpers.lockIdentity(user),
+      );
+      updateAbschnitt(state.getDbContext(), input);
+      helpers.notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_ABSCHNITT_DETAILS,
+    wrap(async (einsatzId: string, abschnittId: string) =>
+      listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
+    ),
+  );
+}
+
+/**
+ * Registers handlers for backup restore and export flows.
+ */
+function registerEinsatzRecoveryHandlers(
+  common: RegistrarCommon,
+  helpers: EinsatzIpcHelpers,
+): void {
+  const { state, wrap, requireUser } = common;
+  ipcMain.handle(
+    IPC_CHANNEL.RESTORE_BACKUP,
+    wrap(async (einsatzId: string) => {
+      const user = requireUser();
+      const dbPath = helpers.resolveRecentDbPathByEinsatzId(einsatzId);
+      if (!dbPath) {
+        return false;
+      }
+
+      const result = await dialog.showOpenDialog({
+        title: 'Backup laden',
+        defaultPath: resolveBackupDir(dbPath),
+        filters: [
+          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
+          { name: 'Legacy SQLite', extensions: ['sqlite'] },
+        ],
+        properties: ['openFile'],
+      });
+      const selected = result.filePaths[0];
+      if (result.canceled || !selected) {
+        return false;
+      }
+
+      const activeContext = state.getDbContext();
+      activeContext.sqlite.close();
+      await state.backupCoordinator.restoreBackup(dbPath, selected);
+      const nextContext = openDatabaseWithRetry(dbPath);
+      ensureDefaultAdmin(nextContext);
+      const dbUser = ensureSessionUserRecord(nextContext, user);
+      state.setSessionUser(dbUser);
+      state.setDbContext(nextContext);
+      state.clientPresence.start(nextContext);
+      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId });
+      state.backupCoordinator.start(nextContext);
+      helpers.notifyEinsatzChanged(einsatzId, 'restore-backup', dbPath);
+      return true;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.EXPORT_EINSATZAKTE,
+    wrap(async (einsatzId: string) => {
+      requireUser();
+      const defaultPath = path.join(process.cwd(), `einsatzakte-${einsatzId}.zip`);
+      const result = await dialog.showSaveDialog({
+        title: 'Einsatzakte exportieren',
+        defaultPath,
+        filters: [{ name: 'ZIP', extensions: ['zip'] }],
+      });
+
+      if (result.canceled || !result.filePath) {
+        return null;
+      }
+
+      await exportEinsatzakte(state.getDbContext(), einsatzId, result.filePath);
+      return { outputPath: result.filePath };
+    }),
+  );
+}

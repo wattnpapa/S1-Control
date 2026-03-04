@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type {
   ActiveClientInfo,
   AbschnittDetails,
@@ -6,28 +6,27 @@ import type {
   EinheitHelfer,
   OrganisationKey,
   PeerUpdateStatus,
-  RecordEditLockInfo,
-  RecordEditLockType,
   SessionUser,
-  TacticalSignConfig,
   UpdaterState,
 } from '@shared/types';
-import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { buildTacticalSignConfigJson, parseTacticalSignConfig } from '@renderer/app/tactical-sign-form';
+import { useAppBootstrap } from '@renderer/app/useAppBootstrap';
+import { useEinsatzData } from '@renderer/app/useEinsatzData';
+import { useEditLocks } from '@renderer/app/useEditLocks';
+import { useStartActions } from '@renderer/app/useStartActions';
+import { useSyncEvents } from '@renderer/app/useSyncEvents';
+import { useSystemActions } from '@renderer/app/useSystemActions';
+import { UpdaterNotices } from '@renderer/components/common/UpdaterUi';
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
 import { EditAbschnittDialog } from '@renderer/components/dialogs/EditAbschnittDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
-import { InlineCreateEinheitEditor, InlineEinheitEditor, InlineFahrzeugEditor } from '@renderer/components/editor/InlineEditors';
 import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
 import { Topbar } from '@renderer/components/layout/Topbar';
 import { WorkspaceRail } from '@renderer/components/layout/WorkspaceRail';
-import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
-import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
-import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
-import { FuehrungsstrukturView } from '@renderer/components/views/FuehrungsstrukturView';
-import { SettingsView } from '@renderer/components/views/SettingsView';
-import { StartView } from '@renderer/components/views/StartView';
+import { AppEntryView } from '@renderer/components/views/AppEntryView';
+import { WorkspaceContent } from '@renderer/components/views/WorkspaceContent';
 import type {
   CreateAbschnittForm,
   CreateEinheitForm,
@@ -43,105 +42,11 @@ import type {
   WorkspaceView,
 } from '@renderer/types/ui';
 import { readError } from '@renderer/utils/error';
-import { parseTaktischeStaerke, toTaktischeStaerke } from '@renderer/utils/tactical';
+import { parseTaktischeStaerke } from '@renderer/utils/tactical';
 
 const EMPTY_DETAILS: AbschnittDetails = { einheiten: [], fahrzeuge: [] };
 const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 };
 const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
-const RELEASES_URL = 'https://github.com/wattnpapa/S1-Control/releases/latest';
-
-/**
- * Handles Format Bytes To Mb.
- */
-function formatBytesToMb(bytes?: number): string {
-  if (!bytes || bytes < 0) return '-';
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-/**
- * Handles Format Speed Mb.
- */
-function formatSpeedMb(bytesPerSecond?: number): string {
-  if (!bytesPerSecond || bytesPerSecond <= 0) return '-';
-  return `${(bytesPerSecond / (1024 * 1024)).toFixed(1)} MB/s`;
-}
-
-/**
- * Handles Format Eta Seconds.
- */
-function formatEtaSeconds(seconds?: number): string {
-  if (!seconds || !Number.isFinite(seconds) || seconds <= 0) return '-';
-  const rounded = Math.max(1, Math.round(seconds));
-  const mins = Math.floor(rounded / 60);
-  const secs = rounded % 60;
-  if (mins > 0) {
-    return `${mins}m ${String(secs).padStart(2, '0')}s`;
-  }
-  return `${secs}s`;
-}
-
-/**
- * Handles Parse Tactical Sign Config.
- */
-function parseTacticalSignConfig(
-  value: string | null | undefined,
-): Pick<CreateEinheitForm, 'tacticalSignMode' | 'tacticalSignUnit' | 'tacticalSignTyp' | 'tacticalSignDenominator'> {
-  if (!value) {
-    return {
-      tacticalSignMode: 'AUTO',
-      tacticalSignUnit: '',
-      tacticalSignTyp: 'none',
-      tacticalSignDenominator: '',
-    };
-  }
-  try {
-    const parsed = JSON.parse(value) as TacticalSignConfig;
-    const source = parsed.meta?.source === 'manual' ? 'MANUELL' : 'AUTO';
-    return {
-      tacticalSignMode: source,
-      tacticalSignUnit: parsed.unit ?? '',
-      tacticalSignTyp: parsed.typ ?? 'none',
-      tacticalSignDenominator: parsed.denominator ?? '',
-    };
-  } catch {
-    return {
-      tacticalSignMode: 'AUTO',
-      tacticalSignUnit: '',
-      tacticalSignTyp: 'none',
-      tacticalSignDenominator: '',
-    };
-  }
-}
-
-/**
- * Handles Build Tactical Sign Config Json.
- */
-function buildTacticalSignConfigJson(
-  input: Pick<CreateEinheitForm, 'nameImEinsatz' | 'organisation' | 'tacticalSignMode' | 'tacticalSignUnit' | 'tacticalSignTyp' | 'tacticalSignDenominator'>,
-): string {
-  const isManual = input.tacticalSignMode === 'MANUELL';
-  const config: TacticalSignConfig = {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
-    organisation: input.organisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
-    text: '',
-    name: input.nameImEinsatz,
-    organisationsname: input.organisation,
-    unit: input.tacticalSignUnit.trim(),
-    typ: input.tacticalSignTyp,
-    denominator: input.tacticalSignDenominator.trim() || undefined,
-    meta: {
-      source: isManual ? 'manual' : 'auto',
-      rawName: input.nameImEinsatz,
-      updatedAt: new Date().toISOString(),
-    },
-  };
-  return JSON.stringify(config);
-}
-
 /**
  * Handles App.
  */
@@ -281,9 +186,20 @@ export function App() {
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
-  const [editLocks, setEditLocks] = useState<RecordEditLockInfo[]>([]);
-  const [ownedEditLocks, setOwnedEditLocks] = useState<Array<{ entityType: RecordEditLockType; entityId: string }>>([]);
-  const lastRemoteRefreshAtRef = useRef(0);
+
+  const {
+    lockByEinheitId,
+    lockByFahrzeugId,
+    lockByAbschnittId,
+    refreshEditLocks,
+    acquireEditLock,
+    releaseEditLock,
+    clearLocks,
+  } = useEditLocks({
+    sessionActive: Boolean(session),
+    selectedEinsatzId,
+    onError: (message) => setError(message),
+  });
 
   const selectedEinsatz = useMemo(
     () => einsaetze.find((item) => item.id === selectedEinsatzId) ?? null,
@@ -320,123 +236,11 @@ export function App() {
         .slice(-250),
     [debugSyncLogs],
   );
-  const lockByEinheitId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'EINHEIT')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
-  const lockByFahrzeugId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'FAHRZEUG')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
-  const lockByAbschnittId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'ABSCHNITT')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
   const selectedAbschnittLock = selectedAbschnittId ? lockByAbschnittId[selectedAbschnittId] : undefined;
   const selectedAbschnittLockedByOther = Boolean(selectedAbschnittLock && !selectedAbschnittLock.isSelf);
 
   const isArchived = selectedEinsatz?.status === 'ARCHIVIERT';
   const showAbschnittSidebar = activeView === 'einsatz';
-
-  const renderUpdaterNotices = () => (
-    <>
-      {updaterState.stage === 'available' && (
-        <div className="update-banner">
-          <span>
-            Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Quelle:{' '}
-            {updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release'}.
-            {updaterState.downloadSource === 'peer-lan' && updaterState.peerHost
-              ? ` LAN-Peer: ${updaterState.peerHost}.`
-              : ''}
-            {updaterState.downloadSource === 'internet' ? ' Fallback: Internet.' : ''}
-            {updaterState.message ? ` ${updaterState.message}` : ''}
-          </span>
-          <div className="update-actions">
-            {updaterState.inAppDownloadSupported && (
-              <button onClick={() => void doDownloadUpdate()} disabled={busy}>
-                Update herunterladen
-              </button>
-            )}
-            <button onClick={() => void doOpenReleasePage()} disabled={busy}>
-              Release-Seite öffnen
-            </button>
-          </div>
-        </div>
-      )}
-      {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
-      {updaterState.stage === 'unsupported' && (
-        <div className="update-banner">
-          <span>{updaterState.message}</span>
-          <button onClick={() => void doOpenReleasePage()} disabled={busy}>
-            Release-Seite öffnen
-          </button>
-        </div>
-      )}
-    </>
-  );
-
-  /**
-   * Handles Render Updater Overlay.
-   */
-  const renderUpdaterOverlay = () => {
-    if (updaterState.stage === 'downloading') {
-      return (
-        <div className="overlay-backdrop">
-          <div className="overlay-panel">
-            <h3>Update wird heruntergeladen</h3>
-            <div className="progress-bar">
-              <div className="progress-fill" style={{ width: `${Math.max(0, Math.min(100, updaterState.progressPercent ?? 0))}%` }} />
-            </div>
-            <p>{Math.round(updaterState.progressPercent ?? 0)}%</p>
-            <p>
-              {formatBytesToMb(updaterState.progressTransferredBytes)} / {formatBytesToMb(updaterState.progressTotalBytes)}
-            </p>
-            <p>Geschwindigkeit: {formatSpeedMb(updaterState.progressBytesPerSecond)}</p>
-            <p>
-              Restzeit:{' '}
-              {formatEtaSeconds(
-                updaterState.progressTransferredBytes !== undefined &&
-                  updaterState.progressTotalBytes !== undefined &&
-                  updaterState.progressBytesPerSecond
-                  ? (updaterState.progressTotalBytes - updaterState.progressTransferredBytes) /
-                      updaterState.progressBytesPerSecond
-                  : undefined,
-              )}
-            </p>
-          </div>
-        </div>
-      );
-    }
-
-    if (updaterState.stage === 'downloaded') {
-      return (
-        <div className="overlay-backdrop">
-          <div className="overlay-panel">
-            <h3>Update wird durchgeführt</h3>
-            <div className="update-install-spinner" aria-label="Update wird durchgeführt" />
-            <p>Die Anwendung wird jetzt automatisch neu gestartet.</p>
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
 
   const clearSelectedEinsatz = useCallback(() => {
     setSelectedEinsatzId('');
@@ -447,53 +251,8 @@ export function App() {
     setAllFahrzeuge([]);
     setGesamtStaerke(EMPTY_STRENGTH);
     setActiveClients([]);
-    setEditLocks([]);
-    setOwnedEditLocks([]);
-  }, []);
-
-  /**
-   * Handles Refresh Edit Locks.
-   */
-  const refreshEditLocks = useCallback(async (einsatzId: string) => {
-    const locks = await window.api.listEditLocks(einsatzId);
-    setEditLocks(locks);
-  }, []);
-
-  /**
-   * Handles Acquire Edit Lock.
-   */
-  const acquireEditLock = useCallback(
-    async (einsatzId: string, entityType: RecordEditLockType, entityId: string): Promise<boolean> => {
-      const result = await window.api.acquireEditLock({ einsatzId, entityType, entityId });
-      await refreshEditLocks(einsatzId);
-      if (!result.acquired) {
-        setError(`Datensatz wird gerade von ${result.lock.computerName} (${result.lock.userName}) bearbeitet.`);
-        return false;
-      }
-      setOwnedEditLocks((prev) => {
-        if (prev.some((item) => item.entityType === entityType && item.entityId === entityId)) {
-          return prev;
-        }
-        return [...prev, { entityType, entityId }];
-      });
-      return true;
-    },
-    [refreshEditLocks],
-  );
-
-  /**
-   * Handles Release Edit Lock.
-   */
-  const releaseEditLock = useCallback(async (einsatzId: string, entityType: RecordEditLockType, entityId: string) => {
-    try {
-      await window.api.releaseEditLock({ einsatzId, entityType, entityId });
-    } finally {
-      setOwnedEditLocks((prev) => prev.filter((item) => !(item.entityType === entityType && item.entityId === entityId)));
-      if (einsatzId) {
-        await refreshEditLocks(einsatzId);
-      }
-    }
-  }, [refreshEditLocks]);
+    clearLocks();
+  }, [clearLocks]);
 
   /**
    * Handles Close Edit Abschnitt Dialog.
@@ -532,279 +291,21 @@ export function App() {
     void releaseEditLock(selectedEinsatzId, 'FAHRZEUG', fahrzeugId).catch(() => undefined);
   }, [editFahrzeugForm.fahrzeugId, releaseEditLock, selectedEinsatzId]);
 
-  const loadEinsatz = useCallback(async (einsatzId: string, preferredAbschnittId?: string) => {
-    await refreshEditLocks(einsatzId);
-    const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
-    setAbschnitte(nextAbschnitte);
-
-    const allDetails = await Promise.all(
-      nextAbschnitte.map((abschnitt) => window.api.listAbschnittDetails(einsatzId, abschnitt.id)),
-    );
-
-    const nextAllKraefte = allDetails.flatMap((d, index) => {
-      const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
-      return d.einheiten.map((einheit) => ({ ...einheit, abschnittName }));
-    });
-    setAllKraefte(nextAllKraefte);
-
-    const einheitNameById = new Map(nextAllKraefte.map((e) => [e.id, e.nameImEinsatz]));
-    const einheitOrgById = new Map(nextAllKraefte.map((e) => [e.id, e.organisation]));
-    const nextAllFahrzeuge = allDetails.flatMap((d, index) => {
-      const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
-      return d.fahrzeuge.map((fahrzeug) => ({
-        ...fahrzeug,
-        abschnittName,
-        organisation: fahrzeug.organisation ?? (fahrzeug.aktuelleEinsatzEinheitId ? (einheitOrgById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? null) : null),
-        einheitName: fahrzeug.aktuelleEinsatzEinheitId
-          ? (einheitNameById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? 'Unbekannt')
-          : '-',
-      }));
-    });
-    setAllFahrzeuge(nextAllFahrzeuge);
-
-    const total = allDetails.reduce<TacticalStrength>((sum, d, index) => {
-      const abschnitt = nextAbschnitte[index];
-      if (abschnitt?.systemTyp === 'ANFAHRT') {
-        return sum;
-      }
-      for (const einheit of d.einheiten) {
-        const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
-        sum.fuehrung += parsed.fuehrung;
-        sum.unterfuehrung += parsed.unterfuehrung;
-        sum.mannschaft += parsed.mannschaft;
-        sum.gesamt += parsed.gesamt;
-      }
-      return sum;
-    }, { ...EMPTY_STRENGTH });
-    setGesamtStaerke(total);
-
-    const effectiveAbschnittId =
-      preferredAbschnittId && nextAbschnitte.some((item) => item.id === preferredAbschnittId)
-        ? preferredAbschnittId
-        : nextAbschnitte[0]?.id || '';
-
-    setSelectedAbschnittId(effectiveAbschnittId);
-    if (effectiveAbschnittId) {
-      setDetails(await window.api.listAbschnittDetails(einsatzId, effectiveAbschnittId));
-    } else {
-      setDetails(EMPTY_DETAILS);
-    }
-
-  }, [refreshEditLocks]);
-
-  const refreshEinsaetze = useCallback(async () => {
-    const next = await window.api.listEinsaetze();
-    setEinsaetze(next);
-    if (selectedEinsatzId && !next.some((item) => item.id === selectedEinsatzId)) {
-      clearSelectedEinsatz();
-    }
-    return next;
-  }, [clearSelectedEinsatz, selectedEinsatzId]);
-
-  const refreshAll = useCallback(async () => {
-    await refreshEinsaetze();
-    if (selectedEinsatzId) {
-      await loadEinsatz(selectedEinsatzId, selectedAbschnittId);
-    }
-  }, [loadEinsatz, refreshEinsaetze, selectedAbschnittId, selectedEinsatzId]);
-
-  useEffect(() => {
-    void (async () => {
-      try {
-        const [currentSession, settings] = await Promise.all([window.api.getSession(), window.api.getSettings()]);
-        setDbPath(settings.dbPath);
-        setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
-        setUpdaterState(await window.api.getUpdaterState());
-        void window.api.checkForUpdates();
-        if (currentSession) {
-          setSession(currentSession);
-        } else {
-          const autoSession = await window.api.login({ name: 'admin', passwort: 'admin' });
-          setSession(autoSession);
-        }
-        if (currentSession) {
-          await refreshEinsaetze();
-        } else {
-          await refreshEinsaetze();
-        }
-      } catch (err) {
-        setError(readError(err));
-      } finally {
-        setAuthReady(true);
-      }
-    })();
-    // initial load only
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!authReady) {
-      return;
-    }
-    void (async () => {
-      try {
-        const pendingPath = await window.api.consumePendingOpenFilePath();
-        if (pendingPath) {
-          setQueuedOpenFilePath(pendingPath);
-        }
-      } catch (err) {
-        setError(readError(err));
-      }
-    })();
-  }, [authReady]);
-
-  useEffect(() => {
-    const unsubscribe = window.updaterEvents.onStateChanged((state) => {
-      setUpdaterState(state as UpdaterState);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    if (!session || !selectedEinsatzId) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      void refreshAll();
-    }, 6000);
-    return () => window.clearInterval(timer);
-  }, [refreshAll, selectedEinsatzId, session]);
-
-  useEffect(() => {
-    if (!session || !selectedEinsatzId || ownedEditLocks.length === 0) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      void (async () => {
-        for (const lock of ownedEditLocks) {
-          try {
-            await window.api.refreshEditLock({
-              einsatzId: selectedEinsatzId,
-              entityType: lock.entityType,
-              entityId: lock.entityId,
-            });
-          } catch {
-            // ignore transient refresh errors
-          }
-        }
-        await refreshEditLocks(selectedEinsatzId);
-      })();
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [ownedEditLocks, refreshEditLocks, selectedEinsatzId, session]);
-
-  useEffect(() => {
-    if (!session || !selectedEinsatzId || !selectedAbschnittId) {
-      return;
-    }
-    void (async () => {
-      try {
-        setDetails(await window.api.listAbschnittDetails(selectedEinsatzId, selectedAbschnittId));
-      } catch (err) {
-        setError(readError(err));
-      }
-    })();
-  }, [selectedAbschnittId, selectedEinsatzId, session]);
-
-  useEffect(() => {
-    if (!session || !selectedEinsatzId || activeView !== 'einstellungen') {
-      return;
-    }
-    /**
-     * Handles Load Clients.
-     */
-    const loadClients = async () => {
-      try {
-        const [clients, settings, peerStatus] = await Promise.all([
-          window.api.listActiveClients(),
-          window.api.getSettings(),
-          window.api.getPeerUpdateStatus(),
-        ]);
-        setActiveClients(clients);
-        setDbPath(settings.dbPath);
-        setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
-        setPeerUpdateStatus(peerStatus);
-      } catch (err) {
-        setError(readError(err));
-      }
-    };
-    void loadClients();
-    const timer = window.setInterval(() => {
-      void loadClients();
-    }, 5000);
-    return () => window.clearInterval(timer);
-  }, [activeView, selectedEinsatzId, session]);
-
-  useEffect(() => {
-    if (!session || !authReady || busy || !queuedOpenFilePath) {
-      return;
-    }
-    const dbPath = queuedOpenFilePath;
-    setQueuedOpenFilePath(null);
-    void withBusy(async () => {
-      const opened = await window.api.openEinsatzByPath(dbPath);
-      setEinsaetze((prev) => {
-        const rest = prev.filter((item) => item.id !== opened.id);
-        return [opened, ...rest];
-      });
-      setSelectedEinsatzId(opened.id);
-      await loadEinsatz(opened.id);
-      setStartChoice('open');
-    });
-  }, [authReady, busy, loadEinsatz, queuedOpenFilePath, session]);
-
-  useEffect(() => {
-    const unsubscribe = window.appEvents.onPendingOpenFile((dbPath) => {
-      setQueuedOpenFilePath(dbPath);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = window.appEvents.onDebugSyncLog((line) => {
-      setDebugSyncLogs((prev) => {
-        const next = [...prev, line];
-        return next.slice(-400);
-      });
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    const unsubscribe = window.appEvents.onEinsatzChanged((signal) => {
-      if (!session || !selectedEinsatzId || signal.einsatzId !== selectedEinsatzId) {
-        return;
-      }
-      const nowTs = Date.now();
-      if (nowTs - lastRemoteRefreshAtRef.current < 800) {
-        return;
-      }
-      lastRemoteRefreshAtRef.current = nowTs;
-      void refreshAll().catch((err: unknown) => {
-        setError(readError(err));
-      });
-    });
-    return () => unsubscribe();
-  }, [refreshAll, selectedEinsatzId, session]);
-
-  useEffect(() => {
-    if (!session) {
-      return;
-    }
-    void (async () => {
-      try {
-        const logs = await window.api.getDebugSyncLogLines();
-        setDebugSyncLogs(logs.slice(-400));
-      } catch (err) {
-        setError(readError(err));
-      }
-    })();
-  }, [session]);
+  const { loadEinsatz, refreshEinsaetze, refreshAll } = useEinsatzData({
+    selectedEinsatzId,
+    selectedAbschnittId,
+    setEinsaetze,
+    setAbschnitte,
+    setSelectedAbschnittId,
+    setDetails,
+    setAllKraefte,
+    setAllFahrzeuge,
+    setGesamtStaerke,
+    clearSelectedEinsatz,
+    refreshEditLocks,
+    emptyDetails: EMPTY_DETAILS,
+    emptyStrength: EMPTY_STRENGTH,
+  });
 
   /**
    * Handles With Busy.
@@ -821,67 +322,74 @@ export function App() {
     }
   };
 
-  /**
-   * Handles Do Start Open Existing.
-   */
-  const doStartOpenExisting = async () => {
-    await withBusy(async () => {
-      const opened = await window.api.openEinsatzWithDialog();
-      if (!opened) {
-        return;
-      }
-      setEinsaetze((prev) => {
-        const rest = prev.filter((item) => item.id !== opened.id);
-        return [opened, ...rest];
-      });
-      setSelectedEinsatzId(opened.id);
-      await loadEinsatz(opened.id);
-      setStartChoice('open');
-    });
-  };
+  useAppBootstrap({
+    authReady,
+    setAuthReady,
+    setDbPath,
+    setLanPeerUpdatesEnabled,
+    setUpdaterState,
+    setSession,
+    setQueuedOpenFilePath,
+    setNow,
+    setError,
+    refreshEinsaetze,
+  });
 
-  /**
-   * Handles Do Start Open Known Einsatz.
-   */
-  const doStartOpenKnownEinsatz = async (einsatzId: string) => {
-    await withBusy(async () => {
-      const opened = await window.api.openEinsatz(einsatzId);
-      if (!opened) {
-        throw new Error('Einsatz konnte im Standardpfad nicht geöffnet werden.');
-      }
-      setSelectedEinsatzId(einsatzId);
-      await loadEinsatz(einsatzId);
-      setStartChoice('open');
-    });
-  };
+  useSyncEvents({
+    session,
+    authReady,
+    busy,
+    activeView,
+    selectedEinsatzId,
+    selectedAbschnittId,
+    queuedOpenFilePath,
+    setQueuedOpenFilePath,
+    setError,
+    setDetails,
+    setActiveClients,
+    setDbPath,
+    setLanPeerUpdatesEnabled,
+    setPeerUpdateStatus,
+    setDebugSyncLogs,
+    setEinsaetze,
+    setSelectedEinsatzId,
+    setStartChoice,
+    loadEinsatz,
+    refreshAll,
+    withBusy,
+  });
 
-  /**
-   * Handles Do Start Create Einsatz.
-   */
-  const doStartCreateEinsatz = async () => {
-    if (!startNewEinsatzName.trim()) {
-      setError('Bitte Einsatzname eingeben.');
-      return;
-    }
+  const startActions = useStartActions({
+    startNewEinsatzName,
+    startNewFuestName,
+    setError,
+    setEinsaetze,
+    setSelectedEinsatzId,
+    setStartNewEinsatzName,
+    setStartChoice,
+    loadEinsatz,
+    withBusy,
+  });
 
-    await withBusy(async () => {
-      const created = await window.api.createEinsatzWithDialog({
-        name: startNewEinsatzName.trim(),
-        fuestName: startNewFuestName.trim() || 'FüSt 1',
-      });
-      if (!created) {
-        return;
-      }
-      setStartNewEinsatzName('');
-      setEinsaetze((prev) => {
-        const rest = prev.filter((item) => item.id !== created.id);
-        return [created, ...rest];
-      });
-      setSelectedEinsatzId(created.id);
-      await loadEinsatz(created.id);
-      setStartChoice('open');
-    });
-  };
+  const systemActions = useSystemActions({
+    dbPath,
+    selectedEinsatzId,
+    selectedAbschnittId,
+    moveDialog,
+    moveTarget,
+    gesamtStaerke,
+    setLanPeerUpdatesEnabled,
+    setDbPath,
+    setPeerUpdateStatus,
+    clearSelectedEinsatz,
+    refreshEinsaetze,
+    loadEinsatz,
+    refreshAll,
+    setError,
+    setMoveDialog,
+    setMoveTarget,
+    withBusy,
+  });
 
   /**
    * Handles Do Create Einheit.
@@ -1505,183 +1013,28 @@ export function App() {
     });
   };
 
-  /**
-   * Handles Do Save Db Path.
-   */
-  const doSaveDbPath = async () => {
-    await withBusy(async () => {
-      await window.api.setDbPath(dbPath);
-      clearSelectedEinsatz();
-      setStartChoice('open');
-      await refreshEinsaetze();
-    });
-  };
-
-  /**
-   * Handles Do Toggle Lan Peer Updates.
-   */
-  const doToggleLanPeerUpdates = async (enabled: boolean) => {
-    await withBusy(async () => {
-      const settings = await window.api.setLanPeerUpdatesEnabled(enabled);
-      setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
-      setDbPath(settings.dbPath);
-      setPeerUpdateStatus(await window.api.getPeerUpdateStatus());
-    });
-  };
-
-  /**
-   * Handles Do Restore Backup.
-   */
-  const doRestoreBackup = async () => {
-    if (!selectedEinsatzId) {
-      setError('Bitte zuerst einen Einsatz auswählen.');
-      return;
-    }
-    await withBusy(async () => {
-      const restored = await window.api.restoreBackup(selectedEinsatzId);
-      if (!restored) {
-        return;
-      }
-      const reopened = await window.api.openEinsatz(selectedEinsatzId);
-      if (!reopened) {
-        throw new Error('Einsatz konnte nach Backup-Wiederherstellung nicht geöffnet werden.');
-      }
-      await loadEinsatz(selectedEinsatzId, selectedAbschnittId);
-    });
-  };
-
-  /**
-   * Handles Do Move.
-   */
-  const doMove = async () => {
-    if (!moveDialog || !selectedEinsatzId || !moveTarget) return;
-    await withBusy(async () => {
-      if (moveDialog.type === 'einheit') {
-        await window.api.moveEinheit({
-          einsatzId: selectedEinsatzId,
-          einheitId: moveDialog.id,
-          nachAbschnittId: moveTarget,
-        });
-      } else {
-        await window.api.moveFahrzeug({
-          einsatzId: selectedEinsatzId,
-          fahrzeugId: moveDialog.id,
-          nachAbschnittId: moveTarget,
-        });
-      }
-      setMoveDialog(null);
-      setMoveTarget('');
-      await refreshAll();
-    });
-  };
-
-  /**
-   * Handles Do Download Update.
-   */
-  const doDownloadUpdate = async () => {
-    await withBusy(async () => {
-      await window.api.downloadUpdate();
-    });
-  };
-
-  /**
-   * Handles Do Open Release Page.
-   */
-  const doOpenReleasePage = async () => {
-    await withBusy(async () => {
-      await window.api.openExternalUrl(RELEASES_URL);
-    });
-  };
-
-  /**
-   * Handles Do Open Strength Display.
-   */
-  const doOpenStrengthDisplay = async () => {
-    await withBusy(async () => {
-      await window.api.openStrengthDisplayWindow();
-      await window.api.setStrengthDisplayState({
-        taktischeStaerke: toTaktischeStaerke(gesamtStaerke).replace(/\/(\d+)$/, '//$1'),
-      });
-    });
-  };
-
-  /**
-   * Handles Do Close Strength Display.
-   */
-  const doCloseStrengthDisplay = async () => {
-    await withBusy(async () => {
-      await window.api.closeStrengthDisplayWindow();
-    });
-  };
-
-  useEffect(() => {
-    void window.api.setStrengthDisplayState({
-      taktischeStaerke: toTaktischeStaerke(gesamtStaerke).replace(/\/(\d+)$/, '//$1'),
-    });
-  }, [gesamtStaerke]);
-
-  if (!authReady) {
+  if (!authReady || !session || !selectedEinsatzId) {
     return (
-      <>
-        {renderUpdaterNotices()}
-        <div className="login-page">
-          <div className="panel start-screen-panel">
-            <div className="login-header">
-              <span className="login-logo-wrap">
-                <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
-              </span>
-              <h1 className="login-title">S1-Control</h1>
-            </div>
-            <p className="hint">Initialisiere Anwendung …</p>
-            {error && <p className="error">{error}</p>}
-          </div>
-        </div>
-        {renderUpdaterOverlay()}
-      </>
-    );
-  }
-
-  if (!session) {
-    return (
-      <>
-        {renderUpdaterNotices()}
-        <div className="login-page">
-          <div className="panel start-screen-panel">
-            <div className="login-header">
-              <span className="login-logo-wrap">
-                <img src="branding/logo.svg" alt="THW Logo" className="login-logo" />
-              </span>
-              <h1 className="login-title">S1-Control</h1>
-            </div>
-            <p className="error">{error || 'Automatische Anmeldung fehlgeschlagen.'}</p>
-          </div>
-        </div>
-        {renderUpdaterOverlay()}
-      </>
-    );
-  }
-
-  if (!selectedEinsatzId) {
-    return (
-      <>
-        {renderUpdaterNotices()}
-        <StartView
-          startChoice={startChoice}
-          setStartChoice={setStartChoice}
-          busy={busy}
-          error={error}
-          einsaetze={einsaetze}
-          startNewEinsatzName={startNewEinsatzName}
-          setStartNewEinsatzName={setStartNewEinsatzName}
-          startNewFuestName={startNewFuestName}
-          setStartNewFuestName={setStartNewFuestName}
-          appVersion={updaterState.currentVersion}
-          onOpenExisting={() => void doStartOpenExisting()}
-          onOpenKnownEinsatz={(einsatzId) => void doStartOpenKnownEinsatz(einsatzId)}
-          onCreate={() => void doStartCreateEinsatz()}
-        />
-        {renderUpdaterOverlay()}
-      </>
+      <AppEntryView
+        authReady={authReady}
+        session={session}
+        selectedEinsatzId={selectedEinsatzId}
+        updaterState={updaterState}
+        busy={busy}
+        error={error}
+        startChoice={startChoice}
+        setStartChoice={setStartChoice}
+        einsaetze={einsaetze}
+        startNewEinsatzName={startNewEinsatzName}
+        setStartNewEinsatzName={setStartNewEinsatzName}
+        startNewFuestName={startNewFuestName}
+        setStartNewFuestName={setStartNewFuestName}
+        onDownloadUpdate={() => void systemActions.downloadUpdate()}
+        onOpenReleasePage={() => void systemActions.openReleasePage()}
+        onOpenExisting={() => void startActions.openExisting()}
+        onOpenKnownEinsatz={(einsatzId) => void startActions.openKnown(einsatzId)}
+        onCreate={() => void startActions.create()}
+      />
     );
   }
 
@@ -1691,12 +1044,17 @@ export function App() {
         einsatzName={selectedEinsatz?.name ?? '-'}
         gesamtStaerke={gesamtStaerke}
         now={now}
-        onOpenStrengthDisplay={() => void doOpenStrengthDisplay()}
-        onCloseStrengthDisplay={() => void doCloseStrengthDisplay()}
+        onOpenStrengthDisplay={() => void systemActions.openStrengthDisplay()}
+        onCloseStrengthDisplay={() => void systemActions.closeStrengthDisplay()}
         busy={busy}
       />
 
-      {renderUpdaterNotices()}
+      <UpdaterNotices
+        updaterState={updaterState}
+        busy={busy}
+        onDownloadUpdate={() => void systemActions.downloadUpdate()}
+        onOpenReleasePage={() => void systemActions.openReleasePage()}
+      />
 
       {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
       {error && <div className="error-banner">{error}</div>}
@@ -1715,192 +1073,68 @@ export function App() {
           />
         )}
 
-        <section className="main-view">
-          {activeView === 'einsatz' && (
-            <>
-              <InlineEinheitEditor
-                visible={showEditEinheitDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={editEinheitForm}
-                onChange={setEditEinheitForm}
-                onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={closeEditEinheitDialog}
-                helfer={editEinheitHelfer}
-                onCreateHelfer={doCreateEinheitHelfer}
-                onUpdateHelfer={doUpdateEinheitHelfer}
-                onDeleteHelfer={doDeleteEinheitHelfer}
-                fahrzeuge={allFahrzeuge}
-                onCreateFahrzeug={doCreateEinheitFahrzeug}
-                onUpdateFahrzeug={doUpdateEinheitFahrzeug}
-              />
-              <InlineCreateEinheitEditor
-                visible={showCreateEinheitDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={createEinheitForm}
-                abschnitte={abschnitte}
-                onChange={setCreateEinheitForm}
-                onSubmit={() => void doSubmitCreateEinheit()}
-                onCancel={() => setShowCreateEinheitDialog(false)}
-              />
-              <InlineFahrzeugEditor
-                visible={showEditFahrzeugDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={editFahrzeugForm}
-                allKraefte={allKraefte}
-                onChange={setEditFahrzeugForm}
-                onSubmit={() => void doSubmitEditFahrzeug()}
-                onCancel={closeEditFahrzeugDialog}
-              />
-              <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
-                Einheit anlegen
-              </button>
-              <EinsatzOverviewView
-                details={details}
-                selectedEinsatz={selectedEinsatz}
-                isArchived={isArchived ?? false}
-                broadcastLogs={broadcastMonitorLogs}
-                onMoveEinheit={(id) => {
-                  setMoveDialog({ type: 'einheit', id });
-                  setMoveTarget(selectedAbschnittId);
-                }}
-                onEditEinheit={doOpenEditEinheitDialog}
-                onSplitEinheit={doOpenSplitEinheitDialog}
-                einheitLocksById={lockByEinheitId}
-                onMoveFahrzeug={(id) => {
-                  setMoveDialog({ type: 'fahrzeug', id });
-                  setMoveTarget(selectedAbschnittId);
-                }}
-                onEditFahrzeug={doOpenEditFahrzeugDialog}
-                fahrzeugLocksById={lockByFahrzeugId}
-              />
-            </>
-          )}
-
-          {activeView === 'fuehrung' && (
-            <>
-              <div className="inline-actions">
-                <button onClick={doCreateAbschnitt} disabled={busy || !selectedEinsatzId || isArchived}>
-                  Abschnitt anlegen
-                </button>
-              </div>
-              <FuehrungsstrukturView abschnitte={abschnitte} kraefte={allKraefte} />
-            </>
-          )}
-
-          {activeView === 'kraefte' && (
-            <>
-              <InlineEinheitEditor
-                visible={showEditEinheitDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={editEinheitForm}
-                onChange={setEditEinheitForm}
-                onSubmit={() => void doSubmitEditEinheit()}
-                onCancel={closeEditEinheitDialog}
-                helfer={editEinheitHelfer}
-                onCreateHelfer={doCreateEinheitHelfer}
-                onUpdateHelfer={doUpdateEinheitHelfer}
-                onDeleteHelfer={doDeleteEinheitHelfer}
-                fahrzeuge={allFahrzeuge}
-                onCreateFahrzeug={doCreateEinheitFahrzeug}
-                onUpdateFahrzeug={doUpdateEinheitFahrzeug}
-              />
-              <InlineCreateEinheitEditor
-                visible={showCreateEinheitDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={createEinheitForm}
-                abschnitte={abschnitte}
-                onChange={setCreateEinheitForm}
-                onSubmit={() => void doSubmitCreateEinheit()}
-                onCancel={() => setShowCreateEinheitDialog(false)}
-              />
-              <div className="inline-actions">
-                <select
-                  value={kraefteOrgFilter}
-                  onChange={(e) => setKraefteOrgFilter(e.target.value as OrganisationKey | 'ALLE')}
-                  disabled={busy}
-                >
-                  <option value="ALLE">Alle Organisationen</option>
-                  {ORGANISATION_OPTIONS.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                <button onClick={doCreateAbschnitt} disabled={busy || !selectedEinsatzId || isArchived}>
-                  Abschnitt anlegen
-                </button>
-                <button onClick={doCreateEinheit} disabled={busy || !selectedAbschnittId || isArchived}>
-                  Einheit anlegen
-                </button>
-              </div>
-              <KraefteOverviewTable
-                einheiten={
-                  kraefteOrgFilter === 'ALLE'
-                    ? allKraefte
-                    : allKraefte.filter((e) => e.organisation === kraefteOrgFilter)
-                }
-                isArchived={isArchived ?? false}
-                onMove={(id) => {
-                  setMoveDialog({ type: 'einheit', id });
-                  setMoveTarget(selectedAbschnittId);
-                }}
-                onEdit={doOpenEditEinheitDialog}
-                onSplit={doOpenSplitEinheitDialog}
-                editLocksById={lockByEinheitId}
-              />
-            </>
-          )}
-
-          {activeView === 'fahrzeuge' && (
-            <>
-              <InlineFahrzeugEditor
-                visible={showEditFahrzeugDialog}
-                busy={busy}
-                isArchived={isArchived ?? false}
-                form={editFahrzeugForm}
-                allKraefte={allKraefte}
-                onChange={setEditFahrzeugForm}
-                onSubmit={() => void doSubmitEditFahrzeug()}
-                onCancel={closeEditFahrzeugDialog}
-              />
-              <button onClick={doCreateFahrzeug} disabled={busy || !selectedAbschnittId || isArchived}>
-                Fahrzeug anlegen
-              </button>
-              <FahrzeugeOverviewTable
-                fahrzeuge={allFahrzeuge}
-                isArchived={isArchived ?? false}
-                onMove={(id) => {
-                  setMoveDialog({ type: 'fahrzeug', id });
-                  setMoveTarget(selectedAbschnittId);
-                }}
-                onEdit={doOpenEditFahrzeugDialog}
-                editLocksById={lockByFahrzeugId}
-              />
-            </>
-          )}
-
-          {activeView === 'einstellungen' && (
-            <SettingsView
-              busy={busy}
-              dbPath={dbPath}
-              selectedEinsatzId={selectedEinsatzId}
-              lanPeerUpdatesEnabled={lanPeerUpdatesEnabled}
-              activeClients={activeClients}
-              peerUpdateStatus={peerUpdateStatus}
-              debugSyncLogs={debugSyncLogs}
-              udpDebugLogs={udpDebugMonitorLogs}
-              onChangeDbPath={setDbPath}
-              onSaveDbPath={() => void doSaveDbPath()}
-              onRestoreBackup={() => void doRestoreBackup()}
-              onToggleLanPeerUpdates={(enabled) => void doToggleLanPeerUpdates(enabled)}
-            />
-          )}
-        </section>
+        <WorkspaceContent
+          activeView={activeView}
+          busy={busy}
+          isArchived={isArchived ?? false}
+          selectedEinsatz={selectedEinsatz}
+          selectedEinsatzId={selectedEinsatzId}
+          selectedAbschnittId={selectedAbschnittId}
+          abschnitte={abschnitte}
+          details={details}
+          allKraefte={allKraefte}
+          allFahrzeuge={allFahrzeuge}
+          broadcastMonitorLogs={broadcastMonitorLogs}
+          debugSyncLogs={debugSyncLogs}
+          udpDebugMonitorLogs={udpDebugMonitorLogs}
+          activeClients={activeClients}
+          dbPath={dbPath}
+          lanPeerUpdatesEnabled={lanPeerUpdatesEnabled}
+          peerUpdateStatus={peerUpdateStatus}
+          kraefteOrgFilter={kraefteOrgFilter}
+          setKraefteOrgFilter={setKraefteOrgFilter}
+          showEditEinheitDialog={showEditEinheitDialog}
+          editEinheitForm={editEinheitForm}
+          setEditEinheitForm={setEditEinheitForm}
+          editEinheitHelfer={editEinheitHelfer}
+          onSubmitEditEinheit={() => void doSubmitEditEinheit()}
+          onCloseEditEinheit={closeEditEinheitDialog}
+          onCreateEinheitHelfer={doCreateEinheitHelfer}
+          onUpdateEinheitHelfer={doUpdateEinheitHelfer}
+          onDeleteEinheitHelfer={doDeleteEinheitHelfer}
+          onCreateEinheitFahrzeug={doCreateEinheitFahrzeug}
+          onUpdateEinheitFahrzeug={doUpdateEinheitFahrzeug}
+          showCreateEinheitDialog={showCreateEinheitDialog}
+          createEinheitForm={createEinheitForm}
+          setCreateEinheitForm={setCreateEinheitForm}
+          onSubmitCreateEinheit={() => void doSubmitCreateEinheit()}
+          onCloseCreateEinheit={() => setShowCreateEinheitDialog(false)}
+          showEditFahrzeugDialog={showEditFahrzeugDialog}
+          editFahrzeugForm={editFahrzeugForm}
+          setEditFahrzeugForm={setEditFahrzeugForm}
+          onSubmitEditFahrzeug={() => void doSubmitEditFahrzeug()}
+          onCloseEditFahrzeug={closeEditFahrzeugDialog}
+          onCreateEinheit={doCreateEinheit}
+          onCreateAbschnitt={doCreateAbschnitt}
+          onCreateFahrzeug={doCreateFahrzeug}
+          onMoveEinheit={(id) => {
+            setMoveDialog({ type: 'einheit', id });
+            setMoveTarget(selectedAbschnittId);
+          }}
+          onEditEinheit={doOpenEditEinheitDialog}
+          onSplitEinheit={doOpenSplitEinheitDialog}
+          onMoveFahrzeug={(id) => {
+            setMoveDialog({ type: 'fahrzeug', id });
+            setMoveTarget(selectedAbschnittId);
+          }}
+          onEditFahrzeug={doOpenEditFahrzeugDialog}
+          onSaveDbPath={() => void systemActions.saveDbPath()}
+          onSetDbPath={setDbPath}
+          onRestoreBackup={() => void systemActions.restoreBackup()}
+          onToggleLanPeerUpdates={(enabled) => void systemActions.toggleLanPeerUpdates(enabled)}
+          einheitLocksById={lockByEinheitId}
+          fahrzeugLocksById={lockByFahrzeugId}
+        />
       </main>
 
       <MoveDialog
@@ -1910,7 +1144,7 @@ export function App() {
         moveTarget={moveTarget}
         isArchived={isArchived ?? false}
         onChangeTarget={setMoveTarget}
-        onConfirm={() => void doMove()}
+        onConfirm={() => void systemActions.move()}
         onClose={() => {
           setMoveDialog(null);
           setMoveTarget('');
@@ -1961,7 +1195,7 @@ export function App() {
         onClose={() => setShowCreateFahrzeugDialog(false)}
       />
 
-      {renderUpdaterOverlay()}
+      <UpdaterOverlay updaterState={updaterState} />
     </div>
   );
 }

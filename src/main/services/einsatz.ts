@@ -11,15 +11,7 @@ import {
   stammdatenEinheit,
   stammdatenFahrzeug,
 } from '../db/schema';
-import type {
-  AbschnittDetails,
-  AbschnittNode,
-  EinsatzListItem,
-  EinheitListItem,
-  EinheitHelfer,
-  FahrzeugListItem,
-  OrganisationKey,
-} from '../../shared/types';
+import type { AbschnittDetails, AbschnittNode, EinsatzListItem, EinheitListItem, EinheitHelfer, FahrzeugListItem } from '../../shared/types';
 import { AppError } from './errors';
 import {
   ensureTacticalSignConfigSource,
@@ -27,21 +19,9 @@ import {
   parseTacticalSignConfigJson,
   toTacticalSignConfigJson,
 } from './tactical-sign-inference';
+import { ensureNotArchived, normalizeOptionalText, nowIso, ORGANISATIONS } from './einsatz-transaction-guards';
 
-/**
- * Handles Now Iso.
- */
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Handles Normalize Optional Text.
- */
-function normalizeOptionalText(value?: string): string | null {
-  const trimmed = value?.trim();
-  return trimmed ? trimmed : null;
-}
+export { ensureNotArchived } from './einsatz-transaction-guards';
 
 /**
  * Handles Parse Taktisch.
@@ -131,23 +111,6 @@ function resolveUpdatedTacticalSignConfigJson(
   return toTacticalSignConfigJson(inferTacticalSignConfig(input.nameImEinsatz, input.organisation).config);
 }
 
-const ORGANISATIONS: OrganisationKey[] = [
-  'THW',
-  'FEUERWEHR',
-  'POLIZEI',
-  'BUNDESWEHR',
-  'REGIE',
-  'DRK',
-  'ASB',
-  'JOHANNITER',
-  'MALTESER',
-  'DLRG',
-  'BERGWACHT',
-  'MHD',
-  'RETTUNGSDIENST_KOMMUNAL',
-  'SONSTIGE',
-];
-
 /**
  * Handles List Einsaetze.
  */
@@ -196,19 +159,6 @@ export function archiveEinsatz(ctx: DbContext, einsatzId: string): void {
 
   if (!updated.changes) {
     throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
-  }
-}
-
-/**
- * Handles Ensure Not Archived.
- */
-export function ensureNotArchived(ctx: DbContext, einsatzId: string): void {
-  const row = ctx.db.select({ status: einsatz.status }).from(einsatz).where(eq(einsatz.id, einsatzId)).get();
-  if (!row) {
-    throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
-  }
-  if (row.status === 'ARCHIVIERT') {
-    throw new AppError('Einsatz ist archiviert und nur lesbar', 'ARCHIVED');
   }
 }
 
