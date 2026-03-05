@@ -1,8 +1,8 @@
-import path from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
 import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
 import { registerIpc } from './ipc/register-ipc';
+import { setupVersionMetadata, withVersion } from './services/app-version';
 import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
 import { ClientPresenceService } from './services/clients';
@@ -11,6 +11,7 @@ import { StrengthDisplayService } from './services/strength-display';
 import { EinsatzSyncService } from './services/einsatz-sync';
 import { UpdaterService } from './services/updater';
 import { onDebugSyncLog } from './services/debug';
+import { broadcastToAllWindows, createMainWindow, resolveRendererUrl } from './services/main-window';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
@@ -59,67 +60,6 @@ function findOpenFilePathInArgv(argv: string[]): string | null {
   return null;
 }
 
-/**
- * Handles To Build Version.
- */
-function toBuildVersion(date: Date): string {
-  const year = date.getUTCFullYear();
-  const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-  const day = String(date.getUTCDate()).padStart(2, '0');
-  const hour = String(date.getUTCHours()).padStart(2, '0');
-  const minute = String(date.getUTCMinutes()).padStart(2, '0');
-  return `${year}.${month}.${day}.${hour}.${minute}`;
-}
-
-/**
- * Handles From Semver To Build Version.
- */
-function fromSemverToBuildVersion(value: string): string | null {
-  const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(value.trim());
-  if (!match) {
-    return null;
-  }
-  const [, year, month, day, hour, minute] = match;
-  return `${year}.${month.padStart(2, '0')}.${day.padStart(2, '0')}.${hour.padStart(2, '0')}.${minute.padStart(2, '0')}`;
-}
-
-/**
- * Handles Resolve App Version Label.
- */
-function resolveAppVersionLabel(): string {
-  const envVersion = process.env.S1_APP_VERSION;
-  if (envVersion) {
-    return envVersion;
-  }
-  const semverVersion = process.env.S1_APP_SEMVER || app.getVersion();
-  const mapped = fromSemverToBuildVersion(semverVersion);
-  if (mapped) {
-    return mapped;
-  }
-  if (semverVersion && semverVersion !== '0.1.0') {
-    return semverVersion;
-  }
-  return toBuildVersion(new Date());
-}
-
-/**
- * Handles With Version.
- */
-function withVersion(details: string): string {
-  return `Version: ${resolveAppVersionLabel()}\n\n${details}`;
-}
-
-/**
- * Handles Resolve Renderer Url.
- */
-function resolveRendererUrl(): string {
-  const devServer = process.env.VITE_DEV_SERVER_URL;
-  if (devServer) {
-    return devServer;
-  }
-
-  return `file://${path.join(__dirname, '../dist-renderer/index.html')}`;
-}
 
 /**
  * Applies pending file-open request from CLI args.
@@ -165,24 +105,6 @@ function setupOpenFileHandler(): void {
     event.preventDefault();
     setPendingOpenFilePath(filePath);
   });
-}
-
-/**
- * Applies runtime versioning and about-panel metadata.
- */
-function setupVersionMetadata(): string {
-  const envSemver = process.env.S1_APP_SEMVER;
-  if (envSemver) {
-    app.setVersion(envSemver);
-  }
-  const versionLabel = resolveAppVersionLabel();
-  app.setAboutPanelOptions({
-    applicationName: 'S1-Control',
-    applicationVersion: versionLabel,
-    version: versionLabel,
-    copyright: `Copyright © ${new Date().getFullYear()} Johannes Rudolph`,
-  });
-  return versionLabel;
 }
 
 /**
@@ -234,30 +156,11 @@ function openSystemDbWithFallback(
 }
 
 /**
- * Creates main app window.
- */
-async function createMainWindow(): Promise<void> {
-  const win = new BrowserWindow({
-    width: 1400,
-    height: 900,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-      contextIsolation: true,
-      nodeIntegration: false,
-      sandbox: false,
-    },
-  });
-  await win.loadURL(resolveRendererUrl());
-}
-
-/**
  * Forwards debug sync log lines to renderer windows.
  */
 function setupDebugSyncForwarding(): void {
   onDebugSyncLog((line) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, line);
-    }
+    broadcastToAllWindows(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, line);
   });
 }
 
@@ -322,15 +225,11 @@ async function bootstrap(): Promise<void> {
   const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
   const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
   const einsatzSync = new EinsatzSyncService((signal) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IPC_CHANNEL.EINSATZ_CHANGED, signal);
-    }
+    broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
   });
   einsatzSync.start(dbContext.path);
   const updater = new UpdaterService((state) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
-    }
+    broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
   }, lanPeerUpdatesEnabled);
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
 
