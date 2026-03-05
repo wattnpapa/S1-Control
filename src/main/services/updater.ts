@@ -8,7 +8,6 @@ import { UpdatePeerService } from './update-peer';
 import { resolveDownloadedArtifactPath, toArtifactMeta, type UpdateArtifactMeta } from './updater-artifact';
 import {
   isNoPublishedVersionsError,
-  isVersionFormatError,
   toDisplayVersion,
 } from './updater-versioning';
 import {
@@ -17,7 +16,11 @@ import {
   registerAutoUpdaterEvents,
 } from './updater-auto-updater';
 import { isOfflineLikeError } from './updater-network-errors';
-import { checkGitHubReleaseVersion } from './updater-github-check';
+import {
+  handleUpdateCheckError,
+  resolveGitHubFallbackReason,
+  runGitHubFallback,
+} from './updater-check-flow';
 import { tryPeerFirstDownload } from './updater-peer-flow';
 
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
@@ -112,7 +115,11 @@ export class UpdaterService {
     this.canDownloadInApp = false;
 
     try {
-      const fallbackReason = this.resolveGitHubFallbackReason();
+      const fallbackReason = resolveGitHubFallbackReason({
+        autoUpdaterEnabled: this.autoUpdaterEnabled,
+        autoUpdaterInitError: this.autoUpdaterInitError,
+        isAutoUpdaterConfigured: this.isAutoUpdaterConfigured(),
+      });
       if (fallbackReason) {
         await this.runGitHubFallback(fallbackReason);
         return;
@@ -136,7 +143,11 @@ export class UpdaterService {
         });
       }
     } catch (error) {
-      await this.handleUpdateCheckError(error);
+      await handleUpdateCheckError({
+        error,
+        runGitHubFallback: (reason) => this.runGitHubFallback(reason),
+        setState: (next) => this.setState(next),
+      });
     }
   }
 
@@ -324,51 +335,16 @@ export class UpdaterService {
   }
 
   /**
-   * Resolves whether updater checks must use GitHub fallback.
-   */
-  private resolveGitHubFallbackReason(): string | null {
-    if (!this.autoUpdaterEnabled) {
-      return this.autoUpdaterInitError
-        ? `Auto-Updater ist im aktuellen Build nicht aktiv (${this.autoUpdaterInitError}).`
-        : 'Auto-Updater ist im aktuellen Build nicht aktiv.';
-    }
-    if (!this.isAutoUpdaterConfigured()) {
-      return '`app-update.yml` fehlt. In-App-Download ist daher nicht möglich.';
-    }
-    return null;
-  }
-
-  /**
    * Runs GitHub fallback check with a reason text.
    */
   private async runGitHubFallback(reason: string): Promise<void> {
-    await checkGitHubReleaseVersion({
+    await runGitHubFallback({
       owner: GITHUB_OWNER,
       repo: GITHUB_REPO,
       reason,
       resolveDisplayVersion: () => this.resolveDisplayVersion(),
       setState: (next) => this.setState(next),
     });
-  }
-
-  /**
-   * Handles errors from electron-updater check path.
-   */
-  private async handleUpdateCheckError(error: unknown): Promise<void> {
-    const message = error instanceof Error ? error.message : String(error);
-    if (isNoPublishedVersionsError(message)) {
-      await this.runGitHubFallback('Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.');
-      return;
-    }
-    if (isOfflineLikeError(message)) {
-      this.setState({ stage: 'idle' });
-      return;
-    }
-    if (isVersionFormatError(message)) {
-      await this.runGitHubFallback(`In-App-Download nicht möglich: ${message}`);
-      return;
-    }
-    this.setState({ stage: 'error', message });
   }
 
   /**
