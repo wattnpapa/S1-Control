@@ -1,12 +1,9 @@
 import path from 'node:path';
 import { dialog, ipcMain } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
-import { openDatabaseWithRetry } from '../db/connection';
-import { ensureDefaultAdmin, ensureSessionUserRecord } from '../services/auth';
-import { resolveBackupDir } from '../services/backup';
+import { ensureSessionUserRecord } from '../services/auth';
 import { debugSync } from '../services/debug';
 import {
-  createEinsatzDbFileName,
   createEinsatzInOwnDatabase,
 } from '../services/einsatz-files';
 import {
@@ -18,6 +15,12 @@ import {
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
 import { ensureRecordEditLockOwnership } from '../services/record-lock';
+import {
+  reopenDbContextAfterRestore,
+  showCreateEinsatzDialog,
+  showOpenEinsatzDialog,
+  showRestoreBackupDialog,
+} from './register-einsatz-ipc-support';
 import type { EntityIpcHelpers, EinsatzIpcHelpers, RegistrarCommon } from './register-support';
 
 /**
@@ -67,17 +70,8 @@ function registerEinsatzOpenHandlers(
     IPC_CHANNEL.OPEN_EINSATZ_DIALOG,
     wrap(async () => {
       const user = requireUser();
-      const result = await dialog.showOpenDialog({
-        title: 'Einsatz-Datei öffnen',
-        defaultPath: helpers.getBaseDir(),
-        filters: [
-          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
-          { name: 'Legacy SQLite', extensions: ['sqlite'] },
-        ],
-        properties: ['openFile'],
-      });
-      const selected = result.filePaths[0];
-      if (result.canceled || !selected) {
+      const selected = await showOpenEinsatzDialog(helpers.getBaseDir());
+      if (!selected) {
         debugSync('einsatz', 'open-dialog:cancel');
         return null;
       }
@@ -118,25 +112,12 @@ function registerEinsatzCreateHandlers(
     wrap(async (input: Parameters<RendererApi['createEinsatzWithDialog']>[0]) => {
       const user = requireUser();
       const baseDir = helpers.getBaseDir();
-      const saveResult = await dialog.showSaveDialog({
-        title: 'Einsatz-Datei speichern',
-        defaultPath: path.join(baseDir, createEinsatzDbFileName(input.name)),
-        filters: [
-          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
-          { name: 'Legacy SQLite', extensions: ['sqlite'] },
-        ],
-      });
-      const selected = saveResult.filePath;
-      if (saveResult.canceled || !selected) {
+      const normalized = await showCreateEinsatzDialog(baseDir, input.name);
+      if (!normalized) {
         debugSync('einsatz', 'create-dialog:cancel');
         return null;
       }
-
-      const normalized =
-        selected.toLowerCase().endsWith('.s1control') || selected.toLowerCase().endsWith('.sqlite')
-          ? selected
-          : `${selected}.s1control`;
-      debugSync('einsatz', 'create-dialog:selected', { selected, normalized });
+      debugSync('einsatz', 'create-dialog:selected', { selected: normalized, normalized });
 
       const created = createEinsatzInOwnDatabase(path.dirname(normalized), input, user, normalized);
       const dbUser = ensureSessionUserRecord(created.ctx, user);
@@ -228,31 +209,13 @@ function registerEinsatzRecoveryHandlers(
         return false;
       }
 
-      const result = await dialog.showOpenDialog({
-        title: 'Backup laden',
-        defaultPath: resolveBackupDir(dbPath),
-        filters: [
-          { name: 'S1-Control Einsatzdatei', extensions: ['s1control'] },
-          { name: 'Legacy SQLite', extensions: ['sqlite'] },
-        ],
-        properties: ['openFile'],
-      });
-      const selected = result.filePaths[0];
-      if (result.canceled || !selected) {
+      const selected = await showRestoreBackupDialog(dbPath);
+      if (!selected) {
         return false;
       }
 
-      const activeContext = state.getDbContext();
-      activeContext.sqlite.close();
       await state.backupCoordinator.restoreBackup(dbPath, selected);
-      const nextContext = openDatabaseWithRetry(dbPath);
-      ensureDefaultAdmin(nextContext);
-      const dbUser = ensureSessionUserRecord(nextContext, user);
-      state.setSessionUser(dbUser);
-      state.setDbContext(nextContext);
-      state.clientPresence.start(nextContext);
-      state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId });
-      state.backupCoordinator.start(nextContext);
+      reopenDbContextAfterRestore(common, dbPath, einsatzId, user);
       helpers.notifyEinsatzChanged(einsatzId, 'restore-backup', dbPath);
       return true;
     }),
