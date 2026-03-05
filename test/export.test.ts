@@ -12,7 +12,7 @@ import { AppError } from '../src/main/services/errors';
 import { exportEinsatzakte } from '../src/main/services/export';
 import { createTestDb } from './helpers/db';
 
-describe('export service', () => {
+describe('export service - payload', () => {
   it('exports einsatzakte zip with html/csv/s1control', async () => {
     const ctx = createTestDb('s1-control-export-');
     try {
@@ -85,6 +85,9 @@ describe('export service', () => {
     }
   });
 
+});
+
+describe('export service - error and edge cases', () => {
   it('throws NOT_FOUND when einsatz does not exist', async () => {
     const ctx = createTestDb('s1-control-export-missing-');
     try {

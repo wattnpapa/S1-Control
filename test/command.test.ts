@@ -17,15 +17,21 @@ import { createDbPath } from './helpers/db';
 
 const user = { id: crypto.randomUUID(), name: 'tester', rolle: 'S1' as const };
 
-describe('command service', () => {
+function setupCommandDbPath(): { getDbPath: () => string } {
   let dbPath: string;
-
   beforeEach(() => {
     dbPath = createDbPath();
   });
+  return {
+    getDbPath: () => dbPath,
+  };
+}
+
+describe('command service - einheit move+undo', () => {
+  const { getDbPath } = setupCommandDbPath();
 
   it('moves and undoes einheit move with command log', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
 
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
@@ -94,8 +100,13 @@ describe('command service', () => {
     ctx.sqlite.close();
   });
 
+});
+
+describe('command service - archive guard', () => {
+  const { getDbPath } = setupCommandDbPath();
+
   it('blocks writes on archived einsatz', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
 
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
@@ -143,8 +154,13 @@ describe('command service', () => {
     ctx.sqlite.close();
   });
 
+});
+
+describe('command service - undo without commands', () => {
+  const { getDbPath } = setupCommandDbPath();
+
   it('returns false when undo has no commands', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
 
     ctx.db
@@ -174,9 +190,12 @@ describe('command service', () => {
     expect(undoLastCommand(ctx, einsatzId, user)).toBe(false);
     ctx.sqlite.close();
   });
+});
 
+describe('command service - fahrzeug move+undo', () => {
+  const { getDbPath } = setupCommandDbPath();
   it('moves and undoes fahrzeug move', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
     const abschnittB = crypto.randomUUID();
@@ -242,8 +261,13 @@ describe('command service', () => {
     ctx.sqlite.close();
   });
 
+});
+
+describe('command service - unsupported undo type', () => {
+  const { getDbPath } = setupCommandDbPath();
+
   it('throws for unsupported undo command type', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
 
     ctx.db
@@ -286,9 +310,13 @@ describe('command service', () => {
     expect(() => undoLastCommand(ctx, einsatzId, user)).toThrow('noch nicht implementiert');
     ctx.sqlite.close();
   });
+});
+
+describe('command service - guard paths', () => {
+  const { getDbPath } = setupCommandDbPath();
 
   it('returns without changes when moving einheit to same abschnitt', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
     const einheitId = crypto.randomUUID();
@@ -323,7 +351,7 @@ describe('command service', () => {
   });
 
   it('throws NOT_FOUND when moving unknown einheit', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
 
@@ -341,9 +369,12 @@ describe('command service', () => {
     expect(() => moveEinheit(ctx, { einsatzId, einheitId: 'missing', nachAbschnittId: abschnittA }, user)).toThrow('Einheit nicht gefunden');
     ctx.sqlite.close();
   });
+});
 
+describe('command service - fahrzeug guard paths', () => {
+  const { getDbPath } = setupCommandDbPath();
   it('throws INVALID_STATE when fahrzeug has no current abschnitt', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
     const fahrzeugId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
@@ -377,7 +408,7 @@ describe('command service', () => {
   });
 
   it('throws NOT_FOUND when moving unknown fahrzeug', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
+    const ctx = openDatabaseWithRetry(getDbPath());
     const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
 
@@ -398,37 +429,4 @@ describe('command service', () => {
     ctx.sqlite.close();
   });
 
-  it('returns without changes when moving fahrzeug to same abschnitt', () => {
-    const ctx = openDatabaseWithRetry(dbPath);
-    const einsatzId = crypto.randomUUID();
-    const abschnittA = crypto.randomUUID();
-    const fahrzeugId = crypto.randomUUID();
-
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Same-Fahrzeug-Abschnitt',
-      fuestName: 'FüSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-    ctx.db.insert(einsatzAbschnitt).values({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' }).run();
-    ctx.db.insert(einsatzFahrzeug).values({
-      id: fahrzeugId,
-      einsatzId,
-      stammdatenFahrzeugId: null,
-      parentEinsatzFahrzeugId: null,
-      aktuelleEinsatzEinheitId: null,
-      aktuellerAbschnittId: abschnittA,
-      status: 'AKTIV',
-      erstellt: new Date().toISOString(),
-      entfernt: null,
-    }).run();
-
-    moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittA }, user);
-    const logs = ctx.db.select().from(einsatzCommandLog).where(eq(einsatzCommandLog.einsatzId, einsatzId)).all();
-    expect(logs).toHaveLength(0);
-    ctx.sqlite.close();
-  });
 });

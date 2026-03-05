@@ -105,6 +105,9 @@ describe('tactical signs service', () => {
     expect(zugtrupp).toContain('cy="86"');
   });
 
+});
+
+describe('tactical signs service - person symbols', () => {
   it('renders person symbols for helper roles and caches per role', () => {
     const leader = getTacticalPersonSvgDataUrl('FEUERWEHR', 'FUEHRER');
     const leaderAgain = getTacticalPersonSvgDataUrl('FEUERWEHR', 'FUEHRER');

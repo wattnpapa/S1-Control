@@ -59,8 +59,21 @@ vi.mock('node:fs', async () => {
 });
 
 import { UpdaterService } from '../src/main/services/updater';
+import {
+  compareBuildVersions,
+  compareSemver,
+  compareVersions,
+  isBuildVersion,
+  isSemverVersion,
+  isVersionFormatError,
+  normalizeVersion,
+  parseBuildVersionDate,
+  parseSemverDate,
+  toDisplayVersion,
+} from '../src/main/services/updater-versioning';
+import { isOfflineLikeError } from '../src/main/services/updater-network-errors';
 
-describe('updater service', () => {
+function setupUpdaterDefaults(): void {
   beforeEach(() => {
     (process as NodeJS.Process & { resourcesPath?: string }).resourcesPath = '/tmp';
     hoisted.setAppVersion('2026.2.25-16.38');
@@ -80,6 +93,10 @@ describe('updater service', () => {
     hoisted.autoUpdaterMock.quitAndInstall.mockReset();
     vi.unstubAllGlobals();
   });
+}
+
+describe('updater service - init and checks', () => {
+  setupUpdaterDefaults();
 
   it('initializes and updates state from updater events', () => {
     const states: Array<ReturnType<UpdaterService['getState']>> = [];
@@ -135,7 +152,10 @@ describe('updater service', () => {
       latestVersion: '2026.02.25.16.26',
     });
   });
+});
 
+describe('updater service - github fallback checks', () => {
+  setupUpdaterDefaults();
   it('handles compare mismatches and offline/network errors in GitHub fallback', async () => {
     const states: Array<ReturnType<UpdaterService['getState']>> = [];
     const service = new UpdaterService((state) => states.push(state));
@@ -176,7 +196,10 @@ describe('updater service', () => {
       message: 'GitHub Update-Check fehlgeschlagen (500)',
     });
   });
+});
 
+describe('updater service - auto updater interaction', () => {
+  setupUpdaterDefaults();
   it('uses electron-updater path when config exists and version is semver', async () => {
     hoisted.setAppVersion('1.2.3');
     hoisted.existsSyncMock.mockReturnValue(true);
@@ -226,7 +249,10 @@ describe('updater service', () => {
     await service.checkForUpdates();
     expect(service.getState()).toMatchObject({ stage: 'error', message: 'boom' });
   });
+});
 
+describe('updater service - fallback and install', () => {
+  setupUpdaterDefaults();
   it('uses github fallback with clear reason when app-update.yml is missing', async () => {
     hoisted.setAppVersion('1.2.3');
     hoisted.existsSyncMock.mockReturnValue(false);
@@ -315,7 +341,10 @@ describe('updater service', () => {
     expect(service.getState()).toMatchObject({ stage: 'unsupported' });
     expect(hoisted.autoUpdaterMock.downloadUpdate).not.toHaveBeenCalled();
   });
+});
 
+describe('updater service - runtime fallback paths', () => {
+  setupUpdaterDefaults();
   it('uses environment display version when provided', () => {
     process.env.S1_APP_VERSION = '2026.02.26.23.59';
     const service = new UpdaterService(() => undefined);
@@ -367,54 +396,43 @@ describe('updater service', () => {
       hoisted.autoUpdaterMock.on = originalOn;
     }
   });
+});
 
+describe('updater service - internal helpers', () => {
+  setupUpdaterDefaults();
   it('covers internal version helpers for semver/build/date comparison', () => {
-    const service = new UpdaterService(() => undefined) as never as {
-      normalizeVersion: (v: string) => string;
-      isSemverVersion: (v: string) => boolean;
-      isBuildVersion: (v: string) => boolean;
-      compareVersions: (a: string, b: string) => number | null;
-      compareSemver: (a: string, b: string) => number;
-      compareBuildVersions: (a: string, b: string) => number | null;
-      parseBuildVersionDate: (v: string) => number | null;
-      parseSemverDate: (v: string) => number | null;
-      toDisplayVersion: (v: string) => string;
-      isVersionFormatError: (v: string) => boolean;
-      isOfflineLikeError: (v: string) => boolean;
-    };
+    expect(normalizeVersion('v1.2.3')).toBe('1.2.3');
+    expect(isSemverVersion('1.2.3')).toBe(true);
+    expect(isSemverVersion('2026.02.25.16.40')).toBe(false);
+    expect(isBuildVersion('2026.02.25.16.40')).toBe(true);
+    expect(isBuildVersion('2026.2.25.16.40')).toBe(false);
 
-    expect(service.normalizeVersion('v1.2.3')).toBe('1.2.3');
-    expect(service.isSemverVersion('1.2.3')).toBe(true);
-    expect(service.isSemverVersion('2026.02.25.16.40')).toBe(false);
-    expect(service.isBuildVersion('2026.02.25.16.40')).toBe(true);
-    expect(service.isBuildVersion('2026.2.25.16.40')).toBe(false);
+    expect(compareSemver('1.2.3', '1.2.4')).toBe(-1);
+    expect(compareSemver('1.2.4', '1.2.3')).toBe(1);
+    expect(compareSemver('1.2.3', '1.2.3')).toBe(0);
 
-    expect(service.compareSemver('1.2.3', '1.2.4')).toBe(-1);
-    expect(service.compareSemver('1.2.4', '1.2.3')).toBe(1);
-    expect(service.compareSemver('1.2.3', '1.2.3')).toBe(0);
+    expect(compareBuildVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.38')).toBe(1);
+    expect(compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.40')).toBe(0);
+    expect(compareBuildVersions('x', '2026.02.25.16.40')).toBeNull();
 
-    expect(service.compareBuildVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
-    expect(service.compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.38')).toBe(1);
-    expect(service.compareBuildVersions('2026.02.25.16.40', '2026.02.25.16.40')).toBe(0);
-    expect(service.compareBuildVersions('x', '2026.02.25.16.40')).toBeNull();
+    expect(compareVersions('1.2.3', '1.2.4')).toBe(-1);
+    expect(compareVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(compareVersions('2026.2.25-16.38', '2026.02.25.16.40')).toBe(-1);
+    expect(compareVersions('weird', '2026.02.25.16.40')).toBeNull();
 
-    expect(service.compareVersions('1.2.3', '1.2.4')).toBe(-1);
-    expect(service.compareVersions('2026.02.25.16.38', '2026.02.25.16.40')).toBe(-1);
-    expect(service.compareVersions('2026.2.25-16.38', '2026.02.25.16.40')).toBe(-1);
-    expect(service.compareVersions('weird', '2026.02.25.16.40')).toBeNull();
+    expect(parseBuildVersionDate('2026.02.25.16.40')).not.toBeNull();
+    expect(parseBuildVersionDate('2026.13.25.16.40')).toBeNull();
+    expect(parseBuildVersionDate('nope')).toBeNull();
+    expect(parseSemverDate('2026.2.25-16.38')).not.toBeNull();
+    expect(parseSemverDate('1.2.3')).toBeNull();
 
-    expect(service.parseBuildVersionDate('2026.02.25.16.40')).not.toBeNull();
-    expect(service.parseBuildVersionDate('2026.13.25.16.40')).toBeNull();
-    expect(service.parseBuildVersionDate('nope')).toBeNull();
-    expect(service.parseSemverDate('2026.2.25-16.38')).not.toBeNull();
-    expect(service.parseSemverDate('1.2.3')).toBeNull();
+    expect(toDisplayVersion('2026.2.25-16.38')).toBe('2026.02.25.16.38');
+    expect(toDisplayVersion('v1.2.3')).toBe('1.2.3');
 
-    expect(service.toDisplayVersion('2026.2.25-16.38')).toBe('2026.02.25.16.38');
-    expect(service.toDisplayVersion('v1.2.3')).toBe('1.2.3');
-
-    expect(service.isVersionFormatError('invalid version')).toBe(true);
-    expect(service.isVersionFormatError('ok')).toBe(false);
-    expect(service.isOfflineLikeError('ENOTFOUND github.com')).toBe(true);
-    expect(service.isOfflineLikeError('some unknown failure')).toBe(false);
+    expect(isVersionFormatError('invalid version')).toBe(true);
+    expect(isVersionFormatError('ok')).toBe(false);
+    expect(isOfflineLikeError('ENOTFOUND github.com')).toBe(true);
+    expect(isOfflineLikeError('some unknown failure')).toBe(false);
   });
 });

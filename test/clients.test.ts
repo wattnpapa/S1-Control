@@ -5,7 +5,7 @@ import { ClientPresenceService } from '../src/main/services/clients';
 import { activeClient } from '../src/main/db/schema';
 import { createTestDb } from './helpers/db';
 
-describe('client presence service', () => {
+function setupClientPresenceEnvironment(): void {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.spyOn(os, 'hostname').mockReturnValue('client-a');
@@ -18,6 +18,10 @@ describe('client presence service', () => {
     vi.useRealTimers();
     vi.restoreAllMocks();
   });
+}
+
+describe('client presence service - lifecycle', () => {
+  setupClientPresenceEnvironment();
 
   it('registers self, marks master and removes itself on stop', () => {
     const ctx = createTestDb('s1-control-clients-');
@@ -41,6 +45,11 @@ describe('client presence service', () => {
       ctx.sqlite.close();
     }
   });
+
+});
+
+describe('client presence service - master election', () => {
+  setupClientPresenceEnvironment();
 
   it('cleans stale clients and elects new master after old one stops', () => {
     const ctx = createTestDb('s1-control-clients-');
@@ -111,6 +120,11 @@ describe('client presence service', () => {
     }
   });
 
+});
+
+describe('client presence service - network/address behavior', () => {
+  setupClientPresenceEnvironment();
+
   it('falls back to loopback if no external IPv4 is available', () => {
     const ctx = createTestDb('s1-control-clients-');
     try {
@@ -128,6 +142,11 @@ describe('client presence service', () => {
       ctx.sqlite.close();
     }
   });
+
+});
+
+describe('client presence service - robustness', () => {
+  setupClientPresenceEnvironment();
 
   it('ignores delete errors on shutdown and no-ops heartbeat without ctx', async () => {
     const service = new ClientPresenceService() as unknown as {

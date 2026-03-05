@@ -34,7 +34,7 @@ import {
 import { createTestDb } from './helpers/db';
 import { hashPassword } from '../src/main/services/auth';
 
-describe('einsatz service', () => {
+describe('einsatz service - basics', () => {
   it('creates einsatz and root FüSt abschnitt', () => {
     const ctx = createTestDb('s1-control-einsatz-create-');
     try {
@@ -134,7 +134,9 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+});
 
+describe('einsatz service - split and command log', () => {
   it('creates fahrzeug linked to unit and abschnitt', () => {
     const ctx = createTestDb('s1-control-einsatz-fahrzeug-');
     try {
@@ -249,7 +251,9 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+});
 
+describe('einsatz service - split and vehicle validation', () => {
   it('throws for invalid split requests', () => {
     const ctx = createTestDb('s1-control-einsatz-split-invalid-');
     try {
@@ -386,7 +390,9 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+});
 
+describe('einsatz service - tactical sign behavior', () => {
   it('supports explicit tactical-sign config and source fallback during split', () => {
     const ctx = createTestDb('s1-control-einsatz-sign-config-');
     try {
@@ -516,7 +522,9 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+});
 
+describe('einsatz service - edge validations', () => {
   it('validates split source existence, non-zero split and non-negative values', () => {
     const ctx = createTestDb('s1-control-einsatz-split-edge-');
     try {
@@ -613,7 +621,46 @@ describe('einsatz service', () => {
     }
   });
 
-  it('updates abschnitt, einheit and fahrzeug in-place', () => {
+  it('updates abschnitt in-place', () => {
+    const ctx = createTestDb('s1-control-einsatz-update-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Update-Test', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+
+      const abschnitt = createAbschnitt(ctx, {
+        einsatzId: created.id,
+        name: 'EA Nord',
+        systemTyp: 'NORMAL',
+        parentId: root.id,
+      });
+
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK Nord',
+        organisation: 'THW',
+        aktuelleStaerke: 9,
+        aktuelleStaerkeTaktisch: '0/1/8/9',
+        aktuellerAbschnittId: abschnitt.id,
+      });
+
+      updateAbschnitt(ctx, {
+        einsatzId: created.id,
+        abschnittId: abschnitt.id,
+        name: 'EA Nord Neu',
+        systemTyp: 'LOGISTIK',
+        parentId: null,
+      });
+
+      const updatedAbschnitt = ctx.db.select().from(einsatzAbschnitt).where(eq(einsatzAbschnitt.id, abschnitt.id)).get();
+      expect(updatedAbschnitt?.name).toBe('EA Nord Neu');
+      expect(updatedAbschnitt?.systemTyp).toBe('LOGISTIK');
+      expect(updatedAbschnitt?.parentId).toBeNull();
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
+
+  it('updates einheit and fahrzeug in-place', () => {
     const ctx = createTestDb('s1-control-einsatz-update-');
     try {
       const created = createEinsatz(ctx, { name: 'Update-Test', fuestName: 'FüSt 1' });
@@ -648,13 +695,6 @@ describe('einsatz service', () => {
       });
       const fahrzeug = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.einsatzId, created.id)).get()!;
 
-      updateAbschnitt(ctx, {
-        einsatzId: created.id,
-        abschnittId: abschnitt.id,
-        name: 'EA Nord Neu',
-        systemTyp: 'LOGISTIK',
-        parentId: null,
-      });
       updateEinheit(ctx, {
         einsatzId: created.id,
         einheitId: einheit.id,
@@ -672,11 +712,6 @@ describe('einsatz service', () => {
         aktuelleEinsatzEinheitId: einheit.id,
         status: 'IN_BEREITSTELLUNG',
       });
-
-      const updatedAbschnitt = ctx.db.select().from(einsatzAbschnitt).where(eq(einsatzAbschnitt.id, abschnitt.id)).get();
-      expect(updatedAbschnitt?.name).toBe('EA Nord Neu');
-      expect(updatedAbschnitt?.systemTyp).toBe('LOGISTIK');
-      expect(updatedAbschnitt?.parentId).toBeNull();
 
       const updatedEinheit = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, einheit.id)).get();
       expect(updatedEinheit?.nameImEinsatz).toBe('FK Nord Neu');
@@ -750,7 +785,7 @@ describe('einsatz service', () => {
     }
   });
 
-  it('creates, updates, lists and deletes helpers per unit', () => {
+  it('creates and updates helpers per unit', () => {
     const ctx = createTestDb('s1-control-einsatz-helfer-');
     try {
       const created = createEinsatz(ctx, { name: 'Helfer', fuestName: 'FüSt 1' });
@@ -808,7 +843,35 @@ describe('einsatz service', () => {
       expect(helfer[0]?.funktion).toBe('Gruppenführer');
       expect(helfer[0]?.vegetarisch).toBe(false);
       expect(helfer[0]?.bemerkung).toBe('Schicht A');
+    } finally {
+      ctx.sqlite.close();
+    }
+  });
 
+  it('lists and deletes helpers per unit', () => {
+    const ctx = createTestDb('s1-control-einsatz-helfer-');
+    try {
+      const created = createEinsatz(ctx, { name: 'Helfer', fuestName: 'FüSt 1' });
+      const root = listAbschnitte(ctx, created.id)[0]!;
+      createEinheit(ctx, {
+        einsatzId: created.id,
+        nameImEinsatz: 'FK OL',
+        organisation: 'THW',
+        aktuelleStaerke: 4,
+        aktuelleStaerkeTaktisch: '0/1/3/4',
+        aktuellerAbschnittId: root.id,
+      });
+      const einheit = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
+
+      createEinheitHelfer(ctx, {
+        einsatzId: created.id,
+        einsatzEinheitId: einheit.id,
+        name: '',
+        rolle: 'FUEHRER',
+        geschlecht: 'WEIBLICH',
+        anzahl: 2,
+      });
+      const helfer = listEinheitHelfer(ctx, einheit.id);
       const helperRow = ctx.db.select().from(einsatzEinheitHelfer).where(eq(einsatzEinheitHelfer.id, helfer[0]!.id)).get();
       expect(helperRow).toBeTruthy();
 
@@ -906,7 +969,9 @@ describe('einsatz service', () => {
       ctx.sqlite.close();
     }
   });
+});
 
+describe('einsatz service - split default sign', () => {
   it('uses default tactical config on split when none exists in source or input', () => {
     const ctx = createTestDb('s1-control-einsatz-split-default-sign-');
     try {

@@ -83,6 +83,9 @@ describe('behavior: Einsatzfluss', () => {
     }
   });
 
+});
+
+describe('behavior: Einsatzfluss - split und archiv', () => {
   it('Szenario: Teileinheit aus Stamm-Einheit reduzieren die Quellstärke', () => {
     const ctx = createTestDb('s1-control-behavior-split-');
     try {

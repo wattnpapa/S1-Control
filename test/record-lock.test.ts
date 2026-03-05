@@ -83,6 +83,9 @@ describe('record lock service', () => {
     expect(refreshedForeign.lock?.computerName).toBe('PC-A');
   });
 
+});
+
+describe('record lock service - ownership and expiry', () => {
   test('enforces ownership checks for protected writes', () => {
     const ctx = createTestDb('record-lock-d-');
     const einsatz = createEinsatz(ctx, { name: 'Locktest', fuestName: 'FüSt 1' });

@@ -137,6 +137,9 @@ describe('einsatz sync service', () => {
     expect(hoisted.socketMock.close).toHaveBeenCalledTimes(1);
   });
 
+});
+
+describe('einsatz sync service - cross mount context', () => {
   it('accepts remote change by einsatzId when db paths differ across mounts', () => {
     const onRemoteChange = vi.fn();
     const service = new EinsatzSyncService(onRemoteChange, 41235);

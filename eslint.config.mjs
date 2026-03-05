@@ -55,5 +55,14 @@ export default tseslint.config(
       globals: globals.node,
     },
   },
+  {
+    files: ['test/**/*.ts'],
+    rules: {
+      // Testfälle bleiben lesbar, aber Limits sind weicher als im Produktivcode.
+      'max-lines': ['warn', { max: 1200, skipBlankLines: true, skipComments: true }],
+      'max-lines-per-function': ['warn', { max: 500, skipBlankLines: true, skipComments: true }],
+      complexity: ['warn', 20],
+    },
+  },
   eslintConfigPrettier,
 );

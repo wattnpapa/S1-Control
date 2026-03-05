@@ -6,7 +6,7 @@ import { iconPath } from '../src/renderer/src/utils/assets';
 import { readError } from '../src/renderer/src/utils/error';
 import { inferVehicleTacticalUnit } from '../src/renderer/src/utils/tactical-vehicle';
 
-describe('renderer utils', () => {
+describe('renderer utils - tactical strength', () => {
   it('formats tactical strength', () => {
     expect(toTaktischeStaerke({ fuehrung: 1, unterfuehrung: 2, mannschaft: 3, gesamt: 6 })).toBe('1/2/3/6');
   });
@@ -64,7 +64,9 @@ describe('renderer utils', () => {
       gesamt: 7,
     });
   });
+});
 
+describe('renderer utils - datetime and assets', () => {
   it('formats NATO date-time string', () => {
     const d = new Date(2026, 1, 25, 14, 7, 0); // local time
     expect(toNatoDateTime(d)).toBe('251407FEB26');
@@ -94,7 +96,9 @@ describe('renderer utils', () => {
     expect(readError(null)).toBe('Fehler');
     expect(readError('x')).toBe('Fehler');
   });
+});
 
+describe('renderer utils - tactical vehicles', () => {
   it('infers tactical vehicle unit codes for THW from free text', () => {
     expect(inferVehicleTacticalUnit('THW', { name: 'FüKomKW' })).toBe('FüKomKW');
     expect(inferVehicleTacticalUnit('THW', { name: 'GKW II' })).toBe('GKW II');

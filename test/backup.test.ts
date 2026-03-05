@@ -4,7 +4,7 @@ import path from 'node:path';
 import { describe, expect, it, vi } from 'vitest';
 import { BackupCoordinator, resolveBackupDir } from '../src/main/services/backup';
 
-describe('backup service', () => {
+describe('backup service - basics', () => {
   it('resolves backup directory next to db', () => {
     expect(resolveBackupDir('/tmp/einsatz.s1control')).toBe('/tmp/backup');
   });
@@ -43,6 +43,9 @@ describe('backup service', () => {
     expect(fs.readFileSync(dbPath, 'utf8')).toBe('new');
   });
 
+});
+
+describe('backup service - scheduling and master handover', () => {
   it('creates periodic backups', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.s1control');
@@ -120,6 +123,9 @@ describe('backup service', () => {
     c.stop();
   });
 
+});
+
+describe('backup service - error handling', () => {
   it('keeps running when backup write throws', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.s1control');
