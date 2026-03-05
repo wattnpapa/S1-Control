@@ -27,9 +27,9 @@ interface UseSystemActionsProps {
 }
 
 /**
- * Provides shared settings, updater, movement and strength display actions.
+ * Provides settings actions for db path and LAN peer updater toggles.
  */
-export function useSystemActions(props: UseSystemActionsProps) {
+function useSystemSettingsActions(props: UseSystemActionsProps) {
   const saveDbPath = useCallback(async () => {
     await props.withBusy(async () => {
       await window.api.setDbPath(props.dbPath);
@@ -68,6 +68,13 @@ export function useSystemActions(props: UseSystemActionsProps) {
     });
   }, [props]);
 
+  return { saveDbPath, toggleLanPeerUpdates, restoreBackup };
+}
+
+/**
+ * Provides move and updater actions.
+ */
+function useSystemProcessActions(props: UseSystemActionsProps) {
   const move = useCallback(async () => {
     if (!props.moveDialog || !props.selectedEinsatzId || !props.moveTarget) {
       return;
@@ -106,6 +113,13 @@ export function useSystemActions(props: UseSystemActionsProps) {
     });
   }, [props]);
 
+  return { move, downloadUpdate, openReleasePage };
+}
+
+/**
+ * Provides strength display actions and sync effect.
+ */
+function useStrengthDisplayActions(props: UseSystemActionsProps) {
   const openStrengthDisplay = useCallback(async () => {
     await props.withBusy(async () => {
       await window.api.openStrengthDisplayWindow();
@@ -127,14 +141,20 @@ export function useSystemActions(props: UseSystemActionsProps) {
     });
   }, [props.gesamtStaerke]);
 
+  return { openStrengthDisplay, closeStrengthDisplay };
+}
+
+/**
+ * Provides shared settings, updater, movement and strength display actions.
+ */
+export function useSystemActions(props: UseSystemActionsProps) {
+  const settingsActions = useSystemSettingsActions(props);
+  const processActions = useSystemProcessActions(props);
+  const strengthDisplayActions = useStrengthDisplayActions(props);
+
   return {
-    saveDbPath,
-    toggleLanPeerUpdates,
-    restoreBackup,
-    move,
-    downloadUpdate,
-    openReleasePage,
-    openStrengthDisplay,
-    closeStrengthDisplay,
+    ...settingsActions,
+    ...processActions,
+    ...strengthDisplayActions,
   };
 }

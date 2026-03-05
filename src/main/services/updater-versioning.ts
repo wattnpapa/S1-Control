@@ -131,23 +131,55 @@ function compareBuildVersions(current: string, latest: string): number | null {
  * Compares supported current/latest versions.
  */
 export function compareVersions(current: string, latest: string): number | null {
-  if (isSemverVersion(current) && isSemverVersion(latest)) {
-    return compareSemver(current, latest);
-  }
-  if (isBuildVersion(current) && isBuildVersion(latest)) {
-    return compareBuildVersions(current, latest);
-  }
-  if (isSemverVersion(current) && isBuildVersion(latest)) {
-    const currentDate = parseSemverDate(current);
-    const latestDate = parseBuildVersionDate(latest);
-    if (currentDate === null || latestDate === null) {
-      return null;
+  const compareStrategies = [
+    tryCompareSemver,
+    tryCompareBuildVersion,
+    tryCompareSemverToBuildVersion,
+  ];
+  for (const strategy of compareStrategies) {
+    const compared = strategy(current, latest);
+    if (compared !== null) {
+      return compared;
     }
-    if (currentDate < latestDate) return -1;
-    if (currentDate > latestDate) return 1;
-    return 0;
   }
   return null;
+}
+
+/**
+ * Attempts semver comparison.
+ */
+function tryCompareSemver(current: string, latest: string): number | null {
+  if (!isSemverVersion(current) || !isSemverVersion(latest)) {
+    return null;
+  }
+  return compareSemver(current, latest);
+}
+
+/**
+ * Attempts build-version comparison.
+ */
+function tryCompareBuildVersion(current: string, latest: string): number | null {
+  if (!isBuildVersion(current) || !isBuildVersion(latest)) {
+    return null;
+  }
+  return compareBuildVersions(current, latest);
+}
+
+/**
+ * Attempts semver->build date comparison.
+ */
+function tryCompareSemverToBuildVersion(current: string, latest: string): number | null {
+  if (!isSemverVersion(current) || !isBuildVersion(latest)) {
+    return null;
+  }
+  const currentDate = parseSemverDate(current);
+  const latestDate = parseBuildVersionDate(latest);
+  if (currentDate === null || latestDate === null) {
+    return null;
+  }
+  if (currentDate < latestDate) return -1;
+  if (currentDate > latestDate) return 1;
+  return 0;
 }
 
 /**

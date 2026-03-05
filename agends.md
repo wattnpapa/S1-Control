@@ -1,5 +1,8 @@
 # S1-Control – Agent-Handbuch
 
+> Hinweis: Die verbindliche, aktuelle Version liegt in `AGENTS.md`.
+> Diese Datei bleibt nur aus Kompatibilitätsgründen bestehen.
+
 Dieses Dokument ist für Coding-Agents, die an diesem Repository arbeiten.
 Ziel: schnell korrekt liefern, ohne bestehende Betriebslogik zu brechen.
 
@@ -126,4 +129,3 @@ Commit-Richtlinie:
 - Auto-Updater ohne vorhandene `latest*.yml` erwarten.
 - UI-Modal überladen statt bestehende Inline-Editoren zu nutzen.
 - Branch-Coverage in Kernservices unterschätzen (v.a. `einsatz.ts`).
-

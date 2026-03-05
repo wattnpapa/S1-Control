@@ -30,52 +30,12 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
       const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
       props.setAbschnitte(nextAbschnitte);
 
-      const allDetails = await Promise.all(
-        nextAbschnitte.map((abschnitt) => window.api.listAbschnittDetails(einsatzId, abschnitt.id)),
-      );
-
-      const nextAllKraefte = allDetails.flatMap((detail, index) => {
-        const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
-        return detail.einheiten.map((einheit) => ({ ...einheit, abschnittName }));
-      });
+      const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
+      const nextAllKraefte = mapAllKraefte(allDetails, nextAbschnitte);
       props.setAllKraefte(nextAllKraefte);
 
-      const einheitNameById = new Map(nextAllKraefte.map((einheit) => [einheit.id, einheit.nameImEinsatz]));
-      const einheitOrgById = new Map(nextAllKraefte.map((einheit) => [einheit.id, einheit.organisation]));
-      const nextAllFahrzeuge = allDetails.flatMap((detail, index) => {
-        const abschnittName = nextAbschnitte[index]?.name ?? 'Unbekannt';
-        return detail.fahrzeuge.map((fahrzeug) => ({
-          ...fahrzeug,
-          abschnittName,
-          organisation:
-            fahrzeug.organisation ??
-            (fahrzeug.aktuelleEinsatzEinheitId ? (einheitOrgById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? null) : null),
-          einheitName: fahrzeug.aktuelleEinsatzEinheitId
-            ? (einheitNameById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? 'Unbekannt')
-            : '-',
-        }));
-      });
-      props.setAllFahrzeuge(nextAllFahrzeuge);
-
-      const total = allDetails.reduce<TacticalStrength>(
-        (sum, detail, index) => {
-          const abschnitt = nextAbschnitte[index];
-          if (abschnitt?.systemTyp === 'ANFAHRT') {
-            return sum;
-          }
-
-          for (const einheit of detail.einheiten) {
-            const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
-            sum.fuehrung += parsed.fuehrung;
-            sum.unterfuehrung += parsed.unterfuehrung;
-            sum.mannschaft += parsed.mannschaft;
-            sum.gesamt += parsed.gesamt;
-          }
-
-          return sum;
-        },
-        { ...props.emptyStrength },
-      );
+      props.setAllFahrzeuge(mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte));
+      const total = aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength);
       props.setGesamtStaerke(total);
 
       const effectiveAbschnittId =
@@ -116,4 +76,78 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
     refreshEinsaetze,
     refreshAll,
   };
+}
+
+/**
+ * Loads all section detail payloads for an operation.
+ */
+async function loadAllAbschnittDetails(
+  einsatzId: string,
+  abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
+): Promise<AbschnittDetails[]> {
+  return Promise.all(abschnitte.map((abschnitt) => window.api.listAbschnittDetails(einsatzId, abschnitt.id)));
+}
+
+/**
+ * Maps unit overview list from per-section details.
+ */
+function mapAllKraefte(
+  allDetails: AbschnittDetails[],
+  abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
+): KraftOverviewItem[] {
+  return allDetails.flatMap((detail, index) => {
+    const abschnittName = abschnitte[index]?.name ?? 'Unbekannt';
+    return detail.einheiten.map((einheit) => ({ ...einheit, abschnittName }));
+  });
+}
+
+/**
+ * Maps vehicle overview list and enriches it with Einheit-derived fields.
+ */
+function mapAllFahrzeuge(
+  allDetails: AbschnittDetails[],
+  abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
+  kraefte: KraftOverviewItem[],
+): FahrzeugOverviewItem[] {
+  const einheitNameById = new Map(kraefte.map((einheit) => [einheit.id, einheit.nameImEinsatz]));
+  const einheitOrgById = new Map(kraefte.map((einheit) => [einheit.id, einheit.organisation]));
+  return allDetails.flatMap((detail, index) => {
+    const abschnittName = abschnitte[index]?.name ?? 'Unbekannt';
+    return detail.fahrzeuge.map((fahrzeug) => ({
+      ...fahrzeug,
+      abschnittName,
+      organisation:
+        fahrzeug.organisation ??
+        (fahrzeug.aktuelleEinsatzEinheitId ? (einheitOrgById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? null) : null),
+      einheitName: fahrzeug.aktuelleEinsatzEinheitId
+        ? (einheitNameById.get(fahrzeug.aktuelleEinsatzEinheitId) ?? 'Unbekannt')
+        : '-',
+    }));
+  });
+}
+
+/**
+ * Aggregates tactical strength while excluding ANFAHRT sections.
+ */
+function aggregateTacticalStrength(
+  allDetails: AbschnittDetails[],
+  abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
+  emptyStrength: TacticalStrength,
+): TacticalStrength {
+  return allDetails.reduce<TacticalStrength>(
+    (sum, detail, index) => {
+      if (abschnitte[index]?.systemTyp === 'ANFAHRT') {
+        return sum;
+      }
+      for (const einheit of detail.einheiten) {
+        const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
+        sum.fuehrung += parsed.fuehrung;
+        sum.unterfuehrung += parsed.unterfuehrung;
+        sum.mannschaft += parsed.mannschaft;
+        sum.gesamt += parsed.gesamt;
+      }
+      return sum;
+    },
+    { ...emptyStrength },
+  );
 }

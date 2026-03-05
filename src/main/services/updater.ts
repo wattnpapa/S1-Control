@@ -1,33 +1,24 @@
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'node:fs';
-import crypto from 'node:crypto';
 import path from 'node:path';
-import type { PeerArtifact, PeerOffer, PeerUpdateStatus, UpdaterState } from '../../shared/types';
+import type { PeerUpdateStatus, UpdaterState } from '../../shared/types';
 import { debugSync } from './debug';
-import { UpdatePeerService, selectBestOffers } from './update-peer';
-import { resolveDownloadedArtifactPath, toArtifactMeta } from './updater-artifact';
+import { UpdatePeerService } from './update-peer';
+import { resolveDownloadedArtifactPath, toArtifactMeta, type UpdateArtifactMeta } from './updater-artifact';
 import {
-  compareVersions,
   isNoPublishedVersionsError,
   isVersionFormatError,
-  normalizeVersion,
   toDisplayVersion,
 } from './updater-versioning';
+import { isOfflineLikeError } from './updater-network-errors';
+import { checkGitHubReleaseVersion } from './updater-github-check';
+import { tryPeerFirstDownload } from './updater-peer-flow';
 
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
 const LAN_PEER_ENABLED_DEFAULT = process.env.S1_UPDATER_LAN_PEER === '1';
-
-type UpdateArtifactMeta = NonNullable<ReturnType<typeof toArtifactMeta>>;
-
-/**
- * Handles Now Iso.
- */
-function nowIso(): string {
-  return new Date().toISOString();
-}
 
 export class UpdaterService {
   private state: UpdaterState = {
@@ -43,7 +34,6 @@ export class UpdaterService {
   private peerEnabled = LAN_PEER_ENABLED_DEFAULT;
   private peerService: UpdatePeerService | null = null;
   private pendingArtifact: UpdateArtifactMeta | null = null;
-  private lastPeerOffer: PeerOffer | null = null;
   private readonly updateCacheDir: string;
 
   private readonly notify: (state: UpdaterState) => void;
@@ -117,17 +107,9 @@ export class UpdaterService {
     this.canDownloadInApp = false;
 
     try {
-      if (!this.autoUpdaterEnabled) {
-        await this.checkGitHubReleaseVersion(
-          this.autoUpdaterInitError
-            ? `Auto-Updater ist im aktuellen Build nicht aktiv (${this.autoUpdaterInitError}).`
-            : 'Auto-Updater ist im aktuellen Build nicht aktiv.',
-        );
-        return;
-      }
-
-      if (!this.isAutoUpdaterConfigured()) {
-        await this.checkGitHubReleaseVersion('`app-update.yml` fehlt. In-App-Download ist daher nicht möglich.');
+      const fallbackReason = this.resolveGitHubFallbackReason();
+      if (fallbackReason) {
+        await this.runGitHubFallback(fallbackReason);
         return;
       }
 
@@ -149,24 +131,7 @@ export class UpdaterService {
         });
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isNoPublishedVersionsError(message)) {
-        await this.checkGitHubReleaseVersion(
-          'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
-        );
-        return;
-      }
-      if (this.isOfflineLikeError(message)) {
-        this.setState({ stage: 'idle' });
-        return;
-      }
-      if (isVersionFormatError(message)) {
-        await this.checkGitHubReleaseVersion(
-          `In-App-Download nicht möglich: ${message}`,
-        );
-        return;
-      }
-      this.setState({ stage: 'error', message });
+      await this.handleUpdateCheckError(error);
     }
   }
 
@@ -184,7 +149,16 @@ export class UpdaterService {
       return;
     }
     if (this.peerEnabled && this.peerService) {
-      const usedPeer = await this.tryPeerFirstDownload();
+      const usedPeer = this.pendingArtifact
+        ? await tryPeerFirstDownload({
+            peerService: this.peerService,
+            pendingArtifact: this.pendingArtifact,
+            updateCacheDir: this.updateCacheDir,
+            genericFeedUrl: GENERIC_FEED_URL,
+            setState: (next) => this.setState(next),
+            nowIso: () => new Date().toISOString(),
+          })
+        : false;
       if (usedPeer) {
         return;
       }
@@ -220,122 +194,17 @@ export class UpdaterService {
    * Handles Configure Auto Updater.
    */
   private configureAutoUpdater(): void {
-    const hasCheckFn =
-      typeof (autoUpdater as unknown as { checkForUpdates?: unknown }).checkForUpdates === 'function';
-    if (!hasCheckFn) {
+    if (!this.hasAutoUpdaterApi()) {
       this.autoUpdaterEnabled = false;
       this.autoUpdaterInitError = 'electron-updater API nicht verfügbar';
       return;
     }
 
     try {
-      const updaterWithChannel = autoUpdater as unknown as {
-        channel?: string;
-        allowPrerelease?: boolean;
-      };
-      // Force stable metadata channel name regardless of app version format.
-      updaterWithChannel.channel = 'latest';
-      updaterWithChannel.allowPrerelease = false;
-
-      const maybeSetFeedUrl = (autoUpdater as unknown as { setFeedURL?: (options: { provider: 'generic'; url: string }) => void })
-        .setFeedURL;
-      if (typeof maybeSetFeedUrl === 'function') {
-        try {
-          // Prefer bundled app-update.yml; setFeedURL can fail on some runtime combinations.
-          maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
-        } catch {
-          // Ignore and continue with app-update.yml based configuration.
-        }
-      }
+      this.configureUpdaterChannelAndFeed();
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
-
-      autoUpdater.on('checking-for-update', () => {
-        this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
-      });
-
-      autoUpdater.on('update-available', (info) => {
-        this.pendingArtifact = toArtifactMeta(
-          info as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
-        );
-        this.setState({
-          stage: 'available',
-          latestVersion: toDisplayVersion(info.version),
-          source: 'electron-updater',
-          inAppDownloadSupported: true,
-          inAppDownloadReason: 'In-App-Download ist verfügbar.',
-        });
-      });
-
-      autoUpdater.on('update-not-available', () => {
-        this.setState({
-          stage: 'not-available',
-          source: 'electron-updater',
-          inAppDownloadSupported: true,
-          inAppDownloadReason: 'In-App-Download ist verfügbar.',
-        });
-      });
-
-      autoUpdater.on('error', (error) => {
-        const message = error.message || 'Update-Fehler';
-        if (isNoPublishedVersionsError(message)) {
-          this.setState({
-            stage: 'not-available',
-            source: 'github-release',
-            inAppDownloadSupported: false,
-            inAppDownloadReason: 'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
-          });
-          return;
-        }
-        if (this.isOfflineLikeError(message)) {
-          // Offlinebetrieb: kein Fehlerbanner erzwingen.
-          this.setState({ stage: 'idle' });
-          return;
-        }
-        this.setState({ stage: 'error', message });
-      });
-
-      autoUpdater.on('download-progress', (progress) => {
-        this.setState({
-          stage: 'downloading',
-          progressPercent: progress.percent,
-          progressTransferredBytes: progress.transferred,
-          progressTotalBytes: progress.total,
-          progressBytesPerSecond: progress.bytesPerSecond,
-        });
-      });
-
-      autoUpdater.on('update-downloaded', (info) => {
-        const localArtifact = resolveDownloadedArtifactPath(
-          this.pendingArtifact?.artifactName,
-          (info as { downloadedFile?: string }).downloadedFile,
-          this.updateCacheDir,
-          app.getPath('userData'),
-        );
-        if (this.pendingArtifact && localArtifact) {
-          this.peerService?.announceLocalArtifacts([
-            {
-              ...this.pendingArtifact,
-              filePath: localArtifact,
-              freshnessTs: nowIso(),
-            },
-          ]);
-        }
-        this.setState({
-          stage: 'downloaded',
-          latestVersion: toDisplayVersion(info.version),
-          progressPercent: 100,
-          progressTransferredBytes: this.state.progressTotalBytes ?? this.state.progressTransferredBytes,
-          source: 'electron-updater',
-          inAppDownloadSupported: true,
-          inAppDownloadReason: 'Update wurde in der App heruntergeladen. Neustart wird ausgeführt.',
-        });
-        // Vorgabe: Nach abgeschlossenem Download ohne zusätzliche Rückfrage neu starten.
-        setTimeout(() => {
-          autoUpdater.quitAndInstall();
-        }, 1800);
-      });
-
+      this.registerAutoUpdaterEvents();
       this.autoUpdaterEnabled = true;
       this.autoUpdaterInitError = null;
     } catch (error) {
@@ -350,226 +219,194 @@ export class UpdaterService {
   }
 
   /**
-   * Handles Is Auto Updater Configured.
+   * Checks whether electron-updater API is available.
    */
-  private isAutoUpdaterConfigured(): boolean {
-    const updateConfigPath = path.join(process.resourcesPath, 'app-update.yml');
-    if (!existsSync(updateConfigPath)) {
-      return false;
-    }
-
-    return true;
+  private hasAutoUpdaterApi(): boolean {
+    return typeof (autoUpdater as unknown as { checkForUpdates?: unknown }).checkForUpdates === 'function';
   }
 
   /**
-   * Handles Check Git Hub Release Version.
+   * Configures updater channel and optional generic feed.
    */
-  private async checkGitHubReleaseVersion(reason: string): Promise<void> {
-    const endpoint = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
+  private configureUpdaterChannelAndFeed(): void {
+    const updaterWithChannel = autoUpdater as unknown as {
+      channel?: string;
+      allowPrerelease?: boolean;
+    };
+    updaterWithChannel.channel = 'latest';
+    updaterWithChannel.allowPrerelease = false;
 
-    try {
-      const response = await fetch(endpoint, {
-        headers: {
-          Accept: 'application/vnd.github+json',
-          'User-Agent': 'S1-Control-Updater',
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`GitHub Update-Check fehlgeschlagen (${response.status})`);
-      }
-
-      const payload = (await response.json()) as { tag_name?: string; name?: string };
-      const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
-      const currentVersion = this.resolveDisplayVersion();
-
-      if (!latestVersion) {
-        this.setState({
-          stage: 'not-available',
-          source: 'github-release',
-          inAppDownloadSupported: false,
-          inAppDownloadReason: reason,
-        });
-        return;
-      }
-
-      const compare = compareVersions(currentVersion, latestVersion);
-      if (compare === null) {
-        this.setState({
-          stage: 'not-available',
-          latestVersion,
-          message: 'Versionsvergleich nicht eindeutig möglich.',
-          source: 'github-release',
-          inAppDownloadSupported: false,
-          inAppDownloadReason: reason,
-        });
-        return;
-      }
-
-      if (compare < 0) {
-        this.setState({
-          stage: 'available',
-          latestVersion,
-          message: reason,
-          source: 'github-release',
-          inAppDownloadSupported: false,
-          inAppDownloadReason: reason,
-        });
-      } else {
-        this.setState({
-          stage: 'not-available',
-          latestVersion,
-          source: 'github-release',
-          inAppDownloadSupported: false,
-          inAppDownloadReason: reason,
-        });
-      }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (this.isOfflineLikeError(message)) {
-        this.setState({ stage: 'idle' });
-        return;
-      }
-      this.setState({ stage: 'error', message });
-    }
-  }
-
-  /**
-   * Handles Try Peer First Download.
-   */
-  private async tryPeerFirstDownload(): Promise<boolean> {
-    if (!this.peerService || !this.pendingArtifact) {
-      return false;
-    }
-    this.setState({
-      stage: 'downloading',
-      peerModeStage: 'discovering',
-      downloadSource: 'peer-lan',
-      message: 'Suche Update-Peer im lokalen Netzwerk ...',
-    });
-    const requestId = crypto.randomUUID();
-    const offers = await this.peerService.queryPeersForVersion({
-      requestId,
-      versionWanted: this.pendingArtifact.version,
-      platform: this.pendingArtifact.platform,
-      arch: this.pendingArtifact.arch,
-      channel: this.pendingArtifact.channel,
-    });
-    if (offers.length === 0) {
-      return false;
-    }
-    const sorted = selectBestOffers(offers);
-    const maxTries = Math.min(2, sorted.length);
-    for (let idx = 0; idx < maxTries; idx += 1) {
-      const offer = sorted[idx]!;
-      try {
-        this.lastPeerOffer = offer;
-        this.setState({
-          stage: 'downloading',
-          peerModeStage: 'downloading',
-          downloadSource: 'peer-lan',
-          peerHost: offer.host,
-          message: `Quelle: LAN-Peer ${offer.host}`,
-        });
-        const targetPath = path.join(this.updateCacheDir, this.pendingArtifact.artifactName);
-        await this.peerService.downloadFromPeer(
-          offer,
-          targetPath,
-          this.pendingArtifact.sha512,
-          (transferred, total) => {
-            const percent = total > 0 ? (transferred / total) * 100 : 0;
-            this.setState({
-              stage: 'downloading',
-              peerModeStage: 'downloading',
-              downloadSource: 'peer-lan',
-              peerHost: offer.host,
-              progressTransferredBytes: transferred,
-              progressTotalBytes: total,
-              progressPercent: percent,
-            });
-          },
-        );
-        this.setState({
-          stage: 'downloading',
-          peerModeStage: 'verifying',
-          downloadSource: 'peer-lan',
-          peerHost: offer.host,
-          message: 'Peer-Download abgeschlossen, starte verifizierte Installation ...',
-        });
-        const artifact: PeerArtifact = {
-          ...this.pendingArtifact,
-          filePath: targetPath,
-          freshnessTs: nowIso(),
-        };
-        this.peerService.announceLocalArtifacts([artifact]);
-        await this.downloadViaLocalFeed(artifact);
-        return true;
-      } catch (error) {
-        const reason = error instanceof Error ? error.message : String(error);
-        debugSync('peer-download', 'candidate-failed', { offer, reason });
-      }
-    }
-    return false;
-  }
-
-  /**
-   * Handles Download Via Local Feed.
-   */
-  private async downloadViaLocalFeed(artifact: PeerArtifact): Promise<void> {
-    if (!this.peerService) {
-      throw new Error('Peer-Service nicht verfügbar');
-    }
-    const localFeed = await this.peerService.createLocalFeedServer({
-      platform: artifact.platform,
-      version: artifact.version,
-      artifactName: artifact.artifactName,
-      sha512: artifact.sha512,
-      size: artifact.size,
-      filePath: artifact.filePath,
-    });
     const maybeSetFeedUrl = (autoUpdater as unknown as {
       setFeedURL?: (options: { provider: 'generic'; url: string }) => void;
     }).setFeedURL;
-    try {
-      if (typeof maybeSetFeedUrl === 'function') {
-        maybeSetFeedUrl({ provider: 'generic', url: localFeed.feedUrl });
-      }
-      await autoUpdater.checkForUpdates();
-      await autoUpdater.downloadUpdate();
-    } finally {
-      await localFeed.close();
-      if (typeof maybeSetFeedUrl === 'function') {
-        maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
-      }
+    if (typeof maybeSetFeedUrl !== 'function') {
+      return;
     }
+    try {
+      maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
+    } catch {
+      // Ignore and continue with app-update.yml based configuration.
+    }
+  }
+
+  /**
+   * Registers all autoUpdater event handlers.
+   */
+  private registerAutoUpdaterEvents(): void {
+    autoUpdater.on('checking-for-update', () => {
+      this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
+    });
+
+    autoUpdater.on('update-available', (info) => {
+      this.pendingArtifact = toArtifactMeta(
+        info as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
+      );
+      this.setState({
+        stage: 'available',
+        latestVersion: toDisplayVersion(info.version),
+        source: 'electron-updater',
+        inAppDownloadSupported: true,
+        inAppDownloadReason: 'In-App-Download ist verfügbar.',
+      });
+    });
+
+    autoUpdater.on('update-not-available', () => {
+      this.setState({
+        stage: 'not-available',
+        source: 'electron-updater',
+        inAppDownloadSupported: true,
+        inAppDownloadReason: 'In-App-Download ist verfügbar.',
+      });
+    });
+
+    autoUpdater.on('error', (error) => this.handleAutoUpdaterError(error.message || 'Update-Fehler'));
+
+    autoUpdater.on('download-progress', (progress) => {
+      this.setState({
+        stage: 'downloading',
+        progressPercent: progress.percent,
+        progressTransferredBytes: progress.transferred,
+        progressTotalBytes: progress.total,
+        progressBytesPerSecond: progress.bytesPerSecond,
+      });
+    });
+
+    autoUpdater.on('update-downloaded', (info) => this.handleUpdateDownloaded(info.version, info as { downloadedFile?: string }));
+  }
+
+  /**
+   * Handles auto-updater error payloads.
+   */
+  private handleAutoUpdaterError(message: string): void {
+    if (isNoPublishedVersionsError(message)) {
+      this.setState({
+        stage: 'not-available',
+        source: 'github-release',
+        inAppDownloadSupported: false,
+        inAppDownloadReason: 'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
+      });
+      return;
+    }
+    if (isOfflineLikeError(message)) {
+      this.setState({ stage: 'idle' });
+      return;
+    }
+    this.setState({ stage: 'error', message });
+  }
+
+  /**
+   * Handles a downloaded update and triggers auto-install.
+   */
+  private handleUpdateDownloaded(version: string, info: { downloadedFile?: string }): void {
+    const localArtifact = resolveDownloadedArtifactPath(
+      this.pendingArtifact?.artifactName,
+      info.downloadedFile,
+      this.updateCacheDir,
+      app.getPath('userData'),
+    );
+    if (this.pendingArtifact && localArtifact) {
+      this.peerService?.announceLocalArtifacts([
+        {
+          ...this.pendingArtifact,
+          filePath: localArtifact,
+          freshnessTs: new Date().toISOString(),
+        },
+      ]);
+    }
+    this.setState({
+      stage: 'downloaded',
+      latestVersion: toDisplayVersion(version),
+      progressPercent: 100,
+      progressTransferredBytes: this.state.progressTotalBytes ?? this.state.progressTransferredBytes,
+      source: 'electron-updater',
+      inAppDownloadSupported: true,
+      inAppDownloadReason: 'Update wurde in der App heruntergeladen. Neustart wird ausgeführt.',
+    });
+    setTimeout(() => {
+      autoUpdater.quitAndInstall();
+    }, 1800);
+  }
+
+  /**
+   * Handles Is Auto Updater Configured.
+   */
+  private isAutoUpdaterConfigured(): boolean {
+    return existsSync(path.join(process.resourcesPath, 'app-update.yml'));
   }
 
   /**
    * Handles Resolve Display Version.
    */
   private resolveDisplayVersion(): string {
-    const envVersion = process.env.S1_APP_VERSION?.trim();
-    if (envVersion) {
-      return envVersion;
-    }
-    return toDisplayVersion(app.getVersion());
+    return process.env.S1_APP_VERSION?.trim() || toDisplayVersion(app.getVersion());
   }
 
   /**
-   * Handles Is Offline Like Error.
+   * Resolves whether updater checks must use GitHub fallback.
    */
-  private isOfflineLikeError(message: string): boolean {
-    const lower = message.toLowerCase();
-    return (
-      lower.includes('internet_disconnected') ||
-      lower.includes('net::err_internet_disconnected') ||
-      lower.includes('enotfound') ||
-      lower.includes('eai_again') ||
-      lower.includes('etimedout') ||
-      lower.includes('econnrefused') ||
-      lower.includes('ehostunreach') ||
-      lower.includes('network')
-    );
+  private resolveGitHubFallbackReason(): string | null {
+    if (!this.autoUpdaterEnabled) {
+      return this.autoUpdaterInitError
+        ? `Auto-Updater ist im aktuellen Build nicht aktiv (${this.autoUpdaterInitError}).`
+        : 'Auto-Updater ist im aktuellen Build nicht aktiv.';
+    }
+    if (!this.isAutoUpdaterConfigured()) {
+      return '`app-update.yml` fehlt. In-App-Download ist daher nicht möglich.';
+    }
+    return null;
+  }
+
+  /**
+   * Runs GitHub fallback check with a reason text.
+   */
+  private async runGitHubFallback(reason: string): Promise<void> {
+    await checkGitHubReleaseVersion({
+      owner: GITHUB_OWNER,
+      repo: GITHUB_REPO,
+      reason,
+      resolveDisplayVersion: () => this.resolveDisplayVersion(),
+      setState: (next) => this.setState(next),
+    });
+  }
+
+  /**
+   * Handles errors from electron-updater check path.
+   */
+  private async handleUpdateCheckError(error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    if (isNoPublishedVersionsError(message)) {
+      await this.runGitHubFallback('Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.');
+      return;
+    }
+    if (isOfflineLikeError(message)) {
+      this.setState({ stage: 'idle' });
+      return;
+    }
+    if (isVersionFormatError(message)) {
+      await this.runGitHubFallback(`In-App-Download nicht möglich: ${message}`);
+      return;
+    }
+    this.setState({ stage: 'error', message });
   }
 
   /**

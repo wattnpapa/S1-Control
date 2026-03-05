@@ -2,42 +2,22 @@ import crypto from 'node:crypto';
 import dgram from 'node:dgram';
 import fs from 'node:fs';
 import http from 'node:http';
-import os from 'node:os';
-import path from 'node:path';
 import { debugSync } from './debug';
+import { PeerDiscoveryTracker } from './update-peer-discovery';
+import { createLocalFeedServer } from './update-peer-feed';
+import {
+  broadcastQuery,
+  detectPrimaryIp,
+  DISCOVERY_MONITOR_INTERVAL_MS,
+  DISCOVERY_PORT,
+  DISCOVERY_TIMEOUT_MS,
+  nowIso,
+  parseWireMessage,
+  selectBestOffers as selectBestOffersInternal,
+} from './update-peer-protocol';
+import type { PeerOfferWireMessage, PeerQueryMessage, WireMessage } from './update-peer-protocol';
+import { downloadPeerFile, nextPeerBlockTimestamp } from './update-peer-transfer';
 import type { PeerArtifact, PeerOffer, PeerTransferStats, PeerUpdateStatus } from '../../shared/types';
-
-const DISCOVERY_PORT = Number(process.env.S1_UPDATER_PEER_PORT || '41234');
-const DISCOVERY_TIMEOUT_MS = 1500;
-const DOWNLOAD_TIMEOUT_MS = 3000;
-const PEER_BLOCK_MS = 10 * 60 * 1000;
-const DISCOVERY_MONITOR_INTERVAL_MS = 10_000;
-const DISCOVERY_OFFER_TTL_MS = 60_000;
-
-interface PeerQuery {
-  requestId: string;
-  versionWanted: string;
-  platform: string;
-  arch: string;
-  channel: string;
-}
-
-interface PeerOfferWire {
-  requestId: string;
-  peerId: string;
-  host: string;
-  httpPort: number;
-  version: string;
-  artifactName: string;
-  sha512: string;
-  size: number;
-  freshnessTs: string;
-  uptimeMs: number;
-}
-
-type WireMessage =
-  | { type: 's1-update-query'; payload: PeerQuery }
-  | { type: 's1-update-offer'; payload: PeerOfferWire };
 
 interface PendingQuery {
   startedAt: number;
@@ -46,49 +26,8 @@ interface PendingQuery {
   timer: NodeJS.Timeout;
 }
 
-interface ObservedPeerOffer extends PeerOffer {
-  seenAt: string;
-}
-
 /**
- * Handles Now Iso.
- */
-function nowIso(): string {
-  return new Date().toISOString();
-}
-
-/**
- * Handles Parse Wire.
- */
-function parseWire(input: Buffer): WireMessage | null {
-  try {
-    const parsed = JSON.parse(input.toString('utf8')) as WireMessage;
-    if (!parsed || typeof parsed !== 'object' || !('type' in parsed) || !('payload' in parsed)) {
-      return null;
-    }
-    return parsed;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Handles Detect Primary Ip.
- */
-function detectPrimaryIp(): string {
-  const interfaces = os.networkInterfaces();
-  for (const entries of Object.values(interfaces)) {
-    for (const entry of entries ?? []) {
-      if (entry.family === 'IPv4' && !entry.internal) {
-        return entry.address;
-      }
-    }
-  }
-  return '127.0.0.1';
-}
-
-/**
- * Handles Sha512 File.
+ * Computes SHA512 digest (base64) for a local file.
  */
 function sha512File(filePath: string): string {
   const hash = crypto.createHash('sha512');
@@ -98,32 +37,17 @@ function sha512File(filePath: string): string {
 }
 
 /**
- * Handles Select Best Offer Internal.
- */
-function selectBestOfferInternal(offers: PeerOffer[]): PeerOffer[] {
-  return [...offers].sort((a, b) => {
-    const tA = Date.parse(a.freshnessTs);
-    const tB = Date.parse(b.freshnessTs);
-    if (tA !== tB) return tB - tA;
-    const rA = a.rttMs ?? Number.MAX_SAFE_INTEGER;
-    const rB = b.rttMs ?? Number.MAX_SAFE_INTEGER;
-    if (rA !== rB) return rA - rB;
-    return a.peerId.localeCompare(b.peerId);
-  });
-}
-
-/**
- * Handles Select Best Offers.
+ * Sort helper exported for tests and selection consistency.
  */
 export function selectBestOffers(offers: PeerOffer[]): PeerOffer[] {
-  return selectBestOfferInternal(offers);
+  return selectBestOffersInternal(offers);
 }
 
 /**
- * Handles Decode Peer Message.
+ * Decoder exported for tests to validate wire compatibility.
  */
 export function decodePeerMessage(input: Buffer): WireMessage | null {
-  return parseWire(input);
+  return parseWireMessage(input);
 }
 
 export class UpdatePeerService {
@@ -141,7 +65,7 @@ export class UpdatePeerService {
 
   private readonly pendingQueries = new Map<string, PendingQuery>();
 
-  private readonly discoveredOffers = new Map<string, ObservedPeerOffer>();
+  private readonly discoveryTracker = new PeerDiscoveryTracker();
 
   private socket: dgram.Socket | null = null;
 
@@ -151,12 +75,10 @@ export class UpdatePeerService {
 
   private lastTransfer: PeerTransferStats | null = null;
 
-  private lastDiscoveryAt: string | null = null;
-
   private discoveryTimer: NodeJS.Timeout | null = null;
 
   /**
-   * Creates an instance of this class.
+   * Creates a peer update service instance.
    */
   public constructor(cacheDir: string, enabled: boolean) {
     this.cacheDir = cacheDir;
@@ -164,52 +86,36 @@ export class UpdatePeerService {
   }
 
   /**
-   * Handles Get Status.
+   * Returns current peer subsystem status for UI/debug.
    */
   public getStatus(): PeerUpdateStatus {
-    this.pruneObservedOffers();
     return {
       enabled: this.enabled,
       seederActive: this.enabled && this.httpPort !== null,
       discoveryPort: DISCOVERY_PORT,
       httpPort: this.httpPort,
       offeredArtifacts: [...this.artifacts.values()],
-      discoveredOffers: [...this.discoveredOffers.values()],
-      lastDiscoveryAt: this.lastDiscoveryAt,
+      discoveredOffers: this.discoveryTracker.getObservedOffers(),
+      lastDiscoveryAt: this.discoveryTracker.getLastDiscoveryAt(),
       lastTransfer: this.lastTransfer,
     };
   }
 
   /**
-   * Handles Start Peer Services.
+   * Starts HTTP seeding and UDP discovery services.
    */
   public startPeerServices(): void {
     if (!this.enabled || this.socket) {
       return;
     }
     fs.mkdirSync(this.cacheDir, { recursive: true });
-
-    this.httpServer = http.createServer((req, res) => this.handleHttp(req, res));
-    this.httpServer.listen(0, '0.0.0.0', () => {
-      const addr = this.httpServer?.address();
-      this.httpPort = typeof addr === 'object' && addr ? addr.port : null;
-      debugSync('peer-service', 'http-listen', { peerId: this.peerId, httpPort: this.httpPort });
-    });
-
-    this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
-    this.socket.on('message', (msg, rinfo) => this.handleUdp(msg, rinfo.address, rinfo.port));
-    this.socket.on('error', (error) => {
-      debugSync('peer-service', 'udp-error', { message: String(error) });
-    });
-    this.socket.bind(DISCOVERY_PORT, () => {
-      this.socket?.setBroadcast(true);
-      debugSync('peer-service', 'udp-listen', { peerId: this.peerId, port: DISCOVERY_PORT });
-    });
+    this.startHttpServer();
+    this.startUdpSocket();
     this.startDiscoveryMonitor();
   }
 
   /**
-   * Handles Stop Peer Services.
+   * Stops HTTP/UDP services and resolves pending discovery calls.
    */
   public stopPeerServices(): void {
     for (const pending of this.pendingQueries.values()) {
@@ -229,47 +135,28 @@ export class UpdatePeerService {
   }
 
   /**
-   * Handles Announce Local Artifacts.
+   * Registers locally cached update artifacts for sharing to peers.
    */
   public announceLocalArtifacts(artifacts: PeerArtifact[]): void {
     for (const artifact of artifacts) {
-      if (!fs.existsSync(artifact.filePath)) {
-        continue;
+      if (fs.existsSync(artifact.filePath)) {
+        this.artifacts.set(artifact.artifactName, artifact);
       }
-      this.artifacts.set(artifact.artifactName, artifact);
     }
-    debugSync('peer-service', 'announce-artifacts', {
-      count: artifacts.length,
-      total: this.artifacts.size,
-    });
+    debugSync('peer-service', 'announce-artifacts', { count: artifacts.length, total: this.artifacts.size });
   }
 
   /**
-   * Handles Query Peers For Version.
+   * Queries LAN peers for matching update artifacts.
    */
-  public async queryPeersForVersion(query: PeerQuery): Promise<PeerOffer[]> {
+  public async queryPeersForVersion(query: PeerQueryMessage): Promise<PeerOffer[]> {
     if (!this.enabled || !this.socket || !this.httpPort) {
       return [];
     }
     return new Promise<PeerOffer[]>((resolve) => {
-      const timer = setTimeout(() => {
-        const pending = this.pendingQueries.get(query.requestId);
-        this.pendingQueries.delete(query.requestId);
-        const offers = selectBestOfferInternal(pending?.offers ?? []);
-        this.observeOffers(offers);
-        this.lastDiscoveryAt = nowIso();
-        resolve(offers);
-      }, DISCOVERY_TIMEOUT_MS);
-
-      this.pendingQueries.set(query.requestId, {
-        startedAt: Date.now(),
-        offers: [],
-        resolve,
-        timer,
-      });
-
-      const wire = JSON.stringify({ type: 's1-update-query', payload: query } satisfies WireMessage);
-      this.socket?.send(wire, DISCOVERY_PORT, '255.255.255.255');
+      const timer = setTimeout(() => this.finishPendingQuery(query.requestId), DISCOVERY_TIMEOUT_MS);
+      this.pendingQueries.set(query.requestId, { startedAt: Date.now(), offers: [], resolve, timer });
+      broadcastQuery(this.socket, { type: 's1-update-query', payload: query } satisfies WireMessage);
       debugSync('peer-discovery', 'query', {
         requestId: query.requestId,
         version: query.versionWanted,
@@ -279,74 +166,48 @@ export class UpdatePeerService {
     });
   }
 
+  /**
+   * Downloads and validates an artifact from a selected peer.
+   */
   public async downloadFromPeer(
     offer: PeerOffer,
     targetPath: string,
     expectedSha512: string,
     onProgress?: (transferred: number, total: number) => void,
   ): Promise<string> {
-    const blockedUntil = this.blockedPeers.get(offer.peerId);
-    if (blockedUntil && blockedUntil > Date.now()) {
-      throw new Error(`Peer ${offer.peerId} ist temporär gesperrt.`);
-    }
-    fs.mkdirSync(path.dirname(targetPath), { recursive: true });
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
-    const started = Date.now();
     try {
-      const response = await fetch(`http://${offer.host}:${offer.httpPort}/update/${encodeURIComponent(offer.artifactName)}`, {
-        signal: controller.signal,
+      const result = await downloadPeerFile({
+        offer,
+        targetPath,
+        expectedSha512,
+        blockedUntil: this.blockedPeers.get(offer.peerId),
+        onProgress,
       });
-      if (!response.ok || !response.body) {
-        throw new Error(`Peer-Download fehlgeschlagen (${response.status})`);
-      }
-      const total = Number(response.headers.get('content-length') || offer.size || 0);
-      const hash = crypto.createHash('sha512');
-      const file = fs.createWriteStream(targetPath);
-      let transferred = 0;
-      for await (const chunk of response.body as unknown as AsyncIterable<Buffer>) {
-        hash.update(chunk);
-        transferred += chunk.length;
-        file.write(chunk);
-        onProgress?.(transferred, total);
-      }
-      file.end();
-      const digest = hash.digest('base64');
-      if (digest !== expectedSha512) {
-        this.blockedPeers.set(offer.peerId, Date.now() + PEER_BLOCK_MS);
-        throw new Error('SHA512-Prüfung für Peer-Download fehlgeschlagen');
-      }
-      this.lastTransfer = {
-        direction: 'download',
-        peerId: offer.peerId,
-        host: offer.host,
-        artifactName: offer.artifactName,
-        bytes: transferred,
-        durationMs: Date.now() - started,
-        at: nowIso(),
-        ok: true,
-      };
-      debugSync('peer-download', 'ok', this.lastTransfer);
-      return targetPath;
+      this.lastTransfer = result.stats;
+      return result.targetPath;
     } catch (error) {
-      this.lastTransfer = {
+      if ((error instanceof Error ? error.message : String(error)).includes('SHA512-Prüfung')) {
+        this.blockedPeers.set(offer.peerId, nextPeerBlockTimestamp());
+      }
+      const fallbackStats: PeerTransferStats = {
         direction: 'download',
         peerId: offer.peerId,
         host: offer.host,
         artifactName: offer.artifactName,
         bytes: 0,
-        durationMs: Date.now() - started,
+        durationMs: 0,
         at: nowIso(),
         ok: false,
         reason: error instanceof Error ? error.message : String(error),
       };
-      debugSync('peer-download', 'failed', this.lastTransfer);
+      this.lastTransfer = (error as { peerStats?: PeerTransferStats }).peerStats ?? fallbackStats;
       throw error;
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
+  /**
+   * Creates temporary local generic feed endpoint for updater handover.
+   */
   public createLocalFeedServer(metadata: {
     platform: string;
     version: string;
@@ -355,70 +216,43 @@ export class UpdatePeerService {
     size: number;
     filePath: string;
   }): Promise<{ feedUrl: string; close: () => Promise<void> }> {
-    const channelFile = metadata.platform === 'darwin' ? 'latest-mac.yml' : metadata.platform === 'linux' ? 'latest-linux.yml' : 'latest.yml';
-    const yml = [
-      `version: ${metadata.version}`,
-      `path: ${metadata.artifactName}`,
-      `sha512: ${metadata.sha512}`,
-      'files:',
-      `  - url: ${metadata.artifactName}`,
-      `    sha512: ${metadata.sha512}`,
-      `    size: ${metadata.size}`,
-      `releaseDate: ${nowIso()}`,
-    ].join('\n');
-
-    return new Promise((resolve, reject) => {
-      const server = http.createServer((req, res) => {
-        if (!req.url) {
-          res.statusCode = 400;
-          res.end();
-          return;
-        }
-        const reqPath = decodeURIComponent(req.url.split('?')[0] || '/');
-        if (reqPath === `/${channelFile}`) {
-          res.setHeader('content-type', 'text/yaml; charset=utf-8');
-          res.end(yml);
-          return;
-        }
-        if (reqPath === `/${metadata.artifactName}`) {
-          const stream = fs.createReadStream(metadata.filePath);
-          stream.on('error', () => {
-            res.statusCode = 500;
-            res.end();
-          });
-          stream.pipe(res);
-          return;
-        }
-        res.statusCode = 404;
-        res.end();
-      });
-      server.on('error', reject);
-      server.listen(0, '127.0.0.1', () => {
-        const addr = server.address();
-        if (!addr || typeof addr === 'string') {
-          reject(new Error('Lokaler Feed-Port konnte nicht ermittelt werden'));
-          return;
-        }
-        resolve({
-          feedUrl: `http://127.0.0.1:${addr.port}`,
-          close: async () =>
-            new Promise<void>((closeResolve) => {
-              server.close(() => closeResolve());
-            }),
-        });
-      });
-    });
+    return createLocalFeedServer(metadata);
   }
 
   /**
-   * Handles Verify File Sha512.
+   * Verifies file integrity with SHA512.
    */
   public static verifyFileSha512(filePath: string, expected: string): boolean {
     return sha512File(filePath) === expected;
   }
 
   /**
-   * Handles Handle Http.
+   * Starts HTTP file server endpoint for artifact transfer.
+   */
+  private startHttpServer(): void {
+    this.httpServer = http.createServer((req, res) => this.handleHttp(req, res));
+    this.httpServer.listen(0, '0.0.0.0', () => {
+      const addr = this.httpServer?.address();
+      this.httpPort = typeof addr === 'object' && addr ? addr.port : null;
+      debugSync('peer-service', 'http-listen', { peerId: this.peerId, httpPort: this.httpPort });
+    });
+  }
+
+  /**
+   * Starts UDP socket and message handlers.
+   */
+  private startUdpSocket(): void {
+    this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true });
+    this.socket.on('message', (msg, rinfo) => this.handleUdp(msg, rinfo.address, rinfo.port));
+    this.socket.on('error', (error) => debugSync('peer-service', 'udp-error', { message: String(error) }));
+    this.socket.bind(DISCOVERY_PORT, () => {
+      this.socket?.setBroadcast(true);
+      debugSync('peer-service', 'udp-listen', { peerId: this.peerId, port: DISCOVERY_PORT });
+    });
+  }
+
+  /**
+   * Serves artifact bytes for LAN peers.
    */
   private handleHttp(req: http.IncomingMessage, res: http.ServerResponse): void {
     const requestUrl = req.url ? decodeURIComponent(req.url) : '/';
@@ -458,40 +292,22 @@ export class UpdatePeerService {
   }
 
   /**
-   * Handles Handle Udp.
+   * Handles incoming UDP query/offer messages.
    */
   private handleUdp(msg: Buffer, sourceHost: string, sourcePort: number): void {
-    const parsed = parseWire(msg);
+    const parsed = parseWireMessage(msg);
     if (!parsed) return;
     if (parsed.type === 's1-update-query') {
       this.handleUdpQuery(parsed.payload, sourceHost, sourcePort);
       return;
     }
-    const pending = this.pendingQueries.get(parsed.payload.requestId);
-    if (!pending) return;
-    if (parsed.payload.peerId === this.peerId) return;
-    pending.offers.push({
-      peerId: parsed.payload.peerId,
-      host: parsed.payload.host,
-      httpPort: parsed.payload.httpPort,
-      version: parsed.payload.version,
-      artifactName: parsed.payload.artifactName,
-      sha512: parsed.payload.sha512,
-      size: parsed.payload.size,
-      freshnessTs: parsed.payload.freshnessTs,
-      rttMs: Date.now() - pending.startedAt,
-    });
-    debugSync('peer-offer', 'received', {
-      requestId: parsed.payload.requestId,
-      from: parsed.payload.host,
-      artifact: parsed.payload.artifactName,
-    });
+    this.recordIncomingOffer(parsed.payload);
   }
 
   /**
-   * Handles Handle Udp Query.
+   * Handles a discovery query and sends matching offers.
    */
-  private handleUdpQuery(query: PeerQuery, sourceHost: string, sourcePort: number): void {
+  private handleUdpQuery(query: PeerQueryMessage, sourceHost: string, sourcePort: number): void {
     if (!this.socket || !this.httpPort) {
       return;
     }
@@ -502,11 +318,8 @@ export class UpdatePeerService {
         item.arch === query.arch &&
         item.channel === query.channel,
     );
-    if (matches.length === 0) {
-      return;
-    }
     for (const matching of matches) {
-      const payload: PeerOfferWire = {
+      const payload: PeerOfferWireMessage = {
         requestId: query.requestId,
         peerId: this.peerId,
         host: detectPrimaryIp(),
@@ -518,18 +331,46 @@ export class UpdatePeerService {
         freshnessTs: matching.freshnessTs,
         uptimeMs: Date.now() - this.startedAt,
       };
-      const wire = JSON.stringify({ type: 's1-update-offer', payload } satisfies WireMessage);
-      this.socket.send(wire, sourcePort, sourceHost);
-      debugSync('peer-offer', 'sent', {
-        requestId: query.requestId,
-        to: sourceHost,
-        artifact: matching.artifactName,
-      });
+      this.socket.send(JSON.stringify({ type: 's1-update-offer', payload } satisfies WireMessage), sourcePort, sourceHost);
+      debugSync('peer-offer', 'sent', { requestId: query.requestId, to: sourceHost, artifact: matching.artifactName });
     }
   }
 
   /**
-   * Handles Start Discovery Monitor.
+   * Stores incoming offer for an active query.
+   */
+  private recordIncomingOffer(payload: PeerOfferWireMessage): void {
+    const pending = this.pendingQueries.get(payload.requestId);
+    if (!pending || payload.peerId === this.peerId) {
+      return;
+    }
+    pending.offers.push({
+      peerId: payload.peerId,
+      host: payload.host,
+      httpPort: payload.httpPort,
+      version: payload.version,
+      artifactName: payload.artifactName,
+      sha512: payload.sha512,
+      size: payload.size,
+      freshnessTs: payload.freshnessTs,
+      rttMs: Date.now() - pending.startedAt,
+    });
+    debugSync('peer-offer', 'received', { requestId: payload.requestId, from: payload.host, artifact: payload.artifactName });
+  }
+
+  /**
+   * Completes a pending query and resolves with sorted offers.
+   */
+  private finishPendingQuery(requestId: string): void {
+    const pending = this.pendingQueries.get(requestId);
+    this.pendingQueries.delete(requestId);
+    const offers = selectBestOffersInternal(pending?.offers ?? []);
+    this.discoveryTracker.observe(offers);
+    pending?.resolve(offers);
+  }
+
+  /**
+   * Starts periodic passive discovery scans for debug/status view.
    */
   private startDiscoveryMonitor(): void {
     if (!this.enabled || this.discoveryTimer) {
@@ -542,7 +383,7 @@ export class UpdatePeerService {
   }
 
   /**
-   * Handles Scan Network Offers.
+   * Performs one passive discovery scan cycle.
    */
   private async scanNetworkOffers(): Promise<void> {
     if (!this.enabled) {
@@ -556,37 +397,10 @@ export class UpdatePeerService {
         arch: process.arch,
         channel: 'latest',
       });
-      this.observeOffers(offers);
-      this.lastDiscoveryAt = nowIso();
+      this.discoveryTracker.observe(offers);
       debugSync('peer-discovery', 'monitor-scan', { offers: offers.length });
     } catch (error) {
-      debugSync('peer-discovery', 'monitor-scan-failed', {
-        message: error instanceof Error ? error.message : String(error),
-      });
-    }
-  }
-
-  /**
-   * Handles Observe Offers.
-   */
-  private observeOffers(offers: PeerOffer[]): void {
-    const seenAt = nowIso();
-    for (const offer of offers) {
-      const key = `${offer.peerId}:${offer.artifactName}`;
-      this.discoveredOffers.set(key, { ...offer, seenAt });
-    }
-    this.pruneObservedOffers();
-  }
-
-  /**
-   * Handles Prune Observed Offers.
-   */
-  private pruneObservedOffers(): void {
-    const threshold = Date.now() - DISCOVERY_OFFER_TTL_MS;
-    for (const [key, offer] of this.discoveredOffers.entries()) {
-      if (Date.parse(offer.seenAt) < threshold) {
-        this.discoveredOffers.delete(key);
-      }
+      debugSync('peer-discovery', 'monitor-scan-failed', { message: error instanceof Error ? error.message : String(error) });
     }
   }
 }

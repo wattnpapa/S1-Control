@@ -61,7 +61,22 @@ interface UseEntityActionsBundleOptions {
  * Composes Abschnitt-, Einheit- and Fahrzeug-actions with shared dependencies.
  */
 export function useEntityActionsBundle(options: UseEntityActionsBundleOptions) {
-  const abschnittActions = useAbschnittActions({
+  const abschnittActions = useAbschnittActions(createAbschnittActionsProps(options));
+  const fahrzeugActions = useFahrzeugActions(createFahrzeugActionsProps(options));
+  const einheitActions = useEinheitActions(createEinheitActionsProps(options));
+
+  return {
+    abschnittActions,
+    fahrzeugActions,
+    einheitActions,
+  };
+}
+
+/**
+ * Builds props object for Abschnitt action hook.
+ */
+function createAbschnittActionsProps(options: UseEntityActionsBundleOptions) {
+  return {
     selectedEinsatzId: options.selectedEinsatzId,
     selectedAbschnittId: options.selectedAbschnittId,
     isArchived: options.isArchived,
@@ -75,15 +90,20 @@ export function useEntityActionsBundle(options: UseEntityActionsBundleOptions) {
     setEditAbschnittForm: options.setEditAbschnittForm,
     setShowCreateAbschnittDialog: options.setShowCreateAbschnittDialog,
     setShowEditAbschnittDialog: options.setShowEditAbschnittDialog,
-    acquireEditLock: async (einsatzId, _entityType, entityId) =>
+    acquireEditLock: async (einsatzId: string, _entityType: 'ABSCHNITT', entityId: string) =>
       options.acquireEditLock(einsatzId, 'ABSCHNITT', entityId),
-    releaseEditLock: async (einsatzId, _entityType, entityId) =>
+    releaseEditLock: async (einsatzId: string, _entityType: 'ABSCHNITT', entityId: string) =>
       options.releaseEditLock(einsatzId, 'ABSCHNITT', entityId),
     loadEinsatz: options.loadEinsatz,
     withBusy: options.withBusy,
-  });
+  };
+}
 
-  const fahrzeugActions = useFahrzeugActions({
+/**
+ * Builds props object for Fahrzeug action hook.
+ */
+function createFahrzeugActionsProps(options: UseEntityActionsBundleOptions) {
+  return {
     selectedEinsatzId: options.selectedEinsatzId,
     selectedAbschnittId: options.selectedAbschnittId,
     isArchived: options.isArchived,
@@ -98,15 +118,20 @@ export function useEntityActionsBundle(options: UseEntityActionsBundleOptions) {
     setShowEditEinheitDialog: options.setShowEditEinheitDialog,
     setShowEditFahrzeugDialog: options.setShowEditFahrzeugDialog,
     closeEditEinheitDialog: options.closeEditEinheitDialog,
-    acquireEditLock: async (einsatzId, _entityType, entityId) =>
+    acquireEditLock: async (einsatzId: string, _entityType: 'FAHRZEUG', entityId: string) =>
       options.acquireEditLock(einsatzId, 'FAHRZEUG', entityId),
-    releaseEditLock: async (einsatzId, _entityType, entityId) =>
+    releaseEditLock: async (einsatzId: string, _entityType: 'FAHRZEUG', entityId: string) =>
       options.releaseEditLock(einsatzId, 'FAHRZEUG', entityId),
     refreshAll: options.refreshAll,
     withBusy: options.withBusy,
-  });
+  };
+}
 
-  const einheitActions = useEinheitActions({
+/**
+ * Builds props object for Einheit action hook.
+ */
+function createEinheitActionsProps(options: UseEntityActionsBundleOptions) {
+  return {
     selectedEinsatzId: options.selectedEinsatzId,
     selectedAbschnittId: options.selectedAbschnittId,
     isArchived: options.isArchived,
@@ -127,21 +152,15 @@ export function useEntityActionsBundle(options: UseEntityActionsBundleOptions) {
     setShowSplitEinheitDialog: options.setShowSplitEinheitDialog,
     closeEditEinheitDialog: options.closeEditEinheitDialog,
     closeEditFahrzeugDialog: options.closeEditFahrzeugDialog,
-    acquireEinheitLock: async (einsatzId, einheitId) =>
+    acquireEinheitLock: async (einsatzId: string, einheitId: string) =>
       options.acquireEditLock(einsatzId, 'EINHEIT', einheitId),
-    releaseEinheitLock: async (einsatzId, einheitId) =>
+    releaseEinheitLock: async (einsatzId: string, einheitId: string) =>
       options.releaseEditLock(einsatzId, 'EINHEIT', einheitId),
-    acquireFahrzeugLock: async (einsatzId, fahrzeugId) =>
+    acquireFahrzeugLock: async (einsatzId: string, fahrzeugId: string) =>
       options.acquireEditLock(einsatzId, 'FAHRZEUG', fahrzeugId),
-    releaseFahrzeugLock: async (einsatzId, fahrzeugId) =>
+    releaseFahrzeugLock: async (einsatzId: string, fahrzeugId: string) =>
       options.releaseEditLock(einsatzId, 'FAHRZEUG', fahrzeugId),
     refreshAll: options.refreshAll,
     withBusy: options.withBusy,
-  });
-
-  return {
-    abschnittActions,
-    fahrzeugActions,
-    einheitActions,
   };
 }

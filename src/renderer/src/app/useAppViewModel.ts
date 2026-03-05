@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import type { AppEntryViewProps } from '@renderer/components/views/AppEntryView';
 import type { AppWorkspaceShellProps } from '@renderer/components/views/AppWorkspaceShell';
+import { buildEntryProps, buildWorkspaceProps } from '@renderer/app/app-view-props';
 import { useAppBootstrap } from '@renderer/app/useAppBootstrap';
-import { DEFAULT_UPDATER_STATE, EMPTY_DETAILS, EMPTY_STRENGTH } from '@renderer/app/defaultState';
+import { EMPTY_DETAILS, EMPTY_STRENGTH } from '@renderer/app/defaultState';
+import { useAppCoreState } from '@renderer/app/useAppCoreState';
 import { useEinsatzData } from '@renderer/app/useEinsatzData';
 import { useEntityActionsBundle } from '@renderer/app/useEntityActionsBundle';
 import { useEditLocks } from '@renderer/app/useEditLocks';
@@ -12,8 +14,6 @@ import { useSystemActions } from '@renderer/app/useSystemActions';
 import { useWorkspaceDerivedState } from '@renderer/app/useWorkspaceDerivedState';
 import { useWorkspaceLifecycle } from '@renderer/app/useWorkspaceLifecycle';
 import { useWorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
-import type { FahrzeugOverviewItem, KraftOverviewItem } from '@renderer/types/ui';
-import type { EinsatzListItem, SessionUser } from '@shared/types';
 import { readError } from '@renderer/utils/error';
 
 /**
@@ -29,18 +29,8 @@ export interface AppViewModel {
  * Builds all state, actions and view props for app root rendering.
  */
 export function useAppViewModel(): AppViewModel {
-  const [session, setSession] = useState<SessionUser | null>(null), [authReady, setAuthReady] = useState(false);
-  const [dbPath, setDbPath] = useState(''), [lanPeerUpdatesEnabled, setLanPeerUpdatesEnabled] = useState(false);
-  const [einsaetze, setEinsaetze] = useState<EinsatzListItem[]>([]);
-  const [selectedEinsatzId, setSelectedEinsatzId] = useState<string>('');
-  const [abschnitte, setAbschnitte] = useState([] as Awaited<ReturnType<typeof window.api.listAbschnitte>>);
-  const [, setSelectedAbschnittId] = useState<string>('');
-  const [details, setDetails] = useState(EMPTY_DETAILS);
-  const [allKraefte, setAllKraefte] = useState<KraftOverviewItem[]>([]);
-  const [allFahrzeuge, setAllFahrzeuge] = useState<FahrzeugOverviewItem[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [updaterState, setUpdaterState] = useState(DEFAULT_UPDATER_STATE);
+  const rootState = useAppCoreState();
+  const [selectedAbschnittId, setSelectedAbschnittId] = useState('');
 
   const uiState = useWorkspaceUiState();
 
@@ -53,30 +43,30 @@ export function useAppViewModel(): AppViewModel {
     releaseEditLock,
     clearLocks,
   } = useEditLocks({
-    sessionActive: Boolean(session),
-    selectedEinsatzId,
-    onError: (message) => setError(message),
+    sessionActive: Boolean(rootState.session),
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    onError: rootState.setError,
   });
 
   const derivedState = useWorkspaceDerivedState({
-    einsaetze,
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
+    einsaetze: rootState.einsaetze,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    selectedAbschnittId,
     debugSyncLogs: uiState.debugSyncLogs,
     lockByAbschnittId,
     activeView: uiState.activeView,
   });
 
   const { clearSelectedEinsatz, closeEditEinheitDialog, closeEditFahrzeugDialog } = useWorkspaceLifecycle({
-    selectedEinsatzId,
+    selectedEinsatzId: rootState.selectedEinsatzId,
     editEinheitId: uiState.editEinheitForm.einheitId,
     editFahrzeugId: uiState.editFahrzeugForm.fahrzeugId,
-    setSelectedEinsatzId,
-    setAbschnitte,
+    setSelectedEinsatzId: rootState.setSelectedEinsatzId,
+    setAbschnitte: rootState.setAbschnitte,
     setSelectedAbschnittId,
-    setDetails,
-    setAllKraefte,
-    setAllFahrzeuge,
+    setDetails: rootState.setDetails,
+    setAllKraefte: rootState.setAllKraefte,
+    setAllFahrzeuge: rootState.setAllFahrzeuge,
     setGesamtStaerke: uiState.setGesamtStaerke,
     setActiveClients: uiState.setActiveClients,
     clearLocks,
@@ -91,14 +81,14 @@ export function useAppViewModel(): AppViewModel {
   });
 
   const { loadEinsatz, refreshEinsaetze, refreshAll } = useEinsatzData({
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
-    setEinsaetze,
-    setAbschnitte,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    selectedAbschnittId,
+    setEinsaetze: rootState.setEinsaetze,
+    setAbschnitte: rootState.setAbschnitte,
     setSelectedAbschnittId,
-    setDetails,
-    setAllKraefte,
-    setAllFahrzeuge,
+    setDetails: rootState.setDetails,
+    setAllKraefte: rootState.setAllKraefte,
+    setAllFahrzeuge: rootState.setAllFahrzeuge,
     setGesamtStaerke: uiState.setGesamtStaerke,
     clearSelectedEinsatz,
     refreshEditLocks,
@@ -110,48 +100,48 @@ export function useAppViewModel(): AppViewModel {
    * Executes action with UI busy and shared error handling.
    */
   const withBusy = async (fn: () => Promise<void>) => {
-    setBusy(true);
-    setError(null);
+    rootState.setBusy(true);
+    rootState.setError(null);
     try {
       await fn();
     } catch (err) {
-      setError(readError(err));
+      rootState.setError(readError(err));
     } finally {
-      setBusy(false);
+      rootState.setBusy(false);
     }
   };
 
   useAppBootstrap({
-    authReady,
-    setAuthReady,
-    setDbPath,
-    setLanPeerUpdatesEnabled,
-    setUpdaterState,
-    setSession,
+    authReady: rootState.authReady,
+    setAuthReady: rootState.setAuthReady,
+    setDbPath: rootState.setDbPath,
+    setLanPeerUpdatesEnabled: rootState.setLanPeerUpdatesEnabled,
+    setUpdaterState: rootState.setUpdaterState,
+    setSession: rootState.setSession,
     setQueuedOpenFilePath: uiState.setQueuedOpenFilePath,
     setNow: uiState.setNow,
-    setError,
+    setError: rootState.setError,
     refreshEinsaetze,
   });
 
   useSyncEvents({
-    session,
-    authReady,
-    busy,
+    session: rootState.session,
+    authReady: rootState.authReady,
+    busy: rootState.busy,
     activeView: uiState.activeView,
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    selectedAbschnittId,
     queuedOpenFilePath: uiState.queuedOpenFilePath,
     setQueuedOpenFilePath: uiState.setQueuedOpenFilePath,
-    setError,
-    setDetails,
+    setError: rootState.setError,
+    setDetails: rootState.setDetails,
     setActiveClients: uiState.setActiveClients,
-    setDbPath,
-    setLanPeerUpdatesEnabled,
+    setDbPath: rootState.setDbPath,
+    setLanPeerUpdatesEnabled: rootState.setLanPeerUpdatesEnabled,
     setPeerUpdateStatus: uiState.setPeerUpdateStatus,
     setDebugSyncLogs: uiState.setDebugSyncLogs,
-    setEinsaetze,
-    setSelectedEinsatzId,
+    setEinsaetze: rootState.setEinsaetze,
+    setSelectedEinsatzId: rootState.setSelectedEinsatzId,
     setStartChoice: uiState.setStartChoice,
     loadEinsatz,
     refreshAll,
@@ -161,9 +151,9 @@ export function useAppViewModel(): AppViewModel {
   const startActions = useStartActions({
     startNewEinsatzName: uiState.startNewEinsatzName,
     startNewFuestName: uiState.startNewFuestName,
-    setError,
-    setEinsaetze,
-    setSelectedEinsatzId,
+    setError: rootState.setError,
+    setEinsaetze: rootState.setEinsaetze,
+    setSelectedEinsatzId: rootState.setSelectedEinsatzId,
     setStartNewEinsatzName: uiState.setStartNewEinsatzName,
     setStartChoice: uiState.setStartChoice,
     loadEinsatz,
@@ -171,30 +161,30 @@ export function useAppViewModel(): AppViewModel {
   });
 
   const systemActions = useSystemActions({
-    dbPath,
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
+    dbPath: rootState.dbPath,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    selectedAbschnittId,
     moveDialog: uiState.moveDialog,
     moveTarget: uiState.moveTarget,
     gesamtStaerke: uiState.gesamtStaerke,
-    setLanPeerUpdatesEnabled,
-    setDbPath,
+    setLanPeerUpdatesEnabled: rootState.setLanPeerUpdatesEnabled,
+    setDbPath: rootState.setDbPath,
     setPeerUpdateStatus: uiState.setPeerUpdateStatus,
     clearSelectedEinsatz,
     refreshEinsaetze,
     loadEinsatz,
     refreshAll,
-    setError,
+    setError: rootState.setError,
     setMoveDialog: uiState.setMoveDialog,
     setMoveTarget: uiState.setMoveTarget,
     withBusy,
   });
 
   const { abschnittActions, fahrzeugActions, einheitActions } = useEntityActionsBundle({
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    selectedAbschnittId,
     isArchived: Boolean(derivedState.isArchived),
-    abschnitte,
+    abschnitte: rootState.abschnitte,
     selectedAbschnittLock: derivedState.selectedAbschnittLock,
     selectedAbschnittLockedByOther: derivedState.selectedAbschnittLockedByOther,
     createAbschnittForm: uiState.createAbschnittForm,
@@ -203,8 +193,8 @@ export function useAppViewModel(): AppViewModel {
     setEditAbschnittForm: uiState.setEditAbschnittForm,
     setShowCreateAbschnittDialog: uiState.setShowCreateAbschnittDialog,
     setShowEditAbschnittDialog: uiState.setShowEditAbschnittDialog,
-    allKraefte,
-    allFahrzeuge,
+    allKraefte: rootState.allKraefte,
+    allFahrzeuge: rootState.allFahrzeuge,
     createFahrzeugForm: uiState.createFahrzeugForm,
     editFahrzeugForm: uiState.editFahrzeugForm,
     setCreateFahrzeugForm: uiState.setCreateFahrzeugForm,
@@ -224,7 +214,7 @@ export function useAppViewModel(): AppViewModel {
     setShowCreateEinheitDialog: uiState.setShowCreateEinheitDialog,
     setShowSplitEinheitDialog: uiState.setShowSplitEinheitDialog,
     closeEditFahrzeugDialog,
-    setError,
+    setError: rootState.setError,
     acquireEditLock,
     releaseEditLock,
     loadEinsatz,
@@ -232,28 +222,22 @@ export function useAppViewModel(): AppViewModel {
     withBusy,
   });
 
-  const showWorkspace = Boolean(authReady && session && selectedEinsatzId);
-
-  const entryProps: AppEntryViewProps = {
-    authReady,
-    session,
-    selectedEinsatzId,
-    updaterState,
-    busy,
-    error,
-    startChoice: uiState.startChoice,
-    setStartChoice: uiState.setStartChoice,
-    einsaetze,
-    startNewEinsatzName: uiState.startNewEinsatzName,
-    setStartNewEinsatzName: uiState.setStartNewEinsatzName,
-    startNewFuestName: uiState.startNewFuestName,
-    setStartNewFuestName: uiState.setStartNewFuestName,
-    onDownloadUpdate: () => void systemActions.downloadUpdate(),
-    onOpenReleasePage: () => void systemActions.openReleasePage(),
-    onOpenExisting: () => void startActions.openExisting(),
-    onOpenKnownEinsatz: (einsatzId) => void startActions.openKnown(einsatzId),
-    onCreate: () => void startActions.create(),
-  };
+  const showWorkspace = Boolean(rootState.authReady && rootState.session && rootState.selectedEinsatzId);
+  const entryProps: AppEntryViewProps = buildEntryProps({
+    authReady: rootState.authReady,
+    session: rootState.session,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    updaterState: rootState.updaterState,
+    busy: rootState.busy,
+    error: rootState.error,
+    einsaetze: rootState.einsaetze,
+    uiState,
+    downloadUpdate: () => void systemActions.downloadUpdate(),
+    openReleasePage: () => void systemActions.openReleasePage(),
+    openExisting: () => void startActions.openExisting(),
+    openKnownEinsatz: (einsatzId) => void startActions.openKnown(einsatzId),
+    createEinsatz: () => void startActions.create(),
+  });
 
   if (!showWorkspace) {
     return {
@@ -263,107 +247,31 @@ export function useAppViewModel(): AppViewModel {
     };
   }
 
-  const workspaceProps: AppWorkspaceShellProps = {
-    busy,
-    now: uiState.now,
-    error,
-    isArchived: Boolean(derivedState.isArchived),
-    activeView: uiState.activeView,
-    selectedEinsatz: derivedState.selectedEinsatz,
-    selectedEinsatzId,
-    selectedAbschnittId: uiState.selectedAbschnittId,
-    abschnitte,
-    details,
-    allKraefte,
-    allFahrzeuge,
-    gesamtStaerke: uiState.gesamtStaerke,
-    updaterState,
-    kraefteOrgFilter: uiState.kraefteOrgFilter,
-    setKraefteOrgFilter: uiState.setKraefteOrgFilter,
-    setActiveView: uiState.setActiveView,
+  const workspaceProps: AppWorkspaceShellProps = buildWorkspaceProps({
+    busy: rootState.busy,
+    error: rootState.error,
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    abschnitte: rootState.abschnitte,
+    details: rootState.details,
+    allKraefte: rootState.allKraefte,
+    allFahrzeuge: rootState.allFahrzeuge,
+    dbPath: rootState.dbPath,
+    lanPeerUpdatesEnabled: rootState.lanPeerUpdatesEnabled,
+    setDbPath: rootState.setDbPath,
     setSelectedAbschnittId,
-    showAbschnittSidebar: derivedState.showAbschnittSidebar,
-    selectedAbschnittLockedByOther: derivedState.selectedAbschnittLockedByOther,
+    uiState,
+    derivedState,
     lockByAbschnittId,
     lockByEinheitId,
     lockByFahrzeugId,
-    showEditEinheitDialog: uiState.showEditEinheitDialog,
-    editEinheitForm: uiState.editEinheitForm,
-    setEditEinheitForm: uiState.setEditEinheitForm,
-    editEinheitHelfer: uiState.editEinheitHelfer,
-    showCreateEinheitDialog: uiState.showCreateEinheitDialog,
-    createEinheitForm: uiState.createEinheitForm,
-    setCreateEinheitForm: uiState.setCreateEinheitForm,
-    showEditFahrzeugDialog: uiState.showEditFahrzeugDialog,
-    editFahrzeugForm: uiState.editFahrzeugForm,
-    setEditFahrzeugForm: uiState.setEditFahrzeugForm,
-    showCreateAbschnittDialog: uiState.showCreateAbschnittDialog,
-    createAbschnittForm: uiState.createAbschnittForm,
-    setCreateAbschnittForm: uiState.setCreateAbschnittForm,
-    showEditAbschnittDialog: uiState.showEditAbschnittDialog,
-    editAbschnittForm: uiState.editAbschnittForm,
-    setEditAbschnittForm: uiState.setEditAbschnittForm,
-    showSplitEinheitDialog: uiState.showSplitEinheitDialog,
-    splitEinheitForm: uiState.splitEinheitForm,
-    setSplitEinheitForm: uiState.setSplitEinheitForm,
-    showCreateFahrzeugDialog: uiState.showCreateFahrzeugDialog,
-    createFahrzeugForm: uiState.createFahrzeugForm,
-    setCreateFahrzeugForm: uiState.setCreateFahrzeugForm,
-    moveDialog: uiState.moveDialog,
-    moveTarget: uiState.moveTarget,
-    setMoveDialog: uiState.setMoveDialog,
-    setMoveTarget: uiState.setMoveTarget,
-    dbPath,
-    lanPeerUpdatesEnabled,
-    peerUpdateStatus: uiState.peerUpdateStatus,
-    activeClients: uiState.activeClients,
-    broadcastMonitorLogs: derivedState.broadcastMonitorLogs,
-    debugSyncLogs: uiState.debugSyncLogs,
-    udpDebugMonitorLogs: derivedState.udpDebugMonitorLogs,
-    onOpenStrengthDisplay: () => void systemActions.openStrengthDisplay(),
-    onCloseStrengthDisplay: () => void systemActions.closeStrengthDisplay(),
-    onDownloadUpdate: () => void systemActions.downloadUpdate(),
-    onOpenReleasePage: () => void systemActions.openReleasePage(),
-    onEditSelectedAbschnitt: abschnittActions.openEditSelectedDialog,
-    onSubmitEditEinheit: () => void einheitActions.submitEdit(),
-    onCloseEditEinheit: closeEditEinheitDialog,
-    onCreateEinheitHelfer: einheitActions.createHelfer,
-    onUpdateEinheitHelfer: einheitActions.updateHelfer,
-    onDeleteEinheitHelfer: einheitActions.deleteHelfer,
-    onCreateEinheitFahrzeug: einheitActions.createEinheitFahrzeug,
-    onUpdateEinheitFahrzeug: einheitActions.updateEinheitFahrzeug,
-    onSubmitCreateEinheit: () => void einheitActions.submitCreate(),
-    onCloseCreateEinheit: () => uiState.setShowCreateEinheitDialog(false),
-    onSubmitEditFahrzeug: () => void fahrzeugActions.submitEdit(),
-    onCloseEditFahrzeug: closeEditFahrzeugDialog,
-    onCreateEinheit: einheitActions.openCreateDialog,
-    onCreateAbschnitt: abschnittActions.openCreateDialog,
-    onCreateFahrzeug: fahrzeugActions.openCreateDialog,
-    onMoveEinheit: (id) => {
-      uiState.setMoveDialog({ type: 'einheit', id });
-      uiState.setMoveTarget(uiState.selectedAbschnittId);
-    },
-    onEditEinheit: einheitActions.openEditDialog,
-    onSplitEinheit: einheitActions.openSplitDialog,
-    onMoveFahrzeug: (id) => {
-      uiState.setMoveDialog({ type: 'fahrzeug', id });
-      uiState.setMoveTarget(uiState.selectedAbschnittId);
-    },
-    onEditFahrzeug: fahrzeugActions.openEditDialog,
-    onSaveDbPath: () => void systemActions.saveDbPath(),
-    onSetDbPath: setDbPath,
-    onRestoreBackup: () => void systemActions.restoreBackup(),
-    onToggleLanPeerUpdates: (enabled) => void systemActions.toggleLanPeerUpdates(enabled),
-    onMoveConfirm: () => void systemActions.move(),
-    onSubmitCreateAbschnitt: () => void abschnittActions.submitCreate(),
-    onCloseCreateAbschnitt: () => uiState.setShowCreateAbschnittDialog(false),
-    onSubmitEditAbschnitt: () => void abschnittActions.submitEdit(),
-    onCloseEditAbschnitt: abschnittActions.closeEditDialog,
-    onSubmitSplitEinheit: () => void einheitActions.submitSplit(),
-    onCloseSplitEinheit: () => uiState.setShowSplitEinheitDialog(false),
-    onSubmitCreateFahrzeug: () => void fahrzeugActions.submitCreate(),
-    onCloseCreateFahrzeug: () => uiState.setShowCreateFahrzeugDialog(false),
-  };
+    closeEditEinheitDialog,
+    closeEditFahrzeugDialog,
+    updaterState: rootState.updaterState,
+    abschnittActions,
+    einheitActions,
+    fahrzeugActions,
+    systemActions,
+  });
 
   return {
     showWorkspace,

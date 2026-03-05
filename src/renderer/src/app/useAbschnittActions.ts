@@ -1,7 +1,6 @@
 import { readError } from '@renderer/utils/error';
 import type { AbschnittNode } from '@shared/types';
 import type { CreateAbschnittForm, EditAbschnittForm } from '@renderer/types/ui';
-import { useCallback } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 
 interface UseAbschnittActionsProps {
@@ -28,16 +27,40 @@ interface UseAbschnittActionsProps {
  * Provides Abschnitt dialog lifecycle and create/update actions.
  */
 export function useAbschnittActions(props: UseAbschnittActionsProps) {
-  const closeEditDialog = useCallback(() => {
+  const closeEditDialog = buildCloseEditDialog(props);
+  const openCreateDialog = buildOpenCreateDialog(props);
+  const openEditSelectedDialog = buildOpenEditSelectedDialog(props);
+  const submitCreate = buildSubmitCreate(props);
+  const submitEdit = buildSubmitEdit(props);
+
+  return {
+    closeEditDialog,
+    openCreateDialog,
+    openEditSelectedDialog,
+    submitCreate,
+    submitEdit,
+  };
+}
+
+/**
+ * Creates callback for closing the Abschnitt edit dialog and releasing lock.
+ */
+function buildCloseEditDialog(props: UseAbschnittActionsProps) {
+  return () => {
     const abschnittId = props.editAbschnittForm.abschnittId;
     props.setShowEditAbschnittDialog(false);
     if (!props.selectedEinsatzId || !abschnittId) {
       return;
     }
     void props.releaseEditLock(props.selectedEinsatzId, 'ABSCHNITT', abschnittId).catch(() => undefined);
-  }, [props]);
+  };
+}
 
-  const openCreateDialog = useCallback(() => {
+/**
+ * Creates callback for opening Abschnitt create dialog.
+ */
+function buildOpenCreateDialog(props: UseAbschnittActionsProps) {
+  return () => {
     if (!props.selectedEinsatzId || props.isArchived) {
       return;
     }
@@ -47,39 +70,54 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
       parentId: props.selectedAbschnittId || '',
     });
     props.setShowCreateAbschnittDialog(true);
-  }, [props]);
+  };
+}
 
-  const openEditSelectedDialog = useCallback(() => {
-    void (async () => {
-      if (!props.selectedAbschnittId || !props.selectedEinsatzId || props.isArchived) {
-        return;
-      }
-      if (props.selectedAbschnittLockedByOther) {
-        props.setError(
-          `Datensatz wird gerade von ${props.selectedAbschnittLock?.computerName} (${props.selectedAbschnittLock?.userName}) bearbeitet.`,
-        );
-        return;
-      }
-      const current = props.abschnitte.find((item) => item.id === props.selectedAbschnittId);
-      if (!current) {
-        props.setError('Abschnitt nicht gefunden.');
-        return;
-      }
-      const acquired = await props.acquireEditLock(props.selectedEinsatzId, 'ABSCHNITT', props.selectedAbschnittId);
-      if (!acquired) {
-        return;
-      }
-      props.setEditAbschnittForm({
-        abschnittId: current.id,
-        name: current.name,
-        systemTyp: current.systemTyp,
-        parentId: current.parentId ?? '',
-      });
-      props.setShowEditAbschnittDialog(true);
-    })().catch((err) => props.setError(readError(err)));
-  }, [props]);
+/**
+ * Creates callback for opening edit dialog for selected Abschnitt.
+ */
+function buildOpenEditSelectedDialog(props: UseAbschnittActionsProps) {
+  return () => {
+    void openEditSelectedDialogAsync(props).catch((err) => props.setError(readError(err)));
+  };
+}
 
-  const submitCreate = useCallback(async () => {
+/**
+ * Opens selected Abschnitt in edit mode after lock acquisition.
+ */
+async function openEditSelectedDialogAsync(props: UseAbschnittActionsProps): Promise<void> {
+  if (!props.selectedAbschnittId || !props.selectedEinsatzId || props.isArchived) {
+    return;
+  }
+  if (props.selectedAbschnittLockedByOther) {
+    props.setError(
+      `Datensatz wird gerade von ${props.selectedAbschnittLock?.computerName} (${props.selectedAbschnittLock?.userName}) bearbeitet.`,
+    );
+    return;
+  }
+  const current = props.abschnitte.find((item) => item.id === props.selectedAbschnittId);
+  if (!current) {
+    props.setError('Abschnitt nicht gefunden.');
+    return;
+  }
+  const acquired = await props.acquireEditLock(props.selectedEinsatzId, 'ABSCHNITT', props.selectedAbschnittId);
+  if (!acquired) {
+    return;
+  }
+  props.setEditAbschnittForm({
+    abschnittId: current.id,
+    name: current.name,
+    systemTyp: current.systemTyp,
+    parentId: current.parentId ?? '',
+  });
+  props.setShowEditAbschnittDialog(true);
+}
+
+/**
+ * Creates callback for creating a new Abschnitt.
+ */
+function buildSubmitCreate(props: UseAbschnittActionsProps) {
+  return async () => {
     if (!props.selectedEinsatzId || props.isArchived) {
       return;
     }
@@ -87,7 +125,6 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
       props.setError('Bitte Namen für den Abschnitt eingeben.');
       return;
     }
-
     await props.withBusy(async () => {
       const created = await window.api.createAbschnitt({
         einsatzId: props.selectedEinsatzId,
@@ -98,9 +135,14 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
       props.setShowCreateAbschnittDialog(false);
       await props.loadEinsatz(props.selectedEinsatzId, created.id);
     });
-  }, [props]);
+  };
+}
 
-  const submitEdit = useCallback(async () => {
+/**
+ * Creates callback for saving selected Abschnitt edits.
+ */
+function buildSubmitEdit(props: UseAbschnittActionsProps) {
+  return async () => {
     if (!props.selectedEinsatzId || props.isArchived) {
       return;
     }
@@ -108,7 +150,6 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
       props.setError('Bitte Namen für den Abschnitt eingeben.');
       return;
     }
-
     await props.withBusy(async () => {
       await window.api.updateAbschnitt({
         einsatzId: props.selectedEinsatzId,
@@ -121,13 +162,5 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
       props.setShowEditAbschnittDialog(false);
       await props.loadEinsatz(props.selectedEinsatzId, props.editAbschnittForm.abschnittId);
     });
-  }, [props]);
-
-  return {
-    closeEditDialog,
-    openCreateDialog,
-    openEditSelectedDialog,
-    submitCreate,
-    submitEdit,
   };
 }

@@ -25,6 +25,47 @@ interface UseEditLocksResult {
 }
 
 /**
+ * Indexes locks by entity type.
+ */
+function indexLocksByType(editLocks: RecordEditLockInfo[], entityType: RecordEditLockType) {
+  return Object.fromEntries(editLocks.filter((lock) => lock.entityType === entityType).map((lock) => [lock.entityId, lock] as const));
+}
+
+/**
+ * Keeps owned lock heartbeats alive while editing.
+ */
+function useEditLockHeartbeat(params: {
+  sessionActive: boolean;
+  selectedEinsatzId: string;
+  ownedEditLocks: OwnedEditLock[];
+  refreshEditLocks: (einsatzId: string) => Promise<void>;
+}) {
+  const { ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive } = params;
+  useEffect(() => {
+    if (!sessionActive || !selectedEinsatzId || ownedEditLocks.length === 0) {
+      return;
+    }
+    const timer = window.setInterval(() => {
+      void (async () => {
+        for (const lock of ownedEditLocks) {
+          try {
+            await window.api.refreshEditLock({
+              einsatzId: selectedEinsatzId,
+              entityType: lock.entityType,
+              entityId: lock.entityId,
+            });
+          } catch {
+            // ignore transient refresh errors
+          }
+        }
+        await refreshEditLocks(selectedEinsatzId);
+      })();
+    }, 8000);
+    return () => window.clearInterval(timer);
+  }, [ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive]);
+}
+
+/**
  * Handles Use Edit Locks.
  */
 export function useEditLocks(params: UseEditLocksParams): UseEditLocksResult {
@@ -87,56 +128,11 @@ export function useEditLocks(params: UseEditLocksParams): UseEditLocksResult {
     setOwnedEditLocks([]);
   }, []);
 
-  const lockByEinheitId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'EINHEIT')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
-  const lockByFahrzeugId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'FAHRZEUG')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
-  const lockByAbschnittId = useMemo(
-    () =>
-      Object.fromEntries(
-        editLocks
-          .filter((lock) => lock.entityType === 'ABSCHNITT')
-          .map((lock) => [lock.entityId, lock] as const),
-      ),
-    [editLocks],
-  );
+  const lockByEinheitId = useMemo(() => indexLocksByType(editLocks, 'EINHEIT'), [editLocks]);
+  const lockByFahrzeugId = useMemo(() => indexLocksByType(editLocks, 'FAHRZEUG'), [editLocks]);
+  const lockByAbschnittId = useMemo(() => indexLocksByType(editLocks, 'ABSCHNITT'), [editLocks]);
 
-  useEffect(() => {
-    if (!sessionActive || !selectedEinsatzId || ownedEditLocks.length === 0) {
-      return;
-    }
-    const timer = window.setInterval(() => {
-      void (async () => {
-        for (const lock of ownedEditLocks) {
-          try {
-            await window.api.refreshEditLock({
-              einsatzId: selectedEinsatzId,
-              entityType: lock.entityType,
-              entityId: lock.entityId,
-            });
-          } catch {
-            // ignore transient refresh errors
-          }
-        }
-        await refreshEditLocks(selectedEinsatzId);
-      })();
-    }, 8000);
-    return () => window.clearInterval(timer);
-  }, [ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive]);
+  useEditLockHeartbeat({ sessionActive, selectedEinsatzId, ownedEditLocks, refreshEditLocks });
 
   return {
     editLocks,
