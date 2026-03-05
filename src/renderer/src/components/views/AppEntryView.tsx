@@ -3,7 +3,7 @@ import { StartView } from '@renderer/components/views/StartView';
 import type { EinsatzListItem, SessionUser, UpdaterState } from '@shared/types';
 import type { Dispatch, JSX, SetStateAction } from 'react';
 
-interface AppEntryViewProps {
+export interface AppEntryViewProps {
   authReady: boolean;
   session: SessionUser | null;
   selectedEinsatzId: string;
