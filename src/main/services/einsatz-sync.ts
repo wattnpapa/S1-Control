@@ -6,6 +6,7 @@ import type { EinsatzChangedSignal } from '../../shared/types';
 
 const DEFAULT_SYNC_PORT = Number(process.env.S1_SYNC_BROADCAST_PORT || '41235');
 const LOOPBACK_ADDRESS = '255.255.255.255';
+const MIN_BROADCAST_INTERVAL_MS = 200;
 
 interface EinsatzChangedWireMessage {
   type: 's1-einsatz-changed';
@@ -97,6 +98,10 @@ export class EinsatzSyncService {
 
   private readonly onRemoteChange: (signal: EinsatzChangedSignal) => void;
 
+  private lastBroadcastAt = 0;
+
+  private lastBroadcastKey: string | null = null;
+
   public constructor(onRemoteChange: (signal: EinsatzChangedSignal) => void, port = DEFAULT_SYNC_PORT) {
     this.onRemoteChange = onRemoteChange;
     this.port = port;
@@ -161,6 +166,19 @@ export class EinsatzSyncService {
     if (!this.socket) {
       return;
     }
+    const broadcastKey = `${input.einsatzId}:${toNormalizedPath(input.dbPath)}`;
+    const now = Date.now();
+    if (this.lastBroadcastKey === broadcastKey && now - this.lastBroadcastAt < MIN_BROADCAST_INTERVAL_MS) {
+      debugSync('einsatz-sync', 'broadcast:throttled', {
+        clientId: this.clientId,
+        einsatzId: input.einsatzId,
+        dbPath: input.dbPath,
+        reason: input.reason,
+      });
+      return;
+    }
+    this.lastBroadcastKey = broadcastKey;
+    this.lastBroadcastAt = now;
     const payload: EinsatzChangedSignal = {
       einsatzId: input.einsatzId,
       dbPath: input.dbPath,

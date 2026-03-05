@@ -4,7 +4,6 @@ import type { PeerOffer } from '../../shared/types';
 
 export const DISCOVERY_PORT = Number(process.env.S1_UPDATER_PEER_PORT || '41234');
 export const DISCOVERY_TIMEOUT_MS = 1500;
-export const DISCOVERY_MONITOR_INTERVAL_MS = 10_000;
 export const DISCOVERY_OFFER_TTL_MS = 60_000;
 
 interface PeerQuery {

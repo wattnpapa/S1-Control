@@ -9,7 +9,6 @@ import { PeerDiscoveryTracker } from './update-peer-discovery';
 import { createLocalFeedServer } from './update-peer-feed';
 import {
   broadcastQuery,
-  DISCOVERY_MONITOR_INTERVAL_MS,
   DISCOVERY_PORT,
   DISCOVERY_TIMEOUT_MS,
   nowIso,
@@ -76,8 +75,6 @@ export class UpdatePeerService {
 
   private lastTransfer: PeerTransferStats | null = null;
 
-  private discoveryTimer: NodeJS.Timeout | null = null;
-
   /**
    * Creates a peer update service instance.
    */
@@ -112,7 +109,6 @@ export class UpdatePeerService {
     fs.mkdirSync(this.cacheDir, { recursive: true });
     this.startHttpServer();
     this.startUdpSocket();
-    this.startDiscoveryMonitor();
   }
 
   /**
@@ -124,10 +120,6 @@ export class UpdatePeerService {
       pending.resolve([]);
     }
     this.pendingQueries.clear();
-    if (this.discoveryTimer) {
-      clearInterval(this.discoveryTimer);
-      this.discoveryTimer = null;
-    }
     this.socket?.close();
     this.socket = null;
     this.httpServer?.close();
@@ -317,38 +309,4 @@ export class UpdatePeerService {
     pending?.resolve(offers);
   }
 
-  /**
-   * Starts periodic passive discovery scans for debug/status view.
-   */
-  private startDiscoveryMonitor(): void {
-    if (!this.enabled || this.discoveryTimer) {
-      return;
-    }
-    this.discoveryTimer = setInterval(() => {
-      void this.scanNetworkOffers();
-    }, DISCOVERY_MONITOR_INTERVAL_MS);
-    void this.scanNetworkOffers();
-  }
-
-  /**
-   * Performs one passive discovery scan cycle.
-   */
-  private async scanNetworkOffers(): Promise<void> {
-    if (!this.enabled) {
-      return;
-    }
-    try {
-      const offers = await this.queryPeersForVersion({
-        requestId: crypto.randomUUID(),
-        versionWanted: '*',
-        platform: process.platform,
-        arch: process.arch,
-        channel: 'latest',
-      });
-      this.discoveryTracker.observe(offers);
-      debugSync('peer-discovery', 'monitor-scan', { offers: offers.length });
-    } catch (error) {
-      debugSync('peer-discovery', 'monitor-scan-failed', { message: error instanceof Error ? error.message : String(error) });
-    }
-  }
 }

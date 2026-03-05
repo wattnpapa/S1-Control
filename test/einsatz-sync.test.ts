@@ -81,6 +81,24 @@ describe('einsatz sync service', () => {
     expect(parsed.payload.einsatzId).toBe('einsatz-1');
   });
 
+  it('throttles duplicate broadcasts for the same einsatz in short succession', () => {
+    const service = new EinsatzSyncService(() => undefined, 41235);
+    service.start('/share/einsatz-a.s1control');
+
+    service.broadcastChange({
+      einsatzId: 'einsatz-1',
+      dbPath: '/share/einsatz-a.s1control',
+      reason: 'update-einheit',
+    });
+    service.broadcastChange({
+      einsatzId: 'einsatz-1',
+      dbPath: '/share/einsatz-a.s1control',
+      reason: 'update-fahrzeug',
+    });
+
+    expect(hoisted.socketMock.send).toHaveBeenCalledTimes(1);
+  });
+
   it('forwards matching remote signals and ignores self or other db paths', () => {
     const onRemoteChange = vi.fn();
     const service = new EinsatzSyncService(onRemoteChange, 41235);
