@@ -12,6 +12,12 @@ interface EinsatzChangedWireMessage {
   payload: EinsatzChangedSignal;
 }
 
+interface MatchContext {
+  sameEinsatzId: boolean;
+  sameBaseName: boolean;
+  sameDbPath: boolean;
+}
+
 /**
  * Handles To Normalized Path.
  */
@@ -43,6 +49,36 @@ function parseWireMessage(data: Buffer): EinsatzChangedWireMessage | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Computes matching flags between incoming and current DB context.
+ */
+function computeMatchContext(payload: EinsatzChangedSignal, currentDbPath: string | null, currentEinsatzId: string | null): MatchContext {
+  const incomingPath = toNormalizedPath(payload.dbPath);
+  const currentPath = currentDbPath ? toNormalizedPath(currentDbPath) : null;
+  const incomingBaseName = path.basename(payload.dbPath).toLowerCase();
+  const currentBaseName = currentDbPath ? path.basename(currentDbPath).toLowerCase() : null;
+  return {
+    sameEinsatzId: currentEinsatzId ? payload.einsatzId === currentEinsatzId : false,
+    sameBaseName: currentBaseName ? incomingBaseName === currentBaseName : false,
+    sameDbPath: currentPath ? incomingPath === currentPath : false,
+  };
+}
+
+/**
+ * Returns whether remote change should be applied locally.
+ */
+function shouldApplyRemoteChange(
+  payload: EinsatzChangedSignal,
+  currentDbPath: string | null,
+  match: MatchContext,
+  localClientId: string,
+): boolean {
+  if (payload.sourceClientId === localClientId || !currentDbPath) {
+    return false;
+  }
+  return match.sameDbPath || match.sameBaseName || match.sameEinsatzId;
 }
 
 /**
@@ -151,13 +187,7 @@ export class EinsatzSyncService {
       debugSync('einsatz-sync', 'received:invalid', { clientId: this.clientId, from: host, size: message.length });
       return;
     }
-    const incomingPath = toNormalizedPath(parsed.payload.dbPath);
-    const currentPath = this.currentDbPath ? toNormalizedPath(this.currentDbPath) : null;
-    const incomingBaseName = path.basename(parsed.payload.dbPath).toLowerCase();
-    const currentBaseName = this.currentDbPath ? path.basename(this.currentDbPath).toLowerCase() : null;
-    const sameEinsatzId = this.currentEinsatzId ? parsed.payload.einsatzId === this.currentEinsatzId : false;
-    const sameBaseName = currentBaseName ? incomingBaseName === currentBaseName : false;
-    const sameDbPath = currentPath ? incomingPath === currentPath : false;
+    const match = computeMatchContext(parsed.payload, this.currentDbPath, this.currentEinsatzId);
     debugSync('einsatz-sync', 'received', {
       clientId: this.clientId,
       from: host,
@@ -165,18 +195,12 @@ export class EinsatzSyncService {
       einsatzId: parsed.payload.einsatzId,
       reason: parsed.payload.reason,
       sameClient: parsed.payload.sourceClientId === this.clientId,
-      hasCurrentPath: Boolean(currentPath),
-      sameDbPath,
-      sameBaseName,
-      sameEinsatzId,
+      hasCurrentPath: Boolean(this.currentDbPath),
+      sameDbPath: match.sameDbPath,
+      sameBaseName: match.sameBaseName,
+      sameEinsatzId: match.sameEinsatzId,
     });
-    if (parsed.payload.sourceClientId === this.clientId) {
-      return;
-    }
-    if (!this.currentDbPath) {
-      return;
-    }
-    if (!sameDbPath && !sameBaseName && !sameEinsatzId) {
+    if (!shouldApplyRemoteChange(parsed.payload, this.currentDbPath, match, this.clientId)) {
       return;
     }
     debugSync('einsatz-sync', 'remote-change', {

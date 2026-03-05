@@ -5,6 +5,11 @@ export interface ShortcodeInference {
   confidence: number;
 }
 
+interface NormalizedNameContext {
+  normalizedName: string;
+  nameTokens: Set<string>;
+}
+
 /**
  * Handles Normalize Text.
  */
@@ -50,18 +55,112 @@ function hasAnyPattern(normalizedName: string, nameTokens: Set<string>, patterns
 }
 
 /**
- * Handles Infer THW Shortcode.
+ * Handles Build Context.
  */
-export function inferThwShortcode(nameImEinsatz: string): ShortcodeInference | null {
+function buildContext(nameImEinsatz: string): NormalizedNameContext | null {
   const normalizedName = normalizeText(nameImEinsatz);
   const nameTokens = new Set(tokenize(nameImEinsatz));
   if (!normalizedName || nameTokens.size === 0) {
     return null;
   }
+  return { normalizedName, nameTokens };
+}
+
+/**
+ * Handles Is Composite Zug Prefix.
+ */
+function detectCompositeZug(context: NormalizedNameContext): { isTechnischerZug: boolean; isFachzug: boolean } {
+  return {
+    isTechnischerZug: hasAnyPattern(context.normalizedName, context.nameTokens, ['tz', 'technischer zug']),
+    isFachzug: hasAnyPattern(context.normalizedName, context.nameTokens, ['fz', 'fachzug']),
+  };
+}
+
+/**
+ * Handles Infer FZ FK.
+ */
+function inferFachzugFk(context: NormalizedNameContext): ShortcodeInference | null {
+  if (
+    !hasAnyPattern(context.normalizedName, context.nameTokens, [
+      'fz fk',
+      'fachzug fuhrung kommunikation',
+      'fachzug fuehrung kommunikation',
+      'fuhrung kommunikation',
+    ])
+  ) {
+    return null;
+  }
+  return {
+    rule: {
+      unit: 'FZ-FK',
+      label: 'Fachzug Führung und Kommunikation',
+      typ: 'platoon',
+      patterns: [],
+    },
+    confidence: 0.9,
+  };
+}
+
+/**
+ * Handles Infer FZ Log.
+ */
+function inferFachzugLog(context: NormalizedNameContext): ShortcodeInference | null {
+  if (
+    !hasAnyPattern(context.normalizedName, context.nameTokens, [
+      'fz log',
+      'fachzug log',
+      'fachzug logistik',
+      'logistikzug',
+    ])
+  ) {
+    return null;
+  }
+  return {
+    rule: {
+      unit: 'FZ-Log',
+      label: 'Fachzug Logistik',
+      typ: 'platoon',
+      patterns: [],
+    },
+    confidence: 0.9,
+  };
+}
+
+/**
+ * Handles Infer TZ With Group.
+ */
+function inferTechnischerZugGroup(context: NormalizedNameContext): ShortcodeInference | null {
+  const groupCandidates = THW_SHORTCODE_RULES.filter((rule) => rule.typ === 'group');
+  for (const rule of groupCandidates) {
+    if (hasAnyPattern(context.normalizedName, context.nameTokens, [rule.unit, rule.label, ...rule.patterns])) {
+      return {
+        rule: {
+          unit: `TZ-${rule.unit}`,
+          label: `Technischer Zug mit Fachgruppe ${rule.label}`,
+          typ: 'platoon',
+          patterns: [],
+        },
+        confidence: 0.88,
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Handles Infer THW Shortcode.
+ */
+export function inferThwShortcode(nameImEinsatz: string): ShortcodeInference | null {
+  const context = buildContext(nameImEinsatz);
+  if (!context) {
+    return null;
+  }
 
   let best: ShortcodeInference | null = null;
   for (const rule of THW_SHORTCODE_RULES) {
-    const matchedPatterns = rule.patterns.filter((pattern) => includesPattern(normalizedName, nameTokens, pattern));
+    const matchedPatterns = rule.patterns.filter((pattern) =>
+      includesPattern(context.normalizedName, context.nameTokens, pattern),
+    );
     if (matchedPatterns.length === 0) {
       continue;
     }
@@ -77,72 +176,32 @@ export function inferThwShortcode(nameImEinsatz: string): ShortcodeInference | n
  * Handles Infer THW Composite Zug.
  */
 export function inferThwCompositeZug(nameImEinsatz: string): ShortcodeInference | null {
-  const normalizedName = normalizeText(nameImEinsatz);
-  const nameTokens = new Set(tokenize(nameImEinsatz));
-  if (!normalizedName || nameTokens.size === 0) {
+  const context = buildContext(nameImEinsatz);
+  if (!context) {
     return null;
   }
 
-  const isTechnischerZug = hasAnyPattern(normalizedName, nameTokens, ['tz', 'technischer zug']);
-  const isFachzug = hasAnyPattern(normalizedName, nameTokens, ['fz', 'fachzug']);
+  const { isTechnischerZug, isFachzug } = detectCompositeZug(context);
   if (!isTechnischerZug && !isFachzug) {
     return null;
   }
 
-  if (
-    isFachzug &&
-    hasAnyPattern(normalizedName, nameTokens, [
-      'fz fk',
-      'fachzug fuhrung kommunikation',
-      'fachzug fuehrung kommunikation',
-      'fuhrung kommunikation',
-    ])
-  ) {
-    return {
-      rule: {
-        unit: 'FZ-FK',
-        label: 'Fachzug Führung und Kommunikation',
-        typ: 'platoon',
-        patterns: [],
-      },
-      confidence: 0.9,
-    };
-  }
+  if (isFachzug) {
+    const fzFk = inferFachzugFk(context);
+    if (fzFk) {
+      return fzFk;
+    }
 
-  if (
-    isFachzug &&
-    hasAnyPattern(normalizedName, nameTokens, [
-      'fz log',
-      'fachzug log',
-      'fachzug logistik',
-      'logistikzug',
-    ])
-  ) {
-    return {
-      rule: {
-        unit: 'FZ-Log',
-        label: 'Fachzug Logistik',
-        typ: 'platoon',
-        patterns: [],
-      },
-      confidence: 0.9,
-    };
+    const fzLog = inferFachzugLog(context);
+    if (fzLog) {
+      return fzLog;
+    }
   }
 
   if (isTechnischerZug) {
-    const groupCandidates = THW_SHORTCODE_RULES.filter((rule) => rule.typ === 'group');
-    for (const rule of groupCandidates) {
-      if (hasAnyPattern(normalizedName, nameTokens, [rule.unit, rule.label, ...rule.patterns])) {
-        return {
-          rule: {
-            unit: `TZ-${rule.unit}`,
-            label: `Technischer Zug mit Fachgruppe ${rule.label}`,
-            typ: 'platoon',
-            patterns: [],
-          },
-          confidence: 0.88,
-        };
-      }
+    const tzGroup = inferTechnischerZugGroup(context);
+    if (tzGroup) {
+      return tzGroup;
     }
   }
 

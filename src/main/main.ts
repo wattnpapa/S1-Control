@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { app, BrowserWindow, dialog } from 'electron';
-import { openDatabaseWithRetry } from './db/connection';
+import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
 import { registerIpc } from './ipc/register-ipc';
 import { ensureDefaultAdmin } from './services/auth';
@@ -122,86 +122,200 @@ function resolveRendererUrl(): string {
 }
 
 /**
- * Handles Bootstrap.
+ * Applies pending file-open request from CLI args.
  */
-async function bootstrap(): Promise<void> {
+function applyInitialOpenFileFromArgs(): void {
   const initialOpenFilePath = findOpenFilePathInArgv(process.argv.slice(1));
   if (initialOpenFilePath) {
     setPendingOpenFilePath(initialOpenFilePath);
   }
+}
 
+/**
+ * Registers single-instance behavior and second-instance handlers.
+ */
+function setupSingleInstanceHandling(): boolean {
   const singleInstanceLock = app.requestSingleInstanceLock();
   if (!singleInstanceLock) {
     app.quit();
-    return;
+    return false;
   }
-
   app.on('second-instance', (_event, argv) => {
     const openPath = findOpenFilePathInArgv(argv);
     if (openPath) {
       setPendingOpenFilePath(openPath);
     }
     const win = BrowserWindow.getAllWindows()[0];
-    if (win) {
-      if (win.isMinimized()) {
-        win.restore();
-      }
-      win.focus();
+    if (!win) {
+      return;
     }
+    if (win.isMinimized()) {
+      win.restore();
+    }
+    win.focus();
   });
+  return true;
+}
 
+/**
+ * Registers macOS file-open handler.
+ */
+function setupOpenFileHandler(): void {
   app.on('open-file', (event, filePath) => {
     event.preventDefault();
     setPendingOpenFilePath(filePath);
   });
+}
 
-  await app.whenReady();
+/**
+ * Applies runtime versioning and about-panel metadata.
+ */
+function setupVersionMetadata(): string {
   const envSemver = process.env.S1_APP_SEMVER;
   if (envSemver) {
     app.setVersion(envSemver);
   }
   const versionLabel = resolveAppVersionLabel();
-
   app.setAboutPanelOptions({
     applicationName: 'S1-Control',
     applicationVersion: versionLabel,
     version: versionLabel,
     copyright: `Copyright © ${new Date().getFullYear()} Johannes Rudolph`,
   });
+  return versionLabel;
+}
 
-  const settingsStore = new SettingsStore(app.getPath('userData'));
+/**
+ * Resolves configured and fallback database paths.
+ */
+function resolveDbPaths(settingsStore: SettingsStore): {
+  defaultBaseDir: string;
+  defaultSystemDbPath: string;
+  configuredSystemDbPath: string;
+} {
   const envPath = process.env.S1_DB_PATH;
   const defaultBaseDir = path.join(app.getPath('userData'), 'einsaetze');
   const configuredRawPath = settingsStore.get().dbPath ?? envPath ?? defaultBaseDir;
   const configuredBaseDir = resolveEinsatzBaseDir(configuredRawPath);
-  const defaultSystemDbPath = resolveSystemDbPath(defaultBaseDir);
-  const configuredSystemDbPath = resolveSystemDbPath(configuredBaseDir);
-
-  let startupWarning: string | null = null;
-
-  /**
-   * Handles Open With Fallback.
-   */
-  const openWithFallback = () => {
-    try {
-      return openDatabaseWithRetry(configuredSystemDbPath);
-    } catch (initialError) {
-      const initialMessage = initialError instanceof Error ? initialError.message : String(initialError);
-      startupWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${configuredSystemDbPath}).\n${initialMessage}`;
-
-      try {
-        settingsStore.set({ dbPath: defaultBaseDir });
-        return openDatabaseWithRetry(defaultSystemDbPath);
-      } catch (fallbackError) {
-        const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
-        const tempPath = path.join(app.getPath('temp'), '_system-fallback.s1control');
-        startupWarning = `${startupWarning}\nFallback auf Standardpfad fehlgeschlagen (${defaultSystemDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`;
-        return openDatabaseWithRetry(tempPath);
-      }
-    }
+  return {
+    defaultBaseDir,
+    defaultSystemDbPath: resolveSystemDbPath(defaultBaseDir),
+    configuredSystemDbPath: resolveSystemDbPath(configuredBaseDir),
   };
+}
 
-  let dbContext = openWithFallback();
+/**
+ * Opens system DB with fallback strategy.
+ */
+function openSystemDbWithFallback(
+  settingsStore: SettingsStore,
+  paths: { defaultBaseDir: string; defaultSystemDbPath: string; configuredSystemDbPath: string },
+): { dbContext: DbContext; startupWarning: string | null } {
+  try {
+    return { dbContext: openDatabaseWithRetry(paths.configuredSystemDbPath), startupWarning: null };
+  } catch (initialError) {
+    const initialMessage = initialError instanceof Error ? initialError.message : String(initialError);
+    const firstWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${paths.configuredSystemDbPath}).\n${initialMessage}`;
+    try {
+      settingsStore.set({ dbPath: paths.defaultBaseDir });
+      return {
+        dbContext: openDatabaseWithRetry(paths.defaultSystemDbPath),
+        startupWarning: firstWarning,
+      };
+    } catch (fallbackError) {
+      const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+      const tempPath = path.join(app.getPath('temp'), '_system-fallback.s1control');
+      return {
+        dbContext: openDatabaseWithRetry(tempPath),
+        startupWarning: `${firstWarning}\nFallback auf Standardpfad fehlgeschlagen (${paths.defaultSystemDbPath}).\n${fallbackMessage}\nEs wird eine temporäre DB genutzt (${tempPath}).`,
+      };
+    }
+  }
+}
+
+/**
+ * Creates main app window.
+ */
+async function createMainWindow(): Promise<void> {
+  const win = new BrowserWindow({
+    width: 1400,
+    height: 900,
+    webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: false,
+    },
+  });
+  await win.loadURL(resolveRendererUrl());
+}
+
+/**
+ * Forwards debug sync log lines to renderer windows.
+ */
+function setupDebugSyncForwarding(): void {
+  onDebugSyncLog((line) => {
+    for (const win of BrowserWindow.getAllWindows()) {
+      win.webContents.send(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, line);
+    }
+  });
+}
+
+/**
+ * Stops long-running background services.
+ */
+function stopServices(
+  backupCoordinator: BackupCoordinator,
+  clientPresence: ClientPresenceService,
+  einsatzSync: EinsatzSyncService,
+  updater: UpdaterService,
+): void {
+  backupCoordinator.stop();
+  clientPresence.stop(true);
+  einsatzSync.stop();
+  updater.shutdown();
+}
+
+/**
+ * Registers app lifecycle handlers.
+ */
+function setupLifecycleHandlers(
+  backupCoordinator: BackupCoordinator,
+  clientPresence: ClientPresenceService,
+  einsatzSync: EinsatzSyncService,
+  updater: UpdaterService,
+): void {
+  app.on('activate', () => {
+    if (BrowserWindow.getAllWindows().length === 0) {
+      void createMainWindow();
+    }
+  });
+  app.on('window-all-closed', () => {
+    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+    app.quit();
+  });
+  app.on('before-quit', () => {
+    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+  });
+}
+
+/**
+ * Handles Bootstrap.
+ */
+async function bootstrap(): Promise<void> {
+  applyInitialOpenFileFromArgs();
+  if (!setupSingleInstanceHandling()) {
+    return;
+  }
+  setupOpenFileHandler();
+  await app.whenReady();
+  setupVersionMetadata();
+
+  const settingsStore = new SettingsStore(app.getPath('userData'));
+  const paths = resolveDbPaths(settingsStore);
+  const dbBootstrap = openSystemDbWithFallback(settingsStore, paths);
+  let dbContext = dbBootstrap.dbContext;
+  const startupWarning = dbBootstrap.startupWarning;
   ensureDefaultAdmin(dbContext);
   const clientPresence = new ClientPresenceService();
   clientPresence.start(dbContext);
@@ -238,36 +352,15 @@ async function bootstrap(): Promise<void> {
     updater,
     strengthDisplay,
     settingsStore,
-    getDefaultDbPath: () => defaultBaseDir,
+    getDefaultDbPath: () => paths.defaultBaseDir,
     consumePendingOpenFilePath,
     getSessionUser: () => currentUser,
     setSessionUser: (user) => {
       currentUser = user;
     },
   });
-
-  onDebugSyncLog((line) => {
-    for (const win of BrowserWindow.getAllWindows()) {
-      win.webContents.send(IPC_CHANNEL.DEBUG_SYNC_LOG_ADDED, line);
-    }
-  });
-
-  const createWindow = async (): Promise<void> => {
-    const win = new BrowserWindow({
-      width: 1400,
-      height: 900,
-      webPreferences: {
-        preload: path.join(__dirname, 'preload.js'),
-        contextIsolation: true,
-        nodeIntegration: false,
-        sandbox: false,
-      },
-    });
-
-    await win.loadURL(resolveRendererUrl());
-  };
-
-  await createWindow();
+  setupDebugSyncForwarding();
+  await createMainWindow();
   void updater.checkForUpdates().catch(() => undefined);
   if (startupWarning) {
     dialog.showMessageBox({
@@ -276,27 +369,7 @@ async function bootstrap(): Promise<void> {
       message: startupWarning,
     }).catch(() => undefined);
   }
-
-  app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      void createWindow();
-    }
-  });
-
-  app.on('window-all-closed', () => {
-    backupCoordinator.stop();
-    clientPresence.stop(true);
-    einsatzSync.stop();
-    updater.shutdown();
-    app.quit();
-  });
-
-  app.on('before-quit', () => {
-    backupCoordinator.stop();
-    clientPresence.stop(true);
-    einsatzSync.stop();
-    updater.shutdown();
-  });
+  setupLifecycleHandlers(backupCoordinator, clientPresence, einsatzSync, updater);
 }
 
 process.on('uncaughtException', (error) => {

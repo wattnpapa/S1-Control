@@ -43,7 +43,7 @@ export function isNoPublishedVersionsError(message: string): boolean {
 /**
  * Parses build-version date to UTC timestamp.
  */
-function parseBuildVersionDate(version: string): number | null {
+export function parseBuildVersionDate(version: string): number | null {
   const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(version.trim());
   if (!match) {
     return null;
@@ -74,7 +74,7 @@ function parseBuildVersionDate(version: string): number | null {
 /**
  * Parses semver-like date build to UTC timestamp.
  */
-function parseSemverDate(version: string): number | null {
+export function parseSemverDate(version: string): number | null {
   const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(version.trim());
   if (!match) {
     return null;
@@ -94,7 +94,7 @@ function parseSemverDate(version: string): number | null {
 /**
  * Compares semantic versions using major/minor/patch.
  */
-function compareSemver(current: string, latest: string): number {
+export function compareSemver(current: string, latest: string): number {
   const toParts = (value: string) =>
     value
       .split(/[.-]/)
@@ -116,7 +116,7 @@ function compareSemver(current: string, latest: string): number {
 /**
  * Compares build versions based on parsed UTC timestamp.
  */
-function compareBuildVersions(current: string, latest: string): number | null {
+export function compareBuildVersions(current: string, latest: string): number | null {
   const currentDate = parseBuildVersionDate(current);
   const latestDate = parseBuildVersionDate(latest);
   if (!currentDate || !latestDate) {

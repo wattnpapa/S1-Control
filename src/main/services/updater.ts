@@ -11,6 +11,11 @@ import {
   isVersionFormatError,
   toDisplayVersion,
 } from './updater-versioning';
+import {
+  configureAutoUpdaterFeed,
+  hasAutoUpdaterApi,
+  registerAutoUpdaterEvents,
+} from './updater-auto-updater';
 import { isOfflineLikeError } from './updater-network-errors';
 import { checkGitHubReleaseVersion } from './updater-github-check';
 import { tryPeerFirstDownload } from './updater-peer-flow';
@@ -194,17 +199,50 @@ export class UpdaterService {
    * Handles Configure Auto Updater.
    */
   private configureAutoUpdater(): void {
-    if (!this.hasAutoUpdaterApi()) {
+    if (!hasAutoUpdaterApi()) {
       this.autoUpdaterEnabled = false;
       this.autoUpdaterInitError = 'electron-updater API nicht verfügbar';
       return;
     }
 
     try {
-      this.configureUpdaterChannelAndFeed();
+      configureAutoUpdaterFeed(GENERIC_FEED_URL);
       autoUpdater.autoDownload = false;
       autoUpdater.autoInstallOnAppQuit = false;
-      this.registerAutoUpdaterEvents();
+      registerAutoUpdaterEvents({
+        onCheckingForUpdate: () => {
+          this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
+        },
+        onUpdateAvailable: (info) => {
+          this.pendingArtifact = toArtifactMeta(info);
+          this.setState({
+            stage: 'available',
+            latestVersion: toDisplayVersion(info.version),
+            source: 'electron-updater',
+            inAppDownloadSupported: true,
+            inAppDownloadReason: 'In-App-Download ist verfügbar.',
+          });
+        },
+        onUpdateNotAvailable: () => {
+          this.setState({
+            stage: 'not-available',
+            source: 'electron-updater',
+            inAppDownloadSupported: true,
+            inAppDownloadReason: 'In-App-Download ist verfügbar.',
+          });
+        },
+        onError: (message) => this.handleAutoUpdaterError(message),
+        onDownloadProgress: (progress) => {
+          this.setState({
+            stage: 'downloading',
+            progressPercent: progress.percent,
+            progressTransferredBytes: progress.transferred,
+            progressTotalBytes: progress.total,
+            progressBytesPerSecond: progress.bytesPerSecond,
+          });
+        },
+        onUpdateDownloaded: (version, info) => this.handleUpdateDownloaded(version, info),
+      });
       this.autoUpdaterEnabled = true;
       this.autoUpdaterInitError = null;
     } catch (error) {
@@ -216,82 +254,6 @@ export class UpdaterService {
         message: `Auto-Updater deaktiviert: ${message}`,
       });
     }
-  }
-
-  /**
-   * Checks whether electron-updater API is available.
-   */
-  private hasAutoUpdaterApi(): boolean {
-    return typeof (autoUpdater as unknown as { checkForUpdates?: unknown }).checkForUpdates === 'function';
-  }
-
-  /**
-   * Configures updater channel and optional generic feed.
-   */
-  private configureUpdaterChannelAndFeed(): void {
-    const updaterWithChannel = autoUpdater as unknown as {
-      channel?: string;
-      allowPrerelease?: boolean;
-    };
-    updaterWithChannel.channel = 'latest';
-    updaterWithChannel.allowPrerelease = false;
-
-    const maybeSetFeedUrl = (autoUpdater as unknown as {
-      setFeedURL?: (options: { provider: 'generic'; url: string }) => void;
-    }).setFeedURL;
-    if (typeof maybeSetFeedUrl !== 'function') {
-      return;
-    }
-    try {
-      maybeSetFeedUrl({ provider: 'generic', url: GENERIC_FEED_URL });
-    } catch {
-      // Ignore and continue with app-update.yml based configuration.
-    }
-  }
-
-  /**
-   * Registers all autoUpdater event handlers.
-   */
-  private registerAutoUpdaterEvents(): void {
-    autoUpdater.on('checking-for-update', () => {
-      this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
-    });
-
-    autoUpdater.on('update-available', (info) => {
-      this.pendingArtifact = toArtifactMeta(
-        info as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
-      );
-      this.setState({
-        stage: 'available',
-        latestVersion: toDisplayVersion(info.version),
-        source: 'electron-updater',
-        inAppDownloadSupported: true,
-        inAppDownloadReason: 'In-App-Download ist verfügbar.',
-      });
-    });
-
-    autoUpdater.on('update-not-available', () => {
-      this.setState({
-        stage: 'not-available',
-        source: 'electron-updater',
-        inAppDownloadSupported: true,
-        inAppDownloadReason: 'In-App-Download ist verfügbar.',
-      });
-    });
-
-    autoUpdater.on('error', (error) => this.handleAutoUpdaterError(error.message || 'Update-Fehler'));
-
-    autoUpdater.on('download-progress', (progress) => {
-      this.setState({
-        stage: 'downloading',
-        progressPercent: progress.percent,
-        progressTransferredBytes: progress.transferred,
-        progressTotalBytes: progress.total,
-        progressBytesPerSecond: progress.bytesPerSecond,
-      });
-    });
-
-    autoUpdater.on('update-downloaded', (info) => this.handleUpdateDownloaded(info.version, info as { downloadedFile?: string }));
   }
 
   /**

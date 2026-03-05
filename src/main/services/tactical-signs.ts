@@ -38,74 +38,49 @@ const vehicleTemplate = Handlebars.compile(readFileSync(vehicleTemplatePath, 'ut
 const personTemplate = Handlebars.compile(readFileSync(personTemplatePath, 'utf8'));
 const cache = new Map<string, string>();
 
+const ORGANISATION_SHORT_NAMES: Partial<Record<OrganisationKey, string>> = {
+  FEUERWEHR: 'FW',
+  POLIZEI: 'POL',
+  BUNDESWEHR: 'BW',
+  DRK: 'DRK',
+  ASB: 'ASB',
+  JOHANNITER: 'JUH',
+  MALTESER: 'MHD',
+  DLRG: 'DLRG',
+  BERGWACHT: 'BWacht',
+  RETTUNGSDIENST_KOMMUNAL: 'RD',
+  SONSTIGE: 'ORG',
+};
+
+const ORGANISATION_COLORS: Record<OrganisationKey, Pick<TemplateInput, 'color_primary' | 'color_text'>> = {
+  THW: { color_primary: '#003399', color_text: '#FFFFFF' },
+  FEUERWEHR: { color_primary: '#d61a1f', color_text: '#FFFFFF' },
+  POLIZEI: { color_primary: '#13a538', color_text: '#FFFFFF' },
+  BUNDESWEHR: { color_primary: '#7a6230', color_text: '#FFFFFF' },
+  REGIE: { color_primary: '#f39200', color_text: '#000000' },
+  DRK: { color_primary: '#FFFFFF', color_text: '#000000' },
+  ASB: { color_primary: '#FFFFFF', color_text: '#000000' },
+  JOHANNITER: { color_primary: '#FFFFFF', color_text: '#000000' },
+  MALTESER: { color_primary: '#FFFFFF', color_text: '#000000' },
+  DLRG: { color_primary: '#FFFFFF', color_text: '#000000' },
+  BERGWACHT: { color_primary: '#FFFFFF', color_text: '#000000' },
+  MHD: { color_primary: '#FFFFFF', color_text: '#000000' },
+  RETTUNGSDIENST_KOMMUNAL: { color_primary: '#FFFFFF', color_text: '#000000' },
+  SONSTIGE: { color_primary: '#4b5566', color_text: '#FFFFFF' },
+};
+
 /**
  * Handles Organisation Short Name.
  */
 function organisationShortName(organisation: OrganisationKey): string {
-  switch (organisation) {
-    case 'FEUERWEHR':
-      return 'FW';
-    case 'POLIZEI':
-      return 'POL';
-    case 'BUNDESWEHR':
-      return 'BW';
-    case 'DRK':
-      return 'DRK';
-    case 'ASB':
-      return 'ASB';
-    case 'JOHANNITER':
-      return 'JUH';
-    case 'MALTESER':
-      return 'MHD';
-    case 'DLRG':
-      return 'DLRG';
-    case 'BERGWACHT':
-      return 'BWacht';
-    case 'RETTUNGSDIENST_KOMMUNAL':
-      return 'RD';
-    case 'SONSTIGE':
-      return 'ORG';
-    default:
-      return organisation;
-  }
+  return ORGANISATION_SHORT_NAMES[organisation] ?? organisation;
 }
 
 /**
  * Handles Organisation Colors.
  */
 function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 'color_primary' | 'color_text'> {
-  switch (organisation) {
-    case 'THW':
-      return { color_primary: '#003399', color_text: '#FFFFFF' };
-    case 'FEUERWEHR':
-      return { color_primary: '#d61a1f', color_text: '#FFFFFF' };
-    case 'POLIZEI':
-      return { color_primary: '#13a538', color_text: '#FFFFFF' };
-    case 'BUNDESWEHR':
-      return { color_primary: '#7a6230', color_text: '#FFFFFF' };
-    case 'REGIE':
-      return { color_primary: '#f39200', color_text: '#000000' };
-    case 'DRK':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'ASB':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'JOHANNITER':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'MALTESER':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'DLRG':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'BERGWACHT':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'MHD':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'RETTUNGSDIENST_KOMMUNAL':
-      return { color_primary: '#FFFFFF', color_text: '#000000' };
-    case 'SONSTIGE':
-      return { color_primary: '#4b5566', color_text: '#FFFFFF' };
-    default:
-      return { color_primary: '#4b5566', color_text: '#FFFFFF' };
-  }
+  return ORGANISATION_COLORS[organisation] ?? ORGANISATION_COLORS.SONSTIGE;
 }
 
 /**

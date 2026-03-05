@@ -22,6 +22,17 @@ export interface TacticalSignCatalogItem {
 }
 
 const SETS = ((config as { sets?: SetDefinition[] }).sets ?? []).filter((set) => Array.isArray(set.symbols));
+const RETTUNGSWESEN_ORGANISATIONS = new Set<OrganisationKey>([
+  'DRK',
+  'ASB',
+  'JOHANNITER',
+  'MALTESER',
+  'DLRG',
+  'BERGWACHT',
+  'MHD',
+  'RETTUNGSDIENST_KOMMUNAL',
+]);
+const DEFAULT_SET_NAMES = ['THW Einheiten', 'Feuerwehr Einheiten', 'Rettungswesen Einheiten', 'Führungsstellen'];
 
 /**
  * Handles Normalize Text.
@@ -66,63 +77,73 @@ function inferTypByName(
  * Handles Set Names For Organisation.
  */
 function setNamesForOrganisation(organisation: OrganisationKey): string[] {
-  if (organisation === 'THW') return ['THW Einheiten'];
-  if (organisation === 'FEUERWEHR') return ['Feuerwehr Einheiten'];
-  if (
-    organisation === 'DRK' ||
-    organisation === 'ASB' ||
-    organisation === 'JOHANNITER' ||
-    organisation === 'MALTESER' ||
-    organisation === 'DLRG' ||
-    organisation === 'BERGWACHT' ||
-    organisation === 'MHD' ||
-    organisation === 'RETTUNGSDIENST_KOMMUNAL'
-  ) {
+  if (organisation === 'THW') {
+    return ['THW Einheiten'];
+  }
+  if (organisation === 'FEUERWEHR') {
+    return ['Feuerwehr Einheiten'];
+  }
+  if (RETTUNGSWESEN_ORGANISATIONS.has(organisation)) {
     return ['Rettungswesen Einheiten'];
   }
-  return ['THW Einheiten', 'Feuerwehr Einheiten', 'Rettungswesen Einheiten', 'Führungsstellen'];
+  return DEFAULT_SET_NAMES;
 }
 
 /**
- * Handles Build Catalog For Organisation.
+ * Creates catalog item for an unversioned symbol.
  */
-export function buildCatalogForOrganisation(organisation: OrganisationKey): TacticalSignCatalogItem[] {
-  const setNames = new Set(setNamesForOrganisation(organisation));
-  const items: TacticalSignCatalogItem[] = [];
+function createBaseItem(label: string, symbol: SetSymbol): TacticalSignCatalogItem {
+  return {
+    key: normalizeText(label).replace(/\s+/g, '-'),
+    label,
+    unit: symbol.unit?.trim() ?? '',
+    typ: inferTypByName(label, 'none'),
+    denominator: symbol.denominator?.trim() || undefined,
+  };
+}
 
-  for (const set of SETS) {
-    const setName = set.name ?? '';
-    if (!setNames.has(setName)) continue;
-    for (const symbol of set.symbols ?? []) {
-      const label = symbol.name?.trim();
-      if (!label) continue;
-      const variants = symbol.variants ?? {};
-      const variantEntries = Object.entries(variants);
-      if (variantEntries.length === 0) {
-        items.push({
-          key: normalizeText(label).replace(/\s+/g, '-'),
-          label,
-          unit: symbol.unit?.trim() ?? '',
-          typ: inferTypByName(label, 'none'),
-          denominator: symbol.denominator?.trim() || undefined,
-        });
-        continue;
-      }
+/**
+ * Creates catalog item for a variant symbol entry.
+ */
+function createVariantItem(label: string, symbol: SetSymbol, variantKey: string, variantLabel: string): TacticalSignCatalogItem {
+  return {
+    key: normalizeText(`${label}-${variantKey}`).replace(/\s+/g, '-'),
+    label: variantLabel,
+    unit: symbol.unit?.trim() ?? '',
+    typ: inferTypByName(variantLabel, typFromVariant(variantKey)),
+    denominator: symbol.denominator?.trim() || undefined,
+  };
+}
 
-      for (const [variantKey, variantLabel] of variantEntries) {
-        const normalizedVariantLabel = variantLabel.trim();
-        if (!normalizedVariantLabel) continue;
-        items.push({
-          key: normalizeText(`${label}-${variantKey}`).replace(/\s+/g, '-'),
-          label: normalizedVariantLabel,
-          unit: symbol.unit?.trim() ?? '',
-          typ: inferTypByName(normalizedVariantLabel, typFromVariant(variantKey)),
-          denominator: symbol.denominator?.trim() || undefined,
-        });
-      }
-    }
+/**
+ * Converts one symbol definition into catalog items.
+ */
+function buildItemsForSymbol(symbol: SetSymbol): TacticalSignCatalogItem[] {
+  const label = symbol.name?.trim();
+  if (!label) {
+    return [];
   }
 
+  const variants = Object.entries(symbol.variants ?? {});
+  if (variants.length === 0) {
+    return [createBaseItem(label, symbol)];
+  }
+
+  return variants
+    .map(([variantKey, variantLabel]) => {
+      const normalizedVariantLabel = variantLabel.trim();
+      if (!normalizedVariantLabel) {
+        return null;
+      }
+      return createVariantItem(label, symbol, variantKey, normalizedVariantLabel);
+    })
+    .filter((item): item is TacticalSignCatalogItem => Boolean(item));
+}
+
+/**
+ * Returns deduplicated and sorted catalog items.
+ */
+function dedupeAndSort(items: TacticalSignCatalogItem[]): TacticalSignCatalogItem[] {
   const dedup = new Map<string, TacticalSignCatalogItem>();
   for (const item of items) {
     const key = `${normalizeText(item.label)}|${item.unit}|${item.typ}|${item.denominator ?? ''}`;
@@ -131,6 +152,17 @@ export function buildCatalogForOrganisation(organisation: OrganisationKey): Tact
     }
   }
   return [...dedup.values()].sort((a, b) => a.label.localeCompare(b.label, 'de'));
+}
+
+/**
+ * Handles Build Catalog For Organisation.
+ */
+export function buildCatalogForOrganisation(organisation: OrganisationKey): TacticalSignCatalogItem[] {
+  const setNames = new Set(setNamesForOrganisation(organisation));
+  const items = SETS
+    .filter((set) => setNames.has(set.name ?? ''))
+    .flatMap((set) => (set.symbols ?? []).flatMap((symbol) => buildItemsForSymbol(symbol)));
+  return dedupeAndSort(items);
 }
 
 /**

@@ -3,11 +3,12 @@ import dgram from 'node:dgram';
 import fs from 'node:fs';
 import http from 'node:http';
 import { debugSync } from './debug';
+import { createPeerHttpHandler } from './update-peer-http-handler';
+import { buildPeerOfferWireMessage, matchesPeerQuery, toPeerOffer } from './update-peer-offers';
 import { PeerDiscoveryTracker } from './update-peer-discovery';
 import { createLocalFeedServer } from './update-peer-feed';
 import {
   broadcastQuery,
-  detectPrimaryIp,
   DISCOVERY_MONITOR_INTERVAL_MS,
   DISCOVERY_PORT,
   DISCOVERY_TIMEOUT_MS,
@@ -230,7 +231,15 @@ export class UpdatePeerService {
    * Starts HTTP file server endpoint for artifact transfer.
    */
   private startHttpServer(): void {
-    this.httpServer = http.createServer((req, res) => this.handleHttp(req, res));
+    this.httpServer = http.createServer(
+      createPeerHttpHandler({
+        artifacts: this.artifacts,
+        peerId: this.peerId,
+        onTransferComplete: (stats) => {
+          this.lastTransfer = stats;
+        },
+      }),
+    );
     this.httpServer.listen(0, '0.0.0.0', () => {
       const addr = this.httpServer?.address();
       this.httpPort = typeof addr === 'object' && addr ? addr.port : null;
@@ -249,46 +258,6 @@ export class UpdatePeerService {
       this.socket?.setBroadcast(true);
       debugSync('peer-service', 'udp-listen', { peerId: this.peerId, port: DISCOVERY_PORT });
     });
-  }
-
-  /**
-   * Serves artifact bytes for LAN peers.
-   */
-  private handleHttp(req: http.IncomingMessage, res: http.ServerResponse): void {
-    const requestUrl = req.url ? decodeURIComponent(req.url) : '/';
-    const artifactName = requestUrl.replace(/^\/update\//, '');
-    const artifact = this.artifacts.get(artifactName);
-    if (!requestUrl.startsWith('/update/') || !artifact || !fs.existsSync(artifact.filePath)) {
-      res.statusCode = 404;
-      res.end();
-      return;
-    }
-    res.setHeader('content-type', 'application/octet-stream');
-    res.setHeader('content-length', String(artifact.size));
-    if (req.method === 'HEAD') {
-      res.statusCode = 200;
-      res.end();
-      return;
-    }
-    const started = Date.now();
-    const stream = fs.createReadStream(artifact.filePath);
-    stream.on('error', () => {
-      res.statusCode = 500;
-      res.end();
-    });
-    stream.on('end', () => {
-      this.lastTransfer = {
-        direction: 'upload',
-        peerId: this.peerId,
-        host: detectPrimaryIp(),
-        artifactName,
-        bytes: artifact.size,
-        durationMs: Date.now() - started,
-        at: nowIso(),
-        ok: true,
-      };
-    });
-    stream.pipe(res);
   }
 
   /**
@@ -311,26 +280,15 @@ export class UpdatePeerService {
     if (!this.socket || !this.httpPort) {
       return;
     }
-    const matches = [...this.artifacts.values()].filter(
-      (item) =>
-        (query.versionWanted === '*' || item.version === query.versionWanted) &&
-        item.platform === query.platform &&
-        item.arch === query.arch &&
-        item.channel === query.channel,
-    );
+    const matches = [...this.artifacts.values()].filter((item) => matchesPeerQuery(item, query));
     for (const matching of matches) {
-      const payload: PeerOfferWireMessage = {
+      const payload: PeerOfferWireMessage = buildPeerOfferWireMessage({
         requestId: query.requestId,
         peerId: this.peerId,
-        host: detectPrimaryIp(),
         httpPort: this.httpPort,
-        version: matching.version,
-        artifactName: matching.artifactName,
-        sha512: matching.sha512,
-        size: matching.size,
-        freshnessTs: matching.freshnessTs,
-        uptimeMs: Date.now() - this.startedAt,
-      };
+        artifact: matching,
+        startedAt: this.startedAt,
+      });
       this.socket.send(JSON.stringify({ type: 's1-update-offer', payload } satisfies WireMessage), sourcePort, sourceHost);
       debugSync('peer-offer', 'sent', { requestId: query.requestId, to: sourceHost, artifact: matching.artifactName });
     }
@@ -344,17 +302,7 @@ export class UpdatePeerService {
     if (!pending || payload.peerId === this.peerId) {
       return;
     }
-    pending.offers.push({
-      peerId: payload.peerId,
-      host: payload.host,
-      httpPort: payload.httpPort,
-      version: payload.version,
-      artifactName: payload.artifactName,
-      sha512: payload.sha512,
-      size: payload.size,
-      freshnessTs: payload.freshnessTs,
-      rttMs: Date.now() - pending.startedAt,
-    });
+    pending.offers.push(toPeerOffer(payload, pending.startedAt));
     debugSync('peer-offer', 'received', { requestId: payload.requestId, from: payload.host, artifact: payload.artifactName });
   }
 

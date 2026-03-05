@@ -114,25 +114,49 @@ export function openDatabaseWithRetry(dbPath: string, retries = 12): DbContext {
       return openDatabase(dbPath);
     } catch (error) {
       lastError = error;
-      const message = error instanceof Error ? error.message : String(error);
+      const message = extractErrorMessage(error);
       debugSync('db', 'open:failed', { dbPath, attempt, message });
-      const isBusy =
-        message.includes('SQLITE_BUSY') ||
-        message.includes('SQLITE_LOCKED') ||
-        message.includes('database is locked');
-      const isOpenRace = message.includes('unable to open database file');
-      if ((!isBusy && !isOpenRace) || attempt === retries) {
+      if (!canRetryOpenError(message, attempt, retries)) {
         break;
       }
-      const waitMs = 250 * (attempt + 1);
-      Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+      waitBeforeNextAttempt(attempt);
     }
   }
 
-  const reason = lastError instanceof Error ? lastError.message : String(lastError);
-  const normalized = dbPath.toLowerCase();
-  const shareHint = normalized.startsWith('/volumes/')
+  const reason = extractErrorMessage(lastError);
+  const shareHint = buildShareHint(dbPath);
+  throw new Error(`Datenbank konnte nicht geöffnet werden (${dbPath}): ${reason}${shareHint}`);
+}
+
+/**
+ * Returns a normalized error message.
+ */
+function extractErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+/**
+ * Determines whether an open-database error is retryable.
+ */
+function canRetryOpenError(message: string, attempt: number, retries: number): boolean {
+  const isBusy = message.includes('SQLITE_BUSY') || message.includes('SQLITE_LOCKED') || message.includes('database is locked');
+  const isOpenRace = message.includes('unable to open database file');
+  return (isBusy || isOpenRace) && attempt < retries;
+}
+
+/**
+ * Waits with linear backoff before the next retry.
+ */
+function waitBeforeNextAttempt(attempt: number): void {
+  const waitMs = 250 * (attempt + 1);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, waitMs);
+}
+
+/**
+ * Builds user hint for network-share paths.
+ */
+function buildShareHint(dbPath: string): string {
+  return dbPath.toLowerCase().startsWith('/volumes/')
     ? ' Hinweis: SMB-Share muss fuer beide Clients mit Lese/Schreibrechten gemountet sein.'
     : '';
-  throw new Error(`Datenbank konnte nicht geöffnet werden (${dbPath}): ${reason}${shareHint}`);
 }

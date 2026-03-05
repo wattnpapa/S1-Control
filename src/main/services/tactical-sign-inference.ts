@@ -17,6 +17,15 @@ export interface TacticalInferenceResult {
   matchedLabel?: string;
 }
 
+type InferenceMatch = {
+  confidence: number;
+  matchedKey?: string;
+  matchedLabel?: string;
+  unit?: string;
+  typ?: TacticalSignConfig['typ'];
+  denominator?: string;
+};
+
 /**
  * Handles Build Meta.
  */
@@ -39,126 +48,109 @@ function buildMeta(input: {
 }
 
 /**
- * Handles Infer Tactical Sign Config.
+ * Builds common base config for inferred signs.
  */
-export function inferTacticalSignConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalInferenceResult {
-  if (organisation === 'THW') {
-    const composite = inferThwCompositeZug(nameImEinsatz);
-    if (composite) {
-      const matchedKey = `thw-zug-${normalizeText(composite.rule.unit).replace(/\s+/g, '-')}`;
-      return {
-        confidence: composite.confidence,
-        matchedKey,
-        matchedLabel: composite.rule.label,
-        config: {
-          grundform: 'taktische_formation',
-          fachaufgabe: 'keine',
-          organisation,
-          einheit: 'keine',
-          verwaltungsstufe: 'keine',
-          symbol: 'keines',
-          text: '',
-          name: nameImEinsatz,
-          organisationsname: organisation,
-          unit: composite.rule.unit,
-          typ: composite.rule.typ,
-          meta: buildMeta({
-            source: 'auto',
-            rawName: nameImEinsatz,
-            confidence: composite.confidence,
-            matchedKey,
-            matchedLabel: composite.rule.label,
-          }),
-        },
-      };
-    }
+function buildDefaultConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalSignConfig {
+  return {
+    grundform: 'taktische_formation',
+    fachaufgabe: 'keine',
+    organisation,
+    einheit: 'keine',
+    verwaltungsstufe: 'keine',
+    symbol: 'keines',
+    text: '',
+    name: nameImEinsatz,
+    organisationsname: organisation,
+  };
+}
 
-    const thwShortcode = inferThwShortcode(nameImEinsatz);
-    if (thwShortcode) {
-      const matchedKey = `thw-shortcode-${normalizeText(thwShortcode.rule.unit).replace(/\s+/g, '-')}`;
-      return {
-        confidence: thwShortcode.confidence,
-        matchedKey,
-        matchedLabel: thwShortcode.rule.label,
-        config: {
-          grundform: 'taktische_formation',
-          fachaufgabe: 'keine',
-          organisation,
-          einheit: 'keine',
-          verwaltungsstufe: 'keine',
-          symbol: 'keines',
-          text: '',
-          name: nameImEinsatz,
-          organisationsname: organisation,
-          unit: thwShortcode.rule.unit,
-          typ: thwShortcode.rule.typ,
-          meta: buildMeta({
-            source: 'auto',
-            rawName: nameImEinsatz,
-            confidence: thwShortcode.confidence,
-            matchedKey,
-            matchedLabel: thwShortcode.rule.label,
-          }),
-        },
-      };
-    }
-  }
+/**
+ * Creates result payload for tactical inference.
+ */
+function buildInferenceResult(
+  nameImEinsatz: string,
+  organisation: OrganisationKey,
+  match: InferenceMatch,
+): TacticalInferenceResult {
+  return {
+    confidence: match.confidence,
+    matchedKey: match.matchedKey,
+    matchedLabel: match.matchedLabel,
+    config: {
+      ...buildDefaultConfig(nameImEinsatz, organisation),
+      unit: match.unit ?? '',
+      typ: match.typ ?? 'none',
+      denominator: match.denominator,
+      meta: buildMeta({
+        source: 'auto',
+        rawName: nameImEinsatz,
+        confidence: match.confidence,
+        matchedKey: match.matchedKey,
+        matchedLabel: match.matchedLabel,
+      }),
+    },
+  };
+}
 
-  const catalog = buildCatalogForOrganisation(organisation);
-  const ranked = rankCatalogCandidates(nameImEinsatz, catalog);
-  const best = ranked[0];
-  const confidence = best?.score ?? 0;
-
-  if (!best || confidence < AUTO_THRESHOLD) {
+/**
+ * Applies THW-specific shorthand inference rules.
+ */
+function inferThwSpecific(nameImEinsatz: string): InferenceMatch | null {
+  const composite = inferThwCompositeZug(nameImEinsatz);
+  if (composite) {
     return {
-      confidence,
-      config: {
-        grundform: 'taktische_formation',
-        fachaufgabe: 'keine',
-        organisation,
-        einheit: 'keine',
-        verwaltungsstufe: 'keine',
-        symbol: 'keines',
-        text: '',
-        name: nameImEinsatz,
-        organisationsname: organisation,
-        unit: '',
-        typ: 'none',
-        meta: buildMeta({
-          source: 'auto',
-          rawName: nameImEinsatz,
-          confidence,
-        }),
-      },
+      confidence: composite.confidence,
+      matchedKey: `thw-zug-${normalizeText(composite.rule.unit).replace(/\s+/g, '-')}`,
+      matchedLabel: composite.rule.label,
+      unit: composite.rule.unit,
+      typ: composite.rule.typ,
     };
   }
 
+  const shortcode = inferThwShortcode(nameImEinsatz);
+  if (!shortcode) {
+    return null;
+  }
+  return {
+    confidence: shortcode.confidence,
+    matchedKey: `thw-shortcode-${normalizeText(shortcode.rule.unit).replace(/\s+/g, '-')}`,
+    matchedLabel: shortcode.rule.label,
+    unit: shortcode.rule.unit,
+    typ: shortcode.rule.typ,
+  };
+}
+
+/**
+ * Infers tactical sign from configured catalog entries.
+ */
+function inferFromCatalog(nameImEinsatz: string, organisation: OrganisationKey): InferenceMatch {
+  const ranked = rankCatalogCandidates(nameImEinsatz, buildCatalogForOrganisation(organisation));
+  const best = ranked[0];
+  const confidence = best?.score ?? 0;
+  if (!best || confidence < AUTO_THRESHOLD) {
+    return { confidence };
+  }
   return {
     confidence,
     matchedKey: best.key,
     matchedLabel: best.label,
-    config: {
-      grundform: 'taktische_formation',
-      fachaufgabe: 'keine',
-      organisation,
-      einheit: 'keine',
-      verwaltungsstufe: 'keine',
-      symbol: 'keines',
-      text: '',
-      name: nameImEinsatz,
-      organisationsname: organisation,
-      unit: best.unit,
-      typ: best.typ,
-      denominator: best.denominator,
-      meta: buildMeta({
-        source: 'auto',
-        rawName: nameImEinsatz,
-        confidence,
-        matchedKey: best.key,
-        matchedLabel: best.label,
-      }),
-    },
+    unit: best.unit,
+    typ: best.typ,
+    denominator: best.denominator,
   };
+}
+
+/**
+ * Handles Infer Tactical Sign Config.
+ */
+export function inferTacticalSignConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalInferenceResult {
+  if (organisation === 'THW') {
+    const thwMatch = inferThwSpecific(nameImEinsatz);
+    if (thwMatch) {
+      return buildInferenceResult(nameImEinsatz, organisation, thwMatch);
+    }
+  }
+  return buildInferenceResult(nameImEinsatz, organisation, inferFromCatalog(nameImEinsatz, organisation));
 }
 
 /**
