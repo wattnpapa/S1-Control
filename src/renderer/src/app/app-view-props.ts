@@ -189,7 +189,7 @@ function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorksp
 /**
  * Creates workspace callback props.
  */
-function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): Pick<
+type WorkspaceCallbacks = Pick<
   AppWorkspaceShellProps,
   | 'onOpenStrengthDisplay'
   | 'onCloseStrengthDisplay'
@@ -229,7 +229,9 @@ function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): Pick<
   | 'onCloseSplitEinheit'
   | 'onSubmitCreateFahrzeug'
   | 'onCloseCreateFahrzeug'
-> {
+>;
+
+function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): WorkspaceCallbacks {
   const closeCallbacks = buildWorkspaceCloseCallbacks(args);
   const moveCallbacks = buildWorkspaceMoveCallbacks(args);
   const storageCallbacks = buildWorkspaceStorageCallbacks(args);

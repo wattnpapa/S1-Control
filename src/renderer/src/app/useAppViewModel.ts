@@ -24,6 +24,13 @@ function createWorkspaceShellProps(params: Parameters<typeof buildWorkspaceProps
 }
 
 /**
+ * Returns whether entry flow should be rendered instead of workspace.
+ */
+function isEntryOnlyState(rootState: ReturnType<typeof useAppCoreState>): boolean {
+  return !rootState.authReady || !rootState.session || !rootState.selectedEinsatzId;
+}
+
+/**
  * Maps view-model context to workspace prop builder input.
  */
 function toWorkspaceBuilderArgs(params: {
@@ -70,6 +77,33 @@ function toWorkspaceBuilderArgs(params: {
 }
 
 /**
+ * Creates entry props from current root/ui state and action bundles.
+ */
+function buildEntryViewProps(params: {
+  rootState: ReturnType<typeof useAppCoreState>;
+  uiState: ReturnType<typeof useWorkspaceUiState>;
+  startActions: ReturnType<typeof useAppControllers>['startActions'];
+  systemActions: ReturnType<typeof useAppControllers>['systemActions'];
+}): AppEntryViewProps {
+  return buildEntryProps({
+    authReady: params.rootState.authReady,
+    session: params.rootState.session,
+    selectedEinsatzId: params.rootState.selectedEinsatzId,
+    updaterState: params.rootState.updaterState,
+    busy: params.rootState.busy,
+    error: params.rootState.error,
+    einsaetze: params.rootState.einsaetze,
+    uiState: params.uiState,
+    checkForUpdates: () => void params.systemActions.checkForUpdates(),
+    downloadUpdate: () => void params.systemActions.downloadUpdate(),
+    openReleasePage: () => void params.systemActions.openReleasePage(),
+    openExisting: () => void params.startActions.openExisting(),
+    openKnownEinsatz: (einsatzId) => void params.startActions.openKnown(einsatzId),
+    createEinsatz: () => void params.startActions.create(),
+  });
+}
+
+/**
  * Builds all state, actions and view props for app root rendering.
  */
 export function useAppViewModel(): AppViewModel {
@@ -110,24 +144,14 @@ export function useAppViewModel(): AppViewModel {
     refreshEinsaetze,
   });
 
-  const entryProps = buildEntryProps({
-    authReady: rootState.authReady,
-    session: rootState.session,
-    selectedEinsatzId: rootState.selectedEinsatzId,
-    updaterState: rootState.updaterState,
-    busy: rootState.busy,
-    error: rootState.error,
-    einsaetze: rootState.einsaetze,
+  const entryProps = buildEntryViewProps({
+    rootState,
     uiState,
-    checkForUpdates: () => void systemActions.checkForUpdates(),
-    downloadUpdate: () => void systemActions.downloadUpdate(),
-    openReleasePage: () => void systemActions.openReleasePage(),
-    openExisting: () => void startActions.openExisting(),
-    openKnownEinsatz: (einsatzId) => void startActions.openKnown(einsatzId),
-    createEinsatz: () => void startActions.create(),
+    startActions,
+    systemActions,
   });
 
-  if (!rootState.authReady || !rootState.session || !rootState.selectedEinsatzId) {
+  if (isEntryOnlyState(rootState)) {
     return {
       showWorkspace: false,
       entryProps,
