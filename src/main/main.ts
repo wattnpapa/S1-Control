@@ -1,4 +1,5 @@
 import { app, BrowserWindow, dialog } from 'electron';
+import path from 'node:path';
 import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
 import { registerIpc } from './ipc/register-ipc';
