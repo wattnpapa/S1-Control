@@ -1,27 +1,26 @@
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'node:fs';
-import os from 'node:os';
 import crypto from 'node:crypto';
 import path from 'node:path';
 import type { PeerArtifact, PeerOffer, PeerUpdateStatus, UpdaterState } from '../../shared/types';
 import { debugSync } from './debug';
 import { UpdatePeerService, selectBestOffers } from './update-peer';
+import { resolveDownloadedArtifactPath, toArtifactMeta } from './updater-artifact';
+import {
+  compareVersions,
+  isNoPublishedVersionsError,
+  isVersionFormatError,
+  normalizeVersion,
+  toDisplayVersion,
+} from './updater-versioning';
 
 const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
 const LAN_PEER_ENABLED_DEFAULT = process.env.S1_UPDATER_LAN_PEER === '1';
 
-interface UpdateArtifactMeta {
-  version: string;
-  platform: string;
-  arch: string;
-  channel: string;
-  artifactName: string;
-  sha512: string;
-  size: number;
-}
+type UpdateArtifactMeta = NonNullable<ReturnType<typeof toArtifactMeta>>;
 
 /**
  * Handles Now Iso.
@@ -135,12 +134,12 @@ export class UpdaterService {
       const result = await autoUpdater.checkForUpdates();
       this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
-      this.pendingArtifact = this.toArtifactMeta(
+      this.pendingArtifact = toArtifactMeta(
         result?.updateInfo as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
       );
       if (latestVersion) {
         this.setState({
-          latestVersion: this.toDisplayVersion(latestVersion),
+          latestVersion: toDisplayVersion(latestVersion),
           source: 'electron-updater',
           inAppDownloadSupported: true,
           inAppDownloadReason: 'In-App-Download ist verfügbar.',
@@ -151,7 +150,7 @@ export class UpdaterService {
       }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (this.isNoPublishedVersionsError(message)) {
+      if (isNoPublishedVersionsError(message)) {
         await this.checkGitHubReleaseVersion(
           'Noch keine veröffentlichte Release-Metadaten für In-App-Download verfügbar.',
         );
@@ -161,7 +160,7 @@ export class UpdaterService {
         this.setState({ stage: 'idle' });
         return;
       }
-      if (this.isVersionFormatError(message)) {
+      if (isVersionFormatError(message)) {
         await this.checkGitHubReleaseVersion(
           `In-App-Download nicht möglich: ${message}`,
         );
@@ -256,12 +255,12 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-available', (info) => {
-        this.pendingArtifact = this.toArtifactMeta(
+        this.pendingArtifact = toArtifactMeta(
           info as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
         );
         this.setState({
           stage: 'available',
-          latestVersion: this.toDisplayVersion(info.version),
+          latestVersion: toDisplayVersion(info.version),
           source: 'electron-updater',
           inAppDownloadSupported: true,
           inAppDownloadReason: 'In-App-Download ist verfügbar.',
@@ -279,7 +278,7 @@ export class UpdaterService {
 
       autoUpdater.on('error', (error) => {
         const message = error.message || 'Update-Fehler';
-        if (this.isNoPublishedVersionsError(message)) {
+        if (isNoPublishedVersionsError(message)) {
           this.setState({
             stage: 'not-available',
             source: 'github-release',
@@ -307,9 +306,11 @@ export class UpdaterService {
       });
 
       autoUpdater.on('update-downloaded', (info) => {
-        const localArtifact = this.resolveDownloadedArtifactPath(
+        const localArtifact = resolveDownloadedArtifactPath(
           this.pendingArtifact?.artifactName,
-          info as { downloadedFile?: string },
+          (info as { downloadedFile?: string }).downloadedFile,
+          this.updateCacheDir,
+          app.getPath('userData'),
         );
         if (this.pendingArtifact && localArtifact) {
           this.peerService?.announceLocalArtifacts([
@@ -322,7 +323,7 @@ export class UpdaterService {
         }
         this.setState({
           stage: 'downloaded',
-          latestVersion: this.toDisplayVersion(info.version),
+          latestVersion: toDisplayVersion(info.version),
           progressPercent: 100,
           progressTransferredBytes: this.state.progressTotalBytes ?? this.state.progressTransferredBytes,
           source: 'electron-updater',
@@ -379,7 +380,7 @@ export class UpdaterService {
       }
 
       const payload = (await response.json()) as { tag_name?: string; name?: string };
-      const latestVersion = this.normalizeVersion(payload.tag_name || payload.name || '');
+      const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
       const currentVersion = this.resolveDisplayVersion();
 
       if (!latestVersion) {
@@ -392,7 +393,7 @@ export class UpdaterService {
         return;
       }
 
-      const compare = this.compareVersions(currentVersion, latestVersion);
+      const compare = compareVersions(currentVersion, latestVersion);
       if (compare === null) {
         this.setState({
           stage: 'not-available',
@@ -543,207 +544,6 @@ export class UpdaterService {
     }
   }
 
-  private toArtifactMeta(
-    info?: { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> },
-  ): UpdateArtifactMeta | null {
-    const version = info?.version ? this.normalizeVersion(info.version) : '';
-    const file = info?.files?.[0];
-    const fileUrl = file?.url ?? '';
-    const artifactName = fileUrl ? path.basename(fileUrl.split('?')[0] || '') : '';
-    const sha512 = file?.sha512 ?? '';
-    if (!version || !artifactName || !sha512) {
-      return null;
-    }
-    return {
-      version,
-      platform: process.platform,
-      arch: process.arch,
-      channel: 'latest',
-      artifactName,
-      sha512,
-      size: Number(file?.size ?? 0),
-    };
-  }
-
-  private resolveDownloadedArtifactPath(
-    artifactName: string | undefined,
-    info?: { downloadedFile?: string },
-  ): string | null {
-    const direct = info?.downloadedFile;
-    if (direct && existsSync(direct)) {
-      return direct;
-    }
-    if (!artifactName) {
-      return null;
-    }
-    const candidates = [
-      path.join(this.updateCacheDir, artifactName),
-      path.join(app.getPath('userData'), 'pending', artifactName),
-      path.join(os.tmpdir(), artifactName),
-    ];
-    for (const candidate of candidates) {
-      if (existsSync(candidate)) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  /**
-   * Handles Normalize Version.
-   */
-  private normalizeVersion(version: string): string {
-    return version.trim().replace(/^v/i, '');
-  }
-
-  /**
-   * Handles Is Semver Version.
-   */
-  private isSemverVersion(version: string): boolean {
-    return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/.test(version.trim());
-  }
-
-  /**
-   * Handles Is Version Format Error.
-   */
-  private isVersionFormatError(message: string): boolean {
-    const lower = message.toLowerCase();
-    return (
-      lower.includes('semver') ||
-      lower.includes('invalid version') ||
-      lower.includes('not a valid semver') ||
-      lower.includes('is not valid semver') ||
-      lower.includes('version is not valid')
-    );
-  }
-
-  /**
-   * Handles Is Build Version.
-   */
-  private isBuildVersion(version: string): boolean {
-    return /^\d{4}\.\d{2}\.\d{2}\.\d{2}\.\d{2}$/.test(version.trim());
-  }
-
-  /**
-   * Handles Is No Published Versions Error.
-   */
-  private isNoPublishedVersionsError(message: string): boolean {
-    return message.toLowerCase().includes('no published versions on github');
-  }
-
-  /**
-   * Handles Compare Versions.
-   */
-  private compareVersions(current: string, latest: string): number | null {
-    if (this.isSemverVersion(current) && this.isSemverVersion(latest)) {
-      return this.compareSemver(current, latest);
-    }
-    if (this.isBuildVersion(current) && this.isBuildVersion(latest)) {
-      return this.compareBuildVersions(current, latest);
-    }
-    if (this.isSemverVersion(current) && this.isBuildVersion(latest)) {
-      const currentDate = this.parseSemverDate(current);
-      const latestDate = this.parseBuildVersionDate(latest);
-      if (currentDate === null || latestDate === null) {
-        return null;
-      }
-      if (currentDate < latestDate) return -1;
-      if (currentDate > latestDate) return 1;
-      return 0;
-    }
-    return null;
-  }
-
-  /**
-   * Handles Compare Semver.
-   */
-  private compareSemver(current: string, latest: string): number {
-    /**
-     * Handles To Parts.
-     */
-    const toParts = (value: string) =>
-      value
-        .split(/[.-]/)
-        .slice(0, 3)
-        .map((part) => Number(part));
-
-    const currentParts = toParts(current);
-    const latestParts = toParts(latest);
-
-    for (let i = 0; i < 3; i += 1) {
-      const a = currentParts[i] ?? 0;
-      const b = latestParts[i] ?? 0;
-      if (a < b) return -1;
-      if (a > b) return 1;
-    }
-    return 0;
-  }
-
-  /**
-   * Handles Compare Build Versions.
-   */
-  private compareBuildVersions(current: string, latest: string): number | null {
-    const currentDate = this.parseBuildVersionDate(current);
-    const latestDate = this.parseBuildVersionDate(latest);
-    if (!currentDate || !latestDate) {
-      return null;
-    }
-    if (currentDate < latestDate) return -1;
-    if (currentDate > latestDate) return 1;
-    return 0;
-  }
-
-  /**
-   * Handles Parse Build Version Date.
-   */
-  private parseBuildVersionDate(version: string): number | null {
-    const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(version.trim());
-    if (!match) {
-      return null;
-    }
-
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const hour = Number(match[4]);
-    const minute = Number(match[5]);
-    const timestamp = Date.UTC(year, month, day, hour, minute, 0, 0);
-    if (Number.isNaN(timestamp)) {
-      return null;
-    }
-    const check = new Date(timestamp);
-    if (
-      check.getUTCFullYear() !== year ||
-      check.getUTCMonth() !== month ||
-      check.getUTCDate() !== day ||
-      check.getUTCHours() !== hour ||
-      check.getUTCMinutes() !== minute
-    ) {
-      return null;
-    }
-    return timestamp;
-  }
-
-  /**
-   * Handles Parse Semver Date.
-   */
-  private parseSemverDate(version: string): number | null {
-    const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(version.trim());
-    if (!match) {
-      return null;
-    }
-    const year = Number(match[1]);
-    const month = Number(match[2]) - 1;
-    const day = Number(match[3]);
-    const hour = Number(match[4]);
-    const minute = Number(match[5]);
-    const timestamp = Date.UTC(year, month, day, hour, minute, 0, 0);
-    if (Number.isNaN(timestamp)) {
-      return null;
-    }
-    return timestamp;
-  }
-
   /**
    * Handles Resolve Display Version.
    */
@@ -752,25 +552,7 @@ export class UpdaterService {
     if (envVersion) {
       return envVersion;
     }
-    return this.toDisplayVersion(app.getVersion());
-  }
-
-  /**
-   * Handles To Display Version.
-   */
-  private toDisplayVersion(version: string): string {
-    const normalized = this.normalizeVersion(version);
-    const parsed = this.parseSemverDate(normalized);
-    if (parsed === null) {
-      return normalized;
-    }
-    const date = new Date(parsed);
-    const year = date.getUTCFullYear();
-    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(date.getUTCDate()).padStart(2, '0');
-    const hour = String(date.getUTCHours()).padStart(2, '0');
-    const minute = String(date.getUTCMinutes()).padStart(2, '0');
-    return `${year}.${month}.${day}.${hour}.${minute}`;
+    return toDisplayVersion(app.getVersion());
   }
 
   /**
