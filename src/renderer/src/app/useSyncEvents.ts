@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react';
+import type { MutableRefObject } from 'react';
 import type {
   ActiveClientInfo,
   AbschnittDetails,
@@ -35,34 +36,10 @@ interface UseSyncEventsOptions {
 }
 
 /**
- * Wires runtime sync, polling and broadcast-driven refresh flows.
+ * Polls selected Einsatz to keep distributed state aligned.
  */
-export function useSyncEvents(options: UseSyncEventsOptions): void {
-  const {
-    session,
-    authReady,
-    busy,
-    activeView,
-    selectedEinsatzId,
-    selectedAbschnittId,
-    queuedOpenFilePath,
-    setQueuedOpenFilePath,
-    setError,
-    setDetails,
-    setActiveClients,
-    setDbPath,
-    setLanPeerUpdatesEnabled,
-    setPeerUpdateStatus,
-    setDebugSyncLogs,
-    setEinsaetze,
-    setSelectedEinsatzId,
-    setStartChoice,
-    loadEinsatz,
-    refreshAll,
-    withBusy,
-  } = options;
-  const lastRemoteRefreshAtRef = useRef(0);
-
+function usePeriodicRefreshEffect(options: UseSyncEventsOptions): void {
+  const { refreshAll, selectedEinsatzId, session } = options;
   useEffect(() => {
     if (!session || !selectedEinsatzId) {
       return;
@@ -72,7 +49,13 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
     }, 6000);
     return () => window.clearInterval(timer);
   }, [refreshAll, selectedEinsatzId, session]);
+}
 
+/**
+ * Loads selected Abschnitt details when selection changes.
+ */
+function useAbschnittDetailsEffect(options: UseSyncEventsOptions): void {
+  const { selectedAbschnittId, selectedEinsatzId, session, setDetails, setError } = options;
   useEffect(() => {
     if (!session || !selectedEinsatzId || !selectedAbschnittId) {
       return;
@@ -85,14 +68,18 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
       }
     })();
   }, [selectedAbschnittId, selectedEinsatzId, session, setDetails, setError]);
+}
 
+/**
+ * Refreshes settings/peer/client state while settings view is active.
+ */
+function useSettingsViewSyncEffect(options: UseSyncEventsOptions): void {
+  const { activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus } =
+    options;
   useEffect(() => {
     if (!session || !selectedEinsatzId || activeView !== 'einstellungen') {
       return;
     }
-    /**
-     * Loads settings-page runtime data from the main process.
-     */
     const loadClients = async () => {
       try {
         const [clients, settings, peerStatus] = await Promise.all([
@@ -113,17 +100,25 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
       void loadClients();
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [
-    activeView,
-    selectedEinsatzId,
-    session,
-    setActiveClients,
-    setDbPath,
-    setError,
-    setLanPeerUpdatesEnabled,
-    setPeerUpdateStatus,
-  ]);
+  }, [activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus]);
+}
 
+/**
+ * Opens queued file path once session/bootstrap are ready.
+ */
+function useQueuedFileOpenEffect(options: UseSyncEventsOptions): void {
+  const {
+    authReady,
+    busy,
+    loadEinsatz,
+    queuedOpenFilePath,
+    session,
+    setEinsaetze,
+    setQueuedOpenFilePath,
+    setSelectedEinsatzId,
+    setStartChoice,
+    withBusy,
+  } = options;
   useEffect(() => {
     if (!session || !authReady || busy || !queuedOpenFilePath) {
       return;
@@ -149,7 +144,12 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
     setStartChoice,
     withBusy,
   ]);
+}
 
+/**
+ * Subscribes live debug lines from main process sync logs.
+ */
+function useDebugLogSubscriptionEffect(setDebugSyncLogs: UseSyncEventsOptions['setDebugSyncLogs']): void {
   useEffect(() => {
     const unsubscribe = window.appEvents.onDebugSyncLog((line) => {
       setDebugSyncLogs((prev) => {
@@ -159,7 +159,13 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
     });
     return () => unsubscribe();
   }, [setDebugSyncLogs]);
+}
 
+/**
+ * Refreshes state on remote change broadcast for current Einsatz.
+ */
+function useEinsatzChangedEffect(options: UseSyncEventsOptions, lastRemoteRefreshAtRef: MutableRefObject<number>): void {
+  const { refreshAll, selectedEinsatzId, session, setError } = options;
   useEffect(() => {
     const unsubscribe = window.appEvents.onEinsatzChanged((signal) => {
       if (!session || !selectedEinsatzId || signal.einsatzId !== selectedEinsatzId) {
@@ -175,8 +181,14 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
       });
     });
     return () => unsubscribe();
-  }, [refreshAll, selectedEinsatzId, session, setError]);
+  }, [refreshAll, selectedEinsatzId, session, setError, lastRemoteRefreshAtRef]);
+}
 
+/**
+ * Loads existing debug lines once session is active.
+ */
+function useInitialDebugLogLoadEffect(options: UseSyncEventsOptions): void {
+  const { session, setDebugSyncLogs, setError } = options;
   useEffect(() => {
     if (!session) {
       return;
@@ -190,4 +202,19 @@ export function useSyncEvents(options: UseSyncEventsOptions): void {
       }
     })();
   }, [session, setDebugSyncLogs, setError]);
+}
+
+/**
+ * Wires runtime sync, polling and broadcast-driven refresh flows.
+ */
+export function useSyncEvents(options: UseSyncEventsOptions): void {
+  const lastRemoteRefreshAtRef = useRef(0);
+
+  usePeriodicRefreshEffect(options);
+  useAbschnittDetailsEffect(options);
+  useSettingsViewSyncEffect(options);
+  useQueuedFileOpenEffect(options);
+  useDebugLogSubscriptionEffect(options.setDebugSyncLogs);
+  useEinsatzChangedEffect(options, lastRemoteRefreshAtRef);
+  useInitialDebugLogLoadEffect(options);
 }

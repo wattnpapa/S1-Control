@@ -12,6 +12,18 @@ interface UpdaterOverlayProps {
 }
 
 /**
+ * Builds human readable update source suffix.
+ */
+function formatUpdateSourceSuffix(updaterState: UpdaterState): string {
+  const sourceLabel = updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release';
+  const peerLabel =
+    updaterState.downloadSource === 'peer-lan' && updaterState.peerHost ? ` LAN-Peer: ${updaterState.peerHost}.` : '';
+  const fallbackLabel = updaterState.downloadSource === 'internet' ? ' Fallback: Internet.' : '';
+  const messageLabel = updaterState.message ? ` ${updaterState.message}` : '';
+  return `Quelle: ${sourceLabel}.${peerLabel}${fallbackLabel}${messageLabel}`;
+}
+
+/**
  * Handles Format Bytes To Mb.
  */
 function formatBytesToMb(bytes?: number): string {
@@ -52,41 +64,40 @@ function formatEtaSeconds(seconds?: number): string {
  */
 export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
   const { updaterState, busy } = props;
+  if (updaterState.stage === 'error') {
+    return <div className="error-banner">Update-Fehler: {updaterState.message}</div>;
+  }
+  if (updaterState.stage === 'unsupported') {
+    return (
+      <div className="update-banner">
+        <span>{updaterState.message}</span>
+        <button onClick={props.onOpenReleasePage} disabled={busy}>
+          Release-Seite öffnen
+        </button>
+      </div>
+    );
+  }
+  if (updaterState.stage !== 'available') {
+    return <></>;
+  }
+
+  const versionLabel = updaterState.latestVersion ? `(${updaterState.latestVersion})` : '';
   return (
-    <>
-      {updaterState.stage === 'available' && (
-        <div className="update-banner">
-          <span>
-            Update verfügbar {updaterState.latestVersion ? `(${updaterState.latestVersion})` : ''}. Quelle:{' '}
-            {updaterState.source === 'electron-updater' ? 'In-App' : 'GitHub Release'}.
-            {updaterState.downloadSource === 'peer-lan' && updaterState.peerHost
-              ? ` LAN-Peer: ${updaterState.peerHost}.`
-              : ''}
-            {updaterState.downloadSource === 'internet' ? ' Fallback: Internet.' : ''}
-            {updaterState.message ? ` ${updaterState.message}` : ''}
-          </span>
-          <div className="update-actions">
-            {updaterState.inAppDownloadSupported && (
-              <button onClick={props.onDownloadUpdate} disabled={busy}>
-                Update herunterladen
-              </button>
-            )}
-            <button onClick={props.onOpenReleasePage} disabled={busy}>
-              Release-Seite öffnen
-            </button>
-          </div>
-        </div>
-      )}
-      {updaterState.stage === 'error' && <div className="error-banner">Update-Fehler: {updaterState.message}</div>}
-      {updaterState.stage === 'unsupported' && (
-        <div className="update-banner">
-          <span>{updaterState.message}</span>
-          <button onClick={props.onOpenReleasePage} disabled={busy}>
-            Release-Seite öffnen
+    <div className="update-banner">
+      <span>
+        Update verfügbar {versionLabel}. {formatUpdateSourceSuffix(updaterState)}
+      </span>
+      <div className="update-actions">
+        {updaterState.inAppDownloadSupported && (
+          <button onClick={props.onDownloadUpdate} disabled={busy}>
+            Update herunterladen
           </button>
-        </div>
-      )}
-    </>
+        )}
+        <button onClick={props.onOpenReleasePage} disabled={busy}>
+          Release-Seite öffnen
+        </button>
+      </div>
+    </div>
   );
 }
 

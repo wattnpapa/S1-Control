@@ -17,6 +17,23 @@ export const ORGANISATION_OPTIONS: Array<{ value: OrganisationKey; label: string
   { value: 'SONSTIGE', label: 'Sonstige' },
 ];
 
+const ORGANISATION_COLORS: Record<OrganisationKey, string> = {
+  THW: '#003399',
+  FEUERWEHR: '#d61a1f',
+  POLIZEI: '#13a538',
+  BUNDESWEHR: '#7a6230',
+  REGIE: '#5e6675',
+  DRK: '#c20f1f',
+  ASB: '#1a4c9b',
+  JOHANNITER: '#d91c27',
+  MALTESER: '#df2026',
+  DLRG: '#1d4b99',
+  BERGWACHT: '#3b7c3f',
+  MHD: '#1b418f',
+  RETTUNGSDIENST_KOMMUNAL: '#e6931b',
+  SONSTIGE: '#4b5566',
+};
+
 /**
  * Handles Pretty Organisation.
  */
@@ -29,36 +46,5 @@ export function prettyOrganisation(org: OrganisationKey): string {
  * Handles Organisation Color.
  */
 export function organisationColor(org: OrganisationKey): string {
-  switch (org) {
-    case 'THW':
-      return '#003399';
-    case 'FEUERWEHR':
-      return '#d61a1f';
-    case 'POLIZEI':
-      return '#13a538';
-    case 'BUNDESWEHR':
-      return '#7a6230';
-    case 'REGIE':
-      return '#5e6675';
-    case 'DRK':
-      return '#c20f1f';
-    case 'ASB':
-      return '#1a4c9b';
-    case 'JOHANNITER':
-      return '#d91c27';
-    case 'MALTESER':
-      return '#df2026';
-    case 'DLRG':
-      return '#1d4b99';
-    case 'BERGWACHT':
-      return '#3b7c3f';
-    case 'MHD':
-      return '#1b418f';
-    case 'RETTUNGSDIENST_KOMMUNAL':
-      return '#e6931b';
-    case 'SONSTIGE':
-      return '#4b5566';
-    default:
-      return '#4b5566';
-  }
+  return ORGANISATION_COLORS[org] ?? ORGANISATION_COLORS.SONSTIGE;
 }

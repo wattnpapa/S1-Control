@@ -4,19 +4,39 @@ import type { StrengthDisplayState } from '@shared/types';
 
 const DEFAULT_STATE: StrengthDisplayState = { taktischeStaerke: '0/0/0//0' };
 
-/**
- * Handles Strength Display View.
- */
-export function StrengthDisplayView(): JSX.Element {
-  const [state, setState] = useState<StrengthDisplayState>(DEFAULT_STATE);
-  const [now, setNow] = useState(new Date());
-  const [inverted, setInverted] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [viewport, setViewport] = useState(() => ({
-    width: window.innerWidth,
-    height: window.innerHeight,
-  }));
+interface FitFontSizeOptions {
+  text: string;
+  viewport: { width: number; height: number };
+  maxWidthRatio: number;
+  maxHeightRatio: number;
+  charWidthEm: number;
+  letterSpacingEm?: number;
+}
 
+/**
+ * Calculates best-fit font size for a text within viewport bounds.
+ */
+function calcFitFontSize(options: FitFontSizeOptions): number {
+  const {
+    text,
+    viewport,
+    maxWidthRatio,
+    maxHeightRatio,
+    charWidthEm,
+    letterSpacingEm = 0,
+  } = options;
+  const safeTextLength = Math.max(1, text.trim().length);
+  const widthUnits = safeTextLength * (charWidthEm + letterSpacingEm);
+  const byWidth = (viewport.width * maxWidthRatio) / widthUnits;
+  const byHeight = viewport.height * maxHeightRatio;
+  return Math.max(24, Math.floor(Math.min(byWidth, byHeight)));
+}
+
+/**
+ * Subscribes to strength state updates.
+ */
+function useStrengthState(): StrengthDisplayState {
+  const [state, setState] = useState<StrengthDisplayState>(DEFAULT_STATE);
   useEffect(() => {
     void (async () => {
       setState(await window.api.getStrengthDisplayState());
@@ -26,30 +46,55 @@ export function StrengthDisplayView(): JSX.Element {
     });
     return () => unsubscribe();
   }, []);
+  return state;
+}
 
+/**
+ * Tracks current monitor viewport size.
+ */
+function useViewport(): { width: number; height: number } {
+  const [viewport, setViewport] = useState(() => ({
+    width: window.innerWidth,
+    height: window.innerHeight,
+  }));
+  useEffect(() => {
+    const onResize = (): void => {
+      setViewport({
+        width: window.innerWidth,
+        height: window.innerHeight,
+      });
+    };
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
+  return viewport;
+}
+
+/**
+ * Tracks current time for the monitor clock.
+ */
+function useClock(): Date {
+  const [now, setNow] = useState(new Date());
   useEffect(() => {
     const timer = window.setInterval(() => setNow(new Date()), 1000);
     return () => window.clearInterval(timer);
   }, []);
+  return now;
+}
 
+/**
+ * Closes menu when clicking outside or pressing escape.
+ */
+function useMenuAutoClose(setMenuOpen: (open: boolean) => void): void {
   useEffect(() => {
-    /**
-     * Handles Global Click.
-     */
-    const onGlobalClick = (event: MouseEvent) => {
+    const onGlobalClick = (event: MouseEvent): void => {
       const target = event.target as HTMLElement | null;
-      if (!target) {
-        return;
-      }
-      if (target.closest('.strength-display-corner-left')) {
+      if (!target || target.closest('.strength-display-corner-left')) {
         return;
       }
       setMenuOpen(false);
     };
-    /**
-     * Handles Key Down.
-     */
-    const onKeyDown = (event: KeyboardEvent) => {
+    const onKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'Escape') {
         setMenuOpen(false);
       }
@@ -60,44 +105,102 @@ export function StrengthDisplayView(): JSX.Element {
       window.removeEventListener('mousedown', onGlobalClick);
       window.removeEventListener('keydown', onKeyDown);
     };
-  }, []);
+  }, [setMenuOpen]);
+}
 
-  useEffect(() => {
-    /**
-     * Handles On Resize.
-     */
-    const onResize = () => {
-      setViewport({
-        width: window.innerWidth,
-        height: window.innerHeight,
-      });
-    };
-    window.addEventListener('resize', onResize);
-    return () => window.removeEventListener('resize', onResize);
-  }, []);
+/**
+ * Renders monitor corner action controls.
+ */
+function StrengthCornerActions({
+  menuOpen,
+  onToggleMenu,
+  onToggleInverted,
+  onClose,
+}: {
+  menuOpen: boolean;
+  onToggleMenu: () => void;
+  onToggleInverted: () => void;
+  onClose: () => void;
+}): JSX.Element {
+  return (
+    <>
+      <div className="strength-display-corner strength-display-corner-left">
+        <CornerButton className="strength-display-corner-button" label="Menü öffnen" title="Monitor-Menü" onClick={onToggleMenu}>
+          ☰
+        </CornerButton>
+        {menuOpen ? (
+          <div className="strength-display-menu">
+            <button type="button" className="strength-display-menu-item" onClick={onToggleInverted}>
+              Schwarz/Weiß wechseln
+            </button>
+            <div className="strength-display-menu-hint">Weitere Einstellungen folgen</div>
+          </div>
+        ) : null}
+      </div>
+      <div className="strength-display-corner strength-display-corner-right">
+        <CornerButton className="strength-display-corner-button" label="Monitor schließen" title="Monitor schließen" onClick={onClose}>
+          ×
+        </CornerButton>
+      </div>
+    </>
+  );
+}
+
+/**
+ * Renders a corner action button.
+ */
+function CornerButton({
+  className,
+  label,
+  title,
+  onClick,
+  children,
+}: {
+  className: string;
+  label: string;
+  title: string;
+  onClick: () => void;
+  children: string;
+}): JSX.Element {
+  return (
+    <button type="button" className={className} aria-label={label} title={title} onClick={onClick}>
+      {children}
+    </button>
+  );
+}
+
+/**
+ * Handles Strength Display View.
+ */
+export function StrengthDisplayView(): JSX.Element {
+  const state = useStrengthState();
+  const now = useClock();
+  const [inverted, setInverted] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const viewport = useViewport();
+  useMenuAutoClose(setMenuOpen);
 
   const containerClass = useMemo(
     () => `strength-display ${inverted ? 'is-inverted' : ''}`,
     [inverted],
   );
-
-  const calcFitFontSize = (
-    text: string,
-    maxWidthRatio: number,
-    maxHeightRatio: number,
-    charWidthEm: number,
-    letterSpacingEm = 0,
-  ): number => {
-    const safeTextLength = Math.max(1, text.trim().length);
-    const widthUnits = safeTextLength * (charWidthEm + letterSpacingEm);
-    const byWidth = (viewport.width * maxWidthRatio) / widthUnits;
-    const byHeight = viewport.height * maxHeightRatio;
-    return Math.max(24, Math.floor(Math.min(byWidth, byHeight)));
-  };
-
-  const strengthFontSize = calcFitFontSize(state.taktischeStaerke, 0.95, 0.42, 0.62, 0.04);
+  const strengthFontSize = calcFitFontSize({
+    text: state.taktischeStaerke,
+    viewport,
+    maxWidthRatio: 0.95,
+    maxHeightRatio: 0.42,
+    charWidthEm: 0.62,
+    letterSpacingEm: 0.04,
+  });
   const timeLabel = toNatoDateTime(now);
-  const timeFontSize = calcFitFontSize(timeLabel, 0.95, 0.24, 0.7, 0.05);
+  const timeFontSize = calcFitFontSize({
+    text: timeLabel,
+    viewport,
+    maxWidthRatio: 0.95,
+    maxHeightRatio: 0.24,
+    charWidthEm: 0.7,
+    letterSpacingEm: 0.05,
+  });
 
   /**
    * Handles Closing The Strength Display Window.
@@ -108,45 +211,17 @@ export function StrengthDisplayView(): JSX.Element {
 
   return (
     <div className={containerClass}>
-      <div className="strength-display-corner strength-display-corner-left">
-        <button
-          type="button"
-          className="strength-display-corner-button"
-          aria-label="Menü öffnen"
-          title="Monitor-Menü"
-          onClick={() => setMenuOpen((prev) => !prev)}
-        >
-          ☰
-        </button>
-        {menuOpen ? (
-          <div className="strength-display-menu">
-            <button
-              type="button"
-              className="strength-display-menu-item"
-              onClick={() => {
-                setInverted((prev) => !prev);
-                setMenuOpen(false);
-              }}
-            >
-              Schwarz/Weiß wechseln
-            </button>
-            <div className="strength-display-menu-hint">Weitere Einstellungen folgen</div>
-          </div>
-        ) : null}
-      </div>
-      <div className="strength-display-corner strength-display-corner-right">
-        <button
-          type="button"
-          className="strength-display-corner-button"
-          aria-label="Monitor schließen"
-          title="Monitor schließen"
-          onClick={() => {
-            void closeMonitor();
-          }}
-        >
-          ×
-        </button>
-      </div>
+      <StrengthCornerActions
+        menuOpen={menuOpen}
+        onToggleMenu={() => setMenuOpen((prev) => !prev)}
+        onToggleInverted={() => {
+          setInverted((prev) => !prev);
+          setMenuOpen(false);
+        }}
+        onClose={() => {
+          void closeMonitor();
+        }}
+      />
       <div className="strength-display-inner">
         <div
           className="strength-display-value"

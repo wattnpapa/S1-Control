@@ -25,7 +25,7 @@ import type {
   TacticalStrength,
   WorkspaceView,
 } from '@renderer/types/ui';
-import type { JSX } from 'react';
+import type { ComponentProps, JSX } from 'react';
 
 export interface AppWorkspaceShellProps {
   busy: boolean;
@@ -161,10 +161,133 @@ export interface AppWorkspaceShellProps {
   onCloseCreateFahrzeug: () => void;
 }
 
+type WorkspaceMainAreaProps = ComponentProps<typeof WorkspaceMainArea>;
+type WorkspaceDialogsProps = ComponentProps<typeof WorkspaceDialogs>;
+
+/**
+ * Builds props for the workspace content area.
+ */
+function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaProps {
+  return {
+    activeView: props.activeView,
+    showAbschnittSidebar: props.showAbschnittSidebar,
+    abschnitte: props.abschnitte,
+    selectedAbschnittId: props.selectedAbschnittId,
+    selectedEinsatz: props.selectedEinsatz,
+    lockByAbschnittId: props.lockByAbschnittId,
+    busy: props.busy,
+    isArchived: props.isArchived,
+    selectedAbschnittLockedByOther: props.selectedAbschnittLockedByOther,
+    details: props.details,
+    selectedEinsatzId: props.selectedEinsatzId,
+    allKraefte: props.allKraefte,
+    allFahrzeuge: props.allFahrzeuge,
+    broadcastMonitorLogs: props.broadcastMonitorLogs,
+    debugSyncLogs: props.debugSyncLogs,
+    udpDebugMonitorLogs: props.udpDebugMonitorLogs,
+    activeClients: props.activeClients,
+    dbPath: props.dbPath,
+    lanPeerUpdatesEnabled: props.lanPeerUpdatesEnabled,
+    peerUpdateStatus: props.peerUpdateStatus,
+    kraefteOrgFilter: props.kraefteOrgFilter,
+    setKraefteOrgFilter: props.setKraefteOrgFilter,
+    showEditEinheitDialog: props.showEditEinheitDialog,
+    editEinheitForm: props.editEinheitForm,
+    setEditEinheitForm: props.setEditEinheitForm,
+    editEinheitHelfer: props.editEinheitHelfer,
+    showCreateEinheitDialog: props.showCreateEinheitDialog,
+    createEinheitForm: props.createEinheitForm,
+    setCreateEinheitForm: props.setCreateEinheitForm,
+    showEditFahrzeugDialog: props.showEditFahrzeugDialog,
+    editFahrzeugForm: props.editFahrzeugForm,
+    setEditFahrzeugForm: props.setEditFahrzeugForm,
+    einheitLocksById: props.lockByEinheitId,
+    fahrzeugLocksById: props.lockByFahrzeugId,
+    onSetActiveView: props.setActiveView,
+    onSetSelectedAbschnittId: props.setSelectedAbschnittId,
+    onEditSelectedAbschnitt: props.onEditSelectedAbschnitt,
+    onSubmitEditEinheit: props.onSubmitEditEinheit,
+    onCloseEditEinheit: props.onCloseEditEinheit,
+    onCreateEinheitHelfer: props.onCreateEinheitHelfer,
+    onUpdateEinheitHelfer: props.onUpdateEinheitHelfer,
+    onDeleteEinheitHelfer: props.onDeleteEinheitHelfer,
+    onCreateEinheitFahrzeug: props.onCreateEinheitFahrzeug,
+    onUpdateEinheitFahrzeug: props.onUpdateEinheitFahrzeug,
+    onSubmitCreateEinheit: props.onSubmitCreateEinheit,
+    onCloseCreateEinheit: props.onCloseCreateEinheit,
+    onSubmitEditFahrzeug: props.onSubmitEditFahrzeug,
+    onCloseEditFahrzeug: props.onCloseEditFahrzeug,
+    onCreateEinheit: props.onCreateEinheit,
+    onCreateAbschnitt: props.onCreateAbschnitt,
+    onCreateFahrzeug: props.onCreateFahrzeug,
+    onMoveEinheit: props.onMoveEinheit,
+    onEditEinheit: props.onEditEinheit,
+    onSplitEinheit: props.onSplitEinheit,
+    onMoveFahrzeug: props.onMoveFahrzeug,
+    onEditFahrzeug: props.onEditFahrzeug,
+    onSaveDbPath: props.onSaveDbPath,
+    onSetDbPath: props.onSetDbPath,
+    onRestoreBackup: props.onRestoreBackup,
+    onToggleLanPeerUpdates: props.onToggleLanPeerUpdates,
+  };
+}
+
+/**
+ * Builds props for global workspace dialogs.
+ */
+function buildDialogsProps(props: AppWorkspaceShellProps): WorkspaceDialogsProps {
+  return {
+    busy: props.busy,
+    isArchived: props.isArchived,
+    abschnitte: props.abschnitte,
+    allKraefte: props.allKraefte,
+    updaterState: props.updaterState,
+    moveDialog: props.moveDialog,
+    moveTarget: props.moveTarget,
+    setMoveDialog: props.setMoveDialog,
+    setMoveTarget: props.setMoveTarget,
+    showCreateAbschnittDialog: props.showCreateAbschnittDialog,
+    createAbschnittForm: props.createAbschnittForm,
+    setCreateAbschnittForm: props.setCreateAbschnittForm,
+    onSubmitCreateAbschnitt: props.onSubmitCreateAbschnitt,
+    onCloseCreateAbschnitt: props.onCloseCreateAbschnitt,
+    showEditAbschnittDialog: props.showEditAbschnittDialog,
+    editAbschnittForm: props.editAbschnittForm,
+    setEditAbschnittForm: props.setEditAbschnittForm,
+    onSubmitEditAbschnitt: props.onSubmitEditAbschnitt,
+    onCloseEditAbschnitt: props.onCloseEditAbschnitt,
+    showSplitEinheitDialog: props.showSplitEinheitDialog,
+    splitEinheitForm: props.splitEinheitForm,
+    setSplitEinheitForm: props.setSplitEinheitForm,
+    onSubmitSplitEinheit: props.onSubmitSplitEinheit,
+    onCloseSplitEinheit: props.onCloseSplitEinheit,
+    showCreateFahrzeugDialog: props.showCreateFahrzeugDialog,
+    createFahrzeugForm: props.createFahrzeugForm,
+    setCreateFahrzeugForm: props.setCreateFahrzeugForm,
+    onSubmitCreateFahrzeug: props.onSubmitCreateFahrzeug,
+    onCloseCreateFahrzeug: props.onCloseCreateFahrzeug,
+    onMoveConfirm: props.onMoveConfirm,
+  };
+}
+
+/**
+ * Renders workspace status banners.
+ */
+function WorkspaceStatusBanners({ isArchived, error }: Pick<AppWorkspaceShellProps, 'isArchived' | 'error'>): JSX.Element {
+  return (
+    <>
+      {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
+      {error && <div className="error-banner">{error}</div>}
+    </>
+  );
+}
+
 /**
  * Renders the full workspace shell once a Einsatz is opened.
  */
 export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
+  const mainAreaProps = buildMainAreaProps(props);
+  const dialogsProps = buildDialogsProps(props);
   return (
     <div className="app-shell">
       <Topbar
@@ -183,104 +306,9 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
         onOpenReleasePage={props.onOpenReleasePage}
       />
 
-      {props.isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
-      {props.error && <div className="error-banner">{props.error}</div>}
-
-      <WorkspaceMainArea
-        activeView={props.activeView}
-        showAbschnittSidebar={props.showAbschnittSidebar}
-        abschnitte={props.abschnitte}
-        selectedAbschnittId={props.selectedAbschnittId}
-        selectedEinsatz={props.selectedEinsatz}
-        lockByAbschnittId={props.lockByAbschnittId}
-        busy={props.busy}
-        isArchived={props.isArchived}
-        selectedAbschnittLockedByOther={props.selectedAbschnittLockedByOther}
-        details={props.details}
-        selectedEinsatzId={props.selectedEinsatzId}
-        allKraefte={props.allKraefte}
-        allFahrzeuge={props.allFahrzeuge}
-        broadcastMonitorLogs={props.broadcastMonitorLogs}
-        debugSyncLogs={props.debugSyncLogs}
-        udpDebugMonitorLogs={props.udpDebugMonitorLogs}
-        activeClients={props.activeClients}
-        dbPath={props.dbPath}
-        lanPeerUpdatesEnabled={props.lanPeerUpdatesEnabled}
-        peerUpdateStatus={props.peerUpdateStatus}
-        kraefteOrgFilter={props.kraefteOrgFilter}
-        setKraefteOrgFilter={props.setKraefteOrgFilter}
-        showEditEinheitDialog={props.showEditEinheitDialog}
-        editEinheitForm={props.editEinheitForm}
-        setEditEinheitForm={props.setEditEinheitForm}
-        editEinheitHelfer={props.editEinheitHelfer}
-        showCreateEinheitDialog={props.showCreateEinheitDialog}
-        createEinheitForm={props.createEinheitForm}
-        setCreateEinheitForm={props.setCreateEinheitForm}
-        showEditFahrzeugDialog={props.showEditFahrzeugDialog}
-        editFahrzeugForm={props.editFahrzeugForm}
-        setEditFahrzeugForm={props.setEditFahrzeugForm}
-        einheitLocksById={props.lockByEinheitId}
-        fahrzeugLocksById={props.lockByFahrzeugId}
-        onSetActiveView={props.setActiveView}
-        onSetSelectedAbschnittId={props.setSelectedAbschnittId}
-        onEditSelectedAbschnitt={props.onEditSelectedAbschnitt}
-        onSubmitEditEinheit={props.onSubmitEditEinheit}
-        onCloseEditEinheit={props.onCloseEditEinheit}
-        onCreateEinheitHelfer={props.onCreateEinheitHelfer}
-        onUpdateEinheitHelfer={props.onUpdateEinheitHelfer}
-        onDeleteEinheitHelfer={props.onDeleteEinheitHelfer}
-        onCreateEinheitFahrzeug={props.onCreateEinheitFahrzeug}
-        onUpdateEinheitFahrzeug={props.onUpdateEinheitFahrzeug}
-        onSubmitCreateEinheit={props.onSubmitCreateEinheit}
-        onCloseCreateEinheit={props.onCloseCreateEinheit}
-        onSubmitEditFahrzeug={props.onSubmitEditFahrzeug}
-        onCloseEditFahrzeug={props.onCloseEditFahrzeug}
-        onCreateEinheit={props.onCreateEinheit}
-        onCreateAbschnitt={props.onCreateAbschnitt}
-        onCreateFahrzeug={props.onCreateFahrzeug}
-        onMoveEinheit={props.onMoveEinheit}
-        onEditEinheit={props.onEditEinheit}
-        onSplitEinheit={props.onSplitEinheit}
-        onMoveFahrzeug={props.onMoveFahrzeug}
-        onEditFahrzeug={props.onEditFahrzeug}
-        onSaveDbPath={props.onSaveDbPath}
-        onSetDbPath={props.onSetDbPath}
-        onRestoreBackup={props.onRestoreBackup}
-        onToggleLanPeerUpdates={props.onToggleLanPeerUpdates}
-      />
-
-      <WorkspaceDialogs
-        busy={props.busy}
-        isArchived={props.isArchived}
-        abschnitte={props.abschnitte}
-        allKraefte={props.allKraefte}
-        updaterState={props.updaterState}
-        moveDialog={props.moveDialog}
-        moveTarget={props.moveTarget}
-        setMoveDialog={props.setMoveDialog}
-        setMoveTarget={props.setMoveTarget}
-        showCreateAbschnittDialog={props.showCreateAbschnittDialog}
-        createAbschnittForm={props.createAbschnittForm}
-        setCreateAbschnittForm={props.setCreateAbschnittForm}
-        onSubmitCreateAbschnitt={props.onSubmitCreateAbschnitt}
-        onCloseCreateAbschnitt={props.onCloseCreateAbschnitt}
-        showEditAbschnittDialog={props.showEditAbschnittDialog}
-        editAbschnittForm={props.editAbschnittForm}
-        setEditAbschnittForm={props.setEditAbschnittForm}
-        onSubmitEditAbschnitt={props.onSubmitEditAbschnitt}
-        onCloseEditAbschnitt={props.onCloseEditAbschnitt}
-        showSplitEinheitDialog={props.showSplitEinheitDialog}
-        splitEinheitForm={props.splitEinheitForm}
-        setSplitEinheitForm={props.setSplitEinheitForm}
-        onSubmitSplitEinheit={props.onSubmitSplitEinheit}
-        onCloseSplitEinheit={props.onCloseSplitEinheit}
-        showCreateFahrzeugDialog={props.showCreateFahrzeugDialog}
-        createFahrzeugForm={props.createFahrzeugForm}
-        setCreateFahrzeugForm={props.setCreateFahrzeugForm}
-        onSubmitCreateFahrzeug={props.onSubmitCreateFahrzeug}
-        onCloseCreateFahrzeug={props.onCloseCreateFahrzeug}
-        onMoveConfirm={props.onMoveConfirm}
-      />
+      <WorkspaceStatusBanners isArchived={props.isArchived} error={props.error} />
+      <WorkspaceMainArea {...mainAreaProps} />
+      <WorkspaceDialogs {...dialogsProps} />
     </div>
   );
 }

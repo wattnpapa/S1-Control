@@ -1,6 +1,5 @@
-import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
+import { EinheitCoreFields, SplitSourceField } from '@renderer/components/dialogs/EinheitFormFields';
 import type { KraftOverviewItem, SplitEinheitForm } from '@renderer/types/ui';
-import type { OrganisationKey } from '@shared/types';
 
 interface SplitEinheitDialogProps {
   visible: boolean;
@@ -25,79 +24,8 @@ export function SplitEinheitDialog(props: SplitEinheitDialogProps): JSX.Element 
     <div className="modal-backdrop">
       <div className="modal">
         <h3>Einheit splitten</h3>
-        <label>
-          Quell-Einheit
-          <select
-            value={props.form.sourceEinheitId}
-            onChange={(e) => props.onChange({ ...props.form, sourceEinheitId: e.target.value })}
-          >
-            <option value="">Bitte wählen</option>
-            {props.allKraefte.map((einheit) => (
-              <option key={einheit.id} value={einheit.id}>
-                {einheit.nameImEinsatz} ({einheit.abschnittName}) [
-                {einheit.aktuelleStaerkeTaktisch ?? einheit.aktuelleStaerke}]
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Name der Teileinheit
-          <input
-            value={props.form.nameImEinsatz}
-            onChange={(e) => props.onChange({ ...props.form, nameImEinsatz: e.target.value })}
-          />
-        </label>
-        <label>
-          Organisation
-          <select
-            value={props.form.organisation}
-            onChange={(e) => props.onChange({ ...props.form, organisation: e.target.value as OrganisationKey })}
-          >
-            {ORGANISATION_OPTIONS.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Führung
-          <input
-            type="number"
-            min={0}
-            value={props.form.fuehrung}
-            onChange={(e) => props.onChange({ ...props.form, fuehrung: e.target.value })}
-          />
-        </label>
-        <label>
-          Unterführung
-          <input
-            type="number"
-            min={0}
-            value={props.form.unterfuehrung}
-            onChange={(e) => props.onChange({ ...props.form, unterfuehrung: e.target.value })}
-          />
-        </label>
-        <label>
-          Mannschaft
-          <input
-            type="number"
-            min={0}
-            value={props.form.mannschaft}
-            onChange={(e) => props.onChange({ ...props.form, mannschaft: e.target.value })}
-          />
-        </label>
-        <label>
-          Status
-          <select
-            value={props.form.status}
-            onChange={(e) => props.onChange({ ...props.form, status: e.target.value as SplitEinheitForm['status'] })}
-          >
-            <option value="AKTIV">AKTIV</option>
-            <option value="IN_BEREITSTELLUNG">IN_BEREITSTELLUNG</option>
-            <option value="ABGEMELDET">ABGEMELDET</option>
-          </select>
-        </label>
+        <SplitSourceField form={props.form} allKraefte={props.allKraefte} onChange={props.onChange} />
+        <EinheitCoreFields form={props.form} onChange={props.onChange} />
         <div className="modal-actions">
           <button onClick={props.onSubmit} disabled={props.busy || props.isArchived}>
             Splitten

@@ -33,6 +33,155 @@ interface EinheitHelferSectionProps {
   onDeleteHelfer: (helferId: string) => Promise<void>;
 }
 
+interface GeschlechtToggleProps {
+  geschlecht: HelferGeschlecht;
+  onChange: (value: HelferGeschlecht) => void;
+}
+
+interface HelferRowBaseProps {
+  organisation: OrganisationKey;
+  row: HelferDraft;
+  updateRow: (next: HelferDraft) => void;
+}
+
+interface ExistingHelferRowProps extends HelferRowBaseProps {
+  rowId: string;
+  busy: boolean;
+  isArchived: boolean;
+  onUpdateHelfer: (input: HelferDraft & { helferId: string }) => Promise<void>;
+  onDeleteHelfer: (helferId: string) => Promise<void>;
+}
+
+interface NewHelferRowProps extends HelferRowBaseProps {
+  rowKey: string;
+  busy: boolean;
+  isArchived: boolean;
+  onCreateHelfer: (input: HelferDraft) => Promise<void>;
+}
+
+/**
+ * Renders role options.
+ */
+function HelferRolleSelect({ value, onChange }: { value: HelferRolle; onChange: (value: HelferRolle) => void }): JSX.Element {
+  return (
+    <select value={value} onChange={(event) => onChange(event.target.value as HelferRolle)}>
+      <option value="FUEHRER">Führer</option>
+      <option value="UNTERFUEHRER">Unterführer</option>
+      <option value="HELFER">Helfer</option>
+    </select>
+  );
+}
+
+/**
+ * Renders compact gender buttons.
+ */
+function GeschlechtToggle({ geschlecht, onChange }: GeschlechtToggleProps): JSX.Element {
+  return (
+    <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
+      <button
+        type="button"
+        className={`gender-toggle ${geschlecht === 'MAENNLICH' ? 'active' : ''}`}
+        onClick={() => onChange('MAENNLICH')}
+        title="Männlich"
+      >
+        <FontAwesomeIcon icon={faMars} />
+      </button>
+      <button
+        type="button"
+        className={`gender-toggle ${geschlecht === 'WEIBLICH' ? 'active' : ''}`}
+        onClick={() => onChange('WEIBLICH')}
+        title="Weiblich"
+      >
+        <FontAwesomeIcon icon={faVenus} />
+      </button>
+    </div>
+  );
+}
+
+/**
+ * Renders shared editable helper cells.
+ */
+function HelferCommonCells({ organisation, row, updateRow }: HelferRowBaseProps): JSX.Element {
+  return (
+    <>
+      <td>
+        <HelferRolleSelect value={row.rolle} onChange={(rolle) => updateRow({ ...row, rolle })} />
+      </td>
+      <td>
+        <GeschlechtToggle geschlecht={row.geschlecht} onChange={(geschlecht) => updateRow({ ...row, geschlecht })} />
+      </td>
+      <td className="helper-name-cell">
+        <TaktischesZeichenPerson organisation={organisation} rolle={row.rolle} />
+        <input
+          value={row.name}
+          onChange={(event) => updateRow({ ...row, name: event.target.value })}
+          placeholder="optional"
+        />
+      </td>
+      <td>
+        <input
+          type="number"
+          min={1}
+          value={row.anzahl}
+          onChange={(event) => {
+            const value = Math.max(1, Math.round(Number(event.target.value) || 1));
+            updateRow({ ...row, anzahl: value });
+          }}
+        />
+      </td>
+      <td><input value={row.funktion} onChange={(event) => updateRow({ ...row, funktion: event.target.value })} /></td>
+      <td><input value={row.telefon} onChange={(event) => updateRow({ ...row, telefon: event.target.value })} /></td>
+      <td><input value={row.erreichbarkeit} onChange={(event) => updateRow({ ...row, erreichbarkeit: event.target.value })} /></td>
+      <td>
+        <input
+          type="checkbox"
+          checked={row.vegetarisch}
+          onChange={(event) => updateRow({ ...row, vegetarisch: event.target.checked })}
+        />
+      </td>
+      <td><input value={row.bemerkung} onChange={(event) => updateRow({ ...row, bemerkung: event.target.value })} /></td>
+    </>
+  );
+}
+
+/**
+ * Renders one persisted helper row.
+ */
+function ExistingHelferRow(props: ExistingHelferRowProps): JSX.Element {
+  return (
+    <tr>
+      <HelferCommonCells organisation={props.organisation} row={props.row} updateRow={props.updateRow} />
+      <td className="inline-subtable-actions">
+        <button
+          onClick={() => void props.onUpdateHelfer({ helferId: props.rowId, ...props.row })}
+          disabled={props.busy || props.isArchived}
+        >
+          Speichern
+        </button>
+        <button onClick={() => void props.onDeleteHelfer(props.rowId)} disabled={props.busy || props.isArchived}>
+          Löschen
+        </button>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Renders one automatically generated helper row.
+ */
+function NewHelferRow(props: NewHelferRowProps): JSX.Element {
+  return (
+    <tr key={props.rowKey}>
+      <HelferCommonCells organisation={props.organisation} row={props.row} updateRow={props.updateRow} />
+      <td className="inline-subtable-actions">
+        <button onClick={() => void props.onCreateHelfer({ ...props.row, anzahl: 1 })} disabled={props.busy || props.isArchived}>
+          Hinzufügen
+        </button>
+      </td>
+    </tr>
+  );
+}
+
 /**
  * Renders and edits Helfer rows for the current Einheit.
  */
@@ -60,158 +209,45 @@ export function EinheitHelferSection(props: EinheitHelferSectionProps): JSX.Elem
               </tr>
             </thead>
             <tbody>
-              {props.helfer.map((row) => {
-                const edit = props.editRows[row.id];
-                if (!edit) {
+              {props.helfer.map((item) => {
+                const row = props.editRows[item.id];
+                if (!row) {
                   return null;
                 }
-
+                const updateRow = (next: HelferDraft): void => {
+                  props.setEditRows((prev) => ({ ...prev, [item.id]: next }));
+                };
                 return (
-                  <tr key={row.id}>
-                    <td>
-                      <select
-                        value={edit.rolle}
-                        onChange={(e) =>
-                          props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, rolle: e.target.value as HelferRolle } }))
-                        }
-                      >
-                        <option value="FUEHRER">Führer</option>
-                        <option value="UNTERFUEHRER">Unterführer</option>
-                        <option value="HELFER">Helfer</option>
-                      </select>
-                    </td>
-                    <td>
-                      <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
-                        <button
-                          type="button"
-                          className={`gender-toggle ${edit.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
-                          onClick={() => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, geschlecht: 'MAENNLICH' } }))}
-                          title="Männlich"
-                        >
-                          <FontAwesomeIcon icon={faMars} />
-                        </button>
-                        <button
-                          type="button"
-                          className={`gender-toggle ${edit.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
-                          onClick={() => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, geschlecht: 'WEIBLICH' } }))}
-                          title="Weiblich"
-                        >
-                          <FontAwesomeIcon icon={faVenus} />
-                        </button>
-                      </div>
-                    </td>
-                    <td className="helper-name-cell">
-                      <TaktischesZeichenPerson organisation={props.organisation} rolle={edit.rolle} />
-                      <input
-                        value={edit.name}
-                        onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, name: e.target.value } }))}
-                        placeholder="optional"
-                      />
-                    </td>
-                    <td>
-                      <input
-                        type="number"
-                        min={1}
-                        value={edit.anzahl}
-                        onChange={(e) =>
-                          props.setEditRows((prev) => ({
-                            ...prev,
-                            [row.id]: { ...edit, anzahl: Math.max(1, Math.round(Number(e.target.value) || 1)) },
-                          }))
-                        }
-                      />
-                    </td>
-                    <td><input value={edit.funktion} onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, funktion: e.target.value } }))} /></td>
-                    <td><input value={edit.telefon} onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, telefon: e.target.value } }))} /></td>
-                    <td><input value={edit.erreichbarkeit} onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, erreichbarkeit: e.target.value } }))} /></td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={edit.vegetarisch}
-                        onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, vegetarisch: e.target.checked } }))}
-                      />
-                    </td>
-                    <td><input value={edit.bemerkung} onChange={(e) => props.setEditRows((prev) => ({ ...prev, [row.id]: { ...edit, bemerkung: e.target.value } }))} /></td>
-                    <td className="inline-subtable-actions">
-                      <button
-                        onClick={() =>
-                          void props.onUpdateHelfer({
-                            helferId: row.id,
-                            ...edit,
-                          })
-                        }
-                        disabled={props.busy || props.isArchived}
-                      >
-                        Speichern
-                      </button>
-                      <button onClick={() => void props.onDeleteHelfer(row.id)} disabled={props.busy || props.isArchived}>
-                        Löschen
-                      </button>
-                    </td>
-                  </tr>
+                  <ExistingHelferRow
+                    key={item.id}
+                    organisation={props.organisation}
+                    rowId={item.id}
+                    row={row}
+                    updateRow={updateRow}
+                    busy={props.busy}
+                    isArchived={props.isArchived}
+                    onUpdateHelfer={props.onUpdateHelfer}
+                    onDeleteHelfer={props.onDeleteHelfer}
+                  />
                 );
               })}
-              {Object.entries(props.autoRows).map(([autoKey, row]) => (
-                <tr key={autoKey}>
-                  <td>
-                    <select
-                      value={row.rolle}
-                      onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, rolle: e.target.value as HelferRolle } }))}
-                    >
-                      <option value="FUEHRER">Führer</option>
-                      <option value="UNTERFUEHRER">Unterführer</option>
-                      <option value="HELFER">Helfer</option>
-                    </select>
-                  </td>
-                  <td>
-                    <div className="gender-toggle-group" role="group" aria-label="Geschlecht">
-                      <button
-                        type="button"
-                        className={`gender-toggle ${row.geschlecht === 'MAENNLICH' ? 'active' : ''}`}
-                        onClick={() => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, geschlecht: 'MAENNLICH' } }))}
-                        title="Männlich"
-                      >
-                        <FontAwesomeIcon icon={faMars} />
-                      </button>
-                      <button
-                        type="button"
-                        className={`gender-toggle ${row.geschlecht === 'WEIBLICH' ? 'active' : ''}`}
-                        onClick={() => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, geschlecht: 'WEIBLICH' } }))}
-                        title="Weiblich"
-                      >
-                        <FontAwesomeIcon icon={faVenus} />
-                      </button>
-                    </div>
-                  </td>
-                  <td className="helper-name-cell">
-                    <TaktischesZeichenPerson organisation={props.organisation} rolle={row.rolle} />
-                    <input
-                      value={row.name}
-                      onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, name: e.target.value } }))}
-                      placeholder="optional"
-                    />
-                  </td>
-                  <td>
-                    <input type="number" min={1} value={1} readOnly />
-                  </td>
-                  <td><input value={row.funktion} onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, funktion: e.target.value } }))} /></td>
-                  <td><input value={row.telefon} onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, telefon: e.target.value } }))} /></td>
-                  <td><input value={row.erreichbarkeit} onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, erreichbarkeit: e.target.value } }))} /></td>
-                  <td>
-                    <input
-                      type="checkbox"
-                      checked={row.vegetarisch}
-                      onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, vegetarisch: e.target.checked } }))}
-                    />
-                  </td>
-                  <td><input value={row.bemerkung} onChange={(e) => props.setAutoRows((prev) => ({ ...prev, [autoKey]: { ...row, bemerkung: e.target.value } }))} /></td>
-                  <td className="inline-subtable-actions">
-                    <button onClick={() => void props.onCreateHelfer({ ...row, anzahl: 1 })} disabled={props.busy || props.isArchived}>
-                      Hinzufügen
-                    </button>
-                  </td>
-                </tr>
-              ))}
+              {Object.entries(props.autoRows).map(([rowKey, row]) => {
+                const updateRow = (next: HelferDraft): void => {
+                  props.setAutoRows((prev) => ({ ...prev, [rowKey]: next }));
+                };
+                return (
+                  <NewHelferRow
+                    key={rowKey}
+                    rowKey={rowKey}
+                    organisation={props.organisation}
+                    row={row}
+                    updateRow={updateRow}
+                    busy={props.busy}
+                    isArchived={props.isArchived}
+                    onCreateHelfer={props.onCreateHelfer}
+                  />
+                );
+              })}
             </tbody>
           </table>
         </td>

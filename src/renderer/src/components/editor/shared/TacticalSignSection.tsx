@@ -8,17 +8,29 @@ type TacticalFormSlice = Pick<
   'nameImEinsatz' | 'organisation' | 'tacticalSignMode' | 'tacticalSignUnit' | 'tacticalSignTyp' | 'tacticalSignDenominator'
 >;
 
-type TacticalCatalogItem = Awaited<
-  ReturnType<typeof window.api.listTacticalSignCatalog>
->[number];
+type TacticalCatalogItem = Awaited<ReturnType<typeof window.api.listTacticalSignCatalog>>[number];
 
 interface TacticalSignSectionProps {
   form: TacticalFormSlice;
   onChange: (next: TacticalFormSlice) => void;
 }
 
+interface TacticalSuggestion {
+  confidence: number;
+  matchedLabel?: string;
+  config: TacticalSignConfig;
+}
+
+interface ManualEditorProps {
+  form: TacticalFormSlice;
+  catalog: TacticalCatalogItem[];
+  search: string;
+  onSearch: (value: string) => void;
+  onChange: (next: TacticalFormSlice) => void;
+}
+
 /**
- * Handles Build Tactical Config.
+ * Builds tactical sign preview config.
  */
 function buildTacticalConfig(form: TacticalFormSlice): TacticalSignConfig {
   return {
@@ -43,24 +55,14 @@ function buildTacticalConfig(form: TacticalFormSlice): TacticalSignConfig {
 }
 
 /**
- * Handles Tactical Sign Section.
+ * Loads tactical sign catalog for selected organization.
  */
-export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Element {
+function useTacticalCatalog(organisation: TacticalFormSlice['organisation'], search: string): TacticalCatalogItem[] {
   const [catalog, setCatalog] = useState<TacticalCatalogItem[]>([]);
-  const [search, setSearch] = useState('');
-  const [suggestion, setSuggestion] = useState<{
-    confidence: number;
-    matchedLabel?: string;
-    config: TacticalSignConfig;
-  } | null>(null);
-
   useEffect(() => {
     let cancelled = false;
     void (async () => {
-      const list = await window.api.listTacticalSignCatalog({
-        organisation: props.form.organisation,
-        query: search.trim() || undefined,
-      });
+      const list = await window.api.listTacticalSignCatalog({ organisation, query: search.trim() || undefined });
       if (!cancelled) {
         setCatalog(list);
       }
@@ -68,11 +70,18 @@ export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Elemen
     return () => {
       cancelled = true;
     };
-  }, [props.form.organisation, search]);
+  }, [organisation, search]);
+  return catalog;
+}
 
+/**
+ * Keeps auto suggestion and derived form fields in sync.
+ */
+function useAutoSuggestion(form: TacticalFormSlice, onChange: TacticalSignSectionProps['onChange']): TacticalSuggestion | null {
+  const [suggestion, setSuggestion] = useState<TacticalSuggestion | null>(null);
   useEffect(() => {
     let cancelled = false;
-    if (props.form.tacticalSignMode !== 'AUTO') {
+    if (form.tacticalSignMode !== 'AUTO') {
       setSuggestion(null);
       return () => {
         cancelled = true;
@@ -80,13 +89,13 @@ export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Elemen
     }
     void (async () => {
       const result = await window.api.inferTacticalSign({
-        organisation: props.form.organisation,
-        nameImEinsatz: props.form.nameImEinsatz,
+        organisation: form.organisation,
+        nameImEinsatz: form.nameImEinsatz,
       });
       if (!cancelled) {
         setSuggestion(result);
-        props.onChange({
-          ...props.form,
+        onChange({
+          ...form,
           tacticalSignUnit: result.config.unit ?? '',
           tacticalSignTyp: result.config.typ ?? 'none',
           tacticalSignDenominator: result.config.denominator ?? '',
@@ -97,125 +106,147 @@ export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Elemen
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [props.form.nameImEinsatz, props.form.organisation, props.form.tacticalSignMode]);
+  }, [form.nameImEinsatz, form.organisation, form.tacticalSignMode]);
+  return suggestion;
+}
 
-  const previewConfig = buildTacticalConfig(props.form);
+/**
+ * Renders mode selector and status text.
+ */
+function TacticalModeSelector({
+  form,
+  suggestion,
+  onChange,
+}: {
+  form: TacticalFormSlice;
+  suggestion: TacticalSuggestion | null;
+  onChange: TacticalSignSectionProps['onChange'];
+}): JSX.Element {
+  const suggestionText =
+    form.tacticalSignMode === 'AUTO'
+      ? `Vorschlag: ${suggestion?.matchedLabel ?? 'kein Treffer'} (${Math.round((suggestion?.confidence ?? 0) * 100)}%)`
+      : 'Manueller Modus aktiv';
+  return (
+    <tr>
+      <th>Taktisches Zeichen</th>
+      <td colSpan={3}>
+        <div className="tactical-editor-grid">
+          <label className="inline-checkbox">
+            <input type="radio" checked={form.tacticalSignMode === 'AUTO'} onChange={() => onChange({ ...form, tacticalSignMode: 'AUTO' })} />
+            Auto
+          </label>
+          <label className="inline-checkbox">
+            <input
+              type="radio"
+              checked={form.tacticalSignMode === 'MANUELL'}
+              onChange={() => onChange({ ...form, tacticalSignMode: 'MANUELL' })}
+            />
+            Manuell
+          </label>
+          <div className="tactical-editor-meta">{suggestionText}</div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Renders manual tactical-sign controls.
+ */
+function ManualTacticalEditor({ form, catalog, search, onSearch, onChange }: ManualEditorProps): JSX.Element {
+  return (
+    <tr>
+      <th>Manuell wählen</th>
+      <td colSpan={3}>
+        <div className="tactical-editor-grid">
+          <input placeholder="Suchen..." value={search} onChange={(event) => onSearch(event.target.value)} />
+          <select
+            value={`${form.tacticalSignUnit}|${form.tacticalSignTyp}|${form.tacticalSignDenominator}`}
+            onChange={(event) => {
+              const [unit, typ, denominator] = event.target.value.split('|');
+              onChange({
+                ...form,
+                tacticalSignUnit: unit ?? '',
+                tacticalSignTyp: (typ as NonNullable<TacticalSignConfig['typ']>) ?? 'none',
+                tacticalSignDenominator: denominator ?? '',
+              });
+            }}
+          >
+            <option value="|none|">-</option>
+            {catalog.map((item) => (
+              <option key={item.key} value={`${item.unit}|${item.typ}|${item.denominator ?? ''}`}>
+                {item.label}
+              </option>
+            ))}
+          </select>
+          <input
+            placeholder="Unit"
+            value={form.tacticalSignUnit}
+            onChange={(event) => onChange({ ...form, tacticalSignUnit: event.target.value })}
+          />
+          <select
+            value={form.tacticalSignTyp}
+            onChange={(event) => onChange({ ...form, tacticalSignTyp: event.target.value as NonNullable<TacticalSignConfig['typ']> })}
+          >
+            <option value="none">Keine</option>
+            <option value="platoon">Zug</option>
+            <option value="group">Gruppe</option>
+            <option value="squad">Trupp</option>
+            <option value="zugtrupp">Zugtrupp</option>
+          </select>
+          <input
+            placeholder="Denominator"
+            value={form.tacticalSignDenominator}
+            onChange={(event) => onChange({ ...form, tacticalSignDenominator: event.target.value })}
+          />
+          <button type="button" onClick={() => onChange({ ...form, tacticalSignMode: 'AUTO' })}>
+            Zurück auf Auto
+          </button>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Renders tactical sign preview.
+ */
+function TacticalPreview({ form }: { form: TacticalFormSlice }): JSX.Element {
+  const previewConfig = buildTacticalConfig(form);
+  return (
+    <tr>
+      <th>Vorschau</th>
+      <td colSpan={3}>
+        <div className="tactical-sign-preview-row">
+          <div className="tactical-sign-preview-box">
+            <TaktischesZeichenEinheit organisation={form.organisation} tacticalSignConfigJson={JSON.stringify(previewConfig)} />
+          </div>
+        </div>
+      </td>
+    </tr>
+  );
+}
+
+/**
+ * Handles Tactical Sign Section.
+ */
+export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Element {
+  const [search, setSearch] = useState('');
+  const catalog = useTacticalCatalog(props.form.organisation, search);
+  const suggestion = useAutoSuggestion(props.form, props.onChange);
   return (
     <>
-      <tr>
-        <th>Taktisches Zeichen</th>
-        <td colSpan={3}>
-          <div className="tactical-editor-grid">
-            <label className="inline-checkbox">
-              <input
-                type="radio"
-                checked={props.form.tacticalSignMode === 'AUTO'}
-                onChange={() => props.onChange({ ...props.form, tacticalSignMode: 'AUTO' })}
-              />
-              Auto
-            </label>
-            <label className="inline-checkbox">
-              <input
-                type="radio"
-                checked={props.form.tacticalSignMode === 'MANUELL'}
-                onChange={() => props.onChange({ ...props.form, tacticalSignMode: 'MANUELL' })}
-              />
-              Manuell
-            </label>
-            <div className="tactical-editor-meta">
-              {props.form.tacticalSignMode === 'AUTO' ? (
-                <>
-                  Vorschlag: {suggestion?.matchedLabel ?? 'kein Treffer'} ({Math.round((suggestion?.confidence ?? 0) * 100)}%)
-                </>
-              ) : (
-                <>Manueller Modus aktiv</>
-              )}
-            </div>
-          </div>
-        </td>
-      </tr>
+      <TacticalModeSelector form={props.form} suggestion={suggestion} onChange={props.onChange} />
       {props.form.tacticalSignMode === 'MANUELL' ? (
-        <tr>
-          <th>Manuell wählen</th>
-          <td colSpan={3}>
-            <div className="tactical-editor-grid">
-              <input
-                placeholder="Suchen..."
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-              />
-              <select
-                value={`${props.form.tacticalSignUnit}|${props.form.tacticalSignTyp}|${props.form.tacticalSignDenominator}`}
-                onChange={(event) => {
-                  const [unit, typ, denominator] = event.target.value.split('|');
-                  props.onChange({
-                    ...props.form,
-                    tacticalSignUnit: unit ?? '',
-                    tacticalSignTyp: (typ as NonNullable<TacticalSignConfig['typ']>) ?? 'none',
-                    tacticalSignDenominator: denominator ?? '',
-                  });
-                }}
-              >
-                <option value="|none|">-</option>
-                {catalog.map((item) => (
-                  <option
-                    key={item.key}
-                    value={`${item.unit}|${item.typ}|${item.denominator ?? ''}`}
-                  >
-                    {item.label}
-                  </option>
-                ))}
-              </select>
-              <input
-                placeholder="Unit"
-                value={props.form.tacticalSignUnit}
-                onChange={(event) => props.onChange({ ...props.form, tacticalSignUnit: event.target.value })}
-              />
-              <select
-                value={props.form.tacticalSignTyp}
-                onChange={(event) =>
-                  props.onChange({
-                    ...props.form,
-                    tacticalSignTyp: event.target.value as NonNullable<TacticalSignConfig['typ']>,
-                  })
-                }
-              >
-                <option value="none">Keine</option>
-                <option value="platoon">Zug</option>
-                <option value="group">Gruppe</option>
-                <option value="squad">Trupp</option>
-                <option value="zugtrupp">Zugtrupp</option>
-              </select>
-              <input
-                placeholder="Denominator"
-                value={props.form.tacticalSignDenominator}
-                onChange={(event) =>
-                  props.onChange({ ...props.form, tacticalSignDenominator: event.target.value })
-                }
-              />
-              <button
-                type="button"
-                onClick={() => props.onChange({ ...props.form, tacticalSignMode: 'AUTO' })}
-              >
-                Zurück auf Auto
-              </button>
-            </div>
-          </td>
-        </tr>
+        <ManualTacticalEditor
+          form={props.form}
+          catalog={catalog}
+          search={search}
+          onSearch={setSearch}
+          onChange={props.onChange}
+        />
       ) : null}
-      <tr>
-        <th>Vorschau</th>
-        <td colSpan={3}>
-          <div className="tactical-sign-preview-row">
-            <div className="tactical-sign-preview-box">
-              <TaktischesZeichenEinheit
-                organisation={props.form.organisation}
-                tacticalSignConfigJson={JSON.stringify(previewConfig)}
-              />
-            </div>
-          </div>
-        </td>
-      </tr>
+      <TacticalPreview form={props.form} />
     </>
   );
 }
