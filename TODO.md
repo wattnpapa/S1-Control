@@ -16,9 +16,9 @@
 - [x] Relevante Tests für IPC-/Entity-Flow laufen lassen.
 
 ## Commit-Plan
-- [ ] Commit 1: `refactor(ipc): split entity einheit/fahrzeug handlers`
-- [ ] Commit 2: `refactor(ipc): split helper handlers and support`
-- [ ] Commit 3: `chore: cleanup imports and verify lint/typecheck`
+- [x] Commit 1: `refactor(ipc): split entity einheit/fahrzeug handlers`
+- [x] Commit 2: `refactor(ipc): split helper handlers and support`
+- [x] Commit 3: `chore: cleanup imports and verify lint/typecheck`
 
 ## Größere Architektur-TODOs (aus Refactor-Plan)
 - [ ] Updater-/Peer-Services weiter zerlegen (`state/source/transfer` klar trennen).
