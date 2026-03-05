@@ -86,6 +86,7 @@ export interface AppWorkspaceShellProps {
   udpDebugMonitorLogs: string[];
   onOpenStrengthDisplay: () => void;
   onCloseStrengthDisplay: () => void;
+  onCheckForUpdates: () => void;
   onDownloadUpdate: () => void;
   onOpenReleasePage: () => void;
   onEditSelectedAbschnitt: () => void;
@@ -228,6 +229,7 @@ function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaPro
     onSaveDbPath: props.onSaveDbPath,
     onSetDbPath: props.onSetDbPath,
     onRestoreBackup: props.onRestoreBackup,
+    onCheckForUpdates: props.onCheckForUpdates,
     onToggleLanPeerUpdates: props.onToggleLanPeerUpdates,
   };
 }

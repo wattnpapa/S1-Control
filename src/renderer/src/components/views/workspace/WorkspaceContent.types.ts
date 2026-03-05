@@ -98,6 +98,7 @@ export interface WorkspaceContentProps {
   onSaveDbPath: () => void;
   onSetDbPath: (value: string) => void;
   onRestoreBackup: () => void;
+  onCheckForUpdates: () => void;
   onToggleLanPeerUpdates: (enabled: boolean) => void;
   einheitLocksById: Record<string, RecordEditLockInfo | undefined>;
   fahrzeugLocksById: Record<string, RecordEditLockInfo | undefined>;

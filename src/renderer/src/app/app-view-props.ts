@@ -15,6 +15,7 @@ export interface BuildEntryPropsArgs {
   error: string | null;
   einsaetze: AppEntryViewProps['einsaetze'];
   uiState: WorkspaceUiState;
+  checkForUpdates: () => void;
   downloadUpdate: () => void;
   openReleasePage: () => void;
   openExisting: () => void;
@@ -40,6 +41,7 @@ export function buildEntryProps(args: BuildEntryPropsArgs): AppEntryViewProps {
     setStartNewEinsatzName: args.uiState.setStartNewEinsatzName,
     startNewFuestName: args.uiState.startNewFuestName,
     setStartNewFuestName: args.uiState.setStartNewFuestName,
+    onCheckForUpdates: args.checkForUpdates,
     onDownloadUpdate: args.downloadUpdate,
     onOpenReleasePage: args.openReleasePage,
     onOpenExisting: args.openExisting,
@@ -98,6 +100,7 @@ export interface BuildWorkspacePropsArgs {
     submitCreate: () => Promise<void>;
   };
   systemActions: {
+    checkForUpdates: () => Promise<void>;
     openStrengthDisplay: () => void;
     closeStrengthDisplay: () => void;
     downloadUpdate: () => void;
@@ -190,6 +193,7 @@ function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): Pick<
   AppWorkspaceShellProps,
   | 'onOpenStrengthDisplay'
   | 'onCloseStrengthDisplay'
+  | 'onCheckForUpdates'
   | 'onDownloadUpdate'
   | 'onOpenReleasePage'
   | 'onEditSelectedAbschnitt'
@@ -303,6 +307,7 @@ function buildWorkspaceStorageCallbacks(args: BuildWorkspacePropsArgs) {
     onSaveDbPath: () => void args.systemActions.saveDbPath(),
     onSetDbPath: args.setDbPath,
     onRestoreBackup: () => void args.systemActions.restoreBackup(),
+    onCheckForUpdates: () => void args.systemActions.checkForUpdates(),
     onToggleLanPeerUpdates: (enabled: boolean) => void args.systemActions.toggleLanPeerUpdates(enabled),
   };
 }

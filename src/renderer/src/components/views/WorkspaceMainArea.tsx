@@ -111,6 +111,7 @@ interface WorkspaceMainAreaProps {
   onSaveDbPath: () => void;
   onSetDbPath: (path: string) => void;
   onRestoreBackup: () => void;
+  onCheckForUpdates: () => void;
   onToggleLanPeerUpdates: (enabled: boolean) => void;
 }
 
@@ -185,6 +186,7 @@ export function WorkspaceMainArea(props: WorkspaceMainAreaProps): JSX.Element {
         onSaveDbPath={props.onSaveDbPath}
         onSetDbPath={props.onSetDbPath}
         onRestoreBackup={props.onRestoreBackup}
+        onCheckForUpdates={props.onCheckForUpdates}
         onToggleLanPeerUpdates={props.onToggleLanPeerUpdates}
         einheitLocksById={props.einheitLocksById}
         fahrzeugLocksById={props.fahrzeugLocksById}

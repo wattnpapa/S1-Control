@@ -75,6 +75,12 @@ function useSystemSettingsActions(props: UseSystemActionsProps) {
  * Provides move and updater actions.
  */
 function useSystemProcessActions(props: UseSystemActionsProps) {
+  const checkForUpdates = useCallback(async () => {
+    await props.withBusy(async () => {
+      await window.api.checkForUpdates();
+    });
+  }, [props]);
+
   const move = useCallback(async () => {
     if (!props.moveDialog || !props.selectedEinsatzId || !props.moveTarget) {
       return;
@@ -113,7 +119,7 @@ function useSystemProcessActions(props: UseSystemActionsProps) {
     });
   }, [props]);
 
-  return { move, downloadUpdate, openReleasePage };
+  return { checkForUpdates, move, downloadUpdate, openReleasePage };
 }
 
 /**

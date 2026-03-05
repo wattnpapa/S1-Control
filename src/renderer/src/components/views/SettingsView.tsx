@@ -12,6 +12,7 @@ interface SettingsViewProps {
   onChangeDbPath: (value: string) => void;
   onSaveDbPath: () => void;
   onRestoreBackup: () => void;
+  onCheckForUpdates: () => void;
   onToggleLanPeerUpdates: (enabled: boolean) => void;
 }
 
@@ -224,6 +225,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       </button>
       <button onClick={props.onRestoreBackup} disabled={props.busy || !props.selectedEinsatzId}>
         Backup laden
+      </button>
+      <button onClick={props.onCheckForUpdates} disabled={props.busy}>
+        Auf Updates prüfen
       </button>
       <label className="settings-toggle">
         LAN-Peer-Updates

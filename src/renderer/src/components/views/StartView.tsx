@@ -11,6 +11,7 @@ interface StartViewProps {
   startNewFuestName: string;
   setStartNewFuestName: (value: string) => void;
   appVersion?: string;
+  onCheckForUpdates: () => void;
   onOpenExisting: () => void;
   onOpenKnownEinsatz: (einsatzId: string) => void;
   onCreate: () => void;
@@ -33,6 +34,11 @@ export function StartView(props: StartViewProps): JSX.Element {
           <p className="login-license">Copyright © {new Date().getFullYear()} Johannes Rudolph</p>
         </div>
         <p className="hint">Möchtest du einen bestehenden Einsatz öffnen oder einen neuen anlegen?</p>
+        <div className="inline-actions">
+          <button onClick={props.onCheckForUpdates} disabled={props.busy}>
+            Auf Updates prüfen
+          </button>
+        </div>
 
         <div className="start-options">
           <button onClick={() => props.setStartChoice('open')} disabled={props.busy}>

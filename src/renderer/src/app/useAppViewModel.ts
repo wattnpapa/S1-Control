@@ -119,6 +119,7 @@ export function useAppViewModel(): AppViewModel {
     error: rootState.error,
     einsaetze: rootState.einsaetze,
     uiState,
+    checkForUpdates: () => void systemActions.checkForUpdates(),
     downloadUpdate: () => void systemActions.downloadUpdate(),
     openReleasePage: () => void systemActions.openReleasePage(),
     openExisting: () => void startActions.openExisting(),

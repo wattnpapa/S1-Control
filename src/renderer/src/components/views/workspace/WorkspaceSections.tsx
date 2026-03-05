@@ -188,6 +188,7 @@ function EinstellungenView(props: WorkspaceContentProps): JSX.Element {
       onChangeDbPath={props.onSetDbPath}
       onSaveDbPath={props.onSaveDbPath}
       onRestoreBackup={props.onRestoreBackup}
+      onCheckForUpdates={props.onCheckForUpdates}
       onToggleLanPeerUpdates={props.onToggleLanPeerUpdates}
     />
   );
