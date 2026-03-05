@@ -10,7 +10,7 @@ const listeners = new Set<DebugListener>();
 function shouldEnableDebug(): boolean {
   const value = process.env.S1_DEBUG_SYNC?.trim().toLowerCase();
   if (!value) {
-    return true;
+    return false;
   }
   return value === '1' || value === 'true' || value === 'yes' || value === 'on';
 }
