@@ -166,21 +166,18 @@ type WorkspaceMainAreaProps = ComponentProps<typeof WorkspaceMainArea>;
 type WorkspaceDialogsProps = ComponentProps<typeof WorkspaceDialogs>;
 
 /**
- * Builds props for the workspace content area.
+ * Builds grouped content props for workspace views.
  */
-function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaProps {
+function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMainAreaProps['contentProps'] {
   return {
-    activeView: props.activeView,
-    showAbschnittSidebar: props.showAbschnittSidebar,
-    abschnitte: props.abschnitte,
-    selectedAbschnittId: props.selectedAbschnittId,
-    selectedEinsatz: props.selectedEinsatz,
-    lockByAbschnittId: props.lockByAbschnittId,
     busy: props.busy,
     isArchived: props.isArchived,
-    selectedAbschnittLockedByOther: props.selectedAbschnittLockedByOther,
-    details: props.details,
+    activeView: props.activeView,
+    selectedEinsatz: props.selectedEinsatz,
     selectedEinsatzId: props.selectedEinsatzId,
+    selectedAbschnittId: props.selectedAbschnittId,
+    abschnitte: props.abschnitte,
+    details: props.details,
     allKraefte: props.allKraefte,
     allFahrzeuge: props.allFahrzeuge,
     broadcastMonitorLogs: props.broadcastMonitorLogs,
@@ -204,9 +201,6 @@ function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaPro
     setEditFahrzeugForm: props.setEditFahrzeugForm,
     einheitLocksById: props.lockByEinheitId,
     fahrzeugLocksById: props.lockByFahrzeugId,
-    onSetActiveView: props.setActiveView,
-    onSetSelectedAbschnittId: props.setSelectedAbschnittId,
-    onEditSelectedAbschnitt: props.onEditSelectedAbschnitt,
     onSubmitEditEinheit: props.onSubmitEditEinheit,
     onCloseEditEinheit: props.onCloseEditEinheit,
     onCreateEinheitHelfer: props.onCreateEinheitHelfer,
@@ -231,6 +225,22 @@ function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaPro
     onRestoreBackup: props.onRestoreBackup,
     onCheckForUpdates: props.onCheckForUpdates,
     onToggleLanPeerUpdates: props.onToggleLanPeerUpdates,
+  };
+}
+
+/**
+ * Builds props for the workspace content area.
+ */
+function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaProps {
+  return {
+    activeView: props.activeView,
+    contentProps: buildWorkspaceContentProps(props),
+    showAbschnittSidebar: props.showAbschnittSidebar,
+    selectedAbschnittLockedByOther: props.selectedAbschnittLockedByOther,
+    lockByAbschnittId: props.lockByAbschnittId,
+    onSetActiveView: props.setActiveView,
+    onSetSelectedAbschnittId: props.setSelectedAbschnittId,
+    onEditSelectedAbschnitt: props.onEditSelectedAbschnitt,
   };
 }
 

@@ -9,10 +9,46 @@ import { SettingsView } from '@renderer/components/views/SettingsView';
 import type { WorkspaceView } from '@renderer/types/ui';
 import type { WorkspaceContentProps } from './WorkspaceContent.types';
 
+type EinheitEditorsProps = Pick<
+  WorkspaceContentProps,
+  | 'showEditEinheitDialog'
+  | 'busy'
+  | 'isArchived'
+  | 'editEinheitForm'
+  | 'setEditEinheitForm'
+  | 'onSubmitEditEinheit'
+  | 'onCloseEditEinheit'
+  | 'editEinheitHelfer'
+  | 'onCreateEinheitHelfer'
+  | 'onUpdateEinheitHelfer'
+  | 'onDeleteEinheitHelfer'
+  | 'allFahrzeuge'
+  | 'onCreateEinheitFahrzeug'
+  | 'onUpdateEinheitFahrzeug'
+  | 'showCreateEinheitDialog'
+  | 'createEinheitForm'
+  | 'abschnitte'
+  | 'setCreateEinheitForm'
+  | 'onSubmitCreateEinheit'
+  | 'onCloseCreateEinheit'
+>;
+
+type FahrzeugEditorProps = Pick<
+  WorkspaceContentProps,
+  | 'showEditFahrzeugDialog'
+  | 'busy'
+  | 'isArchived'
+  | 'editFahrzeugForm'
+  | 'allKraefte'
+  | 'setEditFahrzeugForm'
+  | 'onSubmitEditFahrzeug'
+  | 'onCloseEditFahrzeug'
+>;
+
 /**
  * Renders shared inline editors used in unit-centric views.
  */
-function EinheitEditors(props: WorkspaceContentProps): JSX.Element {
+function EinheitEditors(props: EinheitEditorsProps): JSX.Element {
   return (
     <>
       <InlineEinheitEditor
@@ -48,7 +84,7 @@ function EinheitEditors(props: WorkspaceContentProps): JSX.Element {
 /**
  * Renders inline vehicle editor.
  */
-function FahrzeugEditor(props: WorkspaceContentProps): JSX.Element {
+function FahrzeugEditor(props: FahrzeugEditorProps): JSX.Element {
   return (
     <InlineFahrzeugEditor
       visible={props.showEditFahrzeugDialog}
@@ -64,13 +100,59 @@ function FahrzeugEditor(props: WorkspaceContentProps): JSX.Element {
 }
 
 /**
+ * Maps workspace content props to Einheit editor props.
+ */
+function toEinheitEditorsProps(props: WorkspaceContentProps): EinheitEditorsProps {
+  return {
+    showEditEinheitDialog: props.showEditEinheitDialog,
+    busy: props.busy,
+    isArchived: props.isArchived,
+    editEinheitForm: props.editEinheitForm,
+    setEditEinheitForm: props.setEditEinheitForm,
+    onSubmitEditEinheit: props.onSubmitEditEinheit,
+    onCloseEditEinheit: props.onCloseEditEinheit,
+    editEinheitHelfer: props.editEinheitHelfer,
+    onCreateEinheitHelfer: props.onCreateEinheitHelfer,
+    onUpdateEinheitHelfer: props.onUpdateEinheitHelfer,
+    onDeleteEinheitHelfer: props.onDeleteEinheitHelfer,
+    allFahrzeuge: props.allFahrzeuge,
+    onCreateEinheitFahrzeug: props.onCreateEinheitFahrzeug,
+    onUpdateEinheitFahrzeug: props.onUpdateEinheitFahrzeug,
+    showCreateEinheitDialog: props.showCreateEinheitDialog,
+    createEinheitForm: props.createEinheitForm,
+    abschnitte: props.abschnitte,
+    setCreateEinheitForm: props.setCreateEinheitForm,
+    onSubmitCreateEinheit: props.onSubmitCreateEinheit,
+    onCloseCreateEinheit: props.onCloseCreateEinheit,
+  };
+}
+
+/**
+ * Maps workspace content props to vehicle editor props.
+ */
+function toFahrzeugEditorProps(props: WorkspaceContentProps): FahrzeugEditorProps {
+  return {
+    showEditFahrzeugDialog: props.showEditFahrzeugDialog,
+    busy: props.busy,
+    isArchived: props.isArchived,
+    editFahrzeugForm: props.editFahrzeugForm,
+    allKraefte: props.allKraefte,
+    setEditFahrzeugForm: props.setEditFahrzeugForm,
+    onSubmitEditFahrzeug: props.onSubmitEditFahrzeug,
+    onCloseEditFahrzeug: props.onCloseEditFahrzeug,
+  };
+}
+
+/**
  * Renders dashboard view.
  */
 function EinsatzView(props: WorkspaceContentProps): JSX.Element {
+  const einheitEditorsProps = toEinheitEditorsProps(props);
+  const fahrzeugEditorProps = toFahrzeugEditorProps(props);
   return (
     <>
-      <EinheitEditors {...props} />
-      <FahrzeugEditor {...props} />
+      <EinheitEditors {...einheitEditorsProps} />
+      <FahrzeugEditor {...fahrzeugEditorProps} />
       <button onClick={props.onCreateEinheit} disabled={props.busy || !props.selectedAbschnittId || props.isArchived}>
         Einheit anlegen
       </button>
@@ -111,13 +193,14 @@ function FuehrungView(props: WorkspaceContentProps): JSX.Element {
  * Renders all force overview view.
  */
 function KraefteView(props: WorkspaceContentProps): JSX.Element {
+  const einheitEditorsProps = toEinheitEditorsProps(props);
   const einheiten =
     props.kraefteOrgFilter === 'ALLE'
       ? props.allKraefte
       : props.allKraefte.filter((einheit) => einheit.organisation === props.kraefteOrgFilter);
   return (
     <>
-      <EinheitEditors {...props} />
+      <EinheitEditors {...einheitEditorsProps} />
       <div className="inline-actions">
         <select
           value={props.kraefteOrgFilter}
@@ -154,9 +237,10 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
  * Renders vehicle overview view.
  */
 function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
+  const fahrzeugEditorProps = toFahrzeugEditorProps(props);
   return (
     <>
-      <FahrzeugEditor {...props} />
+      <FahrzeugEditor {...fahrzeugEditorProps} />
       <button onClick={props.onCreateFahrzeug} disabled={props.busy || !props.selectedAbschnittId || props.isArchived}>
         Fahrzeug anlegen
       </button>
