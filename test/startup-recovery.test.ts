@@ -61,4 +61,12 @@ describe('startup recovery', () => {
     expect(deps.updater.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(deps.openExternal).toHaveBeenCalledTimes(1);
   });
+
+  it('does not crash when opening release page fails', async () => {
+    const deps = createDeps({ dialogResponse: 0 });
+    deps.openExternal.mockRejectedValue(new Error('blocked'));
+
+    await expect(runStartupRecovery(new Error('kaputt'), deps)).resolves.toBeUndefined();
+    expect(deps.openExternal).toHaveBeenCalledTimes(1);
+  });
 });

@@ -66,4 +66,42 @@ describe('debug sync logging', () => {
     expect(debug.getDebugSyncLogLines()).toHaveLength(2);
     expect(consoleSpy).toHaveBeenCalledTimes(2);
   });
+
+  it('notifies subscribed listeners and unsubscribes cleanly', async () => {
+    const debug = await importDebugModuleWithEnv('1');
+    const listener = vi.fn();
+    const unsubscribe = debug.onDebugSyncLog(listener);
+
+    debug.debugSync('clients', 'heartbeat', { ok: true });
+    expect(listener).toHaveBeenCalledTimes(1);
+
+    unsubscribe();
+    debug.debugSync('clients', 'heartbeat:failed', { ok: false });
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it('trims log buffer to max retained lines', async () => {
+    process.env.S1_DEBUG_SYNC_MIN_INTERVAL_MS = '0';
+    const debug = await importDebugModuleWithEnv('1');
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+
+    for (let i = 0; i < 450; i += 1) {
+      debug.debugSync('scope', `msg-${i}`);
+    }
+
+    expect(debug.getDebugSyncLogLines()).toHaveLength(400);
+    expect(consoleSpy).toHaveBeenCalledTimes(450);
+  });
+
+  it('handles unserializable meta payloads', async () => {
+    const debug = await importDebugModuleWithEnv('1');
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => undefined);
+    const circular: Record<string, unknown> = {};
+    circular.self = circular;
+
+    debug.debugSync('scope', 'circular', circular);
+
+    expect(debug.getDebugSyncLogLines().at(-1)).toContain('"meta":"unserializable"');
+    expect(consoleSpy).toHaveBeenCalledTimes(1);
+  });
 });
