@@ -1,6 +1,7 @@
 import type { OrganisationKey, TacticalSignConfig } from '@shared/types';
 import { useEffect, useState } from 'react';
 import { prettyOrganisation } from '@renderer/constants/organisation';
+import { buildFallbackFormationSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
 
 interface TaktischesZeichenEinheitProps {
   organisation: OrganisationKey;
@@ -14,7 +15,7 @@ const iconCache = new Map<string, string>();
  */
 export function TaktischesZeichenEinheit(props: TaktischesZeichenEinheitProps): JSX.Element {
   const cacheKey = `${props.organisation}:${props.tacticalSignConfigJson ?? ''}`;
-  const [src, setSrc] = useState<string>(iconCache.get(cacheKey) ?? '');
+  const [src, setSrc] = useState<string>(iconCache.get(cacheKey) ?? buildFallbackFormationSignDataUrl(props.organisation));
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +47,9 @@ export function TaktischesZeichenEinheit(props: TaktischesZeichenEinheitProps): 
         setSrc(dataUrl);
       } catch {
         if (cancelled) return;
-        setSrc('');
+        const fallback = buildFallbackFormationSignDataUrl(props.organisation);
+        iconCache.set(cacheKey, fallback);
+        setSrc(fallback);
       }
     })();
 
@@ -57,11 +60,7 @@ export function TaktischesZeichenEinheit(props: TaktischesZeichenEinheitProps): 
 
   return (
     <span className="tactical-sign-badge">
-      {src ? (
-        <img src={src} alt={`Taktisches Zeichen ${prettyOrganisation(props.organisation)}`} className="tactical-sign" />
-      ) : (
-        <span className="tactical-sign-fallback">{prettyOrganisation(props.organisation).slice(0, 2).toUpperCase()}</span>
-      )}
+      <img src={src} alt={`Taktisches Zeichen ${prettyOrganisation(props.organisation)}`} className="tactical-sign" />
     </span>
   );
 }

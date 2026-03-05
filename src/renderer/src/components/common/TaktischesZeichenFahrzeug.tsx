@@ -1,6 +1,7 @@
 import type { OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
 import { inferVehicleTacticalUnit } from '@renderer/utils/tactical-vehicle';
+import { buildFallbackVehicleSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
 
 interface TaktischesZeichenFahrzeugProps {
   organisation: OrganisationKey | null;
@@ -20,7 +21,7 @@ export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps)
     funkrufname: props.funkrufname,
   });
   const cacheKey = `${organisation}:${inferredUnit}`;
-  const [src, setSrc] = useState<string>(vehicleCache.get(cacheKey) ?? '');
+  const [src, setSrc] = useState<string>(vehicleCache.get(cacheKey) ?? buildFallbackVehicleSignDataUrl(organisation));
 
   useEffect(() => {
     let cancelled = false;
@@ -40,7 +41,9 @@ export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps)
         setSrc(dataUrl);
       } catch {
         if (cancelled) return;
-        setSrc('');
+        const fallback = buildFallbackVehicleSignDataUrl(organisation);
+        vehicleCache.set(cacheKey, fallback);
+        setSrc(fallback);
       }
     })();
 
@@ -51,7 +54,7 @@ export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps)
 
   return (
     <span className="tactical-sign-badge">
-      {src ? <img src={src} alt="Taktisches Zeichen Fahrzeug" className="tactical-sign" /> : <span className="tactical-sign-fallback">KFZ</span>}
+      <img src={src} alt="Taktisches Zeichen Fahrzeug" className="tactical-sign" />
     </span>
   );
 }
