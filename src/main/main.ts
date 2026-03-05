@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog } from 'electron';
+import { app, BrowserWindow, dialog, shell } from 'electron';
 import path from 'node:path';
 import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
@@ -13,11 +13,13 @@ import { EinsatzSyncService } from './services/einsatz-sync';
 import { UpdaterService } from './services/updater';
 import { onDebugSyncLog } from './services/debug';
 import { broadcastToAllWindows, createMainWindow, resolveRendererUrl } from './services/main-window';
+import { runStartupRecovery } from './services/startup-recovery';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
 const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
 let pendingOpenFilePath: string | null = null;
+let bootstrapUpdater: UpdaterService | null = null;
 
 /**
  * Handles Is Einsatz File Path.
@@ -216,6 +218,12 @@ async function bootstrap(): Promise<void> {
   setupVersionMetadata();
 
   const settingsStore = new SettingsStore(app.getPath('userData'));
+  const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
+  const updater = new UpdaterService((state) => {
+    broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
+  }, lanPeerUpdatesEnabled);
+  bootstrapUpdater = updater;
+
   const paths = resolveDbPaths(settingsStore);
   const dbBootstrap = openSystemDbWithFallback(settingsStore, paths);
   let dbContext = dbBootstrap.dbContext;
@@ -224,14 +232,10 @@ async function bootstrap(): Promise<void> {
   const clientPresence = new ClientPresenceService();
   clientPresence.start(dbContext);
   const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
-  const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
   const einsatzSync = new EinsatzSyncService((signal) => {
     broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
   });
   einsatzSync.start(dbContext.path);
-  const updater = new UpdaterService((state) => {
-    broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
-  }, lanPeerUpdatesEnabled);
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
 
   let currentUser: SessionUser | null = null;
@@ -284,9 +288,13 @@ process.on('unhandledRejection', (reason) => {
   dialog.showErrorBox('Unerwarteter Initialisierungsfehler', withVersion(message));
 });
 
-void bootstrap().catch((error) => {
-  dialog.showErrorBox(
-    'Startfehler',
-    withVersion(error instanceof Error ? error.stack || error.message : String(error)),
-  );
+void bootstrap().catch(async (error) => {
+  const updater = bootstrapUpdater ?? new UpdaterService(() => undefined, false);
+  await runStartupRecovery(error, {
+    updater,
+    withVersion,
+    showErrorBox: (title, content) => dialog.showErrorBox(title, content),
+    showMessageBox: async (options) => dialog.showMessageBox(options),
+    openExternal: async (url) => shell.openExternal(url),
+  });
 });
