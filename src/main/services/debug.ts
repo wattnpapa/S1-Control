@@ -1,21 +1,10 @@
+import { isSyncDebugEnabled, shouldEmitSyncDebug } from './diagnostics';
+
 type DebugMeta = Record<string, unknown> | undefined;
 type DebugListener = (line: string) => void;
 const MAX_LOG_LINES = 400;
 const logLines: string[] = [];
 const listeners = new Set<DebugListener>();
-
-/**
- * Handles Should Enable Debug.
- */
-function shouldEnableDebug(): boolean {
-  const value = process.env.S1_DEBUG_SYNC?.trim().toLowerCase();
-  if (!value) {
-    return false;
-  }
-  return value === '1' || value === 'true' || value === 'yes' || value === 'on';
-}
-
-const ENABLED = shouldEnableDebug();
 
 /**
  * Handles Safe Json.
@@ -35,7 +24,7 @@ function safeJson(meta: DebugMeta): string {
  * Handles Debug Sync.
  */
 export function debugSync(scope: string, message: string, meta?: DebugMeta): void {
-  if (!ENABLED) {
+  if (!isSyncDebugEnabled() || !shouldEmitSyncDebug(scope, message)) {
     return;
   }
   const ts = new Date().toISOString();

@@ -10,6 +10,7 @@ import type {
 import type { WorkspaceView } from '@renderer/types/ui';
 import { readError } from '@renderer/utils/error';
 import { upsertRecentEinsatz } from './einsatz-list';
+import { appendDebugSyncLogLine, trimDebugSyncLogs } from './diagnostics-log';
 
 interface UseSyncEventsOptions {
   session: SessionUser | null;
@@ -152,10 +153,7 @@ function useQueuedFileOpenEffect(options: UseSyncEventsOptions): void {
 function useDebugLogSubscriptionEffect(setDebugSyncLogs: UseSyncEventsOptions['setDebugSyncLogs']): void {
   useEffect(() => {
     const unsubscribe = window.appEvents.onDebugSyncLog((line) => {
-      setDebugSyncLogs((prev) => {
-        const next = [...prev, line];
-        return next.slice(-400);
-      });
+      setDebugSyncLogs((prev) => appendDebugSyncLogLine(prev, line));
     });
     return () => unsubscribe();
   }, [setDebugSyncLogs]);
@@ -196,7 +194,7 @@ function useInitialDebugLogLoadEffect(options: UseSyncEventsOptions): void {
     void (async () => {
       try {
         const logs = await window.api.getDebugSyncLogLines();
-        setDebugSyncLogs(logs.slice(-400));
+        setDebugSyncLogs(trimDebugSyncLogs(logs));
       } catch (err) {
         setError(readError(err));
       }

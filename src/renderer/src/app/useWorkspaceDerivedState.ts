@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import type { EinsatzListItem } from '@shared/types';
 import type { WorkspaceView } from '@renderer/types/ui';
+import { selectBroadcastMonitorLogs, selectUdpDebugMonitorLogs } from './diagnostics-log';
 
 interface UseWorkspaceDerivedStateOptions {
   einsaetze: EinsatzListItem[];
@@ -21,35 +22,12 @@ export function useWorkspaceDerivedState(options: UseWorkspaceDerivedStateOption
   );
 
   const broadcastMonitorLogs = useMemo(
-    () =>
-      options.debugSyncLogs
-        .filter((line) => line.includes('[einsatz-sync] received') || line.includes('[einsatz-sync] remote-change'))
-        .slice(-120),
+    () => selectBroadcastMonitorLogs(options.debugSyncLogs),
     [options.debugSyncLogs],
   );
 
   const udpDebugMonitorLogs = useMemo(
-    () =>
-      options.debugSyncLogs
-        .filter((line) => {
-          const isUdpScope =
-            line.includes('[einsatz-sync]') ||
-            line.includes('[peer-service]') ||
-            line.includes('[peer-discovery]') ||
-            line.includes('[peer-offer]');
-          if (!isUdpScope) {
-            return false;
-          }
-          return (
-            line.includes('udp-') ||
-            line.includes('broadcast') ||
-            line.includes('received') ||
-            line.includes('query') ||
-            line.includes('sent') ||
-            line.includes('remote-change')
-          );
-        })
-        .slice(-250),
+    () => selectUdpDebugMonitorLogs(options.debugSyncLogs),
     [options.debugSyncLogs],
   );
 
