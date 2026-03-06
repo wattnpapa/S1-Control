@@ -27,6 +27,26 @@ const GITHUB_OWNER = process.env.S1_UPDATE_OWNER || 'wattnpapa';
 const GITHUB_REPO = process.env.S1_UPDATE_REPO || 'S1-Control';
 const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest/download`;
 const LAN_PEER_ENABLED_DEFAULT = process.env.S1_UPDATER_LAN_PEER === '1';
+const IN_APP_CHECK_TIMEOUT_MS = 12000;
+
+/**
+ * Runs async work with timeout guard.
+ */
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, message: string): Promise<T> {
+  let timer: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(message));
+    }, timeoutMs);
+  });
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
+}
 
 export class UpdaterService {
   private state: UpdaterState = {
@@ -42,6 +62,7 @@ export class UpdaterService {
   private peerEnabled = LAN_PEER_ENABLED_DEFAULT;
   private peerService: UpdatePeerService | null = null;
   private pendingArtifact: UpdateArtifactMeta | null = null;
+  private checkInFlight = false;
   private readonly updateCacheDir: string;
 
   private readonly notify: (state: UpdaterState) => void;
@@ -111,6 +132,10 @@ export class UpdaterService {
    * Handles Check For Updates.
    */
   public async checkForUpdates(): Promise<void> {
+    if (this.checkInFlight) {
+      return;
+    }
+    this.checkInFlight = true;
     this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
     this.canDownloadInApp = false;
 
@@ -125,7 +150,11 @@ export class UpdaterService {
         return;
       }
 
-      const result = await autoUpdater.checkForUpdates();
+      const result = await withTimeout(
+        autoUpdater.checkForUpdates(),
+        IN_APP_CHECK_TIMEOUT_MS,
+        'In-App Update-Check Zeitüberschreitung.',
+      );
       this.canDownloadInApp = true;
       const latestVersion = result?.updateInfo?.version;
       this.pendingArtifact = toArtifactMeta(
@@ -148,6 +177,8 @@ export class UpdaterService {
         runGitHubFallback: (reason) => this.runGitHubFallback(reason),
         setState: (next) => this.setState(next),
       });
+    } finally {
+      this.checkInFlight = false;
     }
   }
 

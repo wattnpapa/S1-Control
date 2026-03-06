@@ -177,7 +177,8 @@ function stopServices(
   updater: UpdaterService,
 ): void {
   backupCoordinator.stop();
-  clientPresence.stop(true);
+  // Avoid blocking shutdown on busy DB writes; stale entries are auto-cleaned by TTL.
+  clientPresence.stop(false);
   einsatzSync.stop();
   updater.shutdown();
 }
@@ -191,17 +192,25 @@ function setupLifecycleHandlers(
   einsatzSync: EinsatzSyncService,
   updater: UpdaterService,
 ): void {
+  let stopped = false;
+  const stopOnce = () => {
+    if (stopped) {
+      return;
+    }
+    stopped = true;
+    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+  };
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       void createMainWindow();
     }
   });
   app.on('window-all-closed', () => {
-    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+    stopOnce();
     app.quit();
   });
   app.on('before-quit', () => {
-    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+    stopOnce();
   });
 }
 

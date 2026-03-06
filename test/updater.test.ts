@@ -258,6 +258,24 @@ describe('updater service - auto updater interaction', () => {
     await service.checkForUpdates();
     expect(service.getState()).toMatchObject({ stage: 'error', message: 'boom' });
   });
+
+  it('times out hanging in-app update checks', async () => {
+    vi.useFakeTimers();
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockReturnValue(new Promise(() => undefined));
+    const service = new UpdaterService(() => undefined);
+
+    const run = service.checkForUpdates();
+    await vi.advanceTimersByTimeAsync(12_100);
+    await run;
+
+    expect(service.getState()).toMatchObject({
+      stage: 'error',
+      message: 'In-App Update-Check Zeitüberschreitung.',
+    });
+    vi.useRealTimers();
+  });
 });
 
 describe('updater service - fallback and install', () => {
