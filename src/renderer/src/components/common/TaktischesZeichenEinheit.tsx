@@ -1,58 +1,36 @@
-import type { OrganisationKey, TacticalSignConfig } from '@shared/types';
+import type { OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import { buildFallbackFormationSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
+import { getFormationSignSrc, toFormationCacheKey } from '@renderer/app/tactical-sign-cache';
 
 interface TaktischesZeichenEinheitProps {
   organisation: OrganisationKey;
   tacticalSignConfigJson?: string | null;
 }
 
-const iconCache = new Map<string, string>();
-
 /**
  * Handles Taktisches Zeichen Einheit.
  */
 export function TaktischesZeichenEinheit(props: TaktischesZeichenEinheitProps): JSX.Element {
-  const cacheKey = `${props.organisation}:${props.tacticalSignConfigJson ?? ''}`;
-  const [src, setSrc] = useState<string>(iconCache.get(cacheKey) ?? buildFallbackFormationSignDataUrl(props.organisation));
+  const cacheKey = toFormationCacheKey({
+    organisation: props.organisation,
+    tacticalSignConfigJson: props.tacticalSignConfigJson,
+  });
+  const [src, setSrc] = useState<string>(buildFallbackFormationSignDataUrl(props.organisation));
 
   useEffect(() => {
     let cancelled = false;
-    const cached = iconCache.get(cacheKey);
-    if (cached) {
-      setSrc(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
-    let tacticalSignConfig: TacticalSignConfig | null = null;
-    if (props.tacticalSignConfigJson) {
-      try {
-        tacticalSignConfig = JSON.parse(props.tacticalSignConfigJson);
-      } catch {
-        tacticalSignConfig = null;
-      }
-    }
-
     void (async () => {
-      try {
-        const dataUrl = await window.api.getTacticalFormationSvg({
-          organisation: props.organisation,
-          tacticalSignConfig,
-        });
-        if (cancelled) return;
-        iconCache.set(cacheKey, dataUrl);
-        setSrc(dataUrl);
-      } catch {
-        if (cancelled) return;
-        const fallback = buildFallbackFormationSignDataUrl(props.organisation);
-        iconCache.set(cacheKey, fallback);
-        setSrc(fallback);
+      const dataUrl = await getFormationSignSrc({
+        organisation: props.organisation,
+        tacticalSignConfigJson: props.tacticalSignConfigJson,
+      });
+      if (cancelled) {
+        return;
       }
+      setSrc(dataUrl);
     })();
-
     return () => {
       cancelled = true;
     };

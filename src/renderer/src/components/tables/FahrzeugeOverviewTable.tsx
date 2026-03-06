@@ -1,4 +1,6 @@
 import type { RecordEditLockInfo } from '@shared/types';
+import { useEffect } from 'react';
+import { prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
 import type { FahrzeugOverviewItem } from '@renderer/types/ui';
 import { FahrzeugRow } from '@renderer/components/tables/FahrzeugRow';
 
@@ -14,6 +16,16 @@ interface FahrzeugeOverviewTableProps {
  * Handles Fahrzeuge Overview Table.
  */
 export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.Element {
+  useEffect(() => {
+    prewarmVehicleSigns(
+      props.fahrzeuge.map((item) => ({
+        organisation: item.organisation,
+        name: item.name,
+        funkrufname: item.funkrufname,
+      })),
+    );
+  }, [props.fahrzeuge]);
+
   return (
     <>
       <h2>Alle Fahrzeuge im Einsatz</h2>

@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import type { AbschnittDetails, EinsatzListItem } from '@shared/types';
 import type { FahrzeugOverviewItem, KraftOverviewItem, TacticalStrength } from '@renderer/types/ui';
 import { parseTaktischeStaerke } from '@renderer/utils/tactical';
+import { prewarmFormationSigns, prewarmVehicleSigns } from './tactical-sign-cache';
 
 interface UseEinsatzDataProps {
   selectedEinsatzId: string;
@@ -34,7 +35,21 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
       const nextAllKraefte = mapAllKraefte(allDetails, nextAbschnitte);
       props.setAllKraefte(nextAllKraefte);
 
-      props.setAllFahrzeuge(mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte));
+      const nextAllFahrzeuge = mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte);
+      props.setAllFahrzeuge(nextAllFahrzeuge);
+      prewarmFormationSigns(
+        nextAllKraefte.map((item) => ({
+          organisation: item.organisation,
+          tacticalSignConfigJson: item.tacticalSignConfigJson,
+        })),
+      );
+      prewarmVehicleSigns(
+        nextAllFahrzeuge.map((item) => ({
+          organisation: item.organisation,
+          name: item.name,
+          funkrufname: item.funkrufname,
+        })),
+      );
       const total = aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength);
       props.setGesamtStaerke(total);
 

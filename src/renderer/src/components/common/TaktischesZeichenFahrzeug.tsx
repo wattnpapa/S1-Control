@@ -1,7 +1,7 @@
 import type { OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
-import { inferVehicleTacticalUnit } from '@renderer/utils/tactical-vehicle';
 import { buildFallbackVehicleSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
+import { getVehicleSignSrc, prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
 
 interface TaktischesZeichenFahrzeugProps {
   organisation: OrganisationKey | null;
@@ -9,48 +9,42 @@ interface TaktischesZeichenFahrzeugProps {
   funkrufname?: string | null;
 }
 
-const vehicleCache = new Map<string, string>();
-
 /**
  * Handles Taktisches Zeichen Fahrzeug.
  */
 export function TaktischesZeichenFahrzeug(props: TaktischesZeichenFahrzeugProps): JSX.Element {
   const organisation = props.organisation ?? 'SONSTIGE';
-  const inferredUnit = inferVehicleTacticalUnit(organisation, {
-    name: props.name,
-    funkrufname: props.funkrufname,
-  });
-  const cacheKey = `${organisation}:${inferredUnit}`;
-  const [src, setSrc] = useState<string>(vehicleCache.get(cacheKey) ?? buildFallbackVehicleSignDataUrl(organisation));
+  const cacheKey = `${organisation}:${props.name ?? ''}:${props.funkrufname ?? ''}`;
+  const [src, setSrc] = useState<string>(buildFallbackVehicleSignDataUrl(organisation));
 
   useEffect(() => {
     let cancelled = false;
-    const cached = vehicleCache.get(cacheKey);
-    if (cached) {
-      setSrc(cached);
-      return () => {
-        cancelled = true;
-      };
-    }
-
     void (async () => {
-      try {
-        const dataUrl = await window.api.getTacticalVehicleSvg({ organisation, unit: inferredUnit });
-        if (cancelled) return;
-        vehicleCache.set(cacheKey, dataUrl);
-        setSrc(dataUrl);
-      } catch {
-        if (cancelled) return;
-        const fallback = buildFallbackVehicleSignDataUrl(organisation);
-        vehicleCache.set(cacheKey, fallback);
-        setSrc(fallback);
+      const dataUrl = await getVehicleSignSrc({
+        organisation: props.organisation,
+        name: props.name,
+        funkrufname: props.funkrufname,
+      });
+      if (cancelled) {
+        return;
       }
+      setSrc(dataUrl);
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [cacheKey, inferredUnit, organisation]);
+  }, [cacheKey, organisation, props.funkrufname, props.name, props.organisation]);
+
+  useEffect(() => {
+    prewarmVehicleSigns([
+      {
+        organisation: props.organisation,
+        name: props.name,
+        funkrufname: props.funkrufname,
+      },
+    ]);
+  }, [cacheKey, props.funkrufname, props.name, props.organisation]);
 
   return (
     <span className="tactical-sign-badge">

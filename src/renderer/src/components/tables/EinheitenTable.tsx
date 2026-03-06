@@ -1,4 +1,6 @@
 import type { EinheitListItem, RecordEditLockInfo } from '@shared/types';
+import { useEffect } from 'react';
+import { prewarmFormationSigns } from '@renderer/app/tactical-sign-cache';
 import { EinheitRow } from '@renderer/components/tables/EinheitRow';
 
 interface EinheitenTableProps {
@@ -14,6 +16,15 @@ interface EinheitenTableProps {
  * Handles Einheiten Table.
  */
 export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
+  useEffect(() => {
+    prewarmFormationSigns(
+      props.einheiten.map((item) => ({
+        organisation: item.organisation,
+        tacticalSignConfigJson: item.tacticalSignConfigJson,
+      })),
+    );
+  }, [props.einheiten]);
+
   const nameById = new Map(props.einheiten.map((item) => [item.id, item.nameImEinsatz]));
 
   return (

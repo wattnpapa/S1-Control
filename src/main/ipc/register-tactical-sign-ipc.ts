@@ -18,6 +18,17 @@ export function registerTacticalSignIpc(common: RegistrarCommon): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.GET_TACTICAL_FORMATION_SVGS,
+    wrap(async (input: Parameters<RendererApi['getTacticalFormationSvgs']>[0]) => {
+      const result: Record<string, string> = {};
+      for (const item of input) {
+        result[item.cacheKey] = getTacticalFormationSvgDataUrl(item.organisation, item.tacticalSignConfig ?? null);
+      }
+      return result;
+    }),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.INFER_TACTICAL_SIGN,
     wrap(async (input: Parameters<RendererApi['inferTacticalSign']>[0]) =>
       inferTacticalSignConfig(input.nameImEinsatz, input.organisation),
@@ -36,6 +47,17 @@ export function registerTacticalSignIpc(common: RegistrarCommon): void {
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
       getTacticalVehicleSvgDataUrl(input.organisation, input.unit),
     ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVGS,
+    wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvgs']>[0]) => {
+      const result: Record<string, string> = {};
+      for (const item of input) {
+        result[item.cacheKey] = getTacticalVehicleSvgDataUrl(item.organisation, item.unit);
+      }
+      return result;
+    }),
   );
 
   ipcMain.handle(

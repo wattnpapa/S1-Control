@@ -39,17 +39,26 @@ interface UseSyncEventsOptions {
 /**
  * Polls selected Einsatz to keep distributed state aligned.
  */
-function usePeriodicRefreshEffect(options: UseSyncEventsOptions): void {
+function usePeriodicRefreshEffect(
+  options: UseSyncEventsOptions,
+  refreshInFlightRef: MutableRefObject<boolean>,
+): void {
   const { refreshAll, selectedEinsatzId, session } = options;
   useEffect(() => {
     if (!session || !selectedEinsatzId) {
       return;
     }
     const timer = window.setInterval(() => {
-      void refreshAll();
+      if (refreshInFlightRef.current) {
+        return;
+      }
+      refreshInFlightRef.current = true;
+      void refreshAll().finally(() => {
+        refreshInFlightRef.current = false;
+      });
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [refreshAll, selectedEinsatzId, session]);
+  }, [refreshAll, refreshInFlightRef, selectedEinsatzId, session]);
 }
 
 /**
@@ -74,7 +83,10 @@ function useAbschnittDetailsEffect(options: UseSyncEventsOptions): void {
 /**
  * Refreshes settings/peer/client state while settings view is active.
  */
-function useSettingsViewSyncEffect(options: UseSyncEventsOptions): void {
+function useSettingsViewSyncEffect(
+  options: UseSyncEventsOptions,
+  settingsSyncInFlightRef: MutableRefObject<boolean>,
+): void {
   const { activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus } =
     options;
   useEffect(() => {
@@ -82,6 +94,10 @@ function useSettingsViewSyncEffect(options: UseSyncEventsOptions): void {
       return;
     }
     const loadClients = async () => {
+      if (settingsSyncInFlightRef.current) {
+        return;
+      }
+      settingsSyncInFlightRef.current = true;
       try {
         const [clients, settings, peerStatus] = await Promise.all([
           window.api.listActiveClients(),
@@ -94,6 +110,8 @@ function useSettingsViewSyncEffect(options: UseSyncEventsOptions): void {
         setPeerUpdateStatus(peerStatus);
       } catch (err) {
         setError(readError(err));
+      } finally {
+        settingsSyncInFlightRef.current = false;
       }
     };
     void loadClients();
@@ -101,7 +119,17 @@ function useSettingsViewSyncEffect(options: UseSyncEventsOptions): void {
       void loadClients();
     }, 5000);
     return () => window.clearInterval(timer);
-  }, [activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus]);
+  }, [
+    activeView,
+    selectedEinsatzId,
+    session,
+    setActiveClients,
+    setDbPath,
+    setError,
+    setLanPeerUpdatesEnabled,
+    setPeerUpdateStatus,
+    settingsSyncInFlightRef,
+  ]);
 }
 
 /**
@@ -207,10 +235,12 @@ function useInitialDebugLogLoadEffect(options: UseSyncEventsOptions): void {
  */
 export function useSyncEvents(options: UseSyncEventsOptions): void {
   const lastRemoteRefreshAtRef = useRef(0);
+  const refreshInFlightRef = useRef(false);
+  const settingsSyncInFlightRef = useRef(false);
 
-  usePeriodicRefreshEffect(options);
+  usePeriodicRefreshEffect(options, refreshInFlightRef);
   useAbschnittDetailsEffect(options);
-  useSettingsViewSyncEffect(options);
+  useSettingsViewSyncEffect(options, settingsSyncInFlightRef);
   useQueuedFileOpenEffect(options);
   useDebugLogSubscriptionEffect(options.setDebugSyncLogs);
   useEinsatzChangedEffect(options, lastRemoteRefreshAtRef);

@@ -216,6 +216,11 @@ export interface RendererApi {
     organisation: OrganisationKey;
     tacticalSignConfig?: TacticalSignConfig | null;
   }): Promise<string>;
+  getTacticalFormationSvgs(input: Array<{
+    cacheKey: string;
+    organisation: OrganisationKey;
+    tacticalSignConfig?: TacticalSignConfig | null;
+  }>): Promise<Record<string, string>>;
   inferTacticalSign(input: {
     organisation: OrganisationKey;
     nameImEinsatz: string;
@@ -239,6 +244,11 @@ export interface RendererApi {
     organisation: OrganisationKey;
     unit?: string;
   }): Promise<string>;
+  getTacticalVehicleSvgs(input: Array<{
+    cacheKey: string;
+    organisation: OrganisationKey;
+    unit?: string;
+  }>): Promise<Record<string, string>>;
   getTacticalPersonSvg(input: {
     organisation: OrganisationKey;
     rolle: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER';
@@ -308,9 +318,11 @@ export const IPC_CHANNEL = {
   EINSATZ_CHANGED: 'einsatz:changed',
   OPEN_EXTERNAL_URL: 'app:open-external-url',
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
+  GET_TACTICAL_FORMATION_SVGS: 'taktisches-zeichen:formation-svgs',
   INFER_TACTICAL_SIGN: 'taktisches-zeichen:infer',
   LIST_TACTICAL_SIGN_CATALOG: 'taktisches-zeichen:catalog',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
+  GET_TACTICAL_VEHICLE_SVGS: 'taktisches-zeichen:vehicle-svgs',
   GET_TACTICAL_PERSON_SVG: 'taktisches-zeichen:person-svg',
   OPEN_STRENGTH_DISPLAY_WINDOW: 'strength-display:open-window',
   CLOSE_STRENGTH_DISPLAY_WINDOW: 'strength-display:close-window',

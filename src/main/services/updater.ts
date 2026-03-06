@@ -234,9 +234,10 @@ export class UpdaterService {
             inAppDownloadReason: 'In-App-Download ist verfügbar.',
           });
         },
-        onUpdateNotAvailable: () => {
+        onUpdateNotAvailable: (info) => {
           this.setState({
             stage: 'not-available',
+            latestVersion: info?.version ? toDisplayVersion(info.version) : this.state.latestVersion,
             source: 'electron-updater',
             inAppDownloadSupported: true,
             inAppDownloadReason: 'In-App-Download ist verfügbar.',

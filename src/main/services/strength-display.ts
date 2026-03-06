@@ -75,9 +75,9 @@ export class StrengthDisplayService {
       this.pushState();
     });
 
-    const baseUrl = this.resolveRendererUrl();
-    const url = baseUrl.includes('?') ? `${baseUrl}&display=strength` : `${baseUrl}?display=strength`;
-    await this.window.loadURL(url);
+    const parsedUrl = new URL(this.resolveRendererUrl());
+    parsedUrl.searchParams.set('display', 'strength');
+    await this.window.loadURL(parsedUrl.toString());
   }
 
   /**

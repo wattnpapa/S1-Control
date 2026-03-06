@@ -3,7 +3,7 @@ import { autoUpdater } from 'electron-updater';
 interface RegisterAutoUpdaterEventsParams {
   onCheckingForUpdate: () => void;
   onUpdateAvailable: (info: { version: string; files?: Array<{ url?: string; sha512?: string; size?: number }> }) => void;
-  onUpdateNotAvailable: () => void;
+  onUpdateNotAvailable: (info: { version?: string }) => void;
   onError: (message: string) => void;
   onDownloadProgress: (progress: {
     percent: number;
@@ -53,7 +53,9 @@ export function registerAutoUpdaterEvents(params: RegisterAutoUpdaterEventsParam
   autoUpdater.on('update-available', (info) =>
     params.onUpdateAvailable(info as { version: string; files?: Array<{ url?: string; sha512?: string; size?: number }> }),
   );
-  autoUpdater.on('update-not-available', () => params.onUpdateNotAvailable());
+  autoUpdater.on('update-not-available', (info) =>
+    params.onUpdateNotAvailable(info as { version?: string }),
+  );
   autoUpdater.on('error', (error) => params.onError(error.message || 'Update-Fehler'));
   autoUpdater.on('download-progress', (progress) =>
     params.onDownloadProgress({

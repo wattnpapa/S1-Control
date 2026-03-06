@@ -1,4 +1,6 @@
 import type { FahrzeugListItem, RecordEditLockInfo } from '@shared/types';
+import { useEffect } from 'react';
+import { prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
 import { FahrzeugRow } from '@renderer/components/tables/FahrzeugRow';
 
 interface FahrzeugeTableProps {
@@ -13,6 +15,16 @@ interface FahrzeugeTableProps {
  * Handles Fahrzeuge Table.
  */
 export function FahrzeugeTable(props: FahrzeugeTableProps): JSX.Element {
+  useEffect(() => {
+    prewarmVehicleSigns(
+      props.fahrzeuge.map((item) => ({
+        organisation: item.organisation,
+        name: item.name,
+        funkrufname: item.funkrufname,
+      })),
+    );
+  }, [props.fahrzeuge]);
+
   return (
     <>
       <h2>Fahrzeuge im Abschnitt</h2>

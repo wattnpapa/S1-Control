@@ -1,5 +1,32 @@
 import path from 'node:path';
-import { BrowserWindow } from 'electron';
+import { existsSync } from 'node:fs';
+import { pathToFileURL } from 'node:url';
+import { app, BrowserWindow } from 'electron';
+
+/**
+ * Builds file-path candidates for packaged renderer entry.
+ */
+function rendererEntryCandidates(): string[] {
+  const appPath = app.getAppPath();
+  return [
+    path.join(__dirname, '../dist-renderer/index.html'),
+    path.join(__dirname, '../dist/index.html'),
+    path.join(appPath, 'dist-renderer/index.html'),
+    path.join(appPath, 'dist/index.html'),
+  ];
+}
+
+/**
+ * Resolves the first existing renderer entry path.
+ */
+function resolveRendererEntryPath(): string {
+  for (const candidate of rendererEntryCandidates()) {
+    if (existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return path.join(__dirname, '../dist-renderer/index.html');
+}
 
 /**
  * Resolves renderer URL for dev/prod modes.
@@ -9,7 +36,7 @@ export function resolveRendererUrl(): string {
   if (devServer) {
     return devServer;
   }
-  return `file://${path.join(__dirname, '../dist-renderer/index.html')}`;
+  return pathToFileURL(resolveRendererEntryPath()).toString();
 }
 
 /**

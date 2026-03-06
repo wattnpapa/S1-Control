@@ -1,4 +1,6 @@
 import type { RecordEditLockInfo } from '@shared/types';
+import { useEffect } from 'react';
+import { prewarmFormationSigns } from '@renderer/app/tactical-sign-cache';
 import { EinheitRow } from '@renderer/components/tables/EinheitRow';
 import type { KraftOverviewItem } from '@renderer/types/ui';
 
@@ -15,6 +17,15 @@ interface KraefteOverviewTableProps {
  * Handles Kraefte Overview Table.
  */
 export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Element {
+  useEffect(() => {
+    prewarmFormationSigns(
+      props.einheiten.map((item) => ({
+        organisation: item.organisation,
+        tacticalSignConfigJson: item.tacticalSignConfigJson,
+      })),
+    );
+  }, [props.einheiten]);
+
   const nameById = new Map(props.einheiten.map((item) => [item.id, item.nameImEinsatz]));
 
   return (

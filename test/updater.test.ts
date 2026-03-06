@@ -240,6 +240,15 @@ describe('updater service - auto updater interaction', () => {
     expect(states.at(-1)).toMatchObject({ stage: 'error', message: 'kaputt' });
   });
 
+  it('stores server version when updater reports not-available', () => {
+    const service = new UpdaterService(() => undefined);
+    hoisted.autoUpdaterMock.emit('update-not-available', { version: '1.2.3' });
+    expect(service.getState()).toMatchObject({
+      stage: 'not-available',
+      latestVersion: '1.2.3',
+    });
+  });
+
   it('handles updater check errors from electron-updater path', async () => {
     hoisted.setAppVersion('1.2.3');
     hoisted.existsSyncMock.mockReturnValue(true);

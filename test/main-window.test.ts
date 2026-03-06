@@ -21,6 +21,9 @@ const hoisted = vi.hoisted(() => {
 });
 
 vi.mock('electron', () => ({
+  app: {
+    getAppPath: () => '/app',
+  },
   BrowserWindow: hoisted.BrowserWindowMock,
 }));
 

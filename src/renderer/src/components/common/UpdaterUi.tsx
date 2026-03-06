@@ -77,22 +77,38 @@ export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
       </div>
     );
   }
+  if (updaterState.stage === 'checking') {
+    return (
+      <div className="update-banner">
+        <span>Prüfe auf Updates...</span>
+      </div>
+    );
+  }
+
+  if (updaterState.stage === 'not-available') {
+    const serverVersionText = updaterState.latestVersion ?? 'nicht ermittelbar';
+    return (
+      <div className="update-banner">
+        <span>Server-Version: {serverVersionText}. Ihre Version ist aktuell.</span>
+      </div>
+    );
+  }
+
   if (updaterState.stage !== 'available') {
     return <></>;
   }
 
-  const versionLabel = updaterState.latestVersion ? `(${updaterState.latestVersion})` : '';
+  const versionLabel = updaterState.latestVersion ?? 'unbekannt';
+  const handleUpdateClick = updaterState.inAppDownloadSupported ? props.onDownloadUpdate : props.onOpenReleasePage;
   return (
     <div className="update-banner">
       <span>
-        Update verfügbar {versionLabel}. {formatUpdateSourceSuffix(updaterState)}
+        Server-Version: {versionLabel}. Update verfügbar. {formatUpdateSourceSuffix(updaterState)}
       </span>
       <div className="update-actions">
-        {updaterState.inAppDownloadSupported && (
-          <button onClick={props.onDownloadUpdate} disabled={busy}>
-            Update herunterladen
-          </button>
-        )}
+        <button onClick={handleUpdateClick} disabled={busy}>
+          Updaten
+        </button>
         <button onClick={props.onOpenReleasePage} disabled={busy}>
           Release-Seite öffnen
         </button>
