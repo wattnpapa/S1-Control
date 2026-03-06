@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { PeerOffer } from '../src/shared/types';
 
 vi.mock('../src/main/services/update-peer-protocol', () => ({
@@ -22,6 +22,10 @@ function offer(peerId: string, artifactName: string): PeerOffer {
 }
 
 describe('peer discovery tracker', () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('starts with empty state', () => {
     const tracker = new PeerDiscoveryTracker();
     expect(tracker.getLastDiscoveryAt()).toBeNull();
@@ -32,6 +36,7 @@ describe('peer discovery tracker', () => {
     const tracker = new PeerDiscoveryTracker();
     const first = offer('peer-a', 'A.zip');
     const second = { ...first, host: '10.0.0.11' };
+    vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2026-03-05T21:00:10.000Z'));
 
     tracker.observe([first]);
     tracker.observe([second]);
