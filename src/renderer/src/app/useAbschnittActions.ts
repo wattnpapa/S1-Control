@@ -19,7 +19,11 @@ interface UseAbschnittActionsProps {
   setShowEditAbschnittDialog: Dispatch<SetStateAction<boolean>>;
   acquireEditLock: (einsatzId: string, entityType: 'ABSCHNITT', entityId: string) => Promise<boolean>;
   releaseEditLock: (einsatzId: string, entityType: 'ABSCHNITT', entityId: string) => Promise<boolean>;
-  loadEinsatz: (einsatzId: string, preferredAbschnittId?: string) => Promise<void>;
+  loadEinsatz: (
+    einsatzId: string,
+    preferredAbschnittId?: string,
+    options?: { waitForFullOverview?: boolean },
+  ) => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
 

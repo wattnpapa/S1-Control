@@ -32,7 +32,12 @@ interface UseSyncEventsOptions {
   setEinsaetze: (value: EinsatzListItem[] | ((prev: EinsatzListItem[]) => EinsatzListItem[])) => void;
   setSelectedEinsatzId: (value: string) => void;
   setStartChoice: (value: 'none' | 'open' | 'create') => void;
-  loadEinsatz: (einsatzId: string, preferredAbschnittId?: string) => Promise<void>;
+  loadEinsatz: (
+    einsatzId: string,
+    preferredAbschnittId?: string,
+    options?: { waitForFullOverview?: boolean },
+  ) => Promise<void>;
+  setEinsatzInitialLoading: (value: boolean) => void;
   refreshAll: () => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
@@ -147,6 +152,7 @@ function useQueuedFileOpenEffect(options: UseSyncEventsOptions): void {
     setEinsaetze,
     setQueuedOpenFilePath,
     setSelectedEinsatzId,
+    setEinsatzInitialLoading,
     setStartChoice,
     withBusy,
   } = options;
@@ -157,11 +163,16 @@ function useQueuedFileOpenEffect(options: UseSyncEventsOptions): void {
     const dbPath = queuedOpenFilePath;
     setQueuedOpenFilePath(null);
     void withBusy(async () => {
-      const opened = await window.api.openEinsatzByPath(dbPath);
-      setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
-      setSelectedEinsatzId(opened.id);
-      await loadEinsatz(opened.id);
-      setStartChoice('open');
+      setEinsatzInitialLoading(true);
+      try {
+        const opened = await window.api.openEinsatzByPath(dbPath);
+        setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
+        setSelectedEinsatzId(opened.id);
+        await loadEinsatz(opened.id, undefined, { waitForFullOverview: true });
+        setStartChoice('open');
+      } finally {
+        setEinsatzInitialLoading(false);
+      }
     });
   }, [
     authReady,
@@ -172,6 +183,7 @@ function useQueuedFileOpenEffect(options: UseSyncEventsOptions): void {
     setEinsaetze,
     setQueuedOpenFilePath,
     setSelectedEinsatzId,
+    setEinsatzInitialLoading,
     setStartChoice,
     withBusy,
   ]);

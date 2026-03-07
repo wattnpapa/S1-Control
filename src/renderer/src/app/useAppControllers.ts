@@ -130,6 +130,7 @@ function useRuntimeSync(
     setDebugSyncLogs: uiState.setDebugSyncLogs,
     setEinsaetze: rootState.setEinsaetze,
     setSelectedEinsatzId: rootState.setSelectedEinsatzId,
+    setEinsatzInitialLoading: rootState.setEinsatzInitialLoading,
     setStartChoice: uiState.setStartChoice,
     loadEinsatz: dataState.loadEinsatz,
     refreshAll: dataState.refreshAll,
@@ -154,6 +155,7 @@ function useStartAndSystemActions(
     setSelectedEinsatzId: rootState.setSelectedEinsatzId,
     setStartNewEinsatzName: uiState.setStartNewEinsatzName,
     setStartChoice: uiState.setStartChoice,
+    setEinsatzInitialLoading: rootState.setEinsatzInitialLoading,
     loadEinsatz: dataState.loadEinsatz,
     withBusy,
   });

@@ -19,6 +19,7 @@ export function useAppCoreState() {
   const [allFahrzeuge, setAllFahrzeuge] = useState<FahrzeugOverviewItem[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [einsatzInitialLoading, setEinsatzInitialLoading] = useState(false);
   const [updaterState, setUpdaterState] = useState(DEFAULT_UPDATER_STATE);
   const [perfSafeMode, setPerfSafeMode] = useState(false);
 
@@ -47,6 +48,8 @@ export function useAppCoreState() {
     setError,
     busy,
     setBusy,
+    einsatzInitialLoading,
+    setEinsatzInitialLoading,
     updaterState,
     setUpdaterState,
     perfSafeMode,

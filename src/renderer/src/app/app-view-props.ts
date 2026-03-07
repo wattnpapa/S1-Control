@@ -57,6 +57,7 @@ export function buildEntryProps(args: BuildEntryPropsArgs): AppEntryViewProps {
  */
 export interface BuildWorkspacePropsArgs {
   busy: boolean;
+  einsatzInitialLoading: boolean;
   error: string | null;
   selectedEinsatzId: string;
   abschnitte: AppWorkspaceShellProps['abschnitte'];
@@ -130,6 +131,7 @@ export function buildWorkspaceProps(args: BuildWorkspacePropsArgs): AppWorkspace
 function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorkspaceShellProps, keyof ReturnType<typeof buildWorkspaceCallbacks>> {
   return {
     busy: args.busy,
+    einsatzInitialLoading: args.einsatzInitialLoading,
     error: args.error,
     isArchived: Boolean(args.derivedState.isArchived),
     activeView: args.uiState.activeView,

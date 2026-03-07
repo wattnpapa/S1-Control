@@ -18,7 +18,11 @@ interface UseSystemActionsProps {
   setPeerUpdateStatus: Dispatch<SetStateAction<PeerUpdateStatus | null>>;
   clearSelectedEinsatz: () => void;
   refreshEinsaetze: () => Promise<unknown>;
-  loadEinsatz: (einsatzId: string, preferredAbschnittId?: string) => Promise<void>;
+  loadEinsatz: (
+    einsatzId: string,
+    preferredAbschnittId?: string,
+    options?: { waitForFullOverview?: boolean },
+  ) => Promise<void>;
   refreshAll: () => Promise<void>;
   setError: (message: string | null) => void;
   setMoveDialog: Dispatch<SetStateAction<MoveDialogState | null>>;

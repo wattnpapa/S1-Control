@@ -29,6 +29,7 @@ import type { ComponentProps, JSX } from 'react';
 
 export interface AppWorkspaceShellProps {
   busy: boolean;
+  einsatzInitialLoading: boolean;
   error: string | null;
   isArchived: boolean;
   activeView: WorkspaceView;
@@ -319,6 +320,14 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
       <WorkspaceStatusBanners isArchived={props.isArchived} error={props.error} />
       <WorkspaceMainArea {...mainAreaProps} />
       <WorkspaceDialogs {...dialogsProps} />
+      {props.einsatzInitialLoading && (
+        <div className="overlay-backdrop">
+          <div className="overlay-panel">
+            <h3>Einsatz wird geladen</h3>
+            <p>Initialdaten werden geladen…</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

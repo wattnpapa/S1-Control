@@ -51,6 +51,7 @@ function toWorkspaceBuilderArgs(params: {
 }): Parameters<typeof buildWorkspaceProps>[0] {
   return {
     busy: params.rootState.busy,
+    einsatzInitialLoading: params.rootState.einsatzInitialLoading,
     error: params.rootState.error,
     selectedEinsatzId: params.rootState.selectedEinsatzId,
     abschnitte: params.rootState.abschnitte,

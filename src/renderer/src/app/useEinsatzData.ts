@@ -28,7 +28,11 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
   const loadRevisionRef = useRef(0);
 
   const loadEinsatz = useCallback(
-    async (einsatzId: string, preferredAbschnittId?: string) => {
+    async (
+      einsatzId: string,
+      preferredAbschnittId?: string,
+      options?: { waitForFullOverview?: boolean },
+    ) => {
       const revision = ++loadRevisionRef.current;
       // Lock list must not block open-flow on slow/shared filesystems.
       void props.refreshEditLocks(einsatzId).catch(() => {
@@ -68,8 +72,7 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         props.setGesamtStaerke({ ...props.emptyStrength });
       }
 
-      // Full overview is loaded in background to avoid blocking open-flow.
-      void (async () => {
+      const loadFullOverview = async () => {
         const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
         if (revision !== loadRevisionRef.current) {
           return;
@@ -92,7 +95,13 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
           })),
         );
         props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
-      })();
+      };
+      if (options?.waitForFullOverview) {
+        await loadFullOverview();
+      } else {
+        // Keep non-initial refreshes responsive by loading full overview in background.
+        void loadFullOverview();
+      }
     },
     [props],
   );

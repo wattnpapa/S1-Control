@@ -52,7 +52,11 @@ interface UseEntityActionsBundleOptions {
   setError: Dispatch<SetStateAction<string | null>>;
   acquireEditLock: (einsatzId: string, entityType: 'ABSCHNITT' | 'EINHEIT' | 'FAHRZEUG', entityId: string) => Promise<boolean>;
   releaseEditLock: (einsatzId: string, entityType: 'ABSCHNITT' | 'EINHEIT' | 'FAHRZEUG', entityId: string) => Promise<void>;
-  loadEinsatz: (einsatzId: string, preferredAbschnittId?: string) => Promise<void>;
+  loadEinsatz: (
+    einsatzId: string,
+    preferredAbschnittId?: string,
+    options?: { waitForFullOverview?: boolean },
+  ) => Promise<void>;
   refreshAll: () => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
