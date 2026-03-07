@@ -16,6 +16,7 @@ export interface BuildEntryPropsArgs {
   einsaetze: AppEntryViewProps['einsaetze'];
   uiState: WorkspaceUiState;
   checkForUpdates: () => void;
+  openMainDevTools: () => void;
   downloadUpdate: () => void;
   openReleasePage: () => void;
   openExisting: () => void;
@@ -42,6 +43,7 @@ export function buildEntryProps(args: BuildEntryPropsArgs): AppEntryViewProps {
     startNewFuestName: args.uiState.startNewFuestName,
     setStartNewFuestName: args.uiState.setStartNewFuestName,
     onCheckForUpdates: args.checkForUpdates,
+    onOpenMainDevTools: args.openMainDevTools,
     onDownloadUpdate: args.downloadUpdate,
     onOpenReleasePage: args.openReleasePage,
     onOpenExisting: args.openExisting,

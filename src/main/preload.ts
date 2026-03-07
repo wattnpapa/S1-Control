@@ -3,6 +3,7 @@ import { IPC_CHANNEL, type RendererApi } from '../shared/ipc';
 import type { EinsatzChangedSignal } from '../shared/types';
 
 const api: RendererApi = {
+  getRuntimeFlags: () => ipcRenderer.invoke(IPC_CHANNEL.GET_RUNTIME_FLAGS),
   getSession: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SESSION),
   login: (input) => ipcRenderer.invoke(IPC_CHANNEL.LOGIN, input),
   logout: () => ipcRenderer.invoke(IPC_CHANNEL.LOGOUT),
@@ -64,6 +65,7 @@ const api: RendererApi = {
   openStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_STRENGTH_DISPLAY_WINDOW),
   closeStrengthDisplayWindow: () => ipcRenderer.invoke(IPC_CHANNEL.CLOSE_STRENGTH_DISPLAY_WINDOW),
   getStrengthDisplayState: () => ipcRenderer.invoke(IPC_CHANNEL.GET_STRENGTH_DISPLAY_STATE),
+  getStrengthDisplayHealth: () => ipcRenderer.invoke(IPC_CHANNEL.GET_STRENGTH_DISPLAY_HEALTH),
   setStrengthDisplayState: (input) => ipcRenderer.invoke(IPC_CHANNEL.SET_STRENGTH_DISPLAY_STATE, input),
   acquireEditLock: (input) => ipcRenderer.invoke(IPC_CHANNEL.ACQUIRE_EDIT_LOCK, input),
   refreshEditLock: (input) => ipcRenderer.invoke(IPC_CHANNEL.REFRESH_EDIT_LOCK, input),

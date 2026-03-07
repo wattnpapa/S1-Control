@@ -12,6 +12,7 @@ interface StartViewProps {
   setStartNewFuestName: (value: string) => void;
   appVersion?: string;
   onCheckForUpdates: () => void;
+  onOpenMainDevTools: () => void;
   onOpenExisting: () => void;
   onOpenKnownEinsatz: (einsatzId: string) => void;
   onCreate: () => void;
@@ -38,7 +39,7 @@ export function StartView(props: StartViewProps): JSX.Element {
           <button onClick={props.onCheckForUpdates} disabled={props.busy}>
             Auf Updates prüfen
           </button>
-          <button onClick={() => void window.api.openMainDevTools()}>
+          <button onClick={props.onOpenMainDevTools}>
             DevTools öffnen
           </button>
         </div>

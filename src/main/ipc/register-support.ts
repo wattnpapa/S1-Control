@@ -23,6 +23,7 @@ export interface AppState {
   setSessionUser: (user: SessionUser | null) => void;
   clientHeartbeatEnabled: boolean;
   lanPeerUpdatesAllowed: boolean;
+  perfSafeMode: boolean;
 }
 
 export type IpcWrapper = <T extends unknown[], R>(

@@ -105,11 +105,13 @@ function openEinsatzByPathForUser(state: AppState, selected: string, user: { nam
     const dbUser = ensureSessionUserRecord(nextContext, user);
     state.setSessionUser(dbUser);
     state.setDbContext(nextContext);
-    if (state.clientHeartbeatEnabled) {
+    if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
       state.clientPresence.start(nextContext);
     }
     state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: einsatzMeta.id });
-    state.backupCoordinator.start(nextContext);
+    if (!state.perfSafeMode) {
+      state.backupCoordinator.start(nextContext);
+    }
     rememberRecentDbPath(state, selected, einsatzMeta.id);
     state.settingsStore.set({ dbPath: path.dirname(selected) });
     debugSync('einsatz', 'open-by-path:ok', {

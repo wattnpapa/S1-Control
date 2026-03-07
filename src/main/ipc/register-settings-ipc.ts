@@ -13,6 +13,13 @@ export function registerSettingsIpc(common: RegistrarCommon, helpers: EinsatzIpc
   const { state, wrap } = common;
 
   ipcMain.handle(
+    IPC_CHANNEL.GET_RUNTIME_FLAGS,
+    wrap(async () => ({
+      perfSafeMode: state.perfSafeMode,
+    })),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.GET_SETTINGS,
     wrap(async () => {
       const stored = state.settingsStore.get();
@@ -31,7 +38,7 @@ export function registerSettingsIpc(common: RegistrarCommon, helpers: EinsatzIpc
       ensureDefaultAdmin(nextContext);
       state.backupCoordinator.stop();
       state.setDbContext(nextContext);
-      if (state.clientHeartbeatEnabled) {
+      if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
         state.clientPresence.start(nextContext);
       }
       state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: null });

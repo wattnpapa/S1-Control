@@ -30,7 +30,10 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
   const loadEinsatz = useCallback(
     async (einsatzId: string, preferredAbschnittId?: string) => {
       const revision = ++loadRevisionRef.current;
-      await props.refreshEditLocks(einsatzId);
+      // Lock list must not block open-flow on slow/shared filesystems.
+      void props.refreshEditLocks(einsatzId).catch(() => {
+        // ignore transient lock-list errors during initial load
+      });
       const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
       if (revision !== loadRevisionRef.current) {
         return;

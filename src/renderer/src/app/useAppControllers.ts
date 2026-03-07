@@ -112,6 +112,7 @@ function useRuntimeSync(
 ) {
   const { rootState, selectedAbschnittId, uiState } = params;
   useSyncEvents({
+    perfSafeMode: rootState.perfSafeMode,
     session: rootState.session,
     authReady: rootState.authReady,
     busy: rootState.busy,

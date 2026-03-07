@@ -20,6 +20,7 @@ export function useAppCoreState() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [updaterState, setUpdaterState] = useState(DEFAULT_UPDATER_STATE);
+  const [perfSafeMode, setPerfSafeMode] = useState(false);
 
   return {
     session,
@@ -48,5 +49,7 @@ export function useAppCoreState() {
     setBusy,
     updaterState,
     setUpdaterState,
+    perfSafeMode,
+    setPerfSafeMode,
   };
 }

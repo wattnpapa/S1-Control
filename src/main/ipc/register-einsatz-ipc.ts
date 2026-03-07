@@ -98,11 +98,13 @@ function registerEinsatzCreateHandlers(
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
-      if (state.clientHeartbeatEnabled) {
+      if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
         state.clientPresence.start(created.ctx);
       }
       state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
-      state.backupCoordinator.start(created.ctx);
+      if (!state.perfSafeMode) {
+        state.backupCoordinator.start(created.ctx);
+      }
       if (created.einsatz.dbPath) {
         helpers.rememberRecentDbPath(created.einsatz.dbPath, created.einsatz.id);
       }
@@ -126,11 +128,13 @@ function registerEinsatzCreateHandlers(
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
-      if (state.clientHeartbeatEnabled) {
+      if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
         state.clientPresence.start(created.ctx);
       }
       state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
-      state.backupCoordinator.start(created.ctx);
+      if (!state.perfSafeMode) {
+        state.backupCoordinator.start(created.ctx);
+      }
       helpers.rememberRecentDbPath(normalized, created.einsatz.id);
       state.settingsStore.set({ dbPath: path.dirname(normalized) });
       debugSync('einsatz', 'create-dialog:ok', {

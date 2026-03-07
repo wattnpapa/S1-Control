@@ -5,9 +5,12 @@ import { StrengthDisplayView } from './components/views/StrengthDisplayView';
 import './styles/app.css';
 
 const displayMode = new URLSearchParams(window.location.search).get('display');
-
-createRoot(document.getElementById('root')!).render(
-  <React.StrictMode>
-    {displayMode === 'strength' ? <StrengthDisplayView /> : <App />}
-  </React.StrictMode>,
-);
+if (displayMode === 'strength') {
+  createRoot(document.getElementById('root')!).render(<StrengthDisplayView />);
+} else {
+  createRoot(document.getElementById('root')!).render(
+    <React.StrictMode>
+      <App />
+    </React.StrictMode>,
+  );
+}

@@ -18,6 +18,7 @@ export interface AppEntryViewProps {
   startNewFuestName: string;
   setStartNewFuestName: Dispatch<SetStateAction<string>>;
   onCheckForUpdates: () => void;
+  onOpenMainDevTools: () => void;
   onDownloadUpdate: () => void;
   onOpenReleasePage: () => void;
   onOpenExisting: () => void;
@@ -95,6 +96,7 @@ export function AppEntryView(props: AppEntryViewProps): JSX.Element | null {
           setStartNewFuestName={props.setStartNewFuestName}
           appVersion={props.updaterState.currentVersion}
           onCheckForUpdates={props.onCheckForUpdates}
+          onOpenMainDevTools={props.onOpenMainDevTools}
           onOpenExisting={props.onOpenExisting}
           onOpenKnownEinsatz={props.onOpenKnownEinsatz}
           onCreate={props.onCreate}

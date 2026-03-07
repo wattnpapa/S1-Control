@@ -13,6 +13,7 @@ import { upsertRecentEinsatz } from './einsatz-list';
 import { appendDebugSyncLogLine, trimDebugSyncLogs } from './diagnostics-log';
 
 interface UseSyncEventsOptions {
+  perfSafeMode: boolean;
   session: SessionUser | null;
   authReady: boolean;
   busy: boolean;
@@ -43,9 +44,9 @@ function usePeriodicRefreshEffect(
   options: UseSyncEventsOptions,
   refreshInFlightRef: MutableRefObject<boolean>,
 ): void {
-  const { refreshAll, selectedEinsatzId, session } = options;
+  const { perfSafeMode, refreshAll, selectedEinsatzId, session } = options;
   useEffect(() => {
-    if (!session || !selectedEinsatzId) {
+    if (perfSafeMode || !session || !selectedEinsatzId) {
       return;
     }
     const timer = window.setInterval(() => {
@@ -58,7 +59,7 @@ function usePeriodicRefreshEffect(
       });
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [refreshAll, refreshInFlightRef, selectedEinsatzId, session]);
+  }, [perfSafeMode, refreshAll, refreshInFlightRef, selectedEinsatzId, session]);
 }
 
 /**
@@ -87,10 +88,10 @@ function useSettingsViewSyncEffect(
   options: UseSyncEventsOptions,
   settingsSyncInFlightRef: MutableRefObject<boolean>,
 ): void {
-  const { activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus } =
+  const { perfSafeMode, activeView, selectedEinsatzId, session, setActiveClients, setDbPath, setError, setLanPeerUpdatesEnabled, setPeerUpdateStatus } =
     options;
   useEffect(() => {
-    if (!session || !selectedEinsatzId || activeView !== 'einstellungen') {
+    if (perfSafeMode || !session || !selectedEinsatzId || activeView !== 'einstellungen') {
       return;
     }
     const loadClients = async () => {
@@ -120,6 +121,7 @@ function useSettingsViewSyncEffect(
     }, 5000);
     return () => window.clearInterval(timer);
   }, [
+    perfSafeMode,
     activeView,
     selectedEinsatzId,
     session,
@@ -191,9 +193,12 @@ function useDebugLogSubscriptionEffect(setDebugSyncLogs: UseSyncEventsOptions['s
  * Refreshes state on remote change broadcast for current Einsatz.
  */
 function useEinsatzChangedEffect(options: UseSyncEventsOptions, lastRemoteRefreshAtRef: MutableRefObject<number>): void {
-  const { refreshAll, selectedEinsatzId, session, setError } = options;
+  const { perfSafeMode, refreshAll, selectedEinsatzId, session, setError } = options;
   useEffect(() => {
     const unsubscribe = window.appEvents.onEinsatzChanged((signal) => {
+      if (perfSafeMode) {
+        return;
+      }
       if (!session || !selectedEinsatzId || signal.einsatzId !== selectedEinsatzId) {
         return;
       }
@@ -207,7 +212,7 @@ function useEinsatzChangedEffect(options: UseSyncEventsOptions, lastRemoteRefres
       });
     });
     return () => unsubscribe();
-  }, [refreshAll, selectedEinsatzId, session, setError, lastRemoteRefreshAtRef]);
+  }, [perfSafeMode, refreshAll, selectedEinsatzId, session, setError, lastRemoteRefreshAtRef]);
 }
 
 /**

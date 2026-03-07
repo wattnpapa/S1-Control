@@ -82,9 +82,11 @@ export function reopenDbContextAfterRestore(
   const dbUser = ensureSessionUserRecord(nextContext, user);
   common.state.setSessionUser(dbUser);
   common.state.setDbContext(nextContext);
-  if (common.state.clientHeartbeatEnabled) {
+  if (common.state.clientHeartbeatEnabled && !common.state.perfSafeMode) {
     common.state.clientPresence.start(nextContext);
   }
   common.state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId });
-  common.state.backupCoordinator.start(nextContext);
+  if (!common.state.perfSafeMode) {
+    common.state.backupCoordinator.start(nextContext);
+  }
 }

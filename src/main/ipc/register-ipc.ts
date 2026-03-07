@@ -1,4 +1,5 @@
 import { toSafeError } from '../services/errors';
+import { debugSync } from '../services/debug';
 import { registerAuthIpc } from './register-auth-ipc';
 import { registerDisplayIpc } from './register-display-ipc';
 import { createEinsatzIpcHelpers, createEntityIpcHelpers } from './register-einsatz-helpers';
@@ -14,11 +15,30 @@ import type { AppState } from './register-support';
  * Handles Register Ipc.
  */
 export function registerIpc(state: AppState): void {
+  const SLOW_IPC_THRESHOLD_MS = 120;
   const wrap = <T extends unknown[], R>(handler: (...args: T) => R | Promise<R>) => {
-    return async (_event: Electron.IpcMainInvokeEvent, ...args: T): Promise<R> => {
+    return async (event: Electron.IpcMainInvokeEvent, ...args: T): Promise<R> => {
+      const startedAt = Date.now();
       try {
-        return await handler(...args);
+        const result = await handler(...args);
+        const durationMs = Date.now() - startedAt;
+        if (durationMs >= SLOW_IPC_THRESHOLD_MS) {
+          debugSync('ipc', 'slow', {
+            channel: event.channel,
+            durationMs,
+            argsCount: args.length,
+          });
+        }
+        return result;
       } catch (error) {
+        const durationMs = Date.now() - startedAt;
+        if (durationMs >= SLOW_IPC_THRESHOLD_MS) {
+          debugSync('ipc', 'slow-error', {
+            channel: event.channel,
+            durationMs,
+            argsCount: args.length,
+          });
+        }
         const safe = toSafeError(error);
         const wrapped = new Error(safe.message);
         if (safe.code) {

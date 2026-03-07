@@ -171,6 +171,9 @@ export interface SplitEinheitInput {
 }
 
 export interface RendererApi {
+  getRuntimeFlags(): Promise<{
+    perfSafeMode: boolean;
+  }>;
   getSession(): Promise<SessionUser | null>;
   login(input: LoginInput): Promise<SessionUser>;
   logout(): Promise<void>;
@@ -258,6 +261,12 @@ export interface RendererApi {
   openStrengthDisplayWindow(): Promise<void>;
   closeStrengthDisplayWindow(): Promise<void>;
   getStrengthDisplayState(): Promise<StrengthDisplayState>;
+  getStrengthDisplayHealth(): Promise<{
+    hasWindow: boolean;
+    loaded: boolean;
+    visible: boolean;
+    prewarmMs?: number;
+  }>;
   setStrengthDisplayState(input: StrengthDisplayState): Promise<void>;
   acquireEditLock(input: {
     einsatzId: string;
@@ -274,6 +283,7 @@ export interface RendererApi {
 }
 
 export const IPC_CHANNEL = {
+  GET_RUNTIME_FLAGS: 'app:get-runtime-flags',
   GET_SESSION: 'session:get',
   LOGIN: 'auth:login',
   LOGOUT: 'auth:logout',
@@ -331,6 +341,7 @@ export const IPC_CHANNEL = {
   OPEN_STRENGTH_DISPLAY_WINDOW: 'strength-display:open-window',
   CLOSE_STRENGTH_DISPLAY_WINDOW: 'strength-display:close-window',
   GET_STRENGTH_DISPLAY_STATE: 'strength-display:get-state',
+  GET_STRENGTH_DISPLAY_HEALTH: 'strength-display:get-health',
   SET_STRENGTH_DISPLAY_STATE: 'strength-display:set-state',
   STRENGTH_DISPLAY_STATE_CHANGED: 'strength-display:state-changed',
   ACQUIRE_EDIT_LOCK: 'edit-lock:acquire',

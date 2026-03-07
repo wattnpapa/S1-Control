@@ -20,9 +20,10 @@ import { IPC_CHANNEL } from '../shared/ipc';
 const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
 let pendingOpenFilePath: string | null = null;
 let bootstrapUpdater: UpdaterService | null = null;
-const DISABLE_LAN_UPDATE_PEER = true;
-const DISABLE_UDP_SYNC = true;
-const DISABLE_CLIENT_HEARTBEAT = true;
+const PERF_SAFE_MODE = process.env.S1_PERF_SAFE_MODE === '1';
+const DISABLE_LAN_UPDATE_PEER = PERF_SAFE_MODE;
+const DISABLE_UDP_SYNC = PERF_SAFE_MODE;
+const DISABLE_CLIENT_HEARTBEAT = PERF_SAFE_MODE;
 
 /**
  * Applies runtime feature workarounds for current Electron/macOS combinations.
@@ -301,6 +302,7 @@ async function bootstrap(): Promise<void> {
   const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
   const effectiveLanPeerEnabled = DISABLE_LAN_UPDATE_PEER ? false : lanPeerUpdatesEnabled;
   debugSync('bootstrap', 'feature-flags', {
+    perfSafeMode: PERF_SAFE_MODE,
     lanUpdatePeerEnabled: effectiveLanPeerEnabled,
     udpSyncEnabled: !DISABLE_UDP_SYNC,
     clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
@@ -356,11 +358,31 @@ async function bootstrap(): Promise<void> {
     },
     clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
     lanPeerUpdatesAllowed: !DISABLE_LAN_UPDATE_PEER,
+    perfSafeMode: PERF_SAFE_MODE,
   });
   setupDebugSyncForwarding();
   registerDebugShortcuts();
   const mainWindow = await createMainWindow();
   wireMainWindowCloseBehavior(mainWindow, strengthDisplay);
+  mainWindow.once('ready-to-show', () => {
+    debugSync('strength-display', 'prewarm-scheduled');
+    setTimeout(() => {
+      try {
+        strengthDisplay.prewarmWindow();
+        debugSync('strength-display', 'prewarm-started', strengthDisplay.getHealth());
+      } catch {
+        // best effort prewarm only
+      }
+    }, 150);
+  });
+  setTimeout(() => {
+    try {
+      strengthDisplay.prewarmWindow();
+      debugSync('strength-display', 'prewarm-retry', strengthDisplay.getHealth());
+    } catch {
+      // best effort prewarm only
+    }
+  }, 1200);
   if (startupWarning) {
     dialog.showMessageBox({
       type: 'warning',

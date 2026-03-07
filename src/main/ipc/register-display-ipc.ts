@@ -4,6 +4,13 @@ import { debugSync } from '../services/debug';
 import type { RegistrarCommon } from './register-support';
 
 /**
+ * Waits for devtools state propagation in Chromium.
+ */
+async function waitForDevToolsStateTick(): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, 120));
+}
+
+/**
  * Handles Register Display Ipc.
  */
 export function registerDisplayIpc(common: RegistrarCommon): void {
@@ -29,6 +36,11 @@ export function registerDisplayIpc(common: RegistrarCommon): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.GET_STRENGTH_DISPLAY_HEALTH,
+    wrap(async () => state.strengthDisplay.getHealth()),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.SET_STRENGTH_DISPLAY_STATE,
     wrap(async (input: Parameters<RendererApi['setStrengthDisplayState']>[0]) => {
       state.strengthDisplay.setState(input);
@@ -45,14 +57,28 @@ export function registerDisplayIpc(common: RegistrarCommon): void {
       }
       const contents = mainWindow.webContents;
       debugSync('devtools', 'open:attempt', { alreadyOpen: contents.isDevToolsOpened() });
-      if (!contents.isDevToolsOpened()) {
-        // Docked mode is more reliable than detached windows on some macOS/Electron builds.
-        contents.openDevTools({ mode: 'right', activate: true });
+      if (contents.isDevToolsOpened()) {
+        contents.devToolsWebContents?.focus();
+        return;
       }
-      if (!contents.isDevToolsOpened()) {
-        contents.toggleDevTools();
+
+      for (const mode of ['detach', 'right', 'bottom'] as const) {
+        contents.openDevTools({ mode, activate: true });
+        await waitForDevToolsStateTick();
+        if (contents.isDevToolsOpened()) {
+          debugSync('devtools', 'open:ok', { mode });
+          mainWindow.focus();
+          return;
+        }
       }
-      debugSync('devtools', 'open:result', { open: contents.isDevToolsOpened() });
+
+      contents.toggleDevTools();
+      await waitForDevToolsStateTick();
+      const open = contents.isDevToolsOpened();
+      debugSync('devtools', 'open:result', { open });
+      if (!open) {
+        throw new Error('DevTools konnten nicht geöffnet werden.');
+      }
       mainWindow.focus();
     }),
   );

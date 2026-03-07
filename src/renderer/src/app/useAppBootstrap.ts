@@ -8,6 +8,7 @@ interface UseAppBootstrapOptions {
   setDbPath: (value: string) => void;
   setLanPeerUpdatesEnabled: (value: boolean) => void;
   setUpdaterState: (value: UpdaterState) => void;
+  setPerfSafeMode: (value: boolean) => void;
   setSession: (value: SessionUser | null) => void;
   setQueuedOpenFilePath: (value: string | null) => void;
   setError: (value: string | null) => void;
@@ -24,6 +25,7 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
     setDbPath,
     setLanPeerUpdatesEnabled,
     setUpdaterState,
+    setPerfSafeMode,
     setSession,
     setQueuedOpenFilePath,
     setError,
@@ -33,9 +35,14 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
   useEffect(() => {
     void (async () => {
       try {
-        const [currentSession, settings] = await Promise.all([window.api.getSession(), window.api.getSettings()]);
+        const [currentSession, settings, runtimeFlags] = await Promise.all([
+          window.api.getSession(),
+          window.api.getSettings(),
+          window.api.getRuntimeFlags(),
+        ]);
         setDbPath(settings.dbPath);
         setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
+        setPerfSafeMode(runtimeFlags.perfSafeMode);
         setUpdaterState(await window.api.getUpdaterState());
         const nextSession = currentSession ?? (await window.api.login({ name: 'admin', passwort: 'admin' }));
         setSession(nextSession);
@@ -46,7 +53,16 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
         setAuthReady(true);
       }
     })();
-  }, [refreshEinsaetze, setAuthReady, setDbPath, setError, setLanPeerUpdatesEnabled, setSession, setUpdaterState]);
+  }, [
+    refreshEinsaetze,
+    setAuthReady,
+    setDbPath,
+    setError,
+    setLanPeerUpdatesEnabled,
+    setPerfSafeMode,
+    setSession,
+    setUpdaterState,
+  ]);
 
   useEffect(() => {
     if (!authReady) {

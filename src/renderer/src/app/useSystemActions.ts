@@ -75,6 +75,15 @@ function useSystemSettingsActions(props: UseSystemActionsProps) {
  * Provides move and updater actions.
  */
 function useSystemProcessActions(props: UseSystemActionsProps) {
+  const openMainDevTools = useCallback(async () => {
+    props.setError(null);
+    try {
+      await window.api.openMainDevTools();
+    } catch (error) {
+      props.setError(error instanceof Error ? error.message : String(error));
+    }
+  }, [props]);
+
   const checkForUpdates = useCallback(async () => {
     props.setError(null);
     try {
@@ -122,7 +131,7 @@ function useSystemProcessActions(props: UseSystemActionsProps) {
     });
   }, [props]);
 
-  return { checkForUpdates, move, downloadUpdate, openReleasePage };
+  return { openMainDevTools, checkForUpdates, move, downloadUpdate, openReleasePage };
 }
 
 /**
@@ -130,18 +139,24 @@ function useSystemProcessActions(props: UseSystemActionsProps) {
  */
 function useStrengthDisplayActions(props: UseSystemActionsProps) {
   const openStrengthDisplay = useCallback(async () => {
-    await props.withBusy(async () => {
+    props.setError(null);
+    try {
       await window.api.openStrengthDisplayWindow();
       await window.api.setStrengthDisplayState({
         taktischeStaerke: toTaktischeStaerke(props.gesamtStaerke).replace(/\/(\d+)$/, '//$1'),
       });
-    });
+    } catch (error) {
+      props.setError(error instanceof Error ? error.message : String(error));
+    }
   }, [props]);
 
   const closeStrengthDisplay = useCallback(async () => {
-    await props.withBusy(async () => {
+    props.setError(null);
+    try {
       await window.api.closeStrengthDisplayWindow();
-    });
+    } catch (error) {
+      props.setError(error instanceof Error ? error.message : String(error));
+    }
   }, [props]);
 
   useEffect(() => {
