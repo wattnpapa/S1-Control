@@ -325,6 +325,9 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
           <div className="overlay-panel">
             <h3>Einsatz wird geladen</h3>
             <p>Initialdaten werden geladen…</p>
+            <div className="progress-bar progress-bar-indeterminate" aria-label="Ladevorgang läuft">
+              <div className="progress-fill progress-fill-indeterminate" />
+            </div>
           </div>
         </div>
       )}

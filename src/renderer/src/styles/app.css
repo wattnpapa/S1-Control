@@ -984,6 +984,15 @@ td.tactical-sign-cell.compact-sign-cell {
   background: linear-gradient(90deg, #2352bf, var(--thw-blue));
 }
 
+.progress-bar-indeterminate {
+  margin-top: 10px;
+}
+
+.progress-fill-indeterminate {
+  width: 35%;
+  animation: indeterminate-progress 1.1s ease-in-out infinite;
+}
+
 .update-install-spinner {
   width: 38px;
   height: 38px;
@@ -997,6 +1006,15 @@ td.tactical-sign-cell.compact-sign-cell {
 @keyframes update-spinner {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@keyframes indeterminate-progress {
+  0% {
+    transform: translateX(-120%);
+  }
+  100% {
+    transform: translateX(300%);
   }
 }
 
