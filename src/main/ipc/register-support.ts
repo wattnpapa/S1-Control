@@ -21,6 +21,8 @@ export interface AppState {
   consumePendingOpenFilePath: () => string | null;
   getSessionUser: () => SessionUser | null;
   setSessionUser: (user: SessionUser | null) => void;
+  clientHeartbeatEnabled: boolean;
+  lanPeerUpdatesAllowed: boolean;
 }
 
 export type IpcWrapper = <T extends unknown[], R>(

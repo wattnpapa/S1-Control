@@ -2,8 +2,7 @@ import { compareVersions, normalizeVersion } from './updater-versioning';
 import { isOfflineLikeError } from './updater-network-errors';
 import type { UpdaterState } from '../../shared/types';
 
-const GITHUB_CHECK_TIMEOUT_MS = 12000;
-const GITHUB_TIMEOUT_MESSAGE = 'Update-Check Zeitüberschreitung (GitHub).';
+const GITHUB_CHECK_TIMEOUT_MS = 5000;
 
 interface GitHubCheckParams {
   owner: string;
@@ -13,29 +12,71 @@ interface GitHubCheckParams {
   setState: (next: Partial<UpdaterState> & Pick<UpdaterState, 'stage'> | Partial<UpdaterState>) => void;
 }
 
+function githubLatestReleaseUrl(owner: string, repo: string): string {
+  return `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
+}
+
+function githubLatestReleasesPageUrl(owner: string, repo: string): string {
+  return `https://github.com/${owner}/${repo}/releases/latest`;
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === 'AbortError';
+}
+
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function githubDualTimeoutMessage(owner: string, repo: string): string {
+  return `Update-Check Zeitüberschreitung (GitHub API: ${githubLatestReleaseUrl(owner, repo)}; GitHub Releases: ${githubLatestReleasesPageUrl(owner, repo)}).`;
+}
+
+async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), GITHUB_CHECK_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 /**
  * Loads latest release payload from GitHub with timeout.
  */
 async function fetchLatestRelease(owner: string, repo: string): Promise<{ tag_name?: string; name?: string }> {
-  const endpoint = `https://api.github.com/repos/${owner}/${repo}/releases/latest`;
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GITHUB_CHECK_TIMEOUT_MS);
-  let response: Response;
-  try {
-    response = await fetch(endpoint, {
-      headers: {
-        Accept: 'application/vnd.github+json',
-        'User-Agent': 'S1-Control-Updater',
-      },
-      signal: controller.signal,
-    });
-  } finally {
-    clearTimeout(timeout);
-  }
+  const endpoint = githubLatestReleaseUrl(owner, repo);
+  const response = await fetchWithTimeout(endpoint, {
+    headers: {
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'S1-Control-Updater',
+    },
+  });
   if (!response.ok) {
     throw new Error(`GitHub Update-Check fehlgeschlagen (${response.status})`);
   }
   return (await response.json()) as { tag_name?: string; name?: string };
+}
+
+/**
+ * Resolves latest release version from GitHub releases web page.
+ */
+async function fetchLatestReleaseFromWeb(owner: string, repo: string): Promise<string> {
+  const endpoint = githubLatestReleasesPageUrl(owner, repo);
+  const response = await fetchWithTimeout(endpoint, {
+    headers: { 'User-Agent': 'S1-Control-Updater' },
+    redirect: 'follow',
+  });
+  if (!response.ok) {
+    throw new Error(`GitHub Releases-Seite nicht erreichbar (${response.status})`);
+  }
+  const resolvedUrl = response.url || endpoint;
+  const match = resolvedUrl.match(/\/releases\/tag\/([^/?#]+)/i);
+  if (!match?.[1]) {
+    throw new Error('GitHub Releases-Seite enthält keine auflösbare Versions-Weiterleitung.');
+  }
+  return normalizeVersion(decodeURIComponent(match[1]));
 }
 
 /**
@@ -79,11 +120,14 @@ function applyVersionState(params: GitHubCheckParams, latestVersion: string): vo
  * Maps GitHub-check errors to updater state.
  */
 function applyGitHubCheckError(params: GitHubCheckParams, error: unknown): void {
-  if (error instanceof Error && error.name === 'AbortError') {
-    params.setState({ stage: 'error', message: GITHUB_TIMEOUT_MESSAGE });
+  if (isAbortError(error)) {
+    params.setState({
+      stage: 'error',
+      message: githubDualTimeoutMessage(params.owner, params.repo),
+    });
     return;
   }
-  const message = error instanceof Error ? error.message : String(error);
+  const message = toErrorMessage(error);
   if (isOfflineLikeError(message)) {
     params.setState({ stage: 'idle' });
     return;
@@ -100,6 +144,21 @@ export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Prom
     const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
     applyVersionState(params, latestVersion);
   } catch (error) {
-    applyGitHubCheckError(params, error);
+    try {
+      const latestVersionFromWeb = await fetchLatestReleaseFromWeb(params.owner, params.repo);
+      applyVersionState(params, latestVersionFromWeb);
+    } catch (fallbackError) {
+      const apiMessage = toErrorMessage(error);
+      const webMessage = toErrorMessage(fallbackError);
+      if (isOfflineLikeError(apiMessage) && isOfflineLikeError(webMessage)) {
+        params.setState({ stage: 'idle' });
+        return;
+      }
+      if (isAbortError(error) || isAbortError(fallbackError)) {
+        applyGitHubCheckError(params, fallbackError);
+        return;
+      }
+      applyGitHubCheckError(params, new Error(`GitHub-Check fehlgeschlagen. API: ${apiMessage} | Releases: ${webMessage}`));
+    }
   }
 }

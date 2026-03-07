@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, shell } from 'electron';
+import { app, BrowserWindow, dialog, globalShortcut, shell } from 'electron';
 import path from 'node:path';
 import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
@@ -11,7 +11,7 @@ import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-f
 import { StrengthDisplayService } from './services/strength-display';
 import { EinsatzSyncService } from './services/einsatz-sync';
 import { UpdaterService } from './services/updater';
-import { onDebugSyncLog } from './services/debug';
+import { debugSync, onDebugSyncLog } from './services/debug';
 import { broadcastToAllWindows, createMainWindow, resolveRendererUrl } from './services/main-window';
 import { runStartupRecovery } from './services/startup-recovery';
 import type { SessionUser } from '../shared/types';
@@ -20,6 +20,18 @@ import { IPC_CHANNEL } from '../shared/ipc';
 const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
 let pendingOpenFilePath: string | null = null;
 let bootstrapUpdater: UpdaterService | null = null;
+const DISABLE_LAN_UPDATE_PEER = true;
+const DISABLE_UDP_SYNC = true;
+const DISABLE_CLIENT_HEARTBEAT = true;
+
+/**
+ * Applies runtime feature workarounds for current Electron/macOS combinations.
+ */
+function applyRuntimeWorkarounds(): void {
+  // Work around startup crashes in newer macOS builds where V8 compile hints
+  // can trigger early SIGTRAP in Electron before app bootstrap completes.
+  app.commandLine.appendSwitch('disable-features', 'V8CompileHints');
+}
 
 /**
  * Handles Is Einsatz File Path.
@@ -186,13 +198,16 @@ function stopServices(
 /**
  * Registers app lifecycle handlers.
  */
-function setupLifecycleHandlers(
-  backupCoordinator: BackupCoordinator,
-  clientPresence: ClientPresenceService,
-  einsatzSync: EinsatzSyncService,
-  updater: UpdaterService,
-): void {
+function setupLifecycleHandlers(input: {
+  backupCoordinator: BackupCoordinator;
+  clientPresence: ClientPresenceService;
+  einsatzSync: EinsatzSyncService;
+  updater: UpdaterService;
+  strengthDisplay: StrengthDisplayService;
+}): void {
+  const { backupCoordinator, clientPresence, einsatzSync, updater, strengthDisplay } = input;
   let stopped = false;
+  let forceExitTimer: NodeJS.Timeout | null = null;
   const stopOnce = () => {
     if (stopped) {
       return;
@@ -202,15 +217,70 @@ function setupLifecycleHandlers(
   };
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      void createMainWindow();
+      void createMainWindow().then((win) => {
+        wireMainWindowCloseBehavior(win, strengthDisplay);
+      });
     }
   });
   app.on('window-all-closed', () => {
+    debugSync('lifecycle', 'window-all-closed');
     stopOnce();
     app.quit();
+    if (!forceExitTimer) {
+      forceExitTimer = setTimeout(() => {
+        debugSync('lifecycle', 'force-exit', { reason: 'window-all-closed-timeout' });
+        app.exit(0);
+      }, 800);
+    }
   });
   app.on('before-quit', () => {
+    debugSync('lifecycle', 'before-quit');
     stopOnce();
+    if (!forceExitTimer) {
+      forceExitTimer = setTimeout(() => {
+        debugSync('lifecycle', 'force-exit', { reason: 'before-quit-timeout' });
+        app.exit(0);
+      }, 800);
+    }
+  });
+  app.on('will-quit', () => {
+    debugSync('lifecycle', 'will-quit');
+    if (forceExitTimer) {
+      clearTimeout(forceExitTimer);
+      forceExitTimer = null;
+    }
+  });
+}
+
+/**
+ * Wires main-window close behavior and ensures auxiliary windows are closed.
+ */
+function wireMainWindowCloseBehavior(win: BrowserWindow, strengthDisplay: StrengthDisplayService): void {
+  const marker = win as BrowserWindow & { __s1MainCloseWired?: boolean };
+  if (marker.__s1MainCloseWired) {
+    return;
+  }
+  marker.__s1MainCloseWired = true;
+  win.on('close', () => {
+    strengthDisplay.closeWindow();
+  });
+}
+
+/**
+ * Registers renderer debugging shortcuts.
+ */
+function registerDebugShortcuts(): void {
+  const toggleFocusedWindowDevTools = () => {
+    const focused = BrowserWindow.getFocusedWindow();
+    if (!focused) {
+      return;
+    }
+    focused.webContents.toggleDevTools();
+  };
+  globalShortcut.register('CommandOrControl+Shift+I', toggleFocusedWindowDevTools);
+  globalShortcut.register('F12', toggleFocusedWindowDevTools);
+  app.on('will-quit', () => {
+    globalShortcut.unregisterAll();
   });
 }
 
@@ -218,6 +288,7 @@ function setupLifecycleHandlers(
  * Handles Bootstrap.
  */
 async function bootstrap(): Promise<void> {
+  applyRuntimeWorkarounds();
   applyInitialOpenFileFromArgs();
   if (!setupSingleInstanceHandling()) {
     return;
@@ -228,9 +299,15 @@ async function bootstrap(): Promise<void> {
 
   const settingsStore = new SettingsStore(app.getPath('userData'));
   const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
+  const effectiveLanPeerEnabled = DISABLE_LAN_UPDATE_PEER ? false : lanPeerUpdatesEnabled;
+  debugSync('bootstrap', 'feature-flags', {
+    lanUpdatePeerEnabled: effectiveLanPeerEnabled,
+    udpSyncEnabled: !DISABLE_UDP_SYNC,
+    clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
+  });
   const updater = new UpdaterService((state) => {
     broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
-  }, lanPeerUpdatesEnabled);
+  }, effectiveLanPeerEnabled);
   bootstrapUpdater = updater;
 
   const paths = resolveDbPaths(settingsStore);
@@ -239,12 +316,18 @@ async function bootstrap(): Promise<void> {
   const startupWarning = dbBootstrap.startupWarning;
   ensureDefaultAdmin(dbContext);
   const clientPresence = new ClientPresenceService();
-  clientPresence.start(dbContext);
-  const backupCoordinator = new BackupCoordinator(() => clientPresence.canWriteBackups());
+  if (!DISABLE_CLIENT_HEARTBEAT) {
+    clientPresence.start(dbContext);
+  }
+  const backupCoordinator = new BackupCoordinator(() =>
+    DISABLE_CLIENT_HEARTBEAT ? true : clientPresence.canWriteBackups(),
+  );
   const einsatzSync = new EinsatzSyncService((signal) => {
     broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
   });
-  einsatzSync.start(dbContext.path);
+  if (!DISABLE_UDP_SYNC) {
+    einsatzSync.start(dbContext.path);
+  }
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
 
   let currentUser: SessionUser | null = null;
@@ -271,10 +354,13 @@ async function bootstrap(): Promise<void> {
     setSessionUser: (user) => {
       currentUser = user;
     },
+    clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
+    lanPeerUpdatesAllowed: !DISABLE_LAN_UPDATE_PEER,
   });
   setupDebugSyncForwarding();
-  await createMainWindow();
-  void updater.checkForUpdates().catch(() => undefined);
+  registerDebugShortcuts();
+  const mainWindow = await createMainWindow();
+  wireMainWindowCloseBehavior(mainWindow, strengthDisplay);
   if (startupWarning) {
     dialog.showMessageBox({
       type: 'warning',
@@ -282,7 +368,13 @@ async function bootstrap(): Promise<void> {
       message: startupWarning,
     }).catch(() => undefined);
   }
-  setupLifecycleHandlers(backupCoordinator, clientPresence, einsatzSync, updater);
+  setupLifecycleHandlers({
+    backupCoordinator,
+    clientPresence,
+    einsatzSync,
+    updater,
+    strengthDisplay,
+  });
 }
 
 process.on('uncaughtException', (error) => {

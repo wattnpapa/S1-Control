@@ -29,7 +29,6 @@ import type { ComponentProps, JSX } from 'react';
 
 export interface AppWorkspaceShellProps {
   busy: boolean;
-  now: Date;
   error: string | null;
   isArchived: boolean;
   activeView: WorkspaceView;
@@ -305,7 +304,6 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
       <Topbar
         einsatzName={props.selectedEinsatz?.name ?? '-'}
         gesamtStaerke={props.gesamtStaerke}
-        now={props.now}
         onOpenStrengthDisplay={props.onOpenStrengthDisplay}
         onCloseStrengthDisplay={props.onCloseStrengthDisplay}
         busy={props.busy}

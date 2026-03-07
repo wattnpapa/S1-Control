@@ -18,7 +18,7 @@ export function registerSettingsIpc(common: RegistrarCommon, helpers: EinsatzIpc
       const stored = state.settingsStore.get();
       return {
         dbPath: stored.dbPath ?? state.getDefaultDbPath(),
-        lanPeerUpdatesEnabled: stored.lanPeerUpdatesEnabled ?? false,
+        lanPeerUpdatesEnabled: state.lanPeerUpdatesAllowed ? (stored.lanPeerUpdatesEnabled ?? false) : false,
       };
     }),
   );
@@ -31,12 +31,16 @@ export function registerSettingsIpc(common: RegistrarCommon, helpers: EinsatzIpc
       ensureDefaultAdmin(nextContext);
       state.backupCoordinator.stop();
       state.setDbContext(nextContext);
-      state.clientPresence.start(nextContext);
+      if (state.clientHeartbeatEnabled) {
+        state.clientPresence.start(nextContext);
+      }
       state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: null });
       state.settingsStore.set({ dbPath: baseDir });
       return {
         dbPath: baseDir,
-        lanPeerUpdatesEnabled: state.settingsStore.get().lanPeerUpdatesEnabled ?? false,
+        lanPeerUpdatesEnabled: state.lanPeerUpdatesAllowed
+          ? (state.settingsStore.get().lanPeerUpdatesEnabled ?? false)
+          : false,
       };
     }),
   );
@@ -44,12 +48,13 @@ export function registerSettingsIpc(common: RegistrarCommon, helpers: EinsatzIpc
   ipcMain.handle(
     IPC_CHANNEL.SET_LAN_PEER_UPDATES_ENABLED,
     wrap(async (enabled: boolean) => {
-      state.settingsStore.set({ lanPeerUpdatesEnabled: enabled });
-      state.updater.setLanPeerEnabled(enabled);
+      const nextEnabled = state.lanPeerUpdatesAllowed ? enabled : false;
+      state.settingsStore.set({ lanPeerUpdatesEnabled: nextEnabled });
+      state.updater.setLanPeerEnabled(nextEnabled);
       const stored = state.settingsStore.get();
       return {
         dbPath: stored.dbPath ?? state.getDefaultDbPath(),
-        lanPeerUpdatesEnabled: stored.lanPeerUpdatesEnabled ?? false,
+        lanPeerUpdatesEnabled: state.lanPeerUpdatesAllowed ? (stored.lanPeerUpdatesEnabled ?? false) : false,
       };
     }),
   );

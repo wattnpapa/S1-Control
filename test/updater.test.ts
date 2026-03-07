@@ -193,7 +193,34 @@ describe('updater service - github fallback checks', () => {
     await service.checkForUpdates();
     expect(states.at(-1)).toMatchObject({
       stage: 'error',
-      message: 'GitHub Update-Check fehlgeschlagen (500)',
+      message:
+        'GitHub-Check fehlgeschlagen. API: GitHub Update-Check fehlgeschlagen (500) | Releases: GitHub Releases-Seite nicht erreichbar (500)',
+    });
+  });
+
+  it('falls back to releases page when GitHub API is unavailable', async () => {
+    const states: Array<ReturnType<UpdaterService['getState']>> = [];
+    const service = new UpdaterService((state) => states.push(state));
+    vi.stubGlobal(
+      'fetch',
+      vi
+        .fn()
+        .mockResolvedValueOnce({
+          ok: false,
+          status: 503,
+          url: 'https://api.github.com/repos/wattnpapa/S1-Control/releases/latest',
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          status: 200,
+          url: 'https://github.com/wattnpapa/S1-Control/releases/tag/2026.02.25.16.40',
+        }),
+    );
+
+    await service.checkForUpdates();
+    expect(states.at(-1)).toMatchObject({
+      stage: 'available',
+      latestVersion: '2026.02.25.16.40',
     });
   });
 });
@@ -209,6 +236,16 @@ describe('updater service - auto updater interaction', () => {
     await service.checkForUpdates();
     expect(hoisted.autoUpdaterMock.checkForUpdates).toHaveBeenCalledTimes(1);
     expect(service.getState()).toMatchObject({ latestVersion: '1.2.4' });
+  });
+
+  it('does not keep checking stage when updater returns without follow-up events', async () => {
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockResolvedValue({ updateInfo: { version: '1.2.3' } });
+    const service = new UpdaterService(() => undefined);
+
+    await service.checkForUpdates();
+    expect(service.getState().stage).toBe('not-available');
   });
 
   it('supports download/install only when auto-updater is configured', async () => {
@@ -272,7 +309,7 @@ describe('updater service - auto updater interaction', () => {
 
     expect(service.getState()).toMatchObject({
       stage: 'error',
-      message: 'In-App Update-Check Zeitüberschreitung.',
+      message: 'In-App Update-Check Zeitüberschreitung (URL: https://github.com/wattnpapa/S1-Control/releases/latest/download).',
     });
     vi.useRealTimers();
   });
@@ -341,6 +378,24 @@ describe('updater service - fallback and install', () => {
       source: 'github-release',
       inAppDownloadSupported: false,
     });
+  });
+
+  it('times out hanging github fallback checks', async () => {
+    vi.useFakeTimers();
+    hoisted.existsSyncMock.mockReturnValue(false);
+    const service = new UpdaterService(() => undefined);
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)));
+
+    const run = service.checkForUpdates();
+    await vi.advanceTimersByTimeAsync(12_100);
+    await run;
+
+    expect(service.getState()).toMatchObject({
+      stage: 'error',
+      message:
+        'Update-Check Zeitüberschreitung (GitHub API: https://api.github.com/repos/wattnpapa/S1-Control/releases/latest; GitHub Releases: https://github.com/wattnpapa/S1-Control/releases/latest).',
+    });
+    vi.useRealTimers();
   });
 
   it('marks idle on offline updater-check error in electron-updater path', async () => {

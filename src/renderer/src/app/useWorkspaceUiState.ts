@@ -74,8 +74,6 @@ export interface WorkspaceUiStateResult {
   setKraefteOrgFilter: Dispatch<SetStateAction<OrganisationKey | 'ALLE'>>;
   gesamtStaerke: TacticalStrength;
   setGesamtStaerke: Dispatch<SetStateAction<TacticalStrength>>;
-  now: Date;
-  setNow: Dispatch<SetStateAction<Date>>;
   activeClients: ActiveClientInfo[];
   setActiveClients: Dispatch<SetStateAction<ActiveClientInfo[]>>;
   peerUpdateStatus: PeerUpdateStatus | null;
@@ -176,7 +174,6 @@ function useWorkspaceRuntimeUiState() {
   const [activeView, setActiveView] = useState<WorkspaceView>('einsatz');
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
-  const [now, setNow] = useState<Date>(new Date());
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
@@ -195,8 +192,6 @@ function useWorkspaceRuntimeUiState() {
     setKraefteOrgFilter,
     gesamtStaerke,
     setGesamtStaerke,
-    now,
-    setNow,
     activeClients,
     setActiveClients,
     peerUpdateStatus,

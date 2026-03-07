@@ -76,9 +76,12 @@ function useSystemSettingsActions(props: UseSystemActionsProps) {
  */
 function useSystemProcessActions(props: UseSystemActionsProps) {
   const checkForUpdates = useCallback(async () => {
-    await props.withBusy(async () => {
+    props.setError(null);
+    try {
       await window.api.checkForUpdates();
-    });
+    } catch (error) {
+      props.setError(error instanceof Error ? error.message : String(error));
+    }
   }, [props]);
 
   const move = useCallback(async () => {

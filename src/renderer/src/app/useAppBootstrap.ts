@@ -10,7 +10,6 @@ interface UseAppBootstrapOptions {
   setUpdaterState: (value: UpdaterState) => void;
   setSession: (value: SessionUser | null) => void;
   setQueuedOpenFilePath: (value: string | null) => void;
-  setNow: (value: Date) => void;
   setError: (value: string | null) => void;
   refreshEinsaetze: () => Promise<unknown>;
 }
@@ -27,7 +26,6 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
     setUpdaterState,
     setSession,
     setQueuedOpenFilePath,
-    setNow,
     setError,
     refreshEinsaetze,
   } = options;
@@ -39,7 +37,6 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
         setDbPath(settings.dbPath);
         setLanPeerUpdatesEnabled(settings.lanPeerUpdatesEnabled);
         setUpdaterState(await window.api.getUpdaterState());
-        void window.api.checkForUpdates();
         const nextSession = currentSession ?? (await window.api.login({ name: 'admin', passwort: 'admin' }));
         setSession(nextSession);
         await refreshEinsaetze();
@@ -71,13 +68,16 @@ export function useAppBootstrap(options: UseAppBootstrapOptions): void {
     const unsubscribe = window.updaterEvents.onStateChanged((state) => {
       setUpdaterState(state as UpdaterState);
     });
+    void (async () => {
+      try {
+        const current = await window.api.getUpdaterState();
+        setUpdaterState(current);
+      } catch {
+        // Ignore here; normal bootstrap error handling covers initial load path.
+      }
+    })();
     return () => unsubscribe();
   }, [setUpdaterState]);
-
-  useEffect(() => {
-    const timer = window.setInterval(() => setNow(new Date()), 1000);
-    return () => window.clearInterval(timer);
-  }, [setNow]);
 
   useEffect(() => {
     const unsubscribe = window.appEvents.onPendingOpenFile((dbPath) => {

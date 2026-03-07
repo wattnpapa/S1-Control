@@ -139,7 +139,6 @@ export function useAppViewModel(): AppViewModel {
     setUpdaterState: rootState.setUpdaterState,
     setSession: rootState.setSession,
     setQueuedOpenFilePath: uiState.setQueuedOpenFilePath,
-    setNow: uiState.setNow,
     setError: rootState.setError,
     refreshEinsaetze,
   });

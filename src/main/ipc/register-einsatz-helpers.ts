@@ -105,7 +105,9 @@ function openEinsatzByPathForUser(state: AppState, selected: string, user: { nam
     const dbUser = ensureSessionUserRecord(nextContext, user);
     state.setSessionUser(dbUser);
     state.setDbContext(nextContext);
-    state.clientPresence.start(nextContext);
+    if (state.clientHeartbeatEnabled) {
+      state.clientPresence.start(nextContext);
+    }
     state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: einsatzMeta.id });
     state.backupCoordinator.start(nextContext);
     rememberRecentDbPath(state, selected, einsatzMeta.id);

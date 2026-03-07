@@ -38,6 +38,9 @@ export function StartView(props: StartViewProps): JSX.Element {
           <button onClick={props.onCheckForUpdates} disabled={props.busy}>
             Auf Updates prüfen
           </button>
+          <button onClick={() => void window.api.openMainDevTools()}>
+            DevTools öffnen
+          </button>
         </div>
 
         <div className="start-options">

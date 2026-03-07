@@ -128,7 +128,6 @@ export function buildWorkspaceProps(args: BuildWorkspacePropsArgs): AppWorkspace
 function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorkspaceShellProps, keyof ReturnType<typeof buildWorkspaceCallbacks>> {
   return {
     busy: args.busy,
-    now: args.uiState.now,
     error: args.error,
     isArchived: Boolean(args.derivedState.isArchived),
     activeView: args.uiState.activeView,

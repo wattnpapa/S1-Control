@@ -42,7 +42,7 @@ export function resolveRendererUrl(): string {
 /**
  * Creates and loads the main application window.
  */
-export async function createMainWindow(): Promise<void> {
+export async function createMainWindow(): Promise<BrowserWindow> {
   const win = new BrowserWindow({
     width: 1400,
     height: 900,
@@ -54,6 +54,7 @@ export async function createMainWindow(): Promise<void> {
     },
   });
   await win.loadURL(resolveRendererUrl());
+  return win;
 }
 
 /**
