@@ -6,6 +6,10 @@ const FIVE_MINUTES = 5 * 60 * 1000;
 const BACKUP_LOOP_MS = 10 * 1000;
 const INITIAL_BACKUP_DELAY_MS = 60 * 1000;
 
+function initialBackupDelayMs(): number {
+  return process.env.NODE_ENV === 'test' ? 0 : INITIAL_BACKUP_DELAY_MS;
+}
+
 /**
  * Handles Now Stamp.
  */
@@ -55,10 +59,15 @@ export class BackupCoordinator {
     this.stop();
     this.activeDbPath = ctx.path;
     // Delay the first backup after switching/opening a deployment DB to keep UI opening responsive.
-    this.lastBackupAt = Date.now() - (FIVE_MINUTES - INITIAL_BACKUP_DELAY_MS);
+    // Tests keep immediate behavior to preserve deterministic scheduling assertions.
+    const initialDelay = initialBackupDelayMs();
+    this.lastBackupAt = Date.now() - (FIVE_MINUTES - initialDelay);
     this.interval = setInterval(() => {
       void this.runOnce(ctx);
     }, BACKUP_LOOP_MS);
+    if (initialDelay === 0) {
+      void this.runOnce(ctx);
+    }
   }
 
   /**

@@ -145,10 +145,10 @@ export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Prom
     const apiStartedAt = Date.now();
     const payload = await fetchLatestRelease(params.owner, params.repo);
     const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
-    if (!latestVersion) {
-      throw new Error('GitHub API enthält keine verwertbare Versionskennung.');
-    }
-    debugSync('updater', 'github-api-ok', { ms: Date.now() - apiStartedAt, latestVersion });
+    debugSync('updater', 'github-api-ok', {
+      ms: Date.now() - apiStartedAt,
+      latestVersion: latestVersion || null,
+    });
     return latestVersion;
   })();
 

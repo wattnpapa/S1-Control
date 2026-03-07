@@ -6,11 +6,18 @@ const hoisted = vi.hoisted(() => ({
     options: Record<string, unknown>;
     handlers: Record<string, () => void>;
     webHandlers: Record<string, () => void>;
-    webContents: { send: ReturnType<typeof vi.fn>; on: (event: string, cb: () => void) => void };
+    webContents: {
+      send: ReturnType<typeof vi.fn>;
+      on: (event: string, cb: () => void) => void;
+      once: (event: string, cb: () => void) => void;
+    };
     isDestroyed: () => boolean;
     show: ReturnType<typeof vi.fn>;
+    hide: ReturnType<typeof vi.fn>;
     focus: ReturnType<typeof vi.fn>;
     close: ReturnType<typeof vi.fn>;
+    destroy: ReturnType<typeof vi.fn>;
+    setBounds: ReturnType<typeof vi.fn>;
     loadURL: ReturnType<typeof vi.fn>;
   }>,
   mockScreen: {
@@ -34,6 +41,9 @@ vi.mock('electron', () => {
         on: (event: string, cb: () => void) => {
           webHandlers[event] = cb;
         },
+        once: (event: string, cb: () => void) => {
+          webHandlers[event] = cb;
+        },
       };
       const win = {
         options,
@@ -42,8 +52,14 @@ vi.mock('electron', () => {
         webContents,
         isDestroyed: () => destroyed,
         show: vi.fn(),
+        hide: vi.fn(),
         focus: vi.fn(),
+        setBounds: vi.fn(),
         close: vi.fn(() => {
+          destroyed = true;
+          handlers.closed?.();
+        }),
+        destroy: vi.fn(() => {
           destroyed = true;
           handlers.closed?.();
         }),
@@ -64,6 +80,7 @@ describe('strength display service', () => {
   it('opens fullscreen window on external display and pushes state', async () => {
     const service = new StrengthDisplayService(() => 'file:///index.html');
     await service.openWindow();
+    await new Promise((resolve) => setTimeout(resolve, 0));
 
     expect(hoisted.createdWindows).toHaveLength(1);
     const win = hoisted.createdWindows[0]!;
@@ -88,6 +105,8 @@ describe('strength display service', () => {
     hoisted.createdWindows.length = 0;
     const service = new StrengthDisplayService(() => 'file:///index.html?foo=1');
     await service.openWindow();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    hoisted.createdWindows[0]!.webHandlers['did-finish-load']?.();
     await service.openWindow();
 
     expect(hoisted.createdWindows).toHaveLength(1);
@@ -97,6 +116,6 @@ describe('strength display service', () => {
     expect(win.loadURL).toHaveBeenCalledWith('file:///index.html?foo=1&display=strength');
 
     service.closeWindow();
-    expect(win.close).toHaveBeenCalled();
+    expect(win.hide).toHaveBeenCalled();
   });
 });

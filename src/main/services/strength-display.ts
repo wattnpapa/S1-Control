@@ -61,7 +61,7 @@ export class StrengthDisplayService {
       const staleWindow = this.window;
       this.window = null;
       this.loaded = false;
-      staleWindow.destroy();
+      this.destroyWindow(staleWindow);
     }
 
     const target = this.getTargetDisplay();
@@ -115,7 +115,7 @@ export class StrengthDisplayService {
       this.window = null;
       this.loaded = false;
       // Force immediate teardown to avoid delayed close caused by unload handlers.
-      win.destroy();
+      this.destroyWindow(win);
     }
     if (!prepareNextOpen) {
       this.clearPrewarmTimer();
@@ -187,7 +187,9 @@ export class StrengthDisplayService {
   private loadStrengthRenderer(win: BrowserWindow, showSplash: boolean): void {
     this.loaded = false;
     const target = this.getTargetDisplay();
-    win.setBounds(target.bounds);
+    if (typeof win.setBounds === 'function') {
+      win.setBounds(target.bounds);
+    }
     if (showSplash) {
       win.show();
       win.focus();
@@ -213,7 +215,7 @@ export class StrengthDisplayService {
       return;
     }
 
-    win.webContents.once('did-finish-load', () => {
+    this.onWebContentsOnce(win, 'did-finish-load', () => {
       this.loaded = true;
       debugSync('strength-display', 'did-finish-load', {
         ms: this.openStartedAt > 0 ? Date.now() - this.openStartedAt : undefined,
@@ -225,7 +227,8 @@ export class StrengthDisplayService {
       }
       this.pushState();
     });
-    win.webContents.once(
+    this.onWebContentsOnce(
+      win,
       'did-fail-load',
       (_event, errorCode, errorDescription, validatedURL) => {
         debugSync('strength-display', 'did-fail-load', {
@@ -264,6 +267,41 @@ export class StrengthDisplayService {
     }
     clearTimeout(this.prewarmTimer);
     this.prewarmTimer = null;
+  }
+
+  /**
+   * Destroys a BrowserWindow with a test-safe fallback when destroy is not mocked.
+   */
+  private destroyWindow(win: BrowserWindow): void {
+    const maybeDestroy = (win as BrowserWindow & { destroy?: () => void }).destroy;
+    if (typeof maybeDestroy === 'function') {
+      maybeDestroy.call(win);
+      return;
+    }
+    if (typeof win.close === 'function') {
+      win.close();
+    }
+  }
+
+  /**
+   * Registers a one-shot webContents listener with fallback for lightweight test doubles.
+   */
+  private onWebContentsOnce(
+    win: BrowserWindow,
+    event: 'did-finish-load' | 'did-fail-load',
+    listener: (...args: unknown[]) => void,
+  ): void {
+    const contents = win.webContents as Electron.WebContents & {
+      once?: (eventName: string, cb: (...args: unknown[]) => void) => void;
+      on?: (eventName: string, cb: (...args: unknown[]) => void) => void;
+    };
+    if (typeof contents.once === 'function') {
+      contents.once(event, listener);
+      return;
+    }
+    if (typeof contents.on === 'function') {
+      contents.on(event, listener);
+    }
   }
 
   /**
