@@ -1,8 +1,9 @@
 import { compareVersions, normalizeVersion } from './updater-versioning';
 import { isOfflineLikeError } from './updater-network-errors';
 import type { UpdaterState } from '../../shared/types';
+import { debugSync } from './debug';
 
-const GITHUB_CHECK_TIMEOUT_MS = 5000;
+const GITHUB_CHECK_TIMEOUT_MS = 8000;
 
 interface GitHubCheckParams {
   owner: string;
@@ -139,26 +140,45 @@ function applyGitHubCheckError(params: GitHubCheckParams, error: unknown): void 
  * Checks GitHub releases and updates updater state via callback.
  */
 export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Promise<void> {
-  try {
+  const startedAt = Date.now();
+  const apiPromise = (async () => {
+    const apiStartedAt = Date.now();
     const payload = await fetchLatestRelease(params.owner, params.repo);
     const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
+    if (!latestVersion) {
+      throw new Error('GitHub API enthält keine verwertbare Versionskennung.');
+    }
+    debugSync('updater', 'github-api-ok', { ms: Date.now() - apiStartedAt, latestVersion });
+    return latestVersion;
+  })();
+
+  const webPromise = (async () => {
+    const webStartedAt = Date.now();
+    const latestVersion = await fetchLatestReleaseFromWeb(params.owner, params.repo);
+    debugSync('updater', 'github-web-ok', { ms: Date.now() - webStartedAt, latestVersion });
+    return latestVersion;
+  })();
+
+  try {
+    const latestVersion = await Promise.any([apiPromise, webPromise]);
+    debugSync('updater', 'github-check-ok', { ms: Date.now() - startedAt, latestVersion });
     applyVersionState(params, latestVersion);
   } catch (error) {
-    try {
-      const latestVersionFromWeb = await fetchLatestReleaseFromWeb(params.owner, params.repo);
-      applyVersionState(params, latestVersionFromWeb);
-    } catch (fallbackError) {
-      const apiMessage = toErrorMessage(error);
-      const webMessage = toErrorMessage(fallbackError);
-      if (isOfflineLikeError(apiMessage) && isOfflineLikeError(webMessage)) {
-        params.setState({ stage: 'idle' });
-        return;
-      }
-      if (isAbortError(error) || isAbortError(fallbackError)) {
-        applyGitHubCheckError(params, fallbackError);
-        return;
-      }
-      applyGitHubCheckError(params, new Error(`GitHub-Check fehlgeschlagen. API: ${apiMessage} | Releases: ${webMessage}`));
+    const aggregate = error as AggregateError;
+    const causes = Array.isArray(aggregate.errors) ? aggregate.errors : [error];
+    const messages = causes.map((cause) => toErrorMessage(cause));
+    const apiMessage = messages[0] ?? 'unbekannt';
+    const webMessage = messages[1] ?? 'unbekannt';
+    if (isOfflineLikeError(apiMessage) && isOfflineLikeError(webMessage)) {
+      params.setState({ stage: 'idle' });
+      return;
     }
+    if (causes.some((cause) => isAbortError(cause))) {
+      debugSync('updater', 'github-check-timeout', { ms: Date.now() - startedAt, apiMessage, webMessage });
+      applyGitHubCheckError(params, new Error(githubDualTimeoutMessage(params.owner, params.repo)));
+      return;
+    }
+    debugSync('updater', 'github-check-error', { ms: Date.now() - startedAt, apiMessage, webMessage });
+    applyGitHubCheckError(params, new Error(`GitHub-Check fehlgeschlagen. API: ${apiMessage} | Releases: ${webMessage}`));
   }
 }

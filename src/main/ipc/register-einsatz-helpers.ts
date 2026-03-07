@@ -144,6 +144,7 @@ export function createEinsatzIpcHelpers(state: AppState): EinsatzIpcHelpers {
     resolveRecentDbPathByEinsatzId: (einsatzId: string): string | null => resolveRecentDbPathByEinsatzId(state, einsatzId),
     openEinsatzByPathForUser: (selected, user) => openEinsatzByPathForUser(state, selected, user),
     notifyEinsatzChanged: (einsatzId, reason, dbPath = state.getDbContext().path) => {
+      state.einsatzReadCache.invalidateEinsatz(state.getDbContext(), einsatzId);
       state.einsatzSync.broadcastChange({ einsatzId, dbPath, reason });
     },
   };

@@ -22,6 +22,8 @@ export class StrengthDisplayService {
 
   private prewarmStartedAt = 0;
 
+  private prewarmTimer: NodeJS.Timeout | null = null;
+
   /**
    * Creates an instance of this class.
    */
@@ -49,10 +51,17 @@ export class StrengthDisplayService {
    */
   public async openWindow(): Promise<void> {
     if (this.window && !this.window.isDestroyed()) {
-      this.window.show();
-      this.window.focus();
-      this.pushState();
-      return;
+      if (this.loaded) {
+        this.window.show();
+        this.window.focus();
+        this.pushState();
+        return;
+      }
+      // Recreate a visible window when prewarm is still loading to guarantee splash feedback.
+      const staleWindow = this.window;
+      this.window = null;
+      this.loaded = false;
+      staleWindow.destroy();
     }
 
     const target = this.getTargetDisplay();
@@ -95,14 +104,28 @@ export class StrengthDisplayService {
   /**
    * Handles Close Window.
    */
-  public closeWindow(): void {
+  public closeWindow(prepareNextOpen = true): void {
     if (this.window && !this.window.isDestroyed()) {
       const win = this.window;
+      if (prepareNextOpen && this.loaded) {
+        // Keep a fully loaded monitor window hidden for instant reopen.
+        win.hide();
+        return;
+      }
       this.window = null;
       this.loaded = false;
       // Force immediate teardown to avoid delayed close caused by unload handlers.
       win.destroy();
     }
+    if (!prepareNextOpen) {
+      this.clearPrewarmTimer();
+      return;
+    }
+    this.clearPrewarmTimer();
+    this.prewarmTimer = setTimeout(() => {
+      this.prewarmTimer = null;
+      this.prewarmWindow();
+    }, 120);
   }
 
   /**
@@ -174,7 +197,7 @@ export class StrengthDisplayService {
       const splashHtml = encodeURIComponent(
         '<!doctype html><html><body style="margin:0;display:grid;place-items:center;background:#000;color:#fff;font:26px -apple-system,Arial,sans-serif;">Stärke-Monitor wird geöffnet…</body></html>',
       );
-      void win.loadURL(`data:text/html;charset=utf-8,${splashHtml}`);
+      this.safeLoadURL(win, `data:text/html;charset=utf-8,${splashHtml}`, 'splash');
     }
 
     if (STRENGTH_DISPLAY_DIAGNOSTIC_STATIC) {
@@ -185,7 +208,7 @@ export class StrengthDisplayService {
         if (win.isDestroyed()) {
           return;
         }
-        void win.loadURL(`data:text/html;charset=utf-8,${diagnosticHtml}`);
+        this.safeLoadURL(win, `data:text/html;charset=utf-8,${diagnosticHtml}`, 'diagnostic');
       }, 0);
       return;
     }
@@ -220,7 +243,7 @@ export class StrengthDisplayService {
           <p style="word-break:break-all;opacity:.8">${validatedURL}</p>
           </body></html>`,
         );
-        void win.loadURL(`data:text/html;charset=utf-8,${html}`);
+        this.safeLoadURL(win, `data:text/html;charset=utf-8,${html}`, 'error-fallback');
       },
     );
 
@@ -231,7 +254,30 @@ export class StrengthDisplayService {
       if (win.isDestroyed()) {
         return;
       }
-      void win.loadURL(targetUrl);
+      this.safeLoadURL(win, targetUrl, 'renderer');
     }, 0);
+  }
+
+  private clearPrewarmTimer(): void {
+    if (!this.prewarmTimer) {
+      return;
+    }
+    clearTimeout(this.prewarmTimer);
+    this.prewarmTimer = null;
+  }
+
+  /**
+   * Loads a URL and swallows expected rejection races when window closes during navigation.
+   */
+  private safeLoadURL(win: BrowserWindow, url: string, phase: string): void {
+    void win.loadURL(url).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      // Expected when a window is destroyed while navigation is still in flight.
+      if (win.isDestroyed() || message.includes('ERR_FAILED (-2)') || message.includes('ERR_ABORTED')) {
+        debugSync('strength-display', 'load:ignored', { phase, message });
+        return;
+      }
+      debugSync('strength-display', 'load:error', { phase, message, url });
+    });
   }
 }

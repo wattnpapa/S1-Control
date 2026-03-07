@@ -4,6 +4,7 @@ import type { DbContext } from '../db/connection';
 import { SettingsStore } from '../db/settings-store';
 import { BackupCoordinator } from '../services/backup';
 import { ClientPresenceService } from '../services/clients';
+import { EinsatzReadCache } from '../services/einsatz-read-cache';
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 import { EinsatzSyncService } from '../services/einsatz-sync';
@@ -16,6 +17,7 @@ export interface AppState {
   einsatzSync: EinsatzSyncService;
   updater: UpdaterService;
   strengthDisplay: StrengthDisplayService;
+  einsatzReadCache: EinsatzReadCache;
   settingsStore: SettingsStore;
   getDefaultDbPath: () => string;
   consumePendingOpenFilePath: () => string | null;

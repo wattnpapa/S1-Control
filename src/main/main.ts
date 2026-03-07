@@ -8,6 +8,7 @@ import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
 import { ClientPresenceService } from './services/clients';
 import { resolveEinsatzBaseDir, resolveSystemDbPath } from './services/einsatz-files';
+import { EinsatzReadCache } from './services/einsatz-read-cache';
 import { StrengthDisplayService } from './services/strength-display';
 import { EinsatzSyncService } from './services/einsatz-sync';
 import { UpdaterService } from './services/updater';
@@ -20,6 +21,9 @@ import { IPC_CHANNEL } from '../shared/ipc';
 const EINSATZ_FILE_EXTENSIONS = ['.s1control', '.sqlite'];
 let pendingOpenFilePath: string | null = null;
 let bootstrapUpdater: UpdaterService | null = null;
+let appShuttingDown = false;
+let strengthPrewarmEarlyTimer: NodeJS.Timeout | null = null;
+let strengthPrewarmRetryTimer: NodeJS.Timeout | null = null;
 const PERF_SAFE_MODE = process.env.S1_PERF_SAFE_MODE === '1';
 const DISABLE_LAN_UPDATE_PEER = PERF_SAFE_MODE;
 const DISABLE_UDP_SYNC = PERF_SAFE_MODE;
@@ -197,6 +201,20 @@ function stopServices(
 }
 
 /**
+ * Clears pending strength-monitor prewarm timers.
+ */
+function clearStrengthPrewarmTimers(): void {
+  if (strengthPrewarmEarlyTimer) {
+    clearTimeout(strengthPrewarmEarlyTimer);
+    strengthPrewarmEarlyTimer = null;
+  }
+  if (strengthPrewarmRetryTimer) {
+    clearTimeout(strengthPrewarmRetryTimer);
+    strengthPrewarmRetryTimer = null;
+  }
+}
+
+/**
  * Registers app lifecycle handlers.
  */
 function setupLifecycleHandlers(input: {
@@ -224,6 +242,8 @@ function setupLifecycleHandlers(input: {
     }
   });
   app.on('window-all-closed', () => {
+    appShuttingDown = true;
+    clearStrengthPrewarmTimers();
     debugSync('lifecycle', 'window-all-closed');
     stopOnce();
     app.quit();
@@ -235,6 +255,8 @@ function setupLifecycleHandlers(input: {
     }
   });
   app.on('before-quit', () => {
+    appShuttingDown = true;
+    clearStrengthPrewarmTimers();
     debugSync('lifecycle', 'before-quit');
     stopOnce();
     if (!forceExitTimer) {
@@ -245,6 +267,7 @@ function setupLifecycleHandlers(input: {
     }
   });
   app.on('will-quit', () => {
+    clearStrengthPrewarmTimers();
     debugSync('lifecycle', 'will-quit');
     if (forceExitTimer) {
       clearTimeout(forceExitTimer);
@@ -263,7 +286,7 @@ function wireMainWindowCloseBehavior(win: BrowserWindow, strengthDisplay: Streng
   }
   marker.__s1MainCloseWired = true;
   win.on('close', () => {
-    strengthDisplay.closeWindow();
+    strengthDisplay.closeWindow(false);
   });
 }
 
@@ -331,6 +354,7 @@ async function bootstrap(): Promise<void> {
     einsatzSync.start(dbContext.path);
   }
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
+  const einsatzReadCache = new EinsatzReadCache();
 
   let currentUser: SessionUser | null = null;
 
@@ -343,12 +367,14 @@ async function bootstrap(): Promise<void> {
         // already closed
       }
       dbContext = ctx;
+      einsatzReadCache.clearAll();
     },
     backupCoordinator,
     clientPresence,
     einsatzSync,
     updater,
     strengthDisplay,
+    einsatzReadCache,
     settingsStore,
     getDefaultDbPath: () => paths.defaultBaseDir,
     consumePendingOpenFilePath,
@@ -366,21 +392,31 @@ async function bootstrap(): Promise<void> {
   wireMainWindowCloseBehavior(mainWindow, strengthDisplay);
   mainWindow.once('ready-to-show', () => {
     debugSync('strength-display', 'prewarm-scheduled');
-    setTimeout(() => {
+    strengthPrewarmEarlyTimer = setTimeout(() => {
       try {
+        if (appShuttingDown || BrowserWindow.getAllWindows().length === 0) {
+          return;
+        }
         strengthDisplay.prewarmWindow();
         debugSync('strength-display', 'prewarm-started', strengthDisplay.getHealth());
       } catch {
         // best effort prewarm only
+      } finally {
+        strengthPrewarmEarlyTimer = null;
       }
     }, 150);
   });
-  setTimeout(() => {
+  strengthPrewarmRetryTimer = setTimeout(() => {
     try {
+      if (appShuttingDown || BrowserWindow.getAllWindows().length === 0) {
+        return;
+      }
       strengthDisplay.prewarmWindow();
       debugSync('strength-display', 'prewarm-retry', strengthDisplay.getHealth());
     } catch {
       // best effort prewarm only
+    } finally {
+      strengthPrewarmRetryTimer = null;
     }
   }, 1200);
   if (startupWarning) {

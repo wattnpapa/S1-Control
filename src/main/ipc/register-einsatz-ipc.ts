@@ -166,7 +166,11 @@ function registerAbschnittHandlers(
   const { state, wrap, requireUser } = common;
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITTE,
-    wrap(async (einsatzId: string) => listAbschnitte(state.getDbContext(), einsatzId)),
+    wrap(async (einsatzId: string) =>
+      state.einsatzReadCache.getAbschnitte(state.getDbContext(), einsatzId, () =>
+        listAbschnitte(state.getDbContext(), einsatzId),
+      ),
+    ),
   );
 
   ipcMain.handle(
@@ -196,13 +200,19 @@ function registerAbschnittHandlers(
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS,
     wrap(async (einsatzId: string, abschnittId: string) =>
-      listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
+      state.einsatzReadCache.getAbschnittDetails(state.getDbContext(), einsatzId, abschnittId, () =>
+        listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
+      ),
     ),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS_BATCH,
-    wrap(async (einsatzId: string) => listAbschnittDetailsBatch(state.getDbContext(), einsatzId)),
+    wrap(async (einsatzId: string) =>
+      state.einsatzReadCache.getAbschnittDetailsBatch(state.getDbContext(), einsatzId, () =>
+        listAbschnittDetailsBatch(state.getDbContext(), einsatzId),
+      ),
+    ),
   );
 }
 

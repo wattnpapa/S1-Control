@@ -4,6 +4,7 @@ import type { DbContext } from '../db/connection';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
 const BACKUP_LOOP_MS = 10 * 1000;
+const INITIAL_BACKUP_DELAY_MS = 60 * 1000;
 
 /**
  * Handles Now Stamp.
@@ -53,11 +54,11 @@ export class BackupCoordinator {
   public start(ctx: DbContext): void {
     this.stop();
     this.activeDbPath = ctx.path;
-    this.lastBackupAt = 0;
+    // Delay the first backup after switching/opening a deployment DB to keep UI opening responsive.
+    this.lastBackupAt = Date.now() - (FIVE_MINUTES - INITIAL_BACKUP_DELAY_MS);
     this.interval = setInterval(() => {
       void this.runOnce(ctx);
     }, BACKUP_LOOP_MS);
-    void this.runOnce(ctx);
   }
 
   /**
