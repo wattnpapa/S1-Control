@@ -29,7 +29,10 @@
     "format": "prettier --write .",
     "test": "vitest run",
     "test:behavior": "vitest run test/behavior*.test.ts test/behavior/**/*.test.ts",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:watch": "E2E_SLOWMO=250 playwright test --headed --workers=1 test/e2e/behavior.smoke.spec.ts",
+    "test:e2e:live": "node scripts/e2e-live-smoke.cjs"
   },
   "build": {
     "appId": "de.thw.s1control",
@@ -109,6 +112,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.20.0",
+    "@playwright/test": "^1.58.2",
     "@types/better-sqlite3": "^7.6.12",
     "@types/jszip": "^3.4.1",
     "@types/node": "^22.13.10",
