@@ -78,6 +78,15 @@ npm run dev
 
 Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (`admin`).
 
+### Performance-/Diagnose-Flags
+
+- `S1_PERF_SAFE_MODE=1`:
+  - deaktiviert bewusst Hintergrundlast (Client-Heartbeat, UDP-Sync, LAN-Update-Peer, zyklische Refresh-Flows),
+  - sinnvoll zur Engpass-Isolation bei trägem UI-Verhalten.
+- `S1_STRENGTH_DIAGNOSTIC_STATIC=1`:
+  - öffnet den Stärke-Monitor ohne normalen Renderer-/Datenpfad,
+  - nur für gezielte Diagnose (nicht für regulären Betrieb).
+
 ### Wichtige Skripte
 
 - `npm run dev`: Vite + Electron mit Live-Reload
