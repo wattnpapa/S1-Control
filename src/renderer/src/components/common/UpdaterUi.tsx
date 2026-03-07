@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import type { UpdaterState } from '@shared/types';
 
 interface UpdaterNoticesProps {
@@ -64,23 +65,62 @@ function formatEtaSeconds(seconds?: number): string {
  */
 export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
   const { updaterState, busy } = props;
+  const noticeKey = useMemo(
+    () =>
+      [
+        updaterState.stage,
+        updaterState.latestVersion ?? '',
+        updaterState.message ?? '',
+        updaterState.source ?? '',
+        updaterState.downloadSource ?? '',
+      ].join('|'),
+    [updaterState],
+  );
+  const [dismissedKey, setDismissedKey] = useState<string | null>(null);
+  const dismissCurrentNotice = () => {
+    setDismissedKey(noticeKey);
+  };
+  useEffect(() => {
+    if (dismissedKey && dismissedKey !== noticeKey) {
+      setDismissedKey(null);
+    }
+  }, [dismissedKey, noticeKey]);
+  if (dismissedKey === noticeKey) {
+    return <></>;
+  }
+
   if (updaterState.stage === 'error') {
-    return <div className="error-banner">Update-Fehler: {updaterState.message}</div>;
+    return (
+      <div className="error-banner notice-with-close">
+        <span>Update-Fehler: {updaterState.message}</span>
+        <button className="notice-close-button" onClick={dismissCurrentNotice} aria-label="Update-Meldung schließen">
+          ×
+        </button>
+      </div>
+    );
   }
   if (updaterState.stage === 'unsupported') {
     return (
-      <div className="update-banner">
+      <div className="update-banner notice-with-close">
         <span>{updaterState.message}</span>
-        <button onClick={props.onOpenReleasePage} disabled={busy}>
-          Release-Seite öffnen
-        </button>
+        <div className="update-actions">
+          <button onClick={props.onOpenReleasePage} disabled={busy}>
+            Release-Seite öffnen
+          </button>
+          <button className="notice-close-button" onClick={dismissCurrentNotice} aria-label="Update-Meldung schließen">
+            ×
+          </button>
+        </div>
       </div>
     );
   }
   if (updaterState.stage === 'checking') {
     return (
-      <div className="update-banner">
+      <div className="update-banner notice-with-close">
         <span>Prüfe auf Updates...</span>
+        <button className="notice-close-button" onClick={dismissCurrentNotice} aria-label="Update-Meldung schließen">
+          ×
+        </button>
       </div>
     );
   }
@@ -88,8 +128,11 @@ export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
   if (updaterState.stage === 'not-available') {
     const serverVersionText = updaterState.latestVersion ?? 'nicht ermittelbar';
     return (
-      <div className="update-banner">
+      <div className="update-banner notice-with-close">
         <span>Server-Version: {serverVersionText}. Ihre Version ist aktuell.</span>
+        <button className="notice-close-button" onClick={dismissCurrentNotice} aria-label="Update-Meldung schließen">
+          ×
+        </button>
       </div>
     );
   }
@@ -101,7 +144,7 @@ export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
   const versionLabel = updaterState.latestVersion ?? 'unbekannt';
   const handleUpdateClick = updaterState.inAppDownloadSupported ? props.onDownloadUpdate : props.onOpenReleasePage;
   return (
-    <div className="update-banner">
+    <div className="update-banner notice-with-close">
       <span>
         Server-Version: {versionLabel}. Update verfügbar. {formatUpdateSourceSuffix(updaterState)}
       </span>
@@ -111,6 +154,9 @@ export function UpdaterNotices(props: UpdaterNoticesProps): JSX.Element {
         </button>
         <button onClick={props.onOpenReleasePage} disabled={busy}>
           Release-Seite öffnen
+        </button>
+        <button className="notice-close-button" onClick={dismissCurrentNotice} aria-label="Update-Meldung schließen">
+          ×
         </button>
       </div>
     </div>

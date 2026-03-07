@@ -292,6 +292,21 @@ textarea {
   gap: 8px;
 }
 
+.notice-with-close {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.notice-close-button {
+  min-width: 32px;
+  height: 32px;
+  line-height: 1;
+  font-size: 18px;
+  padding: 0 8px;
+}
+
 .banner {
   background: #fff6d6;
 }

@@ -138,10 +138,10 @@ export class UpdaterService {
   }
 
   /**
-   * Uses GitHub checks in packaged app by default to avoid hanging in-app updater states.
+   * Optionally forces GitHub checks (diagnostic override).
    */
   private shouldPreferGitHubChecks(): boolean {
-    return process.env.S1_FORCE_GITHUB_UPDATE_CHECK === '1' || app.isPackaged;
+    return process.env.S1_FORCE_GITHUB_UPDATE_CHECK === '1';
   }
 
   /**
