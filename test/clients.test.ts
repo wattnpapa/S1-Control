@@ -189,9 +189,18 @@ describe('client presence service - robustness', () => {
     service.ctx = {
       path: '/tmp/test.s1control',
       db: {
-        transaction: () => {
-          throw new Error('database disk image is malformed');
-        },
+        select: () => ({
+          from: () => ({
+            where: () => ({
+              orderBy: () => ({
+                all: () => {
+                  throw new Error('database disk image is malformed');
+                },
+                get: () => ({ clientId: 'x' }),
+              }),
+            }),
+          }),
+        }),
       },
     };
     service.timer = null;

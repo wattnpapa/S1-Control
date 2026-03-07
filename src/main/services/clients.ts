@@ -149,10 +149,12 @@ export class ClientPresenceService {
         .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
         .get();
       const leaderId = leader?.clientId ?? this.clientId;
+      this.isMaster = leaderId === this.clientId;
       debugSync('clients', 'list', {
         clientId: this.clientId,
         dbPath: this.ctx.path,
         visibleClients: rows.length,
+        isMaster: this.isMaster,
       });
       return rows.map((row) => ({
         clientId: row.clientId,
