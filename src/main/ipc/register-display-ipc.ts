@@ -11,6 +11,67 @@ async function waitForDevToolsStateTick(): Promise<void> {
 }
 
 /**
+ * Opens main-window devtools on a dedicated control lane.
+ */
+async function openMainDevToolsControlLane(): Promise<void> {
+  const requestTs = Date.now();
+  const mainWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  if (!mainWindow || mainWindow.isDestroyed()) {
+    debugSync('devtools', 'open:skip-no-window', { requestTs });
+    return;
+  }
+  const contents = mainWindow.webContents;
+  debugSync('devtools', 'open:request', {
+    requestTs,
+    alreadyOpen: contents.isDevToolsOpened(),
+  });
+  if (contents.isDevToolsOpened()) {
+    contents.devToolsWebContents?.focus();
+    logDevtoolsVisible(requestTs);
+    return;
+  }
+
+  for (const mode of ['detach', 'right', 'bottom'] as const) {
+    contents.openDevTools({ mode, activate: true });
+    await waitForDevToolsStateTick();
+    if (!contents.isDevToolsOpened()) {
+      continue;
+    }
+    logDevtoolsVisible(requestTs, mode);
+    mainWindow.focus();
+    return;
+  }
+
+  contents.toggleDevTools();
+  await waitForDevToolsStateTick();
+  const open = contents.isDevToolsOpened();
+  const visibleTs = Date.now();
+  debugSync('devtools', 'open:result', {
+    open,
+    requestTs,
+    visibleTs,
+    latencyMs: visibleTs - requestTs,
+  });
+  if (!open) {
+    throw new Error('DevTools konnten nicht geöffnet werden.');
+  }
+  mainWindow.focus();
+}
+
+/**
+ * Emits standardized DevTools visibility metrics.
+ */
+function logDevtoolsVisible(requestTs: number, mode?: 'detach' | 'right' | 'bottom'): void {
+  const visibleTs = Date.now();
+  debugSync('devtools', 'open:visible', {
+    mode,
+    requestTs,
+    visibleTs,
+    latencyMs: visibleTs - requestTs,
+  });
+}
+
+/**
  * Handles Register Display Ipc.
  */
 export function registerDisplayIpc(common: RegistrarCommon): void {
@@ -47,39 +108,6 @@ export function registerDisplayIpc(common: RegistrarCommon): void {
     }),
   );
 
-  ipcMain.handle(
-    IPC_CHANNEL.OPEN_MAIN_DEVTOOLS,
-    wrap(async () => {
-      const mainWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
-      if (!mainWindow || mainWindow.isDestroyed()) {
-        debugSync('devtools', 'open:skip-no-window');
-        return;
-      }
-      const contents = mainWindow.webContents;
-      debugSync('devtools', 'open:attempt', { alreadyOpen: contents.isDevToolsOpened() });
-      if (contents.isDevToolsOpened()) {
-        contents.devToolsWebContents?.focus();
-        return;
-      }
-
-      for (const mode of ['detach', 'right', 'bottom'] as const) {
-        contents.openDevTools({ mode, activate: true });
-        await waitForDevToolsStateTick();
-        if (contents.isDevToolsOpened()) {
-          debugSync('devtools', 'open:ok', { mode });
-          mainWindow.focus();
-          return;
-        }
-      }
-
-      contents.toggleDevTools();
-      await waitForDevToolsStateTick();
-      const open = contents.isDevToolsOpened();
-      debugSync('devtools', 'open:result', { open });
-      if (!open) {
-        throw new Error('DevTools konnten nicht geöffnet werden.');
-      }
-      mainWindow.focus();
-    }),
-  );
+  // Dedicated control lane: no shared wrap/queue for DevTools actions.
+  ipcMain.handle(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS, async () => openMainDevToolsControlLane());
 }

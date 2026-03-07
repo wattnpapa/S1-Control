@@ -15,6 +15,7 @@ import { UpdaterService } from './services/updater';
 import { debugSync, onDebugSyncLog } from './services/debug';
 import { broadcastToAllWindows, createMainWindow, resolveRendererUrl } from './services/main-window';
 import { runStartupRecovery } from './services/startup-recovery';
+import { MainDbBridge } from './services/main-db-bridge';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
@@ -28,6 +29,7 @@ const PERF_SAFE_MODE = process.env.S1_PERF_SAFE_MODE === '1';
 const DISABLE_LAN_UPDATE_PEER = PERF_SAFE_MODE;
 const DISABLE_UDP_SYNC = PERF_SAFE_MODE;
 const DISABLE_CLIENT_HEARTBEAT = PERF_SAFE_MODE;
+const USE_DB_UTILITY_PROCESS = process.env.S1_DB_UTILITY_PROCESS === '1';
 
 /**
  * Applies runtime feature workarounds for current Electron/macOS combinations.
@@ -187,17 +189,20 @@ function setupDebugSyncForwarding(): void {
 /**
  * Stops long-running background services.
  */
-function stopServices(
-  backupCoordinator: BackupCoordinator,
-  clientPresence: ClientPresenceService,
-  einsatzSync: EinsatzSyncService,
-  updater: UpdaterService,
-): void {
+function stopServices(input: {
+  backupCoordinator: BackupCoordinator;
+  clientPresence: ClientPresenceService;
+  einsatzSync: EinsatzSyncService;
+  updater: UpdaterService;
+  dbBridge: MainDbBridge;
+}): void {
+  const { backupCoordinator, clientPresence, einsatzSync, updater, dbBridge } = input;
   backupCoordinator.stop();
   // Avoid blocking shutdown on busy DB writes; stale entries are auto-cleaned by TTL.
   clientPresence.stop(false);
   einsatzSync.stop();
   updater.shutdown();
+  dbBridge.stop();
 }
 
 /**
@@ -223,8 +228,9 @@ function setupLifecycleHandlers(input: {
   einsatzSync: EinsatzSyncService;
   updater: UpdaterService;
   strengthDisplay: StrengthDisplayService;
+  dbBridge: MainDbBridge;
 }): void {
-  const { backupCoordinator, clientPresence, einsatzSync, updater, strengthDisplay } = input;
+  const { backupCoordinator, clientPresence, einsatzSync, updater, strengthDisplay, dbBridge } = input;
   let stopped = false;
   let forceExitTimer: NodeJS.Timeout | null = null;
   const stopOnce = () => {
@@ -232,7 +238,13 @@ function setupLifecycleHandlers(input: {
       return;
     }
     stopped = true;
-    stopServices(backupCoordinator, clientPresence, einsatzSync, updater);
+    stopServices({
+      backupCoordinator,
+      clientPresence,
+      einsatzSync,
+      updater,
+      dbBridge,
+    });
   };
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -326,6 +338,7 @@ async function bootstrap(): Promise<void> {
   const effectiveLanPeerEnabled = DISABLE_LAN_UPDATE_PEER ? false : lanPeerUpdatesEnabled;
   debugSync('bootstrap', 'feature-flags', {
     perfSafeMode: PERF_SAFE_MODE,
+    dbUtilityProcessEnabled: USE_DB_UTILITY_PROCESS,
     lanUpdatePeerEnabled: effectiveLanPeerEnabled,
     udpSyncEnabled: !DISABLE_UDP_SYNC,
     clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
@@ -355,6 +368,8 @@ async function bootstrap(): Promise<void> {
   }
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
   const einsatzReadCache = new EinsatzReadCache();
+  const dbBridge = new MainDbBridge();
+  dbBridge.start(USE_DB_UTILITY_PROCESS);
 
   let currentUser: SessionUser | null = null;
 
@@ -385,6 +400,8 @@ async function bootstrap(): Promise<void> {
     clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
     lanPeerUpdatesAllowed: !DISABLE_LAN_UPDATE_PEER,
     perfSafeMode: PERF_SAFE_MODE,
+    useDbUtilityProcess: USE_DB_UTILITY_PROCESS,
+    dbBridge,
   });
   setupDebugSyncForwarding();
   registerDebugShortcuts();
@@ -432,6 +449,7 @@ async function bootstrap(): Promise<void> {
     einsatzSync,
     updater,
     strengthDisplay,
+    dbBridge,
   });
 }
 

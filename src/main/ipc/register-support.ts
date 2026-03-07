@@ -8,6 +8,7 @@ import { EinsatzReadCache } from '../services/einsatz-read-cache';
 import { StrengthDisplayService } from '../services/strength-display';
 import { UpdaterService } from '../services/updater';
 import { EinsatzSyncService } from '../services/einsatz-sync';
+import { MainDbBridge } from '../services/main-db-bridge';
 
 export interface AppState {
   getDbContext: () => DbContext;
@@ -26,6 +27,8 @@ export interface AppState {
   clientHeartbeatEnabled: boolean;
   lanPeerUpdatesAllowed: boolean;
   perfSafeMode: boolean;
+  useDbUtilityProcess: boolean;
+  dbBridge: MainDbBridge;
 }
 
 export type IpcWrapper = <T extends unknown[], R>(

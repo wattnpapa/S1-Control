@@ -23,6 +23,7 @@ import {
   showRestoreBackupDialog,
 } from './register-einsatz-ipc-support';
 import type { EntityIpcHelpers, EinsatzIpcHelpers, RegistrarCommon } from './register-support';
+import type { AbschnittDetails, AbschnittNode } from '../../shared/types';
 
 /**
  * Handles Register Einsatz Ipc.
@@ -167,9 +168,7 @@ function registerAbschnittHandlers(
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITTE,
     wrap(async (einsatzId: string) =>
-      state.einsatzReadCache.getAbschnitte(state.getDbContext(), einsatzId, () =>
-        listAbschnitte(state.getDbContext(), einsatzId),
-      ),
+      readAbschnitte(common, einsatzId),
     ),
   );
 
@@ -200,20 +199,101 @@ function registerAbschnittHandlers(
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS,
     wrap(async (einsatzId: string, abschnittId: string) =>
-      state.einsatzReadCache.getAbschnittDetails(state.getDbContext(), einsatzId, abschnittId, () =>
-        listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
-      ),
+      readAbschnittDetails(common, einsatzId, abschnittId),
     ),
   );
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_ABSCHNITT_DETAILS_BATCH,
     wrap(async (einsatzId: string) =>
-      state.einsatzReadCache.getAbschnittDetailsBatch(state.getDbContext(), einsatzId, () =>
-        listAbschnittDetailsBatch(state.getDbContext(), einsatzId),
-      ),
+      readAbschnittDetailsBatch(common, einsatzId),
     ),
   );
+}
+
+/**
+ * Reads abschnitte with high-priority utility-process delegation and local fallback.
+ */
+async function readAbschnitte(
+  common: RegistrarCommon,
+  einsatzId: string,
+): Promise<AbschnittNode[]> {
+  const { state } = common;
+  const ctx = state.getDbContext();
+  if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+    try {
+      return await state.dbBridge.request(
+        'list-abschnitte',
+        {
+          dbPath: ctx.path,
+          einsatzId,
+        },
+        'high',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      debugSync('db-bridge', 'fallback:list-abschnitte', { einsatzId, message });
+    }
+  }
+  return state.einsatzReadCache.getAbschnitte(ctx, einsatzId, () => listAbschnitte(ctx, einsatzId));
+}
+
+/**
+ * Reads one abschnitt detail payload with high-priority utility-process delegation and local fallback.
+ */
+async function readAbschnittDetails(
+  common: RegistrarCommon,
+  einsatzId: string,
+  abschnittId: string,
+): Promise<AbschnittDetails> {
+  const { state } = common;
+  const ctx = state.getDbContext();
+  if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+    try {
+      return await state.dbBridge.request(
+        'list-abschnitt-details',
+        {
+          dbPath: ctx.path,
+          einsatzId,
+          abschnittId,
+        },
+        'high',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      debugSync('db-bridge', 'fallback:list-abschnitt-details', { einsatzId, abschnittId, message });
+    }
+  }
+  return state.einsatzReadCache.getAbschnittDetails(ctx, einsatzId, abschnittId, () =>
+    listAbschnittDetails(ctx, einsatzId, abschnittId),
+  );
+}
+
+/**
+ * Reads all abschnitt detail payloads in one batch with high-priority utility-process delegation and local fallback.
+ */
+async function readAbschnittDetailsBatch(
+  common: RegistrarCommon,
+  einsatzId: string,
+): Promise<Record<string, AbschnittDetails>> {
+  const { state } = common;
+  const ctx = state.getDbContext();
+  if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+    try {
+      return await state.dbBridge.request(
+        'list-abschnitt-details-batch',
+        {
+          dbPath: ctx.path,
+          einsatzId,
+        },
+        'high',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      debugSync('db-bridge', 'fallback:list-abschnitt-details-batch', { einsatzId, message });
+    }
+  }
+  return state.einsatzReadCache.getAbschnittDetailsBatch(ctx, einsatzId, () => listAbschnittDetailsBatch(ctx, einsatzId));
 }
 
 /**

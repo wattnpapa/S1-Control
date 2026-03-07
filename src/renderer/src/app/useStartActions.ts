@@ -35,7 +35,7 @@ export function useStartActions(props: UseStartActionsProps) {
 
         props.setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
         props.setSelectedEinsatzId(opened.id);
-        await props.loadEinsatz(opened.id, undefined, { waitForFullOverview: true });
+        await props.loadEinsatz(opened.id);
         props.setStartChoice('open');
       } finally {
         props.setEinsatzInitialLoading(false);
@@ -53,7 +53,7 @@ export function useStartActions(props: UseStartActionsProps) {
         }
 
         props.setSelectedEinsatzId(einsatzId);
-        await props.loadEinsatz(einsatzId, undefined, { waitForFullOverview: true });
+        await props.loadEinsatz(einsatzId);
         props.setStartChoice('open');
       } finally {
         props.setEinsatzInitialLoading(false);
@@ -81,7 +81,7 @@ export function useStartActions(props: UseStartActionsProps) {
         props.setStartNewEinsatzName('');
         props.setEinsaetze((prev) => upsertRecentEinsatz(prev, created));
         props.setSelectedEinsatzId(created.id);
-        await props.loadEinsatz(created.id, undefined, { waitForFullOverview: true });
+        await props.loadEinsatz(created.id);
         props.setStartChoice('open');
       } finally {
         props.setEinsatzInitialLoading(false);

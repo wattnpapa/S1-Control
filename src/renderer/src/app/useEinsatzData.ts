@@ -21,6 +21,8 @@ interface UseEinsatzDataProps {
   emptyStrength: TacticalStrength;
 }
 
+const PREWARM_LIMIT = 40;
+
 /**
  * Encapsulates loading and refreshing Einsatz, Abschnitt, Kraft and Fahrzeug data.
  */
@@ -81,19 +83,7 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         const nextAllFahrzeuge = mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte);
         props.setAllKraefte(nextAllKraefte);
         props.setAllFahrzeuge(nextAllFahrzeuge);
-        prewarmFormationSigns(
-          nextAllKraefte.map((item) => ({
-            organisation: item.organisation,
-            tacticalSignConfigJson: item.tacticalSignConfigJson,
-          })),
-        );
-        prewarmVehicleSigns(
-          nextAllFahrzeuge.map((item) => ({
-            organisation: item.organisation,
-            name: item.name,
-            funkrufname: item.funkrufname,
-          })),
-        );
+        scheduleSignPrewarm(nextAllKraefte, nextAllFahrzeuge);
         props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
       };
       if (options?.waitForFullOverview) {
@@ -129,6 +119,30 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
     refreshEinsaetze,
     refreshAll,
   };
+}
+
+/**
+ * Defers tactical-sign prewarm and caps initial batch size to keep first interaction responsive.
+ */
+function scheduleSignPrewarm(
+  kraefte: KraftOverviewItem[],
+  fahrzeuge: FahrzeugOverviewItem[],
+): void {
+  setTimeout(() => {
+    prewarmFormationSigns(
+      kraefte.slice(0, PREWARM_LIMIT).map((item) => ({
+        organisation: item.organisation,
+        tacticalSignConfigJson: item.tacticalSignConfigJson,
+      })),
+    );
+    prewarmVehicleSigns(
+      fahrzeuge.slice(0, PREWARM_LIMIT).map((item) => ({
+        organisation: item.organisation,
+        name: item.name,
+        funkrufname: item.funkrufname,
+      })),
+    );
+  }, 250);
 }
 
 /**
