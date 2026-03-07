@@ -2,6 +2,7 @@ export { ensureNotArchived } from './einsatz-transaction-guards';
 export {
   hasUndoableCommand,
   listAbschnittDetails,
+  listAbschnittDetailsBatch,
   listAbschnitte,
   listEinsaetze,
   listEinheitHelfer,

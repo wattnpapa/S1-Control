@@ -136,16 +136,19 @@ export class ClientPresenceService {
       return [];
     }
     try {
-      this.heartbeat();
-      if (this.disabled || !this.ctx) {
-        return [];
-      }
       const rows = this.ctx.db
         .select()
         .from(activeClient)
         .where(gte(activeClient.lastSeen, staleCutoffIso()))
         .orderBy(asc(activeClient.computerName), asc(activeClient.startedAt))
         .all();
+      const leader = this.ctx.db
+        .select({ clientId: activeClient.clientId })
+        .from(activeClient)
+        .where(gte(activeClient.lastSeen, staleCutoffIso()))
+        .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
+        .get();
+      const leaderId = leader?.clientId ?? this.clientId;
       debugSync('clients', 'list', {
         clientId: this.clientId,
         dbPath: this.ctx.path,
@@ -157,7 +160,7 @@ export class ClientPresenceService {
         ipAddress: row.ipAddress,
         dbPath: row.dbPath,
         lastSeen: row.lastSeen,
-        isMaster: row.isMaster,
+        isMaster: row.clientId === leaderId,
         isSelf: row.clientId === this.clientId,
       }));
     } catch (error) {
@@ -215,13 +218,7 @@ export class ClientPresenceService {
           .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
           .get();
         const leaderId = leader?.clientId ?? this.clientId;
-        tx.update(activeClient)
-          .set({ isMaster: false })
-          .run();
-        tx.update(activeClient)
-          .set({ isMaster: true })
-          .where(eq(activeClient.clientId, leaderId))
-          .run();
+
         if (leaderId === this.clientId) {
           tx.delete(activeClient)
             .where(lt(activeClient.lastSeen, staleCutoff))

@@ -33,16 +33,11 @@ function shouldUseNetworkSafeMode(): boolean {
  */
 function applyPragmas(sqlite: Database.Database, dbPath: string): void {
   const networkSafeMode = shouldUseNetworkSafeMode();
-  if (networkSafeMode) {
-    // WAL is not reliable across many SMB/NAS setups with multiple hosts.
-    sqlite.pragma('journal_mode = DELETE');
-    sqlite.pragma('synchronous = FULL');
-    sqlite.pragma('busy_timeout = 10000');
-  } else {
-    sqlite.pragma('journal_mode = WAL');
-    sqlite.pragma('synchronous = NORMAL');
-    sqlite.pragma('busy_timeout = 5000');
-  }
+  sqlite.pragma('journal_mode = WAL');
+  sqlite.pragma('synchronous = NORMAL');
+  sqlite.pragma('busy_timeout = 5000');
+  sqlite.pragma('wal_autocheckpoint = 1000');
+  sqlite.pragma('temp_store = MEMORY');
   sqlite.pragma('foreign_keys = ON');
   debugSync('db', 'pragmas', { dbPath, networkSafeMode });
 }

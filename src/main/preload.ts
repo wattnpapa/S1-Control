@@ -23,6 +23,8 @@ const api: RendererApi = {
   updateAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_ABSCHNITT, input),
   listAbschnittDetails: (einsatzId, abschnittId) =>
     ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITT_DETAILS, einsatzId, abschnittId),
+  listAbschnittDetailsBatch: (einsatzId) =>
+    ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITT_DETAILS_BATCH, einsatzId),
   createEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINHEIT, input),
   updateEinheit: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_EINHEIT, input),
   createFahrzeug: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_FAHRZEUG, input),
@@ -45,6 +47,7 @@ const api: RendererApi = {
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
+  openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVG, input),

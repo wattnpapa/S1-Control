@@ -189,6 +189,7 @@ export interface RendererApi {
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
   updateAbschnitt(input: UpdateAbschnittInput): Promise<void>;
   listAbschnittDetails(einsatzId: string, abschnittId: string): Promise<AbschnittDetails>;
+  listAbschnittDetailsBatch(einsatzId: string): Promise<Record<string, AbschnittDetails>>;
   createEinheit(input: CreateEinheitInput): Promise<void>;
   updateEinheit(input: UpdateEinheitInput): Promise<void>;
   createFahrzeug(input: CreateFahrzeugInput): Promise<void>;
@@ -211,6 +212,7 @@ export interface RendererApi {
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installDownloadedUpdate(): Promise<void>;
+  openMainDevTools(): Promise<void>;
   openExternalUrl(url: string): Promise<void>;
   getTacticalFormationSvg(input: {
     organisation: OrganisationKey;
@@ -290,6 +292,7 @@ export const IPC_CHANNEL = {
   CREATE_ABSCHNITT: 'abschnitt:create',
   UPDATE_ABSCHNITT: 'abschnitt:update',
   LIST_ABSCHNITT_DETAILS: 'abschnitt:details',
+  LIST_ABSCHNITT_DETAILS_BATCH: 'abschnitt:details-batch',
   CREATE_EINHEIT: 'einheit:create',
   UPDATE_EINHEIT: 'einheit:update',
   CREATE_FAHRZEUG: 'fahrzeug:create',
@@ -313,6 +316,7 @@ export const IPC_CHANNEL = {
   CHECK_UPDATES: 'updater:check',
   DOWNLOAD_UPDATE: 'updater:download',
   INSTALL_UPDATE: 'updater:install',
+  OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',
   EINSATZ_CHANGED: 'einsatz:changed',

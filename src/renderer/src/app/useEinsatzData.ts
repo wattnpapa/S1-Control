@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { AbschnittDetails, EinsatzListItem } from '@shared/types';
 import type { FahrzeugOverviewItem, KraftOverviewItem, TacticalStrength } from '@renderer/types/ui';
@@ -25,33 +25,17 @@ interface UseEinsatzDataProps {
  * Encapsulates loading and refreshing Einsatz, Abschnitt, Kraft and Fahrzeug data.
  */
 export function useEinsatzData(props: UseEinsatzDataProps) {
+  const loadRevisionRef = useRef(0);
+
   const loadEinsatz = useCallback(
     async (einsatzId: string, preferredAbschnittId?: string) => {
+      const revision = ++loadRevisionRef.current;
       await props.refreshEditLocks(einsatzId);
       const nextAbschnitte = await window.api.listAbschnitte(einsatzId);
+      if (revision !== loadRevisionRef.current) {
+        return;
+      }
       props.setAbschnitte(nextAbschnitte);
-
-      const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
-      const nextAllKraefte = mapAllKraefte(allDetails, nextAbschnitte);
-      props.setAllKraefte(nextAllKraefte);
-
-      const nextAllFahrzeuge = mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte);
-      props.setAllFahrzeuge(nextAllFahrzeuge);
-      prewarmFormationSigns(
-        nextAllKraefte.map((item) => ({
-          organisation: item.organisation,
-          tacticalSignConfigJson: item.tacticalSignConfigJson,
-        })),
-      );
-      prewarmVehicleSigns(
-        nextAllFahrzeuge.map((item) => ({
-          organisation: item.organisation,
-          name: item.name,
-          funkrufname: item.funkrufname,
-        })),
-      );
-      const total = aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength);
-      props.setGesamtStaerke(total);
 
       const effectiveAbschnittId =
         preferredAbschnittId && nextAbschnitte.some((item) => item.id === preferredAbschnittId)
@@ -60,10 +44,52 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
 
       props.setSelectedAbschnittId(effectiveAbschnittId);
       if (effectiveAbschnittId) {
-        props.setDetails(await window.api.listAbschnittDetails(einsatzId, effectiveAbschnittId));
+        const selectedDetails = await window.api.listAbschnittDetails(einsatzId, effectiveAbschnittId);
+        if (revision !== loadRevisionRef.current) {
+          return;
+        }
+        props.setDetails(selectedDetails);
+
+        // Fast first paint: seed overview from selected section.
+        const selectedOnly = [selectedDetails];
+        const selectedAbschnittMeta = nextAbschnitte.filter((item) => item.id === effectiveAbschnittId);
+        const quickKraefte = mapAllKraefte(selectedOnly, selectedAbschnittMeta);
+        const quickFahrzeuge = mapAllFahrzeuge(selectedOnly, selectedAbschnittMeta, quickKraefte);
+        props.setAllKraefte(quickKraefte);
+        props.setAllFahrzeuge(quickFahrzeuge);
+        props.setGesamtStaerke(aggregateTacticalStrength(selectedOnly, selectedAbschnittMeta, props.emptyStrength));
       } else {
         props.setDetails(props.emptyDetails);
+        props.setAllKraefte([]);
+        props.setAllFahrzeuge([]);
+        props.setGesamtStaerke({ ...props.emptyStrength });
       }
+
+      // Full overview is loaded in background to avoid blocking open-flow.
+      void (async () => {
+        const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
+        if (revision !== loadRevisionRef.current) {
+          return;
+        }
+        const nextAllKraefte = mapAllKraefte(allDetails, nextAbschnitte);
+        const nextAllFahrzeuge = mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte);
+        props.setAllKraefte(nextAllKraefte);
+        props.setAllFahrzeuge(nextAllFahrzeuge);
+        prewarmFormationSigns(
+          nextAllKraefte.map((item) => ({
+            organisation: item.organisation,
+            tacticalSignConfigJson: item.tacticalSignConfigJson,
+          })),
+        );
+        prewarmVehicleSigns(
+          nextAllFahrzeuge.map((item) => ({
+            organisation: item.organisation,
+            name: item.name,
+            funkrufname: item.funkrufname,
+          })),
+        );
+        props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
+      })();
     },
     [props],
   );
@@ -100,7 +126,8 @@ async function loadAllAbschnittDetails(
   einsatzId: string,
   abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
 ): Promise<AbschnittDetails[]> {
-  return Promise.all(abschnitte.map((abschnitt) => window.api.listAbschnittDetails(einsatzId, abschnitt.id)));
+  const byAbschnittId = await window.api.listAbschnittDetailsBatch(einsatzId);
+  return abschnitte.map((abschnitt) => byAbschnittId[abschnitt.id] ?? { einheiten: [], fahrzeuge: [] });
 }
 
 /**

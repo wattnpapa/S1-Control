@@ -1,4 +1,5 @@
 import { and, desc, eq, sql } from 'drizzle-orm';
+import type { SQL } from 'drizzle-orm';
 import type { DbContext } from '../db/connection';
 import {
   einsatz,
@@ -45,7 +46,53 @@ export function listAbschnittDetails(
   einsatzId: string,
   abschnittId: string,
 ): AbschnittDetails {
-  const einheitenRows = ctx.db
+  const einheitenRows = selectEinheitenRows(
+    ctx,
+    and(eq(einsatzEinheit.einsatzId, einsatzId), eq(einsatzEinheit.aktuellerAbschnittId, abschnittId)),
+  );
+  const fahrzeugeRows = selectFahrzeugeRows(
+    ctx,
+    and(eq(einsatzFahrzeug.einsatzId, einsatzId), eq(einsatzFahrzeug.aktuellerAbschnittId, abschnittId)),
+  );
+
+  const einheiten = mapEinheitenRows(einheitenRows);
+  const fahrzeuge = mapFahrzeugeRows(fahrzeugeRows);
+
+  return { einheiten, fahrzeuge };
+}
+
+/**
+ * Lists Abschnitt details for all sections of one Einsatz in a single DB pass.
+ */
+export function listAbschnittDetailsBatch(
+  ctx: DbContext,
+  einsatzId: string,
+): Record<string, AbschnittDetails> {
+  const einheitenRows = selectEinheitenRows(ctx, eq(einsatzEinheit.einsatzId, einsatzId));
+  const fahrzeugeRows = selectFahrzeugeRows(ctx, eq(einsatzFahrzeug.einsatzId, einsatzId));
+  const grouped: Record<string, AbschnittDetails> = {};
+
+  for (const row of mapEinheitenRows(einheitenRows)) {
+    const abschnittId = row.aktuellerAbschnittId;
+    if (!grouped[abschnittId]) {
+      grouped[abschnittId] = { einheiten: [], fahrzeuge: [] };
+    }
+    grouped[abschnittId].einheiten.push(row);
+  }
+
+  for (const row of mapFahrzeugeRows(fahrzeugeRows)) {
+    const abschnittId = row.aktuellerAbschnittId;
+    if (!grouped[abschnittId]) {
+      grouped[abschnittId] = { einheiten: [], fahrzeuge: [] };
+    }
+    grouped[abschnittId].fahrzeuge.push(row);
+  }
+
+  return grouped;
+}
+
+function selectEinheitenRows(ctx: DbContext, whereClause: SQL<unknown>) {
+  return ctx.db
     .select({
       id: einsatzEinheit.id,
       parentEinsatzEinheitId: einsatzEinheit.parentEinsatzEinheitId,
@@ -73,12 +120,14 @@ export function listAbschnittDetails(
     })
     .from(einsatzEinheit)
     .leftJoin(stammdatenEinheit, eq(einsatzEinheit.stammdatenEinheitId, stammdatenEinheit.id))
-    .where(
-      and(eq(einsatzEinheit.einsatzId, einsatzId), eq(einsatzEinheit.aktuellerAbschnittId, abschnittId)),
-    )
+    .where(whereClause)
     .all();
+}
 
-  const fahrzeugeRows = ctx.db
+type EinheitRow = ReturnType<typeof selectEinheitenRows>[number];
+
+function selectFahrzeugeRows(ctx: DbContext, whereClause: SQL<unknown>) {
+  return ctx.db
     .select({
       id: einsatzFahrzeug.id,
       name: sql<string>`coalesce(${stammdatenFahrzeug.name}, ${einsatzFahrzeug.id})`,
@@ -96,23 +145,25 @@ export function listAbschnittDetails(
     .from(einsatzFahrzeug)
     .leftJoin(stammdatenFahrzeug, eq(einsatzFahrzeug.stammdatenFahrzeugId, stammdatenFahrzeug.id))
     .leftJoin(einsatzEinheit, eq(einsatzFahrzeug.aktuelleEinsatzEinheitId, einsatzEinheit.id))
-    .where(
-      and(eq(einsatzFahrzeug.einsatzId, einsatzId), eq(einsatzFahrzeug.aktuellerAbschnittId, abschnittId)),
-    )
+    .where(whereClause)
     .all();
+}
 
-  const einheiten: EinheitListItem[] = einheitenRows.map((row) => ({
+type FahrzeugRow = ReturnType<typeof selectFahrzeugeRows>[number];
+
+function mapEinheitenRows(rows: EinheitRow[]): EinheitListItem[] {
+  return rows.map((row) => ({
     ...row,
-    status: row.status as EinheitListItem['status'],
+    status: row.status ?? 'AKTIV',
   }));
+}
 
-  const fahrzeuge: FahrzeugListItem[] = fahrzeugeRows.map((row) => ({
+function mapFahrzeugeRows(rows: FahrzeugRow[]): FahrzeugListItem[] {
+  return rows.map((row) => ({
     ...row,
-    status: row.status as FahrzeugListItem['status'],
-    organisation: (row.organisation as FahrzeugListItem['organisation']) ?? null,
+    status: row.status ?? 'AKTIV',
+    organisation: row.organisation ?? null,
   }));
-
-  return { einheiten, fahrzeuge };
 }
 
 /**

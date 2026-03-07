@@ -10,6 +10,7 @@ import {
   archiveEinsatz,
   createAbschnitt,
   listAbschnittDetails,
+  listAbschnittDetailsBatch,
   listAbschnitte,
   updateAbschnitt,
 } from '../services/einsatz';
@@ -97,7 +98,9 @@ function registerEinsatzCreateHandlers(
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
-      state.clientPresence.start(created.ctx);
+      if (state.clientHeartbeatEnabled) {
+        state.clientPresence.start(created.ctx);
+      }
       state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
       state.backupCoordinator.start(created.ctx);
       if (created.einsatz.dbPath) {
@@ -123,7 +126,9 @@ function registerEinsatzCreateHandlers(
       const dbUser = ensureSessionUserRecord(created.ctx, user);
       state.setSessionUser(dbUser);
       state.setDbContext(created.ctx);
-      state.clientPresence.start(created.ctx);
+      if (state.clientHeartbeatEnabled) {
+        state.clientPresence.start(created.ctx);
+      }
       state.einsatzSync.setContext({ dbPath: created.ctx.path, einsatzId: created.einsatz.id });
       state.backupCoordinator.start(created.ctx);
       helpers.rememberRecentDbPath(normalized, created.einsatz.id);
@@ -189,6 +194,11 @@ function registerAbschnittHandlers(
     wrap(async (einsatzId: string, abschnittId: string) =>
       listAbschnittDetails(state.getDbContext(), einsatzId, abschnittId),
     ),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_ABSCHNITT_DETAILS_BATCH,
+    wrap(async (einsatzId: string) => listAbschnittDetailsBatch(state.getDbContext(), einsatzId)),
   );
 }
 
