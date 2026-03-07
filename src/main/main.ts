@@ -263,19 +263,24 @@ function setupLifecycleHandlers(input: {
       forceExitTimer = setTimeout(() => {
         debugSync('lifecycle', 'force-exit', { reason: 'window-all-closed-timeout' });
         app.exit(0);
-      }, 800);
+      }, 250);
     }
   });
   app.on('before-quit', () => {
     appShuttingDown = true;
     clearStrengthPrewarmTimers();
     debugSync('lifecycle', 'before-quit');
+    for (const win of BrowserWindow.getAllWindows()) {
+      if (!win.isDestroyed()) {
+        win.destroy();
+      }
+    }
     stopOnce();
     if (!forceExitTimer) {
       forceExitTimer = setTimeout(() => {
         debugSync('lifecycle', 'force-exit', { reason: 'before-quit-timeout' });
         app.exit(0);
-      }, 800);
+      }, 250);
     }
   });
   app.on('will-quit', () => {

@@ -1,3 +1,4 @@
+import https from 'node:https';
 import { compareVersions, normalizeVersion } from './updater-versioning';
 import { isOfflineLikeError } from './updater-network-errors';
 import type { UpdaterState } from '../../shared/types';
@@ -81,6 +82,43 @@ async function fetchLatestReleaseFromWeb(owner: string, repo: string): Promise<s
 }
 
 /**
+ * Resolves latest release version via Node HTTPS redirect handling.
+ * This avoids Chromium fetch edge cases on some macOS/Electron combinations.
+ */
+async function fetchLatestReleaseViaHttps(owner: string, repo: string): Promise<string> {
+  const endpoint = githubLatestReleasesPageUrl(owner, repo);
+  return await new Promise<string>((resolve, reject) => {
+    const request = https.request(
+      endpoint,
+      {
+        method: 'GET',
+        headers: { 'User-Agent': 'S1-Control-Updater' },
+      },
+      (response) => {
+        const location = response.headers.location;
+        // Consume response to free socket even though body is unused.
+        response.resume();
+        if (typeof location !== 'string') {
+          reject(new Error('GitHub Redirect ohne Location-Header.'));
+          return;
+        }
+        const match = location.match(/\/releases\/tag\/([^/?#]+)/i);
+        if (!match?.[1]) {
+          reject(new Error('GitHub Redirect enthält keine auflösbare Versions-Weiterleitung.'));
+          return;
+        }
+        resolve(normalizeVersion(decodeURIComponent(match[1])));
+      },
+    );
+    request.setTimeout(GITHUB_CHECK_TIMEOUT_MS, () => {
+      request.destroy(new Error('HTTPS Redirect-Check Zeitüberschreitung.'));
+    });
+    request.on('error', (error) => reject(error));
+    request.end();
+  });
+}
+
+/**
  * Applies updater state by comparing local and remote versions.
  */
 function applyVersionState(params: GitHubCheckParams, latestVersion: string): void {
@@ -158,9 +196,15 @@ export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Prom
     debugSync('updater', 'github-web-ok', { ms: Date.now() - webStartedAt, latestVersion });
     return latestVersion;
   })();
+  const httpsPromise = (async () => {
+    const httpsStartedAt = Date.now();
+    const latestVersion = await fetchLatestReleaseViaHttps(params.owner, params.repo);
+    debugSync('updater', 'github-https-ok', { ms: Date.now() - httpsStartedAt, latestVersion });
+    return latestVersion;
+  })();
 
   try {
-    const latestVersion = await Promise.any([apiPromise, webPromise]);
+    const latestVersion = await Promise.any([apiPromise, webPromise, httpsPromise]);
     debugSync('updater', 'github-check-ok', { ms: Date.now() - startedAt, latestVersion });
     applyVersionState(params, latestVersion);
   } catch (error) {

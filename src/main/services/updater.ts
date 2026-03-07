@@ -446,9 +446,15 @@ export class UpdaterService {
         GITHUB_CHECK_TIMEOUT_MESSAGE,
       );
       debugSync('updater', 'fallback:done', { stage: this.state.stage, message: this.state.message ?? null });
-    } catch {
-      debugSync('updater', 'fallback:timeout', { message: GITHUB_CHECK_TIMEOUT_MESSAGE });
-      this.setState({ stage: 'error', message: GITHUB_CHECK_TIMEOUT_MESSAGE });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (message === GITHUB_CHECK_TIMEOUT_MESSAGE) {
+        debugSync('updater', 'fallback:timeout', { message: GITHUB_CHECK_TIMEOUT_MESSAGE });
+        this.setState({ stage: 'error', message: GITHUB_CHECK_TIMEOUT_MESSAGE });
+        return;
+      }
+      debugSync('updater', 'fallback:error', { message });
+      this.setState({ stage: 'error', message });
     }
   }
 

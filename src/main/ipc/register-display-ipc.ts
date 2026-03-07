@@ -11,11 +11,34 @@ async function waitForDevToolsStateTick(): Promise<void> {
 }
 
 /**
+ * Chooses the primary app window and avoids targeting the strength-display window.
+ */
+function resolveMainWindowForDevTools(): BrowserWindow | null {
+  const focused = BrowserWindow.getFocusedWindow();
+  if (focused && !focused.isDestroyed()) {
+    const focusedUrl = focused.webContents.getURL();
+    if (!focusedUrl.includes('display=strength')) {
+      return focused;
+    }
+  }
+  for (const win of BrowserWindow.getAllWindows()) {
+    if (win.isDestroyed()) {
+      continue;
+    }
+    const url = win.webContents.getURL();
+    if (!url.includes('display=strength')) {
+      return win;
+    }
+  }
+  return focused && !focused.isDestroyed() ? focused : BrowserWindow.getAllWindows()[0] ?? null;
+}
+
+/**
  * Opens main-window devtools on a dedicated control lane.
  */
 async function openMainDevToolsControlLane(): Promise<void> {
   const requestTs = Date.now();
-  const mainWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+  const mainWindow = resolveMainWindowForDevTools();
   if (!mainWindow || mainWindow.isDestroyed()) {
     debugSync('devtools', 'open:skip-no-window', { requestTs });
     return;
@@ -53,7 +76,19 @@ async function openMainDevToolsControlLane(): Promise<void> {
     latencyMs: visibleTs - requestTs,
   });
   if (!open) {
-    throw new Error('DevTools konnten nicht geöffnet werden.');
+    const standaloneDevTools = new BrowserWindow({
+      width: 1200,
+      height: 800,
+      show: true,
+      autoHideMenuBar: true,
+      title: 'S1-Control DevTools',
+    });
+    contents.setDevToolsWebContents(standaloneDevTools.webContents);
+    contents.openDevTools({ mode: 'detach', activate: true });
+    await waitForDevToolsStateTick();
+    if (!contents.isDevToolsOpened()) {
+      throw new Error('DevTools konnten nicht geöffnet werden.');
+    }
   }
   mainWindow.focus();
 }
