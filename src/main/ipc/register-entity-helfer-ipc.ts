@@ -7,6 +7,7 @@ import {
   updateEinheitHelfer,
 } from '../services/einsatz';
 import { ensureRecordEditLockOwnership } from '../services/record-lock';
+import { debugSync } from '../services/debug';
 import type { EntityIpcHelpers, RegistrarCommon } from './register-support';
 import { resolveHelferEinheitId } from './register-entity-helfer-support';
 
@@ -25,10 +26,26 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
     IPC_CHANNEL.CREATE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['createEinheitHelfer']>[0]) => {
       const user = requireUser();
+      const identity = helpers.lockIdentity(user);
+      const ctx = state.getDbContext();
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        try {
+          await state.dbBridge.request(
+            'create-einheit-helfer',
+            { dbPath: ctx.path, input, identity },
+            'normal',
+          );
+          helpers.notifyEinsatzChanged(input.einsatzId, 'create-helfer');
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          debugSync('db-bridge', 'fallback:create-helfer', { einsatzId: input.einsatzId, message });
+        }
+      }
       ensureRecordEditLockOwnership(
         state.getDbContext(),
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einsatzEinheitId },
-        helpers.lockIdentity(user),
+        identity,
       );
       createEinheitHelfer(state.getDbContext(), input);
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-helfer');
@@ -39,11 +56,27 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
     IPC_CHANNEL.UPDATE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['updateEinheitHelfer']>[0]) => {
       const user = requireUser();
+      const identity = helpers.lockIdentity(user);
+      const ctx = state.getDbContext();
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        try {
+          await state.dbBridge.request(
+            'update-einheit-helfer',
+            { dbPath: ctx.path, input, identity },
+            'normal',
+          );
+          helpers.notifyEinsatzChanged(input.einsatzId, 'update-helfer');
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          debugSync('db-bridge', 'fallback:update-helfer', { einsatzId: input.einsatzId, message });
+        }
+      }
       const einsatzEinheitId = resolveHelferEinheitId(state.getDbContext(), input.helferId);
       ensureRecordEditLockOwnership(
         state.getDbContext(),
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
-        helpers.lockIdentity(user),
+        identity,
       );
       updateEinheitHelfer(state.getDbContext(), input);
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-helfer');
@@ -54,11 +87,27 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
     IPC_CHANNEL.DELETE_EINHEIT_HELFER,
     wrap(async (input: Parameters<RendererApi['deleteEinheitHelfer']>[0]) => {
       const user = requireUser();
+      const identity = helpers.lockIdentity(user);
+      const ctx = state.getDbContext();
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        try {
+          await state.dbBridge.request(
+            'delete-einheit-helfer',
+            { dbPath: ctx.path, input, identity },
+            'normal',
+          );
+          helpers.notifyEinsatzChanged(input.einsatzId, 'delete-helfer');
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          debugSync('db-bridge', 'fallback:delete-helfer', { einsatzId: input.einsatzId, message });
+        }
+      }
       const einsatzEinheitId = resolveHelferEinheitId(state.getDbContext(), input.helferId);
       ensureRecordEditLockOwnership(
         state.getDbContext(),
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
-        helpers.lockIdentity(user),
+        identity,
       );
       deleteEinheitHelfer(state.getDbContext(), input);
       helpers.notifyEinsatzChanged(input.einsatzId, 'delete-helfer');

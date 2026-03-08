@@ -11,7 +11,19 @@ export function registerSyncIpc(common: RegistrarCommon): void {
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_ACTIVE_CLIENTS,
-    wrap(async () => state.clientPresence.listActiveClients()),
+    wrap(async () => {
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        return await state.dbBridge.request(
+          'presence-list-active',
+          {
+            dbPath: state.getDbContext().path,
+            selfClientId: state.clientPresence.getClientId(),
+          },
+          'low',
+        );
+      }
+      return state.clientPresence.listActiveClients();
+    }),
   );
 
   ipcMain.handle(

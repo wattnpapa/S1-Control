@@ -2,6 +2,7 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import { asc, eq, gte, lt } from 'drizzle-orm';
 import type { ActiveClientInfo } from '../../shared/types';
+import type { DbRuntimeClient } from '../../shared/db-runtime';
 import type { DbContext } from '../db/connection';
 import { activeClient } from '../db/schema';
 import { debugSync } from './debug';
@@ -73,6 +74,11 @@ export class ClientPresenceService {
 
   private disabled = false;
 
+  constructor(
+    private readonly dbBridge: DbRuntimeClient | null = null,
+    private readonly useDbUtilityProcess = false,
+  ) {}
+
   /**
    * Handles Get Client Id.
    */
@@ -111,7 +117,20 @@ export class ClientPresenceService {
     }
     if (removeEntry && this.ctx) {
       try {
-        this.ctx.db.delete(activeClient).where(eq(activeClient.clientId, this.clientId)).run();
+        if (this.useDbUtilityProcess && this.dbBridge) {
+          void this.dbBridge
+            .request(
+              'presence-remove-self',
+              {
+                dbPath: this.ctx.path,
+                clientId: this.clientId,
+              },
+              'low',
+            )
+            .catch(() => undefined);
+        } else {
+          this.ctx.db.delete(activeClient).where(eq(activeClient.clientId, this.clientId)).run();
+        }
         debugSync('clients', 'stop:removed-self', { clientId: this.clientId, dbPath: this.ctx.path });
       } catch {
         // ignore shutdown errors
@@ -133,6 +152,9 @@ export class ClientPresenceService {
    */
   public listActiveClients(): ActiveClientInfo[] {
     if (!this.ctx || this.disabled) {
+      return [];
+    }
+    if (this.useDbUtilityProcess && this.dbBridge) {
       return [];
     }
     try {
@@ -189,6 +211,10 @@ export class ClientPresenceService {
     const ipAddress = detectPrimaryIp();
 
     try {
+      if (this.useDbUtilityProcess && this.dbBridge) {
+        void this.heartbeatViaUtility(ctx.path, computerName, ipAddress);
+        return;
+      }
       ctx.db.transaction((tx) => {
         tx.delete(activeClient).where(lt(activeClient.lastSeen, staleCutoff)).run();
 
@@ -251,6 +277,54 @@ export class ClientPresenceService {
       debugSync('clients', 'heartbeat:failed', {
         clientId: this.clientId,
         dbPath: ctx.path,
+        message,
+      });
+    }
+  }
+
+  /**
+   * Runs heartbeat over DB utility process.
+   */
+  private async heartbeatViaUtility(dbPath: string, computerName: string, ipAddress: string): Promise<void> {
+    if (!this.dbBridge) {
+      return;
+    }
+    try {
+      const result = await this.dbBridge.request(
+        'presence-heartbeat',
+        {
+          dbPath,
+          clientId: this.clientId,
+          computerName,
+          ipAddress,
+          startedAt: this.startedAt,
+        },
+        'low',
+      );
+      this.isMaster = result.isMaster;
+      debugSync('clients', 'heartbeat', {
+        clientId: this.clientId,
+        dbPath,
+        leaderId: result.isMaster ? this.clientId : 'other',
+        isMaster: this.isMaster,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      if (isLockContentionError(error)) {
+        debugSync('clients', 'heartbeat:skipped-lock', {
+          clientId: this.clientId,
+          dbPath,
+          message,
+        });
+        return;
+      }
+      if (isCorruptionError(error)) {
+        this.disablePresence('heartbeat:corruption', message);
+        return;
+      }
+      debugSync('clients', 'heartbeat:failed', {
+        clientId: this.clientId,
+        dbPath,
         message,
       });
     }

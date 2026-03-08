@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import type { DbRuntimeClient } from '../../shared/db-runtime';
 import type { DbContext } from '../db/connection';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -38,7 +39,11 @@ export class BackupCoordinator {
 
   private lastBackupAt = 0;
 
-  constructor(private readonly canWriteBackup: () => boolean = () => true) {}
+  constructor(
+    private readonly canWriteBackup: () => boolean = () => true,
+    private readonly dbBridge: DbRuntimeClient | null = null,
+    private readonly useDbUtilityProcess = false,
+  ) {}
 
   /**
    * Handles Stop.
@@ -107,7 +112,18 @@ export class BackupCoordinator {
     const target = path.join(backupDir, `${baseName}-${nowStamp()}.s1control`);
 
     try {
-      await ctx.sqlite.backup(target);
+      if (this.useDbUtilityProcess && this.dbBridge) {
+        await this.dbBridge.request(
+          'backup-run-once',
+          {
+            dbPath: ctx.path,
+            targetPath: target,
+          },
+          'low',
+        );
+      } else {
+        await ctx.sqlite.backup(target);
+      }
       this.lastBackupAt = now;
     } catch {
       // best effort backup in background

@@ -176,7 +176,29 @@ function registerAbschnittHandlers(
     IPC_CHANNEL.CREATE_ABSCHNITT,
     wrap(async (input: Parameters<RendererApi['createAbschnitt']>[0]) => {
       requireUser();
-      const abschnitt = createAbschnitt(state.getDbContext(), input);
+      const ctx = state.getDbContext();
+      let abschnitt: AbschnittNode;
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        try {
+          abschnitt = await state.dbBridge.request(
+            'create-abschnitt',
+            {
+              dbPath: ctx.path,
+              einsatzId: input.einsatzId,
+              name: input.name,
+              systemTyp: input.systemTyp,
+              parentId: input.parentId,
+            },
+            'normal',
+          );
+          helpers.notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
+          return abschnitt;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          debugSync('db-bridge', 'fallback:create-abschnitt', { einsatzId: input.einsatzId, message });
+        }
+      }
+      abschnitt = createAbschnitt(ctx, input);
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
       return abschnitt;
     }),
@@ -186,12 +208,35 @@ function registerAbschnittHandlers(
     IPC_CHANNEL.UPDATE_ABSCHNITT,
     wrap(async (input: Parameters<RendererApi['updateAbschnitt']>[0]) => {
       const user = requireUser();
+      const identity = entityHelpers.lockIdentity(user);
       ensureRecordEditLockOwnership(
         state.getDbContext(),
         { einsatzId: input.einsatzId, entityType: 'ABSCHNITT', entityId: input.abschnittId },
-        entityHelpers.lockIdentity(user),
+        identity,
       );
-      updateAbschnitt(state.getDbContext(), input);
+      const ctx = state.getDbContext();
+      if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
+        try {
+          await state.dbBridge.request(
+            'update-abschnitt',
+            {
+              dbPath: ctx.path,
+              einsatzId: input.einsatzId,
+              abschnittId: input.abschnittId,
+              name: input.name,
+              systemTyp: input.systemTyp,
+              parentId: input.parentId,
+            },
+            'normal',
+          );
+          helpers.notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
+          return;
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          debugSync('db-bridge', 'fallback:update-abschnitt', { einsatzId: input.einsatzId, message });
+        }
+      }
+      updateAbschnitt(ctx, input);
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
     }),
   );

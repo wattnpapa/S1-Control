@@ -358,12 +358,16 @@ async function bootstrap(): Promise<void> {
   let dbContext = dbBootstrap.dbContext;
   const startupWarning = dbBootstrap.startupWarning;
   ensureDefaultAdmin(dbContext);
-  const clientPresence = new ClientPresenceService();
+  const dbBridge = new MainDbBridge();
+  dbBridge.start(USE_DB_UTILITY_PROCESS);
+  const clientPresence = new ClientPresenceService(dbBridge, USE_DB_UTILITY_PROCESS);
   if (!DISABLE_CLIENT_HEARTBEAT) {
     clientPresence.start(dbContext);
   }
   const backupCoordinator = new BackupCoordinator(() =>
     DISABLE_CLIENT_HEARTBEAT ? true : clientPresence.canWriteBackups(),
+    dbBridge,
+    USE_DB_UTILITY_PROCESS,
   );
   const einsatzSync = new EinsatzSyncService((signal) => {
     broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
@@ -373,8 +377,6 @@ async function bootstrap(): Promise<void> {
   }
   const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
   const einsatzReadCache = new EinsatzReadCache();
-  const dbBridge = new MainDbBridge();
-  dbBridge.start(USE_DB_UTILITY_PROCESS);
 
   let currentUser: SessionUser | null = null;
 
