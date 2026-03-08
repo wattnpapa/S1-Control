@@ -4,7 +4,14 @@ import { isOfflineLikeError } from './updater-network-errors';
 import type { UpdaterState } from '../../shared/types';
 import { debugSync } from './debug';
 
-const GITHUB_CHECK_TIMEOUT_MS = 8000;
+function githubCheckTimeoutMs(): number {
+  const raw = process.env.S1_UPDATER_GITHUB_TIMEOUT_MS?.trim();
+  if (!raw) {
+    return 8000;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 8000;
+}
 
 interface GitHubCheckParams {
   owner: string;
@@ -35,8 +42,9 @@ function githubDualTimeoutMessage(owner: string, repo: string): string {
 }
 
 async function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const timeoutMs = githubCheckTimeoutMs();
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), GITHUB_CHECK_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
   try {
     return await fetch(url, { ...init, signal: controller.signal });
   } finally {
@@ -49,6 +57,7 @@ async function fetchWithTimeout(url: string, init: RequestInit): Promise<Respons
  */
 async function fetchLatestRelease(owner: string, repo: string): Promise<{ tag_name?: string; name?: string }> {
   const endpoint = githubLatestReleaseUrl(owner, repo);
+  debugSync('updater', 'github-api-start', { url: endpoint, timeoutMs: githubCheckTimeoutMs() });
   const response = await fetchWithTimeout(endpoint, {
     headers: {
       Accept: 'application/vnd.github+json',
@@ -66,6 +75,7 @@ async function fetchLatestRelease(owner: string, repo: string): Promise<{ tag_na
  */
 async function fetchLatestReleaseFromWeb(owner: string, repo: string): Promise<string> {
   const endpoint = githubLatestReleasesPageUrl(owner, repo);
+  debugSync('updater', 'github-web-start', { url: endpoint, timeoutMs: githubCheckTimeoutMs() });
   const response = await fetchWithTimeout(endpoint, {
     headers: { 'User-Agent': 'S1-Control-Updater' },
     redirect: 'follow',
@@ -87,6 +97,8 @@ async function fetchLatestReleaseFromWeb(owner: string, repo: string): Promise<s
  */
 async function fetchLatestReleaseViaHttps(owner: string, repo: string): Promise<string> {
   const endpoint = githubLatestReleasesPageUrl(owner, repo);
+  const timeoutMs = githubCheckTimeoutMs();
+  debugSync('updater', 'github-https-start', { url: endpoint, timeoutMs });
   return await new Promise<string>((resolve, reject) => {
     const request = https.request(
       endpoint,
@@ -110,7 +122,7 @@ async function fetchLatestReleaseViaHttps(owner: string, repo: string): Promise<
         resolve(normalizeVersion(decodeURIComponent(match[1])));
       },
     );
-    request.setTimeout(GITHUB_CHECK_TIMEOUT_MS, () => {
+    request.setTimeout(timeoutMs, () => {
       request.destroy(new Error('HTTPS Redirect-Check Zeitüberschreitung.'));
     });
     request.on('error', (error) => reject(error));
@@ -179,12 +191,15 @@ function applyGitHubCheckError(params: GitHubCheckParams, error: unknown): void 
  */
 export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Promise<void> {
   const startedAt = Date.now();
+  const apiUrl = githubLatestReleaseUrl(params.owner, params.repo);
+  const releasesUrl = githubLatestReleasesPageUrl(params.owner, params.repo);
   const apiPromise = (async () => {
     const apiStartedAt = Date.now();
     const payload = await fetchLatestRelease(params.owner, params.repo);
     const latestVersion = normalizeVersion(payload.tag_name || payload.name || '');
     debugSync('updater', 'github-api-ok', {
       ms: Date.now() - apiStartedAt,
+      url: apiUrl,
       latestVersion: latestVersion || null,
     });
     return latestVersion;
@@ -193,19 +208,19 @@ export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Prom
   const webPromise = (async () => {
     const webStartedAt = Date.now();
     const latestVersion = await fetchLatestReleaseFromWeb(params.owner, params.repo);
-    debugSync('updater', 'github-web-ok', { ms: Date.now() - webStartedAt, latestVersion });
+    debugSync('updater', 'github-web-ok', { ms: Date.now() - webStartedAt, url: releasesUrl, latestVersion });
     return latestVersion;
   })();
   const httpsPromise = (async () => {
     const httpsStartedAt = Date.now();
     const latestVersion = await fetchLatestReleaseViaHttps(params.owner, params.repo);
-    debugSync('updater', 'github-https-ok', { ms: Date.now() - httpsStartedAt, latestVersion });
+    debugSync('updater', 'github-https-ok', { ms: Date.now() - httpsStartedAt, url: releasesUrl, latestVersion });
     return latestVersion;
   })();
 
   try {
     const latestVersion = await Promise.any([apiPromise, webPromise, httpsPromise]);
-    debugSync('updater', 'github-check-ok', { ms: Date.now() - startedAt, latestVersion });
+    debugSync('updater', 'github-check-ok', { ms: Date.now() - startedAt, latestVersion, apiUrl, releasesUrl });
     applyVersionState(params, latestVersion);
   } catch (error) {
     const aggregate = error as AggregateError;
@@ -218,11 +233,24 @@ export async function checkGitHubReleaseVersion(params: GitHubCheckParams): Prom
       return;
     }
     if (causes.some((cause) => isAbortError(cause))) {
-      debugSync('updater', 'github-check-timeout', { ms: Date.now() - startedAt, apiMessage, webMessage });
+      debugSync('updater', 'github-check-timeout', {
+        ms: Date.now() - startedAt,
+        apiUrl,
+        releasesUrl,
+        timeoutMs: githubCheckTimeoutMs(),
+        apiMessage,
+        webMessage,
+      });
       applyGitHubCheckError(params, new Error(githubDualTimeoutMessage(params.owner, params.repo)));
       return;
     }
-    debugSync('updater', 'github-check-error', { ms: Date.now() - startedAt, apiMessage, webMessage });
+    debugSync('updater', 'github-check-error', {
+      ms: Date.now() - startedAt,
+      apiUrl,
+      releasesUrl,
+      apiMessage,
+      webMessage,
+    });
     applyGitHubCheckError(params, new Error(`GitHub-Check fehlgeschlagen. API: ${apiMessage} | Releases: ${webMessage}`));
   }
 }

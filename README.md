@@ -86,6 +86,8 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 - `S1_STRENGTH_DIAGNOSTIC_STATIC=1`:
   - öffnet den Stärke-Monitor ohne normalen Renderer-/Datenpfad,
   - nur für gezielte Diagnose (nicht für regulären Betrieb).
+- `S1_UPDATER_IN_APP_TIMEOUT_MS`, `S1_UPDATER_GITHUB_TIMEOUT_MS`, `S1_UPDATER_CHECKING_TIMEOUT_MS`:
+  - optionale Timeout-Overrides für reproduzierbare Update-Diagnose/Tests.
 
 ### Wichtige Skripte
 

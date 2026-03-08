@@ -91,6 +91,9 @@ function setupUpdaterDefaults(): void {
     hoisted.autoUpdaterMock.downloadUpdate.mockReset();
     hoisted.autoUpdaterMock.downloadUpdate.mockResolvedValue(undefined);
     hoisted.autoUpdaterMock.quitAndInstall.mockReset();
+    delete process.env.S1_UPDATER_IN_APP_TIMEOUT_MS;
+    delete process.env.S1_UPDATER_CHECKING_TIMEOUT_MS;
+    delete process.env.S1_UPDATER_GITHUB_TIMEOUT_MS;
     vi.unstubAllGlobals();
   });
 }
@@ -313,6 +316,25 @@ describe('updater service - auto updater interaction', () => {
     });
     vi.useRealTimers();
   });
+
+  it('supports configurable in-app timeout for deterministic tests', async () => {
+    vi.useFakeTimers();
+    process.env.S1_UPDATER_IN_APP_TIMEOUT_MS = '25';
+    hoisted.setAppVersion('1.2.3');
+    hoisted.existsSyncMock.mockReturnValue(true);
+    hoisted.autoUpdaterMock.checkForUpdates.mockReturnValue(new Promise(() => undefined));
+    const service = new UpdaterService(() => undefined);
+
+    const run = service.checkForUpdates();
+    await vi.advanceTimersByTimeAsync(30);
+    await run;
+
+    expect(service.getState()).toMatchObject({
+      stage: 'error',
+      message: 'In-App Update-Check Zeitüberschreitung (URL: https://github.com/wattnpapa/S1-Control/releases/latest/download).',
+    });
+    vi.useRealTimers();
+  });
 });
 
 describe('updater service - fallback and install', () => {
@@ -388,6 +410,26 @@ describe('updater service - fallback and install', () => {
 
     const run = service.checkForUpdates();
     await vi.advanceTimersByTimeAsync(12_100);
+    await run;
+
+    expect(service.getState()).toMatchObject({
+      stage: 'error',
+      message:
+        'Update-Check Zeitüberschreitung (GitHub API: https://api.github.com/repos/wattnpapa/S1-Control/releases/latest; GitHub Releases: https://github.com/wattnpapa/S1-Control/releases/latest).',
+    });
+    vi.useRealTimers();
+  });
+
+  it('supports configurable github timeout for deterministic tests', async () => {
+    vi.useFakeTimers();
+    process.env.S1_UPDATER_IN_APP_TIMEOUT_MS = '40';
+    process.env.S1_UPDATER_GITHUB_TIMEOUT_MS = '40';
+    hoisted.existsSyncMock.mockReturnValue(false);
+    const service = new UpdaterService(() => undefined);
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => undefined)));
+
+    const run = service.checkForUpdates();
+    await vi.advanceTimersByTimeAsync(60);
     await run;
 
     expect(service.getState()).toMatchObject({

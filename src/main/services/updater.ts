@@ -31,11 +31,26 @@ const GENERIC_FEED_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/rele
 const GITHUB_RELEASE_API_URL = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 const GITHUB_RELEASES_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`;
 const LAN_PEER_ENABLED_DEFAULT = process.env.S1_UPDATER_LAN_PEER === '1';
-const IN_APP_CHECK_TIMEOUT_MS = 12000;
-const CHECKING_STAGE_TIMEOUT_MS = 15000;
 const IN_APP_CHECK_TIMEOUT_MESSAGE = `In-App Update-Check Zeitüberschreitung (URL: ${GENERIC_FEED_URL}).`;
 const GITHUB_CHECK_TIMEOUT_MESSAGE = `Update-Check Zeitüberschreitung (GitHub API: ${GITHUB_RELEASE_API_URL}; GitHub Releases: ${GITHUB_RELEASES_URL}).`;
 const CHECKING_STAGE_TIMEOUT_MESSAGE = `Update-Check Zeitüberschreitung. Zuletzt versucht: ${GENERIC_FEED_URL}, ${GITHUB_RELEASE_API_URL} oder ${GITHUB_RELEASES_URL}.`;
+
+function readTimeoutMs(envName: string, fallback: number): number {
+  const raw = process.env[envName]?.trim();
+  if (!raw) {
+    return fallback;
+  }
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function inAppCheckTimeoutMs(): number {
+  return readTimeoutMs('S1_UPDATER_IN_APP_TIMEOUT_MS', 12000);
+}
+
+function checkingStageTimeoutMs(): number {
+  return readTimeoutMs('S1_UPDATER_CHECKING_TIMEOUT_MS', 15000);
+}
 
 /**
  * Runs async work with timeout guard.
@@ -178,9 +193,15 @@ export class UpdaterService {
         return;
       }
 
+      const inAppStartedAt = Date.now();
+      const inAppTimeoutMs = inAppCheckTimeoutMs();
+      debugSync('updater', 'check:in-app-start', {
+        feedUrl: GENERIC_FEED_URL,
+        timeoutMs: inAppTimeoutMs,
+      });
       const result = await withTimeout(
         autoUpdater.checkForUpdates(),
-        IN_APP_CHECK_TIMEOUT_MS,
+        inAppTimeoutMs,
         IN_APP_CHECK_TIMEOUT_MESSAGE,
       );
       this.canDownloadInApp = true;
@@ -189,11 +210,21 @@ export class UpdaterService {
         result?.updateInfo as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
       );
       debugSync('updater', 'check:in-app-result', { latestVersion: latestVersion ?? null });
+      debugSync('updater', 'check:in-app-done', {
+        feedUrl: GENERIC_FEED_URL,
+        ms: Date.now() - inAppStartedAt,
+      });
       this.applyInAppCheckResult(latestVersion);
     } catch (error) {
-      debugSync('updater', 'check:error', {
-        message: error instanceof Error ? error.message : String(error),
-      });
+      const message = error instanceof Error ? error.message : String(error);
+      if (message === IN_APP_CHECK_TIMEOUT_MESSAGE) {
+        debugSync('updater', 'check:in-app-timeout', {
+          feedUrl: GENERIC_FEED_URL,
+          timeoutMs: inAppCheckTimeoutMs(),
+          message,
+        });
+      }
+      debugSync('updater', 'check:error', { message });
       await handleUpdateCheckError({
         error,
         runGitHubFallback: (reason) => this.runGitHubFallback(reason),
@@ -428,10 +459,13 @@ export class UpdaterService {
    * Runs GitHub fallback check with a reason text.
    */
   private async runGitHubFallback(reason: string): Promise<void> {
+    const startedAt = Date.now();
+    const inAppTimeoutMs = inAppCheckTimeoutMs();
     debugSync('updater', 'fallback:start', {
       reason,
       apiUrl: GITHUB_RELEASE_API_URL,
       releasesUrl: GITHUB_RELEASES_URL,
+      timeoutMs: inAppTimeoutMs,
     });
     try {
       await withTimeout(
@@ -442,18 +476,28 @@ export class UpdaterService {
           resolveDisplayVersion: () => this.resolveDisplayVersion(),
           setState: (next) => this.setState(next),
         }),
-        IN_APP_CHECK_TIMEOUT_MS,
+        inAppTimeoutMs,
         GITHUB_CHECK_TIMEOUT_MESSAGE,
       );
-      debugSync('updater', 'fallback:done', { stage: this.state.stage, message: this.state.message ?? null });
+      debugSync('updater', 'fallback:done', {
+        stage: this.state.stage,
+        message: this.state.message ?? null,
+        ms: Date.now() - startedAt,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       if (message === GITHUB_CHECK_TIMEOUT_MESSAGE) {
-        debugSync('updater', 'fallback:timeout', { message: GITHUB_CHECK_TIMEOUT_MESSAGE });
+        debugSync('updater', 'fallback:timeout', {
+          message: GITHUB_CHECK_TIMEOUT_MESSAGE,
+          ms: Date.now() - startedAt,
+          apiUrl: GITHUB_RELEASE_API_URL,
+          releasesUrl: GITHUB_RELEASES_URL,
+          timeoutMs: inAppTimeoutMs,
+        });
         this.setState({ stage: 'error', message: GITHUB_CHECK_TIMEOUT_MESSAGE });
         return;
       }
-      debugSync('updater', 'fallback:error', { message });
+      debugSync('updater', 'fallback:error', { message, ms: Date.now() - startedAt });
       this.setState({ stage: 'error', message });
     }
   }
@@ -486,15 +530,16 @@ export class UpdaterService {
       if (this.state.stage !== 'checking') {
         return;
       }
+      const timeoutMs = checkingStageTimeoutMs();
       debugSync('updater', 'checking-watchdog-timeout', {
-        timeoutMs: CHECKING_STAGE_TIMEOUT_MS,
+        timeoutMs,
         message: CHECKING_STAGE_TIMEOUT_MESSAGE,
       });
       this.setState({
         stage: 'error',
         message: CHECKING_STAGE_TIMEOUT_MESSAGE,
       });
-    }, CHECKING_STAGE_TIMEOUT_MS);
+    }, checkingStageTimeoutMs());
   }
 
   /**
