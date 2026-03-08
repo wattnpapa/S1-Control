@@ -92,6 +92,9 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 - `npm run dev`: Vite + Electron mit Live-Reload
 - `npm run test`: Vitest (DB/Command)
 - `npm run test:coverage`: Tests mit Coverage-Report (text, html, lcov, json-summary)
+- `npm run test:e2e:slo:devtools`: E2E-SLO-Check für DevTools (p95 < 500ms, via Debug-Metriken)
+- `npm run test:e2e:slo:einsatz-open`: E2E-SLO-Check für Einsatz öffnen (p95 < 1.5s)
+- `npm run test:e2e:slo:strength-monitor`: E2E-SLO-Check für Stärke-Monitor öffnen (p95 < 1s)
 - `npm run build`: Lint + Typecheck + Build + Electron distributable (`--dir`)
 - `npm run build:win`: Windows Build (`win-unpacked`, x64)
 - `npm run build:win:zip`: Windows ZIP-Paket (x64)

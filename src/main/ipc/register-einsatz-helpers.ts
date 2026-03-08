@@ -87,7 +87,8 @@ function resolveRecentDbPathByEinsatzId(state: AppState, einsatzId: string): str
  * Opens an einsatz database file and wires process state to the opened context.
  */
 function openEinsatzByPathForUser(state: AppState, selected: string, user: { name: string }) {
-  debugSync('einsatz', 'open-by-path:start', { selected, user: user.name });
+  const requestTs = Date.now();
+  debugSync('einsatz', 'open-by-path:start', { selected, user: user.name, requestTs });
   const nextContext = openDatabaseWithRetry(selected);
   try {
     ensureDefaultAdmin(nextContext);
@@ -118,6 +119,9 @@ function openEinsatzByPathForUser(state: AppState, selected: string, user: { nam
       selected,
       einsatzId: einsatzMeta.id,
       dbPath: nextContext.path,
+      requestTs,
+      readyTs: Date.now(),
+      latencyMs: Date.now() - requestTs,
     });
     return einsatzMeta;
   } catch (error) {

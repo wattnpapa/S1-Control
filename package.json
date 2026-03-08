@@ -32,6 +32,9 @@
     "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
     "test:e2e:watch": "E2E_SLOWMO=250 playwright test --headed --workers=1 test/e2e/behavior.smoke.spec.ts",
+    "test:e2e:slo:devtools": "node scripts/check-devtools-slo.cjs",
+    "test:e2e:slo:einsatz-open": "node scripts/check-einsatz-open-slo.cjs",
+    "test:e2e:slo:strength-monitor": "node scripts/check-strength-monitor-slo.cjs",
     "test:e2e:live": "node scripts/e2e-live-smoke.cjs"
   },
   "build": {
