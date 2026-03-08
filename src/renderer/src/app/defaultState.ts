@@ -72,6 +72,8 @@ export const DEFAULT_CREATE_EINHEIT_FORM: CreateEinheitForm = {
   tacticalSignUnit: '',
   tacticalSignTyp: 'none',
   tacticalSignDenominator: '',
+  stanPresetLabel: '',
+  stanSuggestedVehicles: [],
 };
 
 /**

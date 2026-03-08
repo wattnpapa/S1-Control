@@ -1,0 +1,2906 @@
+{
+  "generatedAt": "2026-03-08T14:34:50.014Z",
+  "sourceZip": "/Users/johannes/Downloads/stan_gesamt_2025.zip",
+  "note": "Automatisch aus PDF-Text extrahiert. Bitte fachlich prüfen.",
+  "entries": [
+    {
+      "id": "lastkraftwagen-1-5-t-nutzlast-mit-ladekran-780-knm",
+      "title": "Lastkraftwagen (1,5 t Nutzlast) mit Ladekran (780 kNm)",
+      "sourceFile": "00-00 StAN-Vorbemerkung-bf.pdf",
+      "strength": null,
+      "vehicles": [
+        "Lastkraftwagen (1,5 t Nutzlast) mit Ladekran (780 kNm)",
+        "LKW Ladekran) ist die Zusatz-funktion Bediener/in Mobilkran o-"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Lastkraftwagen 1,5 t Nutzlast mit Ladekran 780 kNm",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW Ladekran) ist die Zusatz-funktion Bediener/in Mobilkran o-",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "erganzungsausstattung",
+      "title": "(Ergänzungsausstattung)",
+      "sourceFile": "00-01 STAN OV.pdf",
+      "strength": {
+        "fuehrung": 2,
+        "unterfuehrung": 2,
+        "mannschaft": 6,
+        "gesamt": 10
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen OV",
+        "Personenkraftwagen OV",
+        "Gabelstapler (Ergänzungsausstattung)",
+        "Anhänger 0,5 t Nutzlast"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Ergänzungsausstattung",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "PKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Stapler",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "mt",
+      "title": "(MT)",
+      "sourceFile": "00-06 StAN MT-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ",
+        "Anhänger mit Spezialaufbau MT (2 t Zuladung)",
+        "Fahrzeug (PKW, MTW) für die Fahrt zur Einsatzstelle, während des Einsatzes, sowie für die Rückfahrt"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "MT",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Fahrzeug (PKW, MTW) für die Fahrt zur Einsatzstelle, während des Einsatzes, sowie für die Rückfahrt",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "vost",
+      "title": "(VOST)",
+      "sourceFile": "00-07 StAN VOST-bf.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 13,
+        "mannschaft": 32,
+        "gesamt": 46
+      },
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "VOST",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0
+      }
+    },
+    {
+      "id": "tz",
+      "title": "TZ",
+      "sourceFile": "02-00 STAN TZ.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 1,
+        "mannschaft": 2,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "TZ",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "ztr-tz",
+      "title": "(ZTr TZ)",
+      "sourceFile": "02-01 StAN ZTr TZ-bf.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 1,
+        "mannschaft": 2,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Führungskraftwagen"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "TZ",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "zugtrupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FüKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "b",
+      "title": "(B)",
+      "sourceFile": "02-02 StAN B-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 10,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Gerätekraftwagen (7 t Nutzlast)",
+        "Anhänger Plane/Spriegel mit Aufnahmen für Container",
+        "Anhänger Plattform Runge (12 t Zuladung)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "B",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "GKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-r-a",
+      "title": "(FGr R (A))",
+      "sourceFile": "02-04a StAN R (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Anhänger Tieflader mit Aufnahmen für Container",
+        "Anhänger Drucklufterzeuger"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "R",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-r-b",
+      "title": "(FGr R (B))",
+      "sourceFile": "02-04b StAN R (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Anhänger Tieflader mit Aufnahmen für Container",
+        "Anhänger Drucklufterzeuger"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "R",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-r-c",
+      "title": "(FGr R (C))",
+      "sourceFile": "02-04c StAN R (C)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Anhänger Tieflader mit Aufnahmen für Container",
+        "Anhänger Drucklufterzeuger"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "R",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-w-a",
+      "title": "(FGr W (A))",
+      "sourceFile": "02-05a StAN W (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen (gf, 7 t Nutzlast) mit Ladekran",
+        "Anhänger Mehrzweckarbeits-",
+        "Mehrzweckarbeitsboot"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "W",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Mehrzweckarbeitsboot",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-w-b",
+      "title": "(FGr W (B))",
+      "sourceFile": "02-05b StAN W (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen (gf, 7 t Nutzlast) mit Ladekran",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "W",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-brb",
+      "title": "(FGr BrB)",
+      "sourceFile": "02-06 StAN BrB-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 4,
+        "mannschaft": 14,
+        "gesamt": 18
+      },
+      "vehicles": [
+        "Mehrzweckgerätewagen mit Ladebordwand",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "BrB",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Mehrzweckgerätewagen mit Ladebordwand",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-o-a",
+      "title": "(FGr O (A))",
+      "sourceFile": "02-07a StAN O (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ",
+        "Anhänger mit Spezialaufbau FGr O (2 t Zuladung)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "O",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-o-b",
+      "title": "(FGr O (B))",
+      "sourceFile": "02-07b StAN O (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ",
+        "Anhänger mit Spezialaufbau FGr O (2 t Zuladung)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "O",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-o-c",
+      "title": "(FGr O (C))",
+      "sourceFile": "02-07c StAN O (C)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 4,
+        "gesamt": 6
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "O",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-sp",
+      "title": "(FGr Sp)",
+      "sourceFile": "02-08 StAN Sp-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 4,
+        "gesamt": 6
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen FGr",
+        "Anhänger mit Spezialaufbau FGr Sp (2 t Zuladung)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Sp",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-n",
+      "title": "(FGr N)",
+      "sourceFile": "02-09 StAN N-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+        "Gabelstapler (mind. 3 t Hubkraft)",
+        "Kleines Boot",
+        "Anhänger kleines Boot",
+        "Anhänger Plattform mit Aufnahmen für Container",
+        "Anhänger Netzersatzanlage mit Lichtmastanlage"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "N",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Stapler",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Kleines Boot",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "seeba",
+      "title": "SEEBA",
+      "sourceFile": "02-11 STAN SEEBA.pdf",
+      "strength": {
+        "fuehrung": 3,
+        "unterfuehrung": 12,
+        "mannschaft": 6,
+        "gesamt": 21
+      },
+      "vehicles": [
+        "3/9/0/12 Personenkraftwagen,"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "SEEBA",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "PKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-sb-a",
+      "title": "(FGr SB (A))",
+      "sourceFile": "02-13a StAN SB (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "SB",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-sb-b",
+      "title": "(FGr SB (B))",
+      "sourceFile": "02-13b StAN SB (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "SB",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "tr-ess",
+      "title": "(Tr ESS)",
+      "sourceFile": "02-14 StAN Tr ESS-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 1,
+        "mannschaft": 3,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "ESS",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "trupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "tr-mhp",
+      "title": "(Tr MHP)",
+      "sourceFile": "02-15 StAN Tr MHP-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 1,
+        "mannschaft": 3,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen (geländegängig)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "MHP",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "trupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "tr-ul",
+      "title": "(Tr UL)",
+      "sourceFile": "02-16 StAN Tr UL-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 1,
+        "mannschaft": 3,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Mannschaftstransportwagen TZ"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "UL",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "trupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-bt",
+      "title": "(FGr BT)",
+      "sourceFile": "02-17 StAN BT-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Mannschaftslastwagen IV Plane/Spriegel mit Ladebordwand",
+        "Anhänger"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "BT",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MLW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-i",
+      "title": "(FGr I)",
+      "sourceFile": "03-01 StAN I-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Mannschaftslastwagen IV Plane/Spriegel mit Ladebordwand",
+        "Mannschaftstransportwagen FGr",
+        "Anhänger mit Spezialaufbau für FGr I (2 t Nutzlast)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "I",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MLW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-e",
+      "title": "(FGr E)",
+      "sourceFile": "03-02 StAN E-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 2,
+        "mannschaft": 7,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Lastkraftwagen Plane/Spriegel mit Ladebordwand",
+        "Anhänger Netzersatzanlage (ca. 200 kVA)",
+        "Anhänger Netzersatzanlage (ca. 650 kVA)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "E",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-tw",
+      "title": "(FGr TW)",
+      "sourceFile": "03-03 StAN TW-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 15,
+        "gesamt": 18
+      },
+      "vehicles": [
+        "Lastkraftwagen Plane/Spriegel mit Ladebordwand",
+        "Anhänger Trinkwasseraufbereitungsanlage",
+        "Stapler (2 t Hubkraft, geländefähig)",
+        "Anhänger BDF Lafette"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "TW",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Stapler",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-wp-a",
+      "title": "(FGr WP (A))",
+      "sourceFile": "03-04a StAN WP (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen Plane/Spriegel mit Ladebordwand",
+        "Mannschaftslastwagen IV Plane/Spriegel mit Ladebordwand",
+        "Anhänger mit Schmutzwasser-Kreiselpumpe",
+        "Anhänger Plane/Spriegel mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "WP",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MLW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-wp-b",
+      "title": "(FGr WP (B))",
+      "sourceFile": "03-04b StAN WP (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen Plane/Spriegel mit Ladebordwand",
+        "Mannschaftslastwagen IV Plane/Spriegel mit Ladebordwand",
+        "Anhänger mit Schmutzwasser-Kreiselpumpe",
+        "Anhänger Plane/Spriegel mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "WP",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MLW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-wp-c",
+      "title": "(FGr WP (C))",
+      "sourceFile": "03-04c StAN WP (C)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen Plane/Spriegel mit Ladebordwand",
+        "Mannschaftslastwagen IV Plane/Spriegel mit Ladebordwand",
+        "Anhänger mit Schmutzwasser-Kreiselpumpe",
+        "Anhänger Plane/Spriegel mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "WP",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MLW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-ol-a",
+      "title": "(FGr Öl (A))",
+      "sourceFile": "03-05a StAN �l (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 4,
+        "mannschaft": 14,
+        "gesamt": 18
+      },
+      "vehicles": [
+        "Lastkraftwagen Wechsellader",
+        "Lastkraftwagen (7 t Nutzlast) mit Ladekran",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Öl",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-ol-b",
+      "title": "(FGr Öl (B))",
+      "sourceFile": "03-05b StAN �l (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 4,
+        "mannschaft": 14,
+        "gesamt": 18
+      },
+      "vehicles": [
+        "Lastkraftwagen Wechsellader",
+        "Lastkraftwagen (9 t Nutzlast) mit Ladekran",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Öl",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-ol-c",
+      "title": "(FGr Öl (C))",
+      "sourceFile": "03-05c StAN �l (C)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 4,
+        "mannschaft": 14,
+        "gesamt": 18
+      },
+      "vehicles": [
+        "Lastkraftwagen Wechsellader",
+        "Stapler (3 t Hubkraft, geländefähig)",
+        "Anhänger Plattform mit Aufnahmen für Container"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Öl",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Stapler",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "die-seewa-ist-gebietsma-ig-bundesweit-in-3-module-mit-jeweils-einer-fachgruppe-als",
+      "title": "Die SEEWA ist gebietsmäßig bundesweit in 3 Module mit jeweils einer Fachgruppe als",
+      "sourceFile": "03-10 STAN SEEWA.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 2,
+        "mannschaft": 10,
+        "gesamt": 13
+      },
+      "vehicles": [
+        "Anhänger 2 t, Plane/Spriegel",
+        "Anhänger 1,6 t, Kofferaufbau"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "SEEWA",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "ent",
+      "title": "(ENT)",
+      "sourceFile": "06-01 StAN ENT-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 11,
+        "gesamt": 14
+      },
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "ENT",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0
+      }
+    },
+    {
+      "id": "3-1-seelift",
+      "title": "3.1 SEElift",
+      "sourceFile": "09-03 STAN SEElift.pdf",
+      "strength": {
+        "fuehrung": 5,
+        "unterfuehrung": 2,
+        "mannschaft": 6,
+        "gesamt": 13
+      },
+      "vehicles": [
+        "Personenkraftwagen Kombi",
+        "Mannschaftstransportwagen",
+        "Anhänger 0,6 t"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "SEElift",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "PKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "ztr-fz-log",
+      "title": "(ZTr FZ Log)",
+      "sourceFile": "09-04 StAN ZTr Log-bf.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 1,
+        "mannschaft": 2,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Führungskraftwagen"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "FZ Log",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "zugtrupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FüKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-log-mw",
+      "title": "(FGr Log-MW)",
+      "sourceFile": "09-05 StAN Log-MW-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "LKW (gf), Ladekran",
+        "Anhänger Plattform",
+        "PKW (gl)",
+        "Anhänger mit Spezialaufbau für FGr Log-MW"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Log-MW",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW (gf), Ladekran",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "PKW (gl)",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-log-v",
+      "title": "(FGr Log-V)",
+      "sourceFile": "09-06 StAN Log-V-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 9,
+        "gesamt": 12
+      },
+      "vehicles": [
+        "Lastkraftwagen mit Ladebordwand",
+        "Mannschaftstransportwagen FGr",
+        "Anhänger 12t, Koffer, ohne Flurförderzeug be- und entladbar",
+        "Anhänger mit Spezialaufbau für FGr Log-V, Kühl",
+        "Bei dieser Alternative werden die Module des FKH, wo dies möglich ist, auf den Anhänger 12to verla-"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Log-V",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "LKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "tr-ts",
+      "title": "(Tr TS)",
+      "sourceFile": "09-07 StAN Tr TS-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 1,
+        "mannschaft": 3,
+        "gesamt": 4
+      },
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "TS",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "trupp"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0
+      }
+    },
+    {
+      "id": "sys-br500",
+      "title": "Sys BR500",
+      "sourceFile": "09-10 STAN  Sys BR500.pdf",
+      "strength": null,
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "BR500",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0,
+        "vehicles": 0
+      }
+    },
+    {
+      "id": "ztr-fz-fk",
+      "title": "(ZTr FZ FK)",
+      "sourceFile": "10-03 StAN ZTr FK-bf.pdf",
+      "strength": {
+        "fuehrung": 1,
+        "unterfuehrung": 1,
+        "mannschaft": 2,
+        "gesamt": 4
+      },
+      "vehicles": [
+        "Führungskraftwagen"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "FZ FK",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "zugtrupp"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FüKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-f",
+      "title": "(FGr F)",
+      "sourceFile": "10-04 StAN F-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 4,
+        "gesamt": 7
+      },
+      "vehicles": [
+        "Führungs- und Kommunikationskraftwagen",
+        "Anhänger Führung und Lage"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "F",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FüKomKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-k-a",
+      "title": "(FGr K (A))",
+      "sourceFile": "10-05a StAN K (A)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 3,
+        "mannschaft": 6,
+        "gesamt": 9
+      },
+      "vehicles": [
+        "Fernmeldekraftwagen",
+        "Mannschaftstransportwagen Fachgruppe",
+        "Anhänger mit Spezialaufbau für FGr K (1 t Nutzlast)",
+        "Anhänger (2 t Nutzlast)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "K",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FmKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "fgr-k-b",
+      "title": "(FGr K (B))",
+      "sourceFile": "10-05b StAN K (B)-bf.pdf",
+      "strength": {
+        "fuehrung": 0,
+        "unterfuehrung": 4,
+        "mannschaft": 9,
+        "gesamt": 13
+      },
+      "vehicles": [
+        "Fernmeldekraftwagen",
+        "Mannschaftstransportwagen Fachgruppe",
+        "Anhänger mit Spezialaufbau für FGr K (1 t Nutzlast)",
+        "Anhänger (2 t Nutzlast)",
+        "Mastkraftwagen",
+        "Anhänger Richtfunktechnik (2 t Nutzlast)"
+      ],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "K",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "gruppe"
+      },
+      "vehicleTacticalSigns": [
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "FmKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MTW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "fahrzeug",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "MastKW",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        },
+        {
+          "grundform": "anhaenger",
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "Anh",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "",
+          "name": "",
+          "nameDerOrganisation": "THW",
+          "typ": "none"
+        }
+      ],
+      "confidence": {
+        "strength": 0.95,
+        "vehicles": 0.9
+      }
+    },
+    {
+      "id": "stab",
+      "title": "(Stab)",
+      "sourceFile": "10-06 StAN Stab-bf.pdf",
+      "strength": null,
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Stab",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "zug"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0,
+        "vehicles": 0
+      }
+    },
+    {
+      "id": "anschreiben-stan",
+      "title": "Anschreiben StAN",
+      "sourceFile": "Anschreiben StAN.pdf",
+      "strength": null,
+      "vehicles": [],
+      "tacticalSign": {
+        "grundform": "taktische-formation",
+        "fachaufgabe": "",
+        "organisation": "thw",
+        "einheit": "Anschreiben StAN",
+        "verwaltungsstufe": "",
+        "symbol": "",
+        "text": "",
+        "name": "",
+        "nameDerOrganisation": "THW",
+        "typ": "none"
+      },
+      "vehicleTacticalSigns": [],
+      "confidence": {
+        "strength": 0,
+        "vehicles": 0
+      }
+    }
+  ]
+}

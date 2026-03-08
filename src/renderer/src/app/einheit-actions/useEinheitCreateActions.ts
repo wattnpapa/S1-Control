@@ -31,6 +31,8 @@ function initialCreateEinheitForm(selectedAbschnittId: string) {
     tacticalSignUnit: '',
     tacticalSignTyp: 'none' as const,
     tacticalSignDenominator: '',
+    stanPresetLabel: '',
+    stanSuggestedVehicles: [],
   };
 }
 

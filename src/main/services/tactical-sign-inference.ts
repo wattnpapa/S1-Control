@@ -21,10 +21,23 @@ type InferenceMatch = {
   confidence: number;
   matchedKey?: string;
   matchedLabel?: string;
-  unit?: string;
+  einheit?: string;
   typ?: TacticalSignConfig['typ'];
-  denominator?: string;
+  verwaltungsstufe?: string;
 };
+
+/**
+ * Normalizes legacy typ values to current doku enums.
+ */
+function normalizeTyp(typ: TacticalSignConfig['typ']): TacticalSignConfig['typ'] {
+  if (!typ) {
+    return 'none';
+  }
+  if (typ === 'group') return 'gruppe';
+  if (typ === 'squad') return 'trupp';
+  if (typ === 'platoon') return 'zug';
+  return typ;
+}
 
 /**
  * Handles Build Meta.
@@ -52,15 +65,13 @@ function buildMeta(input: {
  */
 function buildDefaultConfig(nameImEinsatz: string, organisation: OrganisationKey): TacticalSignConfig {
   return {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
+    grundzeichen: 'taktische-formation',
     organisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
+    einheit: '',
+    verwaltungsstufe: undefined,
     text: '',
     name: nameImEinsatz,
-    organisationsname: organisation,
+    organisationName: organisation,
   };
 }
 
@@ -78,9 +89,9 @@ function buildInferenceResult(
     matchedLabel: match.matchedLabel,
     config: {
       ...buildDefaultConfig(nameImEinsatz, organisation),
-      unit: match.unit ?? '',
-      typ: match.typ ?? 'none',
-      denominator: match.denominator,
+      einheit: match.einheit ?? '',
+      typ: normalizeTyp(match.typ),
+      verwaltungsstufe: match.verwaltungsstufe || undefined,
       meta: buildMeta({
         source: 'auto',
         rawName: nameImEinsatz,
@@ -102,7 +113,7 @@ function inferThwSpecific(nameImEinsatz: string): InferenceMatch | null {
       confidence: composite.confidence,
       matchedKey: `thw-zug-${normalizeText(composite.rule.unit).replace(/\s+/g, '-')}`,
       matchedLabel: composite.rule.label,
-      unit: composite.rule.unit,
+      einheit: composite.rule.unit,
       typ: composite.rule.typ,
     };
   }
@@ -115,7 +126,7 @@ function inferThwSpecific(nameImEinsatz: string): InferenceMatch | null {
     confidence: shortcode.confidence,
     matchedKey: `thw-shortcode-${normalizeText(shortcode.rule.unit).replace(/\s+/g, '-')}`,
     matchedLabel: shortcode.rule.label,
-    unit: shortcode.rule.unit,
+    einheit: shortcode.rule.unit,
     typ: shortcode.rule.typ,
   };
 }
@@ -134,9 +145,9 @@ function inferFromCatalog(nameImEinsatz: string, organisation: OrganisationKey):
     confidence,
     matchedKey: best.key,
     matchedLabel: best.label,
-    unit: best.unit,
+    einheit: best.einheit,
     typ: best.typ,
-    denominator: best.denominator,
+    verwaltungsstufe: best.verwaltungsstufe,
   };
 }
 
@@ -158,13 +169,12 @@ export function inferTacticalSignConfig(nameImEinsatz: string, organisation: Org
  */
 export function toTacticalSignConfigJson(configInput: TacticalSignConfig): string {
   const config: TacticalSignConfig = {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
+    grundzeichen: 'taktische-formation',
+    einheit: '',
+    verwaltungsstufe: undefined,
     text: '',
     ...configInput,
+    typ: normalizeTyp(configInput.typ),
   };
   return JSON.stringify(config);
 }
@@ -192,19 +202,17 @@ export function ensureTacticalSignConfigSource(
   fallbackOrganisation: OrganisationKey,
 ): TacticalSignConfig {
   const base: TacticalSignConfig = {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
+    grundzeichen: 'taktische-formation',
     organisation: fallbackOrganisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
+    einheit: '',
+    verwaltungsstufe: undefined,
     text: '',
     name: fallbackName,
-    organisationsname: fallbackOrganisation,
+    organisationName: fallbackOrganisation,
     typ: 'none',
-    unit: '',
     ...config,
   };
+  base.typ = normalizeTyp(base.typ);
   base.meta = buildMeta({
     source,
     rawName: base.name ?? fallbackName,

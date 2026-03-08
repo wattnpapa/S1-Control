@@ -49,6 +49,8 @@ export interface CreateEinheitForm {
   tacticalSignUnit: string;
   tacticalSignTyp: NonNullable<TacticalSignConfig['typ']>;
   tacticalSignDenominator: string;
+  stanPresetLabel: string;
+  stanSuggestedVehicles: string[];
 }
 
 export interface CreateFahrzeugForm {

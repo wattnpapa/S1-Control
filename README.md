@@ -97,6 +97,7 @@ Aktuell erfolgt die Anmeldung intern automatisch mit dem lokalen Standard-User (
 - `npm run test:e2e:slo:devtools`: E2E-SLO-Check für DevTools (p95 < 500ms, via Debug-Metriken)
 - `npm run test:e2e:slo:einsatz-open`: E2E-SLO-Check für Einsatz öffnen (p95 < 1.5s)
 - `npm run test:e2e:slo:strength-monitor`: E2E-SLO-Check für Stärke-Monitor öffnen (p95 < 1s)
+- `npm run stan:extract -- /pfad/zu/stan_gesamt_2025.zip`: erzeugt STAN-Entwurf aus PDF-Dateien unter `src/main/services/stan/thw-stan-2025.generated.json`
 - `npm run build`: Lint + Typecheck + Build + Electron distributable (`--dir`)
 - `npm run build:win`: Windows Build (`win-unpacked`, x64)
 - `npm run build:win:zip`: Windows ZIP-Paket (x64)

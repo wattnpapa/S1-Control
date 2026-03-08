@@ -15,6 +15,7 @@ import type {
   EinsatzChangedSignal,
   RecordEditLockInfo,
   RecordEditLockType,
+  ThwStanPresetSuggestion,
 } from './types';
 
 export interface LoginInput {
@@ -235,24 +236,28 @@ export interface RendererApi {
     matchedKey?: string;
     matchedLabel?: string;
   }>;
+  inferThwStanPreset(input: {
+    organisation: OrganisationKey;
+    nameImEinsatz: string;
+  }): Promise<ThwStanPresetSuggestion | null>;
   listTacticalSignCatalog(input: {
     organisation: OrganisationKey;
     query?: string;
   }): Promise<Array<{
     key: string;
     label: string;
-    unit: string;
-    typ: 'none' | 'group' | 'squad' | 'zugtrupp';
-    denominator?: string;
+    einheit: string;
+    typ: NonNullable<TacticalSignConfig['typ']>;
+    verwaltungsstufe?: string;
   }>>;
   getTacticalVehicleSvg(input: {
     organisation: OrganisationKey;
-    unit?: string;
+    einheit?: string;
   }): Promise<string>;
   getTacticalVehicleSvgs(input: Array<{
     cacheKey: string;
     organisation: OrganisationKey;
-    unit?: string;
+    einheit?: string;
   }>): Promise<Record<string, string>>;
   getTacticalPersonSvg(input: {
     organisation: OrganisationKey;
@@ -334,6 +339,7 @@ export const IPC_CHANNEL = {
   GET_TACTICAL_FORMATION_SVG: 'taktisches-zeichen:formation-svg',
   GET_TACTICAL_FORMATION_SVGS: 'taktisches-zeichen:formation-svgs',
   INFER_TACTICAL_SIGN: 'taktisches-zeichen:infer',
+  INFER_THW_STAN_PRESET: 'thw-stan:infer',
   LIST_TACTICAL_SIGN_CATALOG: 'taktisches-zeichen:catalog',
   GET_TACTICAL_VEHICLE_SVG: 'taktisches-zeichen:vehicle-svg',
   GET_TACTICAL_VEHICLE_SVGS: 'taktisches-zeichen:vehicle-svgs',

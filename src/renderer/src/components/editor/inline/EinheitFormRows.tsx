@@ -107,7 +107,55 @@ export function EinheitTacticalRows<TForm extends EinheitForm>({ form, onChange 
           tacticalSignDenominator: next.tacticalSignDenominator,
         })
       }
+      onStanSuggestion={(suggestion) => {
+        if (!('stanSuggestedVehicles' in form)) {
+          return;
+        }
+        const createForm = form as CreateEinheitForm;
+        const nextCreate: CreateEinheitForm = {
+          ...createForm,
+          stanPresetLabel: suggestion ? `${suggestion.title} (${Math.round(suggestion.confidence * 100)}%)` : '',
+          stanSuggestedVehicles: suggestion?.vehicles ?? [],
+        };
+        if (suggestion?.strength) {
+          nextCreate.fuehrung = String(suggestion.strength.fuehrung);
+          nextCreate.unterfuehrung = String(suggestion.strength.unterfuehrung);
+          nextCreate.mannschaft = String(suggestion.strength.mannschaft);
+        }
+        if (suggestion?.tacticalSign && createForm.tacticalSignMode !== 'MANUELL') {
+          nextCreate.tacticalSignUnit = suggestion.tacticalSign.einheit || nextCreate.tacticalSignUnit;
+          nextCreate.tacticalSignTyp = suggestion.tacticalSign.typ ?? nextCreate.tacticalSignTyp;
+          nextCreate.tacticalSignDenominator = suggestion.tacticalSign.verwaltungsstufe ?? '';
+        }
+        onChange(nextCreate as TForm);
+      }}
     />
+  );
+}
+
+/**
+ * Shows inferred STAN preset and suggested vehicles in create mode.
+ */
+export function EinheitStanRows<TForm extends EinheitForm>({ form }: EinheitFormRowsProps<TForm>) {
+  if (!('stanSuggestedVehicles' in form)) {
+    return null;
+  }
+  const createForm = form as CreateEinheitForm;
+  return (
+    <>
+      <tr>
+        <th>STAN-Vorschlag</th>
+        <td colSpan={3}>{createForm.stanPresetLabel || 'Kein STAN-Treffer'}</td>
+      </tr>
+      <tr>
+        <th>STAN-Fahrzeuge</th>
+        <td colSpan={3}>
+          {createForm.stanSuggestedVehicles.length > 0
+            ? createForm.stanSuggestedVehicles.join(', ')
+            : 'Keine Fahrzeugvorschläge erkannt'}
+        </td>
+      </tr>
+    </>
   );
 }
 

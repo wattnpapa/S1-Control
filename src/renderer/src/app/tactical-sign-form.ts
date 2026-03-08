@@ -2,6 +2,17 @@ import type { TacticalSignConfig } from '@shared/types';
 import type { CreateEinheitForm } from '@renderer/types/ui';
 
 /**
+ * Normalizes legacy typ values for UI controls.
+ */
+function normalizeTyp(typ: TacticalSignConfig['typ']): NonNullable<TacticalSignConfig['typ']> {
+  if (!typ) return 'none';
+  if (typ === 'group') return 'gruppe';
+  if (typ === 'squad') return 'trupp';
+  if (typ === 'platoon') return 'zug';
+  return typ;
+}
+
+/**
  * Parses a persisted tactical sign config into editor form fields.
  */
 export function parseTacticalSignConfig(
@@ -20,9 +31,9 @@ export function parseTacticalSignConfig(
     const source = parsed.meta?.source === 'manual' ? 'MANUELL' : 'AUTO';
     return {
       tacticalSignMode: source,
-      tacticalSignUnit: parsed.unit ?? '',
-      tacticalSignTyp: parsed.typ ?? 'none',
-      tacticalSignDenominator: parsed.denominator ?? '',
+      tacticalSignUnit: parsed.einheit ?? '',
+      tacticalSignTyp: normalizeTyp(parsed.typ),
+      tacticalSignDenominator: parsed.verwaltungsstufe ?? '',
     };
   } catch {
     return {
@@ -50,18 +61,14 @@ export function buildTacticalSignConfigJson(
 ): string {
   const isManual = input.tacticalSignMode === 'MANUELL';
   const config: TacticalSignConfig = {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
+    grundzeichen: 'taktische-formation',
     organisation: input.organisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
+    einheit: input.tacticalSignUnit.trim() || undefined,
+    typ: normalizeTyp(input.tacticalSignTyp),
+    verwaltungsstufe: input.tacticalSignDenominator.trim() || undefined,
     text: '',
     name: input.nameImEinsatz,
-    organisationsname: input.organisation,
-    unit: input.tacticalSignUnit.trim(),
-    typ: input.tacticalSignTyp,
-    denominator: input.tacticalSignDenominator.trim() || undefined,
+    organisationName: input.organisation,
     meta: {
       source: isManual ? 'manual' : 'auto',
       rawName: input.nameImEinsatz,

@@ -405,12 +405,12 @@ describe('einsatz service - tactical sign behavior', () => {
         organisation: 'THW',
         aktuelleStaerke: 4,
         aktuelleStaerkeTaktisch: '0/0/4/4',
-        tacticalSignConfigJson: '{"unit":"X"}',
+        tacticalSignConfigJson: '{"einheit":"X"}',
         aktuellerAbschnittId: root.id,
       });
 
       const source = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, created.id)).get()!;
-      expect(source.tacticalSignConfigJson).toContain('"unit":"X"');
+      expect(source.tacticalSignConfigJson).toContain('"einheit":"X"');
 
       splitEinheit(ctx, {
         einsatzId: created.id,
@@ -428,7 +428,7 @@ describe('einsatz service - tactical sign behavior', () => {
         fuehrung: 0,
         unterfuehrung: 0,
         mannschaft: 1,
-        tacticalSignConfigJson: '{"unit":"Y"}',
+        tacticalSignConfigJson: '{"einheit":"Y"}',
       });
 
       const children = ctx.db
@@ -437,8 +437,8 @@ describe('einsatz service - tactical sign behavior', () => {
         .where(and(eq(einsatzEinheit.parentEinsatzEinheitId, source.id), eq(einsatzEinheit.einsatzId, created.id)))
         .all();
 
-      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"unit":"X"'))).toBe(true);
-      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"unit":"Y"'))).toBe(true);
+      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"einheit":"X"'))).toBe(true);
+      expect(children.some((row) => row.tacticalSignConfigJson?.includes('"einheit":"Y"'))).toBe(true);
     } finally {
       ctx.sqlite.close();
     }
@@ -496,8 +496,8 @@ describe('einsatz service - tactical sign behavior', () => {
         aktuelleStaerke: 4,
         aktuelleStaerkeTaktisch: '0/0/4/4',
         tacticalSignConfigJson: JSON.stringify({
-          unit: 'MAN',
-          typ: 'group',
+          einheit: 'MAN',
+          typ: 'gruppe',
           meta: { source: 'manual' },
         }),
         aktuellerAbschnittId: root.id,
@@ -515,8 +515,8 @@ describe('einsatz service - tactical sign behavior', () => {
       });
 
       const updated = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.id, source.id)).get()!;
-      const parsed = JSON.parse(updated.tacticalSignConfigJson ?? '{}') as { unit?: string; meta?: { source?: string } };
-      expect(parsed.unit).toBe('MAN');
+      const parsed = JSON.parse(updated.tacticalSignConfigJson ?? '{}') as { einheit?: string; meta?: { source?: string } };
+      expect(parsed.einheit).toBe('MAN');
       expect(parsed.meta?.source).toBe('manual');
     } finally {
       ctx.sqlite.close();

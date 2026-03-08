@@ -28,10 +28,10 @@ export function toFormationCacheKey(input: FormationSignInput): string {
 /**
  * Builds stable cache key and normalized vehicle sign payload.
  */
-function toVehiclePayload(input: VehicleSignInput): { cacheKey: string; organisation: OrganisationKey; unit: string } {
+function toVehiclePayload(input: VehicleSignInput): { cacheKey: string; organisation: OrganisationKey; einheit: string } {
   const organisation = input.organisation ?? 'SONSTIGE';
-  const unit = inferVehicleTacticalUnit(organisation, { name: input.name, funkrufname: input.funkrufname });
-  return { cacheKey: `${organisation}:${unit}`, organisation, unit };
+  const einheit = inferVehicleTacticalUnit(organisation, { name: input.name, funkrufname: input.funkrufname });
+  return { cacheKey: `${organisation}:${einheit}`, organisation, einheit };
 }
 
 /**
@@ -94,7 +94,7 @@ export async function getVehicleSignSrc(input: VehicleSignInput): Promise<string
   }
   const fallback = buildFallbackVehicleSignDataUrl(payload.organisation);
   const request = window.api
-    .getTacticalVehicleSvg({ organisation: payload.organisation, unit: payload.unit })
+    .getTacticalVehicleSvg({ organisation: payload.organisation, einheit: payload.einheit })
     .catch(() => fallback)
     .then((src) => {
       vehicleCache.set(payload.cacheKey, src);
@@ -146,10 +146,10 @@ export function prewarmFormationSigns(inputs: FormationSignInput[]): void {
  * Preloads visible vehicle signs with one batch IPC call.
  */
 export function prewarmVehicleSigns(inputs: VehicleSignInput[]): void {
-  const unique = new Map<string, { organisation: OrganisationKey; unit: string }>();
+  const unique = new Map<string, { organisation: OrganisationKey; einheit: string }>();
   for (const input of inputs) {
     const payload = toVehiclePayload(input);
-    unique.set(payload.cacheKey, { organisation: payload.organisation, unit: payload.unit });
+    unique.set(payload.cacheKey, { organisation: payload.organisation, einheit: payload.einheit });
   }
   const batch = Array.from(unique.entries()).filter(([key]) => !vehicleCache.has(key) && !vehiclePending.has(key));
   if (batch.length === 0) {
@@ -159,7 +159,7 @@ export function prewarmVehicleSigns(inputs: VehicleSignInput[]): void {
     batch.map(([cacheKey, payload]) => ({
       cacheKey,
       organisation: payload.organisation,
-      unit: payload.unit,
+      einheit: payload.einheit,
     })),
   );
   for (const [cacheKey, payload] of batch) {

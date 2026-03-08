@@ -33,18 +33,31 @@ export interface TacticalSignMeta {
 }
 
 export interface TacticalSignConfig {
+  grundzeichen?: string;
   grundform?: string;
   fachaufgabe?: string;
   organisation?: string;
   einheit?: string;
   verwaltungsstufe?: string;
+  funktion?: string;
   symbol?: string;
   text?: string;
   name?: string;
+  organisationName?: string;
   organisationsname?: string;
-  typ?: 'none' | 'platoon' | 'group' | 'squad' | 'zugtrupp';
-  unit?: string;
-  denominator?: string;
+  typ?:
+    | 'none'
+    | 'trupp'
+    | 'staffel'
+    | 'gruppe'
+    | 'zug'
+    | 'zugtrupp'
+    | 'bereitschaft'
+    | 'abteilung'
+    | 'grossverband'
+    | 'platoon'
+    | 'group'
+    | 'squad';
   strokeWidth?: number;
   meta?: TacticalSignMeta;
 }
@@ -141,6 +154,50 @@ export interface AppSettings {
 
 export interface StrengthDisplayState {
   taktischeStaerke: string;
+}
+
+export interface ThwStanStrength {
+  fuehrung: number;
+  unterfuehrung: number;
+  mannschaft: number;
+  gesamt: number;
+}
+
+export interface ThwStanTacticalSignHint {
+  grundform: 'taktische-formation';
+  fachaufgabe?: string;
+  organisation: OrganisationKey;
+  einheit?: string;
+  verwaltungsstufe?: string;
+  symbol?: string;
+  text?: string;
+  name?: string;
+  organisationsname: string;
+  typ?: NonNullable<TacticalSignConfig['typ']>;
+}
+
+export interface ThwStanVehicleSignHint {
+  grundform: 'fahrzeug' | 'anhaenger';
+  fachaufgabe?: string;
+  organisation: OrganisationKey;
+  einheit?: string;
+  verwaltungsstufe?: string;
+  symbol?: string;
+  text?: string;
+  name?: string;
+  organisationsname: string;
+  typ?: NonNullable<TacticalSignConfig['typ']>;
+}
+
+export interface ThwStanPresetSuggestion {
+  id: string;
+  title: string;
+  sourceFile?: string;
+  confidence: number;
+  strength: ThwStanStrength | null;
+  vehicles: string[];
+  tacticalSign?: ThwStanTacticalSignHint;
+  vehicleTacticalSigns?: ThwStanVehicleSignHint[];
 }
 
 export interface ExportResult {

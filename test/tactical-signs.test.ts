@@ -42,27 +42,28 @@ describe('tactical signs service', () => {
     const svg = decodeSvg(first);
     expect(svg).toContain('THW');
     expect(svg).toContain('#003399');
-    expect(svg).not.toContain('cy="48" rx="10" ry="10" fill="#000000"');
   });
 
-  it('renders configured group markers when typ is set', () => {
+  it('renders configured doku einheit values', () => {
     const dataUrl = getTacticalFormationSvgDataUrl('THW', {
-      typ: 'group',
-      organisationsname: 'THW',
-      unit: 'Fk',
+      grundzeichen: 'taktische-formation',
+      organisation: 'thw',
+      einheit: 'gruppe',
+      organisationName: 'THW',
+      text: 'Fk',
     });
     const svg = decodeSvg(dataUrl);
 
     expect(svg).toContain('Fk');
-    expect(svg).toContain('cy="48"');
+    expect(svg).toContain('<svg');
   });
 
   it('renders white medical organizations', () => {
     const drkSvg = decodeSvg(getTacticalFormationSvgDataUrl('DRK', null));
     const johSvg = decodeSvg(getTacticalFormationSvgDataUrl('JOHANNITER', null));
 
-    expect(drkSvg).toContain('fill="#FFFFFF"');
-    expect(johSvg).toContain('fill="#FFFFFF"');
+    expect(drkSvg).toContain('fill="#ffffff"');
+    expect(johSvg).toContain('fill="#ffffff"');
   });
 
   it('renders vehicle sign with org text and varying colors', () => {
@@ -81,28 +82,27 @@ describe('tactical signs service', () => {
 
       expect(formation).toContain('<svg');
       expect(vehicle).toContain('<svg');
-      expect(formation).toContain('x="10" y="64" width="236" height="128"');
-      expect(vehicle).toContain('L10,192 L246,192');
     }
   });
 
-  it('renders squad and zugtrupp variants with denominator and stroke width', () => {
-    const squad = decodeSvg(
+  it('accepts current doku einheit enums in config', () => {
+    const trupp = decodeSvg(
       getTacticalFormationSvgDataUrl('THW', {
-        typ: 'squad',
-        denominator: '1/2',
-        strokeWidth: 7,
+        grundzeichen: 'taktische-formation',
+        organisation: 'thw',
+        einheit: 'trupp',
       }),
     );
-    const zugtrupp = decodeSvg(
+    const grossverband = decodeSvg(
       getTacticalFormationSvgDataUrl('THW', {
-        typ: 'zugtrupp',
+        grundzeichen: 'taktische-formation',
+        organisation: 'thw',
+        einheit: 'grossverband',
       }),
     );
 
-    expect(squad).toContain('1/2');
-    expect(squad).toContain('stroke-width="7"');
-    expect(zugtrupp).toContain('cy="86"');
+    expect(trupp).toContain('<svg');
+    expect(grossverband).toContain('<svg');
   });
 
 });

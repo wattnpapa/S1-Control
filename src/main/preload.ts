@@ -55,6 +55,7 @@ const api: RendererApi = {
   getTacticalFormationSvgs: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_FORMATION_SVGS, input),
   inferTacticalSign: (input) => ipcRenderer.invoke(IPC_CHANNEL.INFER_TACTICAL_SIGN, input),
+  inferThwStanPreset: (input) => ipcRenderer.invoke(IPC_CHANNEL.INFER_THW_STAN_PRESET, input),
   listTacticalSignCatalog: (input) => ipcRenderer.invoke(IPC_CHANNEL.LIST_TACTICAL_SIGN_CATALOG, input),
   getTacticalVehicleSvg: (input) =>
     ipcRenderer.invoke(IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG, input),

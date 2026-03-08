@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
 import { getTacticalFormationSvgDataUrl, getTacticalPersonSvgDataUrl, getTacticalVehicleSvgDataUrl } from '../services/tactical-signs';
 import { inferTacticalSignConfig, listTacticalSignCatalog } from '../services/tactical-sign-inference';
+import { inferThwStanPreset } from '../services/stan/thw-stan-inference';
 import type { RegistrarCommon } from './register-support';
 
 /**
@@ -36,6 +37,13 @@ export function registerTacticalSignIpc(common: RegistrarCommon): void {
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.INFER_THW_STAN_PRESET,
+    wrap(async (input: Parameters<RendererApi['inferThwStanPreset']>[0]) =>
+      inferThwStanPreset(input.organisation, input.nameImEinsatz),
+    ),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.LIST_TACTICAL_SIGN_CATALOG,
     wrap(async (input: Parameters<RendererApi['listTacticalSignCatalog']>[0]) =>
       listTacticalSignCatalog(input.organisation, input.query),
@@ -45,7 +53,7 @@ export function registerTacticalSignIpc(common: RegistrarCommon): void {
   ipcMain.handle(
     IPC_CHANNEL.GET_TACTICAL_VEHICLE_SVG,
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvg']>[0]) =>
-      getTacticalVehicleSvgDataUrl(input.organisation, input.unit),
+      getTacticalVehicleSvgDataUrl(input.organisation, input.einheit),
     ),
   );
 
@@ -54,7 +62,7 @@ export function registerTacticalSignIpc(common: RegistrarCommon): void {
     wrap(async (input: Parameters<RendererApi['getTacticalVehicleSvgs']>[0]) => {
       const result: Record<string, string> = {};
       for (const item of input) {
-        result[item.cacheKey] = getTacticalVehicleSvgDataUrl(item.organisation, item.unit);
+        result[item.cacheKey] = getTacticalVehicleSvgDataUrl(item.organisation, item.einheit);
       }
       return result;
     }),

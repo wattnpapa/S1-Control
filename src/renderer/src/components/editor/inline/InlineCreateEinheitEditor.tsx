@@ -1,4 +1,11 @@
-import { EinheitContactRows, EinheitIdentityRows, EinheitNotesRows, EinheitStrengthRows, EinheitTacticalRows } from './EinheitFormRows';
+import {
+  EinheitContactRows,
+  EinheitIdentityRows,
+  EinheitNotesRows,
+  EinheitStanRows,
+  EinheitStrengthRows,
+  EinheitTacticalRows,
+} from './EinheitFormRows';
 import type { InlineCreateEinheitEditorProps } from './types';
 
 /**
@@ -40,6 +47,7 @@ export function InlineCreateEinheitEditor(props: InlineCreateEinheitEditorProps)
           </tr>
           <EinheitStrengthRows form={props.form} onChange={props.onChange} />
           <EinheitTacticalRows form={props.form} onChange={props.onChange} />
+          <EinheitStanRows form={props.form} onChange={props.onChange} />
           <EinheitContactRows form={props.form} onChange={props.onChange} />
           <EinheitNotesRows form={props.form} onChange={props.onChange} />
         </tbody>

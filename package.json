@@ -16,6 +16,9 @@
     "dev:electron": "wait-on tcp:5173 file:dist-electron/main.js && cross-env VITE_DEV_SERVER_URL=http://localhost:5173 electronmon .",
     "clean:dist": "node -e \"const fs=require('fs');for (const d of ['dist','dist-electron','dist-renderer']) fs.rmSync(d,{recursive:true,force:true});\"",
     "rebuild:native": "node scripts/rebuild-native.cjs",
+    "stan:extract": "node scripts/extract-thw-stan-from-zip.cjs",
+    "stan:validate": "node scripts/validate-thw-stan-json.cjs",
+    "stan:preview": "node tools/stan-preview/generate-thw-einheiten-preview.cjs",
     "build": "npm run -s clean:dist && npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && npm run -s rebuild:native && cross-env CSC_IDENTITY_AUTO_DISCOVERY=false node scripts/run-electron-builder.cjs --dir",
     "build:win": "npm run -s clean:dist && npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && npm run -s rebuild:native && node scripts/run-electron-builder.cjs --win --x64 --dir",
     "build:win:zip": "npm run -s clean:dist && npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && npm run -s rebuild:native && node scripts/run-electron-builder.cjs --win --x64 --config.win.target=zip",
@@ -111,6 +114,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "taktische-zeichen": "^1.3.4",
+    "taktische-zeichen-core": "^0.10.0",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -135,6 +139,7 @@
     "eslint-plugin-react-refresh": "^0.4.18",
     "eslint-plugin-sonarjs": "^4.0.0",
     "globals": "^15.15.0",
+    "pdf-parse": "^2.4.5",
     "prettier": "^3.5.2",
     "tsup": "^8.4.0",
     "typescript": "^5.7.3",

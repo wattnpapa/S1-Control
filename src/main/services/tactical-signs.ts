@@ -1,42 +1,52 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import Handlebars from 'handlebars';
+import {
+  erzeugeTaktischesZeichen,
+  einheiten,
+  fachaufgaben,
+  funktionen,
+  grundzeichen,
+  organisationen,
+  symbole,
+  verwaltungsstufen,
+  type EinheitId,
+  type FachaufgabeId,
+  type FunktionId,
+  type GrundzeichenId,
+  type OrganisationId,
+  type SymbolId,
+  type TaktischesZeichen,
+  type VerwaltungsstufeId,
+} from 'taktische-zeichen-core';
 import type { OrganisationKey, TacticalSignConfig } from '../../shared/types';
 
-type TemplateInput = {
+type PersonTemplateInput = {
   color_primary: string;
   color_secondary: string;
   stroke_color: string;
   color_text: string;
   organization: string;
   unit: string;
-  denominator?: string;
-  stroke_width?: number;
   platoon?: boolean;
   group?: boolean;
-  squad?: boolean;
-  zugtrupp?: boolean;
 };
 
-const templatePath = path.join(
-  path.dirname(require.resolve('taktische-zeichen/package.json')),
-  'templates',
-  'Einheit.svg',
-);
-const vehicleTemplatePath = path.join(
-  path.dirname(require.resolve('taktische-zeichen/package.json')),
-  'templates',
-  'Fahrzeug.svg',
-);
 const personTemplatePath = path.join(
   path.dirname(require.resolve('taktische-zeichen/package.json')),
   'templates',
   'Person.svg',
 );
-const template = Handlebars.compile(readFileSync(templatePath, 'utf8'));
-const vehicleTemplate = Handlebars.compile(readFileSync(vehicleTemplatePath, 'utf8'));
 const personTemplate = Handlebars.compile(readFileSync(personTemplatePath, 'utf8'));
 const cache = new Map<string, string>();
+
+const GRUNDZEICHEN_SET = new Set(grundzeichen.map((item) => item.id));
+const ORGANISATION_SET = new Set(organisationen.map((item) => item.id));
+const EINHEIT_SET = new Set(einheiten.map((item) => item.id));
+const FACHAUFGABE_SET = new Set(fachaufgaben.map((item) => item.id));
+const VERWALTUNGSSTUFE_SET = new Set(verwaltungsstufen.map((item) => item.id));
+const FUNKTION_SET = new Set(funktionen.map((item) => item.id));
+const SYMBOL_SET = new Set(symbole.map((item) => item.id));
 
 const ORGANISATION_SHORT_NAMES: Partial<Record<OrganisationKey, string>> = {
   FEUERWEHR: 'FW',
@@ -52,7 +62,7 @@ const ORGANISATION_SHORT_NAMES: Partial<Record<OrganisationKey, string>> = {
   SONSTIGE: 'ORG',
 };
 
-const ORGANISATION_COLORS: Record<OrganisationKey, Pick<TemplateInput, 'color_primary' | 'color_text'>> = {
+const ORGANISATION_COLORS: Record<OrganisationKey, Pick<PersonTemplateInput, 'color_primary' | 'color_text'>> = {
   THW: { color_primary: '#003399', color_text: '#FFFFFF' },
   FEUERWEHR: { color_primary: '#d61a1f', color_text: '#FFFFFF' },
   POLIZEI: { color_primary: '#13a538', color_text: '#FFFFFF' },
@@ -69,6 +79,37 @@ const ORGANISATION_COLORS: Record<OrganisationKey, Pick<TemplateInput, 'color_pr
   SONSTIGE: { color_primary: '#4b5566', color_text: '#FFFFFF' },
 };
 
+const ORGANISATION_KEY_TO_CORE: Record<OrganisationKey, OrganisationId> = {
+  THW: 'thw',
+  FEUERWEHR: 'feuerwehr',
+  POLIZEI: 'polizei',
+  BUNDESWEHR: 'bundeswehr',
+  REGIE: 'zivil',
+  DRK: 'hilfsorganisation',
+  ASB: 'hilfsorganisation',
+  JOHANNITER: 'hilfsorganisation',
+  MALTESER: 'hilfsorganisation',
+  DLRG: 'hilfsorganisation',
+  BERGWACHT: 'hilfsorganisation',
+  MHD: 'hilfsorganisation',
+  RETTUNGSDIENST_KOMMUNAL: 'hilfsorganisation',
+  SONSTIGE: 'zivil',
+};
+
+const LEGACY_TYP_TO_EINHEIT: Record<string, EinheitId> = {
+  group: 'gruppe',
+  squad: 'trupp',
+  platoon: 'zug',
+  gruppe: 'gruppe',
+  trupp: 'trupp',
+  staffel: 'staffel',
+  zug: 'zug',
+  zugtrupp: 'zugtrupp',
+  bereitschaft: 'bereitschaft',
+  abteilung: 'abteilung',
+  grossverband: 'grossverband',
+};
+
 /**
  * Handles Organisation Short Name.
  */
@@ -79,36 +120,81 @@ function organisationShortName(organisation: OrganisationKey): string {
 /**
  * Handles Organisation Colors.
  */
-function organisationColors(organisation: OrganisationKey): Pick<TemplateInput, 'color_primary' | 'color_text'> {
+function organisationColors(organisation: OrganisationKey): Pick<PersonTemplateInput, 'color_primary' | 'color_text'> {
   return ORGANISATION_COLORS[organisation] ?? ORGANISATION_COLORS.SONSTIGE;
 }
 
 /**
- * Handles Normalize Type.
+ * Returns enum value only when it exists in the provided set.
  */
-function normalizeType(type: unknown): NonNullable<TacticalSignConfig['typ']> | 'none' {
-  if (type === 'platoon' || type === 'group' || type === 'squad' || type === 'zugtrupp' || type === 'none') {
-    return type;
+function asEnum<T extends string>(value: string | undefined, allowed: Set<string>): T | undefined {
+  if (!value) {
+    return undefined;
   }
-  // Für den aktuellen MVP nur "einfache Einheit" ohne Führungsstärke-Punkte anzeigen.
-  return 'none';
+  const normalized = value.trim().toLowerCase();
+  if (!allowed.has(normalized)) {
+    return undefined;
+  }
+  return normalized as T;
 }
 
 /**
- * Handles Normalize Config.
+ * Normalizes legacy and current typ values to the core einheit enum.
  */
-function normalizeConfig(config: TacticalSignConfig | null | undefined): TacticalSignConfig {
-  if (!config) {
-    return {};
+function typToEinheit(typ: TacticalSignConfig['typ']): EinheitId | undefined {
+  if (!typ || typ === 'none') {
+    return undefined;
   }
-  return config;
+  return LEGACY_TYP_TO_EINHEIT[String(typ).toLowerCase()];
 }
 
 /**
- * Handles Parse Config.
+ * Resolves organisation from config or app domain.
  */
-function parseConfig(config: TacticalSignConfig | null): TacticalSignConfig {
-  return normalizeConfig(config);
+function resolveOrganisationId(config: TacticalSignConfig, organisation: OrganisationKey): OrganisationId {
+  return asEnum<OrganisationId>(config.organisation, ORGANISATION_SET) ?? ORGANISATION_KEY_TO_CORE[organisation];
+}
+
+/**
+ * Resolves core enum values from a tactical config.
+ */
+function toCoreSignSpec(
+  organisation: OrganisationKey,
+  tacticalSignConfig: TacticalSignConfig | null,
+  defaultGrundzeichen: GrundzeichenId,
+): TaktischesZeichen {
+  const config = tacticalSignConfig ?? {};
+  const grundzeichenId =
+    asEnum<GrundzeichenId>(config.grundzeichen ?? config.grundform, GRUNDZEICHEN_SET) ?? defaultGrundzeichen;
+  const organisationId = resolveOrganisationId(config, organisation);
+  const einheitId = asEnum<EinheitId>(config.einheit, EINHEIT_SET) ?? typToEinheit(config.typ);
+  const fachaufgabeId = asEnum<FachaufgabeId>(config.fachaufgabe, FACHAUFGABE_SET);
+  const verwaltungsstufeId = asEnum<VerwaltungsstufeId>(config.verwaltungsstufe, VERWALTUNGSSTUFE_SET);
+  const funktionId = asEnum<FunktionId>(config.funktion, FUNKTION_SET);
+  const symbolId = asEnum<SymbolId>(config.symbol, SYMBOL_SET);
+
+  return {
+    grundzeichen: grundzeichenId,
+    organisation: organisationId,
+    fachaufgabe: fachaufgabeId,
+    einheit: einheitId,
+    verwaltungsstufe: verwaltungsstufeId,
+    funktion: funktionId,
+    symbol: symbolId,
+    text: config.text || undefined,
+    typ: config.typ && config.typ !== 'none' ? config.typ : undefined,
+    name: config.name || undefined,
+    organisationName: config.organisationName || config.organisationsname || organisationShortName(organisation),
+    farbe: organisationColors(organisation).color_primary,
+  };
+}
+
+/**
+ * Encodes core SVG image without using core dataUrl getter (it logs full SVG content).
+ */
+function toDataUrl(spec: TaktischesZeichen): string {
+  const svg = erzeugeTaktischesZeichen(spec).toString();
+  return `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
 }
 
 /**
@@ -118,40 +204,13 @@ export function getTacticalFormationSvgDataUrl(
   organisation: OrganisationKey,
   tacticalSignConfig: TacticalSignConfig | null,
 ): string {
-  const config = parseConfig(tacticalSignConfig);
+  const config = tacticalSignConfig ?? {};
   const cacheKey = `${organisation}:${JSON.stringify(config)}`;
   const existing = cache.get(cacheKey);
   if (existing) {
     return existing;
   }
-
-  const colors = organisationColors(organisation);
-  const typ = normalizeType(config.typ);
-  const organisationName = config.organisationsname?.trim() || organisationShortName(organisation);
-  const unit = config.unit?.trim() || '';
-  const denominator = config.denominator?.trim() || undefined;
-  const strokeWidth =
-    typeof config.strokeWidth === 'number' && Number.isFinite(config.strokeWidth) ? config.strokeWidth : undefined;
-
-  const flags: Pick<TemplateInput, 'platoon' | 'group' | 'squad' | 'zugtrupp'> = {
-    platoon: typ === 'platoon',
-    group: typ === 'group',
-    squad: typ === 'squad',
-    zugtrupp: typ === 'zugtrupp',
-  };
-
-  const svg = template({
-    color_primary: colors.color_primary,
-    color_secondary: '#FFFFFF',
-    stroke_color: '#000000',
-    color_text: colors.color_text,
-    organization: organisationName,
-    unit,
-    denominator,
-    stroke_width: strokeWidth,
-    ...flags,
-  });
-  const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
+  const dataUrl = toDataUrl(toCoreSignSpec(organisation, config, 'taktische-formation'));
   cache.set(cacheKey, dataUrl);
   return dataUrl;
 }
@@ -159,25 +218,21 @@ export function getTacticalFormationSvgDataUrl(
 /**
  * Handles Get Tactical Vehicle Svg Data Url.
  */
-export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey, unit?: string): string {
-  const normalizedUnit = unit?.trim() ?? '';
-  const cacheKey = `vehicle:${organisation}:${normalizedUnit}`;
+export function getTacticalVehicleSvgDataUrl(organisation: OrganisationKey, einheit?: string): string {
+  const normalizedEinheit = einheit?.trim() ?? '';
+  const cacheKey = `vehicle:${organisation}:${normalizedEinheit}`;
   const existing = cache.get(cacheKey);
   if (existing) {
     return existing;
   }
-
-  const colors = organisationColors(organisation);
-  const svg = vehicleTemplate({
-    color_primary: colors.color_primary,
-    color_secondary: '#FFFFFF',
-    stroke_color: '#000000',
-    color_text: colors.color_text,
-    organization: organisationShortName(organisation),
-    unit: normalizedUnit,
-    two_wheels: true,
+  const organisationId = ORGANISATION_KEY_TO_CORE[organisation];
+  const dataUrl = toDataUrl({
+    grundzeichen: 'kraftfahrzeug-landgebunden',
+    organisation: organisationId,
+    text: normalizedEinheit || undefined,
+    organisationName: organisationShortName(organisation),
+    farbe: organisationColors(organisation).color_primary,
   });
-  const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
   cache.set(cacheKey, dataUrl);
   return dataUrl;
 }
@@ -196,13 +251,6 @@ export function getTacticalPersonSvgDataUrl(
   }
 
   const colors = organisationColors(organisation);
-  const flags: Pick<TemplateInput, 'platoon' | 'group' | 'squad' | 'zugtrupp'> = {
-    platoon: rolle === 'FUEHRER',
-    group: rolle === 'UNTERFUEHRER',
-    squad: false,
-    zugtrupp: false,
-  };
-
   const svg = personTemplate({
     color_primary: colors.color_primary,
     color_secondary: '#FFFFFF',
@@ -210,7 +258,8 @@ export function getTacticalPersonSvgDataUrl(
     color_text: colors.color_text,
     organization: organisationShortName(organisation),
     unit: '',
-    ...flags,
+    platoon: rolle === 'FUEHRER',
+    group: rolle === 'UNTERFUEHRER',
   });
   const dataUrl = `data:image/svg+xml;base64,${Buffer.from(svg, 'utf8').toString('base64')}`;
   cache.set(cacheKey, dataUrl);

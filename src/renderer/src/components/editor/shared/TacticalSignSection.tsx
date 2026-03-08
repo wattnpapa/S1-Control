@@ -13,6 +13,7 @@ type TacticalCatalogItem = Awaited<ReturnType<typeof window.api.listTacticalSign
 interface TacticalSignSectionProps {
   form: TacticalFormSlice;
   onChange: (next: TacticalFormSlice) => void;
+  onStanSuggestion?: (suggestion: Awaited<ReturnType<typeof window.api.inferThwStanPreset>>) => void;
 }
 
 interface TacticalSuggestion {
@@ -30,22 +31,29 @@ interface ManualEditorProps {
 }
 
 /**
+ * Normalizes legacy typ values for editor select values.
+ */
+function normalizeTyp(typ: TacticalSignConfig['typ']): NonNullable<TacticalSignConfig['typ']> {
+  if (!typ) return 'none';
+  if (typ === 'group') return 'gruppe';
+  if (typ === 'squad') return 'trupp';
+  if (typ === 'platoon') return 'zug';
+  return typ;
+}
+
+/**
  * Builds tactical sign preview config.
  */
 function buildTacticalConfig(form: TacticalFormSlice): TacticalSignConfig {
   return {
-    grundform: 'taktische_formation',
-    fachaufgabe: 'keine',
+    grundzeichen: 'taktische-formation',
     organisation: form.organisation,
-    einheit: 'keine',
-    verwaltungsstufe: 'keine',
-    symbol: 'keines',
+    einheit: form.tacticalSignUnit.trim() || undefined,
+    verwaltungsstufe: form.tacticalSignDenominator.trim() || undefined,
     text: '',
     name: form.nameImEinsatz,
-    organisationsname: form.organisation,
-    unit: form.tacticalSignUnit.trim(),
-    typ: form.tacticalSignTyp,
-    denominator: form.tacticalSignDenominator.trim() || undefined,
+    organisationName: form.organisation,
+    typ: normalizeTyp(form.tacticalSignTyp),
     meta: {
       source: form.tacticalSignMode === 'MANUELL' ? 'manual' : 'auto',
       rawName: form.nameImEinsatz,
@@ -77,7 +85,11 @@ function useTacticalCatalog(organisation: TacticalFormSlice['organisation'], sea
 /**
  * Keeps auto suggestion and derived form fields in sync.
  */
-function useAutoSuggestion(form: TacticalFormSlice, onChange: TacticalSignSectionProps['onChange']): TacticalSuggestion | null {
+function useAutoSuggestion(
+  form: TacticalFormSlice,
+  onChange: TacticalSignSectionProps['onChange'],
+  onStanSuggestion?: TacticalSignSectionProps['onStanSuggestion'],
+): TacticalSuggestion | null {
   const [suggestion, setSuggestion] = useState<TacticalSuggestion | null>(null);
   useEffect(() => {
     let cancelled = false;
@@ -92,13 +104,18 @@ function useAutoSuggestion(form: TacticalFormSlice, onChange: TacticalSignSectio
         organisation: form.organisation,
         nameImEinsatz: form.nameImEinsatz,
       });
+      const stanSuggestion = await window.api.inferThwStanPreset({
+        organisation: form.organisation,
+        nameImEinsatz: form.nameImEinsatz,
+      });
       if (!cancelled) {
         setSuggestion(result);
+        onStanSuggestion?.(stanSuggestion);
         onChange({
           ...form,
-          tacticalSignUnit: result.config.unit ?? '',
-          tacticalSignTyp: result.config.typ ?? 'none',
-          tacticalSignDenominator: result.config.denominator ?? '',
+          tacticalSignUnit: result.config.einheit ?? '',
+          tacticalSignTyp: normalizeTyp(result.config.typ),
+          tacticalSignDenominator: result.config.verwaltungsstufe ?? '',
         });
       }
     })();
@@ -163,36 +180,40 @@ function ManualTacticalEditor({ form, catalog, search, onSearch, onChange }: Man
           <select
             value={`${form.tacticalSignUnit}|${form.tacticalSignTyp}|${form.tacticalSignDenominator}`}
             onChange={(event) => {
-              const [unit, typ, denominator] = event.target.value.split('|');
+              const [einheit, typ, verwaltungsstufe] = event.target.value.split('|');
               onChange({
                 ...form,
-                tacticalSignUnit: unit ?? '',
-                tacticalSignTyp: (typ as NonNullable<TacticalSignConfig['typ']>) ?? 'none',
-                tacticalSignDenominator: denominator ?? '',
+                tacticalSignUnit: einheit ?? '',
+                tacticalSignTyp: normalizeTyp((typ as TacticalSignConfig['typ']) ?? 'none'),
+                tacticalSignDenominator: verwaltungsstufe ?? '',
               });
             }}
           >
             <option value="|none|">-</option>
             {catalog.map((item) => (
-              <option key={item.key} value={`${item.unit}|${item.typ}|${item.denominator ?? ''}`}>
+              <option key={item.key} value={`${item.einheit}|${item.typ}|${item.verwaltungsstufe ?? ''}`}>
                 {item.label}
               </option>
             ))}
           </select>
           <input
-            placeholder="Unit"
+            placeholder="Einheit"
             value={form.tacticalSignUnit}
             onChange={(event) => onChange({ ...form, tacticalSignUnit: event.target.value })}
           />
           <select
             value={form.tacticalSignTyp}
-            onChange={(event) => onChange({ ...form, tacticalSignTyp: event.target.value as NonNullable<TacticalSignConfig['typ']> })}
+            onChange={(event) => onChange({ ...form, tacticalSignTyp: normalizeTyp(event.target.value as TacticalSignConfig['typ']) })}
           >
             <option value="none">Keine</option>
-            <option value="platoon">Zug</option>
-            <option value="group">Gruppe</option>
-            <option value="squad">Trupp</option>
+            <option value="zug">Zug</option>
+            <option value="gruppe">Gruppe</option>
+            <option value="trupp">Trupp</option>
+            <option value="staffel">Staffel</option>
             <option value="zugtrupp">Zugtrupp</option>
+            <option value="bereitschaft">Bereitschaft</option>
+            <option value="abteilung">Abteilung</option>
+            <option value="grossverband">Großverband</option>
           </select>
           <input
             placeholder="Denominator"
@@ -233,7 +254,7 @@ function TacticalPreview({ form }: { form: TacticalFormSlice }): JSX.Element {
 export function TacticalSignSection(props: TacticalSignSectionProps): JSX.Element {
   const [search, setSearch] = useState('');
   const catalog = useTacticalCatalog(props.form.organisation, search);
-  const suggestion = useAutoSuggestion(props.form, props.onChange);
+  const suggestion = useAutoSuggestion(props.form, props.onChange, props.onStanSuggestion);
   return (
     <>
       <TacticalModeSelector form={props.form} suggestion={suggestion} onChange={props.onChange} />
