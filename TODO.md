@@ -12,8 +12,8 @@
 - [x] Stärke-Monitor öffnen p95 < 1s
 
 ## 3) Updater-Observability
-- [ ] Feingranulare Timings pro Update-URL/Phase (API/Web/HTTPS-Fallback) loggen
-- [ ] Timeouts reproduzierbar in Tests absichern
+- [x] Feingranulare Timings pro Update-URL/Phase (API/Web/HTTPS-Fallback) loggen
+- [x] Timeouts reproduzierbar in Tests absichern
 
 ## 4) Repo-Hygiene
-- [ ] `test-results/` bereinigen oder gezielt ignorieren
+- [x] `test-results/` bereinigen oder gezielt ignorieren
