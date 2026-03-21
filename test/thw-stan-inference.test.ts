@@ -10,7 +10,7 @@ describe('thw stan inference', () => {
     expect(result?.confidence).toBeGreaterThan(0.45);
     expect(result?.strength).not.toBeNull();
     expect((result?.vehicles.length ?? 0)).toBeGreaterThan(0);
-    expect(result?.tacticalSign?.organisation).toBe('THW');
+    expect(result?.tacticalSign?.organisation).toBe('thw');
     expect(result?.tacticalSign?.einheit).toBeTruthy();
     expect((result?.vehicleTacticalSigns?.length ?? 0)).toBeGreaterThan(0);
   });

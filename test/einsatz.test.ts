@@ -1025,7 +1025,7 @@ describe('einsatz service - split default sign', () => {
         .where(and(eq(einsatzEinheit.parentEinsatzEinheitId, sourceId), eq(einsatzEinheit.einsatzId, created.id)))
         .get();
       expect(child?.tacticalSignConfigJson).toContain('"name":"Teil"');
-      expect(child?.tacticalSignConfigJson).toContain('"organisationsname":"THW"');
+      expect(child?.tacticalSignConfigJson).toContain('"organisationName":"THW"');
     } finally {
       ctx.sqlite.close();
     }

@@ -1,4 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import https from 'node:https';
+import type { EventEmitter } from 'node:events';
 
 const hoisted = vi.hoisted(() => {
   let appVersion = '2026.2.25-16.38';
@@ -177,6 +179,22 @@ describe('updater service - github fallback checks', () => {
       message: 'Versionsvergleich nicht eindeutig möglich.',
     });
 
+    const httpsRequestSpy = vi.spyOn(https, 'request').mockImplementation(
+      ((_url, _options, _callback) => {
+        const req = {
+          setTimeout: vi.fn(),
+          on: vi.fn((event: string, handler: (error: Error) => void) => {
+            if (event === 'error') {
+              queueMicrotask(() => handler(new Error('ENOTFOUND')));
+            }
+            return req as unknown as EventEmitter;
+          }),
+          end: vi.fn(),
+          destroy: vi.fn(),
+        };
+        return req as unknown as ReturnType<typeof https.request>;
+      }) as typeof https.request,
+    );
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => {
@@ -185,6 +203,7 @@ describe('updater service - github fallback checks', () => {
     );
     await service.checkForUpdates();
     expect(states.at(-1)).toMatchObject({ stage: 'idle' });
+    httpsRequestSpy.mockRestore();
 
     vi.stubGlobal(
       'fetch',
