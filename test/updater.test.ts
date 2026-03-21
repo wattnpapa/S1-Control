@@ -180,7 +180,7 @@ describe('updater service - github fallback checks', () => {
     });
 
     const httpsRequestSpy = vi.spyOn(https, 'request').mockImplementation(
-      ((_url, _options, _callback) => {
+      (() => {
         const req = {
           setTimeout: vi.fn(),
           on: vi.fn((event: string, handler: (error: Error) => void) => {

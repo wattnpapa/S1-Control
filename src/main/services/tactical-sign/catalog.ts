@@ -38,7 +38,8 @@ function toCatalogItem(item: (typeof einheiten)[number]): TacticalSignCatalogIte
  * Handles Build Catalog For Organisation.
  * Core enum catalog is organisation-agnostic by design.
  */
-export function buildCatalogForOrganisation(_organisation: OrganisationKey): TacticalSignCatalogItem[] {
+export function buildCatalogForOrganisation(organisation: OrganisationKey): TacticalSignCatalogItem[] {
+  void organisation;
   return einheiten
     .map(toCatalogItem)
     .sort((a, b) => a.label.localeCompare(b.label, 'de'));

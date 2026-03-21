@@ -94,7 +94,7 @@ describe('update peer service flow', () => {
     hoisted.socket = {
       ...socketEmitter,
       bind: (_port: number, cb: () => void) => cb(),
-      setBroadcast: (_flag: boolean) => undefined,
+      setBroadcast: () => undefined,
       send: (message: string, port: number, host: string) => {
         hoisted.socket?.sent.push({ message, port, host });
       },
