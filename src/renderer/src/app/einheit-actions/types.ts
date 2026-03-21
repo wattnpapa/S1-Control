@@ -56,7 +56,7 @@ export interface UseEinheitActionsProps {
   releaseEinheitLock: (einsatzId: string, einheitId: string) => Promise<boolean>;
   acquireFahrzeugLock: (einsatzId: string, fahrzeugId: string) => Promise<boolean>;
   releaseFahrzeugLock: (einsatzId: string, fahrzeugId: string) => Promise<boolean>;
-  refreshAll: () => Promise<void>;
+  refreshCurrentEinsatz: (options?: { includeFullOverview?: boolean }) => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
 

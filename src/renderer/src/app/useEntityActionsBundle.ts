@@ -57,6 +57,7 @@ interface UseEntityActionsBundleOptions {
     preferredAbschnittId?: string,
     options?: { waitForFullOverview?: boolean },
   ) => Promise<void>;
+  refreshCurrentEinsatz: (options?: { includeFullOverview?: boolean }) => Promise<void>;
   refreshAll: () => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
@@ -126,7 +127,7 @@ function createFahrzeugActionsProps(options: UseEntityActionsBundleOptions) {
       options.acquireEditLock(einsatzId, 'FAHRZEUG', entityId),
     releaseEditLock: async (einsatzId: string, _entityType: 'FAHRZEUG', entityId: string) =>
       options.releaseEditLock(einsatzId, 'FAHRZEUG', entityId),
-    refreshAll: options.refreshAll,
+    refreshCurrentEinsatz: options.refreshCurrentEinsatz,
     withBusy: options.withBusy,
   };
 }
@@ -164,7 +165,7 @@ function createEinheitActionsProps(options: UseEntityActionsBundleOptions) {
       options.acquireEditLock(einsatzId, 'FAHRZEUG', fahrzeugId),
     releaseFahrzeugLock: async (einsatzId: string, fahrzeugId: string) =>
       options.releaseEditLock(einsatzId, 'FAHRZEUG', fahrzeugId),
-    refreshAll: options.refreshAll,
+    refreshCurrentEinsatz: options.refreshCurrentEinsatz,
     withBusy: options.withBusy,
   };
 }

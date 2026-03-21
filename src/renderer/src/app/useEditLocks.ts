@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { RecordEditLockInfo, RecordEditLockType } from '@shared/types';
 
 interface OwnedEditLock {
@@ -41,11 +41,17 @@ function useEditLockHeartbeat(params: {
   refreshEditLocks: (einsatzId: string) => Promise<void>;
 }) {
   const { ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive } = params;
+  const heartbeatInFlightRef = useRef(false);
+  const lockRefreshTickRef = useRef(0);
   useEffect(() => {
     if (!sessionActive || !selectedEinsatzId || ownedEditLocks.length === 0) {
       return;
     }
     const timer = window.setInterval(() => {
+      if (heartbeatInFlightRef.current) {
+        return;
+      }
+      heartbeatInFlightRef.current = true;
       void (async () => {
         for (const lock of ownedEditLocks) {
           try {
@@ -58,8 +64,13 @@ function useEditLockHeartbeat(params: {
             // ignore transient refresh errors
           }
         }
-        await refreshEditLocks(selectedEinsatzId);
-      })();
+        lockRefreshTickRef.current += 1;
+        if (lockRefreshTickRef.current % 3 === 0) {
+          await refreshEditLocks(selectedEinsatzId);
+        }
+      })().finally(() => {
+        heartbeatInFlightRef.current = false;
+      });
     }, 8000);
     return () => window.clearInterval(timer);
   }, [ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive]);

@@ -35,10 +35,9 @@ interface UseSyncEventsOptions {
   loadEinsatz: (
     einsatzId: string,
     preferredAbschnittId?: string,
-    options?: { waitForFullOverview?: boolean },
+    options?: { waitForFullOverview?: boolean; includeFullOverview?: boolean },
   ) => Promise<void>;
   setEinsatzInitialLoading: (value: boolean) => void;
-  refreshAll: () => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
 
@@ -49,7 +48,7 @@ function usePeriodicRefreshEffect(
   options: UseSyncEventsOptions,
   refreshInFlightRef: MutableRefObject<boolean>,
 ): void {
-  const { perfSafeMode, refreshAll, selectedEinsatzId, session } = options;
+  const { loadEinsatz, perfSafeMode, selectedAbschnittId, selectedEinsatzId, session } = options;
   useEffect(() => {
     if (perfSafeMode || !session || !selectedEinsatzId) {
       return;
@@ -59,12 +58,12 @@ function usePeriodicRefreshEffect(
         return;
       }
       refreshInFlightRef.current = true;
-      void refreshAll().finally(() => {
+      void loadEinsatz(selectedEinsatzId, selectedAbschnittId, { includeFullOverview: false }).finally(() => {
         refreshInFlightRef.current = false;
       });
     }, 6000);
     return () => window.clearInterval(timer);
-  }, [perfSafeMode, refreshAll, refreshInFlightRef, selectedEinsatzId, session]);
+  }, [loadEinsatz, perfSafeMode, refreshInFlightRef, selectedAbschnittId, selectedEinsatzId, session]);
 }
 
 /**
@@ -205,7 +204,7 @@ function useDebugLogSubscriptionEffect(setDebugSyncLogs: UseSyncEventsOptions['s
  * Refreshes state on remote change broadcast for current Einsatz.
  */
 function useEinsatzChangedEffect(options: UseSyncEventsOptions, lastRemoteRefreshAtRef: MutableRefObject<number>): void {
-  const { perfSafeMode, refreshAll, selectedEinsatzId, session, setError } = options;
+  const { loadEinsatz, perfSafeMode, selectedAbschnittId, selectedEinsatzId, session, setError } = options;
   useEffect(() => {
     const unsubscribe = window.appEvents.onEinsatzChanged((signal) => {
       if (perfSafeMode) {
@@ -219,12 +218,12 @@ function useEinsatzChangedEffect(options: UseSyncEventsOptions, lastRemoteRefres
         return;
       }
       lastRemoteRefreshAtRef.current = nowTs;
-      void refreshAll().catch((err: unknown) => {
+      void loadEinsatz(selectedEinsatzId, selectedAbschnittId, { includeFullOverview: false }).catch((err: unknown) => {
         setError(readError(err));
       });
     });
     return () => unsubscribe();
-  }, [perfSafeMode, refreshAll, selectedEinsatzId, session, setError, lastRemoteRefreshAtRef]);
+  }, [loadEinsatz, perfSafeMode, selectedAbschnittId, selectedEinsatzId, session, setError, lastRemoteRefreshAtRef]);
 }
 
 /**

@@ -133,7 +133,6 @@ function useRuntimeSync(
     setEinsatzInitialLoading: rootState.setEinsatzInitialLoading,
     setStartChoice: uiState.setStartChoice,
     loadEinsatz: dataState.loadEinsatz,
-    refreshAll: dataState.refreshAll,
     withBusy,
   });
 }
@@ -229,6 +228,7 @@ function useEntityActions(
     acquireEditLock: lockState.acquireEditLock,
     releaseEditLock: lockState.releaseEditLock,
     loadEinsatz: dataState.loadEinsatz,
+    refreshCurrentEinsatz: dataState.refreshCurrentEinsatz,
     refreshAll: dataState.refreshAll,
     withBusy,
   });

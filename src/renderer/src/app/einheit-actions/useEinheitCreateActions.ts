@@ -108,7 +108,7 @@ function buildSubmitCreate(props: UseEinheitActionsProps) {
         tacticalSignConfigJson,
       });
       props.setShowCreateEinheitDialog(false);
-      await props.refreshAll();
+      await props.refreshCurrentEinsatz({ includeFullOverview: false });
     });
   };
 }

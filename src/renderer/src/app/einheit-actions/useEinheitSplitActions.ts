@@ -56,7 +56,7 @@ export function useEinheitSplitActions(props: UseEinheitActionsProps) {
         status: props.splitEinheitForm.status,
       });
       props.setShowSplitEinheitDialog(false);
-      await props.refreshAll();
+      await props.refreshCurrentEinsatz({ includeFullOverview: false });
     });
   }, [props]);
 

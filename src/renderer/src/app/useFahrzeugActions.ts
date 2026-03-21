@@ -19,7 +19,7 @@ interface UseFahrzeugActionsProps {
   closeEditEinheitDialog: () => void;
   acquireEditLock: (einsatzId: string, entityType: 'FAHRZEUG', entityId: string) => Promise<boolean>;
   releaseEditLock: (einsatzId: string, entityType: 'FAHRZEUG', entityId: string) => Promise<boolean>;
-  refreshAll: () => Promise<void>;
+  refreshCurrentEinsatz: (options?: { includeFullOverview?: boolean }) => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }
 
@@ -109,7 +109,7 @@ function buildSubmitCreate(props: UseFahrzeugActionsProps) {
         nutzlast: props.createFahrzeugForm.nutzlast,
       });
       props.setShowCreateFahrzeugDialog(false);
-      await props.refreshAll();
+      await props.refreshCurrentEinsatz({ includeFullOverview: false });
     });
   };
 }
@@ -207,7 +207,7 @@ function buildSubmitEdit(props: UseFahrzeugActionsProps) {
       });
       await props.releaseEditLock(props.selectedEinsatzId, 'FAHRZEUG', props.editFahrzeugForm.fahrzeugId);
       props.setShowEditFahrzeugDialog(false);
-      await props.refreshAll();
+      await props.refreshCurrentEinsatz({ includeFullOverview: false });
     });
   };
 }

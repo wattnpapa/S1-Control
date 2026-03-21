@@ -33,7 +33,7 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
     async (
       einsatzId: string,
       preferredAbschnittId?: string,
-      options?: { waitForFullOverview?: boolean },
+      options?: { waitForFullOverview?: boolean; includeFullOverview?: boolean },
     ) => {
       const revision = ++loadRevisionRef.current;
       // Lock list must not block open-flow on slow/shared filesystems.
@@ -86,6 +86,10 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         scheduleSignPrewarm(nextAllKraefte, nextAllFahrzeuge);
         props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
       };
+      const includeFullOverview = options?.includeFullOverview ?? true;
+      if (!includeFullOverview) {
+        return;
+      }
       if (options?.waitForFullOverview) {
         await loadFullOverview();
       } else {
@@ -114,10 +118,23 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
     }
   }, [loadEinsatz, props.selectedAbschnittId, props.selectedEinsatzId, refreshEinsaetze]);
 
+  const refreshCurrentEinsatz = useCallback(
+    async (options?: { includeFullOverview?: boolean }) => {
+      if (!props.selectedEinsatzId) {
+        return;
+      }
+      await loadEinsatz(props.selectedEinsatzId, props.selectedAbschnittId, {
+        includeFullOverview: options?.includeFullOverview ?? false,
+      });
+    },
+    [loadEinsatz, props.selectedAbschnittId, props.selectedEinsatzId],
+  );
+
   return {
     loadEinsatz,
     refreshEinsaetze,
     refreshAll,
+    refreshCurrentEinsatz,
   };
 }
 

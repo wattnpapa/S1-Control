@@ -26,7 +26,7 @@ export function useEinheitFahrzeugActions(props: UseEinheitActionsProps) {
           sondergeraet: input.sondergeraet,
           nutzlast: input.nutzlast,
         });
-        await props.refreshAll();
+        await props.refreshCurrentEinsatz({ includeFullOverview: false });
       });
     },
     [props],
@@ -59,7 +59,7 @@ export function useEinheitFahrzeugActions(props: UseEinheitActionsProps) {
             sondergeraet: input.sondergeraet,
             nutzlast: input.nutzlast,
           });
-          await props.refreshAll();
+          await props.refreshCurrentEinsatz({ includeFullOverview: false });
         } finally {
           await props.releaseFahrzeugLock(props.selectedEinsatzId, input.fahrzeugId);
         }

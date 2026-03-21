@@ -143,7 +143,7 @@ function buildSubmitEdit(props: UseEinheitActionsProps) {
       await props.releaseEinheitLock(props.selectedEinsatzId, props.editEinheitForm.einheitId);
       props.setShowEditEinheitDialog(false);
       props.setEditEinheitHelfer([]);
-      await props.refreshAll();
+      await props.refreshCurrentEinsatz({ includeFullOverview: false });
     });
   };
 }
