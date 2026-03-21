@@ -203,7 +203,6 @@ describe('updater service - github fallback checks', () => {
     );
     await service.checkForUpdates();
     expect(states.at(-1)).toMatchObject({ stage: 'idle' });
-    httpsRequestSpy.mockRestore();
 
     vi.stubGlobal(
       'fetch',
@@ -218,6 +217,7 @@ describe('updater service - github fallback checks', () => {
       message:
         'GitHub-Check fehlgeschlagen. API: GitHub Update-Check fehlgeschlagen (500) | Releases: GitHub Releases-Seite nicht erreichbar (500)',
     });
+    httpsRequestSpy.mockRestore();
   });
 
   it('falls back to releases page when GitHub API is unavailable', async () => {
