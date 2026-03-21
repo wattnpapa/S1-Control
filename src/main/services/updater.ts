@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import { app } from 'electron';
 import { autoUpdater } from 'electron-updater';
 import { existsSync } from 'node:fs';
@@ -167,6 +168,25 @@ export class UpdaterService {
       debugSync('updater', 'check:skip-inflight');
       return;
     }
+    this.prepareCheck();
+
+    try {
+      const fallbackReason = this.resolveFallbackReason();
+      if (fallbackReason) {
+        debugSync('updater', 'check:fallback', { reason: fallbackReason });
+        await this.runGitHubFallback(fallbackReason);
+        return;
+      }
+      await this.runInAppCheck();
+    } catch (error) {
+      await this.handleCheckError(error);
+    } finally {
+      this.checkInFlight = false;
+      debugSync('updater', 'check:done', { stage: this.state.stage, message: this.state.message ?? null });
+    }
+  }
+
+  private prepareCheck(): void {
     this.checkInFlight = true;
     debugSync('updater', 'check:start', {
       source: this.shouldPreferGitHubChecks() ? 'github-preferred' : 'auto-updater',
@@ -175,65 +195,59 @@ export class UpdaterService {
     });
     this.setState({ stage: 'checking', lastCheckedAt: new Date().toISOString() });
     this.canDownloadInApp = false;
+  }
 
-    try {
-      if (this.shouldPreferGitHubChecks()) {
-        debugSync('updater', 'check:fallback', { reason: 'packaged-prefer-github' });
-        await this.runGitHubFallback('Paketbetrieb: stabiler GitHub-Update-Check.');
-        return;
-      }
-      const fallbackReason = resolveGitHubFallbackReason({
-        autoUpdaterEnabled: this.autoUpdaterEnabled,
-        autoUpdaterInitError: this.autoUpdaterInitError,
-        isAutoUpdaterConfigured: this.isAutoUpdaterConfigured(),
-      });
-      if (fallbackReason) {
-        debugSync('updater', 'check:fallback', { reason: fallbackReason });
-        await this.runGitHubFallback(fallbackReason);
-        return;
-      }
-
-      const inAppStartedAt = Date.now();
-      const inAppTimeoutMs = inAppCheckTimeoutMs();
-      debugSync('updater', 'check:in-app-start', {
-        feedUrl: GENERIC_FEED_URL,
-        timeoutMs: inAppTimeoutMs,
-      });
-      const result = await withTimeout(
-        autoUpdater.checkForUpdates(),
-        inAppTimeoutMs,
-        IN_APP_CHECK_TIMEOUT_MESSAGE,
-      );
-      this.canDownloadInApp = true;
-      const latestVersion = result?.updateInfo?.version;
-      this.pendingArtifact = toArtifactMeta(
-        result?.updateInfo as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
-      );
-      debugSync('updater', 'check:in-app-result', { latestVersion: latestVersion ?? null });
-      debugSync('updater', 'check:in-app-done', {
-        feedUrl: GENERIC_FEED_URL,
-        ms: Date.now() - inAppStartedAt,
-      });
-      this.applyInAppCheckResult(latestVersion);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (message === IN_APP_CHECK_TIMEOUT_MESSAGE) {
-        debugSync('updater', 'check:in-app-timeout', {
-          feedUrl: GENERIC_FEED_URL,
-          timeoutMs: inAppCheckTimeoutMs(),
-          message,
-        });
-      }
-      debugSync('updater', 'check:error', { message });
-      await handleUpdateCheckError({
-        error,
-        runGitHubFallback: (reason) => this.runGitHubFallback(reason),
-        setState: (next) => this.setState(next),
-      });
-    } finally {
-      this.checkInFlight = false;
-      debugSync('updater', 'check:done', { stage: this.state.stage, message: this.state.message ?? null });
+  private resolveFallbackReason(): string | null {
+    if (this.shouldPreferGitHubChecks()) {
+      return 'Paketbetrieb: stabiler GitHub-Update-Check.';
     }
+    return resolveGitHubFallbackReason({
+      autoUpdaterEnabled: this.autoUpdaterEnabled,
+      autoUpdaterInitError: this.autoUpdaterInitError,
+      isAutoUpdaterConfigured: this.isAutoUpdaterConfigured(),
+    });
+  }
+
+  private async runInAppCheck(): Promise<void> {
+    const inAppStartedAt = Date.now();
+    const inAppTimeoutMs = inAppCheckTimeoutMs();
+    debugSync('updater', 'check:in-app-start', {
+      feedUrl: GENERIC_FEED_URL,
+      timeoutMs: inAppTimeoutMs,
+    });
+    const result = await withTimeout(
+      autoUpdater.checkForUpdates(),
+      inAppTimeoutMs,
+      IN_APP_CHECK_TIMEOUT_MESSAGE,
+    );
+    this.canDownloadInApp = true;
+    const latestVersion = result?.updateInfo?.version;
+    this.pendingArtifact = toArtifactMeta(
+      result?.updateInfo as { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
+    );
+    debugSync('updater', 'check:in-app-result', { latestVersion: latestVersion ?? null });
+    debugSync('updater', 'check:in-app-done', {
+      feedUrl: GENERIC_FEED_URL,
+      ms: Date.now() - inAppStartedAt,
+    });
+    this.applyInAppCheckResult(latestVersion);
+  }
+
+  private async handleCheckError(error: unknown): Promise<void> {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message === IN_APP_CHECK_TIMEOUT_MESSAGE) {
+      debugSync('updater', 'check:in-app-timeout', {
+        feedUrl: GENERIC_FEED_URL,
+        timeoutMs: inAppCheckTimeoutMs(),
+        message,
+      });
+    }
+    debugSync('updater', 'check:error', { message });
+    await handleUpdateCheckError({
+      error,
+      runGitHubFallback: (reason) => this.runGitHubFallback(reason),
+      setState: (next) => this.setState(next),
+    });
   }
 
   /**

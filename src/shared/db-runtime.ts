@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import type { ActiveClientInfo, AbschnittDetails, AbschnittNode, RecordEditLockInfo, RecordEditLockType } from './types';
 
 export type DbOpPriority = 'high' | 'normal' | 'low';

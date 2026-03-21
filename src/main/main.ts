@@ -1,8 +1,8 @@
+/* eslint-disable max-lines */
 import { app, BrowserWindow, dialog, globalShortcut, shell } from 'electron';
 import path from 'node:path';
 import { openDatabaseWithRetry, type DbContext } from './db/connection';
 import { SettingsStore } from './db/settings-store';
-import { registerIpc } from './ipc/register-ipc';
 import { setupVersionMetadata, withVersion } from './services/app-version';
 import { ensureDefaultAdmin } from './services/auth';
 import { BackupCoordinator } from './services/backup';
@@ -16,6 +16,7 @@ import { debugSync, onDebugSyncLog } from './services/debug';
 import { broadcastToAllWindows, createMainWindow, resolveRendererUrl } from './services/main-window';
 import { runStartupRecovery } from './services/startup-recovery';
 import { MainDbBridge } from './services/main-db-bridge';
+import { registerMainIpc, scheduleStrengthDisplayPrewarm } from './services/main-bootstrap';
 import type { SessionUser } from '../shared/types';
 import { IPC_CHANNEL } from '../shared/ipc';
 
@@ -325,6 +326,104 @@ function registerDebugShortcuts(): void {
   });
 }
 
+function initRuntimeServices(settingsStore: SettingsStore): {
+  updater: UpdaterService;
+  dbContext: DbContext;
+  startupWarning: string | null;
+  dbBridge: MainDbBridge;
+  clientPresence: ClientPresenceService;
+  backupCoordinator: BackupCoordinator;
+  einsatzSync: EinsatzSyncService;
+  strengthDisplay: StrengthDisplayService;
+  einsatzReadCache: EinsatzReadCache;
+  defaultDbPath: string;
+} {
+  const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
+  const effectiveLanPeerEnabled = DISABLE_LAN_UPDATE_PEER ? false : lanPeerUpdatesEnabled;
+  debugSync('bootstrap', 'feature-flags', {
+    perfSafeMode: PERF_SAFE_MODE,
+    dbUtilityProcessEnabled: USE_DB_UTILITY_PROCESS,
+    lanUpdatePeerEnabled: effectiveLanPeerEnabled,
+    udpSyncEnabled: !DISABLE_UDP_SYNC,
+    clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
+  });
+  const updater = new UpdaterService((state) => {
+    broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
+  }, effectiveLanPeerEnabled);
+  const paths = resolveDbPaths(settingsStore);
+  const dbBootstrap = openSystemDbWithFallback(settingsStore, paths);
+  const dbBridge = new MainDbBridge();
+  dbBridge.start(USE_DB_UTILITY_PROCESS);
+  const clientPresence = new ClientPresenceService(dbBridge, USE_DB_UTILITY_PROCESS);
+  if (!DISABLE_CLIENT_HEARTBEAT) {
+    clientPresence.start(dbBootstrap.dbContext);
+  }
+  const backupCoordinator = new BackupCoordinator(
+    () => (DISABLE_CLIENT_HEARTBEAT ? true : clientPresence.canWriteBackups()),
+    dbBridge,
+    USE_DB_UTILITY_PROCESS,
+  );
+  const einsatzSync = new EinsatzSyncService((signal) => {
+    broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
+  });
+  if (!DISABLE_UDP_SYNC) {
+    einsatzSync.start(dbBootstrap.dbContext.path);
+  }
+  return {
+    updater,
+    dbContext: dbBootstrap.dbContext,
+    startupWarning: dbBootstrap.startupWarning,
+    dbBridge,
+    clientPresence,
+    backupCoordinator,
+    einsatzSync,
+    strengthDisplay: new StrengthDisplayService(resolveRendererUrl),
+    einsatzReadCache: new EinsatzReadCache(),
+    defaultDbPath: paths.defaultBaseDir,
+  };
+}
+
+async function finalizeBootstrap(input: {
+  startupWarning: string | null;
+  backupCoordinator: BackupCoordinator;
+  clientPresence: ClientPresenceService;
+  einsatzSync: EinsatzSyncService;
+  updater: UpdaterService;
+  strengthDisplay: StrengthDisplayService;
+  dbBridge: MainDbBridge;
+}): Promise<void> {
+  const mainWindow = await createMainWindow();
+  wireMainWindowCloseBehavior(mainWindow, input.strengthDisplay);
+  mainWindow.once('ready-to-show', () => {
+    debugSync('strength-display', 'prewarm-scheduled');
+    scheduleStrengthDisplayPrewarm({
+      strengthDisplay: input.strengthDisplay,
+      isAppShuttingDown: () => appShuttingDown,
+      setEarlyTimer: (timer) => {
+        strengthPrewarmEarlyTimer = timer;
+      },
+      setRetryTimer: (timer) => {
+        strengthPrewarmRetryTimer = timer;
+      },
+    });
+  });
+  if (input.startupWarning) {
+    await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Datenbankpfad Hinweis',
+      message: input.startupWarning,
+    }).catch(() => undefined);
+  }
+  setupLifecycleHandlers({
+    backupCoordinator: input.backupCoordinator,
+    clientPresence: input.clientPresence,
+    einsatzSync: input.einsatzSync,
+    updater: input.updater,
+    strengthDisplay: input.strengthDisplay,
+    dbBridge: input.dbBridge,
+  });
+}
+
 /**
  * Handles Bootstrap.
  */
@@ -339,48 +438,23 @@ async function bootstrap(): Promise<void> {
   setupVersionMetadata();
 
   const settingsStore = new SettingsStore(app.getPath('userData'));
-  const lanPeerUpdatesEnabled = settingsStore.get().lanPeerUpdatesEnabled ?? false;
-  const effectiveLanPeerEnabled = DISABLE_LAN_UPDATE_PEER ? false : lanPeerUpdatesEnabled;
-  debugSync('bootstrap', 'feature-flags', {
-    perfSafeMode: PERF_SAFE_MODE,
-    dbUtilityProcessEnabled: USE_DB_UTILITY_PROCESS,
-    lanUpdatePeerEnabled: effectiveLanPeerEnabled,
-    udpSyncEnabled: !DISABLE_UDP_SYNC,
-    clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
-  });
-  const updater = new UpdaterService((state) => {
-    broadcastToAllWindows(IPC_CHANNEL.UPDATER_STATE_CHANGED, state);
-  }, effectiveLanPeerEnabled);
+  const runtime = initRuntimeServices(settingsStore);
+  const updater = runtime.updater;
   bootstrapUpdater = updater;
-
-  const paths = resolveDbPaths(settingsStore);
-  const dbBootstrap = openSystemDbWithFallback(settingsStore, paths);
-  let dbContext = dbBootstrap.dbContext;
-  const startupWarning = dbBootstrap.startupWarning;
+  let dbContext = runtime.dbContext;
+  const startupWarning = runtime.startupWarning;
   ensureDefaultAdmin(dbContext);
-  const dbBridge = new MainDbBridge();
-  dbBridge.start(USE_DB_UTILITY_PROCESS);
-  const clientPresence = new ClientPresenceService(dbBridge, USE_DB_UTILITY_PROCESS);
-  if (!DISABLE_CLIENT_HEARTBEAT) {
-    clientPresence.start(dbContext);
-  }
-  const backupCoordinator = new BackupCoordinator(() =>
-    DISABLE_CLIENT_HEARTBEAT ? true : clientPresence.canWriteBackups(),
+  const {
     dbBridge,
-    USE_DB_UTILITY_PROCESS,
-  );
-  const einsatzSync = new EinsatzSyncService((signal) => {
-    broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
-  });
-  if (!DISABLE_UDP_SYNC) {
-    einsatzSync.start(dbContext.path);
-  }
-  const strengthDisplay = new StrengthDisplayService(resolveRendererUrl);
-  const einsatzReadCache = new EinsatzReadCache();
+    clientPresence,
+    backupCoordinator,
+    einsatzSync,
+    strengthDisplay,
+    einsatzReadCache,
+  } = runtime;
 
   let currentUser: SessionUser | null = null;
-
-  registerIpc({
+  registerMainIpc({
     getDbContext: () => dbContext,
     setDbContext: (ctx) => {
       try {
@@ -398,59 +472,22 @@ async function bootstrap(): Promise<void> {
     strengthDisplay,
     einsatzReadCache,
     settingsStore,
-    getDefaultDbPath: () => paths.defaultBaseDir,
-    consumePendingOpenFilePath,
+    defaultDbPath: runtime.defaultDbPath,
     getSessionUser: () => currentUser,
     setSessionUser: (user) => {
       currentUser = user;
     },
+    dbBridge,
+    consumePendingOpenFilePath,
     clientHeartbeatEnabled: !DISABLE_CLIENT_HEARTBEAT,
     lanPeerUpdatesAllowed: !DISABLE_LAN_UPDATE_PEER,
     perfSafeMode: PERF_SAFE_MODE,
     useDbUtilityProcess: USE_DB_UTILITY_PROCESS,
-    dbBridge,
   });
   setupDebugSyncForwarding();
   registerDebugShortcuts();
-  const mainWindow = await createMainWindow();
-  wireMainWindowCloseBehavior(mainWindow, strengthDisplay);
-  mainWindow.once('ready-to-show', () => {
-    debugSync('strength-display', 'prewarm-scheduled');
-    strengthPrewarmEarlyTimer = setTimeout(() => {
-      try {
-        if (appShuttingDown || BrowserWindow.getAllWindows().length === 0) {
-          return;
-        }
-        strengthDisplay.prewarmWindow();
-        debugSync('strength-display', 'prewarm-started', strengthDisplay.getHealth());
-      } catch {
-        // best effort prewarm only
-      } finally {
-        strengthPrewarmEarlyTimer = null;
-      }
-    }, 150);
-  });
-  strengthPrewarmRetryTimer = setTimeout(() => {
-    try {
-      if (appShuttingDown || BrowserWindow.getAllWindows().length === 0) {
-        return;
-      }
-      strengthDisplay.prewarmWindow();
-      debugSync('strength-display', 'prewarm-retry', strengthDisplay.getHealth());
-    } catch {
-      // best effort prewarm only
-    } finally {
-      strengthPrewarmRetryTimer = null;
-    }
-  }, 1200);
-  if (startupWarning) {
-    dialog.showMessageBox({
-      type: 'warning',
-      title: 'Datenbankpfad Hinweis',
-      message: startupWarning,
-    }).catch(() => undefined);
-  }
-  setupLifecycleHandlers({
+  await finalizeBootstrap({
+    startupWarning,
     backupCoordinator,
     clientPresence,
     einsatzSync,

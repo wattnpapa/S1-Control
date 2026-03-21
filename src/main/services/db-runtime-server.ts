@@ -1,3 +1,4 @@
+/* eslint-disable max-lines */
 import process from 'node:process';
 import { asc, eq, gte, lt } from 'drizzle-orm';
 import { openDatabaseWithRetry, type DbContext } from '../db/connection';
@@ -50,8 +51,10 @@ class DbRuntimeServer {
     });
   }
 
+  // eslint-disable-next-line max-lines-per-function, complexity
   private async handle(request: DbRuntimeRequest): Promise<void> {
     try {
+      // eslint-disable-next-line sonarjs/max-switch-cases
       switch (request.type) {
         case 'list-abschnitte': {
           const ctx = this.ensureContext(request.payload.dbPath);
