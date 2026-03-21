@@ -1,24 +1,45 @@
 const fs = require('node:fs');
 const path = require('node:path');
+const esbuild = require('esbuild');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 const OUTPUT_HTML = path.join(__dirname, 'thw-einheiten.html');
 const DEFAULT_JSON_PATH = '../../src/main/services/stan/thw-stan-2025.generated.json';
-const libRoot = path.dirname(require.resolve('taktische-zeichen/package.json'));
-const handlebarsRuntime = fs.readFileSync(require.resolve('handlebars/dist/handlebars.min.js'), 'utf8');
-const einheitTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Einheit.svg'), 'utf8');
-const gebaeudeTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Gebäude.svg'), 'utf8');
-const fahrzeugTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Fahrzeug.svg'), 'utf8');
-const anhaengerTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Anhänger.svg'), 'utf8');
-const wasserfahrzeugTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Wasserfahrzeug.svg'), 'utf8');
-const luftfahrzeugTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Luftfahrzeug.svg'), 'utf8');
-const wechselladerfahrzeugTemplate = fs.readFileSync(
-  path.join(libRoot, 'templates', 'Wechselladerfahrzeug.svg'),
-  'utf8',
-);
-const zweiradTemplate = fs.readFileSync(path.join(libRoot, 'templates', 'Zweirad.svg'), 'utf8');
 
-function buildHtml() {
+function buildRendererBundle() {
+  const bundle = esbuild.buildSync({
+    stdin: {
+      contents: `
+        import { erzeugeTaktischesZeichen } from 'taktische-zeichen-core';
+
+        function normalizeSpec(input) {
+          if (!input || typeof input !== 'object' || Array.isArray(input)) {
+            return {};
+          }
+          return structuredClone(input);
+        }
+
+        window.__tzRender = function __tzRender(spec) {
+          const image = erzeugeTaktischesZeichen(normalizeSpec(spec));
+          return image.dataUrl;
+        };
+      `,
+      resolveDir: ROOT,
+      sourcefile: 'stan-preview-renderer-entry.ts',
+      loader: 'ts',
+    },
+    bundle: true,
+    minify: true,
+    write: false,
+    format: 'iife',
+    platform: 'browser',
+    target: ['es2022'],
+  });
+
+  return bundle.outputFiles[0].text;
+}
+
+function buildHtml(coreBundle) {
   return `<!doctype html>
 <html lang="de">
 <head>
@@ -31,7 +52,6 @@ function buildHtml() {
     body { margin:0; font-family:"Segoe UI","Helvetica Neue",Arial,sans-serif; background:var(--bg); color:var(--text); }
     main { max-width:1600px; margin:0 auto; padding:16px; }
     h1 { margin:0 0 8px; }
-    .meta { color:var(--muted); margin:0 0 14px; font-size:14px; }
     .toolbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-bottom:12px; background:var(--panel); border:1px solid var(--line); padding:10px; border-radius:8px; }
     button { border:1px solid #9ab0d9; background:#e8eefc; color:#1d2f63; border-radius:8px; padding:8px 12px; cursor:pointer; }
     input[type=file] { font-size:13px; }
@@ -42,19 +62,15 @@ function buildHtml() {
     th { background:#f7f9fd; font-size:14px; }
     .title { font-weight:600; }
     .source { color:var(--muted); font-size:12px; margin-top:4px; }
-    .sign-cell { min-width:240px; }
-    .sign-einheit { width:140px; height:auto; display:block; }
-    .sign-vehicle { width:110px; height:auto; display:block; }
+    .sign-einheit { width:220px; height:auto; display:block; }
+    .sign-vehicle { width:160px; height:auto; display:block; }
     .strength { font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-weight:700; white-space:nowrap; }
-    pre { margin:6px 0 10px; white-space:pre-wrap; word-break:break-word; font-size:12px; line-height:1.35; background:#f6f8fd; border:1px solid #e2e8f3; border-radius:6px; padding:6px; }
-    .hint-pre { margin-top:6px; margin-bottom:0; }
-    .vehicle-list { list-style:none; padding:0; margin:0; display:grid; gap:7px; }
-    .vehicle-item { display:flex; align-items:flex-start; gap:10px; }
-    .vehicle-sign-wrap { width:120px; flex:0 0 120px; }
+    .vehicle-list { list-style:none; padding:0; margin:0; display:grid; gap:8px; }
+    .vehicle-item { display:flex; gap:10px; align-items:flex-start; }
+    .vehicle-sign-wrap { width:170px; flex:0 0 170px; }
     .muted { color:var(--muted); }
-    .snippet-editor { width:100%; min-height:110px; resize:vertical; border:1px solid #d7deeb; border-radius:6px; padding:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:11px; line-height:1.35; background:#f6f8fd; }
-    .snippet-actions { margin-top:6px; display:flex; gap:6px; }
-    .snippet-actions button { font-size:12px; padding:5px 8px; }
+    .snippet-editor { width:100%; min-height:130px; resize:vertical; border:1px solid #d7deeb; border-radius:6px; padding:6px; font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace; font-size:11px; line-height:1.35; background:#f6f8fd; }
+    .snippet-actions { margin-top:6px; }
   </style>
 </head>
 <body>
@@ -67,7 +83,6 @@ function buildHtml() {
       <span id="status" class="status"></span>
     </div>
     <div id="error"></div>
-    <p id="meta" class="meta"></p>
     <table>
       <thead>
         <tr>
@@ -80,28 +95,9 @@ function buildHtml() {
       <tbody id="rows"></tbody>
     </table>
   </main>
-  <script>${handlebarsRuntime}</script>
+  <script>${coreBundle}</script>
   <script>
     const DEFAULT_JSON_PATH = ${JSON.stringify(DEFAULT_JSON_PATH)};
-    const EINHEIT_TEMPLATE = ${JSON.stringify(einheitTemplate)};
-    const UNIT_TEMPLATE_MAP = {
-      gebaeude: ${JSON.stringify(gebaeudeTemplate)},
-    };
-    const VEHICLE_TEMPLATE_MAP = {
-      fahrzeug: ${JSON.stringify(fahrzeugTemplate)},
-      'kraftfahrzeug-landgebunden': ${JSON.stringify(fahrzeugTemplate)},
-      anhaenger: ${JSON.stringify(anhaengerTemplate)},
-      'anhaenger-lkw': ${JSON.stringify(anhaengerTemplate)},
-      'anhaenger-pkw': ${JSON.stringify(anhaengerTemplate)},
-      wasserfahrzeug: ${JSON.stringify(wasserfahrzeugTemplate)},
-      flugzeug: ${JSON.stringify(luftfahrzeugTemplate)},
-      hubschrauber: ${JSON.stringify(luftfahrzeugTemplate)},
-      luftfahrzeug: ${JSON.stringify(luftfahrzeugTemplate)},
-      wechselladerfahrzeug: ${JSON.stringify(wechselladerfahrzeugTemplate)},
-      wechsellader: ${JSON.stringify(wechselladerfahrzeugTemplate)},
-      zweirad: ${JSON.stringify(zweiradTemplate)},
-    };
-    const templateCompilerCache = new Map();
     let currentPayload = null;
     let currentSourceLabel = DEFAULT_JSON_PATH;
 
@@ -114,10 +110,6 @@ function buildHtml() {
         .replaceAll("'", '&#039;');
     }
 
-    function toDataUrl(svg) {
-      return 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svg)));
-    }
-
     function cloneSign(sign) {
       if (!sign || typeof sign !== 'object' || Array.isArray(sign)) {
         return {};
@@ -125,124 +117,18 @@ function buildHtml() {
       return JSON.parse(JSON.stringify(sign));
     }
 
-    function signUnitLabel(sign) {
-      if (!sign || typeof sign !== 'object') {
-        return '';
+    function renderSign(sign) {
+      try {
+        return { src: window.__tzRender(cloneSign(sign)), error: '' };
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        return { src: '', error: message };
       }
-      return String(sign.einheit || '').trim();
-    }
-
-    function addVerbandMarker(svg, typ) {
-      let barCount = 0;
-      if (typ === 'bereitschaft') barCount = 1;
-      if (typ === 'abteilung') barCount = 2;
-      if (typ === 'grossverband') barCount = 3;
-      if (!barCount) {
-        return svg;
-      }
-      const markerBlocks = [];
-      const startX = 112 - ((barCount - 1) * 16) / 2;
-      for (let i = 0; i < barCount; i += 1) {
-        markerBlocks.push('<rect x="' + (startX + i * 16) + '" y="8" width="10" height="28" fill="#000000" />');
-      }
-      const markerSvg = markerBlocks.join('');
-      return svg.replace('</svg>', markerSvg + '</svg>');
-    }
-
-    function signColors(sign) {
-      const org = String(sign?.organisation || '').trim().toLowerCase();
-      if (org === 'feuerwehr') return { primary: '#d61a1f', text: '#FFFFFF' };
-      if (org === 'polizei') return { primary: '#13a538', text: '#FFFFFF' };
-      if (org === 'bundeswehr') return { primary: '#7a6230', text: '#FFFFFF' };
-      if (org === 'zivil') return { primary: '#f39200', text: '#000000' };
-      if (org === 'hilfsorganisation') return { primary: '#FFFFFF', text: '#000000' };
-      return { primary: '#003399', text: '#FFFFFF' };
-    }
-
-    function renderTemplate(template, data) {
-      let compiled = templateCompilerCache.get(template);
-      if (!compiled) {
-        compiled = window.Handlebars.compile(template);
-        templateCompilerCache.set(template, compiled);
-      }
-      return compiled(data);
-    }
-
-    function renderEinheitSign(sign) {
-      const unitLabel = signUnitLabel(sign);
-      if (!sign || !unitLabel) {
-        return '';
-      }
-      const colors = signColors(sign);
-      const signShape = String(sign.grundform || '').trim().toLowerCase();
-      if (signShape && signShape !== 'taktische-formation') {
-        const unitTemplate = UNIT_TEMPLATE_MAP[signShape];
-        if (!unitTemplate) {
-          return '';
-        }
-        const svg = renderTemplate(unitTemplate, {
-          ...sign,
-          color_primary: colors.primary,
-          color_secondary: '#FFFFFF',
-          stroke_color: '#000000',
-          color_text: colors.text,
-          organization: sign.nameDerOrganisation || '',
-          unit: unitLabel,
-          denominator: sign.verwaltungsstufe || '',
-        });
-        return toDataUrl(svg);
-      }
-      const typ = String(sign.typ || '').trim().toLowerCase();
-      const svg = renderTemplate(EINHEIT_TEMPLATE, {
-        ...sign,
-        color_primary: colors.primary,
-        color_secondary: '#FFFFFF',
-        stroke_color: '#000000',
-        color_text: colors.text,
-        organization: sign.nameDerOrganisation || '',
-        unit: unitLabel,
-        denominator: sign.verwaltungsstufe || '',
-        platoon: typ === 'zug',
-        group: typ === 'gruppe',
-        squad: typ === 'trupp',
-        zugtrupp: typ === 'zugtrupp',
-      });
-      return toDataUrl(addVerbandMarker(svg, typ));
-    }
-
-    function renderFahrzeugSign(sign) {
-      const unitLabel = signUnitLabel(sign);
-      if (!sign || !unitLabel) {
-        return '';
-      }
-      const colors = signColors(sign);
-      const templateKey = String(sign.grundform || '').trim().toLowerCase();
-      const template = VEHICLE_TEMPLATE_MAP[templateKey];
-      if (!template) {
-        return '';
-      }
-      const inferredTrailer = templateKey.includes('anhaenger');
-      const svg = renderTemplate(template, {
-        ...sign,
-        color_primary: colors.primary,
-        color_secondary: '#FFFFFF',
-        stroke_color: '#000000',
-        color_text: colors.text,
-        organization: sign.nameDerOrganisation || '',
-        unit: unitLabel,
-        two_wheels: true,
-        three_wheels: false,
-        trailer: inferredTrailer,
-        container: false,
-        tracks: false,
-        rail: false,
-      });
-      return toDataUrl(svg);
     }
 
     function formatStrength(strength) {
       if (!strength) return '-';
-      return \`\${strength.fuehrung ?? 0}/\${strength.unterfuehrung ?? 0}/\${strength.mannschaft ?? 0}/\${strength.gesamt ?? 0}\`;
+      return String(strength.fuehrung ?? 0) + '/' + String(strength.unterfuehrung ?? 0) + '/' + String(strength.mannschaft ?? 0) + '/' + String(strength.gesamt ?? 0);
     }
 
     function setStatus(message) {
@@ -251,198 +137,227 @@ function buildHtml() {
 
     function setError(message) {
       const el = document.getElementById('error');
-      el.innerHTML = message ? \`<div class="error">\${esc(message)}</div>\` : '';
+      el.innerHTML = message ? '<div class="error">' + esc(message) + '</div>' : '';
+    }
+
+    function updateEntrySnippet(entryIndex, signPath, editor, img, type) {
+      try {
+        const parsed = JSON.parse(editor.value);
+        if (signPath === 'tacticalSign') {
+          currentPayload.entries[entryIndex].tacticalSign = parsed;
+        } else {
+          currentPayload.entries[entryIndex].vehicleTacticalSigns[signPath] = parsed;
+        }
+        const rendered = renderSign(parsed);
+        if (!rendered.src) {
+          throw new Error(rendered.error || 'Ungültige Parameter für taktisches Zeichen');
+        }
+        img.src = rendered.src;
+        img.title = '';
+        const appliedValue = type === 'einheit'
+          ? currentPayload.entries[entryIndex].tacticalSign
+          : currentPayload.entries[entryIndex].vehicleTacticalSigns[signPath];
+        editor.value = JSON.stringify(appliedValue, null, 2);
+        setError('');
+        setStatus('Snippet übernommen');
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setError('Snippet konnte nicht angewendet werden: ' + message);
+      }
     }
 
     function renderRows(entries) {
       const tbody = document.getElementById('rows');
       tbody.innerHTML = '';
-      const sorted = [...entries].sort((a, b) => String(a.title || '').localeCompare(String(b.title || ''), 'de'));
-      for (const entry of sorted) {
-        const entryId = String(entry.id || '');
-        const einheitSrc = renderEinheitSign(entry.tacticalSign);
-        const vehicles = Array.isArray(entry.vehicles) ? entry.vehicles : [];
-        const vehicleSigns = Array.isArray(entry.vehicleTacticalSigns) ? entry.vehicleTacticalSigns : [];
-        const tacticalHint = entry.tacticalSign ? JSON.stringify(entry.tacticalSign, null, 2) : '{}';
-        const vehicleItems = vehicles.length
-          ? vehicles.map((name, i) => {
-              const sign = vehicleSigns[i];
-              const src = renderFahrzeugSign(sign);
-              const hint = sign ? JSON.stringify(cloneSign(sign), null, 2) : '{}';
-              return \`<li class="vehicle-item">
-  <span class="vehicle-sign-wrap">\${src ? \`<img class="sign-vehicle" src="\${src}" alt="Fahrzeugzeichen \${esc(signUnitLabel(sign) || name)}">\` : '-'}</span>
-  <span>
-    <div>\${esc(name)}</div>
-    <textarea class="snippet-editor" data-entry-id="\${esc(entryId)}" data-kind="vehicle" data-vehicle-index="\${i}" spellcheck="false">\${esc(hint)}</textarea>
-    <div class="snippet-actions"><button type="button" class="snippet-apply">Snippet anwenden</button></div>
-  </span>
-</li>\`;
-            }).join('')
-          : '<li class="vehicle-item muted">-</li>';
 
+      entries.forEach((entry, entryIndex) => {
         const tr = document.createElement('tr');
-        tr.innerHTML = \`<td>
-  <div class="title">\${esc(entry.title || '-')}</div>
-  <div class="source">\${esc(entry.sourceFile || '')}</div>
-</td>
-<td class="sign-cell">
-  \${einheitSrc ? \`<img class="sign-einheit" src="\${einheitSrc}" alt="Einheitszeichen \${esc(signUnitLabel(entry.tacticalSign))}">\` : '<span class="muted">-</span>'}
-  <div class="source">\${esc(signUnitLabel(entry.tacticalSign))}\${entry.tacticalSign?.verwaltungsstufe ? \` (\${esc(entry.tacticalSign.verwaltungsstufe)})\` : ''}</div>
-  <textarea class="snippet-editor" data-entry-id="\${esc(entryId)}" data-kind="unit" spellcheck="false">\${esc(tacticalHint)}</textarea>
-  <div class="snippet-actions"><button type="button" class="snippet-apply">Snippet anwenden</button></div>
-</td>
-<td class="strength">\${esc(formatStrength(entry.strength))}</td>
-<td><ul class="vehicle-list">\${vehicleItems}</ul></td>\`;
+
+        const tdTitle = document.createElement('td');
+        tdTitle.innerHTML = '<div class="title">' + esc(entry.title || '') + '</div><div class="source">' + esc(entry.sourceFile || '') + '</div>';
+
+        const tdSign = document.createElement('td');
+        const einheitSign = cloneSign(entry.tacticalSign);
+        const unitImg = document.createElement('img');
+        unitImg.className = 'sign-einheit';
+        const renderedUnit = renderSign(einheitSign);
+        unitImg.src = renderedUnit.src;
+        unitImg.title = renderedUnit.error || '';
+        tdSign.appendChild(unitImg);
+        if (renderedUnit.error) {
+          const unitError = document.createElement('div');
+          unitError.className = 'muted';
+          unitError.textContent = 'Render-Fehler: ' + renderedUnit.error;
+          tdSign.appendChild(unitError);
+        }
+
+        const unitEditor = document.createElement('textarea');
+        unitEditor.className = 'snippet-editor';
+        unitEditor.value = JSON.stringify(einheitSign, null, 2);
+        tdSign.appendChild(unitEditor);
+
+        const unitActions = document.createElement('div');
+        unitActions.className = 'snippet-actions';
+        const unitApply = document.createElement('button');
+        unitApply.textContent = 'Snippet anwenden';
+        unitApply.type = 'button';
+        unitApply.addEventListener('click', () => updateEntrySnippet(entryIndex, 'tacticalSign', unitEditor, unitImg, 'einheit'));
+        unitActions.appendChild(unitApply);
+        tdSign.appendChild(unitActions);
+
+        const tdStrength = document.createElement('td');
+        tdStrength.className = 'strength';
+        tdStrength.textContent = formatStrength(entry.strength);
+
+        const tdVehicles = document.createElement('td');
+        const list = document.createElement('ul');
+        list.className = 'vehicle-list';
+
+        const vehicleSigns = Array.isArray(entry.vehicleTacticalSigns) ? entry.vehicleTacticalSigns : [];
+        const vehicles = Array.isArray(entry.vehicles) ? entry.vehicles : [];
+        const maxLength = Math.max(vehicleSigns.length, vehicles.length);
+
+        for (let i = 0; i < maxLength; i += 1) {
+          const vehicleName = vehicles[i] || '(ohne Fahrzeugname)';
+          const sign = cloneSign(vehicleSigns[i]);
+          const li = document.createElement('li');
+          li.className = 'vehicle-item';
+
+          const signWrap = document.createElement('div');
+          signWrap.className = 'vehicle-sign-wrap';
+          const img = document.createElement('img');
+          img.className = 'sign-vehicle';
+          const renderedVehicle = renderSign(sign);
+          img.src = renderedVehicle.src;
+          img.title = renderedVehicle.error || '';
+          signWrap.appendChild(img);
+          if (renderedVehicle.error) {
+            const vehicleError = document.createElement('div');
+            vehicleError.className = 'muted';
+            vehicleError.textContent = 'Render-Fehler: ' + renderedVehicle.error;
+            signWrap.appendChild(vehicleError);
+          }
+          li.appendChild(signWrap);
+
+          const textWrap = document.createElement('div');
+          textWrap.innerHTML = '<div><strong>' + esc(vehicleName) + '</strong></div>';
+          const editor = document.createElement('textarea');
+          editor.className = 'snippet-editor';
+          editor.value = JSON.stringify(sign, null, 2);
+          textWrap.appendChild(editor);
+
+          const actions = document.createElement('div');
+          actions.className = 'snippet-actions';
+          const applyBtn = document.createElement('button');
+          applyBtn.textContent = 'Snippet anwenden';
+          applyBtn.type = 'button';
+          applyBtn.addEventListener('click', () => updateEntrySnippet(entryIndex, i, editor, img, 'fahrzeug'));
+          actions.appendChild(applyBtn);
+          textWrap.appendChild(actions);
+
+          li.appendChild(textWrap);
+          list.appendChild(li);
+        }
+
+        if (maxLength === 0) {
+          tdVehicles.innerHTML = '<span class="muted">-</span>';
+        } else {
+          tdVehicles.appendChild(list);
+        }
+
+        tr.appendChild(tdTitle);
+        tr.appendChild(tdSign);
+        tr.appendChild(tdStrength);
+        tr.appendChild(tdVehicles);
         tbody.appendChild(tr);
-      }
+      });
     }
 
     function renderPayload(payload, label) {
-      const entries = Array.isArray(payload?.entries) ? payload.entries : [];
-      for (const entry of entries) {
-        entry.tacticalSign = cloneSign(entry.tacticalSign);
-        if (Array.isArray(entry.vehicleTacticalSigns)) {
-          entry.vehicleTacticalSigns = entry.vehicleTacticalSigns.map((sign) => cloneSign(sign));
-        } else {
-          entry.vehicleTacticalSigns = [];
-        }
+      if (!payload || !Array.isArray(payload.entries)) {
+        throw new Error('JSON enthält kein Feld "entries" als Array.');
       }
-      renderRows(entries);
       currentPayload = payload;
       currentSourceLabel = label;
-      document.getElementById('meta').textContent =
-        \`Quelle: \${label} | Einträge: \${entries.length} | Generiert: \${payload?.generatedAt || '-'}\`;
+      renderRows(payload.entries);
+      setStatus('Quelle: ' + label + ' | Einträge: ' + payload.entries.length);
     }
 
-    function findEntryById(entryId) {
-      if (!currentPayload || !Array.isArray(currentPayload.entries)) {
-        return null;
-      }
-      return currentPayload.entries.find((entry) => String(entry.id || '') === entryId) || null;
-    }
-
-    function applySnippet(textarea) {
-      const entryId = textarea.dataset.entryId || '';
-      const kind = textarea.dataset.kind || '';
-      const vehicleIndex = Number(textarea.dataset.vehicleIndex || '-1');
-      const entry = findEntryById(entryId);
-      if (!entry) {
-        setError(\`Eintrag nicht gefunden: \${entryId}\`);
-        return;
-      }
-      const raw = textarea.value;
-      try {
-        const parsed = JSON.parse(raw);
-        if (!parsed || typeof parsed !== 'object') {
-          throw new Error('Snippet muss ein JSON-Objekt sein');
-        }
-        if (kind === 'unit') {
-          entry.tacticalSign = cloneSign(parsed);
-        } else if (kind === 'vehicle') {
-          if (!Array.isArray(entry.vehicleTacticalSigns)) {
-            entry.vehicleTacticalSigns = [];
-          }
-          if (!Number.isInteger(vehicleIndex) || vehicleIndex < 0) {
-            throw new Error('Ungültiger Fahrzeug-Index');
-          }
-          entry.vehicleTacticalSigns[vehicleIndex] = cloneSign(parsed);
-        } else {
-          throw new Error('Unbekannter Snippet-Typ');
-        }
-        renderPayload(currentPayload, currentSourceLabel);
-        setError('');
-        setStatus('Snippet übernommen.');
-      } catch (error) {
-        setError(\`Snippet-Fehler: \${error instanceof Error ? error.message : String(error)}\`);
-        setStatus('Snippet ungültig.');
-      }
-    }
-
-    function saveJsonToFile() {
+    function saveCurrentPayload() {
       if (!currentPayload) {
-        setStatus('Keine JSON geladen.');
+        setError('Kein JSON geladen.');
         return;
       }
-      const text = JSON.stringify(currentPayload, null, 2) + '\\n';
-      const blob = new Blob([text], { type: 'application/json;charset=utf-8' });
+      const blob = new Blob([JSON.stringify(currentPayload, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
-      const anchor = document.createElement('a');
-      const safeSource = String(currentSourceLabel || 'thw-stan')
-        .replace(/^.*[\\\\/]/, '')
-        .replace(/[^a-zA-Z0-9._-]+/g, '_')
-        .replace(/_+/g, '_');
-      anchor.href = url;
-      anchor.download = safeSource.endsWith('.json') ? safeSource : 'thw-stan-korrigiert.json';
-      document.body.appendChild(anchor);
-      anchor.click();
-      anchor.remove();
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'thw-stan-2025.generated.json';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       URL.revokeObjectURL(url);
-      setStatus('JSON gespeichert.');
+      setStatus('JSON gespeichert');
     }
 
     async function loadDefaultJson() {
-      setStatus('Lade Standard-JSON...');
       setError('');
+      setStatus('Lade Standard-JSON...');
+      const response = await fetch(DEFAULT_JSON_PATH);
+      if (!response.ok) {
+        throw new Error('Standard-JSON konnte nicht geladen werden: ' + response.status + ' ' + response.statusText);
+      }
+      const payload = await response.json();
+      renderPayload(payload, DEFAULT_JSON_PATH);
+    }
+
+    async function handleFileInput(file) {
+      if (!file) return;
+      setError('');
+      setStatus('Lade Datei...');
+      const text = await file.text();
+      const payload = JSON.parse(text);
+      renderPayload(payload, file.name);
+    }
+
+    document.getElementById('loadDefaultBtn').addEventListener('click', async () => {
       try {
-        const res = await fetch(DEFAULT_JSON_PATH, { cache: 'no-store' });
-        if (!res.ok) {
-          throw new Error(\`HTTP \${res.status}\`);
-        }
-        const payload = await res.json();
-        renderPayload(payload, DEFAULT_JSON_PATH);
-        setStatus('Standard-JSON geladen.');
+        await loadDefaultJson();
       } catch (error) {
-        setError(
-          \`Standard-JSON konnte nicht geladen werden (\${error instanceof Error ? error.message : String(error)}). \` +
-          'Bitte JSON-Datei manuell wählen.'
-        );
-        setStatus('Bitte JSON-Datei wählen.');
-      }
-    }
-
-    function loadFromFile(file) {
-      const reader = new FileReader();
-      reader.onload = () => {
-        try {
-          const payload = JSON.parse(String(reader.result || '{}'));
-          renderPayload(payload, file.name);
-          setStatus('Datei geladen.');
-          setError('');
-        } catch (error) {
-          setError(\`Ungültige JSON-Datei: \${error instanceof Error ? error.message : String(error)}\`);
-          setStatus('Fehler.');
-        }
-      };
-      reader.readAsText(file, 'utf8');
-    }
-
-    document.getElementById('loadDefaultBtn').addEventListener('click', () => {
-      void loadDefaultJson();
-    });
-    document.getElementById('fileInput').addEventListener('change', (event) => {
-      const file = event.target.files && event.target.files[0];
-      if (file) {
-        loadFromFile(file);
-      }
-    });
-    document.getElementById('saveJsonBtn').addEventListener('click', saveJsonToFile);
-    document.getElementById('rows').addEventListener('click', (event) => {
-      const target = event.target;
-      if (!(target instanceof HTMLElement) || !target.classList.contains('snippet-apply')) {
-        return;
-      }
-      const container = target.closest('li, td');
-      const textarea = container ? container.querySelector('.snippet-editor') : null;
-      if (textarea instanceof HTMLTextAreaElement) {
-        applySnippet(textarea);
+        const message = error instanceof Error ? error.message : String(error);
+        setError(message);
+        setStatus('Fehler');
       }
     });
 
-    void loadDefaultJson();
+    document.getElementById('saveJsonBtn').addEventListener('click', () => saveCurrentPayload());
+
+    document.getElementById('fileInput').addEventListener('change', async (event) => {
+      try {
+        const file = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+        await handleFileInput(file);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        setError('Datei konnte nicht geladen werden: ' + message);
+        setStatus('Fehler');
+      }
+    });
+
+    loadDefaultJson().catch((error) => {
+      const message = error instanceof Error ? error.message : String(error);
+      setError(message + ' (Hinweis: Bei file:// kann der Browser fetch blockieren; nutze dann "JSON wählen".)');
+      setStatus('Bereit');
+    });
   </script>
 </body>
 </html>`;
 }
 
-fs.writeFileSync(OUTPUT_HTML, buildHtml(), 'utf8');
-console.log(`Wrote ${OUTPUT_HTML}`);
+function run() {
+  const rendererBundle = buildRendererBundle();
+  const html = buildHtml(rendererBundle);
+  fs.writeFileSync(OUTPUT_HTML, html, 'utf8');
+  console.log('Wrote', path.relative(process.cwd(), OUTPUT_HTML));
+}
+
+run();

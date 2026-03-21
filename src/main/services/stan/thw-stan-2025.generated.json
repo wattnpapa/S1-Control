@@ -4,58 +4,6 @@
   "note": "Automatisch aus PDF-Text extrahiert. Bitte fachlich prüfen.",
   "entries": [
     {
-      "id": "lastkraftwagen-1-5-t-nutzlast-mit-ladekran-780-knm",
-      "title": "Lastkraftwagen (1,5 t Nutzlast) mit Ladekran (780 kNm)",
-      "sourceFile": "00-00 StAN-Vorbemerkung-bf.pdf",
-      "strength": null,
-      "vehicles": [
-        "Lastkraftwagen (1,5 t Nutzlast) mit Ladekran (780 kNm)",
-        "LKW Ladekran) ist die Zusatz-funktion Bediener/in Mobilkran o-"
-      ],
-      "tacticalSign": {
-        "grundform": "taktische-formation",
-        "fachaufgabe": "",
-        "organisation": "thw",
-        "einheit": "Lastkraftwagen 1,5 t Nutzlast mit Ladekran 780 kNm",
-        "verwaltungsstufe": "",
-        "symbol": "",
-        "text": "",
-        "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
-      },
-      "vehicleTacticalSigns": [
-        {
-          "grundform": "fahrzeug",
-          "fachaufgabe": "",
-          "organisation": "thw",
-          "einheit": "LKW",
-          "verwaltungsstufe": "",
-          "symbol": "",
-          "text": "",
-          "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
-        },
-        {
-          "grundform": "fahrzeug",
-          "fachaufgabe": "",
-          "organisation": "thw",
-          "einheit": "LKW Ladekran) ist die Zusatz-funktion Bediener/in Mobilkran o-",
-          "verwaltungsstufe": "",
-          "symbol": "",
-          "text": "",
-          "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
-        }
-      ],
-      "confidence": {
-        "strength": 0,
-        "vehicles": 0.9
-      }
-    },
-    {
       "id": "erganzungsausstattung",
       "title": "(Ergänzungsausstattung)",
       "sourceFile": "00-01 STAN OV.pdf",
@@ -72,65 +20,65 @@
         "Anhänger 0,5 t Nutzlast"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "Ergänzungsausstattung",
+        "einheit": "",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "OV",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "gebaeude",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "PKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "PKW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Stapler",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Stapler",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Anh 0,5t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -154,53 +102,41 @@
         "Fahrzeug (PKW, MTW) für die Fahrt zur Einsatzstelle, während des Einsatzes, sowie für die Rückfahrt"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "MT",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "MT",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW TZ",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MT 2t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
-        },
-        {
-          "grundform": "fahrzeug",
-          "fachaufgabe": "",
-          "organisation": "thw",
-          "einheit": "Fahrzeug (PKW, MTW) für die Fahrt zur Einsatzstelle, während des Einsatzes, sowie für die Rückfahrt",
-          "verwaltungsstufe": "",
-          "symbol": "",
-          "text": "",
-          "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -220,16 +156,16 @@
       },
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "VOST",
+        "einheit": "zug",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "VOST",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
@@ -251,29 +187,29 @@
         "Mannschaftstransportwagen"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "TZ",
+        "einheit": "zug",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "TZ",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -295,29 +231,29 @@
         "Führungskraftwagen"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "TZ",
+        "einheit": "zugtrupp",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "Ztr TZ",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "zugtrupp"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "FüKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "FüKW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -341,53 +277,53 @@
         "Anhänger Plattform Runge (12 t Zuladung)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "B",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "B",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "GKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "GKW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "7t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Ru 12t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -407,57 +343,70 @@
       },
       "vehicles": [
         "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Bagger",
         "Anhänger Tieflader mit Aufnahmen für Container",
         "Anhänger Drucklufterzeuger"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "R",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "R",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "A",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "LKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "LKW-K 9t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Bagger",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kettenfahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Tiefl 18t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "DLE",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -477,57 +426,70 @@
       },
       "vehicles": [
         "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Radlader",
         "Anhänger Tieflader mit Aufnahmen für Container",
         "Anhänger Drucklufterzeuger"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "R",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "R",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "B",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "LKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "LKW-K 9t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Radlader",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Tiefl 18t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "DLE",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -547,57 +509,70 @@
       },
       "vehicles": [
         "Lastkraftwagen Kipper (ca. 9 t Zuladung)",
+        "Telekoplader",
         "Anhänger Tieflader mit Aufnahmen für Container",
         "Anhänger Drucklufterzeuger"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "R",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "R",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "C",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "LKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "LKW-K 9t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Telelader",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Tiefl 18t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "DLE",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -617,57 +592,96 @@
       },
       "vehicles": [
         "Lastkraftwagen (gf, 7 t Nutzlast) mit Ladekran",
-        "Anhänger Mehrzweckarbeits-",
-        "Mehrzweckarbeitsboot"
+        "Anhänger Mehrzweckarbeitsboot",
+        "Mehrzweckarbeitsboot",
+        "Anhänger Mehrzweckarbeitsboot",
+        "Mehrzweckarbeitsboot",
+        "Material-Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "W",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "W",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "A",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "LKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "LKW-Lkr 7t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MzAB",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Mehrzweckarbeitsboot",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "abrollbehaelter",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -687,44 +701,109 @@
       },
       "vehicles": [
         "Lastkraftwagen (gf, 7 t Nutzlast) mit Ladekran",
-        "Anhänger Plattform mit Aufnahmen für Container"
+        "Anhänger Plattform mit Aufnahmen für Container",
+        "Halbponton",
+        "Halbponton",
+        "Halbponton",
+        "Halbponton",
+        "Material-Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "W",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "W",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "B",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "LKW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "LKW-Lkr 7t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "Pf 12t",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "MzAB",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "abrollbehaelter",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -744,44 +823,57 @@
       },
       "vehicles": [
         "Mehrzweckgerätewagen mit Ladebordwand",
+        "Mobilkran",
         "Anhänger Plattform mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "BrB",
+        "einheit": "",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "BrB",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Mehrzweckgerätewagen mit Ladebordwand",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MzGW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Mobilkran",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "Pf 12t",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -804,41 +896,41 @@
         "Anhänger mit Spezialaufbau FGr O (2 t Zuladung)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "O",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "O",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "A",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW TZ",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "O(A) 2t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -861,41 +953,41 @@
         "Anhänger mit Spezialaufbau FGr O (2 t Zuladung)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "O",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "O",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "B",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW TZ",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "O(B) 2t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -917,29 +1009,29 @@
         "Mannschaftstransportwagen TZ"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "O",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "O",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "C",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW TZ",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -962,41 +1054,41 @@
         "Anhänger mit Spezialaufbau FGr Sp (2 t Zuladung)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "Sp",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "Sp",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "MTW",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MTW FGr",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Sp 2t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1023,89 +1115,89 @@
         "Anhänger Netzersatzanlage mit Lichtmastanlage"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "N",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "N",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MzGW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Stapler",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Stapler 3t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Kleines Boot",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "wasserfahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "kl Boot",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Pf 12t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "NEA 50kVA LIMA",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1127,20 +1219,19 @@
         "3/9/0/12 Personenkraftwagen,"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "SEEBA",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "SEEBA",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "PKW",
@@ -1148,8 +1239,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1171,29 +1263,29 @@
         "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "SB",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "SB",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MzGW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1213,44 +1305,57 @@
       },
       "vehicles": [
         "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+        "Schreitbagger",
         "Anhänger Plattform mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
-        "einheit": "SB",
+        "einheit": "gruppe",
         "verwaltungsstufe": "",
         "symbol": "",
-        "text": "",
+        "text": "SB",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "B",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Mehrzweckgerätewagen Plane/Spriegel mit Ladebordwand",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "MzGW",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "kraftfahrzeug-landgebunden",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
-          "einheit": "Anh",
+          "einheit": "",
           "verwaltungsstufe": "",
           "symbol": "",
-          "text": "",
+          "text": "Pf 12t",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
+        },
+        {
+          "fachaufgabe": "",
+          "organisation": "thw",
+          "einheit": "",
+          "verwaltungsstufe": "",
+          "symbol": "",
+          "text": "Pf 12t",
+          "name": "",
+          "typ": "",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1272,7 +1377,6 @@
         "Mannschaftstransportwagen TZ"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "ESS",
@@ -1280,12 +1384,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "trupp"
+        "typ": "trupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -1293,8 +1397,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1316,7 +1421,6 @@
         "Mannschaftstransportwagen (geländegängig)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "MHP",
@@ -1324,12 +1428,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "trupp"
+        "typ": "trupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -1337,8 +1441,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1360,7 +1465,6 @@
         "Mannschaftstransportwagen TZ"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "UL",
@@ -1368,12 +1472,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "trupp"
+        "typ": "trupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -1381,8 +1485,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1405,7 +1510,6 @@
         "Anhänger"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "BT",
@@ -1413,12 +1517,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MLW",
@@ -1426,11 +1530,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1438,8 +1542,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1463,7 +1568,6 @@
         "Anhänger mit Spezialaufbau für FGr I (2 t Nutzlast)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "I",
@@ -1471,12 +1575,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MLW",
@@ -1484,11 +1588,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -1496,11 +1600,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1508,8 +1612,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1533,7 +1638,6 @@
         "Anhänger Netzersatzanlage (ca. 650 kVA)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "E",
@@ -1541,12 +1645,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1554,11 +1658,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1566,11 +1670,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1578,8 +1682,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1604,7 +1709,6 @@
         "Anhänger BDF Lafette"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "TW",
@@ -1612,12 +1716,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1625,11 +1729,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1637,11 +1741,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Stapler",
@@ -1649,11 +1753,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1661,8 +1765,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1687,7 +1792,6 @@
         "Anhänger Plane/Spriegel mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "WP",
@@ -1695,12 +1799,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1708,11 +1812,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MLW",
@@ -1720,11 +1824,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1732,11 +1836,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1744,8 +1848,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1770,7 +1875,6 @@
         "Anhänger Plane/Spriegel mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "WP",
@@ -1778,12 +1882,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1791,11 +1895,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MLW",
@@ -1803,11 +1907,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1815,11 +1919,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1827,8 +1931,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1853,7 +1958,6 @@
         "Anhänger Plane/Spriegel mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "WP",
@@ -1861,12 +1965,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1874,11 +1978,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MLW",
@@ -1886,11 +1990,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1898,11 +2002,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1910,8 +2014,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -1935,7 +2040,6 @@
         "Anhänger Plattform mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Öl",
@@ -1943,12 +2047,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1956,11 +2060,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -1968,11 +2072,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -1980,8 +2084,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2005,7 +2110,6 @@
         "Anhänger Plattform mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Öl",
@@ -2013,12 +2117,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -2026,11 +2130,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -2038,11 +2142,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2050,8 +2154,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2075,7 +2180,6 @@
         "Anhänger Plattform mit Aufnahmen für Container"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Öl",
@@ -2083,12 +2187,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -2096,11 +2200,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Stapler",
@@ -2108,11 +2212,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2120,8 +2224,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2144,7 +2249,6 @@
         "Anhänger 1,6 t, Kofferaufbau"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "SEEWA",
@@ -2152,12 +2256,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2165,11 +2269,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2177,8 +2281,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2198,7 +2303,6 @@
       },
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "ENT",
@@ -2206,8 +2310,9 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "none",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
@@ -2231,7 +2336,6 @@
         "Anhänger 0,6 t"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "SEElift",
@@ -2239,12 +2343,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "none",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "PKW",
@@ -2252,11 +2356,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -2264,11 +2368,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2276,8 +2380,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2299,7 +2404,6 @@
         "Führungskraftwagen"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "FZ Log",
@@ -2307,12 +2411,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "zugtrupp"
+        "typ": "zugtrupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "FüKW",
@@ -2320,8 +2424,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2346,7 +2451,6 @@
         "Anhänger mit Spezialaufbau für FGr Log-MW"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Log-MW",
@@ -2354,12 +2458,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW (gf), Ladekran",
@@ -2367,11 +2471,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2379,11 +2483,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "PKW (gl)",
@@ -2391,11 +2495,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2403,8 +2507,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2430,7 +2535,6 @@
         "Bei dieser Alternative werden die Module des FKH, wo dies möglich ist, auf den Anhänger 12to verla-"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Log-V",
@@ -2438,12 +2542,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "LKW",
@@ -2451,11 +2555,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -2463,11 +2567,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2475,11 +2579,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2487,11 +2591,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2499,8 +2603,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2520,7 +2625,6 @@
       },
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "TS",
@@ -2528,8 +2632,9 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "trupp"
+        "typ": "trupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
@@ -2544,7 +2649,6 @@
       "strength": null,
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "BR500",
@@ -2552,8 +2656,9 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "none",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
@@ -2575,7 +2680,6 @@
         "Führungskraftwagen"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "FZ FK",
@@ -2583,12 +2687,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "zugtrupp"
+        "typ": "zugtrupp",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "FüKW",
@@ -2596,8 +2700,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2620,7 +2725,6 @@
         "Anhänger Führung und Lage"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "F",
@@ -2628,12 +2732,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "FüKomKW",
@@ -2641,11 +2745,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2653,8 +2757,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2679,7 +2784,6 @@
         "Anhänger (2 t Nutzlast)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "K",
@@ -2687,12 +2791,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "FmKW",
@@ -2700,11 +2804,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -2712,11 +2816,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2724,11 +2828,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2736,8 +2840,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2764,7 +2869,6 @@
         "Anhänger Richtfunktechnik (2 t Nutzlast)"
       ],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "K",
@@ -2772,12 +2876,12 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "gruppe"
+        "typ": "gruppe",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "FmKW",
@@ -2785,11 +2889,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MTW",
@@ -2797,11 +2901,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2809,11 +2913,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2821,11 +2925,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         },
         {
-          "grundform": "fahrzeug",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "MastKW",
@@ -2833,11 +2937,11 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "fahrzeug",
+          "organisationName": "THW"
         },
         {
-          "grundform": "anhaenger",
           "fachaufgabe": "",
           "organisation": "thw",
           "einheit": "Anh",
@@ -2845,8 +2949,9 @@
           "symbol": "",
           "text": "",
           "name": "",
-          "nameDerOrganisation": "THW",
-          "typ": "none"
+          "typ": "none",
+          "grundzeichen": "anhaenger",
+          "organisationName": "THW"
         }
       ],
       "confidence": {
@@ -2861,7 +2966,6 @@
       "strength": null,
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Stab",
@@ -2869,8 +2973,9 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "zug"
+        "typ": "zug",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
@@ -2885,7 +2990,6 @@
       "strength": null,
       "vehicles": [],
       "tacticalSign": {
-        "grundform": "taktische-formation",
         "fachaufgabe": "",
         "organisation": "thw",
         "einheit": "Anschreiben StAN",
@@ -2893,8 +2997,9 @@
         "symbol": "",
         "text": "",
         "name": "",
-        "nameDerOrganisation": "THW",
-        "typ": "none"
+        "typ": "none",
+        "grundzeichen": "taktische-formation",
+        "organisationName": "THW"
       },
       "vehicleTacticalSigns": [],
       "confidence": {
