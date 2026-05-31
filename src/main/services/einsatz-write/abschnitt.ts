@@ -17,7 +17,14 @@ export function createAbschnitt(
     parentId: input.parentId ?? null,
     systemTyp: input.systemTyp,
   };
-  ctx.einsatz.abschnitte.push({ ...item, version: 0 });
+  ctx.einsatz.abschnitte.push({
+    id: item.id,
+    einsatzId: item.einsatzId,
+    name: item.name,
+    parentId: item.parentId,
+    systemTyp: item.systemTyp,
+    version: 0,
+  });
   return item;
 }
 
@@ -44,7 +51,7 @@ export function updateAbschnitt(
     abschnittId: input.abschnittId,
     parentId: nextParentId,
   });
-  const prev = ctx.einsatz.abschnitte[idx];
+  const prev = ctx.einsatz.abschnitte[idx]!;
   ctx.einsatz.abschnitte[idx] = {
     ...prev,
     name: input.name,

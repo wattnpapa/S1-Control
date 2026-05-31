@@ -1,19 +1,18 @@
 import crypto from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
-import type { DbContext } from '../../db/connection';
-import { einsatzEinheit } from '../../db/schema';
+import type { EinsatzWriteCtx, JsonEinheit } from '../../json-store/types';
 import type { EinheitListItem } from '../../../shared/types';
 import { AppError } from '../errors';
 import { ensureNotArchived, normalizeOptionalText, nowIso } from '../einsatz-transaction-guards';
-import { defaultTacticalSignConfigJson, resolveManualTacticalSignConfigJson, resolveUpdatedTacticalSignConfigJson } from './tactical-sign-config';
+import {
+  defaultTacticalSignConfigJson,
+  resolveManualTacticalSignConfigJson,
+  resolveUpdatedTacticalSignConfigJson,
+} from './tactical-sign-config';
 import { formatTaktisch, parseTaktisch, validateTacticalStrength } from './tactical-strength';
 import { validateOrganisation, validateSplitName, validateSplitStrength } from './validations';
 
-/**
- * Creates one Einheit in one Abschnitt.
- */
 export function createEinheit(
-  ctx: DbContext,
+  ctx: EinsatzWriteCtx,
   input: {
     einsatzId: string;
     nameImEinsatz: string;
@@ -43,47 +42,47 @@ export function createEinheit(
   validateOrganisation(input.organisation);
   validateTacticalStrength(input.aktuelleStaerke, input.aktuelleStaerkeTaktisch);
 
-  ctx.db
-    .insert(einsatzEinheit)
-    .values({
-      id: crypto.randomUUID(),
-      einsatzId: input.einsatzId,
-      stammdatenEinheitId: input.stammdatenEinheitId,
-      parentEinsatzEinheitId: null,
-      nameImEinsatz: input.nameImEinsatz,
-      organisation: input.organisation,
-      aktuelleStaerke: input.aktuelleStaerke,
-      aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
-      tacticalSignConfigJson:
-        input.tacticalSignConfigJson === undefined
-          ? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz)
-          : resolveManualTacticalSignConfigJson(input.tacticalSignConfigJson, input.nameImEinsatz, input.organisation),
-      grFuehrerName: normalizeOptionalText(input.grFuehrerName),
-      ovName: normalizeOptionalText(input.ovName),
-      ovTelefon: normalizeOptionalText(input.ovTelefon),
-      ovFax: normalizeOptionalText(input.ovFax),
-      rbName: normalizeOptionalText(input.rbName),
-      rbTelefon: normalizeOptionalText(input.rbTelefon),
-      rbFax: normalizeOptionalText(input.rbFax),
-      lvName: normalizeOptionalText(input.lvName),
-      lvTelefon: normalizeOptionalText(input.lvTelefon),
-      lvFax: normalizeOptionalText(input.lvFax),
-      bemerkung: normalizeOptionalText(input.bemerkung),
-      vegetarierVorhanden: input.vegetarierVorhanden ?? null,
-      erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
-      aktuellerAbschnittId: input.aktuellerAbschnittId,
-      status: input.status ?? 'AKTIV',
-      erstellt: nowIso(),
-      aufgeloest: null,
-    })
-    .run();
+  const entry: JsonEinheit = {
+    id: crypto.randomUUID(),
+    einsatzId: input.einsatzId,
+    stammdatenEinheitId: input.stammdatenEinheitId ?? null,
+    parentEinsatzEinheitId: null,
+    nameImEinsatz: input.nameImEinsatz,
+    organisation: input.organisation,
+    aktuelleStaerke: input.aktuelleStaerke,
+    aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
+    tacticalSignConfigJson:
+      input.tacticalSignConfigJson === undefined
+        ? defaultTacticalSignConfigJson(input.organisation, input.nameImEinsatz)
+        : resolveManualTacticalSignConfigJson(
+            input.tacticalSignConfigJson,
+            input.nameImEinsatz,
+            input.organisation,
+          ),
+    grFuehrerName: normalizeOptionalText(input.grFuehrerName),
+    ovName: normalizeOptionalText(input.ovName),
+    ovTelefon: normalizeOptionalText(input.ovTelefon),
+    ovFax: normalizeOptionalText(input.ovFax),
+    rbName: normalizeOptionalText(input.rbName),
+    rbTelefon: normalizeOptionalText(input.rbTelefon),
+    rbFax: normalizeOptionalText(input.rbFax),
+    lvName: normalizeOptionalText(input.lvName),
+    lvTelefon: normalizeOptionalText(input.lvTelefon),
+    lvFax: normalizeOptionalText(input.lvFax),
+    bemerkung: normalizeOptionalText(input.bemerkung),
+    vegetarierVorhanden: input.vegetarierVorhanden ?? null,
+    erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
+    aktuellerAbschnittId: input.aktuellerAbschnittId,
+    status: input.status ?? 'AKTIV',
+    erstellt: nowIso(),
+    aufgeloest: null,
+    version: 0,
+  };
+  ctx.einsatz.einheiten.push(entry);
 }
 
-/**
- * Updates one Einheit.
- */
 export function updateEinheit(
-  ctx: DbContext,
+  ctx: EinsatzWriteCtx,
   input: {
     einsatzId: string;
     einheitId: string;
@@ -112,56 +111,45 @@ export function updateEinheit(
   validateOrganisation(input.organisation);
   validateTacticalStrength(input.aktuelleStaerke, input.aktuelleStaerkeTaktisch);
 
-  const row = ctx.db
-    .select({
-      id: einsatzEinheit.id,
-      tacticalSignConfigJson: einsatzEinheit.tacticalSignConfigJson,
-    })
-    .from(einsatzEinheit)
-    .where(and(eq(einsatzEinheit.id, input.einheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
-    .get();
-  if (!row) {
+  const idx = ctx.einsatz.einheiten.findIndex(
+    (e) => e.id === input.einheitId && e.einsatzId === input.einsatzId,
+  );
+  if (idx === -1) {
     throw new AppError('Einheit nicht gefunden', 'NOT_FOUND');
   }
-
-  const nextTacticalSignConfigJson = resolveUpdatedTacticalSignConfigJson(row.tacticalSignConfigJson, {
+  const prev = ctx.einsatz.einheiten[idx]!;
+  const nextTacticalSignConfigJson = resolveUpdatedTacticalSignConfigJson(prev.tacticalSignConfigJson, {
     tacticalSignConfigJson: input.tacticalSignConfigJson,
     nameImEinsatz: input.nameImEinsatz,
     organisation: input.organisation,
   });
-
-  ctx.db
-    .update(einsatzEinheit)
-    .set({
-      nameImEinsatz: input.nameImEinsatz,
-      organisation: input.organisation,
-      aktuelleStaerke: input.aktuelleStaerke,
-      aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
-      status: input.status ?? 'AKTIV',
-      tacticalSignConfigJson: nextTacticalSignConfigJson,
-      grFuehrerName: normalizeOptionalText(input.grFuehrerName),
-      ovName: normalizeOptionalText(input.ovName),
-      ovTelefon: normalizeOptionalText(input.ovTelefon),
-      ovFax: normalizeOptionalText(input.ovFax),
-      rbName: normalizeOptionalText(input.rbName),
-      rbTelefon: normalizeOptionalText(input.rbTelefon),
-      rbFax: normalizeOptionalText(input.rbFax),
-      lvName: normalizeOptionalText(input.lvName),
-      lvTelefon: normalizeOptionalText(input.lvTelefon),
-      lvFax: normalizeOptionalText(input.lvFax),
-      bemerkung: normalizeOptionalText(input.bemerkung),
-      vegetarierVorhanden: input.vegetarierVorhanden ?? null,
-      erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
-    })
-    .where(eq(einsatzEinheit.id, input.einheitId))
-    .run();
+  ctx.einsatz.einheiten[idx] = {
+    ...prev,
+    nameImEinsatz: input.nameImEinsatz,
+    organisation: input.organisation,
+    aktuelleStaerke: input.aktuelleStaerke,
+    aktuelleStaerkeTaktisch: input.aktuelleStaerkeTaktisch ?? null,
+    status: input.status ?? 'AKTIV',
+    tacticalSignConfigJson: nextTacticalSignConfigJson,
+    grFuehrerName: normalizeOptionalText(input.grFuehrerName),
+    ovName: normalizeOptionalText(input.ovName),
+    ovTelefon: normalizeOptionalText(input.ovTelefon),
+    ovFax: normalizeOptionalText(input.ovFax),
+    rbName: normalizeOptionalText(input.rbName),
+    rbTelefon: normalizeOptionalText(input.rbTelefon),
+    rbFax: normalizeOptionalText(input.rbFax),
+    lvName: normalizeOptionalText(input.lvName),
+    lvTelefon: normalizeOptionalText(input.lvTelefon),
+    lvFax: normalizeOptionalText(input.lvFax),
+    bemerkung: normalizeOptionalText(input.bemerkung),
+    vegetarierVorhanden: input.vegetarierVorhanden ?? null,
+    erreichbarkeiten: normalizeOptionalText(input.erreichbarkeiten),
+    version: prev.version + 1,
+  };
 }
 
-/**
- * Splits one source unit into a new child unit and reduces source strength.
- */
 export function splitEinheit(
-  ctx: DbContext,
+  ctx: EinsatzWriteCtx,
   input: {
     einsatzId: string;
     sourceEinheitId: string;
@@ -178,64 +166,69 @@ export function splitEinheit(
   validateSplitName(input.nameImEinsatz);
   validateSplitStrength(input.fuehrung, input.unterfuehrung, input.mannschaft);
 
-  ctx.db.transaction((tx) => {
-    const source = tx
-      .select()
-      .from(einsatzEinheit)
-      .where(and(eq(einsatzEinheit.id, input.sourceEinheitId), eq(einsatzEinheit.einsatzId, input.einsatzId)))
-      .get();
-    if (!source) {
-      throw new AppError('Quell-Einheit nicht gefunden', 'NOT_FOUND');
-    }
+  const idx = ctx.einsatz.einheiten.findIndex(
+    (e) => e.id === input.sourceEinheitId && e.einsatzId === input.einsatzId,
+  );
+  if (idx === -1) {
+    throw new AppError('Quell-Einheit nicht gefunden', 'NOT_FOUND');
+  }
+  const source = ctx.einsatz.einheiten[idx]!;
 
-    const splitGesamt = input.fuehrung + input.unterfuehrung + input.mannschaft;
-    if (splitGesamt <= 0) {
-      throw new AppError('Split-Stärke muss größer 0 sein', 'VALIDATION');
-    }
+  const splitGesamt = input.fuehrung + input.unterfuehrung + input.mannschaft;
+  if (splitGesamt <= 0) {
+    throw new AppError('Split-Stärke muss größer 0 sein', 'VALIDATION');
+  }
+  const [srcF, srcUf, srcM] = parseTaktisch(source.aktuelleStaerkeTaktisch, source.aktuelleStaerke);
+  if (input.fuehrung > srcF || input.unterfuehrung > srcUf || input.mannschaft > srcM) {
+    throw new AppError('Split übersteigt verfügbare Teilstärken der Quell-Einheit', 'VALIDATION');
+  }
+  const newSourceF = srcF - input.fuehrung;
+  const newSourceUf = srcUf - input.unterfuehrung;
+  const newSourceM = srcM - input.mannschaft;
+  const newSourceGesamt = newSourceF + newSourceUf + newSourceM;
 
-    const [srcF, srcUf, srcM] = parseTaktisch(source.aktuelleStaerkeTaktisch, source.aktuelleStaerke);
-    if (input.fuehrung > srcF || input.unterfuehrung > srcUf || input.mannschaft > srcM) {
-      throw new AppError('Split übersteigt verfügbare Teilstärken der Quell-Einheit', 'VALIDATION');
-    }
+  ctx.einsatz.einheiten[idx] = {
+    ...source,
+    aktuelleStaerke: newSourceGesamt,
+    aktuelleStaerkeTaktisch: formatTaktisch(newSourceF, newSourceUf, newSourceM),
+  };
 
-    const newSourceF = srcF - input.fuehrung;
-    const newSourceUf = srcUf - input.unterfuehrung;
-    const newSourceM = srcM - input.mannschaft;
-    const newSourceGesamt = newSourceF + newSourceUf + newSourceM;
+  const organisation = input.organisation ?? (source.organisation as EinheitListItem['organisation']);
+  validateOrganisation(organisation);
 
-    tx.update(einsatzEinheit)
-      .set({
-        aktuelleStaerke: newSourceGesamt,
-        aktuelleStaerkeTaktisch: formatTaktisch(newSourceF, newSourceUf, newSourceM),
-      })
-      .where(eq(einsatzEinheit.id, source.id))
-      .run();
-
-    const organisation = input.organisation ?? (source.organisation as EinheitListItem['organisation']);
-    validateOrganisation(organisation);
-
-    tx.insert(einsatzEinheit)
-      .values({
-        id: crypto.randomUUID(),
-        einsatzId: source.einsatzId,
-        stammdatenEinheitId: source.stammdatenEinheitId,
-        parentEinsatzEinheitId: source.id,
-        nameImEinsatz: input.nameImEinsatz.trim(),
-        organisation,
-        aktuelleStaerke: splitGesamt,
-        aktuelleStaerkeTaktisch: formatTaktisch(input.fuehrung, input.unterfuehrung, input.mannschaft),
-        tacticalSignConfigJson:
-          input.tacticalSignConfigJson === undefined
-            ? resolveUpdatedTacticalSignConfigJson(source.tacticalSignConfigJson, {
-                nameImEinsatz: input.nameImEinsatz.trim(),
-                organisation,
-              })
-            : resolveManualTacticalSignConfigJson(input.tacticalSignConfigJson, input.nameImEinsatz.trim(), organisation),
-        aktuellerAbschnittId: source.aktuellerAbschnittId,
-        status: input.status ?? source.status,
-        erstellt: nowIso(),
-        aufgeloest: null,
-      })
-      .run();
+  ctx.einsatz.einheiten.push({
+    id: crypto.randomUUID(),
+    einsatzId: source.einsatzId,
+    stammdatenEinheitId: source.stammdatenEinheitId,
+    parentEinsatzEinheitId: source.id,
+    nameImEinsatz: input.nameImEinsatz.trim(),
+    organisation,
+    aktuelleStaerke: splitGesamt,
+    aktuelleStaerkeTaktisch: formatTaktisch(input.fuehrung, input.unterfuehrung, input.mannschaft),
+    tacticalSignConfigJson:
+      input.tacticalSignConfigJson === undefined
+        ? resolveUpdatedTacticalSignConfigJson(source.tacticalSignConfigJson, {
+            nameImEinsatz: input.nameImEinsatz.trim(),
+            organisation,
+          })
+        : resolveManualTacticalSignConfigJson(input.tacticalSignConfigJson, input.nameImEinsatz.trim(), organisation),
+    grFuehrerName: null,
+    ovName: null,
+    ovTelefon: null,
+    ovFax: null,
+    rbName: null,
+    rbTelefon: null,
+    rbFax: null,
+    lvName: null,
+    lvTelefon: null,
+    lvFax: null,
+    bemerkung: null,
+    vegetarierVorhanden: null,
+    erreichbarkeiten: null,
+    aktuellerAbschnittId: source.aktuellerAbschnittId,
+    status: input.status ?? source.status,
+    erstellt: nowIso(),
+    aufgeloest: null,
+    version: 0,
   });
 }
