@@ -8,10 +8,6 @@ interface CacheEntry<T> {
   expiresAt: number;
 }
 
-/**
- * Small in-memory read cache for hot einsatz overview queries.
- * Source of truth remains SQLite on disk.
- */
 export class EinsatzReadCache {
   private abschnitteByKey = new Map<string, CacheEntry<AbschnittNode[]>>();
 
@@ -19,14 +15,7 @@ export class EinsatzReadCache {
 
   private detailsBatchByKey = new Map<string, CacheEntry<Record<string, AbschnittDetails>>>();
 
-  /**
-   * Returns cached abschnitte or loads fresh value.
-   */
-  public getAbschnitte(
-    ctx: DbContext,
-    einsatzId: string,
-    loader: () => AbschnittNode[],
-  ): AbschnittNode[] {
+  public getAbschnitte(ctx: DbContext, einsatzId: string, loader: () => AbschnittNode[]): AbschnittNode[] {
     const key = this.makeEinsatzKey(ctx, einsatzId);
     const cached = this.abschnitteByKey.get(key);
     if (this.isFresh(cached)) {
@@ -37,15 +26,7 @@ export class EinsatzReadCache {
     return next;
   }
 
-  /**
-   * Returns cached section details or loads fresh value.
-   */
-  public getAbschnittDetails(
-    ctx: DbContext,
-    einsatzId: string,
-    abschnittId: string,
-    loader: () => AbschnittDetails,
-  ): AbschnittDetails {
+  public getAbschnittDetails(ctx: DbContext, einsatzId: string, abschnittId: string, loader: () => AbschnittDetails): AbschnittDetails {
     const key = this.makeAbschnittKey(ctx, einsatzId, abschnittId);
     const cached = this.detailsByKey.get(key);
     if (this.isFresh(cached)) {
@@ -56,14 +37,7 @@ export class EinsatzReadCache {
     return next;
   }
 
-  /**
-   * Returns cached batch details or loads fresh value.
-   */
-  public getAbschnittDetailsBatch(
-    ctx: DbContext,
-    einsatzId: string,
-    loader: () => Record<string, AbschnittDetails>,
-  ): Record<string, AbschnittDetails> {
+  public getAbschnittDetailsBatch(ctx: DbContext, einsatzId: string, loader: () => Record<string, AbschnittDetails>): Record<string, AbschnittDetails> {
     const key = this.makeEinsatzKey(ctx, einsatzId);
     const cached = this.detailsBatchByKey.get(key);
     if (this.isFresh(cached)) {
@@ -74,9 +48,6 @@ export class EinsatzReadCache {
     return next;
   }
 
-  /**
-   * Invalidates all cached reads for one einsatz.
-   */
   public invalidateEinsatz(ctx: DbContext, einsatzId: string): void {
     const einsatzKeyPrefix = this.makeEinsatzKey(ctx, einsatzId);
     this.abschnitteByKey.delete(einsatzKeyPrefix);
@@ -88,9 +59,6 @@ export class EinsatzReadCache {
     }
   }
 
-  /**
-   * Clears all cache entries.
-   */
   public clearAll(): void {
     this.abschnitteByKey.clear();
     this.detailsByKey.clear();
@@ -109,4 +77,3 @@ export class EinsatzReadCache {
     return `${this.makeEinsatzKey(ctx, einsatzId)}:${abschnittId}`;
   }
 }
-

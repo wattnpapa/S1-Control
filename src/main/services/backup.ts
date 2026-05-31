@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import type { DbRuntimeClient } from '../../shared/db-runtime';
 import type { DbContext } from '../db/connection';
 
 const FIVE_MINUTES = 5 * 60 * 1000;
@@ -11,9 +10,6 @@ function initialBackupDelayMs(): number {
   return process.env.NODE_ENV === 'test' ? 0 : INITIAL_BACKUP_DELAY_MS;
 }
 
-/**
- * Handles Now Stamp.
- */
 function nowStamp(): string {
   const d = new Date();
   const yyyy = d.getFullYear();
@@ -25,9 +21,6 @@ function nowStamp(): string {
   return `${yyyy}${mm}${dd}-${hh}${mi}${ss}`;
 }
 
-/**
- * Handles Resolve Backup Dir.
- */
 export function resolveBackupDir(dbPath: string): string {
   return path.join(path.dirname(dbPath), 'backup');
 }
@@ -39,15 +32,8 @@ export class BackupCoordinator {
 
   private lastBackupAt = 0;
 
-  constructor(
-    private readonly canWriteBackup: () => boolean = () => true,
-    private readonly dbBridge: DbRuntimeClient | null = null,
-    private readonly useDbUtilityProcess = false,
-  ) {}
+  constructor(private readonly canWriteBackup: () => boolean = () => true) {}
 
-  /**
-   * Handles Stop.
-   */
   public stop(): void {
     if (this.interval) {
       clearInterval(this.interval);
@@ -57,14 +43,9 @@ export class BackupCoordinator {
     this.lastBackupAt = 0;
   }
 
-  /**
-   * Handles Start.
-   */
   public start(ctx: DbContext): void {
     this.stop();
     this.activeDbPath = ctx.path;
-    // Delay the first backup after switching/opening a deployment DB to keep UI opening responsive.
-    // Tests keep immediate behavior to preserve deterministic scheduling assertions.
     const initialDelay = initialBackupDelayMs();
     this.lastBackupAt = Date.now() - (FIVE_MINUTES - initialDelay);
     this.interval = setInterval(() => {
@@ -75,25 +56,11 @@ export class BackupCoordinator {
     }
   }
 
-  /**
-   * Handles Restore Backup.
-   */
   public async restoreBackup(dbPath: string, backupFilePath: string): Promise<void> {
     this.stop();
-    const walPath = `${dbPath}-wal`;
-    const shmPath = `${dbPath}-shm`;
-    if (fs.existsSync(walPath)) {
-      fs.rmSync(walPath, { force: true });
-    }
-    if (fs.existsSync(shmPath)) {
-      fs.rmSync(shmPath, { force: true });
-    }
     fs.copyFileSync(backupFilePath, dbPath);
   }
 
-  /**
-   * Handles Run Once.
-   */
   private async runOnce(ctx: DbContext): Promise<void> {
     if (this.activeDbPath !== ctx.path) {
       return;
@@ -112,18 +79,7 @@ export class BackupCoordinator {
     const target = path.join(backupDir, `${baseName}-${nowStamp()}.s1control`);
 
     try {
-      if (this.useDbUtilityProcess && this.dbBridge) {
-        await this.dbBridge.request(
-          'backup-run-once',
-          {
-            dbPath: ctx.path,
-            targetPath: target,
-          },
-          'low',
-        );
-      } else {
-        await ctx.sqlite.backup(target);
-      }
+      fs.copyFileSync(ctx.path, target);
       this.lastBackupAt = now;
     } catch {
       // best effort backup in background

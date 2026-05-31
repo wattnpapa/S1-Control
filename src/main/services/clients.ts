@@ -1,54 +1,22 @@
 import os from 'node:os';
 import crypto from 'node:crypto';
-import { asc, eq, gte, lt } from 'drizzle-orm';
 import type { ActiveClientInfo } from '../../shared/types';
-import type { DbRuntimeClient } from '../../shared/db-runtime';
 import type { DbContext } from '../db/connection';
-import { activeClient } from '../db/schema';
+import { systemFilePath } from '../db/connection';
+import { mutateSystemFile, readSystemFile } from '../json-store/system-store';
 import { debugSync } from './debug';
 
 const HEARTBEAT_MS = 5 * 1000;
-// A stricter 30s window causes false stale detection when client clocks drift.
 const STALE_MS = 2 * 60 * 1000;
 
-/**
- * Handles Is Lock Contention Error.
- */
-function isLockContentionError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return (
-    message.includes('database is locked') ||
-    message.includes('SQLITE_BUSY') ||
-    message.includes('SQLITE_LOCKED') ||
-    message.includes('locking protocol')
-  );
-}
-
-/**
- * Handles Is Corruption Error.
- */
-function isCorruptionError(error: unknown): boolean {
-  const message = error instanceof Error ? error.message : String(error);
-  return message.includes('database disk image is malformed') || message.includes('malformed');
-}
-
-/**
- * Handles Now Iso.
- */
 function nowIso(): string {
   return new Date().toISOString();
 }
 
-/**
- * Handles Stale Cutoff Iso.
- */
 function staleCutoffIso(): string {
   return new Date(Date.now() - STALE_MS).toISOString();
 }
 
-/**
- * Handles Detect Primary Ip.
- */
 function detectPrimaryIp(): string {
   const interfaces = os.networkInterfaces();
   for (const entries of Object.values(interfaces)) {
@@ -62,7 +30,7 @@ function detectPrimaryIp(): string {
 }
 
 export class ClientPresenceService {
-  private ctx: DbContext | null = null;
+  private dbPath: string | null = null;
 
   private timer: NodeJS.Timeout | null = null;
 
@@ -74,31 +42,24 @@ export class ClientPresenceService {
 
   private disabled = false;
 
+  private cachedActiveClients: ActiveClientInfo[] = [];
+
   constructor(
-    private readonly dbBridge: DbRuntimeClient | null = null,
-    private readonly useDbUtilityProcess = false,
+    private readonly _dbBridge: unknown = null,
+    private readonly _useDbUtilityProcess = false,
   ) {}
 
-  /**
-   * Handles Get Client Id.
-   */
   public getClientId(): string {
     return this.clientId;
   }
 
-  /**
-   * Handles Get Computer Name.
-   */
   public getComputerName(): string {
     return os.hostname();
   }
 
-  /**
-   * Handles Start.
-   */
   public start(ctx: DbContext): void {
     this.stop(true);
-    this.ctx = ctx;
+    this.dbPath = ctx.path;
     this.disabled = false;
     debugSync('clients', 'start', { clientId: this.clientId, dbPath: ctx.path });
     this.heartbeat();
@@ -107,244 +68,100 @@ export class ClientPresenceService {
     }, HEARTBEAT_MS);
   }
 
-  /**
-   * Handles Stop.
-   */
   public stop(removeEntry = true): void {
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
     }
-    if (removeEntry && this.ctx) {
+    const dbPath = this.dbPath;
+    if (removeEntry && dbPath) {
       try {
-        if (this.useDbUtilityProcess && this.dbBridge) {
-          void this.dbBridge
-            .request(
-              'presence-remove-self',
-              {
-                dbPath: this.ctx.path,
-                clientId: this.clientId,
-              },
-              'low',
-            )
-            .catch(() => undefined);
-        } else {
-          this.ctx.db.delete(activeClient).where(eq(activeClient.clientId, this.clientId)).run();
-        }
-        debugSync('clients', 'stop:removed-self', { clientId: this.clientId, dbPath: this.ctx.path });
+        mutateSystemFile(systemFilePath(dbPath), (system) => {
+          system.activeClients = system.activeClients.filter((c) => c.clientId !== this.clientId);
+        });
+        debugSync('clients', 'stop:removed-self', { clientId: this.clientId, dbPath });
       } catch {
         // ignore shutdown errors
       }
     }
-    this.ctx = null;
+    this.dbPath = null;
     this.isMaster = false;
   }
 
-  /**
-   * Handles Can Write Backups.
-   */
   public canWriteBackups(): boolean {
     return this.isMaster;
   }
 
-  /**
-   * Handles List Active Clients.
-   */
   public listActiveClients(): ActiveClientInfo[] {
-    if (!this.ctx || this.disabled) {
-      return [];
-    }
-    if (this.useDbUtilityProcess && this.dbBridge) {
-      return [];
+    if (!this.dbPath || this.disabled) {
+      return this.cachedActiveClients;
     }
     try {
-      const rows = this.ctx.db
-        .select()
-        .from(activeClient)
-        .where(gte(activeClient.lastSeen, staleCutoffIso()))
-        .orderBy(asc(activeClient.computerName), asc(activeClient.startedAt))
-        .all();
-      const leader = this.ctx.db
-        .select({ clientId: activeClient.clientId })
-        .from(activeClient)
-        .where(gte(activeClient.lastSeen, staleCutoffIso()))
-        .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
-        .get();
+      const system = readSystemFile(systemFilePath(this.dbPath));
+      const cutoff = staleCutoffIso();
+      const active = system.activeClients.filter((c) => c.lastSeen >= cutoff);
+      const leader = [...active].sort((a, b) => {
+        const cmp = a.startedAt.localeCompare(b.startedAt);
+        return cmp !== 0 ? cmp : a.clientId.localeCompare(b.clientId);
+      })[0];
       const leaderId = leader?.clientId ?? this.clientId;
       this.isMaster = leaderId === this.clientId;
-      debugSync('clients', 'list', {
-        clientId: this.clientId,
-        dbPath: this.ctx.path,
-        visibleClients: rows.length,
-        isMaster: this.isMaster,
-      });
-      return rows.map((row) => ({
-        clientId: row.clientId,
-        computerName: row.computerName,
-        ipAddress: row.ipAddress,
-        dbPath: row.dbPath,
-        lastSeen: row.lastSeen,
-        isMaster: row.clientId === leaderId,
-        isSelf: row.clientId === this.clientId,
+      this.cachedActiveClients = active.map((c) => ({
+        clientId: c.clientId,
+        computerName: c.computerName,
+        ipAddress: c.ipAddress,
+        dbPath: c.dbPath,
+        lastSeen: c.lastSeen,
+        isMaster: c.clientId === leaderId,
+        isSelf: c.clientId === this.clientId,
       }));
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isCorruptionError(error)) {
-        this.disablePresence('list:corruption', message);
-        return [];
-      }
-      throw error;
+      return this.cachedActiveClients;
+    } catch {
+      return this.cachedActiveClients;
     }
   }
 
-  /**
-   * Handles Heartbeat.
-   */
   private heartbeat(): void {
-    if (!this.ctx) {
+    const dbPath = this.dbPath;
+    if (!dbPath || this.disabled) {
       return;
     }
-    const ctx = this.ctx;
     const now = nowIso();
-    const staleCutoff = staleCutoffIso();
+    const cutoff = staleCutoffIso();
     const computerName = os.hostname();
     const ipAddress = detectPrimaryIp();
 
     try {
-      if (this.useDbUtilityProcess && this.dbBridge) {
-        void this.heartbeatViaUtility(ctx.path, computerName, ipAddress);
-        return;
-      }
-      ctx.db.transaction((tx) => {
-        tx.delete(activeClient).where(lt(activeClient.lastSeen, staleCutoff)).run();
-
-        tx.insert(activeClient)
-          .values({
+      mutateSystemFile(systemFilePath(dbPath), (system) => {
+        system.activeClients = system.activeClients.filter((c) => c.lastSeen >= cutoff);
+        const existing = system.activeClients.find((c) => c.clientId === this.clientId);
+        if (existing) {
+          existing.computerName = computerName;
+          existing.ipAddress = ipAddress;
+          existing.dbPath = dbPath;
+          existing.lastSeen = now;
+        } else {
+          system.activeClients.push({
             clientId: this.clientId,
             computerName,
             ipAddress,
-            dbPath: ctx.path,
+            dbPath,
             lastSeen: now,
             startedAt: this.startedAt,
             isMaster: false,
-          })
-          .onConflictDoUpdate({
-            target: activeClient.clientId,
-            set: {
-              computerName,
-              ipAddress,
-              dbPath: ctx.path,
-              lastSeen: now,
-            },
-          })
-          .run();
-
-        const leader = tx
-          .select({ clientId: activeClient.clientId })
-          .from(activeClient)
-          .where(gte(activeClient.lastSeen, staleCutoff))
-          .orderBy(asc(activeClient.startedAt), asc(activeClient.clientId))
-          .get();
-        const leaderId = leader?.clientId ?? this.clientId;
-
-        if (leaderId === this.clientId) {
-          tx.delete(activeClient)
-            .where(lt(activeClient.lastSeen, staleCutoff))
-            .run();
+          });
         }
+        const leader = [...system.activeClients].sort((a, b) => {
+          const cmp = a.startedAt.localeCompare(b.startedAt);
+          return cmp !== 0 ? cmp : a.clientId.localeCompare(b.clientId);
+        })[0];
+        const leaderId = leader?.clientId ?? this.clientId;
         this.isMaster = leaderId === this.clientId;
-        debugSync('clients', 'heartbeat', {
-          clientId: this.clientId,
-          dbPath: ctx.path,
-          leaderId,
-          isMaster: this.isMaster,
-        });
+        debugSync('clients', 'heartbeat', { clientId: this.clientId, dbPath, leaderId, isMaster: this.isMaster });
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      if (isLockContentionError(error)) {
-        debugSync('clients', 'heartbeat:skipped-lock', {
-          clientId: this.clientId,
-          dbPath: ctx.path,
-          message,
-        });
-        return;
-      }
-      if (isCorruptionError(error)) {
-        this.disablePresence('heartbeat:corruption', message);
-        return;
-      }
-      debugSync('clients', 'heartbeat:failed', {
-        clientId: this.clientId,
-        dbPath: ctx.path,
-        message,
-      });
+      debugSync('clients', 'heartbeat:failed', { clientId: this.clientId, dbPath, message });
     }
-  }
-
-  /**
-   * Runs heartbeat over DB utility process.
-   */
-  private async heartbeatViaUtility(dbPath: string, computerName: string, ipAddress: string): Promise<void> {
-    if (!this.dbBridge) {
-      return;
-    }
-    try {
-      const result = await this.dbBridge.request(
-        'presence-heartbeat',
-        {
-          dbPath,
-          clientId: this.clientId,
-          computerName,
-          ipAddress,
-          startedAt: this.startedAt,
-        },
-        'low',
-      );
-      this.isMaster = result.isMaster;
-      debugSync('clients', 'heartbeat', {
-        clientId: this.clientId,
-        dbPath,
-        leaderId: result.isMaster ? this.clientId : 'other',
-        isMaster: this.isMaster,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      if (isLockContentionError(error)) {
-        debugSync('clients', 'heartbeat:skipped-lock', {
-          clientId: this.clientId,
-          dbPath,
-          message,
-        });
-        return;
-      }
-      if (isCorruptionError(error)) {
-        this.disablePresence('heartbeat:corruption', message);
-        return;
-      }
-      debugSync('clients', 'heartbeat:failed', {
-        clientId: this.clientId,
-        dbPath,
-        message,
-      });
-    }
-  }
-
-  /**
-   * Handles Disable Presence.
-   */
-  private disablePresence(reason: string, message: string): void {
-    this.disabled = true;
-    this.isMaster = false;
-    if (this.timer) {
-      clearInterval(this.timer);
-      this.timer = null;
-    }
-    debugSync('clients', 'presence-disabled', {
-      clientId: this.clientId,
-      reason,
-      message,
-      dbPath: this.ctx?.path,
-    });
   }
 }

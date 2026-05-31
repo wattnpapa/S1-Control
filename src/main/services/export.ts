@@ -1,15 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import JSZip from 'jszip';
-import { eq } from 'drizzle-orm';
 import type { DbContext } from '../db/connection';
-import {
-  einsatz,
-  einsatzEinheit,
-  einsatzEinheitBewegung,
-  einsatzFahrzeug,
-  einsatzFahrzeugBewegung,
-} from '../db/schema';
 import { AppError } from './errors';
 
 interface EinheitenExportRow {
@@ -38,9 +30,6 @@ interface FahrzeugBewegungExportRow {
   benutzer: string;
 }
 
-/**
- * Handles Escape Html.
- */
 function escapeHtml(text: string): string {
   return text
     .replaceAll('&', '&amp;')
@@ -50,9 +39,6 @@ function escapeHtml(text: string): string {
     .replaceAll("'", '&#039;');
 }
 
-/**
- * Handles To Csv Row.
- */
 function toCsvRow(values: Array<string | number | null>): string {
   return values
     .map((value) => {
@@ -62,19 +48,6 @@ function toCsvRow(values: Array<string | number | null>): string {
     .join(';');
 }
 
-/**
- * Loads all movement rows for a set of entity ids.
- */
-function loadMovements<TMovement>(
-  ids: string[],
-  loader: (id: string) => TMovement[],
-): TMovement[] {
-  return ids.flatMap((id) => loader(id));
-}
-
-/**
- * Builds html report for export package.
- */
 function buildHtmlReport(input: {
   einsatzName: string;
   fuestName: string;
@@ -132,41 +105,16 @@ function buildHtmlReport(input: {
 </html>`;
 }
 
-/**
- * Builds CSV output for unit rows.
- */
 function buildEinheitenCsv(einheiten: EinheitenExportRow[]): string {
   return [
-    toCsvRow([
-      'id',
-      'name_im_einsatz',
-      'organisation',
-      'aktuelle_staerke',
-      'aktuelle_staerke_taktisch',
-      'status',
-      'aktueller_abschnitt_id',
-    ]),
+    toCsvRow(['id', 'name_im_einsatz', 'organisation', 'aktuelle_staerke', 'aktuelle_staerke_taktisch', 'status', 'aktueller_abschnitt_id']),
     ...einheiten.map((item) =>
-      toCsvRow([
-        item.id,
-        item.nameImEinsatz,
-        item.organisation,
-        item.aktuelleStaerke,
-        item.aktuelleStaerkeTaktisch,
-        item.status,
-        item.aktuellerAbschnittId,
-      ]),
+      toCsvRow([item.id, item.nameImEinsatz, item.organisation, item.aktuelleStaerke, item.aktuelleStaerkeTaktisch, item.status, item.aktuellerAbschnittId]),
     ),
   ].join('\n');
 }
 
-/**
- * Builds CSV output for movement rows.
- */
-function buildBewegungenCsv(
-  einheitBewegungen: EinheitBewegungExportRow[],
-  fahrzeugBewegungen: FahrzeugBewegungExportRow[],
-): string {
+function buildBewegungenCsv(einheitBewegungen: EinheitBewegungExportRow[], fahrzeugBewegungen: FahrzeugBewegungExportRow[]): string {
   return [
     toCsvRow(['typ', 'objekt_id', 'von_abschnitt_id', 'nach_abschnitt_id', 'zeitpunkt', 'benutzer']),
     ...einheitBewegungen.map((item) =>
@@ -178,40 +126,48 @@ function buildBewegungenCsv(
   ].join('\n');
 }
 
-/**
- * Handles Export Einsatzakte.
- */
-export async function exportEinsatzakte(
-  ctx: DbContext,
-  einsatzId: string,
-  outputPath: string,
-): Promise<void> {
-  const einsatzRow = ctx.db.select().from(einsatz).where(eq(einsatz.id, einsatzId)).get();
-  if (!einsatzRow) {
+export async function exportEinsatzakte(ctx: DbContext, einsatzId: string, outputPath: string): Promise<void> {
+  const e = ctx.einsatz.einsatz;
+  if (e.id !== einsatzId) {
     throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
   }
 
-  const einheiten = ctx.db.select().from(einsatzEinheit).where(eq(einsatzEinheit.einsatzId, einsatzId)).all();
-  const fahrzeuge = ctx.db.select().from(einsatzFahrzeug).where(eq(einsatzFahrzeug.einsatzId, einsatzId)).all();
+  const einheiten: EinheitenExportRow[] = ctx.einsatz.einheiten
+    .filter((i) => i.einsatzId === einsatzId)
+    .map((i) => ({
+      id: i.id,
+      nameImEinsatz: i.nameImEinsatz,
+      organisation: i.organisation,
+      aktuelleStaerke: i.aktuelleStaerke,
+      aktuelleStaerkeTaktisch: i.aktuelleStaerkeTaktisch,
+      status: i.status,
+      aktuellerAbschnittId: i.aktuellerAbschnittId,
+    }));
 
-  const einheitIds = einheiten.map((item) => item.id);
-  const fahrzeugIds = fahrzeuge.map((item) => item.id);
+  const einheitIds = new Set(einheiten.map((i) => i.id));
+  const fahrzeugIds = new Set(ctx.einsatz.fahrzeuge.filter((f) => f.einsatzId === einsatzId).map((f) => f.id));
 
-  const einheitBewegungen = loadMovements(einheitIds, (id) =>
-    ctx.db.select().from(einsatzEinheitBewegung).where(eq(einsatzEinheitBewegung.einsatzEinheitId, id)).all(),
-  );
-  const fahrzeugBewegungen = loadMovements(fahrzeugIds, (id) =>
-    ctx.db.select().from(einsatzFahrzeugBewegung).where(eq(einsatzFahrzeugBewegung.einsatzFahrzeugId, id)).all(),
-  );
+  const einheitBewegungen: EinheitBewegungExportRow[] = ctx.einsatz.einheitBewegungen
+    .filter((b) => einheitIds.has(b.einsatzEinheitId))
+    .map((b) => ({
+      einsatzEinheitId: b.einsatzEinheitId,
+      vonAbschnittId: b.vonAbschnittId,
+      nachAbschnittId: b.nachAbschnittId,
+      zeitpunkt: b.zeitpunkt,
+      benutzer: b.benutzer,
+    }));
 
-  const html = buildHtmlReport({
-    einsatzName: einsatzRow.name,
-    fuestName: einsatzRow.fuestName,
-    status: einsatzRow.status,
-    einheiten,
-    einheitBewegungen,
-    fahrzeugBewegungen,
-  });
+  const fahrzeugBewegungen: FahrzeugBewegungExportRow[] = ctx.einsatz.fahrzeugBewegungen
+    .filter((b) => fahrzeugIds.has(b.einsatzFahrzeugId))
+    .map((b) => ({
+      einsatzFahrzeugId: b.einsatzFahrzeugId,
+      vonAbschnittId: b.vonAbschnittId,
+      nachAbschnittId: b.nachAbschnittId,
+      zeitpunkt: b.zeitpunkt,
+      benutzer: b.benutzer,
+    }));
+
+  const html = buildHtmlReport({ einsatzName: e.name, fuestName: e.fuestName, status: e.status, einheiten, einheitBewegungen, fahrzeugBewegungen });
   const einheitenCsv = buildEinheitenCsv(einheiten);
   const bewegungenCsv = buildBewegungenCsv(einheitBewegungen, fahrzeugBewegungen);
 

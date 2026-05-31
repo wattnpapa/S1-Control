@@ -1,8 +1,10 @@
 import crypto from 'node:crypto';
-import { and, eq, lt } from 'drizzle-orm';
+import path from 'node:path';
 import type { RecordEditLockInfo, RecordEditLockType } from '../../shared/types';
 import type { DbContext } from '../db/connection';
-import { recordEditLock } from '../db/schema';
+import type { JsonRecordEditLock } from '../json-store/types';
+import { mutateSystemFile } from '../json-store/system-store';
+import { systemFilePath } from '../db/connection';
 
 const LOCK_TTL_MS = 45_000;
 
@@ -18,17 +20,11 @@ interface LockTarget {
   entityId: string;
 }
 
-/**
- * Handles To Iso.
- */
 function toIso(timestamp: number): string {
   return new Date(timestamp).toISOString();
 }
 
-/**
- * Handles To Lock Info.
- */
-function toLockInfo(row: typeof recordEditLock.$inferSelect, selfClientId: string): RecordEditLockInfo {
+function toLockInfo(row: JsonRecordEditLock, selfClientId: string): RecordEditLockInfo {
   return {
     id: row.id,
     einsatzId: row.einsatzId,
@@ -44,16 +40,14 @@ function toLockInfo(row: typeof recordEditLock.$inferSelect, selfClientId: strin
   };
 }
 
-/**
- * Handles Cleanup Expired Locks.
- */
-function cleanupExpiredLocks(ctx: DbContext, nowIso: string): void {
-  ctx.db.delete(recordEditLock).where(lt(recordEditLock.expiresAt, nowIso)).run();
+function cleanupExpired(locks: JsonRecordEditLock[], nowIso: string): JsonRecordEditLock[] {
+  return locks.filter((l) => l.expiresAt >= nowIso);
 }
 
-/**
- * Handles Acquire Record Edit Lock.
- */
+function getSysPath(ctx: DbContext): string {
+  return systemFilePath(ctx.path);
+}
+
 export function acquireRecordEditLock(
   ctx: DbContext,
   target: LockTarget,
@@ -62,57 +56,47 @@ export function acquireRecordEditLock(
   const nowTs = Date.now();
   const nowIso = toIso(nowTs);
   const expiresIso = toIso(nowTs + LOCK_TTL_MS);
+  let result!: { acquired: boolean; lock: RecordEditLockInfo };
 
-  return ctx.db.transaction((tx) => {
-    tx.delete(recordEditLock).where(lt(recordEditLock.expiresAt, nowIso)).run();
-
-    const existing = tx
-      .select()
-      .from(recordEditLock)
-      .where(and(eq(recordEditLock.entityType, target.entityType), eq(recordEditLock.entityId, target.entityId)))
-      .get();
+  mutateSystemFile(getSysPath(ctx), (system) => {
+    system.recordEditLocks = cleanupExpired(system.recordEditLocks, nowIso);
+    const existing = system.recordEditLocks.find(
+      (l) => l.entityType === target.entityType && l.entityId === target.entityId,
+    );
 
     if (!existing) {
-      const id = crypto.randomUUID();
-      tx.insert(recordEditLock)
-        .values({
-          id,
-          einsatzId: target.einsatzId,
-          entityType: target.entityType,
-          entityId: target.entityId,
-          clientId: identity.clientId,
-          computerName: identity.computerName,
-          userName: identity.userName,
-          acquiredAt: nowIso,
-          heartbeatAt: nowIso,
-          expiresAt: expiresIso,
-        })
-        .run();
-      const inserted = tx.select().from(recordEditLock).where(eq(recordEditLock.id, id)).get();
-      return { acquired: true as const, lock: toLockInfo(inserted!, identity.clientId) };
+      const newLock: JsonRecordEditLock = {
+        id: crypto.randomUUID(),
+        einsatzId: target.einsatzId,
+        entityType: target.entityType,
+        entityId: target.entityId,
+        clientId: identity.clientId,
+        computerName: identity.computerName,
+        userName: identity.userName,
+        acquiredAt: nowIso,
+        heartbeatAt: nowIso,
+        expiresAt: expiresIso,
+      };
+      system.recordEditLocks.push(newLock);
+      result = { acquired: true, lock: toLockInfo(newLock, identity.clientId) };
+      return;
     }
 
     if (existing.clientId === identity.clientId) {
-      tx.update(recordEditLock)
-        .set({
-          computerName: identity.computerName,
-          userName: identity.userName,
-          heartbeatAt: nowIso,
-          expiresAt: expiresIso,
-        })
-        .where(eq(recordEditLock.id, existing.id))
-        .run();
-      const renewed = tx.select().from(recordEditLock).where(eq(recordEditLock.id, existing.id)).get();
-      return { acquired: true as const, lock: toLockInfo(renewed!, identity.clientId) };
+      existing.computerName = identity.computerName;
+      existing.userName = identity.userName;
+      existing.heartbeatAt = nowIso;
+      existing.expiresAt = expiresIso;
+      result = { acquired: true, lock: toLockInfo(existing, identity.clientId) };
+      return;
     }
 
-    return { acquired: false as const, lock: toLockInfo(existing, identity.clientId) };
+    result = { acquired: false, lock: toLockInfo(existing, identity.clientId) };
   });
+
+  return result as { acquired: true; lock: RecordEditLockInfo } | { acquired: false; lock: RecordEditLockInfo };
 }
 
-/**
- * Handles Refresh Record Edit Lock.
- */
 export function refreshRecordEditLock(
   ctx: DbContext,
   target: LockTarget,
@@ -121,65 +105,45 @@ export function refreshRecordEditLock(
   const nowTs = Date.now();
   const nowIso = toIso(nowTs);
   const expiresIso = toIso(nowTs + LOCK_TTL_MS);
+  let result!: { refreshed: boolean; lock: RecordEditLockInfo | null };
 
-  return ctx.db.transaction((tx) => {
-    tx.delete(recordEditLock).where(lt(recordEditLock.expiresAt, nowIso)).run();
-    const existing = tx
-      .select()
-      .from(recordEditLock)
-      .where(and(eq(recordEditLock.entityType, target.entityType), eq(recordEditLock.entityId, target.entityId)))
-      .get();
+  mutateSystemFile(getSysPath(ctx), (system) => {
+    system.recordEditLocks = cleanupExpired(system.recordEditLocks, nowIso);
+    const existing = system.recordEditLocks.find(
+      (l) => l.entityType === target.entityType && l.entityId === target.entityId,
+    );
     if (!existing) {
-      return { refreshed: false as const, lock: null };
+      result = { refreshed: false, lock: null };
+      return;
     }
     if (existing.clientId !== identity.clientId) {
-      return { refreshed: false as const, lock: toLockInfo(existing, identity.clientId) };
+      result = { refreshed: false, lock: toLockInfo(existing, identity.clientId) };
+      return;
     }
-    tx.update(recordEditLock)
-      .set({
-        computerName: identity.computerName,
-        userName: identity.userName,
-        heartbeatAt: nowIso,
-        expiresAt: expiresIso,
-      })
-      .where(eq(recordEditLock.id, existing.id))
-      .run();
-    const updated = tx.select().from(recordEditLock).where(eq(recordEditLock.id, existing.id)).get();
-    return { refreshed: true as const, lock: toLockInfo(updated!, identity.clientId) };
+    existing.computerName = identity.computerName;
+    existing.userName = identity.userName;
+    existing.heartbeatAt = nowIso;
+    existing.expiresAt = expiresIso;
+    result = { refreshed: true, lock: toLockInfo(existing, identity.clientId) };
+  });
+
+  return result as { refreshed: true; lock: RecordEditLockInfo } | { refreshed: false; lock: RecordEditLockInfo | null };
+}
+
+export function releaseRecordEditLock(ctx: DbContext, target: LockTarget, identity: LockIdentity): void {
+  mutateSystemFile(getSysPath(ctx), (system) => {
+    system.recordEditLocks = system.recordEditLocks.filter(
+      (l) => !(l.entityType === target.entityType && l.entityId === target.entityId && l.clientId === identity.clientId),
+    );
   });
 }
 
-/**
- * Handles Release Record Edit Lock.
- */
-export function releaseRecordEditLock(ctx: DbContext, target: LockTarget, identity: LockIdentity): void {
-  cleanupExpiredLocks(ctx, toIso(Date.now()));
-  ctx.db
-    .delete(recordEditLock)
-    .where(
-      and(
-        eq(recordEditLock.entityType, target.entityType),
-        eq(recordEditLock.entityId, target.entityId),
-        eq(recordEditLock.clientId, identity.clientId),
-      ),
-    )
-    .run();
-}
-
-/**
- * Handles Ensure Record Edit Lock Ownership.
- */
-export function ensureRecordEditLockOwnership(
-  ctx: DbContext,
-  target: LockTarget,
-  identity: LockIdentity,
-): void {
-  cleanupExpiredLocks(ctx, toIso(Date.now()));
-  const existing = ctx.db
-    .select()
-    .from(recordEditLock)
-    .where(and(eq(recordEditLock.entityType, target.entityType), eq(recordEditLock.entityId, target.entityId)))
-    .get();
+export function ensureRecordEditLockOwnership(ctx: DbContext, target: LockTarget, identity: LockIdentity): void {
+  const nowIso = toIso(Date.now());
+  const locks = cleanupExpired(ctx.system.recordEditLocks, nowIso);
+  const existing = locks.find(
+    (l) => l.entityType === target.entityType && l.entityId === target.entityId,
+  );
   if (!existing) {
     throw new Error('Datensatz ist nicht zur Bearbeitung gesperrt. Bitte Datensatz erneut öffnen.');
   }
@@ -188,21 +152,9 @@ export function ensureRecordEditLockOwnership(
   }
 }
 
-/**
- * Handles List Record Edit Locks.
- */
-export function listRecordEditLocks(
-  ctx: DbContext,
-  einsatzId: string,
-  selfClientId: string,
-): RecordEditLockInfo[] {
+export function listRecordEditLocks(ctx: DbContext, einsatzId: string, selfClientId: string): RecordEditLockInfo[] {
   const nowIso = toIso(Date.now());
-  cleanupExpiredLocks(ctx, nowIso);
-  const rows = ctx.db
-    .select()
-    .from(recordEditLock)
-    .where(eq(recordEditLock.einsatzId, einsatzId))
-    .all();
-  return rows.map((row) => toLockInfo(row, selfClientId));
+  return cleanupExpired(ctx.system.recordEditLocks, nowIso)
+    .filter((l) => l.einsatzId === einsatzId)
+    .map((l) => toLockInfo(l, selfClientId));
 }
-

@@ -1,8 +1,7 @@
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
 import type { DbContext } from '../db/connection';
-import { benutzer } from '../db/schema';
 import type { BenutzerRolle, SessionUser } from '../../shared/types';
+import type { SystemJsonFile } from '../json-store/types';
 import { AppError } from './errors';
 
 const SCRYPT_PARAMS = {
@@ -12,9 +11,6 @@ const SCRYPT_PARAMS = {
   keylen: 64,
 };
 
-/**
- * Handles Hash Password.
- */
 export function hashPassword(password: string): string {
   const salt = crypto.randomBytes(16).toString('hex');
   const hash = crypto
@@ -24,19 +20,14 @@ export function hashPassword(password: string): string {
       p: SCRYPT_PARAMS.p,
     })
     .toString('hex');
-
   return `scrypt$${salt}$${hash}`;
 }
 
-/**
- * Handles Verify Password.
- */
 export function verifyPassword(password: string, stored: string): boolean {
   const [algo, salt, hash] = stored.split('$');
   if (algo !== 'scrypt' || !salt || !hash) {
     return false;
   }
-
   const calculated = crypto
     .scryptSync(password, salt, SCRYPT_PARAMS.keylen, {
       N: SCRYPT_PARAMS.N,
@@ -44,74 +35,56 @@ export function verifyPassword(password: string, stored: string): boolean {
       p: SCRYPT_PARAMS.p,
     })
     .toString('hex');
-
   return crypto.timingSafeEqual(Buffer.from(calculated, 'hex'), Buffer.from(hash, 'hex'));
 }
 
-/**
- * Handles Ensure Default Admin.
- */
 export function ensureDefaultAdmin(ctx: DbContext): void {
-  const existing = ctx.db.select().from(benutzer).where(eq(benutzer.name, 'admin')).get();
-  if (existing) {
+  ensureDefaultAdminInSystem(ctx.system);
+}
+
+export function ensureDefaultAdminInSystem(system: SystemJsonFile): void {
+  if (system.benutzer.some((b) => b.name === 'admin')) {
     return;
   }
-
-  ctx.db.insert(benutzer).values({
+  system.benutzer.push({
     id: crypto.randomUUID(),
     name: 'admin',
     rolle: 'ADMIN',
     passwortHash: hashPassword('admin'),
     aktiv: true,
-  }).run();
+  });
 }
 
-/**
- * Handles Login.
- */
 export function login(ctx: DbContext, name: string, passwort: string): SessionUser {
-  const row = ctx.db.select().from(benutzer).where(eq(benutzer.name, name)).get();
-
+  const row = ctx.system.benutzer.find((b) => b.name === name);
   if (!row || !row.aktiv) {
     throw new AppError('Benutzer nicht gefunden oder deaktiviert', 'AUTH_FAILED');
   }
-
   if (!verifyPassword(passwort, row.passwortHash)) {
     throw new AppError('Passwort ist ungültig', 'AUTH_FAILED');
   }
-
-  return {
-    id: row.id,
-    name: row.name,
-    rolle: row.rolle as BenutzerRolle,
-  };
+  return { id: row.id, name: row.name, rolle: row.rolle as BenutzerRolle };
 }
 
-/**
- * Handles Ensure Session User Record.
- */
 export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): SessionUser {
-  const existingById = ctx.db.select().from(benutzer).where(eq(benutzer.id, user.id)).get();
-  if (existingById) {
+  return ensureSessionUserInSystem(ctx.system, user);
+}
+
+export function ensureSessionUserInSystem(system: SystemJsonFile, user: SessionUser): SessionUser {
+  const byId = system.benutzer.find((b) => b.id === user.id);
+  if (byId) {
     return user;
   }
-
-  const existingByName = ctx.db.select().from(benutzer).where(eq(benutzer.name, user.name)).get();
-  if (existingByName) {
-    return {
-      id: existingByName.id,
-      name: existingByName.name,
-      rolle: existingByName.rolle as BenutzerRolle,
-    };
+  const byName = system.benutzer.find((b) => b.name === user.name);
+  if (byName) {
+    return { id: byName.id, name: byName.name, rolle: byName.rolle as BenutzerRolle };
   }
-
-  // Keep session user available for FK references in command log entries.
-  ctx.db.insert(benutzer).values({
+  system.benutzer.push({
     id: user.id,
     name: user.name,
     rolle: user.rolle,
     passwortHash: hashPassword(crypto.randomUUID()),
     aktiv: true,
-  }).run();
+  });
   return user;
 }
