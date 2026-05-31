@@ -1,16 +1,4 @@
-import { and, desc, eq, sql } from 'drizzle-orm';
-import type { SQL } from 'drizzle-orm';
-import type { DbContext } from '../db/connection';
-import {
-  einsatz,
-  einsatzAbschnitt,
-  einsatzEinheit,
-  einsatzEinheitHelfer,
-  einsatzFahrzeug,
-  einsatzCommandLog,
-  stammdatenEinheit,
-  stammdatenFahrzeug,
-} from '../db/schema';
+import type { EinsatzJsonFile, SystemJsonFile } from '../json-store/types';
 import type {
   AbschnittDetails,
   AbschnittNode,
@@ -18,188 +6,162 @@ import type {
   EinheitHelfer,
   EinheitListItem,
   FahrzeugListItem,
+  HelferGeschlecht,
+  HelferRolle,
+  OrganisationKey,
 } from '../../shared/types';
 
-/**
- * Lists all Einsaetze ordered by start descending.
- */
-export function listEinsaetze(ctx: DbContext): EinsatzListItem[] {
-  return ctx.db.select().from(einsatz).orderBy(desc(einsatz.start)).all();
+export function listEinsaetze(data: EinsatzJsonFile): EinsatzListItem[] {
+  const e = data.einsatz;
+  return [
+    {
+      id: e.id,
+      name: e.name,
+      fuestName: e.fuestName,
+      start: e.start,
+      end: e.end,
+      status: e.status,
+    },
+  ];
 }
 
-/**
- * Lists all Abschnitte for one Einsatz.
- */
-export function listAbschnitte(ctx: DbContext, einsatzId: string): AbschnittNode[] {
-  return ctx.db
-    .select()
-    .from(einsatzAbschnitt)
-    .where(eq(einsatzAbschnitt.einsatzId, einsatzId))
-    .all();
+export function listAbschnitte(data: EinsatzJsonFile, einsatzId: string): AbschnittNode[] {
+  return data.abschnitte
+    .filter((a) => a.einsatzId === einsatzId)
+    .map((a) => ({
+      id: a.id,
+      einsatzId: a.einsatzId,
+      parentId: a.parentId,
+      name: a.name,
+      systemTyp: a.systemTyp,
+    }));
 }
 
-/**
- * Lists Einheiten and Fahrzeuge for one Abschnitt.
- */
+function mapEinheit(
+  e: EinsatzJsonFile['einheiten'][number],
+  system: SystemJsonFile,
+): EinheitListItem {
+  const stamm = e.stammdatenEinheitId
+    ? system.stammdatenEinheiten.find((s) => s.id === e.stammdatenEinheitId)
+    : undefined;
+  return {
+    id: e.id,
+    parentEinsatzEinheitId: e.parentEinsatzEinheitId,
+    nameImEinsatz: e.nameImEinsatz,
+    organisation: e.organisation as OrganisationKey,
+    aktuelleStaerke: e.aktuelleStaerke,
+    aktuelleStaerkeTaktisch: e.aktuelleStaerkeTaktisch,
+    status: e.status,
+    piktogrammKey: stamm?.standardPiktogrammKey ?? null,
+    tacticalSignConfigJson: e.tacticalSignConfigJson,
+    aktuellerAbschnittId: e.aktuellerAbschnittId,
+    grFuehrerName: e.grFuehrerName,
+    ovName: e.ovName,
+    ovTelefon: e.ovTelefon,
+    ovFax: e.ovFax,
+    rbName: e.rbName,
+    rbTelefon: e.rbTelefon,
+    rbFax: e.rbFax,
+    lvName: e.lvName,
+    lvTelefon: e.lvTelefon,
+    lvFax: e.lvFax,
+    bemerkung: e.bemerkung,
+    vegetarierVorhanden: e.vegetarierVorhanden,
+    erreichbarkeiten: e.erreichbarkeiten,
+  };
+}
+
+function mapFahrzeug(
+  f: EinsatzJsonFile['fahrzeuge'][number],
+  einheiten: EinsatzJsonFile['einheiten'],
+): FahrzeugListItem {
+  const einheit = f.aktuelleEinsatzEinheitId
+    ? einheiten.find((e) => e.id === f.aktuelleEinsatzEinheitId)
+    : undefined;
+  return {
+    id: f.id,
+    name: f.name,
+    kennzeichen: f.kennzeichen,
+    status: f.status,
+    piktogrammKey: f.standardPiktogrammKey,
+    organisation: (einheit?.organisation as OrganisationKey | undefined) ?? null,
+    aktuelleEinsatzEinheitId: f.aktuelleEinsatzEinheitId,
+    aktuellerAbschnittId: f.aktuellerAbschnittId,
+    funkrufname: f.funkrufname,
+    stanKonform: f.stanKonform,
+    sondergeraet: f.sondergeraet,
+    nutzlast: f.nutzlast,
+  };
+}
+
 export function listAbschnittDetails(
-  ctx: DbContext,
+  data: EinsatzJsonFile,
+  system: SystemJsonFile,
   einsatzId: string,
   abschnittId: string,
 ): AbschnittDetails {
-  const einheitenRows = selectEinheitenRows(
-    ctx,
-    and(eq(einsatzEinheit.einsatzId, einsatzId), eq(einsatzEinheit.aktuellerAbschnittId, abschnittId)),
-  );
-  const fahrzeugeRows = selectFahrzeugeRows(
-    ctx,
-    and(eq(einsatzFahrzeug.einsatzId, einsatzId), eq(einsatzFahrzeug.aktuellerAbschnittId, abschnittId)),
-  );
-
-  const einheiten = mapEinheitenRows(einheitenRows);
-  const fahrzeuge = mapFahrzeugeRows(fahrzeugeRows);
-
+  const einheiten = data.einheiten
+    .filter((e) => e.einsatzId === einsatzId && e.aktuellerAbschnittId === abschnittId)
+    .map((e) => mapEinheit(e, system));
+  const fahrzeuge = data.fahrzeuge
+    .filter((f) => f.einsatzId === einsatzId && f.aktuellerAbschnittId === abschnittId)
+    .map((f) => mapFahrzeug(f, data.einheiten));
   return { einheiten, fahrzeuge };
 }
 
-/**
- * Lists Abschnitt details for all sections of one Einsatz in a single DB pass.
- */
 export function listAbschnittDetailsBatch(
-  ctx: DbContext,
+  data: EinsatzJsonFile,
+  system: SystemJsonFile,
   einsatzId: string,
 ): Record<string, AbschnittDetails> {
-  const einheitenRows = selectEinheitenRows(ctx, eq(einsatzEinheit.einsatzId, einsatzId));
-  const fahrzeugeRows = selectFahrzeugeRows(ctx, eq(einsatzFahrzeug.einsatzId, einsatzId));
   const grouped: Record<string, AbschnittDetails> = {};
-
-  for (const row of mapEinheitenRows(einheitenRows)) {
-    const abschnittId = row.aktuellerAbschnittId;
-    if (!grouped[abschnittId]) {
-      grouped[abschnittId] = { einheiten: [], fahrzeuge: [] };
-    }
-    grouped[abschnittId].einheiten.push(row);
+  for (const e of data.einheiten) {
+    if (e.einsatzId !== einsatzId) continue;
+    const item = mapEinheit(e, system);
+    const bucket = (grouped[item.aktuellerAbschnittId] ??= { einheiten: [], fahrzeuge: [] });
+    bucket.einheiten.push(item);
   }
-
-  for (const row of mapFahrzeugeRows(fahrzeugeRows)) {
-    const abschnittId = row.aktuellerAbschnittId;
-    if (!grouped[abschnittId]) {
-      grouped[abschnittId] = { einheiten: [], fahrzeuge: [] };
-    }
-    grouped[abschnittId].fahrzeuge.push(row);
+  for (const f of data.fahrzeuge) {
+    if (f.einsatzId !== einsatzId) continue;
+    const item = mapFahrzeug(f, data.einheiten);
+    if (!item.aktuellerAbschnittId) continue;
+    const bucket = (grouped[item.aktuellerAbschnittId] ??= { einheiten: [], fahrzeuge: [] });
+    bucket.fahrzeuge.push(item);
   }
-
   return grouped;
 }
 
-function selectEinheitenRows(ctx: DbContext, whereClause: SQL<unknown>) {
-  return ctx.db
-    .select({
-      id: einsatzEinheit.id,
-      parentEinsatzEinheitId: einsatzEinheit.parentEinsatzEinheitId,
-      nameImEinsatz: einsatzEinheit.nameImEinsatz,
-      organisation: einsatzEinheit.organisation,
-      aktuelleStaerke: einsatzEinheit.aktuelleStaerke,
-      aktuelleStaerkeTaktisch: einsatzEinheit.aktuelleStaerkeTaktisch,
-      status: einsatzEinheit.status,
-      piktogrammKey: sql<string | null>`coalesce(${stammdatenEinheit.standardPiktogrammKey}, null)`,
-      tacticalSignConfigJson: einsatzEinheit.tacticalSignConfigJson,
-      aktuellerAbschnittId: einsatzEinheit.aktuellerAbschnittId,
-      grFuehrerName: einsatzEinheit.grFuehrerName,
-      ovName: einsatzEinheit.ovName,
-      ovTelefon: einsatzEinheit.ovTelefon,
-      ovFax: einsatzEinheit.ovFax,
-      rbName: einsatzEinheit.rbName,
-      rbTelefon: einsatzEinheit.rbTelefon,
-      rbFax: einsatzEinheit.rbFax,
-      lvName: einsatzEinheit.lvName,
-      lvTelefon: einsatzEinheit.lvTelefon,
-      lvFax: einsatzEinheit.lvFax,
-      bemerkung: einsatzEinheit.bemerkung,
-      vegetarierVorhanden: einsatzEinheit.vegetarierVorhanden,
-      erreichbarkeiten: einsatzEinheit.erreichbarkeiten,
-    })
-    .from(einsatzEinheit)
-    .leftJoin(stammdatenEinheit, eq(einsatzEinheit.stammdatenEinheitId, stammdatenEinheit.id))
-    .where(whereClause)
-    .all();
+export function listEinheitHelfer(data: EinsatzJsonFile, einheitId: string): EinheitHelfer[] {
+  return data.helfer
+    .filter((h) => h.einsatzEinheitId === einheitId)
+    .map((h) => ({
+      id: h.id,
+      einsatzId: h.einsatzId,
+      einsatzEinheitId: h.einsatzEinheitId,
+      name: h.name,
+      rolle: h.rolle as HelferRolle,
+      geschlecht: h.geschlecht as HelferGeschlecht,
+      anzahl: h.anzahl,
+      funktion: h.funktion,
+      telefon: h.telefon,
+      erreichbarkeit: h.erreichbarkeit,
+      vegetarisch: h.vegetarisch,
+      bemerkung: h.bemerkung,
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-type EinheitRow = ReturnType<typeof selectEinheitenRows>[number];
-
-function selectFahrzeugeRows(ctx: DbContext, whereClause: SQL<unknown>) {
-  return ctx.db
-    .select({
-      id: einsatzFahrzeug.id,
-      name: sql<string>`coalesce(${stammdatenFahrzeug.name}, ${einsatzFahrzeug.id})`,
-      kennzeichen: stammdatenFahrzeug.kennzeichen,
-      status: einsatzFahrzeug.status,
-      piktogrammKey: sql<string | null>`coalesce(${stammdatenFahrzeug.standardPiktogrammKey}, null)`,
-      organisation: einsatzEinheit.organisation,
-      aktuelleEinsatzEinheitId: einsatzFahrzeug.aktuelleEinsatzEinheitId,
-      aktuellerAbschnittId: einsatzFahrzeug.aktuellerAbschnittId,
-      funkrufname: einsatzFahrzeug.funkrufname,
-      stanKonform: einsatzFahrzeug.stanKonform,
-      sondergeraet: einsatzFahrzeug.sondergeraet,
-      nutzlast: einsatzFahrzeug.nutzlast,
-    })
-    .from(einsatzFahrzeug)
-    .leftJoin(stammdatenFahrzeug, eq(einsatzFahrzeug.stammdatenFahrzeugId, stammdatenFahrzeug.id))
-    .leftJoin(einsatzEinheit, eq(einsatzFahrzeug.aktuelleEinsatzEinheitId, einsatzEinheit.id))
-    .where(whereClause)
-    .all();
+export function loadEinsatzState(
+  data: EinsatzJsonFile,
+  system: SystemJsonFile,
+  einsatzId: string,
+): { abschnitte: AbschnittNode[]; detailsBatch: Record<string, AbschnittDetails> } {
+  return {
+    abschnitte: listAbschnitte(data, einsatzId),
+    detailsBatch: listAbschnittDetailsBatch(data, system, einsatzId),
+  };
 }
 
-type FahrzeugRow = ReturnType<typeof selectFahrzeugeRows>[number];
-
-function mapEinheitenRows(rows: EinheitRow[]): EinheitListItem[] {
-  return rows.map((row) => ({
-    ...row,
-    status: row.status ?? 'AKTIV',
-  }));
-}
-
-function mapFahrzeugeRows(rows: FahrzeugRow[]): FahrzeugListItem[] {
-  return rows.map((row) => ({
-    ...row,
-    status: row.status ?? 'AKTIV',
-    organisation: row.organisation ?? null,
-  }));
-}
-
-/**
- * Lists all helper entries for one EinsatzEinheit.
- */
-export function listEinheitHelfer(ctx: DbContext, einheitId: string): EinheitHelfer[] {
-  return ctx.db
-    .select({
-      id: einsatzEinheitHelfer.id,
-      einsatzId: einsatzEinheitHelfer.einsatzId,
-      einsatzEinheitId: einsatzEinheitHelfer.einsatzEinheitId,
-      name: einsatzEinheitHelfer.name,
-      rolle: einsatzEinheitHelfer.rolle as EinheitHelfer['rolle'],
-      geschlecht: einsatzEinheitHelfer.geschlecht as EinheitHelfer['geschlecht'],
-      anzahl: einsatzEinheitHelfer.anzahl,
-      funktion: einsatzEinheitHelfer.funktion,
-      telefon: einsatzEinheitHelfer.telefon,
-      erreichbarkeit: einsatzEinheitHelfer.erreichbarkeit,
-      vegetarisch: einsatzEinheitHelfer.vegetarisch,
-      bemerkung: einsatzEinheitHelfer.bemerkung,
-    })
-    .from(einsatzEinheitHelfer)
-    .where(eq(einsatzEinheitHelfer.einsatzEinheitId, einheitId))
-    .orderBy(einsatzEinheitHelfer.name)
-    .all();
-}
-
-/**
- * Returns whether there is an undoable command for the Einsatz.
- */
-export function hasUndoableCommand(ctx: DbContext, einsatzId: string): boolean {
-  const row = ctx.db
-    .select({ id: einsatzCommandLog.id })
-    .from(einsatzCommandLog)
-    .where(and(eq(einsatzCommandLog.einsatzId, einsatzId), eq(einsatzCommandLog.undone, false)))
-    .orderBy(desc(einsatzCommandLog.timestamp))
-    .get();
-  return Boolean(row);
+export function hasUndoableCommand(data: EinsatzJsonFile, einsatzId: string): boolean {
+  return data.commandLog.some((c) => c.einsatzId === einsatzId && !c.undone);
 }
