@@ -1,15 +1,10 @@
 import crypto from 'node:crypto';
-import { eq } from 'drizzle-orm';
-import type { DbContext } from '../../db/connection';
-import { einsatz, einsatzAbschnitt } from '../../db/schema';
+import type { EinsatzWriteCtx } from '../../json-store/types';
 import type { EinsatzListItem } from '../../../shared/types';
 import { AppError } from '../errors';
 import { nowIso } from '../einsatz-transaction-guards';
 
-/**
- * Creates an Einsatz with default FüSt section.
- */
-export function createEinsatz(ctx: DbContext, input: { name: string; fuestName: string }): EinsatzListItem {
+export function createEinsatz(ctx: EinsatzWriteCtx, input: { name: string; fuestName: string }): EinsatzListItem {
   const created: EinsatzListItem = {
     id: crypto.randomUUID(),
     name: input.name,
@@ -18,34 +13,22 @@ export function createEinsatz(ctx: DbContext, input: { name: string; fuestName: 
     end: null,
     status: 'AKTIV',
   };
-
-  ctx.db.transaction((tx) => {
-    tx.insert(einsatz).values(created).run();
-    tx.insert(einsatzAbschnitt)
-      .values({
-        id: crypto.randomUUID(),
-        einsatzId: created.id,
-        name: input.fuestName,
-        parentId: null,
-        systemTyp: 'FUEST',
-      })
-      .run();
+  ctx.einsatz.einsatz = { ...created, uebergeordneteFuestName: null };
+  ctx.einsatz.abschnitte.push({
+    id: crypto.randomUUID(),
+    einsatzId: created.id,
+    name: input.fuestName,
+    parentId: null,
+    systemTyp: 'FUEST',
+    version: 0,
   });
-
   return created;
 }
 
-/**
- * Archives one Einsatz and sets end timestamp.
- */
-export function archiveEinsatz(ctx: DbContext, einsatzId: string): void {
-  const updated = ctx.db
-    .update(einsatz)
-    .set({ status: 'ARCHIVIERT', end: nowIso() })
-    .where(eq(einsatz.id, einsatzId))
-    .run();
-
-  if (!updated.changes) {
+export function archiveEinsatz(ctx: EinsatzWriteCtx, einsatzId: string): void {
+  if (ctx.einsatz.einsatz.id !== einsatzId) {
     throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
   }
+  ctx.einsatz.einsatz.status = 'ARCHIVIERT';
+  ctx.einsatz.einsatz.end = nowIso();
 }

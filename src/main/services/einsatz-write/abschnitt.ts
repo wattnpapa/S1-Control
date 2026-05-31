@@ -1,21 +1,15 @@
 import crypto from 'node:crypto';
-import { and, eq } from 'drizzle-orm';
-import type { DbContext } from '../../db/connection';
-import { einsatzAbschnitt } from '../../db/schema';
+import type { EinsatzWriteCtx } from '../../json-store/types';
 import type { AbschnittNode } from '../../../shared/types';
 import { AppError } from '../errors';
 import { ensureNotArchived } from '../einsatz-transaction-guards';
 import { validateAbschnittParent } from './validations';
 
-/**
- * Creates one Abschnitt under an Einsatz.
- */
 export function createAbschnitt(
-  ctx: DbContext,
+  ctx: EinsatzWriteCtx,
   input: { einsatzId: string; name: string; parentId?: string | null; systemTyp: AbschnittNode['systemTyp'] },
 ): AbschnittNode {
   ensureNotArchived(ctx, input.einsatzId);
-
   const item: AbschnittNode = {
     id: crypto.randomUUID(),
     einsatzId: input.einsatzId,
@@ -23,16 +17,12 @@ export function createAbschnitt(
     parentId: input.parentId ?? null,
     systemTyp: input.systemTyp,
   };
-
-  ctx.db.insert(einsatzAbschnitt).values(item).run();
+  ctx.einsatz.abschnitte.push({ ...item, version: 0 });
   return item;
 }
 
-/**
- * Updates one Abschnitt record.
- */
 export function updateAbschnitt(
-  ctx: DbContext,
+  ctx: EinsatzWriteCtx,
   input: {
     einsatzId: string;
     abschnittId: string;
@@ -42,29 +32,24 @@ export function updateAbschnitt(
   },
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
-  const current = ctx.db
-    .select({ id: einsatzAbschnitt.id })
-    .from(einsatzAbschnitt)
-    .where(and(eq(einsatzAbschnitt.id, input.abschnittId), eq(einsatzAbschnitt.einsatzId, input.einsatzId)))
-    .get();
-  if (!current) {
+  const idx = ctx.einsatz.abschnitte.findIndex(
+    (a) => a.id === input.abschnittId && a.einsatzId === input.einsatzId,
+  );
+  if (idx === -1) {
     throw new AppError('Abschnitt nicht gefunden', 'NOT_FOUND');
   }
-
   const nextParentId = input.parentId ?? null;
   validateAbschnittParent(ctx, {
     einsatzId: input.einsatzId,
     abschnittId: input.abschnittId,
     parentId: nextParentId,
   });
-
-  ctx.db
-    .update(einsatzAbschnitt)
-    .set({
-      name: input.name,
-      parentId: nextParentId,
-      systemTyp: input.systemTyp,
-    })
-    .where(eq(einsatzAbschnitt.id, input.abschnittId))
-    .run();
+  const prev = ctx.einsatz.abschnitte[idx];
+  ctx.einsatz.abschnitte[idx] = {
+    ...prev,
+    name: input.name,
+    parentId: nextParentId,
+    systemTyp: input.systemTyp,
+    version: prev.version + 1,
+  };
 }
