@@ -26,38 +26,26 @@ interface UseStartActionsProps {
 export function useStartActions(props: UseStartActionsProps) {
   const openExisting = useCallback(async () => {
     await props.withBusy(async () => {
-      props.setEinsatzInitialLoading(true);
-      try {
-        const opened = await window.api.openEinsatzWithDialog();
-        if (!opened) {
-          return;
-        }
-
-        props.setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
-        props.setSelectedEinsatzId(opened.id);
-        await props.loadEinsatz(opened.id);
-        props.setStartChoice('open');
-      } finally {
-        props.setEinsatzInitialLoading(false);
+      const opened = await window.api.openEinsatzWithDialog();
+      if (!opened) {
+        return;
       }
+      props.setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
+      props.setSelectedEinsatzId(opened.id);
+      props.setStartChoice('open');
+      await props.loadEinsatz(opened.id);
     });
   }, [props]);
 
   const openKnown = useCallback(async (einsatzId: string) => {
     await props.withBusy(async () => {
-      props.setEinsatzInitialLoading(true);
-      try {
-        const opened = await window.api.openEinsatz(einsatzId);
-        if (!opened) {
-          throw new Error('Einsatz konnte im Standardpfad nicht geöffnet werden.');
-        }
-
-        props.setSelectedEinsatzId(einsatzId);
-        await props.loadEinsatz(einsatzId);
-        props.setStartChoice('open');
-      } finally {
-        props.setEinsatzInitialLoading(false);
+      const opened = await window.api.openEinsatz(einsatzId);
+      if (!opened) {
+        throw new Error('Einsatz konnte im Standardpfad nicht geöffnet werden.');
       }
+      props.setSelectedEinsatzId(einsatzId);
+      props.setStartChoice('open');
+      await props.loadEinsatz(einsatzId);
     });
   }, [props]);
 
@@ -77,16 +65,11 @@ export function useStartActions(props: UseStartActionsProps) {
         return;
       }
 
-      props.setEinsatzInitialLoading(true);
-      try {
-        props.setStartNewEinsatzName('');
-        props.setEinsaetze((prev) => upsertRecentEinsatz(prev, created));
-        props.setSelectedEinsatzId(created.id);
-        await props.loadEinsatz(created.id);
-        props.setStartChoice('open');
-      } finally {
-        props.setEinsatzInitialLoading(false);
-      }
+      props.setStartNewEinsatzName('');
+      props.setEinsaetze((prev) => upsertRecentEinsatz(prev, created));
+      props.setSelectedEinsatzId(created.id);
+      props.setStartChoice('open');
+      await props.loadEinsatz(created.id);
     });
   }, [props]);
 
