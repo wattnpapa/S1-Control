@@ -27,7 +27,12 @@ function createWorkspaceShellProps(params: Parameters<typeof buildWorkspaceProps
  * Returns whether entry flow should be rendered instead of workspace.
  */
 function isEntryOnlyState(rootState: ReturnType<typeof useAppCoreState>): boolean {
-  return !rootState.authReady || !rootState.session || !rootState.selectedEinsatzId;
+  const result = !rootState.authReady || !rootState.session || !rootState.selectedEinsatzId;
+  if (result) {
+    console.warn('[ENTRY] authReady=%s session=%s selectedEinsatzId=%s',
+      rootState.authReady, !!rootState.session, rootState.selectedEinsatzId);
+  }
+  return result;
 }
 
 /**
