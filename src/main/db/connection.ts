@@ -1,6 +1,8 @@
+import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
 import type { EinsatzJsonFile, SystemJsonFile, EinsatzWriteCtx } from '../json-store/types';
-import { readEinsatzFile, writeEinsatzFile } from '../json-store/einsatz-store';
+import { readEinsatzFile, writeEinsatzFile, createEmptyEinsatzFile } from '../json-store/einsatz-store';
 import { readSystemFile, writeSystemFile } from '../json-store/system-store';
 import { withFileLock } from '../json-store/file-lock';
 
@@ -15,7 +17,23 @@ export function systemFilePath(einsatzPath: string): string {
 
 export function openDatabaseWithRetry(dbPath: string): DbContext {
   const sysPath = systemFilePath(dbPath);
-  const einsatz = readEinsatzFile(dbPath);
+  const dir = path.dirname(dbPath);
+  fs.mkdirSync(dir, { recursive: true });
+
+  let einsatz: EinsatzJsonFile;
+  if (fs.existsSync(dbPath)) {
+    try {
+      einsatz = readEinsatzFile(dbPath);
+    } catch {
+      // Existing file is not valid JSON (e.g. old SQLite file) — create fresh skeleton.
+      einsatz = createEmptyEinsatzFile({ id: crypto.randomUUID(), name: '', fuestName: '', uebergeordneteFuestName: null, start: new Date().toISOString(), end: null, status: 'AKTIV' });
+      writeEinsatzFile(dbPath, einsatz);
+    }
+  } else {
+    einsatz = createEmptyEinsatzFile({ id: crypto.randomUUID(), name: '', fuestName: '', uebergeordneteFuestName: null, start: new Date().toISOString(), end: null, status: 'AKTIV' });
+    writeEinsatzFile(dbPath, einsatz);
+  }
+
   const system = readSystemFile(sysPath);
   return buildCtx(dbPath, sysPath, einsatz, system);
 }
