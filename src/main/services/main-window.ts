@@ -77,8 +77,24 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   const url = resolveRendererUrl();
   if (process.env.VITE_DEV_SERVER_URL) {
     await waitForDevServer(url);
+    // Vite may accept the TCP connection before it's fully serving HTML.
+    // Retry loadURL up to 10 times with 300ms gaps on ERR_ABORTED (-3).
+    for (let attempt = 0; attempt < 10; attempt++) {
+      try {
+        await win.loadURL(url);
+        return win;
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException).code ?? String(err);
+        if (!String(code).includes('-3') && !String(code).includes('ERR_ABORTED')) {
+          throw err;
+        }
+        await new Promise((r) => setTimeout(r, 300));
+      }
+    }
+    await win.loadURL(url);
+  } else {
+    await win.loadURL(url);
   }
-  await win.loadURL(url);
   return win;
 }
 
