@@ -1,0 +1,15 @@
+{
+  "ignore": [
+    "**/*.json",
+    "**/*.s1control",
+    "**/*.s1control.lock",
+    "**/*.s1control.tmp",
+    "einsatz/**",
+    "backup/**",
+    "dist-renderer/**",
+    "drizzle/**"
+  ],
+  "watch": [
+    "dist-electron"
+  ]
+}
