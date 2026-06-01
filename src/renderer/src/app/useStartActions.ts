@@ -68,16 +68,17 @@ export function useStartActions(props: UseStartActionsProps) {
     }
 
     await props.withBusy(async () => {
+      // Dialog first — loading indicator only after user confirms
+      const created = await window.api.createEinsatzWithDialog({
+        name: props.startNewEinsatzName.trim(),
+        fuestName: props.startNewFuestName.trim() || 'FüSt 1',
+      });
+      if (!created) {
+        return;
+      }
+
       props.setEinsatzInitialLoading(true);
       try {
-        const created = await window.api.createEinsatzWithDialog({
-          name: props.startNewEinsatzName.trim(),
-          fuestName: props.startNewFuestName.trim() || 'FüSt 1',
-        });
-        if (!created) {
-          return;
-        }
-
         props.setStartNewEinsatzName('');
         props.setEinsaetze((prev) => upsertRecentEinsatz(prev, created));
         props.setSelectedEinsatzId(created.id);
