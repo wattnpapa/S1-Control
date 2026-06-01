@@ -100,16 +100,24 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
     [props],
   );
 
+  // Refs keep the latest values without recreating the callback on every render.
+  // This prevents useAppBootstrap from re-firing after every state update.
+  const selectedEinsatzIdRef = useRef(props.selectedEinsatzId);
+  selectedEinsatzIdRef.current = props.selectedEinsatzId;
+  const clearSelectedEinsatzRef = useRef(props.clearSelectedEinsatz);
+  clearSelectedEinsatzRef.current = props.clearSelectedEinsatz;
+
   const refreshEinsaetze = useCallback(async () => {
     const next = await window.api.listEinsaetze();
     props.setEinsaetze(next);
 
-    if (props.selectedEinsatzId && !next.some((item) => item.id === props.selectedEinsatzId)) {
-      props.clearSelectedEinsatz();
+    const currentId = selectedEinsatzIdRef.current;
+    if (currentId && next.length > 0 && !next.some((item) => item.id === currentId)) {
+      clearSelectedEinsatzRef.current();
     }
 
     return next;
-  }, [props]);
+  }, [props.setEinsaetze, selectedEinsatzIdRef, clearSelectedEinsatzRef]);
 
   const refreshAll = useCallback(async () => {
     await refreshEinsaetze();
