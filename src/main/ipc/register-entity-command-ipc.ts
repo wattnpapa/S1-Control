@@ -30,7 +30,9 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
           debugSync('db-bridge', 'fallback:split-einheit', { einsatzId: input.einsatzId, message });
         }
       }
-      splitEinheit(state.getDbContext(), input);
+      const splitCtx = state.getDbContext();
+      splitEinheit(splitCtx, input);
+      await splitCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'split-einheit');
     }),
   );
@@ -54,7 +56,9 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
           debugSync('db-bridge', 'fallback:move-einheit', { einsatzId: input.einsatzId, message });
         }
       }
-      moveEinheit(state.getDbContext(), input, user);
+      const moveEinCtx = state.getDbContext();
+      moveEinheit(moveEinCtx, input, user);
+      await moveEinCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-einheit');
     }),
   );
@@ -78,7 +82,9 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
           debugSync('db-bridge', 'fallback:move-fahrzeug', { einsatzId: input.einsatzId, message });
         }
       }
-      moveFahrzeug(state.getDbContext(), input, user);
+      const moveFzCtx = state.getDbContext();
+      moveFahrzeug(moveFzCtx, input, user);
+      await moveFzCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-fahrzeug');
     }),
   );
@@ -104,8 +110,10 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
           debugSync('db-bridge', 'fallback:undo-last', { einsatzId, message });
         }
       }
-      const undone = undoLastCommand(state.getDbContext(), einsatzId, user);
+      const undoCtx = state.getDbContext();
+      const undone = undoLastCommand(undoCtx, einsatzId, user);
       if (undone) {
+        await undoCtx.save();
         helpers.notifyEinsatzChanged(einsatzId, 'undo-command');
       }
       return undone;
@@ -128,7 +136,7 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
           debugSync('db-bridge', 'fallback:has-undo', { einsatzId, message });
         }
       }
-      return hasUndoableCommand(ctx, einsatzId);
+      return hasUndoableCommand(ctx.einsatz, einsatzId);
     }),
   );
 }

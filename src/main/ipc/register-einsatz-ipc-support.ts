@@ -75,8 +75,6 @@ export function reopenDbContextAfterRestore(
   einsatzId: string,
   user: SessionUser,
 ): void {
-  const activeContext = common.state.getDbContext();
-  activeContext.sqlite.close();
   const nextContext = openDatabaseWithRetry(dbPath);
   ensureDefaultAdmin(nextContext);
   const dbUser = ensureSessionUserRecord(nextContext, user);

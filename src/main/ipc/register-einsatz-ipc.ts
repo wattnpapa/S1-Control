@@ -150,7 +150,9 @@ function registerEinsatzCreateHandlers(
     IPC_CHANNEL.ARCHIVE_EINSATZ,
     wrap(async (einsatzId: string) => {
       requireUser();
-      archiveEinsatz(state.getDbContext(), einsatzId);
+      const ctx = state.getDbContext();
+      archiveEinsatz(ctx, einsatzId);
+      await ctx.save();
       helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
     }),
   );
@@ -199,6 +201,7 @@ function registerAbschnittHandlers(
         }
       }
       abschnitt = createAbschnitt(ctx, input);
+      await ctx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
       return abschnitt;
     }),
@@ -237,6 +240,7 @@ function registerAbschnittHandlers(
         }
       }
       updateAbschnitt(ctx, input);
+      await ctx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
     }),
   );
@@ -280,7 +284,7 @@ async function readAbschnitte(
       debugSync('db-bridge', 'fallback:list-abschnitte', { einsatzId, message });
     }
   }
-  return state.einsatzReadCache.getAbschnitte(ctx, einsatzId, () => listAbschnitte(ctx, einsatzId));
+  return state.einsatzReadCache.getAbschnitte(ctx, einsatzId, () => listAbschnitte(ctx.einsatz, einsatzId));
 }
 
 /**
@@ -310,7 +314,7 @@ async function readAbschnittDetails(
     }
   }
   return state.einsatzReadCache.getAbschnittDetails(ctx, einsatzId, abschnittId, () =>
-    listAbschnittDetails(ctx, einsatzId, abschnittId),
+    listAbschnittDetails(ctx.einsatz, ctx.system, einsatzId, abschnittId),
   );
 }
 
@@ -338,7 +342,7 @@ async function readAbschnittDetailsBatch(
       debugSync('db-bridge', 'fallback:list-abschnitt-details-batch', { einsatzId, message });
     }
   }
-  return state.einsatzReadCache.getAbschnittDetailsBatch(ctx, einsatzId, () => listAbschnittDetailsBatch(ctx, einsatzId));
+  return state.einsatzReadCache.getAbschnittDetailsBatch(ctx, einsatzId, () => listAbschnittDetailsBatch(ctx.einsatz, ctx.system, einsatzId));
 }
 
 /**

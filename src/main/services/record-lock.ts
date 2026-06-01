@@ -3,7 +3,7 @@ import path from 'node:path';
 import type { RecordEditLockInfo, RecordEditLockType } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import type { JsonRecordEditLock } from '../json-store/types';
-import { mutateSystemFile } from '../json-store/system-store';
+import { mutateSystemFile, readSystemFile } from '../json-store/system-store';
 import { systemFilePath } from '../db/connection';
 
 const LOCK_TTL_MS = 45_000;
@@ -140,7 +140,8 @@ export function releaseRecordEditLock(ctx: DbContext, target: LockTarget, identi
 
 export function ensureRecordEditLockOwnership(ctx: DbContext, target: LockTarget, identity: LockIdentity): void {
   const nowIso = toIso(Date.now());
-  const locks = cleanupExpired(ctx.system.recordEditLocks, nowIso);
+  const system = readSystemFile(getSysPath(ctx));
+  const locks = cleanupExpired(system.recordEditLocks, nowIso);
   const existing = locks.find(
     (l) => l.entityType === target.entityType && l.entityId === target.entityId,
   );
@@ -154,7 +155,8 @@ export function ensureRecordEditLockOwnership(ctx: DbContext, target: LockTarget
 
 export function listRecordEditLocks(ctx: DbContext, einsatzId: string, selfClientId: string): RecordEditLockInfo[] {
   const nowIso = toIso(Date.now());
-  return cleanupExpired(ctx.system.recordEditLocks, nowIso)
+  const system = readSystemFile(getSysPath(ctx));
+  return cleanupExpired(system.recordEditLocks, nowIso)
     .filter((l) => l.einsatzId === einsatzId)
     .map((l) => toLockInfo(l, selfClientId));
 }

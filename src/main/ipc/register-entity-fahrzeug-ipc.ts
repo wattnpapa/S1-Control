@@ -30,7 +30,9 @@ export function registerFahrzeugHandlers(common: RegistrarCommon, helpers: Entit
           debugSync('db-bridge', 'fallback:create-fahrzeug', { einsatzId: input.einsatzId, message });
         }
       }
-      createFahrzeug(state.getDbContext(), input);
+      const createFzCtx = state.getDbContext();
+      createFahrzeug(createFzCtx, input);
+      await createFzCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-fahrzeug');
     }),
   );
@@ -55,12 +57,14 @@ export function registerFahrzeugHandlers(common: RegistrarCommon, helpers: Entit
           debugSync('db-bridge', 'fallback:update-fahrzeug', { einsatzId: input.einsatzId, message });
         }
       }
+      const updateFzCtx = state.getDbContext();
       ensureRecordEditLockOwnership(
-        state.getDbContext(),
+        updateFzCtx,
         { einsatzId: input.einsatzId, entityType: 'FAHRZEUG', entityId: input.fahrzeugId },
         identity,
       );
-      updateFahrzeug(state.getDbContext(), input);
+      updateFahrzeug(updateFzCtx, input);
+      await updateFzCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-fahrzeug');
     }),
   );

@@ -19,7 +19,7 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
 
   ipcMain.handle(
     IPC_CHANNEL.LIST_EINHEIT_HELFER,
-    wrap(async (einheitId: string) => listEinheitHelfer(state.getDbContext(), einheitId)),
+    wrap(async (einheitId: string) => listEinheitHelfer(state.getDbContext().einsatz, einheitId)),
   );
 
   ipcMain.handle(
@@ -42,12 +42,14 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
           debugSync('db-bridge', 'fallback:create-helfer', { einsatzId: input.einsatzId, message });
         }
       }
+      const createHelferCtx = state.getDbContext();
       ensureRecordEditLockOwnership(
-        state.getDbContext(),
+        createHelferCtx,
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einsatzEinheitId },
         identity,
       );
-      createEinheitHelfer(state.getDbContext(), input);
+      createEinheitHelfer(createHelferCtx, input);
+      await createHelferCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-helfer');
     }),
   );
@@ -72,13 +74,15 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
           debugSync('db-bridge', 'fallback:update-helfer', { einsatzId: input.einsatzId, message });
         }
       }
-      const einsatzEinheitId = resolveHelferEinheitId(state.getDbContext(), input.helferId);
+      const updateHelferCtx = state.getDbContext();
+      const einsatzEinheitIdU = resolveHelferEinheitId(updateHelferCtx, input.helferId);
       ensureRecordEditLockOwnership(
-        state.getDbContext(),
-        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
+        updateHelferCtx,
+        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitIdU },
         identity,
       );
-      updateEinheitHelfer(state.getDbContext(), input);
+      updateEinheitHelfer(updateHelferCtx, input);
+      await updateHelferCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-helfer');
     }),
   );
@@ -103,13 +107,15 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
           debugSync('db-bridge', 'fallback:delete-helfer', { einsatzId: input.einsatzId, message });
         }
       }
-      const einsatzEinheitId = resolveHelferEinheitId(state.getDbContext(), input.helferId);
+      const deleteHelferCtx = state.getDbContext();
+      const einsatzEinheitId = resolveHelferEinheitId(deleteHelferCtx, input.helferId);
       ensureRecordEditLockOwnership(
-        state.getDbContext(),
+        deleteHelferCtx,
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
         identity,
       );
-      deleteEinheitHelfer(state.getDbContext(), input);
+      deleteEinheitHelfer(deleteHelferCtx, input);
+      await deleteHelferCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'delete-helfer');
     }),
   );

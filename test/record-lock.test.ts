@@ -1,5 +1,4 @@
 import { describe, expect, test } from 'vitest';
-import { eq } from 'drizzle-orm';
 import { createTestDb } from './helpers/db';
 import { createEinsatz } from '../src/main/services/einsatz';
 import {
@@ -9,11 +8,9 @@ import {
   refreshRecordEditLock,
   releaseRecordEditLock,
 } from '../src/main/services/record-lock';
-import { recordEditLock } from '../src/main/db/schema';
+import { mutateSystemFile } from '../src/main/json-store/system-store';
+import { systemFilePath } from '../src/main/db/connection';
 
-/**
- * Handles Build Identity.
- */
 function buildIdentity(clientId: string, computerName: string) {
   return { clientId, computerName, userName: `user-${clientId}` };
 }
@@ -82,7 +79,6 @@ describe('record lock service', () => {
     expect(refreshedForeign.refreshed).toBe(false);
     expect(refreshedForeign.lock?.computerName).toBe('PC-A');
   });
-
 });
 
 describe('record lock service - ownership and expiry', () => {
@@ -109,11 +105,13 @@ describe('record lock service - ownership and expiry', () => {
     const target = { einsatzId: einsatz.id, entityType: 'FAHRZEUG' as const, entityId: 'fahrzeug-2' };
 
     const acquired = acquireRecordEditLock(ctx, target, owner);
-    ctx.db
-      .update(recordEditLock)
-      .set({ expiresAt: new Date(Date.now() - 60_000).toISOString() })
-      .where(eq(recordEditLock.id, acquired.lock.id))
-      .run();
+    // Manually expire the lock by setting expiresAt in the past
+    mutateSystemFile(systemFilePath(ctx.path), (system) => {
+      const lock = system.recordEditLocks.find((l) => l.id === acquired.lock.id);
+      if (lock) {
+        lock.expiresAt = new Date(Date.now() - 60_000).toISOString();
+      }
+    });
 
     const takeover = acquireRecordEditLock(ctx, target, other);
     expect(takeover.acquired).toBe(true);

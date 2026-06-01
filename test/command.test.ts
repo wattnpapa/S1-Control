@@ -1,432 +1,211 @@
 import crypto from 'node:crypto';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { eq } from 'drizzle-orm';
-import { openDatabaseWithRetry } from '../src/main/db/connection';
-import {
-  benutzer,
-  einsatz,
-  einsatzAbschnitt,
-  einsatzCommandLog,
-  einsatzEinheit,
-  einsatzFahrzeug,
-} from '../src/main/db/schema';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../src/main/services/command';
 import { hashPassword } from '../src/main/services/auth';
 import { AppError } from '../src/main/services/errors';
-import { createDbPath } from './helpers/db';
+import { createDbPath, openTestDb } from './helpers/db';
 
 const user = { id: crypto.randomUUID(), name: 'tester', rolle: 'S1' as const };
 
-function setupCommandDbPath(): { getDbPath: () => string } {
+function setupCommandDb(): { getDbPath: () => string; getEinsatzId: () => string } {
   let dbPath: string;
+  let einsatzId: string;
   beforeEach(() => {
     dbPath = createDbPath();
+    einsatzId = crypto.randomUUID();
   });
   return {
     getDbPath: () => dbPath,
+    getEinsatzId: () => einsatzId,
   };
 }
 
 describe('command service - einheit move+undo', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
 
   it('moves and undoes einheit move with command log', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
 
-    const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
     const abschnittB = crypto.randomUUID();
     const einheitId = crypto.randomUUID();
 
-    ctx.db.insert(benutzer).values({
-      id: user.id,
-      name: user.name,
-      rolle: user.rolle,
-      passwortHash: hashPassword('x'),
-      aktiv: true,
-    }).run();
-
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Test',
-      fuestName: 'FueSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-
-    ctx.db.insert(einsatzAbschnitt).values([
-      { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' },
-      { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL' },
-    ]).run();
-
-    ctx.db.insert(einsatzEinheit).values({
-      id: einheitId,
-      einsatzId,
-      stammdatenEinheitId: null,
-      parentEinsatzEinheitId: null,
-      nameImEinsatz: 'TZ',
-      aktuelleStaerke: 9,
-      aktuellerAbschnittId: abschnittA,
-      status: 'AKTIV',
-      erstellt: new Date().toISOString(),
-      aufgeloest: null,
-    }).run();
+    ctx.system.benutzer.push({ id: user.id, name: user.name, rolle: user.rolle, passwortHash: hashPassword('x'), aktiv: true });
+    ctx.einsatz.abschnitte.push(
+      { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 },
+      { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL', version: 0 },
+    );
+    ctx.einsatz.einheiten.push({
+      id: einheitId, einsatzId, stammdatenEinheitId: null, parentEinsatzEinheitId: null,
+      nameImEinsatz: 'TZ', organisation: 'THW', aktuelleStaerke: 9, aktuelleStaerkeTaktisch: null,
+      aktuellerAbschnittId: abschnittA, status: 'AKTIV', tacticalSignConfigJson: null,
+      grFuehrerName: null, ovName: null, ovTelefon: null, ovFax: null,
+      rbName: null, rbTelefon: null, rbFax: null, lvName: null, lvTelefon: null, lvFax: null,
+      bemerkung: null, vegetarierVorhanden: null, erreichbarkeiten: null,
+      erstellt: new Date().toISOString(), aufgeloest: null, version: 0,
+    });
 
     moveEinheit(ctx, { einsatzId, einheitId, nachAbschnittId: abschnittB }, user);
 
-    const moved = ctx.db
-      .select({ abschnittId: einsatzEinheit.aktuellerAbschnittId })
-      .from(einsatzEinheit)
-      .where(eq(einsatzEinheit.id, einheitId))
-      .get();
-
-    expect(moved?.abschnittId).toBe(abschnittB);
+    const moved = ctx.einsatz.einheiten.find((e) => e.id === einheitId);
+    expect(moved?.aktuellerAbschnittId).toBe(abschnittB);
 
     const undoResult = undoLastCommand(ctx, einsatzId, user);
     expect(undoResult).toBe(true);
 
-    const reverted = ctx.db
-      .select({ abschnittId: einsatzEinheit.aktuellerAbschnittId })
-      .from(einsatzEinheit)
-      .where(eq(einsatzEinheit.id, einheitId))
-      .get();
+    const reverted = ctx.einsatz.einheiten.find((e) => e.id === einheitId);
+    expect(reverted?.aktuellerAbschnittId).toBe(abschnittA);
 
-    expect(reverted?.abschnittId).toBe(abschnittA);
-
-    const command = ctx.db.select().from(einsatzCommandLog).where(eq(einsatzCommandLog.einsatzId, einsatzId)).get();
+    const command = ctx.einsatz.commandLog.find((c) => c.einsatzId === einsatzId);
     expect(command?.undone).toBe(true);
-    ctx.sqlite.close();
   });
-
 });
 
 describe('command service - archive guard', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
 
   it('blocks writes on archived einsatz', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId, 'ARCHIVIERT');
 
-    const einsatzId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
     const abschnittB = crypto.randomUUID();
     const fahrzeugId = crypto.randomUUID();
 
-    ctx.db.insert(benutzer).values({
-      id: user.id,
-      name: user.name,
-      rolle: user.rolle,
-      passwortHash: hashPassword('x'),
-      aktiv: true,
-    }).run();
-
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Archived',
-      fuestName: 'FueSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'ARCHIVIERT',
-      uebergeordneteFuestName: null,
-    }).run();
-
-    ctx.db.insert(einsatzAbschnitt).values([
-      { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' },
-      { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL' },
-    ]).run();
-
-    ctx.db.insert(einsatzFahrzeug).values({
-      id: fahrzeugId,
-      einsatzId,
-      stammdatenFahrzeugId: null,
-      parentEinsatzFahrzeugId: null,
-      aktuelleEinsatzEinheitId: null,
-      aktuellerAbschnittId: abschnittA,
-      status: 'AKTIV',
-      erstellt: new Date().toISOString(),
-      entfernt: null,
-    }).run();
-
-    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittB }, user)).toThrow(
-      AppError,
+    ctx.einsatz.abschnitte.push(
+      { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 },
+      { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL', version: 0 },
     );
-    ctx.sqlite.close();
-  });
+    ctx.einsatz.fahrzeuge.push({
+      id: fahrzeugId, einsatzId, parentEinsatzFahrzeugId: null,
+      aktuelleEinsatzEinheitId: null, aktuellerAbschnittId: abschnittA,
+      name: 'Test-Fzg', kennzeichen: null, standardPiktogrammKey: 'mtw',
+      funkrufname: null, stanKonform: null, sondergeraet: null, nutzlast: null,
+      status: 'AKTIV', erstellt: new Date().toISOString(), entfernt: null, version: 0,
+    });
 
+    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittB }, user)).toThrow(AppError);
+  });
 });
 
 describe('command service - undo without commands', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
 
   it('returns false when undo has no commands', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
-
-    ctx.db
-      .insert(benutzer)
-      .values({
-        id: user.id,
-        name: user.name,
-        rolle: user.rolle,
-        passwortHash: hashPassword('x'),
-        aktiv: true,
-      })
-      .run();
-
-    ctx.db
-      .insert(einsatz)
-      .values({
-        id: einsatzId,
-        name: 'No-Commands',
-        fuestName: 'FüSt',
-        start: new Date().toISOString(),
-        end: null,
-        status: 'AKTIV',
-        uebergeordneteFuestName: null,
-      })
-      .run();
-
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     expect(undoLastCommand(ctx, einsatzId, user)).toBe(false);
-    ctx.sqlite.close();
   });
 });
 
 describe('command service - fahrzeug move+undo', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
+
   it('moves and undoes fahrzeug move', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     const abschnittA = crypto.randomUUID();
     const abschnittB = crypto.randomUUID();
     const fahrzeugId = crypto.randomUUID();
 
-    ctx.db
-      .insert(benutzer)
-      .values({
-        id: user.id,
-        name: user.name,
-        rolle: user.rolle,
-        passwortHash: hashPassword('x'),
-        aktiv: true,
-      })
-      .run();
-
-    ctx.db
-      .insert(einsatz)
-      .values({
-        id: einsatzId,
-        name: 'Fahrzeug-Test',
-        fuestName: 'FüSt',
-        start: new Date().toISOString(),
-        end: null,
-        status: 'AKTIV',
-        uebergeordneteFuestName: null,
-      })
-      .run();
-
-    ctx.db
-      .insert(einsatzAbschnitt)
-      .values([
-        { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' },
-        { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL' },
-      ])
-      .run();
-
-    ctx.db
-      .insert(einsatzFahrzeug)
-      .values({
-        id: fahrzeugId,
-        einsatzId,
-        stammdatenFahrzeugId: null,
-        parentEinsatzFahrzeugId: null,
-        aktuelleEinsatzEinheitId: null,
-        aktuellerAbschnittId: abschnittA,
-        status: 'AKTIV',
-        erstellt: new Date().toISOString(),
-        entfernt: null,
-      })
-      .run();
+    ctx.einsatz.abschnitte.push(
+      { id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 },
+      { id: abschnittB, einsatzId, name: 'B', parentId: null, systemTyp: 'NORMAL', version: 0 },
+    );
+    ctx.einsatz.fahrzeuge.push({
+      id: fahrzeugId, einsatzId, parentEinsatzFahrzeugId: null,
+      aktuelleEinsatzEinheitId: null, aktuellerAbschnittId: abschnittA,
+      name: 'Fzg', kennzeichen: null, standardPiktogrammKey: 'mtw',
+      funkrufname: null, stanKonform: null, sondergeraet: null, nutzlast: null,
+      status: 'AKTIV', erstellt: new Date().toISOString(), entfernt: null, version: 0,
+    });
 
     moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittB }, user);
     expect(undoLastCommand(ctx, einsatzId, user)).toBe(true);
 
-    const reverted = ctx.db
-      .select({ abschnittId: einsatzFahrzeug.aktuellerAbschnittId })
-      .from(einsatzFahrzeug)
-      .where(eq(einsatzFahrzeug.id, fahrzeugId))
-      .get();
-
-    expect(reverted?.abschnittId).toBe(abschnittA);
-    ctx.sqlite.close();
+    const reverted = ctx.einsatz.fahrzeuge.find((f) => f.id === fahrzeugId);
+    expect(reverted?.aktuellerAbschnittId).toBe(abschnittA);
   });
-
 });
 
 describe('command service - unsupported undo type', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
 
   it('throws for unsupported undo command type', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
-
-    ctx.db
-      .insert(benutzer)
-      .values({
-        id: user.id,
-        name: user.name,
-        rolle: user.rolle,
-        passwortHash: hashPassword('x'),
-        aktiv: true,
-      })
-      .run();
-
-    ctx.db
-      .insert(einsatz)
-      .values({
-        id: einsatzId,
-        name: 'Undo-Test',
-        fuestName: 'FüSt',
-        start: new Date().toISOString(),
-        end: null,
-        status: 'AKTIV',
-        uebergeordneteFuestName: null,
-      })
-      .run();
-
-    ctx.db
-      .insert(einsatzCommandLog)
-      .values({
-        id: crypto.randomUUID(),
-        einsatzId,
-        benutzerId: user.id,
-        commandTyp: 'UNKNOWN',
-        payloadJson: '{}',
-        timestamp: new Date().toISOString(),
-        undone: false,
-      })
-      .run();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
+    ctx.einsatz.commandLog.push({
+      id: crypto.randomUUID(), einsatzId, benutzerId: user.id,
+      commandTyp: 'UNKNOWN', payloadJson: '{}',
+      timestamp: new Date().toISOString(), undone: false,
+    });
 
     expect(() => undoLastCommand(ctx, einsatzId, user)).toThrow('noch nicht implementiert');
-    ctx.sqlite.close();
   });
 });
 
 describe('command service - guard paths', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
 
   it('returns without changes when moving einheit to same abschnitt', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     const abschnittA = crypto.randomUUID();
     const einheitId = crypto.randomUUID();
 
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Same-Abschnitt',
-      fuestName: 'FüSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-    ctx.db.insert(einsatzAbschnitt).values({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' }).run();
-    ctx.db.insert(einsatzEinheit).values({
-      id: einheitId,
-      einsatzId,
-      stammdatenEinheitId: null,
-      parentEinsatzEinheitId: null,
-      nameImEinsatz: 'OV',
-      aktuelleStaerke: 9,
-      aktuellerAbschnittId: abschnittA,
-      status: 'AKTIV',
-      erstellt: new Date().toISOString(),
-      aufgeloest: null,
-    }).run();
+    ctx.einsatz.abschnitte.push({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 });
+    ctx.einsatz.einheiten.push({
+      id: einheitId, einsatzId, stammdatenEinheitId: null, parentEinsatzEinheitId: null,
+      nameImEinsatz: 'OV', organisation: 'THW', aktuelleStaerke: 9, aktuelleStaerkeTaktisch: null,
+      aktuellerAbschnittId: abschnittA, status: 'AKTIV', tacticalSignConfigJson: null,
+      grFuehrerName: null, ovName: null, ovTelefon: null, ovFax: null,
+      rbName: null, rbTelefon: null, rbFax: null, lvName: null, lvTelefon: null, lvFax: null,
+      bemerkung: null, vegetarierVorhanden: null, erreichbarkeiten: null,
+      erstellt: new Date().toISOString(), aufgeloest: null, version: 0,
+    });
 
     moveEinheit(ctx, { einsatzId, einheitId, nachAbschnittId: abschnittA }, user);
-    const logs = ctx.db.select().from(einsatzCommandLog).where(eq(einsatzCommandLog.einsatzId, einsatzId)).all();
-    expect(logs).toHaveLength(0);
-    ctx.sqlite.close();
+    expect(ctx.einsatz.commandLog.filter((c) => c.einsatzId === einsatzId)).toHaveLength(0);
   });
 
   it('throws NOT_FOUND when moving unknown einheit', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     const abschnittA = crypto.randomUUID();
-
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Unknown-Einheit',
-      fuestName: 'FüSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-    ctx.db.insert(einsatzAbschnitt).values({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' }).run();
+    ctx.einsatz.abschnitte.push({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 });
 
     expect(() => moveEinheit(ctx, { einsatzId, einheitId: 'missing', nachAbschnittId: abschnittA }, user)).toThrow('Einheit nicht gefunden');
-    ctx.sqlite.close();
   });
 });
 
 describe('command service - fahrzeug guard paths', () => {
-  const { getDbPath } = setupCommandDbPath();
+  const { getDbPath, getEinsatzId } = setupCommandDb();
+
   it('throws INVALID_STATE when fahrzeug has no current abschnitt', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     const fahrzeugId = crypto.randomUUID();
     const abschnittA = crypto.randomUUID();
 
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Invalid-Fahrzeug',
-      fuestName: 'FüSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-    ctx.db.insert(einsatzAbschnitt).values({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' }).run();
-    ctx.db.insert(einsatzFahrzeug).values({
-      id: fahrzeugId,
-      einsatzId,
-      stammdatenFahrzeugId: null,
-      parentEinsatzFahrzeugId: null,
-      aktuelleEinsatzEinheitId: null,
-      aktuellerAbschnittId: null,
-      status: 'AKTIV',
-      erstellt: new Date().toISOString(),
-      entfernt: null,
-    }).run();
+    ctx.einsatz.abschnitte.push({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 });
+    ctx.einsatz.fahrzeuge.push({
+      id: fahrzeugId, einsatzId, parentEinsatzFahrzeugId: null,
+      aktuelleEinsatzEinheitId: null, aktuellerAbschnittId: null,
+      name: 'Fzg', kennzeichen: null, standardPiktogrammKey: 'mtw',
+      funkrufname: null, stanKonform: null, sondergeraet: null, nutzlast: null,
+      status: 'AKTIV', erstellt: new Date().toISOString(), entfernt: null, version: 0,
+    });
 
-    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittA }, user)).toThrow(
-      'Fahrzeug hat keinen aktuellen Abschnitt',
-    );
-    ctx.sqlite.close();
+    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId, nachAbschnittId: abschnittA }, user)).toThrow('Fahrzeug hat keinen aktuellen Abschnitt');
   });
 
   it('throws NOT_FOUND when moving unknown fahrzeug', () => {
-    const ctx = openDatabaseWithRetry(getDbPath());
-    const einsatzId = crypto.randomUUID();
+    const einsatzId = getEinsatzId();
+    const ctx = openTestDb(getDbPath(), einsatzId);
     const abschnittA = crypto.randomUUID();
+    ctx.einsatz.abschnitte.push({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL', version: 0 });
 
-    ctx.db.insert(einsatz).values({
-      id: einsatzId,
-      name: 'Unknown-Fahrzeug',
-      fuestName: 'FüSt',
-      start: new Date().toISOString(),
-      end: null,
-      status: 'AKTIV',
-      uebergeordneteFuestName: null,
-    }).run();
-    ctx.db.insert(einsatzAbschnitt).values({ id: abschnittA, einsatzId, name: 'A', parentId: null, systemTyp: 'NORMAL' }).run();
-
-    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId: 'missing', nachAbschnittId: abschnittA }, user)).toThrow(
-      'Fahrzeug nicht gefunden',
-    );
-    ctx.sqlite.close();
+    expect(() => moveFahrzeug(ctx, { einsatzId, fahrzeugId: 'missing', nachAbschnittId: abschnittA }, user)).toThrow('Fahrzeug nicht gefunden');
   });
-
 });

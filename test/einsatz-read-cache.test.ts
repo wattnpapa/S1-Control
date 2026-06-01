@@ -2,8 +2,10 @@ import { describe, expect, it, vi } from 'vitest';
 import { EinsatzReadCache } from '../src/main/services/einsatz-read-cache';
 import type { AbschnittDetails, AbschnittNode } from '../src/shared/types';
 
-function dbCtx(path: string) {
-  return { path } as { path: string };
+import type { DbContext } from '../src/main/db/connection';
+
+function dbCtx(path: string): DbContext {
+  return { path, einsatz: {} as never, system: {} as never, save: async () => {} };
 }
 
 describe('einsatz read cache', () => {

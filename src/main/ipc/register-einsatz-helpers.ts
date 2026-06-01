@@ -3,6 +3,7 @@ import { openDatabaseWithRetry } from '../db/connection';
 import { ensureDefaultAdmin, ensureSessionUserRecord } from '../services/auth';
 import { debugSync } from '../services/debug';
 import { listEinsaetze as listEinsaetzeFromContext } from '../services/einsatz';
+import type { SessionUser } from '../../shared/types';
 import { readPrimaryEinsatzFromDbFile, resolveEinsatzBaseDir } from '../services/einsatz-files';
 import type { AppState, EntityIpcHelpers, EinsatzIpcHelpers, LockIdentity } from './register-support';
 
@@ -86,13 +87,13 @@ function resolveRecentDbPathByEinsatzId(state: AppState, einsatzId: string): str
 /**
  * Opens an einsatz database file and wires process state to the opened context.
  */
-function openEinsatzByPathForUser(state: AppState, selected: string, user: { name: string }) {
+function openEinsatzByPathForUser(state: AppState, selected: string, user: SessionUser) {
   const requestTs = Date.now();
   debugSync('einsatz', 'open-by-path:start', { selected, user: user.name, requestTs });
   const nextContext = openDatabaseWithRetry(selected);
   try {
     ensureDefaultAdmin(nextContext);
-    const einsatzMeta = listEinsaetzeFromContext(nextContext)[0] ?? readPrimaryEinsatzFromDbFile(selected);
+    const einsatzMeta = listEinsaetzeFromContext(nextContext.einsatz)[0] ?? readPrimaryEinsatzFromDbFile(selected);
     if (!einsatzMeta) {
       const fileName = path.basename(selected).toLowerCase();
       if (fileName.startsWith('_system.')) {
@@ -125,11 +126,6 @@ function openEinsatzByPathForUser(state: AppState, selected: string, user: { nam
     });
     return einsatzMeta;
   } catch (error) {
-    try {
-      nextContext.sqlite.close();
-    } catch {
-      // ignore close errors on failed open flow
-    }
     throw error;
   }
 }
@@ -146,7 +142,7 @@ export function createEinsatzIpcHelpers(state: AppState): EinsatzIpcHelpers {
       rememberRecentDbPath(state, dbPath, einsatzId);
     },
     resolveRecentDbPathByEinsatzId: (einsatzId: string): string | null => resolveRecentDbPathByEinsatzId(state, einsatzId),
-    openEinsatzByPathForUser: (selected, user) => openEinsatzByPathForUser(state, selected, user),
+    openEinsatzByPathForUser: (selected, user) => openEinsatzByPathForUser(state, selected, user as SessionUser),
     notifyEinsatzChanged: (einsatzId, reason, dbPath = state.getDbContext().path) => {
       state.einsatzReadCache.invalidateEinsatz(state.getDbContext(), einsatzId);
       state.einsatzSync.broadcastChange({ einsatzId, dbPath, reason });
@@ -158,7 +154,7 @@ export function createEinsatzIpcHelpers(state: AppState): EinsatzIpcHelpers {
  * Builds entity helper callbacks for lock identity and sync notifications.
  */
 export function createEntityIpcHelpers(state: AppState, notifyEinsatzChanged: EinsatzIpcHelpers['notifyEinsatzChanged']): EntityIpcHelpers {
-  const lockIdentity = (user: { name: string }): LockIdentity => ({
+  const lockIdentity = (user: SessionUser): LockIdentity => ({
     clientId: state.clientPresence.getClientId(),
     computerName: state.clientPresence.getComputerName(),
     userName: user.name,

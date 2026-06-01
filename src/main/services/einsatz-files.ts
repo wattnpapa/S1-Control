@@ -2,8 +2,10 @@ import fs from 'node:fs';
 import path from 'node:path';
 import type { CreateEinsatzInput } from '../../shared/ipc';
 import type { EinsatzListItem, SessionUser } from '../../shared/types';
-import { createDbContext, openDatabaseWithRetry, type DbContext } from '../db/connection';
-import { readEinsatzFile, createEmptyEinsatzFile } from '../json-store/einsatz-store';
+import crypto from 'node:crypto';
+import { openDatabaseWithRetry, systemFilePath, type DbContext } from '../db/connection';
+import { readEinsatzFile, createEmptyEinsatzFile, writeEinsatzFile } from '../json-store/einsatz-store';
+import { readSystemFile, writeSystemFile } from '../json-store/system-store';
 import { ensureDefaultAdmin, ensureSessionUserRecord } from './auth';
 import { createEinsatz } from './einsatz';
 
@@ -119,9 +121,11 @@ export function createEinsatzInOwnDatabase(
   fs.mkdirSync(baseDir, { recursive: true });
 
   const dbPath = explicitDbPath ?? path.join(baseDir, createEinsatzDbFileName(input.name));
+  const sysPath = systemFilePath(dbPath);
 
-  const placeholderEinsatz = createEmptyEinsatzFile({
-    id: 'pending',
+  // Write initial skeleton file so openDatabaseWithRetry can read it.
+  const skeleton = createEmptyEinsatzFile({
+    id: crypto.randomUUID(),
     name: input.name,
     fuestName: input.fuestName ?? input.name,
     uebergeordneteFuestName: null,
@@ -129,7 +133,9 @@ export function createEinsatzInOwnDatabase(
     end: null,
     status: 'AKTIV',
   });
-  const ctx = createDbContext(dbPath, placeholderEinsatz);
+  writeEinsatzFile(dbPath, skeleton);
+
+  const ctx = openDatabaseWithRetry(dbPath);
 
   ensureDefaultAdmin(ctx);
   if (sessionUser) {
@@ -137,5 +143,10 @@ export function createEinsatzInOwnDatabase(
   }
 
   const einsatz = createEinsatz(ctx, input);
+
+  // Persist immediately — no lock contention on a freshly created file.
+  writeEinsatzFile(dbPath, ctx.einsatz);
+  writeSystemFile(sysPath, ctx.system);
+
   return { einsatz, ctx };
 }

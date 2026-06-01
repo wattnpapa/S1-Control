@@ -25,17 +25,13 @@ describe('einsatz file service', () => {
     const user = { id: 'u1', name: 'u', rolle: 'S1' as const };
     const created = createEinsatzInOwnDatabase(baseDir, { name: 'Übung Test', fuestName: 'FüSt 1' }, user);
 
-    try {
-      const list = listEinsaetzeFromDirectory(baseDir);
-      expect(list).toHaveLength(1);
-      expect(list[0]?.id).toBe(created.einsatz.id);
+    const list = listEinsaetzeFromDirectory(baseDir);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.id).toBe(created.einsatz.id);
 
-      const dbPath = findDbPathForEinsatz(baseDir, created.einsatz.id);
-      expect(dbPath).toBeTruthy();
-      expect(resolveSystemDbPath(baseDir).endsWith('_system.s1control')).toBe(true);
-    } finally {
-      created.ctx.sqlite.close();
-    }
+    const dbPath = findDbPathForEinsatz(baseDir, created.einsatz.id);
+    expect(dbPath).toBeTruthy();
+    expect(resolveSystemDbPath(baseDir).endsWith('_system.s1control')).toBe(true);
   });
 
   it('handles missing/invalid db files and explicit db path', () => {
@@ -44,22 +40,18 @@ describe('einsatz file service', () => {
     const explicitPath = path.join(baseDir, 'custom.s1control');
     const created = createEinsatzInOwnDatabase(baseDir, { name: 'Übung 2', fuestName: 'FüSt 2' }, user, explicitPath);
 
-    try {
-      expect(createEinsatzDbFileName('Übung Test').endsWith('.s1control')).toBe(true);
-      expect(resolveSystemDbPath(baseDir)).toBe(path.join(baseDir, '_system.s1control'));
-      expect(findDbPathForEinsatz(baseDir, 'does-not-exist')).toBeNull();
+    expect(createEinsatzDbFileName('Übung Test').endsWith('.s1control')).toBe(true);
+    expect(resolveSystemDbPath(baseDir)).toBe(path.join(baseDir, '_system.s1control'));
+    expect(findDbPathForEinsatz(baseDir, 'does-not-exist')).toBeNull();
 
-      const missingPath = path.join(baseDir, 'missing.s1control');
-      const invalidPath = path.join(baseDir, 'invalid.s1control');
-      fs.writeFileSync(invalidPath, 'not-a-db');
+    const missingPath = path.join(baseDir, 'missing.s1control');
+    const invalidPath = path.join(baseDir, 'invalid.s1control');
+    fs.writeFileSync(invalidPath, 'not-a-db');
 
-      const list = listEinsaetzeFromDbPaths([missingPath, invalidPath, explicitPath]);
-      expect(list).toHaveLength(1);
-      expect(list[0]?.id).toBe(created.einsatz.id);
-      expect(list[0]?.dbPath).toBe(explicitPath);
-    } finally {
-      created.ctx.sqlite.close();
-    }
+    const list = listEinsaetzeFromDbPaths([missingPath, invalidPath, explicitPath]);
+    expect(list).toHaveLength(1);
+    expect(list[0]?.id).toBe(created.einsatz.id);
+    expect((list[0] as { dbPath?: string })?.dbPath).toBe(explicitPath);
   });
 
   it('sorts known einsaetze by last usage descending', () => {
@@ -70,16 +62,11 @@ describe('einsatz file service', () => {
     const first = createEinsatzInOwnDatabase(baseDir, { name: 'Erster', fuestName: 'FüSt 1' }, user, firstPath);
     const second = createEinsatzInOwnDatabase(baseDir, { name: 'Zweiter', fuestName: 'FüSt 2' }, user, secondPath);
 
-    try {
-      const sorted = listEinsaetzeFromDbPathsWithUsage([firstPath, secondPath], {
-        [firstPath]: '2026-02-26T10:00:00.000Z',
-        [secondPath]: '2026-02-26T11:00:00.000Z',
-      });
-      expect(sorted[0]?.id).toBe(second.einsatz.id);
-      expect(sorted[1]?.id).toBe(first.einsatz.id);
-    } finally {
-      first.ctx.sqlite.close();
-      second.ctx.sqlite.close();
-    }
+    const sorted = listEinsaetzeFromDbPathsWithUsage([firstPath, secondPath], {
+      [firstPath]: '2026-02-26T10:00:00.000Z',
+      [secondPath]: '2026-02-26T11:00:00.000Z',
+    });
+    expect(sorted[0]?.id).toBe(second.einsatz.id);
+    expect(sorted[1]?.id).toBe(first.einsatz.id);
   });
 });

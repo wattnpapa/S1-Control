@@ -30,7 +30,9 @@ export function registerEinheitHandlers(common: RegistrarCommon, helpers: Entity
           debugSync('db-bridge', 'fallback:create-einheit', { einsatzId: input.einsatzId, message });
         }
       }
-      createEinheit(state.getDbContext(), input);
+      const createCtx = state.getDbContext();
+      createEinheit(createCtx, input);
+      await createCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-einheit');
     }),
   );
@@ -55,12 +57,14 @@ export function registerEinheitHandlers(common: RegistrarCommon, helpers: Entity
           debugSync('db-bridge', 'fallback:update-einheit', { einsatzId: input.einsatzId, message });
         }
       }
+      const updateCtx = state.getDbContext();
       ensureRecordEditLockOwnership(
-        state.getDbContext(),
+        updateCtx,
         { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einheitId },
         identity,
       );
-      updateEinheit(state.getDbContext(), input);
+      updateEinheit(updateCtx, input);
+      await updateCtx.save();
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-einheit');
     }),
   );

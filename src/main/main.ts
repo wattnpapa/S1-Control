@@ -360,8 +360,6 @@ function initRuntimeServices(settingsStore: SettingsStore): {
   }
   const backupCoordinator = new BackupCoordinator(
     () => (DISABLE_CLIENT_HEARTBEAT ? true : clientPresence.canWriteBackups()),
-    dbBridge,
-    USE_DB_UTILITY_PROCESS,
   );
   const einsatzSync = new EinsatzSyncService((signal) => {
     broadcastToAllWindows(IPC_CHANNEL.EINSATZ_CHANGED, signal);
@@ -457,11 +455,6 @@ async function bootstrap(): Promise<void> {
   registerMainIpc({
     getDbContext: () => dbContext,
     setDbContext: (ctx) => {
-      try {
-        dbContext.sqlite.close();
-      } catch {
-        // already closed
-      }
       dbContext = ctx;
       einsatzReadCache.clearAll();
     },
