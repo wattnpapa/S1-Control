@@ -1,4 +1,5 @@
 import path from 'node:path';
+import http from 'node:http';
 import { existsSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { app, BrowserWindow } from 'electron';
@@ -40,6 +41,25 @@ export function resolveRendererUrl(): string {
 }
 
 /**
+ * Waits until the Vite dev server responds before loading it.
+ * Only used in dev mode to avoid ERR_ABORTED on fast Electron starts.
+ */
+async function waitForDevServer(url: string, maxWaitMs = 10_000): Promise<void> {
+  const deadline = Date.now() + maxWaitMs;
+  while (Date.now() < deadline) {
+    const ready = await new Promise<boolean>((resolve) => {
+      const req = http.get(url, (res) => { res.destroy(); resolve(res.statusCode !== undefined); });
+      req.on('error', () => resolve(false));
+      req.setTimeout(500, () => { req.destroy(); resolve(false); });
+    });
+    if (ready) {
+      return;
+    }
+    await new Promise((r) => setTimeout(r, 200));
+  }
+}
+
+/**
  * Creates and loads the main application window.
  */
 export async function createMainWindow(): Promise<BrowserWindow> {
@@ -53,7 +73,12 @@ export async function createMainWindow(): Promise<BrowserWindow> {
       sandbox: false,
     },
   });
-  await win.loadURL(resolveRendererUrl());
+
+  const url = resolveRendererUrl();
+  if (process.env.VITE_DEV_SERVER_URL) {
+    await waitForDevServer(url);
+  }
+  await win.loadURL(url);
   return win;
 }
 
