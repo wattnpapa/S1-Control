@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "writeSeq": 0,
+  "einsatz": {
+    "id": "8851c4c2-e10d-4b28-83d0-5742428c0e9b",
+    "name": "",
+    "fuestName": "",
+    "uebergeordneteFuestName": null,
+    "start": "2026-06-01T10:29:13.623Z",
+    "end": null,
+    "status": "AKTIV"
+  },
+  "abschnitte": [],
+  "einheiten": [],
+  "fahrzeuge": [],
+  "helfer": [],
+  "einheitBewegungen": [],
+  "fahrzeugBewegungen": [],
+  "commandLog": [],
+  "staerkeLog": []
+}

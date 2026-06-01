@@ -160,6 +160,17 @@ export class EinsatzSyncService {
   /**
    * Handles Broadcast Change.
    */
+  public notifyLocal(input: { einsatzId: string; dbPath: string; reason: string }): void {
+    const signal: EinsatzChangedSignal = {
+      einsatzId: input.einsatzId,
+      dbPath: input.dbPath,
+      sourceClientId: this.clientId,
+      changedAt: new Date().toISOString(),
+      reason: input.reason,
+    };
+    this.onRemoteChange(signal);
+  }
+
   public broadcastChange(input: { einsatzId: string; dbPath: string; reason: string }): void {
     this.currentDbPath = input.dbPath;
     this.currentEinsatzId = input.einsatzId;

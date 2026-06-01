@@ -1,0 +1,53 @@
+{
+  "schemaVersion": 1,
+  "stammdatenEinheiten": [],
+  "benutzer": [
+    {
+      "id": "cd9a3805-732d-42f3-a53f-c55d26283bc5",
+      "name": "admin",
+      "rolle": "ADMIN",
+      "passwortHash": "scrypt$8b123412f3ba744f8e97a86929633b8c$1bdc528ac1ef4ff3ed0e9bd0d15ed43e5586761e5ff04fdb7c7b91daa1ac1decb546e04205cbd3261969a9d242e0ca8de8a32cec19e279e757f732e9e9c61f01",
+      "aktiv": true
+    }
+  ],
+  "activeClients": [
+    {
+      "clientId": "f341c1ee-029b-4f8c-a7a3-8d0799ee03af",
+      "computerName": "MacBook-Pro.local",
+      "ipAddress": "192.168.22.77",
+      "dbPath": "/Users/johannes/Developer/S1-Control/einsatz/java_error_in_phpstorm_18906.s1control",
+      "lastSeen": "2026-06-01T21:54:02.212Z",
+      "startedAt": "2026-06-01T21:49:31.907Z",
+      "isMaster": false
+    },
+    {
+      "clientId": "5ac4c589-ab15-414e-a069-32634b0e5c5a",
+      "computerName": "MacBook-Pro.local",
+      "ipAddress": "192.168.22.77",
+      "dbPath": "/Users/johannes/Developer/S1-Control/einsatz/java_error_in_phpstorm_18906.s1control",
+      "lastSeen": "2026-06-01T21:55:00.793Z",
+      "startedAt": "2026-06-01T21:54:08.771Z",
+      "isMaster": false
+    },
+    {
+      "clientId": "e029a0e4-cadf-4f67-967d-1e6166b4eb00",
+      "computerName": "MacBook-Pro.local",
+      "ipAddress": "192.168.22.77",
+      "dbPath": "/Users/johannes/Developer/S1-Control/einsatz/_system.s1control",
+      "lastSeen": "2026-06-01T21:55:13.580Z",
+      "startedAt": "2026-06-01T21:55:01.492Z",
+      "isMaster": false
+    },
+    {
+      "clientId": "f8d64a36-4373-4d47-b9f5-8623b257256b",
+      "computerName": "MacBook-Pro.local",
+      "ipAddress": "192.168.22.77",
+      "dbPath": "/Users/johannes/Developer/S1-Control/einsatz/_system.s1control",
+      "lastSeen": "2026-06-01T21:55:16.999Z",
+      "startedAt": "2026-06-01T21:55:16.998Z",
+      "isMaster": false
+    }
+  ],
+  "einsatzListe": [],
+  "recordEditLocks": []
+}

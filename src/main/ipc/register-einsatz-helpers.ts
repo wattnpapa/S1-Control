@@ -145,6 +145,9 @@ export function createEinsatzIpcHelpers(state: AppState): EinsatzIpcHelpers {
     openEinsatzByPathForUser: (selected, user) => openEinsatzByPathForUser(state, selected, user as SessionUser),
     notifyEinsatzChanged: (einsatzId, reason, dbPath = state.getDbContext().path) => {
       state.einsatzReadCache.invalidateEinsatz(state.getDbContext(), einsatzId);
+      // Notify local renderer directly (own UDP broadcasts are ignored).
+      state.einsatzSync.notifyLocal({ einsatzId, dbPath, reason });
+      // Also broadcast to remote clients via UDP.
       state.einsatzSync.broadcastChange({ einsatzId, dbPath, reason });
     },
   };
