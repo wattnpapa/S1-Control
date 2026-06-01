@@ -3,6 +3,15 @@ import type { EinsatzJsonFile } from './types';
 import { withFileLock } from './file-lock';
 
 export function readEinsatzFile(filePath: string): EinsatzJsonFile {
+  // Peek at the first byte: valid JSON starts with '{'.
+  // This avoids loading large legacy SQLite files into memory before failing.
+  const fd = fs.openSync(filePath, 'r');
+  const header = Buffer.allocUnsafe(1);
+  fs.readSync(fd, header, 0, 1, 0);
+  fs.closeSync(fd);
+  if (header[0] !== 0x7b) {
+    throw new Error(`Not a JSON file: ${filePath}`);
+  }
   const raw = fs.readFileSync(filePath, 'utf8');
   return JSON.parse(raw) as EinsatzJsonFile;
 }
