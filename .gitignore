@@ -8,3 +8,9 @@ dist
 
 coverage
 test-results
+
+# Einsatz data files (runtime data, not source)
+einsatz/
+*.s1control
+*.s1control.lock
+*.s1control.tmp
