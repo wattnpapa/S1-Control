@@ -66,19 +66,18 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         }
         props.setDetails(selectedDetails);
 
-        // Fast first paint: seed overview from selected section.
+        // Fast first paint: seed kraefte/fahrzeuge from selected section only.
         const selectedOnly = [selectedDetails];
         const selectedAbschnittMeta = nextAbschnitte.filter((item) => item.id === effectiveAbschnittId);
         const quickKraefte = mapAllKraefte(selectedOnly, selectedAbschnittMeta);
         const quickFahrzeuge = mapAllFahrzeuge(selectedOnly, selectedAbschnittMeta, quickKraefte);
         props.setAllKraefte(quickKraefte);
         props.setAllFahrzeuge(quickFahrzeuge);
-        props.setGesamtStaerke(aggregateTacticalStrength(selectedOnly, selectedAbschnittMeta, props.emptyStrength));
+        // Do NOT set gesamtStaerke here — it must always reflect ALL sections.
       } else {
         props.setDetails(props.emptyDetails);
         props.setAllKraefte([]);
         props.setAllFahrzeuge([]);
-        props.setGesamtStaerke({ ...props.emptyStrength });
       }
 
       const loadFullOverview = async () => {
@@ -91,10 +90,18 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         props.setAllKraefte(nextAllKraefte);
         props.setAllFahrzeuge(nextAllFahrzeuge);
         scheduleSignPrewarm(nextAllKraefte, nextAllFahrzeuge);
+        // gesamtStaerke is always the sum of ALL sections.
         props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
       };
+      // Always run loadFullOverview (at minimum for gesamtStaerke correctness).
       const includeFullOverview = options?.includeFullOverview ?? true;
       if (!includeFullOverview) {
+        // Still update gesamtStaerke from the batch, but skip kraefte/fahrzeuge lists.
+        void (async () => {
+          const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
+          if (revision !== loadRevisionRef.current) return;
+          props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
+        })();
         return;
       }
       if (options?.waitForFullOverview) {
