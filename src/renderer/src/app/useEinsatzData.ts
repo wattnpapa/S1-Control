@@ -28,6 +28,9 @@ const PREWARM_LIMIT = 40;
  */
 export function useEinsatzData(props: UseEinsatzDataProps) {
   const loadRevisionRef = useRef(0);
+  // Always reflects the latest selectedAbschnittId without stale closure issues.
+  const selectedAbschnittIdRef = useRef(props.selectedAbschnittId);
+  selectedAbschnittIdRef.current = props.selectedAbschnittId;
 
   const loadEinsatz = useCallback(
     async (
@@ -46,9 +49,13 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
       }
       props.setAbschnitte(nextAbschnitte);
 
+      // Prefer the CURRENT selectedAbschnittId (user may have clicked while this ran),
+      // fall back to preferredAbschnittId, then the first abschnitt.
+      const currentAbschnittId = selectedAbschnittIdRef.current;
+      const candidateId = currentAbschnittId || preferredAbschnittId || '';
       const effectiveAbschnittId =
-        preferredAbschnittId && nextAbschnitte.some((item) => item.id === preferredAbschnittId)
-          ? preferredAbschnittId
+        candidateId && nextAbschnitte.some((item) => item.id === candidateId)
+          ? candidateId
           : nextAbschnitte[0]?.id || '';
 
       props.setSelectedAbschnittId(effectiveAbschnittId);
