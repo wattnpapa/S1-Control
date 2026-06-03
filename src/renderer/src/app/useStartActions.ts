@@ -25,22 +25,17 @@ interface UseStartActionsProps {
  */
 export function useStartActions(props: UseStartActionsProps) {
   const openExisting = useCallback(async () => {
-    let opened: EinsatzListItem | null = null;
     await props.withBusy(async () => {
-      opened = await window.api.openEinsatzWithDialog();
+      const opened = await window.api.openEinsatzWithDialog();
       if (!opened) return;
-      props.setEinsaetze((prev) => upsertRecentEinsatz(prev, opened!));
+      props.setEinsaetze((prev) => upsertRecentEinsatz(prev, opened));
       props.setSelectedEinsatzId(opened.id);
       props.setStartChoice('open');
+      await props.loadEinsatz(opened.id);
     });
-    // loadEinsatz runs OUTSIDE withBusy so buttons are enabled immediately
-    if (opened) {
-      void props.loadEinsatz((opened as EinsatzListItem).id).catch(() => undefined);
-    }
   }, [props]);
 
   const openKnown = useCallback(async (einsatzId: string) => {
-    let ok = false;
     await props.withBusy(async () => {
       const opened = await window.api.openEinsatz(einsatzId);
       if (!opened) {
@@ -48,11 +43,8 @@ export function useStartActions(props: UseStartActionsProps) {
       }
       props.setSelectedEinsatzId(einsatzId);
       props.setStartChoice('open');
-      ok = true;
+      await props.loadEinsatz(einsatzId);
     });
-    if (ok) {
-      void props.loadEinsatz(einsatzId).catch(() => undefined);
-    }
   }, [props]);
 
   const create = useCallback(async () => {
@@ -60,8 +52,6 @@ export function useStartActions(props: UseStartActionsProps) {
       props.setError('Bitte Einsatzname eingeben.');
       return;
     }
-
-    let createdId: string | null = null;
     await props.withBusy(async () => {
       const created = await window.api.createEinsatzWithDialog({
         name: props.startNewEinsatzName.trim(),
@@ -72,16 +62,9 @@ export function useStartActions(props: UseStartActionsProps) {
       props.setEinsaetze((prev) => upsertRecentEinsatz(prev, created));
       props.setSelectedEinsatzId(created.id);
       props.setStartChoice('open');
-      createdId = created.id;
+      await props.loadEinsatz(created.id);
     });
-    if (createdId) {
-      void props.loadEinsatz(createdId).catch(() => undefined);
-    }
   }, [props]);
 
-  return {
-    openExisting,
-    openKnown,
-    create,
-  };
+  return { openExisting, openKnown, create };
 }

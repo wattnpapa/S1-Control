@@ -153,7 +153,7 @@ function EinsatzView(props: WorkspaceContentProps): JSX.Element {
     <>
       <EinheitEditors {...einheitEditorsProps} />
       <FahrzeugEditor {...fahrzeugEditorProps} />
-      <button onClick={props.onCreateEinheit} disabled={props.busy || !props.selectedAbschnittId || props.isArchived}>
+      <button onClick={props.onCreateEinheit} disabled={props.busy || props.isArchived}>
         Einheit anlegen
       </button>
       <EinsatzOverviewView
@@ -217,7 +217,7 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
         <button onClick={props.onCreateAbschnitt} disabled={props.busy || !props.selectedEinsatzId || props.isArchived}>
           Abschnitt anlegen
         </button>
-        <button onClick={props.onCreateEinheit} disabled={props.busy || !props.selectedAbschnittId || props.isArchived}>
+        <button onClick={props.onCreateEinheit} disabled={props.busy || props.isArchived}>
           Einheit anlegen
         </button>
       </div>
@@ -241,7 +241,7 @@ function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
   return (
     <>
       <FahrzeugEditor {...fahrzeugEditorProps} />
-      <button onClick={props.onCreateFahrzeug} disabled={props.busy || !props.selectedAbschnittId || props.isArchived}>
+      <button onClick={props.onCreateFahrzeug} disabled={props.busy || props.isArchived}>
         Fahrzeug anlegen
       </button>
       <FahrzeugeOverviewTable
