@@ -8,7 +8,7 @@ import {
   refreshRecordEditLock,
   releaseRecordEditLock,
 } from '../src/main/services/record-lock';
-import { mutateSystemFile } from '../src/main/json-store/system-store';
+import { mutateSystemFileSync } from '../src/main/json-store/system-store';
 import { systemFilePath } from '../src/main/db/connection';
 
 function buildIdentity(clientId: string, computerName: string) {
@@ -106,7 +106,7 @@ describe('record lock service - ownership and expiry', () => {
 
     const acquired = acquireRecordEditLock(ctx, target, owner);
     // Manually expire the lock by setting expiresAt in the past
-    mutateSystemFile(systemFilePath(ctx.path), (system) => {
+    mutateSystemFileSync(systemFilePath(ctx.path), (system) => {
       const lock = system.recordEditLocks.find((l) => l.id === acquired.lock.id);
       if (lock) {
         lock.expiresAt = new Date(Date.now() - 60_000).toISOString();

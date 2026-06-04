@@ -75,7 +75,7 @@ export async function createMainWindow(): Promise<BrowserWindow> {
   });
 
   const url = resolveRendererUrl();
-  if (process.env.VITE_DEV_SERVER_URL) {
+  if (process.env.VITE_DEV_SERVER_URL && process.env.NODE_ENV !== 'test') {
     await waitForDevServer(url);
     // Vite may accept the TCP connection before it's fully serving HTML.
     // Retry loadURL up to 10 times with 300ms gaps on ERR_ABORTED (-3).

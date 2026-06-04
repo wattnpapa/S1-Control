@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import type { ActiveClientInfo } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import { systemFilePath } from '../db/connection';
-import { mutateSystemFile, readSystemFile } from '../json-store/system-store';
+import { mutateSystemFile, readSystemFile, writeSystemFile } from '../json-store/system-store';
 import { debugSync } from './debug';
 
 const HEARTBEAT_MS = 5 * 1000;
@@ -76,9 +76,11 @@ export class ClientPresenceService {
     const dbPath = this.dbPath;
     if (removeEntry && dbPath) {
       try {
-        mutateSystemFile(systemFilePath(dbPath), (system) => {
-          system.activeClients = system.activeClients.filter((c) => c.clientId !== this.clientId);
-        });
+        // Direkt lesen/schreiben ohne Lock (stop ist terminal, kein concurrent write erwartet)
+        const sysPath = systemFilePath(dbPath);
+        const sys = readSystemFile(sysPath);
+        sys.activeClients = sys.activeClients.filter((c) => c.clientId !== this.clientId);
+        writeSystemFile(sysPath, sys);
         debugSync('clients', 'stop:removed-self', { clientId: this.clientId, dbPath });
       } catch {
         // ignore shutdown errors
@@ -132,33 +134,35 @@ export class ClientPresenceService {
     const ipAddress = detectPrimaryIp();
 
     try {
-      mutateSystemFile(systemFilePath(dbPath), (system) => {
-        system.activeClients = system.activeClients.filter((c) => c.lastSeen >= cutoff);
-        const existing = system.activeClients.find((c) => c.clientId === this.clientId);
-        if (existing) {
-          existing.computerName = computerName;
-          existing.ipAddress = ipAddress;
-          existing.dbPath = dbPath;
-          existing.lastSeen = now;
-        } else {
-          system.activeClients.push({
-            clientId: this.clientId,
-            computerName,
-            ipAddress,
-            dbPath,
-            lastSeen: now,
-            startedAt: this.startedAt,
-            isMaster: false,
-          });
-        }
-        const leader = [...system.activeClients].sort((a, b) => {
-          const cmp = a.startedAt.localeCompare(b.startedAt);
-          return cmp !== 0 ? cmp : a.clientId.localeCompare(b.clientId);
-        })[0];
-        const leaderId = leader?.clientId ?? this.clientId;
-        this.isMaster = leaderId === this.clientId;
-        debugSync('clients', 'heartbeat', { clientId: this.clientId, dbPath, leaderId, isMaster: this.isMaster });
-      });
+      // Lockfrei: Heartbeat ist idempotent; bei Konflikt schreibt der nächste Heartbeat
+      const sysPath = systemFilePath(dbPath);
+      const system = readSystemFile(sysPath);
+      system.activeClients = system.activeClients.filter((c) => c.lastSeen >= cutoff);
+      const existing = system.activeClients.find((c) => c.clientId === this.clientId);
+      if (existing) {
+        existing.computerName = computerName;
+        existing.ipAddress = ipAddress;
+        existing.dbPath = dbPath;
+        existing.lastSeen = now;
+      } else {
+        system.activeClients.push({
+          clientId: this.clientId,
+          computerName,
+          ipAddress,
+          dbPath,
+          lastSeen: now,
+          startedAt: this.startedAt,
+          isMaster: false,
+        });
+      }
+      const leader = [...system.activeClients].sort((a, b) => {
+        const cmp = a.startedAt.localeCompare(b.startedAt);
+        return cmp !== 0 ? cmp : a.clientId.localeCompare(b.clientId);
+      })[0];
+      const leaderId = leader?.clientId ?? this.clientId;
+      this.isMaster = leaderId === this.clientId;
+      writeSystemFile(sysPath, system);
+      debugSync('clients', 'heartbeat', { clientId: this.clientId, dbPath, leaderId, isMaster: this.isMaster });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       debugSync('clients', 'heartbeat:failed', { clientId: this.clientId, dbPath, message });

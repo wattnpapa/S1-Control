@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import type { SystemJsonFile } from './types';
-import { withFileLock } from './file-lock';
+import { withFileLock, withFileLockSync } from './file-lock';
 
 function createEmptySystemFile(): SystemJsonFile {
   return {
@@ -24,6 +24,19 @@ export function writeSystemFile(filePath: string, data: SystemJsonFile): void {
   const tmp = filePath + '.tmp';
   fs.writeFileSync(tmp, JSON.stringify(data, null, 2));
   fs.renameSync(tmp, filePath);
+}
+
+/** Synchrone Mutation — blockiert bis Lock erworben, ideal für kurze Operationen. */
+export function mutateSystemFileSync(
+  filePath: string,
+  mutate: (data: SystemJsonFile) => void,
+): SystemJsonFile {
+  return withFileLockSync(filePath, () => {
+    const data = readSystemFile(filePath);
+    mutate(data);
+    writeSystemFile(filePath, data);
+    return data;
+  });
 }
 
 export async function mutateSystemFile(

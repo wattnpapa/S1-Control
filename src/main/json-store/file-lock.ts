@@ -34,6 +34,28 @@ function tryAcquire(lockFile: string): boolean {
   }
 }
 
+/** Synchronous lock — für kurze Mutationen ohne async Overhead. */
+export function withFileLockSync<T>(filePath: string, fn: () => T): T {
+  const lockFile = lockPath(filePath);
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  while (!tryAcquire(lockFile)) {
+    if (Date.now() > deadline) {
+      throw new Error(`Lock timeout for ${filePath}`);
+    }
+    // Busy-spin with short sleep via Atomics (synchronous, no event-loop yield)
+    Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, LOCK_RETRY_INTERVAL_MS);
+  }
+  try {
+    return fn();
+  } finally {
+    try {
+      fs.unlinkSync(lockFile);
+    } catch {
+      /* ignore */
+    }
+  }
+}
+
 export async function withFileLock<T>(filePath: string, fn: () => T | Promise<T>): Promise<T> {
   const lockFile = lockPath(filePath);
   const deadline = Date.now() + LOCK_TIMEOUT_MS;

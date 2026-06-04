@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import os from 'node:os';
 import { vi } from 'vitest';
 import { ClientPresenceService } from '../src/main/services/clients';
-import { readSystemFile } from '../src/main/json-store/system-store';
+import { readSystemFile, writeSystemFile } from '../src/main/json-store/system-store';
 import { systemFilePath } from '../src/main/db/connection';
 import { createTestDb } from './helpers/db';
 
@@ -60,7 +60,6 @@ describe('client presence service - master election', () => {
       startedAt: staleTs,
       isMaster: false,
     });
-    const { writeSystemFile } = require('../src/main/json-store/system-store');
     writeSystemFile(systemFilePath(ctx.path), ctx.system);
 
     const first = new ClientPresenceService();

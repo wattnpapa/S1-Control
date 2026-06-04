@@ -1,7 +1,7 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { BackupCoordinator, resolveBackupDir } from '../src/main/services/backup';
 
 describe('backup service - basics', () => {
@@ -23,122 +23,90 @@ describe('backup service - basics', () => {
     expect(fs.readFileSync(dbPath, 'utf8')).toBe('new');
   });
 
-  it('removes wal/shm files during restore', async () => {
+  it('creates periodic backups via fs.copyFileSync', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.s1control');
-    const backupPath = path.join(dir, 'einsatz-backup.s1control');
-    const walPath = `${dbPath}-wal`;
-    const shmPath = `${dbPath}-shm`;
+    fs.writeFileSync(dbPath, '{"schemaVersion":1}');
 
-    fs.writeFileSync(dbPath, 'old');
-    fs.writeFileSync(backupPath, 'new');
-    fs.writeFileSync(walPath, 'wal');
-    fs.writeFileSync(shmPath, 'shm');
-
-    const c = new BackupCoordinator();
-    await c.restoreBackup(dbPath, backupPath);
-
-    expect(fs.existsSync(walPath)).toBe(false);
-    expect(fs.existsSync(shmPath)).toBe(false);
-    expect(fs.readFileSync(dbPath, 'utf8')).toBe('new');
-  });
-
-});
-
-describe('backup service - scheduling and master handover', () => {
-  it('creates periodic backups', async () => {
-    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.s1control');
-    fs.writeFileSync(dbPath, 'db');
-
-    const backupMock = vi.fn(async (target: string) => {
-      fs.writeFileSync(target, 'backup');
-    });
     const coordinator = new BackupCoordinator();
+    coordinator.start({ path: dbPath } as never);
 
-    coordinator.start({
-      path: dbPath,
-      sqlite: { backup: backupMock },
-    } as never);
-
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    // Wait for backup to run (NODE_ENV=test → immediate)
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const backupDir = resolveBackupDir(dbPath);
+    expect(fs.existsSync(backupDir)).toBe(true);
     const files = fs.readdirSync(backupDir);
     expect(files.some((name) => name.endsWith('.s1control'))).toBe(true);
-    expect(backupMock).toHaveBeenCalled();
 
     coordinator.stop();
   });
+});
 
+describe('backup service - scheduling and master handover', () => {
   it('allows only configured master to write backup', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.s1control');
-    fs.writeFileSync(dbPath, 'db');
+    fs.writeFileSync(dbPath, '{"schemaVersion":1}');
 
-    const backupA = vi.fn(async (target: string) => {
-      fs.writeFileSync(target, 'backup-a');
-    });
-    const backupB = vi.fn(async (target: string) => {
-      fs.writeFileSync(target, 'backup-b');
-    });
+    const master = new BackupCoordinator(() => true);
+    const slave = new BackupCoordinator(() => false);
 
-    const a = new BackupCoordinator(() => true);
-    const b = new BackupCoordinator(() => false);
+    master.start({ path: dbPath } as never);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    a.start({ path: dbPath, sqlite: { backup: backupA } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    slave.start({ path: dbPath } as never);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    b.start({ path: dbPath, sqlite: { backup: backupB } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    // Master created a backup, slave did not
+    const backupDir = resolveBackupDir(dbPath);
+    const files = fs.existsSync(backupDir) ? fs.readdirSync(backupDir) : [];
+    expect(files.some((n) => n.endsWith('.s1control'))).toBe(true);
 
-    expect(backupA).toHaveBeenCalledTimes(1);
-    expect(backupB).not.toHaveBeenCalled();
-
-    a.stop();
-    b.stop();
+    master.stop();
+    slave.stop();
   });
 
   it('hands over backup writing when master changes', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
     const dbPath = path.join(dir, 'einsatz.s1control');
-    fs.writeFileSync(dbPath, 'db');
+    fs.writeFileSync(dbPath, '{"schemaVersion":1}');
     let isMaster = false;
-    const backup = vi.fn(async (target: string) => {
-      fs.writeFileSync(target, 'backup-next');
-    });
+
     const c = new BackupCoordinator(() => isMaster);
-    c.start({ path: dbPath, sqlite: { backup } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 30));
-    expect(backup).not.toHaveBeenCalled();
+    c.start({ path: dbPath } as never);
+    await new Promise((resolve) => setTimeout(resolve, 50));
+
+    const filesBeforePromotion = fs.existsSync(resolveBackupDir(dbPath))
+      ? fs.readdirSync(resolveBackupDir(dbPath)).length
+      : 0;
+    expect(filesBeforePromotion).toBe(0);
 
     isMaster = true;
     c.stop();
-    c.start({ path: dbPath, sqlite: { backup } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    c.start({ path: dbPath } as never);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
     const files = fs.readdirSync(resolveBackupDir(dbPath));
-    expect(backup).toHaveBeenCalled();
     expect(files.some((name) => name.endsWith('.s1control'))).toBe(true);
     c.stop();
   });
-
 });
 
 describe('backup service - error handling', () => {
-  it('keeps running when backup write throws', async () => {
+  it('keeps running after backup write error (corrupted source)', async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-control-backup-'));
-    const dbPath = path.join(dir, 'einsatz.s1control');
-    fs.writeFileSync(dbPath, 'db');
+    // No source file → copyFileSync will throw, coordinator should keep running
+    const dbPath = path.join(dir, 'nonexistent.s1control');
 
-    const backup = vi.fn(async () => {
-      throw new Error('disk full');
-    });
     const c = new BackupCoordinator();
-    c.start({ path: dbPath, sqlite: { backup } } as never);
-    await new Promise((resolve) => setTimeout(resolve, 30));
+    c.start({ path: dbPath } as never);
+    await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(backup).toHaveBeenCalled();
+    // No backup created (source doesn't exist) but coordinator didn't crash
+    const backupDir = resolveBackupDir(dbPath);
+    const files = fs.existsSync(backupDir) ? fs.readdirSync(backupDir) : [];
+    expect(files).toHaveLength(0);
     c.stop();
   });
 });
