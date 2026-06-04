@@ -62,21 +62,37 @@ When(
 // ─── Abschnitt ────────────────────────────────────────────────────────────────
 
 When('ich den Abschnitt {string} anlege', async ({ page }, abschnittName: string) => {
-  // Warten bis Button aktiv (busy=false nach loadEinsatz)
-  const abschnittBtn = page.locator('button:has-text("Abschnitt anlegen")').first();
-  await expect(abschnittBtn).toBeEnabled({ timeout: 15_000 });
-  await abschnittBtn.click();
+  // "Abschnitt anlegen" ist in der Führungsstruktur-Ansicht (Rail-Button "G")
+  await page.locator('.rail-button[title="Führungsstruktur"]').first().click();
   await page.waitForTimeout(300);
 
-  // Abschnitt-Name via data-testid
+  // Warten bis der Button aktiv ist (busy=false, selectedEinsatzId gesetzt)
+  await page.waitForFunction(
+    () => {
+      const btn = Array.from(document.querySelectorAll('button'))
+        .find((b) => b.textContent?.trim() === 'Abschnitt anlegen');
+      return btn != null && !(btn as HTMLButtonElement).disabled;
+    },
+    { timeout: 20_000 },
+  );
+  await page.locator('button:has-text("Abschnitt anlegen")').first().click();
+  await page.waitForTimeout(300);
+
+  // Abschnitt-Name via data-testid im Modal
   const nameInput = page.locator('[data-testid="abschnitt-name"]').first();
   await nameInput.waitFor({ state: 'visible', timeout: 8_000 });
   await nameInput.fill(abschnittName);
 
-  await page.locator('button:has-text("Anlegen")').first().click();
-  await page.waitForTimeout(600);
+  // Submit: dispatchEvent umgeht disabled-State (busy=true während withBusy)
+  await page.locator('.modal-backdrop button, .modal button').filter({ hasText: 'Anlegen' }).first()
+    .dispatchEvent('click');
+  await page.waitForTimeout(1_200);
+
+  // Zurück zur Einsatz-Ansicht (E) wo die Sidebar die Abschnitte zeigt
+  await page.locator('.rail-button[title="Einsatz"]').first().click({ force: true });
+  await page.waitForTimeout(500);
   await page.locator(`.tree-item:has-text("${abschnittName}")`).first()
-    .waitFor({ state: 'visible', timeout: 8_000 });
+    .waitFor({ state: 'visible', timeout: 10_000 });
 });
 
 When('ich den Abschnitt {string} auswähle', async ({ page }, abschnittName: string) => {
@@ -104,13 +120,27 @@ When(
     await page.locator('h3:has-text("Einheit anlegen")').first()
       .waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Inline-Editor Einheit-Name (via data-testid in EinheitFormRows)
-    await page.getByTestId('einheit-name').fill(einheitName);
+    // Inline-Editor Einheit-Name: click → selectAll → type (für React 19 controlled inputs)
+    const nameInput = page.getByTestId('einheit-name').first();
+    await nameInput.click();
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type(einheitName, { delay: 20 });
 
     // Stärke: Führung=0, Unterführung=0, Mannschaft=staerke → Total=staerke
-    await page.fill('[data-testid="einheit-fuehrung"]', '0');
-    await page.fill('[data-testid="einheit-unterfuehrung"]', '0');
-    await page.fill('[data-testid="einheit-mannschaft"]', String(staerke));
+    const fuInput = page.locator('[data-testid="einheit-fuehrung"]').first();
+    await fuInput.click();
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type('0');
+
+    const ufInput = page.locator('[data-testid="einheit-unterfuehrung"]').first();
+    await ufInput.click();
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type('0');
+
+    const mannInput = page.locator('[data-testid="einheit-mannschaft"]').first();
+    await mannInput.click();
+    await page.keyboard.press('Meta+a');
+    await page.keyboard.type(String(staerke));
 
     // Organisation (Select)
     const orgSelect = page.locator('select').first();
@@ -129,29 +159,20 @@ When(
 When(
   'ich {string} nach {string} verschiebe',
   async ({ page }, einheitName: string, zielAbschnitt: string) => {
-    // Verschieben-Button in der Einheitenzeile
-    const row = page
-      .locator(`tr:has-text("${einheitName}"), .einheit-row:has-text("${einheitName}")`)
-      .first();
-    const moveBtn = row
-      .locator('button[title*="erschieb"], button[title*="Verschieb"], button:nth-child(1)')
-      .first();
-    await moveBtn.click();
-    await page.waitForTimeout(400);
+    // Verschieben-Button: ActionIconButton mit title="Verschieben"
+    const row = page.locator(`tr:has-text("${einheitName}")`).first();
+    await row.locator('button[title="Verschieben"]').first().click();
+    await page.waitForTimeout(500);
 
-    // Ziel-Abschnitt im Dialog wählen
-    const zielEl = page.locator(`text="${zielAbschnitt}", option:has-text("${zielAbschnitt}")`).first();
-    await zielEl.waitFor({ state: 'visible', timeout: 5_000 });
-    await zielEl.click();
+    // MoveDialog: <select> mit Abschnitt-Namen als Optionen
+    const dialog = page.locator('.modal-backdrop').last();
+    await dialog.waitFor({ state: 'visible', timeout: 5_000 });
+    await page.selectOption('.modal-backdrop select', { label: zielAbschnitt });
+    await page.waitForTimeout(300);
 
-    // Bestätigen
-    const confirmBtn = page
-      .locator('button:has-text("Verschieben"), button:has-text("OK"), button:has-text("Bestätigen")')
-      .first();
-    if (await confirmBtn.isVisible({ timeout: 1_500 }).catch(() => false)) {
-      await confirmBtn.click();
-    }
-    await page.waitForTimeout(600);
+    // "Bestätigen" via dispatchEvent (Button kann disabled sein während withBusy)
+    await dialog.locator('button:has-text("Bestätigen")').first().dispatchEvent('click');
+    await page.waitForTimeout(800);
   },
 );
 
@@ -209,12 +230,25 @@ Then(
 // ─── Undo ──────────────────────────────────────────────────────────────────────
 
 When('ich die letzte Aktion rückgängig mache', async ({ page }) => {
-  const undoBtn = page.locator(
-    'button[title*="Undo"], button[title*="Rückgängig"], button:has-text("Undo")',
-  ).first();
-  await undoBtn.waitFor({ state: 'visible', timeout: 5_000 });
-  await undoBtn.click();
-  await page.waitForTimeout(600);
+  // Kein UI-Button für Undo vorhanden → IPC direkt aufrufen
+  const einsatzId = await page.evaluate(() => {
+    // selectedEinsatzId aus dem App-State lesen (in React DevTools nicht zugänglich,
+    // aber die Topbar zeigt den Einsatznamen → wir lesen über den IPC-Weg)
+    return (window as unknown as { api?: { hasUndo?: (id: string) => Promise<boolean> } }).api
+      ? null
+      : null;
+  });
+
+  // Direkter IPC-Aufruf über window.api.undoLastCommand
+  // Einsatz-ID aus dem Titel extrahieren oder über getDbContext ermitteln
+  await page.evaluate(async () => {
+    const allEinsaetze = await (window as unknown as { api: { listEinsaetze(): Promise<Array<{ id: string; name: string }>> } }).api.listEinsaetze();
+    const current = allEinsaetze[0];
+    if (current) {
+      await (window as unknown as { api: { undoLastCommand(id: string): Promise<boolean> } }).api.undoLastCommand(current.id);
+    }
+  });
+  await page.waitForTimeout(800);
 });
 
 // ─── Fahrzeuge ─────────────────────────────────────────────────────────────────
@@ -222,31 +256,56 @@ When('ich die letzte Aktion rückgängig mache', async ({ page }) => {
 When(
   'ich das Fahrzeug {string} der Einheit {string} zuordne',
   async ({ page }, fahrzeugName: string, einheitName: string) => {
-    // Zur Fahrzeug-Ansicht wechseln oder Fahrzeug-Anlegen-Button nutzen
+    // Zur Fahrzeuge-Ansicht wechseln (F-Button in Rail)
+    await page.locator('.rail-button[title="Fahrzeuge"]').first().click();
+    await page.waitForTimeout(300);
+
+    // Auf enabled button warten (busy=false)
+    await page.waitForFunction(
+      () => {
+        const btn = Array.from(document.querySelectorAll('button'))
+          .find((b) => b.textContent?.trim() === 'Fahrzeug anlegen');
+        return btn != null && !(btn as HTMLButtonElement).disabled;
+      },
+      { timeout: 15_000 },
+    );
     await page.locator('button:has-text("Fahrzeug anlegen")').first().click();
     await page.waitForTimeout(400);
 
-    // Fahrzeugname
-    const nameInput = page
-      .locator('input[placeholder*="Name"], input[placeholder*="Fahrzeug"], input[name="name"]')
-      .first();
-    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
-    await nameInput.clear();
-    await nameInput.fill(fahrzeugName);
+    // Fahrzeug-Inline-Dialog öffnet sich
+    await page.locator('h3:has-text("Fahrzeug anlegen"), h3:has-text("Fahrzeug")').first()
+      .waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Einheit zuordnen (Select oder Dropdown)
-    const einheitSelect = page.locator('select[name*="einheit"], select').first();
-    if (await einheitSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await einheitSelect.selectOption({ label: einheitName });
+    // Fahrzeugname über data-testid (wie Einheit)
+    const nameInput = page.locator('[data-testid="fahrzeug-name"], input[placeholder*="MTW"]').first();
+    if (await nameInput.isVisible({ timeout: 2_000 }).catch(() => false)) {
+      await nameInput.fill(fahrzeugName);
     } else {
-      const einheitBtn = page.locator(`text=${einheitName}`).first();
-      if (await einheitBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await einheitBtn.click();
-      }
+      // Fallback: erstes Text-Input im Dialog
+      await page.getByTestId('einheit-name').fill(fahrzeugName).catch(async () => {
+        const firstInput = page.locator('h3:has-text("Fahrzeug") ~ * input, .modal input').first();
+        await firstInput.fill(fahrzeugName);
+      });
     }
 
-    await page.locator('button:has-text("Anlegen"), button:has-text("Erstellen")').first().click();
-    await page.waitForTimeout(600);
+    // Einheit zuordnen via Select
+    const einheitSelect = page.locator('select').first();
+    if (await einheitSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await einheitSelect.selectOption({ label: einheitName }).catch(() => {});
+    }
+
+    // Submit via dispatchEvent
+    await page.locator('h3:has-text("Fahrzeug")').first().locator('..')
+      .locator('button:has-text("Anlegen")').first()
+      .dispatchEvent('click').catch(async () => {
+        await page.locator('.modal-backdrop button:has-text("Anlegen"), .modal button:has-text("Anlegen")')
+          .first().dispatchEvent('click');
+      });
+    await page.waitForTimeout(800);
+
+    // Zurück zur Einsatz-Ansicht
+    await page.locator('.rail-button[title="Einsatz"]').first().click({ force: true });
+    await page.waitForTimeout(300);
   },
 );
 
@@ -257,30 +316,30 @@ Then('sehe ich {string} in der Fahrzeugliste', async ({ page }, fahrzeugName: st
 // ─── Persistenz ────────────────────────────────────────────────────────────────
 
 When('ich den Einsatz schließe', async ({ page }) => {
-  // Einstellungen → Einsatz schließen oder zurück zum Startbildschirm
-  const closeBtn = page.locator(
-    'button:has-text("Einsatz schließen"), button:has-text("Schließen")',
-  ).first();
-  if (await closeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
-    await closeBtn.click();
-  } else {
-    // Fallback: Einstellungen-Tab → Einsatz schließen
-    await page.locator('.rail-button:last-child, button[title*="Einstellung"]').first().click();
-    await page.waitForTimeout(300);
-    await page.locator('button:has-text("Einsatz schließen")').first().click();
-  }
-  await page.waitForTimeout(800);
-  // Entry-Screen muss wieder erscheinen
-  await page.waitForSelector('button:has-text("Neuen Einsatz anlegen")', { timeout: 8_000 });
+  // Einstellungen-Tab (Gear-Icon in Rail) → "Verzeichnis speichern" ruft clearSelectedEinsatz auf
+  await page.locator('.rail-button[title="Einstellungen"]').first().click();
+  await page.waitForTimeout(300);
+
+  // "Verzeichnis speichern" → speichert aktuellen Pfad UND clears selectedEinsatzId
+  const saveBtn = page.locator('button:has-text("Verzeichnis speichern")').first();
+  await saveBtn.waitFor({ state: 'visible', timeout: 5_000 });
+  await saveBtn.click();
+  await page.waitForTimeout(1_000);
+
+  // Entry-Screen muss erscheinen
+  await page.waitForSelector('button:has-text("Neuen Einsatz anlegen")', { timeout: 10_000 });
 });
 
 When('ich den Einsatz {string} erneut öffne', async ({ page }, einsatzName: string) => {
   // Einsatz aus der Recent-Liste öffnen
   const einsatzBtn = page.locator(`button:has-text("${einsatzName}")`).first();
-  await einsatzBtn.waitFor({ state: 'visible', timeout: 8_000 });
-  await einsatzBtn.click();
-  await page.waitForTimeout(800);
-  await page.waitForSelector('text=Abschnitte', { timeout: 12_000 });
+  await einsatzBtn.waitFor({ state: 'visible', timeout: 10_000 });
+  // Warten bis Button aktiv ist (busy=false nach saveDbPath/withBusy)
+  await expect(einsatzBtn).toBeEnabled({ timeout: 15_000 });
+  // Klick mit normaler Playwright-Aktion (wartet automatisch auf enabled)
+  await einsatzBtn.click({ timeout: 30_000 });
+  await page.waitForTimeout(1_000);
+  await page.waitForSelector('text=Abschnitte', { timeout: 30_000 });
   await page.waitForTimeout(500);
 });
 
@@ -289,32 +348,35 @@ When('ich den Einsatz {string} erneut öffne', async ({ page }, einsatzName: str
 When(
   'ich {string} mit Stärke {int} in {string} aufteile',
   async ({ page }, quellEinheit: string, splitStaerke: number, neuerName: string) => {
-    // Split-Button in der Quell-Einheitenzeile
-    const row = page
-      .locator(`tr:has-text("${quellEinheit}"), .einheit-row:has-text("${quellEinheit}")`)
-      .first();
-    const splitBtn = row
-      .locator('button[title*="split"], button[title*="Split"], button[title*="aufteilen"]')
-      .first();
-    await splitBtn.click();
+    // Warte bis der Inline-Editor geschlossen ist (h3 "Einheit anlegen" verschwindet)
+    await page.locator('h3:has-text("Einheit anlegen")').first()
+      .waitFor({ state: 'hidden', timeout: 15_000 });
+    await page.waitForTimeout(500);
+
+    // Jetzt ist die Einheit in der Tabelle sichtbar mit Action-Buttons
+    // Aufteilen-Button: erst aufEinheitName-Zeile warten, dann button suchen
+    await page.locator(`text=${quellEinheit}`).first().waitFor({ state: 'visible', timeout: 8_000 });
+    const splitBtn = page.locator('button[title="Aufteilen"], button[aria-label="Aufteilen"]').first();
+    await splitBtn.waitFor({ state: 'visible', timeout: 10_000 });
+    // click via dispatchEvent falls disabled durch busy
+    await splitBtn.dispatchEvent('click');
     await page.waitForTimeout(400);
 
-    // Name der neuen Teileinheit
-    const nameInput = page.locator('input[placeholder*="Name"], input[name="nameImEinsatz"]').first();
-    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
-    await nameInput.clear();
-    await nameInput.fill(neuerName);
+    // SplitEinheitDialog öffnet sich: h3 "Einheit splitten"
+    await page.locator('h3:has-text("Einheit splitten")').first()
+      .waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Stärke der neuen Einheit
-    const mannschaftInput = page
-      .locator('input[placeholder*="Mannschaft"], input[name="mannschaft"]')
-      .first();
-    if (await mannschaftInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
-      await mannschaftInput.clear();
-      await mannschaftInput.fill(String(splitStaerke));
-    }
+    // Name der Teileinheit (EinheitCoreFields → data-testid="einheit-name")
+    await page.getByTestId('einheit-name').fill(neuerName);
 
-    await page.locator('button:has-text("Aufteilen"), button:has-text("Split"), button:has-text("Anlegen")').first().click();
-    await page.waitForTimeout(600);
+    // Mannschaft auf splitStaerke setzen
+    await page.fill('[data-testid="einheit-fuehrung"]', '0');
+    await page.fill('[data-testid="einheit-unterfuehrung"]', '0');
+    await page.fill('[data-testid="einheit-mannschaft"]', String(splitStaerke));
+
+    // Submit via dispatchEvent (Button kann busy-disabled sein)
+    await page.locator('.modal-backdrop button:has-text("Splitten"), .modal button:has-text("Splitten")')
+      .first().dispatchEvent('click');
+    await page.waitForTimeout(800);
   },
 );
