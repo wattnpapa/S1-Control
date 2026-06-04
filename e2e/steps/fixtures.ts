@@ -1,7 +1,8 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { test as base, type Page } from 'playwright-bdd';
+import { test as base } from 'playwright-bdd';
+import type { Page } from '@playwright/test';
 import { _electron as electron, type ElectronApplication } from '@playwright/test';
 import { createBdd } from 'playwright-bdd';
 
@@ -42,8 +43,12 @@ export const test = base.extend<AppFixture>({
       try {
         await Promise.race([app.close(), new Promise((r) => setTimeout(r, 3_000))]);
       } finally {
-        const proc = app.process();
-        if (proc && !proc.killed) proc.kill('SIGTERM');
+        try {
+          const proc = app.process();
+          if (proc && !proc.killed) proc.kill('SIGTERM');
+        } catch {
+          // app already exited
+        }
       }
     },
     { scope: 'test' },

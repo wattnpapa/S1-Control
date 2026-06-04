@@ -1,19 +1,23 @@
 import { defineConfig } from '@playwright/test';
-import { defineBddConfig } from 'playwright-bdd';
-
-const bddConfig = defineBddConfig({
-  features: 'test/e2e/features/**/*.feature',
-  steps: 'test/e2e/steps/**/*.ts',
-  language: 'de',
-});
+import { defineBddProject } from 'playwright-bdd';
 
 export default defineConfig({
-  testDir: bddConfig.outputDir,
   timeout: 120_000,
   fullyParallel: false,
   workers: 1,
   reporter: [
     ['list'],
-    ['html', { open: 'never', outputFolder: 'test-results/e2e-html' }],
+    ['html', { open: 'never', outputFolder: 'e2e-report' }],
+  ],
+  projects: [
+    {
+      name: 'e2e',
+      ...defineBddProject({
+        // Feature files and steps live in e2e/ — separate from Vitest tests in test/
+        features: 'e2e/features/**/*.feature',
+        steps: 'e2e/steps/**/*.ts',
+        language: 'de',
+      }),
+    },
   ],
 });

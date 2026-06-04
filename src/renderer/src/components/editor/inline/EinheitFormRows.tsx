@@ -19,7 +19,7 @@ export function EinheitIdentityRows<TForm extends EinheitForm>({ form, onChange 
       <tr>
         <th>Name im Einsatz</th>
         <td colSpan={3}>
-          <input value={form.nameImEinsatz} onChange={(e) => onChange({ ...form, nameImEinsatz: e.target.value })} />
+          <input data-testid="einheit-name" value={form.nameImEinsatz} onChange={(e) => onChange({ ...form, nameImEinsatz: e.target.value })} />
         </td>
       </tr>
       <tr>
@@ -55,13 +55,14 @@ export function EinheitStrengthRows<TForm extends EinheitForm>({ form, onChange 
       <tr>
         <th>Führung</th>
         <td>
-          <input type="number" min={0} value={form.fuehrung} onChange={(e) => onChange({ ...form, fuehrung: e.target.value })} />
+          <input data-testid="einheit-fuehrung" type="number" min={0} value={form.fuehrung} onChange={(e) => onChange({ ...form, fuehrung: e.target.value })} />
         </td>
         <th>Unterführung</th>
         <td>
           <input
             type="number"
             min={0}
+            data-testid="einheit-unterfuehrung"
             value={form.unterfuehrung}
             onChange={(e) => onChange({ ...form, unterfuehrung: e.target.value })}
           />
@@ -71,6 +72,7 @@ export function EinheitStrengthRows<TForm extends EinheitForm>({ form, onChange 
         <th>Mannschaft</th>
         <td>
           <input
+            data-testid="einheit-mannschaft"
             type="number"
             min={0}
             value={form.mannschaft}

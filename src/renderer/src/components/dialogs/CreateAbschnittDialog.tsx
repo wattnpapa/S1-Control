@@ -29,6 +29,7 @@ export function CreateAbschnittDialog(props: CreateAbschnittDialogProps): JSX.El
           <input
             value={props.form.name}
             onChange={(e) => props.onChange({ ...props.form, name: e.target.value })}
+            data-testid="abschnitt-name"
             placeholder="z.B. Abschnitt Nord"
           />
         </label>

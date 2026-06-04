@@ -66,6 +66,7 @@ export function EinheitCoreFields<TForm extends EinheitCoreForm>({
       <label>
         Name im Einsatz
         <input
+          data-testid="einheit-name"
           value={form.nameImEinsatz}
           onChange={(event) => update('nameImEinsatz', event.target.value as TForm['nameImEinsatz'])}
           placeholder={showNamePlaceholder ? 'z.B. TZ Oldenburg 1' : undefined}
@@ -100,6 +101,7 @@ export function EinheitCoreFields<TForm extends EinheitCoreForm>({
       <label>
         Mannschaft
         <input
+          data-testid="einheit-mannschaft"
           type="number"
           min={0}
           value={form.mannschaft}

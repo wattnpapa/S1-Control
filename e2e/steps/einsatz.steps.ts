@@ -5,10 +5,10 @@ import { Given, When, Then } from './fixtures';
 // ─── Hintergrund ──────────────────────────────────────────────────────────────
 
 Given('die App ist gestartet und ich bin als admin eingeloggt', async ({ page }) => {
-  // Auto-Login (admin/admin) läuft automatisch. Warte auf Entry-Screen.
+  // Auto-Login (admin/admin) läuft automatisch. Warte auf Entry-Screen (bis zu 30s für Cold-Start).
   await page.waitForSelector(
     'button:has-text("Neuen Einsatz anlegen"), button:has-text("Einsatz öffnen")',
-    { timeout: 15_000 },
+    { timeout: 30_000 },
   );
 });
 
@@ -30,51 +30,53 @@ When(
       setTimeout(() => { dialog.showSaveDialog = orig as typeof dialog.showSaveDialog; }, 10_000);
     }, einsatzFile);
 
-    // "Neuen Einsatz anlegen" klicken → zeigt das Anlegen-Formular
+    // "Neuen Einsatz anlegen" klicken → zeigt das Create-Formular
     await page.locator('button:has-text("Neuen Einsatz anlegen")').first().click();
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(400);
 
-    // Einsatzname eingeben
-    const nameInput = page
-      .locator('input[placeholder*="Hochwasser"], input[placeholder*="Einsatz"], input[placeholder*="einsatz"]')
-      .first();
-    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
+    // Einsatzname (Placeholder: "z.B. Hochwasser Landkreis")
+    const nameInput = page.locator('input[placeholder*="Hochwasser"]').first();
+    await nameInput.waitFor({ state: 'visible', timeout: 8_000 });
     await nameInput.clear();
     await nameInput.fill(einsatzName);
 
-    // FüSt-Name (zweites sichtbares Textfeld)
-    const allInputs = page.locator('input[type="text"], input:not([type])');
-    const inputCount = await allInputs.count();
-    if (inputCount >= 2) {
-      await allInputs.nth(1).clear();
-      await allInputs.nth(1).fill(fuestName);
+    // FüSt-Name (zweites Input im Formular, kein Placeholder)
+    const fuSt = page.locator('.start-form input').nth(1);
+    if (await fuSt.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await fuSt.clear();
+      await fuSt.fill(fuestName);
     }
 
-    // Anlegen-Button → löst gemockten Dialog aus
-    await page.locator('button:has-text("Anlegen")').first().click();
+    // Submit: "Einsatz anlegen und öffnen" → löst gemockten Dialog aus
+    await page.locator('button:has-text("Einsatz anlegen und öffnen")').first().click();
 
-    // Workspace muss erscheinen
-    await page.locator('text=Abschnitte').first().waitFor({ state: 'visible', timeout: 15_000 });
-    await page.waitForTimeout(600);
+    // Workspace muss erscheinen (Sidebar mit "Abschnitte")
+    await page.locator('text=Abschnitte').first().waitFor({ state: 'visible', timeout: 30_000 });
+
+    // Warten bis ein tree-item sichtbar und busy=false (loadEinsatz fertig)
+    await page.locator('.tree-item').first().waitFor({ state: 'visible', timeout: 15_000 });
+    await page.waitForTimeout(500);
   },
 );
 
 // ─── Abschnitt ────────────────────────────────────────────────────────────────
 
 When('ich den Abschnitt {string} anlege', async ({ page }, abschnittName: string) => {
-  await page.locator('button:has-text("Abschnitt anlegen")').first().click();
+  // Warten bis Button aktiv (busy=false nach loadEinsatz)
+  const abschnittBtn = page.locator('button:has-text("Abschnitt anlegen")').first();
+  await expect(abschnittBtn).toBeEnabled({ timeout: 15_000 });
+  await abschnittBtn.click();
   await page.waitForTimeout(300);
 
-  const nameInput = page.locator('input[placeholder*="Name"], input[name="name"]').first();
-  await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
-  await nameInput.clear();
+  // Abschnitt-Name via data-testid
+  const nameInput = page.locator('[data-testid="abschnitt-name"]').first();
+  await nameInput.waitFor({ state: 'visible', timeout: 8_000 });
   await nameInput.fill(abschnittName);
 
   await page.locator('button:has-text("Anlegen")').first().click();
-  await page.waitForTimeout(400);
-  // Abschnitt muss in der Sidebar erscheinen
+  await page.waitForTimeout(600);
   await page.locator(`.tree-item:has-text("${abschnittName}")`).first()
-    .waitFor({ state: 'visible', timeout: 5_000 });
+    .waitFor({ state: 'visible', timeout: 8_000 });
 });
 
 When('ich den Abschnitt {string} auswähle', async ({ page }, abschnittName: string) => {
@@ -87,45 +89,37 @@ When('ich den Abschnitt {string} auswähle', async ({ page }, abschnittName: str
 When(
   'ich die Einheit {string} mit Organisation {string} und Stärke {int} anlege',
   async ({ page }, einheitName: string, organisation: string, staerke: number) => {
-    await page.locator('button:has-text("Einheit anlegen")').first().click();
+    // Warten bis mindestens ein Abschnitt in der Sidebar geladen ist.
+    // loadEinsatz setzt selectedAbschnittId: ohne das lehnt der Click-Handler die Aktion ab.
+    await page.locator('.tree-item').first().waitFor({ state: 'visible', timeout: 15_000 });
+    // Kurz warten damit selectedAbschnittId im State gesetzt wird
+    await page.waitForTimeout(500);
+
+    const einheitBtn = page.locator('button:has-text("Einheit anlegen")').first();
+    await expect(einheitBtn).toBeEnabled({ timeout: 10_000 });
+    await einheitBtn.click();
     await page.waitForTimeout(400);
 
-    // Name
-    const nameInput = page
-      .locator('input[placeholder*="Name"], input[name="nameImEinsatz"], input[placeholder*="Einheit"]')
-      .first();
-    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
-    await nameInput.clear();
-    await nameInput.fill(einheitName);
+    // Warte auf den Einheit-Dialog
+    await page.locator('h3:has-text("Einheit anlegen")').first()
+      .waitFor({ state: 'visible', timeout: 8_000 });
 
-    // Stärke-Felder: Mannschaft auf Stärke setzen (Rest auf 0)
-    const mannschaftInput = page
-      .locator('input[placeholder*="Mannschaft"], input[name="mannschaft"]')
-      .first();
-    if (await mannschaftInput.isVisible({ timeout: 1_500 }).catch(() => false)) {
-      await mannschaftInput.clear();
-      await mannschaftInput.fill(String(staerke));
-    } else {
-      // Fallback: erstes Stärke-Feld
-      const staerkeInput = page
-        .locator('input[placeholder*="Stärke"], input[placeholder*="staerke"]')
-        .first();
-      if (await staerkeInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
-        await staerkeInput.clear();
-        await staerkeInput.fill(String(staerke));
-      }
-    }
+    // Inline-Editor Einheit-Name (via data-testid in EinheitFormRows)
+    await page.getByTestId('einheit-name').fill(einheitName);
 
-    // Organisation auswählen
+    // Stärke: Führung=0, Unterführung=0, Mannschaft=staerke → Total=staerke
+    await page.fill('[data-testid="einheit-fuehrung"]', '0');
+    await page.fill('[data-testid="einheit-unterfuehrung"]', '0');
+    await page.fill('[data-testid="einheit-mannschaft"]', String(staerke));
+
+    // Organisation (Select)
     const orgSelect = page.locator('select').first();
     if (await orgSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
       await orgSelect.selectOption(organisation);
     }
 
-    // Anlegen bestätigen
-    await page.locator('button:has-text("Anlegen"), button:has-text("Erstellen"), button[type="submit"]')
-      .first()
-      .click();
+    // Submit: "Anlegen"-Button im Dialog
+    await page.locator('button:has-text("Anlegen")').first().click();
     await page.waitForTimeout(600);
   },
 );
