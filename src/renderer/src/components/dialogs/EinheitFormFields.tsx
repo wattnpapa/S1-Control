@@ -87,11 +87,12 @@ export function EinheitCoreFields<TForm extends EinheitCoreForm>({
       </label>
       <label>
         Führung
-        <input type="number" min={0} value={form.fuehrung} onChange={(event) => update('fuehrung', event.target.value as TForm['fuehrung'])} />
+        <input data-testid="einheit-fuehrung" type="number" min={0} value={form.fuehrung} onChange={(event) => update('fuehrung', event.target.value as TForm['fuehrung'])} />
       </label>
       <label>
         Unterführung
         <input
+          data-testid="einheit-unterfuehrung"
           type="number"
           min={0}
           value={form.unterfuehrung}

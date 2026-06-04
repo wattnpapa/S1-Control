@@ -338,8 +338,12 @@ When('ich den Einsatz {string} erneut öffne', async ({ page }, einsatzName: str
   await expect(einsatzBtn).toBeEnabled({ timeout: 15_000 });
   // Klick mit normaler Playwright-Aktion (wartet automatisch auf enabled)
   await einsatzBtn.click({ timeout: 30_000 });
-  await page.waitForTimeout(1_000);
-  await page.waitForSelector('text=Abschnitte', { timeout: 30_000 });
+  await page.waitForTimeout(800);
+
+  // Wechsel zur Einsatz-Ansicht (E), da wir vorher im Einstellungen-Tab waren
+  await page.locator('.rail-button[title="Einsatz"]').first().click({ force: true, timeout: 5_000 }).catch(() => {});
+  await page.waitForTimeout(300);
+  await page.waitForSelector('text=Abschnitte', { timeout: 20_000 });
   await page.waitForTimeout(500);
 });
 
@@ -353,13 +357,26 @@ When(
       .waitFor({ state: 'hidden', timeout: 15_000 });
     await page.waitForTimeout(500);
 
-    // Jetzt ist die Einheit in der Tabelle sichtbar mit Action-Buttons
-    // Aufteilen-Button: erst aufEinheitName-Zeile warten, dann button suchen
+    // Einheit ist sichtbar (Action-Buttons als SVG-Icon-Buttons)
     await page.locator(`text=${quellEinheit}`).first().waitFor({ state: 'visible', timeout: 8_000 });
-    const splitBtn = page.locator('button[title="Aufteilen"], button[aria-label="Aufteilen"]').first();
-    await splitBtn.waitFor({ state: 'visible', timeout: 10_000 });
-    // click via dispatchEvent falls disabled durch busy
-    await splitBtn.dispatchEvent('click');
+    await page.waitForTimeout(500);
+
+    // Aufteilen via page.evaluate (Icon-Buttons haben kein textContent,
+    // Playwright's waitFor findet sie nicht zuverlässig)
+    const clicked = await page.evaluate(() => {
+      const btn = Array.from(document.querySelectorAll('button'))
+        .find(b => b.getAttribute('title') === 'Aufteilen' || b.getAttribute('aria-label') === 'Aufteilen');
+      if (btn) { (btn as HTMLElement).click(); return true; }
+      return false;
+    });
+    if (!clicked) {
+      // Fallback: 3. Icon-Button im table-icon-button (Verschieben=0, Bearbeiten=1, Aufteilen=2)
+      await page.evaluate(() => {
+        const btns = document.querySelectorAll('.table-icon-button');
+        if (btns.length >= 3) (btns[2] as HTMLElement).click();
+      });
+    }
+    await page.waitForTimeout(400);
     await page.waitForTimeout(400);
 
     // SplitEinheitDialog öffnet sich: h3 "Einheit splitten"
