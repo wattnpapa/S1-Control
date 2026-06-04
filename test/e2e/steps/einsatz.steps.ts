@@ -194,9 +194,133 @@ Then(
   'beträgt die Gesamtstärke über alle Abschnitte {int}',
   async ({ page }, expectedTotal: number) => {
     await page.waitForTimeout(1_500);
-    // Abschnitt wechseln → Gesamtstärke im Header muss TROTZDEM Gesamtsumme zeigen
     const staerkePattern = new RegExp(`\\d+\\/\\d+\\/\\d+\\/${expectedTotal}`);
-    const el = page.locator(`text=${staerkePattern}`).first();
-    await expect(el).toBeVisible({ timeout: 6_000 });
+    await expect(page.locator(`text=${staerkePattern}`).first()).toBeVisible({ timeout: 6_000 });
+  },
+);
+
+Then('sehe ich {string} in der Abschnitt-Liste', async ({ page }, abschnittName: string) => {
+  await expect(page.locator(`.tree-item:has-text("${abschnittName}")`).first()).toBeVisible({ timeout: 5_000 });
+});
+
+Then(
+  'ist {string} nicht mehr im Abschnitt {string}',
+  async ({ page }, einheitName: string, abschnittName: string) => {
+    await page.locator(`.tree-item:has-text("${abschnittName}")`).first().click();
+    await page.waitForTimeout(400);
+    await expect(page.locator(`text=${einheitName}`).first()).not.toBeVisible({ timeout: 3_000 });
+  },
+);
+
+// ─── Undo ──────────────────────────────────────────────────────────────────────
+
+When('ich die letzte Aktion rückgängig mache', async ({ page }) => {
+  const undoBtn = page.locator(
+    'button[title*="Undo"], button[title*="Rückgängig"], button:has-text("Undo")',
+  ).first();
+  await undoBtn.waitFor({ state: 'visible', timeout: 5_000 });
+  await undoBtn.click();
+  await page.waitForTimeout(600);
+});
+
+// ─── Fahrzeuge ─────────────────────────────────────────────────────────────────
+
+When(
+  'ich das Fahrzeug {string} der Einheit {string} zuordne',
+  async ({ page }, fahrzeugName: string, einheitName: string) => {
+    // Zur Fahrzeug-Ansicht wechseln oder Fahrzeug-Anlegen-Button nutzen
+    await page.locator('button:has-text("Fahrzeug anlegen")').first().click();
+    await page.waitForTimeout(400);
+
+    // Fahrzeugname
+    const nameInput = page
+      .locator('input[placeholder*="Name"], input[placeholder*="Fahrzeug"], input[name="name"]')
+      .first();
+    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
+    await nameInput.clear();
+    await nameInput.fill(fahrzeugName);
+
+    // Einheit zuordnen (Select oder Dropdown)
+    const einheitSelect = page.locator('select[name*="einheit"], select').first();
+    if (await einheitSelect.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await einheitSelect.selectOption({ label: einheitName });
+    } else {
+      const einheitBtn = page.locator(`text=${einheitName}`).first();
+      if (await einheitBtn.isVisible({ timeout: 1_000 }).catch(() => false)) {
+        await einheitBtn.click();
+      }
+    }
+
+    await page.locator('button:has-text("Anlegen"), button:has-text("Erstellen")').first().click();
+    await page.waitForTimeout(600);
+  },
+);
+
+Then('sehe ich {string} in der Fahrzeugliste', async ({ page }, fahrzeugName: string) => {
+  await expect(page.locator(`text=${fahrzeugName}`).first()).toBeVisible({ timeout: 5_000 });
+});
+
+// ─── Persistenz ────────────────────────────────────────────────────────────────
+
+When('ich den Einsatz schließe', async ({ page }) => {
+  // Einstellungen → Einsatz schließen oder zurück zum Startbildschirm
+  const closeBtn = page.locator(
+    'button:has-text("Einsatz schließen"), button:has-text("Schließen")',
+  ).first();
+  if (await closeBtn.isVisible({ timeout: 2_000 }).catch(() => false)) {
+    await closeBtn.click();
+  } else {
+    // Fallback: Einstellungen-Tab → Einsatz schließen
+    await page.locator('.rail-button:last-child, button[title*="Einstellung"]').first().click();
+    await page.waitForTimeout(300);
+    await page.locator('button:has-text("Einsatz schließen")').first().click();
+  }
+  await page.waitForTimeout(800);
+  // Entry-Screen muss wieder erscheinen
+  await page.waitForSelector('button:has-text("Neuen Einsatz anlegen")', { timeout: 8_000 });
+});
+
+When('ich den Einsatz {string} erneut öffne', async ({ page }, einsatzName: string) => {
+  // Einsatz aus der Recent-Liste öffnen
+  const einsatzBtn = page.locator(`button:has-text("${einsatzName}")`).first();
+  await einsatzBtn.waitFor({ state: 'visible', timeout: 8_000 });
+  await einsatzBtn.click();
+  await page.waitForTimeout(800);
+  await page.waitForSelector('text=Abschnitte', { timeout: 12_000 });
+  await page.waitForTimeout(500);
+});
+
+// ─── Einheit splitten ──────────────────────────────────────────────────────────
+
+When(
+  'ich {string} mit Stärke {int} in {string} aufteile',
+  async ({ page }, quellEinheit: string, splitStaerke: number, neuerName: string) => {
+    // Split-Button in der Quell-Einheitenzeile
+    const row = page
+      .locator(`tr:has-text("${quellEinheit}"), .einheit-row:has-text("${quellEinheit}")`)
+      .first();
+    const splitBtn = row
+      .locator('button[title*="split"], button[title*="Split"], button[title*="aufteilen"]')
+      .first();
+    await splitBtn.click();
+    await page.waitForTimeout(400);
+
+    // Name der neuen Teileinheit
+    const nameInput = page.locator('input[placeholder*="Name"], input[name="nameImEinsatz"]').first();
+    await nameInput.waitFor({ state: 'visible', timeout: 5_000 });
+    await nameInput.clear();
+    await nameInput.fill(neuerName);
+
+    // Stärke der neuen Einheit
+    const mannschaftInput = page
+      .locator('input[placeholder*="Mannschaft"], input[name="mannschaft"]')
+      .first();
+    if (await mannschaftInput.isVisible({ timeout: 1_000 }).catch(() => false)) {
+      await mannschaftInput.clear();
+      await mannschaftInput.fill(String(splitStaerke));
+    }
+
+    await page.locator('button:has-text("Aufteilen"), button:has-text("Split"), button:has-text("Anlegen")').first().click();
+    await page.waitForTimeout(600);
   },
 );
