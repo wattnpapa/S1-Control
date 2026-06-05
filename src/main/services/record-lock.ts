@@ -1,9 +1,8 @@
 import crypto from 'node:crypto';
-import path from 'node:path';
 import type { RecordEditLockInfo, RecordEditLockType } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import type { JsonRecordEditLock } from '../json-store/types';
-import { mutateSystemFile, mutateSystemFileSync, readSystemFile } from '../json-store/system-store';
+import { mutateSystemFileSync, readSystemFile } from '../json-store/system-store';
 import { systemFilePath } from '../db/connection';
 
 const LOCK_TTL_MS = 45_000;

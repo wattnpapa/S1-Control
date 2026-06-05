@@ -17,7 +17,7 @@ export type AppFixture = {
 /** Playwright-Fixture: startet die App für jeden Test frisch mit eigenem Daten-Verzeichnis. */
 export const test = base.extend<AppFixture>({
   dataDir: [
-    async ({}, use) => {
+    async (_fixtures, use) => {
       const dir = fs.mkdtempSync(path.join(os.tmpdir(), 's1-e2e-'));
       await use(dir);
       fs.rmSync(dir, { recursive: true, force: true });

@@ -231,15 +231,6 @@ Then(
 
 When('ich die letzte Aktion rückgängig mache', async ({ page }) => {
   // Kein UI-Button für Undo vorhanden → IPC direkt aufrufen
-  const einsatzId = await page.evaluate(() => {
-    // selectedEinsatzId aus dem App-State lesen (in React DevTools nicht zugänglich,
-    // aber die Topbar zeigt den Einsatznamen → wir lesen über den IPC-Weg)
-    return (window as unknown as { api?: { hasUndo?: (id: string) => Promise<boolean> } }).api
-      ? null
-      : null;
-  });
-
-  // Direkter IPC-Aufruf über window.api.undoLastCommand
   // Einsatz-ID aus dem Titel extrahieren oder über getDbContext ermitteln
   await page.evaluate(async () => {
     const allEinsaetze = await (window as unknown as { api: { listEinsaetze(): Promise<Array<{ id: string; name: string }>> } }).api.listEinsaetze();

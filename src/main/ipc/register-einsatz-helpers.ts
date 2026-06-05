@@ -91,43 +91,39 @@ function openEinsatzByPathForUser(state: AppState, selected: string, user: Sessi
   const requestTs = Date.now();
   debugSync('einsatz', 'open-by-path:start', { selected, user: user.name, requestTs });
   const nextContext = openDatabaseWithRetry(selected);
-  try {
-    ensureDefaultAdmin(nextContext);
-    const einsatzMeta = listEinsaetzeFromContext(nextContext.einsatz)[0] ?? readPrimaryEinsatzFromDbFile(selected);
-    if (!einsatzMeta) {
-      const fileName = path.basename(selected).toLowerCase();
-      if (fileName.startsWith('_system.')) {
-        throw new Error('Die gewählte Datei ist die Systemdatenbank (_system). Bitte eine Einsatzdatei öffnen.');
-      }
-      throw new Error(
-        'Die gewählte Datei enthält keinen gültigen Einsatz. Bitte die originale Einsatzdatei (.s1control) auswählen.',
-      );
+  ensureDefaultAdmin(nextContext);
+  const einsatzMeta = listEinsaetzeFromContext(nextContext.einsatz)[0] ?? readPrimaryEinsatzFromDbFile(selected);
+  if (!einsatzMeta) {
+    const fileName = path.basename(selected).toLowerCase();
+    if (fileName.startsWith('_system.')) {
+      throw new Error('Die gewählte Datei ist die Systemdatenbank (_system). Bitte eine Einsatzdatei öffnen.');
     }
-
-    const dbUser = ensureSessionUserRecord(nextContext, user);
-    state.setSessionUser(dbUser);
-    state.setDbContext(nextContext);
-    if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
-      state.clientPresence.start(nextContext);
-    }
-    state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: einsatzMeta.id });
-    if (!state.perfSafeMode) {
-      state.backupCoordinator.start(nextContext);
-    }
-    rememberRecentDbPath(state, selected, einsatzMeta.id);
-    state.settingsStore.set({ dbPath: path.dirname(selected) });
-    debugSync('einsatz', 'open-by-path:ok', {
-      selected,
-      einsatzId: einsatzMeta.id,
-      dbPath: nextContext.path,
-      requestTs,
-      readyTs: Date.now(),
-      latencyMs: Date.now() - requestTs,
-    });
-    return einsatzMeta;
-  } catch (error) {
-    throw error;
+    throw new Error(
+      'Die gewählte Datei enthält keinen gültigen Einsatz. Bitte die originale Einsatzdatei (.s1control) auswählen.',
+    );
   }
+
+  const dbUser = ensureSessionUserRecord(nextContext, user);
+  state.setSessionUser(dbUser);
+  state.setDbContext(nextContext);
+  if (state.clientHeartbeatEnabled && !state.perfSafeMode) {
+    state.clientPresence.start(nextContext);
+  }
+  state.einsatzSync.setContext({ dbPath: nextContext.path, einsatzId: einsatzMeta.id });
+  if (!state.perfSafeMode) {
+    state.backupCoordinator.start(nextContext);
+  }
+  rememberRecentDbPath(state, selected, einsatzMeta.id);
+  state.settingsStore.set({ dbPath: path.dirname(selected) });
+  debugSync('einsatz', 'open-by-path:ok', {
+    selected,
+    einsatzId: einsatzMeta.id,
+    dbPath: nextContext.path,
+    requestTs,
+    readyTs: Date.now(),
+    latencyMs: Date.now() - requestTs,
+  });
+  return einsatzMeta;
 }
 
 /**

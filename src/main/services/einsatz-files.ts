@@ -5,7 +5,7 @@ import type { EinsatzListItem, SessionUser } from '../../shared/types';
 import crypto from 'node:crypto';
 import { openDatabaseWithRetry, systemFilePath, type DbContext } from '../db/connection';
 import { readEinsatzFile, createEmptyEinsatzFile, writeEinsatzFile } from '../json-store/einsatz-store';
-import { readSystemFile, writeSystemFile } from '../json-store/system-store';
+import { writeSystemFile } from '../json-store/system-store';
 import { ensureDefaultAdmin, ensureSessionUserRecord } from './auth';
 import { createEinsatz } from './einsatz';
 

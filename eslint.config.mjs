@@ -8,7 +8,7 @@ import sonarjs from 'eslint-plugin-sonarjs';
 
 export default tseslint.config(
   {
-    ignores: ['dist-electron/**', 'dist-renderer/**', 'node_modules/**', 'scripts/**', 'eslint.config.mjs'],
+    ignores: ['dist-electron/**', 'dist-renderer/**', 'node_modules/**', 'scripts/**', 'eslint.config.mjs', '.features-gen/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

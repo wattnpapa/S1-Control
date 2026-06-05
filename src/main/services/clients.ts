@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import type { ActiveClientInfo } from '../../shared/types';
 import type { DbContext } from '../db/connection';
 import { systemFilePath } from '../db/connection';
-import { mutateSystemFile, readSystemFile, writeSystemFile } from '../json-store/system-store';
+import { readSystemFile, writeSystemFile } from '../json-store/system-store';
 import { debugSync } from './debug';
 
 const HEARTBEAT_MS = 5 * 1000;
