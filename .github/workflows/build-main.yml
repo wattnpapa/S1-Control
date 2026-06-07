@@ -139,7 +139,19 @@ jobs:
         env:
           APPLE_API_KEY_BASE64: ${{ secrets.APPLE_API_KEY_BASE64 }}
 
+      - name: Check signing certificate validity
+        run: |
+          KEY_PATH="$RUNNER_TEMP/signing.p12"
+          node -e "const fs=require('node:fs'); fs.writeFileSync(process.argv[1], Buffer.from(process.env.CSC_LINK, 'base64'));" "$KEY_PATH"
+          openssl pkcs12 -in "$KEY_PATH" -nokeys -passin "pass:${CSC_KEY_PASSWORD}" 2>/dev/null | openssl x509 -noout -dates -subject || echo "⚠️ Certificate check failed"
+          rm -f "$KEY_PATH"
+        env:
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+        continue-on-error: true
+
       - name: Build macOS artifacts
+        env:
+          DEBUG: electron-builder
         run: |
           npm run -s lint
           npm run -s typecheck
