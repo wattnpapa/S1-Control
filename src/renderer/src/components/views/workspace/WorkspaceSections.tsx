@@ -184,7 +184,12 @@ function FuehrungView(props: WorkspaceContentProps): JSX.Element {
           Abschnitt anlegen
         </button>
       </div>
-      <FuehrungsstrukturView abschnitte={props.abschnitte} kraefte={props.allKraefte} />
+      <FuehrungsstrukturView
+        abschnitte={props.abschnitte}
+        kraefte={props.allKraefte}
+        onEditAbschnitt={props.onEditAbschnitt}
+        isArchived={props.isArchived}
+      />
     </>
   );
 }

@@ -566,6 +566,29 @@ textarea {
   font-weight: 700;
 }
 
+.fuehr-org-edit-btn {
+  margin-left: auto;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #31508f;
+  padding: 1px 5px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.fuehr-org-card:hover .fuehr-org-edit-btn {
+  opacity: 1;
+}
+
+.fuehr-org-edit-btn:hover {
+  background: #e8eefc;
+  border-color: #31508f;
+}
+
 .fuehr-org-body p {
   margin: 4px 0;
 }

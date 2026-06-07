@@ -78,6 +78,7 @@ export interface BuildWorkspacePropsArgs {
   updaterState: AppWorkspaceShellProps['updaterState'];
   abschnittActions: {
     openEditSelectedDialog: () => void;
+    openEditDialog: (id: string) => void;
     openCreateDialog: () => void;
     submitCreate: () => Promise<void>;
     submitEdit: () => Promise<void>;
@@ -257,6 +258,7 @@ function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): WorkspaceCallba
     onCloseEditFahrzeug: args.closeEditFahrzeugDialog,
     onCreateEinheit: args.einheitActions.openCreateDialog,
     onCreateAbschnitt: args.abschnittActions.openCreateDialog,
+    onEditAbschnitt: args.abschnittActions.openEditDialog,
     onCreateFahrzeug: args.fahrzeugActions.openCreateDialog,
     onMoveEinheit: moveCallbacks.onMoveEinheit,
     onEditEinheit: args.einheitActions.openEditDialog,

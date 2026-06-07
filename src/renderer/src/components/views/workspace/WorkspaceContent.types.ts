@@ -89,6 +89,7 @@ export interface WorkspaceContentProps {
   onCloseEditFahrzeug: () => void;
   onCreateEinheit: () => void;
   onCreateAbschnitt: () => void;
+  onEditAbschnitt: (id: string) => void;
   onCreateFahrzeug: () => void;
   onMoveEinheit: (id: string) => void;
   onEditEinheit: (id: string) => void;

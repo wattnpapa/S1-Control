@@ -34,6 +34,7 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
   const closeEditDialog = buildCloseEditDialog(props);
   const openCreateDialog = buildOpenCreateDialog(props);
   const openEditSelectedDialog = buildOpenEditSelectedDialog(props);
+  const openEditDialog = buildOpenEditDialog(props);
   const submitCreate = buildSubmitCreate(props);
   const submitEdit = buildSubmitEdit(props);
 
@@ -41,6 +42,7 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
     closeEditDialog,
     openCreateDialog,
     openEditSelectedDialog,
+    openEditDialog,
     submitCreate,
     submitEdit,
   };
@@ -84,6 +86,40 @@ function buildOpenEditSelectedDialog(props: UseAbschnittActionsProps) {
   return () => {
     void openEditSelectedDialogAsync(props).catch((err) => props.setError(readError(err)));
   };
+}
+
+/**
+ * Creates callback for opening edit dialog for a specific Abschnitt by ID.
+ */
+function buildOpenEditDialog(props: UseAbschnittActionsProps) {
+  return (abschnittId: string) => {
+    void openEditDialogAsync(props, abschnittId).catch((err) => props.setError(readError(err)));
+  };
+}
+
+/**
+ * Opens a specific Abschnitt in edit mode after lock acquisition.
+ */
+async function openEditDialogAsync(props: UseAbschnittActionsProps, abschnittId: string): Promise<void> {
+  if (!abschnittId || !props.selectedEinsatzId || props.isArchived) {
+    return;
+  }
+  const current = props.abschnitte.find((item) => item.id === abschnittId);
+  if (!current) {
+    props.setError('Abschnitt nicht gefunden.');
+    return;
+  }
+  const acquired = await props.acquireEditLock(props.selectedEinsatzId, 'ABSCHNITT', abschnittId);
+  if (!acquired) {
+    return;
+  }
+  props.setEditAbschnittForm({
+    abschnittId: current.id,
+    name: current.name,
+    systemTyp: current.systemTyp,
+    parentId: current.parentId ?? '',
+  });
+  props.setShowEditAbschnittDialog(true);
 }
 
 /**

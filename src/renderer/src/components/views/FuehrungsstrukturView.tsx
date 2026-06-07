@@ -7,6 +7,8 @@ import type { JSX } from 'react';
 interface FuehrungsstrukturViewProps {
   abschnitte: AbschnittNode[];
   kraefte: KraftOverviewItem[];
+  onEditAbschnitt: (id: string) => void;
+  isArchived: boolean;
 }
 
 interface NodeStats {
@@ -133,9 +135,13 @@ function OrganisationChips({ organisations }: { organisations: Array<[Organisati
 function HierarchyNode({
   node,
   stats,
+  onEditAbschnitt,
+  isArchived,
 }: {
   node: AbschnittNode;
   stats: NodeStats;
+  onEditAbschnitt: (id: string) => void;
+  isArchived: boolean;
 }): JSX.Element {
   return (
     <div className="fuehr-org-node">
@@ -145,6 +151,15 @@ function HierarchyNode({
           <header>
             <h3>{node.name}</h3>
             <span>{node.systemTyp}</span>
+            {!isArchived && (
+              <button
+                className="fuehr-org-edit-btn"
+                onClick={() => onEditAbschnitt(node.id)}
+                title="Abschnitt bearbeiten"
+              >
+                ✎
+              </button>
+            )}
           </header>
           <p>
             Führungsstärke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
@@ -168,10 +183,14 @@ function HierarchyBranch({
   parentId,
   byParent,
   collectStats,
+  onEditAbschnitt,
+  isArchived,
 }: {
   parentId: string | null;
   byParent: TreeIndexes['byParent'];
   collectStats: (abschnittId: string) => NodeStats;
+  onEditAbschnitt: (id: string) => void;
+  isArchived: boolean;
 }): JSX.Element | null {
   const nodes = byParent.get(parentId) ?? [];
   if (nodes.length === 0) {
@@ -183,11 +202,11 @@ function HierarchyBranch({
         const children = byParent.get(node.id) ?? [];
         return (
           <div key={node.id} className="fuehr-org-child">
-            <HierarchyNode node={node} stats={collectStats(node.id)} />
+            <HierarchyNode node={node} stats={collectStats(node.id)} onEditAbschnitt={onEditAbschnitt} isArchived={isArchived} />
             {children.length > 0 ? (
               <div className="fuehr-org-branch">
                 <div className="fuehr-org-branch-down" />
-                <HierarchyBranch parentId={node.id} byParent={byParent} collectStats={collectStats} />
+                <HierarchyBranch parentId={node.id} byParent={byParent} collectStats={collectStats} onEditAbschnitt={onEditAbschnitt} isArchived={isArchived} />
               </div>
             ) : null}
           </div>
@@ -207,7 +226,13 @@ export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.El
     <div className="fuehrung-view">
       <h2>Führungsstruktur und Organisation</h2>
       <div className="fuehr-org-canvas">
-        <HierarchyBranch parentId={null} byParent={indexes.byParent} collectStats={collectStats} />
+        <HierarchyBranch
+          parentId={null}
+          byParent={indexes.byParent}
+          collectStats={collectStats}
+          onEditAbschnitt={props.onEditAbschnitt}
+          isArchived={props.isArchived}
+        />
       </div>
     </div>
   );
