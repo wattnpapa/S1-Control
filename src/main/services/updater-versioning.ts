@@ -152,6 +152,13 @@ function tryCompareSemver(current: string, latest: string): number | null {
   if (!isSemverVersion(current) || !isSemverVersion(latest)) {
     return null;
   }
+  const currentDate = parseSemverDate(current);
+  const latestDate = parseSemverDate(latest);
+  if (currentDate !== null && latestDate !== null) {
+    if (currentDate < latestDate) return -1;
+    if (currentDate > latestDate) return 1;
+    return 0;
+  }
   return compareSemver(current, latest);
 }
 
