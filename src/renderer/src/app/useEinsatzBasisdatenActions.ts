@@ -1,4 +1,3 @@
-import { readError } from '@renderer/utils/error';
 import type { EditEinsatzForm } from '@renderer/types/ui';
 import type { Dispatch, SetStateAction } from 'react';
 
@@ -22,7 +21,9 @@ interface UseEinsatzBasisdatenActionsProps {
 /**
  * Provides Einsatz Basisdaten dialog lifecycle and update actions.
  */
-export function useEinsatzBasisdatenActions(props: UseEinsatzBasisdatenActionsProps) {
+export function useEinsatzBasisdatenActions(
+  props: UseEinsatzBasisdatenActionsProps,
+) {
   const openEditEinsatzDialog = buildOpenEditEinsatzDialog(props);
   const submitEditEinsatz = buildSubmitEditEinsatz(props);
   const closeEditEinsatzDialog = buildCloseEditEinsatzDialog(props);
