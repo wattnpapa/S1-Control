@@ -90,6 +90,7 @@ export interface AppWorkspaceShellProps {
   onDownloadUpdate: () => void;
   onOpenReleasePage: () => void;
   onEditSelectedAbschnitt: () => void;
+  onEditAbschnitt: (id: string) => void;
   onSubmitEditEinheit: () => void;
   onCloseEditEinheit: () => void;
   onCreateEinheitHelfer: (input: {
@@ -214,6 +215,7 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onCloseEditFahrzeug: props.onCloseEditFahrzeug,
     onCreateEinheit: props.onCreateEinheit,
     onCreateAbschnitt: props.onCreateAbschnitt,
+    onEditAbschnitt: props.onEditAbschnitt,
     onCreateFahrzeug: props.onCreateFahrzeug,
     onMoveEinheit: props.onMoveEinheit,
     onEditEinheit: props.onEditEinheit,
