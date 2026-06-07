@@ -1,6 +1,7 @@
 import { EMPTY_DETAILS, EMPTY_STRENGTH } from '@renderer/app/defaultState';
 import { useEditLocks } from '@renderer/app/useEditLocks';
 import { useEinsatzData } from '@renderer/app/useEinsatzData';
+import { useEinsatzBasisdatenActions } from '@renderer/app/useEinsatzBasisdatenActions';
 import { useEntityActionsBundle } from '@renderer/app/useEntityActionsBundle';
 import { useStartActions } from '@renderer/app/useStartActions';
 import { useSyncEvents } from '@renderer/app/useSyncEvents';
@@ -244,6 +245,18 @@ export function useAppControllers(params: UseAppControllersParams) {
   useRuntimeSync(params, dataState, withBusy);
   const { startActions, systemActions } = useStartAndSystemActions(params, dataState, withBusy);
   const { abschnittActions, fahrzeugActions, einheitActions } = useEntityActions(params, lockState, dataState, withBusy);
+  const einsatzBasisdatenActions = useEinsatzBasisdatenActions({
+    selectedEinsatzId: params.rootState.selectedEinsatzId,
+    isArchived: Boolean(lockState.derivedState.isArchived),
+    editEinsatzForm: params.uiState.editEinsatzForm,
+    setEditEinsatzForm: params.uiState.setEditEinsatzForm,
+    setShowEditEinsatzDialog: params.uiState.setShowEditEinsatzDialog,
+    currentEinsatzName: lockState.derivedState.selectedEinsatz?.name ?? '',
+    currentFuestName: lockState.derivedState.selectedEinsatz?.fuestName ?? '',
+    setError: params.rootState.setError,
+    loadEinsatz: dataState.loadEinsatz,
+    withBusy,
+  });
 
   return {
     derivedState: lockState.derivedState,
@@ -258,5 +271,6 @@ export function useAppControllers(params: UseAppControllersParams) {
     abschnittActions,
     fahrzeugActions,
     einheitActions,
+    einsatzBasisdatenActions,
   };
 }

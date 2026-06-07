@@ -25,6 +25,21 @@ export function createEinsatz(ctx: EinsatzWriteCtx, input: { name: string; fuest
   return created;
 }
 
+export function updateEinsatz(ctx: EinsatzWriteCtx, input: { einsatzId: string; name: string; fuestName: string }): void {
+  if (ctx.einsatz.einsatz.id !== input.einsatzId) {
+    throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
+  }
+  if (ctx.einsatz.einsatz.status === 'ARCHIVIERT') {
+    throw new AppError('Archivierter Einsatz kann nicht bearbeitet werden', 'ARCHIVED');
+  }
+  ctx.einsatz.einsatz.name = input.name;
+  ctx.einsatz.einsatz.fuestName = input.fuestName;
+  const fuest = ctx.einsatz.abschnitte.find((a) => a.systemTyp === 'FUEST' && a.parentId === null);
+  if (fuest) {
+    fuest.name = input.fuestName;
+  }
+}
+
 export function archiveEinsatz(ctx: EinsatzWriteCtx, einsatzId: string): void {
   if (ctx.einsatz.einsatz.id !== einsatzId) {
     throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');

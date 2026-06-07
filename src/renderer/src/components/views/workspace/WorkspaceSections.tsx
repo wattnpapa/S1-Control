@@ -1,6 +1,10 @@
 import type { OrganisationKey } from '@shared/types';
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
-import { InlineCreateEinheitEditor, InlineEinheitEditor, InlineFahrzeugEditor } from '@renderer/components/editor/InlineEditors';
+import {
+  InlineCreateEinheitEditor,
+  InlineEinheitEditor,
+  InlineFahrzeugEditor,
+} from '@renderer/components/editor/InlineEditors';
 import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
 import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
 import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
@@ -102,7 +106,9 @@ function FahrzeugEditor(props: FahrzeugEditorProps): JSX.Element {
 /**
  * Maps workspace content props to Einheit editor props.
  */
-function toEinheitEditorsProps(props: WorkspaceContentProps): EinheitEditorsProps {
+function toEinheitEditorsProps(
+  props: WorkspaceContentProps,
+): EinheitEditorsProps {
   return {
     showEditEinheitDialog: props.showEditEinheitDialog,
     busy: props.busy,
@@ -130,7 +136,9 @@ function toEinheitEditorsProps(props: WorkspaceContentProps): EinheitEditorsProp
 /**
  * Maps workspace content props to vehicle editor props.
  */
-function toFahrzeugEditorProps(props: WorkspaceContentProps): FahrzeugEditorProps {
+function toFahrzeugEditorProps(
+  props: WorkspaceContentProps,
+): FahrzeugEditorProps {
   return {
     showEditFahrzeugDialog: props.showEditFahrzeugDialog,
     busy: props.busy,
@@ -153,9 +161,14 @@ function EinsatzView(props: WorkspaceContentProps): JSX.Element {
     <>
       <EinheitEditors {...einheitEditorsProps} />
       <FahrzeugEditor {...fahrzeugEditorProps} />
-      <button onClick={props.onCreateEinheit} disabled={props.busy || props.isArchived}>
-        Einheit anlegen
-      </button>
+      <div className="inline-actions">
+        <button onClick={props.onOpenEditEinsatz} disabled={props.busy || props.isArchived}>
+          Basisdaten bearbeiten
+        </button>
+        <button onClick={props.onCreateEinheit} disabled={props.busy || props.isArchived}>
+          Einheit anlegen
+        </button>
+      </div>
       <EinsatzOverviewView
         details={props.details}
         selectedEinsatz={props.selectedEinsatz}
@@ -180,7 +193,10 @@ function FuehrungView(props: WorkspaceContentProps): JSX.Element {
   return (
     <>
       <div className="inline-actions">
-        <button onClick={props.onCreateAbschnitt} disabled={props.busy || !props.selectedEinsatzId || props.isArchived}>
+        <button
+          onClick={props.onCreateAbschnitt}
+          disabled={props.busy || !props.selectedEinsatzId || props.isArchived}
+        >
           Abschnitt anlegen
         </button>
       </div>
@@ -202,14 +218,20 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
   const einheiten =
     props.kraefteOrgFilter === 'ALLE'
       ? props.allKraefte
-      : props.allKraefte.filter((einheit) => einheit.organisation === props.kraefteOrgFilter);
+      : props.allKraefte.filter(
+          (einheit) => einheit.organisation === props.kraefteOrgFilter,
+        );
   return (
     <>
       <EinheitEditors {...einheitEditorsProps} />
       <div className="inline-actions">
         <select
           value={props.kraefteOrgFilter}
-          onChange={(e) => props.setKraefteOrgFilter(e.target.value as OrganisationKey | 'ALLE')}
+          onChange={(e) =>
+            props.setKraefteOrgFilter(
+              e.target.value as OrganisationKey | 'ALLE',
+            )
+          }
           disabled={props.busy}
         >
           <option value="ALLE">Alle Organisationen</option>
@@ -219,10 +241,16 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
             </option>
           ))}
         </select>
-        <button onClick={props.onCreateAbschnitt} disabled={props.busy || !props.selectedEinsatzId || props.isArchived}>
+        <button
+          onClick={props.onCreateAbschnitt}
+          disabled={props.busy || !props.selectedEinsatzId || props.isArchived}
+        >
           Abschnitt anlegen
         </button>
-        <button onClick={props.onCreateEinheit} disabled={props.busy || props.isArchived}>
+        <button
+          onClick={props.onCreateEinheit}
+          disabled={props.busy || props.isArchived}
+        >
           Einheit anlegen
         </button>
       </div>
@@ -246,7 +274,10 @@ function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
   return (
     <>
       <FahrzeugEditor {...fahrzeugEditorProps} />
-      <button onClick={props.onCreateFahrzeug} disabled={props.busy || props.isArchived}>
+      <button
+        onClick={props.onCreateFahrzeug}
+        disabled={props.busy || props.isArchived}
+      >
         Fahrzeug anlegen
       </button>
       <FahrzeugeOverviewTable

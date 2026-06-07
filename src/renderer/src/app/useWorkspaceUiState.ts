@@ -6,6 +6,7 @@ import type {
   CreateEinheitForm,
   CreateFahrzeugForm,
   EditAbschnittForm,
+  EditEinsatzForm,
   EditEinheitForm,
   EditFahrzeugForm,
   MoveDialogState,
@@ -18,6 +19,7 @@ import {
   DEFAULT_CREATE_EINHEIT_FORM,
   DEFAULT_CREATE_FAHRZEUG_FORM,
   DEFAULT_EDIT_ABSCHNITT_FORM,
+  DEFAULT_EDIT_EINSATZ_FORM,
   DEFAULT_EDIT_EINHEIT_FORM,
   DEFAULT_EDIT_FAHRZEUG_FORM,
   DEFAULT_SPLIT_EINHEIT_FORM,
@@ -40,6 +42,10 @@ export interface WorkspaceUiStateResult {
   setShowEditAbschnittDialog: Dispatch<SetStateAction<boolean>>;
   editAbschnittForm: EditAbschnittForm;
   setEditAbschnittForm: Dispatch<SetStateAction<EditAbschnittForm>>;
+  showEditEinsatzDialog: boolean;
+  setShowEditEinsatzDialog: Dispatch<SetStateAction<boolean>>;
+  editEinsatzForm: EditEinsatzForm;
+  setEditEinsatzForm: Dispatch<SetStateAction<EditEinsatzForm>>;
   createEinheitForm: CreateEinheitForm;
   setCreateEinheitForm: Dispatch<SetStateAction<CreateEinheitForm>>;
   showEditEinheitDialog: boolean;
@@ -115,6 +121,8 @@ function useWorkspaceDialogUiState() {
   const [createAbschnittForm, setCreateAbschnittForm] = useState<CreateAbschnittForm>(DEFAULT_CREATE_ABSCHNITT_FORM);
   const [showEditAbschnittDialog, setShowEditAbschnittDialog] = useState(false);
   const [editAbschnittForm, setEditAbschnittForm] = useState<EditAbschnittForm>(DEFAULT_EDIT_ABSCHNITT_FORM);
+  const [showEditEinsatzDialog, setShowEditEinsatzDialog] = useState(false);
+  const [editEinsatzForm, setEditEinsatzForm] = useState<EditEinsatzForm>(DEFAULT_EDIT_EINSATZ_FORM);
   const [createEinheitForm, setCreateEinheitForm] = useState<CreateEinheitForm>(DEFAULT_CREATE_EINHEIT_FORM);
   const [showEditEinheitDialog, setShowEditEinheitDialog] = useState(false);
   const [editEinheitHelfer, setEditEinheitHelfer] = useState<EinheitHelfer[]>(EMPTY_EINHEIT_HELFER);
@@ -140,6 +148,10 @@ function useWorkspaceDialogUiState() {
     setShowEditAbschnittDialog,
     editAbschnittForm,
     setEditAbschnittForm,
+    showEditEinsatzDialog,
+    setShowEditEinsatzDialog,
+    editEinsatzForm,
+    setEditEinsatzForm,
     createEinheitForm,
     setCreateEinheitForm,
     showEditEinheitDialog,

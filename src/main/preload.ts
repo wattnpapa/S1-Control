@@ -19,6 +19,7 @@ const api: RendererApi = {
   createEinsatz: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ, input),
   createEinsatzWithDialog: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_EINSATZ_DIALOG, input),
   archiveEinsatz: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.ARCHIVE_EINSATZ, einsatzId),
+  updateEinsatz: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_EINSATZ, input),
   listAbschnitte: (einsatzId) => ipcRenderer.invoke(IPC_CHANNEL.LIST_ABSCHNITTE, einsatzId),
   createAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.CREATE_ABSCHNITT, input),
   updateAbschnitt: (input) => ipcRenderer.invoke(IPC_CHANNEL.UPDATE_ABSCHNITT, input),

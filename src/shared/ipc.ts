@@ -35,6 +35,12 @@ export interface CreateAbschnittInput {
   parentId?: string | null;
 }
 
+export interface UpdateEinsatzInput {
+  einsatzId: string;
+  name: string;
+  fuestName: string;
+}
+
 export interface UpdateAbschnittInput {
   einsatzId: string;
   abschnittId: string;
@@ -189,6 +195,7 @@ export interface RendererApi {
   createEinsatz(input: CreateEinsatzInput): Promise<EinsatzListItem>;
   createEinsatzWithDialog(input: CreateEinsatzInput): Promise<EinsatzListItem | null>;
   archiveEinsatz(einsatzId: string): Promise<void>;
+  updateEinsatz(input: UpdateEinsatzInput): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
   updateAbschnitt(input: UpdateAbschnittInput): Promise<void>;
@@ -303,6 +310,7 @@ export const IPC_CHANNEL = {
   CREATE_EINSATZ: 'einsatz:create',
   CREATE_EINSATZ_DIALOG: 'einsatz:create-dialog',
   ARCHIVE_EINSATZ: 'einsatz:archive',
+  UPDATE_EINSATZ: 'einsatz:update',
   LIST_ABSCHNITTE: 'abschnitt:list',
   CREATE_ABSCHNITT: 'abschnitt:create',
   UPDATE_ABSCHNITT: 'abschnitt:update',

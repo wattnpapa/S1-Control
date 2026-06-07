@@ -44,6 +44,7 @@ function toWorkspaceBuilderArgs(params: {
   lockByFahrzeugId: ReturnType<typeof useAppControllers>['lockByFahrzeugId'];
   closeEditEinheitDialog: ReturnType<typeof useAppControllers>['closeEditEinheitDialog'];
   closeEditFahrzeugDialog: ReturnType<typeof useAppControllers>['closeEditFahrzeugDialog'];
+  einsatzBasisdatenActions: ReturnType<typeof useAppControllers>['einsatzBasisdatenActions'];
   abschnittActions: ReturnType<typeof useAppControllers>['abschnittActions'];
   einheitActions: ReturnType<typeof useAppControllers>['einheitActions'];
   fahrzeugActions: ReturnType<typeof useAppControllers>['fahrzeugActions'];
@@ -70,6 +71,7 @@ function toWorkspaceBuilderArgs(params: {
     closeEditEinheitDialog: params.closeEditEinheitDialog,
     closeEditFahrzeugDialog: params.closeEditFahrzeugDialog,
     updaterState: params.rootState.updaterState,
+    einsatzBasisdatenActions: params.einsatzBasisdatenActions,
     abschnittActions: params.abschnittActions,
     einheitActions: params.einheitActions,
     fahrzeugActions: params.fahrzeugActions,

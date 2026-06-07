@@ -98,6 +98,11 @@ export interface EditEinheitForm {
   tacticalSignDenominator: string;
 }
 
+export interface EditEinsatzForm {
+  name: string;
+  fuestName: string;
+}
+
 export interface EditFahrzeugForm {
   fahrzeugId: string;
   name: string;

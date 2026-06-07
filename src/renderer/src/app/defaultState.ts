@@ -4,6 +4,7 @@ import type {
   CreateEinheitForm,
   CreateFahrzeugForm,
   EditAbschnittForm,
+  EditEinsatzForm,
   EditEinheitForm,
   EditFahrzeugForm,
   SplitEinheitForm,
@@ -24,6 +25,14 @@ export const EMPTY_STRENGTH: TacticalStrength = { fuehrung: 0, unterfuehrung: 0,
  * Provides initial updater state.
  */
 export const DEFAULT_UPDATER_STATE: UpdaterState = { stage: 'idle' };
+
+/**
+ * Provides initial form values for Einsatz editing.
+ */
+export const DEFAULT_EDIT_EINSATZ_FORM: EditEinsatzForm = {
+  name: '',
+  fuestName: '',
+};
 
 /**
  * Provides initial form values for Abschnitt creation.

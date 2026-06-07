@@ -76,6 +76,11 @@ export interface BuildWorkspacePropsArgs {
   closeEditEinheitDialog: () => void;
   closeEditFahrzeugDialog: () => void;
   updaterState: AppWorkspaceShellProps['updaterState'];
+  einsatzBasisdatenActions: {
+    openEditEinsatzDialog: () => void;
+    submitEditEinsatz: () => Promise<void>;
+    closeEditEinsatzDialog: () => void;
+  };
   abschnittActions: {
     openEditSelectedDialog: () => void;
     openEditDialog: (id: string) => void;
@@ -119,7 +124,9 @@ export interface BuildWorkspacePropsArgs {
 /**
  * Creates workspace/shell props from prepared app state and actions.
  */
-export function buildWorkspaceProps(args: BuildWorkspacePropsArgs): AppWorkspaceShellProps {
+export function buildWorkspaceProps(
+  args: BuildWorkspacePropsArgs,
+): AppWorkspaceShellProps {
   return {
     ...buildWorkspaceStateProps(args),
     ...buildWorkspaceCallbacks(args),
@@ -129,7 +136,12 @@ export function buildWorkspaceProps(args: BuildWorkspacePropsArgs): AppWorkspace
 /**
  * Creates workspace state props excluding interactive callbacks.
  */
-function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorkspaceShellProps, keyof ReturnType<typeof buildWorkspaceCallbacks>> {
+function buildWorkspaceStateProps(
+  args: BuildWorkspacePropsArgs,
+): Omit<
+  AppWorkspaceShellProps,
+  keyof ReturnType<typeof buildWorkspaceCallbacks>
+> {
   return {
     busy: args.busy,
     einsatzInitialLoading: args.einsatzInitialLoading,
@@ -150,7 +162,8 @@ function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorksp
     setActiveView: args.uiState.setActiveView,
     setSelectedAbschnittId: args.setSelectedAbschnittId,
     showAbschnittSidebar: args.derivedState.showAbschnittSidebar,
-    selectedAbschnittLockedByOther: args.derivedState.selectedAbschnittLockedByOther,
+    selectedAbschnittLockedByOther:
+      args.derivedState.selectedAbschnittLockedByOther,
     lockByAbschnittId: args.lockByAbschnittId,
     lockByEinheitId: args.lockByEinheitId,
     lockByFahrzeugId: args.lockByFahrzeugId,
@@ -170,6 +183,9 @@ function buildWorkspaceStateProps(args: BuildWorkspacePropsArgs): Omit<AppWorksp
     showEditAbschnittDialog: args.uiState.showEditAbschnittDialog,
     editAbschnittForm: args.uiState.editAbschnittForm,
     setEditAbschnittForm: args.uiState.setEditAbschnittForm,
+    showEditEinsatzDialog: args.uiState.showEditEinsatzDialog,
+    editEinsatzForm: args.uiState.editEinsatzForm,
+    setEditEinsatzForm: args.uiState.setEditEinsatzForm,
     showSplitEinheitDialog: args.uiState.showSplitEinheitDialog,
     splitEinheitForm: args.uiState.splitEinheitForm,
     setSplitEinheitForm: args.uiState.setSplitEinheitForm,
@@ -229,13 +245,18 @@ type WorkspaceCallbacks = Pick<
   | 'onCloseCreateAbschnitt'
   | 'onSubmitEditAbschnitt'
   | 'onCloseEditAbschnitt'
+  | 'onOpenEditEinsatz'
+  | 'onSubmitEditEinsatz'
+  | 'onCloseEditEinsatz'
   | 'onSubmitSplitEinheit'
   | 'onCloseSplitEinheit'
   | 'onSubmitCreateFahrzeug'
   | 'onCloseCreateFahrzeug'
 >;
 
-function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): WorkspaceCallbacks {
+function buildWorkspaceCallbacks(
+  args: BuildWorkspacePropsArgs,
+): WorkspaceCallbacks {
   const closeCallbacks = buildWorkspaceCloseCallbacks(args);
   const moveCallbacks = buildWorkspaceMoveCallbacks(args);
   const storageCallbacks = buildWorkspaceStorageCallbacks(args);
@@ -271,6 +292,9 @@ function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): WorkspaceCallba
     onCloseCreateAbschnitt: closeCallbacks.onCloseCreateAbschnitt,
     onSubmitEditAbschnitt: args.abschnittActions.submitEdit,
     onCloseEditAbschnitt: args.abschnittActions.closeEditDialog,
+    onOpenEditEinsatz: args.einsatzBasisdatenActions.openEditEinsatzDialog,
+    onSubmitEditEinsatz: args.einsatzBasisdatenActions.submitEditEinsatz,
+    onCloseEditEinsatz: args.einsatzBasisdatenActions.closeEditEinsatzDialog,
     onSubmitSplitEinheit: args.einheitActions.submitSplit,
     onCloseSplitEinheit: closeCallbacks.onCloseSplitEinheit,
     onSubmitCreateFahrzeug: args.fahrzeugActions.submitCreate,
@@ -284,9 +308,11 @@ function buildWorkspaceCallbacks(args: BuildWorkspacePropsArgs): WorkspaceCallba
 function buildWorkspaceCloseCallbacks(args: BuildWorkspacePropsArgs) {
   return {
     onCloseCreateEinheit: () => args.uiState.setShowCreateEinheitDialog(false),
-    onCloseCreateAbschnitt: () => args.uiState.setShowCreateAbschnittDialog(false),
+    onCloseCreateAbschnitt: () =>
+      args.uiState.setShowCreateAbschnittDialog(false),
     onCloseSplitEinheit: () => args.uiState.setShowSplitEinheitDialog(false),
-    onCloseCreateFahrzeug: () => args.uiState.setShowCreateFahrzeugDialog(false),
+    onCloseCreateFahrzeug: () =>
+      args.uiState.setShowCreateFahrzeugDialog(false),
   };
 }
 
@@ -315,6 +341,7 @@ function buildWorkspaceStorageCallbacks(args: BuildWorkspacePropsArgs) {
     onSetDbPath: args.setDbPath,
     onRestoreBackup: () => void args.systemActions.restoreBackup(),
     onCheckForUpdates: () => void args.systemActions.checkForUpdates(),
-    onToggleLanPeerUpdates: (enabled: boolean) => void args.systemActions.toggleLanPeerUpdates(enabled),
+    onToggleLanPeerUpdates: (enabled: boolean) =>
+      void args.systemActions.toggleLanPeerUpdates(enabled),
   };
 }

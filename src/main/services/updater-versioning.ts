@@ -9,7 +9,9 @@ export function normalizeVersion(version: string): string {
  * Checks whether version matches semver format.
  */
 export function isSemverVersion(version: string): boolean {
-  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/.test(version.trim());
+  return /^\d+\.\d+\.\d+(?:-[0-9A-Za-z-.]+)?(?:\+[0-9A-Za-z-.]+)?$/.test(
+    version.trim(),
+  );
 }
 
 /**
@@ -44,7 +46,9 @@ export function isNoPublishedVersionsError(message: string): boolean {
  * Parses build-version date to UTC timestamp.
  */
 export function parseBuildVersionDate(version: string): number | null {
-  const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(version.trim());
+  const match = /^(\d{4})\.(\d{2})\.(\d{2})\.(\d{2})\.(\d{2})$/.exec(
+    version.trim(),
+  );
   if (!match) {
     return null;
   }
@@ -75,7 +79,9 @@ export function parseBuildVersionDate(version: string): number | null {
  * Parses semver-like date build to UTC timestamp.
  */
 export function parseSemverDate(version: string): number | null {
-  const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(version.trim());
+  const match = /^(\d{4})\.(\d{1,2})\.(\d{1,2})-(\d{1,2})\.(\d{1,2})$/.exec(
+    version.trim(),
+  );
   if (!match) {
     return null;
   }
@@ -116,7 +122,10 @@ export function compareSemver(current: string, latest: string): number {
 /**
  * Compares build versions based on parsed UTC timestamp.
  */
-export function compareBuildVersions(current: string, latest: string): number | null {
+export function compareBuildVersions(
+  current: string,
+  latest: string,
+): number | null {
   const currentDate = parseBuildVersionDate(current);
   const latestDate = parseBuildVersionDate(latest);
   if (!currentDate || !latestDate) {
@@ -130,7 +139,10 @@ export function compareBuildVersions(current: string, latest: string): number | 
 /**
  * Compares supported current/latest versions.
  */
-export function compareVersions(current: string, latest: string): number | null {
+export function compareVersions(
+  current: string,
+  latest: string,
+): number | null {
   const compareStrategies = [
     tryCompareSemver,
     tryCompareBuildVersion,
@@ -165,7 +177,10 @@ function tryCompareSemver(current: string, latest: string): number | null {
 /**
  * Attempts build-version comparison.
  */
-function tryCompareBuildVersion(current: string, latest: string): number | null {
+function tryCompareBuildVersion(
+  current: string,
+  latest: string,
+): number | null {
   if (!isBuildVersion(current) || !isBuildVersion(latest)) {
     return null;
   }
@@ -175,7 +190,10 @@ function tryCompareBuildVersion(current: string, latest: string): number | null 
 /**
  * Attempts semver->build date comparison.
  */
-function tryCompareSemverToBuildVersion(current: string, latest: string): number | null {
+function tryCompareSemverToBuildVersion(
+  current: string,
+  latest: string,
+): number | null {
   if (!isSemverVersion(current) || !isBuildVersion(latest)) {
     return null;
   }

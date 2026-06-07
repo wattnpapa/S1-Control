@@ -8,6 +8,7 @@ import {
 } from '../services/einsatz-files';
 import {
   archiveEinsatz,
+  updateEinsatz,
   createAbschnitt,
   listAbschnittDetails,
   listAbschnittDetailsBatch,
@@ -154,6 +155,17 @@ function registerEinsatzCreateHandlers(
       archiveEinsatz(ctx, einsatzId);
       await ctx.save();
       helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.UPDATE_EINSATZ,
+    wrap(async (input: Parameters<RendererApi['updateEinsatz']>[0]) => {
+      requireUser();
+      const ctx = state.getDbContext();
+      updateEinsatz(ctx, input);
+      await ctx.save();
+      helpers.notifyEinsatzChanged(input.einsatzId, 'update-einsatz');
     }),
   );
 }

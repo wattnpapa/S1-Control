@@ -1,6 +1,9 @@
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import type { KraftOverviewItem, TacticalStrength } from '@renderer/types/ui';
-import { parseTaktischeStaerke, toTaktischeStaerke } from '@renderer/utils/tactical';
+import {
+  parseTaktischeStaerke,
+  toTaktischeStaerke,
+} from '@renderer/utils/tactical';
 import type { AbschnittNode, OrganisationKey } from '@shared/types';
 import type { JSX } from 'react';
 
@@ -33,15 +36,24 @@ const SYSTEM_TYP_LABELS: Record<AbschnittNode['systemTyp'], string> = {
 /**
  * Builds lookup maps for hierarchy and force assignment.
  */
-function buildIndexes(abschnitte: AbschnittNode[], kraefte: KraftOverviewItem[]): TreeIndexes {
+function buildIndexes(
+  abschnitte: AbschnittNode[],
+  kraefte: KraftOverviewItem[],
+): TreeIndexes {
   const byId = new Map(abschnitte.map((item) => [item.id, item]));
   const byParent = new Map<string | null, AbschnittNode[]>();
   for (const abschnitt of abschnitte) {
-    byParent.set(abschnitt.parentId, [...(byParent.get(abschnitt.parentId) ?? []), abschnitt]);
+    byParent.set(abschnitt.parentId, [
+      ...(byParent.get(abschnitt.parentId) ?? []),
+      abschnitt,
+    ]);
   }
   const kraefteByAbschnitt = new Map<string, KraftOverviewItem[]>();
   for (const kraft of kraefte) {
-    kraefteByAbschnitt.set(kraft.aktuellerAbschnittId, [...(kraefteByAbschnitt.get(kraft.aktuellerAbschnittId) ?? []), kraft]);
+    kraefteByAbschnitt.set(kraft.aktuellerAbschnittId, [
+      ...(kraefteByAbschnitt.get(kraft.aktuellerAbschnittId) ?? []),
+      kraft,
+    ]);
   }
   return { byId, byParent, kraefteByAbschnitt };
 }
@@ -49,7 +61,9 @@ function buildIndexes(abschnitte: AbschnittNode[], kraefte: KraftOverviewItem[])
 /**
  * Creates recursive stats collector with memoization.
  */
-function createStatsCollector(indexes: TreeIndexes): (abschnittId: string) => NodeStats {
+function createStatsCollector(
+  indexes: TreeIndexes,
+): (abschnittId: string) => NodeStats {
   const cache = new Map<string, NodeStats>();
   const collectStats = (abschnittId: string): NodeStats => {
     const cached = cache.get(abschnittId);
@@ -80,12 +94,18 @@ function createStatsCollector(indexes: TreeIndexes): (abschnittId: string) => No
  */
 function addDirectStats(target: NodeStats, kraefte: KraftOverviewItem[]): void {
   for (const kraft of kraefte) {
-    const parsed = parseTaktischeStaerke(kraft.aktuelleStaerkeTaktisch, kraft.aktuelleStaerke);
+    const parsed = parseTaktischeStaerke(
+      kraft.aktuelleStaerkeTaktisch,
+      kraft.aktuelleStaerke,
+    );
     target.taktisch.fuehrung += parsed.fuehrung;
     target.taktisch.unterfuehrung += parsed.unterfuehrung;
     target.taktisch.mannschaft += parsed.mannschaft;
     target.taktisch.gesamt += parsed.gesamt;
-    target.organisations.set(kraft.organisation, (target.organisations.get(kraft.organisation) ?? 0) + 1);
+    target.organisations.set(
+      kraft.organisation,
+      (target.organisations.get(kraft.organisation) ?? 0) + 1,
+    );
   }
 }
 
@@ -105,7 +125,9 @@ function addChildStats(target: NodeStats, child: NodeStats): void {
 /**
  * Returns top organization chips for one node.
  */
-function topOrganisations(organisations: Map<OrganisationKey, number>): Array<[OrganisationKey, number]> {
+function topOrganisations(
+  organisations: Map<OrganisationKey, number>,
+): Array<[OrganisationKey, number]> {
   return Array.from(organisations.entries())
     .sort((a, b) => b[1] - a[1])
     .slice(0, 4);
@@ -114,7 +136,11 @@ function topOrganisations(organisations: Map<OrganisationKey, number>): Array<[O
 /**
  * Renders organization chip list.
  */
-function OrganisationChips({ organisations }: { organisations: Array<[OrganisationKey, number]> }): JSX.Element {
+function OrganisationChips({
+  organisations,
+}: {
+  organisations: Array<[OrganisationKey, number]>;
+}): JSX.Element {
   if (organisations.length === 0) {
     return <span className="org-chip">Keine Einheiten</span>;
   }
@@ -145,8 +171,12 @@ function HierarchyNode({
 }): JSX.Element {
   return (
     <div className="fuehr-org-node">
-      <article className={`fuehr-org-card ${node.systemTyp === 'FUEST' ? 'is-command' : ''}`}>
-        <div className="fuehr-org-sign">{SYSTEM_TYP_LABELS[node.systemTyp]}</div>
+      <article
+        className={`fuehr-org-card ${node.systemTyp === 'FUEST' ? 'is-command' : ''}`}
+      >
+        <div className="fuehr-org-sign">
+          {SYSTEM_TYP_LABELS[node.systemTyp]}
+        </div>
         <div className="fuehr-org-body">
           <header>
             <h3>{node.name}</h3>
@@ -162,13 +192,16 @@ function HierarchyNode({
             )}
           </header>
           <p>
-            Führungsstärke: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
+            Führungsstärke:{' '}
+            <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
           </p>
           <p>
             Einheiten gesamt: <strong>{stats.taktisch.gesamt}</strong>
           </p>
           <div className="org-chips">
-            <OrganisationChips organisations={topOrganisations(stats.organisations)} />
+            <OrganisationChips
+              organisations={topOrganisations(stats.organisations)}
+            />
           </div>
         </div>
       </article>
@@ -202,11 +235,22 @@ function HierarchyBranch({
         const children = byParent.get(node.id) ?? [];
         return (
           <div key={node.id} className="fuehr-org-child">
-            <HierarchyNode node={node} stats={collectStats(node.id)} onEditAbschnitt={onEditAbschnitt} isArchived={isArchived} />
+            <HierarchyNode
+              node={node}
+              stats={collectStats(node.id)}
+              onEditAbschnitt={onEditAbschnitt}
+              isArchived={isArchived}
+            />
             {children.length > 0 ? (
               <div className="fuehr-org-branch">
                 <div className="fuehr-org-branch-down" />
-                <HierarchyBranch parentId={node.id} byParent={byParent} collectStats={collectStats} onEditAbschnitt={onEditAbschnitt} isArchived={isArchived} />
+                <HierarchyBranch
+                  parentId={node.id}
+                  byParent={byParent}
+                  collectStats={collectStats}
+                  onEditAbschnitt={onEditAbschnitt}
+                  isArchived={isArchived}
+                />
               </div>
             ) : null}
           </div>
@@ -219,7 +263,9 @@ function HierarchyBranch({
 /**
  * Handles Fuehrungsstruktur View.
  */
-export function FuehrungsstrukturView(props: FuehrungsstrukturViewProps): JSX.Element {
+export function FuehrungsstrukturView(
+  props: FuehrungsstrukturViewProps,
+): JSX.Element {
   const indexes = buildIndexes(props.abschnitte, props.kraefte);
   const collectStats = createStatsCollector(indexes);
   return (

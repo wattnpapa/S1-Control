@@ -1,6 +1,9 @@
 import { readError } from '@renderer/utils/error';
 import type { AbschnittNode } from '@shared/types';
-import type { CreateAbschnittForm, EditAbschnittForm } from '@renderer/types/ui';
+import type {
+  CreateAbschnittForm,
+  EditAbschnittForm,
+} from '@renderer/types/ui';
 import type { Dispatch, SetStateAction } from 'react';
 
 interface UseAbschnittActionsProps {
@@ -8,7 +11,11 @@ interface UseAbschnittActionsProps {
   selectedAbschnittId: string;
   isArchived: boolean;
   abschnitte: AbschnittNode[];
-  selectedAbschnittLock?: { computerName: string; userName: string; isSelf: boolean };
+  selectedAbschnittLock?: {
+    computerName: string;
+    userName: string;
+    isSelf: boolean;
+  };
   selectedAbschnittLockedByOther: boolean;
   createAbschnittForm: CreateAbschnittForm;
   editAbschnittForm: EditAbschnittForm;
@@ -17,8 +24,16 @@ interface UseAbschnittActionsProps {
   setEditAbschnittForm: Dispatch<SetStateAction<EditAbschnittForm>>;
   setShowCreateAbschnittDialog: Dispatch<SetStateAction<boolean>>;
   setShowEditAbschnittDialog: Dispatch<SetStateAction<boolean>>;
-  acquireEditLock: (einsatzId: string, entityType: 'ABSCHNITT', entityId: string) => Promise<boolean>;
-  releaseEditLock: (einsatzId: string, entityType: 'ABSCHNITT', entityId: string) => Promise<boolean>;
+  acquireEditLock: (
+    einsatzId: string,
+    entityType: 'ABSCHNITT',
+    entityId: string,
+  ) => Promise<boolean>;
+  releaseEditLock: (
+    einsatzId: string,
+    entityType: 'ABSCHNITT',
+    entityId: string,
+  ) => Promise<boolean>;
   loadEinsatz: (
     einsatzId: string,
     preferredAbschnittId?: string,
@@ -58,7 +73,9 @@ function buildCloseEditDialog(props: UseAbschnittActionsProps) {
     if (!props.selectedEinsatzId || !abschnittId) {
       return;
     }
-    void props.releaseEditLock(props.selectedEinsatzId, 'ABSCHNITT', abschnittId).catch(() => undefined);
+    void props
+      .releaseEditLock(props.selectedEinsatzId, 'ABSCHNITT', abschnittId)
+      .catch(() => undefined);
   };
 }
 
@@ -84,7 +101,9 @@ function buildOpenCreateDialog(props: UseAbschnittActionsProps) {
  */
 function buildOpenEditSelectedDialog(props: UseAbschnittActionsProps) {
   return () => {
-    void openEditSelectedDialogAsync(props).catch((err) => props.setError(readError(err)));
+    void openEditSelectedDialogAsync(props).catch((err) =>
+      props.setError(readError(err)),
+    );
   };
 }
 
@@ -93,14 +112,19 @@ function buildOpenEditSelectedDialog(props: UseAbschnittActionsProps) {
  */
 function buildOpenEditDialog(props: UseAbschnittActionsProps) {
   return (abschnittId: string) => {
-    void openEditDialogAsync(props, abschnittId).catch((err) => props.setError(readError(err)));
+    void openEditDialogAsync(props, abschnittId).catch((err) =>
+      props.setError(readError(err)),
+    );
   };
 }
 
 /**
  * Opens a specific Abschnitt in edit mode after lock acquisition.
  */
-async function openEditDialogAsync(props: UseAbschnittActionsProps, abschnittId: string): Promise<void> {
+async function openEditDialogAsync(
+  props: UseAbschnittActionsProps,
+  abschnittId: string,
+): Promise<void> {
   if (!abschnittId || !props.selectedEinsatzId || props.isArchived) {
     return;
   }
@@ -109,7 +133,11 @@ async function openEditDialogAsync(props: UseAbschnittActionsProps, abschnittId:
     props.setError('Abschnitt nicht gefunden.');
     return;
   }
-  const acquired = await props.acquireEditLock(props.selectedEinsatzId, 'ABSCHNITT', abschnittId);
+  const acquired = await props.acquireEditLock(
+    props.selectedEinsatzId,
+    'ABSCHNITT',
+    abschnittId,
+  );
   if (!acquired) {
     return;
   }
@@ -125,8 +153,14 @@ async function openEditDialogAsync(props: UseAbschnittActionsProps, abschnittId:
 /**
  * Opens selected Abschnitt in edit mode after lock acquisition.
  */
-async function openEditSelectedDialogAsync(props: UseAbschnittActionsProps): Promise<void> {
-  if (!props.selectedAbschnittId || !props.selectedEinsatzId || props.isArchived) {
+async function openEditSelectedDialogAsync(
+  props: UseAbschnittActionsProps,
+): Promise<void> {
+  if (
+    !props.selectedAbschnittId ||
+    !props.selectedEinsatzId ||
+    props.isArchived
+  ) {
     return;
   }
   if (props.selectedAbschnittLockedByOther) {
@@ -135,12 +169,18 @@ async function openEditSelectedDialogAsync(props: UseAbschnittActionsProps): Pro
     );
     return;
   }
-  const current = props.abschnitte.find((item) => item.id === props.selectedAbschnittId);
+  const current = props.abschnitte.find(
+    (item) => item.id === props.selectedAbschnittId,
+  );
   if (!current) {
     props.setError('Abschnitt nicht gefunden.');
     return;
   }
-  const acquired = await props.acquireEditLock(props.selectedEinsatzId, 'ABSCHNITT', props.selectedAbschnittId);
+  const acquired = await props.acquireEditLock(
+    props.selectedEinsatzId,
+    'ABSCHNITT',
+    props.selectedAbschnittId,
+  );
   if (!acquired) {
     return;
   }
@@ -198,9 +238,16 @@ function buildSubmitEdit(props: UseAbschnittActionsProps) {
         systemTyp: props.editAbschnittForm.systemTyp,
         parentId: props.editAbschnittForm.parentId || null,
       });
-      await props.releaseEditLock(props.selectedEinsatzId, 'ABSCHNITT', props.editAbschnittForm.abschnittId);
+      await props.releaseEditLock(
+        props.selectedEinsatzId,
+        'ABSCHNITT',
+        props.editAbschnittForm.abschnittId,
+      );
       props.setShowEditAbschnittDialog(false);
-      await props.loadEinsatz(props.selectedEinsatzId, props.editAbschnittForm.abschnittId);
+      await props.loadEinsatz(
+        props.selectedEinsatzId,
+        props.editAbschnittForm.abschnittId,
+      );
     });
   };
 }

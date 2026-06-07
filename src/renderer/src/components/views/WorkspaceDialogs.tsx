@@ -1,6 +1,7 @@
 import { CreateAbschnittDialog } from '@renderer/components/dialogs/CreateAbschnittDialog';
 import { CreateFahrzeugDialog } from '@renderer/components/dialogs/CreateFahrzeugDialog';
 import { EditAbschnittDialog } from '@renderer/components/dialogs/EditAbschnittDialog';
+import { EditEinsatzDialog } from '@renderer/components/dialogs/EditEinsatzDialog';
 import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
 import { UpdaterOverlay } from '@renderer/components/common/UpdaterUi';
@@ -8,6 +9,7 @@ import type {
   CreateAbschnittForm,
   CreateFahrzeugForm,
   EditAbschnittForm,
+  EditEinsatzForm,
   KraftOverviewItem,
   MoveDialogState,
   SplitEinheitForm,
@@ -46,6 +48,11 @@ interface WorkspaceDialogsProps {
   onSubmitCreateFahrzeug: () => void;
   onCloseCreateFahrzeug: () => void;
   onMoveConfirm: () => void;
+  showEditEinsatzDialog: boolean;
+  editEinsatzForm: EditEinsatzForm;
+  setEditEinsatzForm: Dispatch<SetStateAction<EditEinsatzForm>>;
+  onSubmitEditEinsatz: () => void;
+  onCloseEditEinsatz: () => void;
 }
 
 /**
@@ -110,6 +117,16 @@ export function WorkspaceDialogs(props: WorkspaceDialogsProps): JSX.Element {
         onChange={props.setCreateFahrzeugForm}
         onSubmit={props.onSubmitCreateFahrzeug}
         onClose={props.onCloseCreateFahrzeug}
+      />
+
+      <EditEinsatzDialog
+        visible={props.showEditEinsatzDialog}
+        busy={props.busy}
+        isArchived={props.isArchived}
+        form={props.editEinsatzForm}
+        onChange={props.setEditEinsatzForm}
+        onSubmit={props.onSubmitEditEinsatz}
+        onClose={props.onCloseEditEinsatz}
       />
 
       <UpdaterOverlay updaterState={props.updaterState} />

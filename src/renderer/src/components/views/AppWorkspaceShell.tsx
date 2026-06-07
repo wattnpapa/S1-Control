@@ -16,6 +16,7 @@ import type {
   CreateEinheitForm,
   CreateFahrzeugForm,
   EditAbschnittForm,
+  EditEinsatzForm,
   EditEinheitForm,
   EditFahrzeugForm,
   FahrzeugOverviewItem,
@@ -67,6 +68,12 @@ export interface AppWorkspaceShellProps {
   showEditAbschnittDialog: boolean;
   editAbschnittForm: EditAbschnittForm;
   setEditAbschnittForm: (next: EditAbschnittForm) => void;
+  showEditEinsatzDialog: boolean;
+  editEinsatzForm: EditEinsatzForm;
+  setEditEinsatzForm: (next: EditEinsatzForm) => void;
+  onOpenEditEinsatz: () => void;
+  onSubmitEditEinsatz: () => void;
+  onCloseEditEinsatz: () => void;
   showSplitEinheitDialog: boolean;
   splitEinheitForm: SplitEinheitForm;
   setSplitEinheitForm: (next: SplitEinheitForm) => void;
@@ -213,6 +220,12 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onCloseCreateEinheit: props.onCloseCreateEinheit,
     onSubmitEditFahrzeug: props.onSubmitEditFahrzeug,
     onCloseEditFahrzeug: props.onCloseEditFahrzeug,
+    showEditEinsatzDialog: props.showEditEinsatzDialog,
+    editEinsatzForm: props.editEinsatzForm,
+    setEditEinsatzForm: props.setEditEinsatzForm,
+    onOpenEditEinsatz: props.onOpenEditEinsatz,
+    onSubmitEditEinsatz: props.onSubmitEditEinsatz,
+    onCloseEditEinsatz: props.onCloseEditEinsatz,
     onCreateEinheit: props.onCreateEinheit,
     onCreateAbschnitt: props.onCreateAbschnitt,
     onEditAbschnitt: props.onEditAbschnitt,
@@ -270,6 +283,11 @@ function buildDialogsProps(props: AppWorkspaceShellProps): WorkspaceDialogsProps
     setEditAbschnittForm: props.setEditAbschnittForm,
     onSubmitEditAbschnitt: props.onSubmitEditAbschnitt,
     onCloseEditAbschnitt: props.onCloseEditAbschnitt,
+    showEditEinsatzDialog: props.showEditEinsatzDialog,
+    editEinsatzForm: props.editEinsatzForm,
+    setEditEinsatzForm: props.setEditEinsatzForm,
+    onSubmitEditEinsatz: props.onSubmitEditEinsatz,
+    onCloseEditEinsatz: props.onCloseEditEinsatz,
     showSplitEinheitDialog: props.showSplitEinheitDialog,
     splitEinheitForm: props.splitEinheitForm,
     setSplitEinheitForm: props.setSplitEinheitForm,

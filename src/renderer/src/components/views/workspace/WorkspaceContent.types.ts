@@ -10,6 +10,7 @@ import type {
   AbschnittDetails,
   AbschnittNode,
   CreateEinheitForm,
+  EditEinsatzForm,
   EditEinheitForm,
   EditFahrzeugForm,
   FahrzeugOverviewItem,
@@ -87,6 +88,12 @@ export interface WorkspaceContentProps {
   setEditFahrzeugForm: (value: EditFahrzeugForm) => void;
   onSubmitEditFahrzeug: () => void;
   onCloseEditFahrzeug: () => void;
+  showEditEinsatzDialog: boolean;
+  editEinsatzForm: EditEinsatzForm;
+  setEditEinsatzForm: (value: EditEinsatzForm) => void;
+  onOpenEditEinsatz: () => void;
+  onSubmitEditEinsatz: () => void;
+  onCloseEditEinsatz: () => void;
   onCreateEinheit: () => void;
   onCreateAbschnitt: () => void;
   onEditAbschnitt: (id: string) => void;
