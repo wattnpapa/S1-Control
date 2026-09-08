@@ -13,6 +13,52 @@ import path from "node:path";
 
 import { einsatzKennung } from "@s1/domaene";
 
+// ---------------------------------------------------------------------------
+// M0.3 — Ereignisprotokoll auf dem Share (KONZEPT-SPEICHER.md)
+// ---------------------------------------------------------------------------
+
+// Startwerte nach §10, an einer Stelle. M0.5 aendert Zahlen, nicht Code.
+export * from "./startwerte.js";
+
+// Die Naht fuer M0.4: Dateisystem-Port ohne Groessenabfrage (§5.4.2, §6.2)
+// und die injizierte Zeitquelle (§8 Vorbemerkung).
+export { DateisystemFehler, type Dateisystem, type Dauerhaftigkeit, type Fehlercode } from "./dateisystem.js";
+export { knotenDateisystem } from "./knotenDateisystem.js";
+export { Frist, systemZeit, wanduhrText, type Zeitquelle } from "./zeit.js";
+
+// Fehlerklassen §8.8 und §8.9.
+export {
+  lokalDauerhafterHinweis,
+  lokaleSchreibstoerungMeldung,
+  lokalWiederholbar,
+  shareklasse,
+  type Shareklasse,
+} from "./fehler.js";
+
+// Pruefsummen §2.1 und §2.3; `sha256Hex` ist die Naht zu `zustandsHash` (§7.6).
+export {
+  KETTE_ANFANG,
+  KETTE_ZEICHEN,
+  crc32Hex,
+  istKette,
+  kettenPruefsumme,
+  sha256Hex,
+  sha256HexBytes,
+} from "./pruefsummen.js";
+
+// Zeilenformat, Pruefung und Hash-Kette §2.1 bis §2.3, §8.1, §8.2, §4.6.
+export {
+  baueZeile,
+  inhaltsSchluessel,
+  leseAbschnitt,
+  type Abschluss,
+  type Abschnittsergebnis,
+  type Defektgrund,
+  type GeleseneZeile,
+  type Identitaetenblick,
+  type Rahmenblick,
+} from "./zeile.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",
