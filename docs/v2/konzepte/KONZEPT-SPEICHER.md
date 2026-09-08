@@ -76,7 +76,7 @@ Trennzeichen ist der Tabulator `0x09`. `JSON.stringify` erzeugt niemals rohe Zei
 
 Ein Ereignis wird mit **einem einzigen** `write` an das bekannte Dateiende geschrieben, gefolgt von `fsync`. Kein Read-Modify-Write, kein Rename, kein Zwischenpuffer über mehrere Ereignisse hinweg.
 
-`fsync` hat über SMB eine definierte Bedeutung: SMB2 FLUSH weist den Server an, den Objektspeicher zu leeren, und blockiert bis zum Abschluss (`nas-speicher-recherche.md` §1.9). Ohne `fsync` darf der Client unter einer Write-Lease lokal puffern; ein Absturz oder Netzabbruch vor dem Lease-Break verlöre den Inhalt. Deshalb ist `fsync` je Zeile Pflicht, lokal wie auf dem Share.
+`fsync` hat über SMB eine definierte Bedeutung: SMB2 FLUSH weist den Server an, den Objektspeicher zu leeren, und blockiert bis zum Abschluss (`nas-speicher-recherche.md` §1.9). Ohne `fsync` darf der Client unter einer Write-Lease lokal puffern (belegt, [MS-SMB2] Leasing, §1.2); dass ein Absturz oder Netzabbruch vor dem Lease-Break den Inhalt verlöre, ist dagegen **nicht** belegt — die Recherche markiert genau diesen Schluss an dieser Stelle als „Ableitung aus 1.2; kein direkter Beleg" (§1.9). Die Folgerung bleibt trotzdem, nur mit anderer Begründung: Zugesichert ist allein die Bedeutung des Flush, nicht die Dauerhaftigkeit ohne ihn. `fsync` je Zeile ist Pflicht, lokal wie auf dem Share — nicht weil der Verlust bewiesen wäre, sondern weil die Dauerhaftigkeit ohne ihn nirgends zugesagt ist.
 
 **Annahme A1:** `fsync` je Ereignis ist auf dem echten Share bezahlbar. Das Abbruchkriterium aus 05-UMSETZUNGSPLAN.md nennt 300 ms je Ereignis als Grenze. Wird sie gerissen, ist die erste Gegenmaßnahme nicht der Verzicht auf `fsync`, sondern die Bündelung: mehrere Ereignisse einer Benutzeraktion werden zu einem `write` zusammengefasst und danach einmal `fsync` gerufen. Die Zeilen bleiben einzeln, nur der Systemaufruf wird geteilt. Messung: M0.5.
 
@@ -117,6 +117,7 @@ Die Speicherschicht liest und schreibt nur diese Felder; alles Weitere ist für 
 | `vorher` / `neu` | gesehener Vorher-Wert und neuer Wert bei setzenden Ereignissen (§2.5) |
 | `nutzlast` | fachliche Nutzlast, für die Speicherschicht undurchsichtig |
 | `undoOf` | optional; Undo ist ein gewöhnliches Ereignis ohne Sonderpfad in der Speicherschicht |
+| `korrekturVon` | optional; Berichtigung eines fachlich falschen Eintrags. Wie `undoOf` ein reines Rahmenfeld ohne Sonderpfad; Auflage 11 und 02-ZIELBILD.md Nr. 9 nennen beide gleichrangig. Semantik im Ereigniskonzept |
 
 ### §2.5 `vorher` ist Teil des Rahmens, nicht der Fachlogik
 
@@ -217,7 +218,9 @@ Auflage 9. Ein neues Segment beginnt **ausschließlich**, wenn das laufende Segm
 
 Begründung: Segmente je Start erzeugen bei fünf Clients über eine mehrtägige Lage dutzende kleiner Dateien. Jede zusätzliche Datei kostet in jedem Poll-Zyklus eine Verzeichnisauflistung oder einen Lesezugriff und verzögert die Sichtbarkeit neuer Dateien um bis zu 10 Sekunden (Windows-Directory-Cache, `nas-speicher-recherche.md` §1.2).
 
-**Startwert: 4 MiB je Segment.** Bei Annahme A2 sind das rund 7.000 bis 10.000 Ereignisse. Der größte erwartete Einsatz (Entscheidung 10: 100 bis 300 Einheiten) bleibt damit bei einem einzigen Segment je Schreiber; die Simulationsobergrenze von 5.000 Einheiten ergibt rund 5 bis 8 Segmente je Schreiber. Bei 5 Clients sind das im schlimmsten Fall rund 40 Dateien, von denen aber nur 5 überhaupt wachsen können (§6.2). Der Wert wird in M0.5 gegen die gemessene Lesezeit eines vollständigen Erstlaufs kalibriert.
+**Startwert: 4 MiB je Segment** (§10, A4). Bei Annahme A2 sind das rund 7.000 bis 10.000 Ereignisse je Segment. Der größte erwartete Einsatz (Entscheidung 10: 100 bis 300 Einheiten, rund 10 Ereignisse je Einheit) bleibt damit weit innerhalb eines einzigen Segments je Schreiber.
+
+Die Simulationsobergrenze von 5.000 Einheiten ergibt 50.000 Ereignisse **über alle Schreiber zusammen** (§2.6). Gleichmäßig auf fünf verteilt sind das 10.000 je Schreiber, also ein bis zwei Segmente je Schreiber und insgesamt fünf bis zehn Dateien. Nur wenn ein einzelner Arbeitsplatz die gesamte Last trüge, käme er allein auf fünf bis acht Segmente. Die frühere Fassung rechnete die Gesamtzahl je Schreiber und kam so auf „rund 40 Dateien" — die Zahl lag auf der sicheren Seite, der Rechenweg stimmte nicht. Für die Poll-Kosten zählt ohnehin nicht die Gesamtzahl, sondern die Zahl der Dateien in Takt A (§6.2). Der Wert wird in M0.5 gegen die gemessene Lesezeit eines vollständigen Erstlaufs kalibriert.
 
 ### §4.3 Abschlusszeile
 
@@ -367,7 +370,11 @@ Ist eine Share-Zeile ab der Abweichungsstelle weder als Zeile lesbar noch einer 
 
 ### §5.5 Leseweg
 
-Der Leser holt für jede fremde Datei die Bytes ab `leseOffset`, hängt sie an die lokale Spiegelkopie an, prüft die Zeilen (§2.1, §2.3) und schreibt `leseOffset` fort. Nur vollständige, geprüfte Zeilen werden übernommen; ein unvollständiger Rest bleibt liegen und wird beim nächsten Durchlauf zusammen mit dem Nachschub ausgewertet.
+Der Leser holt für jede fremde Datei die Bytes ab `leseOffset` **in einen Puffer**, prüft die Zeilen dort (§2.1, §2.3), hängt **nur die geprüften, vollständigen Zeilen** an die lokale Spiegelkopie an und schreibt danach `leseOffset` fort. Die Reihenfolge ist verbindlich: geprüft wird **vor** dem Anhängen, nie danach.
+
+Damit gelangt kein defektes Byte in den lokalen Spiegel. Das entscheidet über zwei andere Stellen: §8.2 Punkt 5 kann die Quarantänestelle beim nächsten Start gegen die Share-Datei erneut prüfen, ohne den Spiegel als Vergleichsmaßstab verloren zu haben, und der Export nach §8.6.1 Regel 4 gibt garantiert nur geprüfte Zeilen weiter. Die Folge ist gewollt und gehört benannt: Ab einer Quarantänestelle ist der lokale Spiegel einer fremden Datei **nicht** byteweise identisch mit der Share-Datei — er ist ihr geprüftes Präfix.
+
+Ein unvollständiger Rest bleibt im Puffer liegen und wird beim nächsten Durchlauf zusammen mit dem Nachschub ausgewertet (§8.1).
 
 ### §5.6 `einsatz.json`
 
@@ -421,7 +428,7 @@ Entscheidend für die Kosten: **Nur das jeweils letzte Segment eines Schreibers 
 
 Im Normalbetrieb ist die Zahl der Dateien in Takt A damit die der aktiven Arbeitsplätze; nach Störungen liegt sie darüber, aber beschränkt durch den Verfall. Die Messung in M0.5 setzt deshalb nicht 5, sondern **10 Segmente bei 5 Clients** an (05-UMSETZUNGSPLAN.md, M0.5) — die Zahl, die eine mehrtägige Lage mit ein paar Zwischenfällen erreicht.
 
-**Startwert Takt A: 2 Sekunden.** Kalibrierung in M0.5 gegen die gemessenen Gesamtkosten eines Zyklus; das Abbruchkriterium liegt bei 2 Sekunden Zykluskosten bei 5 Clients.
+**Startwert Takt A: 3 Sekunden**, mit der Regel: Das Intervall ist mindestens das Doppelte der gemessenen Zykluskosten. Der frühere Startwert von 2 Sekunden lag genau auf der Abbruchgrenze desselben Meilensteins — 2 Sekunden Zykluskosten bei 5 Clients (05-UMSETZUNGSPLAN.md) —, und ein Client, dessen Intervall gleich seinen Zykluskosten ist, pollt ohne Pause. Ein Startwert braucht Abstand zu der Grenze, gegen die er gemessen wird. Kalibrierung in M0.5.
 
 **Takt B — neue Dateien entdecken (lang).** Eine Verzeichnisauflistung von `ereignisse\` findet Dateien neuer Clients und angekündigte Nachfolgesegmente. **Startwert: 10 Sekunden**, weil der Windows-Directory-Cache ohnehin bis zu 10 Sekunden alt sein darf und ein kürzerer Takt nur Last ohne Erkenntnisgewinn erzeugt. Daraus folgt unmittelbar die Zusage aus 02-ZIELBILD.md: Für die **erste** Datei eines neuen Clients sind bis zu 10 Sekunden zugesagt, nicht weniger.
 
@@ -444,10 +451,10 @@ Die weiter gefasste Zusage „kein Verfahren dieses Konzepts darf von ihr abhän
 
 Inhalt: `clientId`, Anzeigename, Rechnername, Programmversion, letzter Kontakt als HLC und als Wanduhr, laufendes eigenes Segment und dessen Offset.
 
-- **Schreibtakt:** alle 15 Sekunden, und zusätzlich bei jedem Segmentwechsel.
+- **Schreibtakt:** alle 15 Sekunden, und zusätzlich bei jedem Segmentwechsel. Startwert nach §10, A4.
 - **Verfahren:** Überschreiben an Ort und Stelle mit Kürzen auf die neue Länge, kein Rename. Rename schlägt unter Windows mit `EPERM`/`EBUSY` fehl, wenn ein anderer Client die Zieldatei ohne `FILE_SHARE_DELETE` geöffnet hält (`nas-speicher-recherche.md` §1.4) — genau das täte ein lesender Client.
 - **Folge davon:** Ein Leser kann eine halb geschriebene Präsenzdatei sehen. Das ist zulässig und vorgesehen: Lässt sie sich nicht parsen, wird sie ignoriert und beim nächsten Takt erneut gelesen. Kein Fehler, keine Meldung.
-- **Veraltet ab 60 Sekunden** ohne Fortschreibung. Die großzügige Schwelle folgt aus dem 10-Sekunden-Attribut-Cache plus Poll-Takt; ein knapperer Wert erzeugte falsche „offline"-Anzeigen.
+- **Veraltet ab 60 Sekunden** ohne Fortschreibung (Startwert, §10, A4). Die großzügige Schwelle folgt aus dem 10-Sekunden-Attribut-Cache plus Poll-Takt; ein knapperer Wert erzeugte falsche „offline"-Anzeigen.
 - Präsenzdateien werden **nie** von fremden Clients gelöscht.
 
 ### §6.5 UDP nur als Beschleuniger
@@ -502,9 +509,9 @@ Auflage 4. Jedes materialisierte Feld trägt die HLC des Ereignisses, das es ges
 
 ### §7.5 Schreiben und Aufräumen
 
-- Ein Schnappschuss entsteht, wenn seit dem letzten mehr als **2.000 Ereignisse** eingeflossen sind oder mehr als **30 Minuten** vergangen sind — was zuerst eintritt. Startwerte, in M0.4 zu prüfen.
+- Ein Schnappschuss entsteht, wenn seit dem letzten mehr als **2.000 Ereignisse** eingeflossen sind oder mehr als **30 Minuten** vergangen sind — was zuerst eintritt. Startwerte nach §10, A4, in M0.4 zu prüfen.
 - Jeder Client schreibt nur Schnappschüsse **unter seiner eigenen `clientId`** und löscht nur **eigene** Schnappschüsse. Damit bleibt „ein Schreiber je Datei" auch hier gewahrt.
-- Ein Client behält seine jüngsten drei eigenen Schnappschüsse (§10, A4) und löscht ältere. Schlägt das Löschen fehl, ist das kein Fehler: Es wird beim nächsten Aufräumlauf wiederholt, es liegen vorübergehend mehr Schnappschüsse als vorgesehen, gemeldet wird nichts.
+- Ein Client behält seine jüngsten drei eigenen Schnappschüsse (§10, A4) und löscht ältere. Das Löschen kann unter Windows aus demselben Grund scheitern, den §6.4 für Rename anführt: wenn ein anderer Client die Datei ohne `FILE_SHARE_DELETE` geöffnet hält (`nas-speicher-recherche.md` §1.4). Das ist kein Fehler — es wird beim nächsten Aufräumlauf wiederholt, es liegen vorübergehend mehr Schnappschüsse als vorgesehen, gemeldet wird nichts. Seit fremde Schnappschüsse nicht mehr gelesen werden, tritt der Fall ohnehin praktisch nur noch auf, wenn ein Wartungswerkzeug den Ordner offen hält.
 - **Ein Client übernimmt ausschließlich Schnappschüsse unter seiner eigenen `clientId`.** Fremde werden nicht gelesen und nicht ausgewertet. Beim Öffnen wird der jüngste **passende** eigene Schnappschuss gewählt; schlägt eine Prüfung fehl, der nächstältere, zuletzt der vollständige Fold.
 
 **Warum keine fremden Schnappschüsse (Entscheidung Johannes, 2026-09-08).** Ein Schnappschuss ist das Ergebnis einer fremden Rechnung, nicht ein Auszug fremder Daten. Der `zustandsHash` ist über den Zustand selbst gebildet und belegt allein, dass die Datei in sich stimmt — nicht, dass der Zustand die Faltung der im Versionsvektor genannten Ereignisse ist. Ein Client mit Speicherfehler, mit einer halb ausgerollten Version bei unverändertem `foldVersion` oder schlicht mit einem Fehler im Fold verteilte seinen Falschzustand damit dauerhaft und unbemerkt an alle anderen — genau die Klasse, die §7.3 „die gefährlichste Fehlerklasse dieses Entwurfs" nennt, und ein Verstoß gegen §1.3 Satz 3. `nas-speicher-recherche.md` §10 sieht als Gegenmaßnahme vor, dass Leser „stichprobenartig gegen Neu-Fold" validieren. Im Betrieb mit bis zu fünf Clients ist der einfachere Weg tragbar: gar nicht erst annehmen. Der Preis ist ein vollständiger Fold, wenn ein Client einen laufenden Einsatz zum ersten Mal öffnet — nach der Abschätzung der Recherche (§4, unter 500 ms in Node bei 50.000 Ereignissen) ist er bezahlbar. Zeigt die Messung in M0.4, dass der Erstlauf zu lang wird, ist die Annahme fremder Schnappschüsse mit stichprobenartiger Nachfaltung nachzurüsten; bis dahin wird sie nicht gebaut. Vermerkt als Annahme A7 in §10.
@@ -697,6 +704,30 @@ Zwei Klassen, verbindlich:
 | A1 | `fsync` je Ereignis auf dem echten Share bezahlbar (< 300 ms) | Messung M0.5; Gegenmaßnahme Bündelung, §2.2 |
 | A2 | 400 bis 600 Byte je Ereignis im Mittel | Prüfung an der Simulation M0.4, §2.6 |
 | A3 | 8 Hexziffern als Dateinamenspräfix kollisionsfrei | Prüfung beim ersten Schreiben, §4.1 |
-| A4 | Startwerte Takt A 2 s, Takt B 10 s, Segment 4 MiB, Schnappschuss alle 2.000 Ereignisse oder 30 min, Zeitausstieg 20 s | sämtlich zu kalibrieren in M0.5; keiner dieser Werte ist eine Zusage |
-| A5 | Verhalten des Synology-SMB-Servers bei `fsync` und bei gleichzeitigem Anhängen und Lesen derselben Datei | M0.5; die Belege in §1 der Recherche sind Client- und Protokollbelege, keine Messung an diesem Gerät |
+| A4 | **Sämtliche Startwerte.** Vollständige Liste unter der Tabelle | zu kalibrieren in M0.5, teils zu prüfen in M0.4; keiner dieser Werte ist eine Zusage |
+| A5 | Verhalten des Synology-SMB-Servers bei `fsync`, bei gleichzeitigem Anhängen und Lesen derselben Datei, und ob eine Neuöffnung durch den Schreiber zum Server durchgeht (§6.6) | M0.5; die Belege in §1 der Recherche sind Client- und Protokollbelege, keine Messung an diesem Gerät |
 | A6 | Ob die Windows-Firewall UDP ohne Administratorrechte zulässt | M0.5; ohne Freigabe entfällt der Beschleuniger ersatzlos (§6.5), das Verfahren bleibt vollständig |
+| A7 | Der Erstlauf beim Öffnen eines laufenden Einsatzes bleibt ohne fremde Schnappschüsse bezahlbar | Prüfung M0.4, §7.5. Wird er zu lang, ist die Annahme fremder Schnappschüsse mit stichprobenartiger Nachfaltung nachzurüsten — bis dahin wird sie nicht gebaut |
+| A8 | Die Segmentierung erzeugt im Feld mehr Dateien in Takt A als es Arbeitsplätze gibt | Messung M0.5 mit 10 Segmenten bei 5 Clients, §6.2 |
+
+### Die Startwerte zu A4, vollständig
+
+Die Einleitung sagt zu, dass jede Zahl, die erst durch die Messung bestimmt wird, als Startwert gekennzeichnet und hier geführt ist. Das ist die Liste:
+
+| Wert | Startwert | Wo | Wogegen kalibriert |
+|---|---|---|---|
+| Takt A (kurzer Poll) | 3 s | §6.2 | gemessene Zykluskosten, mindestens deren Doppeltes |
+| Takt B (Verzeichnisauflistung) | 10 s | §6.2 | Directory-Cache; zugleich die Zusage aus 02-ZIELBILD.md |
+| Verfall aus Takt A nach Stillstand | 5 min | §6.2 | Poll-Kosten gegen Wiederentdeckungszeit |
+| Frist, ab der eine unvollständige Zeile als defekt gilt | 5 min | §8.1 | derselbe Wert; er darf den Verfall nicht unterschreiten |
+| Segmentgröße | 4 MiB | §4.2 | Lesezeit eines vollständigen Erstlaufs |
+| Obergrenze je Zeile | 1 MiB | §2.1 | wird nicht gemessen; Plausibilitätsschranke weit über A2 |
+| Schnappschuss-Auslöser | 2.000 Ereignisse oder 30 min | §7.5 | Erstlaufzeit gegen Schreiblast, M0.4 |
+| Aufbewahrte eigene Schnappschüsse | 3 | §7.5 | Speicherplatz gegen Rückfalltiefe |
+| Zeitausstieg der Oberfläche | 20 s | §8.4 | gemessene Antwortzeiten; muss unter dem `SessTimeout` von 60 s bleiben |
+| Rückstau-Staffel der Spiegelung | 2 / 5 / 15 / 30 s | §5.4.4 | Wiederanlaufzeit des NAS |
+| Präsenztakt | 15 s | §6.4 | Schreiblast gegen Anzeigegenauigkeit |
+| Präsenz gilt als veraltet | 60 s | §6.4 | Attribut-Cache plus Poll-Takt |
+| Delta-Grenze fremder Uhren | 5 min | §3.2 | wird **nicht** gemessen; folgt dem Vorbild `uhlc` (`nas-speicher-recherche.md` §1.11) und steht hier nur, damit jede Zahl des Dokuments an einer Stelle geführt ist |
+
+Der Fünf-Minuten-Verfall aus §4.3 ist kein eigener Wert mehr, sondern der Verfall aus §6.2, angewandt auf ein angekündigtes Nachfolgesegment.
