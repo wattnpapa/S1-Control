@@ -2,6 +2,12 @@
 
 [![codecov](https://codecov.io/gh/wattnpapa/S1-Control/branch/main/graph/badge.svg)](https://codecov.io/gh/wattnpapa/S1-Control)
 
+> **Hinweis auf dem Branch `v2-architektur`:** Der hier beschriebene v1-Code liegt
+> seit dem Umbau vollständig unter `legacy-v1/`. Alle Befehle dieses Dokuments sind
+> dort auszuführen (`cd legacy-v1`). Der neue v2-Baum (npm-Workspaces, Ringgrenzen,
+> Electron-Schale) ist in `README-v2.md` beschrieben. Auf `main` ist v1 unverändert
+> in der Wurzel.
+
 Offline-first Desktop-App für die THW-Führungsstelle (S1) zur Kräfteverwaltung im Einsatz.
 
 ## Für Anwender
