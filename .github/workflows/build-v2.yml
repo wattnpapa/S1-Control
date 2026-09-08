@@ -1,0 +1,142 @@
+# CI-Gerüst für den v2-Baum (Branch `v2-architektur`, Arbeitspaket M-0.3).
+#
+# ────────────────────────────────────────────────────────────────────────────
+# BEKANNT BLOCKIERT — dieser Workflow ist absichtlich NICHT automatisch aktiv.
+#
+# `vendor/bos-kern` zeigt in `.gitmodules` derzeit auf einen lokalen Pfad
+# (`/Users/johannes/Developer/bos-kern`), weil das Kern-Repo noch kein Remote
+# hat. Ein GitHub-Runner kann diesen Pfad nicht auflösen: `submodules:
+# recursive` schlägt dort fehl, und ohne den Kern lassen sich weder
+# `typecheck` noch `test` ausführen. Ein auf Push laufender Workflow wäre
+# also garantiert rot — deshalb steht der Push-Auslöser hier auskommentiert
+# statt scharf. Das ist keine Vergesslichkeit, sondern die ehrliche Abbildung
+# des Standes.
+#
+# Freischalten, sobald das Kern-Repo ein Remote hat:
+#   1. git submodule set-url vendor/bos-kern git@github.com:<konto>/bos-kern.git
+#      git submodule sync --recursive && git commit .gitmodules
+#   2. Für ein privates Kern-Repo zusätzlich ein Token hinterlegen und im
+#      Checkout-Schritt `token: ${{ secrets.BOS_KERN_TOKEN }}` setzen.
+#   3. Den `push:`-Block unten einkommentieren.
+#
+# Bis dahin lässt sich der Workflow jederzeit von Hand über
+# „Run workflow" (workflow_dispatch) starten — dann sieht man auch sofort,
+# ob der Submodul-Checkout inzwischen trägt.
+#
+# Nicht Bestandteil dieses Gerüsts: Signierung, electron-builder, Notarisierung
+# und GitHub-Release. Die kommen mit Arbeitspaket V. Der v1-Workflow
+# `build-main.yml` bleibt unverändert; er löst ohnehin nur auf `main` aus.
+# ────────────────────────────────────────────────────────────────────────────
+
+name: Build v2 (Gerüst)
+
+on:
+  workflow_dispatch:
+  # push:
+  #   branches:
+  #     - v2-architektur
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      build_version: ${{ steps.version.outputs.build_version }}
+      build_semver: ${{ steps.version.outputs.build_semver }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # Zeitstempel-Schema unverändert aus build-main.yml übernommen, damit v1
+      # und v2 dieselbe Versionsbildung haben. Das Setzen und Pushen des Tags
+      # bleibt bewusst dem Release-Workflow aus Arbeitspaket V vorbehalten —
+      # ein Gerüst-Lauf auf einem Entwicklungszweig soll keine Tags erzeugen.
+      - name: Generate build version
+        id: version
+        run: |
+          BUILD_VERSION="$(date -u '+%Y.%m.%d.%H.%M')"
+          BUILD_SEMVER="$(date -u '+%Y.%-m.%-d-%-H.%-M')"
+          echo "build_version=$BUILD_VERSION" >> "$GITHUB_OUTPUT"
+          echo "build_semver=$BUILD_SEMVER" >> "$GITHUB_OUTPUT"
+          echo "Build-Version: $BUILD_VERSION (Semver: $BUILD_SEMVER)"
+
+  pruefung:
+    name: Lint, Typecheck und Tests (${{ matrix.os }})
+    needs: prepare
+    runs-on: ${{ matrix.os }}
+    # Build-Matrix-Struktur wie in build-main.yml: Windows, macOS und Linux.
+    # Die Speicherschicht ab M0.6 bekommt hier ihren eigenen Job.
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+    env:
+      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
+    steps:
+      # BLOCKIERT bis zur Remote-Freigabe des Kern-Repos: `submodules:
+      # recursive` kann die lokale Pfad-URL aus .gitmodules auf einem Runner
+      # nicht auflösen. Der Schritt steht hier vollständig vorbereitet.
+      - name: Checkout (mit Submodul vendor/bos-kern)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      # Die Schale wird in diesem Job weder gebaut noch gestartet, also braucht
+      # kein Runner die 100-MB-Binärdatei von Electron.
+      - name: Install dependencies
+        shell: bash
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
+        run: |
+          for i in 1 2 3; do
+            npm ci && break
+            if [ "$i" -eq 3 ]; then
+              exit 1
+            fi
+            echo "npm ci fehlgeschlagen, Retry $i/3 ..."
+            sleep 10
+          done
+
+      - name: Lint (Ringgrenzen)
+        run: npm run -s lint
+
+      - name: Typecheck (tsc -b über alle Projekte)
+        run: npm run -s typecheck
+
+      # Nachweis, dass `tsc -b` wirklich baut und nicht leerläuft.
+      - name: Emits prüfen
+        shell: bash
+        run: |
+          fehlt=0
+          for paket in domaene speicher netz ausgaben cli; do
+            for datei in "packages/$paket/dist/index.js" "packages/$paket/dist/index.d.ts"; do
+              if [ ! -f "$datei" ]; then
+                echo "Fehlende Ausgabe: $datei"
+                fehlt=1
+              fi
+            done
+          done
+          exit "$fehlt"
+
+      - name: Tests (node und jsdom)
+        run: npm run -s test
+
+      - name: Renderer und Schale bauen
+        run: |
+          npm run -s build:renderer
+          npm run -s build:schale
