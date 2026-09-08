@@ -1,14 +1,28 @@
 /**
- * `@s1/speicher` — Ring 3: alles, was das Dateisystem beruehrt.
+ * `@s1/speicher` — Ring 3: alles, was das Dateisystem berührt.
  *
- * Ab M0.3 entstehen hier Append mit `länge\tcrc32\tjson`, fsync, Hash-Kette,
- * Tail-Leser mit Quarantaene, Segmentwechsel, lokaler Spiegel und Praesenz.
- * Dieser Stand ist ein Geruest mit genau so viel Inhalt, dass die
- * Ringgrenze belegt ist: `node:` ist erlaubt, `@s1/domaene` ist erlaubt,
- * DOM/React/Electron nicht.
+ * Stand M0.3: das Ereignisprotokoll auf dem Share nach
+ * `docs/v2/konzepte/KONZEPT-SPEICHER.md` — Zeilenformat mit `länge \t crc32 \t
+ * json` und `fsync` je Zeile (§2), Hash-Kette (§2.3), Segmente und
+ * Schreiberidentität (§4), lokaler Spiegel mit `upload-state.json` und
+ * Spiegelung mit der Präfix-Invariante (§5), Poll am Offset und Präsenz (§6),
+ * Fehlerbilder und Quarantäne (§8).
+ *
+ * Alle Paragraphenverweise in diesem Paket zeigen auf dieses Dokument, wie
+ * 05-UMSETZUNGSPLAN.md §3 es verlangt.
+ *
+ * Verbindliche Grenze (02-ZIELBILD.md, „Vier Ringe"): `node:` und
+ * `@s1/domaene` sind erlaubt, Electron, React, `@s1/ausgaben` und `@s1/cli`
+ * nicht. Die Regel ist in `eslint.config.mjs` erzwungen, nicht bloß notiert.
+ *
+ * Zwei Nähte sind hier ausdrücklich gebaut, nicht nachzurüsten:
+ *  * `Dateisystem` (§5.4.2, §6.2) — M0.4 hängt daran seine feindliche Schicht.
+ *    Der Port bietet **keine** Größen- oder Metadatenabfrage an.
+ *  * `Zeitquelle` (§8, Vorbemerkung) — keine Komponente ruft eine Uhr
+ *    unmittelbar auf; sonst wären die Fristen aus §5.4.4, §6.2, §6.4 und §8.1
+ *    nicht in Unit-Tests prüfbar.
  */
 
-import { createHash } from "node:crypto";
 import path from "node:path";
 
 import { einsatzKennung } from "@s1/domaene";
@@ -200,24 +214,4 @@ export const EINSATZ_UNTERORDNER = [
  */
 export function einsatzOrdner(shareWurzel: string, datum: string, name: string): string {
   return path.join(shareWurzel, "einsaetze", einsatzKennung(datum, name).ordner);
-}
-
-/**
- * Pfad einer Ereignisdatei. Jeder Client schreibt ausschliesslich eigene
- * Dateien — daher `clientId` im Dateinamen und ein Segmentzaehler statt einer
- * gemeinsamen Datei (tragende Festlegung 1 in 02-ZIELBILD.md).
- */
-export function ereignisDatei(einsatzOrdnerPfad: string, clientId: string, segment: number): string {
-  const nummer = String(segment).padStart(4, "0");
-  return path.join(einsatzOrdnerPfad, "ereignisse", `${clientId}.${nummer}.jsonl`);
-}
-
-/**
- * Inhalts-Hash einer Datei- oder Segmentnutzlast (SHA-256, hexadezimal).
- *
- * Platzhalter fuer die spaetere Hash-Kette je Zeile; hier genuegt der
- * Nachweis, dass `node:crypto` in diesem Ring erlaubt ist.
- */
-export function nutzlastHash(inhalt: string): string {
-  return createHash("sha256").update(inhalt, "utf8").digest("hex");
 }
