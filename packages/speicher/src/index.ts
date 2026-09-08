@@ -137,6 +137,19 @@ export {
   type StartOptionen,
 } from "./schreiberStart.js";
 
+// Spiegelung §5.4 mit der Praefix-Invariante §5.4.1 und den drei Ausgaengen §5.4.3.
+export {
+  MELDUNG_BESCHAEDIGT,
+  MELDUNG_KEIN_SCHREIBRECHT,
+  MELDUNG_NICHT_ERREICHBAR,
+  MELDUNG_ORDNER_FORT,
+  MELDUNG_PROFIL_KOPIERT,
+  Spiegelung,
+  type Spiegelergebnis,
+  type SpiegelungOptionen,
+} from "./spiegelung.js";
+export { vergleicheSpiegel, type VergleichEingabe, type Vergleichsausgang } from "./spiegelvergleich.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",

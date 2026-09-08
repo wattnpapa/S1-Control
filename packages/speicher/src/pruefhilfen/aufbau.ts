@@ -12,6 +12,8 @@ import type { Dateisystem } from "../dateisystem.js";
 import { knotenDateisystem } from "../knotenDateisystem.js";
 import { Einsatzablage } from "../pfade.js";
 import { oeffneSchreiber, type Schreiber } from "../schreiber.js";
+import { Spiegelung } from "../spiegelung.js";
+import { leererUploadZustand } from "../uploadZustand.js";
 import type { Zeitquelle } from "../zeit.js";
 import { spielwiese, type Spielwiese } from "./spielwiese.js";
 
@@ -81,4 +83,55 @@ export async function arbeitsplatz(dateisystem?: Dateisystem): Promise<Arbeitspl
       await wiese[Symbol.asyncDispose]();
     },
   };
+}
+
+/**
+ * Legt den Einsatzordner auf dem Share an und schreibt `einsatz.json` (§5.6).
+ *
+ * `einsatz.json` „wird beim Anlegen des Einsatzes einmal geschrieben und danach
+ * nie wieder verändert" und trägt nur, was zur Identifikation des Ordners nötig
+ * ist. §5.7 prüft vor jedem Spiegelungsversuch gegen genau diese Kennung.
+ */
+export async function legeEinsatzAn(
+  platz: Arbeitsplatz,
+  einsatzId: string,
+  anlegenderClient = "9f3c1a20",
+): Promise<void> {
+  await platz.dateisystem.legeVerzeichnisAn(platz.ablage.share);
+  await platz.dateisystem.legeVerzeichnisAn(platz.ablage.shareEreignisse);
+  await platz.dateisystem.schreibeNeuAnlegen(
+    platz.ablage.shareEinsatzDatei,
+    new TextEncoder().encode(
+      JSON.stringify({
+        einsatzId,
+        angelegtAm: new Date(platz.uhr.lies()).toISOString(),
+        anlegenderClient,
+        formatVersion: 1,
+      }),
+    ),
+  );
+}
+
+/** Baut eine Spiegelung, die den Offset des laufenden Segments beim Schreiber erfragt. */
+export function spiegelungFuer(
+  platz: Arbeitsplatz,
+  schreiber: Schreiber,
+  einsatzId: string,
+  zustand = leererUploadZustand(),
+): Spiegelung {
+  return new Spiegelung(
+    {
+      dateisystem: platz.dateisystem,
+      zeit: platz.uhr.lies,
+      ablage: platz.ablage,
+      clientId: schreiber.clientId,
+      einsatzId,
+      vollstaendigerOffset: () => ({
+        segment: schreiber.segment,
+        offset: schreiber.lokalerVollstaendigerOffset,
+      }),
+      identitaeten: schreiber.identitaeten,
+    },
+    zustand,
+  );
 }
