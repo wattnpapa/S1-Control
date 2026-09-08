@@ -74,7 +74,9 @@ Ein Ereignis wird mit **einem einzigen** `write` an das bekannte Dateiende gesch
 
 `fsync` hat über SMB eine definierte Bedeutung: SMB2 FLUSH weist den Server an, den Objektspeicher zu leeren, und blockiert bis zum Abschluss (`nas-speicher-recherche.md` §1.9). Ohne `fsync` darf der Client unter einer Write-Lease lokal puffern; ein Absturz oder Netzabbruch vor dem Lease-Break verlöre den Inhalt. Deshalb ist `fsync` je Zeile Pflicht, lokal wie auf dem Share.
 
-**Annahme A1:** `fsync` je Ereignis ist auf dem echten Share bezahlbar. Das Abbruchkriterium aus 05-UMSETZUNGSPLAN.md nennt 300 ms je Ereignis als Grenze. Wird sie gerissen, ist die erste Gegenmaßnahme nicht der Verzicht auf `fsync`, sondern die Bündelung: mehrere Ereignisse einer Benutzeraktion werden zu einem `write` zusammengefasst und danach einmal `fsync` gerufen. Die Zeilen bleiben einzeln, nur der Systemaufruf wird geteilt. Das ist zulässig, weil die Zeilen eines `write` gemeinsam sichtbar werden oder gar nicht. Messung: M0.5.
+**Annahme A1:** `fsync` je Ereignis ist auf dem echten Share bezahlbar. Das Abbruchkriterium aus 05-UMSETZUNGSPLAN.md nennt 300 ms je Ereignis als Grenze. Wird sie gerissen, ist die erste Gegenmaßnahme nicht der Verzicht auf `fsync`, sondern die Bündelung: mehrere Ereignisse einer Benutzeraktion werden zu einem `write` zusammengefasst und danach einmal `fsync` gerufen. Die Zeilen bleiben einzeln, nur der Systemaufruf wird geteilt. Messung: M0.5.
+
+**Ausdrücklich nicht behauptet:** dass die Zeilen eines `write` gemeinsam sichtbar werden oder gar nicht. SMB2 sagt das nirgends zu, und der Redirector darf einen Schreibvorgang aufteilen. Die Bündelung ist trotzdem zulässig — nicht weil ein Teilschreiben unmöglich wäre, sondern weil es nach §8.1 folgenlos ist: Der Leser wertet eine unvollständige Zeile nicht aus, und der Schreiber setzt an ihrem Anfang wieder auf. Die Zusage lautet „es schadet nicht", nicht „es kann nicht passieren".
 
 ### §2.3 Hash-Kette
 
@@ -147,7 +149,9 @@ Für Dateinamen und für die Textform in JSON gilt eine **feste Stellenzahl**, d
 <millisekunden: 13 Ziffern, links mit 0 gefüllt>-<zaehler: 6 Ziffern, links mit 0 gefüllt>-<clientId>
 ```
 
-13 Ziffern tragen Unix-Millisekunden bis zum Jahr 2286. 6 Ziffern für den Zähler erlauben eine Million Ereignisse innerhalb derselben Millisekunde; das ist mit Abstand ausreichend und wird beim Überlauf als Fehler behandelt, nicht stillschweigend umgebrochen. Die Textform ist eine Darstellung; im Programm wird trotzdem die Struktur verglichen.
+13 Ziffern tragen Unix-Millisekunden bis zum Jahr 2286. 6 Ziffern für den Zähler erlauben eine Million Ereignisse innerhalb derselben Millisekunde. Die Textform ist eine Darstellung; im Programm wird trotzdem die Struktur verglichen.
+
+**Verhalten beim Zählerüberlauf.** Der Fall ist praktisch unerreichbar — eine Million Ereignisse in einer Millisekunde —, aber „praktisch unerreichbar" ist kein definiertes Verhalten. Regel: Erreicht der Zähler 999.999, wartet der Schreiber, bis die Wanduhr die nächste Millisekunde erreicht, und beginnt dort mit Zähler 0. Das ist eine Wartezeit von höchstens einer Millisekunde und niemals ein Fehler; der Leitsatz „kein Stillstand" gilt auch hier. Ein Zähler, der trotz Wartens nicht zurückgesetzt werden kann, weil die Uhr steht, wird als Uhrfehler nach §8.5 gemeldet.
 
 **Schutz gegen fremde Fehluhren:** Zieht ein empfangener HLC-Wert die eigene Uhr um mehr als **5 Minuten** nach vorn, wird er nicht übernommen. Das Ereignis wird normal gefaltet, aber die eigene physische Komponente folgt ihm nicht, und die Oberfläche zeigt „Uhr eines anderen Rechners weicht um X ab". Vorbild: `uhlc::ExceedingDeltaError` (`nas-speicher-recherche.md` §1.11). Betriebsvoraussetzung ist ohnehin ein vorhandener NTP-Abgleich.
 
@@ -189,6 +193,8 @@ Beim Wechsel schreibt der Schreiber als **letzte Zeile** des alten Segments ein 
 Das leistet dreierlei: Leser wissen, dass ein Segment endgültig fertig ist und nie wieder gepollt werden muss (§6.2); die Hash-Kette läuft über den Segmentwechsel hinweg durch (§2.3); und ein fehlendes Nachfolgesegment fällt beim Lesen auf, statt still zu verschwinden.
 
 Stürzt der Schreiber zwischen Abschlusszeile und erster Zeile des neuen Segments ab, findet der Leser eine Abschlusszeile ohne Nachfolger. Das ist kein Defekt, sondern ein Wartezustand: Der Leser behandelt das Nachfolgesegment als „angekündigt, noch nicht vorhanden" und pollt es (§6.2). Der Schreiber setzt beim nächsten Start dort auf.
+
+**Verfall des Wartezustands.** Kehrt der Schreiber nicht zurück, dürfte dieser Poll sonst für den Rest des Einsatzes laufen. Deshalb: Erscheint ein angekündigtes Nachfolgesegment **fünf Minuten** lang nicht und ist zugleich die Präsenzdatei desselben Clients veraltet (§6.4), fällt das Segment aus dem kurzen Takt A in den langen Takt B zurück. Es gilt damit nicht als verloren — taucht es später auf, wird es normal gelesen —, es kostet nur nicht mehr alle zwei Sekunden einen Zugriff. Der Wert ist ein Startwert nach §10, A4.
 
 ### §4.4 `schreiber.json` — der lokale Schreiberzustand
 
@@ -259,7 +265,11 @@ Ein Hintergrundvorgang im Worker-Thread liest die eigene lokale Datei ab `shareO
 
 Eigenschaften:
 
-- **Wiederholbar.** Der Offset wird erst nach erfolgreichem `fsync` fortgeschrieben. Ein Wiederholversuch ermittelt zuerst die tatsächliche Größe der Share-Datei und setzt dort an; ist sie größer als der gemerkte `shareOffset`, ist der vorige Versuch weiter gekommen als vermerkt, und es wird ab der tatsächlichen Größe fortgesetzt. Doppelt geschriebene Zeilen kann es damit nicht geben. Eine bei einem Abbruch entstandene Bruchstückzeile am Dateiende ist für alle Leser harmlos (§8.1); sie wird beim nächsten Versuch fortgeschrieben, weil der Schreiber alleiniger Eigentümer der Datei ist und ihr tatsächliches Ende kennt.
+- **Wiederholbar, und das wahre Dateiende wird gelesen, nicht erfragt.** Der Offset wird erst nach erfolgreichem `fsync` fortgeschrieben; nach einem Abbruch kann die Share-Datei also weiter sein als der gemerkte `shareOffset`. Das wahre Ende wird **durch Lesen** bestimmt: ab `shareOffset` wird gelesen, bis nichts mehr kommt, und die gelesenen Bytes werden mit den eigenen lokalen Bytes an derselben Stelle verglichen.
+
+  **Nicht über `stat` oder die Dateigröße.** Das wäre derselbe Fehler, den §6.2 für den Lesepfad ausschließt: Die Metadaten-Caches des Windows-Redirectors liefern bis zu 10 Sekunden alte Werte (`nas-speicher-recherche.md` §1.2). Eine zu klein gemeldete Größe würde bereits übertragene Bytes ein zweites Mal anhängen — und damit doppelte Ereigniszeilen in der eigenen Datei erzeugen, den einen Fehler, den dieses Verfahren per Konstruktion ausschließen soll. Datenlesezugriffe gehen ohne gültige Lease zum Server durch und umgehen den Attribut-Cache; deshalb ist Lesen hier die einzige zulässige Feststellung.
+
+  Stimmen die verglichenen Bytes nicht überein, hat ein Fremdschreiber in die eigene Datei geschrieben: Fall 2 nach §4.5. Stimmen sie überein, wird ab dem festgestellten Ende weiter angehängt. Eine bei einem Abbruch entstandene Bruchstückzeile am Dateiende ist für alle Leser harmlos (§8.1); sie wird auf diesem Weg vervollständigt, weil die lokale Datei byteweise identisch ist und ab derselben Stelle fortgeschrieben wird.
 - **Aus dem Worker, nie aus dem Main-Prozess.** Ein blockierender SMB-Aufruf kann bis zu 60 Sekunden hängen, bevor ein Fehler kommt (`SessTimeout`, `nas-speicher-recherche.md` §1.8). Im Electron-Main-Prozess stünde damit die gesamte Oberfläche. Das ist als Lint-Regel zu erzwingen (05-UMSETZUNGSPLAN.md, M2.1).
 - **Mit Rückstauverhalten.** Scheitert die Spiegelung, wird sie mit wachsendem Abstand erneut versucht (Startwerte: 2 s, 5 s, 15 s, danach 30 s dauerhaft). Die Oberfläche zeigt „Share nicht erreichbar seit HH:MM, N Einträge noch nicht übertragen". Kein Dialog, keine Nachfrage, kein Blockieren der Arbeit.
 
@@ -357,6 +367,8 @@ Auflage 4. Jedes materialisierte Feld trägt die HLC des Ereignisses, das es ges
 - Jeder Client schreibt nur Schnappschüsse **unter seiner eigenen `clientId`** und löscht nur **eigene** Schnappschüsse. Damit bleibt „ein Schreiber je Datei" auch hier gewahrt.
 - Ein Client behält seine jüngsten drei eigenen Schnappschüsse und löscht ältere.
 - Beim Öffnen wird der jüngste **passende** Schnappschuss beliebiger Herkunft gewählt: passend heißt `foldVersion` gleich, `zustandsHash` über den geladenen Zustand nachgerechnet und gleich, und jede Datei des Versionsvektors ist vorhanden und mindestens so lang wie der vermerkte Offset. Schlägt eine dieser Prüfungen fehl, wird der nächstältere versucht, zuletzt der vollständige Fold.
+- **Vierte Bedingung: keine eigene Quarantänestelle wird übersprungen.** Führt der Leser für eine Datei ein `quarantaeneAb` (§8.2) und nennt der Versionsvektor des Schnappschusses für dieselbe Datei einen Offset **jenseits** dieser Stelle, wird der Schnappschuss **nicht** angenommen. Sonst holte sich der Leser über den Umweg des fremden Schnappschusses genau die Ereignisse zurück, die er selbst als unlesbar verworfen hat — und zwar vermischt mit dem, was er direkt gelesen hat. Das Ergebnis wäre ein Zustand, den weder der Schnappschuss noch der eigene Fold erzeugt hätte, und niemand könnte ihn erklären.
+- Ein Leser mit Quarantäne schreibt **keine eigenen Schnappschüsse** mehr für diesen Einsatz. Sein Zustand ist unvollständig (§8.6); er darf ihn nicht als Beschleuniger an andere weitergeben.
 
 ---
 
@@ -388,6 +400,7 @@ Grundsatz: **Kein Fehlerbild führt zum Stillstand des Lesers.** Ein Defekt in e
 4. Alle anderen Dateien laufen unverändert weiter.
 5. Bei jedem Programmstart wird die Quarantänestelle **einmal** erneut geprüft. Ein Defekt, der aus einem Lesefehler des Netzes stammte, verschwindet damit; ein echter Defekt bleibt.
 6. `s1 akte pruefe` listet alle Quarantänestellen mit Datei, Offset und Zeitpunkt (Paket V.3).
+7. **Die Konvergenzzusage ist für diesen Arbeitsplatz ausgesetzt**, solange die Quarantäne besteht. Was das heißt und was daraus folgt, steht in §8.6.
 
 *Ausdrücklich nicht:* Kein Überspringen der defekten Zeile mit Weiterlesen dahinter. Nach einem Kettenbruch ist nicht mehr feststellbar, ob die Folgezeilen zur selben Kette gehören; sie auszuwerten hieße, unbestätigte Daten als bestätigt anzuzeigen.
 
@@ -406,6 +419,21 @@ Grundsatz: **Kein Fehlerbild führt zum Stillstand des Lesers.** Ein Defekt in e
 Verstellte Uhr: §3.2 (Delta-Grenze 5 Minuten, Warnung, kein Verwerfen). Geklontes Profil: §4.5 Fall 2 (neue Kennung, Klartextmeldung). Zwei Instanzen auf einem Rechner: §4.5 Fall 1 (`requestSingleInstanceLock`).
 
 ### §8.6 Was zugesichert wird — und was nicht
+
+#### §8.6.1 Konvergenz
+
+**Zugesichert:** Zwei Clients, die dieselbe Ereignismenge gesehen haben, berechnen denselben Zustand — nachprüfbar über den `zustandsHash` (§7.2). Das ist das Kriterium, an dem M0.4 und M2.4 gemessen werden.
+
+**Nicht zugesichert, sobald eine Quarantäne besteht.** Die Quarantäne wirkt je Leser (§8.2). Stößt Client A in der Datei von C auf einen Defekt, während Client B dieselben Bytes vorher fehlerfrei gelesen hat, sehen A und B dauerhaft **verschiedene Ereignismengen** und damit verschiedene Zustände. Das ist kein Programmfehler, sondern die unvermeidliche Folge davon, dass ein Leser fremde Dateien nicht reparieren darf. Wer es übersieht, hält später einen roten Konvergenztest für einen Fehler im Fold.
+
+Daraus folgen vier Regeln:
+
+1. **Sichtbar machen.** Ein Arbeitsplatz mit Quarantäne zeigt dauerhaft an, dass er weniger sieht als die anderen — nicht nur einmal beim Auftreten (§8.2, Punkt 3).
+2. **Nicht weitergeben.** Er schreibt keine Schnappschüsse mehr (§7.5) und nimmt keine an, die über seine Quarantänestelle hinausreichen.
+3. **Aus dem Konvergenzvergleich herausnehmen.** `s1 akte pruefe` und die Simulation vergleichen die Hashes nur der Clients ohne Quarantäne und melden die übrigen getrennt als „unvollständige Sicht". Ein Testlauf, der eine Zeile absichtlich beschädigt, muss diesen Ausgang erwarten, statt an ihm zu scheitern.
+4. **Wiederherstellungsweg.** Der einzige Weg zurück führt über den **Schreiber** der beschädigten Datei: Er hat den Inhalt lokal, erkennt beim Start die Abweichung zwischen lokaler und Share-Datei (§5.4) und schreibt den fehlenden Teil neu. Ist er nicht mehr erreichbar, kann ein anderer Client seinen lokalen Spiegel als Datei ausleiten (`s1 akte exportiere`, Paket M4.4) und über die Einsatzakte einspielen — von Hand, sichtbar, nie automatisch. Automatisches Reparieren fremder Dateien bliebe ausgeschlossen: Es bräche die Regel „ein Schreiber je Datei", auf der die gesamte Statik ruht.
+
+#### §8.6.2 Erkennbarkeit nachträglicher Änderungen
 
 Auflage 14. Der Anspruch „revisionssicher" wird **nicht** erhoben.
 
