@@ -35,7 +35,7 @@ Der Gutachter hat vier schwerwiegende, dreizehn mittlere und neun kleine Befunde
 | G14 | §3.2 | Zählerüberlauf ist nur für den Schreibpfad geregelt; die Empfangsregel kann sieben Stellen erzeugen und bricht die lexikografische Sortierung | **Geschlossen, wie vorgeschlagen** |
 | G15 | §6.6 | `fsync` ist nur für Windows/SMB begründet; auf macOS erfüllt `fsync(2)` die lokale Dauerhaftigkeitszusage nicht, dafür ist `F_FULLFSYNC` nötig | **Geschlossen.** §6.6 verlangt `F_FULLFSYNC` für den lokalen Anhang auf macOS und schreibt vor, eine schwächere Zusage im Messprotokoll zu vermerken statt sie hinzunehmen |
 | G16 | §7.6 | Ruhephase Punkt 2 ist für Dateien, die nach §6.2 in Takt B zurückgefallen sind, weder erfüllbar noch falsifizierbar | **Geschlossen, wie vorgeschlagen** |
-| G17 | §5.7 gegen 02-ZIELBILD Nr. 10 | Die Abweichung ist begründet, aber die verbindliche Quelle sagt weiterhin „Archivierung über `archiv.marker`" | **Teilweise — der Konflikt ist benannt, nicht aufgelöst.** §5.7 führt die Abweichung ausdrücklich als einzige des Dokuments von den zehn tragenden Festlegungen und nennt, was nachzuziehen ist. 02-ZIELBILD.md Nr. 10 und das dortige Layout sind **nicht** geändert: Die Quellen 3 bis 6 sind für diese Überarbeitung verbindlich und werden nicht neu diskutiert. **Offen für Johannes** |
+| G17 | §5.7 gegen 02-ZIELBILD Nr. 10 | Die Abweichung ist begründet, aber die verbindliche Quelle sagt weiterhin „Archivierung über `archiv.marker`" | **Geschlossen.** Zunächst nur benannt, weil die Quellen für die Überarbeitung verbindlich waren. Johannes hat das Nachziehen danach angewiesen: 02-ZIELBILD.md Nr. 10 und das dortige Dateilayout führen den Marker jetzt als abgeleiteten Anzeiger, mit Änderungsvermerk und Begründung. §5.7 weicht damit von keiner der zehn tragenden Festlegungen mehr ab |
 
 ## Klein
 
@@ -87,7 +87,6 @@ Der Gutachter hat das Kriterium in drei Teile zerlegt.
 
 ## Was nach dieser Überarbeitung offen bleibt
 
-- **G17:** 02-ZIELBILD.md Nr. 10 sagt weiterhin „Archivierung über `archiv.marker`". Nachzuziehen, Entscheidung Johannes.
 - **A9:** Ob die Zusage „bis zu 10 Sekunden für die erste Datei eines neuen Clients" haltbar ist, ist offen und wird von diesem Konzept nicht behauptet. Ergibt M0.5 mehr, ist die Zusage im Zielbild zu korrigieren — Entscheidung Johannes.
 - **A7 und A10:** Erstlauf ohne fremde Schnappschüsse und Vollprüfung beim Öffnen sind als bezahlbar angenommen, nicht gemessen.
 - Eine dritte unabhängige Prüfung hat nicht stattgefunden. Die Behandlung der Befunde G1 bis G17 ist ungeprüft.
