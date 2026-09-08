@@ -99,6 +99,15 @@ export {
   type Zustand,
 } from "./zustand.js";
 
+// Der Minimalfold als Mengenfunktion mit Rebase (Auflage 4).
+export {
+  falte,
+  falteAuf,
+  falteHinzu,
+  leereFaltung,
+  materialisiere,
+  type Faltung,
+} from "./fold.js";
 
 /** Ordnername eines Einsatzes auf dem Share: `<datum>_<slug>_<kurzid>`. */
 export interface Einsatzkennung {
