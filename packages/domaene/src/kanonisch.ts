@@ -29,13 +29,13 @@ export type KanonischerWert =
   | { readonly [schluessel: string]: KanonischerWert };
 
 /**
- * Sortiert Schluessel aufsteigend nach Unicode-Codepoint (§7.6).
+ * Vergleicht zwei Zeichenketten aufsteigend nach Unicode-Codepoint (§7.6).
  *
  * `Array.prototype.sort` vergleicht Zeichenketten nach UTF-16-Codeunits, was
  * ausserhalb der BMP von der Codepoint-Ordnung abweicht. Deshalb wird hier
  * ueber die Codepoints verglichen, nicht ueber `<`.
  */
-function vergleicheCodepunkte(a: string, b: string): number {
+export function vergleicheNachCodepunkt(a: string, b: string): number {
   const links = [...a];
   const rechts = [...b];
   const kuerzer = Math.min(links.length, rechts.length);
@@ -98,7 +98,7 @@ function schreibe(wert: Exclude<KanonischerWert, undefined>): string {
 
   const objekt = wert as { readonly [schluessel: string]: KanonischerWert };
   const teile: string[] = [];
-  for (const schluessel of Object.keys(objekt).sort(vergleicheCodepunkte)) {
+  for (const schluessel of Object.keys(objekt).sort(vergleicheNachCodepunkt)) {
     const eintrag = objekt[schluessel];
     if (eintrag === undefined) continue; // §7.6: Felder ohne Wert werden weggelassen.
     teile.push(`${JSON.stringify(schluessel)}:${schreibe(eintrag)}`);

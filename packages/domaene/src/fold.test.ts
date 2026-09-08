@@ -11,6 +11,8 @@ import {
   staerke,
   staerkeGeaendert,
 } from "./pruefhilfen/ereignisbau.js";
+import { zerlegeEreignisId } from "./ereignis.js";
+import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
 import { AUFFANG_ABSCHNITT_ID, FOLD_VERSION } from "./zustand.js";
 
 const einsatz = einsatzAngelegt(hlc(1000, 0, "aa"), 1, {
@@ -88,12 +90,12 @@ describe("Minimalfold — Grundverhalten", () => {
   });
 
   it("reicht unbekannte Ereignisarten durch, statt sie zu verwerfen (§4.1 Regel 4)", () => {
-    const zustand = falte([...grundmenge, fremdesEreignis(hlc(1004, 0, "bb"), 1, "EinsatzArchiviert")]);
+    const zustand = falte([...grundmenge, fremdesEreignis(hlc(1004, 0, "bb"), 1, "NochNichtErfundeneArt")]);
 
     expect(zustand.unbekannt).toEqual([
       {
         id: "bb:1",
-        typ: "EinsatzArchiviert",
+        typ: "NochNichtErfundeneArt",
         schemaVersion: 1,
         hlc: hlc(1004, 0, "bb"),
         akteurBenutzer: "Bediener bb",
@@ -155,7 +157,16 @@ describe("Konflikthinweise sind Teil des Zustands (Auflage 6, §2.5)", () => {
 
     expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(0, 3, 20));
     expect(zustand.hinweise).toEqual([
-      { art: "vorherPasstNicht", feldpfad: "einheit/U1/staerke", gewinner: "cc:1", verdraengt: "bb:1" },
+      {
+        art: "vorherPasstNicht",
+        feldpfad: "einheit/U1/staerke",
+        gewinner: "cc:1",
+        verdraengt: "bb:1",
+        // Der Ereigniskatalog verlangt bei StaerkeGeaendert den Hinweis
+        // ausdruecklich „mit beiden Werten" (§4.2).
+        gesehenerVorher: staerke(0, 1, 8),
+        verdraengterWert: staerke(0, 2, 17),
+      },
     ]);
   });
 
@@ -174,7 +185,14 @@ describe("Konflikthinweise sind Teil des Zustands (Auflage 6, §2.5)", () => {
 
     expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("A");
     expect(zustand.hinweise).toEqual([
-      { art: "vorherPasstNicht", feldpfad: "einheit/U1/abschnittId", gewinner: "cc:1", verdraengt: "bb:1" },
+      {
+        art: "vorherPasstNicht",
+        feldpfad: "einheit/U1/abschnittId",
+        gewinner: "cc:1",
+        verdraengt: "bb:1",
+        gesehenerVorher: "A",
+        verdraengterWert: "B",
+      },
     ]);
   });
 });
@@ -215,5 +233,134 @@ describe("Idempotenz ueber die Ereignis-Id (§4.1 Regel 2)", () => {
   it("aendert nichts, wenn dasselbe Ereignis mehrfach ankommt", () => {
     const doppelt = [...grundmenge, ...grundmenge, einheit, einheit];
     expect(falte(doppelt)).toEqual(falte(grundmenge));
+  });
+});
+
+describe("Mengenfunktion auch bei HLC-Gleichstand (geklontes Profil, M0-Fehlerinjektion)", () => {
+  // §3.2 erhoeht den Zaehler je eigenem Ereignis, §3.3 verbietet die
+  // Doppelvergabe der Laufnummer — zwei verschiedene Ereignisse mit derselben
+  // HLC sind also ein Protokollbruch. Genau den erzeugt aber ein geklontes
+  // Profil, und dessen Injektion verlangt M0 ausdruecklich. Der Fold muss
+  // deshalb auch dann eine Mengenfunktion bleiben.
+  const gleicheHlc = hlc(2000, 0, "bb");
+  const x = staerkeGeaendert(gleicheHlc, 1, "U1", staerke(0, 1, 8), staerke(1, 1, 1));
+  const y = staerkeGeaendert(gleicheHlc, 2, "U1", staerke(0, 1, 8), staerke(9, 9, 9));
+
+  it("entscheidet unabhaengig von der Eintreffreihenfolge", () => {
+    const vorwaerts = falte([...grundmenge, x, y]);
+    const rueckwaerts = falte([...grundmenge, y, x]);
+
+    expect(kanonischeSerialisierung(rueckwaerts as unknown as KanonischerWert)).toBe(
+      kanonischeSerialisierung(vorwaerts as unknown as KanonischerWert),
+    );
+    // Die Ereignis-Id bricht den Gleichstand: „bb:2" liegt ueber „bb:1".
+    expect(vorwaerts.einheiten["U1"]?.staerke.durch).toBe("bb:2");
+  });
+
+  it("gilt auch fuer die Anlage des Einsatzes", () => {
+    const bau = (name: string, laufnummer: number) =>
+      einsatzAngelegt(hlc(500, 0, "aa"), laufnummer, {
+        einsatzId: "E",
+        name,
+        art: "EINSATZ",
+        fuestName: "FueSt",
+        beginn: "2026-09-08T08:00:00+02:00",
+        schichtmodell: "ZWEI_SCHICHT",
+      });
+    const alpha = bau("Alpha", 7);
+    const beta = bau("Beta", 8);
+
+    expect(falte([alpha, beta]).einsatz?.name.wert).toBe(falte([beta, alpha]).einsatz?.name.wert);
+  });
+});
+
+describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)", () => {
+  it("eine zweite Einheitenanlage ueberschreibt spaetere Arbeit nicht mehr", () => {
+    // Die Verschiebung liegt in der HLC unter der zweiten Anlage. Wuerde die
+    // Anlage als gewoehnlicher Schreiber gelten, verschwaende die Verschiebung
+    // still — genau das verbietet §2.5.
+    const verschoben = einheitVerschoben(hlc(5000, 0, "bb"), 1, "U1", "A", "B");
+    const zweiteAnlage = einheitGemeldet(hlc(9000, 0, "cc"), 1, {
+      einheitId: "U1",
+      abschnittId: "A",
+      bezeichnung: "1. Bergungsgruppe",
+      organisation: "THW",
+      ebene: "GRUPPE",
+      staerke: staerke(0, 1, 8),
+      personalErfassung: "NUR_STAERKE",
+      status: "IM_EINSATZ",
+      schicht: "TAG",
+    });
+
+    const zustand = falte([...grundmenge, verschoben, zweiteAnlage]);
+
+    expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("B");
+    expect(zustand.hinweise).toContainEqual({
+      art: "zweiteAnlageVerworfen",
+      feldpfad: "einheit/U1",
+      verworfen: "cc:1",
+      gilt: "aa:4",
+    });
+  });
+
+  it("eine zweite Abschnittsanlage wird verworfen und gemeldet", () => {
+    const zweite = abschnittAngelegt(hlc(9000, 0, "bb"), 1, {
+      abschnittId: "A",
+      name: "Umbenannt",
+      abschnittstyp: "ARCHIV",
+      reihenfolge: 99,
+    });
+    const zustand = falte([...grundmenge, zweite]);
+
+    expect(zustand.abschnitte["A"]?.name.wert).toBe("Einsatzort 1");
+    expect(zustand.hinweise).toContainEqual({
+      art: "zweiteAnlageVerworfen",
+      feldpfad: "abschnitt/A",
+      verworfen: "bb:1",
+      gilt: "aa:2",
+    });
+  });
+});
+
+describe("Die Id des Auffangabschnitts ist reserviert", () => {
+  it("laesst sich nicht durch ein AbschnittAngelegt kapern", () => {
+    const kaperung = abschnittAngelegt(hlc(9000, 0, "bb"), 1, {
+      abschnittId: AUFFANG_ABSCHNITT_ID,
+      name: "Kaperung",
+      // ARCHIV zaehlt nicht in die Gesamtstaerke — genau der Schaden, den
+      // zustand.ts fuer den Auffang ausschliesst.
+      abschnittstyp: "ARCHIV",
+      reihenfolge: 99,
+    });
+    const zustand = falte([...grundmenge, kaperung]);
+
+    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.abschnittstyp.wert).toBe("EINSATZORT");
+    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.systemAbschnitt).toBe(true);
+    expect(zustand.hinweise).toContainEqual({
+      art: "reservierteIdVerworfen",
+      feldpfad: `abschnitt/${AUFFANG_ABSCHNITT_ID}`,
+      verworfen: "bb:1",
+    });
+  });
+
+  it("traegt keine erfundene Ereignis-Id, weil ihn kein Ereignis gesetzt hat (§3.3)", () => {
+    const auffang = falte(grundmenge).abschnitte[AUFFANG_ABSCHNITT_ID];
+    expect(auffang?.name.durch).toBeUndefined();
+    // Jede vorhandene Herkunft muss sich zerlegen lassen.
+    for (const feld of [auffang?.name, auffang?.abschnittstyp, auffang?.reihenfolge]) {
+      if (feld?.durch !== undefined) expect(() => zerlegeEreignisId(feld.durch as string)).not.toThrow();
+    }
+  });
+});
+
+describe("Der Zustand selbst ist reihenfolgeunabhaengig, nicht erst seine Serialisierung", () => {
+  it("ordnet die Schluessel der Sammlungen nach Codepoint", () => {
+    const vorwaerts = falte([einsatz, abschnittA, abschnittB, einheit]);
+    const rueckwaerts = falte([einheit, abschnittB, abschnittA, einsatz]);
+
+    // Ohne diese Zusage zeigten zwei Rechner dieselbe Lage in verschiedener
+    // Reihenfolge, obwohl sie konvergent sind.
+    expect(Object.keys(rueckwaerts.abschnitte)).toEqual(Object.keys(vorwaerts.abschnitte));
+    expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "AUFFANG", "B"]);
   });
 });

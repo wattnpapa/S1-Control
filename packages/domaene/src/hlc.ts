@@ -89,7 +89,10 @@ export function hlcAlsText(hlc: Hlc): string {
 
 /** Liest die Textform aus §3.2 zurueck in die Struktur. */
 export function hlcAusText(text: string): Hlc {
-  const muster = /^(\d{13})-(\d{6})-(.+)$/.exec(text);
+  // `[^-]+` statt `.+`: `hlcAlsText` verweigert eine clientId mit Bindestrich,
+  // also darf die Rueckrichtung sie auch nicht annehmen. Sonst gaebe es
+  // Textformen, die sich lesen, aber nicht wieder schreiben lassen.
+  const muster = /^(\d{13})-(\d{6})-([^-]+)$/.exec(text);
   if (muster === null) throw new SyntaxError(`Keine HLC-Textform nach §3.2: ${JSON.stringify(text)}`);
   return {
     millisekunden: Number(muster[1]),
@@ -159,6 +162,18 @@ export class HlcUhr {
     this.#zaehler = optionen.start?.zaehler ?? 0;
   }
 
+  /** Liest die injizierte Zeitquelle und weist unbrauchbare Werte zurueck. */
+  #wanduhrLesen(): number {
+    const w = this.#wanduhr();
+    if (!Number.isFinite(w) || !Number.isInteger(w) || w < 0) {
+      // Ohne diese Pruefung fiele ein `NaN` still in den Zaehlerpfad: jeder
+      // Vergleich mit `NaN` ist falsch, die HLC liefe unbemerkt nur noch
+      // ueber den Zaehler weiter.
+      throw new RangeError(`Die Wanduhr lieferte keine brauchbare Millisekunde: ${String(w)}`);
+    }
+    return w;
+  }
+
   /** Der aktuelle eigene Stand, ohne ihn fortzuschreiben. */
   get stand(): Hlc {
     return { millisekunden: this.#millisekunden, zaehler: this.#zaehler, clientId: this.#clientId };
@@ -174,7 +189,7 @@ export class HlcUhr {
    * ```
    */
   erzeugen(): Erzeugung {
-    const w = this.#wanduhr();
+    const w = this.#wanduhrLesen();
     if (w > this.#millisekunden) {
       this.#millisekunden = w;
       this.#zaehler = 0;
@@ -222,7 +237,7 @@ export class HlcUhr {
    * ```
    */
   empfangen(fremd: Hlc): Empfang {
-    const w = this.#wanduhr();
+    const w = this.#wanduhrLesen();
     const eigenerOderWanduhr = Math.max(this.#millisekunden, w);
 
     if (fremd.millisekunden - eigenerOderWanduhr > UHR_SCHWELLE_MS) {
@@ -255,6 +270,12 @@ export class HlcUhr {
       // §3.2, Zaehlerueberlauf beim Empfangen: Warten hilft nicht, weil der
       // fremde Wert feststeht. Stattdessen eine Millisekunde weiter, Zaehler 0
       // — monoton und innerhalb der festen Stellenzahl.
+      if (m + 1 > MILLISEKUNDEN_MAX) {
+        // Die feste Stellenzahl ist nach §3.2 tragend — die lexikografische
+        // Sortierung der Schnappschuss-Dateinamen (§7.2) haengt an ihr. Ein
+        // stilles Ueberlaufen waere schlimmer als ein lauter Abbruch.
+        throw new RangeError(`HLC-Millisekunden wuerden die feste Stellenzahl verlassen: ${m + 1}`);
+      }
       this.#millisekunden = m + 1;
       this.#zaehler = 0;
     } else {

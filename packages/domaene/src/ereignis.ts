@@ -108,9 +108,6 @@ export interface Rahmen<TVorher = never, TNeu = never> {
   readonly grund?: string;
 }
 
-/** Der Rahmenanteil, der jedem Ereignis gemeinsam ist — ohne Typ und Nutzlast. */
-export type RahmenAngaben = Omit<Rahmen, "typ" | "vorher" | "neu">;
-
 /** Die aktuelle Version des Ereignisrahmens. */
 export const SCHEMA_VERSION = 1;
 

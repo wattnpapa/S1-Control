@@ -70,7 +70,6 @@ export {
   type Organisation,
   type PersonalErfassung,
   type Rahmen,
-  type RahmenAngaben,
   type Schicht,
   type Schichtmodell,
   type Staerke,
@@ -81,6 +80,7 @@ export {
 // Kanonische Serialisierung und zustandsHash (§7.6).
 export {
   kanonischeSerialisierung,
+  vergleicheNachCodepunkt,
   zustandsHash,
   type KanonischerWert,
   type Sha256Hex,

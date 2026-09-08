@@ -26,8 +26,16 @@ import type {
   TaktischeEbene,
 } from "./ereignis.js";
 import type { Hlc } from "./hlc.js";
+import type { KanonischerWert } from "./kanonisch.js";
 
-/** Version der Fold-Implementierung; harte Schranke fuer Schnappschuesse (§7.3, Auflage 4). */
+/**
+ * Version der Fold-Implementierung; harte Schranke fuer Schnappschuesse
+ * (§7.3, Auflage 4).
+ *
+ * Jede Aenderung an den Fold-Regeln erhoeht diese Zahl. M0.2 liefert die
+ * erste; ein Schnappschuss mit abweichender Version wird stillschweigend
+ * ignoriert und der Zustand aus den Ereignissen gefaltet.
+ */
 export const FOLD_VERSION = 1;
 
 /**
@@ -50,8 +58,15 @@ export const AUFFANG_ABSCHNITT_ID = "AUFFANG";
 export interface Feld<T> {
   readonly wert: T;
   readonly hlc: Hlc;
-  /** Das Ereignis, das dieses Feld gesetzt hat — fuer das Einsatztagebuch und die Diagnose. */
-  readonly durch: EreignisId;
+  /**
+   * Das Ereignis, das dieses Feld gesetzt hat — fuer das Einsatztagebuch und
+   * die Diagnose.
+   *
+   * Fehlt allein bei den Feldern des systemseitigen Auffangabschnitts: sie
+   * entstehen ohne Ereignis, und eine erfundene Ereignis-Id waere eine, die
+   * `zerlegeEreignisId` zu Recht zurueckwiese (§3.3).
+   */
+  readonly durch?: EreignisId;
 }
 
 export interface EinsatzZustand {
@@ -113,13 +128,26 @@ export type Konflikthinweis =
       readonly feldpfad: string;
       readonly gewinner: EreignisId;
       readonly verdraengt: EreignisId;
+      /**
+       * Beide Werte gehoeren in den Hinweis — der Ereigniskatalog verlangt bei
+       * `StaerkeGeaendert` ausdruecklich „Konflikthinweis mit beiden Werten"
+       * (§4.2). Ohne sie kann die Oberflaeche daraus keinen Satz bauen.
+       */
+      readonly gesehenerVorher: KanonischerWert;
+      readonly verdraengterWert: KanonischerWert;
     }
-  /** Ein zweites `EinsatzAngelegt` wurde verworfen (Ereigniskatalog §4.2). */
+  /** Eine zweite Anlage derselben Entitaet wurde verworfen (Ereigniskatalog §4.2). */
   | {
       readonly art: "zweiteAnlageVerworfen";
       readonly feldpfad: string;
       readonly verworfen: EreignisId;
       readonly gilt: EreignisId;
+    }
+  /** Eine Anlage wollte die fuer den Auffang reservierte Id belegen; sie wurde verworfen. */
+  | {
+      readonly art: "reservierteIdVerworfen";
+      readonly feldpfad: string;
+      readonly verworfen: EreignisId;
     }
   /** Die Einheit zeigt auf einen Abschnitt, den es (noch) nicht gibt; sie liegt im Auffang (Auflage 10). */
   | {
