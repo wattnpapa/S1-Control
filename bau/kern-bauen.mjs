@@ -1,4 +1,4 @@
-// Baut das Submodul `vendor/bos-kern` nach `vendor/bos-kern/dist/`.
+// Baut das Submodul `vendor/eeb-format` nach `vendor/eeb-format/dist/`.
 //
 // Warum ein eigenes Skript statt sich auf das `prepare`-Skript des Kerns zu
 // verlassen: Neuere npm-Versionen fuehren Install-Skripte von Abhaengigkeiten
@@ -17,13 +17,13 @@ import { fileURLToPath } from "node:url";
 import path from "node:path";
 
 const wurzel = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const kern = path.join(wurzel, "vendor", "bos-kern");
+const kern = path.join(wurzel, "vendor", "eeb-format");
 const bauKonfiguration = path.join(kern, "tsconfig.build.json");
 
 if (!existsSync(bauKonfiguration)) {
   console.error(
     [
-      "Das Submodul vendor/bos-kern ist nicht ausgecheckt.",
+      "Das Submodul vendor/eeb-format ist nicht ausgecheckt.",
       "Bitte einmalig ausfuehren:",
       "",
       "    git submodule update --init --recursive",

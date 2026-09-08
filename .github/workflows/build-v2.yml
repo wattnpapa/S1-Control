@@ -3,8 +3,8 @@
 # ────────────────────────────────────────────────────────────────────────────
 # BEKANNT BLOCKIERT — dieser Workflow ist absichtlich NICHT automatisch aktiv.
 #
-# `vendor/bos-kern` zeigt in `.gitmodules` derzeit auf einen lokalen Pfad
-# (`/Users/johannes/Developer/bos-kern`), weil das Kern-Repo noch kein Remote
+# `vendor/eeb-format` zeigt in `.gitmodules` derzeit auf einen lokalen Pfad
+# (`/Users/johannes/Developer/eeb-format`), weil das Kern-Repo noch kein Remote
 # hat. Ein GitHub-Runner kann diesen Pfad nicht auflösen: `submodules:
 # recursive` schlägt dort fehl, und ohne den Kern lassen sich weder
 # `typecheck` noch `test` ausführen. Ein auf Push laufender Workflow wäre
@@ -13,7 +13,7 @@
 # des Standes.
 #
 # Freischalten, sobald das Kern-Repo ein Remote hat:
-#   1. git submodule set-url vendor/bos-kern git@github.com:<konto>/bos-kern.git
+#   1. git submodule set-url vendor/eeb-format git@github.com:<konto>/eeb-format.git
 #      git submodule sync --recursive && git commit .gitmodules
 #   2. Für ein privates Kern-Repo zusätzlich ein Token hinterlegen und im
 #      Checkout-Schritt `token: ${{ secrets.BOS_KERN_TOKEN }}` setzen.
@@ -85,7 +85,7 @@ jobs:
       # BLOCKIERT bis zur Remote-Freigabe des Kern-Repos: `submodules:
       # recursive` kann die lokale Pfad-URL aus .gitmodules auf einem Runner
       # nicht auflösen. Der Schritt steht hier vollständig vorbereitet.
-      - name: Checkout (mit Submodul vendor/bos-kern)
+      - name: Checkout (mit Submodul vendor/eeb-format)
         uses: actions/checkout@v4
         with:
           submodules: recursive

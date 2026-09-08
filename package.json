@@ -12,7 +12,7 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "vendor/bos-kern"
+    "vendor/eeb-format"
   ],
   "scripts": {
     "kern:bauen": "node bau/kern-bauen.mjs",

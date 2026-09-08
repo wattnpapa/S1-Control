@@ -6,12 +6,12 @@ import tseslint from "typescript-eslint";
 //
 // Grundregel: jeder Ring darf nur nach innen importieren, nie nach aussen.
 //
-//   @bos/kern     (Ring 1)  plattformneutral, geteilt — eigene Regeln im
+//   @bos/eeb-format     (Ring 1)  plattformneutral, geteilt — eigene Regeln im
 //                           Kern-Repo, hier bewusst nicht doppelt geprüft.
-//   @s1/domaene   (Ring 2)  plattformneutral, darf nur @bos/kern.
+//   @s1/domaene   (Ring 2)  plattformneutral, darf nur @bos/eeb-format.
 //   @s1/speicher  (Ring 3)  node: + @s1/domaene.
 //   @s1/netz      (Ring 3)  node: + @s1/domaene.
-//   @s1/ausgaben  (Ring 3)  @s1/domaene + @bos/kern, kein Electron.
+//   @s1/ausgaben  (Ring 3)  @s1/domaene + @bos/eeb-format, kein Electron.
 //   @s1/cli       (Ring 3)  alle @s1/*, node:, kein Electron.
 //   apps/desktop  (Ring 4)  darf alles nach innen; der Main-Prozess zieht
 //                           aber keine Renderer-Bibliotheken.

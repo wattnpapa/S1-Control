@@ -15,7 +15,7 @@ import { defineConfig } from "vitest/config";
 const quelle = (pfad: string) => new URL(pfad, import.meta.url).pathname;
 
 const alias = {
-  "@bos/kern": quelle("./vendor/bos-kern/src/index.ts"),
+  "@bos/eeb-format": quelle("./vendor/eeb-format/src/index.ts"),
   "@s1/domaene": quelle("./packages/domaene/src/index.ts"),
   "@s1/speicher": quelle("./packages/speicher/src/index.ts"),
   "@s1/netz": quelle("./packages/netz/src/index.ts"),

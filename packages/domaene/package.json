@@ -14,6 +14,6 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "dependencies": {
-    "@bos/kern": "file:../../vendor/bos-kern"
+    "@bos/eeb-format": "file:../../vendor/eeb-format"
   }
 }

@@ -4,7 +4,7 @@ Dieses Dokument beschreibt den Baum, der auf dem Branch `v2-architektur`
 entsteht. Der v1-Code liegt unverändert daneben unter `legacy-v1/` und wird
 nicht mehr gebaut; auf `main` steht er weiterhin allein in der Wurzel.
 Verbindlich sind `docs/v2/02-ZIELBILD.md`, `docs/v2/05-UMSETZUNGSPLAN.md` und
-`docs/v2/adr/ADR-003-geteilter-kern-bos-kern.md`.
+`docs/v2/adr/ADR-003-geteilter-kern-eeb-format.md`.
 
 ## Warum `legacy-v1/`
 
@@ -24,11 +24,11 @@ S1-Control/
   tsconfig.base.json    gemeinsame Compileroptionen
   eslint.config.mjs     die Ringgrenzen, maschinell erzwungen
   vitest.config.ts      vier Testprojekte (node und jsdom)
-  bau/kern-bauen.mjs    baut das Submodul nach vendor/bos-kern/dist
+  bau/kern-bauen.mjs    baut das Submodul nach vendor/eeb-format/dist
   packages/
     domaene/  speicher/  netz/  ausgaben/  cli/
   apps/desktop/         Electron-Main, Preload, Renderer
-  vendor/bos-kern/      git-Submodul, geteilt mit erfassungsbogen.app
+  vendor/eeb-format/      git-Submodul, geteilt mit erfassungsbogen.app
   docs/v2/              Zielbild, Umsetzungsplan, ADRs
   legacy-v1/            v1 als Referenz, wird nicht gebaut
 ```
@@ -42,11 +42,11 @@ Grundregel: jeder Ring darf nur **nach innen** importieren, nie nach außen.
 
 | Ring | Paket | erlaubt | verboten |
 |---|---|---|---|
-| 1 | `@bos/kern` | reines TypeScript | `node:`, DOM, React, Electron (im Kern-Repo geprüft) |
-| 2 | `@s1/domaene` | `@bos/kern` | `node:`, DOM, React, Electron, andere `@s1/*` |
+| 1 | `@bos/eeb-format` | reines TypeScript | `node:`, DOM, React, Electron (im Kern-Repo geprüft) |
+| 2 | `@s1/domaene` | `@bos/eeb-format` | `node:`, DOM, React, Electron, andere `@s1/*` |
 | 3 | `@s1/speicher` | `node:fs`, `node:crypto`, `@s1/domaene` | DOM, React, Electron, `@s1/ausgaben`, `@s1/cli` |
 | 3 | `@s1/netz` | `node:dgram`, `@s1/domaene` | DOM, React, Electron, `@s1/ausgaben`, `@s1/cli` |
-| 3 | `@s1/ausgaben` | `@s1/domaene`, `@bos/kern` | `node:`, Electron, React, `@s1/speicher`, `@s1/netz`, `@s1/cli` |
+| 3 | `@s1/ausgaben` | `@s1/domaene`, `@bos/eeb-format` | `node:`, Electron, React, `@s1/speicher`, `@s1/netz`, `@s1/cli` |
 | 3 | `@s1/cli` | alle `@s1/*`, `node:` | Electron, React |
 | 4 | `apps/desktop` | alles nach innen | Main-Prozess zieht keine Renderer-Bibliotheken; kein Paket importiert aus `apps/*` |
 
@@ -62,20 +62,20 @@ kann:
    einmal unter `jsdom`. Wer eine Plattform-API zur Laufzeit braucht, fällt in
    einem der beiden Läufe durch.
 
-## Das Submodul `vendor/bos-kern`
+## Das Submodul `vendor/eeb-format`
 
-`@bos/kern` ist der geteilte Kern mit erfassungsbogen.app (ADR-003) und hängt
-als git-Submodul unter `vendor/bos-kern`. Er ist zugleich ein npm-Workspace,
-`@s1/domaene` und `@s1/ausgaben` binden ihn per `"file:../../vendor/bos-kern"`
+`@bos/eeb-format` ist der geteilte Kern mit erfassungsbogen.app (ADR-003) und hängt
+als git-Submodul unter `vendor/eeb-format`. Er ist zugleich ein npm-Workspace,
+`@s1/domaene` und `@s1/ausgaben` binden ihn per `"file:../../vendor/eeb-format"`
 ein und rufen ihn tatsächlich auf.
 
 > **Offen:** Das Kern-Repo hat noch **kein** GitHub-Remote — Johannes hat es
 > bewusst noch nicht freigegeben. `.gitmodules` zeigt deshalb auf den lokalen
-> Pfad `/Users/johannes/Developer/bos-kern`. Diese URL **muss umgeschrieben
+> Pfad `/Users/johannes/Developer/eeb-format`. Diese URL **muss umgeschrieben
 > werden**, sobald das Remote existiert:
 >
 > ```bash
-> git submodule set-url vendor/bos-kern git@github.com:<konto>/bos-kern.git
+> git submodule set-url vendor/eeb-format git@github.com:<konto>/eeb-format.git
 > git submodule sync --recursive
 > ```
 >
@@ -83,7 +83,7 @@ ein und rufen ihn tatsächlich auf.
 > `.github/workflows/build-v2.yml` läuft deswegen ausschließlich manuell (siehe
 > dort).
 
-Der Kern wird nach `vendor/bos-kern/dist/` gebaut, bevor irgendetwas anderes
+Der Kern wird nach `vendor/eeb-format/dist/` gebaut, bevor irgendetwas anderes
 läuft. Das erledigt `bau/kern-bauen.mjs` als `postinstall` der Wurzel — nicht
 das `prepare`-Skript des Kerns, weil neuere npm-Versionen Install-Skripte von
 Abhängigkeiten nicht mehr ungefragt ausführen.
@@ -96,7 +96,7 @@ ist.
 
 ```bash
 git submodule update --init --recursive
-npm install            # installiert und baut anschließend vendor/bos-kern
+npm install            # installiert und baut anschließend vendor/eeb-format
 
 npm run typecheck      # tsc -b über alle Projekte, mit echten Emits
 npm run lint           # die Ringgrenzen

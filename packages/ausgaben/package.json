@@ -8,5 +8,5 @@
   "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
-  "dependencies": { "@bos/kern": "file:../../vendor/bos-kern", "@s1/domaene": "*" }
+  "dependencies": { "@bos/eeb-format": "file:../../vendor/eeb-format", "@s1/domaene": "*" }
 }

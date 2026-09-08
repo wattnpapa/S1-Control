@@ -16,6 +16,6 @@ describe("Ausgabekopf", () => {
 
     expect(html).toContain("<h1>Hochwasser Süd</h1>");
     expect(html).toMatch(/2026-09-08_hochwasser-sued_[0-9a-f]{6}/);
-    expect(html).toContain("@bos/kern");
+    expect(html).toContain("@bos/eeb-format");
   });
 });

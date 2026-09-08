@@ -4,14 +4,14 @@
  * Hier entstehen ab M0.2 Zielmodell, Ereigniskatalog, Fold, Konfliktregeln,
  * HLC und Kennzahlen. Dieser Stand ist bewusst ein Geruest: eine einzige
  * kleine, aber fachlich sinnvolle Funktion, die den Verdrahtungsnachweis
- * fuehrt — inklusive eines echten Aufrufs in `@bos/kern`.
+ * fuehrt — inklusive eines echten Aufrufs in `@bos/eeb-format`.
  *
  * Verbindliche Grenze (02-ZIELBILD.md, „Vier Ringe"): kein `node:`, kein DOM,
  * kein React, kein Electron. Erlaubt ist ausschliesslich der Griff nach innen,
- * also nach `@bos/kern`.
+ * also nach `@bos/eeb-format`.
  */
 
-import { inhaltsHash } from "@bos/kern";
+import { inhaltsHash } from "@bos/eeb-format";
 
 /** Ordnername eines Einsatzes auf dem Share: `<datum>_<slug>_<kurzid>`. */
 export interface Einsatzkennung {
@@ -53,7 +53,7 @@ export function slugFuerEinsatz(name: string): string {
  * Bildet die vollstaendige Einsatzkennung.
  *
  * Der Kurz-Id stammt aus `inhaltsHash` des geteilten Kerns. Das ist der
- * Verdrahtungsnachweis fuer das Submodul `vendor/bos-kern`: faellt der Kern
+ * Verdrahtungsnachweis fuer das Submodul `vendor/eeb-format`: faellt der Kern
  * aus, baut dieses Paket nicht mehr.
  *
  * @param datum Einsatzdatum in der Form `JJJJ-MM-TT`.

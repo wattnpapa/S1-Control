@@ -7,7 +7,7 @@
  * nicht importieren.
  */
 
-import { kernVersion } from "@bos/kern";
+import { kernVersion } from "@bos/eeb-format";
 import { einsatzKennung } from "@s1/domaene";
 
 /** Kopfzeile jeder Ausgabe: welcher Einsatz, welcher Stand, welche Kernfassung. */
@@ -42,7 +42,7 @@ export function kopfAlsHtml(kopf: Ausgabekopf): string {
     `  <h1>${htmlMaskieren(kopf.einsatzName)}</h1>`,
     `  <p class="kennung">${htmlMaskieren(kennung.ordner)}</p>`,
     `  <p class="stand">${htmlMaskieren(kopf.stand)}</p>`,
-    `  <p class="kern">@bos/kern ${htmlMaskieren(kernVersion())}</p>`,
+    `  <p class="kern">@bos/eeb-format ${htmlMaskieren(kernVersion())}</p>`,
     "</header>",
   ].join("\n");
 }

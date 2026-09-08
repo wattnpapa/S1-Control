@@ -42,3 +42,49 @@ Blockiert oder verzögert der geteilte Kern zweimal in drei Monaten ein Release 
 ## Alternative bei „Nein"
 
 Schmales, auf einen Tag gepinntes EEB-Paket nur mit Modell, Codec und Signatur (~0,5 PW); Meldekopf-Sammlung, Diff, Aufteilen/Zusammenführen werden in `@s1/domaene` nachgebaut; die Google-Tabelle wird durch Bündeldatei und QR ersetzt, nicht durch Direktschreiben aus der Erfassungsbogen-App.
+
+---
+
+## Nachtrag 2026-09-08: Namen und Aufteilung
+
+Johannes hat den Namen `bos-kern` verworfen — er verspricht mehr, als der
+Inhalt haelt — und entschieden, den geteilten Code auf **mehrere Repos je
+Baustein** zu verteilen statt auf ein Sammelrepo. Die sechs Aufnahmeregeln,
+der Rueckweg und die `file:`-Submodul-Verdrahtung dieses ADR bleiben
+unveraendert gueltig; nur Zuschnitt und Benennung aendern sich.
+
+| Repo | npm | Inhalt | haengt ab von |
+|---|---|---|---|
+| [eeb-format](https://github.com/wattnpapa/eeb-format) | `@bos/eeb-format` | Spezifikation, sprachneutrale Testvektoren, `model`, `codec`, `signatur`, `qr-node`; TypeScript heute, weitere Sprachen spaeter | — |
+| [bos-meldekopf](https://github.com/wattnpapa/bos-meldekopf) | `@bos/meldekopf` | `einsaetze`, `aufteilen`, `zusammenfuehren`, `meldung-diff`, `papierkorb`, neu `darstellung` | eeb-format (peer) |
+| [bos-vokabulare](https://github.com/wattnpapa/bos-vokabulare) | `@bos/vokabulare` | THW- und KatS-Vokabulare | eeb-format (peer) |
+| [bos-taktische-zeichen](https://github.com/wattnpapa/bos-taktische-zeichen) | `@bos/taktische-zeichen` | Zeichenzuordnung, Symbole, Holskript | — |
+
+Alle vier oeffentlich unter `wattnpapa`, EUPL-1.2.
+
+**Warum `qr-node.ts` jetzt passt.** Der Erstschnitt oben fuehrt `qr-node.ts`
+auf, obwohl es `node:zlib` und `qrcode` importiert und damit Aufnahmeregel 2
+verletzt. In einem Format-Repo mit mehreren Sprachimplementierungen ist das
+keine Ausnahme mehr: Aufnahmeregel 2 gilt dort je Implementierung, nicht
+ueber das Repo hinweg.
+
+**Diamant auf `eeb-format`.** Gemessene Abhaengigkeiten: `model` importiert
+nichts, alles andere importiert `model` — auch die Vokabulare. Binden zwei
+Bausteine `eeb-format` je selbst ein, liegen zwei Kopien im Baum und
+TypeScript sieht zwei verschiedene Typen `Bogen`. Gegenmassnahme:
+`eeb-format` ist in den anderen Repos `peerDependency`, jedes Produkt
+liefert genau eine Kopie unter `vendor/eeb-format`, und die CI prueft, dass
+es genau eine ist.
+
+**Taktische Zeichen aus dem Erfassungsbogen statt aus v1.** Die Loesung des
+Erfassungsbogens ordnet benannte Zeichen aus der Sammlung von jonas-koeritz
+zu (echtes GKW- oder MLW-IV-Zeichen, dreistufig ueber Vokabular-Code,
+Namenssuche und Grundzeichen als Rueckfall). v1 erzeugt dagegen eine
+allgemeine Silhouette mit aufgedrucktem Kurzzeichen. Damit aendert sich
+Paket M1.4: statt Uebernahme aus v1 wird die Fassung des Erfassungsbogens
+uebernommen und ihre Schnittstelle von `model` und `hilfen` geloest. Der
+STAN-Datensatz aus v1 wird weiterhin gebraucht, aber fuer die Vorlagen,
+nicht fuer die Zeichen.
+
+**Offen:** Die Lizenzbedingungen der Zeichensammlung sind vor der breiteren
+Nutzung zu pruefen.
