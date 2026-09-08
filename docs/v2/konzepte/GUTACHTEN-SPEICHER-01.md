@@ -4,7 +4,9 @@ Stand: 2026-09-08 · Gegenstand: [KONZEPT-SPEICHER.md](KONZEPT-SPEICHER.md) in d
 
 **Dieses Gutachten ist die Arbeitsgrundlage der Überarbeitung.** Es wird nicht gelöscht, wenn die Befunde abgearbeitet sind, sondern bekommt je Befund einen Vermerk.
 
-**Stand der Abarbeitung: 2026-09-08.** Alle 23 Befunde und die Prüfung der Auflagentabelle sind abgearbeitet; je Befund steht ein Vermerk **Behandlung**. Zwei Punkte hat Johannes entschieden: S5 (nur eigene Schnappschüsse) und M6 (Archivierung als Ereignis). Commits: `03d396e` (S1 bis S6), `cff07ad` (M1 bis M8), `67b85fc` (K1 bis K8) und der Folgecommit zur Auflagentabelle.
+**Stand der Abarbeitung: 2026-09-08.** Alle 23 Befunde und die Prüfung der Auflagentabelle sind abgearbeitet; je Befund steht ein Vermerk **Behandlung**. Zwei Punkte hat Johannes entschieden: S5 (nur eigene Schnappschüsse) und M6 (Archivierung als Ereignis). Commits: `03d396e` (S1 bis S6), `cff07ad` (M1 bis M8), `67b85fc` (K1 bis K8), `c376c9d` (Auflagentabelle §9).
+
+**Nachtrag nach der zweiten Prüfung (`38707cf`).** Eine zweite unabhängige Prüfung hat sieben der Vermerke unten als zu weitgehend beanstandet — S2, S6, M1, M8, K1, K3 und K4. Die Einwände waren in allen sieben Fällen zutreffend; besonders bei S2, wo der neue Reparaturweg für seinen einzigen Anwendungsfall unerreichbar war, und bei K4, wo der Vermerk sachlich falsch war: Die Kettenprüfung war aus `upload-state.json` in der damaligen Form nicht ausführbar, weil dort je Datei nur eine Kette stand. Alle sieben sind inzwischen geschlossen; nachzulesen in [GUTACHTEN-SPEICHER-02.md](GUTACHTEN-SPEICHER-02.md), Abschnitt „Befunde des ersten Gutachtens, die der zweite Prüfer als nicht geschlossen ansah". Die Vermerke unten bleiben unverändert stehen, damit der Weg nachvollziehbar bleibt.
 
 ## Gesamturteil
 
