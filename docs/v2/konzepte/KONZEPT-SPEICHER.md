@@ -1,6 +1,6 @@
 # KONZEPT-SPEICHER — Ereignisprotokoll auf dem Share
 
-Stand: 2026-09-08 · Paket M0.1 · Status: **Entwurf, wartet auf Gegenlesen durch Johannes**
+Stand: 2026-09-08 · Paket M0.1 · Status: **Ueberarbeitungsbeduerftig** — unabhaengig geprueft, Urteil „haelt mit Auflagen". Sechs schwerwiegende, acht mittlere und neun kleine Befunde stehen offen; sie sind in [GUTACHTEN-SPEICHER-01.md](GUTACHTEN-SPEICHER-01.md) einzeln aufgefuehrt. **Vor Abarbeitung der schwerwiegenden Befunde entsteht kein Code fuer M0.2 bis M0.4** — S3 und S4 sind so nicht baubar, S6 macht das Abbruchkriterium von M0 unmessbar.
 
 Verbindliche Grundlagen: [ADR-002](../adr/ADR-002-ereignisprotokoll-statt-lockfile.md), [02-ZIELBILD.md](../02-ZIELBILD.md) Abschnitt „Speichermodell", [03-MEILENSTEINE.md](../03-MEILENSTEINE.md) Auflagen 4 bis 18. Belege für das SMB-Verhalten: `docs/v2-arbeitsstand/bestandsaufnahme/nas-speicher-recherche.md` §1 und §4.
 
