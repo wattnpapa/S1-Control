@@ -1,6 +1,6 @@
 # KONZEPT-SPEICHER — Ereignisprotokoll auf dem Share
 
-Stand: 2026-09-08 · Paket M0.1 · Status: **wartet auf Freigabe durch Johannes** — unabhängig geprüft (Urteil „hält mit Auflagen"), Befunde überarbeitet. Die sechs schwerwiegenden Befunde aus [GUTACHTEN-SPEICHER-01.md](GUTACHTEN-SPEICHER-01.md) sind geschlossen; wie jeder einzelne Befund behandelt wurde, ist dort vermerkt. **Code für M0.2 bis M0.4 entsteht erst nach der Freigabe.**
+Stand: 2026-09-08 · Paket M0.1 · Status: **freigegeben** (Johannes am 2026-09-08) — zweimal unabhängig geprüft, alle Befunde aus [GUTACHTEN-SPEICHER-01.md](GUTACHTEN-SPEICHER-01.md) und [GUTACHTEN-SPEICHER-02.md](GUTACHTEN-SPEICHER-02.md) sind geschlossen; die Behandlung ist dort je Befund vermerkt. Damit ist dieses Dokument die verbindliche Bauvorlage für M0.2 bis M0.4. Offen bleiben allein die Messannahmen A7, A9 und A10 (§10), die M0.5 entscheidet — keine davon blockiert den Bau.
 
 Verbindliche Grundlagen: [ADR-002](../adr/ADR-002-ereignisprotokoll-statt-lockfile.md), [02-ZIELBILD.md](../02-ZIELBILD.md) Abschnitt „Speichermodell", [03-MEILENSTEINE.md](../03-MEILENSTEINE.md) Auflagen 4 bis 18. Belege für das SMB-Verhalten: `docs/v2-arbeitsstand/bestandsaufnahme/nas-speicher-recherche.md` §1 und §4.
 
