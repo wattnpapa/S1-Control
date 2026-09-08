@@ -121,34 +121,69 @@ describe("Spiegelung nach §5.4", () => {
 });
 
 describe("Präfix-Invariante aus §5.4.1", () => {
-  it("hält über beliebig verschränkte Schreib- und Spiegelungsläufe", async () => {
+  it("hält über beliebig verschränkte Schreib-, Bruchstück-, Neustart- und Spiegelungsläufe", async () => {
+    // Zwei Schritte machen diese Eigenschaft erst zu einer: „bruchstueck" legt
+    // eine halb geschriebene Zeile ans lokale Dateiende — der Kill mitten im
+    // Append —, und „neustart" kürzt sie nach §8.1 wieder weg. Solange nur
+    // vollständige Zeilen entstehen, ist jede Spiegelung trivial ein Präfix;
+    // erst diese beiden zusammen erzeugen den Gegenfall aus §5.4.1: Ein Lauf
+    // nimmt eine gerade entstehende Zeile mit, der Rechner stürzt ab, die
+    // lokale Datei wird gekürzt — und die Share-Datei wäre **länger** als die
+    // lokale. Der Vergleich fände dann fremde Bytes an einer Stelle, an der es
+    // lokal keine gibt, und meldete dem Bediener nach einem gewöhnlichen
+    // Absturz, sein Benutzerprofil sei kopiert worden.
     await fc.assert(
       fc.asyncProperty(
-        fc.array(fc.oneof(fc.constant("schreiben"), fc.constant("spiegeln")), {
-          minLength: 4,
-          maxLength: 24,
-        }),
+        fc.array(
+          fc.oneof(
+            fc.constant("schreiben"),
+            fc.constant("schreiben"),
+            fc.constant("spiegeln"),
+            fc.constant("bruchstueck"),
+            fc.constant("neustart"),
+          ),
+          { minLength: 6, maxLength: 24 },
+        ),
         async (plan) => {
           await using platz = await arbeitsplatz();
           await legeEinsatzAn(platz, EINSATZ);
-          const schreiber = await platz.oeffne("9f3c1a20", 500);
-          const spiegelung = spiegelungFuer(platz, schreiber, EINSATZ);
-          for (const schritt of plan) {
-            if (schritt === "schreiben") {
-              platz.uhr.weiter(2);
-              await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "y".repeat(60) } });
-            } else {
-              const ergebnis = await spiegelung.lauf();
-              // Weder Ausgang B noch C dürfen im Normalbetrieb auftreten.
-              expect(ergebnis.art).toBe("uebertragen");
-            }
+          let schreiber = await platz.oeffne("9f3c1a20", 500);
+          let spiegelung = spiegelungFuer(platz, schreiber, EINSATZ);
+          let bruchstueckOffen = false;
+
+          const pruefeInvariante = async () => {
             for (const name of await platz.dateisystem.listeVerzeichnis(platz.ablage.lokalEreignisse)) {
               expect(await shareIstPraefixVonLokal(platz, name), name).toBe(true);
             }
+          };
+
+          for (const schritt of plan) {
+            if (schritt === "schreiben" && !bruchstueckOffen) {
+              platz.uhr.weiter(2);
+              await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "y".repeat(60) } });
+            } else if (schritt === "bruchstueck" && !bruchstueckOffen) {
+              await platz.dateisystem.haengeAnUndSynchronisiere(
+                platz.ablage.lokalSegment("9f3c1a20", schreiber.segment),
+                kodierer.encode('742\tcafebabe\t{"id":"9f3c1a20:'),
+              );
+              bruchstueckOffen = true;
+            } else if (schritt === "neustart") {
+              // §8.1: Der Schreiber kürzt sein eigenes letztes Segment auf die
+              // letzte vollständige, kettenrichtige Zeile.
+              schreiber = await platz.oeffne("9f3c1a20", 500);
+              spiegelung = spiegelungFuer(platz, schreiber, EINSATZ, spiegelung.zustand);
+              bruchstueckOffen = false;
+            } else if (schritt === "spiegeln") {
+              const ergebnis = await spiegelung.lauf();
+              // Weder Ausgang B noch C dürfen hier auftreten — ein Bruchstück
+              // am lokalen Ende und ein Neustart sind Normalbetrieb.
+              expect(ergebnis.art).toBe("uebertragen");
+            }
+            await pruefeInvariante();
           }
         },
       ),
-      { numRuns: 12 },
+      { numRuns: 40 },
     );
   });
 
