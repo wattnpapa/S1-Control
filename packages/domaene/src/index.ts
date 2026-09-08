@@ -37,6 +37,69 @@ export {
   type Wanduhr,
 } from "./hlc.js";
 
+// Ereignisrahmen (§2.4, §2.5, §3.3) und die fuenf Ereignisarten des Minimalfolds.
+export {
+  ABSCHNITTSTYPEN,
+  EINHEIT_STATUS,
+  EINSATZ_ARTEN,
+  ERSTE_LAUFNUMMER,
+  ORGANISATIONEN,
+  PERSONAL_ERFASSUNGEN,
+  SCHEMA_VERSION,
+  SCHICHTEN,
+  SCHICHTMODELLE,
+  TAKTISCHE_EBENEN,
+  ereignisId,
+  istBekannteArt,
+  naechsteLaufnummer,
+  staerkeGleich,
+  staerkeSumme,
+  zerlegeEreignisId,
+  type AbschnittAngelegt,
+  type Abschnittstyp,
+  type Akteur,
+  type EingehendesEreignis,
+  type EinheitGemeldet,
+  type EinheitStatus,
+  type EinheitVerschoben,
+  type EinsatzAngelegt,
+  type EinsatzArt,
+  type Ereignis,
+  type EreignisId,
+  type FremdesEreignis,
+  type Organisation,
+  type PersonalErfassung,
+  type Rahmen,
+  type RahmenAngaben,
+  type Schicht,
+  type Schichtmodell,
+  type Staerke,
+  type StaerkeGeaendert,
+  type TaktischeEbene,
+} from "./ereignis.js";
+
+// Kanonische Serialisierung und zustandsHash (§7.6).
+export {
+  kanonischeSerialisierung,
+  zustandsHash,
+  type KanonischerWert,
+  type Sha256Hex,
+} from "./kanonisch.js";
+
+// Der materialisierte Zustand mit Feld-HLC (§7.4).
+export {
+  AUFFANG_ABSCHNITT_ID,
+  FOLD_VERSION,
+  type AbschnittZustand,
+  type EinheitZustand,
+  type EinsatzZustand,
+  type Feld,
+  type Konflikthinweis,
+  type UnbekanntesEreignis,
+  type Zustand,
+} from "./zustand.js";
+
+
 /** Ordnername eines Einsatzes auf dem Share: `<datum>_<slug>_<kurzid>`. */
 export interface Einsatzkennung {
   /** Sprechender, dateisystemtauglicher Namensteil. */
