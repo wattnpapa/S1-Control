@@ -18,6 +18,8 @@ Wie ein Einsatz als Append-only-Ereignisprotokoll auf einem SMB-Share liegt, wie
 
 Der **Ereigniskatalog** — welche Ereignisarten es gibt, welche Nutzlast sie tragen, welche Konfliktregel je Art gilt, wie der Fold die Felder materialisiert — gehört in `KONZEPT-EREIGNISSE.md` (Paket M1.2, Quelle: `docs/v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §4). Dieses Dokument behandelt Ereignisse als undurchsichtige Nutzlast mit einem festen Rahmen (§2.4). Wo eine Auflage aus 03-MEILENSTEINE.md fachlich in den Fold gehört (Auflagen 10, 11, 12), ist hier nur die **Anforderung an die Speicherschicht** notiert; die fachliche Regel steht im Ereigniskonzept. §9 hält diese Zuordnung nach.
 
+Bei Auflage 11 ist die Abgrenzung nicht so glatt wie bei 10 und 12: Der „Undo-Stapel je Client" ist keine reine Fold-Frage, sondern hat eine Speicherseite — er muss einen Neustart überstehen, und es muss feststehen, wo er liegt. Sie ist in §4.4 behandelt. Die Semantik des Undo bleibt im Ereigniskonzept.
+
 ### §1.3 Die drei tragenden Sätze
 
 1. **Ein Schreiber je Datei.** Kein Client verändert jemals eine Datei, die ein anderer Client geschrieben hat — keine Sperre, kein Master, keine TTL, kein Ersetzen per Rename im Datenpfad. Damit trifft keine der belegten SMB-Schwächen den Schreibpfad: Mandatory Byte-Range-Locks, Oplock- und Lease-Breaks, die Metadaten-Caches des Windows-Redirectors und die nicht-atomare Übernahme veralteter Sperrdateien treffen ausschließlich Modelle, in denen mehrere Clients dieselbe Datei schreiben oder ersetzen (`nas-speicher-recherche.md` §1.2 bis §1.4).
@@ -246,6 +248,8 @@ Liegt ausschließlich lokal, nie auf dem Share:
 ```
 
 Geschrieben wird lokal per Schreiben in eine `.tmp`-Datei plus Rename — auf einem lokalen Dateisystem ist das der übliche, atomare Weg. Auf dem Share ist Rename im Datenpfad verboten (§1.3); lokal gilt dieses Verbot nicht.
+
+**Der Undo-Stapel steht nicht hier — er ist abgeleitet.** Auflage 11 verlangt einen Undo-Stapel je Client. Für die Speicherschicht stellt sich dabei nur die Frage, wo er liegt und ob er einen Neustart übersteht. Antwort: Er liegt nirgends. Er wird beim Öffnen des Einsatzes aus dem lokalen Spiegel berechnet — die eigenen Ereignisse in HLC-Ordnung, abzüglich derer, zu denen bereits ein eigenes Ereignis mit passendem `undoOf` vorliegt, begrenzt auf die jüngsten N. Damit übersteht er jeden Neustart, ohne dass eine eigene Datei ihn tragen müsste, und er kann nicht von den Ereignissen abweichen. Eine gespeicherte Liste könnte das: Sie wäre ein Zustand, der sich nicht allein aus den Ereignissen ergibt, und liefe §1.3 Satz 3 zuwider. N und die Frage, welche Ereignisarten überhaupt rücknehmbar sind, gehören ins Ereigniskonzept.
 
 ### §4.5 Fremdschreiber-Erkennung
 
@@ -679,21 +683,36 @@ Zwei Klassen, verbindlich:
 
 ---
 
-## §9 Nachweis der Auflagen 4 bis 14
+## §9 Nachweis der Auflagen 4 bis 18
+
+Die Kopfzeile nennt die Auflagen 4 bis 18 als Grundlage; deshalb sind sie hier alle geführt. Die Auflagen 15 bis 18 sind Abnahmeauflagen für M0 — sie werden nicht in diesem Dokument erfüllt, sondern in M0.4 bis M0.6. Was die Speicherschicht dafür bereitstellen muss, steht trotzdem hier, sonst fehlte den Prüfungen das Messmittel.
 
 | Auflage (03-MEILENSTEINE.md) | Wo behandelt | Anmerkung |
 |---|---|---|
-| 4 · Fold als Mengenfunktion mit Rebase; HLC je materialisiertem Feld; Schnappschüsse tragen `foldVersion` | §7.2, §7.3, §7.4 | Speicherseite vollständig hier. Der Fold selbst gehört in `KONZEPT-EREIGNISSE.md` (M1.2) |
-| 5 · HLC als Struktur vergleichen; Textform fester Stellenzahl | §3.2 | 13 + 6 Stellen, Vergleich als Struktur, Delta-Grenze 5 min |
+| 4 · Fold als Mengenfunktion mit Rebase; HLC je materialisiertem Feld; Schnappschüsse tragen `foldVersion` | §7.2 bis §7.6 | Speicherseite: Schnappschussformat, `foldVersion` als harte Schranke, Feld-HLC, kanonische Serialisierung. Angenommen werden nur eigene Schnappschüsse (§7.5). Der Fold selbst gehört in `KONZEPT-EREIGNISSE.md` (M1.2) |
+| 5 · HLC als Struktur vergleichen; Textform fester Stellenzahl | §3.2 | 13 + 6 Stellen, Vergleich als Struktur, Fortschreibungsregel für Erzeugen und Empfangen ausgeschrieben, Rückwärtssprung der eigenen Uhr abgefangen, Delta-Grenze 5 min mit benannter Kausalitätsfolge |
 | 6 · Jedes setzende Ereignis trägt den Vorher-Wert; Abweichung ⇒ Konflikthinweis | §2.4, §2.5 | Speicherseite: `vorher` ist Rahmenfeld und wird unverändert durchgereicht. Auswertung im Fold |
-| 7 · Vorgänger-Hash beim Lesen prüfen; defekte Zeile ⇒ Quarantäne ab Offset, kein Stillstand | §2.3, §8.1, §8.2 | Verbindliche Abgrenzung unvollständig ↔ defekt in §8.2 |
-| 8 · Ereignis-ID mit persistenter, monotoner Laufnummer; Fremdschreiber-Erkennung; Single-Instance-Lock | §3.3, §4.4, §4.5 | Beide Fälle mit Reaktion ausformuliert |
-| 9 · Segmentwechsel nach Größe, nicht bei jedem Start; `mindestClientVersion` als Warnung | §4.2, §8.7 | Startwert 4 MiB, Begründung über Poll-Kosten |
+| 7 · Vorgänger-Hash beim Lesen prüfen; defekte Zeile ⇒ Quarantäne ab Offset, kein Stillstand | §2.1, §2.3, §8.1, §8.2 | Die Abgrenzung unvollständig ↔ defekt besteht aus vier Regeln, in die jede Zeile fällt. `länge` ist durch den CRC und die Obergrenze gedeckt; eine unvollständige Zeile wird nach Fristablauf zum sichtbaren Defekt |
+| 8 · Ereignis-ID mit persistenter, monotoner Laufnummer; Fremdschreiber-Erkennung; Single-Instance-Lock | §3.3, §4.4, §4.5, §5.4.3 | Erkennung über die zuletzt vergebene Laufnummer plus Inhaltsvergleich; damit fällt auch die symmetrische Klon-Lage auf. Im laufenden Betrieb über Ausgang C der Spiegelung, ohne Größenabfrage |
+| 9 · Segmentwechsel nach Größe, nicht bei jedem Start; `mindestClientVersion` als Warnung | §4.2, §8.7 | Startwert 4 MiB, Begründung über Poll-Kosten, Rechenweg korrigiert |
 | 10 · Zyklusregel; relative Stärkeänderung; Auffangregel für aufgelöste Abschnitte | — | **Fachliche Fold-Regeln, gehören nach `KONZEPT-EREIGNISSE.md` (M1.2).** Für die Speicherschicht ohne Anforderung; hier bewusst nicht dupliziert |
-| 11 · Undo als normales Ereignis mit `undoOf`, Stapel je Client, kein Redo | §2.4 | Speicherseite: `undoOf` ist ein Rahmenfeld, es gibt keinen Sonderpfad. Semantik im Ereigniskonzept |
+| 11 · Undo als normales Ereignis mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo | §2.4, §4.4 | Speicherseite: `undoOf` und `korrekturVon` sind Rahmenfelder ohne Sonderpfad; der Undo-Stapel wird aus dem lokalen Spiegel abgeleitet, übersteht damit den Neustart und braucht keine eigene Datei (§4.4). Semantik im Ereigniskonzept |
 | 12 · „Neueste Revision zählt" über HLC; Meldezeit anzeigen und plausibilisieren | §3.1, §3.2 | Trennung technischer und fachlicher Zeit hier festgelegt; die Plausibilisierungsschwelle je Feld im Ereigniskonzept |
-| 13 · Ereignis nach `archiv.marker` hat genau eine Behandlung; Ordnerverschiebung darf keinen Upload ins Leere laufen lassen | §5.7 | Beide Teile ausformuliert; Ereignis wird angenommen und gekennzeichnet, nie verworfen |
+| 13 · Ereignis nach `archiv.marker` hat genau eine Behandlung; Ordnerverschiebung darf keinen Upload ins Leere laufen lassen | §5.7 | Archiviert wird durch das Ereignis `EinsatzArchiviert`; der Marker ist ein abgeleiteter Anzeiger mit festgelegtem Inhalt. Damit ist der HLC-Vergleich ausführbar. Das Ereignis wird angenommen und gekennzeichnet, nie verworfen |
 | 14 · Anspruch „revisionssicher" streichen | §8.6 | Zusicherung und Nicht-Zusicherung getrennt benannt |
+| 15 · Feindliche Dateisystem-Schicht in der Simulation | — (M0.4) | Abnahmeauflage. Speicherseitig sind die zu injizierenden Störungen hier einzeln benannt und damit als Testfall formulierbar: abgeschnittene Zeile (§8.1), defekte Zeile (§8.2), blockierender Aufruf (§8.4), dauerhafter Share-Fehler (§8.9), lokale Schreibstörung (§8.8), Beschädigung und Fremdschreiber (§5.4.3, Ausgänge B und C) |
+| 16 · SMB-Latenzmessung und Gesamtkosten eines Poll-Zyklus bei fünf Clients | — (M0.5) | Abnahmeauflage. Speicherseitig: die Startwerttabelle in §10 benennt je Wert, wogegen kalibriert wird; §6.2 nennt die anzusetzende Dateizahl |
+| 17 · Läufe auf mindestens zwei Betriebssystemen; CI-Jobs auf Windows und macOS/Linux | §6.6 (M0.5, M0.6) | Speicherseite: Verhalten je Betriebssystem und die eine Stelle, an der die Lease-Annahme kippt. Die Läufe selbst sind Abnahme |
+| 18 · Zählbares Abbruchkriterium; Property 1 keine Tautologie | §7.6 (M0.2, M0.4) | Speicherseite vollständig: kanonische Serialisierung, Ruhephase über vier beobachtbare Größen, Vergleich mit mitgeführtem Versionsvektor und drei Ausgängen. Dass Property 1 keine Tautologie über die Sortierfunktion ist, betrifft `@s1/domaene` und wird in M0.2 nachgewiesen |
+
+### Was hier nur teilweise erfüllt ist
+
+Damit die Tabelle nicht mehr behauptet, als der Text hergibt:
+
+- **Auflage 4** ist auf der Speicherseite erfüllt, die Annahme fremder Schnappschüsse aber bewusst **weggelassen** statt abgesichert (§7.5, Annahme A7). Zeigt M0.4, dass der Erstlauf ohne sie zu lang wird, ist die Auflage erst mit der stichprobenartigen Nachfaltung erfüllt.
+- **Auflagen 10, 11 und 12** haben eine fachliche Hälfte, die ausdrücklich nicht hier steht. Erfüllt sind sie erst mit `KONZEPT-EREIGNISSE.md`.
+- **Auflage 13** setzt voraus, dass der Ereigniskatalog das Ereignis `EinsatzArchiviert` führt. Dieses Dokument setzt es voraus (§5.7); geschrieben wird es in M1.2.
+- **Auflagen 15 bis 18** sind Abnahmeauflagen. Hier steht das Messmittel, nicht die Messung. Ein grüner Nachweis entsteht in M0.4 bis M0.6, nicht in diesem Dokument.
 
 ---
 
