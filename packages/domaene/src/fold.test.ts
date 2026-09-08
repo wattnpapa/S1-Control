@@ -84,7 +84,21 @@ describe("Minimalfold — Grundverhalten", () => {
       const zustand = falte(menge);
       expect(zustand.einsatz?.name.wert).toBe("Falscher Name");
       expect(zustand.hinweise).toEqual([
-        { art: "zweiteAnlageVerworfen", feldpfad: "einsatz", verworfen: "aa:1", gilt: "bb:1" },
+        {
+          art: "zweiteAnlageVerworfen",
+          feldpfad: "einsatz",
+          verworfen: "aa:1",
+          gilt: "bb:1",
+          // Der verworfene Inhalt gehoert in den Hinweis, sonst verschwindet er.
+          verworfenerInhalt: {
+            einsatzId: "E",
+            name: "Hochwasser Sued",
+            art: "EINSATZ",
+            fuestName: "FueSt Oldenburg",
+            beginn: "2026-09-08T08:00:00+02:00",
+            schichtmodell: "ZWEI_SCHICHT",
+          },
+        },
       ]);
     }
   });
@@ -295,12 +309,38 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
     const zustand = falte([...grundmenge, verschoben, zweiteAnlage]);
 
     expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("B");
-    expect(zustand.hinweise).toContainEqual({
-      art: "zweiteAnlageVerworfen",
-      feldpfad: "einheit/U1",
-      verworfen: "cc:1",
-      gilt: "aa:4",
+    // Inhaltsgleiche Zweitanlage: nichts ist verloren gegangen, also auch kein
+    // Hinweis. Hinweise sind nach P3 Teil des Zustands und keine Geraeuschquelle.
+    expect(zustand.hinweise).toEqual([]);
+  });
+
+  it("meldet den verworfenen Inhalt einer abweichenden Zweitanlage", () => {
+    // Die zweite Meldung traegt eine real gemeldete Staerke. Sie gilt nicht —
+    // aber sie darf nicht spurlos verschwinden.
+    const zweiteAnlage = einheitGemeldet(hlc(9000, 0, "cc"), 1, {
+      einheitId: "U1",
+      abschnittId: "A",
+      bezeichnung: "1. Bergungsgruppe",
+      organisation: "THW",
+      ebene: "GRUPPE",
+      staerke: staerke(7, 7, 7),
+      personalErfassung: "NUR_STAERKE",
+      status: "IM_EINSATZ",
+      schicht: "TAG",
     });
+
+    const zustand = falte([...grundmenge, zweiteAnlage]);
+
+    expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(0, 1, 8));
+    expect(zustand.hinweise).toContainEqual(
+      expect.objectContaining({
+        art: "zweiteAnlageVerworfen",
+        feldpfad: "einheit/U1",
+        verworfen: "cc:1",
+        gilt: "aa:4",
+        verworfenerInhalt: expect.objectContaining({ staerke: staerke(7, 7, 7) }),
+      }),
+    );
   });
 
   it("eine zweite Abschnittsanlage wird verworfen und gemeldet", () => {
@@ -318,6 +358,7 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
       feldpfad: "abschnitt/A",
       verworfen: "bb:1",
       gilt: "aa:2",
+      verworfenerInhalt: { name: "Umbenannt", abschnittstyp: "ARCHIV", reihenfolge: 99 },
     });
   });
 });
@@ -362,5 +403,132 @@ describe("Der Zustand selbst ist reihenfolgeunabhaengig, nicht erst seine Serial
     // Reihenfolge, obwohl sie konvergent sind.
     expect(Object.keys(rueckwaerts.abschnitte)).toEqual(Object.keys(vorwaerts.abschnitte));
     expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "AUFFANG", "B"]);
+  });
+
+  it("ordnet auch die Schluessel der Einheiten", () => {
+    const zweite = einheitGemeldet(hlc(1004, 0, "aa"), 5, {
+      einheitId: "A1",
+      abschnittId: "B",
+      bezeichnung: "2. Bergungsgruppe",
+      organisation: "THW",
+      ebene: "GRUPPE",
+      staerke: staerke(0, 1, 8),
+      personalErfassung: "NUR_STAERKE",
+      status: "IM_EINSATZ",
+      schicht: "TAG",
+    });
+    const dritte = einheitGemeldet(hlc(1005, 0, "aa"), 6, {
+      einheitId: "M2",
+      abschnittId: "B",
+      bezeichnung: "Fachgruppe",
+      organisation: "THW",
+      ebene: "TRUPP",
+      staerke: staerke(0, 1, 3),
+      personalErfassung: "NUR_STAERKE",
+      status: "IM_EINSATZ",
+      schicht: "TAG",
+    });
+
+    const vorwaerts = falte([...grundmenge, zweite, dritte]);
+    const rueckwaerts = falte([dritte, zweite, ...[...grundmenge].reverse()]);
+
+    expect(Object.keys(vorwaerts.einheiten)).toEqual(["A1", "M2", "U1"]);
+    expect(Object.keys(rueckwaerts.einheiten)).toEqual(Object.keys(vorwaerts.einheiten));
+  });
+});
+
+describe("Die Anlage verdraengt Aenderungen nicht still (Auflage 6, §2.5)", () => {
+  // Der Fall entsteht bei Uhrsprung oder geklontem Profil: Die Anlage traegt
+  // eine hoehere HLC als eine Verschiebung. Sie gewinnt dann das Feld — aber
+  // sie hat den verdraengten Stand nie gesehen, weil `EinheitGemeldet` nach
+  // §4.2 keinen Vorher-Wert traegt.
+  const spaeteAnlage = einheitGemeldet(hlc(9000, 0, "bb"), 1, {
+    einheitId: "U9",
+    abschnittId: "A",
+    bezeichnung: "Fachgruppe",
+    organisation: "THW",
+    ebene: "GRUPPE",
+    staerke: staerke(0, 1, 8),
+    personalErfassung: "NUR_STAERKE",
+    status: "IM_EINSATZ",
+    schicht: "TAG",
+  });
+
+  it("meldet die verdraengte Verschiebung", () => {
+    const frueheVerschiebung = einheitVerschoben(hlc(2000, 0, "cc"), 1, "U9", "A", "B");
+    const zustand = falte([einsatz, abschnittA, abschnittB, spaeteAnlage, frueheVerschiebung]);
+
+    expect(zustand.einheiten["U9"]?.abschnittId.wert).toBe("A");
+    expect(zustand.einheiten["U9"]?.abschnittId.durch).toBe("bb:1");
+    expect(zustand.hinweise).toContainEqual({
+      art: "ohneVorherWertVerdraengt",
+      feldpfad: "einheit/U9/abschnittId",
+      gewinner: "bb:1",
+      verdraengt: "cc:1",
+      verdraengterWert: "B",
+    });
+  });
+
+  it("meldet die verdraengte Staerkemeldung", () => {
+    const frueheStaerke = staerkeGeaendert(hlc(2000, 0, "cc"), 1, "U9", staerke(0, 1, 8), staerke(3, 3, 3));
+    const zustand = falte([einsatz, abschnittA, spaeteAnlage, frueheStaerke]);
+
+    expect(zustand.einheiten["U9"]?.staerke.wert).toEqual(staerke(0, 1, 8));
+    expect(zustand.hinweise).toContainEqual({
+      art: "ohneVorherWertVerdraengt",
+      feldpfad: "einheit/U9/staerke",
+      gewinner: "bb:1",
+      verdraengt: "cc:1",
+      verdraengterWert: staerke(3, 3, 3),
+    });
+  });
+
+  it("meldet nichts, wenn die Anlage denselben Wert setzt wie die verdraengte Aenderung", () => {
+    const zurueck = einheitVerschoben(hlc(2000, 0, "cc"), 1, "U9", "B", "A");
+    const zustand = falte([einsatz, abschnittA, abschnittB, spaeteAnlage, zurueck]);
+
+    expect(zustand.hinweise).toEqual([]);
+  });
+
+  it("meldet nichts im Normalfall, in dem die Anlage die kleinste HLC hat", () => {
+    const spaeteVerschiebung = einheitVerschoben(hlc(9500, 0, "cc"), 1, "U1", "A", "B");
+    const zustand = falte([...grundmenge, spaeteVerschiebung]);
+
+    expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("B");
+    expect(zustand.hinweise).toEqual([]);
+  });
+});
+
+describe("Nutzlast-Ids koennen die Datensammlungen nicht kapern", () => {
+  it("behandelt __proto__ als gewoehnliche Id", () => {
+    // Ohne prototyplose Sammlungen waere `sammlung["__proto__"] = wert` kein
+    // Eintrag, sondern ein Aufruf des Prototyp-Setzers: Abschnitt und Einheit
+    // verschwaenden spurlos, und P5 waere trivial erfuellt.
+    const boeserAbschnitt = abschnittAngelegt(hlc(2000, 0, "bb"), 1, {
+      abschnittId: "__proto__",
+      name: "Heikel",
+      abschnittstyp: "EINSATZORT",
+      reihenfolge: 7,
+    });
+    const boeseEinheit = einheitGemeldet(hlc(2001, 0, "bb"), 2, {
+      einheitId: "__proto__",
+      abschnittId: "__proto__",
+      bezeichnung: "Heikel",
+      organisation: "THW",
+      ebene: "GRUPPE",
+      staerke: staerke(0, 1, 8),
+      personalErfassung: "NUR_STAERKE",
+      status: "IM_EINSATZ",
+      schicht: "TAG",
+    });
+
+    const zustand = falte([einsatz, boeserAbschnitt, boeseEinheit]);
+
+    expect(Object.keys(zustand.abschnitte)).toContain("__proto__");
+    expect(Object.keys(zustand.einheiten)).toContain("__proto__");
+    expect(zustand.einheiten["__proto__"]?.wirksamerAbschnittId).toBe("__proto__");
+    expect(zustand.hinweise).toEqual([]);
+    expect(Object.getPrototypeOf(zustand.abschnitte)).toBeNull();
+    expect(Object.getPrototypeOf(zustand.einheiten)).toBeNull();
   });
 });

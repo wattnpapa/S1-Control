@@ -136,12 +136,35 @@ export type Konflikthinweis =
       readonly gesehenerVorher: KanonischerWert;
       readonly verdraengterWert: KanonischerWert;
     }
-  /** Eine zweite Anlage derselben Entitaet wurde verworfen (Ereigniskatalog §4.2). */
+  /**
+   * Der Gewinner eines Feldes hat gar keinen Vorher-Wert mitgefuehrt und
+   * verdraengt trotzdem eine Aenderung — er kann sie nicht gesehen haben.
+   *
+   * Das ist im Minimalset die Anlage: `EinheitGemeldet` traegt nach §4.2
+   * keinen Vorher-Wert. Liegt ihre HLC ueber der einer Verschiebung oder
+   * Staerkemeldung, verwirft sie fremde Arbeit — und §2.5 verlangt, dass das
+   * nicht still geschieht.
+   */
+  | {
+      readonly art: "ohneVorherWertVerdraengt";
+      readonly feldpfad: string;
+      readonly gewinner: EreignisId;
+      readonly verdraengt: EreignisId;
+      readonly verdraengterWert: KanonischerWert;
+    }
+  /**
+   * Eine zweite Anlage derselben Entitaet wurde verworfen (Ereigniskatalog §4.2).
+   *
+   * Der verworfene Inhalt gehoert in den Hinweis: Eine zweite `EinheitGemeldet`
+   * kann eine real gemeldete Staerke tragen, und die verschwaende sonst
+   * spurlos aus dem Zustand.
+   */
   | {
       readonly art: "zweiteAnlageVerworfen";
       readonly feldpfad: string;
       readonly verworfen: EreignisId;
       readonly gilt: EreignisId;
+      readonly verworfenerInhalt: KanonischerWert;
     }
   /** Eine Anlage wollte die fuer den Auffang reservierte Id belegen; sie wurde verworfen. */
   | {

@@ -26,9 +26,11 @@
  *     sortiert wird, ist P1 eine echte Aussage ueber die Aufnahmeoperation.
  *     `eigenschaften.test.ts` fuehrt dazu die Gegenprobe.
  *
- * Sortiert wird an genau einer Stelle: bei der Ausgabe der Konflikthinweise
- * in {@link materialisiere}. Das ist eine Darstellungsreihenfolge einer
- * bereits feststehenden Menge, keine Entscheidung des Folds.
+ * Sortiert wird ausschliesslich in {@link materialisiere}, und dort nur zur
+ * Ausgabe bereits feststehender Mengen: die Schluessel der Datensammlungen,
+ * die Konflikthinweise, die Liste der unbekannten Ereignisse und die Ids
+ * innerhalb eines Hinweises. Keine dieser Sortierungen entscheidet einen
+ * Konflikt, und keine sieht je die Ereignismenge.
  */
 
 import type {
@@ -137,10 +139,21 @@ function nimmBeobachtung<T>(stand: FeldStand<T> | undefined, neu: Beobachtung<T>
  * heisst, dass eine zweite Anlage derselben Id gar nicht vorkommen sollte;
  * kommt sie doch, darf sie die spaetere Arbeit an dieser Entitaet nicht
  * ueberschreiben. Deshalb dieselbe Regel fuer alle drei Anlagen.
+ *
+ * **Zwei Folgen, die zu M0.2 gehoeren und benannt sein wollen.** Erstens
+ * verliert eine abweichende Zweitanlage ihre Werte — deshalb traegt der
+ * Hinweis `zweiteAnlageVerworfen` den verworfenen Inhalt mit. Zweitens sind
+ * die Stammfelder einer Einheit (`bezeichnung`, `organisation`, `ebene`,
+ * `status`, `schicht`, `personalErfassung`) im Minimalset damit nach der
+ * ersten Anlage nicht mehr aenderbar: Die Ereignisarten, die sie aendern
+ * duerften — `EinheitStammdatenGeaendert`, `StatusGesetzt`, `SchichtGesetzt`
+ * — gehoeren zum Katalog von M1.2, nicht zu den fuenf Arten von M0.2. Das ist
+ * eine Luecke des Minimalsets, keine der Regel.
  */
 interface AnlageStand<T> {
   readonly gewinner: Beobachtung<T>;
-  readonly verworfen: ReadonlyMap<EreignisId, true>;
+  /** Verworfene Anlagen mit ihrem Inhalt — der gehoert in den Hinweis, sonst geht er verloren. */
+  readonly verworfen: ReadonlyMap<EreignisId, T>;
 }
 
 function nimmAnlage<T>(stand: AnlageStand<T> | undefined, neu: Beobachtung<T>): AnlageStand<T> {
@@ -152,10 +165,10 @@ function nimmAnlage<T>(stand: AnlageStand<T> | undefined, neu: Beobachtung<T>): 
   const verworfen = new Map(stand.verworfen);
   if (gegenGewinner < 0) {
     // Die kleinere HLC uebernimmt, auch wenn sie spaeter eintrifft.
-    verworfen.set(stand.gewinner.ereignisId, true);
+    verworfen.set(stand.gewinner.ereignisId, stand.gewinner.neu);
     return { gewinner: neu, verworfen };
   }
-  verworfen.set(neu.ereignisId, true);
+  verworfen.set(neu.ereignisId, neu.neu);
   return { gewinner: stand.gewinner, verworfen };
 }
 
@@ -437,7 +450,24 @@ function feldOptional<T>(beobachtung: Beobachtung<unknown>, wert: T | undefined)
  */
 function vorherHinweis<T>(stand: FeldStand<T>, feldpfad: string): Konflikthinweis | undefined {
   const { gewinner, zweiter } = stand;
-  if (gewinner.vorher === undefined || zweiter === undefined) return undefined;
+  if (zweiter === undefined) return undefined; // nichts, was dem Gewinner widerspraeche
+
+  if (gewinner.vorher === undefined) {
+    // Der Gewinner hat keinen Vorher-Wert mitgefuehrt — im Minimalset ist das
+    // die Anlage — und verdraengt trotzdem eine Aenderung. Er kann sie nicht
+    // gesehen haben; ohne Hinweis waere das genau das stille Verwerfen, das
+    // §2.5 ausschliesst.
+    return wertGleich(gewinner.neu, zweiter.neu)
+      ? undefined
+      : {
+          art: "ohneVorherWertVerdraengt",
+          feldpfad,
+          gewinner: gewinner.ereignisId,
+          verdraengt: zweiter.ereignisId,
+          verdraengterWert: zweiter.neu as KanonischerWert,
+        };
+  }
+
   if (wertGleich(gewinner.vorher, zweiter.neu)) return undefined;
   return {
     art: "vorherPasstNicht",
@@ -463,8 +493,9 @@ function idsAus(...staende: ReadonlyArray<FeldStand<unknown> | undefined>): Erei
  * Der systemseitige Auffangabschnitt (Auflage 10).
  *
  * Er entsteht ohne Ereignis; deshalb traegt er weder eine echte Feld-HLC noch
- * eine Ereignis-Id. Die Platzhalter-HLC ist die kleinstmoegliche und kann
- * damit nie eine echte Entscheidung verdraengen.
+ * eine Ereignis-Id. Die Platzhalter-HLC steht nur in seinen drei Feldern und
+ * wird nirgends verglichen — der Auffang nimmt an keinem Konflikt teil, weil
+ * kein Ereignis ihn setzen kann (die Id ist reserviert).
  */
 const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" };
 
@@ -479,6 +510,26 @@ const AUFFANG: AbschnittZustand = {
 /** Schluessel in Codepoint-Ordnung — §7.6 ordnet so, und der Zustand soll es auch tun. */
 function sortierteSchluessel<T>(quelle: ReadonlyMap<string, T>): string[] {
   return [...quelle.keys()].sort(vergleicheNachCodepunkt);
+}
+
+/**
+ * Baut aus einer Map die Datensammlung des Zustands: Schluessel in
+ * Codepoint-Ordnung, **ohne Prototyp**.
+ *
+ * Der fehlende Prototyp ist kein Feinschliff. Eine Abschnitts- oder
+ * Einheiten-Id ist eine Nutzlast aus einer fremden Datei; heisst sie
+ * `__proto__`, waere `sammlung[id] = wert` an einem gewoehnlichen Objekt kein
+ * Eintrag, sondern ein Aufruf des Prototyp-Setzers. Der Abschnitt verschwaende
+ * spurlos, die Einheit ebenso — und P5 waere trivial erfuellt, weil es die
+ * Einheit gar nicht mehr gaebe. `@s1/domaene` prueft die Ids in M0.2 noch
+ * nicht (zod-Schemata sind M1.2); bis dahin traegt diese Zeile die Last.
+ */
+function alsDatensammlung<T>(quelle: ReadonlyMap<string, T>): { readonly [id: string]: T } {
+  const sammlung = Object.create(null) as Record<string, T>;
+  for (const id of sortierteSchluessel(quelle)) {
+    sammlung[id] = quelle.get(id) as T;
+  }
+  return sammlung;
 }
 
 /**
@@ -512,12 +563,14 @@ export function materialisiere(faltung: Faltung): Zustand {
       beginn: feld(anlage, anlage.neu.beginn),
       schichtmodell: feld(anlage, anlage.neu.schichtmodell),
     };
-    for (const verworfen of einsatzAnlage.verworfen.keys()) {
+    for (const [verworfen, inhalt] of einsatzAnlage.verworfen) {
+      if (wertGleich(inhalt, anlage.neu)) continue; // inhaltsgleich: nichts verloren, kein Hinweis
       hinweise.push({
         art: "zweiteAnlageVerworfen",
         feldpfad: "einsatz",
         verworfen,
         gilt: anlage.ereignisId,
+        verworfenerInhalt: inhalt as unknown as KanonischerWert,
       });
     }
   }
@@ -536,21 +589,20 @@ export function materialisiere(faltung: Faltung): Zustand {
       parentId: feldOptional(g, g.neu.parentId),
       reihenfolge: feld(g, g.neu.reihenfolge),
     });
-    for (const verworfen of stand.verworfen.keys()) {
+    for (const [verworfen, inhalt] of stand.verworfen) {
+      if (wertGleich(inhalt, g.neu)) continue;
       hinweise.push({
         art: "zweiteAnlageVerworfen",
         feldpfad: `abschnitt/${id}`,
         verworfen,
         gilt: g.ereignisId,
+        verworfenerInhalt: inhalt as unknown as KanonischerWert,
       });
     }
   }
-  const abschnitte: Record<string, AbschnittZustand> = {};
-  for (const id of sortierteSchluessel(gebaut)) {
-    abschnitte[id] = gebaut.get(id) as AbschnittZustand;
-  }
+  const abschnitte = alsDatensammlung(gebaut);
 
-  const einheiten: Record<string, EinheitZustand> = {};
+  const gebauteEinheiten = new Map<string, EinheitZustand>();
   for (const id of sortierteSchluessel(faltung.einheiten)) {
     const faltungDerEinheit = faltung.einheiten.get(id) as EinheitFaltung;
     const { anlage, verschiebungen, staerkemeldungen } = faltungDerEinheit;
@@ -592,7 +644,7 @@ export function materialisiere(faltung: Faltung): Zustand {
       });
     }
 
-    einheiten[id] = {
+    gebauteEinheiten.set(id, {
       id,
       abschnittId: feld(abschnittStand.gewinner, gewaehlt),
       wirksamerAbschnittId: existiert ? gewaehlt : AUFFANG_ABSCHNITT_ID,
@@ -604,14 +656,16 @@ export function materialisiere(faltung: Faltung): Zustand {
       personalErfassung: feld(g, g.neu.stamm.personalErfassung),
       status: feld(g, g.neu.stamm.status),
       schicht: feldOptional(g, g.neu.stamm.schicht),
-    };
+    });
 
-    for (const verworfen of anlage.verworfen.keys()) {
+    for (const [verworfen, inhalt] of anlage.verworfen) {
+      if (wertGleich(inhalt, g.neu)) continue;
       hinweise.push({
         art: "zweiteAnlageVerworfen",
         feldpfad: `einheit/${id}`,
         verworfen,
         gilt: g.ereignisId,
+        verworfenerInhalt: inhalt as unknown as KanonischerWert,
       });
     }
 
@@ -632,7 +686,14 @@ export function materialisiere(faltung: Faltung): Zustand {
     vergleicheNachCodepunkt(a.id, b.id),
   );
 
-  return { foldVersion: faltung.foldVersion, einsatz, abschnitte, einheiten, hinweise, unbekannt };
+  return {
+    foldVersion: faltung.foldVersion,
+    einsatz,
+    abschnitte,
+    einheiten: alsDatensammlung(gebauteEinheiten),
+    hinweise,
+    unbekannt,
+  };
 }
 
 /**
