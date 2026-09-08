@@ -73,6 +73,8 @@ export type Defektgrund =
   | "laenge"
   /** Regel 3: genug Bytes, aber an der angekündigten Stelle steht kein `\n`. */
   | "keinZeilenende"
+  /** Regel 3: eines der beiden Trennzeichen ist kein Tabulator (§2.1). */
+  | "trennzeichen"
   /** Regel 4: `crc32` stimmt nicht. */
   | "crc"
   /** Regel 4: das JSON ist nicht parsebar oder kein brauchbarer Rahmen. */
@@ -226,7 +228,7 @@ function pruefeZeile(
   puffer: Uint8Array,
   ab: number,
   absoluterOffset: number,
-  erwarteteKette: string,
+  erwarteteKette: string | undefined,
   identitaeten: Identitaetenblick | undefined,
 ): Zeilenbefund {
   const kopf = leseKopf(puffer, ab);
@@ -247,9 +249,16 @@ function pruefeZeile(
     return { abschluss: { art: "defekt", offset: absoluterOffset, grund: "keinZeilenende" } };
   }
 
-  // Regel 4, erster Teil: `crc32`. Der Trennzeichenprüfung bedarf es nicht
-  // gesondert — steht dort kein Tabulator, verschiebt sich der JSON-Bereich,
-  // und der CRC fällt darauf herein.
+  // Noch zu Regel 3: Das zweite Trennzeichen ist nach §2.1 ein Tabulator, wird
+  // vom CRC aber **nicht** gedeckt — der deckt `<länge> \t <json>`. Weil der
+  // Leser die Felder an festen Stellen liest, fiele ein gekipptes Byte genau
+  // hier sonst durch jede Prüfung. Das widerspräche der Zusage aus §2.3, CRC-32
+  // erkenne Übertragungs- und Speicherfehler, und wird deshalb geprüft.
+  if (puffer[ab + kopf.ziffern] !== TABULATOR || puffer[jsonAb - 1] !== TABULATOR) {
+    return { abschluss: { art: "defekt", offset: absoluterOffset, grund: "trennzeichen" } };
+  }
+
+  // Regel 4, erster Teil: `crc32`.
   const crcFeld = puffer.subarray(ab + kopf.ziffern + 1, ab + kopf.ziffern + 1 + 8);
   const json = puffer.subarray(jsonAb, jsonAb + kopf.laenge);
   const crcQuelle = puffer.subarray(ab, ab + kopf.ziffern);
@@ -273,8 +282,10 @@ function pruefeZeile(
     return { abschluss: { art: "defekt", offset: absoluterOffset, grund: "json" } };
   }
 
-  // Regel 4, dritter Teil: die Hash-Kette (§2.3).
-  if (rahmen.vorgaenger !== erwarteteKette) {
+  // Regel 4, dritter Teil: die Hash-Kette (§2.3). `undefined` heißt: Es gibt
+  // (noch) keinen geprüften Anker, gegen den sich die Kette prüfen ließe —
+  // siehe {@link leseZeilengrenzen}.
+  if (erwarteteKette !== undefined && rahmen.vorgaenger !== erwarteteKette) {
     return { abschluss: { art: "defekt", offset: absoluterOffset, grund: "kette" } };
   }
 
@@ -351,6 +362,35 @@ export function leseAbschnitt(
     const zeile = befund.zeile as GeleseneZeile;
     zeilen.push(zeile);
     kette = zeile.kette;
+    ab += zeile.laenge;
+  }
+}
+
+/**
+ * Liest die Zeilengrenzen eines Abschnitts **ohne** Kettenprüfung.
+ *
+ * Nur für den einen Fall, in dem die Kette noch gar nicht geprüft werden kann:
+ * Der Leser muss den Kettenanker einer neu entdeckten Datei erst bestimmen
+ * (§2.3, Sonderfälle „Folgesegment" und „Ersatzsegment"), und dafür braucht er
+ * die Zeilengrenzen und den Typ der ersten Zeile. Prüfsumme, Längenfeld und
+ * JSON werden dabei vollständig geprüft; allein `vorgaenger` bleibt außen vor.
+ *
+ * Ausdrücklich **nicht** für den Leseweg nach §5.5 — dort ist die Kette Teil
+ * der Prüfung, und eine Abweichung ist ein Defekt nach §8.2.
+ */
+export function leseZeilengrenzen(puffer: Uint8Array, startOffset = 0): Abschnittsergebnis {
+  const zeilen: GeleseneZeile[] = [];
+  let ab = 0;
+  for (;;) {
+    if (ab >= puffer.length) {
+      return { zeilen, endeOffset: startOffset + ab, letzteKette: KETTE_ANFANG, abschluss: { art: "ende" } };
+    }
+    const befund = pruefeZeile(puffer, ab, startOffset + ab, undefined, undefined);
+    if (befund.abschluss !== undefined) {
+      return { zeilen, endeOffset: startOffset + ab, letzteKette: KETTE_ANFANG, abschluss: befund.abschluss };
+    }
+    const zeile = befund.zeile as GeleseneZeile;
+    zeilen.push(zeile);
     ab += zeile.laenge;
   }
 }

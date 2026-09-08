@@ -43,9 +43,15 @@ export function akteur(clientId: string): Akteur {
   return { benutzer: `Bediener ${clientId}`, host: `rechner-${clientId}`, clientId };
 }
 
-/** Eine Einsatzablage mit Share- und Spiegelordner innerhalb einer Spielwiese. */
-export function ablageIn(wiese: Spielwiese): Einsatzablage {
-  return new Einsatzablage(wiese.bei("share", "einsatz"), wiese.bei("lokal", "einsatz"));
+/**
+ * Eine Einsatzablage mit Share- und Spiegelordner innerhalb einer Spielwiese.
+ *
+ * `rechner` trennt die lokalen Spiegel: Jeder Client hält nach §5.1 seine
+ * **eigene** vollständige Kopie unter seinem Anwendungsdatenverzeichnis. Ein
+ * gemeinsamer Spiegel wäre kein Testaufbau, sondern ein anderes Verfahren.
+ */
+export function ablageIn(wiese: Spielwiese, rechner = "rechner-1"): Einsatzablage {
+  return new Einsatzablage(wiese.bei("share", "einsatz"), wiese.bei(rechner, "einsatz"));
 }
 
 export interface Arbeitsplatz extends AsyncDisposable {
@@ -55,14 +61,29 @@ export interface Arbeitsplatz extends AsyncDisposable {
   readonly dateisystem: Dateisystem;
   /** Öffnet einen Schreiber auf dieser Ablage — beliebig oft, für „Neustart". */
   oeffne(clientId: string, segmentgroesse?: number): Promise<Schreiber>;
+  /**
+   * Ein zweiter Rechner am **selben Share** mit **eigenem** lokalem Spiegel
+   * (§5.1) und derselben Uhr, damit die Reihenfolge der Ereignisse im Test
+   * bestimmt bleibt.
+   */
+  andererRechner(name: string): Arbeitsplatz;
 }
 
 /** Baut eine Spielwiese mit Ablage, Standuhr und einem echten Dateisystem. */
 export async function arbeitsplatz(dateisystem?: Dateisystem): Promise<Arbeitsplatz> {
   const wiese = await spielwiese();
   const fs = dateisystem ?? knotenDateisystem();
-  const ablage = ablageIn(wiese);
   const uhr = new Standuhr();
+  return baueArbeitsplatz(wiese, fs, uhr, "rechner-1");
+}
+
+function baueArbeitsplatz(
+  wiese: Spielwiese,
+  fs: Dateisystem,
+  uhr: Standuhr,
+  rechner: string,
+): Arbeitsplatz {
+  const ablage = ablageIn(wiese, rechner);
   return {
     wiese,
     ablage,
@@ -79,6 +100,7 @@ export async function arbeitsplatz(dateisystem?: Dateisystem): Promise<Arbeitspl
         ...(segmentgroesse === undefined ? {} : { segmentgroesse }),
         warte: async () => undefined,
       }),
+    andererRechner: (name) => baueArbeitsplatz(wiese, fs, uhr, name),
     async [Symbol.asyncDispose]() {
       await wiese[Symbol.asyncDispose]();
     },

@@ -182,7 +182,7 @@ describe("Neustart mitten im Segment (DoD)", () => {
     await platz.dateisystem.loesche(platz.ablage.lokalSegment("9f3c1a20", 1));
     const altes = await liesSegment(platz.dateisystem, platz.ablage.lokalSegment("9f3c1a20", 0), 0, KETTE_ANFANG);
     await platz.wiese.schreibe(
-      "lokal/einsatz/schreiber.json",
+      "rechner-1/einsatz/schreiber.json",
       JSON.stringify({
         ...erster.zustand,
         segment: segmentInDatei,
@@ -214,7 +214,7 @@ describe("Neustart mitten im Segment (DoD)", () => {
       if (inhalt === undefined) {
         await platz.dateisystem.loesche(platz.ablage.schreiberDatei);
       } else {
-        await platz.wiese.schreibe("lokal/einsatz/schreiber.json", inhalt);
+        await platz.wiese.schreibe("rechner-1/einsatz/schreiber.json", inhalt);
       }
 
       const zweiter = await platz.oeffne("9f3c1a20");
@@ -240,7 +240,7 @@ describe("Neustart mitten im Segment (DoD)", () => {
       alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
     }
     await platz.wiese.schreibe(
-      "lokal/einsatz/schreiber.json",
+      "rechner-1/einsatz/schreiber.json",
       JSON.stringify({ ...erster.zustand, laufnummer: 1 }),
     );
     const zweiter = await platz.oeffne("9f3c1a20");
@@ -257,9 +257,9 @@ describe("Neustart mitten im Segment (DoD)", () => {
     platz.uhr.weiter(1);
     alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet" }));
 
-    const roh = await platz.wiese.lies("lokal/einsatz/ereignisse/9f3c1a20.0000.jsonl");
+    const roh = await platz.wiese.lies("rechner-1/einsatz/ereignisse/9f3c1a20.0000.jsonl");
     roh[roh.length - 6] = (roh[roh.length - 6] as number) ^ 0x01;
-    await platz.wiese.schreibe("lokal/einsatz/ereignisse/9f3c1a20.0000.jsonl", roh);
+    await platz.wiese.schreibe("rechner-1/einsatz/ereignisse/9f3c1a20.0000.jsonl", roh);
 
     await expect(platz.oeffne("9f3c1a20", 400)).rejects.toBeInstanceOf(LokalerKettenbruch);
   });

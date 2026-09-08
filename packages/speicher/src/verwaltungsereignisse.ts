@@ -62,3 +62,13 @@ export function nachfolgerAus(nutzlast: unknown): number | undefined {
   const wert = (nutzlast as Record<string, unknown>)["nachfolger"];
   return typeof wert === "number" && Number.isInteger(wert) && wert >= 0 ? wert : undefined;
 }
+
+/** Liest das ersetzte Segment und den Offset aus einer `SegmentErsetzt`-Zeile (§4.6, Schritt 2). */
+export function ersatzAus(nutzlast: unknown): ErsatzNutzlast | undefined {
+  if (typeof nutzlast !== "object" || nutzlast === null) return undefined;
+  const objekt = nutzlast as Record<string, unknown>;
+  const ersetztesSegment = objekt["ersetztesSegment"];
+  const abOffset = objekt["abOffset"];
+  if (!Number.isInteger(ersetztesSegment) || !Number.isInteger(abOffset)) return undefined;
+  return { ersetztesSegment: ersetztesSegment as number, abOffset: abOffset as number };
+}

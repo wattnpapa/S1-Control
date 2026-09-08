@@ -150,6 +150,17 @@ export {
 } from "./spiegelung.js";
 export { vergleicheSpiegel, type VergleichEingabe, type Vergleichsausgang } from "./spiegelvergleich.js";
 
+// Der Tail-Leser §5.5 mit Quarantaene §8.1/§8.2 und den zwei Takten §6.2.
+export {
+  Leser,
+  type LeserOptionen,
+  type Pollergebnis,
+  type Quarantaenemeldung,
+  type Takt,
+} from "./leser.js";
+export { leseZeilengrenzen } from "./zeile.js";
+export { ersatzAus } from "./verwaltungsereignisse.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",

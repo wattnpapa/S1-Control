@@ -243,3 +243,30 @@ describe("§4.6 — „gleicher Inhalt\" heißt: Rahmen ohne vorgaenger", () => 
     expect(ergebnis.abschluss).toEqual({ art: "defekt", offset: 0, grund: "identitaetAnders" });
   });
 });
+
+describe("§2.1 — die Trennzeichen sind Tabulatoren", () => {
+  it("erkennt ein gekipptes Trennzeichen, obwohl der CRC es nicht deckt", () => {
+    // Der CRC deckt `<länge> \t <json>`; das Trennzeichen zwischen crc32 und
+    // json liegt ausserhalb. Weil der Leser an festen Stellen liest, fiele ein
+    // gekipptes Byte dort sonst durch jede Prüfung — und §2.3 sagt zu, CRC-32
+    // erkenne Übertragungs- und Speicherfehler.
+    const zeile = baueZeile(rahmen("c1:1", KETTE_ANFANG));
+    const text = new TextDecoder().decode(zeile);
+    const ziffern = (/^(\d+)\t/.exec(text) as RegExpExecArray)[1]?.length as number;
+
+    // Das erste Trennzeichen fällt schon in Regel 1: Ohne Tabulator ist das
+    // Längenfeld keine Dezimalzahl mehr.
+    const erstes = zeile.slice();
+    erstes[ziffern] = 0x20;
+    expect(leseAbschnitt(erstes, 0).abschluss).toEqual({ art: "defekt", offset: 0, grund: "laenge" });
+
+    // Das zweite liegt hinter dem CRC-Bereich und braucht die eigene Prüfung.
+    const zweites = zeile.slice();
+    zweites[ziffern + 9] = 0x20;
+    expect(leseAbschnitt(zweites, 0).abschluss).toEqual({
+      art: "defekt",
+      offset: 0,
+      grund: "trennzeichen",
+    });
+  });
+});
