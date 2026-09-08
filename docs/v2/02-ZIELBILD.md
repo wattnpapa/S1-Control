@@ -59,7 +59,7 @@ Bewusste Abweichung vom Hybrid-Vorschlag: HLC, Ereigniskatalog und Fold bleiben 
     praesenz\<clientId>.json                 einzige überschriebene Datei, nur die eigene; rein informativ
     anhaenge\                                EEB-Scans u. ä., inhaltsadressiert, unveränderlich
     ausgaben\                                erzeugte Ausdrucke und HTML-Monitor
-    archiv.marker                            Einsatz beendet
+    archiv.marker                            abgeleiteter Anzeiger; Wahrheit ist das Ereignis EinsatzArchiviert
   programm\                                  Update-Ablage; Manifest Ed25519-signiert
   stammdaten\stan-<version>.json
 ```
@@ -77,7 +77,9 @@ Lokal je Client (App-Data): dieselbe Struktur als Spiegel plus `upload-state.jso
 7. **Zeilenformat** `länge \t crc32 \t json` mit fsync je Zeile und Hash-Kette innerhalb der Datei. Der Vorgänger-Hash wird beim Lesen geprüft; eine defekte Zeile in der Dateimitte führt zur Quarantäne ab Offset mit sichtbarem Hinweis, nie zum Stillstand des Lesers. Der Anspruch „revisionssicher" wird nicht erhoben: ganze Segmente sind ohne Erkennung löschbar; erkennbar ist nur eine nachträgliche Änderung innerhalb einer Datei.
 8. **Ereignis-Identität** `<clientId>:<laufnummer>` mit persistenter, monotoner Laufnummer je Client; Fremdschreiber-Erkennung beim Start (geklontes Profil, zwei Instanzen auf einem Rechner); `requestSingleInstanceLock` verbindlich.
 9. **Undo** ist ein normales Ereignis mit `undoOf`, ohne Sonderpfad im Fold; Undo-Stapel je Client; `KorrekturVon` für fachlich falsche Einträge; kein Redo.
-10. **Archivierung** über `archiv.marker`; ein Ereignis nach dem Marker hat genau eine definierte Behandlung; das Verschieben des Ordners darf keinen laufenden Upload ins Leere laufen lassen.
+10. **Archivierung ist ein Ereignis** (`EinsatzArchiviert`), kein Dateizustand. `archiv.marker` bleibt als **abgeleiteter Anzeiger** erhalten, damit die Einsatzliste den Zustand zeigen kann, ohne den Ereignisstrom zu falten; er ist jederzeit aus den Ereignissen neu erzeugbar, und sein Verlust kostet nichts als diesen Komfort. Ein Ereignis mit einer HLC nach der des Archivierungsereignisses hat genau eine definierte Behandlung. Das Verschieben des Ordners darf keinen laufenden Upload ins Leere laufen lassen.
+
+    *Geändert am 2026-09-08 (Johannes).* Die ursprüngliche Fassung machte den Marker zum Zustandsträger. Damit wäre der Archivzustand der einzige gewesen, der sich nicht allein aus den Ereignissen ergibt — im Widerspruch zu „Wahrheit sind die Ereignisse" —, und der Vergleich gegen „die HLC des Markers" hätte keinen definierten Bezugspunkt gehabt. Ausformuliert in [konzepte/KONZEPT-SPEICHER.md](konzepte/KONZEPT-SPEICHER.md) §5.7; die Semantik des Ereignisses gehört in `KONZEPT-EREIGNISSE.md`, wo 05-UMSETZUNGSPLAN.md M1.2 die Barriere `EinsatzArchiviert` bereits vorsieht.
 
 Ereignistypen, Payloads, Konfliktregel je Typ und die Property-Eigenschaften P1 bis P6 für den Fold stehen ausformuliert in `entwurf/zieldatenmodell-feldabgleich.md` §4. Wo die zwölf Regeln K1 bis K12 aus Vorschlag C davon abweichen, gilt das Zieldatenmodell; eine bewusste Ausnahme wird übernommen: Stärke ist ein absoluter Meldestand mit Last-Writer-Wins über das Tripel, kein additiver Zähler.
 
