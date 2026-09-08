@@ -21,6 +21,13 @@
  *    der schlicht der Ankunftsreihenfolge folgt. Er faellt durch. Damit ist
  *    belegt, dass die Pruefung Unterscheidungskraft hat und nicht jeden
  *    beliebigen Fold durchwinkt.
+ * 4. **Die Erzeugung wird gemessen, nicht behauptet.** Ein Property-Test ist
+ *    nur so viel wert wie seine Eingaben. Der Block „Die erzeugten
+ *    Ereignismengen sind aussagekraeftig" haelt fest, dass die HLC-Ordnung in
+ *    der ueberwiegenden Zahl der Laeufe von der Ordnung nach `(clientId,
+ *    laufnummer)` abweicht — sonst pruefte P1 nicht, dass *die HLC*
+ *    entscheidet, sondern nur Reihenfolgeunabhaengigkeit im Allgemeinen —,
+ *    und dass HLC-Gleichstaende (geklontes Profil) tatsaechlich vorkommen.
  *
  * Der zweite Teil von P1 prueft den Live-Pfad: dieselbe Menge, in zufaellige
  * Schuebe zerlegt und nacheinander per `falteHinzu` in einen bestehenden
@@ -34,6 +41,7 @@ import { describe, expect, it } from "vitest";
 
 import type { EingehendesEreignis, Ereignis, Staerke } from "./ereignis.js";
 import { falte, falteHinzu, leereFaltung, materialisiere } from "./fold.js";
+import { vergleicheHlc } from "./hlc.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
 import {
   abschnittAngelegt,
@@ -65,6 +73,19 @@ type Befehl =
   | { readonly art: "staerke"; readonly client: string; readonly einheitId: string; readonly neu: Staerke; readonly vorherEcht: boolean }
   | { readonly art: "fremd"; readonly client: string };
 
+/**
+ * Das geklonte Profil (03-MEILENSTEINE.md, M0-Fehlerinjektion).
+ *
+ * Ein geklontes Profil schreibt unter derselben `clientId` mit einem eigenen
+ * Laufnummern- und Uhrenlauf. Damit entstehen zwei **verschiedene** Ereignisse
+ * mit derselben HLC — der einzige Weg, wie ein HLC-Gleichstand ueberhaupt
+ * zustande kommt, weil die `clientId` sonst jeden Gleichstand bricht (§3.2).
+ * Ohne diesen Fall koennte kein Property-Test pruefen, ob der Fold auch dann
+ * eine Mengenfunktion bleibt.
+ */
+const KLON_VON = "aa";
+const KLON_LAUFNUMMER_VERSATZ = 500;
+
 const clientArb = fc.constantFrom(...CLIENTS);
 const staerkeArb: fc.Arbitrary<Staerke> = fc
   .tuple(fc.integer({ min: 0, max: 2 }), fc.integer({ min: 0, max: 4 }), fc.integer({ min: 0, max: 20 }))
@@ -73,26 +94,61 @@ const staerkeArb: fc.Arbitrary<Staerke> = fc
 const befehlArb: fc.Arbitrary<Befehl> = fc.oneof(
   { arbitrary: fc.record({ art: fc.constant("einsatz" as const), client: clientArb, name: fc.constantFrom("Hochwasser", "Sturm", "Uebung") }), weight: 2 },
   { arbitrary: fc.record({ art: fc.constant("abschnitt" as const), client: clientArb, abschnittId: fc.constantFrom(...ABSCHNITTE) }), weight: 3 },
-  { arbitrary: fc.record({ art: fc.constant("einheit" as const), client: clientArb, einheitId: fc.constantFrom(...EINHEITEN), abschnittId: fc.constantFrom(...ZIELE) }), weight: 3 },
+  { arbitrary: fc.record({ art: fc.constant("einheit" as const), client: clientArb, einheitId: fc.constantFrom(...EINHEITEN), abschnittId: fc.constantFrom(...ZIELE) }), weight: 4 },
   { arbitrary: fc.record({ art: fc.constant("verschieben" as const), client: clientArb, einheitId: fc.constantFrom(...EINHEITEN), ziel: fc.constantFrom(...ZIELE), vorherEcht: fc.boolean() }), weight: 5 },
   { arbitrary: fc.record({ art: fc.constant("staerke" as const), client: clientArb, einheitId: fc.constantFrom(...EINHEITEN), neu: staerkeArb, vorherEcht: fc.boolean() }), weight: 5 },
   { arbitrary: fc.record({ art: fc.constant("fremd" as const), client: clientArb }), weight: 1 },
 );
 
+/** `true`, wenn dieser Befehl vom geklonten Profil stammt. */
+const klonArb = fc.boolean();
+
+/** Die HLC-Takte je Client: gemeinsamer Vorrat, eigener Versatz, absichtlich mit Gleichstaenden. */
+interface Taktplan {
+  /** Startmillisekunde je Client. Gleiche Werte sind erlaubt und erwuenscht. */
+  readonly versatz: Readonly<Record<string, number>>;
+  /** Schrittweite je Client. Kleine Werte erzeugen Ueberschneidungen. */
+  readonly schritt: Readonly<Record<string, number>>;
+}
+
+const taktplanArb: fc.Arbitrary<Taktplan> = fc
+  .tuple(
+    fc.array(fc.integer({ min: 0, max: 3 }), { minLength: CLIENTS.length, maxLength: CLIENTS.length }),
+    fc.array(fc.integer({ min: 1, max: 3 }), { minLength: CLIENTS.length, maxLength: CLIENTS.length }),
+  )
+  .map(([versaetze, schritte]) => {
+    const versatz: Record<string, number> = {};
+    const schritt: Record<string, number> = {};
+    CLIENTS.forEach((client, i) => {
+      versatz[client] = 1000 + (versaetze[i] as number);
+      schritt[client] = schritte[i] as number;
+    });
+    return { versatz, schritt };
+  });
+
 /**
  * Baut aus den Befehlen eine Ereignismenge in ihrer **Ausgangsreihenfolge**.
  *
- * Zwei Dinge sind hier absichtlich so und nicht anders:
+ * Drei Dinge sind hier absichtlich so und nicht anders:
  *
  *   * Je Client sind Laufnummer und HLC streng monoton (§3.3, §3.2) — das ist
  *     die Wirklichkeit, in der ein Client nur seine eigene Datei schreibt.
  *   * Die Ausgangsreihenfolge ist die **Ankunftsreihenfolge** und damit
- *     ausdruecklich *nicht* die HLC-Ordnung: die Clients ziehen ihre
- *     HLC-Takte aus getrennten Vorraeten. Genau dieser Unterschied macht P1
- *     zu einer Aussage; waeren beide Ordnungen gleich, koennte auch ein
+ *     ausdruecklich *nicht* die HLC-Ordnung. Genau dieser Unterschied macht
+ *     P1 zu einer Aussage; waeren beide Ordnungen gleich, koennte auch ein
  *     reihenfolgeabhaengiger Fold bestehen.
+ *   * Die Taktvorraete der Clients **ueberlappen** und erzeugen absichtlich
+ *     HLC-Gleichstaende. Ohne diese Ueberlappung waere die HLC-Ordnung mit
+ *     der Sortierung nach `(clientId, laufnummer)` identisch, und die
+ *     Property-Tests koennten nicht mehr pruefen, dass wirklich *die HLC*
+ *     entscheidet — sie sagten dann nur noch etwas ueber
+ *     Reihenfolgeunabhaengigkeit im Allgemeinen aus.
  */
-function baueEreignisse(befehle: readonly Befehl[]): EingehendesEreignis[] {
+function baueEreignisse(
+  befehle: readonly Befehl[],
+  plan: Taktplan,
+  klone: readonly boolean[],
+): EingehendesEreignis[] {
   const laufnummern = new Map<string, number>();
   const takte = new Map<string, number>();
   // Der gesehene Stand je Bediener — der Vorher-Wert aus §2.5.
@@ -100,16 +156,21 @@ function baueEreignisse(befehle: readonly Befehl[]): EingehendesEreignis[] {
   const gesehendeStaerke = new Map<string, Staerke>();
 
   const ereignisse: EingehendesEreignis[] = [];
-  for (const befehl of befehle) {
-    const laufnummer = (laufnummern.get(befehl.client) ?? 0) + 1;
-    laufnummern.set(befehl.client, laufnummer);
-    // Getrennte Taktvorraete je Client: aa zaehlt ab 1000, bb ab 1300, cc ab
-    // 1600, jeweils in Zehnerschritten. Innerhalb eines Clients monoton,
-    // ueber die Clients hinweg verschraenkt.
-    const basis = 1000 + CLIENTS.indexOf(befehl.client as (typeof CLIENTS)[number]) * 300;
-    const takt = (takte.get(befehl.client) ?? 0) + 1;
-    takte.set(befehl.client, takt);
-    const h = hlc(basis + takt * 10, 0, befehl.client);
+  befehle.forEach((befehl, i) => {
+    // Der Klon tritt unter der clientId von KLON_VON auf, fuehrt aber eigene
+    // Laufnummern und eine eigene Uhr — daher die getrennten Zaehler.
+    const istKlon = befehl.client === KLON_VON && (klone[i] ?? false);
+    const zaehlerSchluessel = istKlon ? `${befehl.client}#klon` : befehl.client;
+    const laufnummer =
+      (laufnummern.get(zaehlerSchluessel) ?? (istKlon ? KLON_LAUFNUMMER_VERSATZ : 0)) + 1;
+    laufnummern.set(zaehlerSchluessel, laufnummer);
+    const takt = (takte.get(zaehlerSchluessel) ?? 0) + 1;
+    takte.set(zaehlerSchluessel, takt);
+    const h = hlc(
+      (plan.versatz[befehl.client] as number) + takt * (plan.schritt[befehl.client] as number),
+      0,
+      befehl.client,
+    );
 
     switch (befehl.art) {
       case "einsatz":
@@ -171,16 +232,16 @@ function baueEreignisse(befehle: readonly Befehl[]): EingehendesEreignis[] {
       }
 
       case "fremd":
-        ereignisse.push(fremdesEreignis(h, laufnummer, "EinsatzArchiviert"));
+        ereignisse.push(fremdesEreignis(h, laufnummer, "NochNichtErfundeneArt"));
         break;
     }
-  }
+  });
   return ereignisse;
 }
 
 const ereignismengeArb = fc
-  .array(befehlArb, { minLength: 4, maxLength: 40 })
-  .map((befehle) => baueEreignisse(befehle));
+  .tuple(fc.array(befehlArb, { minLength: 6, maxLength: 40 }), taktplanArb, fc.array(klonArb, { maxLength: 40 }))
+  .map(([befehle, plan, klone]) => baueEreignisse(befehle, plan, klone));
 
 /** Menge in Ausgangsreihenfolge plus eine echte Permutation derselben Menge. */
 const mengeUndPermutation = ereignismengeArb.chain((menge) =>
@@ -262,6 +323,78 @@ function naivFalte(ereignisse: readonly EingehendesEreignis[]): NurWerte {
   }
   return { einsatzName, abschnitte, einheiten };
 }
+
+// ---------------------------------------------------------------------------
+// Aussagekraft der Erzeugung
+// ---------------------------------------------------------------------------
+
+/**
+ * Property-Tests sind nur so viel wert wie die Mengen, gegen die sie laufen.
+ * Dieser Block misst die Erzeugung, statt ihre Guete zu behaupten — sonst
+ * koennte P1 jahrelang gruen bleiben, waehrend die Mengen laengst degeneriert
+ * sind.
+ */
+describe("Die erzeugten Ereignismengen sind aussagekraeftig", () => {
+  it("erzeugt Lagen mit Einheiten, konkurrierenden Schreibern und HLC-Gleichstaenden", () => {
+    let laeufe = 0;
+    let mitEinheiten = 0;
+    let hlcOrdnungAndersAlsClientOrdnung = 0;
+    let mitGleichstand = 0;
+    let konkurrenzAufFeld = 0;
+    let ankunftAndersAlsHlc = 0;
+
+    fc.assert(
+      fc.property(mengeUndPermutation, ([ausgang, permutation]) => {
+        laeufe += 1;
+        const zustand = falte(ausgang);
+        if (Object.keys(zustand.einheiten).length > 0) mitEinheiten += 1;
+
+        const nachHlc = [...ausgang].sort((a, b) => vergleicheHlc(a.hlc, b.hlc)).map((e) => e.id);
+        const nachClient = [...ausgang]
+          .sort((a, b) => (a.id === b.id ? 0 : a.id < b.id ? -1 : 1))
+          .map((e) => e.id);
+        // Der Kern: Waeren HLC-Ordnung und die Ordnung nach (clientId,
+        // laufnummer) immer identisch, koennte P1 nicht pruefen, dass die HLC
+        // entscheidet — ein Fold, der die HLC ignoriert und nach der Id
+        // ordnet, bestuende dann ebenfalls.
+        if (kanonischeSerialisierung(nachHlc) !== kanonischeSerialisierung(nachClient)) {
+          hlcOrdnungAndersAlsClientOrdnung += 1;
+        }
+        if (kanonischeSerialisierung(permutation.map((e) => e.id)) !== kanonischeSerialisierung(nachHlc)) {
+          ankunftAndersAlsHlc += 1;
+        }
+
+        const gesehen = new Map<string, string>();
+        for (const e of ausgang) {
+          const schluessel = `${e.hlc.millisekunden}/${e.hlc.zaehler}/${e.hlc.clientId}`;
+          const vorheriges = gesehen.get(schluessel);
+          if (vorheriges !== undefined && vorheriges !== e.id) mitGleichstand += 1;
+          gesehen.set(schluessel, e.id);
+        }
+
+        // Zwei verschiedene Clients schreiben auf dasselbe Feld derselben Einheit.
+        const schreiberJeFeld = new Map<string, Set<string>>();
+        for (const e of ausgang) {
+          if (e.typ !== "EinheitVerschoben" && e.typ !== "StaerkeGeaendert") continue;
+          const nutzlast = (e as Ereignis & { nutzlast: { einheitId: string } }).nutzlast;
+          const pfad = `${nutzlast.einheitId}/${e.typ}`;
+          const menge = schreiberJeFeld.get(pfad) ?? new Set<string>();
+          menge.add(e.akteur.clientId);
+          schreiberJeFeld.set(pfad, menge);
+        }
+        if ([...schreiberJeFeld.values()].some((m) => m.size > 1)) konkurrenzAufFeld += 1;
+      }),
+      { numRuns: 400 },
+    );
+
+    expect(laeufe).toBeGreaterThan(0);
+    expect(mitEinheiten / laeufe).toBeGreaterThan(0.5);
+    expect(hlcOrdnungAndersAlsClientOrdnung / laeufe).toBeGreaterThan(0.3);
+    expect(ankunftAndersAlsHlc / laeufe).toBeGreaterThan(0.5);
+    expect(mitGleichstand).toBeGreaterThan(0);
+    expect(konkurrenzAufFeld / laeufe).toBeGreaterThan(0.3);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // P1 Kommutativitaet
@@ -483,7 +616,7 @@ describe("P4 Summenerhaltung", () => {
 // ---------------------------------------------------------------------------
 
 describe("P5 Kein Waisenzustand — keine Einheit haengt in einem Abschnitt, den es nicht gibt", () => {
-  it("gilt fuer jede erzeugte Menge, auch mit Verweisen ins Leere", () => {
+  it("die wirksame Zuordnung zeigt immer auf einen vorhandenen Abschnitt", () => {
     fc.assert(
       fc.property(ereignismengeArb, (menge) => {
         const zustand = falte(menge);
@@ -495,9 +628,37 @@ describe("P5 Kein Waisenzustand — keine Einheit haengt in einem Abschnitt, den
     );
   });
 
+  it("jeder Verweis ins Leere ist als Hinweis sichtbar — die nicht triviale Haelfte", () => {
+    // Die Pruefung oben allein waere eine Tautologie ueber die Umsetzung:
+    // `wirksamerAbschnittId` wird als `existiert ? gewaehlt : AUFFANG` gesetzt
+    // und AUFFANG steht immer in der Sammlung — sie kann nicht fehlschlagen,
+    // solange diese beiden Zeilen nebeneinanderstehen.
+    //
+    // Die eigentliche Aussage ist eine andere: Der Fold behaelt die
+    // Entscheidung `abschnittId.wert` unveraendert, damit ein spaeter
+    // eintreffendes `AbschnittAngelegt` noch wirken kann (Rebase). Damit steht
+    // in jedem solchen Zustand ein Verweis, der ins Leere zeigt — und genau
+    // der muss sichtbar sein, sonst waere die Auffangregel ein stilles
+    // Verschieben (§2.5, Auflage 10).
+    fc.assert(
+      fc.property(ereignismengeArb, (menge) => {
+        const zustand = falte(menge);
+        for (const [id, einheit] of Object.entries(zustand.einheiten)) {
+          const zeigtInsLeere = !Object.hasOwn(zustand.abschnitte, einheit.abschnittId.wert);
+          const hatHinweis = zustand.hinweise.some(
+            (h) => h.art === "abschnittUnbekannt" && h.feldpfad === `einheit/${id}/abschnittId`,
+          );
+          expect(hatHinweis).toBe(zeigtInsLeere);
+          expect(einheit.wirksamerAbschnittId === einheit.abschnittId.wert).toBe(!zeigtInsLeere);
+        }
+      }),
+      { numRuns: 300 },
+    );
+  });
+
   it("die Erzeugung trifft den Fall auch wirklich", () => {
-    // Ohne diesen Nachweis waere der Test oben moeglicherweise leer: die
-    // Erzeugung muss Verweise auf den nirgends angelegten Abschnitt „D"
+    // Ohne diesen Nachweis waeren die Pruefungen oben moeglicherweise leer:
+    // die Erzeugung muss Verweise auf den nirgends angelegten Abschnitt „D"
     // tatsaechlich hervorbringen.
     let getroffen = 0;
     fc.assert(
