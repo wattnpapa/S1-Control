@@ -22,21 +22,21 @@ Der **Ereigniskatalog** — welche Ereignisarten es gibt, welche Nutzlast sie tr
 
 1. **Ein Schreiber je Datei.** Kein Client verändert jemals eine Datei, die ein anderer Client geschrieben hat — keine Sperre, kein Master, keine TTL, kein Ersetzen per Rename im Datenpfad. Damit trifft keine der belegten SMB-Schwächen den Schreibpfad: Mandatory Byte-Range-Locks, Oplock- und Lease-Breaks, die Metadaten-Caches des Windows-Redirectors und die nicht-atomare Übernahme veralteter Sperrdateien treffen ausschließlich Modelle, in denen mehrere Clients dieselbe Datei schreiben oder ersetzen (`nas-speicher-recherche.md` §1.2 bis §1.4).
 2. **Zuerst lokal, dann auf den Share.** Jedes Ereignis wird zuerst an die lokale Datei angehängt und mit `fsync` dauerhaft gemacht. Die Spiegelung auf den Share ist ein wiederholbarer Append ab einem gemerkten Offset. Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad.
-3. **Wahrheit sind die Ereignisse.** Schnappschüsse sind Beschleuniger und jederzeit verwerfbar. Kein Verfahren in diesem Konzept darf einen Zustand erzeugen, der sich nicht allein aus den Ereignisdateien wiederherstellen lässt.
+3. **Wahrheit sind die Ereignisse.** Schnappschüsse sind Beschleuniger und jederzeit verwerfbar. Kein Verfahren in diesem Konzept darf einen Zustand erzeugen, der sich nicht allein aus den Ereignisdateien wiederherstellen lässt. Abgeleitete Anzeiger auf dem Share — `praesenz\` (§6.4) und `archiv.marker` (§5.7) — sind davon **keine Ausnahme**: Sie tragen keinen Zustand, den die Ereignisse nicht auch tragen, und sind jederzeit aus ihnen neu erzeugbar. Verschwindet ein solcher Anzeiger, kostet das Komfort, nie Daten.
 
 ### §1.4 Dateilayout
 
 ```
 <share>\S1-Control\
   manifest.json                              §8.7
-  einsaetze\<datum>_<slug>_<kurzid>\
+  einsaetze\<datum>_<slug>_<kurzid>\        <kurzid> aus clientId und HLC des Anlegens, §5.6
     einsatz.json                             unveraenderlich, §5.6
     ereignisse\<clientId>.<segment>.jsonl    ein Schreiber je Datei, §2, §4
     schnappschuesse\<hlc>-<clientId>.json    §7
     praesenz\<clientId>.json                 §6.4
     anhaenge\                                inhaltsadressiert, unveraenderlich
     ausgaben\                                erzeugte Ausdrucke, HTML-Monitor
-    archiv.marker                            §5.7
+    archiv.marker                            abgeleiteter Anzeiger, §5.7
   programm\                                  Update-Ablage (Paket V)
   stammdaten\stan-<version>.json
 ```
@@ -155,9 +155,38 @@ Für Dateinamen und für die Textform in JSON gilt eine **feste Stellenzahl**, d
 
 13 Ziffern tragen Unix-Millisekunden bis zum Jahr 2286. 6 Ziffern für den Zähler erlauben eine Million Ereignisse innerhalb derselben Millisekunde. Die Textform ist eine Darstellung; im Programm wird trotzdem die Struktur verglichen.
 
+**Fortschreibung.** Auflage 5 nennt Vergleich und Textform. Ohne eine ausgeschriebene Fortschreibungsregel ist die HLC aber nicht baubar, weder für das Erzeugen noch für das Empfangen. Es gilt:
+
+*Beim Erzeugen eines eigenen Ereignisses:*
+
+```
+w = Wanduhr in Millisekunden
+wenn w > millisekunden:   millisekunden = w;  zaehler = 0
+sonst:                                        zaehler = zaehler + 1
+```
+
+*Beim Lesen eines fremden Ereignisses mit der HLC `f`:*
+
+```
+w = Wanduhr in Millisekunden
+wenn f.millisekunden - max(millisekunden, w) > 5 Minuten:
+    nicht übernehmen (siehe „Schutz gegen fremde Fehluhren")
+sonst:
+    m = max(millisekunden, f.millisekunden, w)
+    wenn m == millisekunden und m == f.millisekunden:  zaehler = max(zaehler, f.zaehler) + 1
+    sonst wenn m == millisekunden:                     zaehler = zaehler + 1
+    sonst wenn m == f.millisekunden:                   zaehler = f.zaehler + 1
+    sonst:                                             zaehler = 0
+    millisekunden = m
+```
+
+**Die eigene Uhr darf rückwärts springen, die HLC nicht.** `millisekunden` wird niemals verkleinert — das ist der Sinn der ersten Zeile beider Regeln. Wird die Systemuhr zurückgestellt, springt ein Zeitabgleich, oder wechselt die Sommerzeit fehlerhaft, läuft die HLC über den Zähler weiter, bis die Wanduhr wieder aufgeholt hat. Ohne diese Regel erzeugte derselbe Client fallende HLC, und das würde an drei Stellen zugleich still falsch: die Sortierung der Schnappschüsse über den Dateinamen (§7.2), der Vergleich gegen die HLC der Archivierung (§5.7) und jede Konfliktentscheidung des Folds. Übersteigt der Rückstand fünf Minuten, wird er zusätzlich als Uhrfehler nach §8.5 gemeldet; die Arbeit läuft weiter.
+
 **Verhalten beim Zählerüberlauf.** Der Fall ist praktisch unerreichbar — eine Million Ereignisse in einer Millisekunde —, aber „praktisch unerreichbar" ist kein definiertes Verhalten. Regel: Erreicht der Zähler 999.999, wartet der Schreiber, bis die Wanduhr die nächste Millisekunde erreicht, und beginnt dort mit Zähler 0. Das ist eine Wartezeit von höchstens einer Millisekunde und niemals ein Fehler; der Leitsatz „kein Stillstand" gilt auch hier. Ein Zähler, der trotz Wartens nicht zurückgesetzt werden kann, weil die Uhr steht, wird als Uhrfehler nach §8.5 gemeldet.
 
 **Schutz gegen fremde Fehluhren:** Zieht ein empfangener HLC-Wert die eigene Uhr um mehr als **5 Minuten** nach vorn, wird er nicht übernommen. Das Ereignis wird normal gefaltet, aber die eigene physische Komponente folgt ihm nicht, und die Oberfläche zeigt „Uhr eines anderen Rechners weicht um X ab". Vorbild: `uhlc::ExceedingDeltaError` (`nas-speicher-recherche.md` §1.11). Betriebsvoraussetzung ist ohnehin ein vorhandener NTP-Abgleich.
+
+**Was die Nichtübernahme kostet.** Sie ist nicht folgenlos, und das gehört benannt: Wer einen fremden Wert nicht übernimmt, gibt für genau dieses Ereignis die Kausalitätszusage der HLC auf. Ein eigenes Ereignis, das der Bediener erzeugt, **nachdem** er den fremden Eintrag auf dem Bildschirm gesehen hat, kann in der HLC-Ordnung **vor** ihm liegen. Der Fold bleibt deterministisch — er ordnet nach den gespeicherten Werten, und alle Clients kommen zum selben Ergebnis —, aber die Ordnung bildet an dieser einen Stelle nicht mehr ab, was tatsächlich zuerst war. Deshalb ist die Meldung nicht optional, und deshalb trägt jedes setzende Ereignis den gesehenen Vorher-Wert (§2.5): Der Konflikthinweis am Feld fängt genau diesen Fall ab. Die Grenze ist so hoch angesetzt, dass sie bei gewöhnlichem NTP-Versatz nie und nur bei einer echten Fehluhr greift.
 
 ### §3.3 Ereignis-Identität und Laufnummer
 
@@ -200,7 +229,9 @@ Das leistet dreierlei: Leser wissen, dass ein Segment endgültig fertig ist und 
 
 Stürzt der Schreiber zwischen Abschlusszeile und erster Zeile des neuen Segments ab, findet der Leser eine Abschlusszeile ohne Nachfolger. Das ist kein Defekt, sondern ein Wartezustand: Der Leser behandelt das Nachfolgesegment als „angekündigt, noch nicht vorhanden" und pollt es (§6.2). Der Schreiber setzt beim nächsten Start dort auf.
 
-**Verfall des Wartezustands.** Kehrt der Schreiber nicht zurück, dürfte dieser Poll sonst für den Rest des Einsatzes laufen. Deshalb: Erscheint ein angekündigtes Nachfolgesegment **fünf Minuten** lang nicht und ist zugleich die Präsenzdatei desselben Clients veraltet (§6.4), fällt das Segment aus dem kurzen Takt A in den langen Takt B zurück. Es gilt damit nicht als verloren — taucht es später auf, wird es normal gelesen —, es kostet nur nicht mehr alle zwei Sekunden einen Zugriff. Der Wert ist ein Startwert nach §10, A4.
+**Verfall des Wartezustands.** Kehrt der Schreiber nicht zurück, liefe dieser Poll sonst für den Rest des Einsatzes. Es gilt die allgemeine Verfallsregel aus §6.2: Erscheint das angekündigte Nachfolgesegment **fünf Minuten** lang nicht, fällt es aus dem kurzen Takt A in den langen Takt B zurück. Es gilt damit nicht als verloren — taucht es später auf, wird es normal gelesen —, es kostet nur nicht mehr jeden kurzen Takt einen Zugriff.
+
+Die Regel ist rein zeitgesteuert. Sie hing in einer früheren Fassung zusätzlich daran, dass die Präsenzdatei desselben Clients veraltet ist; damit hätte ein Ausfall der Präsenz — die nach §6.4 ausfallen **darf** — dazu geführt, dass jeder Leser ein nie erscheinendes Segment für den Rest der Lage im kurzen Takt pollt. Die Präsenzdatei darf den Verfall allenfalls **vorziehen**, nie verhindern. Der Wert ist ein Startwert nach §10, A4.
 
 ### §4.4 `schreiber.json` — der lokale Schreiberzustand
 
@@ -331,6 +362,7 @@ Ist eine Share-Zeile ab der Abweichungsstelle weder als Zeile lesbar noch einer 
 #### §5.4.4 Weitere Eigenschaften
 
 - **Aus dem Worker, nie aus dem Main-Prozess.** Ein blockierender SMB-Aufruf kann bis zu 60 Sekunden hängen, bevor ein Fehler kommt (`SessTimeout`, `nas-speicher-recherche.md` §1.8). Im Electron-Main-Prozess stünde damit die gesamte Oberfläche. Das ist als Lint-Regel zu erzwingen (05-UMSETZUNGSPLAN.md, M2.1).
+- **Segmente aufsteigend.** Hat ein Client mehrere eigene Segmente mit unübertragenen Bytes — nach einem längeren Ausfall oder nach einem Segmentwechsel während der Trennung —, werden sie in aufsteigender Segmentnummer gespiegelt; ein Segment wird erst begonnen, wenn das vorhergehende vollständig übertragen ist. Sonst erschiene bei den Lesern ein Nachfolgesegment vor der Abschlusszeile seines Vorgängers: Die Kette (§2.3) ließe sich erst nachträglich schließen, und §8.6.2 meldete zwischenzeitlich eine fehlende Kettenfortsetzung, wo keine fehlt.
 - **Mit Rückstauverhalten.** Scheitert die Spiegelung, wird sie mit wachsendem Abstand erneut versucht (Startwerte: 2 s, 5 s, 15 s, danach 30 s dauerhaft; §10, A4). Die Oberfläche zeigt „Share nicht erreichbar seit HH:MM, N Einträge noch nicht übertragen". Kein Dialog, keine Nachfrage, kein Blockieren der Arbeit. Zur Unterscheidung vorübergehender von dauerhaften Fehlern siehe §8.9.
 
 ### §5.5 Leseweg
@@ -341,11 +373,31 @@ Der Leser holt für jede fremde Datei die Bytes ab `leseOffset`, hängt sie an d
 
 Wird beim Anlegen des Einsatzes **einmal** geschrieben und danach nie wieder verändert. Es trägt nur, was zur Identifikation des Ordners nötig ist: Einsatz-Kennung, Anlagezeitpunkt, anlegender Client, `formatVersion`. Alle fachlichen Stammdaten — auch der Einsatzname — sind Ereignisse und damit änderbar. Das Anlegen erfolgt mit „nur erzeugen, wenn nicht vorhanden" (`flag: 'wx'`); dass diese Atomarität über SMB serverseitig entschieden wird, ist für den einmaligen Anlegevorgang tragbar (`nas-speicher-recherche.md` §1.4).
 
+**Zwei Clients legen gleichzeitig denselben Einsatz an.** Der Ordnername enthält eine Kurz-ID (§1.4), die aus der `clientId` und der HLC des Anlegens gebildet wird; zwei gleichzeitige Anlagevorgänge erzeugen deshalb zwei verschiedene Ordner, nicht einen Konflikt. Das ist kein Fehler der Speicherschicht, sondern ein fachlicher Doppeleintrag: Es gibt zwei Einsätze, die dasselbe meinen. Die Speicherschicht meldet ihn — beim Öffnen der Einsatzliste erscheinen zwei Einträge mit gleichem Namen und gleichem Anlagezeitpunkt mit dem Hinweis „Zwei Einsätze mit gleichem Namen wurden fast gleichzeitig angelegt" —, löst ihn aber nicht auf. Das Zusammenführen zweier Einsätze ist ein fachlicher Vorgang mit fachlichen Regeln und gehört nicht hierher; bis es ihn gibt, ist der richtige Bedienschritt, einen der beiden zu archivieren. Schlägt `wx` dagegen fehl, weil der Ordner mit **derselben** Kurz-ID bereits existiert, wird der vorhandene geöffnet, nichts überschrieben und nichts gemeldet — das ist der Wiederholversuch nach einem Abbruch.
+
 ### §5.7 Archivierung und Ordnerverschiebung
 
-Auflage 13. Zwei Anforderungen, die die Speicherschicht erfüllen muss.
+Auflage 13. Drei Festlegungen, die die Speicherschicht erfüllen muss.
 
-**Ereignis nach `archiv.marker` — genau eine Behandlung.** Sobald ein Client die Datei `archiv.marker` sieht, wechselt er für diesen Einsatz in einen Nur-Lesen-Zustand und bietet keine ändernden Bedienschritte mehr an. Trifft dennoch ein Ereignis mit einer HLC **nach** der HLC des Markers ein — weil ein anderer Client offline weitergearbeitet hat —, dann gilt: **Das Ereignis wird angenommen, gefaltet und wirkt.** Es wird zusätzlich als „nach Archivierung eingegangen" gekennzeichnet, erscheint im Einsatztagebuch mit diesem Hinweis, und die Oberfläche meldet „Der Einsatz war bereits archiviert; N nachträgliche Einträge sind eingegangen." Verworfen wird nichts. Stilles Verwerfen wäre der schlimmere Fehler, und ein Einsatz, der nachträglich einen Eintrag bekommt, ist ein realer Vorgang, kein Programmfehler.
+**Archiviert wird durch ein Ereignis, nicht durch eine Datei (Entscheidung Johannes, 2026-09-08).** Das Archivieren ist ein gewöhnliches Ereignis `EinsatzArchiviert` in der Ereignisdatei desjenigen Clients, der es auslöst. Seine HLC ist die HLC der Archivierung; erst damit ist der Vergleich weiter unten überhaupt ausführbar. Die fachliche Semantik gehört in `KONZEPT-EREIGNISSE.md`, wo die Barriere `EinsatzArchiviert` bereits vorgesehen ist (05-UMSETZUNGSPLAN.md, M1.2); hier steht nur, was die Speicherschicht davon wissen muss.
+
+`archiv.marker` ist damit **kein Zustandsträger, sondern ein abgeleiteter Anzeiger.** Er existiert allein, damit die Einsatzliste einen Einsatz als archiviert zeigen kann, ohne seinen Ereignisstrom zu falten. Inhalt:
+
+```json
+{ "einsatzId": "…",
+  "ereignis": "9f3c1a20…:4711",
+  "hlc": "1757340000000-000003-9f3c1a20…",
+  "wanduhr": "2026-09-08T14:22:31+02:00" }
+```
+
+- Geschrieben wird er von dem Client, der das Ereignis erzeugt hat, mit `flag: 'wx'`.
+- Jeder andere Client, der das Ereignis liest und keinen Marker vorfindet, legt ihn ebenfalls mit `wx` an. Eine Kollision zweier Clients ist folgenlos, weil beide denselben Inhalt schreiben.
+- Fehlt der Marker oder geht er verloren, ändert das am Zustand nichts. Die Einsatzliste zeigt den Einsatz dann als nicht archiviert, bis er einmal geöffnet wurde — der einzige Schaden.
+- Nimmt ein späteres Ereignis die Archivierung zurück, entfernt der Client, der die Rücknahme faltet, den Marker. Das ist die einzige Stelle, an der ein Client eine Datei löscht, die ein anderer geschrieben hat. Sie ist zulässig, weil die Datei abgeleitet ist und ihr Verlust folgenlos bleibt; „ein Schreiber je Datei" gilt für den Datenpfad, und der Marker ist keiner.
+
+**§1.3 Satz 3 bleibt damit ohne Ausnahme.** Der Archivzustand ergibt sich allein aus den Ereignissen. Die frühere Fassung ließ den Marker den Zustand tragen und ihn zugleich inhaltlich undefiniert — der Vergleich „HLC des Markers" hatte keinen Bezugspunkt, und der Archivzustand war der einzige im ganzen Entwurf, der sich nicht aus den Ereignissen ergab.
+
+**Ereignis nach der Archivierung — genau eine Behandlung.** Sobald ein Client den Einsatz als archiviert faltet, wechselt er für ihn in einen Nur-Lesen-Zustand und bietet keine ändernden Bedienschritte mehr an. Trifft dennoch ein Ereignis mit einer HLC **nach** der des Ereignisses `EinsatzArchiviert` ein — weil ein anderer Client offline weitergearbeitet hat —, dann gilt: **Das Ereignis wird angenommen, gefaltet und wirkt.** Es wird zusätzlich als „nach Archivierung eingegangen" gekennzeichnet, erscheint im Einsatztagebuch mit diesem Hinweis, und die Oberfläche meldet „Der Einsatz war bereits archiviert; N nachträgliche Einträge sind eingegangen." Verworfen wird nichts. Stilles Verwerfen wäre der schlimmere Fehler, und ein Einsatz, der nachträglich einen Eintrag bekommt, ist ein realer Vorgang, kein Programmfehler.
 
 **Ordnerverschiebung darf keinen Upload ins Leere laufen lassen.** Wird der Einsatzordner auf dem Share verschoben, umbenannt oder archiviert, während ein Client noch unübertragene Ereignisse hat, darf der Wiederholversuch den Ordner **nicht neu anlegen**. Deshalb prüft jeder Spiegelungsversuch zuerst, ob unter dem gemerkten Pfad eine `einsatz.json` mit der erwarteten Einsatz-Kennung liegt. Ist sie nicht da oder trägt sie eine andere Kennung, wird die Spiegelung angehalten und im Klartext gemeldet: „Der Einsatzordner ist unter dem bekannten Pfad nicht mehr auffindbar. N Einträge liegen lokal bereit und werden übertragen, sobald der Pfad wieder stimmt." Die Ereignisse bleiben lokal vollständig erhalten; ein neuer Pfad kann in den Einstellungen gesetzt werden, danach läuft die Spiegelung ab dem gemerkten Offset weiter.
 
@@ -361,7 +413,13 @@ Auflage 13. Zwei Anforderungen, die die Speicherschicht erfüllen muss.
 
 **Takt A — bekannte, noch wachsende Dateien (kurz).** Für jede fremde Datei, die weder abgeschlossen noch in Quarantäne ist, wird direkt am bekannten `leseOffset` gelesen. Kein `stat`, kein `mtime`-Vergleich: Ein Datenlesezugriff geht ohne gültige Lease zum Server durch, während die Attribut-Caches des Windows-Redirectors bis zu 10 Sekunden alte Werte liefern (`nas-speicher-recherche.md` §1.2). Kommen 0 Bytes zurück, ist nichts Neues da; kommen Bytes zurück, werden sie nach §5.5 verarbeitet. Das kostet je Datei einen Öffnen-Lesen-Schließen-Zyklus.
 
-Entscheidend für die Kosten: **Nur das jeweils letzte Segment eines Schreibers kann wachsen.** Abgeschlossene Segmente sind durch ihre Abschlusszeile (§4.3) endgültig erkennbar und werden nie wieder angefasst. Bei fünf Clients sind das fünf Dateien je Takt, unabhängig davon, wie lang der Einsatz schon läuft.
+Entscheidend für die Kosten: **Nur das jeweils letzte Segment eines Schreibers kann wachsen.** Abgeschlossene Segmente sind durch ihre Abschlusszeile (§4.3) endgültig erkennbar und werden nie wieder angefasst. Damit hängt die Zahl der Dateien in Takt A nicht daran, wie lang der Einsatz schon läuft.
+
+**Sie hängt aber an der Zahl der je schreibenden Kennungen, nicht an der Zahl der Arbeitsplätze.** „Fünf Clients ⇒ fünf Dateien je Takt" gilt nur, solange jede Kette entweder wächst oder eine Abschlusszeile trägt. Eine Kennung, die aufgegeben wird, hinterlässt eine Datei, die beides nicht tut: Sie bekommt keine Abschlusszeile mehr und wächst nie wieder. Das geschieht bei jeder Klon-Erkennung (§4.5), jedem Präfixkonflikt (§4.1), jedem Ersatzsegment (§4.6), jedem verlorenen Benutzerprofil und jeder Neuinstallation. Ohne weitere Regel bliebe jede dieser Dateien für den Rest der Lage in Takt A.
+
+**Verfallsregel, für jede Datei gleich.** Liefert eine Datei in Takt A über **fünf Minuten** hinweg keine neuen Bytes, fällt sie in Takt B zurück. Sie gilt damit nicht als verloren: Liefert sie in Takt B wieder Bytes, kehrt sie unmittelbar in Takt A zurück. Dieselbe Regel deckt das angekündigte, aber noch nicht vorhandene Nachfolgesegment aus §4.3 und die Datei mit vorläufiger Quarantäne aus §8.1 ab — es gibt nur diese eine Regel, und sie ist rein zeitgesteuert. Startwert nach §10, A4.
+
+Im Normalbetrieb ist die Zahl der Dateien in Takt A damit die der aktiven Arbeitsplätze; nach Störungen liegt sie darüber, aber beschränkt durch den Verfall. Die Messung in M0.5 setzt deshalb nicht 5, sondern **10 Segmente bei 5 Clients** an (05-UMSETZUNGSPLAN.md, M0.5) — die Zahl, die eine mehrtägige Lage mit ein paar Zwischenfällen erreicht.
 
 **Startwert Takt A: 2 Sekunden.** Kalibrierung in M0.5 gegen die gemessenen Gesamtkosten eines Zyklus; das Abbruchkriterium liegt bei 2 Sekunden Zykluskosten bei 5 Clients.
 
@@ -375,7 +433,14 @@ Die Oberfläche zeigt dauerhaft: den Zeitpunkt des letzten erfolgreichen Poll-Du
 
 ### §6.4 Präsenz
 
-`praesenz\<clientId>.json` ist die **einzige** Datei auf dem Share, die überschrieben wird, und jeder Client überschreibt ausschließlich seine eigene. Sie ist **rein informativ**: Kein Verfahren dieses Konzepts und keine Fold-Regel darf von ihr abhängen. Fällt sie aus, ist nur die Anzeige „3 weitere Arbeitsplätze" ungenau.
+`praesenz\<clientId>.json` ist die **einzige** Datei auf dem Share, die überschrieben wird, und jeder Client überschreibt ausschließlich seine eigene.
+
+**Zusicherung, genau abgegrenzt:** Die Präsenzdatei ist **kein Datenpfad und keine Fold-Regel**. Kein Ereignis, kein gefalteter Zustand und keine Poll-Entscheidung hängt an ihr. Fällt sie vollständig aus, ist die Folge auf zwei Stellen begrenzt, und beide sind Komfort:
+
+- Die Anzeige „3 weitere Arbeitsplätze" (§6.3) wird ungenau.
+- Die Erkennungshilfe für entfernte Dateien (§8.6.2) verliert eine ihrer beiden Quellen; die andere — Schnappschüsse und die lokalen Spiegel der übrigen Clients — bleibt.
+
+Die weiter gefasste Zusage „kein Verfahren dieses Konzepts darf von ihr abhängen" wäre nicht wahr gewesen: §4.3 machte den Verfall des Wartezustands von ihr abhängig, und ein Ausfall der Präsenz hätte damit die Poll-Last dauerhaft erhöht. Dieser Verfall ist jetzt rein zeitgesteuert (§6.2); die Präsenzdatei darf ihn **vorziehen**, nie verhindern. Das ist die Rolle, die ihr überall zusteht: Beschleuniger und Anzeige, nie Voraussetzung.
 
 Inhalt: `clientId`, Anzeigename, Rechnername, Programmversion, letzter Kontakt als HLC und als Wanduhr, laufendes eigenes Segment und dessen Offset.
 
@@ -388,6 +453,20 @@ Inhalt: `clientId`, Anzeigename, Rechnername, Programmversion, letzter Kontakt a
 ### §6.5 UDP nur als Beschleuniger
 
 Ein UDP-Hinweis („Client X hat bis Offset Z geschrieben") darf einen Takt-A-Durchlauf vorziehen. Er darf niemals die Grundlage sein: Broadcast wird bei WLAN-Client-Isolation vollständig unterdrückt, geht bei mehreren Netzwerkadaptern in das falsche Netz, und die Windows-Firewall kann den Empfang ohne Administratorrechte verhindern (`nas-speicher-recherche.md` §1.10). Zudem kann ein Hinweis **vor** der Sichtbarkeit der Daten eintreffen; der vorgezogene Lesezugriff darf dann nichts finden, ohne dass das ein Fehler ist. Entscheidung 11 hält fest: nicht im kritischen Pfad.
+
+### §6.6 Verhalten je Betriebssystem
+
+Auflage 17 und M0.6 verlangen drei Betriebssysteme, Entscheidung 13 gewichtet sie: Windows ist das Produkt, macOS die Entwicklungsplattform mit Best-Effort-Paket, Linux nur CI-Lauf. Die Begründungen der vorstehenden Abschnitte stützen sich fast durchweg auf Belege zum Windows-Redirector. Hier steht, was auf den anderen beiden gilt und wo eine Annahme kippt.
+
+**Windows.** Drei Metadaten-Caches im SMB-Client: `FileInfoCacheLifetime` 10 s, `DirectoryCacheLifetime` 10 s, `FileNotFoundCacheLifetime` 5 s (`nas-speicher-recherche.md` §1.2). Daraus folgen unmittelbar der Takt B von 10 Sekunden (§6.2), das Verbot der Größenabfrage (§5.4.2) und die großzügige Veraltet-Schwelle der Präsenz (§6.4). Rename scheitert mit `EPERM`/`EBUSY`, wenn ein anderer Client die Zieldatei ohne `FILE_SHARE_DELETE` geöffnet hält (§1.4) — deshalb kein Rename im Datenpfad und Überschreiben statt Rename bei der Präsenz. Der `SessTimeout` von 60 s (§1.8) begründet §8.4.
+
+**macOS.** Die Verzeichnis-Enumeration ist ebenfalls gecacht und lässt sich nur per Root-Konfiguration abstellen (`/etc/nsmb.conf`, `dir_cache_off=yes` beziehungsweise `dir_cache_max_cnt=0`, wirksam erst nach Neu-Mount; `nas-speicher-recherche.md` §1.7). Eine Anwendung kann das nicht ändern, und dieses Konzept setzt es nicht voraus. Folge: Der Takt B von 10 Sekunden gilt auch hier, und die Zusage „bis zu 10 Sekunden für die erste Datei eines neuen Clients" ist auf macOS nicht besser als auf Windows und möglicherweise schlechter — Apple nennt keine Zahl. M0.5 misst das auf beiden Plattformen. Die tragende Entlastung ist auf macOS dieselbe wie auf Windows: Takt A liest am bekannten Offset und kommt ohne Verzeichnisauflistung aus; die Enumeration steckt allein im langsamen Takt.
+
+**Linux.** Der CIFS-Client cacht Attribute standardmäßig nur 1 Sekunde (`actimeo=1`, `nas-speicher-recherche.md` §1.6) — deutlich kürzer als Windows. Das ändert nichts, weil das Verfahren keine Attribute auswertet; es macht die Zusagen auf Linux nur nicht schlechter. Zwei Mount-Optionen könnten das Verhalten verschlechtern, und beide treffen dieses Verfahren nicht: `cache=loose` erlaubt lockere Caching-Semantik, betrifft aber Daten, die je Datei nur ein einziger Schreiber schreibt; und Windows-Byte-Range-Locks sind über CIFS **mandatory** und können Lese- und Schreibvorgänge anderer blockieren (§1.3, §1.6) — dieses Verfahren setzt keine Byte-Range-Locks. Da der Mount ohnehin nicht durch die Anwendung kontrollierbar ist, verlässt sich das Konzept auf **keine** Mount-Option. Das ist der eigentliche Punkt: Die Portabilität kommt nicht daher, dass alle drei Systeme sich gleich verhielten, sondern daher, dass keine der Zusagen von einem Cache-Verhalten abhängt.
+
+**Wann die Lease-Annahme kippt.** §5.4.2 und §6.2 stützen sich auf den Satz „Datenlesezugriffe gehen ohne gültige Lease zum Server durch und umgehen den Attribut-Cache" (`nas-speicher-recherche.md` §1.2, §4). Der Satz gilt für den Leser einer **fremden** Datei: Er hält auf sie keine Lease, sein Client muss also fragen. Er gilt **nicht** ohne Weiteres für den Schreiber, der seine eigene Datei dauerhaft offen hält — auf ein solches Handle kann der Server eine Write- oder RWH-Lease vergeben, und dann darf der SMB-Client eigene Lesevorgänge aus dem lokalen Puffer bedienen (§1.2). Genau dort läge der Fehler: Der Schreiber prüft in §5.4.2 das wahre Dateiende durch Lesen, und ein aus dem eigenen Cache bedienter Lesevorgang zeigte ihm nicht, was auf dem Server steht.
+
+Deshalb, verbindlich: **Für die Feststellung des Share-Endes nach §5.4.2 und für die Prüfung nach §4.5 öffnet der Schreiber die Datei neu.** Er liest diese Prüfung nie über ein dauerhaft offenes Handle. Dies ist die einzige Stelle im Konzept, an der die Lease-Annahme kippt, und mit dieser Regel ist sie behandelt. Ob die Neuöffnung auf dem Synology-Gerät tatsächlich zum Server durchgeht, ist Teil der Messung A5 (§10).
 
 ---
 
@@ -527,7 +606,11 @@ Ebenfalls **defekt** ist eine Zeile, deren Ereignis-Identität `<clientId>:<lauf
 
 *Bild:* Ein Aufruf kehrt nicht zurück; der SMB-Client wartet bis zum `SessTimeout` von 60 Sekunden (`nas-speicher-recherche.md` §1.8).
 
-*Verhalten:* Sämtliche Share-Zugriffe laufen im Worker-Thread je Akte, nie im Main-Prozess, und tragen einen eigenen Zeitausstieg (**Startwert 20 s**, deutlich unter dem SMB-Standard). Nach dem Ausstieg gilt der Zugriff als gescheitert und wird nach §5.4 wiederholt. Die Oberfläche bleibt in jedem Fall bedienbar. Als Lint-Regel: kein synchroner Datei- oder Netzaufruf im Main-Prozess (05-UMSETZUNGSPLAN.md, M2.1).
+*Verhalten:* Sämtliche Share-Zugriffe laufen im Worker-Thread je Akte, nie im Main-Prozess. Die Oberfläche bleibt in jedem Fall bedienbar. Als Lint-Regel: kein synchroner Datei- oder Netzaufruf im Main-Prozess (05-UMSETZUNGSPLAN.md, M2.1).
+
+**Was der Zeitausstieg von 20 Sekunden leistet — und was nicht.** Ein laufender `fs`-Aufruf lässt sich in Node nicht abbrechen. Der Zeitausstieg (**Startwert 20 s**, deutlich unter dem SMB-Standard von 60 s; §10, A4) beendet deshalb **nicht** den Zugriff, sondern allein den Wartezustand der Oberfläche: Nach 20 Sekunden meldet die Statuszeile „Der Server antwortet seit 20 s nicht", und der Bediener arbeitet lokal ungestört weiter (§5.2). Der Aufruf selbst läuft weiter, bis er zurückkehrt — spätestens nach dem `SessTimeout`.
+
+**Kein zweiter Versuch, solange der erste unterwegs ist.** Je Datei ist höchstens ein Zugriff offen; die Speicherschicht serialisiert das selbst und überlässt es nicht dem Aufrufer. Der Rückstau nach §5.4.4 beginnt seine Wartezeit erst zu zählen, wenn der erste Versuch zurückgekehrt ist. Ein Wiederholversuch neben einem noch hängenden Anhänge-Vorgang brächte zwei gleichzeitige Schreibvorgänge auf dieselbe Datei — genau den Zustand, den „ein Schreiber je Datei" ausschließen soll, und zwar unbemerkt, weil beide demselben Prozess gehören. Die 20 Sekunden sind damit ein Wert der Oberfläche, kein Wert des I/O.
 
 ### §8.5 Verstellte Uhr, geklontes Profil, zwei Instanzen
 
@@ -561,6 +644,31 @@ Auflage 14. Der Anspruch „revisionssicher" wird **nicht** erhoben.
 ### §8.7 `manifest.json` und `mindestClientVersion`
 
 `manifest.json` auf der Share-Wurzel trägt `formatVersion` und `mindestClientVersion`. Auflage 9, zweiter Teil: `mindestClientVersion` wirkt als **Warnung, nicht als Sperre**. Ein zu alter Client zeigt „Dieser Arbeitsplatz ist älter als vorgesehen; bitte aktualisieren", arbeitet aber weiter. Ein Programm, das sich im Einsatz selbst aussperrt, ist ein größerer Schaden als ein Programm, das eine unbekannte Ereignisart überspringt und darauf hinweist. Unbekannte Ereignisarten und unbekannte Felder werden toleriert und unverändert weitergespiegelt, damit ein alter Client die Daten eines neuen nicht beschädigt.
+
+### §8.8 Lokale Schreibstörung
+
+*Bild:* Der lokale Schreibweg nach §5.2 scheitert — volle Platte (`ENOSPC`), entzogenes Schreibrecht (`EACCES`), ein Virenscanner, der die Datei kurzzeitig hält (`EBUSY` unter Windows), ein defekter Datenträger (`EIO`).
+
+*Warum das einen eigenen Abschnitt braucht:* §1.3 Satz 2 erklärt den lokalen Anhang zur Wahrheit, und §5.2 Schritt 4 lässt die Oberfläche das Ereignis unmittelbar zeigen. Scheitert Schritt 2, darf Schritt 4 nicht stattfinden. Ein Bedienschritt, den die Oberfläche annimmt und der nirgends steht, wäre der schlimmste Fehler dieses Entwurfs — schlimmer als ein sichtbar abgewiesener Bedienschritt. Der gesamte übrige Text behandelt Störungen auf dem Share; der Weg, den §1.3 zur Wahrheit erklärt, hatte bis hierher kein einziges Fehlerbild.
+
+*Verhalten:*
+
+1. Der Bedienschritt wird **sichtbar abgewiesen**. Die Eingabe bleibt im Formular stehen, der Wert wird nicht in den Zustand übernommen, und es erscheint: „Der Eintrag konnte auf diesem Rechner nicht gespeichert werden und wurde nicht übernommen." Kein stilles Verwerfen, kein Übernehmen auf Verdacht.
+2. Die bereits erhöhte Laufnummer bleibt vergeben. §3.3 lässt Lücken ausdrücklich zu; ein Rückschritt der Laufnummer wäre der gefährlichere Fehler, weil er zwei Ereignissen dieselbe Identität geben könnte.
+3. `EBUSY` und `EACCES` werden **einmal** nach kurzer Wartezeit wiederholt — ein Virenscanner-Zugriff ist typischerweise nach Millisekunden vorbei. Danach gilt Punkt 1.
+4. Bei `ENOSPC` und `EIO` erscheint zusätzlich ein dauerhafter Hinweis in der Statuszeile, bis wieder erfolgreich geschrieben wurde. `ENOSPC` nennt den Grund im Klartext („Auf diesem Rechner ist kein Speicherplatz mehr frei"), weil der Bediener ihn selbst beheben kann.
+5. Der Einsatz bleibt lesbar, und die Ereignisse der anderen Clients laufen weiter ein. Der Leitsatz „kein Stillstand" gilt auch hier: Der Arbeitsplatz wird zum Nur-Lesen-Platz, nicht zum toten Fenster.
+
+### §8.9 Dauerhafte gegenüber vorübergehenden Share-Fehlern
+
+Der Rückstau nach §5.4.4 wiederholt einen gescheiterten Zugriff endlos mit wachsendem Abstand. Für vorübergehende Fehler ist das richtig, für dauerhafte falsch: Wird einem Arbeitsplatz im laufenden Betrieb das Schreibrecht auf dem Share entzogen, liefert jeder Versuch `EACCES` — und §6.3 zeigte den Share dabei weiterhin als erreichbar, weil die Lesezugriffe ja funktionieren. Der Bediener sähe „alles in Ordnung" und übertrüge nichts mehr.
+
+Zwei Klassen, verbindlich:
+
+- **Vorübergehend** — `ETIMEDOUT`, `ENOTCONN`, `EHOSTUNREACH`, `ENETUNREACH`, `EBUSY`, jeder Fehler beim Verbindungsaufbau und jeder Zeitausstieg nach §8.4. Behandlung: Rückstau nach §5.4.4, Anzeige „Share nicht erreichbar seit HH:MM, N Einträge noch nicht übertragen".
+- **Dauerhaft** — `EACCES`, `EPERM`, `EROFS` und `ENOSPC` auf dem Share. Behandlung: Der Rückstau geht sofort auf den langsamsten Takt (30 s), und die Statuszeile trennt den Zustand von der Erreichbarkeit: „Der Server ist erreichbar, nimmt von diesem Arbeitsplatz aber keine Einträge an (kein Schreibrecht). N Einträge liegen lokal bereit." Weiterversucht wird trotzdem — ein Recht kann zurückgegeben werden —, aber nicht mehr im Sekundentakt und nie unter einer Anzeige, die Erfolg suggeriert.
+
+`ENOENT` auf dem Einsatzordner gehört in keine der beiden Klassen, sondern in den Fall aus §5.7 (Ordner verschoben, umbenannt oder archiviert).
 
 ---
 
