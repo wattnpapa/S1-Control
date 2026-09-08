@@ -59,6 +59,51 @@ export {
   type Rahmenblick,
 } from "./zeile.js";
 
+// Dateilayout und Benennung §1.4 und §4.1.
+export {
+  CLIENT_PRAEFIX_STELLEN,
+  DATEI_ARCHIV_MARKER,
+  DATEI_EINSATZ,
+  DATEI_SCHREIBER,
+  DATEI_UPLOAD_ZUSTAND,
+  ERSTES_SEGMENT,
+  Einsatzablage,
+  ORDNER_ANHAENGE,
+  ORDNER_AUSGABEN,
+  ORDNER_EREIGNISSE,
+  ORDNER_PRAESENZ,
+  ORDNER_SCHNAPPSCHUESSE,
+  SEGMENT_STELLEN,
+  clientPraefix,
+  ereignisDateiname,
+  segmentText,
+  zerlegeEreignisDateiname,
+  type Dateikennung,
+} from "./pfade.js";
+
+// `schreiber.json` §4.4 — Beschleuniger, kein Wahrheitstraeger.
+export {
+  deuteSchreiberzustand,
+  liesSchreiberzustand,
+  neuerSchreiberzustand,
+  schreibeSchreiberzustand,
+  type Schreiberzustand,
+} from "./schreiberzustand.js";
+
+// `upload-state.json` §5.3.
+export {
+  deuteUploadZustand,
+  leererUploadZustand,
+  liesUploadZustand,
+  neuerEigenerOffset,
+  neuerFremderOffset,
+  schreibeUploadZustand,
+  type EigenerOffset,
+  type FremderOffset,
+  type Stuetzstelle,
+  type UploadZustand,
+} from "./uploadZustand.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",
