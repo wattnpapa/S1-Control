@@ -20,6 +20,20 @@
     "declarationMap": true,
     "sourceMap": true,
     "verbatimModuleSyntax": true,
-    "isolatedModules": true
+    "isolatedModules": true,
+    // Typaufloesung der eigenen Pakete ueber die Quellen statt ueber
+    // `dist/`. Ohne das haengt `tsc -b` an einem Henne-Ei-Problem: die
+    // `exports` der Pakete zeigen auf `dist/index.d.ts`, das es vor dem
+    // ersten Bau nicht gibt — und ein geloeschtes `dist/` bei erhaltenem
+    // `.tsbuildinfo` fuehrt zu genau demselben Bild. Zur Laufzeit bleibt es
+    // beim gewoehnlichen Weg ueber `node_modules` und `exports`; `paths`
+    // wirkt nur auf die Typpruefung.
+    "paths": {
+      "@s1/domaene": ["./packages/domaene/src/index.ts"],
+      "@s1/speicher": ["./packages/speicher/src/index.ts"],
+      "@s1/netz": ["./packages/netz/src/index.ts"],
+      "@s1/ausgaben": ["./packages/ausgaben/src/index.ts"],
+      "@s1/cli": ["./packages/cli/src/index.ts"]
+    }
   }
 }

@@ -106,6 +106,15 @@ npm start              # leeres Electron-Fenster
 npm run start:rauchprobe   # startet, meldet den Fensterzustand, beendet sich
 ```
 
+Zwei Kleinigkeiten machen `tsc -b` gegen einen geleerten Baum robust, und
+beide sind aus einem echten Fehlschlag entstanden, nicht aus Vorsicht:
+`tsconfig.base.json` löst die eigenen `@s1/*`-Pakete per `paths` über die
+Quellen auf (die `exports` zeigen auf `dist/`, das es vor dem ersten Bau nicht
+gibt), und jedes Projekt legt seinen `tsBuildInfoFile` in den eigenen
+Ausgabeordner (wer `dist/` löscht, löscht den Bauzustand mit — sonst hält sich
+`tsc -b` für fertig und emittiert nichts). Zur Laufzeit bleibt es beim
+gewöhnlichen Weg über `node_modules` und `exports`.
+
 `npm run typecheck` ist ein echter `tsc -b`: nach dem Lauf liegen in jedem
 Paket `dist/index.js` und `dist/index.d.ts`. Die Wurzel-`tsconfig.json` ist
 eine Solution-Datei; sie enthält selbst keine Quellen, baut aber über ihre

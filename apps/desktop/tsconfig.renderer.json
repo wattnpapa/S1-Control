@@ -7,6 +7,8 @@
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
     "types": [],
     "outDir": "dist/renderer",
+    // Bauzustand in den Ausgabeordner: wer dist/ loescht, loescht ihn mit.
+    "tsBuildInfoFile": "dist/renderer/.tsbuildinfo",
     "rootDir": "src/renderer"
   },
   "include": ["src/renderer/**/*.ts"],

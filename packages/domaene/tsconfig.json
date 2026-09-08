@@ -9,6 +9,8 @@
     "lib": ["ES2022"],
     "types": [],
     "outDir": "dist",
+    // Bauzustand in den Ausgabeordner: wer dist/ loescht, loescht ihn mit.
+    "tsBuildInfoFile": "dist/.tsbuildinfo",
     "rootDir": "src"
   },
   "include": ["src/**/*.ts"]
