@@ -48,7 +48,7 @@ Konsolidiert aus den sechs Widerlegungen (Urteil §12.5), nach Fälligkeit.
 10. Zyklusregel für `AbschnittUmgehaengt`; relative statt absoluter Stärkeänderung bei Aufteilen/Zusammenführen; Auffangregel für aufgelöste Abschnitte.
 11. Undo als normales Ereignis mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo.
 12. „Neueste Revision zählt" definieren: HLC entscheidet, fachliche Meldezeit wird angezeigt und plausibilisiert; große Abweichung ⇒ Konflikthinweis am Stärkewert.
-13. Ereignis nach `archiv.marker` hat genau eine Behandlung; Ordnerverschiebung darf keinen Upload-Retry ins Leere laufen lassen.
+13. Ereignis nach der Archivierung hat genau eine Behandlung; Ordnerverschiebung darf keinen Upload-Retry ins Leere laufen lassen. *(Angeglichen am 2026-09-08: Der Wortlaut nannte ursprünglich `archiv.marker` als Bezugspunkt. Maßgeblich ist die HLC des Ereignisses `EinsatzArchiviert`; der Marker ist ein abgeleiteter Anzeiger — 02-ZIELBILD.md Nr. 10, KONZEPT-SPEICHER.md §5.7. Die Anforderung selbst ist unverändert.)*
 14. Anspruch „revisionssicher" streichen; zugesagt wird nur „Änderung innerhalb einer Datei erkennbar".
 
 **In M0 und dessen Abnahme**
