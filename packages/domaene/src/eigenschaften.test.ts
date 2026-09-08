@@ -27,7 +27,9 @@
  *    der ueberwiegenden Zahl der Laeufe von der Ordnung nach `(clientId,
  *    laufnummer)` abweicht — sonst pruefte P1 nicht, dass *die HLC*
  *    entscheidet, sondern nur Reihenfolgeunabhaengigkeit im Allgemeinen —,
- *    und dass HLC-Gleichstaende (geklontes Profil) tatsaechlich vorkommen.
+ *    und dass HLC-Gleichstaende (geklontes Profil) **auf demselben Feld**
+ *    tatsaechlich vorkommen — nur die kann der Gleichstandsbruch in
+ *    `vergleicheBeobachtung` ueberhaupt entscheiden.
  *
  * Der zweite Teil von P1 prueft den Live-Pfad: dieselbe Menge, in zufaellige
  * Schuebe zerlegt und nacheinander per `falteHinzu` in einen bestehenden
@@ -39,10 +41,18 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import type { EingehendesEreignis, Ereignis, Staerke } from "./ereignis.js";
+import type {
+  AbschnittAngelegt,
+  EingehendesEreignis,
+  EinheitGemeldet,
+  Ereignis,
+  Staerke,
+} from "./ereignis.js";
 import { falte, falteHinzu, leereFaltung, materialisiere } from "./fold.js";
 import { vergleicheHlc } from "./hlc.js";
+import { vergleicheNachCodepunkt } from "./kanonisch.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
+
 import {
   abschnittAngelegt,
   einheitGemeldet,
@@ -338,10 +348,22 @@ describe("Die erzeugten Ereignismengen sind aussagekraeftig", () => {
   it("erzeugt Lagen mit Einheiten, konkurrierenden Schreibern und HLC-Gleichstaenden", () => {
     let laeufe = 0;
     let mitEinheiten = 0;
-    let hlcOrdnungAndersAlsClientOrdnung = 0;
-    let mitGleichstand = 0;
-    let konkurrenzAufFeld = 0;
+    let hlcOrdnungAndersAlsIdOrdnung = 0;
     let ankunftAndersAlsHlc = 0;
+    let gleichstandAufDemselbenFeld = 0;
+    let konkurrenzAufFeld = 0;
+
+    /** Welches Akkumulatorfeld ein Ereignis beruehrt — Gleichstand zaehlt nur hier. */
+    const feldSchluessel = (e: EingehendesEreignis): string | undefined => {
+      if (e.typ === "EinheitVerschoben" || e.typ === "StaerkeGeaendert") {
+        const nutzlast = (e as Ereignis & { nutzlast: { einheitId: string } }).nutzlast;
+        return `einheit/${nutzlast.einheitId}/${e.typ}`;
+      }
+      if (e.typ === "EinheitGemeldet") return `einheit/${(e as EinheitGemeldet).nutzlast.einheitId}/anlage`;
+      if (e.typ === "AbschnittAngelegt") return `abschnitt/${(e as AbschnittAngelegt).nutzlast.abschnittId}`;
+      if (e.typ === "EinsatzAngelegt") return "einsatz";
+      return undefined;
+    };
 
     fc.assert(
       fc.property(mengeUndPermutation, ([ausgang, permutation]) => {
@@ -350,48 +372,56 @@ describe("Die erzeugten Ereignismengen sind aussagekraeftig", () => {
         if (Object.keys(zustand.einheiten).length > 0) mitEinheiten += 1;
 
         const nachHlc = [...ausgang].sort((a, b) => vergleicheHlc(a.hlc, b.hlc)).map((e) => e.id);
-        const nachClient = [...ausgang]
-          .sort((a, b) => (a.id === b.id ? 0 : a.id < b.id ? -1 : 1))
+        const nachId = [...ausgang]
+          .sort((a, b) => vergleicheNachCodepunkt(a.id, b.id))
           .map((e) => e.id);
-        // Der Kern: Waeren HLC-Ordnung und die Ordnung nach (clientId,
-        // laufnummer) immer identisch, koennte P1 nicht pruefen, dass die HLC
-        // entscheidet — ein Fold, der die HLC ignoriert und nach der Id
-        // ordnet, bestuende dann ebenfalls.
-        if (kanonischeSerialisierung(nachHlc) !== kanonischeSerialisierung(nachClient)) {
-          hlcOrdnungAndersAlsClientOrdnung += 1;
+        // Der Kern: Waeren HLC-Ordnung und die Ordnung nach der Ereignis-Id
+        // immer identisch, koennte P1 nicht pruefen, dass die HLC entscheidet
+        // — ein Fold, der die HLC ignoriert und nach der Id ordnet, bestuende
+        // dann ebenfalls.
+        if (kanonischeSerialisierung(nachHlc) !== kanonischeSerialisierung(nachId)) {
+          hlcOrdnungAndersAlsIdOrdnung += 1;
         }
         if (kanonischeSerialisierung(permutation.map((e) => e.id)) !== kanonischeSerialisierung(nachHlc)) {
           ankunftAndersAlsHlc += 1;
         }
 
-        const gesehen = new Map<string, string>();
+        // Nur ein Gleichstand auf **demselben** Feld kann vom
+        // Gleichstandsbruch ueberhaupt entschieden werden. Ein Gleichstand
+        // irgendwo im Lauf waere die falsche Groesse: er liesse sich
+        // erreichen, ohne dass der Fold je darueber entscheiden muesste.
+        const jeHlcUndFeld = new Map<string, string>();
         for (const e of ausgang) {
-          const schluessel = `${e.hlc.millisekunden}/${e.hlc.zaehler}/${e.hlc.clientId}`;
-          const vorheriges = gesehen.get(schluessel);
-          if (vorheriges !== undefined && vorheriges !== e.id) mitGleichstand += 1;
-          gesehen.set(schluessel, e.id);
+          const feld = feldSchluessel(e);
+          if (feld === undefined) continue;
+          const schluessel = `${e.hlc.millisekunden}/${e.hlc.zaehler}/${e.hlc.clientId}#${feld}`;
+          const vorheriges = jeHlcUndFeld.get(schluessel);
+          if (vorheriges !== undefined && vorheriges !== e.id) gleichstandAufDemselbenFeld += 1;
+          jeHlcUndFeld.set(schluessel, e.id);
         }
 
         // Zwei verschiedene Clients schreiben auf dasselbe Feld derselben Einheit.
         const schreiberJeFeld = new Map<string, Set<string>>();
         for (const e of ausgang) {
           if (e.typ !== "EinheitVerschoben" && e.typ !== "StaerkeGeaendert") continue;
-          const nutzlast = (e as Ereignis & { nutzlast: { einheitId: string } }).nutzlast;
-          const pfad = `${nutzlast.einheitId}/${e.typ}`;
-          const menge = schreiberJeFeld.get(pfad) ?? new Set<string>();
+          const feld = feldSchluessel(e) as string;
+          const menge = schreiberJeFeld.get(feld) ?? new Set<string>();
           menge.add(e.akteur.clientId);
-          schreiberJeFeld.set(pfad, menge);
+          schreiberJeFeld.set(feld, menge);
         }
         if ([...schreiberJeFeld.values()].some((m) => m.size > 1)) konkurrenzAufFeld += 1;
       }),
       { numRuns: 400 },
     );
 
-    expect(laeufe).toBeGreaterThan(0);
+    expect(laeufe).toBe(400);
     expect(mitEinheiten / laeufe).toBeGreaterThan(0.5);
-    expect(hlcOrdnungAndersAlsClientOrdnung / laeufe).toBeGreaterThan(0.3);
+    expect(hlcOrdnungAndersAlsIdOrdnung / laeufe).toBeGreaterThan(0.5);
     expect(ankunftAndersAlsHlc / laeufe).toBeGreaterThan(0.5);
-    expect(mitGleichstand).toBeGreaterThan(0);
+    // Ohne Gleichstaende auf demselben Feld liefe der Gleichstandsbruch aus
+    // `vergleicheBeobachtung` ungeprueft mit — die Suite bliebe gruen, auch
+    // wenn man ihn entfernte.
+    expect(gleichstandAufDemselbenFeld).toBeGreaterThan(4);
     expect(konkurrenzAufFeld / laeufe).toBeGreaterThan(0.3);
   });
 });
