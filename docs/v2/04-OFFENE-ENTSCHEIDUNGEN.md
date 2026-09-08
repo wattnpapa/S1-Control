@@ -2,6 +2,8 @@
 
 Stand: 2026-09-08 · Quelle: Urteil §13, ergänzt um die Betriebsparameter vom 2026-09-07. Bereits beantwortet und hier nicht mehr aufgeführt: NAS (Synology), NTP (vorhanden), Client-OS (Windows 11 ohne Admin-Rechte), gleichzeitige Rechner (1 bis 5), macOS/Linux (berücksichtigen), Altdaten (keine).
 
+> **Stand 2026-09-08: entschieden.** Johannes hat am 2026-09-08 die Empfehlungen angenommen („wir gehen den Weg, den du für sinnvoll hältst") und den Feldversuch beantwortet: v1 startet auf den FüSt-Rechnern ohne Admin-Rechte. Die getroffenen Beschlüsse je Nummer stehen in [05-UMSETZUNGSPLAN.md](05-UMSETZUNGSPLAN.md) Abschnitt 1. Offen bleiben nur noch Nr. 2 (Stunden je Woche, Planannahme 10), Nr. 10 (größter Einsatz, Annahme 100 bis 300 Einheiten) und Nr. 12 (Windows-Rechner benennen). Die Tabelle unten bleibt als Begründung der Optionen stehen.
+
 Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzuschnitt bestimmen. Alle anderen können bis zum jeweils genannten Meilenstein warten.
 
 | Nr. | Entscheidung | Optionen und Folgen | Empfehlung | Fällig |

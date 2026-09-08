@@ -1,6 +1,6 @@
 # S1-Control v2 – Architekturentscheidung auf der grünen Wiese
 
-Stand: 2026-09-08 · Branch `v2-architektur` · Status: **Entscheidungsvorlage, Umsetzung noch nicht begonnen**
+Stand: 2026-09-08 · Branch `v2-architektur` · Status: **Weg beschlossen (2026-09-08), Umsetzung beginnt mit M-0**
 
 Dieser Ordner beantwortet die Frage, mit der der Branch angelegt wurde: Soll S1-Control neu aufgesetzt werden, und ist dafür der Stack des Schwesterprojekts bmecatEditor (Tauri 2 + Rust + React) besser als der heutige (Electron + React + JSON-Dateien)? Randbedingungen: dateibasierte Datenhaltung auf einer Synology-NAS, mehrere Clients gleichzeitig, kein Serverprozess, Ablösung der Excel „Einsatzkräfteübersicht V 1.5.2-beta".
 
@@ -12,7 +12,8 @@ Dieser Ordner beantwortet die Frage, mit der der Branch angelegt wurde: Soll S1-
 | 2 | [02-ZIELBILD.md](02-ZIELBILD.md) | Entwicklung | Stack, Speichermodell, Ringe und Pakete, Dateilayout auf dem Share, Meldekopf-Wege, Ausgaben, Tests |
 | 3 | [03-MEILENSTEINE.md](03-MEILENSTEINE.md) | Planung | Vorschaltungen vor der ersten Codezeile, Meilensteine für beide Zielumfänge, die 25 Auflagen aus der Widerlegung |
 | 4 | [04-OFFENE-ENTSCHEIDUNGEN.md](04-OFFENE-ENTSCHEIDUNGEN.md) | Johannes | 13 Entscheidungen, die nur der Produktverantwortliche treffen kann, je mit Empfehlung |
-| 5 | [adr/](adr/) | Nachwelt | Vier Architekturentscheidungen als ADR, damit die Fragen nicht in zwei Jahren erneut gestellt werden |
+| 5 | [05-UMSETZUNGSPLAN.md](05-UMSETZUNGSPLAN.md) | Planung | Beschlossener Weg: getroffene Entscheidungen, Arbeitspakete M-0 bis V mit Definition of Done, Summe, Kalender, Risiken, nächste Schritte |
+| 6 | [adr/](adr/) | Nachwelt | Vier Architekturentscheidungen als ADR, damit die Fragen nicht in zwei Jahren erneut gestellt werden |
 
 ## Wie die Entscheidung entstanden ist
 
