@@ -261,7 +261,6 @@ export class Spiegelung {
       shareBytes,
       shareOffset: offsets.shareOffset,
       lokaleBytes: lokal,
-      erwarteteKette: offsets.letzteKette,
       lokaleInhalte: this.#optionen.identitaeten,
     });
     return this.#behandleAusgang(ausgang, kennung, offsets, lokal, sharePfad);

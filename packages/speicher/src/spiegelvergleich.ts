@@ -21,7 +21,7 @@
  * eine Aussage über den Rechner des Bedieners nach sich.
  */
 
-import { inhaltsSchluessel, leseAbschnitt, type Identitaetenblick } from "./zeile.js";
+import { inhaltsSchluessel, leseZeilengrenzen, type Identitaetenblick } from "./zeile.js";
 
 /** Der Ausgang eines Vergleichs nach §5.4.3. */
 export type Vergleichsausgang =
@@ -58,8 +58,6 @@ export interface VergleichEingabe {
    * `lokalerVollstaendigerOffset` (§5.4.1).
    */
   readonly lokaleBytes: Uint8Array;
-  /** Kettenprüfsumme an `shareOffset` (§5.3). */
-  readonly erwarteteKette: string;
   /** Die lokal vergebenen Identitäten samt Inhaltsschlüssel (§5.3). */
   readonly lokaleInhalte: Identitaetenblick;
 }
@@ -69,14 +67,23 @@ export interface VergleichEingabe {
  * derselben Stelle und liefert einen der drei Ausgänge aus §5.4.3.
  */
 export function vergleicheSpiegel(eingabe: VergleichEingabe): Vergleichsausgang {
-  const { shareBytes, shareOffset, lokaleBytes, erwarteteKette, lokaleInhalte } = eingabe;
+  const { shareBytes, shareOffset, lokaleBytes, lokaleInhalte } = eingabe;
 
   const abweichung = ersteAbweichung(shareBytes, shareOffset, lokaleBytes);
   if (abweichung === undefined) return { art: "A", gepruefteBytes: shareBytes.byteLength };
 
   // Ab der Abweichungsstelle werden die Share-Zeilen betrachtet. Maßgeblich ist
   // die Zeile, in die die Abweichung fällt — nicht das einzelne Byte.
-  const gelesen = leseAbschnitt(shareBytes, shareOffset, erwarteteKette);
+  //
+  // Gelesen wird hier **ohne** Kettenprüfung, und das ist keine Nachlässigkeit:
+  // §5.4.3 nennt als nicht auswertbar ausdrücklich „verfälschte Länge,
+  // verfälschter CRC". Eine abweichende Kette gehört nicht dazu — `vorgaenger`
+  // liegt innerhalb des CRC-Bereichs, eine Zeile mit stimmigem CRC und
+  // abweichender Kette wurde also genau so **geschrieben**. Das ist eine
+  // Schreibspur, kein gekipptes Bit. Prüfte man hier die Kette mit, verschwände
+  // genau der Fall aus §4.5 Schritt 1 in Ausgang B: der Klon, der ein Segment
+  // mit höherer Nummer und eigener Kette begonnen hat.
+  const gelesen = leseZeilengrenzen(shareBytes, shareOffset);
   const absoluteAbweichung = shareOffset + abweichung;
   const erste = gelesen.zeilen.findIndex((z) => z.offset + z.laenge > absoluteAbweichung);
   const betroffene = erste < 0 ? [] : gelesen.zeilen.slice(erste);

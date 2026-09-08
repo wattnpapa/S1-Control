@@ -161,6 +161,27 @@ export {
 export { leseZeilengrenzen } from "./zeile.js";
 export { ersatzAus } from "./verwaltungsereignisse.js";
 
+// Pruefung beim Oeffnen: Fremdschreiber §4.5 Fall 2 und Vollpruefung §4.6.1.
+export {
+  pruefeBeimOeffnen,
+  type Oeffnungsbefund,
+  type OeffnungspruefungOptionen,
+} from "./oeffnungspruefung.js";
+
+// Praesenz §6.4 und der Quarantaenehinweis als Beschleuniger §4.6.1.
+export {
+  PRAESENZ_ORDNER,
+  deutePraesenz,
+  hinweiseAufEigeneDateien,
+  istVeraltet,
+  liesFremdePraesenz,
+  schreibePraesenz,
+  type FremdePraesenz,
+  type Praesenz,
+  type PraesenzOptionen,
+  type Quarantaenehinweis,
+} from "./praesenz.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",
