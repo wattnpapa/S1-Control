@@ -1,0 +1,45 @@
+{
+  "name": "s1-control",
+  "version": "0.0.0",
+  "private": true,
+  "description": "S1-Control v2 — Einsatzführung für die THW-Führungsstelle. Wurzel der npm-Workspaces.",
+  "license": "EUPL-1.2",
+  "author": {
+    "name": "Johannes Rudolph",
+    "email": "johannes.rudolph@thw-oldenburg.de"
+  },
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "vendor/bos-kern"
+  ],
+  "scripts": {
+    "kern:bauen": "node bau/kern-bauen.mjs",
+    "postinstall": "npm run kern:bauen",
+    "typecheck": "tsc -b",
+    "typecheck:sauber": "tsc -b --clean",
+    "lint": "eslint .",
+    "test": "vitest run",
+    "build:renderer": "vite build --config apps/desktop/vite.config.ts",
+    "build:schale": "node apps/desktop/bau/schale.mjs",
+    "build": "npm run kern:bauen && npm run typecheck && npm run build:renderer && npm run build:schale",
+    "electron:holen": "install-electron",
+    "start": "npm run build && npm run electron:holen && electron apps/desktop",
+    "start:rauchprobe": "npm run build && npm run electron:holen && cross-env S1_SMOKE=1 electron apps/desktop"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@types/node": "^26.1.1",
+    "@typescript/native": "npm:typescript@^7.0.2",
+    "cross-env": "^7.0.3",
+    "electron": "^43.4.0",
+    "esbuild": "^0.28.1",
+    "eslint": "^10.10.0",
+    "jsdom": "^29.1.1",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript-eslint": "^8.70.0",
+    "vite": "^8.1.4",
+    "vitest": "^4.1.10"
+  }
+}

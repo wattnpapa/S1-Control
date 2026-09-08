@@ -1,0 +1,14 @@
+{
+  // Renderer: DOM, aber keine Node-Typen und kein Electron. Der Renderer
+  // erreicht die Schale ausschliesslich ueber die im Preload freigegebene
+  // Bruecke.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": [],
+    "outDir": "dist/renderer",
+    "rootDir": "src/renderer"
+  },
+  "include": ["src/renderer/**/*.ts"],
+  "references": [{ "path": "../../packages/domaene" }]
+}

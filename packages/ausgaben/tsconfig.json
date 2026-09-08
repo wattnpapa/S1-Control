@@ -1,0 +1,14 @@
+{
+  // Ring 3 — erzeugt HTML als Zeichenkette. Kein DOM (das Rendern uebernimmt
+  // die Schale), kein Electron, kein React. node: waere erlaubt, wird hier
+  // aber nicht gebraucht; "types": [] haelt die Vorlagen bewusst rein.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../domaene" }]
+}

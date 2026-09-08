@@ -1,0 +1,19 @@
+{
+  // Loesungsdatei fuer `tsc -b`. Sie enthaelt selbst keine Quelldateien —
+  // `"files": []` ist hier kein Leerlauf, sondern die von TypeScript
+  // vorgesehene Form einer Solution-Datei: `tsc -b` folgt den Referenzen,
+  // baut jedes Projekt in Abhaengigkeitsreihenfolge und schreibt echte
+  // Ausgaben nach `packages/<paket>/dist/` bzw. `apps/desktop/dist/`.
+  //
+  // Nachweis, dass wirklich gebaut wird: nach `npm run typecheck` existieren
+  // in jedem Paket ein `dist/index.js` und ein `dist/index.d.ts`.
+  "files": [],
+  "references": [
+    { "path": "./packages/domaene" },
+    { "path": "./packages/speicher" },
+    { "path": "./packages/netz" },
+    { "path": "./packages/ausgaben" },
+    { "path": "./packages/cli" },
+    { "path": "./apps/desktop" }
+  ]
+}

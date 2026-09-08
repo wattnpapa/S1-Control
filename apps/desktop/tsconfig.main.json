@@ -1,0 +1,20 @@
+{
+  // Main-Prozess und Preload: Node und Electron, aber kein DOM. Fehlt "DOM"
+  // in "lib", faellt schon die Typpruefung durch, sobald jemand hier
+  // `document` oder `window` benutzt — der Main-Prozess zieht keine
+  // Renderer-Bibliotheken.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist/main",
+    "rootDir": "src/main"
+  },
+  "include": ["src/main/**/*.ts"],
+  "references": [
+    { "path": "../../packages/domaene" },
+    { "path": "../../packages/speicher" },
+    { "path": "../../packages/netz" },
+    { "path": "../../packages/ausgaben" }
+  ]
+}

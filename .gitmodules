@@ -1,0 +1,3 @@
+[submodule "vendor/bos-kern"]
+	path = vendor/bos-kern
+	url = /Users/johannes/Developer/bos-kern

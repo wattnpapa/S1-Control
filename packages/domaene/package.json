@@ -1,0 +1,19 @@
+{
+  "name": "@s1/domaene",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Plattformneutraler Fachkern von S1-Control: Zielmodell, Ereigniskatalog, Fold, Kennzahlen.",
+  "license": "EUPL-1.2",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "dependencies": {
+    "@bos/kern": "file:../../vendor/bos-kern"
+  }
+}

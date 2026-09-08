@@ -1,0 +1,12 @@
+{
+  // Ring 3 — darf node:dgram, aber kein DOM, kein React, kein Electron.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../domaene" }]
+}

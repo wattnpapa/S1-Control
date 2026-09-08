@@ -1,0 +1,15 @@
+{
+  // Ring 2 — plattformneutral. Die Grenze steht hier nicht nur im Lint:
+  //   * "lib" ohne "DOM": `document`, `window` und `fetch` sind unbekannt.
+  //   * "types": []      : keine Node-Globals (`process`, `Buffer`, `__dirname`).
+  // Damit scheitert die Typpruefung schon dann, wenn jemand eine
+  // Plattform-API ohne Import benutzt.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"]
+}

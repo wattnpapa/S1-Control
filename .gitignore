@@ -18,3 +18,8 @@ einsatz/
 *.s1control
 *.s1control.lock
 *.s1control.tmp
+
+# v2-Baum (npm-Workspaces)
+node_modules/
+out/
+*.tsbuildinfo

@@ -1,0 +1,18 @@
+{
+  // Ring 3 — darf alle @s1/*-Pakete und node:, aber kein Electron und
+  // kein React.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [
+    { "path": "../domaene" },
+    { "path": "../speicher" },
+    { "path": "../netz" },
+    { "path": "../ausgaben" }
+  ]
+}

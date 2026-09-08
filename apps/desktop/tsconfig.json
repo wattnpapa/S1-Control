@@ -1,0 +1,7 @@
+{
+  // Loesungsdatei der Schale: Main und Renderer sind zwei getrennte Projekte,
+  // weil sie unterschiedliche Plattformen sind. Nur der Main-Prozess bekommt
+  // Node-Typen, nur der Renderer bekommt das DOM.
+  "files": [],
+  "references": [{ "path": "./tsconfig.main.json" }, { "path": "./tsconfig.renderer.json" }]
+}

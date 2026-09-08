@@ -1,0 +1,13 @@
+{
+  // Ring 3 — darf node: (fs, crypto, path), aber kein DOM, kein React,
+  // kein Electron. "lib" bleibt deshalb ohne "DOM".
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "references": [{ "path": "../domaene" }]
+}

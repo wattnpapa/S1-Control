@@ -1,0 +1,25 @@
+{
+  // Gemeinsame Compileroptionen aller v2-Projekte. Jedes Paket erbt hiervon
+  // und ergaenzt nur, was es unterscheidet: `lib`, `types`, `outDir`,
+  // `rootDir` und seine Projektreferenzen.
+  //
+  // `composite: true` steht hier, weil `tsc -b` es fuer jedes referenzierte
+  // Projekt verlangt: nur damit entstehen `.d.ts`-Dateien und
+  // `.tsbuildinfo`, und nur damit baut der Build-Modus inkrementell in der
+  // richtigen Reihenfolge.
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "skipLibCheck": true,
+    "composite": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true
+  }
+}

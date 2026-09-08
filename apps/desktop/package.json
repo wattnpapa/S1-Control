@@ -1,0 +1,15 @@
+{
+  "name": "@s1/desktop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ring 4: die Electron-Schale. Main-Prozess ohne Fachzustand, Preload, Renderer.",
+  "license": "EUPL-1.2",
+  "type": "module",
+  "main": "out/main.mjs",
+  "dependencies": {
+    "@s1/ausgaben": "*",
+    "@s1/domaene": "*",
+    "@s1/netz": "*",
+    "@s1/speicher": "*"
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "name": "@s1/cli",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Ring 3: Kommandozeile s1 — akte pruefe | falte | exportiere | simuliere | diagnose.",
+  "license": "EUPL-1.2",
+  "type": "module",
+  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "types": "./dist/index.d.ts",
+  "main": "./dist/index.js",
+  "bin": { "s1": "./dist/bin.js" },
+  "dependencies": {
+    "@s1/ausgaben": "*",
+    "@s1/domaene": "*",
+    "@s1/netz": "*",
+    "@s1/speicher": "*"
+  }
+}
