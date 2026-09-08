@@ -1,10 +1,13 @@
 /**
  * `@s1/domaene` — Ring 2: plattformneutraler Fachkern von S1-Control.
  *
- * Hier entstehen ab M0.2 Zielmodell, Ereigniskatalog, Fold, Konfliktregeln,
- * HLC und Kennzahlen. Dieser Stand ist bewusst ein Geruest: eine einzige
- * kleine, aber fachlich sinnvolle Funktion, die den Verdrahtungsnachweis
- * fuehrt — inklusive eines echten Aufrufs in `@bos/eeb-format`.
+ * Stand M0.2: HLC (§3.2), Ereignisrahmen (§2.4) und der Minimalfold als
+ * Mengenfunktion mit Rebase. Zielmodell in voller Breite, vollstaendiger
+ * Ereigniskatalog und Kennzahlen folgen in M1.2 und M1.3.
+ *
+ * Die Paragraphenverweise in diesem Paket zeigen auf
+ * `docs/v2/konzepte/KONZEPT-SPEICHER.md`, wie 05-UMSETZUNGSPLAN.md §3 es
+ * verlangt.
  *
  * Verbindliche Grenze (02-ZIELBILD.md, „Vier Ringe"): kein `node:`, kein DOM,
  * kein React, kein Electron. Erlaubt ist ausschliesslich der Griff nach innen,
@@ -12,6 +15,27 @@
  */
 
 import { inhaltsHash } from "@bos/eeb-format";
+
+// Hybrid Logical Clock — KONZEPT-SPEICHER.md §3.1 und §3.2, Auflage 5.
+export {
+  HlcUhr,
+  MILLISEKUNDEN_MAX,
+  MILLISEKUNDEN_STELLEN,
+  UHR_SCHWELLE_MS,
+  ZAEHLER_MAX,
+  ZAEHLER_STELLEN,
+  groessereHlc,
+  hlcAlsText,
+  hlcAusText,
+  hlcGleich,
+  vergleicheHlc,
+  type Empfang,
+  type Erzeugung,
+  type Hlc,
+  type HlcUhrOptionen,
+  type Uhrmeldung,
+  type Wanduhr,
+} from "./hlc.js";
 
 /** Ordnername eines Einsatzes auf dem Share: `<datum>_<slug>_<kurzid>`. */
 export interface Einsatzkennung {
