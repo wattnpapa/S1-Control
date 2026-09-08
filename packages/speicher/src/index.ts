@@ -104,6 +104,39 @@ export {
   type UploadZustand,
 } from "./uploadZustand.js";
 
+// Verwaltungsereignisse §2.4, §4.3, §4.6 — mehr Ereignisarten kennt diese Schicht nicht.
+export {
+  TYP_SEGMENT_ABGESCHLOSSEN,
+  TYP_SEGMENT_ERSETZT,
+  VERWALTUNGSTYPEN,
+  istVerwaltungsereignis,
+  nachfolgerAus,
+  type AbschlussNutzlast,
+  type ErsatzNutzlast,
+} from "./verwaltungsereignisse.js";
+
+// Geprueftes Lesen einer Segmentdatei §5.5; das Dateiende wird gelesen, nie erfragt (§5.4.2).
+export { angekuendigterNachfolger, liesSegment, type Segmentbefund } from "./segmentlese.js";
+
+// Die gesehenen Identitaeten aus dem lokalen Spiegel §5.3.
+export { Identitaetenbuch } from "./identitaeten.js";
+
+// Der Schreiber §5.2, §4.2, §4.3, §4.5, §4.6, §8.8.
+export {
+  Schreiber,
+  oeffneSchreiber,
+  type Ereignisentwurf,
+  type GeschriebeneZeile,
+  type Schreibergebnis,
+  type SchreiberOptionen,
+} from "./schreiber.js";
+export {
+  LokalerKettenbruch,
+  bereiteSchreiberVor,
+  type Schreiberbestand,
+  type StartOptionen,
+} from "./schreiberStart.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",
