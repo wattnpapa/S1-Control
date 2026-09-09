@@ -186,3 +186,59 @@ describe("Kennungswechsel nach §4.5, Reaktion", () => {
     expect(leser.zustand.fremd[`${ICH}.0000`]).toBeDefined();
   });
 });
+
+describe("Ein bereits ersetztes Segment (§4.6 Schritt 5, Entscheidung 16a)", () => {
+  /** Wie `pruefe`, aber mit der Auskunft über bereits ersetzte Segmente. */
+  function pruefeMitErsatz(
+    platz: Arbeitsplatz,
+    schreiber: Schreiber,
+    bereitsErsetzt: ReadonlyMap<number, number>,
+  ) {
+    return pruefeBeimOeffnen({
+      dateisystem: platz.dateisystem,
+      ablage: platz.ablage,
+      clientId: schreiber.clientId,
+      identitaeten: schreiber.identitaeten,
+      bereitsErsetzt,
+    });
+  }
+
+  /** Der Offset, an dem die Beschädigung gemeldet würde. */
+  async function beschaedigeUndMelde(platz: Arbeitsplatz, schreiber: Schreiber, byte: number) {
+    const pfad = `share/einsatz/ereignisse/${ICH}.0000.jsonl`;
+    const roh = await platz.wiese.lies(pfad);
+    roh[byte] = (roh[byte] as number) ^ 0x01;
+    await platz.wiese.schreibe(pfad, roh);
+    const befund = await pruefe(platz, schreiber);
+    if (befund.art !== "beschaedigt") throw new Error(JSON.stringify(befund));
+    return befund.abOffset;
+  }
+
+  it("meldet den bekannten Schaden ab der Übernahmestelle nicht noch einmal", async () => {
+    // §4.6 Schritt 5: Das ersetzte Segment „wird nicht mehr beschrieben".
+    // Alles ab der Übernahmestelle steht im Ersatz lesbar noch einmal; eine
+    // zweite Reparatur wäre keine Heilung, sondern eine Dauerstörung bei
+    // jedem Öffnen.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber } = await eigenerStand(platz, 5);
+    const abOffset = await beschaedigeUndMelde(platz, schreiber, 40);
+    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[0, abOffset]]));
+    expect(befund).toEqual({ art: "inOrdnung" });
+  });
+
+  it("meldet einen **späteren** Schaden unterhalb der Übernahmestelle sehr wohl", async () => {
+    // Die Zeilen zwischen der neuen Beschädigung und der Übernahmestelle hat
+    // kein Ersatzsegment je mitgenommen — sie standen lesbar da. Hinter der
+    // neuen Quarantäne sind sie für jeden Leser fort. Genau so entstand der
+    // Verlust bei Startwert 111 (Messprotokoll 7.5). Entscheidung 16 (a).
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber } = await eigenerStand(platz, 5);
+    const abOffset = await beschaedigeUndMelde(platz, schreiber, 40);
+    // Der Ersatz übernahm erst weit hinter dieser Stelle.
+    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[0, abOffset + 10_000]]));
+    expect(befund.art).toBe("beschaedigt");
+    expect(befund.art === "beschaedigt" && befund.abOffset).toBe(abOffset);
+  });
+});

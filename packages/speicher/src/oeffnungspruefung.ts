@@ -74,8 +74,12 @@ export interface OeffnungspruefungOptionen {
    * **Ausgang C bleibt wirksam.** „Es wird nicht mehr beschrieben" gilt für
    * diesen Client; ein Klon schreibt dort sehr wohl weiter, und §4.5 Schritt 1
    * verlangt ausdrücklich „alle eigenen Segmente".
+   *
+   * Der Wert je Segment ist der Offset, **ab dem** der Ersatz übernommen hat.
+   * Er entscheidet, ob eine gemeldete Beschädigung die bereits bekannte ist
+   * oder eine neue weiter vorn; siehe die Fallunterscheidung unten.
    */
-  readonly bereitsErsetzt?: ReadonlySet<number>;
+  readonly bereitsErsetzt?: ReadonlyMap<number, number>;
   /**
    * Die eigene zuletzt vergebene Laufnummer aus `schreiber.json` (§3.3).
    *
@@ -129,7 +133,7 @@ export async function pruefeBeimOeffnen(
     // Nur unter der **laufenden** Kennung kann eine fremde Laufnummer noch zu
     // einer doppelten Identität führen — dort schreibt dieser Client weiter.
     unterLaufenderKennung = Math.max(unterLaufenderKennung, hoechsteLaufnummer(share));
-    const istErsetzt = optionen.bereitsErsetzt?.has(kennung.segment) === true;
+    const ersetztAb = optionen.bereitsErsetzt?.get(kennung.segment);
 
     const ausgang = vergleicheSpiegel({
       shareBytes: share,
@@ -138,11 +142,30 @@ export async function pruefeBeimOeffnen(
       lokaleInhalte: optionen.identitaeten,
     });
     if (ausgang.art === "B") {
-      // Ein bereits ersetztes Segment wird nach §4.6 Schritt 5 „nicht mehr
-      // beschrieben"; seine Bytes bleiben beschädigt liegen, und das ist der
-      // vorgesehene Endzustand. Eine zweite Reparatur wäre keine Heilung,
-      // sondern eine Dauerstörung.
-      if (istErsetzt) continue;
+      // **Ein ersetztes Segment wird nicht wieder repariert — es sei denn, der
+      // Schaden sitzt vor der Stelle, ab der der Ersatz übernommen hat.**
+      //
+      // §4.6 Schritt 5 sagt, das beschädigte Segment werde „nicht mehr
+      // beschrieben"; seine Bytes bleiben liegen, und das ist der vorgesehene
+      // Endzustand. Für den bekannten Schaden ab `ersetztAb` gilt das
+      // unverändert: Alles ab dort steht im Ersatzsegment lesbar noch einmal,
+      // eine zweite Reparatur wäre keine Heilung, sondern eine Dauerstörung
+      // bei jedem Öffnen.
+      //
+      // Eine **spätere** Beschädigung *unterhalb* dieser Stelle ist etwas
+      // anderes. Die Zeilen zwischen ihr und `ersetztAb` hat kein
+      // Ersatzsegment je mitgenommen — sie standen ja lesbar da. Hinter der
+      // neuen Quarantäne sind sie für jeden Leser fort (§8.2 Punkt 7, §2.3),
+      // und ohne diese Unterscheidung bliebe der Verlust endgültig. In der
+      // Simulation M0.4 entstand genau so der Verlust bei Startwert 111: das
+      // Segment `0000` bei Offset 13.830 ersetzt, danach bei 11.424 erneut
+      // beschädigt, die Zeilen `:397` bis `:400` fort (Messprotokoll 7.5,
+      // Entscheidung 16, Richtung (a)).
+      //
+      // Die Wiederholung endet: Jede weitere Reparatur setzt an einem
+      // **kleineren** Offset an, und `ersetzteSegmente` führt den kleinsten.
+      // Unterhalb von 0 gibt es nichts mehr.
+      if (ersetztAb !== undefined && ausgang.abOffset >= ersetztAb) continue;
       return { art: "beschaedigt", segment: kennung.segment, abOffset: ausgang.abOffset };
     }
     // Ausgang C wird **auch** in einem ersetzten Segment ausgewertet: §4.6

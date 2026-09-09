@@ -72,7 +72,7 @@ export interface SpiegelungOptionen {
    * Share. Aus dem einmaligen Heilweg würde eine Dauerstörung im Takt des
    * Rückstaus.
    */
-  readonly bereitsErsetzt?: () => Promise<ReadonlySet<number>>;
+  readonly bereitsErsetzt?: () => Promise<ReadonlyMap<number, number>>;
 }
 
 /**
@@ -167,7 +167,7 @@ export class Spiegelung {
       // den Lesern ein Nachfolgesegment vor der Abschlusszeile seines
       // Vorgängers, und §8.6.2 meldete eine fehlende Kettenfortsetzung, wo
       // keine fehlt.
-      const ersetzt = (await this.#optionen.bereitsErsetzt?.()) ?? new Set<number>();
+      const ersetzt = (await this.#optionen.bereitsErsetzt?.()) ?? new Map<number, number>();
       for (const kennung of await this.#eigeneSegmente()) {
         // §4.6 Schritt 5: Ein ersetztes Segment wird nicht mehr beschrieben.
         // Seine Bytes auf dem Share bleiben beschädigt liegen — das ist der

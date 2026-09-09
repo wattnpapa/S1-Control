@@ -7,11 +7,17 @@
  * dem der Ersatz gilt" nennt. §1.3 Satz 3 bleibt damit gewahrt — es entsteht
  * kein Zustand, der sich nicht aus den Ereignissen ergibt.
  *
- * Gebraucht wird die Menge für die Vollprüfung beim Öffnen (§4.6.1 Auslöser 1):
- * Ein ersetztes Segment „wird nicht mehr beschrieben" (§4.6 Schritt 5), seine
- * Beschädigung auf dem Share bleibt also dauerhaft liegen. Ohne diese Auskunft
- * fiele die Prüfung bei jedem Öffnen erneut in Ausgang B und erzeugte jedes Mal
- * ein weiteres Ersatzsegment.
+ * Gebraucht wird die Auskunft für die Vollprüfung beim Öffnen (§4.6.1
+ * Auslöser 1): Ein ersetztes Segment „wird nicht mehr beschrieben" (§4.6
+ * Schritt 5), seine Beschädigung auf dem Share bleibt also dauerhaft liegen.
+ * Ohne diese Auskunft fiele die Prüfung bei jedem Öffnen erneut in Ausgang B
+ * und erzeugte jedes Mal ein weiteres Ersatzsegment.
+ *
+ * **Nicht bloß „ersetzt ja/nein", sondern ab welcher Stelle.** Eine spätere
+ * Beschädigung *unterhalb* dieser Stelle ist neuer Schaden: Sie nimmt Zeilen
+ * den Lesern, die kein Ersatzsegment je mitgenommen hat. Wer nur „ersetzt"
+ * wüsste, ließe sie liegen und verlöre sie endgültig. Entscheidung 16,
+ * Richtung (a); siehe `pruefeBeimOeffnen`.
  */
 
 import type { Dateisystem } from "./dateisystem.js";
@@ -35,7 +41,7 @@ export async function ersetzteSegmente(
   dateisystem: Dateisystem,
   ablage: Einsatzablage,
   clientId: string,
-): Promise<ReadonlySet<number>> {
+): Promise<ReadonlyMap<number, number>> {
   const praefix = clientPraefix(clientId);
   const namen = await dateisystem.listeVerzeichnis(ablage.lokalEreignisse);
 
@@ -51,7 +57,8 @@ export async function ersetzteSegmente(
     }
   }
 
-  const ersetzt = new Set<number>();
+  /** Segmentnummer → **kleinster** Offset, ab dem ein Ersatz übernommen hat. */
+  const ersetzt = new Map<number, number>();
   for (const [, bytes] of bytesJeSegment) {
     const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
     const erste = zeilen[0];
@@ -73,7 +80,13 @@ export async function ersetzteSegmente(
     // nach §4.6 ausdrücklich folgenlos — „der Fold ist eine Mengenfunktion
     // über die Ereignis-Identitäten". Befund des zweiten Gutachtens zu M0.4.
     if (istVollstaendig(bytesJeSegment.get(ersatz.ersetztesSegment), ersatz.abOffset, zeilen)) {
-      ersetzt.add(ersatz.ersetztesSegment);
+      // Gibt es mehrere Ersätze desselben Segments — eine spätere Beschädigung
+      // unterhalb der ersten Stelle —, zählt der **kleinste** Offset: Ab ihm
+      // ist alles anderswo lesbar wiederholt.
+      const bisher = ersetzt.get(ersatz.ersetztesSegment);
+      if (bisher === undefined || ersatz.abOffset < bisher) {
+        ersetzt.set(ersatz.ersetztesSegment, ersatz.abOffset);
+      }
     }
   }
   return ersetzt;

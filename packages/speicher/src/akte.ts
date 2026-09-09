@@ -24,6 +24,7 @@ import { Leser, type Pollergebnis } from "./leser.js";
 import { pruefeBeimOeffnen, type Oeffnungsbefund } from "./oeffnungspruefung.js";
 import {
   clientPraefix,
+  ereignisDateiname,
   segmentText,
   zerlegeEreignisDateiname,
   type Dateikennung,
@@ -129,6 +130,39 @@ export async function oeffneAkte(
  * nächste Öffnen (§4.6.1 Auslöser 1) nähme die Arbeit wieder auf.
  */
 const REPARATUREN_JE_OEFFNEN = 64;
+
+/**
+ * Ab welcher Stelle das Ersatzsegment den Inhalt übernimmt (§4.6 Schritt 3).
+ *
+ * **Nicht der aufgezeichnete Übertragungsstand, sondern die
+ * Lesbarkeitsgrenze.** §4.6 sagte nicht, ab welcher Stelle der Ersatz
+ * übernimmt; der Code nahm den gemeldeten Abweichungsoffset, und der stammt
+ * im Spiegelpfad aus `upload-state.json`. Der liegt in aller Regel **hinter**
+ * der Beschädigungsstelle: Die Bytes dazwischen stehen physisch auf dem
+ * Share, sind hinter der Quarantäne aber für keinen Leser mehr erreichbar
+ * (§8.2 Punkt 7, §2.3), und das Ersatzsegment nahm sie nicht mit. Sie waren
+ * für jeden Leser fort. In der Simulation M0.4 verloren so fünf von achtzehn
+ * Startwerten Ereignisse (Messprotokoll 7.5). Entscheidung 16, Richtung (a):
+ * „Ab der letzten lesbaren Zeile übernehmen."
+ *
+ * Genommen wird deshalb das **Minimum** aus gemeldeter Stelle und
+ * Lesbarkeitsgrenze. Alle betroffenen Zeilen liegen lokal vor (§1.3 Satz 2),
+ * die Angabe ist also verfügbar. Der Preis sind Zeilen, die auf dem Share
+ * doppelt stehen — einmal unlesbar hinter der Beschädigung, einmal lesbar im
+ * Ersatz; der Fold entdoppelt über die Identität (§4.6, „Was ‚gleicher
+ * Inhalt' heißt"), ein Leser sieht sie einmal.
+ *
+ * Ist die Datei nicht lesbar, bleibt es bei der gemeldeten Stelle: Eine
+ * Reparatur, die an einer geratenen Stelle ansetzt, wäre schlimmer als eine,
+ * die zu spät ansetzt.
+ */
+export function reparaturAnsatz(
+  gemeldeterOffset: number,
+  shareBytes: Uint8Array | undefined,
+): number {
+  if (shareBytes === undefined) return gemeldeterOffset;
+  return Math.min(gemeldeterOffset, leseZeilengrenzen(shareBytes, 0).endeOffset);
+}
 
 export class Akte {
   readonly #optionen: AkteOptionen;
@@ -362,7 +396,8 @@ export class Akte {
    * suggeriert.
    */
   async #repariere(segment: number, abOffset: number): Promise<Reaktion> {
-    const ergebnis = await this.#schreiber.schreibeErsatzsegment(segment, abOffset);
+    const ansatz = reparaturAnsatz(abOffset, await this.#eigeneShareBytes(segment));
+    const ergebnis = await this.#schreiber.schreibeErsatzsegment(segment, ansatz);
     if (ergebnis.art !== "geschrieben") {
       return {
         art: "reparaturGescheitert",
@@ -376,11 +411,24 @@ export class Akte {
     return {
       art: "repariert",
       ersetztesSegment: segment,
-      abOffset,
+      abOffset: ansatz,
       meldung:
         "Ein Teil der bereits übertragenen Einträge dieses Arbeitsplatzes ist auf dem Server " +
         "beschädigt; er wird neu geschrieben.",
     };
+  }
+
+  /**
+   * Die eigenen Bytes dieses Segments, wie sie auf dem Share liegen.
+   * `undefined`, wenn die Datei nicht lesbar ist.
+   */
+  async #eigeneShareBytes(segment: number): Promise<Uint8Array | undefined> {
+    const name = ereignisDateiname(this.#schreiber.clientId, segment);
+    try {
+      return await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.shareDatei(name), 0);
+    } catch {
+      return undefined;
+    }
   }
 
   /**

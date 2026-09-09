@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { HlcUhr } from "@s1/domaene";
 
-import { oeffneAkte, type AkteOptionen } from "./akte.js";
+import { oeffneAkte, reparaturAnsatz, type AkteOptionen } from "./akte.js";
 import { DateisystemFehler } from "./dateisystem.js";
 import { akteur, arbeitsplatz, legeEinsatzAn } from "./pruefhilfen/aufbau.js";
 import { stoerdateisystem, type Stoerung } from "./pruefhilfen/stoerdateisystem.js";
@@ -611,5 +611,76 @@ describe("Befunde des Gutachtens gegen akte.ts", () => {
     const nachher = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
     expect(nachher.byteLength).toBe(vorher.byteLength);
     expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(ungespiegelt));
+  });
+});
+
+describe("§4.6 setzt an der Lesbarkeitsgrenze an (Entscheidung 16a)", () => {
+  /** Der Offset, ab dem das Ersatzsegment übernommen hat — aus seiner ersten Zeile. */
+  async function uebernahmeAb(platz: Arbeitsplatz, segment: number): Promise<number> {
+    const bytes = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, segment), 0);
+    const erste = leseZeilengrenzen(bytes, 0).zeilen[0];
+    if (erste === undefined) throw new Error("Ersatzsegment ist leer");
+    const nutzlast = erste.rahmen["nutzlast"] as { readonly abOffset: number };
+    return nutzlast.abOffset;
+  }
+
+  /** Schreibt `anzahl` Ereignisse, spiegelt und beschädigt die `zeile`-te Share-Zeile. */
+  async function standMitBeschaedigung(platz: Arbeitsplatz, anzahl: number, zeile: number) {
+    const { akte } = await oeffneAkte(akteOptionen(platz));
+    for (let i = 0; i < anzahl; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const pfad = `share/einsatz/ereignisse/${ICH}.0000.jsonl`;
+    const roh = await platz.wiese.lies(pfad);
+    const ziel = leseZeilengrenzen(roh, 0).zeilen[zeile];
+    if (ziel === undefined) throw new Error("zu wenige Zeilen");
+    const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+    roh[stelle] = (roh[stelle] as number) ^ 0x01;
+    await platz.wiese.schreibe(pfad, roh);
+    // Die Lesbarkeitsgrenze ist damit der Anfang der beschädigten Zeile.
+    return { grenze: ziel.offset };
+  }
+
+  it("nimmt die Lesbarkeitsgrenze, wenn die gemeldete Stelle dahinter liegt", async () => {
+    // Der Kern der Entscheidung. Die gemeldete Stelle stammt im Spiegelpfad
+    // aus `upload-state.json` und liegt hinter der Beschädigung; alles
+    // dazwischen wäre für jeden Leser fort.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { grenze } = await standMitBeschaedigung(platz, 8, 3);
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
+    expect(grenze).toBeGreaterThan(0);
+    expect(reparaturAnsatz(share.byteLength, share)).toBe(grenze);
+    // Liegt die gemeldete Stelle davor, bleibt sie stehen: Sie ist die
+    // schärfere Angabe.
+    expect(reparaturAnsatz(0, share)).toBe(0);
+    // Ohne lesbare Datei bleibt es bei der gemeldeten Stelle.
+    expect(reparaturAnsatz(4711, undefined)).toBe(4711);
+  });
+
+  it("setzt den Ersatz nicht hinter der Lesbarkeitsgrenze an", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { grenze } = await standMitBeschaedigung(platz, 8, 3);
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz));
+    expect(ergebnis.reaktion?.art).toBe("repariert");
+    expect(await uebernahmeAb(platz, 1)).toBeLessThanOrEqual(grenze);
+  });
+
+  it("führt zu jedem ersetzten Segment die Stelle mit, ab der der Ersatz gilt", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { grenze } = await standMitBeschaedigung(platz, 8, 3);
+    await oeffneAkte(akteOptionen(platz));
+
+    // Nicht bloß „Segment 0 ist ersetzt", sondern ab welchem Offset. Ohne
+    // diese Angabe bliebe eine spätere Beschädigung davor unrepariert.
+    const ersetzt = await ersetzteSegmente(platz.dateisystem, platz.ablage, ICH);
+    const ab = await uebernahmeAb(platz, 1);
+    expect(ab).toBeGreaterThan(0);
+    expect(ab).toBeLessThanOrEqual(grenze);
+    expect(ersetzt.get(0)).toBe(ab);
   });
 });
