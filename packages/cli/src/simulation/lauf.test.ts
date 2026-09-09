@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { knotenDateisystem } from "@s1/speicher";
+import { baueZeile, Einsatzablage, ereignisDateiname, KETTE_ANFANG, knotenDateisystem } from "@s1/speicher";
 
-import { fuehreSimulationAus, type Laufergebnis } from "./lauf.js";
+import {
+  fuehreSimulationAus,
+  pruefeVollstaendigkeit,
+  type Laufergebnis,
+  type Vollstaendigkeitsquelle,
+} from "./lauf.js";
 import { abnahmePlan, deutePlan, pruefePlan, ruhigerPlan, type Plan } from "./plan.js";
 import { berichte, fehlendeStoerungen, GEFORDERTE_STOERUNGEN } from "./bericht.js";
 
@@ -261,4 +266,71 @@ describe("Plandatei", () => {
     }
     expect(ergebnis.erfolg).toBe(false);
   }, 60_000);
+});
+
+describe("Vollständigkeitsprüfung — die Sollmenge", () => {
+  /**
+   * Baut zwei Ordner, schreibt dieselben Zeilen lokal und auf den Share und
+   * gibt die Quelle zurück, die `pruefeVollstaendigkeit` sieht.
+   */
+  async function stelleAuf(
+    wurzel: string,
+    ids: readonly string[],
+  ): Promise<{ ablage: Einsatzablage; datei: string }> {
+    const fs = knotenDateisystem();
+    const ablage = new Einsatzablage(`${wurzel}/share`, `${wurzel}/lokal`);
+    await fs.legeVerzeichnisAn(ablage.lokalEreignisse);
+    await fs.legeVerzeichnisAn(ablage.shareEreignisse);
+    const datei = ereignisDateiname("aaaaaaaa-1", 0);
+    const teile = ids.map((id) =>
+      baueZeile({ id, vorgaenger: KETTE_ANFANG, typ: "Einheit", nutzlast: {} }),
+    );
+    const bytes = new Uint8Array(teile.reduce((n, t) => n + t.byteLength, 0));
+    let ziel = 0;
+    for (const teil of teile) {
+      bytes.set(teil, ziel);
+      ziel += teil.byteLength;
+    }
+    await fs.haengeAnUndSynchronisiere(ablage.lokalDatei(datei), bytes);
+    await fs.haengeAnUndSynchronisiere(ablage.shareDatei(datei), bytes);
+    return { ablage, datei };
+  }
+
+  it("meldet ein Ereignis als verloren, das lokal **und** auf dem Share fort ist", async () => {
+    // Der Kern des Befundes aus 7.6: Die Sollmenge stammte allein aus den
+    // überlebenden lokalen Dateien. Eine gelöschte Zeile fehlte damit auf
+    // beiden Seiten und fiel nicht auf — gerade der Schaden, den die Prüfung
+    // fangen soll. Die Quittung des Schreibers überlebt das Löschen.
+    const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-soll-test-"));
+    try {
+      const { ablage } = await stelleAuf(wurzel, ["aaaaaaaa-1:1"]);
+      const quelle: Vollstaendigkeitsquelle = {
+        clientId: "aaaaaaaa-1",
+        ablage,
+        // `:2` wurde geschrieben und quittiert, steht aber nirgends mehr.
+        geschriebeneIdentitaeten: new Set(["aaaaaaaa-1:1", "aaaaaaaa-1:2"]),
+        frühereClientIds: [],
+      };
+      const verluste = await pruefeVollstaendigkeit(knotenDateisystem(), [quelle]);
+      expect(verluste.map((v) => v.ereignisId)).toEqual(["aaaaaaaa-1:2"]);
+    } finally {
+      await fsp.rm(wurzel, { recursive: true, force: true });
+    }
+  });
+
+  it("meldet nichts, solange jede quittierte Zeile auf dem Share steht", async () => {
+    const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-soll-test-"));
+    try {
+      const { ablage } = await stelleAuf(wurzel, ["aaaaaaaa-1:1", "aaaaaaaa-1:2"]);
+      const quelle: Vollstaendigkeitsquelle = {
+        clientId: "aaaaaaaa-1",
+        ablage,
+        geschriebeneIdentitaeten: new Set(["aaaaaaaa-1:1", "aaaaaaaa-1:2"]),
+        frühereClientIds: [],
+      };
+      expect(await pruefeVollstaendigkeit(knotenDateisystem(), [quelle])).toEqual([]);
+    } finally {
+      await fsp.rm(wurzel, { recursive: true, force: true });
+    }
+  });
 });

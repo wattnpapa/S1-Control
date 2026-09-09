@@ -111,6 +111,22 @@ export class Klient {
   /** Zählt die geschriebenen Ereignisse und ihre Bytes — Grundlage der Prüfung von A2 (§2.6). */
   geschrieben = 0;
   geschriebeneBytes = 0;
+  /**
+   * Die Identität **jedes** Ereignisses, dessen Schreibvorgang mit
+   * `geschrieben` beantwortet wurde.
+   *
+   * Das ist die Sollmenge der Vollständigkeitsprüfung. Bis zum 2026-09-09
+   * merkte sich der Klient nur den Zähler, und `pruefeVollstaendigkeit`
+   * baute das Soll aus den überlebenden lokalen Dateien — eine lokal
+   * **gelöschte** Zeile fehlte damit auf beiden Seiten und fiel nicht auf,
+   * also gerade der Schaden, den die Prüfung fangen soll. Befund 7.6 des
+   * dritten Gutachterdurchgangs.
+   *
+   * §1.3 Satz 2 macht den lokalen Anhang zur Wahrheit; ein Bedienschritt,
+   * den der Schreiber mit „geschrieben" quittiert hat, gehört von da an
+   * dazu, unabhängig davon, ob die Datei später noch existiert.
+   */
+  readonly geschriebeneIdentitaeten = new Set<string>();
   /** Kleinste und größte geschriebene Zeile — A2 ist eine Spanne, kein Mittelwert (§2.6, §10). */
   kleinsteZeile = Number.POSITIVE_INFINITY;
   groessteZeile = 0;
@@ -301,6 +317,7 @@ export class Klient {
     if (ergebnis.art === "geschrieben") {
       this.geschrieben += 1;
       this.geschriebeneBytes += ergebnis.zeile.bytes.byteLength;
+      this.geschriebeneIdentitaeten.add(ergebnis.zeile.rahmen.id);
       this.kleinsteZeile = Math.min(this.kleinsteZeile, ergebnis.zeile.bytes.byteLength);
       this.groessteZeile = Math.max(this.groessteZeile, ergebnis.zeile.bytes.byteLength);
       this.#nimmAuf([{ rahmen: ergebnis.zeile.rahmen }]);

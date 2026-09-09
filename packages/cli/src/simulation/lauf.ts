@@ -216,7 +216,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
     }
     const befund = vergleiche(staende);
     const spiegelpruefung = await pruefeSpiegel(echt, klienten);
-    const verluste = await pruefeVollstaendigkeit(echt, klienten);
+    const verluste = await pruefeVollstaendigkeit(echt, klienten.map(alsVollstaendigkeitsquelle));
     phasen.push({
       nummer: phase,
       kommandos: kommandosGesamt,
@@ -436,9 +436,28 @@ async function pruefeSpiegel(
  * Zeile physisch da und lesbar ist, nicht ob ein bestimmter Leser sie
  * verketten kann. Genau daran hängt die Unterscheidung.
  */
-async function pruefeVollstaendigkeit(
+export interface Vollstaendigkeitsquelle {
+  readonly clientId: string;
+  readonly ablage: Einsatzablage;
+  /** Was der Schreiber mit „geschrieben" quittiert hat (§1.3 Satz 2). */
+  readonly geschriebeneIdentitaeten: ReadonlySet<string>;
+  /** Aufgegebene Kennungen (§4.5 Fall 2); ihre Dateien gehören weiter zum Soll. */
+  readonly frühereClientIds: readonly string[];
+}
+
+/** Die Sicht auf einen Klienten, die `pruefeVollstaendigkeit` braucht. */
+export function alsVollstaendigkeitsquelle(klient: Klient): Vollstaendigkeitsquelle {
+  return {
+    clientId: klient.clientId,
+    ablage: klient.ablage,
+    geschriebeneIdentitaeten: klient.geschriebeneIdentitaeten,
+    frühereClientIds: klient.akte.schreiber.zustand.frühereClientIds ?? [],
+  };
+}
+
+export async function pruefeVollstaendigkeit(
   echt: Dateisystem,
-  klienten: readonly Klient[],
+  klienten: readonly Vollstaendigkeitsquelle[],
 ): Promise<readonly Verlust[]> {
   const aufDemShare = new Set<string>();
   const shareOrdner = klienten[0]?.ablage.shareEreignisse;
@@ -451,10 +470,17 @@ async function pruefeVollstaendigkeit(
 
   const verluste: Verlust[] = [];
   for (const klient of klienten) {
+    // **Die Sollmenge hat zwei Quellen, und die zweite ist die wichtigere.**
+    //
+    // Die lokalen Dateien sagen, was heute noch dasteht. Sie allein genügen
+    // nicht: Eine lokal **gelöschte** Zeile fehlte damit auf beiden Seiten und
+    // fiel nicht auf — gerade der Schaden, den diese Prüfung fangen soll
+    // (Befund 7.6 des Messprotokolls). Die zweite Quelle ist deshalb, was der
+    // Schreiber mit „geschrieben" quittiert hat: `Klient.geschriebeneIdentitaeten`.
+    // Sie überlebt jedes Löschen und jeden Kennungswechsel.
+    const soll = new Set<string>(klient.geschriebeneIdentitaeten);
     const praefixe = new Set<string>([clientPraefix(klient.clientId)]);
-    for (const frueher of klient.akte.schreiber.zustand.frühereClientIds ?? []) {
-      praefixe.add(clientPraefix(frueher));
-    }
+    for (const frueher of klient.frühereClientIds) praefixe.add(clientPraefix(frueher));
     for (const name of [...(await echt.listeVerzeichnis(klient.ablage.lokalEreignisse))].sort()) {
       const kenn = zerlegeEreignisDateiname(name);
       if (kenn === undefined || !praefixe.has(kenn.praefix)) continue;
@@ -464,9 +490,12 @@ async function pruefeVollstaendigkeit(
         // ein ersetztes Segment behält seine eigenen, das Ersatzsegment nimmt
         // sie nicht mit (§4.6). Sie zählen deshalb nicht als Verlust.
         if (istVerwaltungsereignis(zeile.rahmen.typ)) continue;
-        if (aufDemShare.has(zeile.rahmen.id)) continue;
-        verluste.push({ clientId: klient.clientId, ereignisId: zeile.rahmen.id });
+        soll.add(zeile.rahmen.id);
       }
+    }
+    for (const id of [...soll].sort()) {
+      if (aufDemShare.has(id)) continue;
+      verluste.push({ clientId: klient.clientId, ereignisId: id });
     }
   }
   return verluste;
