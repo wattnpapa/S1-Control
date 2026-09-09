@@ -386,3 +386,360 @@ ZDM §4.2 nennt `EinsatzAngelegt` „erstes Ereignis der Akte; ein zweites wird 
 An vier Stellen wird ein Ereignis gefaltet, ohne den abgeleiteten Zustand zu ändern: ein Storno gegen eine bereits eingetroffene Anforderung und eine Zusage nach der Erledigung (§5.6.2), eine zweite Archivierung (§7.2), eine Zusammenführung, deren Quelle bereits aufgegangen ist (§5.4.3).
 
 In allen entsteht `wirkungslosGegenTerminalzustand` mit der Ereignis-Id und dem Grund. Ohne ihn wäre die Lage von stillem Verwerfen nicht zu unterscheiden: Der Bediener hat gehandelt, das Ereignis steht in der Akte, und nichts ändert sich. Der gewöhnliche `vorherPasstNicht` greift nicht, weil das gesetzte Feld den erwarteten Wert annimmt — wirkungslos ist erst die **Ableitung** darüber.
+
+---
+
+## §4 Nutzlastversionen und die Upcaster-Kette
+
+### §4.1 Eine Version je Ereignisart
+
+`schemaVersion` ist die Version der **Nutzlast dieser Ereignisart**, beginnt bei `1` und steigt unabhängig von den anderen. Eine gemeinsame Version zwänge jede Erweiterung an einer Art jede andere in eine neue Version. Das Feld heißt `schemaVersion` und nicht `v`, weil die Speicherschicht es so führt; Befund B1.
+
+### §4.2 Was ein Upcaster darf
+
+Er bildet eine Nutzlast der Version `n` auf `n+1` derselben Art ab und ist **rein** (keine Uhr, kein Zufall, kein Dateisystem), **zustandsblind** (weder gefalteter Zustand noch andere Ereignisse — sonst hinge das Ergebnis von der Reihenfolge ab, in der die Ereignisse durch ihn laufen) und **rahmenblind** (er arbeitet allein auf `nutzlast`).
+
+Erlaubt: umbenennen; zerlegen, wenn die Zerlegung allein aus dem alten Wert folgt; ergänzen, wenn der Wert **aus der Nutzlast selbst** folgt; entfernen. Verboten: ein Pflichtfeld mit einem erfundenen Vorgabewert füllen. Lässt sich der Wert nicht ableiten, bleibt das Feld **optional** — für immer.
+
+### §4.3 Die Kette, und was mit einer höheren Version geschieht
+
+Beim Lesen läuft eine Nutzlast der Version `n < k` durch die Upcaster `n → … → k` und wird danach gegen das Schema von `k` geprüft. **Keinen Downcaster:** Version `> k` fällt unter §3.7 Punkt 2. Der Upcaster läuft **beim Lesen, nie beim Schreiben** (das Protokoll ist append-only) und **nicht beim Spiegeln** — dort werden die Originalbytes weitergeschrieben, sonst hinge der Inhalt der Akte davon ab, wer gespiegelt hat, und die Hash-Kette bräche.
+
+### §4.4 Startzustand
+
+**Alle Arten stehen bei `schemaVersion = 1`;** die Kette ist leer. Ein neuer **Wert** in einem offenen Bereich erhöht die Version nicht — das ist ihr Sinn. Ein neues **optionales** Feld ebenso wenig (§3.7 Punkt 3). Ein neues **Pflichtfeld** erhöht sie. Unabhängig davon erhöht jede Katalogänderung `foldVersion` (§3.9); die beiden Zahlen messen Verschiedenes: `schemaVersion` die Lesbarkeit einer Nutzlast, `foldVersion` die Vergleichbarkeit zweier Zustände.
+
+---
+
+## §5 Der Katalog
+
+### §5.1 Lesart und gemeinsame Bausteine
+
+Jede Gruppe bringt ihre Nutzlastschemata, danach eine Tabelle mit fünf Spalten:
+
+* **Typ** — der Wert des Rahmenfelds `typ`.
+* **Form** — (a), (b) oder (c) nach §2.2.
+* **Feldpfad / Wert** — das gesetzte Zustandsfeld und der Typ von `neu`. Bei Anlagen: „Anlage", die belegten Pfade stehen in §2.3.
+* **Klasse** — eine der vier aus §3.4.
+* **Undo** — die Klasse aus §6 U2 und das benannte Gegenereignis.
+
+Die Schemata beschreiben **nur `nutzlast`**; der gesetzte Wert steht bei Form (a) im Rahmen. Kein Schema ist `strict`. `grund` steht in §2.4.
+
+```ts
+const zId          = z.string().min(1).max(200)
+const zZeitpunkt   = z.string().datetime({ offset: true })
+const zDatum       = z.string().regex(/^\d{4}-\d{2}-\d{2}$/)
+const zAnzahl      = z.number().int().nonnegative()
+const zText        = z.string()
+const zPflichttext = z.string().min(1)
+const zStaerke     = z.object({ fuehrer: zAnzahl, unterfuehrer: zAnzahl, mannschaft: zAnzahl })
+
+// Offene Bereiche (§3.7 Punkt 5): Zeichenkette, bekannte Werte als Liste.
+const zStatus = zPflichttext; const zSchicht = zPflichttext
+const zOrganisation = zPflichttext; const zEbene = zPflichttext
+const zAbschnittstyp = zPflichttext
+
+// Geschlossene Bereiche: an ihnen hängt eine Regel ohne sinnvollen Rückfall.
+const zEinsatzArt    = z.enum(["EINSATZ", "UEBUNG", "VERANSTALTUNG"])
+const zSchichtmodell = z.enum(["ZWEI_SCHICHT", "DREI_SCHICHT"])
+const zRolle         = z.enum(["FUEHRER", "UNTERFUEHRER", "MANNSCHAFT"])
+const zGeschlecht    = z.enum(["MAENNLICH", "WEIBLICH", "DIVERS"])
+const zErnaehrung    = z.enum(["FLEISCH", "VEGETARISCH", "VEGAN"])
+const zPersonalErf   = z.enum(["VOLLSTAENDIG", "NUR_STAERKE"])
+const zMeldeStatus   = z.enum(["ANWESEND", "ABGERUECKT", "AUFGEGANGEN"])
+const zMeldeQuelle   = z.enum(["SCAN","MANUELL","PDF_IMPORT","AUFTEILUNG","ZUSAMMENFUEHRUNG"])
+const zAuftragQuelle = z.enum(["MANUELL", "BEWEGUNG", "EEB"])
+const zFahrzeugStatus = z.enum(["EINSATZBEREIT", "NICHT_EINSATZBEREIT"])
+
+const zKontakt = z.object({ art: z.enum(["MOBIL","FESTNETZ","EMAIL"]),
+                            dienstlich: z.boolean(), wert: zPflichttext })
+const zHierarchieEbene = z.object({ art: zPflichttext, name: zPflichttext,
+  kurz: zText.optional(), telefon: zText.optional(), email: zText.optional() })
+```
+
+**Zur Id-Länge.** Eine Entitäts-Id ist Nutzlast aus einer fremden Datei und wird Schlüssel einer Datensammlung. `fold.ts` legt die Sammlungen ohne Prototyp an — sonst wäre eine Id `__proto__` kein Eintrag, sondern ein Aufruf des Prototyp-Setzers, und die Entität verschwände spurlos. Die Längenschranke (S7) verhindert, dass eine erfundene Id den Speicher jedes Clients füllt.
+
+### §5.2 Einsatz
+
+```ts
+const EinsatzAngelegt = z.object({
+  einsatzId: zId, name: zPflichttext, art: zEinsatzArt, fuestName: zPflichttext,
+  uebergeordneteFuestName: zText.optional(), ort: zText.optional(),
+  beginn: zZeitpunkt, schichtmodell: zSchichtmodell,
+  kosten: z.object({ psaKostenProSatz: z.number(), vdaProTag: z.number(),
+                     ukVerpflegungProTag: z.number(), geplanteEinsatztage: zAnzahl }),
+})
+const EinsatzStammdatenGeaendert = z.object({ einsatzId: zId,
+  feld: z.enum(["name","art","fuestName","uebergeordneteFuestName","ort","beginn","schichtmodell"]) })
+const KostenParameterGeaendert = z.object({ einsatzId: zId,
+  feld: z.enum(["psaKostenProSatz","vdaProTag","ukVerpflegungProTag","geplanteEinsatztage"]) })
+const EinsatzBeendet              = z.object({ einsatzId: zId })
+const EinsatzWiedereroeffnet      = z.object({ einsatzId: zId })
+const EinsatzArchiviert           = z.object({ einsatzId: zId, zeitpunkt: zZeitpunkt,
+                                               snapshotHash: z.string().length(64) })
+const ArchivierungZurueckgenommen = z.object({ einsatzId: zId, archivierungEreignisId: zId })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `EinsatzAngelegt` | b | Anlage | Regel §3.11 | nein |
+| `EinsatzStammdatenGeaendert` | a | `einsatz/<feld>` · Typ des Feldes | LWW/Feld | frei, dieselbe Art |
+| `KostenParameterGeaendert` | a | `einsatz/kosten/<feld>` · `number` | LWW/Feld | frei, dieselbe Art |
+| `EinsatzBeendet` | a | `einsatz/ende` · `Zeitpunkt` | LWW/Feld | frei → `EinsatzWiedereroeffnet` |
+| `EinsatzWiedereroeffnet` | a | `einsatz/ende` · `null` | LWW/Feld | — |
+| `EinsatzArchiviert` | b | `einsatz/archivierungen/<eigene id>` | Regel §7 | nein |
+| `ArchivierungZurueckgenommen` | b | `einsatz/archivierungen/<benannte id>` | Regel §7 | nein |
+
+**Die Kostenparameter stehen in der Anlage** und belegen die vier Pfade `einsatz/kosten/<feld>` (§2.3) — dieselben, die `KostenParameterGeaendert` trifft. Wären sie eine Konstante im Code, hätte der Zustand einen Anfangswert ohne Ereignisquelle (§1.3 Satz 4), und `vorher` der ersten Änderung passte auf nichts. ZDM §3.2 nennt die Vorbelegungen 180/150/20/5; die Maske schlägt sie vor, geschrieben werden sie mit der Anlage (S9).
+
+**`beginn` ist änderbar.** Ein Vertipper im Einsatzbeginn muss korrigierbar sein, und `KorrekturVon` hilft bei Anlagen nicht (§5.9.2).
+
+**Beenden ist nicht Archivieren.** `status` ist abgeleitet: archiviert, wenn §7 es sagt; sonst beendet, wenn `ende` gesetzt ist; sonst aktiv. Kein Ereignis setzt ihn direkt.
+
+**T1:** Zwei `EinsatzAngelegt` verschiedener HLC und Namen ⇒ der Name der kleineren HLC gilt, `zweiteAnlageVerworfen` mit dem verworfenen Inhalt. **T2:** `EinsatzBeendet` (HLC 5) und `EinsatzWiedereroeffnet` (HLC 7, `neu = null`) in beiden Permutationen ⇒ `ende` trägt `null` mit Feld-HLC 7, unterscheidbar von „nie gesetzt".
+
+### §5.3 Abschnitt
+
+```ts
+const AbschnittAngelegt = z.object({ abschnittId: zId, name: zPflichttext,
+  typ: zAbschnittstyp, parentId: zId.optional(), reihenfolge: z.number().int(),
+  bemerkung: zText.optional() })
+const AbschnittUmbenannt         = z.object({ abschnittId: zId })
+const AbschnittTypGeaendert      = z.object({ abschnittId: zId })   // `grund` Pflicht
+const AbschnittUmgehaengt        = z.object({ abschnittId: zId })
+const AbschnittUmsortiert        = z.object({ abschnittId: zId })
+const AbschnittBemerkungGesetzt  = z.object({ abschnittId: zId })
+const AbschnittAufgeloest        = z.object({ abschnittId: zId })
+const AbschnittWiederhergestellt = z.object({ abschnittId: zId })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `AbschnittAngelegt` | b | Anlage | additiv, §3.11 | strukturell → `AbschnittAufgeloest` |
+| `AbschnittUmbenannt` | a | `abschnitt/<id>/name` · `string` | LWW/Feld | frei |
+| `AbschnittTypGeaendert` | a | `abschnitt/<id>/typ` · offener Bereich | LWW/Feld | frei |
+| `AbschnittUmgehaengt` | a | `abschnitt/<id>/parentId` · `Id \| null` | Regel §5.3.1 | frei |
+| `AbschnittUmsortiert` | a | `abschnitt/<id>/reihenfolge` · `number` | LWW/Feld | frei |
+| `AbschnittBemerkungGesetzt` | a | `abschnitt/<id>/bemerkung` · `string \| null` | LWW/Feld | frei |
+| `AbschnittAufgeloest` | a | `abschnitt/<id>/aufgeloest` · `{zielAbschnittId, aufgeloestAm}` | LWW/Entität, Wirkung §5.3.2 | strukturell → `AbschnittWiederhergestellt` |
+| `AbschnittWiederhergestellt` | a | `abschnitt/<id>/aufgeloest` · `null` | LWW/Entität | — |
+
+**Sekundärsortierung.** Bei gleicher `reihenfolge` entscheidet die Entitäts-Id in Codepoint-Ordnung — für Abschnitte wie für Einheiten (ZDM §4.2). Ohne diese Regel hinge die Reihenfolge zweier gleichrangiger Einträge im Ausdruck an der Schlüsselreihenfolge der Datensammlung, und zwei Clients druckten Verschiedenes, obwohl ihr Zustand konvergiert.
+
+#### §5.3.1 Regel: die Zyklusprüfung (Auflage 10)
+
+Ein Abschnitt darf nicht sein eigener Vorfahr werden. Zwei Clients können den Zyklus gemeinsam erzeugen, ohne dass einer ihn sieht.
+
+**Die Regel wirkt auf das abgeleitete Feld, nicht auf die Beobachtung.** `parentId` wird nach LWW gefaltet und behält seinen Gewinner samt HLC. Beim Materialisieren prüft der Fold den Wald: Liegt ein Zyklus vor, wird darin die Kante mit der **größten** HLC nicht wirksam — `wirksamerParentId` ist abwesend, der Abschnitt hängt an der Wurzel —, und es entsteht `zyklusAufgeloest` mit dem verdrängten Elternwert.
+
+**Warum das abgeleitete Feld.** Setzte die Regel `parentId` selbst zurück, verlöre das Feld seine Beobachtung; eine danach eintreffende Umhängung mit kleinerer HLC gewönne gegen ein leeres Feld, und ein Client aus dem Schnappschuss käme zu einem anderen Baum als der volle Fold. **Warum die größere HLC weicht:** die jüngere Handlung, deterministisch wählbar. **Warum an die Wurzel:** Der `vorher`-Wert ist der Stand, den ein Client gesehen hat; ihn einzusetzen gäbe dem Feld einen Wert, den kein Ereignis dieser HLC gesetzt hat. Die Wurzel ist der einzige Wert, der immer existiert und keinen Zyklus schließen kann.
+
+**Terminierung:** In einem Elternzeiger-Wald sind Zyklen knoten- und kantendisjunkt; das Lösen einer Kante erzeugt keinen neuen. Linear in der Zahl der Abschnitte.
+
+**T3:** X unter Y (5), Y unter X (7), beide Permutationen ⇒ `wirksamerParentId` von Y abwesend, ein Hinweis. **T4:** Dreierzyklus ⇒ genau eine Kante weicht, in jeder Permutation dieselbe. **T5:** `parentId` = eigene Id ⇒ Wurzel, Hinweis. **T6 (Rebase):** T3, Schnappschuss, dann `AbschnittUmgehaengt(Y → Z, HLC 6)` ⇒ wie voller Fold.
+
+#### §5.3.2 Regel: der aufgelöste Abschnitt
+
+`AbschnittAufgeloest` setzt `aufgeloest` auf `{ zielAbschnittId, aufgeloestAm }`. LWW/Entität: Bei zwei nebenläufigen Auflösungen mit verschiedenem Ziel gewinnt die höhere HLC mit ihrem Ziel, und der gesehene Vorher-Wert erzeugt den gewöhnlichen Hinweis. `aufgeloestAm` ist die fachliche Zeit der Auflösung (Ist-Zeit, §2.5) und schließt die Lücke, die ZDM §3.2 mit `abschnitt.aufgeloestAm` offen ließe.
+
+1. **Der Abschnitt bleibt im Zustand,** mit `aufgeloest` und dessen HLC.
+2. **Einheiten in ihm stehen im Ziel.** `wirksamerAbschnittId` ist das Ziel — auch bei einem nebenläufigen `EinheitVerschoben` **in** diesen Abschnitt mit höherer HLC: Die Verschiebung wird gefaltet, die Wirkung ist der Weiterlauf ins Ziel, und es entsteht `abschnittAufgeloest`. Eine Einheit darf nie in einem nicht existierenden Abschnitt hängen.
+3. **Ist das Ziel selbst aufgelöst, wird der Kette gefolgt.** Schließt sie einen Kreis oder endet in einem unbekannten Abschnitt, landet die Einheit im Auffang (§5.3.3), mit beiden Hinweisen. Der Abbruch bei der ersten Wiederholung macht die Verfolgung linear.
+
+Alles, was die Kette braucht, steht im Zustand; die Regel gilt damit auch nach einem Schnappschuss.
+
+**T7:** Einheit in A, Auflösung A → B ⇒ wirksam B. **T8:** Verschiebung nach A (9), Auflösung A → B (5) ⇒ wirksam B, `abschnittId` bleibt A, Hinweis. **T9:** A→B, B→C ⇒ C. **T10:** A→B, B→A ⇒ Auffang, zwei Hinweise. **T11:** Zwei Auflösungen von A mit Zielen B und C ⇒ Ziel der höheren HLC, `vorherPasstNicht`. **T12 (Rebase):** T9, Schnappschuss, dann `AbschnittAufgeloest(C → D)` ⇒ wie voller Fold.
+
+#### §5.3.3 Regel: der Auffangabschnitt — und was er nicht ist (Auflage 10)
+
+**Zwei Regeln, nicht eine:**
+
+* **Abschnitt unbekannt** — das `AbschnittAngelegt` ist noch unterwegs. Der Zustand ist **vorläufig**: Sobald es eintrifft, steht die Einheit ohne Zutun richtig. Bis dahin Auffang, Hinweis `abschnittUnbekannt`.
+* **Abschnitt aufgelöst** — eine Handlung mit **benanntem Ziel**. Die Einheit in den Auffang zu legen wäre eine dauerhafte Verschlechterung.
+
+Beide teilen die Zusicherung: **Die Stärke einer real gemeldeten Einheit verschwindet nie aus der Gesamtstärke, weil ein Abschnitt fehlt.** Deshalb ist der Auffang zählend und seine Id reserviert.
+
+**Der Preis, benannt.** Eine Einheit im Auffang zählt mit, auch wenn ihr echter Abschnitt vom Typ `ANGEFORDERT` oder `ARCHIV` ist und nach ZDM §2.4 nicht zählen würde. Trifft das `AbschnittAngelegt` ein, springt die Gesamtstärke nach unten. Das ist die Kehrseite der Zusicherung und in §8.2 geführt; die Alternative verlöre gemeldete Kräfte, und das ist der gefährlichere Fehler. Aus demselben Grund zählt ein Abschnitt mit **unbekanntem** Typ wie `EINSATZORT` (§3.7).
+
+**Fahrzeuge gehen nicht in den Auffang.** Ein Fahrzeug hat keine Stärke; die Zusicherung greift nicht. Bei unbekanntem Abschnitt bleibt `abschnittId` gefaltet stehen, `wirksamerAbschnittId` ist **abwesend** (das Fahrzeug hängt an seiner Einheit), und es entsteht `fremdreferenzUnbekannt`. Bei aufgelöstem Abschnitt gilt dieselbe Kette wie bei der Einheit. Damit ist P5 sauber getrennt: Es spricht von Einheiten.
+
+**T13:** `EinheitGemeldet` in Abschnitt Q ohne dessen Anlage ⇒ Auffang, Hinweis. **T14:** Plus `AbschnittAngelegt(Q)` ⇒ Einheit in Q, kein Hinweis, jede Permutation. **T15:** `FahrzeugVerschoben` in unbekannten Abschnitt ⇒ kein Auffang, `fremdreferenzUnbekannt`. **T16:** Abschnitt mit unbekanntem Typ ⇒ `zaehltInGesamtstaerke` wahr, `unbekannterWert`.
+
+#### §5.3.4 Die beiden systemseitigen Abschnitte
+
+Der Fold erzeugt sie ohne Ereignis. Das sind die **einzigen** zwei Ausnahmen von §1.3 Satz 4, und weil ihre Werte in den `zustandsHash` eingehen, sind sie hier vollständig festgeschrieben — sonst setzte ein Client „Archiv" und ein anderer „ARCHIV", und beide wären nicht konvergent.
+
+```ts
+const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" }
+// `durch` fehlt bei beiden: eine erfundene Ereignis-Id wäre eine, die
+// `zerlegeEreignisId` zu Recht zurückwiese (§3.3 Speicher).
+
+AUFFANG = { id: "AUFFANG", systemAbschnitt: true,
+  name: { wert: "Auffang", hlc: SYSTEM_HLC, wanduhr: "" },
+  typ:  { wert: "EINSATZORT", hlc: SYSTEM_HLC, wanduhr: "" },
+  reihenfolge: { wert: 0, hlc: SYSTEM_HLC, wanduhr: "" },
+  verworfeneAnlagen: [], zaehltInGesamtstaerke: true }
+
+ARCHIV = { id: "ARCHIV", systemAbschnitt: true,
+  name: { wert: "Einsatz beendet", hlc: SYSTEM_HLC, wanduhr: "" },
+  typ:  { wert: "ARCHIV", hlc: SYSTEM_HLC, wanduhr: "" },
+  reihenfolge: { wert: 999999, hlc: SYSTEM_HLC, wanduhr: "" },
+  verworfeneAnlagen: [], zaehltInGesamtstaerke: false }
+```
+
+`name` des Archivs folgt der Excel (`Stärke!B431` „Kopier Bereich für ‚Einsatz beendet'"); `reihenfolge` setzt es ans Ende jeder Sortierung. Beide Ids sind **reserviert**: Eine Anlage darauf wird verworfen und erzeugt `reservierteIdVerworfen`. Ohne die Reservierung könnte eine Anlage dem Auffang einen nicht zählenden Typ geben, und die Stärke jeder dort liegenden Einheit verschwände.
+
+| Invariante ZDM §3.2 | Behandlung |
+|---|---|
+| (a) genau ein `ARCHIV`, systemseitig, nicht löschbar | oben |
+| (b) höchstens ein `FUEHRUNGSSTELLE` ohne `parentId` | **nicht erzwungen** — zwei Clients können nebenläufig je eine anlegen, und ein Verwerfen wäre stilles Verwerfen. Anzeigefrage, keine Foldregel |
+| (c) kein Zyklus | §5.3.1 |
+| (d) ein aufgelöster Abschnitt enthält keine Einheiten | §5.3.2 über `wirksamerAbschnittId` |
+
+**T17:** `AbschnittAngelegt` auf `AUFFANG` bzw. `ARCHIV` ⇒ verworfen, Hinweis, Werte unverändert. **T18:** Zwei Clients ohne gemeinsame Ereignisse haben für beide Systemabschnitte denselben Teilhash.
+
+### §5.4 Einheit
+
+```ts
+const zEinheitAnlage = z.object({
+  abschnittId: zId, bezeichnung: zPflichttext, organisation: zOrganisation,
+  organisationName: zText.optional(), hierarchie: z.array(zHierarchieEbene),
+  standortRef: z.number().int().optional(), fuestKennung: zText.optional(),
+  ebene: zEbene, staerke: zStaerke, personalErfassung: zPersonalErf,
+  status: zStatus, schicht: zSchicht.optional(), reihenfolge: z.number().int(),
+  istFuehrungDesAbschnitts: z.boolean(), bemerkung: zText.optional(),
+  teilEtikett: zText.optional(), vorlageId: zId.optional(),
+  meldungId: zId.optional(), einheitSchluessel: zText.optional(),
+})
+const EinheitGemeldet = zEinheitAnlage.extend({ einheitId: zId })
+
+const EinheitStammdatenGeaendert = z.object({ einheitId: zId, feld: z.enum([
+  "bezeichnung","organisation","organisationName","hierarchie","ebene","fuestKennung",
+  "bemerkung","teilEtikett","fuehrungskraft","erreichbarkeitOverride","taktischesZeichen",
+  "istFuehrungDesAbschnitts","standortRef","personalErfassung","einheitSchluessel"]) })
+const StaerkeGeaendert  = z.object({ einheitId: zId, meldezeit: zZeitpunkt.optional() })
+const StatusGesetzt     = z.object({ einheitId: zId })
+const SchichtGesetzt    = z.object({ einheitId: zId })
+const ZeitpunktGesetzt  = z.object({ einheitId: zId,
+  feld: z.enum(["eingetroffenAm","verfuegbarBis","einsatzendeAm","rueckfuehrungAm"]) })
+const EinheitVerschoben = z.object({ einheitId: zId, kommentar: zText.optional() })
+const EinheitUmsortiert = z.object({ einheitId: zId })
+const EinheitArchiviert = z.object({ einheitId: zId })
+const LogistikGesetzt   = z.object({ einheitId: zId, feld: z.enum(["weiblich","divers",
+  "vegetarisch","vegan","uebernachtungM","uebernachtungW","uebernachtungD"]) })
+const SofortbedarfGesetzt = z.object({ einheitId: zId })
+const PsaBedarfGesetzt    = z.object({ einheitId: zId })
+
+const EinheitAufgeteilt = z.object({
+  quellEinheitId: zId, neueEinheitId: zId,
+  neueEinheit: zEinheitAnlage,             // vollständige Anlage der abgeteilten Einheit
+  gesehen: zStaerke,                       // Quellstärke, die der Bediener sah (§5.4.3)
+  uebernommeneFahrzeugIds: z.array(zId), uebernommenePersonIds: z.array(zId),
+})
+const EinheitZusammengefuehrt = z.object({
+  zielEinheitId: zId,
+  quellen: z.array(z.object({ einheitId: zId, gesehen: zStaerke })).min(1),
+})
+
+const EinheitEntfernt          = z.object({ einheitId: zId })   // `grund` Pflicht
+const EinheitWiederhergestellt = z.object({ einheitId: zId })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `EinheitGemeldet` | b | Anlage | additiv, §3.11 | frei → `EinheitEntfernt` |
+| `EinheitStammdatenGeaendert` | a | `einheit/<id>/<feld>` · Typ des Feldes | LWW/Feld; `hierarchie`, `fuehrungskraft`, `taktischesZeichen` LWW/Entität | frei |
+| `StaerkeGeaendert` | a | `einheit/<id>/staerke` · `Staerke` | LWW/Entität | frei |
+| `StatusGesetzt` | a | `einheit/<id>/status` · offener Bereich | LWW/Feld | frei |
+| `SchichtGesetzt` | a | `einheit/<id>/schicht` · offener Bereich | LWW/Feld | frei |
+| `ZeitpunktGesetzt` | a | `einheit/<id>/<feld>` · `Zeitpunkt \| null` | LWW/Feld | frei |
+| `EinheitVerschoben` | a | `einheit/<id>/abschnittId` · `Id` | Regel §5.3.2 | frei |
+| `EinheitUmsortiert` | a | `einheit/<id>/reihenfolge` · `number` | LWW/Feld | frei |
+| `EinheitArchiviert` | a | `einheit/<id>/abschnittId` · `"ARCHIV"` | Regel §5.3.2 | frei |
+| `LogistikGesetzt` | a | `einheit/<id>/logistik/<feld>` · `number \| null` | LWW/Feld | frei |
+| `SofortbedarfGesetzt` | a | `einheit/<id>/sofortbedarf` · Block | LWW/Entität | frei |
+| `PsaBedarfGesetzt` | a | `einheit/<id>/psaSaetzeProTag` · `number \| null` | LWW/Feld | frei |
+| `EinheitAufgeteilt` | c | neue Einheit: Anlage **und** `einheit/<neueId>/abgeteiltVon` | Regel §5.4.2 | strukturell → `EinheitZusammengefuehrt` |
+| `EinheitZusammengefuehrt` | c | je Quelle `einheit/<quellId>/aufgegangenIn` · `{zielEinheitId, gesehen}` | Regel §5.4.3 | strukturell → `EinheitAufgeteilt` |
+| `EinheitEntfernt` | a | `einheit/<id>/entfernt` · `true` | LWW/Feld, Wirkung §5.4.5 | frei → `EinheitWiederhergestellt` |
+| `EinheitWiederhergestellt` | a | `einheit/<id>/entfernt` · `false` | LWW/Feld | — |
+
+**`einsatzendeAm` beim Archivieren.** `EinheitArchiviert` verschiebt nur; das fachliche Einsatzende ist ein eigenes `ZeitpunktGesetzt`. Zwei Werte in einem Ereignis wären zwei Konflikte in einem.
+
+**`PsaBedarfGesetzt` bleibt eine eigene Art** (ZDM §4.2), obwohl `psaSaetzeProTag` auch über `EinheitStammdatenGeaendert` erreichbar wäre. Eine Zusammenlegung wäre unschädlich — dieselbe Klasse, dasselbe Feld —, aber ein Ereignis dieser Art aus einer Migration oder einem neueren Client fiele dann unter „unbekannte Art" und würde nicht gefaltet: Der PSA-Bedarf verschwände aus der Kostenrechnung, und niemand fände die Ursache im Katalog.
+
+#### §5.4.1 Regel: die Stärke ist ein Tripel
+
+LWW über das ganze Tripel, nicht je Rolle. Die drei Zahlen sind eine Meldung („0/3/17"); ein Merge aus zwei Meldungen ergäbe eine Stärke, die nie jemand gemeldet hat. Passt `vorher` nicht, entsteht `vorherPasstNicht` **mit beiden Werten**.
+
+**T19:** Zwei `StaerkeGeaendert` verschiedener HLC, die verschiedene Rollen ändern ⇒ genau eines der Tripel, nie eine Mischung, plus Hinweis.
+
+#### §5.4.2 Regel: Aufteilen wirkt relativ — die Wirkung steht an der neuen Einheit (Auflage 10)
+
+`EinheitAufgeteilt` **setzt** die Quellstärke nicht, es **verringert** sie. v1 setzt absolut und wäre nebenläufig falsch: Zwei gleichzeitige Aufteilungen erzeugten beide Teile, die Quelle sänke nur einmal.
+
+**Wo die Verringerung steht.** Nicht an der Quelle, sondern an der **neuen Einheit**: Sie trägt `abgeteiltVon = { quellEinheitId, abgeteilteStaerke }` als gewöhnliches Feld (LWW/Entität) mit der HLC der Aufteilung. Die Quelle hat ein unverändertes `staerke`-Feld.
+
+> **Wirksame Stärke einer Einheit `u`** = `u.staerke.wert`
+> − Σ `v.abgeteiltVon.wert.abgeteilteStaerke` über alle `v` mit `v.abgeteiltVon.wert.quellEinheitId = u` und `v.abgeteiltVon.hlc > u.staerke.hlc`
+> + Σ `v.aufgegangenIn.wert.gesehen` über alle `v` mit wirksamem `v.aufgegangenIn.wert.zielEinheitId = u` und `v.aufgegangenIn.hlc > u.staerke.hlc`
+> je Rolle, geklemmt bei 0.
+
+**Warum das die richtige Form ist — vier Eigenschaften auf einmal:**
+
+* **Rebase-fest.** Jeder Summand steht in einem Feld einer Entität des Zustands; nichts liegt in einem Akkumulator, nichts muss ein Schnappschuss zusätzlich tragen (§3.1).
+* **Idempotent über den Fachvorgang.** Jede Einheit `v` trägt **ein** `abgeteiltVon` und **ein** `aufgegangenIn`. Zwei inhaltsgleiche Aufteilungen mit derselben `neueEinheitId` sind eine Entität und damit ein Summand; zwei Clients, die dieselbe Zusammenführung schreiben, setzen dasselbe Feld. Eine Liste von Deltas könnte das nicht — sie zählte je Ereignis, nicht je Vorgang.
+* **Beschränkt.** Der Zustand wächst nicht: Es kommt kein Feld hinzu, das mehr als einen Wert hält.
+* **Nebenläufig richtig.** Zwei Aufteilungen derselben Quelle erzeugen zwei Einheiten, also zwei Summanden.
+
+**Warum nur die jüngeren Summanden.** Eine absolute Meldung sagt „so ist der Stand jetzt". Wer nach einer Aufteilung 0/2/15 meldet, hat sie berücksichtigt; sie erneut abzuziehen wäre doppelte Buchung. Ein Vorgang **nach** der Meldung ist noch nicht enthalten.
+
+**Berechnung und Terminierung.** Die Summe über „alle `v`, die auf `u` zeigen" braucht einen Index über `abgeteiltVon.quellEinheitId` und `aufgegangenIn.zielEinheitId` — ein Durchlauf, danach ist jede Einheit in konstanter Zeit fertig. Die Prüfung in §5.4.3 braucht die wirksame Stärke der Quelle; die Abhängigkeit folgt den `aufgegangenIn`-Kanten, die nach der Kreisauflösung (§5.4.3) ein Wald sind. Berechnet wird in topologischer Ordnung dieses Waldes, also linear.
+
+**Die neue Einheit ist eine vollständige Anlage.** `neueEinheit` trägt alle Pflichtfelder aus ZDM §3.2; der aufteilende Client kennt die Quelle und füllt sie vor, der Bediener bestätigt. Ohne diese Festlegung müsste der Fold Felder von der Quelle kopieren, und **welchen Stand** er kopierte, hinge vom Zeitpunkt ab — nicht rebase-fest. `abgeteiltVonId` aus ZDM §3.2 ist damit `abgeteiltVon.wert.quellEinheitId`.
+
+**Klemmen bei null.** Wird eine Rolle negativ, gilt 0 und es entsteht `staerkeGeklemmt` mit dem rechnerischen Wert.
+
+**T20:** Zwei nebenläufige Aufteilungen derselben Quelle (je 0/1/3) aus 1/4/12 ⇒ Quelle 1/2/6, zwei neue Einheiten, Gesamtstärke unverändert, jede Permutation. **T21:** `StaerkeGeaendert` (9) nach Aufteilung (5) ⇒ der Abzug wirkt nicht mehr. **T22:** Aufteilung (9) nach Meldung (5) ⇒ er wirkt. **T23:** Abgeteilte Stärke größer als die Quelle ⇒ 0/0/0, `staerkeGeklemmt`. **T24 (Rebase):** T22, Schnappschuss, danach `StaerkeGeaendert` (3) ⇒ wie voller Fold. **T25 (Idempotenz über den Vorgang):** Zwei inhaltsgleiche `EinheitAufgeteilt` mit derselben `neueEinheitId`, verschiedene Ereignis-Ids ⇒ **ein** Abzug, Gesamtstärke unverändert.
+
+#### §5.4.3 Regel: Zusammenführen — je Quelle, und einmalig
+
+`EinheitZusammengefuehrt` setzt je Quelle `aufgegangenIn = { zielEinheitId, gesehen }`. Eine aufgegangene Einheit bleibt im Zustand, `zaehlt` ist falsch, ihre Zahlen stecken im Ziel (§5.4.2).
+
+**`aufgegangenIn` ist monoton: die kleinste HLC gilt.** Anders als jedes andere Feld gewinnt hier nicht die höchste, sondern die **erste** Zusammenführung; jede weitere ist wirkungslos und erzeugt `wirkungslosGegenTerminalzustand`.
+
+Das ist die entscheidende Festlegung, und sie ist teuer erkauft. Mit gewöhnlichem LWW ließe sich eine Quelle **umlenken**: X geht in Z1 auf, jemand meldet Z1 danach absolut (die Meldung enthält X), und eine spätere Zusammenführung schickt X nach Z2. Z1 behielte X in seiner Basis, Z2 bekäme X als Summanden — X zählte zweimal, ohne dass ein Hinweis entstünde, weil beide Meldungen für sich stimmig sind. Mit der Monotonie kann das nicht auftreten: Was aufgegangen ist, bleibt, wo es aufging. Wer es doch bewegen will, nimmt die Zusammenführung zurück — dafür gibt es die strukturelle Rücknahme `EinheitAufgeteilt` (U2), und die ist sichtbar.
+
+**Überlappende Quellmengen.** Führt A die Einheiten {X, Y} zusammen und B gleichzeitig {Y, Z} in ein anderes Ziel, entscheidet für Y die kleinere HLC; X geht zu A's Ziel, Z zu B's, und für Y erzeugt der Verlierer den Wirkungslos-Hinweis. Kein Summand wird doppelt gezählt und keiner verschluckt.
+
+**Kreise und Selbstbezug.** Zeigt `aufgegangenIn` nach mehreren Schritten auf eine bereits besuchte Einheit — A→B und B→A —, ist die Kante mit der **größeren** HLC nicht wirksam: Jene Einheit bleibt eigenständig und zählt, es entsteht `zusammenfuehrungKreis`. Dasselbe, wenn `zielEinheitId` in den eigenen `quellen` steht. Ohne die Regel wären beide Einheiten „aufgegangen", zählten nirgends, und ihre Stärke verschwände still — genau das, was §5.3.3 als tragende Zusicherung ausschließt.
+
+**`gesehen` ist kein Vorher-Wert.** Es ist eine Prüfangabe (§2.2c): der Stand der Quelle, den der Bediener beim Zusammenführen sah. Der `vorher` von `aufgegangenIn` ist, wie bei jedem Feld, dessen früherer Wert — im Regelfall abwesend. Weicht `gesehen` von der wirksamen Stärke der Quelle ab, entsteht `zusammenfuehrungSummeWeichtAb` mit beiden Zahlen, am Feldpfad `einheit/<quellId>/staerke`. Verglichen wird gegen den **gefalteten** Stand, nicht gegen einen historischen Zwischenstand: Ein Zwischenstand stünde nicht im Zustand und wäre nach einem Schnappschuss nicht rekonstruierbar.
+
+Dieselbe Prüfangabe trägt `EinheitAufgeteilt` als `gesehen` — der Stand der Quelle vor dem Abteilen. Auch dort führt eine Abweichung zum Hinweis.
+
+**P4 (Summenerhaltung) hält genau dann,** wenn alle `gesehen` den wirksamen Stärken entsprechen und nichts geklemmt wurde. Beide Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar (§8.1).
+
+**T26:** Zwei Quellen 0/1/3 und 0/2/6 ⇒ Ziel plus 0/3/9, Quellen aufgegangen, Gesamtstärke unverändert. **T27:** Eine Quelle meldet nebenläufig anders ⇒ `zusammenfuehrungSummeWeichtAb`. **T28:** Dieselbe Zusammenführung zweimal (verschiedene Ereignis-Ids) ⇒ **ein** Summand. **T29:** {X,Y} nach Z1 und {Y,Z} nach Z2 ⇒ Y zählt einmal, beim Gewinner, Wirkungslos-Hinweis beim Verlierer. **T30:** A→B und B→A ⇒ eine Einheit bleibt eigenständig, `zusammenfuehrungKreis`, Gesamtstärke unverändert. **T31:** `zielEinheitId` in `quellen` ⇒ dieselbe Behandlung. **T32 (Umlenkung):** X→Z1 (9), `StaerkeGeaendert` an Z1 (12), X→Z2 (15) ⇒ X bleibt in Z1, Gesamtstärke unverändert, Wirkungslos-Hinweis für die zweite Zusammenführung. Ohne die Monotonie zählte X zweimal.
+
+#### §5.4.4 Die mögliche Dublette
+
+Zwei Clients melden dieselbe reale Einheit — am Meldekopf und in der Führungsstelle. Kein technischer Konflikt: zwei Ids, zwei Anlagen, beide gültig. Erkennung über `einheitSchluessel` (aus dem EEB, Heuristik).
+
+**Form des Hinweises.** Je Schlüssel **ein** Hinweis, nicht paarweise: `moeglicheDublette` mit der aufsteigend sortierten Liste aller Ids und dem Feldpfad `einheit/<kleinste Id>/einheitSchluessel`. Paarweise Hinweise wären bei vier Einheiten sechs Zeilen für einen Sachverhalt, und ihre Zahl hinge von einer Wahl ab, die zwei Clients gleich treffen müssten, damit P3 hält.
+
+**Wer in die Gruppe geht:** nur Einheiten mit `zaehlt` — weder entfernt noch aufgegangen. Bleibt eine übrig, entsteht kein Hinweis. Damit verschwindet er nach einer Zusammenführung wie nach dem Entfernen der Dublette, symmetrisch zu §5.6.1.
+
+**Aufgelöst wird nur von Hand.** Zwei Trupps derselben Fachgruppe können denselben Schlüssel tragen; eine automatische Verschmelzung nähme eine Meldung aus der Lage. Der Schlüssel ist „von der App vorgeschlagen, vom Menschen bestätigt" — deshalb ist er über `EinheitStammdatenGeaendert` **änderbar**, sonst bliebe ein falscher Vorschlag dauerhaft stehen.
+
+**T33:** Zwei mit demselben Schlüssel ⇒ beide zählen, ein Hinweis mit zwei Ids. **T34:** Drei ⇒ ein Hinweis mit drei Ids. **T35:** Nach Zusammenführung bzw. `EinheitEntfernt` ⇒ kein Hinweis. **T36:** Nach Änderung des Schlüssels ⇒ kein Hinweis.
+
+#### §5.4.5 Regel: Entfernen ist kein Löschen
+
+`EinheitEntfernt` löscht nichts. Die Einheit wird markiert, zählt nirgends mehr, bleibt in Tagebuch und Historie. `grund` ist Pflicht (§2.4).
+
+`entfernt` ist ein gewöhnliches LWW/Feld über das Paar `EinheitEntfernt`/`EinheitWiederhergestellt` — sonst wäre die Wiederherstellung nicht möglich. Der Satz aus ZDM §4.2, das Entfernen „gewinne gegen alle nebenläufigen Feldänderungen", bedeutet **nicht**, dass es andere Felder verdrängt: Sie werden weiter gefaltet, damit eine Wiederherstellung den neuesten Stand zeigt. Er bedeutet, dass die Einheit **unabhängig von jedem anderen Feld** nirgends mitzählt, solange `entfernt` gilt.
+
+Dasselbe Paar gilt für `Fahrzeug`, `Person`, `Dienstposten` und `Anhang`; die Gegenereignisse sind benannt. Pflicht-`grund` haben nach §2.4 nur `EinheitEntfernt`, `FahrzeugEntfernt` und `PersonEntfernt` — sie nehmen eine gemeldete Kraft oder ein gemeldetes Mittel aus der Lage. Ein Dienstposten ist Planung, ein Anhang ein Verweis.
+
+**T37:** `EinheitEntfernt` (5), `StaerkeGeaendert` (7) ⇒ entfernt, Stärke aktualisiert, zählt nicht. **T38:** Dazu `EinheitWiederhergestellt` (9) ⇒ zählt wieder, mit der Stärke aus 7. **T39:** Eine entfernte Einheit, die aus einer Aufteilung stammt ⇒ die Quelle bleibt verringert.
