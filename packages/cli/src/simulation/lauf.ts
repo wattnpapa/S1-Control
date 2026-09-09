@@ -281,7 +281,11 @@ async function stelleRuheHer(
   // der einzige Weg zurück aus einer Beschädigung (§8.6.1 Regel 4), käme nie
   // zum Zug. Ein Neustart je Phase ist zugleich das realistische Bild: ein
   // Arbeitsplatz, der zwischendurch geschlossen und wieder geöffnet wird.
-  for (const klient of klienten) await klient.oeffneMitWiederholung();
+  // Nicht **ein** Neustart, sondern so viele, bis nichts mehr zu reparieren
+  // ist: §4.6.1 Auslöser 1 hängt am Öffnen, und eine an einer lokalen
+  // Schreibstörung abgebrochene Reparatur (§8.8) wird erst beim nächsten
+  // Öffnen fortgesetzt. Ein einzelner Start misst sonst einen Zwischenstand.
+  for (const klient of klienten) await klient.oeffneBisNichtsMehrZuTun();
 
   let offen: string[] = [];
   for (let runde = 1; runde <= plan.ruheVersucheMax; runde += 1) {

@@ -119,6 +119,10 @@ export class Klient {
   oeffnungsdauerMs = 0;
   /** Wie oft das Öffnen an einem lokalen Dateisystemfehler gescheitert ist (§8.8 Punkt 5). */
   oeffnenGescheitert = 0;
+  /** Zusätzliche Öffnungen, weil eine Reparatur nach §4.6 noch nicht fertig war. */
+  reparaturrunden = 0;
+  /** Wie oft eine Reparatur auch nach mehreren Öffnungen nicht abgeschlossen war. */
+  reparaturNichtAbgeschlossen = 0;
 
   constructor(optionen: KlientOptionen) {
     this.#o = optionen;
@@ -162,6 +166,38 @@ export class Klient {
       : this.akte.leser.quarantaenen.map(
           (q) => `${q.datei}@${q.offset} (${q.grund}${q.vorlaeufig ? ", vorläufig nach §8.1" : ", endgültig nach §8.2"})`,
         );
+  }
+
+  /**
+   * Öffnet so oft, bis die Vollprüfung nichts mehr zu reparieren findet.
+   *
+   * §4.6.1 Auslöser 1 hängt am **Programmstart**: „Beim Öffnen eines Einsatzes
+   * liest der Schreiber seine eigenen Share-Segmente vollständig." Bricht das
+   * Wiederholen der Ereignisse dabei an einer lokalen Schreibstörung ab (§8.8),
+   * bleibt der Rest bis zum **nächsten** Öffnen liegen — das ist nach §4.6
+   * richtig so, heißt aber, dass ein einzelner Programmstart nicht genügt, um
+   * den Endzustand zu erreichen. Ein Bediener startet in einer solchen Lage
+   * erneut; die Simulation tut dasselbe, sonst misst sie einen Zwischenstand
+   * und nennt ihn Verlust.
+   *
+   * Bleibt nach `runden` Öffnungen noch etwas zu reparieren, wird abgebrochen
+   * und gemeldet: Dann ist es kein Zwischenstand mehr, sondern ein Zustand, aus
+   * dem das Verfahren nicht mehr herausfindet.
+   */
+  async oeffneBisNichtsMehrZuTun(runden = 5): Promise<Oeffnungsergebnis> {
+    let ergebnis = await this.oeffneMitWiederholung();
+    for (let runde = 1; runde < runden && ergebnis.befund.art === "beschaedigt"; runde += 1) {
+      this.reparaturrunden += 1;
+      ergebnis = await this.oeffneMitWiederholung();
+    }
+    if (ergebnis.befund.art === "beschaedigt") {
+      this.meldungen.push({
+        art: "reparaturNichtAbgeschlossen",
+        text: `Client ${this.nummer}: nach ${runden} Öffnungen ist Segment ${ergebnis.befund.segment} weiterhin beschädigt`,
+      });
+      this.reparaturNichtAbgeschlossen += 1;
+    }
+    return ergebnis;
   }
 
   /**

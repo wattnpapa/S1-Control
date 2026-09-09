@@ -92,9 +92,29 @@ export async function ketteAnStelle(
   quelleIstVollstaendig = false,
 ): Promise<string | undefined> {
   if (offset === 0) {
-    return segment === 0
-      ? KETTE_ANFANG
-      : ketteAmEnde(segment - 1, quelle, quelleIstVollstaendig);
+    // **Der Anker ist der des ersetzten Segments selbst, nicht der seines
+    // Vorgängers.** Für ein gewöhnliches Segment ist das dasselbe (§2.3: „die
+    // Kettenprüfsumme der letzten Zeile des Vorgängersegments"), für ein
+    // **Ersatzsegment** nicht: Es setzt nach §4.6 Schritt 3 auf der letzten
+    // unbeschädigten Zeile des von ihm ersetzten Segments auf, irgendwo in
+    // dessen Mitte. Wird ein Ersatzsegment selbst beschädigt, und zwar gleich
+    // an seiner ersten Zeile, dann ersetzt der Ersatz des Ersatzes es ab
+    // Offset 0 — und die Frage lautet, worauf **es** aufsetzte, nicht was
+    // hinter seinem Vorgänger steht.
+    //
+    // Ohne diese Unterscheidung trägt die erste Zeile des zweiten
+    // Ersatzsegments einen Anker, den der Start nicht nachvollziehen kann:
+    // `bereiteSchreiberVor` bricht mit `LokalerKettenbruch` an Byte 0 ab, und
+    // der Client kommt an seine eigene Akte nie wieder heran (§8, Grundsatz;
+    // §8.8 Punkt 5). Befund aus der Simulation M0.4.
+    //
+    // Die Rekursion endet: Ein Ersatzsegment trägt immer eine **höhere**
+    // Nummer als das von ihm ersetzte (§4.6 Schritt 1, „die nächste freie
+    // Nummer"), die Frage wandert also stets zu kleineren Segmenten.
+    if (segment === 0) return KETTE_ANFANG;
+    const bytes = await quelle(segment);
+    if (bytes === undefined) return undefined;
+    return kettenanker(segment, bytes, quelle, quelleIstVollstaendig);
   }
   const bytes = await quelle(segment);
   if (bytes === undefined) return undefined;

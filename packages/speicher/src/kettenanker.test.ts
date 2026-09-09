@@ -144,3 +144,36 @@ describe("grenzeUndKette — Zeilengrenze ohne Kettenurteil", () => {
     });
   });
 });
+
+describe("§4.6 Schritt 3 — der Ersatz eines Ersatzsegments", () => {
+  it("erbt ab Offset 0 den Anker des ersetzten Segments, nicht den seines Vorgängers", () => {
+    // Ein Ersatzsegment setzt mitten im ersetzten Segment auf. Wird es selbst
+    // gleich an seiner ersten Zeile beschädigt, ersetzt der Ersatz des Ersatzes
+    // es ab Offset 0 — und die Frage lautet, worauf **es** aufsetzte. Wer
+    // stattdessen das Ende seines Vorgängers nimmt, erzeugt einen Anker, den
+    // `bereiteSchreiberVor` nicht nachvollziehen kann: Der Client kommt an
+    // seine eigene Akte nie wieder heran. Befund aus der Simulation M0.4.
+    return (async () => {
+      const { segment0, zeilenVon0 } = zweiSegmente();
+      const ersteZeile = zeilenVon0[0] as Uint8Array;
+      const abOffset = ersteZeile.byteLength;
+      const ankerVonEins = kettenPruefsumme(ersteZeile);
+      // Segment 1 ist ein Ersatzsegment für Segment 0 ab der zweiten Zeile.
+      const kopf = baueZeile({
+        id: "c1:9",
+        vorgaenger: ankerVonEins,
+        typ: TYP_SEGMENT_ERSETZT,
+        schemaVersion: 1,
+        nutzlast: { ersetztesSegment: 0, abOffset },
+      } as Rahmenblick);
+      const segment1 = kopf;
+      const quelle = async (s: number) =>
+        s === 0 ? segment0 : s === 1 ? segment1 : undefined;
+
+      // Segment 2 ersetzt Segment 1 ab Offset 0.
+      expect(await ketteAnStelle(1, 0, quelle)).toBe(ankerVonEins);
+      // Ausdrücklich **nicht** das Ende von Segment 0.
+      expect(await ketteAnStelle(1, 0, quelle)).not.toBe(await ketteAmEnde(0, quelle));
+    })();
+  });
+});
