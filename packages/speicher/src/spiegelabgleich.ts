@@ -25,6 +25,19 @@ export interface AbgleichOptionen {
   readonly eigenesPraefix: string;
   readonly identitaeten: Identitaetenbuch;
   readonly lagen: Map<string, Dateilage>;
+  /**
+   * Obergrenze für den `leseOffset` einer einzelnen Datei, oder `undefined`
+   * für „keine".
+   *
+   * Gebraucht in genau einer Lage: unmittelbar nach einem Kennungswechsel
+   * (§4.5 Schritt 6), dessen Kürzung noch aussteht. Dann ist der lokale
+   * Spiegel der aufgegebenen Datei **kein** geprüftes Präfix ihrer
+   * Share-Entsprechung — er ist länger. Ohne Obergrenze setzte der Abgleich
+   * `leseOffset` hinter das Share-Ende, und die Zeilen, die der Klon dort
+   * schreibt, erreichte der Leser bis zum nächsten Programmstart nicht mehr.
+   * Befund 7.6 des Messprotokolls, hergeleitet.
+   */
+  readonly obergrenze?: (name: string) => Promise<number | undefined>;
 }
 
 /**
@@ -63,7 +76,11 @@ export async function gleicheMitSpiegelAb(optionen: AbgleichOptionen): Promise<v
 
   for (const liste of jePraefix.values()) {
     for (const { name } of liste.sort((a, b) => a.segment - b.segment)) {
-      const bytes = await optionen.dateisystem.liesAb(optionen.ablage.lokalDatei(name), 0);
+      const alle = await optionen.dateisystem.liesAb(optionen.ablage.lokalDatei(name), 0);
+      const grenze = await optionen.obergrenze?.(name);
+      // Die Obergrenze ist immer eine Zeilengrenze (sie kommt aus
+      // `leseZeilengrenzen`); der Schnitt fällt also nie mitten in eine Zeile.
+      const bytes = grenze === undefined ? alle : alle.subarray(0, Math.min(grenze, alle.byteLength));
       const { endeOffset, letzteKette } = grenzeUndKette(bytes);
       const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
       optionen.identitaeten.merkeAlle(zeilen);

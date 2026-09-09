@@ -220,10 +220,10 @@ export class Akte {
     // würde nie wieder gelesen. Befund aus der Simulation M0.4.
     await this.#kuerzeAufgegebeneDateien(
       (this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
-      // Beim Öffnen ist nicht verbürgt, dass die Übernahme seinerzeit gelungen
-      // ist. Gelöscht wird deshalb nichts — und gekürzt erst, nachdem §4.5
-      // Schritt 3 für die betroffenen Zeilen nachgeholt wurde.
-      false,
+      // Beim Öffnen ist für **keine** Kennung verbürgt, dass die Übernahme
+      // seinerzeit gelungen ist. Gelöscht wird deshalb nichts — und gekürzt
+      // erst, nachdem §4.5 Schritt 3 für die betroffenen Zeilen nachgeholt
+      // wurde.
     );
     await this.#leser.gleicheMitSpiegelAb();
     const quarantaeneNachlauf = await this.#leser.pruefeQuarantaenenErneut();
@@ -419,6 +419,29 @@ export class Akte {
   }
 
   /**
+   * Wie weit der lokale Spiegel dieser Datei ein Präfix ihrer Share-Datei ist
+   * — an einer Zeilengrenze (§5.5).
+   *
+   * `undefined` heißt „keine Obergrenze": Die Share-Datei ist nicht lesbar,
+   * und eine geratene Grenze wäre schlechter als keine.
+   */
+  async #gemeinsamesPraefixMitShare(name: string): Promise<number | undefined> {
+    let lokal: Uint8Array;
+    let share: Uint8Array;
+    try {
+      lokal = await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.lokalDatei(name), 0);
+      share = await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.shareDatei(name), 0);
+    } catch {
+      return undefined;
+    }
+    let gleich = 0;
+    while (gleich < share.byteLength && gleich < lokal.byteLength && share[gleich] === lokal[gleich]) {
+      gleich += 1;
+    }
+    return leseZeilengrenzen(lokal.subarray(0, gleich), 0).endeOffset;
+  }
+
+  /**
    * Die eigenen Bytes dieses Segments, wie sie auf dem Share liegen.
    * `undefined`, wenn die Datei nicht lesbar ist.
    */
@@ -450,19 +473,40 @@ export class Akte {
     const ungespiegelte = await this.#ungespiegelteEigeneZeilen();
     const ergebnis = await this.#schreiber.kennungswechsel(neueClientId, ungespiegelte);
 
-    const gekuerzt =
+    const aufgegebene = [
+      clientPraefix(alteClientId),
+      ...(this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
+    ];
+    let gekuerzt =
       ergebnis === undefined
         ? await this.#kuerzeAufgegebeneDateien(
-            [
-              clientPraefix(alteClientId),
-              ...(this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
-            ],
-            // §4.5 Schritt 3 ist an dieser Stelle vollständig gelungen — nur
-            // dann steht der Inhalt der aufgegebenen Dateien nachweislich auch
-            // in der Datei der neuen Kennung.
-            true,
+            aufgegebene,
+            // §4.5 Schritt 3 ist **für diese eine Kennung** vollständig
+            // gelungen — nur für sie steht der Inhalt nachweislich auch in der
+            // Datei der neuen Kennung. Ältere Kennungen hat die Übernahme nie
+            // berührt; sie werden mitgekürzt, aber nicht gelöscht.
+            clientPraefix(alteClientId),
           )
         : false;
+    if (!gekuerzt) {
+      // **Sonst bliebe der Klon bis zum Neustart unsichtbar.**
+      //
+      // `gleicheMitSpiegelAb` gleich darunter setzt den `leseOffset` der
+      // aufgegebenen Datei auf ihre volle lokale Länge (§5.5: der Spiegel ist
+      // „ihr geprüftes Präfix"). Ist die Kürzung ausgeblieben — weil die
+      // Übernahme nach §8.8 abgebrochen ist oder das Kürzen selbst scheiterte
+      // —, ist die Datei länger als das Share-Ende, und der Leser käme an die
+      // Zeilen des Klons innerhalb dieser Sitzung nie wieder heran. Das
+      // Öffnen holt es nach (siehe `oeffnen`); ein Bediener müsste dafür aber
+      // neu starten. Befund 7.6 des Messprotokolls, hergeleitet.
+      //
+      // Nachgeholt wird deshalb hier mit derselben Bedingung wie beim Öffnen:
+      // ohne Löschgewissheit, und gekürzt erst, nachdem §4.5 Schritt 3 für die
+      // betroffenen Zeilen nachgeholt wurde. Scheitert auch das an einer
+      // lokalen Schreibstörung, bleibt es beim nächsten Öffnen — mehr als
+      // sichtbar abzuweisen lässt §8.8 nicht zu.
+      gekuerzt = await this.#kuerzeAufgegebeneDateien(aufgegebene);
+    }
 
     // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst
     // (§4.6, „Die lokale Seite", Schritt 3, sinngemäß auch hier): Sie gehören zu
@@ -470,7 +514,14 @@ export class Akte {
     // aus dem Spiegel auf (§4.5 Schritt 6).
     this.#leser = this.#baueLeser({ eigen: {}, fremd: this.#leser.zustand.fremd });
     this.#spiegelung = this.#baueSpiegelung({ eigen: alteOffsets, fremd: {} });
-    await this.#leser.gleicheMitSpiegelAb();
+    // Steht die Kürzung noch aus, ist der lokale Spiegel der aufgegebenen
+    // Datei **länger** als ihre Share-Entsprechung — §5.5 („ihr geprüftes
+    // Präfix") gilt für sie in diesem Augenblick nicht. Ohne Obergrenze
+    // spränge `leseOffset` hinter das Share-Ende, und der Klon bliebe bis zum
+    // nächsten Programmstart ungelesen.
+    await this.#leser.gleicheMitSpiegelAb(
+      gekuerzt ? undefined : (name) => this.#gemeinsamesPraefixMitShare(name),
+    );
 
     if (ergebnis !== undefined) {
       // §8.8 und §6.3: Bricht das Übernehmen der Zeilen ab, darf hier keine
@@ -547,11 +598,21 @@ export class Akte {
    */
   async #kuerzeAufgegebeneDateien(
     praefixe: Iterable<string>,
-    uebernahmeGelungen: boolean,
+    uebernahmeGelungenFuer?: string,
   ): Promise<boolean> {
     let vollstaendig = true;
     for (const praefix of new Set(praefixe)) {
       if (praefix === clientPraefix(this.#schreiber.clientId)) continue;
+      // **Die Gewissheit gilt je Präfix, nicht für alle.** `uebernahmeGelungen`
+      // begründet das Löschen damit, dass der Inhalt der Datei nachweislich
+      // anderswo steht. Gesammelt hat `#ungespiegelteEigeneZeilen` aber allein
+      // die Zeilen des **gerade** aufgegebenen Präfixes; für eine ältere
+      // Kennung — etwa aus einem vorangegangenen Wechsel, dessen Übernahme
+      // nach §8.8 abgebrochen ist — gilt sie nicht. Vorher galt sie hier für
+      // jedes Präfix, und eine solche Datei konnte gelöscht werden, obwohl
+      // ihr Inhalt nirgends sonst steht. Befund 7.6 des Messprotokolls,
+      // hergeleitet.
+      const uebernahmeGelungen = praefix === uebernahmeGelungenFuer;
       for (const kennung of await this.#eigeneDateien(praefix)) {
         const stand =
           this.#spiegelung.zustand.eigen[`${praefix}.${segmentText(kennung.segment)}`]

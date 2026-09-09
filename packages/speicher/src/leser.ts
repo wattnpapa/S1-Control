@@ -116,7 +116,9 @@ export class Leser {
    * Gleicht `leseOffset` gegen den lokalen Spiegel ab — beim Öffnen, vor allem
    * anderen (§5.3, §5.5). Ausgeführt in `spiegelabgleich.ts`.
    */
-  async gleicheMitSpiegelAb(): Promise<void> {
+  async gleicheMitSpiegelAb(
+    obergrenze?: (name: string) => Promise<number | undefined>,
+  ): Promise<void> {
     await gleicheMitSpiegelAb({
       dateisystem: this.#optionen.dateisystem,
       ablage: this.#optionen.ablage,
@@ -124,6 +126,7 @@ export class Leser {
       eigenesPraefix: clientPraefix(this.#optionen.clientId),
       identitaeten: this.#optionen.identitaeten,
       lagen: this.#lagen,
+      ...(obergrenze === undefined ? {} : { obergrenze }),
     });
     this.#schreibeZustandFort();
   }

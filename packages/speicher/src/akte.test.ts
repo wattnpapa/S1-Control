@@ -684,3 +684,145 @@ describe("§4.6 setzt an der Lesbarkeitsgrenze an (Entscheidung 16a)", () => {
     expect(ersetzt.get(0)).toBe(ab);
   });
 });
+
+describe("Was der Kennungswechsel den älteren Kennungen antut (Befund 7.6)", () => {
+  it("liest den Klon noch in derselben Sitzung, wenn die Kürzung aussteht", async () => {
+    // `gleicheMitSpiegelAb` setzt den `leseOffset` der aufgegebenen Datei auf
+    // ihre volle lokale Länge (§5.5: der Spiegel ist „ihr geprüftes Präfix").
+    // Steht die Kürzung noch aus, ist sie länger als das Share-Ende — der
+    // Leser käme an die Zeilen des Klons bis zum nächsten Programmstart nicht
+    // mehr heran. Befund 7.6 des Messprotokolls, hergeleitet.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const stoerungen: Stoerung[] = [];
+    const { akte } = await oeffneAkte({
+      ...akteOptionen(platz),
+      dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+    });
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    // Zwei ungespiegelte Zeilen — sie machen den lokalen Spiegel länger als
+    // das Share-Ende.
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 10 + i } }));
+    }
+
+    // Der Klon zwingt den Wechsel …
+    const stand = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:77`,
+        vorgaenger: stand,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+    // … und die Kürzung der aufgegebenen Datei scheitert (§8.8).
+    stoerungen.push({
+      aufruf: "kuerzeAuf",
+      code: "EIO",
+      malen: Infinity,
+      pfadEnthaelt: `${ICH}.0000`,
+    });
+    const { reaktion } = await akte.spiegle();
+    expect(reaktion?.art).toBe("kennungGewechselt");
+
+    // Der Leseoffset steht **nicht** hinter dem Share-Ende: Er endet dort, wo
+    // lokaler Spiegel und Share-Datei auseinanderlaufen.
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
+    const lokal = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    expect(lokal.byteLength).toBeGreaterThan(share.byteLength);
+    const lage = akte.leser.zustand.fremd[`${ICH}.0000`];
+    if (lage === undefined) throw new Error("keine Lage für die aufgegebene Datei");
+    expect(lage.leseOffset).toBeLessThan(lokal.byteLength);
+    expect(lage.leseOffset).toBeLessThanOrEqual(share.byteLength);
+  });
+
+  it("löscht die Datei einer älteren Kennung nicht, die die Übernahme nie berührt hat", async () => {
+    // `#wechsleKennung` übergab **alle** früheren Kennungen mit der
+    // Gewissheit, ihr Inhalt stehe „nachweislich anderswo". Gesammelt werden
+    // aber nur die Zeilen des **gerade** aufgegebenen Präfixes. Für eine
+    // ältere Kennung, deren Übernahme seinerzeit nach §8.8 abgebrochen ist,
+    // gilt die Gewissheit nicht — und ihre nie gespiegelte Datei wurde beim
+    // nächsten Wechsel gelöscht. Ihre Zeilen stehen dann nirgends mehr.
+    // Befund 7.6, hergeleitet.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const ZWEI = "22222222";
+    const DREI = "33333333";
+    const kennungen = [ZWEI, DREI];
+    const stoerungen: Stoerung[] = [];
+    const { akte } = await oeffneAkte({
+      ...akteOptionen(platz),
+      dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+      neueKennung: () => kennungen.shift() ?? DREI,
+    });
+
+    // Zwei Zeilen unter ICH, die der Share nie gesehen hat.
+    const nurLokal: string[] = [];
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      nurLokal.push(
+        alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } })).rahmen
+          .id,
+      );
+    }
+
+    /** Der Klon beginnt ein eigenes Segment — das zwingt den Wechsel (§4.5 Schritt 1). */
+    async function klonBeginntSegment(unter: string, nummer: number) {
+      await platz.dateisystem.haengeAnUndSynchronisiere(
+        platz.ablage.shareSegment(unter, 7),
+        baueZeile({
+          id: `${unter}:${nummer}`,
+          vorgaenger: KETTE_ANFANG,
+          typ: "EinheitGemeldet",
+          schemaVersion: 1,
+          nutzlast: { vomKlon: true },
+        }),
+      );
+    }
+
+    // Erster Wechsel — und die Übernahme bricht an einer lokalen
+    // Schreibstörung ab (§8.8). Die zwei Zeilen bleiben allein in `ICH.0000`.
+    await klonBeginntSegment(ICH, 77);
+    stoerungen.push({
+      aufruf: "haengeAnUndSynchronisiere",
+      code: "ENOSPC",
+      malen: Infinity,
+      pfadEnthaelt: `${ZWEI}.0000`,
+    });
+    // §4.5 Schritt 1 („alle eigenen Segmente") wird beim **Öffnen** geprüft.
+    const ersteroeffnung = await oeffneAkte({
+      ...akteOptionen(platz),
+      dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+      neueKennung: () => kennungen.shift() ?? DREI,
+    });
+    expect(ersteroeffnung.ergebnis.reaktion?.art).toBe("kennungswechselUnvollstaendig");
+    stoerungen.length = 0;
+
+    // Zweiter Wechsel: ZWEI wird aufgegeben, DREI übernimmt. ICH ist jetzt
+    // eine **ältere** Kennung, die diese Übernahme nie berührt hat — und
+    // `ICH.0000` hat keine Entsprechung auf dem Share.
+    platz.uhr.weiter(3);
+    alsGeschrieben(
+      await ersteroeffnung.akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 9 } }),
+    );
+    await klonBeginntSegment(ZWEI, 88);
+    const zweite = await oeffneAkte({
+      ...akteOptionen(platz, ZWEI),
+      neueKennung: () => kennungen.shift() ?? DREI,
+    });
+    expect(["kennungGewechselt", "kennungswechselUnvollstaendig"]).toContain(
+      zweite.ergebnis.reaktion?.art,
+    );
+
+    // Die zwei Zeilen stehen noch — sonst wären sie fort.
+    expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(nurLokal));
+  });
+});
