@@ -1,10 +1,12 @@
 # 04 – Offene Entscheidungen für Johannes
 
-Stand: 2026-09-08 · Quelle: Urteil §13, ergänzt um die Betriebsparameter vom 2026-09-07. Bereits beantwortet und hier nicht mehr aufgeführt: NAS (Synology), NTP (vorhanden), Client-OS (Windows 11 ohne Admin-Rechte), gleichzeitige Rechner (1 bis 5), macOS/Linux (berücksichtigen), Altdaten (keine).
+Stand: 2026-09-09 · Quelle: Urteil §13, ergänzt um die Betriebsparameter vom 2026-09-07. Bereits beantwortet und hier nicht mehr aufgeführt: NAS (Synology), NTP (vorhanden), Client-OS (Windows 11 ohne Admin-Rechte), gleichzeitige Rechner (1 bis 5), macOS/Linux (berücksichtigen), Altdaten (keine).
 
 > **Stand 2026-09-08: entschieden.** Johannes hat am 2026-09-08 die Empfehlungen angenommen („wir gehen den Weg, den du für sinnvoll hältst") und den Feldversuch beantwortet: v1 startet auf den FüSt-Rechnern ohne Admin-Rechte. Die getroffenen Beschlüsse je Nummer stehen in [05-UMSETZUNGSPLAN.md](05-UMSETZUNGSPLAN.md) Abschnitt 1. Offen bleiben nur noch Nr. 2 (Stunden je Woche, Planannahme 10), Nr. 10 (größter Einsatz, Annahme 100 bis 300 Einheiten) und Nr. 12 (Windows-Rechner benennen). Die Tabelle unten bleibt als Begründung der Optionen stehen.
 
 Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzuschnitt bestimmen. Alle anderen können bis zum jeweils genannten Meilenstein warten.
+
+**Neu am 2026-09-09:** Aus der Simulation M0.4 sind zwei Konzeptentscheidungen hinzugekommen — Nr. 14 und Nr. 15 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md und sind bewusst nicht getroffen worden.
 
 | Nr. | Entscheidung | Optionen und Folgen | Empfehlung | Fällig |
 |---|---|---|---|---|
@@ -21,6 +23,82 @@ Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzus
 | 11 | **UDP-Beschleuniger** | Wird eine Windows-Firewall-Eingangsregel ohne Admin-Rechte je aktiv? Wenn nein: UDP streichen, Zusage „unter 1 Sekunde" durch „Poll-Intervall plus Cache, ehrlich angezeigt" ersetzen | im Feldversuch M-1 mitprüfen (`Get-NetFirewallRule`); im Zweifel streichen | M-1 |
 | 12 | **Windows-Entwicklungsmaschine** | Entwickelt wird auf macOS; mindestens sieben Arbeitspakete sind Windows-spezifisch (Installer, Update, SMB-Cache, Firewall, SmartScreen, Zweitmonitor, Handscanner) | Rechner benennen, spätestens für M0 | M0 |
 | 13 | **Zielplattformen** | Vier gebaute Plattformen sind Dauerlast | Windows Produkt, macOS Entwicklungsplattform mit Best-Effort-Paket, Linux nur CI-Lauf | M7 |
+
+## Konzeptentscheidungen aus M0.4 — zwei Stellen in KONZEPT-SPEICHER.md
+
+Beide sind in der Simulation M0.4 aufgefallen, beide sind **Entscheidungen am
+Konzept und nicht am Code**, und beide sind bewusst nicht getroffen worden. Die
+Herleitung steht in [messungen/M0.4-simulation.md](messungen/M0.4-simulation.md),
+Abschnitt 4 und Abschnitt 2.
+
+### 14 · §8.6.1 Regel 4 hält nicht, wenn die Beschädigung spät entdeckt wird
+
+**Was heute zugesagt ist.** Regel 4: Weil Ausgang B eine Beschädigung ohne fremde
+Schreibspur ist, schreibt der Schreiber den fehlenden Teil als Ersatzsegment nach
+§4.6 neu — „danach gilt die Konvergenzzusage für die betroffenen Leser wieder".
+
+**Warum das nicht trägt.** Wird die Beschädigung erst entdeckt, nachdem der
+Schreiber das Segment verlassen hat, heilt das Ersatzsegment nur das **eine**
+beschädigte Segment. Die inzwischen geschriebenen Folgesegmente bleiben für den
+betroffenen Leser dauerhaft unlesbar: Ihr Kettenanker ist nach §2.3 die letzte
+Zeile des Vorgängers, und die liegt hinter der Quarantänestelle. Der Leser kann
+sie nicht prüfen, ohne Unbestätigtes als bestätigt zu führen — was §8.2
+ausdrücklich verbietet. §8.2 Punkt 7 sagt für genau diesen Zustand „die
+Konvergenzzusage ist ausgesetzt, solange die Quarantäne besteht"; §8.6.1 Regel 4
+lässt sie wieder gelten. Die beiden Sätze widersprechen sich, und der
+Widerspruch wird sichtbar, sobald §4.6.1 Auslöser 1 greift — also im Regelfall,
+denn der hängt am nächsten Programmstart.
+
+**Die drei Richtungen.**
+
+| | Was geändert wird | Was es kostet | Was es aufgibt |
+|---|---|---|---|
+| A | §8.6.1 Regel 4 präzisieren: Die Zusage gilt nur für die Ereignisse des ersetzten Segments. Alles danach bleibt für den betroffenen Leser ausgesetzt, bis er den Einsatz mit einem gesunden Spiegel neu aufsetzt (§8.6.1, Exportweg) | Nur Text; der Code tut das bereits | Ein Leser, den eine späte Beschädigung trifft, braucht einen Bedienschritt, um wieder mitzulesen |
+| B | Das Ersatzsegment auf **alle** Segmente ab der Fehlerstelle ausdehnen | Verändert §4.6 erheblich; der Schreiber wiederholt unter Umständen sehr viele Ereignisse, und jeder Anlauf kann nach §8.8 abbrechen | Die Zusage „ein Ersatzsegment je Beschädigung"; die Datenmenge je Reparatur ist nicht mehr beschränkt |
+| C | Dem Leser erlauben, ein Folgesegment ohne prüfbaren Anker zu lesen und als „ungeprüfte Kette" zu kennzeichnen | Bricht mit §8.2 und mit §1.3 | Die Zusage, dass nur geprüfte Zeilen in den Fold gehen — der Kern des Verfahrens |
+
+**Einordnung, keine Entscheidung.** A ist die einzige Richtung, die keine
+Zusage aufgibt: Sie schreibt auf, was §8.2 Punkt 7 ohnehin schon sagt, und
+löst den Widerspruch zugunsten des strengeren Satzes. B ist fachlich
+verteidigbar, wenn der Wiederanlauf ohne Bedienschritt gefordert ist — dann
+gehört aber auch entschieden, wo die Obergrenze der zu wiederholenden Menge
+liegt. C ist aus unserer Sicht nicht tragfähig; sie ist der Vollständigkeit
+halber aufgeführt, weil sie in Abschnitt 4 des Protokolls steht.
+
+**Was bis zur Entscheidung gilt:** Die Simulation wertet diesen Ausgang als
+„nicht vergleichbar" nach §7.6 — kein Fehler, kein Nachweis — und meldet die
+Quarantänen getrennt, wie §8.6.1 Regel 3 es verlangt.
+
+### 15 · §7.6 braucht zwei Präzisierungen, sonst ist die Ruhephase im Feld nicht messbar
+
+Beide sind in der Simulation umgesetzt und dort belegt; beide machen die
+Ruhephase **schwerer** erreichbar, nicht leichter. Zu entscheiden ist, ob sie in
+§7.6 nachgezogen werden.
+
+**(a) Bedingung 2 und 3 hängen am Fortschritt, nicht an den gelesenen Bytes.**
+§7.6 verlangt heute „0 Bytes geliefert". Eine Datei in vorläufiger Quarantäne
+wird nach §8.1 in **jedem** Takt-B-Durchlauf erneut geprüft und liefert dabei
+jedes Mal dieselben unvollständigen Bytes. Wörtlich gelesen wäre die Ruhephase
+damit für den Rest der Lage unerreichbar, sobald irgendwo eine Zeile steht, die
+niemand mehr vervollständigt — der Fall, den §8.1 ausdrücklich kennt. Und ohne
+Ruhephase gibt es keinen Konvergenzvergleich, also auch kein Abbruchkriterium
+nach Auflage 18. Vorschlag: Gemessen wird, ob das **gesehene Dateiende**
+vorgerückt ist. Dieselbe Unterscheidung trifft `Dateilage.gesehenesEnde` schon
+für den Verfall aus §6.2.
+
+**(b) Zwei aufeinanderfolgende Durchläufe reichen gegen die Caches aus §6.6
+nicht.** §7.6 begründet die zwei Durchläufe damit, dass ein einzelner leerer
+Takt A auch entsteht, wenn ein anderer Client gerade zwischen zwei Zeilen
+steht. Das deckt nur den Fall ab, in dem der Leser die Wahrheit sieht. Der
+Verzeichnis-Cache hält seine Auskunft 10 Sekunden, der `FileNotFound`-Cache 5;
+bei einem Takt B von 4 Sekunden (§6.2) werden **zwei** aufeinanderfolgende
+Durchläufe aus derselben zwischengespeicherten Auskunft bedient, und zwei leere
+Durchläufe belegen dann nicht, dass nichts da ist. Vorschlag: `2 + ⌈Cache /
+Takt⌉` leere Durchläufe. Ohne Caches sind das genau die zwei aus §7.6.
+
+**Warum es nicht warten sollte.** `s1 akte pruefe` (Paket V.3) meldet die
+Ruhephase nach der heutigen Fassung falsch — im Feld also gerade dort, wo sie
+gemessen werden soll (M0.5, M2.4).
 
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
