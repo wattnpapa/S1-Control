@@ -21,7 +21,7 @@ import {
   type Schreibergebnis,
 } from "./schreibergebnis.js";
 
-import type { Dateisystem } from "./dateisystem.js";
+import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
 import { lokalDauerhafterHinweis, lokalWiederholbar, lokaleSchreibstoerungMeldung } from "./fehler.js";
 import type { Identitaetenbuch } from "./identitaeten.js";
 import {
@@ -96,6 +96,12 @@ export class Schreiber {
   readonly #identitaeten: Identitaetenbuch;
   readonly #bestand: Schreiberbestand;
   #zustand: Schreiberzustand;
+  /**
+   * `true`, solange hinter {@link Schreiberzustand.lokalerOffset} Bytes stehen
+   * können, die zu keiner vollständigen Zeile gehören (§8.1, §5.4.1). Vor dem
+   * nächsten Anhang wird dann gekürzt.
+   */
+  #tailReparaturNoetig = false;
 
   constructor(optionen: SchreiberOptionen, bestand: Schreiberbestand) {
     this.#dateisystem = optionen.dateisystem;
@@ -144,9 +150,17 @@ export class Schreiber {
     return this.#bestand;
   }
 
-  /** Schreibt `schreiber.json` fort — ohne `fsync` (§5.2). */
-  async speichereZustand(): Promise<void> {
-    await schreibeSchreiberzustand(this.#dateisystem, this.#ablage.schreiberDatei, this.#zustand);
+  /**
+   * Schreibt `schreiber.json` fort — ohne `fsync` (§5.2).
+   *
+   * `false` heißt: Der Beschleuniger konnte nicht fortgeschrieben werden. Das
+   * ist nach §4.4 folgenlos — das laufende Segment kommt aus dem Dateibestand
+   * (§4.3), die Laufnummer aus dem Maximum von Datei und Dateibestand (§3.3) —,
+   * und es reißt deshalb den Bedienschritt nicht ab. Wer es gleichwohl anzeigen
+   * will, bekommt hier die Auskunft.
+   */
+  async speichereZustand(): Promise<boolean> {
+    return schreibeSchreiberzustand(this.#dateisystem, this.#ablage.schreiberDatei, this.#zustand);
   }
 
   /**
@@ -253,27 +267,100 @@ export class Schreiber {
    * und bei jedem anderen Code sofort — wird der Bedienschritt sichtbar
    * abgewiesen. Die bereits erhöhte Laufnummer bleibt vergeben (§8.8 Punkt 2):
    * ein Rückschritt wäre der gefährlichere Fehler.
+   *
+   * **Ein gescheiterter Anhang kann Bytes hinterlassen haben.** Ein `write`
+   * kann teilweise durchgehen und dann scheitern — §5.4.1 nennt genau das für
+   * den Share („Was dort ankommt, ist ein Präfix dessen, was gesendet wurde"),
+   * und lokal ist es derselbe Vorgang wie der Kill mitten im Append aus §8.1.
+   * Ohne Behandlung stünde danach ein Bruchstück in der Datei, die nächste
+   * Zeile würde dahinter geschrieben, und ab dieser Stelle wäre die eigene
+   * Datei **dauerhaft** nicht mehr auswertbar: Das Längenfeld des Bruchstücks
+   * kündigt Bytes an, an deren Ende kein `\n` steht — Regel 3 aus §8.2, also
+   * defekt. `lokalerVollstaendigerOffset` bliebe stehen, die Spiegelung
+   * überträge nichts mehr, und jeder Leser fiele an derselben Stelle in
+   * Quarantäne, während der Arbeitsplatz munter weiterschriebe. Genau der
+   * stille Falschzustand, den §6.3 ausschließt. Befund aus der Simulation M0.4.
+   *
+   * Behandelt wird er mit der Regel, die §8.1 ohnehin vorgibt — Kürzen auf die
+   * letzte vollständige Zeile —, nur zum selben Auslöser statt erst beim
+   * nächsten Start. Gekürzt wird auf {@link Schreiberzustand.lokalerOffset},
+   * den Stand **vor** dieser Zeile. Das kann nie ein bereits gespiegeltes Byte
+   * entfernen: §5.4.1 überträgt höchstens bis genau dorthin.
    */
   async #haengeAn(pfad: string, bytes: Uint8Array): Promise<Schreibergebnis | undefined> {
+    const stand = this.#zustand.lokalerOffset;
+    // Eine Reparatur, die beim letzten Mal selbst gescheitert ist, wird zuerst
+    // nachgeholt. Ohne das schriebe der nächste Bedienschritt hinter das
+    // Bruchstück und machte es endgültig.
+    if (this.#tailReparaturNoetig) {
+      const repariert = await this.#kuerzeAufStand(pfad, stand);
+      if (repariert !== undefined) return repariert;
+    }
     for (let versuch = 0; versuch < 2; versuch += 1) {
       try {
         await this.#dateisystem.haengeAnUndSynchronisiere(pfad, bytes);
+        this.#tailReparaturNoetig = false;
         return undefined;
       } catch (fehler) {
         if (versuch === 0 && lokalWiederholbar(fehler)) {
+          // Vor dem zweiten Versuch dasselbe Kürzen: Auch der erste Versuch
+          // kann Bytes hinterlassen haben, und ein zweites `haengeAn` dahinter
+          // erzeugte dieselbe unauswertbare Stelle.
+          this.#tailReparaturNoetig = true;
           await this.#warte(LOKALE_WIEDERHOLUNG_MS);
+          const repariert = await this.#kuerzeAufStand(pfad, stand);
+          if (repariert !== undefined) return repariert;
           continue;
         }
+        this.#tailReparaturNoetig = true;
         const code = fehler instanceof Error && "code" in fehler ? String(fehler.code) : undefined;
         const basis = {
           art: "abgewiesen",
           meldung: lokaleSchreibstoerungMeldung(fehler),
           dauerhafterHinweis: lokalDauerhafterHinweis(fehler),
         } as const;
-        return code === undefined ? basis : { ...basis, code };
+        const abgewiesen = code === undefined ? basis : { ...basis, code };
+        // Das Kürzen darf selbst scheitern; dann bleibt die Reparatur offen
+        // und wird vor dem nächsten Anhang nachgeholt. Abgewiesen wird der
+        // Bedienschritt so oder so (§8.8 Punkt 1).
+        await this.#kuerzeAufStand(pfad, stand);
+        return abgewiesen;
       }
     }
     return undefined;
+  }
+
+  /**
+   * Kürzt die eigene laufende Datei auf den bekannten guten Stand (§8.1).
+   *
+   * Liefert ein abweisendes Ergebnis, wenn auch das Kürzen scheitert — dann
+   * darf nicht weitergeschrieben werden, denn die nächste Zeile käme hinter
+   * das Bruchstück zu stehen.
+   */
+  async #kuerzeAufStand(pfad: string, stand: number): Promise<Schreibergebnis | undefined> {
+    try {
+      await this.#dateisystem.kuerzeAuf(pfad, stand);
+      this.#tailReparaturNoetig = false;
+      return undefined;
+    } catch (fehler) {
+      // `ENOENT` heißt: Die Datei gibt es noch gar nicht, also auch kein
+      // Bruchstück. Das ist der Normalfall beim ersten Anhang an ein neues
+      // Segment (§4.2) und beim Ersatzsegment (§4.6). Es als Fehler zu werten
+      // hieße, den Bedienschritt dauerhaft abzuweisen: Die Reparatur bliebe
+      // offen, und jeder weitere Anhang scheiterte an derselben Stelle.
+      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
+        this.#tailReparaturNoetig = false;
+        return undefined;
+      }
+      this.#tailReparaturNoetig = true;
+      const code = fehler instanceof Error && "code" in fehler ? String(fehler.code) : undefined;
+      const basis = {
+        art: "abgewiesen",
+        meldung: lokaleSchreibstoerungMeldung(fehler),
+        dauerhafterHinweis: lokalDauerhafterHinweis(fehler),
+      } as const;
+      return code === undefined ? basis : { ...basis, code };
+    }
   }
 
   /**

@@ -17,7 +17,7 @@
 import type { HlcUhr } from "@s1/domaene";
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
-import { shareklasse } from "./fehler.js";
+import { lokaleSchreibstoerungMeldung, shareklasse } from "./fehler.js";
 import type { Identitaetenbuch } from "./identitaeten.js";
 
 import { Dateilage } from "./leserlage.js";
@@ -42,6 +42,7 @@ export {
   type Pollergebnis,
   type Quarantaenegrund,
   type Quarantaenemeldung,
+  type Spiegelschreibfehler,
 } from "./pollergebnis.js";
 
 export interface LeserOptionen {
@@ -264,7 +265,12 @@ export class Leser {
     }
 
     sammler.gelesenBytes += bytes.byteLength;
-    lage.merkeBytes(lage.offsets.leseOffset + bytes.byteLength, this.#optionen.zeit());
+    // §7.6, Bedingung 2 und 3 hängen am Fortschritt, nicht am Umsatz: Eine
+    // Datei mit vorläufiger Quarantäne liefert nach §8.1 in jedem Durchlauf
+    // dieselben unvollständigen Bytes.
+    const bisOffset = lage.offsets.leseOffset + bytes.byteLength;
+    sammler.fortschrittBytes += Math.max(0, bisOffset - lage.gesehenesEnde);
+    lage.merkeBytes(bisOffset, this.#optionen.zeit());
 
     if (bytes.byteLength === 0) {
       lage.verfallPruefen(this.#optionen.zeit);
@@ -318,11 +324,53 @@ export class Leser {
 
     const gepruefteBytes = gelesen.endeOffset - lage.offsets.leseOffset;
     if (gepruefteBytes > 0) {
-      await this.#optionen.dateisystem.legeVerzeichnisAn(this.#optionen.ablage.lokalEreignisse);
-      await this.#optionen.dateisystem.haengeAnUndSynchronisiere(
-        this.#optionen.ablage.lokalDatei(lage.name),
-        bytes.subarray(0, gepruefteBytes),
-      );
+      try {
+        await this.#optionen.dateisystem.legeVerzeichnisAn(this.#optionen.ablage.lokalEreignisse);
+        // §5.5: „Der lokale Spiegel einer fremden Datei ist ihr **geprüftes
+        // Präfix**." Genau `leseOffset` Byte lang, nicht mehr. Vor dem Anhängen
+        // wird darauf gekürzt, und zwar bedingungslos:
+        //
+        // Ein vorangegangener Anhang kann teilweise durchgegangen und dann
+        // gescheitert sein (§8.8) — ein `write` schreibt ein Präfix und meldet
+        // danach den Fehler, genau wie §5.4.1 es für den Share beschreibt.
+        // `leseOffset` bleibt dann stehen, die Bytes hinter ihm gehören zu
+        // keiner geprüften Zeile. Ohne diese Kürzung hängte der nächste
+        // Durchlauf dieselben geprüften Bytes ein zweites Mal **hinter** das
+        // Bruchstück: Der Spiegel wäre länger als die Share-Datei und ab dieser
+        // Stelle ein anderer Bytestrom — er wäre kein Präfix mehr, der Export
+        // nach §8.6.1 Regel 4 gäbe unbestätigte Bytes weiter, und der
+        // Konvergenzvergleich nach §7.6 verglichen zwei Clients über
+        // verschiedene Inhalte derselben Datei. Befund aus der Simulation M0.4.
+        //
+        // Dasselbe deckt den Neustart ab: `gleicheMitSpiegelAb` setzt
+        // `leseOffset` auf das geprüfte Ende des Spiegels, kürzt ihn aber
+        // nicht. Ein nach einem Absturz liegen gebliebenes Bruchstück wird
+        // damit hier weggeräumt.
+        await this.#kuerzeSpiegel(lage.name, lage.offsets.leseOffset);
+        await this.#optionen.dateisystem.haengeAnUndSynchronisiere(
+          this.#optionen.ablage.lokalDatei(lage.name),
+          bytes.subarray(0, gepruefteBytes),
+        );
+      } catch (fehler) {
+        if (!(fehler instanceof DateisystemFehler)) throw fehler;
+        // §8, Grundsatz: kein Stillstand des Lesers. §8.8: Der lokale
+        // Schreibweg kann scheitern — volle Platte, entzogenes Recht,
+        // Virenscanner —, und §5.5 verlangt „geprüft **vor** dem Anhängen".
+        // Also: `leseOffset` bleibt stehen, die Identitäten werden **nicht**
+        // gemerkt, die Zeilen werden **nicht** herausgegeben. Beim nächsten
+        // Durchlauf werden dieselben Bytes erneut geholt und erneut geprüft.
+        //
+        // Ohne diesen Fang riss ein einziges `ENOSPC` den gesamten
+        // Poll-Durchlauf ab und mit ihm die Auswertung aller anderen Dateien —
+        // genau das, was der Grundsatz von §8 ausschließt. Befund aus der
+        // Simulation M0.4.
+        sammler.spiegelfehler.push({
+          datei: lage.name,
+          code: fehler.code,
+          meldung: lokaleSchreibstoerungMeldung(fehler),
+        });
+        return;
+      }
     }
 
     this.#optionen.identitaeten.merkeAlle(gelesen.zeilen);
@@ -358,6 +406,21 @@ export class Leser {
     // Wiederholungen sind dasselbe Ereignis (§8.2) und gehören nicht ein
     // zweites Mal in das Bündel für den Fold.
     sammler.neueZeilen.push(...gelesen.zeilen.filter((zeile) => !zeile.wiederholung));
+  }
+
+  /**
+   * Kürzt den Spiegel einer fremden Datei auf ihr geprüftes Präfix (§5.5).
+   *
+   * `ENOENT` ist kein Fehler: Eine gerade erst in Takt B entdeckte Datei hat
+   * noch keinen Spiegel, und `leseOffset` ist dann 0.
+   */
+  async #kuerzeSpiegel(name: string, laenge: number): Promise<void> {
+    try {
+      await this.#optionen.dateisystem.kuerzeAuf(this.#optionen.ablage.lokalDatei(name), laenge);
+    } catch (fehler) {
+      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") return;
+      throw fehler;
+    }
   }
 
   /**

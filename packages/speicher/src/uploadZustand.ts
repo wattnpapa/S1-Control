@@ -24,7 +24,7 @@
  *   wieder auf denselben Defekt.
  */
 
-import type { Dateisystem } from "./dateisystem.js";
+import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
 import { KETTE_ANFANG, istKette } from "./pruefsummen.js";
 
 const kodierer = new TextEncoder();
@@ -192,22 +192,37 @@ function ganzzahl(wert: unknown): wert is number {
  *
  * Aus demselben Grund wie bei `schreiber.json` (§5.2): genau ein `fsync` je
  * Ereignis, und die Datei ist nach dem Kopfkommentar wiederherstellbar.
+ *
+ * Liefert `false` statt zu werfen, wenn ein Dateisystemfehler dazwischenkam —
+ * aus demselben Grund und mit derselben Begründung wie
+ * `schreibeSchreiberzustand` (§4.4, §8.8, §9 zu Auflage 15): Diese Datei ist
+ * ein Beschleuniger. Ihr Verlust kostet einen erneuten Abgleich gegen den
+ * lokalen Spiegel beim nächsten Öffnen (§5.3, §5.5) und sonst nichts; ein
+ * abgerissener Bedienschritt oder ein abgerissener Poll-Durchlauf kostet mehr.
+ * Befund aus der Simulation M0.4.
  */
 export async function schreibeUploadZustand(
   dateisystem: Dateisystem,
   pfad: string,
   zustand: UploadZustand,
-): Promise<void> {
+): Promise<boolean> {
   // Eindeutig je Schreibvorgang: §6.2 lässt Takte unabhängig laufen, und zwei
   // gleichzeitige Läufe teilten sich sonst dieselbe `.tmp`-Datei — der eine
   // benennt sie um, der andere findet sie nicht mehr und scheitert mit ENOENT
   // an einer Datei, die es nie hätte geben dürfen.
   const tmp = `${pfad}.${naechsteTmpNummer()}.tmp`;
-  await dateisystem.schreibeUeberOhneSync(
-    tmp,
-    kodierer.encode(`${JSON.stringify(zustand, undefined, 2)}\n`),
-  );
-  await dateisystem.benenneUm(tmp, pfad);
+  try {
+    await dateisystem.schreibeUeberOhneSync(
+      tmp,
+      kodierer.encode(`${JSON.stringify(zustand, undefined, 2)}\n`),
+    );
+    await dateisystem.benenneUm(tmp, pfad);
+    return true;
+  } catch (fehler) {
+    if (!(fehler instanceof DateisystemFehler)) throw fehler;
+    await dateisystem.loesche(tmp).catch(() => undefined);
+    return false;
+  }
 }
 
 /** Ein eigener Offset, der noch nie gespiegelt wurde. */

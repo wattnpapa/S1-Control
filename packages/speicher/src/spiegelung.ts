@@ -26,6 +26,7 @@ import { shareklasse } from "./fehler.js";
 import { grenzeUndKette } from "./kettenanker.js";
 import {
   MELDUNG_BESCHAEDIGT,
+  MELDUNG_EIGENE_DATEI_FEHLT,
   MELDUNG_KEIN_SCHREIBRECHT,
   MELDUNG_NICHT_ERREICHBAR,
   MELDUNG_ORDNER_FORT,
@@ -88,6 +89,7 @@ export type {
 } from "./spiegelergebnis.js";
 export {
   MELDUNG_BESCHAEDIGT,
+  MELDUNG_EIGENE_DATEI_FEHLT,
   MELDUNG_KEIN_SCHREIBRECHT,
   MELDUNG_NICHT_ERREICHBAR,
   MELDUNG_ORDNER_FORT,
@@ -98,6 +100,8 @@ export class Spiegelung {
   readonly #optionen: SpiegelungOptionen;
   #zustand: UploadZustand;
   #rueckstauStufe = 0;
+  /** Segmente, für die in dieser Sitzung schon ein Anhang **versucht** wurde (§5.4.2). */
+  readonly #angehaengt = new Set<string>();
   #laeuft = false;
   #ausfallSeit: number | undefined;
 
@@ -213,6 +217,15 @@ export class Spiegelung {
    * schon vom alten Präfix belegt, mitsamt dessen `shareOffset`. Deshalb steht
    * hier der Dateiname ohne Endung, genau wie bei `fremd`.
    */
+  /**
+   * `true`, wenn `ENOENT` für dieses Segment wahr sein **kann** — also nur beim
+   * allerersten Anlegen (§5.4.2, siehe {@link Spiegelung} und der Kommentar an
+   * der Fangstelle).
+   */
+  #erstesAnlegen(schluessel: string, offsets: EigenerOffset): boolean {
+    return offsets.shareOffset === 0 && !this.#angehaengt.has(schluessel);
+  }
+
   #schluessel(segment: number): string {
     return `${clientPraefix(this.#optionen.clientId)}.${segmentText(segment)}`;
   }
@@ -237,11 +250,31 @@ export class Spiegelung {
     try {
       shareBytes = await this.#optionen.dateisystem.liesAb(sharePfad, offsets.shareOffset);
     } catch (fehler) {
-      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
-        shareBytes = new Uint8Array(0);
-      } else {
-        throw fehler;
-      }
+      if (!(fehler instanceof DateisystemFehler) || fehler.code !== "ENOENT") throw fehler;
+      // `ENOENT` heißt **nicht** „die Datei ist leer".
+      //
+      // §5.4.2 sagt: „Nach einem Abbruch kann die Share-Datei weiter sein als
+      // der gemerkte `shareOffset`." Weiter — nie kürzer. Eine Datei, in die
+      // dieser Client nachweislich schon geschrieben hat, kann nicht nicht
+      // existieren; wer das gleichsetzt, hängt alles ab `shareOffset` ein
+      // zweites Mal an und erzeugt „doppelte Ereigniszeilen in der eigenen
+      // Datei — den einen Fehler, den dieses Verfahren per Konstruktion
+      // ausschließen soll" (§5.4.2, wörtlich).
+      //
+      // Dass das nicht theoretisch ist, hat die Simulation M0.4 gezeigt: Der
+      // `FileNotFoundCacheLifetime` von 5 Sekunden (§6.6,
+      // `nas-speicher-recherche.md` §1.2) meldet eine gerade erst angelegte
+      // Datei weiterhin als fehlend. §9 (Auflage 15) verlangt, dass dieser
+      // Cache **folgenlos** bleibt; mit der Gleichsetzung war er es nicht.
+      //
+      // Behandelt wird er deshalb als das, was er ist: ein vorübergehender
+      // Fehler mit Rückstau nach §5.4.4. Der nächste Lauf liest erneut, und
+      // spätestens nach Ablauf des Caches steht das wahre Ende da.
+      if (!this.#erstesAnlegen(schluessel, offsets)) return this.#eigeneDateiFehlt();
+      // Der einzige Fall, in dem `ENOENT` wahr sein darf: Dieser Client hat für
+      // dieses Segment noch nie etwas auf den Share gegeben. Dann legt der
+      // Anhang die Datei an.
+      shareBytes = new Uint8Array(0);
     }
 
     const ausgang = vergleicheSpiegel({
@@ -286,6 +319,10 @@ export class Spiegelung {
       this.#merkeOffset(kennung.segment, shareEnde, lokal);
       return { art: "uebertragen", uebertragen: 0 };
     }
+    // Vor dem Anhang vermerken, nicht danach: Auch ein gescheiterter Anhang
+    // kann ein Präfix auf dem Share hinterlassen haben (§5.4.1), und danach ist
+    // `ENOENT` für diese Datei endgültig eine Falschauskunft.
+    this.#angehaengt.add(this.#schluessel(kennung.segment));
     await this.#optionen.dateisystem.haengeAnUndSynchronisiere(sharePfad, anzuhaengen);
     this.#merkeOffset(kennung.segment, lokal.byteLength, lokal);
     return { art: "uebertragen", uebertragen: anzuhaengen.byteLength };
@@ -366,6 +403,29 @@ export class Spiegelung {
   }
 
   /** §8.9: vorübergehende und dauerhafte Fehler werden verschieden behandelt. */
+  /**
+   * `ENOENT` auf einer **eigenen** Segmentdatei, in der schon Bytes liegen.
+   *
+   * Nicht §5.7 (dort geht es um den Einsatz**ordner**, und der ist unmittelbar
+   * davor geprüft worden) und nicht `shareklasse` — die ordnet `ENOENT`
+   * zutreffend dem Ordnerfall zu. Hier ist es die Auskunft eines
+   * Negativ-Caches (§6.6) oder eine gelöschte Datei (§8.6.2, „Wer
+   * Schreibzugriff hat, kann das letzte Segment spurlos entfernen"). Beides
+   * wird gleich behandelt: Rückstau nach §5.4.4 und eine Meldung, die weder
+   * Erfolg noch eine Ursache behauptet, die nicht belegt ist (§6.3).
+   */
+  #eigeneDateiFehlt(): Spiegelergebnis {
+    this.#ausfallSeit ??= this.#optionen.zeit();
+    const wartezeit = this.naechsterVersuchMs;
+    this.#rueckstauStufe = Math.min(this.#rueckstauStufe + 1, RUECKSTAU_STAFFEL_MS.length - 1);
+    return {
+      art: "gescheitert",
+      klasse: "voruebergehend",
+      meldung: MELDUNG_EIGENE_DATEI_FEHLT,
+      naechsterVersuchMs: wartezeit,
+    };
+  }
+
   #scheitern(fehler: unknown): Spiegelergebnis {
     const klasse = shareklasse(fehler);
     this.#ausfallSeit ??= this.#optionen.zeit();

@@ -154,6 +154,7 @@ export {
 // Spiegelung §5.4 mit der Praefix-Invariante §5.4.1 und den drei Ausgaengen §5.4.3.
 export {
   MELDUNG_BESCHAEDIGT,
+  MELDUNG_EIGENE_DATEI_FEHLT,
   MELDUNG_KEIN_SCHREIBRECHT,
   MELDUNG_NICHT_ERREICHBAR,
   MELDUNG_ORDNER_FORT,
@@ -172,6 +173,7 @@ export {
   type Pollergebnis,
   type Quarantaenegrund,
   type Quarantaenemeldung,
+  type Spiegelschreibfehler,
   type Takt,
 } from "./leser.js";
 export { Dateilage } from "./leserlage.js";

@@ -20,6 +20,15 @@ export const MELDUNG_ORDNER_FORT =
 export const MELDUNG_KEIN_SCHREIBRECHT =
   "Der Server ist erreichbar, nimmt von diesem Arbeitsplatz aber keine Einträge an (kein Schreibrecht). Die Einträge liegen lokal bereit.";
 export const MELDUNG_NICHT_ERREICHBAR = "Share nicht erreichbar.";
+/**
+ * §5.4.2 und §6.6: Die eigene Datei ist auf dem Server gerade nicht
+ * auffindbar, obwohl bereits Einträge darin liegen. Ursache ist entweder ein
+ * Negativ-Cache des SMB-Clients (§6.6) oder eine entfernte Datei (§8.6.2) —
+ * beides lässt sich hier nicht unterscheiden, und deshalb behauptet der Text
+ * keine von beiden.
+ */
+export const MELDUNG_EIGENE_DATEI_FEHLT =
+  "Die eigene Datei ist auf dem Server gerade nicht auffindbar, obwohl bereits Einträge darin liegen. Es wird weiter versucht; die Einträge liegen lokal bereit.";
 
 /** Das Ergebnis eines Spiegelungslaufs. */
 export type Spiegelergebnis =

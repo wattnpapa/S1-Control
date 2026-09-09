@@ -17,7 +17,7 @@
 
 import type { Akteur, HlcUhr } from "@s1/domaene";
 
-import type { Dateisystem } from "./dateisystem.js";
+import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
 import { ersetzteSegmente } from "./ersetzteSegmente.js";
 import { Identitaetenbuch } from "./identitaeten.js";
 import { Leser, type Pollergebnis } from "./leser.js";
@@ -116,7 +116,7 @@ export class Akte {
   #leser: Leser;
   #spiegelung: Spiegelung;
   /** Reiht die Schreibvorgänge auf `upload-state.json` (§8.4). */
-  #zustandSchreiben: Promise<void> = Promise.resolve();
+  #zustandSchreiben: Promise<boolean> = Promise.resolve(true);
 
   constructor(optionen: AkteOptionen, schreiber: Schreiber, zustand: UploadZustand) {
     this.#optionen = optionen;
@@ -147,19 +147,26 @@ export class Akte {
    * „Je Datei ist höchstens ein Zugriff offen; die Speicherschicht serialisiert
    * das selbst und überlässt es nicht dem Aufrufer."
    */
-  async speichereZustand(): Promise<void> {
-    this.#zustandSchreiben = this.#zustandSchreiben.then(async () => {
-      await schreibeUploadZustand(
+  async speichereZustand(): Promise<boolean> {
+    this.#zustandSchreiben = this.#zustandSchreiben.then(async () =>
+      schreibeUploadZustand(
         this.#optionen.dateisystem,
         this.#optionen.ablage.uploadZustandDatei,
         this.zustand,
-      );
-    });
-    await this.#zustandSchreiben;
+      ),
+    );
+    return this.#zustandSchreiben;
   }
 
   /** Siehe {@link oeffneAkte}. */
   async oeffnen(): Promise<Oeffnungsergebnis> {
+    // §4.5 Schritt 6 nachholen, bevor der Spiegelabgleich läuft: Blieb das
+    // Kürzen beim Wechsel unvollständig (§8.8), setzte `gleicheMitSpiegelAb`
+    // den `leseOffset` der aufgegebenen Datei hinter ihr Share-Ende, und sie
+    // würde nie wieder gelesen. Befund aus der Simulation M0.4.
+    await this.#kuerzeAufgegebeneDateien(
+      (this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
+    );
     await this.#leser.gleicheMitSpiegelAb();
     const quarantaeneNachlauf = await this.#leser.pruefeQuarantaenenErneut();
     const befund = await pruefeBeimOeffnen({
@@ -305,14 +312,20 @@ export class Akte {
     const alteClientId = this.#schreiber.clientId;
     const neueClientId = this.#optionen.neueKennung();
     // Vor dem Wechsel festhalten: Danach schlüsselt die Spiegelung unter dem
-    // neuen Präfix, und die alten Offsets wären nicht mehr auffindbar.
+    // neuen Präfix, und die alten Offsets wären nicht mehr auffindbar. Sie
+    // werden weitergeführt, aber nie wieder beschrieben (§4.6, „Die lokale
+    // Seite", Schritt 3, sinngemäß auch hier).
     const alteOffsets = this.#spiegelung.zustand.eigen;
     const ungespiegelte = await this.#ungespiegelteEigeneZeilen();
     const ergebnis = await this.#schreiber.kennungswechsel(neueClientId, ungespiegelte);
 
-    if (ergebnis === undefined) {
-      await this.#kuerzeAlteDateienAufShareStand(alteClientId, alteOffsets);
-    }
+    const gekuerzt =
+      ergebnis === undefined
+        ? await this.#kuerzeAufgegebeneDateien([
+            clientPraefix(alteClientId),
+            ...(this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
+          ])
+        : false;
 
     // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst
     // (§4.6, „Die lokale Seite", Schritt 3, sinngemäß auch hier): Sie gehören zu
@@ -342,46 +355,103 @@ export class Akte {
       alteClientId,
       neueClientId,
       mitgenommen: ungespiegelte.length,
-      meldung:
-        "Dieses Benutzerprofil wurde offenbar kopiert. Der Rechner arbeitet ab jetzt unter einer " +
-        "neuen Kennung weiter; bereits geschriebene Einträge bleiben erhalten.",
+      // §4.5 Schritt 6 ist erst mit der Kürzung erfüllt; scheitert sie an einer
+      // lokalen Schreibstörung (§8.8), wird das gesagt statt verschwiegen
+      // (§6.3). Der Wechsel selbst gilt, und die Kürzung wird beim nächsten
+      // Öffnen über `gleicheMitSpiegelAb` und den Leser nachgeholt.
+      meldung: gekuerzt
+        ? "Dieses Benutzerprofil wurde offenbar kopiert. Der Rechner arbeitet ab jetzt unter einer " +
+          "neuen Kennung weiter; bereits geschriebene Einträge bleiben erhalten."
+        : "Dieses Benutzerprofil wurde offenbar kopiert. Der Rechner arbeitet ab jetzt unter einer " +
+          "neuen Kennung weiter; bereits geschriebene Einträge bleiben erhalten. Das Aufräumen der " +
+          "alten Dateien auf diesem Rechner konnte noch nicht abgeschlossen werden.",
     };
   }
 
   /**
-   * Kürzt die aufgegebenen eigenen Dateien auf ihren Share-Stand.
+   * Bringt die Dateien aufgegebener Kennungen auf das, was §4.5 Schritt 6 aus
+   * ihnen macht: den **Spiegel einer fremden Datei** (§5.5).
    *
    * §4.5 Schritt 6 erklärt den lokalen Spiegel der alten eigenen Datei ab dem
    * Wechsel zum „Spiegel einer fremden Datei — nämlich der des Klons". Das
-   * setzt voraus, dass er ein Präfix der Share-Datei ist (§5.5). Genau das ist
-   * er im Augenblick des Wechsels **nicht**: Er enthält zusätzlich die noch
-   * nicht gespiegelten Zeilen, deretwegen Schritt 3 überhaupt existiert.
+   * setzt nach §5.5 voraus, dass er das **geprüfte Präfix** der Share-Datei
+   * ist. Im Augenblick des Wechsels ist er das nicht: Er enthält zusätzlich die
+   * noch nicht gespiegelten Zeilen, deretwegen Schritt 3 überhaupt existiert.
    *
    * Ohne diese Kürzung setzte der Spiegelabgleich `leseOffset` auf die lokale
    * Länge — also hinter das Share-Ende. Der Klon würde nie wieder gelesen: kein
    * Byte, keine Meldung, keine Quarantäne. Genau der stille Falschzustand, den
    * §6.3 ausschließt.
    *
+   * **Gekürzt wird auf das, was der Share hergibt, nicht auf den gemerkten
+   * `shareOffset`.** Der gemerkte Offset wird erst nach erfolgreichem `fsync`
+   * fortgeschrieben (§5.4.2); nach einem abgebrochenen Übertragungsversuch
+   * liegen auf dem Share bereits Bytes, die er nicht kennt. Auf ihn zu kürzen
+   * entfernte lokal Zeilen, die auf dem Share stehen — der Spiegel wäre danach
+   * dauerhaft kürzer als die Datei, die er spiegelt, und der Leser holte sie
+   * nie nach, weil die Kette an einer anderen Stelle stünde. Maßgeblich ist
+   * deshalb das gelesene Share-Ende, so weit es byteweise mit der lokalen Datei
+   * übereinstimmt, abgerundet auf die letzte vollständige Zeile (§5.5).
+   *
    * Verworfen wird dabei nichts: Die abgeschnittenen Zeilen sind nach Schritt 3
    * unverändert und mit derselben Identität in die Datei der neuen Kennung
-   * übernommen worden. Gekürzt wird deshalb erst, **nachdem** die Übernahme
-   * vollständig gelungen ist.
+   * übernommen worden.
+   *
+   * Die Behandlung **aller** früheren Kennungen und der Aufruf bei jedem Öffnen
+   * sind Befunde aus der Simulation M0.4: Ein Client kann die Kennung mehrfach
+   * wechseln (§4.5 kennt keine Obergrenze), und scheitert das Kürzen an einer
+   * lokalen Schreibstörung (§8.8), bleibt Schritt 6 sonst dauerhaft unerfüllt.
+   * Der Vorgang ist wiederholbar: Er entfernt nie Bytes, die auf dem Share
+   * stehen.
    *
    * Das Konzept sagt zu dieser Kürzung nichts; sie ist die Auslegung, mit der
    * Schritt 6 überhaupt erfüllbar wird.
    */
-  async #kuerzeAlteDateienAufShareStand(
-    alteClientId: string,
-    alteOffsets: UploadZustand["eigen"],
-  ): Promise<void> {
-    const praefix = clientPraefix(alteClientId);
-    for (const kennung of await this.#eigeneDateien(praefix)) {
-      const stand = alteOffsets[`${praefix}.${segmentText(kennung.segment)}`]?.shareOffset ?? 0;
-      await this.#optionen.dateisystem.kuerzeAuf(
-        this.#optionen.ablage.lokalDatei(kennung.name),
-        stand,
-      );
+  async #kuerzeAufgegebeneDateien(praefixe: Iterable<string>): Promise<boolean> {
+    let vollstaendig = true;
+    for (const praefix of new Set(praefixe)) {
+      if (praefix === clientPraefix(this.#schreiber.clientId)) continue;
+      for (const kennung of await this.#eigeneDateien(praefix)) {
+        try {
+          if (!(await this.#kuerzeAufShareStand(kennung))) vollstaendig = false;
+        } catch (fehler) {
+          // §8.8 verlangt eine sichtbare Abweisung, §8 Grundsatz verbietet den
+          // Stillstand: Ein lokaler Dateisystemfehler darf den Kennungswechsel
+          // nicht abbrechen. Befund aus der Simulation M0.4.
+          if (!(fehler instanceof DateisystemFehler)) throw fehler;
+          vollstaendig = false;
+        }
+      }
     }
+    return vollstaendig;
+  }
+
+  /** Kürzt eine einzelne aufgegebene Datei; `false`, wenn der Share nicht lesbar war. */
+  async #kuerzeAufShareStand(kennung: Dateikennung): Promise<boolean> {
+    const lokalPfad = this.#optionen.ablage.lokalDatei(kennung.name);
+    const lokal = await this.#optionen.dateisystem.liesAb(lokalPfad, 0);
+    let share: Uint8Array;
+    try {
+      share = await this.#optionen.dateisystem.liesAb(
+        this.#optionen.ablage.shareDatei(kennung.name),
+        0,
+      );
+    } catch (fehler) {
+      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
+        share = new Uint8Array(0);
+      } else {
+        // Share nicht lesbar: nichts kürzen. Beim nächsten Öffnen erneut.
+        return false;
+      }
+    }
+    let gleich = 0;
+    while (gleich < share.byteLength && gleich < lokal.byteLength && share[gleich] === lokal[gleich]) {
+      gleich += 1;
+    }
+    // §5.5: Der Spiegel endet an einer Zeilengrenze, nie mitten in einer Zeile.
+    const ziel = leseZeilengrenzen(lokal.subarray(0, gleich), 0).endeOffset;
+    if (ziel < lokal.byteLength) await this.#optionen.dateisystem.kuerzeAuf(lokalPfad, ziel);
+    return true;
   }
 
   /** Die lokalen Segmentdateien einer Kennung, aufsteigend. */

@@ -26,7 +26,7 @@
  * schmales Kostenmodell geprüft.
  */
 
-import type { Dateisystem } from "./dateisystem.js";
+import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
 import { KETTE_ANFANG, istKette } from "./pruefsummen.js";
 
 const kodierer = new TextEncoder();
@@ -124,22 +124,47 @@ function ganzzahlAb(wert: unknown, untergrenze: number): wert is number {
 /**
  * Schreibt `schreiber.json` per `.tmp` plus Rename, **ohne** `fsync` (§4.4, §5.2).
  *
- * Scheitert das Umbenennen, bleibt der alte Stand stehen. Das ist kein Fehler,
- * den der Aufrufer behandeln müsste: Der alte Stand ist höchstens veraltet, und
- * ein veralteter Stand führt nach §4.4 zu einer Lücke in der Laufnummer, die
- * §3.3 ausdrücklich erlaubt — niemals zu einem Rückschritt.
+ * Liefert `false`, wenn der Schreibvorgang an einem Dateisystemfehler
+ * gescheitert ist — und wirft dann **nicht**.
+ *
+ * Das ist die Einlösung von §4.4: `schreiber.json` ist ein **Beschleuniger,
+ * kein Wahrheitsträger**. Das laufende Segment bestimmt der Schreiber nach §4.3
+ * aus dem lokalen Dateibestand, und die Laufnummer wird beim Start als Maximum
+ * aus Datei und Dateibestand gebildet — ein veralteter Stand führt deshalb
+ * höchstens zu einer Lücke in der Laufnummer, die §3.3 ausdrücklich erlaubt,
+ * und nie zu einem Rückschritt oder einer Doppelvergabe.
+ *
+ * Warum das gefangen wird, statt zu fliegen: §8.8 verlangt für eine lokale
+ * Schreibstörung, dass der **Bedienschritt** sichtbar abgewiesen wird — nicht,
+ * dass die Akte abstürzt. Und der Rename-Fehler `EPERM`/`EBUSY` (§6.4,
+ * `nas-speicher-recherche.md` §1.4) muss nach §9 (Auflage 15) **folgenlos**
+ * bleiben. Ohne dieses `catch` war er es nicht: Ein einziges gescheitertes
+ * Umbenennen dieser Nebendatei riss den ganzen Schreibweg ab. Befund aus der
+ * Simulation M0.4.
+ *
+ * Gefangen wird ausschließlich {@link DateisystemFehler}. Ein Programmfehler in
+ * dieser Funktion soll weiterhin laut sein.
  */
 export async function schreibeSchreiberzustand(
   dateisystem: Dateisystem,
   pfad: string,
   zustand: Schreiberzustand,
-): Promise<void> {
+): Promise<boolean> {
   // Eindeutig je Schreibvorgang: §6.2 lässt Takte unabhängig laufen, und zwei
   // gleichzeitige Läufe teilten sich sonst dieselbe `.tmp`-Datei — der eine
   // benennt sie um, der andere findet sie nicht mehr und scheitert mit ENOENT
   // an einer Datei, die es nie hätte geben dürfen.
   const tmp = `${pfad}.${naechsteTmpNummer()}.tmp`;
   const bytes = kodierer.encode(`${JSON.stringify(zustand, undefined, 2)}\n`);
-  await dateisystem.schreibeUeberOhneSync(tmp, bytes);
-  await dateisystem.benenneUm(tmp, pfad);
+  try {
+    await dateisystem.schreibeUeberOhneSync(tmp, bytes);
+    await dateisystem.benenneUm(tmp, pfad);
+    return true;
+  } catch (fehler) {
+    if (!(fehler instanceof DateisystemFehler)) throw fehler;
+    // Die `.tmp`-Datei kann liegen bleiben; sie trägt kein `.jsonl` und wird
+    // von `zerlegeEreignisDateiname` nirgends als Segment gedeutet (§4.1).
+    await dateisystem.loesche(tmp).catch(() => undefined);
+    return false;
+  }
 }
