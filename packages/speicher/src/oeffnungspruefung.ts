@@ -31,7 +31,7 @@ import { leseZeilengrenzen, type Identitaetenblick } from "./zeile.js";
 /** Das Ergebnis der Prüfung beim Öffnen. */
 export type Oeffnungsbefund =
   /** Nichts zu tun. Die Share-Dateien sind ein Präfix der lokalen. */
-  | { readonly art: "inOrdnung"; readonly hoechsteLaufnummerAufShare: number }
+  | { readonly art: "inOrdnung" }
   /**
    * §4.6.1 mit §5.4.3 Ausgang B: Die eigenen Bytes auf dem Share sind
    * verfälscht, ohne dass eine fremde Schreibspur nachweisbar wäre. Reparatur
@@ -114,7 +114,6 @@ export async function pruefeBeimOeffnen(
   } catch (fehler) {
     return nichtErreichbar(fehler);
   }
-  let hoechste = 0;
   /** Die höchste Laufnummer, die auf dem Share unter der **laufenden** Kennung steht (§4.5 Schritt 3). */
   let unterLaufenderKennung = 0;
 
@@ -127,7 +126,6 @@ export async function pruefeBeimOeffnen(
     } catch (fehler) {
       return nichtErreichbar(fehler);
     }
-    hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
     // Nur unter der **laufenden** Kennung kann eine fremde Laufnummer noch zu
     // einer doppelten Identität führen — dort schreibt dieser Client weiter.
     unterLaufenderKennung = Math.max(unterLaufenderKennung, hoechsteLaufnummer(share));
@@ -163,23 +161,13 @@ export async function pruefeBeimOeffnen(
     }
   }
 
-  for (const frühere of optionen.frühereClientIds ?? []) {
-    let dateien: readonly Dateikennung[];
-    try {
-      dateien = await shareSegmenteMitPraefix(optionen, clientPraefix(frühere));
-    } catch (fehler) {
-      return nichtErreichbar(fehler);
-    }
-    for (const kennung of dateien) {
-      let share: Uint8Array;
-      try {
-        share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
-      } catch (fehler) {
-        return nichtErreichbar(fehler);
-      }
-      hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
-    }
-  }
+  // Die Share-Dateien der **aufgegebenen** Kennungen werden hier bewusst nicht
+  // mehr gelesen. Sie trugen allein zu einer höchsten Laufnummer über alle
+  // Kennungen bei, die kein Aufrufer je gelesen hat; für §4.5 Schritt 3 zählt
+  // nach dem Befund aus der Simulation M0.4 ohnehin nur die laufende Kennung
+  // (siehe oben). Das sparte je Öffnen einen vollständigen Lesedurchgang über
+  // jede aufgegebene Datei. Dass der Share erreichbar ist, steht bereits fest:
+  // Die Segmentliste der laufenden Kennung ist oben gelesen worden.
 
   // §4.5 Schritt 3: „Ist sie größer als die eigene zuletzt vergebene, hat ein
   // anderer Prozess unter derselben Kennung geschrieben." Der Vergleich steht
@@ -207,7 +195,7 @@ export async function pruefeBeimOeffnen(
     };
   }
 
-  return { art: "inOrdnung", hoechsteLaufnummerAufShare: hoechste };
+  return { art: "inOrdnung" };
 }
 
 /** Alle Dateien in `ereignisse\` mit diesem Kennungspräfix, aufsteigend. */

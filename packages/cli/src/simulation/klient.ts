@@ -273,6 +273,11 @@ export class Klient {
       this.meldungen.push({ art: `oeffnungsbefund:${ergebnis.befund.art}`, text: JSON.stringify(ergebnis.befund).slice(0, 240) });
     }
     this.#merke(ergebnis.reaktion);
+    // §4.6.1 Auslöser 1 spricht im Plural: Beim Öffnen kann **mehr als eine**
+    // Beschädigung repariert werden. Ohne diese Zeile zeigte der Bericht nur
+    // die erste Reaktion, und ob die zweite und dritte Reparatur gelungen
+    // sind, stand nirgends. Befund aus der Simulation M0.4.
+    for (const weitere of ergebnis.weitereReaktionen ?? []) this.#merke(weitere);
     this.#nimmAuf(ergebnis.quarantaeneNachlauf.neueZeilen);
     // Ein Neustart macht die Taktzähler ungültig: Was vor dem Neustart leer
     // war, sagt über den neuen Leser nichts (§7.6, „zwei aufeinanderfolgende").

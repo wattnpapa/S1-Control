@@ -42,7 +42,7 @@ describe("Prüfung beim Öffnen (§4.5 Fall 2, §4.6.1 Auslöser 1)", () => {
     await legeEinsatzAn(platz, EINSATZ);
     const { schreiber } = await eigenerStand(platz, 4);
     const befund = await pruefe(platz, schreiber);
-    expect(befund).toEqual({ art: "inOrdnung", hoechsteLaufnummerAufShare: 4 });
+    expect(befund).toEqual({ art: "inOrdnung" });
   });
 
   it("findet eine Beschädigung in der **Mitte** der Datei, die §5.4.3 nie sähe (§4.6.1)", async () => {
