@@ -1099,3 +1099,235 @@ Wirkung: Der benannte Eintrag steht auf `gilt = false`. War er der maßgebliche 
 Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv.marker`, und kein Client legt ihn wieder an, solange sein eigener Fold den Einsatz nicht als archiviert führt.
 
 **T68:** Zwei `EinsatzArchiviert` (5 und 9) ⇒ maßgeblich ist 5, für die zweite ein Wirkungslos-Hinweis. **T69:** `StatusGesetzt` mit HLC 7 dazu ⇒ gefaltet, wirkt, ein `nachArchivierungEingegangen` an der Einheit mit dem Feldnamen. **T70:** Rücknahme der Archivierung mit HLC 5 ⇒ maßgeblich ist 9, die Einheit aus HLC 7 verliert ihren Hinweis. **T71 (Grabstein):** Die Rücknahme trifft **vor** ihrer Archivierung ein ⇒ derselbe Zustand wie in umgekehrter Reihenfolge. **T72 (Monotonie):** Archivierung HLC 9, Rücknahme HLC 5 ⇒ der Einsatz ist offen. **T73:** Beide Archivierungen zurückgenommen ⇒ Einsatz offen, keine Entität trägt den Hinweis. **T74:** Alle vorstehenden Fälle in jeder Permutation mit demselben Ergebnis.
+
+---
+
+## §8 Was zugesichert wird — und was nicht
+
+### §8.1 Die sieben Eigenschaften
+
+| | Zugesichert | Bedingung |
+|---|---|---|
+| **P1 Kommutativität** | Jede Permutation einer Ereignismenge ergibt denselben Zustand, einschließlich der Hinweise | keine. Gilt für alle Arten, auch die der Klasse „Regel" |
+| **P2 Idempotenz** | Ein doppelt gefaltetes Ereignis ändert den Zustand nicht | keine (§3.6) |
+| **P3 Konvergenz** | Zwei Clients mit derselben Ereignismenge **und derselben `foldVersion`** haben denselben Zustand | dieselbe Menge und dieselbe Fold-Fassung (§3.9). Bei Quarantäne sehen zwei Clients verschiedene Mengen — KONZEPT-SPEICHER.md §8.6.1 |
+| **P4 Summenerhaltung** | Aufteilen und Zusammenführen in beliebiger Reihenfolge lassen die Gesamtstärke unverändert | **bedingt:** alle `gesehen` entsprechen den wirksamen Stärken (§5.4.3) und nichts wurde geklemmt (§5.4.2). Beide Ausnahmen erzeugen einen Hinweis |
+| **P5 Kein Waisenzustand** | Keine **Einheit** steht in einem nicht existierenden oder aufgelösten Abschnitt | keine. Für Fahrzeuge gilt die schwächere Regel aus §5.3.3, ausdrücklich nicht P5 |
+| **P6 Monotone Zustandsmaschine** | `anforderung.zustand` geht nie von `EINGETROFFEN` zurück | **bedingt:** über einer Menge ohne `ErledigungZurueckgenommen` (§5.6.2) |
+| **P7 Rebase-Treue** | Der Zustand aus „Schnappschuss laden, Rest falten" ist gleich dem aus „alles falten" — für jeden Schnitt | keine. Die formale Fassung von §3.1 |
+
+P7 ist neu gegenüber ZDM §4.4 und gehört in die DoD von M1.3. Ohne sie prüft P1 nur den vollen Fold, während im Betrieb jeder Client nach dem ersten Schnappschuss den anderen Weg geht.
+
+Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre entweder falsch oder schnitte den Test so zu, dass er nur widerspruchsfreie Eingaben sieht — das Schein-Grün, das Auflage 18 verbietet.
+
+### §8.2 Nicht zugesichert
+
+**Die Hinweiskette über mehr als zwei Schreiber.** Bei drei und mehr nebenläufigen Änderungen an demselben Feld bekommt nur die zweithöchste einen Hinweis (§3.3). Der Zustand ist richtig und konvergent; am Feld ist nicht ablesbar, dass drei Leute geschrieben haben. Der Weg dahin führt über die Größe jedes Schnappschusses.
+
+**Die Vollständigkeit des Einsatztagebuchs auf einem Client mit Schnappschuss.** Es liest den Ereignisstrom (§5.9.1); ein Client, der aus einem Schnappschuss startet, liest die alten Ereignisse bei Bedarf nach. Solange der Einsatzordner vollständig ist, kostet das Zeit und keinen Inhalt — fehlt eine Datei, fehlt die Zeile. Die Aussage „N nachträgliche Einträge" (§7.3) hängt daran.
+
+**Die Zahl der betroffenen Ereignisse nach einer Archivierung.** Der Zustand nennt die betroffenen **Entitäten und Felder**, nicht die Ereignisse.
+
+**Fachliche Richtigkeit einer Meldung.** Der Fold entscheidet, welche Meldung gilt, nie welche stimmt. `zusammenfuehrungSummeWeichtAb`, `staerkeGeklemmt`, `moeglicheDublette`, `unbekannterWert` und `meldezeitUnplausibel` sind für Menschen.
+
+**Die Gesamtstärke, solange eine Einheit im Auffang liegt** oder ein Abschnittstyp unbekannt ist. Sie kann vorübergehend zu hoch sein (§5.3.3, §3.7). Zugesichert ist, dass keine gemeldete Stärke verschwindet — nicht, dass die Summe in jedem Zwischenstand stimmt.
+
+**Vollständigkeit der Dublettenerkennung.** `einheitSchluessel` ist eine Heuristik.
+
+**Erzwungene Modell-Invarianten.** Weder „höchstens eine Führungsstelle ohne Elternabschnitt" (§5.3.4) noch die Schichtpflicht (§5.7) noch ein Format der Anforderungs-Kennung (§5.6.1) werden erzwungen. Alle drei sind Warnungen der Oberfläche.
+
+**Drei Zustandsteile ohne harte Schranke** (§3.2): `verworfeneAnlagen` und `verworfeneSchluessel` wachsen mit doppelt vergebenen Ids — im Normalbetrieb null, im Klon- oder Migrationsfall nicht; `archivierungen` bekommt je Rücknahme auf eine unbekannte Id einen dauerhaften Eintrag; `wartend` wächst mit den Entitäten, deren Anlage nie kommt (verlorenes Segment, Quarantäne). Alle drei sind klein und in der Praxis leer, aber keine ist nachweisbar beschränkt. Ein Client mit Quarantäne sammelt den dritten systematisch.
+
+**Reihenfolge innerhalb einer Wanduhr-Sekunde.** `wanduhr` ordnet nichts. Zwei Ereignisse mit derselben fachlichen Meldezeit und verschiedener HLC werden nach HLC geordnet.
+
+---
+
+## §9 Nachweis der Auflagen
+
+| Auflage | Wo | Anmerkung |
+|---|---|---|
+| 4 · Mengenfold mit Rebase; HLC je Feld; Schnappschüsse tragen `foldVersion` | §3.1 bis §3.3, §3.9 | **Vollständig**, alle drei Teile. §3.9 setzt `foldVersion = 2` und nennt die Regel, wann sie steigt — einschließlich einer neuen Ereignisart |
+| 6 · Vorher-Wert an jedem setzenden Ereignis; Abweichung ⇒ Hinweis | §2.2, §2.3, §3.8 | **Vollständig.** Drei Formen statt „drei Sätze ohne Ausnahme"; §2.3 nennt die Feldpfade der Anlagen unter ihren **Zustands**namen, sodass Anlage und Änderung dasselbe Feld treffen |
+| 10 · Zyklusregel; relative Stärkeänderung; Auffangregel | §5.3.1, §5.4.2, §5.3.3 | **Vollständig.** Die relative Änderung steht als Feld an der Entität, die sie erzeugt |
+| 11 · Undo mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo | §6 | **Vollständig.** Je Art nennt die Undo-Spalte, ob dieselbe Art mit `neu = vorher` genügt oder ein benanntes Gegenereignis nötig ist; die nicht rücknehmbaren haben je einen anderen benannten Weg (§5.9.2) |
+| 12 · „Neueste Revision zählt" **definieren**; Meldezeit plausibilisieren | §2.5, §2.6, §3.5 | **Vollständig.** §2.6 definiert beide Ordnungen getrennt: HLC für Konflikte, `stand` für die Revisionsreihe. §2.5 ordnet jede fachliche Zeit einer von drei Klassen zu |
+| 13 · Ereignis nach der Archivierung, genau eine Behandlung | §7 | **Vollständig**, mit Grabstein, Monotonie und der Auflösung des Widerspruchs zu ZDM §4.1 Regel 5 |
+| 18 · Zählbares Abbruchkriterium; P1 keine Tautologie | §8.1, §11 | **Zählbar:** §11.1 nennt die Zahlen. Die Gegenprobe zu P1 läuft an diesem Katalog (T75), nicht nur an M0.2 |
+
+### Was hier nur teilweise erfüllt ist
+
+* **Auflage 4** ist erfüllt, die Hinweiskette aber auf zwei Beobachtungen begrenzt (§3.3, §8.2) — eine Entscheidung über die Größe des Zustands, keine Lücke im Nachweis.
+* **Auflage 6** gilt für die Arten dieses Katalogs; für eine künftige Art erst, wenn ihr Feldpfad benannt ist. §2.2 macht das zur Bedingung jeder Erweiterung.
+* **P4, P6 und P7** sind die DoD von M1.3. Dieses Dokument liefert ihre Definition samt Bedingung.
+
+---
+
+## §10 Startwerte, Befunde und offene Punkte
+
+### Startwerte
+
+| Nr. | Wert | Startwert | Wo | Wogegen zu kalibrieren |
+|---|---|---|---|---|
+| S1 | Plausibilisierung von Ist-Zeiten | 12 Stunden, beide Richtungen | §2.5 | Erfahrung aus dem ersten geführten Einsatz |
+| S2 | Format der Anforderungs-Kennung | keines; Freitext ohne Prüfung | §5.6.1 | Antwort der FüSt auf Frage 22 |
+| S3 | Statusliste | neun bekannte Werte, Bereich offen | §3.7 | Antwort auf Frage 19. Hinzufügen kostet nichts, Entfernen einen Upcaster |
+| S4 | Tiefe des Undo-Stapels N | 20 | §6 U3 | Bedienerfahrung |
+| S5 | `WASSERWIRTSCHAFT`, Anzeige „HK/NLWKN" | wie am 2026-09-09 beschlossen | §3.7 | Antwort auf Frage 20; Aufspaltung wäre ein Upcaster aus `organisationName` |
+| S6 | Vorbelegung `schichtmodell` | `ZWEI_SCHICHT` | §5.2 | Antwort auf Frage 21 |
+| S7 | Obergrenze einer Entitäts-Id | 200 Zeichen | §5.1 | wird nicht gemessen; Plausibilitätsschranke |
+| S8 | Plausibilisierung von Planwerten | 90 Tage nach der Wanduhr; Hinweis auch davor | §2.5 | Dauer der längsten geführten Lage |
+| S9 | Kostenvorbelegungen | 180 € / 150 € / 20 € / 5 Tage | §5.2 | ZDM §3.2 aus der Excel |
+| S10 | Umfang der Eigenschaftsprüfung | siehe §11.1 | §11.1 | Laufzeit in der CI |
+
+### Befunde für Johannes — nicht durch dieses Dokument geändert
+
+**B1 — `schemaVersion` ist nicht die Version des Rahmens.** KONZEPT-SPEICHER.md §2.4 beschreibt sie so; die DoD von M1.2 und ZDM §4.1 meinen die Nutzlast dieser Art. Dieses Konzept liest sie als Nutzlastversion (§4.1); der Rahmen ist über `manifest.json` versioniert, und die Speicherschicht reicht das Feld ohnehin nur durch. **Vorschlag:** den Satz in §2.4 ändern.
+
+**B2 — Der Undo-Stapel in §4.4 ist zu eng.** „ein **eigenes** Ereignis mit passendem `undoOf`" → „ein Ereignis". §4.4 verweist die Semantik ausdrücklich hierher; die Änderung bleibt in seiner Absicht. Begründung in §6 U3.
+
+**B3 — ZDM §4.1 Regel 5 widerspricht KONZEPT-SPEICHER.md §5.7.** §7.3 entscheidet für die Speicherfassung. **Vorschlag:** Regel 5 streichen oder mit Verweis versehen.
+
+**B4 — Der Zustand wächst gegenüber M0.2 deutlich.** `zweiter` je Feld, `wanduhr` und `fachlicheZeit` je Beobachtung, die verworfenen Anlagen, die abgeleiteten Felder — grob geschätzt Faktor drei bis vier je Schnappschuss. KONZEPT-SPEICHER.md §7.5 kalibriert die Schnappschuss-Auslöser gegen die Erstlaufzeit, nicht gegen die Dateigröße. **Kein Handlungsbedarf vor M0.5**, aber die Messung dort sollte die Schnappschussgröße mitnehmen.
+
+**B5 — `foldVersion` steigt künftig bei jeder Katalogerweiterung** (§3.9). Das heißt: Nach jedem Ausbau verwerfen alle Clients ihre Schnappschüsse einmal und falten voll. Bei den in KONZEPT-SPEICHER.md §7.5 geschätzten 20 bis 30 MB je Einsatz ist das ein spürbarer Erstlauf. **Vorschlag:** in M0.5 mitmessen; wird er zu lang, ist die Gegenmaßnahme nicht eine schwächere Versionsregel, sondern die dort bereits vorgesehene Annahme fremder Schnappschüsse (A7).
+
+### Auslegungen, die das Zieldatenmodell nicht hergibt
+
+1. **`abgeteiltVon` und `aufgegangenIn` als Felder der abgeleiteten Einheit** (§5.4.2, §5.4.3). ZDM §4.2 nennt `meldeZustand = AUFGEGANGEN` an der Quelle — aber `meldeZustand` ist nach §2.9 ein Merkmal der **Meldung**, und `Einheit` in §3.2 hat kein solches Feld. Sie führt für die Gegenrichtung `abgeteiltVonId`; dies ist das symmetrische Gegenstück.
+2. **Zusammenführen je Quelle statt als Klumpen** (§5.4.3). ZDM nennt einen Gesamtwert `uebernommeneStaerke`, der sich nicht auf die einzelne Quelle zurückrechnen lässt und deshalb weder überlappende Quellmengen noch den Kreis trägt.
+3. **`aufgegangenIn` ist monoton** (§5.4.3). ZDM sagt dazu nichts; ohne Monotonie zählt eine umgelenkte Quelle doppelt.
+4. **Die Zusammensetzungsregel der wirksamen Stärke** (§5.4.2).
+5. **Die drei Gegenereignisse der Anforderung und die fünf `…Wiederhergestellt`** (§5.6.2, §5.4.5). ZDM nennt sie in der Undo-Spalte, ohne ein Ereignis zu benennen.
+6. **`ArchivierungZurueckgenommen`** (§7.4) — eine Art, die ZDM nicht kennt; KONZEPT-SPEICHER.md §5.7 setzt sie voraus, ohne sie zu benennen.
+7. **`Einheit.einheitSchluessel`** (§5.4.4). ZDM führt den Schlüssel nur an der Meldung.
+8. **`EinheitAufgeteilt` trägt die vollständige Anlage der neuen Einheit** (§5.4.2). ZDM nennt nur `teilEtikett` und `abgeteilteStaerke`.
+9. **Der Bewegungsauftrag hat eine abgeleitete Id** (§5.6.3).
+10. **Fünf Wertebereiche sind offen** (§3.7). ZDM führt sie als Aufzählungen.
+11. **`EinsatzBeendet`, `PersonEntfernt` und `DienstpostenEntfernt` sind LWW/Feld** statt LWW/Entität (ZDM §4.2). Die Felder sind einwertig; das Ergebnis ist identisch, die Benennung genauer.
+12. **`aufgeloestAm` und `hinzugefuegtAm` stehen in der Nutzlast** (§5.3.2, §5.8). ZDM führt sie als Entitätsfelder, ohne ein Ereignis zu nennen, das sie setzt.
+13. **P7** (§8.1). ZDM §4.4 kennt P1 bis P6.
+
+### Offen geblieben
+
+| Punkt | Wer entscheidet |
+|---|---|
+| Fragen 19 bis 22 aus 04-OFFENE-ENTSCHEIDUNGEN.md | FüSt; bis dahin gelten S2, S3, S5, S6 |
+| B1 bis B5 | Johannes; keiner blockiert M1.3 |
+| Ob die Hinweiskette über mehr als zwei Schreiber gebraucht wird | Betrieb; Änderung an der Schnappschussgröße |
+| Die Schwellen S1 und S8 | erster geführter Einsatz |
+| Schnappschussgröße und Erstlaufzeit nach B4 und B5 | Messung M0.5 |
+
+---
+
+## §11 Verzeichnis der Prüffälle
+
+### §11.1 Die zählbaren Größen (Auflage 18)
+
+Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
+
+| Prüfung | Umfang | Abbruchkriterium |
+|---|---|---|
+| **P1** (T75) | mindestens **500 Permutationen** je Menge, mindestens **200 Mengen** von je **40 bis 120 Ereignissen**, die zusammen **jede Ereignisart mindestens zehnmal** enthalten | eine einzige abweichende Serialisierung ist ein Fehlschlag |
+| **P2** (T81) | dieselben Mengen, jedes Ereignis doppelt | dito |
+| **P3** (T87) | dieselben Mengen, zwei unabhängig aufgebaute Faltungen | Vergleich über den `zustandsHash` |
+| **P4** (T20, T26) | mindestens **100 Mengen** mit je zwei bis fünf Aufteilungen und Zusammenführungen | Gesamtstärke vor und nach dem Fold gleich, sofern kein Hinweis `zusammenfuehrungSummeWeichtAb` oder `staerkeGeklemmt` vorliegt |
+| **P5** (T95) | alle Mengen aus P1 | keine Einheit in einem unbekannten oder aufgelösten Abschnitt |
+| **P6** (T46) | alle Permutationen **und alle Präfixe** je Menge | Zustand nie `≠ EINGETROFFEN` nach einem `AnforderungErledigt` ohne jüngeres Gegenereignis |
+| **P7** (T77) | für jede Menge aus P1 **jeder** Schnitt: Präfix falten, serialisieren, laden, Rest falten | Zustand gleich dem vollen Fold, einschließlich Hinweisen |
+
+**Warum P1 keine Tautologie ist.** Der Fold sortiert nirgends (Modulkopf von `fold.ts`). T75 fügt die Gegenprobe für diesen Katalog hinzu: Wird in den Akkumulator eine Sortierung nach Eintreffreihenfolge eingebaut, muss T75 fallen. Ein Test, der auch mit dieser Mutation grün bleibt, prüft die Eigenschaft nicht.
+
+### §11.2 Zuordnung Regel → Prüffall
+
+| Regel | § | Prüffälle |
+|---|---|---|
+| Drei Formen von `vorher`/`neu` | §2.2 | T78, T79, T80 |
+| Anlagen belegen Zustandsfeldpfade | §2.3 | T82, T13 |
+| `grund` bei neun Arten Pflicht | §2.4 | T83 |
+| Plausibilisierung, drei Zeitklassen | §2.5 | T84, T85, T86 |
+| Zwei Ordnungen (Konflikt und Revision) | §2.6 | T55, T56 |
+| Zustandsgebundenheit (P7) | §3.1 | T77, T6, T12, T24, T71 |
+| Der Zustand ist vollständig beschrieben | §3.2 | T87, T18 |
+| Zweite Beobachtung im Zustand | §3.3 | T88 |
+| Tie-Break, LWW-Richtung | §3.5 | T89 |
+| Tie-Break, Anlage-Richtung | §3.5 | T90 |
+| Idempotenz über die Ereignis-Id | §3.6 | T81 |
+| Idempotenz über den Inhaltsschlüssel | §3.6 | T52, T53, T54 |
+| Idempotenz über den Fachvorgang | §3.6 | T25, T28 |
+| Unbekannte Art, Version, Feld, Nutzlast, Wert | §3.7 | T91, T92, T93, T94, T16 |
+| Rückfall je offenem Wertebereich | §3.7 | T16, T94 |
+| Hinweise werden neu gerechnet | §3.8 | T65, T88, T96 |
+| `foldVersion` steigt auch bei neuer Art | §3.9 | T97 |
+| Wartende Beobachtung, `anlageFehlt` | §3.10 | T98 |
+| Unbekannte Fremdreferenz | §3.10 | T99, T15 |
+| Zweite Anlage: kleinste HLC | §3.11 | T1, T90, T100 |
+| Gefaltet, aber wirkungslos | §3.12 | T44, T29, T68 |
+| Upcaster rein und zustandsblind | §4.2 | T101 |
+| Beim Spiegeln keine Upcaster | §4.3 | T102 |
+| Einsatz: Anlage, Beenden, Wiedereröffnen | §5.2 | T1, T2 |
+| Zyklusregel | §5.3.1 | T3, T4, T5, T6 |
+| Aufgelöster Abschnitt, Kette, Ziel-LWW | §5.3.2 | T7 bis T12 |
+| Auffang nur für den unbekannten Abschnitt | §5.3.3 | T13, T14, T16 |
+| Fahrzeuge gehen nicht in den Auffang | §5.3.3 | T15 |
+| Systemabschnitte, reservierte Ids | §5.3.4 | T17, T18 |
+| Stärke ist ein Tripel | §5.4.1 | T19 |
+| Relative Änderung, Klemmung, Vorgangsidempotenz | §5.4.2 | T20 bis T25 |
+| Zusammenführen je Quelle, Monotonie, Kreis | §5.4.3 | T26 bis T32 |
+| Mögliche Dublette (Einheit) | §5.4.4 | T33 bis T36 |
+| Entfernen ist kein Löschen | §5.4.5 | T37, T38, T39 |
+| Listen sind ein Wert | §5.5 | T40 |
+| Personen ändern die Stärke nicht | §5.5 | T41 |
+| Kennung ist ein Etikett | §5.6.1 | T42, T43 |
+| Zustandsmaschine, P6 | §5.6.2 | T44 bis T47 |
+| Bewegungsauftrag mit abgeleiteter Id | §5.6.3 | T48, T49 |
+| Schichtplan-Schlüssel ist ein Paar | §5.7 | T50, T51 |
+| Empfang ist eine Tatsache, Revisionsordnung | §5.8.1 | T52 bis T56 |
+| Übernahme erzeugt Feldereignisse | §5.8.2 | T57 |
+| Tagebuch ist Stromprojektion | §5.9.1 | T103 |
+| `KorrekturVon` nur für setzende Arten | §5.9.2 | T58, T59, T60 |
+| U1 kein Sonderpfad | §6 | T61 |
+| U2 drei Klassen | §6 | T7, T20, T47 |
+| U3 Stapel je Client | §6 | T62, T63 |
+| U4 Korrektur ist kein Undo | §6 | T58 |
+| U5 kein Redo | §6 | T104 |
+| U6 Undo gegen Fremdänderung | §6 | T64, T65, T66, T67 |
+| Maßgebliche Archivierung, Grabstein, Monotonie | §7.2 | T68, T71, T72 |
+| Ereignis nach der Archivierung wirkt | §7.3 | T69 |
+| Rücknahme der Archivierung | §7.4 | T70, T73, T74 |
+| P1 über den vollen Katalog | §8.1 | T75 |
+| P5 | §8.1 | T95 |
+| Sekundärsortierung bei gleicher Reihenfolge | §5.3 | T105 |
+
+### §11.3 Die Fälle, die nicht bei einer einzelnen Ereignisart stehen
+
+**T75 (P1)** Jede Permutation ergibt denselben `zustandsHash`; mit einer Sortierung nach Eintreffreihenfolge im Akkumulator fällt der Fall.
+**T76** Für jede Menge aus P1 gilt: Der Zustand enthält kein Feld, das §3.2 nicht nennt — geprüft über einen Schemavergleich der Serialisierung.
+**T77 (P7)** Für jede Menge und jeden Schnitt: Präfix falten, serialisieren, laden, Rest falten ⇒ gleicher Zustand einschließlich Hinweisen.
+**T78** Ein Ereignis der Form (a) ohne `neu` ⇒ ungültig (§3.7 Punkt 4).
+**T79** Eine Anlage **mit** `neu` ⇒ ungültig.
+**T80** `neu = null` auf einem Override hebt ihn auf; ein nie gesetztes Feld hat `vorher` abwesend; beide sind in der Serialisierung unterscheidbar.
+**T81 (P2)** Dieselbe Menge zweimal gefaltet ⇒ identischer Zustand und identische Hinweise.
+**T82** `AbschnittAngelegt` (Nutzlastfeld `typ`) und `AbschnittTypGeaendert` treffen **denselben** Feldpfad ⇒ eine Typänderung mit passendem `vorher` erzeugt keinen Hinweis, eine mit unpassendem erzeugt `vorherPasstNicht`. Dasselbe für `EinsatzAngelegt.kosten` gegen `KostenParameterGeaendert`.
+**T83** Jede der neun Arten aus §2.4 ohne `grund` ⇒ Schemafehler. Jede andere ohne `grund` ⇒ gültig, `DienstpostenEntfernt` und `AnhangEntfernt` eingeschlossen.
+**T84** `StaerkeGeaendert` mit `meldezeit` 30 Stunden vor der Wanduhr ⇒ `meldezeitUnplausibel` **am Stärkewert**; mit 6 Stunden ⇒ kein Hinweis.
+**T85** `zugesagtFuer` einen Tag in der Zukunft ⇒ **kein** Hinweis; 120 Tage danach oder ein Tag davor ⇒ Hinweis.
+**T86** `stand` und `empfangenAm` einer Meldung, beliebig weit von der Wanduhr entfernt ⇒ **nie** ein Hinweis.
+**T87 (P3)** Zwei unabhängig aufgebaute Faltungen derselben Menge ⇒ gleicher `zustandsHash`.
+**T88** e1(HLC 1, neu A), e3(HLC 3, vorher A, neu C), Schnappschuss, danach e2(HLC 2, neu B) ⇒ `vorherPasstNicht` entsteht — beim vollen Fold wie beim Rebase.
+**T89** Zwei LWW-Ereignisse identischer HLC, verschiedene Ids ⇒ die größere Id gewinnt.
+**T90** Zwei Anlagen identischer HLC ⇒ die kleinere Id gilt.
+**T91** Unbekannter `typ` ⇒ nicht gefaltet, geführt, Originalbytes unverändert.
+**T92** Bekannte Art, `schemaVersion` über der eigenen ⇒ ebenso; kein Downcaster.
+**T93** Zusätzliches unbekanntes Nutzlastfeld ⇒ gefaltet, ignoriert, beim Spiegeln mitgeführt.
+**T94** `EinheitGemeldet` mit einem zehnten Statuswert ⇒ Einheit vollständig im Zustand, Wert unverändert gespeichert, `unbekannterWert`, zählt in der Gesamtstärke, in keinem Statuseimer.
+**T95 (P5)** Für alle Mengen aus P1 zeigt keine Einheit auf einen nicht existierenden oder aufgelösten Abschnitt.
+**T96** Ein `fremdreferenzUnbekannt` und ein `anlageFehlt` verschwinden ohne Zutun, sobald die fehlende Entität eintrifft — auch nach einem Schnappschuss.
+**T97** Zwei Clients mit derselben Ereignismenge, einer kennt eine Ereignisart mehr ⇒ ihre `foldVersion` unterscheidet sich, und der Konvergenzvergleich meldet „nicht vergleichbar" statt „Fehler".
+**T98** `StaerkeGeaendert` ohne `EinheitGemeldet` ⇒ die Einheit erscheint nicht, zählt nicht, ein `anlageFehlt`; trifft die Anlage nach, steht der Wert da.
+**T99** `PersonHinzugefuegt` mit unbekannter `einheitId` ⇒ die Person erscheint, `fremdreferenzUnbekannt`.
+**T100** Zwei inhaltsgleiche Anlagen derselben Id ⇒ kein Hinweis, nichts in `verworfeneAnlagen`.
+**T101** Ein Upcaster, zweimal auf dieselbe Nutzlast angewandt, liefert dasselbe Ergebnis und liest keinen Zustand.
+**T102** Ein Client spiegelt ein Ereignis niedrigerer Version weiter ⇒ die geschriebenen Bytes sind identisch mit den gelesenen.
+**T103** Drei Änderungen an demselben Feld ⇒ der Zustand trägt zwei Beobachtungen, das aus dem Ereignisstrom gerenderte Tagebuch drei Zeilen.
+**T104** Es existiert kein Rahmenfeld und keine Ereignisart für Redo — Prüfung am Schema.
+**T105** Zwei Abschnitte gleicher `reihenfolge` und zwei Einheiten gleicher `reihenfolge` ⇒ Ausgabereihenfolge nach Entitäts-Id, auf jedem Client gleich.
