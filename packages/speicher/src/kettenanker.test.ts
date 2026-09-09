@@ -177,3 +177,60 @@ describe("§4.6 Schritt 3 — der Ersatz eines Ersatzsegments", () => {
     })();
   });
 });
+
+describe("`quelleIstVollstaendig` — Spiegel oder eigener Bestand", () => {
+  /**
+   * Beide Belegungen des Schalters, an dem Verhalten geprüft, das sie
+   * unterscheidet (§2.3, §4.3).
+   *
+   * `false` ist die Sicht eines **Lesers**: Sein Spiegel ist nach §5.5 nur das
+   * geprüfte Präfix, seine bisher letzte Zeile ist nur zufällig die letzte, und
+   * ein leeres Segment heißt dort „noch nichts gelesen". Er urteilt deshalb
+   * nicht.
+   *
+   * `true` ist die Sicht des **Schreibers** auf seine eigenen lokalen Segmente
+   * (`schreiber.ts`, `schreiberStart.ts`): Er kennt sie vollständig. Für ihn
+   * ist die letzte Zeile die letzte — auch ohne Abschlusszeile, die ein nach
+   * §4.6 ersetztes Segment nie bekommt —, und ein leeres Segment trägt nichts
+   * zur Kette bei, weshalb die Frage an den Vorgänger weitergehen darf.
+   *
+   * Bliebe der Schalter wirkungslos, hinge daran unmittelbar §4.6: Der
+   * Schreiber fände den Anker seines Ersatzsegments nicht mehr, und
+   * `bereiteSchreiberVor` bräche mit `LokalerKettenbruch` ab.
+   */
+  it("urteilt bei vollständiger Quelle auch ohne Abschlusszeile — bei einem Spiegel nicht", async () => {
+    const { segment0, segment1 } = zweiSegmente();
+    const quelle = async (s: number) => (s === 0 ? segment0 : s === 1 ? segment1 : undefined);
+    const letzteVonEins = leseZeilengrenzen(segment1).zeilen[0]?.bytes as Uint8Array;
+
+    // Spiegelsicht: Segment 1 hat keine Abschlusszeile, also keine letzte Zeile.
+    expect(await ketteAmEnde(1, quelle, false)).toBeUndefined();
+    // Eigener Bestand: die letzte Zeile ist die letzte.
+    expect(await ketteAmEnde(1, quelle, true)).toBe(kettenPruefsumme(letzteVonEins));
+  });
+
+  it("überspringt bei vollständiger Quelle ein leeres Zwischensegment — bei einem Spiegel nicht", async () => {
+    // Ein leeres Segment entsteht, wenn der erste Anhang an ein neues Segment
+    // scheitert (§8.8) und danach ein Ersatzsegment oder ein Kennungswechsel
+    // folgt. Für den Schreiber trägt es nichts zur Kette bei; für einen Leser
+    // hieße „leer" auch „noch nichts gelesen".
+    const { segment0, endeVon0 } = zweiSegmente();
+    const quelle = async (s: number) =>
+      s === 0 ? segment0 : s === 1 ? new Uint8Array(0) : undefined;
+
+    expect(await ketteAmEnde(1, quelle, false)).toBeUndefined();
+    expect(await ketteAmEnde(1, quelle, true)).toBe(endeVon0);
+  });
+
+  it("reicht den Schalter aus `kettenanker` an den Vorgänger durch", async () => {
+    // Der Schreiber ruft `kettenanker` auf, nicht `ketteAmEnde`. Ginge der
+    // Schalter dort verloren, wäre er wirkungslos, wo er gebraucht wird.
+    const { segment0, segment1 } = zweiSegmente();
+    const zweite = zeile("c1:4", kettenPruefsumme(segment1));
+    const quelle = async (s: number) =>
+      s === 0 ? segment0 : s === 1 ? segment1 : s === 2 ? zweite : undefined;
+
+    expect(await kettenanker(2, zweite, quelle)).toBeUndefined();
+    expect(await kettenanker(2, zweite, quelle, true)).toBe(kettenPruefsumme(segment1));
+  });
+});

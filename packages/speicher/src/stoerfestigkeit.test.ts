@@ -19,7 +19,11 @@ import { Leser } from "./leser.js";
 import { akteur, arbeitsplatz, legeEinsatzAn, spiegelungFuer } from "./pruefhilfen/aufbau.js";
 import { stoerdateisystem, type Stoerung } from "./pruefhilfen/stoerdateisystem.js";
 import { teilschreiber, type Teilschreibung } from "./pruefhilfen/teilschreiber.js";
+import { kettenanker } from "./kettenanker.js";
+import { kettenPruefsumme } from "./pruefsummen.js";
+import { oeffneSchreiber } from "./schreiber.js";
 import { Spiegelung } from "./spiegelung.js";
+import { TYP_SEGMENT_ERSETZT, ersatzAus } from "./verwaltungsereignisse.js";
 import { MELDUNG_EIGENE_DATEI_FEHLT } from "./spiegelergebnis.js";
 import { leererUploadZustand, schreibeUploadZustand } from "./uploadZustand.js";
 import { schreibeSchreiberzustand } from "./schreiberzustand.js";
@@ -946,5 +950,129 @@ describe("§4.6 Schritt 4 — auch die zweite Reparatur wiederholt die Ereigniss
       .filter((z) => z.offset >= abOffset && z.rahmen.typ !== "SegmentErsetzt")
       .map((z) => z.rahmen.id);
     expect(ersatz.slice(1).map((z) => z.rahmen.id)).toEqual(erwartet);
+  });
+});
+
+/** Öffnet einen nackten Schreiber auf einem gestörten Dateisystem. */
+function schreiberFuer(
+  platz: Arbeitsplatz,
+  dateisystem: Dateisystem,
+  clientId = ICH,
+  segmentgroesse = 100_000,
+) {
+  return oeffneSchreiber({
+    dateisystem,
+    zeit: platz.uhr.lies,
+    ablage: platz.ablage,
+    clientId,
+    akteur: akteur(clientId),
+    uhr: new HlcUhr({ clientId, wanduhr: platz.uhr.lies }),
+    segmentgroesse,
+    warte: async () => undefined,
+  });
+}
+
+describe("§8.8 — der Reparaturmerker hängt an der Datei, nicht am Schreiber (Befund 14 aus M0.4)", () => {
+  it("weist ein Ersatzsegment nicht ab, weil an einer **anderen** Datei eine Kürzung aussteht", async () => {
+    // Der Merker trägt den **Pfad** der Datei, hinter deren gutem Stand ein
+    // Bruchstück liegen kann — kein Ja/Nein. Wäre er ein Ja/Nein, griffe die
+    // Reparatur bei der nächsten Schreibbewegung auf **irgendeine** Datei:
+    // Ein Ersatzsegment (§4.6) legt eine neue Datei an, und die Kürzung ginge
+    // dort ins Leere. Scheitert sie — dieselbe Störung, die schon die erste
+    // Kürzung verhindert hat —, wird die Reparatur des beschädigten Segments
+    // abgewiesen, obwohl an ihrer eigenen Datei nichts auszusetzen ist. Quittiert
+    // sie dagegen, fiele der Merker, und das Bruchstück in der alten Datei
+    // bliebe für immer stehen — in einer Datei, die nach §4.6 Schritt 5 nie
+    // wieder beschrieben wird.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const teile: Teilschreibung[] = [
+      { pfadEnthaelt: `${ICH}.0000.jsonl`, bytes: 60, code: "EIO", malen: 0 },
+    ];
+    // §8.8: Ein Virenscanner hält den lokalen Ordner; jede Kürzung scheitert.
+    const stoerungen: Stoerung[] = [
+      { aufruf: "kuerzeAuf", code: "EACCES", malen: 0, pfadEnthaelt: "rechner-1" },
+    ];
+    const fs = teilschreiber(stoerdateisystem(platz.dateisystem, stoerungen), teile);
+    const schreiber = await schreiberFuer(platz, fs);
+    for (let i = 0; i < 5; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+
+    // Ein teilweise gelungener Anhang an 0000, und die Kürzung scheitert:
+    // Ab hier steht der Merker auf **dieser** Datei.
+    (teile[0] as Teilschreibung).malen = 1;
+    (stoerungen[0] as Stoerung).malen = Number.POSITIVE_INFINITY;
+    platz.uhr.weiter(3);
+    expect((await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 5 } })).art).toBe(
+      "abgewiesen",
+    );
+    const mitBruch = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    expect(leseZeilengrenzen(mitBruch, 0).endeOffset).toBeLessThan(mitBruch.byteLength);
+
+    // Das Ersatzsegment schreibt in eine **neue** Datei 0001. Der Merker gilt
+    // ihr nicht, also wird dort auch nichts gekürzt.
+    const zeilen = leseZeilengrenzen(mitBruch, 0).zeilen;
+    const abOffset = (zeilen[2] as { offset: number }).offset;
+    const ergebnis = await schreiber.schreibeErsatzsegment(0, abOffset);
+    expect(ergebnis.art).toBe("geschrieben");
+
+    const ersatz = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 1), 0);
+    const ersatzZeilen = leseZeilengrenzen(ersatz, 0).zeilen;
+    expect(ersatzZeilen[0]?.rahmen.typ).toBe(TYP_SEGMENT_ERSETZT);
+    // §4.6 Schritt 4: alle Ereignisse ab der Stelle, hier die Zeilen 3, 4 und 5.
+    expect(ersatzZeilen.slice(1).map((z) => z.rahmen.id)).toEqual([
+      `${ICH}:3`,
+      `${ICH}:4`,
+      `${ICH}:5`,
+    ]);
+  });
+});
+
+describe("§4.6 Schritt 3 — `abOffset` in der Nutzlast ist eine lokale Zeilengrenze (Befund 17 aus M0.4)", () => {
+  it("trägt die Grenze der letzten mitgenommenen Zeile ein, nicht die Share-Fehlerstelle", async () => {
+    // `abOffset` kommt aus dem Vergleich mit dem Share (§5.4.3) und ist dort
+    // eine Zeilengrenze — lokal aber nicht notwendig auch: Liegt die Abweichung
+    // hinter allen auswertbaren Share-Zeilen, ist es das Parse-Ende der
+    // Share-Datei, und das fällt mitten in eine lokale Zeile, sobald dort ein
+    // Bruchstück steht (§5.4.1). `kettenanker` sucht beim nächsten Öffnen die
+    // Zeile, die bei diesem Offset **endet**; findet er sie nicht, bricht
+    // `bereiteSchreiberVor` mit `LokalerKettenbruch` ab — der Client kommt an
+    // seine eigene Akte nie wieder heran.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const schreiber = await schreiberFuer(platz, platz.dateisystem);
+    for (let i = 0; i < 5; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+
+    const lokal = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    const zeilen = leseZeilengrenzen(lokal, 0).zeilen;
+    const dritte = zeilen[2] as { offset: number; laenge: number };
+    // Mitten in der dritten Zeile — keine lokale Zeilengrenze.
+    const ausDemShare = dritte.offset + Math.floor(dritte.laenge / 2);
+    const grenzeDavor = dritte.offset;
+
+    expect((await schreiber.schreibeErsatzsegment(0, ausDemShare)).art).toBe("geschrieben");
+
+    const ersatz = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 1), 0);
+    const kopf = leseZeilengrenzen(ersatz, 0).zeilen[0];
+    expect(kopf?.rahmen.typ).toBe(TYP_SEGMENT_ERSETZT);
+    const nutzlast = ersatzAus(kopf?.rahmen["nutzlast"]);
+    expect(nutzlast?.ersetztesSegment).toBe(0);
+    expect(nutzlast?.abOffset).toBe(grenzeDavor);
+    expect(nutzlast?.abOffset).not.toBe(ausDemShare);
+
+    // Die Folge, um die es geht: Der Anker ist bestimmbar, und der nächste
+    // Start kommt an die eigene Akte heran.
+    const quelle = async (s: number) =>
+      s === 0 ? lokal : s === 1 ? ersatz : undefined;
+    expect(await kettenanker(1, ersatz, quelle, true)).toBe(
+      kettenPruefsumme((zeilen[1] as { bytes: Uint8Array }).bytes),
+    );
+    const neu = await schreiberFuer(platz, platz.dateisystem);
+    expect(neu.segment).toBe(1);
   });
 });

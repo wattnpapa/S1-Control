@@ -7,7 +7,7 @@ import { arbeitsplatz, legeEinsatzAn, spiegelungFuer } from "./pruefhilfen/aufba
 import { KETTE_ANFANG } from "./pruefsummen.js";
 import { leererUploadZustand } from "./uploadZustand.js";
 import { UNVOLLSTAENDIG_FRIST_MS, VERFALL_MS } from "./startwerte.js";
-import { baueZeile, leseAbschnitt } from "./zeile.js";
+import { baueZeile, leseAbschnitt, leseZeilengrenzen } from "./zeile.js";
 import type { Arbeitsplatz } from "./pruefhilfen/aufbau.js";
 import type { Schreibergebnis } from "./schreiber.js";
 
@@ -491,5 +491,67 @@ describe("Befunde aus der Begutachtung", () => {
     platz.uhr.weiter(VERFALL_MS + 1);
     await leser.taktA();
     expect(leser.inTaktA).not.toContain(`${FREMD}.0001.jsonl`);
+  });
+});
+
+describe("§5.5 — die Kürzung des Spiegels verlängert ihn nicht (Befund 20 aus M0.4)", () => {
+  it("lässt einen zu kurzen Spiegel kurz, statt ihn mit Nullbytes auf `leseOffset` aufzufüllen", async () => {
+    // `kuerzeAuf` **verlängert** mit Nullbytes, wenn die verlangte Länge über
+    // der tatsächlichen liegt. Dass `leseOffset` nie über der Spiegellänge
+    // steht, ist eine Zusicherung der Aufrufreihenfolge in `akte.ts` — dort
+    // gleicht `gleicheMitSpiegelAb` beides vor dem ersten Poll ab. `Leser` ist
+    // aber öffentlich, und ein Aufrufer, der mit einem gemerkten
+    // Uploadzustand auf einen verkürzten Spiegel trifft, verlangt genau diese
+    // Länge. Ohne die Grenze in `#kuerzeSpiegel` stünden danach Nullbytes im
+    // Spiegel: Er wäre kein Präfix der Share-Datei mehr, der Export nach
+    // §8.6.1 Regel 4 gäbe erfundene Bytes weiter, und jeder Leser fiele dort
+    // nach §8.2 in Quarantäne.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber: fremd, platz: fremdPlatz } = await fremderSchreiber(platz, 3);
+    const datei = `${FREMD}.0000.jsonl`;
+
+    const erster = leserFuer(platz, "9f3c1a20");
+    await erster.taktB();
+    const zustand = erster.zustand;
+    const leseOffset = zustand.fremd[`${FREMD}.0000`]?.leseOffset as number;
+
+    // Der Spiegel wird hinter dem Rücken des Lesers kürzer — ein abgebrochener
+    // lokaler Schreibweg (§8.8), eine zurückgespielte Sicherung, ein
+    // Uploadzustand aus einer früheren Sitzung.
+    const spiegelpfad = platz.ablage.lokalDatei(datei);
+    const kurz = (leseZeilengrenzen(await platz.dateisystem.liesAb(spiegelpfad, 0), 0).zeilen[0] as {
+      laenge: number;
+    }).laenge;
+    await platz.dateisystem.kuerzeAuf(spiegelpfad, kurz);
+    expect(kurz).toBeLessThan(leseOffset);
+
+    // Neue Zeilen auf dem Share, und ein Leser, der auf dem gemerkten
+    // `leseOffset` aufsetzt, ohne vorher abzugleichen.
+    platz.uhr.weiter(3);
+    alsGeschrieben(await fremd.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 3 } }));
+    await spiegelungFuer(fremdPlatz, fremd, EINSATZ, leererUploadZustand()).lauf();
+
+    const zweiter = new Leser(
+      {
+        dateisystem: platz.dateisystem,
+        zeit: platz.uhr.lies,
+        ablage: platz.ablage,
+        clientId: "9f3c1a20",
+        identitaeten: new Identitaetenbuch(),
+      },
+      zustand,
+    );
+    const ergebnis = await zweiter.taktA();
+    expect(ergebnis.neueZeilen.map((z) => z.rahmen.id)).toEqual([`${FREMD}:4`]);
+
+    const spiegel = await platz.dateisystem.liesAb(spiegelpfad, 0);
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareDatei(datei), 0);
+    const neueBytes = share.byteLength - leseOffset;
+    // Kein einziges erfundenes Byte: Der Spiegel ist um genau die neuen Bytes
+    // gewachsen, nicht um die Lücke bis `leseOffset` obendrein.
+    expect(spiegel.byteLength).toBe(kurz + neueBytes);
+    expect(spiegel.includes(0)).toBe(false);
+    expect(spiegel.subarray(0, kurz)).toEqual(share.subarray(0, kurz));
   });
 });
