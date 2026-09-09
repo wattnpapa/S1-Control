@@ -707,3 +707,285 @@ Zwei Clients melden dieselbe reale Einheit — am Meldekopf und in der Führungs
 Dieselbe Regel und dasselbe Ereignispaar gelten für `Fahrzeug`, `Person`, `Dienstposten` und `Anhang` (§5.5, §5.7, §5.8). Die Gegenereignisse sind benannt und tragen keinen Pflicht-`grund` — eine Rücknahme braucht keine Begründung, das Entfernen schon.
 
 **T33:** `EinheitEntfernt` (HLC 5), `StaerkeGeaendert` (HLC 7) ⇒ entfernt, Stärke aktualisiert, zählt nicht. **T34:** Dazu `EinheitWiederhergestellt` (HLC 9) ⇒ zählt wieder, mit der Stärke aus HLC 7.
+
+### §5.5 Fahrzeug und Person
+
+```ts
+const FahrzeugAngelegt = z.object({
+  fahrzeugId: zId, einheitId: zId.optional(), abschnittId: zId.optional(),
+  typ: zPflichttext, bezeichnung: zText.optional(), kennzeichen: zText.optional(),
+  funkrufname: z.object({ kennwort: zPflichttext, eigenerStandort: z.boolean(),
+                          ort: zText.optional(), teile: z.array(z.number().int()) }).optional(),
+  stanKonform: z.boolean().optional(),        // abwesend = nicht anwendbar (dreiwertig)
+  aenderungen: zText.optional(), nutzlastText: zText.optional(),
+  status: z.enum(["EINSATZBEREIT", "NICHT_EINSATZBEREIT"]),
+})
+const FahrzeugGeaendert = z.object({ fahrzeugId: zId, feld: z.enum([
+  "typ","bezeichnung","kennzeichen","funkrufname","stanKonform","aenderungen",
+  "nutzlastText","status","taktischesZeichen"]) })
+const FahrzeugVerschoben        = z.object({ fahrzeugId: zId })   // neu = abschnittId | null
+const FahrzeugEinheitGewechselt = z.object({ fahrzeugId: zId })   // neu = einheitId | null
+const FahrzeugEntfernt          = z.object({ fahrzeugId: zId })   // neu = true; `grund` Pflicht
+const FahrzeugWiederhergestellt = z.object({ fahrzeugId: zId })   // neu = false
+
+const PersonHinzugefuegt = z.object({
+  personId: zId, einheitId: zId,
+  nachname: zPflichttext, vorname: zPflichttext, rolle: zRolle,
+  funktionen: z.array(zPflichttext), fahrerlaubnisse: z.array(zPflichttext),
+  geschlecht: zGeschlecht, ernaehrung: zErnaehrung,
+  kontakte: z.array(zKontakt), zusatzqualifikationen: z.array(zPflichttext),
+  bemerkung: zText.optional(),
+})
+const PersonGeaendert = z.object({ personId: zId, feld: z.enum([
+  "nachname","vorname","rolle","funktionen","fahrerlaubnisse","geschlecht",
+  "ernaehrung","kontakte","zusatzqualifikationen","bemerkung","einheitId"]) })
+const PersonEntfernt          = z.object({ personId: zId })   // neu = true; `grund` Pflicht
+const PersonWiederhergestellt = z.object({ personId: zId })   // neu = false
+```
+
+| Typ | Feldpfad | Klasse | Undo |
+|---|---|---|---|
+| `FahrzeugAngelegt` | Anlage | additiv, bei Kollision §3.11 | frei → `FahrzeugEntfernt` |
+| `FahrzeugGeaendert` | `fahrzeug/<id>/<feld>` | LWW/Feld; `funkrufname`, `taktischesZeichen` LWW/Entität | frei |
+| `FahrzeugVerschoben` | `fahrzeug/<id>/abschnittId` | Regel (§5.3.3) | frei |
+| `FahrzeugEinheitGewechselt` | `fahrzeug/<id>/einheitId` | LWW/Feld, §3.10 bei unbekannter Einheit | frei |
+| `FahrzeugEntfernt` / `…Wiederhergestellt` | `fahrzeug/<id>/entfernt` | LWW/Feld, Wirkung §5.4.5 | frei |
+| `PersonHinzugefuegt` | Anlage | additiv, bei Kollision §3.11 | frei → `PersonEntfernt` |
+| `PersonGeaendert` | `person/<id>/<feld>` | LWW/Feld; die vier Listenfelder LWW/Entität | frei |
+| `PersonEntfernt` / `…Wiederhergestellt` | `person/<id>/entfernt` | LWW/Feld, Wirkung §5.4.5 | frei |
+
+**Listen sind ein Wert.** `funktionen`, `fahrerlaubnisse`, `kontakte`, `zusatzqualifikationen`, `hierarchie` und `fuehrungskraft` werden als Ganzes ersetzt, nie elementweise gemischt. Ein Merge über Listen zweier Clients wäre nicht deterministisch begründbar — in welcher Reihenfolge, mit welcher Dublettenerkennung?
+
+**Die Stärke folgt nicht aus den Personen.** `staerke` ist ein gemeldetes Tripel; `personalErfassung` sagt, ob Einzelpersonen erfasst sind. Der Fold rechnet Personen **nicht** in die Stärke um — das wäre eine Kennzahl (M1.3, ZDM §3.3 K4) und ersetzte eine Meldung durch eine Rechnung. `PersonHinzugefuegt` erzeugt kein Stärke-Delta.
+
+**T35:** Zwei `PersonGeaendert` auf `kontakte` mit verschiedenen Listen ⇒ genau eine Liste, keine Vereinigung. **T36:** `PersonHinzugefuegt` ⇒ `staerke` unverändert.
+
+### §5.6 Auftrag und Anforderung
+
+```ts
+const AuftragErfasst = z.object({
+  auftragId: zId, einheitId: zId, von: zZeitpunkt, bis: zZeitpunkt.optional(),
+  abschnittId: zId.optional(), text: zPflichttext,
+  quelle: z.enum(["MANUELL", "BEWEGUNG", "EEB"]),
+})
+const AuftragBeendet         = z.object({ auftragId: zId })   // neu = bis
+const AuftragZurueckgenommen = z.object({ auftragId: zId })   // neu = true
+
+const AnforderungAngelegt = z.object({
+  anforderungId: zId, kennung: zText.optional(),
+  abzuloesendeEinheitId: zId.optional(),
+  vorgeseheneEinheitText: zText.optional(), vorgesehenerAuftrag: zText.optional(),
+  angefordertAm: zZeitpunkt, bemerkung: zText.optional(),
+})
+const AnforderungGeaendert = z.object({ anforderungId: zId, feld: z.enum([
+  "kennung","abzuloesendeEinheitId","vorgeseheneEinheitText","vorgesehenerAuftrag",
+  "bemerkung","angefordertAm"]) })
+
+const AbloesungZugesagt    = z.object({ anforderungId: zId })
+//   neu = { zugesagtFuer: Zeitpunkt, zugesagtVon: string, abloesendeEinheitId?: Id }
+const ZusageZurueckgenommen = z.object({ anforderungId: zId })   // neu = null
+const AnforderungErledigt  = z.object({ anforderungId: zId })
+//   neu = { erledigtAm: Zeitpunkt, abloesendeEinheitId: Id }
+const ErledigungZurueckgenommen = z.object({ anforderungId: zId })   // neu = null
+const AnforderungStorniert = z.object({ anforderungId: zId })   // neu = true; `grund` Pflicht
+const StornoZurueckgenommen = z.object({ anforderungId: zId })   // neu = false
+```
+
+| Typ | Feldpfad | Klasse | Undo |
+|---|---|---|---|
+| `AuftragErfasst` | Anlage | additiv, bei Kollision §3.11 | frei → `AuftragZurueckgenommen` |
+| `AuftragBeendet` | `auftrag/<id>/bis` | LWW/Feld | frei |
+| `AuftragZurueckgenommen` | `auftrag/<id>/zurueckgenommen` | LWW/Feld | — |
+| `AnforderungAngelegt` | Anlage | additiv, bei Kollision §3.11 | frei → `AnforderungStorniert` |
+| `AnforderungGeaendert` | `anforderung/<id>/<feld>` | LWW/Feld | frei |
+| `AbloesungZugesagt` | `anforderung/<id>/zusage` | LWW/Entität | frei → `ZusageZurueckgenommen` |
+| `AnforderungErledigt` | `anforderung/<id>/erledigung` | LWW/Entität | frei → `ErledigungZurueckgenommen` |
+| `AnforderungStorniert` | `anforderung/<id>/storno` | LWW/Feld | frei → `StornoZurueckgenommen` |
+| die drei Gegenereignisse | dasselbe Feld | wie oben | — |
+
+#### §5.6.1 Regel: die Kennung ist ein Etikett, keine Identität (Frage 22)
+
+`kennung` ist optionaler Freitext **ohne Formatprüfung**. Das Format ist mit der übergeordneten Stelle abgestimmt (EXH F-F1) und der Führungsstelle nicht abgerungen; eine erfundene Prüfung wäre ein Platzhalter, der später wie eine Festlegung aussieht (Startwert S2).
+
+**Die Kennung wird nie zur Identität.** Nach EXH F-F3 tragen die abzulösende und die ablösende Zeile dieselbe Kennung **absichtlich**; ein Verschmelzen darüber wäre fachlich falsch. Stilles Nebeneinander wäre eine unbemerkte Doppelanforderung. Deshalb: Führen mehrere nicht stornierte Anforderungen dieselbe nicht leere Kennung, entsteht **ein** `moeglicheDublette` je Kennung mit allen Ids — dieselbe Form und dieselbe Begründung wie bei der Einheit (§5.4.4).
+
+**T37:** Zwei `AnforderungAngelegt` mit derselben Kennung ⇒ zwei Anforderungen, ein Hinweis. **T38:** Eine davon storniert ⇒ kein Hinweis.
+
+#### §5.6.2 Regel: die Zustandsmaschine (Prüfkriterium P6)
+
+`anforderung.zustand` ist **kein eigenes Feld**. Er wird aus drei gewöhnlichen Feldern abgeleitet:
+
+| Feld | gesetzt durch | zurückgenommen durch |
+|---|---|---|
+| `zusage` | `AbloesungZugesagt` (Struktur) | `ZusageZurueckgenommen` (`null`) |
+| `erledigung` | `AnforderungErledigt` (Struktur) | `ErledigungZurueckgenommen` (`null`) |
+| `storno` | `AnforderungStorniert` (`true`) | `StornoZurueckgenommen` (`false`) |
+
+```
+zustand = erledigung ? EINGETROFFEN : storno ? STORNIERT : zusage ? ZUGESAGT : OFFEN
+```
+
+**Warum drei Felder statt eines Zustandsfelds.** Ein einzelnes Feld mit LWW ließe `EINGETROFFEN → ZUGESAGT` zu, sobald eine verspätete Zusage eine höhere HLC trägt — genau der Rückschritt, den P6 verbietet. Drei unabhängige Felder mit einer Ableitung können das nicht: Die Ableitung fragt nur, **ob** erledigt gilt, nie **wann**.
+
+**Warum die drei Gegenereignisse.** Ohne sie wäre ein Undo dieser Arten nur durch Ausschluss des Originals aus der Ereignismenge darstellbar — ein Sonderpfad, den U1 ausschließt. ZDM §4.2 nennt für `AbloesungZugesagt` bereits ein „Gegen-Set auf `zustand = OFFEN`"; hier bekommt es einen Namen und ein Feld.
+
+Vier Folgerungen:
+
+1. **`EINGETROFFEN` gewinnt gegen ein Storno,** auch gegen eines mit höherer HLC. Was eingetroffen ist, ist eingetroffen. Das Storno wird gefaltet, `storno` steht auf `true`, der abgeleitete Zustand ändert sich nicht — und **genau dafür** gibt es `wirkungslosGegenTerminalzustand` (§3.12). Der gewöhnliche `vorherPasstNicht` griffe hier nicht: `storno` stand vorher tatsächlich auf `false`, der Schreiber hat sich nicht geirrt. Ohne den eigenen Hinweis wäre eine bewusste Stornierung wirkungslos **und** unsichtbar.
+2. **Eine spätere Zusage ändert den Zustand nicht mehr,** wenn `erledigung` gilt; ihre Felder werden trotzdem nach LWW gefaltet. Auch hier entsteht `wirkungslosGegenTerminalzustand`.
+3. **Die Ableitung hängt an der Menge, nicht an einer Reihenfolge.** P6 lautet damit: In **jeder** Permutation und **jedem** Präfix einer Menge, die ein `AnforderungErledigt` und kein jüngeres `ErledigungZurueckgenommen` enthält, ist der Zustand `EINGETROFFEN`.
+4. **Eine Rücknahme ist kein Rückschritt im Sinne von P6.** P6 spricht über eine Menge ohne Gegenereignis. Eine bewusste Rücknahme hat Akteur, Grund und Tagebuchzeile.
+
+**T39:** Erledigt (HLC 5) und storniert (HLC 9), beide Permutationen ⇒ `EINGETROFFEN`, `wirkungslosGegenTerminalzustand`. **T40:** Zusage (HLC 9) nach Erledigung (HLC 5) ⇒ `EINGETROFFEN`, `zugesagtVon` gesetzt, Hinweis. **T41 (P6):** jede Permutation, jedes Präfix. **T42:** `ErledigungZurueckgenommen` (HLC 11) ⇒ `ZUGESAGT`; mit HLC 3 ⇒ weiterhin `EINGETROFFEN`.
+
+#### §5.6.3 Der Bewegungsauftrag ist ein Ereignis mit abgeleiteter Id
+
+ZDM §4.2 verlangt, `EinheitVerschoben` erzeuge „automatisch einen `Auftrag` mit `quelle = BEWEGUNG`". Der schreibende Client schreibt ihn als **eigenes `AuftragErfasst`** in denselben Anhang.
+
+**Die Id ist abgeleitet:** `auftragId = "<id des EinheitVerschoben>#bewegung"`. Damit ist der Auftrag über §3.11 idempotent — schrieben zwei Clients ihn, gälte die kleinere HLC, und der Inhalt ist gleich, also entsteht nicht einmal ein Hinweis.
+
+**Warum ein Ereignis und nicht eine Projektion.** Als Projektion des Zustands wäre er verloren, sobald das Verschiebeereignis nicht mehr der Gewinner oder der Zweite des Feldes ist (§3.3): Bei drei Verschiebungen gäbe es zwei Aufträge statt drei. Als additive Entität steht er vollständig im Zustand. Der Einwand „zwei Wahrheiten über dieselbe Bewegung" entfällt durch die abgeleitete Id — es kann nur eine geben.
+
+**T43:** Drei aufeinanderfolgende Verschiebungen derselben Einheit ⇒ drei Bewegungsaufträge. **T44:** Zwei Clients schreiben denselben Bewegungsauftrag ⇒ einer im Zustand, kein Hinweis.
+
+### §5.7 Führungsstelle: Dienstposten und Schichtplan
+
+```ts
+const DienstpostenAngelegt = z.object({
+  dienstpostenId: zId, teileinheit: zPflichttext, funktion: zPflichttext,
+  schicht: zSchicht, reihenfolge: z.number().int(),
+})
+const DienstpostenGeaendert = z.object({ dienstpostenId: zId,
+  feld: z.enum(["teileinheit","funktion","schicht","reihenfolge"]) })
+const DienstpostenBesetzt   = z.object({ dienstpostenId: zId })   // neu = Tripel
+const DienstpostenEntfernt  = z.object({ dienstpostenId: zId })   // neu = true
+const DienstpostenWiederhergestellt = z.object({ dienstpostenId: zId })   // neu = false
+const SchichtplanEintragGesetzt = z.object({ dienstpostenId: zId, datum: zDatum })
+//   neu = Text | null
+```
+
+| Typ | Feldpfad | Klasse | Undo |
+|---|---|---|---|
+| `DienstpostenAngelegt` | Anlage | additiv, bei Kollision §3.11 | frei → `DienstpostenEntfernt` |
+| `DienstpostenGeaendert` | `dienstposten/<id>/<feld>` | LWW/Feld | frei |
+| `DienstpostenBesetzt` | `dienstposten/<id>/besetzung` | LWW/Entität über das Tripel | frei |
+| `DienstpostenEntfernt` / `…Wiederhergestellt` | `dienstposten/<id>/entfernt` | LWW/Feld, Wirkung §5.4.5 | frei |
+| `SchichtplanEintragGesetzt` | `schichtplan/<dienstpostenId>/<datum>` | LWW/Feld | frei |
+
+**Der Schlüssel des Schichtplans ist das Paar (`dienstpostenId`, `datum`),** nicht eine eigene Entitäts-Id. Zwei Clients, die denselben Tag desselben Dienstpostens beschreiben, meinen dieselbe Zelle des FüSt-Blatts; mit zwei Ids hätten sie zwei Einträge für eine Zelle, und die Ausgabe müsste raten. `text` bleibt mehrzeiliger Freitext (ZDM §1.14) — ein Wert, keine Struktur.
+
+**`schicht` ist am Dienstposten Pflicht,** an der Einheit nach ZDM §2.3 Nr. 4 optional außer im Abschnittstyp `ANGEFORDERT`. Diese Ausnahme ist **keine Foldregel**: Der Fold nimmt jede Schicht und jede fehlende an. Sie ist eine Warnregel der Maske und steht hier nur, damit sie nicht im Code als Ablehnung auftaucht (Frage 21, §10 S6).
+
+**T45:** Zwei Einträge auf denselben Dienstposten und dasselbe Datum ⇒ ein Eintrag, LWW. **T46:** Auf verschiedene Daten ⇒ zwei Einträge, kein Konflikt.
+
+### §5.8 EEB-Meldungen und Anhänge
+
+```ts
+const EebMeldungEmpfangen = z.object({
+  meldungId: zId,                    // = bogenInhaltsId(bogen); Idempotenzschlüssel §3.6
+  einheitSchluessel: zPflichttext, stand: zZeitpunkt, empfangenAm: zZeitpunkt,
+  quelle: z.enum(["SCAN","MANUELL","PDF_IMPORT","AUFTEILUNG","ZUSAMMENFUEHRUNG"]),
+  signatur: z.object({ zustand: z.enum(["GUELTIG","UNGUELTIG"]),
+    pubkey: zText.optional(), kurzform: zText.optional(),
+    absender: z.object({ name: zText.optional(), email: zText.optional(),
+                         telefon: zText.optional() }).optional() }).optional(),
+  rohPayload: zText.optional(),
+  bogen: z.unknown(),                // vollständige EEB-Struktur, unverändert (§5.8.1)
+})
+const EebMeldungZugeordnet  = z.object({ meldungId: zId })   // neu = einheitSchluessel
+const EebMeldungUebernommen = z.object({ meldungId: zId, einheitId: zId,
+                                         uebernommeneFelder: z.array(zPflichttext) })
+const EebMeldungUebernahmeZurueckgenommen = z.object({ meldungId: zId })
+const EebMeldungAbgelehnt   = z.object({ meldungId: zId })   // `grund` Pflicht
+const EebMeldeStatusGesetzt = z.object({ meldungId: zId })   // neu ∈ ZDM §2.9
+
+const AnhangHinzugefuegt = z.object({
+  anhangId: z.string().length(64), einheitId: zId.optional(),
+  dateiname: zPflichttext, mimeTyp: zPflichttext, groesse: zAnzahl,
+})
+const AnhangEntfernt          = z.object({ anhangId: z.string().length(64) })   // neu = true
+const AnhangWiederhergestellt = z.object({ anhangId: z.string().length(64) })   // neu = false
+```
+
+| Typ | Feldpfad | Klasse | Undo |
+|---|---|---|---|
+| `EebMeldungEmpfangen` | Anlage über `meldungId` | Regel (§3.6, §3.11) | **nein** |
+| `EebMeldungZugeordnet` | `meldung/<id>/einheitSchluessel` | LWW/Feld | frei |
+| `EebMeldungUebernommen` | `meldung/<id>/uebernahme` | LWW/Entität, Wirkung §5.8.2 | frei → `…Zurueckgenommen` |
+| `EebMeldungAbgelehnt` | `meldung/<id>/uebernahme` | LWW/Entität | frei |
+| `EebMeldeStatusGesetzt` | `meldung/<id>/meldeStatus` | LWW/Feld | frei |
+| `AnhangHinzugefuegt` | Anlage über `anhangId` | Regel (§3.6, §3.11) | frei → `AnhangEntfernt` |
+| `AnhangEntfernt` / `…Wiederhergestellt` | `anhang/<id>/entfernt` | LWW/Feld | frei |
+
+#### §5.8.1 Regel: der Empfang ist eine Tatsache
+
+`EebMeldungEmpfangen` ist **nicht rücknehmbar** und über `meldungId` idempotent. Die Meldung ist unveränderlich: Eine Korrektur ist eine **neue** Meldung mit eigener `meldungId` (Revision), Löschen ist verboten (EXH F-E2). Wer eine Meldung nicht will, lehnt sie ab — sie bleibt sichtbar.
+
+`bogen` steht als `z.unknown()`. Das ist Absicht: Die Struktur des Erfassungsbogens gehört `@bos/kern` und wird dort versioniert (M1.1). Sie hier zweitzubeschreiben hieße, zwei Wahrheiten über dasselbe Format zu führen; die Prüfung leistet der Codec des Kerns. Dieser Katalog legt allein fest, dass der Bogen **unverändert** mitgeführt wird.
+
+**Vier Felder der Meldung sind abgeleitet, nicht gesetzt:** `zugEtikett`, `teilEtikett`, `aufgegangenIn` und `stammtVon` (ZDM §3.2) folgen aus `bogen` und aus den Aufteilungs- und Zusammenführungsereignissen der zugehörigen Einheit. Sie stehen im Zustand, aber kein Ereignis setzt sie — deshalb hat keines von ihnen einen Feldpfad. `uebernahmeZustand = GEAENDERT` ist ebenso abgeleitet: Es gilt, wenn zu demselben `einheitSchluessel` eine Meldung mit jüngerem `stand` vorliegt als die übernommene (ZDM §2.9).
+
+**T47:** Zwei `EebMeldungEmpfangen`, gleiche `meldungId`, gleicher Bogen, verschiedene Ereignis-Ids ⇒ eine Meldung, kein Hinweis. **T48:** Gleiche `meldungId`, abweichender Bogen ⇒ eine Meldung (kleinste HLC), `inhaltsschluesselWidersprochen`. **T49:** Abweichendes `empfangenAm` ⇒ eine Meldung, **kein** Hinweis. **T50:** Zweite Revision nach Übernahme ⇒ `uebernahmeZustand = GEAENDERT`, in jeder Permutation.
+
+#### §5.8.2 Regel: die Übernahme erzeugt die Feldereignisse mit
+
+`EebMeldungUebernommen` setzt `uebernahme` **und** die übernommenen Werte werden als eigenständige Feldereignisse geschrieben (`StaerkeGeaendert`, `LogistikGesetzt`, …) mit `grund = "EEB <meldungId>"`. Dort gelten die gewöhnlichen Konfliktregeln, und die Übernahme ist im Tagebuch erkennbar.
+
+**Das sind wirklich geschriebene Ereignisse, keine Projektion** — anders als beim Bewegungsauftrag, der eine abgeleitete Id trägt (§5.6.3). Der Unterschied ist begründet: Welche Felder eine Übernahme übernimmt, folgt aus einer **Auswahl des Bedieners** (`uebernommeneFelder`) und aus dem Stand, den er dabei gesehen hat — dieser gesehene Vorher-Wert steckt in den Feldereignissen und nirgends sonst. Als Projektion wäre er verloren, und Auflage 6 gälte für den ganzen EEB-Weg nicht mehr.
+
+**T51:** Übernahme plus zugehöriges `StaerkeGeaendert` mit gesehenem Vorher-Wert; ein nebenläufiges `StaerkeGeaendert` höherer HLC gewinnt, `vorherPasstNicht` entsteht.
+
+### §5.9 Einsatztagebuch und Korrekturen
+
+```ts
+const EtbEintragErfasst = z.object({
+  etbId: zId, zeitpunkt: zZeitpunkt, text: zPflichttext,
+  bezug: z.object({ entitaet: z.enum(["EINHEIT","ABSCHNITT","FAHRZEUG","ANFORDERUNG"]),
+                    id: zId }).optional(),
+})
+const EtbEintragBerichtigt = z.object({
+  etbId: zId, berichtigtEintragId: zId, zeitpunkt: zZeitpunkt, text: zPflichttext,
+})   // `grund` Pflicht
+const KorrekturVon = z.object({
+  korrigiertesEreignisId: zId,
+  zielTyp: zPflichttext,      // eine SETZENDE Art, §5.9.2
+  zielNutzlast: z.unknown(),  // gegen das Schema von `zielTyp` geprüft
+})   // neu = der korrigierte Wert; `grund` Pflicht
+```
+
+| Typ | Feldpfad | Klasse | Undo |
+|---|---|---|---|
+| `EtbEintragErfasst` | Anlage | additiv, unveränderlich | **nein** |
+| `EtbEintragBerichtigt` | Anlage | additiv | **nein** |
+| `KorrekturVon` | der Feldpfad von `zielTyp` | wie `zielTyp` | **nein** |
+
+#### §5.9.1 Das Einsatztagebuch ist eine Projektion des Ereignisstroms
+
+Jedes fachliche Ereignis erzeugt eine Tagebuchzeile; `EtbEintragErfasst` ist der frei getippte Zusatz, `EtbEintragBerichtigt` die Berichtigungszeile daneben. Doppelt geführt wird nichts (ZDM §3.1 Nr. 6). Die beiden Verwaltungsereignisse der Speicherschicht erscheinen nicht (§1.2).
+
+**Das Tagebuch wird aus den Ereignisdateien gerendert, nicht aus dem Zustand.** Es ist **kein** Bestandteil des `Zustand` und geht **nicht** in den `zustandsHash` ein. Der Grund ist §3.1: Der Zustand hält je Feld zwei Beobachtungen, das Tagebuch braucht alle. Es aus dem Zustand zu projizieren hieße, bei drei Änderungen an einem Feld zwei Zeilen zu zeigen.
+
+Das ist kein Verlust: Die Ereignisdateien sind append-only und vollständig (KONZEPT-SPEICHER.md §1.3), das Tagebuch ist also jederzeit vollständig herstellbar — es kostet Lesezeit, keinen Inhalt. Nur die Entitäten `EtbEintrag` selbst (die getippten Zeilen) stehen im Zustand, weil sie eigene Anlagen mit eigener Id sind.
+
+Die Zeilen tragen den **fachlichen** `zeitpunkt` aus der Nutzlast, nicht die Wanduhr des Rahmens; angezeigt werden beide, geordnet wird nach `hlc` (§3.5).
+
+#### §5.9.2 Regel: `KorrekturVon` gilt nur für setzende Arten
+
+`KorrekturVon` faltet wie sein Ziel: Die eingebettete Nutzlast wird gegen das Schema von `zielTyp` geprüft, und das Ereignis wirkt wie eines dieser Art — mit der HLC und der Id des Korrekturereignisses. Zusätzlich wird das korrigierte Ereignis im Tagebuch als berichtigt markiert; **beide Zeilen bleiben stehen** (U4).
+
+**`zielTyp` darf keine Anlageart sein.** Für Anlagen gilt §3.11: die kleinste HLC gewinnt. Eine Korrektur hat kausal immer die größere und würde als `zweiteAnlageVerworfen` abgetan — sie täte nachweislich nichts. Ein `KorrekturVon` mit einer Anlageart als `zielTyp` ist deshalb **ungültig** und wird nach §3.7 Punkt 4 behandelt.
+
+Damit ist der Korrekturweg für jede der Anlagearten anders, und zwar benannt:
+
+| Was falsch ist | Der Weg |
+|---|---|
+| ein Stammwert des Einsatzes, auch `beginn` | `EinsatzStammdatenGeaendert` (§5.2) |
+| ein Stammwert einer Einheit, auch `personalErfassung`, `einheitSchluessel` | `EinheitStammdatenGeaendert` |
+| eine Einheit ist gar nicht da | `EinheitEntfernt` mit Grund |
+| eine EEB-Meldung ist falsch | eine neue Revision; die alte ablehnen |
+| eine Tagebuchzeile ist falsch | `EtbEintragBerichtigt` |
+| eine Zuordnung, eine Zusage, ein Zeitpunkt, ein Status war fachlich falsch | `KorrekturVon` |
+
+Die letzte Zeile ist der Fall, den U4 meint: Eine Meldung wurde der falschen Einheit zugeordnet (`EebMeldungZugeordnet`) und ist bereits in Summen und Ausdrücke eingegangen.
+
+**T52:** `KorrekturVon` mit `zielTyp = "StaerkeGeaendert"` und höherer HLC ⇒ die korrigierte Stärke gilt, beide Zeilen im Tagebuch. **T53:** `KorrekturVon` mit `zielTyp = "EinheitGemeldet"` ⇒ ungültig, nicht gefaltet, geführt. **T54:** `KorrekturVon` mit unbekanntem `zielTyp` ⇒ ebenso.
