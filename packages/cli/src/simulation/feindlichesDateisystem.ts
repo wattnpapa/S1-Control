@@ -263,7 +263,7 @@ export class FeindlichesDateisystem implements Dateisystem {
     // Platte; ihn hier mit zu verzögern erfände eine Störung, die es nicht
     // gibt, und §9 verbietet für diese Gruppe gerade das Erfinden.
     if (!this.#o.istShare(pfad) || this.#o.profil.verzeichnisCacheMs <= 0) {
-      return this.#o.echt.listeVerzeichnis(pfad);
+      return sortiert(await this.#o.echt.listeVerzeichnis(pfad));
     }
     const jetzt = this.#o.jetzt();
     const gemerkt = this.#verzeichnis.get(pfad);
@@ -271,7 +271,7 @@ export class FeindlichesDateisystem implements Dateisystem {
       this.#zaehle("verzeichnisCache");
       return gemerkt.stand;
     }
-    const stand = await this.#o.echt.listeVerzeichnis(pfad);
+    const stand = sortiert(await this.#o.echt.listeVerzeichnis(pfad));
     this.#verzeichnis.set(pfad, { stand, bis: jetzt + this.#o.profil.verzeichnisCacheMs });
     return stand;
   }
@@ -373,6 +373,23 @@ export class FeindlichesDateisystem implements Dateisystem {
     this.#zaehle("sichtbarkeitVerzoegert");
     return bytes.subarray(0, Math.max(0, lage.ende - offset));
   }
+}
+
+/**
+ * Verzeichnisauflistungen werden **sortiert** herausgegeben.
+ *
+ * `readdir` gibt die Namen in einer Reihenfolge zurück, die das Dateisystem
+ * bestimmt — und die ist unter Windows eine andere als unter macOS. Über die
+ * Reihenfolge hängt daran, in welcher Folge der Leser die Dateien anfasst, wie
+ * viele Aufrufe dabei entstehen und damit, an welcher Stelle der Zufallsstrom
+ * dieser Schicht welche Störung zieht. Ein Lauf mit demselben Startwert wäre
+ * auf zwei Betriebssystemen ein anderer — und die DoD von M0.4 („reproduzierbar
+ * konvergent") wie Auflage 17 (Läufe auf mindestens zwei Betriebssystemen)
+ * hingen an einer Zufälligkeit des Dateisystems. Das Verfahren selbst verlangt
+ * keine Reihenfolge (§6.2); die Simulation braucht eine.
+ */
+function sortiert(namen: readonly string[]): readonly string[] {
+  return [...namen].sort();
 }
 
 /** Die Aufrufe, die den Datenträger verändern — nur sie treffen §8.8 und §8.9. */

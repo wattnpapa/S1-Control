@@ -228,7 +228,15 @@ describe("§5.4.2 — ENOENT heißt nicht: die Datei ist leer", () => {
     // §6.6: Der FileNotFoundCacheLifetime meldet die vorhandene Datei als
     // fehlend. Vor dem Befund aus M0.4 galt sie damit als leer, und alles ab
     // shareOffset wurde ein zweites Mal angehängt.
-    stoerungen.push({ aufruf: "liesAb", code: "ENOENT", malen: 1, pfadEnthaelt: `share/einsatz/ereignisse/${ICH}` });
+    stoerungen.push({
+      aufruf: "liesAb",
+      code: "ENOENT",
+      malen: 1,
+      // Der vollständige Pfad, nicht ein Stück davon: Ein Dateiname allein
+      // träfe auch den lokalen Spiegel, und ein Stück mit  träfe unter
+      // Windows gar nichts.
+      pfadEnthaelt: platz.ablage.shareSegment(ICH, 0),
+    });
     const gestoert = await spiegelung.lauf();
     expect(gestoert.art).toBe("gescheitert");
     if (gestoert.art !== "gescheitert") throw new Error("unerreichbar");
@@ -287,7 +295,7 @@ describe("§5.4.2 — ENOENT heißt nicht: die Datei ist leer", () => {
       aufruf: "liesAb",
       code: "ENOENT",
       malen: 1,
-      pfadEnthaelt: `share/einsatz/ereignisse/${ICH}`,
+      pfadEnthaelt: platz.ablage.shareSegment(ICH, 0),
     });
     const nachNeustart = await bauen().lauf();
     expect(nachNeustart.art).toBe("gescheitert");
@@ -843,7 +851,7 @@ describe("§8.1 — der Reparaturmerker hängt an der Datei, nicht am Schreiber"
       aufruf: "kuerzeAuf",
       code: "EIO",
       malen: Number.POSITIVE_INFINITY,
-      pfadEnthaelt: `${ICH}.0000.jsonl`,
+      pfadEnthaelt: platz.ablage.lokalSegment(ICH, 0),
     });
     platz.uhr.weiter(3);
     expect((await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 1 } })).art).toBe(
