@@ -1,6 +1,6 @@
 # KONZEPT-EREIGNISSE — Ereigniskatalog, Konfliktregeln, Undo
 
-Stand: 2026-09-09 · Paket M1.2 · Status: **Entwurf, dritte Fassung nach vier Gutachten**
+Stand: 2026-09-09 · Paket M1.2 · Status: **Entwurf, vierte Fassung nach sechs Gutachten**
 
 Verbindliche Grundlagen: [KONZEPT-SPEICHER.md](KONZEPT-SPEICHER.md) (freigegeben am 2026-09-08), [03-MEILENSTEINE.md](../03-MEILENSTEINE.md) Auflagen 4, 6, 10, 11, 12, 13 und 18, [02-ZIELBILD.md](../02-ZIELBILD.md). Fachliche Quelle: `docs/v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §2 bis §4 — im Folgenden **ZDM**. Stand des Codes: `packages/domaene/src/{ereignis,fold,zustand}.ts` aus M0.2.
 
@@ -65,11 +65,15 @@ Auflage 6 verlangt den gesehenen Vorher-Wert an jedem setzenden Ereignis und ein
 
 **(a) Setzendes Ereignis auf eine Entität.** Es setzt **ein** Zustandsfeld. `neu` trägt den Wert, `vorher` den gesehenen. Die Nutzlast trägt nur die Kennung und, wo nötig, die Feldauswahl (`feld: "bezeichnung"`). Ist der Wert eine Struktur (Klasse LWW/Entität, §3.4), **ist** `neu` diese Struktur. `neu = null` heißt „Wert löschen"; ist das Feld vorher ungesetzt, ist `vorher` **abwesend** — die Unterscheidung ist nötig, weil die kanonische Serialisierung Felder ohne Wert weglässt.
 
-**(b) Anlage.** Sie legt eine Entität an und setzt **alle** ihre Felder auf einmal. Ihre Werte stehen in der **Nutzlast** — dort und nirgends sonst, denn ein einzelnes `neu` könnte sie nicht tragen. `vorher` ist abwesend: Es gab nichts zu sehen. Welche Feldpfade sie belegt, steht in §2.3.
+**(b) Anlegendes Ereignis.** Es legt eine Entität oder einen Eintrag an und setzt **alle** seine Felder auf einmal. Die Werte stehen in der **Nutzlast** — dort und nirgends sonst, denn ein einzelnes `neu` könnte sie nicht tragen. `vorher` ist abwesend: Es gab nichts zu sehen. Welche Feldpfade eine Anlage belegt, steht in §2.3.
 
-**(c) Setzendes Ereignis auf mehrere Entitäten.** Nur zwei Arten: `EinheitAufgeteilt` und `EinheitZusammengefuehrt`. Sie sind ein Fachvorgang, der mehrere Einheiten zugleich betrifft; ihn zu zerlegen hieße, dass ein Teil verlorengehen könnte. Für sie gilt: **je betroffener Entität genau ein Feld**, und der Wert je Entität steht in der Nutzlast unter der Kennung dieser Entität. Ihre Prüfangaben (`gesehen`) sind **kein** `vorher` im Sinne von (a), sondern ein eigenes Datum mit eigener Regel (§5.4.3).
+Die dreizehn Arten, die eine **Entität** anlegen, sind in §3.11 aufgezählt; sie unterliegen dort zusätzlich der Kollisionsregel. `EinsatzArchiviert` und `ArchivierungZurueckgenommen` sind ebenfalls Form (b) — sie legen einen **Eintrag** unter einer Ereignis-Id an (§7.2) —, gehören aber nicht zu jenen dreizehn: Es gibt keine zweite Anlage derselben Id, weil die Id die des Ereignisses selbst ist. `EinheitAufgeteilt` ist dagegen Form (c): Es legt die neue Einheit an **und** setzt je übernommenem Fahrzeug und je übernommener Person ein Feld (§5.4.2). Seine Wirkung auf die Stärke der Quelle ist keines von beidem, sondern eine **Ableitung**.
 
-Die Zuordnung je Art steht in der Spalte „Form" der Katalogtabellen. Ein Ereignis der Form (a) ohne `neu` ist ungültig (§3.7 Punkt 4); ein Ereignis der Form (b) oder (c) mit `neu` ebenso.
+**(c) Setzendes Ereignis auf mehrere Entitäten.** Zwei Arten: `EinheitZusammengefuehrt` und `EinheitAufgeteilt`. Beide sind ein Fachvorgang, der mehrere Entitäten zugleich betrifft; ihn zu zerlegen hieße, dass ein Teil verlorengehen könnte. Es gilt: **je betroffener Entität genau ein Feld**, und der Wert je Entität steht in der Nutzlast unter der Kennung dieser Entität. Die Prüfangabe `gesehen` ist **kein** `vorher` im Sinne von (a), sondern ein eigenes Datum mit eigener Regel (§5.4.3).
+
+**`KorrekturVon` hat keine eigene Form,** sondern übernimmt die ihres `zielTyp`. Weil `zielTyp` keine Anlageart sein darf (§5.9.2), ist das immer (a) oder (c).
+
+Die Zuordnung je Art steht in der Spalte „Form" der Katalogtabellen. Ein Ereignis der Form (a) ohne `neu` ist ungültig (§3.7 Punkt 4); ein Ereignis der Form (b) mit `neu` ebenso.
 
 ### §2.3 Welche Feldpfade eine Anlage belegt
 
@@ -78,13 +82,19 @@ Die Zuordnung je Art steht in der Spalte „Form" der Katalogtabellen. Ein Ereig
 | Anlage | belegte Feldpfade |
 |---|---|
 | `EinsatzAngelegt` | `einsatz/name`, `/art`, `/fuestName`, `/uebergeordneteFuestName`, `/ort`, `/beginn`, `/schichtmodell` und die vier Pfade `einsatz/kosten/<feld>` — je Kostenparameter ein eigener Pfad, damit ein späteres `KostenParameterGeaendert` denselben Pfad trifft |
-| `AbschnittAngelegt` | `abschnitt/<id>/name`, `/typ` (Nutzlastfeld heißt `typ`), `/parentId`, `/reihenfolge`, `/bemerkung` |
-| `EinheitGemeldet` | je Feld des Schemas `abschnitt/<id>`-frei unter `einheit/<id>/<feld>`, mit `staerke` unter `einheit/<id>/staerke` |
+| `AbschnittAngelegt` | `abschnitt/<id>/name`, `/typ`, `/parentId`, `/reihenfolge`, `/bemerkung` |
+| `EinheitGemeldet` | je Feld des Schemas unter `einheit/<id>/<feld>`, gleichnamig — einschließlich `abschnittId` und `staerke` |
 | die übrigen | analog, je Feld des Schemas unter dem Pfad der Entität |
 
 **Ein optionales Feld, das in der Nutzlast fehlt, belegt keinen Pfad.** Die Anlage setzt es nicht auf abwesend, sondern äußert sich nicht dazu. Sonst überschriebe eine inhaltsgleiche Zweitanlage ohne Bemerkung eine später gesetzte Bemerkung mit „leer".
 
 Nicht belegt werden die Kennung selbst und jedes Feld, das §3.2 als **abgeleitet** führt.
+
+**Wenn eine Anlage fremde Arbeit verdrängt.** Eine Anlage trägt keinen Vorher-Wert, gewinnt aber ein Feld, sobald ihre HLC über der einer Änderung an demselben Feld liegt. Der Fall ist real und nicht selten: Ein Client meldet eine Einheit (HLC 9), während ein anderer sie bereits verschoben hat (HLC 5) — etwa weil die Anlage über einen Meldekopf nachläuft. Die Anlage gewinnt `abschnittId` und setzt es auf ihren Wert, ohne den fremden gesehen haben zu können.
+
+> **Regel.** Trägt der Gewinner eines Feldes **kein** `gesehenerVorher` und unterscheidet sich sein Wert von dem der zweithöchsten Beobachtung, entsteht `ohneVorherWertVerdraengt` mit Gewinner, verdrängtem Ereignis und verdrängtem Wert. Sind die Werte gleich, entsteht kein Hinweis — es ist nichts verloren.
+
+Ohne diesen Hinweis wäre die Lage von stillem Verwerfen nicht zu unterscheiden, und Auflage 6 hätte für Anlagen keine Wirkung. `@s1/domaene` erzeugt ihn seit M0.2; hier steht die Regel dazu. Prüffall T106.
 
 ### §2.4 `grund` — die vollständige Liste der Pflichtfälle
 
@@ -100,7 +110,7 @@ KONZEPT-SPEICHER.md §3.1 trennt technische Ordnung (HLC) und fachliche Zeit und
 
 | Klasse | Zeiten | Prüfung |
 |---|---|---|
-| **Ist-Zeit** | `meldezeit` (`StaerkeGeaendert`), `eingetroffenAm`, `einsatzendeAm`, `rueckfuehrungAm`, `angefordertAm`, `erledigtAm`, `von` (`AuftragErfasst`), `beginn` und `ende` des Einsatzes, `zeitpunkt` beider ETB-Arten, `aufgeloestAm`, `hinzugefuegtAm`, `zeitpunkt` von `EinsatzArchiviert` | Abweichung von der `wanduhr` desselben Ereignisses über **12 Stunden** in eine der beiden Richtungen ⇒ `meldezeitUnplausibel`. Startwert S1 |
+| **Ist-Zeit** | `meldezeit` (`StaerkeGeaendert`), `eingetroffenAm`, `einsatzendeAm`, `rueckfuehrungAm`, `angefordertAm`, `erledigtAm`, `von` (`AuftragErfasst`), `beginn` und `ende` des Einsatzes, `zeitpunkt` beider ETB-Arten, `aufgeloestAm`, `hinzugefuegtAm`, `zeitpunkt` von `EinsatzArchiviert` (dessen `wanduhr` steht im Eintrag, §3.2) | Abweichung von der `wanduhr` desselben Ereignisses über **12 Stunden** in eine der beiden Richtungen ⇒ `meldezeitUnplausibel`. Startwert S1 |
 | **Planwert** | `verfuegbarBis`, `zugesagtFuer`, `bis` (`AuftragBeendet` und `AuftragErfasst`) | Hinweis nur, wenn der Wert **vor** der Wanduhr liegt oder mehr als **90 Tage** danach. Startwert S8 |
 | **Fremdzeit** | `stand` und `empfangenAm` einer EEB-Meldung | **keine Prüfung.** Sie stammen aus einem fremden Gerät, dessen Uhr diese Führungsstelle nicht verantwortet; ein Hinweis daran wäre bei jedem zweiten Papierbogen zu sehen und damit wertlos |
 
@@ -146,13 +156,22 @@ interface Beobachtung<T> {
   durch?: EreignisId              // fehlt nur bei den Systemabschnitten (§5.3.4)
   gesehenerVorher?: T | null
   // Eingangsdaten der Hinweise, die sonst nicht neu berechenbar wären (§3.8):
-  wanduhr: string                 // ISO-8601 des setzenden Ereignisses
+  wanduhr?: string                // ISO-8601 des setzenden Ereignisses; fehlt nur
+                                  // bei den Systemabschnitten (§5.3.4)
   fachlicheZeit?: string          // die Zeit aus §2.5, sofern die Art eine trägt
   zeitklasse?: "IST" | "PLAN"     // welche Schwelle gilt
   undoOf?: EreignisId
 }
 
 interface Feld<T> extends Beobachtung<T> { zweiter?: Beobachtung<T> }   // §3.3
+
+/**
+ * Ein Feld, dessen **erste** Beobachtung gilt (§3.3, Sammelform „Erstwert").
+ * Die verdrängten stehen daneben, weil ohne sie weder der Hinweis noch die
+ * Mengeneigenschaft trägt: Ein Max-2-Akkumulator verlöre bei drei Vorgängen
+ * ausgerechnet den Gewinner.
+ */
+interface Erstwert<T> extends Beobachtung<T> { verdraengt: Beobachtung<T>[] }
 
 /** Eine verworfene Zweitanlage — Eingangsdatum von `zweiteAnlageVerworfen`. */
 interface VerworfeneAnlage { durch: EreignisId; hlc: Hlc; inhalt: unknown }
@@ -163,12 +182,15 @@ interface EinsatzZustand {
   name: Feld<string>; art: Feld<string>; fuestName: Feld<string>
   uebergeordneteFuestName?: Feld<string>; ort?: Feld<string>
   beginn: Feld<Zeitpunkt>; schichtmodell: Feld<string>
-  ende: Feld<Zeitpunkt>                       // null = wiedereröffnet
+  ende?: Feld<Zeitpunkt>                      // null = wiedereröffnet; fehlt = nie beendet
   kosten: { psaKostenProSatz: Feld<number>; vdaProTag: Feld<number>
             ukVerpflegungProTag: Feld<number>; geplanteEinsatztage: Feld<number> }
-  archivierungen: { [ereignisId: string]: { gilt: boolean; hlc: Hlc
-                                            zeitpunkt?: Zeitpunkt; snapshotHash?: string
-                                            zurueckgenommenDurch?: EreignisId } }   // §7.2
+  archivierungen: { [ereignisId: string]: {
+      gilt: boolean
+      hlc?: Hlc; wanduhr?: string          // fehlen beim reinen Grabstein (§7.2)
+      zeitpunkt?: Zeitpunkt; snapshotHash?: string
+      zurueckgenommenDurch: EreignisId[]   // aufsteigend sortiert, §7.2
+  } }
   verworfeneAnlagen: VerworfeneAnlage[]
   // abgeleitet:
   status: "AKTIV" | "BEENDET" | "ARCHIVIERT"
@@ -205,13 +227,15 @@ interface EinheitZustand {
   einsatzendeAm?: Feld<Zeitpunkt>; rueckfuehrungAm?: Feld<Zeitpunkt>
   logistik: { [feld: string]: Feld<number> }  // Override je Feld; §5.4
   sofortbedarf?: Feld<Sofortbedarf>; psaSaetzeProTag?: Feld<number>
-  abgeteiltVon?: Feld<{ quellEinheitId: Id; abgeteilteStaerke: Staerke }>   // §5.4.2
-  aufgegangenIn?: Feld<{ zielEinheitId: Id; gesehen: Staerke }>             // §5.4.3
-  entfernt: Feld<boolean>
+  abgeteiltVon?: Erstwert<{ quellEinheitId: Id; abgeteilteStaerke: Staerke
+                            gesehen: Staerke }>                            // §5.4.2
+  aufgegangenIn?: Erstwert<{ zielEinheitId: Id; gesehen: Staerke }>        // §5.4.3
+  entfernt?: Feld<boolean>                    // fehlt = nie entfernt (§2.3)
   verworfeneAnlagen: VerworfeneAnlage[]
   // abgeleitet:
   wirksamerAbschnittId: Id                    // §5.3.2, §5.3.3
   wirksameStaerke: Staerke                    // §5.4.2
+  wirksamAufgegangen: boolean                 // §5.4.3, nach der Kreisauflösung
   zaehlt: boolean                             // §3.2, Absatz „Zählbarkeit"
 }
 
@@ -243,9 +267,11 @@ Die übrigen Entitätsstrukturen bauen nach demselben Muster: **jedes Feld, das 
 * **Auftrag**: `einheitId`, `von`, `bis`, `abschnittId`, `text`, `quelle`, `zurueckgenommen`.
 * **Anforderung**: `kennung`, `abzuloesendeEinheitId`, `vorgeseheneEinheitText`, `vorgesehenerAuftrag`, `angefordertAm`, `bemerkung`, `zusage`, `erledigung`, `storno`; abgeleitet `zustand` (§5.6.2).
 * **Dienstposten**: `teileinheit`, `funktion`, `schicht`, `reihenfolge`, `besetzung`, `entfernt`.
-* **Meldung**: `einheitSchluessel`, `meldeStatus`, `uebernahme`, dazu die unveränderlichen Anlagewerte `stand`, `empfangenAm`, `quelle`, `signatur`, `rohPayload`, `bogen`; abgeleitet `uebernahmeZustand`, `zugEtikett`, `teilEtikett`, `aufgegangenIn`, `stammtVon` (§5.8.1).
+* **Meldung**: `einheitSchluessel`, `meldeStatus`, `uebernahme` (`{einheitId, uebernommeneFelder}` oder `null`), `abgelehnt`, dazu die unveränderlichen Anlagewerte `stand`, `empfangenAm`, `quelle`, `signatur`, `rohPayload`, `bogen`; abgeleitet allein `uebernahmeZustand` (§5.8.1).
 * **Anhang**: `einheitId`, `dateiname`, `mimeTyp`, `groesse`, `hinzugefuegtAm`, `entfernt`.
 * **EtbEintrag**: `zeitpunkt`, `text`, `bezug`, bei der Berichtigung zusätzlich `berichtigtEintragId`.
+
+**Ein nie gesetztes Feld fehlt.** Jedes Feld, das keine Anlage belegt und das noch kein Ereignis gesetzt hat, ist **abwesend** — nicht `{wert: false, hlc: …}` mit erfundener HLC. Das betrifft `einsatz.ende`, die fünf `entfernt`, `auftrag.zurueckgenommen`, `anforderung.storno`, `zusage`, `erledigung`, `abschnitt.aufgeloest`, `einheit.abgeteiltVon` und `aufgegangenIn`. KONZEPT-SPEICHER.md §7.6 lässt Felder ohne Wert weg; ein erfundener Anfangswert stünde dagegen im Hash, und zwei Implementierungen, von denen eine ihn setzt und eine nicht, wären bei **jedem** Einsatz nicht konvergent, in dem nichts entfernt wurde — also praktisch immer.
 
 **Zählbarkeit.** `einheit.zaehlt` ist wahr, wenn die Einheit weder entfernt noch aufgegangen ist **und** ihr `wirksamerAbschnittId` auf einen Abschnitt mit `zaehltInGesamtstaerke` zeigt. `abschnitt.zaehltInGesamtstaerke` folgt aus `typ` nach ZDM §2.4; ein **unbekannter** Typ zählt wie `EINSATZORT`, also **mit** (§5.3.3). Damit hängt die Zählbarkeit an genau einer Stelle statt an dreien.
 
@@ -257,9 +283,17 @@ Die übrigen Entitätsstrukturen bauen nach demselben Muster: **jedes Feld, das 
 4. **`wartend`** hält Beobachtungen zu noch nicht angelegten Entitäten, je Feld zwei. Es wächst mit der Zahl der Entitäten, deren Anlage aussteht — und die ist **nicht** beschränkt, wenn eine Anlage nie kommt (verlorenes Segment, Quarantäne). Benannt in §8.2.
 5. **Alles Übrige** ist genau ein Wert je Feld je Entität.
 
-**Abgeleitete Felder gehen in die kanonische Serialisierung ein.** Sie sind kein zweiter Zustand: Jeder Client leitet sie aus derselben Grundlage gleich ab. Sie stehen im Zustand, damit ein Verbraucher sie nicht selbst berechnen muss und damit ein Fehler in der Ableitung im Konvergenzvergleich auffällt statt in der Anzeige. Die vollständige Liste: `einsatz.status`, `einsatz.archiviertDurch`, `einsatz.archiviertMit`, `abschnitt.wirksamerParentId`, `abschnitt.zaehltInGesamtstaerke`, `einheit.wirksamerAbschnittId`, `einheit.wirksameStaerke`, `einheit.zaehlt`, `fahrzeug.wirksamerAbschnittId`, `anforderung.zustand`, `meldung.uebernahmeZustand`, `meldung.zugEtikett`, `meldung.teilEtikett`, `meldung.aufgegangenIn`, `meldung.stammtVon`.
+**Abgeleitete Felder gehen in die kanonische Serialisierung ein.** Sie sind kein zweiter Zustand: Jeder Client leitet sie aus derselben Grundlage gleich ab. Sie stehen im Zustand, damit ein Verbraucher sie nicht selbst berechnen muss und damit ein Fehler in der Ableitung im Konvergenzvergleich auffällt statt in der Anzeige. Die vollständige Liste: `einsatz.status`, `einsatz.archiviertDurch`, `einsatz.archiviertMit`, `abschnitt.wirksamerParentId`, `abschnitt.zaehltInGesamtstaerke`, `einheit.wirksamerAbschnittId`, `einheit.wirksameStaerke`, `einheit.wirksamAufgegangen`, `einheit.zaehlt`, `fahrzeug.wirksamerAbschnittId`, `anforderung.zustand`, `meldung.uebernahmeZustand`.
 
-### §3.3 Der Akkumulator je Feld: zwei Beobachtungen, beide im Zustand
+**Was ausdrücklich *nicht* im Zustand steht: alles, was aus `bogen` folgt.** `zugEtikett`, `teilEtikett`, `stammtVon` und `aufgegangenIn` der Meldung (ZDM §3.2) werden von der Oberfläche aus dem Bogen gelesen und **nicht** materialisiert. Der Grund ist der `zustandsHash`: `bogen` ist `z.unknown()`, seine Struktur gehört `@bos/eeb-format` und wird **dort** versioniert. Stünden daraus abgeleitete Werte im Zustand, hinge der Hash an der Version eines fremden Pakets, das `foldVersion` nicht berührt — zwei Clients mit verschiedenen Codec-Fassungen fielen in den roten Ausgang von §7.6 der Speicherschicht, ohne dass ein Fold-Fehler vorläge.
+
+### §3.3 Zwei Akkumulatoren, und je Feld steht fest, welcher gilt
+
+Der Fold kennt **zwei** Aufnahmeoperationen. Welche für ein Feld gilt, sagt seine Konfliktklasse (§3.4), und der Zustand macht es am Typ sichtbar: `Feld<T>` gegen `Erstwert<T>` (§3.2).
+
+**`Feld<T>` — die beiden höchsten Beobachtungen.** Für alle Felder der Klassen LWW/Feld und LWW/Entität.
+
+**`Erstwert<T>` — die kleinste Beobachtung, die übrigen als `verdraengt`.** Für die drei Felder der Klasse Erstwert. Warum die verdrängten mitgeführt werden müssen: Bei drei Zusammenführungen derselben Quelle (HLC 5, 7, 9) hielte ein Max-2-Akkumulator 9 und 7 — der Gewinner 5 wäre verloren, und zwar in jeder Permutation und nach jedem Schnappschuss. Die Liste ist beschränkt durch die Zahl der Vorgänge an dieser Entität; sie ist im Normalbetrieb leer und in §8.2 als Wachstumspunkt geführt.
 
 Je Feldpfad hält der Fold die **beiden höchsten** Beobachtungen nach §3.5. Der Gewinner liefert Wert und Feld-HLC (Auflage 4); die zweithöchste ist der Wert, gegen den `gesehenerVorher` des Gewinners geprüft wird (§2.2a). **Beide stehen im materialisierten Zustand** — sonst erzeugte ein nach dem Schnappschuss eintreffendes Ereignis mit mittlerer HLC beim vollen Fold einen Hinweis und beim Rebase keinen.
 
@@ -270,7 +304,9 @@ Je Feldpfad hält der Fold die **beiden höchsten** Beobachtungen nach §3.5. De
 ### §3.4 Die vier Konfliktklassen
 
 **LWW/Feld** — skalarer Wert; zwei Clients, die verschiedene Felder ändern, verlieren nichts.
-**LWW/Entität** — der Wert ist eine Struktur, die fachlich **eine** Meldung ist: Stärke-Tripel, Dienstpostenbesetzung, Sofortbedarf, `hierarchie`, `fuehrungskraft`, `funkrufname`, `taktischesZeichen`, die vier Listenfelder der Person, Zusage- und Erledigungsblock, Auflösungsziel, `abgeteiltVon`, `aufgegangenIn`. Ein Merge über die Bestandteile wäre nicht falsch gerechnet, sondern falsch gedacht.
+**LWW/Entität** — der Wert ist eine Struktur, die fachlich **eine** Meldung ist: Stärke-Tripel, Dienstpostenbesetzung, Sofortbedarf, `hierarchie`, `fuehrungskraft`, `funkrufname`, `taktischesZeichen`, die vier Listenfelder der Person, Zusage- und Erledigungsblock, Auflösungsziel, `meldung.uebernahme`. Ein Merge über die Bestandteile wäre nicht falsch gerechnet, sondern falsch gedacht.
+
+**Erstwert** — die Beobachtung mit der **kleinsten** HLC gilt, die übrigen stehen als `verdraengt` daneben (§3.3). Genau drei Felder: `einheit.abgeteiltVon`, `einheit.aufgegangenIn` und die Einträge in `einsatz.archivierungen`. Sie beschreiben einen Vorgang, der einmal geschieht und danach nicht durch einen späteren ersetzt wird — die Begründung steht je Feld in §5.4.2, §5.4.3 und §7.2. Für Anlagen gilt dieselbe Ordnung (§3.11), dort mit `verworfeneAnlagen` als Ablage.
 **Additiv** — Anlage einer Entität mit eigener Id oder ein unveränderlicher Eintrag; bei Kollision §3.11.
 **Regel** — fachliche Auflösung, im Katalog ausgeschrieben, entscheidet allein aus Zustand und Ereignis.
 
@@ -285,7 +321,13 @@ Zwei verschiedene Ereignisse mit derselben HLC sind ein Protokollbruch — den e
 
 ### §3.6 Idempotenz
 
-**Über die Ereignis-Id.** Ein Ereignis mit bereits gefalteter `id` wird verworfen, ohne Hinweis. Das ist P2.
+**Über die Ereignis-Id.** Ein Ereignis mit bereits gefalteter `id` **und gleichem Inhalt** wird verworfen, ohne Hinweis. Das ist P2.
+
+**Zwei verschiedene Ereignisse mit derselben Id** sind ein Protokollbruch — §3.3 der Speicherschicht verbietet die Doppelvergabe der Laufnummer. Erzeugt wird er trotzdem, und zwar vom geklonten Profil, dessen Injektion M0 verlangt: Es teilt `clientId` **und** Laufnummer, also nicht nur die HLC, sondern die ganze Id. „Das zweite wird verworfen" wäre hier eine Aussage über die **Eintreffreihenfolge** — der Fold wäre keine Mengenfunktion mehr, und zwar ausgerechnet im Zielfall der Fehlerinjektion.
+
+> **Regel.** Bei gleicher `id` und verschiedenem Inhalt gilt das Ereignis mit der kleineren HLC; bei gleicher HLC das mit der kleineren kanonischen Serialisierung. Das andere geht in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`.
+
+Damit ist die Auswahl eine Minimumsbildung über eine Menge und die Idempotenz reihenfolgeunabhängig. `fold.ts` prüft in M0.2 nur die Id (`gesehen.has`) und ist an dieser Stelle nachzuziehen — vermerkt als Prüffall T107.
 
 **Über einen fachlichen Schlüssel.** `EebMeldungEmpfangen` über `meldungId`, `AnhangHinzugefuegt` über `anhangId`. Es gilt §3.11 mit dem Schlüssel statt der Entitäts-Id; ein zweites Ereignis mit abweichendem Inhalt landet in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`. In den Inhaltsvergleich gehen nur die inhaltstragenden Felder ein (`bogen`, `einheitSchluessel`, `stand`, `signatur`), nicht `empfangenAm`, nicht `quelle`.
 
@@ -315,6 +357,8 @@ Jeder offene Bereich braucht deshalb einen **benannten Rückfall**, sonst wäre 
 
 Der letzte ist der einzige, an dem eine Foldregel hängt (`zaehltInGesamtstaerke`, §3.2), und er ist deshalb der einzige, dessen Rückfall etwas kostet: Ein unbekannter Typ zählt lieber zu viel als zu wenig. Die umgekehrte Wahl verlöre gemeldete Kräfte aus der Lage, und das ist in einer Führungsstelle der gefährlichere Fehler.
 
+**Freie Vokabularwerte** sind eine dritte Klasse und ausdrücklich **kein** offener Wertebereich: `fahrzeug.typ`, `funkrufname.kennwort`, `hierarchieEbene.art`, `person.funktionen`, `.fahrerlaubnisse`, `.zusatzqualifikationen`, `dienstposten.teileinheit` und `.funktion`. ZDM §3.2 führt sie als `VokabularWert`, das Vokabular ist aber nach §1.2 **Stammdatum außerhalb der Akte** und wird versioniert ausgeliefert. Ein Wert außerhalb der ausgelieferten Liste ist deshalb keine Unbekanntheit, sondern eine zulässige freie Eingabe — die Excel-Praxis „FW" für vierzig Ortsfeuerwehren lebt davon. Sie erzeugen **keinen** `unbekannterWert`, und der Zustand hängt nicht an der Vokabularfassung (dieselbe Begründung wie bei `bogen`, §3.2).
+
 **Geschlossen** bleiben die Bereiche, an denen eine Regel hängt, ohne dass ein Rückfall sinnvoll wäre: die `feld`-Auswahlen, `quelle` der Meldung, `meldeStatus`, `rolle`, `geschlecht`, `ernaehrung`, `personalErfassung`, `art` des Einsatzes, `schichtmodell`, `quelle` des Auftrags, `status` des Fahrzeugs. `uebernahmeZustand` steht **nicht** in dieser Liste, weil kein Ereignis ihn trägt — er ist abgeleitet (§5.8.1).
 
 **Der Wertebereich hängt am Feldpfad, nicht am Ereignis.** Der Katalog nennt je Feldpfad den Typ von `neu` (§5.1); daraus weiß der Fold, ob ein Wert zu prüfen ist und gegen welche Liste.
@@ -340,6 +384,7 @@ Damit das geht, muss **jedes Eingangsdatum eines Hinweises im Zustand stehen**. 
 | `abschnittAufgeloest` | die Einheit wurde in einen aufgelösten Abschnitt gelegt und steht im Ziel | §5.3.2 |
 | `zyklusAufgeloest` | eine Umhängung hätte einen Zyklus erzeugt | §5.3.1 |
 | `staerkeGeklemmt` | die wirksame Stärke wäre negativ geworden | §5.4.2 |
+| `strukturvorgangGegenWanduhr` | ein Summand zählt, obwohl seine Wanduhr vor der Meldung liegt | §5.4.2 |
 | `zusammenfuehrungSummeWeichtAb` | die gesehene Quellstärke passt nicht zur wirksamen | §5.4.3 |
 | `zusammenfuehrungKreis` | zwei Einheiten wären ineinander aufgegangen | §5.4.3 |
 | `moeglicheDublette` | mehrere Entitäten mit demselben fachlichen Schlüssel | §5.4.4 |
@@ -357,7 +402,7 @@ Auflage 4 verlangt sie am Schnappschuss; KONZEPT-SPEICHER.md §7.3 macht sie zur
 
 **Dieses Konzept setzt `foldVersion = 2`** (M0.2 hat 1). Die Erhöhung ist zwingend: §3.2 erweitert den Zustand, §3.8 führt neue Hinweisarten ein, und ein Schnappschuss aus M0.2 trüge weder `zweiter` noch die Eingangsdaten der Hinweise.
 
-**Regel für die Zukunft: Jede Änderung am Katalog erhöht `foldVersion`** — eine neue Ereignisart eingeschlossen. Die erste Fassung dieses Konzepts nahm eine neue Art aus, weil ein alter Client sie ohnehin nicht faltet. Das ist falsch, und zwar an der Stelle, an der es am teuersten ist: Zwei Clients verschiedener Programmversionen mit **derselben** Ereignismenge haben dann identische Versionsvektoren, aber verschiedene Zustände — der eine faltet die neue Art, der andere führt sie unter `unbekannt`. §7.6 der Speicherschicht ordnet das als „Fehler, der rote Ausgang, an dem M0 abbricht" ein, ohne dass er von einem echten Fold-Fehler zu unterscheiden wäre. Weil `mindestClientVersion` nach §8.7 dort ausdrücklich **Warnung und keine Sperre** ist, ist der gemischte Betrieb der geplante Normalfall und nicht der Ausnahmefall.
+**Regel für die Zukunft: Jede Änderung am Katalog erhöht `foldVersion`** — eine neue Ereignisart eingeschlossen, und **jede Änderung an einer der bekannten Werteliste der offenen Bereiche** ebenso. Der zweite Teil ist nicht selbstverständlich und deshalb ausgeschrieben: Ein zehnter Statuswert erzeugt bei einem Client mit der alten Liste den Hinweis `unbekannterWert` und bei einem mit der neuen keinen. Hinweise gehen in den `zustandsHash` (§3.8) — zwei Clients hätten bei identischer Ereignismenge identische Versionsvektoren und verschiedene Hashes, also den roten Ausgang. Für die Nutzlast bleibt der neue Wert gültig (`schemaVersion` steigt nicht, §4.4); vergleichbar sind die Zustände erst wieder, wenn beide Clients dieselbe Liste haben — und genau das sagt eine unterschiedliche `foldVersion` aus. Die erste Fassung dieses Konzepts nahm eine neue Art aus, weil ein alter Client sie ohnehin nicht faltet. Das ist falsch, und zwar an der Stelle, an der es am teuersten ist: Zwei Clients verschiedener Programmversionen mit **derselben** Ereignismenge haben dann identische Versionsvektoren, aber verschiedene Zustände — der eine faltet die neue Art, der andere führt sie unter `unbekannt`. §7.6 der Speicherschicht ordnet das als „Fehler, der rote Ausgang, an dem M0 abbricht" ein, ohne dass er von einem echten Fold-Fehler zu unterscheiden wäre. Weil `mindestClientVersion` nach §8.7 dort ausdrücklich **Warnung und keine Sperre** ist, ist der gemischte Betrieb der geplante Normalfall und nicht der Ausnahmefall.
 
 ### §3.10 Fremdreferenzen: die wartende Beobachtung
 
@@ -365,11 +410,11 @@ Ein Ereignis kann auf eine Entität verweisen, die dieser Client noch nicht hat.
 
 **Die eigene Anlage fehlt.** Beobachtungen zu dieser Entität stehen unter `wartend` und wirken unverändert, sobald die Anlage eintrifft. Solange sie fehlt: Die Entität erscheint **nicht** in ihrer Datensammlung und zählt nirgends — eine Schattenentität mit erfundenen Pflichtfeldern wäre eine Tatsachenbehauptung. Es entsteht **ein** `anlageFehlt` je Entität mit den Ids der wartenden Ereignisse. Aufgenommen wird wie sonst, je Feld die beiden höchsten (§3.3).
 
-**Ein Feld verweist auf eine fehlende Entität** (`Person.einheitId`, `Fahrzeug.einheitId`, `Auftrag.einheitId`, `Anforderung.abzuloesendeEinheitId`, `EtbEintrag.bezug`, `Meldung.einheitId`, `Anhang.einheitId`). Das Feld wird **gefaltet und behalten** — der Verweis ist der gemeldete Wert —, die Entität erscheint, und es entsteht `fremdreferenzUnbekannt`. Der Hinweis verschwindet ohne Zutun, sobald die verwiesene Entität eintrifft (§3.8).
+**Ein Feld verweist auf eine fehlende Entität** (`Person.einheitId`, `Fahrzeug.einheitId`, `Auftrag.einheitId`, `Anforderung.abzuloesendeEinheitId`, `EtbEintrag.bezug`, `Meldung.uebernahme.wert.einheitId`, `Anhang.einheitId`). Das Feld wird **gefaltet und behalten** — der Verweis ist der gemeldete Wert —, die Entität erscheint, und es entsteht `fremdreferenzUnbekannt`. Der Hinweis verschwindet ohne Zutun, sobald die verwiesene Entität eintrifft (§3.8).
 
 **Warum zwei Behandlungen.** Ohne eigene Anlage gibt es die Entität nicht; sie zu zeigen hieße, ihre Pflichtfelder zu erfinden. Ein unbekannter Verweis macht die Entität dagegen nicht ungültig — eine Person ohne bekannte Einheit ist eine reale Meldung.
 
-**Die beiden strukturellen Arten brauchen `wartend` nicht.** `EinheitAufgeteilt` setzt sein Ergebnis auf der **neuen** Einheit ab, die es selbst anlegt; `EinheitZusammengefuehrt` auf der **Quelle**. Beide Ziele sind Felder je einer Entität und fallen damit unter die beiden Fälle oben. Ein Delta an einer noch nicht angelegten Entität, das `wartend` gar nicht aufnehmen könnte, gibt es nach §5.4.2 nicht mehr.
+**Die strukturellen Arten setzen nur auf Entitäten ab, die es gibt oder die sie selbst anlegen.** `EinheitAufgeteilt` legt die neue Einheit selbst an; `EinheitZusammengefuehrt` schreibt auf die **Quelle**. Beides sind Felder je einer Entität und fallen unter die Fälle oben. Nur die übernommenen Fahrzeuge und Personen einer Aufteilung (§5.4.2) können unbekannt sein — für sie gilt `wartend` wie für jedes andere Feld. Ein Summand an einer noch nicht angelegten Entität, den `wartend` nicht aufnehmen könnte, entsteht nach §5.4.2 nicht mehr: Die Wirkung steht immer auf der Entität, die das Ereignis selbst beschreibt.
 
 **Die einzige Ausnahme ist der Abschnitt einer Einheit** (§5.3.3): Dort tritt der Auffang an die Stelle des Verweises, damit die Stärke einer real gemeldeten Einheit nicht aus der Gesamtstärke fällt. Das ist eine Zusicherung über Zahlen, keine über Verweise.
 
@@ -383,7 +428,7 @@ ZDM §4.2 nennt `EinsatzAngelegt` „erstes Ereignis der Akte; ein zweites wird 
 
 ### §3.12 Gefaltet, aber wirkungslos
 
-An vier Stellen wird ein Ereignis gefaltet, ohne den abgeleiteten Zustand zu ändern: ein Storno gegen eine bereits eingetroffene Anforderung und eine Zusage nach der Erledigung (§5.6.2), eine zweite Archivierung (§7.2), eine Zusammenführung, deren Quelle bereits aufgegangen ist (§5.4.3).
+An fünf Stellen wird ein Ereignis gefaltet, ohne den abgeleiteten Zustand zu ändern: ein Storno gegen eine bereits eingetroffene Anforderung und eine Zusage nach der Erledigung (§5.6.2), eine zweite Archivierung (§7.2), eine Zusammenführung, deren Quelle bereits aufgegangen ist (§5.4.3), und ein `EinheitWiederhergestellt` auf eine aufgegangene Einheit — sie zählt weiterhin nicht, weil ihre Zahlen im Ziel stecken.
 
 In allen entsteht `wirkungslosGegenTerminalzustand` mit der Ereignis-Id und dem Grund. Ohne ihn wäre die Lage von stillem Verwerfen nicht zu unterscheiden: Der Bediener hat gehandelt, das Ereignis steht in der Akte, und nichts ändert sich. Der gewöhnliche `vorherPasstNicht` greift nicht, weil das gesetzte Feld den erwarteten Wert annimmt — wirkungslos ist erst die **Ableitung** darüber.
 
@@ -407,7 +452,7 @@ Beim Lesen läuft eine Nutzlast der Version `n < k` durch die Upcaster `n → �
 
 ### §4.4 Startzustand
 
-**Alle Arten stehen bei `schemaVersion = 1`;** die Kette ist leer. Ein neuer **Wert** in einem offenen Bereich erhöht die Version nicht — das ist ihr Sinn. Ein neues **optionales** Feld ebenso wenig (§3.7 Punkt 3). Ein neues **Pflichtfeld** erhöht sie. Unabhängig davon erhöht jede Katalogänderung `foldVersion` (§3.9); die beiden Zahlen messen Verschiedenes: `schemaVersion` die Lesbarkeit einer Nutzlast, `foldVersion` die Vergleichbarkeit zweier Zustände.
+**Alle Arten stehen bei `schemaVersion = 1`;** die Kette ist leer. Das gilt auch gegenüber M0.2, obwohl `EinheitGemeldet` dort weniger Pflichtfelder hatte (`hierarchie`, `reihenfolge`, `istFuehrungDesAbschnitts` kommen hinzu): Die Akten aus M0 sind Simulationsdaten und werden nicht weitergeführt — es gibt keinen Bestand, für den ein Upcaster nötig wäre. Ein M0.2-Ereignis fiele nach §3.7 Punkt 4 unter „ungültige Nutzlast"; das ist richtig so und keine Lücke. Ein neuer **Wert** in einem offenen Bereich erhöht die Version nicht — das ist ihr Sinn. Ein neues **optionales** Feld ebenso wenig (§3.7 Punkt 3). Ein neues **Pflichtfeld** erhöht sie. Unabhängig davon erhöht jede Katalogänderung `foldVersion` (§3.9); die beiden Zahlen messen Verschiedenes: `schemaVersion` die Lesbarkeit einer Nutzlast, `foldVersion` die Vergleichbarkeit zweier Zustände.
 
 ---
 
@@ -477,7 +522,7 @@ const EinsatzBeendet              = z.object({ einsatzId: zId })
 const EinsatzWiedereroeffnet      = z.object({ einsatzId: zId })
 const EinsatzArchiviert           = z.object({ einsatzId: zId, zeitpunkt: zZeitpunkt,
                                                snapshotHash: z.string().length(64) })
-const ArchivierungZurueckgenommen = z.object({ einsatzId: zId, archivierungEreignisId: zId })
+const ArchivierungZurueckgenommen = z.object({ einsatzId: zId, archivierungEreignisId: zId })   // `grund` Pflicht (§2.4)
 ```
 
 | Typ | Form | Feldpfad / Wert | Klasse | Undo |
@@ -575,15 +620,15 @@ const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" }
 // `zerlegeEreignisId` zu Recht zurückwiese (§3.3 Speicher).
 
 AUFFANG = { id: "AUFFANG", systemAbschnitt: true,
-  name: { wert: "Auffang", hlc: SYSTEM_HLC, wanduhr: "" },
-  typ:  { wert: "EINSATZORT", hlc: SYSTEM_HLC, wanduhr: "" },
-  reihenfolge: { wert: 0, hlc: SYSTEM_HLC, wanduhr: "" },
+  name: { wert: "Auffang", hlc: SYSTEM_HLC },
+  typ:  { wert: "EINSATZORT", hlc: SYSTEM_HLC },
+  reihenfolge: { wert: 0, hlc: SYSTEM_HLC },
   verworfeneAnlagen: [], zaehltInGesamtstaerke: true }
 
 ARCHIV = { id: "ARCHIV", systemAbschnitt: true,
-  name: { wert: "Einsatz beendet", hlc: SYSTEM_HLC, wanduhr: "" },
-  typ:  { wert: "ARCHIV", hlc: SYSTEM_HLC, wanduhr: "" },
-  reihenfolge: { wert: 999999, hlc: SYSTEM_HLC, wanduhr: "" },
+  name: { wert: "Einsatz beendet", hlc: SYSTEM_HLC },
+  typ:  { wert: "ARCHIV", hlc: SYSTEM_HLC },
+  reihenfolge: { wert: 999999, hlc: SYSTEM_HLC },
   verworfeneAnlagen: [], zaehltInGesamtstaerke: false }
 ```
 
@@ -659,7 +704,7 @@ const EinheitWiederhergestellt = z.object({ einheitId: zId })
 | `LogistikGesetzt` | a | `einheit/<id>/logistik/<feld>` · `number \| null` | LWW/Feld | frei |
 | `SofortbedarfGesetzt` | a | `einheit/<id>/sofortbedarf` · Block | LWW/Entität | frei |
 | `PsaBedarfGesetzt` | a | `einheit/<id>/psaSaetzeProTag` · `number \| null` | LWW/Feld | frei |
-| `EinheitAufgeteilt` | c | neue Einheit: Anlage **und** `einheit/<neueId>/abgeteiltVon` | Regel §5.4.2 | strukturell → `EinheitZusammengefuehrt` |
+| `EinheitAufgeteilt` | c | neue Einheit: Anlage einschließlich `abgeteiltVon`; je übernommenem Fahrzeug `fahrzeug/<id>/einheitId`, je Person `person/<id>/einheitId` | Regel §5.4.2 | strukturell → `EinheitZusammengefuehrt` |
 | `EinheitZusammengefuehrt` | c | je Quelle `einheit/<quellId>/aufgegangenIn` · `{zielEinheitId, gesehen}` | Regel §5.4.3 | strukturell → `EinheitAufgeteilt` |
 | `EinheitEntfernt` | a | `einheit/<id>/entfernt` · `true` | LWW/Feld, Wirkung §5.4.5 | frei → `EinheitWiederhergestellt` |
 | `EinheitWiederhergestellt` | a | `einheit/<id>/entfernt` · `false` | LWW/Feld | — |
@@ -681,9 +726,13 @@ LWW über das ganze Tripel, nicht je Rolle. Die drei Zahlen sind eine Meldung (�
 **Wo die Verringerung steht.** Nicht an der Quelle, sondern an der **neuen Einheit**: Sie trägt `abgeteiltVon = { quellEinheitId, abgeteilteStaerke }` als gewöhnliches Feld (LWW/Entität) mit der HLC der Aufteilung. Die Quelle hat ein unverändertes `staerke`-Feld.
 
 > **Wirksame Stärke einer Einheit `u`** = `u.staerke.wert`
-> − Σ `v.abgeteiltVon.wert.abgeteilteStaerke` über alle `v` mit `v.abgeteiltVon.wert.quellEinheitId = u` und `v.abgeteiltVon.hlc > u.staerke.hlc`
-> + Σ `v.aufgegangenIn.wert.gesehen` über alle `v` mit wirksamem `v.aufgegangenIn.wert.zielEinheitId = u` und `v.aufgegangenIn.hlc > u.staerke.hlc`
+> − Σ `v.abgeteiltVon.wert.abgeteilteStaerke` über alle `v` mit `v.abgeteiltVon.wert.quellEinheitId = u` und **`v` zählt gegen die Basis** (siehe unten)
+> + Σ `v.aufgegangenIn.wert.gesehen` über alle `v` mit **wirksamem** `v.aufgegangenIn.wert.zielEinheitId = u` und **`v` zählt gegen die Basis**
 > je Rolle, geklemmt bei 0.
+
+> **„Zählt gegen die Basis"** heißt: Die Basisbeobachtung von `u.staerke` stammt aus einem **`StaerkeGeaendert` oder einer EEB-Übernahme** und hat eine **kleinere** HLC als der Vorgang — oder die Basis stammt aus einer **Anlage**. Eine Anlage unterdrückt **nie** einen Summanden.
+
+**Warum die Anlage nie unterdrückt.** Sie nennt die Stärke, mit der eine Einheit in die Lage kommt; sie kann keinen Vorgang enthalten, der eine Einheit betrifft, die es vorher nicht gab. Die erste Fassung dieser Regel verglich gegen jede absolute Beobachtung und verlor damit einen realen Fall: Wird eine Einheit X (0/0/10) in ein Ziel Z zusammengeführt, das dieser Client noch gar nicht kennt (HLC 400), und trifft `EinheitGemeldet(Z, 0/0/3)` später mit HLC 500 ein, fiele der Summand aus — zehn gemeldete Kräfte wären weg, ohne Hinweis. §3.10 lässt genau diese Reihenfolge ausdrücklich zu.
 
 **Warum das die richtige Form ist — vier Eigenschaften auf einmal:**
 
@@ -696,9 +745,25 @@ LWW über das ganze Tripel, nicht je Rolle. Die drei Zahlen sind eine Meldung (�
 
 **Berechnung und Terminierung.** Die Summe über „alle `v`, die auf `u` zeigen" braucht einen Index über `abgeteiltVon.quellEinheitId` und `aufgegangenIn.zielEinheitId` — ein Durchlauf, danach ist jede Einheit in konstanter Zeit fertig. Die Prüfung in §5.4.3 braucht die wirksame Stärke der Quelle; die Abhängigkeit folgt den `aufgegangenIn`-Kanten, die nach der Kreisauflösung (§5.4.3) ein Wald sind. Berechnet wird in topologischer Ordnung dieses Waldes, also linear.
 
+**`abgeteilteStaerke` und `neueEinheit.staerke` müssen gleich sein.** Das Schema prüft es (`z.refine`); eine Nutzlast, die beides verschieden füllt, ist ungültig (§3.7 Punkt 4). Ohne die Bindung entstünden Kräfte aus dem Nichts: Quelle minus 3, neue Einheit plus 5, und kein Hinweis, weil nichts negativ wird und `gesehen` stimmt.
+
+Die beiden Werte bleiben trotzdem getrennt geführt, und das hat eine Folge, die benannt gehört: **Eine spätere Korrektur der Stärke an der neuen Einheit ändert den Abzug bei der Quelle nicht.** `abgeteiltVon.abgeteilteStaerke` steht fest. Wer sich beim Abteilen verzählt hat, korrigiert **beide** Seiten — an der neuen Einheit mit `StaerkeGeaendert`, an der Quelle ebenso. Das ist gewollt: Der Abzug ist die Meldung „diese drei sind gegangen", keine Rechnung, die sich nachträglich mitzieht.
+
 **Die neue Einheit ist eine vollständige Anlage.** `neueEinheit` trägt alle Pflichtfelder aus ZDM §3.2; der aufteilende Client kennt die Quelle und füllt sie vor, der Bediener bestätigt. Ohne diese Festlegung müsste der Fold Felder von der Quelle kopieren, und **welchen Stand** er kopierte, hinge vom Zeitpunkt ab — nicht rebase-fest. `abgeteiltVonId` aus ZDM §3.2 ist damit `abgeteiltVon.wert.quellEinheitId`.
 
+**Die übernommenen Fahrzeuge und Personen wechseln mit.** `uebernommeneFahrzeugIds` und `uebernommenePersonIds` setzen `fahrzeug/<id>/einheitId` beziehungsweise `person/<id>/einheitId` auf die neue Einheit — je betroffener Entität ein Feld, mit der HLC der Aufteilung und mit dem gesehenen Vorher-Wert (der Quelle). Damit ist `EinheitAufgeteilt` doch ein Ereignis der Form (c) (§2.2), und die Regel aus §3.10 gilt: Ist ein Fahrzeug diesem Client noch nicht bekannt, wartet die Beobachtung.
+
+Ohne diese Festlegung wären die beiden Listen dekorativ, und die Fahrzeugzuordnung ginge bei jeder Aufteilung verloren — die stillere und deshalb wahrscheinlichere Auslegung im Code.
+
 **Klemmen bei null.** Wird eine Rolle negativ, gilt 0 und es entsteht `staerkeGeklemmt` mit dem rechnerischen Wert.
+
+**Der Uhrenwiderspruch — die eine Lage, in der die HLC-Schranke nicht trägt.** Die Schranke ist ein Stellvertreter für Kausalität: Wer nach einem Vorgang meldet, hat ihn berücksichtigt, und seine HLC liegt darüber, weil er ihn gefaltet hat (§3.2 der Speicherschicht schreibt die eigene Uhr beim Lesen fremder Ereignisse fort). **Dieser Stellvertreter versagt an genau einer Stelle,** und die Speicherschicht benennt sie selbst: Eine fremde HLC, die mehr als fünf Minuten vorausläuft, wird **nicht** übernommen — ein Bediener, der den fremden Eintrag auf dem Schirm sieht und daraufhin meldet, schreibt dann ein Ereignis, das in der HLC-Ordnung **vor** dem gesehenen liegt. Seine Meldung enthält den Vorgang, die Schranke zählt ihn trotzdem, und die Stärke steht zweimal in der Lage.
+
+Erkennbar ist die Lage, weil `wanduhr` je Beobachtung im Zustand steht (§3.2):
+
+> **Regel.** Zählt ein Summand, weil seine HLC über der Basis liegt, während seine `wanduhr` **vor** der der Basis liegt, widersprechen sich technische Ordnung und Wanduhr. Der Summand zählt (die HLC entscheidet, §3.5), und es entsteht `strukturvorgangGegenWanduhr` mit beiden Zeiten und beiden Ereignis-Ids.
+
+Damit ist der Fall nicht behoben — beheben kann ihn nur der Bediener, der die Zahlen nachrechnet —, aber er ist **sichtbar**, und P4 fällt nicht mehr still. §8.1 nennt ihn als dritte Bedingung.
 
 **T20:** Zwei nebenläufige Aufteilungen derselben Quelle (je 0/1/3) aus 1/4/12 ⇒ Quelle 1/2/6, zwei neue Einheiten, Gesamtstärke unverändert, jede Permutation. **T21:** `StaerkeGeaendert` (9) nach Aufteilung (5) ⇒ der Abzug wirkt nicht mehr. **T22:** Aufteilung (9) nach Meldung (5) ⇒ er wirkt. **T23:** Abgeteilte Stärke größer als die Quelle ⇒ 0/0/0, `staerkeGeklemmt`. **T24 (Rebase):** T22, Schnappschuss, danach `StaerkeGeaendert` (3) ⇒ wie voller Fold. **T25 (Idempotenz über den Vorgang):** Zwei inhaltsgleiche `EinheitAufgeteilt` mit derselben `neueEinheitId`, verschiedene Ereignis-Ids ⇒ **ein** Abzug, Gesamtstärke unverändert.
 
@@ -706,7 +771,7 @@ LWW über das ganze Tripel, nicht je Rolle. Die drei Zahlen sind eine Meldung (�
 
 `EinheitZusammengefuehrt` setzt je Quelle `aufgegangenIn = { zielEinheitId, gesehen }`. Eine aufgegangene Einheit bleibt im Zustand, `zaehlt` ist falsch, ihre Zahlen stecken im Ziel (§5.4.2).
 
-**`aufgegangenIn` ist monoton: die kleinste HLC gilt.** Anders als jedes andere Feld gewinnt hier nicht die höchste, sondern die **erste** Zusammenführung; jede weitere ist wirkungslos und erzeugt `wirkungslosGegenTerminalzustand`.
+**`aufgegangenIn` ist ein Feld der Klasse Erstwert (§3.4): die kleinste HLC gilt.** Nicht die höchste, sondern die **erste** Zusammenführung gewinnt; jede weitere steht als `verdraengt` daneben und erzeugt `wirkungslosGegenTerminalzustand`. Der Zustand führt sie mit, weil ohne sie bei drei Zusammenführungen derselben Quelle der Gewinner aus dem Akkumulator fiele (§3.3).
 
 Das ist die entscheidende Festlegung, und sie ist teuer erkauft. Mit gewöhnlichem LWW ließe sich eine Quelle **umlenken**: X geht in Z1 auf, jemand meldet Z1 danach absolut (die Meldung enthält X), und eine spätere Zusammenführung schickt X nach Z2. Z1 behielte X in seiner Basis, Z2 bekäme X als Summanden — X zählte zweimal, ohne dass ein Hinweis entstünde, weil beide Meldungen für sich stimmig sind. Mit der Monotonie kann das nicht auftreten: Was aufgegangen ist, bleibt, wo es aufging. Wer es doch bewegen will, nimmt die Zusammenführung zurück — dafür gibt es die strukturelle Rücknahme `EinheitAufgeteilt` (U2), und die ist sichtbar.
 
@@ -900,7 +965,7 @@ const EebMeldungZugeordnet  = z.object({ meldungId: zId })
 const EebMeldungUebernommen = z.object({ meldungId: zId, einheitId: zId,
                                          uebernommeneFelder: z.array(zPflichttext) })
 const EebMeldungUebernahmeZurueckgenommen = z.object({ meldungId: zId })
-const EebMeldungAbgelehnt   = z.object({ meldungId: zId })   // `grund` Pflicht
+const EebMeldungAbgelehnt   = z.object({ meldungId: zId })   // `grund` Pflicht (§2.4)
 const EebMeldeStatusGesetzt = z.object({ meldungId: zId })
 
 const AnhangHinzugefuegt = z.object({ anhangId: z.string().length(64),
@@ -915,7 +980,8 @@ const AnhangWiederhergestellt = z.object({ anhangId: z.string().length(64) })
 | `EebMeldungEmpfangen` | b | Anlage über `meldungId` | Regel §3.6, §3.11 | **nein** |
 | `EebMeldungZugeordnet` | a | `meldung/<id>/einheitSchluessel` · `string` | LWW/Feld | frei |
 | `EebMeldungUebernommen` | a | `meldung/<id>/uebernahme` · `{einheitId, uebernommeneFelder}` | LWW/Entität | frei → `…Zurueckgenommen` |
-| `EebMeldungAbgelehnt` | a | `meldung/<id>/uebernahme` · `null` mit Ablehnungsvermerk | LWW/Entität | frei |
+| `EebMeldungUebernahmeZurueckgenommen` | a | `meldung/<id>/uebernahme` · `null` | LWW/Entität | — |
+| `EebMeldungAbgelehnt` | a | `meldung/<id>/abgelehnt` · `true` | LWW/Feld | frei, dieselbe Art mit `false` |
 | `EebMeldeStatusGesetzt` | a | `meldung/<id>/meldeStatus` · geschlossener Bereich | LWW/Feld | frei |
 | `AnhangHinzugefuegt` | b | Anlage über `anhangId` | Regel §3.6, §3.11 | frei → `AnhangEntfernt` |
 | `AnhangEntfernt` / `…Wiederhergestellt` | a | `anhang/<id>/entfernt` · `boolean` | LWW/Feld | frei |
@@ -924,18 +990,22 @@ const AnhangWiederhergestellt = z.object({ anhangId: z.string().length(64) })
 
 `EebMeldungEmpfangen` ist **nicht rücknehmbar** und über `meldungId` idempotent. Die Meldung ist unveränderlich: Eine Korrektur ist eine **neue** Meldung mit eigener `meldungId` (Revision), Löschen ist verboten. Wer eine Meldung nicht will, lehnt sie ab — sie bleibt sichtbar.
 
+**`meldungId` ist der Inhalts-Hash des Bogens** (`bogenInhaltsId(bogen)`, ZDM §3.2), nicht eine frei vergebene Kennung. Darauf beruht die Zusicherung, dass zwei Meldeköpfe, die denselben QR scannen, **eine** Meldung erzeugen. Das Schema kann es nicht prüfen — der Fold hat den Codec nicht, `@bos/eeb-format` hat ihn —, und deshalb steht es hier als Pflicht des **Schreibers**. Ein Client, der den Codec ohnehin geladen hat, darf nachrechnen und bei Abweichung warnen; der Fold tut es nicht. Der Inhaltsvergleich aus §3.6 bleibt trotzdem nötig: Er fängt die gefälschte oder mit einer anderen Codec-Fassung berechnete Id.
+
 `bogen` steht als `z.unknown()`: Die Struktur gehört `@bos/eeb-format` und wird dort versioniert. Sie hier zweitzubeschreiben führte zwei Wahrheiten über dasselbe Format; die Prüfung leistet der Codec. Dieser Katalog legt fest, dass der Bogen **unverändert** mitgeführt wird.
 
-**Fünf Merkmale der Meldung sind abgeleitet, nicht gesetzt** (§3.2): `zugEtikett`, `teilEtikett`, `stammtVon` und `aufgegangenIn` folgen aus `bogen` und aus den Aufteilungs- und Zusammenführungsfeldern der zugehörigen Einheit; `uebernahmeZustand` folgt aus `uebernahme` und der Revisionsreihe:
+**Ablehnung und Rücknahme sind zwei Felder, nicht eines.** Die erste Fassung setzte beide auf `uebernahme = null` — damit wäre eine abgelehnte Meldung von einer nie übernommenen nicht zu unterscheiden, und `ABGELEHNT` aus dem Zustand nicht entscheidbar. `abgelehnt` ist deshalb ein eigenes LWW-Feld; die Meldung bleibt nach EXH F-E2 in beiden Fällen sichtbar.
+
+**Ein Merkmal der Meldung ist abgeleitet** (§3.2): `uebernahmeZustand` folgt aus `abgelehnt`, `uebernahme` und der Revisionsreihe:
 
 ```
-uebernahmeZustand = abgelehnt                        ? ABGELEHNT
-                  : keine Übernahme                  ? NEU
+uebernahmeZustand = abgelehnt.wert === true          ? ABGELEHNT
+                  : uebernahme fehlt oder null       ? NEU
                   : jüngere Revision derselben Reihe ? GEAENDERT
                   :                                    UEBERNOMMEN
 ```
 
-„Jünger" heißt nach **`stand`**, nicht nach HLC (§2.6). Ein nachgescannter Papierbogen von gestern hat die höhere HLC und den älteren `stand`; nach HLC geordnet gälte er als aktuell, und die Lage zeigte den Stand von gestern.
+**Eine Revisionsreihe ist die Menge der Meldungen mit demselben gefalteten `einheitSchluessel`** — dem Feld der Meldung, das `EebMeldungZugeordnet` korrigieren kann, nicht dem Wert aus dem Bogen. Damit ist die Reihe aus dem Zustand bestimmbar und folgt einer Korrektur der Zuordnung. „Jünger" heißt innerhalb der Reihe nach **`stand`**, nicht nach HLC (§2.6). Ein nachgescannter Papierbogen von gestern hat die höhere HLC und den älteren `stand`; nach HLC geordnet gälte er als aktuell, und die Lage zeigte den Stand von gestern.
 
 **T52:** Zwei `EebMeldungEmpfangen`, gleiche `meldungId`, gleicher Bogen ⇒ eine Meldung, kein Hinweis. **T53:** Gleiche `meldungId`, abweichender Bogen ⇒ eine Meldung (kleinste HLC), `inhaltsschluesselWidersprochen`, verworfener Inhalt in `verworfeneSchluessel`. **T54:** Abweichendes `empfangenAm` ⇒ eine Meldung, **kein** Hinweis. **T55:** Zweite Revision mit jüngerem `stand` nach Übernahme ⇒ `GEAENDERT`. **T56:** Zweite Revision mit **älterem** `stand`, aber höherer HLC ⇒ **nicht** `GEAENDERT`.
 
@@ -965,7 +1035,7 @@ const KorrekturVon = z.object({ korrigiertesEreignisId: zId, zielTyp: zPflichtte
 | `EtbEintragBerichtigt` | b | Anlage | additiv, §3.11 | **nein** |
 | `KorrekturVon` | wie `zielTyp` | der Feldpfad von `zielTyp` | wie `zielTyp` | **nein** |
 
-**`EtbEintragBerichtigt` ist die dreizehnte Anlageart** (§3.11) und hat eine eigene `etbId`. Zwei Berichtigungen derselben Id fallen damit unter dieselbe Regel wie jede andere Anlage; ohne sie hinge das Verhalten an der Wahl des Implementierers. `berichtigtEintragId` benennt die berichtigte Zeile **unabhängig davon, ob dieser Client sie hat** — Grabsteinregel wie in §7.2.
+**`EtbEintragBerichtigt` gehört zu den dreizehn Anlagearten** (§3.11) und hat eine eigene `etbId`. Zwei Berichtigungen derselben Id fallen damit unter dieselbe Regel wie jede andere Anlage; ohne sie hinge das Verhalten an der Wahl des Implementierers. `berichtigtEintragId` benennt die berichtigte Zeile **unabhängig davon, ob dieser Client sie hat** — Grabsteinregel wie in §7.2.
 
 #### §5.9.1 Das Einsatztagebuch ist eine Projektion des Ereignisstroms
 
@@ -1043,7 +1113,7 @@ Ein zurückgenommenes Ereignis wird durch **erneutes Ausführen der Handlung** w
 
 Kompensiert A ein Ereignis, das B zwischenzeitlich überschrieben hat, gilt weiterhin LWW: **Die Kompensation gewinnt, wenn ihre HLC höher ist.** Zusätzlich entsteht `undoTrifftFremdenStand` mit Gewinner, verdrängtem Wert und der Id des Originals. Eine eigene Hinweisart und nicht `vorherPasstNicht`, weil der Bediener nicht ein Feld gesetzt, sondern „rückgängig" gedrückt hat und die Oberfläche daraus einen anderen Satz bauen muss.
 
-Der Hinweis wird nach §3.8 bei jeder Materialisierung neu gerechnet: Er steht genau dann, wenn der **Gewinner** des Feldes ein `undoOf` trägt und der Zweitplatzierte von einem anderen Client stammt. Verdrängt später ein viertes Ereignis den Undo vom Gewinnerplatz, fällt er von selbst weg.
+Der Hinweis wird nach §3.8 bei jeder Materialisierung neu gerechnet. Er steht genau dann, wenn **alle drei** Bedingungen gelten: Der Gewinner des Feldes trägt ein `undoOf`, der Zweitplatzierte stammt von einem anderen Client, **und die beiden Werte sind verschieden**. Die dritte Bedingung ist die, an der zwei Rücknahmen desselben Ereignisses auseinandergehen (unten); ohne sie erzeugte jede doppelte Rücknahme einen Hinweis, obwohl niemandes Arbeit verdrängt wurde. `fold.ts` unterdrückt bei `ohneVorherWertVerdraengt` seit M0.2 nach demselben Muster über `wertGleich`. Verdrängt später ein viertes Ereignis den Undo vom Gewinnerplatz, fällt er von selbst weg.
 
 **Zwei Clients nehmen dasselbe Ereignis zurück.** Beide schreiben eine Kompensation mit demselben `undoOf` und, weil beide aus demselben `vorher` stammen, demselben Wert. LWW entscheidet; das Ergebnis ist derselbe Wert, und weil die Werte gleich sind, entsteht **kein** Hinweis. Sahen sie verschiedene Stände, unterscheiden sich die Werte, und es gilt LWW mit Hinweis.
 
@@ -1067,7 +1137,10 @@ Es kann mehr als ein `EinsatzArchiviert` geben. Die Ableitung:
 
 * Der Zustand führt `archivierungen` als Abbildung von **Ereignis-Id** auf `{ gilt, hlc, zeitpunkt?, snapshotHash?, zurueckgenommenDurch? }`. `EinsatzArchiviert` legt den Eintrag unter seiner **eigenen** Id mit `gilt = true` an; `ArchivierungZurueckgenommen` setzt den Eintrag unter der von ihm **benannten** Id auf `gilt = false`.
 * **Der Eintrag entsteht unabhängig davon, ob das benannte Ereignis bekannt ist.** Trifft die Rücknahme vor der Archivierung ein, steht der Eintrag als **Grabstein** mit `false` da; die später eintreffende Archivierung findet ihn vor.
-* **`gilt` ist monoton: einmal `false`, immer `false`** — unabhängig von den HLC beider Ereignisse. Kein LWW.
+* **`gilt` ist monoton: einmal `false`, immer `false`** — unabhängig von den HLC beider Ereignisse. Kein LWW. Es ist ein Feld der Klasse Erstwert (§3.4): Was zuerst geschah, bleibt.
+* **Eine Rücknahme wirkt nur auf eine Archivierung mit kleinerer HLC.** Man kann nur zurücknehmen, was es schon gab. Ohne diese Bedingung vergiftete eine Rücknahme auf eine noch nicht vergebene Id (Vertipper, verlorenes Segment) diese Id dauerhaft: Ereignis-Ids sind nach §3.3 der Speicherschicht deterministisch (`clientId:laufnummer`), und erreichte derselbe Client später diese Laufnummer mit seinem `EinsatzArchiviert`, wäre genau diese Archivierung tot geboren — der Bediener klickt, nichts geschieht, der Grund steht nirgends.
+* **`zurueckgenommenDurch` ist eine Liste,** aufsteigend nach Ereignis-Id sortiert. Zwei Clients können dieselbe Archivierung gleichzeitig zurücknehmen; ein einwertiges Feld müsste zwischen ihnen wählen, und die Wahl ginge in den `zustandsHash` ein.
+* **`hlc` und `wanduhr` des Eintrags fehlen, solange nur der Grabstein vorliegt.** Sie kommen mit dem Archivierungsereignis. Ein erfundener Anfangswert stünde im Hash (§3.2, „Ein nie gesetztes Feld fehlt").
 * **Maßgeblich** ist unter allen Einträgen mit `gilt = true` der mit der **kleinsten** HLC des Archivierungsereignisses; bei Gleichstand die kleinere Id. Gibt es keinen, ist der Einsatz nicht archiviert.
 
 **Warum monoton und nicht LWW.** Mit LWW hinge die Wirkung einer Rücknahme an der Uhr des archivierenden Clients. KONZEPT-SPEICHER.md §3.2 übernimmt eine fremde HLC nicht, wenn sie mehr als fünf Minuten vorausläuft — der Fall, den die Fehlerinjektion von M0 ausdrücklich erzeugt. Archiviert A mit einer verstellten Uhr bei HLC 9 und nimmt B es daraufhin bei HLC 5 zurück, gewänne unter LWW die Archivierung: Die Rücknahme wäre wirkungslos, es entstünde **kein** Hinweis (das Feld hatte tatsächlich den erwarteten Wert), und die Speicherseite entfernte den Marker nicht. Ein Bedienschritt mit Pflicht-`grund` verpuffte still — gegen §1.3 Satz 3.
@@ -1110,8 +1183,8 @@ Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv
 |---|---|---|
 | **P1 Kommutativität** | Jede Permutation einer Ereignismenge ergibt denselben Zustand, einschließlich der Hinweise | keine. Gilt für alle Arten, auch die der Klasse „Regel" |
 | **P2 Idempotenz** | Ein doppelt gefaltetes Ereignis ändert den Zustand nicht | keine (§3.6) |
-| **P3 Konvergenz** | Zwei Clients mit derselben Ereignismenge **und derselben `foldVersion`** haben denselben Zustand | dieselbe Menge und dieselbe Fold-Fassung (§3.9). Bei Quarantäne sehen zwei Clients verschiedene Mengen — KONZEPT-SPEICHER.md §8.6.1 |
-| **P4 Summenerhaltung** | Aufteilen und Zusammenführen in beliebiger Reihenfolge lassen die Gesamtstärke unverändert | **bedingt:** alle `gesehen` entsprechen den wirksamen Stärken (§5.4.3) und nichts wurde geklemmt (§5.4.2). Beide Ausnahmen erzeugen einen Hinweis |
+| **P3 Konvergenz** | Zwei Clients mit derselben Ereignismenge **und derselben `foldVersion`** haben denselben Zustand | dieselbe Menge und dieselbe Fold-Fassung — die nach §3.9 auch die bekannten Wertelisten umfasst. Bei Quarantäne sehen zwei Clients verschiedene Mengen (KONZEPT-SPEICHER.md §8.6.1) |
+| **P4 Summenerhaltung** | Aufteilen und Zusammenführen in beliebiger Reihenfolge lassen die Gesamtstärke unverändert | **bedingt:** alle `gesehen` entsprechen den wirksamen Stärken (§5.4.3), nichts wurde geklemmt, und kein Summand steht im Uhrenwiderspruch (§5.4.2). Alle drei Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar |
 | **P5 Kein Waisenzustand** | Keine **Einheit** steht in einem nicht existierenden oder aufgelösten Abschnitt | keine. Für Fahrzeuge gilt die schwächere Regel aus §5.3.3, ausdrücklich nicht P5 |
 | **P6 Monotone Zustandsmaschine** | `anforderung.zustand` geht nie von `EINGETROFFEN` zurück | **bedingt:** über einer Menge ohne `ErledigungZurueckgenommen` (§5.6.2) |
 | **P7 Rebase-Treue** | Der Zustand aus „Schnappschuss laden, Rest falten" ist gleich dem aus „alles falten" — für jeden Schnitt | keine. Die formale Fassung von §3.1 |
@@ -1136,7 +1209,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 
 **Erzwungene Modell-Invarianten.** Weder „höchstens eine Führungsstelle ohne Elternabschnitt" (§5.3.4) noch die Schichtpflicht (§5.7) noch ein Format der Anforderungs-Kennung (§5.6.1) werden erzwungen. Alle drei sind Warnungen der Oberfläche.
 
-**Drei Zustandsteile ohne harte Schranke** (§3.2): `verworfeneAnlagen` und `verworfeneSchluessel` wachsen mit doppelt vergebenen Ids — im Normalbetrieb null, im Klon- oder Migrationsfall nicht; `archivierungen` bekommt je Rücknahme auf eine unbekannte Id einen dauerhaften Eintrag; `wartend` wächst mit den Entitäten, deren Anlage nie kommt (verlorenes Segment, Quarantäne). Alle drei sind klein und in der Praxis leer, aber keine ist nachweisbar beschränkt. Ein Client mit Quarantäne sammelt den dritten systematisch.
+**Vier Zustandsteile ohne harte Schranke** (§3.2): die `verdraengt`-Listen der drei Erstwert-Felder wachsen mit der Zahl wiederholter Vorgänge an derselben Entität — im Normalbetrieb null, bei wiederholtem Zusammenführen derselben Quelle nicht; `verworfeneAnlagen` und `verworfeneSchluessel` wachsen mit doppelt vergebenen Ids — im Normalbetrieb null, im Klon- oder Migrationsfall nicht; `archivierungen` bekommt je Rücknahme auf eine unbekannte Id einen dauerhaften Eintrag; `wartend` wächst mit den Entitäten, deren Anlage nie kommt (verlorenes Segment, Quarantäne). Alle drei sind klein und in der Praxis leer, aber keine ist nachweisbar beschränkt. Ein Client mit Quarantäne sammelt den dritten systematisch.
 
 **Reihenfolge innerhalb einer Wanduhr-Sekunde.** `wanduhr` ordnet nichts. Zwei Ereignisse mit derselben fachlichen Meldezeit und verschiedener HLC werden nach HLC geordnet.
 
@@ -1148,10 +1221,10 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 |---|---|---|
 | 4 · Mengenfold mit Rebase; HLC je Feld; Schnappschüsse tragen `foldVersion` | §3.1 bis §3.3, §3.9 | **Vollständig**, alle drei Teile. §3.9 setzt `foldVersion = 2` und nennt die Regel, wann sie steigt — einschließlich einer neuen Ereignisart |
 | 6 · Vorher-Wert an jedem setzenden Ereignis; Abweichung ⇒ Hinweis | §2.2, §2.3, §3.8 | **Vollständig.** Drei Formen statt „drei Sätze ohne Ausnahme"; §2.3 nennt die Feldpfade der Anlagen unter ihren **Zustands**namen, sodass Anlage und Änderung dasselbe Feld treffen |
-| 10 · Zyklusregel; relative Stärkeänderung; Auffangregel | §5.3.1, §5.4.2, §5.3.3 | **Vollständig.** Die relative Änderung steht als Feld an der Entität, die sie erzeugt |
+| 10 · Zyklusregel; relative Stärkeänderung; **Auffangregel für aufgelöste Abschnitte** | §5.3.1, §5.4.2, §5.3.3 | **Erfüllt, aber mit einer begründeten Umkehrung:** §5.3.3 gibt dem aufgelösten Abschnitt **nicht** den Auffang, sondern das benannte Ziel der Auflösung; der Auffang bleibt dem *unbekannten* Abschnitt. Die Auflage nennt den umgekehrten Fall. Als Auslegung 14 in §10 geführt |
 | 11 · Undo mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo | §6 | **Vollständig.** Je Art nennt die Undo-Spalte, ob dieselbe Art mit `neu = vorher` genügt oder ein benanntes Gegenereignis nötig ist; die nicht rücknehmbaren haben je einen anderen benannten Weg (§5.9.2) |
-| 12 · „Neueste Revision zählt" **definieren**; Meldezeit plausibilisieren | §2.5, §2.6, §3.5 | **Vollständig.** §2.6 definiert beide Ordnungen getrennt: HLC für Konflikte, `stand` für die Revisionsreihe. §2.5 ordnet jede fachliche Zeit einer von drei Klassen zu |
-| 13 · Ereignis nach der Archivierung, genau eine Behandlung | §7 | **Vollständig**, mit Grabstein, Monotonie und der Auflösung des Widerspruchs zu ZDM §4.1 Regel 5 |
+| 12 · „Neueste Revision zählt" **definieren** (HLC entscheidet); Meldezeit plausibilisieren | §2.5, §2.6, §3.5 | **Vollständig, mit einer benannten Ergänzung:** HLC entscheidet jeden Konflikt; für die Reihenfolge der EEB-**Revisionen** gilt zusätzlich `stand`, weil ein nachgescannter Bogen von gestern sonst als aktuell gälte. Die Auflage nennt nur die HLC; als Auslegung 15 in §10 geführt |
+| 13 · Ereignis nach der Archivierung, genau eine Behandlung; Ordnerverschiebung darf keinen Upload ins Leere laufen lassen | §7 | **Erste Hälfte vollständig**, mit Grabstein, Monotonie und der Auflösung des Widerspruchs zu ZDM §4.1 Regel 5. Die **zweite Hälfte ist Speicherseite** und dort erfüllt (KONZEPT-SPEICHER.md §5.7); dieses Dokument leistet sie nicht |
 | 18 · Zählbares Abbruchkriterium; P1 keine Tautologie | §8.1, §11 | **Zählbar:** §11.1 nennt die Zahlen. Die Gegenprobe zu P1 läuft an diesem Katalog (T75), nicht nur an M0.2 |
 
 ### Was hier nur teilweise erfüllt ist
@@ -1170,7 +1243,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 |---|---|---|---|---|
 | S1 | Plausibilisierung von Ist-Zeiten | 12 Stunden, beide Richtungen | §2.5 | Erfahrung aus dem ersten geführten Einsatz |
 | S2 | Format der Anforderungs-Kennung | keines; Freitext ohne Prüfung | §5.6.1 | Antwort der FüSt auf Frage 22 |
-| S3 | Statusliste | neun bekannte Werte, Bereich offen | §3.7 | Antwort auf Frage 19. Hinzufügen kostet nichts, Entfernen einen Upcaster |
+| S3 | Statusliste | neun bekannte Werte, Bereich offen | §3.7 | Antwort auf Frage 19. Hinzufügen kostet **keine Schemaversion** (die Nutzlast bleibt gültig), wohl aber eine `foldVersion` (§3.9); Entfernen zusätzlich einen Upcaster |
 | S4 | Tiefe des Undo-Stapels N | 20 | §6 U3 | Bedienerfahrung |
 | S5 | `WASSERWIRTSCHAFT`, Anzeige „HK/NLWKN" | wie am 2026-09-09 beschlossen | §3.7 | Antwort auf Frage 20; Aufspaltung wäre ein Upcaster aus `organisationName` |
 | S6 | Vorbelegung `schichtmodell` | `ZWEI_SCHICHT` | §5.2 | Antwort auf Frage 21 |
@@ -1206,6 +1279,12 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 11. **`EinsatzBeendet`, `PersonEntfernt` und `DienstpostenEntfernt` sind LWW/Feld** statt LWW/Entität (ZDM §4.2). Die Felder sind einwertig; das Ergebnis ist identisch, die Benennung genauer.
 12. **`aufgeloestAm` und `hinzugefuegtAm` stehen in der Nutzlast** (§5.3.2, §5.8). ZDM führt sie als Entitätsfelder, ohne ein Ereignis zu nennen, das sie setzt.
 13. **P7** (§8.1). ZDM §4.4 kennt P1 bis P6.
+14. **Der Auffang gilt nicht für den aufgelösten Abschnitt** (§5.3.3). Auflage 10 nennt ihn ausdrücklich für diesen Fall; die Umkehrung ist begründet, weicht aber vom Wortlaut ab.
+15. **`stand` als zweite Ordnung für EEB-Revisionen** (§2.6). Auflage 12 nennt allein die HLC.
+16. **`AnforderungGeaendert` und `AbschnittBemerkungGesetzt`** sind neue Arten, die ZDM §4.2 nicht kennt; ohne sie wären `kennung`, `angefordertAm` und die Abschnittsbemerkung nach der Anlage unveränderlich.
+17. **`fahrzeug.entferntAm` entfällt** (ZDM §3.2) zugunsten des Wahrheitswerts `entfernt`; der Zeitpunkt steht im Einsatztagebuch. **`fahrzeug.nutzlast` heißt `nutzlastText`,** weil `nutzlast` im Ereignisrahmen belegt ist.
+18. **Freie Vokabularwerte erzeugen keinen `unbekannterWert`** (§3.7). ZDM §3.2 führt sie als `VokabularWert` einer geschlossenen Liste.
+19. **Vier aus `bogen` abgeleitete Merkmale stehen nicht im Zustand** (§3.2). ZDM §3.2 führt sie an der Meldung.
 
 ### Offen geblieben
 
@@ -1247,7 +1326,9 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | Plausibilisierung, drei Zeitklassen | §2.5 | T84, T85, T86 |
 | Zwei Ordnungen (Konflikt und Revision) | §2.6 | T55, T56 |
 | Zustandsgebundenheit (P7) | §3.1 | T77, T6, T12, T24, T71 |
-| Der Zustand ist vollständig beschrieben | §3.2 | T87, T18 |
+| Der Zustand ist vollständig beschrieben | §3.2 | T76, T87, T18 |
+| Erstwert-Akkumulator mit verdrängten Beobachtungen | §3.3 | T108 |
+| Ein nie gesetztes Feld fehlt | §3.2 | T109 |
 | Zweite Beobachtung im Zustand | §3.3 | T88 |
 | Tie-Break, LWW-Richtung | §3.5 | T89 |
 | Tie-Break, Anlage-Richtung | §3.5 | T90 |
@@ -1261,7 +1342,13 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | Wartende Beobachtung, `anlageFehlt` | §3.10 | T98 |
 | Unbekannte Fremdreferenz | §3.10 | T99, T15 |
 | Zweite Anlage: kleinste HLC | §3.11 | T1, T90, T100 |
-| Gefaltet, aber wirkungslos | §3.12 | T44, T29, T68 |
+| Gefaltet, aber wirkungslos | §3.12 | T44, T45, T29, T68, T110 |
+| Anlage verdrängt ohne Vorher-Wert | §2.3 | T106 |
+| Gleiche Ereignis-Id, verschiedener Inhalt | §3.6 | T107 |
+| Uhrenwiderspruch bei einem Summanden | §5.4.2 | T111 |
+| Anlage unterdrückt keinen Summanden | §5.4.2 | T112 |
+| Übernommene Fahrzeuge und Personen wechseln mit | §5.4.2 | T113 |
+| Rücknahme wirkt nur auf kleinere HLC | §7.2 | T114 |
 | Upcaster rein und zustandsblind | §4.2 | T101 |
 | Beim Spiegeln keine Upcaster | §4.3 | T102 |
 | Einsatz: Anlage, Beenden, Wiedereröffnen | §5.2 | T1, T2 |
@@ -1330,4 +1417,13 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T102** Ein Client spiegelt ein Ereignis niedrigerer Version weiter ⇒ die geschriebenen Bytes sind identisch mit den gelesenen.
 **T103** Drei Änderungen an demselben Feld ⇒ der Zustand trägt zwei Beobachtungen, das aus dem Ereignisstrom gerenderte Tagebuch drei Zeilen.
 **T104** Es existiert kein Rahmenfeld und keine Ereignisart für Redo — Prüfung am Schema.
+**T106** `EinheitVerschoben` (HLC 5) und `EinheitGemeldet` (HLC 9) derselben Einheit ⇒ die Anlage gewinnt `abschnittId`, `ohneVorherWertVerdraengt` mit dem verdrängten Abschnitt; setzt die Anlage denselben Abschnitt, entsteht kein Hinweis.
+**T107** Zwei verschiedene Ereignisse mit derselben `id` (geklontes Profil) ⇒ das mit der kleineren HLC gilt, das andere steht in `verworfeneSchluessel`, in jeder Permutation dasselbe Ergebnis.
+**T108** Drei Zusammenführungen derselben Quelle (HLC 5, 7, 9) ⇒ die mit HLC 5 gilt, die beiden anderen stehen als `verdraengt` und erzeugen je einen Wirkungslos-Hinweis; auch nach einem Schnappschuss.
+**T109** Ein Einsatz, in dem nichts entfernt und nichts beendet wurde ⇒ die Felder `entfernt`, `ende`, `storno`, `zurueckgenommen` fehlen in der Serialisierung, statt mit einem erfundenen Anfangswert darin zu stehen.
+**T110** `EinheitWiederhergestellt` auf eine aufgegangene Einheit ⇒ sie zählt weiterhin nicht, `wirkungslosGegenTerminalzustand`.
+**T111** Zusammenführung mit HLC 1000 und Wanduhr 12:00, Basis des Ziels mit HLC 500 und Wanduhr 12:05 ⇒ der Summand zählt, `strukturvorgangGegenWanduhr` mit beiden Zeiten.
+**T112** Zusammenführung nach Z (HLC 400), danach `EinheitGemeldet(Z)` (HLC 500) ⇒ der Summand zählt; die Anlage unterdrückt ihn nicht.
+**T113** Aufteilung mit `uebernommeneFahrzeugIds` ⇒ `fahrzeug/<id>/einheitId` zeigt auf die neue Einheit; ist das Fahrzeug unbekannt, wartet die Beobachtung und wirkt beim Eintreffen.
+**T114** `ArchivierungZurueckgenommen` (HLC 5) auf eine Id, deren `EinsatzArchiviert` später mit HLC 9 geschrieben wird ⇒ die Archivierung gilt; die Rücknahme wirkt nur auf kleinere HLC.
 **T105** Zwei Abschnitte gleicher `reihenfolge` und zwei Einheiten gleicher `reihenfolge` ⇒ Ausgabereihenfolge nach Entitäts-Id, auf jedem Client gleich.
