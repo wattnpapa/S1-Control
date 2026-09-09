@@ -144,6 +144,10 @@ export {
   rueckfallFahrzeugSvg,
 } from "./zeichen/rueckfall.js";
 
+// Vorlagenkatalog (M1.4). Stammdatum, kein Ereignis (KONZEPT-EREIGNISSE §1.2).
+export { VORLAGENKATALOGE, type EinheitVorlage, type Vorlagenkatalog } from "./vorlagen/katalog.js";
+export { gefuellteKataloge, vorlage, vorlagen, vorlagenAus } from "./vorlagen/index.js";
+
 // STAN-Datensatz und Vorschlag (M1.4). Stammdatum, kein Ereignis (§1.2).
 export { THW_STAN, type StanEintrag } from "./stan/daten.js";
 export {
