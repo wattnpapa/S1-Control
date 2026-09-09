@@ -579,10 +579,29 @@ export class Schreiber {
     };
     await this.speichereZustand();
 
-    for (const zeile of ungespiegelte) {
+    return this.uebernehmeZeilen(ungespiegelte);
+  }
+
+  /**
+   * Hängt fremdstämmige Zeilen unverändert an die laufende eigene Datei an
+   * (§4.5 Schritt 3).
+   *
+   * Die Identität `<alteClientId>:<laufnummer>` bleibt stehen; nur der
+   * Kettenvorgänger wird auf die laufende Kette gesetzt, weil die Kette nach
+   * §2.3 an der Datei hängt und nicht am Ereignis.
+   *
+   * **Wiederaufnehmbar.** Bricht das Anhängen an einer lokalen Schreibstörung
+   * ab (§8.8), stehen die bereits übernommenen Zeilen und die übrigen nicht;
+   * der Aufrufer stellt fest, welche fehlen, und ruft erneut. Genau das
+   * braucht das Nachholen beim Öffnen: Ein abgebrochener Kennungswechsel darf
+   * die aufgegebene Datei nicht mit Zeilen zurücklassen, die nirgends sonst
+   * stehen. Befund aus der Simulation M0.4.
+   */
+  async uebernehmeZeilen(zeilen: readonly GeleseneZeile[]): Promise<Schreibergebnis | undefined> {
+    for (const zeile of zeilen) {
       const uebernommen = { ...zeile.rahmen, vorgaenger: this.#zustand.letzteKette } as Rahmenblick;
       const bytes = baueZeile(uebernommen);
-      const pfad = this.#ablage.lokalSegment(neueClientId, 0);
+      const pfad = this.#ablage.lokalSegment(this.#zustand.clientId, this.#zustand.segment);
       const offset = this.#zustand.lokalerOffset;
       const fehler = await this.#haengeAn(pfad, bytes);
       if (fehler !== undefined) return fehler;

@@ -182,8 +182,9 @@ export class Akte {
     // würde nie wieder gelesen. Befund aus der Simulation M0.4.
     await this.#kuerzeAufgegebeneDateien(
       (this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
-      // Beim Öffnen ist nicht mehr feststellbar, ob die Übernahme seinerzeit
-      // vollständig gelungen ist. Gelöscht wird deshalb nichts.
+      // Beim Öffnen ist nicht verbürgt, dass die Übernahme seinerzeit gelungen
+      // ist. Gelöscht wird deshalb nichts — und gekürzt erst, nachdem §4.5
+      // Schritt 3 für die betroffenen Zeilen nachgeholt wurde.
       false,
     );
     await this.#leser.gleicheMitSpiegelAb();
@@ -550,7 +551,7 @@ export class Akte {
    */
   async #kuerzeAufShareStand(
     kennung: Dateikennung,
-    darfLoeschen: boolean,
+    uebernahmeGelungen: boolean,
     shareOffset: number,
   ): Promise<boolean> {
     const lokalPfad = this.#optionen.ablage.lokalDatei(kennung.name);
@@ -566,7 +567,7 @@ export class Akte {
         // Share nicht lesbar: nichts kürzen. Beim nächsten Öffnen erneut.
         return false;
       }
-      if (!darfLoeschen || shareOffset > 0) return false;
+      if (!uebernahmeGelungen || shareOffset > 0) return false;
       await this.#optionen.dateisystem.loesche(lokalPfad);
       return true;
     }
@@ -577,8 +578,62 @@ export class Akte {
     // §5.5: Der Spiegel endet an einer Zeilengrenze, nie mitten in einer Zeile.
     const ziel = leseZeilengrenzen(lokal.subarray(0, gleich), 0).endeOffset;
     if (ziel < shareOffset) return false;
-    if (ziel < lokal.byteLength) await this.#optionen.dateisystem.kuerzeAuf(lokalPfad, ziel);
+    if (ziel >= lokal.byteLength) return true;
+    if (!uebernahmeGelungen && !(await this.#holeUebernahmeNach(lokal, ziel))) return false;
+    await this.#optionen.dateisystem.kuerzeAuf(lokalPfad, ziel);
     return true;
+  }
+
+  /**
+   * Holt §4.5 Schritt 3 für die Zeilen nach, die gleich weggeschnitten werden —
+   * `false`, wenn das nicht vollständig gelungen ist.
+   *
+   * **Warum das sein muss.** Die Kürzung wirft die Zeilen jenseits von `ziel`
+   * weg. Sie ist nur deshalb verlustfrei, weil §4.5 Schritt 3 dieselben Zeilen
+   * mit derselben Identität in die Datei der neuen Kennung übernommen hat.
+   * Bricht der Kennungswechsel an einer lokalen Schreibstörung ab (§8.8,
+   * Reaktion `kennungswechselUnvollstaendig`), ist genau das **nicht**
+   * geschehen: Die Zeilen liegen jenseits des `shareOffset`, stehen also auf
+   * keiner Share-Datei, und unter der neuen Kennung stehen sie auch nicht.
+   * Ohne diese Nacharbeit löschte die Kürzung sie ersatzlos — derselbe Schaden
+   * wie Befund 13 der Simulation M0.4, nur über den Kennungswechsel statt über
+   * den Spiegel. Hergeleitet im Gutachten zu M0.4, hier nachgestellt.
+   *
+   * Verwaltungsereignisse (§2.4) bleiben ausgenommen, aus demselben Grund wie
+   * in {@link Akte.#ungespiegelteEigeneZeilen}: Sie reden über die Datei, in
+   * der sie stehen, und wären in einer anderen falsch.
+   *
+   * Scheitert das Anhängen erneut, bleibt die Datei unangetastet und der
+   * Versuch wird beim nächsten Öffnen wiederholt (§8.8: sichtbare Abweisung,
+   * kein Abbruch). Der Vorgang ist wiederholbar, weil die Identität
+   * entscheidet und nicht die Zahl der Anläufe — und die Identitäten werden
+   * **je Datei frisch gelesen**: Bricht das Anhängen mitten in der Liste ab,
+   * ist eine gemerkte Menge falsch, und eine falsche Menge hieße hier, dieselbe
+   * Zeile ein zweites Mal in die Ereignismenge zu geben (§5.4.2).
+   */
+  async #holeUebernahmeNach(lokal: Uint8Array, ziel: number): Promise<boolean> {
+    const vorhanden = await this.#eigeneIdentitaeten();
+    const fehlende = leseZeilengrenzen(lokal, 0).zeilen.filter(
+      (z) =>
+        z.offset >= ziel &&
+        !istVerwaltungsereignis(z.rahmen.typ) &&
+        !vorhanden.has(z.rahmen.id),
+    );
+    if (fehlende.length === 0) return true;
+    return (await this.#schreiber.uebernehmeZeilen(fehlende)) === undefined;
+  }
+
+  /** Die Identitäten, die lokal unter der laufenden Kennung stehen. */
+  async #eigeneIdentitaeten(): Promise<Set<string>> {
+    const ids = new Set<string>();
+    for (const kennung of await this.#eigeneDateien(clientPraefix(this.#schreiber.clientId))) {
+      const bytes = await this.#optionen.dateisystem.liesAb(
+        this.#optionen.ablage.lokalDatei(kennung.name),
+        0,
+      );
+      for (const zeile of leseZeilengrenzen(bytes, 0).zeilen) ids.add(zeile.rahmen.id);
+    }
+    return ids;
   }
 
   /** Die lokalen Segmentdateien einer Kennung, aufsteigend. */

@@ -36,6 +36,17 @@ function akteOptionen(platz: Arbeitsplatz, clientId = ICH, segmentgroesse?: numb
   };
 }
 
+/** Alle Ereignis-Identitäten, die lokal überhaupt noch irgendwo stehen. */
+async function lokaleIdentitaeten(platz: Arbeitsplatz): Promise<readonly string[]> {
+  const namen = await platz.dateisystem.listeVerzeichnis(platz.ablage.lokalEreignisse);
+  const ids: string[] = [];
+  for (const name of namen) {
+    const bytes = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(name), 0);
+    ids.push(...leseZeilengrenzen(bytes, 0).zeilen.map((z) => z.rahmen.id));
+  }
+  return ids;
+}
+
 describe("Akte — die Verdrahtung von §4.5, §4.6 und §5.4", () => {
   it("öffnet, schreibt, spiegelt und meldet dabei nichts Ungewöhnliches", async () => {
     await using platz = await arbeitsplatz();
@@ -477,5 +488,128 @@ describe("Befunde des Gutachtens gegen akte.ts", () => {
     expect(typen).not.toContain("SegmentAbgeschlossen");
     // Und `0000` der neuen Kennung gilt nicht als ersetzt.
     expect([...(await ersetzteSegmente(platz.dateisystem, platz.ablage, NEUE))]).toEqual([]);
+  });
+  it("verliert beim Öffnen nichts, was ein abgebrochener Kennungswechsel nicht übernommen hat (§4.5 Schritt 3, §8.8)", async () => {
+    // Der Weg: Der Kennungswechsel bricht beim Übernehmen der ungespiegelten
+    // Zeilen an einer lokalen Schreibstörung ab (§8.8, Reaktion
+    // `kennungswechselUnvollstaendig`). Die Zeilen stehen danach **nur** in der
+    // aufgegebenen Datei — nicht auf dem Share (sie waren ungespiegelt) und
+    // nicht unter der neuen Kennung (die Übernahme kam nicht dazu). Das
+    // Nachholen der Kürzung beim nächsten Öffnen (§4.5 Schritt 6) darf sie
+    // deshalb nicht wegschneiden.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const stoerungen: Stoerung[] = [];
+    const { akte } = await oeffneAkte({
+      ...akteOptionen(platz),
+      dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+    });
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+
+    // Drei Ereignisse, die der Share nie gesehen hat.
+    const ungespiegelt: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      platz.uhr.weiter(3);
+      ungespiegelt.push(
+        alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 10 + i } }))
+          .rahmen.id,
+      );
+    }
+
+    // Der Klon zwingt den Wechsel (§4.5).
+    const stand = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:77`,
+        vorgaenger: stand,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+    // …und die Übernahme scheitert an der ersten Zeile.
+    stoerungen.push({
+      aufruf: "haengeAnUndSynchronisiere",
+      code: "ENOSPC",
+      malen: Infinity,
+      pfadEnthaelt: `${NEUE}.0000`,
+    });
+    const { reaktion } = await akte.spiegle();
+    expect(reaktion?.art).toBe("kennungswechselUnvollstaendig");
+    // Bis hierher ist nichts verloren — die Meldung sagt genau das zu.
+    expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(ungespiegelt));
+
+    // Der nächste Start — ohne Störung, und unter der Kennung, die der
+    // Wechsel hinterlassen hat.
+    stoerungen.length = 0;
+    await oeffneAkte(akteOptionen(platz, NEUE));
+
+    // Nichts verloren: Die drei stehen weiterhin lokal …
+    expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(ungespiegelt));
+    // … und zwar dort, wo §4.5 Schritt 3 sie hinschreiben wollte, mit
+    // unveränderter Identität.
+    const neueDatei = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(NEUE, 0), 0);
+    expect(leseZeilengrenzen(neueDatei, 0).zeilen.map((z) => z.rahmen.id)).toEqual(ungespiegelt);
+    // Und §4.5 Schritt 6 ist trotzdem erfüllt — der Spiegel der aufgegebenen
+    // Datei ist wieder ein Präfix ihrer Share-Entsprechung (§8.6.1 Regel 4).
+    const spiegel = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    const shareAlt = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
+    expect(spiegel.byteLength).toBeLessThan(shareAlt.byteLength);
+    expect(shareAlt.subarray(0, spiegel.byteLength)).toEqual(spiegel);
+  });
+
+  it("kürzt die aufgegebene Datei nicht, solange das Nachholen scheitert (§8.8)", async () => {
+    // Der Gegenprobe-Fall: Geht das Nachholen der Übernahme nicht, darf die
+    // Kürzung **nicht** trotzdem laufen. §8.8 verlangt eine sichtbare
+    // Abweisung und den erneuten Versuch beim nächsten Öffnen — nicht den
+    // Verlust.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const stoerungen: Stoerung[] = [];
+    const gestoert = stoerdateisystem(platz.dateisystem, stoerungen);
+    const { akte } = await oeffneAkte({ ...akteOptionen(platz), dateisystem: gestoert });
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const ungespiegelt: string[] = [];
+    for (let i = 0; i < 3; i += 1) {
+      platz.uhr.weiter(3);
+      ungespiegelt.push(
+        alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 10 + i } }))
+          .rahmen.id,
+      );
+    }
+    const stand = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:77`,
+        vorgaenger: stand,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+    stoerungen.push({
+      aufruf: "haengeAnUndSynchronisiere",
+      code: "ENOSPC",
+      malen: Infinity,
+      pfadEnthaelt: `${NEUE}.0000`,
+    });
+    expect((await akte.spiegle()).reaktion?.art).toBe("kennungswechselUnvollstaendig");
+
+    // Das Öffnen läuft gegen dieselbe Störung.
+    const vorher = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    await oeffneAkte({ ...akteOptionen(platz, NEUE), dateisystem: gestoert });
+    const nachher = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    expect(nachher.byteLength).toBe(vorher.byteLength);
+    expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(ungespiegelt));
   });
 });
