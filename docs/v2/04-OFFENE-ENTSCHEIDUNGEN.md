@@ -8,6 +8,8 @@ Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzus
 
 **Neu am 2026-09-09:** Aus der Simulation M0.4 sind drei Konzeptentscheidungen hinzugekommen — Nr. 14, 15 und 16 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md.
 
+**Ebenfalls neu am 2026-09-09:** Die fachlichen Klärungen mit der FüSt am Ende des Dokuments sind als Nr. 19 bis 22 ausgeschrieben. Sie sind der Einstieg in M1 (siehe [../v2-arbeitsstand/auftraege/M1-einstieg.md](../v2-arbeitsstand/auftraege/M1-einstieg.md)) und gehören **vor** den Ereigniskatalog M1.2 beantwortet. Anders als 1 bis 18 kann Johannes sie nicht allein entscheiden — sie brauchen die FüSt.
+
 > **Stand 2026-09-09: Nr. 14 bis 18 sind alle entschieden.**
 >
 > * **14 → A** und **16 → (a)**: in KONZEPT-SPEICHER.md nachgezogen (§4.6 Schritt 2 und 5, §8.6.1 Regel 4) und im Code umgesetzt.
@@ -307,10 +309,180 @@ gebildet und nach dem zweiten Zusatz in §7.6 erneut verschieden.
 
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
-Aus dem Zieldatenmodell (`../v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §6) und dem Handbuch-Bericht:
+Quellen: Zieldatenmodell (`../v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §6)
+und der Handbuch-Bericht (`../v2-arbeitsstand/bestandsaufnahme/excel-handbuch-anforderungen.md`).
 
-- Gilt die Statusliste der Eingabemaske („Rufbereitschaft", „Einsatzvorbehalt") oder die Kurzform des Status-Blatts? Die Excel widerspricht sich.
-- Bedeutung der Kürzel „HK" (HK/NLWKN), „MT", „LdF", „TLtg." und der unbeschrifteten Zeichen der FüOrg-Palette.
-- Wird Schichtbetrieb mit zwei oder drei Schichten geführt, oder beides je Einsatz?
-- Format der Anforderungs-ID mit der übergeordneten Stelle.
-- Welche der Ausgabeprodukte werden im Einsatz tatsächlich gedruckt, welche nur am Bildschirm gelesen?
+**Neu am 2026-09-09:** Vier dieser Klärungen sind hier als Nr. 19 bis 22
+ausgeschrieben, weil der Auftrag M1-einstieg verlangt, sie **vor** dem
+Ereigniskatalog (M1.2) vorzulegen — mit dem konkreten Widerspruch und mit dem
+Vorschlag, der ohne Antwort gilt. Jede Nummer nennt außerdem, was am Katalog
+davon abhängt und was sich später noch billig ändern lässt. Der Maßstab dafür
+ist §8.7 von `konzepte/KONZEPT-SPEICHER.md`: Ereignisse sind append-only, ein
+einmal geschriebener Schlüssel steht für immer in der Akte. **Werte hinzufügen
+ist billig, Werte umbenennen oder entfernen kostet einen Upcaster.**
+
+Die fünfte Klärung berührt M1.2 nicht und steht unten.
+
+### 19 · Welche Statusliste gilt — die der Eingabemaske oder die des Status-Blatts?
+
+**Der Widerspruch, wörtlich.** Die Eingabemaske der Excel bietet in Spalte
+`Stärke!Z` neun Statuswerte an, darunter „Rufbereitschaft" und
+„Einsatzvorbehalt". Die Auswertung auf dem Blatt `Status` zählt mit
+`SUMIF(Stärke!$Z…)` gegen die Zeichenketten „Ruf Bereitsch." und
+„Einsatzvorbeh." (`Status!B24` ff., EXD §11, KRI §3.1). Die beiden Schreibweisen
+sind nicht gleich, also trifft das SUMIF nie zu: **jede Einheit mit einem dieser
+beiden Status fällt in der laufenden Excel aus dem Statusbild heraus.** Die
+Kontrollsumme `Status!35` bemerkt es nicht, weil sie über dieselben Kurzformen
+läuft; die Warnung `Status!G36` meldet nur Einheiten ganz ohne Status.
+
+**Die Frage an die FüSt** ist deshalb nicht „welche Schreibweise ist richtig" —
+in v2 ist der Anzeigename nur Beschriftung und der stabile Schlüssel entscheidet
+—, sondern: **Sind „Rufbereitschaft" und „Einsatzvorbehalt" im Betrieb je
+vergeben worden?** Wenn ja, war das Statusbild der Excel jahrelang unvollständig,
+und das sollte die FüSt wissen, unabhängig von v2. Wenn nein, sind es zwei
+Karteileichen aus der Vorlage.
+
+**Was am Katalog daran hängt.** `EinheitGemeldet.status` und
+`StatusGesetzt.{vorher,neu}` tragen den Schlüssel als Nutzlast. Neun Werte statt
+sieben kosten nichts an Regelwerk — die Konfliktregel ist in beiden Fällen
+LWW/Feld. Teuer ist nur die Gegenrichtung: Wer zuerst sieben Werte festschreibt
+und später `RUFBEREITSCHAFT` nachrüstet, hat einen Upcaster mehr; wer neun
+festschreibt und zwei davon nie benutzt, hat zwei tote Enum-Einträge.
+
+**Vorschlag ohne Antwort: alle neun Werte behalten** (wie §6 Frage 2). Der
+Katalog schreibt die neun Schlüssel aus §2.2 fest und vermerkt bei den beiden
+strittigen ausdrücklich, dass ihre Benutzung im Betrieb unbelegt ist.
+
+### 20 · Was bedeuten HK, MT, LdF und TLtg. — und die unbeschrifteten Zeichen der FüOrg-Palette?
+
+**Der Befund.** Vier Kürzel stehen in der Excel ohne Auflösung, und die
+Abkürzungsliste `AküLi` kennt keines davon (EXH, Abschnitt „Offene Punkte"):
+
+* **HK** in der Organisationsliste „HK/NLWKN" (`Status!B17`, `ERLAUBTE_ORGANISATIONEN`)
+  sowie in „Register HK Gerät" und „HK Geräte VPS 24 Vers. 14.3" (`Neu!B12, B20, B21`).
+  NLWKN ist der Niedersächsische Landesbetrieb für Wasserwirtschaft, Küsten- und
+  Naturschutz [unbelegt]; wofür HK daneben steht, ist offen.
+* **MT** als erste Kopiervorlage der THW-StAN (`Stärke!C26`, THW-Einheitstyp Nr. 1).
+* **LdF** als FüSt-Funktion (`FüSt!B74`), zwischen „GrFü F/K" und „SprFu".
+* **TLtg.** nur in einer Änderungszeile: „Version für TLtg." (`Neu!B14`, Fassung 0.5).
+* Dazu das runde **M**-Zeichen der FüOrg-Palette und weitere Bilder ohne
+  Beschriftung; die Dateinamen tragen keine Semantik („Grafik N"), nur zwei
+  Bilder haben ein `descr`-Attribut (`t-trztr`, `f-flts`).
+
+**Was am Katalog daran hängt — und zwar nur eines der vier.** Allein **HK**
+bindet M1.2 hart: §2.1 hat daraus den Organisationsschlüssel
+`WASSERWIRTSCHAFT` mit der Anzeige „Wasserwirtschaft (NLWKN/HK)" gemacht. Dieser
+Schlüssel steht in der Nutzlast von `EinheitGemeldet` und
+`EinheitStammdatenGeaendert` und ist damit append-only. Steht HK für etwas
+anderes als eine Wasserwirtschaftsbehörde — eine zweite Organisation, die in der
+Excel nur die Zelle mit NLWKN teilt —, dann ist der Schlüssel falsch geschnitten,
+und jede bereits geschriebene Einheit trägt den falschen Code.
+
+Die anderen drei binden den Katalog **nicht**, und das gehört zur Antwort dazu:
+
+* **MT** ist ein Eintrag im Vorlagenkatalog (`EinheitVorlage`, §3.2). Vorlagen
+  sind Daten, keine Ereignisart — die Klärung gehört zu M1.4, nicht zu M1.2.
+* **LdF** ist ein Wert in `dienstposten.funktion`, und das Feld ist nach §1.14
+  ausdrücklich **Freitext mit Katalogvorbelegung**. Ein unaufgelöstes Kürzel
+  bleibt schlicht als Text stehen.
+* **TLtg.** kommt im Datenmodell überhaupt nicht vor; es steht in einer
+  Versionshistorie. Ohne Auflösung fehlt nichts.
+* Die unbeschrifteten FüOrg-Zeichen betreffen `einheit.taktischesZeichen`
+  (gesetzt über `EinheitStammdatenGeaendert`, LWW/Feld). Welche Zeichen es gibt,
+  ist eine Katalogfrage von M1.4 und der Lagekarte in M3, keine Frage der
+  Ereignisform.
+
+**Vorschlag ohne Antwort.** Bei HK den Schlüssel `WASSERWIRTSCHAFT` behalten,
+aber die Anzeige auf „HK/NLWKN" ändern — also das schreiben, was in der Excel
+steht, statt eine Deutung zu behaupten, die niemand belegt hat. Der Schlüssel
+bleibt damit auch dann tragfähig, wenn HK sich später als etwas anderes
+herausstellt: Er ist der Migrationsschlüssel für genau diese Excel-Spalte, und
+eine spätere Aufspaltung in zwei Organisationen ist ein normaler Upcaster.
+MT, LdF und die Zeichen bleiben unaufgelöste Textwerte in ihren Katalogen, mit
+Vermerk „Bedeutung offen"; TLtg. wird nicht weiterverfolgt.
+
+### 21 · Zwei Schichten, drei Schichten, oder beides je Einsatz?
+
+**Der Befund.** Die Excel führt vier Schichtwerte nebeneinander: `Tag`, `Nacht`,
+`Früh`, `Spät` (`Stärke!AA`, Auswertung `Log!D..G`, EXD §8.3/§10 Nr. 10). Das ist
+kein Widerspruch, sondern eine offene Stelle: Vier Werte in einer Liste sind nur
+dann sinnvoll, wenn im selben Einsatz zwei verschiedene Modelle nebeneinander
+laufen. Die Vorbelegung ist `Tag` (Kommentar `Stärke!AA4`), also faktisch
+Zwei-Schicht-Betrieb. Ob die FüSt je „Früh/Spät/Nacht" geführt hat oder ob die
+drei Werte nur der Vollständigkeit halber in der Vorlage stehen, ist unbelegt.
+
+**Was am Katalog daran hängt — weniger, als es aussieht.** §2.3 hat die Frage in
+zwei Teile zerlegt und einen davon schon entschieden: `einsatz.schichtmodell`
+steuert nur, welche Werte die Maske **anbietet**; ein abweichender Wert wird
+**nicht abgelehnt**, sondern erzeugt eine Warnung (Begründung: eine hinzukommende
+Feuerwehrbereitschaft kann ein anderes Modell fahren). Für M1.2 heißt das:
+`SchichtGesetzt` nimmt jeden der vier Werte an, immer, unabhängig vom Modell —
+sonst könnte ein Client ein Ereignis eines anderen Clients nicht falten, und das
+wäre stilles Verwerfen. Die FüSt-Antwort ändert also die **Vorbelegung** von
+`EinsatzAngelegt.schichtmodell` und die Maske, nicht die Faltregel.
+
+Zwei Punkte bleiben trotzdem an der Antwort hängen:
+
+1. Ob `schichtmodell` überhaupt ein Feld am Einsatz ist. Wird nur ein Modell
+   gefahren, ist es eine Konstante und `EinsatzStammdatenGeaendert` braucht das
+   Feld nicht.
+2. Die Ausnahme aus §2.3 Nr. 4: `schicht` ist Pflicht **außer** im Abschnitt vom
+   Typ `ANGEFORDERT` — genau die Ausnahme, die die Konsistenzformel
+   `Status!J42` macht. Diese Ausnahme steht unabhängig von der Zahl der
+   Schichten und wird im Katalog so festgeschrieben.
+
+**Vorschlag ohne Antwort: `ZWEI_SCHICHT` (Tag/Nacht) als Vorbelegung**, das Feld
+`schichtmodell` am Einsatz behalten, alle vier Werte im Schema, Abweichung vom
+Modell als Warnung und nie als Ablehnung.
+
+### 22 · Wie wird die Anforderungs-ID gebildet?
+
+**Der Befund.** Das Handbuch sagt zur Spalte `Stärke!O`: Das Format der
+Anforderungs-ID ist „mit der zuständigen THW-Ansprechstelle abgestimmt"
+(`Hinweise!C24-C25`, EXH F-F1) — welches Format das ist, steht nirgends. Die ID
+ist dabei nicht nur eine Beschriftung: Nach EXH F-F3 ist sie das Band zwischen
+der abzulösenden Einheit A und der ablösenden Einheit B, beide tragen dieselbe
+ID (`image84`, Vorgehen bei Ablösungen), und an Einheit B wird sie später wieder
+gelöscht.
+
+**Was am Katalog daran hängt.** Zwei Dinge, und das zweite ist das wichtigere:
+
+1. Ob `AnforderungAngelegt.kennung` nur eingegeben oder auch erzeugt wird. Das
+   ist eine Maskenfrage und billig zu ändern.
+2. **Ob die Kennung eine Identität ist.** Das ist eine Katalogfrage und nicht
+   billig. §3.2 führt `anforderung.id` getrennt von `anforderung.kennung`, und
+   der Katalog muss sagen, was bei zwei Anforderungen mit derselben Kennung
+   geschieht. Zwei Clients, die bei einer Mehrtageslage unabhängig dieselbe
+   Ablösung anfordern, erzeugen zwei `AnforderungAngelegt` mit zwei
+   `anforderungId` und derselben Kennung. Verschmelzen wäre falsch (dieselbe
+   Kennung wird nach F-F3 absichtlich von zwei Zeilen getragen); stilles
+   Nebeneinander wäre eine Doppelanforderung, die niemandem auffällt. Die
+   Vorlage dafür steht schon im Katalog: `EinheitGemeldet` behandelt die
+   mögliche Dublette als **fachlichen** Hinweis, nicht als technischen Konflikt.
+
+**Vorschlag ohne Antwort:** `kennung` ist optionaler Freitext ohne Formatprüfung,
+Konfliktregel LWW/Feld, mit optionalem Generator `<FüSt-Kürzel>-<lfd. Nr.>` in
+der Maske (§6 Frage 11). Der Katalog legt fest: **Die Kennung ist ein Etikett,
+keine Identität.** Zwei Anforderungen mit derselben Kennung bleiben zwei
+Anforderungen; die zweite erzeugt den Hinweis „Kennung bereits vergeben" mit
+Verweis auf die erste. Ohne Format von der übergeordneten Stelle wird auch keine
+Prüfung gebaut — eine erfundene Prüfung wäre genau der Platzhalter, der später
+wie eine Festlegung aussieht.
+
+### Die fünfte Klärung — sie bindet M1.2 nicht
+
+**Welche Ausgabeprodukte werden im Einsatz tatsächlich gedruckt, welche nur am
+Bildschirm gelesen?** Kandidaten sind `Druck`, `Status`, `Log`, `LogFrei`,
+`FüOrg`, `Auswertung` und der HTML-Monitor (EXH §3, F-K7). Die Antwort bestimmt
+Layoutaufwand und Papierformate in M4, nicht die Ereignisform: Ausgaben sind
+Projektionen des gefalteten Zustands (§1.16), und keine von ihnen erzeugt oder
+liest ein Ereignis. Fällig zu M4, nicht jetzt.
+
+### Was M1.2 ohne Antwort tut
+
+Der Ereigniskatalog wird mit den vier Vorschlägen oben geschrieben und
+kennzeichnet jede Stelle als Startwert nach dem Muster von §10 in
+`konzepte/KONZEPT-SPEICHER.md` — also als Wert, der ohne Änderung des Regelwerks
+ausgetauscht werden kann. Was nicht passiert: Platzhalter-Enums, erfundene
+Formatprüfungen oder eine Deutung von HK, MT, LdF und TLtg., die später wie eine
+Festlegung gelesen wird.

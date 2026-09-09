@@ -1,6 +1,31 @@
 # Einstieg in M1 — was zuerst, was worauf wartet
 
-Stand: 2026-09-09 · Meilenstein M1 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **noch nicht begonnen**
+Stand: 2026-09-09 · Meilenstein M1 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **begonnen, wartet auf die FüSt**
+
+> **Bearbeitungsstand 2026-09-09.** Der erste Schritt ist erledigt: Die vier
+> Fragen an die FüSt liegen ausgeschrieben als Nr. 19 bis 22 in
+> [04-OFFENE-ENTSCHEIDUNGEN.md](../../v2/04-OFFENE-ENTSCHEIDUNGEN.md), je mit
+> dem konkreten Widerspruch, mit dem, was am Ereigniskatalog daran hängt, und
+> mit dem Vorschlag, der ohne Antwort gilt. Zwei Ergebnisse der Durchsicht
+> gehören hierher, weil sie diesen Auftrag korrigieren:
+>
+> * **Nur zwei der vier Fragen binden M1.2 hart** — die Statusliste (19) und die
+>   Anforderungs-ID (22, und zwar nicht wegen des Formats, sondern wegen der
+>   Frage, ob die Kennung eine Identität ist). Von den vier Kürzeln (20) bindet
+>   allein „HK" den Katalog, weil daraus ein append-only-Organisationsschlüssel
+>   geworden ist; MT, LdF und die FüOrg-Zeichen sind Katalogdaten aus M1.4, und
+>   „TLtg." kommt im Datenmodell überhaupt nicht vor. Beim Schichtmodell (21)
+>   ist die Faltregel bereits in §2.3 entschieden (Warnung statt Ablehnung); die
+>   FüSt-Antwort ändert nur die Vorbelegung.
+> * **M1.2 kann damit beginnen**, sobald Johannes die Vorschläge entweder
+>   bestätigt oder ersetzt. Ein Warten auf die FüSt ist für die beiden harten
+>   Fragen nicht nötig, wenn die Vorschläge als Startwerte nach dem Muster von
+>   §10 in KONZEPT-SPEICHER.md gekennzeichnet werden.
+>
+> **M1.1 ist in dieser Arbeitsumgebung nicht ausführbar:** Es extrahiert aus dem
+> Repository `einheitenerfassungsbogen`, das hier nicht erreichbar ist. Nur
+> `vendor/eeb-format` liegt als Submodul vor.
+
 
 Aufträge werden hier abgelegt, damit nachvollziehbar bleibt, wogegen ein Paket
 gebaut wurde. Der Text unterhalb der Trennlinie wird unverändert als Auftrag an
