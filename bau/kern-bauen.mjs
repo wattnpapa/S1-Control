@@ -33,17 +33,41 @@ if (!existsSync(bauKonfiguration)) {
   process.exit(1);
 }
 
-const tsc = path.join(
-  wurzel,
-  "node_modules",
-  ".bin",
-  process.platform === "win32" ? "tsc.cmd" : "tsc",
-);
+// Aufgerufen wird die JavaScript-Datei des Compilers, nicht der Shim aus
+// `node_modules/.bin`. Grund: Auf Windows ist der Shim eine `.cmd`-Datei, und
+// Node verweigert seit 20.12.2 das Starten von `.cmd` und `.bat` ohne
+// `shell: true` (Absicherung gegen CVE-2024-27980). `spawnSync` schlaegt dann
+// mit `EINVAL` fehl, `status` bleibt `null`, und ohne die Fehlerpruefung
+// weiter unten endete dieses Skript stumm mit Code 1 — genau der stille
+// Fehlschlag, den es zu vermeiden gilt.
+//
+// Der Umweg ueber `process.execPath` braucht keine Shell und verhaelt sich auf
+// allen drei Betriebssystemen gleich (Entscheidung 13: Windows ist das
+// Produkt, macOS die Entwicklungsplattform, Linux der CI-Lauf).
+const tscSkript = path.join(wurzel, "node_modules", "@typescript", "native", "bin", "tsc");
 
-if (!existsSync(tsc)) {
-  console.error("tsc nicht gefunden — bitte zuerst `npm install` in der Wurzel ausfuehren.");
+if (!existsSync(tscSkript)) {
+  console.error(
+    [
+      `Der TypeScript-Compiler wurde nicht gefunden: ${tscSkript}`,
+      "Bitte zuerst `npm install` in der Wurzel ausfuehren.",
+      "Aendert sich der Paketname in package.json, ist dieser Pfad mitzuziehen.",
+    ].join("\n"),
+  );
   process.exit(1);
 }
 
-const lauf = spawnSync(tsc, ["-p", bauKonfiguration], { stdio: "inherit", cwd: wurzel });
+const lauf = spawnSync(process.execPath, [tscSkript, "-p", bauKonfiguration], {
+  stdio: "inherit",
+  cwd: wurzel,
+});
+
+// `spawnSync` meldet einen gescheiterten Start nicht ueber `status`, sondern
+// ueber `error`. Ohne diese Pruefung waere jeder Startfehler ein wortloses
+// Beenden mit Code 1.
+if (lauf.error) {
+  console.error(`Der TypeScript-Compiler liess sich nicht starten: ${lauf.error.message}`);
+  process.exit(1);
+}
+
 process.exit(lauf.status ?? 1);
