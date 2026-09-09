@@ -4,6 +4,6 @@ import process from "node:process";
 
 import { fuehreAus } from "./index.js";
 
-const ergebnis = fuehreAus(process.argv.slice(2));
+const ergebnis = await fuehreAus(process.argv.slice(2));
 process.stdout.write(`${ergebnis.text}\n`);
 process.exitCode = ergebnis.code;
