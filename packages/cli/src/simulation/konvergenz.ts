@@ -270,7 +270,11 @@ function merkeErsetzteDatei(
   if (ersatz === undefined) return;
   const kennung = zerlegeEreignisDateiname(name);
   if (kennung === undefined) return;
-  ziel.add(ereignisDateiname(kennung.praefix, ersatz.ersetztesSegment));
+  // Das ersetzte Segment kann unter einer **aufgegebenen** Kennung liegen
+  // (§4.5 Schritt 6, Entscheidung 17); dann nennt die Nutzlast deren Präfix.
+  // Fehlt es, ist es das der Datei, in der die Zeile steht — so sind auch die
+  // Zeilen von vor dieser Festlegung zu lesen.
+  ziel.add(ereignisDateiname(ersatz.praefix ?? kennung.praefix, ersatz.ersetztesSegment));
 }
 
 /** Zwei Versionsvektoren sind gleich, wenn sie über dieselbe Dateimenge dieselben Stände führen (§7.6). */

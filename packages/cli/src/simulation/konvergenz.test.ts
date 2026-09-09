@@ -302,6 +302,37 @@ describe("erhebeStand — ersetzte Segmente stehen nicht im Vektor (§7.6, Entsc
     }
   });
 
+  it("folgt dem Präfix in der Nutzlast, wenn die Kennung gewechselt hat", async () => {
+    // Entscheidung 17: Das Ersatzsegment steht unter der **neuen** Kennung und
+    // ersetzt ein Segment der aufgegebenen. Ohne das Präfix aus der Nutzlast
+    // nähme der Vektor das gleichnamige Segment der neuen Kennung heraus — die
+    // falsche Datei — und behielte die richtige.
+    const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
+    try {
+      const ablage = new Einsatzablage(path.join(wurzel, "share"), wurzel);
+      await fsp.mkdir(ablage.lokalEreignisse, { recursive: true });
+      await fsp.writeFile(
+        path.join(ablage.lokalEreignisse, "1111aaaa.0000.jsonl"),
+        verbinde(zeile("1111aaaa:1", "Lagemeldung"), zeile("1111aaaa:2", "Lagemeldung")),
+      );
+      await fsp.writeFile(
+        path.join(ablage.lokalEreignisse, "3333cccc.0000.jsonl"),
+        verbinde(
+          zeile("3333cccc:5", "SegmentErsetzt", {
+            ersetztesSegment: 0,
+            abOffset: 0,
+            praefix: "1111aaaa",
+          }),
+          zeile("1111aaaa:2", "Lagemeldung"),
+        ),
+      );
+      const stand = await erhebeStand(knotenDateisystem(), ablage, "3333cccc", []);
+      expect(Object.keys(stand.vektor)).toEqual(["3333cccc.0000.jsonl"]);
+    } finally {
+      await fsp.rm(wurzel, { recursive: true, force: true });
+    }
+  });
+
   it("nimmt ohne Ersatzsegment nichts heraus — der Unterschied bleibt sichtbar", async () => {
     const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
     const leserWurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
