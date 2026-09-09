@@ -989,3 +989,118 @@ Damit ist der Korrekturweg für jede der Anlagearten anders, und zwar benannt:
 Die letzte Zeile ist der Fall, den U4 meint: Eine Meldung wurde der falschen Einheit zugeordnet (`EebMeldungZugeordnet`) und ist bereits in Summen und Ausdrücke eingegangen.
 
 **T52:** `KorrekturVon` mit `zielTyp = "StaerkeGeaendert"` und höherer HLC ⇒ die korrigierte Stärke gilt, beide Zeilen im Tagebuch. **T53:** `KorrekturVon` mit `zielTyp = "EinheitGemeldet"` ⇒ ungültig, nicht gefaltet, geführt. **T54:** `KorrekturVon` mit unbekanntem `zielTyp` ⇒ ebenso.
+
+---
+
+## §6 Undo — die Regeln U1 bis U6 (Auflage 11)
+
+Ausgangslage: EXH F-L2 fordert echtes Undo, die Excel hat keins, v1 hat es nur für das Verschieben und ohne Bedienelement. In einem Append-only-Protokoll ist Löschen oder Umschreiben ausgeschlossen. Auflage 11 legt vier Eckpunkte fest: Undo ist ein gewöhnliches Ereignis mit `undoOf`, es gibt einen Stapel je Client, `KorrekturVon` ist etwas anderes, und Redo gibt es nicht.
+
+### U1 — Undo ist ein neues Ereignis, und der Fold hat keinen Sonderpfad
+
+Ein Undo ist ein Ereignis wie jedes andere: eigene `id`, eigene `hlc`, eigener `akteur`. Es trägt zusätzlich `undoOf` und setzt ein Feld auf den Wert, den das Original verdrängt hat — bei setzenden Arten aus dessen `vorher`.
+
+**Der Fold liest `undoOf` nicht, um zu entscheiden.** Er faltet das Kompensationsereignis nach der Regel seiner eigenen Art. `undoOf` ist für das Einsatztagebuch da und für den Stapel (U3).
+
+Deshalb führt der Katalog für **jede** rücknehmbare Art ein benanntes Gegenereignis: die drei der Anforderung (§5.6.2), `EinsatzWiedereroeffnet`, `AbschnittWiederhergestellt`, `AuftragZurueckgenommen`, `EebMeldungUebernahmeZurueckgenommen` und die fünf `…Wiederhergestellt` (Einheit, Fahrzeug, Person, Dienstposten, Anhang). Ohne sie gäbe es Arten, deren Rücknahme nur durch **Ausschluss** des Originals aus der Ereignismenge darstellbar wäre — eine Rückwärtslogik, bei der die Menge nicht mehr die Menge ist, sondern die Menge minus einer Auswahl, die von einem anderen Ereignis abhängt. Genau das schließt Auflage 11 aus.
+
+**T55:** Ein Fold, dem `undoOf` künstlich entfernt wird, liefert denselben Zustand — bis auf die Markierung im Tagebuch. Die Gegenprobe fällt, sobald jemand eine Ausschlusslogik einbaut.
+
+### U2 — Was rückgängig gemacht werden kann, ist typabhängig
+
+| Klasse | Arten | Kompensation |
+|---|---|---|
+| **frei rückgängig** | alle setzenden Arten, alle Verschiebungen, alle Anlagen außer den unten genannten, Zusagen | ein Ereignis derselben Art mit `neu = vorher` des Originals, oder das im Katalog genannte Gegenereignis |
+| **strukturell rückgängig** | `EinheitAufgeteilt` ↔ `EinheitZusammengefuehrt`, `AbschnittAngelegt` ↔ `AbschnittAufgeloest`, `AbschnittAufgeloest` ↔ `AbschnittWiederhergestellt` | der **inverse Fachvorgang**, nicht ein technisches Zurückrollen. Im Tagebuch als Rücknahme markiert, fachlich eine echte Handlung: Die zusammengeführte Einheit ist wieder zwei, weil jemand sie wieder getrennt hat |
+| **nicht rückgängig** | `EinsatzAngelegt`, `EinsatzArchiviert`, `EebMeldungEmpfangen`, `EtbEintragErfasst`, `EtbEintragBerichtigt`, `KorrekturVon` | Tatsachen und Barrieren |
+
+**Für die sechs nicht rücknehmbaren Arten gibt es keinen gemeinsamen Ersatz.** Die erste Fassung dieses Konzepts behauptete, `KorrekturVon` sei er — das war falsch, weil eine Korrektur auf eine Anlage nie gewinnt (§5.9.2). Der Weg ist je Art ein anderer, und die Tabelle in §5.9.2 nennt ihn: Stammdatenereignisse für die Anlagen, eine neue Revision für die EEB-Meldung, `EtbEintragBerichtigt` für das Tagebuch, `ArchivierungZurueckgenommen` für die Barriere.
+
+**Warum `EinsatzArchiviert` nicht rückgängig ist, obwohl es zurückgenommen werden kann.** Ein Undo sagt „das war ein Versehen, es soll nicht gewesen sein"; die Rücknahme einer Archivierung sagt „der Einsatz geht weiter". Das erste passt zu einer Barriere nicht — sie hat, solange sie galt, die Arbeit aller Clients gesteuert. Deshalb trägt `ArchivierungZurueckgenommen` kein `undoOf`, steht nicht auf dem Stapel und braucht einen `grund`.
+
+### U3 — Der Stapel ist je Client, und er wird abgeleitet
+
+„Letzte Aktion rückgängig" heißt: das **eigene** Ereignis dieses Clients mit der höchsten HLC, das noch nicht kompensiert ist. Ein globales Undo wäre für den Bediener nicht vorhersagbar; v1 macht es global und hat konsequenterweise kein Bedienelement dafür gebaut.
+
+Der Stapel liegt nirgends. KONZEPT-SPEICHER.md §4.4 leitet ihn aus dem lokalen Spiegel ab und **verweist die Semantik ausdrücklich hierher** („N und die Frage, welche Ereignisarten überhaupt rücknehmbar sind, gehören ins Ereigniskonzept"). Zwei Größen legt dieses Konzept fest:
+
+* **Tiefe N = 20** (Startwert S4). Der Stapel dient dem Zurücknehmen eines Vertippers, nicht dem Zurückrollen einer Schicht; zwanzig Schritte decken jede Bedienfolge ab, die ein Mensch als „gerade eben" empfindet, und begrenzen zugleich, wie weit ein Undo in fremde Arbeit hineinreicht (U6).
+* **Kompensiert ist ein Ereignis, sobald *irgendein* Client es kompensiert hat.** §4.4 formuliert dort enger („ein **eigenes** Ereignis mit passendem `undoOf`"). Das ist Befund B2 (§10) — kein Widerspruch, den dieses Konzept einseitig auflöst, sondern eine Wortänderung, die §4.4 braucht, damit seine eigene Absicht trägt.
+
+  Begründung: Hat B mein Ereignis bereits zurückgenommen, ist der alte Stand wiederhergestellt. Nähme ich es erneut zurück, setzte mein Undo denselben Wert ein zweites Mal — mit einer HLC, die inzwischen über allem liegt, was zwischenzeitlich geschrieben wurde. Ich verwürfe fremde Arbeit, ohne es zu beabsichtigen, und der Bediener sähe nur „rückgängig". Der engere Stapel erzeugt genau die Lage, vor der U6 warnt, und zwar unnötig.
+
+**T56:** A schreibt e1, B kompensiert e1 ⇒ der Stapel von A enthält e1 nicht mehr. **T57:** Der Stapel enthält keine fremden Ereignisse, auch nicht das jüngste der Akte.
+
+### U4 — `KorrekturVon` ist etwas anderes als Undo
+
+Undo tut so, als wäre nichts gewesen. Korrektur sagt, dass etwas war.
+
+`KorrekturVon` ist das Werkzeug für „das war fachlich falsch", nicht für „das war ein Vertipper" — etwa wenn eine Meldung der falschen Einheit zugeordnet wurde und bereits in Summen und Ausdrücke eingegangen ist. Im Tagebuch erscheinen **beide** Zeilen, weil es die Lage dokumentiert, wie sie geführt wurde, und nicht, wie sie im Rückblick hätte sein sollen.
+
+Formal: `korrekturVon` ist ein Rahmenfeld wie `undoOf`, `KorrekturVon` eine Ereignisart mit eingebetteter Zielnutzlast (§5.9.2), und ein Korrekturereignis steht **nicht** auf dem Undo-Stapel. Es ist selbst nicht rücknehmbar — eine Korrektur einer Korrektur ist wieder eine Korrektur.
+
+### U5 — Redo gibt es nicht
+
+Ein zurückgenommenes Ereignis wird durch **erneutes Ausführen der Handlung** wiederhergestellt: ein neues Ereignis, ohne `undoOf`. Es gibt keinen Redo-Stapel und kein Rahmenfeld dafür.
+
+Ein Redo über nebenläufige Ereignisse ist nicht deterministisch definierbar: Zwischen Undo und Redo kann ein anderer Client dasselbe Feld gesetzt haben; ein Redo müsste entscheiden, ob es dessen Arbeit verwirft — und hätte dafür keinen gesehenen Vorher-Wert, weil der Bediener beim Drücken von „Wiederherstellen" nicht auf das Feld geschaut hat.
+
+### U6 — Undo gegen Fremdänderung
+
+Kompensiert A ein Ereignis, das B zwischenzeitlich überschrieben hat, gilt weiterhin LWW: **Die Kompensation gewinnt, wenn ihre HLC höher ist.** Zusätzlich entsteht `undoTrifftFremdenStand` mit Gewinner, verdrängtem Wert und der Id des zurückgenommenen Originals.
+
+Es ist eine eigene Hinweisart und nicht `vorherPasstNicht`, obwohl beide dieselbe Lage messen: Der Bediener hat hier nicht ein Feld gesetzt, sondern „rückgängig" gedrückt, und der Satz, den die Oberfläche daraus baut, muss ein anderer sein („Ihre Rücknahme hat eine Änderung von <Akteur> überschrieben").
+
+**Zwei Clients nehmen dasselbe Ereignis zurück.** Beide schreiben eine Kompensation mit demselben `undoOf` und — weil beide aus demselben `vorher` des Originals stammen — demselben Wert. Der Fold entscheidet nach LWW; das Ergebnis ist derselbe Wert, und weil die Werte gleich sind, entsteht **kein** Hinweis. Im Tagebuch stehen beide Rücknahmen. Sahen die beiden Clients verschiedene Stände, unterscheiden sich die Werte, und es gilt LWW mit Hinweis wie sonst.
+
+**T58:** A schreibt `StatusGesetzt` (HLC 5), B setzt anders (HLC 7), A nimmt zurück (HLC 9) ⇒ der Wert von A gilt, `undoTrifftFremdenStand`. **T59:** Zwei Clients kompensieren dasselbe Ereignis mit demselben Wert ⇒ ein Wert, kein Hinweis, zwei Tagebuchzeilen. **T60:** Dieselben mit verschiedenen Werten ⇒ LWW, Hinweis.
+
+---
+
+## §7 Die Barriere `EinsatzArchiviert` (Auflage 13)
+
+KONZEPT-SPEICHER.md §5.7 legt die Speicherseite fest und setzt dieses Ereignis voraus. Hier stehen Nutzlast, Wirkung auf den Fold, die Behandlung eines später eintreffenden Ereignisses und die Rücknahme.
+
+### §7.1 Nutzlast und Wirkung
+
+`EinsatzArchiviert` trägt `{ einsatzId, zeitpunkt, snapshotHash }`. `snapshotHash` ist der `zustandsHash` über den Zustand, den der archivierende Client gefaltet hatte — **Beleg, nicht Bedingung**: Ein anderer Client, der einen anderen Hash rechnet, weil er mehr oder weniger Ereignisse gesehen hat, archiviert trotzdem und faltet trotzdem. Ihn zur Bedingung zu machen hieße, die Archivierung von der Sicht eines einzelnen Clients abhängig zu machen.
+
+Wirkung: Der Einsatz gilt als archiviert. Der Client wechselt für ihn in einen Nur-Lesen-Zustand und bietet keine ändernden Bedienschritte mehr an. Der Fold selbst hört **nicht** auf zu falten.
+
+### §7.2 Die maßgebliche Archivierung — und der Grabstein
+
+Es kann mehr als ein `EinsatzArchiviert` geben: zwei Clients archivieren gleichzeitig, oder es wird nach einer Rücknahme erneut archiviert. Die Ableitung:
+
+* Der Zustand führt `einsatz.archivierungen` als Abbildung von **Ereignis-Id auf ein LWW-Feld** (§3.2). `EinsatzArchiviert` setzt den Eintrag unter seiner **eigenen** Id auf `true`; `ArchivierungZurueckgenommen` setzt den Eintrag unter der von ihm **benannten** Id auf `false`.
+* **Der Eintrag entsteht unabhängig davon, ob das benannte Ereignis bekannt ist.** Trifft die Rücknahme vor der Archivierung ein — anderer Spiegel, Quarantäne, Segmentnachlauf —, steht der Eintrag als **Grabstein** mit `false` da; die später eintreffende Archivierung setzt denselben Schlüssel mit **kleinerer** HLC auf `true` und verliert nach LWW. Ohne diese Festlegung hinge der Archivzustand an der Eintreffreihenfolge, und P1 und P3 fielen an der prominentesten Stelle des Dokuments.
+* **Maßgeblich** ist unter allen Einträgen mit Wert `true` der mit der **kleinsten** HLC des Archivierungsereignisses; bei Gleichstand die kleinere Id (§3.5). Gibt es keinen, ist der Einsatz nicht archiviert.
+
+Dieselbe Grabsteinregel gilt für jedes Feld, das ein Ereignis über die Id eines anderen adressiert: `KorrekturVon.korrigiertesEreignisId` und `EtbEintragBerichtigt.berichtigtEintragId` markieren das benannte Ereignis im Tagebuch, gleichgültig, ob es dem Client vorliegt.
+
+„Die mit kleinerer HLC gilt, die zweite ist ein No-op" (ZDM §4.2) ist damit ausgeschrieben: Die zweite Archivierung erzeugt keine zweite Barriere, wohl aber `wirkungslosGegenTerminalzustand` (§3.12) — sie ist nicht falsch, sie ist nur später, und der Bediener soll sehen, dass sein Klick nichts geändert hat.
+
+### §7.3 Ein Ereignis nach der Archivierung — genau eine Behandlung
+
+**Das Ereignis wird angenommen, gefaltet und wirkt.** Verworfen wird nichts.
+
+**Der Hinweis hängt am Feld, nicht am Ereignis.** Für jedes materialisierte Feld, dessen Gewinner-HLC größer ist als die der maßgeblichen Archivierung, entsteht `nachArchivierungEingegangen` mit dem Feldpfad und der Id des Gewinners. Das ist die einzige Form, die nach §3.1 trägt: Der Zustand kennt Felder, nicht den Ereignisstrom, und nach einem Schnappschuss wären die Ereignisse unterhalb des Offsets nicht mehr da. So dagegen wird der Hinweis bei **jeder** Materialisierung neu berechnet — auch dann, wenn ein `EinsatzArchiviert` verspätet eintrifft und Felder betrifft, die längst gefaltet sind.
+
+Die Zusicherung, die daraus folgt, ist enger als „jedes nachträgliche Ereignis wird angezeigt" und dafür haltbar: **Keine nachträgliche Änderung, die im Zustand steht, bleibt unbemerkt.** Ein Ereignis, das seinen Konflikt verloren hat, hat den Zustand nicht geändert und erzeugt keinen eigenen Hinweis; es steht im Tagebuch. Die Meldung „Der Einsatz war bereits archiviert; N nachträgliche Einträge sind eingegangen" ist deshalb eine Auskunft der **Tagebuchprojektion** (§5.9.1), die den Ereignisstrom liest, nicht des Zustands. §8.2 führt das als Nicht-Zusicherung.
+
+**Diese Festlegung steht im Widerspruch zu ZDM §4.1 Regel 5 und ersetzt sie.** Dort heißt es: „Nach `EinsatzArchiviert` werden neue Ereignisse **nicht mehr gefaltet**, sondern als Konflikthinweis angezeigt." KONZEPT-SPEICHER.md §5.7 sagt das Gegenteil, ausdrücklich und begründet („Stilles Verwerfen wäre der schlimmere Fehler, und ein Einsatz, der nachträglich einen Eintrag bekommt, ist ein realer Vorgang"). Maßgeblich ist die Speicherfassung:
+
+1. Sie ist freigegeben (2026-09-08); ZDM ist ein Entwurfsbericht.
+2. Auflage 13 verlangt „genau **eine** Behandlung" — zwei Dokumente mit gegenläufigen Sätzen sind das Gegenteil.
+3. Nicht zu falten hieße, dass der Zustand davon abhinge, in welcher Reihenfolge ein Client Archivierung und Nachzügler sieht. Der Fold wäre keine Mengenfunktion mehr, und P1 fiele. Das ist der technische Grund, unabhängig von der fachlichen Abwägung.
+
+Die Abweichung ist hier benannt, weil eine Zusage, die ein anderer Paragraph aussetzt, **beide** Stellen nennen muss — die Lehre aus M0.4 Abschnitt 4. Sie steht zusätzlich als Befund B3 in §10.
+
+### §7.4 Die Rücknahme
+
+`ArchivierungZurueckgenommen` trägt `{ einsatzId, archivierungEreignisId }` und einen Pflicht-`grund`. Sie ist **kein Undo** (U2): kein `undoOf`, nicht auf dem Stapel.
+
+Wirkung: Der benannte Eintrag steht auf `false` (§7.2). Ist er der maßgebliche gewesen und gibt es keinen weiteren mit `true`, ist der Einsatz wieder offen, und die Hinweise `nachArchivierungEingegangen` verschwinden an allen Feldern, deren HLC nun keine geltende Archivierung mehr überschreitet. **Das ist kein Zurückrollen, sondern dieselbe Ableitung über eine größere Menge** — deshalb geht es überhaupt, und deshalb geht es auch aus einem Schnappschuss heraus.
+
+Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv.marker`, und kein Client legt ihn wieder an, solange sein eigener Fold den Einsatz nicht als archiviert führt. Beide Regeln stützen sich allein auf den gefalteten Zustand — was §5.7 dort verlangt.
+
+**T61:** Zwei `EinsatzArchiviert` (HLC 5 und 9) ⇒ maßgeblich ist HLC 5, für die zweite `wirkungslosGegenTerminalzustand`. **T62:** `StatusGesetzt` mit HLC 7 dazu ⇒ gefaltet, wirkt, `nachArchivierungEingegangen` am Feld. **T63:** Rücknahme der Archivierung mit HLC 5 ⇒ maßgeblich ist HLC 9, das Feld aus HLC 7 verliert seinen Hinweis. **T64 (Grabstein):** Die Rücknahme trifft **vor** ihrer Archivierung ein ⇒ derselbe Zustand wie in umgekehrter Reihenfolge. **T65:** Beide Archivierungen zurückgenommen ⇒ Einsatz offen, kein Feld trägt den Hinweis. **T66:** Alle vorstehenden Fälle in jeder Permutation mit demselben Ergebnis.
