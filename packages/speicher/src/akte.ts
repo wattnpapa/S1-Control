@@ -240,6 +240,14 @@ export class Akte {
       if (reaktion.art !== "repariert") break;
       befund = await this.#pruefeBeimOeffnen();
     }
+    // Der letzte Befund kann etwas anderes sein als eine Beschädigung — eine
+    // fremde Schreibspur (§4.5 Fall 2) etwa, die `pruefeBeimOeffnen` erst
+    // sieht, nachdem der erste Fund erledigt ist. Sie darf nicht liegen
+    // bleiben, nur weil sie die zweite war.
+    if (befund.art !== "beschaedigt") {
+      const weitere = await this.#reagiereAufBefund(befund);
+      if (weitere !== undefined) reaktionen.push(weitere);
+    }
     return { befund: erster, reaktionen };
   }
 

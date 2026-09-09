@@ -574,3 +574,300 @@ describe("§4.5 Schritt 6 — eine nie gespiegelte aufgegebene Datei", () => {
     expect(ids).toContain(`${ICH}:${letzteNummer}`);
   });
 });
+
+describe("§4.6 — der Reparaturweg unter Störung", () => {
+  /** Füllt Segment 0000, spiegelt, und beschädigt es auf dem Share in der Mitte. */
+  async function beschaedigtesSegment(
+    platz: Arbeitsplatz,
+    dateisystem: Dateisystem,
+  ): Promise<{ akte: Awaited<ReturnType<typeof oeffneAkte>>["akte"] }> {
+    const { akte } = await oeffneAkte(akteOptionen(platz, dateisystem));
+    for (let i = 0; i < 6; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const roh = new Uint8Array(
+      await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0),
+    );
+    const zeilen = leseZeilengrenzen(roh, 0).zeilen;
+    const ziel = zeilen[1] as { offset: number; laenge: number };
+    const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+    roh[stelle] = ((roh[stelle] as number) ^ 0x20) & 0xff;
+    await platz.dateisystem.kuerzeAuf(platz.ablage.shareSegment(ICH, 0), 0);
+    await platz.dateisystem.haengeAnUndSynchronisiere(platz.ablage.shareSegment(ICH, 0), roh);
+    return { akte };
+  }
+
+  it("lässt die Akte öffnen, auch wenn die Kopfzeile des Ersatzsegments scheitert", async () => {
+    // Bleibt der Schreiber auf dem leeren Ersatzsegment stehen, geht die
+    // nächste gewöhnliche Zeile als **erste** hinaus. Für `kettenanker` ist das
+    // dann kein Ersatzsegment mehr, sondern ein Folgesegment mit falschem
+    // Anker — und `bereiteSchreiberVor` bricht von da an bei jedem Start ab.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const stoerungen: Stoerung[] = [];
+    const fs = stoerdateisystem(platz.dateisystem, stoerungen);
+    await beschaedigtesSegment(platz, fs);
+
+    // Die Kopfzeile des Ersatzsegments scheitert.
+    stoerungen.push({
+      aufruf: "haengeAnUndSynchronisiere",
+      code: "ENOSPC",
+      malen: 2,
+      pfadEnthaelt: `rechner-1`,
+    });
+    const gescheitert = await oeffneAkte(akteOptionen(platz, fs));
+    expect(gescheitert.ergebnis.reaktion?.art).toBe("reparaturGescheitert");
+
+    // Entscheidend: Es wird **weitergearbeitet**. Ohne die Rücknahme ginge
+    // diese Zeile als erste Zeile des Ersatzsegments hinaus, ohne
+    // `SegmentErsetzt` davor — und das nächste Öffnen bräche ab.
+    stoerungen.length = 0;
+    platz.uhr.weiter(3);
+    alsGeschrieben(
+      await gescheitert.akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { nach: true } }),
+    );
+
+    const zweiter = await oeffneAkte(akteOptionen(platz, fs));
+    expect(zweiter.ergebnis.reaktion?.art).toBe("repariert");
+    // Und ein drittes Mal ist nichts mehr zu tun (§4.6 Schritt 5).
+    const dritter = await oeffneAkte(akteOptionen(platz, fs));
+    expect(dritter.ergebnis.befund.art).toBe("inOrdnung");
+  });
+
+  it("repariert beim Öffnen **alle** beschädigten eigenen Segmente (§4.6.1 im Plural)", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    // Zwei volle Segmente erzeugen und spiegeln.
+    while (akte.schreiber.segment < 2) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(
+        await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }),
+      );
+      await akte.spiegle();
+    }
+    // Beide auf dem Share in der Mitte beschädigen.
+    for (const segment of [0, 1]) {
+      const pfad = platz.ablage.shareSegment(ICH, segment);
+      const roh = new Uint8Array(await platz.dateisystem.liesAb(pfad, 0));
+      const zeilen = leseZeilengrenzen(roh, 0).zeilen;
+      const ziel = zeilen[1] as { offset: number; laenge: number };
+      const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+      roh[stelle] = ((roh[stelle] as number) ^ 0x20) & 0xff;
+      await platz.dateisystem.kuerzeAuf(pfad, 0);
+      await platz.dateisystem.haengeAnUndSynchronisiere(pfad, roh);
+    }
+
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    expect(ergebnis.befund.art).toBe("beschaedigt");
+    expect(ergebnis.reaktion?.art).toBe("repariert");
+    // Der zweite Schaden wird im selben Öffnen erledigt — sonst bliebe die
+    // Quarantäne jedes Lesers dort bis zum nächsten Start bestehen (§8.2).
+    expect(ergebnis.weitereReaktionen?.map((r) => r.art)).toEqual(["repariert"]);
+    const nachher = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    expect(nachher.ergebnis.befund.art).toBe("inOrdnung");
+  });
+});
+
+describe("§4.5 Schritt 3 — der Laufnummernvergleich gilt der laufenden Kennung", () => {
+  it("wechselt die Kennung wegen derselben Klon-Zeile nur einmal", async () => {
+    // Sonst löste dieselbe Zeile bei jedem Öffnen erneut einen Wechsel aus:
+    // Der Bediener bekäme bei jedem Start zu lesen, sein Profil sei kopiert
+    // worden, und `frühereClientIds` wüchse unbegrenzt.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    let kennungen = 0;
+    const optionen = (): AkteOptionen => ({
+      ...akteOptionen(platz, platz.dateisystem, ICH),
+      neueKennung: () => `bbccdd${String(kennungen++).padStart(2, "0")}`,
+    });
+    const { akte } = await oeffneAkte(optionen());
+    for (let i = 0; i < 3; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const kette = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:9999`,
+        vorgaenger: kette,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+
+    const erster = await oeffneAkte(optionen());
+    expect(erster.ergebnis.befund.art).toBe("fremdschreiber");
+    expect(erster.ergebnis.reaktion?.art).toBe("kennungGewechselt");
+    const jetzt = erster.akte.schreiber.clientId;
+
+    const zweiter = await oeffneAkte({ ...optionen(), clientId: jetzt });
+    expect(zweiter.ergebnis.befund.art).toBe("inOrdnung");
+    expect(zweiter.akte.schreiber.clientId).toBe(jetzt);
+  });
+});
+
+describe("§4.5 Schritt 6 — die Kürzung geht nie unter den Share-Stand", () => {
+  it("behält lokale Zeilen, deren Share-Fassung vor dem Offset beschädigt ist", async () => {
+    // Die Beschädigung sitzt **vor** `shareOffset` — die Stelle, die der
+    // Vergleich aus §5.4.3 nie sieht (§4.6.1). Würde bis zum byteweisen
+    // Gleichstand gekürzt, verschwänden lokal Zeilen, die §4.5 Schritt 3 nicht
+    // mitnimmt und die auf dem Share für jeden Leser in Quarantäne stehen — der
+    // Wiederherstellungsweg aus §8.6.1 Regel 4 hätte dann keine Grundlage mehr.
+    // Befund aus der Simulation M0.4.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    // Segment 0000 vollmachen und spiegeln.
+    while (akte.schreiber.segment === 0) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(
+        await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }),
+      );
+      if (akte.schreiber.segment === 0) await akte.spiegle();
+    }
+    await akte.spiegle();
+    const lokal0Vorher = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+
+    // Segment 0000 auf dem Share in der Mitte kippen — weit vor `shareOffset`.
+    const pfad0 = platz.ablage.shareSegment(ICH, 0);
+    const roh = new Uint8Array(await platz.dateisystem.liesAb(pfad0, 0));
+    const zeilen = leseZeilengrenzen(roh, 0).zeilen;
+    const ziel = zeilen[1] as { offset: number; laenge: number };
+    const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+    roh[stelle] = ((roh[stelle] as number) ^ 0x20) & 0xff;
+    await platz.dateisystem.kuerzeAuf(pfad0, 0);
+    await platz.dateisystem.haengeAnUndSynchronisiere(pfad0, roh);
+
+    // In Segment 0001 weiterschreiben, spiegeln und dort den Klon anhängen:
+    // Der Klon muss in einer **unbeschädigten** Datei stehen, sonst sieht ihn
+    // die Prüfung gar nicht (§8.2 bricht die Auswertung an der Fehlerstelle ab).
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const kette1 = akte.zustand.eigen[`${ICH}.0001`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 1),
+      baueZeile({
+        id: `${ICH}:4242`,
+        vorgaenger: kette1,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+
+    const { akte: zweite, ergebnis } = await oeffneAkte(
+      akteOptionen(platz, platz.dateisystem, ICH, 900),
+    );
+    // Erst die Reparatur nach §4.6, dann der Kennungswechsel nach §4.5 Fall 2:
+    // Die fremde Schreibspur wird erst sichtbar, wenn der erste Fund erledigt ist.
+    expect(ergebnis.reaktion?.art).toBe("repariert");
+    expect(ergebnis.weitereReaktionen?.map((r) => r.art)).toEqual(["kennungGewechselt"]);
+    expect(zweite.schreiber.clientId).not.toBe(ICH);
+
+    // Und das Entscheidende: Segment 0000 ist lokal unverändert.
+    const lokal0Nachher = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0);
+    expect(lokal0Nachher.byteLength).toBe(lokal0Vorher.byteLength);
+    expect(lokal0Nachher).toEqual(lokal0Vorher);
+  });
+});
+
+describe("§8.1 — der Start räumt auch ein früheres Segment auf", () => {
+  it("kürzt ein Bruchstück in einem nicht letzten eigenen Segment, statt abzubrechen", async () => {
+    // §8.1 nennt nur „sein eigenes letztes Segment". Bleibt ein Bruchstück in
+    // einem früheren stehen — nach einem Ersatzsegment (§4.6) oder einem
+    // Kennungswechsel (§4.5) wird es nie wieder beschrieben —, sperrte ein
+    // lauter Abbruch den Client dauerhaft aus seiner eigenen Akte aus, gegen
+    // §8, Grundsatz, und §8.8 Punkt 5. Befund aus der Simulation M0.4.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    while (akte.schreiber.segment === 0) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(
+        await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "y".repeat(120) } }),
+      );
+    }
+    platz.uhr.weiter(3);
+    alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 1 } }));
+
+    // Ein Bruchstück in Segment 0000 — dem **nicht letzten** Segment.
+    const pfad0 = platz.ablage.lokalSegment(ICH, 0);
+    const vorher = (await platz.dateisystem.liesAb(pfad0, 0)).byteLength;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      pfad0,
+      new TextEncoder().encode('742\tcafebabe\t{"id":"abbruch'),
+    );
+
+    const { akte: neu } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    expect(neu.schreiber.segment).toBe(1);
+    expect((await platz.dateisystem.liesAb(pfad0, 0)).byteLength).toBe(vorher);
+    // Und es lässt sich weiterschreiben.
+    platz.uhr.weiter(3);
+    alsGeschrieben(await neu.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 2 } }));
+  });
+});
+
+/**
+ * **Grenze dieses Tests, benannt.** Die Pfadbindung des Reparaturmerkers ist
+ * durch keine einzelne Mutation zum Fallen zu bringen: Räumt der Merker das
+ * Bruchstück nicht weg, holt es die Kürzung beim Start nach (§8.1, oben), und
+ * umgekehrt. Beide Wege decken einander; geprüft ist damit die Wirkung, nicht
+ * jeder ihrer beiden Träger einzeln. Der Test unten pinnt den Fall, in dem der
+ * Merker greift, ohne dass ein Neustart dazwischenliegt.
+ */
+describe("§8.1 — der Reparaturmerker hängt an der Datei, nicht am Schreiber", () => {
+  it("quittiert ein Bruchstück nicht auf einer anderen Datei", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const teile: Teilschreibung[] = [];
+    const stoerungen: Stoerung[] = [];
+    const fs = stoerdateisystem(teilschreiber(platz.dateisystem, teile), stoerungen);
+    const { akte } = await oeffneAkte(akteOptionen(platz, fs, ICH, 900));
+    platz.uhr.weiter(3);
+    alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 0 } }));
+    const sauber = (await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0))
+      .byteLength;
+
+    // Anhang geht teilweise durch **und** das Kürzen scheitert: Die Reparatur
+    // bleibt offen.
+    teile.push({ pfadEnthaelt: `${ICH}.0000.jsonl`, bytes: 50, code: "EIO", malen: 1 });
+    stoerungen.push({
+      aufruf: "kuerzeAuf",
+      code: "EIO",
+      malen: Number.POSITIVE_INFINITY,
+      pfadEnthaelt: `${ICH}.0000.jsonl`,
+    });
+    platz.uhr.weiter(3);
+    expect((await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 1 } })).art).toBe(
+      "abgewiesen",
+    );
+    expect((await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0)).byteLength).toBe(
+      sauber + 50,
+    );
+
+    // Jetzt gelingt ein Anhang an eine **andere** Datei. Er darf die offene
+    // Reparatur an Segment 0000 nicht quittieren — sonst bliebe das Bruchstück
+    // dort für immer stehen, sobald das Segment nicht mehr beschrieben wird.
+    await fs.haengeAnUndSynchronisiere(
+      platz.ablage.lokalSegment(ICH, 1),
+      new TextEncoder().encode("egal"),
+    );
+    stoerungen.length = 0;
+    platz.uhr.weiter(3);
+    alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 2 } }));
+    const gelesen = leseZeilengrenzen(
+      await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 0), 0),
+      0,
+    );
+    expect(gelesen.zeilen.map((z) => z.rahmen.id)).toEqual([`${ICH}:1`, `${ICH}:3`]);
+  });
+});
