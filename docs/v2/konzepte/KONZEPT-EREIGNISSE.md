@@ -1,6 +1,6 @@
 # KONZEPT-EREIGNISSE — Ereigniskatalog, Konfliktregeln, Undo
 
-Stand: 2026-09-09 · Paket M1.2, Bauvorlage für M1.3 · Status: **Entwurf, sechzehnte Fassung nach fünfzehn Gutachten**
+Stand: 2026-09-09 · Paket M1.2, Bauvorlage für M1.3 · Status: **Entwurf, siebzehnte Fassung nach sechzehn Gutachten**
 
 Verbindliche Grundlagen: [KONZEPT-SPEICHER.md](KONZEPT-SPEICHER.md) (freigegeben am 2026-09-08), [03-MEILENSTEINE.md](../03-MEILENSTEINE.md) Auflagen 4, 6, 10, 11, 12, 13 und 18, [02-ZIELBILD.md](../02-ZIELBILD.md). Fachliche Quelle: `docs/v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §2 bis §4 — im Folgenden **ZDM**. Stand des Codes: `packages/domaene/src/{ereignis,fold,zustand}.ts` aus M0.2.
 
@@ -293,7 +293,7 @@ interface Zustand {
                hlc: Hlc; akteurBenutzer: string; akteurHost: string
                grund: "ART" | "VERSION" | "SCHEMA" }[]   // §3.7, nach `id` geordnet
   wartend: { [entitaetspfad: string]: { feld: string; beobachtung: Beobachtung<unknown> }[] }
-  verworfeneSchluessel: { art: "EREIGNIS_ID" | "INHALTSSCHLUESSEL" | "RESERVIERTE_ID"
+  verworfeneSchluessel: { art: "INHALTSSCHLUESSEL" | "RESERVIERTE_ID"
                           schluessel: string; verworfen: EreignisId
                           hlc: Hlc; inhalt: unknown }[]   // §3.6
 }
@@ -329,7 +329,7 @@ Maßgeblich ist bei (2) `wirksamAufgegangen`, nicht das blosse Vorhandensein von
 **Sechs Schranken, damit der Zustand nicht mit der Akte wächst:**
 
 1. **`zweiter`** ist eine zusätzliche Beobachtung je Feld — der Zustand verdoppelt sich je Feld, er wächst nicht mit der Zahl der Ereignisse.
-2. **`verworfeneAnlagen`** je Entität und **`verworfeneSchluessel`** global wachsen mit der Zahl doppelt vergebener Ids. Im Normalbetrieb ist sie null; sie entsteht nur bei geklontem Profil oder Migrationsfehler. Benannt in §8.2.
+2. **`verworfeneAnlagen`** je Entität und **`verworfeneSchluessel`** global wachsen mit der Zahl doppelt vergebener **Entitäts-Ids und fachlicher Schlüssel**. Im Normalbetrieb ist sie null; sie entsteht nur bei geklontem Profil oder Migrationsfehler. Benannt in §8.2.
 3. **`archivierungen`** hat einen Eintrag je Archivierungsereignis **und** je Rücknahme, die eine unbekannte Archivierung benennt (§7.2). Ein Einsatz wird ein- bis zweimal archiviert; eine Rücknahme auf eine Id, die es nie geben wird, hinterlässt einen Eintrag. Benannt in §8.2.
 4. **`wartend`** hält Beobachtungen zu noch nicht angelegten Entitäten, je Feldpfad so viele, wie seine Aufnahmeoperation vorsieht (§3.3). Es wächst mit der Zahl der Entitäten, deren Anlage aussteht — und die ist **nicht** beschränkt, wenn eine Anlage nie kommt (verlorenes Segment, Quarantäne). Benannt in §8.2.
 5. **Die `verdraengt`-Listen der beiden Erstwert-Felder** wachsen mit der Zahl wiederholter Vorgänge an derselben Entität — im Normalbetrieb null.
@@ -371,39 +371,29 @@ Gefaltet wird nach `hlc`, nie nach `wanduhr`. Bei gleicher HLC entscheidet die E
 * **LWW** wählt das größte Element: bei Gleichstand gewinnt die **größere** Id.
 * **Anlagen** (§3.11) und die **Erstwert-Felder** (§3.4) wählen das kleinste: bei Gleichstand gilt die **kleinere** Id. Beides sind Minimumsbildungen und tragen dieselbe Richtung — sonst entschiede ausgerechnet beim geklonten Profil die Eintreffreihenfolge darüber, in welches Ziel eine Einheit aufgeht.
 
-Zwei verschiedene Ereignisse mit derselben HLC sind ein Protokollbruch — den erzeugt aber das geklonte Profil, dessen Injektion M0 verlangt. Ohne Tie-Break entschiede der Fold dort nach Eintreffreihenfolge und wäre ausgerechnet im Zielfall der Fehlerinjektion keine Mengenfunktion. `vergleicheBeobachtung` in `fold.ts` tut das seit M0.2 in beiden Richtungen richtig.
+Zwei verschiedene Ereignisse mit derselben HLC sind nach §3.2 der Speicherschicht ausgeschlossen, solange zwei Clients verschiedene Kennungen tragen — die `clientId` ist der dritte Teil der HLC. Der Tie-Break ist trotzdem festzulegen und nicht bloß Vorsicht: Er entscheidet auch dort, wo **derselbe** Client zwei Ereignisse mit derselben HLC schreibt, was §3.2 dort über den Zähler ausschließt, und er macht die Ordnung total statt nur fast total. Eine Regel, die nur fast immer greift, wird im Code zur Fallunterscheidung nach Eintreffreihenfolge. `vergleicheBeobachtung` in `fold.ts` tut das seit M0.2 in beiden Richtungen richtig.
 
 ### §3.6 Idempotenz
 
-**Über die Ereignis-Id.** Ein Ereignis, dessen `id` der **Versionsvektor des Zustands** bereits deckt, ist gefaltet und wird verworfen, ohne Hinweis. Das ist P2.
+**Über die Ereignis-Id — und zwar nicht hier.** Die Entdopplung geschieht in der **Speicherschicht**, nicht im Fold. §5.3 dort hält je Einsatz die Menge der bereits gesehenen Ereignis-Identitäten; sie wird beim Öffnen aus dem lokalen Spiegel aufgebaut, nicht gespeichert, geht in keinen Schnappschuss und in keinen Hash ein. Eine wiederholte Zeile mit **identischem** Inhalt wird dort übersprungen (§8.2), eine mit **anderem** Inhalt ist ein Defekt und führt zur Quarantäne ab ihrem Offset. **Der Fold sieht deshalb jede Identität höchstens einmal**, und er sieht nie zwei verschiedene Ereignisse unter derselben Identität.
 
-**Woran „bereits gefaltet" entschieden wird.** Nicht an einer Menge aller gefalteten Ids — die wüchse mit der Zahl der Ereignisse, und §3.1 verbietet sie. Eine Ereignis-Id ist `clientId:laufnummer` (§5.1), und die Speicherschicht liest das Segment jedes Clients der Reihe nach; der Versionsvektor ist damit je Client eine echte Höchstmarke ohne Lücken. `laufnummer ≤ vektor[clientId]` heißt „gefaltet". Der Vektor ist mit der Zahl der Clients beschränkt, steht in jedem Schnappschuss (KONZEPT-SPEICHER.md §7.2) und ist damit nach §3.1 zulässig.
+Die dritte bis sechzehnte Fassung dieses Konzepts bauten dafür eine eigene Regel — erst „bereits gefaltete Id und gleicher Inhalt", dann eine Auswahl über den Versionsvektor — samt Hinweisart, Ablage in `verworfeneSchluessel` und einer Aussetzung von P1, P2, P3 und P7. **Das war doppelt gemoppelt und in beiden Fassungen falsch.** Die erste brauchte je gefalteter Id ihren Inhalt und verstieß damit gegen §3.1. Die zweite verstieß ebenfalls dagegen — der Versionsvektor steht im **Umschlag** eines Schnappschusses, nicht im Zustand — und war zudem sachlich unhaltbar: Er ist nach §7.2 der Speicherschicht je **Datei** geschlüsselt, nicht je Client; ein Client kann nach einem Kennungswechsel (§4.5) oder einer Reparatur (§4.6) Zeilen unter mehreren Dateien tragen, und §7.6 nimmt ersetzte Segmente wieder heraus, sodass die vermeintliche Höchstmarke nicht einmal monoton ist. Ein Leser hätte damit gültige Ereignisse still verworfen, und die Wiederherstellung aus einem Ersatzsegment (§4.6) hätte einem Client in Quarantäne genau die fehlenden Ereignisse verweigert.
 
-**„Gleicher Inhalt"** heißt: gleiche kanonische Serialisierung von `typ`, `nutzlast`, `vorher`, `neu` **und `hlc`**. Die HLC gehört dazu, und das ist nicht selbstverständlich: Zwei Ereignisse desselben geklonten Profils tragen dieselbe Id und dieselbe Nutzlast, aber verschiedene HLC — und die HLC entscheidet jeden Feldkonflikt. Ohne sie im Vergleich verwürfe der Fold das zweite als Duplikat **ohne Hinweis**, und welches der beiden die Feld-HLC setzt, hinge an der Eintreffreihenfolge; zwei Clients kämen zu verschiedenen Werten, und keiner sähe warum. Mit ihr ist der Fall „abweichender Inhalt" und trägt `ereignisIdDoppeltVergeben` (T163). `wanduhr`, `akteur` und `vorgaenger` gehen **nicht** ein — sie unterscheiden sich zwischen zwei Klonen immer, und ein Vergleich, der sie einschlösse, machte aus jedem Duplikat einen Widerspruch.
+**Was der Fold stattdessen leisten muss: strukturelle Idempotenz.** Dieselbe Ereignismenge zweimal zu falten darf den Zustand nicht ändern — nicht weil der Fold Ids merkt, sondern weil jede Aufnahmeoperation ein Halbverband ist. Für die Feldakkumulatoren gilt das ohnehin (Maximum, Minimum). Für die **wachsenden Listen** ist es festzulegen:
 
-**Zwei verschiedene Ereignisse mit derselben Id sind ein Protokollbruch,** kein Konflikt. §3.3 der Speicherschicht verbietet die Doppelvergabe der Laufnummer; §4.5 dort erkennt das geklonte Profil und zwingt ihm eine neue `clientId` auf. Bis das greift, kann der Bruch in der Akte stehen.
+> **`Erstwert.verdraengt`, `verworfeneAnlagen`, `verworfeneSchluessel`, `wartend`, `hinweise` und `unbekannt` sind Mengen:** Zwei Einträge mit identischer kanonischer Serialisierung werden zu einem zusammengezogen. §3.2 legt ihre Ordnung fest, diese Regel ihre Vielfachheit.
 
-> **Regel.** Das zuerst gefaltete Ereignis gilt für die Felder, die es setzt. **Jedes** Ereignis dieser Id — das gefaltete eingeschlossen — geht mit `art: "EREIGNIS_ID"` in `verworfeneSchluessel`, und `ereignisIdDoppeltVergeben` führt ihre Nutzlasten in `inhalte`.
+Das ist nicht theoretisch. §4.6 der Speicherschicht schreibt nach einer Beschädigung ein Ersatzsegment, das Ereignisse **noch einmal** liefert, und nennt das ausdrücklich folgenlos, „weil der Fold eine Mengenfunktion ist". Folgenlos ist es nur mit dieser Regel: Ohne sie stünde eine verdrängte Zusammenführung nach der Reparatur zweimal in `verdraengt`, und zwei gesunde Clients hätten verschiedene `zustandsHash` (T171). Das ist P2, und P2 gilt damit **unbedingt**.
 
-**Erkannt wird die Kollision nur innerhalb eines Faltungslaufs.** Solange beide Ereignisse in derselben Faltung eintreffen, liegt das zuerst gefaltete noch vor und beide Inhalte lassen sich ablegen. Über einen **Schnappschuss hinweg** geht das nicht: Der Zustand trägt vom gefalteten Ereignis nur seine Wirkung, nicht seine Nutzlast, und ein später eintreffendes zweites Ereignis derselben Id ist vom gewöhnlichen Duplikat nicht mehr zu unterscheiden — es wird verworfen, und der Hinweis entsteht nicht. **Über einer Ereignismenge mit doppelt vergebener Id ist deshalb auch P7 ausgesetzt** (§8.1), nicht nur P1 und P3. Das ist Teil von B6 und lässt sich hier nicht heilen: Die Gegenmaßnahme wäre, je gefalteter Id ihren Inhalt zu halten, und das verbietet §3.1.
+**„Gleicher Inhalt"** ist trotzdem hier zu definieren, weil §4.6 und §8.2 der Speicherschicht darauf verweisen: gleiche kanonische Serialisierung von `typ`, `nutzlast`, `vorher`, `neu` und `hlc`. `wanduhr`, `akteur` und `vorgaenger` gehen **nicht** ein — `vorgaenger` nicht, weil eine wiederholte Zeile im Ersatzsegment zwangsläufig einen anderen Vorgänger hat (§4.6 dort), die beiden anderen nicht, weil sie sich zwischen zwei Klonen immer unterscheiden und ein Vergleich, der sie einschlösse, aus jedem Duplikat einen Widerspruch machte.
 
-**`verworfeneSchluessel` ist wie `hinweise` eine Menge:** Zwei Einträge mit identischer kanonischer Serialisierung werden zu einem zusammengezogen. Ohne diese Regel bräche P2 in genau dieser Lage — kommt dasselbe Ereignis zweimal an, nachdem ein anderes derselben Id gefaltet wurde, entstünden zwei bytegleiche Einträge, und der Zustand hinge daran, wie oft ein Duplikat eintraf (T171).
+**Über einen fachlichen Schlüssel.** `EebMeldungEmpfangen` über `meldungId`, `AnhangHinzugefuegt` über `anhangId`. Das ist etwas anderes als die Ereignis-Id: Zwei Meldeköpfe, die denselben QR scannen, schreiben **zwei** Ereignisse mit zwei Identitäten und einem fachlichen Schlüssel. Es gilt §3.11 mit dem Schlüssel statt der Entitäts-Id; ein zweites Ereignis mit abweichendem Inhalt landet mit `art: "INHALTSSCHLUESSEL"` in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`.
 
-**Die `inhalte` des Hinweises bleiben reihenfolgeabhängig,** weil die Menge der abgelegten Inhalte es ist: Welches Ereignis gefaltet wurde und welche danach kamen, entscheidet die Eintreffreihenfolge. Sie sind trotzdem **aufsteigend nach ihrer kanonischen Serialisierung** geführt, damit wenigstens dieselbe Menge auf jedem Client dieselbe Ordnung hat. Die fünfzehnte Fassung behauptete an dieser Stelle mehr, als sie halten kann.
-
-**Diese eine Stelle ist ausdrücklich reihenfolgeabhängig, und das ist die ehrlichere Wahl.** Eine Auswahl „kleinere HLC gewinnt" wäre zwar als Mengenoperation formulierbar, aber nicht baubar: Sie müsste einen bereits gefalteten Gewinner **zurücknehmen**, sobald später ein Ereignis mit derselben Id und kleinerer HLC eintrifft — und dafür bräuchte der Zustand je gefalteter Id ihren Inhalt, also eine Struktur, die mit der Zahl der Ereignisse wächst. Das verbietet §3.1.
-
-Die Folge ist benannt statt versteckt: **Über einer Ereignismenge mit doppelt vergebener Id gelten P1 und P3 nicht** (§8.2). P2 hält, weil zwei bytegleiche Ereignisse auch bei gleicher Id gleicher Inhalt sind. `fold.ts` verwirft in M0.2 nach der Id ohne Hinweis und ist nachzuziehen (T107).
-
-**Der Konvergenzvergleich meldet dafür einen Fehler, keinen Sonderausgang — und das ist ein Befund für Johannes (B6).** Er wiegt schwerer, als die vierzehnte Fassung annahm: Ein Client, der über die Kollision hinweg aus einem Schnappschuss startet, trägt den Hinweis gar nicht. Frühere Fassungen dieses Konzepts schrieben, der Vergleich melde „nicht vergleichbar". Das trifft nicht zu: §7.6 der Speicherschicht kennt diesen Ausgang nur bei verschiedenen Versionsvektoren, und §8.6.1 knüpft ihn an die Quarantäne. Eine doppelt vergebene Ereignis-Id liegt **innerhalb** der Bytes; alle Clients haben denselben Versionsvektor und verschiedene `zustandsHash`, also den **roten Ausgang**. Für den Betrieb ist das richtig — ein Protokollbruch soll auffallen. Für den Prüfstand von M0.4 ist es ein Problem, weil dort das geklonte Profil zur Pflicht-Fehlerinjektion gehört und „Konvergenz aller Clients per Hash nach jeder Ruhephase" das Abbruchkriterium ist. Dieses Dokument kann das nicht lösen: Eine Auswahl ohne Reihenfolgeabhängigkeit brauchte je gefalteter Id ihren Inhalt (siehe oben), und die Speicherschicht wird hier benutzt und nicht angefasst. Zu entscheiden ist, ob §7.6 eine vierte Zeile bekommt oder das Abbruchkriterium von M0.4 einen benannten Vorbehalt.
-
-**Was dieses Konzept dagegen festlegen kann, ist der Hinweis selbst.** `verworfeneSchluessel` nimmt bei einer Kollision **jeden** beteiligten Inhalt auf, nicht nur den zweiten, und `ereignisIdDoppeltVergeben` führt sie **aufsteigend nach ihrer kanonischen Serialisierung**. Damit ist wenigstens die Hinweismenge auf allen Clients dieselbe, und der Unterschied im Hash beschränkt sich auf die Felder, die die beiden Ereignisse setzen. Die Menge wächst mit der Zahl der Kollisionen, also in derselben Klasse wie `verworfeneSchluessel` ohnehin (§8.2). Prüffall T170.
-
-**Über einen fachlichen Schlüssel.** `EebMeldungEmpfangen` über `meldungId`, `AnhangHinzugefuegt` über `anhangId`. Es gilt §3.11 mit dem Schlüssel statt der Entitäts-Id; ein zweites Ereignis mit abweichendem Inhalt landet mit `art: "INHALTSSCHLUESSEL"` in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`. In den Inhaltsvergleich gehen **nur unveränderliche Anlagewerte** ein: für die Meldung `bogen`, `stand`, `signatur` und `rohPayload` — der Rohtext gehört dazu, sonst verschwände ein abweichender Bogen, dessen abgeleitete Felder zufällig gleich sind, ohne Hinweis —, für den Anhang `dateiname`, `mimeTyp`, `groesse` und `einheitId` — dort setzt allein die Anlage, es gibt kein änderndes Ereignis. Nicht `empfangenAm`, nicht `quelle`, nicht `hinzugefuegtAm` — sie beschreiben den Empfang, nicht den Inhalt.
+In den Inhaltsvergleich gehen **nur unveränderliche Anlagewerte** ein: für die Meldung `bogen`, `stand`, `signatur` und `rohPayload` — der Rohtext gehört dazu, sonst verschwände ein abweichender Bogen, dessen abgeleitete Felder zufällig gleich sind, ohne Hinweis —, für den Anhang `dateiname`, `mimeTyp`, `groesse` und `einheitId`; dort setzt allein die Anlage, es gibt kein änderndes Ereignis. Nicht `empfangenAm`, nicht `quelle`, nicht `hinzugefuegtAm` — sie beschreiben den Empfang, nicht den Inhalt.
 
 **`einheitSchluessel` geht ausdrücklich nicht ein,** obwohl er inhaltstragend aussieht. Er ist über `EebMeldungZugeordnet` **änderbar**, und ein Vergleich gegen ein änderbares Zustandsfeld wäre reihenfolgeabhängig: Trifft die zweite Meldung vor der Zuordnung ein, sind die Werte gleich und es entsteht kein Eintrag; trifft sie danach ein, entsteht einer. `verworfeneSchluessel` steht im Zustand und im `zustandsHash` — P1 und P3 fielen über einer vollkommen gesunden Ereignismenge. Gegen die **Nutzlast** der geltenden Anlage zu vergleichen, wäre keine Abhilfe: Sie steht nach einem Schnappschuss nicht mehr im Zustand (§3.1), genau das Argument aus §3.11. Prüffall T142.
 
-**`art` unterscheidet die drei Quellen.** Aus `verworfeneSchluessel` speisen sich drei Hinweisarten: `ereignisIdDoppeltVergeben` und `inhaltsschluesselWidersprochen` hier, `reservierteIdVerworfen` in §5.3.4. Ohne den Diskriminator müsste ein Client sie an der Form des Schlüssels erraten — `"AUFFANG"` gegen Inhalts-Hash gegen `clientId:laufnummer` —, und zwei Implementierungen rieten verschieden: verschiedene Hinweise, verschiedener `zustandsHash`, roter Ausgang ohne Fold-Fehler. Prüffall T136.
+**`art` unterscheidet die beiden Quellen.** Aus `verworfeneSchluessel` speisen sich zwei Hinweisarten: `inhaltsschluesselWidersprochen` hier und `reservierteIdVerworfen` in §5.3.4. Ohne den Diskriminator müsste ein Client sie an der Form des Schlüssels erraten — `"AUFFANG"` gegen Inhalts-Hash —, und zwei Implementierungen rieten verschieden: verschiedene Hinweise, verschiedener `zustandsHash`, roter Ausgang ohne Fold-Fehler. Prüffall T136.
 
 **Über den Fachvorgang.** Aufteilen und Zusammenführen sind zusätzlich über die **Entität** idempotent, auf der ihr Ergebnis steht — nicht über die Ereignis-Id (§5.4.2, §5.4.3). Das ist der Grund, weshalb es kein Änderungsbuch mehr gibt.
 
@@ -454,7 +444,6 @@ Damit das geht, muss **jedes Eingangsdatum eines Hinweises im Zustand stehen**. 
 | `zweiteAnlageVerworfen` | zweite Anlage derselben Id, mit ihrem Inhalt | §3.11 |
 | `reservierteIdVerworfen` | Anlage auf `AUFFANG` oder `ARCHIV` | §5.3.4 |
 | `inhaltsschluesselWidersprochen` | gleicher fachlicher Schlüssel, abweichender Inhalt | §3.6 |
-| `ereignisIdDoppeltVergeben` | zwei verschiedene Ereignisse mit derselben Id | §3.6 |
 | `anlageFehlt` | Beobachtungen liegen vor, die Anlage der Entität fehlt | §3.10 |
 | `fremdreferenzUnbekannt` | ein Feld verweist auf eine Entität, die es (noch) nicht gibt | §3.10 |
 | `abschnittUnbekannt` | die Einheit zeigt auf einen unbekannten Abschnitt, sie liegt im Auffang | §5.3.3 |
@@ -478,11 +467,11 @@ Jeder Hinweis trägt einen `feldpfad`; wo kein einzelnes Feld betroffen ist, den
 
 #### §3.8a Die Struktur eines Hinweises
 
-§3.2 beschreibt den Zustand feldgenau, hält für `hinweise` aber nur `Konflikthinweis[]` fest. Das genügt nicht: Der Hinweis geht **byteweise** in die kanonische Serialisierung ein, und §3.8 ordnet die Liste sogar **nach** dieser Serialisierung — die Feldnamen bestimmen also nicht nur den Hash, sondern auch die Reihenfolge. Zwei Umsetzungen, die dasselbe Datum `verworfen` und `gilt` nennen, hätten bei identischer Ereignismenge verschiedene Zustände. Deshalb steht die Struktur hier, und §3.2 ist erst mit ihr vollständig.
+§3.2 beschreibt den Zustand feldgenau, hält für `hinweise` aber nur `Konflikthinweis[]` fest. Das genügt nicht: Der Hinweis geht **byteweise** in die kanonische Serialisierung ein, und §3.8 ordnet die Liste sogar **nach** dieser Serialisierung — die Feldnamen bestimmen also nicht nur den Hash, sondern auch die Reihenfolge. Zwei Umsetzungen, die dasselbe Datum `verworfen` und `gilt` nennen, hätten bei identischer Ereignismenge verschiedene Zustände. §3.8 zählt 21 Arten auf; die Tabelle unten nennt für jede ihre Felder. Deshalb steht die Struktur hier, und §3.2 ist erst mit ihr vollständig.
 
 ```ts
 interface Konflikthinweis {
-  art: Hinweisart                 // die 22 Werte der Tabelle oben, geschlossene Liste
+  art: Hinweisart                 // die 21 Werte der Tabelle oben, geschlossene Liste
   feldpfad: string                // §3.8; wo kein Feld betroffen ist, der Pfad der Entität
   // dazu genau die Felder der Tabelle unten, keine weiteren
 }
@@ -497,10 +486,9 @@ interface Konflikthinweis {
 | `zweiteAnlageVerworfen` | `verworfen: EreignisId` · `gilt: EreignisId` · `inhalt: unknown` |
 | `reservierteIdVerworfen` | `verworfen: EreignisId` · `id: Id` |
 | `inhaltsschluesselWidersprochen` | `verworfen: EreignisId` · `gilt: EreignisId` · `schluessel: string` |
-| `ereignisIdDoppeltVergeben` | `id: EreignisId` · `inhalte: unknown[]` — die Nutzlasten **aller** Ereignisse dieser Id, aufsteigend nach ihrer kanonischen Serialisierung, damit der Hinweis nicht von der Eintreffreihenfolge abhängt |
 | `anlageFehlt` | `wartende: EreignisId[]` — aufsteigend, und nur die, die `wartend` hält (§3.10) |
 | `fremdreferenzUnbekannt` | `verweistAuf: Id` |
-| `abschnittUnbekannt` | `gemeldeterAbschnittId: Id` |
+| `abschnittUnbekannt` | `gemeldeterAbschnittId: Id` — die Id, die der Fold nicht auflösen konnte. Ohne Auflösungskette ist das die Id aus `einheit.abschnittId`; **mit** Kette (§5.3.2) das unbekannte **Ende** der Kette, nicht ihr Anfang. Der Anfang steht bereits im `abschnittAufgeloest` desselben Falls |
 | `abschnittAufgeloest` | `aufgeloesterAbschnittId: Id` · `zielAbschnittId: Id` — beides vom **ersten** Kettenglied (§5.3.2): der Abschnitt, auf den die Einheit selbst zeigt, und das Ziel, das **dessen** Auflösung benennt. Nicht der Abschnitt, in dem die Einheit am Ende steht; der steht in `wirksamerAbschnittId` und ist bei zwei der drei Kettenenden der Auffang |
 | `zyklusAufgeloest` | `ereignis: EreignisId` · `gewuenschterParentId: Id` |
 | `staerkeGeklemmt` | `rechnerisch: StaerkeRechnerisch` |
@@ -543,6 +531,8 @@ Ein Ereignis kann auf eine Entität verweisen, die dieser Client noch nicht hat.
 
 **Die beiden Verweise *im Wert* dieser Felder sind davon nicht erfasst** und brauchen eine dritte Behandlung: `aufgegangenIn.wert.zielEinheitId` und `abgeteiltVon.wert.quellEinheitId` betreffen nicht den Träger des Feldes — der ist da —, sondern die Gegenseite einer Rechnung. Die Aufzählung oben nennt sie deshalb nicht; ihre Regel steht in **§5.4.2a**, und ohne sie verschwände beim unbekannten Ziel einer Zusammenführung die Stärke der Quelle ohne jeden Hinweis. Beide erzeugen `fremdreferenzUnbekannt`.
 
+**Das Fahrzeug folgt derselben Kette, landet aber nie im Auffang** (§5.3.3). Endet die Kette im Unbekannten oder im Kreis, wo die Einheit in den Auffang geht, behält das Fahrzeug das **letzte auflösbare Glied** der Kette — beim Kreis den Abschnitt, an dem die Verfolgung abbricht, beim unbekannten Ende den letzten bekannten Abschnitt. Nie den Auffang: Der ist eine Zusicherung über Stärkezahlen, und ein Fahrzeug trägt keine (§5.3.3). Die Hinweise entstehen dabei wie bei der Einheit, mit dem Feldpfad des Fahrzeugs. Prüffall T173.
+
 **Die einzige Ausnahme ist der Abschnitt einer Einheit** (§5.3.3): Dort tritt der Auffang an die Stelle des Verweises, damit die Stärke einer real gemeldeten Einheit nicht aus der Gesamtstärke fällt. Das ist eine Zusicherung über Zahlen, keine über Verweise.
 
 ### §3.11 Zwei Anlagen derselben Id: die kleinste HLC gilt
@@ -551,7 +541,7 @@ Liegen zwei Anlagen derselben Entitäts-Id vor, gilt die mit der **kleinsten** H
 
 > **Die verdrängte Anlage belegt keinen Feldpfad.** Sie nimmt an keiner Feldauswahl teil; ihr Inhalt steht allein in `verworfeneAnlagen` und im Hinweis. Der Satz ist nötig, weil die naheliegende Gegenlesart — „eine Anlage ist eine Menge von Beobachtungen, also fallen ihre Felder in die gewöhnliche LWW-Auswahl" — Kräfte aus dem Nichts schafft: U (0/0/10) wird um 0/0/3 nach V abgeteilt (HLC 100), der Meldekopf meldet V eigenständig mit 0/0/9 nach (HLC 150). Die Aufteilung bleibt die geltende Anlage (kleinere HLC), der Abzug wirkt nach §5.4.2a (3) — und beliefe die zweite Anlage `V.staerke` mit ihrer größeren HLC, stünden 7 + 9 = 16 in der Lage statt 10. Wer die Stärke von V wirklich korrigieren will, tut das mit `StaerkeGeaendert`; dann trägt die Meldung einen Vorher-Wert und die Gegenkorrektur an der Quelle ist die bekannte Pflicht (§5.4.3). `fold.ts` hält es seit M0.2 so; hier steht die Regel dazu. Prüffall T143.
 >
-> **Der Satz betrifft den Anlageteil, nicht das ganze Ereignis.** `EinheitAufgeteilt` ist nach §2.2 zugleich Form (b) und Form (c). Verliert sein **Anlageteil** gegen eine frühere Anlage derselben Id, wirkt sein **(c)-Teil weiter**: `abgeteiltVon` der neuen Einheit wird gesetzt — es ist kein Nutzlastfeld der Anlage, sondern die Wirkung des Vorgangs — und die `einheitId` der übernommenen Fahrzeuge und Personen ebenso; jene Entitäten haben mit der Kollision nichts zu tun. Andernfalls liefe §5.4.2a (3) leer (ein `abgeteiltVon` der verdrängten Anlage gäbe es dann gar nicht), §3.12 könnte seinen Satz „neben einer verdrängten Aufteilung steht zusätzlich `zweiteAnlageVerworfen`" nicht erfüllen, und die Fahrzeuge blieben bei der Quelle, obwohl sie tatsächlich mitgegangen sind. Der Abzug ist dann nach (3) unwirksam. **Ein zusätzlicher `wirkungslosGegenTerminalzustand` entsteht dabei nicht** — §3.12 zählt seine Stellen abschließend auf, und diese ist keine davon; `zweiteAnlageVerworfen` beschreibt die Lage vollständig, und der (c)-Teil war nicht wirkungslos, er hat die Fahrzeuge bewegt. Prüffall T146.
+> **Der Satz betrifft den Anlageteil, nicht das ganze Ereignis.** `EinheitAufgeteilt` ist nach §2.2 zugleich Form (b) und Form (c). Verliert sein **Anlageteil** gegen eine frühere Anlage derselben Id, wirkt sein **(c)-Teil weiter**: `abgeteiltVon` der neuen Einheit wird gesetzt — es ist kein Nutzlastfeld der Anlage, sondern die Wirkung des Vorgangs — und die `einheitId` der übernommenen Fahrzeuge und Personen ebenso; jene Entitäten haben mit der Kollision nichts zu tun. Andernfalls liefe §5.4.2a (3) leer (ein `abgeteiltVon` der verdrängten Anlage gäbe es dann gar nicht), §3.12 könnte seinen Satz „neben einer verdrängten Aufteilung steht zusätzlich `zweiteAnlageVerworfen`" nicht erfüllen, und die Fahrzeuge blieben bei der Quelle, obwohl sie tatsächlich mitgegangen sind. Der Abzug ist dann nach (3) unwirksam. **Ein zusätzlicher `wirkungslosGegenTerminalzustand` entsteht dabei nicht** — §3.12 zählt seine Stellen abschließend auf, und diese ist keine davon. Die Stelle `ZWEITE_AUFTEILUNG` dort meint eine **andere** Lage: zwei `EinheitAufgeteilt` auf dieselbe neue Einheit, wo das Erstwert-Feld `abgeteiltVon` eine Beobachtung verdrängt. Hier gewinnt ein `EinheitGemeldet` die Anlage, und im Erstwert-Feld wird nichts verdrängt; `zweiteAnlageVerworfen` beschreibt die Lage vollständig, und der (c)-Teil war nicht wirkungslos, er hat die Fahrzeuge bewegt. Prüffall T146.
 
 **Die beiden Inhaltsschlüssel-Arten sind ausgenommen.** `EebMeldungEmpfangen` und `AnhangHinzugefuegt` stehen unter den dreizehn Anlagearten, folgen aber §3.6: Bei **gleichem** Inhalt entsteht kein Hinweis und kein Eintrag (T52, T54), bei abweichendem `inhaltsschluesselWidersprochen` und ein Eintrag in `verworfeneSchluessel` statt in `verworfeneAnlagen`. Die Begründung des nächsten Absatzes trägt für sie nicht: Ihre inhaltstragenden Felder sind unveränderliche Anlagewerte und stehen nach §3.2 **im Zustand** (`bogen`, `stand`, `signatur`, `rohPayload`; beim Anhang `dateiname`, `mimeTyp`, `groesse`, `einheitId`), der Vergleich überlebt also jeden Schnappschuss. Zwei Meldeköpfe, die denselben QR scannen, sind ein Alltagsvorgang und keine Lage, die jemand ansehen muss. Prüffall T147.
 
@@ -720,16 +710,20 @@ const AbschnittWiederhergestellt = z.object({ abschnittId: zId })
 
 | `typ` | `zaehltInGesamtstaerke` |
 |---|---|
-| `EINSATZORT` | ja |
-| `BEREITSTELLUNGSRAUM` | ja |
 | `FUEHRUNGSSTELLE` | ja |
-| `ANGEFORDERT` | nein |
-| `ABGERUECKT` | nein |
-| `ARCHIV` | nein — der Systemabschnitt aus §5.3.4 |
+| `MELDEKOPF` | ja |
+| `SONSTIGE_FUEHRUNG` | ja |
+| `LOGISTIK` | ja |
+| `BEREITSTELLUNGSRAUM` | ja |
+| `EINSATZORT` | ja |
+| `ANGEFORDERT` | **nein** — die Einheit ist angefordert und noch nicht da |
+| `ARCHIV` | **nein** — der Systemabschnitt aus §5.3.4 |
+
+Das sind **acht** Werte, dieselben acht, die `ereignis.ts` seit M0.2 führt.
 
 **`VORLAGEN` ist kein Abschnittstyp.** ZDM §2.4 führt ihn in der Tabelle, erklärt ihn in Entscheidung 1 aber zum Nicht-Abschnitt; er steht deshalb **nicht** in der bekannten Liste, und ein `AbschnittAngelegt` mit diesem Typ erzeugt `unbekannterWert` und zählt nach §5.3.3 wie `EINSATZORT`. Ohne diese Festlegung nähme die eine Umsetzung ihn auf (nicht zählend, kein Hinweis) und die andere nicht (zählend, Hinweis) — zwölf Helfer Unterschied in der Gesamtstärke und ein Hinweis mehr im Hash (T172).
 
-**Die vier übrigen offenen Bereiche** — Status, Organisation, Personalerfassung, Schichtmodell — hängen an keiner Summe; ihre bekannten Listen stehen in `@s1/domaene` (`ereignis.ts`), und §3.9 bindet jede Änderung an eine `foldVersion`. Ein Prüffall hält je Liste ihren Umfang fest, damit eine stille Erweiterung auffällt (T172).
+**Die übrigen offenen Bereiche** — Status, Organisation, Personalerfassung, Schichtmodell — hängen an keiner Summe; ihre bekannten Listen stehen in `@s1/domaene` (`ereignis.ts`), und §3.9 bindet jede Änderung an eine `foldVersion`. Ein Prüffall hält je Liste ihren Umfang fest, damit eine stille Erweiterung auffällt (T172).
 
 **Sekundärsortierung.** Bei gleicher `reihenfolge` entscheidet die Entitäts-Id in Codepoint-Ordnung — für Abschnitte wie für Einheiten (ZDM §4.2). Ohne diese Regel hinge die Reihenfolge zweier gleichrangiger Einträge im Ausdruck an der Schlüsselreihenfolge der Datensammlung, und zwei Clients druckten Verschiedenes, obwohl ihr Zustand konvergiert.
 
@@ -1438,14 +1432,14 @@ Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv
 | | Zugesichert | Bedingung |
 |---|---|---|
 | **P1 Kommutativität** | Jede Permutation einer Ereignismenge ergibt denselben Zustand, einschließlich der Hinweise | keine. Gilt für alle Arten, auch die der Klasse „Regel" |
-| **P2 Idempotenz** | Ein doppelt gefaltetes Ereignis ändert den Zustand nicht | keine (§3.6) |
+| **P2 Idempotenz** | Ein doppelt gefaltetes Ereignis ändert den Zustand nicht | keine. Sie ist **strukturell**: Jede Aufnahmeoperation ist ein Halbverband, und die sechs wachsenden Listen sind Mengen (§3.6) |
 | **P3 Konvergenz** | Zwei Clients mit derselben Ereignismenge **und derselben `foldVersion`** haben denselben Zustand | dieselbe Menge und dieselbe Fold-Fassung — die nach §3.9 auch die bekannten Wertelisten umfasst. Bei Quarantäne sehen zwei Clients verschiedene Mengen (KONZEPT-SPEICHER.md §8.6.1) |
 | **P4 Summenerhaltung** | Sei `P(e)` die Menge aller Ereignisse aus `M` mit kleinerer HLC als `e`. Für jedes strukturelle Ereignis `e ∈ M` (`EinheitAufgeteilt`, `EinheitZusammengefuehrt`) gilt `Bilanzsumme(falte(P(e) ∪ {e})) = Bilanzsumme(falte(P(e)))` | **bedingt**, zwei Bedingungen, beide an `falte(P(e) ∪ {e})` gelesen: (i) **keine** der beiden Faltungen trägt ein `vorgangSummeWeichtAb` mit `vorgangsart: "ZUSAMMENFUEHRUNG"` — gleich, welcher Vorgang es ausgelöst hat; (ii) `P(e)` ist vollständig (siehe unten) und keine von `e` berührte Einheit ist in `falte(P(e) ∪ {e})` entfernt. Beide sind am Zustand ablesbar.
 
 Bedingung (i) ist ausdrücklich **nicht** auf `e` beschränkt. Eine fremde, falsche Zusammenführung im Präfix friert dort ein `gesehen` ein, das später nicht mehr zur Quelle passt; führt `e` danach eine Einheit in eben jene Quelle, verschiebt sich die Bilanz um die Differenz, obwohl `e` selbst fehlerfrei ist. §5.4.3 sagt seit jeher „für **jede** Zusammenführung"; die engere Lesart wäre eine Verengung ohne Deckung. Ein `vorgangSummeWeichtAb` mit `vorgangsart: "AUFTEILUNG"` und ein `staerkeGeklemmt` setzen P4 **nicht** aus |
 | **P5 Kein Waisenzustand** | Keine **Einheit** steht in einem nicht existierenden oder aufgelösten Abschnitt | keine. Für Fahrzeuge gilt die schwächere Regel aus §5.3.3, ausdrücklich nicht P5 |
 | **P6 Monotone Zustandsmaschine** | `anforderung.zustand` geht nie von `EINGETROFFEN` zurück | **bedingt:** über einer Menge ohne `ErledigungZurueckgenommen` (§5.6.2) |
-| **P7 Rebase-Treue** | Der Zustand aus „Schnappschuss laden, Rest falten" ist gleich dem aus „alles falten" — für jeden Schnitt | **bedingt:** über einer Menge **ohne** doppelt vergebene Ereignis-Id (§3.6). Sonst die formale Fassung von §3.1 |
+| **P7 Rebase-Treue** | Der Zustand aus „Schnappschuss laden, Rest falten" ist gleich dem aus „alles falten" — für jeden Schnitt | keine. Die formale Fassung von §3.1 |
 
 > **Bilanzsumme** eines Zustands = Σ `wirksameStaerkeRechnerisch(u)` über alle Einheiten `u`, die **weder entfernt noch wirksam aufgegangen** sind. Das ist `zaehlt` **ohne** seine Abschnittsbedingung, gerechnet mit dem **ungeklemmten** Wert aus §5.4.2.
 
@@ -1506,7 +1500,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 
 **Vier Zustandsteile ohne harte Schranke** (§3.2): die `verdraengt`-Listen der beiden Erstwert-Felder wachsen mit wiederholten Vorgängen an derselben Entität; `verworfeneAnlagen` und `verworfeneSchluessel` mit doppelt vergebenen Ids — im Normalbetrieb null, im Klon- oder Migrationsfall nicht; `archivierungen` bekommt je Rücknahme auf eine unbekannte Id einen dauerhaften Eintrag; `wartend` wächst mit den Entitäten, deren Anlage nie kommt (verlorenes Segment, Quarantäne). Alle vier sind klein und in der Praxis leer, aber keine ist nachweisbar beschränkt; `wartend` sammelt ein Client mit Quarantäne systematisch.
 
-**P1, P3 und P7 gelten nicht über einer Ereignismenge mit doppelt vergebener Ereignis-Id** (§3.6). P7 nicht, weil die Kollision über einen Schnappschuss hinweg nicht mehr erkennbar ist. Die Auswahl hängt dort an der Eintreffreihenfolge, und das ist die einzige Stelle des Konzepts, an der das gewollt ist — die Alternative wäre eine Struktur im Zustand, die mit der Zahl der Ereignisse wächst. P2 hält. Der Hinweis `ereignisIdDoppeltVergeben` ist auf allen Clients derselbe und macht die Lage sichtbar; der Konvergenzvergleich meldet trotzdem einen **Fehler**, weil die gesetzten Felder auseinandergehen — Befund B6 in §10.
+**Zwei verschiedene Ereignisse unter derselben Identität** kommen im Fold nicht vor: Die Speicherschicht erklärt eine solche Zeile für defekt und setzt die Datei ab ihrem Offset in Quarantäne (§8.2 dort); die Konvergenzzusage ist für diesen Arbeitsplatz ausgesetzt, und der Vergleich meldet „nicht vergleichbar" (§8.6.1). Dieses Konzept hatte dafür bis zur sechzehnten Fassung eine eigene, überflüssige und falsche Regel; §3.6 erklärt, warum sie fällt. **P1 bis P7 gelten damit ohne diesen Vorbehalt.**
 
 **Reihenfolge innerhalb einer Wanduhr-Sekunde.** `wanduhr` ordnet nichts. Zwei Ereignisse mit derselben fachlichen Meldezeit und verschiedener HLC werden nach HLC geordnet.
 
@@ -1560,8 +1554,6 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 
 **B4 — Der Zustand wächst gegenüber M0.2 deutlich.** `zweiter` je Feld, `wanduhr` und `fachlicheZeit` je Beobachtung, die verworfenen Anlagen, die abgeleiteten Felder — grob geschätzt Faktor drei bis vier je Schnappschuss. KONZEPT-SPEICHER.md §7.5 kalibriert die Schnappschuss-Auslöser gegen die Erstlaufzeit, nicht gegen die Dateigröße. **Kein Handlungsbedarf vor M0.5**, aber die Messung dort sollte die Schnappschussgröße mitnehmen.
 
-**B6 — Der rote Ausgang bei doppelt vergebener Ereignis-Id.** §3.6 lässt die Auswahl an der Eintreffreihenfolge hängen; zwei Clients haben dann denselben Versionsvektor und verschiedene `zustandsHash`, und §7.6 der Speicherschicht kennt dafür nur „Fehler“. Zugleich verlangt die M0-Zeile in 03-MEILENSTEINE das geklonte Profil als Pflicht-Fehlerinjektion und misst an der Hash-Konvergenz nach jeder Ruhephase. **Vorschlag:** entweder §7.6 um eine vierte Zeile ergänzen („Versionsvektoren gleich, Hashes verschieden, und wenigstens **einer** der Zustände trägt `ereignisIdDoppeltVergeben` ⇒ Protokollbruch, nicht Fold-Fehler — „wenigstens einer", weil ein Client aus einem Schnappschuss den Hinweis nicht mehr bilden kann (§3.6)"), oder das Abbruchkriterium von M0.4 um denselben Vorbehalt. Beides berührt ein freigegebenes Dokument und gehört Johannes; **es blockiert M1.3 nicht**, wohl aber die Auswertung von M0.4.
-
 **B5 — `foldVersion` steigt künftig bei jeder Katalogerweiterung** (§3.9). Das heißt: Nach jedem Ausbau verwerfen alle Clients ihre Schnappschüsse einmal und falten voll. Bei den in KONZEPT-SPEICHER.md §7.5 geschätzten 20 bis 30 MB je Einsatz ist das ein spürbarer Erstlauf. **Vorschlag:** in M0.5 mitmessen; wird er zu lang, ist die Gegenmaßnahme nicht eine schwächere Versionsregel, sondern die dort bereits vorgesehene Annahme fremder Schnappschüsse (A7).
 
 ### Auslegungen, die das Zieldatenmodell nicht hergibt
@@ -1595,7 +1587,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 |---|---|
 | Fragen 19 bis 22 aus 04-OFFENE-ENTSCHEIDUNGEN.md | FüSt; bis dahin gelten S2, S3, S5, S6 |
 | Offene Frage 3 aus ZDM §2.4 Nr. 6: Vererbung der Zählbarkeit | FüSt; bis dahin gilt S11. Blockiert M1.3 nicht, aber eine spätere Antwort kostet eine `foldVersion` |
-| B1 bis B6 | Johannes; keiner blockiert M1.3. B6 blockiert die Auswertung von M0.4 |
+| B1 bis B5 | Johannes; keiner blockiert M1.3 |
 | Ob die Hinweiskette über mehr als zwei Schreiber gebraucht wird | Betrieb; Änderung an der Schnappschussgröße |
 | Die Schwellen S1 und S8 | erster geführter Einsatz |
 | Schnappschussgröße und Erstlaufzeit nach B4 und B5 | Messung M0.5 |
@@ -1640,15 +1632,15 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | Zweite Beobachtung im Zustand | §3.3 | T88 |
 | Tie-Break, LWW-Richtung | §3.5 | T89 |
 | Tie-Break, Anlage-Richtung | §3.5 | T90 |
-| Idempotenz über die Ereignis-Id, Versionsvektor, HLC im Inhaltsvergleich | §3.6 | T81, T163, T171 |
+| Entdopplung ist Sache der Speicherschicht; strukturelle Idempotenz | §3.6 | T81, T107, T117, T163, T170, T171 |
 | Idempotenz über den Inhaltsschlüssel | §3.6 | T52, T53, T54, T142 |
 | Idempotenz über den Fachvorgang | §3.6 | T25, T28 |
 | Unbekannte Art, Version, Feld, Nutzlast, Wert | §3.7 | T91, T92, T93, T94, T16, T160, T161, T172 |
 | Rückfall je offenem Wertebereich | §3.7 | T16, T94 |
 | Hinweise werden neu gerechnet, gleichlautende zusammengezogen | §3.8 | T65, T88, T96, T156 |
-| Struktur jeder Hinweisart | §3.8a | T166, T76, T167, T170 |
+| Struktur jeder Hinweisart | §3.8a | T166, T76, T167 |
 | `foldVersion` steigt auch bei neuer Art | §3.9 | T97 |
-| Wartende Beobachtung, `anlageFehlt` | §3.10 | T98, T144 |
+| Wartende Beobachtung, `anlageFehlt`, Fahrzeug in einer Kette | §3.10 | T98, T144, T173 |
 | Unbekannte Fremdreferenz | §3.10 | T99, T15 |
 | Unbekanntes Ziel bzw. unbekannte Quelle eines Vorgangs | §5.4.2a, §3.10 | T133 |
 | Zweite Anlage: kleinste HLC, belegt keinen Feldpfad | §3.11 | T1, T90, T100, T143 |
@@ -1743,7 +1735,7 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T103** Drei Änderungen an demselben Feld ⇒ der Zustand trägt zwei Beobachtungen, das aus dem Ereignisstrom gerenderte Tagebuch drei Zeilen.
 **T104** Es existiert kein Rahmenfeld und keine Ereignisart für Redo — Prüfung am Schema.
 **T106** `EinheitVerschoben` (HLC 5) und `EinheitGemeldet` (HLC 9) derselben Einheit ⇒ die Anlage gewinnt `abschnittId`, `ohneVorherWertVerdraengt` mit dem verdrängten Abschnitt; setzt die Anlage denselben Abschnitt, entsteht kein Hinweis.
-**T107** Zwei verschiedene Ereignisse mit derselben `id` (geklontes Profil) ⇒ das **zuerst gefaltete** gilt, beide Inhalte stehen in `verworfeneSchluessel`, und `ereignisIdDoppeltVergeben` entsteht mit beiden. Der Prüffall erwartet **kein** permutationsstabiles Ergebnis der **Felder**: §8.2 setzt P1 und P3 dort aus. Der **Hinweis** dagegen ist permutationsstabil und wird als solcher geprüft.
+**T107** Der Fold bekommt eine Ereignismenge, in der jede Identität genau einmal vorkommt — das ist die Zusicherung der Speicherschicht (§8.2 dort), und der Fold prüft sie nicht nach. Der Prüffall hält fest, dass `@s1/domaene` **keine** Sonderbehandlung für doppelt vergebene Ids enthält: kein Id-Gedächtnis, keine Hinweisart, kein Sonderpfad.
 **T108** Drei Zusammenführungen derselben Quelle (HLC 5, 7, 9) ⇒ die mit HLC 5 gilt, die beiden anderen stehen als `verdraengt` und erzeugen je einen Wirkungslos-Hinweis; auch nach einem Schnappschuss.
 **T109** Ein Einsatz, in dem nichts entfernt und nichts beendet wurde ⇒ die Felder `entfernt`, `ende`, `storno`, `zurueckgenommen` fehlen in der Serialisierung, statt mit einem erfundenen Anfangswert darin zu stehen.
 **T110** `EinheitWiederhergestellt` auf eine aufgegangene Einheit ⇒ sie zählt weiterhin nicht (sie ist aufgegangen), **aber** ihr Zuwachs wirkt beim Ziel wieder (§5.4.2a Nr. 1): Die Wiederherstellung ändert den abgeleiteten Zustand und ist deshalb **nicht** wirkungslos.
@@ -1753,7 +1745,7 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T113** Aufteilung mit `uebernommeneFahrzeuge` ⇒ `fahrzeug/<id>/einheitId` zeigt auf die neue Einheit; ist das Fahrzeug unbekannt, wartet die Beobachtung und wirkt beim Eintreffen.
 **T114** `ArchivierungZurueckgenommen` mit einem `archivierungHlc`, das zu keiner Archivierung passt ⇒ sie wirkt nicht, `wirkungslosGegenTerminalzustand`; wird später unter derselben Ereignis-Id eine Archivierung mit **anderer** HLC geschrieben, gilt sie.
 **T116** Archivierung HLC 9, Rücknahme HLC 5 mit passendem `archivierungHlc` ⇒ der Einsatz ist offen; die kleinere HLC der Rücknahme ändert daran nichts.
-**T117** Zwei verschiedene Ereignisse mit derselben Id ⇒ `ereignisIdDoppeltVergeben` mit beiden Inhalten, auf jedem Client derselbe Hinweis; der Konvergenzvergleich meldet einen **Fehler**, weil die Felder auseinandergehen (B6).
+**T117** Zwei Zeilen mit derselben Identität und **gleichem** Inhalt (Ersatzsegment nach einer Reparatur, §4.6 der Speicherschicht) ⇒ derselbe Zustand wie ohne die Wiederholung, in jeder Reihenfolge und über jeden Schnitt. Das ist P2 an der Stelle, an der die Speicherschicht sie ausdrücklich voraussetzt.
 **T118** Drei verdrängte Beobachtungen eines Erstwert-Feldes, in zwei Reihenfolgen eingelesen ⇒ gleiche Serialisierung, weil die Liste nach HLC und Ereignis-Id geordnet ist.
 **T120** Übernahme des Feldes `staerke` aus einem Bogen bei einer Einheit mit Zuwachs ⇒ der Client bietet sie nicht automatisch an, sondern zeigt Bogenstand und eigene Stärke nebeneinander (Prüfung am schreibenden Client, nicht am Fold).
 **T121** Einzelne fehlerfreie Aufteilung (`gesehen` = Stand vor dem Abteilen) ⇒ **kein** `vorgangSummeWeichtAb`; die eigene `abgeteilteStaerke` fällt aus der Vergleichsgröße heraus. Eine **zweite, spätere** Aufteilung derselben Quelle mit dem inzwischen richtigen `gesehen` ⇒ ebenfalls keiner; mit dem alten `gesehen` ⇒ Hinweis. Die Mutation, die die eigene `abgeteilteStaerke` **nicht** herausrechnet, muss den ersten Teil fallen lassen.
@@ -1771,7 +1763,7 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T133** Zusammenführung auf ein `zielEinheitId`, das dieser Client nicht kennt ⇒ die Quelle zählt **weiter**, `fremdreferenzUnbekannt` an `einheit/<quellId>/aufgegangenIn`; trifft die Anlage des Ziels ein, wandert die Stärke, der Hinweis fällt weg. Symmetrisch: Aufteilung mit unbekannter `quellEinheitId` ⇒ der Abzug wirkt nicht, `fremdreferenzUnbekannt` an `einheit/<neueId>/abgeteiltVon`, **kein** `vorgangSummeWeichtAb` (der Vergleich unterbleibt, §5.4.3), keine Kraft verschwindet.
 **T134** X (0/0/10) wird um 0/0/3 aufgeteilt, danach geht X mit `gesehen` 0/0/7 in Z auf ⇒ **kein** Hinweis, Gesamtstärke 0/0/10. Mit `gesehen` 0/0/10 ⇒ `vorgangSummeWeichtAb`. Die siebte Fassung kehrte beides um.
 **T135** Zwei Zusammenführungen derselben Quelle in verschiedene Ziele ⇒ genau **ein** `wirkungslosGegenTerminalzustand` für die verdrängte, **kein** `vorherPasstNicht` und **kein** `ohneVorherWertVerdraengt`: Die Erstwert-Felder sind von der Vorher-Prüfung ausgenommen (§2.2a).
-**T136** Je ein Eintrag aus doppelt vergebener Ereignis-Id, aus widersprochenem Inhaltsschlüssel und aus einer Anlage auf `AUFFANG` ⇒ drei Einträge in `verworfeneSchluessel` mit verschiedenem `art`, und drei Hinweisarten, ohne dass die Form des Schlüssels ausgewertet wird.
+**T136** Je ein Eintrag aus widersprochenem Inhaltsschlüssel und aus einer Anlage auf `AUFFANG` ⇒ zwei Einträge in `verworfeneSchluessel` mit verschiedenem `art`, und zwei Hinweisarten, ohne dass die Form des Schlüssels ausgewertet wird.
 **T137** Archivierter Einsatz ohne jede Rücknahme ⇒ `archivierungen[<id>].zurueckgenommenDurch` ist `[]` und steht in der Serialisierung; zwei Clients haben denselben `zustandsHash`.
 **T138** Aufteilung mit `uebernommeneFahrzeuge`, bei der `gesehenEinheitId` fehlt ⇒ `gesehenerVorher = { wert: null }`; gegen eine zweithöchste Beobachtung mit Einheit entsteht `vorherPasstNicht`, nicht `ohneVorherWertVerdraengt`.
 **T139** U (0/0/10) wird um 0/0/4 nach V abgeteilt (HLC 20), danach geht U in V auf (HLC 30) ⇒ **kein** Kreis, `wirksame(V)` = 0/0/10, U aufgegangen, ein zählendes Objekt, keine Hinweise. Die Mutation, die beide Kantenarten in **einen** Graphen legt, muss den Fall fallen lassen.
@@ -1792,16 +1784,17 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T159 (verdrängte Erstwert-Beobachtung):** `q` (0/0/5) geht bei HLC 5 in `z1` auf (`gesehen` 0/0/5) und bei HLC 9 in `z2` (`gesehen` 0/0/9) ⇒ genau **ein** Hinweis, `wirkungslosGegenTerminalzustand`; **kein** `vorgangSummeWeichtAb` für die verdrängte Beobachtung, obwohl ihr `gesehen` im Zustand steht und abweicht.
 **T160 (Doppelnennung):** `EinheitZusammengefuehrt` mit derselben `einheitId` zweimal in `quellen`, mit dem Ziel unter den Quellen, und `EinheitAufgeteilt` mit demselben Fahrzeug zweimal ⇒ je ungültige Nutzlast, nicht gefaltet, unter `unbekannt` geführt.
 **T161 (Zustandstyp):** Schnappschuss einer Einheit mit `wirksameStaerkeRechnerisch` 0/0/−5 ⇒ laden und weiterfalten ergibt denselben Zustand wie der volle Fold; eine Prüfung des Zustands gegen `zStaerke` wäre falsch und darf nicht stattfinden.
+**T173 (Fahrzeug in einer Kette ohne Ende):** Fahrzeug in A, `AbschnittAufgeloest(A→B)`, `AbschnittAufgeloest(B→A)` ⇒ `fahrzeug/<id>/wirksamerAbschnittId` ist das letzte auflösbare Glied, **nicht** der Auffang; dieselbe Menge mit einer Einheit statt eines Fahrzeugs ⇒ Auffang.
 **T172 (bekannte Wertelisten):** `AbschnittAngelegt` mit `typ: "VORLAGEN"` ⇒ `unbekannterWert` und `zaehltInGesamtstaerke` wahr. Je offenem Bereich ein Prüffall, der den Umfang seiner bekannten Liste festhält; eine stille Erweiterung lässt ihn fallen und erzwingt damit die `foldVersion` aus §3.9.
 **T167 (`verworfeneAnlagen` an jeder Entität):** Zwei `FahrzeugAngelegt` derselben Id mit verschiedenem Kennzeichen ⇒ `zweiteAnlageVerworfen` am Fahrzeug, und derselbe Hinweis nach einem Schnappschuss. Ein Einsatz **ohne** jede Doppelanlage ⇒ jede Entität der dreizehn Anlagearten trägt `verworfeneAnlagen: []` in der Serialisierung, `Meldung` und `Anhang` tragen das Feld **nicht**.
 **T168 (Kreiskante ohne Vergleich):** Zusammenführungskreis A→B (HLC 5), B→A (HLC 9) ⇒ `zusammenfuehrungKreis` und **kein** `vorgangSummeWeichtAb`, obwohl `gesehen` der unwirksamen Kante nicht zur wirksamen Stärke passt. Andernfalls übersprünge P4 jeden Vorgang dieser Menge.
 **T169 (aufgelöste Kette):** Kette in einen unbekannten Abschnitt ⇒ Auffang, `abschnittAufgeloest` für das **erste** Kettenglied und `abschnittUnbekannt`. Kette in einen Kreis, alle Abschnitte bekannt ⇒ Auffang, **nur** `abschnittAufgeloest` für das erste Glied. Reguläres Ende ⇒ das Ziel gilt, `abschnittAufgeloest` für das erste Glied. In allen drei Fällen dasselbe Kettenglied, unabhängig davon, wie viel der Kette dieser Client kennt.
-**T170 (Hinweis bei doppelter Id):** Zwei Ereignisse derselben Id, in beiden Reihenfolgen gefaltet ⇒ `ereignisIdDoppeltVergeben` mit beiden Nutzlasten, aufsteigend nach kanonischer Serialisierung. Derselbe Schnitt mit Schnappschuss zwischen den beiden ⇒ **kein** Hinweis; der Prüffall hält fest, dass P7 hier ausgesetzt ist (B6).
-**T171 (`verworfeneSchluessel` ist eine Menge):** Drei Ereignisse `E1`, `E1` (bytegleich) und `E2` mit derselben Id, in allen Reihenfolgen ⇒ höchstens zwei Einträge, nie ein bytegleiches Paar; das zweimalige Falten von `E1` ändert den Zustand nicht (P2).
-**T163 (geklontes Profil, gleiche Nutzlast, andere HLC):** Zwei Ereignisse mit derselben Id, derselben Nutzlast und HLC 100 bzw. 900, dazu ein fremdes `StatusGesetzt` bei HLC 500 ⇒ `ereignisIdDoppeltVergeben` entsteht, weil die HLC in den Inhaltsvergleich eingeht. Ohne sie verschwände das zweite lautlos, und der geltende Statuswert hinge an der Eintreffreihenfolge.
+**T170 (Mengen statt Listen):** Für jede der sechs wachsenden Listen aus §3.6 wird derselbe Eintrag zweimal erzeugt ⇒ er steht einmal. Die Mutation, die eine davon als Liste führt, muss T171 fallen lassen.
+**T171 (Reparatur liefert doppelt):** Eine Menge mit einer verdrängten Zusammenführung, einer verworfenen Zweitanlage und einem unbekannten Ereignis wird vollständig gefaltet; danach wird dieselbe Menge ein zweites Mal hinzugefaltet ⇒ derselbe `zustandsHash`. Ohne die Mengenregel aus §3.6 stünden `verdraengt`, `verworfeneAnlagen` und `unbekannt` doppelt.
+**T163 (Inhaltsvergleich mit HLC):** Zwei Zeilen mit derselben Identität, derselben Nutzlast und HLC 100 bzw. 900 ⇒ **kein** gleicher Inhalt im Sinne von §3.6; die Speicherschicht erklärt die zweite für defekt. Der Prüffall prüft die Vergleichsfunktion, die sie dafür aus `@s1/domaene` bezieht — ohne die HLC hielte sie die beiden für dasselbe Ereignis.
 **T164 (Dublette und Archiv):** Eine archivierte Einheit und eine neu gemeldete mit demselben `einheitSchluessel` ⇒ **kein** `moeglicheDublette`; die archivierte ist nicht in der Gruppe. Über drei Turnusse bleibt es bei keinem Hinweis statt drei wachsenden.
 **T165 (verschachteltes `KorrekturVon`):** `KorrekturVon` mit `zielTyp = "KorrekturVon"` ⇒ ungültige Nutzlast, nicht gefaltet, unter `unbekannt` geführt. Ebenso `zielTyp = "EinsatzArchiviert"`.
-**T166 (Struktur der Hinweise):** Für jede der 22 Hinweisarten wird ein Fall erzeugt und die kanonische Serialisierung des Hinweises gegen einen festgeschriebenen Erwartungswert gestellt ⇒ kein Feld, das §3.8a nicht nennt, keines, das es nennt und fehlt, und jede Liste aufsteigend sortiert. Das ist die Gegenprobe zu T76 für den Teilbaum `hinweise`.
+**T166 (Struktur der Hinweise):** Für jede der 21 Hinweisarten wird ein Fall erzeugt und die kanonische Serialisierung des Hinweises gegen einen festgeschriebenen Erwartungswert gestellt ⇒ kein Feld, das §3.8a nicht nennt, keines, das es nennt und fehlt, und jede Liste aufsteigend sortiert. Das ist die Gegenprobe zu T76 für den Teilbaum `hinweise`.
 **T162 (`grund` bei der Rücknahme einer Ablehnung):** `EebMeldungAbgelehnt` mit `neu = true` ohne `grund` ⇒ ungültig; mit `neu = false` ohne `grund` ⇒ **gültig** und wirksam.
 **T157 (struktureller Rückweg):** `q` geht irrtümlich in `z1` auf; die Rücknahme teilt `q'` aus `z1` ab und führt Fahrzeuge und Personen in `uebernommeneFahrzeuge`/`uebernommenePersonen` mit ⇒ Bilanz wiederhergestellt, Zuordnungen wandern mit, `q` bleibt aufgegangen, und `auftrag/<id>/einheitId` zeigt weiterhin auf `q` — die benannte Lücke aus §8.2.
 **T153 (P4 gegen vorauslaufende Uhr):** `EinheitGemeldet(U)` mit HLC 4600000, `EinheitAufgeteilt(U→V, 0/0/3)` mit HLC 4000000 von einem Client, dessen Uhr nachgeht ⇒ der Fold rechnet über der vollen Menge richtig (U 0/0/7, V 0/0/3), aber `P(e)` kennt U nicht: `fremdreferenzUnbekannt` steht, und P4 überspringt das Ereignis. Eine Prüfung ohne diese Bedingung meldete einen Bruch.
