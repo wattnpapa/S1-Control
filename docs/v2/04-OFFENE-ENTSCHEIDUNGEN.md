@@ -8,6 +8,14 @@ Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzus
 
 **Neu am 2026-09-09:** Aus der Simulation M0.4 sind drei Konzeptentscheidungen hinzugekommen — Nr. 14, 15 und 16 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md.
 
+> **Stand 2026-09-09: 19 bis 22 laufen mit den Vorschlägen an.** Johannes hat
+> entschieden, die vier Vorschläge als Startwerte zu nehmen, damit M1.2 nicht auf
+> die FüSt wartet („nimm die Vorschläge als Startwerte und mach mit M1.2
+> weiter"). Startwert heißt nach dem Muster von §10 in KONZEPT-SPEICHER.md: Der
+> Wert ist austauschbar, ohne dass sich eine Regel ändert. Die Fragen an die FüSt
+> bleiben offen und werden durch diese Entscheidung nicht beantwortet; was eine
+> späte Antwort kostet, steht je Nummer unten.
+
 **Ebenfalls neu am 2026-09-09:** Die fachlichen Klärungen mit der FüSt am Ende des Dokuments sind als Nr. 19 bis 22 ausgeschrieben. Sie sind der Einstieg in M1 (siehe [../v2-arbeitsstand/auftraege/M1-einstieg.md](../v2-arbeitsstand/auftraege/M1-einstieg.md)) und gehören **vor** den Ereigniskatalog M1.2 beantwortet. Anders als 1 bis 18 kann Johannes sie nicht allein entscheiden — sie brauchen die FüSt.
 
 > **Stand 2026-09-09: Nr. 14 bis 18 sind alle entschieden.**
@@ -478,7 +486,7 @@ Layoutaufwand und Papierformate in M4, nicht die Ereignisform: Ausgaben sind
 Projektionen des gefalteten Zustands (§1.16), und keine von ihnen erzeugt oder
 liest ein Ereignis. Fällig zu M4, nicht jetzt.
 
-### Was M1.2 ohne Antwort tut
+### Was M1.2 ohne Antwort tut — so beschlossen am 2026-09-09
 
 Der Ereigniskatalog wird mit den vier Vorschlägen oben geschrieben und
 kennzeichnet jede Stelle als Startwert nach dem Muster von §10 in
