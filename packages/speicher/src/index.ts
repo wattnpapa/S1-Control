@@ -209,6 +209,16 @@ export {
   type Quarantaenehinweis,
 } from "./praesenz.js";
 
+// Die geoeffnete Einsatzakte — Schreiber, Spiegelung und Leser zusammengeschaltet.
+// Hier haben §4.5 (Kennungswechsel) und §4.6 (Ersatzsegment) ihren Aufrufer.
+export {
+  Akte,
+  oeffneAkte,
+  type AkteOptionen,
+  type Oeffnungsergebnis,
+  type Reaktion,
+} from "./akte.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",
