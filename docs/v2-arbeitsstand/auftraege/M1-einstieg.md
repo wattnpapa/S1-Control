@@ -17,10 +17,10 @@ Stand: 2026-09-09 · Meilenstein M1 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSET
 >   „TLtg." kommt im Datenmodell überhaupt nicht vor. Beim Schichtmodell (21)
 >   ist die Faltregel bereits in §2.3 entschieden (Warnung statt Ablehnung); die
 >   FüSt-Antwort ändert nur die Vorbelegung.
-> * **M1.2 kann damit beginnen**, sobald Johannes die Vorschläge entweder
->   bestätigt oder ersetzt. Ein Warten auf die FüSt ist für die beiden harten
->   Fragen nicht nötig, wenn die Vorschläge als Startwerte nach dem Muster von
->   §10 in KONZEPT-SPEICHER.md gekennzeichnet werden.
+> * **M1.2 hat begonnen** — Johannes hat die Vorschläge am 2026-09-09 als
+>   Startwerte freigegeben; der Entwurf von
+>   [KONZEPT-EREIGNISSE.md](../../v2/konzepte/KONZEPT-EREIGNISSE.md) liegt vor. Die vier Startwerte stehen dort in §10 als S2, S3,
+>   S5 und S6 und sind austauschbar, ohne dass sich eine Regel ändert.
 >
 > **M1.1 ist in dieser Arbeitsumgebung nicht ausführbar:** Es extrahiert aus dem
 > Repository `einheitenerfassungsbogen`, das hier nicht erreichbar ist. Nur
