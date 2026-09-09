@@ -32,9 +32,12 @@ name: Build v2 (Gerüst)
 
 on:
   workflow_dispatch:
-  # push:
-  #   branches:
-  #     - v2-architektur
+  # M0.6 verlangt einen grünen CI-Lauf auf Windows, macOS und Linux. Dafür muss
+  # der Lauf auch ausgelöst werden — solange nur `workflow_dispatch` stand, ist
+  # der Job nie gelaufen.
+  push:
+    branches:
+      - v2-architektur
 
 permissions:
   contents: read
@@ -82,9 +85,11 @@ jobs:
       S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
       S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
     steps:
-      # BLOCKIERT bis zur Remote-Freigabe des Kern-Repos: `submodules:
-      # recursive` kann die lokale Pfad-URL aus .gitmodules auf einem Runner
-      # nicht auflösen. Der Schritt steht hier vollständig vorbereitet.
+      # `.gitmodules` zeigt auf die öffentliche URL des Kern-Repos
+      # (https://github.com/wattnpapa/eeb-format.git); ein Runner löst sie ohne
+      # Anmeldung auf. Der frühere Vermerk „BLOCKIERT bis zur Remote-Freigabe"
+      # war überholt: Das Repo ist freigegeben, und der hier eingetragene
+      # Submodul-Zeiger ist auf dessen `main` enthalten.
       - name: Checkout (mit Submodul vendor/eeb-format)
         uses: actions/checkout@v4
         with:
