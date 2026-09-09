@@ -393,7 +393,9 @@ describe("Neustart nach einer Reparatur (§4.6, §2.3)", () => {
     const grenze = leseZeilengrenzen(lokal).zeilen[1]?.offset as number;
     alsGeschrieben(await erster.schreibeErsatzsegment(1, grenze));
 
+    // Zwei Rotationen sind vorausgegangen, das Ersatzsegment ist deshalb die 3.
+    const ersatzsegment = erster.segment;
     const zweiter = await platz.oeffne("9f3c1a20", 400);
-    expect(zweiter.segment).toBe(2);
+    expect(zweiter.segment).toBe(ersatzsegment);
   });
 });

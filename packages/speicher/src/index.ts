@@ -188,6 +188,7 @@ export { leseZeilengrenzen } from "./zeile.js";
 export { ersatzAus } from "./verwaltungsereignisse.js";
 
 // Pruefung beim Oeffnen: Fremdschreiber §4.5 Fall 2 und Vollpruefung §4.6.1.
+export { ersetzteSegmente } from "./ersetzteSegmente.js";
 export {
   pruefeBeimOeffnen,
   type Oeffnungsbefund,

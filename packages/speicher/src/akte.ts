@@ -18,6 +18,7 @@
 import type { Akteur, HlcUhr } from "@s1/domaene";
 
 import type { Dateisystem } from "./dateisystem.js";
+import { ersetzteSegmente } from "./ersetzteSegmente.js";
 import { Identitaetenbuch } from "./identitaeten.js";
 import { Leser, type Pollergebnis } from "./leser.js";
 import { pruefeBeimOeffnen, type Oeffnungsbefund } from "./oeffnungspruefung.js";
@@ -31,6 +32,7 @@ import {
 import { oeffneSchreiber, type Ereignisentwurf, type Schreibergebnis, type Schreiber } from "./schreiber.js";
 import { Spiegelung, type Spiegelergebnis } from "./spiegelung.js";
 import { liesUploadZustand, schreibeUploadZustand, type UploadZustand } from "./uploadZustand.js";
+import { TYP_SEGMENT_ABGESCHLOSSEN } from "./verwaltungsereignisse.js";
 import { leseZeilengrenzen, type GeleseneZeile } from "./zeile.js";
 import type { Zeitquelle } from "./zeit.js";
 
@@ -48,8 +50,12 @@ export interface Oeffnungsergebnis {
 export type Reaktion =
   /** §4.6: Ersatzsegment geschrieben. Kein Kennungswechsel. */
   | { readonly art: "repariert"; readonly ersetztesSegment: number; readonly abOffset: number; readonly meldung: string }
+  /** §4.6: Die Reparatur selbst ist gescheitert (§8.8). Kein Erfolg melden. */
+  | { readonly art: "reparaturGescheitert"; readonly ersetztesSegment: number; readonly meldung: string }
   /** §4.5 Fall 2: neue Kennung, mitgenommene Identitäten. */
   | { readonly art: "kennungGewechselt"; readonly alteClientId: string; readonly neueClientId: string; readonly mitgenommen: number; readonly meldung: string }
+  /** §4.5 Fall 2, aber das Übernehmen der Zeilen brach ab (§8.8). */
+  | { readonly art: "kennungswechselUnvollstaendig"; readonly alteClientId: string; readonly neueClientId: string; readonly meldung: string }
   /** §5.7: Der Ordner ist fort; die Spiegelung ruht. */
   | { readonly art: "ordnerFort"; readonly meldung: string }
   /** §8.9: Der Zugriff scheiterte; der Rückstau bestimmt den nächsten Versuch. */
@@ -141,6 +147,14 @@ export class Akte {
       clientId: this.#schreiber.clientId,
       identitaeten: this.#schreiber.identitaeten,
       eigeneLaufnummer: this.#schreiber.zustand.laufnummer,
+      // §4.6 Schritt 5: Ein ersetztes Segment wird nicht mehr beschrieben, und
+      // seine Beschädigung auf dem Share bleibt liegen. Ohne diese Auskunft
+      // erzeugte jedes Öffnen ein weiteres Ersatzsegment.
+      bereitsErsetzt: await ersetzteSegmente(
+        this.#optionen.dateisystem,
+        this.#optionen.ablage,
+        this.#schreiber.clientId,
+      ),
       ...(this.#schreiber.zustand.frühereClientIds === undefined
         ? {}
         : { frühereClientIds: this.#schreiber.zustand.frühereClientIds }),
@@ -214,9 +228,26 @@ export class Akte {
     return undefined;
   }
 
-  /** §4.6: Reparatur durch Anhängen an anderer Stelle. Kein Kennungswechsel. */
+  /**
+   * §4.6: Reparatur durch Anhängen an anderer Stelle. Kein Kennungswechsel.
+   *
+   * Scheitert der lokale Anhang, wird das **gemeldet** und nicht als Erfolg
+   * ausgegeben: §8.8 Punkt 1 verlangt, dass ein gescheiterter Schreibvorgang
+   * sichtbar abgewiesen wird, und §6.3 verbietet eine Anzeige, die Erfolg
+   * suggeriert.
+   */
   async #repariere(segment: number, abOffset: number): Promise<Reaktion> {
-    await this.#schreiber.schreibeErsatzsegment(segment, abOffset);
+    const ergebnis = await this.#schreiber.schreibeErsatzsegment(segment, abOffset);
+    if (ergebnis.art !== "geschrieben") {
+      return {
+        art: "reparaturGescheitert",
+        ersetztesSegment: segment,
+        meldung:
+          ergebnis.art === "abgewiesen"
+            ? ergebnis.meldung
+            : "Die Reparatur konnte nicht abgeschlossen werden.",
+      };
+    }
     return {
       art: "repariert",
       ersetztesSegment: segment,
@@ -239,12 +270,34 @@ export class Akte {
     const alteClientId = this.#schreiber.clientId;
     const neueClientId = this.#optionen.neueKennung();
     const ungespiegelte = await this.#ungespiegelteEigeneZeilen();
-    await this.#schreiber.kennungswechsel(neueClientId, ungespiegelte);
-    // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst;
-    // der Leser baut seinen Stand für die alte Datei aus dem Spiegel auf.
+    const ergebnis = await this.#schreiber.kennungswechsel(neueClientId, ungespiegelte);
+
+    // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst
+    // (§4.6, „Die lokale Seite", Schritt 3, sinngemäß auch hier): Sie gehören zu
+    // einer Datei, die ab jetzt fremd ist. Der Leser baut seinen Stand für sie
+    // aus dem Spiegel auf (§4.5 Schritt 6).
     this.#leser = this.#baueLeser({ eigen: {}, fremd: this.#leser.zustand.fremd });
-    this.#spiegelung = this.#baueSpiegelung({ eigen: {}, fremd: {} });
+    this.#spiegelung = this.#baueSpiegelung({
+      eigen: this.#spiegelung.zustand.eigen,
+      fremd: {},
+    });
     await this.#leser.gleicheMitSpiegelAb();
+
+    if (ergebnis !== undefined) {
+      // §8.8 und §6.3: Bricht das Übernehmen der Zeilen ab, darf hier keine
+      // Erfolgsmeldung stehen. Die Kennung ist gewechselt und persistiert — was
+      // fehlt, sind die restlichen mitzunehmenden Zeilen, und genau das wird
+      // gesagt.
+      return {
+        art: "kennungswechselUnvollstaendig",
+        alteClientId,
+        neueClientId,
+        meldung:
+          "Dieses Benutzerprofil wurde offenbar kopiert. Der Rechner arbeitet ab jetzt unter einer " +
+          "neuen Kennung weiter. Ein Teil der noch nicht übertragenen Einträge konnte dabei nicht " +
+          "übernommen werden und ist auf diesem Rechner weiterhin vorhanden.",
+      };
+    }
     return {
       art: "kennungGewechselt",
       alteClientId,
@@ -286,7 +339,20 @@ export class Akte {
       );
       const stand =
         this.#spiegelung.zustand.eigen[`${praefix}.${segmentText(kennung.segment)}`]?.shareOffset ?? 0;
-      zeilen.push(...leseZeilengrenzen(bytes, 0).zeilen.filter((z) => z.offset >= stand));
+      zeilen.push(
+        ...leseZeilengrenzen(bytes, 0).zeilen.filter(
+          (z) =>
+            z.offset >= stand &&
+            // §4.3: Eine Abschlusszeile sagt „dieses Segment ist fertig, es geht
+            // bei N weiter". In einer **anderen** Datei ist das eine falsche
+            // Aussage: Ein Leser, dessen Abschnitt darauf endet, hielte den
+            // neuen Arbeitsplatz für abgeschlossen und läse ihn nie wieder —
+            // ohne Meldung und ohne Quarantäne. Sie wird deshalb nicht
+            // mitgenommen; die alte Datei wächst ohnehin nicht mehr und fällt
+            // nach §6.2 aus Takt A heraus.
+            z.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN,
+        ),
+      );
     }
     return zeilen;
   }

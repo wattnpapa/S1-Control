@@ -295,7 +295,14 @@ export class Schreiber {
   async schreibeErsatzsegment(ersetztesSegment: number, abOffset: number): Promise<Schreibergebnis> {
     const quelle = await this.#liesEigenesSegment(ersetztesSegment);
     const bisStelle = quelle.zeilen.filter((z) => z.offset + z.laenge <= abOffset);
-    const abStelle = quelle.zeilen.filter((z) => z.offset >= abOffset);
+    // §4.3: Eine Abschlusszeile des ersetzten Segments gehört nicht in das
+    // Ersatzsegment. Sie sagt „dieses Segment ist fertig, es geht bei N
+    // weiter" — im Ersatzsegment, in das gleich weitergeschrieben wird, wäre
+    // das eine falsche Aussage, und ein Leser hielte das Ersatzsegment sofort
+    // für abgeschlossen.
+    const abStelle = quelle.zeilen.filter(
+      (z) => z.offset >= abOffset && z.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN,
+    );
 
     // §4.6 Schritt 3: `vorgaenger` ist die Kettenprüfsumme der letzten
     // **unbeschädigten** Zeile des ersetzten Segments — bewusst nicht dessen

@@ -53,6 +53,18 @@ export interface OeffnungspruefungOptionen {
   /** Aufgegebene Kennungen (§4.5, Schritt 1) — sie zählen für die Laufnummer mit. */
   readonly frühereClientIds?: readonly string[];
   /**
+   * Segmente, die nach §4.6 bereits durch ein Ersatzsegment ersetzt wurden.
+   *
+   * Sie werden von der Vollprüfung ausgenommen. §4.6 Schritt 5: „Das
+   * beschädigte Segment bekommt keine Abschlusszeile mehr. **Es wird nicht mehr
+   * beschrieben.**" Die Beschädigung auf dem Share bleibt also dauerhaft
+   * liegen — ohne diese Ausnahme lieferte der Vergleich bei **jedem** Öffnen
+   * erneut Ausgang B, und jedes Öffnen erzeugte ein weiteres Ersatzsegment.
+   * Aus einem einmaligen Heilweg würde eine Dauerstörung mit unbegrenztem
+   * Dateiwachstum.
+   */
+  readonly bereitsErsetzt?: ReadonlySet<number>;
+  /**
    * Die eigene zuletzt vergebene Laufnummer aus `schreiber.json` (§3.3).
    *
    * Ohne sie bleibt §4.5 Schritt 3 unausgewertet: „Ist sie **größer als** die
@@ -90,6 +102,10 @@ export async function pruefeBeimOeffnen(
   for (const kennung of eigene) {
     const share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
     hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
+    // Ein bereits ersetztes Segment wird nicht mehr beschrieben (§4.6 Schritt 5)
+    // und nicht mehr geprüft; seine Bytes bleiben beschädigt liegen, und das
+    // ist der vorgesehene Endzustand.
+    if (optionen.bereitsErsetzt?.has(kennung.segment) === true) continue;
     const lokal = await liesOderLeer(
       optionen.dateisystem,
       optionen.ablage.lokalDatei(kennung.name),

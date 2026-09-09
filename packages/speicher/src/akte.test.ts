@@ -4,6 +4,7 @@ import { HlcUhr } from "@s1/domaene";
 
 import { oeffneAkte, type AkteOptionen } from "./akte.js";
 import { akteur, arbeitsplatz, legeEinsatzAn } from "./pruefhilfen/aufbau.js";
+import { stoerdateisystem, type Stoerung } from "./pruefhilfen/stoerdateisystem.js";
 import { KETTE_ANFANG } from "./pruefsummen.js";
 import { liesSegment } from "./segmentlese.js";
 import { baueZeile, leseAbschnitt } from "./zeile.js";
@@ -149,5 +150,104 @@ describe("Akte — die Verdrahtung von §4.5, §4.6 und §5.4", () => {
     await platz.dateisystem.loesche(platz.ablage.shareEinsatzDatei);
     const { reaktion } = await akte.spiegle();
     expect(reaktion?.art).toBe("ordnerFort");
+  });
+});
+
+describe("Befunde aus dem Abschlussgutachten", () => {
+  it("erzeugt bei wiederholtem Öffnen nicht jedes Mal ein neues Ersatzsegment (§4.6 Schritt 5)", async () => {
+    // §4.6 Schritt 5: „Das beschädigte Segment bekommt keine Abschlusszeile
+    // mehr. Es wird nicht mehr beschrieben." Die Beschädigung auf dem Share
+    // bleibt also dauerhaft liegen — ohne Ausnahme von der Vollprüfung fiele
+    // jedes Öffnen erneut in Ausgang B, und aus einem einmaligen Heilweg würde
+    // eine Dauerstörung mit unbegrenztem Dateiwachstum.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz));
+    for (let i = 0; i < 4; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const roh = await platz.wiese.lies(`share/einsatz/ereignisse/${ICH}.0000.jsonl`);
+    roh[40] = (roh[40] as number) ^ 0x01;
+    await platz.wiese.schreibe(`share/einsatz/ereignisse/${ICH}.0000.jsonl`, roh);
+
+    const erstes = await oeffneAkte(akteOptionen(platz));
+    expect(erstes.ergebnis.reaktion?.art).toBe("repariert");
+
+    // Zweites und drittes Öffnen: nichts mehr zu tun.
+    const zweites = await oeffneAkte(akteOptionen(platz));
+    expect(zweites.ergebnis.befund.art).toBe("inOrdnung");
+    expect(zweites.ergebnis.reaktion).toBeUndefined();
+    const drittes = await oeffneAkte(akteOptionen(platz));
+    expect(drittes.ergebnis.reaktion).toBeUndefined();
+
+    const dateien = [...(await platz.dateisystem.listeVerzeichnis(platz.ablage.lokalEreignisse))].sort();
+    expect(dateien).toEqual([`${ICH}.0000.jsonl`, `${ICH}.0001.jsonl`]);
+  });
+
+  it("meldet keinen Erfolg, wenn die Reparatur am lokalen Schreiben scheitert (§8.8, §6.3)", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz));
+    for (let i = 0; i < 3; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+    const roh = await platz.wiese.lies(`share/einsatz/ereignisse/${ICH}.0000.jsonl`);
+    roh[40] = (roh[40] as number) ^ 0x01;
+    await platz.wiese.schreibe(`share/einsatz/ereignisse/${ICH}.0000.jsonl`, roh);
+
+    const stoerungen: Stoerung[] = [
+      {
+        aufruf: "haengeAnUndSynchronisiere",
+        code: "ENOSPC",
+        malen: Infinity,
+        pfadEnthaelt: "rechner-1",
+      },
+    ];
+    const gestoert = {
+      ...akteOptionen(platz),
+      dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+    };
+    const { ergebnis } = await oeffneAkte(gestoert);
+    expect(ergebnis.reaktion?.art).toBe("reparaturGescheitert");
+    expect(ergebnis.reaktion?.meldung).toContain("Speicherplatz");
+  });
+
+  it("schleppt beim Kennungswechsel keine Abschlusszeile in die neue Datei (§4.3)", async () => {
+    // Eine Abschlusszeile sagt „dieses Segment ist fertig, es geht bei N
+    // weiter". In der neuen Datei wäre das falsch: Ein Leser, dessen Abschnitt
+    // darauf endet, hielte den neuen Arbeitsplatz für abgeschlossen und läse
+    // ihn nie wieder — ohne Meldung und ohne Quarantäne.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, ICH, 400));
+    while (akte.schreiber.segment === 0) {
+      platz.uhr.weiter(1);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }));
+    }
+    // Nichts davon ist gespiegelt: alles wird beim Wechsel mitgenommen.
+    const stand = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette ?? "0".repeat(32);
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:77`,
+        vorgaenger: stand,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+    const { reaktion } = await akte.spiegle();
+    expect(reaktion?.art).toBe("kennungGewechselt");
+
+    const neu = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(NEUE, 0), 0);
+    const uebernommen = leseAbschnitt(neu, 0, KETTE_ANFANG);
+    expect(uebernommen.abschluss).toEqual({ art: "ende" });
+    expect(uebernommen.zeilen.map((z) => z.rahmen.typ)).not.toContain("SegmentAbgeschlossen");
+    // Und es sind trotzdem alle fachlichen Ereignisse mitgekommen.
+    expect(uebernommen.zeilen.length).toBeGreaterThan(0);
   });
 });
