@@ -82,8 +82,11 @@ export async function kettenanker(
  * (§4.6, Schritt 3).
  *
  * `offset === 0` heißt: Der Ersatz beginnt vor der ersten Zeile des ersetzten
- * Segments. Dann ist der Anker der desselben Segments, also die Kette am Ende
- * seines Vorgängers.
+ * Segments. Gefragt ist dann der Anker, auf dem `segment` **selbst** aufsetzt
+ * — bei einem gewöhnlichen Segment die Kette am Ende seines Vorgängers, bei
+ * einem Ersatzsegment dagegen die Stelle mitten im ersetzten Segment, auf der
+ * es nach §4.6 Schritt 3 aufgesetzt hat. Die Begründung samt Fundstelle steht
+ * im Rumpf.
  */
 export async function ketteAnStelle(
   segment: number,

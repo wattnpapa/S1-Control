@@ -119,10 +119,14 @@ export async function oeffneAkte(
 /**
  * Höchstzahl der Reparaturen je Öffnen (§4.6.1 Auslöser 1).
  *
- * Keine Zusage, sondern eine Schranke gegen eine Endlosschleife: Jede
- * Reparatur legt ein Ersatzsegment an und nimmt sein Vorbild nach §4.6
- * Schritt 5 aus der Prüfung, es kann also nie mehr Reparaturen als eigene
- * Segmente geben. Der Wert liegt darüber.
+ * Keine Zusage, sondern eine **feste** Schranke gegen eine Endlosschleife.
+ * Der Sache nach kann es nie mehr Reparaturen als eigene Segmente geben —
+ * jede Reparatur legt ein Ersatzsegment an und nimmt sein Vorbild nach §4.6
+ * Schritt 5 aus der Prüfung. Geprüft wird diese Schranke hier aber nicht;
+ * geprüft wird die Zahl 64. Sie liegt für jede Akte, die M0 betrachtet,
+ * darüber. Eine Akte mit mehr als 64 beschädigten eigenen Segmenten verließe
+ * die Schleife still und bliebe für den Rest der Sitzung unrepariert; das
+ * nächste Öffnen (§4.6.1 Auslöser 1) nähme die Arbeit wieder auf.
  */
 const REPARATUREN_JE_OEFFNEN = 64;
 
