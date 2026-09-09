@@ -8,7 +8,12 @@ Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzus
 
 **Neu am 2026-09-09:** Aus der Simulation M0.4 sind drei Konzeptentscheidungen hinzugekommen — Nr. 14, 15 und 16 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md.
 
-> **Stand 2026-09-09: Nr. 14 und Nr. 16 sind entschieden.** Johannes hat **14 auf Richtung A** und **16 auf Richtung (a)** festgelegt. Beide sind in KONZEPT-SPEICHER.md nachgezogen (§4.6 Schritt 2 und 5, §8.6.1 Regel 4) und im Code umgesetzt. Die Herleitungen bleiben unten als Begründung stehen. **Nr. 15 ist weiterhin offen.**
+> **Stand 2026-09-09: Nr. 14 bis 18 sind alle entschieden.**
+>
+> * **14 → A** und **16 → (a)**: in KONZEPT-SPEICHER.md nachgezogen (§4.6 Schritt 2 und 5, §8.6.1 Regel 4) und im Code umgesetzt.
+> * **15 → beide Präzisierungen**, **17 → B**, **18 → A**: entschieden, aber **noch nicht umgesetzt**. Der Auftrag dazu steht in [../v2-arbeitsstand/auftraege/M0-nacharbeit-3.md](../v2-arbeitsstand/auftraege/M0-nacharbeit-3.md).
+>
+> Die Herleitungen unten bleiben als Begründung stehen.
 
 | Nr. | Entscheidung | Optionen und Folgen | Empfehlung | Fällig |
 |---|---|---|---|---|
@@ -76,7 +81,7 @@ wertet diesen Ausgang weiterhin als „nicht vergleichbar" nach §7.6 — kein
 Fehler, kein Nachweis — und meldet die Quarantänen getrennt, wie §8.6.1
 Regel 3 es verlangt.
 
-### 15 · §7.6 braucht zwei Präzisierungen, sonst ist die Ruhephase im Feld nicht messbar
+### 15 · §7.6 braucht zwei Präzisierungen, sonst ist die Ruhephase im Feld nicht messbar — **entschieden: beide**
 
 Beide sind in der Simulation umgesetzt und dort belegt; beide machen die
 Ruhephase **schwerer** erreichbar, nicht leichter. Zu entscheiden ist, ob sie in
@@ -106,6 +111,12 @@ Takt⌉` leere Durchläufe. Ohne Caches sind das genau die zwei aus §7.6.
 **Warum es nicht warten sollte.** `s1 akte pruefe` (Paket V.3) meldet die
 Ruhephase nach der heutigen Fassung falsch — im Feld also gerade dort, wo sie
 gemessen werden soll (M0.5, M2.4).
+
+**Entschieden am 2026-09-09: beide Präzisierungen werden nachgezogen.** §7.6
+misst den Fortschritt künftig am gesehenen Dateiende statt an gelieferten
+Bytes und verlangt `2 + ⌈Cache / Takt⌉` leere Durchläufe. Die Simulation tut
+beides seit M0.4; nachzuziehen ist der Konzepttext und alles, was §7.6 sonst
+noch umsetzt. **Noch nicht umgesetzt** — siehe M0-nacharbeit-3.md.
 
 ### 16 · §4.6 setzt beim aufgezeichneten Übertragungsstand an, nicht bei der letzten lesbaren Zeile — **entschieden: (a)**
 
@@ -175,7 +186,7 @@ gelesen wurde. Damit (a) trägt, ist Schritt 5 präzisiert: Ein Schaden
 unterhalb der Übernahmestelle löst eine erneute Reparatur aus, einer ab ihr
 nicht. Startwert 111 verliert danach kein Ereignis mehr.
 
-### 17 · Die Datei einer aufgegebenen Kennung repariert niemand mehr
+### 17 · Die Datei einer aufgegebenen Kennung repariert niemand mehr — **entschieden: B**
 
 **Woher der Befund kommt.** Aus dem Sweep nach der zweiten Nacharbeit
 ([messungen/M0.4-simulation.md](messungen/M0.4-simulation.md), Abschnitt 7.7).
@@ -211,10 +222,17 @@ A ist ehrlich und billig, gibt aber eine Zusage auf, die im Feld zählt — ein
 Profilklon ist nach §4.5 der erwartete Fall, nicht der exotische. C ist der
 teuerste Weg und löst nur den Teil, der beim Wechsel schon bekannt ist.
 
-**Was bis zur Entscheidung gilt:** Der Lauf meldet den Verlust als Mangel.
-Er wird nicht geschönt.
+**Entschieden am 2026-09-09: Richtung B.** Die Vollprüfung beim Öffnen nimmt
+die Dateien aufgegebener Kennungen wieder auf; eine Beschädigung dort wird
+durch ein Ersatzsegment unter der **neuen** Kennung repariert. Damit muss
+`SegmentErsetzt` künftig auch das *Präfix* des ersetzten Segments nennen, nicht
+nur dessen Nummer — sonst hält `ersetzteSegmente` das Segment `0000` der neuen
+Kennung für ersetzt. Der Preis, ein Lesedurchgang je aufgegebener Datei beim
+Öffnen, wird in M0.5 unter A10 mitgemessen. **Noch nicht umgesetzt** — siehe
+M0-nacharbeit-3.md. Bis dahin meldet der Lauf den Verlust als Mangel; er wird
+nicht geschönt.
 
-### 18 · Der Versionsvektor deckt sich nach einer Reparatur nach §4.6 nie wieder
+### 18 · Der Versionsvektor deckt sich nach einer Reparatur nach §4.6 nie wieder — **entschieden: A**
 
 **Woher der Befund kommt.** Ebenfalls aus dem Sweep (Abschnitt 7.7),
 Startwert 999. Zwei Phasen ohne Konvergenznachweis, **kein** Verlust, **kein**
@@ -249,9 +267,11 @@ Auflage 18 für genau die Läufe aus, in denen die Reparatur geprüft wird.
 | B | §7.6 vergleicht statt des Vektors die **Menge der Ereignis-Identitäten**. Der Bericht führt sie ohnehin schon mit (`identitaetenHash`) | Ändert das Kriterium an einer tragenden Stelle; der Vektor ist die billigere Prüfung und fängt Fälle, die die Identitätsmenge nicht sieht | Die Aussage „gleicher Vektor" als Vorbedingung des Hash-Vergleichs |
 | C | Nichts. Der Ausgang „nicht vergleichbar" ist nach §7.6 kein Fehler, und der Lauf meldet ihn korrekt | Nichts | Den Konvergenznachweis in jedem Lauf, in dem repariert wurde — also in jedem Lauf, der §4.6 prüft |
 
-**Einordnung, keine Entscheidung.** A ist der kleinste Eingriff und deckt sich
-mit dem, was §7.6 für die Ruhephase schon tut. C ist der Stand von heute und
-kostet den Nachweis dort, wo er am meisten wert wäre.
+**Entschieden am 2026-09-09: Richtung A.** §7.6 nimmt ersetzte Segmente aus
+dem Versionsvektor heraus — so wie Bedingung 1 sie schon aus der Ruhephase
+herausnimmt. Die Ereignisse dieser Segmente stehen im Ersatzsegment und gehen
+dort in den Vektor ein; es geht also nichts verloren. **Noch nicht umgesetzt**
+— siehe M0-nacharbeit-3.md.
 
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
