@@ -222,7 +222,13 @@ describe("Präfix-Invariante aus §5.4.1", () => {
       ),
       { numRuns: 40 },
     );
-  });
+    // Eigene Frist statt der 5 Sekunden von Vitest: Diese Eigenschaft führt bei
+    // 40 Läufen mit bis zu 24 Schritten mehrere hundert **echte**
+    // Dateioperationen aus. Auf Windows — dem Zielsystem nach Entscheidung 13 —
+    // reicht die Standardfrist dafür nicht. Die Prüftiefe zu senken wäre der
+    // falsche Ausweg: Erst die Zahl der Läufe macht aus der Eigenschaft eine
+    // Prüfung.
+  }, 120_000);
 
   it("hält auch über einen Absturz mitten im Append hinweg", async () => {
     // Der Gegenfall aus §5.4.1: Ein Lauf nimmt eine gerade entstehende Zeile
