@@ -14,6 +14,7 @@
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "dependencies": {
-    "@bos/eeb-format": "file:../../vendor/eeb-format"
+    "@bos/eeb-format": "file:../../vendor/eeb-format",
+    "taktische-zeichen-core": "^0.10.0"
   }
 }

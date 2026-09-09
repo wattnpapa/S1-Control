@@ -109,6 +109,50 @@ export {
   type Faltung,
 } from "./fold.js";
 
+// Zeichen-Inferenz und Zeichenkatalog aus v1 (M1.4). Vorschlaege fuer die
+// Maske, kein Bestandteil des Folds.
+export {
+  normalisiereText,
+  trifftMuster,
+  wortmenge,
+  zerlegeInWorte,
+} from "./zeichen/text.js";
+export { ebeneAusV1Typ, type V1Zeichentyp } from "./zeichen/ebene.js";
+export {
+  THW_KUERZEL,
+  ZEICHEN_ALIASE,
+  findeThwKuerzel,
+  findeThwZug,
+  type KuerzelRegel,
+  type KuerzelTreffer,
+} from "./zeichen/thw-kuerzel.js";
+export { filtereKatalog, katalogFuer, type KatalogEintrag } from "./zeichen/katalog.js";
+export { bewerteKandidaten, type BewerteterEintrag } from "./zeichen/bewertung.js";
+export {
+  REGEL_FASSUNG,
+  UEBERNAHME_SCHWELLE,
+  alsBedienungUebernommen,
+  listeZeichenkatalog,
+  schlageZeichenVor,
+  type TaktischesZeichen,
+  type ZeichenHerkunft,
+  type ZeichenVorschlag,
+} from "./zeichen/inferenz.js";
+export {
+  organisationsKurzform,
+  rueckfallEinheitSvg,
+  rueckfallFahrzeugSvg,
+} from "./zeichen/rueckfall.js";
+
+// STAN-Datensatz und Vorschlag (M1.4). Stammdatum, kein Ereignis (§1.2).
+export { THW_STAN, type StanEintrag } from "./stan/daten.js";
+export {
+  STAN_SCHWELLE,
+  schlageStanVor,
+  stanEintraege,
+  type StanVorschlag,
+} from "./stan/inferenz.js";
+
 /** Ordnername eines Einsatzes auf dem Share: `<datum>_<slug>_<kurzid>`. */
 export interface Einsatzkennung {
   /** Sprechender, dateisystemtauglicher Namensteil. */
