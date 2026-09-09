@@ -116,7 +116,17 @@ gemessen werden soll (M0.5, M2.4).
 misst den Fortschritt künftig am gesehenen Dateiende statt an gelieferten
 Bytes und verlangt `2 + ⌈Cache / Takt⌉` leere Durchläufe. Die Simulation tut
 beides seit M0.4; nachzuziehen ist der Konzepttext und alles, was §7.6 sonst
-noch umsetzt. **Noch nicht umgesetzt** — siehe M0-nacharbeit-3.md.
+noch umsetzt.
+
+**Umgesetzt am 2026-09-09** (dritte Nacharbeit). §7.6 nennt beide
+Präzisierungen jetzt ausdrücklich: Bedingung 2 und 3 verlangen „keinen
+Fortschritt" statt „0 Bytes", und die Zahl der geforderten Durchläufe steht
+als `2 + ⌈Cache / Takt⌉` samt Begründung im Text. Außerhalb der Simulation
+setzt nichts §7.6 um: `s1 akte pruefe` (Paket V.3) ist **noch nicht gebaut**
+— die Kommandozeile kennt in diesem Stand allein `diagnose` und `simuliere`
+(`packages/cli/src/index.ts`). Der Vermerk „meldet die Ruhephase falsch"
+betrifft also ein künftiges Paket, das jetzt gegen die richtige Fassung
+gebaut wird.
 
 ### 16 · §4.6 setzt beim aufgezeichneten Übertragungsstand an, nicht bei der letzten lesbaren Zeile — **entschieden: (a)**
 
