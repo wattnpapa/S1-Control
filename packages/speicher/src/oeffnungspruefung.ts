@@ -18,6 +18,7 @@
 import { zerlegeEreignisId } from "@s1/domaene";
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
+import { shareklasse, type Shareklasse } from "./fehler.js";
 import {
   clientPraefix,
   zerlegeEreignisDateiname,
@@ -37,6 +38,15 @@ export type Oeffnungsbefund =
    * durch ein Ersatzsegment nach §4.6.
    */
   | { readonly art: "beschaedigt"; readonly segment: number; readonly abOffset: number }
+  /**
+   * Der Share war nicht erreichbar (§8.3, §8.9).
+   *
+   * §1.3 Satz 2: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Das
+   * Öffnen scheitert daran **nicht** — der Client arbeitet lokal weiter (§5.2),
+   * die Prüfung wird beim nächsten Öffnen nachgeholt, und §4.6.1 Auslöser 2
+   * kann sie vorziehen.
+   */
+  | { readonly art: "nichtErreichbar"; readonly klasse: Shareklasse; readonly code: string }
   /** §4.5 Fall 2 mit §5.4.3 Ausgang C: geklontes Benutzerprofil. */
   | {
       readonly art: "fremdschreiber";
@@ -55,13 +65,15 @@ export interface OeffnungspruefungOptionen {
   /**
    * Segmente, die nach §4.6 bereits durch ein Ersatzsegment ersetzt wurden.
    *
-   * Sie werden von der Vollprüfung ausgenommen. §4.6 Schritt 5: „Das
-   * beschädigte Segment bekommt keine Abschlusszeile mehr. **Es wird nicht mehr
-   * beschrieben.**" Die Beschädigung auf dem Share bleibt also dauerhaft
-   * liegen — ohne diese Ausnahme lieferte der Vergleich bei **jedem** Öffnen
-   * erneut Ausgang B, und jedes Öffnen erzeugte ein weiteres Ersatzsegment.
-   * Aus einem einmaligen Heilweg würde eine Dauerstörung mit unbegrenztem
-   * Dateiwachstum.
+   * Sie werden von **Ausgang B** ausgenommen, nicht von der Prüfung. §4.6
+   * Schritt 5: „Das beschädigte Segment bekommt keine Abschlusszeile mehr. **Es
+   * wird nicht mehr beschrieben.**" Die Beschädigung bleibt also dauerhaft
+   * liegen — ohne diese Ausnahme lieferte der Vergleich bei jedem Öffnen erneut
+   * Ausgang B, und jedes Öffnen erzeugte ein weiteres Ersatzsegment.
+   *
+   * **Ausgang C bleibt wirksam.** „Es wird nicht mehr beschrieben" gilt für
+   * diesen Client; ein Klon schreibt dort sehr wohl weiter, und §4.5 Schritt 1
+   * verlangt ausdrücklich „alle eigenen Segmente".
    */
   readonly bereitsErsetzt?: ReadonlySet<number>;
   /**
@@ -96,20 +108,25 @@ export interface OeffnungspruefungOptionen {
 export async function pruefeBeimOeffnen(
   optionen: OeffnungspruefungOptionen,
 ): Promise<Oeffnungsbefund> {
-  const eigene = await shareSegmenteMitPraefix(optionen, clientPraefix(optionen.clientId));
+  let eigene: readonly Dateikennung[];
+  try {
+    eigene = await shareSegmenteMitPraefix(optionen, clientPraefix(optionen.clientId));
+  } catch (fehler) {
+    return nichtErreichbar(fehler);
+  }
   let hoechste = 0;
 
   for (const kennung of eigene) {
-    const share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
+    let share: Uint8Array;
+    let lokal: Uint8Array;
+    try {
+      share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
+      lokal = await liesOderLeer(optionen.dateisystem, optionen.ablage.lokalDatei(kennung.name));
+    } catch (fehler) {
+      return nichtErreichbar(fehler);
+    }
     hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
-    // Ein bereits ersetztes Segment wird nicht mehr beschrieben (§4.6 Schritt 5)
-    // und nicht mehr geprüft; seine Bytes bleiben beschädigt liegen, und das
-    // ist der vorgesehene Endzustand.
-    if (optionen.bereitsErsetzt?.has(kennung.segment) === true) continue;
-    const lokal = await liesOderLeer(
-      optionen.dateisystem,
-      optionen.ablage.lokalDatei(kennung.name),
-    );
+    const istErsetzt = optionen.bereitsErsetzt?.has(kennung.segment) === true;
 
     const ausgang = vergleicheSpiegel({
       shareBytes: share,
@@ -118,8 +135,18 @@ export async function pruefeBeimOeffnen(
       lokaleInhalte: optionen.identitaeten,
     });
     if (ausgang.art === "B") {
+      // Ein bereits ersetztes Segment wird nach §4.6 Schritt 5 „nicht mehr
+      // beschrieben"; seine Bytes bleiben beschädigt liegen, und das ist der
+      // vorgesehene Endzustand. Eine zweite Reparatur wäre keine Heilung,
+      // sondern eine Dauerstörung.
+      if (istErsetzt) continue;
       return { art: "beschaedigt", segment: kennung.segment, abOffset: ausgang.abOffset };
     }
+    // Ausgang C wird **auch** in einem ersetzten Segment ausgewertet: §4.6
+    // Schritt 5 sagt, *dieser* Client schreibe dort nicht mehr — ein Klon tut
+    // es sehr wohl. §4.5 Schritt 1 verlangt ausdrücklich „alle eigenen
+    // Segmente", und der reine Zahlenvergleich aus Schritt 3 allein reicht
+    // nach §4.5 Schritt 4 nicht.
     if (ausgang.art === "C") {
       return {
         art: "fremdschreiber",
@@ -132,11 +159,19 @@ export async function pruefeBeimOeffnen(
   }
 
   for (const frühere of optionen.frühereClientIds ?? []) {
-    for (const kennung of await shareSegmenteMitPraefix(optionen, clientPraefix(frühere))) {
-      const share = await liesOderLeer(
-        optionen.dateisystem,
-        optionen.ablage.shareDatei(kennung.name),
-      );
+    let dateien: readonly Dateikennung[];
+    try {
+      dateien = await shareSegmenteMitPraefix(optionen, clientPraefix(frühere));
+    } catch (fehler) {
+      return nichtErreichbar(fehler);
+    }
+    for (const kennung of dateien) {
+      let share: Uint8Array;
+      try {
+        share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
+      } catch (fehler) {
+        return nichtErreichbar(fehler);
+      }
       hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
     }
   }
@@ -171,6 +206,18 @@ async function shareSegmenteMitPraefix(
       return kennung !== undefined && kennung.praefix === praefix ? [kennung] : [];
     })
     .sort((a, b) => a.segment - b.segment);
+}
+
+/**
+ * §1.3 Satz 2: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Ein
+ * unerreichbarer Share darf das Öffnen nicht verhindern.
+ */
+function nichtErreichbar(fehler: unknown): Oeffnungsbefund {
+  return {
+    art: "nichtErreichbar",
+    klasse: shareklasse(fehler),
+    code: fehler instanceof DateisystemFehler ? fehler.code : "EUNKNOWN",
+  };
 }
 
 async function liesOderLeer(dateisystem: Dateisystem, pfad: string): Promise<Uint8Array> {

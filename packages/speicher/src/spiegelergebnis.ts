@@ -25,6 +25,12 @@ export const MELDUNG_NICHT_ERREICHBAR = "Share nicht erreichbar.";
 export type Spiegelergebnis =
   /** Ausgang A für alle Segmente; `uebertragen` ist die Zahl der übertragenen Bytes. */
   | { readonly art: "uebertragen"; readonly uebertragen: number }
+  /**
+   * Ein Lauf war noch unterwegs (§8.4). **Keine Störung:** §6.2 lässt die Takte
+   * unabhängig laufen, die Überlappung ist vorgesehen. Der Aufrufer wartet den
+   * nächsten Takt ab und meldet dem Bediener nichts.
+   */
+  | { readonly art: "laeuftBereits" }
   /** Ausgang B (§5.4.3): Beschädigung ohne fremde Schreibspur — Reparatur nach §4.6. */
   | {
       readonly art: "beschaedigt";

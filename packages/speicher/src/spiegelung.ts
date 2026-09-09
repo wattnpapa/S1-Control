@@ -60,6 +60,18 @@ export interface SpiegelungOptionen {
   readonly vollstaendigerOffset: () => { readonly segment: number; readonly offset: number };
   /** Die lokal vergebenen Identitäten (§5.3) — Grundlage der Trennung von B und C. */
   readonly identitaeten: Identitaetenblick;
+  /**
+   * Welche eigenen Segmente nach §4.6 bereits ersetzt sind.
+   *
+   * §4.6 Schritt 5: „Das beschädigte Segment bekommt keine Abschlusszeile mehr.
+   * **Es wird nicht mehr beschrieben.**" Seine Beschädigung bleibt auf dem
+   * Share dauerhaft liegen. Ohne diese Auskunft fiele **jeder** Lauf erneut in
+   * Ausgang B, jeder Lauf erzeugte ein weiteres Ersatzsegment, und weil der
+   * Lauf beim ersten `beschaedigt` zurückkehrt, erreichte keines davon je den
+   * Share. Aus dem einmaligen Heilweg würde eine Dauerstörung im Takt des
+   * Rückstaus.
+   */
+  readonly bereitsErsetzt?: () => Promise<ReadonlySet<number>>;
 }
 
 /**
@@ -123,12 +135,10 @@ export class Spiegelung {
    */
   async lauf(): Promise<Spiegelergebnis> {
     if (this.#laeuft) {
-      return {
-        art: "gescheitert",
-        klasse: "voruebergehend",
-        meldung: "Ein Spiegelungslauf ist noch unterwegs (§8.4).",
-        naechsterVersuchMs: this.naechsterVersuchMs,
-      };
+      // §6.2 lässt Takte ausdrücklich unabhängig laufen; eine Überlappung ist
+      // der Normalfall und **keine** Störung. Sie als „gescheitert" zu melden
+      // wäre eine unehrliche Anzeige nach §6.3.
+      return { art: "laeuftBereits" };
     }
     this.#laeuft = true;
     try {
@@ -155,7 +165,12 @@ export class Spiegelung {
       // den Lesern ein Nachfolgesegment vor der Abschlusszeile seines
       // Vorgängers, und §8.6.2 meldete eine fehlende Kettenfortsetzung, wo
       // keine fehlt.
+      const ersetzt = (await this.#optionen.bereitsErsetzt?.()) ?? new Set<number>();
       for (const kennung of await this.#eigeneSegmente()) {
+        // §4.6 Schritt 5: Ein ersetztes Segment wird nicht mehr beschrieben.
+        // Seine Bytes auf dem Share bleiben beschädigt liegen — das ist der
+        // vorgesehene Endzustand, kein Anlass für eine weitere Reparatur.
+        if (ersetzt.has(kennung.segment)) continue;
         const lokal = await this.#lokaleBytesBisVollstaendig(kennung);
         const ergebnis = await this.#spiegleSegment(kennung, lokal);
         if (ergebnis.art !== "uebertragen") return ergebnis;

@@ -30,6 +30,13 @@ import type { Dateisystem } from "./dateisystem.js";
 import { KETTE_ANFANG, istKette } from "./pruefsummen.js";
 
 const kodierer = new TextEncoder();
+
+let tmpZaehler = 0;
+/** Fortlaufende Nummer für eindeutige `.tmp`-Namen. */
+function naechsteTmpNummer(): number {
+  tmpZaehler += 1;
+  return tmpZaehler;
+}
 const dekodierer = new TextDecoder("utf-8", { fatal: false });
 
 /** Der Inhalt von `schreiber.json` (§4.4). */
@@ -127,7 +134,11 @@ export async function schreibeSchreiberzustand(
   pfad: string,
   zustand: Schreiberzustand,
 ): Promise<void> {
-  const tmp = `${pfad}.tmp`;
+  // Eindeutig je Schreibvorgang: §6.2 lässt Takte unabhängig laufen, und zwei
+  // gleichzeitige Läufe teilten sich sonst dieselbe `.tmp`-Datei — der eine
+  // benennt sie um, der andere findet sie nicht mehr und scheitert mit ENOENT
+  // an einer Datei, die es nie hätte geben dürfen.
+  const tmp = `${pfad}.${naechsteTmpNummer()}.tmp`;
   const bytes = kodierer.encode(`${JSON.stringify(zustand, undefined, 2)}\n`);
   await dateisystem.schreibeUeberOhneSync(tmp, bytes);
   await dateisystem.benenneUm(tmp, pfad);

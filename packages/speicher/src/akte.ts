@@ -32,7 +32,7 @@ import {
 import { oeffneSchreiber, type Ereignisentwurf, type Schreibergebnis, type Schreiber } from "./schreiber.js";
 import { Spiegelung, type Spiegelergebnis } from "./spiegelung.js";
 import { liesUploadZustand, schreibeUploadZustand, type UploadZustand } from "./uploadZustand.js";
-import { TYP_SEGMENT_ABGESCHLOSSEN } from "./verwaltungsereignisse.js";
+import { istVerwaltungsereignis } from "./verwaltungsereignisse.js";
 import { leseZeilengrenzen, type GeleseneZeile } from "./zeile.js";
 import type { Zeitquelle } from "./zeit.js";
 
@@ -59,7 +59,15 @@ export type Reaktion =
   /** §5.7: Der Ordner ist fort; die Spiegelung ruht. */
   | { readonly art: "ordnerFort"; readonly meldung: string }
   /** §8.9: Der Zugriff scheiterte; der Rückstau bestimmt den nächsten Versuch. */
-  | { readonly art: "gescheitert"; readonly meldung: string; readonly naechsterVersuchMs: number };
+  | { readonly art: "gescheitert"; readonly meldung: string; readonly naechsterVersuchMs: number }
+  /**
+   * §8.3: Der Share war beim Öffnen nicht erreichbar.
+   *
+   * §1.3 Satz 2: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Die
+   * Akte ist trotzdem offen und benutzbar — es wird lokal geschrieben (§5.2),
+   * und die Prüfung wird nachgeholt.
+   */
+  | { readonly art: "shareNichtErreichbar"; readonly code: string; readonly meldung: string };
 
 export interface AkteOptionen {
   readonly dateisystem: Dateisystem;
@@ -107,6 +115,8 @@ export class Akte {
   readonly #schreiber: Schreiber;
   #leser: Leser;
   #spiegelung: Spiegelung;
+  /** Reiht die Schreibvorgänge auf `upload-state.json` (§8.4). */
+  #zustandSchreiben: Promise<void> = Promise.resolve();
 
   constructor(optionen: AkteOptionen, schreiber: Schreiber, zustand: UploadZustand) {
     this.#optionen = optionen;
@@ -128,13 +138,24 @@ export class Akte {
     return { eigen: this.#spiegelung.zustand.eigen, fremd: this.#leser.zustand.fremd };
   }
 
-  /** Schreibt `upload-state.json` fort. */
+  /**
+   * Schreibt `upload-state.json` fort — serialisiert.
+   *
+   * §6.2 lässt `spiegle()`, `taktA()` und `taktB()` unabhängig laufen, und alle
+   * drei schreiben denselben Zustand. Ohne diese Reihung überschnitten sich
+   * zwei Schreibvorgänge auf derselben Datei; §8.4 verlangt genau das nicht:
+   * „Je Datei ist höchstens ein Zugriff offen; die Speicherschicht serialisiert
+   * das selbst und überlässt es nicht dem Aufrufer."
+   */
   async speichereZustand(): Promise<void> {
-    await schreibeUploadZustand(
-      this.#optionen.dateisystem,
-      this.#optionen.ablage.uploadZustandDatei,
-      this.zustand,
-    );
+    this.#zustandSchreiben = this.#zustandSchreiben.then(async () => {
+      await schreibeUploadZustand(
+        this.#optionen.dateisystem,
+        this.#optionen.ablage.uploadZustandDatei,
+        this.zustand,
+      );
+    });
+    await this.#zustandSchreiben;
   }
 
   /** Siehe {@link oeffneAkte}. */
@@ -205,6 +226,15 @@ export class Akte {
     if (befund.art === "fremdschreiber") {
       return this.#wechsleKennung();
     }
+    if (befund.art === "nichtErreichbar") {
+      return {
+        art: "shareNichtErreichbar",
+        code: befund.code,
+        meldung:
+          "Der Server war beim Öffnen nicht erreichbar. Der Einsatz ist geöffnet, es wird lokal " +
+          "gespeichert und übertragen, sobald der Server wieder antwortet.",
+      };
+    }
     return undefined;
   }
 
@@ -217,6 +247,11 @@ export class Akte {
     }
     if (ergebnis.art === "ordnerFort") {
       return { art: "ordnerFort", meldung: ergebnis.meldung };
+    }
+    if (ergebnis.art === "laeuftBereits") {
+      // §6.2 lässt die Takte unabhängig laufen; die Überlappung ist vorgesehen
+      // und wird dem Bediener nicht als Störung gemeldet (§6.3).
+      return undefined;
     }
     if (ergebnis.art === "gescheitert") {
       return {
@@ -269,18 +304,22 @@ export class Akte {
   async #wechsleKennung(): Promise<Reaktion> {
     const alteClientId = this.#schreiber.clientId;
     const neueClientId = this.#optionen.neueKennung();
+    // Vor dem Wechsel festhalten: Danach schlüsselt die Spiegelung unter dem
+    // neuen Präfix, und die alten Offsets wären nicht mehr auffindbar.
+    const alteOffsets = this.#spiegelung.zustand.eigen;
     const ungespiegelte = await this.#ungespiegelteEigeneZeilen();
     const ergebnis = await this.#schreiber.kennungswechsel(neueClientId, ungespiegelte);
+
+    if (ergebnis === undefined) {
+      await this.#kuerzeAlteDateienAufShareStand(alteClientId, alteOffsets);
+    }
 
     // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst
     // (§4.6, „Die lokale Seite", Schritt 3, sinngemäß auch hier): Sie gehören zu
     // einer Datei, die ab jetzt fremd ist. Der Leser baut seinen Stand für sie
     // aus dem Spiegel auf (§4.5 Schritt 6).
     this.#leser = this.#baueLeser({ eigen: {}, fremd: this.#leser.zustand.fremd });
-    this.#spiegelung = this.#baueSpiegelung({
-      eigen: this.#spiegelung.zustand.eigen,
-      fremd: {},
-    });
+    this.#spiegelung = this.#baueSpiegelung({ eigen: alteOffsets, fremd: {} });
     await this.#leser.gleicheMitSpiegelAb();
 
     if (ergebnis !== undefined) {
@@ -310,6 +349,55 @@ export class Akte {
   }
 
   /**
+   * Kürzt die aufgegebenen eigenen Dateien auf ihren Share-Stand.
+   *
+   * §4.5 Schritt 6 erklärt den lokalen Spiegel der alten eigenen Datei ab dem
+   * Wechsel zum „Spiegel einer fremden Datei — nämlich der des Klons". Das
+   * setzt voraus, dass er ein Präfix der Share-Datei ist (§5.5). Genau das ist
+   * er im Augenblick des Wechsels **nicht**: Er enthält zusätzlich die noch
+   * nicht gespiegelten Zeilen, deretwegen Schritt 3 überhaupt existiert.
+   *
+   * Ohne diese Kürzung setzte der Spiegelabgleich `leseOffset` auf die lokale
+   * Länge — also hinter das Share-Ende. Der Klon würde nie wieder gelesen: kein
+   * Byte, keine Meldung, keine Quarantäne. Genau der stille Falschzustand, den
+   * §6.3 ausschließt.
+   *
+   * Verworfen wird dabei nichts: Die abgeschnittenen Zeilen sind nach Schritt 3
+   * unverändert und mit derselben Identität in die Datei der neuen Kennung
+   * übernommen worden. Gekürzt wird deshalb erst, **nachdem** die Übernahme
+   * vollständig gelungen ist.
+   *
+   * Das Konzept sagt zu dieser Kürzung nichts; sie ist die Auslegung, mit der
+   * Schritt 6 überhaupt erfüllbar wird.
+   */
+  async #kuerzeAlteDateienAufShareStand(
+    alteClientId: string,
+    alteOffsets: UploadZustand["eigen"],
+  ): Promise<void> {
+    const praefix = clientPraefix(alteClientId);
+    for (const kennung of await this.#eigeneDateien(praefix)) {
+      const stand = alteOffsets[`${praefix}.${segmentText(kennung.segment)}`]?.shareOffset ?? 0;
+      await this.#optionen.dateisystem.kuerzeAuf(
+        this.#optionen.ablage.lokalDatei(kennung.name),
+        stand,
+      );
+    }
+  }
+
+  /** Die lokalen Segmentdateien einer Kennung, aufsteigend. */
+  async #eigeneDateien(praefix: string): Promise<readonly Dateikennung[]> {
+    const namen = await this.#optionen.dateisystem.listeVerzeichnis(
+      this.#optionen.ablage.lokalEreignisse,
+    );
+    return namen
+      .flatMap((name) => {
+        const kennung = zerlegeEreignisDateiname(name);
+        return kennung !== undefined && kennung.praefix === praefix ? [kennung] : [];
+      })
+      .sort((a: Dateikennung, b: Dateikennung) => a.segment - b.segment);
+  }
+
+  /**
    * §4.5 Schritt 3: „Die noch nicht gespiegelten lokalen Ereignisse behalten
    * ihre Identität."
    *
@@ -321,18 +409,8 @@ export class Akte {
    */
   async #ungespiegelteEigeneZeilen(): Promise<readonly GeleseneZeile[]> {
     const praefix = clientPraefix(this.#schreiber.clientId);
-    const namen = await this.#optionen.dateisystem.listeVerzeichnis(
-      this.#optionen.ablage.lokalEreignisse,
-    );
-    const eigene = namen
-      .flatMap((name) => {
-        const kennung = zerlegeEreignisDateiname(name);
-        return kennung !== undefined && kennung.praefix === praefix ? [kennung] : [];
-      })
-      .sort((a: Dateikennung, b: Dateikennung) => a.segment - b.segment);
-
     const zeilen: GeleseneZeile[] = [];
-    for (const kennung of eigene) {
+    for (const kennung of await this.#eigeneDateien(praefix)) {
       const bytes = await this.#optionen.dateisystem.liesAb(
         this.#optionen.ablage.lokalDatei(kennung.name),
         0,
@@ -343,14 +421,20 @@ export class Akte {
         ...leseZeilengrenzen(bytes, 0).zeilen.filter(
           (z) =>
             z.offset >= stand &&
-            // §4.3: Eine Abschlusszeile sagt „dieses Segment ist fertig, es geht
-            // bei N weiter". In einer **anderen** Datei ist das eine falsche
-            // Aussage: Ein Leser, dessen Abschnitt darauf endet, hielte den
-            // neuen Arbeitsplatz für abgeschlossen und läse ihn nie wieder —
-            // ohne Meldung und ohne Quarantäne. Sie wird deshalb nicht
-            // mitgenommen; die alte Datei wächst ohnehin nicht mehr und fällt
-            // nach §6.2 aus Takt A heraus.
-            z.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN,
+            // Verwaltungsereignisse (§2.4) reden über **die Datei**, in der sie
+            // stehen, und werden deshalb nicht mitgenommen:
+            //
+            // `SegmentAbgeschlossen` sagt nach §4.3 „dieses Segment ist fertig,
+            // es geht bei N weiter". In einer anderen Datei ist das falsch: Ein
+            // Leser, dessen Abschnitt darauf endet, hielte den neuen
+            // Arbeitsplatz für abgeschlossen und läse ihn nie wieder — ohne
+            // Meldung, ohne Quarantäne.
+            //
+            // `SegmentErsetzt` nennt nach §4.6 Schritt 2 ein Segment des
+            // **alten** Präfixes. Stünde es am Anfang der neuen Datei, hielte
+            // `ersetzteSegmente` das laufende Segment `0000` der neuen Kennung
+            // für ersetzt — es fiele dauerhaft aus der Vollprüfung nach §4.6.1.
+            !istVerwaltungsereignis(z.rahmen.typ),
         ),
       );
     }
@@ -384,6 +468,17 @@ export class Akte {
           offset: this.#schreiber.lokalerVollstaendigerOffset,
         }),
         identitaeten: this.#schreiber.identitaeten,
+        // §4.6 Schritt 5, auch hier: Ein ersetztes Segment wird nicht mehr
+        // beschrieben. Ohne diese Auskunft fiele jeder Spiegelungslauf erneut
+        // in Ausgang B und erzeugte ein weiteres Ersatzsegment — und weil der
+        // Lauf beim ersten `beschaedigt` zurückkehrt, erreichte keines davon je
+        // den Share.
+        bereitsErsetzt: () =>
+          ersetzteSegmente(
+            this.#optionen.dateisystem,
+            this.#optionen.ablage,
+            this.#schreiber.clientId,
+          ),
       },
       zustand,
     );
