@@ -37,7 +37,17 @@ export type Oeffnungsbefund =
    * verfälscht, ohne dass eine fremde Schreibspur nachweisbar wäre. Reparatur
    * durch ein Ersatzsegment nach §4.6.
    */
-  | { readonly art: "beschaedigt"; readonly segment: number; readonly abOffset: number }
+  | {
+      readonly art: "beschaedigt";
+      readonly segment: number;
+      readonly abOffset: number;
+      /**
+       * Kennungspräfix der beschädigten Datei. Seit Entscheidung 17 nicht mehr
+       * zwingend das laufende: Auch die Datei einer **aufgegebenen** Kennung
+       * wird geprüft und repariert (§4.5 Schritt 6, §4.6.1 Auslöser 1).
+       */
+      readonly praefix: string;
+    }
   /**
    * Der Share war nicht erreichbar (§8.3, §8.9).
    *
@@ -60,7 +70,14 @@ export interface OeffnungspruefungOptionen {
   readonly dateisystem: Dateisystem;
   readonly ablage: Einsatzablage;
   readonly clientId: string;
-  /** Aufgegebene Kennungen (§4.5, Schritt 1) — sie zählen für die Laufnummer mit. */
+  /**
+   * Aufgegebene Kennungen (§4.5, Schritt 1).
+   *
+   * Ihre Dateien werden **mitgeprüft** (Entscheidung 17, Richtung B): §4.5
+   * Schritt 6 macht die alte Datei fürs Lesen fremd, für die **Prüfung** bleibt
+   * sie eigen. Ohne das entdeckt niemand eine Beschädigung dort, obwohl es
+   * einen Rechner gibt, der den Inhalt vollständig hat.
+   */
   readonly frühereClientIds?: readonly string[];
   /**
    * Segmente, die nach §4.6 bereits durch ein Ersatzsegment ersetzt wurden.
@@ -75,11 +92,16 @@ export interface OeffnungspruefungOptionen {
    * diesen Client; ein Klon schreibt dort sehr wohl weiter, und §4.5 Schritt 1
    * verlangt ausdrücklich „alle eigenen Segmente".
    *
-   * Der Wert je Segment ist der Offset, **ab dem** der Ersatz übernommen hat.
+   * Der Wert je Datei ist der Offset, **ab dem** der Ersatz übernommen hat.
    * Er entscheidet, ob eine gemeldete Beschädigung die bereits bekannte ist
    * oder eine neue weiter vorn; siehe die Fallunterscheidung unten.
+   *
+   * Der Schlüssel ist der **Dateiname**: Seit Entscheidung 17 kann das ersetzte
+   * Segment unter einer aufgegebenen Kennung liegen, und eine Zuordnung über
+   * die bloße Nummer nähme das gleichnamige Segment der laufenden Kennung aus
+   * der Prüfung.
    */
-  readonly bereitsErsetzt?: ReadonlyMap<number, number>;
+  readonly bereitsErsetzt?: ReadonlyMap<string, number>;
   /**
    * Die eigene zuletzt vergebene Laufnummer aus `schreiber.json` (§3.3).
    *
@@ -112,9 +134,24 @@ export interface OeffnungspruefungOptionen {
 export async function pruefeBeimOeffnen(
   optionen: OeffnungspruefungOptionen,
 ): Promise<Oeffnungsbefund> {
+  const laufendesPraefix = clientPraefix(optionen.clientId);
+  /**
+   * Die laufende Kennung zuerst, danach die aufgegebenen (Entscheidung 17).
+   *
+   * Die Reihenfolge ist nicht gleichgültig: `pruefeBeimOeffnen` kehrt beim
+   * ersten Befund zurück, und der Bediener soll zuerst von seiner **laufenden**
+   * Datei hören. Die aufgegebenen kommen im nächsten Durchgang dran — `Akte`
+   * prüft und repariert in einer Schleife, bis nichts mehr offen ist.
+   */
+  const praefixe = [
+    laufendesPraefix,
+    ...(optionen.frühereClientIds ?? []).map(clientPraefix).filter((p) => p !== laufendesPraefix),
+  ];
   let eigene: readonly Dateikennung[];
   try {
-    eigene = await shareSegmenteMitPraefix(optionen, clientPraefix(optionen.clientId));
+    // Das Verzeichnis wird **einmal** gelesen und danach je Präfix sortiert —
+    // eine Auflistung je Kennung wäre derselbe Aufruf mehrfach.
+    eigene = eigeneSegmente(await optionen.dateisystem.listeVerzeichnis(optionen.ablage.shareEreignisse), praefixe);
   } catch (fehler) {
     return nichtErreichbar(fehler);
   }
@@ -132,15 +169,53 @@ export async function pruefeBeimOeffnen(
     }
     // Nur unter der **laufenden** Kennung kann eine fremde Laufnummer noch zu
     // einer doppelten Identität führen — dort schreibt dieser Client weiter.
-    unterLaufenderKennung = Math.max(unterLaufenderKennung, hoechsteLaufnummer(share));
-    const ersetztAb = optionen.bereitsErsetzt?.get(kennung.segment);
+    if (kennung.praefix === laufendesPraefix) {
+      unterLaufenderKennung = Math.max(unterLaufenderKennung, hoechsteLaufnummer(share));
+    }
+    const ersetztAb = optionen.bereitsErsetzt?.get(kennung.name);
+    const aufgegeben = kennung.praefix !== laufendesPraefix;
 
     const ausgang = vergleicheSpiegel({
-      shareBytes: share,
+      // **Bei einer aufgegebenen Kennung wird nur der gespiegelte Teil
+      // verglichen.**
+      //
+      // §4.5 Schritt 6: Ihre Datei ist ab dem Wechsel „der Spiegel einer
+      // fremden Datei — nämlich der des Klons". Dass auf dem Share mehr steht
+      // als lokal, ist dort der **vorgesehene** Zustand: Der Klon schreibt
+      // weiter, und der eigene Spiegel zieht im nächsten Takt nach. Die
+      // Präfix-Invariante aus §5.4.1 gilt für diese Datei nicht mehr; ohne die
+      // Kürzung meldete jeder Vorsprung des Klons eine Beschädigung, und der
+      // Client schriebe ein Ersatzsegment für Zeilen, die er gar nicht hat.
+      //
+      // Was übrig bleibt, ist genau die Frage, um die es hier geht: Weichen die
+      // Share-Bytes **innerhalb** des gespiegelten Teils von den lokalen ab?
+      // Dann sind sie verfälscht, und dieser Client hat den richtigen Inhalt.
+      // Eine Beschädigung jenseits des Spiegels bleibt außen vor — dort hat er
+      // nichts, was er wiederholen könnte.
+      shareBytes: aufgegeben ? share.subarray(0, Math.min(share.byteLength, lokal.byteLength)) : share,
       shareOffset: 0,
       lokaleBytes: lokal,
       lokaleInhalte: optionen.identitaeten,
     });
+    // **Unter einer aufgegebenen Kennung gibt es keinen Ausgang C mehr.**
+    //
+    // Er unterscheidet „fremde Schreibspur" von „verfälschte Bytes" — eine
+    // Frage, die dort schon beantwortet ist: Ein fremder Schreiber ist der
+    // erwartete Zustand, und der Kennungswechsel hat bereits stattgefunden.
+    // Nach der Kürzung oben bleibt als Ursache einer Abweichung nur die
+    // Verfälschung, also Ausgang B. Ihn als C zu melden löste bei jedem Öffnen
+    // einen weiteren Kennungswechsel aus (siehe unten).
+    if (aufgegeben && ausgang.art === "C") {
+      if (ersetztAb === undefined || ausgang.abOffset < ersetztAb) {
+        return {
+          art: "beschaedigt",
+          segment: kennung.segment,
+          abOffset: ausgang.abOffset,
+          praefix: kennung.praefix,
+        };
+      }
+      continue;
+    }
     if (ausgang.art === "B") {
       // **Ein ersetztes Segment wird nicht wieder repariert — es sei denn, der
       // Schaden sitzt vor der Stelle, ab der der Ersatz übernommen hat.**
@@ -166,13 +241,21 @@ export async function pruefeBeimOeffnen(
       // **kleineren** Offset an, und `ersetzteSegmente` führt den kleinsten.
       // Unterhalb von 0 gibt es nichts mehr.
       if (ersetztAb !== undefined && ausgang.abOffset >= ersetztAb) continue;
-      return { art: "beschaedigt", segment: kennung.segment, abOffset: ausgang.abOffset };
+      return {
+        art: "beschaedigt",
+        segment: kennung.segment,
+        abOffset: ausgang.abOffset,
+        praefix: kennung.praefix,
+      };
     }
     // Ausgang C wird **auch** in einem ersetzten Segment ausgewertet: §4.6
     // Schritt 5 sagt, *dieser* Client schreibe dort nicht mehr — ein Klon tut
     // es sehr wohl. §4.5 Schritt 1 verlangt ausdrücklich „alle eigenen
     // Segmente", und der reine Zahlenvergleich aus Schritt 3 allein reicht
     // nach §4.5 Schritt 4 nicht.
+    //
+    // **Nicht unter einer aufgegebenen Kennung** — dort ist er oben schon
+    // erledigt.
     if (ausgang.art === "C") {
       return {
         art: "fremdschreiber",
@@ -184,13 +267,27 @@ export async function pruefeBeimOeffnen(
     }
   }
 
-  // Die Share-Dateien der **aufgegebenen** Kennungen werden hier bewusst nicht
-  // mehr gelesen. Sie trugen allein zu einer höchsten Laufnummer über alle
-  // Kennungen bei, die kein Aufrufer je gelesen hat; für §4.5 Schritt 3 zählt
-  // nach dem Befund aus der Simulation M0.4 ohnehin nur die laufende Kennung
-  // (siehe oben). Das sparte je Öffnen einen vollständigen Lesedurchgang über
-  // jede aufgegebene Datei. Dass der Share erreichbar ist, steht bereits fest:
-  // Die Segmentliste der laufenden Kennung ist oben gelesen worden.
+  // **Warum die aufgegebenen Kennungen wieder mitgelesen werden.**
+  //
+  // Bis zum 2026-09-09 standen sie hier ausdrücklich draußen: Sie trugen allein
+  // zu einer höchsten Laufnummer über alle Kennungen bei, die kein Aufrufer je
+  // las — für §4.5 Schritt 3 zählt nur die laufende Kennung —, und das Weglassen
+  // sparte je Öffnen einen vollständigen Lesedurchgang über jede aufgegebene
+  // Datei.
+  //
+  // Der Grund ist mit Entscheidung 17 gefallen. Wird die Datei einer
+  // aufgegebenen Kennung auf dem Share beschädigt (§8.2), fällt jeder Leser
+  // dort in Quarantäne, und niemand repariert: Der ursprüngliche Schreiber hat
+  // den Inhalt lokal vollständig, darf dort nach §4.5 Schritt 6 aber nichts
+  // mehr schreiben, und die Vollprüfung sah die Datei nicht mehr an. Die Zeilen
+  // hinter der Beschädigung waren damit für jeden Leser fort, obwohl es einen
+  // Rechner gibt, der sie hat (Startwert 12345, Messprotokoll 7.7). §4.5
+  // Schritt 6 macht die alte Datei fürs **Lesen** fremd; für die **Prüfung**
+  // bleibt sie eigen. Repariert wird durch ein Ersatzsegment unter der neuen
+  // Kennung — „ein Schreiber je Datei" bleibt unangetastet.
+  //
+  // Der Preis ist der Lesedurchgang je aufgegebener Datei; er wird in M0.5
+  // unter A10 mitgemessen.
 
   // §4.5 Schritt 3: „Ist sie größer als die eigene zuletzt vergebene, hat ein
   // anderer Prozess unter derselben Kennung geschrieben." Der Vergleich steht
@@ -211,7 +308,7 @@ export async function pruefeBeimOeffnen(
   if (zuletztVergeben !== undefined && unterLaufenderKennung > zuletztVergeben) {
     return {
       art: "fremdschreiber",
-      segment: eigene.at(-1)?.segment ?? 0,
+      segment: eigene.filter((k) => k.praefix === laufendesPraefix).at(-1)?.segment ?? 0,
       abOffset: 0,
       id: `${optionen.clientId}:${unterLaufenderKennung}`,
       grund: "laufnummerHoeher",
@@ -221,18 +318,25 @@ export async function pruefeBeimOeffnen(
   return { art: "inOrdnung" };
 }
 
-/** Alle Dateien in `ereignisse\` mit diesem Kennungspräfix, aufsteigend. */
-async function shareSegmenteMitPraefix(
-  optionen: OeffnungspruefungOptionen,
-  praefix: string,
-): Promise<readonly Dateikennung[]> {
-  const namen = await optionen.dateisystem.listeVerzeichnis(optionen.ablage.shareEreignisse);
-  return namen
-    .flatMap((name) => {
-      const kennung = zerlegeEreignisDateiname(name);
-      return kennung !== undefined && kennung.praefix === praefix ? [kennung] : [];
-    })
-    .sort((a, b) => a.segment - b.segment);
+/**
+ * Die Dateien dieser Kennungen, in der Reihenfolge der Präfixe und je Präfix
+ * nach Segmentnummer aufsteigend.
+ *
+ * Die Reihenfolge trägt: `pruefeBeimOeffnen` kehrt beim ersten Befund zurück,
+ * und die laufende Kennung steht in `praefixe` vorn.
+ */
+function eigeneSegmente(
+  namen: readonly string[],
+  praefixe: readonly string[],
+): readonly Dateikennung[] {
+  const kennungen = namen.flatMap((name) => {
+    const kennung = zerlegeEreignisDateiname(name);
+    return kennung !== undefined && praefixe.includes(kennung.praefix) ? [kennung] : [];
+  });
+  return kennungen.sort(
+    (a, b) =>
+      praefixe.indexOf(a.praefix) - praefixe.indexOf(b.praefix) || a.segment - b.segment,
+  );
 }
 
 /**

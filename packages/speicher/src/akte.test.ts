@@ -453,10 +453,12 @@ describe("Befunde des Gutachtens gegen akte.ts", () => {
   });
 
   it("schleppt beim Kennungswechsel auch keine SegmentErsetzt-Zeile mit (§2.4, §4.6)", async () => {
-    // `SegmentErsetzt` nennt ein Segment des **alten** Präfixes. Stünde es am
-    // Anfang der Datei der neuen Kennung, hielte `ersetzteSegmente` deren
-    // laufendes Segment `0000` für ersetzt — es fiele dauerhaft aus der
-    // Vollprüfung nach §4.6.1.
+    // `SegmentErsetzt` sagt, dass **die Datei, in der die Zeile steht**, der
+    // Ersatz eines anderen Segments ist (§4.6 Schritt 2). Am Anfang der Datei
+    // der neuen Kennung ist das falsch: Sie ist ein gewöhnliches erstes
+    // Segment, und `kettenanker` suchte ihren Anker mitten im genannten Vorbild
+    // statt am Kettenanfang. Seit Entscheidung 17 nennt die Nutzlast auch das
+    // Präfix — an dieser Aussage ändert das nichts.
     await using platz = await arbeitsplatz();
     await legeEinsatzAn(platz, EINSATZ);
     const { akte } = await oeffneAkte(akteOptionen(platz));
@@ -486,8 +488,18 @@ describe("Befunde des Gutachtens gegen akte.ts", () => {
     const typen = leseZeilengrenzen(neu).zeilen.map((z) => z.rahmen.typ);
     expect(typen).not.toContain("SegmentErsetzt");
     expect(typen).not.toContain("SegmentAbgeschlossen");
-    // Und `0000` der neuen Kennung gilt nicht als ersetzt.
+    // Und `0000` der neuen Kennung gilt nicht als ersetzt — auch dann nicht,
+    // wenn die aufgegebene Kennung mitgelesen wird (Entscheidung 17). Ersetzt
+    // ist allein `0000` der **alten** Kennung, denn deren Ersatzsegment steht
+    // dort weiterhin.
     expect([...(await ersetzteSegmente(platz.dateisystem, platz.ablage, NEUE))]).toEqual([]);
+    // Die aufgegebenen Dateien sind hier gelöscht — sie lagen nie auf dem
+    // Share, und ihr Inhalt ist beim Wechsel vollständig übernommen worden
+    // (siehe `#kuerzeAufShareStand`). Auch mit mitgelesener alter Kennung
+    // (Entscheidung 17) gilt deshalb nichts als ersetzt.
+    expect([
+      ...(await ersetzteSegmente(platz.dateisystem, platz.ablage, NEUE, [ICH])).keys(),
+    ]).toEqual([]);
   });
   it("verliert beim Öffnen nichts, was ein abgebrochener Kennungswechsel nicht übernommen hat (§4.5 Schritt 3, §8.8)", async () => {
     // Der Weg: Der Kennungswechsel bricht beim Übernehmen der ungespiegelten
@@ -681,7 +693,7 @@ describe("§4.6 setzt an der Lesbarkeitsgrenze an (Entscheidung 16a)", () => {
     const ab = await uebernahmeAb(platz, 1);
     expect(ab).toBeGreaterThan(0);
     expect(ab).toBeLessThanOrEqual(grenze);
-    expect(ersetzt.get(0)).toBe(ab);
+    expect(ersetzt.get(`${ICH}.0000.jsonl`)).toBe(ab);
   });
 });
 
@@ -824,5 +836,148 @@ describe("Was der Kennungswechsel den älteren Kennungen antut (Befund 7.6)", ()
 
     // Die zwei Zeilen stehen noch — sonst wären sie fort.
     expect(await lokaleIdentitaeten(platz)).toEqual(expect.arrayContaining(nurLokal));
+  });
+});
+
+describe("Reparatur in der Datei einer aufgegebenen Kennung (Entscheidung 17, Richtung B)", () => {
+  /**
+   * Treibt einen Arbeitsplatz in den Kennungswechsel und lässt seine alte
+   * Datei **gespiegelt** zurück.
+   *
+   * Das Spiegeln vor dem Wechsel ist der Punkt: Nur eine Datei, die auf dem
+   * Share liegt, kann dort beschädigt werden — und nur sie überlebt den
+   * Wechsel lokal (`#kuerzeAufShareStand` löscht die nie gespiegelte).
+   */
+  async function nachKennungswechsel(platz: Arbeitsplatz) {
+    const { akte } = await oeffneAkte(akteOptionen(platz));
+    for (let i = 0; i < 8; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+
+    // Der Klon beginnt ein eigenes Segment — das löst den Wechsel nach §4.5
+    // Fall 2 aus.
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 7),
+      baueZeile({
+        id: `${ICH}:99`,
+        vorgaenger: KETTE_ANFANG,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      } as never),
+    );
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz));
+    expect(ergebnis.reaktion?.art).toBe("kennungGewechselt");
+  }
+
+  /** Kippt ein Bit in der genannten Zeile der Share-Datei der alten Kennung. */
+  async function beschaedigeAlteDatei(platz: Arbeitsplatz, zeile: number) {
+    const pfad = `share/einsatz/ereignisse/${ICH}.0000.jsonl`;
+    const roh = await platz.wiese.lies(pfad);
+    const ziel = leseZeilengrenzen(roh, 0).zeilen[zeile];
+    if (ziel === undefined) throw new Error("zu wenige Zeilen");
+    const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+    roh[stelle] = (roh[stelle] as number) ^ 0x01;
+    await platz.wiese.schreibe(pfad, roh);
+    return { grenze: ziel.offset, verloreneIds: leseZeilengrenzen(roh, 0).zeilen.slice(zeile).map((z) => z.rahmen.id) };
+  }
+
+  it("entdeckt und repariert eine Beschädigung unter der aufgegebenen Kennung", async () => {
+    // Der Befund aus Startwert 12345 (Messprotokoll 7.7): Die Zeilen hinter
+    // der Beschädigung sind für jeden Leser fort, obwohl dieser Rechner sie
+    // vollständig hat. §4.5 Schritt 6 macht die Datei fürs Lesen fremd; für
+    // die **Prüfung** bleibt sie eigen.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await nachKennungswechsel(platz);
+    const { verloreneIds } = await beschaedigeAlteDatei(platz, 4);
+
+    const { akte, ergebnis } = await oeffneAkte(akteOptionen(platz, NEUE));
+    expect(ergebnis.befund.art).toBe("beschaedigt");
+    if (ergebnis.befund.art !== "beschaedigt") throw new Error("unerreichbar");
+    // Die beschädigte Datei ist die der **alten** Kennung.
+    expect(ergebnis.befund.praefix).toBe(ICH);
+    expect(ergebnis.reaktion?.art).toBe("repariert");
+    if (ergebnis.reaktion?.art !== "repariert") throw new Error("unerreichbar");
+    expect(ergebnis.reaktion.praefix).toBe(ICH);
+
+    // §4.6, „Die lokale Seite", Punkt 1: erst lokal, dann übertragen. Ein
+    // Leser sieht das Ersatzsegment erst nach dem Spiegelungslauf.
+    await akte.spiegle();
+
+    // Repariert wird durch ein Ersatzsegment unter der **neuen** Kennung —
+    // „ein Schreiber je Datei" bleibt unangetastet.
+    const namen = await platz.dateisystem.listeVerzeichnis(platz.ablage.shareEreignisse);
+    const ersatzNamen = namen.filter((n) => n.startsWith(`${NEUE}.`));
+    expect(ersatzNamen.length).toBeGreaterThan(0);
+
+    // Und die verlorenen Zeilen stehen dort wieder — lesbar, unter
+    // unveränderter Identität (§4.6 Schritt 4).
+    const wiederLesbar = new Set<string>();
+    for (const name of ersatzNamen) {
+      const bytes = await platz.dateisystem.liesAb(platz.ablage.shareDatei(name), 0);
+      for (const z of leseZeilengrenzen(bytes, 0).zeilen) wiederLesbar.add(z.rahmen.id);
+    }
+    for (const id of verloreneIds) expect(wiederLesbar.has(id)).toBe(true);
+  });
+
+  it("nennt in der Kopfzeile das Präfix des ersetzten Segments", async () => {
+    // Ohne das Präfix hielte `ersetzteSegmente` das Segment `0000` der
+    // **neuen** Kennung für ersetzt: Es fiele dauerhaft aus der Vollprüfung
+    // nach §4.6.1, und eine Beschädigung dort bliebe für immer liegen.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await nachKennungswechsel(platz);
+    await beschaedigeAlteDatei(platz, 4);
+    await oeffneAkte(akteOptionen(platz, NEUE));
+
+    const ersetzt = await ersetzteSegmente(platz.dateisystem, platz.ablage, NEUE, [ICH]);
+    expect([...ersetzt.keys()]).toEqual([`${ICH}.0000.jsonl`]);
+    expect(ersetzt.has(`${NEUE}.0000.jsonl`)).toBe(false);
+  });
+
+  it("hält ein Öffnen nach der Reparatur für in Ordnung — keine zweite Runde", async () => {
+    // §4.6 Schritt 5: „Es wird nicht mehr beschrieben." Ohne die Auskunft aus
+    // `ersetzteSegmente` erzeugte jedes weitere Öffnen ein neues
+    // Ersatzsegment — eine Dauerstörung statt einer Heilung.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await nachKennungswechsel(platz);
+    await beschaedigeAlteDatei(platz, 4);
+    const { akte } = await oeffneAkte(akteOptionen(platz, NEUE));
+    await akte.spiegle();
+    const vorher = (await platz.dateisystem.listeVerzeichnis(platz.ablage.shareEreignisse)).length;
+
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz, NEUE));
+    expect(ergebnis.befund.art).not.toBe("beschaedigt");
+    expect((await platz.dateisystem.listeVerzeichnis(platz.ablage.shareEreignisse)).length).toBe(
+      vorher,
+    );
+  });
+
+  it("meldet keine Beschädigung, wenn der Klon in der alten Datei bloß weiterschreibt", async () => {
+    // Der Gegenfall, an dem der Weg scheitern würde. §4.5 Schritt 6: Die alte
+    // Datei ist „der Spiegel einer fremden Datei — nämlich der des Klons".
+    // Dass auf dem Share mehr steht als lokal, ist dort der vorgesehene
+    // Zustand und keine Beschädigung; ein Ersatzsegment dafür wiederholte
+    // Zeilen, die dieser Client gar nicht hat.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await nachKennungswechsel(platz);
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:1234`,
+        vorgaenger: KETTE_ANFANG,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      } as never),
+    );
+
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz, NEUE));
+    expect(ergebnis.befund.art).toBe("inOrdnung");
   });
 });

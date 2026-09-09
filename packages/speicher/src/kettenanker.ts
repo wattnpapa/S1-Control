@@ -39,14 +39,22 @@ import {
 import { leseZeilengrenzen } from "./zeile.js";
 
 /**
- * Liefert die Bytes eines Segments derselben Schreiberkennung, oder
- * `undefined`, wenn es nicht vorliegt.
+ * Liefert die Bytes eines Segments, oder `undefined`, wenn es nicht vorliegt.
  *
  * Gefragt wird immer die **eigene, geprüfte** Seite — der lokale Spiegel oder
  * die eigenen lokalen Segmente —, nie der Share. Sonst ließe sich der Anker
  * aus derselben Quelle fälschen, gegen die er prüfen soll.
+ *
+ * `praefix` benennt die Kennung, wenn die Frage eine **andere** Kennung
+ * betrifft als die, für die diese Quelle gebaut wurde. Das kommt seit §4.5
+ * Schritt 6 vor: Ein Ersatzsegment unter der neuen Kennung ersetzt ein Segment
+ * unter der aufgegebenen, und sein Anker liegt in deren Datei. Fehlt der Wert,
+ * gilt die eigene Kennung der Quelle.
  */
-export type Segmentquelle = (segment: number) => Promise<Uint8Array | undefined>;
+export type Segmentquelle = (
+  segment: number,
+  praefix?: string,
+) => Promise<Uint8Array | undefined>;
 
 /**
  * Der `vorgaenger`, den die erste Zeile dieses Segments tragen muss.
@@ -64,17 +72,34 @@ export async function kettenanker(
   segmentBytes: Uint8Array,
   quelle: Segmentquelle,
   quelleIstVollstaendig = false,
+  praefix?: string,
 ): Promise<string | undefined> {
-  if (segment === 0) return KETTE_ANFANG;
-
   const erste = leseZeilengrenzen(segmentBytes, 0).zeilen[0];
   if (erste !== undefined && erste.rahmen.typ === TYP_SEGMENT_ERSETZT) {
     const ersatz = ersatzAus(erste.rahmen["nutzlast"]);
     if (ersatz === undefined) return undefined;
-    return ketteAnStelle(ersatz.ersetztesSegment, ersatz.abOffset, quelle, quelleIstVollstaendig);
+    // **Das ersetzte Segment kann unter einer anderen Kennung liegen.** Seit
+    // §4.5 Schritt 6 die aufgegebene Datei für die Prüfung eigen lässt,
+    // repariert der Client sie durch ein Ersatzsegment unter der **neuen**
+    // Kennung (Entscheidung 17, Richtung B). Der Anker liegt dann in der Datei
+    // der alten. Nennt die Nutzlast kein Präfix, ist es das eigene — so sind
+    // auch alle Zeilen von vor dieser Festlegung zu lesen.
+    return ketteAnStelle(
+      ersatz.ersetztesSegment,
+      ersatz.abOffset,
+      quelle,
+      quelleIstVollstaendig,
+      ersatz.praefix ?? praefix,
+    );
   }
 
-  return ketteAmEnde(segment - 1, quelle, quelleIstVollstaendig);
+  // Erst **nach** der Ersatzprüfung: Ein Ersatzsegment kann die Nummer 0 tragen
+  // — nämlich das erste Segment einer frisch erzeugten Kennung, das ein Segment
+  // der aufgegebenen ersetzt. Sein Anker ist die Stelle im ersetzten Segment,
+  // nicht der Kettenanfang.
+  if (segment === 0) return KETTE_ANFANG;
+
+  return ketteAmEnde(segment - 1, quelle, quelleIstVollstaendig, praefix);
 }
 
 /**
@@ -93,6 +118,7 @@ export async function ketteAnStelle(
   offset: number,
   quelle: Segmentquelle,
   quelleIstVollstaendig = false,
+  praefix?: string,
 ): Promise<string | undefined> {
   if (offset === 0) {
     // **Der Anker ist der des ersetzten Segments selbst, nicht der seines
@@ -115,11 +141,11 @@ export async function ketteAnStelle(
     // Nummer als das von ihm ersetzte (§4.6 Schritt 1, „die nächste freie
     // Nummer"), die Frage wandert also stets zu kleineren Segmenten.
     if (segment === 0) return KETTE_ANFANG;
-    const bytes = await quelle(segment);
+    const bytes = await quelle(segment, praefix);
     if (bytes === undefined) return undefined;
-    return kettenanker(segment, bytes, quelle, quelleIstVollstaendig);
+    return kettenanker(segment, bytes, quelle, quelleIstVollstaendig, praefix);
   }
-  const bytes = await quelle(segment);
+  const bytes = await quelle(segment, praefix);
   if (bytes === undefined) return undefined;
   const zeile = leseZeilengrenzen(bytes, 0).zeilen.find((z) => z.offset + z.laenge === offset);
   return zeile === undefined ? undefined : kettenPruefsumme(zeile.bytes);
@@ -154,9 +180,10 @@ export async function ketteAmEnde(
   segment: number,
   quelle: Segmentquelle,
   quelleIstVollstaendig = false,
+  praefix?: string,
 ): Promise<string | undefined> {
   if (segment < 0) return KETTE_ANFANG;
-  const bytes = await quelle(segment);
+  const bytes = await quelle(segment, praefix);
   if (bytes === undefined) return undefined;
   const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
   const letzte = zeilen.at(-1);
@@ -169,7 +196,7 @@ export async function ketteAmEnde(
     // heißt „leer" auch „noch nichts gelesen", und der Vorgänger wäre der
     // falsche Anker.
     if (!quelleIstVollstaendig) return undefined;
-    return segment === 0 ? KETTE_ANFANG : ketteAmEnde(segment - 1, quelle, true);
+    return segment === 0 ? KETTE_ANFANG : ketteAmEnde(segment - 1, quelle, true, praefix);
   }
   // §4.3: Erst die Abschlusszeile macht eine Zeile zur letzten — **wenn die
   // Quelle ein Spiegel ist**. Der Schreiber kennt seine eigenen Dateien

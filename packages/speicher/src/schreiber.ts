@@ -26,6 +26,7 @@ import { lokalDauerhafterHinweis, lokalWiederholbar, lokaleSchreibstoerungMeldun
 import type { Identitaetenbuch } from "./identitaeten.js";
 import {
   clientPraefix,
+  ereignisDateiname,
   zerlegeEreignisDateiname,
   type Dateikennung,
   type Einsatzablage,
@@ -389,11 +390,29 @@ export class Schreiber {
    * §4.5 Schritt 4 meldete beim nächsten Öffnen, das Profil sei kopiert worden
    * — derselbe Falschalarm, den §5.4.1 gerade ausschließt.
    *
+   * **Das ersetzte Segment kann unter einer aufgegebenen Kennung liegen.** Seit
+   * Entscheidung 17 (Richtung B) prüft die Vollprüfung beim Öffnen auch die
+   * Dateien aufgegebener Kennungen, und §4.5 Schritt 6 verbietet allein das
+   * Schreiben **in** diese Datei — nicht die Reparatur. Das Ersatzsegment
+   * entsteht unter der **laufenden** Kennung; „ein Schreiber je Datei" bleibt
+   * unangetastet. Die Kopfzeile nennt dann zusätzlich das Präfix des ersetzten
+   * Segments, sonst hielte jeder Auswerter das gleichnamige Segment der
+   * laufenden Kennung für ersetzt.
+   *
    * @param ersetztesSegment Das Segment, dessen Share-Bytes beschädigt sind.
    * @param abOffset         Offset der ersten abweichenden Zeile.
+   * @param praefix          Kennungspräfix des ersetzten Segments; ohne Angabe
+   *                         das eigene.
    */
-  async schreibeErsatzsegment(ersetztesSegment: number, abOffset: number): Promise<Schreibergebnis> {
-    const quelle = await this.#liesEigenesSegment(ersetztesSegment);
+  async schreibeErsatzsegment(
+    ersetztesSegment: number,
+    abOffset: number,
+    praefix?: string,
+  ): Promise<Schreibergebnis> {
+    const eigenesPraefix = clientPraefix(this.#zustand.clientId);
+    /** `undefined`, solange das ersetzte Segment die eigene Kennung trägt. */
+    const fremdesPraefix = praefix !== undefined && praefix !== eigenesPraefix ? praefix : undefined;
+    const quelle = await this.#liesEigenesSegment(ersetztesSegment, fremdesPraefix);
     if (quelle === undefined) {
       // Ohne bestimmbaren Anker ist nicht feststellbar, welche Zeilen zu
       // wiederholen sind. Ein Ersatzsegment ins Blaue zu schreiben wäre
@@ -459,8 +478,15 @@ export class Schreiber {
       laufend?.zeilen[0]?.rahmen.typ === TYP_SEGMENT_ERSETZT
         ? ersatzAus(laufend.zeilen[0].rahmen["nutzlast"])
         : undefined;
+    // Fortgesetzt wird nur, wenn das laufende Ersatzsegment **dieselbe** Datei
+    // ersetzt — Nummer und Präfix. Ohne den Präfixvergleich setzte der Client
+    // die Reparatur des Segments `0000` einer aufgegebenen Kennung in einem
+    // Ersatzsegment fort, das das eigene `0000` ersetzt, und schriebe die
+    // falschen Zeilen weiter.
     const fortsetzung =
-      laufend !== undefined && laufendeErsatzNutzlast?.ersetztesSegment === ersetztesSegment;
+      laufend !== undefined &&
+      laufendeErsatzNutzlast?.ersetztesSegment === ersetztesSegment &&
+      (laufendeErsatzNutzlast.praefix ?? eigenesPraefix) === (fremdesPraefix ?? eigenesPraefix);
 
     if (fortsetzung) {
       const vorhanden = new Set((laufend as { zeilen: readonly GeleseneZeile[] }).zeilen.map((z) => z.rahmen.id));
@@ -489,7 +515,14 @@ export class Schreiber {
     // Schritt 2: erste Zeile ist `SegmentErsetzt`.
     const kopf = await this.#schreibeZeile({
       typ: TYP_SEGMENT_ERSETZT,
-      nutzlast: { ersetztesSegment, abOffset: abGrenze },
+      nutzlast: {
+        ersetztesSegment,
+        abOffset: abGrenze,
+        // Nur nennen, wenn es ein anderes ist: Die Nutzlast geht in den
+        // `zustandsHash` nicht ein (§2.4), wohl aber in die Bytes jeder
+        // Kopfzeile — und ein Feld, das immer dasselbe sagt, sagt nichts.
+        ...(fremdesPraefix === undefined ? {} : { praefix: fremdesPraefix }),
+      },
     });
     if (kopf.art !== "geschrieben") {
       // **Der halb vollzogene Wechsel wird zurückgenommen.**
@@ -625,6 +658,7 @@ export class Schreiber {
    */
   async #liesEigenesSegment(
     segment: number,
+    fremdesPraefix?: string,
   ): Promise<{ zeilen: readonly GeleseneZeile[]; startkette: string } | undefined> {
     // **Der Anker kommt aus `kettenanker`, nicht aus einer mitgeschleiften
     // Variablen.** §2.3 kennt drei Fälle, und der dritte ist genau der, der
@@ -639,25 +673,42 @@ export class Schreiber {
     // trotzdem „er wird neu geschrieben". `schreiberStart.ts` warnt im
     // Kommentar wörtlich vor diesem Fehler und macht es richtig; hier stand er.
     // Befund des zweiten Gutachtens zu M0.4.
-    const bytesJeSegment = new Map<number, Uint8Array>();
+    const eigenesPraefix = clientPraefix(this.#zustand.clientId);
+    const bytesJeDatei = new Map<string, Uint8Array>();
     for (const kennung of await this.#eigeneSegmente()) {
-      bytesJeSegment.set(
-        kennung.segment,
+      bytesJeDatei.set(
+        kennung.name,
         await this.#dateisystem.liesAb(this.#ablage.lokalDatei(kennung.name), 0),
       );
     }
-    const quelle: Segmentquelle = async (s) => bytesJeSegment.get(s);
-    const eigene = bytesJeSegment.get(segment) ?? new Uint8Array(0);
-    // `true`: Die Quelle sind die **eigenen** lokalen Segmente, und die sind
-    // vollständig — anders als der Spiegel eines Lesers (§5.5).
-    const kette = await kettenanker(segment, eigene, quelle, true);
+    // **Auch die Dateien aufgegebener Kennungen sind Quelle.** Ein
+    // Ersatzsegment unter der laufenden Kennung setzt nach §4.6 Schritt 3 auf
+    // einer Zeile in der Datei der aufgegebenen auf (Entscheidung 17); wer nur
+    // die eigenen Segmente anböte, fände den Anker nicht und meldete ihn als
+    // unbestimmbar. Der Client hat sie lokal vollständig — das ist gerade der
+    // Grund, warum er reparieren kann.
+    const quelle: Segmentquelle = async (s, p) => {
+      const name = ereignisDateiname(p ?? eigenesPraefix, s);
+      const vorhanden = bytesJeDatei.get(name);
+      if (vorhanden !== undefined) return vorhanden;
+      if (p === undefined || p === eigenesPraefix) return undefined;
+      try {
+        const bytes = await this.#dateisystem.liesAb(this.#ablage.lokalDatei(name), 0);
+        bytesJeDatei.set(name, bytes);
+        return bytes;
+      } catch {
+        return undefined;
+      }
+    };
+    const praefix = fremdesPraefix ?? eigenesPraefix;
+    const name = ereignisDateiname(praefix, segment);
+    const eigene = (await quelle(segment, praefix)) ?? new Uint8Array(0);
+    // `true`: Die Quelle sind die **eigenen** lokalen Segmente — die der
+    // laufenden wie die der aufgegebenen Kennung —, und die sind vollständig,
+    // anders als der Spiegel eines Lesers (§5.5).
+    const kette = await kettenanker(segment, eigene, quelle, true, praefix);
     if (kette === undefined) return undefined;
-    const befund = await liesSegment(
-      this.#dateisystem,
-      this.#ablage.lokalSegment(this.#zustand.clientId, segment),
-      0,
-      kette,
-    );
+    const befund = await liesSegment(this.#dateisystem, this.#ablage.lokalDatei(name), 0, kette);
     return { zeilen: befund.zeilen, startkette: kette };
   }
 

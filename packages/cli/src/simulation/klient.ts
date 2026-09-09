@@ -479,12 +479,17 @@ export class Klient {
     let unuebertragen = 0;
     if (this.#akte !== undefined) {
       const praefix = clientPraefix(this.#clientId);
-      const ersetzt = await ersetzteSegmente(this.#o.echt, this.ablage, this.#clientId);
+      const ersetzt = await ersetzteSegmente(
+        this.#o.echt,
+        this.ablage,
+        this.#clientId,
+        this.akte.schreiber.zustand.frühereClientIds ?? [],
+      );
       const eigen = this.akte.zustand.eigen;
       for (const name of await this.#o.echt.listeVerzeichnis(this.ablage.lokalEreignisse)) {
         const kennung = zerlegeEreignisDateiname(name);
         if (kennung === undefined || kennung.praefix !== praefix) continue;
-        if (ersetzt.has(kennung.segment)) continue;
+        if (ersetzt.has(name)) continue;
         const bytes = await this.#o.echt.liesAb(this.ablage.lokalDatei(name), 0);
         const vollstaendig = leseZeilengrenzen(bytes, 0).endeOffset;
         const stand = eigen[`${praefix}.${segmentText(kennung.segment)}`]?.shareOffset ?? 0;

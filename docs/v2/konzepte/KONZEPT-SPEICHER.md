@@ -290,6 +290,12 @@ Schritt 4 ist der Grund, warum das Kriterium nicht „größer oder gleich der e
 5. Die lokalen Spiegeldateien werden unter dem neuen Präfix neu angelegt; die alten bleiben unverändert liegen und werden weiter als fremde Dateien gelesen.
 6. Der lokale Spiegel der alten eigenen Datei wird **nicht** verworfen. Er ist ab jetzt der Spiegel einer fremden Datei — nämlich der des Klons.
 
+   **Fürs Lesen fremd, für die Prüfung eigen.** Der Client schreibt in diese Datei nichts mehr, und er liest sie wie jede fremde. Die Vollprüfung beim Öffnen (§4.6.1 Auslöser 1) nimmt sie aber weiterhin mit: Wird sie auf dem Share beschädigt (§8.2), fällt jeder Leser dort in Quarantäne, und ohne diese Prüfung entdeckte es niemand — der ursprüngliche Schreiber hat den Inhalt lokal vollständig, ist also der einzige, der reparieren kann. Repariert wird durch ein Ersatzsegment unter der **neuen** Kennung; „ein Schreiber je Datei" bleibt unangetastet, weil in die alte Datei nach wie vor niemand schreibt. Ohne diese Festlegung gälte die Zusage, dass geschriebene Ereignisse alle Leser erreichen, nach einem Kennungswechsel mit anschließender Beschädigung nicht mehr — und ein Profilklon ist nach diesem Paragraphen der erwartete Fall, nicht der exotische.
+
+   Zwei Grenzen gehören dazu. **Erstens** wird nur der gespiegelte Teil verglichen: Dass auf dem Share mehr steht als lokal, ist hier der vorgesehene Zustand — der Klon schreibt weiter —, keine Verletzung der Präfix-Invariante aus §5.4.1 und keine Beschädigung. Eine Beschädigung jenseits des eigenen Spiegels bleibt liegen; dort gibt es nichts zu wiederholen. **Zweitens** gibt es unter einer aufgegebenen Kennung keinen Ausgang C mehr: Ein fremder Schreiber ist dort die Erwartung, und der Kennungswechsel hat bereits stattgefunden. Ihn erneut zu melden löste bei jedem Öffnen einen weiteren aus.
+
+   Der Preis ist ein Lesedurchgang je aufgegebener Datei bei jedem Öffnen. Er wächst mit der Zahl der Wechsel und wird in M0.5 unter Annahme A10 mitgemessen.
+
 Daraus folgt eine Präzisierung des Kriteriums: Ausgang C in §5.4.3 und Schritt 2 oben stellen auf **die Datei** ab, nicht auf das `id`-Präfix der Zeile. Maßgeblich ist, ob eine Zeile in einer Datei steht, die dem prüfenden Client gehört, und ob ihre Identität lokal vergeben ist.
 
 Die alte Segmentdatei auf dem Share bleibt liegen und wird von allen Lesern normal ausgewertet. Sie wächst aus Sicht dieses Clients nicht mehr und fällt deshalb nach §6.2 aus Takt A heraus.
@@ -301,7 +307,9 @@ Stellt der Schreiber Ausgang B nach §5.4.3 fest — die auf dem Share liegenden
 Ablauf:
 
 1. Der Schreiber beginnt ein neues Segment mit der nächsten freien Nummer. Es heißt **Ersatzsegment**.
-2. Dessen erste Zeile ist ein Ereignis vom Typ `SegmentErsetzt`. Ihre Nutzlast nennt das ersetzte Segment und den Offset, ab dem der Ersatz gilt.
+2. Dessen erste Zeile ist ein Ereignis vom Typ `SegmentErsetzt`. Ihre Nutzlast nennt das ersetzte Segment und den Offset, ab dem der Ersatz gilt — und, wenn das ersetzte Segment eine **andere** Kennung trägt, deren Präfix.
+
+   **Warum das Präfix dazugehört.** Seit §4.5 Schritt 6 die aufgegebene Datei für die Prüfung eigen lässt, steht das Ersatzsegment unter der neuen Kennung und das ersetzte unter der alten. Nennte die Nutzlast nur die Nummer, hielte jeder Auswerter das Segment gleicher Nummer der **eigenen** Kennung für ersetzt: Es fiele aus der Vollprüfung nach §4.6.1 und aus dem Versionsvektor nach §7.6, und der Kettenanker nach Schritt 3 würde in der falschen Datei gesucht. Fehlt das Präfix, ist es das eigene — so sind auch alle Zeilen zu lesen, die vor dieser Festlegung geschrieben wurden.
 
    **Der Ersatz gilt ab der letzten für einen Leser auswertbaren Zeile, nicht ab der ersten abweichenden.** Beide Stellen fallen auseinander, sobald der Schreiber die Abweichung erst nach seinem letzten Übertragungsstand bemerkt: Die Zeilen zwischen der Beschädigungsstelle und diesem Stand stehen physisch auf dem Share, sind hinter der Quarantäne (§8.2 Punkt 7, §2.3) aber für keinen Leser mehr erreichbar. Nähme der Ersatz sie nicht mit, wären sie für alle fort — auch für den Exportweg aus §8.6.1 Regel 4. Maßgeblich ist deshalb das Ende der letzten Zeile, die ein Leser in der Share-Datei noch auswerten kann; liegt die gemeldete Abweichung davor, gilt die frühere der beiden Stellen. Der Schreiber hat alle betroffenen Zeilen lokal (§1.3 Satz 2), die Angabe ist also immer verfügbar.
 
@@ -316,7 +324,7 @@ Warum das trägt:
 
 - **Für Leser in Quarantäne** ist das Ersatzsegment eine neue Datei ohne Quarantänestelle. Sie holen sich dort genau die Ereignisse, die ihnen fehlen, und die Konvergenzzusage aus §8.6.1 gilt für sie wieder.
 - **Für Leser ohne Quarantäne**, die die Original-Bytes fehlerfrei gelesen haben, kommen die Ereignisse ein zweites Mal an. Das ist folgenlos, weil der Fold eine Mengenfunktion über die Ereignis-Identitäten ist (Auflage 4): Zwei Zeilen mit derselben Identität sind dasselbe Ereignis, nicht zwei.
-- **„Ein Schreiber je Datei" bleibt unangetastet.** Der Schreiber schreibt ausschließlich in eine eigene, neu angelegte Datei.
+- **„Ein Schreiber je Datei" bleibt unangetastet.** Der Schreiber schreibt ausschließlich in eine eigene, neu angelegte Datei. Das gilt auch dann, wenn das ersetzte Segment unter einer aufgegebenen Kennung liegt (§4.5 Schritt 6): In die alte Datei schreibt weiterhin niemand.
 
 #### Was „gleicher Inhalt" heißt — verbindlich
 
@@ -345,7 +353,7 @@ Kehrt der Schreiber nie zurück, greift der Exportweg aus §8.6.1 Regel 4.
 
 Der Vergleich in §5.4.3 setzt an `shareOffset` an und sieht deshalb nur, was seit dem letzten Offset-Commit geschrieben wurde. Eine Beschädigung in der **Mitte** der Share-Datei — genau die, die beim Leser die Quarantäne nach §8.2 auslöst — läge davor und fiele dort nie auf. Ohne einen eigenen Auslöser wäre §4.6 ein Weg, der für seinen einzigen Anwendungsfall nicht erreicht wird. Es gibt deshalb zwei Auslöser:
 
-**Auslöser 1 — Vollprüfung beim Öffnen (Grundlast, immer vorhanden).** Beim Öffnen eines Einsatzes liest der Schreiber seine eigenen Share-Segmente **vollständig** und vergleicht sie gegen seine lokalen. Das ist bezahlbar, weil ein Client ohnehin beim Öffnen alle fremden Dateien vollständig liest (§7.5: keine fremden Schnappschüsse) — die eigenen Segmente sind ein Fünftel davon. Die Prüfung läuft im Worker und blockiert die Bedienung nicht; bis sie abgeschlossen ist, wird normal weitergearbeitet und weitergespiegelt. Kosten in M0.5 messen (Annahme A10).
+**Auslöser 1 — Vollprüfung beim Öffnen (Grundlast, immer vorhanden).** Beim Öffnen eines Einsatzes liest der Schreiber seine eigenen Share-Segmente **vollständig** und vergleicht sie gegen seine lokalen. „Eigene" schließt die Segmente **aufgegebener** Kennungen ein (§4.5 Schritt 6, mit den beiden dort genannten Grenzen); die laufende Kennung kommt zuerst an die Reihe, damit der Bediener zuerst von seiner eigenen Datei hört. Das ist bezahlbar, weil ein Client ohnehin beim Öffnen alle fremden Dateien vollständig liest (§7.5: keine fremden Schnappschüsse) — die eigenen Segmente sind ein Fünftel davon. Die Prüfung läuft im Worker und blockiert die Bedienung nicht; bis sie abgeschlossen ist, wird normal weitergearbeitet und weitergespiegelt. Kosten in M0.5 messen (Annahme A10).
 
 **Auslöser 2 — Hinweis eines Lesers (Beschleuniger).** Setzt ein Leser eine Datei in Quarantäne, trägt er Datei und Offset in **seine eigene** Präsenzdatei ein (§6.4). Sieht ein Schreiber dort seine eigene Datei genannt, prüft er sie sofort ab dem genannten Offset, statt bis zum nächsten Öffnen zu warten. Das bleibt im Rahmen von §6.4: Die Präsenzdatei beschleunigt, sie ist nicht Voraussetzung — fällt sie aus, heilt Auslöser 1 dieselbe Beschädigung, nur später.
 

@@ -238,9 +238,25 @@ durch ein Ersatzsegment unter der **neuen** Kennung repariert. Damit muss
 `SegmentErsetzt` künftig auch das *Präfix* des ersetzten Segments nennen, nicht
 nur dessen Nummer — sonst hält `ersetzteSegmente` das Segment `0000` der neuen
 Kennung für ersetzt. Der Preis, ein Lesedurchgang je aufgegebener Datei beim
-Öffnen, wird in M0.5 unter A10 mitgemessen. **Noch nicht umgesetzt** — siehe
-M0-nacharbeit-3.md. Bis dahin meldet der Lauf den Verlust als Mangel; er wird
-nicht geschönt.
+Öffnen, wird in M0.5 unter A10 mitgemessen.
+
+**Umgesetzt am 2026-09-09** (dritte Nacharbeit). §4.5 Schritt 6, §4.6
+Schritt 2 und §4.6.1 Auslöser 1 sind nachgezogen; `pruefeBeimOeffnen` nimmt die
+aufgegebenen Kennungen wieder auf, `SegmentErsetzt` nennt das Präfix, und
+`ersetzteSegmente`, `kettenanker` und der Versionsvektor werten es aus.
+
+**Zwei Grenzen sind beim Umsetzen dazugekommen.** Beide betreffen den Fall,
+dass der Klon wirklich existiert und weiterschreibt:
+
+* **Verglichen wird nur der gespiegelte Teil.** Dass auf dem Share mehr steht
+  als lokal, ist bei einer aufgegebenen Datei der vorgesehene Zustand, keine
+  Verletzung von §5.4.1. Ohne diese Kürzung meldete jeder Vorsprung des Klons
+  eine Beschädigung, und der Client schriebe ein Ersatzsegment für Zeilen, die
+  er gar nicht hat.
+* **Unter einer aufgegebenen Kennung gibt es keinen Ausgang C mehr.** Er
+  unterscheidet fremde Schreibspur von verfälschten Bytes — eine Frage, die
+  dort schon beantwortet ist. Ihn zu melden löste bei jedem Öffnen einen
+  weiteren Kennungswechsel aus.
 
 ### 18 · Der Versionsvektor deckt sich nach einer Reparatur nach §4.6 nie wieder — **entschieden: A**
 

@@ -22,6 +22,7 @@ import { Identitaetenbuch } from "./identitaeten.js";
 import {
   ERSTES_SEGMENT,
   clientPraefix,
+  ereignisDateiname,
   zerlegeEreignisDateiname,
   type Dateikennung,
   type Einsatzablage,
@@ -119,7 +120,24 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
       await dateisystem.liesAb(ablage.lokalDatei(kennung.name), 0),
     );
   }
-  const quelle: Segmentquelle = async (segment) => bytesJeSegment.get(segment);
+  const eigenesPraefix = clientPraefix(clientId);
+  // **Auch die Dateien aufgegebener Kennungen sind Quelle.** Seit
+  // Entscheidung 17 kann ein Ersatzsegment unter der laufenden Kennung ein
+  // Segment unter einer aufgegebenen ersetzen; sein Anker liegt nach §4.6
+  // Schritt 3 in deren Datei. Wer sie nicht anböte, fände den Anker nicht —
+  // und `bereiteSchreiberVor` bräche mit `LokalerKettenbruch` an Byte 0 ab,
+  // der Client käme an seine eigene Akte nie wieder heran (§8.8 Punkt 5).
+  const quelle: Segmentquelle = async (segment, praefix) => {
+    if (praefix === undefined || praefix === eigenesPraefix) return bytesJeSegment.get(segment);
+    try {
+      return await dateisystem.liesAb(
+        ablage.lokalDatei(ereignisDateiname(praefix, segment)),
+        0,
+      );
+    } catch {
+      return undefined;
+    }
+  };
 
   let kette = KETTE_ANFANG;
   let offsetImLetzten = 0;
@@ -132,7 +150,7 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
     const bytes = bytesJeSegment.get(kennung.segment) as Uint8Array;
     // `true`: Die Quelle sind die **eigenen** lokalen Segmente, und die sind
     // vollständig — anders als der Spiegel eines Lesers (§5.5).
-    const anker = await kettenanker(kennung.segment, bytes, quelle, true);
+    const anker = await kettenanker(kennung.segment, bytes, quelle, true, eigenesPraefix);
     if (anker === undefined) throw new LokalerKettenbruch(kennung.segment, 0);
 
     const befund = await liesSegment(dateisystem, ablage.lokalDatei(kennung.name), 0, anker);

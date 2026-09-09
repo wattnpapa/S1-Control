@@ -21,7 +21,12 @@
  */
 
 import type { Dateisystem } from "./dateisystem.js";
-import { clientPraefix, zerlegeEreignisDateiname, type Einsatzablage } from "./pfade.js";
+import {
+  clientPraefix,
+  ereignisDateiname,
+  zerlegeEreignisDateiname,
+  type Einsatzablage,
+} from "./pfade.js";
 import {
   TYP_SEGMENT_ABGESCHLOSSEN,
   TYP_SEGMENT_ERSETZT,
@@ -30,41 +35,57 @@ import {
 import { leseZeilengrenzen, type GeleseneZeile } from "./zeile.js";
 
 /**
- * Liest die eigenen lokalen Segmente und sammelt, welche Segmentnummern durch
- * ein Ersatzsegment ersetzt wurden.
+ * Liest die lokalen Segmente der eigenen **und der aufgegebenen** Kennungen und
+ * sammelt, welche Dateien durch ein Ersatzsegment ersetzt wurden.
  *
  * Gelesen wird der **lokale** Bestand: Er ist die eigene, geprüfte Seite. Auf
  * dem Share stünde dieselbe Auskunft, aber dort könnte sie beschädigt sein —
  * und genau darum geht es hier.
+ *
+ * **Der Schlüssel ist der Dateiname, nicht die Segmentnummer.** Seit §4.5
+ * Schritt 6 die aufgegebene Datei für die Prüfung eigen lässt (Entscheidung 17,
+ * Richtung B), stehen ersetztes Segment und Ersatz unter verschiedenen
+ * Kennungen. Eine Zuordnung über die bloße Nummer hielte das Segment gleicher
+ * Nummer der laufenden Kennung für ersetzt — es fiele dauerhaft aus der
+ * Vollprüfung nach §4.6.1, und eine Beschädigung dort bliebe für immer liegen.
  */
 export async function ersetzteSegmente(
   dateisystem: Dateisystem,
   ablage: Einsatzablage,
   clientId: string,
-): Promise<ReadonlyMap<number, number>> {
-  const praefix = clientPraefix(clientId);
+  frühereClientIds: readonly string[] = [],
+): Promise<ReadonlyMap<string, number>> {
+  const eigene = new Set([clientId, ...frühereClientIds].map(clientPraefix));
   const namen = await dateisystem.listeVerzeichnis(ablage.lokalEreignisse);
 
-  /** Die Bytes je eigenem Segment, einmal gelesen. */
-  const bytesJeSegment = new Map<number, Uint8Array>();
+  /** Die Bytes je eigener Datei, einmal gelesen. */
+  const bytesJeDatei = new Map<string, Uint8Array>();
   for (const name of namen) {
     const kennung = zerlegeEreignisDateiname(name);
-    if (kennung === undefined || kennung.praefix !== praefix) continue;
+    if (kennung === undefined || !eigene.has(kennung.praefix)) continue;
     try {
-      bytesJeSegment.set(kennung.segment, await dateisystem.liesAb(ablage.lokalDatei(name), 0));
+      bytesJeDatei.set(name, await dateisystem.liesAb(ablage.lokalDatei(name), 0));
     } catch {
       continue;
     }
   }
 
-  /** Segmentnummer → **kleinster** Offset, ab dem ein Ersatz übernommen hat. */
-  const ersetzt = new Map<number, number>();
-  for (const [, bytes] of bytesJeSegment) {
+  /** Dateiname → **kleinster** Offset, ab dem ein Ersatz übernommen hat. */
+  const ersetzt = new Map<string, number>();
+  for (const [dateiname, bytes] of bytesJeDatei) {
+    const eigenesPraefix = zerlegeEreignisDateiname(dateiname)?.praefix;
+    if (eigenesPraefix === undefined) continue;
     const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
     const erste = zeilen[0];
     if (erste === undefined || erste.rahmen.typ !== TYP_SEGMENT_ERSETZT) continue;
     const ersatz = ersatzAus(erste.rahmen["nutzlast"]);
     if (ersatz === undefined) continue;
+    // Ohne Präfix in der Nutzlast ist es das Präfix der Datei, in der die Zeile
+    // steht — so sind die Zeilen von vor Entscheidung 17 zu lesen.
+    const ersetzteDatei = ereignisDateiname(
+      ersatz.praefix ?? eigenesPraefix,
+      ersatz.ersetztesSegment,
+    );
     // **Nur ein vollständiges Ersatzsegment nimmt sein Vorbild aus der
     // Prüfung.** §4.6 Schritt 4 verlangt, dass „alle Ereignisse ab dieser
     // Stelle noch einmal" geschrieben werden. Bricht das an einer lokalen
@@ -79,13 +100,13 @@ export async function ersetzteSegmente(
     // wieder auf. Dass dabei Zeilen ein zweites Mal geschrieben werden, ist
     // nach §4.6 ausdrücklich folgenlos — „der Fold ist eine Mengenfunktion
     // über die Ereignis-Identitäten". Befund des zweiten Gutachtens zu M0.4.
-    if (istVollstaendig(bytesJeSegment.get(ersatz.ersetztesSegment), ersatz.abOffset, zeilen)) {
+    if (istVollstaendig(bytesJeDatei.get(ersetzteDatei), ersatz.abOffset, zeilen)) {
       // Gibt es mehrere Ersätze desselben Segments — eine spätere Beschädigung
       // unterhalb der ersten Stelle —, zählt der **kleinste** Offset: Ab ihm
       // ist alles anderswo lesbar wiederholt.
-      const bisher = ersetzt.get(ersatz.ersetztesSegment);
+      const bisher = ersetzt.get(ersetzteDatei);
       if (bisher === undefined || ersatz.abOffset < bisher) {
-        ersetzt.set(ersatz.ersetztesSegment, ersatz.abOffset);
+        ersetzt.set(ersetzteDatei, ersatz.abOffset);
       }
     }
   }

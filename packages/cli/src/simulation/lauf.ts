@@ -349,7 +349,12 @@ async function pruefeSpiegel(
   const befunde: Spiegelbefund[] = [];
   for (const klient of klienten) {
     const eigen = klient.akte.zustand.eigen;
-    const ersetzt = await ersetzteSegmente(echt, klient.ablage, klient.clientId);
+    const ersetzt = await ersetzteSegmente(
+      echt,
+      klient.ablage,
+      klient.clientId,
+      klient.akte.schreiber.zustand.frühereClientIds ?? [],
+    );
     const praefixe = new Set<string>([clientPraefix(klient.clientId)]);
     for (const frueher of klient.akte.schreiber.zustand.frühereClientIds ?? []) {
       praefixe.add(clientPraefix(frueher));
@@ -367,8 +372,7 @@ async function pruefeSpiegel(
       } catch {
         share = new Uint8Array(0);
       }
-      const istErsetzt =
-        kenn.praefix === clientPraefix(klient.clientId) && ersetzt.has(kenn.segment);
+      const istErsetzt = ersetzt.has(name);
       const vollstaendig = leseZeilengrenzen(lokal, 0).endeOffset;
       const shareOffset = eigen[`${kenn.praefix}.${segmentText(kenn.segment)}`]?.shareOffset ?? 0;
 

@@ -192,7 +192,7 @@ describe("Ein bereits ersetztes Segment (§4.6 Schritt 5, Entscheidung 16a)", ()
   function pruefeMitErsatz(
     platz: Arbeitsplatz,
     schreiber: Schreiber,
-    bereitsErsetzt: ReadonlyMap<number, number>,
+    bereitsErsetzt: ReadonlyMap<string, number>,
   ) {
     return pruefeBeimOeffnen({
       dateisystem: platz.dateisystem,
@@ -223,7 +223,7 @@ describe("Ein bereits ersetztes Segment (§4.6 Schritt 5, Entscheidung 16a)", ()
     await legeEinsatzAn(platz, EINSATZ);
     const { schreiber } = await eigenerStand(platz, 5);
     const abOffset = await beschaedigeUndMelde(platz, schreiber, 40);
-    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[0, abOffset]]));
+    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[`${ICH}.0000.jsonl`, abOffset]]));
     expect(befund).toEqual({ art: "inOrdnung" });
   });
 
@@ -237,7 +237,7 @@ describe("Ein bereits ersetztes Segment (§4.6 Schritt 5, Entscheidung 16a)", ()
     const { schreiber } = await eigenerStand(platz, 5);
     const abOffset = await beschaedigeUndMelde(platz, schreiber, 40);
     // Der Ersatz übernahm erst weit hinter dieser Stelle.
-    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[0, abOffset + 10_000]]));
+    const befund = await pruefeMitErsatz(platz, schreiber, new Map([[`${ICH}.0000.jsonl`, abOffset + 10_000]]));
     expect(befund.art).toBe("beschaedigt");
     expect(befund.art === "beschaedigt" && befund.abOffset).toBe(abOffset);
   });

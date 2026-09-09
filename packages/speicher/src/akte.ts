@@ -56,9 +56,26 @@ export interface Oeffnungsergebnis {
 /** Die beiden Reaktionen aus §5.4.3, mit dem Text, den der Bediener sieht. */
 export type Reaktion =
   /** §4.6: Ersatzsegment geschrieben. Kein Kennungswechsel. */
-  | { readonly art: "repariert"; readonly ersetztesSegment: number; readonly abOffset: number; readonly meldung: string }
+  | {
+      readonly art: "repariert";
+      readonly ersetztesSegment: number;
+      readonly abOffset: number;
+      /**
+       * Kennungspräfix des ersetzten Segments. Seit Entscheidung 17 nicht mehr
+       * zwingend das laufende: Auch die Datei einer aufgegebenen Kennung wird
+       * repariert (§4.5 Schritt 6). Ohne diese Angabe wäre im Diagnosebericht
+       * nicht zu sehen, **welche** Datei ersetzt wurde.
+       */
+      readonly praefix: string;
+      readonly meldung: string;
+    }
   /** §4.6: Die Reparatur selbst ist gescheitert (§8.8). Kein Erfolg melden. */
-  | { readonly art: "reparaturGescheitert"; readonly ersetztesSegment: number; readonly meldung: string }
+  | {
+      readonly art: "reparaturGescheitert";
+      readonly ersetztesSegment: number;
+      readonly praefix: string;
+      readonly meldung: string;
+    }
   /** §4.5 Fall 2: neue Kennung, mitgenommene Identitäten. */
   | { readonly art: "kennungGewechselt"; readonly alteClientId: string; readonly neueClientId: string; readonly mitgenommen: number; readonly meldung: string }
   /** §4.5 Fall 2, aber das Übernehmen der Zeilen brach ab (§8.8). */
@@ -271,7 +288,7 @@ export class Akte {
     const reaktionen: Reaktion[] = [];
     let befund: Oeffnungsbefund = erster;
     for (let runde = 0; runde < REPARATUREN_JE_OEFFNEN && befund.art === "beschaedigt"; runde += 1) {
-      const reaktion = await this.#repariere(befund.segment, befund.abOffset);
+      const reaktion = await this.#repariere(befund.segment, befund.abOffset, befund.praefix);
       reaktionen.push(reaktion);
       // Scheitert die Reparatur selbst (§8.8), wird abgebrochen: Ein zweiter
       // Versuch an derselben Stelle brächte dasselbe Ergebnis, und §6.3
@@ -304,6 +321,7 @@ export class Akte {
         this.#optionen.dateisystem,
         this.#optionen.ablage,
         this.#schreiber.clientId,
+        this.#schreiber.zustand.frühereClientIds ?? [],
       ),
       ...(this.#schreiber.zustand.frühereClientIds === undefined
         ? {}
@@ -395,13 +413,16 @@ export class Akte {
    * sichtbar abgewiesen wird, und §6.3 verbietet eine Anzeige, die Erfolg
    * suggeriert.
    */
-  async #repariere(segment: number, abOffset: number): Promise<Reaktion> {
-    const ansatz = reparaturAnsatz(abOffset, await this.#eigeneShareBytes(segment));
-    const ergebnis = await this.#schreiber.schreibeErsatzsegment(segment, ansatz);
+  async #repariere(segment: number, abOffset: number, praefix?: string): Promise<Reaktion> {
+    const kennungspraefix = praefix ?? clientPraefix(this.#schreiber.clientId);
+    const name = ereignisDateiname(kennungspraefix, segment);
+    const ansatz = reparaturAnsatz(abOffset, await this.#shareBytes(name));
+    const ergebnis = await this.#schreiber.schreibeErsatzsegment(segment, ansatz, kennungspraefix);
     if (ergebnis.art !== "geschrieben") {
       return {
         art: "reparaturGescheitert",
         ersetztesSegment: segment,
+        praefix: kennungspraefix,
         meldung:
           ergebnis.art === "abgewiesen"
             ? ergebnis.meldung
@@ -412,6 +433,7 @@ export class Akte {
       art: "repariert",
       ersetztesSegment: segment,
       abOffset: ansatz,
+      praefix: kennungspraefix,
       meldung:
         "Ein Teil der bereits übertragenen Einträge dieses Arbeitsplatzes ist auf dem Server " +
         "beschädigt; er wird neu geschrieben.",
@@ -442,11 +464,14 @@ export class Akte {
   }
 
   /**
-   * Die eigenen Bytes dieses Segments, wie sie auf dem Share liegen.
-   * `undefined`, wenn die Datei nicht lesbar ist.
+   * Die Bytes dieser Datei, wie sie auf dem Share liegen. `undefined`, wenn sie
+   * nicht lesbar ist.
+   *
+   * Der Dateiname statt der Segmentnummer: Seit Entscheidung 17 kann die zu
+   * reparierende Datei unter einer **aufgegebenen** Kennung liegen (§4.5
+   * Schritt 6).
    */
-  async #eigeneShareBytes(segment: number): Promise<Uint8Array | undefined> {
-    const name = ereignisDateiname(this.#schreiber.clientId, segment);
+  async #shareBytes(name: string): Promise<Uint8Array | undefined> {
     try {
       return await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.shareDatei(name), 0);
     } catch {
@@ -795,10 +820,14 @@ export class Akte {
             // Arbeitsplatz für abgeschlossen und läse ihn nie wieder — ohne
             // Meldung, ohne Quarantäne.
             //
-            // `SegmentErsetzt` nennt nach §4.6 Schritt 2 ein Segment des
-            // **alten** Präfixes. Stünde es am Anfang der neuen Datei, hielte
-            // `ersetzteSegmente` das laufende Segment `0000` der neuen Kennung
-            // für ersetzt — es fiele dauerhaft aus der Vollprüfung nach §4.6.1.
+            // `SegmentErsetzt` sagt nach §4.6 Schritt 2, dass **diese** Datei
+            // der Ersatz eines anderen Segments ist. In der neuen Datei ist das
+            // falsch: Sie ist ein gewöhnliches erstes Segment, und `kettenanker`
+            // suchte ihren Anker in der Mitte des genannten Vorbilds statt am
+            // Kettenanfang. Seit Entscheidung 17 nennt die Nutzlast zwar auch
+            // das Präfix, an dieser Aussage ändert das nichts — mitgenommen
+            // wird sie deshalb weiterhin nicht. Ein Ersatzsegment entsteht,
+            // wenn es gebraucht wird, durch die Vollprüfung beim Öffnen.
             !istVerwaltungsereignis(z.rahmen.typ),
         ),
       );
@@ -843,6 +872,7 @@ export class Akte {
             this.#optionen.dateisystem,
             this.#optionen.ablage,
             this.#schreiber.clientId,
+            this.#schreiber.zustand.frühereClientIds ?? [],
           ),
       },
       zustand,

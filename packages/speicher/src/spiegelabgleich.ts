@@ -105,8 +105,12 @@ export function spiegelquelle(
   ablage: Einsatzablage,
   praefix: string,
 ): Segmentquelle {
-  return async (segment) => {
-    const name = `${praefix}.${segmentText(segment)}.jsonl`;
+  return async (segment, anderesPraefix) => {
+    // `anderesPraefix` kommt vor, seit ein Ersatzsegment ein Segment unter
+    // einer **aufgegebenen** Kennung ersetzen kann (§4.5 Schritt 6,
+    // Entscheidung 17). Der Anker liegt dann in deren Spiegeldatei — sie liegt
+    // im selben Ordner und wird nach §4.5 Schritt 5 weiter geführt.
+    const name = `${anderesPraefix ?? praefix}.${segmentText(segment)}.jsonl`;
     try {
       return await dateisystem.liesAb(ablage.lokalDatei(name), 0);
     } catch {
@@ -128,5 +132,5 @@ export async function anfangsKette(
 ): Promise<string | undefined> {
   const kennung = zerlegeEreignisDateiname(dateiname);
   if (kennung === undefined) return undefined;
-  return kettenanker(kennung.segment, bytes, quelleFuer(kennung.praefix));
+  return kettenanker(kennung.segment, bytes, quelleFuer(kennung.praefix), false, kennung.praefix);
 }
