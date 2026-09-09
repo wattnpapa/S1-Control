@@ -165,12 +165,20 @@ describe("Plandatei", () => {
       stoerungen: {},
       dateisystemZaehler: {},
     } as unknown as Laufergebnis;
-    // Der Abnahmeplan fordert alle zehn; keine ist eingetreten.
+    // Der Abnahmeplan fordert alle vierzehn; keine ist eingetreten.
     expect([...fehlendeStoerungen(leer)].sort()).toEqual([...GEFORDERTE_STOERUNGEN].sort());
 
     const voll = {
       plan: abnahmePlan(),
-      stoerungen: { kill: 1, partition: 1, uhrsprung: 1 },
+      stoerungen: {
+        kill: 1,
+        partition: 1,
+        uhrsprung: 1,
+        beschaedigung: 1,
+        profilKlon: 1,
+        schreibrechtEntzug: 1,
+        lokaleSchreibstoerung: 1,
+      },
       dateisystemZaehler: {
         abgeschnittenShare: 1,
         abgeschnittenLokal: 1,
@@ -191,6 +199,45 @@ describe("Plandatei", () => {
       dateisystemZaehler: {},
     } as unknown as Laufergebnis;
     expect(fehlendeStoerungen(ohne)).toEqual([]);
+  });
+
+  it("fordert §8.2, §4.5 Fall 2, §8.9 und §8.8 wie jede andere Störung", () => {
+    // Bis zum 2026-09-09 standen diese vier in einer eigenen Liste, deren
+    // Ausbleiben kein Mangel war. Ein Lauf konnte damit grün sein, ohne die
+    // Beschädigung und das Ersatzsegment auch nur berührt zu haben (Befund
+    // 7.6 des Messprotokolls). Sie gehören jetzt in die Mangelprüfung.
+    const leer = {
+      plan: abnahmePlan(),
+      stoerungen: {},
+      dateisystemZaehler: {},
+    } as unknown as Laufergebnis;
+    const fehlend = new Set(fehlendeStoerungen(leer));
+    expect(fehlend.has("beschaedigung")).toBe(true);
+    expect(fehlend.has("profilKlon")).toBe(true);
+    expect(fehlend.has("schreibrechtEntzug")).toBe(true);
+    expect(fehlend.has("lokaleSchreibstoerung")).toBe(true);
+  });
+
+  it("misst die Gelegenheiten der Beschädigung an einer Phase, nicht am ganzen Lauf", () => {
+    // §8.2 wird nur in der letzten Phase gezogen (`lauf.ts`, Phasenschleife).
+    // Ein Plan, dessen Lauf insgesamt genug Kommandos hätte, dessen letzte
+    // Phase aber zu kurz ist, fordert die Beschädigung deshalb **nicht** —
+    // sonst meldete er einen Mangel, den der Plan selbst erzeugt hat.
+    const p = abnahmePlan();
+    // 1/beschaedigung Kommandos je Phase sind gerade eine erwartete Störung.
+    const jePhase = Math.ceil(1 / p.fehler.beschaedigung);
+    const knappDrunter = {
+      plan: { ...p, kommandos: (jePhase - 1) * 4, phasen: 4 },
+      stoerungen: {},
+      dateisystemZaehler: {},
+    } as unknown as Laufergebnis;
+    expect(fehlendeStoerungen(knappDrunter)).not.toContain("beschaedigung");
+    const knappDrueber = {
+      plan: { ...p, kommandos: jePhase * 4, phasen: 4 },
+      stoerungen: {},
+      dateisystemZaehler: {},
+    } as unknown as Laufergebnis;
+    expect(fehlendeStoerungen(knappDrueber)).toContain("beschaedigung");
   });
 
   it("macht eine geforderte, aber ausgebliebene Störung zum Mangel", async () => {

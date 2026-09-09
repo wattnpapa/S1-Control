@@ -19,7 +19,20 @@ const AUSGANG: Readonly<Record<string, string>> = {
   zuWenigeClients: "zu wenige Clients ohne Quarantäne",
 };
 
-/** Die Störungen, die M0.4 nennt und die deshalb vorkommen müssen. */
+/**
+ * Die Störungen, die M0.4 nennt und die deshalb vorkommen müssen.
+ *
+ * Die letzten vier standen bis zum 2026-09-09 in einer eigenen Liste
+ * `WEITERE_STOERUNGEN`, deren Ausbleiben ausdrücklich **kein** Mangel war.
+ * Das hat den Lauf zu milde gemessen: Ein Lauf konnte grün sein, ohne §8.2
+ * (Beschädigung, Quarantäne), §4.6 (Ersatzsegment), §4.5 Fall 2 (Profilklon),
+ * §8.9 (Schreibrechtentzug) oder §8.8 (lokale Schreibstörung) auch nur
+ * berührt zu haben — und Abschnitt 3 des Messprotokolls behauptete das
+ * Gegenteil. Befund des dritten Gutachterdurchgangs (7.6, beobachtet).
+ *
+ * Ob eine Störung gefordert ist, entscheidet weiterhin `istGefordert` am
+ * Plan: Ein Plan, der sie ausschaltet, fordert sie nicht.
+ */
 export const GEFORDERTE_STOERUNGEN: readonly string[] = [
   // Fehlerinjektion aus der DoD.
   "kill",
@@ -33,10 +46,8 @@ export const GEFORDERTE_STOERUNGEN: readonly string[] = [
   "fileNotFoundCache",
   "verzeichnisCache",
   "sichtbarkeitVerzoegert",
-];
-
-/** Störungen, die vorkommen sollen, deren Ausbleiben aber kein Mangel ist. */
-const WEITERE_STOERUNGEN: readonly string[] = [
+  // Die Fehlerbilder aus §9 (Auflage 15). Ohne sie weist der Lauf über §8.2,
+  // §4.6, §4.5 Fall 2, §8.9 und §8.8 nichts nach.
   "beschaedigung",
   "profilKlon",
   "schreibrechtEntzug",
@@ -100,6 +111,17 @@ function istGefordert(ergebnis: Laufergebnis, name: string): boolean {
       return p.profil.verzeichnisCacheMs > 0;
     case "sichtbarkeitVerzoegert":
       return p.profil.sichtbarkeitsverzoegerungMs > 0;
+    // Die Beschädigung wird nur in der **letzten** Phase gezogen (`lauf.ts`,
+    // Phasenschleife). Ihre Gelegenheiten sind deshalb die Kommandos einer
+    // Phase, nicht die des ganzen Laufs.
+    case "beschaedigung":
+      return erwartet(p.fehler.beschaedigung, Math.ceil(p.kommandos / Math.max(1, p.phasen)));
+    case "profilKlon":
+      return erwartet(p.fehler.profilKlon, p.kommandos);
+    case "schreibrechtEntzug":
+      return erwartet(p.fehler.schreibrechtEntzug, p.kommandos);
+    case "lokaleSchreibstoerung":
+      return erwartet(p.fehler.lokaleSchreibstoerung, p.kommandos);
     default:
       return false;
   }
@@ -183,14 +205,14 @@ export function berichte(ergebnis: Laufergebnis): string {
 
   zeilen.push("Störungen — wie oft sie gegriffen haben");
   const fehlend = new Set(fehlendeStoerungen(ergebnis));
-  for (const name of [...GEFORDERTE_STOERUNGEN, ...WEITERE_STOERUNGEN]) {
+  for (const name of GEFORDERTE_STOERUNGEN) {
     const anzahl = gezaehlt[name] ?? 0;
     zeilen.push(
       `  ${name.padEnd(24)} ${String(anzahl).padStart(6)}${fehlend.has(name) ? "   ← vom Plan gefordert, aber nicht eingetreten" : ""}`,
     );
   }
   for (const [name, anzahl] of Object.entries(gezaehlt).sort()) {
-    if (GEFORDERTE_STOERUNGEN.includes(name) || WEITERE_STOERUNGEN.includes(name)) continue;
+    if (GEFORDERTE_STOERUNGEN.includes(name)) continue;
     zeilen.push(`  ${name.padEnd(24)} ${String(anzahl).padStart(6)}`);
   }
   zeilen.push("");
