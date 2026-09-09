@@ -743,3 +743,359 @@ Zwei Clients melden dieselbe reale Einheit — am Meldekopf und in der Führungs
 Dasselbe Paar gilt für `Fahrzeug`, `Person`, `Dienstposten` und `Anhang`; die Gegenereignisse sind benannt. Pflicht-`grund` haben nach §2.4 nur `EinheitEntfernt`, `FahrzeugEntfernt` und `PersonEntfernt` — sie nehmen eine gemeldete Kraft oder ein gemeldetes Mittel aus der Lage. Ein Dienstposten ist Planung, ein Anhang ein Verweis.
 
 **T37:** `EinheitEntfernt` (5), `StaerkeGeaendert` (7) ⇒ entfernt, Stärke aktualisiert, zählt nicht. **T38:** Dazu `EinheitWiederhergestellt` (9) ⇒ zählt wieder, mit der Stärke aus 7. **T39:** Eine entfernte Einheit, die aus einer Aufteilung stammt ⇒ die Quelle bleibt verringert.
+
+### §5.5 Fahrzeug und Person
+
+```ts
+const FahrzeugAngelegt = z.object({
+  fahrzeugId: zId, einheitId: zId.optional(), abschnittId: zId.optional(),
+  typ: zPflichttext, bezeichnung: zText.optional(), kennzeichen: zText.optional(),
+  funkrufname: z.object({ kennwort: zPflichttext, eigenerStandort: z.boolean(),
+    ort: zText.optional(), teile: z.array(z.number().int()) }).optional(),
+  stanKonform: z.boolean().optional(), aenderungen: zText.optional(),
+  nutzlastText: zText.optional(), status: zFahrzeugStatus })
+const FahrzeugGeaendert = z.object({ fahrzeugId: zId, feld: z.enum(["typ","bezeichnung",
+  "kennzeichen","funkrufname","stanKonform","aenderungen","nutzlastText","status",
+  "taktischesZeichen"]) })
+const FahrzeugVerschoben        = z.object({ fahrzeugId: zId })
+const FahrzeugEinheitGewechselt = z.object({ fahrzeugId: zId })
+const FahrzeugEntfernt          = z.object({ fahrzeugId: zId })   // `grund` Pflicht
+const FahrzeugWiederhergestellt = z.object({ fahrzeugId: zId })
+
+const PersonHinzugefuegt = z.object({ personId: zId, einheitId: zId,
+  nachname: zPflichttext, vorname: zPflichttext, rolle: zRolle,
+  funktionen: z.array(zPflichttext), fahrerlaubnisse: z.array(zPflichttext),
+  geschlecht: zGeschlecht, ernaehrung: zErnaehrung, kontakte: z.array(zKontakt),
+  zusatzqualifikationen: z.array(zPflichttext), bemerkung: zText.optional() })
+const PersonGeaendert = z.object({ personId: zId, feld: z.enum(["nachname","vorname",
+  "rolle","funktionen","fahrerlaubnisse","geschlecht","ernaehrung","kontakte",
+  "zusatzqualifikationen","bemerkung","einheitId"]) })
+const PersonEntfernt          = z.object({ personId: zId })   // `grund` Pflicht
+const PersonWiederhergestellt = z.object({ personId: zId })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `FahrzeugAngelegt` | b | Anlage | additiv, §3.11 | frei → `FahrzeugEntfernt` |
+| `FahrzeugGeaendert` | a | `fahrzeug/<id>/<feld>` · Typ des Feldes | LWW/Feld; `funkrufname`, `taktischesZeichen` LWW/Entität | frei |
+| `FahrzeugVerschoben` | a | `fahrzeug/<id>/abschnittId` · `Id \| null` | Regel §5.3.3 | frei |
+| `FahrzeugEinheitGewechselt` | a | `fahrzeug/<id>/einheitId` · `Id \| null` | LWW/Feld, §3.10 | frei |
+| `FahrzeugEntfernt` / `…Wiederhergestellt` | a | `fahrzeug/<id>/entfernt` · `boolean` | LWW/Feld, §5.4.5 | frei |
+| `PersonHinzugefuegt` | b | Anlage | additiv, §3.11 | frei → `PersonEntfernt` |
+| `PersonGeaendert` | a | `person/<id>/<feld>` · Typ des Feldes | LWW/Feld; die vier Listenfelder LWW/Entität | frei |
+| `PersonEntfernt` / `…Wiederhergestellt` | a | `person/<id>/entfernt` · `boolean` | LWW/Feld, §5.4.5 | frei |
+
+**Listen sind ein Wert.** `funktionen`, `fahrerlaubnisse`, `kontakte`, `zusatzqualifikationen`, `hierarchie`, `fuehrungskraft` werden als Ganzes ersetzt. Ein Merge über Listen zweier Clients wäre nicht deterministisch begründbar.
+
+**Die Stärke folgt nicht aus den Personen.** `staerke` ist ein gemeldetes Tripel; `personalErfassung` sagt, ob Einzelpersonen erfasst sind. Personen in die Stärke umzurechnen wäre eine Kennzahl (M1.3) und ersetzte eine Meldung durch eine Rechnung.
+
+**T40:** Zwei `PersonGeaendert` auf `kontakte` ⇒ genau eine Liste, keine Vereinigung. **T41:** `PersonHinzugefuegt` ⇒ `staerke` unverändert.
+
+### §5.6 Auftrag und Anforderung
+
+```ts
+const AuftragErfasst = z.object({ auftragId: zId, einheitId: zId, von: zZeitpunkt,
+  bis: zZeitpunkt.optional(), abschnittId: zId.optional(), text: zPflichttext,
+  quelle: zAuftragQuelle })
+const AuftragBeendet         = z.object({ auftragId: zId })
+const AuftragZurueckgenommen = z.object({ auftragId: zId })
+
+const AnforderungAngelegt = z.object({ anforderungId: zId, kennung: zText.optional(),
+  abzuloesendeEinheitId: zId.optional(), vorgeseheneEinheitText: zText.optional(),
+  vorgesehenerAuftrag: zText.optional(), angefordertAm: zZeitpunkt,
+  bemerkung: zText.optional() })
+const AnforderungGeaendert = z.object({ anforderungId: zId, feld: z.enum(["kennung",
+  "abzuloesendeEinheitId","vorgeseheneEinheitText","vorgesehenerAuftrag","bemerkung",
+  "angefordertAm"]) })
+const AbloesungZugesagt         = z.object({ anforderungId: zId })
+const ZusageZurueckgenommen     = z.object({ anforderungId: zId })
+const AnforderungErledigt       = z.object({ anforderungId: zId })
+const ErledigungZurueckgenommen = z.object({ anforderungId: zId })
+const AnforderungStorniert      = z.object({ anforderungId: zId })   // `grund` Pflicht
+const StornoZurueckgenommen     = z.object({ anforderungId: zId })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `AuftragErfasst` | b | Anlage | additiv, §3.11 | frei → `AuftragZurueckgenommen` |
+| `AuftragBeendet` | a | `auftrag/<id>/bis` · `Zeitpunkt` | LWW/Feld | frei |
+| `AuftragZurueckgenommen` | a | `auftrag/<id>/zurueckgenommen` · `true` | LWW/Feld | — |
+| `AnforderungAngelegt` | b | Anlage | additiv, §3.11 | frei → `AnforderungStorniert` |
+| `AnforderungGeaendert` | a | `anforderung/<id>/<feld>` · Typ des Feldes | LWW/Feld | frei |
+| `AbloesungZugesagt` | a | `anforderung/<id>/zusage` · `{zugesagtFuer, zugesagtVon, abloesendeEinheitId?}` | LWW/Entität | frei → `ZusageZurueckgenommen` |
+| `AnforderungErledigt` | a | `anforderung/<id>/erledigung` · `{erledigtAm, abloesendeEinheitId}` | LWW/Entität | frei → `ErledigungZurueckgenommen` |
+| `AnforderungStorniert` | a | `anforderung/<id>/storno` · `true` | LWW/Feld | frei → `StornoZurueckgenommen` |
+| die drei Gegenereignisse | a | dasselbe Feld · `null` bzw. `false` | wie oben | — |
+
+#### §5.6.1 Regel: die Kennung ist ein Etikett, keine Identität (Frage 22)
+
+Optionaler Freitext **ohne Formatprüfung** (S2). **Nie Identität:** Nach EXH F-F3 tragen die abzulösende und die ablösende Zeile dieselbe Kennung absichtlich; ein Verschmelzen wäre fachlich falsch, stilles Nebeneinander eine unbemerkte Doppelanforderung. Führen mehrere nicht stornierte Anforderungen dieselbe nicht leere Kennung, entsteht **ein** `moeglicheDublette` je Kennung mit allen Ids — Form und Begründung wie §5.4.4.
+
+**T42:** Zwei mit derselben Kennung ⇒ zwei Anforderungen, ein Hinweis. **T43:** Eine storniert ⇒ kein Hinweis.
+
+#### §5.6.2 Regel: die Zustandsmaschine (Prüfkriterium P6)
+
+`zustand` ist **kein eigenes Feld**, sondern abgeleitet aus drei gewöhnlichen:
+
+```
+zustand = erledigung ? EINGETROFFEN : storno ? STORNIERT : zusage ? ZUGESAGT : OFFEN
+```
+
+**Warum drei Felder statt eines Zustandsfelds.** Ein einzelnes Feld mit LWW ließe `EINGETROFFEN → ZUGESAGT` zu, sobald eine verspätete Zusage eine höhere HLC trägt — der Rückschritt, den P6 verbietet. Drei unabhängige Felder mit einer Ableitung können das nicht: Die Ableitung fragt nur, **ob** erledigt gilt, nie **wann**.
+
+**Warum die drei Gegenereignisse.** Ohne sie wäre ein Undo nur durch Ausschluss des Originals aus der Ereignismenge darstellbar — ein Sonderpfad, den U1 ausschließt. ZDM §4.2 nennt für `AbloesungZugesagt` bereits ein „Gegen-Set auf `zustand = OFFEN`"; hier bekommt es Namen und Feld.
+
+1. **`EINGETROFFEN` gewinnt gegen ein Storno,** auch mit höherer HLC. Das Storno wird gefaltet, `storno` steht auf `true`, der abgeleitete Zustand ändert sich nicht — dafür gibt es `wirkungslosGegenTerminalzustand` (§3.12). `vorherPasstNicht` griffe nicht: `storno` stand vorher tatsächlich auf `false`, der Schreiber hat sich nicht geirrt. Ohne den eigenen Hinweis wäre eine bewusste Stornierung wirkungslos **und** unsichtbar.
+2. **Eine spätere Zusage** ändert den Zustand nicht mehr, wenn `erledigung` gilt; ihre Felder werden trotzdem gefaltet, mit demselben Hinweis.
+3. **Die Ableitung hängt an der Menge.** P6: In jeder Permutation und jedem Präfix einer Menge mit `AnforderungErledigt` und ohne jüngeres `ErledigungZurueckgenommen` ist der Zustand `EINGETROFFEN`.
+4. **Eine Rücknahme ist kein Rückschritt im Sinne von P6** — sie hat Akteur, Grund und Tagebuchzeile.
+
+**T44:** Erledigt (5) und storniert (9), beide Permutationen ⇒ `EINGETROFFEN`, Wirkungslos-Hinweis. **T45:** Zusage (9) nach Erledigung (5) ⇒ `EINGETROFFEN`, `zusage` gesetzt, Hinweis. **T46 (P6):** jede Permutation, jedes Präfix. **T47:** `ErledigungZurueckgenommen` (11) ⇒ `ZUGESAGT`; mit HLC 3 ⇒ weiterhin `EINGETROFFEN`.
+
+#### §5.6.3 Der Bewegungsauftrag ist ein Ereignis mit abgeleiteter Id
+
+ZDM §4.2 verlangt, `EinheitVerschoben` erzeuge automatisch einen `Auftrag` mit `quelle = BEWEGUNG`. Der schreibende Client schreibt ihn als **eigenes `AuftragErfasst`** in denselben Anhang, mit `auftragId = "<id des EinheitVerschoben>#bewegung"`.
+
+Damit ist er über §3.11 idempotent: Schrieben ihn zwei Clients, gälte die kleinere HLC, und weil der Inhalt gleich ist, entsteht nicht einmal ein Hinweis. **Warum ein Ereignis und keine Projektion:** Aus dem Zustand projiziert wäre er verloren, sobald das Verschiebeereignis nicht mehr Gewinner oder Zweiter des Feldes ist — bei drei Verschiebungen gäbe es zwei Aufträge statt drei. Der Einwand „zwei Wahrheiten über dieselbe Bewegung" entfällt durch die abgeleitete Id.
+
+**T48:** Drei aufeinanderfolgende Verschiebungen ⇒ drei Bewegungsaufträge. **T49:** Zwei Clients schreiben denselben ⇒ einer im Zustand, kein Hinweis.
+
+### §5.7 Führungsstelle: Dienstposten und Schichtplan
+
+```ts
+const DienstpostenAngelegt = z.object({ dienstpostenId: zId, teileinheit: zPflichttext,
+  funktion: zPflichttext, schicht: zSchicht, reihenfolge: z.number().int() })
+const DienstpostenGeaendert = z.object({ dienstpostenId: zId,
+  feld: z.enum(["teileinheit","funktion","schicht","reihenfolge"]) })
+const DienstpostenBesetzt           = z.object({ dienstpostenId: zId })
+const DienstpostenEntfernt          = z.object({ dienstpostenId: zId })
+const DienstpostenWiederhergestellt = z.object({ dienstpostenId: zId })
+const SchichtplanEintragGesetzt     = z.object({ dienstpostenId: zId, datum: zDatum })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `DienstpostenAngelegt` | b | Anlage | additiv, §3.11 | frei → `DienstpostenEntfernt` |
+| `DienstpostenGeaendert` | a | `dienstposten/<id>/<feld>` · Typ des Feldes | LWW/Feld | frei |
+| `DienstpostenBesetzt` | a | `dienstposten/<id>/besetzung` · Tripel | LWW/Entität | frei |
+| `DienstpostenEntfernt` / `…Wiederhergestellt` | a | `dienstposten/<id>/entfernt` · `boolean` | LWW/Feld, §5.4.5 | frei |
+| `SchichtplanEintragGesetzt` | a | `schichtplan/<dienstpostenId>/<datum>` · `string \| null` | LWW/Feld | frei |
+
+**Der Schlüssel des Schichtplans ist das Paar (`dienstpostenId`, `datum`).** Zwei Clients, die denselben Tag desselben Dienstpostens beschreiben, meinen dieselbe Zelle des FüSt-Blatts; mit zwei Entitäts-Ids hätten sie zwei Einträge für eine Zelle. `text` bleibt mehrzeiliger Freitext (ZDM §1.14) — ein Wert, keine Struktur.
+
+**`schicht` ist am Dienstposten Pflicht,** an der Einheit nach ZDM §2.3 Nr. 4 optional außer im Abschnittstyp `ANGEFORDERT`. Diese Ausnahme ist **keine Foldregel** — der Fold nimmt jede und jede fehlende Schicht an —, sondern eine Warnregel der Maske. Sie steht hier, damit sie nicht im Code als Ablehnung auftaucht (S6 betrifft die Vorbelegung des Schichtmodells, nicht diese Pflicht).
+
+**T50:** Zwei Einträge auf denselben Dienstposten und dasselbe Datum ⇒ ein Eintrag, LWW. **T51:** Auf verschiedene Daten ⇒ zwei Einträge.
+
+### §5.8 EEB-Meldungen und Anhänge
+
+```ts
+const EebMeldungEmpfangen = z.object({ meldungId: zId, einheitSchluessel: zPflichttext,
+  stand: zZeitpunkt, empfangenAm: zZeitpunkt, quelle: zMeldeQuelle,
+  signatur: z.object({ zustand: z.enum(["GUELTIG","UNGUELTIG"]), pubkey: zText.optional(),
+    kurzform: zText.optional(), absender: z.object({ name: zText.optional(),
+    email: zText.optional(), telefon: zText.optional() }).optional() }).optional(),
+  rohPayload: zText.optional(), bogen: z.unknown() })
+const EebMeldungZugeordnet  = z.object({ meldungId: zId })
+const EebMeldungUebernommen = z.object({ meldungId: zId, einheitId: zId,
+                                         uebernommeneFelder: z.array(zPflichttext) })
+const EebMeldungUebernahmeZurueckgenommen = z.object({ meldungId: zId })
+const EebMeldungAbgelehnt   = z.object({ meldungId: zId })   // `grund` Pflicht
+const EebMeldeStatusGesetzt = z.object({ meldungId: zId })
+
+const AnhangHinzugefuegt = z.object({ anhangId: z.string().length(64),
+  einheitId: zId.optional(), dateiname: zPflichttext, mimeTyp: zPflichttext,
+  groesse: zAnzahl, hinzugefuegtAm: zZeitpunkt })
+const AnhangEntfernt          = z.object({ anhangId: z.string().length(64) })
+const AnhangWiederhergestellt = z.object({ anhangId: z.string().length(64) })
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `EebMeldungEmpfangen` | b | Anlage über `meldungId` | Regel §3.6, §3.11 | **nein** |
+| `EebMeldungZugeordnet` | a | `meldung/<id>/einheitSchluessel` · `string` | LWW/Feld | frei |
+| `EebMeldungUebernommen` | a | `meldung/<id>/uebernahme` · `{einheitId, uebernommeneFelder}` | LWW/Entität | frei → `…Zurueckgenommen` |
+| `EebMeldungAbgelehnt` | a | `meldung/<id>/uebernahme` · `null` mit Ablehnungsvermerk | LWW/Entität | frei |
+| `EebMeldeStatusGesetzt` | a | `meldung/<id>/meldeStatus` · geschlossener Bereich | LWW/Feld | frei |
+| `AnhangHinzugefuegt` | b | Anlage über `anhangId` | Regel §3.6, §3.11 | frei → `AnhangEntfernt` |
+| `AnhangEntfernt` / `…Wiederhergestellt` | a | `anhang/<id>/entfernt` · `boolean` | LWW/Feld | frei |
+
+#### §5.8.1 Regel: der Empfang ist eine Tatsache
+
+`EebMeldungEmpfangen` ist **nicht rücknehmbar** und über `meldungId` idempotent. Die Meldung ist unveränderlich: Eine Korrektur ist eine **neue** Meldung mit eigener `meldungId` (Revision), Löschen ist verboten. Wer eine Meldung nicht will, lehnt sie ab — sie bleibt sichtbar.
+
+`bogen` steht als `z.unknown()`: Die Struktur gehört `@bos/eeb-format` und wird dort versioniert. Sie hier zweitzubeschreiben führte zwei Wahrheiten über dasselbe Format; die Prüfung leistet der Codec. Dieser Katalog legt fest, dass der Bogen **unverändert** mitgeführt wird.
+
+**Fünf Merkmale der Meldung sind abgeleitet, nicht gesetzt** (§3.2): `zugEtikett`, `teilEtikett`, `stammtVon` und `aufgegangenIn` folgen aus `bogen` und aus den Aufteilungs- und Zusammenführungsfeldern der zugehörigen Einheit; `uebernahmeZustand` folgt aus `uebernahme` und der Revisionsreihe:
+
+```
+uebernahmeZustand = abgelehnt                        ? ABGELEHNT
+                  : keine Übernahme                  ? NEU
+                  : jüngere Revision derselben Reihe ? GEAENDERT
+                  :                                    UEBERNOMMEN
+```
+
+„Jünger" heißt nach **`stand`**, nicht nach HLC (§2.6). Ein nachgescannter Papierbogen von gestern hat die höhere HLC und den älteren `stand`; nach HLC geordnet gälte er als aktuell, und die Lage zeigte den Stand von gestern.
+
+**T52:** Zwei `EebMeldungEmpfangen`, gleiche `meldungId`, gleicher Bogen ⇒ eine Meldung, kein Hinweis. **T53:** Gleiche `meldungId`, abweichender Bogen ⇒ eine Meldung (kleinste HLC), `inhaltsschluesselWidersprochen`, verworfener Inhalt in `verworfeneSchluessel`. **T54:** Abweichendes `empfangenAm` ⇒ eine Meldung, **kein** Hinweis. **T55:** Zweite Revision mit jüngerem `stand` nach Übernahme ⇒ `GEAENDERT`. **T56:** Zweite Revision mit **älterem** `stand`, aber höherer HLC ⇒ **nicht** `GEAENDERT`.
+
+#### §5.8.2 Regel: die Übernahme erzeugt die Feldereignisse mit
+
+`EebMeldungUebernommen` setzt `uebernahme` **und** die übernommenen Werte werden als eigenständige Feldereignisse geschrieben (`StaerkeGeaendert`, `LogistikGesetzt`, …) mit `grund = "EEB <meldungId>"`. Dort gelten die gewöhnlichen Konfliktregeln.
+
+**Das sind wirklich geschriebene Ereignisse, keine Projektion** — anders als beim Bewegungsauftrag. Welche Felder eine Übernahme übernimmt, folgt aus einer **Auswahl des Bedieners** und aus dem Stand, den er dabei gesehen hat; dieser gesehene Vorher-Wert steckt in den Feldereignissen und nirgends sonst. Als Projektion wäre er verloren, und Auflage 6 gälte für den ganzen EEB-Weg nicht mehr.
+
+**T57:** Übernahme plus zugehöriges `StaerkeGeaendert` mit gesehenem Vorher-Wert; ein nebenläufiges `StaerkeGeaendert` höherer HLC gewinnt, `vorherPasstNicht` entsteht.
+
+### §5.9 Einsatztagebuch und Korrekturen
+
+```ts
+const EtbEintragErfasst = z.object({ etbId: zId, zeitpunkt: zZeitpunkt, text: zPflichttext,
+  bezug: z.object({ entitaet: z.enum(["EINHEIT","ABSCHNITT","FAHRZEUG","ANFORDERUNG"]),
+                    id: zId }).optional() })
+const EtbEintragBerichtigt = z.object({ etbId: zId, berichtigtEintragId: zId,
+  zeitpunkt: zZeitpunkt, text: zPflichttext })   // `grund` Pflicht
+const KorrekturVon = z.object({ korrigiertesEreignisId: zId, zielTyp: zPflichttext,
+  zielNutzlast: z.unknown() })                   // `grund` Pflicht
+```
+
+| Typ | Form | Feldpfad / Wert | Klasse | Undo |
+|---|---|---|---|---|
+| `EtbEintragErfasst` | b | Anlage | additiv, §3.11 | **nein** |
+| `EtbEintragBerichtigt` | b | Anlage | additiv, §3.11 | **nein** |
+| `KorrekturVon` | wie `zielTyp` | der Feldpfad von `zielTyp` | wie `zielTyp` | **nein** |
+
+**`EtbEintragBerichtigt` ist die dreizehnte Anlageart** (§3.11) und hat eine eigene `etbId`. Zwei Berichtigungen derselben Id fallen damit unter dieselbe Regel wie jede andere Anlage; ohne sie hinge das Verhalten an der Wahl des Implementierers. `berichtigtEintragId` benennt die berichtigte Zeile **unabhängig davon, ob dieser Client sie hat** — Grabsteinregel wie in §7.2.
+
+#### §5.9.1 Das Einsatztagebuch ist eine Projektion des Ereignisstroms
+
+Jedes fachliche Ereignis erzeugt eine Tagebuchzeile; `EtbEintragErfasst` ist der frei getippte Zusatz. Doppelt geführt wird nichts. Die beiden Verwaltungsereignisse der Speicherschicht erscheinen nicht.
+
+**Das Tagebuch wird aus den Ereignisdateien gerendert, nicht aus dem Zustand.** Es ist **kein** Bestandteil des `Zustand` und geht **nicht** in den `zustandsHash` ein: Der Zustand hält je Feld zwei Beobachtungen, das Tagebuch braucht alle — projiziert man es aus dem Zustand, zeigt es bei drei Änderungen zwei Zeilen. Nur die Entitäten `EtbEintrag` selbst (die getippten und die berichtigenden Zeilen) stehen im Zustand, weil sie eigene Anlagen mit eigener Id sind.
+
+Das ist kein Verlust: Die Ereignisdateien sind append-only und vollständig; das Tagebuch ist jederzeit herstellbar — es kostet Lesezeit, keinen Inhalt. Die Zeilen tragen den fachlichen `zeitpunkt`, geordnet wird nach `hlc`. `art` und `ereignisId` aus ZDM §3.2 sind Merkmale dieser Projektion und keine Zustandsfelder.
+
+#### §5.9.2 Regel: `KorrekturVon` gilt nur für setzende Arten
+
+Die eingebettete Nutzlast wird gegen das Schema von `zielTyp` geprüft, und das Ereignis wirkt wie eines dieser Art — mit HLC und Id des Korrekturereignisses. Zusätzlich wird das korrigierte Ereignis im Tagebuch als berichtigt markiert; **beide Zeilen bleiben stehen** (U4).
+
+**`zielTyp` darf keine Anlageart sein.** Für Anlagen gilt §3.11: die kleinste HLC gewinnt; eine Korrektur hat kausal immer die größere und würde als `zweiteAnlageVerworfen` abgetan — sie täte nachweislich nichts. Ein solches `KorrekturVon` ist **ungültig** (§3.7 Punkt 4). Damit ist der Korrekturweg je Anlageart ein anderer, und zwar benannt:
+
+| Was falsch ist | Der Weg |
+|---|---|
+| ein Stammwert des Einsatzes, auch `beginn` | `EinsatzStammdatenGeaendert` |
+| ein Stammwert einer Einheit, auch `personalErfassung`, `einheitSchluessel` | `EinheitStammdatenGeaendert` |
+| eine Einheit ist gar nicht da | `EinheitEntfernt` mit Grund |
+| eine EEB-Meldung ist falsch | eine neue Revision; die alte ablehnen |
+| eine Tagebuchzeile ist falsch | `EtbEintragBerichtigt` |
+| eine Zuordnung, Zusage, ein Zeitpunkt, ein Status war fachlich falsch | `KorrekturVon` |
+
+**T58:** `KorrekturVon` mit `zielTyp = "StaerkeGeaendert"` und höherer HLC ⇒ die korrigierte Stärke gilt, beide Zeilen im Tagebuch. **T59:** `zielTyp = "EinheitGemeldet"` ⇒ ungültig, nicht gefaltet, geführt. **T60:** unbekannter `zielTyp` ⇒ ebenso.
+
+---
+
+## §6 Undo — die Regeln U1 bis U6 (Auflage 11)
+
+Auflage 11 legt vier Eckpunkte fest: Undo ist ein gewöhnliches Ereignis mit `undoOf`, es gibt einen Stapel je Client, `KorrekturVon` ist etwas anderes, und Redo gibt es nicht.
+
+### U1 — Undo ist ein neues Ereignis, und der Fold hat keinen Sonderpfad
+
+Eigene `id`, eigene `hlc`, eigener `akteur`, zusätzlich `undoOf`, und es setzt ein Feld auf den Wert, den das Original verdrängt hat — bei setzenden Arten aus dessen `vorher`.
+
+**Der Fold liest `undoOf` nicht, um zu entscheiden.** Er faltet die Kompensation nach der Regel ihrer eigenen Art. `undoOf` steht im Zustand (`Beobachtung.undoOf`, §3.2), weil der Hinweis aus U6 es braucht, und dient sonst dem Tagebuch und dem Stapel.
+
+Deshalb führt der Katalog für **jede** rücknehmbare Art ein Gegenereignis oder lässt dieselbe Art mit `neu = vorher` genügen. Ohne das gäbe es Arten, deren Rücknahme nur durch **Ausschluss** des Originals aus der Ereignismenge darstellbar wäre — eine Rückwärtslogik, bei der die Menge nicht mehr die Menge ist.
+
+**T61:** Ein Fold, dem `undoOf` künstlich entfernt wird, liefert denselben Zustand bis auf die Tagebuchmarkierung und den Hinweis aus U6.
+
+### U2 — Was rückgängig gemacht werden kann, ist typabhängig
+
+| Klasse | Arten | Kompensation |
+|---|---|---|
+| **frei rückgängig** | alle setzenden Arten, alle Verschiebungen, alle Anlagen außer den unten genannten, Zusagen | ein Ereignis derselben Art mit `neu = vorher` **oder** das im Katalog benannte Gegenereignis. Welche Form gilt, steht in der Undo-Spalte je Art |
+| **strukturell rückgängig** | `EinheitAufgeteilt` ↔ `EinheitZusammengefuehrt`, `AbschnittAngelegt` ↔ `AbschnittAufgeloest`, `AbschnittAufgeloest` ↔ `AbschnittWiederhergestellt` | der **inverse Fachvorgang**, nicht ein technisches Zurückrollen. Im Tagebuch als Rücknahme markiert, fachlich eine echte Handlung |
+| **nicht rückgängig** | `EinsatzAngelegt`, `EinsatzArchiviert`, `EebMeldungEmpfangen`, `EtbEintragErfasst`, `EtbEintragBerichtigt`, `KorrekturVon` | Tatsachen und Barrieren |
+
+**Für die sechs nicht rücknehmbaren Arten gibt es keinen gemeinsamen Ersatz.** Der Weg ist je Art ein anderer, und die Tabelle in §5.9.2 nennt ihn. Insbesondere ist `KorrekturVon` **nicht** der Ersatz für die Anlagen — auf eine Anlage angewandt täte es nachweislich nichts.
+
+**Warum `EinsatzArchiviert` nicht rückgängig ist, obwohl es zurückgenommen werden kann.** Ein Undo sagt „das war ein Versehen"; die Rücknahme einer Archivierung sagt „der Einsatz geht weiter". Das erste passt zu einer Barriere nicht — sie hat, solange sie galt, die Arbeit aller Clients gesteuert. `ArchivierungZurueckgenommen` trägt deshalb kein `undoOf`, steht nicht auf dem Stapel und braucht einen `grund`.
+
+### U3 — Der Stapel ist je Client, und er wird abgeleitet
+
+„Letzte Aktion rückgängig" heißt: das **eigene** Ereignis dieses Clients mit der höchsten HLC, das noch nicht kompensiert ist. Ein globales Undo wäre für den Bediener nicht vorhersagbar.
+
+Der Stapel liegt nirgends. KONZEPT-SPEICHER.md §4.4 leitet ihn aus dem lokalen Spiegel ab und **verweist die Semantik ausdrücklich hierher**. Zwei Größen legt dieses Konzept fest:
+
+* **Tiefe N = 20** (S4). Der Stapel dient dem Zurücknehmen eines Vertippers, nicht dem Zurückrollen einer Schicht; zwanzig Schritte decken jede Bedienfolge ab, die ein Mensch als „gerade eben" empfindet, und begrenzen, wie weit ein Undo in fremde Arbeit reicht.
+* **Kompensiert ist ein Ereignis, sobald *irgendein* Client es kompensiert hat.** §4.4 formuliert enger („ein **eigenes** Ereignis mit passendem `undoOf`") — Befund B2. Begründung: Hat B mein Ereignis zurückgenommen, ist der alte Stand wiederhergestellt. Nähme ich es erneut zurück, setzte mein Undo denselben Wert ein zweites Mal, mit einer HLC über allem, was zwischenzeitlich geschrieben wurde. Ich verwürfe fremde Arbeit, ohne es zu beabsichtigen.
+
+**T62:** A schreibt e1, B kompensiert e1 ⇒ der Stapel von A enthält e1 nicht mehr. **T63:** Der Stapel enthält keine fremden Ereignisse.
+
+### U4 — `KorrekturVon` ist etwas anderes als Undo
+
+Undo tut so, als wäre nichts gewesen. Korrektur sagt, dass etwas war. Sie ist das Werkzeug für „das war fachlich falsch" — etwa eine Meldung, die der falschen Einheit zugeordnet wurde und bereits in Summen und Ausdrücke eingegangen ist. Im Tagebuch erscheinen **beide** Zeilen. Ein Korrekturereignis steht nicht auf dem Undo-Stapel und ist selbst nicht rücknehmbar.
+
+### U5 — Redo gibt es nicht
+
+Ein zurückgenommenes Ereignis wird durch **erneutes Ausführen der Handlung** wiederhergestellt: ein neues Ereignis ohne `undoOf`. Ein Redo über nebenläufige Ereignisse ist nicht deterministisch definierbar — zwischen Undo und Redo kann ein anderer dasselbe Feld gesetzt haben, und ein Redo hätte keinen gesehenen Vorher-Wert.
+
+### U6 — Undo gegen Fremdänderung
+
+Kompensiert A ein Ereignis, das B zwischenzeitlich überschrieben hat, gilt weiterhin LWW: **Die Kompensation gewinnt, wenn ihre HLC höher ist.** Zusätzlich entsteht `undoTrifftFremdenStand` mit Gewinner, verdrängtem Wert und der Id des Originals. Eine eigene Hinweisart und nicht `vorherPasstNicht`, weil der Bediener nicht ein Feld gesetzt, sondern „rückgängig" gedrückt hat und die Oberfläche daraus einen anderen Satz bauen muss.
+
+Der Hinweis wird nach §3.8 bei jeder Materialisierung neu gerechnet: Er steht genau dann, wenn der **Gewinner** des Feldes ein `undoOf` trägt und der Zweitplatzierte von einem anderen Client stammt. Verdrängt später ein viertes Ereignis den Undo vom Gewinnerplatz, fällt er von selbst weg.
+
+**Zwei Clients nehmen dasselbe Ereignis zurück.** Beide schreiben eine Kompensation mit demselben `undoOf` und, weil beide aus demselben `vorher` stammen, demselben Wert. LWW entscheidet; das Ergebnis ist derselbe Wert, und weil die Werte gleich sind, entsteht **kein** Hinweis. Sahen sie verschiedene Stände, unterscheiden sich die Werte, und es gilt LWW mit Hinweis.
+
+**T64:** A schreibt `StatusGesetzt` (5), B setzt anders (7), A nimmt zurück (9) ⇒ der Wert von A gilt, `undoTrifftFremdenStand`. **T65:** Ein viertes `StatusGesetzt` (11) ⇒ der Hinweis fällt weg. **T66:** Zwei Clients kompensieren dasselbe Ereignis mit demselben Wert ⇒ ein Wert, kein Hinweis. **T67:** Dieselben mit verschiedenen Werten ⇒ LWW, Hinweis.
+
+---
+
+## §7 Die Barriere `EinsatzArchiviert` (Auflage 13)
+
+### §7.1 Nutzlast und Wirkung
+
+`EinsatzArchiviert` trägt `{ einsatzId, zeitpunkt, snapshotHash }`. Beide Werte stehen im Zustand unter `einsatz.archivierungen[<eigene id>]` (§3.2) — sonst wäre der „Beleg" nur im Ereignisstrom auffindbar und nach einem Schnappschuss verloren.
+
+`snapshotHash` ist **Beleg, nicht Bedingung**: Ein anderer Client, der einen anderen Hash rechnet, archiviert trotzdem und faltet trotzdem. Ihn zur Bedingung zu machen hieße, die Archivierung von der Sicht eines einzelnen Clients abhängig zu machen.
+
+Wirkung: Der Einsatz gilt als archiviert, der Client wechselt in einen Nur-Lesen-Zustand und bietet keine ändernden Bedienschritte mehr an. Der Fold hört **nicht** auf zu falten.
+
+### §7.2 Die maßgebliche Archivierung — und der monotone Grabstein
+
+Es kann mehr als ein `EinsatzArchiviert` geben. Die Ableitung:
+
+* Der Zustand führt `archivierungen` als Abbildung von **Ereignis-Id** auf `{ gilt, hlc, zeitpunkt?, snapshotHash?, zurueckgenommenDurch? }`. `EinsatzArchiviert` legt den Eintrag unter seiner **eigenen** Id mit `gilt = true` an; `ArchivierungZurueckgenommen` setzt den Eintrag unter der von ihm **benannten** Id auf `gilt = false`.
+* **Der Eintrag entsteht unabhängig davon, ob das benannte Ereignis bekannt ist.** Trifft die Rücknahme vor der Archivierung ein, steht der Eintrag als **Grabstein** mit `false` da; die später eintreffende Archivierung findet ihn vor.
+* **`gilt` ist monoton: einmal `false`, immer `false`** — unabhängig von den HLC beider Ereignisse. Kein LWW.
+* **Maßgeblich** ist unter allen Einträgen mit `gilt = true` der mit der **kleinsten** HLC des Archivierungsereignisses; bei Gleichstand die kleinere Id. Gibt es keinen, ist der Einsatz nicht archiviert.
+
+**Warum monoton und nicht LWW.** Mit LWW hinge die Wirkung einer Rücknahme an der Uhr des archivierenden Clients. KONZEPT-SPEICHER.md §3.2 übernimmt eine fremde HLC nicht, wenn sie mehr als fünf Minuten vorausläuft — der Fall, den die Fehlerinjektion von M0 ausdrücklich erzeugt. Archiviert A mit einer verstellten Uhr bei HLC 9 und nimmt B es daraufhin bei HLC 5 zurück, gewänne unter LWW die Archivierung: Die Rücknahme wäre wirkungslos, es entstünde **kein** Hinweis (das Feld hatte tatsächlich den erwarteten Wert), und die Speicherseite entfernte den Marker nicht. Ein Bedienschritt mit Pflicht-`grund` verpuffte still — gegen §1.3 Satz 3.
+
+Monotonie ist hier zulässig, weil es keine symmetrische Gegenhandlung gibt: Wer nach einer Rücknahme wieder archivieren will, schreibt ein **neues** `EinsatzArchiviert` mit neuer Id, und das legt einen neuen Eintrag an. Eine Rücknahme benennt immer genau ein Ereignis und kann keines wiederbeleben.
+
+Dieselbe Grabsteinregel gilt für jedes Feld, das ein Ereignis über die Id eines anderen adressiert: `KorrekturVon.korrigiertesEreignisId` und `EtbEintragBerichtigt.berichtigtEintragId` markieren das benannte Ereignis im Tagebuch, gleichgültig ob es vorliegt.
+
+Die zweite Archivierung erzeugt keine zweite Barriere, wohl aber `wirkungslosGegenTerminalzustand` (§3.12) — sie ist nicht falsch, nur später, und der Bediener soll sehen, dass sein Klick nichts geändert hat.
+
+**Die Schranke, benannt.** Der Schlüsselraum von `archivierungen` sind die Ids **beider** Arten. Eine Rücknahme auf eine Id, die es nie geben wird — Vertipper, verlorenes Segment —, hinterlässt einen dauerhaften Eintrag. Das ist selten und billig (ein Eintrag), aber es ist keine Null, und §8.2 führt es.
+
+### §7.3 Ein Ereignis nach der Archivierung — genau eine Behandlung
+
+**Das Ereignis wird angenommen, gefaltet und wirkt.** Verworfen wird nichts.
+
+**Der Hinweis hängt an der Entität, nicht am Ereignis und nicht am einzelnen Feld.** Für jede Entität, von deren Feldern mindestens eines eine Gewinner-HLC größer als die der maßgeblichen Archivierung trägt, entsteht **ein** `nachArchivierungEingegangen` mit dem Entitätspfad und der Liste der betroffenen Feldnamen. Das ist die einzige Form, die nach §3.1 trägt — der Zustand kennt Felder, nicht den Ereignisstrom — und sie hält die Zahl der Hinweise bei der Zahl der geänderten Entitäten statt bei der ihrer Felder. Bei einer Archivierung mit versehentlich kleiner HLC wären das sonst sechsstellig viele Hinweise im Hash.
+
+Die Zusicherung ist damit enger als „jedes nachträgliche Ereignis wird angezeigt" und dafür haltbar: **Keine nachträgliche Änderung, die im Zustand steht, bleibt unbemerkt.** Ein Ereignis, das seinen Konflikt verloren hat, hat den Zustand nicht geändert; es steht im Tagebuch. Die Meldung „N nachträgliche Einträge" ist eine Auskunft der Tagebuchprojektion (§5.9.1), nicht des Zustands; §8.2 führt das.
+
+**Diese Festlegung ersetzt ZDM §4.1 Regel 5** („nach `EinsatzArchiviert` werden neue Ereignisse nicht mehr gefaltet"). KONZEPT-SPEICHER.md §5.7 sagt das Gegenteil, ausdrücklich und begründet. Maßgeblich ist die Speicherfassung: Sie ist freigegeben, ZDM ist ein Entwurfsbericht; Auflage 13 verlangt „genau **eine** Behandlung"; und nicht zu falten hieße, dass der Zustand davon abhinge, in welcher Reihenfolge ein Client Archivierung und Nachzügler sieht — der Fold wäre keine Mengenfunktion mehr. Der Widerspruch steht zusätzlich als Befund B3 in §10.
+
+### §7.4 Die Rücknahme
+
+`ArchivierungZurueckgenommen` trägt `{ einsatzId, archivierungEreignisId }` und einen Pflicht-`grund`. **Kein Undo** (U2): kein `undoOf`, nicht auf dem Stapel.
+
+Wirkung: Der benannte Eintrag steht auf `gilt = false`. War er der maßgebliche und gibt es keinen weiteren mit `true`, ist der Einsatz wieder offen, und die Hinweise verschwinden an allen Entitäten, deren Felder nun keine geltende Archivierung mehr überschreiten. **Kein Zurückrollen, sondern dieselbe Ableitung über eine größere Menge** — deshalb geht es auch aus einem Schnappschuss heraus.
+
+Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv.marker`, und kein Client legt ihn wieder an, solange sein eigener Fold den Einsatz nicht als archiviert führt.
+
+**T68:** Zwei `EinsatzArchiviert` (5 und 9) ⇒ maßgeblich ist 5, für die zweite ein Wirkungslos-Hinweis. **T69:** `StatusGesetzt` mit HLC 7 dazu ⇒ gefaltet, wirkt, ein `nachArchivierungEingegangen` an der Einheit mit dem Feldnamen. **T70:** Rücknahme der Archivierung mit HLC 5 ⇒ maßgeblich ist 9, die Einheit aus HLC 7 verliert ihren Hinweis. **T71 (Grabstein):** Die Rücknahme trifft **vor** ihrer Archivierung ein ⇒ derselbe Zustand wie in umgekehrter Reihenfolge. **T72 (Monotonie):** Archivierung HLC 9, Rücknahme HLC 5 ⇒ der Einsatz ist offen. **T73:** Beide Archivierungen zurückgenommen ⇒ Einsatz offen, keine Entität trägt den Hinweis. **T74:** Alle vorstehenden Fälle in jeder Permutation mit demselben Ergebnis.
