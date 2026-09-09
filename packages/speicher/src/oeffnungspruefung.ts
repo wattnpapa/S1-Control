@@ -24,9 +24,8 @@ import {
   type Dateikennung,
   type Einsatzablage,
 } from "./pfade.js";
-import { KETTE_ANFANG } from "./pruefsummen.js";
 import { vergleicheSpiegel } from "./spiegelvergleich.js";
-import { leseAbschnitt, leseZeilengrenzen, type Identitaetenblick } from "./zeile.js";
+import { leseZeilengrenzen, type Identitaetenblick } from "./zeile.js";
 
 /** Das Ergebnis der Prüfung beim Öffnen. */
 export type Oeffnungsbefund =
@@ -77,7 +76,6 @@ export async function pruefeBeimOeffnen(
 ): Promise<Oeffnungsbefund> {
   const eigene = await shareSegmenteMitPraefix(optionen, clientPraefix(optionen.clientId));
   let hoechste = 0;
-  let kette = KETTE_ANFANG;
 
   for (const kennung of eigene) {
     const share = await liesOderLeer(optionen.dateisystem, optionen.ablage.shareDatei(kennung.name));
@@ -105,8 +103,6 @@ export async function pruefeBeimOeffnen(
         grund: ausgang.grund,
       };
     }
-    // Die Kette läuft über den Segmentwechsel hinweg durch (§2.3).
-    kette = leseAbschnitt(lokal, 0, kette).letzteKette;
   }
 
   for (const frühere of optionen.frühereClientIds ?? []) {

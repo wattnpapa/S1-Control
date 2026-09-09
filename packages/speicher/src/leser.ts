@@ -17,36 +17,46 @@
 import type { HlcUhr, Uhrmeldung } from "@s1/domaene";
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
+import { shareklasse, type Shareklasse } from "./fehler.js";
 import type { Identitaetenbuch } from "./identitaeten.js";
-import { clientPraefix, zerlegeEreignisDateiname, segmentText, type Einsatzablage } from "./pfade.js";
-import { KETTE_ANFANG, kettenPruefsumme } from "./pruefsummen.js";
+import { grenzeUndKette, kettenanker, type Segmentquelle } from "./kettenanker.js";
+import { Dateilage } from "./leserlage.js";
+import { clientPraefix, segmentText, zerlegeEreignisDateiname, type Einsatzablage } from "./pfade.js";
 import { angekuendigterNachfolger } from "./segmentlese.js";
-import { TYP_SEGMENT_ERSETZT, ersatzAus } from "./verwaltungsereignisse.js";
-import { UNVOLLSTAENDIG_FRIST_MS, VERFALL_MS } from "./startwerte.js";
-import {
-  neuerFremderOffset,
-  type FremderOffset,
-  type UploadZustand,
-} from "./uploadZustand.js";
-import {
-  leseAbschnitt,
-  leseZeilengrenzen,
-  type Defektgrund,
-  type GeleseneZeile,
-} from "./zeile.js";
+import { neuerFremderOffset, type FremderOffset, type UploadZustand } from "./uploadZustand.js";
+import { leseAbschnitt, leseZeilengrenzen, type Defektgrund, type GeleseneZeile } from "./zeile.js";
 import { wanduhrText, type Zeitquelle } from "./zeit.js";
 
-/** In welchem Takt eine Datei geführt wird (§6.2). */
-export type Takt = "A" | "B";
+export type { Takt } from "./leserlage.js";
+
+/** Warum eine Datei in Quarantäne steht. */
+export type Quarantaenegrund = Defektgrund | "fristAbgelaufen";
 
 /** Eine Quarantänestelle mit dem Text, den §8.2 Punkt 3 verlangt. */
 export interface Quarantaenemeldung {
   readonly datei: string;
   readonly offset: number;
-  readonly grund: Defektgrund | "fristAbgelaufen";
+  readonly grund: Quarantaenegrund;
   /** §8.1: vorläufig heißt, die Datei wird in jedem Takt-B-Durchlauf erneut geprüft. */
   readonly vorlaeufig: boolean;
+  /** §8.2 Punkt 6 verlangt für `s1 akte pruefe` Datei, Offset **und** Zeitpunkt. */
+  readonly seit: number;
   readonly meldung: string;
+}
+
+/**
+ * Ein gescheiterter Lesezugriff (§8.3).
+ *
+ * „Das Lesen fremder Dateien liefert Fehler, die als ‚nicht erreichbar' gezählt
+ * werden. Die Statuszeile nennt Dauer und Anzahl der wartenden Einträge."
+ * Deshalb wird der Fehler gemeldet und nicht verschluckt: Verschluckt sähe ein
+ * Share-Ausfall aus wie Bedingung 2 der Ruhephase (§7.6) — überall 0 Bytes —,
+ * und ein Konvergenzlauf hielte Stillstand für Ruhe.
+ */
+export interface Lesefehler {
+  readonly datei: string;
+  readonly klasse: Shareklasse;
+  readonly code: string;
 }
 
 /** Das Ergebnis eines Takt-Durchlaufs. */
@@ -64,45 +74,14 @@ export interface Pollergebnis {
   readonly neueDateien: readonly string[];
   /** Neu entstandene Quarantänestellen (§8.1, §8.2). */
   readonly neueQuarantaenen: readonly Quarantaenemeldung[];
+  /** Quarantänestellen, die ohne Zutun weggefallen sind (§8.1). */
+  readonly geheilteQuarantaenen: readonly string[];
+  /** Gescheiterte Zugriffe (§8.3). Nicht leer heißt: Dies war **keine** Ruhephase. */
+  readonly lesefehler: readonly Lesefehler[];
   /** Meldungen der Uhr beim Empfang fremder HLC (§3.2). */
   readonly uhrmeldungen: readonly Uhrmeldung[];
   /** Zahl der neu gelesenen Bytes; 0 in **allen** Dateien ist Bedingung 2 der Ruhephase (§7.6). */
   readonly gelesenBytes: number;
-}
-
-/** Laufzeitzustand einer beobachteten fremden Datei. */
-interface Dateilage {
-  readonly name: string;
-  offsets: FremderOffset;
-  takt: Takt;
-  /** Wann zuletzt **neue** Bytes kamen — Grundlage des Verfalls aus §6.2. */
-  letzteBytes: number;
-  /**
-   * Das weiteste bisher gesehene Dateiende (`leseOffset` plus gelesene Bytes).
-   *
-   * Nötig, um „neue Bytes" von „dieselben Bytes noch einmal" zu unterscheiden:
-   * Eine unvollständige Zeile wird bei jedem Durchlauf erneut mitgelesen, ohne
-   * dass die Datei gewachsen wäre. Ohne diese Unterscheidung setzte sie den
-   * Verfall aus §6.2 endlos zurück, und die Datei bliebe für den Rest der Lage
-   * im kurzen Takt.
-   */
-  gesehenesEnde: number;
-  /** Seit wann dieselbe unvollständige Zeile unverändert unvollständig ist (§8.1). */
-  unvollstaendigSeit: number | undefined;
-  /** Byte-Offset, an dem die unvollständige Zeile beginnt — zur Prüfung „unverändert". */
-  unvollstaendigAb: number | undefined;
-  /** §4.3: durch eine Abschlusszeile angekündigt, aber noch nicht vorhanden. */
-  angekuendigt: boolean;
-  /**
-   * Ob der Kettenanker dieser Datei feststeht (§2.3, Sonderfälle).
-   *
-   * Für Segment `0000` sind es 32 Nullen; für ein Folgesegment die
-   * Kettenprüfsumme der letzten Zeile des Vorgängers; für ein Ersatzsegment die
-   * der letzten unbeschädigten Zeile des ersetzten Segments (§4.6, Schritt 3).
-   * Solange er nicht feststeht, wird die Datei **nicht** ausgewertet — sonst
-   * bräche die Kettenprüfung an einer Stelle, an der gar nichts kaputt ist.
-   */
-  ankerBekannt: boolean;
 }
 
 export interface LeserOptionen {
@@ -117,9 +96,56 @@ export interface LeserOptionen {
   readonly uhr?: HlcUhr;
 }
 
+/** Sammelt, was ein Durchlauf ergeben hat. */
+class Sammler {
+  readonly neueZeilen: GeleseneZeile[] = [];
+  readonly neueDateien: string[] = [];
+  readonly neueQuarantaenen: Quarantaenemeldung[] = [];
+  readonly geheilteQuarantaenen: string[] = [];
+  readonly lesefehler: Lesefehler[] = [];
+  readonly uhrmeldungen: Uhrmeldung[] = [];
+  gelesenBytes = 0;
+
+  fertig(): Pollergebnis {
+    return {
+      neueZeilen: this.neueZeilen,
+      neueDateien: this.neueDateien,
+      neueQuarantaenen: this.neueQuarantaenen,
+      geheilteQuarantaenen: this.geheilteQuarantaenen,
+      lesefehler: this.lesefehler,
+      uhrmeldungen: this.uhrmeldungen,
+      gelesenBytes: this.gelesenBytes,
+    };
+  }
+
+  uebernimm(anderer: Pollergebnis): void {
+    this.neueZeilen.push(...anderer.neueZeilen);
+    this.neueDateien.push(...anderer.neueDateien);
+    this.neueQuarantaenen.push(...anderer.neueQuarantaenen);
+    this.geheilteQuarantaenen.push(...anderer.geheilteQuarantaenen);
+    this.lesefehler.push(...anderer.lesefehler);
+    this.uhrmeldungen.push(...anderer.uhrmeldungen);
+    this.gelesenBytes += anderer.gelesenBytes;
+  }
+}
+
 export class Leser {
   readonly #optionen: LeserOptionen;
   readonly #lagen = new Map<string, Dateilage>();
+  /**
+   * §8.4: „**Kein zweiter Versuch, solange der erste unterwegs ist.** Je Datei
+   * ist höchstens ein Zugriff offen; die Speicherschicht serialisiert das
+   * selbst und überlässt es nicht dem Aufrufer."
+   *
+   * Takt A (3 s) und Takt B (4 s) laufen nach §6.2 unabhängig, und ein
+   * SMB-Zugriff darf bis zu 60 Sekunden hängen (§8.4) — die Überlappung ist der
+   * Normalfall, nicht die Ausnahme. Ohne diesen Riegel läsen zwei Durchläufe
+   * denselben `leseOffset` und hängten beide dieselben geprüften Bytes an den
+   * lokalen Spiegel an. Der Spiegel wäre danach kettenwidrig, und §8.6.1
+   * Regel 4 („Der ausgeleitete Spiegel enthält nur geprüfte Zeilen") gälte
+   * nicht mehr.
+   */
+  readonly #inArbeit = new Set<string>();
   #zustand: UploadZustand;
 
   constructor(optionen: LeserOptionen, zustand: UploadZustand) {
@@ -127,7 +153,7 @@ export class Leser {
     this.#zustand = zustand;
     for (const [schluessel, offsets] of Object.entries(zustand.fremd)) {
       const name = `${schluessel}.jsonl`;
-      this.#lagen.set(name, this.#neueLage(name, offsets));
+      this.#lagen.set(name, new Dateilage(name, offsets, optionen.zeit()));
     }
   }
 
@@ -140,12 +166,22 @@ export class Leser {
   get quarantaenen(): readonly Quarantaenemeldung[] {
     return [...this.#lagen.values()]
       .filter((lage) => lage.offsets.quarantaeneAb !== null)
-      .map((lage) => this.#meldung(lage, lage.offsets.quarantaeneAb as number, "kette", lage.offsets.vorlaeufig === true));
+      .map((lage) =>
+        this.#meldung(
+          lage,
+          lage.offsets.quarantaeneAb as number,
+          // Der tatsächliche Grund, nicht ein angenommener: §8.2 Punkt 6
+          // verlangt eine Auskunft, und eine falsch behauptete Ursache ist
+          // schlechter als gar keine.
+          (lage.quarantaenegrund ?? "fristAbgelaufen") as Quarantaenegrund,
+          lage.offsets.vorlaeufig === true,
+        ),
+      );
   }
 
   /** Die Dateien, die gerade im kurzen Takt geführt werden (§6.2). */
   get inTaktA(): readonly string[] {
-    return [...this.#lagen.values()].filter((l) => this.#gehoertZuTaktA(l)).map((l) => l.name);
+    return [...this.#lagen.values()].filter((l) => l.inTaktA()).map((l) => l.name);
   }
 
   /**
@@ -163,9 +199,19 @@ export class Leser {
    *
    * Zugleich baut er die Menge der gesehenen Identitäten auf, die §5.3 „beim
    * Öffnen aus dem lokalen Spiegel" verlangt.
+   *
+   * **Ohne Kettenprüfung**, und das ist Absicht: Der Spiegel enthält nach §5.5
+   * ausschließlich geprüfte Zeilen; gesucht ist hier seine Länge und der
+   * Kettenwert an ihr, kein Urteil. Eine Prüfung bräuchte den Anker dieser
+   * Datei — bei einem fremden Ersatzsegment ist das eine innere Zeile des
+   * ersetzten Segments (§4.6, Schritt 3) —, und mit dem falschen Anker fiele
+   * `leseOffset` auf 0 zurück. Genau das erzeugte den doppelten Anhang, den
+   * dieser Abgleich verhindern soll.
    */
   async gleicheMitSpiegelAb(): Promise<void> {
-    const namen = await this.#optionen.dateisystem.listeVerzeichnis(this.#optionen.ablage.lokalEreignisse);
+    const namen = await this.#optionen.dateisystem.listeVerzeichnis(
+      this.#optionen.ablage.lokalEreignisse,
+    );
     const jePraefix = new Map<string, { name: string; segment: number }[]>();
     for (const name of namen) {
       const kennung = zerlegeEreignisDateiname(name);
@@ -176,23 +222,26 @@ export class Leser {
     }
 
     for (const liste of jePraefix.values()) {
-      // Die Kette läuft über den Segmentwechsel hinweg durch (§2.3); deshalb
-      // aufsteigend und mit durchgereichter Kette.
-      let kette = KETTE_ANFANG;
       for (const { name } of liste.sort((a, b) => a.segment - b.segment)) {
-        const bytes = await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.lokalDatei(name), 0);
-        const gelesen = leseAbschnitt(bytes, 0, kette, this.#optionen.identitaeten);
-        this.#optionen.identitaeten.merkeAlle(gelesen.zeilen);
-        const lage = this.#lagen.get(name) ?? this.#neueLage(name, neuerFremderOffset());
+        const bytes = await this.#optionen.dateisystem.liesAb(
+          this.#optionen.ablage.lokalDatei(name),
+          0,
+        );
+        const { endeOffset, letzteKette } = grenzeUndKette(bytes);
+        const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
+        this.#optionen.identitaeten.merkeAlle(zeilen);
+        const lage =
+          this.#lagen.get(name) ?? new Dateilage(name, neuerFremderOffset(), this.#optionen.zeit());
         lage.offsets = {
           ...lage.offsets,
-          leseOffset: gelesen.endeOffset,
-          letzteKette: gelesen.letzteKette,
+          leseOffset: endeOffset,
+          letzteKette,
           abgeschlossen:
-            lage.offsets.abgeschlossen || angekuendigterNachfolger(gelesen.zeilen) !== undefined,
+            lage.offsets.abgeschlossen || angekuendigterNachfolger(zeilen) !== undefined,
         };
+        lage.ankerBekannt = true;
+        lage.gesehenesEnde = endeOffset;
         this.#lagen.set(name, lage);
-        kette = gelesen.letzteKette;
       }
     }
     this.#schreibeZustandFort();
@@ -205,11 +254,10 @@ export class Leser {
    */
   async pruefeQuarantaenenErneut(): Promise<Pollergebnis> {
     const betroffen = [...this.#lagen.values()].filter((l) => l.offsets.quarantaeneAb !== null);
-    for (const lage of betroffen) {
-      lage.offsets = { ...lage.offsets, quarantaeneAb: null };
-      lage.takt = "A";
-    }
-    return this.#lies(betroffen);
+    const namen = betroffen.map((l) => l.name);
+    for (const lage of betroffen) lage.quarantaeneAufheben();
+    const ergebnis = await this.#lies(betroffen);
+    return { ...ergebnis, geheilteQuarantaenen: this.#nochGeheilt(namen, ergebnis) };
   }
 
   /**
@@ -224,7 +272,7 @@ export class Leser {
    * Abschlusszeile endgültig erkennbar.
    */
   async taktA(): Promise<Pollergebnis> {
-    return this.#lies([...this.#lagen.values()].filter((l) => this.#gehoertZuTaktA(l)));
+    return this.#lies([...this.#lagen.values()].filter((l) => l.inTaktA()));
   }
 
   /**
@@ -233,157 +281,138 @@ export class Leser {
    * Eine Verzeichnisauflistung von `ereignisse\` findet Dateien neuer Clients
    * und angekündigte Nachfolgesegmente. Zusätzlich werden hier die Dateien
    * gelesen, die aus Takt A herausgefallen sind: verfallene, vorläufig
-   * quarantänisierte und angekündigte. Ohne diesen Zusatz wäre Bedingung 3 der
-   * Ruhephase (§7.6) für genau diese Dateien unbestimmt.
+   * quarantänisierte und angekündigte — genau die drei, die §7.6 Bedingung 3
+   * aufzählt.
+   *
+   * **Die vorläufige Quarantäne wird dabei aufgehoben** (§8.1): „Wird die Zeile
+   * später doch vollständig und kettenrichtig, fällt die Quarantäne ohne Zutun
+   * weg und die Datei kehrt in Takt A zurück." Bleibt die Zeile unvollständig,
+   * setzt die Frist sie im selben Durchlauf wieder.
    */
   async taktB(): Promise<Pollergebnis> {
-    const neueDateien: string[] = [];
-    for (const name of await this.#optionen.dateisystem.listeVerzeichnis(this.#optionen.ablage.shareEreignisse)) {
+    const sammler = new Sammler();
+    let namen: readonly string[];
+    try {
+      namen = await this.#optionen.dateisystem.listeVerzeichnis(
+        this.#optionen.ablage.shareEreignisse,
+      );
+    } catch (fehler) {
+      sammler.lesefehler.push(this.#lesefehler("ereignisse", fehler));
+      return sammler.fertig();
+    }
+
+    for (const name of namen) {
       const kennung = zerlegeEreignisDateiname(name);
       if (kennung === undefined || this.#istEigen(kennung.praefix)) continue;
       const bekannt = this.#lagen.get(name);
       if (bekannt === undefined) {
-        this.#lagen.set(name, this.#neueLage(name, neuerFremderOffset()));
-        neueDateien.push(name);
+        this.#lagen.set(name, new Dateilage(name, neuerFremderOffset(), this.#optionen.zeit()));
+        sammler.neueDateien.push(name);
       } else if (bekannt.angekuendigt) {
         // Das angekündigte Nachfolgesegment ist da (§4.3).
         bekannt.angekuendigt = false;
         bekannt.takt = "A";
       }
     }
+
     const zuLesen = [...this.#lagen.values()].filter(
-      (l) => !l.offsets.abgeschlossen && (!this.#gehoertZuTaktA(l) || neueDateien.includes(l.name)),
+      (l) => l.inTaktB() || sammler.neueDateien.includes(l.name),
     );
-    const ergebnis = await this.#lies(zuLesen);
-    return { ...ergebnis, neueDateien: [...neueDateien, ...ergebnis.neueDateien] };
+    const aufgehoben = zuLesen.filter((l) => l.vorlaeufigeQuarantaene()).map((l) => l.name);
+    for (const lage of zuLesen) {
+      if (lage.vorlaeufigeQuarantaene()) lage.quarantaeneAufheben();
+    }
+    const gelesen = await this.#lies(zuLesen);
+    sammler.uebernimm(gelesen);
+    return { ...sammler.fertig(), geheilteQuarantaenen: this.#nochGeheilt(aufgehoben, gelesen) };
+  }
+
+  /** Welche der aufgehobenen Quarantänen im selben Durchlauf nicht wieder zuschlugen. */
+  #nochGeheilt(aufgehoben: readonly string[], ergebnis: Pollergebnis): readonly string[] {
+    const wiederKrank = new Set(ergebnis.neueQuarantaenen.map((q) => q.datei));
+    return aufgehoben.filter((name) => !wiederKrank.has(name));
   }
 
   /** Der Leseweg nach §5.5, angewandt auf eine Auswahl von Dateien. */
   async #lies(lagen: readonly Dateilage[]): Promise<Pollergebnis> {
-    const neueZeilen: GeleseneZeile[] = [];
-    const neueQuarantaenen: Quarantaenemeldung[] = [];
-    const uhrmeldungen: Uhrmeldung[] = [];
-    const neueDateien: string[] = [];
-    let gelesenBytes = 0;
+    const sammler = new Sammler();
     const zurueckgestellt: Dateilage[] = [];
 
     for (const lage of lagen) {
-      let bytes: Uint8Array;
+      // §8.4: kein zweiter Zugriff auf dieselbe Datei, solange der erste läuft.
+      if (this.#inArbeit.has(lage.name)) continue;
+      this.#inArbeit.add(lage.name);
       try {
-        bytes = await this.#optionen.dateisystem.liesAb(
-          this.#optionen.ablage.shareDatei(lage.name),
-          lage.offsets.leseOffset,
-        );
-      } catch (fehler) {
-        if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
-          // Ein angekündigtes, noch nicht vorhandenes Nachfolgesegment ist kein
-          // Fehler, sondern ein Wartezustand (§4.3).
-          this.#verfallPruefen(lage);
-          continue;
-        }
-        // §8: Ein Fehler an einer Datei hält die anderen nicht auf.
-        continue;
+        if (await this.#liesEine(lage, sammler)) zurueckgestellt.push(lage);
+      } finally {
+        this.#inArbeit.delete(lage.name);
       }
-      gelesenBytes += bytes.byteLength;
-      const gesehenesEnde = lage.offsets.leseOffset + bytes.byteLength;
-      if (gesehenesEnde > lage.gesehenesEnde) {
-        lage.gesehenesEnde = gesehenesEnde;
-        lage.letzteBytes = this.#optionen.zeit();
-        lage.takt = "A";
-      }
-      if (bytes.byteLength === 0) {
-        this.#verfallPruefen(lage);
-        this.#fristPruefen(lage, neueQuarantaenen);
-        continue;
-      }
-      if (!lage.ankerBekannt) {
-        const anker = await this.#anfangsKette(lage, bytes);
-        if (anker === undefined) {
-          // Der Vorgänger ist noch nicht gelesen. Zurückstellen, nicht als
-          // Defekt melden — sonst setzte der Leser eine gesunde Datei allein
-          // deshalb in Quarantäne, weil er sie in der falschen Reihenfolge
-          // angefasst hat.
-          zurueckgestellt.push(lage);
-          continue;
-        }
-        lage.offsets = { ...lage.offsets, letzteKette: anker };
-        lage.ankerBekannt = true;
-      }
-      const geprueft = await this.#verarbeite(lage, bytes, neueQuarantaenen, uhrmeldungen);
-      neueZeilen.push(...geprueft);
-      // §8.1: Die Frist läuft auch dann, wenn bei jedem Durchlauf dieselben
-      // unvollständigen Bytes zurückkommen — genau das ist ihr Anwendungsfall.
-      this.#verfallPruefen(lage);
-      this.#fristPruefen(lage, neueQuarantaenen);
     }
 
     this.#schreibeZustandFort();
-    const ergebnis = { neueZeilen, neueDateien, neueQuarantaenen, uhrmeldungen, gelesenBytes };
+    const ergebnis = sammler.fertig();
     if (zurueckgestellt.length === 0 || zurueckgestellt.length === lagen.length) return ergebnis;
     // Ein zweiter Durchgang genügt, wenn im ersten etwas gelesen wurde: Der
     // Vorgänger einer zurückgestellten Datei kann jetzt bekannt sein.
-    const nachzuegler = await this.#lies(zurueckgestellt);
-    return {
-      neueZeilen: [...neueZeilen, ...nachzuegler.neueZeilen],
-      neueDateien: [...neueDateien, ...nachzuegler.neueDateien],
-      neueQuarantaenen: [...neueQuarantaenen, ...nachzuegler.neueQuarantaenen],
-      uhrmeldungen: [...uhrmeldungen, ...nachzuegler.uhrmeldungen],
-      gelesenBytes: gelesenBytes + nachzuegler.gelesenBytes,
-    };
+    const gesamt = new Sammler();
+    gesamt.uebernimm(ergebnis);
+    gesamt.uebernimm(await this.#lies(zurueckgestellt));
+    return gesamt.fertig();
   }
 
-  /**
-   * Der Kettenanker einer neu entdeckten Datei (§2.3, Sonderfälle).
-   *
-   * - Erste Zeile des **ersten** Segments eines Clients: 32 Nullen.
-   * - Erste Zeile eines **Folgesegments**: Kettenprüfsumme der letzten Zeile
-   *   des Vorgängersegments — die Kette läuft über den Segmentwechsel hinweg
-   *   durch (§4.3).
-   * - Erste Zeile eines **Ersatzsegments** (§4.6, Schritt 3): Kettenprüfsumme
-   *   der letzten **unbeschädigten** Zeile des ersetzten Segments, also der
-   *   Zeile, die genau am genannten Offset endet. Bewusst nicht dessen letzte
-   *   Zeile — die Kette schließt an der Stelle an, ab der repariert wird.
-   *
-   * Der Wert wird aus dem eigenen Spiegel **berechnet**, nie aus der Zeile
-   * übernommen: Ein aus der Datei übernommener Anker prüfte nichts.
-   */
-  async #anfangsKette(lage: Dateilage, bytes: Uint8Array): Promise<string | undefined> {
-    const kennung = zerlegeEreignisDateiname(lage.name);
-    if (kennung === undefined) return undefined;
-    if (kennung.segment === 0) return KETTE_ANFANG;
-
-    const erste = leseZeilengrenzen(bytes, 0).zeilen[0];
-    if (erste === undefined) return undefined;
-
-    if (erste.rahmen.typ === TYP_SEGMENT_ERSETZT) {
-      const ersatz = ersatzAus(erste.rahmen["nutzlast"]);
-      if (ersatz === undefined) return undefined;
-      return this.#ketteAnStelle(kennung.praefix, ersatz.ersetztesSegment, ersatz.abOffset);
-    }
-    return this.#ketteAmEndeVon(kennung.praefix, kennung.segment - 1);
-  }
-
-  /** Die Kettenprüfsumme der Zeile, die im eigenen Spiegel genau bei `offset` endet. */
-  async #ketteAnStelle(praefix: string, segment: number, offset: number): Promise<string | undefined> {
-    if (offset === 0) {
-      return segment === 0 ? KETTE_ANFANG : this.#ketteAmEndeVon(praefix, segment - 1);
-    }
-    const name = `${praefix}.${segmentText(segment)}.jsonl`;
+  /** @returns `true`, wenn die Datei zurückgestellt wurde (Kettenanker noch unbekannt). */
+  async #liesEine(lage: Dateilage, sammler: Sammler): Promise<boolean> {
     let bytes: Uint8Array;
     try {
-      bytes = await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.lokalDatei(name), 0);
-    } catch {
-      return undefined;
+      bytes = await this.#optionen.dateisystem.liesAb(
+        this.#optionen.ablage.shareDatei(lage.name),
+        lage.offsets.leseOffset,
+      );
+    } catch (fehler) {
+      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
+        // Ein angekündigtes, noch nicht vorhandenes Nachfolgesegment ist kein
+        // Fehler, sondern ein Wartezustand (§4.3) — und es verfällt wie jede
+        // andere Datei (§6.2).
+        lage.verfallPruefen(this.#optionen.zeit);
+        return false;
+      }
+      // §8, Grundsatz: Ein Fehler an einer Datei hält die anderen nicht auf.
+      // §8.3: Er wird trotzdem gezählt und gemeldet.
+      sammler.lesefehler.push(this.#lesefehler(lage.name, fehler));
+      lage.verfallPruefen(this.#optionen.zeit);
+      return false;
     }
-    const zeile = leseZeilengrenzen(bytes, 0).zeilen.find((z) => z.offset + z.laenge === offset);
-    return zeile === undefined ? undefined : kettenPruefsumme(zeile.bytes);
-  }
 
-  /** Die Kettenprüfsumme am Ende eines vollständig gelesenen Vorgängersegments. */
-  #ketteAmEndeVon(praefix: string, segment: number): string | undefined {
-    const vorgaenger = this.#lagen.get(`${praefix}.${segmentText(segment)}.jsonl`);
-    if (vorgaenger === undefined || !vorgaenger.offsets.abgeschlossen) return undefined;
-    return vorgaenger.offsets.letzteKette;
+    sammler.gelesenBytes += bytes.byteLength;
+    lage.merkeBytes(lage.offsets.leseOffset + bytes.byteLength, this.#optionen.zeit());
+
+    if (bytes.byteLength === 0) {
+      lage.verfallPruefen(this.#optionen.zeit);
+      this.#fristPruefen(lage, sammler);
+      return false;
+    }
+
+    if (!lage.ankerBekannt) {
+      const anker = await this.#anfangsKette(lage, bytes);
+      if (anker === undefined) {
+        // Der Vorgänger ist noch nicht gelesen. Zurückstellen, nicht als Defekt
+        // melden — sonst setzte der Leser eine gesunde Datei allein deshalb in
+        // Quarantäne, weil er sie in der falschen Reihenfolge angefasst hat.
+        // Der Verfall aus §6.2 gilt trotzdem: Eine dauerhaft unauflösbare Datei
+        // darf nicht für den Rest der Lage jeden kurzen Takt kosten.
+        lage.verfallPruefen(this.#optionen.zeit);
+        return true;
+      }
+      lage.offsets = { ...lage.offsets, letzteKette: anker };
+      lage.ankerBekannt = true;
+    }
+
+    await this.#verarbeite(lage, bytes, sammler);
+    // §8.1: Die Frist läuft auch dann, wenn bei jedem Durchlauf dieselben
+    // unvollständigen Bytes zurückkommen — genau das ist ihr Anwendungsfall.
+    lage.verfallPruefen(this.#optionen.zeit);
+    this.#fristPruefen(lage, sammler);
+    return false;
   }
 
   /**
@@ -397,12 +426,7 @@ export class Leser {
    * fremden Datei **nicht** byteweise identisch mit der Share-Datei — er ist
    * ihr geprüftes Präfix.
    */
-  async #verarbeite(
-    lage: Dateilage,
-    bytes: Uint8Array,
-    neueQuarantaenen: Quarantaenemeldung[],
-    uhrmeldungen: Uhrmeldung[],
-  ): Promise<readonly GeleseneZeile[]> {
+  async #verarbeite(lage: Dateilage, bytes: Uint8Array, sammler: Sammler): Promise<void> {
     const gelesen = leseAbschnitt(
       bytes,
       lage.offsets.leseOffset,
@@ -424,104 +448,93 @@ export class Leser {
       const hlc = zeile.rahmen["hlc"];
       if (this.#optionen.uhr !== undefined && istHlc(hlc)) {
         const empfang = this.#optionen.uhr.empfangen(hlc);
-        if (empfang.meldung !== undefined) uhrmeldungen.push(empfang.meldung);
+        if (empfang.meldung !== undefined) sammler.uhrmeldungen.push(empfang.meldung);
       }
     }
 
-    const abgeschlossen = angekuendigterNachfolger(gelesen.zeilen);
+    const nachfolger = angekuendigterNachfolger(gelesen.zeilen);
     lage.offsets = {
       ...lage.offsets,
       leseOffset: gelesen.endeOffset,
       letzteKette: gelesen.letzteKette,
-      abgeschlossen: lage.offsets.abgeschlossen || abgeschlossen !== undefined,
+      abgeschlossen: lage.offsets.abgeschlossen || nachfolger !== undefined,
     };
-    if (abgeschlossen !== undefined) this.#kuendigeNachfolgerAn(lage, abgeschlossen);
+    if (nachfolger !== undefined) this.#kuendigeNachfolgerAn(lage, nachfolger);
 
     if (gelesen.abschluss.art === "unvollstaendig") {
       // §8.1: Der Rest wird nicht ausgewertet, der Offset bleibt davor stehen.
-      // Keine Meldung, kein Hinweis — dies ist kein Fehler. Die Frist beginnt
-      // erst dann neu, wenn die Zeile an einer anderen Stelle beginnt.
-      if (lage.unvollstaendigAb !== gelesen.endeOffset) {
-        lage.unvollstaendigAb = gelesen.endeOffset;
-        lage.unvollstaendigSeit = this.#optionen.zeit();
-      }
+      // Keine Meldung, kein Hinweis — dies ist kein Fehler.
+      lage.merkeUnvollstaendig(gelesen.endeOffset, this.#optionen.zeit());
     } else {
-      lage.unvollstaendigAb = undefined;
-      lage.unvollstaendigSeit = undefined;
+      lage.merkeVollstaendig();
     }
 
     if (gelesen.abschluss.art === "defekt") {
-      this.#quarantaene(lage, gelesen.abschluss.offset, gelesen.abschluss.grund, false, neueQuarantaenen);
+      this.#quarantaene(lage, gelesen.abschluss.offset, gelesen.abschluss.grund, false, sammler);
     }
 
     // Wiederholungen sind dasselbe Ereignis (§8.2) und gehören nicht ein
     // zweites Mal in das Bündel für den Fold.
-    return gelesen.zeilen.filter((zeile) => !zeile.wiederholung);
-  }
-
-  /**
-   * §6.2, Verfallsregel: „Liefert eine Datei in Takt A über fünf Minuten hinweg
-   * keine neuen Bytes, fällt sie in Takt B zurück." Sie gilt damit nicht als
-   * verloren — liefert sie in Takt B wieder Bytes, kehrt sie unmittelbar nach
-   * Takt A zurück. Die Regel ist rein zeitgesteuert und hängt an keiner
-   * anderen Datei; insbesondere nicht an der Präsenzdatei, die nach §6.4
-   * ausfallen **darf**.
-   */
-  #verfallPruefen(lage: Dateilage): void {
-    if (this.#optionen.zeit() - lage.letzteBytes > VERFALL_MS) lage.takt = "B";
+    sammler.neueZeilen.push(...gelesen.zeilen.filter((zeile) => !zeile.wiederholung));
   }
 
   /**
    * §8.1, Frist: „Bleibt dieselbe unvollständige Zeile fünf Minuten lang
    * unverändert unvollständig, ist der Normalfall ausgeschlossen — kein
    * Schreibvorgang dauert so lange." Die Datei geht in eine **vorläufige**
-   * Quarantäne über; wird die Zeile später doch vollständig und kettenrichtig,
-   * fällt sie ohne Zutun weg.
+   * Quarantäne über.
    *
    * Ohne diese Frist bliebe der Datenstrom eines Arbeitsplatzes für alle
    * anderen dauerhaft stehen, während die Statuszeile weiter erfolgreiche
    * Abfragen meldete — ein stiller Falschzustand in Reinform.
    */
-  #fristPruefen(lage: Dateilage, neueQuarantaenen: Quarantaenemeldung[]): void {
-    if (lage.unvollstaendigSeit === undefined || lage.offsets.quarantaeneAb !== null) return;
-    if (this.#optionen.zeit() - lage.unvollstaendigSeit <= UNVOLLSTAENDIG_FRIST_MS) return;
-    this.#quarantaene(lage, lage.offsets.leseOffset, "fristAbgelaufen", true, neueQuarantaenen);
+  #fristPruefen(lage: Dateilage, sammler: Sammler): void {
+    if (lage.offsets.quarantaeneAb !== null) return;
+    if (!lage.fristAbgelaufen(this.#optionen.zeit)) return;
+    this.#quarantaene(lage, lage.offsets.leseOffset, "fristAbgelaufen", true, sammler);
   }
 
   #quarantaene(
     lage: Dateilage,
     offset: number,
-    grund: Defektgrund | "fristAbgelaufen",
+    grund: Quarantaenegrund,
     vorlaeufig: boolean,
-    gesammelt: Quarantaenemeldung[],
+    sammler: Sammler,
   ): void {
-    lage.offsets = vorlaeufig
-      ? { ...lage.offsets, quarantaeneAb: offset, vorlaeufig: true }
-      : { ...lage.offsets, quarantaeneAb: offset, vorlaeufig: false };
     // §8.2 Punkt 2: Diese Datei wird ab dort nicht weiter ausgewertet und nicht
     // weiter gepollt. Punkt 4: Alle anderen Dateien laufen unverändert weiter.
-    lage.takt = "B";
-    gesammelt.push(this.#meldung(lage, offset, grund, vorlaeufig));
+    lage.quarantaene(offset, grund, vorlaeufig, this.#optionen.zeit());
+    sammler.neueQuarantaenen.push(this.#meldung(lage, offset, grund, vorlaeufig));
   }
 
   /** Der Text aus §8.2 Punkt 3: sichtbar und dauerhaft, kein technischer Text, keine Verharmlosung. */
   #meldung(
     lage: Dateilage,
     offset: number,
-    grund: Defektgrund | "fristAbgelaufen",
+    grund: Quarantaenegrund,
     vorlaeufig: boolean,
   ): Quarantaenemeldung {
     const kennung = zerlegeEreignisDateiname(lage.name);
     const arbeitsplatz = kennung?.praefix ?? lage.name;
+    const seit = lage.quarantaeneSeit ?? this.#optionen.zeit();
     return {
       datei: lage.name,
       offset,
       grund,
       vorlaeufig,
+      seit,
       meldung:
-        `Die Einträge von Arbeitsplatz ${arbeitsplatz} ab ${wanduhrText(this.#optionen.zeit())} ` +
+        `Die Einträge von Arbeitsplatz ${arbeitsplatz} ab ${wanduhrText(seit)} ` +
         "sind beschädigt und werden nicht angezeigt. " +
         "Die Einträge aller anderen Arbeitsplätze sind vollständig.",
+    };
+  }
+
+  #lesefehler(datei: string, fehler: unknown): Lesefehler {
+    return {
+      datei,
+      klasse: shareklasse(fehler),
+      code: fehler instanceof DateisystemFehler ? fehler.code : "EUNKNOWN",
     };
   }
 
@@ -535,22 +548,40 @@ export class Leser {
     if (kennung === undefined) return;
     const name = `${kennung.praefix}.${segmentText(nachfolger)}.jsonl`;
     if (this.#lagen.has(name)) return;
-    const neue = this.#neueLage(name, {
-      ...neuerFremderOffset(),
+    const neue = new Dateilage(
+      name,
       // Die Kette läuft über den Segmentwechsel hinweg durch (§2.3).
-      letzteKette: lage.offsets.letzteKette,
-    });
+      { ...neuerFremderOffset(), letzteKette: lage.offsets.letzteKette },
+      this.#optionen.zeit(),
+    );
     neue.angekuendigt = true;
-    // Der Anker steht fest: Die Kette läuft über den Segmentwechsel hinweg
-    // durch (§2.3), also ist es die Kettenprüfsumme der Abschlusszeile.
     neue.ankerBekannt = true;
     this.#lagen.set(name, neue);
   }
 
-  #gehoertZuTaktA(lage: Dateilage): boolean {
-    if (lage.offsets.abgeschlossen) return false;
-    if (lage.offsets.quarantaeneAb !== null) return false;
-    return lage.takt === "A" || lage.angekuendigt;
+  /**
+   * Der Kettenanker einer neu entdeckten Datei (§2.3, Sonderfälle).
+   *
+   * Bestimmt wird er aus dem **eigenen Spiegel** dieser Schreiberkennung, nie
+   * aus der Share-Datei selbst: Ein aus der zu prüfenden Datei übernommener
+   * Anker prüfte nichts.
+   */
+  async #anfangsKette(lage: Dateilage, bytes: Uint8Array): Promise<string | undefined> {
+    const kennung = zerlegeEreignisDateiname(lage.name);
+    if (kennung === undefined) return undefined;
+    return kettenanker(kennung.segment, bytes, this.#spiegelquelle(kennung.praefix));
+  }
+
+  /** Die Segmente einer fremden Kennung aus dem lokalen Spiegel (§5.5). */
+  #spiegelquelle(praefix: string): Segmentquelle {
+    return async (segment) => {
+      const name = `${praefix}.${segmentText(segment)}.jsonl`;
+      try {
+        return await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.lokalDatei(name), 0);
+      } catch {
+        return undefined;
+      }
+    };
   }
 
   /**
@@ -563,20 +594,6 @@ export class Leser {
    */
   #istEigen(praefix: string): boolean {
     return praefix === clientPraefix(this.#optionen.clientId);
-  }
-
-  #neueLage(name: string, offsets: FremderOffset): Dateilage {
-    return {
-      name,
-      offsets,
-      takt: offsets.quarantaeneAb === null ? "A" : "B",
-      letzteBytes: this.#optionen.zeit(),
-      gesehenesEnde: offsets.leseOffset,
-      unvollstaendigSeit: undefined,
-      unvollstaendigAb: undefined,
-      angekuendigt: false,
-      ankerBekannt: offsets.leseOffset > 0 || zerlegeEreignisDateiname(name)?.segment === 0,
-    };
   }
 
   /**

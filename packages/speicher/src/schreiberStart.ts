@@ -26,20 +26,26 @@ import {
   type Dateikennung,
   type Einsatzablage,
 } from "./pfade.js";
+import { kettenanker, type Segmentquelle } from "./kettenanker.js";
 import { KETTE_ANFANG } from "./pruefsummen.js";
 import { angekuendigterNachfolger, liesSegment } from "./segmentlese.js";
 import { liesSchreiberzustand, type Schreiberzustand } from "./schreiberzustand.js";
 import type { GeleseneZeile } from "./zeile.js";
 
 /**
- * Ein lokaler Kettenbruch in einem **nicht** letzten eigenen Segment.
+ * Ein lokaler Kettenbruch in einem eigenen Segment, dessen Anker feststeht.
  *
- * Für diesen Fall gibt das Konzept keine Regel her: §8.1 kürzt ausdrücklich
- * nur „sein eigenes letztes Segment", §4.6 repariert den Share bei intaktem
- * lokalem Bestand, und §8.2 gilt für fremde Dateien. Weiterzuschreiben hieße,
- * die Kette auf einer Stelle aufzusetzen, deren Vorgeschichte nicht mehr
- * belegt ist — also unbestätigte Daten als bestätigt zu führen. Deshalb ein
- * lauter Abbruch statt einer stillen Annahme.
+ * Nicht gemeint ist der Fall, in dem der Anker nach §2.3 schlicht ein anderer
+ * ist als 32 Nullen — den bestimmt {@link kettenanker}, und ein Ersatzsegment
+ * (§4.6, Schritt 3) ist deshalb **kein** Kettenbruch. Gemeint ist der Fall, in
+ * dem der Anker bekannt ist und die Zeilen trotzdem nicht darauf aufsetzen.
+ *
+ * Dafür gibt das Konzept keine Regel her: §8.1 kürzt ausdrücklich nur „sein
+ * eigenes letztes Segment", §4.6 repariert den Share bei intaktem lokalem
+ * Bestand, und §8.2 gilt für fremde Dateien. Weiterzuschreiben hieße, die Kette
+ * auf einer Stelle aufzusetzen, deren Vorgeschichte nicht mehr belegt ist —
+ * also unbestätigte Daten als bestätigt zu führen. Deshalb ein lauter Abbruch
+ * statt einer stillen Annahme.
  */
 export class LokalerKettenbruch extends Error {
   readonly segment: number;
@@ -99,9 +105,22 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
   const eigeneSegmente = await eigeneSegmenteFinden(dateisystem, ablage, clientId);
   const identitaeten = new Identitaetenbuch();
 
-  // (3) Aufsteigend lesen und die Kette durchziehen. Sie läuft über den
-  // Segmentwechsel hinweg durch (§2.3, §4.3) — deshalb ist die Reihenfolge
-  // nicht beliebig.
+  // (3) Aufsteigend lesen und je Segment den Anker nach §2.3 bestimmen. Ein
+  // Folgesegment erbt die Kette des Vorgängerendes, ein Ersatzsegment die der
+  // letzten unbeschädigten Zeile des ersetzten Segments (§4.6, Schritt 3) —
+  // beides bestimmt `kettenanker`, nicht eine mitgeschleifte Variable. Wer hier
+  // stattdessen die Kette durchreicht, hält jedes Ersatzsegment für
+  // kettenfalsch und sperrt genau den Client aus, der als einziger reparieren
+  // kann (§8.6.1 Regel 4).
+  const bytesJeSegment = new Map<number, Uint8Array>();
+  for (const kennung of eigeneSegmente) {
+    bytesJeSegment.set(
+      kennung.segment,
+      await dateisystem.liesAb(ablage.lokalDatei(kennung.name), 0),
+    );
+  }
+  const quelle: Segmentquelle = async (segment) => bytesJeSegment.get(segment);
+
   let kette = KETTE_ANFANG;
   let offsetImLetzten = 0;
   let hoechsteLaufnummer = 0;
@@ -111,7 +130,11 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
   for (let i = 0; i < eigeneSegmente.length; i += 1) {
     const kennung = eigeneSegmente[i] as Dateikennung;
     const istLetztes = i === eigeneSegmente.length - 1;
-    const befund = await liesSegment(dateisystem, ablage.lokalDatei(kennung.name), 0, kette);
+    const bytes = bytesJeSegment.get(kennung.segment) as Uint8Array;
+    const anker = await kettenanker(kennung.segment, bytes, quelle);
+    if (anker === undefined) throw new LokalerKettenbruch(kennung.segment, 0);
+
+    const befund = await liesSegment(dateisystem, ablage.lokalDatei(kennung.name), 0, anker);
     identitaeten.merkeAlle(befund.zeilen);
     hoechsteLaufnummer = Math.max(hoechsteLaufnummer, hoechsteAus(befund.zeilen));
 

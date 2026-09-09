@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import { knotenDateisystem } from "./knotenDateisystem.js";
 import { arbeitsplatz, legeEinsatzAn, spiegelungFuer } from "./pruefhilfen/aufbau.js";
 import { stoerdateisystem, type Stoerung } from "./pruefhilfen/stoerdateisystem.js";
+import { segmentText } from "./pfade.js";
 import { KETTE_ANFANG } from "./pruefsummen.js";
 import { liesSegment } from "./segmentlese.js";
 import { RUECKSTAU_STAFFEL_MS } from "./startwerte.js";
@@ -108,7 +109,13 @@ describe("Spiegelung nach §5.4", () => {
     await spiegelung.lauf();
     // Das Nachfolgesegment erscheint nie vor der Abschlusszeile seines
     // Vorgängers — sonst meldete §8.6.2 eine fehlende Kettenfortsetzung.
+    // `vorhanden` ausdrücklich mitgeprüft: Ohne diese Zusicherung ginge der Test
+    // auch dann durch, wenn die Datei gar nicht existiert — `liesSegment`
+    // liefert dann eine leere Zeilenliste mit dem Abschluss „ende". Genau daran
+    // blieb ein Blocker unentdeckt: Kein Segment ab Nummer 1 wurde übertragen,
+    // und der Lauf meldete trotzdem „übertragen".
     const erstes = await liesSegment(platz.dateisystem, platz.ablage.shareSegment("9f3c1a20", 0), 0, KETTE_ANFANG);
+    expect(erstes.vorhanden).toBe(true);
     expect(erstes.abschluss).toEqual({ art: "ende" });
     const zweites = await liesSegment(
       platz.dateisystem,
@@ -116,7 +123,37 @@ describe("Spiegelung nach §5.4", () => {
       0,
       erstes.letzteKette,
     );
+    expect(zweites.vorhanden).toBe(true);
     expect(zweites.abschluss).toEqual({ art: "ende" });
+    expect(zweites.zeilen.length).toBeGreaterThan(0);
+  });
+
+  it("überträgt auch über mehrere Segmentwechsel hinweg jedes Segment vollständig (§5.4.4)", async () => {
+    // Der Fall, den ein Lauf über nur einen Wechsel nicht trifft: Ab Segment 1
+    // ist der Kettenanker nicht mehr 32 Nullen (§2.3). Wer das übersieht, hält
+    // jedes ältere Segment für leer, überträgt es nie und meldet Erfolg —
+    // stiller Datenverlust.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const schreiber = await platz.oeffne("9f3c1a20", 400);
+    while (schreiber.segment < 4) {
+      platz.uhr.weiter(1);
+      alsGeschrieben(await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }));
+    }
+    const spiegelung = spiegelungFuer(platz, schreiber, EINSATZ);
+    await spiegelung.lauf();
+
+    for (let segment = 0; segment <= 4; segment += 1) {
+      const lokal = await platz.dateisystem.liesAb(platz.ablage.lokalSegment("9f3c1a20", segment), 0);
+      const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment("9f3c1a20", segment), 0);
+      expect(share, `Segment ${segment}`).toEqual(lokal);
+      // §7.6 Bedingung 1: `shareOffset` gleich dem lokalen vollständigen Offset.
+      // Bleibt er auf 0 stehen, ist die Ruhephase nie erreichbar und das
+      // Abbruchkriterium von M0.4 unmessbar.
+      expect(spiegelung.zustand.eigen[segmentText(segment)]?.shareOffset, `Offset ${segment}`).toBe(
+        lokal.byteLength,
+      );
+    }
   });
 });
 

@@ -22,6 +22,7 @@
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
 import { shareklasse, type Shareklasse } from "./fehler.js";
+import { grenzeUndKette } from "./kettenanker.js";
 import type { Identitaetenblick } from "./zeile.js";
 import {
   clientPraefix,
@@ -30,7 +31,6 @@ import {
   type Dateikennung,
   type Einsatzablage,
 } from "./pfade.js";
-import { KETTE_ANFANG } from "./pruefsummen.js";
 import { vergleicheSpiegel, type Vergleichsausgang } from "./spiegelvergleich.js";
 import { RUECKSTAU_STAFFEL_MS } from "./startwerte.js";
 import {
@@ -38,7 +38,6 @@ import {
   type EigenerOffset,
   type UploadZustand,
 } from "./uploadZustand.js";
-import { leseAbschnitt } from "./zeile.js";
 import type { Zeitquelle } from "./zeit.js";
 
 /** Klartextmeldungen für den Bediener; §5.4.3, §5.4.4, §5.7, §8.9. */
@@ -320,7 +319,14 @@ export class Spiegelung {
   #merkeOffset(segment: number, offset: number, lokal: Uint8Array): void {
     const schluessel = segmentText(segment);
     const bisher = this.#zustand.eigen[schluessel] ?? neuerEigenerOffset();
-    const gelesen = leseAbschnitt(
+    // **Ohne Kettenpruefung, und das ist Absicht.** Die eigenen lokalen Bytes
+    // sind beim Start geprueft worden (§8.1, `bereiteSchreiberVor`) und stammen
+    // im laufenden Betrieb aus dem eigenen Schreibweg. Eine Pruefung braeuchte
+    // den Anker dieses Segments, und der ist fuer jedes Segment ab 1 nicht 32
+    // Nullen (§2.3) — mit dem falschen Anker braeche sie an Byte 0 ab, der
+    // Offset bliebe fuer immer auf 0 stehen, und Bedingung 1 der Ruhephase
+    // (§7.6) waere nie mehr erfuellbar.
+    const { endeOffset, letzteKette } = grenzeUndKette(
       lokal.subarray(bisher.shareOffset, offset),
       bisher.shareOffset,
       bisher.letzteKette,
@@ -329,11 +335,7 @@ export class Spiegelung {
       ...this.#zustand,
       eigen: {
         ...this.#zustand.eigen,
-        [schluessel]: {
-          ...bisher,
-          shareOffset: gelesen.endeOffset,
-          letzteKette: gelesen.letzteKette,
-        },
+        [schluessel]: { ...bisher, shareOffset: endeOffset, letzteKette },
       },
     };
   }
@@ -352,10 +354,13 @@ export class Spiegelung {
     );
     const laufend = this.#optionen.vollstaendigerOffset();
     if (laufend.segment === kennung.segment) return bytes.subarray(0, laufend.offset);
-    const gelesen = leseAbschnitt(bytes, 0, KETTE_ANFANG);
-    // Ältere Segmente sind abgeschlossen; ihre Kette beginnt nicht zwingend bei
-    // 32 Nullen, deshalb zählt hier allein die Zeilengrenze, nicht die Kette.
-    return bytes.subarray(0, gelesen.abschluss.art === "ende" ? bytes.byteLength : gelesen.endeOffset);
+    // Aeltere Segmente sind abgeschlossen; gesucht ist allein die letzte
+    // Zeilengrenze. Die Kette wird hier **nicht** geprueft: Ihr Anker ist fuer
+    // jedes Segment ab 1 nicht 32 Nullen (§2.3), und mit dem falschen Anker
+    // braeche die Pruefung an Byte 0 ab. Das Ergebnis waere eine leer wirkende
+    // Datei — das Segment wuerde nie uebertragen, waehrend der Lauf
+    // „uebertragen" meldete.
+    return bytes.subarray(0, grenzeUndKette(bytes).endeOffset);
   }
 
   /** Die eigenen lokalen Segmentdateien, aufsteigend (§5.4.4). */
