@@ -100,6 +100,61 @@ Takt⌉` leere Durchläufe. Ohne Caches sind das genau die zwei aus §7.6.
 Ruhephase nach der heutigen Fassung falsch — im Feld also gerade dort, wo sie
 gemessen werden soll (M0.5, M2.4).
 
+### 16 · §4.6 setzt beim aufgezeichneten Übertragungsstand an, nicht bei der letzten lesbaren Zeile
+
+**Woher der Befund kommt.** Aus dem wiederholten Sweep über achtzehn
+Startwerte (Abschnitt 7.5 des Messprotokolls). Sechs Läufe fielen, fünf davon
+mit verlorenen Ereignissen. Der Befund ist **reproduziert** — zwei
+Wiederholungen je Startwert liefern dieselben Ereignis-Identitäten — und er ist
+**älter als die Korrektur aus Aufgabe 4**: Drei von vier nachgefahrenen
+Startwerten verlieren mit und ohne diese Korrektur exakt dieselben Ereignisse.
+
+**Der Ablauf, an Startwert 111 Zeile für Zeile nachgemessen.** Arbeitsplatz 1
+schreibt unter der Kennung `21e23b8b`, Segment `0000`:
+
+* Lokal enthält das Segment die Zeilen `:378` bis `:406`, 17.073 Byte.
+* Die Share-Kopie ist 15.239 Byte groß, aber nach der Beschädigung (§8.2) nur
+  bis Offset **11.424** auswertbar. Letzte lesbare Zeile dort: `:396`.
+* Der aufgezeichnete Übertragungsstand in `upload-state.json` steht auf
+  **13.830** — das ist die Stelle nach Zeile `:400`.
+* Das Ersatzsegment `0001` eröffnet mit `:407 [SegmentErsetzt]` und nimmt die
+  Zeilen `:401` bis `:406` mit — also alles ab dem **aufgezeichneten** Stand.
+
+Die Zeilen `:397` bis `:400` liegen dazwischen. Sie stehen physisch auf dem
+Share, sind hinter der Beschädigung aber für keinen Leser mehr erreichbar, und
+das Ersatzsegment nimmt sie nicht mit. Für jeden Leser sind sie fort. Dieselbe
+Mechanik erzeugt im selben Lauf die zweite Lücke bei `:434`.
+
+**Warum es niemandem auffällt.** Die Ruhephase nach §7.6 nimmt ersetzte
+Segmente ausdrücklich von Bedingung 1 aus — ihre lokalen Restbytes gelten als
+„Bytes, die nie wieder übertragen werden" (§4.6, „Die lokale Seite", Punkt 4).
+Für die tatsächlich ersetzten Zeilen stimmt das; für die Lücke zwischen
+Lesbarkeitsgrenze und aufgezeichnetem Stand stimmt es nicht. Der Lauf meldet
+deshalb „Ruhe erreicht" und verliert trotzdem Ereignisse.
+
+**Die Entscheidung.** §4.6 sagt heute nicht, *ab welcher Stelle* das
+Ersatzsegment den Inhalt übernimmt. Der Code nimmt den aufgezeichneten
+Übertragungsstand. Zur Wahl steht:
+
+* **(a) Ab der letzten lesbaren Zeile übernehmen.** Das Ersatzsegment trägt
+  alles, was auf dem Share nicht mehr erreichbar ist. Der Client hat alle
+  Zeilen lokal, die Angabe ist also verfügbar. Kostet mehr Bytes im Ersatz und
+  erzeugt Zeilen, die auf dem Share doppelt stehen — einmal unlesbar hinter der
+  Beschädigung, einmal lesbar im Ersatz. Der Fold entdoppelt über die
+  Identität, ein Leser sieht sie nur einmal.
+* **(b) Beim aufgezeichneten Stand bleiben und den Verlust benennen.** Dann
+  gehört in §4.6 der Satz, dass Zeilen zwischen Lesbarkeitsgrenze und
+  Übertragungsstand verloren gehen, und §7.6 Bedingung 1 darf ersetzte
+  Segmente nicht mehr pauschal ausnehmen — sonst misst die Ruhephase an der
+  Stelle vorbei, an der der Schaden entsteht.
+* **(c) Die Lesbarkeitsgrenze schon beim Spiegeln führen.** Der
+  Übertragungsstand würde nie über die letzte lesbare Zeile hinauslaufen. Das
+  ist der größte Eingriff und trifft §5.4.3.
+
+**Zusammenhang mit Nr. 14.** Beide betreffen §4.6 und beide entstehen daraus,
+dass die Reparatur an einem *Byte-Offset* ansetzt statt an der letzten
+verketteten Zeile. Sie sollten zusammen entschieden werden.
+
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
 Aus dem Zieldatenmodell (`../v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §6) und dem Handbuch-Bericht:
