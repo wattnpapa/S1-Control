@@ -6,7 +6,9 @@ Stand: 2026-09-09 · Quelle: Urteil §13, ergänzt um die Betriebsparameter vom 
 
 Die Entscheidungen 1, 2 und 4 müssen vor M0 fallen, weil sie den Meilensteinzuschnitt bestimmen. Alle anderen können bis zum jeweils genannten Meilenstein warten.
 
-**Neu am 2026-09-09:** Aus der Simulation M0.4 sind zwei Konzeptentscheidungen hinzugekommen — Nr. 14 und Nr. 15 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md und sind bewusst nicht getroffen worden.
+**Neu am 2026-09-09:** Aus der Simulation M0.4 sind drei Konzeptentscheidungen hinzugekommen — Nr. 14, 15 und 16 im Abschnitt unter der Tabelle. Sie betreffen KONZEPT-SPEICHER.md.
+
+> **Stand 2026-09-09: Nr. 14 und Nr. 16 sind entschieden.** Johannes hat **14 auf Richtung A** und **16 auf Richtung (a)** festgelegt. Beide sind in KONZEPT-SPEICHER.md nachgezogen (§4.6 Schritt 2 und 5, §8.6.1 Regel 4) und im Code umgesetzt. Die Herleitungen bleiben unten als Begründung stehen. **Nr. 15 ist weiterhin offen.**
 
 | Nr. | Entscheidung | Optionen und Folgen | Empfehlung | Fällig |
 |---|---|---|---|---|
@@ -31,7 +33,7 @@ Konzept und nicht am Code**, und beide sind bewusst nicht getroffen worden. Die
 Herleitung steht in [messungen/M0.4-simulation.md](messungen/M0.4-simulation.md),
 Abschnitt 4 und Abschnitt 2.
 
-### 14 · §8.6.1 Regel 4 hält nicht, wenn die Beschädigung spät entdeckt wird
+### 14 · §8.6.1 Regel 4 hält nicht, wenn die Beschädigung spät entdeckt wird — **entschieden: A**
 
 **Was heute zugesagt ist.** Regel 4: Weil Ausgang B eine Beschädigung ohne fremde
 Schreibspur ist, schreibt der Schreiber den fehlenden Teil als Ersatzsegment nach
@@ -65,9 +67,14 @@ gehört aber auch entschieden, wo die Obergrenze der zu wiederholenden Menge
 liegt. C ist aus unserer Sicht nicht tragfähig; sie ist der Vollständigkeit
 halber aufgeführt, weil sie in Abschnitt 4 des Protokolls steht.
 
-**Was bis zur Entscheidung gilt:** Die Simulation wertet diesen Ausgang als
-„nicht vergleichbar" nach §7.6 — kein Fehler, kein Nachweis — und meldet die
-Quarantänen getrennt, wie §8.6.1 Regel 3 es verlangt.
+**Entschieden am 2026-09-09: Richtung A.** §8.6.1 Regel 4 sagt jetzt
+ausdrücklich, dass die Zusage nur für die Ereignisse des ersetzten Segments
+gilt und für den betroffenen Leser darüber hinaus nach §8.2 Punkt 7
+ausgesetzt bleibt, bis er den Einsatz mit einem gesunden Spiegel neu
+aufsetzt. Der Code tat das bereits; geändert ist nur der Text. Die Simulation
+wertet diesen Ausgang weiterhin als „nicht vergleichbar" nach §7.6 — kein
+Fehler, kein Nachweis — und meldet die Quarantänen getrennt, wie §8.6.1
+Regel 3 es verlangt.
 
 ### 15 · §7.6 braucht zwei Präzisierungen, sonst ist die Ruhephase im Feld nicht messbar
 
@@ -100,7 +107,7 @@ Takt⌉` leere Durchläufe. Ohne Caches sind das genau die zwei aus §7.6.
 Ruhephase nach der heutigen Fassung falsch — im Feld also gerade dort, wo sie
 gemessen werden soll (M0.5, M2.4).
 
-### 16 · §4.6 setzt beim aufgezeichneten Übertragungsstand an, nicht bei der letzten lesbaren Zeile
+### 16 · §4.6 setzt beim aufgezeichneten Übertragungsstand an, nicht bei der letzten lesbaren Zeile — **entschieden: (a)**
 
 **Woher der Befund kommt.** Aus dem wiederholten Sweep über achtzehn
 Startwerte (Abschnitt 7.5 des Messprotokolls). Sechs Läufe fielen, fünf davon
@@ -153,7 +160,20 @@ Ersatzsegment den Inhalt übernimmt. Der Code nimmt den aufgezeichneten
 
 **Zusammenhang mit Nr. 14.** Beide betreffen §4.6 und beide entstehen daraus,
 dass die Reparatur an einem *Byte-Offset* ansetzt statt an der letzten
-verketteten Zeile. Sie sollten zusammen entschieden werden.
+verketteten Zeile. Sie sind zusammen entschieden worden.
+
+**Entschieden am 2026-09-09: Richtung (a).** §4.6 Schritt 2 nennt jetzt die
+letzte für einen Leser auswertbare Zeile als Übernahmestelle und benennt die
+doppelt stehenden Zeilen als in Kauf genommenen Preis.
+
+**Was beim Umsetzen dazugekommen ist.** Der Befund wurde an Startwert 111 mit
+festem Ordner Zeile für Zeile nachgemessen. Der erste Ersatz war korrekt; die
+Zeilen `:397` bis `:400` gingen verloren, weil dasselbe Segment **danach ein
+zweites Mal** beschädigt wurde — diesmal *vor* der Übernahmestelle — und §4.6
+Schritt 5 („wird nicht mehr beschrieben") als Verbot jeder weiteren Reparatur
+gelesen wurde. Damit (a) trägt, ist Schritt 5 präzisiert: Ein Schaden
+unterhalb der Übernahmestelle löst eine erneute Reparatur aus, einer ab ihr
+nicht. Startwert 111 verliert danach kein Ereignis mehr.
 
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
