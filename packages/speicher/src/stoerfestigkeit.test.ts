@@ -565,7 +565,6 @@ describe("§4.5 Schritt 6 — eine nie gespiegelte aufgegebene Datei", () => {
     expect(ergebnis.befund.art).toBe("fremdschreiber");
     expect(ergebnis.reaktion?.art).toBe("kennungGewechselt");
 
-    console.log("DIR", await platz.dateisystem.listeVerzeichnis(platz.ablage.lokalEreignisse));
     // Weg — nicht 0 Byte groß.
     await expect(platz.dateisystem.liesAb(lokal0001, 0)).rejects.toMatchObject({ code: "ENOENT" });
     // §4.5 Schritt 3: Der Inhalt steht unverändert in der Datei der neuen Kennung.
