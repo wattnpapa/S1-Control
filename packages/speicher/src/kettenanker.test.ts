@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import { grenzeUndKette, ketteAmEnde, ketteAnStelle, kettenanker } from "./kettenanker.js";
 import { KETTE_ANFANG, kettenPruefsumme } from "./pruefsummen.js";
-import { TYP_SEGMENT_ERSETZT } from "./verwaltungsereignisse.js";
+import { TYP_SEGMENT_ABGESCHLOSSEN, TYP_SEGMENT_ERSETZT } from "./verwaltungsereignisse.js";
 import { baueZeile, leseZeilengrenzen, type Rahmenblick } from "./zeile.js";
 
 function zeile(id: string, vorgaenger: string, zusatz: Record<string, unknown> = {}): Uint8Array {
@@ -20,14 +20,31 @@ function verkette(...teile: readonly Uint8Array[]): Uint8Array {
   return bytes;
 }
 
-/** Zwei Segmente, deren Kette über die Grenze hinweg durchläuft (§2.3, §4.3). */
+/**
+ * Zwei Segmente, deren Kette über die Grenze hinweg durchläuft (§2.3, §4.3).
+ *
+ * Segment 0 endet mit seiner **Abschlusszeile**. Das ist keine Ausschmückung:
+ * §2.3 nennt als Anker „die Kettenprüfsumme der letzten Zeile des
+ * Vorgängersegments", und §4.3 legt fest, woran man die letzte Zeile erkennt.
+ * Ein Segment ohne Abschlusszeile hat keine letzte Zeile, sondern nur eine
+ * bisher letzte.
+ */
 function zweiSegmente() {
   const a1 = zeile("c1:1", KETTE_ANFANG);
   const a2 = zeile("c1:2", kettenPruefsumme(a1));
-  const segment0 = verkette(a1, a2);
-  const b1 = zeile("c1:3", kettenPruefsumme(a2));
+  const schluss = zeile("c1:s", kettenPruefsumme(a2), {
+    typ: TYP_SEGMENT_ABGESCHLOSSEN,
+    nutzlast: { nachfolger: 1 },
+  });
+  const segment0 = verkette(a1, a2, schluss);
+  const b1 = zeile("c1:3", kettenPruefsumme(schluss));
   const segment1 = verkette(b1);
-  return { segment0, segment1, endeVon0: kettenPruefsumme(a2), zeilenVon0: [a1, a2] as const };
+  return {
+    segment0,
+    segment1,
+    endeVon0: kettenPruefsumme(schluss),
+    zeilenVon0: [a1, a2, schluss] as const,
+  };
 }
 
 describe("Kettenanker nach §2.3", () => {
@@ -78,11 +95,31 @@ describe("Kettenanker nach §2.3", () => {
     expect(await kettenanker(1, segment1, async () => undefined)).toBeUndefined();
   });
 
-  it("überspringt ein leeres Zwischensegment, statt die Kette abreißen zu lassen", async () => {
-    const { segment0, endeVon0 } = zweiSegmente();
+  it("urteilt nicht über ein Segment ohne Abschlusszeile (§4.3)", async () => {
+    // Der Anker eines Folgesegments ist die Kette der **letzten** Zeile seines
+    // Vorgängers, und die steht erst mit der Abschlusszeile fest (§2.3, §4.3).
+    // Ein Leser, der den Vorgänger erst zur Hälfte gespiegelt hat, nähme sonst
+    // seine bisher letzte Zeile, fände die erste Zeile des Nachfolgers
+    // kettenfalsch und setzte eine **gesunde** Datei nach §8.2 dauerhaft in
+    // Quarantäne. Befund aus der Simulation M0.4.
+    const { segment0, segment1, endeVon0 } = zweiSegmente();
+    const halb = segment0.subarray(0, (leseZeilengrenzen(segment0).zeilen[0] as { laenge: number }).laenge);
+    const quelle = async (s: number) => (s === 0 ? halb : s === 1 ? segment1 : undefined);
+    expect(await kettenanker(1, segment1, quelle)).toBeUndefined();
+
+    // Sobald der Vorgänger vollständig gespiegelt ist, steht der Anker.
+    const vollstaendig = async (s: number) =>
+      s === 0 ? segment0 : s === 1 ? segment1 : undefined;
+    expect(await kettenanker(1, segment1, vollstaendig)).toBe(endeVon0);
+  });
+
+  it("urteilt nicht über ein leeres Zwischensegment", async () => {
+    // Ein leeres Segment ist nicht abgeschlossen; es „überspringen" hieße, den
+    // Anker aus einem Segment zu holen, das gar nicht der Vorgänger ist.
+    const { segment0 } = zweiSegmente();
     const quelle = async (s: number) =>
       s === 0 ? segment0 : s === 1 ? new Uint8Array(0) : undefined;
-    expect(await ketteAmEnde(1, quelle)).toBe(endeVon0);
+    expect(await ketteAmEnde(1, quelle)).toBeUndefined();
   });
 });
 

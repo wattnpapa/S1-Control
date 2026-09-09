@@ -100,8 +100,6 @@ export class Spiegelung {
   readonly #optionen: SpiegelungOptionen;
   #zustand: UploadZustand;
   #rueckstauStufe = 0;
-  /** Segmente, für die in dieser Sitzung schon ein Anhang **versucht** wurde (§5.4.2). */
-  readonly #angehaengt = new Set<string>();
   #laeuft = false;
   #ausfallSeit: number | undefined;
 
@@ -217,15 +215,6 @@ export class Spiegelung {
    * schon vom alten Präfix belegt, mitsamt dessen `shareOffset`. Deshalb steht
    * hier der Dateiname ohne Endung, genau wie bei `fremd`.
    */
-  /**
-   * `true`, wenn `ENOENT` für dieses Segment wahr sein **kann** — also nur beim
-   * allerersten Anlegen (§5.4.2, siehe {@link Spiegelung} und der Kommentar an
-   * der Fangstelle).
-   */
-  #erstesAnlegen(schluessel: string, offsets: EigenerOffset): boolean {
-    return offsets.shareOffset === 0 && !this.#angehaengt.has(schluessel);
-  }
-
   #schluessel(segment: number): string {
     return `${clientPraefix(this.#optionen.clientId)}.${segmentText(segment)}`;
   }
@@ -270,10 +259,26 @@ export class Spiegelung {
       // Behandelt wird er deshalb als das, was er ist: ein vorübergehender
       // Fehler mit Rückstau nach §5.4.4. Der nächste Lauf liest erneut, und
       // spätestens nach Ablauf des Caches steht das wahre Ende da.
-      if (!this.#erstesAnlegen(schluessel, offsets)) return this.#eigeneDateiFehlt();
-      // Der einzige Fall, in dem `ENOENT` wahr sein darf: Dieser Client hat für
-      // dieses Segment noch nie etwas auf den Share gegeben. Dann legt der
-      // Anhang die Datei an.
+      if (offsets.shareOffset > 0) return this.#eigeneDateiFehlt();
+      // `shareOffset` ist 0 — „noch nie etwas übertragen" und „der Cache lügt"
+      // sind an dieser Stelle nicht zu unterscheiden, und ein Merker in dieser
+      // Instanz hilft nicht: Er überlebt keinen Neustart, während der Cache
+      // ihn überdauert. Entschieden wird deshalb **auf dem Server**: `wx` legt
+      // die Datei nur an, wenn es sie nicht gibt (§5.6). Kommt `EEXIST`
+      // zurück, war das `ENOENT` eine Falschauskunft, und es wird nichts
+      // angehängt. Befund aus der Simulation M0.4 — ohne diese Entscheidung
+      // hängte ein Neustart innerhalb der Cache-Dauer den gesamten Inhalt des
+      // Segments ein zweites Mal an, und die Datei begann für jeden Leser mit
+      // einer Zeile ohne Zeilenende (§8.2 Regel 3): dauerhafte Quarantäne für
+      // alle anderen, während dieser Arbeitsplatz weiterschrieb.
+      try {
+        await this.#optionen.dateisystem.schreibeNeuAnlegen(sharePfad, new Uint8Array(0));
+      } catch (anlegefehler) {
+        if (anlegefehler instanceof DateisystemFehler && anlegefehler.code === "EEXIST") {
+          return this.#eigeneDateiFehlt();
+        }
+        return this.#scheitern(anlegefehler);
+      }
       shareBytes = new Uint8Array(0);
     }
 
@@ -319,10 +324,6 @@ export class Spiegelung {
       this.#merkeOffset(kennung.segment, shareEnde, lokal);
       return { art: "uebertragen", uebertragen: 0 };
     }
-    // Vor dem Anhang vermerken, nicht danach: Auch ein gescheiterter Anhang
-    // kann ein Präfix auf dem Share hinterlassen haben (§5.4.1), und danach ist
-    // `ENOENT` für diese Datei endgültig eine Falschauskunft.
-    this.#angehaengt.add(this.#schluessel(kennung.segment));
     await this.#optionen.dateisystem.haengeAnUndSynchronisiere(sharePfad, anzuhaengen);
     this.#merkeOffset(kennung.segment, lokal.byteLength, lokal);
     return { art: "uebertragen", uebertragen: anzuhaengen.byteLength };

@@ -30,7 +30,12 @@
  */
 
 import { KETTE_ANFANG, kettenPruefsumme } from "./pruefsummen.js";
-import { TYP_SEGMENT_ERSETZT, ersatzAus } from "./verwaltungsereignisse.js";
+import {
+  TYP_SEGMENT_ABGESCHLOSSEN,
+  TYP_SEGMENT_ERSETZT,
+  ersatzAus,
+  nachfolgerAus,
+} from "./verwaltungsereignisse.js";
 import { leseZeilengrenzen } from "./zeile.js";
 
 /**
@@ -97,9 +102,26 @@ export async function ketteAnStelle(
  * Die Kettenprüfsumme der letzten Zeile eines Segments — der Anker seines
  * Nachfolgers (§2.3, §4.3).
  *
- * Ein Segment ohne auswertbare Zeile reicht die Frage an seinen Vorgänger
- * weiter: Eine leere Datei unterbricht die Kette nicht, sie trägt nur nichts
- * zu ihr bei.
+ * **Nur, wenn dieses Segment abgeschlossen ist.** §2.3 sagt „Kettenprüfsumme
+ * der letzten Zeile des Vorgängersegments", und §4.3 legt fest, woran man die
+ * letzte Zeile erkennt: an der Abschlusszeile, die den Nachfolger ankündigt.
+ * Ohne diese Bedingung nimmt der Leser die letzte Zeile, die er **bisher**
+ * gespiegelt hat — und die ist es nur zufällig. Genau daraus entsteht das
+ * Fehlerbild, gegen das dieser Anker gebaut wurde, nur umgekehrt: Ein Leser,
+ * der den Vorgänger erst zur Hälfte gelesen hat und den Nachfolger im selben
+ * Durchlauf anfasst, berechnet einen falschen Anker, findet die erste Zeile
+ * des Nachfolgers kettenfalsch und setzt eine **gesunde** Datei nach §8.2
+ * **dauerhaft** in Quarantäne — mit dem sichtbaren Hinweis, die Einträge
+ * dieses Arbeitsplatzes seien beschädigt. Das ist eine nachweislich falsche
+ * Aussage über einen anderen Arbeitsplatz, und sie ist nicht heilbar: §8.2
+ * Punkt 5 prüft die Stelle nur beim Programmstart erneut, und dort steht
+ * dieselbe halb gelesene Datei. Befund aus der Simulation M0.4.
+ *
+ * `undefined` heißt deshalb hier wie überall „noch nicht bestimmbar": Der
+ * Aufrufer stellt die Datei zurück (§5.5) und versucht es im nächsten
+ * Durchlauf, wenn der Vorgänger weiter gelesen ist. Die Verfallsregel aus §6.2
+ * sorgt dafür, dass eine dauerhaft unbestimmbare Datei nicht für den Rest der
+ * Lage den kurzen Takt kostet.
  */
 export async function ketteAmEnde(
   segment: number,
@@ -108,9 +130,14 @@ export async function ketteAmEnde(
   if (segment < 0) return KETTE_ANFANG;
   const bytes = await quelle(segment);
   if (bytes === undefined) return undefined;
-  const letzte = leseZeilengrenzen(bytes, 0).zeilen.at(-1);
-  if (letzte !== undefined) return kettenPruefsumme(letzte.bytes);
-  return segment === 0 ? KETTE_ANFANG : ketteAmEnde(segment - 1, quelle);
+  const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
+  const letzte = zeilen.at(-1);
+  // §4.3: Erst die Abschlusszeile macht eine Zeile zur letzten. Fehlt sie,
+  // wächst dieses Segment noch oder es ist nur unvollständig gespiegelt —
+  // beides heißt „noch nicht bestimmbar", nicht „kettenfalsch".
+  if (letzte === undefined || letzte.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN) return undefined;
+  if (nachfolgerAus(letzte.rahmen["nutzlast"]) === undefined) return undefined;
+  return kettenPruefsumme(letzte.bytes);
 }
 
 /**

@@ -419,10 +419,13 @@ function bewerte(
         `Phase ${phase.nummer}: nicht vergleichbar und die Zustände decken sich nicht — ${phase.befund.grund}`,
       );
     } else if (letzte && phase.befund.art === "zuWenigeClients") {
-      const ungeheilt = phase.befund.unvollstaendigeSicht.filter((s) => !s.geheilt);
-      if (ungeheilt.length > 0) {
+      // §8.6.1 Regel 4: Nach der Reparatur über das Ersatzsegment gilt die
+      // Konvergenzzusage für die betroffenen Leser wieder. Weniger als zwei
+      // Clients ohne Quarantäne ist deshalb kein Mangel — dass die Zustände
+      // sich danach nicht decken, sehr wohl.
+      if (!phase.befund.zustaendeDeckenSich) {
         maengel.push(
-          `Phase ${phase.nummer}: weniger als zwei Clients ohne Quarantäne, und ${ungeheilt.length} davon nicht geheilt`,
+          `Phase ${phase.nummer}: weniger als zwei Clients ohne Quarantäne, und die Zustände decken sich nicht`,
         );
       }
     }

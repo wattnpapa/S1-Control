@@ -115,9 +115,18 @@ export type Vergleichsbefund =
       readonly gleicheHashes: boolean;
       readonly unvollstaendigeSicht: readonly UnvollstaendigeSicht[];
     }
-  /** Weniger als zwei Clients ohne Quarantäne — es gibt nichts zu vergleichen. */
+  /**
+   * Weniger als zwei Clients ohne Quarantäne — nach §7.6 gibt es nichts zu
+   * vergleichen.
+   *
+   * `zustaendeDeckenSich` ist die Ersatzauskunft und die Substanz von §8.6.1
+   * Regel 4: Halten trotz der Quarantäne alle Clients denselben Zustand? Genau
+   * das sagt der Wiederherstellungsweg über das Ersatzsegment (§4.6) zu —
+   * „Danach gilt die Konvergenzzusage für die betroffenen Leser wieder."
+   */
   | {
       readonly art: "zuWenigeClients";
+      readonly zustaendeDeckenSich: boolean;
       readonly unvollstaendigeSicht: readonly UnvollstaendigeSicht[];
     };
 
@@ -226,7 +235,11 @@ export function vergleiche(staende: readonly Clientstand[]): Vergleichsbefund {
   const gesund = staende.filter((s) => s.quarantaenen.length === 0);
   const kranke = staende.filter((s) => s.quarantaenen.length > 0);
 
-  const referenzHash = gesund[0]?.zustandsHash;
+  // Ohne Client ohne Quarantäne gibt es keinen gesunden Bezugspunkt. Dann ist
+  // der Bezug der erste Client überhaupt: Die Frage lautet nicht mehr „deckt
+  // er sich mit den Gesunden", sondern „decken sich alle" — und genau das ist
+  // die Zusage aus §8.6.1 Regel 4 nach der Reparatur.
+  const referenzHash = gesund[0]?.zustandsHash ?? staende[0]?.zustandsHash;
   const unvollstaendigeSicht: readonly UnvollstaendigeSicht[] = kranke.map((s) => ({
     clientId: s.clientId,
     quarantaenen: s.quarantaenen,
@@ -234,7 +247,12 @@ export function vergleiche(staende: readonly Clientstand[]): Vergleichsbefund {
   }));
 
   if (gesund.length < 2) {
-    return { art: "zuWenigeClients", unvollstaendigeSicht };
+    return {
+      art: "zuWenigeClients",
+      zustaendeDeckenSich:
+        referenzHash !== undefined && staende.every((s) => s.zustandsHash === referenzHash),
+      unvollstaendigeSicht,
+    };
   }
 
   const erster = gesund[0] as Clientstand;

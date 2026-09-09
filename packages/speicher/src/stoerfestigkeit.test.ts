@@ -237,6 +237,57 @@ describe("§5.4.2 — ENOENT heißt nicht: die Datei ist leer", () => {
     const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
     expect(share).toEqual(lokal);
   });
+
+  it("entscheidet die Falschauskunft auf dem Server, nicht in dieser Sitzung", async () => {
+    // Ein Merker in der Spiegelung überlebt keinen Neustart, der Cache aus §6.6
+    // überdauert ihn. Ein Neustart innerhalb der Cache-Dauer hängte deshalb den
+    // gesamten Inhalt des Segments ein zweites Mal an — die Datei begann für
+    // jeden Leser mit einer Zeile ohne Zeilenende (§8.2 Regel 3): dauerhafte
+    // Quarantäne für alle anderen. Befund aus der Simulation M0.4.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const schreiber = await platz.oeffne(ICH);
+    for (let i = 0; i < 3; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    const stoerungen: Stoerung[] = [];
+    const fs = stoerdateisystem(platz.dateisystem, stoerungen);
+    const bauen = (): Spiegelung =>
+      new Spiegelung(
+        {
+          dateisystem: fs,
+          zeit: platz.uhr.lies,
+          ablage: platz.ablage,
+          clientId: ICH,
+          einsatzId: EINSATZ,
+          vollstaendigerOffset: () => ({
+            segment: schreiber.segment,
+            offset: schreiber.lokalerVollstaendigerOffset,
+          }),
+          identitaeten: schreiber.identitaeten,
+        },
+        leererUploadZustand(),
+      );
+
+    // Erster Lauf: überträgt alles, aber `upload-state.json` geht verloren —
+    // der frische Zustand unten steht für den Neustart.
+    expect((await bauen().lauf()).art).toBe("uebertragen");
+    const nachErstem = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
+
+    // Neustart: neue Spiegelung, `shareOffset` wieder 0 — und der Negativ-Cache
+    // meldet die vorhandene Datei als fehlend.
+    stoerungen.push({
+      aufruf: "liesAb",
+      code: "ENOENT",
+      malen: 1,
+      pfadEnthaelt: `share/einsatz/ereignisse/${ICH}`,
+    });
+    const nachNeustart = await bauen().lauf();
+    expect(nachNeustart.art).toBe("gescheitert");
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
+    expect(share).toEqual(nachErstem);
+  });
 });
 
 describe("§8, Grundsatz — eine lokale Schreibstörung hält den Leser nicht auf", () => {

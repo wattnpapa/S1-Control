@@ -85,6 +85,11 @@ export function berichte(ergebnis: Laufergebnis): string {
         zeilen.push(`      ${client}: ${hash}`);
       }
     }
+    if (phase.befund.art === "zuWenigeClients") {
+      zeilen.push(
+        `      alle Zustände decken sich trotzdem: ${phase.befund.zustaendeDeckenSich ? "ja" : "nein"}`,
+      );
+    }
     if (phase.befund.art === "nichtVergleichbar") {
       zeilen.push(`      Grund: ${phase.befund.grund}`);
       zeilen.push(
