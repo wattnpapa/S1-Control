@@ -175,6 +175,84 @@ gelesen wurde. Damit (a) trägt, ist Schritt 5 präzisiert: Ein Schaden
 unterhalb der Übernahmestelle löst eine erneute Reparatur aus, einer ab ihr
 nicht. Startwert 111 verliert danach kein Ereignis mehr.
 
+### 17 · Die Datei einer aufgegebenen Kennung repariert niemand mehr
+
+**Woher der Befund kommt.** Aus dem Sweep nach der zweiten Nacharbeit
+([messungen/M0.4-simulation.md](messungen/M0.4-simulation.md), Abschnitt 7.7).
+Startwert 12345 verliert zwei Ereignisse; beide stehen unter dem Präfix einer
+Kennung, die der Arbeitsplatz nach einem Profilklon aufgegeben hat.
+
+**Der Ablauf.** Ein Arbeitsplatz wechselt nach §4.5 die Kennung. Seine alte
+Datei ist ab dem Wechsel „der Spiegel einer fremden Datei — nämlich der des
+Klons" (§4.5 Schritt 6). Wird sie danach auf dem Share beschädigt (§8.2), gilt:
+
+* Der Leser fällt dort in Quarantäne und liest nicht weiter — richtig so.
+* Der ursprüngliche Schreiber hat den Inhalt lokal vollständig, darf dort aber
+  nach §4.5 Schritt 6 nichts mehr schreiben.
+* Die Vollprüfung beim Öffnen (§4.6.1 Auslöser 1) sieht die Datei gar nicht
+  mehr an: Sie bildet ihre Vergleichsmenge aus dem **laufenden** Präfix.
+
+Die Zeilen hinter der Beschädigungsstelle sind damit für jeden Leser fort,
+obwohl es einen Rechner gibt, der sie vollständig hat. Gemessen an Startwert
+12345: `65654370.0000.jsonl` ist bis 24.306 auswertbar, dort steht `:377`;
+`65654370.0002.jsonl` bis 24.194, dort steht `:468`.
+
+**Die Richtungen.**
+
+| | Was geändert wird | Was es kostet | Was es aufgibt |
+|---|---|---|---|
+| A | Nichts. Der Verlust ist die zugesagte Folge von §4.5 Schritt 6, und der Weg zurück ist der Export aus §8.6.1 Regel 4 — von Hand, sichtbar | Nur Text: §4.5 Schritt 6 und §8.6 sagen es ausdrücklich | Die Zusage, dass geschriebene Ereignisse alle Leser erreichen, gilt nach einem Kennungswechsel mit anschließender Beschädigung nicht mehr |
+| B | Die Vollprüfung beim Öffnen nimmt auch die Dateien **aufgegebener** Kennungen wieder auf und repariert eine Beschädigung dort durch ein Ersatzsegment unter der **neuen** Kennung | Ein Lesedurchgang je aufgegebener Datei bei jedem Öffnen (der wurde 2026-09-09 gerade eingespart); die Kosten wachsen mit der Zahl der Wechsel | Nichts an „ein Schreiber je Datei" — geschrieben wird in eine neue eigene Datei. Aber §4.5 Schritt 6 muss sagen, dass die alte Datei für die **Prüfung** eigen bleibt, auch wenn sie fürs Lesen fremd ist |
+| C | Der Kennungswechsel nimmt **alle** Zeilen der aufgegebenen Datei mit, nicht nur die ungespiegelten | Verdoppelt im schlimmsten Fall den gesamten bisherigen Bestand dieses Arbeitsplatzes bei jedem Wechsel | Die Beschränkung der Datenmenge je Wechsel |
+
+**Einordnung, keine Entscheidung.** B trifft die Ursache und lässt jede Zusage
+stehen; sein Preis ist Laufzeit beim Öffnen, und der ist messbar (M0.5, A10).
+A ist ehrlich und billig, gibt aber eine Zusage auf, die im Feld zählt — ein
+Profilklon ist nach §4.5 der erwartete Fall, nicht der exotische. C ist der
+teuerste Weg und löst nur den Teil, der beim Wechsel schon bekannt ist.
+
+**Was bis zur Entscheidung gilt:** Der Lauf meldet den Verlust als Mangel.
+Er wird nicht geschönt.
+
+### 18 · Der Versionsvektor deckt sich nach einer Reparatur nach §4.6 nie wieder
+
+**Woher der Befund kommt.** Ebenfalls aus dem Sweep (Abschnitt 7.7),
+Startwert 999. Zwei Phasen ohne Konvergenznachweis, **kein** Verlust, **kein**
+roter Ausgang — und in allen Phasen meldet der Bericht „gleiche Ereignismenge:
+ja, gleicher Zustand: ja".
+
+**Der Ablauf.** Eine Share-Datei wird nach §8.2 beschädigt. Jeder Leser führt
+seinen Spiegel dieser Datei danach bis zur Beschädigungsstelle — genau das,
+was §5.5 zusagt: „Ab einer Quarantänestelle ist der lokale Spiegel einer
+fremden Datei nicht byteweise identisch mit der Share-Datei — er ist ihr
+geprüftes Präfix." Der Schreiber hat sie lokal vollständig. Die fehlenden
+Ereignisse holen sich die Leser aus dem Ersatzsegment (§4.6); Zustand und
+Ereignismenge decken sich danach wieder.
+
+Der Versionsvektor nach §7.6 zählt aber Datei und Offset. Für das beschädigte
+Segment steht beim Schreiber ein größerer Offset als bei jedem Leser, und das
+ändert sich nie mehr. §7.6 meldet deshalb dauerhaft „verschiedene
+Versionsvektoren, nicht vergleichbar — kein Fehler, aber auch kein Nachweis".
+Gemessen an Startwert 999: `00000003.0005.jsonl`, 10.404 bei drei
+Arbeitsplätzen gegen 11.860 beim Schreiber.
+
+**Warum das zählt.** Ein Einsatz, in dem einmal nach §4.6 repariert wurde,
+kann den Konvergenznachweis nach §7.6 **nie wieder** führen — auch dann nicht,
+wenn er nachweislich konvergiert ist. Damit fällt das Abbruchkriterium aus
+Auflage 18 für genau die Läufe aus, in denen die Reparatur geprüft wird.
+
+**Die Richtungen.**
+
+| | Was geändert wird | Was es kostet | Was es aufgibt |
+|---|---|---|---|
+| A | §7.6 nimmt ersetzte Segmente aus dem Versionsvektor heraus, so wie §7.6 Bedingung 1 sie schon aus der Ruhephase herausnimmt | Wenig Text, wenig Code | Nichts Erkennbares — die Ereignisse dieser Segmente stehen im Ersatz und gehen dort in den Vektor ein |
+| B | §7.6 vergleicht statt des Vektors die **Menge der Ereignis-Identitäten**. Der Bericht führt sie ohnehin schon mit (`identitaetenHash`) | Ändert das Kriterium an einer tragenden Stelle; der Vektor ist die billigere Prüfung und fängt Fälle, die die Identitätsmenge nicht sieht | Die Aussage „gleicher Vektor" als Vorbedingung des Hash-Vergleichs |
+| C | Nichts. Der Ausgang „nicht vergleichbar" ist nach §7.6 kein Fehler, und der Lauf meldet ihn korrekt | Nichts | Den Konvergenznachweis in jedem Lauf, in dem repariert wurde — also in jedem Lauf, der §4.6 prüft |
+
+**Einordnung, keine Entscheidung.** A ist der kleinste Eingriff und deckt sich
+mit dem, was §7.6 für die Ruhephase schon tut. C ist der Stand von heute und
+kostet den Nachweis dort, wo er am meisten wert wäre.
+
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 
 Aus dem Zieldatenmodell (`../v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §6) und dem Handbuch-Bericht:
