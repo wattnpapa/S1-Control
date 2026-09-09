@@ -127,12 +127,23 @@ export default tseslint.config(
     { paths: keineGeschwister("@s1/speicher", "@s1/netz", "@s1/ausgaben", "@s1/cli") },
   ),
 
+  // @s1/speicher und @s1/netz liegen im selben Ring, sind aber Geschwister:
+  // „Ringe importieren nur nach innen“ schließt auch den Griff zur Seite aus.
+  // Eine gemeinsame Regel für beide ließ genau diesen Griff zu.
   ringRegel(
-    ["packages/speicher/src/**/*.ts", "packages/netz/src/**/*.ts"],
+    ["packages/speicher/src/**/*.ts"],
     KEIN_ELECTRON,
     KEINE_RENDERER_BIBLIOTHEK,
     KEIN_GRIFF_NACH_AUSSEN,
-    { paths: keineGeschwister("@s1/ausgaben", "@s1/cli") },
+    { paths: keineGeschwister("@s1/netz", "@s1/ausgaben", "@s1/cli") },
+  ),
+
+  ringRegel(
+    ["packages/netz/src/**/*.ts"],
+    KEIN_ELECTRON,
+    KEINE_RENDERER_BIBLIOTHEK,
+    KEIN_GRIFF_NACH_AUSSEN,
+    { paths: keineGeschwister("@s1/speicher", "@s1/ausgaben", "@s1/cli") },
   ),
 
   ringRegel(

@@ -168,10 +168,22 @@ export { vergleicheSpiegel, type VergleichEingabe, type Vergleichsausgang } from
 export {
   Leser,
   type LeserOptionen,
+  type Lesefehler,
   type Pollergebnis,
+  type Quarantaenegrund,
   type Quarantaenemeldung,
   type Takt,
 } from "./leser.js";
+export { Dateilage } from "./leserlage.js";
+
+// Kettenanker nach §2.3 — die einzige Stelle, die die drei Sonderfaelle kennt.
+export {
+  grenzeUndKette,
+  ketteAmEnde,
+  ketteAnStelle,
+  kettenanker,
+  type Segmentquelle,
+} from "./kettenanker.js";
 export { leseZeilengrenzen } from "./zeile.js";
 export { ersatzAus } from "./verwaltungsereignisse.js";
 
@@ -185,6 +197,7 @@ export {
 // Praesenz §6.4 und der Quarantaenehinweis als Beschleuniger §4.6.1.
 export {
   PRAESENZ_ORDNER,
+  Praesenzbeobachtung,
   deutePraesenz,
   hinweiseAufEigeneDateien,
   istVeraltet,

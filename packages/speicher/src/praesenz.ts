@@ -104,6 +104,33 @@ export interface FremdePraesenz {
 }
 
 /**
+ * Merkt sich, seit wann eine fremde Präsenzdatei **unverändert** ist.
+ *
+ * §6.4 sagt „veraltet ab 60 Sekunden **ohne Fortschreibung**". Fortschreibung
+ * ist eine Änderung des Inhalts, nicht ein Zahlenwert in der Datei: Wer die
+ * fremde Wanduhr gegen die eigene rechnet, misst die Uhrdifferenz mit — und
+ * §3.2 behandelt eine um Minuten abweichende Fremduhr ausdrücklich als
+ * möglichen Betriebszustand, nicht als Fehler. Ein solcher Arbeitsplatz stünde
+ * dauerhaft auf „offline" oder dauerhaft auf „aktiv".
+ *
+ * Beobachtet wird deshalb mit der **eigenen** Uhr, wann sich der Inhalt zuletzt
+ * geändert hat. Das ist uhrunabhängig und misst genau das, was §6.4 meint.
+ */
+export class Praesenzbeobachtung {
+  readonly #gesehen = new Map<string, { readonly stand: string; readonly seit: number }>();
+
+  /** Meldet den gelesenen Inhalt und liefert, ob er als veraltet gilt. */
+  beobachte(clientId: string, stand: string, jetzt: number): boolean {
+    const bisher = this.#gesehen.get(clientId);
+    if (bisher === undefined || bisher.stand !== stand) {
+      this.#gesehen.set(clientId, { stand, seit: jetzt });
+      return false;
+    }
+    return jetzt - bisher.seit > PRAESENZ_VERALTET_MS;
+  }
+}
+
+/**
  * Liest alle Präsenzdateien außer der eigenen (§6.4).
  *
  * Ein Leser kann eine **halb geschriebene** Datei sehen; das ist zulässig und
@@ -115,6 +142,7 @@ export interface FremdePraesenz {
  */
 export async function liesFremdePraesenz(
   optionen: PraesenzOptionen,
+  beobachtung?: Praesenzbeobachtung,
 ): Promise<readonly FremdePraesenz[]> {
   const namen = await optionen.dateisystem.listeVerzeichnis(optionen.ablage.sharePraesenz);
   const ergebnis: FremdePraesenz[] = [];
@@ -127,9 +155,14 @@ export async function liesFremdePraesenz(
     } catch {
       continue;
     }
-    const praesenz = deutePraesenz(dekodierer.decode(bytes));
+    const text = dekodierer.decode(bytes);
+    const praesenz = deutePraesenz(text);
     if (praesenz === undefined) continue;
-    ergebnis.push({ praesenz, veraltet: istVeraltet(praesenz, optionen.zeit()) });
+    const veraltet =
+      beobachtung === undefined
+        ? istVeraltet(praesenz, optionen.zeit())
+        : beobachtung.beobachte(praesenz.clientId, text, optionen.zeit());
+    ergebnis.push({ praesenz, veraltet });
   }
   return ergebnis;
 }
@@ -150,7 +183,14 @@ export function deutePraesenz(text: string): Praesenz | undefined {
   return objekt as unknown as Praesenz;
 }
 
-/** §6.4: „Veraltet ab 60 Sekunden ohne Fortschreibung." */
+/**
+ * §6.4: „Veraltet ab 60 Sekunden ohne Fortschreibung" — anhand der **fremden**
+ * Wanduhr.
+ *
+ * Nur als Rückfallweg, wenn keine {@link Praesenzbeobachtung} mitgegeben wird.
+ * Er misst die Uhrdifferenz mit und ist deshalb bei einer nach §3.2 zulässig
+ * abweichenden Fremduhr ungenau; die Beobachtung ist der bessere Weg.
+ */
 export function istVeraltet(praesenz: Praesenz, jetzt: number): boolean {
   const gemeldet = Date.parse(praesenz.wanduhr);
   if (Number.isNaN(gemeldet)) return true;

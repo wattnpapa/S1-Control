@@ -33,6 +33,9 @@ const VORUEBERGEHEND: ReadonlySet<string> = new Set([
   "EBUSY",
   "EAGAIN",
   "EIO",
+  // Ein Kurzschreibvorgang (§2.2: ein einziger `write`) ist ein
+  // Ubertragungsproblem, kein Rechteproblem; er wird wiederholt.
+  "EKURZSCHREIBUNG",
 ]);
 
 /** §8.9, dauerhaft: Rechte- und Platzfehler; sie geben sich nicht von selbst. */

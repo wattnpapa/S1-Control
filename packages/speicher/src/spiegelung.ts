@@ -180,7 +180,7 @@ export class Spiegelung {
         const ergebnis = await this.#spiegleSegment(kennung, lokal);
         if (ergebnis.art !== "uebertragen") return ergebnis;
         uebertragen += ergebnis.uebertragen;
-        const stand = this.#zustand.eigen[segmentText(kennung.segment)]?.shareOffset ?? 0;
+        const stand = this.#zustand.eigen[this.#schluessel(kennung.segment)]?.shareOffset ?? 0;
         // Erst wenn dieses Segment vollstaendig uebertragen ist, darf das
         // naechste folgen (§5.4.4).
         if (stand < lokal.byteLength) break;
@@ -230,6 +230,21 @@ export class Spiegelung {
   }
 
   /**
+   * Der Schlüssel eines eigenen Segments in `upload-state.json`.
+   *
+   * §5.3 zeigt die reine Segmentnummer (`"0003"`). Das reicht nicht, sobald
+   * §4.5 Schritt 2 greift: Nach einem Kennungswechsel „beginnt der Client ein
+   * Segment `0000` unter dem neuen Präfix" — der Schlüssel `"0000"` wäre dann
+   * schon vom alten Präfix belegt, mitsamt dessen `shareOffset`. Die neue Datei
+   * würde entweder nie übertragen (`lokal.byteLength <= shareOffset`) oder an
+   * falscher Stelle angehängt. Deshalb steht hier der Dateiname ohne Endung,
+   * genau wie bei `fremd` — `"9f3c1a20.0003"`.
+   */
+  #schluessel(segment: number): string {
+    return `${clientPraefix(this.#optionen.clientId)}.${segmentText(segment)}`;
+  }
+
+  /**
    * Ein einzelnes eigenes Segment übertragen (§5.4.1 bis §5.4.3).
    *
    * `lokal` ist der lokale Vergleichsmaßstab: die Datei bis zur letzten
@@ -237,7 +252,7 @@ export class Spiegelung {
    * die Präfix-Invariante.
    */
   async #spiegleSegment(kennung: Dateikennung, lokal: Uint8Array): Promise<Spiegelergebnis> {
-    const schluessel = segmentText(kennung.segment);
+    const schluessel = this.#schluessel(kennung.segment);
     const offsets: EigenerOffset = this.#zustand.eigen[schluessel] ?? neuerEigenerOffset();
     if (lokal.byteLength <= offsets.shareOffset) return { art: "uebertragen", uebertragen: 0 };
 
@@ -317,7 +332,7 @@ export class Spiegelung {
    * Bytes seien übertragen, deren Kette niemand geprüft hat.
    */
   #merkeOffset(segment: number, offset: number, lokal: Uint8Array): void {
-    const schluessel = segmentText(segment);
+    const schluessel = this.#schluessel(segment);
     const bisher = this.#zustand.eigen[schluessel] ?? neuerEigenerOffset();
     // **Ohne Kettenpruefung, und das ist Absicht.** Die eigenen lokalen Bytes
     // sind beim Start geprueft worden (§8.1, `bereiteSchreiberVor`) und stammen

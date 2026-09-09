@@ -133,7 +133,7 @@ describe("Kennungswechsel nach §4.5, Reaktion", () => {
     await using platz = await arbeitsplatz();
     await legeEinsatzAn(platz, EINSATZ);
     const { schreiber, spiegelung } = await eigenerStand(platz, 2);
-    const shareOffset = (spiegelung.zustand.eigen["0000"] as { shareOffset: number }).shareOffset;
+    const shareOffset = (spiegelung.zustand.eigen[`${ICH}.0000`] as { shareOffset: number }).shareOffset;
 
     platz.uhr.weiter(3);
     alsGeschrieben(await schreiber.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 2 } }));

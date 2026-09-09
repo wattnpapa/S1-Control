@@ -92,7 +92,19 @@ export function knotenDateisystem(): Dateisystem {
         // Ein einziger `write` (§2.2), danach `fsync` — über SMB ein SMB2
         // FLUSH, der bis zum Abschluss blockiert (`nas-speicher-recherche.md`
         // §1.9).
-        await griff.write(bytes, 0, bytes.byteLength);
+        //
+        // `bytesWritten` wird geprüft: Schreibt der Redirector weniger als
+        // verlangt, meldete der Aufruf sonst Erfolg, der Offset würde über die
+        // tatsächlich geschriebene Menge hinaus fortgeschrieben, und die
+        // fehlenden Bytes kämen nie nach — die Share-Datei trüge an dieser
+        // Stelle dauerhaft eine abgeschnittene Zeile, hinter der
+        // weitergeschrieben wird. §5.4.2 („Der Offset wird erst nach
+        // erfolgreichem `fsync` fortgeschrieben") wäre nur dem Buchstaben nach
+        // eingehalten.
+        const { bytesWritten } = await griff.write(bytes, 0, bytes.byteLength);
+        if (bytesWritten !== bytes.byteLength) {
+          throw new DateisystemFehler("EKURZSCHREIBUNG", pfad);
+        }
         await griff.sync();
       } catch (fehler) {
         uebersetze(fehler, pfad);
@@ -111,7 +123,10 @@ export function knotenDateisystem(): Dateisystem {
         uebersetze(fehler, pfad);
       }
       try {
-        await griff.write(bytes, 0, bytes.byteLength);
+        const { bytesWritten } = await griff.write(bytes, 0, bytes.byteLength);
+        if (bytesWritten !== bytes.byteLength) {
+          throw new DateisystemFehler("EKURZSCHREIBUNG", pfad);
+        }
       } catch (fehler) {
         uebersetze(fehler, pfad);
       } finally {
@@ -130,7 +145,10 @@ export function knotenDateisystem(): Dateisystem {
         uebersetze(fehler, pfad);
       }
       try {
-        await griff.write(bytes, 0, bytes.byteLength);
+        const { bytesWritten } = await griff.write(bytes, 0, bytes.byteLength);
+        if (bytesWritten !== bytes.byteLength) {
+          throw new DateisystemFehler("EKURZSCHREIBUNG", pfad);
+        }
         await griff.sync();
       } catch (fehler) {
         uebersetze(fehler, pfad);

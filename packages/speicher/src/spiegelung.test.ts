@@ -59,7 +59,7 @@ describe("Spiegelung nach §5.4", () => {
     const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment("9f3c1a20", 0), 0);
     const lokal = await platz.dateisystem.liesAb(platz.ablage.lokalSegment("9f3c1a20", 0), 0);
     expect(share).toEqual(lokal);
-    expect(spiegelung.zustand.eigen["0000"]?.shareOffset).toBe(lokal.byteLength);
+    expect(spiegelung.zustand.eigen["9f3c1a20.0000"]?.shareOffset).toBe(lokal.byteLength);
   });
 
   it("ist wiederholbar: ein zweiter Lauf ohne neue Ereignisse überträgt nichts (Idempotenz)", async () => {
@@ -150,7 +150,7 @@ describe("Spiegelung nach §5.4", () => {
       // §7.6 Bedingung 1: `shareOffset` gleich dem lokalen vollständigen Offset.
       // Bleibt er auf 0 stehen, ist die Ruhephase nie erreichbar und das
       // Abbruchkriterium von M0.4 unmessbar.
-      expect(spiegelung.zustand.eigen[segmentText(segment)]?.shareOffset, `Offset ${segment}`).toBe(
+      expect(spiegelung.zustand.eigen[`9f3c1a20.${segmentText(segment)}`]?.shareOffset, `Offset ${segment}`).toBe(
         lokal.byteLength,
       );
     }
@@ -260,7 +260,7 @@ describe("Die drei Ausgänge aus §5.4.3", () => {
   function offsetZurueck(zustand: ReturnType<typeof spiegelungFuer>["zustand"], bis: number) {
     return {
       ...zustand,
-      eigen: { ...zustand.eigen, "0000": { shareOffset: bis, letzteKette: KETTE_ANFANG } },
+      eigen: { ...zustand.eigen, "9f3c1a20.0000": { shareOffset: bis, letzteKette: KETTE_ANFANG } },
     };
   }
 
@@ -314,7 +314,7 @@ describe("Die drei Ausgänge aus §5.4.3", () => {
     // Der Klon hat unter derselben Kennung weitergeschrieben.
     const fremd = baueZeile({
       id: "9f3c1a20:99",
-      vorgaenger: spiegelung.zustand.eigen["0000"]?.letzteKette as string,
+      vorgaenger: spiegelung.zustand.eigen["9f3c1a20.0000"]?.letzteKette as string,
       typ: "EinheitGemeldet",
       schemaVersion: 1,
       nutzlast: { vomKlon: true },
@@ -346,7 +346,7 @@ describe("Die drei Ausgänge aus §5.4.3", () => {
     // gleich vergibt —, aber mit anderem Inhalt.
     const klonzeile = baueZeile({
       id: "9f3c1a20:3",
-      vorgaenger: spiegelung.zustand.eigen["0000"]?.letzteKette as string,
+      vorgaenger: spiegelung.zustand.eigen["9f3c1a20.0000"]?.letzteKette as string,
       typ: "EinheitGemeldet",
       schemaVersion: 1,
       nutzlast: { n: 999 },

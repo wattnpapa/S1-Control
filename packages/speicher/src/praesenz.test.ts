@@ -4,6 +4,7 @@ import {
   deutePraesenz,
   hinweiseAufEigeneDateien,
   istVeraltet,
+  Praesenzbeobachtung,
   liesFremdePraesenz,
   schreibePraesenz,
   type PraesenzOptionen,
@@ -107,5 +108,44 @@ describe("Quarantänehinweis als Beschleuniger (§4.6.1, Auslöser 2)", () => {
     await schreibePraesenz(optionen(platz, "8899aabb"), stand);
     const fremde = await liesFremdePraesenz(optionen(platz, "9f3c1a20"));
     expect(hinweiseAufEigeneDateien(fremde, "9f3c1a20")).toEqual([]);
+  });
+});
+
+describe("Veraltung ohne Vergleich fremder Uhren (§6.4, §3.2)", () => {
+  it("misst die Zeit ohne Fortschreibung mit der eigenen Uhr", async () => {
+    await using platz = await arbeitsplatz();
+    const beobachtung = new Praesenzbeobachtung();
+    await schreibePraesenz(optionen(platz, "8899aabb"), stand);
+
+    expect((await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung))[0]?.veraltet).toBe(false);
+    platz.uhr.weiter(PRAESENZ_VERALTET_MS + 1);
+    expect((await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung))[0]?.veraltet).toBe(true);
+
+    // Fortschreibung heißt: Der Inhalt ändert sich. Danach gilt sie wieder als
+    // frisch, ohne dass irgendeine fremde Uhr befragt würde.
+    await schreibePraesenz(optionen(platz, "8899aabb"), { ...stand, offset: 5000 });
+    expect((await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung))[0]?.veraltet).toBe(false);
+  });
+
+  it("hält einen Arbeitsplatz mit weit abweichender Uhr nicht dauerhaft für offline", async () => {
+    // §3.2 behandelt eine um Minuten abweichende Fremduhr ausdrücklich als
+    // möglichen Betriebszustand. Ein Vergleich der fremden Wanduhr mit der
+    // eigenen zeigte ihn dauerhaft als offline — eine unehrliche Anzeige
+    // gegenüber §6.3.
+    await using platz = await arbeitsplatz();
+    const beobachtung = new Praesenzbeobachtung();
+    // Die Uhr des anderen Rechners geht eine Stunde nach; die eigene bleibt,
+    // wo sie ist.
+    const nachgehend = platz.uhr.lies() - 60 * 60 * 1000;
+    await schreibePraesenz(
+      { ...optionen(platz, "8899aabb"), zeit: () => nachgehend },
+      stand,
+    );
+
+    const mitBeobachtung = await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung);
+    expect(mitBeobachtung[0]?.veraltet).toBe(false);
+    // Der Rückfallweg über die fremde Wanduhr täuschte sich hier.
+    const ohne = await liesFremdePraesenz(optionen(platz, "9f3c1a20"));
+    expect(ohne[0]?.veraltet).toBe(true);
   });
 });

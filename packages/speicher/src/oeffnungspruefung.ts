@@ -43,7 +43,7 @@ export type Oeffnungsbefund =
       readonly segment: number;
       readonly abOffset: number;
       readonly id: string;
-      readonly grund: "identitaetUnbekannt" | "inhaltAbweichend";
+      readonly grund: "identitaetUnbekannt" | "inhaltAbweichend" | "laufnummerHoeher";
     };
 
 export interface OeffnungspruefungOptionen {
@@ -52,6 +52,16 @@ export interface OeffnungspruefungOptionen {
   readonly clientId: string;
   /** Aufgegebene Kennungen (§4.5, Schritt 1) — sie zählen für die Laufnummer mit. */
   readonly frühereClientIds?: readonly string[];
+  /**
+   * Die eigene zuletzt vergebene Laufnummer aus `schreiber.json` (§3.3).
+   *
+   * Ohne sie bleibt §4.5 Schritt 3 unausgewertet: „Ist sie **größer als** die
+   * eigene zuletzt vergebene, hat ein anderer Prozess unter derselben Kennung
+   * geschrieben." Schritt 4 — der Inhaltsvergleich — allein deckt den Fall
+   * nicht ab, in dem der Klon Nummern vergeben hat, die dieser Client noch gar
+   * nicht kennt und deren Zeilen er deshalb nicht vergleichen kann.
+   */
+  readonly eigeneLaufnummer?: number;
   /** Die lokal vergebenen Identitäten (§5.3). */
   readonly identitaeten: Identitaetenblick;
 }
@@ -113,6 +123,21 @@ export async function pruefeBeimOeffnen(
       );
       hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
     }
+  }
+
+  // §4.5 Schritt 3: „Ist sie größer als die eigene zuletzt vergebene, hat ein
+  // anderer Prozess unter derselben Kennung geschrieben." Der Vergleich steht
+  // **nach** den Schritten 1 und 2 und **vor** der Rückgabe — sonst bliebe er
+  // eine Zahl ohne Auswerter.
+  const zuletztVergeben = optionen.eigeneLaufnummer;
+  if (zuletztVergeben !== undefined && hoechste > zuletztVergeben) {
+    return {
+      art: "fremdschreiber",
+      segment: eigene.at(-1)?.segment ?? 0,
+      abOffset: 0,
+      id: `${optionen.clientId}:${hoechste}`,
+      grund: "laufnummerHoeher",
+    };
   }
 
   return { art: "inOrdnung", hoechsteLaufnummerAufShare: hoechste };
