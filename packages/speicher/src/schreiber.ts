@@ -36,7 +36,11 @@ import { bereiteSchreiberVor, type Schreiberbestand } from "./schreiberStart.js"
 import { schreibeSchreiberzustand, type Schreiberzustand } from "./schreiberzustand.js";
 import { liesSegment } from "./segmentlese.js";
 import { LOKALE_WIEDERHOLUNG_MS, SEGMENTGROESSE_BYTE } from "./startwerte.js";
-import { TYP_SEGMENT_ABGESCHLOSSEN, TYP_SEGMENT_ERSETZT } from "./verwaltungsereignisse.js";
+import {
+  TYP_SEGMENT_ABGESCHLOSSEN,
+  TYP_SEGMENT_ERSETZT,
+  ersatzAus,
+} from "./verwaltungsereignisse.js";
 import { zieheHlc } from "./hlcZiehen.js";
 import { baueRahmen } from "./rahmenbau.js";
 import { baueZeile, type GeleseneZeile, type Rahmenblick } from "./zeile.js";
@@ -436,6 +440,47 @@ export class Schreiber {
     // Kette `anschluss` trägt. Befund aus der Simulation M0.4.
     const abGrenze = bisStelle.at(-1) === undefined ? 0 : (bisStelle.at(-1) as GeleseneZeile).offset + (bisStelle.at(-1) as GeleseneZeile).laenge;
 
+    // **Ein angefangenes Ersatzsegment wird fortgesetzt, nicht neu begonnen.**
+    //
+    // Bricht das Wiederholen der Ereignisse an einer lokalen Schreibstörung ab
+    // (§8.8), steht ein unvollständiges Ersatzsegment da, und die Vollprüfung
+    // beim Öffnen (§4.6.1 Auslöser 1) nimmt die Reparatur wieder auf. Finge
+    // jeder Anlauf von vorn an, müsste **eine** Reparatur alle Zeilen am Stück
+    // schaffen: Bei 33 zu wiederholenden Zeilen und einer Störwahrscheinlichkeit
+    // je Anhang läuft das auf Glücksspiel hinaus, und in der Simulation blieben
+    // nach fünf Anläufen fünf unvollständige Ersatzsegmente stehen (8, 22, 30,
+    // 22 und 5 von 33 Zeilen) — die letzten vier Ereignisse erreichte kein
+    // Leser mehr. Wird stattdessen fortgesetzt, ist jeder Anlauf ein Fortschritt
+    // und die Reparatur läuft zu Ende. §4.6 steht dem nicht entgegen: Die Datei
+    // ist append-only, die Kette läuft weiter, und die wiederholten Zeilen
+    // tragen unverändert ihre Identität. Befund aus der Simulation M0.4.
+    const laufend = await this.#liesEigenesSegment(this.#zustand.segment);
+    const laufendeErsatzNutzlast =
+      laufend?.zeilen[0]?.rahmen.typ === TYP_SEGMENT_ERSETZT
+        ? ersatzAus(laufend.zeilen[0].rahmen["nutzlast"])
+        : undefined;
+    const fortsetzung =
+      laufend !== undefined && laufendeErsatzNutzlast?.ersetztesSegment === ersetztesSegment;
+
+    if (fortsetzung) {
+      const vorhanden = new Set((laufend as { zeilen: readonly GeleseneZeile[] }).zeilen.map((z) => z.rahmen.id));
+      const letzteZeile = (laufend as { zeilen: readonly GeleseneZeile[] }).zeilen.at(-1) as GeleseneZeile;
+      let ergebnis: GeschriebeneZeile = {
+        segment: this.#zustand.segment,
+        offset: letzteZeile.offset,
+        bytes: letzteZeile.bytes,
+        rahmen: letzteZeile.rahmen,
+        kette: letzteZeile.kette,
+      };
+      for (const zeile of abStelle) {
+        if (vorhanden.has(zeile.rahmen.id)) continue;
+        const geschrieben = await this.#wiederhole(zeile, this.#zustand.segment);
+        if ("art" in geschrieben) return geschrieben;
+        ergebnis = geschrieben;
+      }
+      return { art: "geschrieben", zeile: ergebnis };
+    }
+
     const ersatz = await this.#naechstesFreiesSegment();
     const vorherigerZustand = this.#zustand;
     this.#zustand = { ...this.#zustand, segment: ersatz, lokalerOffset: 0, letzteKette: anschluss };
@@ -475,18 +520,34 @@ export class Schreiber {
     // die Identitäten (Auflage 4), für ihn ist die Wiederholung folgenlos.
     let letzte = kopf.zeile;
     for (const zeile of abStelle) {
-      const wiederholt = { ...zeile.rahmen, vorgaenger: this.#zustand.letzteKette } as Rahmenblick;
-      const bytes = baueZeile(wiederholt);
-      const pfad = this.#ablage.lokalSegment(this.#zustand.clientId, ersatz);
-      const offset = this.#zustand.lokalerOffset;
-      const fehler = await this.#haengeAn(pfad, bytes);
-      if (fehler !== undefined) return fehler;
-      const kette = kettenPruefsumme(bytes);
-      this.#zustand = { ...this.#zustand, lokalerOffset: offset + bytes.byteLength, letzteKette: kette };
-      await this.speichereZustand();
-      letzte = { segment: ersatz, offset, bytes, rahmen: wiederholt, kette };
+      const geschrieben = await this.#wiederhole(zeile, ersatz);
+      if ("art" in geschrieben) return geschrieben;
+      letzte = geschrieben;
     }
     return { art: "geschrieben", zeile: letzte };
+  }
+
+  /**
+   * Schreibt eine Zeile des ersetzten Segments noch einmal (§4.6 Schritt 4).
+   *
+   * „Mit **unveränderten** Ereignis-Identitäten, unveränderter HLC und
+   * unveränderter Nutzlast. Es sind dieselben Ereignisse, nicht neue." Allein
+   * `vorgaenger` ist ein anderer — die Kette läuft im Ersatzsegment weiter.
+   */
+  async #wiederhole(
+    zeile: GeleseneZeile,
+    segment: number,
+  ): Promise<GeschriebeneZeile | Schreibergebnis> {
+    const wiederholt = { ...zeile.rahmen, vorgaenger: this.#zustand.letzteKette } as Rahmenblick;
+    const bytes = baueZeile(wiederholt);
+    const pfad = this.#ablage.lokalSegment(this.#zustand.clientId, segment);
+    const offset = this.#zustand.lokalerOffset;
+    const fehler = await this.#haengeAn(pfad, bytes);
+    if (fehler !== undefined) return fehler;
+    const kette = kettenPruefsumme(bytes);
+    this.#zustand = { ...this.#zustand, lokalerOffset: offset + bytes.byteLength, letzteKette: kette };
+    await this.speichereZustand();
+    return { segment, offset, bytes, rahmen: wiederholt, kette };
   }
 
   /**
