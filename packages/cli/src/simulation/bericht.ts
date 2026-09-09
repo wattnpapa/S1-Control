@@ -157,6 +157,15 @@ export function berichte(ergebnis: Laufergebnis): string {
           `${s.geheilt ? ", Zustand deckt sich trotzdem" : ", Zustand weicht ab"}`,
       );
     }
+    if (phase.verluste.length > 0) {
+      zeilen.push(`      VERLUST: ${phase.verluste.length} Ereignis(se) auf keiner Share-Datei mehr`);
+      for (const v of phase.verluste.slice(0, 5)) {
+        zeilen.push(`        ${v.ereignisId} von ${v.clientId}`);
+      }
+      if (phase.verluste.length > 5) zeilen.push(`        … und ${phase.verluste.length - 5} weitere`);
+    } else {
+      zeilen.push("      kein Ereignis verloren: jede geschriebene Zeile ist auf dem Share auswertbar");
+    }
     const schief = phase.spiegelpruefung.filter((s) => !s.stimmt);
     zeilen.push(
       `      lokal ↔ Share: ${phase.spiegelpruefung.length - schief.length}/${phase.spiegelpruefung.length} eigene Segmente byteweise gleich`,

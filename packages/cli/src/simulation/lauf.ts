@@ -28,6 +28,7 @@
 
 import {
   clientPraefix,
+  istVerwaltungsereignis,
   ersetzteSegmente,
   leseZeilengrenzen,
   segmentText,
@@ -53,6 +54,19 @@ export interface Spiegelbefund {
   readonly hinweis?: string;
 }
 
+/**
+ * Ein Ereignis, das ein Client lokal geschrieben hat und das auf dem Share
+ * nirgends mehr auswertbar ist.
+ *
+ * Das ist der harte Verlust — nicht zu verwechseln mit dem Fall aus §8.2, in
+ * dem ein **Leser** wegen seiner Quarantäne nicht mehr an Bytes herankommt, die
+ * sehr wohl auf dem Share stehen. Hier ist niemand mehr, der sie holen könnte.
+ */
+export interface Verlust {
+  readonly clientId: string;
+  readonly ereignisId: string;
+}
+
 export interface Phasenbefund {
   readonly nummer: number;
   readonly kommandos: number;
@@ -64,6 +78,8 @@ export interface Phasenbefund {
   readonly beschaedigungen: number;
   readonly befund: Vergleichsbefund;
   readonly spiegelpruefung: readonly Spiegelbefund[];
+  /** Ereignisse, die kein Leser mehr erreichen kann (§1.3 Satz 2, §4.6 Schritt 4). */
+  readonly verluste: readonly Verlust[];
   readonly staende: readonly Clientstand[];
 }
 
@@ -200,6 +216,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
     }
     const befund = vergleiche(staende);
     const spiegelpruefung = await pruefeSpiegel(echt, klienten);
+    const verluste = await pruefeVollstaendigkeit(echt, klienten);
     phasen.push({
       nummer: phase,
       kommandos: kommandosGesamt,
@@ -209,6 +226,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
       beschaedigungen: (stoerwerk.zaehlung()["beschaedigung"] ?? 0) - beschaedigungenVorher,
       befund,
       spiegelpruefung,
+      verluste,
       staende,
     });
     melde(
@@ -393,6 +411,63 @@ async function pruefeSpiegel(
   return befunde;
 }
 
+/**
+ * Prüft, dass **jedes** Ereignis, das ein Client geschrieben hat, auf dem Share
+ * noch auswertbar ist.
+ *
+ * Das ist der Kern dessen, was §7.6 mit „lokales Log gleich Share-Segment je
+ * Client" meint, und es ist die einzige Prüfung, die den harten Verlust von
+ * dem unterscheidet, was das Konzept ausdrücklich zulässt:
+ *
+ *  * Eine **Quarantäne** (§8.2) nimmt einem *Leser* den Zugang zu Bytes, die
+ *    auf dem Share sehr wohl stehen. §8.2 Punkt 7 setzt die Konvergenzzusage
+ *    für ihn aus; verloren ist nichts.
+ *  * Ein **Verlust** heißt: Die Zeile steht auf keiner Share-Datei mehr, die
+ *    sich auswerten lässt. Dann ist sie für alle fort — auch für den
+ *    Wiederherstellungsweg aus §8.6.1 Regel 4, der den Spiegel eines anderen
+ *    Clients ausleitet. §1.3 Satz 2 erklärt den lokalen Anhang zur Wahrheit;
+ *    diese Wahrheit ist damit nicht mehr zustellbar.
+ *
+ * Gelesen wird die Share-Seite **ohne Kettenprüfung**: Gesucht ist, ob die
+ * Zeile physisch da und lesbar ist, nicht ob ein bestimmter Leser sie
+ * verketten kann. Genau daran hängt die Unterscheidung.
+ */
+async function pruefeVollstaendigkeit(
+  echt: Dateisystem,
+  klienten: readonly Klient[],
+): Promise<readonly Verlust[]> {
+  const aufDemShare = new Set<string>();
+  const shareOrdner = klienten[0]?.ablage.shareEreignisse;
+  if (shareOrdner === undefined) return [];
+  for (const name of [...(await echt.listeVerzeichnis(shareOrdner))].sort()) {
+    if (zerlegeEreignisDateiname(name) === undefined) continue;
+    const bytes = await echt.liesAb(`${shareOrdner}/${name}`, 0);
+    for (const zeile of leseZeilengrenzen(bytes, 0).zeilen) aufDemShare.add(zeile.rahmen.id);
+  }
+
+  const verluste: Verlust[] = [];
+  for (const klient of klienten) {
+    const praefixe = new Set<string>([clientPraefix(klient.clientId)]);
+    for (const frueher of klient.akte.schreiber.zustand.frühereClientIds ?? []) {
+      praefixe.add(clientPraefix(frueher));
+    }
+    for (const name of [...(await echt.listeVerzeichnis(klient.ablage.lokalEreignisse))].sort()) {
+      const kenn = zerlegeEreignisDateiname(name);
+      if (kenn === undefined || !praefixe.has(kenn.praefix)) continue;
+      const bytes = await echt.liesAb(klient.ablage.lokalDatei(name), 0);
+      for (const zeile of leseZeilengrenzen(bytes, 0).zeilen) {
+        // Verwaltungsereignisse (§2.4) reden über die Datei, in der sie stehen;
+        // ein ersetztes Segment behält seine eigenen, das Ersatzsegment nimmt
+        // sie nicht mit (§4.6). Sie zählen deshalb nicht als Verlust.
+        if (istVerwaltungsereignis(zeile.rahmen.typ)) continue;
+        if (aufDemShare.has(zeile.rahmen.id)) continue;
+        verluste.push({ clientId: klient.clientId, ereignisId: zeile.rahmen.id });
+      }
+    }
+  }
+  return verluste;
+}
+
 function bewerte(
   plan: Plan,
   phasen: readonly Phasenbefund[],
@@ -419,13 +494,26 @@ function bewerte(
         `Phase ${phase.nummer}: kein Konvergenznachweis (${phase.befund.art})` +
           (phase.befund.art === "nichtVergleichbar" ? ` — ${phase.befund.grund}` : ""),
       );
-    } else if (letzte && phase.befund.art === "nichtVergleichbar" && !phase.befund.gleicheHashes) {
-      // §8.6.1: Nach der Beschädigung darf der Ausgang „nicht vergleichbar"
-      // stehen — aber die Zustände müssen sich trotzdem gedeckt haben, sobald
-      // das Ersatzsegment gelesen ist. Tun sie es nicht, hat die Heilung nicht
-      // stattgefunden, und das ist ein Mangel.
+    }
+    // **Kein Urteil über die Zustände zweier Clients mit verschiedenen
+    // Versionsvektoren.** §7.6 sagt dazu „nicht vergleichbar — kein Fehler,
+    // aber auch kein Nachweis", und §8.2 Punkt 7 setzt die Konvergenzzusage
+    // aus, solange eine Quarantäne besteht. Beide Ausgänge — `nichtVergleichbar`
+    // und `zuWenigeClients` — werden deshalb gleich behandelt: berichtet,
+    // nicht bewertet.
+    //
+    // Vorher waren sie ungleich behandelt, und das war schlimmer als beides:
+    // `nichtVergleichbar` verlangte Hash-Gleichheit, `zuWenigeClients` nicht.
+    // Derselbe Sachverhalt war damit einmal ein Mangel und einmal nicht — und
+    // je **mehr** Clients beschädigt waren, desto eher bestand der Lauf.
+    // Befund des zweiten Gutachtens zu M0.4.
+    //
+    // Was den Verlust angeht, den diese Forderung eigentlich fangen sollte,
+    // steht jetzt `pruefeVollstaendigkeit` — und die trifft ihn direkt, statt
+    // ihn aus einem Hash-Unterschied zu erraten.
+    for (const verlust of phase.verluste) {
       maengel.push(
-        `Phase ${phase.nummer}: nicht vergleichbar und die Zustände decken sich nicht — ${phase.befund.grund}`,
+        `Phase ${phase.nummer}: Ereignis ${verlust.ereignisId} von ${verlust.clientId} steht auf keiner auswertbaren Share-Datei mehr`,
       );
     }
     // `zuWenigeClients` in der letzten Phase ist **kein** Mangel.

@@ -30,6 +30,7 @@ import {
   type Dateikennung,
   type Einsatzablage,
 } from "./pfade.js";
+import { kettenanker, type Segmentquelle } from "./kettenanker.js";
 import { kettenPruefsumme, KETTE_ANFANG } from "./pruefsummen.js";
 import { bereiteSchreiberVor, type Schreiberbestand } from "./schreiberStart.js";
 import { schreibeSchreiberzustand, type Schreiberzustand } from "./schreiberzustand.js";
@@ -389,6 +390,19 @@ export class Schreiber {
    */
   async schreibeErsatzsegment(ersetztesSegment: number, abOffset: number): Promise<Schreibergebnis> {
     const quelle = await this.#liesEigenesSegment(ersetztesSegment);
+    if (quelle === undefined) {
+      // Ohne bestimmbaren Anker ist nicht feststellbar, welche Zeilen zu
+      // wiederholen sind. Ein Ersatzsegment ins Blaue zu schreiben wäre
+      // schlimmer als keines: Es sähe wie eine Reparatur aus und wäre keine
+      // (§6.3, §4.6 Schritt 4).
+      return {
+        art: "abgewiesen",
+        meldung:
+          "Ein Teil der bereits übertragenen Einträge dieses Arbeitsplatzes ist auf dem Server " +
+          "beschädigt. Die Reparatur konnte nicht vorbereitet werden.",
+        dauerhafterHinweis: false,
+      };
+    }
     const bisStelle = quelle.zeilen.filter((z) => z.offset + z.laenge <= abOffset);
     // §4.3: Eine Abschlusszeile des ersetzten Segments gehört nicht in das
     // Ersatzsegment. Sie sagt „dieses Segment ist fertig, es geht bei N
@@ -531,18 +545,33 @@ export class Schreiber {
    */
   async #liesEigenesSegment(
     segment: number,
-  ): Promise<{ zeilen: readonly GeleseneZeile[]; startkette: string }> {
-    let kette = KETTE_ANFANG;
+  ): Promise<{ zeilen: readonly GeleseneZeile[]; startkette: string } | undefined> {
+    // **Der Anker kommt aus `kettenanker`, nicht aus einer mitgeschleiften
+    // Variablen.** §2.3 kennt drei Fälle, und der dritte ist genau der, der
+    // hier vorkommt: Die erste Zeile eines **Ersatzsegments** setzt auf der
+    // letzten unbeschädigten Zeile des ersetzten Segments auf — „bewusst nicht
+    // dessen letzte Zeile". Wer die Kette stattdessen von Segment zu Segment
+    // durchreicht, hält jedes Ersatzsegment für kettenfalsch, findet keine
+    // einzige Zeile und schreibt bei der **zweiten** Reparatur ein
+    // Ersatzsegment, das nur seine eigene Kopfzeile enthält: §4.6 Schritt 4
+    // („schreibt alle Ereignisse ab dieser Stelle noch einmal") wäre verletzt,
+    // die Ereignisse erreichten keinen Leser mehr, und der Bediener läse
+    // trotzdem „er wird neu geschrieben". `schreiberStart.ts` warnt im
+    // Kommentar wörtlich vor diesem Fehler und macht es richtig; hier stand er.
+    // Befund des zweiten Gutachtens zu M0.4.
+    const bytesJeSegment = new Map<number, Uint8Array>();
     for (const kennung of await this.#eigeneSegmente()) {
-      if (kennung.segment >= segment) break;
-      const vorher = await liesSegment(
-        this.#dateisystem,
-        this.#ablage.lokalDatei(kennung.name),
-        0,
-        kette,
+      bytesJeSegment.set(
+        kennung.segment,
+        await this.#dateisystem.liesAb(this.#ablage.lokalDatei(kennung.name), 0),
       );
-      kette = vorher.letzteKette;
     }
+    const quelle: Segmentquelle = async (s) => bytesJeSegment.get(s);
+    const eigene = bytesJeSegment.get(segment) ?? new Uint8Array(0);
+    // `true`: Die Quelle sind die **eigenen** lokalen Segmente, und die sind
+    // vollständig — anders als der Spiegel eines Lesers (§5.5).
+    const kette = await kettenanker(segment, eigene, quelle, true);
+    if (kette === undefined) return undefined;
     const befund = await liesSegment(
       this.#dateisystem,
       this.#ablage.lokalSegment(this.#zustand.clientId, segment),
@@ -552,15 +581,6 @@ export class Schreiber {
     return { zeilen: befund.zeilen, startkette: kette };
   }
 
-  /**
-   * Die eigenen lokalen Segmentdateien, aufsteigend — **frisch aufgelistet**.
-   *
-   * Der Bestand aus dem Start (§4.3) veraltet, sobald ein Segmentwechsel oder
-   * ein Ersatzsegment eine Datei hinzugefügt hat. Eine veraltete Liste
-   * vergäbe in §4.6 Schritt 1 eine Nummer, die schon belegt ist — und ein
-   * zweiter Schreiber derselben Datei ist genau das, was „ein Schreiber je
-   * Datei" ausschließen soll.
-   */
   async #eigeneSegmente(): Promise<readonly Dateikennung[]> {
     const praefix = clientPraefix(this.#zustand.clientId);
     const namen = await this.#dateisystem.listeVerzeichnis(this.#ablage.lokalEreignisse);

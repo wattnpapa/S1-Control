@@ -870,3 +870,73 @@ describe("§8.1 — der Reparaturmerker hängt an der Datei, nicht am Schreiber"
     expect(gelesen.zeilen.map((z) => z.rahmen.id)).toEqual([`${ICH}:1`, `${ICH}:3`]);
   });
 });
+
+describe("§4.6 Schritt 4 — auch die zweite Reparatur wiederholt die Ereignisse", () => {
+  /** Kippt ein Byte in der Mitte der angegebenen Zeile einer Share-Datei. */
+  async function kippe(platz: Arbeitsplatz, pfad: string, zeilennummer: number): Promise<number> {
+    const roh = new Uint8Array(await platz.dateisystem.liesAb(pfad, 0));
+    const zeilen = leseZeilengrenzen(roh, 0).zeilen;
+    const ziel = zeilen[zeilennummer] as { offset: number; laenge: number };
+    const stelle = ziel.offset + Math.floor(ziel.laenge / 2);
+    roh[stelle] = ((roh[stelle] as number) ^ 0x20) & 0xff;
+    await platz.dateisystem.kuerzeAuf(pfad, 0);
+    await platz.dateisystem.haengeAnUndSynchronisiere(pfad, roh);
+    return ziel.offset;
+  }
+
+  it("verliert bei der Reparatur eines Ersatzsegments keine Ereignisse", async () => {
+    // Ein Ersatzsegment setzt nach §2.3 **nicht** auf dem Ende seines
+    // Vorgängers auf. Wer die Kette von Segment zu Segment durchreicht, hält es
+    // für kettenfalsch, findet keine Zeile und schreibt ein Ersatzsegment, das
+    // nur seine eigene Kopfzeile enthält — §4.6 Schritt 4 verletzt, und der
+    // Bediener liest trotzdem „er wird neu geschrieben". Befund des zweiten
+    // Gutachtens zu M0.4.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, platz.dateisystem));
+    for (let i = 0; i < 6; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await akte.spiegle();
+
+    // Erste Beschädigung in Segment 0000 → Ersatzsegment 0001.
+    await kippe(platz, platz.ablage.shareSegment(ICH, 0), 3);
+    const erste = await oeffneAkte(akteOptionen(platz, platz.dateisystem));
+    expect(erste.ergebnis.reaktion?.art).toBe("repariert");
+
+    // Weiterschreiben in das Ersatzsegment und spiegeln.
+    for (let i = 6; i < 11; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await erste.akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    await erste.akte.spiegle();
+    const vorZweiter = leseZeilengrenzen(
+      await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 1), 0),
+      0,
+    ).zeilen;
+    expect(vorZweiter.length).toBeGreaterThan(6);
+
+    // Zweite Beschädigung — diesmal im **Ersatzsegment** 0001.
+    const abOffset = await kippe(platz, platz.ablage.shareSegment(ICH, 1), 3);
+    const zweite = await oeffneAkte(akteOptionen(platz, platz.dateisystem));
+    expect(zweite.ergebnis.reaktion?.art).toBe("repariert");
+
+    const ersatz = leseZeilengrenzen(
+      await platz.dateisystem.liesAb(platz.ablage.lokalSegment(ICH, 2), 0),
+      0,
+    ).zeilen;
+    // Nicht nur die Kopfzeile: §4.6 Schritt 4 verlangt alle Ereignisse ab der
+    // Fehlerstelle noch einmal.
+    expect(ersatz.length).toBeGreaterThan(1);
+    expect(ersatz[0]?.rahmen.typ).toBe("SegmentErsetzt");
+    expect((ersatz[0]?.rahmen["nutzlast"] as { abOffset: number }).abOffset).toBe(abOffset);
+
+    // Und zwar genau die, die ab der Fehlerstelle standen — mit unveränderter
+    // Identität (§4.6 Schritt 4).
+    const erwartet = vorZweiter
+      .filter((z) => z.offset >= abOffset && z.rahmen.typ !== "SegmentErsetzt")
+      .map((z) => z.rahmen.id);
+    expect(ersatz.slice(1).map((z) => z.rahmen.id)).toEqual(erwartet);
+  });
+});
