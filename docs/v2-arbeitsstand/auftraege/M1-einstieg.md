@@ -22,9 +22,15 @@ Stand: 2026-09-09 · Meilenstein M1 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSET
 >   [KONZEPT-EREIGNISSE.md](../../v2/konzepte/KONZEPT-EREIGNISSE.md) liegt vor. Die vier Startwerte stehen dort in §10 als S2, S3,
 >   S5 und S6 und sind austauschbar, ohne dass sich eine Regel ändert.
 >
-> **M1.1 ist in dieser Arbeitsumgebung nicht ausführbar:** Es extrahiert aus dem
-> Repository `einheitenerfassungsbogen`, das hier nicht erreichbar ist. Nur
-> `vendor/eeb-format` liegt als Submodul vor.
+> **Stand der fünf Pakete am 2026-09-09:**
+>
+> | Paket | Stand |
+> |---|---|
+> | M1.1 | **Prämisse hat sich geändert** — der Kern ist bereits extrahiert, in vier Pakete statt in einen. Befund und Vorschlag in [M1.1-befund-kern-existiert-bereits.md](M1.1-befund-kern-existiert-bereits.md); die Neuzuschneidung braucht eine Entscheidung von Johannes |
+> | M1.2 | dritte Fassung von [KONZEPT-EREIGNISSE.md](../../v2/konzepte/KONZEPT-EREIGNISSE.md) nach vier Gutachten; nicht freigegeben |
+> | M1.3 | nicht begonnen — wartet auf die Freigabe von M1.2 |
+> | M1.4 | **gebaut und grün**: Zeichen-Inferenz, STAN-Datensatz und Vorlagenkatalog liegen in `@s1/domaene`. Offen bleibt allein der Katalog `KATS_STAN_NDS`, dessen Arbeitsmappe nicht vorliegt |
+> | M1.5 | nicht begonnen |
 
 
 Aufträge werden hier abgelegt, damit nachvollziehbar bleibt, wogegen ein Paket
