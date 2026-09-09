@@ -115,6 +115,8 @@ export async function pruefeBeimOeffnen(
     return nichtErreichbar(fehler);
   }
   let hoechste = 0;
+  /** Die höchste Laufnummer, die auf dem Share unter der **laufenden** Kennung steht (§4.5 Schritt 3). */
+  let unterLaufenderKennung = 0;
 
   for (const kennung of eigene) {
     let share: Uint8Array;
@@ -126,6 +128,9 @@ export async function pruefeBeimOeffnen(
       return nichtErreichbar(fehler);
     }
     hoechste = Math.max(hoechste, hoechsteLaufnummer(share));
+    // Nur unter der **laufenden** Kennung kann eine fremde Laufnummer noch zu
+    // einer doppelten Identität führen — dort schreibt dieser Client weiter.
+    unterLaufenderKennung = Math.max(unterLaufenderKennung, hoechsteLaufnummer(share));
     const istErsetzt = optionen.bereitsErsetzt?.has(kennung.segment) === true;
 
     const ausgang = vergleicheSpiegel({
@@ -180,13 +185,24 @@ export async function pruefeBeimOeffnen(
   // anderer Prozess unter derselben Kennung geschrieben." Der Vergleich steht
   // **nach** den Schritten 1 und 2 und **vor** der Rückgabe — sonst bliebe er
   // eine Zahl ohne Auswerter.
+  //
+  // **Nur unter der laufenden Kennung.** Eine aufgegebene Kennung (§4.5
+  // Schritt 1) zählt für die Laufnummer mit — damit keine Nummer zweimal
+  // vergeben wird —, darf den Vergleich aber nicht mehr auslösen: Dieser Client
+  // schreibt dort nicht mehr, eine fremde Nummer kann dort also keine doppelte
+  // Identität mehr erzeugen. Ohne diese Trennung löste dieselbe Klon-Zeile bei
+  // **jedem** Öffnen erneut einen Kennungswechsel aus; `frühereClientIds` und
+  // mit ihnen die Kosten der Prüfung wüchsen unbegrenzt, und der Bediener bekäme
+  // bei jedem Start erneut zu lesen, sein Profil sei kopiert worden — eine
+  // Aussage, die nach dem ersten Wechsel nicht mehr zutrifft. Befund aus der
+  // Simulation M0.4.
   const zuletztVergeben = optionen.eigeneLaufnummer;
-  if (zuletztVergeben !== undefined && hoechste > zuletztVergeben) {
+  if (zuletztVergeben !== undefined && unterLaufenderKennung > zuletztVergeben) {
     return {
       art: "fremdschreiber",
       segment: eigene.at(-1)?.segment ?? 0,
       abOffset: 0,
-      id: `${optionen.clientId}:${hoechste}`,
+      id: `${optionen.clientId}:${unterLaufenderKennung}`,
       grund: "laufnummerHoeher",
     };
   }

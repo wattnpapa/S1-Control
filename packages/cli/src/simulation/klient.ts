@@ -185,9 +185,17 @@ export class Klient {
       } catch (fehler) {
         letzter = fehler;
         this.oeffnenGescheitert += 1;
+        // Der Dateibestand gehört in die Meldung: Ohne ihn ist ein
+        // Kettenbruch beim Start (§8.1, §2.3) hinterher nicht mehr zu
+        // untersuchen — der Lauf ist dann vorbei und die Lage verändert.
+        const bestand = await this.#o.echt
+          .listeVerzeichnis(this.ablage.lokalEreignisse)
+          .catch(() => [] as readonly string[]);
         this.meldungen.push({
           art: "oeffnenGescheitert",
-          text: `Öffnen scheiterte an einem lokalen Dateisystemfehler: ${(fehler as Error).message}`,
+          text:
+            `Client ${this.nummer} (${this.#clientId}): ${(fehler as Error).name} — ` +
+            `${(fehler as Error).message} | lokal: ${bestand.join(", ")}`,
         });
       }
     }
@@ -220,6 +228,13 @@ export class Klient {
     if (akte.schreiber.clientId !== this.#clientId) {
       this.#clientId = akte.schreiber.clientId;
       this.#hlcUhr = new HlcUhr({ clientId: this.#clientId, wanduhr: this.uhr.lies });
+    }
+    if (ergebnis.befund.art !== "inOrdnung") {
+      // §4.5 Fall 2 und §4.6 werden beim Öffnen ausgelöst (§4.6.1 Auslöser 1).
+      // Welcher Befund es war, gehört in den Bericht: Ein zu Unrecht
+      // ausgelöster Ausgang C trifft eine Aussage über den Rechner des
+      // Bedieners und muss auffindbar sein (§5.4.3).
+      this.meldungen.push({ art: `oeffnungsbefund:${ergebnis.befund.art}`, text: JSON.stringify(ergebnis.befund).slice(0, 240) });
     }
     this.#merke(ergebnis.reaktion);
     this.#nimmAuf(ergebnis.quarantaeneNachlauf.neueZeilen);

@@ -3,9 +3,10 @@
  * §8.3 und §7.6.
  *
  * Getrennt vom Leser, weil hier nur beschrieben wird, was ein Durchlauf
- * hergibt. Die Felder sind nicht beliebig: `gelesenBytes` trägt Bedingung 2 der
- * Ruhephase (§7.6), und `lesefehler` ist der Grund, warum ein Share-Ausfall
- * **nicht** wie Ruhe aussieht.
+ * hergibt. Die Felder sind nicht beliebig: `fortschrittBytes` trägt Bedingung 2
+ * und 3 der Ruhephase (§7.6), und `lesefehler` wie `spiegelfehler` sind der
+ * Grund, warum ein Share-Ausfall oder eine volle Platte **nicht** wie Ruhe
+ * aussieht.
  */
 
 import type { Uhrmeldung } from "@s1/domaene";

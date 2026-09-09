@@ -43,14 +43,66 @@ const WEITERE_STOERUNGEN: readonly string[] = [
   "lokaleSchreibstoerung",
 ];
 
+/**
+ * Zahl mit Tausenderpunkt und Komma — von Hand, nicht über `toLocaleString`.
+ *
+ * `toLocaleString("de-DE")` fällt auf einem Node ohne volles ICU auf eine
+ * andere Schreibweise zurück; der Berichtstext unterschiede sich dann zwischen
+ * den drei Betriebssystemen aus Auflage 17.
+ */
 function zahl(wert: number, stellen = 0): string {
-  return wert.toLocaleString("de-DE", { minimumFractionDigits: stellen, maximumFractionDigits: stellen });
+  const fest = wert.toFixed(stellen);
+  const [ganz, bruch] = fest.split(".");
+  const vorzeichen = (ganz as string).startsWith("-") ? "-" : "";
+  const ziffern = (ganz as string).replace("-", "");
+  const gruppiert = ziffern.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+  return bruch === undefined ? `${vorzeichen}${gruppiert}` : `${vorzeichen}${gruppiert},${bruch}`;
 }
 
-/** Welche geforderten Störungen in diesem Lauf gar nicht vorkamen. */
+/**
+ * Welche vom Plan **geforderten** Störungen in diesem Lauf gar nicht vorkamen.
+ *
+ * „Gefordert" heißt: Der Plan hat sie eingeschaltet. Ein Plan, der eine Störung
+ * auf 0 setzt oder so wenige Kommandos vorsieht, dass sie rechnerisch nicht
+ * vorkommen kann, fordert sie nicht — und ihr Ausbleiben ist dann kein Mangel,
+ * sondern die Folge des Plans. Der Abnahmeplan fordert alle zehn.
+ */
 export function fehlendeStoerungen(ergebnis: Laufergebnis): readonly string[] {
   const gezaehlt = { ...ergebnis.stoerungen, ...ergebnis.dateisystemZaehler };
-  return GEFORDERTE_STOERUNGEN.filter((name) => (gezaehlt[name] ?? 0) === 0);
+  return GEFORDERTE_STOERUNGEN.filter(
+    (name) => istGefordert(ergebnis, name) && (gezaehlt[name] ?? 0) === 0,
+  );
+}
+
+/** Ob der Plan diese Störung eingeschaltet hat und mindestens ein Treffer zu erwarten war. */
+function istGefordert(ergebnis: Laufergebnis, name: string): boolean {
+  const p = ergebnis.plan;
+  const erwartet = (wahrscheinlichkeit: number, gelegenheiten: number): boolean =>
+    wahrscheinlichkeit > 0 && wahrscheinlichkeit * gelegenheiten >= 1;
+  switch (name) {
+    case "kill":
+      return erwartet(p.fehler.kill, p.kommandos);
+    case "partition":
+      return erwartet(p.fehler.partition, p.kommandos);
+    case "uhrsprung":
+      return erwartet(p.fehler.uhrsprung, p.kommandos);
+    case "abgeschnittenShare":
+      return erwartet(p.profil.abgeschnittenShare, p.kommandos);
+    case "abgeschnittenLokal":
+      return erwartet(p.profil.abgeschnittenLokal, p.kommandos);
+    case "renameFehler":
+      return erwartet(p.profil.renameFehler, p.kommandos);
+    case "blockade":
+      return erwartet(p.profil.blockade, p.kommandos);
+    case "fileNotFoundCache":
+      return p.profil.fileNotFoundCacheMs > 0;
+    case "verzeichnisCache":
+      return p.profil.verzeichnisCacheMs > 0;
+    case "sichtbarkeitVerzoegert":
+      return p.profil.sichtbarkeitsverzoegerungMs > 0;
+    default:
+      return false;
+  }
 }
 
 export function berichte(ergebnis: Laufergebnis): string {
@@ -114,10 +166,12 @@ export function berichte(ergebnis: Laufergebnis): string {
   zeilen.push("");
 
   zeilen.push("Störungen — wie oft sie gegriffen haben");
+  const fehlend = new Set(fehlendeStoerungen(ergebnis));
   for (const name of [...GEFORDERTE_STOERUNGEN, ...WEITERE_STOERUNGEN]) {
     const anzahl = gezaehlt[name] ?? 0;
-    const noetig = GEFORDERTE_STOERUNGEN.includes(name);
-    zeilen.push(`  ${name.padEnd(24)} ${String(anzahl).padStart(6)}${anzahl === 0 && noetig ? "   ← gefordert, aber nicht eingetreten" : ""}`);
+    zeilen.push(
+      `  ${name.padEnd(24)} ${String(anzahl).padStart(6)}${fehlend.has(name) ? "   ← vom Plan gefordert, aber nicht eingetreten" : ""}`,
+    );
   }
   for (const [name, anzahl] of Object.entries(gezaehlt).sort()) {
     if (GEFORDERTE_STOERUNGEN.includes(name) || WEITERE_STOERUNGEN.includes(name)) continue;
@@ -149,12 +203,6 @@ export function berichte(ergebnis: Laufergebnis): string {
   );
   zeilen.push("  Die Zeit dazu misst M0.5 am echten Share; hier steht allein die Datenmenge.");
   zeilen.push("");
-
-  const fehlend = fehlendeStoerungen(ergebnis);
-  if (fehlend.length > 0) {
-    zeilen.push(`WARNUNG: geforderte Störungen ohne einen einzigen Treffer: ${fehlend.join(", ")}`);
-    zeilen.push("");
-  }
 
   if (ergebnis.erfolg) {
     zeilen.push("Ergebnis: bestanden — kein roter Ausgang, kein Mangel.");

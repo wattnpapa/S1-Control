@@ -81,7 +81,7 @@ export class Stoerwerk {
   }
 
   /** Zieht die Störungen für einen Bedienschritt des angegebenen Clients. */
-  async vorBedienschritt(handelnder: Klient, alle: readonly Klient[]): Promise<void> {
+  async vorBedienschritt(handelnder: Klient): Promise<void> {
     const f = this.#o.fehler;
     const z = this.#o.zufall;
 
@@ -111,13 +111,21 @@ export class Stoerwerk {
       this.#merke("lokaleSchreibstoerung", handelnder, `${code} auf dem lokalen Schreibweg (§8.8)`);
     }
 
-    if (this.beschaedigungAktiv && z.trifft(f.beschaedigung)) {
-      await this.#beschaedige(alle);
-    }
-
     if (z.trifft(f.profilKlon)) {
       await this.#klone(handelnder);
     }
+  }
+
+  /**
+   * Die Beschädigung nach §8.2, gezogen **nach** dem Spiegelungslauf.
+   *
+   * Siehe die Begründung der Reihenfolge in `lauf.ts`: Nur frisch gespiegelte,
+   * noch nicht gelesene Bytes erreichen einen Leser.
+   */
+  async nachDerSpiegelung(alle: readonly Klient[]): Promise<void> {
+    if (!this.beschaedigungAktiv) return;
+    if (!this.#o.zufall.trifft(this.#o.fehler.beschaedigung)) return;
+    await this.#beschaedige(alle);
   }
 
   /**
@@ -170,7 +178,14 @@ export class Stoerwerk {
     // Mindestens eine Zeile muss hinter der beschädigten stehen, sonst liegt
     // die Beschädigung am Dateiende und ist §8.1, nicht §8.2.
     if (zeilen.length < 2) return;
-    const ziel = zeilen[this.#o.zufall.bis(zeilen.length - 1)];
+    // **Möglichst weit hinten.** Ein Leser liest nach §6.2 ab seinem
+    // `leseOffset` und sieht eine Stelle nie wieder, die er schon gelesen hat.
+    // Eine Beschädigung in der Dateimitte trifft deshalb nur den Schreiber
+    // (§4.6.1 Auslöser 1) und nie einen Leser — der Weg aus §8.2 und §8.6.1
+    // bliebe ungeprüft. Die vorletzte Zeile ist die letzte Stelle, an der noch
+    // eine Zeile folgt (Bedingung für §8.2 statt §8.1) und die zugleich gute
+    // Aussicht hat, von mindestens einem Leser noch nicht gelesen zu sein.
+    const ziel = zeilen[zeilen.length - 2];
     if (ziel === undefined) return;
     // In die Zeilenmitte, damit weder das Längenfeld noch das Zeilenende
     // getroffen wird: Das ist Regel 4 aus §8.2 (CRC stimmt nicht), der Fall,

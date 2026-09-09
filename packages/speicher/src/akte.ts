@@ -44,6 +44,12 @@ export interface Oeffnungsergebnis {
   readonly reaktion?: Reaktion;
   /** Was der Quarantäne-Nachlauf aus §8.2 Punkt 5 ergeben hat. */
   readonly quarantaeneNachlauf: Pollergebnis;
+  /**
+   * Weitere Reaktionen, wenn beim Öffnen **mehrere** eigene Segmente repariert
+   * wurden (§4.6.1 Auslöser 1 im Plural). `reaktion` bleibt die erste — sie ist
+   * die, über die der Bediener informiert wird.
+   */
+  readonly weitereReaktionen?: readonly Reaktion[];
 }
 
 /** Die beiden Reaktionen aus §5.4.3, mit dem Text, den der Bediener sieht. */
@@ -110,6 +116,16 @@ export async function oeffneAkte(
   return { akte, ergebnis };
 }
 
+/**
+ * Höchstzahl der Reparaturen je Öffnen (§4.6.1 Auslöser 1).
+ *
+ * Keine Zusage, sondern eine Schranke gegen eine Endlosschleife: Jede
+ * Reparatur legt ein Ersatzsegment an und nimmt sein Vorbild nach §4.6
+ * Schritt 5 aus der Prüfung, es kann also nie mehr Reparaturen als eigene
+ * Segmente geben. Der Wert liegt darüber.
+ */
+const REPARATUREN_JE_OEFFNEN = 64;
+
 export class Akte {
   readonly #optionen: AkteOptionen;
   readonly #schreiber: Schreiber;
@@ -166,10 +182,69 @@ export class Akte {
     // würde nie wieder gelesen. Befund aus der Simulation M0.4.
     await this.#kuerzeAufgegebeneDateien(
       (this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
+      // Beim Öffnen ist nicht mehr feststellbar, ob die Übernahme seinerzeit
+      // vollständig gelungen ist. Gelöscht wird deshalb nichts.
+      false,
     );
     await this.#leser.gleicheMitSpiegelAb();
     const quarantaeneNachlauf = await this.#leser.pruefeQuarantaenenErneut();
-    const befund = await pruefeBeimOeffnen({
+    // §4.6.1 Auslöser 1 im Plural: „Beim Öffnen eines Einsatzes liest der
+    // Schreiber seine eigenen Share-**Segmente** vollständig und vergleicht sie
+    // gegen seine lokalen." `pruefeBeimOeffnen` liefert **einen** Befund und
+    // kehrt beim ersten zurück; eine Beschädigung in einem zweiten Segment
+    // bliebe also bis zum nächsten Öffnen liegen — und mit ihr die Quarantäne,
+    // in die jeder Leser dort fällt (§8.2). Deshalb wird geprüft und repariert,
+    // bis nichts mehr zu reparieren ist. Die Schranke ist die Zahl der eigenen
+    // Segmente: mehr Reparaturen als Segmente kann es nicht geben, und ein
+    // Ersatzsegment nimmt sein Vorbild nach §4.6 Schritt 5 aus der Prüfung.
+    // Befund aus der Simulation M0.4.
+    const { befund, reaktionen } = await this.#pruefeUndRepariere();
+    const reaktion = reaktionen[0] ?? (await this.#reagiereAufBefund(befund));
+    await this.speichereZustand();
+    const ergebnis: Oeffnungsergebnis = {
+      befund,
+      quarantaeneNachlauf,
+      ...(reaktion === undefined ? {} : { reaktion }),
+      ...(reaktionen.length > 1 ? { weitereReaktionen: reaktionen.slice(1) } : {}),
+    };
+    return ergebnis;
+  }
+
+  /**
+   * Prüft die eigenen Share-Segmente und repariert **jede** gefundene
+   * Beschädigung (§4.6.1 Auslöser 1, §4.6).
+   *
+   * Zurückgegeben wird der **erste** Befund — er ist der, über den der Bediener
+   * informiert wird — und die Reihe der Reaktionen. Die Schleife ist der
+   * Unterschied zu einem einzelnen Durchgang: `pruefeBeimOeffnen` kehrt beim
+   * ersten Befund zurück, eine Beschädigung im zweiten eigenen Segment bliebe
+   * also bis zum nächsten Öffnen liegen — und mit ihr die Quarantäne, in die
+   * jeder Leser dort fällt (§8.2). §4.6.1 Auslöser 1 spricht von den eigenen
+   * Share-**Segmenten** im Plural. Befund aus der Simulation M0.4.
+   */
+  async #pruefeUndRepariere(): Promise<{
+    readonly befund: Oeffnungsbefund;
+    readonly reaktionen: readonly Reaktion[];
+  }> {
+    const erster = await this.#pruefeBeimOeffnen();
+    if (erster.art !== "beschaedigt") return { befund: erster, reaktionen: [] };
+
+    const reaktionen: Reaktion[] = [];
+    let befund: Oeffnungsbefund = erster;
+    for (let runde = 0; runde < REPARATUREN_JE_OEFFNEN && befund.art === "beschaedigt"; runde += 1) {
+      const reaktion = await this.#repariere(befund.segment, befund.abOffset);
+      reaktionen.push(reaktion);
+      // Scheitert die Reparatur selbst (§8.8), wird abgebrochen: Ein zweiter
+      // Versuch an derselben Stelle brächte dasselbe Ergebnis, und §6.3
+      // verbietet eine Anzeige, die Erfolg suggeriert.
+      if (reaktion.art !== "repariert") break;
+      befund = await this.#pruefeBeimOeffnen();
+    }
+    return { befund: erster, reaktionen };
+  }
+
+  async #pruefeBeimOeffnen(): Promise<Oeffnungsbefund> {
+    return pruefeBeimOeffnen({
       dateisystem: this.#optionen.dateisystem,
       ablage: this.#optionen.ablage,
       clientId: this.#schreiber.clientId,
@@ -187,11 +262,6 @@ export class Akte {
         ? {}
         : { frühereClientIds: this.#schreiber.zustand.frühereClientIds }),
     });
-    const reaktion = await this.#reagiereAufBefund(befund);
-    await this.speichereZustand();
-    return reaktion === undefined
-      ? { befund, quarantaeneNachlauf }
-      : { befund, reaktion, quarantaeneNachlauf };
   }
 
   /** Ein Ereignis schreiben (§5.2). */
@@ -227,9 +297,9 @@ export class Akte {
   }
 
   async #reagiereAufBefund(befund: Oeffnungsbefund): Promise<Reaktion | undefined> {
-    if (befund.art === "beschaedigt") {
-      return this.#repariere(befund.segment, befund.abOffset);
-    }
+    // `beschaedigt` ist hier nicht mehr zu behandeln: `#pruefeUndRepariere`
+    // erledigt §4.6 und liefert seine Reaktionen selbst.
+    if (befund.art === "beschaedigt") return undefined;
     if (befund.art === "fremdschreiber") {
       return this.#wechsleKennung();
     }
@@ -321,10 +391,16 @@ export class Akte {
 
     const gekuerzt =
       ergebnis === undefined
-        ? await this.#kuerzeAufgegebeneDateien([
-            clientPraefix(alteClientId),
-            ...(this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
-          ])
+        ? await this.#kuerzeAufgegebeneDateien(
+            [
+              clientPraefix(alteClientId),
+              ...(this.#schreiber.zustand.frühereClientIds ?? []).map(clientPraefix),
+            ],
+            // §4.5 Schritt 3 ist an dieser Stelle vollständig gelungen — nur
+            // dann steht der Inhalt der aufgegebenen Dateien nachweislich auch
+            // in der Datei der neuen Kennung.
+            true,
+          )
         : false;
 
     // Die alten `eigen`-Einträge bleiben stehen und werden nie wieder angefasst
@@ -374,8 +450,9 @@ export class Akte {
    *
    * §4.5 Schritt 6 erklärt den lokalen Spiegel der alten eigenen Datei ab dem
    * Wechsel zum „Spiegel einer fremden Datei — nämlich der des Klons". Das
-   * setzt nach §5.5 voraus, dass er das **geprüfte Präfix** der Share-Datei
-   * ist. Im Augenblick des Wechsels ist er das nicht: Er enthält zusätzlich die
+   * setzt voraus, dass er nach §5.5 nur geprüfte Zeilen enthält und damit ein
+   * Präfix der Share-Datei ist — §7.6 fasst das als „ihr geprüftes Präfix"
+   * zusammen. Im Augenblick des Wechsels ist er das nicht: Er enthält zusätzlich die
    * noch nicht gespiegelten Zeilen, deretwegen Schritt 3 überhaupt existiert.
    *
    * Ohne diese Kürzung setzte der Spiegelabgleich `leseOffset` auf die lokale
@@ -407,17 +484,27 @@ export class Akte {
    * Das Konzept sagt zu dieser Kürzung nichts; sie ist die Auslegung, mit der
    * Schritt 6 überhaupt erfüllbar wird.
    */
-  async #kuerzeAufgegebeneDateien(praefixe: Iterable<string>): Promise<boolean> {
+  async #kuerzeAufgegebeneDateien(
+    praefixe: Iterable<string>,
+    uebernahmeGelungen: boolean,
+  ): Promise<boolean> {
     let vollstaendig = true;
     for (const praefix of new Set(praefixe)) {
       if (praefix === clientPraefix(this.#schreiber.clientId)) continue;
       for (const kennung of await this.#eigeneDateien(praefix)) {
+        const stand =
+          this.#spiegelung.zustand.eigen[`${praefix}.${segmentText(kennung.segment)}`]
+            ?.shareOffset ?? 0;
         try {
-          if (!(await this.#kuerzeAufShareStand(kennung))) vollstaendig = false;
+          if (!(await this.#kuerzeAufShareStand(kennung, uebernahmeGelungen, stand))) {
+            vollstaendig = false;
+          }
         } catch (fehler) {
-          // §8.8 verlangt eine sichtbare Abweisung, §8 Grundsatz verbietet den
-          // Stillstand: Ein lokaler Dateisystemfehler darf den Kennungswechsel
-          // nicht abbrechen. Befund aus der Simulation M0.4.
+          // §8.8 verlangt für eine lokale Schreibstörung eine sichtbare
+          // Abweisung, nicht den Abbruch der Akte, und §8.8 Punkt 5 hält fest:
+          // „Der Arbeitsplatz wird zum Nur-Lesen-Platz, nicht zum toten
+          // Fenster." Ohne diesen Fang riss ein einzelnes `EIO` den gesamten
+          // Spiegelungslauf ab. Befund aus der Simulation M0.4.
           if (!(fehler instanceof DateisystemFehler)) throw fehler;
           vollstaendig = false;
         }
@@ -426,8 +513,38 @@ export class Akte {
     return vollstaendig;
   }
 
-  /** Kürzt eine einzelne aufgegebene Datei; `false`, wenn der Share nicht lesbar war. */
-  async #kuerzeAufShareStand(kennung: Dateikennung): Promise<boolean> {
+  /**
+   * Kürzt eine einzelne aufgegebene Datei; `false`, wenn etwas offen bleibt und
+   * beim nächsten Öffnen erneut zu versuchen ist.
+   *
+   * **Niemals unter `shareOffset`.** Bis dorthin ist übertragen worden, und nur
+   * die Zeilen **darüber** nimmt §4.5 Schritt 3 in die Datei der neuen Kennung
+   * mit. Ein Ziel unterhalb entsteht, wenn die Share-Datei **vor**
+   * `shareOffset` verfälscht ist — die Beschädigung, die der Vergleich aus
+   * §5.4.3 nie sieht, weil er am `shareOffset` ansetzt (§4.6.1). Dort zu kürzen
+   * löschte lokal Zeilen, die nirgends sonst mehr stehen: auf dem Share ab der
+   * Fehlerstelle für jeden Leser in Quarantäne (§8.2), in der Datei der neuen
+   * Kennung nicht enthalten. Das nähme dem Wiederherstellungsweg aus §8.6.1
+   * Regel 4 seine Grundlage — „Der ausgeleitete Spiegel enthält nur geprüfte
+   * Zeilen" setzt voraus, dass es ihn noch gibt.
+   *
+   * **Eine fehlende Share-Datei ist kein Grund zu kürzen.** Sie hat zwei
+   * Ursachen, die hier nicht zu unterscheiden sind: Das Segment wurde nie
+   * gespiegelt — oder der `FileNotFound`-Cache aus §6.6 lügt. Im zweiten Fall
+   * kürzte ein Kürzen auf 0 die Datei auf nichts, obwohl sie vollständig auf
+   * dem Share liegt. Sie wird deshalb **gelöscht statt gekürzt**, und das nur
+   * unter der Bedingung, unter der ihr Inhalt nachweislich anderswo steht: wenn
+   * die Übernahme nach §4.5 Schritt 3 gerade vollständig gelungen ist. Beim
+   * Nachholen (beim Öffnen) fehlt diese Gewissheit; dort bleibt eine solche
+   * Datei unangetastet.
+   *
+   * Beide Regeln sind Befunde aus der Simulation M0.4.
+   */
+  async #kuerzeAufShareStand(
+    kennung: Dateikennung,
+    darfLoeschen: boolean,
+    shareOffset: number,
+  ): Promise<boolean> {
     const lokalPfad = this.#optionen.ablage.lokalDatei(kennung.name);
     const lokal = await this.#optionen.dateisystem.liesAb(lokalPfad, 0);
     let share: Uint8Array;
@@ -437,12 +554,13 @@ export class Akte {
         0,
       );
     } catch (fehler) {
-      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
-        share = new Uint8Array(0);
-      } else {
+      if (!(fehler instanceof DateisystemFehler) || fehler.code !== "ENOENT") {
         // Share nicht lesbar: nichts kürzen. Beim nächsten Öffnen erneut.
         return false;
       }
+      if (!darfLoeschen || shareOffset > 0) return false;
+      await this.#optionen.dateisystem.loesche(lokalPfad);
+      return true;
     }
     let gleich = 0;
     while (gleich < share.byteLength && gleich < lokal.byteLength && share[gleich] === lokal[gleich]) {
@@ -450,6 +568,7 @@ export class Akte {
     }
     // §5.5: Der Spiegel endet an einer Zeilengrenze, nie mitten in einer Zeile.
     const ziel = leseZeilengrenzen(lokal.subarray(0, gleich), 0).endeOffset;
+    if (ziel < shareOffset) return false;
     if (ziel < lokal.byteLength) await this.#optionen.dateisystem.kuerzeAuf(lokalPfad, ziel);
     return true;
   }

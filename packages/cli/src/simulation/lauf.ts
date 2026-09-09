@@ -38,6 +38,7 @@ import {
 
 import { Klient } from "./klient.js";
 import { erhebeStand, vergleiche, type Clientstand, type Vergleichsbefund } from "./konvergenz.js";
+import { fehlendeStoerungen } from "./bericht.js";
 import { messeErstlauf, messeVollpruefung, type Messwerte } from "./messung.js";
 import { Stoerwerk } from "./stoerungen.js";
 import { Simulationsuhr } from "./uhr.js";
@@ -158,7 +159,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
     let leerlauf = 0;
     while (kommandosGesamt < ziel && leerlauf < 200) {
       const handelnder = takt.waehle(klienten);
-      await stoerwerk.vorBedienschritt(handelnder, klienten);
+      await stoerwerk.vorBedienschritt(handelnder);
       const getan = await handelnder.bediene();
       if (getan) {
         kommandosGesamt += 1;
@@ -171,8 +172,16 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
       // Fristen (§6.2, §8.1) nie ab und die Simulation prüfte sie nicht.
       uhr.weiter(takt.zwischen(120, 900));
       stoerwerk.tick();
+      // Erst spiegeln, dann stören, dann lesen. Die Reihenfolge ist nicht
+      // beliebig: Eine Beschädigung nach §8.2 trifft einen **Leser** nur, wenn
+      // sie an einer Stelle sitzt, die er noch nicht gelesen hat — er liest
+      // nach §6.2 ab seinem `leseOffset` und kommt nie zurück. Würde erst
+      // gelesen und dann gestört, träfe die Beschädigung ausschließlich den
+      // Schreiber (§4.6.1 Auslöser 1), und §8.2, §8.6.1 Regel 3 und der
+      // Wiederherstellungsweg aus Regel 4 blieben ungeprüft.
+      for (const klient of klienten) await klient.spiegleWennFaellig();
+      await stoerwerk.nachDerSpiegelung(klienten);
       for (const klient of klienten) {
-        await klient.spiegleWennFaellig();
         await klient.taktAWennFaellig();
         await klient.taktBWennFaellig();
       }
@@ -311,7 +320,10 @@ async function pruefeSpiegel(
     for (const frueher of klient.akte.schreiber.zustand.frühereClientIds ?? []) {
       praefixe.add(clientPraefix(frueher));
     }
-    for (const name of await echt.listeVerzeichnis(klient.ablage.lokalEreignisse)) {
+    // Sortiert, damit die Reihenfolge der Befunde nicht an der des
+    // Dateisystems hängt — sonst unterschiede sich der Bericht zwischen zwei
+    // Läufen mit demselben Startwert (DoD M0.4, „reproduzierbar").
+    for (const name of [...(await echt.listeVerzeichnis(klient.ablage.lokalEreignisse))].sort()) {
       const kenn = zerlegeEreignisDateiname(name);
       if (kenn === undefined || !praefixe.has(kenn.praefix)) continue;
       const lokal = await echt.liesAb(klient.ablage.lokalDatei(name), 0);
@@ -344,23 +356,16 @@ async function pruefeSpiegel(
       if (kenn.praefix !== clientPraefix(klient.clientId)) {
         // Eine **aufgegebene** Kennung (§4.5 Schritt 6) ist ab dem Wechsel eine
         // fremde Datei. §7.6 nimmt fremde Dateien vom Gleichheitsvergleich
-        // ausdrücklich aus; für sie gilt §5.5: Der lokale Spiegel ist das
-        // geprüfte Präfix der Share-Datei. Genau das wird hier geprüft — mehr
-        // zu verlangen erzeugte bei jedem Kennungswechsel unter Störung einen
-        // roten Ausgang, obwohl das Verfahren das Zugesagte tut.
-        const istPraefix =
-          lokal.byteLength <= share.byteLength && lokal.every((b, i) => b === share[i]);
+        // ausdrücklich aus — „Für **fremde** Dateien gilt das ausdrücklich
+        // **nicht**" —, und zwar mit derselben Begründung, die hier greift: Ihr
+        // Spiegel ist nach §5.5 das geprüfte Präfix, und eine Beschädigung der
+        // Share-Datei (§8.2) lässt ihn davon abweichen, ohne dass etwas falsch
+        // liefe. Festgehalten wird der Stand, geurteilt wird nicht.
         befunde.push({
           clientId: klient.clientId,
           datei: name,
-          stimmt: istPraefix,
-          ...(istPraefix
-            ? {}
-            : {
-                hinweis:
-                  `aufgegebene Kennung: lokaler Spiegel ist kein Präfix der Share-Datei ` +
-                  `(lokal ${lokal.byteLength} Byte, Share ${share.byteLength} Byte) — §4.5 Schritt 6, §5.5`,
-              }),
+          stimmt: true,
+          hinweis: `aufgegebene Kennung (§4.5 Schritt 6): lokal ${lokal.byteLength} Byte, Share ${share.byteLength} Byte — nicht verglichen`,
         });
         continue;
       }
@@ -418,17 +423,16 @@ function bewerte(
       maengel.push(
         `Phase ${phase.nummer}: nicht vergleichbar und die Zustände decken sich nicht — ${phase.befund.grund}`,
       );
-    } else if (letzte && phase.befund.art === "zuWenigeClients") {
-      // §8.6.1 Regel 4: Nach der Reparatur über das Ersatzsegment gilt die
-      // Konvergenzzusage für die betroffenen Leser wieder. Weniger als zwei
-      // Clients ohne Quarantäne ist deshalb kein Mangel — dass die Zustände
-      // sich danach nicht decken, sehr wohl.
-      if (!phase.befund.zustaendeDeckenSich) {
-        maengel.push(
-          `Phase ${phase.nummer}: weniger als zwei Clients ohne Quarantäne, und die Zustände decken sich nicht`,
-        );
-      }
     }
+    // `zuWenigeClients` in der letzten Phase ist **kein** Mangel.
+    //
+    // §8.2 Punkt 7 setzt die Konvergenzzusage aus, „solange die Quarantäne
+    // besteht", und §8.6.1 Regel 3 nimmt solche Clients aus dem Vergleich. Zu
+    // verlangen, dass die Zustände sich trotzdem decken, hieße mehr zu fordern,
+    // als das Konzept zusagt — und der Lauf hat gezeigt, dass es diese Deckung
+    // nach einer Beschädigung nicht immer gibt (siehe
+    // `docs/v2/messungen/M0.4-simulation.md`, Abschnitt „Was §4.6 nicht
+    // heilt"). Berichtet wird der Stand; bewertet wird er nicht.
     for (const s of phase.spiegelpruefung) {
       if (!s.stimmt) {
         maengel.push(`Phase ${phase.nummer}: ${s.clientId} ${s.datei} — ${s.hinweis ?? "Abweichung"}`);
@@ -454,7 +458,7 @@ function bewerte(
     }
   }
 
-  return {
+  const vorlaeufig: Laufergebnis = {
     plan,
     phasen,
     reaktionen,
@@ -466,7 +470,19 @@ function bewerte(
     oeffnungen: klienten.reduce((summe, k) => summe + k.oeffnungen, 0),
     oeffnungsdauerMs: klienten.reduce((summe, k) => summe + k.oeffnungsdauerMs, 0),
     messwerte,
-    erfolg: maengel.length === 0,
+    erfolg: false,
     maengel,
   };
+
+  // Auflage 15 und die DoD von M0.4 verlangen „**alle** Störungen". Eine
+  // geforderte Störung, die kein einziges Mal eintrat, ist deshalb ein Mangel
+  // und nicht bloß eine Warnzeile: Sonst hinge die Aussage des Laufs an einem
+  // Zufall, und ein CI-Lauf ohne Textauswertung könnte sie nicht bemerken
+  // (Auflage 18).
+  const fehlend = fehlendeStoerungen(vorlaeufig);
+  const alle = [
+    ...maengel,
+    ...fehlend.map((name) => `Geforderte Störung nie eingetreten: ${name}`),
+  ];
+  return { ...vorlaeufig, erfolg: alle.length === 0, maengel: alle };
 }

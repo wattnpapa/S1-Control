@@ -79,7 +79,10 @@ export const ALLE_FEHLER: Fehlerinjektion = {
   uhrsprungMs: 8 * 60 * 1000,
   schreibrechtEntzug: 0.002,
   schreibrechtEntzugMs: 30_000,
-  beschaedigung: 0.002,
+  // Nur in der letzten Phase wirksam (siehe `lauf.ts`). Bei 400 Kommandos je
+  // Phase sind das rund acht Treffer — die Störung muss **eintreten**, sonst
+  // weist der Lauf über §8.2, §8.6.1 und §4.6 nichts nach.
+  beschaedigung: 0.02,
   profilKlon: 0.001,
   lokaleSchreibstoerung: 0.006,
 };

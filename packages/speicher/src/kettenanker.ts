@@ -63,6 +63,7 @@ export async function kettenanker(
   segment: number,
   segmentBytes: Uint8Array,
   quelle: Segmentquelle,
+  quelleIstVollstaendig = false,
 ): Promise<string | undefined> {
   if (segment === 0) return KETTE_ANFANG;
 
@@ -70,10 +71,10 @@ export async function kettenanker(
   if (erste !== undefined && erste.rahmen.typ === TYP_SEGMENT_ERSETZT) {
     const ersatz = ersatzAus(erste.rahmen["nutzlast"]);
     if (ersatz === undefined) return undefined;
-    return ketteAnStelle(ersatz.ersetztesSegment, ersatz.abOffset, quelle);
+    return ketteAnStelle(ersatz.ersetztesSegment, ersatz.abOffset, quelle, quelleIstVollstaendig);
   }
 
-  return ketteAmEnde(segment - 1, quelle);
+  return ketteAmEnde(segment - 1, quelle, quelleIstVollstaendig);
 }
 
 /**
@@ -88,9 +89,12 @@ export async function ketteAnStelle(
   segment: number,
   offset: number,
   quelle: Segmentquelle,
+  quelleIstVollstaendig = false,
 ): Promise<string | undefined> {
   if (offset === 0) {
-    return segment === 0 ? KETTE_ANFANG : ketteAmEnde(segment - 1, quelle);
+    return segment === 0
+      ? KETTE_ANFANG
+      : ketteAmEnde(segment - 1, quelle, quelleIstVollstaendig);
   }
   const bytes = await quelle(segment);
   if (bytes === undefined) return undefined;
@@ -126,17 +130,37 @@ export async function ketteAnStelle(
 export async function ketteAmEnde(
   segment: number,
   quelle: Segmentquelle,
+  quelleIstVollstaendig = false,
 ): Promise<string | undefined> {
   if (segment < 0) return KETTE_ANFANG;
   const bytes = await quelle(segment);
   if (bytes === undefined) return undefined;
   const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
   const letzte = zeilen.at(-1);
-  // §4.3: Erst die Abschlusszeile macht eine Zeile zur letzten. Fehlt sie,
-  // wächst dieses Segment noch oder es ist nur unvollständig gespiegelt —
-  // beides heißt „noch nicht bestimmbar", nicht „kettenfalsch".
-  if (letzte === undefined || letzte.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN) return undefined;
-  if (nachfolgerAus(letzte.rahmen["nutzlast"]) === undefined) return undefined;
+  if (letzte === undefined) {
+    // Ein **leeres** Segment trägt nichts zur Kette bei. Bei vollständiger
+    // Quelle — den eigenen lokalen Dateien — darf die Frage deshalb an den
+    // Vorgänger weitergehen: Eine leere Datei entsteht, wenn der erste Anhang
+    // an ein neues Segment scheitert (§8.8) und danach ein Ersatzsegment oder
+    // ein Kennungswechsel folgt. Bei einem **Spiegel** darf sie das nicht: Dort
+    // heißt „leer" auch „noch nichts gelesen", und der Vorgänger wäre der
+    // falsche Anker.
+    if (!quelleIstVollstaendig) return undefined;
+    return segment === 0 ? KETTE_ANFANG : ketteAmEnde(segment - 1, quelle, true);
+  }
+  // §4.3: Erst die Abschlusszeile macht eine Zeile zur letzten — **wenn die
+  // Quelle ein Spiegel ist**. Der Schreiber kennt seine eigenen Dateien
+  // vollständig; für ihn ist die letzte Zeile die letzte Zeile, auch ohne
+  // Abschlusszeile (etwa bei einem nach §4.6 ersetzten Segment, das nie eine
+  // bekommt). Für einen Leser gilt das nicht: Sein Spiegel ist nach §5.5 nur
+  // das geprüfte Präfix, und seine bisher letzte Zeile ist es nur zufällig.
+  if (!quelleIstVollstaendig && letzte.rahmen.typ !== TYP_SEGMENT_ABGESCHLOSSEN) return undefined;
+  if (
+    !quelleIstVollstaendig &&
+    nachfolgerAus(letzte.rahmen["nutzlast"]) === undefined
+  ) {
+    return undefined;
+  }
   return kettenPruefsumme(letzte.bytes);
 }
 

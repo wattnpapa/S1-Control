@@ -197,7 +197,8 @@ function ganzzahl(wert: unknown): wert is number {
  * aus demselben Grund und mit derselben Begründung wie
  * `schreibeSchreiberzustand` (§4.4, §8.8, §9 zu Auflage 15): Diese Datei ist
  * ein Beschleuniger. Ihr Verlust kostet einen erneuten Abgleich gegen den
- * lokalen Spiegel beim nächsten Öffnen (§5.3, §5.5) und sonst nichts; ein
+ * lokalen Spiegel beim nächsten Öffnen (§5.3, §5.5) und die Verwendbarkeit der
+ * eigenen Stützstellen (§7.5, Prüfung 3 nennt genau diesen Fall); ein
  * abgerissener Bedienschritt oder ein abgerissener Poll-Durchlauf kostet mehr.
  * Befund aus der Simulation M0.4.
  */

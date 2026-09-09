@@ -265,12 +265,9 @@ export class Leser {
     }
 
     sammler.gelesenBytes += bytes.byteLength;
-    // §7.6, Bedingung 2 und 3 hängen am Fortschritt, nicht am Umsatz: Eine
-    // Datei mit vorläufiger Quarantäne liefert nach §8.1 in jedem Durchlauf
-    // dieselben unvollständigen Bytes.
-    const bisOffset = lage.offsets.leseOffset + bytes.byteLength;
-    sammler.fortschrittBytes += Math.max(0, bisOffset - lage.gesehenesEnde);
-    lage.merkeBytes(bisOffset, this.#optionen.zeit());
+    // §6.2, Verfall: „neue Bytes" heißt gewachsenes Dateiende — unabhängig
+    // davon, ob sie übernommen werden konnten.
+    lage.merkeBytes(lage.offsets.leseOffset + bytes.byteLength, this.#optionen.zeit());
 
     if (bytes.byteLength === 0) {
       lage.verfallPruefen(this.#optionen.zeit);
@@ -295,7 +292,18 @@ export class Leser {
       lage.ankerBekannt = true;
     }
 
+    // §7.6, Bedingung 2 und 3 hängen am **Fortschritt**, nicht am Umsatz —
+    // und Fortschritt ist, was in den Spiegel gelangt ist. Deshalb wird er am
+    // `leseOffset` gemessen, vor und nach der Verarbeitung, nicht an den
+    // gelesenen Bytes: Ein Durchlauf, der Bytes holt, sie aber nicht übernehmen
+    // kann (§8.8, oder Kettenanker noch unbestimmt), hat nichts bewegt, und der
+    // Durchlauf, der es später nachholt, hat sehr wohl etwas bewegt. Würde der
+    // Fortschritt schon beim Lesen gebucht, zählte der erste Durchlauf und der
+    // erfolgreiche nicht — und ausgerechnet der Takt, in dem die Ereignisse in
+    // den Fold laufen, gälte als Ruhetakt. Befund aus der Simulation M0.4.
+    const vorher = lage.offsets.leseOffset;
     await this.#verarbeite(lage, bytes, sammler);
+    sammler.fortschrittBytes += Math.max(0, lage.offsets.leseOffset - vorher);
     // §8.1: Die Frist läuft auch dann, wenn bei jedem Durchlauf dieselben
     // unvollständigen Bytes zurückkommen — genau das ist ihr Anwendungsfall.
     lage.verfallPruefen(this.#optionen.zeit);
@@ -415,12 +423,21 @@ export class Leser {
    * noch keinen Spiegel, und `leseOffset` ist dann 0.
    */
   async #kuerzeSpiegel(name: string, laenge: number): Promise<void> {
+    const pfad = this.#optionen.ablage.lokalDatei(name);
+    let vorhanden: Uint8Array;
     try {
-      await this.#optionen.dateisystem.kuerzeAuf(this.#optionen.ablage.lokalDatei(name), laenge);
+      vorhanden = await this.#optionen.dateisystem.liesAb(pfad, 0);
     } catch (fehler) {
       if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") return;
       throw fehler;
     }
+    // `kuerzeAuf` **verlängert** mit Nullbytes, wenn die Länge über der Datei
+    // liegt. Dass `leseOffset` nach `gleicheMitSpiegelAb` nie über der
+    // Spiegellänge steht, ist eine Zusicherung der Aufrufreihenfolge in
+    // `akte.ts` — und `Leser` ist öffentlich. Die Grenze steht deshalb hier,
+    // nicht in einer Annahme über den Aufrufer.
+    if (laenge >= vorhanden.byteLength) return;
+    await this.#optionen.dateisystem.kuerzeAuf(pfad, laenge);
   }
 
   /**

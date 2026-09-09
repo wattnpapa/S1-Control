@@ -4,7 +4,7 @@ import { knotenDateisystem } from "@s1/speicher";
 
 import { fuehreSimulationAus, type Laufergebnis } from "./lauf.js";
 import { abnahmePlan, deutePlan, pruefePlan, ruhigerPlan, type Plan } from "./plan.js";
-import { berichte, fehlendeStoerungen } from "./bericht.js";
+import { berichte, fehlendeStoerungen, GEFORDERTE_STOERUNGEN } from "./bericht.js";
 
 import * as fsp from "node:fs/promises";
 import os from "node:os";
@@ -67,7 +67,11 @@ describe("Simulationslauf — M0.4", () => {
   }, 90_000);
 
   it("konvergiert auch unter allen Störungen und weist sie im Bericht nach", async () => {
-    const ergebnis = await lauf({ ...abnahmePlan(), ...KLEIN, kommandos: 90, phasen: 3 });
+    // Groß genug, dass jede vom Plan geforderte Störung rechnerisch eintritt —
+    // sonst meldet `bewerte` sie zu Recht als Mangel, und der Test prüfte nur,
+    // dass ein zu kleiner Lauf klein ist.
+    const ergebnis = await lauf({ ...abnahmePlan(), clients: 3, kommandos: 400, phasen: 2, ruheVersucheMax: 200 });
+    expect(fehlendeStoerungen(ergebnis)).toEqual([]);
     expect(ergebnis.maengel).toEqual([]);
     // §7.6: Der rote Ausgang darf nie eintreten.
     expect(ergebnis.phasen.map((p) => p.befund.art)).not.toContain("abweichend");
@@ -75,8 +79,10 @@ describe("Simulationslauf — M0.4", () => {
     const text = berichte(ergebnis);
     expect(text).toContain("Konvergenzvergleich nach §7.6");
     expect(text).toContain("A2");
-    expect(text).toContain(ergebnis.erfolg ? "bestanden" : "NICHT bestanden");
-  }, 120_000);
+    // Kein `erfolg ? … : …`: Ein Erwartungswert, der sich nach dem Ergebnis
+    // richtet, prüft nichts — und „NICHT bestanden" enthält „bestanden".
+    expect(text).toMatch(/^Ergebnis: bestanden/m);
+  }, 180_000);
 
   it("misst die Zahlen, die M0.5 braucht (§10, A2/A7/A10)", async () => {
     const ergebnis = await lauf({ ...ruhigerPlan(), ...KLEIN });
@@ -135,11 +141,15 @@ describe("Plandatei", () => {
 
   it("nennt die geforderten Störungen, die in einem Lauf nicht vorkamen", () => {
     const leer = {
+      plan: abnahmePlan(),
       stoerungen: {},
       dateisystemZaehler: {},
     } as unknown as Laufergebnis;
-    expect(fehlendeStoerungen(leer).length).toBeGreaterThan(0);
+    // Der Abnahmeplan fordert alle zehn; keine ist eingetreten.
+    expect([...fehlendeStoerungen(leer)].sort()).toEqual([...GEFORDERTE_STOERUNGEN].sort());
+
     const voll = {
+      plan: abnahmePlan(),
       stoerungen: { kill: 1, partition: 1, uhrsprung: 1 },
       dateisystemZaehler: {
         abgeschnittenShare: 1,
@@ -152,5 +162,36 @@ describe("Plandatei", () => {
       },
     } as unknown as Laufergebnis;
     expect(fehlendeStoerungen(voll)).toEqual([]);
+
+    // Ein Plan, der eine Störung abschaltet, fordert sie nicht — ihr Ausbleiben
+    // ist dann kein Mangel, sondern die Folge des Plans.
+    const ohne = {
+      plan: ruhigerPlan(),
+      stoerungen: {},
+      dateisystemZaehler: {},
+    } as unknown as Laufergebnis;
+    expect(fehlendeStoerungen(ohne)).toEqual([]);
   });
+
+  it("macht eine geforderte, aber ausgebliebene Störung zum Mangel", async () => {
+    // Auflage 15 und die DoD verlangen „alle Störungen". Ein Plan, der sie
+    // fordert, in dem sie aber nicht eintreten, darf nicht bestehen.
+    const plan: Plan = {
+      ...abnahmePlan(),
+      clients: 2,
+      kommandos: 40,
+      phasen: 1,
+      ruheVersucheMax: 200,
+      // Der Abnahmeplan fordert alle zehn Störungen; 40 Kommandos reichen für
+      // die seltenen nicht. Genau das muss der Lauf melden, statt zu bestehen.
+      fehler: { ...abnahmePlan().fehler, beschaedigung: 0 },
+    };
+    const ergebnis = await lauf(plan);
+    const fehlend = fehlendeStoerungen(ergebnis);
+    expect(fehlend.length).toBeGreaterThan(0);
+    for (const name of fehlend) {
+      expect(ergebnis.maengel).toContain(`Geforderte Störung nie eingetreten: ${name}`);
+    }
+    expect(ergebnis.erfolg).toBe(false);
+  }, 60_000);
 });

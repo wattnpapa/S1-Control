@@ -30,13 +30,19 @@ import type { Schreibergebnis } from "./schreiber.js";
 const EINSATZ = "2026-09-08_hochwasser-sued_ab12cd";
 const ICH = "9f3c1a20";
 const FREMD = "8899aabb";
+const NEUE_KENNUNG = "aabbccdd";
 
 function alsGeschrieben(ergebnis: Schreibergebnis) {
   if (ergebnis.art !== "geschrieben") throw new Error(JSON.stringify(ergebnis));
   return ergebnis.zeile;
 }
 
-function akteOptionen(platz: Arbeitsplatz, dateisystem: Dateisystem, clientId = ICH): AkteOptionen {
+function akteOptionen(
+  platz: Arbeitsplatz,
+  dateisystem: Dateisystem,
+  clientId = ICH,
+  segmentgroesse = 100_000,
+): AkteOptionen {
   return {
     dateisystem,
     zeit: platz.uhr.lies,
@@ -45,8 +51,8 @@ function akteOptionen(platz: Arbeitsplatz, dateisystem: Dateisystem, clientId = 
     einsatzId: EINSATZ,
     akteur: akteur(clientId),
     uhr: new HlcUhr({ clientId, wanduhr: platz.uhr.lies }),
-    neueKennung: () => "aabbccdd",
-    segmentgroesse: 100_000,
+    neueKennung: () => NEUE_KENNUNG,
+    segmentgroesse,
   };
 }
 
@@ -323,11 +329,16 @@ describe("§8, Grundsatz — eine lokale Schreibstörung hält den Leser nicht a
     // §5.5: geprüft **vor** dem Anhängen — der Offset darf nicht vorlaufen.
     expect(leser.zustand.fremd[`${FREMD}.0000`]?.leseOffset ?? 0).toBe(0);
     expect(erster.neueZeilen).toHaveLength(0);
-    // §7.6: Ein stehen gebliebener Spiegel ist keine Ruhe.
-    expect(erster.fortschrittBytes).toBeGreaterThan(0);
+    // §7.6: Nichts ist in den Spiegel gelangt, also kein Fortschritt — und weil
+    // `spiegelfehler` nicht leer ist, gilt der Durchlauf trotzdem nicht als
+    // Ruhe. Beides zusammen ist die Aussage; der Fortschritt allein wäre hier
+    // von echter Ruhe nicht zu unterscheiden.
+    expect(erster.fortschrittBytes).toBe(0);
 
     const zweiter = await leser.taktA();
     expect(zweiter.spiegelfehler).toHaveLength(0);
+    // Der Durchlauf, der es nachholt, hat sehr wohl etwas bewegt.
+    expect(zweiter.fortschrittBytes).toBeGreaterThan(0);
     expect(zweiter.neueZeilen.map((z) => z.rahmen.id)).toEqual([`${FREMD}:1`, `${FREMD}:2`, `${FREMD}:3`]);
     const spiegel = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(`${FREMD}.0000.jsonl`), 0);
     const share = await platz.dateisystem.liesAb(platz.ablage.shareDatei(`${FREMD}.0000.jsonl`), 0);
@@ -378,6 +389,7 @@ describe("§7.6 — Bedingung 2 und 3 hängen am Fortschritt, nicht am Umsatz", 
     const fremd = await anderer.oeffne(FREMD);
     anderer.uhr.weiter(3);
     const zeile = alsGeschrieben(await fremd.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 0 } }));
+    await spiegelungFuer(anderer, fremd, EINSATZ).lauf();
     // Ein Bruchstück auf dem Share, das nie vervollständigt wird — der Fall aus
     // §8.1, „der Schreiber ist mitten in einer Zeile endgültig ausgefallen".
     await platz.dateisystem.haengeAnUndSynchronisiere(
@@ -504,5 +516,61 @@ describe("§4.5 Schritt 6 — die aufgegebene Datei wird zum Spiegel einer fremd
     const share = await platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 0), 0);
     expect(gekürzt.byteLength).toBe(shareLaenge);
     expect(share.subarray(0, gekürzt.byteLength)).toEqual(gekürzt);
+  });
+});
+
+describe("§4.5 Schritt 6 — eine nie gespiegelte aufgegebene Datei", () => {
+  it("wird gelöscht, nicht auf 0 gekürzt, und nur bei gelungener Übernahme", async () => {
+    // Ohne Share-Entsprechung ist die aufgegebene Datei der Spiegel einer
+    // fremden Datei, die es nicht gibt. Bliebe sie als 0-Byte-Datei liegen,
+    // kennte kein anderer Client sie: Der Versionsvektor dieses Clients wäre
+    // dauerhaft ein anderer, und der Vergleich nach §7.6 fiele für den Rest
+    // der Lage in den dritten Ausgang. Befund aus der Simulation M0.4.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { akte } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    // Segment 0000 füllen und **vor** dem Wechsel spiegeln, damit Segment 0001
+    // nie auf den Share gelangt: Nur dann ist `shareOffset` dort 0, und nur
+    // dann darf gelöscht werden.
+    while (akte.schreiber.segment === 0) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(
+        await akte.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }),
+      );
+      if (akte.schreiber.segment === 0) await akte.spiegle();
+    }
+    const lokal0001 = platz.ablage.lokalSegment(ICH, 1);
+    expect((await platz.dateisystem.liesAb(lokal0001, 0)).byteLength).toBeGreaterThan(0);
+    await expect(
+      platz.dateisystem.liesAb(platz.ablage.shareSegment(ICH, 1), 0),
+    ).rejects.toMatchObject({ code: "ENOENT" });
+
+    const kette = akte.zustand.eigen[`${ICH}.0000`]?.letzteKette as string;
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(ICH, 0),
+      baueZeile({
+        id: `${ICH}:777`,
+        vorgaenger: kette,
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+        nutzlast: { vomKlon: true },
+      }),
+    );
+    // Ausgelöst über die Vollprüfung beim Öffnen (§4.6.1 Auslöser 1): Der
+    // Spiegelungslauf kommt an Segment 0000 nicht mehr vorbei, weil dort nichts
+    // mehr zu übertragen ist (§5.4.2 setzt am `shareOffset` an — genau die
+    // Lücke, für die §4.6.1 den zweiten Auslöser vorsieht).
+    const letzteNummer = akte.schreiber.zustand.laufnummer;
+    const { ergebnis } = await oeffneAkte(akteOptionen(platz, platz.dateisystem, ICH, 900));
+    expect(ergebnis.befund.art).toBe("fremdschreiber");
+    expect(ergebnis.reaktion?.art).toBe("kennungGewechselt");
+
+    console.log("DIR", await platz.dateisystem.listeVerzeichnis(platz.ablage.lokalEreignisse));
+    // Weg — nicht 0 Byte groß.
+    await expect(platz.dateisystem.liesAb(lokal0001, 0)).rejects.toMatchObject({ code: "ENOENT" });
+    // §4.5 Schritt 3: Der Inhalt steht unverändert in der Datei der neuen Kennung.
+    const neu = await platz.dateisystem.liesAb(platz.ablage.lokalSegment(NEUE_KENNUNG, 0), 0);
+    const ids = leseZeilengrenzen(neu, 0).zeilen.map((z) => z.rahmen.id);
+    expect(ids).toContain(`${ICH}:${letzteNummer}`);
   });
 });

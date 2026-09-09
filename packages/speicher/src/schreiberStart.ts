@@ -129,20 +129,17 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
 
   for (let i = 0; i < eigeneSegmente.length; i += 1) {
     const kennung = eigeneSegmente[i] as Dateikennung;
-    const istLetztes = i === eigeneSegmente.length - 1;
     const bytes = bytesJeSegment.get(kennung.segment) as Uint8Array;
-    const anker = await kettenanker(kennung.segment, bytes, quelle);
+    // `true`: Die Quelle sind die **eigenen** lokalen Segmente, und die sind
+    // vollständig — anders als der Spiegel eines Lesers (§5.5).
+    const anker = await kettenanker(kennung.segment, bytes, quelle, true);
     if (anker === undefined) throw new LokalerKettenbruch(kennung.segment, 0);
 
     const befund = await liesSegment(dateisystem, ablage.lokalDatei(kennung.name), 0, anker);
     identitaeten.merkeAlle(befund.zeilen);
     hoechsteLaufnummer = Math.max(hoechsteLaufnummer, hoechsteAus(befund.zeilen));
 
-    if (!istLetztes && befund.abschluss.art !== "ende") {
-      const offset = befund.abschluss.art === "defekt" ? befund.abschluss.offset : befund.endeOffset;
-      throw new LokalerKettenbruch(kennung.segment, offset);
-    }
-    if (istLetztes && befund.abschluss.art === "defekt") {
+    if (befund.abschluss.art === "defekt") {
       throw new LokalerKettenbruch(kennung.segment, befund.abschluss.offset);
     }
 
@@ -150,9 +147,28 @@ export async function bereiteSchreiberVor(optionen: StartOptionen): Promise<Schr
     // Segment lokal auf die letzte vollständige, kettenrichtige Zeile. Weil
     // nur bis genau dorthin gespiegelt wurde (§5.4.1), kann diese Kürzung nie
     // Bytes entfernen, die auf dem Share schon liegen.
-    if (istLetztes && befund.endeOffset < befund.neueBytes) {
+    //
+    // **Auch ein früheres Segment wird gekürzt, wenn es unvollständig endet.**
+    // §8.1 nennt nur „sein eigenes letztes Segment", und für den Normalfall
+    // genügt das: Ein Segment wird verlassen, indem eine Abschlusszeile
+    // geschrieben wird (§4.3), und danach wächst es nicht mehr. Ein
+    // **abgebrochener** Anhang kann aber ein Bruchstück hinterlassen, und wenn
+    // dieser Client danach in ein Ersatzsegment (§4.6) oder unter eine neue
+    // Kennung (§4.5) wechselt, wird das alte Segment nie wieder beschrieben —
+    // das Bruchstück bliebe für immer stehen. Ein lauter Abbruch an dieser
+    // Stelle sperrte den Client dauerhaft aus seiner eigenen Akte aus, und zwar
+    // gegen §8, Grundsatz, und gegen §8.8 Punkt 5 („Der Arbeitsplatz wird zum
+    // Nur-Lesen-Platz, nicht zum toten Fenster").
+    //
+    // Die Kürzung ist dieselbe Regel auf denselben Anlass, nur an einem
+    // anderen Segment: Ein unvollständiger Rest am Ende einer eigenen Datei ist
+    // nach §5.4.1 nie gespiegelt worden. Eine **defekte** Zeile bleibt dagegen
+    // ein Abbruch — dafür gibt das Konzept keine Regel her (siehe
+    // {@link LokalerKettenbruch}). Befund aus der Simulation M0.4.
+    if (befund.endeOffset < befund.neueBytes) {
       await dateisystem.kuerzeAuf(ablage.lokalDatei(kennung.name), befund.endeOffset);
       gekuerztAuf = befund.endeOffset;
+      bytesJeSegment.set(kennung.segment, bytes.subarray(0, befund.endeOffset));
     }
 
     kette = befund.letzteKette;

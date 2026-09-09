@@ -97,11 +97,19 @@ export class Schreiber {
   readonly #bestand: Schreiberbestand;
   #zustand: Schreiberzustand;
   /**
-   * `true`, solange hinter {@link Schreiberzustand.lokalerOffset} Bytes stehen
-   * können, die zu keiner vollständigen Zeile gehören (§8.1, §5.4.1). Vor dem
-   * nächsten Anhang wird dann gekürzt.
+   * Pfad der Datei, hinter deren bekanntem guten Stand Bytes stehen können, die
+   * zu keiner vollständigen Zeile gehören (§8.1, §5.4.1) — `undefined`, wenn
+   * keine Reparatur aussteht.
+   *
+   * **Der Pfad, nicht ein Ja/Nein.** Ein Merker ohne Datei wurde von der
+   * nächsten Schreibbewegung quittiert, auch wenn die auf eine **andere** Datei
+   * ging: Ein Ersatzsegment (§4.6) oder ein Kennungswechsel (§4.5) legt eine
+   * neue Datei an, dort greift die Kürzung ins Leere, der Merker fiele — und
+   * das Bruchstück in der alten Datei bliebe für immer stehen, in einer Datei,
+   * die nach §4.6 Schritt 5 nie wieder beschrieben wird. Befund aus der
+   * Simulation M0.4.
    */
-  #tailReparaturNoetig = false;
+  #reparaturNoetigFuer: string | undefined = undefined;
 
   constructor(optionen: SchreiberOptionen, bestand: Schreiberbestand) {
     this.#dateisystem = optionen.dateisystem;
@@ -290,29 +298,29 @@ export class Schreiber {
   async #haengeAn(pfad: string, bytes: Uint8Array): Promise<Schreibergebnis | undefined> {
     const stand = this.#zustand.lokalerOffset;
     // Eine Reparatur, die beim letzten Mal selbst gescheitert ist, wird zuerst
-    // nachgeholt. Ohne das schriebe der nächste Bedienschritt hinter das
-    // Bruchstück und machte es endgültig.
-    if (this.#tailReparaturNoetig) {
+    // nachgeholt — aber nur an **derselben** Datei. Ohne das schriebe der
+    // nächste Bedienschritt hinter das Bruchstück und machte es endgültig.
+    if (this.#reparaturNoetigFuer === pfad) {
       const repariert = await this.#kuerzeAufStand(pfad, stand);
       if (repariert !== undefined) return repariert;
     }
     for (let versuch = 0; versuch < 2; versuch += 1) {
       try {
         await this.#dateisystem.haengeAnUndSynchronisiere(pfad, bytes);
-        this.#tailReparaturNoetig = false;
+        if (this.#reparaturNoetigFuer === pfad) this.#reparaturNoetigFuer = undefined;
         return undefined;
       } catch (fehler) {
         if (versuch === 0 && lokalWiederholbar(fehler)) {
           // Vor dem zweiten Versuch dasselbe Kürzen: Auch der erste Versuch
           // kann Bytes hinterlassen haben, und ein zweites `haengeAn` dahinter
           // erzeugte dieselbe unauswertbare Stelle.
-          this.#tailReparaturNoetig = true;
+          this.#reparaturNoetigFuer = pfad;
           await this.#warte(LOKALE_WIEDERHOLUNG_MS);
           const repariert = await this.#kuerzeAufStand(pfad, stand);
           if (repariert !== undefined) return repariert;
           continue;
         }
-        this.#tailReparaturNoetig = true;
+        this.#reparaturNoetigFuer = pfad;
         const code = fehler instanceof Error && "code" in fehler ? String(fehler.code) : undefined;
         const basis = {
           art: "abgewiesen",
@@ -340,7 +348,7 @@ export class Schreiber {
   async #kuerzeAufStand(pfad: string, stand: number): Promise<Schreibergebnis | undefined> {
     try {
       await this.#dateisystem.kuerzeAuf(pfad, stand);
-      this.#tailReparaturNoetig = false;
+      if (this.#reparaturNoetigFuer === pfad) this.#reparaturNoetigFuer = undefined;
       return undefined;
     } catch (fehler) {
       // `ENOENT` heißt: Die Datei gibt es noch gar nicht, also auch kein
@@ -349,10 +357,10 @@ export class Schreiber {
       // hieße, den Bedienschritt dauerhaft abzuweisen: Die Reparatur bliebe
       // offen, und jeder weitere Anhang scheiterte an derselben Stelle.
       if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
-        this.#tailReparaturNoetig = false;
+        if (this.#reparaturNoetigFuer === pfad) this.#reparaturNoetigFuer = undefined;
         return undefined;
       }
-      this.#tailReparaturNoetig = true;
+      this.#reparaturNoetigFuer = pfad;
       const code = fehler instanceof Error && "code" in fehler ? String(fehler.code) : undefined;
       const basis = {
         art: "abgewiesen",
@@ -395,17 +403,57 @@ export class Schreiber {
     // **unbeschädigten** Zeile des ersetzten Segments — bewusst nicht dessen
     // letzter Zeile. Die Kette schließt an der Stelle an, ab der repariert wird.
     const anschluss = bisStelle.at(-1)?.kette ?? quelle.startkette;
+    // **Der Offset in der Nutzlast ist eine lokale Zeilengrenze.**
+    //
+    // `abOffset` kommt aus dem Vergleich mit dem Share (§5.4.3) und ist dort
+    // eine Zeilengrenze — aber nicht notwendig auch lokal: Liegt die Abweichung
+    // hinter allen auswertbaren Share-Zeilen, ist es das Parse-Ende der
+    // Share-Datei, und das fällt mitten in eine lokale Zeile, sobald auf dem
+    // Share ein Bruchstück steht (§5.4.1, Teilschreiben).
+    //
+    // §4.6 Schritt 3 verlangt als Anker „die Kettenprüfsumme der letzten
+    // unbeschädigten Zeile des ersetzten Segments", und `kettenanker` sucht
+    // beim nächsten Öffnen genau die Zeile, die bei diesem Offset **endet**.
+    // Findet er sie nicht, gilt der Anker als unbestimmbar, und
+    // `bereiteSchreiberVor` bricht mit `LokalerKettenbruch` ab — der Client
+    // kommt an seine eigene Akte nie wieder heran. Deshalb steht in der
+    // Nutzlast die Grenze, an der der Ersatz **tatsächlich** ansetzt: das Ende
+    // der letzten mitgenommenen lokalen Zeile. Sie ist dieselbe Stelle, deren
+    // Kette `anschluss` trägt. Befund aus der Simulation M0.4.
+    const abGrenze = bisStelle.at(-1) === undefined ? 0 : (bisStelle.at(-1) as GeleseneZeile).offset + (bisStelle.at(-1) as GeleseneZeile).laenge;
 
     const ersatz = await this.#naechstesFreiesSegment();
+    const vorherigerZustand = this.#zustand;
     this.#zustand = { ...this.#zustand, segment: ersatz, lokalerOffset: 0, letzteKette: anschluss };
     await this.speichereZustand();
 
     // Schritt 2: erste Zeile ist `SegmentErsetzt`.
     const kopf = await this.#schreibeZeile({
       typ: TYP_SEGMENT_ERSETZT,
-      nutzlast: { ersetztesSegment, abOffset },
+      nutzlast: { ersetztesSegment, abOffset: abGrenze },
     });
-    if (kopf.art !== "geschrieben") return kopf;
+    if (kopf.art !== "geschrieben") {
+      // **Der halb vollzogene Wechsel wird zurückgenommen.**
+      //
+      // Scheitert die Kopfzeile (§8.8), stünde der Schreiber sonst auf einem
+      // leeren Segment `ersatz` mit der Kette aus §4.6 Schritt 3 im Rücken. Die
+      // nächste gewöhnliche Zeile ginge dann als **erste** Zeile dieses
+      // Segments hinaus — ohne `SegmentErsetzt` davor. Damit ist es für
+      // `kettenanker` kein Ersatzsegment mehr, sondern ein gewöhnliches
+      // Folgesegment, dessen Anker die letzte Zeile des Vorgängers wäre — und
+      // die trägt eine andere Kette. Beim nächsten Start bricht
+      // `bereiteSchreiberVor` mit `LokalerKettenbruch` an Byte 0 ab, und der
+      // Client kommt an seine eigene Akte nie wieder heran (§8, Grundsatz;
+      // §8.8 Punkt 5). Befund aus der Simulation M0.4.
+      //
+      // Zurückgenommen wird nur der **Zustand**; geschrieben wurde nichts.
+      // Die Reparatur wird beim nächsten Öffnen erneut versucht (§4.6.1
+      // Auslöser 1) — sie ist wiederholbar, weil das Ersatzsegment erst mit
+      // seiner ersten Zeile entsteht.
+      this.#zustand = vorherigerZustand;
+      await this.speichereZustand();
+      return kopf;
+    }
 
     // Schritt 4: dieselben Ereignisse noch einmal — mit **unveränderten**
     // Identitäten, unveränderter HLC und unveränderter Nutzlast. Es sind
