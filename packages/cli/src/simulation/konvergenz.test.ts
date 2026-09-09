@@ -1,6 +1,12 @@
+import * as fsp from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { vektorenGleich, vergleiche, type Clientstand } from "./konvergenz.js";
+import { Einsatzablage, KETTE_ANFANG, baueZeile, knotenDateisystem } from "@s1/speicher";
+
+import { erhebeStand, vektorenGleich, vergleiche, type Clientstand } from "./konvergenz.js";
 import { teileQuarantaenen } from "./klient.js";
 
 /** Ein Stand mit allen Feldern; die Tests setzen nur, was sie brauchen. */
@@ -207,5 +213,107 @@ describe("teileQuarantaenen — die Herkunft am Einzelstück", () => {
 
   it("liefert für keine Meldung zwei leere Listen", () => {
     expect(teileQuarantaenen([])).toEqual({ endgueltig: [], vorlaeufig: [] });
+  });
+});
+
+describe("erhebeStand — ersetzte Segmente stehen nicht im Vektor (§7.6, Entscheidung 18)", () => {
+  /**
+   * Baut eine Zeile mit gültigem Längenfeld und CRC. Die Kette wird von
+   * `leseZeilengrenzen` nicht geprüft (§2.3, Sonderfall „Ersatzsegment"),
+   * deshalb genügt hier ein fester `vorgaenger`.
+   */
+  function zeile(id: string, typ: string, nutzlast?: Record<string, unknown>): Uint8Array {
+    const rahmen: Record<string, unknown> = {
+      id,
+      hlc: { wanduhr: 1, zaehler: 0, clientId: id.split(":")[0] as string },
+      vorgaenger: KETTE_ANFANG,
+      schemaVersion: 1,
+      typ,
+      akteur: { benutzer: "b", host: "h", clientId: id.split(":")[0] as string },
+      wanduhr: "2026-09-09T20:00:00+02:00",
+    };
+    if (nutzlast !== undefined) rahmen["nutzlast"] = nutzlast;
+    return baueZeile(rahmen as never);
+  }
+
+  function verbinde(...teile: readonly Uint8Array[]): Uint8Array {
+    const gesamt = new Uint8Array(teile.reduce((summe, t) => summe + t.length, 0));
+    let ab = 0;
+    for (const t of teile) {
+      gesamt.set(t, ab);
+      ab += t.length;
+    }
+    return gesamt;
+  }
+
+  /**
+   * Legt einen lokalen Spiegel an: das beschädigte Segment `0000` in der
+   * angegebenen Länge und — wenn `mitErsatz` — das Ersatzsegment `0001`.
+   */
+  async function lege(
+    wurzel: string,
+    zeilenImOriginal: number,
+    mitErsatz: boolean,
+  ): Promise<Einsatzablage> {
+    const ablage = new Einsatzablage(path.join(wurzel, "share"), wurzel);
+    await fsp.mkdir(ablage.lokalEreignisse, { recursive: true });
+    const alle = [
+      zeile("1111aaaa:1", "Lagemeldung"),
+      zeile("1111aaaa:2", "Lagemeldung"),
+      zeile("1111aaaa:3", "Lagemeldung"),
+    ];
+    await fsp.writeFile(
+      path.join(ablage.lokalEreignisse, "1111aaaa.0000.jsonl"),
+      verbinde(...alle.slice(0, zeilenImOriginal)),
+    );
+    if (mitErsatz) {
+      await fsp.writeFile(
+        path.join(ablage.lokalEreignisse, "1111aaaa.0001.jsonl"),
+        verbinde(
+          zeile("1111aaaa:4", "SegmentErsetzt", { ersetztesSegment: 0, abOffset: 0 }),
+          zeile("1111aaaa:3", "Lagemeldung"),
+        ),
+      );
+    }
+    return ablage;
+  }
+
+  it("lässt Schreiber und Leser nach einer Reparatur wieder auf denselben Vektor kommen", async () => {
+    const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
+    const leserWurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
+    try {
+      const fs = knotenDateisystem();
+      // Der Schreiber hat das beschädigte Segment lokal vollständig (drei
+      // Zeilen), der Leser führt seinen Spiegel nur bis zur Quarantänestelle
+      // (zwei Zeilen) — §5.5. Beide haben das Ersatzsegment.
+      const schreiber = await erhebeStand(fs, await lege(wurzel, 3, true), "1111aaaa", []);
+      const leser = await erhebeStand(fs, await lege(leserWurzel, 2, true), "2222bbbb", []);
+
+      expect(Object.keys(schreiber.vektor)).toEqual(["1111aaaa.0001.jsonl"]);
+      expect(vektorenGleich(schreiber.vektor, leser.vektor)).toBe(true);
+      expect(vergleiche([schreiber, leser]).art).toBe("konvergent");
+      // Die Ereignisse des ersetzten Segments bleiben gefaltet: `:1` und `:2`
+      // stehen in keinem Ersatz.
+      expect(schreiber.ereignisse).toBe(3);
+      expect(leser.ereignisse).toBe(3);
+    } finally {
+      await fsp.rm(wurzel, { recursive: true, force: true });
+      await fsp.rm(leserWurzel, { recursive: true, force: true });
+    }
+  });
+
+  it("nimmt ohne Ersatzsegment nichts heraus — der Unterschied bleibt sichtbar", async () => {
+    const wurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
+    const leserWurzel = await fsp.mkdtemp(path.join(os.tmpdir(), "s1-konvergenz-"));
+    try {
+      const fs = knotenDateisystem();
+      const schreiber = await erhebeStand(fs, await lege(wurzel, 3, false), "1111aaaa", []);
+      const leser = await erhebeStand(fs, await lege(leserWurzel, 2, false), "2222bbbb", []);
+      expect(Object.keys(schreiber.vektor)).toEqual(["1111aaaa.0000.jsonl"]);
+      expect(vektorenGleich(schreiber.vektor, leser.vektor)).toBe(false);
+    } finally {
+      await fsp.rm(wurzel, { recursive: true, force: true });
+      await fsp.rm(leserWurzel, { recursive: true, force: true });
+    }
   });
 });

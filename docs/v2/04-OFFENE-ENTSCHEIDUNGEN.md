@@ -280,8 +280,14 @@ Auflage 18 für genau die Läufe aus, in denen die Reparatur geprüft wird.
 **Entschieden am 2026-09-09: Richtung A.** §7.6 nimmt ersetzte Segmente aus
 dem Versionsvektor heraus — so wie Bedingung 1 sie schon aus der Ruhephase
 herausnimmt. Die Ereignisse dieser Segmente stehen im Ersatzsegment und gehen
-dort in den Vektor ein; es geht also nichts verloren. **Noch nicht umgesetzt**
-— siehe M0-nacharbeit-3.md.
+dort in den Vektor ein; es geht also nichts verloren.
+
+**Umgesetzt am 2026-09-09** (dritte Nacharbeit). §7.6 nennt die Herausnahme,
+`erhebeStand` führt sie aus. Sie greift bei **jedem** Client, nicht nur beim
+Schreiber: Welche Datei ersetzt ist, steht in der ersten Zeile des
+Ersatzsegments, und die hat jeder in seinem Spiegel. Fiele sie nur beim
+Schreiber heraus, wären die Vektoren wieder über verschiedene Dateimengen
+gebildet und nach dem zweiten Zusatz in §7.6 erneut verschieden.
 
 ## Fachliche Klärungen mit der FüSt (kein Entwicklungsthema)
 

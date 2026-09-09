@@ -45,11 +45,16 @@ import {
 } from "@s1/domaene";
 import {
   KETTE_ANFANG,
+  TYP_SEGMENT_ERSETZT,
+  ereignisDateiname,
+  ersatzAus,
   istVerwaltungsereignis,
   leseZeilengrenzen,
   sha256Hex,
+  zerlegeEreignisDateiname,
   type Dateisystem,
   type Einsatzablage,
+  type GeleseneZeile,
 } from "@s1/speicher";
 
 /** Stand einer Datei im lokalen Spiegel: bis wohin gelesen und mit welcher Kette (§5.3, §7.6). */
@@ -173,6 +178,15 @@ export async function erhebeStand(
   const identitaeten: string[] = [];
   let bytes = 0;
 
+  /**
+   * Die Dateien, die nach §4.6 durch ein Ersatzsegment ersetzt wurden.
+   *
+   * Sie fallen am Ende aus dem Vektor heraus (Entscheidung 18, Richtung A);
+   * ihre **Ereignisse** bleiben gefaltet, denn die Zeilen vor der
+   * Übernahmestelle stehen in keinem Ersatz.
+   */
+  const ersetzteDateien = new Set<string>();
+
   const namen = [...(await dateisystem.listeVerzeichnis(ablage.lokalEreignisse))].sort();
   for (const name of namen) {
     if (!name.endsWith(".jsonl")) continue;
@@ -183,6 +197,7 @@ export async function erhebeStand(
       offset: abschnitt.endeOffset,
       kette: letzte === undefined ? KETTE_ANFANG : letzte.kette,
     };
+    merkeErsetzteDatei(name, abschnitt.zeilen, ersetzteDateien);
     for (const zeile of abschnitt.zeilen) {
       bytes += zeile.laenge;
       // §2.4: `SegmentAbgeschlossen` und `SegmentErsetzt` reden über die Datei,
@@ -196,6 +211,25 @@ export async function erhebeStand(
       ereignisse.push(zeile.rahmen as unknown as EingehendesEreignis);
     }
   }
+
+  // §7.6: **Ersetzte Segmente stehen nicht im Versionsvektor.**
+  //
+  // Nach einer Reparatur nach §4.6 führt jeder Leser seinen Spiegel der
+  // beschädigten Datei bis zur Quarantänestelle — „er ist ihr geprüftes
+  // Präfix" (§5.5) —, der Schreiber hat sie lokal vollständig. Der Offset
+  // dieser einen Datei deckt sich damit nie wieder, und §7.6 meldete dauerhaft
+  // „verschiedene Versionsvektoren, nicht vergleichbar", obwohl Ereignismenge
+  // und Zustand übereinstimmen. Ein Einsatz, in dem einmal repariert wurde,
+  // könnte den Konvergenznachweis nie wieder führen — also gerade in den
+  // Läufen nicht, die §4.6 prüfen (Startwert 999, Messprotokoll 7.7;
+  // Entscheidung 18, Richtung A).
+  //
+  // Es geht dabei nichts verloren: Die Ereignisse ab der Übernahmestelle
+  // stehen im Ersatzsegment und gehen **dort** in den Vektor ein, die davor
+  // liegenden sind unverändert gefaltet. Der Vergleich wird dadurch nicht
+  // milder, sondern schärfer — was vorher als „nicht vergleichbar" durchging,
+  // muss jetzt im `zustandsHash` bestehen.
+  for (const name of ersetzteDateien) delete vektor[name];
 
   const zustand: Zustand = materialisiere(falteAuf(ereignisse));
   const eindeutige = [...new Set(identitaeten)].sort();
@@ -211,6 +245,32 @@ export async function erhebeStand(
     vorlaeufigeQuarantaenen,
     bytes,
   };
+}
+
+/**
+ * Trägt die Datei ein, die dieses Segment ersetzt hat — falls es ein
+ * Ersatzsegment nach §4.6 ist.
+ *
+ * Erkennbar ist das an der ersten Zeile: §4.6 Schritt 2 verlangt dort ein
+ * `SegmentErsetzt`, dessen Nutzlast das ersetzte Segment nennt. Damit weiß
+ * **jeder** Client, dessen Spiegel das Ersatzsegment enthält, welche Datei
+ * ersetzt ist — nicht nur ihr Schreiber. Genau das ist die Voraussetzung
+ * dafür, dass die Datei bei allen zugleich aus dem Vektor fällt; fiele sie nur
+ * beim Schreiber heraus, wären die Vektoren wieder über verschiedene
+ * Dateimengen gebildet und damit erneut verschieden (§7.6, zweiter Zusatz).
+ */
+function merkeErsetzteDatei(
+  name: string,
+  zeilen: readonly GeleseneZeile[],
+  ziel: Set<string>,
+): void {
+  const erste = zeilen[0];
+  if (erste === undefined || erste.rahmen.typ !== TYP_SEGMENT_ERSETZT) return;
+  const ersatz = ersatzAus(erste.rahmen["nutzlast"]);
+  if (ersatz === undefined) return;
+  const kennung = zerlegeEreignisDateiname(name);
+  if (kennung === undefined) return;
+  ziel.add(ereignisDateiname(kennung.praefix, ersatz.ersetztesSegment));
 }
 
 /** Zwei Versionsvektoren sind gleich, wenn sie über dieselbe Dateimenge dieselben Stände führen (§7.6). */
