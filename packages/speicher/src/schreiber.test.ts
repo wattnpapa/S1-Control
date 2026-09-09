@@ -7,6 +7,7 @@ import { KETTE_ANFANG, kettenPruefsumme } from "./pruefsummen.js";
 import { LokalerKettenbruch } from "./schreiberStart.js";
 import { liesSchreiberzustand } from "./schreiberzustand.js";
 import { liesSegment } from "./segmentlese.js";
+import { leseZeilengrenzen } from "./zeile.js";
 import { TYP_SEGMENT_ABGESCHLOSSEN, TYP_SEGMENT_ERSETZT } from "./verwaltungsereignisse.js";
 import type { Schreibergebnis } from "./schreiber.js";
 
@@ -335,5 +336,64 @@ describe("Ersatzsegment nach §4.6", () => {
     // unverändert liegen und ist damit länger als seine Share-Entsprechung.
     const altes = await liesSegment(platz.dateisystem, platz.ablage.lokalSegment("9f3c1a20", 0), 0, KETTE_ANFANG);
     expect(altes.zeilen).toHaveLength(4);
+  });
+});
+
+describe("Neustart nach einer Reparatur (§4.6, §2.3)", () => {
+  it("öffnet den Einsatz nach einem Ersatzsegment wieder und schreibt kettenrichtig weiter", async () => {
+    // §8.6.1 Regel 4 macht den Schreiber der beschädigten Datei zum einzigen
+    // Weg zurück. Sperrt ihn der Neustart aus, führt dieser Weg ins Leere.
+    // Der Anker der ersten Zeile eines Ersatzsegments ist nach §2.3 die Kette
+    // der letzten **unbeschädigten** Zeile des ersetzten Segments — nicht die
+    // des Vorgängerendes.
+    await using platz = await arbeitsplatz();
+    const erster = await platz.oeffne("9f3c1a20");
+    const zeilen = [];
+    for (let i = 0; i < 4; i += 1) {
+      platz.uhr.weiter(3);
+      zeilen.push(alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } })));
+    }
+    const abOffset = (zeilen[2] as { offset: number }).offset;
+    alsGeschrieben(await erster.schreibeErsatzsegment(0, abOffset));
+    const offsetVorher = erster.lokalerVollstaendigerOffset;
+
+    const zweiter = await platz.oeffne("9f3c1a20");
+    expect(zweiter.segment).toBe(1);
+    expect(zweiter.lokalerVollstaendigerOffset).toBe(offsetVorher);
+    platz.uhr.weiter(3);
+    const weiter = alsGeschrieben(await zweiter.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 9 } }));
+    expect(weiter.rahmen["vorgaenger"]).toBe(erster.zustand.letzteKette);
+  });
+
+  it("öffnet auch nach einem Ersatzsegment ab Offset 0 wieder", async () => {
+    await using platz = await arbeitsplatz();
+    const erster = await platz.oeffne("9f3c1a20");
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(3);
+      alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    alsGeschrieben(await erster.schreibeErsatzsegment(0, 0));
+    const zweiter = await platz.oeffne("9f3c1a20");
+    expect(zweiter.segment).toBe(1);
+    expect(zweiter.startbefund.rekonstruiert).toBe(false);
+  });
+
+  it("öffnet nach einem Ersatzsegment auf einem Folgesegment wieder", async () => {
+    await using platz = await arbeitsplatz();
+    const erster = await platz.oeffne("9f3c1a20", 400);
+    while (erster.segment === 0) {
+      platz.uhr.weiter(1);
+      alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet", nutzlast: { f: "x".repeat(120) } }));
+    }
+    for (let i = 0; i < 2; i += 1) {
+      platz.uhr.weiter(1);
+      alsGeschrieben(await erster.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: i } }));
+    }
+    const lokal = await platz.dateisystem.liesAb(platz.ablage.lokalSegment("9f3c1a20", 1), 0);
+    const grenze = leseZeilengrenzen(lokal).zeilen[1]?.offset as number;
+    alsGeschrieben(await erster.schreibeErsatzsegment(1, grenze));
+
+    const zweiter = await platz.oeffne("9f3c1a20", 400);
+    expect(zweiter.segment).toBe(2);
   });
 });

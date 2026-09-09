@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 
 import { Identitaetenbuch } from "./identitaeten.js";
 import { Leser } from "./leser.js";
+import { stoerdateisystem, type Stoerung } from "./pruefhilfen/stoerdateisystem.js";
 import { arbeitsplatz, legeEinsatzAn, spiegelungFuer } from "./pruefhilfen/aufbau.js";
 import { KETTE_ANFANG } from "./pruefsummen.js";
 import { leererUploadZustand } from "./uploadZustand.js";
 import { UNVOLLSTAENDIG_FRIST_MS, VERFALL_MS } from "./startwerte.js";
-import { leseAbschnitt } from "./zeile.js";
+import { baueZeile, leseAbschnitt } from "./zeile.js";
 import type { Arbeitsplatz } from "./pruefhilfen/aufbau.js";
 import type { Schreibergebnis } from "./schreiber.js";
 
@@ -316,5 +317,179 @@ describe("Abgleich mit dem Spiegel beim Öffnen (§5.3, §5.5)", () => {
     expect(ids).not.toContain(`${FREMD}:3`);
     expect(ids).not.toContain(`${FREMD}:4`);
     expect(ergebnis.neueZeilen.some((z) => z.rahmen.typ === "SegmentErsetzt")).toBe(true);
+  });
+});
+
+describe("Befunde aus der Begutachtung", () => {
+  it("verdoppelt den Spiegel nicht, wenn eine fremde Kennung ein Ersatzsegment hat (§5.5, §2.3)", async () => {
+    // Der Anker eines fremden Ersatzsegments ist eine **innere** Zeile des
+    // ersetzten Segments (§4.6 Schritt 3). Wer ihn für 32 Nullen hält, setzt
+    // `leseOffset` beim Öffnen auf 0 zurück und hängt den gesamten Inhalt ein
+    // zweites Mal an den Spiegel an — der doppelte Anhang, den §5.4.2 als den
+    // einen Fehler benennt, den dieses Verfahren ausschliessen soll.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber: fremd, platz: fremdPlatz } = await fremderSchreiber(platz, 4);
+    const leser = leserFuer(platz, "9f3c1a20");
+    await leser.taktB();
+
+    const lokal = await fremdPlatz.dateisystem.liesAb(fremdPlatz.ablage.lokalSegment(FREMD, 0), 0);
+    const dritte = leseAbschnitt(lokal, 0, KETTE_ANFANG).zeilen[2] as { offset: number };
+    alsGeschrieben(await fremd.schreibeErsatzsegment(0, dritte.offset));
+    await spiegelungFuer(fremdPlatz, fremd, EINSATZ, { eigen: {}, fremd: {} }).lauf();
+    await leser.taktB();
+
+    const vorher = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(`${FREMD}.0001.jsonl`), 0);
+    expect(vorher.byteLength).toBeGreaterThan(0);
+
+    // Neustart ohne upload-state.json: der Abgleich darf nichts verdoppeln.
+    const zweiter = leserFuer(platz, "9f3c1a20", new Identitaetenbuch());
+    await zweiter.gleicheMitSpiegelAb();
+    expect(zweiter.zustand.fremd[`${FREMD}.0001`]?.leseOffset).toBe(vorher.byteLength);
+    await zweiter.taktB();
+    const nachher = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(`${FREMD}.0001.jsonl`), 0);
+    expect(nachher).toEqual(vorher);
+  });
+
+  it("hängt bei zwei gleichzeitigen Takt-A-Durchläufen nichts doppelt an (§8.4)", async () => {
+    // §8.4: „Kein zweiter Versuch, solange der erste unterwegs ist. Je Datei ist
+    // höchstens ein Zugriff offen; die Speicherschicht serialisiert das selbst
+    // und überlässt es nicht dem Aufrufer." Takt A (3 s) und Takt B (4 s)
+    // laufen nach §6.2 unabhängig, und ein SMB-Zugriff darf bis zu 60 s hängen
+    // — die Überlappung ist der Normalfall, nicht die Ausnahme.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber: fremd, platz: fremdPlatz } = await fremderSchreiber(platz, 2);
+    const leser = leserFuer(platz, "9f3c1a20");
+    await leser.taktB();
+
+    // Neue Bytes, die beide Läufe zu lesen versuchen.
+    for (let i = 0; i < 3; i += 1) {
+      fremdPlatz.uhr.weiter(3);
+      alsGeschrieben(await fremd.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 10 + i } }));
+    }
+    await spiegelungFuer(fremdPlatz, fremd, EINSATZ, { eigen: {}, fremd: {} }).lauf();
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareDatei(`${FREMD}.0000.jsonl`), 0);
+
+    const [a, b] = await Promise.all([leser.taktA(), leser.taktA()]);
+
+    // Der lokale Spiegel ist das geprüfte Präfix der Share-Datei (§5.5) — nicht
+    // ihr Anderthalbfaches.
+    const spiegel = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(`${FREMD}.0000.jsonl`), 0);
+    expect(spiegel).toEqual(share);
+    // Und dasselbe Ereignis erscheint nicht zweimal im Bündel für den Fold.
+    const ids = [...a.neueZeilen, ...b.neueZeilen].map((z) => z.rahmen.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it("meldet einen gescheiterten Lesezugriff, statt ihn zu verschlucken (§8.3, §7.6)", async () => {
+    // Verschluckt sähe ein Share-Ausfall aus wie Bedingung 2 der Ruhephase —
+    // überall 0 Bytes —, und ein Konvergenzlauf hielte Stillstand für Ruhe.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await fremderSchreiber(platz, 2);
+    const leser = leserFuer(platz, "9f3c1a20");
+    await leser.taktB();
+
+    const stoerungen: Stoerung[] = [
+      { aufruf: "liesAb", code: "ETIMEDOUT", malen: Infinity, pfadEnthaelt: "share" },
+    ];
+    const gestoert = new Leser(
+      {
+        dateisystem: stoerdateisystem(platz.dateisystem, stoerungen),
+        zeit: platz.uhr.lies,
+        ablage: platz.ablage,
+        clientId: "9f3c1a20",
+        identitaeten: new Identitaetenbuch(),
+      },
+      leser.zustand,
+    );
+    const ergebnis = await gestoert.taktA();
+    expect(ergebnis.gelesenBytes).toBe(0);
+    // Genau hier liegt der Unterschied zu einer echten Ruhephase.
+    expect(ergebnis.lesefehler).toHaveLength(1);
+    expect(ergebnis.lesefehler[0]?.klasse).toBe("voruebergehend");
+    expect(ergebnis.lesefehler[0]?.code).toBe("ETIMEDOUT");
+  });
+
+  it("hebt die vorläufige Quarantäne im laufenden Betrieb ohne Zutun auf (§8.1)", async () => {
+    // §8.1: „Wird die Zeile später doch vollständig und kettenrichtig, fällt die
+    // Quarantäne **ohne Zutun** weg und die Datei kehrt in Takt A zurück." Ohne
+    // Zutun heisst: ohne Programmstart.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    const { schreiber: fremd } = await fremderSchreiber(platz, 2);
+    const leser = leserFuer(platz, "9f3c1a20");
+    await leser.taktB();
+
+    platz.uhr.weiter(3);
+    const dritte = alsGeschrieben(await fremd.schreibe({ typ: "EinheitGemeldet", nutzlast: { n: 2 } }));
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareDatei(`${FREMD}.0000.jsonl`),
+      dritte.bytes.subarray(0, 20),
+    );
+    await leser.taktA();
+    platz.uhr.weiter(UNVOLLSTAENDIG_FRIST_MS + 1);
+    expect((await leser.taktA()).neueQuarantaenen).toHaveLength(1);
+
+    // Der Schreiber vervollständigt die Zeile — der Regelfall nach §5.4.1.
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareDatei(`${FREMD}.0000.jsonl`),
+      dritte.bytes.subarray(20),
+    );
+    const geheilt = await leser.taktB();
+    expect(geheilt.geheilteQuarantaenen).toEqual([`${FREMD}.0000.jsonl`]);
+    expect(geheilt.neueZeilen.map((z) => z.rahmen.id)).toEqual([`${FREMD}:3`]);
+    expect(leser.inTaktA).toContain(`${FREMD}.0000.jsonl`);
+    expect(leser.quarantaenen).toEqual([]);
+  });
+
+  it("pollt eine endgültig quarantänisierte Datei nicht weiter (§8.2 Punkt 2)", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await fremderSchreiber(platz, 4);
+    const roh = await platz.wiese.lies(`share/einsatz/ereignisse/${FREMD}.0000.jsonl`);
+    const dritteZeile = leseAbschnitt(roh, 0, KETTE_ANFANG).zeilen[2] as { offset: number; laenge: number };
+    const stelle = dritteZeile.offset + dritteZeile.laenge - 5;
+    roh[stelle] = (roh[stelle] as number) ^ 0x01;
+    await platz.wiese.schreibe(`share/einsatz/ereignisse/${FREMD}.0000.jsonl`, roh);
+
+    const leser = leserFuer(platz, "9f3c1a20");
+    expect((await leser.taktB()).neueQuarantaenen).toHaveLength(1);
+    // §8.2 Punkt 2: „wird ab dort nicht weiter ausgewertet und nicht weiter
+    // gepollt" — kein zweiter Durchlauf erzeugt dieselbe Meldung noch einmal.
+    const nochmal = await leser.taktB();
+    expect(nochmal.neueQuarantaenen).toEqual([]);
+    expect(nochmal.gelesenBytes).toBe(0);
+    expect(leser.quarantaenen).toHaveLength(1);
+    expect(leser.quarantaenen[0]?.grund).toBe("crc");
+    expect(leser.quarantaenen[0]?.seit).toBeGreaterThan(0);
+  });
+
+  it("lässt eine zurückgestellte Datei verfallen, statt sie ewig im kurzen Takt zu halten (§6.2)", async () => {
+    // Steht der Kettenanker nicht fest, wird die Datei zurückgestellt. Ohne
+    // Verfall bliebe sie für den Rest der Lage in Takt A und kostete jeden
+    // kurzen Takt einen vollständigen Lesezugriff.
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    // Ein Segment 0001 ohne Vorgänger auf dem Share: der Anker ist nicht
+    // bestimmbar.
+    await platz.dateisystem.haengeAnUndSynchronisiere(
+      platz.ablage.shareSegment(FREMD, 1),
+      baueZeile({
+        id: `${FREMD}:9`,
+        vorgaenger: "a".repeat(32),
+        typ: "EinheitGemeldet",
+        schemaVersion: 1,
+      }),
+    );
+    const leser = leserFuer(platz, "9f3c1a20");
+    const ergebnis = await leser.taktB();
+    expect(ergebnis.neueQuarantaenen).toEqual([]); // kein Urteil ohne Grundlage
+    expect(ergebnis.neueZeilen).toEqual([]);
+
+    platz.uhr.weiter(VERFALL_MS + 1);
+    await leser.taktA();
+    expect(leser.inTaktA).not.toContain(`${FREMD}.0001.jsonl`);
   });
 });
