@@ -83,11 +83,12 @@ Auflage 6 verlangt den Konflikthinweis bei Abweichung. Ausgeschrieben:
 
 > **Regel.** Trägt der Gewinner eines Feldes einen `gesehenerVorher` und gibt es eine **zweithöchste** Beobachtung (§3.3), deren Wert davon abweicht, entsteht `vorherPasstNicht` mit dem Feldpfad, beiden Ereignis-Ids, dem gesehenen und dem verdrängten Wert. Verglichen wird über die kanonische Serialisierung, also auch für Strukturwerte wie das Stärke-Tripel.
 
-Drei Grenzfälle, jeder mit seiner Antwort:
+Vier Grenzfälle, jeder mit seiner Antwort:
 
 * **Keine zweithöchste Beobachtung.** Kein Hinweis. Es gibt nichts, dem die Behauptung des Schreibers widerspräche: Niemandes Arbeit wurde verdrängt. Das gilt auch, wenn der Gewinner einen Wert zu sehen behauptet, den das Feld nie hatte — der Fold prüft Verdrängung, nicht Wahrhaftigkeit.
 * **`gesehenerVorher` ist `{ wert: null }`.** Ein ausdrücklich mitgeführtes „ich sah nichts". Gegen eine zweithöchste Beobachtung mit einem Wert ist das eine Abweichung und erzeugt den Hinweis; ohne zweithöchste Beobachtung nicht.
-* **Kein `gesehenerVorher`.** Das ist die Anlage (§2.3) — dort greift `ohneVorherWertVerdraengt` statt `vorherPasstNicht`, mit derselben Wertgleichheitsprüfung.
+* **Kein `gesehenerVorher`.** Das ist die Anlage (§2.3) — dort greift `ohneVorherWertVerdraengt` statt `vorherPasstNicht`, mit derselben Wertgleichheitsprüfung. Ein **fehlendes optionales Nutzlastfeld** eines Ereignisses der Form (c) ist etwas anderes: Es sagt „ich sah nichts" und wird als `gesehenerVorher = { wert: null }` aufgenommen, fällt also unter den Grenzfall darüber. So das fehlende `gesehenEinheitId` einer Aufteilung (§5.4.2). Prüffall T138.
+* **Ein Erstwert-Feld** (`abgeteiltVon`, `aufgegangenIn`). Für sie gilt die Prüfung **nicht**. Sie gehören zu Ereignissen der Form (c), die im Rahmen weder `neu` noch `vorher` tragen dürfen (§2.2), und sie haben keine zweithöchste Beobachtung, sondern eine Liste `verdraengt` um einen Gewinner mit der **kleinsten** HLC (§3.3). Weder `vorherPasstNicht` noch `ohneVorherWertVerdraengt` entstehen dort; die Verdrängung meldet `wirkungslosGegenTerminalzustand` (§3.12), und die inhaltliche Prüfung leistet `gesehen` mit `vorgangSummeWeichtAb` (§5.4.3). Ohne diese Klarstellung trüge ein einziger Vorgang drei Hinweise für eine Sache. Prüffall T135.
 
 Beide Hinweise werden nach §3.8 bei jeder Materialisierung neu gerechnet; verdrängt ein drittes Ereignis den Zweitplatzierten, fallen sie von selbst weg.
 
@@ -123,6 +124,8 @@ Freitext, überall erlaubt. **Pflicht** (`z.string().min(1)`) bei neun Arten, un
 ### §2.5 Fachliche Zeiten und ihre Plausibilisierung (Auflage 12)
 
 KONZEPT-SPEICHER.md §3.1 trennt technische Ordnung (HLC) und fachliche Zeit und schiebt die Schwelle hierher. **Jede** fachliche Zeit des Katalogs ist einer von drei Klassen zugeordnet; es gibt keine vierte und keine unzugeordnete.
+
+**`datum` in `SchichtplanEintragGesetzt` ist keine fachliche Zeit,** sondern ein **Schlüsselbestandteil** (§5.7): Es benennt die Zelle, die beschrieben wird, nicht den Zeitpunkt einer Meldung. Es wird deshalb nicht plausibilisiert, und die Aufzählung oben führt es nicht — ein Dienstplan für übermorgen ist der Normalfall, und ein Eintrag für vorgestern eine zulässige Nachtragung.
 
 | Klasse | Zeiten | Prüfung |
 |---|---|---|
@@ -285,8 +288,9 @@ interface Zustand {
                hlc: Hlc; akteurBenutzer: string; akteurHost: string
                grund: "ART" | "VERSION" | "SCHEMA" }[]   // §3.7, nach `id` geordnet
   wartend: { [entitaetspfad: string]: { feld: string; beobachtung: Beobachtung<unknown> }[] }
-  verworfeneSchluessel: { schluessel: string; verworfen: EreignisId
-                          hlc: Hlc; inhalt: unknown }[]
+  verworfeneSchluessel: { art: "EREIGNIS_ID" | "INHALTSSCHLUESSEL" | "RESERVIERTE_ID"
+                          schluessel: string; verworfen: EreignisId
+                          hlc: Hlc; inhalt: unknown }[]   // §3.6
 }
 ```
 
@@ -362,13 +366,17 @@ Zwei verschiedene Ereignisse mit derselben HLC sind ein Protokollbruch — den e
 
 **Zwei verschiedene Ereignisse mit derselben Id sind ein Protokollbruch,** kein Konflikt. §3.3 der Speicherschicht verbietet die Doppelvergabe der Laufnummer; §4.5 dort erkennt das geklonte Profil und zwingt ihm eine neue `clientId` auf. Bis das greift, kann der Bruch in der Akte stehen.
 
-> **Regel.** Das zuerst gefaltete Ereignis gilt. Das andere geht in `verworfeneSchluessel` und erzeugt `ereignisIdDoppeltVergeben` mit beiden Inhalten.
+> **Regel.** Das zuerst gefaltete Ereignis gilt. Das andere geht mit `art: "EREIGNIS_ID"` in `verworfeneSchluessel` und erzeugt `ereignisIdDoppeltVergeben` mit **dem verworfenen** Inhalt.
+
+**Nur mit dem verworfenen, nicht mit beiden.** Der Inhalt des Gewinners steht nach einem Schnappschuss nicht mehr im Zustand — es ist genau das Argument, mit dem §3.11 den Hinweis auch bei inhaltsgleichen Anlagen erzwingt. Ihn mitzuführen hieße, je gefalteter Ereignis-Id ihren Inhalt zu halten, und das verbietet §3.1.
 
 **Diese eine Stelle ist ausdrücklich reihenfolgeabhängig, und das ist die ehrlichere Wahl.** Eine Auswahl „kleinere HLC gewinnt" wäre zwar als Mengenoperation formulierbar, aber nicht baubar: Sie müsste einen bereits gefalteten Gewinner **zurücknehmen**, sobald später ein Ereignis mit derselben Id und kleinerer HLC eintrifft — und dafür bräuchte der Zustand je gefalteter Id ihren Inhalt, also eine Struktur, die mit der Zahl der Ereignisse wächst. Das verbietet §3.1.
 
 Die Folge ist benannt statt versteckt: **Über einer Ereignismenge mit doppelt vergebener Id gelten P1, P2 und P3 nicht** (§8.2). Der Hinweis macht die Lage sichtbar, der Konvergenzvergleich meldet sie als „nicht vergleichbar", und die Reparatur führt wie bei der Quarantäne über den Schreiber. `fold.ts` verwirft in M0.2 nach der Id ohne Hinweis und ist nachzuziehen (T107).
 
-**Über einen fachlichen Schlüssel.** `EebMeldungEmpfangen` über `meldungId`, `AnhangHinzugefuegt` über `anhangId`. Es gilt §3.11 mit dem Schlüssel statt der Entitäts-Id; ein zweites Ereignis mit abweichendem Inhalt landet in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`. In den Inhaltsvergleich gehen nur die inhaltstragenden Felder ein (`bogen`, `einheitSchluessel`, `stand`, `signatur`), nicht `empfangenAm`, nicht `quelle`.
+**Über einen fachlichen Schlüssel.** `EebMeldungEmpfangen` über `meldungId`, `AnhangHinzugefuegt` über `anhangId`. Es gilt §3.11 mit dem Schlüssel statt der Entitäts-Id; ein zweites Ereignis mit abweichendem Inhalt landet mit `art: "INHALTSSCHLUESSEL"` in `verworfeneSchluessel` und erzeugt `inhaltsschluesselWidersprochen`. In den Inhaltsvergleich gehen nur die inhaltstragenden Felder ein (`bogen`, `einheitSchluessel`, `stand`, `signatur`), nicht `empfangenAm`, nicht `quelle`.
+
+**`art` unterscheidet die drei Quellen.** Aus `verworfeneSchluessel` speisen sich drei Hinweisarten: `ereignisIdDoppeltVergeben` und `inhaltsschluesselWidersprochen` hier, `reservierteIdVerworfen` in §5.3.4. Ohne den Diskriminator müsste ein Client sie an der Form des Schlüssels erraten — `"AUFFANG"` gegen Inhalts-Hash gegen `clientId:laufnummer` —, und zwei Implementierungen rieten verschieden: verschiedene Hinweise, verschiedener `zustandsHash`, roter Ausgang ohne Fold-Fehler. Prüffall T136.
 
 **Über den Fachvorgang.** Aufteilen und Zusammenführen sind zusätzlich über die **Entität** idempotent, auf der ihr Ergebnis steht — nicht über die Ereignis-Id (§5.4.2, §5.4.3). Das ist der Grund, weshalb es kein Änderungsbuch mehr gibt.
 
@@ -408,7 +416,7 @@ P3 verlangt, dass zwei Clients mit derselben Ereignismenge **dieselben Hinweise*
 
 **Die Regel, ohne Ausnahme: Hinweise werden bei jeder Materialisierung aus dem Zustand neu berechnet und nie fortgeschrieben.** Fortgeschriebene Hinweise wären falsch, sobald ein später eintreffendes Ereignis ihre Grundlage entzieht — `fremdreferenzUnbekannt` „verschwindet ohne Zutun" (§3.10), `anlageFehlt` ebenso, und ein `vorherPasstNicht` fällt weg, sobald ein drittes Ereignis den Zweitplatzierten verdrängt.
 
-Damit das geht, muss **jedes Eingangsdatum eines Hinweises im Zustand stehen**. Das ist der Grund für sechs Angaben, die sonst niemand bräuchte: `Beobachtung.wanduhr`, `.fachlicheZeit` und `.zeitklasse` (für `meldezeitUnplausibel`), `Beobachtung.undoOf` (für `undoTrifftFremdenStand`), `angelegtDurch` je Entität sowie `verworfeneAnlagen` je Entität und `verworfeneSchluessel` global (für `zweiteAnlageVerworfen`, `reservierteIdVerworfen`, `inhaltsschluesselWidersprochen`). M0.2 hält diese Angaben im Akkumulator statt im Zustand; das ist die Änderung, die `foldVersion 2` unter anderem trägt.
+Damit das geht, muss **jedes Eingangsdatum eines Hinweises im Zustand stehen**. Das ist der Grund für sieben Angaben, die sonst niemand bräuchte: `Beobachtung.wanduhr`, `.fachlicheZeit` und `.zeitklasse` (für `meldezeitUnplausibel`), `Beobachtung.undoOf` (für `undoTrifftFremdenStand`), `angelegtDurch` je Entität sowie `verworfeneAnlagen` je Entität und `verworfeneSchluessel` global (für `zweiteAnlageVerworfen`, `reservierteIdVerworfen`, `inhaltsschluesselWidersprochen`). M0.2 hält diese Angaben im Akkumulator statt im Zustand; das ist die Änderung, die `foldVersion 2` unter anderem trägt.
 
 | Art | Bedeutung | § |
 |---|---|---|
@@ -456,6 +464,8 @@ Ein Ereignis kann auf eine Entität verweisen, die dieser Client noch nicht hat.
 
 **Die strukturellen Arten setzen nur auf Entitäten ab, die es gibt oder die sie selbst anlegen.** `EinheitAufgeteilt` legt die neue Einheit selbst an; `EinheitZusammengefuehrt` schreibt auf die **Quelle**. Beides sind Felder je einer Entität und fallen unter die Fälle oben. Nur die übernommenen Fahrzeuge und Personen einer Aufteilung (§5.4.2) können unbekannt sein — für sie gilt `wartend` wie für jedes andere Feld. Ein Summand an einer noch nicht angelegten Entität, den `wartend` nicht aufnehmen könnte, entsteht nach §5.4.2 nicht mehr: Die Wirkung steht immer auf der Entität, die das Ereignis selbst beschreibt.
 
+**Die beiden Verweise *im Wert* dieser Felder sind davon nicht erfasst** und brauchen eine dritte Behandlung: `aufgegangenIn.wert.zielEinheitId` und `abgeteiltVon.wert.quellEinheitId` betreffen nicht den Träger des Feldes — der ist da —, sondern die Gegenseite einer Rechnung. Die Aufzählung oben nennt sie deshalb nicht; ihre Regel steht in **§5.4.2a**, und ohne sie verschwände beim unbekannten Ziel einer Zusammenführung die Stärke der Quelle ohne jeden Hinweis. Beide erzeugen `fremdreferenzUnbekannt`.
+
 **Die einzige Ausnahme ist der Abschnitt einer Einheit** (§5.3.3): Dort tritt der Auffang an die Stelle des Verweises, damit die Stärke einer real gemeldeten Einheit nicht aus der Gesamtstärke fällt. Das ist eine Zusicherung über Zahlen, keine über Verweise.
 
 ### §3.11 Zwei Anlagen derselben Id: die kleinste HLC gilt
@@ -463,6 +473,8 @@ Ein Ereignis kann auf eine Entität verweisen, die dieser Client noch nicht hat.
 Liegen zwei Anlagen derselben Entitäts-Id vor, gilt die mit der **kleinsten** HLC (bei Gleichstand die kleinere Id, §3.5); jede weitere geht in `verworfeneAnlagen` und erzeugt `zweiteAnlageVerworfen` mit ihrem Inhalt und der Id der geltenden (`angelegtDurch`, §3.2).
 
 **Auch bei inhaltsgleichen Anlagen entsteht der Hinweis.** Die dritte Fassung nahm sie aus („es ist nichts verloren"), und das war nicht baubar: Der Vergleich braucht den Inhalt der **geltenden** Anlage, und der steht nach einem Schnappschuss nicht mehr im Zustand — die Felder der Entität sind inzwischen von anderen Ereignissen überschrieben, und ein fehlendes optionales Nutzlastfeld belegt nach §2.3 ohnehin keinen Pfad. Ein Client aus dem Schnappschuss käme zu einem anderen Hinweisstand als der volle Fold, und P7 fiele. Der Hinweis ist auch inhaltsgleich nicht wertlos: Zwei Clients, die dieselbe Einheit angelegt haben, ist eine Lage, die die Führungsstelle sehen soll.
+
+`fold.ts` unterdrückt in M0.2 den Hinweis bei Inhaltsgleichheit (`// inhaltsgleich: nichts verloren, kein Hinweis`) — die Regel der dritten Fassung. **Das ist nachzuziehen** (T89), wie §3.5, §3.6 und §2.3 die übrigen Abweichungen des Standes von M0.2 benennen.
 
 ZDM §4.2 nennt `EinsatzAngelegt` „erstes Ereignis der Akte; ein zweites wird verworfen", und „erstes" kann nicht die Ankunft meinen. Gewönne die größte HLC, überschriebe eine verspätete Zweitanlage die gesamte Arbeit zwischen beiden Anlagen — sie trägt alle Anlagefelder und keinen Vorher-Wert.
 
@@ -684,7 +696,7 @@ ARCHIV = { id: "ARCHIV", systemAbschnitt: true,
   angelegtMit: SYSTEM_HLC, verworfeneAnlagen: [], zaehltInGesamtstaerke: false }
 ```
 
-`name` des Archivs folgt der Excel (`Stärke!B431` „Kopier Bereich für ‚Einsatz beendet'"); `reihenfolge` setzt es ans Ende jeder Sortierung. Beide Ids sind **reserviert**: Eine Anlage darauf wird verworfen und erzeugt `reservierteIdVerworfen`. Ohne die Reservierung könnte eine Anlage dem Auffang einen nicht zählenden Typ geben, und die Stärke jeder dort liegenden Einheit verschwände. **Die verworfene Anlage landet in `verworfeneSchluessel`,** nicht in `verworfeneAnlagen` des Systemabschnitts — dessen Felder sind hier festgeschrieben und bleiben es, sonst wären zwei Clients mit verschiedenen Fehlversuchen nicht mehr konvergent.
+`name` des Archivs folgt der Excel (`Stärke!B431` „Kopier Bereich für ‚Einsatz beendet'"); `reihenfolge` setzt es ans Ende jeder Sortierung. Beide Ids sind **reserviert**: Eine Anlage darauf wird verworfen und erzeugt `reservierteIdVerworfen`. Ohne die Reservierung könnte eine Anlage dem Auffang einen nicht zählenden Typ geben, und die Stärke jeder dort liegenden Einheit verschwände. **Die verworfene Anlage landet mit `art: "RESERVIERTE_ID"` in `verworfeneSchluessel`,** nicht in `verworfeneAnlagen` des Systemabschnitts — dessen Felder sind hier festgeschrieben und bleiben es, sonst wären zwei Clients mit verschiedenen Fehlversuchen nicht mehr konvergent.
 
 | Invariante ZDM §3.2 | Behandlung |
 |---|---|
@@ -812,7 +824,7 @@ Der Fold kann das nicht prüfen: Ihm liegt ein gewöhnliches `StaerkeGeaendert` 
 * **Beschränkt.** Der Zustand wächst nicht: Es kommt kein Feld hinzu, das mehr als einen Wert hält.
 * **Nebenläufig richtig.** Zwei Aufteilungen derselben Quelle erzeugen zwei Einheiten, also zwei Summanden.
 
-**Berechnung und Terminierung.** Die Summe ist **flach**: Jeder Summand ist ein fester Wert aus der Nutzlast (`abgeteilteStaerke`, `gesehen`), keine abgeleitete Größe. Es genügt ein Durchlauf, der einen Index über `abgeteiltVon.quellEinheitId` und `aufgegangenIn.zielEinheitId` aufbaut; danach ist jede Einheit in konstanter Zeit fertig. **Keine Rekursion, keine topologische Ordnung** — eine frühere Fassung ließ den Summanden die wirksame Stärke der Quelle sein und brauchte beides; seit er der gesehene Wert ist, nicht mehr. Auch die Vergleichsgröße aus §5.4.3 ist flach: `staerke.wert` plus die Zuwächse, ein zweiter Durchlauf über denselben Index.
+**Berechnung und Terminierung.** Die Summe ist **flach**: Jeder Summand ist ein fester Wert aus der Nutzlast (`abgeteilteStaerke`, `gesehen`), keine abgeleitete Größe. Es genügt ein Durchlauf, der einen Index über `abgeteiltVon.quellEinheitId` und `aufgegangenIn.zielEinheitId` aufbaut; danach ist jede Einheit in konstanter Zeit fertig. **Keine Rekursion, keine topologische Ordnung** — eine frühere Fassung ließ den Summanden die wirksame Stärke der Quelle sein und brauchte beides; seit er der gesehene Wert ist, nicht mehr. Auch die Vergleichsgröße aus §5.4.3 ist flach: die wirksame Stärke, die ohnehin berechnet wird, je Aufteilung um ihre eigene `abgeteilteStaerke` ergänzt — kein weiterer Durchlauf.
 
 **`abgeteilteStaerke` und `neueEinheit.staerke` müssen gleich sein.** Beide stehen in der Nutzlast, und das Schema prüft die Gleichheit mit `refine`; eine Nutzlast, die sie verschieden füllt, ist ungültig (§3.7 Punkt 4). Ohne die Bindung entstünden Kräfte aus dem Nichts: Quelle minus 3, neue Einheit plus 5, und kein Hinweis, weil nichts negativ wird und `gesehen` stimmt.
 
@@ -834,15 +846,24 @@ Vier Bedingungen, jede aus dem Zustand entscheidbar und jede mit einem Gegenbeis
 
 **(2) Ein Abgang wirkt weiter, auch wenn die abgeteilte Einheit entfernt ist.** Das ist kein Widerspruch zu (1), sondern dieselbe Regel: Entfernen nimmt Stärke aus der Lage. Die drei Abgeteilten sind gegangen; sie kommen nicht dadurch zurück, dass jemand ihren Eintrag entfernt.
 
-**(3) Ein Summand wirkt nur, wenn die Entität, die ihn trägt, durch **dieses** Ereignis angelegt wurde.** Formal: `v.abgeteiltVon` wirkt nur, wenn `v.angelegtDurch` das Aufteilungsereignis ist. Gegenbeispiel sonst: Der Meldekopf meldet die Teileinheit V direkt (HLC 50), die Führungsstelle teilt sie aus U ab (HLC 100). Nach §3.11 gilt die frühere Anlage mit ihrer eigenen Stärke, der Abzug bei U bliebe aber stehen — die Bilanz ginge auf. Die Bedingung schließt das, und `zweiteAnlageVerworfen` zeigt die Lage ohnehin an.
+**(3) Ein `abgeteiltVon` wirkt nur, wenn die Einheit, die es trägt, durch **dieses** Ereignis angelegt wurde.** Formal: `v.abgeteiltVon` wirkt nur, wenn `v.angelegtDurch` das Aufteilungsereignis ist. **Die Bedingung gilt allein für `abgeteiltVon`** und ist auf keinen anderen Summanden zu übertragen: Ein `aufgegangenIn` wird von einer Einheit getragen, die **nie** durch das Zusammenführungsereignis angelegt wurde, sondern immer aus einer eigenen Anlage stammt. Wer (3) allgemein läse, käme dazu, dass **kein einziger Zuwachs jemals wirkt** — jede Zusammenführung löschte die Stärke ihrer Quelle aus der Lage, und die Prüffälle der Aufteilung blieben dabei grün. Gegenbeispiel sonst: Der Meldekopf meldet die Teileinheit V direkt (HLC 50), die Führungsstelle teilt sie aus U ab (HLC 100). Nach §3.11 gilt die frühere Anlage mit ihrer eigenen Stärke, der Abzug bei U bliebe aber stehen — die Bilanz ginge auf. Die Bedingung schließt das, und `zweiteAnlageVerworfen` zeigt die Lage ohnehin an.
 
 **(4) Kreise und Selbstbezug wirken nicht.** `quellEinheitId = neueEinheitId` ist bereits im Schema ungültig. Zeigt eine Kette von `abgeteiltVon` auf eine besuchte Einheit zurück, wirkt die Kante mit der **größeren** HLC nicht (bei Gleichstand die größere Ereignis-Id), und es entsteht `aufteilungKreis` — dieselbe Auflösung wie in §5.3.1 und §5.4.3, aus demselben Grund.
 
+**Die Reihenfolge der Prüfungen steht fest: erst (4), dann (1) bis (3).** Die Kreisauflösung läuft über **alle** Kanten, auch über die, die (1) bis (3) später fallen lassen; erst auf den verbliebenen wirken die drei anderen Bedingungen. Nicht umgekehrt, und der Unterschied ist keine Feinheit: Bei A→B (HLC 5), B→A (HLC 9) und einem `EinheitEntfernt(A)` löst die Kreissuche zuerst die Kante B→A auf, B bleibt eigenständig und zählt. Liefe (1) zuerst, wäre A's Kante schon weg, es gäbe keinen Kreis, B ginge in die entfernte A auf — und B's Stärke verschwände ohne Hinweis. Zwei Implementierungen mit verschiedener Reihenfolge hätten verschiedene Gesamtstärken **und** verschiedene Hinweismengen; P3 fiele. Die Kreisauflösung hängt allein an `abgeteiltVon`, `aufgegangenIn` und der HLC — also an nichts, was ein Ereignis an einer dritten Einheit verschieben könnte. Prüffall T132.
+
+**Wann `aufgegangenIn` überhaupt wirksam ist.** Die vier Bedingungen betreffen den **Summanden**. Die Kante selbst hat zwei eigene, und sie gehören hierher, weil sonst Stärke ohne Hinweis verschwindet:
+
+* **Das Ziel muss im Zustand stehen.** Kennt dieser Client `zielEinheitId` (noch) nicht, ist `aufgegangenIn` **nicht wirksam**: Die Quelle bleibt eigenständig, sie zählt weiter, und es entsteht `fremdreferenzUnbekannt` am Feldpfad `einheit/<quellId>/aufgegangenIn`. Ohne diese Regel verschwänden ihre Kräfte vollständig — sie zählte nicht mehr, und ihr Summand fände kein Ziel. Der Fall ist der Normalfall eines verteilten Protokolls: Ein Client sieht die Zusammenführung, bevor die Anlage des Ziels bei ihm ankommt. Der Hinweis verschwindet ohne Zutun, sobald sie eintrifft (§3.8), und die Stärke wandert dann von der Quelle ins Ziel.
+* **Kein Kreis** — Bedingung (4) und §5.4.3, dieselbe Auflösung.
+
+**Die Gegenrichtung braucht keine Regel.** Ist die `quellEinheitId` einer Aufteilung unbekannt, findet der Abzug keine Einheit, auf die er wirken könnte; die Summe läuft über die Einheiten des Zustands. Verloren geht dabei nichts: Die Quelle ist diesem Client noch gar nicht bekannt, ihre Stärke steht in keiner Summe, und trifft ihre Anlage ein, wirkt der Abzug. Sichtbar gemacht wird die Lage trotzdem, mit `fremdreferenzUnbekannt` am Feldpfad `einheit/<neueId>/abgeteiltVon`. Prüffall T133.
+
 **Eine fünfte Bedingung wäre falsch, und das gehört hierher.** Der Fall, der sie nahelegt, ist: U (0/0/10) geht in Z auf, danach wird U in V (0/0/4) aufgeteilt — U zählt nicht, Z trägt U's zehn, V's vier kämen hinzu, Summe 14 statt 10. Die naheliegende Regel „die abgeteilte Einheit erbt die Nichtzählbarkeit ihrer Quelle" schafft mehr Schaden als sie heilt: Sie ist weder transitiv definierbar (eine Aufteilung aus V wüsste nichts mehr von U), sie führt die HLC-Bedingung durch die Hintertür wieder ein, die §5.4.2 gerade verworfen hat, und sie kann eine ganze Lage auf null bringen — geht der Rest einer Quelle in die eigene abgeteilte Teileinheit auf, zählte am Ende keine der beiden.
 
-**Der Fall ist bereits abgedeckt, und zwar sichtbar.** `gesehen` der Zusammenführung (0/0/10) passt nach der Aufteilung nicht mehr zur Vergleichsgröße der Quelle, und es entsteht `vorgangSummeWeichtAb` an `einheit/U/staerke`. Die Summe ist falsch, die Lage steht als Hinweis im Zustand, und P4 ist über solchen Mengen nach §8.1 ausdrücklich ausgesetzt. Das ist genau die Bedingtheit, die dort zugesagt ist — kein stiller Fehler, sondern zwei Meldungen, die sich widersprechen und die jemand klären muss.
+**Der Fall ist bereits abgedeckt, und zwar sichtbar.** Die Vergleichsgröße der Zusammenführung ist nach §5.4.3 die **wirksame** Stärke der Quelle; sie ist nach der Aufteilung 0/0/6 und passt nicht mehr zu `gesehen` (0/0/10). Es entsteht `vorgangSummeWeichtAb` an `einheit/U/staerke` (T126). Genau dafür trägt jene Vergleichsgröße die fremden Abgänge mit — sie ist die Stelle, an der dieser Widerspruch auffällt. Die Summe ist falsch, die Lage steht als Hinweis im Zustand, und P4 ist über solchen Mengen nach §8.1 ausdrücklich ausgesetzt. Das ist genau die Bedingtheit, die dort zugesagt ist — kein stiller Fehler, sondern zwei Meldungen, die sich widersprechen und die jemand klären muss.
 
-**T20:** Zwei nebenläufige Aufteilungen derselben Quelle (je 0/1/3) aus 1/4/12 ⇒ Quelle 1/2/6, zwei neue Einheiten, Gesamtstärke unverändert, jede Permutation. **T21:** `StaerkeGeaendert` (9) nach Aufteilung (5) ⇒ der Abzug wirkt **weiterhin**; die Meldung setzt die eigene Stärke und lässt ihn unberührt. **T22:** Aufteilung (9) nach Meldung (5) ⇒ ebenso; die Reihenfolge ändert nichts. **T23:** Abgeteilte Stärke größer als die Quelle ⇒ 0/0/0, `staerkeGeklemmt`. **T24 (Rebase):** T22, Schnappschuss, danach `StaerkeGeaendert` (3) ⇒ wie voller Fold. **T25 (Idempotenz über den Vorgang):** Zwei inhaltsgleiche `EinheitAufgeteilt` mit derselben `neueEinheitId`, verschiedene Ereignis-Ids ⇒ **ein** Abzug, Gesamtstärke unverändert.
+**T20:** Zwei nebenläufige Aufteilungen derselben Quelle (je 0/1/3) aus 1/4/12, beide mit `gesehen` 1/4/12 ⇒ Quelle 1/2/6, zwei neue Einheiten, Gesamtstärke unverändert, jede Permutation — **und je ein `vorgangSummeWeichtAb`**, der Fehlalarm aus §5.4.3. Er setzt P4 nicht aus; die Prüfung muss auch über ihn hinweg durchlaufen. **T21:** `StaerkeGeaendert` (9) nach Aufteilung (5) ⇒ der Abzug wirkt **weiterhin**; die Meldung setzt die eigene Stärke und lässt ihn unberührt. **T22:** Aufteilung (9) nach Meldung (5) ⇒ ebenso; die Reihenfolge ändert nichts. **T23:** Abgeteilte Stärke größer als die Quelle ⇒ 0/0/0, `staerkeGeklemmt`. **T24 (Rebase):** T22, Schnappschuss, danach `StaerkeGeaendert` (3) ⇒ wie voller Fold. **T25 (Idempotenz über den Vorgang):** Zwei inhaltsgleiche `EinheitAufgeteilt` mit derselben `neueEinheitId`, verschiedene Ereignis-Ids ⇒ **ein** Abzug, Gesamtstärke unverändert.
 
 #### §5.4.3 Regel: Zusammenführen — je Quelle, und einmalig
 
@@ -856,17 +877,33 @@ Das ist die entscheidende Festlegung, und sie ist teuer erkauft. Mit gewöhnlich
 
 **Kreise und Selbstbezug.** Zeigt `aufgegangenIn` nach mehreren Schritten auf eine bereits besuchte Einheit — A→B und B→A —, ist die Kante mit der **größeren** HLC nicht wirksam (bei Gleichstand die mit der größeren Ereignis-Id, §3.5): Jene Einheit bleibt eigenständig und zählt, es entsteht `zusammenfuehrungKreis`. Dasselbe, wenn `zielEinheitId` in den eigenen `quellen` steht. Ohne die Regel wären beide Einheiten „aufgegangen", zählten nirgends, und ihre Stärke verschwände still — genau das, was §5.3.3 als tragende Zusicherung ausschließt.
 
-**`gesehen` ist kein Vorher-Wert,** sondern eine Prüfangabe (§2.2c): der Stand der Quelle, den der Bediener beim Vorgang sah. Der `vorher` von `aufgegangenIn` ist, wie bei jedem Feld, dessen früherer Wert — im Regelfall abwesend.
+**`gesehen` ist kein Vorher-Wert,** sondern eine Prüfangabe (§2.2, Form (c)): der Stand der Quelle, den der Bediener beim Vorgang sah. Einen `vorher` hat `aufgegangenIn` **nie** — Form (c) verbietet ihn im Rahmen, und §2.2a nimmt die Erstwert-Felder von der Vorher-Prüfung ausdrücklich aus.
 
-Weicht `gesehen` ab, entsteht `vorgangSummeWeichtAb` mit beiden Zahlen am Feldpfad `einheit/<quellId>/staerke`. **Die Vergleichsgröße ist je Vorgang eine andere, und beide sind aus dem Zustand berechenbar:**
+Weicht `gesehen` ab, entsteht `vorgangSummeWeichtAb` mit beiden Zahlen am Feldpfad `einheit/<quellId>/staerke`.
 
-| Vorgang | verglichen wird `gesehen` gegen |
-|---|---|
-| beide Vorgänge, je Quelle | `staerke.wert` **plus allen Zuwachs**, also die wirksame Stärke **ohne die Abgänge** |
+> **Die Vergleichsgröße ist die wirksame Stärke der Quelle (§5.4.2), ohne die Wirkung des geprüften Vorgangs selbst.** Ausgeschrieben:
+>
+> | Vorgang | `gesehen` wird verglichen gegen |
+> |---|---|
+> | `EinheitZusammengefuehrt`, je Quelle `q` | `wirksameStaerke(q)` — unverändert, denn eine Zusammenführung verringert die Stärke ihrer Quelle nicht, sie macht sie nur unzählbar |
+> | `EinheitAufgeteilt` | `wirksameStaerke(quelle)` **plus der eigenen** `abgeteilteStaerke` — der Stand, den die Quelle ohne diese eine Aufteilung hätte |
+>
+> Beide Größen stehen im Zustand und fragen nach keiner HLC.
 
-**Warum für beide dieselbe Größe, und warum nicht die wirksame Stärke.** Eine Aufteilung verringert die wirksame Stärke ihrer Quelle; verglichen man `gesehen` gegen sie, erzeugte **jede fehlerfreie Aufteilung** einen Hinweis, und P4 wäre über jeder Menge mit einer Aufteilung unerfüllbar. Dasselbe trifft eine Zusammenführung, deren Quelle **später** aufgeteilt wird — auch dort verschöbe sich die Vergleichsgröße nachträglich, und ein Vorgang, bei dem sich niemand verzählt hat, trüge einen Hinweis. Die Größe „ohne Abgänge" ist gegen beides stabil und stimmt auch bei **zwei nebenläufigen** Vorgängen: Alle Beteiligten sahen denselben Stand und vergleichen gegen denselben Wert.
+**Warum die Wirkung des eigenen Vorgangs herausfällt.** `gesehen` ist der Stand **vor** dem Vorgang. Eine Aufteilung verringert diesen Stand; verglichen man gegen die wirksame Stärke danach, trüge **jede fehlerfreie Aufteilung** einen Hinweis. Eine Zusammenführung verringert ihn nicht — sie setzt `aufgegangenIn` und schaltet `zaehlt` ab, die Zahlen der Quelle bleiben stehen. Für sie ist „davor" gleich „danach", und es fällt nichts heraus.
 
-**P4 (Summenerhaltung) hält genau dann,** wenn alle `gesehen` den wirksamen Stärken entsprechen und nichts geklemmt wurde. Beide Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar (§8.1).
+**Warum fremde Abgänge trotzdem mitzählen.** Die siebte Fassung verglich gegen `staerke.wert` plus allen Zuwachs, also **ohne jeden** Abgang, damit sich die Vergleichsgröße einer Zusammenführung durch eine spätere Aufteilung nicht verschiebt. Das war falsch, und zwar in beide Richtungen:
+
+* X (0/0/10) wird um 0/0/3 aufgeteilt; danach geht X in Z auf. Die Maske zeigt 0/0/7, der Bediener trägt 0/0/7 ein — und bekäme einen Hinweis, weil gegen 0/0/10 verglichen würde. Trüge er stattdessen die falsche 0/0/10 ein, schwiege die Prüfung, und die Lage stünde bei 13 statt 10. **Die Prüfung feuerte bei der richtigen Eingabe und schwiege bei der falschen.**
+* Umgekehrt: U (0/0/10) geht in Z auf (`gesehen` 0/0/10); **danach** teilt jemand 0/0/4 aus U ab. Die Lage trägt 14 statt 10 — und ohne die fremden Abgänge in der Vergleichsgröße entstünde kein Hinweis. Es ist genau der Fall, für den §5.4.2a **keine** fünfte Wirksamkeitsbedingung einführt, weil er hier sichtbar wird; ohne diese Größe wäre jene Begründung eine Behauptung ohne Deckung.
+
+Die Verschiebung, die die siebte Fassung fürchtete, ist deshalb keine: Eine Aufteilung **nach** der Zusammenführung ihrer Quelle ist kein harmloser Nachzügler, sondern der Widerspruch selbst. Sie soll die Vergleichsgröße verschieben.
+
+Damit ist die Prüfung **exakt die Bedingung von P4**: Die Gesamtstärke bleibt genau dann erhalten, wenn jede Zusammenführung so viel ins Ziel trägt, wie ihre Quelle wirksam hatte. Eine Aufteilung kann P4 gar nicht brechen — `abgeteilteStaerke` und `neueEinheit.staerke` sind schemaseitig gleich, Abzug und neue eigene Stärke heben sich auf.
+
+**Der Preis: zwei nebenläufige Abgänge derselben Quelle melden sich gegenseitig.** Teilen zwei Clients gleichzeitig aus U (0/1/12) je 0/1/3 ab, sahen beide 0/1/12; die Vergleichsgröße jedes der beiden Vorgänge nimmt den Abgang des anderen mit und ergibt 0/0/9. Beide bekommen `vorgangSummeWeichtAb`. Das ist ein Fehlalarm, und er bleibt stehen: Die Frage „war der fremde Abgang schon da, als ich sah?" ließe sich nur über eine HLC beantworten — der Stellvertreter für Kausalität, den §5.4.2 verworfen hat. Der Fehlalarm ist die richtige Seite des Irrtums. Er ist sichtbar, er kostet keine Kraft, und zwei Aufteilungen derselben Quelle in derselben Minute sind eine Lage, die die Führungsstelle ohnehin ansehen soll. Die Gegenrichtung wäre ein stiller Doppelzähler.
+
+**P4 (Summenerhaltung) hält genau dann,** wenn für jede **Zusammenführung** `gesehen` der wirksamen Stärke ihrer Quelle entspricht und nichts geklemmt wurde. Ein `vorgangSummeWeichtAb` aus einer **Aufteilung** setzt P4 **nicht** aus: Es meldet einen Irrtum über den Stand, keinen Verlust in der Summe (T20). Beide Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar (§8.1).
 
 **T26:** Zwei Quellen 0/1/3 und 0/2/6 ⇒ Ziel plus 0/3/9, Quellen aufgegangen, Gesamtstärke unverändert. **T27:** Eine Quelle meldet nebenläufig anders ⇒ `vorgangSummeWeichtAb`. **T28:** Dieselbe Zusammenführung zweimal (verschiedene Ereignis-Ids) ⇒ **ein** Summand. **T29:** {X,Y} nach Z1 und {Y,Z} nach Z2 ⇒ Y zählt einmal, beim Gewinner, Wirkungslos-Hinweis beim Verlierer. **T30:** A→B und B→A ⇒ eine Einheit bleibt eigenständig, `zusammenfuehrungKreis`, Gesamtstärke unverändert. **T31:** `zielEinheitId` in `quellen` ⇒ dieselbe Behandlung. **T32 (Umlenkung):** X→Z1 (9), `StaerkeGeaendert` an Z1 (12), X→Z2 (15) ⇒ X bleibt in Z1, Gesamtstärke unverändert, Wirkungslos-Hinweis für die zweite Zusammenführung. Ohne die Monotonie zählte X zweimal.
 
@@ -1218,7 +1255,7 @@ Wirkung: Der Einsatz gilt als archiviert, der Client wechselt in einen Nur-Lesen
 
 Es kann mehr als ein `EinsatzArchiviert` geben. Die Ableitung:
 
-* Der Zustand führt `archivierungen` als Abbildung von **Ereignis-Id** auf `{ gilt, hlc, zeitpunkt?, snapshotHash?, zurueckgenommenDurch? }`. `EinsatzArchiviert` legt den Eintrag unter seiner **eigenen** Id mit `gilt = true` an; `ArchivierungZurueckgenommen` setzt den Eintrag unter der von ihm **benannten** Id auf `gilt = false`.
+* Der Zustand führt `archivierungen` als Abbildung von **Ereignis-Id** auf `{ gilt, hlc?, wanduhr?, zeitpunkt?, snapshotHash?, zurueckgenommenDurch }` — **`zurueckgenommenDurch` ist immer vorhanden**, im Regelfall als leere Liste. §7.6 der Speicherschicht behält leere Listen und lässt fehlende Felder weg; ein Client, der das Feld bei einer Archivierung ohne Rücknahme wegließe, hätte einen anderen `zustandsHash` als einer, der `[]` schreibt (T137). `EinsatzArchiviert` legt den Eintrag unter seiner **eigenen** Id mit `gilt = true` an; `ArchivierungZurueckgenommen` setzt den Eintrag unter der von ihm **benannten** Id auf `gilt = false`.
 * **Der Eintrag entsteht unabhängig davon, ob das benannte Ereignis bekannt ist.** Trifft die Rücknahme vor der Archivierung ein, steht der Eintrag als **Grabstein** mit `false` da; die später eintreffende Archivierung findet ihn vor.
 * **`gilt` ist eine Konjunktion über die Menge**, kein LWW und kein Erstwert:
   `gilt = es gibt eine Archivierung mit dieser Id ∧ keine der Rücknahmen auf diese Id nennt deren HLC`.
@@ -1271,7 +1308,7 @@ Die Speicherseite folgt: Der Client, der die Rücknahme faltet, entfernt `archiv
 | **P1 Kommutativität** | Jede Permutation einer Ereignismenge ergibt denselben Zustand, einschließlich der Hinweise | keine. Gilt für alle Arten, auch die der Klasse „Regel" |
 | **P2 Idempotenz** | Ein doppelt gefaltetes Ereignis ändert den Zustand nicht | keine (§3.6) |
 | **P3 Konvergenz** | Zwei Clients mit derselben Ereignismenge **und derselben `foldVersion`** haben denselben Zustand | dieselbe Menge und dieselbe Fold-Fassung — die nach §3.9 auch die bekannten Wertelisten umfasst. Bei Quarantäne sehen zwei Clients verschiedene Mengen (KONZEPT-SPEICHER.md §8.6.1) |
-| **P4 Summenerhaltung** | Aufteilen und Zusammenführen in beliebiger Reihenfolge lassen die Gesamtstärke unverändert | **bedingt:** alle `gesehen` entsprechen den wirksamen Stärken (§5.4.3) und nichts wurde geklemmt (§5.4.2). Beide Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar |
+| **P4 Summenerhaltung** | Aufteilen und Zusammenführen in beliebiger Reihenfolge lassen die Gesamtstärke unverändert | **bedingt:** jedes `gesehen` einer **Zusammenführung** entspricht der wirksamen Stärke seiner Quelle (§5.4.3) und nichts wurde geklemmt (§5.4.2). Beide Ausnahmen erzeugen einen Hinweis, sind also am Zustand ablesbar. Ein `vorgangSummeWeichtAb` aus einer **Aufteilung** setzt P4 nicht aus (§5.4.3) |
 | **P5 Kein Waisenzustand** | Keine **Einheit** steht in einem nicht existierenden oder aufgelösten Abschnitt | keine. Für Fahrzeuge gilt die schwächere Regel aus §5.3.3, ausdrücklich nicht P5 |
 | **P6 Monotone Zustandsmaschine** | `anforderung.zustand` geht nie von `EINGETROFFEN` zurück | **bedingt:** über einer Menge ohne `ErledigungZurueckgenommen` (§5.6.2) |
 | **P7 Rebase-Treue** | Der Zustand aus „Schnappschuss laden, Rest falten" ist gleich dem aus „alles falten" — für jeden Schnitt | keine. Die formale Fassung von §3.1 |
@@ -1311,7 +1348,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 | Auflage | Wo | Anmerkung |
 |---|---|---|
 | 4 · Mengenfold mit Rebase; HLC je Feld; Schnappschüsse tragen `foldVersion` | §3.1 bis §3.3, §3.9 | **Vollständig**, alle drei Teile. §3.9 setzt `foldVersion = 2` und nennt die Regel, wann sie steigt — einschließlich einer neuen Ereignisart |
-| 6 · Vorher-Wert an jedem setzenden Ereignis; Abweichung ⇒ Hinweis | §2.2, §2.3, §3.8 | **Vollständig.** Drei Formen statt „drei Sätze ohne Ausnahme"; §2.3 nennt die Feldpfade der Anlagen unter ihren **Zustands**namen, sodass Anlage und Änderung dasselbe Feld treffen |
+| 6 · Vorher-Wert an jedem setzenden Ereignis; Abweichung ⇒ Hinweis | §2.2, §2.2a, §2.3, §3.8 | **Erfüllt, mit einer benannten Auslegung:** Drei Formen statt „drei Sätze ohne Ausnahme"; §2.3 nennt die Feldpfade der Anlagen unter ihren **Zustands**namen, sodass Anlage und Änderung dasselbe Feld treffen. §2.2a prüft die Abweichung gegen die **verdrängte Beobachtung**, nicht gegen den gefalteten Zustand — ein Vorher-Wert, den das Feld nie hatte, erzeugt ohne Verdrängung keinen Hinweis (T130). Als Auslegung 20 in §10 geführt |
 | 10 · Zyklusregel; relative Stärkeänderung; **Auffangregel für aufgelöste Abschnitte** | §5.3.1, §5.4.2, §5.3.3 | **Erfüllt, aber mit einer begründeten Umkehrung:** §5.3.3 gibt dem aufgelösten Abschnitt **nicht** den Auffang, sondern das benannte Ziel der Auflösung; der Auffang bleibt dem *unbekannten* Abschnitt. Die Auflage nennt den umgekehrten Fall. Als Auslegung 14 in §10 geführt |
 | 11 · Undo mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo | §6 | **Vollständig.** Je Art nennt die Undo-Spalte, ob dieselbe Art mit `neu = vorher` genügt oder ein benanntes Gegenereignis nötig ist; die nicht rücknehmbaren haben je einen anderen benannten Weg (§5.9.2) |
 | 12 · „Neueste Revision zählt" **definieren** (HLC entscheidet); Meldezeit plausibilisieren | §2.5, §2.6, §3.5 | **Vollständig, mit einer benannten Ergänzung:** HLC entscheidet jeden Konflikt; für die Reihenfolge der EEB-**Revisionen** gilt zusätzlich `stand`, weil ein nachgescannter Bogen von gestern sonst als aktuell gälte. Die Auflage nennt nur die HLC; als Auslegung 15 in §10 geführt |
@@ -1321,7 +1358,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 ### Was hier nur teilweise erfüllt ist
 
 * **Auflage 4** ist erfüllt, die Hinweiskette aber auf zwei Beobachtungen begrenzt (§3.3, §8.2) — eine Entscheidung über die Größe des Zustands, keine Lücke im Nachweis.
-* **Auflage 6** gilt für die Arten dieses Katalogs; für eine künftige Art erst, wenn ihr Feldpfad benannt ist. §2.2 macht das zur Bedingung jeder Erweiterung.
+* **Auflage 6** gilt für die Arten dieses Katalogs; für eine künftige Art erst, wenn ihr Feldpfad benannt ist. §2.2 macht das zur Bedingung jeder Erweiterung. Die beiden Erstwert-Felder sind von der Vorher-Prüfung ausgenommen (§2.2a); ihre inhaltliche Prüfung leistet `gesehen`.
 * **P4, P6 und P7** sind die DoD von M1.3. Dieses Dokument liefert ihre Definition samt Bedingung.
 
 ---
@@ -1376,6 +1413,7 @@ Die beiden bedingten Zusagen sind als solche geführt. Eine unbedingte wäre ent
 17. **`fahrzeug.entferntAm` entfällt** (ZDM §3.2) zugunsten des Wahrheitswerts `entfernt`; der Zeitpunkt steht im Einsatztagebuch. **`fahrzeug.nutzlast` heißt `nutzlastText`,** weil `nutzlast` im Ereignisrahmen belegt ist.
 18. **Freie Vokabularwerte erzeugen keinen `unbekannterWert`** (§3.7). ZDM §3.2 führt sie als `VokabularWert` einer geschlossenen Liste.
 19. **Vier aus `bogen` abgeleitete Merkmale stehen nicht im Zustand** (§3.2). ZDM §3.2 führt sie an der Meldung.
+20. **Die Vorher-Prüfung misst gegen die verdrängte Beobachtung, nicht gegen den gefalteten Zustand** (§2.2a). Auflage 6 spricht von der Abweichung schlechthin. Ein Wert, den niemandes Arbeit widerlegt, erzeugt keinen Hinweis; die Alternative hieße, je Feld die gesamte Beobachtungsfolge zu halten, und das verbietet §3.1.
 
 ### Offen geblieben
 
@@ -1400,7 +1438,7 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | **P1** (T75) | mindestens **500 Permutationen** je Menge, mindestens **200 Mengen** von je **40 bis 120 Ereignissen**, die zusammen **jede Ereignisart mindestens zehnmal** enthalten | eine einzige abweichende Serialisierung ist ein Fehlschlag |
 | **P2** (T81) | dieselben Mengen, jedes Ereignis doppelt | dito |
 | **P3** (T87) | dieselben Mengen, zwei unabhängig aufgebaute Faltungen | Vergleich über den `zustandsHash` |
-| **P4** (T20, T26) | mindestens **100 Mengen** mit je zwei bis fünf Aufteilungen und Zusammenführungen | Gesamtstärke vor und nach dem Fold gleich, sofern kein Hinweis `vorgangSummeWeichtAb` oder `staerkeGeklemmt` vorliegt |
+| **P4** (T20, T26) | mindestens **100 Mengen** mit je zwei bis fünf Aufteilungen und Zusammenführungen | Gesamtstärke vor und nach dem Fold gleich, sofern kein `vorgangSummeWeichtAb` **einer Zusammenführung** und kein `staerkeGeklemmt` vorliegt. Ein Aufteilungs-Hinweis ist kein Ausschlussgrund — läuft die Prüfung auch über ihn hinweg nicht durch, ist das ein Fehlschlag (T20) |
 | **P5** (T95) | alle Mengen aus P1 | keine Einheit in einem unbekannten oder aufgelösten Abschnitt |
 | **P6** (T46) | alle Permutationen **und alle Präfixe** je Menge | Zustand nie `≠ EINGETROFFEN` nach einem `AnforderungErledigt` ohne jüngeres Gegenereignis |
 | **P7** (T77) | für jede Menge aus P1 **jeder** Schnitt: Präfix falten, serialisieren, laden, Rest falten | Zustand gleich dem vollen Fold, einschließlich Hinweisen |
@@ -1412,7 +1450,7 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | Regel | § | Prüffälle |
 |---|---|---|
 | Drei Formen von `vorher`/`neu` | §2.2 | T78, T79, T80 |
-| Prüfung des Vorher-Werts, drei Grenzfälle | §2.2a | T119, T130, T131 |
+| Prüfung des Vorher-Werts, vier Grenzfälle | §2.2a | T119, T130, T131, T135, T138 |
 | Anlagen belegen Zustandsfeldpfade | §2.3 | T82, T13 |
 | `grund` bei neun Arten Pflicht | §2.4 | T83 |
 | Plausibilisierung, drei Zeitklassen | §2.5 | T84, T85, T86 |
@@ -1433,18 +1471,22 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 | `foldVersion` steigt auch bei neuer Art | §3.9 | T97 |
 | Wartende Beobachtung, `anlageFehlt` | §3.10 | T98 |
 | Unbekannte Fremdreferenz | §3.10 | T99, T15 |
+| Unbekanntes Ziel bzw. unbekannte Quelle eines Vorgangs | §5.4.2a, §3.10 | T133 |
 | Zweite Anlage: kleinste HLC | §3.11 | T1, T90, T100 |
 | Gefaltet, aber wirkungslos | §3.12 | T44, T45, T29, T68, T110 |
 | Anlage verdrängt ohne Vorher-Wert | §2.3 | T106 |
 | Gleiche Ereignis-Id, verschiedener Inhalt | §3.6 | T107 |
 | Summanden wirken ohne HLC-Bedingung | §5.4.2 | T21, T22, T111, T112, T115 |
 | Doppelt vergebene Ereignis-Id | §3.6 | T107, T117 |
+| `art` in `verworfeneSchluessel` | §3.6, §5.3.4 | T136 |
 | Ordnung der Listen im Zustand | §3.2 | T118 |
 | Gesehener Vorher-Wert `null` | §3.2 | T119 |
 | Rücknahme benennt Id und HLC | §7.2 | T114, T116, T122 |
+| `zurueckgenommenDurch` ist immer eine Liste | §7.2 | T137 |
 | EEB-Übernahme bei Zuwachs | §5.4.2 | T120 |
-| Vergleichsgröße von `gesehen` | §5.4.3 | T121, T27 |
+| Vergleichsgröße von `gesehen` | §5.4.3 | T121, T126, T134, T27, T20 |
 | Wann ein Summand wirkt | §5.4.2a | T123, T124, T125, T126, T127, T39 |
+| Reihenfolge Kreisauflösung vor Wirksamkeitsbedingungen | §5.4.2a | T132 |
 | Tie-Break der Kreisauflösungen | §5.3.1, §5.4.2a, §5.4.3 | T128 |
 | Stärkesummen lesen die wirksame Stärke | §1.2 | T129 |
 | Übernommene Fahrzeuge und Personen wechseln mit | §5.4.2 | T113 |
@@ -1531,16 +1573,23 @@ Startwerte (S10), gegen die Laufzeit in der CI zu kalibrieren:
 **T117** Zwei verschiedene Ereignisse mit derselben Id ⇒ `ereignisIdDoppeltVergeben`; der Konvergenzvergleich meldet „nicht vergleichbar" statt eines Fehlers.
 **T118** Drei verdrängte Beobachtungen eines Erstwert-Feldes, in zwei Reihenfolgen eingelesen ⇒ gleiche Serialisierung, weil die Liste nach HLC und Ereignis-Id geordnet ist.
 **T120** Übernahme des Feldes `staerke` aus einem Bogen bei einer Einheit mit Zuwachs ⇒ der Client bietet sie nicht automatisch an, sondern zeigt Bogenstand und eigene Stärke nebeneinander (Prüfung am schreibenden Client, nicht am Fold).
-**T121** Fehlerfreie Aufteilung (`gesehen` = Stand vor dem Abteilen) ⇒ **kein** `vorgangSummeWeichtAb`; zwei nebenläufige Aufteilungen derselben Quelle mit demselben `gesehen` ⇒ ebenfalls keiner.
+**T121** Einzelne fehlerfreie Aufteilung (`gesehen` = Stand vor dem Abteilen) ⇒ **kein** `vorgangSummeWeichtAb`; die eigene `abgeteilteStaerke` fällt aus der Vergleichsgröße heraus. Eine **zweite, spätere** Aufteilung derselben Quelle mit dem inzwischen richtigen `gesehen` ⇒ ebenfalls keiner; mit dem alten `gesehen` ⇒ Hinweis. Die Mutation, die die eigene `abgeteilteStaerke` **nicht** herausrechnet, muss den ersten Teil fallen lassen.
 **T122** Rücknahme mit `archivierungHlc`, Schnappschuss, danach trifft die Archivierung ein ⇒ derselbe Zustand wie beim vollen Fold, für eine passende wie für eine unpassende HLC.
 **T123** X (0/0/5) geht in Z auf, danach `EinheitEntfernt(X)` ⇒ `wirksame(Z)` sinkt um 0/0/5.
 **T124** `abgeteiltVon` einer Einheit, deren `angelegtDurch` eine andere Anlage ist ⇒ der Abzug wirkt nicht; `zweiteAnlageVerworfen` steht.
 **T125** Aufteilungskreis A→B, B→A ⇒ die Kante mit der größeren HLC wirkt nicht, `aufteilungKreis`, Gesamtstärke unverändert.
-**T126** Aufteilung aus einer Quelle, die bereits aufgegangen ist ⇒ `vorgangSummeWeichtAb` an der Quelle; die Summe ist erkennbar falsch, und P4 ist über dieser Menge nach §8.1 ausgesetzt.
+**T126** U (0/0/10) geht in Z auf (`gesehen` 0/0/10), danach wird U um 0/0/4 aufgeteilt ⇒ die Vergleichsgröße der **Zusammenführung** ist 0/0/6 und passt nicht mehr, `vorgangSummeWeichtAb` an `einheit/U/staerke`. Die Summe ist erkennbar falsch (14 statt 10), und P4 ist über dieser Menge nach §8.1 ausgesetzt. Die Mutation, die fremde Abgänge aus der Vergleichsgröße nimmt, muss diesen Fall fallen lassen.
 **T127** `EinheitAufgeteilt` mit `quellEinheitId = neueEinheitId` ⇒ ungültige Nutzlast.
 **T128** Zwei Kreiskanten mit identischer HLC ⇒ die größere Ereignis-Id weicht, auf jedem Client dieselbe.
 **T119** `AbschnittBemerkungGesetzt(neu = null, vorher = null)` gegen ein nebenläufiges mit einem Wert ⇒ `vorherPasstNicht`, derselbe Hinweis auch nach einem Schnappschuss.
 **T130** Gewinner mit `gesehenerVorher`, aber ohne zweithöchste Beobachtung ⇒ **kein** Hinweis, auch wenn der behauptete Wert nie im Feld stand.
 **T131** `gesehenerVorher = { wert: null }` gegen eine zweithöchste Beobachtung mit Wert ⇒ `vorherPasstNicht`; ohne zweithöchste ⇒ kein Hinweis.
+**T132** A→B (HLC 5), B→A (HLC 9), dazu `EinheitEntfernt(A)` ⇒ die Kreisauflösung läuft **vor** den Wirksamkeitsbedingungen: B→A weicht, `zusammenfuehrungKreis`, B bleibt eigenständig und zählt. Die Mutation, die (1) zuerst laufen lässt, muss den Fall fallen lassen — dort verschwände B's Stärke.
+**T133** Zusammenführung auf ein `zielEinheitId`, das dieser Client nicht kennt ⇒ die Quelle zählt **weiter**, `fremdreferenzUnbekannt` an `einheit/<quellId>/aufgegangenIn`; trifft die Anlage des Ziels ein, wandert die Stärke, der Hinweis fällt weg. Symmetrisch: Aufteilung mit unbekannter `quellEinheitId` ⇒ der Abzug wirkt nicht, `fremdreferenzUnbekannt` an `einheit/<neueId>/abgeteiltVon`, keine Kraft verschwindet.
+**T134** X (0/0/10) wird um 0/0/3 aufgeteilt, danach geht X mit `gesehen` 0/0/7 in Z auf ⇒ **kein** Hinweis, Gesamtstärke 0/0/10. Mit `gesehen` 0/0/10 ⇒ `vorgangSummeWeichtAb`. Die siebte Fassung kehrte beides um.
+**T135** Zwei Zusammenführungen derselben Quelle in verschiedene Ziele ⇒ genau **ein** `wirkungslosGegenTerminalzustand` für die verdrängte, **kein** `vorherPasstNicht` und **kein** `ohneVorherWertVerdraengt`: Die Erstwert-Felder sind von der Vorher-Prüfung ausgenommen (§2.2a).
+**T136** Je ein Eintrag aus doppelt vergebener Ereignis-Id, aus widersprochenem Inhaltsschlüssel und aus einer Anlage auf `AUFFANG` ⇒ drei Einträge in `verworfeneSchluessel` mit verschiedenem `art`, und drei Hinweisarten, ohne dass die Form des Schlüssels ausgewertet wird.
+**T137** Archivierter Einsatz ohne jede Rücknahme ⇒ `archivierungen[<id>].zurueckgenommenDurch` ist `[]` und steht in der Serialisierung; zwei Clients haben denselben `zustandsHash`.
+**T138** Aufteilung mit `uebernommeneFahrzeuge`, bei der `gesehenEinheitId` fehlt ⇒ `gesehenerVorher = { wert: null }`; gegen eine zweithöchste Beobachtung mit Einheit entsteht `vorherPasstNicht`, nicht `ohneVorherWertVerdraengt`.
 **T129** Eine Menge mit Aufteilungen, Zusammenführungen, entfernten und aufgegangenen Einheiten ⇒ die Gesamtstärke der Lage ist die Summe von `wirksameStaerke` über die Einheiten mit `zaehlt`, nicht von `staerke`.
 **T105** Zwei Abschnitte gleicher `reihenfolge` und zwei Einheiten gleicher `reihenfolge` ⇒ Ausgabereihenfolge nach Entitäts-Id, auf jedem Client gleich.
