@@ -14,75 +14,35 @@
  * Attribut-Caches bis zu 10 Sekunden alte Werte liefern.
  */
 
-import type { HlcUhr, Uhrmeldung } from "@s1/domaene";
+import type { HlcUhr } from "@s1/domaene";
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
-import { shareklasse, type Shareklasse } from "./fehler.js";
+import { shareklasse } from "./fehler.js";
 import type { Identitaetenbuch } from "./identitaeten.js";
-import { grenzeUndKette, kettenanker, type Segmentquelle } from "./kettenanker.js";
+
 import { Dateilage } from "./leserlage.js";
-import { clientPraefix, segmentText, zerlegeEreignisDateiname, type Einsatzablage } from "./pfade.js";
 import { angekuendigterNachfolger } from "./segmentlese.js";
+import { clientPraefix, segmentText, zerlegeEreignisDateiname, type Einsatzablage } from "./pfade.js";
+import { anfangsKette, gleicheMitSpiegelAb, spiegelquelle } from "./spiegelabgleich.js";
 import { neuerFremderOffset, type FremderOffset, type UploadZustand } from "./uploadZustand.js";
-import { leseAbschnitt, leseZeilengrenzen, type Defektgrund, type GeleseneZeile } from "./zeile.js";
+import {
+  Sammler,
+  type Lesefehler,
+  type Pollergebnis,
+  type Quarantaenegrund,
+  type Quarantaenemeldung,
+} from "./pollergebnis.js";
+import { leseAbschnitt } from "./zeile.js";
 import { wanduhrText, type Zeitquelle } from "./zeit.js";
 
 export type { Takt } from "./leserlage.js";
-
-/** Warum eine Datei in Quarantäne steht. */
-export type Quarantaenegrund = Defektgrund | "fristAbgelaufen";
-
-/** Eine Quarantänestelle mit dem Text, den §8.2 Punkt 3 verlangt. */
-export interface Quarantaenemeldung {
-  readonly datei: string;
-  readonly offset: number;
-  readonly grund: Quarantaenegrund;
-  /** §8.1: vorläufig heißt, die Datei wird in jedem Takt-B-Durchlauf erneut geprüft. */
-  readonly vorlaeufig: boolean;
-  /** §8.2 Punkt 6 verlangt für `s1 akte pruefe` Datei, Offset **und** Zeitpunkt. */
-  readonly seit: number;
-  readonly meldung: string;
-}
-
-/**
- * Ein gescheiterter Lesezugriff (§8.3).
- *
- * „Das Lesen fremder Dateien liefert Fehler, die als ‚nicht erreichbar' gezählt
- * werden. Die Statuszeile nennt Dauer und Anzahl der wartenden Einträge."
- * Deshalb wird der Fehler gemeldet und nicht verschluckt: Verschluckt sähe ein
- * Share-Ausfall aus wie Bedingung 2 der Ruhephase (§7.6) — überall 0 Bytes —,
- * und ein Konvergenzlauf hielte Stillstand für Ruhe.
- */
-export interface Lesefehler {
-  readonly datei: string;
-  readonly klasse: Shareklasse;
-  readonly code: string;
-}
-
-/** Das Ergebnis eines Takt-Durchlaufs. */
-export interface Pollergebnis {
-  /**
-   * Die neu gelesenen Zeilen **als Bündel** über alle Dateien.
-   *
-   * Bewusst gesammelt und nicht je Zeile herausgegeben: `falteHinzu` in
-   * `@s1/domaene` kopiert die Faltung je Aufruf. Für ein Bündel ist das
-   * unbedenklich, für einen Aufruf je Einzelereignis wäre es quadratisch — bei
-   * 50.000 Ereignissen je Einsatz (§2.6) relevant.
-   */
-  readonly neueZeilen: readonly GeleseneZeile[];
-  /** Dateien, die dieser Durchlauf zum ersten Mal gesehen hat (§6.2, Takt B). */
-  readonly neueDateien: readonly string[];
-  /** Neu entstandene Quarantänestellen (§8.1, §8.2). */
-  readonly neueQuarantaenen: readonly Quarantaenemeldung[];
-  /** Quarantänestellen, die ohne Zutun weggefallen sind (§8.1). */
-  readonly geheilteQuarantaenen: readonly string[];
-  /** Gescheiterte Zugriffe (§8.3). Nicht leer heißt: Dies war **keine** Ruhephase. */
-  readonly lesefehler: readonly Lesefehler[];
-  /** Meldungen der Uhr beim Empfang fremder HLC (§3.2). */
-  readonly uhrmeldungen: readonly Uhrmeldung[];
-  /** Zahl der neu gelesenen Bytes; 0 in **allen** Dateien ist Bedingung 2 der Ruhephase (§7.6). */
-  readonly gelesenBytes: number;
-}
+export {
+  Sammler,
+  type Lesefehler,
+  type Pollergebnis,
+  type Quarantaenegrund,
+  type Quarantaenemeldung,
+} from "./pollergebnis.js";
 
 export interface LeserOptionen {
   readonly dateisystem: Dateisystem;
@@ -94,39 +54,6 @@ export interface LeserOptionen {
   readonly identitaeten: Identitaetenbuch;
   /** Optional: Die eigene HLC wird beim Lesen fremder Ereignisse fortgeschrieben (§3.2). */
   readonly uhr?: HlcUhr;
-}
-
-/** Sammelt, was ein Durchlauf ergeben hat. */
-class Sammler {
-  readonly neueZeilen: GeleseneZeile[] = [];
-  readonly neueDateien: string[] = [];
-  readonly neueQuarantaenen: Quarantaenemeldung[] = [];
-  readonly geheilteQuarantaenen: string[] = [];
-  readonly lesefehler: Lesefehler[] = [];
-  readonly uhrmeldungen: Uhrmeldung[] = [];
-  gelesenBytes = 0;
-
-  fertig(): Pollergebnis {
-    return {
-      neueZeilen: this.neueZeilen,
-      neueDateien: this.neueDateien,
-      neueQuarantaenen: this.neueQuarantaenen,
-      geheilteQuarantaenen: this.geheilteQuarantaenen,
-      lesefehler: this.lesefehler,
-      uhrmeldungen: this.uhrmeldungen,
-      gelesenBytes: this.gelesenBytes,
-    };
-  }
-
-  uebernimm(anderer: Pollergebnis): void {
-    this.neueZeilen.push(...anderer.neueZeilen);
-    this.neueDateien.push(...anderer.neueDateien);
-    this.neueQuarantaenen.push(...anderer.neueQuarantaenen);
-    this.geheilteQuarantaenen.push(...anderer.geheilteQuarantaenen);
-    this.lesefehler.push(...anderer.lesefehler);
-    this.uhrmeldungen.push(...anderer.uhrmeldungen);
-    this.gelesenBytes += anderer.gelesenBytes;
-  }
 }
 
 export class Leser {
@@ -186,64 +113,17 @@ export class Leser {
 
   /**
    * Gleicht `leseOffset` gegen den lokalen Spiegel ab — beim Öffnen, vor allem
-   * anderen.
-   *
-   * §5.5 sagt zu, dass der Spiegel einer fremden Datei „ihr geprüftes Präfix"
-   * ist; daraus folgt, dass seine Länge genau `leseOffset` ist. Der Abgleich
-   * macht `upload-state.json` damit zu dem, was §4.4 auch über `schreiber.json`
-   * sagt: einem Beschleuniger, keinem Wahrheitsträger. Er ist nicht bloß
-   * Vorsicht, sondern nötig — nach einem Kennungswechsel (§4.5, Schritt 6) ist
-   * die eigene alte Datei plötzlich eine fremde, deren Spiegel bereits
-   * vollständig dasteht. Ohne Abgleich läse der Leser sie ab Byte 0 erneut und
-   * hängte ihren gesamten Inhalt ein zweites Mal an den eigenen Spiegel an.
-   *
-   * Zugleich baut er die Menge der gesehenen Identitäten auf, die §5.3 „beim
-   * Öffnen aus dem lokalen Spiegel" verlangt.
-   *
-   * **Ohne Kettenprüfung**, und das ist Absicht: Der Spiegel enthält nach §5.5
-   * ausschließlich geprüfte Zeilen; gesucht ist hier seine Länge und der
-   * Kettenwert an ihr, kein Urteil. Eine Prüfung bräuchte den Anker dieser
-   * Datei — bei einem fremden Ersatzsegment ist das eine innere Zeile des
-   * ersetzten Segments (§4.6, Schritt 3) —, und mit dem falschen Anker fiele
-   * `leseOffset` auf 0 zurück. Genau das erzeugte den doppelten Anhang, den
-   * dieser Abgleich verhindern soll.
+   * anderen (§5.3, §5.5). Ausgeführt in `spiegelabgleich.ts`.
    */
   async gleicheMitSpiegelAb(): Promise<void> {
-    const namen = await this.#optionen.dateisystem.listeVerzeichnis(
-      this.#optionen.ablage.lokalEreignisse,
-    );
-    const jePraefix = new Map<string, { name: string; segment: number }[]>();
-    for (const name of namen) {
-      const kennung = zerlegeEreignisDateiname(name);
-      if (kennung === undefined || this.#istEigen(kennung.praefix)) continue;
-      const liste = jePraefix.get(kennung.praefix) ?? [];
-      liste.push({ name, segment: kennung.segment });
-      jePraefix.set(kennung.praefix, liste);
-    }
-
-    for (const liste of jePraefix.values()) {
-      for (const { name } of liste.sort((a, b) => a.segment - b.segment)) {
-        const bytes = await this.#optionen.dateisystem.liesAb(
-          this.#optionen.ablage.lokalDatei(name),
-          0,
-        );
-        const { endeOffset, letzteKette } = grenzeUndKette(bytes);
-        const zeilen = leseZeilengrenzen(bytes, 0).zeilen;
-        this.#optionen.identitaeten.merkeAlle(zeilen);
-        const lage =
-          this.#lagen.get(name) ?? new Dateilage(name, neuerFremderOffset(), this.#optionen.zeit());
-        lage.offsets = {
-          ...lage.offsets,
-          leseOffset: endeOffset,
-          letzteKette,
-          abgeschlossen:
-            lage.offsets.abgeschlossen || angekuendigterNachfolger(zeilen) !== undefined,
-        };
-        lage.ankerBekannt = true;
-        lage.gesehenesEnde = endeOffset;
-        this.#lagen.set(name, lage);
-      }
-    }
+    await gleicheMitSpiegelAb({
+      dateisystem: this.#optionen.dateisystem,
+      ablage: this.#optionen.ablage,
+      zeit: this.#optionen.zeit,
+      eigenesPraefix: clientPraefix(this.#optionen.clientId),
+      identitaeten: this.#optionen.identitaeten,
+      lagen: this.#lagen,
+    });
     this.#schreibeZustandFort();
   }
 
@@ -393,7 +273,9 @@ export class Leser {
     }
 
     if (!lage.ankerBekannt) {
-      const anker = await this.#anfangsKette(lage, bytes);
+      const anker = await anfangsKette(lage.name, bytes, (praefix) =>
+        spiegelquelle(this.#optionen.dateisystem, this.#optionen.ablage, praefix),
+      );
       if (anker === undefined) {
         // Der Vorgänger ist noch nicht gelesen. Zurückstellen, nicht als Defekt
         // melden — sonst setzte der Leser eine gesunde Datei allein deshalb in
@@ -557,31 +439,6 @@ export class Leser {
     neue.angekuendigt = true;
     neue.ankerBekannt = true;
     this.#lagen.set(name, neue);
-  }
-
-  /**
-   * Der Kettenanker einer neu entdeckten Datei (§2.3, Sonderfälle).
-   *
-   * Bestimmt wird er aus dem **eigenen Spiegel** dieser Schreiberkennung, nie
-   * aus der Share-Datei selbst: Ein aus der zu prüfenden Datei übernommener
-   * Anker prüfte nichts.
-   */
-  async #anfangsKette(lage: Dateilage, bytes: Uint8Array): Promise<string | undefined> {
-    const kennung = zerlegeEreignisDateiname(lage.name);
-    if (kennung === undefined) return undefined;
-    return kettenanker(kennung.segment, bytes, this.#spiegelquelle(kennung.praefix));
-  }
-
-  /** Die Segmente einer fremden Kennung aus dem lokalen Spiegel (§5.5). */
-  #spiegelquelle(praefix: string): Segmentquelle {
-    return async (segment) => {
-      const name = `${praefix}.${segmentText(segment)}.jsonl`;
-      try {
-        return await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.lokalDatei(name), 0);
-      } catch {
-        return undefined;
-      }
-    };
   }
 
   /**

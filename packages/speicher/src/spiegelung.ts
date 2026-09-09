@@ -21,8 +21,17 @@
  */
 
 import { DateisystemFehler, type Dateisystem } from "./dateisystem.js";
-import { shareklasse, type Shareklasse } from "./fehler.js";
+import { pruefeEinsatzordner } from "./einsatzordner.js";
+import { shareklasse } from "./fehler.js";
 import { grenzeUndKette } from "./kettenanker.js";
+import {
+  MELDUNG_BESCHAEDIGT,
+  MELDUNG_KEIN_SCHREIBRECHT,
+  MELDUNG_NICHT_ERREICHBAR,
+  MELDUNG_ORDNER_FORT,
+  MELDUNG_PROFIL_KOPIERT,
+  type Spiegelergebnis,
+} from "./spiegelergebnis.js";
 import type { Identitaetenblick } from "./zeile.js";
 import {
   clientPraefix,
@@ -39,46 +48,6 @@ import {
   type UploadZustand,
 } from "./uploadZustand.js";
 import type { Zeitquelle } from "./zeit.js";
-
-/** Klartextmeldungen für den Bediener; §5.4.3, §5.4.4, §5.7, §8.9. */
-export const MELDUNG_BESCHAEDIGT =
-  "Ein Teil der bereits übertragenen Einträge dieses Arbeitsplatzes ist auf dem Server beschädigt; er wird neu geschrieben.";
-export const MELDUNG_PROFIL_KOPIERT =
-  "Dieses Benutzerprofil wurde offenbar kopiert. Der Rechner arbeitet ab jetzt unter einer neuen Kennung weiter; bereits geschriebene Einträge bleiben erhalten.";
-export const MELDUNG_ORDNER_FORT =
-  "Der Einsatzordner ist unter dem bekannten Pfad nicht mehr auffindbar. Die Einträge liegen lokal bereit und werden übertragen, sobald der Pfad wieder stimmt.";
-export const MELDUNG_KEIN_SCHREIBRECHT =
-  "Der Server ist erreichbar, nimmt von diesem Arbeitsplatz aber keine Einträge an (kein Schreibrecht). Die Einträge liegen lokal bereit.";
-export const MELDUNG_NICHT_ERREICHBAR = "Share nicht erreichbar.";
-
-/** Das Ergebnis eines Spiegelungslaufs. */
-export type Spiegelergebnis =
-  /** Ausgang A für alle Segmente; `uebertragen` ist die Zahl der übertragenen Bytes. */
-  | { readonly art: "uebertragen"; readonly uebertragen: number }
-  /** Ausgang B (§5.4.3): Beschädigung ohne fremde Schreibspur — Reparatur nach §4.6. */
-  | {
-      readonly art: "beschaedigt";
-      readonly segment: number;
-      readonly abOffset: number;
-      readonly meldung: string;
-    }
-  /** Ausgang C (§5.4.3): fremde Schreibspur — Fall 2 nach §4.5. */
-  | {
-      readonly art: "fremdeSchreibspur";
-      readonly segment: number;
-      readonly abOffset: number;
-      readonly id: string;
-      readonly meldung: string;
-    }
-  /** §5.7: Der Ordner ist unter dem gemerkten Pfad nicht mehr auffindbar. */
-  | { readonly art: "ordnerFort"; readonly meldung: string }
-  /** §8.9: Der Zugriff scheiterte; der Rückstau bestimmt den nächsten Versuch. */
-  | {
-      readonly art: "gescheitert";
-      readonly klasse: Shareklasse;
-      readonly meldung: string;
-      readonly naechsterVersuchMs: number;
-    };
 
 export interface SpiegelungOptionen {
   readonly dateisystem: Dateisystem;
@@ -102,6 +71,17 @@ export interface SpiegelungOptionen {
  * (das ist M2.1); hier heißt der Satz nur, dass diese Klasse keinen synchronen
  * Aufruf erzwingt und ohne Electron läuft.
  */
+export type {
+  Spiegelergebnis,
+} from "./spiegelergebnis.js";
+export {
+  MELDUNG_BESCHAEDIGT,
+  MELDUNG_KEIN_SCHREIBRECHT,
+  MELDUNG_NICHT_ERREICHBAR,
+  MELDUNG_ORDNER_FORT,
+  MELDUNG_PROFIL_KOPIERT,
+} from "./spiegelergebnis.js";
+
 export class Spiegelung {
   readonly #optionen: SpiegelungOptionen;
   #zustand: UploadZustand;
@@ -194,39 +174,19 @@ export class Spiegelung {
   }
 
   /**
-   * §5.7: „Deshalb prüft jeder Spiegelungsversuch zuerst, ob unter dem
-   * gemerkten Pfad eine `einsatz.json` mit der erwarteten Einsatz-Kennung
-   * liegt. Ist sie nicht da oder trägt sie eine andere Kennung, wird die
-   * Spiegelung angehalten."
-   *
-   * Der Wiederholversuch darf den Ordner **nicht neu anlegen** — sonst liefe
-   * der Upload eines verschobenen oder archivierten Einsatzes in einen frisch
-   * erzeugten, leeren Ordner.
+   * §5.7: Prüft vor jedem Lauf, ob unter dem gemerkten Pfad eine
+   * `einsatz.json` mit der erwarteten Kennung liegt. Ausgeführt in
+   * `einsatzordner.ts`.
    */
   async #pruefeEinsatzordner(): Promise<Spiegelergebnis | undefined> {
-    let bytes: Uint8Array;
-    try {
-      bytes = await this.#optionen.dateisystem.liesAb(this.#optionen.ablage.shareEinsatzDatei, 0);
-    } catch (fehler) {
-      if (fehler instanceof DateisystemFehler && fehler.code === "ENOENT") {
-        return { art: "ordnerFort", meldung: MELDUNG_ORDNER_FORT };
-      }
-      return this.#scheitern(fehler);
-    }
-    let kennung: unknown;
-    try {
-      kennung = JSON.parse(new TextDecoder().decode(bytes));
-    } catch {
-      return { art: "ordnerFort", meldung: MELDUNG_ORDNER_FORT };
-    }
-    const gefunden =
-      typeof kennung === "object" && kennung !== null
-        ? (kennung as Record<string, unknown>)["einsatzId"]
-        : undefined;
-    if (gefunden !== this.#optionen.einsatzId) {
-      return { art: "ordnerFort", meldung: MELDUNG_ORDNER_FORT };
-    }
-    return undefined;
+    const befund = await pruefeEinsatzordner(
+      this.#optionen.dateisystem,
+      this.#optionen.ablage,
+      this.#optionen.einsatzId,
+    );
+    if (befund === "inOrdnung") return undefined;
+    if (befund === "ordnerFort") return { art: "ordnerFort", meldung: MELDUNG_ORDNER_FORT };
+    return this.#scheitern(befund.fehler);
   }
 
   /**
@@ -235,10 +195,8 @@ export class Spiegelung {
    * §5.3 zeigt die reine Segmentnummer (`"0003"`). Das reicht nicht, sobald
    * §4.5 Schritt 2 greift: Nach einem Kennungswechsel „beginnt der Client ein
    * Segment `0000` unter dem neuen Präfix" — der Schlüssel `"0000"` wäre dann
-   * schon vom alten Präfix belegt, mitsamt dessen `shareOffset`. Die neue Datei
-   * würde entweder nie übertragen (`lokal.byteLength <= shareOffset`) oder an
-   * falscher Stelle angehängt. Deshalb steht hier der Dateiname ohne Endung,
-   * genau wie bei `fremd` — `"9f3c1a20.0003"`.
+   * schon vom alten Präfix belegt, mitsamt dessen `shareOffset`. Deshalb steht
+   * hier der Dateiname ohne Endung, genau wie bei `fremd`.
    */
   #schluessel(segment: number): string {
     return `${clientPraefix(this.#optionen.clientId)}.${segmentText(segment)}`;

@@ -13,7 +13,13 @@
  * `fsync`, weil die Datei nach §4.4 rekonstruierbar ist.
  */
 
-import { SCHEMA_VERSION, naechsteLaufnummer, type Akteur, type Hlc, type HlcUhr, type Uhrmeldung } from "@s1/domaene";
+import { naechsteLaufnummer, type Akteur, type HlcUhr } from "@s1/domaene";
+
+import {
+  type Ereignisentwurf,
+  type GeschriebeneZeile,
+  type Schreibergebnis,
+} from "./schreibergebnis.js";
 
 import type { Dateisystem } from "./dateisystem.js";
 import { lokalDauerhafterHinweis, lokalWiederholbar, lokaleSchreibstoerungMeldung } from "./fehler.js";
@@ -30,49 +36,10 @@ import { schreibeSchreiberzustand, type Schreiberzustand } from "./schreiberzust
 import { liesSegment } from "./segmentlese.js";
 import { LOKALE_WIEDERHOLUNG_MS, SEGMENTGROESSE_BYTE } from "./startwerte.js";
 import { TYP_SEGMENT_ABGESCHLOSSEN, TYP_SEGMENT_ERSETZT } from "./verwaltungsereignisse.js";
+import { zieheHlc } from "./hlcZiehen.js";
+import { baueRahmen } from "./rahmenbau.js";
 import { baueZeile, type GeleseneZeile, type Rahmenblick } from "./zeile.js";
 import { wanduhrText, type Zeitquelle } from "./zeit.js";
-
-/** Was ein Aufrufer über ein zu schreibendes Ereignis mitgibt (§2.4). */
-export interface Ereignisentwurf {
-  readonly typ: string;
-  readonly nutzlast?: unknown;
-  /** Gesehener Vorher-Wert bei setzenden Ereignissen (§2.5, Auflage 6). */
-  readonly vorher?: unknown;
-  readonly neu?: unknown;
-  readonly undoOf?: string;
-  readonly korrekturVon?: string;
-  readonly grund?: string;
-  readonly schemaVersion?: number;
-}
-
-/** Eine geschriebene Zeile samt ihrer Stelle in der Datei. */
-export interface GeschriebeneZeile {
-  readonly segment: number;
-  readonly offset: number;
-  readonly bytes: Uint8Array;
-  readonly rahmen: Rahmenblick;
-  readonly kette: string;
-}
-
-/** Das Ergebnis eines Schreibversuchs. */
-export type Schreibergebnis =
-  | { readonly art: "geschrieben"; readonly zeile: GeschriebeneZeile; readonly meldung?: Uhrmeldung }
-  /**
-   * §8.8 Punkt 1: Der Bedienschritt wird **sichtbar abgewiesen**. Die Eingabe
-   * bleibt im Formular stehen, der Wert wird nicht in den Zustand übernommen.
-   * Ein Bedienschritt, den die Oberfläche annimmt und der nirgends steht, wäre
-   * der schlimmste Fehler dieses Entwurfs.
-   */
-  | {
-      readonly art: "abgewiesen";
-      readonly meldung: string;
-      readonly code?: string;
-      /** §8.8 Punkt 4: dauerhafter Hinweis in der Statuszeile bei `ENOSPC` und `EIO`. */
-      readonly dauerhafterHinweis: boolean;
-    }
-  /** §3.2, Zählerüberlauf: Die Uhr steht, der Zähler ist voll. */
-  | { readonly art: "uhrSteht"; readonly meldung: Uhrmeldung };
 
 export interface SchreiberOptionen {
   readonly dateisystem: Dateisystem;
@@ -86,9 +53,6 @@ export interface SchreiberOptionen {
   /** §8.8: Warten vor dem einen Wiederholversuch. Injizierbar, damit Tests keine Viertelsekunde stehen. */
   readonly warte?: (ms: number) => Promise<void>;
 }
-
-/** Wie oft auf die nächste Millisekunde gewartet wird, bevor „die Uhr steht" gilt (§3.2). */
-const HLC_WARTEVERSUCHE = 8;
 
 const schlafe = (ms: number): Promise<void> =>
   new Promise((fertig) => {
@@ -114,6 +78,12 @@ export async function oeffneSchreiber(optionen: SchreiberOptionen): Promise<Schr
   await schreiber.speichereZustand();
   return schreiber;
 }
+
+export type {
+  Ereignisentwurf,
+  GeschriebeneZeile,
+  Schreibergebnis,
+} from "./schreibergebnis.js";
 
 export class Schreiber {
   readonly #dateisystem: Dateisystem;
@@ -231,7 +201,7 @@ export class Schreiber {
 
   /** Eine einzelne Zeile in das laufende Segment, ohne Prüfung auf Segmentwechsel. */
   async #schreibeZeile(entwurf: Ereignisentwurf): Promise<Schreibergebnis> {
-    const gezogen = this.#zieheHlc();
+    const gezogen = zieheHlc(this.#uhr, this.#zeit);
     if (gezogen.art === "uhrSteht") return gezogen;
 
     // §3.3: Die Laufnummer wird **vor** dem Schreiben der Zeile erhöht und
@@ -243,7 +213,14 @@ export class Schreiber {
     this.#zustand = { ...this.#zustand, laufnummer };
     await this.speichereZustand();
 
-    const rahmen = this.#baueRahmen(entwurf, gezogen.hlc, laufnummer);
+    const rahmen = baueRahmen(entwurf, {
+      clientId: this.#zustand.clientId,
+      laufnummer,
+      hlc: gezogen.hlc,
+      vorgaenger: this.#zustand.letzteKette,
+      akteur: this.#akteur,
+      wanduhr: wanduhrText(this.#zeit()),
+    });
     const bytes = baueZeile(rahmen);
     const pfad = this.#ablage.lokalSegment(this.#zustand.clientId, this.#zustand.segment);
     const offset = this.#zustand.lokalerOffset;
@@ -267,49 +244,6 @@ export class Schreiber {
     return gezogen.meldung === undefined
       ? { art: "geschrieben", zeile }
       : { art: "geschrieben", zeile, meldung: gezogen.meldung };
-  }
-
-  /** Zieht eine HLC und behandelt den Zählerüberlauf aus §3.2. */
-  #zieheHlc():
-    | { readonly art: "hlc"; readonly hlc: Hlc; readonly meldung?: Uhrmeldung }
-    | { readonly art: "uhrSteht"; readonly meldung: Uhrmeldung } {
-    let letzte: Uhrmeldung | undefined;
-    for (let versuch = 0; versuch < HLC_WARTEVERSUCHE; versuch += 1) {
-      const erzeugt = this.#uhr.erzeugen();
-      if (erzeugt.art === "erzeugt") {
-        return erzeugt.meldung === undefined
-          ? { art: "hlc", hlc: erzeugt.hlc }
-          : { art: "hlc", hlc: erzeugt.hlc, meldung: erzeugt.meldung };
-      }
-      // §3.2: „Erreicht der Zähler 999.999, wartet der Schreiber, bis die
-      // Wanduhr die nächste Millisekunde erreicht." Das ist höchstens eine
-      // Millisekunde und niemals ein Fehler.
-      letzte = erzeugt.meldung ?? letzte;
-    }
-    return {
-      art: "uhrSteht",
-      meldung: letzte ?? { art: "uhrSteht", millisekunden: this.#zeit() },
-    };
-  }
-
-  /** Baut den Rahmen nach §2.4. Unbekannte Zusatzfelder gibt es hier nicht — der Entwurf ist die Quelle. */
-  #baueRahmen(entwurf: Ereignisentwurf, hlc: Hlc, laufnummer: number): Rahmenblick {
-    const rahmen: Record<string, unknown> = {
-      id: `${this.#zustand.clientId}:${laufnummer}`,
-      hlc,
-      vorgaenger: this.#zustand.letzteKette,
-      schemaVersion: entwurf.schemaVersion ?? SCHEMA_VERSION,
-      typ: entwurf.typ,
-      akteur: this.#akteur,
-      wanduhr: wanduhrText(this.#zeit()),
-    };
-    if (entwurf.nutzlast !== undefined) rahmen["nutzlast"] = entwurf.nutzlast;
-    if (entwurf.vorher !== undefined) rahmen["vorher"] = entwurf.vorher;
-    if (entwurf.neu !== undefined) rahmen["neu"] = entwurf.neu;
-    if (entwurf.undoOf !== undefined) rahmen["undoOf"] = entwurf.undoOf;
-    if (entwurf.korrekturVon !== undefined) rahmen["korrekturVon"] = entwurf.korrekturVon;
-    if (entwurf.grund !== undefined) rahmen["grund"] = entwurf.grund;
-    return rahmen as unknown as Rahmenblick;
   }
 
   /**
