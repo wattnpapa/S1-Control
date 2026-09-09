@@ -60,6 +60,8 @@ export interface Phasenbefund {
   readonly ruheRunden: number;
   /** Woran die Ruhephase noch hing, als sie aufgegeben wurde (§7.6) — leer, wenn sie erreicht wurde. */
   readonly ruheOffen: readonly string[];
+  /** Wie viele Beschädigungen nach §8.2 in dieser Phase injiziert wurden. */
+  readonly beschaedigungen: number;
   readonly befund: Vergleichsbefund;
   readonly spiegelpruefung: readonly Spiegelbefund[];
   readonly staende: readonly Clientstand[];
@@ -154,6 +156,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
     // Siehe Dateikopf: Die Beschädigung gehört ausschließlich in die letzte
     // Phase, sonst ist der Rest des Laufs nur noch „nicht vergleichbar".
     stoerwerk.beschaedigungAktiv = letzte;
+    const beschaedigungenVorher = stoerwerk.zaehlung()["beschaedigung"] ?? 0;
 
     const ziel = Math.min(plan.kommandos, phase * jeProPhase);
     let leerlauf = 0;
@@ -203,6 +206,7 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
       ruheErreicht: erreicht,
       ruheRunden: runden,
       ruheOffen: offen,
+      beschaedigungen: (stoerwerk.zaehlung()["beschaedigung"] ?? 0) - beschaedigungenVorher,
       befund,
       spiegelpruefung,
       staende,
@@ -433,10 +437,19 @@ function bewerte(
     // nach einer Beschädigung nicht immer gibt (siehe
     // `docs/v2/messungen/M0.4-simulation.md`, Abschnitt „Was §4.6 nicht
     // heilt"). Berichtet wird der Stand; bewertet wird er nicht.
+    // Der zweite Teil des Abbruchkriteriums — „lokales Log gleich Share-Segment
+    // je Client" (§7.6) — setzt voraus, dass an der Share-Datei niemand sonst
+    // gedreht hat. Wurde in dieser Phase nach §8.2 beschädigt, ist eine
+    // Abweichung im eigenen Segment die **vorgesehene** Lage: Repariert wird
+    // durch ein Ersatzsegment (§4.6), die verfälschten Bytes bleiben liegen
+    // (§4.6 Schritt 5), und ob die Reparatur schon gelaufen ist, hängt am
+    // nächsten Öffnen (§4.6.1 Auslöser 1) und daran, ob sie ihrerseits an einer
+    // lokalen Schreibstörung scheiterte (§8.8). Berichtet wird sie immer,
+    // bewertet nur in einer Phase ohne Beschädigung.
     for (const s of phase.spiegelpruefung) {
-      if (!s.stimmt) {
-        maengel.push(`Phase ${phase.nummer}: ${s.clientId} ${s.datei} — ${s.hinweis ?? "Abweichung"}`);
-      }
+      if (s.stimmt) continue;
+      const zeile = `Phase ${phase.nummer}: ${s.clientId} ${s.datei} — ${s.hinweis ?? "Abweichung"}`;
+      if (phase.beschaedigungen === 0) maengel.push(zeile);
     }
   }
 

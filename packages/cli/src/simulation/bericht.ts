@@ -161,7 +161,14 @@ export function berichte(ergebnis: Laufergebnis): string {
     zeilen.push(
       `      lokal ↔ Share: ${phase.spiegelpruefung.length - schief.length}/${phase.spiegelpruefung.length} eigene Segmente byteweise gleich`,
     );
-    for (const s of schief) zeilen.push(`      ABWEICHUNG ${s.datei}: ${s.hinweis ?? ""}`);
+    for (const s of schief) {
+      zeilen.push(
+        `      ABWEICHUNG ${s.datei}: ${s.hinweis ?? ""}` +
+          (phase.beschaedigungen > 0
+            ? ` (nach ${phase.beschaedigungen} Beschädigung(en) nach §8.2 nicht bewertet)`
+            : ""),
+      );
+    }
   }
   zeilen.push("");
 
