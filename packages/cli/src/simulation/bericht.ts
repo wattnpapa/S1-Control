@@ -179,6 +179,16 @@ export function berichte(ergebnis: Laufergebnis): string {
           `${s.geheilt ? ", Zustand deckt sich trotzdem" : ", Zustand weicht ab"}`,
       );
     }
+    // §8.1: berichtet, nicht bewertet. Sie nimmt keinen Client aus dem
+    // Vergleich — sonst wäre eine Phase aus einem Zustand heraus unbewertbar,
+    // den §8.1 ausdrücklich als „kein Fehler" führt.
+    for (const stand of phase.staende) {
+      if (stand.vorlaeufigeQuarantaenen.length === 0) continue;
+      zeilen.push(
+        `      vorläufige Quarantäne (§8.1, kein Fehler): ${stand.clientId} ` +
+          `(${stand.vorlaeufigeQuarantaenen.length} Stelle(n))`,
+      );
+    }
     if (phase.verluste.length > 0) {
       zeilen.push(`      VERLUST: ${phase.verluste.length} Ereignis(se) auf keiner Share-Datei mehr`);
       for (const v of phase.verluste.slice(0, 5)) {

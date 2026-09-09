@@ -212,7 +212,15 @@ export async function fuehreSimulationAus(optionen: LaufOptionen): Promise<Laufe
 
     const staende: Clientstand[] = [];
     for (const klient of klienten) {
-      staende.push(await erhebeStand(echt, klient.ablage, klient.clientId, klient.quarantaenen));
+      staende.push(
+        await erhebeStand(
+          echt,
+          klient.ablage,
+          klient.clientId,
+          klient.quarantaenen,
+          klient.vorlaeufigeQuarantaenen,
+        ),
+      );
     }
     const befund = vergleiche(staende);
     const spiegelpruefung = await pruefeSpiegel(echt, klienten);

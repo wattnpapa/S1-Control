@@ -75,8 +75,18 @@ export interface Clientstand {
   /** Diagnose, kein Kriterium: Hash über die Menge der gefalteten Ereignis-Identitäten. */
   readonly identitaetenHash: string;
   readonly ereignisse: number;
-  /** §8.6.1 Regel 3: Wer hier etwas stehen hat, wird aus dem Vergleich genommen. */
+  /**
+   * Die **endgültigen** Quarantänestellen nach §8.2. §8.6.1 Regel 3: Wer hier
+   * etwas stehen hat, wird aus dem Vergleich genommen.
+   */
   readonly quarantaenen: readonly string[];
+  /**
+   * Die **vorläufigen** Quarantänestellen nach §8.1 — berichtet, nicht
+   * bewertet. §8.1 führt sie ausdrücklich als „kein Fehler": Die Datei wird
+   * in jedem Takt-B-Durchlauf erneut geprüft, und die Stelle verschwindet,
+   * sobald der Schreiber die Zeile vervollständigt.
+   */
+  readonly vorlaeufigeQuarantaenen: readonly string[];
   /** Die Bytes aller gelesenen Ereigniszeilen — Grundlage der Prüfung von A2 (§2.6, §10). */
   readonly bytes: number;
 }
@@ -156,6 +166,7 @@ export async function erhebeStand(
   ablage: Einsatzablage,
   clientId: string,
   quarantaenen: readonly string[],
+  vorlaeufigeQuarantaenen: readonly string[] = [],
 ): Promise<Clientstand> {
   const vektor: Record<string, Dateistand> = {};
   const ereignisse: EingehendesEreignis[] = [];
@@ -197,6 +208,7 @@ export async function erhebeStand(
     identitaetenHash: sha256Hex(eindeutige.join("\n")),
     ereignisse: eindeutige.length,
     quarantaenen,
+    vorlaeufigeQuarantaenen,
     bytes,
   };
 }
@@ -230,7 +242,16 @@ function ersterUnterschied(a: Versionsvektor, b: Versionsvektor): string {
   return "kein Unterschied gefunden";
 }
 
-/** Führt den Vergleich nach §7.6 und §8.6.1 Regel 3 durch. */
+/**
+ * Führt den Vergleich nach §7.6 und §8.6.1 Regel 3 durch.
+ *
+ * „Krank" heißt **endgültige** Quarantäne nach §8.2. Die vorläufige aus §8.1
+ * zählt nicht: Sie ist dort ausdrücklich „kein Fehler", verschwindet mit der
+ * nächsten vollständigen Zeile, und ein Client, der allein ihretwegen aus dem
+ * Vergleich fiele, machte eine Phase unbewertbar aus einem Zustand heraus,
+ * der keiner ist. Bis zum 2026-09-09 wurden beide gleich behandelt; siehe
+ * `Klient.quarantaenen`.
+ */
 export function vergleiche(staende: readonly Clientstand[]): Vergleichsbefund {
   const gesund = staende.filter((s) => s.quarantaenen.length === 0);
   const kranke = staende.filter((s) => s.quarantaenen.length > 0);

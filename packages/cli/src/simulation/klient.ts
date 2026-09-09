@@ -44,6 +44,7 @@ import {
   type Einsatzablage,
   type Oeffnungsergebnis,
   type Pollergebnis,
+  type Quarantaenemeldung,
   type Reaktion,
   type Schreibergebnis,
   type Spiegelergebnis,
@@ -54,6 +55,32 @@ import { naechsterSchritt } from "./kommandos.js";
 import { Clientuhr, Simulationsuhr } from "./uhr.js";
 import type { Plan } from "./plan.js";
 import { Zufall } from "./zufall.js";
+
+/**
+ * Trennt die Quarantänestellen nach ihrer **Herkunft**.
+ *
+ * §8.1 und §8.2 erzeugen beide eine Quarantäne, meinen aber Verschiedenes.
+ * §8.1 ist die unvollständige letzte Zeile — dort ausdrücklich „kein
+ * Fehler": Die Datei wird in jedem Takt-B-Durchlauf erneut geprüft, und die
+ * Stelle verschwindet, sobald der Schreiber die Zeile vervollständigt. §8.2
+ * ist die verfälschte Zeile; sie bleibt, und §8.6.1 Regel 3 nimmt ihren
+ * Leser aus dem Vergleich.
+ *
+ * Bis zum 2026-09-09 zählte die Simulation beide gleich. Damit wurden Phasen
+ * aus einem Zustand heraus unbewertbar, den das Konzept als Nicht-Zustand
+ * führt. Befund 7.6 des Messprotokolls, beobachtet.
+ */
+export function teileQuarantaenen(meldungen: readonly Quarantaenemeldung[]): {
+  readonly endgueltig: readonly string[];
+  readonly vorlaeufig: readonly string[];
+} {
+  const text = (q: Quarantaenemeldung): string =>
+    `${q.datei}@${q.offset} (${q.grund}${q.vorlaeufig ? ", vorläufig nach §8.1" : ", endgültig nach §8.2"})`;
+  return {
+    endgueltig: meldungen.filter((q) => !q.vorlaeufig).map(text),
+    vorlaeufig: meldungen.filter((q) => q.vorlaeufig).map(text),
+  };
+}
 
 /** Was ein Durchlauf ergeben hat — für Bericht und Ruhephase. */
 export interface Klientmeldung {
@@ -175,13 +202,32 @@ export class Klient {
     return this.#zustand;
   }
 
-  /** Die bestehenden Quarantänestellen (§8.2 Punkt 6) — Eingang in §8.6.1 Regel 3. */
+  /**
+   * Die **endgültigen** Quarantänestellen nach §8.2 — Eingang in §8.6.1 Regel 3.
+   *
+   * Bis zum 2026-09-09 stand hier jede Quarantäne, auch die vorläufige aus
+   * §8.1. Das war zu streng: §8.1 führt die unvollständige letzte Zeile
+   * ausdrücklich als „kein Fehler" — sie wird in jedem Takt-B-Durchlauf
+   * erneut geprüft und verschwindet, sobald der Schreiber sie
+   * vervollständigt. §8.6.1 Regel 3 meint die Quarantäne aus §8.2, die
+   * bleibt. Ein Client mit bloß vorläufiger Quarantäne aus dem Vergleich zu
+   * nehmen, machte Phasen unbewertbar aus einem Zustand heraus, der keiner
+   * ist. Befund 7.6 des dritten Gutachterdurchgangs, beobachtet.
+   */
   get quarantaenen(): readonly string[] {
-    return this.#akte === undefined
-      ? []
-      : this.akte.leser.quarantaenen.map(
-          (q) => `${q.datei}@${q.offset} (${q.grund}${q.vorlaeufig ? ", vorläufig nach §8.1" : ", endgültig nach §8.2"})`,
-        );
+    return teileQuarantaenen(this.#akte === undefined ? [] : this.akte.leser.quarantaenen)
+      .endgueltig;
+  }
+
+  /**
+   * Die **vorläufigen** Quarantänestellen nach §8.1.
+   *
+   * Sie werden berichtet, aber nicht bewertet: §8.1 nennt sie „kein Fehler",
+   * und §7.6 misst den Fortschritt am gesehenen Dateiende, nicht an ihnen.
+   */
+  get vorlaeufigeQuarantaenen(): readonly string[] {
+    return teileQuarantaenen(this.#akte === undefined ? [] : this.akte.leser.quarantaenen)
+      .vorlaeufig;
   }
 
   /**

@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { vektorenGleich, vergleiche, type Clientstand } from "./konvergenz.js";
+import { teileQuarantaenen } from "./klient.js";
 
 /** Ein Stand mit allen Feldern; die Tests setzen nur, was sie brauchen. */
 function stand(teil: Partial<Clientstand> & { clientId: string }): Clientstand {
@@ -10,6 +11,7 @@ function stand(teil: Partial<Clientstand> & { clientId: string }): Clientstand {
     identitaetenHash: "ids-gleich",
     ereignisse: 3,
     quarantaenen: [],
+    vorlaeufigeQuarantaenen: [],
     bytes: 300,
     ...teil,
   };
@@ -147,5 +149,63 @@ describe("Konvergenzvergleich — die drei Ausgänge aus §7.6", () => {
     if (verschiedene.art !== "nichtVergleichbar") throw new Error("unerreichbar");
     expect(verschiedene.gleicheIdentitaeten).toBe(false);
     expect(verschiedene.gleicheHashes).toBe(false);
+  });
+});
+
+describe("Herkunft der Quarantäne — §8.1 gegen §8.2", () => {
+  it("nimmt einen Client mit bloß vorläufiger Quarantäne **nicht** aus dem Vergleich", () => {
+    // §8.1 führt die unvollständige letzte Zeile ausdrücklich als „kein
+    // Fehler"; sie wird in jedem Takt-B-Durchlauf erneut geprüft und
+    // verschwindet, sobald der Schreiber sie vervollständigt. §8.6.1 Regel 3
+    // meint die Quarantäne aus §8.2. Bis zum 2026-09-09 wurden beide gleich
+    // behandelt, und Phasen wurden aus einem Nicht-Zustand heraus
+    // unbewertbar (Befund 7.6 des Messprotokolls).
+    const befund = vergleiche([
+      stand({ clientId: "a", vorlaeufigeQuarantaenen: ["x.0000.jsonl@40 (unvollstaendig)"] }),
+      stand({ clientId: "b" }),
+    ]);
+    expect(befund.art).toBe("konvergent");
+    if (befund.art !== "konvergent") throw new Error("unerreichbar");
+    expect(befund.clients).toEqual(["a", "b"]);
+    // Und sie erscheint auch nicht als unvollständige Sicht nach Regel 3.
+    expect(befund.unvollstaendigeSicht).toEqual([]);
+  });
+
+  it("nimmt einen Client mit endgültiger Quarantäne weiterhin aus dem Vergleich", () => {
+    const befund = vergleiche([
+      stand({ clientId: "a", quarantaenen: ["x.0000.jsonl@40 (crcFalsch)"] }),
+      stand({ clientId: "b" }),
+      stand({ clientId: "c" }),
+    ]);
+    expect(befund.art).toBe("konvergent");
+    if (befund.art !== "konvergent") throw new Error("unerreichbar");
+    expect(befund.clients).toEqual(["b", "c"]);
+    expect(befund.unvollstaendigeSicht.map((s) => s.clientId)).toEqual(["a"]);
+  });
+});
+
+describe("teileQuarantaenen — die Herkunft am Einzelstück", () => {
+  const meldung = (datei: string, vorlaeufig: boolean) =>
+    ({
+      datei,
+      offset: 40,
+      grund: vorlaeufig ? "unvollstaendig" : "crcFalsch",
+      vorlaeufig,
+      seit: 0,
+      meldung: "",
+    }) as never;
+
+  it("sortiert §8.1 und §8.2 auseinander und benennt beide im Text", () => {
+    const geteilt = teileQuarantaenen([meldung("a.0000.jsonl", true), meldung("b.0000.jsonl", false)]);
+    expect(geteilt.vorlaeufig).toHaveLength(1);
+    expect(geteilt.endgueltig).toHaveLength(1);
+    expect(geteilt.vorlaeufig[0]).toContain("a.0000.jsonl@40");
+    expect(geteilt.vorlaeufig[0]).toContain("vorläufig nach §8.1");
+    expect(geteilt.endgueltig[0]).toContain("b.0000.jsonl@40");
+    expect(geteilt.endgueltig[0]).toContain("endgültig nach §8.2");
+  });
+
+  it("liefert für keine Meldung zwei leere Listen", () => {
+    expect(teileQuarantaenen([])).toEqual({ endgueltig: [], vorlaeufig: [] });
   });
 });
