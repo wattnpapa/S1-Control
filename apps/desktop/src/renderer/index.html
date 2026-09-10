@@ -504,6 +504,90 @@
         min-width: 12rem;
       }
 
+      /* ---- Der Eingangskorb (M6.1) ------------------------------------- */
+
+      /* Die Ampel der Excel: gelb heisst „liegt an", gruen „uebernommen",
+         grau „bewusst abgelehnt". Sie ist hier kein Anstrich, sondern der
+         abgeleitete uebernahmeZustand (§5.8.1) — sie kann nicht vergessen
+         werden, wie es in einer Tabelle geschieht. */
+      .eingangskorb h2 {
+        font-size: 1rem;
+        margin: 0.6rem 0 0.3rem;
+      }
+      .eingangsfilter {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+      }
+      .meldungstabelle {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      .meldungstabelle th,
+      .meldungstabelle td {
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        font-weight: 400;
+      }
+      .meldungstabelle thead th {
+        font-weight: 700;
+      }
+      .ampel {
+        padding: 0 0.3rem;
+        border-radius: 0.2rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .ampel-neu,
+      .ampel-geaendert {
+        background: rgba(217, 119, 6, 0.22);
+      }
+      .ampel-uebernommen {
+        background: rgba(21, 122, 60, 0.2);
+      }
+      .ampel-abgelehnt {
+        background: rgba(128, 128, 128, 0.2);
+      }
+      /* §5.8.1: Eine abgelehnte Meldung bleibt sichtbar — Loeschen ist
+         verboten. Sie wird blass, nicht unsichtbar. */
+      .meldungstabelle tr.abgelehnt th,
+      .meldungstabelle tr.abgelehnt td {
+        opacity: 0.6;
+      }
+      .revisionen {
+        margin-top: 0.8rem;
+        padding: 0.5rem;
+        border: 1px solid rgba(128, 128, 128, 0.5);
+        border-radius: 0.3rem;
+      }
+      .revisionenkopf {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .revisionenkopf h3 {
+        font-size: 0.9rem;
+        margin: 0;
+      }
+      .fassungen {
+        margin: 0.4rem 0 0;
+        padding-left: 1.4rem;
+        font-size: 0.85rem;
+      }
+      .fassungen li.kopf {
+        font-weight: 700;
+      }
+      .fassungen .felder {
+        font-weight: 400;
+        opacity: 0.75;
+        font-size: 0.8rem;
+      }
+
       /* ---- Der Staerke-Monitor (M3.5) ---------------------------------- */
 
       /* Dieses Fenster wird nicht bedient, sondern gelesen — von der anderen

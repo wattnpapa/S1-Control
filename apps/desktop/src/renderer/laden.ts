@@ -22,12 +22,15 @@
 
 import { create } from "zustand";
 
+import type { Meldungszeile } from "@s1/domaene";
+
 import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
   Anforderungsansicht,
   Baumansicht,
+  Eingangskorbansicht,
   Fuestansicht,
   Kostenansicht,
   Bedienergebnis,
@@ -81,6 +84,16 @@ export interface Tagebuchfilterwahl {
   readonly von?: number;
 }
 
+/** Die Filterwahl des Eingangskorbs (M6.1). */
+export interface Eingangsfilterwahl {
+  readonly zustaende?: readonly ("NEU" | "GEAENDERT" | "UEBERNOMMEN" | "ABGELEHNT")[];
+  /** Auf eine Revisionsreihe zuschneiden — das ist die Revisionsansicht (M6.2). */
+  readonly einheitSchluessel?: string;
+  readonly suche?: string;
+  readonly nurKoepfe?: boolean;
+  readonly von?: number;
+}
+
 /** Die Filterwahl der Anforderungsliste (M5.3). */
 export interface Anforderungsfilterwahl {
   readonly zustaende?: readonly ("OFFEN" | "ZUGESAGT" | "EINGETROFFEN" | "STORNIERT")[];
@@ -121,6 +134,9 @@ export interface Laden {
   readonly anforderungsfilter: Anforderungsfilterwahl;
   /** Das Blatt der Führungsstelle (M5.4). */
   readonly fuest: Fuestansicht | undefined;
+  /** Der Eingangskorb des Meldekopfs (M6.1). */
+  readonly eingangskorb: Eingangskorbansicht | undefined;
+  readonly eingangsfilter: Eingangsfilterwahl;
   readonly tabellenfilter: Tabellenfilter;
   readonly tagebuchfilter: Tagebuchfilterwahl;
 
@@ -131,6 +147,17 @@ export interface Laden {
   holeKosten(): Promise<void>;
   holeAnforderungen(): Promise<void>;
   holeFuest(): Promise<void>;
+  holeEingangskorb(): Promise<void>;
+  setzeEingangsfilter(filter: Eingangsfilterwahl): Promise<void>;
+  /**
+   * Die Fassungen **einer** Reihe (M6.2).
+   *
+   * Sie werden geholt und nicht gehalten: Das Fenster darüber ist ein Dialog,
+   * der aufgeht, gelesen und geschlossen wird. Im Store zu stehen hieße, ihn
+   * bei jedem Zeigerstand mitzuerneuern, auch wenn niemand ihn offen hat —
+   * genau das, was M3.7 vermeidet.
+   */
+  holeRevisionen(einheitSchluessel: string): Promise<readonly Meldungszeile[]>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -203,7 +230,7 @@ let hinweisNummer = 0;
  * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
  * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
  */
-const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen" | "fuest", number> = {
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen" | "fuest" | "eingangskorb", number> = {
   baum: 0,
   tabelle: 0,
   tagebuch: 0,
@@ -211,6 +238,7 @@ const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | 
   kosten: 0,
   anforderungen: 0,
   fuest: 0,
+  eingangskorb: 0,
 };
 
 export const useLaden = create<Laden>((setze, hole) => {
@@ -246,7 +274,8 @@ export const useLaden = create<Laden>((setze, hole) => {
       | "untertabelle"
       | "kosten"
       | "anforderungen"
-      | "fuest",
+      | "fuest"
+      | "eingangskorb",
   >(
     welche: A,
     baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
@@ -352,6 +381,8 @@ export const useLaden = create<Laden>((setze, hole) => {
     anforderungen: undefined,
     anforderungsfilter: {},
     fuest: undefined,
+    eingangskorb: undefined,
+    eingangsfilter: {},
     eeb: undefined,
     htmlMonitor: undefined,
     bildschirme: undefined,
@@ -393,6 +424,50 @@ export const useLaden = create<Laden>((setze, hole) => {
 
     async holeFuest() {
       await holeAnsicht("fuest", (akteId) => ({ art: "fuestAnfordern", akteId }));
+    },
+
+    async holeEingangskorb() {
+      const filter = hole().eingangsfilter;
+      await holeAnsicht("eingangskorb", (akteId) => ({
+        art: "eingangskorbAnfordern",
+        akteId,
+        von: filter.von ?? 0,
+        anzahl: SEITE,
+        ...(filter.zustaende === undefined ? {} : { zustaende: [...filter.zustaende] }),
+        ...(filter.einheitSchluessel === undefined
+          ? {}
+          : { einheitSchluessel: filter.einheitSchluessel }),
+        ...(filter.suche === undefined ? {} : { suche: filter.suche }),
+        ...(filter.nurKoepfe === undefined ? {} : { nurKoepfe: filter.nurKoepfe }),
+      }));
+    },
+
+    async holeRevisionen(einheitSchluessel) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return [];
+      // **Nicht über `mitFehlerbild`** — dieselbe Regel wie bei den anderen
+      // Ansichtsrufen (siehe `holeAnsicht`): Ein fehlgeschlagener Ansichtsruf
+      // ist kein Fehlerbild über dem ganzen Fenster. Er wird als Hinweis
+      // geführt, und der Dialog bleibt leer.
+      let antwort;
+      try {
+        antwort = await rufe({ art: "eingangskorbAnfordern", akteId, einheitSchluessel });
+      } catch (fehler) {
+        merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
+        return [];
+      }
+      // Nach `stand` geordnet und nicht nach Empfangszeit: Ein nachgescannter
+      // Papierbogen von gestern kommt später an und ist trotzdem die ältere
+      // Fassung (§2.6).
+      return [...antwort.zeilen].sort((links, rechts) => {
+        const nachStand = links.stand.localeCompare(rechts.stand);
+        return nachStand !== 0 ? nachStand : links.empfangenAm.localeCompare(rechts.empfangenAm);
+      });
+    },
+
+    async setzeEingangsfilter(filter) {
+      setze({ eingangsfilter: filter });
+      await hole().holeEingangskorb();
     },
 
     async setzeAnforderungsfilter(filter) {
@@ -527,6 +602,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.kosten === undefined ? undefined : zustand.holeKosten(),
         zustand.anforderungen === undefined ? undefined : zustand.holeAnforderungen(),
         zustand.fuest === undefined ? undefined : zustand.holeFuest(),
+        zustand.eingangskorb === undefined ? undefined : zustand.holeEingangskorb(),
       ]);
     },
 

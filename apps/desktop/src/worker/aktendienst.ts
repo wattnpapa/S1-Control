@@ -28,6 +28,7 @@
 import {
   HlcUhr,
   KATALOG,
+  grundPasst,
   Undostapel,
   falteHinzu,
   hlcAlsText,
@@ -84,6 +85,7 @@ import {
   lagebildDelta,
   type Baumansicht,
   type Anforderungsansicht,
+  type Eingangskorbansicht,
   type Fuestansicht,
   type Kostenansicht,
   type Bedienergebnis,
@@ -527,6 +529,20 @@ export class Aktendienst {
         dauerhafterHinweis: false,
       };
     }
+    // §2.4: Der Grund ist bei manchen Arten Pflicht, und die Regel steht im
+    // Katalog — dieselbe, die auch der Fold anwendet. Ohne diese Pruefung
+    // naehme der Dienst den Bedienschritt an, schriebe ihn in ein
+    // append-only-Protokoll und wuerfe ihn beim naechsten Falten als
+    // `unbekannt` weg (§3.7 Regel 4): Der Bediener saehe „geschrieben" und
+    // keine Wirkung.
+    if (!grundPasst(eintrag, entwurf)) {
+      return {
+        art: "abgewiesen",
+        meldung: `${entwurf.typ} braucht einen Grund (§2.4).`,
+        code: "GRUND",
+        dauerhafterHinweis: false,
+      };
+    }
     const geprueft = eintrag.schema.safeParse(entwurf.nutzlast ?? {});
     if (geprueft.success) return undefined;
     const erste = geprueft.error.issues[0];
@@ -641,6 +657,25 @@ export class Aktendienst {
       }),
       staerke: projektion.fuestStaerke(this.#zustand),
     };
+  }
+
+  /**
+   * Der Eingangskorb des Meldekopfs (M6.1) und die Revisionen einer Reihe
+   * (M6.2) — derselbe Ruf mit anderem Filter.
+   *
+   * Der `uebernahmeZustand` je Meldung kommt aus dem Fold (§5.8.1) und wird
+   * hier nur weitergereicht; die Projektion ordnet und schneidet.
+   */
+  eingangskorb(ruf: Extract<Ruf, { art: "eingangskorbAnfordern" }>): Eingangskorbansicht {
+    const ausschnitt = projektion.eingangskorb(this.#zustand, {
+      ...(ruf.zustaende === undefined ? {} : { zustaende: ruf.zustaende }),
+      ...(ruf.einheitSchluessel === undefined ? {} : { einheitSchluessel: ruf.einheitSchluessel }),
+      ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
+      ...(ruf.nurKoepfe === undefined ? {} : { nurKoepfe: ruf.nurKoepfe }),
+      ...(ruf.von === undefined ? {} : { von: ruf.von }),
+      ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
+    });
+    return { lageZeiger: this.#lageZeiger, ...ausschnitt };
   }
 
   /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */

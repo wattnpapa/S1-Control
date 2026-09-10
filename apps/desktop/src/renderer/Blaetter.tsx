@@ -16,11 +16,13 @@
 import { useState } from "react";
 
 import { Anforderungen } from "./Anforderungen.js";
+import { Eingangskorb } from "./Eingangskorb.js";
 import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
 import { Kosten } from "./Kosten.js";
 
 /** Die Blätter in der Reihenfolge, in der sie in der Leiste stehen. */
 const BLAETTER = [
+  { schluessel: "eingang", titel: "Eingangskorb" },
   { schluessel: "anforderungen", titel: "Anforderungen" },
   { schluessel: "fuest", titel: "Führungsstelle" },
   { schluessel: "kosten", titel: "Kosten" },
@@ -50,6 +52,7 @@ export function Blaetter(): React.JSX.Element {
           </button>
         ))}
       </div>
+      {offen === "eingang" && <Eingangskorb />}
       {offen === "anforderungen" && <Anforderungen />}
       {offen === "fuest" && <Fuehrungsstelle />}
       {offen === "kosten" && <Kosten />}

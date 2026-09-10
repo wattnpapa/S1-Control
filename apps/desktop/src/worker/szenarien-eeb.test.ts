@@ -25,7 +25,13 @@ import {
 } from "@bos/eeb-format";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { kennzahlen } from "@s1/domaene";
+import { kennzahlen, projektion } from "@s1/domaene";
+
+import {
+  ablehnungZurueckgenommen,
+  meldungAbgelehnt,
+  uebernahmeZurueckgenommen,
+} from "../kontrakt/bedienschritte.js";
 
 import { grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz } from "./pruefhilfen/werkstatt.js";
 
@@ -354,5 +360,148 @@ describe("Funktionalität: Revisionen einer Einheit", () => {
     const zwei = await uebernimm(platz, anderer as Erfassungsbogen);
     expect(zwei).not.toBe(eins);
     expect(kennzahlen.revisionskoepfe(platz.dienst.zustand)).toHaveLength(2);
+  });
+});
+
+/**
+ * Der Eingangskorb mit Quittierung — M6.1.
+ *
+ * Die Excel führt diesen Weg von Hand: gelb heißt „liegt an", grün heißt
+ * „übernommen", eine Änderung setzt wieder gelb (Hinweise C159–C172,
+ * EXH F-E1). Hier ist die Ampel der abgeleitete `uebernahmeZustand` aus
+ * §5.8.1 und kann deshalb nicht vergessen werden.
+ */
+describe("Funktionalität: Eingangskorb mit Quittierung", () => {
+  async function scanneNur(platz: Platz, bogen: Erfassungsbogen): Promise<void> {
+    await platz.dienst.eebScan(encodePayloadUrl(bogen, KOMPRESSOR));
+  }
+
+  async function uebernimm(platz: Platz, bogen: Erfassungsbogen): Promise<void> {
+    await scanneNur(platz, bogen);
+    const ergebnis = await platz.dienst.eebUebernehmen("EO");
+    if (ergebnis.art !== "uebernommen") throw new Error(JSON.stringify(ergebnis));
+  }
+
+  it("Szenario: eine übernommene Meldung steht auf grün", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await uebernimm(platz, liesDatei(ALLE[0] as string));
+
+    const korb = projektion.eingangskorb(platz.dienst.zustand);
+    expect(korb.zeilen).toHaveLength(1);
+    expect(korb.zeilen[0]?.zustand).toBe("UEBERNOMMEN");
+    expect(korb.offen).toBe(0);
+  });
+
+  it("Szenario: eine jüngere Fassung setzt die übernommene wieder auf gelb", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    await uebernimm(platz, bogen);
+    // Nur scannen, nicht übernehmen: Die zweite Fassung liegt an.
+    await scanneNur(platz, { ...bogen, stand: bogen.stand + 24 * 60 } as Erfassungsbogen);
+    const ergebnis = await platz.dienst.eebUebernehmen("EO");
+    expect(ergebnis.art).toBe("uebernommen");
+
+    // §5.8.1: `GEAENDERT` heißt „übernommen, aber es liegt eine jüngere
+    // Fassung derselben Reihe vor". Die ältere trägt es, die jüngere nicht.
+    const korb = projektion.eingangskorb(platz.dienst.zustand);
+    const zustaende = korb.zeilen.map((z) => z.zustand).sort();
+    expect(zustaende).toEqual(["GEAENDERT", "UEBERNOMMEN"]);
+  });
+
+  it("Szenario: eine abgelehnte Meldung bleibt sichtbar", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    await uebernimm(platz, bogen);
+    const meldungId = Object.keys(platz.dienst.zustand.meldungen)[0] as string;
+
+    await platz.dienst.bediene(meldungAbgelehnt(meldungId, "Doppelt gemeldet, Bogen von gestern"));
+
+    // §5.8.1: Der Empfang ist eine Tatsache, Löschen ist verboten. Wer eine
+    // Meldung nicht will, lehnt sie ab — sie bleibt im Korb.
+    const korb = projektion.eingangskorb(platz.dienst.zustand);
+    expect(korb.zeilen).toHaveLength(1);
+    expect(korb.zeilen[0]?.zustand).toBe("ABGELEHNT");
+    expect(platz.dienst.zustand.meldungen[meldungId]).toBeDefined();
+  });
+
+  it("Szenario: die Ablehnung wird zurückgenommen und braucht dafür keinen Grund", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await uebernimm(platz, liesDatei(ALLE[0] as string));
+    const meldungId = Object.keys(platz.dienst.zustand.meldungen)[0] as string;
+    await platz.dienst.bediene(meldungAbgelehnt(meldungId, "Irrtum"));
+
+    // §5.8.1: dieselbe Art mit `neu = false`, und dann ohne Pflicht-`grund`.
+    // Der Grund gehört zur Ablehnung, nicht zu ihrer Rücknahme.
+    const ergebnis = await platz.dienst.bediene(ablehnungZurueckgenommen(meldungId));
+    expect(ergebnis.art).toBe("geschrieben");
+    expect(projektion.eingangskorb(platz.dienst.zustand).zeilen[0]?.zustand).toBe("UEBERNOMMEN");
+  });
+
+  it("Szenario: eine Ablehnung ohne Grund wird abgewiesen (§2.4)", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await uebernimm(platz, liesDatei(ALLE[0] as string));
+    const meldungId = Object.keys(platz.dienst.zustand.meldungen)[0] as string;
+
+    const ergebnis = await platz.dienst.bediene({
+      typ: "EebMeldungAbgelehnt",
+      nutzlast: { meldungId },
+      vorher: false,
+      neu: true,
+    });
+    expect(ergebnis.art).toBe("abgewiesen");
+  });
+
+  it("Szenario: die Rücknahme der Übernahme stellt die Meldung zurück in den Korb", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await uebernimm(platz, liesDatei(ALLE[0] as string));
+    const meldungId = Object.keys(platz.dienst.zustand.meldungen)[0] as string;
+
+    await platz.dienst.bediene(uebernahmeZurueckgenommen(meldungId));
+
+    const korb = projektion.eingangskorb(platz.dienst.zustand);
+    expect(korb.zeilen[0]?.zustand).toBe("NEU");
+    expect(korb.offen).toBe(1);
+    // Die Einheit bleibt: Die Feldereignisse der Übernahme sind
+    // eigenständige Ereignisse (§5.8.2), und was einmal in der Lage stand,
+    // verschwindet nicht dadurch, dass man den Vermerk zurücknimmt.
+    expect(Object.keys(platz.dienst.zustand.einheiten).length).toBeGreaterThan(1);
+  });
+
+  it("Szenario: der Korb zeigt auf Wunsch nur die jüngste Fassung je Reihe (K26)", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    await uebernimm(platz, bogen);
+    await uebernimm(platz, { ...bogen, stand: bogen.stand + 24 * 60 } as Erfassungsbogen);
+
+    expect(projektion.eingangskorb(platz.dienst.zustand).zeilen).toHaveLength(2);
+    const koepfe = projektion.eingangskorb(platz.dienst.zustand, { nurKoepfe: true });
+    expect(koepfe.zeilen).toHaveLength(1);
+    expect(koepfe.zeilen[0]?.kopf).toBe(true);
+  });
+
+  it("Szenario: die Revisionen einer Reihe stehen nach Stand und nicht nach Empfang", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    // Erst die **jüngere** Fassung übernehmen, dann die ältere nachscannen —
+    // der Fall des nachgescannten Papierbogens von gestern (§2.6).
+    await uebernimm(platz, { ...bogen, stand: bogen.stand + 24 * 60 } as Erfassungsbogen);
+    await uebernimm(platz, bogen);
+
+    const schluessel = Object.values(platz.dienst.zustand.meldungen)[0]?.einheitSchluessel?.wert;
+    const reihe = projektion.revisionen(platz.dienst.zustand, String(schluessel));
+    expect(reihe).toHaveLength(2);
+    // Älteste zuerst — nach `stand`, obwohl sie später empfangen wurde.
+    expect(reihe[0]?.stand.localeCompare(reihe[1]?.stand ?? "")).toBeLessThan(0);
+    expect(reihe[0]?.empfangenAm.localeCompare(reihe[1]?.empfangenAm ?? "")).toBeGreaterThanOrEqual(0);
+    // Und der Kopf ist die jüngere, nicht die zuletzt empfangene.
+    expect(reihe[1]?.kopf).toBe(true);
   });
 });

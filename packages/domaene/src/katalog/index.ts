@@ -364,3 +364,26 @@ export const GRUND_PFLICHT: readonly string[] = [...KATALOG_EINTRAEGE, KORREKTUR
   .filter((eintrag) => eintrag.grundPflicht === true)
   .map((eintrag) => eintrag.typ)
   .sort();
+
+/**
+ * Die `grund`-Pflicht aus §2.4 — **eine** Stelle fuer beide Seiten.
+ *
+ * Der Fold braucht sie beim Lesen: Ein Ereignis, das sie verletzt, faellt
+ * nach §3.7 Regel 4 unter `unbekannt` und wirkt nicht. Der Schreiber braucht
+ * dieselbe Regel, und zwar **vorher** — sonst nimmt er einen Bedienschritt
+ * an, schreibt ihn in ein append-only-Protokoll und wirft ihn beim naechsten
+ * Falten weg. Der Bediener saehe „geschrieben" und keine Wirkung.
+ *
+ * Die eine Ausnahme haengt am Wert des Rahmenfeldes `neu` und nicht allein an
+ * der Art: `EebMeldungAbgelehnt` mit `neu = false` ist die **Ruecknahme** der
+ * Ablehnung, und fuer sie ist der Grund frei (§5.8.1). Im Nutzlastschema ist
+ * das nicht ausdrueckbar, deshalb steht es hier.
+ */
+export function grundPasst(
+  eintrag: Katalogeintrag,
+  ereignis: { readonly grund?: string; readonly neu?: unknown },
+): boolean {
+  if (eintrag.grundPflicht !== true) return true;
+  if (eintrag.typ === "EebMeldungAbgelehnt" && ereignis.neu === false) return true;
+  return typeof ereignis.grund === "string" && ereignis.grund.length > 0;
+}

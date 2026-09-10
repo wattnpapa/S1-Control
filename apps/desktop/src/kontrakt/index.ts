@@ -30,6 +30,7 @@ import type {
   Anforderungsausschnitt,
   Baumknoten,
   Kostenblatt,
+  Meldungsausschnitt,
   Schichtplanblatt,
   Tabellenausschnitt,
   Tagebuchzeile,
@@ -253,6 +254,19 @@ export const zRuf = z.discriminatedUnion("art", [
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
   // Rufe holten dieselben Posten zweimal.
+  // Der Eingangskorb (M6.1) und die Revisionen einer Reihe (M6.2) — **ein**
+  // Ruf mit Filter, wie jede Liste seit M3.7. `einheitSchluessel` schneidet
+  // ihn auf eine Reihe zu; das ist die Revisionsansicht.
+  z.object({
+    art: z.literal("eingangskorbAnfordern"),
+    akteId: zAkteId,
+    zustaende: z.array(z.enum(["NEU", "GEAENDERT", "UEBERNOMMEN", "ABGELEHNT"])).optional(),
+    einheitSchluessel: z.string().optional(),
+    suche: z.string().optional(),
+    nurKoepfe: z.boolean().optional(),
+    von: z.number().int().min(0).optional(),
+    anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+  }),
   z.object({
     art: z.literal("fuestAnfordern"),
     akteId: zAkteId,
@@ -401,6 +415,7 @@ export interface Antworten {
   kostenAnfordern: Kostenansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
+  eingangskorbAnfordern: Eingangskorbansicht;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -434,6 +449,9 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/** Der Eingangskorb des Meldekopfs (M6.1) — mit Ausschnitt, wie jede Liste. */
+export interface Eingangskorbansicht extends Ansichtsstand, Meldungsausschnitt {}
 
 /** Das Blatt der Fuehrungsstelle (M5.4): Dienstposten, Summen und Schichtplan. */
 export interface Fuestansicht extends Ansichtsstand {

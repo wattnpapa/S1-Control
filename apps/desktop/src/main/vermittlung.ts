@@ -175,6 +175,7 @@ export class Vermittlung {
       case "kostenAnfordern":
       case "anforderungenAnfordern":
       case "fuestAnfordern":
+      case "eingangskorbAnfordern":
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":

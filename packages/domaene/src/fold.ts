@@ -51,7 +51,7 @@ import {
   type EreignisId,
 } from "./ereignis.js";
 import { hlcAlsText, vergleicheHlc, type Hlc } from "./hlc.js";
-import { KATALOG, type Katalogeintrag } from "./katalog/index.js";
+import { KATALOG, grundPasst, type Katalogeintrag } from "./katalog/index.js";
 import {
   kanonischeSerialisierung,
   vergleicheNachCodepunkt,
@@ -433,19 +433,6 @@ function formPasst(eintrag: Katalogeintrag, ereignis: EingehendesEreignis): bool
   return !hatNeu && !hatVorher;
 }
 
-/**
- * Die `grund`-Pflicht aus §2.4.
- *
- * Die eine Ausnahme haengt am Wert des Rahmenfeldes `neu` und nicht allein an
- * der Art: `EebMeldungAbgelehnt` mit `neu = false` ist die Ruecknahme der
- * Ablehnung, und fuer sie ist `grund` frei. Im Nutzlastschema ist das nicht
- * ausdrueckbar, deshalb steht es hier.
- */
-function grundPasst(eintrag: Katalogeintrag, ereignis: EingehendesEreignis): boolean {
-  if (eintrag.grundPflicht !== true) return true;
-  if (eintrag.typ === "EebMeldungAbgelehnt" && ereignis.neu === false) return true;
-  return typeof ereignis.grund === "string" && ereignis.grund.length > 0;
-}
 
 /**
  * Die Feldpfade, die eine Anlage belegt (§2.3).

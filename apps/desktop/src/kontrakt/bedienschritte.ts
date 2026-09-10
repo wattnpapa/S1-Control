@@ -491,3 +491,100 @@ export function schichtplanEintrag(
     neu: text.trim() === "" ? null : text,
   };
 }
+
+// ---------------------------------------------------------------------------
+// Der Eingangskorb (M6.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Eine Meldung ablehnen (§5.8.1).
+ *
+ * **Kein Loeschen.** Der Empfang ist eine Tatsache: `EebMeldungEmpfangen` ist
+ * nicht ruecknehmbar, die Meldung bleibt sichtbar, und wer sie nicht will,
+ * lehnt sie ab. §2.4 macht den Grund zur Pflicht — eine abgelehnte Meldung
+ * ohne Begruendung waere im Nachhinein nicht von einem Versehen zu
+ * unterscheiden.
+ *
+ * `abgelehnt` ist ein **eigenes** Feld und nicht `uebernahme = null`: Sonst
+ * waere eine abgelehnte Meldung von einer nie uebernommenen nicht zu
+ * unterscheiden, und `ABGELEHNT` aus dem Zustand nicht entscheidbar (§5.8.1).
+ */
+export function meldungAbgelehnt(meldungId: string, grund: string): Entwurf {
+  return {
+    typ: "EebMeldungAbgelehnt",
+    nutzlast: { meldungId },
+    vorher: false,
+    neu: true,
+    grund,
+  };
+}
+
+/**
+ * Die Ablehnung zuruecknehmen.
+ *
+ * Dieselbe Art mit `neu = false` — und dann **ohne** Pflicht-`grund` (§5.8.1,
+ * Tabellenzeile zu `EebMeldungAbgelehnt`). Das ist kein Schlupfloch: Der
+ * Grund gehoert zur Ablehnung, nicht zu ihrer Ruecknahme.
+ */
+export function ablehnungZurueckgenommen(meldungId: string): Entwurf {
+  return { typ: "EebMeldungAbgelehnt", nutzlast: { meldungId }, vorher: true, neu: false };
+}
+
+/**
+ * Die Uebernahme zuruecknehmen (§5.8.1).
+ *
+ * Sie setzt `uebernahme` auf `null`; die Meldung faellt damit auf `NEU`
+ * zurueck und steht wieder im Korb. Die Feldereignisse, die die Uebernahme
+ * geschrieben hat, bleiben stehen — sie sind eigenstaendige Ereignisse
+ * (§5.8.2), und was einmal in der Lage stand, verschwindet nicht dadurch,
+ * dass man den Vermerk zuruecknimmt. Wer den Wert zuruecksetzen will, setzt
+ * ihn zurueck.
+ */
+export function uebernahmeZurueckgenommen(meldungId: string): Entwurf {
+  return { typ: "EebMeldungUebernahmeZurueckgenommen", nutzlast: { meldungId }, neu: null };
+}
+
+/** Die drei Werte, die §5.8 fuer den Meldestatus kennt. */
+export const MELDESTATUS = ["ANWESEND", "ABGERUECKT", "AUFGEGANGEN"] as const;
+export type Meldestatus = (typeof MELDESTATUS)[number];
+
+/**
+ * Den Meldestatus setzen (§5.8).
+ *
+ * `AUFGEGANGEN` trennt zwei Dinge, die sonst verwechselt wuerden: Ein
+ * zusammengefuehrter Truppteil ist **nicht** abgerueckt — er ist wieder Teil
+ * seiner Einheit und steckt in deren Zahlen. Als „abgerueckt" gemeldet, laese
+ * die Fuehrungsstelle einen Abgang, den es nie gab (`@bos/meldekopf`,
+ * `einsaetze.ts`).
+ */
+export function meldeStatusGesetzt(
+  meldungId: string,
+  vorher: string | null,
+  neu: Meldestatus,
+): Entwurf {
+  return { typ: "EebMeldeStatusGesetzt", nutzlast: { meldungId }, vorher, neu };
+}
+
+/**
+ * Eine Meldung einer anderen Revisionsreihe zuordnen (§5.8.1).
+ *
+ * Die Zuordnung ist eine **Heuristik** — die Anwendung schlaegt den
+ * Fingerabdruck vor, der Mensch bestaetigt oder ueberschreibt
+ * (`@bos/meldekopf`, Modulkopf). Ein hartes Zusammenfuehren waere bei einem
+ * Fingerabdruck aus Organisation, Typ und Herkunft eine Wette. Deshalb gibt
+ * es dieses Ereignis: Es korrigiert die Reihe, und der Fold folgt ihm — „eine
+ * Revisionsreihe ist die Menge der Meldungen mit demselben **gefalteten**
+ * `einheitSchluessel`".
+ */
+export function meldungZugeordnet(
+  meldungId: string,
+  vorher: string,
+  einheitSchluessel: string,
+): Entwurf {
+  return {
+    typ: "EebMeldungZugeordnet",
+    nutzlast: { meldungId },
+    vorher,
+    neu: einheitSchluessel,
+  };
+}
