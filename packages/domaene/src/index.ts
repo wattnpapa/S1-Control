@@ -75,6 +75,15 @@ export {
   type Sha256Hex,
 } from "./kanonisch.js";
 
+// Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).
+export * as kennzahlen from "./kennzahlen.js";
+export type {
+  FuestZeile,
+  Kostenzahlen,
+  Logistikzahlen,
+  Matrixzeile,
+} from "./kennzahlen.js";
+
 // Der Ereigniskatalog (M1.3): Nutzlastschemata und die Tabelle aus §5.1.
 export {
   ANLAGEARTEN,
