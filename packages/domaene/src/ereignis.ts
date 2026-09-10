@@ -1,15 +1,18 @@
 /**
- * Ereignisrahmen und die fuenf Ereignisarten des Minimalfolds (M0.2).
+ * Ereignisrahmen, Identitaet und die bekannten Werte der offenen Bereiche.
  *
  * Rahmenfelder nach KONZEPT-SPEICHER.md §2.4, Identitaet und Laufnummer nach
- * §3.3 (Auflage 8), `vorher`/`neu` nach §2.5 (Auflage 6). Die fachlichen
- * Nutzlasten und die Konfliktregel je Typ stehen im Ereigniskatalog
- * `docs/v2-arbeitsstand/entwurf/zieldatenmodell-feldabgleich.md` §4.2.
+ * §3.3 (Auflage 8), `vorher`/`neu` nach §2.5 (Auflage 6). Die Nutzlasten und
+ * die Konfliktregel je Art stehen seit M1.3 im Katalog (`katalog/index.ts`,
+ * KONZEPT-EREIGNISSE.md §5); die fuenf Ereignisarten des Minimalfolds aus
+ * M0.2 sind mit ihm entfallen.
  *
- * Bewusst nur fuenf Arten: der vollstaendige Katalog samt zod-Schemata,
- * Upcaster-Kette und Undo-Semantik ist M1.2 (`KONZEPT-EREIGNISSE.md`) und
- * M1.3. Hier steht genau so viel, dass die Eigenschaften P1 bis P6
- * aussagekraeftig werden.
+ * Die Wertelisten hier sind die **bekannten** Werte der fuenf offenen
+ * Bereiche (§3.7). Sie schliessen nichts aus: Ein unbekannter Wert wird
+ * gefaltet, gespeichert und unveraendert weitergespiegelt, und der Fold
+ * erzeugt `unbekannterWert`. Jede Aenderung an ihnen erhoeht `foldVersion`
+ * (§3.9) — zwei Clients mit verschiedenen Listen fuehren verschiedene
+ * Hinweise und damit verschiedene Zustaende.
  */
 
 import type { Hlc } from "./hlc.js";
@@ -201,122 +204,6 @@ export interface Staerke {
   readonly fuehrer: number;
   readonly unterfuehrer: number;
   readonly mannschaft: number;
-}
-
-// ---------------------------------------------------------------------------
-// Die fuenf Ereignisarten des Minimalfolds (Ereigniskatalog §4.2)
-// ---------------------------------------------------------------------------
-
-/** Erstes Ereignis der Akte; ein zweites wird verworfen (§4.2). */
-export interface EinsatzAngelegt extends Rahmen {
-  readonly typ: "EinsatzAngelegt";
-  readonly nutzlast: {
-    readonly einsatzId: string;
-    readonly name: string;
-    readonly art: EinsatzArt;
-    readonly fuestName: string;
-    readonly uebergeordneteFuestName?: string;
-    readonly beginn: string;
-    readonly schichtmodell: Schichtmodell;
-  };
-}
-
-/** Additiv ueber die eindeutige Id (§4.2). */
-export interface AbschnittAngelegt extends Rahmen {
-  readonly typ: "AbschnittAngelegt";
-  readonly nutzlast: {
-    readonly abschnittId: string;
-    readonly name: string;
-    readonly abschnittstyp: Abschnittstyp;
-    readonly parentId?: string;
-    readonly reihenfolge: number;
-  };
-}
-
-/** Anlage einer Einheit; additiv ueber die eindeutige Id (§4.2). */
-export interface EinheitGemeldet extends Rahmen {
-  readonly typ: "EinheitGemeldet";
-  readonly nutzlast: {
-    readonly einheitId: string;
-    readonly abschnittId: string;
-    readonly bezeichnung: string;
-    readonly organisation: Organisation;
-    readonly organisationName?: string;
-    readonly ebene: TaktischeEbene;
-    readonly staerke: Staerke;
-    readonly personalErfassung: PersonalErfassung;
-    readonly status: EinheitStatus;
-    readonly schicht?: Schicht;
-  };
-}
-
-/**
- * Last-Writer-Wins auf `abschnittId` (§4.2).
- *
- * `vorher` ist das `vonAbschnittId` des Katalogs, `neu` das `nachAbschnittId`
- * — dieselben beiden Werte, nur unter den Rahmennamen aus §2.4.
- */
-export interface EinheitVerschoben extends Rahmen<string, string> {
-  readonly typ: "EinheitVerschoben";
-  readonly vorher: string;
-  readonly neu: string;
-  readonly nutzlast: {
-    readonly einheitId: string;
-    readonly kommentar?: string;
-  };
-}
-
-/**
- * Last-Writer-Wins ueber das ganze Tripel, nicht je Rolle (§4.2).
- *
- * Begruendung des Katalogs: die drei Zahlen sind eine Meldung („0/3/17"),
- * keine unabhaengigen Felder; ein Merge aus zwei Meldungen ergaebe eine
- * Staerke, die nie jemand gemeldet hat.
- */
-export interface StaerkeGeaendert extends Rahmen<Staerke, Staerke> {
-  readonly typ: "StaerkeGeaendert";
-  readonly vorher: Staerke;
-  readonly neu: Staerke;
-  readonly nutzlast: {
-    readonly einheitId: string;
-  };
-}
-
-/** Die fuenf Ereignisarten, die M0.2 faltet. */
-export type Ereignis =
-  | EinsatzAngelegt
-  | AbschnittAngelegt
-  | EinheitGemeldet
-  | EinheitVerschoben
-  | StaerkeGeaendert;
-
-/**
- * Ein Ereignis, dessen Art dieser Client nicht kennt.
- *
- * Ereigniskatalog §4.1 Regel 4: unbekannte Typen werden **durchgereicht, nicht
- * verworfen**. Der Fold faltet sie nicht, fuehrt sie aber im Zustand mit,
- * damit das Einsatztagebuch „unbekanntes Ereignis (Typ X, Version Y) von
- * <Akteur>" zeigen kann.
- */
-export interface FremdesEreignis extends Rahmen<unknown, unknown> {
-  readonly typ: string;
-  readonly nutzlast?: unknown;
-}
-
-/** Alles, was der Fold entgegennimmt: bekannte Arten und unbekannte Typen. */
-export type EingehendesEreignis = Ereignis | FremdesEreignis;
-
-const BEKANNTE_TYPEN: ReadonlySet<string> = new Set<Ereignis["typ"]>([
-  "EinsatzAngelegt",
-  "AbschnittAngelegt",
-  "EinheitGemeldet",
-  "EinheitVerschoben",
-  "StaerkeGeaendert",
-]);
-
-/** `true`, wenn der Minimalfold diese Ereignisart kennt (§4.1 Regel 4). */
-export function istBekannteArt(ereignis: EingehendesEreignis): ereignis is Ereignis {
-  return BEKANNTE_TYPEN.has(ereignis.typ);
 }
 
 /** Summe der drei Rollen eines Staerke-Tripels. */

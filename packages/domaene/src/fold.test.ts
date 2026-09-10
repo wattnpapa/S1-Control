@@ -84,25 +84,39 @@ describe("Minimalfold — Grundverhalten", () => {
       [zweiteAnlage, einsatz],
     ]) {
       const zustand = falte(menge);
-      expect(zustand.einsatz?.name.wert).toBe("Falscher Name");
-      expect(zustand.hinweise).toEqual([
-        {
+      // T1: `angelegtDurch` ist die Anlage mit der **kleineren** HLC, der
+      // Name aber der der groesseren — die Kennung ist keine Beobachtung
+      // (§2.3), die uebrigen Felder folgen der gewoehnlichen Auswahl.
+      expect(zustand.einsatz?.angelegtDurch).toBe("bb:1");
+      expect(zustand.einsatz?.name.wert).toBe("Hochwasser Sued");
+      expect(zustand.hinweise).toContainEqual(
+        expect.objectContaining({
           art: "zweiteAnlageVerworfen",
           feldpfad: "einsatz",
           verworfen: "aa:1",
           gilt: "bb:1",
           ereignisart: "EinsatzAngelegt",
           // Der verworfene Inhalt gehoert in den Hinweis, sonst verschwindet er.
-          inhalt: {
+          inhalt: expect.objectContaining({
             einsatzId: "E",
             name: "Hochwasser Sued",
             art: "EINSATZ",
             fuestName: "FueSt Oldenburg",
             beginn: "2026-09-08T08:00:00+02:00",
             schichtmodell: "ZWEI_SCHICHT",
-          },
-        },
-      ]);
+          }),
+        }),
+      );
+      // Und je abweichendem Feld ein `ohneVorherWertVerdraengt` (§2.3, T146):
+      // Die Anlage mit der groesseren HLC gewinnt das Feld und traegt keinen
+      // Vorher-Wert. Der Hinweis entsteht je **Feldpfad**, nicht je Entitaet.
+      expect(zustand.hinweise).toContainEqual({
+        art: "ohneVorherWertVerdraengt",
+        feldpfad: "einsatz/name",
+        gewinner: "aa:1",
+        verdraengt: "bb:1",
+        verdraengterWert: "Falscher Name",
+      });
     }
   });
 
@@ -292,10 +306,12 @@ describe("Mengenfunktion auch bei HLC-Gleichstand (geklontes Profil, M0-Fehlerin
 });
 
 describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)", () => {
-  it("eine zweite Einheitenanlage ueberschreibt spaetere Arbeit nicht mehr", () => {
-    // Die Verschiebung liegt in der HLC unter der zweiten Anlage. Wuerde die
-    // Anlage als gewoehnlicher Schreiber gelten, verschwaende die Verschiebung
-    // still — genau das verbietet §2.5.
+  it("eine zweite Anlage belegt ihre Feldpfade, meldet das aber doppelt (T143, §3.11)", () => {
+    // Die Anlage mit der **kleinsten** HLC stellt `angelegtDurch`; ihre
+    // Feldwerte folgen dagegen der gewoehnlichen Auswahl. Eine spaete zweite
+    // Anlage kann deshalb eine Verschiebung zuruecksetzen — das ist der Preis
+    // dafuer, dass §3.11 ohne Ruecknahme auskommt, und er ist doppelt
+    // ausgewiesen: `zweiteAnlageVerworfen` und `ohneVorherWertVerdraengt`.
     const verschoben = einheitVerschoben(hlc(5000, 0, "bb"), 1, "U1", "A", "B");
     const zweiteAnlage = einheitGemeldet(hlc(9000, 0, "cc"), 1, {
       einheitId: "U1",
@@ -311,13 +327,16 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
 
     const zustand = falte([...grundmenge, verschoben, zweiteAnlage]);
 
-    expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("B");
-    // Auch die inhaltsgleiche Zweitanlage erzeugt den Hinweis (T100,
-    // KONZEPT-EREIGNISSE.md §3.11): Zwei Arbeitsplaetze haben dieselbe Einheit
-    // angelegt, und das ist eine Auskunft ueber die Lage der Clients. Anders
-    // als bei den Inhaltsschluesseln aus §3.6, wo dasselbe zweimal zu scannen
-    // ein Alltagsvorgang ist.
-    expect(zustand.hinweise).toEqual([
+    expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("A");
+    expect(zustand.einheiten["U1"]?.abschnittId.durch).toBe("cc:1");
+    // `angelegtDurch` bleibt bei der kleinsten HLC.
+    expect(zustand.einheiten["U1"]?.angelegtDurch).toBe("aa:4");
+    // Auch die inhaltsgleiche Zweitanlage erzeugt den Hinweis (T100, §3.11):
+    // Zwei Arbeitsplaetze haben dieselbe Einheit angelegt, und das ist eine
+    // Auskunft ueber die Lage der Clients. Anders als bei den
+    // Inhaltsschluesseln aus §3.6, wo dasselbe zweimal zu scannen ein
+    // Alltagsvorgang ist.
+    expect(zustand.hinweise).toContainEqual(
       expect.objectContaining({
         art: "zweiteAnlageVerworfen",
         feldpfad: "einheit/U1",
@@ -325,7 +344,15 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
         gilt: "aa:4",
         ereignisart: "EinheitGemeldet",
       }),
-    ]);
+    );
+    // Und die verdraengte Verschiebung steht daneben, nicht still verworfen.
+    expect(zustand.hinweise).toContainEqual({
+      art: "ohneVorherWertVerdraengt",
+      feldpfad: "einheit/U1/abschnittId",
+      gewinner: "cc:1",
+      verdraengt: "bb:1",
+      verdraengterWert: "B",
+    });
     expect(zustand.einheiten["U1"]?.verworfeneAnlagen).toHaveLength(1);
   });
 
@@ -346,7 +373,10 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
 
     const zustand = falte([...grundmenge, zweiteAnlage]);
 
-    expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(0, 1, 8));
+    // T143: Die Anlage mit der groesseren HLC belegt `staerke` nach der
+    // gewoehnlichen Auswahl; `angelegtDurch` bleibt bei der kleineren.
+    expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(7, 7, 7));
+    expect(zustand.einheiten["U1"]?.angelegtDurch).toBe("aa:4");
     expect(zustand.hinweise).toContainEqual(
       expect.objectContaining({
         art: "zweiteAnlageVerworfen",
@@ -368,14 +398,17 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
     });
     const zustand = falte([...grundmenge, zweite]);
 
-    expect(zustand.abschnitte["A"]?.name.wert).toBe("Einsatzort 1");
+    // Auch hier belegt die verworfene Anlage ihre Feldpfade (§3.11); allein
+    // `angelegtDurch` folgt der kleinsten HLC.
+    expect(zustand.abschnitte["A"]?.name.wert).toBe("Umbenannt");
+    expect(zustand.abschnitte["A"]?.angelegtDurch).toBe("aa:2");
     expect(zustand.hinweise).toContainEqual({
       art: "zweiteAnlageVerworfen",
       feldpfad: "abschnitt/A",
       verworfen: "bb:1",
       gilt: "aa:2",
       ereignisart: "AbschnittAngelegt",
-      inhalt: { abschnittId: "A", name: "Umbenannt", abschnittstyp: "ARCHIV", reihenfolge: 99 },
+      inhalt: { abschnittId: "A", name: "Umbenannt", typ: "ARCHIV", reihenfolge: 99 },
     });
   });
 });

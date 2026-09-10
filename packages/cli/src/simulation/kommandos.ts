@@ -113,7 +113,15 @@ export function naechsterSchritt(
         fuestName: "FüSt Oldenburg",
         uebergeordneteFuestName: "Regionalstelle Oldenburg",
         beginn: "2026-09-09T06:00:00.000Z",
-        schichtmodell: "ZWEI_SCHICHTEN",
+        schichtmodell: "ZWEI_SCHICHT",
+        // Die Kostenparameter stehen in der Anlage (§2.3); ohne sie ist die
+        // Nutzlast nach §3.7 Punkt 4 ungueltig.
+        kosten: {
+          psaKostenProSatz: 180,
+          vdaProTag: 150,
+          ukVerpflegungProTag: 20,
+          geplanteEinsatztage: 5,
+        },
       },
     };
   }
@@ -128,7 +136,7 @@ export function naechsterSchritt(
       nutzlast: {
         abschnittId: `A-${clientId}-${laufendeNummer}`,
         name: `${zufall.waehle(ABSCHNITTSNAMEN)} ${laufendeNummer}`,
-        abschnittstyp: zufall.waehle(ABSCHNITTSTYPEN),
+        typ: zufall.waehle(ABSCHNITTSTYPEN),
         ...(s.abschnitte.length > 0 && zufall.trifft(0.4)
           ? { parentId: zufall.waehle(s.abschnitte) }
           : {}),
@@ -151,6 +159,9 @@ export function naechsterSchritt(
         personalErfassung: "VOLLSTAENDIG",
         status: zufall.waehle(EINHEIT_STATUS),
         schicht: zufall.waehle(SCHICHTEN),
+        hierarchie: [],
+        reihenfolge: zufall.bis(1000),
+        istFuehrungDesAbschnitts: false,
       },
     };
   }

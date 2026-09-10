@@ -85,6 +85,15 @@ export interface Katalogeintrag {
   readonly gegenereignis?: string;
   /** `true`, wo §6 U2 Undo ausdruecklich ausschliesst. */
   readonly ohneUndo?: true;
+  /**
+   * Nutzlastfelder einer Anlage, deren Bestandteile je einen **eigenen**
+   * Feldpfad belegen (§2.3).
+   *
+   * Nur `EinsatzAngelegt.kosten`: Die vier Kostenparameter stehen als
+   * `einsatz/kosten/<feld>` im Zustand, damit ein spaeteres
+   * `KostenParameterGeaendert` denselben Pfad trifft.
+   */
+  readonly anlageUnterpfade?: readonly string[];
 }
 
 const e = (eintrag: Katalogeintrag): Katalogeintrag => eintrag;
@@ -98,7 +107,8 @@ const ausNutzlast = (schluessel: string, praefix?: string): Feldwahl =>
 export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   // §5.2 Einsatz
   e({ typ: "EinsatzAngelegt", form: "b", schema: S.EinsatzAngelegt, nutzlastVersion: 1,
-      entitaet: "einsatz", idFeld: "einsatzId", klasse: "REGEL", ohneUndo: true }),
+      entitaet: "einsatz", idFeld: "einsatzId", klasse: "REGEL", ohneUndo: true,
+      anlageUnterpfade: ["kosten"] }),
   e({ typ: "EinsatzStammdatenGeaendert", form: "a", schema: S.EinsatzStammdatenGeaendert,
       nutzlastVersion: 1, entitaet: "einsatz", idFeld: "einsatzId",
       feld: ausNutzlast("feld"), klasse: "LWW_FELD",

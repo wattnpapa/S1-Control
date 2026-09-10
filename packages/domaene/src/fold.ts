@@ -1,74 +1,107 @@
 /**
- * Der Minimalfold von M0.2 — eine **Mengenfunktion mit Rebase**.
+ * Der Fold — eine **Mengenfunktion mit Rebase**, gesteuert vom Katalog.
  *
  * Auflage 4 und 02-ZIELBILD.md Nr. 3: „Der Fold ist eine Mengenfunktion, der
  * Live-Pfad ist ein Rebase, jedes materialisierte Feld traegt die HLC seines
  * Gewinners."
  *
+ * ## Warum hier keine Fallunterscheidung nach Ereignisart steht
+ *
+ * Welches Feld eine Art setzt, in welcher Form und nach welcher Klasse, steht
+ * in `katalog/index.ts` — Zeile fuer Zeile aus KONZEPT-EREIGNISSE.md §5
+ * abgeschrieben und dort pruefbar. Eine Regel, die nur im Code steht, ist eine
+ * Auslegung; das ist der Zustand, den `akte.ts` in M0.3 hatte und der dort
+ * zehn Befunde gekostet hat. Der Fold liest die Tabelle.
+ *
  * ## Warum hier nirgends sortiert wird
  *
  * Der Fold nimmt Ereignisse einzeln entgegen und verrechnet sie in einen
  * Akkumulator, dessen Aufnahmeoperation kommutativ, assoziativ und idempotent
- * ist: je Feld werden die **beiden hoechsten Beobachtungen** nach einer
- * totalen Ordnung gehalten — HLC nach §3.2, bei Gleichstand die Ereignis-Id
- * (siehe {@link vergleicheBeobachtung}). Es gibt keine Stelle, an der eine
- * Ereignisliste sortiert und dann der Reihe nach angewandt wuerde.
+ * ist: je Feld die **beiden hoechsten** Beobachtungen nach einer totalen
+ * Ordnung (§3.3, §3.5). Es gibt keine Stelle, an der eine Ereignisliste
+ * sortiert und dann der Reihe nach angewandt wuerde.
  *
  * Das ist keine Stilfrage, sondern die Voraussetzung fuer beides zugleich:
  *
  *   * **Rebase.** Ein nachtraeglich eintreffendes Ereignis darf ein Feld noch
  *     ueberschreiben, wenn seine HLC hoeher ist als die des bisherigen
- *     Gewinners — und darf es nicht, wenn sie niedriger ist. Ein Fold, der
- *     erst sortiert und dann anwendet, muesste dafuer die gesamte
- *     Ereignismenge erneut lesen; hier genuegt der Akkumulator.
- *   * **Auflage 18.** Ein Fold, der intern sortiert, macht die Eigenschaft P1
- *     (Permutation) zur Tautologie ueber die Sortierfunktion. Weil hier nicht
- *     sortiert wird, ist P1 eine echte Aussage ueber die Aufnahmeoperation.
- *     `eigenschaften.test.ts` fuehrt dazu die Gegenprobe.
+ *     Gewinners — und darf es nicht, wenn sie niedriger ist.
+ *   * **Auflage 18.** Ein Fold, der intern sortiert, macht P1 (Permutation)
+ *     zur Tautologie ueber die Sortierfunktion.
  *
  * Sortiert wird ausschliesslich in {@link materialisiere}, und dort nur zur
- * Ausgabe bereits feststehender Mengen: die Schluessel der Datensammlungen,
- * die Konflikthinweise, die Liste der unbekannten Ereignisse und die Ids
- * innerhalb eines Hinweises. Keine dieser Sortierungen entscheidet einen
- * Konflikt, und keine sieht je die Ereignismenge.
+ * Ausgabe bereits feststehender Mengen. Keine dieser Sortierungen entscheidet
+ * einen Konflikt.
+ *
+ * ## Stand
+ *
+ * M1.3 Stufe 3a: die Formen (a) und (b) ueber alle Katalogarten. Die beiden
+ * strukturellen Arten der Form (c), die Barriere `EinsatzArchiviert`, Undo und
+ * die Regeln §5.3.1 bis §5.3.2 folgen in den naechsten Stufen; wo sie fehlen,
+ * steht es an der Stelle.
  */
 
-import type {
-  Abschnittstyp,
-  EingehendesEreignis,
-  EinheitStatus,
-  EinsatzArt,
-  Ereignis,
-  EreignisId,
-  Organisation,
-  PersonalErfassung,
-  Schicht,
-  Schichtmodell,
-  Staerke,
-  TaktischeEbene,
+import {
+  ABSCHNITTSTYPEN,
+  EINHEIT_STATUS,
+  ORGANISATIONEN,
+  SCHICHTEN,
+  TAKTISCHE_EBENEN,
+  type Akteur,
+  type EreignisId,
 } from "./ereignis.js";
-import { istBekannteArt } from "./ereignis.js";
 import { vergleicheHlc, type Hlc } from "./hlc.js";
+import { KATALOG, type Katalogeintrag } from "./katalog/index.js";
 import {
   kanonischeSerialisierung,
   vergleicheNachCodepunkt,
   type KanonischerWert,
 } from "./kanonisch.js";
+import { staerkeGeklemmt, type Staerke } from "./werte.js";
 import {
   ARCHIV_ABSCHNITT_ID,
   AUFFANG_ABSCHNITT_ID,
   FOLD_VERSION,
+  KAPPUNG_MAX,
   type AbschnittZustand,
-  type EinheitZustand,
-  type EinsatzZustand,
+  type Beobachtung as ZustandsBeobachtung,
   type Feld,
   type Konflikthinweis,
   type UnbekanntesEreignis,
   type VerworfeneAnlage,
+  type VerworfenerSchluessel,
   type WartendeBeobachtung,
   type Zustand,
 } from "./zustand.js";
-import { staerkeGeklemmt } from "./werte.js";
+
+// ---------------------------------------------------------------------------
+// Eingang
+// ---------------------------------------------------------------------------
+
+/**
+ * Was der Fold entgegennimmt: der Rahmen aus §2.1 mit einem beliebigen `typ`.
+ *
+ * Bewusst **kein** diskriminiertes Union ueber die bekannten Arten. Ein
+ * Ereignis einer Art, die dieser Client nicht kennt, ist gueltiger Eingang und
+ * wird durchgereicht (§3.7 Regel 1); ein Typ, der das ausschloesse, machte den
+ * haeufigsten Fall des gemischten Betriebs zum Compilerfehler.
+ */
+export interface EingehendesEreignis {
+  readonly id: EreignisId;
+  readonly hlc: Hlc;
+  readonly vorgaenger?: string;
+  /** Version der **Nutzlast dieser Art** (§4.1). */
+  readonly schemaVersion: number;
+  readonly typ: string;
+  readonly akteur: Akteur;
+  readonly wanduhr: string;
+  readonly vorher?: unknown;
+  readonly neu?: unknown;
+  readonly undoOf?: EreignisId;
+  readonly korrekturVon?: EreignisId;
+  readonly grund?: string;
+  readonly nutzlast?: unknown;
+}
 
 // ---------------------------------------------------------------------------
 // Der Akkumulator je Feld
@@ -79,40 +112,33 @@ interface Beobachtung<T> {
   readonly hlc: Hlc;
   readonly ereignisId: EreignisId;
   readonly neu: T;
-  /** Der beim Bedienen gesehene Vorher-Wert (§2.5); fehlt bei Anlage-Ereignissen. */
-  readonly vorher?: T;
   /**
-   * Die Wanduhr des setzenden Ereignisses.
+   * Der gesehene Vorher-Wert (§2.2a); fehlt bei Anlagen.
    *
-   * Sie ordnet nichts (§3.1) und steht trotzdem im Zustand: `meldezeitUnplausibel`
-   * braucht sie als Eingangsdatum, und ein Hinweis muss nach einem Schnappschuss
-   * neu rechenbar sein (§3.8).
+   * Ein **Behaelter** und kein blosser Wert: `undefined` und `null` muessen
+   * sich unterscheiden lassen — „kein Vorher-Wert mitgefuehrt" gegen
+   * „ausdruecklich als ungesetzt gesehen".
    */
+  readonly vorher?: { readonly wert: T };
   readonly wanduhr?: string;
+  readonly fachlicheZeit?: string;
+  readonly zeitklasse?: "IST" | "PLAN";
+  readonly undoOf?: EreignisId;
   /** Die Ereignisart — die Entitaet grenzt sie nur ein, sie bestimmt sie nicht (§3.6). */
   readonly ereignisart?: string;
   /** Rahmenfeld `grund` (§2.4); getrennt von der Nutzlast gehalten. */
   readonly grund?: string;
-  /**
-   * Die **reine Nutzlast** des Ereignisses, unveraendert (§3.6).
-   *
-   * Nur bei Anlagen gesetzt. Sie ist nicht dasselbe wie `neu`: `neu` ist die
-   * Form, in der der Akkumulator rechnet, die Nutzlast die Form, in der jemand
-   * geschrieben hat. `inhalt` eines Hinweises und `angelegtMitNutzlast` zeigen
-   * ausschliesslich diese; ein Zustand, der die interne Form abliesse, waere
-   * zwischen zwei Umsetzungen nicht bytegleich.
-   */
+  /** Die **reine Nutzlast**, unveraendert (§3.6); nur bei Anlagen gesetzt. */
   readonly nutzlast?: unknown;
 }
 
 /**
- * Die beiden hoechsten Beobachtungen eines Feldes.
+ * Die beiden hoechsten Beobachtungen eines Feldes (§3.3).
  *
- * Mehr wird nicht gebraucht: Der Gewinner liefert Wert und Feld-HLC (§7.4),
- * der Zweite liefert den Wert, gegen den der gesehene Vorher-Wert des
- * Gewinners geprueft wird (§2.5). „Die beiden groessten Elemente einer Menge
- * bezueglich einer totalen Ordnung" ist kommutativ, assoziativ und idempotent
- * — daher ist es die ganze Aufnahmeoperation.
+ * Mehr wird nicht gebraucht: Der Gewinner liefert Wert und Feld-HLC, der
+ * Zweite den Wert, gegen den `gesehenerVorher` des Gewinners geprueft wird.
+ * „Die beiden groessten Elemente einer Menge bezueglich einer totalen Ordnung"
+ * ist kommutativ, assoziativ und idempotent — daher die ganze Aufnahme.
  */
 interface FeldStand<T> {
   readonly gewinner: Beobachtung<T>;
@@ -120,19 +146,15 @@ interface FeldStand<T> {
 }
 
 /**
- * Die totale Ordnung auf Beobachtungen: erst die HLC nach §3.2, bei
- * Gleichstand die Ereignis-Id.
+ * Die totale Ordnung auf Beobachtungen: erst die HLC (§3.5), bei Gleichstand
+ * die Ereignis-Id in Codepoint-Ordnung.
  *
  * Der zweite Schritt ist keine Verzierung. Zwei **verschiedene** Ereignisse
- * mit derselben HLC sind ein Protokollbruch — §3.2 erhoeht den Zaehler je
- * eigenem Ereignis, §3.3 verbietet die Doppelvergabe der Laufnummer. Genau
- * diesen Bruch erzeugt aber das **geklonte Profil**, dessen Injektion M0
- * ausdruecklich verlangt (03-MEILENSTEINE.md, M0). Ohne den zweiten Schritt
- * entschiede der Akkumulator dann nach Eintreffreihenfolge, und der Fold
- * waere ausgerechnet in dem Fall keine Mengenfunktion mehr, fuer den die
- * Fehlerinjektion gebaut ist. Erst mit ihm ist die Ordnung auf Beobachtungen
- * total — und nur dann traegt die Begruendung „die beiden groessten Elemente
- * bezueglich einer totalen Ordnung".
+ * mit derselben HLC sind ein Protokollbruch — genau den erzeugt aber das
+ * geklonte Profil, dessen Injektion M0 verlangt. Ohne den zweiten Schritt
+ * entschiede der Akkumulator dann nach Eintreffreihenfolge, und der Fold waere
+ * ausgerechnet dort keine Mengenfunktion mehr, wofuer die Fehlerinjektion
+ * gebaut ist.
  */
 function vergleicheBeobachtung(a: Beobachtung<unknown>, b: Beobachtung<unknown>): number {
   const nachHlc = vergleicheHlc(a.hlc, b.hlc);
@@ -154,42 +176,18 @@ function nimmBeobachtung<T>(stand: FeldStand<T> | undefined, neu: Beobachtung<T>
 }
 
 /**
- * Der Akkumulator einer **Anlage**: das Ereignis mit der kleinsten HLC gilt,
- * jedes weitere wird verworfen und gemeldet.
+ * Der Akkumulator einer **Anlage**: die kleinste HLC gilt, jede weitere geht
+ * in die Ablage (§3.11, §3.5).
  *
- * Der Ereigniskatalog nennt `EinsatzAngelegt` „erstes Ereignis der Akte; ein
- * zweites wird verworfen" und `AbschnittAngelegt`/`EinheitGemeldet` „additiv
- * (eindeutige Id)" (§4.2). „Erstes" kann nicht die Ankunft meinen — das waere
- * nicht konvergent; die Analogie zu `EinsatzArchiviert` („die mit kleinerer
- * `hlc` gilt") gibt die Lesart vor. Und „additiv ueber die eindeutige Id"
- * heisst, dass eine zweite Anlage derselben Id gar nicht vorkommen sollte;
- * kommt sie doch, darf sie die spaetere Arbeit an dieser Entitaet nicht
- * ueberschreiben. Deshalb dieselbe Regel fuer alle drei Anlagen.
- *
- * **Zwei Folgen, die zu M0.2 gehoeren und benannt sein wollen.** Erstens
- * verliert eine abweichende Zweitanlage ihre Werte — deshalb traegt der
- * Hinweis `zweiteAnlageVerworfen` den verworfenen Inhalt mit. Zweitens sind
- * die Stammfelder einer Einheit (`bezeichnung`, `organisation`, `ebene`,
- * `status`, `schicht`, `personalErfassung`) im Minimalset damit nach der
- * ersten Anlage nicht mehr aenderbar: Die Ereignisarten, die sie aendern
- * duerften — `EinheitStammdatenGeaendert`, `StatusGesetzt`, `SchichtGesetzt`
- * — gehoeren zum Katalog von M1.2, nicht zu den fuenf Arten von M0.2. Das ist
- * eine Luecke des Minimalsets, keine der Regel.
+ * Bei Gleichstand gilt die **kleinere** Id — Anlagen und Erstwert-Felder sind
+ * Minimumsbildungen und tragen dieselbe Richtung.
  */
-interface AnlageStand<T> {
-  readonly gewinner: Beobachtung<T>;
-  /**
-   * Verworfene Anlagen mit Inhalt, Art und Grund (§3.11).
-   *
-   * Alle drei gehoeren in den Hinweis und damit in den Zustand: Der Inhalt,
-   * weil er sonst spurlos verschwaende; die Art, weil die Entitaet sie nur
-   * eingrenzt; der Grund, weil die Ablage zeigen soll, warum jemand geschrieben
-   * hat, und `grund` ein Rahmenfeld ist.
-   */
-  readonly verworfen: ReadonlyMap<EreignisId, Beobachtung<T>>;
+interface AnlageStand {
+  readonly gewinner: Beobachtung<unknown>;
+  readonly verworfen: ReadonlyMap<EreignisId, Beobachtung<unknown>>;
 }
 
-function nimmAnlage<T>(stand: AnlageStand<T> | undefined, neu: Beobachtung<T>): AnlageStand<T> {
+function nimmAnlage(stand: AnlageStand | undefined, neu: Beobachtung<unknown>): AnlageStand {
   if (stand === undefined) return { gewinner: neu, verworfen: new Map() };
 
   const gegenGewinner = vergleicheBeobachtung(neu, stand.gewinner);
@@ -205,7 +203,7 @@ function nimmAnlage<T>(stand: AnlageStand<T> | undefined, neu: Beobachtung<T>): 
   return { gewinner: stand.gewinner, verworfen };
 }
 
-/** Wertgleichheit ueber die kanonische Serialisierung (§7.6) — gilt fuer Skalare wie fuer das Staerke-Tripel. */
+/** Wertgleichheit ueber die kanonische Serialisierung (§7.6) — Skalare wie Strukturen. */
 function wertGleich(a: unknown, b: unknown): boolean {
   return (
     kanonischeSerialisierung(a as KanonischerWert) === kanonischeSerialisierung(b as KanonischerWert)
@@ -216,89 +214,49 @@ function wertGleich(a: unknown, b: unknown): boolean {
 // Der Akkumulator des ganzen Einsatzes
 // ---------------------------------------------------------------------------
 
-interface EinsatzWerte {
-  readonly einsatzId: string;
-  readonly name: string;
-  readonly art: EinsatzArt;
-  readonly fuestName: string;
-  readonly uebergeordneteFuestName?: string;
-  readonly beginn: string;
-  readonly schichtmodell: Schichtmodell;
+/** Was der Fold zu **einer** Entitaet haelt. */
+interface EntitaetFaltung {
+  /** Ohne sie ist die Entitaet noch nicht materialisierbar (§3.10). */
+  anlage?: AnlageStand;
+  /** Restpfad unter der Entitaet → die beiden hoechsten Beobachtungen. */
+  readonly felder: Map<string, FeldStand<unknown>>;
 }
 
-interface AbschnittWerte {
-  readonly name: string;
-  readonly abschnittstyp: Abschnittstyp;
-  readonly parentId?: string;
-  readonly reihenfolge: number;
+/** Ein Ereignis, das eine reservierte Id treffen wollte (§5.3.4). */
+interface ReservierterTreffer {
+  readonly id: string;
+  readonly beobachtung: Beobachtung<unknown>;
 }
 
-interface EinheitStammWerte {
-  readonly bezeichnung: string;
-  readonly organisation: Organisation;
-  readonly organisationName?: string;
-  readonly ebene: TaktischeEbene;
-  readonly personalErfassung: PersonalErfassung;
-  readonly status: EinheitStatus;
-  readonly schicht?: Schicht;
-}
-
-/** Die Anlagewerte einer Einheit — alles, was `EinheitGemeldet` setzt. */
-interface EinheitAnlageWerte {
-  readonly stamm: EinheitStammWerte;
-  readonly abschnittId: string;
-  readonly staerke: Staerke;
-}
-
-interface EinheitFaltung {
-  /** Aus `EinheitGemeldet`; ohne sie ist die Einheit noch nicht materialisierbar. */
-  readonly anlage?: AnlageStand<EinheitAnlageWerte>;
-  /** Ausschliesslich aus `EinheitVerschoben`; die Anlage kommt erst beim Materialisieren dazu. */
-  readonly verschiebungen?: FeldStand<string>;
-  /** Ausschliesslich aus `StaerkeGeaendert`; die Anlage kommt erst beim Materialisieren dazu. */
-  readonly staerkemeldungen?: FeldStand<Staerke>;
-}
-
-/**
- * Der Faltungszustand — der Akkumulator, aus dem {@link materialisiere} den
- * Zustand nach §7.4 erzeugt.
- *
- * Er wird nie an die kanonische Serialisierung gereicht; dafuer ist der
- * materialisierte Zustand da. Hier stehen bewusst `Map` und `Set`, weil sie
- * die Aufnahmeoperation billig machen.
- */
 export interface Faltung {
   readonly foldVersion: number;
-  /** Ereigniskatalog §4.1 Regel 2: ein Ereignis mit bereits gefalteter `id` wird verworfen. */
+  /** §3.6: ein Ereignis mit bereits gefalteter `id` wird nicht zweimal verrechnet. */
   readonly gesehen: Set<EreignisId>;
-  /** Die Anlage mit der **kleinsten** HLC gilt (§4.2). */
-  einsatzAnlage?: AnlageStand<EinsatzWerte>;
-  readonly abschnitte: Map<string, AnlageStand<AbschnittWerte>>;
-  readonly einheiten: Map<string, EinheitFaltung>;
-  /** Anlagen, die eine reservierte Abschnitts-Id belegen wollten — Wert ist die Id (§5.3.4). */
-  readonly reservierteId: Map<EreignisId, string>;
+  /** Schluessel ist der Entitaetspfad: `einsatz` oder `<art>/<id>`. */
+  readonly entitaeten: Map<string, EntitaetFaltung>;
+  readonly reservierteId: Map<EreignisId, ReservierterTreffer>;
   readonly unbekannt: Map<EreignisId, UnbekanntesEreignis>;
 }
 
-/** Eine leere Faltung. */
 export function leereFaltung(): Faltung {
   return {
     foldVersion: FOLD_VERSION,
     gesehen: new Set(),
-    abschnitte: new Map(),
-    einheiten: new Map(),
+    entitaeten: new Map(),
     reservierteId: new Map(),
     unbekannt: new Map(),
   };
 }
 
 function kopiere(faltung: Faltung): Faltung {
+  const entitaeten = new Map<string, EntitaetFaltung>();
+  for (const [pfad, eintrag] of faltung.entitaeten) {
+    entitaeten.set(pfad, { anlage: eintrag.anlage, felder: new Map(eintrag.felder) });
+  }
   return {
     foldVersion: faltung.foldVersion,
     gesehen: new Set(faltung.gesehen),
-    einsatzAnlage: faltung.einsatzAnlage,
-    abschnitte: new Map(faltung.abschnitte),
-    einheiten: new Map(faltung.einheiten),
+    entitaeten,
     reservierteId: new Map(faltung.reservierteId),
     unbekannt: new Map(faltung.unbekannt),
   };
@@ -308,147 +266,251 @@ function kopiere(faltung: Faltung): Faltung {
 // Die Aufnahmeoperation
 // ---------------------------------------------------------------------------
 
-function nimmEinsatzAnlage(faltung: Faltung, ereignis: Ereignis & { typ: "EinsatzAngelegt" }): void {
-  faltung.einsatzAnlage = nimmAnlage(faltung.einsatzAnlage, {
+/** Der Entitaetspfad, unter dem eine Art ihre Beobachtungen ablegt (§3.2). */
+function entitaetspfad(eintrag: Katalogeintrag, id: string): string {
+  if (eintrag.entitaet === "einsatz") return "einsatz";
+  if (eintrag.entitaet === "schichtplan") {
+    // §3.10: Der Schichtplan wartet unter dem **Dienstposten**, nicht unter
+    // sich selbst — die fehlende Entitaet ist der Dienstposten.
+    return `dienstposten/${id}`;
+  }
+  return `${eintrag.entitaet}/${id}`;
+}
+
+function alsText(wert: unknown): string | undefined {
+  return typeof wert === "string" && wert.length > 0 ? wert : undefined;
+}
+
+/** Die Id, auf die ein Ereignis zielt — aus dem Nutzlastfeld der Katalogzeile. */
+function idAus(eintrag: Katalogeintrag, nutzlast: unknown): string | undefined {
+  if (typeof nutzlast !== "object" || nutzlast === null) return undefined;
+  return alsText((nutzlast as Record<string, unknown>)[eintrag.idFeld]);
+}
+
+/** Der Restpfad des gesetzten Feldes bei Form (a) (§5.1). */
+function feldpfadAus(eintrag: Katalogeintrag, nutzlast: unknown): string | undefined {
+  const feld = eintrag.feld;
+  if (feld === undefined) return undefined;
+  if (feld.art === "fest") return feld.pfad;
+  if (typeof nutzlast !== "object" || nutzlast === null) return undefined;
+  const name = alsText((nutzlast as Record<string, unknown>)[feld.schluessel]);
+  if (name === undefined) return undefined;
+  if (eintrag.entitaet === "schichtplan") return `schichtplan/${name}`;
+  return feld.praefix === undefined ? name : `${feld.praefix}/${name}`;
+}
+
+function fuegeEin(faltung: Faltung, pfad: string): EntitaetFaltung {
+  const vorhanden = faltung.entitaeten.get(pfad);
+  if (vorhanden !== undefined) return vorhanden;
+  const neu: EntitaetFaltung = { felder: new Map() };
+  faltung.entitaeten.set(pfad, neu);
+  return neu;
+}
+
+function setzeFeld(
+  faltung: Faltung,
+  pfad: string,
+  feld: string,
+  beobachtung: Beobachtung<unknown>,
+): void {
+  const eintrag = fuegeEin(faltung, pfad);
+  eintrag.felder.set(feld, nimmBeobachtung(eintrag.felder.get(feld), beobachtung));
+}
+
+/** Der gemeinsame Rahmenanteil jeder Beobachtung. */
+function rahmenAnteil(ereignis: EingehendesEreignis): Omit<Beobachtung<unknown>, "neu"> {
+  return {
     hlc: ereignis.hlc,
     ereignisId: ereignis.id,
     wanduhr: ereignis.wanduhr,
     ereignisart: ereignis.typ,
-    grund: ereignis.grund,
-    nutzlast: ereignis.nutzlast,
-    neu: {
-      einsatzId: ereignis.nutzlast.einsatzId,
-      name: ereignis.nutzlast.name,
-      art: ereignis.nutzlast.art,
-      fuestName: ereignis.nutzlast.fuestName,
-      uebergeordneteFuestName: ereignis.nutzlast.uebergeordneteFuestName,
-      beginn: ereignis.nutzlast.beginn,
-      schichtmodell: ereignis.nutzlast.schichtmodell,
-    },
-  });
+    ...(ereignis.grund === undefined ? {} : { grund: ereignis.grund }),
+    ...(ereignis.undoOf === undefined ? {} : { undoOf: ereignis.undoOf }),
+  };
 }
 
-function aendereEinheit(
-  faltung: Faltung,
-  einheitId: string,
-  aenderung: (bisher: EinheitFaltung) => EinheitFaltung,
-): void {
-  const bisher = faltung.einheiten.get(einheitId) ?? {};
-  faltung.einheiten.set(einheitId, aenderung(bisher));
+function alsUnbekannt(
+  ereignis: EingehendesEreignis,
+  grund: UnbekanntesEreignis["grund"],
+): UnbekanntesEreignis {
+  return {
+    id: ereignis.id,
+    typ: ereignis.typ,
+    schemaVersion: ereignis.schemaVersion,
+    hlc: ereignis.hlc,
+    akteurBenutzer: ereignis.akteur.benutzer,
+    akteurHost: ereignis.akteur.host,
+    grund,
+  };
+}
+
+/**
+ * Die Formpruefung aus §2.2, als Teil der Gueltigkeit nach §3.7 Punkt 4.
+ *
+ * Ungueltig ist: ein Ereignis der Form (a) **ohne** `neu`, eines der Form (b)
+ * **mit** `neu`, eines der Form (c) mit `neu` oder `vorher` im Rahmen. Der
+ * Wert `null` ist dabei ein gueltiges `neu` („Wert loeschen"); geprueft wird
+ * die Anwesenheit des Schluessels, nicht seine Wahrheit.
+ */
+function formPasst(eintrag: Katalogeintrag, ereignis: EingehendesEreignis): boolean {
+  const hatNeu = "neu" in ereignis;
+  const hatVorher = "vorher" in ereignis;
+  if (eintrag.form === "a") return hatNeu;
+  if (eintrag.form === "b") return !hatNeu;
+  return !hatNeu && !hatVorher;
+}
+
+/**
+ * Die `grund`-Pflicht aus §2.4.
+ *
+ * Die eine Ausnahme haengt am Wert des Rahmenfeldes `neu` und nicht allein an
+ * der Art: `EebMeldungAbgelehnt` mit `neu = false` ist die Ruecknahme der
+ * Ablehnung, und fuer sie ist `grund` frei. Im Nutzlastschema ist das nicht
+ * ausdrueckbar, deshalb steht es hier.
+ */
+function grundPasst(eintrag: Katalogeintrag, ereignis: EingehendesEreignis): boolean {
+  if (eintrag.grundPflicht !== true) return true;
+  if (eintrag.typ === "EebMeldungAbgelehnt" && ereignis.neu === false) return true;
+  return typeof ereignis.grund === "string" && ereignis.grund.length > 0;
+}
+
+/**
+ * Die Feldpfade, die eine Anlage belegt (§2.3).
+ *
+ * Genau die Felder, die ihr Nutzlastschema fuer den Zustand setzt — ohne die
+ * Kennung selbst. **Ein optionales Feld, das in der Nutzlast fehlt, belegt
+ * keinen Pfad**: Die Anlage setzt es nicht auf abwesend, sie aeussert sich
+ * nicht dazu. Sonst ueberschriebe eine nachlaufende Anlage ohne Bemerkung eine
+ * bereits gesetzte Bemerkung mit „leer".
+ */
+function anlageFelder(
+  eintrag: Katalogeintrag,
+  nutzlast: Record<string, unknown>,
+): Map<string, unknown> {
+  const felder = new Map<string, unknown>();
+  for (const [name, wert] of Object.entries(nutzlast)) {
+    if (name === eintrag.idFeld) continue;
+    if (wert === undefined) continue;
+    if (eintrag.anlageUnterpfade?.includes(name) === true) {
+      // Ein Block, dessen Bestandteile je einen eigenen Pfad belegen — die
+      // vier `einsatz/kosten/<feld>`, damit ein spaeteres
+      // `KostenParameterGeaendert` denselben Pfad trifft (§2.3).
+      if (typeof wert === "object" && wert !== null) {
+        for (const [teil, teilwert] of Object.entries(wert as Record<string, unknown>)) {
+          if (teilwert !== undefined) felder.set(`${name}/${teil}`, teilwert);
+        }
+      }
+      continue;
+    }
+    felder.set(name, wert);
+  }
+  return felder;
+}
+
+/** Die beiden reservierten Abschnitts-Ids (§5.3.4). */
+function istReserviert(eintrag: Katalogeintrag, id: string): boolean {
+  return (
+    eintrag.entitaet === "abschnitt" &&
+    (id === AUFFANG_ABSCHNITT_ID || id === ARCHIV_ABSCHNITT_ID)
+  );
 }
 
 function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
-  if (faltung.gesehen.has(ereignis.id)) return; // §4.1 Regel 2
+  if (faltung.gesehen.has(ereignis.id)) return; // §3.6
   faltung.gesehen.add(ereignis.id);
 
-  if (!istBekannteArt(ereignis)) {
-    // §4.1 Regel 4: unbekannte Typen werden durchgereicht, nicht verworfen.
-    faltung.unbekannt.set(ereignis.id, {
-      id: ereignis.id,
-      typ: ereignis.typ,
-      schemaVersion: ereignis.schemaVersion,
-      hlc: ereignis.hlc,
-      akteurBenutzer: ereignis.akteur.benutzer,
-      akteurHost: ereignis.akteur.host,
-      grund: "ART",
+  const eintrag = KATALOG.get(ereignis.typ);
+  if (eintrag === undefined) {
+    // §3.7 Regel 1: unbekannte Arten werden durchgereicht, nicht verworfen.
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "ART"));
+    return;
+  }
+  if (ereignis.schemaVersion > eintrag.nutzlastVersion) {
+    // §3.7 Regel 2: es gibt keinen Downcaster (§4.3).
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "VERSION"));
+    return;
+  }
+
+  const geprueft = eintrag.schema.safeParse(ereignis.nutzlast);
+  if (
+    !geprueft.success ||
+    !formPasst(eintrag, ereignis) ||
+    !grundPasst(eintrag, ereignis) ||
+    idAus(eintrag, ereignis.nutzlast) === undefined
+  ) {
+    // §3.7 Regel 4: der Fold raet nicht und stuerzt nicht ab.
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "SCHEMA"));
+    return;
+  }
+
+  const nutzlast = ereignis.nutzlast as Record<string, unknown>;
+  const id = idAus(eintrag, nutzlast) as string;
+  const rahmen = rahmenAnteil(ereignis);
+
+  if (eintrag.form === "c") {
+    // Die beiden strukturellen Arten kommen in Stufe 3c dazu. Bis dahin
+    // stehen sie unter `unbekannt` und nicht still weg: Ein Fold, der sie
+    // schwiege, verloere eine Aufteilung ohne jede Spur.
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "ART"));
+    return;
+  }
+
+  if (eintrag.entitaet === "archivierungen") {
+    // Die Barriere `EinsatzArchiviert` und ihre Ruecknahme kommen in Stufe 3e
+    // dazu (§7). Bis dahin ebenso sichtbar wie oben.
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "ART"));
+    return;
+  }
+
+  if (istReserviert(eintrag, id)) {
+    // §5.3.4: Anlage **und** jedes aendernde Ereignis auf `AUFFANG` oder
+    // `ARCHIV` sind wirkungslos; beide gehen unter `art: "RESERVIERTE_ID"` in
+    // `verworfeneSchluessel`, damit nichts still verpufft.
+    faltung.reservierteId.set(ereignis.id, {
+      id,
+      beobachtung: {
+        ...rahmen,
+        neu: ereignis.neu,
+        ...("vorher" in ereignis ? { vorher: { wert: ereignis.vorher } } : {}),
+        nutzlast,
+      },
     });
     return;
   }
 
-  switch (ereignis.typ) {
-    case "EinsatzAngelegt":
-      nimmEinsatzAnlage(faltung, ereignis);
-      return;
+  const pfad = entitaetspfad(eintrag, id);
 
-    case "AbschnittAngelegt": {
-      const id = ereignis.nutzlast.abschnittId;
-      if (id === AUFFANG_ABSCHNITT_ID || id === ARCHIV_ABSCHNITT_ID) {
-        // Der Auffang ist systemseitig (Auflage 10). Wuerde eine Anlage ihn
-        // ueberschreiben, koennte sie ihm einen nicht zaehlenden Typ geben —
-        // und die Staerke jeder Einheit, die dort landet, verschwaende aus der
-        // Gesamtstaerke. Die Id ist deshalb reserviert.
-        faltung.reservierteId.set(ereignis.id, id);
-        return;
-      }
-      faltung.abschnitte.set(
-        id,
-        nimmAnlage(faltung.abschnitte.get(id), {
-          hlc: ereignis.hlc,
-          ereignisId: ereignis.id,
-          wanduhr: ereignis.wanduhr,
-          ereignisart: ereignis.typ,
-          grund: ereignis.grund,
-          nutzlast: ereignis.nutzlast,
-          neu: {
-            name: ereignis.nutzlast.name,
-            abschnittstyp: ereignis.nutzlast.abschnittstyp,
-            parentId: ereignis.nutzlast.parentId,
-            reihenfolge: ereignis.nutzlast.reihenfolge,
-          },
-        }),
-      );
-      return;
+  if (eintrag.form === "b") {
+    const eintragDerEntitaet = fuegeEin(faltung, pfad);
+    eintragDerEntitaet.anlage = nimmAnlage(eintragDerEntitaet.anlage, {
+      ...rahmen,
+      neu: nutzlast,
+      nutzlast,
+    });
+    // §3.11: Auch die **verworfene** Anlage belegt ihre Feldpfade nach der
+    // gewoehnlichen Auswahl. Die Beobachtungen gehen deshalb unabhaengig
+    // davon in die Felder, welche Anlage `angelegtDurch` stellt.
+    for (const [name, wert] of anlageFelder(eintrag, nutzlast)) {
+      setzeFeld(faltung, pfad, name, { ...rahmen, neu: wert });
     }
-
-    case "EinheitGemeldet": {
-      const nutzlast = ereignis.nutzlast;
-      aendereEinheit(faltung, nutzlast.einheitId, (bisher) => ({
-        ...bisher,
-        anlage: nimmAnlage(bisher.anlage, {
-          hlc: ereignis.hlc,
-          ereignisId: ereignis.id,
-          wanduhr: ereignis.wanduhr,
-          ereignisart: ereignis.typ,
-          grund: ereignis.grund,
-          nutzlast: ereignis.nutzlast,
-          neu: {
-            stamm: {
-              bezeichnung: nutzlast.bezeichnung,
-              organisation: nutzlast.organisation,
-              organisationName: nutzlast.organisationName,
-              ebene: nutzlast.ebene,
-              personalErfassung: nutzlast.personalErfassung,
-              status: nutzlast.status,
-              schicht: nutzlast.schicht,
-            },
-            abschnittId: nutzlast.abschnittId,
-            staerke: nutzlast.staerke,
-          },
-        }),
-      }));
-      return;
-    }
-
-    case "EinheitVerschoben":
-      aendereEinheit(faltung, ereignis.nutzlast.einheitId, (bisher) => ({
-        ...bisher,
-        verschiebungen: nimmBeobachtung(bisher.verschiebungen, {
-          hlc: ereignis.hlc,
-          ereignisId: ereignis.id,
-          wanduhr: ereignis.wanduhr,
-          ereignisart: ereignis.typ,
-          grund: ereignis.grund,
-          neu: ereignis.neu,
-          vorher: ereignis.vorher,
-        }),
-      }));
-      return;
-
-    case "StaerkeGeaendert":
-      aendereEinheit(faltung, ereignis.nutzlast.einheitId, (bisher) => ({
-        ...bisher,
-        staerkemeldungen: nimmBeobachtung(bisher.staerkemeldungen, {
-          hlc: ereignis.hlc,
-          ereignisId: ereignis.id,
-          wanduhr: ereignis.wanduhr,
-          ereignisart: ereignis.typ,
-          grund: ereignis.grund,
-          neu: ereignis.neu,
-          vorher: ereignis.vorher,
-        }),
-      }));
-      return;
+    return;
   }
+
+  // Form (a): genau ein Feld, der Wert steht im Rahmen (§2.2).
+  const feld = feldpfadAus(eintrag, nutzlast);
+  if (feld === undefined) {
+    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "SCHEMA"));
+    return;
+  }
+  const wert = eintrag.festerWert === undefined ? ereignis.neu : eintrag.festerWert;
+  setzeFeld(faltung, pfad, feld, {
+    ...rahmen,
+    neu: wert,
+    ...("vorher" in ereignis ? { vorher: { wert: ereignis.vorher } } : {}),
+    ...(typeof nutzlast["meldezeit"] === "string"
+      ? { fachlicheZeit: nutzlast["meldezeit"], zeitklasse: "IST" as const }
+      : {}),
+  });
 }
 
 /**
@@ -470,16 +532,21 @@ export function falteAuf(ereignisse: Iterable<EingehendesEreignis>): Faltung {
 }
 
 // ---------------------------------------------------------------------------
-// Materialisierung (§7.4 und §7.6)
+// Materialisierung (§3.2 und §3.8)
 // ---------------------------------------------------------------------------
 
-function beobachtungAus<T>(b: Beobachtung<unknown>, wert: T): Feld<T> {
+function beobachtungAus(b: Beobachtung<unknown>): ZustandsBeobachtung<unknown> {
   return {
-    wert,
+    wert: b.neu === undefined ? null : (b.neu as unknown),
     hlc: b.hlc,
     durch: b.ereignisId,
     ...(b.wanduhr === undefined ? {} : { wanduhr: b.wanduhr }),
-    ...(b.vorher === undefined ? {} : { gesehenerVorher: { wert: b.vorher as T } }),
+    ...(b.fachlicheZeit === undefined ? {} : { fachlicheZeit: b.fachlicheZeit }),
+    ...(b.zeitklasse === undefined ? {} : { zeitklasse: b.zeitklasse }),
+    ...(b.undoOf === undefined ? {} : { undoOf: b.undoOf }),
+    ...(b.vorher === undefined
+      ? {}
+      : { gesehenerVorher: { wert: b.vorher.wert === undefined ? null : b.vorher.wert } }),
   };
 }
 
@@ -490,47 +557,36 @@ function beobachtungAus<T>(b: Beobachtung<unknown>, wert: T): Feld<T> {
  * sich `vorherPasstNicht` nach einem Schnappschuss nicht mehr bilden, und der
  * Rebase nach dem Laden entschiede anders als der volle Fold (P7).
  */
-function feldAus<T>(stand: FeldStand<T>): Feld<T> {
-  const gewinner = beobachtungAus(stand.gewinner, stand.gewinner.neu);
+function feldAus(stand: FeldStand<unknown>): Feld<unknown> {
+  const gewinner = beobachtungAus(stand.gewinner);
   if (stand.zweiter === undefined) return gewinner;
-  return { ...gewinner, zweiter: beobachtungAus(stand.zweiter, stand.zweiter.neu) };
-}
-
-function feld<T>(beobachtung: Beobachtung<unknown>, wert: T): Feld<T> {
-  return beobachtungAus(beobachtung, wert);
-}
-
-/** `undefined` bleibt `undefined` — §7.6 laesst Felder ohne Wert weg, statt `null` zu schreiben. */
-function feldOptional<T>(
-  beobachtung: Beobachtung<unknown>,
-  wert: T | undefined,
-): Feld<T> | undefined {
-  return wert === undefined ? undefined : beobachtungAus(beobachtung, wert);
+  return { ...gewinner, zweiter: beobachtungAus(stand.zweiter) };
 }
 
 /**
- * Prueft den gesehenen Vorher-Wert des Gewinners gegen das, was der
- * naechstniedrigere Schreiber gesetzt hat (§2.2a, Auflage 6).
+ * Prueft den gesehenen Vorher-Wert des Gewinners gegen die zweithoechste
+ * Beobachtung (§2.2a, Auflage 6).
  *
- * Ohne zweite Beobachtung gibt es nichts, was dem gesehenen Wert
- * widerspraeche — dann auch keinen Hinweis.
+ * Ohne zweithoechste Beobachtung kein Hinweis: Es gibt nichts, dem die
+ * Behauptung des Schreibers widerspraeche — niemandes Arbeit wurde verdraengt.
+ * Der Fold prueft Verdraengung, nicht Wahrhaftigkeit.
  *
- * Der Akkumulator haelt je Feld zwei Beobachtungen; damit erhaelt bei drei und
- * mehr nebenlaeufigen Schreibern nur der zweithoechste einen Hinweis, die
- * darunter nicht. Das ist keine Bequemlichkeit, sondern folgt aus §3.1: Ein
- * Schnappschuss traegt den Zustand samt Feld-HLC, nicht den Ereignisstrom —
- * ein Akkumulator, der alle Beobachtungen braeuchte, waere aus einem
- * Schnappschuss nicht wiederherstellbar. KONZEPT-EREIGNISSE.md §8.2 fuehrt die
- * Schranke als Nicht-Zusicherung.
+ * Der Akkumulator haelt je Feld zwei Beobachtungen; bei drei und mehr
+ * nebenlaeufigen Schreibern erhaelt nur der zweithoechste einen Hinweis. Das
+ * folgt aus §3.1 — ein Schnappschuss traegt den Zustand, nicht den
+ * Ereignisstrom — und steht in §8.2 als Nicht-Zusicherung.
  */
-function vorherHinweis<T>(stand: FeldStand<T>, feldpfad: string): Konflikthinweis | undefined {
+function vorherHinweis(
+  stand: FeldStand<unknown>,
+  feldpfad: string,
+): Konflikthinweis | undefined {
   const { gewinner, zweiter } = stand;
-  if (zweiter === undefined) return undefined; // nichts, was dem Gewinner widerspraeche
+  if (zweiter === undefined) return undefined;
 
   if (gewinner.vorher === undefined) {
-    // Der Gewinner hat keinen Vorher-Wert mitgefuehrt — das ist die Anlage —
-    // und verdraengt trotzdem eine Aenderung. Er kann sie nicht gesehen haben;
-    // ohne Hinweis waere das genau das stille Verwerfen, das §2.3 ausschliesst.
+    // Der Gewinner hat keinen Vorher-Wert mitgefuehrt — das ist die Anlage
+    // (§2.3) — und verdraengt trotzdem eine Aenderung. Er kann sie nicht
+    // gesehen haben; ohne Hinweis waere das stilles Verwerfen.
     return wertGleich(gewinner.neu, zweiter.neu)
       ? undefined
       : {
@@ -542,22 +598,19 @@ function vorherHinweis<T>(stand: FeldStand<T>, feldpfad: string): Konflikthinwei
         };
   }
 
-  if (wertGleich(gewinner.vorher, zweiter.neu)) return undefined;
+  if (wertGleich(gewinner.vorher.wert, zweiter.neu)) return undefined;
   return {
     art: "vorherPasstNicht",
     feldpfad,
     gewinner: gewinner.ereignisId,
     verdraengt: zweiter.ereignisId,
-    gesehen: gewinner.vorher as KanonischerWert,
+    gesehen: gewinner.vorher.wert as KanonischerWert,
     verdraengterWert: zweiter.neu as KanonischerWert,
   };
 }
 
-/**
- * Die verworfenen Anlagen einer Entitaet, wie §3.2 sie im Zustand haelt —
- * nach `durch` geordnet, damit die Serialisierung stabil ist.
- */
-function verworfeneAnlagenAus<T>(stand: AnlageStand<T>): VerworfeneAnlage[] {
+/** Die verworfenen Anlagen einer Entitaet (§3.2), nach `durch` geordnet. */
+function verworfeneAnlagenAus(stand: AnlageStand): VerworfeneAnlage[] {
   return [...stand.verworfen.values()]
     .map((b) => ({
       durch: b.ereignisId,
@@ -574,12 +627,12 @@ function verworfeneAnlagenAus<T>(stand: AnlageStand<T>): VerworfeneAnlage[] {
  *
  * **Auch bei Inhaltsgleichheit.** Zwei Clients, die dieselbe Einheit gleich
  * anlegen, sind eine Auskunft ueber die Lage der Arbeitsplaetze — anders als
- * bei den Inhaltsschluesseln aus §3.6, wo dieselbe Meldung zweimal zu scannen
- * ein Alltagsvorgang ist (T100, T52).
+ * bei den Inhaltsschluesseln aus §3.6, wo dasselbe zweimal zu scannen ein
+ * Alltagsvorgang ist (T100, T52).
  */
 function anlageHinweise(
   feldpfad: string,
-  stand: AnlageStand<unknown>,
+  stand: AnlageStand,
   verworfene: readonly VerworfeneAnlage[],
 ): Konflikthinweis[] {
   return verworfene.map((v) => ({
@@ -594,13 +647,7 @@ function anlageHinweise(
 }
 
 /** Die Anlagedaten, die §3.2 an jeder Entitaet verlangt. */
-function anlageAus<T>(stand: AnlageStand<T>): {
-  angelegtDurch: EreignisId;
-  angelegtMit: Hlc;
-  angelegtMitNutzlast: KanonischerWert;
-  angelegtMitArt: string;
-  angelegtMitGrund?: string;
-} {
+function anlageAus(stand: AnlageStand): Record<string, unknown> {
   const g = stand.gewinner;
   return {
     angelegtDurch: g.ereignisId,
@@ -611,31 +658,66 @@ function anlageAus<T>(stand: AnlageStand<T>): {
   };
 }
 
-function idsAus(...staende: ReadonlyArray<FeldStand<unknown> | undefined>): EreignisId[] {
-  const ids = new Set<EreignisId>();
-  for (const stand of staende) {
-    if (stand === undefined) continue;
-    ids.add(stand.gewinner.ereignisId);
-    if (stand.zweiter !== undefined) ids.add(stand.zweiter.ereignisId);
+/**
+ * Setzt einen Restpfad mit `/` als verschachteltes Objekt (§3.2).
+ *
+ * Betrifft `einsatz/kosten/<feld>` und `einheit/logistik/<feld>`: Der Zustand
+ * fuehrt sie als Block, der Katalog als eigenen Feldpfad je Bestandteil —
+ * damit ein spaeteres `KostenParameterGeaendert` denselben Pfad trifft (§2.3).
+ */
+function setzeVerschachtelt(ziel: Record<string, unknown>, pfad: string, wert: unknown): void {
+  const teile = pfad.split("/");
+  let ebene = ziel;
+  for (const teil of teile.slice(0, -1)) {
+    const vorhanden = ebene[teil];
+    if (typeof vorhanden !== "object" || vorhanden === null) {
+      ebene[teil] = Object.create(null) as Record<string, unknown>;
+    }
+    ebene = ebene[teil] as Record<string, unknown>;
   }
-  return [...ids].sort(vergleicheNachCodepunkt);
+  ebene[teile[teile.length - 1] as string] = wert;
 }
+
+/** Die offenen Wertebereiche und ihre bekannten Werte (§3.7). */
+const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["einheit.status", new Set<string>(EINHEIT_STATUS)],
+  ["einheit.schicht", new Set<string>(SCHICHTEN)],
+  ["einheit.organisation", new Set<string>(ORGANISATIONEN)],
+  ["einheit.ebene", new Set<string>(TAKTISCHE_EBENEN)],
+  ["abschnitt.typ", new Set<string>(ABSCHNITTSTYPEN)],
+]);
+
+/**
+ * Felder, deren Wert auf eine andere Entitaet verweist (§3.10).
+ *
+ * Das Feld wird **gefaltet und behalten** — der Verweis ist der gemeldete
+ * Wert —, die Entitaet erscheint, und es entsteht `fremdreferenzUnbekannt`.
+ * Eine Person ohne bekannte Einheit ist eine reale Meldung.
+ */
+const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
+  ["person.einheitId", "einheit"],
+  ["fahrzeug.einheitId", "einheit"],
+  ["auftrag.einheitId", "einheit"],
+  ["anforderung.abzuloesendeEinheitId", "einheit"],
+  ["anhang.einheitId", "einheit"],
+]);
 
 /**
  * Die beiden systemseitigen Abschnitte (§5.3.4).
  *
  * Sie entstehen ohne Ereignis; deshalb tragen sie weder eine echte Feld-HLC
- * noch eine Ereignis-Id noch eine Wanduhr. Die Platzhalter-HLC steht nur in
- * ihren Feldern und wird nirgends verglichen — beide nehmen an keinem Konflikt
- * teil, weil ihre Ids reserviert sind.
+ * noch eine Ereignis-Id noch eine Wanduhr — eine erfundene Ereignis-Id waere
+ * eine, die `zerlegeEreignisId` zu Recht zurueckwiese. Die Platzhalter-HLC
+ * steht nur in ihren Feldern und wird nirgends verglichen: Beide nehmen an
+ * keinem Konflikt teil, weil ihre Ids reserviert sind.
  */
 const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" };
 
-/** Die acht Abschnittstypen aus §5.3.3; `ANGEFORDERT` und `ARCHIV` zaehlen nicht. */
+/** `ANGEFORDERT` und `ARCHIV` zaehlen nicht; ein **unbekannter** Typ zaehlt (§3.7). */
 const NICHT_ZAEHLENDE_TYPEN: ReadonlySet<string> = new Set(["ANGEFORDERT", "ARCHIV"]);
 
-function zaehlt(typ: string): boolean {
-  return !NICHT_ZAEHLENDE_TYPEN.has(typ);
+function zaehltTyp(typ: unknown): boolean {
+  return typeof typ === "string" ? !NICHT_ZAEHLENDE_TYPEN.has(typ) : true;
 }
 
 const AUFFANG: AbschnittZustand = {
@@ -652,9 +734,11 @@ const AUFFANG: AbschnittZustand = {
 const ARCHIV: AbschnittZustand = {
   id: ARCHIV_ABSCHNITT_ID,
   angelegtMit: SYSTEM_HLC,
-  name: { wert: "Archiv", hlc: SYSTEM_HLC },
+  // Der Name folgt der Excel (`Staerke!B431`), die Reihenfolge setzt das
+  // Archiv ans Ende jeder Sortierung (§5.3.4).
+  name: { wert: "Einsatz beendet", hlc: SYSTEM_HLC },
   typ: { wert: "ARCHIV", hlc: SYSTEM_HLC },
-  reihenfolge: { wert: Number.MAX_SAFE_INTEGER, hlc: SYSTEM_HLC },
+  reihenfolge: { wert: 999999, hlc: SYSTEM_HLC },
   verworfeneAnlagen: [],
   systemAbschnitt: true,
   zaehltInGesamtstaerke: false,
@@ -669,12 +753,11 @@ function sortierteSchluessel<T>(quelle: ReadonlyMap<string, T>): string[] {
  * Baut aus einer Map die Datensammlung des Zustands: Schluessel in
  * Codepoint-Ordnung, **ohne Prototyp**.
  *
- * Der fehlende Prototyp ist kein Feinschliff. Eine Abschnitts- oder
- * Einheiten-Id ist eine Nutzlast aus einer fremden Datei; heisst sie
- * `__proto__`, waere `sammlung[id] = wert` an einem gewoehnlichen Objekt kein
- * Eintrag, sondern ein Aufruf des Prototyp-Setzers. Der Abschnitt verschwaende
- * spurlos, die Einheit ebenso — und P5 waere trivial erfuellt, weil es die
- * Einheit gar nicht mehr gaebe.
+ * Der fehlende Prototyp ist kein Feinschliff. Eine Entitaets-Id ist Nutzlast
+ * aus einer fremden Datei; heisst sie `__proto__`, waere `sammlung[id] = wert`
+ * an einem gewoehnlichen Objekt kein Eintrag, sondern ein Aufruf des
+ * Prototyp-Setzers — die Entitaet verschwaende spurlos, und P5 waere trivial
+ * erfuellt, weil es sie gar nicht mehr gaebe.
  */
 function alsDatensammlung<T>(quelle: ReadonlyMap<string, T>): { readonly [id: string]: T } {
   const sammlung = Object.create(null) as Record<string, T>;
@@ -684,9 +767,68 @@ function alsDatensammlung<T>(quelle: ReadonlyMap<string, T>): { readonly [id: st
   return sammlung;
 }
 
-/** Eine leere Datensammlung — die Zielstruktur haelt sie vor, auch wenn sie leer bleibt. */
 function leereSammlung<T>(): { readonly [id: string]: T } {
   return Object.create(null) as Record<string, T>;
+}
+
+/** `true`, wenn ein Feld einen Wert traegt, der weder `null` noch `false` ist (§5.6.2). */
+function gilt(feld: Feld<unknown> | undefined): boolean {
+  return feld !== undefined && feld.wert !== null && feld.wert !== false;
+}
+
+interface GebauteEntitaet {
+  readonly art: string;
+  readonly id: string;
+  readonly werte: Record<string, unknown>;
+  readonly felder: ReadonlyMap<string, Feld<unknown>>;
+}
+
+/**
+ * Baut eine Entitaet aus ihren Feldern und ihrer Anlage.
+ *
+ * Generisch und nicht je Art, weil der Katalog die Feldnamen festlegt: Was
+ * §5 als Feldpfad nennt, ist ein `Feld<T>` unter demselben Namen (§3.2). Die
+ * abgeleiteten Merkmale kommen danach je Art dazu; sie sind die einzige
+ * Stelle, an der der Fold ueber die Tabelle hinaus etwas weiss.
+ */
+function baueEntitaet(
+  art: string,
+  id: string,
+  eintrag: EntitaetFaltung,
+  hinweise: Konflikthinweis[],
+): GebauteEntitaet {
+  const anlage = eintrag.anlage as AnlageStand;
+  const verworfeneAnlagen = verworfeneAnlagenAus(anlage);
+  const pfadDerEntitaet = art === "einsatz" ? "einsatz" : `${art}/${id}`;
+
+  const werte: Record<string, unknown> = { ...anlageAus(anlage) };
+  if (art !== "einsatz") werte["id"] = id;
+  // `Meldung` und `Anhang` gehen ueber den Inhaltsschluessel und legen ihre
+  // Verlierer in `verworfeneSchluessel` ab, tragen also **kein**
+  // `verworfeneAnlagen` (§3.2).
+  if (art !== "meldung" && art !== "anhang") werte["verworfeneAnlagen"] = verworfeneAnlagen;
+
+  const felder = new Map<string, Feld<unknown>>();
+  for (const name of sortierteSchluessel(eintrag.felder)) {
+    const stand = eintrag.felder.get(name) as FeldStand<unknown>;
+    const feld = feldAus(stand);
+    felder.set(name, feld);
+    setzeVerschachtelt(werte, name, feld);
+
+    const feldpfad = `${pfadDerEntitaet}/${name}`;
+    const hinweis = vorherHinweis(stand, feldpfad);
+    if (hinweis !== undefined) hinweise.push(hinweis);
+
+    // §2.2a: Wertbezogene Hinweise entstehen nur am **Gewinner** eines Feldes.
+    const bekannte = OFFENE_BEREICHE.get(`${art}.${name}`);
+    if (bekannte !== undefined && typeof feld.wert === "string" && !bekannte.has(feld.wert)) {
+      hinweise.push({ art: "unbekannterWert", feldpfad, wert: feld.wert });
+    }
+  }
+
+  hinweise.push(...anlageHinweise(pfadDerEntitaet, anlage, verworfeneAnlagen));
+
+  return { art, id, werte, felder };
 }
 
 /**
@@ -694,191 +836,276 @@ function leereSammlung<T>(): { readonly [id: string]: T } {
  *
  * Rein und ohne Zustand: derselbe Akkumulator ergibt immer denselben Zustand,
  * und zwar bis in die Schluesselreihenfolge der Datensammlungen hinein.
- *
- * Sortiert wird hier ausschliesslich zur Ausgabe bereits feststehender
- * Mengen; keine dieser Sortierungen entscheidet einen Konflikt (siehe
- * Modulkopf zu Auflage 18).
  */
 export function materialisiere(faltung: Faltung): Zustand {
   const hinweise: Konflikthinweis[] = [];
   const wartend = new Map<string, WartendeBeobachtung[]>();
+  const gebaut = new Map<string, Map<string, GebauteEntitaet>>();
 
-  let einsatz: EinsatzZustand | undefined;
-  const einsatzAnlage = faltung.einsatzAnlage;
-  if (einsatzAnlage !== undefined) {
-    const anlage = einsatzAnlage.gewinner;
-    const verworfeneAnlagen = verworfeneAnlagenAus(einsatzAnlage);
-    einsatz = {
-      ...anlageAus(einsatzAnlage),
-      id: anlage.neu.einsatzId,
-      name: feld(anlage, anlage.neu.name),
-      art: feld(anlage, anlage.neu.art),
-      fuestName: feld(anlage, anlage.neu.fuestName),
-      uebergeordneteFuestName: feldOptional(anlage, anlage.neu.uebergeordneteFuestName),
-      beginn: feld(anlage, anlage.neu.beginn),
-      schichtmodell: feld(anlage, anlage.neu.schichtmodell),
-      kosten: {},
-      verworfeneAnlagen,
-      status: "AKTIV",
-    };
-    hinweise.push(...anlageHinweise("einsatz", einsatzAnlage, verworfeneAnlagen));
-  }
+  for (const pfad of sortierteSchluessel(faltung.entitaeten)) {
+    const eintrag = faltung.entitaeten.get(pfad) as EntitaetFaltung;
+    const trenner = pfad.indexOf("/");
+    const art = trenner === -1 ? pfad : pfad.slice(0, trenner);
+    const id = trenner === -1 ? pfad : pfad.slice(trenner + 1);
 
-  for (const [verworfen, id] of faltung.reservierteId) {
-    hinweise.push({
-      art: "reservierteIdVerworfen",
-      feldpfad: `abschnitt/${id}`,
-      verworfen,
-      id,
-    });
-  }
-
-  const gebaut = new Map<string, AbschnittZustand>([
-    [AUFFANG_ABSCHNITT_ID, AUFFANG],
-    [ARCHIV_ABSCHNITT_ID, ARCHIV],
-  ]);
-  for (const [id, stand] of faltung.abschnitte) {
-    const g = stand.gewinner;
-    const verworfeneAnlagen = verworfeneAnlagenAus(stand);
-    gebaut.set(id, {
-      ...anlageAus(stand),
-      id,
-      name: feld(g, g.neu.name),
-      typ: feld(g, g.neu.abschnittstyp),
-      parentId: feldOptional(g, g.neu.parentId),
-      reihenfolge: feld(g, g.neu.reihenfolge),
-      verworfeneAnlagen,
-      zaehltInGesamtstaerke: zaehlt(g.neu.abschnittstyp),
-    });
-    hinweise.push(...anlageHinweise(`abschnitt/${id}`, stand, verworfeneAnlagen));
-  }
-  const abschnitte = alsDatensammlung(gebaut);
-
-  const gebauteEinheiten = new Map<string, EinheitZustand>();
-  for (const id of sortierteSchluessel(faltung.einheiten)) {
-    const faltungDerEinheit = faltung.einheiten.get(id) as EinheitFaltung;
-    const { anlage, verschiebungen, staerkemeldungen } = faltungDerEinheit;
-    if (anlage === undefined) {
-      // Feldaenderungen ohne Anlage: die Beobachtungen warten sichtbar im
-      // Zustand und wirken, sobald das `EinheitGemeldet` eintrifft (§3.10).
+    if (eintrag.anlage === undefined) {
+      // §3.10: Ohne eigene Anlage gibt es die Entitaet nicht; sie zu zeigen
+      // hiesse, ihre Pflichtfelder zu erfinden. Die Beobachtungen warten
+      // sichtbar und wirken unveraendert, sobald die Anlage eintrifft.
       const wartende: WartendeBeobachtung[] = [];
-      if (verschiebungen !== undefined) {
-        wartende.push({
-          feld: "abschnittId",
-          beobachtung: feldAus(verschiebungen) as never,
-        });
+      const ids = new Set<EreignisId>();
+      for (const name of sortierteSchluessel(eintrag.felder)) {
+        const stand = eintrag.felder.get(name) as FeldStand<unknown>;
+        wartende.push({ feld: name, beobachtung: feldAus(stand) });
+        ids.add(stand.gewinner.ereignisId);
+        if (stand.zweiter !== undefined) ids.add(stand.zweiter.ereignisId);
       }
-      if (staerkemeldungen !== undefined) {
-        wartende.push({ feld: "staerke", beobachtung: feldAus(staerkemeldungen) as never });
-      }
-      wartend.set(`einheit/${id}`, wartende);
+      if (wartende.length === 0) continue;
+      wartend.set(pfad, wartende);
+      // Nur die Ids, die `wartend` **haelt** — nicht die aller je
+      // eingetroffenen. Sonst hinge der Inhalt daran, ob dieser Client voll
+      // gefaltet oder aus einem Schnappschuss geladen hat, und P7 fiele.
       hinweise.push({
         art: "anlageFehlt",
-        feldpfad: `einheit/${id}`,
-        wartende: idsAus(verschiebungen, staerkemeldungen),
+        feldpfad: pfad,
+        wartende: [...ids].sort(vergleicheNachCodepunkt),
       });
       continue;
     }
 
-    const g = anlage.gewinner;
-    // Die Anlage setzt `abschnittId` und `staerke` mit, aber ohne gesehenen
-    // Vorher-Wert — es gab vorher nichts zu sehen. Sie wird erst hier mit den
-    // Feldaenderungen zusammengefuehrt, damit eine verworfene zweite Anlage
-    // die spaetere Arbeit an der Einheit nicht ueberschreiben kann.
-    const abschnittStand = nimmBeobachtung(verschiebungen, {
-      hlc: g.hlc,
-      ereignisId: g.ereignisId,
-      wanduhr: g.wanduhr,
-      ereignisart: g.ereignisart,
-      neu: g.neu.abschnittId,
-    });
-    const staerkeStand = nimmBeobachtung(staerkemeldungen, {
-      hlc: g.hlc,
-      ereignisId: g.ereignisId,
-      wanduhr: g.wanduhr,
-      ereignisart: g.ereignisart,
-      neu: g.neu.staerke,
-    });
+    const entitaet = baueEntitaet(art, id, eintrag, hinweise);
+    const nachArt = gebaut.get(art) ?? new Map<string, GebauteEntitaet>();
+    nachArt.set(id, entitaet);
+    gebaut.set(art, nachArt);
+  }
 
-    const gewaehlt = abschnittStand.gewinner.neu;
-    const existiert = Object.hasOwn(abschnitte, gewaehlt);
-    if (!existiert) {
+  for (const { verworfen, treffer } of [...faltung.reservierteId].map(([verworfen, treffer]) => ({
+    verworfen,
+    treffer,
+  }))) {
+    // §5.3.4: Der `feldpfad` ist **immer** der Pfad der Entitaet — auch bei
+    // einem aendernden Ereignis, das einen Feldpfad benennt: gesetzt wurde ja
+    // keines. Welche Art verworfen wurde, steht im Eintrag, nicht im Hinweis.
+    hinweise.push({
+      art: "reservierteIdVerworfen",
+      feldpfad: `abschnitt/${treffer.id}`,
+      verworfen,
+      id: treffer.id,
+    });
+  }
+
+  // --- Abschnitte, einschliesslich der beiden systemseitigen --------------
+  const abschnitte = new Map<string, AbschnittZustand>([
+    [AUFFANG_ABSCHNITT_ID, AUFFANG],
+    [ARCHIV_ABSCHNITT_ID, ARCHIV],
+  ]);
+  for (const [id, entitaet] of gebaut.get("abschnitt") ?? []) {
+    abschnitte.set(id, {
+      ...entitaet.werte,
+      zaehltInGesamtstaerke: zaehltTyp(entitaet.felder.get("typ")?.wert),
+      ...(entitaet.felder.get("parentId")?.wert === undefined ||
+      entitaet.felder.get("parentId")?.wert === null
+        ? {}
+        : { wirksamerParentId: entitaet.felder.get("parentId")?.wert as string }),
+    } as unknown as AbschnittZustand);
+  }
+
+  // --- Einheiten ----------------------------------------------------------
+  const einheiten = new Map<string, unknown>();
+  for (const [id, entitaet] of gebaut.get("einheit") ?? []) {
+    const gemeldet = entitaet.felder.get("abschnittId")?.wert;
+    const existiert = typeof gemeldet === "string" && abschnitte.has(gemeldet);
+    if (!existiert && typeof gemeldet === "string") {
+      // Auflage 10: Die Staerke einer real gemeldeten Einheit darf nicht
+      // dadurch aus der Gesamtstaerke fallen, dass ein Ereignis noch fehlt.
       hinweise.push({
         art: "abschnittUnbekannt",
         feldpfad: `einheit/${id}/abschnittId`,
-        gemeldeterAbschnittId: gewaehlt,
+        gemeldeterAbschnittId: gemeldet,
       });
     }
-    const wirksamerAbschnittId = existiert ? gewaehlt : AUFFANG_ABSCHNITT_ID;
-    const staerke = staerkeStand.gewinner.neu;
-    const verworfeneAnlagen = verworfeneAnlagenAus(anlage);
-
-    gebauteEinheiten.set(id, {
-      ...anlageAus(anlage),
-      id,
-      abschnittId: feldAus(abschnittStand),
-      reihenfolge: feld(g, 0),
-      bezeichnung: feld(g, g.neu.stamm.bezeichnung),
-      organisation: feld(g, g.neu.stamm.organisation),
-      organisationName: feldOptional(g, g.neu.stamm.organisationName),
-      ebene: feld(g, g.neu.stamm.ebene),
-      staerke: feldAus(staerkeStand),
-      personalErfassung: feld(g, g.neu.stamm.personalErfassung),
-      status: feld(g, g.neu.stamm.status),
-      schicht: feldOptional(g, g.neu.stamm.schicht),
-      logistik: leereSammlung<Feld<number>>(),
-      verworfeneAnlagen,
+    const wirksamerAbschnittId = existiert ? (gemeldet as string) : AUFFANG_ABSCHNITT_ID;
+    const staerke = (entitaet.felder.get("staerke")?.wert ?? {
+      fuehrer: 0,
+      unterfuehrer: 0,
+      mannschaft: 0,
+    }) as Staerke;
+    const entfernt = gilt(entitaet.felder.get("entfernt"));
+    einheiten.set(id, {
+      ...entitaet.werte,
+      logistik: (entitaet.werte["logistik"] as Record<string, unknown>) ?? leereSammlung(),
       wirksamerAbschnittId,
+      // Die strukturellen Arten kommen in Stufe 3c dazu; bis dahin ist die
+      // wirksame Staerke die gemeldete.
       wirksameStaerkeRechnerisch: staerke,
       wirksameStaerke: staerkeGeklemmt(staerke),
       wirksamAufgegangen: false,
-      zaehlt: (abschnitte[wirksamerAbschnittId]?.zaehltInGesamtstaerke ?? false),
+      zaehlt:
+        !entfernt && (abschnitte.get(wirksamerAbschnittId)?.zaehltInGesamtstaerke ?? false),
     });
-
-    hinweise.push(...anlageHinweise(`einheit/${id}`, anlage, verworfeneAnlagen));
-
-    const abschnittHinweis = vorherHinweis(abschnittStand, `einheit/${id}/abschnittId`);
-    if (abschnittHinweis !== undefined) hinweise.push(abschnittHinweis);
-    const staerkeHinweis = vorherHinweis(staerkeStand, `einheit/${id}/staerke`);
-    if (staerkeHinweis !== undefined) hinweise.push(staerkeHinweis);
   }
 
-  // `hinweise` ist eine **Menge** (§3.8): bytegleiche Eintraege fallen zusammen,
-  // sonst haenge ihre Zahl daran, wie oft eine Umsetzung die Ableitung aufruft.
-  const nachSerialisierung = new Map<string, Konflikthinweis>();
-  for (const hinweis of hinweise) {
-    nachSerialisierung.set(
-      kanonischeSerialisierung(hinweis as unknown as KanonischerWert),
-      hinweis,
+  // --- Die uebrigen Entitaeten -------------------------------------------
+  const sammlung = (art: string): Map<string, unknown> => {
+    const ergebnis = new Map<string, unknown>();
+    for (const [id, entitaet] of gebaut.get(art) ?? []) ergebnis.set(id, entitaet.werte);
+    return ergebnis;
+  };
+
+  const fahrzeuge = new Map<string, unknown>();
+  for (const [id, entitaet] of gebaut.get("fahrzeug") ?? []) {
+    const gemeldet = entitaet.felder.get("abschnittId")?.wert;
+    fahrzeuge.set(id, {
+      ...entitaet.werte,
+      // §5.3.3: Den Auffang bekommt ein Fahrzeug **nie** — der ist eine
+      // Zusicherung ueber Staerkezahlen, und ein Fahrzeug traegt keine. Es
+      // behaelt seinen eigenen `abschnittId`.
+      wirksamerAbschnittId: typeof gemeldet === "string" ? gemeldet : "",
+    });
+  }
+
+  const anforderungen = new Map<string, unknown>();
+  for (const [id, entitaet] of gebaut.get("anforderung") ?? []) {
+    // §5.6.2, die Zustandsmaschine, gegen die P6 misst.
+    const zustand = gilt(entitaet.felder.get("erledigung"))
+      ? "EINGETROFFEN"
+      : gilt(entitaet.felder.get("storno"))
+        ? "STORNIERT"
+        : gilt(entitaet.felder.get("zusage"))
+          ? "ZUGESAGT"
+          : "OFFEN";
+    anforderungen.set(id, { ...entitaet.werte, zustand });
+  }
+
+  // --- Meldungen: die Revisionsreihe (§5.8.1) -----------------------------
+  const meldungen = new Map<string, unknown>();
+  const meldungsListe = [...(gebaut.get("meldung") ?? [])];
+  for (const [id, entitaet] of meldungsListe) {
+    const schluessel = entitaet.felder.get("einheitSchluessel")?.wert;
+    const stand = entitaet.felder.get("stand")?.wert;
+    // „Juenger" heisst innerhalb der Reihe nach `stand`, nicht nach HLC
+    // (§2.6): Ein nachgescannter Papierbogen von gestern hat die hoehere HLC
+    // und den aelteren `stand`.
+    const juengere = meldungsListe.some(
+      ([fremdeId, fremde]) =>
+        fremdeId !== id &&
+        typeof schluessel === "string" &&
+        fremde.felder.get("einheitSchluessel")?.wert === schluessel &&
+        typeof stand === "string" &&
+        typeof fremde.felder.get("stand")?.wert === "string" &&
+        (fremde.felder.get("stand")?.wert as string) > stand,
     );
+    const uebernahmeZustand =
+      entitaet.felder.get("abgelehnt")?.wert === true
+        ? "ABGELEHNT"
+        : !gilt(entitaet.felder.get("uebernahme"))
+          ? "NEU"
+          : juengere
+            ? "GEAENDERT"
+            : "UEBERNOMMEN";
+    meldungen.set(id, { ...entitaet.werte, uebernahmeZustand });
+  }
+
+  // --- Fremdreferenzen (§3.10) -------------------------------------------
+  for (const [art, nachArt] of gebaut) {
+    for (const [id, entitaet] of nachArt) {
+      for (const [name, feld] of entitaet.felder) {
+        const zielart = FREMDREFERENZEN.get(`${art}.${name}`);
+        if (zielart === undefined) continue;
+        if (typeof feld.wert !== "string") continue;
+        const vorhanden = zielart === "einheit" ? einheiten.has(feld.wert) : false;
+        if (!vorhanden) {
+          hinweise.push({
+            art: "fremdreferenzUnbekannt",
+            feldpfad: `${art}/${id}/${name}`,
+            verweistAuf: feld.wert,
+          });
+        }
+      }
+    }
+  }
+
+  // --- Einsatz ------------------------------------------------------------
+  const einsatzGebaut = gebaut.get("einsatz")?.get("einsatz");
+  const einsatz =
+    einsatzGebaut === undefined
+      ? undefined
+      : {
+          ...einsatzGebaut.werte,
+          kosten: (einsatzGebaut.werte["kosten"] as Record<string, unknown>) ?? leereSammlung(),
+          // §7.1: Die Kennung stammt aus der geltenden Anlage und ist das
+          // einzige abgeleitete Kennungsfeld.
+          id:
+            ((einsatzGebaut.werte["angelegtMitNutzlast"] as Record<string, unknown>)?.[
+              "einsatzId"
+            ] as string) ?? "",
+          // `ARCHIVIERT` kommt mit der Barriere in Stufe 3e dazu (§7).
+          status: gilt(einsatzGebaut.felder.get("ende")) ? "BEENDET" : "AKTIV",
+        };
+
+  // --- Kappung (§3.2, Startwert S12) --------------------------------------
+  const gekappt = <T extends { readonly id: string }>(werte: readonly T[]): T[] =>
+    [...werte].sort((a, b) => vergleicheNachCodepunkt(a.id, b.id)).slice(0, KAPPUNG_MAX);
+
+  const unbekannt = gekappt([...faltung.unbekannt.values()]);
+
+  const verworfeneSchluessel: VerworfenerSchluessel[] = [...faltung.reservierteId]
+    .map(([verworfen, treffer]) => ({
+      art: "RESERVIERTE_ID" as const,
+      schluessel: treffer.id,
+      verworfen,
+      hlc: treffer.beobachtung.hlc,
+      ereignisart: treffer.beobachtung.ereignisart ?? "",
+      inhalt: (treffer.beobachtung.nutzlast ?? {}) as KanonischerWert,
+      ...(treffer.beobachtung.neu === undefined
+        ? {}
+        : { neu: treffer.beobachtung.neu as KanonischerWert }),
+      ...(treffer.beobachtung.vorher === undefined
+        ? {}
+        : { vorher: treffer.beobachtung.vorher.wert as KanonischerWert }),
+      ...(treffer.beobachtung.grund === undefined ? {} : { grund: treffer.beobachtung.grund }),
+    }))
+    .sort((a, b) => vergleicheNachCodepunkt(a.verworfen, b.verworfen))
+    .slice(0, KAPPUNG_MAX);
+  const behalten = new Set(verworfeneSchluessel.map((v) => v.verworfen));
+
+  // §3.2 Schranke 2: Mit dem Eintrag faellt sein Hinweis — das ist gewollt und
+  // in §8.2 benannt. Der Hinweis liest **denselben** Eintrag, nicht einen
+  // anderen Zustandsteil; genau das macht die Kappung zulaessig.
+  const uebrige = hinweise.filter(
+    (h) => h.art !== "reservierteIdVerworfen" || behalten.has(h.verworfen),
+  );
+
+  // `hinweise` ist eine **Menge** (§3.8): bytegleiche Eintraege fallen
+  // zusammen, sonst haenge ihre Zahl daran, wie oft eine Umsetzung die
+  // Ableitung aufruft — und das ginge in den `zustandsHash` ein.
+  const nachSerialisierung = new Map<string, Konflikthinweis>();
+  for (const hinweis of uebrige) {
+    nachSerialisierung.set(kanonischeSerialisierung(hinweis as unknown as KanonischerWert), hinweis);
   }
   const geordnet = [...nachSerialisierung.keys()]
     .sort(vergleicheNachCodepunkt)
     .map((schluessel) => nachSerialisierung.get(schluessel) as Konflikthinweis);
 
-  const unbekannt = [...faltung.unbekannt.values()].sort((a, b) =>
-    vergleicheNachCodepunkt(a.id, b.id),
-  );
-
   return {
     foldVersion: faltung.foldVersion,
-    einsatz,
-    abschnitte,
-    einheiten: alsDatensammlung(gebauteEinheiten),
-    fahrzeuge: leereSammlung(),
-    personen: leereSammlung(),
-    auftraege: leereSammlung(),
-    anforderungen: leereSammlung(),
-    dienstposten: leereSammlung(),
+    einsatz: einsatz as Zustand["einsatz"],
+    abschnitte: alsDatensammlung(abschnitte),
+    einheiten: alsDatensammlung(einheiten) as Zustand["einheiten"],
+    fahrzeuge: alsDatensammlung(fahrzeuge) as Zustand["fahrzeuge"],
+    personen: alsDatensammlung(sammlung("person")) as Zustand["personen"],
+    auftraege: alsDatensammlung(sammlung("auftrag")) as Zustand["auftraege"],
+    anforderungen: alsDatensammlung(anforderungen) as Zustand["anforderungen"],
+    dienstposten: alsDatensammlung(sammlung("dienstposten")) as Zustand["dienstposten"],
     schichtplan: leereSammlung(),
-    meldungen: leereSammlung(),
-    anhaenge: leereSammlung(),
-    etbEintraege: leereSammlung(),
+    meldungen: alsDatensammlung(meldungen) as Zustand["meldungen"],
+    anhaenge: alsDatensammlung(sammlung("anhang")) as Zustand["anhaenge"],
+    etbEintraege: alsDatensammlung(sammlung("etbEintrag")) as Zustand["etbEintraege"],
     archivierungen: leereSammlung(),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),
-    verworfeneSchluessel: [],
+    verworfeneSchluessel,
   };
 }
 

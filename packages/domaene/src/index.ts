@@ -50,30 +50,19 @@ export {
   SCHICHTMODELLE,
   TAKTISCHE_EBENEN,
   ereignisId,
-  istBekannteArt,
   naechsteLaufnummer,
-  staerkeGleich,
-  staerkeSumme,
   zerlegeEreignisId,
-  type AbschnittAngelegt,
   type Abschnittstyp,
   type Akteur,
-  type EingehendesEreignis,
-  type EinheitGemeldet,
   type EinheitStatus,
-  type EinheitVerschoben,
-  type EinsatzAngelegt,
   type EinsatzArt,
-  type Ereignis,
   type EreignisId,
-  type FremdesEreignis,
   type Organisation,
   type PersonalErfassung,
   type Rahmen,
   type Schicht,
   type Schichtmodell,
   type Staerke,
-  type StaerkeGeaendert,
   type TaktischeEbene,
 } from "./ereignis.js";
 
@@ -106,6 +95,8 @@ export {
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
   STAERKE_NULL,
+  staerkeGleich,
+  staerkeSumme,
   staerkeGeklemmt,
   staerkeIstNegativ,
   staerkeMinus,
@@ -154,6 +145,7 @@ export {
 // Der Minimalfold als Mengenfunktion mit Rebase (Auflage 4).
 export {
   falte,
+  type EingehendesEreignis,
   falteAuf,
   falteHinzu,
   leereFaltung,

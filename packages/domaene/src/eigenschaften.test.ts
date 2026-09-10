@@ -41,14 +41,14 @@
 import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
-import type {
-  AbschnittAngelegt,
-  EingehendesEreignis,
-  EinheitGemeldet,
-  Ereignis,
-  Staerke,
-} from "./ereignis.js";
-import { falte, falteHinzu, leereFaltung, materialisiere } from "./fold.js";
+import type { Staerke } from "./werte.js";
+import {
+  falte,
+  falteHinzu,
+  leereFaltung,
+  materialisiere,
+  type EingehendesEreignis,
+} from "./fold.js";
 import { vergleicheHlc } from "./hlc.js";
 import { vergleicheNachCodepunkt } from "./kanonisch.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
@@ -306,27 +306,33 @@ function naivFalte(ereignisse: readonly EingehendesEreignis[]): NurWerte {
   const einheiten: Record<string, { abschnittId: string; staerke: Staerke }> = {};
 
   for (const ereignis of ereignisse) {
-    const bekannt = ereignis as Ereignis;
+    // Der naive Fold liest die Nutzlast ungetypt — er ist die Gegenprobe und
+    // kein Produktionspfad.
+    const bekannt = ereignis as EingehendesEreignis & {
+      nutzlast: Record<string, string> & { staerke: Staerke };
+      neu: string & Staerke;
+    };
     switch (bekannt.typ) {
       case "EinsatzAngelegt":
-        einsatzName ??= bekannt.nutzlast.name;
+        einsatzName ??= bekannt.nutzlast["name"];
         break;
       case "AbschnittAngelegt":
-        abschnitte[bekannt.nutzlast.abschnittId] = `Abschnitt ${bekannt.nutzlast.abschnittId}`;
+        abschnitte[bekannt.nutzlast["abschnittId"] as string] =
+          `Abschnitt ${bekannt.nutzlast["abschnittId"]}`;
         break;
       case "EinheitGemeldet":
-        einheiten[bekannt.nutzlast.einheitId] = {
-          abschnittId: bekannt.nutzlast.abschnittId,
+        einheiten[bekannt.nutzlast["einheitId"] as string] = {
+          abschnittId: bekannt.nutzlast["abschnittId"] as string,
           staerke: bekannt.nutzlast.staerke,
         };
         break;
       case "EinheitVerschoben": {
-        const bisher = einheiten[bekannt.nutzlast.einheitId];
+        const bisher = einheiten[bekannt.nutzlast["einheitId"] as string];
         if (bisher !== undefined) bisher.abschnittId = bekannt.neu;
         break;
       }
       case "StaerkeGeaendert": {
-        const bisher = einheiten[bekannt.nutzlast.einheitId];
+        const bisher = einheiten[bekannt.nutzlast["einheitId"] as string];
         if (bisher !== undefined) bisher.staerke = bekannt.neu;
         break;
       }
@@ -358,12 +364,12 @@ describe("Die erzeugten Ereignismengen sind aussagekraeftig", () => {
 
     /** Welches Akkumulatorfeld ein Ereignis beruehrt — Gleichstand zaehlt nur hier. */
     const feldSchluessel = (e: EingehendesEreignis): string | undefined => {
+      const nutzlast = e.nutzlast as Record<string, string>;
       if (e.typ === "EinheitVerschoben" || e.typ === "StaerkeGeaendert") {
-        const nutzlast = (e as Ereignis & { nutzlast: { einheitId: string } }).nutzlast;
-        return `einheit/${nutzlast.einheitId}/${e.typ}`;
+        return `einheit/${nutzlast["einheitId"]}/${e.typ}`;
       }
-      if (e.typ === "EinheitGemeldet") return `einheit/${(e as EinheitGemeldet).nutzlast.einheitId}/anlage`;
-      if (e.typ === "AbschnittAngelegt") return `abschnitt/${(e as AbschnittAngelegt).nutzlast.abschnittId}`;
+      if (e.typ === "EinheitGemeldet") return `einheit/${nutzlast["einheitId"]}/anlage`;
+      if (e.typ === "AbschnittAngelegt") return `abschnitt/${nutzlast["abschnittId"]}`;
       if (e.typ === "EinsatzAngelegt") return "einsatz";
       return undefined;
     };
