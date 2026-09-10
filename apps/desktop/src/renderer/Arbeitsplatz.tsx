@@ -13,6 +13,7 @@ import { Anforderungen } from "./Anforderungen.js";
 import { bruecke } from "./bruecke.js";
 import { Diagnose } from "./Diagnose.js";
 import { Eingangskorb } from "./Eingangskorb.js";
+import { Fuehrungsorganisation } from "./Fuehrungsorganisation.js";
 import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
 import { Hilfe } from "./Hilfe.js";
 import { Kopfband } from "./Kopfband.js";
@@ -147,6 +148,7 @@ export function Arbeitsplatz(): React.JSX.Element {
             {blatt === "anforderungen" && <Anforderungen />}
             {blatt === "fuest" && <Fuehrungsstelle />}
             {blatt === "kosten" && <Kosten />}
+            {blatt === "fueorg" && <Fuehrungsorganisation />}
             {blatt === "diagnose" && (
               <>
                 <Diagnose />

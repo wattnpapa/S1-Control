@@ -47,6 +47,7 @@
         --knopf-rahmen: var(--navy-900);
         --knopf-fuellung: var(--navy-900);
         --knopf-fuellung-text: #ffffff;
+        --harke-linie: #000000;
         --gesperrt-bg: #e3e6ef;
         --gesperrt-text: #8b93ad;
         --rahmenbreite: 1px;
@@ -84,6 +85,7 @@
         --kartenkante-farbe: #6b74a8;
         --knopf-rahmen: #6b74a8;
         --knopf-fuellung: #3b4383;
+        --harke-linie: #c3c8e4;
         --gesperrt-bg: #262b4d;
         --gesperrt-text: #7d85ad;
         color-scheme: dark;
@@ -141,6 +143,7 @@
         --knopf-rahmen: #5a4c1e;
         --knopf-fuellung: #c8a232;
         --knopf-fuellung-text: #14120a;
+        --harke-linie: #c8a232;
         --gesperrt-bg: #241f0c;
         --gesperrt-text: #8d7a34;
         color-scheme: dark;
@@ -164,6 +167,132 @@
         display: flex;
         flex-direction: column;
         min-height: 100vh;
+      }
+
+      /* ---- Führungsharke (Entwurf, Option 3a) ---------------------------- */
+
+      .fueorgkopf {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 14px;
+      }
+      .fueorgkopf h2 {
+        margin: 0;
+      }
+      .fueorgkopf .spaltengruppen {
+        margin: 0 0 0 auto;
+      }
+      .fueorgflaeche {
+        display: flex;
+        gap: 14px;
+        align-items: flex-start;
+      }
+      .harke {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow-x: auto;
+        padding: 8px 0 16px;
+      }
+      /* Der Stamm ist die senkrechte Linie, der Querbalken die waagerechte.
+         Beide 3 px schwarz — im Nachtbild bernstein, damit sie auf dem
+         schwarzen Grund überhaupt stehen. */
+      .harke .stamm {
+        width: 3px;
+        margin: 0 auto;
+        background: var(--harke-linie);
+      }
+      /* Der Balken spannt ueber die ganze Reihe darunter — ohne `stretch`
+         schrumpfte er in der zentrierten Spalte auf null Breite. */
+      .harke .quer {
+        height: 3px;
+        align-self: stretch;
+        background: var(--harke-linie);
+      }
+      .harke .reihe {
+        display: grid;
+        justify-items: center;
+      }
+      .harke .zelle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 0;
+        padding: 0 8px;
+      }
+      .harke .knoten {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+      }
+      .harke .knoten.aufgeloest {
+        opacity: 0.55;
+      }
+      .harke .knoten.aufgeloest .name {
+        text-decoration: line-through;
+      }
+      .harke .unterschrift,
+      .einrichtungen .unterschrift {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1px;
+        padding: 4px 0 2px;
+        font-size: 10.5px;
+        line-height: 1.35;
+        color: var(--text-muted-2, var(--text-leise));
+        text-align: center;
+      }
+      .harke .unterschrift .name {
+        font-weight: 700;
+        color: var(--text);
+      }
+      .harke .unterschrift .typ {
+        color: var(--text-leiser);
+      }
+      .harke .unterschrift .zahlen,
+      .einrichtungen .unterschrift {
+        font-variant-numeric: tabular-nums;
+      }
+      /* Die Zeichen tragen ihre eigene Farbe (gelb mit schwarzem Rand) und
+         folgen keinem Theme: Ein taktisches Zeichen ist genormt, und ein
+         graues Zeichen wäre ein anderes. Im Nachtbild bekommt es einen
+         schmalen Grund, damit der schwarze Rand nicht im Grund verschwindet. */
+      :root[data-theme="nacht"] .tz,
+      :root[data-theme="dunkel"] .tz {
+        background: #d8d3c0;
+        padding: 2px;
+      }
+      .einrichtungen {
+        flex: 0 0 300px;
+        border-left: var(--rahmenbreite) solid var(--rahmen);
+        padding-left: 14px;
+      }
+      .einrichtungen h3 {
+        margin: 0 0 9px;
+        font: 400 0.84em/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--text-leise);
+      }
+      .einrichtungen ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 13px;
+      }
+      .einrichtungen li {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+      .einrichtungen li .name {
+        font-weight: 700;
+        padding-top: 4px;
       }
 
       /* ---- Kopfband (Entwurf, Option 2a) -------------------------------- */

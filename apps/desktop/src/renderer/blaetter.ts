@@ -20,6 +20,7 @@ export interface Reiter {
     | "anforderungen"
     | "fuest"
     | "kosten"
+    | "fueorg"
     | "ausgaben"
     | "tagebuch"
     | "diagnose";
@@ -34,6 +35,7 @@ export const BLAETTER: readonly Reiter[] = [
   { schluessel: "anforderungen", titel: "Anforderungen" },
   { schluessel: "fuest", titel: "Führungsstelle" },
   { schluessel: "kosten", titel: "Kosten" },
+  { schluessel: "fueorg", titel: "Führungsorganisation" },
   { schluessel: "ausgaben", titel: "Ausgaben" },
   { schluessel: "tagebuch", titel: "Einsatztagebuch" },
   // Ganz rechts und als letztes Blatt: Die Diagnose wird nicht im Betrieb
