@@ -484,6 +484,75 @@
         margin: 0;
       }
 
+      /* ---- Hilfe: Tastenkarte und Abkuerzungen (M3.6) -------------------- */
+
+      .hilfeknopf {
+        margin-left: auto;
+      }
+      .hilfe {
+        border: 1px solid rgba(128, 128, 128, 0.5);
+        border-radius: 6px;
+        padding: 0.8rem;
+      }
+      .hilfekopf {
+        display: flex;
+        align-items: baseline;
+        gap: 1rem;
+        margin-bottom: 0.5rem;
+      }
+      .hilfekopf h2 {
+        margin: 0;
+      }
+      .hilfespalten {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
+        align-items: flex-start;
+      }
+      .hilfespalten > div {
+        flex: 1 1 24rem;
+        min-width: 0;
+      }
+      .hilfe h3 {
+        font-size: 0.95rem;
+        margin: 0 0 0.5rem;
+      }
+      .hilfe h4 {
+        font-size: 0.85rem;
+        margin: 0.8rem 0 0.2rem;
+        opacity: 0.7;
+      }
+      .hilfe table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      .hilfe th,
+      .hilfe td {
+        text-align: left;
+        vertical-align: top;
+        padding: 0.1rem 0.5rem 0.1rem 0;
+      }
+      .hilfe th {
+        white-space: nowrap;
+      }
+      /* Ein Kuerzel wird als Taste gesetzt: Es steht fuer einen Griff und
+         nicht fuer ein Wort. */
+      .hilfe kbd {
+        font-family: inherit;
+        font-size: 0.8rem;
+        border: 1px solid rgba(128, 128, 128, 0.6);
+        border-bottom-width: 2px;
+        border-radius: 3px;
+        padding: 0 0.3rem;
+      }
+      /* Die Abkuerzungsliste hat 108 Zeilen; sie scrollt in sich, damit die
+         Tastenkarte daneben stehen bleibt. */
+      .akueli {
+        max-height: 24rem;
+        overflow-y: auto;
+      }
+
     </style>
   </head>
   <body>

@@ -7,12 +7,14 @@
  * hineinwachsen.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { bruecke } from "./bruecke.js";
+import { Hilfe } from "./Hilfe.js";
 import { Lage } from "./Lage.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
+import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 
 /**
  * Die Uhr des Fensters — sie tickt, damit „vor 8 s" auch dann altert, wenn
@@ -33,6 +35,21 @@ function useJetzt(): number {
 export function Arbeitsplatz(): React.JSX.Element {
   const laden = useLaden();
   const jetzt = useJetzt();
+  const [hilfeOffen, setzeHilfeOffen] = useState(false);
+
+  // Strg+H, wie in der Excel (m_makroFunktionen). Das Kürzel wird hier
+  // angemeldet und nicht in einer Ansicht: Die Hilfe gehört zum Fenster und
+  // ist aus jeder Maske erreichbar.
+  useKuerzel(
+    useMemo(
+      () => ({
+        hilfe: () => {
+          setzeHilfeOffen((bisher) => !bisher);
+        },
+      }),
+      [],
+    ),
+  );
 
   useEffect(() => {
     // Der Hörer wird **vor** dem Start eingehängt: Das erste volle Lagebild
@@ -53,6 +70,16 @@ export function Arbeitsplatz(): React.JSX.Element {
     <div className="arbeitsplatz">
       <header>
         <h1>S1-Control</h1>
+        <button
+          type="button"
+          className="hilfeknopf"
+          onClick={() => {
+            setzeHilfeOffen((bisher) => !bisher);
+          }}
+          title={`Tastenkarte und Abkürzungen (${kuerzelText(kuerzel("hilfe") as never)})`}
+        >
+          Hilfe
+        </button>
         {laden.umgebung !== undefined && (
           <span className="umgebung">
             {laden.umgebung.rechnername} · {laden.umgebung.clientId.slice(0, 8)} ·{" "}
@@ -71,6 +98,13 @@ export function Arbeitsplatz(): React.JSX.Element {
       )}
 
       <main>
+        {hilfeOffen && (
+          <Hilfe
+            aufSchliessen={() => {
+              setzeHilfeOffen(false);
+            }}
+          />
+        )}
         {laden.akteId === undefined ? <Auswahl /> : <Lage />}
 
         {laden.hinweise.length > 0 && (

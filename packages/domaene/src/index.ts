@@ -87,6 +87,9 @@ export {
   type Vokabeltabellen,
 } from "./eeb/adapter.js";
 
+// Die Abkuerzungsliste — das Blatt „AküLi“ der Excel (M3.6).
+export { AKUELI, sucheAkueli, type Akueeintrag, type Akuegruppe } from "./akueli.js";
+
 // Der Handscanner-Weg (M3.4): Segmente sammeln, Signatur pruefen, uebernehmen.
 export {
   LEERER_STAND,
