@@ -10,10 +10,11 @@
     "outDir": "dist/main",
     // Bauzustand in den Ausgabeordner: wer dist/ loescht, loescht ihn mit.
     "tsBuildInfoFile": "dist/main/.tsbuildinfo",
-    "rootDir": "src/main"
+    "rootDir": "src"
   },
-  "include": ["src/main/**/*.ts"],
+  "include": ["src/main/**/*.ts", "src/worker/**/*.ts"],
   "references": [
+    { "path": "./tsconfig.kontrakt.json" },
     { "path": "../../packages/domaene" },
     { "path": "../../packages/speicher" },
     { "path": "../../packages/netz" },

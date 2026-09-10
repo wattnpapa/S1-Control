@@ -12,5 +12,5 @@
     "rootDir": "src/renderer"
   },
   "include": ["src/renderer/**/*.ts"],
-  "references": [{ "path": "../../packages/domaene" }]
+  "references": [{ "path": "./tsconfig.kontrakt.json" }, { "path": "../../packages/domaene" }]
 }

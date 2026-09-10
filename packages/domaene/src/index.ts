@@ -174,6 +174,17 @@ export {
   type Faltung,
 } from "./fold.js";
 
+// Der Undo-Stapel je Client (M2.3) — KONZEPT-EREIGNISSE.md §6, U1 bis U6.
+export {
+  UNDO_TIEFE,
+  Undostapel,
+  geltenderFeldwert,
+  kompensationFuer,
+  type Kompensation,
+  type Kompensationsentwurf,
+  type StapelEintrag,
+} from "./undo.js";
+
 // Zeichen-Inferenz und Zeichenkatalog aus v1 (M1.4). Vorschlaege fuer die
 // Maske, kein Bestandteil des Folds.
 export {

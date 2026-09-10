@@ -1,0 +1,19 @@
+{
+  // Der IPC-Kontrakt ist ein eigenes Projekt, weil ihn **beide** Seiten
+  // brauchen: Main und Worker (Node) ebenso wie der Renderer (DOM). Als Teil
+  // eines der beiden muesste die andere Seite dessen Plattform mitziehen —
+  // also entweder Node-Typen in den Renderer oder das DOM in den Main.
+  //
+  // Entsprechend eng ist er hier eingestellt: kein `lib.dom`, keine
+  // Node-Typen. Was hier baut, laeuft ueberall.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": [],
+    "outDir": "dist/kontrakt",
+    "tsBuildInfoFile": "dist/kontrakt/.tsbuildinfo",
+    "rootDir": "src/kontrakt"
+  },
+  "include": ["src/kontrakt/**/*.ts"],
+  "references": [{ "path": "../../packages/domaene" }]
+}

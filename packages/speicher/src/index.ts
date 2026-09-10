@@ -197,6 +197,15 @@ export {
   type OeffnungspruefungOptionen,
 } from "./oeffnungspruefung.js";
 
+// Pfadpruefung §5.7 sowie Anlegen und Auffinden eines Einsatzordners §5.6.
+export {
+  legeEinsatzAn,
+  liesEinsatzanker,
+  pruefeEinsatzordner,
+  type Einsatzanker,
+  type Ordnerbefund,
+} from "./einsatzordner.js";
+
 // Praesenz §6.4 und der Quarantaenehinweis als Beschleuniger §4.6.1.
 export {
   PRAESENZ_ORDNER,

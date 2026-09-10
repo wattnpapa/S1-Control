@@ -13,6 +13,9 @@ import { defineConfig } from "vitest/config";
 //                                 eeb-Adapters ueber die 443 Beispielboegen.
 //                                 Node, weil beides Dateien liest — genau
 //                                 deshalb steht es nicht in Ring 2.
+//   desktop-schale                Kontrakt, Worker und Main der Schale — Node.
+//                                 Hier laeuft der Mehrclient-Nachweis aus
+//                                 M2.3 ueber das echte Dateisystem.
 //   desktop-renderer              der Renderer-Anteil der Schale — jsdom.
 //
 // Die Aliase zeigen bewusst auf die Quellen statt auf die gebauten dist/-
@@ -69,6 +72,18 @@ export default defineConfig({
           name: "bau",
           environment: "node",
           include: ["bau/**/*.test.ts"],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: "desktop-schale",
+          environment: "node",
+          include: [
+            "apps/desktop/src/kontrakt/**/*.test.ts",
+            "apps/desktop/src/worker/**/*.test.ts",
+            "apps/desktop/src/main/**/*.test.ts",
+          ],
         },
       },
       {

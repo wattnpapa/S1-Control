@@ -10,6 +10,7 @@
     "@s1/ausgaben": "*",
     "@s1/domaene": "*",
     "@s1/netz": "*",
-    "@s1/speicher": "*"
+    "@s1/speicher": "*",
+    "zod": "^4.6.1"
   }
 }
