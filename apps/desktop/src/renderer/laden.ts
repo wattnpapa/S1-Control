@@ -22,7 +22,7 @@
 
 import { create } from "zustand";
 
-import type { Meldungszeile } from "@s1/domaene";
+import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
@@ -158,6 +158,13 @@ export interface Laden {
    * genau das, was M3.7 vermeidet.
    */
   holeRevisionen(einheitSchluessel: string): Promise<readonly Meldungszeile[]>;
+  /**
+   * Was sich von der vorletzten zur letzten Fassung geändert hat (M6.2).
+   *
+   * `null`, wenn die Reihe nur eine Fassung hat oder ein Bogen fehlt — dort
+   * gibt es keine Bewegung, nur einen Stand.
+   */
+  holeAenderung(einheitSchluessel: string): Promise<Fassungsvergleich | null>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -463,6 +470,17 @@ export const useLaden = create<Laden>((setze, hole) => {
         const nachStand = links.stand.localeCompare(rechts.stand);
         return nachStand !== 0 ? nachStand : links.empfangenAm.localeCompare(rechts.empfangenAm);
       });
+    },
+
+    async holeAenderung(einheitSchluessel) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return null;
+      try {
+        return await rufe({ art: "fassungsvergleichAnfordern", akteId, einheitSchluessel });
+      } catch (fehler) {
+        merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
+        return null;
+      }
     },
 
     async setzeEingangsfilter(filter) {

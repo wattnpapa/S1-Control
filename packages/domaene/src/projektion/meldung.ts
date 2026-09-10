@@ -24,6 +24,9 @@
  * Schutz vor Datenverlust)".
  */
 
+import { bogenDiff, type BogenDiff } from "@bos/meldekopf";
+import type { Erfassungsbogen } from "@bos/eeb-format";
+
 import * as kennzahlen from "../kennzahlen.js";
 import type { Id } from "../werte.js";
 import type { MeldungZustand, Zustand } from "../zustand.js";
@@ -260,4 +263,89 @@ export function revisionen(zustand: Zustand, einheitSchluessel: string): readonl
     if (nachStand !== 0) return nachStand;
     return links.empfangenAm.localeCompare(rechts.empfangenAm);
   });
+}
+
+// ---------------------------------------------------------------------------
+// Der Diff zweier Fassungen (M6.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Was sich von einer Fassung zur nächsten geändert hat.
+ *
+ * **Die Rechnung kommt aus dem geteilten Kern** (`@bos/meldekopf`,
+ * `meldung-diff.ts`) und wird hier nicht nachgebaut. Sein Modulkopf sagt,
+ * warum es diesen Vergleich überhaupt gibt: „die Historie zeigt Stände, der
+ * Diff zeigt Bewegung (Stärke 12 → 9, Fahrzeug abgemeldet, Ruhezeit jetzt
+ * erforderlich)". Für eine Schichtübergabe ist die Bewegung die Auskunft, und
+ * für eine Führungsstelle, die eine Tagesmeldung übernehmen soll, ebenso.
+ *
+ * Er liefert **fertige Anzeigetexte**, keine Rohwerte — mit Absicht: So zeigen
+ * die Ansicht im Erfassungsbogen und die hier denselben Wortlaut, und die
+ * Zahlen sind so formatiert, wie sie im Bogen stehen.
+ *
+ * **Die Zuordnung ist eine Heuristik**, und der Kern sagt das auch: Personen
+ * über „Nachname, Vorname", Fahrzeuge über das Kennzeichen. Ein nachgetragenes
+ * Kennzeichen erscheint deshalb als Abgang plus Zugang statt als Änderung —
+ * bewusst, weil nicht entscheidbar.
+ */
+export interface Fassungsvergleich {
+  readonly vonId: Id;
+  readonly nachId: Id;
+  readonly vonStand: string;
+  readonly nachStand: string;
+  readonly diff: BogenDiff;
+}
+
+/** Der Bogen einer Meldung, sofern er lesbar mitgeführt wurde (§5.8.1). */
+function bogenVon(meldung: MeldungZustand | undefined): Erfassungsbogen | undefined {
+  const wert = meldung?.bogen?.wert;
+  return wert === undefined || wert === null ? undefined : (wert as unknown as Erfassungsbogen);
+}
+
+/**
+ * Vergleicht zwei Fassungen einer Reihe.
+ *
+ * `undefined`, wenn eine der beiden Meldungen fehlt oder ihren Bogen nicht
+ * mitführt. Letzteres ist kein Fehler: `bogen` ist im Katalog optional, und
+ * eine Meldung, die aus einer fremden Fassung stammt, kann ihn auslassen. Ein
+ * Vergleich, der dann etwas erfände, wäre schlimmer als keiner.
+ */
+export function fassungsvergleich(
+  zustand: Zustand,
+  vonId: Id,
+  nachId: Id,
+): Fassungsvergleich | undefined {
+  const von = zustand.meldungen[vonId];
+  const nach = zustand.meldungen[nachId];
+  const bogenVor = bogenVon(von);
+  const bogenNach = bogenVon(nach);
+  if (von === undefined || nach === undefined || bogenVor === undefined || bogenNach === undefined) {
+    return undefined;
+  }
+  return {
+    vonId,
+    nachId,
+    vonStand: text(von.stand.wert),
+    nachStand: text(nach.stand.wert),
+    diff: bogenDiff(bogenVor, bogenNach),
+  };
+}
+
+/**
+ * Der Vergleich der beiden jüngsten Fassungen einer Reihe — was die
+ * Führungsstelle sehen will, bevor sie eine Tagesmeldung übernimmt.
+ *
+ * `undefined` bei einer Reihe mit nur einer Fassung: Dort gibt es keine
+ * Bewegung, nur einen Stand.
+ */
+export function letzteAenderung(
+  zustand: Zustand,
+  einheitSchluessel: string,
+): Fassungsvergleich | undefined {
+  const reihe = revisionen(zustand, einheitSchluessel);
+  if (reihe.length < 2) return undefined;
+  const vorletzte = reihe[reihe.length - 2];
+  const letzte = reihe[reihe.length - 1];
+  if (vorletzte === undefined || letzte === undefined) return undefined;
+  return fassungsvergleich(zustand, vorletzte.id, letzte.id);
 }

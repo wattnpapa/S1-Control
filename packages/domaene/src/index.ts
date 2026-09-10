@@ -121,6 +121,7 @@ export type {
   Kostenparameter,
   Kostenzeile,
   Logistikblatt,
+  Fassungsvergleich,
   Meldezustand,
   Meldungsausschnitt,
   Meldungszeile,

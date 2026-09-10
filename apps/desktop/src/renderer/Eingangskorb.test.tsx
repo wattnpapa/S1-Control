@@ -167,6 +167,64 @@ describe("Der Eingangskorb", () => {
     );
   });
 
+  it("zeigt die Bewegung zur vorigen Fassung im Dialog", async () => {
+    antworte([zeile("m1", { fassung: 2, fassungen: 2 })]);
+    attrappe.antwortet("fassungsvergleichAnfordern", {
+      vonId: "m0",
+      nachId: "m1",
+      vonStand: "2026-09-09T08:00:00+02:00",
+      nachStand: "2026-09-10T08:00:00+02:00",
+      diff: {
+        staerke: [{ feld: "Gesamtstärke", vorher: "9", nachher: "6" }],
+        personalZugang: [],
+        personalAbgang: ["Meyer, Anton"],
+        personalGeaendert: [],
+        fahrzeugeZugang: [],
+        fahrzeugeAbgang: [],
+        fahrzeugeGeaendert: [],
+        bedarf: [],
+        sonstiges: [],
+        anzahl: 2,
+      },
+    });
+    await zeige();
+    fireEvent.click(screen.getByText("2 von 2"));
+
+    // Die Texte kommen fertig aus dem geteilten Kern; die Ansicht formatiert
+    // nichts nach, damit App und Führungsstelle denselben Wortlaut zeigen.
+    await waitFor(() => {
+      expect(screen.getByText("Gesamtstärke: 9 → 6")).toBeDefined();
+    });
+    expect(screen.getByText("Meyer, Anton")).toBeDefined();
+  });
+
+  it("sagt es, wenn sich inhaltlich nichts geändert hat", async () => {
+    antworte([zeile("m1", { fassung: 2, fassungen: 2 })]);
+    attrappe.antwortet("fassungsvergleichAnfordern", {
+      vonId: "m0",
+      nachId: "m1",
+      vonStand: "a",
+      nachStand: "b",
+      diff: {
+        staerke: [],
+        personalZugang: [],
+        personalAbgang: [],
+        personalGeaendert: [],
+        fahrzeugeZugang: [],
+        fahrzeugeAbgang: [],
+        fahrzeugeGeaendert: [],
+        bedarf: [],
+        sonstiges: [],
+        anzahl: 0,
+      },
+    });
+    await zeige();
+    fireEvent.click(screen.getByText("2 von 2"));
+    await waitFor(() => {
+      expect(screen.getByText(/inhaltlich unverändert/)).toBeDefined();
+    });
+  });
+
   it("zeigt eine unsignierte Meldung ohne Aufregung", async () => {
     antworte([zeile("m1", { signatur: "" })]);
     await zeige();

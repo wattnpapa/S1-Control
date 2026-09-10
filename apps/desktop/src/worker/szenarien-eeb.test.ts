@@ -505,3 +505,69 @@ describe("Funktionalität: Eingangskorb mit Quittierung", () => {
     expect(reihe[1]?.kopf).toBe(true);
   });
 });
+
+/**
+ * Der Vergleich zweier Fassungen — M6.2.
+ *
+ * „Die Historie zeigt Stände, der Diff zeigt Bewegung" — der Satz steht im
+ * Modulkopf von `@bos/meldekopf`, und er ist der Grund für diesen Weg: Vor
+ * einer Übernahme will die Führungsstelle nicht die ganze Fassung lesen,
+ * sondern wissen, was anders ist.
+ */
+describe("Funktionalität: Änderungen zwischen zwei Fassungen", () => {
+  async function uebernimm(platz: Platz, bogen: Erfassungsbogen): Promise<void> {
+    await platz.dienst.eebScan(encodePayloadUrl(bogen, KOMPRESSOR));
+    const ergebnis = await platz.dienst.eebUebernehmen("EO");
+    if (ergebnis.art !== "uebernommen") throw new Error(JSON.stringify(ergebnis));
+  }
+
+  it("Szenario: eine geänderte Stärke steht als Bewegung da", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    await uebernimm(platz, bogen);
+    await uebernimm(platz, {
+      ...bogen,
+      stand: bogen.stand + 24 * 60,
+      staerkeManuell: { fuehrer: 1, unterfuehrer: 1, mannschaft: 4, gesamt: 6 },
+    } as Erfassungsbogen);
+
+    const schluessel = String(
+      Object.values(platz.dienst.zustand.meldungen)[0]?.einheitSchluessel?.wert,
+    );
+    const vergleich = projektion.letzteAenderung(platz.dienst.zustand, schluessel);
+    expect(vergleich).toBeDefined();
+    expect(vergleich?.diff.anzahl).toBeGreaterThan(0);
+    // Die Texte kommen fertig aus dem geteilten Kern — hier wird nichts
+    // formatiert, damit App und Führungsstelle denselben Wortlaut zeigen.
+    const gesamt = vergleich?.diff.staerke.find((a) => a.feld === "Gesamtstärke");
+    expect(gesamt?.nachher).toBe("6");
+  });
+
+  it("Szenario: eine Fassung ohne inhaltliche Änderung meldet null Positionen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+    await uebernimm(platz, bogen);
+    // Nur der Stand wandert: ein anderer Bogen, dieselbe Einheit, kein Inhalt
+    // anders. Der Meldestand selbst ist kein Diff-Eintrag.
+    await uebernimm(platz, { ...bogen, stand: bogen.stand + 60 } as Erfassungsbogen);
+
+    const schluessel = String(
+      Object.values(platz.dienst.zustand.meldungen)[0]?.einheitSchluessel?.wert,
+    );
+    expect(projektion.letzteAenderung(platz.dienst.zustand, schluessel)?.diff.anzahl).toBe(0);
+  });
+
+  it("Szenario: eine Reihe mit einer einzigen Fassung hat keine Bewegung", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await uebernimm(platz, liesDatei(ALLE[0] as string));
+
+    const schluessel = String(
+      Object.values(platz.dienst.zustand.meldungen)[0]?.einheitSchluessel?.wert,
+    );
+    // Dort gibt es keine Bewegung, nur einen Stand.
+    expect(projektion.letzteAenderung(platz.dienst.zustand, schluessel)).toBeUndefined();
+  });
+});

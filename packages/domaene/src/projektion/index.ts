@@ -102,6 +102,8 @@ export {
 export {
   MELDE_ZUSTAENDE,
   eingangskorb,
+  fassungsvergleich,
+  letzteAenderung,
   meldungszeile,
   revisionen,
   vergleicheMeldungen,
@@ -109,4 +111,5 @@ export {
   type Meldungsausschnitt,
   type Meldungsoptionen,
   type Meldungszeile,
+  type Fassungsvergleich,
 } from "./meldung.js";

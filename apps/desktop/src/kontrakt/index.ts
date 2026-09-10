@@ -30,6 +30,7 @@ import type {
   Anforderungsausschnitt,
   Baumknoten,
   Kostenblatt,
+  Fassungsvergleich,
   Meldungsausschnitt,
   Schichtplanblatt,
   Tabellenausschnitt,
@@ -267,6 +268,18 @@ export const zRuf = z.discriminatedUnion("art", [
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),
+  // Der Vergleich zweier Fassungen (M6.2) — ein eigener Ruf und kein Feld der
+  // Korbzeile: Er traegt bei einer Einheit mit dreissig Personen mehr Text als
+  // die ganze Liste, und gebraucht wird er fuer **eine** Zeile, wenn jemand
+  // hinsieht.
+  z.object({
+    art: z.literal("fassungsvergleichAnfordern"),
+    akteId: zAkteId,
+    /** Ohne Angabe: die beiden juengsten Fassungen der Reihe. */
+    vonId: z.string().optional(),
+    nachId: z.string().optional(),
+    einheitSchluessel: z.string().optional(),
+  }),
   z.object({
     art: z.literal("fuestAnfordern"),
     akteId: zAkteId,
@@ -416,6 +429,8 @@ export interface Antworten {
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
+  /** `null`, wenn eine der beiden Fassungen fehlt oder ihren Bogen nicht mitfuehrt. */
+  fassungsvergleichAnfordern: Fassungsvergleich | null;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;

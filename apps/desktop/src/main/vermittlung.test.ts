@@ -421,6 +421,17 @@ describe("Jeder Ansichtsruf erreicht den Aktendienst", () => {
       { art: "eingangskorbAnfordern", akteId },
     ];
 
+    // `fassungsvergleichAnfordern` steht bewusst nicht in der Liste: Er
+    // antwortet mit `null`, wenn es nichts zu vergleichen gibt, und trägt
+    // deshalb keinen Zeigerstand. Geprüft wird er trotzdem — nur anders.
+    const vergleich = await werkstatt.vermittlung.beantworte({
+      art: "fassungsvergleichAnfordern",
+      akteId,
+      einheitSchluessel: "gibt-es-nicht",
+    });
+    expect(vergleich.ok, "fassungsvergleichAnfordern wurde abgewiesen").toBe(true);
+    expect((vergleich as { wert: unknown }).wert).toBeNull();
+
     for (const anfrage of rufe) {
       const antwort = await werkstatt.vermittlung.beantworte(anfrage);
       expect(antwort.ok, `${anfrage.art} wurde abgewiesen`).toBe(true);

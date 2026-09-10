@@ -41,6 +41,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.fuest(auftrag.ruf);
     case "eingangskorbAnfordern":
       return dienst.eingangskorb(auftrag.ruf);
+    case "fassungsvergleichAnfordern":
+      return dienst.fassungsvergleich(auftrag.ruf);
     case "baumAnfordern":
       return dienst.baum(auftrag.ruf);
     case "tabelleAnfordern":

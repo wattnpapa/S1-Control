@@ -678,6 +678,23 @@ export class Aktendienst {
     return { lageZeiger: this.#lageZeiger, ...ausschnitt };
   }
 
+  /**
+   * Der Vergleich zweier Fassungen (M6.2).
+   *
+   * Ohne `vonId`/`nachId` die **beiden juengsten** der Reihe: Das ist die
+   * Frage vor einer Uebernahme — was hat sich seit der letzten Meldung
+   * geaendert.
+   */
+  fassungsvergleich(
+    ruf: Extract<Ruf, { art: "fassungsvergleichAnfordern" }>,
+  ): projektion.Fassungsvergleich | null {
+    if (ruf.vonId !== undefined && ruf.nachId !== undefined) {
+      return projektion.fassungsvergleich(this.#zustand, ruf.vonId, ruf.nachId) ?? null;
+    }
+    if (ruf.einheitSchluessel === undefined) return null;
+    return projektion.letzteAenderung(this.#zustand, ruf.einheitSchluessel) ?? null;
+  }
+
   /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */
   tabelle(ruf: Extract<Ruf, { art: "tabelleAnfordern" }>): Tabellenansicht {
     const ausschnitt = projektion.einheitentabelle(this.#zustand, {
