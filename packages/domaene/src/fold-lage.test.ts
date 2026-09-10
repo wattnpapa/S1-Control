@@ -253,7 +253,9 @@ describe("§5.7 Der Schichtplan ist eine eigene Wurzel-Datensammlung", () => {
     expect(zustand.schichtplan["D1"]?.["2026-09-10"]?.wert).toBe("Meier");
     // Nicht als Feld des Dienstpostens: Sonst belegte ein einziger
     // Dienstposten so viele Schluessel, wie jemand Tage beschrieben hat.
-    expect((zustand.dienstposten["D1"] as Record<string, unknown>)["schichtplan"]).toBeUndefined();
+    expect(
+      (zustand.dienstposten["D1"] as unknown as Record<string, unknown>)["schichtplan"],
+    ).toBeUndefined();
   });
 
   it("T182: ein Dienstposten ohne Planzeile traegt keinen Schluessel", () => {

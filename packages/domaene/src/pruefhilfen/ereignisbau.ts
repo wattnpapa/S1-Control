@@ -111,6 +111,7 @@ export interface EinheitAnlage {
   readonly hierarchie?: readonly { art: string; name: string }[];
   readonly reihenfolge?: number;
   readonly istFuehrungDesAbschnitts?: boolean;
+  readonly einheitSchluessel?: string;
 }
 
 export function einheitGemeldet(
