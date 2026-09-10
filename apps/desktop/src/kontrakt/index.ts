@@ -253,8 +253,8 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({
     art: z.literal("ausgabeErzeugen"),
     akteId: zAkteId,
-    ausgabe: z.enum(["druck", "status"]),
-    format: z.enum(["html", "pdf"]),
+    ausgabe: z.enum(["druck", "status", "auswertung"]),
+    format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),
   }),

@@ -74,3 +74,11 @@ export {
   type Statusdaten,
   type Verteilungszeile,
 } from "./status.js";
+export {
+  SPALTE_BEREICH,
+  auswertungAlsXlsx,
+  spaltenname,
+  xmlMaskieren,
+  zellentext,
+  type Auswertungsoptionen,
+} from "./xlsx.js";

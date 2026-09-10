@@ -21,7 +21,10 @@ export function Ausgaben(): React.JSX.Element {
   const [organisation, setzeOrganisation] = useState("THW");
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
 
-  function erzeuge(ausgabe: "druck" | "status", format: "html" | "pdf"): void {
+  function erzeuge(
+    ausgabe: "druck" | "status" | "auswertung",
+    format: "html" | "pdf" | "xlsx",
+  ): void {
     setzeMeldung(undefined);
     void (async () => {
       const ergebnis = await laden.erzeugeAusgabe(
@@ -63,6 +66,12 @@ export function Ausgaben(): React.JSX.Element {
       </button>
       <button type="button" onClick={() => { erzeuge("status", "html"); }}>
         Status als HTML
+      </button>
+      {/* Die Auswertung ist die einzige Ausgabe, die die Bereichszugehörigkeit
+          als Attribut führt — erst damit lässt sich filtern und
+          weiterrechnen (M4.2, `excel-domaenenmodell.md` §4.4). */}
+      <button type="button" onClick={() => { erzeuge("auswertung", "xlsx"); }}>
+        Auswertung als XLSX
       </button>
       {meldung !== undefined && (
         <p role="status" className="hinweistext">

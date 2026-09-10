@@ -50,6 +50,7 @@ export type Auftrag =
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
   | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status"; readonly organisation?: string }
+  | { readonly art: "auswertungXlsx"; readonly nummer: number }
   | { readonly art: "ausgabeSchreiben"; readonly nummer: number; readonly dateiname: string; readonly bytes: Uint8Array }
   | { readonly art: "eebScan"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebScan" }> }
   | { readonly art: "eebZuruecksetzen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebZuruecksetzen" }> }
@@ -187,6 +188,8 @@ if (parentPort !== null) {
         return dienst.untertabelle(auftrag.ruf);
       case "ausgabeHtml":
         return dienst.ausgabeHtml(auftrag.ausgabe, auftrag.organisation);
+      case "auswertungXlsx":
+        return dienst.auswertungXlsx();
       case "ausgabeSchreiben":
         return { pfad: await dienst.ausgabeSchreiben(auftrag.dateiname, auftrag.bytes) };
       case "eebScan":

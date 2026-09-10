@@ -194,6 +194,24 @@ jobs:
       - name: Tor 2 — Lint (Ringgrenzen)
         run: npm run -s lint
 
+      # Der Nachweis gegen fremde Leser (M4.0, M4.2) braucht zwei Programme,
+      # die kein npm-Paket mitbringt: `unzip` für das ZIP-Format der
+      # Einsatzakte und LibreOffice **Calc** für die XLSX-Auswertung. Das
+      # Grundpaket `libreoffice-core` genügt nicht — ohne den Calc-Filter
+      # meldet `soffice` für jede Tabelle „source file could not be loaded",
+      # auch für eine, die es selbst geschrieben hat.
+      #
+      # Nur auf Linux: Auf den Windows- und macOS-Läufern stehen beide nicht
+      # zuverlässig zur Verfügung, und `vitest.config.ts` führt das Projekt
+      # `fremdleser` dort deshalb gar nicht erst. Was dort geprüft würde, ist
+      # eine Eigenschaft der **Datei**, und die ist auf allen drei Plattformen
+      # dieselbe: Der Schreiber kennt kein `node:`.
+      - name: Werkzeuge für den Fremdleser-Nachweis (nur Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends unzip libreoffice-calc
+
       # Tor 3. Vitest fährt beide Umgebungen (node und jsdom) in einem Lauf.
       - name: Tor 3 — Tests
         run: npm run -s test

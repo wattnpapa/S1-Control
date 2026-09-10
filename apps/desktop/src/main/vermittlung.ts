@@ -202,6 +202,22 @@ export class Vermittlung {
    * Layout, das niemand pflegt.
    */
   async #erzeugeAusgabe(ruf: Extract<Ruf, { art: "ausgabeErzeugen" }>): Promise<Ausgabeergebnis> {
+    // Die Auswertung ist keine Seite, sondern eine Datei aus Bytes: Sie
+    // braucht weder Vorlage noch Rendering-Engine und geht deshalb den
+    // kuerzeren Weg (M4.2).
+    if (ruf.ausgabe === "auswertung" || ruf.format === "xlsx") {
+      const { dateiname, bytes: xlsx } = (await this.#o.hof.frage(ruf.akteId, {
+        art: "auswertungXlsx",
+      })) as { dateiname: string; bytes: Uint8Array };
+      const { pfad } = (await this.#o.hof.frage(ruf.akteId, {
+        art: "ausgabeSchreiben",
+        dateiname: `${dateiname}.xlsx`,
+        bytes: xlsx,
+      })) as { pfad: string };
+      this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(xlsx.length)} Bytes)`);
+      return { pfad, bytes: xlsx.length };
+    }
+
     const gerendert = (await this.#o.hof.frage(ruf.akteId, {
       art: "ausgabeHtml",
       ausgabe: ruf.ausgabe,

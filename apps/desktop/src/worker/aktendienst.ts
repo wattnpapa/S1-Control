@@ -66,7 +66,7 @@ import {
 } from "@s1/speicher";
 
 import type { Kompressor } from "@bos/eeb-format";
-import { druckAlsHtml, druckdaten, statusAlsHtml, statusdaten } from "@s1/ausgaben";
+import { auswertungAlsXlsx, druckAlsHtml, druckdaten, statusAlsHtml, statusdaten } from "@s1/ausgaben";
 
 import {
   lagebildDelta,
@@ -628,6 +628,24 @@ export class Aktendienst {
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };
+  }
+
+  /**
+   * Die Auswertung als XLSX (M4.2).
+   *
+   * Sie geht **nicht** durch {@link ausgabeHtml}: Sie ist keine Seite,
+   * sondern eine Datei aus Bytes, und sie braucht keinen Umweg ueber die
+   * Schale — anders als das PDF, fuer das es eine Rendering-Engine braucht.
+   */
+  auswertungXlsx(): { dateiname: string; bytes: Uint8Array } {
+    const jetzt = new Date(this.#o.zeit());
+    return {
+      dateiname: `auswertung_${dateimarke(jetzt)}`,
+      bytes: auswertungAlsXlsx(this.#zustand, {
+        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        zeitpunkt: jetzt,
+      }),
+    };
   }
 
   /**

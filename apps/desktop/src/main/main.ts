@@ -316,8 +316,15 @@ function ausgabenprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): 
         const akteId = (angelegt.wert as { akteId: string }).akteId;
         zeilen.push(`S1_SMOKE: share=${share}`);
 
-        for (const ausgabe of ["druck", "status"] as const) {
-          for (const format of ["html", "pdf"] as const) {
+        const wege = [
+          { ausgabe: "druck", format: "html" },
+          { ausgabe: "druck", format: "pdf" },
+          { ausgabe: "status", format: "html" },
+          { ausgabe: "status", format: "pdf" },
+          { ausgabe: "auswertung", format: "xlsx" },
+        ] as const;
+        for (const { ausgabe, format } of wege) {
+          {
             const antwort = await vermittlung.beantworte({
               art: "ausgabeErzeugen",
               akteId,
