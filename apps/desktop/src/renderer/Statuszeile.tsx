@@ -10,6 +10,7 @@
  * Aufrufer gibt die Uhr, und im Betrieb tickt sie im Fenster.
  */
 
+import { staerkeText } from "./formate.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
 /**
@@ -92,16 +93,6 @@ export function Statuszeile({ lagebild, jetzt }: StatuszeileEigenschaften): Reac
         </strong>
       )}
 
-      <span className="staerke">
-        {String(lagebild.einheiten)} Einheiten · {String(lagebild.gesamtstaerke.fuehrer)}/
-        {String(lagebild.gesamtstaerke.unterfuehrer)}/{String(lagebild.gesamtstaerke.mannschaft)}/
-        {String(
-          lagebild.gesamtstaerke.fuehrer +
-            lagebild.gesamtstaerke.unterfuehrer +
-            lagebild.gesamtstaerke.mannschaft,
-        )}
-      </span>
-
       {lagebild.hinweise > 0 && (
         <span className="warnung">{String(lagebild.hinweise)} Konflikthinweis(e)</span>
       )}
@@ -112,6 +103,14 @@ export function Statuszeile({ lagebild, jetzt }: StatuszeileEigenschaften): Reac
           {String(lagebild.unbekannteEreignisse)} unbekannte Ereignisse
         </span>
       )}
+
+      {/* Rechts steht die Stärke in derselben Schreibweise wie im Kopfband
+          (Entwurf „Oberfläche"): `42 EINH · 24/61/183 // 268`. Sie ist die
+          Zahl, die abgelesen und weitergegeben wird — sie darf sich zwischen
+          zwei Stellen des Fensters nicht in der Form unterscheiden. */}
+      <span className="staerke">
+        {String(lagebild.einheiten)} EINH · {staerkeText(lagebild.gesamtstaerke)}
+      </span>
     </footer>
   );
 }

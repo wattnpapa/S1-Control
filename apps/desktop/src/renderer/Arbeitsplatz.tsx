@@ -11,12 +11,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { bruecke } from "./bruecke.js";
 import { Hilfe } from "./Hilfe.js";
+import { Kopfband } from "./Kopfband.js";
 import { Lage } from "./Lage.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
+import { Staerkeband } from "./Staerkeband.js";
 import { Statuszeile } from "./Statuszeile.js";
-import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
+import { useKuerzel } from "./tastatur.js";
 
 /**
  * Die Uhr des Fensters — sie tickt, damit „vor 8 s" auch dann altert, wenn
@@ -54,6 +56,13 @@ export function Arbeitsplatz(): React.JSX.Element {
   );
 
   useEffect(() => {
+    // Das Theme hängt am Wurzelelement und nicht an dieser Komponente: Die
+    // Marken unter `:root` gelten auch für Masken, Nebenblätter und das
+    // Monitorfenster, die ausserhalb dieses Baums gezeichnet werden.
+    document.documentElement.dataset["theme"] = laden.einstellungen.theme ?? "standard";
+  }, [laden.einstellungen.theme]);
+
+  useEffect(() => {
     // Der Hörer wird **vor** dem Start eingehängt: Das erste volle Lagebild
     // kommt unmittelbar nach dem Öffnen einer Akte, und ein Hörer, der danach
     // einhängt, verpasste genau die Mitteilung, auf der alle Deltas aufbauen.
@@ -70,25 +79,20 @@ export function Arbeitsplatz(): React.JSX.Element {
 
   return (
     <div className="arbeitsplatz">
-      <header>
-        <h1>S1-Control</h1>
-        <button
-          type="button"
-          className="hilfeknopf"
-          onClick={() => {
-            setzeHilfeOffen((bisher) => !bisher);
-          }}
-          title={`Tastenkarte und Abkürzungen (${kuerzelText(kuerzel("hilfe") as never)})`}
-        >
-          Hilfe
-        </button>
-        {laden.umgebung !== undefined && (
-          <span className="umgebung">
-            {laden.umgebung.rechnername} · {laden.umgebung.clientId.slice(0, 8)} ·{" "}
-            {laden.umgebung.programmversion}
-          </span>
-        )}
-      </header>
+      <Kopfband
+        lagebild={laden.lagebild}
+        jetzt={jetzt}
+        theme={laden.einstellungen.theme ?? "standard"}
+        waehleTheme={(gewaehlt) => void laden.waehleTheme(gewaehlt)}
+        aufHilfe={() => {
+          setzeHilfeOffen((bisher) => !bisher);
+        }}
+        zurueckZurAuswahl={
+          laden.akteId === undefined ? undefined : () => void laden.schliesseEinsatz()
+        }
+      />
+
+      {laden.lagebild !== undefined && <Staerkeband lagebild={laden.lagebild} />}
 
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">
@@ -191,7 +195,17 @@ function Auswahl(): React.JSX.Element {
           type="button"
           disabled={laden.beschaeftigt}
           onClick={() =>
-            void laden.setzeEinstellungen({ sharePfad: share, anzeigename: name, betriebsart })
+            void laden.setzeEinstellungen({
+              sharePfad: share,
+              anzeigename: name,
+              betriebsart,
+              // Das Erscheinungsbild gehört dem Schalter im Kopfband; diese
+              // Maske reicht es durch, statt es auf den Stand beim Öffnen
+              // zurückzudrehen.
+              ...(laden.einstellungen.theme === undefined
+                ? {}
+                : { theme: laden.einstellungen.theme }),
+            })
           }
         >
           Übernehmen

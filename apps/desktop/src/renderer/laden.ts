@@ -48,6 +48,7 @@ import type {
   Ruf,
   Tabellenansicht,
   Tagebuchansicht,
+  Theme,
   Uebernahmeergebnis,
   Umgebung,
   Untertabellenansicht,
@@ -121,6 +122,16 @@ export interface Laden {
 
   starte(): Promise<void>;
   setzeEinstellungen(neu: Einstellungen): Promise<void>;
+  /**
+   * Wählt das Erscheinungsbild dieses Geräts (Entwurf „Oberfläche").
+   *
+   * Anders als {@link Laden.setzeEinstellungen} sperrt es nichts und wirft
+   * kein Fehlerbild: Der Wechsel ist sofort sichtbar, das Speichern läuft
+   * hinterher. Ein Arbeitsplatz, der wegen einer nicht schreibbaren
+   * Einstellungsdatei im hellen Bild stehen bliebe, wäre im dunklen Fahrzeug
+   * unbedienbar — die Anzeige wiegt hier schwerer als die Buchführung.
+   */
+  waehleTheme(theme: Theme): Promise<void>;
   ladeEinsaetze(): Promise<void>;
   legeEinsatzAn(name: string, datum: string): Promise<void>;
   oeffneEinsatz(ordner: string): Promise<void>;
@@ -372,6 +383,19 @@ export const useLaden = create<Laden>((setze, hole) => {
         setze({ einstellungen: gespeichert });
         await hole().ladeEinsaetze();
       });
+    },
+
+    async waehleTheme(theme) {
+      const einstellungen = { ...hole().einstellungen, theme };
+      setze({ einstellungen });
+      try {
+        setze({ einstellungen: await rufe({ art: "einstellungenSetzen", einstellungen }) });
+      } catch {
+        merkeHinweis(
+          "warnung",
+          "Das Erscheinungsbild gilt für dieses Fenster, ist aber nicht gespeichert.",
+        );
+      }
     },
 
     async ladeEinsaetze() {

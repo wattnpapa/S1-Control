@@ -79,7 +79,7 @@ describe("Statuszeile", () => {
     zeige();
     expect(screen.getByText("Stand: vor 8 s")).toBeDefined();
     expect(screen.getByText(/Share erreichbar/)).toBeDefined();
-    expect(screen.getByText("2 Einheiten · 1/2/20/23")).toBeDefined();
+    expect(screen.getByText("2 EINH · 1/2/20 // 23")).toBeDefined();
   });
 
   it("meldet einen Einsatz ohne Ereignisse nicht als uralt", () => {
