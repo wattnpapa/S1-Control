@@ -819,6 +819,70 @@ const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 ]);
 
 /**
+ * Die fachlichen Zeiten des Katalogs und ihre Klasse (§2.5, Auflage 12).
+ *
+ * **Jede** fachliche Zeit ist einer von drei Klassen zugeordnet; es gibt keine
+ * vierte und keine unzugeordnete. Die dritte, **Fremdzeit** (`meldung.stand`
+ * und `.empfangenAm`), wird gar nicht geprueft: Sie stammt aus einem fremden
+ * Geraet, dessen Uhr diese Fuehrungsstelle nicht verantwortet — ein Hinweis
+ * daran waere bei jedem zweiten Papierbogen zu sehen und damit wertlos. Sie
+ * steht deshalb nicht in dieser Tabelle.
+ *
+ * `datum` in `SchichtplanEintragGesetzt` ist **keine** fachliche Zeit, sondern
+ * ein Schluesselbestandteil (§5.7): Ein Dienstplan fuer uebermorgen ist der
+ * Normalfall.
+ */
+const ZEITEN: ReadonlyMap<string, { klasse: "IST" | "PLAN"; schluessel?: string }> = new Map([
+  ["einsatz.beginn", { klasse: "IST" as const }],
+  ["einsatz.ende", { klasse: "IST" as const }],
+  ["abschnitt.aufgeloest", { klasse: "IST" as const, schluessel: "aufgeloestAm" }],
+  ["einheit.eingetroffenAm", { klasse: "IST" as const }],
+  ["einheit.einsatzendeAm", { klasse: "IST" as const }],
+  ["einheit.rueckfuehrungAm", { klasse: "IST" as const }],
+  ["einheit.verfuegbarBis", { klasse: "PLAN" as const }],
+  ["auftrag.von", { klasse: "IST" as const }],
+  ["auftrag.bis", { klasse: "PLAN" as const }],
+  ["anforderung.angefordertAm", { klasse: "IST" as const }],
+  ["anforderung.zusage", { klasse: "PLAN" as const, schluessel: "zugesagtFuer" }],
+  ["anforderung.erledigung", { klasse: "IST" as const, schluessel: "erledigtAm" }],
+  ["anhang.hinzugefuegtAm", { klasse: "IST" as const }],
+  ["etbEintrag.zeitpunkt", { klasse: "IST" as const }],
+]);
+
+/** Startwert S1: Abweichung einer Ist-Zeit von der Wanduhr in eine der beiden Richtungen. */
+const IST_SCHWELLE_MS = 12 * 60 * 60 * 1000;
+/** Startwert S8: Ein Planwert darf hoechstens so weit nach der Wanduhr liegen. */
+const PLAN_SCHWELLE_MS = 90 * 24 * 60 * 60 * 1000;
+
+/**
+ * Plausibilisiert eine fachliche Zeit gegen die Wanduhr desselben Ereignisses
+ * (§2.5).
+ *
+ * **Der Hinweis ist kein Fehler**, das Ereignis wirkt. **Die Schwelle
+ * entscheidet keinen Konflikt** — taete sie es, haenge die Konfliktaufloesung
+ * an der Wanduhr, und §3.1 verbietet das.
+ */
+function zeitHinweis(
+  feldpfad: string,
+  fachlicheZeit: string,
+  wanduhr: string | undefined,
+  klasse: "IST" | "PLAN",
+  ereignis: EreignisId | undefined,
+): Konflikthinweis | undefined {
+  if (wanduhr === undefined || ereignis === undefined) return undefined;
+  const zeit = Date.parse(fachlicheZeit);
+  const uhr = Date.parse(wanduhr);
+  if (Number.isNaN(zeit) || Number.isNaN(uhr)) return undefined;
+  const abstand = zeit - uhr;
+  const unplausibel =
+    klasse === "IST"
+      ? Math.abs(abstand) > IST_SCHWELLE_MS
+      : abstand < 0 || abstand > PLAN_SCHWELLE_MS;
+  if (!unplausibel) return undefined;
+  return { art: "meldezeitUnplausibel", feldpfad, ereignis, fachlicheZeit, wanduhr, zeitklasse: klasse };
+}
+
+/**
  * Felder, deren Wert auf eine andere Entitaet verweist (§3.10).
  *
  * Das Feld wird **gefaltet und behalten** — der Verweis ist der gemeldete
@@ -1071,6 +1135,34 @@ function baueEntitaet(
     if (hinweis !== undefined) hinweise.push(hinweis);
 
     // §2.2a: Wertbezogene Hinweise entstehen nur am **Gewinner** eines Feldes.
+    // Sie fordern auf, einen Wert zu pruefen, der **gilt**; ein verdraengter
+    // Wert gilt nirgends, und ein Hinweis auf ihn erschiene und verschwaende
+    // mit jeder fremden Aenderung an demselben Feld.
+    const zeit = ZEITEN.get(`${art}.${name}`);
+    if (zeit !== undefined) {
+      const roh =
+        zeit.schluessel === undefined
+          ? feld.wert
+          : (feld.wert as Record<string, unknown> | null)?.[zeit.schluessel];
+      if (typeof roh === "string") {
+        const hinweis = zeitHinweis(feldpfad, roh, feld.wanduhr, zeit.klasse, feld.durch);
+        if (hinweis !== undefined) hinweise.push(hinweis);
+      }
+    }
+    if (typeof feld.fachlicheZeit === "string" && feld.zeitklasse !== undefined) {
+      // `meldezeit` bei `StaerkeGeaendert` ist kein eigenes Zustandsfeld,
+      // sondern datiert die Meldung; der Hinweis steht nach Auflage 12 am
+      // **Staerkewert** (§2.5).
+      const hinweis = zeitHinweis(
+        feldpfad,
+        feld.fachlicheZeit,
+        feld.wanduhr,
+        feld.zeitklasse,
+        feld.durch,
+      );
+      if (hinweis !== undefined) hinweise.push(hinweis);
+    }
+
     const bekannte = OFFENE_BEREICHE.get(`${art}.${name}`);
     if (bekannte !== undefined && typeof feld.wert === "string" && !bekannte.has(feld.wert)) {
       hinweise.push({ art: "unbekannterWert", feldpfad, wert: feld.wert });
@@ -1524,6 +1616,34 @@ export function materialisiere(faltung: Faltung): Zustand {
     });
   }
 
+  // §5.4.4: **Je Schluessel ein Hinweis**, nicht paarweise — bei vier
+  // Einheiten waeren das sechs Zeilen fuer einen Sachverhalt, und ihre Zahl
+  // haenge von einer Wahl ab, die zwei Clients gleich treffen muessten.
+  // In die Gruppe geht, was **weder entfernt noch wirksam aufgegangen noch
+  // archiviert** ist: die ersten beiden Bedingungen von `zaehlt`, **ohne** den
+  // Abschnittstyp — der Regelfall ist gerade die am Meldekopf gemeldete
+  // Einheit in einem Abschnitt vom Typ `ANGEFORDERT` —, aber **ohne** die
+  // Einheiten im reservierten Abschnitt `ARCHIV` (T164).
+  const nachSchluessel = new Map<string, string[]>();
+  for (const [id, entitaet] of einheitenGebaut) {
+    const schluessel = entitaet.felder.get("einheitSchluessel")?.wert;
+    if (typeof schluessel !== "string" || schluessel.length === 0) continue;
+    if (entfernte.has(id) || zuwachsKanteWirksam(id)) continue;
+    const gebauteEinheit = einheiten.get(id) as { wirksamerAbschnittId: string };
+    if (gebauteEinheit.wirksamerAbschnittId === ARCHIV_ABSCHNITT_ID) continue;
+    nachSchluessel.set(schluessel, [...(nachSchluessel.get(schluessel) ?? []), id]);
+  }
+  for (const [schluessel, ids] of nachSchluessel) {
+    if (ids.length < 2) continue;
+    const sortiert = [...ids].sort(vergleicheNachCodepunkt);
+    hinweise.push({
+      art: "moeglicheDublette",
+      feldpfad: `einheit/${sortiert[0] as string}/einheitSchluessel`,
+      schluessel,
+      ids: sortiert,
+    });
+  }
+
   // --- Die uebrigen Entitaeten -------------------------------------------
   const sammlung = (art: string): Map<string, unknown> => {
     const ergebnis = new Map<string, unknown>();
@@ -1570,6 +1690,7 @@ export function materialisiere(faltung: Faltung): Zustand {
   }
 
   const anforderungen = new Map<string, unknown>();
+  const nachKennung = new Map<string, string[]>();
   for (const [id, entitaet] of gebaut.get("anforderung") ?? []) {
     // §5.6.2, die Zustandsmaschine, gegen die P6 misst.
     const zustand = gilt(entitaet.felder.get("erledigung"))
@@ -1580,6 +1701,40 @@ export function materialisiere(faltung: Faltung): Zustand {
           ? "ZUGESAGT"
           : "OFFEN";
     anforderungen.set(id, { ...entitaet.werte, zustand });
+
+    // §5.6.1: Die Kennung ist ein Etikett, keine Identitaet — die abzuloesende
+    // und die abloesende Zeile tragen sie absichtlich gleich. Form und
+    // Begruendung wie §5.4.4.
+    const kennung = entitaet.felder.get("kennung")?.wert;
+    if (typeof kennung !== "string" || kennung.length === 0) continue;
+    if (zustand === "STORNIERT") continue;
+    nachKennung.set(kennung, [...(nachKennung.get(kennung) ?? []), id]);
+  }
+  for (const [kennung, ids] of nachKennung) {
+    if (ids.length < 2) continue;
+    const sortiert = [...ids].sort(vergleicheNachCodepunkt);
+    hinweise.push({
+      art: "moeglicheDublette",
+      feldpfad: `anforderung/${sortiert[0] as string}/kennung`,
+      schluessel: kennung,
+      ids: sortiert,
+    });
+  }
+
+  // §5.7: `schichtplan` ist eine eigene Wurzel-Datensammlung, kein Feld des
+  // Dienstpostens — sonst belegte ein einziger Dienstposten so viele
+  // Schluessel, wie jemand Tage beschrieben hat.
+  const dienstposten = new Map<string, unknown>();
+  const schichtplan = new Map<string, { readonly [datum: string]: Feld<unknown> }>();
+  for (const [id, entitaet] of gebaut.get("dienstposten") ?? []) {
+    const werte = { ...entitaet.werte };
+    delete werte["schichtplan"];
+    dienstposten.set(id, werte);
+    const zellen = new Map<string, Feld<unknown>>();
+    for (const [name, feld] of entitaet.felder) {
+      if (name.startsWith("schichtplan/")) zellen.set(name.slice("schichtplan/".length), feld);
+    }
+    if (zellen.size > 0) schichtplan.set(id, alsDatensammlung(zellen));
   }
 
   // --- Meldungen: die Revisionsreihe (§5.8.1) -----------------------------
@@ -1701,8 +1856,8 @@ export function materialisiere(faltung: Faltung): Zustand {
     personen: alsDatensammlung(sammlung("person")) as Zustand["personen"],
     auftraege: alsDatensammlung(sammlung("auftrag")) as Zustand["auftraege"],
     anforderungen: alsDatensammlung(anforderungen) as Zustand["anforderungen"],
-    dienstposten: alsDatensammlung(sammlung("dienstposten")) as Zustand["dienstposten"],
-    schichtplan: leereSammlung(),
+    dienstposten: alsDatensammlung(dienstposten) as Zustand["dienstposten"],
+    schichtplan: alsDatensammlung(schichtplan) as Zustand["schichtplan"],
     meldungen: alsDatensammlung(meldungen) as Zustand["meldungen"],
     anhaenge: alsDatensammlung(sammlung("anhang")) as Zustand["anhaenge"],
     etbEintraege: alsDatensammlung(sammlung("etbEintrag")) as Zustand["etbEintraege"],

@@ -24,6 +24,9 @@ export function akteur(clientId: string): Akteur {
   return { benutzer: `Bediener ${clientId}`, host: `rechner-${clientId}`, clientId };
 }
 
+/** Bezugspunkt der abgeleiteten Wanduhr: der Beginn des Testeinsatzes. */
+const BEZUGSZEIT = Date.parse("2026-09-08T08:00:00+02:00");
+
 /** Der Rahmenanteil, den alle Bauhilfen gemeinsam setzen (§2.1). */
 function rahmen(h: Hlc, laufnummer: number) {
   return {
@@ -32,8 +35,10 @@ function rahmen(h: Hlc, laufnummer: number) {
     schemaVersion: SCHEMA_VERSION,
     akteur: akteur(h.clientId),
     // Die Wanduhr ist reine Anzeige (§3.1) und wird hier aus der HLC
-    // abgeleitet, damit die Bauhilfen keine echte Uhr brauchen.
-    wanduhr: new Date(h.millisekunden).toISOString(),
+    // abgeleitet, damit die Bauhilfen keine echte Uhr brauchen. Der Bezugs-
+    // punkt liegt im Einsatzzeitraum, damit die fachlichen Zeiten der Tests
+    // nicht schon durch die Bauhilfe unplausibel werden (§2.5).
+    wanduhr: new Date(BEZUGSZEIT + h.millisekunden).toISOString(),
   };
 }
 

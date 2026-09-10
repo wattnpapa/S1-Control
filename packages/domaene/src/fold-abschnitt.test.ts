@@ -31,7 +31,7 @@ function bau(
     hlc: h,
     schemaVersion: SCHEMA_VERSION,
     akteur: akteur(h.clientId),
-    wanduhr: new Date(h.millisekunden).toISOString(),
+    wanduhr: new Date(Date.parse("2026-09-08T08:00:00+02:00") + h.millisekunden).toISOString(),
     typ,
     nutzlast,
     ...weiteres,
