@@ -58,6 +58,7 @@ import {
   clientPraefix,
   istVerwaltungsereignis,
   liesFremdePraesenz,
+  liesLokaleHistorie,
   oeffneAkte,
   schreibePraesenz,
   segmentText,
@@ -319,6 +320,34 @@ export class Aktendienst {
 
     this.#melde(ergebnis.reaktion);
     for (const weitere of ergebnis.weitereReaktionen ?? []) this.#melde(weitere);
+
+    // **Die Wiederaufnahme, vor allem anderen.** Der Leser liest fremde
+    // Dateien ab seinem gemerkten `leseOffset` (§6.2) und eigene gar nicht
+    // (§5.4.1), und beide Offsets ueberstehen den Neustart in
+    // `upload-state.json`. Ohne diesen Aufruf bliebe die Faltung nach jedem
+    // Programmstart leer, bis jemand etwas Neues schreibt — der Einsatz saehe
+    // aus, als haette er nie stattgefunden. Die Quelle ist der lokale Spiegel,
+    // aus dem §5.3 die Identitaeten und §4.4 den Undo-Stapel ohnehin beim
+    // Oeffnen aufbaut.
+    const historie = await liesLokaleHistorie(this.#o.dateisystem, this.#o.ablage);
+    this.#nimmAuf(historie.zeilen);
+    for (const fehler of historie.lesefehler) {
+      this.#o.sende({
+        art: "hinweis",
+        akteId: this.#o.akteId,
+        stufe: "warnung",
+        text: `Beim Wiederaufnehmen war ${fehler.datei} nicht vollständig lesbar (${fehler.code}). Was auf dem Share liegt, wird nachgeholt.`,
+      });
+    }
+
+    // §3.2: Die HLC-Uhr faengt nach einem Neustart bei der Wanduhr an. Was die
+    // Wiederaufnahme mitbringt, ist ihr deshalb nicht bekannt — ein Peer, der
+    // vor dem Neustart voraus war, waere es aus Sicht dieses Clients nicht
+    // mehr, und das naechste eigene Ereignis sortierte unter seines. Der
+    // hoechste wiederaufgenommene Stand geht darum durch `empfangen`, genau
+    // wie beim Lesen im Takt.
+    if (this.#hoechsteHlc !== undefined) this.#hlcUhr.empfangen(this.#hoechsteHlc);
+
     this.#nimmAuf(ergebnis.quarantaeneNachlauf.neueZeilen);
 
     // Der Oeffnungsbefund sagt bereits, ob der Share erreichbar war; ihn hier

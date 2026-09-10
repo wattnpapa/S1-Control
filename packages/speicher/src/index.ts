@@ -132,6 +132,9 @@ export {
 // Geprueftes Lesen einer Segmentdatei §5.5; das Dateiende wird gelesen, nie erfragt (§5.4.2).
 export { angekuendigterNachfolger, liesSegment, type Segmentbefund } from "./segmentlese.js";
 
+// Die Wiederaufnahme beim Oeffnen: der Fachzustand aus dem lokalen Spiegel §5.3, §4.4.
+export { liesLokaleHistorie, type Historienbefund } from "./historie.js";
+
 // Die gesehenen Identitaeten aus dem lokalen Spiegel §5.3.
 export { Identitaetenbuch } from "./identitaeten.js";
 
