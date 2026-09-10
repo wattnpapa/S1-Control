@@ -1,0 +1,1381 @@
+{
+  "schemaVersion": 8,
+  "uebung": true,
+  "stand": 3439260,
+  "einheit": {
+    "organisation": 1,
+    "einheitsTyp": {
+      "freitext": "Verstärkter Bergungszug"
+    },
+    "hierarchie": [
+      {
+        "bezeichnung": {
+          "code": 1
+        },
+        "name": "Oldenburg (NI)",
+        "kurz": "OODE",
+        "telefon": "5553702955",
+        "email": "OV-Oldenburg-Ni@thw.de"
+      },
+      {
+        "bezeichnung": {
+          "code": 2
+        },
+        "name": "Oldenburg",
+        "telefon": "5551892887",
+        "email": "Poststelle.RSt_Oldenburg@thw.de"
+      },
+      {
+        "bezeichnung": {
+          "code": 3
+        },
+        "name": "Bremen, Niedersachsen",
+        "telefon": "5558869463",
+        "email": "Poststelle.LVHBNI@thw.de"
+      }
+    ]
+  },
+  "einsatz": {
+    "zeitraumVon": 2388,
+    "zeitraumBis": 2395,
+    "ortAuftrag": "Großschadenslage nach Starkregen und Hangrutsch im Landkreis Oldenburg — Verstärkter Bergungszug mit Schwerer Bergung: Menschenrettung aus verschütteten Gebäuden, Abstützen einsturzgefährdeter Bauwerke, Beräumung der Zufahrtswege, Aufbau einer Bereitstellungsraum-Struktur für nachrückende Kräfte."
+  },
+  "personalErfassung": 0,
+  "personal": [
+    {
+      "vorname": "Sandra",
+      "nachname": "Otto",
+      "staerkeRolle": 2,
+      "funktionen": [
+        {
+          "code": 1
+        },
+        {
+          "code": 30
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 1,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5558758679"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        },
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        }
+      ]
+    },
+    {
+      "vorname": "Felix",
+      "nachname": "Braun",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 2
+        },
+        {
+          "code": 31
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5554814493"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        },
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Tim",
+      "nachname": "Wolf",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 3
+        },
+        {
+          "code": 32
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552289512"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        },
+        {
+          "freitext": "Funkamateur (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Dominik",
+      "nachname": "Peters",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 4
+        },
+        {
+          "code": 36
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5555362846"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Zimmerer (Beruf)"
+        },
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Tanja",
+      "nachname": "Schmidt",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 38
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 1,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5555695703"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        },
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        }
+      ]
+    },
+    {
+      "vorname": "Dominik",
+      "nachname": "Arnold",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 41
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5558918084"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        },
+        {
+          "freitext": "Tischler (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Paul",
+      "nachname": "Haas",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 49
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5559250941"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Funkamateur (extern)"
+        },
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Jonas",
+      "nachname": "Günther",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 51
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552473322"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        },
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Franziska",
+      "nachname": "Thiel",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 67
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 1,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5554364275"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        },
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Florian",
+      "nachname": "Keller",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 30
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5557586656"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Tischler (Beruf)"
+        },
+        {
+          "freitext": "Zimmerer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Erik",
+      "nachname": "Winkler",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 31
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 2,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5557772418"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        },
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        }
+      ]
+    },
+    {
+      "vorname": "Thomas",
+      "nachname": "Klein",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 3
+        },
+        {
+          "code": 32
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5553446953"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        },
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Jannik",
+      "nachname": "Horn",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 4
+        },
+        {
+          "code": 36
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 2,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5554217180"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        },
+        {
+          "freitext": "Funkamateur (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Michael",
+      "nachname": "Böhm",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 38
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5550994799"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Zimmerer (Beruf)"
+        },
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Jana",
+      "nachname": "Scherer",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 41
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 1,
+      "ernaehrung": 2,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5550661942"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        },
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        }
+      ]
+    },
+    {
+      "vorname": "Karsten",
+      "nachname": "Fischer",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 49
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5557439561"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        },
+        {
+          "freitext": "Tischler (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Andreas",
+      "nachname": "Maier",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 51
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5557106704"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Funkamateur (extern)"
+        },
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Ole",
+      "nachname": "Brandt",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 67
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5553884323"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        },
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Carina",
+      "nachname": "Winter",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 30
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 1,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5551993370"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        },
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Simon",
+      "nachname": "Wolf",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 31
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5558770989"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Tischler (Beruf)"
+        },
+        {
+          "freitext": "Zimmerer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Jens",
+      "nachname": "Arnold",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 3
+        },
+        {
+          "code": 32
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5553859804"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        },
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        }
+      ]
+    },
+    {
+      "vorname": "Niklas",
+      "nachname": "Dietrich",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 4
+        },
+        {
+          "code": 36
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552646758"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        },
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Ines",
+      "nachname": "Krämer",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 38
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 1,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5555869139"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        },
+        {
+          "freitext": "Funkamateur (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Sven",
+      "nachname": "Stein",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 41
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5559091520"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Zimmerer (Beruf)"
+        },
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Joachim",
+      "nachname": "Franke",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 49
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5556534853"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        },
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        }
+      ]
+    },
+    {
+      "vorname": "Joachim",
+      "nachname": "Möller",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 51
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5559757234"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        },
+        {
+          "freitext": "Tischler (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Niklas",
+      "nachname": "Lutz",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 67
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552979615"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Funkamateur (extern)"
+        },
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Marco",
+      "nachname": "Jäger",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 30
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5556201996"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        },
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Ole",
+      "nachname": "Wolf",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 31
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5553645329"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        },
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Anna",
+      "nachname": "Krämer",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 3
+        },
+        {
+          "code": 32
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 1,
+      "ernaehrung": 2,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5553247520"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Tischler (Beruf)"
+        },
+        {
+          "freitext": "Zimmerer (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Joachim",
+      "nachname": "Menzel",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "code": 4
+        },
+        {
+          "code": 36
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 1,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5558611568"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        },
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        }
+      ]
+    },
+    {
+      "vorname": "Uwe",
+      "nachname": "Herrmann",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 38
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5555389187"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        },
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Jan",
+      "nachname": "Pohl",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 41
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552166806"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Rettungssanitäter (extern)"
+        },
+        {
+          "freitext": "Funkamateur (extern)"
+        }
+      ]
+    },
+    {
+      "vorname": "Julian",
+      "nachname": "Engel",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 49
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5558944425"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Zimmerer (Beruf)"
+        },
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Lukas",
+      "nachname": "Krüger",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 51
+        }
+      ],
+      "fahrerlaubnis": 10,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5555722044"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Landwirt — Erfahrung Großgeräte"
+        },
+        {
+          "freitext": "Feuerwehr-Doppelmitglied (AGT)"
+        }
+      ]
+    },
+    {
+      "vorname": "Lukas",
+      "nachname": "Busch",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 67
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552499663"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Motorsägenschein AS Baum I (extern)"
+        },
+        {
+          "freitext": "Tischler (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Birgit",
+      "nachname": "Köhler",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 30
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 1,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5559277282"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Funkamateur (extern)"
+        },
+        {
+          "freitext": "Elektrofachkraft (Beruf)"
+        }
+      ]
+    },
+    {
+      "vorname": "Ole",
+      "nachname": "Neumann",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "code": 5
+        },
+        {
+          "code": 31
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5556054901"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+        },
+        {
+          "freitext": "Berufskraftfahrer (Beruf)"
+        }
+      ]
+    }
+  ],
+  "fahrzeuge": [
+    {
+      "typ": {
+        "code": 24
+      },
+      "kennzeichen": "THW-80373",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          71,
+          25
+        ]
+      },
+      "stanKonform": true
+    },
+    {
+      "typ": {
+        "code": 4
+      },
+      "kennzeichen": "THW-80374",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          72,
+          51
+        ]
+      },
+      "stanKonform": true
+    },
+    {
+      "typ": {
+        "freitext": "MzKW"
+      },
+      "kennzeichen": "THW-80375",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          72,
+          54
+        ]
+      },
+      "stanKonform": false,
+      "aenderungen": "OV-eigenes Fahrzeug, zusätzlich zur StAN"
+    },
+    {
+      "typ": {
+        "code": 16
+      },
+      "kennzeichen": "Kettenbagger 8 t (Mietgerät)",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          72,
+          71
+        ]
+      },
+      "stanKonform": false,
+      "aenderungen": "Mietgerät — Tiltrotator und Abbruchgreifer"
+    },
+    {
+      "typ": {
+        "code": 4
+      },
+      "kennzeichen": "THW-80376",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          73,
+          51
+        ]
+      },
+      "stanKonform": true
+    },
+    {
+      "typ": {
+        "code": 7
+      },
+      "kennzeichen": "THW-80377",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          73,
+          61
+        ]
+      },
+      "stanKonform": true
+    },
+    {
+      "typ": {
+        "code": 8
+      },
+      "kennzeichen": "THW-80378",
+      "funkrufname": {
+        "kennwort": {
+          "code": 1
+        },
+        "eigenerStandort": true,
+        "teile": [
+          71,
+          43
+        ]
+      },
+      "stanKonform": true,
+      "aenderungen": "Materialtransport Schwere Bergung, Ladebordwand"
+    },
+    {
+      "typ": {
+        "code": 45
+      },
+      "kennzeichen": "THW-80379",
+      "stanKonform": true,
+      "aenderungen": "Tieflader für Bagger"
+    },
+    {
+      "typ": {
+        "code": 47
+      },
+      "kennzeichen": "THW-80380",
+      "stanKonform": true,
+      "aenderungen": "NEA 50 kVA für Baustellenbeleuchtung"
+    },
+    {
+      "typ": {
+        "code": 43
+      },
+      "kennzeichen": "THW-80381",
+      "stanKonform": true,
+      "aenderungen": "Verpflegungs- und Sanitätsausstattung"
+    }
+  ],
+  "sofortbedarf": {
+    "verpflegungPersonen": 38,
+    "dieselLiter": 620,
+    "benzinLiter": 40,
+    "gemischLiter": 20,
+    "unterbringung": true,
+    "ruhezeitErforderlich": true
+  },
+  "sonstiges": "Einsatz mehrschichtig über mindestens sieben Tage geplant. Ablösung nach je 12 h erforderlich, zweite Schicht wird nachgeführt. Unterbringung in Turnhalle organisiert, Feldküche der FGr Log-V angefragt. Schwere Bergung benötigt zusätzlich Rüstholz, Baustützen und Abbruchhämmer — Nachforderung über die Regionalstelle läuft."
+}

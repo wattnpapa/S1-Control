@@ -1,0 +1,252 @@
+{
+  "schemaVersion": 8,
+  "uebung": true,
+  "stand": 1971930,
+  "einheit": {
+    "organisation": 9,
+    "einheitsTyp": {
+      "freitext": "Wasserrettungszug — Strömungsrettergruppe"
+    },
+    "hierarchie": [
+      {
+        "bezeichnung": {
+          "freitext": "Ortsgruppe"
+        },
+        "name": "Gaggenau",
+        "kurz": "OG Gaggenau",
+        "telefon": "5552469367",
+        "email": "info@gaggenau.dlrg.de"
+      },
+      {
+        "bezeichnung": {
+          "freitext": "Bezirk"
+        },
+        "name": "Mittelbaden"
+      },
+      {
+        "bezeichnung": {
+          "freitext": "Landesverband"
+        },
+        "name": "Baden"
+      }
+    ]
+  },
+  "einsatz": {
+    "zeitraumVon": 1405,
+    "zeitraumBis": 1408,
+    "ortAuftrag": "Hochwasserlage an Rhein und Murg im Landkreis Rastatt — Menschenrettung aus überfluteten Bereichen, Deichverteidigung und Sicherung der Rettungskräfte auf dem Wasser; Bereitstellungsraum am DLRG-Zentrum Rastatt."
+  },
+  "personalErfassung": 0,
+  "personal": [
+    {
+      "vorname": "Niklas",
+      "nachname": "Roth",
+      "staerkeRolle": 1,
+      "funktionen": [
+        {
+          "freitext": "GrFü"
+        }
+      ],
+      "fahrerlaubnis": 9,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [
+        {
+          "art": 0,
+          "dienstlich": false,
+          "wert": "5552782619"
+        }
+      ],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        },
+        {
+          "freitext": "832 Zugführer- und Einsatzführerausbildung (Führungsstufe B)"
+        }
+      ]
+    },
+    {
+      "vorname": "Sandra",
+      "nachname": "Becker",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 1,
+      "ernaehrung": 1,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        }
+      ]
+    },
+    {
+      "vorname": "Patrick",
+      "nachname": "Hoffmann",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        },
+        {
+          "freitext": "Rettungsschwimmabzeichen Gold"
+        }
+      ]
+    },
+    {
+      "vorname": "Jan",
+      "nachname": "Baumann",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        },
+        {
+          "freitext": "715 BOS-Sprechfunker digital"
+        }
+      ]
+    },
+    {
+      "vorname": "Leon",
+      "nachname": "Rapp",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 6,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        }
+      ]
+    },
+    {
+      "vorname": "Niklas",
+      "nachname": "Vogt",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 5,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        },
+        {
+          "freitext": "401 Basisausbildung Einsatzdienste"
+        }
+      ]
+    },
+    {
+      "vorname": "Paul",
+      "nachname": "Huber",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Sr"
+        }
+      ],
+      "fahrerlaubnis": 0,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        }
+      ]
+    },
+    {
+      "vorname": "Alexander",
+      "nachname": "Becker",
+      "staerkeRolle": 0,
+      "funktionen": [
+        {
+          "freitext": "Kf"
+        }
+      ],
+      "fahrerlaubnis": 6,
+      "geschlecht": 0,
+      "ernaehrung": 0,
+      "kontakte": [],
+      "zusatzqualifikationen": [
+        {
+          "freitext": "1011 Strömungsretter 1 (SR1)"
+        },
+        {
+          "freitext": "401 Basisausbildung Einsatzdienste"
+        }
+      ]
+    }
+  ],
+  "fahrzeuge": [
+    {
+      "typ": {
+        "freitext": "SrGrFzg (GA Strömungsrettung)"
+      },
+      "kennzeichen": "RA-DL 461",
+      "stanKonform": true,
+      "aenderungen": "Zugfahrzeug mit Beladung Strömungsrettung",
+      "funkrufname": {
+        "kennwort": {
+          "code": 7
+        },
+        "eigenerStandort": false,
+        "ort": "Gaggenau",
+        "teile": [
+          46,
+          1
+        ]
+      }
+    },
+    {
+      "typ": {
+        "freitext": "Raft-Anhänger (Strömungsrettung)"
+      },
+      "kennzeichen": "RA-DL 462",
+      "stanKonform": true,
+      "aenderungen": "Raft (aufblasbares Wildwasserboot) auf Anhänger"
+    }
+  ],
+  "sofortbedarf": {
+    "verpflegungPersonen": 8,
+    "dieselLiter": 120,
+    "benzinLiter": 40,
+    "gemischLiter": 0,
+    "unterbringung": true,
+    "ruhezeitErforderlich": true
+  }
+}

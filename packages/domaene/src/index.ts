@@ -75,6 +75,18 @@ export {
   type Sha256Hex,
 } from "./kanonisch.js";
 
+// Der Adapter `eeb → EinheitGemeldet` (M1.5).
+export {
+  bemerkungAus,
+  bezeichnungAus,
+  ebeneAusEinheitstyp,
+  uebersetzeBogen,
+  type NameJeCode,
+  type UebersetzterBogen,
+  type UebersetzungsAuftrag,
+  type Vokabeltabellen,
+} from "./eeb/adapter.js";
+
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).
 export * as kennzahlen from "./kennzahlen.js";
 export type {

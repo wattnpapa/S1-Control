@@ -12,7 +12,9 @@
   "workspaces": [
     "packages/*",
     "apps/*",
-    "vendor/eeb-format"
+    "vendor/eeb-format",
+    "vendor/bos-vokabulare",
+    "vendor/bos-meldekopf"
   ],
   "scripts": {
     "kern:bauen": "node bau/kern-bauen.mjs",

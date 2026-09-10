@@ -7,6 +7,12 @@ import { defineConfig } from "vitest/config";
 //                                 Genau daran zeigt sich, dass der Fachkern
 //                                 weder Node-Globals noch ein DOM braucht.
 //   pakete                        speicher, netz, ausgaben, cli — Node.
+//   bau                           was ueber den Paketen liegt: die
+//                                 Aufnahmeregeln der Kernpakete unter vendor/
+//                                 (ADR-003) und der Roundtrip des
+//                                 eeb-Adapters ueber die 443 Beispielboegen.
+//                                 Node, weil beides Dateien liest — genau
+//                                 deshalb steht es nicht in Ring 2.
 //   desktop-renderer              der Renderer-Anteil der Schale — jsdom.
 //
 // Die Aliase zeigen bewusst auf die Quellen statt auf die gebauten dist/-
@@ -16,6 +22,8 @@ const quelle = (pfad: string) => new URL(pfad, import.meta.url).pathname;
 
 const alias = {
   "@bos/eeb-format": quelle("./vendor/eeb-format/src/index.ts"),
+  "@bos/vokabulare": quelle("./vendor/bos-vokabulare/src/index.ts"),
+  "@bos/meldekopf": quelle("./vendor/bos-meldekopf/src/index.ts"),
   "@s1/domaene": quelle("./packages/domaene/src/index.ts"),
   "@s1/speicher": quelle("./packages/speicher/src/index.ts"),
   "@s1/netz": quelle("./packages/netz/src/index.ts"),
@@ -53,6 +61,14 @@ export default defineConfig({
             "packages/ausgaben/src/**/*.test.ts",
             "packages/cli/src/**/*.test.ts",
           ],
+        },
+      },
+      {
+        resolve: { alias },
+        test: {
+          name: "bau",
+          environment: "node",
+          include: ["bau/**/*.test.ts"],
         },
       },
       {

@@ -7,7 +7,11 @@ import tseslint from "typescript-eslint";
 // Grundregel: jeder Ring darf nur nach innen importieren, nie nach aussen.
 //
 //   @bos/eeb-format     (Ring 1)  plattformneutral, geteilt — eigene Regeln im
-//                           Kern-Repo, hier bewusst nicht doppelt geprüft.
+//   @bos/vokabulare           jeweiligen Repo. Hier nicht doppelt gelintet,
+//   @bos/meldekopf            wohl aber nachgewiesen: `bau/kern/
+//                           aufnahmeregeln.test.ts` prüft den gepinnten
+//                           Quelltext gegen Aufnahmeregel 2 und gegen die DoD
+//                           von M1.1 (kein Capacitor, kein `localStorage`).
 //   @s1/domaene   (Ring 2)  plattformneutral, darf nur @bos/eeb-format.
 //   @s1/speicher  (Ring 3)  node: + @s1/domaene.
 //   @s1/netz      (Ring 3)  node: + @s1/domaene.
@@ -103,7 +107,10 @@ export default tseslint.config(
       // v1 wird nicht mehr gebaut und nicht mehr gelintet; er liegt nur noch
       // als Referenz da (siehe README-v2.md).
       "legacy-v1/**",
-      // Der geteilte Kern prüft seine Aufnahmeregeln in seinem eigenen Repo.
+      // Die geteilten Kernpakete prüfen ihre Aufnahmeregeln in ihren eigenen
+      // Repos; auf dieser Seite steht der Nachweis als Test statt als Lint
+      // (`bau/kern/aufnahmeregeln.test.ts`) — er misst den **gepinnten
+      // Stand**, und genau der kann sich mit einem Pin-Wechsel ändern.
       "vendor/**",
       "**/dist/**",
       "**/out/**",
