@@ -28,7 +28,9 @@
     "build": "npm run kern:bauen && npm run typecheck && npm run build:renderer && npm run build:schale",
     "electron:holen": "install-electron",
     "start": "npm run build && npm run electron:holen && electron apps/desktop",
-    "start:rauchprobe": "npm run build && npm run electron:holen && cross-env S1_SMOKE=1 electron apps/desktop"
+    "start:rauchprobe": "npm run build && npm run electron:holen && cross-env S1_SMOKE=1 electron apps/desktop",
+    "build:paket": "node apps/desktop/bau/paket.mjs",
+    "build:paket:probe": "node apps/desktop/bau/paket.mjs --dir"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -41,6 +43,7 @@
     "@typescript/native": "npm:typescript@^7.0.2",
     "cross-env": "^7.0.3",
     "electron": "^43.4.0",
+    "electron-builder": "^26.15.3",
     "esbuild": "^0.28.1",
     "eslint": "^10.10.0",
     "fast-check": "^4.9.0",

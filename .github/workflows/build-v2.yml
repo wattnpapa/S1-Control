@@ -8,11 +8,13 @@
 # das Produkt, macOS die Entwicklungsplattform, Linux der CI-Lauf
 # (Entscheidung 13) — ein Tor, das nur auf einer davon grün ist, ist kein Tor.
 #
-# NICHT enthalten sind Signierung, Notarisierung, electron-builder und das
-# GitHub-Release. Diese Schritte hängen an Geheimnissen und an einer
-# Paketierung, die der v2-Baum noch nicht hat; sie gehören zu Meilenstein M7
-# (Verteilung). Übernommen ist aus der v1-Kette deshalb nur die Bildung der
-# Zeitstempel-Version — siehe Job `vorbereitung`.
+# Seit M7.1 baut die Kette auch die **Pakete** (Tor 5) und legt sie als
+# Artefakt ab — auf jeder Plattform ihr eigenes Format, ohne Kreuzbau.
+#
+# NICHT enthalten sind weiterhin Signierung, Notarisierung und das
+# GitHub-Release. Sie hängen an Geheimnissen, die dieser Baum nicht hat und
+# nicht haben soll; `bau/paket.mjs` schaltet beides ab, wenn sie fehlen, und
+# baut unsigniert weiter. Die Konfiguration dafür steht schon.
 #
 # `build-main.yml` bleibt unverändert und löst weiterhin nur auf `main` aus;
 # die beiden Ketten laufen nebeneinander, bis v2 v1 ablöst.
@@ -220,10 +222,44 @@ jobs:
       # Akten-Worker) von esbuild. Beide gehören in die Prüfkette, weil sie
       # Fehler finden, die `tsc -b` nicht sieht: nicht auflösbare Verweise aus
       # `index.html`, verletzte Content-Security-Policy, fehlende Einstiege.
-      # Paketiert wird hier nichts — electron-builder, Signierung und Release
-      # kommen erst mit M7 (Verteilung).
       - name: Tor 4 — Renderer bauen
         run: npm run -s build:renderer
 
       - name: Tor 4 — Schale bauen (Main, Preload, Akten-Worker)
         run: npm run -s build:schale
+
+      # ────────────────────────────────────────────────────────────────────
+      # Tor 5 — die Pakete (M7.1).
+      #
+      # Gebaut wird auf jeder Plattform ihr eigenes Format: NSIS und Portable
+      # unter Windows, DMG und ZIP unter macOS, deb und AppImage unter Linux.
+      # Es gibt keinen Kreuzbau — ein Windows-Installer, der unter Linux
+      # entsteht, ist nie derselbe wie einer vom Windows-Laeufer, und die
+      # Frage von V.1 lautet, ob **dieses** Paket sich ohne Elevation
+      # installieren laesst.
+      #
+      # **Ohne Zertifikat und ohne Notarisierung.** `bau/paket.mjs` schaltet
+      # beides ab, wenn die Geheimnisse fehlen, und baut unsigniert weiter.
+      # Das ist Absicht: Die Paketierung soll in jedem Lauf geprueft werden
+      # und nicht erst dann, wenn jemand ein Zertifikat hinterlegt hat. Der
+      # signierte Bau kommt, wenn die Geheimnisse da sind — die Konfiguration
+      # dafuer steht schon.
+      # ────────────────────────────────────────────────────────────────────
+      - name: Tor 5 — Pakete bauen
+        run: npm run -s build:paket
+
+      - name: Pakete als Artefakt ablegen
+        uses: actions/upload-artifact@v4
+        with:
+          name: pakete-${{ runner.os }}
+          # Nur die fertigen Dateien, nicht das entpackte Verzeichnis: Das
+          # `linux-unpacked` daneben ist ein Zwischenstand und waere in jedem
+          # Artefakt der groesste Posten.
+          path: |
+            dist-pakete/*.exe
+            dist-pakete/*.dmg
+            dist-pakete/*.zip
+            dist-pakete/*.deb
+            dist-pakete/*.AppImage
+          if-no-files-found: error
+          retention-days: 14

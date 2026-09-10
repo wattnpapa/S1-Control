@@ -1,0 +1,96 @@
+# Paketierung der Electron-Schale (M7.1).
+#
+# ────────────────────────────────────────────────────────────────────────────
+# Was hier gepackt wird — und was ausdruecklich nicht.
+#
+# `bau/schale.mjs` buendelt Main, Worker und Preload mit esbuild; `vite` baut
+# den Renderer. Alles Fremde ist dabei **eingebuendelt** (nur `electron`
+# bleibt aussen vor). Deshalb steht unter `files` nur `out/**` und keine
+# `node_modules`: Es gibt nichts nachzuladen, und ein Paket, das die
+# Workspace-Verweise (`file:../../vendor/...`) aufloesen muesste, waere von
+# der Ordnerstruktur dieses Rechners abhaengig.
+#
+# `extraMetadata.dependencies: {}` sagt electron-builder dasselbe noch einmal
+# ausdruecklich: Die `package.json` im Paket fuehrt keine Abhaengigkeiten, weil
+# keine gebraucht wird.
+# ────────────────────────────────────────────────────────────────────────────
+
+appId: de.thw.s1control
+productName: S1-Control
+copyright: © THW Ortsverband Oldenburg
+
+directories:
+  output: ../../dist-pakete
+  buildResources: bau/paketmittel
+
+files:
+  - out/**/*
+  - package.json
+  # **Ohne `node_modules`.** electron-builder sammelt sonst jede Zeile aus
+  # `dependencies` ein — hier also die drei geteilten Kerne samt ihren
+  # Quellkarten, obwohl `bau/schale.mjs` sie laengst eingebuendelt hat. Das
+  # Archiv wuchs dadurch auf 29 MB, von denen 28 doppelt waren.
+  - "!node_modules/**/*"
+
+extraMetadata:
+  main: out/main.mjs
+  dependencies: {}
+  # Der Paketname bestimmt den Namen der ausfuehrbaren Datei. Ohne diese
+  # Zeile hiesse sie `@s1desktop` — der Workspace-Name mit entferntem
+  # Schraegstrich, und das steht dann auf dem Rechner der Fuehrungsstelle.
+  name: s1-control
+
+# Die Fassung von Electron steht hier und nicht in einer `dependencies`-Zeile
+# des Pakets: `extraMetadata.dependencies` ist leer, also findet
+# electron-builder sie dort nicht mehr.
+electronVersion: 43.6.0
+
+win:
+  target:
+    # Zwei Ziele, und beide aus dem Betrieb begruendet (V.1):
+    #   nsis     — die Installation auf einem Rechner der Fuehrungsstelle,
+    #   portable — der Stick fuer den Rechner, auf dem niemand installieren
+    #              darf oder will.
+    - nsis
+    - portable
+
+nsis:
+  # **Der Kern von V.1.** `perMachine: false` heisst: Installation in das
+  # Benutzerprofil, ohne Administratorrechte, ohne UAC-Abfrage. M-1 im
+  # Meilensteindokument nennt genau das als Abbruchkriterium — laeuft es
+  # nicht, faellt der ganze Desktop-Ansatz.
+  perMachine: false
+  # Kein Ein-Klick-Installer: Wer auf einem fremden Rechner installiert, will
+  # sehen, wohin.
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createStartMenuShortcut: true
+  createDesktopShortcut: true
+  shortcutName: S1-Control
+  menuCategory: Sonstige
+
+mac:
+  category: public.app-category.utilities
+  target:
+    - dmg
+    - zip
+  # `hardenedRuntime` und `notarize` gehoeren zusammen und brauchen beide ein
+  # Zertifikat. Ohne eines baut electron-builder unsigniert weiter, statt
+  # abzubrechen — siehe `bau/paket.mjs`.
+  hardenedRuntime: true
+
+linux:
+  target:
+    - deb
+    - AppImage
+  category: Utility
+  desktop:
+    entry:
+      Name: S1-Control
+      Categories: Utility;
+
+# Kein `publish`: Der Verteilweg dieses Produkts ist der Share (V.2,
+# Entscheidung 7 — LAN-Peer-Update gestrichen), und ein GitHub-Release ist die
+# zweite Quelle, die ein Mensch anstoesst. Ein eingebauter Auto-Updater, der
+# waehrend einer Lage nach Hause telefoniert, ist genau das nicht.
+publish: null
