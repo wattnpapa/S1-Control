@@ -13,6 +13,7 @@
  */
 
 import { THEMEN, type Lagebild, type Theme } from "../kontrakt/index.js";
+import { BLAETTER, type Blatt } from "./blaetter.js";
 import { staerkeText, taktischeZeit } from "./formate.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { alter } from "./Statuszeile.js";
@@ -33,6 +34,11 @@ export interface KopfbandEigenschaften {
   aufHilfe(): void;
   /** Der Weg zurück — fehlt er, ist kein Einsatz offen und die Zeile entfällt. */
   zurueckZurAuswahl?: (() => void) | undefined;
+  /** Das aufgeschlagene Blatt; ohne offenen Einsatz entfällt die Reiterzeile. */
+  blatt?: Blatt | undefined;
+  waehleBlatt?: ((blatt: Blatt) => void) | undefined;
+  /** Wie viele Meldungen im Eingangskorb offen sind — 0 zeigt keine Marke. */
+  offeneMeldungen?: number | undefined;
 }
 
 export function Kopfband({
@@ -42,6 +48,9 @@ export function Kopfband({
   waehleTheme,
   aufHilfe,
   zurueckZurAuswahl,
+  blatt,
+  waehleBlatt,
+  offeneMeldungen = 0,
 }: KopfbandEigenschaften): React.JSX.Element {
   // Ohne offenen Einsatz steht hier ein Strich und nicht `0/0/0 // 0`: Eine
   // Null ist eine Aussage über die Lage, und ohne Akte gibt es keine.
@@ -96,6 +105,37 @@ export function Kopfband({
       </div>
 
       <Zustandszeile lagebild={lagebild} jetzt={jetzt} />
+
+      {/* Die Reiter stehen im Kopfband und nicht über dem Tagebuch: Sie
+          führen die **ganze** Ansicht und nicht ein Nebenblatt unter der
+          Lage. Damit trägt die Arbeitsfläche zu jedem Zeitpunkt eine Sache
+          statt sechs untereinander. */}
+      {blatt !== undefined && waehleBlatt !== undefined && (
+        <div className="reiter" role="tablist" aria-label="Ansichten">
+          {BLAETTER.map((eintrag) => (
+            <button
+              key={eintrag.schluessel}
+              type="button"
+              role="tab"
+              className={eintrag.rechts === true ? "rechts" : undefined}
+              aria-selected={blatt === eintrag.schluessel}
+              // Der Zähler steht im Namen und nicht nur als Zahl daneben:
+              // Vorgelesen wäre „Eingangskorb 7" sonst „Eingangskorb sieben"
+              // ohne Bezug — und zwischen zwei Textknoten fällt der Abstand
+              // im zugänglichen Namen ohnehin weg.
+              {...(eintrag.schluessel === "eingang" && offeneMeldungen > 0
+                ? { "aria-label": `${eintrag.titel} ${String(offeneMeldungen)} offen` }
+                : {})}
+              onClick={() => waehleBlatt(eintrag.schluessel)}
+            >
+              {eintrag.titel}
+              {eintrag.schluessel === "eingang" && offeneMeldungen > 0 && (
+                <span className="zaehler">{String(offeneMeldungen)}</span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </header>
   );
 }

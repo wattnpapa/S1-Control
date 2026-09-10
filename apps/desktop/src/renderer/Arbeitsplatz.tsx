@@ -9,9 +9,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 
+import { Anforderungen } from "./Anforderungen.js";
 import { bruecke } from "./bruecke.js";
+import { Diagnose } from "./Diagnose.js";
+import { Eingangskorb } from "./Eingangskorb.js";
+import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
 import { Hilfe } from "./Hilfe.js";
 import { Kopfband } from "./Kopfband.js";
+import { Kosten } from "./Kosten.js";
+import { Programmversorgung } from "./Programmversorgung.js";
+import { gehoertZurLage, type Blatt } from "./blaetter.js";
 import { Lage } from "./Lage.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
@@ -40,6 +47,10 @@ export function Arbeitsplatz(): React.JSX.Element {
   const laden = useLaden();
   const jetzt = useJetzt();
   const [hilfeOffen, setzeHilfeOffen] = useState(false);
+  // Welches Blatt aufgeschlagen ist, ist eine Sache **dieses Fensters**: Zwei
+  // Arbeitsplätze am selben Einsatz sehen verschiedene Blätter, und beim
+  // Schließen der Akte ist die Frage hinfällig.
+  const [blatt, setzeBlatt] = useState<Blatt>("lage");
 
   // Strg+H, wie in der Excel (m_makroFunktionen). Das Kürzel wird hier
   // angemeldet und nicht in einer Ansicht: Die Hilfe gehört zum Fenster und
@@ -90,6 +101,9 @@ export function Arbeitsplatz(): React.JSX.Element {
         zurueckZurAuswahl={
           laden.akteId === undefined ? undefined : () => void laden.schliesseEinsatz()
         }
+        {...(laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf"
+          ? { blatt, waehleBlatt: setzeBlatt, offeneMeldungen: laden.eingangskorb?.offen ?? 0 }
+          : {})}
       />
 
       {laden.lagebild !== undefined && <Staerkeband lagebild={laden.lagebild} />}
@@ -121,7 +135,25 @@ export function Arbeitsplatz(): React.JSX.Element {
         ) : laden.einstellungen.betriebsart === "meldekopf" ? (
           <Meldekopf />
         ) : (
-          <Lage />
+          // Ein Blatt zur Zeit. Die Lage bleibt dabei **eingehängt**, auch
+          // wenn ein anderes Blatt oben liegt: Sie hält die Auswahl von
+          // Abschnitt und Einheit, auf die Ausgaben und Tagebuch sich
+          // beziehen, und die soll ein Blick in die Kosten nicht löschen.
+          <>
+            <div hidden={!gehoertZurLage(blatt)}>
+              <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} />
+            </div>
+            {blatt === "eingang" && <Eingangskorb />}
+            {blatt === "anforderungen" && <Anforderungen />}
+            {blatt === "fuest" && <Fuehrungsstelle />}
+            {blatt === "kosten" && <Kosten />}
+            {blatt === "diagnose" && (
+              <>
+                <Diagnose />
+                <Programmversorgung />
+              </>
+            )}
+          </>
         )}
 
         {laden.hinweise.length > 0 && (

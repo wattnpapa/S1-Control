@@ -126,4 +126,56 @@ describe("Kopfband", () => {
     );
     expect(screen.queryByRole("button", { name: /Einsatzauswahl/ })).toBeNull();
   });
+
+  it("zeigt die Reiter erst mit offenem Einsatz und meldet die Wahl", async () => {
+    const waehleBlatt = vi.fn();
+    render(
+      <Kopfband
+        lagebild={LAGEBILD}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+        blatt="lage"
+        waehleBlatt={waehleBlatt}
+        offeneMeldungen={7}
+      />,
+    );
+    expect(screen.getByRole("tab", { name: "Lage", selected: true })).toBeDefined();
+    // Der Zähler steht am Reiter, weil dort die Entscheidung fällt, ob man
+    // hinsieht — nicht erst im Blatt.
+    expect(screen.getByRole("tab", { name: "Eingangskorb 7 offen" })).toBeDefined();
+
+    await userEvent.click(screen.getByRole("tab", { name: /Eingangskorb/ }));
+    expect(waehleBlatt).toHaveBeenCalledWith("eingang");
+  });
+
+  it("lässt die Reiterzeile weg, solange kein Einsatz offen ist", () => {
+    render(
+      <Kopfband
+        lagebild={undefined}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+      />,
+    );
+    expect(screen.queryByRole("tablist")).toBeNull();
+  });
+
+  it("nennt keinen Zähler, wenn nichts offen ist", () => {
+    render(
+      <Kopfband
+        lagebild={LAGEBILD}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+        blatt="kosten"
+        waehleBlatt={() => undefined}
+      />,
+    );
+    expect(screen.getByRole("tab", { name: "Eingangskorb" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Kosten", selected: true })).toBeDefined();
+  });
 });

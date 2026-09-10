@@ -14,14 +14,19 @@ import { useMemo, useState } from "react";
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
 import { Ausgaben } from "./Ausgaben.js";
-import { Blaetter } from "./Blaetter.js";
 import { Monitorwahl } from "./Monitorwahl.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
 import { useLaden } from "./laden.js";
 import { useKuerzel } from "./tastatur.js";
+import type { Lageblatt } from "./blaetter.js";
 
-export function Lage(): React.JSX.Element {
+export interface LageEigenschaften {
+  /** Welches der drei Blätter der Lage oben liegt (`blaetter.ts`). */
+  readonly blatt: Lageblatt;
+}
+
+export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [abschnittId, setzeAbschnittId] = useState<string | undefined>(undefined);
   const [einheitId, setzeEinheitId] = useState<string | undefined>(undefined);
@@ -43,11 +48,10 @@ export function Lage(): React.JSX.Element {
 
   return (
     <section aria-label="Lagebild" className="lage">
-      <div className="lagekopf">
-        <h2>{laden.lagebild?.einsatzName ?? "Wird geöffnet …"}</h2>
-        <button type="button" onClick={() => void laden.schliesseEinsatz()}>
-          Einsatz schließen
-        </button>
+      {/* Die Werkzeugzeile trägt, was die ganze Lage betrifft, und sonst
+          nichts: Der Weg aus dem Einsatz steht im Kopfband, das Anlegen und
+          Verschieben in den Köpfen von Baum und Tabelle. */}
+      <div className="lagekopf" hidden={blatt !== "lage"}>
         <button
           type="button"
           onClick={() => {
@@ -67,7 +71,7 @@ export function Lage(): React.JSX.Element {
         </button>
       </div>
 
-      <div className="lagespalten">
+      <div className="lagespalten" hidden={blatt !== "lage"}>
         <Abschnittsbaum
           gewaehlt={abschnittId}
           aufWahl={(gewaehlt) => {
@@ -85,9 +89,7 @@ export function Lage(): React.JSX.Element {
         />
       </div>
 
-      <Ausgaben />
-
-      <Blaetter />
+      {blatt === "ausgaben" && <Ausgaben />}
 
       {scannerOffen && (
         <Scanner
@@ -98,7 +100,7 @@ export function Lage(): React.JSX.Element {
         />
       )}
 
-      <Tagebuch einheitId={einheitId} abschnittId={abschnittId} />
+      {blatt === "tagebuch" && <Tagebuch einheitId={einheitId} abschnittId={abschnittId} />}
     </section>
   );
 }

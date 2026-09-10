@@ -47,6 +47,8 @@
         --knopf-rahmen: var(--navy-900);
         --knopf-fuellung: var(--navy-900);
         --knopf-fuellung-text: #ffffff;
+        --gesperrt-bg: #e3e6ef;
+        --gesperrt-text: #8b93ad;
         --rahmenbreite: 1px;
         --schrift: 12px;
         --knopfhoehe: 31px;
@@ -82,6 +84,8 @@
         --kartenkante-farbe: #6b74a8;
         --knopf-rahmen: #6b74a8;
         --knopf-fuellung: #3b4383;
+        --gesperrt-bg: #262b4d;
+        --gesperrt-text: #7d85ad;
         color-scheme: dark;
       }
 
@@ -96,6 +100,10 @@
         --text-leiser: #333333;
         --kartenkante-farbe: #000000;
         --knopf-rahmen: #000000;
+        /* Ein gesperrter Knopf darf im Feldbild nicht schwarz auf schwarz
+           stehen: Der Rahmen ist hier ueberall schwarz, die Fuellung nicht. */
+        --gesperrt-bg: #d5d8e0;
+        --gesperrt-text: #4a4a4a;
         --rahmenbreite: 2px;
         --schrift: 14px;
         --knopfhoehe: 38px;
@@ -133,7 +141,16 @@
         --knopf-rahmen: #5a4c1e;
         --knopf-fuellung: #c8a232;
         --knopf-fuellung-text: #14120a;
+        --gesperrt-bg: #241f0c;
+        --gesperrt-text: #8d7a34;
         color-scheme: dark;
+      }
+
+      /* `hidden` muss staerker sein als jede Anzeigeregel darunter: Ein
+         ausgeblendetes Blatt bleibt sonst sichtbar, weil `.lagespalten`
+         ein `display: flex` traegt. */
+      [hidden] {
+        display: none !important;
       }
 
       body {
@@ -240,6 +257,34 @@
       .kopfband .zustandszeile.gestoert {
         color: var(--warn-linie);
       }
+      /* Die Reiterzeile schliesst das Kopfband nach unten ab: Der gewaehlte
+         Reiter traegt seine Marke dort, wo die Arbeitsflaeche beginnt. */
+      .kopfband .reiter {
+        display: flex;
+        gap: 2px;
+      }
+      .kopfband .reiter button {
+        height: auto;
+        padding: 7px 13px 6px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--kopfband-leise);
+        font: 400 13px/1.2 var(--ui);
+      }
+      .kopfband .reiter button[aria-selected="true"] {
+        color: var(--kopfband-text);
+        font-weight: 700;
+        border-bottom-color: var(--kopfband-text);
+      }
+      .kopfband .reiter button.rechts {
+        margin-left: auto;
+      }
+      .kopfband .reiter .zaehler {
+        margin-left: 6px;
+        color: #f0c368;
+        font-variant-numeric: tabular-nums;
+      }
 
       /* ---- Stärkeband ---------------------------------------------------- */
 
@@ -297,7 +342,6 @@
         gap: 14px;
       }
       main > section,
-      .lage > .lagekopf,
       .lagespalten > .baum,
       .lagespalten > .einheiten,
       .lage > .ausgaben,
@@ -359,9 +403,9 @@
         font-weight: 700;
       }
       button:disabled {
-        background: var(--rahmen);
-        border-color: var(--rahmen);
-        color: var(--text-leiser);
+        background: var(--gesperrt-bg);
+        border-color: var(--knopf-rahmen);
+        color: var(--gesperrt-text);
         cursor: default;
       }
 
@@ -414,6 +458,7 @@
 
       .lagekopf {
         gap: 8px;
+        margin-bottom: 0;
       }
       .lagekopf,
       .baumkopf {
@@ -433,19 +478,34 @@
         gap: 14px;
         align-items: flex-start;
       }
+      /* Der Baum steht fest und schmal (Entwurf: 266 px): Er ist die
+         Gliederung und nicht der Inhalt; die Breite gehoert der Tabelle. */
       .baum {
-        min-width: 22rem;
-        flex: 1 1 22rem;
+        flex: 0 0 300px;
+        min-width: 300px;
+        overflow: hidden;
+      }
+      /* Im Feldbild ist die Schrift groesser — der Baum bekommt die Breite,
+         die er dafuer braucht, statt jeden zweiten Namen zu kuerzen. */
+      :root[data-theme="feld"] .baum {
+        flex-basis: 340px;
+        min-width: 340px;
       }
       .baumliste {
         list-style: none;
         margin: 0;
         padding: 0;
       }
+      /* Name links, Zahlen rechts, und der Name gibt nach: In einer schmalen
+         Spalte ist die Stelle, an der gekuerzt werden darf, der Name — die
+         Staerke daneben ist der Grund, aus dem die Zeile ueberhaupt gelesen
+         wird. */
       .baumzeile {
         display: flex;
-        gap: 0.8rem;
+        align-items: baseline;
+        gap: 8px;
         width: 100%;
+        box-sizing: border-box;
         text-align: left;
         background: none;
         border: 1px solid transparent;
@@ -464,16 +524,35 @@
         color: var(--knopf-fuellung-text);
         font-weight: 700;
       }
+      .baumzeile .name {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      /* Der Typ steht als Kuerzel und in Mono: „EINSATZORT" ausgeschrieben
+         nimmt in einer 288-px-Spalte den Platz des Namens weg. */
       .baumzeile .typ {
-        font-size: 0.8rem;
-        opacity: 0.6;
+        flex: 0 3 auto;
+        font: 400 0.8em/1 var(--mono);
+        color: var(--text-leiser);
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        max-width: 7em;
+      }
+      .baumzeile.gewaehlt .typ {
+        color: inherit;
       }
       /* Die Zahlen stehen rechts und in Tabellenziffern: Wer Staerken
          vergleicht, liest Spalten und keine Woerter. */
       .baumzeile .zahlen {
         margin-left: auto;
+        white-space: nowrap;
+        font-family: var(--mono);
         font-variant-numeric: tabular-nums;
-        font-size: 0.85rem;
+        font-size: 0.85em;
       }
       .schalter {
         display: inline-flex;

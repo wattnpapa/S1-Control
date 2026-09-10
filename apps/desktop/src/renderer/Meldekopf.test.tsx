@@ -147,9 +147,12 @@ describe("Der Meldekopf-Modus", () => {
     });
     render(<Arbeitsplatz />);
 
+    // Seit die Ansichten hinter Reitern liegen, steht beim Aufschlagen die
+    // Lage oben — Baum und Tabelle, nicht die Ausgaben.
     await waitFor(() => {
-      expect(screen.getByLabelText("Ausgaben")).toBeDefined();
+      expect(screen.getByLabelText("Abschnitte")).toBeDefined();
     });
+    expect(screen.getByLabelText("Einheiten")).toBeDefined();
     expect(screen.queryByLabelText("Meldekopf")).toBeNull();
   });
 

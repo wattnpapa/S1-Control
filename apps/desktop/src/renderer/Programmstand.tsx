@@ -37,11 +37,12 @@ export function Programmstand(): React.JSX.Element | null {
   }, [pruefe, sharePfad]);
 
   // `undefined` heißt „noch nicht gefragt", die beiden anderen sind der
-  // Normalfall. Keiner der drei erzeugt einen Hinweis — der Knopf zum Holen
-  // steht trotzdem da, denn **gerade dann** ist er gefragt: Wer kein Angebot
-  // sieht, will wissen, ob es eines gibt.
+  // Normalfall. Keiner der drei erzeugt einen Hinweis, und seit die Ansichten
+  // hinter Reitern liegen auch keinen Knopf mehr über der Lage: Wer ohne
+  // Angebot ein Paket holen will, findet den Knopf im Blatt „Diagnose" —
+  // dort, wo auch sonst nachgesehen wird, was das Programm gerade tut.
   if (stand === undefined || stand.art === "keinManifest" || stand.art === "aktuell") {
-    return <Programmversorgung />;
+    return null;
   }
 
   if (stand.art === "abgelehnt") {
