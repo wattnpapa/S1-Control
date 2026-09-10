@@ -27,7 +27,34 @@ import { grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz } from "./prue
 
 afterEach(raeumeAuf);
 
-const ANGEFORDERT_AM = "2026-09-10T09:00:00+02:00";
+/**
+ * Die fachlichen Zeiten dieser Szenarien — **relativ zur Uhr des Läufers**.
+ *
+ * Der Aktendienst schreibt mit der Systemzeit, und §2.5 plausibilisiert jede
+ * fachliche Zeit gegen die Wanduhr desselben Ereignisses: eine Ist-Zeit gegen
+ * zwölf Stunden in beide Richtungen, eine **Planzeit** gegen die Zukunft. Ein
+ * festes Datum im Test ist damit eine Zeitbombe: Es läuft, solange die Uhr des
+ * Läufers nahe genug daran steht, und wird rot, sobald sie weiterrückt — hier
+ * geschehen, als der Container an einem Nachmittag lief und die Zusage für
+ * 16:00 in der Vergangenheit lag.
+ *
+ * Gerechnet wird deshalb von `Date.now()` aus. Was die Szenarien prüfen, ist
+ * die Zustandsmaschine und nicht der Kalender.
+ */
+function vor(stunden: number): string {
+  return new Date(Date.now() - stunden * 60 * 60 * 1000).toISOString();
+}
+
+function in_(stunden: number): string {
+  return new Date(Date.now() + stunden * 60 * 60 * 1000).toISOString();
+}
+
+/** Angefordert vor einer Stunde — eine Ist-Zeit weit innerhalb der Schwelle. */
+const ANGEFORDERT_AM = vor(1);
+/** Zugesagt für in sechs Stunden — eine Planzeit, und die liegt in der Zukunft. */
+const ZUGESAGT_FUER = in_(6);
+/** Eingetroffen vor zwanzig Minuten. */
+const ERLEDIGT_AM = vor(1 / 3);
 
 // ---------------------------------------------------------------------------
 // Die Schritte
@@ -75,20 +102,20 @@ describe("Szenario: Eine Anforderung durchläuft ihre vier Zustände", () => {
     await wennIchAnfordere(platz, "A1", "ANF-001");
     expect(dannIstDerZustand(platz, "A1")).toBe("OFFEN");
 
-    await platz.dienst.bediene(abloesungZugesagt("A1", "2026-09-10T16:00:00+02:00", "THW RB Oldenburg"));
+    await platz.dienst.bediene(abloesungZugesagt("A1", ZUGESAGT_FUER, "THW RB Oldenburg"));
     expect(dannIstDerZustand(platz, "A1")).toBe("ZUGESAGT");
 
-    await platz.dienst.bediene(anforderungErledigt("A1", "2026-09-10T15:40:00+02:00"));
+    await platz.dienst.bediene(anforderungErledigt("A1", ERLEDIGT_AM));
     expect(dannIstDerZustand(platz, "A1")).toBe("EINGETROFFEN");
   });
 
   it("zeigt die Zusage unter dem Schlüssel, den der Fold plausibilisiert", async () => {
     const platz = await angenommenEinEinsatz();
     await wennIchAnfordere(platz, "A1", "ANF-001");
-    await platz.dienst.bediene(abloesungZugesagt("A1", "2026-09-10T16:00:00+02:00", "THW RB Oldenburg"));
+    await platz.dienst.bediene(abloesungZugesagt("A1", ZUGESAGT_FUER, "THW RB Oldenburg"));
 
     const zeile = projektion.anforderungsliste(platz.dienst.zustand).zeilen[0];
-    expect(zeile?.zugesagtFuer).toBe("2026-09-10T16:00:00+02:00");
+    expect(zeile?.zugesagtFuer).toBe(ZUGESAGT_FUER);
     expect(zeile?.zugesagtVon).toBe("THW RB Oldenburg");
     // Und kein Konflikthinweis: Eine Planzeit sechs Stunden nach der Wanduhr
     // liegt weit innerhalb der Schwelle aus §2.5.
@@ -100,7 +127,7 @@ describe("Szenario: Eingetroffen gewinnt gegen ein späteres Storno (§5.6.2, P6
   it("bleibt EINGETROFFEN und meldet die Wirkungslosigkeit", async () => {
     const platz = await angenommenEinEinsatz();
     await wennIchAnfordere(platz, "A1", "ANF-001");
-    await platz.dienst.bediene(anforderungErledigt("A1", "2026-09-10T15:40:00+02:00"));
+    await platz.dienst.bediene(anforderungErledigt("A1", ERLEDIGT_AM));
 
     // Das Storno wird **gefaltet** — `storno` steht danach auf `true` —, aber
     // der abgeleitete Zustand ändert sich nicht. Ein Rückschritt wäre genau
@@ -128,13 +155,13 @@ describe("Szenario: Eingetroffen gewinnt gegen ein späteres Storno (§5.6.2, P6
   it("hält auch eine Zusage nach der Erledigung für wirkungslos", async () => {
     const platz = await angenommenEinEinsatz();
     await wennIchAnfordere(platz, "A1", "ANF-001");
-    await platz.dienst.bediene(anforderungErledigt("A1", "2026-09-10T15:40:00+02:00"));
-    await platz.dienst.bediene(abloesungZugesagt("A1", "2026-09-10T16:00:00+02:00", "spät"));
+    await platz.dienst.bediene(anforderungErledigt("A1", ERLEDIGT_AM));
+    await platz.dienst.bediene(abloesungZugesagt("A1", ZUGESAGT_FUER, "spät"));
 
     expect(dannIstDerZustand(platz, "A1")).toBe("EINGETROFFEN");
     // Das Feld ist gesetzt, der Zustand nicht gewechselt — beides zugleich.
     const zeile = projektion.anforderungsliste(platz.dienst.zustand).zeilen[0];
-    expect(zeile?.zugesagtFuer).toBe("2026-09-10T16:00:00+02:00");
+    expect(zeile?.zugesagtFuer).toBe(ZUGESAGT_FUER);
   });
 });
 
@@ -142,8 +169,8 @@ describe("Szenario: Die drei Rücknahmen", () => {
   it("nimmt die Erledigung zurück und fällt auf ZUGESAGT", async () => {
     const platz = await angenommenEinEinsatz();
     await wennIchAnfordere(platz, "A1", "ANF-001");
-    await platz.dienst.bediene(abloesungZugesagt("A1", "2026-09-10T16:00:00+02:00", "RB"));
-    await platz.dienst.bediene(anforderungErledigt("A1", "2026-09-10T15:40:00+02:00"));
+    await platz.dienst.bediene(abloesungZugesagt("A1", ZUGESAGT_FUER, "RB"));
+    await platz.dienst.bediene(anforderungErledigt("A1", ERLEDIGT_AM));
     await platz.dienst.bediene(ruecknahme("A1", "erledigung"));
 
     // Eine Rücknahme ist kein Rückschritt im Sinne von P6: Sie hat Akteur,
@@ -154,7 +181,7 @@ describe("Szenario: Die drei Rücknahmen", () => {
   it("nimmt die Zusage zurück und fällt auf OFFEN", async () => {
     const platz = await angenommenEinEinsatz();
     await wennIchAnfordere(platz, "A1", "ANF-001");
-    await platz.dienst.bediene(abloesungZugesagt("A1", "2026-09-10T16:00:00+02:00", "RB"));
+    await platz.dienst.bediene(abloesungZugesagt("A1", ZUGESAGT_FUER, "RB"));
     await platz.dienst.bediene(ruecknahme("A1", "zusage"));
     expect(dannIstDerZustand(platz, "A1")).toBe("OFFEN");
   });

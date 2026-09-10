@@ -25,6 +25,23 @@ import { grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz } from "./prue
 
 afterEach(raeumeAuf);
 
+/**
+ * Fachliche Zeiten **relativ zur Uhr des Läufers**.
+ *
+ * Der Aktendienst schreibt mit der Systemzeit, und §2.5 plausibilisiert jede
+ * fachliche Zeit gegen die Wanduhr desselben Ereignisses — eine Ist-Zeit
+ * gegen zwölf Stunden in beide Richtungen. Ein festes Datum ist damit eine
+ * Zeitbombe: Es läuft, solange die Uhr des Läufers nahe genug daran steht,
+ * und wird rot, sobald sie weiterrückt. Geprüft wird hier die Fachregel und
+ * nicht der Kalender.
+ */
+function vorStunden(stunden: number): string {
+  return new Date(Date.now() - stunden * 60 * 60 * 1000).toISOString();
+}
+
+/** Aufgelöst vor zwei Stunden. */
+const AUFGELOEST_AM = vorStunden(2);
+
 // ---------------------------------------------------------------------------
 // Die Schritte
 // ---------------------------------------------------------------------------
@@ -177,7 +194,7 @@ describe("Funktionalität: Abschnittsbaum", () => {
       "AbschnittAufgeloest",
       { abschnittId: "EO" },
       null,
-      { zielAbschnittId: "EA-NORD", aufgeloestAm: "2026-09-10T12:00:00+02:00" },
+      { zielAbschnittId: "EA-NORD", aufgeloestAm: AUFGELOEST_AM },
     );
 
     expect(platz.dienst.zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe("EA-NORD");
@@ -195,7 +212,7 @@ describe("Funktionalität: Abschnittsbaum", () => {
       "AbschnittAufgeloest",
       { abschnittId: "EO" },
       null,
-      { zielAbschnittId: "EA-NORD", aufgeloestAm: "2026-09-10T12:00:00+02:00" },
+      { zielAbschnittId: "EA-NORD", aufgeloestAm: AUFGELOEST_AM },
     );
 
     // §6 U2: `AbschnittAufgeloest` ist strukturell rücknehmbar — über das
