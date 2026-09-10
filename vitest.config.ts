@@ -91,7 +91,7 @@ export default defineConfig({
         test: {
           name: "desktop-renderer",
           environment: "jsdom",
-          include: ["apps/desktop/src/renderer/**/*.test.ts"],
+          include: ["apps/desktop/src/renderer/**/*.test.ts", "apps/desktop/src/renderer/**/*.test.tsx"],
         },
       },
     ],

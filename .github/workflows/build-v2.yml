@@ -1,49 +1,55 @@
-# CI-Gerüst für den v2-Baum (Branch `v2-architektur`, Arbeitspaket M-0.3).
+# Bau- und Prüfkette für den v2-Baum (Branch `v2-architektur`, Arbeitspaket M2.5).
 #
 # ────────────────────────────────────────────────────────────────────────────
-# BEKANNT BLOCKIERT — dieser Workflow ist absichtlich NICHT automatisch aktiv.
+# Was dieser Workflow ist — und was er (noch) nicht ist.
 #
-# `vendor/eeb-format` zeigt in `.gitmodules` derzeit auf einen lokalen Pfad
-# (`/Users/johannes/Developer/eeb-format`), weil das Kern-Repo noch kein Remote
-# hat. Ein GitHub-Runner kann diesen Pfad nicht auflösen: `submodules:
-# recursive` schlägt dort fehl, und ohne den Kern lassen sich weder
-# `typecheck` noch `test` ausführen. Ein auf Push laufender Workflow wäre
-# also garantiert rot — deshalb steht der Push-Auslöser hier auskommentiert
-# statt scharf. Das ist keine Vergesslichkeit, sondern die ehrliche Abbildung
-# des Standes.
+# Er fährt die vier Tore des v2-Baums auf denselben drei Plattformen, auf denen
+# die v1-Kette (`build-main.yml`) baut: Windows, macOS und Linux. Windows ist
+# das Produkt, macOS die Entwicklungsplattform, Linux der CI-Lauf
+# (Entscheidung 13) — ein Tor, das nur auf einer davon grün ist, ist kein Tor.
 #
-# Freischalten, sobald das Kern-Repo ein Remote hat:
-#   1. git submodule set-url vendor/eeb-format git@github.com:<konto>/eeb-format.git
-#      git submodule sync --recursive && git commit .gitmodules
-#   2. Für ein privates Kern-Repo zusätzlich ein Token hinterlegen und im
-#      Checkout-Schritt `token: ${{ secrets.BOS_KERN_TOKEN }}` setzen.
-#   3. Den `push:`-Block unten einkommentieren.
+# NICHT enthalten sind Signierung, Notarisierung, electron-builder und das
+# GitHub-Release. Diese Schritte hängen an Geheimnissen und an einer
+# Paketierung, die der v2-Baum noch nicht hat; sie gehören zu Meilenstein M7
+# (Verteilung). Übernommen ist aus der v1-Kette deshalb nur die Bildung der
+# Zeitstempel-Version — siehe Job `vorbereitung`.
 #
-# Bis dahin lässt sich der Workflow jederzeit von Hand über
-# „Run workflow" (workflow_dispatch) starten — dann sieht man auch sofort,
-# ob der Submodul-Checkout inzwischen trägt.
-#
-# Nicht Bestandteil dieses Gerüsts: Signierung, electron-builder, Notarisierung
-# und GitHub-Release. Die kommen mit Arbeitspaket V. Der v1-Workflow
-# `build-main.yml` bleibt unverändert; er löst ohnehin nur auf `main` aus.
+# `build-main.yml` bleibt unverändert und löst weiterhin nur auf `main` aus;
+# die beiden Ketten laufen nebeneinander, bis v2 v1 ablöst.
 # ────────────────────────────────────────────────────────────────────────────
 
-name: Build v2 (Gerüst)
+name: Build v2
 
 on:
+  # Der Handstart bleibt erhalten, damit sich ein Lauf auch ohne neuen Commit
+  # auslösen lässt — etwa nach einer Änderung an den Submodul-Zeigern.
   workflow_dispatch:
-  # M0.6 verlangt einen grünen CI-Lauf auf Windows, macOS und Linux. Dafür muss
-  # der Lauf auch ausgelöst werden — solange nur `workflow_dispatch` stand, ist
-  # der Job nie gelaufen.
   push:
     branches:
       - v2-architektur
+  # Pull Requests gegen den v2-Zweig laufen durch dieselben Tore. Sonst wäre
+  # der erste Nachweis, dass eine Änderung auf allen drei Plattformen trägt,
+  # erst der Merge — und damit zu spät.
+  pull_request:
+    branches:
+      - v2-architektur
 
+# Nur Lesezugriff: Dieser Workflow setzt weder Tags noch Releases (siehe
+# Kopfkommentar). Sobald M7 das Tag-Setzen aus `build-main.yml` übernimmt,
+# braucht der dortige Job `contents: write` — hier bewusst nicht.
 permissions:
   contents: read
 
+# Ein neuer Push auf denselben Zweig macht den vorigen Lauf gegenstandslos.
+# Drei Plattformen mal mehrere Minuten Bauzeit sind zu teuer, um sie für einen
+# überholten Stand weiterlaufen zu lassen.
+concurrency:
+  group: build-v2-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  prepare:
+  vorbereitung:
+    name: Bau-Version bilden
     runs-on: ubuntu-latest
     outputs:
       build_version: ${{ steps.version.outputs.build_version }}
@@ -54,56 +60,94 @@ jobs:
         with:
           fetch-depth: 0
 
-      # Zeitstempel-Schema unverändert aus build-main.yml übernommen, damit v1
-      # und v2 dieselbe Versionsbildung haben. Das Setzen und Pushen des Tags
-      # bleibt bewusst dem Release-Workflow aus Arbeitspaket V vorbehalten —
-      # ein Gerüst-Lauf auf einem Entwicklungszweig soll keine Tags erzeugen.
-      - name: Generate build version
+      # Zeitstempel-Schema Zeichen für Zeichen aus `build-main.yml` übernommen,
+      # damit v1 und v2 dieselbe Versionsbildung haben und ein v2-Artefakt
+      # später in dieselbe Release-Reihe passt:
+      #   build_version  = %Y.%m.%d.%H.%M  (das Git-Tag der v1-Kette)
+      #   build_semver   = %Y.%-m.%-d-%-H.%-M  (semver-taugliche Schreibweise
+      #                    ohne führende Nullen, für package.json/electron-builder)
+      # Beide sind UTC — ein Runner hat keine verlässliche lokale Zeitzone.
+      #
+      # BEWUSST WEGGELASSEN gegenüber v1: `git tag` und `git push origin`.
+      # Ein Tag ist ein Verteilungsversprechen; ihn auf jedem Push eines
+      # Entwicklungszweigs zu setzen, würde die Tag-Reihe zumüllen und den
+      # Auto-Update-Kanal von v1 stören. Das Setzen des Tags samt Signierung,
+      # electron-builder und GitHub-Release kommt mit M7 (Verteilung) und wird
+      # dann an den Release-Auslöser gehängt, nicht an diesen Prüf-Workflow.
+      # Die Version wird hier trotzdem gebildet und weitergereicht, damit die
+      # Bauschritte sie schon jetzt als `S1_APP_VERSION` sehen — sonst ist das
+      # Schema bis M7 ungetestet.
+      - name: Bau-Version aus Zeitstempel bilden
         id: version
         run: |
           BUILD_VERSION="$(date -u '+%Y.%m.%d.%H.%M')"
           BUILD_SEMVER="$(date -u '+%Y.%-m.%-d-%-H.%-M')"
           echo "build_version=$BUILD_VERSION" >> "$GITHUB_OUTPUT"
           echo "build_semver=$BUILD_SEMVER" >> "$GITHUB_OUTPUT"
-          echo "Build-Version: $BUILD_VERSION (Semver: $BUILD_SEMVER)"
+          echo "Bau-Version: $BUILD_VERSION (Semver: $BUILD_SEMVER)"
 
   pruefung:
-    name: Lint, Typecheck und Tests (${{ matrix.os }})
-    needs: prepare
+    name: Tore (${{ matrix.os }})
+    needs: vorbereitung
     runs-on: ${{ matrix.os }}
-    # Build-Matrix-Struktur wie in build-main.yml: Windows, macOS und Linux.
-    # Die Speicherschicht ab M0.6 bekommt hier ihren eigenen Job.
     strategy:
+      # Kein Abbruch der übrigen Plattformen, wenn eine rot wird. Gerade die
+      # plattformabhängigen Fehler (Pfadtrennzeichen, Zeilenenden, `.cmd`-Shims
+      # unter Windows) will man in einem Lauf alle sehen und nicht einen nach
+      # dem anderen.
       fail-fast: false
       matrix:
         os:
           - ubuntu-latest
-          - macos-latest
           - windows-latest
+          - macos-latest
     env:
-      BUILD_VERSION: ${{ needs.prepare.outputs.build_version }}
-      S1_APP_VERSION: ${{ needs.prepare.outputs.build_version }}
-      S1_APP_SEMVER: ${{ needs.prepare.outputs.build_semver }}
+      BUILD_VERSION: ${{ needs.vorbereitung.outputs.build_version }}
+      S1_APP_VERSION: ${{ needs.vorbereitung.outputs.build_version }}
+      S1_APP_SEMVER: ${{ needs.vorbereitung.outputs.build_semver }}
     steps:
-      # `.gitmodules` zeigt auf die öffentliche URL des Kern-Repos
-      # (https://github.com/wattnpapa/eeb-format.git); ein Runner löst sie ohne
-      # Anmeldung auf. Der frühere Vermerk „BLOCKIERT bis zur Remote-Freigabe"
-      # war überholt: Das Repo ist freigegeben, und der hier eingetragene
-      # Submodul-Zeiger ist auf dessen `main` enthalten.
-      - name: Checkout (mit Submodul vendor/eeb-format)
+      # `submodules: recursive` ist hier keine Bequemlichkeit, sondern Pflicht:
+      # Die drei Kernpakete unter `vendor/` (eeb-format, bos-vokabulare,
+      # bos-meldekopf) liegen in eigenen Repositorien und werden von
+      # `bau/kern-bauen.mjs` gebaut, das als `postinstall` der Wurzel läuft.
+      # Fehlt auch nur eines, bricht schon `npm ci` ab — der Rest des Jobs
+      # käme gar nicht erst zum Zug. Die drei Repos sind öffentlich, ein
+      # Runner löst die URLs aus `.gitmodules` also ohne Anmeldung auf; würde
+      # eines privat gestellt, wäre hier zusätzlich ein `token:` nötig.
+      - name: Checkout samt Kern-Submodulen
         uses: actions/checkout@v4
         with:
           submodules: recursive
 
-      - name: Setup Node
+      # Feste Version 22 wie in `build-main.yml`. v1 und v2 laufen so lange auf
+      # derselben Node-Reihe, wie sie nebeneinander gepflegt werden — ein
+      # Unterschied hier würde Fehler erzeugen, die nur in einer der beiden
+      # Ketten auftreten. Bewusst NICHT `node-version-file: .nvmrc`: Die
+      # `.nvmrc` nennt 24, und ein Sprung auf eine andere Hauptversion gehört
+      # als eigener, absichtlicher Schritt für beide Ketten gemeinsam gemacht.
+      # Der npm-Cache hängt an `package-lock.json` und spart auf allen drei
+      # Plattformen den Löwenanteil der Installationszeit.
+      - name: Node einrichten
         uses: actions/setup-node@v4
         with:
-          node-version-file: .nvmrc
+          node-version: 22
           cache: npm
 
-      # Die Schale wird in diesem Job weder gebaut noch gestartet, also braucht
-      # kein Runner die 100-MB-Binärdatei von Electron.
-      - name: Install dependencies
+      # Electron wird in diesem Job weder gestartet noch paketiert — die Schale
+      # wird nur gebündelt (esbuild), nicht ausgeführt. Der Download der rund
+      # 100 MB großen Binärdatei bliebe also ungenutzt und wird abgeschaltet.
+      #
+      # Die Wiederholschleife stammt aus der v1-Kette: `npm ci` scheitert auf
+      # den Runnern gelegentlich an Netzaussetzern der Registry, und ein
+      # solcher Fehlschlag hat mit dem Baum nichts zu tun. `shell: bash` sorgt
+      # dafür, dass dieselbe Schleife auch auf dem Windows-Runner läuft (dort
+      # ist die Vorgabe PowerShell); v1 brauchte dafür noch eine zweite,
+      # nachgebaute pwsh-Fassung.
+      #
+      # `npm ci` löst über `postinstall` `npm run kern:bauen` aus und baut damit
+      # die drei Kernpakete nach `vendor/*/dist/` — ohne diesen Schritt fänden
+      # `tsc -b`, ESLint und Vitest weder Typen noch JavaScript.
+      - name: Abhängigkeiten installieren (löst kern:bauen aus)
         shell: bash
         env:
           ELECTRON_SKIP_BINARY_DOWNLOAD: "1"
@@ -117,14 +161,20 @@ jobs:
             sleep 10
           done
 
-      - name: Lint (Ringgrenzen)
-        run: npm run -s lint
-
-      - name: Typecheck (tsc -b über alle Projekte)
+      # Tor 1. `npm run typecheck` ist `tsc -b`, also ein echter Projektbau mit
+      # Ausgabe nach `packages/*/dist/`, kein `--noEmit`. Er steht vor Lint und
+      # Tests, weil beide auf die erzeugten `dist/`-Ausgaben der Nachbarpakete
+      # zugreifen: ohne diesen Schritt scheitern sie an fehlenden Modulen statt
+      # an echten Befunden.
+      - name: Tor 1 — Typecheck (tsc -b über alle Projekte)
         run: npm run -s typecheck
 
-      # Nachweis, dass `tsc -b` wirklich baut und nicht leerläuft.
-      - name: Emits prüfen
+      # `tsc -b` ist inkrementell und meldet auch dann Erfolg, wenn es wegen
+      # eines stehengebliebenen `.tsbuildinfo` gar nichts getan hat. Auf einem
+      # frischen Runner darf das nicht vorkommen — dieser Schritt macht den
+      # Unterschied zwischen „hat gebaut" und „lief leer" sichtbar, statt ihn
+      # bis zum ersten fehlenden Modul im Renderer zu vertagen.
+      - name: Nachweis, dass tsc -b wirklich Ausgaben erzeugt hat
         shell: bash
         run: |
           fehlt=0
@@ -138,10 +188,24 @@ jobs:
           done
           exit "$fehlt"
 
-      - name: Tests (node und jsdom)
+      # Tor 2. ESLint erzwingt unter anderem die Ringgrenzen zwischen den
+      # Paketen (kein Zugriff von innen nach außen) — ein Regelbruch, den kein
+      # Test bemerken würde, weil der Code trotzdem läuft.
+      - name: Tor 2 — Lint (Ringgrenzen)
+        run: npm run -s lint
+
+      # Tor 3. Vitest fährt beide Umgebungen (node und jsdom) in einem Lauf.
+      - name: Tor 3 — Tests
         run: npm run -s test
 
-      - name: Renderer und Schale bauen
-        run: |
-          npm run -s build:renderer
-          npm run -s build:schale
+      # Tor 4. Der Renderer wird von Vite gebündelt, die Schale (Main, Preload,
+      # Akten-Worker) von esbuild. Beide gehören in die Prüfkette, weil sie
+      # Fehler finden, die `tsc -b` nicht sieht: nicht auflösbare Verweise aus
+      # `index.html`, verletzte Content-Security-Policy, fehlende Einstiege.
+      # Paketiert wird hier nichts — electron-builder, Signierung und Release
+      # kommen erst mit M7 (Verteilung).
+      - name: Tor 4 — Renderer bauen
+        run: npm run -s build:renderer
+
+      - name: Tor 4 — Schale bauen (Main, Preload, Akten-Worker)
+        run: npm run -s build:schale

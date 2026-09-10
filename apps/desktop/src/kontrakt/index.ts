@@ -26,11 +26,7 @@
 
 import { z } from "zod";
 
-export const KANAL_RUF = "s1:ruf";
-export const KANAL_MITTEILUNG = "s1:mitteilung";
-
-/** Der Name, unter dem die Bruecke im Renderer steht. */
-export const BRUECKE = "s1";
+export { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "./kanaele.js";
 
 // ---------------------------------------------------------------------------
 // Bausteine

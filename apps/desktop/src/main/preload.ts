@@ -17,7 +17,8 @@
 
 import { contextBridge, ipcRenderer, type IpcRendererEvent } from "electron";
 
-import { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "../kontrakt/index.js";
+// Nur die Kanalnamen, nicht der ganze Kontrakt: siehe `kanaele.ts`.
+import { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "../kontrakt/kanaele.js";
 import type { Antwort, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 const bruecke = {

@@ -5,12 +5,16 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    // React 19 mit der automatischen JSX-Laufzeit: kein `import React` je
+    // Datei, und der Buendler loest `react/jsx-runtime` selbst auf.
+    "jsx": "react-jsx",
+    "jsxImportSource": "react",
     "types": [],
     "outDir": "dist/renderer",
     // Bauzustand in den Ausgabeordner: wer dist/ loescht, loescht ihn mit.
     "tsBuildInfoFile": "dist/renderer/.tsbuildinfo",
     "rootDir": "src/renderer"
   },
-  "include": ["src/renderer/**/*.ts"],
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
   "references": [{ "path": "./tsconfig.kontrakt.json" }, { "path": "../../packages/domaene" }]
 }
