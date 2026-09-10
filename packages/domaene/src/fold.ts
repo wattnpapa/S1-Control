@@ -57,7 +57,16 @@ import {
   vergleicheNachCodepunkt,
   type KanonischerWert,
 } from "./kanonisch.js";
-import { staerkeGeklemmt, type Staerke } from "./werte.js";
+import {
+  STAERKE_NULL,
+  staerkeGeklemmt,
+  staerkeGleich,
+  staerkeIstNegativ,
+  staerkeMinus,
+  staerkePlus,
+  type Staerke,
+  type StaerkeRechnerisch,
+} from "./werte.js";
 import {
   ARCHIV_ABSCHNITT_ID,
   AUFFANG_ABSCHNITT_ID,
@@ -65,6 +74,7 @@ import {
   KAPPUNG_MAX,
   type AbschnittZustand,
   type Beobachtung as ZustandsBeobachtung,
+  type Erstwert,
   type Feld,
   type Konflikthinweis,
   type UnbekanntesEreignis,
@@ -203,6 +213,36 @@ function nimmAnlage(stand: AnlageStand | undefined, neu: Beobachtung<unknown>): 
   return { gewinner: stand.gewinner, verworfen };
 }
 
+/**
+ * Der Akkumulator eines **Erstwert**-Feldes: die kleinste HLC gilt, die
+ * uebrigen stehen als `verdraengt` daneben (§3.3, §3.4).
+ *
+ * Genau zwei Felder tragen ihn: `einheit.abgeteiltVon` und
+ * `einheit.aufgegangenIn`. Warum die verdraengten mitgefuehrt werden muessen:
+ * Bei drei Zusammenfuehrungen derselben Quelle (HLC 5, 7, 9) hielte ein
+ * Max-2-Akkumulator 9 und 7 — der Gewinner 5 waere verloren, und zwar in
+ * jeder Permutation und nach jedem Schnappschuss.
+ */
+interface ErstwertStand {
+  readonly gewinner: Beobachtung<unknown>;
+  /** Nach `ereignisId` geschluesselt — eine Menge, damit P2 haelt (§3.6). */
+  readonly verdraengt: ReadonlyMap<EreignisId, Beobachtung<unknown>>;
+}
+
+function nimmErstwert(stand: ErstwertStand | undefined, neu: Beobachtung<unknown>): ErstwertStand {
+  if (stand === undefined) return { gewinner: neu, verdraengt: new Map() };
+  const gegenGewinner = vergleicheBeobachtung(neu, stand.gewinner);
+  if (gegenGewinner === 0) return stand;
+
+  const verdraengt = new Map(stand.verdraengt);
+  if (gegenGewinner < 0) {
+    verdraengt.set(stand.gewinner.ereignisId, stand.gewinner);
+    return { gewinner: neu, verdraengt };
+  }
+  verdraengt.set(neu.ereignisId, neu);
+  return { gewinner: stand.gewinner, verdraengt };
+}
+
 /** Wertgleichheit ueber die kanonische Serialisierung (§7.6) — Skalare wie Strukturen. */
 function wertGleich(a: unknown, b: unknown): boolean {
   return (
@@ -220,6 +260,8 @@ interface EntitaetFaltung {
   anlage?: AnlageStand;
   /** Restpfad unter der Entitaet → die beiden hoechsten Beobachtungen. */
   readonly felder: Map<string, FeldStand<unknown>>;
+  /** Die beiden Erstwert-Felder `abgeteiltVon` und `aufgegangenIn` (§3.4). */
+  readonly erstwerte: Map<string, ErstwertStand>;
 }
 
 /** Ein Ereignis, das eine reservierte Id treffen wollte (§5.3.4). */
@@ -251,7 +293,11 @@ export function leereFaltung(): Faltung {
 function kopiere(faltung: Faltung): Faltung {
   const entitaeten = new Map<string, EntitaetFaltung>();
   for (const [pfad, eintrag] of faltung.entitaeten) {
-    entitaeten.set(pfad, { anlage: eintrag.anlage, felder: new Map(eintrag.felder) });
+    entitaeten.set(pfad, {
+      anlage: eintrag.anlage,
+      felder: new Map(eintrag.felder),
+      erstwerte: new Map(eintrag.erstwerte),
+    });
   }
   return {
     foldVersion: faltung.foldVersion,
@@ -302,7 +348,7 @@ function feldpfadAus(eintrag: Katalogeintrag, nutzlast: unknown): string | undef
 function fuegeEin(faltung: Faltung, pfad: string): EntitaetFaltung {
   const vorhanden = faltung.entitaeten.get(pfad);
   if (vorhanden !== undefined) return vorhanden;
-  const neu: EntitaetFaltung = { felder: new Map() };
+  const neu: EntitaetFaltung = { felder: new Map(), erstwerte: new Map() };
   faltung.entitaeten.set(pfad, neu);
   return neu;
 }
@@ -415,6 +461,94 @@ function istReserviert(eintrag: Katalogeintrag, id: string): boolean {
   );
 }
 
+function setzeErstwert(
+  faltung: Faltung,
+  pfad: string,
+  feld: string,
+  beobachtung: Beobachtung<unknown>,
+): void {
+  const eintrag = fuegeEin(faltung, pfad);
+  eintrag.erstwerte.set(feld, nimmErstwert(eintrag.erstwerte.get(feld), beobachtung));
+}
+
+/**
+ * Die beiden Arten der Form (c): sie wirken auf **mehrere** Entitaeten
+ * zugleich (§2.2, §5.4.2, §5.4.3).
+ *
+ * Je betroffener Entitaet genau ein Feld, und der Wert je Entitaet steht in
+ * der Nutzlast unter der Kennung dieser Entitaet — im Rahmen duerfen weder
+ * `neu` noch `vorher` stehen, weil beide einwertig sind.
+ */
+function nimmStrukturell(
+  faltung: Faltung,
+  eintrag: Katalogeintrag,
+  nutzlast: Record<string, unknown>,
+  rahmen: Omit<Beobachtung<unknown>, "neu">,
+): void {
+  if (eintrag.typ === "EinheitAufgeteilt") {
+    const neueId = nutzlast["neueEinheitId"] as string;
+    const quellId = nutzlast["quellEinheitId"] as string;
+    const neueEinheit = nutzlast["neueEinheit"] as Record<string, unknown>;
+    const pfad = `einheit/${neueId}`;
+
+    // Der Anlageteil: `EinheitAufgeteilt` legt die neue Einheit an und
+    // unterliegt damit §3.11 wie jede Anlage. `inhalt` ist die **ganze**
+    // Nutzlast einschliesslich des (c)-Teils — der hat gewirkt, auch wenn der
+    // Anlageteil verliert (§3.8a).
+    const derEntitaet = fuegeEin(faltung, pfad);
+    derEntitaet.anlage = nimmAnlage(derEntitaet.anlage, {
+      ...rahmen,
+      neu: nutzlast,
+      nutzlast,
+    });
+    for (const [name, wert] of Object.entries(neueEinheit)) {
+      if (wert !== undefined) setzeFeld(faltung, pfad, name, { ...rahmen, neu: wert });
+    }
+
+    // Die Wirkung steht an der **neuen** Einheit, nicht an der Quelle
+    // (§5.4.2): Zwei gleichzeitige Aufteilungen erzeugten sonst beide Teile,
+    // und die Quelle saenke nur einmal.
+    setzeErstwert(faltung, pfad, "abgeteiltVon", {
+      ...rahmen,
+      neu: {
+        quellEinheitId: quellId,
+        abgeteilteStaerke: nutzlast["abgeteilteStaerke"],
+        gesehen: nutzlast["gesehen"],
+      },
+    });
+
+    // Die uebernommenen Fahrzeuge und Personen wechseln mit — je betroffener
+    // Entitaet ein Feld, mit dem in der **Nutzlast** mitgefuehrten gesehenen
+    // Vorher-Wert. Fehlt er, war die Entitaet keiner Einheit zugeordnet
+    // (§2.2a: ein fehlendes optionales Nutzlastfeld sagt „ich sah nichts").
+    const uebernahmen: readonly [string, string, string][] = [
+      ["uebernommeneFahrzeuge", "fahrzeugId", "fahrzeug"],
+      ["uebernommenePersonen", "personId", "person"],
+    ];
+    for (const [liste, idFeld, art] of uebernahmen) {
+      for (const eintragDerListe of (nutzlast[liste] ?? []) as Record<string, string>[]) {
+        setzeFeld(faltung, `${art}/${eintragDerListe[idFeld] as string}`, "einheitId", {
+          ...rahmen,
+          neu: neueId,
+          vorher: { wert: eintragDerListe["gesehenEinheitId"] ?? null },
+        });
+      }
+    }
+    return;
+  }
+
+  // `EinheitZusammengefuehrt` schreibt auf die **Quellen**, nicht auf das Ziel
+  // (§5.4.3). Eine aufgegangene Einheit bleibt im Zustand, `zaehlt` ist
+  // falsch, ihre Zahlen stecken im Ziel.
+  const zielId = nutzlast["zielEinheitId"] as string;
+  for (const quelle of (nutzlast["quellen"] ?? []) as Record<string, unknown>[]) {
+    setzeErstwert(faltung, `einheit/${quelle["einheitId"] as string}`, "aufgegangenIn", {
+      ...rahmen,
+      neu: { zielEinheitId: zielId, gesehen: quelle["gesehen"] },
+    });
+  }
+}
+
 function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
   if (faltung.gesehen.has(ereignis.id)) return; // §3.6
   faltung.gesehen.add(ereignis.id);
@@ -448,10 +582,7 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
   const rahmen = rahmenAnteil(ereignis);
 
   if (eintrag.form === "c") {
-    // Die beiden strukturellen Arten kommen in Stufe 3c dazu. Bis dahin
-    // stehen sie unter `unbekannt` und nicht still weg: Ein Fold, der sie
-    // schwiege, verloere eine Aufteilung ohne jede Spur.
-    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "ART"));
+    nimmStrukturell(faltung, eintrag, nutzlast, rahmen);
     return;
   }
 
@@ -885,11 +1016,22 @@ function gilt(feld: Feld<unknown> | undefined): boolean {
   return feld !== undefined && feld.wert !== null && feld.wert !== false;
 }
 
+/** Ein Erstwert-Feld, wie §3.2 es im Zustand haelt. */
+function erstwertAus(stand: ErstwertStand): Erstwert<unknown> {
+  return {
+    ...beobachtungAus(stand.gewinner),
+    verdraengt: [...stand.verdraengt.values()]
+      .map(beobachtungAus)
+      .sort((a, b) => vergleicheNachCodepunkt(a.durch ?? "", b.durch ?? "")),
+  };
+}
+
 interface GebauteEntitaet {
   readonly art: string;
   readonly id: string;
   readonly werte: Record<string, unknown>;
   readonly felder: ReadonlyMap<string, Feld<unknown>>;
+  readonly erstwerte: ReadonlyMap<string, ErstwertStand>;
 }
 
 /**
@@ -935,9 +1077,25 @@ function baueEntitaet(
     }
   }
 
+  for (const name of sortierteSchluessel(eintrag.erstwerte)) {
+    const stand = eintrag.erstwerte.get(name) as ErstwertStand;
+    werte[name] = erstwertAus(stand);
+    // §3.12: Der Hinweis entsteht **je verdraengter Beobachtung**, nicht je
+    // Entitaet — bei drei Zusammenfuehrungen derselben Quelle stehen zwei
+    // Eintraege in `verdraengt` und zwei Hinweise im Zustand.
+    for (const verdraengt of stand.verdraengt.values()) {
+      hinweise.push({
+        art: "wirkungslosGegenTerminalzustand",
+        feldpfad: `${pfadDerEntitaet}/${name}`,
+        ereignis: verdraengt.ereignisId,
+        grund: name === "abgeteiltVon" ? "ZWEITE_AUFTEILUNG" : "QUELLE_BEREITS_AUFGEGANGEN",
+      });
+    }
+  }
+
   hinweise.push(...anlageHinweise(pfadDerEntitaet, anlage, verworfeneAnlagen));
 
-  return { art, id, werte, felder };
+  return { art, id, werte, felder, erstwerte: eintrag.erstwerte };
 }
 
 /**
@@ -968,6 +1126,17 @@ export function materialisiere(faltung: Faltung): Zustand {
         wartende.push({ feld: name, beobachtung: feldAus(stand) });
         ids.add(stand.gewinner.ereignisId);
         if (stand.zweiter !== undefined) ids.add(stand.zweiter.ereignisId);
+      }
+      // Aufgenommen wird wie sonst — je Feldpfad nach der Aufnahmeoperation
+      // seiner Klasse (§3.10). Fuer die beiden Erstwert-Felder also die
+      // kleinste plus die verdraengten; sonst verloere eine Zusammenfuehrung
+      // auf eine noch nicht angelegte Quelle ihren Gewinner, sobald drei
+      // Vorgaenge warten.
+      for (const name of sortierteSchluessel(eintrag.erstwerte)) {
+        const stand = eintrag.erstwerte.get(name) as ErstwertStand;
+        wartende.push({ feld: name, beobachtung: erstwertAus(stand) });
+        ids.add(stand.gewinner.ereignisId);
+        for (const verdraengt of stand.verdraengt.values()) ids.add(verdraengt.ereignisId);
       }
       if (wartende.length === 0) continue;
       wartend.set(pfad, wartende);
@@ -1030,9 +1199,193 @@ export function materialisiere(faltung: Faltung): Zustand {
     abschnitte.set(id, { ...vorhanden, wirksamerParentId: kante.wert });
   }
 
-  // --- Einheiten ----------------------------------------------------------
+  // --- Einheiten (§5.4.2, §5.4.2a, §5.4.3) --------------------------------
+  const einheitenGebaut = gebaut.get("einheit") ?? new Map<string, GebauteEntitaet>();
+
+  interface Kante {
+    readonly traeger: string;
+    readonly gegenseite: string;
+    readonly gesehen: Staerke;
+    readonly abgeteilteStaerke?: Staerke;
+    readonly hlc: Hlc;
+    readonly durch: EreignisId;
+  }
+
+  const abzuege = new Map<string, Kante>(); // Traeger → Kante `abgeteiltVon`
+  const zuwaechse = new Map<string, Kante>(); // Traeger → Kante `aufgegangenIn`
+  const entfernte = new Set<string>();
+
+  for (const [id, entitaet] of einheitenGebaut) {
+    if (gilt(entitaet.felder.get("entfernt"))) entfernte.add(id);
+
+    const abgeteilt = entitaet.erstwerte.get("abgeteiltVon");
+    if (abgeteilt !== undefined) {
+      const wert = abgeteilt.gewinner.neu as {
+        quellEinheitId: string;
+        abgeteilteStaerke: Staerke;
+        gesehen: Staerke;
+      };
+      // **(3)** Ein `abgeteiltVon` wirkt nur, wenn die Einheit, die es traegt,
+      // durch **dieses** Ereignis angelegt wurde. Sonst haette die
+      // Fuehrungsstelle einer fremden Meldung Helfer entnommen (§5.4.2a).
+      // Die Bedingung gilt allein fuer `abgeteiltVon`: Ein `aufgegangenIn`
+      // wird nie von der Entitaet getragen, die das Ereignis anlegt — wer sie
+      // allgemein laese, kaeme dazu, dass kein einziger Zuwachs je wirkt.
+      const durchDiesesEreignis = entitaet.werte["angelegtDurch"] === abgeteilt.gewinner.ereignisId;
+      if (durchDiesesEreignis) {
+        abzuege.set(id, {
+          traeger: id,
+          gegenseite: wert.quellEinheitId,
+          gesehen: wert.gesehen,
+          abgeteilteStaerke: wert.abgeteilteStaerke,
+          hlc: abgeteilt.gewinner.hlc,
+          durch: abgeteilt.gewinner.ereignisId,
+        });
+      }
+    }
+
+    const aufgegangen = entitaet.erstwerte.get("aufgegangenIn");
+    if (aufgegangen !== undefined) {
+      const wert = aufgegangen.gewinner.neu as { zielEinheitId: string; gesehen: Staerke };
+      zuwaechse.set(id, {
+        traeger: id,
+        gegenseite: wert.zielEinheitId,
+        gesehen: wert.gesehen,
+        hlc: aufgegangen.gewinner.hlc,
+        durch: aufgegangen.gewinner.ereignisId,
+      });
+    }
+  }
+
+  // Die Gegenseite muss im Zustand stehen. Kennt dieser Client sie nicht, ist
+  // die Kante **nicht wirksam** (§5.4.2a): Die Quelle bleibt eigenstaendig und
+  // zaehlt weiter — ohne diese Regel verschwaenden ihre Kraefte vollstaendig.
+  // Der Hinweis verschwindet ohne Zutun, sobald die Anlage eintrifft.
+  const unwirksam = new Set<string>();
+  for (const [id, kante] of zuwaechse) {
+    if (einheitenGebaut.has(kante.gegenseite)) continue;
+    unwirksam.add(`aufgegangenIn/${id}`);
+    hinweise.push({
+      art: "fremdreferenzUnbekannt",
+      feldpfad: `einheit/${id}/aufgegangenIn`,
+      verweistAuf: kante.gegenseite,
+    });
+  }
+  for (const [id, kante] of abzuege) {
+    // Die Gegenrichtung braucht keine Wirksamkeitsregel: Der Abzug findet
+    // keine Einheit, auf die er wirken koennte, und die Summe laeuft ueber die
+    // Einheiten des Zustands. Sichtbar gemacht wird die Lage trotzdem (T133).
+    if (einheitenGebaut.has(kante.gegenseite)) continue;
+    hinweise.push({
+      art: "fremdreferenzUnbekannt",
+      feldpfad: `einheit/${id}/abgeteiltVon`,
+      verweistAuf: kante.gegenseite,
+    });
+  }
+
+  /**
+   * **(4)** Kreise wirken nicht — und gesucht wird in **zwei getrennten
+   * Graphen**, nicht in einem (§5.4.2a).
+   *
+   * Eine Kette, die zwischen `abgeteiltVon` und `aufgegangenIn` wechselt, ist
+   * kein Kreis: Die beiden Kanten bedeuten Verschiedenes — die eine zieht
+   * Kraefte ab und laesst die Einheit zaehlen, die andere laesst die Zahlen
+   * stehen und schaltet die Zaehlbarkeit ab. Ohne diese Trennung waere der
+   * haeufigste zusammengesetzte Vorgang der Fuehrungsstelle ein Kreis: U wird
+   * um V abgeteilt, danach geht der Rest von U in V auf (T139).
+   */
+  const loeseKantenKreise = (
+    kanten: ReadonlyMap<string, Kante>,
+    feld: string,
+    hinweisart: "aufteilungKreis" | "zusammenfuehrungKreis",
+  ): void => {
+    const farbe = new Map<string, "laeuft" | "fertig">();
+    const naechster = (id: string): string | undefined => {
+      if (unwirksam.has(`${feld}/${id}`)) return undefined;
+      const kante = kanten.get(id);
+      return kante !== undefined && kanten.has(kante.gegenseite) ? kante.gegenseite : undefined;
+    };
+    for (const start of [...kanten.keys()].sort(vergleicheNachCodepunkt)) {
+      if (farbe.get(start) === "fertig") continue;
+      const pfad: string[] = [];
+      let laufend: string | undefined = start;
+      while (laufend !== undefined && farbe.get(laufend) !== "fertig") {
+        if (farbe.get(laufend) === "laeuft") {
+          const kreis = pfad.slice(pfad.indexOf(laufend));
+          let juengste = kreis[0] as string;
+          for (const id of kreis) {
+            const a = kanten.get(id) as Kante;
+            const b = kanten.get(juengste) as Kante;
+            const nachHlc = vergleicheHlc(a.hlc, b.hlc);
+            const groesser =
+              nachHlc !== 0 ? nachHlc > 0 : vergleicheNachCodepunkt(a.durch, b.durch) > 0;
+            if (groesser) juengste = id;
+          }
+          unwirksam.add(`${feld}/${juengste}`);
+          hinweise.push({
+            art: hinweisart,
+            feldpfad: `einheit/${juengste}/${feld}`,
+            kanten: kreis
+              .map((id) => (kanten.get(id) as Kante).durch)
+              .sort(vergleicheNachCodepunkt),
+            unwirksam: (kanten.get(juengste) as Kante).durch,
+          });
+          break;
+        }
+        farbe.set(laufend, "laeuft");
+        pfad.push(laufend);
+        laufend = naechster(laufend);
+      }
+      for (const id of pfad) farbe.set(id, "fertig");
+    }
+  };
+
+  // **Die Reihenfolge steht fest: erst (3), dann (4), dann (1) und (2)**
+  // (§5.4.2a). (3) ist oben schon gelaufen — eine Kante, die (3) fallen laesst,
+  // hatte nie eine Wirkung und darf deshalb auch keine wirksame aus einem
+  // Kreis schlagen (T140). (1) und (2) laufen **nach** der Kreissuche: Sonst
+  // waere bei A→B, B→A und einem `EinheitEntfernt(A)` die Kante von A schon
+  // weg, B ginge in die entfernte A auf, und B's Staerke verschwaende ohne
+  // Hinweis (T132).
+  loeseKantenKreise(abzuege, "abgeteiltVon", "aufteilungKreis");
+  loeseKantenKreise(zuwaechse, "aufgegangenIn", "zusammenfuehrungKreis");
+
+  const abzugWirksam = (id: string): boolean =>
+    abzuege.has(id) &&
+    !unwirksam.has(`abgeteiltVon/${id}`) &&
+    einheitenGebaut.has((abzuege.get(id) as Kante).gegenseite);
+  const zuwachsKanteWirksam = (id: string): boolean =>
+    zuwaechse.has(id) && !unwirksam.has(`aufgegangenIn/${id}`);
+
+  // Die flache Summe aus §5.4.2. **Ohne jede Bedingung an die HLC** — eine HLC
+  // ist eine Linearisierung von Nebenlaeufigkeit und sagt nur „nicht kausal
+  // davor", nicht „hat gesehen". Traegt `staerke` die **eigene** Staerke, kann
+  // eine Meldung einen Zuwachs nie schon enthalten: Sie beschreibt ihn nicht.
+  const rechnerisch = new Map<string, StaerkeRechnerisch>();
+  for (const [id, entitaet] of einheitenGebaut) {
+    rechnerisch.set(id, (entitaet.felder.get("staerke")?.wert ?? STAERKE_NULL) as Staerke);
+  }
+  for (const [id, kante] of abzuege) {
+    // **(2)** Ein Abgang wirkt weiter, auch wenn die abgeteilte Einheit
+    // entfernt ist: Die Abgeteilten sind gegangen; sie kommen nicht dadurch
+    // zurueck, dass jemand ihren Eintrag entfernt.
+    if (!abzugWirksam(id)) continue;
+    const quelle = rechnerisch.get(kante.gegenseite);
+    if (quelle === undefined) continue;
+    rechnerisch.set(kante.gegenseite, staerkeMinus(quelle, kante.abgeteilteStaerke as Staerke));
+  }
+  for (const [id, kante] of zuwaechse) {
+    if (!zuwachsKanteWirksam(id)) continue;
+    // **(1)** Ein Zuwachs wirkt nicht, wenn seine Quelle entfernt ist:
+    // `EinheitEntfernt` nimmt etwas aus allen Summen, das jemand gemeldet hat.
+    if (entfernte.has(id)) continue;
+    const ziel = rechnerisch.get(kante.gegenseite);
+    if (ziel === undefined) continue;
+    rechnerisch.set(kante.gegenseite, staerkePlus(ziel, kante.gesehen));
+  }
+
   const einheiten = new Map<string, unknown>();
-  for (const [id, entitaet] of gebaut.get("einheit") ?? []) {
+  for (const [id, entitaet] of einheitenGebaut) {
     const gemeldet = entitaet.felder.get("abschnittId")?.wert;
     const feldpfad = `einheit/${id}/abschnittId`;
     let wirksamerAbschnittId = AUFFANG_ABSCHNITT_ID;
@@ -1069,23 +1422,105 @@ export function materialisiere(faltung: Faltung): Zustand {
       // `abschnittAufgeloest`: Es gibt hier keinen unbekannten Abschnitt, und
       // `abschnittUnbekannt` haette kein Feld zu fuellen (T10, T169).
     }
-    const staerke = (entitaet.felder.get("staerke")?.wert ?? {
-      fuehrer: 0,
-      unterfuehrer: 0,
-      mannschaft: 0,
-    }) as Staerke;
-    const entfernt = gilt(entitaet.felder.get("entfernt"));
+
+    const summe = rechnerisch.get(id) as StaerkeRechnerisch;
+    // **Die Klemmung ist der letzte Schritt.** Alles, was auf der Summe
+    // aufsetzt — die Vergleichsgroesse aus §5.4.3 und die Bilanzsumme aus
+    // §8.1 —, rechnet mit `wirksameStaerkeRechnerisch`; nur das Lagebild sieht
+    // den geklemmten Wert.
+    if (staerkeIstNegativ(summe)) {
+      hinweise.push({
+        art: "staerkeGeklemmt",
+        feldpfad: `einheit/${id}/staerke`,
+        rechnerisch: summe,
+      });
+    }
+    const entfernt = entfernte.has(id);
+    // Massgeblich ist `wirksamAufgegangen`, nicht das blosse Vorhandensein von
+    // `aufgegangenIn`: Bei einem Kreis und bei unbekanntem Ziel bleibt die
+    // Einheit eigenstaendig und zaehlt (§3.2). Das Entfernen der Quelle
+    // gehoert **nicht** zu diesen Ausnahmen — es unterdrueckt den Summanden
+    // beim Ziel, laesst die Kante aber wirksam (T152).
+    const wirksamAufgegangen = zuwachsKanteWirksam(id);
     einheiten.set(id, {
       ...entitaet.werte,
       logistik: (entitaet.werte["logistik"] as Record<string, unknown>) ?? leereSammlung(),
       wirksamerAbschnittId,
-      // Die strukturellen Arten kommen in Stufe 3c dazu; bis dahin ist die
-      // wirksame Staerke die gemeldete.
-      wirksameStaerkeRechnerisch: staerke,
-      wirksameStaerke: staerkeGeklemmt(staerke),
-      wirksamAufgegangen: false,
+      wirksameStaerkeRechnerisch: summe,
+      wirksameStaerke: staerkeGeklemmt(summe),
+      wirksamAufgegangen,
       zaehlt:
-        !entfernt && (abschnitte.get(wirksamerAbschnittId)?.zaehltInGesamtstaerke ?? false),
+        !entfernt &&
+        !wirksamAufgegangen &&
+        (abschnitte.get(wirksamerAbschnittId)?.zaehltInGesamtstaerke ?? false),
+    });
+  }
+
+  // §5.4.2a (1): Was das Entfernen **mitnimmt**, wird benannt — sonst
+  // verschwaende gemeldete Staerke still. Nach unten die Quellen, die in die
+  // entfernte Einheit aufgegangen sind; nach oben das Ziel, in das sie selbst
+  // aufgegangen ist (T141, T152).
+  for (const entfernteId of [...entfernte].sort(vergleicheNachCodepunkt)) {
+    const betroffene: { einheitId: string; richtung: "QUELLE" | "ZIEL"; staerke: Staerke }[] = [];
+    for (const [id, kante] of zuwaechse) {
+      if (kante.gegenseite !== entfernteId || !zuwachsKanteWirksam(id) || entfernte.has(id)) {
+        continue;
+      }
+      betroffene.push({ einheitId: id, richtung: "QUELLE", staerke: kante.gesehen });
+    }
+    const eigene = zuwaechse.get(entfernteId);
+    if (eigene !== undefined && zuwachsKanteWirksam(entfernteId)) {
+      betroffene.push({
+        einheitId: eigene.gegenseite,
+        richtung: "ZIEL",
+        staerke: eigene.gesehen,
+      });
+    }
+    if (betroffene.length === 0) continue;
+    const entferntDurch = einheitenGebaut.get(entfernteId)?.felder.get("entfernt")?.durch;
+    hinweise.push({
+      art: "entfernungNimmtZugewachsenes",
+      feldpfad: `einheit/${entfernteId}/entfernt`,
+      entfernt: entferntDurch ?? "",
+      betroffene: betroffene.sort((a, b) => vergleicheNachCodepunkt(a.einheitId, b.einheitId)),
+    });
+  }
+
+  // §5.4.3: `gesehen` gegen die wirksame Staerke der Quelle. **Geprueft wird
+  // allein die geltende Beobachtung** — eine verdraengte hat nichts bewegt,
+  // und `wirkungslosGegenTerminalzustand` sagt bereits alles (T159). **Wirkt
+  // die Kante nicht, unterbleibt der Vergleich** (T124, T168).
+  for (const [id, kante] of zuwaechse) {
+    if (!zuwachsKanteWirksam(id)) continue;
+    const quellstaerke = rechnerisch.get(id);
+    if (quellstaerke === undefined) continue;
+    if (staerkeGleich(kante.gesehen, quellstaerke)) continue;
+    hinweise.push({
+      art: "vorgangSummeWeichtAb",
+      feldpfad: `einheit/${id}/staerke`,
+      vorgangsart: "ZUSAMMENFUEHRUNG",
+      vorgang: kante.durch,
+      gesehen: kante.gesehen,
+      berechnet: quellstaerke,
+    });
+  }
+  for (const [id, kante] of abzuege) {
+    if (!abzugWirksam(id)) continue;
+    const quellstaerke = rechnerisch.get(kante.gegenseite);
+    if (quellstaerke === undefined) continue;
+    // Der Stand, den die Quelle **ohne diese eine Aufteilung** haette:
+    // `gesehen` ist der Stand vor dem Vorgang. Vergliche man gegen die
+    // wirksame Staerke danach, truege jede fehlerfreie Aufteilung einen
+    // Hinweis (§5.4.3).
+    const ohneDiesen = staerkePlus(quellstaerke, kante.abgeteilteStaerke as Staerke);
+    if (staerkeGleich(kante.gesehen, ohneDiesen)) continue;
+    hinweise.push({
+      art: "vorgangSummeWeichtAb",
+      feldpfad: `einheit/${kante.gegenseite}/staerke`,
+      vorgangsart: "AUFTEILUNG",
+      vorgang: kante.durch,
+      gesehen: kante.gesehen,
+      berechnet: ohneDiesen,
     });
   }
 
