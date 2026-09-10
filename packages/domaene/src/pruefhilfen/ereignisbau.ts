@@ -177,3 +177,47 @@ export function fremdesEreignis(h: Hlc, laufnummer: number, typ: string): Eingeh
 export function staerke(fuehrer: number, unterfuehrer: number, mannschaft: number): Staerke {
   return { fuehrer, unterfuehrer, mannschaft };
 }
+
+/**
+ * Ein Ereignis der Form (a): Der Wert steht in `neu`, die Nutzlast benennt nur
+ * den Bezug (§2.2).
+ *
+ * Die Bauhilfen darueber decken die haeufigen Faelle ab; diese hier deckt den
+ * Rest, damit eine Pruefage nicht `statusGesetzt` verbiegen muss, um ein
+ * `LogistikGesetzt` zu bauen. `vorher` gehoert dazu und ist nicht optional
+ * gemeint: §2.2a prueft es, und ein Test, der es weglaesst, prueft weniger als
+ * der Betrieb.
+ */
+export function feldEreignis(
+  h: Hlc,
+  laufnummer: number,
+  typ: string,
+  nutzlast: Record<string, unknown>,
+  vorher: unknown,
+  neu: unknown,
+  grund?: string,
+): EingehendesEreignis {
+  return {
+    ...rahmen(h, laufnummer),
+    typ,
+    nutzlast,
+    vorher,
+    neu,
+    ...(grund === undefined ? {} : { grund }),
+  };
+}
+
+/**
+ * Ein Ereignis der Form (b): Die Nutzlast **ist** die Anlage (§2.2).
+ *
+ * Ohne `vorher` und ohne `neu` — eine Anlage hat keinen Vorher-Wert, und §2.2a
+ * prueft an ihr nichts.
+ */
+export function anlageEreignis(
+  h: Hlc,
+  laufnummer: number,
+  typ: string,
+  nutzlast: Record<string, unknown>,
+): EingehendesEreignis {
+  return { ...rahmen(h, laufnummer), typ, nutzlast };
+}

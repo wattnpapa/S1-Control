@@ -33,6 +33,25 @@
  *  * Einheiten mehrerer Organisationen, weil der Organisationsfilter des
  *    Druckblatts sonst nichts zu filtern hätte.
  *
+ * **Seit M5 zusätzlich**, weil die vier Bereiche dieses Meilensteins sonst
+ * über einer leeren Lage geprüft würden:
+ *
+ *  * **Logistikwerte** an neun Einheiten — weiblich, divers, vegetarisch,
+ *    vegan und Übernachtungsbedarf. Ohne sie stünden die Spalten J bis P des
+ *    Log-Blatts und die Logistikspalten der Statusmatrix durchweg auf null,
+ *    und ein Goldfile über lauter Nullen prüft die Rechnung nicht;
+ *  * **PSA-Sätze** an fünf Einheiten, damit die Kostenübersicht nicht überall
+ *    dieselbe Zahl zeigt (Spalte AO ist die einzige Eingabe der Gruppe);
+ *  * **vier Anforderungen**, je eine in jedem der vier Zustände aus §5.6.2 —
+ *    offen, zugesagt, eingetroffen, storniert. Mit **verschiedenen**
+ *    Kennungen: Zwei gleiche erzeugten `moeglicheDublette` (§5.6.1), und
+ *    diese Lage soll hinweisfrei bleiben;
+ *  * **Dienstposten** in allen fünf Teilbereichen der Vorlage, teils besetzt,
+ *    teils nicht, in Tag- und Nachtschicht — K17 rechnet aus ihnen die Stärke
+ *    der Führungsstelle, und die geht in den Druck ein;
+ *  * **Schichtplaneinträge** an zwei Tagen, weil die Spalten des Plans aus den
+ *    Daten kommen und nicht aus einem Kalender (§5.7).
+ *
  * Bewusst **nicht** enthalten: Konflikthinweise. Sie gehören in die Prüffälle
  * des Folds und nicht in ein Ausgabe-Goldfile — eine Lage mit Hinweisen macht
  * jede Zahländerung zu einer Untersuchung.
@@ -42,8 +61,10 @@ import type { EingehendesEreignis } from "../fold.js";
 import { EINHEIT_STATUS, SCHICHTEN } from "../ereignis.js";
 import {
   abschnittAngelegt,
+  anlageEreignis,
   einheitGemeldet,
   einsatzAngelegt,
+  feldEreignis,
   hlc,
   staerke,
   statusGesetzt,
@@ -171,6 +192,113 @@ const EINHEITEN: readonly Einheitsangabe[] = [
 ];
 
 /**
+ * Logistikwerte je Einheit — die Spalten AC bis AI der Vorlage.
+ *
+ * Nur an neun Einheiten, und das ist Absicht: In einem echten Einsatz meldet
+ * nicht jede Einheit ihre Zusammensetzung, und eine Lage, in der alle es tun,
+ * prüfte den Fall nicht, für den K4 seinen Rückfall auf die Personenzählung
+ * hat. Die Zahlen bleiben unter der Gesamtstärke der jeweiligen Einheit —
+ * sonst würde `maennlich` negativ, und das wäre eine andere Prüfung.
+ */
+const LOGISTIK: readonly {
+  readonly einheitId: string;
+  readonly weiblich?: number;
+  readonly divers?: number;
+  readonly vegetarisch?: number;
+  readonly vegan?: number;
+  readonly uebernachtungM?: number;
+  readonly uebernachtungW?: number;
+  readonly uebernachtungD?: number;
+}[] = [
+  { einheitId: "E01", weiblich: 2, vegetarisch: 1, uebernachtungM: 4, uebernachtungW: 2 },
+  { einheitId: "E05", weiblich: 2, divers: 1, vegetarisch: 2, vegan: 1, uebernachtungM: 4, uebernachtungW: 2, uebernachtungD: 1 },
+  { einheitId: "E06", weiblich: 5, vegetarisch: 3, vegan: 1 },
+  { einheitId: "E10", weiblich: 4, divers: 1, vegetarisch: 2, uebernachtungM: 10, uebernachtungW: 4, uebernachtungD: 1 },
+  { einheitId: "E12", weiblich: 1, vegetarisch: 1, uebernachtungM: 8, uebernachtungW: 1 },
+  { einheitId: "E20", weiblich: 3, vegan: 1 },
+  { einheitId: "E25", weiblich: 2, divers: 1 },
+  { einheitId: "E30", weiblich: 1, vegetarisch: 2, uebernachtungM: 6, uebernachtungW: 1 },
+  { einheitId: "E35", weiblich: 1 },
+];
+
+/**
+ * PSA-Sätze je Tag — Spalte AO, die einzige Eingabe der Kostengruppe.
+ *
+ * Die Führungsstelle steht mit 1 da, wie die Vorlage es für ihre eigenen
+ * Zeilen vorbelegt; die Bergungs- und Räumkräfte mit 1, die Betreuung mit 0.
+ * Eine Lage, in der jede Einheit denselben Wert trägt, ließe nicht erkennen,
+ * ob die Kostenspalte ihn überhaupt liest.
+ */
+const PSA_SAETZE: readonly (readonly [string, number])[] = [
+  ["E01", 1],
+  ["E12", 1],
+  ["E20", 2],
+  ["E25", 1],
+  ["E06", 0],
+];
+
+/**
+ * Die vier Anforderungen, je eine in einem der vier Zustände aus §5.6.2.
+ *
+ * `zustandNach` ist nicht das Feld — der Zustand wird abgeleitet und nicht
+ * gesetzt. Es sagt, welche Folgeereignisse die Lage schreibt.
+ */
+const ANFORDERUNGEN: readonly {
+  readonly id: string;
+  readonly kennung: string;
+  readonly abzuloesendeEinheitId?: string;
+  readonly vorgeseheneEinheitText: string;
+  readonly vorgesehenerAuftrag: string;
+  readonly zustandNach: "OFFEN" | "ZUGESAGT" | "EINGETROFFEN" | "STORNIERT";
+}[] = [
+  { id: "A1", kennung: "ANF-2026-001", abzuloesendeEinheitId: "E12", vorgeseheneEinheitText: "BGr THW OV Varel", vorgesehenerAuftrag: "Ablösung Deichverteidigung Nord", zustandNach: "OFFEN" },
+  { id: "A2", kennung: "ANF-2026-002", abzuloesendeEinheitId: "E20", vorgeseheneEinheitText: "FGr N THW OV Jever", vorgesehenerAuftrag: "Notstrom Pumpwerk Süd", zustandNach: "ZUGESAGT" },
+  { id: "A3", kennung: "ANF-2026-003", vorgeseheneEinheitText: "SanZ DRK KV Ammerland", vorgesehenerAuftrag: "Sanitätswache Schule Mitte", zustandNach: "EINGETROFFEN" },
+  { id: "A4", kennung: "ANF-2026-004", vorgeseheneEinheitText: "Drohnentrupp", vorgesehenerAuftrag: "Lagebild aus der Luft", zustandNach: "STORNIERT" },
+];
+
+/**
+ * Die Dienstposten der Führungsstelle — alle fünf Teilbereiche der Vorlage
+ * (`excel-domaenenmodell.md` §5).
+ *
+ * Je Funktion eine Tag- und eine Nachtzeile, wie das Blatt es führt; besetzt
+ * ist nur ein Teil, weil eine vollbesetzte Führungsstelle die Ausnahme ist und
+ * K17 gerade die **besetzten** zählt.
+ */
+const DIENSTPOSTEN: readonly {
+  readonly id: string;
+  readonly teileinheit: string;
+  readonly funktion: string;
+  readonly schicht: string;
+  readonly reihenfolge: number;
+  readonly besetzung?: string;
+}[] = [
+  { id: "D01", teileinheit: "Stab", funktion: "Ltr FüSt", schicht: "TAG", reihenfolge: 1, besetzung: "Mennenga, Fokke" },
+  { id: "D02", teileinheit: "Stab", funktion: "Ltr FüSt", schicht: "NACHT", reihenfolge: 2, besetzung: "Gnieser, Jannik" },
+  { id: "D03", teileinheit: "Stab", funktion: "SGL 1", schicht: "TAG", reihenfolge: 3, besetzung: "van Rijsinge, Nils" },
+  { id: "D04", teileinheit: "Stab", funktion: "SGL 1", schicht: "NACHT", reihenfolge: 4 },
+  { id: "D05", teileinheit: "Stab", funktion: "SGL 2", schicht: "TAG", reihenfolge: 5, besetzung: "Meyer, Anton" },
+  { id: "D06", teileinheit: "Stab", funktion: "FüGeh SG 2", schicht: "TAG", reihenfolge: 6, besetzung: "Janssen, Frauke" },
+  { id: "D07", teileinheit: "ZTr FK", funktion: "ZTrFü FK", schicht: "TAG", reihenfolge: 1, besetzung: "Onken, Hilke" },
+  { id: "D08", teileinheit: "ZTr FK", funktion: "SprFu/Kf", schicht: "TAG", reihenfolge: 2, besetzung: "Behrends, Timo" },
+  { id: "D09", teileinheit: "ZTr FK", funktion: "SprFu/Kf", schicht: "NACHT", reihenfolge: 3 },
+  { id: "D10", teileinheit: "FGr F", funktion: "GrFü F", schicht: "TAG", reihenfolge: 1, besetzung: "Ahlers, Sönke" },
+  { id: "D11", teileinheit: "FGr F", funktion: "LdF", schicht: "TAG", reihenfolge: 2, besetzung: "Kruse, Malte" },
+  { id: "D12", teileinheit: "FGr K", funktion: "GrFü K", schicht: "NACHT", reihenfolge: 1, besetzung: "Wilts, Heike" },
+  { id: "D13", teileinheit: "FGr K", funktion: "He K", schicht: "NACHT", reihenfolge: 2, besetzung: "Bruns, Lasse" },
+  { id: "D14", teileinheit: "Externe", funktion: "FaBe Wasserwirtschaft", schicht: "TAG", reihenfolge: 1, besetzung: "Dr. Poppen, Insa (NLWKN)" },
+];
+
+/** Zwei Tage Schichtplan — die Spalten des Plans kommen aus den Daten (§5.7). */
+const SCHICHTPLAN: readonly (readonly [string, string, string])[] = [
+  ["D01", "2026-09-08", "Mennenga, Fokke / Ltr FüSt / THW OV Oldenburg / Mob. 0441-000001"],
+  ["D01", "2026-09-09", "Mennenga, Fokke / Ltr FüSt / THW OV Oldenburg / Bem: nur bis 14 Uhr"],
+  ["D02", "2026-09-08", "Gnieser, Jannik / Ltr FüSt Nacht / THW OV Oldenburg"],
+  ["D03", "2026-09-09", "van Rijsinge, Nils / SGL 1 / THW OV Oldenburg"],
+  ["D07", "2026-09-08", "Onken, Hilke / ZTrFü FK / THW OV Oldenburg"],
+];
+
+/**
  * Die Ereignisfolge der Prüflage.
  *
  * Sie wird bei jedem Aufruf neu gebaut und trägt jedes Mal dieselben HLC —
@@ -287,6 +415,117 @@ export function prueflageEreignisse(): readonly EingehendesEreignis[] {
     })),
   );
 
+  // ------------------------------------------------------------------
+  // M5: Logistik, Kosten, Anforderungen, Führungsstelle
+  // ------------------------------------------------------------------
+
+  // §2.2a: Der Vorher-Wert einer Logistikzahl, die noch nie gesetzt wurde, ist
+  // `null` — nicht 0. Die 0 ist der abgeleitete Anzeigewert (K4 zählt dann
+  // Personen), das Feld selbst ist leer.
+  for (const eintrag of LOGISTIK) {
+    for (const [feld, wert] of Object.entries(eintrag)) {
+      if (feld === "einheitId" || typeof wert !== "number") continue;
+      ereignisse.push(
+        bau((h, n) =>
+          feldEreignis(h, n, "LogistikGesetzt", { einheitId: eintrag.einheitId, feld }, null, wert),
+        ),
+      );
+    }
+  }
+
+  for (const [einheitId, saetze] of PSA_SAETZE) {
+    ereignisse.push(
+      bau((h, n) => feldEreignis(h, n, "PsaBedarfGesetzt", { einheitId }, null, saetze)),
+    );
+  }
+
+  for (const anforderung of ANFORDERUNGEN) {
+    ereignisse.push(
+      bau((h, n) =>
+        anlageEreignis(h, n, "AnforderungAngelegt", {
+          anforderungId: anforderung.id,
+          kennung: anforderung.kennung,
+          ...(anforderung.abzuloesendeEinheitId === undefined
+            ? {}
+            : { abzuloesendeEinheitId: anforderung.abzuloesendeEinheitId }),
+          vorgeseheneEinheitText: anforderung.vorgeseheneEinheitText,
+          vorgesehenerAuftrag: anforderung.vorgesehenerAuftrag,
+          // Innerhalb der Ist-Schwelle von zwölf Stunden (§2.5) — sonst trüge
+          // die Lage einen `meldezeitUnplausibel`, und sie soll hinweisfrei
+          // bleiben.
+          angefordertAm: "2026-09-08T07:30:00+02:00",
+        }),
+      ),
+    );
+
+    if (anforderung.zustandNach === "ZUGESAGT" || anforderung.zustandNach === "EINGETROFFEN") {
+      ereignisse.push(
+        bau((h, n) =>
+          feldEreignis(h, n, "AbloesungZugesagt", { anforderungId: anforderung.id }, null, {
+            // `zugesagtFuer` ist der Schlüssel, den der Fold als Planzeit
+            // plausibilisiert (§2.5); die anderen beiden sind Anzeige.
+            zugesagtFuer: "2026-09-08T16:00:00+02:00",
+            zugesagtVon: "THW RB Oldenburg",
+          }),
+        ),
+      );
+    }
+    if (anforderung.zustandNach === "EINGETROFFEN") {
+      ereignisse.push(
+        bau((h, n) =>
+          feldEreignis(h, n, "AnforderungErledigt", { anforderungId: anforderung.id }, null, {
+            erledigtAm: "2026-09-08T09:15:00+02:00",
+          }),
+        ),
+      );
+    }
+    if (anforderung.zustandNach === "STORNIERT") {
+      // §2.4: Das Storno ist einer der Pflichtfälle für `grund`.
+      ereignisse.push(
+        bau((h, n) =>
+          feldEreignis(
+            h,
+            n,
+            "AnforderungStorniert",
+            { anforderungId: anforderung.id },
+            false,
+            true,
+            "Eigene Drohnenkomponente verfügbar, Anforderung zurückgezogen",
+          ),
+        ),
+      );
+    }
+  }
+
+  for (const posten of DIENSTPOSTEN) {
+    ereignisse.push(
+      bau((h, n) =>
+        anlageEreignis(h, n, "DienstpostenAngelegt", {
+          dienstpostenId: posten.id,
+          teileinheit: posten.teileinheit,
+          funktion: posten.funktion,
+          schicht: posten.schicht,
+          reihenfolge: posten.reihenfolge,
+        }),
+      ),
+    );
+    if (posten.besetzung !== undefined) {
+      ereignisse.push(
+        bau((h, n) =>
+          feldEreignis(h, n, "DienstpostenBesetzt", { dienstpostenId: posten.id }, null, posten.besetzung),
+        ),
+      );
+    }
+  }
+
+  for (const [dienstpostenId, datum, text] of SCHICHTPLAN) {
+    ereignisse.push(
+      bau((h, n) =>
+        feldEreignis(h, n, "SchichtplanEintragGesetzt", { dienstpostenId, datum }, null, text),
+      ),
+    );
+  }
+
   return ereignisse;
 }
 
@@ -310,4 +549,15 @@ export const PRUEFLAGE_ZUSICHERUNGEN = {
   leererAbschnitt: "EO4",
   /** Die entfernte Einheit; sie bleibt im Zustand und in keiner Summe. */
   entfernteEinheit: "E39",
+  /** So viele Anforderungen, je eine in jedem Zustand aus §5.6.2. */
+  anforderungen: ANFORDERUNGEN.length,
+  /** So viele Dienstposten, davon besetzt: siehe `besetzteDienstposten`. */
+  dienstposten: DIENSTPOSTEN.length,
+  besetzteDienstposten: DIENSTPOSTEN.filter((p) => p.besetzung !== undefined).length,
+  /** Die Teilbereiche, die tatsächlich vorkommen. */
+  teilbereiche: [...new Set(DIENSTPOSTEN.map((p) => p.teileinheit))],
+  /** Die Tage, an denen der Schichtplan etwas trägt. */
+  schichtplanTage: [...new Set(SCHICHTPLAN.map(([, datum]) => datum))].sort(),
+  /** So viele Einheiten tragen Logistikwerte. */
+  einheitenMitLogistik: LOGISTIK.length,
 } as const;
