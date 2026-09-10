@@ -29,7 +29,7 @@ import {
 
 import { Maske } from "./Maske.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
-import { anlageAusVorlage, aufteilung, entfernung, verschiebung, zusammenfuehrung } from "./bedienschritte.js";
+import { anlageAusVorlage, aufteilung, entfernung, verschiebung, zusammenfuehrung } from "../kontrakt/bedienschritte.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 

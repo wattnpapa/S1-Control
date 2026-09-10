@@ -20,6 +20,7 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
 import { Aktendienst, type Takte } from "./aktendienst.js";
+import { bearbeiteAuftrag } from "./auftraege.js";
 import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 /** Was der Main-Prozess dem Worker beim Start mitgibt — alles serialisierbar. */
@@ -48,6 +49,7 @@ export type Auftrag =
   // bevor der Main sie weiterreicht.
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "kostenAnfordern"; readonly nummer: number }
+  | { readonly art: "anforderungenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "anforderungenAnfordern" }> }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
   | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status" | "log" | "kosten"; readonly organisation?: string }
@@ -171,54 +173,20 @@ if (parentPort !== null) {
     })();
   });
 
+  /**
+   * Die Auftragsschleife.
+   *
+   * Der Verteiler steht in `auftraege.ts` und nicht hier: Die Werkstatt der
+   * Vermittlungstests braucht denselben, und zwei Fassungen derselben Tabelle
+   * bedeuten, dass die zweite hinterherhinkt (siehe Modulkopf dort).
+   * `schliesse` bleibt hier, weil es den Zeitgeber dieses Workers abraeumt.
+   */
   async function bearbeite(auftrag: Auftrag): Promise<unknown> {
-    switch (auftrag.art) {
-      case "oeffne":
-        return { befund: (await dienst.oeffne()).befund.art };
-      case "bediene":
-        return dienst.bediene(auftrag.entwurf);
-      case "zurueck":
-        return dienst.zurueck(auftrag.grund);
-      case "undoStapel":
-        return dienst.undoStapel();
-      case "standAnfordern":
-        dienst.sendeVollenStand();
-        return null;
-      case "kostenAnfordern":
-        return dienst.kosten();
-      case "baumAnfordern":
-        return dienst.baum(auftrag.ruf);
-      case "tabelleAnfordern":
-        return dienst.tabelle(auftrag.ruf);
-      case "untertabelleAnfordern":
-        return dienst.untertabelle(auftrag.ruf);
-      case "ausgabeHtml":
-        return dienst.ausgabeHtml(auftrag.ausgabe, auftrag.organisation);
-      case "auswertungXlsx":
-        return dienst.auswertungXlsx();
-      case "oldenburgXlsx":
-        return dienst.oldenburgXlsx();
-      case "logFreiXlsx":
-        return dienst.logFreiXlsx();
-      case "htmlMonitorSchalten":
-        return dienst.monitorSchalten(auftrag.ruf.an, {
-          ...(auftrag.ruf.mitStatus === undefined ? {} : { mitStatus: auftrag.ruf.mitStatus }),
-          ...(auftrag.ruf.organisation === undefined ? {} : { organisation: auftrag.ruf.organisation }),
-        });
-      case "ausgabeSchreiben":
-        return { pfad: await dienst.ausgabeSchreiben(auftrag.dateiname, auftrag.bytes) };
-      case "eebScan":
-        return dienst.eebScan(auftrag.ruf.text);
-      case "eebZuruecksetzen":
-        return dienst.eebZuruecksetzen();
-      case "eebUebernehmen":
-        return dienst.eebUebernehmen(auftrag.ruf.abschnittId);
-      case "tagebuchAnfordern":
-        return dienst.tagebuch(auftrag.ruf);
-      case "schliesse":
-        dienst.schliesse();
-        clearInterval(zeitgeber);
-        return null;
+    if (auftrag.art === "schliesse") {
+      dienst.schliesse();
+      clearInterval(zeitgeber);
+      return null;
     }
+    return bearbeiteAuftrag(dienst, auftrag);
   }
 }

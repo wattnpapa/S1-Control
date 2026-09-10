@@ -15,10 +15,14 @@
 
 import { useState } from "react";
 
+import { Anforderungen } from "./Anforderungen.js";
 import { Kosten } from "./Kosten.js";
 
 /** Die Blätter in der Reihenfolge, in der sie in der Leiste stehen. */
-const BLAETTER = [{ schluessel: "kosten", titel: "Kosten" }] as const;
+const BLAETTER = [
+  { schluessel: "anforderungen", titel: "Anforderungen" },
+  { schluessel: "kosten", titel: "Kosten" },
+] as const;
 
 type Blatt = (typeof BLAETTER)[number]["schluessel"];
 
@@ -44,6 +48,7 @@ export function Blaetter(): React.JSX.Element {
           </button>
         ))}
       </div>
+      {offen === "anforderungen" && <Anforderungen />}
       {offen === "kosten" && <Kosten />}
     </section>
   );

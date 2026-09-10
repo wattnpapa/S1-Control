@@ -26,6 +26,7 @@ import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
+  Anforderungsansicht,
   Baumansicht,
   Kostenansicht,
   Bedienergebnis,
@@ -79,6 +80,13 @@ export interface Tagebuchfilterwahl {
   readonly von?: number;
 }
 
+/** Die Filterwahl der Anforderungsliste (M5.3). */
+export interface Anforderungsfilterwahl {
+  readonly zustaende?: readonly ("OFFEN" | "ZUGESAGT" | "EINGETROFFEN" | "STORNIERT")[];
+  readonly suche?: string;
+  readonly von?: number;
+}
+
 export interface Laden {
   readonly umgebung: Umgebung | undefined;
   readonly einstellungen: Einstellungen;
@@ -107,6 +115,9 @@ export interface Laden {
   readonly untertabelle: Untertabellenansicht | undefined;
   /** Die Kostenübersicht (M5.2); `undefined` heißt „noch nie geholt“. */
   readonly kosten: Kostenansicht | undefined;
+  /** Die Anforderungsliste (M5.3). */
+  readonly anforderungen: Anforderungsansicht | undefined;
+  readonly anforderungsfilter: Anforderungsfilterwahl;
   readonly tabellenfilter: Tabellenfilter;
   readonly tagebuchfilter: Tagebuchfilterwahl;
 
@@ -115,6 +126,8 @@ export interface Laden {
   holeTagebuch(): Promise<void>;
   holeUntertabelle(einheitId: string): Promise<void>;
   holeKosten(): Promise<void>;
+  holeAnforderungen(): Promise<void>;
+  setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
   readonly eeb: EebStand | undefined;
@@ -165,6 +178,7 @@ const LEERE_ANSICHTEN = {
   tagebuch: undefined,
   untertabelle: undefined,
   kosten: undefined,
+  anforderungen: undefined,
   // Auch der Sammelstand: Er gehört zur Akte, nicht zum Fenster. Ein halb
   // gescannter Bogen ohne Akte hat kein Ziel (M3.4).
   eeb: undefined,
@@ -185,12 +199,13 @@ let hinweisNummer = 0;
  * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
  * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
  */
-const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten", number> = {
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen", number> = {
   baum: 0,
   tabelle: 0,
   tagebuch: 0,
   untertabelle: 0,
   kosten: 0,
+  anforderungen: 0,
 };
 
 export const useLaden = create<Laden>((setze, hole) => {
@@ -218,7 +233,9 @@ export const useLaden = create<Laden>((setze, hole) => {
    * das bei einer kurzen Störung leer wird, ist schlechter als eines, das
    * sichtbar altert.
    */
-  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten">(
+  async function holeAnsicht<
+    A extends "baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen",
+  >(
     welche: A,
     baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
   ): Promise<void> {
@@ -320,6 +337,8 @@ export const useLaden = create<Laden>((setze, hole) => {
     tagebuch: undefined,
     untertabelle: undefined,
     kosten: undefined,
+    anforderungen: undefined,
+    anforderungsfilter: {},
     eeb: undefined,
     htmlMonitor: undefined,
     bildschirme: undefined,
@@ -345,6 +364,23 @@ export const useLaden = create<Laden>((setze, hole) => {
 
     async holeKosten() {
       await holeAnsicht("kosten", (akteId) => ({ art: "kostenAnfordern", akteId }));
+    },
+
+    async holeAnforderungen() {
+      const filter = hole().anforderungsfilter;
+      await holeAnsicht("anforderungen", (akteId) => ({
+        art: "anforderungenAnfordern",
+        akteId,
+        von: filter.von ?? 0,
+        anzahl: SEITE,
+        ...(filter.zustaende === undefined ? {} : { zustaende: [...filter.zustaende] }),
+        ...(filter.suche === undefined ? {} : { suche: filter.suche }),
+      }));
+    },
+
+    async setzeAnforderungsfilter(filter) {
+      setze({ anforderungsfilter: filter });
+      await hole().holeAnforderungen();
     },
 
     async holeTagebuch() {
@@ -472,6 +508,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.tagebuch === undefined ? undefined : zustand.holeTagebuch(),
         einheitId === undefined ? undefined : zustand.holeUntertabelle(einheitId),
         zustand.kosten === undefined ? undefined : zustand.holeKosten(),
+        zustand.anforderungen === undefined ? undefined : zustand.holeAnforderungen(),
       ]);
     },
 

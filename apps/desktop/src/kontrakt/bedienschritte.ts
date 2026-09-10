@@ -8,7 +8,12 @@
  * ist nur über das DOM prüfbar — und dann prüft man die Darstellung mit.
  *
  * Sie liegen hier und nicht in `@s1/domaene`, weil sie den {@link Entwurf} des
- * IPC-Kontrakts bauen und damit zur Schale gehören. Was sie **nicht** tun: Id,
+ * IPC-Kontrakts bauen und damit zur Schale gehören. Und sie liegen **beim
+ * Kontrakt** und nicht beim Renderer, obwohl sie von Masken gerufen werden:
+ * Die Szenarientests fahren dieselben Entwürfe gegen den Aktendienst, und der
+ * gehört zum Main-Projekt. Läge das Modul beim Renderer, hätte ein Test
+ * entweder die Ringgrenze zu brechen oder eine zweite Bauweise zu erfinden —
+ * und die zweite ist immer die ältere (02-ZIELBILD.md, „Vier Ringe“). Was sie **nicht** tun: Id,
  * HLC, Akteur und Wanduhr setzen. Die gehören dem Schreiber
  * (KONZEPT-SPEICHER.md §2.4); ein Renderer, der eine HLC vergäbe, hätte eine
  * Uhr und damit Fachzustand.
@@ -21,7 +26,7 @@
 
 import type { EinheitVorlage, Spalte, Staerke, Tabellenzeile } from "@s1/domaene";
 
-import type { Entwurf } from "../kontrakt/index.js";
+import type { Entwurf } from "./index.js";
 
 /** Der Vorbelegungsstatus einer neu angelegten Einheit (§5.4, Blatt „Stärke“ Spalte Z). */
 export const STATUS_VORBELEGUNG = "ANGEFORDERT";
@@ -273,4 +278,114 @@ export function kostenParameter(
   neu: number,
 ): Entwurf {
   return { typ: "KostenParameterGeaendert", nutzlast: { einsatzId, feld }, vorher, neu };
+}
+
+// ---------------------------------------------------------------------------
+// Anforderungen (M5.3)
+// ---------------------------------------------------------------------------
+
+/** Die Anlage einer Anforderung — Form (b): die Nutzlast **ist** die Anlage (§2.2). */
+export interface Anforderungsanlage {
+  readonly anforderungId: string;
+  readonly kennung?: string;
+  readonly abzuloesendeEinheitId?: string;
+  readonly vorgeseheneEinheitText?: string;
+  readonly vorgesehenerAuftrag?: string;
+  readonly angefordertAm: string;
+  readonly bemerkung?: string;
+}
+
+export function anforderungAnlegen(anlage: Anforderungsanlage): Entwurf {
+  // Ohne `vorher` und ohne `neu`: Eine Anlage hat keinen Vorher-Wert, und
+  // §2.2a prueft an ihr nichts.
+  return { typ: "AnforderungAngelegt", nutzlast: { ...anlage } };
+}
+
+/** Die Felder, die `AnforderungGeaendert` kennt (§5.6). */
+export const ANFORDERUNGSFELDER = [
+  "kennung",
+  "abzuloesendeEinheitId",
+  "vorgeseheneEinheitText",
+  "vorgesehenerAuftrag",
+  "bemerkung",
+  "angefordertAm",
+] as const;
+
+export type Anforderungsfeld = (typeof ANFORDERUNGSFELDER)[number];
+
+export function anforderungGeaendert(
+  anforderungId: string,
+  feld: Anforderungsfeld,
+  vorher: unknown,
+  neu: unknown,
+): Entwurf {
+  return { typ: "AnforderungGeaendert", nutzlast: { anforderungId, feld }, vorher, neu };
+}
+
+/**
+ * Die Zusage (§5.6.2).
+ *
+ * Der Wert traegt `zugesagtFuer` — genau diesen Schluessel plausibilisiert der
+ * Fold als Planzeit (§2.5). `zustand.ts` beschreibt das Feld abweichend; die
+ * Fassung des Folds gilt, weil an ihr Verhalten haengt.
+ */
+export function abloesungZugesagt(
+  anforderungId: string,
+  zugesagtFuer: string,
+  zugesagtVon: string,
+): Entwurf {
+  return {
+    typ: "AbloesungZugesagt",
+    nutzlast: { anforderungId },
+    vorher: null,
+    neu: { zugesagtFuer, zugesagtVon },
+  };
+}
+
+export function anforderungErledigt(anforderungId: string, erledigtAm: string): Entwurf {
+  return {
+    typ: "AnforderungErledigt",
+    nutzlast: { anforderungId },
+    vorher: null,
+    neu: { erledigtAm },
+  };
+}
+
+/** Das Storno — §2.4 macht den Grund hier zur Pflicht. */
+export function anforderungStorniert(anforderungId: string, grund: string): Entwurf {
+  return {
+    typ: "AnforderungStorniert",
+    nutzlast: { anforderungId },
+    vorher: false,
+    neu: true,
+    grund,
+  };
+}
+
+/**
+ * Die drei Ruecknahmen (§5.6.2).
+ *
+ * Sie sind **keine** Undo-Ereignisse: Undo nimmt das juengste eigene Ereignis
+ * zurueck (U1), eine Ruecknahme hier setzt ein bestimmtes Feld auf `null` und
+ * darf jederzeit kommen — auch fuer ein fremdes Ereignis, auch spaeter. Ohne
+ * sie waere ein Rueckschritt nur durch Ausschluss des Originals aus der
+ * Ereignismenge darstellbar, und genau das schliesst U1 aus.
+ */
+export const RUECKNAHMEN = {
+  zusage: "ZusageZurueckgenommen",
+  erledigung: "ErledigungZurueckgenommen",
+  storno: "StornoZurueckgenommen",
+} as const;
+
+export function ruecknahme(
+  anforderungId: string,
+  was: keyof typeof RUECKNAHMEN,
+  grund?: string,
+): Entwurf {
+  return {
+    typ: RUECKNAHMEN[was],
+    nutzlast: { anforderungId },
+    neu: null,
+    ...(grund === undefined ? {} : { grund }),
+  };
 }

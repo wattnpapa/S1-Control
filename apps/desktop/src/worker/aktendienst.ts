@@ -83,6 +83,7 @@ import {
 import {
   lagebildDelta,
   type Baumansicht,
+  type Anforderungsansicht,
   type Kostenansicht,
   type Bedienergebnis,
   type Lagebild,
@@ -601,6 +602,23 @@ export class Aktendienst {
    */
   kosten(): Kostenansicht {
     return { lageZeiger: this.#lageZeiger, blatt: projektion.kostenblatt(this.#zustand) };
+  }
+
+  /**
+   * Die Anforderungsliste (M5.3), gefiltert und auf den Ausschnitt beschnitten.
+   *
+   * Der **abgeleitete** Zustand je Anforderung kommt aus dem Fold (§5.6.2) und
+   * wird hier nur weitergereicht. Ein zweiter Ableitungspfad waere genau die
+   * zweite Wahrheit, die P6 ausschliesst.
+   */
+  anforderungen(ruf: Extract<Ruf, { art: "anforderungenAnfordern" }>): Anforderungsansicht {
+    const ausschnitt = projektion.anforderungsliste(this.#zustand, {
+      ...(ruf.zustaende === undefined ? {} : { zustaende: ruf.zustaende }),
+      ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
+      ...(ruf.von === undefined ? {} : { von: ruf.von }),
+      ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
+    });
+    return { lageZeiger: this.#lageZeiger, ...ausschnitt };
   }
 
   /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */

@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
-import { KOSTENFELDER, kostenParameter, type Kostenfeld } from "./bedienschritte.js";
+import { KOSTENFELDER, kostenParameter, type Kostenfeld } from "../kontrakt/bedienschritte.js";
 
 /** Die Beschriftungen der vier Parameter, in der Reihenfolge der Vorlage. */
 const BESCHRIFTUNG: Readonly<Record<Kostenfeld, string>> = {

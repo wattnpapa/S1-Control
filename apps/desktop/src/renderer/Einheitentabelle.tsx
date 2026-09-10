@@ -25,7 +25,7 @@ import { projektion, type Spalte, type Spaltengruppe, type Tabellenzeile } from 
 
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
-import { eingabeAlsWert, inlineEntwurf } from "./bedienschritte.js";
+import { eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 

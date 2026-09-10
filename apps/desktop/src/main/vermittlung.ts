@@ -172,6 +172,8 @@ export class Vermittlung {
       // Fachzustand"). Geprueft sind sie zu diesem Zeitpunkt bereits — `zRuf`
       // faengt eine zu grosse `anzahl` ab, bevor sie den Worker erreicht.
       case "baumAnfordern":
+      case "kostenAnfordern":
+      case "anforderungenAnfordern":
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":

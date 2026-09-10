@@ -24,6 +24,7 @@ import { Arbeiterhof, type Arbeiter } from "./arbeiterhof.js";
 import { Vermittlung } from "./vermittlung.js";
 import { Aktendienst } from "../worker/aktendienst.js";
 import type { Auftrag, Startdaten, WorkerBotschaft } from "../worker/akte-worker.js";
+import { bearbeiteAuftrag } from "../worker/auftraege.js";
 import type { Bedienergebnis, EinsatzEintrag, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 const wegwerf: string[] = [];
@@ -98,23 +99,23 @@ function baueDirektenArbeiter(
   };
 }
 
+/**
+ * Die Auftragsbearbeitung dieser Werkstatt — **derselbe** Verteiler wie im
+ * Betrieb.
+ *
+ * Hier stand bis M5.3 eine zweite, handgeschriebene Fassung mit sechs
+ * Auftragsarten. Sie war der Grund, warum `kostenAnfordern` durch die
+ * Vermittlung fallen konnte, ohne dass ein Test es bemerkte: Der Aktendienst
+ * konnte die Ansicht, die Naht dorthin war nicht verdrahtet, und dieser Test
+ * kannte den Auftrag gar nicht. Jetzt ruft er `bearbeiteAuftrag`, und ein
+ * neuer Ansichtsruf ist hier ohne Zutun abgedeckt.
+ */
 async function bearbeite(dienst: Aktendienst, auftrag: Auftrag): Promise<unknown> {
-  switch (auftrag.art) {
-    case "oeffne":
-      return { befund: (await dienst.oeffne()).befund.art };
-    case "bediene":
-      return dienst.bediene(auftrag.entwurf);
-    case "zurueck":
-      return dienst.zurueck(auftrag.grund);
-    case "undoStapel":
-      return dienst.undoStapel();
-    case "standAnfordern":
-      dienst.sendeVollenStand();
-      return null;
-    case "schliesse":
-      dienst.schliesse();
-      return null;
+  if (auftrag.art === "schliesse") {
+    dienst.schliesse();
+    return null;
   }
+  return bearbeiteAuftrag(dienst, auftrag);
 }
 
 function baueWerkstatt(): Werkstatt {
@@ -390,5 +391,42 @@ describe("Bedienen über die Vermittlung", () => {
       akteId: angelegt.akteId,
     });
     expect(antwort).toEqual({ ok: false, meldung: `Unbekannte Akte: ${angelegt.akteId}` });
+  });
+});
+
+describe("Jeder Ansichtsruf erreicht den Aktendienst", () => {
+  /**
+   * **Warum dieser Test die Naht misst und nicht die Ansicht.**
+   *
+   * Die Vermittlung reicht die Ansichtsrufe mit einem `switch` an den Worker
+   * weiter. Der `switch` hat keinen Vorgabezweig — was er nicht kennt, fällt
+   * hindurch und wird zu `undefined`, und der Aufrufer bekommt eine Antwort,
+   * die formal in Ordnung ist und nichts enthält. Genau das ist mit
+   * `kostenAnfordern` aus M5.2 passiert: Die Ansicht war gebaut, ihre Tests
+   * gegen den Aktendienst waren grün, und über die Prozessgrenze kam nichts
+   * an. Deshalb steht hier **jeder** Ansichtsruf, und ein neuer gehört
+   * hinzugefügt.
+   */
+  it("liefert zu jedem Ansichtsruf eine Antwort mit Zeigerstand", async () => {
+    const werkstatt = await mitShare();
+    const { akteId } = await ruf<{ akteId: string }>(werkstatt, ANLEGEN);
+
+    const rufe: Ruf[] = [
+      { art: "baumAnfordern", akteId },
+      { art: "tabelleAnfordern", akteId },
+      { art: "tagebuchAnfordern", akteId },
+      { art: "kostenAnfordern", akteId },
+      { art: "anforderungenAnfordern", akteId },
+    ];
+
+    for (const anfrage of rufe) {
+      const antwort = await werkstatt.vermittlung.beantworte(anfrage);
+      expect(antwort.ok, `${anfrage.art} wurde abgewiesen`).toBe(true);
+      const wert = (antwort as { wert: unknown }).wert as { lageZeiger?: number } | null;
+      expect(wert, `${anfrage.art} lieferte nichts`).not.toBeNull();
+      // Jede Ansichtsantwort trägt den Zeigerstand, zu dem sie gebaut wurde
+      // (M3.7) — ohne ihn hätte der Renderer ein Wettrennen.
+      expect(typeof wert?.lageZeiger, `${anfrage.art} ohne Zeigerstand`).toBe("number");
+    }
   });
 });

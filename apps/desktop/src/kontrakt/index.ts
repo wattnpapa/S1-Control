@@ -27,6 +27,7 @@
 import { z } from "zod";
 
 import type {
+  Anforderungsausschnitt,
   Baumknoten,
   Kostenblatt,
   Tabellenausschnitt,
@@ -246,6 +247,14 @@ export const zRuf = z.discriminatedUnion("art", [
   // und eine Abrechnung mit der ersten Seite waere keine. Bei 150 Einheiten
   // sind es 150 Zeilen mit je acht Zahlen — das traegt ein Ruf.
   z.object({ art: z.literal("kostenAnfordern"), akteId: zAkteId }),
+  z.object({
+    art: z.literal("anforderungenAnfordern"),
+    akteId: zAkteId,
+    zustaende: z.array(z.enum(["OFFEN", "ZUGESAGT", "EINGETROFFEN", "STORNIERT"])).optional(),
+    suche: z.string().optional(),
+    von: z.number().int().min(0).optional(),
+    anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+  }),
 
   // ---- Der Handscanner-Weg (M3.4) -----------------------------------------
   //
@@ -376,6 +385,7 @@ export interface Antworten {
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
   baumAnfordern: Baumansicht;
   kostenAnfordern: Kostenansicht;
+  anforderungenAnfordern: Anforderungsansicht;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -409,6 +419,9 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/** Die Anforderungsliste (M5.3) — mit Ausschnitt, wie jede Liste (M3.7). */
+export interface Anforderungsansicht extends Ansichtsstand, Anforderungsausschnitt {}
 
 /** Die Kostenuebersicht (M5.2) — Parameter, Zeilen, Summe. */
 export interface Kostenansicht extends Ansichtsstand {

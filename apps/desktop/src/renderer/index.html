@@ -367,6 +367,72 @@
         text-align: right;
       }
 
+      .anforderungen h2,
+      .kosten h2 {
+        font-size: 1rem;
+        margin: 0.6rem 0 0.3rem;
+      }
+      .anforderungsfilter,
+      .anforderungneu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        font-size: 0.85rem;
+      }
+      .anforderungneu label {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+      }
+      .anforderungstabelle {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      .anforderungstabelle th,
+      .anforderungstabelle td {
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        font-weight: 400;
+      }
+      .anforderungstabelle thead th {
+        font-weight: 700;
+      }
+      /* Der abgeleitete Zustand ist die wichtigste Spalte der Liste (§5.6.2);
+         er traegt deshalb Farbe, und zwar dieselbe Ampel wie der Einheiten-
+         status: offen mahnt, eingetroffen ist erledigt. */
+      .zustand {
+        padding: 0 0.3rem;
+        border-radius: 0.2rem;
+        font-size: 0.75rem;
+        font-weight: 700;
+      }
+      .zustand-offen {
+        background: rgba(185, 28, 28, 0.18);
+      }
+      .zustand-zugesagt {
+        background: rgba(217, 119, 6, 0.18);
+      }
+      .zustand-eingetroffen {
+        background: rgba(21, 122, 60, 0.18);
+      }
+      .zustand-storniert {
+        background: rgba(128, 128, 128, 0.18);
+      }
+      /* §5.4.5 sinngemaess: Ein Storno loescht nicht, es streicht durch. */
+      .anforderungstabelle tr.storniert th,
+      .anforderungstabelle tr.storniert td {
+        opacity: 0.6;
+      }
+      .handlungen {
+        display: flex;
+        gap: 0.3rem;
+        flex-wrap: wrap;
+      }
+
       /* ---- Der Staerke-Monitor (M3.5) ---------------------------------- */
 
       /* Dieses Fenster wird nicht bedient, sondern gelesen — von der anderen
