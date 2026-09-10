@@ -1,17 +1,64 @@
 # Kurzanleitung S1-Control
 
-Zwei Seiten zum Danebenlegen. Die zweite Seite — die sechs Störfälle — ist
-erzeugt: Sie stammt aus derselben Liste, die die Diagnoseansicht im Programm
-zeigt (`packages/domaene/src/stoerfaelle.ts`). Wer einen Fall ändert, ändert
-ihn dort und erneuert diese Datei mit `npm run doku:kurzanleitung`.
+Zwei Seiten zum Danebenlegen. Seite 1 ist der Betrieb, Seite 2 sind die sechs
+Störfälle. Seite 2 ist erzeugt: Sie stammt aus derselben Liste, die die
+Diagnoseansicht im Programm zeigt (`packages/domaene/src/stoerfaelle.ts`). Wer
+einen Fall ändert, ändert ihn dort und erneuert diese Datei mit
+`npm run doku:kurzanleitung`.
+
+## Anfangen
+
+1. **Einstellungen:** Sharepfad eintragen (`\\nas\einsatz`) und einen
+   Anzeigenamen setzen. Der Name steht in der Statuszeile der anderen.
+2. **Einsatz anlegen** oder einen bestehenden **öffnen**. Beides geht über die
+   Liste auf der Startseite; angelegt wird ein Einsatz genau einmal, von einem
+   Rechner.
+3. Alle weiteren Rechner öffnen denselben Einsatz aus der Liste. Sie sehen
+   sich danach gegenseitig unten in der Statuszeile.
+
+## Die Statuszeile lesen
+
+| Was dort steht | Was es heißt |
+|---|---|
+| Stand: vor 8 s | Wann das jüngste Ereignis eintraf |
+| 2 weitere, 1 veraltet | Wache und stumme Arbeitsplätze (§6.4) |
+| Share nicht erreichbar | Es wird lokal weitergeschrieben, nichts geht verloren |
+| 4.2 kB nicht übertragen | So viel Eigenes liegt noch nicht auf dem Share |
+
+## Tastenkürzel
+
+| Taste | Was sie tut |
+|---|---|
+| Strg + N | Neuen Eintrag anlegen |
+| Strg + E | Eintrag entfernen, mit Grund (§2.4) |
+| Strg + M | Einheiten in einen anderen Abschnitt verschieben |
+| Strg + F | In die Suche springen |
+| Strg + Z | Letzte eigene Aktion zurücknehmen (§6 U3) |
+| Strg + D | „Jetzt“ in das Zeitfeld schreiben, in dem der Cursor steht |
+| Strg + Q | Erfassungsbogen vom Handscanner einlesen |
+| Strg + H | Abkürzungsliste und Tastenkarte |
+
+## Drei Sätze, die Zeit sparen
+
+**Nichts geht verloren, wenn der Share weg ist.** Jedes Ereignis liegt zuerst
+lokal, dann auf dem Share (§1.3). Weiterarbeiten ist immer richtig.
+
+**Zurücknehmen ist ein Ereignis, kein Löschen.** Was zurückgenommen wurde,
+bleibt im Tagebuch sichtbar (§5.9.1). Das ist gewollt.
+
+**Zwei Bediener am selben Feld sind kein Fehler.** Das Programm entscheidet
+nach fester Regel und merkt sich, was es verdrängt hat. Der Hinweis steht in
+der Diagnose; geklärt wird fachlich (§2.2a, §3.8).
 
 ## Wo etwas steht, wenn es klemmt
 
 Im Programm: **Nebenblätter → Diagnose.** Dort stehen die Arbeitsplätze mit
 ihren Ständen, die Pfade von Protokoll, Share und lokalem Spiegel und die
-letzten Meldungen dieser Sitzung.
+letzten Meldungen dieser Sitzung. Alles Weitere: [BETRIEB.md](BETRIEB.md).
 
-## Die sechs Störfälle
+---
+
+# Seite 2 — Die sechs Störfälle
 
 <!-- STÖRFALLMATRIX ANFANG — erzeugt, nicht von Hand ändern -->
 
