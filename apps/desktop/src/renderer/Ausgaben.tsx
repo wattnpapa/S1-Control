@@ -1,8 +1,10 @@
 /**
  * Die Kernausgaben in der Oberfläche (M4.1).
  *
- * Vier Knöpfe: Druck und Status, je als HTML und als PDF. Mehr braucht es
- * nicht — in der Excel sind es zwei Blätter und die Drucktaste.
+ * Die Ausgaben der Meilensteine M4 und M5: Druck und Status je als HTML und
+ * als PDF, die Auswertung und der Oldenburger Block als XLSX, das
+ * Logistikblatt als PDF und als Wertekopie. Jede entspricht einem Blatt der
+ * Vorlage; keine rechnet selbst.
  *
  * **Der Pfad wird genannt.** Ein „fertig“ ohne Pfad zwingt den Bediener, die
  * Datei zu suchen; sie liegt im Ordner `ausgaben\` des Einsatzes auf dem
@@ -22,7 +24,7 @@ export function Ausgaben(): React.JSX.Element {
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
 
   function erzeuge(
-    ausgabe: "druck" | "status" | "auswertung" | "oldenburg",
+    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeMeldung(undefined);
@@ -72,6 +74,16 @@ export function Ausgaben(): React.JSX.Element {
           weiterrechnen (M4.2, `excel-domaenenmodell.md` §4.4). */}
       <button type="button" onClick={() => { erzeuge("auswertung", "xlsx"); }}>
         Auswertung als XLSX
+      </button>
+      {/* Das Logistikblatt (M5.1) beantwortet eine Frage, die die
+          Einheitenliste nicht beantwortet: wie viele wo. Deshalb eine Zeile je
+          Bereich (`excel-domaenenmodell.md` §4.3). Die Wertekopie daneben ist
+          die Fassung zum Weiterschicken — die Vorlage lässt sie ungeschützt. */}
+      <button type="button" onClick={() => { erzeuge("log", "pdf"); }}>
+        Logistik als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("logfrei", "xlsx"); }}>
+        Logistik als XLSX (LogFrei)
       </button>
       {/* Der Oldenburger Block (M4.2) ist derselbe Bestand in der
           Spaltenordnung der Vorlage — zum Einfügen in die gewohnte Excel.

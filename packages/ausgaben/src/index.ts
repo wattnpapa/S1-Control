@@ -77,6 +77,7 @@ export {
 export {
   SPALTE_BEREICH,
   auswertungAlsXlsx,
+  logFreiAlsXlsx,
   oldenburgAlsXlsx,
   spaltenname,
   xmlMaskieren,
@@ -84,6 +85,7 @@ export {
   type Auswertungsoptionen,
   type Oldenburgoptionen,
 } from "./xlsx.js";
+export { LOG_FUSSNOTE, LOG_STIL, logAlsHtml, type Logausgabeoptionen } from "./log.js";
 export {
   MONITOR_DATEINAME,
   MONITOR_STIL,

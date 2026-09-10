@@ -200,6 +200,105 @@ export function auswertungAlsXlsx(zustand: Zustand, optionen: Auswertungsoptione
 }
 
 // ---------------------------------------------------------------------------
+// LogFrei (M5.1)
+// ---------------------------------------------------------------------------
+
+/**
+ * Das Blatt „LogFrei" — die Wertekopie des Logistikblatts.
+ *
+ * Die Vorlage erzeugt es per Makro `kopiereLogInLogFrei` aus `Log!C7:P34` und
+ * `C38:P38` und lässt es **ungeschützt** (`excel-domaenenmodell.md` §4.3): Es
+ * ist die Fassung zum Weiterverarbeiten — Zahlen anpassen, Spalten ergänzen,
+ * an den Caterer schicken. Genau das ist hier eine XLSX und kein HTML: Ein
+ * Ausdruck lässt sich nicht weiterrechnen.
+ *
+ * **Ohne Formeln, mit Werten** — wie die Vorlage es auch tut, und aus dem
+ * Grund, der über `auswertungAlsXlsx` steht: Eine Formel, die eine Zahl aus
+ * dem Zustand nachrechnet, ist eine zweite Wahrheit über dieselbe Größe.
+ *
+ * Die Zeile „Angefordert / Anmarsch" steht getrennt **unter** der Summe und
+ * geht nicht in sie ein (§4.3, Z. 36 und 38).
+ */
+export function logFreiAlsXlsx(zustand: Zustand, optionen: Auswertungsoptionen = {}): Uint8Array {
+  const blatt = projektion.logistikblatt(zustand);
+  const schichtKopf: Readonly<Record<string, string>> = {
+    FRUEH: "Früh",
+    SPAET: "Spät",
+    TAG: "Tag",
+    NACHT: "Nacht",
+  };
+  const koepfe = [
+    "Bereich",
+    ...projektion.LOG_SCHICHTEN.map((s) => schichtKopf[s] ?? s),
+    "Summe",
+    "Männl.",
+    "Weibl.",
+    "Div.",
+    "Veget.",
+    "Vegan.",
+    "ÜN (m)",
+    "ÜN (w)",
+    "ÜN (d)",
+  ];
+
+  const werte = (zeile: projektion.Logistikzeile): (string | number)[] => [
+    zellentext(zeile.name),
+    ...projektion.LOG_SCHICHTEN.map((s) => zeile.jeSchicht[s] ?? 0),
+    zeile.gesamt,
+    zeile.maennlich,
+    zeile.weiblich,
+    zeile.divers,
+    zeile.vegetarisch,
+    zeile.vegan,
+    zeile.uebernachtung.m,
+    zeile.uebernachtung.w,
+    zeile.uebernachtung.d,
+  ];
+
+  const zeilenXml: string[] = [];
+  let nummer = 1;
+  const schreibe = (spalten: readonly (string | number)[]): void => {
+    zeilenXml.push(
+      `<row r="${String(nummer)}">${spalten.map((wert, stelle) => zelle(stelle + 1, nummer, wert)).join("")}</row>`,
+    );
+    nummer += 1;
+  };
+
+  const einsatzName =
+    typeof zustand.einsatz?.name.wert === "string" ? zustand.einsatz.name.wert : "(ohne Namen)";
+  const stand = optionen.stand ?? "";
+  // Zelle E4 der Vorlage trägt den Stand; hier steht er in A1, weil dieses
+  // Blatt keine Hilfsspalten davor hat.
+  schreibe([zellentext(`${einsatzName}${stand === "" ? "" : ` — ${stand}`}`)]);
+  schreibe(koepfe);
+  for (const zeile of blatt.zeilen) schreibe(werte(zeile));
+  schreibe(werte(blatt.gesamt));
+  schreibe([]);
+  schreibe([zellentext("Kräfte aus dem Bereich „Angefordert / Anmarsch“")]);
+  schreibe(werte(blatt.angefordert));
+  schreibe([]);
+  schreibe([zellentext(projektion.LOG_MAENNLICH)]);
+
+  const inhalt = [
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+    `<sheetData>${zeilenXml.join("")}</sheetData>`,
+    "</worksheet>",
+  ].join("");
+
+  return schreibeZip(
+    [
+      textEintrag("[Content_Types].xml", INHALTSTYPEN),
+      textEintrag("_rels/.rels", WURZELVERWEISE),
+      textEintrag("xl/workbook.xml", arbeitsmappe("LogFrei")),
+      textEintrag("xl/_rels/workbook.xml.rels", MAPPENVERWEISE),
+      textEintrag("xl/worksheets/sheet1.xml", inhalt),
+    ],
+    optionen,
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Der Oldenburger Block (M4.2, zweite Ausgabevariante)
 // ---------------------------------------------------------------------------
 

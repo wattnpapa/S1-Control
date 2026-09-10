@@ -49,9 +49,10 @@ export type Auftrag =
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
-  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status"; readonly organisation?: string }
+  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status" | "log"; readonly organisation?: string }
   | { readonly art: "auswertungXlsx"; readonly nummer: number }
   | { readonly art: "oldenburgXlsx"; readonly nummer: number }
+  | { readonly art: "logFreiXlsx"; readonly nummer: number }
   | { readonly art: "htmlMonitorSchalten"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "htmlMonitorSchalten" }> }
   | { readonly art: "ausgabeSchreiben"; readonly nummer: number; readonly dateiname: string; readonly bytes: Uint8Array }
   | { readonly art: "eebScan"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebScan" }> }
@@ -194,6 +195,8 @@ if (parentPort !== null) {
         return dienst.auswertungXlsx();
       case "oldenburgXlsx":
         return dienst.oldenburgXlsx();
+      case "logFreiXlsx":
+        return dienst.logFreiXlsx();
       case "htmlMonitorSchalten":
         return dienst.monitorSchalten(auftrag.ruf.an, {
           ...(auftrag.ruf.mitStatus === undefined ? {} : { mitStatus: auftrag.ruf.mitStatus }),

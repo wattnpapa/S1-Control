@@ -23,7 +23,13 @@ import process from "node:process";
 
 import { describe, expect, it } from "vitest";
 
-import { druckAlsHtml, druckdaten, statusAlsHtml, statusdaten } from "../../packages/ausgaben/src/index.js";
+import {
+  druckAlsHtml,
+  druckdaten,
+  logAlsHtml,
+  statusAlsHtml,
+  statusdaten,
+} from "../../packages/ausgaben/src/index.js";
 import { falteHinzu, leereFaltung, materialisiere } from "../../packages/domaene/src/fold.js";
 import { prueflageEreignisse } from "../../packages/domaene/src/pruefhilfen/pruefage.js";
 import type { Zustand } from "../../packages/domaene/src/zustand.js";
@@ -79,6 +85,19 @@ describe("Der Druck", () => {
 describe("Die Status-Matrix", () => {
   it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
     gegenGoldfile("status.html", statusAlsHtml(statusdaten(lage()), KOPF));
+  });
+});
+
+describe("Das Logistikblatt", () => {
+  it("bleibt Zeile für Zeile, wie es abgenommen wurde", () => {
+    gegenGoldfile("log.html", logAlsHtml(lage(), KOPF));
+  });
+
+  it("führt die leeren Bereiche mit, wenn man es verlangt", () => {
+    // Die Vorlage blendet sie beim Blattwechsel aus (`t_log`); der zweite
+    // Goldfile hält fest, dass der Schalter tatsächlich Zeilen hinzufügt und
+    // nicht nur eine Überschrift ändert.
+    gegenGoldfile("log-mit-leeren.html", logAlsHtml(lage(), KOPF, { mitLeeren: true }));
   });
 });
 

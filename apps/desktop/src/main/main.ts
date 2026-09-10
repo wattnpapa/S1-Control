@@ -322,6 +322,12 @@ function ausgabenprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): 
           { ausgabe: "status", format: "html" },
           { ausgabe: "status", format: "pdf" },
           { ausgabe: "auswertung", format: "xlsx" },
+          { ausgabe: "oldenburg", format: "xlsx" },
+          // M5.1: Das Logistikblatt geht denselben Weg wie der Druck — durch
+          // die Rendering-Engine der Schale. Die Rauchprobe prueft ihn mit,
+          // weil ein PDF, das niemand oeffnet, kein Nachweis ist.
+          { ausgabe: "log", format: "pdf" },
+          { ausgabe: "logfrei", format: "xlsx" },
         ] as const;
         for (const { ausgabe, format } of wege) {
           {

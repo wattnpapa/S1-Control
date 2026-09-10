@@ -257,7 +257,11 @@ export const zRuf = z.discriminatedUnion("art", [
     // Spaltenordnung des Blatts „Staerke" der Vorlage, zum Einfuegen in die
     // gewohnte Excel. Eine eigene Ausgabeart und keine Option der Auswertung,
     // weil es eine andere Datei mit einem anderen Zweck ist.
-    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg"]),
+    // `log` ist das Blatt „Logistik Details" (M5.1), `logfrei` seine
+    // Wertekopie zum Weiterverarbeiten — zwei Ausgaben, weil die Vorlage
+    // zwei Blaetter hat und sie verschieden benutzt werden: eines wird
+    // ausgedruckt, das andere weitergeschickt.
+    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg", "log", "logfrei"]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),

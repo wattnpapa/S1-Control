@@ -68,23 +68,39 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     expect(readFileSync(pfad, "utf8")).toBe(html);
   });
 
-  it("liefert Auswertung und Oldenburger Block als je eigene Datei", async () => {
+  it("rendert das Logistikblatt mit seiner getrennten Zeile", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const { dateiname, html } = platz.dienst.ausgabeHtml("log");
+
+    expect(html).toContain("Logistik Details");
+    // §4.3: Die angeforderten Kräfte stehen getrennt und nicht in der Summe.
+    expect(html).toContain("Angefordert / Anmarsch");
+    // Die Rechnung hinter „Männl.“ steht im Blatt, weil die Vorlage sich an
+    // dieser Stelle widerspricht (§4.2 gegen §4.3).
+    expect(html).toContain("Gesamt − weiblich − divers");
+    expect(dateiname).toMatch(/^logistik_\d{4}-\d{2}-\d{2}_\d{4}$/);
+  });
+
+  it("liefert Auswertung, Oldenburger Block und LogFrei als je eigene Datei", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
 
     const auswertung = platz.dienst.auswertungXlsx();
     const block = platz.dienst.oldenburgXlsx();
+    const logfrei = platz.dienst.logFreiXlsx();
 
     // Zwei Ausgaben mit zwei Zwecken: Die eine ist unsere filterbare
     // Auswertung (§4.4), der andere der Block zum Einfügen in die Vorlage
     // (§2). Sie tragen deshalb verschiedene Namen und verschiedene Bytes.
     expect(auswertung.dateiname).toMatch(/^auswertung_\d{4}-\d{2}-\d{2}_\d{4}$/);
     expect(block.dateiname).toMatch(/^oldenburg_\d{4}-\d{2}-\d{2}_\d{4}$/);
+    expect(logfrei.dateiname).toMatch(/^logfrei_\d{4}-\d{2}-\d{2}_\d{4}$/);
     expect(Array.from(block.bytes)).not.toEqual(Array.from(auswertung.bytes));
 
     // Beides sind ZIP-Dateien: „PK\x03\x04" ist die Signatur des lokalen
     // Kopfs, mit der jeder Leser die Datei erkennt.
-    for (const bytes of [auswertung.bytes, block.bytes]) {
+    for (const bytes of [auswertung.bytes, block.bytes, logfrei.bytes]) {
       expect(Array.from(bytes.slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04]);
     }
 

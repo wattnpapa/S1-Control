@@ -36,7 +36,11 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { auswertungAlsXlsx, oldenburgAlsXlsx } from "../../packages/ausgaben/src/index.js";
+import {
+  auswertungAlsXlsx,
+  logFreiAlsXlsx,
+  oldenburgAlsXlsx,
+} from "../../packages/ausgaben/src/index.js";
 import { falteHinzu, leereFaltung, materialisiere } from "../../packages/domaene/src/fold.js";
 import { prueflageEreignisse } from "../../packages/domaene/src/pruefhilfen/pruefage.js";
 import type { Zustand } from "../../packages/domaene/src/zustand.js";
@@ -130,7 +134,7 @@ describe("Die Auswertung in einem fremden OOXML-Leser", () => {
   });
 
   it("gibt Umlaute unverfälscht wieder", () => {
-    // Der Bereichsname „EA Deich Nord" und die Bezeichnungen tragen Umlaute
+    // Der Bereichsname „EA Deich Nord“ und die Bezeichnungen tragen Umlaute
     // und ein ß. Eine Datei, die sie zerlegt, ist für eine deutschsprachige
     // Führungsstelle unbrauchbar.
     const zeilen = ueberFremdenLeser(auswertungAlsXlsx(lage()));
@@ -216,5 +220,29 @@ describe("Der Oldenburger Block in einem fremden OOXML-Leser", () => {
     expect(Number.isNaN(fuehrer)).toBe(false);
     expect(Number.isNaN(gesamt)).toBe(false);
     expect(gesamt).toBe(fuehrer + Number(erste[35]) + Number(erste[36]));
+  });
+});
+
+describe("LogFrei in einem fremden OOXML-Leser", () => {
+  it("wird geöffnet und zeigt die vierzehn Spalten des Logistikblatts", () => {
+    const zeilen = ueberFremdenLeser(logFreiAlsXlsx(lage()));
+    const kopf = zeilen[1] as string[];
+    expect(kopf[0]).toBe("Bereich");
+    expect(kopf[1]).toBe("Früh");
+    expect(kopf[5]).toBe("Summe");
+    expect(kopf[13]).toBe("ÜN (d)");
+    expect(kopf).toHaveLength(14);
+  });
+
+  it("liefert die Summenzeile als Zahlen und die getrennte Zeile darunter", () => {
+    const zeilen = ueberFremdenLeser(logFreiAlsXlsx(lage()));
+    const getrennt = zeilen.findIndex((zeile) => (zeile[0] ?? "").startsWith("Kräfte aus dem Bereich"));
+    expect(getrennt).toBeGreaterThan(2);
+    // Die Zeile unmittelbar über der Leerzeile vor der Überschrift ist die
+    // Summe; ihre Spalte „Summe“ muss eine Zahl sein, sonst rechnet niemand
+    // damit weiter.
+    const summenzeile = zeilen[getrennt - 2] as string[];
+    expect(Number.isNaN(Number(summenzeile[5]))).toBe(false);
+    expect(Number(summenzeile[5])).toBeGreaterThan(0);
   });
 });

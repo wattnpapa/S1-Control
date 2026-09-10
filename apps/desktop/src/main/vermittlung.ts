@@ -207,9 +207,20 @@ export class Vermittlung {
     // Die Auswertung ist keine Seite, sondern eine Datei aus Bytes: Sie
     // braucht weder Vorlage noch Rendering-Engine und geht deshalb den
     // kuerzeren Weg (M4.2).
-    if (ruf.ausgabe === "auswertung" || ruf.ausgabe === "oldenburg" || ruf.format === "xlsx") {
+    // Drei Ausgaben sind keine Seite, sondern eine Datei aus Bytes: Sie
+    // brauchen weder Vorlage noch Rendering-Engine und gehen deshalb den
+    // kuerzeren Weg (M4.2, M5.1).
+    const alsBytes: Readonly<
+      Partial<Record<string, "auswertungXlsx" | "oldenburgXlsx" | "logFreiXlsx">>
+    > = {
+      auswertung: "auswertungXlsx",
+      oldenburg: "oldenburgXlsx",
+      logfrei: "logFreiXlsx",
+    };
+    const byteweg = alsBytes[ruf.ausgabe];
+    if (byteweg !== undefined || ruf.format === "xlsx") {
       const { dateiname, bytes: xlsx } = (await this.#o.hof.frage(ruf.akteId, {
-        art: ruf.ausgabe === "oldenburg" ? "oldenburgXlsx" : "auswertungXlsx",
+        art: byteweg ?? "auswertungXlsx",
       })) as { dateiname: string; bytes: Uint8Array };
       const { pfad } = (await this.#o.hof.frage(ruf.akteId, {
         art: "ausgabeSchreiben",
@@ -220,9 +231,13 @@ export class Vermittlung {
       return { pfad, bytes: xlsx.length };
     }
 
+    // Was hier ankommt, ist eine der drei Seiten — die drei Byte-Ausgaben
+    // sind oben schon zurueck. Der Zuschnitt steht im Typ und nicht in einer
+    // Zusicherung: `ausgabeHtml` kennt genau diese drei.
+    const seite = ruf.ausgabe as "druck" | "status" | "log";
     const gerendert = (await this.#o.hof.frage(ruf.akteId, {
       art: "ausgabeHtml",
-      ausgabe: ruf.ausgabe,
+      ausgabe: seite,
       ...(ruf.organisation === undefined ? {} : { organisation: ruf.organisation }),
     })) as { dateiname: string; html: string };
 

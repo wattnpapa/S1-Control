@@ -69,6 +69,8 @@ import type { Kompressor } from "@bos/eeb-format";
 import {
   MONITOR_DATEINAME,
   auswertungAlsXlsx,
+  logAlsHtml,
+  logFreiAlsXlsx,
   oldenburgAlsXlsx,
   druckAlsHtml,
   druckdaten,
@@ -649,7 +651,10 @@ export class Aktendienst {
    * Eine Fuehrungsstelle druckt im Einsatz mehrmals, und eine Datei, die sich
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
    */
-  ausgabeHtml(ausgabe: "druck" | "status", organisation?: string): { dateiname: string; html: string } {
+  ausgabeHtml(
+    ausgabe: "druck" | "status" | "log",
+    organisation?: string,
+  ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
@@ -659,6 +664,9 @@ export class Aktendienst {
     const marke = dateimarke(jetzt);
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
+    }
+    if (ausgabe === "log") {
+      return { dateiname: `logistik_${marke}`, html: logAlsHtml(this.#zustand, kopf) };
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };
@@ -741,6 +749,24 @@ export class Aktendienst {
     return {
       dateiname: `auswertung_${dateimarke(jetzt)}`,
       bytes: auswertungAlsXlsx(this.#zustand, {
+        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        zeitpunkt: jetzt,
+      }),
+    };
+  }
+
+  /**
+   * Die Wertekopie des Logistikblatts als XLSX (M5.1).
+   *
+   * Die Vorlage erzeugt sie per Makro aus dem Log-Blatt und laesst sie
+   * ungeschuetzt (`excel-domaenenmodell.md` §4.3): Sie ist die Fassung zum
+   * Weiterverarbeiten und geht deshalb an den Caterer, nicht an die Wand.
+   */
+  logFreiXlsx(): { dateiname: string; bytes: Uint8Array } {
+    const jetzt = new Date(this.#o.zeit());
+    return {
+      dateiname: `logfrei_${dateimarke(jetzt)}`,
+      bytes: logFreiAlsXlsx(this.#zustand, {
         stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
         zeitpunkt: jetzt,
       }),
