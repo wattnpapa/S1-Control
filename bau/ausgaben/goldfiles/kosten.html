@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Kosten — Übung Weser-Ems</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: system-ui, sans-serif; font-size: 10pt; margin: 0; }
+    h1 { font-size: 14pt; margin: 0 0 2mm; }
+    h2 { font-size: 11pt; margin: 5mm 0 1.5mm; }
+    .ausgabe-kopf p { margin: 0; font-size: 8pt; color: #444; }
+    .fuest { margin: 0 0 4mm; }
+    table.parameter, table.kosten { border-collapse: collapse; }
+    table.kosten { width: 100%; }
+    table.parameter th, table.parameter td, table.kosten th, table.kosten td { border: 0.3mm solid #999; padding: 0.8mm 1.5mm; }
+    table.kosten thead th { background: #eee; font-size: 9pt; }
+    th[scope="row"] { text-align: left; font-weight: 400; }
+    td.zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    tr.summenzeile th, tr.summenzeile td { font-weight: 700; background: #e8e8e8; }
+    .hinweis { font-size: 8pt; color: #444; margin-top: 4mm; }
+  </style>
+</head>
+<body>
+<header class="ausgabe-kopf">
+  <h1>Übung Weser-Ems</h1>
+  <p class="kennung">2026-09-08_uebung-weser-ems_227e68</p>
+  <p class="stand">Stand: 08.09.2026, 08:15</p>
+  <p class="kern">@bos/eeb-format 0.0.0</p>
+</header>
+  <p class="fuest">FüSt Oldenburg</p>
+  <h2>Kostenparameter</h2>
+  <table class="parameter">
+    <tbody>
+      <tr><th scope="row">Kosten pro Satz PSA</th><td class="zahl">180,00 €</td></tr>
+      <tr><th scope="row">VDA pro Tag und Kraft</th><td class="zahl">150,00 €</td></tr>
+      <tr><th scope="row">Unterkunft und Verpflegung pro Tag und Kraft</th><td class="zahl">20,00 €</td></tr>
+      <tr><th scope="row">Geplante Einsatztage</th><td class="zahl">5</td></tr>
+    </tbody>
+  </table>
+  <h2>Kosten je Einheit</h2>
+  <table class="kosten">
+    <thead>
+      <tr>
+        <th scope="col">Einheit</th><th scope="col">Bereich</th><th scope="col">Org.</th>
+        <th scope="col">Kräfte</th><th scope="col">PSA-Sätze / Tag</th>
+        <th scope="col">PSA / Tag</th><th scope="col">VDA + UK / Tag</th>
+        <th scope="col">Personentage</th><th scope="col">Gesamt</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">Stab FüSt</th>
+        <td>FüSt Oldenburg</td>
+        <td>THW</td>
+        <td class="zahl">6</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1.080,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">10.500,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Stab FüSt Nacht</th>
+        <td>FüSt Oldenburg</td>
+        <td>THW</td>
+        <td class="zahl">4</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">680,00 €</td>
+        <td class="zahl">20</td>
+        <td class="zahl">3.400,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Meldekopf</th>
+        <td>Meldekopf</td>
+        <td>THW</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Meldekopf Spät</th>
+        <td>Meldekopf</td>
+        <td>THW</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Logistik-Verpflegung</th>
+        <td>Logistik</td>
+        <td>THW</td>
+        <td class="zahl">7</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.190,00 €</td>
+        <td class="zahl">35</td>
+        <td class="zahl">5.950,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Betreuungsgruppe</th>
+        <td>Logistik</td>
+        <td>DRK</td>
+        <td class="zahl">12</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">2.040,00 €</td>
+        <td class="zahl">60</td>
+        <td class="zahl">10.200,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Verpflegungstrupp</th>
+        <td>Logistik</td>
+        <td>JUH</td>
+        <td class="zahl">5</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">850,00 €</td>
+        <td class="zahl">25</td>
+        <td class="zahl">4.250,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Tr Log Schlauch</th>
+        <td>Logistik</td>
+        <td>FEUERWEHR</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Tr Log WT</th>
+        <td>Logistik</td>
+        <td>FEUERWEHR</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">TZ THW Bereitstellung</th>
+        <td>Bereitstellungsraum Hafen</td>
+        <td>THW</td>
+        <td class="zahl">18</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">3.060,00 €</td>
+        <td class="zahl">90</td>
+        <td class="zahl">15.300,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">LZ FW Bereitstellung</th>
+        <td>Bereitstellungsraum Hafen</td>
+        <td>FEUERWEHR</td>
+        <td class="zahl">22</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">3.740,00 €</td>
+        <td class="zahl">110</td>
+        <td class="zahl">18.700,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">SanZ Bereitstellung</th>
+        <td>Bereitstellungsraum Hafen</td>
+        <td>ASB</td>
+        <td class="zahl">15</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">2.550,00 €</td>
+        <td class="zahl">75</td>
+        <td class="zahl">12.750,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Pioniermaschinenzug</th>
+        <td>Bereitstellungsraum Hafen</td>
+        <td>BUNDESWEHR</td>
+        <td class="zahl">25</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">4.250,00 €</td>
+        <td class="zahl">125</td>
+        <td class="zahl">21.250,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">ZTr THW Deich</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">4</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">680,00 €</td>
+        <td class="zahl">20</td>
+        <td class="zahl">3.400,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">BGr 1 Oldenburg</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">9</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1.620,00 €</td>
+        <td class="zahl">1.530,00 €</td>
+        <td class="zahl">45</td>
+        <td class="zahl">15.750,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">BGr 2 Oldenburg</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">9</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.530,00 €</td>
+        <td class="zahl">45</td>
+        <td class="zahl">7.650,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Wasserschaden</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">5.100,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Notversorgung</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">5.100,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Rettungsdienst Vorhaltung</th>
+        <td>EA Deich Nord</td>
+        <td>RETTUNGSDIENST</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">340,00 €</td>
+        <td class="zahl">10</td>
+        <td class="zahl">1.700,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">BGr Teilbar</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">5.100,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">BGr Teilbar — Trupp</th>
+        <td>EA Deich Nord</td>
+        <td>THW</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Räumen A</th>
+        <td>UA Deichfuß</td>
+        <td>THW</td>
+        <td class="zahl">7</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.190,00 €</td>
+        <td class="zahl">35</td>
+        <td class="zahl">5.950,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">LG Rastede</th>
+        <td>UA Deichfuß</td>
+        <td>FEUERWEHR</td>
+        <td class="zahl">9</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.530,00 €</td>
+        <td class="zahl">45</td>
+        <td class="zahl">7.650,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Sandsackkolonne</th>
+        <td>UA Deichfuß</td>
+        <td>REGIE</td>
+        <td class="zahl">22</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">3.740,00 €</td>
+        <td class="zahl">110</td>
+        <td class="zahl">18.700,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">ZTr THW Pumpwerk</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>THW</td>
+        <td class="zahl">4</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">680,00 €</td>
+        <td class="zahl">20</td>
+        <td class="zahl">3.400,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Wasserschaden/Pumpen</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>THW</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">5.100,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">FGr Elektroversorgung</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>THW</td>
+        <td class="zahl">5</td>
+        <td class="zahl">2</td>
+        <td class="zahl">1.800,00 €</td>
+        <td class="zahl">850,00 €</td>
+        <td class="zahl">25</td>
+        <td class="zahl">13.250,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">AB HFS Bereitschaft</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>FEUERWEHR</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.020,00 €</td>
+        <td class="zahl">30</td>
+        <td class="zahl">5.100,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Trupp Aufklärung</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>THW</td>
+        <td class="zahl">3</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">510,00 €</td>
+        <td class="zahl">15</td>
+        <td class="zahl">2.550,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">GTr Wassergefahren</th>
+        <td>EA Pumpwerk Süd</td>
+        <td>DLRG</td>
+        <td class="zahl">5</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">850,00 €</td>
+        <td class="zahl">25</td>
+        <td class="zahl">4.250,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Betreuungszug</th>
+        <td>EA Schule Mitte</td>
+        <td>DRK</td>
+        <td class="zahl">20</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">3.400,00 €</td>
+        <td class="zahl">100</td>
+        <td class="zahl">17.000,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Gr Betreuung Nacht</th>
+        <td>EA Schule Mitte</td>
+        <td>DRK</td>
+        <td class="zahl">9</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.530,00 €</td>
+        <td class="zahl">45</td>
+        <td class="zahl">7.650,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">St PSNV</th>
+        <td>EA Schule Mitte</td>
+        <td>MHD</td>
+        <td class="zahl">4</td>
+        <td class="zahl">1</td>
+        <td class="zahl">720,00 €</td>
+        <td class="zahl">680,00 €</td>
+        <td class="zahl">20</td>
+        <td class="zahl">7.000,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">St Registrierung</th>
+        <td>EA Schule Mitte</td>
+        <td>JUH</td>
+        <td class="zahl">4</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">680,00 €</td>
+        <td class="zahl">20</td>
+        <td class="zahl">3.400,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Sanitätsgruppe</th>
+        <td>EA Schule Mitte</td>
+        <td>ASB</td>
+        <td class="zahl">8</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.360,00 €</td>
+        <td class="zahl">40</td>
+        <td class="zahl">6.800,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Streifenwagen Absperrung</th>
+        <td>EA Schule Mitte</td>
+        <td>POLIZEI</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">340,00 €</td>
+        <td class="zahl">10</td>
+        <td class="zahl">1.700,00 €</td>
+      </tr>
+      <tr>
+        <th scope="row">Gr Wasserrettung</th>
+        <td>EA Schule Mitte</td>
+        <td>DLRG</td>
+        <td class="zahl">8</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0,00 €</td>
+        <td class="zahl">1.360,00 €</td>
+        <td class="zahl">40</td>
+        <td class="zahl">6.800,00 €</td>
+      </tr>
+      <tr class="summenzeile">
+        <th scope="row" colspan="3">Summe</th>
+        <td class="zahl">293</td>
+        <td></td>
+        <td class="zahl">5.220,00 €</td>
+        <td class="zahl">49.810,00 €</td>
+        <td class="zahl">1465</td>
+        <td class="zahl">275.150,00 €</td>
+      </tr>
+    </tbody>
+  </table>
+  <p class="hinweis">3 Einheit(en) fallen aus der Rechnung: angeforderte und archivierte Kräfte zählen nach dem Zieldatenmodell §2.4 nicht mit. Gesamt ist bei einer Einheit ohne Kräfte null — die Vorlage erzwingt das über IFERROR, weil sie an dieser Stelle durch die Gesamtstärke teilt.</p>
+</body>
+</html>

@@ -47,9 +47,10 @@ export type Auftrag =
   // zwei Stellen nachzutragen — und der Kontrakt hat sie bereits geprueft,
   // bevor der Main sie weiterreicht.
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
+  | { readonly art: "kostenAnfordern"; readonly nummer: number }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
-  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status" | "log"; readonly organisation?: string }
+  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status" | "log" | "kosten"; readonly organisation?: string }
   | { readonly art: "auswertungXlsx"; readonly nummer: number }
   | { readonly art: "oldenburgXlsx"; readonly nummer: number }
   | { readonly art: "logFreiXlsx"; readonly nummer: number }
@@ -183,6 +184,8 @@ if (parentPort !== null) {
       case "standAnfordern":
         dienst.sendeVollenStand();
         return null;
+      case "kostenAnfordern":
+        return dienst.kosten();
       case "baumAnfordern":
         return dienst.baum(auftrag.ruf);
       case "tabelleAnfordern":

@@ -82,6 +82,34 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     expect(dateiname).toMatch(/^logistik_\d{4}-\d{2}-\d{2}_\d{4}$/);
   });
 
+  it("rendert die Kostenübersicht mit ihren Parametern", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const { dateiname, html } = platz.dienst.ausgabeHtml("kosten");
+
+    expect(html).toContain("Kostenparameter");
+    // Die Vorbelegungen aus ZDM §3.2: 180 € je PSA-Satz, 150 € VDA, 20 €
+    // Unterkunft, fünf Einsatztage. Sie stehen in der Anlage und nicht im
+    // Code (§5.2).
+    expect(html).toContain("180,00 €");
+    expect(html).toContain("150,00 €");
+    expect(dateiname).toMatch(/^kosten_\d{4}-\d{2}-\d{2}_\d{4}$/);
+  });
+
+  it("liefert die Kostenübersicht auch als Ansicht — ohne Ausschnitt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const ansicht = platz.dienst.kosten();
+
+    // Eine Abrechnung mit der ersten Seite wäre keine: Der Ruf trägt keinen
+    // Ausschnitt, und die Antwort deshalb jede Zeile.
+    expect(ansicht.blatt.zeilen.length).toBeGreaterThan(0);
+    expect(ansicht.blatt.summe.gesamt).toBeGreaterThan(0);
+    // Jede Ansichtsantwort trägt den Zeigerstand, zu dem sie gebaut wurde
+    // (M3.7) — sonst hätte der Renderer ein Wettrennen.
+    expect(ansicht.lageZeiger).toBeGreaterThanOrEqual(0);
+  });
+
   it("liefert Auswertung, Oldenburger Block und LogFrei als je eigene Datei", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

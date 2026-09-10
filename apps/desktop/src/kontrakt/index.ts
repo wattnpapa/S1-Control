@@ -26,7 +26,13 @@
 
 import { z } from "zod";
 
-import type { Baumknoten, Tabellenausschnitt, Tagebuchzeile, Untertabelle } from "@s1/domaene";
+import type {
+  Baumknoten,
+  Kostenblatt,
+  Tabellenausschnitt,
+  Tagebuchzeile,
+  Untertabelle,
+} from "@s1/domaene";
 
 export { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "./kanaele.js";
 
@@ -228,6 +234,19 @@ export const zRuf = z.discriminatedUnion("art", [
   // aufgeklappten Zeile zu zeigen.
   z.object({ art: z.literal("untertabelleAnfordern"), akteId: zAkteId, einheitId: zText }),
 
+  // ---- Die Ansichten von M5 -----------------------------------------------
+  //
+  // Auch sie sind eigene Rufe und keine Felder des Lagebilds: Die
+  // Kostenuebersicht traegt eine Zeile je Einheit, die Anforderungsliste eine
+  // je Anforderung, und das Blatt der Fuehrungsstelle eine je Dienstposten.
+  // Sie am Lagebild mitzuschieben hiesse, bei jeder Statusaenderung drei
+  // Tabellen zu uebertragen, die niemand offen hat.
+  //
+  // Die Kostenuebersicht hat **keinen** Ausschnitt: Sie ist eine Abrechnung,
+  // und eine Abrechnung mit der ersten Seite waere keine. Bei 150 Einheiten
+  // sind es 150 Zeilen mit je acht Zahlen — das traegt ein Ruf.
+  z.object({ art: z.literal("kostenAnfordern"), akteId: zAkteId }),
+
   // ---- Der Handscanner-Weg (M3.4) -----------------------------------------
   //
   // Ein Handscanner ist fuer den Rechner eine Tastatur; was ankommt, ist Text.
@@ -261,7 +280,7 @@ export const zRuf = z.discriminatedUnion("art", [
     // Wertekopie zum Weiterverarbeiten — zwei Ausgaben, weil die Vorlage
     // zwei Blaetter hat und sie verschieden benutzt werden: eines wird
     // ausgedruckt, das andere weitergeschickt.
-    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg", "log", "logfrei"]),
+    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg", "log", "logfrei", "kosten"]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),
@@ -356,6 +375,7 @@ export interface Antworten {
   zurueck: Bedienergebnis;
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
   baumAnfordern: Baumansicht;
+  kostenAnfordern: Kostenansicht;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -389,6 +409,11 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/** Die Kostenuebersicht (M5.2) — Parameter, Zeilen, Summe. */
+export interface Kostenansicht extends Ansichtsstand {
+  readonly blatt: Kostenblatt;
+}
 
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {
   readonly einheitId: string;

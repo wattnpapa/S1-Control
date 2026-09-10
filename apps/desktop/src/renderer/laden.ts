@@ -27,6 +27,7 @@ import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
   Baumansicht,
+  Kostenansicht,
   Bedienergebnis,
   Bildschirm,
   EebStand,
@@ -104,6 +105,8 @@ export interface Laden {
   readonly tagebuch: Tagebuchansicht | undefined;
   /** Die Untertabellen der aufgeklappten Einheit — höchstens einer. */
   readonly untertabelle: Untertabellenansicht | undefined;
+  /** Die Kostenübersicht (M5.2); `undefined` heißt „noch nie geholt“. */
+  readonly kosten: Kostenansicht | undefined;
   readonly tabellenfilter: Tabellenfilter;
   readonly tagebuchfilter: Tagebuchfilterwahl;
 
@@ -111,6 +114,7 @@ export interface Laden {
   holeTabelle(): Promise<void>;
   holeTagebuch(): Promise<void>;
   holeUntertabelle(einheitId: string): Promise<void>;
+  holeKosten(): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
   readonly eeb: EebStand | undefined;
@@ -120,7 +124,7 @@ export interface Laden {
 
   /** Erzeugt eine Kernausgabe und liefert, wo sie liegt (M4.1). */
   erzeugeAusgabe(
-    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei",
+    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei" | "kosten",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;
@@ -160,6 +164,7 @@ const LEERE_ANSICHTEN = {
   tabelle: undefined,
   tagebuch: undefined,
   untertabelle: undefined,
+  kosten: undefined,
   // Auch der Sammelstand: Er gehört zur Akte, nicht zum Fenster. Ein halb
   // gescannter Bogen ohne Akte hat kein Ziel (M3.4).
   eeb: undefined,
@@ -180,11 +185,12 @@ let hinweisNummer = 0;
  * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
  * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
  */
-const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle", number> = {
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten", number> = {
   baum: 0,
   tabelle: 0,
   tagebuch: 0,
   untertabelle: 0,
+  kosten: 0,
 };
 
 export const useLaden = create<Laden>((setze, hole) => {
@@ -212,7 +218,7 @@ export const useLaden = create<Laden>((setze, hole) => {
    * das bei einer kurzen Störung leer wird, ist schlechter als eines, das
    * sichtbar altert.
    */
-  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch" | "untertabelle">(
+  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten">(
     welche: A,
     baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
   ): Promise<void> {
@@ -313,6 +319,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     tabelle: undefined,
     tagebuch: undefined,
     untertabelle: undefined,
+    kosten: undefined,
     eeb: undefined,
     htmlMonitor: undefined,
     bildschirme: undefined,
@@ -334,6 +341,10 @@ export const useLaden = create<Laden>((setze, hole) => {
         ...(filter.suche === undefined ? {} : { suche: filter.suche }),
         ...(filter.mitStillgelegten === undefined ? {} : { mitStillgelegten: filter.mitStillgelegten }),
       }));
+    },
+
+    async holeKosten() {
+      await holeAnsicht("kosten", (akteId) => ({ art: "kostenAnfordern", akteId }));
     },
 
     async holeTagebuch() {
@@ -460,6 +471,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.tabelle === undefined ? undefined : zustand.holeTabelle(),
         zustand.tagebuch === undefined ? undefined : zustand.holeTagebuch(),
         einheitId === undefined ? undefined : zustand.holeUntertabelle(einheitId),
+        zustand.kosten === undefined ? undefined : zustand.holeKosten(),
       ]);
     },
 

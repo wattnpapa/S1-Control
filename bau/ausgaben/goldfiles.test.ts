@@ -26,6 +26,7 @@ import { describe, expect, it } from "vitest";
 import {
   druckAlsHtml,
   druckdaten,
+  kostenAlsHtml,
   logAlsHtml,
   statusAlsHtml,
   statusdaten,
@@ -98,6 +99,12 @@ describe("Das Logistikblatt", () => {
     // Goldfile hält fest, dass der Schalter tatsächlich Zeilen hinzufügt und
     // nicht nur eine Überschrift ändert.
     gegenGoldfile("log-mit-leeren.html", logAlsHtml(lage(), KOPF, { mitLeeren: true }));
+  });
+});
+
+describe("Die Kostenübersicht", () => {
+  it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
+    gegenGoldfile("kosten.html", kostenAlsHtml(lage(), KOPF));
   });
 });
 

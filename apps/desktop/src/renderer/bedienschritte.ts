@@ -244,3 +244,33 @@ export function entfernung(einheitId: string, grund: string): Entwurf {
     grund,
   };
 }
+
+/**
+ * Die vier Kostenparameter des Einsatzes (M5.2).
+ *
+ * Sie stehen in der Anlage `EinsatzAngelegt.kosten` und belegen die Pfade
+ * `einsatz/kosten/<feld>` (§5.2). Waeren sie Konstanten im Code, haette der
+ * Zustand einen Anfangswert ohne Ereignisquelle, und `vorher` der ersten
+ * Aenderung passte auf nichts — deshalb traegt schon die Anlage sie mit.
+ *
+ * `einsatzId` gehoert in die Nutzlast, obwohl es je Akte nur einen Einsatz
+ * gibt: Der Rahmen benennt den Bezug, und ein Ereignis ohne ihn waere in einer
+ * zusammengefuehrten Akte nicht mehr zuzuordnen (§2.2).
+ */
+export const KOSTENFELDER = [
+  "psaKostenProSatz",
+  "vdaProTag",
+  "ukVerpflegungProTag",
+  "geplanteEinsatztage",
+] as const;
+
+export type Kostenfeld = (typeof KOSTENFELDER)[number];
+
+export function kostenParameter(
+  einsatzId: string,
+  feld: Kostenfeld,
+  vorher: number,
+  neu: number,
+): Entwurf {
+  return { typ: "KostenParameterGeaendert", nutzlast: { einsatzId, feld }, vorher, neu };
+}

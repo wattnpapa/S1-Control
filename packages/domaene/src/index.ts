@@ -107,16 +107,30 @@ export {
   type Uebernahmeentwurf,
 } from "./eeb/scanner.js";
 
-// Die Projektionen des Lagebilds (M3.0): Baum, Tabelle, Tagebuch.
+// Die Projektionen: aus M3.0 Baum, Tabelle und Tagebuch, aus M5.0 die
+// Anforderungsliste, das Blatt der Fuehrungsstelle, die Logistikzeilen und die
+// Kostenuebersicht.
 export * as projektion from "./projektion/index.js";
 export type {
+  Anforderungsausschnitt,
+  Anforderungszeile,
+  Anforderungszustand,
   Baumknoten,
+  Dienstpostenzeile,
+  Kostenblatt,
+  Kostenparameter,
+  Kostenzeile,
+  Logistikblatt,
+  Logistikzeile,
+  Schichtplanblatt,
+  Schichtplanzeile,
   Spalte,
   Spaltengruppe,
   Tabellenausschnitt,
   Tabellenzeile,
   Tagebuchfilter,
   Tagebuchzeile,
+  Teilbereichsblock,
   Untertabelle,
   Zelle,
 } from "./projektion/index.js";

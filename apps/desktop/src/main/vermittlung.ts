@@ -234,7 +234,7 @@ export class Vermittlung {
     // Was hier ankommt, ist eine der drei Seiten — die drei Byte-Ausgaben
     // sind oben schon zurueck. Der Zuschnitt steht im Typ und nicht in einer
     // Zusicherung: `ausgabeHtml` kennt genau diese drei.
-    const seite = ruf.ausgabe as "druck" | "status" | "log";
+    const seite = ruf.ausgabe as "druck" | "status" | "log" | "kosten";
     const gerendert = (await this.#o.hof.frage(ruf.akteId, {
       art: "ausgabeHtml",
       ausgabe: seite,

@@ -85,6 +85,7 @@ export {
   type Auswertungsoptionen,
   type Oldenburgoptionen,
 } from "./xlsx.js";
+export { KOSTEN_FUSSNOTE, KOSTEN_STIL, euro, kostenAlsHtml } from "./kosten.js";
 export { LOG_FUSSNOTE, LOG_STIL, logAlsHtml, type Logausgabeoptionen } from "./log.js";
 export {
   MONITOR_DATEINAME,

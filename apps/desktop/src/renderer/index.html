@@ -312,6 +312,61 @@
         opacity: 0.7;
       }
 
+      /* ---- Die Nebenblaetter (M5) -------------------------------------- */
+
+      /* Aufgeschlagen, gelesen, wieder zugeklappt — nicht das, was waehrend
+         eines Einsatzes offen bleibt. Deshalb eine Reiterleiste und keine
+         weiteren Abschnitte unter dem Lagebild. */
+      .blaetter {
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+      }
+      .reiterleiste {
+        display: flex;
+        gap: 0.4rem;
+      }
+      .reiterleiste button[aria-selected="true"] {
+        font-weight: 700;
+        border-bottom: 2px solid currentColor;
+      }
+      .kosten h3 {
+        font-size: 0.9rem;
+        margin: 0.8rem 0 0.3rem;
+      }
+      .kosten table {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      .kosten .kostentabelle {
+        width: 100%;
+      }
+      .kosten th,
+      .kosten td {
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        font-weight: 400;
+      }
+      .kosten thead th {
+        font-weight: 700;
+      }
+      /* Zahlen rechtsbuendig und mit Tabellenziffern: Betraege untereinander
+         sind nur dann vergleichbar, wenn die Stellen uebereinanderstehen. */
+      .kosten td.zahl {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .kosten tr.summenzeile th,
+      .kosten tr.summenzeile td {
+        font-weight: 700;
+      }
+      .kosten .parameter input {
+        width: 8rem;
+        text-align: right;
+      }
+
       /* ---- Der Staerke-Monitor (M3.5) ---------------------------------- */
 
       /* Dieses Fenster wird nicht bedient, sondern gelesen — von der anderen

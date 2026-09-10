@@ -69,6 +69,7 @@ import type { Kompressor } from "@bos/eeb-format";
 import {
   MONITOR_DATEINAME,
   auswertungAlsXlsx,
+  kostenAlsHtml,
   logAlsHtml,
   logFreiAlsXlsx,
   oldenburgAlsXlsx,
@@ -82,6 +83,7 @@ import {
 import {
   lagebildDelta,
   type Baumansicht,
+  type Kostenansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
@@ -589,6 +591,18 @@ export class Aktendienst {
     };
   }
 
+  /**
+   * Die Kostenuebersicht (M5.2) — **ohne** Ausschnitt.
+   *
+   * Sie ist eine Abrechnung, und eine Abrechnung mit der ersten Seite waere
+   * keine. Bei 150 Einheiten sind es 150 Zeilen mit je acht Zahlen; das traegt
+   * ein Ruf, und geholt wird sie ohnehin nur, wenn jemand sie aufschlaegt
+   * (M3.7).
+   */
+  kosten(): Kostenansicht {
+    return { lageZeiger: this.#lageZeiger, blatt: projektion.kostenblatt(this.#zustand) };
+  }
+
   /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */
   tabelle(ruf: Extract<Ruf, { art: "tabelleAnfordern" }>): Tabellenansicht {
     const ausschnitt = projektion.einheitentabelle(this.#zustand, {
@@ -652,7 +666,7 @@ export class Aktendienst {
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
    */
   ausgabeHtml(
-    ausgabe: "druck" | "status" | "log",
+    ausgabe: "druck" | "status" | "log" | "kosten",
     organisation?: string,
   ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
@@ -667,6 +681,9 @@ export class Aktendienst {
     }
     if (ausgabe === "log") {
       return { dateiname: `logistik_${marke}`, html: logAlsHtml(this.#zustand, kopf) };
+    }
+    if (ausgabe === "kosten") {
+      return { dateiname: `kosten_${marke}`, html: kostenAlsHtml(this.#zustand, kopf) };
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };

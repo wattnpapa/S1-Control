@@ -24,7 +24,7 @@ export function Ausgaben(): React.JSX.Element {
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
 
   function erzeuge(
-    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei",
+    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei" | "kosten",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeMeldung(undefined);
@@ -84,6 +84,11 @@ export function Ausgaben(): React.JSX.Element {
       </button>
       <button type="button" onClick={() => { erzeuge("logfrei", "xlsx"); }}>
         Logistik als XLSX (LogFrei)
+      </button>
+      {/* Die Kostenübersicht (M5.2) ist der einzige Ausdruck, der nicht an
+          die Wand gehört, sondern in die Abrechnung. */}
+      <button type="button" onClick={() => { erzeuge("kosten", "pdf"); }}>
+        Kosten als PDF
       </button>
       {/* Der Oldenburger Block (M4.2) ist derselbe Bestand in der
           Spaltenordnung der Vorlage — zum Einfügen in die gewohnte Excel.

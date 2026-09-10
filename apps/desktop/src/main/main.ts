@@ -328,6 +328,7 @@ function ausgabenprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): 
           // weil ein PDF, das niemand oeffnet, kein Nachweis ist.
           { ausgabe: "log", format: "pdf" },
           { ausgabe: "logfrei", format: "xlsx" },
+          { ausgabe: "kosten", format: "pdf" },
         ] as const;
         for (const { ausgabe, format } of wege) {
           {
