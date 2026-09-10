@@ -125,6 +125,10 @@ export interface Laden {
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;
 
+  /** Wo die Datei des HTML-Monitors liegt; `undefined` heißt „aus“ (M4.3). */
+  readonly htmlMonitor: string | undefined;
+  schalteHtmlMonitor(an: boolean, mitStatus?: boolean, organisation?: string): Promise<void>;
+
   /** Die angeschlossenen Bildschirme; `undefined` heißt „noch nicht gefragt“ (M3.5). */
   readonly bildschirme: readonly Bildschirm[] | undefined;
   ladeBildschirme(): Promise<void>;
@@ -159,6 +163,10 @@ const LEERE_ANSICHTEN = {
   // Auch der Sammelstand: Er gehört zur Akte, nicht zum Fenster. Ein halb
   // gescannter Bogen ohne Akte hat kein Ziel (M3.4).
   eeb: undefined,
+  // Und der HTML-Monitor: Er schreibt in den Ordner **dieser** Akte; nach
+  // einem Wechsel zeigte der Schalter auf eine Datei, die zu einem anderen
+  // Einsatz gehört (M4.3).
+  htmlMonitor: undefined,
 } as const;
 
 let hinweisNummer = 0;
@@ -306,6 +314,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     tagebuch: undefined,
     untertabelle: undefined,
     eeb: undefined,
+    htmlMonitor: undefined,
     bildschirme: undefined,
     tabellenfilter: {},
     tagebuchfilter: {},
@@ -390,6 +399,21 @@ export const useLaden = create<Laden>((setze, hole) => {
           ...(organisation === undefined ? {} : { organisation }),
         }),
       );
+    },
+
+    async schalteHtmlMonitor(an, mitStatus, organisation) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return;
+      await mitFehlerbild(async () => {
+        const pfad = await rufe({
+          art: "htmlMonitorSchalten",
+          akteId,
+          an,
+          ...(mitStatus === undefined ? {} : { mitStatus }),
+          ...(organisation === undefined ? {} : { organisation }),
+        });
+        setze({ htmlMonitor: pfad ?? undefined });
+      });
     },
 
     async ladeBildschirme() {

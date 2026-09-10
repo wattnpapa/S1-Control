@@ -259,6 +259,19 @@ export const zRuf = z.discriminatedUnion("art", [
     organisation: z.string().optional(),
   }),
 
+  // Der HTML-Monitor (M4.3): eine Datei in `ausgaben\`, die sich alle sechzig
+  // Sekunden selbst neu laedt und die ein **zweites Geraet** ueber das Netz
+  // oeffnet. Nicht zu verwechseln mit dem Staerke-Monitor aus M3.5: Der ist
+  // ein Fenster dieser Anwendung auf einem zweiten Bildschirm, dieser hier
+  // eine Datei fuer ein fremdes Geraet.
+  z.object({
+    art: z.literal("htmlMonitorSchalten"),
+    akteId: zAkteId,
+    an: z.boolean(),
+    mitStatus: z.boolean().optional(),
+    organisation: z.string().optional(),
+  }),
+
   // ---- Der Staerke-Monitor (M3.5) -----------------------------------------
   //
   // Diese drei Rufe fassen als einzige ein **Fenster** an. Sie tragen deshalb
@@ -341,6 +354,8 @@ export interface Antworten {
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
   ausgabeErzeugen: Ausgabeergebnis;
+  /** Der Pfad der Monitordatei, oder `null` nach dem Ausschalten. */
+  htmlMonitorSchalten: string | null;
   bildschirmeAuflisten: readonly Bildschirm[];
   monitorOeffnen: null;
   monitorSchliessen: null;

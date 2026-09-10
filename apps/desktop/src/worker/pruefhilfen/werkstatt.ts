@@ -38,6 +38,8 @@ export const EINSATZ_ID = "2026-09-10-hochwasser-weser-ems";
 export interface Platz {
   readonly dienst: Aktendienst;
   readonly mitteilungen: Mitteilung[];
+  /** Der Einsatzordner auf dem Share — fuer Nachweise, die Dateien suchen. */
+  readonly share: string;
 }
 
 const wegwerf: string[] = [];
@@ -78,9 +80,9 @@ export function baueDienst(wurzel: string, share: string, nummer: number): Platz
       inflateRaw: (daten) => new Uint8Array(inflateRawSync(daten)),
     },
     sende: (m) => mitteilungen.push(m),
-    takte: { spiegelungMs: 0, taktAMs: 0, taktBMs: 0, praesenzMs: 0 },
+    takte: { spiegelungMs: 0, taktAMs: 0, taktBMs: 0, praesenzMs: 0, monitorMs: 0 },
   });
-  return { dienst, mitteilungen };
+  return { dienst, mitteilungen, share };
 }
 
 /** Legt den Einsatzordner auf dem Share an — ohne fachliches Ereignis. */

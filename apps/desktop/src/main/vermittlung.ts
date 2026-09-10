@@ -181,6 +181,8 @@ export class Vermittlung {
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
       case "ausgabeErzeugen":
         return this.#erzeugeAusgabe(ruf);
+      case "htmlMonitorSchalten":
+        return this.#o.hof.frage(ruf.akteId, { art: "htmlMonitorSchalten", ruf });
       case "bildschirmeAuflisten":
         return this.#fenstersteuerung().bildschirme();
       case "monitorOeffnen":

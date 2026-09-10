@@ -82,3 +82,10 @@ export {
   zellentext,
   type Auswertungsoptionen,
 } from "./xlsx.js";
+export {
+  MONITOR_DATEINAME,
+  MONITOR_STIL,
+  RELOAD_SEKUNDEN,
+  monitorAlsHtml,
+  type Monitoroptionen,
+} from "./monitor.js";

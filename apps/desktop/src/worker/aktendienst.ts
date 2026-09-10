@@ -66,7 +66,15 @@ import {
 } from "@s1/speicher";
 
 import type { Kompressor } from "@bos/eeb-format";
-import { auswertungAlsXlsx, druckAlsHtml, druckdaten, statusAlsHtml, statusdaten } from "@s1/ausgaben";
+import {
+  MONITOR_DATEINAME,
+  auswertungAlsXlsx,
+  druckAlsHtml,
+  druckdaten,
+  monitorAlsHtml,
+  statusAlsHtml,
+  statusdaten,
+} from "@s1/ausgaben";
 
 import {
   lagebildDelta,
@@ -96,6 +104,15 @@ export interface Takte {
   readonly taktAMs: number;
   readonly taktBMs: number;
   readonly praesenzMs: number;
+  /**
+   * Wie oft die Monitordatei hoechstens neu geschrieben wird (M4.3).
+   *
+   * Die Haelfte der Nachladezeit der Seite (60 s, `RELOAD_SEKUNDEN`): Damit
+   * ist das Bild an der Wand nie aelter als eine halbe Ladeperiode, und der
+   * Share sieht hoechstens zwei Schreibvorgaenge je Minute. Oefter zu
+   * schreiben brachte nichts — die Seite laedt ja nicht oefter.
+   */
+  readonly monitorMs: number;
 }
 
 export const TAKTE_VORBELEGUNG: Takte = {
@@ -103,6 +120,7 @@ export const TAKTE_VORBELEGUNG: Takte = {
   taktAMs: 1_000,
   taktBMs: 4_000,
   praesenzMs: 15_000,
+  monitorMs: 30_000,
 };
 
 export interface AktendienstOptionen {
@@ -225,6 +243,17 @@ export class Aktendienst {
   #scanPayload: Uint8Array | undefined;
   #scanText = "";
 
+  /**
+   * Der HTML-Monitor (M4.3): eingeschaltet oder nicht, und mit welchen Wahlen.
+   *
+   * Er ist **aus**, bis ihn jemand einschaltet. Eine Datei, die immer
+   * geschrieben wird, liegt auf jedem Share jedes Einsatzes — auch dort, wo
+   * niemand ein zweites Geraet hat, und kostet zwei Schreibvorgaenge je
+   * Minute fuer nichts.
+   */
+  #monitor: { mitStatus: boolean; organisation?: string } | undefined;
+  #letzterMonitor = Number.NEGATIVE_INFINITY;
+
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
     this.#takte = { ...TAKTE_VORBELEGUNG, ...optionen.takte };
@@ -331,6 +360,10 @@ export class Aktendienst {
     if (jetzt - this.#letztePraesenz >= this.#takte.praesenzMs) {
       this.#letztePraesenz = jetzt;
       await this.#praesenz();
+    }
+    if (this.#monitor !== undefined && jetzt - this.#letzterMonitor >= this.#takte.monitorMs) {
+      this.#letzterMonitor = jetzt;
+      await this.#schreibeMonitor();
     }
     this.#sendeDelta();
   }
@@ -628,6 +661,71 @@ export class Aktendienst {
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };
+  }
+
+  /**
+   * Schaltet den HTML-Monitor ein oder aus (M4.3).
+   *
+   * Beim Einschalten wird **sofort** geschrieben und nicht erst zum naechsten
+   * Takt: Wer den Monitor einschaltet, geht danach zum zweiten Geraet, und
+   * eine halbe Minute vor einer leeren Seite zu stehen waere die
+   * unfreundlichste Art, den Schalter zu bestaetigen.
+   */
+  async monitorSchalten(
+    an: boolean,
+    optionen: { mitStatus?: boolean; organisation?: string } = {},
+  ): Promise<string | null> {
+    if (!an) {
+      this.#monitor = undefined;
+      return null;
+    }
+    this.#monitor = {
+      mitStatus: optionen.mitStatus ?? false,
+      ...(optionen.organisation === undefined ? {} : { organisation: optionen.organisation }),
+    };
+    this.#letzterMonitor = this.#o.zeit();
+    return this.#schreibeMonitor();
+  }
+
+  /** `true`, solange der Monitor laeuft — fuer die Anzeige des Schalters. */
+  get monitorLaeuft(): boolean {
+    return this.#monitor !== undefined;
+  }
+
+  /**
+   * Schreibt die Monitordatei — **auch dann, wenn sich nichts geaendert hat.**
+   *
+   * Das ist Absicht und dieselbe Ueberlegung wie beim Lagebild aus M2: Die
+   * Seite laedt sich alle sechzig Sekunden neu; laedt sie und zeigt dasselbe
+   * „Bild geschrieben“ wie vorher, ist das die Auskunft, dass der Schreiber
+   * steht. Wuerde nur bei Aenderung geschrieben, waere ein toter Worker von
+   * einer ruhigen Lage nicht zu unterscheiden — und genau das ist der Fehler,
+   * den ein Monitor an der Wand am teuersten macht.
+   *
+   * Der Preis sind zwei kleine Schreibvorgaenge je Minute und Akte. Die
+   * Datei ist ein abgeleiteter Anzeiger (§1.3) und geht ohne `fsync` heraus.
+   */
+  async #schreibeMonitor(): Promise<string> {
+    const wahl = this.#monitor;
+    if (wahl === undefined) throw new Error("Der Monitor ist nicht eingeschaltet.");
+    const jetzt = new Date(this.#o.zeit());
+    const html = monitorAlsHtml(
+      this.#zustand,
+      {
+        datum: this.#o.einsatzId.slice(0, 10),
+        einsatzName: alsText(this.#zustand.einsatz?.name.wert),
+        stand: `Stand der Lage: ${this.#letzteWanduhr === "" ? "noch keine Meldung" : new Date(this.#letzteWanduhr).toLocaleString("de-DE")}`,
+      },
+      {
+        mitStatus: wahl.mitStatus,
+        // Der fachliche Stand ist der der juengsten Meldung; das
+        // Lebenszeichen ist die Uhr dieses Rechners. Zwei Zeiten, und sie
+        // werden nicht vermischt (§2.6).
+        geschriebenUm: jetzt.toLocaleString("de-DE"),
+        ...(wahl.organisation === undefined ? {} : { organisation: wahl.organisation }),
+      },
+    );
+    return this.ausgabeSchreiben(MONITOR_DATEINAME, new TextEncoder().encode(html));
   }
 
   /**
