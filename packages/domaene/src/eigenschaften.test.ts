@@ -280,13 +280,16 @@ interface NurWerte {
 function nurWerte(zustand: Zustand): NurWerte {
   const abschnitte: Record<string, string> = {};
   for (const [id, abschnitt] of Object.entries(zustand.abschnitte)) {
-    if (id !== AUFFANG_ABSCHNITT_ID) abschnitte[id] = abschnitt.name.wert;
+    if (id !== AUFFANG_ABSCHNITT_ID) abschnitte[id] = abschnitt.name.wert ?? "";
   }
   const einheiten: Record<string, { abschnittId: string; staerke: Staerke }> = {};
   for (const [id, einheit] of Object.entries(zustand.einheiten)) {
-    einheiten[id] = { abschnittId: einheit.abschnittId.wert, staerke: einheit.staerke.wert };
+    einheiten[id] = {
+      abschnittId: einheit.abschnittId.wert ?? "",
+      staerke: einheit.staerke.wert ?? { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
+    };
   }
-  return { einsatzName: zustand.einsatz?.name.wert, abschnitte, einheiten };
+  return { einsatzName: zustand.einsatz?.name.wert ?? undefined, abschnitte, einheiten };
 }
 
 /**
@@ -674,7 +677,7 @@ describe("P5 Kein Waisenzustand — keine Einheit haengt in einem Abschnitt, den
       fc.property(ereignismengeArb, (menge) => {
         const zustand = falte(menge);
         for (const [id, einheit] of Object.entries(zustand.einheiten)) {
-          const zeigtInsLeere = !Object.hasOwn(zustand.abschnitte, einheit.abschnittId.wert);
+          const zeigtInsLeere = !Object.hasOwn(zustand.abschnitte, einheit.abschnittId.wert ?? "");
           const hatHinweis = zustand.hinweise.some(
             (h) => h.art === "abschnittUnbekannt" && h.feldpfad === `einheit/${id}/abschnittId`,
           );

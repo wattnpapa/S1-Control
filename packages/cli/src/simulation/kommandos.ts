@@ -72,8 +72,8 @@ function sicht(zustand: Zustand): Sicht {
     abschnitte: Object.keys(zustand.abschnitte),
     einheiten: Object.values(zustand.einheiten).map((e) => ({
       id: e.id,
-      abschnittId: e.abschnittId.wert,
-      staerke: e.staerke.wert,
+      abschnittId: e.abschnittId.wert ?? "",
+      staerke: e.staerke.wert ?? { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
     })),
     einsatzAngelegt: zustand.einsatz !== undefined,
   };

@@ -86,16 +86,51 @@ export {
   type Sha256Hex,
 } from "./kanonisch.js";
 
-// Der materialisierte Zustand mit Feld-HLC (§7.4).
+// Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
+  STAERKE_NULL,
+  staerkeGeklemmt,
+  staerkeIstNegativ,
+  staerkeMinus,
+  staerkePlus,
+  type HierarchieEbene,
+  type Id,
+  type Kontakt,
+  type Sofortbedarf,
+  type StaerkeRechnerisch,
+  type Zeitpunkt,
+} from "./werte.js";
+
+// Der materialisierte Zustand — Zielmodell nach KONZEPT-EREIGNISSE.md §3.2.
+export {
+  ARCHIV_ABSCHNITT_ID,
   AUFFANG_ABSCHNITT_ID,
   FOLD_VERSION,
+  KAPPUNG_MAX,
+  WIRKUNGSLOSGRUENDE,
   type AbschnittZustand,
+  type AnforderungZustand,
+  type Anlage,
+  type AnhangZustand,
+  type ArchivierungZustand,
+  type AuftragZustand,
+  type Beobachtung,
+  type DienstpostenZustand,
   type EinheitZustand,
   type EinsatzZustand,
+  type Erstwert,
+  type EtbEintragZustand,
+  type FahrzeugZustand,
   type Feld,
+  type Hinweisart,
   type Konflikthinweis,
+  type MeldungZustand,
+  type PersonZustand,
   type UnbekanntesEreignis,
+  type VerworfeneAnlage,
+  type VerworfenerSchluessel,
+  type WartendeBeobachtung,
+  type Wirkungslosgrund,
   type Zustand,
 } from "./zustand.js";
 

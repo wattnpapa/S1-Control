@@ -13,7 +13,7 @@ import {
 } from "./pruefhilfen/ereignisbau.js";
 import { zerlegeEreignisId } from "./ereignis.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
-import { AUFFANG_ABSCHNITT_ID, FOLD_VERSION } from "./zustand.js";
+import { ARCHIV_ABSCHNITT_ID, AUFFANG_ABSCHNITT_ID, FOLD_VERSION } from "./zustand.js";
 
 const einsatz = einsatzAngelegt(hlc(1000, 0, "aa"), 1, {
   einsatzId: "E",
@@ -60,7 +60,9 @@ describe("Minimalfold — Grundverhalten", () => {
     expect(zustand.einsatz?.name.wert).toBe("Hochwasser Sued");
     expect(zustand.einsatz?.name.hlc).toEqual(hlc(1000, 0, "aa"));
     expect(zustand.einsatz?.name.durch).toBe("aa:1");
-    expect(Object.keys(zustand.abschnitte).sort()).toEqual([AUFFANG_ABSCHNITT_ID, "A", "B"].sort());
+    expect(Object.keys(zustand.abschnitte).sort()).toEqual(
+      [AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID, "A", "B"].sort(),
+    );
     expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(0, 1, 8));
     expect(zustand.einheiten["U1"]?.staerke.hlc).toEqual(hlc(1003, 0, "aa"));
     expect(zustand.hinweise).toEqual([]);
@@ -89,8 +91,9 @@ describe("Minimalfold — Grundverhalten", () => {
           feldpfad: "einsatz",
           verworfen: "aa:1",
           gilt: "bb:1",
+          ereignisart: "EinsatzAngelegt",
           // Der verworfene Inhalt gehoert in den Hinweis, sonst verschwindet er.
-          verworfenerInhalt: {
+          inhalt: {
             einsatzId: "E",
             name: "Hochwasser Sued",
             art: "EINSATZ",
@@ -114,6 +117,7 @@ describe("Minimalfold — Grundverhalten", () => {
         hlc: hlc(1004, 0, "bb"),
         akteurBenutzer: "Bediener bb",
         akteurHost: "rechner-bb",
+        grund: "ART",
       },
     ]);
   });
@@ -152,7 +156,7 @@ describe("Rebase — der Live-Pfad (Auflage 4, 02-ZIELBILD.md Nr. 3)", () => {
     const zwischenzustand = materialisiere(ohneAnlage);
     expect(zwischenzustand.einheiten["U1"]).toBeUndefined();
     expect(zwischenzustand.hinweise).toEqual([
-      { art: "anlageFehlt", feldpfad: "einheit/U1", ereignisse: ["bb:1"] },
+      { art: "anlageFehlt", feldpfad: "einheit/U1", wartende: ["bb:1"] },
     ]);
 
     const zustand = materialisiere(falteHinzu(ohneAnlage, [einheit]));
@@ -178,7 +182,7 @@ describe("Konflikthinweise sind Teil des Zustands (Auflage 6, §2.5)", () => {
         verdraengt: "bb:1",
         // Der Ereigniskatalog verlangt bei StaerkeGeaendert den Hinweis
         // ausdruecklich „mit beiden Werten" (§4.2).
-        gesehenerVorher: staerke(0, 1, 8),
+        gesehen: staerke(0, 1, 8),
         verdraengterWert: staerke(0, 2, 17),
       },
     ]);
@@ -204,7 +208,7 @@ describe("Konflikthinweise sind Teil des Zustands (Auflage 6, §2.5)", () => {
         feldpfad: "einheit/U1/abschnittId",
         gewinner: "cc:1",
         verdraengt: "bb:1",
-        gesehenerVorher: "A",
+        gesehen: "A",
         verdraengterWert: "B",
       },
     ]);
@@ -223,8 +227,7 @@ describe("Auffangregel fuer unbekannte Abschnitte (Auflage 10)", () => {
     expect(zustand.hinweise).toContainEqual({
       art: "abschnittUnbekannt",
       feldpfad: "einheit/U1/abschnittId",
-      abschnittId: "gibtEsNicht",
-      gewinner: "bb:1",
+      gemeldeterAbschnittId: "gibtEsNicht",
     });
   });
 
@@ -309,9 +312,21 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
     const zustand = falte([...grundmenge, verschoben, zweiteAnlage]);
 
     expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("B");
-    // Inhaltsgleiche Zweitanlage: nichts ist verloren gegangen, also auch kein
-    // Hinweis. Hinweise sind nach P3 Teil des Zustands und keine Geraeuschquelle.
-    expect(zustand.hinweise).toEqual([]);
+    // Auch die inhaltsgleiche Zweitanlage erzeugt den Hinweis (T100,
+    // KONZEPT-EREIGNISSE.md §3.11): Zwei Arbeitsplaetze haben dieselbe Einheit
+    // angelegt, und das ist eine Auskunft ueber die Lage der Clients. Anders
+    // als bei den Inhaltsschluesseln aus §3.6, wo dasselbe zweimal zu scannen
+    // ein Alltagsvorgang ist.
+    expect(zustand.hinweise).toEqual([
+      expect.objectContaining({
+        art: "zweiteAnlageVerworfen",
+        feldpfad: "einheit/U1",
+        verworfen: "cc:1",
+        gilt: "aa:4",
+        ereignisart: "EinheitGemeldet",
+      }),
+    ]);
+    expect(zustand.einheiten["U1"]?.verworfeneAnlagen).toHaveLength(1);
   });
 
   it("meldet den verworfenen Inhalt einer abweichenden Zweitanlage", () => {
@@ -338,7 +353,8 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
         feldpfad: "einheit/U1",
         verworfen: "cc:1",
         gilt: "aa:4",
-        verworfenerInhalt: expect.objectContaining({ staerke: staerke(7, 7, 7) }),
+        ereignisart: "EinheitGemeldet",
+        inhalt: expect.objectContaining({ staerke: staerke(7, 7, 7) }),
       }),
     );
   });
@@ -358,7 +374,8 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
       feldpfad: "abschnitt/A",
       verworfen: "bb:1",
       gilt: "aa:2",
-      verworfenerInhalt: { name: "Umbenannt", abschnittstyp: "ARCHIV", reihenfolge: 99 },
+      ereignisart: "AbschnittAngelegt",
+      inhalt: { abschnittId: "A", name: "Umbenannt", abschnittstyp: "ARCHIV", reihenfolge: 99 },
     });
   });
 });
@@ -375,12 +392,13 @@ describe("Die Id des Auffangabschnitts ist reserviert", () => {
     });
     const zustand = falte([...grundmenge, kaperung]);
 
-    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.abschnittstyp.wert).toBe("EINSATZORT");
+    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.typ.wert).toBe("EINSATZORT");
     expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.systemAbschnitt).toBe(true);
     expect(zustand.hinweise).toContainEqual({
       art: "reservierteIdVerworfen",
       feldpfad: `abschnitt/${AUFFANG_ABSCHNITT_ID}`,
       verworfen: "bb:1",
+      id: AUFFANG_ABSCHNITT_ID,
     });
   });
 
@@ -388,7 +406,7 @@ describe("Die Id des Auffangabschnitts ist reserviert", () => {
     const auffang = falte(grundmenge).abschnitte[AUFFANG_ABSCHNITT_ID];
     expect(auffang?.name.durch).toBeUndefined();
     // Jede vorhandene Herkunft muss sich zerlegen lassen.
-    for (const feld of [auffang?.name, auffang?.abschnittstyp, auffang?.reihenfolge]) {
+    for (const feld of [auffang?.name, auffang?.typ, auffang?.reihenfolge]) {
       if (feld?.durch !== undefined) expect(() => zerlegeEreignisId(feld.durch as string)).not.toThrow();
     }
   });
@@ -402,7 +420,7 @@ describe("Der Zustand selbst ist reihenfolgeunabhaengig, nicht erst seine Serial
     // Ohne diese Zusage zeigten zwei Rechner dieselbe Lage in verschiedener
     // Reihenfolge, obwohl sie konvergent sind.
     expect(Object.keys(rueckwaerts.abschnitte)).toEqual(Object.keys(vorwaerts.abschnitte));
-    expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "AUFFANG", "B"]);
+    expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "ARCHIV", "AUFFANG", "B"]);
   });
 
   it("ordnet auch die Schluessel der Einheiten", () => {
