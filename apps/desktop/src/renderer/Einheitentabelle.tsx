@@ -30,6 +30,41 @@ import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 
+/**
+ * Die Spaltengruppen, wie sie am Umschalter stehen.
+ *
+ * In der Projektion heißen sie wie in der Excel (`KOSTENUEBERSICHT`); über
+ * einer Tabelle gelesen sind Versalien ohne Umlaute keine Beschriftung,
+ * sondern ein Bezeichner.
+ */
+const GRUPPENTITEL: Record<string, string> = {
+  GRUNDDATEN: "Grunddaten",
+  STAERKE: "Stärke",
+  RESSOURCENPLANUNG: "Ressourcen",
+  LOGISTIKDATEN: "Logistik",
+  KOSTENUEBERSICHT: "Kosten",
+};
+
+/**
+ * Der Ton einer Statusmarke.
+ *
+ * **Farbe und Wort, nie Farbe allein** (§9-Regel der Oberfläche): Die Marke
+ * trägt den Status ausgeschrieben; die Farbe ist die zweite Auskunft für den
+ * Blick über die Spalte, nicht die erste.
+ */
+const STATUSTON: Record<string, string> = {
+  IM_EINSATZ: "ok",
+  EINSATZBEREIT: "ok",
+  ANMARSCH: "warn",
+  ANGEFORDERT: "warn",
+  NICHT_EINSATZBEREIT: "fehler",
+};
+
+/** Zahlenspalten stehen rechts: Wer Stärken vergleicht, liest Spalten. */
+function istZahl(spalte: Spalte): boolean {
+  return spalte.art === "zahl" || spalte.schluessel === "gesamt" || spalte.schluessel === "staerke";
+}
+
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
   | "anlegen"
@@ -75,6 +110,21 @@ export function Einheitentabelle({
   const spalten = useMemo(() => projektion.spaltenDerGruppen(gruppen), [gruppen]);
   const zeilen = laden.tabelle?.zeilen ?? [];
   const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
+  const summe = useMemo(
+    () =>
+      zeilen.reduce(
+        (bisher, zeile) =>
+          zeile.entfernt
+            ? bisher
+            : {
+                fuehrer: bisher.fuehrer + zeile.staerke.fuehrer,
+                unterfuehrer: bisher.unterfuehrer + zeile.staerke.unterfuehrer,
+                mannschaft: bisher.mannschaft + zeile.staerke.mannschaft,
+              },
+        { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
+      ),
+    [zeilen],
+  );
 
   useKuerzel(
     useMemo(
@@ -131,20 +181,12 @@ export function Einheitentabelle({
   return (
     <section aria-label="Einheiten" className="einheiten">
       <div className="einheitenkopf">
-        <h2>Einheiten <Hilfemarke kennung="einheiten" /></h2>
-        <label className="suchfeld">
-          Suche
-          <input
-            id="einheitensuche"
-            value={suche}
-            onChange={(e) => {
-              setzeSuche(e.target.value);
-            }}
-            title={`In die Suche springen (${kuerzelText(kuerzel("suchen") as never)})`}
-          />
-        </label>
+        <h2>
+          Einheiten ({String(laden.tabelle?.gesamtzahl ?? 0)}) <Hilfemarke kennung="einheiten" />
+        </h2>
         <button
           type="button"
+          className="haupt"
           onClick={() => {
             setzeMaske("anlegen");
           }}
@@ -152,6 +194,11 @@ export function Einheitentabelle({
         >
           Aus Vorlage
         </button>
+        {/* Die drei Schritte, die auf einer Auswahl arbeiten, stehen
+            zusammen und durch einen Strich von Anlegen getrennt: Sie sind
+            gesperrt, solange nichts markiert ist, und das soll man sehen,
+            ohne die Knöpfe zu lesen. */}
+        <span className="trenner" aria-hidden="true" />
         <button type="button" disabled={markiert.length === 0} onClick={() => { setzeMaske("verschieben"); }}>
           Verschieben ({markiert.length})
         </button>
@@ -164,23 +211,35 @@ export function Einheitentabelle({
         <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("entfernen"); }}>
           Entfernen
         </button>
+        <label className="suchfeld">
+          Suche
+          <input
+            id="einheitensuche"
+            value={suche}
+            placeholder="Einheit, Organisation, Ort, Kennzeichen …"
+            onChange={(e) => {
+              setzeSuche(e.target.value);
+            }}
+            title={`In die Suche springen (${kuerzelText(kuerzel("suchen") as never)})`}
+          />
+        </label>
       </div>
 
       <div className="spaltengruppen" role="group" aria-label="Spaltengruppen">
         {projektion.SPALTENGRUPPEN.map((gruppe) => (
-          <label key={gruppe} className="schalter">
-            <input
-              type="checkbox"
-              checked={gruppen.includes(gruppe)}
-              // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
-              // ohne Bezeichnung und Status ist keine Lage.
-              disabled={gruppe === "GRUNDDATEN"}
-              onChange={() => {
-                schalteGruppe(gruppe);
-              }}
-            />
-            {gruppe}
-          </label>
+          <button
+            key={gruppe}
+            type="button"
+            aria-pressed={gruppen.includes(gruppe)}
+            // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
+            // ohne Bezeichnung und Status ist keine Lage.
+            disabled={gruppe === "GRUNDDATEN"}
+            onClick={() => {
+              schalteGruppe(gruppe);
+            }}
+          >
+            {GRUPPENTITEL[gruppe] ?? gruppe}
+          </button>
         ))}
       </div>
 
@@ -190,7 +249,12 @@ export function Einheitentabelle({
             <tr>
               <th scope="col">Abschnitt</th>
               {spalten.map((spalte) => (
-                <th key={spalte.schluessel} scope="col" title={`Excel-Spalte ${spalte.excel}`}>
+                <th
+                  key={spalte.schluessel}
+                  scope="col"
+                  className={istZahl(spalte) ? "zahl" : undefined}
+                  title={`Excel-Spalte ${spalte.excel}`}
+                >
                   {spalte.kopf}
                 </th>
               ))}
@@ -233,13 +297,37 @@ export function Einheitentabelle({
               </tr>
             ))}
           </tbody>
+          {/* Die Summe steht unter der Tabelle und zählt genau das, was
+              darüber steht — den Ausschnitt, nicht den Einsatz. Entfernte
+              Einheiten bleiben sichtbar, zählen aber nicht mit (§5.4.5); die
+              Gesamtstärke des Einsatzes steht im Kopfband. */}
+          <tfoot>
+            <tr className="summenzeile">
+              <th scope="row">{zeilen.length === (laden.tabelle?.gesamtzahl ?? 0) ? "Summe" : "Summe (Ausschnitt)"}</th>
+              {spalten.map((spalte) => (
+                <td key={spalte.schluessel} className={istZahl(spalte) ? "zahl" : undefined}>
+                  {spalte.schluessel === "staerke"
+                    ? `${String(summe.fuehrer)}/${String(summe.unterfuehrer)}/${String(summe.mannschaft)}`
+                    : spalte.schluessel === "gesamt"
+                      ? String(summe.fuehrer + summe.unterfuehrer + summe.mannschaft)
+                      : ""}
+                </td>
+              ))}
+            </tr>
+          </tfoot>
         </table>
       </div>
 
       <p className="tabellenfuss">
-        {zeilen.length === laden.tabelle?.gesamtzahl
-          ? `${String(zeilen.length)} Einheiten`
-          : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
+        <span>
+          {zeilen.length === laden.tabelle?.gesamtzahl
+            ? `${String(zeilen.length)} Einheiten`
+            : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
+        </span>
+        <span className="hinweistext">
+          Doppelklick bearbeitet die Zelle · Enter schreibt · Esc verwirft ·{" "}
+          {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
+        </span>
       </p>
 
       {einheitId !== undefined && <Untertabellen einheitId={einheitId} />}
@@ -300,13 +388,18 @@ function Zelle({
         className={[
           zelle.umstritten ? "umstritten" : "",
           spalte.schreibt === undefined ? "berechnet" : "",
+          istZahl(spalte) ? "zahl" : "",
         ]
           .filter((klasse) => klasse !== "")
           .join(" ")}
         title={titel}
         onDoubleClick={spalte.schreibt === undefined ? undefined : aufBearbeiten}
       >
-        {zelle.text}
+        {spalte.schluessel === "status" && zelle.text !== "" ? (
+          <span className={`marke-zustand ${STATUSTON[zelle.text] ?? "neutral"}`}>{zelle.text}</span>
+        ) : (
+          zelle.text
+        )}
         {zelle.umstritten && <span aria-label="Konflikthinweis"> ⚠</span>}
       </td>
     );

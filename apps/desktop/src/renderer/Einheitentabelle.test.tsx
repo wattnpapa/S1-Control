@@ -98,16 +98,16 @@ describe("Die Einheitentabelle", () => {
 
   it("schaltet eine Spaltengruppe zu und wieder ab", async () => {
     await zeigeTabelle();
-    fireEvent.click(screen.getByLabelText("LOGISTIKDATEN"));
+    fireEvent.click(screen.getByRole("button", { name: "Logistik" }));
     expect(screen.getByRole("columnheader", { name: "Weibl." })).toBeDefined();
-    fireEvent.click(screen.getByLabelText("LOGISTIKDATEN"));
+    fireEvent.click(screen.getByRole("button", { name: "Logistik" }));
     expect(screen.queryByRole("columnheader", { name: "Weibl." })).toBeNull();
   });
 
   it("lässt die Grunddaten nicht wegschalten", async () => {
     await zeigeTabelle();
     // Eine Tabelle ohne Bezeichnung und Status ist keine Lage.
-    expect(screen.getByLabelText("GRUNDDATEN").hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("button", { name: "Grunddaten" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("schreibt eine Inline-Änderung mit dem gesehenen Vorher-Wert (§2.2a)", async () => {

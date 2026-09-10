@@ -428,6 +428,34 @@
         font-weight: 600;
         font-variant-numeric: tabular-nums;
       }
+      /* Zustandsmarken: Status in der Tabelle, Ampeln im Eingangskorb. Farbe
+         **und** Wort — eine Auskunft, die nur an der Farbe haengt, faellt bei
+         Rotschwaeche aus. */
+      .marke-zustand {
+        display: inline-block;
+        padding: 2px 6px;
+        border: var(--rahmenbreite) solid var(--neutral-bg);
+        background: var(--neutral-bg);
+        color: var(--text-leise);
+        font: 700 0.82em/1.3 var(--ui);
+        letter-spacing: 0.04em;
+      }
+      .marke-zustand.ok {
+        background: var(--ok-bg);
+        border-color: var(--ok-linie);
+        color: var(--ok-text);
+      }
+      .marke-zustand.warn {
+        background: var(--warn-bg);
+        border-color: var(--warn-linie);
+        color: var(--warn-text);
+      }
+      .marke-zustand.fehler {
+        background: var(--err-bg);
+        border-color: var(--err-linie);
+        color: var(--err-text);
+      }
+
       .warnung {
         color: var(--warn-text);
       }
@@ -613,21 +641,58 @@
       .einheitenkopf h2 {
         margin: 0 0.5rem 0 0;
       }
+      /* Ein senkrechter Strich statt eines Umbruchs: Er trennt das Anlegen
+         von den Schritten, die auf einer Auswahl arbeiten. */
+      .einheitenkopf .trenner {
+        width: 1px;
+        align-self: stretch;
+        margin: 0 4px;
+        background: var(--rahmen);
+      }
+      /* Die Suche steht rechts und ist breit genug fuer den Platzhalter:
+         Gesucht wird nach Bezeichnung, Organisation, Ort und Kennzeichen. */
       .suchfeld {
         display: inline-flex;
-        align-items: baseline;
-        gap: 0.3rem;
-        margin: 0;
+        align-items: center;
+        gap: 6px;
+        margin: 0 0 0 auto;
+        text-transform: none;
+        letter-spacing: 0;
       }
       .suchfeld input {
         display: inline;
-        width: 14rem;
+        width: 17rem;
+        margin-top: 0;
       }
+      /* Die Spaltengruppen sind ein Umschalter und keine Liste von
+         Kaestchen: Fuenf Haken in Versalien ueber einer Tabelle lesen sich
+         wie eine zweite Kopfzeile. */
       .spaltengruppen {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.8rem;
-        margin-bottom: 0.5rem;
+        gap: 0;
+        margin: 9px 0;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        width: fit-content;
+      }
+      .spaltengruppen button {
+        border: 0;
+        border-left: var(--rahmenbreite) solid var(--rahmen);
+        background: var(--karte);
+        color: var(--text-leise);
+        font-size: 0.92em;
+      }
+      .spaltengruppen button:first-child {
+        border-left: 0;
+      }
+      .spaltengruppen button[aria-pressed="true"] {
+        background: var(--kopf-bg);
+        color: var(--text);
+        font-weight: 700;
+      }
+      .spaltengruppen button:disabled[aria-pressed="true"] {
+        background: var(--kopf-bg);
+        color: var(--text-leise);
       }
       /* Die Tabelle darf breiter sein als das Fenster: Die Excel hat 48
          Spalten, und wer die Kostenuebersicht zuschaltet, will scrollen und
@@ -641,10 +706,15 @@
         width: 100%;
         font-size: 0.85rem;
       }
+      /* Die Zeilen bleiben einzeilig: Die Tabelle ist ein Vergleich ueber
+         Zeilen hinweg, und umbrechende Zellen verschieben jede Zeile
+         gegeneinander. Die Excel hat 48 Spalten; wer Ressourcen, Logistik
+         oder Kosten zuschaltet, scrollt waagerecht — der Rahmen scrollt,
+         nicht die Seite. */
       .einheiten th,
       .einheiten td {
         border-bottom: 1px solid var(--rahmen-weich);
-        padding: 0.15rem 0.4rem;
+        padding: 6px 8px;
         text-align: left;
         white-space: nowrap;
       }
@@ -675,6 +745,19 @@
         text-decoration: line-through;
         opacity: 0.6;
       }
+      .einheiten th.zahl,
+      .einheiten td.zahl {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      /* Die Summenzeile traegt den Kopfgrund: Sie gehoert zur Tabelle und
+         nicht zu den Zeilen darueber. */
+      .einheiten tfoot th,
+      .einheiten tfoot td {
+        background: var(--kopf-bg);
+        font-weight: 700;
+        border-top: var(--rahmenbreite) solid var(--rahmen);
+      }
       .einheiten td.berechnet {
         opacity: 0.7;
         font-variant-numeric: tabular-nums;
@@ -700,9 +783,13 @@
         font: inherit;
       }
       .tabellenfuss {
-        margin: 0.3rem 0 0;
-        font-size: 0.8rem;
-        opacity: 0.7;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 14px;
+        align-items: baseline;
+        margin: 6px 0 0;
+        font-size: 0.92em;
+        color: var(--text-leise);
       }
       .untertabellen {
         display: flex;
@@ -983,21 +1070,32 @@
       .meldungstabelle thead th {
         font-weight: 700;
       }
+      /* Die Ampeln des Eingangskorbs sind dieselben Marken wie der Status in
+         der Tabelle — eine Meldung, die „neu" ist, sieht aus wie eine
+         Einheit, die im Anmarsch ist. */
       .ampel {
-        padding: 0 0.3rem;
-        border-radius: 0.2rem;
-        font-size: 0.75rem;
-        font-weight: 700;
+        display: inline-block;
+        padding: 2px 6px;
+        border: var(--rahmenbreite) solid var(--neutral-bg);
+        background: var(--neutral-bg);
+        color: var(--text-leise);
+        font: 700 0.82em/1.3 var(--ui);
+        letter-spacing: 0.04em;
       }
       .ampel-neu,
       .ampel-geaendert {
         background: var(--warn-bg);
+        border-color: var(--warn-linie);
+        color: var(--warn-text);
       }
       .ampel-uebernommen {
         background: var(--ok-bg);
+        border-color: var(--ok-linie);
+        color: var(--ok-text);
       }
       .ampel-abgelehnt {
-        background: var(--rahmen-weich);
+        background: var(--neutral-bg);
+        border-color: var(--rahmen);
       }
       /* §5.8.1: Eine abgelehnte Meldung bleibt sichtbar — Loeschen ist
          verboten. Sie wird blass, nicht unsichtbar. */
