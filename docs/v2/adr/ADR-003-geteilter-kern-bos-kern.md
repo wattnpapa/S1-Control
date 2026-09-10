@@ -1,6 +1,6 @@
 # ADR-003 – Geteilter TypeScript-Kern `@bos/kern` mit erfassungsbogen.app
 
-Status: **vorgeschlagen, wartet auf Entscheidung 4** (04-OFFENE-ENTSCHEIDUNGEN.md) · Datum: 2026-09-08 · Entscheider: Johannes Rudolph
+Status: **angenommen mit Nachtrag** (siehe Nachtrag vom 2026-09-10 am Ende) · Datum: 2026-09-08 · Entscheider: Johannes Rudolph
 
 ## Kontext
 
@@ -88,3 +88,46 @@ nicht fuer die Zeichen.
 
 **Offen:** Die Lizenzbedingungen der Zeichensammlung sind vor der breiteren
 Nutzung zu pruefen.
+
+---
+
+## Nachtrag vom 2026-09-10: vier Pakete statt eines Kerns
+
+Entschieden von Johannes am 2026-09-10.
+
+Der Text oben spricht durchgehend von **einem** Kern (`@bos/kern`, Submodul
+`vendor/bos-kern`). Als M1.1 begonnen werden sollte, lag die Extraktion auf
+der Erfassungsbogen-Seite bereits vor — aber in **vier** thematisch
+getrennten Repositorien, die `wattnpapa/erfassungsbogen` seit dem 2026-09-09
+als Submodule einbindet. Der Befund
+[M1.1-befund-kern-existiert-bereits.md](../../v2-arbeitsstand/auftraege/M1.1-befund-kern-existiert-bereits.md)
+zaehlt sie mit Zeilenzahlen auf.
+
+**Die Aufteilung bleibt, sie wird nicht zu einem Kern zusammengezogen.** Die
+vier Pakete aendern sich in verschiedenen Takten: `vokabulare` waechst mit
+jeder neuen Ortsfeuerwehr und jedem Funkrufnamen, `eeb-format` nur mit einem
+Schemaschritt des Bogens, `meldekopf` mit der Bedienung der Sammlung. Ein
+gemeinsames Repository zwaenge jede Vokabularerweiterung in einen Pin des
+Codecs. Der Preis ist benannt: **vier Pins statt eines**, im Gleichschritt zu
+halten, und der Diamant auf `eeb-format` (oben) wird damit zur Regel statt
+zur Ausnahme — die `peerDependency`-Loesung und die CI-Pruefung auf genau
+eine Kopie gelten unveraendert und jetzt fuer drei abhaengige Pakete.
+
+**S1-Control nimmt drei der vier auf:** `@bos/eeb-format`, `@bos/meldekopf`
+und `@bos/vokabulare`. **`@bos/taktische-zeichen` bleibt zunaechst
+draussen** — und das kehrt den vorletzten Absatz oben um. Jener Absatz
+verlangte, M1.4 solle die Zeichenloesung des Erfassungsbogens statt der aus
+v1 uebernehmen; M1.4 ist inzwischen gebaut und hat die v1-Inferenz nach
+`@s1/domaene` geholt (`zeichen/*`). Beides nebeneinander waere eine zweite
+Wahrheit ueber dieselbe Sache. Ob der Erfassungsbogen-Kern die v1-Inferenz
+spaeter abloest, ist eine eigene Entscheidung mit einem eigenen Vergleich —
+nicht ein Nebenprodukt der Verdrahtung. Die offene Lizenzfrage der
+Zeichensammlung bleibt davon unberuehrt und ist vor einer Aufnahme zu
+klaeren.
+
+**Was das an M1.1 aendert:** aus „`@bos/kern` Stufe 1 extrahieren" wird
+„Kernpakete einbinden" — drei Submodule, drei `file:`-Abhaengigkeiten, die
+Ringgrenzen in `eslint.config.mjs` und der Nachweis der DoD gegen die 463
+Beispielboegen. Die Zerlegung eines fremden Baums und die transitive Huelle,
+die §6 des Umsetzungsplans als Unsicherheit nach oben an M1.1 haengt,
+entfallen.
