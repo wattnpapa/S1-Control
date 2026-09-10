@@ -1,6 +1,8 @@
 # Einstieg in M6 — EEB und Meldekopf
 
-Stand: 2026-09-10 · Meilenstein M6 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M6 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **abgeschlossen**, siehe
+[M6-abschlussbericht.md](../berichte/M6-abschlussbericht.md); M6.5 (Kamera)
+ist gemessen und Johannes vorgelegt
 
 M6 macht aus dem Erfassungsbogen einen **Weg** statt eines Scans. Die Zeile im
 Meilensteindokument nennt sechs Stücke: „QR per Kamera und Handscanner mit
