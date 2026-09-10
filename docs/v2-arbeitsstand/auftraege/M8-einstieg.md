@@ -1,6 +1,6 @@
 # Einstieg in M8 — Dokumentation und Abnahme
 
-Stand: 2026-09-10 · Meilenstein M8 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M8 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **abgeschlossen** — [Abschlussbericht](../berichte/M8-abschlussbericht.md)
 
 M8 ist der letzte Meilenstein des Plans. Seine Zeile im Meilensteindokument
 lautet: „Anwenderdokumentation, In-App-Hilfe, Tastenkürzel, Abkürzungsliste;
