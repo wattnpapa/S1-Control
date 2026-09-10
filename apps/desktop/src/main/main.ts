@@ -160,7 +160,7 @@ function starte(): void {
   void app.whenReady().then(() => {
     protokoll.schreibe("info", `Start, Electron ${process.versions.electron ?? "?"}`);
     const erstes = fensterOeffnen(fenster);
-    if (rauchprobe) rauchprobeFahren(erstes, vermittlung);
+    if (rauchprobe) rauchprobeFahren(erstes, vermittlung, fenstersteuerung, () => monitor);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) fensterOeffnen(fenster);
@@ -205,7 +205,25 @@ function fensterOeffnen(fenster: Set<BrowserWindow>): BrowserWindow {
   return neu;
 }
 
-function rauchprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): void {
+/**
+ * Die Rauchprobe — ein Start ohne Zuschauer, nachweisbar.
+ *
+ * Seit M3.5 prueft sie **zwei** Fenster. Der Staerke-Monitor ist der einzige
+ * Teil von M3, der ohne echte Hardware sonst gar nicht laeuft: Ob ein zweites
+ * `BrowserWindow` mit dem Fragment `#monitor` die Monitoransicht zeigt und
+ * nicht den Arbeitsplatz, sagt kein Komponententest. Auf einem Rechner mit
+ * einer Anzeige geht er auf dieser auf — das ist die dokumentierte Reaktion
+ * und genau der Fall, den die Rauchprobe hier vorfindet.
+ *
+ * Was sie **nicht** ersetzt, ist der Nachweis auf einem echten
+ * Zweitbildschirm; der bleibt offen wie M2.4.
+ */
+function rauchprobeFahren(
+  fenster: BrowserWindow,
+  vermittlung: Vermittlung,
+  fenstersteuerung: Fenstersteuerung,
+  monitorFenster: () => BrowserWindow | undefined,
+): void {
   fenster.webContents.once("did-finish-load", () => {
     void (async () => {
       fenster.show();
@@ -216,6 +234,23 @@ function rauchprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): voi
       const text: unknown = await fenster.webContents.executeJavaScript(
         "document.getElementById('wurzel')?.textContent ?? ''",
       );
+      // Der Monitor: oeffnen, laden lassen, ansehen, schliessen.
+      const bildschirme = fenstersteuerung.bildschirme();
+      fenstersteuerung.monitorOeffnen();
+      const monitor = monitorFenster();
+      const monitortext =
+        monitor === undefined
+          ? "(kein Fenster)"
+          : await new Promise<string>((fertig) => {
+              monitor.webContents.once("did-finish-load", () => {
+                void monitor.webContents
+                  .executeJavaScript("document.getElementById('wurzel')?.textContent ?? ''")
+                  .then((inhalt: unknown) => {
+                    fertig(String(inhalt));
+                  });
+              });
+            });
+
       process.stdout.write(
         [
           "S1_SMOKE: Fenster erzeugt",
@@ -224,10 +259,14 @@ function rauchprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): voi
           `S1_SMOKE: groesse=${fenster.getBounds().width}x${fenster.getBounds().height}`,
           `S1_SMOKE: clientId=${platz.clientId.slice(0, 8)}…`,
           `S1_SMOKE: renderer=${String(text)}`,
+          `S1_SMOKE: bildschirme=${String(bildschirme.length)}`,
+          `S1_SMOKE: monitor=${monitor === undefined ? "nein" : monitor.getTitle()}`,
+          `S1_SMOKE: monitorinhalt=${monitortext}`,
           "S1_SMOKE: beende Anwendung",
           "",
         ].join("\n"),
       );
+      fenstersteuerung.monitorSchliessen();
       app.exit(0);
     })();
   });

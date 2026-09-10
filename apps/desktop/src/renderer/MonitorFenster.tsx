@@ -48,6 +48,15 @@ export function MonitorFenster(): React.JSX.Element {
   const [lagebild, setzeLagebild] = useState<Lagebild | undefined>(undefined);
 
   useEffect(() => {
+    // Der Fenstertitel wird **hier** gesetzt und nicht im Main: `loadFile`
+    // laedt dieselbe Seite wie der Arbeitsplatz, und deren `<title>`
+    // ueberschreibt den, den `new BrowserWindow` mitbekommen hat. Auf einer
+    // Taskleiste mit zwei Eintraegen namens „S1-Control“ findet niemand den
+    // Monitor wieder.
+    document.title = "S1-Control — Stärke";
+  }, []);
+
+  useEffect(() => {
     let akteId: string | undefined;
     let folge = -1;
     return bruecke().aufMitteilung((mitteilung) => {
