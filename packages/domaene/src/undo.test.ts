@@ -27,6 +27,7 @@ import {
   statusGesetzt,
 } from "./pruefhilfen/ereignisbau.js";
 import { SCHEMA_VERSION, ereignisId } from "./ereignis.js";
+import { KATALOG, KATALOG_EINTRAEGE } from "./katalog/index.js";
 
 /** Grundlage aller Tests: ein Abschnitt und eine Einheit darin, beide von `aa`. */
 function grundlage(): EingehendesEreignis[] {
@@ -238,69 +239,41 @@ describe("U2 — was rückgängig gemacht werden kann, ist typabhängig", () => 
     expect(danach.einheiten["U1"]?.entfernt?.wert).toBe(true);
   });
 
-  it("nimmt einen angelegten Abschnitt über AbschnittAufgeloest zurück", () => {
+  it("führt einen angelegten Abschnitt als strukturelle Rücknahme", () => {
+    // §5.3: `AbschnittAufgeloest` setzt `{ zielAbschnittId, aufgeloestAm }`.
+    // Wohin die Einheiten gehen sollen, steht in der Anlage nirgends — die
+    // Rücknahme ist hier eine fachliche Handlung mit eigener Maske.
     const ereignisse = grundlage();
     const anlage = ereignisse[0] as EingehendesEreignis;
     const ergebnis = kompensationFuer(anlage, falte(ereignisse));
-    expect(ergebnis.art).toBe("entwurf");
-    if (ergebnis.art !== "entwurf") return;
-    expect(ergebnis.entwurf.typ).toBe("AbschnittAufgeloest");
-    expect(ergebnis.entwurf.nutzlast).toEqual({ abschnittId: "EO" });
-  });
-
-  it("meldet die strukturellen Arten als eigenen Fachvorgang", () => {
-    const aufgeteilt: EingehendesEreignis = {
-      id: ereignisId("aa", 7),
-      hlc: hlc(50, 0, "aa"),
-      schemaVersion: SCHEMA_VERSION,
-      akteur: akteur("aa"),
-      wanduhr: "2026-09-08T08:00:50.000Z",
-      typ: "EinheitAufgeteilt",
-      nutzlast: { neueEinheitId: "U2", quellEinheitId: "U1" },
-    };
-    const ergebnis = kompensationFuer(aufgeteilt, falte(grundlage()));
     expect(ergebnis.art).toBe("strukturell");
     if (ergebnis.art !== "strukturell") return;
-    expect(ergebnis.inverseArt).toBe("EinheitZusammengefuehrt");
+    expect(ergebnis.inverseArt).toBe("AbschnittAufgeloest");
   });
 
-  it("weist die sechs nicht rücknehmbaren Arten ab", () => {
-    const zustand = falte(grundlage());
-    for (const typ of [
-      "EinsatzAngelegt",
-      "EinsatzArchiviert",
-      "EebMeldungEmpfangen",
-      "EtbEintragErfasst",
-      "EtbEintragBerichtigt",
-      "KorrekturVon",
-    ]) {
-      const ereignis: EingehendesEreignis = {
-        id: ereignisId("aa", 9),
-        hlc: hlc(60, 0, "aa"),
-        schemaVersion: SCHEMA_VERSION,
-        akteur: akteur("aa"),
-        wanduhr: "2026-09-08T08:01:00.000Z",
-        typ,
-        nutzlast: {},
-      };
-      expect(kompensationFuer(ereignis, zustand).art, typ).toBe("nichtMoeglich");
-    }
+  it("lässt für jede rücknehmbare Art des Katalogs einen Weg offen", () => {
+    // Der Nachweis zu U1: „Deshalb führt der Katalog für **jede** rücknehmbare
+    // Art ein Gegenereignis oder lässt dieselbe Art mit `neu = vorher`
+    // genügen." Fällt dieser Test, ist eine Art in den Katalog gekommen, deren
+    // Rücknahme nur durch **Ausschluss** des Originals aus der Ereignismenge
+    // darstellbar wäre — und dann ist die Menge nicht mehr die Menge.
+    //
+    // Geprüft wird der Katalog und nicht ein erzeugter Durchlauf: Eine
+    // Nutzlast je Art zu raten hieße, die Wertebereiche der Schemata
+    // nachzubauen, und der Test spräche danach über den Nachbau statt über den
+    // Katalog.
+    const ohneWeg = KATALOG_EINTRAEGE.filter(
+      (eintrag) =>
+        eintrag.ohneUndo !== true && eintrag.gegenereignis === undefined && eintrag.form !== "a",
+    );
+    expect(ohneWeg.map((e) => e.typ)).toEqual([]);
   });
 
-  it("lässt keine dieser Arten auf den Stapel", () => {
-    const stapel = new Undostapel("aa");
-    for (const typ of ["EinsatzAngelegt", "EinsatzArchiviert", "KorrekturVon"]) {
-      stapel.nimmAuf({
-        id: ereignisId("aa", 9),
-        hlc: hlc(60, 0, "aa"),
-        schemaVersion: SCHEMA_VERSION,
-        akteur: akteur("aa"),
-        wanduhr: "2026-09-08T08:01:00.000Z",
-        typ,
-        nutzlast: {},
-      });
-    }
-    expect(stapel.eintraege).toHaveLength(0);
+  it("nennt für jedes Gegenereignis einen Eintrag desselben Katalogs", () => {
+    const fehlend = KATALOG_EINTRAEGE.filter(
+      (eintrag) => eintrag.gegenereignis !== undefined && !KATALOG.has(eintrag.gegenereignis),
+    );
+    expect(fehlend.map((e) => `${e.typ} → ${String(e.gegenereignis)}`)).toEqual([]);
   });
 });
 

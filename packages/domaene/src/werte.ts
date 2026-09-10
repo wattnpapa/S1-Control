@@ -123,3 +123,22 @@ export function staerkeIstNegativ(staerke: StaerkeRechnerisch): boolean {
 
 /** Das neutrale Element der Stärkerechnung. */
 export const STAERKE_NULL: Staerke = { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 };
+
+/**
+ * Die Vorbelegung der vier Kostenparameter — Startwert S9 (ZDM §3.2).
+ *
+ * Sie steht hier und nicht in der Schale, weil sie eine fachliche Zahl ist und
+ * keine Einstellung des Rechners: Jeder Client, der einen Einsatz anlegt, soll
+ * dieselben Werte einsetzen, damit ein spaeterer Kostenvergleich zwischen zwei
+ * Einsaetzen nicht an der Herkunft des anlegenden Arbeitsplatzes haengt.
+ *
+ * Sie ist eine **Vorbelegung**, kein fester Wert: Die Fuehrungsstelle aendert
+ * jeden der vier ueber `KostenParameterGeaendert`, und der Fold trifft dabei
+ * denselben Feldpfad `einsatz/kosten/<feld>` wie die Anlage (§2.3).
+ */
+export const KOSTEN_VORBELEGUNG = {
+  psaKostenProSatz: 180,
+  vdaProTag: 150,
+  ukVerpflegungProTag: 20,
+  geplanteEinsatztage: 5,
+} as const;

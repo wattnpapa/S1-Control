@@ -129,7 +129,7 @@ async function grundlage(a: Platz): Promise<void> {
     nutzlast: {
       abschnittId: "EO",
       name: "Deich Nord",
-      abschnittstyp: "EINSATZORT",
+      typ: "EINSATZORT",
       reihenfolge: 1,
     },
   });

@@ -115,6 +115,7 @@ export {
 
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
+  KOSTEN_VORBELEGUNG,
   STAERKE_NULL,
   staerkeGleich,
   staerkeSumme,

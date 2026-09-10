@@ -9,9 +9,13 @@
 // erledigt: buendeln. Die Typpruefung macht `tsc -b`, nicht der Buendler.
 //
 // Zwei Ausgabeformate, mit Absicht:
-//   out/main.mjs    ESM — Electron 43 laedt ESM-Main.
-//   out/preload.cjs CommonJS — Preload-Skripte werden in der Sandbox
-//                   ausschliesslich als CommonJS geladen.
+//   out/main.mjs        ESM — Electron 43 laedt ESM-Main.
+//   out/akte-worker.mjs ESM — ein `worker_thread` je offener Akte (M2.1).
+//                       Eigenes Buendel, weil `new Worker(datei)` eine Datei
+//                       braucht und keinen Modulverweis; es liegt neben
+//                       main.mjs, damit der Main den Pfad ohne Suche kennt.
+//   out/preload.cjs     CommonJS — Preload-Skripte werden in der Sandbox
+//                       ausschliesslich als CommonJS geladen.
 
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
@@ -35,6 +39,13 @@ await build({
   ...gemeinsam,
   entryPoints: [path.join(app, "src/main/main.ts")],
   outfile: path.join(app, "out/main.mjs"),
+  format: "esm",
+});
+
+await build({
+  ...gemeinsam,
+  entryPoints: [path.join(app, "src/worker/akte-worker.ts")],
+  outfile: path.join(app, "out/akte-worker.mjs"),
   format: "esm",
 });
 

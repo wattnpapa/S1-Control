@@ -71,6 +71,22 @@ const KEINE_RENDERER_BIBLIOTHEK = {
   ],
 };
 
+/**
+ * Die Module, ueber die ein synchroner Datei- oder Netzzugriff in den Main
+ * kaeme. `node:fs/promises` bleibt erlaubt — verboten ist die synchrone Tuer,
+ * nicht das Dateisystem.
+ */
+const BLOCKIERENDE_MODULE = ["fs", "child_process", "http", "https", "net", "dgram", "tls", "dns"];
+
+const KEIN_BLOCKIERENDES_MODUL = {
+  // Als **Namensliste** und nicht als Muster: Ein Muster `node:fs` faengt hier
+  // auch `node:fs/promises`, und genau das soll erlaubt bleiben.
+  paths: namen(
+    [...BLOCKIERENDE_MODULE, ...BLOCKIERENDE_MODULE.map((name) => `node:${name}`)],
+    "Kein synchroner Datei- oder Netzaufruf im Main (DoD M2.1). `node:fs/promises` ist erlaubt.",
+  ),
+};
+
 const KEIN_GRIFF_NACH_AUSSEN = {
   patterns: [
     {
@@ -175,7 +191,47 @@ export default tseslint.config(
     ["apps/desktop/src/main/**/*.ts"],
     // Electron ist hier erlaubt und erwünscht; Renderer-Bibliotheken nicht.
     KEINE_RENDERER_BIBLIOTHEK,
+    KEIN_BLOCKIERENDES_MODUL,
   ),
+
+  {
+    // DoD M2.1: „kein synchroner Datei- oder Netzaufruf im Main (Lint)".
+    //
+    // Der Main teilt sich einen einzigen Thread mit der Fensterverwaltung und
+    // dem IPC. Ein blockierender Aufruf friert dort **jedes** Fenster ein,
+    // auch das, das mit dem Aufruf nichts zu tun hat — und auf einem
+    // SMB-Laufwerk dauert ein solcher Aufruf im schlechten Fall Sekunden
+    // (KONZEPT-SPEICHER.md §6.6). Die beiden Regeln greifen von zwei Seiten:
+    // die Importliste oben verbietet das Modul, diese hier den Aufruf.
+    //
+    // Der Worker ist ausdrücklich **nicht** eingeschlossen: Er ist ein eigener
+    // Thread, und dort blockiert ein Aufruf niemanden außer sich selbst.
+    files: ["apps/desktop/src/main/**/*.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression > MemberExpression[property.name=/Sync$/]",
+          message:
+            "Kein synchroner Aufruf im Main-Prozess (DoD M2.1): Er friert jedes Fenster ein.",
+        },
+      ],
+    },
+  },
+
+  // Die Prüfungen **zum** Main sind nicht der Main. Sie laufen unter Vitest in
+  // einem eigenen Prozess, bauen Wegwerf-Verzeichnisse und dürfen dafür
+  // synchron auf das Dateisystem greifen — ein blockierender Aufruf friert
+  // dort kein Fenster ein, weil es keines gibt. Die Renderer-Bibliotheken
+  // bleiben auch hier verboten.
+  ringRegel(
+    ["apps/desktop/src/main/**/*.test.ts"],
+    KEINE_RENDERER_BIBLIOTHEK,
+  ),
+  {
+    files: ["apps/desktop/src/main/**/*.test.ts"],
+    rules: { "no-restricted-syntax": "off" },
+  },
 
   ringRegel(
     ["apps/desktop/src/renderer/**/*.ts", "apps/desktop/src/renderer/**/*.tsx"],

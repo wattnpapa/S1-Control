@@ -251,6 +251,18 @@ export function geltenderFeldwert(
 // Der Kompensationsentwurf (U1, U2)
 // ---------------------------------------------------------------------------
 
+/**
+ * Die Schluessel, die das Nutzlastschema einer Art kennt.
+ *
+ * Gelesen wird die `shape` des zod-Objekts. Eine Art, deren Schema kein
+ * Objekt ist, liefert die leere Liste — dann bleibt unten die Kennung, und
+ * die abschliessende Schemapruefung entscheidet.
+ */
+function schluesselDerArt(eintrag: Katalogeintrag): readonly string[] {
+  const gestalt = (eintrag.schema as { shape?: Record<string, unknown> }).shape;
+  return gestalt === undefined ? [] : Object.keys(gestalt);
+}
+
 function nutzlastAls(ereignis: EingehendesEreignis): Record<string, unknown> {
   const roh: unknown = ereignis.nutzlast;
   return typeof roh === "object" && roh !== null ? (roh as Record<string, unknown>) : {};
@@ -316,6 +328,31 @@ export function kompensationFuer(
   if (ziel === undefined) {
     return { art: "nichtMoeglich", meldung: `Gegenereignis ${zielArt} steht nicht im Katalog.` };
   }
+  /**
+   * U2, Zeile „strukturell rueckgaengig": Ein Gegenereignis **anderer** Art
+   * ohne `festerWert` traegt einen Wert, den das Original nicht hergibt.
+   *
+   * Der Fall, an dem es haengt, ist `AbschnittAngelegt` → `AbschnittAufgeloest`
+   * (§5.3): Die Aufloesung setzt `{ zielAbschnittId, aufgeloestAm }`, und
+   * wohin die Einheiten des Abschnitts gehen sollen, steht in der Anlage
+   * nirgends. Die Ruecknahme ist dort eine **fachliche Handlung** mit eigener
+   * Maske, kein technisches Zurueckrollen — genau, was die Tabelle in U2 sagt.
+   *
+   * Umgekehrt sind `EinheitGemeldet` → `EinheitEntfernt` (`festerWert: true`)
+   * und `AbschnittAufgeloest` → `AbschnittWiederhergestellt`
+   * (`festerWert: null`) vollstaendig ableitbar. Die Unterscheidung liegt
+   * damit im Katalog und nicht in einer Namensliste, die veralten koennte.
+   */
+  if (zielArt !== eintrag.typ && !Object.hasOwn(ziel, "festerWert")) {
+    return {
+      art: "strukturell",
+      inverseArt: zielArt,
+      meldung:
+        `${original.typ} wird durch den inversen Fachvorgang ${zielArt} zurückgenommen ` +
+        "(§6 U2). Die Werte dafür stehen nicht im Original.",
+    };
+  }
+
   if (ziel.grundPflicht === true && (grund === undefined || grund.length === 0)) {
     return { art: "brauchtGrund", zielArt };
   }
@@ -326,20 +363,21 @@ export function kompensationFuer(
     return { art: "nichtMoeglich", meldung: `Im Original fehlt ${eintrag.idFeld}.` };
   }
 
-  // Die Nutzlast der Kompensation traegt genau zwei Dinge: die Kennung und,
-  // wo die Zielart ihr Feld aus der Nutzlast waehlt, dieselbe Feldwahl wie das
-  // Original. Alles Weitere waere geraten.
-  const nutzlast: Record<string, unknown> = { [ziel.idFeld]: id };
-  if (ziel.feld?.art === "ausNutzlast") {
-    const wahl = quelle[ziel.feld.schluessel];
-    if (wahl === undefined) {
-      return {
-        art: "nichtMoeglich",
-        meldung: `Im Original fehlt die Feldwahl ${ziel.feld.schluessel}.`,
-      };
-    }
-    nutzlast[ziel.feld.schluessel] = wahl;
+  // Die Nutzlast der Kompensation entsteht aus der des Originals, **beschnitten
+  // auf die Felder, die die Zielart kennt**.
+  //
+  // Zwei Fallen liegen hier nebeneinander. Nur die Kennung zu uebernehmen ist
+  // zu wenig: `SchichtplanEintragGesetzt` wird ueber `dienstpostenId` **und**
+  // `datum` bezeichnet, und `LogistikGesetzt` braucht seine Feldwahl. Die
+  // ganze Nutzlast zu uebernehmen ist zu viel: Kein Schema des Katalogs ist
+  // `strict` (§3.7), die Anlage einer Einheit kaeme also mitsamt Staerke und
+  // Bezeichnung durch — totes Gewicht in einem Protokoll, das nie geloescht
+  // wird. Der Schnitt entlang der Schlüssel der Zielart trifft beides.
+  const nutzlast: Record<string, unknown> = {};
+  for (const schluessel of schluesselDerArt(ziel)) {
+    if (quelle[schluessel] !== undefined) nutzlast[schluessel] = quelle[schluessel];
   }
+  nutzlast[ziel.idFeld] ??= id;
 
   const geprueft = ziel.schema.safeParse(nutzlast);
   if (!geprueft.success) {

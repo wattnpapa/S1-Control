@@ -43,6 +43,18 @@ export type Auftrag =
   | { readonly art: "standAnfordern"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };
 
+/**
+ * Ein Auftrag ohne seine laufende Nummer — die vergibt der Arbeiterhof.
+ *
+ * `Omit<Auftrag, "nummer">` allein taugt hier nicht: Auf eine Vereinigung
+ * angewandt behaelt `Omit` nur die Felder, die **alle** Zweige teilen, und
+ * `entwurf` faellt weg. Der Umweg ueber einen Typparameter verteilt sich
+ * dagegen ueber die Zweige — eine bedingte Form verteilt nur, wenn links vom
+ * `extends` ein blosser Typparameter steht.
+ */
+type OhneNummer<T> = T extends unknown ? Omit<T, "nummer"> : never;
+export type Auftragsentwurf = OhneNummer<Auftrag>;
+
 /** Was der Worker zurueckschickt. */
 export type WorkerBotschaft =
   | { readonly art: "antwort"; readonly nummer: number; readonly wert: unknown }

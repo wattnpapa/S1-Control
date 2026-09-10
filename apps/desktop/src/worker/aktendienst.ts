@@ -27,6 +27,7 @@
 
 import {
   HlcUhr,
+  KATALOG,
   Undostapel,
   falteHinzu,
   hlcAlsText,
@@ -376,6 +377,8 @@ export class Aktendienst {
     if (this.#geschlossen) {
       return { art: "nichtMoeglich", meldung: "Die Akte ist geschlossen." };
     }
+    const abgewiesen = this.#pruefeNutzlast(entwurf);
+    if (abgewiesen !== undefined) return abgewiesen;
     const ergebnis = await this.akte.schreibe(entwurf);
     if (ergebnis.art === "geschrieben") {
       this.#nimmAuf([{ rahmen: ergebnis.zeile.rahmen }]);
@@ -391,6 +394,44 @@ export class Aktendienst {
       };
     }
     return { art: "uhrSteht", meldung: JSON.stringify(ergebnis.meldung) };
+  }
+
+  /**
+   * Prueft die Nutzlast gegen den Katalog, **bevor** geschrieben wird.
+   *
+   * §3.7 regelt, was ein Client mit einem Ereignis tut, dessen Nutzlast er
+   * nicht deuten kann: Er faltet es nach `unbekannt` und arbeitet weiter. Das
+   * ist die Regel fuer die **Empfangsseite** — fuer Zeilen, die eine andere
+   * Fassung geschrieben hat. Auf der Schreibseite waere sie eine Zumutung: Das
+   * Ereignisprotokoll ist append-only (§1.3), eine falsch gebaute Nutzlast
+   * bliebe darin stehen, und jeder Client jeder kuenftigen Fassung schleppte
+   * sie als `unbekannt` mit.
+   *
+   * §8.8 Punkt 1 verlangt, einen gescheiterten Bedienschritt **sichtbar**
+   * abzuweisen. Genau das geschieht hier, und zwar bevor eine Zeile entsteht.
+   */
+  #pruefeNutzlast(entwurf: Ereignisentwurf): Bedienergebnis | undefined {
+    const eintrag = KATALOG.get(entwurf.typ);
+    if (eintrag === undefined) {
+      return {
+        art: "abgewiesen",
+        meldung: `Diese Fassung kennt die Ereignisart ${entwurf.typ} nicht.`,
+        code: "ART",
+        dauerhafterHinweis: false,
+      };
+    }
+    const geprueft = eintrag.schema.safeParse(entwurf.nutzlast ?? {});
+    if (geprueft.success) return undefined;
+    const erste = geprueft.error.issues[0];
+    return {
+      art: "abgewiesen",
+      meldung:
+        erste === undefined
+          ? `Die Nutzlast für ${entwurf.typ} ist nicht gültig.`
+          : `Die Nutzlast für ${entwurf.typ} ist nicht gültig: ${erste.path.join(".")} — ${erste.message}`,
+      code: "SCHEMA",
+      dauerhafterHinweis: false,
+    };
   }
 
   /**
