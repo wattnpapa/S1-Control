@@ -62,6 +62,10 @@ const zStaerke = z.object({
  */
 export const zAkteId = z.string().regex(/^akte-\d+$/);
 
+export const THEMEN = ["standard", "dunkel", "feld", "nacht"] as const;
+export const zTheme = z.enum(THEMEN);
+export type Theme = z.infer<typeof zTheme>;
+
 export const zEinstellungen = z.object({
   /** Wurzel des Shares, unterhalb derer `einsaetze/` liegt. */
   sharePfad: z.string(),
@@ -82,6 +86,17 @@ export const zEinstellungen = z.object({
    * Ohne Angabe `fuehrungsstelle` — der Arbeitsplatz, den es bisher gab.
    */
   betriebsart: z.enum(["fuehrungsstelle", "meldekopf"]).optional(),
+  /**
+   * Das Erscheinungsbild dieses Geraets (Entwurf „Oberflaeche").
+   *
+   * Es steht in den Einstellungen des **Geraets** und nicht in der Akte: Der
+   * Arbeitsplatz im Zelt steht anders als der im Fahrzeug, und beide fuehren
+   * denselben Einsatz. „feld" traegt 2-px-Raender und groessere Schrift fuer
+   * Handschuhe und Sonne, „nacht" Bernstein auf Schwarz.
+   *
+   * Ohne Angabe `standard`.
+   */
+  theme: zTheme.optional(),
 });
 export type Einstellungen = z.infer<typeof zEinstellungen>;
 

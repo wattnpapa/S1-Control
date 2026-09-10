@@ -55,6 +55,16 @@ export async function liesArbeitsplatz(datei: string, vorbelegterShare = ""): Pr
     anzeigename: geprueft.success && geprueft.data.anzeigename.length > 0
       ? geprueft.data.anzeigename
       : "Arbeitsplatz",
+    // Betriebsart und Erscheinungsbild werden **mitgelesen**. Ohne diese
+    // beiden Zeilen schriebe `#setzeEinstellungen` sie zwar in die Datei, der
+    // naechste Start liesse sie aber fallen — ein Meldekopf waere nach jedem
+    // Neustart wieder eine Fuehrungsstelle und das Nachtbild wieder hell.
+    ...(geprueft.success && geprueft.data.betriebsart !== undefined
+      ? { betriebsart: geprueft.data.betriebsart }
+      : {}),
+    ...(geprueft.success && geprueft.data.theme !== undefined
+      ? { theme: geprueft.data.theme }
+      : {}),
     clientId,
   };
   if (!geprueft.success || wert["clientId"] !== clientId) {

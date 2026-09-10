@@ -436,6 +436,7 @@ export class Vermittlung {
       sharePfad: platz.sharePfad,
       anzeigename: platz.anzeigename,
       ...(platz.betriebsart === undefined ? {} : { betriebsart: platz.betriebsart }),
+      ...(platz.theme === undefined ? {} : { theme: platz.theme }),
     };
   }
 
