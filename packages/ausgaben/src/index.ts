@@ -1,10 +1,17 @@
 /**
  * `@s1/ausgaben` — Ring 3: die Ausgabeprodukte als HTML.
  *
- * Hier entstehen ab M4 Druck, Status-Matrix, Logistik, FueOrg, Auswertung und
- * der HTML-Monitor. Das PDF entsteht ausdruecklich nicht hier, sondern in der
+ * Hier entstehen Druck, Status-Matrix, Auswertung, der HTML-Monitor und die
+ * Einsatzakte. Das PDF entsteht ausdruecklich nicht hier, sondern in der
  * Schale ueber `webContents.printToPDF` — deshalb darf dieses Paket Electron
- * nicht importieren.
+ * nicht importieren, und deshalb liefert jede Vorlage hier eine
+ * **Zeichenkette**.
+ *
+ * Das Paket ist auch ohne `node:` gehalten (`types: []` in der tsconfig). Das
+ * ist strenger, als der Ring verlangt, und mit Absicht: Eine Vorlage, die
+ * Dateien schreibt, ist eine Vorlage weniger, die sich ohne Dateisystem
+ * pruefen laesst. Wer die Bytes ablegt, ist die Schale oder die
+ * Kommandozeile.
  */
 
 import { kernVersion } from "@bos/eeb-format";
@@ -46,3 +53,5 @@ export function kopfAlsHtml(kopf: Ausgabekopf): string {
     "</header>",
   ].join("\n");
 }
+
+export { dosZeit, schreibeZip, textEintrag, type Zipeintrag, type Zipoptionen } from "./zip.js";

@@ -66,6 +66,9 @@ export {
   type TaktischeEbene,
 } from "./ereignis.js";
 
+// CRC-32 (§2.1) — geteilt zwischen Speicherschicht und Ausgaben (M4.0).
+export { crc32, crc32Hex } from "./pruefsumme.js";
+
 // Kanonische Serialisierung und zustandsHash (§7.6).
 export {
   kanonischeSerialisierung,

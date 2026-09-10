@@ -15,36 +15,24 @@
 
 import { createHash } from "node:crypto";
 
+import { crc32Hex } from "@s1/domaene";
 import type { Sha256Hex } from "@s1/domaene";
 
-/** CRC-32 nach IEEE 802.3, Polynom `0xEDB88320` (§2.1). */
-const CRC_TABELLE: Uint32Array = (() => {
-  const tabelle = new Uint32Array(256);
-  for (let n = 0; n < 256; n += 1) {
-    let c = n;
-    for (let k = 0; k < 8; k += 1) {
-      c = (c & 1) !== 0 ? 0xed_b8_83_20 ^ (c >>> 1) : c >>> 1;
-    }
-    tabelle[n] = c >>> 0;
-  }
-  return tabelle;
-})();
-
 /**
- * CRC-32 über Bytes, als genau 8 Hexzeichen in **Kleinbuchstaben** (§2.1).
+ * CRC-32 nach §2.1 — **weitergereicht**, nicht hier gerechnet.
  *
- * Die Kleinschreibung ist festgelegt und nicht Geschmack: §2.3 verlangt sie
- * ausdrücklich auch für die Kettenprüfsumme, weil „eine offene Groß- und
- * Kleinschreibung eine stille Fehlerquelle wäre" — der Wert wird als
- * Zeichenkette verglichen.
+ * Die Funktion selbst steht seit M4.0 in `@s1/domaene`. Der Grund ist keine
+ * Aufräumlust: `@s1/ausgaben` braucht dieselbe Prüfsumme für die ZIP-Köpfe
+ * der Einsatzakte und der XLSX-Ausgabe (M4.2, M4.4), darf dieses Paket als
+ * Geschwister im selben Ring aber nicht importieren (02-ZIELBILD.md, „Vier
+ * Ringe"). Zwei Tabellen desselben Polynoms wären zwei Wahrheiten über
+ * dieselbe Zahl.
+ *
+ * Was hier bleibt, ist die **Regel**: dass eine Zeile diese Prüfsumme trägt
+ * und wie sie geschrieben wird (§2.1). Der Wert kommt aus dem Fachkern —
+ * plattformneutral, wie eine Rechnung über Bytes es sein kann.
  */
-export function crc32Hex(bytes: Uint8Array): string {
-  let c = 0xff_ff_ff_ff;
-  for (let i = 0; i < bytes.length; i += 1) {
-    c = (CRC_TABELLE[(c ^ (bytes[i] as number)) & 0xff] as number) ^ (c >>> 8);
-  }
-  return ((c ^ 0xff_ff_ff_ff) >>> 0).toString(16).padStart(8, "0");
-}
+export { crc32Hex };
 
 /** SHA-256 über Bytes, volle Länge als 64 Hexzeichen in Kleinbuchstaben. */
 export function sha256HexBytes(bytes: Uint8Array): string {
