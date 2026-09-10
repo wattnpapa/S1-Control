@@ -118,7 +118,10 @@ export class Vermittlung {
         })) as Bedienergebnis;
       case "undoStapel":
         return this.#o.hof.frage(ruf.akteId, { art: "undoStapel" });
-      // Die drei Ansichtsrufe (M3.7) gehen unveraendert an den Worker. Der
+      // Die Ansichtsrufe (M3.7) und der Handscanner-Weg (M3.4) gehen
+      // unveraendert an den Worker; der Main deutet weder eine Projektion noch
+      // einen Bogen — das Entpacken braucht einen Kompressor, und der liegt im
+      // Worker. Der
       // Main deutet sie nicht: Er haette dazu den Fachzustand gebraucht, und
       // genau den hat er nicht (02-ZIELBILD.md, „Electron-Main ohne
       // Fachzustand"). Geprueft sind sie zu diesem Zeitpunkt bereits — `zRuf`
@@ -127,6 +130,9 @@ export class Vermittlung {
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":
+      case "eebScan":
+      case "eebZuruecksetzen":
+      case "eebUebernehmen":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
     }
   }

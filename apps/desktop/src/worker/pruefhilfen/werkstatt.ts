@@ -20,6 +20,7 @@
 import { mkdtempSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { deflateRawSync, inflateRawSync } from "node:zlib";
 
 import {
   EINSATZ_UNTERORDNER,
@@ -70,6 +71,12 @@ export function baueDienst(wurzel: string, share: string, nummer: number): Platz
     rechnername: `rechner-${String(nummer)}`,
     programmversion: "0.0.0-test",
     neueKennung: () => `${String(nummer + 8)}${"f".repeat(31)}`,
+    // Derselbe Entpacker wie im Betrieb (`akte-worker.ts`): Der
+    // Handscanner-Weg soll im Nachweis nicht an einer Attrappe haengen.
+    kompressor: {
+      deflateRaw: (daten) => new Uint8Array(deflateRawSync(daten)),
+      inflateRaw: (daten) => new Uint8Array(inflateRawSync(daten)),
+    },
     sende: (m) => mitteilungen.push(m),
     takte: { spiegelungMs: 0, taktAMs: 0, taktBMs: 0, praesenzMs: 0 },
   });

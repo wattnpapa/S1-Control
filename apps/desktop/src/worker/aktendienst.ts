@@ -32,8 +32,12 @@ import {
   falteHinzu,
   hlcAlsText,
   kennzahlen,
+  LEERER_STAND,
   kompensationFuer,
   leereFaltung,
+  liesBogen,
+  nimmScan,
+  uebernahmeEntwuerfe,
   materialisiere,
   projektion,
   vergleicheHlc,
@@ -41,6 +45,7 @@ import {
   type EingehendesEreignis,
   type Faltung,
   type Hlc,
+  type Sammelstand,
   type Zustand,
 } from "@s1/domaene";
 import {
@@ -60,6 +65,8 @@ import {
   type Zeitquelle,
 } from "@s1/speicher";
 
+import type { Kompressor } from "@bos/eeb-format";
+
 import {
   lagebildDelta,
   type Baumansicht,
@@ -70,6 +77,9 @@ import {
   type Ruf,
   type Tabellenansicht,
   type Tagebuchansicht,
+  type EebStand,
+  type EebVorschau,
+  type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
 
@@ -106,6 +116,16 @@ export interface AktendienstOptionen {
   readonly rechnername: string;
   readonly programmversion: string;
   readonly neueKennung: () => string;
+  /**
+   * Der Kompressor fuer den Handscanner-Weg (M3.4).
+   *
+   * Injiziert wie das Dateisystem: `@s1/domaene` ist plattformneutral und hat
+   * weder `node:zlib` noch die `DecompressionStream` des Browsers
+   * (02-ZIELBILD.md, „Vier Ringe“). Fehlt er, ist der Scan-Weg schlicht nicht
+   * verfuegbar — das ist besser als ein Aktendienst, der ohne ihn nicht
+   * startet.
+   */
+  readonly kompressor?: Kompressor;
   /** Wohin die Mitteilungen gehen — im Worker `parentPort.postMessage`. */
   readonly sende: (mitteilung: Mitteilung) => void;
   readonly takte?: Partial<Takte>;
@@ -191,6 +211,18 @@ export class Aktendienst {
    * geht nirgendwohin und stirbt mit dem Worker.
    */
   readonly #ereignisse: EingehendesEreignis[] = [];
+
+  /**
+   * Der Sammelstand des Handscanners (M3.4).
+   *
+   * Er liegt hier und nicht im Renderer, weil er aus Byte-Abschnitten besteht,
+   * die nur mit dem Codec zu deuten sind. Er gehoert zur **Akte** und nicht
+   * zum Fenster: Wer den Einsatz schliesst, verliert ihn — ein halb
+   * gescannter Bogen ohne Akte hat kein Ziel.
+   */
+  #scanstand: Sammelstand = LEERER_STAND;
+  #scanPayload: Uint8Array | undefined;
+  #scanText = "";
 
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
@@ -563,6 +595,159 @@ export class Aktendienst {
       ruf.anzahl,
     );
     return { lageZeiger: this.#lageZeiger, ...ausschnitt };
+  }
+
+  // -------------------------------------------------------------------------
+  // Der Handscanner-Weg (M3.4)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Nimmt einen gescannten Text auf.
+   *
+   * Ein Ruf je Scan: Der Handscanner tippt eine Zeichenkette und schliesst mit
+   * Enter ab; die Maske schickt sie hierher und bekommt den Fortschritt
+   * zurueck. Das ist ein Botschaftswechsel je Teil und damit vernachlaessigbar
+   * — ein Bogen hat selten mehr als drei.
+   */
+  async eebScan(text: string): Promise<EebStand> {
+    if (this.#o.kompressor === undefined) {
+      return { art: "unlesbar", haben: 0, anzahl: 0, meldung: "Auf diesem Arbeitsplatz ist kein Entpacker eingerichtet." };
+    }
+    const vorheriger = this.#scanstand;
+    const befund = nimmScan(vorheriger, text);
+    if (befund.art === "unlesbar") {
+      return { art: "unlesbar", haben: vorheriger.haben, anzahl: vorheriger.anzahl, meldung: befund.meldung };
+    }
+    this.#scanstand = befund.stand;
+    if (befund.art !== "vollstaendig") {
+      return { art: befund.art, haben: befund.stand.haben, anzahl: befund.stand.anzahl };
+    }
+
+    this.#scanPayload = befund.payload;
+    this.#scanText = text;
+    try {
+      const bogen = await liesBogen(befund.payload, this.#o.kompressor);
+      return {
+        art: "vollstaendig",
+        haben: befund.stand.haben,
+        anzahl: befund.stand.anzahl,
+        vorschau: this.#vorschau(bogen),
+      };
+    } catch (fehler) {
+      // Der Payload liess sich nicht entpacken. Wie darauf zu reagieren ist,
+      // haengt daran, **woher** er kam:
+      //
+      //  * Aus einem **Stapel** — dann sind die gesammelten Teile Truemmer,
+      //    und der naechste Scan darf nicht auf ihnen aufsetzen.
+      //  * Aus einem **einzelnen** Scan — dann war es ein anderer Code (ein
+      //    Strichcode auf demselben Tisch, ein fremder QR). Der halbe Stapel,
+      //    der daneben liegt, gehoert nicht dazu und bleibt stehen: Zehn
+      //    Minuten Scanarbeit wegen eines Fehlgriffs zu verlieren waere die
+      //    teurere Reaktion.
+      const ausStapel = befund.stand.anzahl > 1;
+      this.#scanPayload = undefined;
+      this.#scanText = "";
+      this.#scanstand = ausStapel ? LEERER_STAND : vorheriger;
+      return {
+        art: "unlesbar",
+        haben: this.#scanstand.haben,
+        anzahl: this.#scanstand.anzahl,
+        meldung: `Der Scan enthält keinen lesbaren Erfassungsbogen: ${(fehler as Error).message}`,
+      };
+    }
+  }
+
+  /** Verwirft den Sammelstand — der Knopf „Von vorn“ der Maske. */
+  eebZuruecksetzen(): EebStand {
+    this.#scanstand = LEERER_STAND;
+    this.#scanPayload = undefined;
+    this.#scanText = "";
+    return { art: "leer", haben: 0, anzahl: 0 };
+  }
+
+  /**
+   * Uebernimmt den gescannten Bogen in einen Abschnitt.
+   *
+   * §5.8.2: Die uebernommenen Werte werden als **eigenstaendige** Ereignisse
+   * geschrieben. Sie gehen einzeln in die Akte, und das ist keine Schwaeche:
+   * Das Protokoll ist append-only, jedes Ereignis traegt seine eigene HLC, und
+   * ein Client, der nur die Haelfte sieht, faltet den Rest, sobald er ihn
+   * bekommt (§3.10). Bricht ein Schritt ab, bleibt das Geschriebene stehen —
+   * die Meldung ist dann aufgenommen, die Einheit vielleicht noch nicht, und
+   * genau das meldet der Ausgang.
+   */
+  async eebUebernehmen(abschnittId: string): Promise<Uebernahmeergebnis> {
+    if (this.#o.kompressor === undefined || this.#scanPayload === undefined) {
+      return { art: "nichtMoeglich", meldung: "Es liegt kein vollständig gescannter Bogen vor." };
+    }
+    const befund = await liesBogen(this.#scanPayload, this.#o.kompressor);
+    const einheitId = `E-${befund.meldungId.slice(0, 12)}`;
+    const entwuerfe = uebernahmeEntwuerfe(befund.bogen, befund.signatur, {
+      meldungId: befund.meldungId,
+      einheitId,
+      abschnittId,
+      // Die Ids der Personen und Fahrzeuge leiten sich aus der `meldungId`
+      // ab und werden nicht gewuerfelt: Scannt ein zweiter Meldekopf denselben
+      // Bogen, entstehen dieselben Ids — und §3.6 macht daraus eine
+      // verworfene Zweitanlage statt einer Dublette.
+      personIds: befund.bogen.personal.map((_, nummer) => `P-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
+      fahrzeugIds: befund.bogen.fahrzeuge.map((_, nummer) => `F-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
+      empfangenAm: this.#jetztText(),
+      quelle: "SCAN",
+      rohPayload: this.#scanText,
+      einheitSchluessel: befund.meldungId,
+    });
+
+    let geschrieben = 0;
+    for (const entwurf of entwuerfe) {
+      const ergebnis = await this.bediene(entwurf);
+      if (ergebnis.art !== "geschrieben") {
+        return {
+          art: "abgewiesen",
+          meldung: ergebnis.art === "abgewiesen" ? ergebnis.meldung : JSON.stringify(ergebnis),
+          beiEreignis: entwurf.typ,
+        };
+      }
+      geschrieben += 1;
+    }
+    this.eebZuruecksetzen();
+    return { art: "uebernommen", einheitId, ereignisse: geschrieben };
+  }
+
+  /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
+  #vorschau(befund: {
+    readonly bogen: import("@bos/eeb-format").Erfassungsbogen;
+    readonly signatur: import("@bos/eeb-format").SignaturStatus;
+    readonly meldungId: string;
+  }): EebVorschau {
+    const uebersetzt = uebernahmeEntwuerfe(befund.bogen, befund.signatur, {
+      meldungId: befund.meldungId,
+      einheitId: "vorschau",
+      abschnittId: "vorschau",
+      empfangenAm: this.#jetztText(),
+    });
+    const einheit = (uebersetzt.find((e) => e.typ === "EinheitGemeldet")?.nutzlast ?? {}) as Record<string, unknown>;
+    const hierarchie = (einheit["hierarchie"] ?? []) as { art?: string; name?: string }[];
+    const signatur = befund.signatur;
+    return {
+      meldungId: befund.meldungId,
+      bezeichnung: String(einheit["bezeichnung"] ?? ""),
+      organisation: String(einheit["organisation"] ?? ""),
+      herkunft: hierarchie.map((stufe) => `${stufe.art ?? ""} ${stufe.name ?? ""}`.trim()).join(" · "),
+      ebene: String(einheit["ebene"] ?? ""),
+      staerke: (einheit["staerke"] ?? { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 }) as EebVorschau["staerke"],
+      personen: befund.bogen.personal.length,
+      fahrzeuge: befund.bogen.fahrzeuge.length,
+      stand: String(
+        (uebersetzt.find((e) => e.typ === "EebMeldungEmpfangen")?.nutzlast["stand"] ?? "") as string,
+      ),
+      signatur: signatur.zustand === "gueltig" ? "gueltig" : signatur.zustand === "ungueltig" ? "ungueltig" : "unsigniert",
+      ...(signatur.zustand === "unsigniert" ? {} : { signaturKurzform: signatur.kurzform }),
+      ...(signatur.zustand === "gueltig" && signatur.absender?.name !== undefined
+        ? { absender: signatur.absender.name }
+        : {}),
+      ...(typeof einheit["bemerkung"] === "string" ? { bemerkung: einheit["bemerkung"] } : {}),
+    };
   }
 
   /** Der Stapel, wie die Oberflaeche ihn zeigt (§6 U3). */

@@ -227,6 +227,22 @@ export const zRuf = z.discriminatedUnion("art", [
   // 150 Einheiten viertausend Datensaetze zu tragen, um die einer einzigen
   // aufgeklappten Zeile zu zeigen.
   z.object({ art: z.literal("untertabelleAnfordern"), akteId: zAkteId, einheitId: zText }),
+
+  // ---- Der Handscanner-Weg (M3.4) -----------------------------------------
+  //
+  // Ein Handscanner ist fuer den Rechner eine Tastatur; was ankommt, ist Text.
+  // Er wird **im Worker** entpackt und nicht im Renderer: Das Entpacken
+  // braucht einen Kompressor (`node:zlib`), und der Renderer hat kein Node
+  // (02-ZIELBILD.md, „Vier Ringe“). Der Sammelstand liegt aus demselben Grund
+  // dort — er besteht aus Byte-Abschnitten, und die haben im Renderer nichts
+  // verloren, der sie ohnehin nicht deuten kann.
+  z.object({ art: z.literal("eebScan"), akteId: zAkteId, text: z.string() }),
+  z.object({ art: z.literal("eebZuruecksetzen"), akteId: zAkteId }),
+  z.object({
+    art: z.literal("eebUebernehmen"),
+    akteId: zAkteId,
+    abschnittId: zText,
+  }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -297,6 +313,9 @@ export interface Antworten {
   baumAnfordern: Baumansicht;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
+  eebScan: EebStand;
+  eebZuruecksetzen: EebStand;
+  eebUebernehmen: Uebernahmeergebnis;
   tagebuchAnfordern: Tagebuchansicht;
 }
 
@@ -323,6 +342,46 @@ export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {
   readonly einheitId: string;
 }
+
+/**
+ * Was der Renderer ueber den Sammelstand eines Bogens erfaehrt (M3.4).
+ *
+ * **Kein einziges Byte des Bogens.** Der Renderer bekommt den Fortschritt
+ * („Teil 2 von 3“), den Signaturbefund und eine Vorschau in Klartext — genug,
+ * um zu entscheiden, ob uebernommen wird. Die Byte-Abschnitte bleiben im
+ * Worker: Sie sind nur mit dem Codec zu deuten, und der liegt dort.
+ */
+export interface EebStand {
+  readonly art: "leer" | "unlesbar" | "gesammelt" | "duplikat" | "fremd" | "vollstaendig";
+  readonly haben: number;
+  readonly anzahl: number;
+  readonly meldung?: string;
+  /** Nur bei `vollstaendig` — der Bogen in Klartext, so weit die Maske ihn zeigt. */
+  readonly vorschau?: EebVorschau;
+}
+
+export interface EebVorschau {
+  readonly meldungId: string;
+  readonly bezeichnung: string;
+  readonly organisation: string;
+  readonly herkunft: string;
+  readonly ebene: string;
+  readonly staerke: { readonly fuehrer: number; readonly unterfuehrer: number; readonly mannschaft: number };
+  readonly personen: number;
+  readonly fahrzeuge: number;
+  readonly stand: string;
+  /** §5.8.1: Der Befund wird **angezeigt**, er entscheidet nichts. */
+  readonly signatur: "unsigniert" | "gueltig" | "ungueltig";
+  readonly signaturKurzform?: string;
+  readonly absender?: string;
+  readonly bemerkung?: string;
+}
+
+/** Der Ausgang einer Uebernahme — mehrere Ereignisse, ein Ergebnis. */
+export type Uebernahmeergebnis =
+  | { readonly art: "uebernommen"; readonly einheitId: string; readonly ereignisse: number }
+  | { readonly art: "nichtMoeglich"; readonly meldung: string }
+  | { readonly art: "abgewiesen"; readonly meldung: string; readonly beiEreignis: string };
 
 export interface Tagebuchansicht extends Ansichtsstand {
   readonly zeilen: readonly Tagebuchzeile[];

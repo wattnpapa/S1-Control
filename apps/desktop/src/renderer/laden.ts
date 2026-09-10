@@ -27,6 +27,7 @@ import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Baumansicht,
   Bedienergebnis,
+  EebStand,
   EinsatzEintrag,
   Einstellungen,
   Entwurf,
@@ -35,6 +36,7 @@ import type {
   Ruf,
   Tabellenansicht,
   Tagebuchansicht,
+  Uebernahmeergebnis,
   Umgebung,
   Untertabellenansicht,
 } from "../kontrakt/index.js";
@@ -107,6 +109,12 @@ export interface Laden {
   holeTabelle(): Promise<void>;
   holeTagebuch(): Promise<void>;
   holeUntertabelle(einheitId: string): Promise<void>;
+
+  /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
+  readonly eeb: EebStand | undefined;
+  scanne(text: string): Promise<void>;
+  setzeScanZurueck(): Promise<void>;
+  uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
   setzeTabellenfilter(filter: Tabellenfilter): Promise<void>;
   setzeTagebuchfilter(filter: Tagebuchfilterwahl): Promise<void>;
   /** Holt jede Ansicht neu, die schon einmal geholt wurde. */
@@ -133,6 +141,9 @@ const LEERE_ANSICHTEN = {
   tabelle: undefined,
   tagebuch: undefined,
   untertabelle: undefined,
+  // Auch der Sammelstand: Er gehört zur Akte, nicht zum Fenster. Ein halb
+  // gescannter Bogen ohne Akte hat kein Ziel (M3.4).
+  eeb: undefined,
 } as const;
 
 let hinweisNummer = 0;
@@ -279,6 +290,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     tabelle: undefined,
     tagebuch: undefined,
     untertabelle: undefined,
+    eeb: undefined,
     tabellenfilter: {},
     tagebuchfilter: {},
 
@@ -319,6 +331,35 @@ export const useLaden = create<Laden>((setze, hole) => {
         akteId,
         einheitId,
       }));
+    },
+
+    async scanne(text) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return;
+      // **Kein** `mitFehlerbild`: Ein misslungener Scan ist kein Fehler des
+      // Fensters, sondern ein Befund über den Scan — und er steht als
+      // Meldung im Sammelstand, wo die Maske ihn zeigt.
+      const stand = await rufe({ art: "eebScan", akteId, text });
+      setze({ eeb: stand });
+    },
+
+    async setzeScanZurueck() {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return;
+      setze({ eeb: await rufe({ art: "eebZuruecksetzen", akteId }) });
+    },
+
+    async uebernimmScan(abschnittId) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      const ergebnis = await mitFehlerbild(() =>
+        rufe({ art: "eebUebernehmen", akteId, abschnittId }),
+      );
+      if (ergebnis?.art === "uebernommen") {
+        setze({ eeb: undefined });
+        await hole().frischeAnsichten();
+      }
+      return ergebnis;
     },
 
     async setzeTabellenfilter(filter) {

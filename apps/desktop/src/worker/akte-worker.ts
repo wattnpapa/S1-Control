@@ -15,6 +15,7 @@
 
 import { parentPort, workerData } from "node:worker_threads";
 import os from "node:os";
+import { deflateRawSync, inflateRawSync } from "node:zlib";
 
 import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
@@ -48,6 +49,9 @@ export type Auftrag =
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
+  | { readonly art: "eebScan"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebScan" }> }
+  | { readonly art: "eebZuruecksetzen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebZuruecksetzen" }> }
+  | { readonly art: "eebUebernehmen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebUebernehmen" }> }
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
   | { readonly art: "schliesse"; readonly nummer: number };
 
@@ -96,6 +100,14 @@ if (parentPort !== null) {
     rechnername: os.hostname(),
     programmversion: start.programmversion,
     neueKennung,
+    // §M3.4: Der Entpacker des Handscanner-Wegs. Er steht hier und nicht in
+    // Ring 2, weil `node:zlib` ein Node-Kernmodul ist; der Worker ist ein
+    // eigener Thread, und ein synchroner Aufruf blockiert dort niemanden
+    // ausser sich selbst (dieselbe Begruendung wie beim Dateisystem).
+    kompressor: {
+      deflateRaw: (daten) => new Uint8Array(deflateRawSync(daten)),
+      inflateRaw: (daten) => new Uint8Array(inflateRawSync(daten)),
+    },
     sende: (mitteilung) => {
       port.postMessage({ art: "mitteilung", mitteilung } satisfies WorkerBotschaft);
     },
@@ -171,6 +183,12 @@ if (parentPort !== null) {
         return dienst.tabelle(auftrag.ruf);
       case "untertabelleAnfordern":
         return dienst.untertabelle(auftrag.ruf);
+      case "eebScan":
+        return dienst.eebScan(auftrag.ruf.text);
+      case "eebZuruecksetzen":
+        return dienst.eebZuruecksetzen();
+      case "eebUebernehmen":
+        return dienst.eebUebernehmen(auftrag.ruf.abschnittId);
       case "tagebuchAnfordern":
         return dienst.tagebuch(auftrag.ruf);
       case "schliesse":

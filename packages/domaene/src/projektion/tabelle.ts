@@ -467,6 +467,22 @@ function text(wert: unknown): string {
   return typeof wert === "string" ? wert : "";
 }
 
+/**
+ * Liest ein Feld, das **fehlen** darf, obwohl der Typ es nicht sagt.
+ *
+ * `FahrzeugZustand.bezeichnung` und `PersonZustand.vorname` stehen in
+ * `zustand.ts` als `Feld<string>` ohne Fragezeichen; im Katalog sind
+ * `bezeichnung` und `vorname` aber **optional** (§5.5). Ein Fahrzeug, das nur
+ * seinen Typ meldet — und die Prüfdaten enthalten solche —, hat die
+ * Beobachtung gar nicht, und `feld.wert` liefe ins Leere. Das ist ein Befund
+ * am Zielmodell (F-B1 im Bericht zu M3) und wird hier nicht geheilt, sondern
+ * abgefangen: Eine Projektion, die an einem gültigen Zustand abstürzt, ist
+ * der schlechtere Fehler.
+ */
+function feldtext(feld: { readonly wert: unknown } | undefined): string {
+  return feld === undefined ? "" : text(feld.wert);
+}
+
 function textOptional(wert: unknown): string | undefined {
   return typeof wert === "string" && wert !== "" ? wert : undefined;
 }
@@ -512,8 +528,8 @@ export function untertabelle(zustand: Zustand, einheitId: Id): Untertabelle {
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((fahrzeug) => ({
       id: fahrzeug.id,
-      typ: text(fahrzeug.typ.wert),
-      bezeichnung: text(fahrzeug.bezeichnung.wert),
+      typ: feldtext(fahrzeug.typ),
+      bezeichnung: feldtext(fahrzeug.bezeichnung),
       ...(textOptional(fahrzeug.kennzeichen?.wert) === undefined
         ? {}
         : { kennzeichen: textOptional(fahrzeug.kennzeichen?.wert) as string }),
@@ -528,7 +544,7 @@ export function untertabelle(zustand: Zustand, einheitId: Id): Untertabelle {
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((person) => ({
       id: person.id,
-      name: `${text(person.vorname.wert)} ${text(person.nachname.wert)}`.trim(),
+      name: `${feldtext(person.vorname)} ${feldtext(person.nachname)}`.trim(),
       ...(textOptional(person.rolle?.wert) === undefined
         ? {}
         : { rolle: textOptional(person.rolle?.wert) as string }),
@@ -540,7 +556,7 @@ export function untertabelle(zustand: Zustand, einheitId: Id): Untertabelle {
     .sort((a, b) => (a.id < b.id ? -1 : 1))
     .map((auftrag) => ({
       id: auftrag.id,
-      text: text(auftrag.text.wert),
+      text: feldtext(auftrag.text),
       ...(textOptional(auftrag.von?.wert) === undefined
         ? {}
         : { von: textOptional(auftrag.von?.wert) as string }),

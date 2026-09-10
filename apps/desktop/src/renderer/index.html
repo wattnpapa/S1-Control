@@ -445,6 +445,45 @@
         opacity: 0.8;
       }
 
+      /* ---- Der Handscanner (M3.4) --------------------------------------- */
+
+      .scanner {
+        margin-top: 1.5rem;
+        padding: 0.8rem;
+        border: 1px solid rgba(128, 128, 128, 0.5);
+        border-radius: 6px;
+      }
+      .scannerkopf {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-bottom: 0.5rem;
+      }
+      .scannerkopf h2 {
+        margin: 0;
+      }
+      /* Der Fortschritt steht gross und allein: Wer sieben Teile scannt,
+         schaut zwischen den Scans genau auf diese eine Zeile. */
+      .fortschritt {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0.5rem 0;
+      }
+      .vorschau dl {
+        display: grid;
+        grid-template-columns: max-content 1fr;
+        gap: 0.2rem 1rem;
+        margin: 0 0 0.8rem;
+        font-size: 0.9rem;
+      }
+      .vorschau dt {
+        opacity: 0.7;
+      }
+      .vorschau dd {
+        margin: 0;
+      }
+
     </style>
   </head>
   <body>

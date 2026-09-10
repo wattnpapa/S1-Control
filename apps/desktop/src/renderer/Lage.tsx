@@ -9,17 +9,34 @@
  * überlebt keinen Wechsel der Akte.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
+import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
 import { useLaden } from "./laden.js";
+import { useKuerzel } from "./tastatur.js";
 
 export function Lage(): React.JSX.Element {
   const laden = useLaden();
   const [abschnittId, setzeAbschnittId] = useState<string | undefined>(undefined);
   const [einheitId, setzeEinheitId] = useState<string | undefined>(undefined);
+  const [scannerOffen, setzeScannerOffen] = useState(false);
+
+  // Strg+Q öffnet den Scanner — der Buchstabe der Excel für „digitalen EEB in
+  // neue Zeile" (m_makroFunktionen). Er wird hier angemeldet und nicht in der
+  // Tabelle: Der Scanner gehört zur Lage, nicht zu einer ihrer Ansichten.
+  useKuerzel(
+    useMemo(
+      () => ({
+        eeb: () => {
+          setzeScannerOffen(true);
+        },
+      }),
+      [],
+    ),
+  );
 
   return (
     <section aria-label="Lagebild" className="lage">
@@ -27,6 +44,14 @@ export function Lage(): React.JSX.Element {
         <h2>{laden.lagebild?.einsatzName ?? "Wird geöffnet …"}</h2>
         <button type="button" onClick={() => void laden.schliesseEinsatz()}>
           Einsatz schließen
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            setzeScannerOffen(true);
+          }}
+        >
+          Erfassungsbogen einlesen
         </button>
         <button
           type="button"
@@ -55,6 +80,15 @@ export function Lage(): React.JSX.Element {
           aufEinheit={setzeEinheitId}
         />
       </div>
+
+      {scannerOffen && (
+        <Scanner
+          abschnittId={abschnittId}
+          aufSchliessen={() => {
+            setzeScannerOffen(false);
+          }}
+        />
+      )}
 
       <Tagebuch einheitId={einheitId} abschnittId={abschnittId} />
     </section>

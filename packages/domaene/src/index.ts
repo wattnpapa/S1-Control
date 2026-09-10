@@ -87,6 +87,20 @@ export {
   type Vokabeltabellen,
 } from "./eeb/adapter.js";
 
+// Der Handscanner-Weg (M3.4): Segmente sammeln, Signatur pruefen, uebernehmen.
+export {
+  LEERER_STAND,
+  TEILE_MAX,
+  liesBogen,
+  nimmScan,
+  uebernahmeEntwuerfe,
+  type Bogenbefund,
+  type Sammelstand,
+  type Scanbefund,
+  type UebernahmeAuftrag,
+  type Uebernahmeentwurf,
+} from "./eeb/scanner.js";
+
 // Die Projektionen des Lagebilds (M3.0): Baum, Tabelle, Tagebuch.
 export * as projektion from "./projektion/index.js";
 export type {
