@@ -38,6 +38,9 @@ import {
   leereFaltung,
   liesBogen,
   nimmScan,
+  buendelAusMeldungen,
+  einheitIdAus,
+  liesBuendel,
   uebernahmeEntwuerfe,
   materialisiere,
   projektion,
@@ -85,6 +88,7 @@ import {
   lagebildDelta,
   type Baumansicht,
   type Anforderungsansicht,
+  type Buendelergebnis,
   type Eingangskorbansicht,
   type Fuestansicht,
   type Kostenansicht,
@@ -1042,6 +1046,104 @@ export class Aktendienst {
     return { art: "uebernommen", einheitId, ereignisse: geschrieben };
   }
 
+  /**
+   * Liest eine Buendeldatei ein (M6.3).
+   *
+   * Je Eintrag entstehen dieselben Ereignisse wie nach einem Scan — der Weg
+   * ueber die Datei ist ein anderer Transport und kein anderes Verfahren.
+   * Doppelte fallen ueber die `meldungId` zusammen (§3.6): Zwei Meldekoepfe,
+   * die denselben Bogen fuehren, und ein zweimal eingelesenes Buendel ergeben
+   * **eine** Meldung.
+   *
+   * **Ein Abbruch mittendrin laesst das Geschriebene stehen.** Das ist keine
+   * Schwaeche, sondern das Protokoll: append-only, jedes Ereignis mit eigener
+   * HLC (§1.3). Gezaehlt wird deshalb, was ankam, und der Ausgang sagt es.
+   */
+  async buendelEinlesen(text: string, abschnittId: string): Promise<Buendelergebnis> {
+    const befund = liesBuendel(text);
+    let aufgenommen = 0;
+    let bekannt = 0;
+
+    for (const eintrag of befund.eintraege) {
+      // §3.6: Kennt die Akte die Meldung schon, ist nichts zu tun. Der Fold
+      // faellt zwar ohnehin auf eine Anlage zusammen, aber ein Ereignis zu
+      // schreiben, das nichts aendert, fuellte das Protokoll und das Tagebuch.
+      if (this.#zustand.meldungen[eintrag.meldungId] !== undefined) {
+        bekannt += 1;
+        continue;
+      }
+      const einheitId = einheitIdAus(eintrag.einheitSchluessel);
+      const entwuerfe = uebernahmeEntwuerfe(
+        eintrag.bogen,
+        // Der Signaturbefund der Datei, in die Form der Bauhilfe gebracht.
+        // Unsigniert ist kein Fehler (§5.8.1) — die Signatur entscheidet
+        // nichts, sie wird angezeigt.
+        signaturbefund(eintrag.signatur),
+        {
+          meldungId: eintrag.meldungId,
+          einheitId,
+          abschnittId,
+          personIds: eintrag.bogen.personal.map(
+            (_, nummer) => `P-${eintrag.meldungId.slice(0, 10)}-${String(nummer)}`,
+          ),
+          fahrzeugIds: eintrag.bogen.fahrzeuge.map(
+            (_, nummer) => `F-${eintrag.meldungId.slice(0, 10)}-${String(nummer)}`,
+          ),
+          empfangenAm: eintrag.empfangenAm === "" ? this.#jetztText() : eintrag.empfangenAm,
+          quelle: eintrag.quelle,
+          einheitSchluessel: eintrag.einheitSchluessel,
+        },
+        this.#zustand.einheiten[einheitId],
+      );
+
+      for (const entwurf of entwuerfe) {
+        const ergebnis = await this.bediene(entwurf);
+        if (ergebnis.art !== "geschrieben") {
+          return {
+            aufgenommen,
+            bekannt,
+            uebersprungen: befund.uebersprungen + (befund.eintraege.length - aufgenommen - bekannt),
+            name: befund.name,
+          };
+        }
+      }
+      aufgenommen += 1;
+    }
+
+    return { aufgenommen, bekannt, uebersprungen: befund.uebersprungen, name: befund.name };
+  }
+
+  /**
+   * Schreibt die Meldungen dieser Akte als Buendeldatei (M6.3).
+   *
+   * Sie geht nach `ausgaben\` wie jede andere Ausgabe (M4.1): Eine
+   * Buendeldatei ist ein abgeleiteter Anzeiger (§1.3) — sie traegt nichts,
+   * was die Ereignisse nicht auch tragen, und ist jederzeit neu erzeugbar.
+   */
+  async buendelSchreiben(): Promise<{ pfad: string; bytes: number }> {
+    const jetzt = new Date(this.#o.zeit());
+    const meldungen = Object.values(this.#zustand.meldungen)
+      .filter((meldung) => meldung.bogen?.wert !== undefined && meldung.bogen.wert !== null)
+      .map((meldung) => ({
+        meldungId: meldung.id,
+        einheitSchluessel: alsText(meldung.einheitSchluessel?.wert),
+        bogen: meldung.bogen?.wert as unknown as import("@bos/eeb-format").Erfassungsbogen,
+        empfangenAm: alsText(meldung.empfangenAm.wert),
+        ...(meldung.meldeStatus?.wert === undefined
+          ? {}
+          : { meldeStatus: alsText(meldung.meldeStatus.wert) }),
+      }));
+
+    const text = buendelAusMeldungen(meldungen, {
+      id: this.#o.einsatzId,
+      name: alsText(this.#zustand.einsatz?.name.wert),
+      jetzt: jetzt.getTime(),
+    });
+    const bytes = new TextEncoder().encode(text);
+    const pfad = await this.ausgabeSchreiben(`buendel_${dateimarke(jetzt)}.json`, bytes);
+    return { pfad, bytes: bytes.length };
+  }
+
   /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
   #vorschau(befund: {
     readonly bogen: import("@bos/eeb-format").Erfassungsbogen;
@@ -1212,6 +1314,22 @@ export class Aktendienst {
 
 function alsText(wert: unknown): string {
   return typeof wert === "string" ? wert : "";
+}
+
+/**
+ * Der Signaturbefund einer Buendelzeile in der Form, die die Bauhilfe erwartet.
+ *
+ * Die Datei fuehrt nur den Zustand; `pubkey` und `kurzform` gehoeren zum
+ * Transport, den sie nicht mitbringt. Sie bleiben leer statt erfunden — §5.8
+ * laesst den ganzen Signaturblock weg, wenn nichts vorliegt, und eine
+ * erfundene Kurzform waere eine Absenderangabe, die niemand gemacht hat.
+ */
+function signaturbefund(
+  zustand: "GUELTIG" | "UNGUELTIG" | undefined,
+): import("@bos/eeb-format").SignaturStatus {
+  if (zustand === "GUELTIG") return { zustand: "gueltig", pubkey: "", kurzform: "" };
+  if (zustand === "UNGUELTIG") return { zustand: "ungueltig", pubkey: "", kurzform: "" };
+  return { zustand: "unsigniert" };
 }
 
 /**

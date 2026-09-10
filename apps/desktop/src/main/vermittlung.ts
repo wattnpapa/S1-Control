@@ -177,6 +177,7 @@ export class Vermittlung {
       case "fuestAnfordern":
       case "eingangskorbAnfordern":
       case "fassungsvergleichAnfordern":
+      case "buendelEinlesen":
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":
@@ -186,6 +187,8 @@ export class Vermittlung {
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
       case "ausgabeErzeugen":
         return this.#erzeugeAusgabe(ruf);
+      case "buendelSchreiben":
+        return this.#o.hof.frage(ruf.akteId, { art: "buendelSchreiben" });
       case "htmlMonitorSchalten":
         return this.#o.hof.frage(ruf.akteId, { art: "htmlMonitorSchalten", ruf });
       case "bildschirmeAuflisten":

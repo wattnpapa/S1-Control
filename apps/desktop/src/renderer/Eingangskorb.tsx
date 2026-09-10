@@ -62,6 +62,8 @@ export function Eingangskorb(): React.JSX.Element {
         {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`}
       </h2>
 
+      <Buendel />
+
       <div className="eingangsfilter">
         {ZUSTAENDE.map((zustand) => {
           const gewaehlt = filter.zustaende?.includes(zustand.wert) ?? false;
@@ -359,6 +361,88 @@ function Bewegung({ vergleich }: { readonly vergleich: Fassungsvergleich }): Rea
             </ul>
           </div>
         ))}
+    </div>
+  );
+}
+
+/**
+ * Die Bündeldatei (M6.3) — der Meldeweg ohne Netz.
+ *
+ * Ein Meldekopf steht am Bereitstellungsraum, oft ohne Verbindung zur
+ * Führungsstelle. Er sammelt dort Bögen in der Erfassungsbogen-App, und
+ * irgendwann fährt jemand mit einem USB-Stick hinüber. Dreißig Bögen einzeln
+ * zu scannen wäre eine halbe Stunde Arbeit für etwas, das eine Datei kann.
+ *
+ * **Der Griff ins Dateisystem geschieht hier und nicht im Worker.** Das
+ * Dateifeld des Browsers liefert den Text; der Worker bekommt Text und keinen
+ * Pfad. Ein Worker, der Pfade öffnet, die ihm jemand nennt, ist eine Tür, die
+ * niemand braucht.
+ */
+function Buendel(): React.JSX.Element {
+  const laden = useLaden();
+  const [abschnittId, setzeAbschnittId] = useState("");
+  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+
+  const abschnitte = laden.baum?.baum ?? [];
+
+  return (
+    <div className="buendel">
+      <label>
+        Bündel einlesen nach
+        <select
+          value={abschnittId}
+          onChange={(e) => {
+            setzeAbschnittId(e.target.value);
+          }}
+        >
+          <option value="">Abschnitt wählen …</option>
+          {abschnitte.map((knoten) => (
+            <option key={knoten.id} value={knoten.id}>
+              {knoten.name}
+            </option>
+          ))}
+        </select>
+      </label>
+      <input
+        type="file"
+        accept="application/json,.json"
+        aria-label="Bündeldatei"
+        disabled={abschnittId === ""}
+        onChange={(e) => {
+          const datei = e.target.files?.[0];
+          if (datei === undefined) return;
+          void (async () => {
+            const text = await datei.text();
+            const ergebnis = await laden.lieseBuendel(text, abschnittId);
+            if (ergebnis === undefined) return;
+            // §3.6: Ein zweimal eingelesenes Bündel ist kein Fehler, sondern
+            // ein Vorgang ohne Wirkung. Genau das muss dastehen, sonst hält
+            // der Bediener es für einen Fehlschlag.
+            setzeMeldung(
+              `${String(ergebnis.aufgenommen)} aufgenommen, ${String(ergebnis.bekannt)} schon bekannt` +
+                (ergebnis.uebersprungen > 0
+                  ? `, ${String(ergebnis.uebersprungen)} nicht lesbar`
+                  : ""),
+            );
+          })();
+        }}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          void (async () => {
+            const ergebnis = await laden.schreibeBuendel();
+            if (ergebnis !== undefined) setzeMeldung(`Geschrieben: ${ergebnis.pfad}`);
+          })();
+        }}
+      >
+        Bündel schreiben
+      </button>
+      {meldung !== undefined && (
+        <span role="status" className="hinweistext">
+          {meldung}
+        </span>
+      )}
     </div>
   );
 }

@@ -272,6 +272,14 @@ export const zRuf = z.discriminatedUnion("art", [
   // Korbzeile: Er traegt bei einer Einheit mit dreissig Personen mehr Text als
   // die ganze Liste, und gebraucht wird er fuer **eine** Zeile, wenn jemand
   // hinsieht.
+  // Die Buendeldatei (M6.3). Der **Text** geht ueber die Grenze, nicht ein
+  // Pfad: Die Datei kommt vom USB-Stick eines Meldekopfs, und den Griff ins
+  // Dateisystem tut der Renderer ueber sein Dateifeld — der Worker soll keine
+  // Pfade oeffnen, die ihm jemand nennt.
+  z.object({ art: z.literal("buendelEinlesen"), akteId: zAkteId, text: z.string(), abschnittId: zText }),
+  // Der Rueckweg schreibt in `ausgaben\` wie jede andere Ausgabe (M4.1) und
+  // liefert den Pfad: Wer sie weitergibt, muss wissen, wo sie liegt.
+  z.object({ art: z.literal("buendelSchreiben"), akteId: zAkteId }),
   z.object({
     art: z.literal("fassungsvergleichAnfordern"),
     akteId: zAkteId,
@@ -431,6 +439,8 @@ export interface Antworten {
   eingangskorbAnfordern: Eingangskorbansicht;
   /** `null`, wenn eine der beiden Fassungen fehlt oder ihren Bogen nicht mitfuehrt. */
   fassungsvergleichAnfordern: Fassungsvergleich | null;
+  buendelEinlesen: Buendelergebnis;
+  buendelSchreiben: Ausgabeergebnis;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -464,6 +474,24 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/** Was beim Einlesen einer Buendeldatei herauskam (M6.3). */
+export interface Buendelergebnis {
+  /** So viele Meldungen sind neu in die Akte gekommen. */
+  readonly aufgenommen: number;
+  /**
+   * So viele waren schon da.
+   *
+   * §3.6: Derselbe Bogen ergibt dieselbe `meldungId` und damit **eine**
+   * Meldung. Ein zweimal eingelesenes Buendel ist deshalb kein Fehler,
+   * sondern ein Vorgang ohne Wirkung — und das ist die Auskunft, die der
+   * Bediener braucht.
+   */
+  readonly bekannt: number;
+  /** Eintraege, die die Datei fuehrt und die nicht lesbar waren. */
+  readonly uebersprungen: number;
+  readonly name: string;
+}
 
 /** Der Eingangskorb des Meldekopfs (M6.1) — mit Ausschnitt, wie jede Liste. */
 export interface Eingangskorbansicht extends Ansichtsstand, Meldungsausschnitt {}

@@ -95,6 +95,7 @@ export { AKUELI, sucheAkueli, type Akueeintrag, type Akuegruppe } from "./akueli
 
 // Der Handscanner-Weg (M3.4): Segmente sammeln, Signatur pruefen, uebernehmen.
 export {
+  einheitIdAus,
   LEERER_STAND,
   TEILE_MAX,
   liesBogen,
@@ -106,6 +107,14 @@ export {
   type UebernahmeAuftrag,
   type Uebernahmeentwurf,
 } from "./eeb/scanner.js";
+
+// Die Buendeldatei (M6.3) — der Meldeweg ohne Netz.
+export {
+  buendelAusMeldungen,
+  liesBuendel,
+  type Buendelbefund,
+  type Buendeleintrag,
+} from "./eeb/buendel.js";
 
 // Die Projektionen: aus M3.0 Baum, Tabelle und Tagebuch, aus M5.0 die
 // Anforderungsliste, das Blatt der Fuehrungsstelle, die Logistikzeilen und die

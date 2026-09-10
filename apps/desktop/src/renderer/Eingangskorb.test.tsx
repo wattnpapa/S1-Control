@@ -225,6 +225,50 @@ describe("Der Eingangskorb", () => {
     });
   });
 
+  it("liest ein Bündel erst, wenn ein Abschnitt gewählt ist", async () => {
+    useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
+    await zeige();
+    const feld = screen.getByLabelText("Bündeldatei") as HTMLInputElement;
+    // Ohne Ziel gibt es kein Einlesen: Eine Meldung ohne Abschnitt hätte im
+    // Lagebild keinen Ort.
+    expect(feld.disabled).toBe(true);
+
+    fireEvent.change(screen.getByLabelText("Bündel einlesen nach"), { target: { value: "EO" } });
+    await waitFor(() => {
+      expect((screen.getByLabelText("Bündeldatei") as HTMLInputElement).disabled).toBe(false);
+    });
+  });
+
+  it("nennt beim Bündel auch die schon bekannten Meldungen (§3.6)", async () => {
+    attrappe.antwortet("buendelEinlesen", {
+      aufgenommen: 2,
+      bekannt: 3,
+      uebersprungen: 1,
+      name: "BR Hafen",
+    });
+    useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
+    await zeige();
+    fireEvent.change(screen.getByLabelText("Bündel einlesen nach"), { target: { value: "EO" } });
+
+    const datei = new File(['[]'], "buendel.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Bündeldatei"), { target: { files: [datei] } });
+
+    // Ein zweimal eingelesenes Bündel ist kein Fehler, sondern ein Vorgang
+    // ohne Wirkung — genau das muss dastehen.
+    await waitFor(() => {
+      expect(screen.getByText(/2 aufgenommen, 3 schon bekannt, 1 nicht lesbar/)).toBeDefined();
+    });
+  });
+
+  it("schreibt ein Bündel und nennt den Pfad", async () => {
+    attrappe.antwortet("buendelSchreiben", { pfad: "/share/ausgaben/buendel_2026-09-10_1430.json", bytes: 4096 });
+    await zeige();
+    fireEvent.click(screen.getByText("Bündel schreiben"));
+    await waitFor(() => {
+      expect(screen.getByText(/buendel_2026-09-10_1430\.json/)).toBeDefined();
+    });
+  });
+
   it("zeigt eine unsignierte Meldung ohne Aufregung", async () => {
     antworte([zeile("m1", { signatur: "" })]);
     await zeige();

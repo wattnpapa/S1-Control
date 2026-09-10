@@ -28,6 +28,7 @@ import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
+  Buendelergebnis,
   Anforderungsansicht,
   Baumansicht,
   Eingangskorbansicht,
@@ -165,6 +166,10 @@ export interface Laden {
    * gibt es keine Bewegung, nur einen Stand.
    */
   holeAenderung(einheitSchluessel: string): Promise<Fassungsvergleich | null>;
+  /** Liest eine Bündeldatei ein (M6.3); der Text kommt aus dem Dateifeld. */
+  lieseBuendel(text: string, abschnittId: string): Promise<Buendelergebnis | undefined>;
+  /** Schreibt die Meldungen dieser Akte als Bündeldatei nach `ausgaben\`. */
+  schreibeBuendel(): Promise<Ausgabeergebnis | undefined>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -481,6 +486,21 @@ export const useLaden = create<Laden>((setze, hole) => {
         merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
         return null;
       }
+    },
+
+    async lieseBuendel(text, abschnittId) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      // **Über `mitFehlerbild`**, anders als die Ansichtsrufe: Das Einlesen
+      // ist ein Bedienschritt und schreibt in die Akte. Scheitert er, ist das
+      // ein Fehlerbild und kein Hinweis am Rand.
+      return mitFehlerbild(() => rufe({ art: "buendelEinlesen", akteId, text, abschnittId }));
+    },
+
+    async schreibeBuendel() {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      return mitFehlerbild(() => rufe({ art: "buendelSchreiben", akteId }));
     },
 
     async setzeEingangsfilter(filter) {

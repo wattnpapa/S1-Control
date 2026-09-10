@@ -43,6 +43,10 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.eingangskorb(auftrag.ruf);
     case "fassungsvergleichAnfordern":
       return dienst.fassungsvergleich(auftrag.ruf);
+    case "buendelEinlesen":
+      return dienst.buendelEinlesen(auftrag.ruf.text, auftrag.ruf.abschnittId);
+    case "buendelSchreiben":
+      return dienst.buendelSchreiben();
     case "baumAnfordern":
       return dienst.baum(auftrag.ruf);
     case "tabelleAnfordern":

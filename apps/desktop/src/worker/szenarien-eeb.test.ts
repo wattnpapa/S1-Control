@@ -571,3 +571,121 @@ describe("Funktionalität: Änderungen zwischen zwei Fassungen", () => {
     expect(projektion.letzteAenderung(platz.dienst.zustand, schluessel)).toBeUndefined();
   });
 });
+
+/**
+ * Die Bündeldatei — M6.3.
+ *
+ * Ein Meldekopf am Bereitstellungsraum hat oft keine Verbindung zur
+ * Führungsstelle (`excel-handbuch-anforderungen.md`, Rollen). Er sammelt Bögen
+ * in seiner App, und jemand trägt die Datei hinüber. Das Format ist die
+ * `Einsatzsammlung` des Erfassungsbogens — ein eigenes zu erfinden hieße,
+ * denselben Bogen zweimal zu beschreiben.
+ */
+describe("Funktionalität: Bündeldatei", () => {
+  /** Eine Sammlung, wie die App sie exportiert. */
+  function sammlung(boegen: readonly Erfassungsbogen[]): string {
+    return JSON.stringify([
+      {
+        id: "s1",
+        name: "BR Hafen",
+        art: 0,
+        angelegt: 1_757_000_000_000,
+        geaendert: 1_757_000_000_000,
+        eintraege: boegen.map((bogen, i) => ({
+          id: `e${String(i)}`,
+          einheitSchluessel: "",
+          empfangenAm: 1_757_000_000_000 + i * 1000,
+          quelle: "scan",
+          status: 0,
+          bogen,
+        })),
+      },
+    ]);
+  }
+
+  it("Szenario: eine Datei mit drei Bögen wird zu drei Meldungen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const boegen = ALLE.slice(0, 3).map(liesDatei);
+
+    const ergebnis = await platz.dienst.buendelEinlesen(sammlung(boegen), "EO");
+    expect(ergebnis.aufgenommen).toBe(3);
+    expect(ergebnis.bekannt).toBe(0);
+    expect(ergebnis.uebersprungen).toBe(0);
+    expect(ergebnis.name).toBe("BR Hafen");
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(3);
+  });
+
+  it("Szenario: dasselbe Bündel zweimal eingelesen ändert nichts (§3.6)", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const datei = sammlung(ALLE.slice(0, 2).map(liesDatei));
+
+    await platz.dienst.buendelEinlesen(datei, "EO");
+    const zweites = await platz.dienst.buendelEinlesen(datei, "EO");
+
+    // Derselbe Bogen ergibt dieselbe `meldungId` und damit eine Meldung. Ein
+    // zweimal eingelesenes Bündel ist kein Fehler, sondern ein Vorgang ohne
+    // Wirkung — und das muss der Bediener erfahren.
+    expect(zweites.aufgenommen).toBe(0);
+    expect(zweites.bekannt).toBe(2);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(2);
+  });
+
+  it("Szenario: ein Bogen aus dem Bündel und derselbe gescannt fallen zusammen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const bogen = liesDatei(ALLE[0] as string);
+
+    await platz.dienst.eebScan(encodePayloadUrl(bogen, KOMPRESSOR));
+    await platz.dienst.eebUebernehmen("EO");
+    const ergebnis = await platz.dienst.buendelEinlesen(sammlung([bogen]), "EO");
+
+    // Zwei Meldeköpfe, zwei Wege, eine Meldung — darauf beruht die
+    // Dublettenfreiheit des ganzen Meldewegs (§5.8.1).
+    expect(ergebnis.bekannt).toBe(1);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(1);
+  });
+
+  it("Szenario: kaputte Einträge werden gezählt und nicht verschwiegen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const gut = liesDatei(ALLE[0] as string);
+    const datei = JSON.stringify([
+      {
+        id: "s1",
+        name: "Kaputt",
+        art: 0,
+        angelegt: 1,
+        geaendert: 1,
+        eintraege: [
+          { id: "a", einheitSchluessel: "", empfangenAm: 1, quelle: "scan", status: 0, bogen: gut },
+          { id: "b", einheitSchluessel: "", empfangenAm: 1, quelle: "scan", status: 0 },
+          { id: "c", einheitSchluessel: "", empfangenAm: 1, quelle: "scan", status: 0, bogen: { unsinn: true } },
+        ],
+      },
+    ]);
+
+    const ergebnis = await platz.dienst.buendelEinlesen(datei, "EO");
+    expect(ergebnis.aufgenommen).toBe(1);
+    // Wer eine Datei mit drei Bögen einliest und einen bekommt, muss das
+    // erfahren — ein stiller Leser verlöre die Meldung und die Auskunft.
+    expect(ergebnis.uebersprungen).toBe(2);
+  });
+
+  it("Szenario: der Rückweg schreibt eine Datei, die sich wieder einlesen lässt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.buendelEinlesen(sammlung(ALLE.slice(0, 2).map(liesDatei)), "EO");
+
+    const geschrieben = await platz.dienst.buendelSchreiben();
+    expect(geschrieben.bytes).toBeGreaterThan(0);
+    expect(path.basename(geschrieben.pfad)).toMatch(/^buendel_\d{4}-\d{2}-\d{2}_\d{4}\.json$/);
+
+    // Der Rundlauf: dieselbe Datei wieder hinein — und nichts ist neu.
+    const text = readFileSync(geschrieben.pfad, "utf8");
+    const zurueck = await platz.dienst.buendelEinlesen(text, "EO");
+    expect(zurueck.aufgenommen).toBe(0);
+    expect(zurueck.bekannt).toBe(2);
+  });
+});
