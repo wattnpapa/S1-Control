@@ -104,15 +104,59 @@ Der Knopf ist der einzige Ruf, den diese Anwendung nach draußen tut, und er
 geschieht nur auf Druck. Es gibt keinen Auto-Updater, keine Hintergrundabfrage
 und keine Telemetrie.
 
+### Einmalig: das Schlüsselpaar
+
+Bevor überhaupt etwas verteilt werden kann, braucht die Führungsstelle **ein**
+Schlüsselpaar. Es wird einmal erzeugt und danach nie wieder: Ein zweites
+erklärt jedes bereits veröffentlichte Manifest für ungültig, weil die
+Arbeitsplätze mit der alten Fassung es als fremden Schlüssel ablehnen.
+
+```
+s1 paket schluessel
+```
+
+Das Kommando legt den privaten Teil in `verteilschluessel.privat` — mit
+Rechten für den Eigentümer allein — und schreibt auf den Bildschirm nur den
+öffentlichen, als fertige Zeile für den Quelltext:
+
+```
+export const VERTRAUTER_SCHLUESSEL = "…64 Hexzeichen…";
+```
+
+Diese Zeile ersetzt die gleichnamige in
+`apps/desktop/src/main/verteilschluessel.ts`. Danach neu bauen und
+ausliefern: **Erst eine Fassung, die diesen Schlüssel kennt, nimmt damit
+signierte Pakete an.** Solange dort nichts steht, wird nichts angeboten und
+nichts geholt, und die Anwendung sagt warum.
+
+Der private Teil gehört in den Tresor der Führungsstelle und in kein
+Repository. Wer ihn verliert, kann keine Pakete mehr veröffentlichen; wer ihn
+findet, kann es. Unter Windows setzt das Kommando keine Dateirechte — dort
+schützt die Datei, wer sie wohin legt.
+
+### Ein Paket signieren
+
+```
+s1 paket signiere S1-Control-2.1.0-win-x64.exe \
+   --schluessel verteilschluessel.privat \
+   --version 2.1.0 \
+   --hinweis "Was sich geändert hat"
+```
+
+Das Kommando bildet Größe und SHA-256, setzt die Plattform aus der Endung
+(überschreibbar mit `--plattform`) und schreibt `manifest.json` neben das
+Paket. Die Fassung wird **nicht** geraten: An ihr hängt der Vergleich, der
+entscheidet, ob ein Update angeboten wird.
+
+Paket und Manifest gehören ab jetzt zusammen. Die Datei allein wird abgelehnt.
+
 ### Der Weg von Hand
 
 Wenn die Führungsstelle kein Internet hat oder das Paket aus einer anderen
 Quelle kommt:
 
 1. Das Paket bauen (`npm run build:paket`) oder aus den CI-Artefakten holen.
-2. Ein Manifest signieren. Es trägt Version, Dateiname, Größe, SHA-256 und
-   eine Ed25519-Signatur; der öffentliche Schlüssel ist in der Anwendung
-   hinterlegt (`apps/desktop/src/main/verteilschluessel.ts`).
+2. Ein Manifest signieren, mit `s1 paket signiere` wie oben.
 3. Datei **und** Manifest zusammen in `<share>\S1-Control\programm\` legen.
    Nie die Datei allein: Die Prüfung vergleicht den Hash und lehnt sonst ab.
 

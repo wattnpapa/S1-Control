@@ -17,11 +17,20 @@
  * So wird er erzeugt (einmalig, auf dem Rechner, der veröffentlicht):
  *
  * ```
- * node -e "import('@bos/eeb-format').then(async (k) => {
- *   const p = await k.schluesselpaarErzeugen();
- *   console.log('privat:      ', k.zuHex(p.privat));
- *   console.log('oeffentlich: ', k.zuHex(p.oeffentlich));
- * })"
+ * s1 paket schluessel
+ * ```
+ *
+ * Das Kommando legt den **privaten** Teil in eine Datei mit Rechten für den
+ * Eigentümer allein und schreibt auf den Bildschirm nur den öffentlichen —
+ * als genau die Zeile, die unten steht. Ein früherer Stand dieser Anleitung
+ * war ein `node -e`-Einzeiler, der beide Teile ausgab; er schrieb damit den
+ * privaten Schlüssel in den Sitzungsverlauf, in die Zwischenablage und
+ * womöglich in ein Protokoll (M9.2).
+ *
+ * Ein Paket wird danach so signiert:
+ *
+ * ```
+ * s1 paket signiere <paketdatei> --schluessel <datei> --version 2.1.0
  * ```
  *
  * Der öffentliche Teil kommt hierher, der private in den Tresor der

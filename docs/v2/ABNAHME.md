@@ -73,8 +73,10 @@ Was im Baum nachgewiesen ist, steht in den Abschlussberichten unter
       Arbeitsplätze zeigen das Angebot mit der richtigen Version.
 - [ ] **E2** Ein Paket mit vertauschter Datei oder verändertem Manifest wird
       **abgelehnt**, mit Grund.
-- [ ] **E3** Der Vertrauensanker ist erzeugt, der private Schlüssel liegt
-      nicht im Repository, und wer ihn hat, ist festgehalten.
+- [ ] **E3** Der Vertrauensanker ist mit `s1 paket schluessel` erzeugt, die
+      Zeile steht in `verteilschluessel.ts`, eine Fassung damit ist gebaut und
+      ausgeliefert, der private Schlüssel liegt nicht im Repository, und wer
+      ihn hat, ist festgehalten.
 - [ ] **E4** Die Diagnoseansicht zeigt auf jedem der drei Rechner die anderen
       beiden mit Offsets und Uhrabweichung.
 - [ ] **E7** Der Knopf „Neues Paket für die Führungsstelle holen“ lädt an

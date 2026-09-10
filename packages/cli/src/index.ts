@@ -24,6 +24,8 @@ import { EINSATZ_UNTERORDNER, einsatzOrdner, knotenDateisystem } from "@s1/speic
 
 import { exportiere, importiere } from "./akte/exportiere.js";
 import { pruefe } from "./akte/pruefe.js";
+import { schluessel } from "./paket/schluessel.js";
+import { signiere } from "./paket/signiere.js";
 import { berichte } from "./simulation/bericht.js";
 import { fuehreSimulationAus } from "./simulation/lauf.js";
 import { abnahmePlan, deutePlan, pruefePlan, type Plan } from "./simulation/plan.js";
@@ -47,6 +49,16 @@ const HILFE = [
   "",
   "  s1 akte importiere <archiv>  Archiv auspacken und prüfen (M4.4)",
   "    --ziel <ordner>            Zielordner; muss leer oder nicht vorhanden sein",
+  "",
+  "  s1 paket schluessel          Verteil-Schlüsselpaar erzeugen (M9.2)",
+  "    --ziel <datei>             Zieldatei des privaten Teils; Vorgabe verteilschluessel.privat",
+  "",
+  "  s1 paket signiere <datei>    Manifest zu einem Programmpaket erzeugen (M9.2)",
+  "    --schluessel <datei>       privater Schlüssel in Hexform (Pflicht)",
+  "    --version <fassung>        die Fassung, etwa 2.1.0 (Pflicht)",
+  "    --plattform <name>         win32 | darwin | linux; ohne Angabe aus der Endung",
+  "    --hinweis <text>           was sich geändert hat; wird dem Bediener gezeigt",
+  "    --ziel <datei>             Zieldatei; ohne Angabe manifest.json neben dem Paket",
   "",
   "  s1 simuliere [Optionen]      Konvergenz unter Störung prüfen (M0.4)",
   "    --plan <datei>             Plandatei (JSON); fehlende Felder aus dem Abnahmeplan",
@@ -200,6 +212,26 @@ export async function fuehreAus(argv: readonly string[]): Promise<Ergebnis> {
       // beschädigte Einsatzakte erscheinen. Alles, was `pruefe` über eine
       // Akte zu sagen hat, sagt es mit Code 1.
       return { text: `s1 akte ${unterkommando}: ${(fehler as Error).message}`, code: 2 };
+    }
+  }
+
+  if (kommando === "paket") {
+    const [unterkommando, ...rest] = reste;
+    const unterkommandos: Readonly<Record<string, (argv: readonly string[]) => Promise<Ergebnis>>> = {
+      schluessel: (argv) => schluessel(argv),
+      signiere: (argv) => signiere(argv),
+    };
+    const lauf = unterkommando === undefined ? undefined : unterkommandos[unterkommando];
+    if (lauf === undefined) {
+      return {
+        text: `Unbekanntes Unterkommando: paket ${unterkommando ?? ""}\n\n${HILFE}`,
+        code: 2,
+      };
+    }
+    try {
+      return await lauf(rest);
+    } catch (fehler) {
+      return { text: `s1 paket ${unterkommando}: ${(fehler as Error).message}`, code: 2 };
     }
   }
 
