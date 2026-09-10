@@ -67,6 +67,21 @@ export const zEinstellungen = z.object({
   sharePfad: z.string(),
   /** Was die anderen Arbeitsplaetze in der Praesenz sehen (§6.4). */
   anzeigename: z.string(),
+  /**
+   * Die Betriebsart dieses Arbeitsplatzes (M6.4).
+   *
+   * **`meldekopf` ist keine Rolle und kein Recht**, sondern ein Zuschnitt der
+   * Oberflaeche: Ein Meldekopf nimmt Boegen auf und quittiert sie; er fuehrt
+   * kein Lagebild. Wer an diesem Rechner sitzt, koennte alles andere auch —
+   * die Akte ist dieselbe, die Ereignisse sind dieselben, und es gibt keinen
+   * Server, der etwas verweigern koennte (02-ZIELBILD.md, „kein
+   * Serverprozess"). Ein Rechtesystem vorzutaeuschen, das keines ist, waere
+   * die schlechtere Loesung: Es hielte niemanden auf und liesse alle glauben,
+   * es taete es.
+   *
+   * Ohne Angabe `fuehrungsstelle` — der Arbeitsplatz, den es bisher gab.
+   */
+  betriebsart: z.enum(["fuehrungsstelle", "meldekopf"]).optional(),
 });
 export type Einstellungen = z.infer<typeof zEinstellungen>;
 

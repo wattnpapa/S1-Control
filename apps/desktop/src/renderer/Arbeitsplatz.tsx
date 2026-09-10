@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { bruecke } from "./bruecke.js";
 import { Hilfe } from "./Hilfe.js";
 import { Lage } from "./Lage.js";
+import { Meldekopf } from "./Meldekopf.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
@@ -105,7 +106,16 @@ export function Arbeitsplatz(): React.JSX.Element {
             }}
           />
         )}
-        {laden.akteId === undefined ? <Auswahl /> : <Lage />}
+        {/* Die Betriebsart entscheidet, was hier steht (M6.4). Ein Meldekopf
+            nimmt Bögen auf und quittiert sie; ein Lagebild führt er nicht.
+            Dieselbe Akte, dieselben Ereignisse — ein anderer Zuschnitt. */}
+        {laden.akteId === undefined ? (
+          <Auswahl />
+        ) : laden.einstellungen.betriebsart === "meldekopf" ? (
+          <Meldekopf />
+        ) : (
+          <Lage />
+        )}
 
         {laden.hinweise.length > 0 && (
           <section aria-label="Hinweise" className="hinweise">
@@ -132,11 +142,15 @@ function Auswahl(): React.JSX.Element {
   const [share, setzeShare] = useState(laden.einstellungen.sharePfad);
   const [name, setzeName] = useState(laden.einstellungen.anzeigename);
   const [neuerEinsatz, setzeNeuerEinsatz] = useState("");
+  const [betriebsart, setzeBetriebsart] = useState(
+    laden.einstellungen.betriebsart ?? "fuehrungsstelle",
+  );
 
   // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
   useEffect(() => {
     setzeShare(laden.einstellungen.sharePfad);
     setzeName(laden.einstellungen.anzeigename);
+    setzeBetriebsart(laden.einstellungen.betriebsart ?? "fuehrungsstelle");
   }, [laden.einstellungen]);
 
   return (
@@ -151,10 +165,31 @@ function Auswahl(): React.JSX.Element {
           Anzeigename
           <input value={name} onChange={(e) => setzeName(e.target.value)} />
         </label>
+        <label>
+          Betriebsart
+          <select
+            value={betriebsart}
+            onChange={(e) => {
+              setzeBetriebsart(e.target.value as "fuehrungsstelle" | "meldekopf");
+            }}
+          >
+            <option value="fuehrungsstelle">Führungsstelle</option>
+            <option value="meldekopf">Meldekopf</option>
+          </select>
+        </label>
+        {betriebsart === "meldekopf" && (
+          <p className="hinweistext">
+            Der Meldekopf sieht Scanner, Eingangskorb und Bündeldatei — kein Lagebild. Er schreibt
+            in dieselbe Akte auf demselben Share; die Betriebsart ist ein Zuschnitt der Oberfläche
+            und kein Recht.
+          </p>
+        )}
         <button
           type="button"
           disabled={laden.beschaeftigt}
-          onClick={() => void laden.setzeEinstellungen({ sharePfad: share, anzeigename: name })}
+          onClick={() =>
+            void laden.setzeEinstellungen({ sharePfad: share, anzeigename: name, betriebsart })
+          }
         >
           Übernehmen
         </button>
