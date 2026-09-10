@@ -70,6 +70,7 @@ import {
   type Ruf,
   type Tabellenansicht,
   type Tagebuchansicht,
+  type Untertabellenansicht,
 } from "../kontrakt/index.js";
 
 /**
@@ -147,7 +148,7 @@ export class Aktendienst {
   #zustand: Zustand = materialisiere(leereFaltung());
   #stapel: Undostapel;
 
-  /** Die hoechste gesehene HLC — der „Stand", den die Statuszeile nennt. */
+  /** Die hoechste gesehene HLC — der „Stand“, den die Statuszeile nennt. */
   #hoechsteHlc: Hlc | undefined;
   #letzteWanduhr = "";
   #letzterShareKontakt = "";
@@ -237,7 +238,7 @@ export class Aktendienst {
     });
     this.#akte = akte;
     // §4.5: Wechselt die Akte die Kennung, wechseln Uhr und Stapel mit — die
-    // clientId steht in jeder HLC (§3.2) und entscheidet, was „eigen" ist.
+    // clientId steht in jeder HLC (§3.2) und entscheidet, was „eigen“ ist.
     if (akte.schreiber.clientId !== this.#clientId) this.#uebernimmKennung(akte.schreiber.clientId);
 
     this.#melde(ergebnis.reaktion);
@@ -245,7 +246,7 @@ export class Aktendienst {
     this.#nimmAuf(ergebnis.quarantaeneNachlauf.neueZeilen);
 
     // Der Oeffnungsbefund sagt bereits, ob der Share erreichbar war; ihn hier
-    // zu setzen erspart der Statuszeile eine Sekunde „nicht erreichbar", die
+    // zu setzen erspart der Statuszeile eine Sekunde „nicht erreichbar“, die
     // nicht stimmt.
     this.#shareErreichbar = ergebnis.reaktion?.art !== "shareNichtErreichbar";
     if (this.#shareErreichbar) this.#letzterShareKontakt = this.#jetztText();
@@ -468,7 +469,7 @@ export class Aktendienst {
   }
 
   /**
-   * „Letzte Aktion rueckgaengig" (§6 U3).
+   * „Letzte Aktion rueckgaengig“ (§6 U3).
    *
    * Der Stapel liefert das Original, `kompensationFuer` den Entwurf, und
    * geschrieben wird ein **gewoehnliches** Ereignis mit `undoOf` (U1). Der
@@ -531,6 +532,15 @@ export class Aktendienst {
     return { lageZeiger: this.#lageZeiger, ...ausschnitt };
   }
 
+  /** Fahrzeuge, Personen und Auftraege **einer** Einheit (M3.2). */
+  untertabelle(ruf: Extract<Ruf, { art: "untertabelleAnfordern" }>): Untertabellenansicht {
+    return {
+      lageZeiger: this.#lageZeiger,
+      einheitId: ruf.einheitId,
+      ...projektion.untertabelle(this.#zustand, ruf.einheitId),
+    };
+  }
+
   /**
    * Das Einsatztagebuch (M3.3).
    *
@@ -569,7 +579,7 @@ export class Aktendienst {
     this.#hlcUhr = new HlcUhr({ clientId: neue, wanduhr: this.#o.zeit });
     // Der Stapel wird **neu aufgebaut**, nicht umgeschrieben: Nach dem Wechsel
     // gehoeren die Zeilen der alten Kennung nicht mehr diesem Client (§4.5),
-    // und ein Undo darauf faellt unter U3, Satz „keine fremden Ereignisse".
+    // und ein Undo darauf faellt unter U3, Satz „keine fremden Ereignisse“.
     this.#stapel = new Undostapel(neue);
   }
 

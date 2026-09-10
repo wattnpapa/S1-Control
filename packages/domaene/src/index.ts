@@ -9,7 +9,7 @@
  * `docs/v2/konzepte/KONZEPT-SPEICHER.md`, wie 05-UMSETZUNGSPLAN.md §3 es
  * verlangt.
  *
- * Verbindliche Grenze (02-ZIELBILD.md, „Vier Ringe"): kein `node:`, kein DOM,
+ * Verbindliche Grenze (02-ZIELBILD.md, „Vier Ringe“): kein `node:`, kein DOM,
  * kein React, kein Electron. Erlaubt ist ausschliesslich der Griff nach innen,
  * also nach `@bos/eeb-format`.
  */
@@ -97,6 +97,8 @@ export type {
   Tabellenzeile,
   Tagebuchfilter,
   Tagebuchzeile,
+  Untertabelle,
+  Zelle,
 } from "./projektion/index.js";
 
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).

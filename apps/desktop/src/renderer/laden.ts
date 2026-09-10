@@ -36,6 +36,7 @@ import type {
   Tabellenansicht,
   Tagebuchansicht,
   Umgebung,
+  Untertabellenansicht,
 } from "../kontrakt/index.js";
 
 /** Wie viele Hinweise das Fenster höchstens behält. */
@@ -97,12 +98,15 @@ export interface Laden {
   readonly baum: Baumansicht | undefined;
   readonly tabelle: Tabellenansicht | undefined;
   readonly tagebuch: Tagebuchansicht | undefined;
+  /** Die Untertabellen der aufgeklappten Einheit — höchstens einer. */
+  readonly untertabelle: Untertabellenansicht | undefined;
   readonly tabellenfilter: Tabellenfilter;
   readonly tagebuchfilter: Tagebuchfilterwahl;
 
   holeBaum(): Promise<void>;
   holeTabelle(): Promise<void>;
   holeTagebuch(): Promise<void>;
+  holeUntertabelle(einheitId: string): Promise<void>;
   setzeTabellenfilter(filter: Tabellenfilter): Promise<void>;
   setzeTagebuchfilter(filter: Tagebuchfilterwahl): Promise<void>;
   /** Holt jede Ansicht neu, die schon einmal geholt wurde. */
@@ -128,6 +132,7 @@ const LEERE_ANSICHTEN = {
   baum: undefined,
   tabelle: undefined,
   tagebuch: undefined,
+  untertabelle: undefined,
 } as const;
 
 let hinweisNummer = 0;
@@ -141,10 +146,11 @@ let hinweisNummer = 0;
  * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
  * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
  */
-const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch", number> = {
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle", number> = {
   baum: 0,
   tabelle: 0,
   tagebuch: 0,
+  untertabelle: 0,
 };
 
 export const useLaden = create<Laden>((setze, hole) => {
@@ -172,7 +178,7 @@ export const useLaden = create<Laden>((setze, hole) => {
    * das bei einer kurzen Störung leer wird, ist schlechter als eines, das
    * sichtbar altert.
    */
-  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch">(
+  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch" | "untertabelle">(
     welche: A,
     baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
   ): Promise<void> {
@@ -241,7 +247,7 @@ export const useLaden = create<Laden>((setze, hole) => {
           datum,
           // Die drei Vorbelegungen sind die Werte, mit denen eine Führungsstelle
           // beginnt; geändert werden sie danach über die Stammdaten. Die Maske
-          // „Einsatz anlegen" ist der falsche Ort für eine Entscheidung über
+          // „Einsatz anlegen“ ist der falsche Ort für eine Entscheidung über
           // das Schichtmodell (Startwert S6).
           einsatzArt: "EINSATZ",
           fuestName: hole().einstellungen.anzeigename,
@@ -272,6 +278,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     baum: undefined,
     tabelle: undefined,
     tagebuch: undefined,
+    untertabelle: undefined,
     tabellenfilter: {},
     tagebuchfilter: {},
 
@@ -306,6 +313,14 @@ export const useLaden = create<Laden>((setze, hole) => {
       }));
     },
 
+    async holeUntertabelle(einheitId) {
+      await holeAnsicht("untertabelle", (akteId) => ({
+        art: "untertabelleAnfordern",
+        akteId,
+        einheitId,
+      }));
+    },
+
     async setzeTabellenfilter(filter) {
       // Ein geänderter Filter setzt den Ausschnitt zurück: Wer auf Seite 4
       // steht und dann sucht, will nicht Seite 4 der neuen Treffermenge.
@@ -323,10 +338,12 @@ export const useLaden = create<Laden>((setze, hole) => {
       // Nur, was schon einmal geholt wurde: Eine zugeklappte Ansicht kostet
       // so nichts, und genau darauf beruht der Zuschnitt aus M3.7 — geschoben
       // wird ein Zeiger, geholt wird, was offen ist.
+      const einheitId = zustand.untertabelle?.einheitId;
       await Promise.all([
         zustand.baum === undefined ? undefined : zustand.holeBaum(),
         zustand.tabelle === undefined ? undefined : zustand.holeTabelle(),
         zustand.tagebuch === undefined ? undefined : zustand.holeTagebuch(),
+        einheitId === undefined ? undefined : zustand.holeUntertabelle(einheitId),
       ]);
     },
 

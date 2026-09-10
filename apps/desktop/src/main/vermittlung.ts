@@ -5,7 +5,7 @@
  * Fallunterscheidung ueber die Rufarten, und sie kennt kein Electron. Was sie
  * braucht, bekommt sie: den Arbeiterhof, das Dateisystem, den Pfad der
  * Einstellungen und die Umgebungsangaben. Damit ist der ganze Weg
- * „Ruf → Antwort" pruefbar, ohne dass ein Fenster oeffnet.
+ * „Ruf → Antwort“ pruefbar, ohne dass ein Fenster oeffnet.
  *
  * **Kein Fachzustand.** Die Vermittlung faltet nichts, sie haelt keinen
  * Zustand ausser den Einstellungen und der Zuordnung Akte → Ordner. Jede
@@ -125,6 +125,7 @@ export class Vermittlung {
       // faengt eine zu grosse `anzahl` ab, bevor sie den Worker erreicht.
       case "baumAnfordern":
       case "tabelleAnfordern":
+      case "untertabelleAnfordern":
       case "tagebuchAnfordern":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
     }
@@ -222,7 +223,7 @@ export class Vermittlung {
           // Startwert S9: Die vier Kostenparameter sind Pflicht in der Anlage
           // (§5.2) und werden von der Fuehrungsstelle spaeter ueber
           // `KostenParameterGeaendert` gesetzt. Sie hier abzufragen hiesse,
-          // die Maske „Einsatz anlegen" mit Zahlen zu belasten, die im ersten
+          // die Maske „Einsatz anlegen“ mit Zahlen zu belasten, die im ersten
           // Augenblick eines Einsatzes niemanden interessieren.
           kosten: KOSTEN_VORBELEGUNG,
         },

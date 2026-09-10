@@ -28,12 +28,14 @@ export {
   spalte,
   spaltenDerGruppen,
   tabellenzeile,
+  untertabelle,
   type Schreibweg,
   type Spalte,
   type Spaltengruppe,
   type Tabellenausschnitt,
   type Tabellenoptionen,
   type Tabellenzeile,
+  type Untertabelle,
   type Zelle,
 } from "./tabelle.js";
 

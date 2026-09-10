@@ -192,6 +192,200 @@
         width: min(40rem, 100%);
         padding: 0.3rem;
       }
+
+      /* ---- Die Einheitentabelle (M3.2) ---------------------------------- */
+
+      .einheiten {
+        flex: 3 1 40rem;
+        min-width: 0;
+      }
+      .einheitenkopf {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .einheitenkopf h2 {
+        margin: 0 0.5rem 0 0;
+      }
+      .suchfeld {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 0.3rem;
+        margin: 0;
+      }
+      .suchfeld input {
+        display: inline;
+        width: 14rem;
+      }
+      .spaltengruppen {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-bottom: 0.5rem;
+      }
+      /* Die Tabelle darf breiter sein als das Fenster: Die Excel hat 48
+         Spalten, und wer die Kostenuebersicht zuschaltet, will scrollen und
+         nicht umbrechen. Der Rahmen scrollt, nicht die Seite. */
+      .tabellenrahmen {
+        overflow-x: auto;
+        border: 1px solid rgba(128, 128, 128, 0.3);
+      }
+      .einheiten table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      .einheiten th,
+      .einheiten td {
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        white-space: nowrap;
+      }
+      .einheiten thead th {
+        position: sticky;
+        top: 0;
+        background: Canvas;
+        border-bottom: 2px solid rgba(128, 128, 128, 0.5);
+      }
+      .einheiten tbody tr:hover {
+        background: rgba(128, 128, 128, 0.08);
+      }
+      .einheiten tbody tr.markiert {
+        background: rgba(128, 128, 128, 0.18);
+      }
+      .einheiten tbody tr.gewaehlt th[scope="row"] {
+        font-weight: 700;
+      }
+      /* Eine entfernte Einheit bleibt sichtbar (§5.4.5) und ist durchgestrichen:
+         Sie zaehlt nicht mehr, ist aber nicht fort. */
+      .einheiten tbody tr.entfernt {
+        text-decoration: line-through;
+        opacity: 0.6;
+      }
+      .einheiten td.berechnet {
+        opacity: 0.7;
+        font-variant-numeric: tabular-nums;
+      }
+      /* Eine umstrittene Zelle wird markiert und nicht still ueberschrieben —
+         die sichtbare Seite von §3.8. Farbe **und** Zeichen: Eine Auskunft,
+         die nur an der Farbe haengt, faellt bei Rotschwaeche aus. */
+      .einheiten td.umstritten {
+        background: rgba(180, 83, 9, 0.15);
+      }
+      .einheiten td.bearbeitet input,
+      .einheiten td.bearbeitet select {
+        display: block;
+        width: 12rem;
+        padding: 0.1rem;
+        font: inherit;
+      }
+      .tabellenfuss {
+        margin: 0.3rem 0 0;
+        font-size: 0.8rem;
+        opacity: 0.7;
+      }
+      .untertabellen {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 2rem;
+        margin-top: 1rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+      }
+      .untertabellen h3 {
+        font-size: 0.9rem;
+        margin: 0 0 0.3rem;
+      }
+      .untertabellen ul {
+        margin: 0;
+        padding-left: 1.2rem;
+        font-size: 0.85rem;
+      }
+      .untertabellen li.entfernt {
+        text-decoration: line-through;
+        opacity: 0.6;
+      }
+      .untertabellen li.beendet {
+        opacity: 0.7;
+      }
+
+      /* ---- Der Staerke-Monitor (M3.5) ---------------------------------- */
+
+      /* Dieses Fenster wird nicht bedient, sondern gelesen — von der anderen
+         Seite des Raums, im Vorbeigehen, oft schraeg. Daraus folgt alles
+         Weitere und nichts davon ist Geschmack:
+
+           * Fester schwarzer Grund mit weisser Schrift statt `color-scheme`.
+             Der Monitor haengt an der Wand; welches Farbschema der Rechner
+             gerade faehrt, ist fuer die Lesbarkeit aus fuenf Metern
+             gleichgueltig — hoher Kontrast ist es nicht. Ein Fenster, das
+             ueber Nacht hell wird, blendet den Raum.
+           * Zentriert und ohne Zierrat: Es steht genau eine Zahl im Raum.
+           * `tabular-nums` wie in der Statuszeile und im Abschnittsbaum: Wer
+             Staerken vergleicht, liest Spalten und keine Woerter — und die
+             Ziffern springen nicht, wenn die Zahl sich im Sekundentakt
+             aendert. Die feste Zeichenbreite ist zugleich die Grundlage der
+             dynamischen Schrift (siehe `schriftgroesse` in
+             monitorZahlen.ts).
+
+         Die Groesse der grossen Zeile steht bewusst **nicht** hier, sondern
+         kommt als `style` aus der Komponente: Sie haengt an der Fenstergroesse
+         und damit an einer Zahl, die erst zur Laufzeit feststeht. */
+      .monitor {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.5rem;
+        min-height: 100vh;
+        margin: 0;
+        padding: 1rem;
+        background: #000;
+        color: #fff;
+        text-align: center;
+        font-variant-numeric: tabular-nums;
+      }
+      .monitor p {
+        margin: 0;
+        max-width: 100%;
+      }
+      /* Die grosse Zahl: Ihre Groesse setzt die Komponente, hier stehen nur
+         die Eigenschaften, die von ihr unabhaengig sind. `line-height: 1`
+         verhindert, dass die Zeile bei grossen Graden mehr Platz beansprucht
+         als sie fuellt — die Heuristik rechnet mit der Schrifthoehe. */
+      .monitor .monitorstaerke {
+        line-height: 1;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+        overflow-wrap: anywhere;
+      }
+      /* Die Beschriftung sagt, welche der drei Zahlen was ist. Sie darf klein
+         sein: Wer sie einmal gelesen hat, liest danach nur noch die Zahl. */
+      .monitor .monitorbeschriftung {
+        font-size: clamp(0.8rem, 2vw, 1.4rem);
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        opacity: 0.65;
+      }
+      /* Die NATO-Zeit ist die zweitwichtigste Angabe des Monitors und deshalb
+         deutlich groesser als der Fuss, aber klar unter der Staerke. */
+      .monitor .monitorzeit {
+        font-size: clamp(1.2rem, 6vw, 4rem);
+        letter-spacing: 0.06em;
+      }
+      .monitor .monitorfuss {
+        font-size: clamp(0.8rem, 2.5vw, 1.6rem);
+        opacity: 0.75;
+      }
+      /* Ohne geoeffnete Akte bleibt der Monitor ruhig: gedaempft, ohne die
+         grosse Zahl — er behauptet dann nichts ueber eine Staerke. */
+      .monitor .monitorhinweis {
+        font-size: clamp(1rem, 4vw, 2.4rem);
+        opacity: 0.55;
+      }
     </style>
   </head>
   <body>

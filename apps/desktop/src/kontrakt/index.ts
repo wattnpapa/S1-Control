@@ -26,7 +26,7 @@
 
 import { z } from "zod";
 
-import type { Baumknoten, Tabellenausschnitt, Tagebuchzeile } from "@s1/domaene";
+import type { Baumknoten, Tabellenausschnitt, Tagebuchzeile, Untertabelle } from "@s1/domaene";
 
 export { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "./kanaele.js";
 
@@ -97,7 +97,7 @@ export type Peer = z.infer<typeof zPeer>;
  * **Zwei Werte sind Lebenszeichen und aendern sich in jedem Takt:**
  * `letzterShareKontakt` und die `wanduhr` je Peer. Sie kosten je Akte eine
  * kleine Mitteilung je Sekunde, auch wenn fachlich nichts geschieht — und
- * genau das ist ihr Zweck: Eine Statuszeile, die „Share erreichbar" zeigt,
+ * genau das ist ihr Zweck: Eine Statuszeile, die „Share erreichbar“ zeigt,
  * ohne zu sagen, wann das zuletzt zutraf, ist keine Auskunft, sondern ein
  * Standbild. Alles Fachliche schweigt dagegen, solange sich nichts aendert.
  *
@@ -128,7 +128,7 @@ export const zLagebild = z.object({
   staerkeJeStatus: z.record(z.string(), z.number().int()),
   hinweise: z.number().int().min(0),
   unbekannteEreignisse: z.number().int().min(0),
-  /** Wie viele Schritte „rueckgaengig" noch gehen (§6 U3). */
+  /** Wie viele Schritte „rueckgaengig“ noch gehen (§6 U3). */
   undoTiefe: z.number().int().min(0),
   undoObersteArt: z.string().optional(),
   /**
@@ -221,6 +221,12 @@ export const zRuf = z.discriminatedUnion("art", [
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),
+  // Die Untertabellen **einer** Einheit — ein eigener Ruf und keine Spalte der
+  // Tabelle. Eine Einheit mit vollstaendiger Personalerfassung fuehrt bis zu
+  // dreissig Personen (ZDM §3.4); sie an jeder Zeile mitzuschicken hiesse, bei
+  // 150 Einheiten viertausend Datensaetze zu tragen, um die einer einzigen
+  // aufgeklappten Zeile zu zeigen.
+  z.object({ art: z.literal("untertabelleAnfordern"), akteId: zAkteId, einheitId: zText }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -290,6 +296,7 @@ export interface Antworten {
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
   baumAnfordern: Baumansicht;
   tabelleAnfordern: Tabellenansicht;
+  untertabelleAnfordern: Untertabellenansicht;
   tagebuchAnfordern: Tagebuchansicht;
 }
 
@@ -312,6 +319,10 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {
+  readonly einheitId: string;
+}
 
 export interface Tagebuchansicht extends Ansichtsstand {
   readonly zeilen: readonly Tagebuchzeile[];
@@ -371,7 +382,7 @@ export const LAGEBILD_SCHLUESSEL = Object.keys(zLagebild.shape) as readonly (key
  * zulaessig und nicht die kanonische Serialisierung aus §7.6: Beide Seiten
  * entstehen aus **derselben** Projektionsfunktion, also in derselben
  * Schluesselreihenfolge. Fuer den Zustandshash waere das zu wenig; fuer die
- * Frage „hat sich die Statuszeile geaendert" ist es genau richtig und um
+ * Frage „hat sich die Statuszeile geaendert“ ist es genau richtig und um
  * Groessenordnungen billiger.
  */
 export function lagebildDelta(vorher: Lagebild, nachher: Lagebild): Partial<Lagebild> {

@@ -12,11 +12,13 @@
 import { useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
+import { Einheitentabelle } from "./Einheitentabelle.js";
 import { useLaden } from "./laden.js";
 
 export function Lage(): React.JSX.Element {
   const laden = useLaden();
   const [abschnittId, setzeAbschnittId] = useState<string | undefined>(undefined);
+  const [einheitId, setzeEinheitId] = useState<string | undefined>(undefined);
 
   return (
     <section aria-label="Lagebild" className="lage">
@@ -36,7 +38,21 @@ export function Lage(): React.JSX.Element {
       </div>
 
       <div className="lagespalten">
-        <Abschnittsbaum gewaehlt={abschnittId} aufWahl={setzeAbschnittId} />
+        <Abschnittsbaum
+          gewaehlt={abschnittId}
+          aufWahl={(gewaehlt) => {
+            setzeAbschnittId(gewaehlt);
+            // Ein Abschnittswechsel hebt die Einheitenwahl auf: Die gewählte
+            // Einheit steht danach fast immer außerhalb des Filters, und eine
+            // Auswahl, die man nicht sieht, ist schlimmer als keine.
+            setzeEinheitId(undefined);
+          }}
+        />
+        <Einheitentabelle
+          abschnittId={abschnittId}
+          einheitId={einheitId}
+          aufEinheit={setzeEinheitId}
+        />
       </div>
     </section>
   );

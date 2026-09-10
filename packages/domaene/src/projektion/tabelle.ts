@@ -2,9 +2,9 @@
  * Die Einheitentabelle als Projektion (M3.2).
  *
  * Die Excel führt eine Einheit als **eine Zeile mit 48 Spalten** (Blatt
- * „Stärke", B..AW; Bestandsaufnahme `excel-domaenenmodell.md` §2). Drei
+ * „Stärke“, B..AW; Bestandsaufnahme `excel-domaenenmodell.md` §2). Drei
  * Spaltengruppen sind darin ausgeblendet und per Menü zuschaltbar —
- * „Ressourcenplanung" (L:Y), „Logistikdaten" (AC:AI), „Kostenübersicht"
+ * „Ressourcenplanung“ (L:Y), „Logistikdaten“ (AC:AI), „Kostenübersicht“
  * (AN:AW). Genau diese Gruppen nennt die DoD von M3.2 mit „ein- und
  * ausblendbar", und genau sie stehen deshalb hier: als Tabelle, nicht als
  * Fallunterscheidung in einer Komponente.
@@ -83,7 +83,7 @@ export interface Spalte {
   /** Schlüssel der Spalte und zugleich Name des Zustandsfeldes, wo es eines gibt. */
   readonly schluessel: string;
   readonly kopf: string;
-  /** Die Spalte des Blatts „Stärke", aus der sie stammt. */
+  /** Die Spalte des Blatts „Stärke“, aus der sie stammt. */
   readonly excel: string;
   readonly gruppe: Spaltengruppe;
   readonly art: "text" | "zahl" | "auswahl" | "zeitpunkt" | "staerke" | "berechnet";
@@ -98,7 +98,7 @@ export interface Spalte {
 const s = (spalte: Spalte): Spalte => spalte;
 
 /**
- * Die Spalten in der Reihenfolge des Blatts „Stärke".
+ * Die Spalten in der Reihenfolge des Blatts „Stärke“.
  *
  * Die Reihenfolge ist die der Excel und nicht die des Zielmodells: Wer die
  * Referenzlage vergleicht, liest von links nach rechts in beiden.
@@ -196,7 +196,7 @@ export function spaltenDerGruppen(gruppen: readonly Spaltengruppe[]): readonly S
  *
  * `wert` ist der Wert, den ein Bedienschritt als `vorher` mitschickt
  * (§2.2a, Auflage 6) — **nicht** der angezeigte Text. Die Trennung ist der
- * Kern der Inline-Bearbeitung: Angezeigt wird „9 Helfer", geschickt wird das
+ * Kern der Inline-Bearbeitung: Angezeigt wird „9 Helfer“, geschickt wird das
  * Tripel, und geprüft wird gegen den Wert, den dieser Client gesehen hat.
  */
 export interface Zelle {
@@ -391,7 +391,7 @@ export function einheitentabelle(
     return heuhaufen.includes(suche);
   });
 
-  // §5.3, „Sekundärsortierung": erst `reihenfolge`, dann die Id in
+  // §5.3, „Sekundärsortierung“: erst `reihenfolge`, dann die Id in
   // Codepoint-Ordnung — für Einheiten wie für Abschnitte. Ohne die zweite
   // Stufe hinge die Reihenfolge zweier gleichrangiger Zeilen an der
   // Schlüsselreihenfolge der Datensammlung, und zwei Clients zeigten
@@ -410,4 +410,145 @@ export function einheitentabelle(
     gesamtzahl: gefiltert.length,
     von,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Die Untertabellen (M3.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Fahrzeuge, Personen und Aufträge **einer** Einheit.
+ *
+ * Ein eigener Ruf und keine Spalte der Tabelle, und der Grund ist derselbe wie
+ * beim Ausschnitt: Eine Einheit mit vollständiger Personalerfassung führt bis
+ * zu dreißig Personen (ZDM §3.4). Sie an jeder Zeile mitzuschicken hieße, bei
+ * 150 Einheiten viertausend Datensätze über die Prozessgrenze zu tragen, um
+ * die einer einzigen aufgeklappten Zeile zu zeigen.
+ *
+ * Die Excel führt dieselben Angaben als mehrzeiligen Freitext in den Spalten
+ * J und K (`excel-domaenenmodell.md` §2). Dass hier Entitäten stehen und dort
+ * Text, ist der eigentliche Fortschritt: Aus Text lässt sich keine Stückzahl
+ * summieren.
+ */
+export interface Untertabelle {
+  readonly fahrzeuge: readonly {
+    readonly id: Id;
+    readonly typ: string;
+    readonly bezeichnung: string;
+    readonly kennzeichen?: string;
+    /**
+     * Der Funkrufname als **Text**, nicht als Struktur.
+     *
+     * Im Katalog ist er ein Objekt aus Kennwort, Standortangabe und
+     * Kennzahlen (§5.5). Die Untertabelle setzt daraus die Form zusammen, die
+     * über Funk gesprochen wird — „Heros Oldenburg 21/51“ —, weil die
+     * Bestandteile in einer Zeile ohnehin nur so gelesen werden. Wer sie
+     * einzeln braucht, greift auf den Zustand, nicht auf diese Projektion.
+     */
+    readonly funkrufname?: string;
+    readonly entfernt: boolean;
+  }[];
+  readonly personen: readonly {
+    readonly id: Id;
+    readonly name: string;
+    readonly rolle?: string;
+    readonly entfernt: boolean;
+  }[];
+  readonly auftraege: readonly {
+    readonly id: Id;
+    readonly text: string;
+    readonly von?: string;
+    readonly bis?: string;
+    readonly beendet: boolean;
+  }[];
+}
+
+function text(wert: unknown): string {
+  return typeof wert === "string" ? wert : "";
+}
+
+function textOptional(wert: unknown): string | undefined {
+  return typeof wert === "string" && wert !== "" ? wert : undefined;
+}
+
+/**
+ * Setzt den Funkrufnamen zu der Form zusammen, in der er gesprochen wird.
+ *
+ * `kennwort` plus, wenn der eigene Standort gemeint ist, der Ort und die
+ * Kennzahlen mit Schrägstrich (§5.5). Fehlt das Kennwort, fehlt der ganze
+ * Name — ein Funkrufname aus Kennzahlen allein wäre über Funk nicht
+ * zuzuordnen.
+ */
+function funkrufnameText(wert: unknown): string | undefined {
+  if (typeof wert !== "object" || wert === null) return undefined;
+  const teil = wert as {
+    kennwort?: unknown;
+    ort?: unknown;
+    eigenerStandort?: unknown;
+    teile?: unknown;
+  };
+  const kennwort = textOptional(teil.kennwort);
+  if (kennwort === undefined) return undefined;
+  const ort = textOptional(teil.ort);
+  const kennzahlen = Array.isArray(teil.teile)
+    ? teil.teile.filter((zahl): zahl is number => typeof zahl === "number").join("/")
+    : "";
+  return [kennwort, ort, kennzahlen === "" ? undefined : kennzahlen]
+    .filter((stueck): stueck is string => stueck !== undefined)
+    .join(" ");
+}
+
+/**
+ * Die Untertabellen einer Einheit.
+ *
+ * Entfernte Einträge bleiben stehen und sind gekennzeichnet — §5.4.5 gilt für
+ * Fahrzeuge und Personen wie für Einheiten: Entfernen ist kein Löschen, und
+ * eine Zeile, die aus der Anzeige verschwindet, lässt sich nicht
+ * wiederherstellen, weil niemand sie mehr sieht.
+ */
+export function untertabelle(zustand: Zustand, einheitId: Id): Untertabelle {
+  const fahrzeuge = Object.values(zustand.fahrzeuge)
+    .filter((fahrzeug) => fahrzeug.einheitId?.wert === einheitId)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((fahrzeug) => ({
+      id: fahrzeug.id,
+      typ: text(fahrzeug.typ.wert),
+      bezeichnung: text(fahrzeug.bezeichnung.wert),
+      ...(textOptional(fahrzeug.kennzeichen?.wert) === undefined
+        ? {}
+        : { kennzeichen: textOptional(fahrzeug.kennzeichen?.wert) as string }),
+      ...(funkrufnameText(fahrzeug.funkrufname?.wert) === undefined
+        ? {}
+        : { funkrufname: funkrufnameText(fahrzeug.funkrufname?.wert) as string }),
+      entfernt: fahrzeug.entfernt?.wert === true,
+    }));
+
+  const personen = Object.values(zustand.personen)
+    .filter((person) => person.einheitId?.wert === einheitId)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((person) => ({
+      id: person.id,
+      name: `${text(person.vorname.wert)} ${text(person.nachname.wert)}`.trim(),
+      ...(textOptional(person.rolle?.wert) === undefined
+        ? {}
+        : { rolle: textOptional(person.rolle?.wert) as string }),
+      entfernt: person.entfernt?.wert === true,
+    }));
+
+  const auftraege = Object.values(zustand.auftraege)
+    .filter((auftrag) => auftrag.einheitId?.wert === einheitId && auftrag.zurueckgenommen?.wert !== true)
+    .sort((a, b) => (a.id < b.id ? -1 : 1))
+    .map((auftrag) => ({
+      id: auftrag.id,
+      text: text(auftrag.text.wert),
+      ...(textOptional(auftrag.von?.wert) === undefined
+        ? {}
+        : { von: textOptional(auftrag.von?.wert) as string }),
+      ...(textOptional(auftrag.bis?.wert) === undefined
+        ? {}
+        : { bis: textOptional(auftrag.bis?.wert) as string }),
+      beendet: auftrag.bis?.wert != null,
+    }));
+
+  return { fahrzeuge, personen, auftraege };
 }

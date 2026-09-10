@@ -47,6 +47,7 @@ export type Auftrag =
   // bevor der Main sie weiterreicht.
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
+  | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
   | { readonly art: "schliesse"; readonly nummer: number };
 
@@ -168,6 +169,8 @@ if (parentPort !== null) {
         return dienst.baum(auftrag.ruf);
       case "tabelleAnfordern":
         return dienst.tabelle(auftrag.ruf);
+      case "untertabelleAnfordern":
+        return dienst.untertabelle(auftrag.ruf);
       case "tagebuchAnfordern":
         return dienst.tagebuch(auftrag.ruf);
       case "schliesse":
