@@ -1,5 +1,5 @@
 /**
- * Die Störfallkarte als Text (M7.3).
+ * Erzeugte Abschnitte für die Dokumentation (M7.3, erweitert in M8.2).
  *
  * **Der zweite Leser der Matrix.** Die Diagnoseansicht zeigt die sechs Fälle
  * auf dem Bildschirm; diese Datei setzt dieselben sechs für Papier. Beide
@@ -17,7 +17,7 @@
  * Ring 2 weiß, was gilt; `@s1/ausgaben` weiß, wie es aussieht.
  */
 
-import { STOERFAELLE } from "@s1/domaene";
+import { AKUELI, ANSICHTEN, KUERZEL, STOERFAELLE, kuerzelText } from "@s1/domaene";
 
 /**
  * Die Marken, zwischen denen der erzeugte Block steht.
@@ -67,12 +67,121 @@ export function stoerfallmatrixMarkdown(): string {
  * Papier auffällt.
  */
 export function mitStoerfallmatrix(dokument: string): string {
-  const anfang = dokument.indexOf(MARKE_ANFANG);
-  const ende = dokument.indexOf(MARKE_ENDE);
-  if (anfang < 0 || ende < 0 || ende < anfang) {
-    throw new Error("Das Dokument führt die beiden Marken der Störfallmatrix nicht.");
+  return zwischenMarken(dokument, MARKE_ANFANG, MARKE_ENDE, stoerfallmatrixMarkdown());
+}
+
+// ---------------------------------------------------------------------------
+// Das Handbuch (M8.2)
+// ---------------------------------------------------------------------------
+//
+// Dieselbe Begründung wie oben, dreimal weiter getrieben: Tastenkürzel,
+// Abkürzungen und Ansichtstexte stehen im Baum je genau einmal. Ein Handbuch,
+// das sie abschreibt, ist nach der dritten Änderung an drei Stellen falsch —
+// und die Stelle, die dann niemand berichtigt, ist die Dokumentation.
+
+export const MARKE_TASTEN_ANFANG = "<!-- TASTENKARTE ANFANG — erzeugt, nicht von Hand ändern -->";
+export const MARKE_TASTEN_ENDE = "<!-- TASTENKARTE ENDE -->";
+export const MARKE_ANSICHTEN_ANFANG = "<!-- ANSICHTEN ANFANG — erzeugt, nicht von Hand ändern -->";
+export const MARKE_ANSICHTEN_ENDE = "<!-- ANSICHTEN ENDE -->";
+export const MARKE_AKUELI_ANFANG = "<!-- AKÜLI ANFANG — erzeugt, nicht von Hand ändern -->";
+export const MARKE_AKUELI_ENDE = "<!-- AKÜLI ENDE -->";
+
+/** Die Tastenkarte als Tabellen, nach Bereichen gegliedert wie im Hilfefenster. */
+export function tastenkarteMarkdown(): string {
+  const bereiche = [...new Set(KUERZEL.map((eintrag) => eintrag.bereich))];
+  const teile: string[] = [];
+  for (const bereich of bereiche) {
+    teile.push(`### ${bereich}`);
+    teile.push("");
+    teile.push("| Taste | Was sie tut | In der Excel |");
+    teile.push("|---|---|---|");
+    for (const eintrag of KUERZEL.filter((k) => k.bereich === bereich)) {
+      teile.push(`| ${kuerzelText(eintrag)} | ${eintrag.beschreibung} | ${eintrag.excel ?? "—"} |`);
+    }
+    teile.push("");
   }
-  const vorne = dokument.slice(0, anfang + MARKE_ANFANG.length);
-  const hinten = dokument.slice(ende);
-  return `${vorne}\n\n${stoerfallmatrixMarkdown()}\n${hinten}`;
+  return `${teile.join("\n").trimEnd()}\n`;
+}
+
+/** Die Ansichten mit ihren drei Antworten — dieselben, die die Hilfemarke zeigt. */
+export function ansichtenMarkdown(): string {
+  const teile: string[] = [];
+  for (const ansicht of ANSICHTEN) {
+    teile.push(`### ${ansicht.titel}`);
+    teile.push("");
+    teile.push(ansicht.wozu);
+    teile.push("");
+    teile.push(`**Zuerst:** ${ansicht.zuerst}`);
+    teile.push("");
+    teile.push(`**Gut zu wissen:** ${ansicht.ueberraschung}`);
+    if (ansicht.kuerzel.length > 0) {
+      const namen = ansicht.kuerzel
+        .map((name) => KUERZEL.find((k) => k.name === name))
+        .filter((k) => k !== undefined)
+        .map((k) => kuerzelText(k));
+      teile.push("");
+      teile.push(`**Kürzel:** ${namen.join(" · ")}`);
+    }
+    teile.push("");
+  }
+  return `${teile.join("\n").trimEnd()}\n`;
+}
+
+/**
+ * Die Abkürzungsliste, nach Gruppen.
+ *
+ * Sie ist mit über hundert Einträgen der längste erzeugte Abschnitt, und sie
+ * gehört trotzdem ins Handbuch: Wer am Meldekopf ein Kürzel hört, das er nicht
+ * kennt, hat nicht immer einen Bildschirm vor sich.
+ */
+export function akueliMarkdown(): string {
+  const gruppen = [...new Set(AKUELI.map((eintrag) => eintrag.gruppe))];
+  // Die Gruppenschlüssel sind Schlüssel und keine Überschriften; „EINHEITEN"
+  // als Zwischentitel wäre gebrüllt. Fehlt eine Übersetzung, steht der
+  // Schlüssel da — sichtbar falsch ist besser als still verschwunden.
+  const titel: Readonly<Record<string, string>> = {
+    EINHEITEN: "Einheiten",
+    FAHRZEUGE_UND_GERAETE: "Fahrzeuge und Geräte",
+  };
+  const teile: string[] = [];
+  for (const gruppe of gruppen) {
+    teile.push(`### ${titel[gruppe] ?? gruppe}`);
+    teile.push("");
+    teile.push("| Kürzel | Bedeutung |");
+    teile.push("|---|---|");
+    for (const eintrag of AKUELI.filter((e) => e.gruppe === gruppe)) {
+      teile.push(`| ${eintrag.kuerzel} | ${eintrag.bedeutung} |`);
+    }
+    teile.push("");
+  }
+  return `${teile.join("\n").trimEnd()}\n`;
+}
+
+/**
+ * Trägt einen erzeugten Block zwischen zwei Marken ein.
+ *
+ * Aus {@link mitStoerfallmatrix} herausgezogen, als der zweite Block dazukam:
+ * Vier Marken und vier fast gleiche Funktionen wären vier Stellen gewesen, an
+ * denen dieselbe Abschneide-Regel hätte stimmen müssen.
+ */
+export function zwischenMarken(
+  dokument: string,
+  anfangsmarke: string,
+  endmarke: string,
+  block: string,
+): string {
+  const anfang = dokument.indexOf(anfangsmarke);
+  const ende = dokument.indexOf(endmarke);
+  if (anfang < 0 || ende < 0 || ende < anfang) {
+    throw new Error(`Das Dokument führt die Marken ${anfangsmarke} und ${endmarke} nicht.`);
+  }
+  return `${dokument.slice(0, anfang + anfangsmarke.length)}\n\n${block}\n${dokument.slice(ende)}`;
+}
+
+/** Alle erzeugten Abschnitte des Handbuchs auf einmal. */
+export function mitHandbuchabschnitten(dokument: string): string {
+  let ergebnis = zwischenMarken(dokument, MARKE_TASTEN_ANFANG, MARKE_TASTEN_ENDE, tastenkarteMarkdown());
+  ergebnis = zwischenMarken(ergebnis, MARKE_ANSICHTEN_ANFANG, MARKE_ANSICHTEN_ENDE, ansichtenMarkdown());
+  ergebnis = zwischenMarken(ergebnis, MARKE_AKUELI_ANFANG, MARKE_AKUELI_ENDE, akueliMarkdown());
+  return zwischenMarken(ergebnis, MARKE_ANFANG, MARKE_ENDE, stoerfallmatrixMarkdown());
 }

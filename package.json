@@ -31,7 +31,8 @@
     "start:rauchprobe": "npm run build && npm run electron:holen && cross-env S1_SMOKE=1 electron apps/desktop",
     "build:paket": "node apps/desktop/bau/paket.mjs",
     "build:paket:probe": "node apps/desktop/bau/paket.mjs --dir",
-    "doku:kurzanleitung": "npm run typecheck && node bau/kurzanleitung.mjs"
+    "doku:kurzanleitung": "npm run typecheck && node bau/kurzanleitung.mjs",
+    "doku:handbuch": "npm run typecheck && node bau/handbuch.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

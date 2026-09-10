@@ -98,8 +98,19 @@ export {
 // Die Störfallkarte (M7.3) — dieselben sechs Fälle wie die Diagnoseansicht,
 // gesetzt für Papier.
 export {
+  MARKE_AKUELI_ANFANG,
+  MARKE_AKUELI_ENDE,
   MARKE_ANFANG,
+  MARKE_ANSICHTEN_ANFANG,
+  MARKE_ANSICHTEN_ENDE,
   MARKE_ENDE,
+  MARKE_TASTEN_ANFANG,
+  MARKE_TASTEN_ENDE,
+  akueliMarkdown,
+  ansichtenMarkdown,
+  mitHandbuchabschnitten,
   mitStoerfallmatrix,
   stoerfallmatrixMarkdown,
+  tastenkarteMarkdown,
+  zwischenMarken,
 } from "./kurzanleitung.js";
