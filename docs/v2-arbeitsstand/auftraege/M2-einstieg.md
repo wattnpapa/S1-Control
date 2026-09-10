@@ -1,6 +1,11 @@
 # Einstieg in M2 — Schale, Worker, Store
 
-Stand: 2026-09-10 · Meilenstein M2 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **begonnen**
+Stand: 2026-09-10 · Meilenstein M2 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **abgeschlossen bis auf M2.4**
+
+> **Bearbeitungsstand 2026-09-10.** M2.1, M2.2, M2.3 und M2.5 sind gebaut und
+> grün; M2.4 bleibt blockiert. Was gebaut wurde, welche Entscheidungen dabei
+> gefallen sind und was für Johannes offen bleibt, steht im
+> [Abschlussbericht](../berichte/M2-abschlussbericht.md).
 
 M2 ist der zweite Prüfpunkt mit Abbruchrecht. Was er beweisen soll, steht in
 einem Satz: **zwei Rechner führen auf dem echten Share denselben Einsatz.**
