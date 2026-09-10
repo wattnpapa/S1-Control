@@ -3,8 +3,8 @@
  *
  * Geplant sind `akte pruefe | falte | exportiere`, `simuliere` und `diagnose`
  * (02-ZIELBILD.md, Abschnitt „Diagnose im Einsatz"). Dieser Stand kennt
- * `diagnose` und `simuliere`; `simuliere` ist das Arbeitspaket M0.4
- * (05-UMSETZUNGSPLAN.md).
+ * `diagnose`, `simuliere` und `akte pruefe`; `simuliere` ist das Arbeitspaket
+ * M0.4, `akte pruefe` die Abnahmebedingung von M2.4 (05-UMSETZUNGSPLAN.md).
  *
  * Verbindliche Grenze: alle `@s1/*` und `node:` sind erlaubt, Electron und
  * React nicht (02-ZIELBILD.md, „Vier Ringe"; erzwungen in `eslint.config.mjs`).
@@ -19,6 +19,7 @@ import { kopfAlsHtml } from "@s1/ausgaben";
 import { HINWEIS_PORT } from "@s1/netz";
 import { EINSATZ_UNTERORDNER, einsatzOrdner, knotenDateisystem } from "@s1/speicher";
 
+import { pruefe } from "./akte/pruefe.js";
 import { berichte } from "./simulation/bericht.js";
 import { fuehreSimulationAus } from "./simulation/lauf.js";
 import { abnahmePlan, deutePlan, pruefePlan, type Plan } from "./simulation/plan.js";
@@ -33,6 +34,9 @@ const HILFE = [
   "s1 — Kommandozeile zu S1-Control",
   "",
   "  s1 diagnose <share-wurzel>   Verdrahtung und Ablagepfade anzeigen",
+  "",
+  "  s1 akte pruefe <ordner>      Einsatzordner prüfen (M2.4)",
+  "    --vergleiche <ordner>      zweiten Ordner prüfen und den zustandsHash vergleichen",
   "",
   "  s1 simuliere [Optionen]      Konvergenz unter Störung prüfen (M0.4)",
   "    --plan <datei>             Plandatei (JSON); fehlende Felder aus dem Abnahmeplan",
@@ -162,6 +166,25 @@ export async function fuehreAus(argv: readonly string[]): Promise<Ergebnis> {
       `Ausgabekopf:       ${kopfAlsHtml({ datum: "2026-09-08", einsatzName: "Beispiel", stand: "Probe" }).split("\n").length} Zeilen HTML`,
     ];
     return { text: zeilen.join("\n"), code: 0 };
+  }
+
+  if (kommando === "akte") {
+    const [unterkommando, ...rest] = reste;
+    if (unterkommando !== "pruefe") {
+      return {
+        text: `Unbekanntes Unterkommando: akte ${unterkommando ?? ""}\n\n${HILFE}`,
+        code: 2,
+      };
+    }
+    try {
+      return await pruefe(rest);
+    } catch (fehler) {
+      // Exitcode 2 ist der **Aufruffehler** und nicht der Befund: Ein
+      // vertippter Pfad darf im Abnahmeprotokoll von M2.4 nicht als
+      // beschädigte Einsatzakte erscheinen. Alles, was `pruefe` über eine
+      // Akte zu sagen hat, sagt es mit Code 1.
+      return { text: `s1 akte pruefe: ${(fehler as Error).message}`, code: 2 };
+    }
   }
 
   if (kommando === "simuliere") {
