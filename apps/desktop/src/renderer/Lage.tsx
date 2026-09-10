@@ -13,6 +13,7 @@ import { useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
+import { Tagebuch } from "./Tagebuch.js";
 import { useLaden } from "./laden.js";
 
 export function Lage(): React.JSX.Element {
@@ -54,6 +55,8 @@ export function Lage(): React.JSX.Element {
           aufEinheit={setzeEinheitId}
         />
       </div>
+
+      <Tagebuch einheitId={einheitId} abschnittId={abschnittId} />
     </section>
   );
 }

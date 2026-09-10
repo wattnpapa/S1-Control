@@ -386,6 +386,65 @@
         font-size: clamp(1rem, 4vw, 2.4rem);
         opacity: 0.55;
       }
+      /* ---- Das Einsatztagebuch (M3.3) ----------------------------------- */
+
+      .tagebuch {
+        margin-top: 1.5rem;
+      }
+      .tagebuchkopf {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin-bottom: 0.5rem;
+      }
+      .tagebuchkopf h2 {
+        margin: 0 0.5rem 0 0;
+      }
+      .tagebuch table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+      }
+      .tagebuch th,
+      .tagebuch td {
+        border-bottom: 1px solid rgba(128, 128, 128, 0.2);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        vertical-align: top;
+      }
+      .tagebuch thead th {
+        position: sticky;
+        top: 0;
+        background: Canvas;
+        border-bottom: 2px solid rgba(128, 128, 128, 0.5);
+        white-space: nowrap;
+      }
+      /* Die Zeitspalten in Tabellenziffern und schmal: Sie werden ueberflogen,
+         nicht gelesen. Der Satz bekommt den Rest der Breite. */
+      .tagebuch td:first-child,
+      .tagebuch td:nth-child(2) {
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+      }
+      .tagebuch td.satz {
+        width: 100%;
+      }
+      /* Ruecknahme und Berichtigung bleiben als Zeilen stehen (§6 U4) und
+         sind deshalb markiert — sonst erkennt niemand, welche Zeile welche
+         zuruecknimmt. */
+      .tagebuch tr.ruecknahme,
+      .tagebuch tr.berichtigung {
+        background: rgba(128, 128, 128, 0.1);
+      }
+      .tagebuch .marke {
+        font-size: 0.75rem;
+        border: 1px solid currentColor;
+        border-radius: 3px;
+        padding: 0 0.3rem;
+        opacity: 0.8;
+      }
+
     </style>
   </head>
   <body>
