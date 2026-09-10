@@ -389,3 +389,105 @@ export function ruecknahme(
     ...(grund === undefined ? {} : { grund }),
   };
 }
+
+// ---------------------------------------------------------------------------
+// Dienstposten und Schichtplan (M5.4)
+// ---------------------------------------------------------------------------
+
+/** Die Anlage eines Dienstpostens — Form (b), §5.7. */
+export interface Dienstpostenanlage {
+  readonly dienstpostenId: string;
+  readonly teileinheit: string;
+  readonly funktion: string;
+  readonly schicht: string;
+  readonly reihenfolge: number;
+}
+
+export function dienstpostenAnlegen(anlage: Dienstpostenanlage): Entwurf {
+  return { typ: "DienstpostenAngelegt", nutzlast: { ...anlage } };
+}
+
+export const DIENSTPOSTENFELDER = ["teileinheit", "funktion", "schicht", "reihenfolge"] as const;
+export type Dienstpostenfeld = (typeof DIENSTPOSTENFELDER)[number];
+
+export function dienstpostenGeaendert(
+  dienstpostenId: string,
+  feld: Dienstpostenfeld,
+  vorher: unknown,
+  neu: unknown,
+): Entwurf {
+  // `feld` steht in der **Nutzlast**: Der Katalog liest es mit
+  // `ausNutzlast("feld")`, und der Rahmen kennt kein solches Feld (§2.2).
+  return { typ: "DienstpostenGeaendert", nutzlast: { dienstpostenId, feld }, vorher, neu };
+}
+
+/**
+ * Die Besetzung eines Dienstpostens (§5.7).
+ *
+ * Die Vorlage traegt sie als „1" in der Rollenspalte
+ * (`excel-domaenenmodell.md` §5); hier steht der **Name**. Das ist mehr und
+ * nicht weniger: Die Rolle folgt der Funktion des Postens, gezaehlt wird
+ * ueber K17, und wer den Posten besetzt, steht damit auch im Tagebuch.
+ *
+ * Ein leerer Name raeumt den Posten: Der Wert wird `null`, das Feld bleibt
+ * stehen (§3.2), und K17 zaehlt ihn nicht mehr.
+ */
+export function dienstpostenBesetzt(
+  dienstpostenId: string,
+  vorher: string | null,
+  besetzung: string,
+): Entwurf {
+  return {
+    typ: "DienstpostenBesetzt",
+    nutzlast: { dienstpostenId },
+    vorher,
+    neu: besetzung.trim() === "" ? null : besetzung.trim(),
+  };
+}
+
+/** §5.4.5 sinngemaess: Entfernen ist kein Loeschen. */
+export function dienstpostenEntfernt(dienstpostenId: string, grund: string): Entwurf {
+  return {
+    typ: "DienstpostenEntfernt",
+    nutzlast: { dienstpostenId },
+    vorher: false,
+    neu: true,
+    grund,
+  };
+}
+
+export function dienstpostenWiederhergestellt(dienstpostenId: string): Entwurf {
+  return {
+    typ: "DienstpostenWiederhergestellt",
+    nutzlast: { dienstpostenId },
+    vorher: true,
+    neu: false,
+  };
+}
+
+/**
+ * Eine Zelle des Schichtplans (§5.7).
+ *
+ * Der Schluessel ist das **Paar** (`dienstpostenId`, `datum`): Zwei Clients,
+ * die denselben Tag desselben Postens beschreiben, meinen dieselbe Zelle des
+ * FueSt-Blatts. Mit zwei Entitaets-Ids haetten sie zwei Eintraege fuer eine
+ * Zelle.
+ *
+ * `datum` ist **keine** fachliche Zeit, sondern Schluesselbestandteil — es
+ * wird deshalb nicht plausibilisiert (§2.5). Ein Dienstplan fuer uebermorgen
+ * ist der Normalfall, ein Eintrag fuer vorgestern eine zulaessige
+ * Nachtragung.
+ */
+export function schichtplanEintrag(
+  dienstpostenId: string,
+  datum: string,
+  vorher: string | null,
+  text: string,
+): Entwurf {
+  return {
+    typ: "SchichtplanEintragGesetzt",
+    nutzlast: { dienstpostenId, datum },
+    vorher,
+    neu: text.trim() === "" ? null : text,
+  };
+}

@@ -417,6 +417,7 @@ describe("Jeder Ansichtsruf erreicht den Aktendienst", () => {
       { art: "tagebuchAnfordern", akteId },
       { art: "kostenAnfordern", akteId },
       { art: "anforderungenAnfordern", akteId },
+      { art: "fuestAnfordern", akteId },
     ];
 
     for (const anfrage of rufe) {

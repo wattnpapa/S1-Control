@@ -30,8 +30,10 @@ import type {
   Anforderungsausschnitt,
   Baumknoten,
   Kostenblatt,
+  Schichtplanblatt,
   Tabellenausschnitt,
   Tagebuchzeile,
+  Teilbereichsblock,
   Untertabelle,
 } from "@s1/domaene";
 
@@ -247,6 +249,18 @@ export const zRuf = z.discriminatedUnion("art", [
   // und eine Abrechnung mit der ersten Seite waere keine. Bei 150 Einheiten
   // sind es 150 Zeilen mit je acht Zahlen — das traegt ein Ruf.
   z.object({ art: z.literal("kostenAnfordern"), akteId: zAkteId }),
+  // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
+  // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
+  // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
+  // Rufe holten dieselben Posten zweimal.
+  z.object({
+    art: z.literal("fuestAnfordern"),
+    akteId: zAkteId,
+    mitEntfernten: z.boolean().optional(),
+    /** Erster angezeigter Tag des Schichtplans, ISO-Datum, einschliesslich. */
+    planVon: z.string().optional(),
+    planBis: z.string().optional(),
+  }),
   z.object({
     art: z.literal("anforderungenAnfordern"),
     akteId: zAkteId,
@@ -386,6 +400,7 @@ export interface Antworten {
   baumAnfordern: Baumansicht;
   kostenAnfordern: Kostenansicht;
   anforderungenAnfordern: Anforderungsansicht;
+  fuestAnfordern: Fuestansicht;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -419,6 +434,18 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/** Das Blatt der Fuehrungsstelle (M5.4): Dienstposten, Summen und Schichtplan. */
+export interface Fuestansicht extends Ansichtsstand {
+  readonly bloecke: readonly Teilbereichsblock[];
+  readonly plan: Schichtplanblatt;
+  /** K17: je Teileinheit und Schicht die Staerke der besetzten Posten. */
+  readonly staerke: readonly {
+    readonly teileinheit: string;
+    readonly schicht: string;
+    readonly staerke: { readonly fuehrer: number; readonly unterfuehrer: number; readonly mannschaft: number };
+  }[];
+}
 
 /** Die Anforderungsliste (M5.3) — mit Ausschnitt, wie jede Liste (M3.7). */
 export interface Anforderungsansicht extends Ansichtsstand, Anforderungsausschnitt {}

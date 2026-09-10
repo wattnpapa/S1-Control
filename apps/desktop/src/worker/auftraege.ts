@@ -37,6 +37,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.kosten();
     case "anforderungenAnfordern":
       return dienst.anforderungen(auftrag.ruf);
+    case "fuestAnfordern":
+      return dienst.fuest(auftrag.ruf);
     case "baumAnfordern":
       return dienst.baum(auftrag.ruf);
     case "tabelleAnfordern":

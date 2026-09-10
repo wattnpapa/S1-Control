@@ -28,6 +28,7 @@ import type {
   Ausgabeergebnis,
   Anforderungsansicht,
   Baumansicht,
+  Fuestansicht,
   Kostenansicht,
   Bedienergebnis,
   Bildschirm,
@@ -118,6 +119,8 @@ export interface Laden {
   /** Die Anforderungsliste (M5.3). */
   readonly anforderungen: Anforderungsansicht | undefined;
   readonly anforderungsfilter: Anforderungsfilterwahl;
+  /** Das Blatt der Führungsstelle (M5.4). */
+  readonly fuest: Fuestansicht | undefined;
   readonly tabellenfilter: Tabellenfilter;
   readonly tagebuchfilter: Tagebuchfilterwahl;
 
@@ -127,6 +130,7 @@ export interface Laden {
   holeUntertabelle(einheitId: string): Promise<void>;
   holeKosten(): Promise<void>;
   holeAnforderungen(): Promise<void>;
+  holeFuest(): Promise<void>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -199,13 +203,14 @@ let hinweisNummer = 0;
  * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
  * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
  */
-const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen", number> = {
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen" | "fuest", number> = {
   baum: 0,
   tabelle: 0,
   tagebuch: 0,
   untertabelle: 0,
   kosten: 0,
   anforderungen: 0,
+  fuest: 0,
 };
 
 export const useLaden = create<Laden>((setze, hole) => {
@@ -234,7 +239,14 @@ export const useLaden = create<Laden>((setze, hole) => {
    * sichtbar altert.
    */
   async function holeAnsicht<
-    A extends "baum" | "tabelle" | "tagebuch" | "untertabelle" | "kosten" | "anforderungen",
+    A extends
+      | "baum"
+      | "tabelle"
+      | "tagebuch"
+      | "untertabelle"
+      | "kosten"
+      | "anforderungen"
+      | "fuest",
   >(
     welche: A,
     baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
@@ -339,6 +351,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     kosten: undefined,
     anforderungen: undefined,
     anforderungsfilter: {},
+    fuest: undefined,
     eeb: undefined,
     htmlMonitor: undefined,
     bildschirme: undefined,
@@ -376,6 +389,10 @@ export const useLaden = create<Laden>((setze, hole) => {
         ...(filter.zustaende === undefined ? {} : { zustaende: [...filter.zustaende] }),
         ...(filter.suche === undefined ? {} : { suche: filter.suche }),
       }));
+    },
+
+    async holeFuest() {
+      await holeAnsicht("fuest", (akteId) => ({ art: "fuestAnfordern", akteId }));
     },
 
     async setzeAnforderungsfilter(filter) {
@@ -509,6 +526,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         einheitId === undefined ? undefined : zustand.holeUntertabelle(einheitId),
         zustand.kosten === undefined ? undefined : zustand.holeKosten(),
         zustand.anforderungen === undefined ? undefined : zustand.holeAnforderungen(),
+        zustand.fuest === undefined ? undefined : zustand.holeFuest(),
       ]);
     },
 

@@ -84,6 +84,7 @@ import {
   lagebildDelta,
   type Baumansicht,
   type Anforderungsansicht,
+  type Fuestansicht,
   type Kostenansicht,
   type Bedienergebnis,
   type Lagebild,
@@ -619,6 +620,27 @@ export class Aktendienst {
       ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
     });
     return { lageZeiger: this.#lageZeiger, ...ausschnitt };
+  }
+
+  /**
+   * Das Blatt der Fuehrungsstelle (M5.4).
+   *
+   * Dienstposten, Schichtplan und die Staerke aus K17 in **einem** Ruf: Sie
+   * sind drei Sichten auf dieselbe Menge, und drei Rufe holten die Posten
+   * dreimal.
+   */
+  fuest(ruf: Extract<Ruf, { art: "fuestAnfordern" }>): Fuestansicht {
+    const mitEntfernten = ruf.mitEntfernten === true ? { mitEntfernten: true } : {};
+    return {
+      lageZeiger: this.#lageZeiger,
+      bloecke: projektion.dienstpostenblatt(this.#zustand, mitEntfernten),
+      plan: projektion.schichtplanblatt(this.#zustand, {
+        ...mitEntfernten,
+        ...(ruf.planVon === undefined ? {} : { von: ruf.planVon }),
+        ...(ruf.planBis === undefined ? {} : { bis: ruf.planBis }),
+      }),
+      staerke: projektion.fuestStaerke(this.#zustand),
+    };
   }
 
   /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */

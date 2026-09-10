@@ -433,6 +433,77 @@
         flex-wrap: wrap;
       }
 
+      .fuehrungsstelle h2 {
+        font-size: 1rem;
+        margin: 0.6rem 0 0.3rem;
+      }
+      .fuehrungsstelle h3 {
+        font-size: 0.9rem;
+        margin: 0.8rem 0 0.3rem;
+      }
+      .fuestsumme ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: 0.85rem;
+      }
+      .dienstpostenneu,
+      .planneu {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: center;
+        margin: 0.5rem 0;
+        font-size: 0.85rem;
+      }
+      .dienstpostenneu label,
+      .planneu label {
+        display: flex;
+        gap: 0.3rem;
+        align-items: center;
+      }
+      .dienstposten,
+      .schichtplan {
+        border-collapse: collapse;
+        font-size: 0.85rem;
+      }
+      .schichtplan {
+        width: 100%;
+      }
+      .dienstposten th,
+      .dienstposten td,
+      .schichtplan th,
+      .schichtplan td {
+        border: 1px solid rgba(128, 128, 128, 0.35);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        font-weight: 400;
+      }
+      .dienstposten thead th,
+      .schichtplan thead th {
+        font-weight: 700;
+      }
+      .dienstposten tr.summenzeile th,
+      .dienstposten tr.summenzeile td {
+        font-weight: 700;
+      }
+      /* §5.4.5 sinngemaess: Ein entfernter Posten bleibt sichtbar — sonst
+         liesse er sich nicht wiederherstellen, weil ihn niemand mehr sieht. */
+      .dienstposten tr.entfernt th,
+      .dienstposten tr.entfernt td {
+        opacity: 0.55;
+        text-decoration: line-through;
+      }
+      /* Die Planzellen tragen mehrzeiligen Freitext (ZDM §1.14): Name,
+         Herkunft, Erreichbarkeit. Sie duerfen breit sein. */
+      .schichtplan input {
+        width: 100%;
+        min-width: 12rem;
+      }
+
       /* ---- Der Staerke-Monitor (M3.5) ---------------------------------- */
 
       /* Dieses Fenster wird nicht bedient, sondern gelesen — von der anderen
