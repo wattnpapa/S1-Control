@@ -206,9 +206,12 @@ describe("Funktionalität: Tastaturbedienung", () => {
   it("Szenario: die Abkürzungsliste steht als Hilfefenster bereit", () => {
     render(<Hilfe aufSchliessen={() => undefined} />);
     expect(screen.getByLabelText("Hilfe")).toBeDefined();
-    expect(screen.getByText("Zugtrupp")).toBeDefined();
-    // Und die Tastenkarte steht daneben, aus derselben Liste, aus der die
-    // Kürzel greifen.
+    // Zuerst die Tastenkarte, aus derselben Liste, aus der die Kürzel greifen.
     expect(screen.getByText("Strg+H")).toBeDefined();
+    // Die Abkürzungen liegen seit M8.1 auf einem eigenen Reiter: Mit den
+    // Ansichtstexten und den Störfällen daneben wäre ein Fenster daraus eine
+    // Seite zum Scrollen geworden.
+    fireEvent.click(screen.getByRole("tab", { name: "Abkürzungen" }));
+    expect(screen.getByText("Zugtrupp")).toBeDefined();
   });
 });

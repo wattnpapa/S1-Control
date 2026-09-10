@@ -17,6 +17,7 @@ import { useState } from "react";
 import { ORGANISATIONEN } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 
 export function Ausgaben(): React.JSX.Element {
   const laden = useLaden();
@@ -41,7 +42,7 @@ export function Ausgaben(): React.JSX.Element {
 
   return (
     <section aria-label="Ausgaben" className="ausgaben">
-      <h2>Ausgaben</h2>
+      <h2>Ausgaben <Hilfemarke kennung="ausgaben" /></h2>
       <label className="schalter">
         Davon Stärke
         <select

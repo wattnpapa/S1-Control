@@ -19,6 +19,7 @@
 import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 import { KOSTENFELDER, kostenParameter, type Kostenfeld } from "../kontrakt/bedienschritte.js";
 
 /** Die Beschriftungen der vier Parameter, in der Reihenfolge der Vorlage. */
@@ -81,7 +82,7 @@ export function Kosten(): React.JSX.Element {
 
   return (
     <section aria-label="Kosten" className="kosten">
-      <h2>Kosten</h2>
+      <h2>Kosten <Hilfemarke kennung="kosten" /></h2>
 
       <h3>Parameter des Einsatzes</h3>
       <table className="parameter">

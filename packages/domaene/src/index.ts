@@ -377,3 +377,20 @@ export {
   type Stoerfallbefund,
   type Stoerfallkennung,
 } from "./stoerfaelle.js";
+
+// Die Tastenkarte (M3.6, in Ring 2 seit M8.1) — gelesen vom Fenster, der
+// In-App-Hilfe und dem Handbuch.
+export {
+  KUERZEL,
+  findeKuerzel,
+  kuerzel,
+  kuerzelText,
+  passt,
+  type Kuerzel,
+  type Kuerzelbereich,
+  type Tastendruck,
+} from "./tastenkarte.js";
+
+// Die Kurzhilfe je Ansicht (M8.1) — gelesen von der Ansicht selbst, dem
+// Hilfefenster und dem Handbuch.
+export { ANSICHTEN, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } from "./bedienhilfe.js";

@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import type { Anforderungszeile, Anforderungszustand } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 import {
   abloesungZugesagt,
   anforderungAnlegen,
@@ -95,7 +96,7 @@ export function Anforderungen(): React.JSX.Element {
 
   return (
     <section aria-label="Anforderungen" className="anforderungen">
-      <h2>Anforderungen</h2>
+      <h2>Anforderungen <Hilfemarke kennung="anforderungen" /></h2>
 
       <div className="anforderungsfilter">
         {ZUSTAENDE.map((zustand) => {

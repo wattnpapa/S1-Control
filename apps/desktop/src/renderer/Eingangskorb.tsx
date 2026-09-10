@@ -20,6 +20,7 @@ import { useEffect, useState } from "react";
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 import {
   MELDESTATUS,
   ablehnungZurueckgenommen,
@@ -59,7 +60,7 @@ export function Eingangskorb(): React.JSX.Element {
     <section aria-label="Eingangskorb" className="eingangskorb">
       <h2>
         Eingangskorb
-        {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`}
+        {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`} <Hilfemarke kennung="eingangskorb" />
       </h2>
 
       <Buendel />

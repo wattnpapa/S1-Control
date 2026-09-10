@@ -27,6 +27,7 @@ import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 
 /** Welche Maske gerade offen ist — höchstens eine. */
 type Maskenart = "anlegen" | "umbenennen" | "typ" | "umhaengen" | "aufloesen" | undefined;
@@ -94,7 +95,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
   return (
     <section aria-label="Abschnitte" className="baum">
       <div className="baumkopf">
-        <h2>Abschnitte</h2>
+        <h2>Abschnitte <Hilfemarke kennung="abschnitte" /></h2>
         <button
           type="button"
           onClick={() => {

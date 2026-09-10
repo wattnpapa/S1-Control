@@ -28,6 +28,7 @@ import { Untertabellen } from "./Untertabellen.js";
 import { eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
@@ -130,7 +131,7 @@ export function Einheitentabelle({
   return (
     <section aria-label="Einheiten" className="einheiten">
       <div className="einheitenkopf">
-        <h2>Einheiten</h2>
+        <h2>Einheiten <Hilfemarke kennung="einheiten" /></h2>
         <label className="suchfeld">
           Suche
           <input

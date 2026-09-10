@@ -31,6 +31,7 @@ import { STOERFAELLE, UHR_GRENZE_MS, erkannteStoerfaelle } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { alter, bytes } from "./Statuszeile.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 import type { Lagebild, Peer } from "../kontrakt/index.js";
 
 /** Eine Abweichung in Sekunden oder Minuten, mit Vorzeichen und in Worten. */
@@ -106,7 +107,7 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
 
   return (
     <section aria-label="Diagnose" className="diagnose">
-      <h2>Diagnose</h2>
+      <h2>Diagnose <Hilfemarke kennung="diagnose" /></h2>
 
       <h3>Was gerade zutrifft</h3>
       {zutreffend.length === 0 ? (

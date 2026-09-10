@@ -21,6 +21,7 @@
 import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 
 export interface TagebuchEigenschaften {
   /** Filter „nur diese Einheit“ — kommt aus der Auswahl in der Tabelle. */
@@ -52,7 +53,7 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
   return (
     <section aria-label="Einsatztagebuch" className="tagebuch">
       <div className="tagebuchkopf">
-        <h2>Einsatztagebuch</h2>
+        <h2>Einsatztagebuch <Hilfemarke kennung="tagebuch" /></h2>
         <label className="suchfeld">
           Suche
           <input

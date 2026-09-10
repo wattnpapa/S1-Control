@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 import type { Dienstpostenzeile, Teilbereichsblock } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Hilfemarke } from "./Hilfemarke.js";
 import {
   dienstpostenAnlegen,
   dienstpostenBesetzt,
@@ -95,7 +96,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
 
   return (
     <section aria-label="Führungsstelle" className="fuehrungsstelle">
-      <h2>Führungsstelle</h2>
+      <h2>Führungsstelle <Hilfemarke kennung="fuehrungsstelle" /></h2>
 
       <div className="fuestsumme">
         {ansicht.staerke.length === 0 ? (
