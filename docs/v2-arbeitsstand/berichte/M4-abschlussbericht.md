@@ -17,12 +17,12 @@ Goldfiles ersetzt sie.
 |---|---|---|
 | M4.0 | ZIP-Schreiber, CRC-32 nach Ring 2, synthetische Prüflage | fertig |
 | M4.1 | Druck und Status-Matrix als HTML, PDF über `printToPDF` | gebaut, **Parität mit der Excel offen** |
-| M4.2 | Auswertung als XLSX | fertig |
+| M4.2 | Auswertung als XLSX, dazu der Oldenburger Block als Exportvariante | fertig |
 | M4.3 | HTML-Monitor als Datei mit Reload | fertig |
 | M4.4 | Einsatzakte als ZIP, `s1 akte exportiere` und `importiere` | fertig |
 
-Gates zum Stand dieses Berichts: `tsc -b` sauber, `eslint .` sauber, **1269
-Tests in 96 Dateien grün** (von 1183 zum Ende von M3), `build:renderer` und
+Gates zum Stand dieses Berichts: `tsc -b` sauber, `eslint .` sauber, **1279
+Tests in 97 Dateien grün** (von 1183 zum Ende von M3), `build:renderer` und
 `build:schale` sauber. Dazu zwei Nachweise, die außerhalb der Testläufe
 stehen: die Rauchprobe unter Xvfb erzeugt beide PDF, und der `fremdleser`-Lauf
 prüft ZIP und XLSX mit Programmen, die nichts von diesem Baum wissen.
@@ -37,6 +37,7 @@ prüft ZIP und XLSX mit Programmen, die nichts von diesem Baum wissen.
 | `e337d2c` | M4.2: die Auswertung als XLSX, mit eigenem Schreiber |
 | `dcbb3f8` | M4.3: der HTML-Monitor als Datei für ein zweites Gerät |
 | `12d182d` | M4.4: die Einsatzakte als ZIP, mit Rückweg |
+| `d827758` | M4.2: der Oldenburger Block als Exportvariante |
 
 ## Was festgelegt wurde, und warum gerade so
 
@@ -120,6 +121,38 @@ gebaut hat.
 Zwei Feinheiten stehen im Code mit ihrer Begründung: Abschnitte ohne Einheiten
 werden ausgeblendet (K7), und `ANGEFORDERT` bleibt aus der Gesamtstärke
 draußen — angeforderte Kräfte sind noch nicht da.
+
+### Zwei XLSX-Ausgaben, weil es zwei Zwecke sind
+
+Die Auswertung ist unsere Ausgabe: die Spalten in der Ordnung der
+Oberfläche, der Bereich als eigene Spalte, Summenzeile, Autofilter, fixierte
+Kopfzeile. Sie ist die einzige Ausgabe, die die Bereichszugehörigkeit als
+Attribut führt und nicht als Zeilenposition — erst damit lässt sich filtern
+und weiterrechnen.
+
+Der Oldenburger Block ist etwas anderes: der Block, den eine Führungsstelle
+in ihre gewohnte Excel **einfügt**. Dafür muss die Spaltenfolge die des
+Blatts „Stärke" sein, B bis AM in ihrer Folge, einschließlich der Spalten,
+die S1-Control nicht führt, und einschließlich der beiden versteckten
+Reservespalten X und Y. Eine Spalte zu wenig, und alles dahinter sitzt in der
+Vorlage um eins verschoben — der Fehler fällt beim Ansehen niemandem auf,
+weil jede Zelle etwas enthält, nur das Falsche. Deshalb prüfen die Tests vor
+allem die Ordnung.
+
+Zwei Stellen sind Entscheidungen und keine Ableitungen. Die Vorlage kennt vier
+Ebenenspalten (Zug, Trupp o. Staffel, Gruppe, Person), das Zielmodell zehn
+Ebenen (ZDM §2.8); die Zuordnung ist eine Vergröberung, und alles oberhalb des
+Zuges steht in „Zug", weil die Vorlage für einen Verband keine eigene Spalte
+hat. `UNBESTIMMT` bekommt keine der vier — eine Einheit ohne Ebene in eine
+Ebenenspalte zu schreiben, wäre eine Behauptung. Und die Kostenspalten AN bis
+AW fehlen ganz: Sie sind in der Vorlage durchweg Formel und rechnen sich nach
+dem Einfügen selbst aus; sie mit Werten zu überschreiben, nähme der Vorlage
+ihre Rechnung.
+
+Der Weg zurück ist nicht vorgesehen. Wer den Block einfügt, führt die Lage ab
+da in der Excel weiter; ein Reimport von dort gibt es nicht, und er wäre auch
+falsch — die Ereignisse sind die Aufzeichnung (KONZEPT-EREIGNISSE.md §1),
+nicht der Zellinhalt.
 
 ### PDF entsteht in der Schale, nicht in Ring 3
 
@@ -220,6 +253,10 @@ NATO-Zeit gehört in die Stammdaten der Führungsstelle). B1 und B2 berühren de
   jetzt einpacken, weitergeben und mit einem Kommando prüfen. Für die
   Abnahmen, die auf Hardware warten, ist das der Weg, auf dem der Bestand
   eines Übungslaufs hierher zurückkommt.
+* **Den Übergabeweg in die Excel.** Solange die Parität offen ist, kann eine
+  Führungsstelle den Oldenburger Block einfügen und in ihrer Vorlage
+  weiterarbeiten. Das ist auch der Weg, auf dem sich der Vergleich später
+  Zeile für Zeile führen lässt: derselbe Bestand, dieselben Spalten.
 * **Die Trennung Ausgabeform / Rechnung.** Keine Ausgabe rechnet. Wer eine
   Zahl ändern will, ändert eine Kennzahl in Ring 2 und sieht sie in allen vier
   Ausgaben.
