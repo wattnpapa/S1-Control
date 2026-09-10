@@ -15,6 +15,20 @@ Die vorher halbtransparenten Grautöne der Ansichten sind auf die Marken gezogen
 sodass Baum, Einheitentabelle, Masken, Nebenblätter, Eingangskorb und
 Führungsstelle den Wechsel mitmachen.
 
+Die Anordnung folgt Option 2a: **ein Blatt zur Zeit**. Die Reiter stehen im
+Kopfband (`blaetter.ts`, `Kopfband.tsx`) und führen die ganze Ansicht — Lage,
+Eingangskorb, Anforderungen, Führungsstelle, Kosten, Ausgaben, Einsatztagebuch,
+rechts die Diagnose. Vorher lagen Ausgaben, Nebenblätter und Tagebuch
+untereinander unter der Lage; wer die Einheitentabelle sehen wollte, scrollte an
+allem vorbei. Die Lage bleibt beim Blattwechsel eingehängt, weil sie die Auswahl
+von Abschnitt und Einheit hält, auf die Ausgaben und Tagebuch sich beziehen. Der
+Zähler am Reiter „Eingangskorb" nennt die offenen Meldungen. Die Werkzeugzeile
+der Lage trägt nur noch, was die ganze Lage betrifft — Bogen einlesen,
+Stärke-Monitor, Rückgängig; der Weg aus dem Einsatz steht als „‹ Einsatzauswahl"
+im Kopfband. Der Knopf, mit dem ein Arbeitsplatz das Programmpaket für alle holt,
+steht jetzt im Blatt „Diagnose" statt über der Lage; ein Angebot oder ein
+abgelehntes Manifest erscheint weiterhin oben.
+
 Neu sind das Navy-Kopfband mit Wortbild, Gesamtstärke, taktischer Zeit,
 Hilfeknopf und Themenschalter (`Kopfband.tsx`), das Stärkeband mit den fünf
 Kacheln (`Staerkeband.tsx`) und die Schreibweisen in `formate.ts`: Die
@@ -31,8 +45,7 @@ mitgeschlossen worden: `liesArbeitsplatz` hat die Betriebsart bisher zwar
 geschrieben, aber nicht wieder gelesen — ein Meldekopf war nach jedem Start
 wieder eine Führungsstelle.
 
-Offen: der Reiterstreifen im Kopfband (die Nebenblätter haben heute eine eigene
-Reiterleiste über dem Tagebuch), die Feingestaltung der Bogenübernahme aus
+Offen: die Feingestaltung der Bogenübernahme aus
 erfassungsbogen.app (Option 2d) und die Führungsharke als Bildschirmansicht —
 sie existiert bislang nur als Ausgabe `fueorg`. Die taktischen Zeichen aus dem
 Bündel liegen unter `apps/desktop/assets/tz/clean/` (`viewBox 0 0 256 256`, ohne
