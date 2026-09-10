@@ -464,14 +464,34 @@ export class Aktendienst {
           .filter((q) => !q.vorlaeufig)
           .map((q) => ({ datei: q.datei, offset: q.offset })),
       );
+      const jetzt = this.#o.zeit();
       this.#peers = (await liesFremdePraesenz(praesenzOptionen, this.#praesenzbeobachtung)).map(
-        (fremd) => ({
-          clientId: fremd.praesenz.clientId,
-          anzeigename: fremd.praesenz.anzeigename,
-          rechnername: fremd.praesenz.rechnername,
-          veraltet: fremd.veraltet,
-          wanduhr: fremd.praesenz.wanduhr,
-        }),
+        (fremd) => {
+          // §6.4: Die Praesenzdatei traegt Segment und Offset des anderen
+          // Platzes. Danebengestellt, wie weit **wir** seine laufende Datei
+          // gelesen haben — die Differenz ist die Auskunft der
+          // Diagnoseansicht (M7.3). Steht sie still, waehrend er schreibt,
+          // kommt der Share nicht durch.
+          const schluessel = `${clientPraefix(fremd.praesenz.clientId)}.${segmentText(fremd.praesenz.segment)}`;
+          const gelesen = this.#akte === undefined ? 0 : (this.akte.zustand.fremd[schluessel]?.leseOffset ?? 0);
+          // §2.6: Die Abweichung ordnet nichts; sie erklaert Anzeigen und die
+          // Schwellen aus §2.5. Vorzeichenbehaftet, weil „geht vor" und „geht
+          // nach" verschiedene Ursachen haben.
+          const dann = Date.parse(fremd.praesenz.wanduhr);
+          return {
+            clientId: fremd.praesenz.clientId,
+            anzeigename: fremd.praesenz.anzeigename,
+            rechnername: fremd.praesenz.rechnername,
+            veraltet: fremd.veraltet,
+            wanduhr: fremd.praesenz.wanduhr,
+            programmversion: fremd.praesenz.programmversion,
+            segment: fremd.praesenz.segment,
+            offset: fremd.praesenz.offset,
+            gelesenerOffset: gelesen,
+            uhrAbweichungMs: Number.isNaN(dann) ? 0 : dann - jetzt,
+            quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
+          };
+        },
       );
       this.#setzeShare(true);
     } catch (fehler) {

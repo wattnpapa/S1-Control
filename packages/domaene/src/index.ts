@@ -364,3 +364,16 @@ export {
   type Pruefauftrag,
   type Pruefergebnis,
 } from "./verteilung.js";
+
+// Die Störfallmatrix (M7.3) — sechs Fälle als Daten, gelesen von der
+// Diagnoseansicht und von der Kurzanleitung.
+export {
+  STOERFAELLE,
+  UHR_GRENZE_MS,
+  erkannteStoerfaelle,
+  stoerfall,
+  type Dringlichkeit,
+  type Stoerfall,
+  type Stoerfallbefund,
+  type Stoerfallkennung,
+} from "./stoerfaelle.js";

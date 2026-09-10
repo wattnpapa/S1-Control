@@ -11,6 +11,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { Statuszeile, alter, bytes } from "./Statuszeile.js";
 import type { Lagebild } from "../kontrakt/index.js";
+import { peer } from "../kontrakt/pruefhilfen.js";
 
 afterEach(cleanup);
 
@@ -94,8 +95,8 @@ describe("Statuszeile", () => {
   it("zählt die wachen und die veralteten Arbeitsplätze getrennt (§6.4)", () => {
     zeige({
       peers: [
-        { clientId: "b", anzeigename: "B", rechnername: "rb", veraltet: false, wanduhr: "" },
-        { clientId: "c", anzeigename: "C", rechnername: "rc", veraltet: true, wanduhr: "" },
+        peer({ clientId: "b", anzeigename: "B", rechnername: "rb", veraltet: false }),
+        peer({ clientId: "c", anzeigename: "C", rechnername: "rc", veraltet: true }),
       ],
     });
     expect(screen.getByText("1 weitere, 1 veraltet")).toBeDefined();

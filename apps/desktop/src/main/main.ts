@@ -158,6 +158,9 @@ function starte(): void {
     protokolliere: (stufe, text) => {
       protokoll.schreibe(stufe, text);
     },
+    // M7.3: Ort und Inhalt des Protokolls sind die erste Frage im Störfall.
+    protokolldatei: protokoll.datei,
+    letzteMeldungen: () => protokoll.letzteMeldungen,
   });
 
   ipcMain.handle(KANAL_RUF, async (_ereignis: IpcMainInvokeEvent, roh: unknown) => {

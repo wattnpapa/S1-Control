@@ -109,6 +109,37 @@ export const zPeer = z.object({
   /** §6.4: ab 60 Sekunden ohne Fortschreibung gilt ein Arbeitsplatz als veraltet. */
   veraltet: z.boolean(),
   wanduhr: z.string(),
+  // ---- Was M7.3 hinzunimmt: die Zahlen, aus denen eine Diagnose wird -------
+  //
+  // Sie stehen **am Peer** und nicht in einem eigenen Diagnoseruf, weil sie
+  // ohnehin in jedem Praesenztakt gelesen werden (§6.4): Die Praesenzdatei
+  // traegt Version, Segment und Offset seit M2.3. Sie ein zweites Mal zu holen,
+  // waere ein zweiter Griff auf denselben Ordner.
+  /** Die Programmfassung des anderen Platzes — ungleiche Fassungen erklaeren vieles. */
+  programmversion: z.string(),
+  /** Das Segment, in das der andere Platz gerade schreibt (§5.2). */
+  segment: z.number().int().min(0),
+  /** Wie weit er nach eigener Angabe geschrieben hat. */
+  offset: z.number().int().min(0),
+  /**
+   * Wie weit **dieser** Platz seine laufende Datei gelesen hat.
+   *
+   * Die Differenz zu `offset` ist die eigentliche Auskunft der Ansicht: Steht
+   * sie still, waehrend der andere schreibt, kommt der Share nicht durch. Sie
+   * darf negativ wirken, wenn der andere gerade geschrieben und noch nicht
+   * gespiegelt hat — deshalb wird sie gezeigt und nicht bewertet.
+   */
+  gelesenerOffset: z.number().int().min(0),
+  /**
+   * Abweichung seiner Wanduhr zur eigenen, in Millisekunden, vorzeichenbehaftet.
+   *
+   * §2.6: Die Ordnung haengt daran nicht. Angezeigte Zeitpunkte und die
+   * Plausibilitaetsschwellen aus §2.5 hingegen schon — deshalb steht die Zahl
+   * hier und nicht nur im Protokoll.
+   */
+  uhrAbweichungMs: z.number().int(),
+  /** Dateien, die **er** in Quarantaene gemeldet hat (§8.2, §4.6.1). */
+  quarantaene: z.number().int().min(0),
 });
 export type Peer = z.infer<typeof zPeer>;
 
@@ -299,6 +330,13 @@ export const zRuf = z.discriminatedUnion("art", [
   // Der Update-Weg (M7.2). **Ohne Akte**: Er haengt am Share und nicht an
   // einem Einsatz — geprueft wird auch dann, wenn keine Akte offen ist.
   z.object({ art: z.literal("programmstandPruefen") }),
+
+  // Die Diagnoseansicht (M7.3). **Ohne Akte**: Was sie zeigt, gehoert dem
+  // Arbeitsplatz und nicht einem Einsatz — Pfade, Fassungen, die letzten
+  // Meldungen des Protokolls. Das Fachliche (Peers, Quarantaene, Hinweise)
+  // steht laengst im geschobenen Lagebild; es hier zu wiederholen hiesse,
+  // dieselbe Zahl aus zwei Quellen zu zeigen, die sich unterscheiden koennen.
+  z.object({ art: z.literal("diagnoseAnfordern") }),
   z.object({
     art: z.literal("fassungsvergleichAnfordern"),
     akteId: zAkteId,
@@ -461,6 +499,7 @@ export interface Antworten {
   buendelEinlesen: Buendelergebnis;
   buendelSchreiben: Ausgabeergebnis;
   programmstandPruefen: Programmbefund;
+  diagnoseAnfordern: Diagnose;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -515,6 +554,48 @@ export type Programmbefund =
       readonly kurzform: string;
     }
   | { readonly art: "abgelehnt"; readonly grund: string; readonly meldung: string };
+
+/**
+ * Eine Zeile des Protokolls, wie die Diagnoseansicht sie zeigt (M7.3).
+ *
+ * Sie kommt aus dem Ringpuffer der Schale und nicht aus der Datei: Die Datei
+ * liegt im Benutzerprofil und kann vier Megabyte gross sein; gefragt ist,
+ * was zuletzt schiefging.
+ */
+export interface Protokollzeile {
+  readonly wanduhr: string;
+  readonly stufe: "info" | "warnung" | "fehler";
+  readonly text: string;
+}
+
+/**
+ * Was die Diagnoseansicht ueber diesen Arbeitsplatz weiss (M7.3).
+ *
+ * **Warum Pfade und keine Inhalte.** Die Ansicht sagt, **wo** die
+ * Protokolldatei liegt, und zeigt die letzten Meldungen aus dem Speicher.
+ * Sie liest die Datei nicht in den Renderer: Ein Protokoll von vier Megabyte
+ * ueber die IPC-Grenze zu tragen, um zwanzig Zeilen zu zeigen, waere derselbe
+ * Fehler wie ein Ansichtsruf ohne Ausschnitt (Entscheidung 10).
+ */
+export interface Diagnose {
+  readonly plattform: string;
+  readonly electron: string;
+  readonly programmversion: string;
+  readonly rechnername: string;
+  readonly benutzer: string;
+  readonly clientId: string;
+  /** Der Ort der Protokolldatei — die Frage, die im Stoerfall zuerst kommt. */
+  readonly protokolldatei: string;
+  readonly einstellungsdatei: string;
+  /** Die Wurzel des lokalen Spiegels (§1.3) — sie darf geloescht werden. */
+  readonly spiegelwurzel: string;
+  readonly sharePfad: string;
+  /** Ob der Sharepfad in diesem Augenblick als Ordner lesbar ist. */
+  readonly shareLesbar: boolean;
+  /** Die eigene Wanduhr im Augenblick der Auskunft — Bezug jeder Abweichung. */
+  readonly wanduhr: string;
+  readonly letzteMeldungen: readonly Protokollzeile[];
+}
 
 /** Was beim Einlesen einer Buendeldatei herauskam (M6.3). */
 export interface Buendelergebnis {

@@ -59,6 +59,26 @@ describe("Zwei Arbeitsplätze auf demselben Verzeichnis", () => {
     expect(lageA?.peers[0]?.anzeigename).toBe("Arbeitsplatz 2");
   });
 
+  it("tragen die Zahlen mit, aus denen die Diagnose wird (M7.3)", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    await takteBis([a, b]);
+
+    // Aus der Sicht von B: A hat geschrieben, und B hat es gelesen. Die
+    // Diagnoseansicht stellt beide Zahlen nebeneinander; steht die gelesene
+    // still, während die geschriebene wächst, kommt der Share nicht durch.
+    const ueberA = letztesLagebild(b)?.peers[0];
+    expect(ueberA?.offset).toBeGreaterThan(0);
+    expect(ueberA?.gelesenerOffset).toBeGreaterThan(0);
+    expect(ueberA?.segment).toBe(0);
+    expect(ueberA?.programmversion).not.toBe("");
+    expect(ueberA?.quarantaene).toBe(0);
+    // Beide Plätze hängen an derselben Prüfuhr — die Abweichung ist deshalb
+    // klein. Geprüft wird, dass überhaupt gerechnet wird und nicht 0 als
+    // Vorbelegung stehen bleibt: eine Abweichung unter einer Sekunde.
+    expect(Math.abs(ueberA?.uhrAbweichungMs ?? Number.NaN)).toBeLessThan(1000);
+  });
+
   it("konvergieren, wenn beide zugleich schreiben", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);

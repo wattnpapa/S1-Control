@@ -25,7 +25,14 @@ import { Vermittlung } from "./vermittlung.js";
 import { Aktendienst } from "../worker/aktendienst.js";
 import type { Auftrag, Startdaten, WorkerBotschaft } from "../worker/akte-worker.js";
 import { bearbeiteAuftrag } from "../worker/auftraege.js";
-import type { Bedienergebnis, EinsatzEintrag, Mitteilung, Ruf } from "../kontrakt/index.js";
+import type {
+  Bedienergebnis,
+  Diagnose,
+  EinsatzEintrag,
+  Mitteilung,
+  Protokollzeile,
+  Ruf,
+} from "../kontrakt/index.js";
 
 const wegwerf: string[] = [];
 afterEach(() => {
@@ -124,6 +131,8 @@ function baueWerkstatt(): Werkstatt {
   const sharePfad = path.join(wurzel, "share");
   const mitteilungen: Mitteilung[] = [];
   const dienste = new Map<string, Aktendienst>();
+  // Der Ringpuffer der Schale, hier von Hand — die Vermittlung liest ihn nur.
+  const gemeldet: Protokollzeile[] = [];
 
   const hof = new Arbeiterhof({
     fabrik: (start) => baueDirektenArbeiter(start, dienste),
@@ -140,7 +149,11 @@ function baueWerkstatt(): Werkstatt {
     programmversion: "0.0.0-test",
     rechnername: "pruefrechner",
     benutzer: "pruefer",
-    protokolliere: () => undefined,
+    protokolliere: (stufe, text) => {
+      gemeldet.push({ wanduhr: "2026-09-10T12:00:00.000Z", stufe, text });
+    },
+    protokolldatei: path.join(wurzel, "profil", "s1-control.log"),
+    letzteMeldungen: () => [...gemeldet].reverse(),
   });
 
   return {
@@ -497,5 +510,41 @@ describe("Der Programmstand auf dem Share (M7.2)", () => {
     });
     expect(befund.art).toBe("abgelehnt");
     expect(befund.meldung).toContain("kein Verteilschlüssel");
+  });
+});
+
+describe("Die Diagnoseauskunft (M7.3)", () => {
+  it("nennt Pfade, Fassung und die letzten Meldungen — jüngste zuerst", async () => {
+    const werkstatt = baueWerkstatt();
+    await ruf(werkstatt, { art: "einstellungenSetzen", einstellungen: { sharePfad: werkstatt.sharePfad, anzeigename: "Prüfer" } });
+    // Ein Ruf, der scheitert, damit etwas im Protokoll steht: Die Ansicht soll
+    // zeigen, was schiefging, und nicht nur, dass es ein Protokoll gibt.
+    await werkstatt.vermittlung.beantworte({ art: "einsatzOeffnen", ordner: "gibtesnicht" });
+
+    const auskunft = await ruf<Diagnose>(werkstatt, { art: "diagnoseAnfordern" });
+
+    expect(auskunft.sharePfad).toBe(werkstatt.sharePfad);
+    expect(auskunft.programmversion).toBe("0.0.0-test");
+    expect(auskunft.rechnername).toBe("pruefrechner");
+    expect(auskunft.protokolldatei).toContain("s1-control.log");
+    expect(auskunft.einstellungsdatei).toContain("einstellungen.json");
+    expect(auskunft.spiegelwurzel).toContain("spiegel");
+    expect(auskunft.letzteMeldungen[0]?.stufe).toBe("fehler");
+    expect(auskunft.letzteMeldungen[0]?.text).toContain("einsatzOeffnen");
+  });
+
+  it("meldet einen unlesbaren Share als nicht lesbar statt zu scheitern", async () => {
+    // §6.4 im Kleinen: Die Auskunft über einen unerreichbaren Share ist
+    // selbst dann zu geben, wenn der Share weg ist — sonst fehlte sie genau
+    // in dem Fall, für den die Ansicht gebaut ist.
+    const werkstatt = baueWerkstatt();
+    await ruf(werkstatt, {
+      art: "einstellungenSetzen",
+      einstellungen: { sharePfad: path.join(werkstatt.sharePfad, "weg"), anzeigename: "Prüfer" },
+    });
+
+    const auskunft = await ruf<Diagnose>(werkstatt, { art: "diagnoseAnfordern" });
+
+    expect(auskunft.shareLesbar).toBe(false);
   });
 });

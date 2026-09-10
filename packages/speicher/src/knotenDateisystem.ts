@@ -192,6 +192,14 @@ export function knotenDateisystem(): Dateisystem {
       }
     },
 
+    async existiert(pfad) {
+      try {
+        return (await fsp.stat(pfad)).isDirectory();
+      } catch {
+        return false;
+      }
+    },
+
     async legeVerzeichnisAn(pfad) {
       try {
         await fsp.mkdir(pfad, { recursive: true });

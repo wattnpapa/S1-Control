@@ -147,4 +147,19 @@ export interface Dateisystem {
 
   /** Legt ein Verzeichnis samt Elternverzeichnissen an; vorhandene sind kein Fehler. */
   legeVerzeichnisAn(pfad: string): Promise<void>;
+
+  /**
+   * Ob unter diesem Pfad ein Verzeichnis liegt.
+   *
+   * Nachgetragen für die Diagnoseansicht (M7.3), und sie brauchte genau
+   * diesen Zusatz: {@link listeVerzeichnis} liefert bei ENOENT eine leere
+   * Liste, weil der Datenpfad einen noch nicht angelegten Unterordner wie
+   * einen leeren behandeln soll (§1.4). Für die Frage „ist der Share da“ ist
+   * dieselbe Antwort falsch — ein eingestellter, aber verschwundener Share
+   * sähe aus wie ein frisch eingerichteter.
+   *
+   * Wirft nicht: Ein fehlendes Recht ist hier dieselbe Auskunft wie ein
+   * fehlender Ordner — beides heißt „von hier aus nicht zu erreichen“.
+   */
+  existiert(pfad: string): Promise<boolean>;
 }

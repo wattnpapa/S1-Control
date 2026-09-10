@@ -34,7 +34,9 @@ import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./ein
 import { OHNE_SCHLUESSEL, VERTRAUTER_SCHLUESSEL } from "./verteilschluessel.js";
 import type { Arbeiterhof } from "./arbeiterhof.js";
 import type {
+  Diagnose,
   Programmbefund,
+  Protokollzeile,
   Antwort,
   Ausgabeergebnis,
   Bildschirm,
@@ -102,6 +104,17 @@ export interface VermittlungOptionen {
   readonly rechnername: string;
   readonly benutzer: string;
   readonly protokolliere: (stufe: "info" | "warnung" | "fehler", text: string) => void;
+  /** Wo die Protokolldatei liegt — die Diagnoseansicht nennt den Ort (M7.3). */
+  readonly protokolldatei?: string;
+  /**
+   * Die letzten Meldungen, juengste zuerst.
+   *
+   * Als Funktion und nicht als Feld: Sie aendern sich waehrend der Laufzeit,
+   * und die Vermittlung soll sie im Augenblick der Frage holen statt eine
+   * Fassung vom Start zu halten. Fehlt sie — in den Tests zum Datenpfad —,
+   * bleibt die Liste leer; das ist eine leere Liste und keine Luecke.
+   */
+  readonly letzteMeldungen?: () => readonly Protokollzeile[];
 }
 
 /** Der Unterordner, unter dem die Einsaetze auf dem Share liegen. */
@@ -146,6 +159,8 @@ export class Vermittlung {
         return this.#umgebung();
       case "programmstandPruefen":
         return this.#programmstand();
+      case "diagnoseAnfordern":
+        return this.#diagnose();
       case "einstellungenLesen":
         return this.#einstellungen();
       case "einstellungenSetzen":
@@ -292,6 +307,40 @@ export class Vermittlung {
       throw new Error("Auf diesem Arbeitsplatz ist keine Fenstersteuerung eingerichtet.");
     }
     return steuerung;
+  }
+
+  /**
+   * Was dieser Arbeitsplatz ueber sich selbst weiss (M7.3).
+   *
+   * **Der Sharepfad wird lesend geprueft und nicht schreibend.** Eine
+   * Schreibprobe waere die genauere Auskunft — und sie legte eine Datei auf
+   * einer fremden Freigabe an, jedes Mal, wenn jemand die Ansicht oeffnet.
+   * Ob geschrieben werden kann, sagt der Datenpfad ohnehin: Er tut es
+   * dauernd, und die unuebertragenen Bytes im Lagebild zeigen, wenn nicht.
+   */
+  async #diagnose(): Promise<Diagnose> {
+    const platz = await this.arbeitsplatz();
+    // `existiert` und nicht `listeVerzeichnis`: Letzteres liefert bei einem
+    // fehlenden Ordner eine leere Liste (§1.4), und ein verschwundener Share
+    // saehe damit aus wie ein frisch eingerichteter — die eine Verwechslung,
+    // die diese Ansicht nicht machen darf.
+    const shareLesbar =
+      platz.sharePfad !== "" && (await this.#o.dateisystem.existiert(platz.sharePfad));
+    return {
+      plattform: this.#o.plattform,
+      electron: this.#o.electron,
+      programmversion: this.#o.programmversion,
+      rechnername: this.#o.rechnername,
+      benutzer: this.#o.benutzer,
+      clientId: platz.clientId,
+      protokolldatei: this.#o.protokolldatei ?? "(kein Protokoll)",
+      einstellungsdatei: this.#o.einstellungsdatei,
+      spiegelwurzel: this.#o.spiegelwurzel,
+      sharePfad: platz.sharePfad,
+      shareLesbar,
+      wanduhr: new Date().toISOString(),
+      letzteMeldungen: this.#o.letzteMeldungen?.() ?? [],
+    };
   }
 
   async #umgebung(): Promise<Umgebung> {

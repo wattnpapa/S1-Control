@@ -18,6 +18,14 @@
  *
  * Der Schreibvorgang scheitert still: Ein Protokoll, das die Anwendung
  * anhaelt, weil die Platte voll ist, waere die Umkehrung seines Zwecks.
+ *
+ * **Seit M7.3 haelt es zusaetzlich die letzten Meldungen im Speicher.** Die
+ * Diagnoseansicht braucht sie, und der Weg ueber die Datei waere der falsche:
+ * Sie liegt im Benutzerprofil, ist bis zu vier Megabyte gross und kann genau
+ * dann unlesbar sein, wenn es interessant wird — bei vollem Datentraeger
+ * naemlich, wo der Schreibvorgang oben still scheitert. Der Ringpuffer haelt,
+ * was diese Sitzung gemeldet hat, und ist als einziger Teil des Protokolls
+ * auch dann noch da.
  */
 
 import * as fsp from "node:fs/promises";
@@ -28,11 +36,27 @@ export type Stufe = "info" | "warnung" | "fehler";
 /** Ab dieser Groesse wird auf `.1` weggerollt (eine Vorgaengerfassung, mehr nicht). */
 export const PROTOKOLL_MAX_BYTES = 4 * 1024 * 1024;
 
+/**
+ * So viele Meldungen haelt der Ringpuffer.
+ *
+ * Fuenfzig, weil die Ansicht sie auf einer Seite zeigen soll und weil eine
+ * laengere Liste die Frage nicht besser beantwortet: Wer wissen will, was vor
+ * einer Stunde geschah, oeffnet die Datei — ihr Ort steht daneben.
+ */
+export const PROTOKOLL_RINGPUFFER = 50;
+
+export interface Protokolleintrag {
+  readonly wanduhr: string;
+  readonly stufe: Stufe;
+  readonly text: string;
+}
+
 export class Protokoll {
   readonly #datei: string;
   readonly #maxBytes: number;
   #reihe: Promise<void> = Promise.resolve();
   #geschrieben = 0;
+  #ring: Protokolleintrag[] = [];
 
   constructor(datei: string, maxBytes: number = PROTOKOLL_MAX_BYTES) {
     this.#datei = datei;
@@ -43,8 +67,22 @@ export class Protokoll {
     return this.#datei;
   }
 
+  /**
+   * Die letzten Meldungen, juengste zuerst.
+   *
+   * Umgedreht, weil die Ansicht sie so zeigt und die Umkehrung sonst an drei
+   * Stellen stuende. Eine Kopie, damit niemand von aussen in den Puffer
+   * schreibt.
+   */
+  get letzteMeldungen(): readonly Protokolleintrag[] {
+    return [...this.#ring].reverse();
+  }
+
   schreibe(stufe: Stufe, text: string, wanduhr: string = new Date().toISOString()): void {
-    const zeile = `${wanduhr}\t${stufe.toUpperCase()}\t${text.replaceAll("\n", " ")}\n`;
+    const gesaeubert = text.replaceAll("\n", " ");
+    this.#ring.push({ wanduhr, stufe, text: gesaeubert });
+    if (this.#ring.length > PROTOKOLL_RINGPUFFER) this.#ring = this.#ring.slice(-PROTOKOLL_RINGPUFFER);
+    const zeile = `${wanduhr}\t${stufe.toUpperCase()}\t${gesaeubert}\n`;
     this.#reihe = this.#reihe.then(async () => {
       try {
         await fsp.mkdir(path.dirname(this.#datei), { recursive: true });

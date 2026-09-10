@@ -51,5 +51,6 @@ export function stoerdateisystem(echt: Dateisystem, stoerungen: Stoerung[]): Dat
     loesche: (pfad) => (pruefe("loesche", pfad), echt.loesche(pfad)),
     listeVerzeichnis: (pfad) => (pruefe("listeVerzeichnis", pfad), echt.listeVerzeichnis(pfad)),
     legeVerzeichnisAn: (pfad) => (pruefe("legeVerzeichnisAn", pfad), echt.legeVerzeichnisAn(pfad)),
+    existiert: (pfad) => (pruefe("existiert", pfad), echt.existiert(pfad)),
   };
 }

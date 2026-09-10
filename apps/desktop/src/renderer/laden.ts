@@ -36,6 +36,7 @@ import type {
   Kostenansicht,
   Bedienergebnis,
   Bildschirm,
+  Diagnose,
   EebStand,
   EinsatzEintrag,
   Einstellungen,
@@ -203,6 +204,10 @@ export interface Laden {
   /** Was der Programmordner des Shares hergibt (M7.2); `undefined` heißt „nicht gefragt“. */
   readonly programmstand: Programmbefund | undefined;
   pruefeProgrammstand(): Promise<void>;
+
+  /** Was dieser Arbeitsplatz über sich weiß (M7.3); `undefined` heißt „nicht gefragt“. */
+  readonly diagnose: Diagnose | undefined;
+  holeDiagnose(): Promise<void>;
 
   bediene(entwurf: Entwurf): Promise<Bedienergebnis | undefined>;
   zurueck(grund?: string): Promise<Bedienergebnis | undefined>;
@@ -647,6 +652,20 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.fuest === undefined ? undefined : zustand.holeFuest(),
         zustand.eingangskorb === undefined ? undefined : zustand.holeEingangskorb(),
       ]);
+    },
+
+    diagnose: undefined,
+
+    async holeDiagnose() {
+      // Wie beim Programmstand **kein** `mitFehlerbild`: Diese Ansicht wird
+      // geöffnet, **weil** etwas klemmt. Ein Fehlerbild über dem Fenster
+      // verdeckte dann genau die Auskunft, die jemand sucht.
+      try {
+        const befund = await rufe({ art: "diagnoseAnfordern" });
+        if (befund !== null && typeof befund === "object") setze({ diagnose: befund as Diagnose });
+      } catch (fehler) {
+        merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
+      }
     },
 
     programmstand: undefined,

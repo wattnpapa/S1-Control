@@ -16,6 +16,7 @@
 import { useState } from "react";
 
 import { Anforderungen } from "./Anforderungen.js";
+import { Diagnose } from "./Diagnose.js";
 import { Eingangskorb } from "./Eingangskorb.js";
 import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
 import { Kosten } from "./Kosten.js";
@@ -26,6 +27,10 @@ const BLAETTER = [
   { schluessel: "anforderungen", titel: "Anforderungen" },
   { schluessel: "fuest", titel: "Führungsstelle" },
   { schluessel: "kosten", titel: "Kosten" },
+  // Ganz rechts und als letztes Blatt: Die Diagnose wird nicht im Betrieb
+  // gelesen, sondern wenn etwas klemmt (M7.3). Sie steht deshalb dort, wo
+  // niemand sie versehentlich aufschlägt — und trotzdem im selben Griff.
+  { schluessel: "diagnose", titel: "Diagnose" },
 ] as const;
 
 type Blatt = (typeof BLAETTER)[number]["schluessel"];
@@ -56,6 +61,7 @@ export function Blaetter(): React.JSX.Element {
       {offen === "anforderungen" && <Anforderungen />}
       {offen === "fuest" && <Fuehrungsstelle />}
       {offen === "kosten" && <Kosten />}
+      {offen === "diagnose" && <Diagnose />}
     </section>
   );
 }

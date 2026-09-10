@@ -94,3 +94,12 @@ export {
   monitorAlsHtml,
   type Monitoroptionen,
 } from "./monitor.js";
+
+// Die Störfallkarte (M7.3) — dieselben sechs Fälle wie die Diagnoseansicht,
+// gesetzt für Papier.
+export {
+  MARKE_ANFANG,
+  MARKE_ENDE,
+  mitStoerfallmatrix,
+  stoerfallmatrixMarkdown,
+} from "./kurzanleitung.js";

@@ -281,6 +281,18 @@ export class FeindlichesDateisystem implements Dateisystem {
     await this.#o.echt.legeVerzeichnisAn(pfad);
   }
 
+  /**
+   * Auch die Existenzfrage geht durch die Störungen (M7.3).
+   *
+   * Ohne `#vorZugriff` wäre sie der eine Griff auf den Share, der nie hängt —
+   * und §9 verbietet gerade das: eine Simulation, die einen Zugriff
+   * freistellt, den es in Wirklichkeit nicht gibt.
+   */
+  async existiert(pfad: string): Promise<boolean> {
+    await this.#vorZugriff(pfad, "existiert");
+    return this.#o.echt.existiert(pfad);
+  }
+
   // -------------------------------------------------------------------------
   // Innere Mechanik
   // -------------------------------------------------------------------------
