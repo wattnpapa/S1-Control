@@ -15,7 +15,7 @@
 
 import { describe, expect, it } from "vitest";
 
-import { dosZeit, schreibeZip, textEintrag } from "./zip.js";
+import { dosZeit, liesZip, schreibeZip, textEintrag } from "./zip.js";
 import { crc32 } from "@s1/domaene";
 
 const KODIERER = new TextEncoder();
@@ -110,5 +110,45 @@ describe("dosZeit", () => {
     const { zeit, datum } = dosZeit(new Date(0));
     expect(zeit).toBe(0);
     expect((datum >> 9) + 1980).toBe(1980);
+  });
+});
+
+describe("liesZip — der Rückweg", () => {
+  it("liest zurück, was schreibeZip geschrieben hat", () => {
+    const eintraege = [
+      textEintrag("einsatz.json", '{"einsatzId":"2026-09-08_uebung_ab12cd"}\n'),
+      textEintrag("ereignisse/0000-aabbccdd.jsonl", "42\t1a2b3c4d\t{}\n"),
+      { pfad: "anhaenge/leer.bin", bytes: new Uint8Array(0) },
+    ];
+    const zurueck = liesZip(schreibeZip(eintraege));
+    expect(zurueck.map((e) => e.pfad)).toEqual(eintraege.map((e) => e.pfad));
+    for (const [i, soll] of eintraege.entries()) {
+      expect(Array.from((zurueck[i] as { bytes: Uint8Array }).bytes)).toEqual(Array.from(soll.bytes));
+    }
+  });
+
+  it("hält Umlaute im Pfad durch — UTF-8 ist im Merkmalsbit angesagt", () => {
+    const zurueck = liesZip(schreibeZip([textEintrag("ausgaben/stärke-übersicht.html", "x")]));
+    expect((zurueck[0] as { pfad: string }).pfad).toBe("ausgaben/stärke-übersicht.html");
+  });
+
+  it("meldet ein gekipptes Byte über die CRC-32 des Formats", () => {
+    const bytes = schreibeZip([textEintrag("a.txt", "Lagemeldung 08:00")]);
+    // Der lokale Kopf ist 30 Byte plus 5 Byte Name lang; danach beginnen die
+    // Daten. Ein Byte darin kippen heißt: dieselbe Länge, andere Prüfsumme —
+    // genau der Fall, den §2.1 für die Ereigniszeilen abfängt.
+    const verbogen = new Uint8Array(bytes);
+    verbogen[35] = (verbogen[35] as number) ^ 0x01;
+    expect(() => liesZip(verbogen)).toThrow(/CRC-32/);
+  });
+
+  it("weist etwas zurück, das kein Archiv ist, statt es zu deuten", () => {
+    expect(() => liesZip(new TextEncoder().encode("Das ist eine Textdatei."))).toThrow(
+      /Abschlusssatz/,
+    );
+  });
+
+  it("liest ein leeres Archiv als leere Liste", () => {
+    expect(liesZip(schreibeZip([]))).toEqual([]);
   });
 });

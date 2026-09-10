@@ -21,3 +21,8 @@
 declare class TextEncoder {
   encode(eingabe?: string): Uint8Array;
 }
+
+declare class TextDecoder {
+  constructor(kennung?: string);
+  decode(eingabe?: Uint8Array): string;
+}

@@ -42,6 +42,7 @@ export interface Zipeintrag {
 }
 
 const KODIERER = new TextEncoder();
+const ENTKODIERER = new TextDecoder("utf-8");
 
 /** Die vier Signaturen, die das Format vorschreibt. */
 const SIG_LOKAL = 0x04_03_4b_50;
@@ -205,4 +206,93 @@ export function schreibeZip(
 /** Bequemlichkeit: ein Eintrag aus Text, immer UTF-8. */
 export function textEintrag(pfad: string, text: string): Zipeintrag {
   return { pfad, bytes: KODIERER.encode(text) };
+}
+
+/**
+ * Liest ein Archiv, das {@link schreibeZip} geschrieben hat.
+ *
+ * **Warum ueberhaupt ein Leser.** Der Export einer Einsatzakte ist erst dann
+ * bewiesen, wenn das Archiv wieder auspackbar ist und der ausgepackte Ordner
+ * dieselbe Pruefung besteht wie das Original (05-UMSETZUNGSPLAN.md, M4.4:
+ * „Reimport per `s1 akte pruefe` konsistent"). Ein Beweis, der ein fremdes
+ * Werkzeug voraussetzt, laeuft nur dort, wo dieses Werkzeug installiert ist;
+ * der Rueckweg gehoert deshalb in denselben Ring wie der Hinweg. Der Beweis
+ * mit dem fremden Leser (`unzip -t`) bleibt daneben bestehen — er prueft eine
+ * andere Frage, naemlich ob das Format stimmt und nicht nur zu sich selbst
+ * passt.
+ *
+ * **Bewusst eng.** Gelesen wird nur, was dieser Schreiber erzeugt: gespeichert
+ * statt komprimiert, keine Zip64-Erweiterung, kein Archivkommentar, kein
+ * Datenbeschreiber hinter den Daten. Alles andere wird abgelehnt statt
+ * halbwegs gedeutet — ein Auspacker, der raet, verwandelt einen Formatfehler
+ * in stillen Datenverlust.
+ *
+ * Gelesen wird ueber das Zentralverzeichnis und nicht ueber die lokalen
+ * Koepfe: Nur das Verzeichnis ist die verbindliche Liste des Archivs
+ * (APPNOTE 4.3.6), und ein lokaler Kopf darf laut Format Groessen auf 0
+ * setzen und sie hinter die Daten schreiben.
+ */
+export function liesZip(bytes: Uint8Array): readonly Zipeintrag[] {
+  const sicht = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const endeOffset = sucheAbschluss(sicht, bytes.length);
+  if (endeOffset < 0) throw new Error("Kein ZIP: der Abschlusssatz fehlt");
+
+  const anzahl = sicht.getUint16(endeOffset + 10, true);
+  const verzeichnisOffset = sicht.getUint32(endeOffset + 16, true);
+
+  const eintraege: Zipeintrag[] = [];
+  let lauf = verzeichnisOffset;
+  for (let i = 0; i < anzahl; i += 1) {
+    if (lauf + 46 > bytes.length || sicht.getUint32(lauf, true) !== SIG_ZENTRAL) {
+      throw new Error(`ZIP beschaedigt: Verzeichniseintrag ${i} fehlt an Offset ${lauf}`);
+    }
+    const methode = sicht.getUint16(lauf + 10, true);
+    if (methode !== METHODE_GESPEICHERT) {
+      throw new Error(`ZIP mit Methode ${methode}: dieser Leser kennt nur „gespeichert"`);
+    }
+    const pruefsumme = sicht.getUint32(lauf + 16, true);
+    const groesse = sicht.getUint32(lauf + 24, true);
+    const namensLaenge = sicht.getUint16(lauf + 28, true);
+    const zusatzLaenge = sicht.getUint16(lauf + 30, true);
+    const kommentarLaenge = sicht.getUint16(lauf + 32, true);
+    const datenOffset = sicht.getUint32(lauf + 42, true);
+    const pfad = ENTKODIERER.decode(bytes.subarray(lauf + 46, lauf + 46 + namensLaenge));
+
+    if (datenOffset + 30 > bytes.length || sicht.getUint32(datenOffset, true) !== SIG_LOKAL) {
+      throw new Error(`ZIP beschaedigt: kein lokaler Kopf zu ${pfad}`);
+    }
+    const lokalName = sicht.getUint16(datenOffset + 26, true);
+    const lokalZusatz = sicht.getUint16(datenOffset + 28, true);
+    const anfang = datenOffset + 30 + lokalName + lokalZusatz;
+    const inhalt = bytes.slice(anfang, anfang + groesse);
+    if (inhalt.length !== groesse) {
+      throw new Error(`ZIP beschaedigt: ${pfad} ist abgeschnitten`);
+    }
+    // Die CRC-32 des Formats ist dieselbe Pruefsumme, mit der §2.1 die
+    // Ereigniszeilen sichert. Sie hier zu pruefen kostet nichts und faengt
+    // das gekippte Byte, bevor es als Ereignisdatei zurueck auf die Platte
+    // geht.
+    if (crc32(inhalt) !== pruefsumme) {
+      throw new Error(`ZIP beschaedigt: CRC-32 stimmt nicht fuer ${pfad}`);
+    }
+    eintraege.push({ pfad, bytes: inhalt });
+    lauf += 46 + namensLaenge + zusatzLaenge + kommentarLaenge;
+  }
+  return eintraege;
+}
+
+/**
+ * Sucht den Abschlusssatz vom Dateiende her.
+ *
+ * Rueckwaerts, weil das Format es so vorschreibt: Der Satz ist mindestens 22
+ * Byte lang und darf einen Kommentar von bis zu 65.535 Byte hinter sich haben,
+ * steht also nicht an einem festen Offset. Gesucht wird deshalb bis maximal
+ * so weit zurueck.
+ */
+function sucheAbschluss(sicht: DataView, laenge: number): number {
+  const frueheste = Math.max(0, laenge - 22 - 0xff_ff);
+  for (let offset = laenge - 22; offset >= frueheste; offset -= 1) {
+    if (sicht.getUint32(offset, true) === SIG_ENDE) return offset;
+  }
+  return -1;
 }

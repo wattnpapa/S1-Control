@@ -54,7 +54,7 @@ export function kopfAlsHtml(kopf: Ausgabekopf): string {
   ].join("\n");
 }
 
-export { dosZeit, schreibeZip, textEintrag, type Zipeintrag, type Zipoptionen } from "./zip.js";
+export { dosZeit, liesZip, schreibeZip, textEintrag, type Zipeintrag, type Zipoptionen } from "./zip.js";
 export {
   DRUCK_FUSSNOTE,
   DRUCK_STIL,

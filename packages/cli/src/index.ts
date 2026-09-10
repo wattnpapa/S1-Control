@@ -1,10 +1,13 @@
 /**
  * `@s1/cli` — Ring 3: die Kommandozeile `s1`.
  *
- * Geplant sind `akte pruefe | falte | exportiere`, `simuliere` und `diagnose`
- * (02-ZIELBILD.md, Abschnitt „Diagnose im Einsatz"). Dieser Stand kennt
- * `diagnose`, `simuliere` und `akte pruefe`; `simuliere` ist das Arbeitspaket
- * M0.4, `akte pruefe` die Abnahmebedingung von M2.4 (05-UMSETZUNGSPLAN.md).
+ * Geplant sind `akte pruefe | exportiere | importiere`, `simuliere` und
+ * `diagnose` (02-ZIELBILD.md, Abschnitt „Diagnose im Einsatz"). Dieser Stand
+ * kennt
+ * `diagnose`, `simuliere`, `akte pruefe`, `akte exportiere` und `akte
+ * importiere`; `simuliere` ist das Arbeitspaket M0.4, `akte pruefe` die
+ * Abnahmebedingung von M2.4, das Paar aus Export und Reimport die von M4.4
+ * (05-UMSETZUNGSPLAN.md).
  *
  * Verbindliche Grenze: alle `@s1/*` und `node:` sind erlaubt, Electron und
  * React nicht (02-ZIELBILD.md, „Vier Ringe"; erzwungen in `eslint.config.mjs`).
@@ -19,6 +22,7 @@ import { kopfAlsHtml } from "@s1/ausgaben";
 import { HINWEIS_PORT } from "@s1/netz";
 import { EINSATZ_UNTERORDNER, einsatzOrdner, knotenDateisystem } from "@s1/speicher";
 
+import { exportiere, importiere } from "./akte/exportiere.js";
 import { pruefe } from "./akte/pruefe.js";
 import { berichte } from "./simulation/bericht.js";
 import { fuehreSimulationAus } from "./simulation/lauf.js";
@@ -37,6 +41,12 @@ const HILFE = [
   "",
   "  s1 akte pruefe <ordner>      Einsatzordner prüfen (M2.4)",
   "    --vergleiche <ordner>      zweiten Ordner prüfen und den zustandsHash vergleichen",
+  "",
+  "  s1 akte exportiere <ordner>  Einsatzakte als ZIP sichern (M4.4)",
+  "    --ziel <datei>             Zieldatei; ohne Angabe <einsatzId>.zip im Arbeitsverzeichnis",
+  "",
+  "  s1 akte importiere <archiv>  Archiv auspacken und prüfen (M4.4)",
+  "    --ziel <ordner>            Zielordner; muss leer oder nicht vorhanden sein",
   "",
   "  s1 simuliere [Optionen]      Konvergenz unter Störung prüfen (M0.4)",
   "    --plan <datei>             Plandatei (JSON); fehlende Felder aus dem Abnahmeplan",
@@ -170,20 +180,26 @@ export async function fuehreAus(argv: readonly string[]): Promise<Ergebnis> {
 
   if (kommando === "akte") {
     const [unterkommando, ...rest] = reste;
-    if (unterkommando !== "pruefe") {
+    const unterkommandos: Readonly<Record<string, (argv: readonly string[]) => Promise<Ergebnis>>> = {
+      pruefe: (argv) => pruefe(argv),
+      exportiere: (argv) => exportiere(argv),
+      importiere: (argv) => importiere(argv),
+    };
+    const lauf = unterkommando === undefined ? undefined : unterkommandos[unterkommando];
+    if (lauf === undefined) {
       return {
         text: `Unbekanntes Unterkommando: akte ${unterkommando ?? ""}\n\n${HILFE}`,
         code: 2,
       };
     }
     try {
-      return await pruefe(rest);
+      return await lauf(rest);
     } catch (fehler) {
       // Exitcode 2 ist der **Aufruffehler** und nicht der Befund: Ein
       // vertippter Pfad darf im Abnahmeprotokoll von M2.4 nicht als
       // beschädigte Einsatzakte erscheinen. Alles, was `pruefe` über eine
       // Akte zu sagen hat, sagt es mit Code 1.
-      return { text: `s1 akte pruefe: ${(fehler as Error).message}`, code: 2 };
+      return { text: `s1 akte ${unterkommando}: ${(fehler as Error).message}`, code: 2 };
     }
   }
 
