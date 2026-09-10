@@ -27,6 +27,7 @@ import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./ein
 import type { Arbeiterhof } from "./arbeiterhof.js";
 import type {
   Antwort,
+  Bildschirm,
   Bedienergebnis,
   EinsatzEintrag,
   Einstellungen,
@@ -35,8 +36,32 @@ import type {
 } from "../kontrakt/index.js";
 import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
 
+/**
+ * Was die Vermittlung ueber Fenster wissen muss — und mehr nicht (M3.5).
+ *
+ * Eine **Naht** wie der `Dateisystem`-Port in Ring 3. Die Vermittlung kennt
+ * kein Electron (siehe Dateikopf), und der Staerke-Monitor ist das einzige
+ * Paket von M3, das ein zweites `BrowserWindow` braucht. Ohne diese Naht
+ * muesste entweder die Vermittlung `electron` importieren — dann ist der
+ * ganze Weg „Ruf → Antwort“ nicht mehr ohne Fenster pruefbar — oder der Main
+ * bekaeme eine zweite Fallunterscheidung ueber Rufarten neben dieser hier.
+ */
+export interface Fenstersteuerung {
+  bildschirme(): readonly Bildschirm[];
+  /** Oeffnet den Monitor auf dem genannten Bildschirm; ohne Angabe auf dem zweiten. */
+  monitorOeffnen(bildschirmId?: string): void;
+  monitorSchliessen(): void;
+}
+
 export interface VermittlungOptionen {
   readonly hof: Arbeiterhof;
+  /**
+   * Fehlt in den Tests zum Datenpfad: Wer den Weg „Ruf → Antwort“ prueft,
+   * braucht kein Fenster. Fehlt sie, sind die drei Monitorrufe schlicht nicht
+   * verfuegbar und melden das — besser als eine Vermittlung, die ohne
+   * Bildschirm nicht baut.
+   */
+  readonly fenstersteuerung?: Fenstersteuerung;
   readonly dateisystem: Dateisystem;
   /** Wo `einstellungen.json` liegt — im Profil des Benutzers. */
   readonly einstellungsdatei: string;
@@ -134,7 +159,23 @@ export class Vermittlung {
       case "eebZuruecksetzen":
       case "eebUebernehmen":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
+      case "bildschirmeAuflisten":
+        return this.#fenstersteuerung().bildschirme();
+      case "monitorOeffnen":
+        this.#fenstersteuerung().monitorOeffnen(ruf.bildschirmId);
+        return null;
+      case "monitorSchliessen":
+        this.#fenstersteuerung().monitorSchliessen();
+        return null;
     }
+  }
+
+  #fenstersteuerung(): Fenstersteuerung {
+    const steuerung = this.#o.fenstersteuerung;
+    if (steuerung === undefined) {
+      throw new Error("Auf diesem Arbeitsplatz ist keine Fenstersteuerung eingerichtet.");
+    }
+    return steuerung;
   }
 
   async #umgebung(): Promise<Umgebung> {

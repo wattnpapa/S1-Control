@@ -243,6 +243,15 @@ export const zRuf = z.discriminatedUnion("art", [
     akteId: zAkteId,
     abschnittId: zText,
   }),
+
+  // ---- Der Staerke-Monitor (M3.5) -----------------------------------------
+  //
+  // Diese drei Rufe fassen als einzige ein **Fenster** an. Sie tragen deshalb
+  // keine `akteId`: Der Monitor haengt nicht an einer Akte, sondern am
+  // Arbeitsplatz — er zeigt, was dieses Fenster ohnehin geschoben bekommt.
+  z.object({ art: z.literal("bildschirmeAuflisten") }),
+  z.object({ art: z.literal("monitorOeffnen"), bildschirmId: z.string().optional() }),
+  z.object({ art: z.literal("monitorSchliessen") }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -316,6 +325,9 @@ export interface Antworten {
   eebScan: EebStand;
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
+  bildschirmeAuflisten: readonly Bildschirm[];
+  monitorOeffnen: null;
+  monitorSchliessen: null;
   tagebuchAnfordern: Tagebuchansicht;
 }
 
@@ -375,6 +387,22 @@ export interface EebVorschau {
   readonly signaturKurzform?: string;
   readonly absender?: string;
   readonly bemerkung?: string;
+}
+
+/**
+ * Ein angeschlossener Bildschirm — die Auswahl fuer den Staerke-Monitor.
+ *
+ * `id` kommt vom Betriebssystem und ist zwischen zwei Starts **nicht**
+ * stabil; sie wird deshalb nicht gemerkt. Was gemerkt werden koennte, waere
+ * die Reihenfolge — und die aendert sich, sobald jemand ein Kabel umsteckt.
+ * Die Wahl ist ein Handgriff je Einsatz und kein Einstellungswert.
+ */
+export interface Bildschirm {
+  readonly id: string;
+  readonly name: string;
+  readonly breite: number;
+  readonly hoehe: number;
+  readonly primaer: boolean;
 }
 
 /** Der Ausgang einer Uebernahme — mehrere Ereignisse, ein Ergebnis. */

@@ -27,6 +27,7 @@ import { lagebildMit } from "../kontrakt/index.js";
 import type {
   Baumansicht,
   Bedienergebnis,
+  Bildschirm,
   EebStand,
   EinsatzEintrag,
   Einstellungen,
@@ -115,6 +116,12 @@ export interface Laden {
   scanne(text: string): Promise<void>;
   setzeScanZurueck(): Promise<void>;
   uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
+
+  /** Die angeschlossenen Bildschirme; `undefined` heißt „noch nicht gefragt“ (M3.5). */
+  readonly bildschirme: readonly Bildschirm[] | undefined;
+  ladeBildschirme(): Promise<void>;
+  oeffneMonitor(bildschirmId?: string): Promise<void>;
+  schliesseMonitor(): Promise<void>;
   setzeTabellenfilter(filter: Tabellenfilter): Promise<void>;
   setzeTagebuchfilter(filter: Tagebuchfilterwahl): Promise<void>;
   /** Holt jede Ansicht neu, die schon einmal geholt wurde. */
@@ -291,6 +298,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     tagebuch: undefined,
     untertabelle: undefined,
     eeb: undefined,
+    bildschirme: undefined,
     tabellenfilter: {},
     tagebuchfilter: {},
 
@@ -360,6 +368,27 @@ export const useLaden = create<Laden>((setze, hole) => {
         await hole().frischeAnsichten();
       }
       return ergebnis;
+    },
+
+    async ladeBildschirme() {
+      await mitFehlerbild(async () => {
+        setze({ bildschirme: await rufe({ art: "bildschirmeAuflisten" }) });
+      });
+    },
+
+    async oeffneMonitor(bildschirmId) {
+      await mitFehlerbild(async () => {
+        await rufe({
+          art: "monitorOeffnen",
+          ...(bildschirmId === undefined ? {} : { bildschirmId }),
+        });
+      });
+    },
+
+    async schliesseMonitor() {
+      await mitFehlerbild(async () => {
+        await rufe({ art: "monitorSchliessen" });
+      });
     },
 
     async setzeTabellenfilter(filter) {

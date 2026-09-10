@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
+import { Monitorwahl } from "./Monitorwahl.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
 import { useLaden } from "./laden.js";
@@ -53,6 +54,7 @@ export function Lage(): React.JSX.Element {
         >
           Erfassungsbogen einlesen
         </button>
+        <Monitorwahl />
         <button
           type="button"
           disabled={laden.lagebild === undefined || laden.lagebild.undoTiefe === 0}

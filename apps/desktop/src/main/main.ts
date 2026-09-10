@@ -22,15 +22,15 @@ import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { app, BrowserWindow, ipcMain, type IpcMainInvokeEvent } from "electron";
+import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from "electron";
 
 import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof } from "./arbeiterhof.js";
 import { Protokoll } from "./protokoll.js";
-import { Vermittlung } from "./vermittlung.js";
+import { Vermittlung, type Fenstersteuerung } from "./vermittlung.js";
 import { knotenArbeiterFabrik } from "./knotenArbeiter.js";
-import { KANAL_MITTEILUNG, KANAL_RUF, zRuf, type Mitteilung } from "../kontrakt/index.js";
+import { KANAL_MITTEILUNG, KANAL_RUF, zRuf, type Bildschirm, type Mitteilung } from "../kontrakt/index.js";
 
 const hierher = path.dirname(fileURLToPath(import.meta.url));
 const rauchprobe = process.env["S1_SMOKE"] === "1";
@@ -63,8 +63,68 @@ function starte(): void {
     },
   });
 
+  // Der Staerke-Monitor ist ein **zweites** Fenster auf dieselbe Anwendung
+  // (M3.5). Es bekommt dieselben Mitteilungen wie das Arbeitsplatzfenster —
+  // der Arbeiterhof schickt an alle —, laedt aber dieselbe Seite mit dem
+  // Fragment `#monitor` und zeigt dort die Monitoransicht. Ein eigener
+  // Einstiegspunkt waere ein zweites Buendel fuer dieselben zwanzig Zeilen.
+  let monitor: BrowserWindow | undefined;
+  const fenstersteuerung: Fenstersteuerung = {
+    bildschirme: () =>
+      screen.getAllDisplays().map(
+        (anzeige): Bildschirm => ({
+          id: String(anzeige.id),
+          name: anzeige.label === "" ? `Bildschirm ${String(anzeige.id)}` : anzeige.label,
+          breite: anzeige.bounds.width,
+          hoehe: anzeige.bounds.height,
+          primaer: anzeige.id === screen.getPrimaryDisplay().id,
+        }),
+      ),
+    monitorOeffnen: (bildschirmId?: string) => {
+      if (monitor !== undefined && !monitor.isDestroyed()) {
+        monitor.focus();
+        return;
+      }
+      const anzeigen = screen.getAllDisplays();
+      // Ohne Angabe der **zweite** Bildschirm, nicht der erste: Der Monitor
+      // haengt an der Wand, der Arbeitsplatz steht auf dem Tisch. Gibt es nur
+      // einen, oeffnet er dort — ein Fenster, das nirgends aufgeht, waere
+      // schlechter als eines am falschen Platz.
+      const ziel =
+        anzeigen.find((anzeige) => String(anzeige.id) === bildschirmId) ??
+        anzeigen.find((anzeige) => anzeige.id !== screen.getPrimaryDisplay().id) ??
+        screen.getPrimaryDisplay();
+      monitor = new BrowserWindow({
+        x: ziel.bounds.x,
+        y: ziel.bounds.y,
+        width: ziel.bounds.width,
+        height: ziel.bounds.height,
+        fullscreen: anzeigen.length > 1,
+        title: "S1-Control — Stärke",
+        backgroundColor: "#000000",
+        webPreferences: {
+          preload: path.join(hierher, "preload.cjs"),
+          contextIsolation: true,
+          nodeIntegration: false,
+          sandbox: true,
+        },
+      });
+      fenster.add(monitor);
+      monitor.on("closed", () => {
+        if (monitor !== undefined) fenster.delete(monitor);
+        monitor = undefined;
+      });
+      void monitor.loadFile(path.join(hierher, "renderer", "index.html"), { hash: "monitor" });
+    },
+    monitorSchliessen: () => {
+      if (monitor !== undefined && !monitor.isDestroyed()) monitor.close();
+      monitor = undefined;
+    },
+  };
+
   const vermittlung = new Vermittlung({
     hof,
+    fenstersteuerung,
     dateisystem: knotenDateisystem(),
     einstellungsdatei: path.join(app.getPath("userData"), "einstellungen.json"),
     spiegelwurzel: path.join(app.getPath("userData"), "spiegel"),
