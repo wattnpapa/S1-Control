@@ -1,6 +1,7 @@
 # Einstieg in M5 — Ressourcenplanung, Logistik, Kosten, FüSt-Personal
 
-Stand: 2026-09-10 · Meilenstein M5 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M5 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md) · Status: **abgeschlossen**, siehe
+[M5-abschlussbericht.md](../berichte/M5-abschlussbericht.md)
 
 M5 ist der erste Meilenstein, der in `05-UMSETZUNGSPLAN.md` nicht vorkommt.
 Der Plan dort beschreibt Stufe 1 — das Zwischenziel „besser als die Excel" —
