@@ -86,6 +86,23 @@ export {
   type Sha256Hex,
 } from "./kanonisch.js";
 
+// Der Ereigniskatalog (M1.3): Nutzlastschemata und die Tabelle aus §5.1.
+export {
+  ANLAGEARTEN,
+  GRUND_PFLICHT,
+  ID_MAX_LAENGE,
+  KATALOG,
+  KATALOG_EINTRAEGE,
+  KORREKTUR_VON,
+  istBekannterTyp,
+  schemata,
+  type Entitaetsart,
+  type Feldwahl,
+  type Form,
+  type Katalogeintrag,
+  type Konfliktklasse,
+} from "./katalog/index.js";
+
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
   STAERKE_NULL,
