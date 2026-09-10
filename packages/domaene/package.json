@@ -15,6 +15,7 @@
   "main": "./dist/index.js",
   "dependencies": {
     "@bos/eeb-format": "file:../../vendor/eeb-format",
-    "taktische-zeichen-core": "^0.10.0"
+    "taktische-zeichen-core": "^0.10.0",
+    "zod": "^4.6.1"
   }
 }
