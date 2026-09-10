@@ -1279,9 +1279,23 @@ export class Aktendienst {
    */
   #nimmAuf(zeilen: readonly { readonly rahmen: { readonly typ: string } }[]): void {
     const ereignisse: EingehendesEreignis[] = [];
+    // Ein Satz je Aufruf statt einer Suche je Zeile: Die Wiederaufnahme
+    // uebergibt den ganzen Spiegel auf einmal, und §2.6 rechnet mit 50.000
+    // Ereignissen je Einsatz.
+    const indiesemZug = new Set<string>();
     for (const zeile of zeilen) {
       if (istVerwaltungsereignis(zeile.rahmen.typ)) continue;
-      ereignisse.push(zeile.rahmen as unknown as EingehendesEreignis);
+      const ereignis = zeile.rahmen as unknown as EingehendesEreignis;
+      // §3.6, hier fuer die **Liste** und nicht nur fuer die Faltung: Die
+      // Faltung verrechnet eine bereits gesehene Id nicht zweimal, die Liste
+      // aus §5.9.1 wuerde sie zweimal zeigen. Zwei Wege liefern dieselbe Zeile
+      // ein zweites Mal — ein Ersatzsegment wiederholt die Zeilen des
+      // ersetzten (§4.6), und die Wiederaufnahme beim Oeffnen liest beide
+      // Dateien. Ein Tagebuch mit doppelten Eintraegen waere kein
+      // Schoenheitsfehler: Es ist die Urkunde des Einsatzes.
+      if (this.#faltung.gesehen.has(ereignis.id) || indiesemZug.has(ereignis.id)) continue;
+      indiesemZug.add(ereignis.id);
+      ereignisse.push(ereignis);
     }
     if (ereignisse.length === 0) return;
     this.#ereignisse.push(...ereignisse);

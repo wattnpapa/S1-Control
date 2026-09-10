@@ -65,6 +65,26 @@ export interface AbgleichOptionen {
  */
 export async function gleicheMitSpiegelAb(optionen: AbgleichOptionen): Promise<void> {
   const namen = await optionen.dateisystem.listeVerzeichnis(optionen.ablage.lokalEreignisse);
+
+  // **Zuerst die Dateien, die es nicht mehr gibt.** Die Zusage aus §5.5 lautet,
+  // der Spiegel einer fremden Datei sei ihr geprüftes Präfix und seine Länge
+  // damit genau `leseOffset` — und sie gilt auch, wenn der Spiegel gar nicht
+  // mehr da ist: Dann ist das geprüfte Präfix leer und `leseOffset` null.
+  // Bliebe der gemerkte Offset stehen, läse der Takt die Share-Datei erst ab
+  // dieser Stelle weiter (§6.2); alles davor käme nie wieder an, und der
+  // Arbeitsplatz zeigte dauerhaft eine Lage ohne die halbe Vorgeschichte. Der
+  // Anlass ist nicht bloß gedacht: ein aufgeräumtes Benutzerverzeichnis, ein
+  // wiederhergestelltes Profil, ein Virenscanner, der eine Datei fortnimmt —
+  // `upload-state.json` überlebt das alles, denn sie liegt woanders.
+  const vorhanden = new Set(namen);
+  for (const [name, lage] of optionen.lagen) {
+    if (vorhanden.has(name)) continue;
+    const kennung = zerlegeEreignisDateiname(name);
+    if (kennung === undefined || kennung.praefix === optionen.eigenesPraefix) continue;
+    if (lage.offsets.leseOffset === 0) continue;
+    optionen.lagen.set(name, new Dateilage(name, neuerFremderOffset(), optionen.zeit()));
+  }
+
   const jePraefix = new Map<string, { name: string; segment: number }[]>();
   for (const name of namen) {
     const kennung = zerlegeEreignisDateiname(name);

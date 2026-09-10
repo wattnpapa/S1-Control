@@ -295,6 +295,46 @@ describe("Abgleich mit dem Spiegel beim Öffnen (§5.3, §5.5)", () => {
     expect(spiegelNachher).toEqual(spiegelVorher);
   });
 
+  it("setzt leseOffset zurück, wenn die Spiegeldatei fort ist, statt sie ab der alten Stelle zu lesen", async () => {
+    await using platz = await arbeitsplatz();
+    await legeEinsatzAn(platz, EINSATZ);
+    await fremderSchreiber(platz, 3);
+    const erster = leserFuer(platz, "9f3c1a20");
+    await erster.taktB();
+    expect(erster.zustand.fremd[`${FREMD}.0000`]?.leseOffset).toBeGreaterThan(0);
+
+    // Der Spiegel ist fort, `upload-state.json` nicht — sie liegt eine Ebene
+    // höher und übersteht ein aufgeräumtes Benutzerverzeichnis. Bliebe der
+    // gemerkte Offset stehen, läse der nächste Takt die Share-Datei ab dieser
+    // Stelle weiter, und die drei Zeilen davor kämen nie wieder an.
+    await platz.dateisystem.loesche(platz.ablage.lokalDatei(`${FREMD}.0000.jsonl`));
+
+    const zweiter = new Leser(
+      {
+        dateisystem: platz.dateisystem,
+        zeit: platz.uhr.lies,
+        ablage: platz.ablage,
+        clientId: "9f3c1a20",
+        identitaeten: new Identitaetenbuch(),
+      },
+      erster.zustand,
+    );
+    await zweiter.gleicheMitSpiegelAb();
+    expect(zweiter.zustand.fremd[`${FREMD}.0000`]?.leseOffset).toBe(0);
+
+    // Takt A und nicht B: Die Datei ist dem Leser bekannt, sie ist keine neue
+    // Entdeckung — nur ihr Spiegel fängt wieder bei null an (§6.2).
+    const ergebnis = await zweiter.taktA();
+    expect(ergebnis.neueZeilen.map((z) => z.rahmen.id)).toEqual([
+      `${FREMD}:1`,
+      `${FREMD}:2`,
+      `${FREMD}:3`,
+    ]);
+    const spiegel = await platz.dateisystem.liesAb(platz.ablage.lokalDatei(`${FREMD}.0000.jsonl`), 0);
+    const share = await platz.dateisystem.liesAb(platz.ablage.shareDatei(`${FREMD}.0000.jsonl`), 0);
+    expect(spiegel).toEqual(share);
+  });
+
   it("überspringt eine wiederholte Zeile aus einem Ersatzsegment, statt sie zu verwerfen (§4.6)", async () => {
     await using platz = await arbeitsplatz();
     await legeEinsatzAn(platz, EINSATZ);

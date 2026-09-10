@@ -17,9 +17,13 @@
  * wie eine, die keine faltet.
  */
 
+import { copyFileSync, readdirSync, rmSync } from "node:fs";
+import path from "node:path";
+
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  EINSATZ_ID,
   baueDienst,
   baueWerkstatt,
   grundlage,
@@ -33,6 +37,11 @@ import {
 } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
+
+/** Der Ereignisordner des lokalen Spiegels eines Platzes. */
+function spiegelordner(platz: Platz): string {
+  return path.join(platz.wurzel, `lokal-${String(platz.nummer)}`, EINSATZ_ID, "ereignisse");
+}
 
 function tagebuchzahl(platz: Platz): number {
   return platz.dienst.tagebuch({
@@ -117,6 +126,46 @@ describe("Funktionalität: Wiederaufnahme", () => {
     const neu = await starteNeu(b);
 
     expect(Object.keys(neu.dienst.zustand.abschnitte).sort()).toEqual(abschnitteVorher);
+    expect(Object.keys(neu.dienst.zustand.einheiten)).toHaveLength(1);
+  });
+
+  it("Szenario: der lokale Spiegel ist fort, upload-state.json nicht", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    await takteBis([a, b]);
+    expect(Object.keys(b.dienst.zustand.einheiten)).toHaveLength(1);
+
+    // Ein aufgeräumtes Benutzerverzeichnis, ein wiederhergestelltes Profil,
+    // ein Virenscanner: Die gespiegelten Ereignisdateien sind fort,
+    // `upload-state.json` liegt eine Ebene höher und ist noch da. Ohne den
+    // Abgleich aus §5.5 läse der Takt die fremde Datei ab dem gemerkten
+    // Offset weiter — die Vorgeschichte käme nie wieder an.
+    rmSync(spiegelordner(b), { recursive: true, force: true });
+
+    const neu = await starteNeu(b);
+    await takteBis([neu]);
+
+    expect(Object.keys(neu.dienst.zustand.einheiten)).toHaveLength(1);
+  });
+
+  it("Szenario: dieselbe Zeile in zwei Spiegeldateien ergibt einen Tagebucheintrag", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await takteBis([platz]);
+    const vorher = tagebuchzahl(platz);
+
+    // Ein Ersatzsegment (§4.6) wiederholt die Zeilen des ersetzten Segments:
+    // dieselben Ereignis-Ids, andere Datei, beide im Spiegel. Hier
+    // nachgestellt durch eine Kopie unter anderem Präfix. Die Faltung
+    // verrechnet eine bekannte Id nicht zweimal — das Tagebuch aus §5.9.1
+    // läuft aber über die Ereignisse und nicht über den Zustand.
+    const ordner = spiegelordner(platz);
+    const datei = readdirSync(ordner).find((name) => name.endsWith(".jsonl"));
+    copyFileSync(path.join(ordner, datei as string), path.join(ordner, "abcdef01.0000.jsonl"));
+
+    const neu = await starteNeu(platz);
+
+    expect(tagebuchzahl(neu)).toBe(vorher);
     expect(Object.keys(neu.dienst.zustand.einheiten)).toHaveLength(1);
   });
 
