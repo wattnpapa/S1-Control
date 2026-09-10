@@ -13,6 +13,7 @@ import { useMemo, useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
+import { Ausgaben } from "./Ausgaben.js";
 import { Monitorwahl } from "./Monitorwahl.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
@@ -82,6 +83,8 @@ export function Lage(): React.JSX.Element {
           aufEinheit={setzeEinheitId}
         />
       </div>
+
+      <Ausgaben />
 
       {scannerOffen && (
         <Scanner

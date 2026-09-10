@@ -49,6 +49,8 @@ export type Auftrag =
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
+  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status"; readonly organisation?: string }
+  | { readonly art: "ausgabeSchreiben"; readonly nummer: number; readonly dateiname: string; readonly bytes: Uint8Array }
   | { readonly art: "eebScan"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebScan" }> }
   | { readonly art: "eebZuruecksetzen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebZuruecksetzen" }> }
   | { readonly art: "eebUebernehmen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebUebernehmen" }> }
@@ -183,6 +185,10 @@ if (parentPort !== null) {
         return dienst.tabelle(auftrag.ruf);
       case "untertabelleAnfordern":
         return dienst.untertabelle(auftrag.ruf);
+      case "ausgabeHtml":
+        return dienst.ausgabeHtml(auftrag.ausgabe, auftrag.organisation);
+      case "ausgabeSchreiben":
+        return { pfad: await dienst.ausgabeSchreiben(auftrag.dateiname, auftrag.bytes) };
       case "eebScan":
         return dienst.eebScan(auftrag.ruf.text);
       case "eebZuruecksetzen":

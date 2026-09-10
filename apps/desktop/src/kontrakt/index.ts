@@ -244,6 +244,21 @@ export const zRuf = z.discriminatedUnion("art", [
     abschnittId: zText,
   }),
 
+  // ---- Die Kernausgaben (M4.1) --------------------------------------------
+  //
+  // Gerendert wird im **Worker**: Er haelt den Zustand, und die Vorlagen
+  // liefern eine Zeichenkette (`@s1/ausgaben` hat kein `node:`). Das PDF
+  // entsteht in der Schale ueber `webContents.printToPDF` — dafuer braucht es
+  // eine Rendering-Engine, und die gibt es nur dort.
+  z.object({
+    art: z.literal("ausgabeErzeugen"),
+    akteId: zAkteId,
+    ausgabe: z.enum(["druck", "status"]),
+    format: z.enum(["html", "pdf"]),
+    /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
+    organisation: z.string().optional(),
+  }),
+
   // ---- Der Staerke-Monitor (M3.5) -----------------------------------------
   //
   // Diese drei Rufe fassen als einzige ein **Fenster** an. Sie tragen deshalb
@@ -325,6 +340,7 @@ export interface Antworten {
   eebScan: EebStand;
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
+  ausgabeErzeugen: Ausgabeergebnis;
   bildschirmeAuflisten: readonly Bildschirm[];
   monitorOeffnen: null;
   monitorSchliessen: null;
@@ -387,6 +403,19 @@ export interface EebVorschau {
   readonly signaturKurzform?: string;
   readonly absender?: string;
   readonly bemerkung?: string;
+}
+
+/**
+ * Wo eine erzeugte Ausgabe liegt (M4.1).
+ *
+ * Der Pfad ist absolut und zeigt in den Ordner `ausgaben\` des Einsatzes
+ * (KONZEPT-SPEICHER.md §1.4). Er geht an den Renderer zurueck, damit die
+ * Oberflaeche sagen kann, **wohin** geschrieben wurde — ein „fertig“ ohne
+ * Pfad zwingt den Bediener, danach zu suchen.
+ */
+export interface Ausgabeergebnis {
+  readonly pfad: string;
+  readonly bytes: number;
 }
 
 /**

@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Stärke — Übung Weser-Ems</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm; }
+    body { font-family: system-ui, sans-serif; font-size: 10pt; margin: 0; }
+    h1 { font-size: 14pt; margin: 0 0 2mm; }
+    .ausgabe-kopf p { margin: 0; font-size: 8pt; color: #444; }
+    .fuest { margin: 0 0 4mm; font-size: 10pt; }
+    table.druck { border-collapse: collapse; width: 100%; }
+    table.druck th, table.druck td { border: 0.3mm solid #999; padding: 0.8mm 1.5mm; }
+    table.druck th { background: #eee; font-size: 9pt; }
+    td.zahl { text-align: right; font-variant-numeric: tabular-nums; width: 8mm; }
+    td.gesamt { font-weight: 600; }
+    td.trenner { text-align: center; width: 3mm; color: #666; }
+    td.nr { text-align: right; width: 8mm; color: #666; }
+    td.davon { background: #f6f6f6; }
+    tr.summenzeile td { font-weight: 700; background: #e8e8e8; }
+    td.tiefe-1 { padding-left: 6mm; }
+    td.tiefe-2 { padding-left: 11mm; }
+    td.tiefe-3 { padding-left: 16mm; }
+    .probe.ok { color: #157a3c; }
+    .probe.fehler { color: #b91c1c; font-weight: 700; }
+    .fussnote, .angefordert { font-size: 9pt; color: #444; margin: 2mm 0 0; }
+  </style>
+</head>
+<body>
+<header class="ausgabe-kopf">
+  <h1>Übung Weser-Ems</h1>
+  <p class="kennung">2026-09-08_uebung-weser-ems_227e68</p>
+  <p class="stand">Stand: 08.09.2026, 08:15</p>
+  <p class="kern">@bos/eeb-format 0.0.0</p>
+</header>
+  <p class="fuest">FüSt Oldenburg</p>
+  <table class="druck">
+    <thead>
+      <tr>
+        <th scope="col">Nr.</th>
+        <th scope="col">Einsatzstelle</th>
+        <th scope="col" colspan="5">Fü / UFü / He</th>
+        <th scope="col">Gesamt</th>
+        <th scope="col">Probe</th>
+        <th scope="col" colspan="4">Davon Stärke: FEUERWEHR</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="summenzeile">
+        <td class="nr"></td>
+        <td>Gesamt</td>
+        <td class="zahl">15</td>
+        <td class="trenner">/</td>
+        <td class="zahl">53</td>
+        <td class="trenner">/</td>
+        <td class="zahl">225</td>
+        <td class="trenner">=</td>
+        <td class="zahl gesamt">293</td>
+        <td class="probe ok">o.k.</td>
+        <td class="zahl davon">2</td>
+        <td class="zahl davon">8</td>
+        <td class="zahl davon">33</td>
+        <td class="zahl davon gesamt">43</td>
+      </tr>
+        <tr>
+          <td class="nr">1</td>
+          <td class="bereich tiefe-0">FüSt Oldenburg</td>
+          <td class="zahl">3</td>
+          <td class="trenner">/</td>
+          <td class="zahl">5</td>
+          <td class="trenner">/</td>
+          <td class="zahl">2</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">10</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon gesamt">0</td>
+        </tr>
+        <tr>
+          <td class="nr">2</td>
+          <td class="bereich tiefe-0">Meldekopf</td>
+          <td class="zahl">1</td>
+          <td class="trenner">/</td>
+          <td class="zahl">2</td>
+          <td class="trenner">/</td>
+          <td class="zahl">3</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">6</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon gesamt">0</td>
+        </tr>
+        <tr>
+          <td class="nr">3</td>
+          <td class="bereich tiefe-0">Logistik</td>
+          <td class="zahl">1</td>
+          <td class="trenner">/</td>
+          <td class="zahl">6</td>
+          <td class="trenner">/</td>
+          <td class="zahl">23</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">30</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">2</td>
+          <td class="zahl davon">4</td>
+          <td class="zahl davon gesamt">6</td>
+        </tr>
+        <tr>
+          <td class="nr">4</td>
+          <td class="bereich tiefe-0">Bereitstellungsraum Hafen</td>
+          <td class="zahl">4</td>
+          <td class="trenner">/</td>
+          <td class="zahl">13</td>
+          <td class="trenner">/</td>
+          <td class="zahl">63</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">80</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">1</td>
+          <td class="zahl davon">4</td>
+          <td class="zahl davon">17</td>
+          <td class="zahl davon gesamt">22</td>
+        </tr>
+        <tr>
+          <td class="nr">5</td>
+          <td class="bereich tiefe-0">EA Deich Nord</td>
+          <td class="zahl">1</td>
+          <td class="trenner">/</td>
+          <td class="zahl">7</td>
+          <td class="trenner">/</td>
+          <td class="zahl">37</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">45</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon gesamt">0</td>
+        </tr>
+        <tr>
+          <td class="nr">6</td>
+          <td class="bereich tiefe-1">UA Deichfuß</td>
+          <td class="zahl">1</td>
+          <td class="trenner">/</td>
+          <td class="zahl">4</td>
+          <td class="trenner">/</td>
+          <td class="zahl">33</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">38</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">1</td>
+          <td class="zahl davon">1</td>
+          <td class="zahl davon">7</td>
+          <td class="zahl davon gesamt">9</td>
+        </tr>
+        <tr>
+          <td class="nr">7</td>
+          <td class="bereich tiefe-0">EA Pumpwerk Süd</td>
+          <td class="zahl">1</td>
+          <td class="trenner">/</td>
+          <td class="zahl">6</td>
+          <td class="trenner">/</td>
+          <td class="zahl">22</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">29</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">1</td>
+          <td class="zahl davon">5</td>
+          <td class="zahl davon gesamt">6</td>
+        </tr>
+        <tr>
+          <td class="nr">8</td>
+          <td class="bereich tiefe-0">EA Schule Mitte</td>
+          <td class="zahl">3</td>
+          <td class="trenner">/</td>
+          <td class="zahl">10</td>
+          <td class="trenner">/</td>
+          <td class="zahl">42</td>
+          <td class="trenner">=</td>
+          <td class="zahl gesamt">55</td>
+          <td class="probe ok">o.k.</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon">0</td>
+          <td class="zahl davon gesamt">0</td>
+        </tr>
+    </tbody>
+  </table>
+  <p class="fussnote">(ohne Kräfte aus dem Bereich „Angefordert / Anmarsch“)</p>
+  <p class="angefordert">Angefordert / Anmarsch: 1/6/30 = 37</p>
+</body>
+</html>

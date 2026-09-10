@@ -66,6 +66,7 @@ import {
 } from "@s1/speicher";
 
 import type { Kompressor } from "@bos/eeb-format";
+import { druckAlsHtml, druckdaten, statusAlsHtml, statusdaten } from "@s1/ausgaben";
 
 import {
   lagebildDelta,
@@ -598,6 +599,54 @@ export class Aktendienst {
   }
 
   // -------------------------------------------------------------------------
+  // Die Kernausgaben (M4.1)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Rendert eine Ausgabe als HTML — und schreibt sie nicht.
+   *
+   * Gerendert wird hier, weil der Zustand hier liegt; geschrieben wird
+   * anderswo, weil der PDF-Weg die Bytes erst in der Schale bekommt
+   * (`printToPDF`). Beide Wege gehen durch **dieselbe** Vorlage: Ein PDF, das
+   * aus einer zweiten Vorlage entstuende, waere ein zweites Layout, das
+   * niemand pflegt.
+   *
+   * Der Dateiname traegt den Stand in der Uhrzeit und nicht bloss „druck.pdf“:
+   * Eine Fuehrungsstelle druckt im Einsatz mehrmals, und eine Datei, die sich
+   * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
+   */
+  ausgabeHtml(ausgabe: "druck" | "status", organisation?: string): { dateiname: string; html: string } {
+    const jetzt = new Date(this.#o.zeit());
+    const kopf = {
+      datum: this.#o.einsatzId.slice(0, 10),
+      einsatzName: alsText(this.#zustand.einsatz?.name.wert),
+      stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+    };
+    const marke = dateimarke(jetzt);
+    if (ausgabe === "status") {
+      return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
+    }
+    const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
+    return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };
+  }
+
+  /**
+   * Schreibt Bytes in den Ordner `ausgaben\` des Einsatzes und liefert den Pfad.
+   *
+   * `schreibeUeberOhneSync` und nicht der Anhaenge-Weg aus §2.2: Eine Ausgabe
+   * ist ein **abgeleiteter** Anzeiger wie die Praesenzdatei (§1.3) — sie
+   * traegt keinen Zustand, den die Ereignisse nicht auch tragen, und ist
+   * jederzeit neu erzeugbar. Ein `fsync` je Ausdruck kostete auf einem
+   * SMB-Laufwerk Zeit fuer eine Zusicherung, die hier niemand braucht.
+   */
+  async ausgabeSchreiben(dateiname: string, bytes: Uint8Array): Promise<string> {
+    const pfad = this.#o.ablage.ausgabeDatei(dateiname);
+    await this.#o.dateisystem.legeVerzeichnisAn(this.#o.ablage.shareAusgaben);
+    await this.#o.dateisystem.schreibeUeberOhneSync(pfad, bytes);
+    return pfad;
+  }
+
+  // -------------------------------------------------------------------------
   // Der Handscanner-Weg (M3.4)
   // -------------------------------------------------------------------------
 
@@ -884,4 +933,25 @@ export class Aktendienst {
 
 function alsText(wert: unknown): string {
   return typeof wert === "string" ? wert : "";
+}
+
+/**
+ * Die Zeitmarke im Dateinamen einer Ausgabe: `2026-09-10_1430`.
+ *
+ * Ortszeit und keine Zone — der Dateiname wird von einem Menschen gelesen,
+ * der neben dem Rechner steht, und nicht von einem Programm sortiert. Was
+ * geordnet werden muss, steht im Manifest der Einsatzakte (M4.4).
+ */
+function dateimarke(zeitpunkt: Date): string {
+  const zwei = (zahl: number): string => String(zahl).padStart(2, "0");
+  return [
+    zeitpunkt.getFullYear(),
+    "-",
+    zwei(zeitpunkt.getMonth() + 1),
+    "-",
+    zwei(zeitpunkt.getDate()),
+    "_",
+    zwei(zeitpunkt.getHours()),
+    zwei(zeitpunkt.getMinutes()),
+  ].join("");
 }

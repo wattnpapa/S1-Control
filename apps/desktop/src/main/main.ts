@@ -27,6 +27,7 @@ import { app, BrowserWindow, ipcMain, screen, type IpcMainInvokeEvent } from "el
 import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof } from "./arbeiterhof.js";
+import { elektronDrucker } from "./drucker.js";
 import { Protokoll } from "./protokoll.js";
 import { Vermittlung, type Fenstersteuerung } from "./vermittlung.js";
 import { knotenArbeiterFabrik } from "./knotenArbeiter.js";
@@ -34,6 +35,16 @@ import { KANAL_MITTEILUNG, KANAL_RUF, zRuf, type Bildschirm, type Mitteilung } f
 
 const hierher = path.dirname(fileURLToPath(import.meta.url));
 const rauchprobe = process.env["S1_SMOKE"] === "1";
+/**
+ * Die zweite Stufe der Rauchprobe: die Kernausgaben (M4.1).
+ *
+ * `S1_SMOKE=ausgaben` legt in einem Wegwerf-Share einen Einsatz an, erzeugt
+ * Druck und Status als HTML **und** als PDF und schreibt heraus, was dabei
+ * herausgekommen ist. Das ist der einzige Weg, `printToPDF` ohne Zuschauer
+ * nachzuweisen: Ein Komponententest kann es nicht, weil es eine
+ * Rendering-Engine braucht.
+ */
+const ausgabenprobe = process.env["S1_SMOKE"] === "ausgaben";
 
 /**
  * §4.4: **Ein** Schreiber je Profil.
@@ -125,6 +136,7 @@ function starte(): void {
   const vermittlung = new Vermittlung({
     hof,
     fenstersteuerung,
+    drucker: elektronDrucker(),
     dateisystem: knotenDateisystem(),
     einstellungsdatei: path.join(app.getPath("userData"), "einstellungen.json"),
     spiegelwurzel: path.join(app.getPath("userData"), "spiegel"),
@@ -161,6 +173,7 @@ function starte(): void {
     protokoll.schreibe("info", `Start, Electron ${process.versions.electron ?? "?"}`);
     const erstes = fensterOeffnen(fenster);
     if (rauchprobe) rauchprobeFahren(erstes, vermittlung, fenstersteuerung, () => monitor);
+    if (ausgabenprobe) ausgabenprobeFahren(erstes, vermittlung);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) fensterOeffnen(fenster);
@@ -268,6 +281,62 @@ function rauchprobeFahren(
       );
       fenstersteuerung.monitorSchliessen();
       app.exit(0);
+    })();
+  });
+}
+
+/**
+ * Erzeugt Druck und Status als HTML und als PDF und meldet das Ergebnis.
+ *
+ * Der Share liegt in einem Wegwerf-Verzeichnis, das der Aufrufer setzt
+ * (`S1_SMOKE_SHARE`); ohne Angabe im Temp-Ordner. Der Einsatz ist leer bis
+ * auf sein Anlegeereignis — geprueft wird hier der **Weg**, nicht die Zahlen;
+ * die pruefen die Goldfiles gegen die Prueflage.
+ */
+function ausgabenprobeFahren(fenster: BrowserWindow, vermittlung: Vermittlung): void {
+  fenster.webContents.once("did-finish-load", () => {
+    void (async () => {
+      const zeilen: string[] = [];
+      try {
+        const share = process.env["S1_SMOKE_SHARE"] ?? path.join(os.tmpdir(), `s1-ausgaben-${String(Date.now())}`);
+        await vermittlung.beantworte({
+          art: "einstellungenSetzen",
+          einstellungen: { sharePfad: share, anzeigename: "Rauchprobe" },
+        });
+        const angelegt = await vermittlung.beantworte({
+          art: "einsatzAnlegen",
+          name: "Rauchprobe Ausgaben",
+          datum: "2026-09-10",
+          einsatzArt: "UEBUNG",
+          fuestName: "FueSt Rauchprobe",
+          beginn: new Date().toISOString(),
+          schichtmodell: "ZWEI_SCHICHT",
+        });
+        if (!angelegt.ok) throw new Error(angelegt.meldung);
+        const akteId = (angelegt.wert as { akteId: string }).akteId;
+        zeilen.push(`S1_SMOKE: share=${share}`);
+
+        for (const ausgabe of ["druck", "status"] as const) {
+          for (const format of ["html", "pdf"] as const) {
+            const antwort = await vermittlung.beantworte({
+              art: "ausgabeErzeugen",
+              akteId,
+              ausgabe,
+              format,
+            });
+            if (!antwort.ok) throw new Error(`${ausgabe}/${format}: ${antwort.meldung}`);
+            const ergebnis = antwort.wert as { pfad: string; bytes: number };
+            zeilen.push(
+              `S1_SMOKE: ${ausgabe}.${format}=${path.basename(ergebnis.pfad)} bytes=${String(ergebnis.bytes)}`,
+            );
+          }
+        }
+        zeilen.push("S1_SMOKE: Ausgaben erzeugt");
+      } catch (fehler) {
+        zeilen.push(`S1_SMOKE: FEHLER ${(fehler as Error).message}`);
+      }
+      process.stdout.write(`${zeilen.join("\n")}\n`);
+      app.exit(zeilen.some((zeile) => zeile.includes("FEHLER")) ? 1 : 0);
     })();
   });
 }

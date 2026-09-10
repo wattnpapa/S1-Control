@@ -25,6 +25,7 @@ import { create } from "zustand";
 import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
 import type {
+  Ausgabeergebnis,
   Baumansicht,
   Bedienergebnis,
   Bildschirm,
@@ -116,6 +117,13 @@ export interface Laden {
   scanne(text: string): Promise<void>;
   setzeScanZurueck(): Promise<void>;
   uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
+
+  /** Erzeugt eine Kernausgabe und liefert, wo sie liegt (M4.1). */
+  erzeugeAusgabe(
+    ausgabe: "druck" | "status",
+    format: "html" | "pdf",
+    organisation?: string,
+  ): Promise<Ausgabeergebnis | undefined>;
 
   /** Die angeschlossenen Bildschirme; `undefined` heißt „noch nicht gefragt“ (M3.5). */
   readonly bildschirme: readonly Bildschirm[] | undefined;
@@ -368,6 +376,20 @@ export const useLaden = create<Laden>((setze, hole) => {
         await hole().frischeAnsichten();
       }
       return ergebnis;
+    },
+
+    async erzeugeAusgabe(ausgabe, format, organisation) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      return mitFehlerbild(() =>
+        rufe({
+          art: "ausgabeErzeugen",
+          akteId,
+          ausgabe,
+          format,
+          ...(organisation === undefined ? {} : { organisation }),
+        }),
+      );
     },
 
     async ladeBildschirme() {

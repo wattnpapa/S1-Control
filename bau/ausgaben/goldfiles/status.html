@@ -1,0 +1,362 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Status — Übung Weser-Ems</title>
+  <style>
+    @page { size: A4 portrait; margin: 12mm; }
+    body { font-family: system-ui, sans-serif; font-size: 10pt; margin: 0; }
+    h1 { font-size: 14pt; margin: 0 0 2mm; }
+    h2 { font-size: 11pt; margin: 5mm 0 1.5mm; }
+    .ausgabe-kopf p { margin: 0; font-size: 8pt; color: #444; }
+    .fuest { margin: 0 0 4mm; }
+    table.status { border-collapse: collapse; width: 100%; }
+    table.status th, table.status td { border: 0.3mm solid #999; padding: 0.8mm 1.5mm; }
+    table.status thead th { background: #eee; font-size: 9pt; }
+    table.status th[scope="row"] { text-align: left; font-weight: 400; }
+    td.zahl { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.summenzeile th, tr.summenzeile td { font-weight: 700; background: #e8e8e8; }
+    ul.proben { margin: 0; padding-left: 5mm; }
+    .ok { color: #157a3c; }
+    .fehler { color: #b91c1c; font-weight: 700; }
+    .hinweis { font-size: 9pt; color: #444; }
+  </style>
+</head>
+<body>
+<header class="ausgabe-kopf">
+  <h1>Übung Weser-Ems</h1>
+  <p class="kennung">2026-09-08_uebung-weser-ems_227e68</p>
+  <p class="stand">Stand: 08.09.2026, 08:15</p>
+  <p class="kern">@bos/eeb-format 0.0.0</p>
+</header>
+  <p class="fuest">FüSt Oldenburg</p>
+  <h2>Stärke nach Organisationen</h2>
+  <table class="status">
+    <thead>
+      <tr>
+        <th scope="col">Organisation</th>
+        <th scope="col">Fü</th><th scope="col">UFü</th><th scope="col">He</th><th scope="col">Gesamt</th>
+        <th scope="col">Männl.</th><th scope="col">Weibl.</th><th scope="col">Div.</th>
+        <th scope="col">Veget.</th><th scope="col">Vegan</th>
+        <th scope="col">ÜN (m)</th><th scope="col">ÜN (w)</th><th scope="col">ÜN (d)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <th scope="row">ASB</th>
+        <td class="zahl">2</td>
+        <td class="zahl">3</td>
+        <td class="zahl">18</td>
+        <td class="zahl">23</td>
+        <td class="zahl">23</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">BERGWACHT</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl">6</td>
+        <td class="zahl">6</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">BUNDESWEHR</th>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">20</td>
+        <td class="zahl">25</td>
+        <td class="zahl">25</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">DLRG</th>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">10</td>
+        <td class="zahl">13</td>
+        <td class="zahl">13</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">DRK</th>
+        <td class="zahl">2</td>
+        <td class="zahl">6</td>
+        <td class="zahl">33</td>
+        <td class="zahl">41</td>
+        <td class="zahl">41</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">FEUERWEHR</th>
+        <td class="zahl">3</td>
+        <td class="zahl">12</td>
+        <td class="zahl">50</td>
+        <td class="zahl">65</td>
+        <td class="zahl">65</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">JUH</th>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">7</td>
+        <td class="zahl">9</td>
+        <td class="zahl">9</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">MHD</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl">4</td>
+        <td class="zahl">4</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">POLIZEI</th>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">REGIE</th>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">20</td>
+        <td class="zahl">22</td>
+        <td class="zahl">22</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">RETTUNGSDIENST</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr>
+        <th scope="row">THW</th>
+        <td class="zahl">7</td>
+        <td class="zahl">23</td>
+        <td class="zahl">88</td>
+        <td class="zahl">118</td>
+        <td class="zahl">118</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+      <tr class="summenzeile">
+        <th scope="row">Gesamt</th>
+        <td class="zahl">16</td>
+        <td class="zahl">59</td>
+        <td class="zahl">255</td>
+        <td class="zahl">330</td>
+        <td class="zahl">330</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Status der Einsatzkräfte</h2>
+  <table class="status">
+    <thead><tr><th scope="col">Wert</th><th scope="col">Fü</th><th scope="col">UFü</th><th scope="col">He</th><th scope="col">Gesamt</th></tr></thead>
+    <tbody>
+      <tr>
+        <th scope="row">ANGEFORDERT</th>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl">25</td>
+        <td class="zahl">31</td>
+      </tr>
+      <tr>
+        <th scope="row">ANMARSCH</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">5</td>
+      </tr>
+      <tr>
+        <th scope="row">EINSATZBEREIT</th>
+        <td class="zahl">2</td>
+        <td class="zahl">10</td>
+        <td class="zahl">41</td>
+        <td class="zahl">53</td>
+      </tr>
+      <tr>
+        <th scope="row">EINSATZVORBEHALT</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl">6</td>
+      </tr>
+      <tr>
+        <th scope="row">IM_EINSATZ</th>
+        <td class="zahl">10</td>
+        <td class="zahl">32</td>
+        <td class="zahl">131</td>
+        <td class="zahl">173</td>
+      </tr>
+      <tr>
+        <th scope="row">NICHT_EINSATZBEREIT</th>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl">8</td>
+      </tr>
+      <tr>
+        <th scope="row">RUECKMARSCH</th>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">3</td>
+      </tr>
+      <tr>
+        <th scope="row">RUFBEREITSCHAFT</th>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl">17</td>
+        <td class="zahl">21</td>
+      </tr>
+      <tr>
+        <th scope="row">RUHE</th>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl">24</td>
+        <td class="zahl">30</td>
+      </tr>
+      <tr class="summenzeile">
+        <th scope="row">Summe</th>
+        <td></td><td></td><td></td>
+        <td class="zahl">330</td>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Schichten</h2>
+  <table class="status">
+    <thead><tr><th scope="col">Wert</th><th scope="col">Fü</th><th scope="col">UFü</th><th scope="col">He</th><th scope="col">Gesamt</th></tr></thead>
+    <tbody>
+      <tr>
+        <th scope="row">FRUEH</th>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">3</td>
+        <td class="zahl">6</td>
+      </tr>
+      <tr>
+        <th scope="row">NACHT</th>
+        <td class="zahl">2</td>
+        <td class="zahl">8</td>
+        <td class="zahl">37</td>
+        <td class="zahl">47</td>
+      </tr>
+      <tr>
+        <th scope="row">SPAET</th>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl">10</td>
+        <td class="zahl">14</td>
+      </tr>
+      <tr>
+        <th scope="row">TAG</th>
+        <td class="zahl">11</td>
+        <td class="zahl">40</td>
+        <td class="zahl">175</td>
+        <td class="zahl">226</td>
+      </tr>
+      <tr class="summenzeile">
+        <th scope="row">Summe</th>
+        <td></td><td></td><td></td>
+        <td class="zahl">293</td>
+      </tr>
+    </tbody>
+  </table>
+  <h2>Kontrollsummen</h2>
+  <ul class="proben">
+    <li class="ok">Status: o.k.</li>
+    <li class="ok">Schicht: o.k.</li>
+  </ul>
+  <p class="hinweis">Alle Einheiten tragen Organisation, Status und Schicht.</p>
+</body>
+</html>

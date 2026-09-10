@@ -27,6 +27,7 @@ import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./ein
 import type { Arbeiterhof } from "./arbeiterhof.js";
 import type {
   Antwort,
+  Ausgabeergebnis,
   Bildschirm,
   Bedienergebnis,
   EinsatzEintrag,
@@ -53,8 +54,27 @@ export interface Fenstersteuerung {
   monitorSchliessen(): void;
 }
 
+/**
+ * Was die Vermittlung zum Drucken braucht — und mehr nicht (M4.1).
+ *
+ * Wieder eine **Naht** wie {@link Fenstersteuerung}: Ein PDF entsteht ueber
+ * `webContents.printToPDF`, also in Electron, und die Vermittlung kennt kein
+ * Electron. Ohne diese Naht waere der Weg „Ruf → Antwort“ fuer die Ausgaben
+ * nicht mehr ohne Fenster pruefbar.
+ */
+export interface Drucker {
+  /** Rendert eine vollstaendige HTML-Seite und liefert die PDF-Bytes. */
+  alsPdf(html: string, quer: boolean): Promise<Uint8Array>;
+}
+
 export interface VermittlungOptionen {
   readonly hof: Arbeiterhof;
+  /**
+   * Fehlt in den Tests zum Datenpfad. Ohne ihn ist nur die HTML-Ausgabe
+   * verfuegbar; sie meldet das, statt dass die Vermittlung ohne Electron
+   * nicht baut.
+   */
+  readonly drucker?: Drucker;
   /**
    * Fehlt in den Tests zum Datenpfad: Wer den Weg „Ruf → Antwort“ prueft,
    * braucht kein Fenster. Fehlt sie, sind die drei Monitorrufe schlicht nicht
@@ -159,6 +179,8 @@ export class Vermittlung {
       case "eebZuruecksetzen":
       case "eebUebernehmen":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
+      case "ausgabeErzeugen":
+        return this.#erzeugeAusgabe(ruf);
       case "bildschirmeAuflisten":
         return this.#fenstersteuerung().bildschirme();
       case "monitorOeffnen":
@@ -168,6 +190,48 @@ export class Vermittlung {
         this.#fenstersteuerung().monitorSchliessen();
         return null;
     }
+  }
+
+  /**
+   * Erzeugt eine Ausgabe und legt sie in `ausgaben\` ab (M4.1).
+   *
+   * Gerendert wird im Worker (er haelt den Zustand), das PDF entsteht in der
+   * Schale (nur dort gibt es eine Rendering-Engine), geschrieben wird wieder
+   * im Worker (er haelt die Ablage). Drei Schritte, drei Zustaendigkeiten —
+   * und **eine** Vorlage: Ein PDF aus einer zweiten Vorlage waere ein zweites
+   * Layout, das niemand pflegt.
+   */
+  async #erzeugeAusgabe(ruf: Extract<Ruf, { art: "ausgabeErzeugen" }>): Promise<Ausgabeergebnis> {
+    const gerendert = (await this.#o.hof.frage(ruf.akteId, {
+      art: "ausgabeHtml",
+      ausgabe: ruf.ausgabe,
+      ...(ruf.organisation === undefined ? {} : { organisation: ruf.organisation }),
+    })) as { dateiname: string; html: string };
+
+    let bytes: Uint8Array;
+    let endung: string;
+    if (ruf.format === "pdf") {
+      const drucker = this.#o.drucker;
+      if (drucker === undefined) {
+        throw new Error("Auf diesem Arbeitsplatz ist kein Drucker eingerichtet.");
+      }
+      // Der Druck liegt quer, die Status-Matrix hochkant — so wie die
+      // Vorlagen der Excel gedruckt werden (`excel-domaenenmodell.md` §4).
+      bytes = await drucker.alsPdf(gerendert.html, ruf.ausgabe === "druck");
+      endung = "pdf";
+    } else {
+      bytes = new TextEncoder().encode(gerendert.html);
+      endung = "html";
+    }
+
+    const dateiname = `${gerendert.dateiname}.${endung}`;
+    const { pfad } = (await this.#o.hof.frage(ruf.akteId, {
+      art: "ausgabeSchreiben",
+      dateiname,
+      bytes,
+    })) as { pfad: string };
+    this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(bytes.length)} Bytes)`);
+    return { pfad, bytes: bytes.length };
   }
 
   #fenstersteuerung(): Fenstersteuerung {

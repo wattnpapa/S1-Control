@@ -21,7 +21,7 @@ import { einsatzKennung } from "@s1/domaene";
 export interface Ausgabekopf {
   readonly datum: string;
   readonly einsatzName: string;
-  /** Frei formulierte Standangabe, etwa „Stand: 08.09.2026, 14:12". */
+  /** Frei formulierte Standangabe, etwa „Stand: 08.09.2026, 14:12“. */
   readonly stand: string;
 }
 
@@ -55,3 +55,22 @@ export function kopfAlsHtml(kopf: Ausgabekopf): string {
 }
 
 export { dosZeit, schreibeZip, textEintrag, type Zipeintrag, type Zipoptionen } from "./zip.js";
+export {
+  DRUCK_FUSSNOTE,
+  DRUCK_STIL,
+  druckAlsHtml,
+  druckdaten,
+  type Druckdaten,
+  type Druckoptionen,
+  type Druckzeile,
+} from "./druck.js";
+export {
+  STATUS_STIL,
+  meldungSchicht,
+  meldungStatus,
+  statusAlsHtml,
+  statusdaten,
+  type Organisationszeile,
+  type Statusdaten,
+  type Verteilungszeile,
+} from "./status.js";

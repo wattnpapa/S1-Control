@@ -553,6 +553,32 @@
         overflow-y: auto;
       }
 
+      /* ---- Die Kernausgaben (M4.1) -------------------------------------- */
+
+      .ausgaben {
+        display: flex;
+        align-items: baseline;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-top: 1.5rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid rgba(128, 128, 128, 0.3);
+      }
+      .ausgaben h2 {
+        margin: 0 0.5rem 0 0;
+      }
+      .ausgaben select {
+        display: inline;
+        width: auto;
+      }
+      /* Der Pfad steht in voller Breite unter den Knoepfen und bricht um:
+         Er ist lang, und abgeschnitten hilft er niemandem. */
+      .ausgaben p {
+        flex-basis: 100%;
+        margin: 0.3rem 0 0;
+        word-break: break-all;
+      }
+
     </style>
   </head>
   <body>

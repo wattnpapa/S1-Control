@@ -162,4 +162,20 @@ export class Einsatzablage {
   praesenzDatei(clientId: string): string {
     return path.join(this.sharePraesenz, `${clientId}.json`);
   }
+
+  /** Ausgabeordner auf dem Share (§1.4): erzeugte Ausdrucke und der HTML-Monitor. */
+  get shareAusgaben(): string {
+    return path.join(this.share, ORDNER_AUSGABEN);
+  }
+
+  /**
+   * Eine erzeugte Ausgabe auf dem Share.
+   *
+   * Sie ist ein **abgeleiteter** Anzeiger wie die Präsenzdatei (§1.3): Sie
+   * trägt keinen Zustand, den die Ereignisse nicht auch tragen, und ist
+   * jederzeit neu erzeugbar. Verschwindet sie, kostet das Komfort, nie Daten.
+   */
+  ausgabeDatei(dateiname: string): string {
+    return path.join(this.shareAusgaben, dateiname);
+  }
 }
