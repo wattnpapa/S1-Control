@@ -1,6 +1,13 @@
 # Einstieg in M3 — Lagebild
 
-Stand: 2026-09-10 · Meilenstein M3 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M3 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **abgeschlossen bis auf den Zweitbildschirm**
+
+> **Bearbeitungsstand 2026-09-10.** Alle acht Pakete sind gebaut und grün.
+> Offen bleibt der Nachweis von M3.5 auf einer echten zweiten Anzeige. Das
+> Einsatztagebuch (M3.3) ist gebaut; Johannes hat es danach aus dem Umfang
+> genommen — es wird nicht weiter ausgebaut. Was gebaut wurde, welche
+> Entscheidungen dabei gefallen sind und was offen bleibt, steht im
+> [Abschlussbericht](../berichte/M3-abschlussbericht.md).
 
 M3 ist der erste Meilenstein ohne Prüfpunkt mit Abbruchrecht. Was er liefern
 soll, steht in einem Satz: **die Führungsstelle führt ihre Lage in dieser
