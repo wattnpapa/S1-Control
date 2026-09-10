@@ -267,7 +267,13 @@ export interface FahrzeugZustand extends Anlage {
   readonly entfernt?: Feld<boolean>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
   // abgeleitet:
-  readonly wirksamerAbschnittId: Id;
+  /**
+   * **Abwesend**, wenn der gemeldete Abschnitt unmittelbar unbekannt ist
+   * (§5.3.3): Das Fahrzeug haengt dann an seiner Einheit. Den Auffang bekommt
+   * es nie — der ist eine Zusicherung ueber Staerkezahlen, und ein Fahrzeug
+   * traegt keine.
+   */
+  readonly wirksamerAbschnittId?: Id;
 }
 
 export interface PersonZustand extends Anlage {

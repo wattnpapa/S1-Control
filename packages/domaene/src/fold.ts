@@ -771,6 +771,115 @@ function leereSammlung<T>(): { readonly [id: string]: T } {
   return Object.create(null) as Record<string, T>;
 }
 
+/**
+ * Loest die Zyklen im Abschnittswald auf (§5.3.1, Auflage 10).
+ *
+ * **Die Regel wirkt auf das abgeleitete Feld, nicht auf die Beobachtung.**
+ * `parentId` behaelt seinen Gewinner samt HLC; hier faellt nur die Kante mit
+ * der **groessten** HLC eines Zyklus aus, und der Abschnitt haengt an der
+ * Wurzel. Setzte die Regel `parentId` selbst zurueck, gewaenne eine spaeter
+ * eintreffende Umhaengung mit kleinerer HLC gegen ein leeres Feld, und ein
+ * Client aus dem Schnappschuss kaeme zu einem anderen Baum als der volle Fold.
+ *
+ * Die groessere HLC weicht, weil sie die juengere Handlung ist und
+ * deterministisch waehlbar. An die Wurzel, weil der gesehene Vorher-Wert dem
+ * Feld einen Wert gaebe, den kein Ereignis dieser HLC gesetzt hat — die Wurzel
+ * ist der einzige Wert, der immer existiert und keinen Zyklus schliessen kann.
+ *
+ * Terminierung: In einem Elternzeiger-Wald sind Zyklen knoten- und
+ * kantendisjunkt; das Loesen einer Kante erzeugt keinen neuen.
+ */
+function loeseZyklen(
+  kanten: ReadonlyMap<string, Feld<unknown>>,
+  hinweise: Konflikthinweis[],
+): Set<string> {
+  const gefallen = new Set<string>();
+  const farbe = new Map<string, "laeuft" | "fertig">();
+
+  const elternteil = (id: string): string | undefined => {
+    if (gefallen.has(id)) return undefined;
+    const wert = kanten.get(id)?.wert;
+    return typeof wert === "string" && kanten.has(wert) ? wert : undefined;
+  };
+
+  for (const start of [...kanten.keys()].sort(vergleicheNachCodepunkt)) {
+    if (farbe.get(start) === "fertig") continue;
+    const pfad: string[] = [];
+    let laufend: string | undefined = start;
+    while (laufend !== undefined && farbe.get(laufend) !== "fertig") {
+      if (farbe.get(laufend) === "laeuft") {
+        // Ein Zyklus: alles ab dem ersten Auftreten von `laufend`.
+        const zyklus = pfad.slice(pfad.indexOf(laufend));
+        let schwaechste = zyklus[0] as string;
+        for (const id of zyklus) {
+          const a = kanten.get(id) as Feld<unknown>;
+          const b = kanten.get(schwaechste) as Feld<unknown>;
+          const nachHlc = vergleicheHlc(a.hlc, b.hlc);
+          const groesser =
+            nachHlc !== 0
+              ? nachHlc > 0
+              : vergleicheNachCodepunkt(a.durch ?? "", b.durch ?? "") > 0;
+          if (groesser) schwaechste = id;
+        }
+        const kante = kanten.get(schwaechste) as Feld<unknown>;
+        gefallen.add(schwaechste);
+        hinweise.push({
+          art: "zyklusAufgeloest",
+          feldpfad: `abschnitt/${schwaechste}/parentId`,
+          ereignis: kante.durch ?? "",
+          gewuenschterParentId: kante.wert as string,
+        });
+        break;
+      }
+      farbe.set(laufend, "laeuft");
+      pfad.push(laufend);
+      laufend = elternteil(laufend);
+    }
+    for (const id of pfad) farbe.set(id, "fertig");
+  }
+  return gefallen;
+}
+
+/** Wie eine Aufloesungskette endet (§5.3.2 Nr. 3). */
+type Kettenende =
+  | { readonly art: "REGULAER"; readonly ziel: string }
+  | { readonly art: "KREIS" }
+  | { readonly art: "UNBEKANNT"; readonly id: string };
+
+/**
+ * Folgt der Kette aufgeloester Abschnitte (§5.3.2 Nr. 3).
+ *
+ * Sie endet auf drei Weisen, und jede hat ihre eigenen Hinweise. Der Abbruch
+ * bei der ersten Wiederholung macht die Verfolgung linear. Alles, was die
+ * Kette braucht, steht im Zustand — die Regel gilt damit auch nach einem
+ * Schnappschuss.
+ */
+function folgeAufloesung(
+  start: string,
+  abschnitte: ReadonlyMap<string, AbschnittZustand>,
+): Kettenende {
+  const gesehen = new Set<string>([start]);
+  let laufend = start;
+  for (;;) {
+    const aufgeloest = abschnitte.get(laufend)?.aufgeloest?.wert as
+      | { zielAbschnittId?: string }
+      | null
+      | undefined;
+    const ziel = aufgeloest?.zielAbschnittId;
+    if (typeof ziel !== "string") return { art: "REGULAER", ziel: laufend };
+    if (!abschnitte.has(ziel)) return { art: "UNBEKANNT", id: ziel };
+    if (gesehen.has(ziel)) return { art: "KREIS" };
+    gesehen.add(ziel);
+    laufend = ziel;
+  }
+}
+
+/** Das Ziel, das die Aufloesung des **ersten** Kettenglieds benennt (§5.3.2). */
+function zielDesErstenGlieds(abschnitt: AbschnittZustand | undefined): string {
+  const wert = abschnitt?.aufgeloest?.wert as { zielAbschnittId?: string } | null | undefined;
+  return typeof wert?.zielAbschnittId === "string" ? wert.zielAbschnittId : "";
+}
+
 /** `true`, wenn ein Feld einen Wert traegt, der weder `null` noch `false` ist (§5.6.2). */
 function gilt(feld: Feld<unknown> | undefined): boolean {
   return feld !== undefined && feld.wert !== null && feld.wert !== false;
@@ -899,32 +1008,67 @@ export function materialisiere(faltung: Faltung): Zustand {
     [AUFFANG_ABSCHNITT_ID, AUFFANG],
     [ARCHIV_ABSCHNITT_ID, ARCHIV],
   ]);
+  const elternKanten = new Map<string, Feld<unknown>>();
   for (const [id, entitaet] of gebaut.get("abschnitt") ?? []) {
     abschnitte.set(id, {
       ...entitaet.werte,
       zaehltInGesamtstaerke: zaehltTyp(entitaet.felder.get("typ")?.wert),
-      ...(entitaet.felder.get("parentId")?.wert === undefined ||
-      entitaet.felder.get("parentId")?.wert === null
-        ? {}
-        : { wirksamerParentId: entitaet.felder.get("parentId")?.wert as string }),
     } as unknown as AbschnittZustand);
+    const parent = entitaet.felder.get("parentId");
+    if (parent !== undefined && typeof parent.wert === "string") elternKanten.set(id, parent);
+  }
+  // Die beiden Systemabschnitte haben keine Elternkante und stehen trotzdem im
+  // Wald: `AUFFANG` oder `ARCHIV` als Elternteil ist ein gueltiger Verweis.
+  for (const id of [AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID]) {
+    if (!elternKanten.has(id)) elternKanten.set(id, { wert: null, hlc: SYSTEM_HLC });
+  }
+  const gefalleneKanten = loeseZyklen(elternKanten, hinweise);
+  for (const [id, kante] of elternKanten) {
+    const vorhanden = abschnitte.get(id);
+    if (vorhanden === undefined || vorhanden.systemAbschnitt === true) continue;
+    if (gefalleneKanten.has(id) || typeof kante.wert !== "string") continue;
+    abschnitte.set(id, { ...vorhanden, wirksamerParentId: kante.wert });
   }
 
   // --- Einheiten ----------------------------------------------------------
   const einheiten = new Map<string, unknown>();
   for (const [id, entitaet] of gebaut.get("einheit") ?? []) {
     const gemeldet = entitaet.felder.get("abschnittId")?.wert;
-    const existiert = typeof gemeldet === "string" && abschnitte.has(gemeldet);
-    if (!existiert && typeof gemeldet === "string") {
-      // Auflage 10: Die Staerke einer real gemeldeten Einheit darf nicht
-      // dadurch aus der Gesamtstaerke fallen, dass ein Ereignis noch fehlt.
+    const feldpfad = `einheit/${id}/abschnittId`;
+    let wirksamerAbschnittId = AUFFANG_ABSCHNITT_ID;
+    if (typeof gemeldet !== "string" || !abschnitte.has(gemeldet)) {
+      // §5.3.3, erste Regel: Der Abschnitt ist unbekannt, das
+      // `AbschnittAngelegt` noch unterwegs. Der Zustand ist **vorlaeufig** —
+      // sobald es eintrifft, steht die Einheit ohne Zutun richtig. Die Staerke
+      // einer real gemeldeten Einheit darf nicht dadurch aus der Gesamtstaerke
+      // fallen, dass ein Ereignis noch fehlt (Auflage 10).
+      if (typeof gemeldet === "string") {
+        hinweise.push({ art: "abschnittUnbekannt", feldpfad, gemeldeterAbschnittId: gemeldet });
+      }
+    } else if (abschnitte.get(gemeldet)?.aufgeloest?.wert == null) {
+      wirksamerAbschnittId = gemeldet;
+    } else {
+      // §5.3.3, zweite Regel: Der Abschnitt ist aufgeloest — eine Handlung mit
+      // **benanntem Ziel**. Die Einheit in den Auffang zu legen waere eine
+      // dauerhafte Verschlechterung; sie steht im Ziel. Ist das Ziel selbst
+      // aufgeloest, wird der Kette gefolgt (§5.3.2 Nr. 3).
       hinweise.push({
-        art: "abschnittUnbekannt",
-        feldpfad: `einheit/${id}/abschnittId`,
-        gemeldeterAbschnittId: gemeldet,
+        art: "abschnittAufgeloest",
+        feldpfad,
+        // Immer das **erste** Kettenglied, damit der Hinweis nicht davon
+        // abhaengt, wie weit ein Client die Kette schon kennt.
+        aufgeloesterAbschnittId: gemeldet,
+        zielAbschnittId: zielDesErstenGlieds(abschnitte.get(gemeldet)),
       });
+      const ende = folgeAufloesung(gemeldet, abschnitte);
+      if (ende.art === "REGULAER") wirksamerAbschnittId = ende.ziel;
+      else if (ende.art === "UNBEKANNT") {
+        hinweise.push({ art: "abschnittUnbekannt", feldpfad, gemeldeterAbschnittId: ende.id });
+      }
+      // Beim Kreis bleibt es beim Auffang, und zwar **allein** mit
+      // `abschnittAufgeloest`: Es gibt hier keinen unbekannten Abschnitt, und
+      // `abschnittUnbekannt` haette kein Feld zu fuellen (T10, T169).
     }
-    const wirksamerAbschnittId = existiert ? (gemeldet as string) : AUFFANG_ABSCHNITT_ID;
     const staerke = (entitaet.felder.get("staerke")?.wert ?? {
       fuehrer: 0,
       unterfuehrer: 0,
@@ -952,15 +1096,41 @@ export function materialisiere(faltung: Faltung): Zustand {
     return ergebnis;
   };
 
+  // §5.3.3: **Fahrzeuge gehen nicht in den Auffang.** Ein Fahrzeug hat keine
+  // Staerke; die Zusicherung ueber Staerkezahlen greift nicht. Damit ist P5
+  // sauber getrennt: Es spricht von Einheiten.
   const fahrzeuge = new Map<string, unknown>();
   for (const [id, entitaet] of gebaut.get("fahrzeug") ?? []) {
     const gemeldet = entitaet.felder.get("abschnittId")?.wert;
+    const feldpfad = `fahrzeug/${id}/abschnittId`;
+    let wirksamerAbschnittId: string | undefined;
+    if (typeof gemeldet === "string" && !abschnitte.has(gemeldet)) {
+      // Unmittelbar unbekannt: `abschnittId` bleibt gefaltet stehen,
+      // `wirksamerAbschnittId` ist **abwesend** — das Fahrzeug haengt an
+      // seiner Einheit (T15).
+      hinweise.push({ art: "fremdreferenzUnbekannt", feldpfad, verweistAuf: gemeldet });
+    } else if (typeof gemeldet === "string") {
+      wirksamerAbschnittId = gemeldet;
+      if (abschnitte.get(gemeldet)?.aufgeloest?.wert != null) {
+        hinweise.push({
+          art: "abschnittAufgeloest",
+          feldpfad,
+          aufgeloesterAbschnittId: gemeldet,
+          zielAbschnittId: zielDesErstenGlieds(abschnitte.get(gemeldet)),
+        });
+        const ende = folgeAufloesung(gemeldet, abschnitte);
+        if (ende.art === "REGULAER") wirksamerAbschnittId = ende.ziel;
+        else if (ende.art === "UNBEKANNT") {
+          hinweise.push({ art: "fremdreferenzUnbekannt", feldpfad, verweistAuf: ende.id });
+        }
+        // Im Kreis wie im Unbekannten behaelt das Fahrzeug **seinen eigenen**
+        // `abschnittId` — nicht den Auffang und nicht „abwesend", denn der
+        // Abschnitt, auf den es zeigt, existiert ja (§3.10, T173).
+      }
+    }
     fahrzeuge.set(id, {
       ...entitaet.werte,
-      // §5.3.3: Den Auffang bekommt ein Fahrzeug **nie** — der ist eine
-      // Zusicherung ueber Staerkezahlen, und ein Fahrzeug traegt keine. Es
-      // behaelt seinen eigenen `abschnittId`.
-      wirksamerAbschnittId: typeof gemeldet === "string" ? gemeldet : "",
+      ...(wirksamerAbschnittId === undefined ? {} : { wirksamerAbschnittId }),
     });
   }
 
