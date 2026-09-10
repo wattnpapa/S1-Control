@@ -45,13 +45,40 @@ mitgeschlossen worden: `liesArbeitsplatz` hat die Betriebsart bisher zwar
 geschrieben, aber nicht wieder gelesen — ein Meldekopf war nach jedem Start
 wieder eine Führungsstelle.
 
-Offen: die Feingestaltung der Bogenübernahme aus
+Die Einheitentabelle folgt dem Entwurf: der Kopf in einer Zeile mit der Zahl der
+Treffer, „Aus Vorlage" als gefülltem Hauptweg, den vier auswahlgebundenen
+Schritten dahinter und der Suche rechts; die Spaltengruppen als Umschalter
+statt fünf Kästchen und mit Beschriftungen statt Excel-Bezeichnern; der Status
+als Marke mit Farbe und Wort; Zahlenspalten rechtsbündig in Tabellenziffern;
+darunter eine Summenzeile über den gezeigten Ausschnitt und die Fußnote zur
+Bedienung der Zelle. Die Ampeln des Eingangskorbs benutzen dieselbe Marke.
+Die Zeilen bleiben einzeilig — die Excel hat 48 Spalten, und wer Ressourcen,
+Logistik oder Kosten zuschaltet, scrollt waagerecht im Rahmen der Karte.
+
+Die Führungsorganisation ist als eigenes Blatt umgesetzt (Option 3a,
+`Fuehrungsorganisation.tsx`, `harke.ts`, `zeichen.tsx`): gezeichnet aus dem
+Abschnittsbaum, kein zweiter Editor. Je Ebene steht ein CSS-Grid aus gleichen
+Spalten; der Querbalken spannt mit `margin: 0 calc(100 %/2n)` genau von Mitte
+zu Mitte der äußeren Kinder, Abzweigstummel und Zeichen sitzen in derselben
+Zelle und beide zentriert, ohne `transform`. Linien 3 px, Stummel 20/16/14,
+Knoten 196/176/118 px. Die Beschriftung hängt an Typ **und** Tiefe — derselbe
+Einsatzort heißt auf Ebene 1 EAL und darunter UEAL —, deshalb tragen die
+Zeichen ihren Text aus dem Code und nicht aus der SVG-Datei. Meldekopf,
+Bereitstellungsraum und Logistik stehen als Einrichtungen neben der Harke, weil
+sie keine Führungsebene sind. Der Knopf „Als PDF (Lagekarte)" schreibt die
+vorhandene Ausgabe `fueorg` (M8.3); das gedruckte Blatt ist weiterhin die
+eingerückte Liste aus `@s1/ausgaben`.
+
+Offen: der Zeichensatz-Auszug als Legende neben der Harke, die Feingestaltung der Bogenübernahme aus
 erfassungsbogen.app (Option 2d) und die Führungsharke als Bildschirmansicht —
 sie existiert bislang nur als Ausgabe `fueorg`. Die taktischen Zeichen aus dem
 Bündel liegen unter `apps/desktop/assets/tz/clean/` (`viewBox 0 0 256 256`, ohne
 C2PA-Metadaten) und werden noch nicht gezeichnet. Vor ihrer ersten Verwendung
 ist Roboto Slab Bold lokal einzubinden: Die Anwendung läuft offline, eine
-Schrift von Google Fonts wäre im Einsatz nicht da.
+Schrift von Google Fonts wäre im Einsatz nicht da. Bis dahin zeichnet die Harke
+ihre Zeichen mit dem Rückfall auf Georgia — die Form stimmt, die Serifen sind
+andere. Die gelieferten Dateien trugen je acht Kilobyte C2PA-Metadaten; sie
+sind entfernt, übrig sind rund 500 Byte je Zeichen.
 
 Die fünf offenen Entscheidungen am Ende des Handoffs (Zahl der Themes,
 Modulleiste links, Erfassen im Meldekopf-Modus, Schriftfamilien, gemeinsames
@@ -60,5 +87,6 @@ zweiter Navigationsstreifen und Mono nur für Marken, Spaltenköpfe und Kennunge
 
 Unter `stand/` liegen vier Aufnahmen des gebauten Renderers (1320×860, Chromium,
 Brücke durch eine Attrappe mit einer erfundenen Lage ersetzt): `standard.png`,
-`dunkel.png`, `feld.png`, `nacht.png`. Sie zeigen den Stand vom 2026-09-10 und
+`dunkel.png`, `feld.png`, `nacht.png`, dazu `fuehrungsorganisation.png` und
+`einheitentabelle-status.png` (die Tabelle an ihr rechtes Ende gescrollt). Sie zeigen den Stand vom 2026-09-10 und
 sind bei der nächsten Änderung an der Gestaltung neu zu erzeugen.
