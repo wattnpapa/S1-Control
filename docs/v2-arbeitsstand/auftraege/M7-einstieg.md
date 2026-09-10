@@ -1,6 +1,6 @@
 # Einstieg in M7 — Verteilung und Betrieb
 
-Stand: 2026-09-10 · Meilenstein M7 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md), im Umsetzungsplan der Block [V](../../v2/05-UMSETZUNGSPLAN.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M7 aus [03-MEILENSTEINE.md](../../v2/03-MEILENSTEINE.md), im Umsetzungsplan der Block [V](../../v2/05-UMSETZUNGSPLAN.md) · Status: **abgeschlossen** — [Abschlussbericht](../berichte/M7-abschlussbericht.md)
 
 M7 beantwortet die Frage, die nach sechs Meilensteinen Fachlichkeit übrig ist:
 **Wie kommt das Programm auf einen Rechner der Führungsstelle, und was tut
