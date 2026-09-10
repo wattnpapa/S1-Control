@@ -35,6 +35,7 @@ import {
   kompensationFuer,
   leereFaltung,
   materialisiere,
+  projektion,
   vergleicheHlc,
   type Akteur,
   type EingehendesEreignis,
@@ -61,10 +62,14 @@ import {
 
 import {
   lagebildDelta,
+  type Baumansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
   type Peer,
+  type Ruf,
+  type Tabellenansicht,
+  type Tagebuchansicht,
 } from "../kontrakt/index.js";
 
 /**
@@ -126,6 +131,7 @@ function leeresLagebild(einsatzId: string): Lagebild {
     hinweise: 0,
     unbekannteEreignisse: 0,
     undoTiefe: 0,
+    lageZeiger: 0,
   };
 }
 
@@ -157,6 +163,33 @@ export class Aktendienst {
   #gesendet: Lagebild;
   #folge = 0;
   #geschlossen = false;
+
+  /**
+   * Zaehlt jedes gefaltete fachliche Ereignis (M3.7).
+   *
+   * Er zaehlt **Ereignisse** und nicht Aenderungen am Lagebild: Eine
+   * Statusaenderung an einer von 150 Einheiten laesst die flache Projektion
+   * unberuehrt, und trotzdem ist die Tabelle danach veraltet. Ein Zeiger, der
+   * an der Projektion haengt, meldete diesen Fall nie.
+   */
+  #lageZeiger = 0;
+
+  /**
+   * Die fachlichen Ereignisse dieser Akte, in Eintreffreihenfolge.
+   *
+   * §5.9.1: Das Tagebuch wird aus den Ereignisdateien gerendert und ist
+   * ausdruecklich **kein** Bestandteil des `Zustand`. Der Dienst haelt sie
+   * deshalb neben der Faltung — nicht als zweite Wahrheit, sondern als
+   * dieselbe Quelle, die auch die Faltung gespeist hat. Das erspart es, fuer
+   * jede Tagebuchansicht die Segmente erneut zu lesen; die Zeilen selbst
+   * entstehen erst beim Ruf, mit den Namen, die **jetzt** gelten.
+   *
+   * Die Liste waechst mit der Zahl der Ereignisse. Das ist hier zulaessig und
+   * in §3.1 nicht gemeint: Jene Schranke gilt dem `Zustand`, der in den
+   * `zustandsHash` eingeht und ueber Schnappschuesse wandert. Diese Liste
+   * geht nirgendwohin und stirbt mit dem Worker.
+   */
+  readonly #ereignisse: EingehendesEreignis[] = [];
 
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
@@ -464,6 +497,64 @@ export class Aktendienst {
     return this.bediene(kompensation.entwurf);
   }
 
+  // -------------------------------------------------------------------------
+  // Die drei Ansichten (M3.7)
+  // -------------------------------------------------------------------------
+
+  /**
+   * Der Abschnittsbaum (M3.1).
+   *
+   * Gebaut wird beim Ruf und nicht auf Vorrat: Ein Baum, den niemand
+   * aufgeklappt hat, kostet so nichts, und ein Baum, den jemand aufgeklappt
+   * hat, ist bei jedem Ruf frisch. Die Projektion liegt in Ring 2 und rechnet
+   * dort gegen §5.3; hier wird sie nur gerufen.
+   */
+  baum(ruf: Extract<Ruf, { art: "baumAnfordern" }>): Baumansicht {
+    return {
+      lageZeiger: this.#lageZeiger,
+      baum: projektion.abschnittsbaum(this.#zustand, {
+        ...(ruf.ohneAufgeloeste === undefined ? {} : { ohneAufgeloeste: ruf.ohneAufgeloeste }),
+        ...(ruf.ohneArchiv === undefined ? {} : { ohneArchiv: ruf.ohneArchiv }),
+      }),
+    };
+  }
+
+  /** Die Einheitentabelle, gefiltert und auf den Ausschnitt beschnitten (M3.2). */
+  tabelle(ruf: Extract<Ruf, { art: "tabelleAnfordern" }>): Tabellenansicht {
+    const ausschnitt = projektion.einheitentabelle(this.#zustand, {
+      ...(ruf.abschnittId === undefined ? {} : { abschnittId: ruf.abschnittId }),
+      ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
+      ...(ruf.mitStillgelegten === undefined ? {} : { mitStillgelegten: ruf.mitStillgelegten }),
+      ...(ruf.von === undefined ? {} : { von: ruf.von }),
+      ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
+    });
+    return { lageZeiger: this.#lageZeiger, ...ausschnitt };
+  }
+
+  /**
+   * Das Einsatztagebuch (M3.3).
+   *
+   * Es laeuft ueber **alle** Ereignisse dieser Akte und nicht ueber den
+   * Zustand — §5.9.1: Der Zustand haelt je Feld zwei Beobachtungen, das
+   * Tagebuch braucht alle. Der Zustand kommt trotzdem mit, aber nur fuer die
+   * Namen in den Saetzen.
+   */
+  tagebuch(ruf: Extract<Ruf, { art: "tagebuchAnfordern" }>): Tagebuchansicht {
+    const ausschnitt = projektion.tagebuchausschnitt(
+      this.#zustand,
+      this.#ereignisse,
+      {
+        ...(ruf.einheitId === undefined ? {} : { einheitId: ruf.einheitId }),
+        ...(ruf.abschnittId === undefined ? {} : { abschnittId: ruf.abschnittId }),
+        ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
+        ...(ruf.nurRuecknahmen === undefined ? {} : { nurRuecknahmen: ruf.nurRuecknahmen }),
+      },
+      ruf.von,
+      ruf.anzahl,
+    );
+    return { lageZeiger: this.#lageZeiger, ...ausschnitt };
+  }
+
   /** Der Stapel, wie die Oberflaeche ihn zeigt (§6 U3). */
   undoStapel(): readonly { id: string; typ: string; wanduhr: string }[] {
     return this.#stapel.eintraege.map((e) => ({ id: e.id, typ: e.typ, wanduhr: e.wanduhr }));
@@ -515,6 +606,8 @@ export class Aktendienst {
       ereignisse.push(zeile.rahmen as unknown as EingehendesEreignis);
     }
     if (ereignisse.length === 0) return;
+    this.#ereignisse.push(...ereignisse);
+    this.#lageZeiger += ereignisse.length;
     this.#faltung = falteHinzu(this.#faltung, ereignisse);
     this.#zustand = materialisiere(this.#faltung);
     this.#stapel.nimmAlleAuf(ereignisse);
@@ -560,6 +653,7 @@ export class Aktendienst {
       unbekannteEreignisse: zustand.unbekannt.length,
       undoTiefe: this.#stapel.eintraege.length,
       ...(oberster === undefined ? {} : { undoObersteArt: oberster.typ }),
+      lageZeiger: this.#lageZeiger,
     };
   }
 

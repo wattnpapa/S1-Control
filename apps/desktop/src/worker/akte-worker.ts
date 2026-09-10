@@ -19,7 +19,7 @@ import os from "node:os";
 import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
 import { Aktendienst, type Takte } from "./aktendienst.js";
-import type { Entwurf, Mitteilung } from "../kontrakt/index.js";
+import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 /** Was der Main-Prozess dem Worker beim Start mitgibt — alles serialisierbar. */
 export interface Startdaten {
@@ -41,6 +41,13 @@ export type Auftrag =
   | { readonly art: "zurueck"; readonly nummer: number; readonly grund?: string }
   | { readonly art: "undoStapel"; readonly nummer: number }
   | { readonly art: "standAnfordern"; readonly nummer: number }
+  // Die drei Ansichtsrufe reisen als **der Ruf selbst** durch (M3.7). Ihre
+  // Felder hier ein zweites Mal aufzuzaehlen hiesse, jeden neuen Filter an
+  // zwei Stellen nachzutragen — und der Kontrakt hat sie bereits geprueft,
+  // bevor der Main sie weiterreicht.
+  | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
+  | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
+  | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
   | { readonly art: "schliesse"; readonly nummer: number };
 
 /**
@@ -157,6 +164,12 @@ if (parentPort !== null) {
       case "standAnfordern":
         dienst.sendeVollenStand();
         return null;
+      case "baumAnfordern":
+        return dienst.baum(auftrag.ruf);
+      case "tabelleAnfordern":
+        return dienst.tabelle(auftrag.ruf);
+      case "tagebuchAnfordern":
+        return dienst.tagebuch(auftrag.ruf);
       case "schliesse":
         dienst.schliesse();
         clearInterval(zeitgeber);

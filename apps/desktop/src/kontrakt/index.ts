@@ -26,6 +26,8 @@
 
 import { z } from "zod";
 
+import type { Baumknoten, Tabellenausschnitt, Tagebuchzeile } from "@s1/domaene";
+
 export { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "./kanaele.js";
 
 // ---------------------------------------------------------------------------
@@ -129,6 +131,22 @@ export const zLagebild = z.object({
   /** Wie viele Schritte „rueckgaengig" noch gehen (§6 U3). */
   undoTiefe: z.number().int().min(0),
   undoObersteArt: z.string().optional(),
+  /**
+   * Zaehlt bei jeder fachlichen Aenderung um eins hoch (M3.7).
+   *
+   * **Das ist der einzige Zuwachs, den das Lagebild in M3 erfaehrt, und er
+   * ist das Gegenteil von Wachstum.** M2 hat festgelegt, dass hier keine
+   * Tabelle, kein Baum und kein Tagebuch hineinwandert; ein Dauerstrom des
+   * vollen Zustands waere bei 150 Einheiten das Falsche. Der Zeiger ist die
+   * kleinste Auskunft, mit der eine offene Ansicht erfaehrt, dass ihr Bild
+   * veraltet ist: eine Zahl. **Was** sich geaendert hat, sagt er nicht — das
+   * holt sich die Ansicht mit ihrem eigenen Ruf, gefiltert und auf ihren
+   * Ausschnitt beschnitten.
+   *
+   * Er laeuft ueber den bestehenden Delta-Weg mit und kostet dort nichts: Er
+   * ist ein oberster Schluessel wie jeder andere.
+   */
+  lageZeiger: z.number().int().min(0),
 });
 export type Lagebild = z.infer<typeof zLagebild>;
 
@@ -147,6 +165,18 @@ export type Entwurf = z.infer<typeof zEntwurf>;
 // ---------------------------------------------------------------------------
 // Rufe
 // ---------------------------------------------------------------------------
+
+/**
+ * Wie viele Zeilen ein einzelner Ansichtsruf hoechstens zurueckgibt.
+ *
+ * Die Schranke steht **im Schema** und nicht in der Ansicht: Der Main prueft
+ * jeden Ruf, bevor er den Worker erreicht, und ein Renderer, den ein fremdes
+ * Skript erreicht hat, koennte sonst `anzahl: 5_000_000` schicken und den
+ * Worker eine Antwort bauen lassen, die keiner liest. Fuenfhundert ist
+ * grosszuegig gegenueber der Zahl aus der DoD von M3.2 (150 Einheiten) und
+ * klein genug, dass eine Antwort in Millisekunden serialisiert.
+ */
+export const AUSSCHNITT_MAX = 500;
 
 export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("umgebung") }),
@@ -168,6 +198,39 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("bedienen"), akteId: zAkteId, entwurf: zEntwurf }),
   z.object({ art: z.literal("zurueck"), akteId: zAkteId, grund: z.string().optional() }),
   z.object({ art: z.literal("undoStapel"), akteId: zAkteId }),
+
+  // ---- Die drei Ansichtsrufe (M3.7) ---------------------------------------
+  //
+  // Sie holen, was das geschobene Lagebild ausdruecklich **nicht** traegt.
+  // Jeder von ihnen nimmt seinen Filter und seinen Ausschnitt entgegen, und
+  // das ist der Grund ihrer Existenz: Ein Ruf ohne Ausschnitt zwingt den
+  // Worker, bei 5.000 Einheiten alles zu bauen, um 50 Zeilen zu zeigen —
+  // und zwar bei jeder Aenderung (Entscheidung 10 des Umsetzungsplans).
+  z.object({
+    art: z.literal("baumAnfordern"),
+    akteId: zAkteId,
+    ohneAufgeloeste: z.boolean().optional(),
+    ohneArchiv: z.boolean().optional(),
+  }),
+  z.object({
+    art: z.literal("tabelleAnfordern"),
+    akteId: zAkteId,
+    abschnittId: z.string().optional(),
+    suche: z.string().optional(),
+    mitStillgelegten: z.boolean().optional(),
+    von: z.number().int().min(0).optional(),
+    anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+  }),
+  z.object({
+    art: z.literal("tagebuchAnfordern"),
+    akteId: zAkteId,
+    einheitId: z.string().optional(),
+    abschnittId: z.string().optional(),
+    suche: z.string().optional(),
+    nurRuecknahmen: z.boolean().optional(),
+    von: z.number().int().min(0).optional(),
+    anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+  }),
 ]);
 export type Ruf = z.infer<typeof zRuf>;
 
@@ -225,6 +288,36 @@ export interface Antworten {
   bedienen: Bedienergebnis;
   zurueck: Bedienergebnis;
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
+  baumAnfordern: Baumansicht;
+  tabelleAnfordern: Tabellenansicht;
+  tagebuchAnfordern: Tagebuchansicht;
+}
+
+/**
+ * Die Antwort eines Ansichtsrufs traegt **immer** den Zeigerstand mit, zu dem
+ * sie gebaut wurde.
+ *
+ * Ohne ihn haette der Renderer ein Wettrennen: Trifft ein Delta mit dem neuen
+ * Zeiger ein, waehrend die Antwort auf den vorigen noch unterwegs ist, traegt
+ * er ein aelteres Bild ueber ein neueres. Mit dem Stand in der Antwort ist der
+ * Fall entscheidbar — und zwar im Renderer, ohne dass der Worker sich merken
+ * muesste, welche Ansicht welchen Stand hat.
+ */
+export interface Ansichtsstand {
+  readonly lageZeiger: number;
+}
+
+export interface Baumansicht extends Ansichtsstand {
+  readonly baum: readonly Baumknoten[];
+}
+
+export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+export interface Tagebuchansicht extends Ansichtsstand {
+  readonly zeilen: readonly Tagebuchzeile[];
+  /** Wie viele Zeilen der Filter insgesamt trifft — die Zahl unter der Liste. */
+  readonly gesamtzahl: number;
+  readonly von: number;
 }
 
 // ---------------------------------------------------------------------------

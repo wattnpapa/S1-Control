@@ -33,7 +33,7 @@ import type {
   Ruf,
   Umgebung,
 } from "../kontrakt/index.js";
-import type { Startdaten } from "../worker/akte-worker.js";
+import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
 
 export interface VermittlungOptionen {
   readonly hof: Arbeiterhof;
@@ -118,6 +118,15 @@ export class Vermittlung {
         })) as Bedienergebnis;
       case "undoStapel":
         return this.#o.hof.frage(ruf.akteId, { art: "undoStapel" });
+      // Die drei Ansichtsrufe (M3.7) gehen unveraendert an den Worker. Der
+      // Main deutet sie nicht: Er haette dazu den Fachzustand gebraucht, und
+      // genau den hat er nicht (02-ZIELBILD.md, „Electron-Main ohne
+      // Fachzustand"). Geprueft sind sie zu diesem Zeitpunkt bereits — `zRuf`
+      // faengt eine zu grosse `anzahl` ab, bevor sie den Worker erreicht.
+      case "baumAnfordern":
+      case "tabelleAnfordern":
+      case "tagebuchAnfordern":
+        return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
     }
   }
 

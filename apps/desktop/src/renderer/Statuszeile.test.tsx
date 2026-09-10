@@ -34,6 +34,7 @@ const GRUND: Lagebild = {
   hinweise: 0,
   unbekannteEreignisse: 0,
   undoTiefe: 0,
+  lageZeiger: 7,
 };
 
 function zeige(teil: Partial<Lagebild> = {}): void {

@@ -30,6 +30,7 @@ const LAGEBILD: Lagebild = {
   hinweise: 0,
   unbekannteEreignisse: 0,
   undoTiefe: 2,
+  lageZeiger: 7,
   undoObersteArt: "EinheitGemeldet",
 };
 

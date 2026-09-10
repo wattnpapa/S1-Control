@@ -87,6 +87,18 @@ export {
   type Vokabeltabellen,
 } from "./eeb/adapter.js";
 
+// Die Projektionen des Lagebilds (M3.0): Baum, Tabelle, Tagebuch.
+export * as projektion from "./projektion/index.js";
+export type {
+  Baumknoten,
+  Spalte,
+  Spaltengruppe,
+  Tabellenausschnitt,
+  Tabellenzeile,
+  Tagebuchfilter,
+  Tagebuchzeile,
+} from "./projektion/index.js";
+
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).
 export * as kennzahlen from "./kennzahlen.js";
 export type {

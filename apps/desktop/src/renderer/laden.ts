@@ -25,22 +25,52 @@ import { create } from "zustand";
 import { rufe } from "./bruecke.js";
 import { lagebildMit } from "../kontrakt/index.js";
 import type {
+  Baumansicht,
   Bedienergebnis,
   EinsatzEintrag,
   Einstellungen,
   Entwurf,
   Lagebild,
   Mitteilung,
+  Ruf,
+  Tabellenansicht,
+  Tagebuchansicht,
   Umgebung,
 } from "../kontrakt/index.js";
 
 /** Wie viele Hinweise das Fenster höchstens behält. */
 export const HINWEISE_MAX = 50;
 
+/**
+ * Wie viele Zeilen eine Ansicht auf einmal holt (M3.7).
+ *
+ * Deutlich unter `AUSSCHNITT_MAX` des Kontrakts: Die Schranke dort schützt den
+ * Worker vor einem Ruf, den niemand lesen will; diese Zahl hier ist die, die
+ * tatsächlich auf einen Bildschirm passt. Wer weiter blättert, holt die
+ * nächste Seite — das ist billiger als eine Antwort, die zehnmal so groß ist
+ * wie das, was das Fenster zeigt.
+ */
+export const SEITE = 100;
+
 export interface Hinweis {
   readonly nummer: number;
   readonly stufe: "info" | "warnung" | "fehler";
   readonly text: string;
+}
+
+export interface Tabellenfilter {
+  readonly abschnittId?: string;
+  readonly suche?: string;
+  readonly mitStillgelegten?: boolean;
+  readonly von?: number;
+}
+
+export interface Tagebuchfilterwahl {
+  readonly einheitId?: string;
+  readonly abschnittId?: string;
+  readonly suche?: string;
+  readonly nurRuecknahmen?: boolean;
+  readonly von?: number;
 }
 
 export interface Laden {
@@ -63,6 +93,21 @@ export interface Laden {
   legeEinsatzAn(name: string, datum: string): Promise<void>;
   oeffneEinsatz(ordner: string): Promise<void>;
   schliesseEinsatz(): Promise<void>;
+  /** Die drei Ansichten. `undefined` heißt: noch nie geholt (M3.7). */
+  readonly baum: Baumansicht | undefined;
+  readonly tabelle: Tabellenansicht | undefined;
+  readonly tagebuch: Tagebuchansicht | undefined;
+  readonly tabellenfilter: Tabellenfilter;
+  readonly tagebuchfilter: Tagebuchfilterwahl;
+
+  holeBaum(): Promise<void>;
+  holeTabelle(): Promise<void>;
+  holeTagebuch(): Promise<void>;
+  setzeTabellenfilter(filter: Tabellenfilter): Promise<void>;
+  setzeTagebuchfilter(filter: Tagebuchfilterwahl): Promise<void>;
+  /** Holt jede Ansicht neu, die schon einmal geholt wurde. */
+  frischeAnsichten(): Promise<void>;
+
   bediene(entwurf: Entwurf): Promise<Bedienergebnis | undefined>;
   zurueck(grund?: string): Promise<Bedienergebnis | undefined>;
   nimmMitteilung(mitteilung: Mitteilung): void;
@@ -71,7 +116,36 @@ export interface Laden {
 
 const LEERE_EINSTELLUNGEN: Einstellungen = { sharePfad: "", anzeigename: "" };
 
+/**
+ * Was von den Ansichten bleibt, wenn die Akte wechselt: nichts.
+ *
+ * Ein Baum aus dem vorigen Einsatz im Fenster des nächsten wäre nicht bloß
+ * unschön, sondern falsch — die Ids sind je Akte vergeben, und ein Klick
+ * darauf schriebe in die neue Akte auf einen Abschnitt, den es dort nicht
+ * gibt.
+ */
+const LEERE_ANSICHTEN = {
+  baum: undefined,
+  tabelle: undefined,
+  tagebuch: undefined,
+} as const;
+
 let hinweisNummer = 0;
+
+/**
+ * Eine laufende Nummer je Ansicht — der Schutz gegen die überholte Antwort.
+ *
+ * Zwei Rufe derselben Ansicht können sich überholen: Wer schnell tippt,
+ * schickt drei Suchen, und die Antworten kommen in beliebiger Reihenfolge
+ * zurück. Ohne diese Nummer trüge das Fenster am Ende das Ergebnis der
+ * zweiten Suche, weil es zuletzt eintraf. Verworfen wird deshalb jede
+ * Antwort, die nicht zum **jüngsten** Ruf ihrer Ansicht gehört.
+ */
+const laufendeNummer: Record<"baum" | "tabelle" | "tagebuch", number> = {
+  baum: 0,
+  tabelle: 0,
+  tagebuch: 0,
+};
 
 export const useLaden = create<Laden>((setze, hole) => {
   /** Führt einen Ruf aus und macht aus einem Fehler ein Fehlerbild statt eines Absturzes. */
@@ -86,6 +160,33 @@ export const useLaden = create<Laden>((setze, hole) => {
       return undefined;
     } finally {
       setze({ beschaeftigt: false });
+    }
+  }
+
+  /**
+   * Holt eine Ansicht und trägt sie ein — sofern sie nicht überholt ist.
+   *
+   * Sie läuft **nicht** über `mitFehlerbild`: Ein fehlgeschlagener
+   * Ansichtsruf ist kein Fehlerbild über dem ganzen Fenster. Er wird als
+   * Hinweis geführt, und die Ansicht behält, was sie hatte — ein Lagebild,
+   * das bei einer kurzen Störung leer wird, ist schlechter als eines, das
+   * sichtbar altert.
+   */
+  async function holeAnsicht<A extends "baum" | "tabelle" | "tagebuch">(
+    welche: A,
+    baueRuf: (akteId: string) => Extract<Ruf, { art: `${A}Anfordern` }>,
+  ): Promise<void> {
+    const akteId = hole().akteId;
+    if (akteId === undefined) return;
+    laufendeNummer[welche] += 1;
+    const meine = laufendeNummer[welche];
+    try {
+      const antwort = await rufe(baueRuf(akteId));
+      if (meine !== laufendeNummer[welche]) return;
+      if (hole().akteId !== akteId) return;
+      setze({ [welche]: antwort } as unknown as Partial<Laden>);
+    } catch (fehler) {
+      merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
     }
   }
 
@@ -147,7 +248,7 @@ export const useLaden = create<Laden>((setze, hole) => {
           beginn: new Date().toISOString(),
           schichtmodell: "ZWEI_SCHICHT",
         });
-        setze({ akteId: angelegt.akteId, lagebild: undefined, folge: -1 });
+        setze({ akteId: angelegt.akteId, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
         await hole().ladeEinsaetze();
       });
     },
@@ -155,7 +256,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     async oeffneEinsatz(ordner) {
       await mitFehlerbild(async () => {
         const geoeffnet = await rufe({ art: "einsatzOeffnen", ordner });
-        setze({ akteId: geoeffnet.akteId, lagebild: undefined, folge: -1 });
+        setze({ akteId: geoeffnet.akteId, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
       });
     },
 
@@ -164,8 +265,69 @@ export const useLaden = create<Laden>((setze, hole) => {
       if (akteId === undefined) return;
       await mitFehlerbild(async () => {
         await rufe({ art: "einsatzSchliessen", akteId });
-        setze({ akteId: undefined, lagebild: undefined, folge: -1 });
+        setze({ akteId: undefined, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
       });
+    },
+
+    baum: undefined,
+    tabelle: undefined,
+    tagebuch: undefined,
+    tabellenfilter: {},
+    tagebuchfilter: {},
+
+    async holeBaum() {
+      await holeAnsicht("baum", (akteId) => ({ art: "baumAnfordern", akteId, ohneArchiv: false }));
+    },
+
+    async holeTabelle() {
+      const filter = hole().tabellenfilter;
+      await holeAnsicht("tabelle", (akteId) => ({
+        art: "tabelleAnfordern",
+        akteId,
+        von: filter.von ?? 0,
+        anzahl: SEITE,
+        ...(filter.abschnittId === undefined ? {} : { abschnittId: filter.abschnittId }),
+        ...(filter.suche === undefined ? {} : { suche: filter.suche }),
+        ...(filter.mitStillgelegten === undefined ? {} : { mitStillgelegten: filter.mitStillgelegten }),
+      }));
+    },
+
+    async holeTagebuch() {
+      const filter = hole().tagebuchfilter;
+      await holeAnsicht("tagebuch", (akteId) => ({
+        art: "tagebuchAnfordern",
+        akteId,
+        von: filter.von ?? 0,
+        anzahl: SEITE,
+        ...(filter.einheitId === undefined ? {} : { einheitId: filter.einheitId }),
+        ...(filter.abschnittId === undefined ? {} : { abschnittId: filter.abschnittId }),
+        ...(filter.suche === undefined ? {} : { suche: filter.suche }),
+        ...(filter.nurRuecknahmen === undefined ? {} : { nurRuecknahmen: filter.nurRuecknahmen }),
+      }));
+    },
+
+    async setzeTabellenfilter(filter) {
+      // Ein geänderter Filter setzt den Ausschnitt zurück: Wer auf Seite 4
+      // steht und dann sucht, will nicht Seite 4 der neuen Treffermenge.
+      setze({ tabellenfilter: { von: 0, ...filter } });
+      await hole().holeTabelle();
+    },
+
+    async setzeTagebuchfilter(filter) {
+      setze({ tagebuchfilter: { von: 0, ...filter } });
+      await hole().holeTagebuch();
+    },
+
+    async frischeAnsichten() {
+      const zustand = hole();
+      // Nur, was schon einmal geholt wurde: Eine zugeklappte Ansicht kostet
+      // so nichts, und genau darauf beruht der Zuschnitt aus M3.7 — geschoben
+      // wird ein Zeiger, geholt wird, was offen ist.
+      await Promise.all([
+        zustand.baum === undefined ? undefined : zustand.holeBaum(),
+        zustand.tabelle === undefined ? undefined : zustand.holeTabelle(),
+        zustand.tagebuch === undefined ? undefined : zustand.holeTagebuch(),
+      ]);
     },
 
     async bediene(entwurf) {
@@ -191,14 +353,16 @@ export const useLaden = create<Laden>((setze, hole) => {
       if (mitteilung.art === "akteGeschlossen") {
         if (mitteilung.akteId !== zustand.akteId) return;
         merkeHinweis("warnung", mitteilung.meldung);
-        setze({ akteId: undefined, lagebild: undefined, folge: -1 });
+        setze({ akteId: undefined, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
         return;
       }
       // Eine Mitteilung für eine andere Akte gehört einem anderen Fenster.
       if (mitteilung.akteId !== zustand.akteId) return;
 
       if (mitteilung.voll !== undefined) {
+        const vorher = zustand.lagebild?.lageZeiger;
         setze({ lagebild: mitteilung.voll, folge: mitteilung.folge });
+        if (vorher !== mitteilung.voll.lageZeiger) void hole().frischeAnsichten();
         return;
       }
       if (zustand.lagebild === undefined) {
@@ -213,10 +377,12 @@ export const useLaden = create<Laden>((setze, hole) => {
         void rufe({ art: "standAnfordern", akteId: mitteilung.akteId });
         return;
       }
-      setze({
-        lagebild: lagebildMit(zustand.lagebild, mitteilung.geaendert ?? {}),
-        folge: mitteilung.folge,
-      });
+      const neuesBild = lagebildMit(zustand.lagebild, mitteilung.geaendert ?? {});
+      setze({ lagebild: neuesBild, folge: mitteilung.folge });
+      // M3.7: Der Zeiger ist die einzige Auskunft, die der Worker über
+      // fachliche Änderungen schiebt. Ändert er sich, ist jedes offene Bild
+      // veraltet — und nur die offenen werden nachgeholt.
+      if (zustand.lagebild.lageZeiger !== neuesBild.lageZeiger) void hole().frischeAnsichten();
     },
 
     loescheFehler() {
