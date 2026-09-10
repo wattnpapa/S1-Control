@@ -83,7 +83,9 @@ Der Satz „je betroffener Entität genau ein Feld" gilt für die Entitäten, au
 
 Auflage 6 verlangt den Konflikthinweis bei Abweichung. Ausgeschrieben:
 
-> **Regel.** Trägt der Gewinner eines Feldes einen `gesehenerVorher` und gibt es eine **zweithöchste** Beobachtung (§3.3), deren Wert davon abweicht, entsteht `vorherPasstNicht` mit dem Feldpfad, beiden Ereignis-Ids, dem gesehenen und dem verdrängten Wert. Verglichen wird über die kanonische Serialisierung, also auch für Strukturwerte wie das Stärke-Tripel.
+> **Regel.** Trägt der Gewinner eines Feldes einen `gesehenerVorher` und gibt es eine **zweithöchste** Beobachtung (§3.3), deren Wert davon abweicht, entsteht `vorherPasstNicht` mit dem Feldpfad, beiden Ereignis-Ids, dem gesehenen und dem verdrängten Wert — **es sei denn, der Gewinner setzt denselben Wert, den die zweithöchste trägt**. Verglichen wird über die kanonische Serialisierung, also auch für Strukturwerte wie das Stärke-Tripel.
+
+**Der Vorbehalt am Ende ist seit der zweiunddreißigsten Fassung dort, und er ist keine Verfeinerung, sondern eine Berichtigung.** `ohneVorherWertVerdraengt` trägt ihn seit M0.2 („Sind die Werte gleich, entsteht kein Hinweis — es ist nichts verloren", §2.3); `vorherPasstNicht` trug ihn nicht, und die Asymmetrie war nicht begründet. Beide Hinweise machen dasselbe sichtbar: die **Verdrängung von Arbeit**. Wo der Wert unverändert bleibt, ist nichts verdrängt worden, und ein Hinweis darauf, dass jemand einen anderen Vorzustand gesehen hat, ohne dass es einen Unterschied machte, ist eine Auskunft über die Vergangenheit und nicht über die Lage. Der Fall, an dem es auffiel, ist T66: Zwei Rücknahmen desselben Ereignisses stammen aus demselben `vorher` und setzen denselben Wert; die zweite widersprach dem Stand nur deshalb, weil die erste ihn bereits hergestellt hatte. §6 U6 verlangt dort ausdrücklich „kein Hinweis", und ohne den Vorbehalt entstand `vorherPasstNicht`. Die beiden Stellen widersprachen sich; diese hier gibt nach.
 
 Vier Grenzfälle, jeder mit seiner Antwort:
 
@@ -1427,7 +1429,7 @@ Der Hinweis wird nach §3.8 bei jeder Materialisierung neu gerechnet. Er steht g
 
 **Zwei Clients nehmen dasselbe Ereignis zurück** — was nach U3 über die Bedienung nicht geht, wohl aber über ein geklontes Profil, das dieselbe `clientId` trägt, und über eine Wiederherstellung aus einem Spiegel. Beide schreiben eine Kompensation mit demselben `undoOf` und, weil beide aus demselben `vorher` stammen, demselben Wert. LWW entscheidet; das Ergebnis ist derselbe Wert, und weil die Werte gleich sind, entsteht **kein** Hinweis. Sahen sie verschiedene Stände, unterscheiden sich die Werte, und es gilt LWW mit Hinweis.
 
-**T64:** A schreibt `StatusGesetzt` (5), B setzt anders (7), A nimmt zurück (9) ⇒ der Wert von A gilt, `undoTrifftFremdenStand`. **T65:** Ein viertes `StatusGesetzt` (11) ⇒ der Hinweis fällt weg. **T66:** Zwei Clients kompensieren dasselbe Ereignis mit demselben Wert ⇒ ein Wert, kein Hinweis. **T67:** Dieselben mit verschiedenen Werten ⇒ LWW, Hinweis.
+**T64:** A schreibt `StatusGesetzt` (5), B setzt anders (7), A nimmt zurück (9) ⇒ der Wert von A gilt, `undoTrifftFremdenStand`. **T65:** Ein viertes `StatusGesetzt` (11) ⇒ der Hinweis fällt weg. **T66:** Zwei Clients kompensieren dasselbe Ereignis mit demselben Wert ⇒ ein Wert, **kein Hinweis überhaupt** — weder `undoTrifftFremdenStand` (die Werte sind gleich) noch `vorherPasstNicht` (der Vorbehalt aus §2.2a). **T67:** Dieselben mit verschiedenen Werten ⇒ LWW, Hinweis.
 
 ---
 

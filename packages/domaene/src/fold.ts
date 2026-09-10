@@ -595,7 +595,11 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
   const geprueft = eintrag.schema.safeParse(ereignis.nutzlast);
   if (
     !geprueft.success ||
+    // Die Form richtet sich bei `KorrekturVon` nach dem `zielTyp`, und der ist
+    // immer (a) — die eigene Zeile traegt deshalb dieselbe Form.
     !formPasst(eintrag, ereignis) ||
+    // Die `grund`-Pflicht bemisst sich am Rahmenfeld `typ`, **nicht** am
+    // `zielTyp` (§2.4): Ein `KorrekturVon` braucht seinen eigenen.
     !grundPasst(eintrag, ereignis) ||
     idAus(eintrag, ereignis.nutzlast) === undefined
   ) {
@@ -604,16 +608,50 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
     return;
   }
 
-  const nutzlast = ereignis.nutzlast as Record<string, unknown>;
-  const id = idAus(eintrag, nutzlast) as string;
+  const eigeneNutzlast = ereignis.nutzlast as Record<string, unknown>;
+
+  // §5.9.2: `KorrekturVon` wirkt wie ein Ereignis seines `zielTyp` — mit HLC
+  // und Id des Korrekturereignisses. `zielTyp` ist abschliessend aufgezaehlt:
+  // **jede Art der Form (a) ausser `KorrekturVon` selbst**. Ausgeschlossen
+  // sind damit die dreizehn Anlagearten, die beiden strukturellen und die
+  // beiden Archivierungsarten. Fuer eine Anlage taete die Korrektur
+  // nachweislich Schaden: Sie truege die groessere HLC, ueberschriebe **alle**
+  // Felder mit den Werten der eingebetteten Nutzlast und keinen einzigen
+  // Vorher-Wert. Die Verschachtelung ist verboten, weil `zielNutzlast`
+  // `z.unknown()` ist und „effektiv Form (a)" zwei Antworten haette (T165).
+  let wirkEintrag = eintrag;
+  let nutzlast = eigeneNutzlast;
+  if (eintrag.typ === "KorrekturVon") {
+    const ziel = KATALOG.get(eigeneNutzlast["zielTyp"] as string);
+    const zielNutzlast = eigeneNutzlast["zielNutzlast"];
+    if (
+      ziel === undefined ||
+      ziel.form !== "a" ||
+      ziel.typ === "KorrekturVon" ||
+      !ziel.schema.safeParse(zielNutzlast).success
+    ) {
+      faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "SCHEMA"));
+      return;
+    }
+    wirkEintrag = ziel;
+    nutzlast = zielNutzlast as Record<string, unknown>;
+    if (idAus(wirkEintrag, nutzlast) === undefined) {
+      faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "SCHEMA"));
+      return;
+    }
+  }
+
+  const id = idAus(wirkEintrag, nutzlast) as string;
+  // Die **Art** bleibt `KorrekturVon` (§3.6): Die Ablage soll zeigen, was
+  // jemand geschrieben hat, und geschrieben wurde eine Berichtigung.
   const rahmen = rahmenAnteil(ereignis);
 
-  if (eintrag.form === "c") {
-    nimmStrukturell(faltung, eintrag, nutzlast, rahmen);
+  if (wirkEintrag.form === "c") {
+    nimmStrukturell(faltung, wirkEintrag, nutzlast, rahmen);
     return;
   }
 
-  if (eintrag.entitaet === "archivierungen") {
+  if (wirkEintrag.entitaet === "archivierungen") {
     // §7.1: `einsatzId` wird vom Fold **nicht gelesen und nicht gespeichert**.
     // Der Einsatz ist der der Akte; ein Abgleich waere eine zweite Wahrheit
     // ueber etwas, das der Ordner schon sagt (T183).
@@ -644,7 +682,7 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
     return;
   }
 
-  if (istReserviert(eintrag, id)) {
+  if (istReserviert(wirkEintrag, id)) {
     // §5.3.4: Anlage **und** jedes aendernde Ereignis auf `AUFFANG` oder
     // `ARCHIV` sind wirkungslos; beide gehen unter `art: "RESERVIERTE_ID"` in
     // `verworfeneSchluessel`, damit nichts still verpufft.
@@ -660,9 +698,9 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
     return;
   }
 
-  const pfad = entitaetspfad(eintrag, id);
+  const pfad = entitaetspfad(wirkEintrag, id);
 
-  if (eintrag.form === "b") {
+  if (wirkEintrag.form === "b") {
     const eintragDerEntitaet = fuegeEin(faltung, pfad);
     eintragDerEntitaet.anlage = nimmAnlage(eintragDerEntitaet.anlage, {
       ...rahmen,
@@ -672,19 +710,19 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
     // §3.11: Auch die **verworfene** Anlage belegt ihre Feldpfade nach der
     // gewoehnlichen Auswahl. Die Beobachtungen gehen deshalb unabhaengig
     // davon in die Felder, welche Anlage `angelegtDurch` stellt.
-    for (const [name, wert] of anlageFelder(eintrag, nutzlast)) {
+    for (const [name, wert] of anlageFelder(wirkEintrag, nutzlast)) {
       setzeFeld(faltung, pfad, name, { ...rahmen, neu: wert });
     }
     return;
   }
 
   // Form (a): genau ein Feld, der Wert steht im Rahmen (§2.2).
-  const feld = feldpfadAus(eintrag, nutzlast);
+  const feld = feldpfadAus(wirkEintrag, nutzlast);
   if (feld === undefined) {
     faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "SCHEMA"));
     return;
   }
-  const wert = eintrag.festerWert === undefined ? ereignis.neu : eintrag.festerWert;
+  const wert = wirkEintrag.festerWert === undefined ? ereignis.neu : wirkEintrag.festerWert;
   setzeFeld(faltung, pfad, feld, {
     ...rahmen,
     neu: wert,
@@ -765,6 +803,33 @@ function vorherHinweis(
   const { gewinner, zweiter } = stand;
   if (zweiter === undefined) return undefined;
 
+  // §6 U6: Kompensiert A ein Ereignis, das B zwischenzeitlich ueberschrieben
+  // hat, gilt weiterhin LWW — die Kompensation gewinnt, wenn ihre HLC hoeher
+  // ist. Eine **eigene** Hinweisart und nicht `vorherPasstNicht`, weil der
+  // Bediener nicht ein Feld gesetzt, sondern „rueckgaengig" gedrueckt hat und
+  // die Oberflaeche daraus einen anderen Satz bauen muss.
+  //
+  // Drei Bedingungen zugleich: Der Gewinner traegt ein `undoOf`, der
+  // Zweitplatzierte ist **nicht** das Ereignis, das er zuruecknimmt, und die
+  // Werte sind verschieden. Die dritte ist die, an der zwei Ruecknahmen
+  // desselben Ereignisses auseinandergehen (T66, T67) — ohne sie truege jede
+  // doppelte Ruecknahme einen Hinweis, obwohl niemandes Arbeit verdraengt
+  // wurde.
+  if (
+    gewinner.undoOf !== undefined &&
+    zweiter.ereignisId !== gewinner.undoOf &&
+    !wertGleich(gewinner.neu, zweiter.neu)
+  ) {
+    return {
+      art: "undoTrifftFremdenStand",
+      feldpfad,
+      undo: gewinner.ereignisId,
+      original: gewinner.undoOf,
+      verdraengt: zweiter.ereignisId,
+      verdraengterWert: zweiter.neu as KanonischerWert,
+    };
+  }
+
   if (gewinner.vorher === undefined) {
     // Der Gewinner hat keinen Vorher-Wert mitgefuehrt — das ist die Anlage
     // (§2.3) — und verdraengt trotzdem eine Aenderung. Er kann sie nicht
@@ -781,6 +846,15 @@ function vorherHinweis(
   }
 
   if (wertGleich(gewinner.vorher.wert, zweiter.neu)) return undefined;
+  // **Sind die beiden Werte gleich, entsteht kein Hinweis** — dieselbe
+  // Unterdrueckung wie bei `ohneVorherWertVerdraengt` (§2.3), und aus
+  // demselben Grund: Beide Hinweise machen die **Verdraengung von Arbeit**
+  // sichtbar, und wo der Wert unveraendert bleibt, ist nichts verdraengt
+  // worden. Ohne sie truege jede doppelte Ruecknahme desselben Ereignisses
+  // einen Hinweis (T66) — beide Kompensationen stammen aus demselben `vorher`
+  // und setzen denselben Wert, und die zweite widersprach dem Stand nur
+  // deshalb, weil die erste ihn bereits hergestellt hatte.
+  if (wertGleich(gewinner.neu, zweiter.neu)) return undefined;
   return {
     art: "vorherPasstNicht",
     feldpfad,
