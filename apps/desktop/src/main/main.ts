@@ -45,6 +45,16 @@ const rauchprobe = process.env["S1_SMOKE"] === "1";
  * Rendering-Engine braucht.
  */
 const ausgabenprobe = process.env["S1_SMOKE"] === "ausgaben";
+/**
+ * Die dritte Stufe: Was kann der Renderer an Kamera und Barcode-Erkennung?
+ *
+ * `S1_SMOKE=kamera` fragt die Schale, was sie **tatsaechlich** mitbringt, und
+ * schreibt es heraus. Das Auftragsdokument von M6 verlangt genau das: erst
+ * messen, dann bauen. `BarcodeDetector` gehoert zu Chromium, ist aber nicht
+ * auf jeder Plattform vorhanden — eine Behauptung darueber taugt nicht, ein
+ * Lauf schon.
+ */
+const kameraprobe = process.env["S1_SMOKE"] === "kamera";
 
 /**
  * §4.4: **Ein** Schreiber je Profil.
@@ -174,6 +184,7 @@ function starte(): void {
     const erstes = fensterOeffnen(fenster);
     if (rauchprobe) rauchprobeFahren(erstes, vermittlung, fenstersteuerung, () => monitor);
     if (ausgabenprobe) ausgabenprobeFahren(erstes, vermittlung);
+    if (kameraprobe) kameraprobeFahren(erstes);
 
     app.on("activate", () => {
       if (BrowserWindow.getAllWindows().length === 0) fensterOeffnen(fenster);
@@ -280,6 +291,83 @@ function rauchprobeFahren(
         ].join("\n"),
       );
       fenstersteuerung.monitorSchliessen();
+      app.exit(0);
+    })();
+  });
+}
+
+/**
+ * Misst, was diese Schale fuer den Kameraweg mitbringt (M6.5).
+ *
+ * Drei Fragen, und keine davon ist zu erraten:
+ *
+ *  1. Gibt es `BarcodeDetector` ueberhaupt? Er gehoert zu Chromium, wird aber
+ *     nicht auf jeder Plattform ausgeliefert.
+ *  2. Kennt er das Format `qr_code`? Die Liste haengt am Betriebssystem —
+ *     unter macOS kommt sie von Vision, unter Android von den Play Services,
+ *     unter Linux und Windows oft von nirgends.
+ *  3. Gibt es `mediaDevices.getUserMedia`? Ohne Kamera nuetzt der beste
+ *     Decoder nichts.
+ *
+ * Geschrieben wird das Ergebnis und keine Wertung. Was daraus folgt, steht im
+ * Abschlussbericht.
+ */
+function kameraprobeFahren(fenster: BrowserWindow): void {
+  fenster.webContents.once("did-finish-load", () => {
+    void (async () => {
+      // Mit Frist: `executeJavaScript` haengt, wenn das Skript darin eine
+      // Zusage nie erfuellt — und genau das kann eine Schnittstelle tun, die
+      // es auf dieser Plattform nur halb gibt. Eine Probe, die haengt, misst
+      // nichts.
+      const befund: unknown = await Promise.race([
+        fenster.webContents.executeJavaScript(
+        `(async () => {
+          const hatDetector = typeof globalThis.BarcodeDetector === "function";
+          let formate = [];
+          let fehler = "";
+          if (hatDetector) {
+            try {
+              formate = await globalThis.BarcodeDetector.getSupportedFormats();
+            } catch (e) {
+              fehler = String(e && e.message ? e.message : e);
+            }
+          }
+          return {
+            detector: hatDetector,
+            formate,
+            qr: formate.includes("qr_code"),
+            fehler,
+            getUserMedia: typeof navigator.mediaDevices?.getUserMedia === "function",
+          };
+        })()`,
+        ),
+        new Promise((fertig) =>
+          setTimeout(
+            () => fertig({ detector: false, formate: [], qr: false, fehler: "Zeitausstieg nach 10 s", getUserMedia: false }),
+            10_000,
+          ),
+        ),
+      ]);
+      const b = befund as {
+        detector: boolean;
+        formate: string[];
+        qr: boolean;
+        fehler: string;
+        getUserMedia: boolean;
+      };
+      process.stdout.write(
+        [
+          `S1_KAMERA: plattform=${process.platform}`,
+          `S1_KAMERA: electron=${process.versions.electron ?? "?"}`,
+          `S1_KAMERA: chrome=${process.versions.chrome ?? "?"}`,
+          `S1_KAMERA: barcodeDetector=${String(b.detector)}`,
+          `S1_KAMERA: formate=${b.formate.join(",") || "(keine)"}`,
+          `S1_KAMERA: qrCode=${String(b.qr)}`,
+          `S1_KAMERA: getUserMedia=${String(b.getUserMedia)}`,
+          `S1_KAMERA: fehler=${b.fehler || "(keiner)"}`,
+          "",
+        ].join("\n"),
+      );
       app.exit(0);
     })();
   });
