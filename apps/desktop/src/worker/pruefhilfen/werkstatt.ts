@@ -40,6 +40,10 @@ export interface Platz {
   readonly mitteilungen: Mitteilung[];
   /** Der Einsatzordner auf dem Share — fuer Nachweise, die Dateien suchen. */
   readonly share: string;
+  /** Das Wegwerf-Verzeichnis, in dem der lokale Spiegel dieses Platzes liegt. */
+  readonly wurzel: string;
+  /** Die Nummer, aus der Kennung und Spiegelordner gebildet sind. */
+  readonly nummer: number;
 }
 
 const wegwerf: string[] = [];
@@ -82,7 +86,22 @@ export function baueDienst(wurzel: string, share: string, nummer: number): Platz
     sende: (m) => mitteilungen.push(m),
     takte: { spiegelungMs: 0, taktAMs: 0, taktBMs: 0, praesenzMs: 0, monitorMs: 0 },
   });
-  return { dienst, mitteilungen, share };
+  return { dienst, mitteilungen, share, wurzel, nummer };
+}
+
+/**
+ * Schliesst einen Platz und oeffnet denselben Arbeitsplatz noch einmal —
+ * gleiche Kennung, gleicher lokaler Spiegel, gleicher Share.
+ *
+ * Das ist der Programmneustart, wie ihn ein Bediener ausloest: Fenster zu,
+ * Fenster auf. Die Mitteilungen des alten Platzes bleiben beim alten Platz;
+ * der neue faengt mit seinem eigenen vollen Lagebild an.
+ */
+export async function starteNeu(platz: Platz): Promise<Platz> {
+  platz.dienst.schliesse();
+  const neuer = baueDienst(platz.wurzel, platz.share, platz.nummer);
+  await neuer.dienst.oeffne();
+  return neuer;
 }
 
 /** Legt den Einsatzordner auf dem Share an — ohne fachliches Ereignis. */
