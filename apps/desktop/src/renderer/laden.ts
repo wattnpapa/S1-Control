@@ -182,7 +182,15 @@ export interface Laden {
 
   /** Erzeugt eine Kernausgabe und liefert, wo sie liegt (M4.1). */
   erzeugeAusgabe(
-    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei" | "kosten",
+    ausgabe:
+      | "druck"
+      | "status"
+      | "auswertung"
+      | "oldenburg"
+      | "log"
+      | "logfrei"
+      | "kosten"
+      | "fueorg",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;

@@ -25,7 +25,15 @@ export function Ausgaben(): React.JSX.Element {
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
 
   function erzeuge(
-    ausgabe: "druck" | "status" | "auswertung" | "oldenburg" | "log" | "logfrei" | "kosten",
+    ausgabe:
+      | "druck"
+      | "status"
+      | "auswertung"
+      | "oldenburg"
+      | "log"
+      | "logfrei"
+      | "kosten"
+      | "fueorg",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeMeldung(undefined);
@@ -85,6 +93,13 @@ export function Ausgaben(): React.JSX.Element {
       </button>
       <button type="button" onClick={() => { erzeuge("logfrei", "xlsx"); }}>
         Logistik als XLSX (LogFrei)
+      </button>
+      {/* Die Führungsharke (M8.3) ist das Gegenstück zum Blatt „FüOrg“ der
+          Excel — und dort ein reines Zeichenblatt. Gezeichnet wird hier, was
+          im Abschnittsbaum bedient wird; einen zweiten Editor gibt es nicht,
+          weil die Ereignisse nur eine Struktur kennen (§5.3). */}
+      <button type="button" onClick={() => { erzeuge("fueorg", "pdf"); }}>
+        Führungsorganisation als PDF
       </button>
       {/* Die Kostenübersicht (M5.2) ist der einzige Ausdruck, der nicht an
           die Wand gehört, sondern in die Abrechnung. */}

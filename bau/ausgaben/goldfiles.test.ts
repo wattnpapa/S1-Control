@@ -25,6 +25,8 @@ import { describe, expect, it } from "vitest";
 
 import {
   druckAlsHtml,
+  harke,
+  harkeAlsHtml,
   druckdaten,
   kostenAlsHtml,
   logAlsHtml,
@@ -105,6 +107,36 @@ describe("Das Logistikblatt", () => {
 describe("Die Kostenübersicht", () => {
   it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
     gegenGoldfile("kosten.html", kostenAlsHtml(lage(), KOPF));
+  });
+});
+
+describe("Die Führungsharke (M8.3)", () => {
+  it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
+    gegenGoldfile("fueorg.html", harkeAlsHtml(lage(), KOPF));
+  });
+
+  it("zeichnet den Archivabschnitt nicht mit", () => {
+    // Ein Organigramm mit dem Archiv darin zeigte eine Führungsstruktur, die
+    // es nicht gibt. Aufgelöste Abschnitte bleiben dagegen stehen (§5.3.2).
+    const blatt = harke(lage());
+    const namen: string[] = [];
+    const sammle = (knoten: readonly { name: string; kinder: readonly never[] }[]): void => {
+      for (const k of knoten) {
+        namen.push(k.name);
+        sammle(k.kinder);
+      }
+    };
+    sammle(blatt.knoten as never);
+    expect(namen.some((name) => name.toUpperCase().includes("ARCHIV"))).toBe(false);
+  });
+
+  it("führt die Führungsstelle außerhalb des Baums", () => {
+    // §5.7 und K17: Die FüSt entsteht aus den Dienstposten und erscheint
+    // nicht als gemeldete Einheit. Im Baum stünde sie doppelt.
+    const blatt = harke(lage());
+    expect(blatt.fuest.length).toBeGreaterThan(0);
+    expect(blatt.fuestGesamt.fuehrer + blatt.fuestGesamt.unterfuehrer + blatt.fuestGesamt.mannschaft)
+      .toBeGreaterThan(0);
   });
 });
 

@@ -395,7 +395,17 @@ export const zRuf = z.discriminatedUnion("art", [
     // Wertekopie zum Weiterverarbeiten — zwei Ausgaben, weil die Vorlage
     // zwei Blaetter hat und sie verschieden benutzt werden: eines wird
     // ausgedruckt, das andere weitergeschickt.
-    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg", "log", "logfrei", "kosten"]),
+    ausgabe: z.enum([
+      "druck",
+      "status",
+      "auswertung",
+      "oldenburg",
+      "log",
+      "logfrei",
+      "kosten",
+      // Die Führungsharke (M8.3) — das Blatt „FüOrg“ der Excel.
+      "fueorg",
+    ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),

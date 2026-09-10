@@ -96,6 +96,21 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     expect(dateiname).toMatch(/^kosten_\d{4}-\d{2}-\d{2}_\d{4}$/);
   });
 
+  it("rendert die Führungsharke aus Baum und Dienstposten (M8.3)", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const { dateiname, html } = platz.dienst.ausgabeHtml("fueorg");
+
+    expect(html).toContain("Führungsorganisation");
+    // Die Führungsstelle steht in ihrem eigenen Kasten und nicht im Baum:
+    // Sie entsteht aus den Dienstposten (§5.7, K17) und wäre dort doppelt.
+    // Diese Grundlage hat keine Dienstposten — dann sagt der Kasten das,
+    // statt eine Null zu zeigen, die wie eine unbesetzte FüSt aussähe.
+    expect(html).toContain("Keine Dienstposten erfasst.");
+    expect(html).toContain("Einsatz gesamt:");
+    expect(dateiname).toMatch(/^fueorg_\d{4}-\d{2}-\d{2}_\d{4}$/);
+  });
+
   it("liefert die Kostenübersicht auch als Ansicht — ohne Ausschnitt", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

@@ -73,6 +73,7 @@ import type { Kompressor } from "@bos/eeb-format";
 import {
   MONITOR_DATEINAME,
   auswertungAlsXlsx,
+  harkeAlsHtml,
   kostenAlsHtml,
   logAlsHtml,
   logFreiAlsXlsx,
@@ -782,7 +783,7 @@ export class Aktendienst {
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
    */
   ausgabeHtml(
-    ausgabe: "druck" | "status" | "log" | "kosten",
+    ausgabe: "druck" | "status" | "log" | "kosten" | "fueorg",
     organisation?: string,
   ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
@@ -800,6 +801,9 @@ export class Aktendienst {
     }
     if (ausgabe === "kosten") {
       return { dateiname: `kosten_${marke}`, html: kostenAlsHtml(this.#zustand, kopf) };
+    }
+    if (ausgabe === "fueorg") {
+      return { dateiname: `fueorg_${marke}`, html: harkeAlsHtml(this.#zustand, kopf) };
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };

@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Führungsorganisation — Übung Weser-Ems</title>
+  <style>
+.harke ul { list-style: none; margin: 0; padding-left: 1.6em; }
+.harke > ul { padding-left: 0; }
+.harke-knoten { border-left: 2px solid #333; padding: 0.2em 0 0.2em 0.6em; margin: 0.15em 0; }
+.harke-knoten > .name { font-weight: bold; }
+.harke-knoten > .typ { color: #555; margin-left: 0.5em; }
+.harke-knoten > .staerke { float: right; font-variant-numeric: tabular-nums; }
+.harke-knoten > .einheiten { color: #555; margin-left: 0.5em; }
+.harke-knoten.aufgeloest > .name { text-decoration: line-through; }
+.fuest-kasten { border: 2px solid #333; padding: 0.4em 0.8em; margin-bottom: 1em; }
+.fuest-kasten table { border-collapse: collapse; }
+.fuest-kasten td { padding: 0.1em 0.8em 0.1em 0; }
+  </style>
+</head>
+<body>
+<header class="ausgabe-kopf">
+  <h1>Übung Weser-Ems</h1>
+  <p class="kennung">2026-09-08_uebung-weser-ems_227e68</p>
+  <p class="stand">Stand: 08.09.2026, 08:15</p>
+  <p class="kern">@bos/eeb-format 0.0.0</p>
+</header>
+<section class="harke">
+  <h2>Führungsorganisation</h2>
+  <div class="fuest-kasten">
+    <h3>Führungsstelle</h3>
+<table>
+  <tr><td>Stab · TAG</td><td>1 / 3 / 0 = 4</td></tr>
+  <tr><td>Stab · NACHT</td><td>1 / 0 / 0 = 1</td></tr>
+  <tr><td>ZTr FK · TAG</td><td>0 / 1 / 1 = 2</td></tr>
+  <tr><td>FGr F · TAG</td><td>0 / 1 / 1 = 2</td></tr>
+  <tr><td>FGr K · NACHT</td><td>0 / 1 / 1 = 2</td></tr>
+  <tr><td>Externe · TAG</td><td>0 / 0 / 1 = 1</td></tr>
+  <tr class="summe"><td>Führungsstelle gesamt</td><td>2 / 6 / 4 = 12</td></tr>
+</table>
+  </div>
+  <ul>
+<li class="harke-knoten">
+  <span class="name">Auffang</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">0 / 0 / 0 = 0</span>
+  <span class="einheiten">0 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">FüSt Oldenburg</span>
+  <span class="typ">FUEHRUNGSSTELLE</span>
+  <span class="staerke">3 / 5 / 2 = 10</span>
+  <span class="einheiten">2 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">Meldekopf</span>
+  <span class="typ">MELDEKOPF</span>
+  <span class="staerke">1 / 2 / 3 = 6</span>
+  <span class="einheiten">2 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">Logistik</span>
+  <span class="typ">LOGISTIK</span>
+  <span class="staerke">1 / 6 / 23 = 30</span>
+  <span class="einheiten">5 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">Bereitstellungsraum Hafen</span>
+  <span class="typ">BEREITSTELLUNGSRAUM</span>
+  <span class="staerke">4 / 13 / 63 = 80</span>
+  <span class="einheiten">4 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">EA Deich Nord</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">2 / 11 / 70 = 83</span>
+  <span class="einheiten">11 Einh.</span>
+
+<ul>
+<li class="harke-knoten">
+  <span class="name">UA Deichfuß</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">1 / 4 / 33 = 38</span>
+  <span class="einheiten">3 Einh.</span>
+
+</li>
+</ul>
+</li>
+<li class="harke-knoten">
+  <span class="name">EA Pumpwerk Süd</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">1 / 6 / 22 = 29</span>
+  <span class="einheiten">6 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">EA Schule Mitte</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">3 / 10 / 42 = 55</span>
+  <span class="einheiten">7 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">EA Reserve</span>
+  <span class="typ">EINSATZORT</span>
+  <span class="staerke">0 / 0 / 0 = 0</span>
+  <span class="einheiten">0 Einh.</span>
+
+</li>
+<li class="harke-knoten">
+  <span class="name">Angefordert / Anmarsch</span>
+  <span class="typ">ANGEFORDERT</span>
+  <span class="staerke">1 / 6 / 30 = 37</span>
+  <span class="einheiten">3 Einh.</span>
+
+</li>
+  </ul>
+  <p class="gesamt">Einsatz gesamt: 15 / 53 / 225 = 293</p>
+  <p class="fussnote">Fü / UFü / He = Gesamt. Aufgelöste Abschnitte sind durchgestrichen (§5.3.2); die Führungsstelle steht außerhalb des Baums, weil sie aus den Dienstposten entsteht (§5.7, K17).</p>
+</section>
+</body>
+</html>

@@ -114,3 +114,7 @@ export {
   tastenkarteMarkdown,
   zwischenMarken,
 } from "./kurzanleitung.js";
+
+// Die Führungsharke (M8.3) — das Blatt „FüOrg“ der Excel, gezeichnet aus
+// Abschnittsbaum und Dienstposten.
+export { FUEORG_STIL, harke, harkeAlsHtml, staerkeText, type Harke, type Harkenknoten } from "./fueorg.js";
