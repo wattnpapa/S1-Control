@@ -69,6 +69,7 @@ import type { Kompressor } from "@bos/eeb-format";
 import {
   MONITOR_DATEINAME,
   auswertungAlsXlsx,
+  oldenburgAlsXlsx,
   druckAlsHtml,
   druckdaten,
   monitorAlsHtml,
@@ -740,6 +741,25 @@ export class Aktendienst {
     return {
       dateiname: `auswertung_${dateimarke(jetzt)}`,
       bytes: auswertungAlsXlsx(this.#zustand, {
+        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        zeitpunkt: jetzt,
+      }),
+    };
+  }
+
+  /**
+   * Der Oldenburger Block als XLSX (M4.2, Exportvariante).
+   *
+   * Derselbe Bestand wie die Auswertung, aber in der Spaltenordnung des
+   * Blatts „Staerke" der Vorlage — zum Einfuegen in die gewohnte Excel. Wer
+   * ihn erzeugt, uebergibt die Lage; er ist ein Ausgang und kein Umlauf, und
+   * einen Rueckweg von dort gibt es nicht.
+   */
+  oldenburgXlsx(): { dateiname: string; bytes: Uint8Array } {
+    const jetzt = new Date(this.#o.zeit());
+    return {
+      dateiname: `oldenburg_${dateimarke(jetzt)}`,
+      bytes: oldenburgAlsXlsx(this.#zustand, {
         stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
         zeitpunkt: jetzt,
       }),

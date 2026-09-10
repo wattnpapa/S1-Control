@@ -1,6 +1,8 @@
 # Einstieg in M4 — Kernausgaben
 
-Stand: 2026-09-10 · Meilenstein M4 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **in Arbeit**
+Stand: 2026-09-10 · Meilenstein M4 aus [05-UMSETZUNGSPLAN.md](../../v2/05-UMSETZUNGSPLAN.md) · Status: **abgeschlossen**, siehe
+[M4-abschlussbericht.md](../berichte/M4-abschlussbericht.md); Prüfpunkt 3
+(Parität mit dem Excel-Ausdruck) bleibt offen
 
 M4 ist der dritte Prüfpunkt mit Abbruchrecht. Was er beweisen soll, steht in
 einem Satz: **die Ausdrucke sehen aus wie die der Excel und stimmen mit ihr

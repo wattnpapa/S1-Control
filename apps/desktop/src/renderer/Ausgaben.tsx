@@ -22,7 +22,7 @@ export function Ausgaben(): React.JSX.Element {
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
 
   function erzeuge(
-    ausgabe: "druck" | "status" | "auswertung",
+    ausgabe: "druck" | "status" | "auswertung" | "oldenburg",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeMeldung(undefined);
@@ -72,6 +72,13 @@ export function Ausgaben(): React.JSX.Element {
           weiterrechnen (M4.2, `excel-domaenenmodell.md` §4.4). */}
       <button type="button" onClick={() => { erzeuge("auswertung", "xlsx"); }}>
         Auswertung als XLSX
+      </button>
+      {/* Der Oldenburger Block (M4.2) ist derselbe Bestand in der
+          Spaltenordnung der Vorlage — zum Einfügen in die gewohnte Excel.
+          Er steht neben der Auswertung und nicht an ihrer Stelle: Die eine
+          ist unsere Ausgabe, der andere der Übergabeweg. */}
+      <button type="button" onClick={() => { erzeuge("oldenburg", "xlsx"); }}>
+        Oldenburger Block als XLSX
       </button>
       {/* Der HTML-Monitor (M4.3) ist keine einmalige Ausgabe, sondern eine
           Datei, die sich fortschreibt — deshalb ein Schalter und kein Knopf.

@@ -207,9 +207,9 @@ export class Vermittlung {
     // Die Auswertung ist keine Seite, sondern eine Datei aus Bytes: Sie
     // braucht weder Vorlage noch Rendering-Engine und geht deshalb den
     // kuerzeren Weg (M4.2).
-    if (ruf.ausgabe === "auswertung" || ruf.format === "xlsx") {
+    if (ruf.ausgabe === "auswertung" || ruf.ausgabe === "oldenburg" || ruf.format === "xlsx") {
       const { dateiname, bytes: xlsx } = (await this.#o.hof.frage(ruf.akteId, {
-        art: "auswertungXlsx",
+        art: ruf.ausgabe === "oldenburg" ? "oldenburgXlsx" : "auswertungXlsx",
       })) as { dateiname: string; bytes: Uint8Array };
       const { pfad } = (await this.#o.hof.frage(ruf.akteId, {
         art: "ausgabeSchreiben",

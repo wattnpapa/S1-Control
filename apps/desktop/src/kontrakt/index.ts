@@ -253,7 +253,11 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({
     art: z.literal("ausgabeErzeugen"),
     akteId: zAkteId,
-    ausgabe: z.enum(["druck", "status", "auswertung"]),
+    // `oldenburg` ist die Exportvariante aus M4.2: derselbe Bestand in der
+    // Spaltenordnung des Blatts „Staerke" der Vorlage, zum Einfuegen in die
+    // gewohnte Excel. Eine eigene Ausgabeart und keine Option der Auswertung,
+    // weil es eine andere Datei mit einem anderen Zweck ist.
+    ausgabe: z.enum(["druck", "status", "auswertung", "oldenburg"]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),

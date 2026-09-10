@@ -68,6 +68,30 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     expect(readFileSync(pfad, "utf8")).toBe(html);
   });
 
+  it("liefert Auswertung und Oldenburger Block als je eigene Datei", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+
+    const auswertung = platz.dienst.auswertungXlsx();
+    const block = platz.dienst.oldenburgXlsx();
+
+    // Zwei Ausgaben mit zwei Zwecken: Die eine ist unsere filterbare
+    // Auswertung (§4.4), der andere der Block zum Einfügen in die Vorlage
+    // (§2). Sie tragen deshalb verschiedene Namen und verschiedene Bytes.
+    expect(auswertung.dateiname).toMatch(/^auswertung_\d{4}-\d{2}-\d{2}_\d{4}$/);
+    expect(block.dateiname).toMatch(/^oldenburg_\d{4}-\d{2}-\d{2}_\d{4}$/);
+    expect(Array.from(block.bytes)).not.toEqual(Array.from(auswertung.bytes));
+
+    // Beides sind ZIP-Dateien: „PK\x03\x04" ist die Signatur des lokalen
+    // Kopfs, mit der jeder Leser die Datei erkennt.
+    for (const bytes of [auswertung.bytes, block.bytes]) {
+      expect(Array.from(bytes.slice(0, 4))).toEqual([0x50, 0x4b, 0x03, 0x04]);
+    }
+
+    const pfad = await platz.dienst.ausgabeSchreiben(`${block.dateiname}.xlsx`, block.bytes);
+    expect(path.basename(pfad)).toBe(`${block.dateiname}.xlsx`);
+  });
+
   it("überschreibt eine Ausgabe desselben Namens, ohne zu klagen", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

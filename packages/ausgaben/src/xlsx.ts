@@ -188,12 +188,216 @@ export function auswertungAlsXlsx(zustand: Zustand, optionen: Auswertungsoptione
     [
       textEintrag("[Content_Types].xml", INHALTSTYPEN),
       textEintrag("_rels/.rels", WURZELVERWEISE),
-      textEintrag("xl/workbook.xml", ARBEITSMAPPE),
+      textEintrag("xl/workbook.xml", arbeitsmappe("Auswertung")),
       textEintrag("xl/_rels/workbook.xml.rels", MAPPENVERWEISE),
       textEintrag(
         "xl/worksheets/sheet1.xml",
         baueBlatt(koepfe, daten, `${einsatzName}${stand === "" ? "" : ` — ${stand}`}`),
       ),
+    ],
+    optionen,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Der Oldenburger Block (M4.2, zweite Ausgabevariante)
+// ---------------------------------------------------------------------------
+
+/**
+ * Die Spalten des Blatts „Stärke" in **ihrer** Reihenfolge, B bis AM.
+ *
+ * **Wozu eine zweite Spaltenordnung.** Die Auswertung oben ist unsere Ausgabe:
+ * die Spalten in der Ordnung, in der sie in der Oberfläche stehen, den Bereich
+ * als eigene Spalte. Der Oldenburger Block ist etwas anderes — er ist der
+ * Block, den eine Führungsstelle in ihre gewohnte Excel **einfügt**. Dafür
+ * muss die Spaltenfolge Zeichen für Zeichen die des Blatts „Stärke" sein
+ * (`excel-domaenenmodell.md` §2, Spalten B..AW), einschließlich der Spalten,
+ * die S1-Control nicht führt, und einschließlich der beiden versteckten
+ * Reservespalten X und Y. Eine Spalte zu wenig, und alles dahinter landet um
+ * eins verschoben in der Vorlage.
+ *
+ * Dieselbe Zuordnung benutzt die Erfassungsbogen-App für ihren Export
+ * (`excel-vba-workflows.md` §11.7); dort bleiben die Spalten leer, die der
+ * Führungsstelle gehören. Hier ist es umgekehrt: Die Führungsstelle füllt sie,
+ * und leer bleiben die, die im Zielmodell (noch) nicht vorkommen — Ablösung,
+ * Anforderungs-ID und die Zusagen (Spalten N bis S), Stufe 2 nach
+ * Entscheidung 1.
+ *
+ * `AN..AW` fehlen: Die Kostenübersicht ist in der Vorlage durchweg Formel und
+ * rechnet sich nach dem Einfügen selbst aus. Sie mit Werten zu überschreiben,
+ * nähme der Vorlage ihre Rechnung.
+ */
+const OLDENBURG_SPALTEN: readonly {
+  readonly excel: string;
+  readonly kopf: string;
+  readonly quelle: string;
+}[] = [
+  { excel: "B", kopf: "FüSt.", quelle: "fuestKennung" },
+  { excel: "C", kopf: "Bezeichnung", quelle: "bezeichnung" },
+  { excel: "D", kopf: "Organisation", quelle: "organisation" },
+  { excel: "E", kopf: "Herkunft", quelle: "herkunft" },
+  // F bis I sind **eine** Angabe der Excel in vier Spalten: Die Bezeichnung
+  // steht in der Spalte der Ebene, die anderen drei bleiben leer. Im
+  // Zielmodell ist das ein Feld (`ebene`, ZDM §2.8) — die Aufteilung ist eine
+  // Eigenheit der Vorlage und wird hier nur für sie wiederhergestellt.
+  { excel: "F", kopf: "Zug", quelle: "ebene:ZUG" },
+  { excel: "G", kopf: "Trupp o. Staffel", quelle: "ebene:TRUPP" },
+  { excel: "H", kopf: "Gruppe", quelle: "ebene:GRUPPE" },
+  { excel: "I", kopf: "Person", quelle: "ebene:PERSON" },
+  { excel: "J", kopf: "Geräte / Fahrzeuge", quelle: "geraete" },
+  { excel: "K", kopf: "Aufträge", quelle: "auftraege" },
+  { excel: "L", kopf: "Erreichbarkeit", quelle: "erreichbarkeit" },
+  { excel: "M", kopf: "Verfügbar bis", quelle: "verfuegbarBis" },
+  { excel: "N", kopf: "Ablösung angefordert", quelle: "" },
+  { excel: "O", kopf: "Anforderungs-ID", quelle: "" },
+  { excel: "P", kopf: "Zugesagt für", quelle: "" },
+  { excel: "Q", kopf: "Zugesagt von (Org.)", quelle: "" },
+  { excel: "R", kopf: "Vorgesehene Einheit", quelle: "" },
+  { excel: "S", kopf: "Vorgesehener Auftrag", quelle: "" },
+  { excel: "T", kopf: "eingetr. / zugew.", quelle: "eingetroffenAm" },
+  { excel: "U", kopf: "Einsatzende", quelle: "einsatzendeAm" },
+  { excel: "V", kopf: "Rückführung", quelle: "rueckfuehrungAm" },
+  { excel: "W", kopf: "Bemerkungen", quelle: "bemerkung" },
+  { excel: "X", kopf: "Reserve 1", quelle: "" },
+  { excel: "Y", kopf: "Reserve 2", quelle: "" },
+  { excel: "Z", kopf: "Status", quelle: "status" },
+  { excel: "AA", kopf: "Schicht", quelle: "schicht" },
+  { excel: "AB", kopf: "ID Einheiten-erfassungsbogen", quelle: "einheitSchluessel" },
+  { excel: "AC", kopf: "Weibl.", quelle: "zahl:weiblich" },
+  { excel: "AD", kopf: "Div.", quelle: "zahl:divers" },
+  { excel: "AE", kopf: "Veget.", quelle: "zahl:vegetarisch" },
+  { excel: "AF", kopf: "Vegan.", quelle: "zahl:vegan" },
+  { excel: "AG", kopf: "ÜN (m)", quelle: "zahl:uebernachtungM" },
+  { excel: "AH", kopf: "ÜN (w)", quelle: "zahl:uebernachtungW" },
+  { excel: "AI", kopf: "ÜN (d)", quelle: "zahl:uebernachtungD" },
+  { excel: "AJ", kopf: "Fü", quelle: "staerke:fuehrer" },
+  { excel: "AK", kopf: "Ufü", quelle: "staerke:unterfuehrer" },
+  { excel: "AL", kopf: "He", quelle: "staerke:mannschaft" },
+  { excel: "AM", kopf: "Gesamt", quelle: "gesamt" },
+];
+
+/**
+ * Welche Ebene in welche der vier Spalten F..I gehört.
+ *
+ * Die Vorlage kennt vier Schubladen, das Zielmodell zehn Ebenen (ZDM §2.8).
+ * Die Zuordnung ist damit eine Vergröberung und keine Umbenennung: Alles
+ * oberhalb des Zuges steht in „Zug", weil die Vorlage für einen Verband keine
+ * eigene Spalte hat und eine Bereitschaft dort besser aufgehoben ist als
+ * nirgends. `UNBESTIMMT` bekommt keine der vier Spalten — eine Einheit ohne
+ * Ebene in eine Ebenenspalte zu schreiben, wäre eine Behauptung.
+ */
+const EBENENSPALTE: Readonly<Record<string, string>> = {
+  GROSSVERBAND: "ZUG",
+  ABTEILUNG: "ZUG",
+  BEREITSCHAFT: "ZUG",
+  ZUG: "ZUG",
+  ZUGTRUPP: "TRUPP",
+  TRUPP: "TRUPP",
+  STAFFEL: "TRUPP",
+  GRUPPE: "GRUPPE",
+  PERSON: "PERSON",
+};
+
+/** Der Wert einer Oldenburg-Spalte für eine Einheitenzeile. */
+function oldenburgWert(
+  zeile: projektion.Tabellenzeile,
+  quelle: string,
+): string | number {
+  if (quelle === "") return "";
+  // Die Gesamtstärke ist in der Vorlage `=SUM(AJn:ALn)`; hier steht der Wert.
+  // Als **Zahl**, sonst rechnet die eingefügte Zeile nicht mit (§4.4).
+  if (quelle === "gesamt") return zeile.gesamt;
+  const [art, teil] = quelle.split(":");
+  if (teil === undefined) return zellentext(zeile.zellen[art as string]?.text ?? "");
+  if (art === "ebene") {
+    const ebene = zeile.zellen["ebene"]?.text ?? "";
+    return EBENENSPALTE[ebene] === teil ? zellentext(zeile.anzeige) : "";
+  }
+  if (art === "staerke") {
+    return zeile.staerke[teil as keyof projektion.Tabellenzeile["staerke"]];
+  }
+  // `zahl:` — die Logistikspalten. Sie stehen im Zustand als Zahl und in der
+  // Zelle als Text; die Vorlage summiert sie, also müssen sie Zahl bleiben.
+  const wert = Number.parseInt(zeile.zellen[teil]?.text ?? "", 10);
+  return Number.isNaN(wert) ? 0 : wert;
+}
+
+export interface Oldenburgoptionen extends Zipoptionen {
+  /** Der Stand, wie er über dem Block steht. */
+  readonly stand?: string;
+}
+
+/**
+ * Baut den Oldenburger Block als XLSX — die Exportvariante aus M4.2.
+ *
+ * **Was das ist und was es nicht ist.** Es ist der Übergabeweg für eine
+ * Führungsstelle, die weiter mit ihrer Excel arbeitet: Spalten B bis AM in
+ * der Ordnung der Vorlage, je Abschnitt eine Überschriftenzeile mit dem
+ * Namen in Spalte B — genau so führt das Blatt „Stärke" seine Einsatzstellen
+ * (`excel-domaenenmodell.md` §2, Spalte B) —, darunter die Einheiten in der
+ * Reihenfolge des Abschnittsbaums. Der Block lässt sich in die Vorlage
+ * einfügen, ohne dass eine Spalte verrutscht.
+ *
+ * Es ist **kein** Ersatz für die Vorlage und kein Rückweg: Wer den Block
+ * einfügt, führt die Lage ab da in der Excel weiter. Ein Reimport von dort
+ * gibt es nicht, und er ist auch nicht vorgesehen — die Ereignisse sind die
+ * Aufzeichnung (KONZEPT-EREIGNISSE.md §1), nicht der Zellinhalt.
+ *
+ * **Keine Summenzeile, kein Autofilter, keine fixierte Kopfzeile.** Alles
+ * drei bringt die Vorlage selbst mit; ein zweiter Autofilter im eingefügten
+ * Block wäre einer zu viel.
+ */
+export function oldenburgAlsXlsx(zustand: Zustand, optionen: Oldenburgoptionen = {}): Uint8Array {
+  const zeilenXml: string[] = [];
+  let nummer = 1;
+
+  const kopf = optionen.stand ?? "";
+  if (kopf !== "") {
+    zeilenXml.push(`<row r="${String(nummer)}">${zelle(1, nummer, zellentext(kopf))}</row>`);
+    nummer += 1;
+  }
+  zeilenXml.push(
+    `<row r="${String(nummer)}">${OLDENBURG_SPALTEN.map((spalte, stelle) =>
+      zelle(stelle + 1, nummer, spalte.kopf),
+    ).join("")}</row>`,
+  );
+  nummer += 1;
+
+  // Die Reihenfolge ist die des Abschnittsbaums und nicht die der Einheiten:
+  // Der Block soll so aussehen wie das Blatt, in das er eingefügt wird, und
+  // dort steht die Lage nach Einsatzstellen sortiert (§5.3).
+  for (const knoten of projektion.baumZeilen(projektion.abschnittsbaum(zustand))) {
+    const einheiten = projektion.einheitentabelle(zustand, { abschnittId: knoten.id }).zeilen;
+    // Ein Abschnitt ohne Einheiten bekommt keine Zeile: Dieselbe Regel wendet
+    // das Druckblatt an (K7), und ein eingefügter Block soll die Vorlage nicht
+    // mit leeren Überschriften auffüllen.
+    if (einheiten.length === 0) continue;
+    zeilenXml.push(`<row r="${String(nummer)}">${zelle(1, nummer, zellentext(knoten.name))}</row>`);
+    nummer += 1;
+    for (const einheit of einheiten) {
+      zeilenXml.push(
+        `<row r="${String(nummer)}">${OLDENBURG_SPALTEN.map((spalte, stelle) =>
+          zelle(stelle + 1, nummer, oldenburgWert(einheit, spalte.quelle)),
+        ).join("")}</row>`,
+      );
+      nummer += 1;
+    }
+  }
+
+  const blatt = [
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">',
+    `<sheetData>${zeilenXml.join("")}</sheetData>`,
+    "</worksheet>",
+  ].join("");
+
+  return schreibeZip(
+    [
+      textEintrag("[Content_Types].xml", INHALTSTYPEN),
+      textEintrag("_rels/.rels", WURZELVERWEISE),
+      textEintrag("xl/workbook.xml", arbeitsmappe("Stärke")),
+      textEintrag("xl/_rels/workbook.xml.rels", MAPPENVERWEISE),
+      textEintrag("xl/worksheets/sheet1.xml", blatt),
     ],
     optionen,
   );
@@ -297,12 +501,21 @@ const WURZELVERWEISE = [
   "</Relationships>",
 ].join("");
 
-const ARBEITSMAPPE = [
-  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
-  '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
-  '<sheets><sheet name="Auswertung" sheetId="1" r:id="rId1"/></sheets>',
-  "</workbook>",
-].join("");
+/**
+ * Die Arbeitsmappe mit ihrem einen Blatt.
+ *
+ * Der Blattname geht hinein, weil es zwei Ausgaben gibt: die Auswertung und
+ * den Oldenburger Block. Wer die zweite Datei oeffnet, soll am Reiter sehen,
+ * was er vor sich hat.
+ */
+function arbeitsmappe(blattname: string): string {
+  return [
+    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',
+    '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">',
+    `<sheets><sheet name="${xmlMaskieren(blattname)}" sheetId="1" r:id="rId1"/></sheets>`,
+    "</workbook>",
+  ].join("");
+}
 
 const MAPPENVERWEISE = [
   '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>',

@@ -77,10 +77,12 @@ export {
 export {
   SPALTE_BEREICH,
   auswertungAlsXlsx,
+  oldenburgAlsXlsx,
   spaltenname,
   xmlMaskieren,
   zellentext,
   type Auswertungsoptionen,
+  type Oldenburgoptionen,
 } from "./xlsx.js";
 export {
   MONITOR_DATEINAME,

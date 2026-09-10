@@ -36,7 +36,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { auswertungAlsXlsx } from "../../packages/ausgaben/src/index.js";
+import { auswertungAlsXlsx, oldenburgAlsXlsx } from "../../packages/ausgaben/src/index.js";
 import { falteHinzu, leereFaltung, materialisiere } from "../../packages/domaene/src/fold.js";
 import { prueflageEreignisse } from "../../packages/domaene/src/pruefhilfen/pruefage.js";
 import type { Zustand } from "../../packages/domaene/src/zustand.js";
@@ -192,5 +192,29 @@ describe("Der Aufbau der Datei", () => {
       "xl/_rels/workbook.xml.rels",
       "xl/worksheets/sheet1.xml",
     ]);
+  });
+});
+
+describe("Der Oldenburger Block in einem fremden OOXML-Leser", () => {
+  it("wird geöffnet und liefert die 38 Spalten der Vorlage in ihrer Ordnung", () => {
+    const zeilen = ueberFremdenLeser(oldenburgAlsXlsx(lage()));
+    const kopf = zeilen[0] as string[];
+    expect(kopf).toHaveLength(38);
+    expect(kopf[0]).toBe("FüSt.");
+    expect(kopf[4]).toBe("Zug");
+    expect(kopf[24]).toBe("Status");
+    expect(kopf[37]).toBe("Gesamt");
+  });
+
+  it("liefert Stärke und Gesamt als Zahlen — sonst rechnet die Vorlage nicht mit", () => {
+    const zeilen = ueberFremdenLeser(oldenburgAlsXlsx(lage()));
+    // Die erste Datenzeile steht unter der Kopfzeile und unter der
+    // Überschriftenzeile des ersten Abschnitts.
+    const erste = zeilen[2] as string[];
+    const fuehrer = Number(erste[34]);
+    const gesamt = Number(erste[37]);
+    expect(Number.isNaN(fuehrer)).toBe(false);
+    expect(Number.isNaN(gesamt)).toBe(false);
+    expect(gesamt).toBe(fuehrer + Number(erste[35]) + Number(erste[36]));
   });
 });
