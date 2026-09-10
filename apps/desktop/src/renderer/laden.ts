@@ -42,6 +42,7 @@ import type {
   Entwurf,
   Lagebild,
   Mitteilung,
+  Programmbefund,
   Ruf,
   Tabellenansicht,
   Tagebuchansicht,
@@ -198,6 +199,10 @@ export interface Laden {
   setzeTagebuchfilter(filter: Tagebuchfilterwahl): Promise<void>;
   /** Holt jede Ansicht neu, die schon einmal geholt wurde. */
   frischeAnsichten(): Promise<void>;
+
+  /** Was der Programmordner des Shares hergibt (M7.2); `undefined` heißt „nicht gefragt“. */
+  readonly programmstand: Programmbefund | undefined;
+  pruefeProgrammstand(): Promise<void>;
 
   bediene(entwurf: Entwurf): Promise<Bedienergebnis | undefined>;
   zurueck(grund?: string): Promise<Bedienergebnis | undefined>;
@@ -642,6 +647,23 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.fuest === undefined ? undefined : zustand.holeFuest(),
         zustand.eingangskorb === undefined ? undefined : zustand.holeEingangskorb(),
       ]);
+    },
+
+    programmstand: undefined,
+
+    async pruefeProgrammstand() {
+      // **Nicht über `mitFehlerbild`**: Ein Share ohne Programmordner ist der
+      // Normalfall, und ein Fehlerbild über dem ganzen Fenster wäre eine
+      // Meldung über einen Normalzustand.
+      try {
+        const befund = await rufe({ art: "programmstandPruefen" });
+        // Ein `null` ueber die Prozessgrenze ist kein Befund. Es kommt vor,
+        // wenn eine Schale den Ruf nicht kennt — und eine Ansicht, die darauf
+        // ein Feld liest, stuerzt ab, statt nichts zu zeigen.
+        if (befund !== null && typeof befund === "object") setze({ programmstand: befund });
+      } catch (fehler) {
+        merkeHinweis("warnung", fehler instanceof Error ? fehler.message : String(fehler));
+      }
     },
 
     async bediene(entwurf) {

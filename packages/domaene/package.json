@@ -16,6 +16,7 @@
   "dependencies": {
     "@bos/eeb-format": "file:../../vendor/eeb-format",
     "@bos/meldekopf": "file:../../vendor/bos-meldekopf",
+    "@noble/ed25519": "^2.3.0",
     "taktische-zeichen-core": "^0.10.0",
     "zod": "^4.6.1"
   }

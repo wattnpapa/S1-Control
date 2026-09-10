@@ -347,3 +347,20 @@ export function einsatzKennung(datum: string, name: string): Einsatzkennung {
   const kurzId = inhaltsHash(`${datum}|${name}`).slice(0, 6);
   return { slug, kurzId, ordner: `${datum}_${slug}_${kurzId}` };
 }
+
+// Das Programmmanifest und seine Pruefung (M7.2) — der Verteilweg ueber den
+// Share. Rein und ohne Dateisystem: Wer die Bytes holt, ist die Schale.
+export {
+  DATEI_MANIFEST,
+  ORDNER_PROGRAMM,
+  kurzform,
+  pruefeManifest,
+  signiereStand,
+  signierteBytes,
+  vergleicheVersionen,
+  type Ablehnungsgrund,
+  type Programmmanifest,
+  type Programmstand,
+  type Pruefauftrag,
+  type Pruefergebnis,
+} from "./verteilung.js";

@@ -504,6 +504,24 @@
         min-width: 12rem;
       }
 
+      /* ---- Der Programmstand (M7.2) ------------------------------------ */
+
+      /* Ein Angebot und keine Warnung: Es liegt etwas bereit, jemand kann es
+         einspielen, wenn die Lage es zulaesst. Ein abgelehntes Paket ist die
+         andere Nachricht — entweder hat jemand vergessen zu signieren, oder
+         es hat jemand versucht, der es nicht darf. */
+      .programmstand {
+        margin: 0.5rem 0;
+        padding: 0.4rem 0.6rem;
+        border-left: 3px solid rgba(21, 122, 60, 0.7);
+        background: rgba(21, 122, 60, 0.08);
+        font-size: 0.85rem;
+      }
+      .programmstand.abgelehnt {
+        border-left-color: rgba(185, 28, 28, 0.8);
+        background: rgba(185, 28, 28, 0.08);
+      }
+
       /* ---- Der Eingangskorb (M6.1) ------------------------------------- */
 
       /* Die Ampel der Excel: gelb heisst „liegt an", gruen „uebernommen",

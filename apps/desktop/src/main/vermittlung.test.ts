@@ -11,7 +11,7 @@
  * Fenster zu öffnen.
  */
 
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -441,5 +441,61 @@ describe("Jeder Ansichtsruf erreicht den Aktendienst", () => {
       // (M3.7) — ohne ihn hätte der Renderer ein Wettrennen.
       expect(typeof wert?.lageZeiger, `${anfrage.art} ohne Zeigerstand`).toBe("number");
     }
+  });
+});
+
+describe("Der Programmstand auf dem Share (M7.2)", () => {
+  /**
+   * **Warum dieser Test den Weg misst und nicht die Prüfung.**
+   *
+   * Jeden Ablehnungsgrund einzeln fährt `verteilung.test.ts` in Ring 2 —
+   * rein, ohne Share. Hier steht die Naht: dass die Vermittlung im richtigen
+   * Ordner nachsieht, dass sie den Hash der Datei daneben bildet, und dass
+   * ein Share ohne Programmordner **kein** Fehler ist.
+   *
+   * Ein Angebot lässt sich hier nicht erzeugen: `VERTRAUTER_SCHLUESSEL` ist
+   * in dieser Fassung leer, und das ist die sichere Vorbelegung (siehe
+   * `verteilschluessel.ts`). Genau das prüft der zweite Fall.
+   */
+  it("meldet einen Share ohne Programmordner als Normalzustand", async () => {
+    const werkstatt = await mitShare();
+    const befund = await ruf<{ art: string; ordner?: string }>(werkstatt, {
+      art: "programmstandPruefen",
+    });
+
+    // Auf den meisten Shares liegt kein Manifest. Eine Fehlermeldung darüber
+    // wäre eine Meldung über einen Normalzustand.
+    expect(befund.art).toBe("keinManifest");
+    expect(befund.ordner).toContain("programm");
+  });
+
+  it("bietet ohne hinterlegten Verteilschlüssel nichts an und sagt warum", async () => {
+    const werkstatt = await mitShare();
+    const ordner = path.join(werkstatt.sharePfad, "programm");
+    mkdirSync(ordner, { recursive: true });
+    // Ein Manifest, das formal in Ordnung ist. Ohne Vertrauensanker kann
+    // diese Fassung nicht entscheiden, wem sie glaubt — also glaubt sie
+    // niemandem.
+    writeFileSync(
+      path.join(ordner, "manifest.json"),
+      JSON.stringify({
+        stand: {
+          version: "9.9.9",
+          datei: "S1-Control-9.9.9.exe",
+          groesse: 1,
+          sha256: "a".repeat(64),
+          plattform: "linux",
+          veroeffentlicht: "2026-09-10T12:00:00+02:00",
+        },
+        signatur: "aa".repeat(32),
+        pubkey: "bb".repeat(32),
+      }),
+    );
+
+    const befund = await ruf<{ art: string; grund?: string; meldung?: string }>(werkstatt, {
+      art: "programmstandPruefen",
+    });
+    expect(befund.art).toBe("abgelehnt");
+    expect(befund.meldung).toContain("kein Verteilschlüssel");
   });
 });

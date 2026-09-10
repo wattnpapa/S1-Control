@@ -295,6 +295,10 @@ export const zRuf = z.discriminatedUnion("art", [
   // Der Rueckweg schreibt in `ausgaben\` wie jede andere Ausgabe (M4.1) und
   // liefert den Pfad: Wer sie weitergibt, muss wissen, wo sie liegt.
   z.object({ art: z.literal("buendelSchreiben"), akteId: zAkteId }),
+
+  // Der Update-Weg (M7.2). **Ohne Akte**: Er haengt am Share und nicht an
+  // einem Einsatz — geprueft wird auch dann, wenn keine Akte offen ist.
+  z.object({ art: z.literal("programmstandPruefen") }),
   z.object({
     art: z.literal("fassungsvergleichAnfordern"),
     akteId: zAkteId,
@@ -456,6 +460,7 @@ export interface Antworten {
   fassungsvergleichAnfordern: Fassungsvergleich | null;
   buendelEinlesen: Buendelergebnis;
   buendelSchreiben: Ausgabeergebnis;
+  programmstandPruefen: Programmbefund;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
@@ -489,6 +494,27 @@ export interface Baumansicht extends Ansichtsstand {
 }
 
 export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+
+/**
+ * Was die Pruefung des Programmordners ergeben hat (M7.2).
+ *
+ * `keinManifest` ist **kein Fehler**: Auf den meisten Shares liegt keines,
+ * und ein Fehlerbild dafuer waere eine Meldung ueber einen Normalzustand.
+ */
+export type Programmbefund =
+  | { readonly art: "keinManifest"; readonly ordner: string }
+  | { readonly art: "aktuell"; readonly laufend: string }
+  | {
+      readonly art: "verfuegbar";
+      readonly version: string;
+      readonly datei: string;
+      readonly pfad: string;
+      readonly groesse: number;
+      readonly veroeffentlicht: string;
+      readonly hinweis?: string;
+      readonly kurzform: string;
+    }
+  | { readonly art: "abgelehnt"; readonly grund: string; readonly meldung: string };
 
 /** Was beim Einlesen einer Buendeldatei herauskam (M6.3). */
 export interface Buendelergebnis {

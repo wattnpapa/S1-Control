@@ -14,18 +14,27 @@
 
 import path from "node:path";
 
-import { KOSTEN_VORBELEGUNG, einsatzKennung } from "@s1/domaene";
+import {
+  DATEI_MANIFEST,
+  KOSTEN_VORBELEGUNG,
+  ORDNER_PROGRAMM,
+  einsatzKennung,
+  pruefeManifest,
+} from "@s1/domaene";
 import {
   EINSATZ_UNTERORDNER,
   Einsatzablage,
   legeEinsatzAn,
   liesEinsatzanker,
+  sha256HexBytes,
   type Dateisystem,
 } from "@s1/speicher";
 
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
+import { OHNE_SCHLUESSEL, VERTRAUTER_SCHLUESSEL } from "./verteilschluessel.js";
 import type { Arbeiterhof } from "./arbeiterhof.js";
 import type {
+  Programmbefund,
   Antwort,
   Ausgabeergebnis,
   Bildschirm,
@@ -135,6 +144,8 @@ export class Vermittlung {
     switch (ruf.art) {
       case "umgebung":
         return this.#umgebung();
+      case "programmstandPruefen":
+        return this.#programmstand();
       case "einstellungenLesen":
         return this.#einstellungen();
       case "einstellungenSetzen":
@@ -296,7 +307,106 @@ export class Vermittlung {
 
   async #einstellungen(): Promise<Einstellungen> {
     const platz = await this.arbeitsplatz();
-    return { sharePfad: platz.sharePfad, anzeigename: platz.anzeigename };
+    return {
+      sharePfad: platz.sharePfad,
+      anzeigename: platz.anzeigename,
+      ...(platz.betriebsart === undefined ? {} : { betriebsart: platz.betriebsart }),
+    };
+  }
+
+  /**
+   * Prueft, ob im Ordner `programm\` des Shares ein neueres Paket liegt (M7.2).
+   *
+   * **Der Griff auf die Dateien geschieht hier, das Urteil in Ring 2.** Die
+   * Vermittlung liest zwei Dateien und rechnet einen Hash; ob daraus ein
+   * Angebot wird, entscheidet `pruefeManifest` — rein, ohne Share, mit Tests
+   * fuer jeden Ablehnungsgrund einzeln.
+   *
+   * **Kein Manifest ist kein Fehler.** Auf den meisten Shares liegt keines,
+   * und eine Fehlermeldung darueber waere eine Meldung ueber einen
+   * Normalzustand.
+   *
+   * **Die Datei wird gelesen, um ihren Hash zu bilden** — nicht ausgefuehrt.
+   * Das Einspielen loest ein Mensch aus, und zwar ausserhalb dieser
+   * Anwendung: Ein Programm, das sich mitten in einer Lage selbst ersetzt,
+   * ist ein Ausfall mit Ansage (M7-Auftragsdokument).
+   */
+  async #programmstand(): Promise<Programmbefund> {
+    const platz = await this.arbeitsplatz();
+    const ordner = path.join(platz.sharePfad, ORDNER_PROGRAMM);
+    const manifestPfad = path.join(ordner, DATEI_MANIFEST);
+
+    // **Erst nachsehen, dann urteilen.** Liegt gar kein Manifest da, ist das
+    // der Normalfall und keine Ablehnung — auch dann nicht, wenn ausserdem
+    // kein Schluessel hinterlegt ist. Zwei Nachrichten ueber denselben leeren
+    // Ordner waeren eine zu viel.
+    let text: string;
+    try {
+      text = new TextDecoder().decode(await this.#o.dateisystem.liesAb(manifestPfad, 0));
+    } catch {
+      return { art: "keinManifest", ordner };
+    }
+
+    // Ohne Vertrauensanker keine Pruefung und damit kein Angebot. Das ist die
+    // sichere Vorbelegung und keine Panne: Eine Fassung ohne Schluessel kann
+    // nicht entscheiden, wem sie glaubt.
+    if (VERTRAUTER_SCHLUESSEL === "") {
+      this.#o.protokolliere("warnung", OHNE_SCHLUESSEL);
+      return { art: "abgelehnt", grund: "fremderSchluessel", meldung: OHNE_SCHLUESSEL };
+    }
+
+    // Der Hash der Datei wird nur gebildet, wenn das Manifest ihn nennen
+    // koennte — also nach dem ersten Deuten. Eine 90-MB-Datei zu lesen, bevor
+    // klar ist, ob sie ueberhaupt gemeint ist, waere Arbeit auf Verdacht.
+    const ergebnis = await pruefeManifest({
+      text,
+      vertrauterSchluessel: VERTRAUTER_SCHLUESSEL,
+      laufendeVersion: this.#o.programmversion,
+      plattform: this.#o.plattform,
+    });
+    if (ergebnis.art === "abgelehnt") {
+      if (ergebnis.grund === "nichtNeuer") return { art: "aktuell", laufend: this.#o.programmversion };
+      this.#o.protokolliere("warnung", `Programmmanifest abgelehnt: ${ergebnis.meldung}`);
+      return { art: "abgelehnt", grund: ergebnis.grund, meldung: ergebnis.meldung };
+    }
+
+    const dateiPfad = path.join(ordner, ergebnis.stand.datei);
+    let dateiHash: string;
+    try {
+      dateiHash = sha256HexBytes(await this.#o.dateisystem.liesAb(dateiPfad, 0));
+    } catch {
+      return {
+        art: "abgelehnt",
+        grund: "dateiPasstNicht",
+        meldung: `Das Manifest nennt ${ergebnis.stand.datei}; die Datei liegt nicht daneben.`,
+      };
+    }
+
+    const mitDatei = await pruefeManifest({
+      text,
+      vertrauterSchluessel: VERTRAUTER_SCHLUESSEL,
+      laufendeVersion: this.#o.programmversion,
+      plattform: this.#o.plattform,
+      dateiHash,
+    });
+    if (mitDatei.art !== "angeboten") {
+      const grund = mitDatei.art === "abgelehnt" ? mitDatei.grund : "unlesbar";
+      const meldung = mitDatei.art === "abgelehnt" ? mitDatei.meldung : "";
+      this.#o.protokolliere("warnung", `Programmpaket abgelehnt: ${meldung}`);
+      return { art: "abgelehnt", grund, meldung };
+    }
+
+    this.#o.protokolliere("info", `Neues Paket auf dem Share: ${mitDatei.stand.version}`);
+    return {
+      art: "verfuegbar",
+      version: mitDatei.stand.version,
+      datei: mitDatei.stand.datei,
+      pfad: dateiPfad,
+      groesse: mitDatei.stand.groesse,
+      veroeffentlicht: mitDatei.stand.veroeffentlicht,
+      ...(mitDatei.stand.hinweis === undefined ? {} : { hinweis: mitDatei.stand.hinweis }),
+      kurzform: mitDatei.kurzform,
+    };
   }
 
   async #setzeEinstellungen(neu: Einstellungen): Promise<Einstellungen> {

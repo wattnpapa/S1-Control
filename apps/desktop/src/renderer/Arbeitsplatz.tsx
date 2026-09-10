@@ -13,6 +13,7 @@ import { bruecke } from "./bruecke.js";
 import { Hilfe } from "./Hilfe.js";
 import { Lage } from "./Lage.js";
 import { Meldekopf } from "./Meldekopf.js";
+import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
@@ -106,6 +107,8 @@ export function Arbeitsplatz(): React.JSX.Element {
             }}
           />
         )}
+        <Programmstand />
+
         {/* Die Betriebsart entscheidet, was hier steht (M6.4). Ein Meldekopf
             nimmt Bögen auf und quittiert sie; ein Lagebild führt er nicht.
             Dieselbe Akte, dieselben Ereignisse — ein anderer Zuschnitt. */}
