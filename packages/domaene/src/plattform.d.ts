@@ -22,3 +22,24 @@
 declare class TextEncoder {
   encode(eingabe?: string): Uint8Array;
 }
+
+/**
+ * `URL` — dasselbe Muster, seit M9.1.
+ *
+ * Gebraucht wird er, um die Adresse eines Anhangs aus einer Veröffentlichung
+ * zu **zerlegen**, statt sie mit einem regulären Ausdruck zu prüfen. Der
+ * Unterschied ist nicht Bequemlichkeit: `https://gute.stelle@boese.stelle/x`
+ * besteht jede naive Prüfung auf ein Präfix und zeigt trotzdem woandershin.
+ * Wer den Wirt wissen will, muss die Adresse nach denselben Regeln zerlegen,
+ * nach denen sie später aufgerufen wird.
+ *
+ * Es gibt ihn in Node seit 10 und in jedem Browser; der Konstruktor wirft bei
+ * einer unbrauchbaren Adresse, und genau darauf stützt sich der Aufrufer.
+ */
+declare class URL {
+  constructor(eingabe: string, basis?: string);
+  readonly protocol: string;
+  readonly hostname: string;
+  readonly pathname: string;
+  readonly href: string;
+}

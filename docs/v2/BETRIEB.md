@@ -76,6 +76,39 @@ Der Verteilweg ist der Share (Entscheidung 7; ein LAN-Peer-Update ist
 gestrichen). Ein Paket wird angeboten, nie eingespielt: Die Anwendung zeigt,
 dass etwas bereitliegt und wo. Auslösen tut ein Mensch.
 
+### Der Weg über den Knopf
+
+Der bequeme Weg, und der vorgesehene: An **einem** Rechner der
+Führungsstelle steht unter dem Lagebild der Knopf **„Neues Paket für die
+Führungsstelle holen“**. Er lädt Manifest und Paket aus der Veröffentlichung,
+prüft Schlüssel, Signatur, Plattform, Fassung und Hash — und legt beides in
+`programm\`. Die anderen Arbeitsplätze bekommen es danach angeboten, ohne
+selbst etwas aus dem Netz zu holen.
+
+Zwei Dinge dazu, beide wichtig:
+
+* **Nicht während einer laufenden Lage.** Der Download geht über dieselbe
+  Leitung wie der Share, dauert bei neunzig Megabyte mehrere Minuten und kann
+  die Übertragung der Einträge verzögern. Ist ein Einsatz geöffnet, warnt die
+  Anwendung und verlangt eine zweite Bestätigung. Der richtige Zeitpunkt ist
+  vor dem Einsatz.
+* **Es wird geholt, nicht installiert.** Auch nach dem Knopfdruck ersetzt sich
+  nichts von selbst. Danach liegt eine Datei auf dem Share, und ein Mensch
+  startet sie.
+
+Kommt eine der Prüfungen nicht durch, wird **nichts** geschrieben, und die
+Anwendung nennt den Grund. Ein Paket, das erst auf dem Share auffiele, hätte
+man den anderen Arbeitsplätzen bereits hingelegt.
+
+Der Knopf ist der einzige Ruf, den diese Anwendung nach draußen tut, und er
+geschieht nur auf Druck. Es gibt keinen Auto-Updater, keine Hintergrundabfrage
+und keine Telemetrie.
+
+### Der Weg von Hand
+
+Wenn die Führungsstelle kein Internet hat oder das Paket aus einer anderen
+Quelle kommt:
+
 1. Das Paket bauen (`npm run build:paket`) oder aus den CI-Artefakten holen.
 2. Ein Manifest signieren. Es trägt Version, Dateiname, Größe, SHA-256 und
    eine Ed25519-Signatur; der öffentliche Schlüssel ist in der Anwendung
@@ -83,9 +116,21 @@ dass etwas bereitliegt und wo. Auslösen tut ein Mensch.
 3. Datei **und** Manifest zusammen in `<share>\S1-Control\programm\` legen.
    Nie die Datei allein: Die Prüfung vergleicht den Hash und lehnt sonst ab.
 
-Solange kein Schlüssel hinterlegt ist, wird nichts angeboten, und die
-Anwendung sagt warum. Das ist die sichere Vorbelegung — ein Platzhalter, der
-alles annähme, sähe aus wie eine Prüfung und wäre keine.
+### Was eine Veröffentlichung tragen muss
+
+Damit der Knopf sie benutzen kann, braucht eine Veröffentlichung zwei Anhänge:
+
+* `manifest.json` — signiert, wie oben.
+* die Paketdatei, **genau unter dem Namen**, den das Manifest in `datei`
+  nennt.
+
+Entwürfe und Vorabfassungen werden übergangen: Wer eine Vorabfassung an eine
+Führungsstelle geben will, gibt sie ausdrücklich und nicht dadurch, dass
+jemand auf einen Knopf drückt.
+
+Solange kein Schlüssel hinterlegt ist, wird nichts angeboten und nichts
+geholt, und die Anwendung sagt warum. Das ist die sichere Vorbelegung — ein
+Platzhalter, der alles annähme, sähe aus wie eine Prüfung und wäre keine.
 
 ## Notverfahren bei NAS-Ausfall
 
@@ -137,7 +182,8 @@ auspackt, verliert nichts, prüft aber auch nichts.
 
 ## Was der Betrieb nicht kann
 
-* **Keine automatische Installation.** Siehe oben: angeboten, nicht eingespielt.
+* **Keine automatische Installation.** Siehe oben: geholt und angeboten, nicht
+  eingespielt. Es gibt keinen Auto-Updater.
 * **Keine Telemetrie.** Was auf dem Rechner der Führungsstelle geschieht,
   bleibt dort. Das Protokoll liegt im Benutzerprofil und geht nirgendwohin.
 * **Kein Sperren.** Zwei Bediener können dasselbe Feld ändern. Das Programm

@@ -331,6 +331,13 @@ export const zRuf = z.discriminatedUnion("art", [
   // einem Einsatz — geprueft wird auch dann, wenn keine Akte offen ist.
   z.object({ art: z.literal("programmstandPruefen") }),
 
+  // Ein Paket aus der Veröffentlichung holen und in den Share legen (M9.1).
+  // **Ohne Akte** wie die Pruefung darueber, und mit derselben Festlegung:
+  // Es wird geholt und abgelegt, nicht installiert. Der Ruf ist der einzige
+  // im ganzen Kontrakt, der einen Ruf nach draussen ausloest — und er
+  // geschieht ausschliesslich, weil ein Mensch einen Knopf gedrueckt hat.
+  z.object({ art: z.literal("programmpaketHolen") }),
+
   // Die Diagnoseansicht (M7.3). **Ohne Akte**: Was sie zeigt, gehoert dem
   // Arbeitsplatz und nicht einem Einsatz — Pfade, Fassungen, die letzten
   // Meldungen des Protokolls. Das Fachliche (Peers, Quarantaene, Hinweise)
@@ -509,6 +516,7 @@ export interface Antworten {
   buendelEinlesen: Buendelergebnis;
   buendelSchreiben: Ausgabeergebnis;
   programmstandPruefen: Programmbefund;
+  programmpaketHolen: Bezugsbefund;
   diagnoseAnfordern: Diagnose;
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
@@ -606,6 +614,24 @@ export interface Diagnose {
   readonly wanduhr: string;
   readonly letzteMeldungen: readonly Protokollzeile[];
 }
+
+/**
+ * Was beim Holen eines Pakets herauskam (M9.1).
+ *
+ * `aktuell` ist **kein** Fehler und der haeufigste Fall: Es gibt nichts
+ * Neueres als das, was schon laeuft oder schon im Share liegt.
+ */
+export type Bezugsbefund =
+  | {
+      readonly art: "geholt";
+      readonly version: string;
+      readonly datei: string;
+      readonly groesse: number;
+      readonly pfad: string;
+      readonly kurzform: string;
+    }
+  | { readonly art: "aktuell"; readonly vorhanden: string }
+  | { readonly art: "abgelehnt"; readonly grund: string; readonly meldung: string };
 
 /** Was beim Einlesen einer Buendeldatei herauskam (M6.3). */
 export interface Buendelergebnis {

@@ -77,6 +77,12 @@ Was im Baum nachgewiesen ist, steht in den Abschlussberichten unter
       nicht im Repository, und wer ihn hat, ist festgehalten.
 - [ ] **E4** Die Diagnoseansicht zeigt auf jedem der drei Rechner die anderen
       beiden mit Offsets und Uhrabweichung.
+- [ ] **E7** Der Knopf „Neues Paket für die Führungsstelle holen“ lädt an
+      **einem** Rechner ein Paket aus der Veröffentlichung und legt es in
+      `programm\`; die beiden anderen bekommen es danach angeboten, ohne
+      selbst ins Netz zu gehen.
+- [ ] **E8** Derselbe Knopf bei geöffnetem Einsatz zeigt die Warnung und
+      verlangt eine zweite Bestätigung.
 - [ ] **E5** **[KURZANLEITUNG.md](KURZANLEITUNG.md) ist von einer zweiten
       Person durchgearbeitet worden**, die nicht am Bau beteiligt war, und die
       Stellen, an denen sie hängenblieb, sind geändert.

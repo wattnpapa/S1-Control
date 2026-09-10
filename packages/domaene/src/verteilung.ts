@@ -260,3 +260,137 @@ export function kurzform(pubkeyHex: string): string {
     .replace(/(.{4})(?=.)/g, "$1 ")
     .trim();
 }
+
+// ---------------------------------------------------------------------------
+// Der Bezug eines Pakets aus einer Veröffentlichung (M9.1)
+// ---------------------------------------------------------------------------
+//
+// **Was hier hinzukommt und was nicht.** Bisher legte ein Mensch das Paket von
+// Hand in `programm\`. Das bleibt der Weg; was fehlte, war der Handgriff davor:
+// Wer holt das Paket, und woher? Jetzt kann **ein** Arbeitsplatz es auf
+// Knopfdruck aus der Veröffentlichung holen und in den Share legen — und die
+// übrigen bekommen es über den Weg aus M7.2 angeboten, unverändert.
+//
+// **Kein Auto-Update.** Nichts hiervon läuft von selbst, nichts installiert
+// etwas, und niemand telefoniert im Hintergrund nach Hause. Es ist ein
+// Knopf, den ein Mensch drückt, und danach liegt eine Datei auf einer
+// Freigabe. Entscheidung 7 bleibt damit unangetastet: Der Verteilweg **ist**
+// der Share; die Veröffentlichung ist nur die Quelle, aus der er befüllt wird.
+//
+// **Das Deuten der Antwort steht in Ring 2 und ist rein**, aus demselben
+// Grund wie die Manifestprüfung darüber: Die Antwort kommt aus dem Netz und
+// ist damit Text, den irgendjemand geschrieben hat. Was daraus gelesen wird,
+// muss einzeln prüfbar sein — ohne Netz, ohne Share, ohne Uhr.
+
+/** Ein Anhang einer Veröffentlichung, so weit er hier gebraucht wird. */
+export interface Releaseanhang {
+  readonly name: string;
+  readonly url: string;
+  readonly groesse: number;
+}
+
+export interface Release {
+  /** Die Fassung, aus dem Namen der Marke gewonnen — ohne führendes `v`. */
+  readonly version: string;
+  readonly anhaenge: readonly Releaseanhang[];
+}
+
+export type Releasebefund =
+  | { readonly art: "gefunden"; readonly release: Release }
+  | { readonly art: "unbrauchbar"; readonly meldung: string };
+
+/**
+ * Deutet die Antwort der Veröffentlichungsstelle.
+ *
+ * **Der Wirt wird geprüft und nicht geglaubt.** Die Antwort nennt zu jedem
+ * Anhang eine Adresse zum Herunterladen, und diese Adresse kommt aus derselben
+ * Quelle wie alles andere darin. Zeigte sie auf einen fremden Rechner, lüde
+ * die Anwendung von dort — die Prüfung der Signatur fiele das später zwar auf,
+ * aber der Ruf wäre getan und verriete, wer hier arbeitet. Deshalb: nur `https`
+ * und nur die Wirte, die der Aufrufer nennt.
+ *
+ * **Entwürfe und Vorabfassungen werden abgewiesen.** Wer eine Vorabfassung an
+ * eine Führungsstelle geben will, gibt sie ausdrücklich und nicht dadurch, dass
+ * jemand auf einen Knopf drückt.
+ *
+ * Ein Anhangsname mit Pfadanteil fliegt hier heraus und nicht erst beim
+ * Schreiben — derselbe Grund wie bei `stand.datei` oben.
+ */
+export function deuteRelease(text: string, erlaubteWirte: readonly string[]): Releasebefund {
+  let roh: {
+    tag_name?: unknown;
+    draft?: unknown;
+    prerelease?: unknown;
+    assets?: unknown;
+  };
+  try {
+    roh = JSON.parse(text) as typeof roh;
+  } catch {
+    return { art: "unbrauchbar", meldung: "Die Antwort der Veröffentlichungsstelle ist kein JSON." };
+  }
+  if (typeof roh !== "object" || roh === null) {
+    return { art: "unbrauchbar", meldung: "Die Antwort ist kein Objekt." };
+  }
+  if (typeof roh.tag_name !== "string" || roh.tag_name === "") {
+    return { art: "unbrauchbar", meldung: "Die Veröffentlichung trägt keine Marke." };
+  }
+  if (roh.draft === true) {
+    return { art: "unbrauchbar", meldung: "Die neueste Veröffentlichung ist ein Entwurf." };
+  }
+  if (roh.prerelease === true) {
+    return { art: "unbrauchbar", meldung: "Die neueste Veröffentlichung ist eine Vorabfassung." };
+  }
+  if (!Array.isArray(roh.assets)) {
+    return { art: "unbrauchbar", meldung: "Die Veröffentlichung führt keine Anhänge." };
+  }
+
+  const anhaenge: Releaseanhang[] = [];
+  for (const eintrag of roh.assets as readonly {
+    name?: unknown;
+    browser_download_url?: unknown;
+    size?: unknown;
+  }[]) {
+    if (
+      typeof eintrag !== "object" ||
+      eintrag === null ||
+      typeof eintrag.name !== "string" ||
+      typeof eintrag.browser_download_url !== "string" ||
+      typeof eintrag.size !== "number"
+    ) {
+      continue;
+    }
+    if (eintrag.name.includes("/") || eintrag.name.includes("\\") || eintrag.name.includes("..")) {
+      return {
+        art: "unbrauchbar",
+        meldung: `Ein Anhang trägt einen Pfadanteil im Namen: ${eintrag.name}`,
+      };
+    }
+    let wirt: string;
+    try {
+      const adresse = new URL(eintrag.browser_download_url);
+      if (adresse.protocol !== "https:") {
+        return { art: "unbrauchbar", meldung: `Ein Anhang wird nicht über https angeboten: ${eintrag.name}` };
+      }
+      wirt = adresse.hostname.toLowerCase();
+    } catch {
+      return { art: "unbrauchbar", meldung: `Ein Anhang hat keine gültige Adresse: ${eintrag.name}` };
+    }
+    if (!erlaubteWirte.includes(wirt)) {
+      return {
+        art: "unbrauchbar",
+        meldung: `Ein Anhang liegt auf einem fremden Wirt: ${wirt}`,
+      };
+    }
+    anhaenge.push({ name: eintrag.name, url: eintrag.browser_download_url, groesse: eintrag.size });
+  }
+
+  return {
+    art: "gefunden",
+    release: { version: roh.tag_name.replace(/^v/i, ""), anhaenge },
+  };
+}
+
+/** Der Anhang mit genau diesem Namen — oder keiner. */
+export function anhang(release: Release, name: string): Releaseanhang | undefined {
+  return release.anhaenge.find((eintrag) => eintrag.name === name);
+}

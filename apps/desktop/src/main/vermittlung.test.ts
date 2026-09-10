@@ -548,3 +548,33 @@ describe("Die Diagnoseauskunft (M7.3)", () => {
     expect(auskunft.shareLesbar).toBe(false);
   });
 });
+
+describe("Das Holen eines Pakets über die Vermittlung (M9.1)", () => {
+  it("meldet ohne eingerichteten Netzzugang, dass der Weg nicht verfügbar ist", async () => {
+    // Die Werkstatt zum Datenpfad hat keinen Holer — und das ist die Probe
+    // auf die Naht: Ohne Netz tut die Vermittlung alles Übrige, und der eine
+    // Weg, der es braucht, sagt es, statt zu werfen.
+    const werkstatt = baueWerkstatt();
+    await ruf(werkstatt, {
+      art: "einstellungenSetzen",
+      einstellungen: { sharePfad: werkstatt.sharePfad, anzeigename: "Prüfer" },
+    });
+
+    const befund = await ruf<{ art: string; grund?: string }>(werkstatt, {
+      art: "programmpaketHolen",
+    });
+
+    expect(befund.art).toBe("abgelehnt");
+    expect(befund.grund).toBe("netzfehler");
+  });
+
+  it("lehnt ohne eingestellten Share ab, bevor irgendetwas gerufen wird", async () => {
+    const werkstatt = baueWerkstatt();
+    const befund = await ruf<{ art: string; grund?: string }>(werkstatt, {
+      art: "programmpaketHolen",
+    });
+
+    expect(befund.art).toBe("abgelehnt");
+    expect(befund.grund).toBe("keinShare");
+  });
+});

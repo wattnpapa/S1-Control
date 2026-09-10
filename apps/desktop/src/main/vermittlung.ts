@@ -31,9 +31,16 @@ import {
 } from "@s1/speicher";
 
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
+import { holePaket, type Netzholer } from "./programmbezug.js";
+import {
+  MANIFEST_GRENZE_BYTES,
+  PAKET_GRENZE_BYTES,
+  RELEASE_AUSKUNFT,
+} from "./verteilquelle.js";
 import { OHNE_SCHLUESSEL, VERTRAUTER_SCHLUESSEL } from "./verteilschluessel.js";
 import type { Arbeiterhof } from "./arbeiterhof.js";
 import type {
+  Bezugsbefund,
   Diagnose,
   Programmbefund,
   Protokollzeile,
@@ -115,6 +122,16 @@ export interface VermittlungOptionen {
    * bleibt die Liste leer; das ist eine leere Liste und keine Luecke.
    */
   readonly letzteMeldungen?: () => readonly Protokollzeile[];
+  /**
+   * Der Griff ins Netz (M9.1) — der einzige Ruf dieses Programms nach draussen.
+   *
+   * Optional, und das ist die Aussage: Ohne ihn tut die Vermittlung alles,
+   * was sie sonst tut, und der eine Weg, der das Netz braucht, meldet sich
+   * als nicht verfuegbar. Die Tests zum Datenpfad laufen damit ohne Netz —
+   * und ein Bau, in dem er versehentlich fehlte, faellt auf, statt still zu
+   * schweigen.
+   */
+  readonly netz?: Netzholer;
 }
 
 /** Der Unterordner, unter dem die Einsaetze auf dem Share liegen. */
@@ -159,6 +176,8 @@ export class Vermittlung {
         return this.#umgebung();
       case "programmstandPruefen":
         return this.#programmstand();
+      case "programmpaketHolen":
+        return this.#holePaket();
       case "diagnoseAnfordern":
         return this.#diagnose();
       case "einstellungenLesen":
@@ -307,6 +326,63 @@ export class Vermittlung {
       throw new Error("Auf diesem Arbeitsplatz ist keine Fenstersteuerung eingerichtet.");
     }
     return steuerung;
+  }
+
+  /**
+   * Holt ein Paket aus der Veroeffentlichung und legt es in den Share (M9.1).
+   *
+   * **Der Vergleichsmassstab ist die hoehere von zwei Fassungen**: der
+   * laufenden dieses Arbeitsplatzes und der, die bereits geprueft im Share
+   * liegt. Nur die **geprueft** vorhandene zaehlt: Ein unsigniertes Manifest,
+   * das eine Fassung 99 behauptete, unterbaende sonst jedes weitere Holen —
+   * kein Einbruch, aber eine wirksame Blockade, und die waere von aussen zu
+   * legen.
+   *
+   * Der Griff ins Netz ist eingespritzt (`netz`). Fehlt er — in den Tests zum
+   * Datenpfad —, ist der Weg schlicht nicht verfuegbar und sagt das.
+   */
+  async #holePaket(): Promise<Bezugsbefund> {
+    // **Erst der Share, dann das Netz.** Der fehlende Share ist die Lage des
+    // Bedieners und die nuetzlichere Auskunft; der fehlende Holer ist eine
+    // Eigenschaft dieses Baus. Andersherum bekaeme jemand ohne eingestellten
+    // Share eine Meldung ueber den Netzzugang zu lesen und suchte an der
+    // falschen Stelle.
+    const platz = await this.arbeitsplatz();
+    if (platz.sharePfad === "") {
+      return {
+        art: "abgelehnt",
+        grund: "keinShare",
+        meldung: "Es ist kein Share eingestellt, in den ein Paket zu legen waere.",
+      };
+    }
+    const netz = this.#o.netz;
+    if (netz === undefined) {
+      return {
+        art: "abgelehnt",
+        grund: "netzfehler",
+        meldung: "Diese Fassung hat keinen Netzzugang eingerichtet.",
+      };
+    }
+
+    const vorhanden = await this.#programmstand();
+    const befund = await holePaket({
+      netz,
+      dateisystem: this.#o.dateisystem,
+      auskunft: RELEASE_AUSKUNFT,
+      programmordner: path.join(platz.sharePfad, ORDNER_PROGRAMM),
+      verbinde: (ordner, name) => path.join(ordner, name),
+      vertrauterSchluessel: VERTRAUTER_SCHLUESSEL,
+      laufendeVersion: this.#o.programmversion,
+      ...(vorhanden.art === "verfuegbar" ? { vorhandeneVersion: vorhanden.version } : {}),
+      plattform: this.#o.plattform,
+      manifestGrenze: MANIFEST_GRENZE_BYTES,
+      paketGrenze: PAKET_GRENZE_BYTES,
+      protokolliere: this.#o.protokolliere,
+    });
+    if (befund.art === "abgelehnt") {
+      this.#o.protokolliere("warnung", `Paket nicht geholt (${befund.grund}): ${befund.meldung}`);
+    }
+    return befund;
   }
 
   /**

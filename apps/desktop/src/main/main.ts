@@ -29,6 +29,7 @@ import { knotenDateisystem } from "@s1/speicher";
 import { Arbeiterhof } from "./arbeiterhof.js";
 import { elektronDrucker } from "./drucker.js";
 import { Protokoll } from "./protokoll.js";
+import { knotenNetzholer } from "./netzholer.js";
 import { Vermittlung, type Fenstersteuerung } from "./vermittlung.js";
 import { knotenArbeiterFabrik } from "./knotenArbeiter.js";
 import { KANAL_MITTEILUNG, KANAL_RUF, zRuf, type Bildschirm, type Mitteilung } from "../kontrakt/index.js";
@@ -158,6 +159,9 @@ function starte(): void {
     protokolliere: (stufe, text) => {
       protokoll.schreibe(stufe, text);
     },
+    // M9.1: der einzige Ruf dieses Programms nach draußen, und er geschieht
+    // nur, wenn ein Mensch den Knopf drückt.
+    netz: knotenNetzholer(),
     // M7.3: Ort und Inhalt des Protokolls sind die erste Frage im Störfall.
     protokolldatei: protokoll.datei,
     letzteMeldungen: () => protokoll.letzteMeldungen,

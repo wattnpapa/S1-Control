@@ -75,6 +75,22 @@ Was damit zu tun ist, entscheidet ein Mensch: Der richtige Wert wird neu
 eingetragen und ist damit der jüngste. Die Hinweise stehen in der
 Diagnoseansicht.
 
+## Ein neues Programmpaket holen
+
+Unter dem Lagebild steht der Knopf **„Neues Paket für die Führungsstelle
+holen“**. Ihn drückt **eine** Person an **einem** Rechner: Sie holt das Paket
+aus der Veröffentlichung, die Anwendung prüft Signatur und Prüfsumme und legt
+es auf den Share. Alle anderen Arbeitsplätze bekommen es danach angeboten,
+ohne selbst ins Netz zu gehen.
+
+Vor dem Einsatz, nicht während. Ist ein Einsatz geöffnet, warnt die Anwendung
+und fragt ein zweites Mal — der Download geht über dieselbe Leitung wie der
+Share.
+
+Installiert wird nichts von selbst; es gibt keinen Auto-Updater. Nach dem
+Holen liegt eine Datei auf dem Share, und ein Mensch startet sie. Alles
+Weitere in [BETRIEB.md](BETRIEB.md).
+
 ## Die Ansichten
 
 <!-- ANSICHTEN ANFANG — erzeugt, nicht von Hand ändern -->

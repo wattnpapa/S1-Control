@@ -18,6 +18,7 @@
 import { useEffect } from "react";
 
 import { useLaden } from "./laden.js";
+import { Programmversorgung } from "./Programmversorgung.js";
 
 /** Größe in MB, eine Nachkommastelle — mehr sagt bei einem Paket nichts. */
 function groesse(bytes: number): string {
@@ -36,14 +37,18 @@ export function Programmstand(): React.JSX.Element | null {
   }, [pruefe, sharePfad]);
 
   // `undefined` heißt „noch nicht gefragt", die beiden anderen sind der
-  // Normalfall: kein Manifest auf dem Share, oder das eigene ist das neueste.
-  // Alle drei zeigen nichts — ein Hinweis über einen Normalzustand ist Lärm.
-  if (stand === undefined || stand.art === "keinManifest" || stand.art === "aktuell") return null;
+  // Normalfall. Keiner der drei erzeugt einen Hinweis — der Knopf zum Holen
+  // steht trotzdem da, denn **gerade dann** ist er gefragt: Wer kein Angebot
+  // sieht, will wissen, ob es eines gibt.
+  if (stand === undefined || stand.art === "keinManifest" || stand.art === "aktuell") {
+    return <Programmversorgung />;
+  }
 
   if (stand.art === "abgelehnt") {
     return (
       <section aria-label="Programmstand" className="programmstand abgelehnt">
         <strong>Ein Paket auf dem Share wurde abgelehnt.</strong> {stand.meldung}
+        <Programmversorgung />
       </section>
     );
   }
@@ -57,6 +62,7 @@ export function Programmstand(): React.JSX.Element | null {
           Zusicherung — sie steht hier, damit ein Bediener am Telefon sagen
           kann, welchen Schlüssel sein Rechner sieht. */}
       <span className="hinweistext"> Signiert mit {stand.kurzform}.</span>
+      <Programmversorgung />
     </section>
   );
 }

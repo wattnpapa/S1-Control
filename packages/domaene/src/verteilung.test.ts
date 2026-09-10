@@ -14,6 +14,8 @@ import { describe, expect, it } from "vitest";
 import { schluesselpaarErzeugen, zuHex } from "@bos/eeb-format";
 
 import {
+  anhang,
+  deuteRelease,
   pruefeManifest,
   signiereStand,
   vergleicheVersionen,
@@ -200,5 +202,127 @@ describe("pruefeManifest", () => {
       if (ergebnis.art !== "abgelehnt") return;
       expect(ergebnis.grund).toBe("unlesbar");
     }
+  });
+});
+
+describe("Die Antwort der Veröffentlichungsstelle (M9.1)", () => {
+  const WIRTE = ["github.com", "objects.githubusercontent.com"];
+
+  /** Eine Antwort, wie die Stelle sie liefert; angegeben wird nur die Abweichung. */
+  function antwort(teile: Record<string, unknown> = {}): string {
+    return JSON.stringify({
+      tag_name: "v2.1.0",
+      draft: false,
+      prerelease: false,
+      assets: [
+        {
+          name: "manifest.json",
+          browser_download_url: "https://github.com/wattnpapa/s1-control/releases/download/v2.1.0/manifest.json",
+          size: 512,
+        },
+        {
+          name: "S1-Control-Setup-2.1.0.exe",
+          browser_download_url:
+            "https://objects.githubusercontent.com/wattnpapa/s1-control/S1-Control-Setup-2.1.0.exe",
+          size: 91_000_000,
+        },
+      ],
+      ...teile,
+    });
+  }
+
+  it("liest Marke und Anhänge und streift das führende v ab", () => {
+    const befund = deuteRelease(antwort(), WIRTE);
+    expect(befund.art).toBe("gefunden");
+    if (befund.art !== "gefunden") return;
+    expect(befund.release.version).toBe("2.1.0");
+    expect(befund.release.anhaenge).toHaveLength(2);
+    expect(anhang(befund.release, "manifest.json")?.groesse).toBe(512);
+    expect(anhang(befund.release, "gibtesnicht")).toBeUndefined();
+  });
+
+  it("weist einen Entwurf ab", () => {
+    // Wer eine Vorabfassung an eine Führungsstelle geben will, gibt sie
+    // ausdrücklich — und nicht dadurch, dass jemand auf einen Knopf drückt.
+    expect(deuteRelease(antwort({ draft: true }), WIRTE).art).toBe("unbrauchbar");
+  });
+
+  it("weist eine Vorabfassung ab", () => {
+    expect(deuteRelease(antwort({ prerelease: true }), WIRTE).art).toBe("unbrauchbar");
+  });
+
+  it("weist einen Anhang auf einem fremden Wirt ab", () => {
+    const fremd = antwort({
+      assets: [
+        { name: "manifest.json", browser_download_url: "https://beispiel.invalid/x.json", size: 10 },
+      ],
+    });
+    const befund = deuteRelease(fremd, WIRTE);
+    expect(befund.art).toBe("unbrauchbar");
+    if (befund.art === "unbrauchbar") expect(befund.meldung).toContain("fremden Wirt");
+  });
+
+  it("lässt sich von einer Adresse mit Benutzerteil nicht täuschen", () => {
+    // `https://github.com@beispiel.invalid/x` besteht jede Prüfung auf ein
+    // Präfix und zeigt trotzdem woandershin. Zerlegt wird deshalb nach
+    // denselben Regeln, nach denen später aufgerufen wird.
+    const getarnt = antwort({
+      assets: [
+        {
+          name: "manifest.json",
+          browser_download_url: "https://github.com@beispiel.invalid/manifest.json",
+          size: 10,
+        },
+      ],
+    });
+    expect(deuteRelease(getarnt, WIRTE).art).toBe("unbrauchbar");
+  });
+
+  it("weist eine Adresse ohne https ab", () => {
+    const unverschluesselt = antwort({
+      assets: [
+        { name: "manifest.json", browser_download_url: "http://github.com/x.json", size: 10 },
+      ],
+    });
+    expect(deuteRelease(unverschluesselt, WIRTE).art).toBe("unbrauchbar");
+  });
+
+  it("weist einen Anhangsnamen mit Pfadanteil ab", () => {
+    const boese = antwort({
+      assets: [
+        {
+          name: "../../autostart.exe",
+          browser_download_url: "https://github.com/x.exe",
+          size: 10,
+        },
+      ],
+    });
+    const befund = deuteRelease(boese, WIRTE);
+    expect(befund.art).toBe("unbrauchbar");
+    if (befund.art === "unbrauchbar") expect(befund.meldung).toContain("Pfadanteil");
+  });
+
+  it("übergeht einen unvollständigen Anhang, statt die ganze Antwort zu verwerfen", () => {
+    // Die Stelle liefert zu jedem Anhang mehr Felder, als hier gebraucht
+    // werden; ein Eintrag ohne Größe ist kein Angriff, sondern ein Eintrag,
+    // der nicht gemeint ist.
+    const gemischt = antwort({
+      assets: [
+        { name: "liesmich.txt" },
+        {
+          name: "manifest.json",
+          browser_download_url: "https://github.com/manifest.json",
+          size: 512,
+        },
+      ],
+    });
+    const befund = deuteRelease(gemischt, WIRTE);
+    expect(befund.art).toBe("gefunden");
+    if (befund.art === "gefunden") expect(befund.release.anhaenge).toHaveLength(1);
+  });
+
+  it("weist eine Antwort ohne Marke und eine ohne JSON ab", () => {
+    expect(deuteRelease("{}", WIRTE).art).toBe("unbrauchbar");
+    expect(deuteRelease("kein json", WIRTE).art).toBe("unbrauchbar");
   });
 });

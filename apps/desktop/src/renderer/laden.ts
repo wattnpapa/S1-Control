@@ -35,6 +35,7 @@ import type {
   Fuestansicht,
   Kostenansicht,
   Bedienergebnis,
+  Bezugsbefund,
   Bildschirm,
   Diagnose,
   EebStand,
@@ -212,6 +213,17 @@ export interface Laden {
   /** Was der Programmordner des Shares hergibt (M7.2); `undefined` heißt „nicht gefragt“. */
   readonly programmstand: Programmbefund | undefined;
   pruefeProgrammstand(): Promise<void>;
+
+  /**
+   * Ein Paket aus der Veröffentlichung holen und in den Share legen (M9.1).
+   *
+   * Läuft, solange `holtPaket` gesetzt ist; das Ergebnis steht danach in
+   * `bezug`. Beides im Store und nicht in der Komponente, weil der Vorgang
+   * Minuten dauern kann und ein Wechsel der Ansicht ihn nicht abbrechen soll.
+   */
+  readonly bezug: Bezugsbefund | undefined;
+  readonly holtPaket: boolean;
+  holePaket(): Promise<void>;
 
   /** Was dieser Arbeitsplatz über sich weiß (M7.3); `undefined` heißt „nicht gefragt“. */
   readonly diagnose: Diagnose | undefined;
@@ -660,6 +672,35 @@ export const useLaden = create<Laden>((setze, hole) => {
         zustand.fuest === undefined ? undefined : zustand.holeFuest(),
         zustand.eingangskorb === undefined ? undefined : zustand.holeEingangskorb(),
       ]);
+    },
+
+    bezug: undefined,
+    holtPaket: false,
+
+    async holePaket() {
+      // **Kein `mitFehlerbild`**: Der Vorgang hat sein eigenes Ergebnisfeld,
+      // und eine Ablehnung ist hier eine Auskunft und kein Fehler des
+      // Fensters. Ein Fehlerbild über allem verdeckte genau den Grund.
+      if (hole().holtPaket) return;
+      setze({ holtPaket: true, bezug: undefined });
+      try {
+        const befund = await rufe({ art: "programmpaketHolen" });
+        if (befund !== null && typeof befund === "object") setze({ bezug: befund as Bezugsbefund });
+      } catch (fehler) {
+        setze({
+          bezug: {
+            art: "abgelehnt",
+            grund: "netzfehler",
+            meldung: fehler instanceof Error ? fehler.message : String(fehler),
+          },
+        });
+      } finally {
+        setze({ holtPaket: false });
+        // Nach einem geholten Paket steht auf dem Share etwas Neues — der
+        // Hinweis daneben soll das sofort zeigen und nicht erst beim
+        // nächsten Start.
+        await hole().pruefeProgrammstand();
+      }
     },
 
     diagnose: undefined,

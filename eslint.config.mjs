@@ -211,7 +211,11 @@ export default tseslint.config(
       "no-restricted-syntax": [
         "error",
         {
-          selector: "CallExpression > MemberExpression[property.name=/Sync$/]",
+          // Gemeint sind die `*Sync`-Verfahren von Node. Ausgenommen ist, was
+          // auf `OhneSync` endet: `schreibeUeberOhneSync` der Speicherschicht
+          // sagt „ohne fsync" und ist gerade **nicht** synchron — die Regel
+          // traf hier den einen Namen, der ihr Gegenteil bedeutet (M9.1).
+          selector: "CallExpression > MemberExpression[property.name=/(?<!Ohne)Sync$/]",
           message:
             "Kein synchroner Aufruf im Main-Prozess (DoD M2.1): Er friert jedes Fenster ein.",
         },
