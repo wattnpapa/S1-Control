@@ -93,6 +93,105 @@
         margin: 0;
         padding-left: 1.2rem;
       }
+
+      /* ---- Das Lagebild (M3) ------------------------------------------- */
+
+      .lagekopf,
+      .baumkopf {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin-bottom: 0.5rem;
+      }
+      .lagekopf h2,
+      .baumkopf h2 {
+        margin: 0 0.5rem 0 0;
+      }
+      .lagespalten {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.5rem;
+        align-items: flex-start;
+      }
+      .baum {
+        min-width: 22rem;
+        flex: 1 1 22rem;
+      }
+      .baumliste {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+      }
+      .baumzeile {
+        display: flex;
+        gap: 0.8rem;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: 1px solid transparent;
+        padding: 0.2rem 0.4rem;
+        font: inherit;
+        cursor: pointer;
+      }
+      .baumzeile:hover {
+        border-color: rgba(128, 128, 128, 0.4);
+      }
+      .baumzeile.gewaehlt {
+        border-color: currentColor;
+        font-weight: 600;
+      }
+      .baumzeile .typ {
+        font-size: 0.8rem;
+        opacity: 0.6;
+      }
+      /* Die Zahlen stehen rechts und in Tabellenziffern: Wer Staerken
+         vergleicht, liest Spalten und keine Woerter. */
+      .baumzeile .zahlen {
+        margin-left: auto;
+        font-variant-numeric: tabular-nums;
+        font-size: 0.85rem;
+      }
+      .schalter {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+        margin: 0;
+        font-size: 0.85rem;
+      }
+      .schalter input {
+        display: inline;
+        width: auto;
+      }
+      /* Die Maske liegt ueber der Ansicht, damit der Blick nicht springt,
+         und sie ist schmal: Ein Formular, das die ganze Breite fuellt,
+         zwingt das Auge bei jeder Zeile quer ueber den Bildschirm. */
+      .maske {
+        position: fixed;
+        inset: 50% auto auto 50%;
+        transform: translate(-50%, -50%);
+        min-width: 22rem;
+        max-width: min(32rem, 90vw);
+        padding: 1rem;
+        border: 1px solid rgba(128, 128, 128, 0.6);
+        border-radius: 6px;
+        background: Canvas;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      }
+      .maske h3 {
+        margin: 0 0 0.8rem;
+        font-size: 1rem;
+      }
+      .maskenknoepfe {
+        display: flex;
+        gap: 0.5rem;
+        margin-top: 1rem;
+      }
+      select {
+        display: block;
+        width: min(40rem, 100%);
+        padding: 0.3rem;
+      }
     </style>
   </head>
   <body>

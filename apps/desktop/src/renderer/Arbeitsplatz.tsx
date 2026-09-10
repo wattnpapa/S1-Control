@@ -10,6 +10,7 @@
 import { useEffect, useState } from "react";
 
 import { bruecke } from "./bruecke.js";
+import { Lage } from "./Lage.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 
@@ -70,29 +71,7 @@ export function Arbeitsplatz(): React.JSX.Element {
       )}
 
       <main>
-        {laden.akteId === undefined ? (
-          <Auswahl />
-        ) : (
-          <section aria-label="Geöffneter Einsatz">
-            <h2>{laden.lagebild?.einsatzName ?? "Wird geöffnet …"}</h2>
-            <p className="hinweistext">
-              Das Lagebild kommt mit M3. Dieses Fenster zeigt bis dahin den Stand der Akte.
-            </p>
-            <button type="button" onClick={() => void laden.schliesseEinsatz()}>
-              Einsatz schließen
-            </button>
-            <button
-              type="button"
-              disabled={laden.lagebild === undefined || laden.lagebild.undoTiefe === 0}
-              onClick={() => void laden.zurueck()}
-            >
-              Rückgängig
-              {laden.lagebild?.undoObersteArt === undefined
-                ? ""
-                : ` (${laden.lagebild.undoObersteArt})`}
-            </button>
-          </section>
-        )}
+        {laden.akteId === undefined ? <Auswahl /> : <Lage />}
 
         {laden.hinweise.length > 0 && (
           <section aria-label="Hinweise" className="hinweise">
