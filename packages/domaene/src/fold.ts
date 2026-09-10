@@ -50,7 +50,7 @@ import {
   type Akteur,
   type EreignisId,
 } from "./ereignis.js";
-import { vergleicheHlc, type Hlc } from "./hlc.js";
+import { hlcAlsText, vergleicheHlc, type Hlc } from "./hlc.js";
 import { KATALOG, type Katalogeintrag } from "./katalog/index.js";
 import {
   kanonischeSerialisierung,
@@ -73,6 +73,7 @@ import {
   FOLD_VERSION,
   KAPPUNG_MAX,
   type AbschnittZustand,
+  type ArchivierungZustand,
   type Beobachtung as ZustandsBeobachtung,
   type Erstwert,
   type Feld,
@@ -264,6 +265,23 @@ interface EntitaetFaltung {
   readonly erstwerte: Map<string, ErstwertStand>;
 }
 
+/**
+ * Ein Eintrag der Abbildung `archivierungen` (§7.2).
+ *
+ * Der Eintrag entsteht **unabhaengig davon, ob das benannte Ereignis bekannt
+ * ist**: Trifft die Ruecknahme vor der Archivierung ein, steht er als
+ * **Grabstein** da; die spaeter eintreffende Archivierung findet ihn vor.
+ */
+interface ArchivierungStand {
+  archiviert?: {
+    readonly hlc: Hlc;
+    readonly wanduhr: string;
+    readonly zeitpunkt: string;
+    readonly snapshotHash: string;
+  };
+  readonly ruecknahmen: Map<EreignisId, { readonly erwarteteHlc: string; readonly hlc: Hlc }>;
+}
+
 /** Ein Ereignis, das eine reservierte Id treffen wollte (§5.3.4). */
 interface ReservierterTreffer {
   readonly id: string;
@@ -277,6 +295,8 @@ export interface Faltung {
   /** Schluessel ist der Entitaetspfad: `einsatz` oder `<art>/<id>`. */
   readonly entitaeten: Map<string, EntitaetFaltung>;
   readonly reservierteId: Map<EreignisId, ReservierterTreffer>;
+  /** Nach **Ereignis-Id** geschluesselt, nicht nach Entitaet (§7.2). */
+  readonly archivierungen: Map<EreignisId, ArchivierungStand>;
   readonly unbekannt: Map<EreignisId, UnbekanntesEreignis>;
 }
 
@@ -286,6 +306,7 @@ export function leereFaltung(): Faltung {
     gesehen: new Set(),
     entitaeten: new Map(),
     reservierteId: new Map(),
+    archivierungen: new Map(),
     unbekannt: new Map(),
   };
 }
@@ -304,6 +325,12 @@ function kopiere(faltung: Faltung): Faltung {
     gesehen: new Set(faltung.gesehen),
     entitaeten,
     reservierteId: new Map(faltung.reservierteId),
+    archivierungen: new Map(
+      [...faltung.archivierungen].map(([id, stand]) => [
+        id,
+        { archiviert: stand.archiviert, ruecknahmen: new Map(stand.ruecknahmen) },
+      ]),
+    ),
     unbekannt: new Map(faltung.unbekannt),
   };
 }
@@ -587,9 +614,33 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
   }
 
   if (eintrag.entitaet === "archivierungen") {
-    // Die Barriere `EinsatzArchiviert` und ihre Ruecknahme kommen in Stufe 3e
-    // dazu (§7). Bis dahin ebenso sichtbar wie oben.
-    faltung.unbekannt.set(ereignis.id, alsUnbekannt(ereignis, "ART"));
+    // §7.1: `einsatzId` wird vom Fold **nicht gelesen und nicht gespeichert**.
+    // Der Einsatz ist der der Akte; ein Abgleich waere eine zweite Wahrheit
+    // ueber etwas, das der Ordner schon sagt (T183).
+    const unter =
+      ereignis.typ === "EinsatzArchiviert"
+        ? ereignis.id
+        : (nutzlast["archivierungEreignisId"] as string);
+    const stand: ArchivierungStand = faltung.archivierungen.get(unter) ?? {
+      ruecknahmen: new Map(),
+    };
+    if (ereignis.typ === "EinsatzArchiviert") {
+      stand.archiviert = {
+        hlc: ereignis.hlc,
+        wanduhr: ereignis.wanduhr,
+        zeitpunkt: nutzlast["zeitpunkt"] as string,
+        snapshotHash: nutzlast["snapshotHash"] as string,
+      };
+    } else {
+      // Eine Ruecknahme benennt die Archivierung mit Id **und** HLC. Sie wirkt
+      // nur auf eine Archivierung, deren HLC genau diese ist — das ist der
+      // gesehene Vorher-Wert im Sinne von Auflage 6 (§7.2).
+      stand.ruecknahmen.set(ereignis.id, {
+        erwarteteHlc: nutzlast["archivierungHlc"] as string,
+        hlc: ereignis.hlc,
+      });
+    }
+    faltung.archivierungen.set(unter, stand);
     return;
   }
 
@@ -1096,6 +1147,16 @@ interface GebauteEntitaet {
   readonly werte: Record<string, unknown>;
   readonly felder: ReadonlyMap<string, Feld<unknown>>;
   readonly erstwerte: ReadonlyMap<string, ErstwertStand>;
+  /**
+   * Die **hoechste** HLC aller gehaltenen Beobachtungen je Feld (§7.3).
+   *
+   * Bei einem `Feld<T>` ist das immer der Gewinner; bei einem `Erstwert<T>`
+   * kann es ein verdraengter sein. Sonst flackerte der Hinweis: Eine
+   * Zusammenfuehrung mit HLC 9 nach einer Archivierung mit HLC 5 verloere
+   * nach dem Eintreffen der Anlage gegen den Gewinner mit der **kleineren**
+   * HLC und verschwaende, obwohl sie unveraendert im Zustand steht (T187).
+   */
+  readonly hoechsteHlc: ReadonlyMap<string, Hlc>;
 }
 
 /**
@@ -1124,10 +1185,12 @@ function baueEntitaet(
   if (art !== "meldung" && art !== "anhang") werte["verworfeneAnlagen"] = verworfeneAnlagen;
 
   const felder = new Map<string, Feld<unknown>>();
+  const hoechsteHlc = new Map<string, Hlc>();
   for (const name of sortierteSchluessel(eintrag.felder)) {
     const stand = eintrag.felder.get(name) as FeldStand<unknown>;
     const feld = feldAus(stand);
     felder.set(name, feld);
+    hoechsteHlc.set(name, stand.gewinner.hlc);
     setzeVerschachtelt(werte, name, feld);
 
     const feldpfad = `${pfadDerEntitaet}/${name}`;
@@ -1172,6 +1235,11 @@ function baueEntitaet(
   for (const name of sortierteSchluessel(eintrag.erstwerte)) {
     const stand = eintrag.erstwerte.get(name) as ErstwertStand;
     werte[name] = erstwertAus(stand);
+    let hoechste = stand.gewinner.hlc;
+    for (const verdraengt of stand.verdraengt.values()) {
+      if (vergleicheHlc(verdraengt.hlc, hoechste) > 0) hoechste = verdraengt.hlc;
+    }
+    hoechsteHlc.set(name, hoechste);
     // §3.12: Der Hinweis entsteht **je verdraengter Beobachtung**, nicht je
     // Entitaet — bei drei Zusammenfuehrungen derselben Quelle stehen zwei
     // Eintraege in `verdraengt` und zwei Hinweise im Zustand.
@@ -1187,7 +1255,7 @@ function baueEntitaet(
 
   hinweise.push(...anlageHinweise(pfadDerEntitaet, anlage, verworfeneAnlagen));
 
-  return { art, id, werte, felder, erstwerte: eintrag.erstwerte };
+  return { art, id, werte, felder, erstwerte: eintrag.erstwerte, hoechsteHlc };
 }
 
 /**
@@ -1200,6 +1268,8 @@ export function materialisiere(faltung: Faltung): Zustand {
   const hinweise: Konflikthinweis[] = [];
   const wartend = new Map<string, WartendeBeobachtung[]>();
   const gebaut = new Map<string, Map<string, GebauteEntitaet>>();
+  /** Pfad → Feld → hoechste gehaltene HLC; Grundlage von §7.3. */
+  const hlcJeFeld = new Map<string, Map<string, Hlc>>();
 
   for (const pfad of sortierteSchluessel(faltung.entitaeten)) {
     const eintrag = faltung.entitaeten.get(pfad) as EntitaetFaltung;
@@ -1232,6 +1302,9 @@ export function materialisiere(faltung: Faltung): Zustand {
       }
       if (wartende.length === 0) continue;
       wartend.set(pfad, wartende);
+      const jeFeld = new Map<string, Hlc>();
+      for (const { feld, beobachtung } of wartende) jeFeld.set(feld, beobachtung.hlc);
+      hlcJeFeld.set(pfad, jeFeld);
       // Nur die Ids, die `wartend` **haelt** — nicht die aller je
       // eingetroffenen. Sonst hinge der Inhalt daran, ob dieser Client voll
       // gefaltet oder aus einem Schnappschuss geladen hat, und P7 fiele.
@@ -1244,6 +1317,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     }
 
     const entitaet = baueEntitaet(art, id, eintrag, hinweise);
+    hlcJeFeld.set(pfad, new Map(entitaet.hoechsteHlc));
     const nachArt = gebaut.get(art) ?? new Map<string, GebauteEntitaet>();
     nachArt.set(id, entitaet);
     gebaut.set(art, nachArt);
@@ -1785,6 +1859,134 @@ export function materialisiere(faltung: Faltung): Zustand {
     }
   }
 
+  // --- Die Barriere `EinsatzArchiviert` (§7) ------------------------------
+  const archivierungen = new Map<string, ArchivierungZustand>();
+  let massgeblich: { id: EreignisId; hlc: Hlc } | undefined;
+  for (const id of [...faltung.archivierungen.keys()].sort(vergleicheNachCodepunkt)) {
+    const stand = faltung.archivierungen.get(id) as ArchivierungStand;
+    const eigeneHlc = stand.archiviert?.hlc;
+    // §7.2: `gilt` ist eine **Konjunktion ueber die Menge** — kommutativ,
+    // assoziativ und idempotent ohne jede Auswahl. Eine Ruecknahme wirkt auch
+    // dann, wenn ihre HLC **kleiner** ist als die der Archivierung: der Fall
+    // der vorlaufenden fremden Uhr, den die Speicherschicht als Normalfall
+    // fuehrt. Und eine Ruecknahme auf eine noch nicht vergebene Id vergiftet
+    // sie nicht dauerhaft — eine spaetere Archivierung truege eine andere HLC.
+    const passendeRuecknahme = (r: { erwarteteHlc: string }): boolean =>
+      eigeneHlc !== undefined && r.erwarteteHlc === hlcAlsText(eigeneHlc);
+    const gilt =
+      eigeneHlc !== undefined && ![...stand.ruecknahmen.values()].some(passendeRuecknahme);
+    archivierungen.set(id, {
+      gilt,
+      ...(stand.archiviert === undefined
+        ? {}
+        : {
+            hlc: stand.archiviert.hlc,
+            wanduhr: stand.archiviert.wanduhr,
+            zeitpunkt: stand.archiviert.zeitpunkt,
+            snapshotHash: stand.archiviert.snapshotHash,
+          }),
+      // Immer vorhanden, im Regelfall als leere Liste: §7.6 der Speicher-
+      // schicht behaelt leere Listen, und ein Client, der das Feld wegliesse,
+      // haette einen anderen `zustandsHash` (T137).
+      zurueckgenommenDurch: [...stand.ruecknahmen]
+        .map(([ereignisId, r]) => ({ ereignisId, erwarteteHlc: r.erwarteteHlc, hlc: r.hlc }))
+        .sort((a, b) => vergleicheNachCodepunkt(a.ereignisId, b.ereignisId)),
+    });
+    if (gilt && eigeneHlc !== undefined) {
+      const besser =
+        massgeblich === undefined ||
+        vergleicheHlc(eigeneHlc, massgeblich.hlc) < 0 ||
+        (vergleicheHlc(eigeneHlc, massgeblich.hlc) === 0 &&
+          vergleicheNachCodepunkt(id, massgeblich.id) < 0);
+      if (besser) massgeblich = { id, hlc: eigeneHlc };
+    }
+    // §3.12: Eine zweite Archivierung erzeugt keine zweite Barriere, wohl aber
+    // den Wirkungslos-Hinweis — sie ist nicht falsch, nur spaeter.
+    for (const [ereignisId, r] of stand.ruecknahmen) {
+      // Solange die Archivierung fehlt, entsteht **kein** Hinweis: Ein
+      // Grabstein, der auf sie wartet, und eine Ruecknahme, die ins Leere
+      // geht, sind im Zustand nicht unterscheidbar (§3.12).
+      if (eigeneHlc === undefined || passendeRuecknahme(r)) continue;
+      hinweise.push({
+        art: "wirkungslosGegenTerminalzustand",
+        feldpfad: `archivierungen/${id}`,
+        ereignis: ereignisId,
+        grund: "RUECKNAHME_OHNE_PASSENDE_ARCHIVIERUNG",
+      });
+    }
+  }
+  for (const [id, eintrag] of archivierungen) {
+    if (!eintrag.gilt || id === massgeblich?.id) continue;
+    hinweise.push({
+      art: "wirkungslosGegenTerminalzustand",
+      feldpfad: `archivierungen/${id}`,
+      ereignis: id,
+      grund: "ZWEITE_ARCHIVIERUNG",
+    });
+  }
+
+  if (massgeblich !== undefined) {
+    // §7.3: **Das Ereignis wird angenommen, gefaltet und wirkt.** Verworfen
+    // wird nichts — sichtbar gemacht wird es je Entitaet, nicht je Ereignis:
+    // Bei einer Archivierung mit versehentlich kleiner HLC waeren das sonst
+    // sechsstellig viele Hinweise im Hash.
+    const barriere = massgeblich;
+    for (const pfad of [...hlcJeFeld.keys()].sort(vergleicheNachCodepunkt)) {
+      const jeFeld = hlcJeFeld.get(pfad) as Map<string, Hlc>;
+      const dienstposten = pfad.startsWith("dienstposten/") && !wartend.has(pfad);
+      const eigene: string[] = [];
+      const zellen: string[] = [];
+      for (const [feld, hlc] of jeFeld) {
+        if (vergleicheHlc(hlc, barriere.hlc) <= 0) continue;
+        if (dienstposten && feld.startsWith("schichtplan/")) {
+          zellen.push(feld.slice("schichtplan/".length));
+        } else eigene.push(feld);
+      }
+      if (eigene.length > 0) {
+        hinweise.push({
+          art: "nachArchivierungEingegangen",
+          feldpfad: pfad,
+          archivierung: barriere.id,
+          betroffeneFelder: eigene.sort(vergleicheNachCodepunkt),
+        });
+      }
+      if (zellen.length > 0) {
+        // §7.3: **ein** Hinweis je Dienstposten, mit der Wurzel `schichtplan`
+        // statt `dienstposten` — das FueSt-Blatt nach Feierabend
+        // weiterzuschreiben ist genau der Vorgang, den Auflage 13 sichtbar
+        // haben will (T181).
+        hinweise.push({
+          art: "nachArchivierungEingegangen",
+          feldpfad: `schichtplan/${pfad.slice("dienstposten/".length)}`,
+          archivierung: barriere.id,
+          betroffeneFelder: zellen.sort(vergleicheNachCodepunkt),
+        });
+      }
+    }
+
+    // §7.3, die drei Bedingungen (a), (b) und (c) fuer eine Ruecknahme.
+    for (const [id, eintrag] of archivierungen) {
+      const eigeneHlc = eintrag.hlc;
+      const betroffen = eintrag.zurueckgenommenDurch
+        .filter(
+          (r) =>
+            eigeneHlc !== undefined &&
+            r.erwarteteHlc === hlcAlsText(eigeneHlc) &&
+            vergleicheHlc(r.hlc, barriere.hlc) > 0,
+        )
+        .map((r) => `zurueckgenommenDurch/${r.ereignisId}`)
+        .sort(vergleicheNachCodepunkt);
+      if (betroffen.length === 0) continue;
+      hinweise.push({
+        art: "nachArchivierungEingegangen",
+        feldpfad: `archivierungen/${id}`,
+        // Die Bedeutung des Feldes ist ueberall „nach welcher Barriere".
+        archivierung: barriere.id,
+        betroffeneFelder: betroffen,
+      });
+    }
+  }
+
   // --- Einsatz ------------------------------------------------------------
   const einsatzGebaut = gebaut.get("einsatz")?.get("einsatz");
   const einsatz =
@@ -1799,8 +2001,18 @@ export function materialisiere(faltung: Faltung): Zustand {
             ((einsatzGebaut.werte["angelegtMitNutzlast"] as Record<string, unknown>)?.[
               "einsatzId"
             ] as string) ?? "",
-          // `ARCHIVIERT` kommt mit der Barriere in Stufe 3e dazu (§7).
-          status: gilt(einsatzGebaut.felder.get("ende")) ? "BEENDET" : "AKTIV",
+          // §5.2: `status` ist abgeleitet — archiviert, wenn §7 es sagt;
+          // sonst beendet, wenn `ende` gesetzt ist; sonst aktiv. Kein Ereignis
+          // setzt ihn direkt.
+          status:
+            massgeblich !== undefined
+              ? "ARCHIVIERT"
+              : gilt(einsatzGebaut.felder.get("ende"))
+                ? "BEENDET"
+                : "AKTIV",
+          ...(massgeblich === undefined
+            ? {}
+            : { archiviertDurch: massgeblich.id, archiviertMit: massgeblich.hlc }),
         };
 
   // --- Kappung (§3.2, Startwert S12) --------------------------------------
@@ -1861,7 +2073,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     meldungen: alsDatensammlung(meldungen) as Zustand["meldungen"],
     anhaenge: alsDatensammlung(sammlung("anhang")) as Zustand["anhaenge"],
     etbEintraege: alsDatensammlung(sammlung("etbEintrag")) as Zustand["etbEintraege"],
-    archivierungen: leereSammlung(),
+    archivierungen: alsDatensammlung(archivierungen),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),
