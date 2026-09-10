@@ -949,7 +949,14 @@ export class Aktendienst {
       return { art: "nichtMoeglich", meldung: "Es liegt kein vollständig gescannter Bogen vor." };
     }
     const befund = await liesBogen(this.#scanPayload, this.#o.kompressor);
-    const einheitId = `E-${befund.meldungId.slice(0, 12)}`;
+    // Die Kennung kommt aus dem **Fingerabdruck** und nicht aus der
+    // `meldungId` (M6.0): Sonst legte jede Tagesmeldung derselben Einheit eine
+    // zweite Einheit an, und die Fuehrungsstelle saehe dieselbe Gruppe nach
+    // drei Tagen dreimal im Lagebild.
+    const einheitId = befund.einheitId;
+    // Gibt es die Einheit schon, ist dies eine **Revision**: Die Uebernahme
+    // schreibt dann Feldereignisse und keine zweite Anlage (§5.8.2).
+    const vorhanden = this.#zustand.einheiten[einheitId];
     const entwuerfe = uebernahmeEntwuerfe(befund.bogen, befund.signatur, {
       meldungId: befund.meldungId,
       einheitId,
@@ -963,8 +970,9 @@ export class Aktendienst {
       empfangenAm: this.#jetztText(),
       quelle: "SCAN",
       rohPayload: this.#scanText,
-      einheitSchluessel: befund.meldungId,
-    });
+      einheitSchluessel: befund.einheitSchluessel,
+    },
+    vorhanden);
 
     let geschrieben = 0;
     for (const entwurf of entwuerfe) {
