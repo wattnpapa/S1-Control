@@ -1,0 +1,168 @@
+# Der Zeichensatz bleibt im Gleichstand mit seiner Quelle.
+#
+# ────────────────────────────────────────────────────────────────────────────
+# Warum es diesen Workflow gibt.
+#
+# Die taktischen Zeichen kommen aus jonas-koeritz/Taktische-Zeichen. Dort
+# kommen Zeichen dazu — Einheiten, Fahrzeuge, Einrichtungen —, und in einer
+# Führungsstelle fällt das erst auf, wenn eines fehlt. Ein Mensch, der einmal
+# im Quartal daran denkt, ist der schlechtere Weg: Er denkt nicht daran.
+#
+# Der Lauf **öffnet einen Pull Request und merged nichts**. Zeichen sind
+# Anzeige: Ein Zeichen, das sich still ändert, ändert still die Lagekarte.
+# Was hereinkommt, wird gelesen.
+#
+# Gebaut wird aus den Quellen (Jinja2-Vorlagen, `make svg`) und nicht aus dem
+# Release-Archiv: Das Archiv hängt an der Laune des Veröffentlichens, der
+# Hauptzweig trägt den Stand. Gebraucht wird dafür nur j2cli — Inkscape und
+# optipng bleiben außen vor, weil wir keine PNG brauchen.
+
+name: Taktische Zeichen
+
+on:
+  schedule:
+    # Montags früh, außerhalb der Arbeitszeit einer Führungsstelle.
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+concurrency:
+  group: taktische-zeichen
+  cancel-in-progress: false
+
+jobs:
+  einspielen:
+    name: Zeichensatz prüfen und einspielen
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: v2-architektur
+
+      - name: Zeichensatz holen
+        uses: actions/checkout@v4
+        with:
+          repository: jonas-koeritz/Taktische-Zeichen
+          path: zeichensatz
+          fetch-depth: 1
+
+      - name: Stand der Quelle feststellen
+        id: quelle
+        run: |
+          cd zeichensatz
+          echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+          echo "kurz=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+          echo "datum=$(git log -1 --format=%cs)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: j2cli installieren
+        run: pip install --quiet j2cli
+
+      - name: SVG erzeugen
+        run: make -C zeichensatz svg -j 4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Zeichen einspielen
+        run: |
+          node bau/zeichen-importieren.mjs \
+            --quelle zeichensatz/build/svg \
+            --commit "${{ steps.quelle.outputs.commit }}" \
+            --datum "${{ steps.quelle.outputs.datum }}"
+
+      # Ein Import, der die Hälfte der Zeichen verliert, ist kein Import,
+      # sondern ein Schaden. Der Lauf bricht ab, bevor daraus ein PR wird.
+      - name: Ergebnis prüfen
+        run: |
+          node --input-type=module -e '
+            import { readFileSync, existsSync } from "node:fs";
+            import path from "node:path";
+            const wurzel = "apps/desktop/assets/tz";
+            const index = JSON.parse(readFileSync(path.join(wurzel, "index.json"), "utf8"));
+            if (index.zeichen.length < 500) {
+              throw new Error(`Nur ${index.zeichen.length} Zeichen — das ist kein vollständiger Satz.`);
+            }
+            for (const eintrag of index.zeichen) {
+              if (!existsSync(path.join(wurzel, eintrag.datei))) {
+                throw new Error(`Im Verzeichnis steht ${eintrag.datei}, die Datei fehlt.`);
+              }
+            }
+            if (!existsSync(path.join(wurzel, "schrift/RobotoSlab-Bold.woff"))) {
+              throw new Error("Die Schrift fehlt — die Zeichen trügen ihre Beschriftung nicht.");
+            }
+            console.log(`${index.zeichen.length} Zeichen geprüft.`);
+          '
+
+      - name: Änderungen feststellen
+        id: aenderung
+        run: |
+          if git diff --quiet -- apps/desktop/assets/tz; then
+            echo "geaendert=nein" >> "$GITHUB_OUTPUT"
+            echo "Der Zeichensatz ist unverändert."
+          else
+            echo "geaendert=ja" >> "$GITHUB_OUTPUT"
+            git diff --stat -- apps/desktop/assets/tz | tail -1
+          fi
+
+      - name: Pull Request öffnen
+        if: steps.aenderung.outputs.geaendert == 'ja'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          KURZ: ${{ steps.quelle.outputs.kurz }}
+          COMMIT: ${{ steps.quelle.outputs.commit }}
+          DATUM: ${{ steps.quelle.outputs.datum }}
+        run: |
+          set -euo pipefail
+          ZWEIG="zeichensatz/${KURZ}"
+
+          # Die Liste der dazugekommenen und der entfallenen Zeichen steht im
+          # PR-Text: Sie ist das, was gelesen werden muss.
+          NEU="$(git status --porcelain -- apps/desktop/assets/tz | grep '^??' | sed 's|^?? ||' | head -40 || true)"
+          WEG="$(git status --porcelain -- apps/desktop/assets/tz | grep '^ D' | sed 's|^ D ||' | head -40 || true)"
+          # `--input-type=module`, weil der Baum ESM ist: `require` gibt es hier nicht.
+          ANZAHL="$(node --input-type=module -e '
+            import { readFileSync } from "node:fs";
+            console.log(JSON.parse(readFileSync("apps/desktop/assets/tz/index.json", "utf8")).zeichen.length);
+          ')"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -B "$ZWEIG"
+          git add apps/desktop/assets/tz
+          git commit -m "chore(zeichen): Zeichensatz auf ${KURZ} (${DATUM})" \
+            -m "Erzeugt von .github/workflows/taktische-zeichen.yml aus jonas-koeritz/Taktische-Zeichen@${COMMIT}."
+          git push --force-with-lease origin "$ZWEIG"
+
+          if gh pr view "$ZWEIG" --json number >/dev/null 2>&1; then
+            echo "Es gibt bereits einen Pull Request für $ZWEIG."
+            exit 0
+          fi
+
+          {
+            echo "Der Zeichensatz oben hat sich geändert."
+            echo
+            echo "* Quelle: jonas-koeritz/Taktische-Zeichen@\`${COMMIT}\` (${DATUM})"
+            echo "* Zeichen im Satz: ${ANZAHL}"
+            echo
+            if [ -n "$NEU" ]; then echo "**Neu**"; echo; echo '```'; echo "$NEU"; echo '```'; echo; fi
+            if [ -n "$WEG" ]; then echo "**Entfallen**"; echo; echo '```'; echo "$WEG"; echo '```'; echo; fi
+            echo "Zeichen sind Anzeige: Bitte ansehen, bevor das hier zusammengeführt wird."
+            echo "Die Quellen stehen unter CC BY 4.0, die erzeugten Zeichen unter CC0 1.0."
+          } > /tmp/pr-text.md
+
+          gh pr create \
+            --base v2-architektur \
+            --head "$ZWEIG" \
+            --title "Taktische Zeichen: Stand ${KURZ} (${DATUM})" \
+            --body-file /tmp/pr-text.md
