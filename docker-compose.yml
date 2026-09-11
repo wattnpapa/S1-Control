@@ -1,0 +1,54 @@
+# S1-Control v2 — Web-Schale im Container, im Mischbetrieb mit den
+# Desktop-Arbeitsplaetzen auf demselben Share (ADR-005).
+#
+#   docker compose up -d --build
+#   http://<rechner>:8080
+#
+# Zwei Wege, den Share in den Container zu bekommen; einer von beiden muss
+# unter `volumes:` des Dienstes aktiv sein:
+#
+#   A) Der Docker-Host hat das SMB-Share bereits eingehaengt (z. B. unter
+#      /mnt/s1-share, per fstab oder systemd-mount). Dann genuegt der
+#      Bind-Mount unten. Das ist der einfachere und robustere Weg, weil das
+#      Einhaengen dort liegt, wo es auch ueberwacht wird.
+#   B) Docker haengt das Share selbst ein (Volume `s1-share` mit dem
+#      cifs-Treiber, unten auskommentiert). Zugangsdaten kommen aus `.env`
+#      (Vorlage: .env.beispiel), nicht aus dieser Datei.
+#
+# Der Container laeuft als Benutzer `node` (uid 1000). Beim cifs-Mount
+# entscheiden `uid=`/`gid=` darueber, wem die Dateien gehoeren — sie muessen
+# zu diesem Benutzer passen, sonst kann die Schale nicht anhaengen (§8.4:
+# EACCES ist ein dauerhafter Fehler, den die Statuszeile meldet).
+
+services:
+  s1-web:
+    build:
+      context: .
+      args:
+        S1_APP_VERSION: "0.0.0"
+    image: s1-control-web
+    container_name: s1-control-web
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Wie lange ein Browser-Arbeitsplatz ohne Browser offen bleibt (Sekunden).
+      S1_WEB_GNADENFRIST_S: "120"
+    volumes:
+      - s1-daten:/daten
+      # Weg A: auf dem Host eingehaengter Share
+      - /mnt/s1-share:/share
+      # Weg B: von Docker eingehaengter Share (Volume unten einkommentieren)
+      # - s1-share:/share
+
+volumes:
+  s1-daten:
+  # s1-share:
+  #   driver: local
+  #   driver_opts:
+  #     type: cifs
+  #     device: "//${S1_NAS_HOST}/${S1_NAS_FREIGABE}"
+  #     # vers=3.0: SMB2/3 wie bei den Windows-Clients. cache=strict ist die
+  #     # Vorgabe des Linux-Clients; KONZEPT-SPEICHER.md §6.6 behandelt die
+  #     # Eigenheiten des Linux-Lesers (actimeo), der Lesepfad kommt damit aus.
+  #     o: "username=${S1_NAS_BENUTZER},password=${S1_NAS_PASSWORT},uid=1000,gid=1000,vers=3.0,iocharset=utf8,file_mode=0664,dir_mode=0775"

@@ -1,0 +1,15 @@
+# Nur der Quellbaum der v2-Schale geht in den Bau-Kontext (siehe Dockerfile).
+.git
+.github
+node_modules
+**/node_modules
+**/dist
+**/out
+coverage
+test-results
+legacy-v1
+docs
+pruefdaten
+*.log
+.DS_Store
+.idea
