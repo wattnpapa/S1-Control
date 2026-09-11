@@ -712,6 +712,13 @@
         color: var(--knopf-fuellung-text);
         font-weight: 700;
       }
+      /* Das Zeichen der Zeile: feste Breite, damit die Namen darunter in
+         einer Flucht stehen — eine Spalte, die mal 22 und mal 0 px breit ist,
+         zerreisst den Baum optisch. */
+      .baumzeile .baumzeichen {
+        flex: 0 0 26px;
+        line-height: 0;
+      }
       .baumzeile .name {
         flex: 1 1 auto;
         min-width: 0;

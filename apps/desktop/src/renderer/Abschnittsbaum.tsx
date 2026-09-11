@@ -26,6 +26,8 @@ import { ABSCHNITTSTYPEN, projektion, type Baumknoten } from "@s1/domaene";
 import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
+import { langform, zeichenkennung } from "./harke.js";
+import { Zeichen } from "./zeichen.js";
 import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 
@@ -162,8 +164,18 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                   aufWahl(zeile.id === gewaehlt ? undefined : zeile.id);
                 }}
               >
+                {/* Das taktische Zeichen des Abschnitts — dasselbe, das in
+                    der Führungsharke steht und auf der Lagekarte klebt. Wer
+                    den Baum liest, soll die Struktur ohne Umweg über die
+                    Typbezeichnung erkennen. */}
+                <ZeichenDesAbschnitts typ={zeile.typ} tiefe={zeile.tiefe} />
                 <span className="name">{zeile.name}</span>
-                <span className="typ">{zeile.typ}</span>
+                {/* Der Typ als Wort nur dort, wo kein Zeichen ihn zeigt: Beides
+                    nebeneinander sagt dasselbe zweimal und nimmt dem Namen den
+                    Platz. Am Zeichen steht die Bedeutung im `title`. */}
+                {zeichenkennung(zeile.typ, zeile.tiefe) === undefined && (
+                  <span className="typ">{zeile.typ}</span>
+                )}
                 <span className="zahlen">
                   {String(zeile.einheitenSumme)} Einh. · {zeile.summenStaerke.fuehrer}/
                   {zeile.summenStaerke.unterfuehrer}/{zeile.summenStaerke.mannschaft}
@@ -428,4 +440,27 @@ async function verschiebeInReihenfolge(
     vorher: nachbar.reihenfolge,
     neu: knoten.reihenfolge,
   });
+}
+
+/**
+ * Das Zeichen einer Baumzeile — klein, und nur wenn der Satz eines kennt.
+ *
+ * Die Zuordnung steht in `harke.ts` und wird hier **mitbenutzt** statt
+ * nachgebaut: Ein Abschnitt, der in der Harke eine Einsatzabschnittsleitung
+ * ist, darf im Baum keine andere sein.
+ */
+function ZeichenDesAbschnitts({
+  typ,
+  tiefe,
+}: {
+  readonly typ: string;
+  readonly tiefe: number;
+}): React.JSX.Element | null {
+  const kennung = zeichenkennung(typ, tiefe);
+  if (kennung === undefined) return null;
+  return (
+    <span className="baumzeichen">
+      <Zeichen kennung={kennung} bedeutung={langform(typ, tiefe)} breite={26} ausschnitt="0 56 256 176" />
+    </span>
+  );
 }

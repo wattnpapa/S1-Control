@@ -73,14 +73,19 @@ describe("Der Abschnittsbaum", () => {
     expect(attrappe.letzterRuf("baumAnfordern")?.akteId).toBe("akte-1");
   });
 
-  it("zeigt Name, Typ und die Stärke des Teilbaums", async () => {
+  it("zeigt Name, Zeichen und die Stärke des Teilbaums", async () => {
     await zeigeBaum();
     // Über den Zeileninhalt und nicht über einen Textknoten: React verteilt
     // die Zahlen auf mehrere Knoten, und die Aussage gilt der Zeile.
     const zeile = screen.getByText("Deich Nord").closest("button") as HTMLElement;
-    expect(zeile.textContent).toContain("EINSATZORT");
     expect(zeile.textContent).toContain("1 Einh.");
     expect(zeile.textContent).toContain("0/1/8");
+    // Den Typ trägt das taktische Zeichen, nicht das Wort daneben: Beides
+    // nebeneinander sagt dasselbe zweimal.
+    await waitFor(() => {
+      expect(zeile.querySelector("[aria-label='Einsatzabschnittsleitung']")).not.toBeNull();
+    });
+    expect(zeile.textContent).not.toContain("EINSATZORT");
   });
 
   it("sperrt die ändernden Knöpfe für die Systemabschnitte (§5.3.4)", async () => {

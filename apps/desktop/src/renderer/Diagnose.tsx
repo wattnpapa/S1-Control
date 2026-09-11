@@ -30,6 +30,7 @@ import { useEffect } from "react";
 import { STOERFAELLE, UHR_GRENZE_MS, erkannteStoerfaelle } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { zeichensatzHerkunft } from "./zeichensatz.js";
 import { alter, bytes } from "./Statuszeile.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import type { Lagebild, Peer } from "../kontrakt/index.js";
@@ -94,6 +95,7 @@ export interface DiagnoseEigenschaften {
 
 export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): React.JSX.Element {
   const laden = useLaden();
+  const zeichensatz = zeichensatzHerkunft();
   const holeDiagnose = laden.holeDiagnose;
 
   useEffect(() => {
@@ -192,6 +194,14 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
           <dd>{auskunft.einstellungsdatei}</dd>
           <dt>Fassung</dt>
           <dd>{`${auskunft.programmversion}, Electron ${auskunft.electron}, ${auskunft.plattform}`}</dd>
+          {/* Woher die taktischen Zeichen stammen. Sie sind Anzeige, und im
+              Zweifel („bei mir sieht das Zeichen anders aus") ist der Stand
+              des Satzes die erste Frage. */}
+          <dt>Taktische Zeichen</dt>
+          <dd>
+            {`${String(zeichensatz.anzahl)} Zeichen, Stand ${zeichensatz.stand} (${zeichensatz.commit.slice(0, 7)})`}
+            <span className="hinweistext"> {zeichensatz.herkunft}</span>
+          </dd>
           <dt>Kennung</dt>
           <dd>{`${auskunft.clientId} auf ${auskunft.rechnername} als ${auskunft.benutzer}`}</dd>
         </dl>
