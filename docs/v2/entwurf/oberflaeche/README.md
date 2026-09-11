@@ -88,10 +88,25 @@ Pull Request; zusammengeführt wird von Hand, denn ein Zeichen, das sich still
 Die Oberfläche setzt die Zeichen **inline** (`zeichensatz.ts`, `zeichen.tsx`):
 In einem `<img>` wäre das SVG ein eigenes Dokument ohne Zugriff auf die
 Schriften der Seite, und die Beschriftung fiele auf eine Systemschrift zurück.
-Gebündelt wird nur, was gebraucht wird — heute Führungsstellen und
-Einrichtungen. Die Schrift bindet der `<style>`-Block per `@font-face` ein; die
-Anwendung lädt nichts aus dem Netz. Damit ist auch die offene Frage der
-Offline-Schrift erledigt.
+Die Schrift bindet der `<style>`-Block per `@font-face` ein; die Anwendung lädt
+nichts aus dem Netz. Damit ist auch die offene Frage der Offline-Schrift
+erledigt.
+
+Der Zugang gilt für den **ganzen** Satz und für jede Ansicht, nicht nur für die
+Harke. Geladen wird je Zeichen und einmal: `import.meta.glob` ohne `eager`
+schneidet die knapp tausend Dateien auseinander, `ladeZeichen` holt eine davon,
+`useZeichen` zeigt sie, und was einmal da war, bleibt im Speicher — in einer
+Tabelle mit vierzig Zeilen wird dasselbe Zeichen einmal geholt und vierzigmal
+gezeigt. Ganz vorliegen muss nur das Verzeichnis (`index.json`, Kennung und
+Titel, rund hundert Kilobyte): Ohne es gäbe es keine Suche über den Satz, und
+eine Zeichenwahl, die erst tausend Dateien lädt, um ihre Namen zu kennen, ist
+keine. `sucheZeichen`, `kategorien` und `titelVon` stehen dafür bereit.
+
+Genutzt wird das heute an drei Stellen: in der Führungsharke, im
+Abschnittsbaum (jede Zeile trägt das Zeichen ihres Typs; das Typwort daneben
+entfällt dann, denn es sagt dasselbe zweimal) und in der Diagnose, die Stand
+und Herkunft des Satzes nennt — im Zweifel („bei mir sieht das Zeichen anders
+aus") ist das die erste Frage.
 
 Die fünf offenen Entscheidungen am Ende des Handoffs (Zahl der Themes,
 Modulleiste links, Erfassen im Meldekopf-Modus, Schriftfamilien, gemeinsames
