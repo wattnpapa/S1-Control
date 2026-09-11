@@ -13,7 +13,7 @@ import {
 } from "./pruefhilfen/ereignisbau.js";
 import { zerlegeEreignisId } from "./ereignis.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "./kanonisch.js";
-import { ARCHIV_ABSCHNITT_ID, AUFFANG_ABSCHNITT_ID, FOLD_VERSION } from "./zustand.js";
+import { ARCHIV_ABSCHNITT_ID, EINGANG_ABSCHNITT_ID, FOLD_VERSION } from "./zustand.js";
 
 const einsatz = einsatzAngelegt(hlc(1000, 0, "aa"), 1, {
   einsatzId: "E",
@@ -61,7 +61,7 @@ describe("Minimalfold — Grundverhalten", () => {
     expect(zustand.einsatz?.name.hlc).toEqual(hlc(1000, 0, "aa"));
     expect(zustand.einsatz?.name.durch).toBe("aa:1");
     expect(Object.keys(zustand.abschnitte).sort()).toEqual(
-      [AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID, "A", "B"].sort(),
+      [EINGANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID, "A", "B"].sort(),
     );
     expect(zustand.einheiten["U1"]?.staerke.wert).toEqual(staerke(0, 1, 8));
     expect(zustand.einheiten["U1"]?.staerke.hlc).toEqual(hlc(1003, 0, "aa"));
@@ -229,15 +229,15 @@ describe("Konflikthinweise sind Teil des Zustands (Auflage 6, §2.5)", () => {
   });
 });
 
-describe("Auffangregel fuer unbekannte Abschnitte (Auflage 10)", () => {
-  it("haengt eine Einheit in den Auffang, statt sie ins Leere zeigen zu lassen", () => {
+describe("Eingangsregel fuer unbekannte Abschnitte (Auflage 10)", () => {
+  it("haengt eine Einheit in den Eingang, statt sie ins Leere zeigen zu lassen", () => {
     const insNichts = einheitVerschoben(hlc(4000, 0, "bb"), 1, "U1", "A", "gibtEsNicht");
     const zustand = falte([...grundmenge, insNichts]);
 
     // Die Entscheidung des Folds bleibt sichtbar — sie wird gebraucht, damit
     // ein spaeter eintreffendes AbschnittAngelegt noch wirken kann.
     expect(zustand.einheiten["U1"]?.abschnittId.wert).toBe("gibtEsNicht");
-    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(AUFFANG_ABSCHNITT_ID);
+    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
     expect(zustand.hinweise).toContainEqual({
       art: "abschnittUnbekannt",
       feldpfad: "einheit/U1/abschnittId",
@@ -245,7 +245,7 @@ describe("Auffangregel fuer unbekannte Abschnitte (Auflage 10)", () => {
     });
   });
 
-  it("holt die Einheit aus dem Auffang, sobald der Abschnitt eintrifft", () => {
+  it("holt die Einheit aus dem Eingang, sobald der Abschnitt eintrifft", () => {
     const insNichts = einheitVerschoben(hlc(4000, 0, "bb"), 1, "U1", "A", "C");
     const spaeterAbschnitt = abschnittAngelegt(hlc(9000, 0, "cc"), 1, {
       abschnittId: "C",
@@ -413,33 +413,33 @@ describe("Anlagen sind Mengenoperationen, keine Reihenfolgeoperationen (§4.2)",
   });
 });
 
-describe("Die Id des Auffangabschnitts ist reserviert", () => {
+describe("Die Id des Eingangsabschnitts ist reserviert", () => {
   it("laesst sich nicht durch ein AbschnittAngelegt kapern", () => {
     const kaperung = abschnittAngelegt(hlc(9000, 0, "bb"), 1, {
-      abschnittId: AUFFANG_ABSCHNITT_ID,
+      abschnittId: EINGANG_ABSCHNITT_ID,
       name: "Kaperung",
       // ARCHIV zaehlt nicht in die Gesamtstaerke — genau der Schaden, den
-      // zustand.ts fuer den Auffang ausschliesst.
+      // zustand.ts fuer den Eingang ausschliesst.
       abschnittstyp: "ARCHIV",
       reihenfolge: 99,
     });
     const zustand = falte([...grundmenge, kaperung]);
 
-    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.typ.wert).toBe("EINSATZORT");
-    expect(zustand.abschnitte[AUFFANG_ABSCHNITT_ID]?.systemAbschnitt).toBe(true);
+    expect(zustand.abschnitte[EINGANG_ABSCHNITT_ID]?.typ.wert).toBe("EINGANG");
+    expect(zustand.abschnitte[EINGANG_ABSCHNITT_ID]?.systemAbschnitt).toBe(true);
     expect(zustand.hinweise).toContainEqual({
       art: "reservierteIdVerworfen",
-      feldpfad: `abschnitt/${AUFFANG_ABSCHNITT_ID}`,
+      feldpfad: `abschnitt/${EINGANG_ABSCHNITT_ID}`,
       verworfen: "bb:1",
-      id: AUFFANG_ABSCHNITT_ID,
+      id: EINGANG_ABSCHNITT_ID,
     });
   });
 
   it("traegt keine erfundene Ereignis-Id, weil ihn kein Ereignis gesetzt hat (§3.3)", () => {
-    const auffang = falte(grundmenge).abschnitte[AUFFANG_ABSCHNITT_ID];
-    expect(auffang?.name.durch).toBeUndefined();
+    const eingang = falte(grundmenge).abschnitte[EINGANG_ABSCHNITT_ID];
+    expect(eingang?.name.durch).toBeUndefined();
     // Jede vorhandene Herkunft muss sich zerlegen lassen.
-    for (const feld of [auffang?.name, auffang?.typ, auffang?.reihenfolge]) {
+    for (const feld of [eingang?.name, eingang?.typ, eingang?.reihenfolge]) {
       if (feld?.durch !== undefined) expect(() => zerlegeEreignisId(feld.durch as string)).not.toThrow();
     }
   });
@@ -453,7 +453,7 @@ describe("Der Zustand selbst ist reihenfolgeunabhaengig, nicht erst seine Serial
     // Ohne diese Zusage zeigten zwei Rechner dieselbe Lage in verschiedener
     // Reihenfolge, obwohl sie konvergent sind.
     expect(Object.keys(rueckwaerts.abschnitte)).toEqual(Object.keys(vorwaerts.abschnitte));
-    expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "ARCHIV", "AUFFANG", "B"]);
+    expect(Object.keys(vorwaerts.abschnitte)).toEqual(["A", "ARCHIV", "B", "EINGANG"]);
   });
 
   it("ordnet auch die Schluessel der Einheiten", () => {

@@ -317,7 +317,7 @@ describe("Bedienen über die Vermittlung", () => {
     });
     expect(ergebnis.art).toBe("geschrieben");
     const staende = werkstatt.mitteilungen.filter((m) => m.art === "stand");
-    // Drei: der angelegte Abschnitt und die beiden Systemabschnitte `AUFFANG`
+    // Drei: der angelegte Abschnitt und die beiden Systemabschnitte `EINGANG`
     // und `ARCHIV`, die der Fold immer führt (§5.3).
     expect(staende.at(-1)?.geaendert?.abschnitte).toBe(3);
   });

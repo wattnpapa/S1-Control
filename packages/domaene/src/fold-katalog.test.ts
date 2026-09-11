@@ -304,25 +304,25 @@ describe("Die Zustandsmaschine der Anforderung (§5.6.2, P6)", () => {
 });
 
 describe("Die reservierten Abschnitts-Ids (§5.3.4)", () => {
-  it("verwirft auch ein aenderndes Ereignis auf AUFFANG und meldet es (T177)", () => {
+  it("verwirft auch ein aenderndes Ereignis auf EINGANG und meldet es (T177)", () => {
     const kaperung = bau(hlc(9000, 0, "bb"), 1, "AbschnittTypGeaendert", {
-      abschnittId: "AUFFANG",
+      abschnittId: "EINGANG",
     }, { neu: "ANGEFORDERT", vorher: "EINSATZORT", grund: "Umbau" });
     const zustand = falte([...grundmenge, kaperung]);
 
-    expect(zustand.abschnitte["AUFFANG"]?.typ.wert).toBe("EINSATZORT");
-    expect(zustand.abschnitte["AUFFANG"]?.zaehltInGesamtstaerke).toBe(true);
+    expect(zustand.abschnitte["EINGANG"]?.typ.wert).toBe("EINGANG");
+    expect(zustand.abschnitte["EINGANG"]?.zaehltInGesamtstaerke).toBe(false);
     expect(zustand.hinweise).toContainEqual({
       art: "reservierteIdVerworfen",
-      feldpfad: "abschnitt/AUFFANG",
+      feldpfad: "abschnitt/EINGANG",
       verworfen: "bb:1",
-      id: "AUFFANG",
+      id: "EINGANG",
     });
     // Die Art steht im Eintrag, nicht im Hinweis (§5.3.4).
     expect(zustand.verworfeneSchluessel).toEqual([
       expect.objectContaining({
         art: "RESERVIERTE_ID",
-        schluessel: "AUFFANG",
+        schluessel: "EINGANG",
         verworfen: "bb:1",
         ereignisart: "AbschnittTypGeaendert",
         neu: "ANGEFORDERT",
@@ -348,10 +348,10 @@ describe("Die reservierten Abschnitts-Ids (§5.3.4)", () => {
     // Ohne `ereignisart` waeren die beiden Eintraege bytegleich, und der
     // Bediener saehe zwar, dass etwas verworfen wurde, aber nicht was.
     const umbenannt = bau(hlc(9000, 0, "bb"), 1, "AbschnittUmbenannt", {
-      abschnittId: "AUFFANG",
+      abschnittId: "EINGANG",
     }, { neu: "Sammelraum" });
     const typGeaendert = bau(hlc(9001, 0, "cc"), 1, "AbschnittTypGeaendert", {
-      abschnittId: "AUFFANG",
+      abschnittId: "EINGANG",
     }, { neu: "Sammelraum", grund: "Versuch" });
     const zustand = falte([...grundmenge, umbenannt, typGeaendert]);
     expect(zustand.verworfeneSchluessel).toHaveLength(2);

@@ -388,7 +388,7 @@ describe("§7.3 Ein Ereignis nach der Archivierung wirkt und wird sichtbar", () 
 
   it("faellt nicht auf `unbekannt` und `verworfeneSchluessel` (§7.3, Nicht-Zusicherung)", () => {
     const fremd = bau(hlc(7, 0, "cc"), 1, "NochNichtErfundeneArt", {});
-    const kaperung = bau(hlc(8, 0, "cc"), 2, "AbschnittUmbenannt", { abschnittId: "AUFFANG" }, {
+    const kaperung = bau(hlc(8, 0, "cc"), 2, "AbschnittUmbenannt", { abschnittId: "EINGANG" }, {
       neu: "Sammelraum",
     });
     const zustand = falte([...grundmenge, archiviert(hlc(5, 0, "bb"), 1), fremd, kaperung]);

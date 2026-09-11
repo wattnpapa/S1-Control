@@ -39,20 +39,22 @@ import type {
  * abweichender Version wird stillschweigend ignoriert und der Zustand aus den
  * Ereignissen gefaltet. **2** seit dem Zielmodell aus M1.3: Der Zustand traegt
  * jetzt die Eingangsdaten der Hinweise mit, die M0.2 nur im Akkumulator
- * hielt (§3.8).
+ * hielt (§3.8). **3**, seit der systemseitige Eingang den eigenen Typ
+ * `EINGANG` traegt und nicht mehr in die Gesamtstaerke zaehlt (§5.3.4).
  */
-export const FOLD_VERSION = 2;
+export const FOLD_VERSION = 3;
 
 /**
- * Auffangabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
+ * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
  * oder aufgeloest ist (Auflage 10, §5.3.2 und §5.3.3).
  *
- * Der Typ ist `EINSATZORT` und damit zaehlend: Die Staerke einer real
- * gemeldeten Einheit darf nicht dadurch aus der Gesamtstaerke verschwinden,
- * dass ein Ereignis noch fehlt. Die Id ist **reserviert**; eine Anlage oder
- * Aenderung darauf wirkt nicht und erzeugt `reservierteIdVerworfen` (§5.3.4).
+ * Der Typ ist `EINGANG` und damit weder zaehlend noch im Druck: Der Eingang
+ * ist kein Teil der Fuehrungsorganisation, sondern die Warteschlange davor.
+ * Eine Einheit zaehlt erst, wenn sie in einem gemeldeten Abschnitt haengt.
+ * Der Typ traegt aus demselben Grund kein taktisches Zeichen. Die Id ist
+ * **reserviert**; eine Anlage oder Aenderung darauf wirkt nicht und erzeugt `reservierteIdVerworfen` (§5.3.4).
  */
-export const AUFFANG_ABSCHNITT_ID = "AUFFANG";
+export const EINGANG_ABSCHNITT_ID = "EINGANG";
 
 /** Systemseitiger Archivabschnitt; ebenfalls reservierte Id (§5.3.4). */
 export const ARCHIV_ABSCHNITT_ID = "ARCHIV";
@@ -201,7 +203,7 @@ export interface AbschnittZustand {
   readonly taktischesZeichen?: Feld<string>;
   readonly aufgeloest?: Feld<{ readonly zielAbschnittId: Id; readonly aufgeloestAm: Zeitpunkt }>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
-  /** `true` bei `AUFFANG` und `ARCHIV` (§5.3.4). */
+  /** `true` bei `EINGANG` und `ARCHIV` (§5.3.4). */
   readonly systemAbschnitt?: true;
   // abgeleitet:
   readonly wirksamerParentId?: Id;
@@ -278,7 +280,7 @@ export interface FahrzeugZustand extends Anlage {
   // abgeleitet:
   /**
    * **Abwesend**, wenn der gemeldete Abschnitt unmittelbar unbekannt ist
-   * (§5.3.3): Das Fahrzeug haengt dann an seiner Einheit. Den Auffang bekommt
+   * (§5.3.3): Das Fahrzeug haengt dann an seiner Einheit. Den Eingang bekommt
    * es nie — der ist eine Zusicherung ueber Staerkezahlen, und ein Fahrzeug
    * traegt keine.
    */

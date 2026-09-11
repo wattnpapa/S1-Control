@@ -127,6 +127,7 @@ export const ABSCHNITTSTYPEN = [
   "ANGEFORDERT",
   "BEREITSTELLUNGSRAUM",
   "EINSATZORT",
+  "EINGANG",
   "ARCHIV",
 ] as const;
 export type Abschnittstyp = (typeof ABSCHNITTSTYPEN)[number];

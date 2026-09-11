@@ -69,7 +69,7 @@ import {
 } from "./werte.js";
 import {
   ARCHIV_ABSCHNITT_ID,
-  AUFFANG_ABSCHNITT_ID,
+  EINGANG_ABSCHNITT_ID,
   FOLD_VERSION,
   KAPPUNG_MAX,
   type AbschnittZustand,
@@ -471,7 +471,7 @@ function anlageFelder(
 function istReserviert(eintrag: Katalogeintrag, id: string): boolean {
   return (
     eintrag.entitaet === "abschnitt" &&
-    (id === AUFFANG_ABSCHNITT_ID || id === ARCHIV_ABSCHNITT_ID)
+    (id === EINGANG_ABSCHNITT_ID || id === ARCHIV_ABSCHNITT_ID)
   );
 }
 
@@ -670,7 +670,7 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
   }
 
   if (istReserviert(wirkEintrag, id)) {
-    // §5.3.4: Anlage **und** jedes aendernde Ereignis auf `AUFFANG` oder
+    // §5.3.4: Anlage **und** jedes aendernde Ereignis auf `EINGANG` oder
     // `ARCHIV` sind wirkungslos; beide gehen unter `art: "RESERVIERTE_ID"` in
     // `verworfeneSchluessel`, damit nichts still verpufft.
     faltung.reservierteId.set(ereignis.id, {
@@ -1020,22 +1020,22 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
  */
 const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" };
 
-/** `ANGEFORDERT` und `ARCHIV` zaehlen nicht; ein **unbekannter** Typ zaehlt (§3.7). */
-const NICHT_ZAEHLENDE_TYPEN: ReadonlySet<string> = new Set(["ANGEFORDERT", "ARCHIV"]);
+/** `ANGEFORDERT`, `EINGANG` und `ARCHIV` zaehlen nicht; ein **unbekannter** Typ zaehlt (§3.7). */
+const NICHT_ZAEHLENDE_TYPEN: ReadonlySet<string> = new Set(["ANGEFORDERT", "EINGANG", "ARCHIV"]);
 
 function zaehltTyp(typ: unknown): boolean {
   return typeof typ === "string" ? !NICHT_ZAEHLENDE_TYPEN.has(typ) : true;
 }
 
-const AUFFANG: AbschnittZustand = {
-  id: AUFFANG_ABSCHNITT_ID,
+const EINGANG: AbschnittZustand = {
+  id: EINGANG_ABSCHNITT_ID,
   angelegtMit: SYSTEM_HLC,
-  name: { wert: "Auffang", hlc: SYSTEM_HLC },
-  typ: { wert: "EINSATZORT", hlc: SYSTEM_HLC },
+  name: { wert: "Eingang", hlc: SYSTEM_HLC },
+  typ: { wert: "EINGANG", hlc: SYSTEM_HLC },
   reihenfolge: { wert: 0, hlc: SYSTEM_HLC },
   verworfeneAnlagen: [],
   systemAbschnitt: true,
-  zaehltInGesamtstaerke: true,
+  zaehltInGesamtstaerke: false,
 };
 
 const ARCHIV: AbschnittZustand = {
@@ -1401,7 +1401,7 @@ export function materialisiere(faltung: Faltung): Zustand {
 
   // --- Abschnitte, einschliesslich der beiden systemseitigen --------------
   const abschnitte = new Map<string, AbschnittZustand>([
-    [AUFFANG_ABSCHNITT_ID, AUFFANG],
+    [EINGANG_ABSCHNITT_ID, EINGANG],
     [ARCHIV_ABSCHNITT_ID, ARCHIV],
   ]);
   const elternKanten = new Map<string, Feld<unknown>>();
@@ -1414,8 +1414,8 @@ export function materialisiere(faltung: Faltung): Zustand {
     if (parent !== undefined && typeof parent.wert === "string") elternKanten.set(id, parent);
   }
   // Die beiden Systemabschnitte haben keine Elternkante und stehen trotzdem im
-  // Wald: `AUFFANG` oder `ARCHIV` als Elternteil ist ein gueltiger Verweis.
-  for (const id of [AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID]) {
+  // Wald: `EINGANG` oder `ARCHIV` als Elternteil ist ein gueltiger Verweis.
+  for (const id of [EINGANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID]) {
     if (!elternKanten.has(id)) elternKanten.set(id, { wert: null, hlc: SYSTEM_HLC });
   }
   const gefalleneKanten = loeseZyklen(elternKanten, hinweise);
@@ -1615,7 +1615,7 @@ export function materialisiere(faltung: Faltung): Zustand {
   for (const [id, entitaet] of einheitenGebaut) {
     const gemeldet = entitaet.felder.get("abschnittId")?.wert;
     const feldpfad = `einheit/${id}/abschnittId`;
-    let wirksamerAbschnittId = AUFFANG_ABSCHNITT_ID;
+    let wirksamerAbschnittId = EINGANG_ABSCHNITT_ID;
     if (typeof gemeldet !== "string" || !abschnitte.has(gemeldet)) {
       // §5.3.3, erste Regel: Der Abschnitt ist unbekannt, das
       // `AbschnittAngelegt` noch unterwegs. Der Zustand ist **vorlaeufig** —
@@ -1629,7 +1629,7 @@ export function materialisiere(faltung: Faltung): Zustand {
       wirksamerAbschnittId = gemeldet;
     } else {
       // §5.3.3, zweite Regel: Der Abschnitt ist aufgeloest — eine Handlung mit
-      // **benanntem Ziel**. Die Einheit in den Auffang zu legen waere eine
+      // **benanntem Ziel**. Die Einheit in den Eingang zu legen waere eine
       // dauerhafte Verschlechterung; sie steht im Ziel. Ist das Ziel selbst
       // aufgeloest, wird der Kette gefolgt (§5.3.2 Nr. 3).
       hinweise.push({
@@ -1645,7 +1645,7 @@ export function materialisiere(faltung: Faltung): Zustand {
       else if (ende.art === "UNBEKANNT") {
         hinweise.push({ art: "abschnittUnbekannt", feldpfad, gemeldeterAbschnittId: ende.id });
       }
-      // Beim Kreis bleibt es beim Auffang, und zwar **allein** mit
+      // Beim Kreis bleibt es beim Eingang, und zwar **allein** mit
       // `abschnittAufgeloest`: Es gibt hier keinen unbekannten Abschnitt, und
       // `abschnittUnbekannt` haette kein Feld zu fuellen (T10, T169).
     }
@@ -1786,7 +1786,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     return ergebnis;
   };
 
-  // §5.3.3: **Fahrzeuge gehen nicht in den Auffang.** Ein Fahrzeug hat keine
+  // §5.3.3: **Fahrzeuge gehen nicht in den Eingang.** Ein Fahrzeug hat keine
   // Staerke; die Zusicherung ueber Staerkezahlen greift nicht. Damit ist P5
   // sauber getrennt: Es spricht von Einheiten.
   const fahrzeuge = new Map<string, unknown>();
@@ -1814,7 +1814,7 @@ export function materialisiere(faltung: Faltung): Zustand {
           hinweise.push({ art: "fremdreferenzUnbekannt", feldpfad, verweistAuf: ende.id });
         }
         // Im Kreis wie im Unbekannten behaelt das Fahrzeug **seinen eigenen**
-        // `abschnittId` — nicht den Auffang und nicht „abwesend", denn der
+        // `abschnittId` — nicht den Eingang und nicht „abwesend", denn der
         // Abschnitt, auf den es zeigt, existiert ja (§3.10, T173).
       }
     }

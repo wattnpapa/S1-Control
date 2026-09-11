@@ -1,5 +1,5 @@
 /**
- * Die Abschnittsregeln §5.3.1 bis §5.3.3 — Zyklus, Aufloesung, Auffang.
+ * Die Abschnittsregeln §5.3.1 bis §5.3.3 — Zyklus, Aufloesung, Eingang.
  *
  * Die Pruefall-Nummern sind die aus §11 des Konzepts.
  */
@@ -17,7 +17,7 @@ import {
   hlc,
   staerke,
 } from "./pruefhilfen/ereignisbau.js";
-import { AUFFANG_ABSCHNITT_ID } from "./zustand.js";
+import { EINGANG_ABSCHNITT_ID } from "./zustand.js";
 
 function bau(
   h: Hlc,
@@ -240,7 +240,7 @@ describe("§5.3.2 Der aufgeloeste Abschnitt", () => {
     ]);
   });
 
-  it("T10: A → B, B → A, beide bekannt — Auffang und genau ein Hinweis", () => {
+  it("T10: A → B, B → A, beide bekannt — Eingang und genau ein Hinweis", () => {
     const zustand = falte([
       einsatz,
       a,
@@ -249,14 +249,15 @@ describe("§5.3.2 Der aufgeloeste Abschnitt", () => {
       aufgeloest(hlc(30, 0, "bb"), 1, "A", "B"),
       aufgeloest(hlc(31, 0, "bb"), 2, "B", "A"),
     ]);
-    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(AUFFANG_ABSCHNITT_ID);
-    expect(zustand.einheiten["U1"]?.zaehlt).toBe(true);
+    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
+    // Der Eingang zaehlt nicht (§5.3.4): Die Einheit liegt vor der Fuehrungsorganisation.
+    expect(zustand.einheiten["U1"]?.zaehlt).toBe(false);
     // `abschnittUnbekannt` entsteht nicht — es haette kein Feld zu fuellen.
     expect(zustand.hinweise.filter((h) => h.art === "abschnittUnbekannt")).toEqual([]);
     expect(zustand.hinweise.filter((h) => h.art === "abschnittAufgeloest")).toHaveLength(1);
   });
 
-  it("endet die Kette im Unbekannten, gibt es Auffang und beide Hinweise", () => {
+  it("endet die Kette im Unbekannten, gibt es Eingang und beide Hinweise", () => {
     const zustand = falte([
       einsatz,
       a,
@@ -265,7 +266,7 @@ describe("§5.3.2 Der aufgeloeste Abschnitt", () => {
       aufgeloest(hlc(30, 0, "bb"), 1, "A", "B"),
       aufgeloest(hlc(31, 0, "bb"), 2, "B", "NOCH_NICHT_DA"),
     ]);
-    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(AUFFANG_ABSCHNITT_ID);
+    expect(zustand.einheiten["U1"]?.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
     expect(zustand.hinweise).toContainEqual({
       art: "abschnittAufgeloest",
       feldpfad: "einheit/U1/abschnittId",
@@ -327,7 +328,7 @@ describe("§5.3.2 Der aufgeloeste Abschnitt", () => {
   });
 });
 
-describe("§5.3.3 Fahrzeuge gehen nicht in den Auffang", () => {
+describe("§5.3.3 Fahrzeuge gehen nicht in den Eingang", () => {
   function fahrzeug(h: Hlc, laufnummer: number, id: string, abschnittId?: string) {
     return bau(h, laufnummer, "FahrzeugAngelegt", {
       fahrzeugId: id,
@@ -337,7 +338,7 @@ describe("§5.3.3 Fahrzeuge gehen nicht in den Auffang", () => {
     });
   }
 
-  it("T15: unmittelbar unbekannter Abschnitt — kein Auffang, `fremdreferenzUnbekannt`", () => {
+  it("T15: unmittelbar unbekannter Abschnitt — kein Eingang, `fremdreferenzUnbekannt`", () => {
     const zustand = falte([einsatz, fahrzeug(hlc(20, 0, "aa"), 2, "F1", "GIBT_ES_NICHT")]);
     expect(zustand.fahrzeuge["F1"]?.wirksamerAbschnittId).toBeUndefined();
     expect(zustand.fahrzeuge["F1"]?.abschnittId?.wert).toBe("GIBT_ES_NICHT");
@@ -388,12 +389,12 @@ describe("§5.3.3 Fahrzeuge gehen nicht in den Auffang", () => {
   });
 });
 
-describe("§5.3.3 Der Auffang und sein benannter Preis", () => {
+describe("§5.3.3 Der Eingang und sein benannter Preis", () => {
   it("T13/T14: Einheit in einem noch unbekannten Abschnitt, in jeder Permutation", () => {
     const einheit = einheitIn(hlc(20, 0, "aa"), 5, "U1", "Q");
     const ohne = falte([einsatz, einheit]);
-    expect(ohne.einheiten["U1"]?.wirksamerAbschnittId).toBe(AUFFANG_ABSCHNITT_ID);
-    expect(ohne.einheiten["U1"]?.zaehlt).toBe(true);
+    expect(ohne.einheiten["U1"]?.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
+    expect(ohne.einheiten["U1"]?.zaehlt).toBe(false);
 
     const q = abschnitt(hlc(30, 0, "bb"), 1, "Q");
     for (const menge of [
@@ -406,9 +407,14 @@ describe("§5.3.3 Der Auffang und sein benannter Preis", () => {
     }
   });
 
-  it("der Preis: die Gesamtstaerke springt nach unten, wenn der Abschnitt eintrifft (§8.2)", () => {
+  it("der Preis: die Gesamtstaerke springt nach oben, wenn der Abschnitt eintrifft (§8.2)", () => {
     const einheit = einheitIn(hlc(20, 0, "aa"), 5, "U1", "Q");
-    expect(falte([einsatz, einheit]).einheiten["U1"]?.zaehlt).toBe(true);
+    // Im Eingang zaehlt sie nicht — der Eingang ist die Warteschlange vor der
+    // Fuehrungsorganisation, nicht ihr Teil (§5.3.4).
+    expect(falte([einsatz, einheit]).einheiten["U1"]?.zaehlt).toBe(false);
+
+    const q = abschnitt(hlc(30, 0, "bb"), 1, "Q");
+    expect(falte([einsatz, einheit, q]).einheiten["U1"]?.zaehlt).toBe(true);
 
     const angefordert = abschnittAngelegt(hlc(30, 0, "bb"), 1, {
       abschnittId: "Q",

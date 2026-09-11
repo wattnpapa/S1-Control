@@ -227,7 +227,7 @@ export class Stoerwerk {
       wanduhr: new Date(this.#o.jetzt()).toISOString(),
       nutzlast: {
         einheitId: `E-klon-${this.#o.zufall.bis(100000)}`,
-        abschnittId: "AUFFANG",
+        abschnittId: "EINGANG",
         bezeichnung: "Zug des geklonten Profils",
         organisation: "THW",
         ebene: "ZUG",

@@ -196,7 +196,7 @@ export {
 // Der materialisierte Zustand — Zielmodell nach KONZEPT-EREIGNISSE.md §3.2.
 export {
   ARCHIV_ABSCHNITT_ID,
-  AUFFANG_ABSCHNITT_ID,
+  EINGANG_ABSCHNITT_ID,
   FOLD_VERSION,
   KAPPUNG_MAX,
   WIRKUNGSLOSGRUENDE,

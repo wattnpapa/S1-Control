@@ -45,7 +45,7 @@ Konsolidiert aus den sechs Widerlegungen (Urteil §12.5), nach Fälligkeit.
 7. Vorgänger-Hash beim Lesen prüfen; defekte Zeile ⇒ Quarantäne ab Offset mit Hinweis, kein Stillstand.
 8. Ereignis-ID mit persistenter, monotoner Laufnummer je Client; Fremdschreiber-Erkennung beim Start; Single-Instance-Lock.
 9. Segmentwechsel nach Größe, nicht bei jedem Start; `mindestClientVersion` als Warnung, nicht als Sperre.
-10. Zyklusregel für `AbschnittUmgehaengt`; relative statt absoluter Stärkeänderung bei Aufteilen/Zusammenführen; Auffangregel für aufgelöste Abschnitte.
+10. Zyklusregel für `AbschnittUmgehaengt`; relative statt absoluter Stärkeänderung bei Aufteilen/Zusammenführen; Eingangsregel für aufgelöste Abschnitte.
 11. Undo als normales Ereignis mit `undoOf`, Stapel je Client, `KorrekturVon`, kein Redo.
 12. „Neueste Revision zählt" definieren: HLC entscheidet, fachliche Meldezeit wird angezeigt und plausibilisiert; große Abweichung ⇒ Konflikthinweis am Stärkewert.
 13. Ereignis nach der Archivierung hat genau eine Behandlung; Ordnerverschiebung darf keinen Upload-Retry ins Leere laufen lassen. *(Angeglichen am 2026-09-08: Der Wortlaut nannte ursprünglich `archiv.marker` als Bezugspunkt. Maßgeblich ist die HLC des Ereignisses `EinsatzArchiviert`; der Marker ist ein abgeleiteter Anzeiger — 02-ZIELBILD.md Nr. 10, KONZEPT-SPEICHER.md §5.7. Die Anforderung selbst ist unverändert.)*

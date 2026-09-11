@@ -31,7 +31,7 @@ import {
   hlc,
   staerke,
 } from "./pruefhilfen/ereignisbau.js";
-import { ARCHIV_ABSCHNITT_ID } from "./zustand.js";
+import { ARCHIV_ABSCHNITT_ID, EINGANG_ABSCHNITT_ID } from "./zustand.js";
 import type { Staerke } from "./werte.js";
 
 const BEZUG = Date.parse("2026-09-08T08:00:00+02:00");
@@ -335,8 +335,24 @@ describe("K7 und K8 — Druck", () => {
     expect(K.imDruckSichtbar(zustand, "EO")).toBe(true);
     expect(K.imDruckSichtbar(zustand, "LOG")).toBe(true);
     expect(K.imDruckSichtbar(zustand, "AN")).toBe(false);
-    // Der Auffang traegt in dieser Lage niemanden.
-    expect(K.imDruckSichtbar(zustand, "AUFFANG")).toBe(false);
+    // Der Eingang traegt in dieser Lage niemanden.
+    expect(K.imDruckSichtbar(zustand, "EINGANG")).toBe(false);
+  });
+
+  it("K7: der Eingang erscheint auch mit Kraeften nicht im Druck", () => {
+    // Eine Einheit meldet einen Abschnitt, dessen Anlage noch aussteht: Sie
+    // liegt im Eingang (§5.3.3) — sichtbar im Zustand, aber weder im Druck
+    // noch in der Gesamtstaerke.
+    const mitEingang = falte([
+      ...referenzlage(),
+      einheit(9000, "U9", "NOCH_NICHT_DA", staerke(1, 1, 1), "THW", "IM_EINSATZ"),
+    ]);
+    expect(mitEingang.einheiten["U9"]?.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
+    expect(mitEingang.einheiten["U9"]?.zaehlt).toBe(false);
+    expect(K.imDruckSichtbar(mitEingang, EINGANG_ABSCHNITT_ID)).toBe(false);
+    expect(K.einsatzGesamtstaerke(mitEingang).gesamt).toEqual(
+      K.einsatzGesamtstaerke(zustand).gesamt,
+    );
   });
 
   it("K8: die Plausibilitaetsprobe geht auf", () => {

@@ -33,11 +33,11 @@ import type {
 /** `ANGEFORDERT` ist der einzige Typ mit abweichenden Zaehlregeln (ZDM §2.4). */
 export const ANGEFORDERT = "ANGEFORDERT";
 
-/** Typen, die im Druck erscheinen — alles ausser `ANGEFORDERT` und `ARCHIV`. */
-const NICHT_IM_DRUCK: ReadonlySet<string> = new Set([ANGEFORDERT, "ARCHIV"]);
+/** Typen, die im Druck erscheinen — alles ausser `ANGEFORDERT`, `EINGANG` und `ARCHIV`. */
+const NICHT_IM_DRUCK: ReadonlySet<string> = new Set([ANGEFORDERT, "EINGANG", "ARCHIV"]);
 
 /** Typen, deren Einheiten in die Kosten eingehen — dieselben wie in der Gesamtstaerke. */
-const NICHT_IN_KOSTEN: ReadonlySet<string> = new Set([ANGEFORDERT, "ARCHIV"]);
+const NICHT_IN_KOSTEN: ReadonlySet<string> = new Set([ANGEFORDERT, "EINGANG", "ARCHIV"]);
 
 function typDesAbschnitts(zustand: Zustand, abschnittId: string): string {
   const wert = zustand.abschnitte[abschnittId]?.typ.wert;

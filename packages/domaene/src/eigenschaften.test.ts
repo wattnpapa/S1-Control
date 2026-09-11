@@ -65,11 +65,11 @@ import {
   staerke,
   staerkeGeaendert,
 } from "./pruefhilfen/ereignisbau.js";
-import { AUFFANG_ABSCHNITT_ID, type Zustand } from "./zustand.js";
+import { EINGANG_ABSCHNITT_ID, type Zustand } from "./zustand.js";
 
 const CLIENTS = ["aa", "bb", "cc"] as const;
 const ABSCHNITTE = ["A", "B", "C"] as const;
-/** „D" kommt in keinem `AbschnittAngelegt` vor — der Fall fuer die Auffangregel (P5). */
+/** „D" kommt in keinem `AbschnittAngelegt` vor — der Fall fuer die Eingangsregel (P5). */
 const ZIELE = ["A", "B", "C", "D"] as const;
 const EINHEITEN = ["U1", "U2", "U3"] as const;
 /** Die Ids, unter denen eine Aufteilung ihre neue Einheit anlegt. */
@@ -635,7 +635,7 @@ interface NurWerte {
 function nurWerte(zustand: Zustand): NurWerte {
   const abschnitte: Record<string, string> = {};
   for (const [id, abschnitt] of Object.entries(zustand.abschnitte)) {
-    if (id !== AUFFANG_ABSCHNITT_ID) abschnitte[id] = abschnitt.name.wert ?? "";
+    if (id !== EINGANG_ABSCHNITT_ID) abschnitte[id] = abschnitt.name.wert ?? "";
   }
   const einheiten: Record<string, { abschnittId: string; staerke: Staerke }> = {};
   for (const [id, einheit] of Object.entries(zustand.einheiten)) {
@@ -1238,15 +1238,15 @@ describe("P5 Kein Waisenzustand — keine Einheit haengt in einem Abschnitt, den
 
   it("jeder Verweis ins Leere ist als Hinweis sichtbar — die nicht triviale Haelfte", () => {
     // Die Pruefung oben allein waere eine Tautologie ueber die Umsetzung:
-    // `wirksamerAbschnittId` wird als `existiert ? gewaehlt : AUFFANG` gesetzt
-    // und AUFFANG steht immer in der Sammlung — sie kann nicht fehlschlagen,
+    // `wirksamerAbschnittId` wird als `existiert ? gewaehlt : EINGANG` gesetzt
+    // und EINGANG steht immer in der Sammlung — sie kann nicht fehlschlagen,
     // solange diese beiden Zeilen nebeneinanderstehen.
     //
     // Die eigentliche Aussage ist eine andere: Der Fold behaelt die
     // Entscheidung `abschnittId.wert` unveraendert, damit ein spaeter
     // eintreffendes `AbschnittAngelegt` noch wirken kann (Rebase). Damit steht
     // in jedem solchen Zustand ein Verweis, der ins Leere zeigt — und genau
-    // der muss sichtbar sein, sonst waere die Auffangregel ein stilles
+    // der muss sichtbar sein, sonst waere die Eingangsregel ein stilles
     // Verschieben (§2.5, Auflage 10).
     fc.assert(
       fc.property(ereignismengeArb, (menge) => {
@@ -1256,14 +1256,14 @@ describe("P5 Kein Waisenzustand — keine Einheit haengt in einem Abschnitt, den
           const gemeldet = einheit.abschnittId.wert ?? "";
           const zeigtInsLeere = !Object.hasOwn(zustand.abschnitte, gemeldet);
           if (zeigtInsLeere) {
-            // Der gemeldete Abschnitt fehlt: Auffang, und der Verweis steht
+            // Der gemeldete Abschnitt fehlt: Eingang, und der Verweis steht
             // mit **seiner eigenen Id** im Hinweis.
             expect(zustand.hinweise).toContainEqual({
               art: "abschnittUnbekannt",
               feldpfad,
               gemeldeterAbschnittId: gemeldet,
             });
-            expect(einheit.wirksamerAbschnittId).toBe(AUFFANG_ABSCHNITT_ID);
+            expect(einheit.wirksamerAbschnittId).toBe(EINGANG_ABSCHNITT_ID);
           }
           // Und die eigentliche Aussage, jetzt auch fuer den aufgeloesten
           // Abschnitt (§5.3.2): **Wo die Einheit woanders steht, als sie
