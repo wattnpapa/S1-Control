@@ -1,10 +1,15 @@
 /**
  * Einstieg des Renderers.
  *
- * Er tut drei Dinge und hoert dann auf: die Bruecke aus `window` einsetzen,
- * React an den Wurzelknoten haengen, fertig. Ausserhalb eines Browsers nicht
- * ausfuehrbar und deshalb von den Tests ausgenommen — was hier zu pruefen
- * waere, prueft `Arbeitsplatz.test.tsx` an der Komponente selbst.
+ * Er tut drei Dinge und hoert dann auf: die Bruecke einsetzen, React an den
+ * Wurzelknoten haengen, fertig. Ausserhalb eines Browsers nicht ausfuehrbar
+ * und deshalb von den Tests ausgenommen — was hier zu pruefen waere, prueft
+ * `Arbeitsplatz.test.tsx` an der Komponente selbst.
+ *
+ * Welche Bruecke, entscheidet das Fenster: Hat das Preload `window.s1`
+ * hinterlegt, laeuft der Renderer in Electron; sonst ist er von der
+ * Web-Schale ausgeliefert worden (ADR-005) und spricht ueber `fetch` und
+ * `EventSource` mit ihr. Der Rest des Renderers sieht den Unterschied nicht.
  */
 
 import { StrictMode } from "react";
@@ -12,6 +17,13 @@ import { createRoot } from "react-dom/client";
 
 import { Arbeitsplatz } from "./Arbeitsplatz.js";
 import { MonitorFenster } from "./MonitorFenster.js";
+import { setzeBruecke } from "./bruecke.js";
+import { webBruecke } from "./webBruecke.js";
+import { BRUECKE } from "../kontrakt/index.js";
+
+if ((globalThis as Record<string, unknown>)[BRUECKE] === undefined) {
+  setzeBruecke(webBruecke());
+}
 
 /**
  * Welches Fenster ist das hier?

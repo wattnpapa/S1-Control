@@ -109,7 +109,21 @@ export interface VermittlungOptionen {
   readonly electron: string;
   readonly programmversion: string;
   readonly rechnername: string;
-  readonly benutzer: string;
+  /**
+   * Der Akteur in jedem Ereignis dieses Arbeitsplatzes (`akteur.benutzer`).
+   *
+   * Als Zeichenkette ist es das Benutzerkonto des Rechners — der Desktop-Fall.
+   * Als Funktion wird es aus dem Arbeitsplatz gebildet: Die Web-Schale
+   * (ADR-005) kennt kein Benutzerkonto je Browser, dort ist der Anzeigename
+   * das Einzige, was der Bediener ueber sich gesagt hat.
+   */
+  readonly benutzer: string | ((platz: Arbeitsplatz) => string);
+  /**
+   * Der Share-Pfad, mit dem ein Arbeitsplatz **ohne** Einstellungsdatei
+   * beginnt. Der Desktop laesst ihn leer und fragt den Bediener; die
+   * Web-Schale bekommt ihn vom Dienst, der den Share eingehaengt hat.
+   */
+  readonly vorbelegterShare?: string;
   readonly protokolliere: (stufe: "info" | "warnung" | "fehler", text: string) => void;
   /** Wo die Protokolldatei liegt — die Diagnoseansicht nennt den Ort (M7.3). */
   readonly protokolldatei?: string;
@@ -166,7 +180,10 @@ export class Vermittlung {
   }
 
   async arbeitsplatz(): Promise<Arbeitsplatz> {
-    this.#arbeitsplatz ??= await liesArbeitsplatz(this.#o.einstellungsdatei);
+    this.#arbeitsplatz ??= await liesArbeitsplatz(
+      this.#o.einstellungsdatei,
+      this.#o.vorbelegterShare ?? "",
+    );
     return this.#arbeitsplatz;
   }
 
@@ -407,7 +424,7 @@ export class Vermittlung {
       electron: this.#o.electron,
       programmversion: this.#o.programmversion,
       rechnername: this.#o.rechnername,
-      benutzer: this.#o.benutzer,
+      benutzer: this.#benutzer(platz),
       clientId: platz.clientId,
       protokolldatei: this.#o.protokolldatei ?? "(kein Protokoll)",
       einstellungsdatei: this.#o.einstellungsdatei,
@@ -588,7 +605,7 @@ export class Vermittlung {
         name: ruf.name,
         datum: ruf.datum,
         angelegtAm: new Date().toISOString(),
-        angelegtVon: this.#o.benutzer,
+        angelegtVon: this.#benutzer(platz),
       },
       EINSATZ_UNTERORDNER,
     );
@@ -650,7 +667,7 @@ export class Vermittlung {
       lokalerEinsatzOrdner: path.join(this.#o.spiegelwurzel, ordner),
       clientId: platz.clientId,
       einsatzId: ordner,
-      benutzer: this.#o.benutzer,
+      benutzer: this.#benutzer(platz),
       anzeigename: platz.anzeigename,
       programmversion: this.#o.programmversion,
     };
@@ -667,6 +684,10 @@ export class Vermittlung {
     }
     this.#o.protokolliere("info", `Einsatz geöffnet: ${ordner} als ${akteId}`);
     return akteId;
+  }
+
+  #benutzer(platz: Arbeitsplatz): string {
+    return typeof this.#o.benutzer === "function" ? this.#o.benutzer(platz) : this.#o.benutzer;
   }
 
   #ablage(sharePfad: string, ordner: string): Einsatzablage {

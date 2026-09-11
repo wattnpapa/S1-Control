@@ -186,6 +186,10 @@ function Auswahl(): React.JSX.Element {
   const [betriebsart, setzeBetriebsart] = useState(
     laden.einstellungen.betriebsart ?? "fuehrungsstelle",
   );
+  // Im Browser gibt der Dienst den Share vor (ADR-005) — er hat ihn eingehängt,
+  // und ein Bediener könnte ihn ohnehin nicht auf ein anderes Verzeichnis des
+  // Servers umstellen. Das Feld zeigt ihn deshalb nur.
+  const shareFest = laden.umgebung?.plattform === "web";
 
   // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
   useEffect(() => {
@@ -200,7 +204,11 @@ function Auswahl(): React.JSX.Element {
         <h2>Einstellungen</h2>
         <label>
           Share-Pfad
-          <input value={share} onChange={(e) => setzeShare(e.target.value)} />
+          {shareFest ? (
+            <output className="hinweistext">{share} (vom Dienst vorgegeben)</output>
+          ) : (
+            <input value={share} onChange={(e) => setzeShare(e.target.value)} />
+          )}
         </label>
         <label>
           Anzeigename

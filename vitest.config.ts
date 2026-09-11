@@ -124,6 +124,7 @@ export default defineConfig({
             "apps/desktop/src/kontrakt/**/*.test.ts",
             "apps/desktop/src/worker/**/*.test.ts",
             "apps/desktop/src/main/**/*.test.ts",
+            "apps/desktop/src/web/**/*.test.ts",
           ],
         },
       },

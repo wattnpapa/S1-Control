@@ -1,8 +1,8 @@
 {
-  // Main-Prozess und Preload: Node und Electron, aber kein DOM. Fehlt "DOM"
-  // in "lib", faellt schon die Typpruefung durch, sobald jemand hier
-  // `document` oder `window` benutzt — der Main-Prozess zieht keine
-  // Renderer-Bibliotheken.
+  // Main-Prozess, Preload, Worker und Web-Schale: Node (und im Main Electron),
+  // aber kein DOM. Fehlt "DOM" in "lib", faellt schon die Typpruefung durch,
+  // sobald jemand hier `document` oder `window` benutzt — keine der
+  // Node-Seiten zieht Renderer-Bibliotheken.
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2022"],
@@ -12,7 +12,7 @@
     "tsBuildInfoFile": "dist/main/.tsbuildinfo",
     "rootDir": "src"
   },
-  "include": ["src/main/**/*.ts", "src/worker/**/*.ts"],
+  "include": ["src/main/**/*.ts", "src/worker/**/*.ts", "src/web/**/*.ts"],
   "references": [
     { "path": "./tsconfig.kontrakt.json" },
     { "path": "../../packages/domaene" },

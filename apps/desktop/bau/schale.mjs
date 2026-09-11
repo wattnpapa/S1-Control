@@ -16,6 +16,11 @@
 //                       main.mjs, damit der Main den Pfad ohne Suche kennt.
 //   out/preload.cjs     CommonJS — Preload-Skripte werden in der Sandbox
 //                       ausschliesslich als CommonJS geladen.
+//   out/web.mjs         ESM — die Web-Schale (ADR-005): derselbe Kern hinter
+//                       einem HTTP-Dienst statt hinter Fenstern. Ohne
+//                       Electron, damit `node out/web.mjs` in einem Container
+//                       laeuft, in dem es keines gibt; sie findet
+//                       akte-worker.mjs und renderer/ neben sich.
 
 import { build } from "esbuild";
 import { fileURLToPath } from "node:url";
@@ -54,4 +59,11 @@ await build({
   entryPoints: [path.join(app, "src/main/preload.ts")],
   outfile: path.join(app, "out/preload.cjs"),
   format: "cjs",
+});
+
+await build({
+  ...gemeinsam,
+  entryPoints: [path.join(app, "src/web/web.ts")],
+  outfile: path.join(app, "out/web.mjs"),
+  format: "esm",
 });

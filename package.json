@@ -29,6 +29,7 @@
     "electron:holen": "install-electron",
     "start": "npm run build && npm run electron:holen && electron apps/desktop",
     "start:rauchprobe": "npm run build && npm run electron:holen && cross-env S1_SMOKE=1 electron apps/desktop",
+    "start:web": "npm run build && node apps/desktop/out/web.mjs",
     "build:paket": "node apps/desktop/bau/paket.mjs",
     "build:paket:probe": "node apps/desktop/bau/paket.mjs --dir",
     "doku:kurzanleitung": "npm run typecheck && node bau/kurzanleitung.mjs",

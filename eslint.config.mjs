@@ -18,7 +18,10 @@ import tseslint from "typescript-eslint";
 //   @s1/ausgaben  (Ring 3)  @s1/domaene + @bos/eeb-format, kein Electron.
 //   @s1/cli       (Ring 3)  alle @s1/*, node:, kein Electron.
 //   apps/desktop  (Ring 4)  darf alles nach innen; der Main-Prozess zieht
-//                           aber keine Renderer-Bibliotheken.
+//                           aber keine Renderer-Bibliotheken. Die Web-Schale
+//                           (src/web) ist eine zweite Schale um denselben
+//                           Kern: kein Electron, keine Renderer-Bibliothek,
+//                           kein synchroner Aufruf (ADR-005).
 //
 // Ergänzend, und deshalb nicht hier: `tsconfig.json` je Paket. `@s1/domaene`
 // bekommt weder "DOM" in `lib` noch Node-Typen, damit auch der Griff nach
@@ -235,6 +238,29 @@ export default tseslint.config(
   {
     files: ["apps/desktop/src/main/**/*.test.ts"],
     rules: { "no-restricted-syntax": "off" },
+  },
+
+  // Die Web-Schale (ADR-005) bedient alle Browser aus einem Thread; ein
+  // blockierender Aufruf haelt dort jeden Bediener an, nicht nur einen. Sie
+  // darf `node:http` — das ist ihr Zweck —, aber nichts Synchrones und kein
+  // Electron: Sie laeuft in einem Container, in dem es keines gibt.
+  ringRegel(
+    ["apps/desktop/src/web/**/*.ts"],
+    KEIN_ELECTRON,
+    KEINE_RENDERER_BIBLIOTHEK,
+  ),
+  {
+    files: ["apps/desktop/src/web/**/*.ts"],
+    ignores: ["apps/desktop/src/web/**/*.test.ts"],
+    rules: {
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector: "CallExpression > MemberExpression[property.name=/(?<!Ohne)Sync$/]",
+          message: "Kein synchroner Aufruf in der Web-Schale: Er hält jeden Browser an.",
+        },
+      ],
+    },
   },
 
   ringRegel(

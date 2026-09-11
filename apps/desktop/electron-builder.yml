@@ -25,6 +25,9 @@ directories:
 
 files:
   - out/**/*
+  # Die Web-Schale (ADR-005) ist ein eigenes Laufbild (Dockerfile); im
+  # Desktop-Paket waere sie ein Megabyte, das nie geladen wird.
+  - "!out/web.mjs*"
   - package.json
   # **Ohne `node_modules`.** electron-builder sammelt sonst jede Zeile aus
   # `dependencies` ein — hier also die drei geteilten Kerne samt ihren
