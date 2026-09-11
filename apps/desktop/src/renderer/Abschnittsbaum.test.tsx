@@ -151,6 +151,19 @@ describe("Der Abschnittsbaum", () => {
     expect(angeboten).not.toContain("B");
   });
 
+  it("hängt die Maske an den Körper, nicht in den Baum (Stapelordnung)", async () => {
+    await zeigeBaum("EO");
+    fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
+
+    // Steht die Maske im Baum, entscheidet die Reihenfolge im Dokument, wer
+    // oben liegt — der klebende Spaltenkopf der Einheitentabelle kommt danach
+    // und legte sich darüber. Der Grund am Körper nimmt sie aus dieser Ordnung.
+    const formular = screen.getByLabelText("„Deich Nord“ umbenennen");
+    const grund = formular.parentElement;
+    expect(grund?.className).toBe("maskengrund");
+    expect(grund?.parentElement).toBe(document.body);
+  });
+
   it("schließt die Maske mit Escape, ohne etwas zu schreiben (M3.6)", async () => {
     await zeigeBaum("EO");
     fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
