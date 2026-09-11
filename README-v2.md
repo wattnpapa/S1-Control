@@ -27,7 +27,9 @@ S1-Control/
   bau/kern-bauen.mjs    baut das Submodul nach vendor/eeb-format/dist
   packages/
     domaene/  speicher/  netz/  ausgaben/  cli/
-  apps/desktop/         Electron-Main, Preload, Renderer
+  apps/desktop/         Electron-Main, Preload, Renderer, Worker
+                        + src/web: die Web-Schale (ADR-005)
+  Dockerfile            Laufbild der Web-Schale; docker-compose.yml haengt Share und Daten ein
   vendor/eeb-format/      git-Submodul, geteilt mit erfassungsbogen.app
   docs/v2/              Zielbild, Umsetzungsplan, ADRs
   legacy-v1/            v1 als Referenz, wird nicht gebaut
@@ -104,6 +106,7 @@ npm test               # alle Pakete; @s1/domaene unter node und jsdom
 npm run build          # Renderer (Vite) + Main/Preload (esbuild)
 npm start              # leeres Electron-Fenster
 npm run start:rauchprobe   # startet, meldet den Fensterzustand, beendet sich
+S1_SHARE=/pfad/zum/share npm run start:web   # dieselbe Anwendung im Browser (ADR-005)
 ```
 
 Zwei Kleinigkeiten machen `tsc -b` gegen einen geleerten Baum robust, und
@@ -141,6 +144,52 @@ ohnehin `tsc -b`, nicht der Bündler.
 Zwei Ausgabeformate mit Absicht: `out/main.mjs` als ESM (Electron 43 lädt
 ESM-Main), `out/preload.cjs` als CommonJS (Preload-Skripte werden in der
 Sandbox nur als CommonJS geladen).
+
+### Web-Schale und Docker (ADR-005)
+
+Derselbe Kern laeuft auch ohne Electron: `apps/desktop/src/web/` ist eine
+zweite Schale in Ring 4, die den gebauten Renderer ueber HTTP ausliefert und
+die Rufe des Browsers an dieselbe `Vermittlung`, denselben `Arbeiterhof` und
+dieselben Worker reicht wie der Main. Sie ist fuer die Rechner der
+Fuehrungsstelle gedacht, auf denen sich nichts installieren laesst, und laeuft
+im **Mischbetrieb** neben den Desktop-Arbeitsplaetzen auf demselben Share.
+
+Fachlich ist die Web-Schale kein Server, sondern ein Rechner mit mehreren
+Arbeitsplaetzen: **Jeder Browser ist ein Arbeitsplatz** mit eigener
+`clientId`, eigenem Spiegel, eigenen Ereignisdateien und eigenem Undo-Stapel.
+Die Zuordnung ist ein `HttpOnly`-Cookie; der Share-Pfad kommt vom Dienst und
+ist im Browser nicht umstellbar; der Anzeigename wird zum Akteur der
+Ereignisse. Der Datenpfad bleibt unveraendert — auf dem Share sieht ein
+Browser aus wie ein weiterer Windows-Rechner. Der Staerke-Monitor ist unter
+`/#monitor` erreichbar (ein zweiter Reiter oder ein Fernseher mit Browser).
+
+| Variable | Bedeutung | Vorgabe |
+|---|---|---|
+| `S1_SHARE` | Wurzel des Shares (Pflicht) | — |
+| `S1_DATEN` | Profile, Spiegel, Protokoll der Web-Arbeitsplaetze | `~/.s1-control-web` |
+| `S1_WEB_HOST` / `S1_WEB_PORT` | Adresse und Port | `127.0.0.1` / `8080` |
+| `S1_WEB_GNADENFRIST_S` | wie lange ein Arbeitsplatz ohne Browser offen bleibt | `120` |
+| `S1_APP_VERSION` | Programmversion fuer Praesenz und Statuszeile | `0.0.0` |
+
+Im Container (`Dockerfile`, zwei Stufen; das Laufbild enthaelt nur Node und
+`out/`) sind `S1_SHARE=/share` und `S1_DATEN=/daten` vorbelegt. Die
+`docker-compose.yml` haengt das Share auf zwei Wegen ein: als Bind-Mount eines
+auf dem Host bereits eingehaengten SMB-Shares, oder — auskommentiert — als
+Docker-Volume mit dem cifs-Treiber und Zugangsdaten aus `.env`
+(Vorlage `.env.beispiel`). Betrieb und Grenzen: `docs/v2/BETRIEB.md`.
+
+```bash
+git submodule update --init --recursive   # der Bau-Kontext ist eine Kopie des Arbeitsbaums
+docker compose up -d --build              # http://<rechner>:8080
+```
+
+Drei Wege, mehr nicht: `POST /ruf` (ein Ruf, eine Antwort), `GET
+/mitteilungen` (Server-Sent Events fuer die Mitteilungen), `GET /...` (der
+Renderer). Keine Anmeldung — wer den Dienst im Netz der Fuehrungsstelle
+erreicht, arbeitet mit, wie auf dem Share jeder schreibt, der das Verzeichnis
+sieht; Rufe werden nur aus derselben Herkunft angenommen. Was im Browser
+fehlt: PDF-Ausgaben (sie brauchen `printToPDF` aus Electron; HTML und XLSX
+gehen), die Kamera und das Oeffnen des Monitors als eigenes Fenster.
 
 ### Die Rauchprobe
 

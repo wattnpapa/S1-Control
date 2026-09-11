@@ -13,7 +13,7 @@ Dieser Ordner beantwortet die Frage, mit der der Branch angelegt wurde: Soll S1-
 | 3 | [03-MEILENSTEINE.md](03-MEILENSTEINE.md) | Planung | Vorschaltungen vor der ersten Codezeile, Meilensteine für beide Zielumfänge, die 25 Auflagen aus der Widerlegung |
 | 4 | [04-OFFENE-ENTSCHEIDUNGEN.md](04-OFFENE-ENTSCHEIDUNGEN.md) | Johannes | 13 Entscheidungen, die nur der Produktverantwortliche treffen kann, je mit Empfehlung |
 | 5 | [05-UMSETZUNGSPLAN.md](05-UMSETZUNGSPLAN.md) | Planung | Beschlossener Weg: getroffene Entscheidungen, Arbeitspakete M-0 bis V mit Definition of Done, Summe, Kalender, Risiken, nächste Schritte |
-| 6 | [adr/](adr/) | Nachwelt | Vier Architekturentscheidungen als ADR, damit die Fragen nicht in zwei Jahren erneut gestellt werden |
+| 6 | [adr/](adr/) | Nachwelt | Fünf Architekturentscheidungen als ADR, damit die Fragen nicht in zwei Jahren erneut gestellt werden |
 
 ## Wie die Entscheidung entstanden ist
 

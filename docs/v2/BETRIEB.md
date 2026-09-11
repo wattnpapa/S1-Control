@@ -176,6 +176,52 @@ Solange kein Schlüssel hinterlegt ist, wird nichts angeboten und nichts
 geholt, und die Anwendung sagt warum. Das ist die sichere Vorbelegung — ein
 Platzhalter, der alles annähme, sähe aus wie eine Prüfung und wäre keine.
 
+## Die Web-Schale im Container
+
+Für Rechner, auf denen sich S1-Control nicht starten lässt (fremde Geräte,
+AppLocker, Konten ohne Ausführungsrecht), läuft dieselbe Anwendung im Browser
+(ADR-005). Ein Container auf einem Rechner der Führungsstelle oder auf dem NAS
+hängt den Share ein und liefert die Oberfläche unter `http://<rechner>:8080`
+aus. Der Desktop-Betrieb bleibt daneben unverändert: **Jeder Browser ist ein
+weiterer Arbeitsplatz** mit eigener Kennung, eigenem Spiegel und eigenem
+Undo — auf dem Share nicht von einem Windows-Rechner zu unterscheiden.
+
+Einrichten, auf einem Rechner mit Docker:
+
+```
+git clone … S1-Control && cd S1-Control
+git submodule update --init --recursive
+docker compose up -d --build
+```
+
+Die `docker-compose.yml` erwartet den Share als Bind-Mount (`/mnt/s1-share`
+auf dem Host, per fstab oder systemd eingehängt) oder — auskommentiert — als
+cifs-Volume mit den Zugangsdaten aus `.env` (Vorlage `.env.beispiel`). Der
+Container läuft als Benutzer `node` (uid 1000); `uid=`/`gid=` des Mounts
+müssen dazu passen, sonst meldet die Statuszeile „kein Schreibrecht“ (§8.4).
+Profile, Spiegel und Protokoll der Web-Arbeitsplätze liegen im Volume
+`s1-daten`; es zu löschen kostet nur die Kennungen, nicht die Akte.
+
+Was der Bediener wissen muss:
+
+* **Der Anzeigename ist der Akteur.** Ein Browser hat kein Benutzerkonto; was
+  in den Einstellungen als Anzeigename steht, steht im Einsatztagebuch.
+* **Der Arbeitsplatz hängt am Browser.** Cookies löschen oder ein anderer
+  Browser heißt: ein neuer Arbeitsplatz mit neuer Kennung. Der alte bleibt
+  auf dem Share als das, was er war.
+* **Der Stärke-Monitor** ist dieselbe Adresse mit `#monitor` — auf einem
+  Fernseher mit Browser oder in einem zweiten Reiter.
+* **Was fehlt:** PDF-Ausgaben (HTML und XLSX gehen; das PDF entsteht auf einem
+  Desktop-Arbeitsplatz), die Kamera, und das Programmpaket wird nicht über den
+  Share eingespielt — ein Container wird durch ein neues Bild aktualisiert.
+* **Keine Anmeldung.** Wer den Dienst im Netz erreicht, arbeitet mit — wie
+  auf dem Share jeder schreibt, der das Verzeichnis sieht. Der Dienst gehört
+  in das Netz der Führungsstelle und nirgendwo sonst hin.
+
+Beim Stoppen (`docker compose stop`) schließt der Dienst alle Arbeitsplätze
+geordnet; der Upload-Stand wird fortgeschrieben, die Präsenz bleibt liegen und
+altert sichtbar (§6.4).
+
 ## Notverfahren bei NAS-Ausfall
 
 **Der Ausfall ist der Normalpfad, nicht der Fehlerpfad** (§1.3, Satz 2). Jedes
