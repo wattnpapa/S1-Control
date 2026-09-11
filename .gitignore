@@ -25,3 +25,6 @@ einsatz/
 node_modules/
 out/
 *.tsbuildinfo
+
+# Zugangsdaten fuer docker-compose (Vorlage: .env.beispiel)
+.env
