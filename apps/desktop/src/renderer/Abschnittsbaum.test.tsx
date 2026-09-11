@@ -40,7 +40,7 @@ function knoten(id: string, name: string, teil: Partial<Baumknoten> = {}): Baumk
 const BAUM: readonly Baumknoten[] = [
   knoten("EO", "Deich Nord"),
   knoten("EA-SUED", "EA Süd", { reihenfolge: 2 }),
-  knoten("AUFFANG", "Auffang", { systemAbschnitt: true, reihenfolge: 0, einheiten: 0, einheitenSumme: 0 }),
+  knoten("EINGANG", "Eingang", { systemAbschnitt: true, reihenfolge: 0, einheiten: 0, einheitenSumme: 0 }),
 ];
 
 let attrappe: Attrappe;
@@ -89,8 +89,8 @@ describe("Der Abschnittsbaum", () => {
   });
 
   it("sperrt die ändernden Knöpfe für die Systemabschnitte (§5.3.4)", async () => {
-    await zeigeBaum("AUFFANG");
-    // Jedes ändernde Ereignis auf `AUFFANG` ist wirkungslos; einen Knopf
+    await zeigeBaum("EINGANG");
+    // Jedes ändernde Ereignis auf `EINGANG` ist wirkungslos; einen Knopf
     // anzubieten, dessen Wirkung der Fold verwirft, wäre ein Versprechen,
     // das die Anwendung nicht hält.
     expect(screen.getByRole("button", { name: "Umbenennen" }).hasAttribute("disabled")).toBe(true);

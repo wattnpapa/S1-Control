@@ -51,12 +51,14 @@ describe("kurzform", () => {
 });
 
 describe("harkenbild", () => {
-  it("trennt die Einrichtungen von der Führung und lässt das Archiv weg", () => {
+  it("trennt die Einrichtungen von der Führung und lässt die Systemabschnitte weg", () => {
     const bild = harkenbild([
       knoten("EA1", "EINSATZORT"),
       knoten("MK", "MELDEKOPF"),
       knoten("BR", "BEREITSTELLUNGSRAUM"),
       knoten("ARCHIV", "ARCHIV"),
+      // Der Eingang gehört nicht in die Führungsorganisation (§5.3.3).
+      knoten("EINGANG", "EINGANG"),
     ]);
     expect(bild.fuehrung.map((k) => k.id)).toEqual(["EA1"]);
     expect(bild.einrichtungen.map((k) => k.id)).toEqual(["MK", "BR"]);
@@ -73,6 +75,13 @@ describe("Maße", () => {
 });
 
 describe("zeichenkennung", () => {
+  it("kennt für den Eingang kein Zeichen", () => {
+    // §5.3.3: Der Eingang ist keine Führungsstelle und keine Einrichtung; er
+    // braucht kein taktisches Zeichen.
+    expect(zeichenkennung("EINGANG", 0)).toBeUndefined();
+    expect(zeichenkennung("EINGANG", 1)).toBeUndefined();
+  });
+
   it("wählt die Datei nach Typ und Tiefe", () => {
     // Die Dateien tragen ihren Text fest — deshalb zwei verschiedene für
     // denselben Typ auf zwei Ebenen.

@@ -383,7 +383,8 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                   (zeile) =>
                     zeile.id !== knoten.id &&
                     zeile.aufgeloestNach === undefined &&
-                    zeile.typ !== "ARCHIV",
+                    zeile.typ !== "ARCHIV" &&
+                    zeile.typ !== "EINGANG",
                 )
                 .map((zeile) => (
                   <option key={zeile.id} value={zeile.id}>
@@ -402,11 +403,11 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
   );
 }
 
-/** Die acht bekannten Abschnittstypen (§5.3); der Bereich selbst bleibt offen (§3.7). */
+/** Die bekannten Abschnittstypen (§5.3) ohne die beiden systemseitigen; der Bereich bleibt offen (§3.7). */
 function Typwahl({ wert, aufWahl }: { wert: string; aufWahl: (typ: string) => void }): React.JSX.Element {
   return (
     <select value={wert} onChange={(e) => { aufWahl(e.target.value); }}>
-      {ABSCHNITTSTYPEN.filter((typ) => typ !== "ARCHIV").map((typ) => (
+      {ABSCHNITTSTYPEN.filter((typ) => typ !== "ARCHIV" && typ !== "EINGANG").map((typ) => (
         <option key={typ} value={typ}>
           {typ}
         </option>
@@ -418,7 +419,7 @@ function Typwahl({ wert, aufWahl }: { wert: string; aufWahl: (typ: string) => vo
 /**
  * Die beiden Systemabschnitte lassen sich nicht ändern (§5.3.4).
  *
- * Jedes ändernde Ereignis auf `AUFFANG` oder `ARCHIV` ist wirkungslos und
+ * Jedes ändernde Ereignis auf `EINGANG` oder `ARCHIV` ist wirkungslos und
  * erzeugt `reservierteIdVerworfen`. Einen Knopf anzubieten, dessen Wirkung der
  * Fold anschließend verwirft, wäre ein Versprechen, das die Anwendung nicht
  * hält.

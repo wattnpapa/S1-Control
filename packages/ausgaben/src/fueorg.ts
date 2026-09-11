@@ -76,14 +76,15 @@ function harkenknoten(knoten: Baumknoten): Harkenknoten {
 /**
  * Baut die Harke aus dem Zustand.
  *
- * Der Baum kommt **ohne Archiv**: Ein Organigramm, das den Archivabschnitt
- * zeichnet, zeigt eine Führungsstruktur, die es nicht gibt. Aufgelöste
+ * Der Baum kommt **ohne die beiden Systemabschnitte**: Ein Organigramm, das
+ * das Archiv oder den Eingang zeichnet, zeigt eine Führungsstruktur, die es
+ * nicht gibt — der Eingang ist die Warteschlange davor (§5.3.4). Aufgelöste
  * Abschnitte bleiben dagegen stehen (§5.3.2) — sie waren Teil der
  * Organisation, und ein Blatt, das gedruckt und abgeheftet wird, soll das
  * zeigen.
  */
 export function harke(zustand: Zustand): Harke {
-  const baum = projektion.abschnittsbaum(zustand, { ohneArchiv: true });
+  const baum = projektion.abschnittsbaum(zustand, { ohneArchiv: true, ohneEingang: true });
   const fuestZeilen = projektion.fuestStaerke(zustand);
   const fuest = fuestZeilen.map((zeile) => ({
     bezeichnung: `${zeile.teileinheit} · ${zeile.schicht}`,

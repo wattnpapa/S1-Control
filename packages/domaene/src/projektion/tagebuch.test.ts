@@ -138,9 +138,9 @@ describe("tagebuchzeile", () => {
   });
 
   it("spricht bei einer Verschiebung über beide Abschnitte", () => {
-    const ereignis = einheitVerschoben(hlc(7, 0, "a"), 7, "U1", "EA-NORD", "AUFFANG");
+    const ereignis = einheitVerschoben(hlc(7, 0, "a"), 7, "U1", "EA-NORD", "EINGANG");
     const zeile = tagebuchzeile(falte([...GRUNDLAGE, ereignis]), ereignis);
-    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Einheit verschoben: EA-NORD → AUFFANG");
+    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Einheit verschoben: EA-NORD → EINGANG");
   });
 
   it("gibt den frei getippten Eintrag als Text wieder, nicht als Feldübergang", () => {
@@ -210,7 +210,7 @@ describe("trifftFilter", () => {
     expect(trifftFilter(zeile, { einheitId: "U1" })).toBe(true);
     expect(trifftFilter(zeile, { einheitId: "U2" })).toBe(false);
     expect(trifftFilter(zeile, { abschnittId: "EA-NORD" })).toBe(true);
-    expect(trifftFilter(zeile, { abschnittId: "AUFFANG" })).toBe(false);
+    expect(trifftFilter(zeile, { abschnittId: "EINGANG" })).toBe(false);
   });
 
   it("sucht im Satz, im Akteur und im Grund, ohne Rücksicht auf Groß- und Kleinschreibung", () => {

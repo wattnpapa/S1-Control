@@ -16,7 +16,7 @@
 
 import { abschnittStaerke, einheitenImAbschnitt } from "../kennzahlen.js";
 import { staerkePlus, type Id, type Staerke } from "../werte.js";
-import { ARCHIV_ABSCHNITT_ID, AUFFANG_ABSCHNITT_ID, type AbschnittZustand, type Zustand } from "../zustand.js";
+import { ARCHIV_ABSCHNITT_ID, EINGANG_ABSCHNITT_ID, type AbschnittZustand, type Zustand } from "../zustand.js";
 
 /**
  * Ein Knoten des Baums.
@@ -50,7 +50,7 @@ export interface Baumknoten {
   readonly einheitenSumme: number;
   /** §5.3: geht die Stärke dieses Abschnitts in die Gesamtstärke ein? */
   readonly zaehlt: boolean;
-  /** §5.3.4: `AUFFANG` und `ARCHIV` — sie lassen sich nicht ändern. */
+  /** §5.3.4: `EINGANG` und `ARCHIV` — sie lassen sich nicht ändern. */
   readonly systemAbschnitt: boolean;
   /**
    * Das frei gewählte taktische Zeichen — die Kennung aus dem Zeichensatz.
@@ -91,8 +91,17 @@ export interface Baumoptionen {
    * aufgeräumtes Bild will, schaltet ihn hier weg — und nicht der Fold.
    */
   readonly ohneAufgeloeste?: boolean;
-  /** Den Systemabschnitt `ARCHIV` weglassen; `AUFFANG` bleibt immer sichtbar. */
+  /** Den Systemabschnitt `ARCHIV` weglassen. */
   readonly ohneArchiv?: boolean;
+  /**
+   * Den Systemabschnitt `EINGANG` weglassen.
+   *
+   * Vorbelegung ist `false`: Im Abschnittsbaum muss er sichtbar sein, sonst
+   * verschwände eine Einheit, deren `AbschnittAngelegt` noch unterwegs ist
+   * (§5.3.3). Wer die **Führungsorganisation** zeichnet, schaltet ihn weg — er
+   * ist die Warteschlange davor und kein Teil der Organisation (§5.3.4).
+   */
+  readonly ohneEingang?: boolean;
 }
 
 /**
@@ -129,6 +138,7 @@ export function abschnittsbaum(zustand: Zustand, optionen: Baumoptionen = {}): r
   const sichtbar = new Map<Id, AbschnittZustand>();
   for (const [id, abschnitt] of Object.entries(zustand.abschnitte)) {
     if (optionen.ohneArchiv === true && id === ARCHIV_ABSCHNITT_ID) continue;
+    if (optionen.ohneEingang === true && id === EINGANG_ABSCHNITT_ID) continue;
     if (optionen.ohneAufgeloeste === true && abschnitt.aufgeloest?.wert != null) continue;
     sichtbar.set(id, abschnitt);
   }
@@ -222,16 +232,21 @@ export function schluesseZyklus(zustand: Zustand, abschnittId: Id, kandidat: Id)
  * Der Abschnitt selbst scheidet aus, ein bereits aufgelöster ebenfalls — er
  * verlängerte nur die Kette —, und `ARCHIV` scheidet aus, weil eine Auflösung
  * dorthin die Stärke aller betroffenen Einheiten aus der Gesamtstärke nähme,
- * ohne dass jemand eine Einheit archiviert hätte.
+ * ohne dass jemand eine Einheit archiviert hätte. `EINGANG` scheidet aus
+ * demselben Grund aus: Er zählt nicht (§5.3.3), und eine Auflösung dorthin
+ * schöbe geführte Kräfte zurück in die Warteschlange.
  */
 export function aufloesungsziele(zustand: Zustand, abschnittId: Id): readonly Id[] {
   return Object.entries(zustand.abschnitte)
     .filter(
       ([id, abschnitt]) =>
-        id !== abschnittId && id !== ARCHIV_ABSCHNITT_ID && abschnitt.aufgeloest?.wert == null,
+        id !== abschnittId &&
+        id !== ARCHIV_ABSCHNITT_ID &&
+        id !== EINGANG_ABSCHNITT_ID &&
+        abschnitt.aufgeloest?.wert == null,
     )
     .map(([id]) => id)
     .sort();
 }
 
-export { AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID };
+export { EINGANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID };

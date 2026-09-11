@@ -35,7 +35,7 @@ import {
   staerke,
   staerkeGeaendert,
 } from "../pruefhilfen/ereignisbau.js";
-import { AUFFANG_ABSCHNITT_ID } from "../zustand.js";
+import { EINGANG_ABSCHNITT_ID } from "../zustand.js";
 import type { Zustand } from "../zustand.js";
 
 function falte(ereignisse: readonly EingehendesEreignis[]): Zustand {
@@ -250,9 +250,9 @@ describe("einheitentabelle — Sortierung", () => {
 });
 
 describe("einheitentabelle — Filter", () => {
-  it("filtert über den wirksamen Abschnitt und findet die Einheit im Auffang wieder", () => {
+  it("filtert über den wirksamen Abschnitt und findet die Einheit im Eingang wieder", () => {
     // §5.3.3: Eine Einheit, deren gemeldeter Abschnitt unbekannt ist, geht in
-    // den Auffang und nicht verloren — ihre Stärke zählt weiter. Deshalb muss
+    // den Eingang und nicht verloren — ihre Stärke zählt weiter. Deshalb muss
     // der Filter den **wirksamen** Abschnitt lesen: Wer nach dem gemeldeten
     // filterte, verlöre sie in jeder Ansicht.
     const zustand = falte([
@@ -264,9 +264,9 @@ describe("einheitentabelle — Filter", () => {
 
     expect(einheitentabelle(zustand, { abschnittId: "EA-NORD" }).zeilen.map((z) => z.einheitId))
       .toEqual(["U1"]);
-    const imAuffang = einheitentabelle(zustand, { abschnittId: AUFFANG_ABSCHNITT_ID });
-    expect(imAuffang.zeilen.map((z) => z.einheitId)).toEqual(["U3"]);
-    expect(imAuffang.zeilen[0]?.abschnittId).toBe(AUFFANG_ABSCHNITT_ID);
+    const imEingang = einheitentabelle(zustand, { abschnittId: EINGANG_ABSCHNITT_ID });
+    expect(imEingang.zeilen.map((z) => z.einheitId)).toEqual(["U3"]);
+    expect(imEingang.zeilen[0]?.abschnittId).toBe(EINGANG_ABSCHNITT_ID);
   });
 
   it("sucht in der Bezeichnung ohne Rücksicht auf Groß-/Kleinschreibung", () => {

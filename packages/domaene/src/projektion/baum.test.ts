@@ -19,7 +19,7 @@ import {
   hlc,
   staerke,
 } from "../pruefhilfen/ereignisbau.js";
-import { AUFFANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID } from "../zustand.js";
+import { EINGANG_ABSCHNITT_ID, ARCHIV_ABSCHNITT_ID } from "../zustand.js";
 import type { Zustand } from "../zustand.js";
 
 function falte(ereignisse: readonly EingehendesEreignis[]): Zustand {
@@ -112,20 +112,20 @@ describe("das frei gewählte Zeichen (§5.3)", () => {
     expect(knoten?.zeichen).toBeUndefined();
   });
 
-  it("wirkt auf dem Auffang nicht (§5.3.4)", () => {
-    const aufDenAuffang = feldEreignis(
+  it("wirkt auf dem Eingang nicht (§5.3.4)", () => {
+    const aufDenEingang = feldEreignis(
       hlc(11, 0, "a"),
       11,
       "AbschnittZeichenGesetzt",
-      { abschnittId: AUFFANG_ABSCHNITT_ID },
+      { abschnittId: EINGANG_ABSCHNITT_ID },
       null,
       "Einheiten/Bergungsgruppe",
     );
-    const zustand = falte([EINSATZ, aufDenAuffang]);
-    const auffang = abschnittsbaum(zustand, { ohneArchiv: true }).find(
-      (k) => k.id === AUFFANG_ABSCHNITT_ID,
+    const zustand = falte([EINSATZ, aufDenEingang]);
+    const eingang = abschnittsbaum(zustand, { ohneArchiv: true }).find(
+      (k) => k.id === EINGANG_ABSCHNITT_ID,
     );
-    expect(auffang?.zeichen).toBeUndefined();
+    expect(eingang?.zeichen).toBeUndefined();
   });
 });
 
@@ -202,10 +202,11 @@ describe("abschnittsbaum", () => {
 
   it("führt die beiden Systemabschnitte und kennzeichnet sie", () => {
     const baum = abschnittsbaum(falte([EINSATZ]));
-    const auffang = baum.find((k) => k.id === AUFFANG_ABSCHNITT_ID);
+    const eingang = baum.find((k) => k.id === EINGANG_ABSCHNITT_ID);
     const archiv = baum.find((k) => k.id === ARCHIV_ABSCHNITT_ID);
-    expect(auffang?.systemAbschnitt).toBe(true);
-    expect(auffang?.zaehlt).toBe(true);
+    expect(eingang?.systemAbschnitt).toBe(true);
+    // §5.3.3: Der Eingang steht vor der Fuehrungsorganisation und zaehlt nicht.
+    expect(eingang?.zaehlt).toBe(false);
     expect(archiv?.systemAbschnitt).toBe(true);
     expect(archiv?.zaehlt).toBe(false);
     // §5.3.4: `ARCHIV` steht mit reihenfolge 999999 am Ende jeder Sortierung.
@@ -246,17 +247,19 @@ describe("schluesseZyklus", () => {
 
   it("lässt einen Vorfahren und einen Fremden zu", () => {
     expect(schluesseZyklus(zustand, "C", "A")).toBe(false);
-    expect(schluesseZyklus(zustand, "C", AUFFANG_ABSCHNITT_ID)).toBe(false);
+    expect(schluesseZyklus(zustand, "C", EINGANG_ABSCHNITT_ID)).toBe(false);
   });
 });
 
 describe("aufloesungsziele", () => {
-  it("lässt den Abschnitt selbst und ARCHIV aus", () => {
+  it("lässt den Abschnitt selbst, ARCHIV und EINGANG aus", () => {
     const zustand = falte([EINSATZ, abschnitt(2, 2, "A", "A", 0), abschnitt(3, 3, "B", "B", 0)]);
     const ziele = aufloesungsziele(zustand, "A");
     expect(ziele).toContain("B");
-    expect(ziele).toContain(AUFFANG_ABSCHNITT_ID);
     expect(ziele).not.toContain("A");
     expect(ziele).not.toContain(ARCHIV_ABSCHNITT_ID);
+    // Eine Aufloesung in den Eingang schoebe gefuehrte Kraefte zurueck in die
+    // Warteschlange und naehme ihre Staerke aus der Gesamtstaerke (§5.3.3).
+    expect(ziele).not.toContain(EINGANG_ABSCHNITT_ID);
   });
 });

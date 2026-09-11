@@ -45,6 +45,8 @@ export function kurzform(typ: string, tiefe: number): string {
       return "LOG";
     case "ANGEFORDERT":
       return "ANF";
+    case "EINGANG":
+      return "EIN";
     case "EINSATZORT":
       return tiefe === 0 ? "EAL" : "UEAL";
     default:
@@ -127,6 +129,8 @@ export function langform(typ: string, tiefe: number): string {
       return "Versorgungsstelle";
     case "ANGEFORDERT":
       return "Angefordert";
+    case "EINGANG":
+      return "Eingang";
     case "EINSATZORT":
       return tiefe === 0 ? "Einsatzabschnittsleitung" : "Untereinsatzabschnittsleitung";
     default:
@@ -164,13 +168,15 @@ export interface Harkenbild {
 /**
  * Teilt den Baum in Harke und Einrichtungen.
  *
- * Der Archivabschnitt fällt weg: Ein Organigramm, das ihn zeichnet, zeigt eine
- * Führungsstruktur, die es nicht gibt. Aufgelöste Abschnitte bleiben stehen
- * (§5.3.2) — sie waren Teil der Organisation, und ein Blatt, das an der Wand
- * hängt, soll das zeigen.
+ * Die beiden Systemabschnitte fallen weg: Ein Organigramm, das das Archiv oder
+ * den Eingang zeichnet, zeigt eine Führungsstruktur, die es nicht gibt. Der
+ * Eingang ist die Warteschlange vor der Organisation (§5.3.3) und trägt aus
+ * demselben Grund kein taktisches Zeichen. Aufgelöste Abschnitte bleiben
+ * stehen (§5.3.2) — sie waren Teil der Organisation, und ein Blatt, das an der
+ * Wand hängt, soll das zeigen.
  */
 export function harkenbild(baum: readonly Baumknoten[]): Harkenbild {
-  const oben = baum.filter((knoten) => knoten.typ !== "ARCHIV");
+  const oben = baum.filter((knoten) => knoten.typ !== "ARCHIV" && knoten.typ !== "EINGANG");
   return {
     fuehrung: oben.filter((knoten) => !istEinrichtung(knoten.typ)),
     einrichtungen: oben.filter((knoten) => istEinrichtung(knoten.typ)),

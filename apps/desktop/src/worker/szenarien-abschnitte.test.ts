@@ -226,13 +226,13 @@ describe("Funktionalität: Abschnittsbaum", () => {
 
   it("Szenario: die Systemabschnitte lassen sich nicht ändern", async () => {
     const platz = await angenommenEinEinsatz();
-    // §5.3.4: Jedes ändernde Ereignis auf `AUFFANG` ist wirkungslos und
+    // §5.3.4: Jedes ändernde Ereignis auf `EINGANG` ist wirkungslos und
     // erzeugt `reservierteIdVerworfen`. Der Bedienschritt geht durch — er
     // wird geschrieben —, aber er wirkt nicht. Genau deshalb bietet die Maske
     // die Knöpfe für Systemabschnitte gar nicht erst an.
-    await wennIchSetze(platz, "AbschnittUmbenannt", { abschnittId: "AUFFANG" }, "Auffang", "Sammelstelle");
+    await wennIchSetze(platz, "AbschnittUmbenannt", { abschnittId: "EINGANG" }, "Eingang", "Sammelstelle");
 
-    expect(knoten(platz, "AUFFANG")?.name).toBe("Auffang");
+    expect(knoten(platz, "EINGANG")?.name).toBe("Eingang");
     expect(
       platz.dienst.zustand.hinweise.some((hinweis) => hinweis.art === "reservierteIdVerworfen"),
     ).toBe(true);

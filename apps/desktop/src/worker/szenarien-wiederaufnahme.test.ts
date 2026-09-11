@@ -55,7 +55,7 @@ describe("Funktionalität: Wiederaufnahme", () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
     const vorher = tagebuchzahl(platz);
-    // Drei Abschnitte, nicht einer: `EinsatzAngelegt` legt Auffang und Archiv
+    // Drei Abschnitte, nicht einer: `EinsatzAngelegt` legt Eingang und Archiv
     // mit an, und auch die sind Ereignisse, die den Neustart überstehen.
     const abschnitteVorher = Object.keys(platz.dienst.zustand.abschnitte).sort();
 

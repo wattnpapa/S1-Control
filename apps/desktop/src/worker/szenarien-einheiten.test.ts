@@ -267,20 +267,21 @@ describe("Funktionalität: Einheiten", () => {
     expect(unter.fahrzeuge[0]?.funkrufname).toBe("Heros Oldenburg 21/51");
   });
 
-  it("Szenario: eine Einheit in einen unbekannten Abschnitt bleibt sichtbar und zählt", async () => {
+  it("Szenario: eine Einheit in einen unbekannten Abschnitt bleibt sichtbar, zählt aber nicht", async () => {
     const platz = await angenommenEinEinsatz();
-    // §5.3.3: Das `AbschnittAngelegt` ist noch unterwegs. Die Stärke einer
-    // real gemeldeten Einheit darf nicht dadurch verschwinden, dass ein
-    // Ereignis fehlt — sie steht im Auffang und zählt.
+    // §5.3.3: Das `AbschnittAngelegt` ist noch unterwegs. Die Einheit darf
+    // nicht dadurch verschwinden, dass ein Ereignis fehlt — sie steht sichtbar
+    // im Eingang. Gezählt wird sie dort nicht: Der Eingang ist die
+    // Warteschlange vor der Führungsorganisation (§5.3.4).
     await wennIchDieEinheitAnlege(platz, "U7", "Kommt aus dem Nichts", "NOCH-NICHT-DA", {
       fuehrer: 1,
       unterfuehrer: 0,
       mannschaft: 0,
     });
 
-    const imAuffang = dannSeheIchDieTabelle(platz, "AUFFANG");
-    expect(imAuffang.map((zeile) => zeile.einheitId)).toContain("U7");
-    expect(gesamtstaerke(platz)).toBe(10);
+    const imEingang = dannSeheIchDieTabelle(platz, "EINGANG");
+    expect(imEingang.map((zeile) => zeile.einheitId)).toContain("U7");
+    expect(gesamtstaerke(platz)).toBe(9);
   });
 
   it("Szenario: eine Inline-Änderung mit falschem Vorher-Wert erzeugt einen Hinweis an der Zelle", async () => {

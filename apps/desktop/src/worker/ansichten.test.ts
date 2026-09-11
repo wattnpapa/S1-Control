@@ -87,7 +87,7 @@ describe("baumAnfordern", () => {
     const { baum } = a.dienst.baum({ art: "baumAnfordern", akteId: "akte-1" });
     const ids = baum.map((knoten) => knoten.id);
     expect(ids).toContain("EO");
-    expect(ids).toContain("AUFFANG");
+    expect(ids).toContain("EINGANG");
     expect(ids).toContain("ARCHIV");
     const eo = baum.find((knoten) => knoten.id === "EO");
     expect(eo?.name).toBe("Deich Nord");
