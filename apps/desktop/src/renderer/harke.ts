@@ -52,6 +52,36 @@ export function kurzform(typ: string, tiefe: number): string {
   }
 }
 
+/**
+ * Das Zeichen aus dem importierten Satz (`apps/desktop/assets/tz/`).
+ *
+ * Die Dateien tragen ihren Text fest — `EAL.svg` sagt „EAL". Genau deshalb
+ * hängt die Wahl der Datei an Typ **und** Tiefe: Derselbe Einsatzort ist auf
+ * der ersten Ebene ein Einsatzabschnitt und darunter ein Untereinsatzabschnitt.
+ *
+ * `undefined` heißt: Für diesen Typ hat der Satz kein Zeichen. Die Ansicht
+ * zeichnet dann die Kurzform als Text — sichtbar fehlend statt stillschweigend
+ * falsch.
+ */
+export function zeichenkennung(typ: string, tiefe: number): string | undefined {
+  switch (typ) {
+    case "FUEHRUNGSSTELLE":
+      return "Führungsstellen/TEL";
+    case "SONSTIGE_FUEHRUNG":
+      return "Führungsstellen/EL";
+    case "MELDEKOPF":
+      return "Einrichtungen/Meldekopf";
+    case "BEREITSTELLUNGSRAUM":
+      return "Einrichtungen/Bereitstellungsraum";
+    case "LOGISTIK":
+      return "Einrichtungen/Logistikstützpunkt";
+    case "EINSATZORT":
+      return tiefe === 0 ? "Führungsstellen/EAL" : "Führungsstellen/UEAL";
+    default:
+      return undefined;
+  }
+}
+
 /** Die ausgeschriebene Beschriftung — für `title` und für die zweite Wahl. */
 export function langform(typ: string, tiefe: number): string {
   switch (typ) {

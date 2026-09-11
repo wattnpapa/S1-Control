@@ -6,7 +6,15 @@ import { describe, expect, it } from "vitest";
 
 import type { Baumknoten } from "@s1/domaene";
 
-import { harkenbild, istEinrichtung, knotenbreite, kurzform, langform, stummel } from "./harke.js";
+import {
+  harkenbild,
+  istEinrichtung,
+  knotenbreite,
+  kurzform,
+  langform,
+  stummel,
+  zeichenkennung,
+} from "./harke.js";
 
 function knoten(id: string, typ: string): Baumknoten {
   return {
@@ -61,5 +69,22 @@ describe("Maße", () => {
   it("staffelt Knotenbreite und Stummel nach Ebene (Entwurf)", () => {
     expect([knotenbreite(0), knotenbreite(1), knotenbreite(2)]).toEqual([196, 176, 118]);
     expect([stummel(0), stummel(1), stummel(2)]).toEqual([20, 16, 14]);
+  });
+});
+
+describe("zeichenkennung", () => {
+  it("wählt die Datei nach Typ und Tiefe", () => {
+    // Die Dateien tragen ihren Text fest — deshalb zwei verschiedene für
+    // denselben Typ auf zwei Ebenen.
+    expect(zeichenkennung("EINSATZORT", 0)).toBe("Führungsstellen/EAL");
+    expect(zeichenkennung("EINSATZORT", 1)).toBe("Führungsstellen/UEAL");
+    expect(zeichenkennung("FUEHRUNGSSTELLE", 0)).toBe("Führungsstellen/TEL");
+    expect(zeichenkennung("MELDEKOPF", 0)).toBe("Einrichtungen/Meldekopf");
+  });
+
+  it("sagt nichts, wo der Satz nichts hat", () => {
+    // `undefined` ist kein Fehler: Die Ansicht zeichnet dann die Kurzform als
+    // Text — sichtbar fehlend statt stillschweigend falsch.
+    expect(zeichenkennung("ANGEFORDERT", 0)).toBeUndefined();
   });
 });

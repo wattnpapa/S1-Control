@@ -5,10 +5,41 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'"
     />
     <title>S1-Control</title>
     <style>
+      /* Die Schrift der taktischen Zeichen. Sie liegt im Paket
+         (`apps/desktop/assets/tz/schrift/`, Apache-2.0) und nicht bei Google
+         Fonts: Die Anwendung laeuft offline (02-ZIELBILD.md), und ein Zeichen
+         mit fremder Schrift ist im Ausdruck ein anderes Zeichen. */
+      @font-face {
+        font-family: "Roboto Slab";
+        font-weight: bold;
+        font-style: normal;
+        src: url("../../assets/tz/schrift/RobotoSlab-Bold.woff") format("woff");
+      }
+
+      /* Ein taktisches Zeichen steht inline im Dokument (siehe zeichen.tsx);
+         die Groesse gibt der Aufrufer, das SVG traegt seine viewBox. */
+      .tz {
+        display: inline-block;
+        line-height: 0;
+      }
+      .tz svg {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+      .tz-fehlt {
+        line-height: 1.2;
+        padding: 4px 6px;
+        border: var(--rahmenbreite) dashed var(--rahmen);
+        color: var(--text-leise);
+        text-align: center;
+        font-size: 0.92em;
+      }
+
       /* Die Gestaltungsebene aus dem Entwurf
          (docs/v2/entwurf/oberflaeche/HANDOFF-OBERFLAECHE.md, Option 2a).
          Alles haengt an den Marken unter :root, damit ein Themewechsel an

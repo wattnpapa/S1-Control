@@ -1,88 +1,66 @@
 /**
- * Die taktischen Zeichen der Führungsharke (Entwurf „Oberfläche", Assets).
+ * Ein taktisches Zeichen aus dem importierten Zeichensatz.
  *
- * **Inline und nicht als `<img>`.** Die Zeichen tragen ihre Beschriftung als
- * Text; in einem `<img src>` griffe die Schriftart des Fensters nicht, und ein
- * Zeichen mit fremder Schrift ist im Ausdruck ein anderes Zeichen. Die
- * Geometrie ist die der gelieferten Dateien unter `apps/desktop/assets/tz/`:
- * Zeichenfläche 256×256, Führungsstellen-Flagge `x=10 y=64 w=236 h=128` in
- * `#ffff00` mit 5 px schwarzem Rand und Mast, Einrichtungen als Kreis `r=64`.
+ * Die Datei kommt unverändert aus jonas-koeritz/Taktische-Zeichen
+ * (`apps/desktop/assets/tz/`, erzeugt von `bau/zeichen-importieren.mjs`).
+ * Sie wird **inline** gesetzt, damit die mitgelieferte Roboto Slab greift;
+ * die Größe steuert der Aufrufer, das SVG selbst trägt seine `viewBox`.
  *
- * **Roboto Slab, mit Rückfall.** Die Vorlage setzt Roboto Slab Bold. Die
- * Anwendung läuft offline (02-ZIELBILD.md), eine Schrift von Google Fonts wäre
- * im Einsatz nicht da; bis sie im Paket liegt, trägt der Rückfall auf Georgia
- * das Zeichen. Die Form bleibt, die Serifen wechseln.
+ * **`dangerouslySetInnerHTML` an genau dieser Stelle.** Der Inhalt ist keine
+ * Eingabe und kein Inhalt der Akte: Er wird zur Bauzeit aus dem Repository
+ * eingebunden und liegt im Bündel wie jede andere Quelle. Ein Zeichen über
+ * `<img>` verlöre die Schrift, ein nachgebautes SVG die Norm.
  */
 
-const SCHRIFT = "'Roboto Slab', Georgia, serif";
+import { zeichenSvg } from "./zeichensatz.js";
 
 export interface ZeichenEigenschaften {
-  /** Die Beschriftung im Zeichen — `TEL`, `EAL`, `UEAL`, `M`. */
-  readonly text: string;
-  /** Was das Zeichen bedeutet; steht in `title` und für Vorleseprogramme. */
+  /** `Führungsstellen/EAL`, `Einrichtungen/Meldekopf` — Ordner und Dateiname. */
+  readonly kennung: string;
+  /** Was das Zeichen bedeutet; für Vorleseprogramme und `title`. */
   readonly bedeutung: string;
   readonly breite: number;
+  /**
+   * Ein engerer Ausschnitt der Zeichenfläche, etwa `"0 56 256 176"`.
+   *
+   * Die Zeichenfläche ist immer 256×256, das Zeichen selbst nimmt sie selten
+   * ganz ein: Unter einer Führungsstellen-Flagge stünde sonst ein Drittel
+   * Leerraum, und die Harke würde doppelt so hoch wie nötig. Der Ausschnitt
+   * verschiebt nichts und skaliert nichts — er schneidet nur den Rand weg.
+   */
+  readonly ausschnitt?: string | undefined;
 }
 
-/** Die Flagge einer Führungsstelle. */
-export function Fuehrungszeichen({
-  text,
+export function Zeichen({
+  kennung,
   bedeutung,
   breite,
+  ausschnitt,
 }: ZeichenEigenschaften): React.JSX.Element {
-  return (
-    // Der Ausschnitt endet unter dem Mast: Die Zeichenflaeche ist 256×256,
-    // die Flagge nimmt davon nur die Mitte ein — ohne Beschnitt stuende unter
-    // jedem Zeichen ein Drittel Leerraum, und die Harke wuerde doppelt so
-    // hoch wie noetig.
-    <svg
-      viewBox="0 56 256 176"
-      width={breite}
-      height={(breite * 176) / 256}
-      role="img"
-      aria-label={bedeutung}
-      className="tz"
-    >
-      <title>{bedeutung}</title>
-      <rect x="10" y="64" width="236" height="128" fill="#ffff00" stroke="#000" strokeWidth="5" />
-      <line x1="10" y1="194" x2="10" y2="225" stroke="#000" strokeWidth="5" />
-      <text
-        x="128"
-        y="150"
-        style={{ font: `bold 56px ${SCHRIFT}`, textAnchor: "middle" }}
-        fill="#000"
-      >
-        {text}
-      </text>
-    </svg>
-  );
-}
+  const roh = zeichenSvg(kennung);
+  const inhalt =
+    roh === undefined || ausschnitt === undefined
+      ? roh
+      : roh.replace(/viewBox="[^"]*"/i, `viewBox="${ausschnitt}"`);
 
-/** Der Kreis einer Einrichtung — Meldekopf, Bereitstellungsraum, Versorgung. */
-export function Einrichtungszeichen({
-  text,
-  bedeutung,
-  breite,
-}: ZeichenEigenschaften): React.JSX.Element {
+  if (inhalt === undefined) {
+    // Ein Zeichen, das der Satz nicht (mehr) kennt: Der Platz bleibt, die
+    // Bedeutung steht da. Nichts verschwindet stillschweigend.
+    return (
+      <span className="tz tz-fehlt" style={{ width: breite }} title={`${bedeutung} (${kennung})`}>
+        {bedeutung}
+      </span>
+    );
+  }
+
   return (
-    <svg
-      viewBox="0 0 256 256"
-      width={breite}
-      height={breite}
+    <span
+      className="tz"
+      style={{ width: breite }}
       role="img"
       aria-label={bedeutung}
-      className="tz"
-    >
-      <title>{bedeutung}</title>
-      <circle cx="128" cy="128" r="64" fill="#ffff00" stroke="#000" strokeWidth="5" />
-      <text
-        x="128"
-        y="150"
-        style={{ font: `bold 56px ${SCHRIFT}`, textAnchor: "middle" }}
-        fill="#000"
-      >
-        {text}
-      </text>
-    </svg>
+      title={bedeutung}
+      dangerouslySetInnerHTML={{ __html: inhalt }}
+    />
   );
 }

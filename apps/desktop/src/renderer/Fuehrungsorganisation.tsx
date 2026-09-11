@@ -20,10 +20,15 @@ import type { Baumknoten } from "@s1/domaene";
 
 import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
-import { Einrichtungszeichen, Fuehrungszeichen } from "./zeichen.js";
-import { harkenbild, knotenbreite, kurzform, langform, stummel } from "./harke.js";
+import { Zeichen } from "./zeichen.js";
+import { harkenbild, knotenbreite, kurzform, langform, stummel, zeichenkennung } from "./harke.js";
 
 type Beschriftung = "kurz" | "lang";
+
+/** Die Flagge samt Mast liegt zwischen y=64 und y=225 der Zeichenfläche. */
+const AUSSCHNITT_FLAGGE = "0 56 256 176";
+/** Der Kreis einer Einrichtung hat r=64 um die Mitte. */
+const AUSSCHNITT_KREIS = "56 56 144 144";
 
 export function Fuehrungsorganisation(): React.JSX.Element {
   const laden = useLaden();
@@ -90,10 +95,11 @@ export function Fuehrungsorganisation(): React.JSX.Element {
             <ul>
               {bild.einrichtungen.map((knoten) => (
                 <li key={knoten.id}>
-                  <Einrichtungszeichen
-                    text={kurzform(knoten.typ, 0).slice(0, 1)}
+                  <Zeichen
+                    kennung={zeichenkennung(knoten.typ, 0) ?? kurzform(knoten.typ, 0)}
                     bedeutung={langform(knoten.typ, 0)}
                     breite={74}
+                    ausschnitt={AUSSCHNITT_KREIS}
                   />
                   <span className="name">{knoten.name}</span>
                   <span className="unterschrift">{unterschrift(knoten)}</span>
@@ -159,10 +165,11 @@ function Knoten({
 
   return (
     <div className={knoten.aufgeloestNach === undefined ? "knoten" : "knoten aufgeloest"}>
-      <Fuehrungszeichen
-        text={kurz}
+      <Zeichen
+        kennung={zeichenkennung(knoten.typ, tiefe) ?? kurz}
         bedeutung={lang}
         breite={knotenbreite(tiefe)}
+        ausschnitt={knoten.typ === "EINSATZORT" || knoten.typ === "FUEHRUNGSSTELLE" || knoten.typ === "SONSTIGE_FUEHRUNG" ? AUSSCHNITT_FLAGGE : undefined}
       />
       <div className="unterschrift" style={{ maxWidth: knotenbreite(tiefe) }}>
         <span className="name">{knoten.name}</span>
