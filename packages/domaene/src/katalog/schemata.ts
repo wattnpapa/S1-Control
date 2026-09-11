@@ -112,6 +112,15 @@ export const AbschnittTypGeaendert = z.object({ abschnittId: zId });
 export const AbschnittUmgehaengt = z.object({ abschnittId: zId });
 export const AbschnittUmsortiert = z.object({ abschnittId: zId });
 export const AbschnittBemerkungGesetzt = z.object({ abschnittId: zId });
+/**
+ * Das taktische Zeichen des Abschnitts, frei gewählt.
+ *
+ * `neu` ist die Kennung aus dem Zeichensatz (`Führungsstellen/EAL`) oder
+ * `null` — dann zeigt die Ansicht wieder das Zeichen, das aus Typ und Tiefe
+ * folgt. Der Bereich ist offen (§3.7): Der Satz wird nachgeführt, und eine
+ * Kennung, die dieser Client nicht kennt, darf die Faltung nicht anhalten.
+ */
+export const AbschnittZeichenGesetzt = z.object({ abschnittId: zId });
 export const AbschnittAufgeloest = z.object({ abschnittId: zId });
 export const AbschnittWiederhergestellt = z.object({ abschnittId: zId });
 

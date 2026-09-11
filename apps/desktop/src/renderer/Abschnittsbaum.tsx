@@ -2,10 +2,16 @@
  * Der Abschnittsbaum (M3.1).
  *
  * Sechs Bedienschritte aus der DoD: anlegen, umbenennen, Typ ändern, umhängen
- * (mit Zyklusregel), sortieren, auflösen mit Zielabschnitt. Jeder von ihnen
- * ist genau **ein** Ereignis aus §5.3 — die Maske baut den Entwurf, der
- * Aktendienst schreibt ihn, und der Baum kommt beim nächsten Zeigerwechsel
- * neu.
+ * (mit Zyklusregel), sortieren, auflösen mit Zielabschnitt — dazu die freie
+ * Wahl des taktischen Zeichens. Jeder von ihnen ist genau **ein** Ereignis aus
+ * §5.3 — die Maske baut den Entwurf, der Aktendienst schreibt ihn, und der
+ * Baum kommt beim nächsten Zeigerwechsel neu.
+ *
+ * **Zeichen und Typ sind zweierlei.** Der Typ entscheidet, ob die Stärke des
+ * Abschnitts in die Gesamtstärke eingeht (§5.3.3), und eine Änderung daran
+ * verlangt einen Grund (§2.4). Das Zeichen entscheidet nichts davon; es sagt,
+ * womit der Abschnitt auf der Karte und in der Harke steht. Deshalb hat es
+ * eine eigene Art und keine Grundpflicht.
  *
  * **Die Komponente rechnet nicht.** Sortierung, Zyklusregel und
  * Auflösungskette stehen in `@s1/domaene/projektion`; was hier steht, ist die
@@ -26,13 +32,21 @@ import { ABSCHNITTSTYPEN, projektion, type Baumknoten } from "@s1/domaene";
 import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
-import { langform, zeichenkennung } from "./harke.js";
+import { abschnittszeichen, langform } from "./harke.js";
 import { Zeichen } from "./zeichen.js";
+import { Zeichenwahl } from "./Zeichenwahl.js";
 import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 
 /** Welche Maske gerade offen ist — höchstens eine. */
-type Maskenart = "anlegen" | "umbenennen" | "typ" | "umhaengen" | "aufloesen" | undefined;
+type Maskenart =
+  | "anlegen"
+  | "umbenennen"
+  | "typ"
+  | "zeichen"
+  | "umhaengen"
+  | "aufloesen"
+  | undefined;
 
 export interface AbschnittsbaumEigenschaften {
   /** Der gewählte Abschnitt; er filtert zugleich die Einheitentabelle. */
@@ -113,6 +127,14 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
         <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeEingabe(knoten?.typ ?? ""); setzeMaske("typ"); }}>
           Typ ändern
         </button>
+        <button
+          type="button"
+          disabled={!aenderbar(knoten)}
+          onClick={() => { setzeEingabe(knoten?.zeichen ?? ""); setzeMaske("zeichen"); }}
+          title="Das taktische Zeichen dieses Abschnitts frei wählen"
+        >
+          Zeichen
+        </button>
         <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeMaske("umhaengen"); }}>
           Umhängen
         </button>
@@ -168,14 +190,12 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                     der Führungsharke steht und auf der Lagekarte klebt. Wer
                     den Baum liest, soll die Struktur ohne Umweg über die
                     Typbezeichnung erkennen. */}
-                <ZeichenDesAbschnitts typ={zeile.typ} tiefe={zeile.tiefe} />
+                <ZeichenDesAbschnitts knoten={zeile} />
                 <span className="name">{zeile.name}</span>
                 {/* Der Typ als Wort nur dort, wo kein Zeichen ihn zeigt: Beides
                     nebeneinander sagt dasselbe zweimal und nimmt dem Namen den
                     Platz. Am Zeichen steht die Bedeutung im `title`. */}
-                {zeichenkennung(zeile.typ, zeile.tiefe) === undefined && (
-                  <span className="typ">{zeile.typ}</span>
-                )}
+                {abschnittszeichen(zeile) === undefined && <span className="typ">{zeile.typ}</span>}
                 <span className="zahlen">
                   {String(zeile.einheitenSumme)} Einh. · {zeile.summenStaerke.fuehrer}/
                   {zeile.summenStaerke.unterfuehrer}/{zeile.summenStaerke.mannschaft}
@@ -277,6 +297,33 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
             Grund (Pflicht)
             <input value={grund} onChange={(e) => { setzeGrund(e.target.value); }} />
           </label>
+        </Maske>
+      )}
+
+      {maske === "zeichen" && knoten !== undefined && (
+        <Maske
+          titel={`Zeichen von „${knoten.name}“`}
+          // Kein Grund und keine Pflichtangabe: Das Zeichen ist eine Aussage
+          // ueber die Darstellung und nicht ueber die Lage — es verschiebt
+          // keine Staerke und keine Zaehlregel, anders als der Typ (§2.4).
+          bereit={eingabe !== (knoten.zeichen ?? "")}
+          aufAbbrechen={schliesse}
+          aufBestaetigen={() => {
+            void bediene({
+              typ: "AbschnittZeichenGesetzt",
+              nutzlast: { abschnittId: knoten.id },
+              vorher: knoten.zeichen ?? null,
+              neu: eingabe === "" ? null : eingabe,
+            });
+          }}
+        >
+          <Zeichenwahl
+            wert={eingabe === "" ? undefined : eingabe}
+            abgeleitet={`${langform(knoten.typ, knoten.tiefe)} (aus dem Typ)`}
+            aufWahl={(kennung) => {
+              setzeEingabe(kennung ?? "");
+            }}
+          />
         </Maske>
       )}
 
@@ -450,17 +497,23 @@ async function verschiebeInReihenfolge(
  * ist, darf im Baum keine andere sein.
  */
 function ZeichenDesAbschnitts({
-  typ,
-  tiefe,
+  knoten,
 }: {
-  readonly typ: string;
-  readonly tiefe: number;
+  readonly knoten: Baumknoten;
 }): React.JSX.Element | null {
-  const kennung = zeichenkennung(typ, tiefe);
-  if (kennung === undefined) return null;
+  const gewaehlt = abschnittszeichen(knoten);
+  if (gewaehlt === undefined) return null;
   return (
     <span className="baumzeichen">
-      <Zeichen kennung={kennung} bedeutung={langform(typ, tiefe)} breite={26} ausschnitt="0 56 256 176" />
+      <Zeichen
+        kennung={gewaehlt.kennung}
+        // Die Langform nur beim abgeleiteten Zeichen: Bei einem frei
+        // gewaehlten benennt der Satz selbst, was es bedeutet, und der Typ
+        // waere dann die falsche Auskunft.
+        bedeutung={knoten.zeichen === undefined ? langform(knoten.typ, knoten.tiefe) : undefined}
+        breite={26}
+        ausschnitt={gewaehlt.ausschnitt}
+      />
     </span>
   );
 }

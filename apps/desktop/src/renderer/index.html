@@ -804,6 +804,92 @@
         gap: 0.5rem;
         margin-top: 1rem;
       }
+
+      /* ---- Die Zeichenwahl (§5.3, freies Piktogramm) --------------------- */
+
+      /* Breiter als eine gewoehnliche Maske: Eine Kachelwand in 22 rem zeigt
+         zwei Zeichen nebeneinander, und wer waehlt, will vergleichen. */
+      .maske:has(.zeichenwahl) {
+        min-width: min(34rem, 90vw);
+        max-width: min(48rem, 92vw);
+      }
+      .zeichenwahlkopf {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        align-items: flex-end;
+      }
+      .zeichenwahlkopf label {
+        margin-bottom: 0;
+      }
+      .zeichenwahlkopf select,
+      .zeichenwahlkopf input {
+        width: min(16rem, 100%);
+      }
+      /* Die Wand scrollt in sich: Vierzig Kacheln sind laenger als jeder
+         Bildschirm, und eine Maske, die mitwaechst, schiebt ihre Knoepfe aus
+         dem Bild. */
+      .zeichenkacheln {
+        list-style: none;
+        margin: 0.8rem 0 0;
+        padding: 0;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+        gap: 6px;
+        max-height: 46vh;
+        overflow-y: auto;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        padding: 6px;
+      }
+      .zeichenkachel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        width: 100%;
+        height: 100%;
+        padding: 6px 4px;
+        background: none;
+        border: 1px solid transparent;
+        text-align: center;
+        cursor: pointer;
+      }
+      .zeichenkachel:hover {
+        background: var(--zeile-alt);
+      }
+      .zeichenkachel.gewaehlt {
+        background: var(--zeile-gewaehlt);
+        border-color: var(--rahmen);
+      }
+      .zeichenkachel .kachelbild {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 46px;
+      }
+      /* Die erste Kachel traegt kein Bild, sondern den Rueckweg zur
+         Ableitung — sie soll trotzdem so hoch sein wie die anderen. */
+      .zeichenkachel .kachelleer {
+        font-size: 0.8em;
+        color: var(--text-leise);
+        border: 1px dashed var(--rahmen);
+        width: 44px;
+        line-height: 1.2;
+      }
+      /* Zwei Zeilen Titel, dann Schluss: Ein Titel, der die Kachel auf die
+         doppelte Hoehe treibt, verschiebt die ganze Reihe. */
+      .zeichenkachel .kacheltitel {
+        font-size: 0.78em;
+        line-height: 1.25;
+        color: var(--text-leise);
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+      .zeichenkachel.gewaehlt .kacheltitel {
+        color: var(--text);
+      }
       select {
         display: block;
         width: min(40rem, 100%);

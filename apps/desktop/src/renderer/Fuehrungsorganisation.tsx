@@ -95,11 +95,16 @@ export function Fuehrungsorganisation(): React.JSX.Element {
             <ul>
               {bild.einrichtungen.map((knoten) => (
                 <li key={knoten.id}>
+                  {/* Ein frei gewaehltes Zeichen (§5.3) gilt auch hier: Die
+                      Harke und der Baum zeigen denselben Abschnitt, und zwei
+                      verschiedene Zeichen dafuer waeren zwei Aussagen. Der
+                      Kreisausschnitt gehoert zum abgeleiteten Zeichen und
+                      passte auf ein fremdes nicht. */}
                   <Zeichen
-                    kennung={zeichenkennung(knoten.typ, 0) ?? kurzform(knoten.typ, 0)}
-                    bedeutung={langform(knoten.typ, 0)}
+                    kennung={knoten.zeichen ?? zeichenkennung(knoten.typ, 0) ?? kurzform(knoten.typ, 0)}
+                    bedeutung={knoten.zeichen === undefined ? langform(knoten.typ, 0) : undefined}
                     breite={74}
-                    ausschnitt={AUSSCHNITT_KREIS}
+                    ausschnitt={knoten.zeichen === undefined ? AUSSCHNITT_KREIS : undefined}
                   />
                   <span className="name">{knoten.name}</span>
                   <span className="unterschrift">{unterschrift(knoten)}</span>
@@ -166,10 +171,17 @@ function Knoten({
   return (
     <div className={knoten.aufgeloestNach === undefined ? "knoten" : "knoten aufgeloest"}>
       <Zeichen
-        kennung={zeichenkennung(knoten.typ, tiefe) ?? kurz}
-        bedeutung={lang}
+        kennung={knoten.zeichen ?? zeichenkennung(knoten.typ, tiefe) ?? kurz}
+        bedeutung={knoten.zeichen === undefined ? lang : undefined}
         breite={knotenbreite(tiefe)}
-        ausschnitt={knoten.typ === "EINSATZORT" || knoten.typ === "FUEHRUNGSSTELLE" || knoten.typ === "SONSTIGE_FUEHRUNG" ? AUSSCHNITT_FLAGGE : undefined}
+        ausschnitt={
+          knoten.zeichen === undefined &&
+          (knoten.typ === "EINSATZORT" ||
+            knoten.typ === "FUEHRUNGSSTELLE" ||
+            knoten.typ === "SONSTIGE_FUEHRUNG")
+            ? AUSSCHNITT_FLAGGE
+            : undefined
+        }
       />
       <div className="unterschrift" style={{ maxWidth: knotenbreite(tiefe) }}>
         <span className="name">{knoten.name}</span>

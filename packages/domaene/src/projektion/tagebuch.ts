@@ -60,6 +60,7 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   AbschnittUmgehaengt: "Abschnitt umgehängt",
   AbschnittUmsortiert: "Abschnitt umsortiert",
   AbschnittBemerkungGesetzt: "Bemerkung des Abschnitts gesetzt",
+  AbschnittZeichenGesetzt: "Taktisches Zeichen gesetzt",
   AbschnittAufgeloest: "Abschnitt aufgelöst",
   AbschnittWiederhergestellt: "Abschnitt wiederhergestellt",
   // §5.4 Einheit

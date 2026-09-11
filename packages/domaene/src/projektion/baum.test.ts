@@ -15,6 +15,7 @@ import {
   abschnittAngelegt,
   einheitGemeldet,
   einsatzAngelegt,
+  feldEreignis,
   hlc,
   staerke,
 } from "../pruefhilfen/ereignisbau.js";
@@ -72,6 +73,61 @@ function einheit(
     status: "IM_EINSATZ",
   });
 }
+
+describe("das frei gewählte Zeichen (§5.3)", () => {
+  const GESETZT = feldEreignis(
+    hlc(9, 0, "a"),
+    9,
+    "AbschnittZeichenGesetzt",
+    { abschnittId: "EA-NORD" },
+    null,
+    "Einheiten/Bergungsgruppe",
+  );
+
+  it("trägt die gewählte Kennung in den Knoten", () => {
+    const zustand = falte([EINSATZ, abschnitt(2, 2, "EA-NORD", "EA Nord", 1), GESETZT]);
+    const knoten = abschnittsbaum(zustand, { ohneArchiv: true }).find((k) => k.id === "EA-NORD");
+    expect(knoten?.zeichen).toBe("Einheiten/Bergungsgruppe");
+  });
+
+  it("lässt das Feld weg, solange niemand gewählt hat", () => {
+    const zustand = falte([EINSATZ, abschnitt(2, 2, "EA-NORD", "EA Nord", 1)]);
+    const knoten = abschnittsbaum(zustand, { ohneArchiv: true }).find((k) => k.id === "EA-NORD");
+    // Weggelassen und nicht als leerer Text: Die Ansicht unterscheidet daran,
+    // ob sie das Zeichen aus dem Typ ableiten soll.
+    expect(knoten?.zeichen).toBeUndefined();
+  });
+
+  it("nimmt die Wahl zurück, wenn `neu` null ist", () => {
+    const zurueck = feldEreignis(
+      hlc(10, 0, "a"),
+      10,
+      "AbschnittZeichenGesetzt",
+      { abschnittId: "EA-NORD" },
+      "Einheiten/Bergungsgruppe",
+      null,
+    );
+    const zustand = falte([EINSATZ, abschnitt(2, 2, "EA-NORD", "EA Nord", 1), GESETZT, zurueck]);
+    const knoten = abschnittsbaum(zustand, { ohneArchiv: true }).find((k) => k.id === "EA-NORD");
+    expect(knoten?.zeichen).toBeUndefined();
+  });
+
+  it("wirkt auf dem Auffang nicht (§5.3.4)", () => {
+    const aufDenAuffang = feldEreignis(
+      hlc(11, 0, "a"),
+      11,
+      "AbschnittZeichenGesetzt",
+      { abschnittId: AUFFANG_ABSCHNITT_ID },
+      null,
+      "Einheiten/Bergungsgruppe",
+    );
+    const zustand = falte([EINSATZ, aufDenAuffang]);
+    const auffang = abschnittsbaum(zustand, { ohneArchiv: true }).find(
+      (k) => k.id === AUFFANG_ABSCHNITT_ID,
+    );
+    expect(auffang?.zeichen).toBeUndefined();
+  });
+});
 
 describe("abschnittsbaum", () => {
   it("hängt Abschnitte unter ihren Elternteil und sortiert nach Reihenfolge, dann Id", () => {

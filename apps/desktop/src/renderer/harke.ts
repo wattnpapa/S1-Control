@@ -82,6 +82,36 @@ export function zeichenkennung(typ: string, tiefe: number): string | undefined {
   }
 }
 
+/**
+ * Der Ausschnitt, den die Flaggen aus `Führungsstellen/` brauchen.
+ *
+ * Sie füllen die 256er-Fläche nur zur Hälfte; ohne den Schnitt stünde unter
+ * jeder Flagge ein Drittel Leerraum. Für ein **frei gewähltes** Zeichen gilt
+ * er nicht: Ein Einheitenzeichen ist quadratisch, und derselbe Schnitt nähme
+ * ihm oben und unten je ein Viertel.
+ */
+export const FLAGGENAUSSCHNITT = "0 56 256 176";
+
+/**
+ * Welches Zeichen ein Abschnitt zeigt — die freie Wahl vor der Ableitung.
+ *
+ * `AbschnittZeichenGesetzt` (§5.3) trägt eine Kennung aus dem Zeichensatz in
+ * die Akte. Steht dort eine, gilt sie; sonst bleibt es bei dem Zeichen, das
+ * aus Typ und Tiefe folgt. Der `ausschnitt` gehört zur Antwort und nicht zum
+ * Aufrufer: Er hängt daran, **welches** Zeichen gewählt wurde.
+ */
+export function abschnittszeichen(knoten: {
+  readonly typ: string;
+  readonly tiefe: number;
+  readonly zeichen?: string;
+}): { readonly kennung: string; readonly ausschnitt?: string } | undefined {
+  if (knoten.zeichen !== undefined) return { kennung: knoten.zeichen };
+  const abgeleitet = zeichenkennung(knoten.typ, knoten.tiefe);
+  return abgeleitet === undefined
+    ? undefined
+    : { kennung: abgeleitet, ausschnitt: FLAGGENAUSSCHNITT };
+}
+
 /** Die ausgeschriebene Beschriftung — für `title` und für die zweite Wahl. */
 export function langform(typ: string, tiefe: number): string {
   switch (typ) {

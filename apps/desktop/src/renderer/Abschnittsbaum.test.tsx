@@ -151,6 +151,49 @@ describe("Der Abschnittsbaum", () => {
     expect(angeboten).not.toContain("B");
   });
 
+  it("schreibt ein `AbschnittZeichenGesetzt` mit der gewählten Kennung (§5.3)", async () => {
+    await zeigeBaum("EO");
+    fireEvent.click(screen.getByRole("button", { name: "Zeichen" }));
+
+    // Über die Suche und nicht über die Kachelwand als Ganzes: Der Satz hat
+    // knapp tausend Zeichen, und die Wand zeigt nur einen Ausschnitt davon.
+    fireEvent.change(screen.getByLabelText("Suche"), { target: { value: "Bereitstellungsraum" } });
+    const kacheln = screen.getByRole("list", { name: "Taktische Zeichen" });
+    const kachel = [...kacheln.querySelectorAll("button")].find((knopf) =>
+      (knopf.getAttribute("title") ?? "").includes("Einrichtungen/Bereitstellungsraum"),
+    );
+    expect(kachel).toBeDefined();
+    fireEvent.click(kachel as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("AbschnittZeichenGesetzt");
+    });
+    const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
+    expect(entwurf?.neu).toBe("Einrichtungen/Bereitstellungsraum");
+    // §2.2a: Der Vorher-Wert ist der, den **dieses** Fenster gesehen hat —
+    // hier keiner, denn der Abschnitt folgte bisher seinem Typ.
+    expect(entwurf?.vorher).toBeNull();
+  });
+
+  it("nimmt die Wahl mit der ersten Kachel zurück (`neu` = null)", async () => {
+    attrappe.antwortet("baumAnfordern", {
+      lageZeiger: 5,
+      baum: [knoten("EO", "Deich Nord", { zeichen: "Einheiten/Bergungsgruppe" })],
+    });
+    await zeigeBaum("EO");
+    fireEvent.click(screen.getByRole("button", { name: "Zeichen" }));
+    fireEvent.click(screen.getByRole("button", { name: /aus dem Typ/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("AbschnittZeichenGesetzt");
+    });
+    const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
+    expect(entwurf?.neu).toBeNull();
+    expect(entwurf?.vorher).toBe("Einheiten/Bergungsgruppe");
+  });
+
   it("hängt die Maske an den Körper, nicht in den Baum (Stapelordnung)", async () => {
     await zeigeBaum("EO");
     fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));

@@ -52,6 +52,15 @@ export interface Baumknoten {
   readonly zaehlt: boolean;
   /** §5.3.4: `AUFFANG` und `ARCHIV` — sie lassen sich nicht ändern. */
   readonly systemAbschnitt: boolean;
+  /**
+   * Das frei gewählte taktische Zeichen — die Kennung aus dem Zeichensatz.
+   *
+   * Fehlt sie, nimmt die Ansicht das Zeichen, das aus `typ` und `tiefe` folgt.
+   * Die Projektion kennt diese Ableitung nicht und soll sie nicht kennen: Sie
+   * hängt an der Tiefe **und** am gelieferten Zeichensatz, und beides ist eine
+   * Aussage über die Darstellung (siehe `harke.ts` im Renderer).
+   */
+  readonly zeichen?: string;
   /** §5.3.2: gesetzt, sobald der Abschnitt aufgelöst ist; nennt das Ziel. */
   readonly aufgeloestNach?: Id;
   /**
@@ -150,6 +159,10 @@ export function abschnittsbaum(zustand: Zustand, optionen: Baumoptionen = {}): r
       typ: text(abschnitt.typ.wert, "EINSATZORT"),
       reihenfolge: zahl(abschnitt.reihenfolge.wert),
       tiefe,
+      ...(typeof abschnitt.taktischesZeichen?.wert === "string" &&
+      abschnitt.taktischesZeichen.wert !== ""
+        ? { zeichen: abschnitt.taktischesZeichen.wert }
+        : {}),
       eigeneStaerke,
       summenStaerke: kinder.reduce<Staerke>((summe, kind) => staerkePlus(summe, kind.summenStaerke), eigeneStaerke),
       einheiten,

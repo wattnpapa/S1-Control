@@ -190,6 +190,15 @@ export interface AbschnittZustand {
   readonly reihenfolge: Feld<number>;
   readonly parentId?: Feld<Id>;
   readonly bemerkung?: Feld<string>;
+  /**
+   * Das frei gewaehlte taktische Zeichen — die Kennung aus dem Zeichensatz.
+   *
+   * Fehlt es, zeigt die Ansicht das Zeichen, das aus `typ` und Tiefe folgt.
+   * Das ist der Regelfall; dieses Feld ist der Widerspruch dagegen, und er
+   * gehoert in die Akte: Wer am Nebenplatz auf denselben Einsatz schaut, soll
+   * dasselbe Bild sehen.
+   */
+  readonly taktischesZeichen?: Feld<string>;
   readonly aufgeloest?: Feld<{ readonly zielAbschnittId: Id; readonly aufgeloestAm: Zeitpunkt }>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
   /** `true` bei `AUFFANG` und `ARCHIV` (§5.3.4). */
