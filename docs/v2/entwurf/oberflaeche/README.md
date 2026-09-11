@@ -61,24 +61,37 @@ Abschnittsbaum, kein zweiter Editor. Je Ebene steht ein CSS-Grid aus gleichen
 Spalten; der Querbalken spannt mit `margin: 0 calc(100 %/2n)` genau von Mitte
 zu Mitte der äußeren Kinder, Abzweigstummel und Zeichen sitzen in derselben
 Zelle und beide zentriert, ohne `transform`. Linien 3 px, Stummel 20/16/14,
-Knoten 196/176/118 px. Die Beschriftung hängt an Typ **und** Tiefe — derselbe
-Einsatzort heißt auf Ebene 1 EAL und darunter UEAL —, deshalb tragen die
-Zeichen ihren Text aus dem Code und nicht aus der SVG-Datei. Meldekopf,
+Knoten 196/176/118 px. Welches Zeichen ein Knoten bekommt, hängt an Typ **und**
+Tiefe — derselbe Einsatzort ist auf Ebene 1 ein Einsatzabschnitt und darunter
+ein Untereinsatzabschnitt, und die Dateien tragen ihren Text fest. Meldekopf,
 Bereitstellungsraum und Logistik stehen als Einrichtungen neben der Harke, weil
 sie keine Führungsebene sind. Der Knopf „Als PDF (Lagekarte)" schreibt die
 vorhandene Ausgabe `fueorg` (M8.3); das gedruckte Blatt ist weiterhin die
 eingerückte Liste aus `@s1/ausgaben`.
 
-Offen: der Zeichensatz-Auszug als Legende neben der Harke, die Feingestaltung der Bogenübernahme aus
-erfassungsbogen.app (Option 2d) und die Führungsharke als Bildschirmansicht —
-sie existiert bislang nur als Ausgabe `fueorg`. Die taktischen Zeichen aus dem
-Bündel liegen unter `apps/desktop/assets/tz/clean/` (`viewBox 0 0 256 256`, ohne
-C2PA-Metadaten) und werden noch nicht gezeichnet. Vor ihrer ersten Verwendung
-ist Roboto Slab Bold lokal einzubinden: Die Anwendung läuft offline, eine
-Schrift von Google Fonts wäre im Einsatz nicht da. Bis dahin zeichnet die Harke
-ihre Zeichen mit dem Rückfall auf Georgia — die Form stimmt, die Serifen sind
-andere. Die gelieferten Dateien trugen je acht Kilobyte C2PA-Metadaten; sie
-sind entfernt, übrig sind rund 500 Byte je Zeichen.
+Offen: der Zeichensatz-Auszug als Legende neben der Harke und die
+Feingestaltung der Bogenübernahme aus erfassungsbogen.app (Option 2d).
+
+Die taktischen Zeichen kommen aus jonas-koeritz/Taktische-Zeichen und liegen
+unter `apps/desktop/assets/tz/`. Der Ordner wird **erzeugt**:
+`bau/zeichen-importieren.mjs` rendert die Jinja2-Vorlagen der Quelle (`make svg`,
+nur j2cli nötig), löst die in jedes SVG eingebettete Schrift heraus und legt sie
+einmal unter `schrift/RobotoSlab-Bold.woff` ab — sonst trüge der Satz bei knapp
+tausend Zeichen über zwanzig Megabyte Schrift. `index.json` führt jedes Zeichen
+mit Kategorie, Datei und ausgeschriebenem Titel, `HERKUNFT.md` den Stand der
+Quelle und die Lizenzen (Quellen CC BY 4.0, erzeugte Zeichen CC0 1.0, Schrift
+Apache-2.0). Die wöchentliche Aktion `.github/workflows/taktische-zeichen.yml`
+prüft montags, ob die Quelle sich geändert hat, spielt sie ein und öffnet einen
+Pull Request; zusammengeführt wird von Hand, denn ein Zeichen, das sich still
+ändert, ändert still die Lagekarte.
+
+Die Oberfläche setzt die Zeichen **inline** (`zeichensatz.ts`, `zeichen.tsx`):
+In einem `<img>` wäre das SVG ein eigenes Dokument ohne Zugriff auf die
+Schriften der Seite, und die Beschriftung fiele auf eine Systemschrift zurück.
+Gebündelt wird nur, was gebraucht wird — heute Führungsstellen und
+Einrichtungen. Die Schrift bindet der `<style>`-Block per `@font-face` ein; die
+Anwendung lädt nichts aus dem Netz. Damit ist auch die offene Frage der
+Offline-Schrift erledigt.
 
 Die fünf offenen Entscheidungen am Ende des Handoffs (Zahl der Themes,
 Modulleiste links, Erfassen im Meldekopf-Modus, Schriftfamilien, gemeinsames
