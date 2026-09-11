@@ -15,6 +15,7 @@ import { KATALOG_EINTRAEGE } from "../katalog/index.js";
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../fold.js";
 import {
   abschnittAngelegt,
+  anlageEreignis,
   einheitGemeldet,
   einheitVerschoben,
   einsatzAngelegt,
@@ -91,6 +92,21 @@ describe("tagebuchzeile", () => {
     expect(zeile.satz).toBe("TZ THW OV Oldenburg: Einheit gemeldet");
     expect(zeile.einheitId).toBe("U1");
     expect(zeile.abschnittId).toBe("EA-NORD");
+  });
+
+  it("stürzt nicht an einem Fahrzeug ohne Bezeichnung (§5.5)", () => {
+    // `bezeichnung` ist im Katalog optional — ein Fahrzeug, das nur seinen Typ
+    // meldet, hat die Beobachtung gar nicht. Die Zeile nimmt dann die Id, und
+    // das Tagebuch bleibt lesbar. Vorher warf sie, und weil der Ansichtsruf
+    // den Fehler als Hinweis führt, blieb das ganze Blatt leer.
+    const ereignis = anlageEreignis(hlc(7, 0, "a"), 7, "FahrzeugAngelegt", {
+      fahrzeugId: "F1",
+      einheitId: "U1",
+      typ: "MLW IV",
+      status: "EINSATZBEREIT",
+    });
+    const zeile = tagebuchzeile(falte([...GRUNDLAGE, ereignis]), ereignis);
+    expect(zeile.satz).toBe("F1: Fahrzeug angelegt");
   });
 
   it("zeigt bei einem setzenden Ereignis den Übergang von vorher nach neu (§2.2)", () => {

@@ -238,31 +238,40 @@ function alsId(wert: unknown): Id | undefined {
 function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefined): string {
   if (id === undefined) return "";
   switch (eintrag.entitaet) {
-    case "einheit": {
-      const einheit = zustand.einheiten[id];
-      return typeof einheit?.bezeichnung.wert === "string" ? einheit.bezeichnung.wert : id;
-    }
-    case "abschnitt": {
-      const abschnitt = zustand.abschnitte[id];
-      return typeof abschnitt?.name.wert === "string" ? abschnitt.name.wert : id;
-    }
-    case "fahrzeug": {
-      const fahrzeug = zustand.fahrzeuge[id];
-      return typeof fahrzeug?.bezeichnung.wert === "string" ? fahrzeug.bezeichnung.wert : id;
-    }
+    case "einheit":
+      return feldtext(zustand.einheiten[id]?.bezeichnung) ?? id;
+    case "abschnitt":
+      return feldtext(zustand.abschnitte[id]?.name) ?? id;
+    case "fahrzeug":
+      return feldtext(zustand.fahrzeuge[id]?.bezeichnung) ?? id;
     case "person": {
       const person = zustand.personen[id];
-      const nachname = person?.nachname.wert;
-      const vorname = person?.vorname.wert;
-      return typeof nachname === "string" ? `${String(vorname ?? "")} ${nachname}`.trim() : id;
+      const nachname = feldtext(person?.nachname);
+      if (nachname === undefined) return id;
+      return `${feldtext(person?.vorname) ?? ""} ${nachname}`.trim();
     }
-    case "einsatz": {
-      const name = zustand.einsatz?.name.wert;
-      return typeof name === "string" ? name : id;
-    }
+    case "einsatz":
+      return feldtext(zustand.einsatz?.name) ?? id;
     default:
       return id;
   }
+}
+
+/**
+ * Liest ein Feld, das **fehlen** darf, obwohl der Typ es nicht sagt.
+ *
+ * `FahrzeugZustand.bezeichnung` steht in `zustand.ts` als `Feld<string>` ohne
+ * Fragezeichen; im Katalog ist `bezeichnung` aber optional (§5.5). Ein
+ * Fahrzeug, das nur seinen Typ meldet — und die Prüfdaten enthalten solche —,
+ * hat die Beobachtung gar nicht. `fahrzeug?.bezeichnung.wert` schützte dann
+ * das Fahrzeug und nicht das Feld, und das Tagebuch stürzte an seiner ersten
+ * Fahrzeugzeile ab: Die Ansicht blieb leer, und in den Hinweisen stand
+ * „Cannot read properties of undefined (reading 'wert')". Derselbe Befund
+ * am Zielmodell wie F-B1 in `tabelle.ts`, und dieselbe Antwort: abfangen,
+ * nicht heilen.
+ */
+function feldtext(feld: { readonly wert: unknown } | undefined): string | undefined {
+  return typeof feld?.wert === "string" ? feld.wert : undefined;
 }
 
 /** Welches Feld eine Art setzt — fest oder aus der Nutzlast (§5.1, `Feldwahl`). */
