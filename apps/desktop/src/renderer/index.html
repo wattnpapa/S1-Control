@@ -1619,7 +1619,12 @@
     </style>
   </head>
   <body>
-    <main id="wurzel"></main>
+    <!-- Der Wurzelknoten ist ein `div` und kein `main`: Der Arbeitsplatz
+         bringt sein eigenes `main` mit, und das aeussere trug sonst dessen
+         Regeln mit — 14 px Polster als weisser Ring um Kopfband,
+         Staerkeband und Statuszeile, und dazu 28 px mehr Hoehe als das
+         Fenster hat, weshalb die Statuszeile unten abgeschnitten war. -->
+    <div id="wurzel"></div>
     <script type="module" src="./haupt.tsx"></script>
   </body>
 </html>
