@@ -18,3 +18,9 @@ interface ImportMeta {
     optionen?: { eager?: boolean; query?: string; import?: string },
   ): Record<string, unknown>;
 }
+
+/** Rohtext statt Modul — so kommt `index.json` des Zeichensatzes herein. */
+declare module "*.json?raw" {
+  const inhalt: string;
+  export default inhalt;
+}

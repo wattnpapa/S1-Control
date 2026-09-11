@@ -107,12 +107,12 @@ async function hauptlauf() {
     const ziel = path.join(ZIEL, relativ);
     await fsp.mkdir(path.dirname(ziel), { recursive: true });
     await fsp.writeFile(ziel, inhalt, "utf8");
+    // Nur Kennung und Titel: Kategorie, Name und Dateiname stehen in der
+    // Kennung, und das Verzeichnis wird im Renderer mitgeladen — jedes
+    // abgeleitete Feld waere dort Ballast in jedem Fenster.
     verzeichnis.push({
       kennung: relativ.replace(/\.svg$/, "").replaceAll(path.sep, "/"),
-      kategorie: path.dirname(relativ).replaceAll(path.sep, "/"),
-      name: path.basename(relativ, ".svg"),
       titel: titelAus(roh, path.basename(relativ, ".svg")),
-      datei: relativ.replaceAll(path.sep, "/"),
     });
   }
 
@@ -149,8 +149,8 @@ async function hauptlauf() {
       "jedem Zeichen und wird von der Oberfläche per `@font-face` geladen — die",
       "Anwendung lädt keine Schrift aus dem Netz.",
       "",
-      "`index.json` führt jedes Zeichen mit Kategorie, Dateiname und dem",
-      "ausgeschriebenen Titel aus dem SVG.",
+      "`index.json` führt jedes Zeichen mit seiner Kennung (`Kategorie/Name`, ohne",
+      "Endung) und dem ausgeschriebenen Titel aus dem SVG.",
       "",
     ].join("\n"),
     "utf8",

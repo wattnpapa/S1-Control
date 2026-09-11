@@ -96,19 +96,18 @@ describe("Der Zeichenimport", () => {
     expect(eal).toContain("EAL");
   });
 
-  it("führt jedes Zeichen mit Kategorie und ausgeschriebenem Titel", () => {
+  it("führt jedes Zeichen mit Kennung und ausgeschriebenem Titel", () => {
     const index = JSON.parse(readFileSync(path.join(ziel, "index.json"), "utf8")) as {
       commit: string;
-      zeichen: { kennung: string; kategorie: string; titel: string; datei: string }[];
+      zeichen: { kennung: string; titel: string }[];
     };
     expect(index.commit).toBe("abc1234");
     expect(index.zeichen).toHaveLength(2);
+    // Kennung und Titel, sonst nichts: Kategorie, Name und Dateiname stehen in
+    // der Kennung.
     expect(index.zeichen[0]).toEqual({
       kennung: "Führungsstellen/EAL",
-      kategorie: "Führungsstellen",
-      name: "EAL",
       titel: "Einsatzabschnittsleitung",
-      datei: "Führungsstellen/EAL.svg",
     });
   });
 

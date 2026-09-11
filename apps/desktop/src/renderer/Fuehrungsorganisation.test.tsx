@@ -57,8 +57,11 @@ describe("Die Führungsorganisation", () => {
     await waitFor(() => {
       expect(screen.getByText("EA 1 Deich Nord")).toBeDefined();
     });
-    // Das Zeichen trägt die Kurzform, die Bildunterschrift Name und Stärke.
-    expect(screen.getByLabelText("Einsatzabschnittsleitung")).toBeDefined();
+    // Das Zeichen kommt aus dem Satz und wird beim ersten Zeigen geladen;
+    // die Bildunterschrift steht sofort.
+    await waitFor(() => {
+      expect(screen.getByLabelText("Einsatzabschnittsleitung")).toBeDefined();
+    });
     expect(screen.getByLabelText("Untereinsatzabschnittsleitung")).toBeDefined();
     expect(screen.getAllByText("14 Einh. · 4/11/38").length).toBeGreaterThan(0);
 
@@ -87,7 +90,9 @@ describe("Die Führungsorganisation", () => {
     });
     // In der Kurzform steht die Bedeutung nur im Zeichen selbst (als `title`
     // für Vorleseprogramme), nicht unter ihm.
-    expect(screen.getAllByText("Einsatzabschnittsleitung")).toHaveLength(1);
+    await waitFor(() => {
+      expect(screen.getAllByText("Einsatzabschnittsleitung")).toHaveLength(1);
+    });
 
     await userEvent.click(screen.getByRole("button", { name: "Ausgeschrieben" }));
     expect(screen.getAllByText("Einsatzabschnittsleitung")).toHaveLength(2);
