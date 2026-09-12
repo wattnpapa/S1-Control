@@ -64,6 +64,9 @@ jobs:
           printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H gitlab.opencode.de >> ~/.ssh/known_hosts 2>/dev/null
+          # Fingerabdruck ins Protokoll: verrät nichts Geheimes, zeigt aber
+          # sofort, ob der Schlüssel lesbar ist und welcher hinterlegt wurde.
+          ssh-keygen -y -f ~/.ssh/id_ed25519 | ssh-keygen -lf -
 
       - name: Alle Branches und Tags spiegeln
         env:
