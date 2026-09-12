@@ -36,6 +36,12 @@ on:
     branches: ['**']
     tags: ['**']
   delete:
+  # Tags, die eine andere Kette selbst erzeugt (Releases), lösen kein
+  # Push-Ereignis aus — GitHub unterdrückt das für den eigenen Token. Der
+  # Anschluss an deren Abschluss holt sie sofort statt erst über Nacht.
+  workflow_run:
+    workflows: ['Build Main Releases']
+    types: [completed]
   schedule:
     - cron: '17 3 * * *'
   workflow_dispatch:
