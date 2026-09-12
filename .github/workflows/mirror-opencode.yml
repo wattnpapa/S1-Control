@@ -1,0 +1,76 @@
+# Spiegelung des Repos nach openCoDE (GitLab des Bundes).
+#
+# ────────────────────────────────────────────────────────────────────────────
+# Was dieser Workflow tut.
+#
+# Jeder Vorgang auf GitHub — jeder Push auf jeden Branch, jedes Tag, jede
+# gelöschte Referenz — wird unverändert nach
+# git@gitlab.opencode.de:oc000172112778/S1-Control.git durchgereicht.
+#
+# GitHub bleibt dabei die **einzige** führende Seite. `git push --mirror`
+# gleicht die Gegenseite exakt an: was hier nicht (mehr) existiert, wird dort
+# entfernt. Wer direkt auf openCoDE committet, verliert seine Arbeit beim
+# nächsten Lauf. Das ist gewollt — ein Spiegel, kein zweites Zuhause.
+#
+# Der nächtliche Lauf ist nur ein Auffangnetz für Vorgänge, die kein
+# Push-Ereignis auslösen (etwa ein Lauf, der an einem Ausfall der Gegenseite
+# gescheitert ist).
+#
+# ────────────────────────────────────────────────────────────────────────────
+# Einmalige Einrichtung.
+#
+# 1. Schlüsselpaar erzeugen (ohne Passphrase):
+#       ssh-keygen -t ed25519 -C "github-spiegel-s1-control" -f /tmp/oc-spiegel -N ""
+# 2. Öffentlichen Teil (/tmp/oc-spiegel.pub) auf openCoDE eintragen:
+#       Projekt → Settings → Repository → Deploy keys → New deploy key,
+#       Haken bei "Grant write permissions to this key".
+# 3. Privaten Teil (/tmp/oc-spiegel) auf GitHub hinterlegen:
+#       Settings → Secrets and variables → Actions → New repository secret,
+#       Name: OPENCODE_SSH_KEY
+# 4. Beide temporären Dateien löschen.
+
+name: Spiegel nach openCoDE
+
+on:
+  push:
+    branches: ['**']
+    tags: ['**']
+  delete:
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: spiegel-opencode
+  cancel-in-progress: false
+
+jobs:
+  spiegeln:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # Ohne den Schlüssel läuft der Workflow ins Leere statt rot — etwa in Forks.
+    if: github.repository == 'wattnpapa/S1-Control'
+    steps:
+      - name: Schlüssel und Hostkennung einrichten
+        env:
+          SSH_KEY: ${{ secrets.OPENCODE_SSH_KEY }}
+        run: |
+          if [ -z "$SSH_KEY" ]; then
+            echo "::error::Secret OPENCODE_SSH_KEY fehlt — siehe Kopf dieser Datei."
+            exit 1
+          fi
+          mkdir -p ~/.ssh
+          printf '%s\n' "$SSH_KEY" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan -H gitlab.opencode.de >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Alle Branches und Tags spiegeln
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Ein blanker Spiegelklon statt actions/checkout: nur so liegen alle
+          # Referenzen vollständig vor, ohne Streit um den ausgecheckten Branch.
+          git clone --mirror "https://x-access-token:$GH_TOKEN@github.com/${{ github.repository }}.git" spiegel.git
+          cd spiegel.git
+          git push --mirror git@gitlab.opencode.de:oc000172112778/S1-Control.git
