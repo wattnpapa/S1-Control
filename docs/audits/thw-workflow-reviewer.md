@@ -31,7 +31,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P0-1 Gesamtübersichten (Kräfte, Fahrzeuge, Führungsstruktur) schrumpfen im Betrieb auf den gewählten Abschnitt
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:69-81` (Schnellpfad setzt `allKraefte`/`allFahrzeuge` **nur** aus dem gewählten Abschnitt), `src/renderer/src/app/useEinsatzData.ts:97-106` (bei `includeFullOverview: false` wird die Vollliste nie nachgeladen, nur die Gesamtstärke), Aufrufer: `src/renderer/src/app/useSyncEvents.ts:56-64` (zyklisch alle 6 s), `src/renderer/src/app/useSyncEvents.ts:221`, `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:111`, `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:270`, `src/renderer/src/app/einheit-actions/useEinheitSplitActions.ts:59`, `src/renderer/src/app/useFahrzeugActions.ts:112`, `src/renderer/src/app/einheit-actions/useEinheitFahrzeugActions.ts:29,62`. Verbraucher: `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:216-267` (Kräfte), `:272-292` (Fahrzeuge), `:203-208` → `src/renderer/src/components/views/FuehrungsstrukturView.tsx:147-165` (Führungsstruktur-Stärken).
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:69-81` (Schnellpfad setzt `allKraefte`/`allFahrzeuge` **nur** aus dem gewählten Abschnitt), `src/renderer/src/app/useEinsatzData.ts:97-106` (bei `includeFullOverview: false` wird die Vollliste nie nachgeladen, nur die Gesamtstärke), Aufrufer: `src/renderer/src/app/useSyncEvents.ts:56-64` (zyklisch alle 6 s), `src/renderer/src/app/useSyncEvents.ts:221`, `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:111`, `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:146`, `src/renderer/src/app/einheit-actions/useEinheitSplitActions.ts:59`, `src/renderer/src/app/useFahrzeugActions.ts:112`, `src/renderer/src/app/einheit-actions/useEinheitFahrzeugActions.ts:29,62`. Verbraucher: `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:216-267` (Kräfte), `:272-292` (Fahrzeuge), `:203-208` → `src/renderer/src/components/views/FuehrungsstrukturView.tsx:266-284` (Führungsstruktur-Stärken).
 - **Beobachtetes Problem (aus Code hergeleitet, Laufzeitprüfung offen):** Nach jedem Anlegen/Bearbeiten/Splitten und spätestens nach dem nächsten 6-Sekunden-Polling werden `allKraefte`/`allFahrzeuge` auf die Einheiten des aktuell gewählten Abschnitts reduziert und nicht wieder aufgefüllt. Die Views „Kräfte", „Fahrzeuge" und „Führungsstruktur" arbeiten genau auf diesen Listen.
 - **Erwartung der Rolle:** Eine Gesamtübersicht zeigt alle Kräfte des Einsatzes, unabhängig davon, welcher Abschnitt links markiert ist. Wenn gefiltert wird, muss der Filter sichtbar sein.
 - **Auswirkung im Einsatz:** Der S1 sieht in der Kräfteübersicht und in der Führungsstruktur zu wenige Einheiten, ohne dass irgendetwas auf eine Einschränkung hinweist. Kräfte können übersehen, doppelt angefordert oder als „nicht da" gemeldet werden. Die Führungsstruktur-Karten zeigen für alle nicht gewählten Abschnitte 0er-Stärken, während die Topbar-Gesamtstärke korrekt bleibt – zwei widersprüchliche Zahlen auf einem Bildschirm.
@@ -40,7 +40,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P0-2 Einsatz beenden, archivieren und Einsatzakte exportieren sind in der Oberfläche nicht erreichbar
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/ExportView.tsx:14-26` (Komponente existiert, wird nirgends gerendert – kein Import außerhalb der Datei), `src/renderer/src/components/layout/WorkspaceRail.tsx:342-383` und `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:320-329` (nur `einsatz`, `fuehrung`, `kraefte`, `fahrzeuge`, `einstellungen`), `src/shared/ipc.ts:197` (`archiveEinsatz`), `src/shared/ipc.ts:217` (`exportEinsatzakte`), `src/main/ipc/register-einsatz-ipc.ts:155,404` (Main-Seite implementiert), `src/renderer/src/components/views/AppWorkspaceShell.tsx:311` (Archiv-Banner existiert, aber kein Weg dorthin), `README.md` („Export (MVP)" wird als Funktion beschrieben).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/ExportView.tsx:14-27` (Komponente existiert, wird nirgends gerendert – kein Import außerhalb der Datei), `src/renderer/src/components/layout/WorkspaceRail.tsx:13-54` und `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:320-329` (nur `einsatz`, `fuehrung`, `kraefte`, `fahrzeuge`, `einstellungen`), `src/shared/ipc.ts:197` (`archiveEinsatz`), `src/shared/ipc.ts:217` (`exportEinsatzakte`), `src/main/ipc/register-einsatz-ipc.ts:155,404` (Main-Seite implementiert), `src/renderer/src/components/views/AppWorkspaceShell.tsx:311` (Archiv-Banner existiert, aber kein Weg dorthin), `README.md` („Export (MVP)" wird als Funktion beschrieben).
 - **Beobachtetes Problem:** Die letzte Prozessstufe ist dokumentiert und in Main/IPC vorhanden, aber der Renderer ruft weder `archiveEinsatz` noch `exportEinsatzakte` auf. Der Einsatz kann über die Oberfläche weder auf BEENDET gesetzt noch archiviert noch exportiert werden.
 - **Erwartung der Rolle:** Am Einsatzende drücke ich „Einsatz beenden" und „Einsatzakte exportieren" und bekomme eine Datei, die ich weitergeben und ablegen kann.
 - **Auswirkung im Einsatz:** Der Ablauf endet ohne definierten Abschluss. Es gibt kein übergabefähiges Dokument; die Einsatzdokumentation muss händisch aus der SQLite-Datei oder gar nicht erzeugt werden. Ein Einsatz bleibt dauerhaft „AKTIV" und damit beschreibbar, auch wenn er längst beendet ist.
@@ -49,7 +49,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P0-3 Kräfte in Abschnitten vom Typ ANFAHRT zählen ohne jeden Hinweis nicht zur Gesamtstärke
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:236-260` (`aggregateTacticalStrength` überspringt `systemTyp === 'ANFAHRT'`), `src/renderer/src/components/views/FuehrungsstrukturView.tsx:78-81` (gleiche Ausnahme), Anzeige: `src/renderer/src/components/layout/Topbar.tsx:423-426` und `src/renderer/src/components/views/StrengthDisplayView.tsx:212` (Monitor), Auswahl des Typs: `src/renderer/src/components/dialogs/CreateAbschnittDialog.tsx:118-130`.
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:239-260` (`aggregateTacticalStrength` überspringt `systemTyp === 'ANFAHRT'`), `src/renderer/src/components/views/FuehrungsstrukturView.tsx:78-81` (gleiche Ausnahme), Anzeige: `src/renderer/src/components/layout/Topbar.tsx:40-43` und `src/renderer/src/components/views/StrengthDisplayView.tsx:231` (Monitor), Auswahl des Typs: `src/renderer/src/components/dialogs/CreateAbschnittDialog.tsx:36-48`.
 - **Beobachtetes Problem:** Ob eine Einheit in die Gesamtstärke eingeht, hängt allein am Systemtyp des Abschnitts. Weder beim Anlegen des Abschnitts noch in der Topbar, noch im Stärke-Monitor, noch in der Führungsstruktur-Karte wird dieser Ausschluss erklärt oder angezeigt.
 - **Erwartung der Rolle:** Wenn eine Zahl als „Stärke" gemeldet wird, muss erkennbar sein, wer darin enthalten ist und wer nicht – und zwar auf dem Bildschirm, von dem abgelesen wird.
 - **Auswirkung im Einsatz:** Die gemeldete Stärke ist systematisch zu niedrig, sobald Kräfte im Abschnitt „Anfahrt" geführt werden. Eine falsche Stärkemeldung an die übergeordnete Führung ist eine gefährliche Fehlinterpretation und kann zu Nach- oder Fehlanforderungen führen. Umgekehrt springt die Zahl beim Verschieben aus der Anfahrt heraus sprunghaft nach oben, ohne dass sich real etwas geändert hat.
@@ -58,7 +58,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P0-4 Abgemeldete Einheiten und außer Betrieb gesetzte Fahrzeuge bleiben in der Stärke enthalten
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:245-252` und `src/renderer/src/components/views/FuehrungsstrukturView.tsx:95-109` (Statusfeld wird bei der Summenbildung nirgends ausgewertet); Statusauswahl: `src/renderer/src/components/editor/inline/EinheitFormRows.tsx:36-43` (`AKTIV`, `IN_BEREITSTELLUNG`, `ABGEMELDET`), Schema: `drizzle/0000_initial.sql:36-48`.
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/useEinsatzData.ts:249-256` und `src/renderer/src/components/views/FuehrungsstrukturView.tsx:95-109` (Statusfeld wird bei der Summenbildung nirgends ausgewertet); Statusauswahl: `src/renderer/src/components/editor/inline/EinheitFormRows.tsx:36-43` (`AKTIV`, `IN_BEREITSTELLUNG`, `ABGEMELDET`), Schema: `drizzle/0000_initial.sql:36-48`.
 - **Beobachtetes Problem:** Eine Einheit auf `ABGEMELDET` zu setzen ändert die Gesamtstärke nicht. Ein echtes Abmelden (Einheit rückt ab) ist über die Oberfläche nur als Statusänderung ohne Wirkung oder gar nicht möglich; eine Löschfunktion für Einheiten existiert im Renderer nicht.
 - **Erwartung der Rolle:** Wenn ich eine Einheit abmelde, sinkt die gemeldete Stärke – das ist der Hauptzweck des Status.
 - **Auswirkung im Einsatz:** Die Stärke wächst über die Einsatzdauer monoton und wird nach den ersten Ablösungen deutlich zu hoch gemeldet. Der S1 verliert das Vertrauen in die Zahl und führt parallel Strichliste.
@@ -71,7 +71,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P1-1 Anmeldung findet unsichtbar als `admin` statt – keine Übergabe, keine Zuordnung von Einträgen zu Personen
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/useAppBootstrap.ts:47` (fester Auto-Login `admin`/`admin`), `src/renderer/src/components/views/LoginView.tsx:14-43` (Login-Maske existiert, wird nirgends eingebunden – kein Import), `src/renderer/src/components/views/AppEntryView.tsx:63-80` (bei fehlender Session nur Fehlertext, keine Anmeldemöglichkeit), Protokollierung: `src/main/services/command.ts:50,100,142` (`benutzer: user.name`), Sperren: `src/renderer/src/components/layout/AbschnittSidebar.tsx:504` (zeigt Rechnername und Benutzername).
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/useAppBootstrap.ts:47` (fester Auto-Login `admin`/`admin`), `src/renderer/src/components/views/LoginView.tsx:14-43` (Login-Maske existiert, wird nirgends eingebunden – kein Import), `src/renderer/src/components/views/AppEntryView.tsx:63-80` (bei fehlender Session nur Fehlertext, keine Anmeldemöglichkeit), Protokollierung: `src/main/services/command.ts:50,100,142` (`benutzer: user.name`), Sperren: `src/renderer/src/components/layout/AbschnittSidebar.tsx:72` (zeigt Rechnername und Benutzername).
 - **Beobachtetes Problem:** Es gibt keine Anmeldung. Jede Bewegung, jeder Undo-Eintrag und jede Bearbeitungssperre wird dem Benutzer `admin` zugeschrieben. Schlägt der Auto-Login fehl, ist die App ohne Anmeldemaske in einer Sackgasse.
 - **Erwartung der Rolle:** Bei Schichtbeginn melde ich mich an, damit erkennbar ist, wer welche Meldung eingetragen hat; bei Schichtende melde ich mich ab.
 - **Auswirkung im Einsatz:** Übergaben zwischen Schichten sind nicht nachvollziehbar. Bei Rückfragen („wer hat die 12 eingetragen?") hilft das Protokoll nicht. Auf einem gemeinsam genutzten FüSt-Rechner ist außerdem nicht erkennbar, wer gerade einen Datensatz gesperrt hält, außer über den Rechnernamen.
@@ -80,7 +80,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P1-2 Einen Einsatz schließen oder wechseln geht nur über „Einstellungen → Verzeichnis speichern"
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/useSystemActions.ts:173-179` (`saveDbPath` ruft `clearSelectedEinsatz`), `src/renderer/src/components/views/SettingsView.tsx:223-226` (Button „Verzeichnis speichern"), `src/renderer/src/app/useWorkspaceLifecycle.ts:30-40` (einziger Weg zurück zum Startbildschirm), `src/renderer/src/components/layout/Topbar.tsx:432-439` (Topbar bietet nur Monitor-Aktionen), Beleg aus den eigenen Tests: `e2e/steps/einsatz.steps.ts:310` und `:314` („'Verzeichnis speichern' ruft clearSelectedEinsatz auf").
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/useSystemActions.ts:37-43` (`saveDbPath` ruft `clearSelectedEinsatz`), `src/renderer/src/components/views/SettingsView.tsx:223-225` (Button „Verzeichnis speichern"), `src/renderer/src/app/useWorkspaceLifecycle.ts:30-40` (einziger Weg zurück zum Startbildschirm), `src/renderer/src/components/layout/Topbar.tsx:49-56` (Topbar bietet nur Monitor-Aktionen), Beleg aus den eigenen Tests: `e2e/steps/einsatz.steps.ts:310` und `:314` („'Verzeichnis speichern' ruft clearSelectedEinsatz auf").
 - **Beobachtetes Problem:** Es gibt keine Aktion „Einsatz schließen" oder „Einsatz wechseln". Der einzige Weg zurück ist ein Einstellungs-Button, dessen Beschriftung etwas völlig anderes verspricht – der eigene e2e-Test dokumentiert diesen Umweg ausdrücklich.
 - **Erwartung der Rolle:** Ein sichtbarer Weg zurück zur Einsatzauswahl, ohne in Systemeinstellungen zu gehen.
 - **Auswirkung im Einsatz:** Wer den Einsatz wechseln will (zweite Lage, falsche Datei geöffnet), findet den Weg ohne Einweisung nicht und startet stattdessen die Anwendung neu. Umgekehrt löst ein Nutzer, der nur den Pfad korrigieren will, ungewollt das Schließen des laufenden Einsatzes aus.
@@ -107,7 +107,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P1-5 Stärke doppelt pflegen: Zahlenfelder und Helferliste laufen nebeneinander mit unterschiedlicher Speicherlogik
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/editor/inline/EinheitFormRows.tsx:52-87` (Zahlenfelder Führung/Unterführung/Mannschaft), `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:77-104` (`nextAutoRows` erzeugt Platzhalterzeilen aus der Differenz), `src/renderer/src/components/editor/shared/EinheitHelferSection.tsx:150-161` (jede Helferzeile hat einen eigenen „Speichern"-Knopf), `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:144-150` (getrennter „Speichern"-Knopf für die Einheit), Auswirkung auf gespeicherte Stärke: `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:249-250` (Stärke kommt ausschließlich aus den Zahlenfeldern).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/editor/inline/EinheitFormRows.tsx:52-87` (Zahlenfelder Führung/Unterführung/Mannschaft), `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:77-104` (`nextAutoRows` erzeugt Platzhalterzeilen aus der Differenz), `src/renderer/src/components/editor/shared/EinheitHelferSection.tsx:150-161` (jede Helferzeile hat einen eigenen „Speichern"-Knopf), `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:144-150` (getrennter „Speichern"-Knopf für die Einheit), Auswirkung auf gespeicherte Stärke: `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:125-126` (Stärke kommt ausschließlich aus den Zahlenfeldern).
 - **Beobachtetes Problem:** Dieselbe Information – wie viele Führer, Unterführer, Helfer sind da – wird an zwei Stellen gepflegt. Die gemeldete Stärke stammt nur aus den Zahlenfeldern; die namentliche Helferliste beeinflusst sie nicht. In einem einzigen Formular gibt es zwei verschiedene Speicherwege: zeilenweise sofort (Helfer, Fahrzeuge) und ganzheitlich am Ende (Einheit).
 - **Erwartung der Rolle:** Eine Eingabe, ein Speichern. Wenn ich zehn Helfer eintrage, soll die Stärke zehn sein.
 - **Auswirkung im Einsatz:** Zahlenfeld und Namensliste laufen auseinander; Verpflegungs- und Meldezahlen widersprechen sich. Unter Zeitdruck wird der falsche Speichern-Knopf gedrückt und Arbeit geht verloren, ohne dass etwas darauf hinweist.
@@ -116,7 +116,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P1-6 Aktionen brechen ohne Rückmeldung ab, wenn kein Abschnitt gewählt ist oder der Einsatz archiviert ist
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:43-50` (stiller `return`), `src/renderer/src/app/useFahrzeugActions.ts:69-80` (stiller `return`; nur der Fall „keine Einheit vorhanden" erzeugt eine Meldung), `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:184-186` (stiller `return`), `src/renderer/src/app/useEinsatzBasisdatenActions.ts:42-45` (stiller `return`), Kontext: Abschnittsleiste nur in der Einsatz-Ansicht sichtbar (`src/renderer/src/app/useWorkspaceDerivedState.ts:300`), Aktionen aber auch in Kräfte-/Fahrzeug-Ansicht (`src/renderer/src/components/views/workspace/WorkspaceSections.tsx:244-256`, `:277-282`).
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:43-50` (stiller `return`), `src/renderer/src/app/useFahrzeugActions.ts:69-80` (stiller `return`; nur der Fall „keine Einheit vorhanden" erzeugt eine Meldung), `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:60-62` (stiller `return`), `src/renderer/src/app/useEinsatzBasisdatenActions.ts:42-45` (stiller `return`), Kontext: Abschnittsleiste nur in der Einsatz-Ansicht sichtbar (`src/renderer/src/app/useWorkspaceDerivedState.ts:40`), Aktionen aber auch in Kräfte-/Fahrzeug-Ansicht (`src/renderer/src/components/views/workspace/WorkspaceSections.tsx:244-256`, `:277-282`).
 - **Beobachtetes Problem:** Knöpfe sind aktiv, die Aktion passiert aber nicht und es erscheint keine Meldung. In den Kräfte- und Fahrzeugansichten ist zudem gar nicht sichtbar, welcher Abschnitt gerade gewählt ist, von dem die Aktion abhängt.
 - **Erwartung der Rolle:** Entweder der Knopf funktioniert, oder er ist erkennbar gesperrt mit Begründung.
 - **Auswirkung im Einsatz:** Mehrfaches Drücken, Unsicherheit ob die App hängt, Zeitverlust in der Erfassungsspitze, wenn viele Kräfte gleichzeitig eintreffen.
@@ -125,7 +125,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P1-7 Archivierter Einsatz lässt sich nicht einmal mehr ansehen
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:184-186` (Öffnen der Einheit-Detailansicht bei `isArchived` blockiert), `src/renderer/src/components/views/FuehrungsstrukturView.tsx:65-73` (Bearbeiten-Knopf ausgeblendet), `src/renderer/src/components/views/AppWorkspaceShell.tsx:311` (nur Banner „nur lesen").
+- **Fundstelle / Aufgabe:** `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:60-62` (Öffnen der Einheit-Detailansicht bei `isArchived` blockiert), `src/renderer/src/components/views/FuehrungsstrukturView.tsx:184-192` (Bearbeiten-Knopf ausgeblendet), `src/renderer/src/components/views/AppWorkspaceShell.tsx:311` (nur Banner „nur lesen").
 - **Beobachtetes Problem:** „Nur lesen" bedeutet hier faktisch „Details gar nicht lesbar": Der Detaileditor einer Einheit ist zugleich die einzige Ansicht für Erreichbarkeiten, Ansprechpartner und Helferliste und wird im Archiv komplett verweigert.
 - **Erwartung der Rolle:** Einen abgeschlossenen Einsatz nachschlagen zu können, ist der Hauptzweck des Archivs.
 - **Auswirkung im Einsatz:** Rückfragen zu einem abgeschlossenen Einsatz (Kontaktdaten, wer war beteiligt) sind am Gerät nicht beantwortbar.
@@ -138,7 +138,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P2-1 Abschnitt anlegen erzwingt einen Ansichtswechsel mitten in der Kräfteerfassung
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:192-210` (Knopf „Abschnitt anlegen" nur in Führungsstruktur- und Kräfte-Ansicht), Abschnittsbaum aber nur in der Einsatz-Ansicht (`src/renderer/src/app/useWorkspaceDerivedState.ts:300`); Beleg aus den eigenen Tests: `e2e/steps/einsatz.steps.ts:64-96` (erst Rail „Führungsstruktur", dann zurück auf „Einsatz", um das Ergebnis zu sehen).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:192-210` (Knopf „Abschnitt anlegen" nur in Führungsstruktur- und Kräfte-Ansicht), Abschnittsbaum aber nur in der Einsatz-Ansicht (`src/renderer/src/app/useWorkspaceDerivedState.ts:40`); Beleg aus den eigenen Tests: `e2e/steps/einsatz.steps.ts:64-96` (erst Rail „Führungsstruktur", dann zurück auf „Einsatz", um das Ergebnis zu sehen).
 - **Beobachtetes Problem:** Wer beim Erfassen merkt, dass ein Abschnitt fehlt, muss die Ansicht wechseln, anlegen und zurückwechseln; das Ergebnis ist in der Ansicht, in der es angelegt wurde, nicht in der Abschnittsleiste sichtbar.
 - **Erwartung der Rolle:** Neuen Abschnitt dort anlegen, wo der Abschnittsbaum steht, und sofort weiterarbeiten.
 - **Auswirkung im Einsatz:** Zwei zusätzliche Kontextwechsel je neuem Abschnitt, genau in der hektischsten Phase (Aufbau der Struktur bei eintreffenden Kräften).
@@ -148,7 +148,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 ### P2-2 Verschieben-Dialog zeigt weder den aktuellen Abschnitt noch die Hierarchie
 
 - **Fundstelle / Aufgabe:** `src/renderer/src/components/dialogs/MoveDialog.tsx:22-41` (Auswahlliste nur mit `abschnitt.name`, flach, ohne Markierung des Ist-Zustands), Vorbelegung auf den aktuell gewählten Abschnitt: `src/renderer/src/app/app-view-props.ts:325-330`.
-- **Beobachtetes Problem:** Der Dialog nennt weder Einheit noch Herkunftsabschnitt und listet alle Abschnitte flach, während der Abschnittsbaum sonst hierarchisch und mit Systemtyp dargestellt wird (`src/renderer/src/components/layout/AbschnittSidebar.tsx:513`). Bei gleichlautenden Unterabschnitten ist keine Unterscheidung möglich.
+- **Beobachtetes Problem:** Der Dialog nennt weder Einheit noch Herkunftsabschnitt und listet alle Abschnitte flach, während der Abschnittsbaum sonst hierarchisch und mit Systemtyp dargestellt wird (`src/renderer/src/components/layout/AbschnittSidebar.tsx:71`). Bei gleichlautenden Unterabschnitten ist keine Unterscheidung möglich.
 - **Erwartung der Rolle:** „Einheit X von A nach B verschieben" muss im Bestätigungsmoment vollständig lesbar sein.
 - **Auswirkung im Einsatz:** Verschieben in den falschen Abschnitt, was wegen des fehlenden Undo (P1-3) nur mit einem zweiten Bewegungseintrag korrigierbar ist.
 - **Empfehlung:** Im Dialog Einheitenname, Quellabschnitt und Zielabschnitt im Klartext nennen; Zielliste hierarchisch und mit Systemtyp darstellen, aktuellen Abschnitt kennzeichnen.
@@ -165,7 +165,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P2-4 Der Startbildschirm mischt Einsatzführung mit Entwicklerwerkzeugen
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/StartView.tsx:44-52` („DevTools öffnen" gleichwertig neben „Auf Updates prüfen"), `src/renderer/src/components/views/EinsatzOverviewView.tsx:53-57` („UDP Broadcast Monitor" direkt unter den Kräften der Lageübersicht), `src/renderer/src/components/views/SettingsView.tsx:257-259` (Debug-Protokolle in den Einstellungen).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/StartView.tsx:39-45` („DevTools öffnen" gleichwertig neben „Auf Updates prüfen"), `src/renderer/src/components/views/EinsatzOverviewView.tsx:53-57` („UDP Broadcast Monitor" direkt unter den Kräften der Lageübersicht), `src/renderer/src/components/views/SettingsView.tsx:257-258` (Debug-Protokolle in den Einstellungen).
 - **Beobachtetes Problem:** Diagnosewerkzeuge stehen dauerhaft in den Arbeitsansichten, teilweise an prominenter Stelle in der Einsatzübersicht.
 - **Erwartung der Rolle:** Der Arbeitsbildschirm zeigt Lage und Kräfte; Technikdiagnose liegt abseits.
 - **Auswirkung im Einsatz:** Ablenkung, versehentliches Öffnen der DevTools, und die eigentliche Einsatzübersicht wird nach unten gedrängt.
@@ -174,7 +174,7 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P2-5 „Backup laden" ist ein folgenschwerer Schritt ohne Vorwarnung in der Oberfläche
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/SettingsView.tsx:226-228` (Knopf ohne Erläuterung), `src/renderer/src/app/useSystemActions.ts:190-209` (führt direkt zur Wiederherstellung und öffnet den Einsatz neu), Main-Seite: `src/main/ipc/register-einsatz-ipc.ts:369-386`.
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/SettingsView.tsx:226-228` (Knopf ohne Erläuterung), `src/renderer/src/app/useSystemActions.ts:54-73` (führt direkt zur Wiederherstellung und öffnet den Einsatz neu), Main-Seite: `src/main/ipc/register-einsatz-ipc.ts:369-386`.
 - **Beobachtetes Problem:** Die Wirkung („aktueller Stand wird durch einen älteren ersetzt, für alle Clients") wird in der Oberfläche nirgends benannt; es gibt nur die Dateiauswahl des Betriebssystems.
 - **Erwartung der Rolle:** Vor dem Zurückspielen eines Backups eine klare Ansage, welcher Stand verloren geht und wer davon betroffen ist.
 - **Auswirkung im Einsatz:** Verlust aller Eingaben seit dem Sicherungszeitpunkt (bis zu fünf Minuten laut `README.md`) auf allen Arbeitsplätzen.
@@ -187,21 +187,21 @@ Die Kernstrecke „Einsatz anlegen → Abschnitte → Einheiten mit Stärke erfa
 
 ### P3-1 Führungsstruktur-Karten sind missverständlich beschriftet
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/FuehrungsstrukturView.tsx:75-81` („Führungsstärke" für die gesamte taktische Stärke; „Einheiten gesamt" zeigt `stats.taktisch.gesamt`, also die Personenzahl, nicht die Anzahl der Einheiten).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/FuehrungsstrukturView.tsx:194-200` („Führungsstärke" für die gesamte taktische Stärke; „Einheiten gesamt" zeigt `stats.taktisch.gesamt`, also die Personenzahl, nicht die Anzahl der Einheiten).
 - **Auswirkung im Einsatz:** Beim schnellen Ablesen wird eine Personenzahl als Anzahl Einheiten gelesen – falsche Lagebeurteilung auf den zweiten Blick.
 - **Empfehlung:** „Stärke" und „Personen gesamt" bzw. „Einheiten: n" getrennt und korrekt benennen.
 - **Verifikation:** Abschnitt mit 2 Einheiten und 18 Personen zeigt beide Zahlen unverwechselbar.
 
 ### P3-2 Navigationsleiste mit Einzelbuchstaben E/G/K/F
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/layout/WorkspaceRail.tsx:345-372` (Buchstaben als Beschriftung, Klartext nur im `title`-Tooltip).
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/layout/WorkspaceRail.tsx:16-49` (Buchstaben als Beschriftung, Klartext nur im `title`-Tooltip).
 - **Auswirkung im Einsatz:** Ohne Maus-Verweilen ist nicht erkennbar, wohin ein Knopf führt; „G" für Führungsstruktur ist nicht selbsterklärend.
 - **Empfehlung:** Sprechende Kurzbeschriftungen oder etablierte Symbole mit sichtbarem Text.
 - **Verifikation:** Ein Ersteinsteiger findet die Fahrzeugübersicht ohne Tooltip.
 
 ### P3-3 Stärke-Monitor ohne Bezug zum Einsatz und ohne Aktualitätsangabe
 
-- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/StrengthDisplayView.tsx:206-223` (nur Stärkezeichenkette und Uhrzeit), Speisung aus `src/renderer/src/app/useSystemActions.ts:302-306`.
+- **Fundstelle / Aufgabe:** `src/renderer/src/components/views/StrengthDisplayView.tsx:212-242` (nur Stärkezeichenkette und Uhrzeit), Speisung aus `src/renderer/src/app/useSystemActions.ts:166-170`.
 - **Auswirkung im Einsatz:** Auf dem Raum-Monitor ist nicht erkennbar, zu welchem Einsatz die Zahl gehört und ob die Anzeige noch aktuell ist (z. B. wenn der speisende Arbeitsplatz hängt).
 - **Empfehlung:** Einsatzname und Zeitpunkt der letzten Aktualisierung mit anzeigen; Veralten der Daten sichtbar machen.
 - **Verifikation:** Speisenden Arbeitsplatz anhalten – der Monitor muss erkennen lassen, dass die Zahl nicht mehr fortgeschrieben wird.
