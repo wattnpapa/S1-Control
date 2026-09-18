@@ -389,7 +389,7 @@ an genau den Stellen, an denen ich entscheiden muss (`Systemtyp`, `Parent-Abschn
 
 - **Fundstelle:** Topbar `src/renderer/src/components/layout/Topbar.tsx:42` über
   `src/renderer/src/utils/tactical.ts:6-8` ergibt "1/2/9/12"; der Vollbildmonitor bekommt dieselbe
-  Zahl mit doppeltem Trennstrich `src/renderer/src/app/useSystemActions.ts:146-148` und zeigt
+  Zahl mit doppeltem Trennstrich `src/renderer/src/app/useSystemActions.ts:149-151` und zeigt
   "1/2/9//12" (`src/renderer/src/components/views/StrengthDisplayView.tsx:231`,
   Standardwert `:5`).
 - **Beobachtung:** Dieselbe Größe wird an zwei Stellen unterschiedlich geschrieben.

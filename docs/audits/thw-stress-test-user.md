@@ -116,7 +116,7 @@ loswerden.
 **Fundstellen**
 - `src/renderer/src/app/app-view-props.ts:322-331` – beim Öffnen wird `moveTarget` auf den **aktuell in der Sidebar ausgewählten Abschnitt** gesetzt, nicht auf den Abschnitt der betroffenen Einheit.
 - `src/renderer/src/components/dialogs/MoveDialog.tsx:22-41` – der Dialog nennt **nicht**, welche Einheit/welches Fahrzeug verschoben wird, zeigt **nicht** den aktuellen Abschnitt, listet Abschnitte flach nur mit `name` (ohne Hierarchie, ohne `[systemTyp]`), und "Bestätigen" ist sofort aktiv.
-- `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:228-262` – in der Kräfte-Ansicht werden Einheiten **aller** Abschnitte gelistet; die Sidebar-Auswahl hat mit der Zeile nichts zu tun.
+- `src/renderer/src/components/views/workspace/WorkspaceSections.tsx:236-262` – in der Kräfte-Ansicht werden Einheiten **aller** Abschnitte gelistet; die Sidebar-Auswahl hat mit der Zeile nichts zu tun.
 
 **Beobachtetes Problem (Code):** Aus der Gesamtübersicht "Kräfte" auf das Verschieben-Symbol tippen
 und sofort "Bestätigen" drücken schiebt die Einheit in den zufällig links markierten Abschnitt.
@@ -144,7 +144,7 @@ Verschieben eine kurze Bestätigung mit Rücknahme-Möglichkeit.
 **Fundstellen**
 - `src/renderer/src/app/useEinsatzData.ts:236-260` – `aggregateTacticalStrength` überspringt Abschnitte mit `systemTyp === 'ANFAHRT'` und summiert sonst **alle** Einheiten, unabhängig von `status` (`AKTIV`, `IN_BEREITSTELLUNG`, `ABGEMELDET`).
 - `src/renderer/src/components/layout/Topbar.tsx:38-43` – Anzeige "Stärke" ohne jeden Zusatz, was gezählt wird.
-- `src/renderer/src/components/dialogs/EinheitFormFields.tsx:106-113` – Status `ABGEMELDET` ist wählbar und der einzige Weg, eine Einheit "wegzumelden".
+- `src/renderer/src/components/dialogs/EinheitFormFields.tsx:112-119` – Status `ABGEMELDET` ist wählbar und der einzige Weg, eine Einheit "wegzumelden".
 
 **Beobachtetes Problem (Code):** Eine Einheit, die als `ABGEMELDET` gepflegt wurde, erhöht weiterhin
 die Gesamtstärke in Topbar und Stärke-Monitor. Umgekehrt verschwinden Kräfte im Abschnitt vom Typ
@@ -176,8 +176,8 @@ sich nachvollziehbar und beschriftet verändern.
 - `src/renderer/src/app/useAppControllers.ts:26-38` – `withBusy` setzt bei **jeder** Aktion zuerst `setError(null)`.
 - `src/renderer/src/components/views/AppWorkspaceShell.tsx:308-313,340` – der einzige Fehlerkanal ist ein Banner ganz oben im Fenster.
 - `src/renderer/src/styles/app.css:811-826` – Dialoge liegen als `position: fixed` Overlay über der Seite; das Banner liegt darunter/dahinter.
-- Validierungen melden ausschließlich über dieses Banner, z. B. `src/renderer/src/app/einheit-actions/useEinheitSplitActions.ts:36-48`, `einheit-actions/useEinheitCreateActions.ts:60-72`, `useAbschnittActions.ts` (Namensprüfungen).
-- Erfolgspfade schließen nur den Dialog, ohne Meldung: `useEinheitCreateActions.ts:110-113`, `useEinheitSplitActions.ts:67-70`, `useSystemActions.ts:118-122`.
+- Validierungen melden ausschließlich über dieses Banner, z. B. `src/renderer/src/app/einheit-actions/useEinheitSplitActions.ts:36-48`, `einheit-actions/useEinheitCreateActions.ts:61-68`, `useAbschnittActions.ts` (Namensprüfungen).
+- Erfolgspfade schließen nur den Dialog, ohne Meldung: `useEinheitCreateActions.ts:112-114`, `useEinheitSplitActions.ts:67-70`, `useSystemActions.ts:118-122`.
 
 **Beobachtetes Problem (Code):** Drückt der Nutzer im Split- oder Anlegen-Dialog auf Absenden und
 eine Prüfung schlägt fehl, bleibt der Dialog offen und die Erklärung erscheint im Banner hinter dem
@@ -205,7 +205,7 @@ sein, ohne dass der Nutzer den Dialog schließen muss.
 ### P1-2 Stumme Knöpfe: "Einheit anlegen" / "Fahrzeug anlegen" reagieren in bestimmten Zuständen gar nicht
 
 **Fundstellen**
-- `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:41-49` – ohne `selectedAbschnittId` wird der Aufruf kommentarlos verworfen (Button ist jedoch aktiv, vgl. `WorkspaceSections.tsx:160-166`).
+- `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:41-49` – ohne `selectedAbschnittId` wird der Aufruf kommentarlos verworfen (Button ist jedoch aktiv, vgl. `WorkspaceSections.tsx:167-170`).
 - `src/renderer/src/app/useFahrzeugActions.ts:66-78` – ohne ausgewählten Abschnitt ebenfalls stiller Abbruch; ohne vorhandene Einheit immerhin eine Meldung.
 - `src/renderer/src/app/einheit-actions/useEinheitEditActions.ts:64-72` – Bearbeiten bricht still ab, wenn die Sperre nicht erlangt wurde (die Ursache landet nur im Banner, vgl. P1-1).
 - `e2e/steps/einsatz.steps.ts:60-70,110-116,178-186` – die Tests müssen aktiv darauf warten, dass Buttons nicht mehr `disabled` sind, und umgehen den `disabled`-Zustand teils per `dispatchEvent`. Das ist ein Indiz dafür, dass dieselbe Wartezeit auch den Nutzer trifft (Annahme, da nicht live gemessen).
@@ -227,7 +227,7 @@ Ursache und den nächsten Schritt nennen.
 
 **Fundstellen**
 - `src/renderer/src/app/useAppCoreState.ts:24` und `useAppControllers.ts:26-38` – ein einziges globales `busy` für alle Schreibvorgänge.
-- Auswirkungen über die ganze Oberfläche: `Topbar.tsx:47-54` (Stärke-Monitor), `StartView.tsx:40-48`, `WorkspaceSections.tsx:160-166,228-262`, `SettingsView.tsx:223-241`.
+- Auswirkungen über die ganze Oberfläche: `Topbar.tsx:47-54` (Stärke-Monitor), `StartView.tsx:40-48`, `WorkspaceSections.tsx:167-170,246-256,281`, `SettingsView.tsx:223-240`.
 
 **Beobachtetes Problem (Code):** Während eines Schreibvorgangs sind auch völlig unbeteiligte
 Bedienelemente gesperrt – inklusive Monitor öffnen/schließen und Ansichtswechsel-abhängiger
@@ -275,7 +275,7 @@ muss ohne Datenverlust weiterarbeiten können.
 ### P1-5 Zwei folgenschwere Einstellungsknöpfe ohne Warnung: "Verzeichnis speichern" schließt den Einsatz, "Backup laden" überschreibt ihn
 
 **Fundstellen**
-- `src/renderer/src/components/views/SettingsView.tsx:222-228` – beide Knöpfe direkt untereinander, ohne erklärenden Text.
+- `src/renderer/src/components/views/SettingsView.tsx:223-229` – beide Knöpfe direkt untereinander, ohne erklärenden Text.
 - `src/renderer/src/app/useSystemActions.ts:37-43` – `saveDbPath` ruft `clearSelectedEinsatz()`, der geöffnete Einsatz wird also geschlossen.
 - `e2e/steps/einsatz.steps.ts:305-319` – der E2E-Test benutzt genau diesen Knopf als "Einsatz schließen". Das bestätigt die Nebenwirkung.
 - `src/main/ipc/register-einsatz-ipc.ts:368-386` und `register-einsatz-ipc-support.ts:57-67` – "Backup laden" öffnet einen Dateidialog und ersetzt anschließend die aktive Einsatzdatei; es gibt keine In-App-Rückfrage, nur einen Dateidialog mit dem Titel "Backup laden".
@@ -301,7 +301,7 @@ dastehen und abbrechbar sein.
 ### P1-6 Helfer löschen ohne Rückfrage, direkt neben "Speichern"
 
 **Fundstellen**
-- `src/renderer/src/components/editor/shared/EinheitHelferSection.tsx:150-166` – "Speichern" und "Löschen" nebeneinander in derselben Zellenleiste.
+- `src/renderer/src/components/editor/shared/EinheitHelferSection.tsx:152-167` – "Speichern" und "Löschen" nebeneinander in derselben Zellenleiste.
 - `src/renderer/src/app/einheit-actions/useEinheitHelferActions.ts:66-79` – Löschen wird sofort ausgeführt; kein Undo (vgl. P0-2).
 
 **Beobachtetes Problem (Code):** In einer eng gesetzten Tabellenzeile liegt die zerstörende Aktion
@@ -339,7 +339,7 @@ Einstellungs-Zahnrad bereits ein Symbol genutzt wird.
 **Fundstellen**
 - `src/renderer/src/components/views/EinsatzOverviewView.tsx:56-60` – "UDP Broadcast Monitor" mit Rohlog direkt unter den Einheiten-/Fahrzeugtabellen der Einsatzübersicht.
 - `src/renderer/src/components/views/StartView.tsx:41-44` – "DevTools öffnen" prominent auf dem Startbildschirm.
-- `src/renderer/src/components/views/SettingsView.tsx:246-247` – zwei weitere Debug-Logbereiche.
+- `src/renderer/src/components/views/SettingsView.tsx:257-258` – zwei weitere Debug-Logbereiche.
 
 **Problem/Auswirkung:** Die zentrale Lageansicht endet in einem technischen Protokoll. Unter Stress
 kostet das Scrollweg und Aufmerksamkeit, und ein versehentlich geöffnetes DevTools-Fenster wirkt wie
@@ -369,8 +369,8 @@ Dialog (mit Rückfrage, falls Eingaben vorhanden sind).
 ### P2-4 Erfassungsformulare verlangen mehr Aufmerksamkeit, als im Einsatz vorhanden ist
 
 **Fundstellen**
-- `src/renderer/src/components/dialogs/EinheitFormFields.tsx:120-175` – Erfassungsbogen mit OV/RB/LV je Name/Telefon/Fax plus Bemerkung und Erreichbarkeiten.
-- `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:139-183` – im Bearbeiten-Editor zusätzlich Fahrzeug- und Helfer-Untertabellen im selben Formular.
+- `src/renderer/src/components/dialogs/EinheitFormFields.tsx:122-175` – Erfassungsbogen mit OV/RB/LV je Name/Telefon/Fax plus Bemerkung und Erreichbarkeiten.
+- `src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:145-190` – im Bearbeiten-Editor zusätzlich Fahrzeug- und Helfer-Untertabellen im selben Formular.
 - `src/renderer/src/app/einheit-actions/useEinheitCreateActions.ts:9-21` – Vorbelegung `0/1/8`; die Stärke wird in drei Einzelfeldern erfasst.
 
 **Problem/Auswirkung:** Der Kernvorgang "Einheit meldet sich an" erfordert das Durchqueren eines
@@ -403,10 +403,10 @@ Export.
 
 ### P2-6 Statuswerte erscheinen als technische Bezeichner
 
-**Fundstellen:** `src/renderer/src/components/dialogs/EinheitFormFields.tsx:106-113` und
-`components/tables/EinheitRow.tsx:117` – Anzeige von `IN_BEREITSTELLUNG`, `AUSSER_BETRIEB`,
+**Fundstellen:** `src/renderer/src/components/dialogs/EinheitFormFields.tsx:112-119` und
+`components/tables/EinheitRow.tsx:118` – Anzeige von `IN_BEREITSTELLUNG`, `AUSSER_BETRIEB`,
 `ABGEMELDET` in Großbuchstaben mit Unterstrichen; ebenso `abschnitt.systemTyp` als `[FUEST]`,
-`[ANFAHRT]` (`AbschnittSidebar.tsx:74`).
+`[ANFAHRT]` (`AbschnittSidebar.tsx:66-76`).
 
 **Problem/Auswirkung:** Lesbarkeit und Verwechslungsgefahr beim schnellen Überfliegen einer langen
 Tabelle; die Bedeutung von `FUEST` vs. `ANFAHRT` ist für die Stärkeberechnung erheblich (siehe
@@ -422,7 +422,7 @@ Abschnittstypen dort, wo sie gewählt werden.
 **Fundstellen**
 - `README.md` – Abschnitt "Export (MVP)": "Einsatzakte exportieren" erzeugt ZIP mit DB-Kopie, Report und CSV.
 - `src/main/preload.ts:43` – `exportEinsatzakte` vorhanden; `src/main/ipc/register-einsatz-ipc.ts:388-406` – Handler vorhanden.
-- `src/renderer/src/components/views/ExportView.tsx` – Ansicht existiert, wird aber **nirgends** eingebunden: `WorkspaceSections.tsx:305-313` kennt nur `einsatz`, `fuehrung`, `kraefte`, `fahrzeuge`, `einstellungen`; `WorkspaceRail.tsx` hat keinen Eintrag dafür.
+- `src/renderer/src/components/views/ExportView.tsx` – Ansicht existiert, wird aber **nirgends** eingebunden: `WorkspaceSections.tsx:321-328` kennt nur `einsatz`, `fuehrung`, `kraefte`, `fahrzeuge`, `einstellungen`; `WorkspaceRail.tsx` hat keinen Eintrag dafür.
 
 **Problem/Auswirkung:** Am Einsatzende sucht der Helfer den Export, den die Doku verspricht, findet
 ihn nicht und muss annehmen, die Software könne es nicht. Die Dokumentation der Einsatzakte
@@ -436,7 +436,7 @@ unterbleibt oder wird händisch nachgebaut.
 ### P2-8 Kein Hinweis auf Aktualität und Herkunft der angezeigten Daten
 
 **Fundstellen:** `src/renderer/src/app/useSyncEvents.ts:50-66` (Polling alle 6 s),
-`useSyncEvents.ts:194-215` (Refresh auf Broadcast), `useEditLocks.ts:50-77` (Lock-Heartbeat).
+`useSyncEvents.ts:206-230` (Refresh auf Broadcast), `useEditLocks.ts:50-77` (Lock-Heartbeat).
 In der Oberfläche gibt es keinen Zeitstempel "zuletzt aktualisiert", keinen Verbindungs-/Share-Status
 und keinen Hinweis, wenn sich Daten gerade durch einen anderen Client geändert haben.
 
@@ -466,13 +466,13 @@ Verwechslungsgefahr zwischen den drei Symbolen hoch – besonders, weil "Verschi
 
 ### P3-3 Startbildschirm nennt Status, aber nicht den Speicherort
 
-`src/renderer/src/components/views/StartView.tsx:70-82` – die Liste zeigt `Name (STATUS)`; der Pfad
+`src/renderer/src/components/views/StartView.tsx:66-76` – die Liste zeigt `Name (STATUS)`; der Pfad
 steht nur im `title`-Tooltip. Bei gleichnamigen Übungs- und Echtlagen auf einem Share ist nicht auf
 einen Blick erkennbar, welche Datei geöffnet wird.
 
 ### P3-4 Entwürfe der Untertabellen gehen beim Ansichtswechsel verloren
 
-`src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:105-137` – Helfer- und
+`src/renderer/src/components/editor/inline/InlineEinheitEditor.tsx:109-137` – Helfer- und
 Fahrzeugentwürfe liegen in lokalem Komponentenstate. Wechselt der Nutzer währenddessen die Ansicht
 über die Rail, wird der Editor ausgehängt; die Hauptfelder bleiben (Parent-State), die noch nicht
 gespeicherten Helferzeilen nicht. Unter Unterbrechung ist das ein stiller Teilverlust.
