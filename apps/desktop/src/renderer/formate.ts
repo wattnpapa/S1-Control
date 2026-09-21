@@ -2,7 +2,7 @@
  * Die Schreibweisen der Oberfläche (Entwurf „Oberfläche", Abschnitt Typografie).
  *
  * Zwei Angaben stehen an mehreren Stellen zugleich — die Gesamtstärke im
- * Kopfband, im Stärkeband und in der Statuszeile, die taktische Zeit im
+ * Kopfband und in der Statuszeile, die taktische Zeit im
  * Kopfband und auf jedem Ausdruck. Sie sind deshalb **einmal** geschrieben:
  * Zwei Stellen, die dieselbe Zahl verschieden setzen, lesen sich im Einsatz
  * wie zwei verschiedene Zahlen.

@@ -446,40 +446,6 @@
         font-variant-numeric: tabular-nums;
       }
 
-      /* ---- Stärkeband ---------------------------------------------------- */
-
-      .staerkeband {
-        display: flex;
-        background: var(--karte);
-        border-bottom: 1px solid var(--rahmen);
-      }
-      .staerkeband .kachel {
-        flex: 1;
-        padding: 11px 13px;
-        border-left: 1px solid var(--rahmen-weich);
-        display: flex;
-        flex-direction: column;
-        gap: 3px;
-      }
-      .staerkeband .kachel:first-child {
-        border-left: 0;
-      }
-      .staerkeband .kachel.summe {
-        background: var(--zeile-alt);
-      }
-      .staerkeband .zahl {
-        font-size: 27px;
-        font-weight: 700;
-        font-variant-numeric: tabular-nums;
-        line-height: 1;
-      }
-      .staerkeband .label {
-        font: 400 0.84em/1 var(--mono);
-        letter-spacing: 0.14em;
-        text-transform: uppercase;
-        color: var(--text-leise);
-      }
-
       /* ---- Arbeitsfläche ------------------------------------------------- */
 
       main {
@@ -1707,8 +1673,8 @@
   <body>
     <!-- Der Wurzelknoten ist ein `div` und kein `main`: Der Arbeitsplatz
          bringt sein eigenes `main` mit, und das aeussere trug sonst dessen
-         Regeln mit — 14 px Polster als weisser Ring um Kopfband,
-         Staerkeband und Statuszeile, und dazu 28 px mehr Hoehe als das
+         Regeln mit — 14 px Polster als weisser Ring um Kopfband
+         und Statuszeile, und dazu 28 px mehr Hoehe als das
          Fenster hat, weshalb die Statuszeile unten abgeschnitten war. -->
     <div id="wurzel"></div>
     <script type="module" src="./haupt.tsx"></script>

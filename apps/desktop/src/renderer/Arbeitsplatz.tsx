@@ -24,7 +24,6 @@ import { Lage } from "./Lage.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
-import { Staerkeband } from "./Staerkeband.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { useKuerzel } from "./tastatur.js";
 
@@ -106,8 +105,6 @@ export function Arbeitsplatz(): React.JSX.Element {
           ? { blatt, waehleBlatt: setzeBlatt, offeneMeldungen: laden.eingangskorb?.offen ?? 0 }
           : {})}
       />
-
-      {laden.lagebild !== undefined && <Staerkeband lagebild={laden.lagebild} />}
 
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">

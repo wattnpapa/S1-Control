@@ -6,10 +6,9 @@
  * taktische Zeit** in Zahlen, die man aus zwei Metern liest, und darunter in
  * einer Zeile, ob der Stand aktuell und der Share erreichbar ist.
  *
- * Die Stärke steht hier und **nicht** zusätzlich im Stärkeband: Das Band
- * gliedert sie auf (Führer, Unterführer, Mannschaft), das Kopfband nennt sie
- * als eine Zahl. Zwei Orte für dieselbe Aussage wären ein Widerspruch, sobald
- * einer von beiden hinterherhinkt.
+ * Die Stärke steht nur hier (und in der Statuszeile). Das frühere Stärkeband
+ * unter dem Kopfband wiederholte sie in Kacheln und ist seit dem 21.09.2026
+ * entfernt.
  */
 
 import { THEMEN, type Lagebild, type Theme } from "../kontrakt/index.js";
