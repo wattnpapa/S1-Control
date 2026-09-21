@@ -109,8 +109,9 @@ function ExistingFahrzeugRow(props: ExistingFahrzeugRowProps): JSX.Element {
         <button
           onClick={() => void props.onUpdateFahrzeug({ fahrzeugId: props.rowId, ...props.row })}
           disabled={props.busy || props.isArchived}
+          title="Speichert nur diese Fahrzeugzeile"
         >
-          Speichern
+          Zeile speichern
         </button>
       </td>
     </tr>

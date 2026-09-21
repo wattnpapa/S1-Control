@@ -175,27 +175,27 @@ export function EinheitContactRows<TForm extends EinheitForm>({ form, onChange }
       </tr>
       <tr>
         <th>OV Telefon</th>
-        <td><input value={form.ovTelefon} onChange={(e) => onChange({ ...form, ovTelefon: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.ovTelefon} onChange={(e) => onChange({ ...form, ovTelefon: e.target.value })} /></td>
         <th>OV Fax</th>
-        <td><input value={form.ovFax} onChange={(e) => onChange({ ...form, ovFax: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.ovFax} onChange={(e) => onChange({ ...form, ovFax: e.target.value })} /></td>
       </tr>
       <tr>
         <th>RB</th>
         <td><input value={form.rbName} onChange={(e) => onChange({ ...form, rbName: e.target.value })} /></td>
         <th>RB Telefon</th>
-        <td><input value={form.rbTelefon} onChange={(e) => onChange({ ...form, rbTelefon: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.rbTelefon} onChange={(e) => onChange({ ...form, rbTelefon: e.target.value })} /></td>
       </tr>
       <tr>
         <th>RB Fax</th>
-        <td><input value={form.rbFax} onChange={(e) => onChange({ ...form, rbFax: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.rbFax} onChange={(e) => onChange({ ...form, rbFax: e.target.value })} /></td>
         <th>LV</th>
         <td><input value={form.lvName} onChange={(e) => onChange({ ...form, lvName: e.target.value })} /></td>
       </tr>
       <tr>
         <th>LV Telefon</th>
-        <td><input value={form.lvTelefon} onChange={(e) => onChange({ ...form, lvTelefon: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.lvTelefon} onChange={(e) => onChange({ ...form, lvTelefon: e.target.value })} /></td>
         <th>LV Fax</th>
-        <td><input value={form.lvFax} onChange={(e) => onChange({ ...form, lvFax: e.target.value })} /></td>
+        <td><input type="tel" inputMode="tel" value={form.lvFax} onChange={(e) => onChange({ ...form, lvFax: e.target.value })} /></td>
       </tr>
     </>
   );

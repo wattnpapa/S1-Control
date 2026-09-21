@@ -32,7 +32,23 @@ export class BackupCoordinator {
 
   private lastBackupAt = 0;
 
+  private letzteSicherung: { zeitpunkt: string; pfad: string } | null = null;
+
+  private letzterFehler: string | null = null;
+
   constructor(private readonly canWriteBackup: () => boolean = () => true) {}
+
+  /**
+   * Zustand der Sicherungen für die Anzeige: ohne ihn bleibt ein
+   * gescheitertes Backup unbemerkt, bis es gebraucht wird.
+   */
+  public zustand(): { letzteSicherung: string | null; pfad: string | null; fehler: string | null } {
+    return {
+      letzteSicherung: this.letzteSicherung?.zeitpunkt ?? null,
+      pfad: this.letzteSicherung?.pfad ?? null,
+      fehler: this.letzterFehler,
+    };
+  }
 
   public stop(): void {
     if (this.interval) {
@@ -117,8 +133,11 @@ export class BackupCoordinator {
     try {
       fs.copyFileSync(ctx.path, target);
       this.lastBackupAt = now;
-    } catch {
-      // best effort backup in background
+      this.letzteSicherung = { zeitpunkt: new Date(now).toISOString(), pfad: target };
+      this.letzterFehler = null;
+    } catch (error) {
+      // Der Fehler darf nicht stillschweigend liegen bleiben.
+      this.letzterFehler = error instanceof Error ? error.message : String(error);
     }
   }
 }

@@ -169,6 +169,11 @@ function registerEinsatzCreateHandlers(
   );
 
   ipcMain.handle(
+    IPC_CHANNEL.SICHERUNGS_ZUSTAND,
+    wrap(async () => state.backupCoordinator.zustand()),
+  );
+
+  ipcMain.handle(
     IPC_CHANNEL.SET_EINSATZ_STATUS,
     wrap(async (input: Parameters<RendererApi['setEinsatzStatus']>[0]) => {
       requireUser();

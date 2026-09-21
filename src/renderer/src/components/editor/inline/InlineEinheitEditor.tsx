@@ -164,11 +164,19 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
       <header className="inline-editor-header">
         <h3>Einheit bearbeiten</h3>
         <div className="inline-editor-actions">
-          <button onClick={props.onSubmit} disabled={props.busy || props.isArchived}>
-            Speichern
+          <button
+            onClick={props.onSubmit}
+            disabled={props.busy || props.isArchived}
+            title="Speichert die Stammdaten der Einheit. Helfer- und Fahrzeugzeilen werden je Zeile gespeichert."
+          >
+            Einheit speichern
           </button>
-          <button onClick={props.onCancel} disabled={props.busy}>
-            Abbrechen
+          <button
+            onClick={props.onCancel}
+            disabled={props.busy}
+            title="Schließt den Editor. Bereits gespeicherte Zeilen bleiben erhalten."
+          >
+            Schließen
           </button>
         </div>
       </header>

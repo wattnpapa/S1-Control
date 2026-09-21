@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { AppError } from './errors';
 import type { CreateEinsatzInput } from '../../shared/ipc';
 import type { EinsatzListItem, SessionUser } from '../../shared/types';
 import crypto from 'node:crypto';
@@ -121,6 +122,15 @@ export function createEinsatzInOwnDatabase(
   fs.mkdirSync(baseDir, { recursive: true });
 
   const dbPath = explicitDbPath ?? path.join(baseDir, createEinsatzDbFileName(input.name));
+  // Eine vorhandene Einsatzdatei wird nie überschrieben: sie kann die einzige
+  // Fassung einer laufenden oder abgeschlossenen Lage sein.
+  if (fs.existsSync(dbPath)) {
+    throw new AppError(
+      `Unter "${path.basename(dbPath)}" liegt bereits ein Einsatz. ` +
+        'Bitte einen anderen Namen wählen oder den vorhandenen Einsatz öffnen.',
+      'CONFLICT',
+    );
+  }
   const sysPath = systemFilePath(dbPath);
 
   // Write initial skeleton file so openDatabaseWithRetry can read it.

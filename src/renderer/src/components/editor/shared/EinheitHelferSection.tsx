@@ -130,7 +130,15 @@ function HelferCommonCells({ organisation, row, updateRow }: HelferRowBaseProps)
         />
       </td>
       <td><input value={row.funktion} onChange={(event) => updateRow({ ...row, funktion: event.target.value })} /></td>
-      <td><input value={row.telefon} onChange={(event) => updateRow({ ...row, telefon: event.target.value })} /></td>
+      <td>
+        <input
+          type="tel"
+          inputMode="tel"
+          autoComplete="tel"
+          value={row.telefon}
+          onChange={(event) => updateRow({ ...row, telefon: event.target.value })}
+        />
+      </td>
       <td><input value={row.erreichbarkeit} onChange={(event) => updateRow({ ...row, erreichbarkeit: event.target.value })} /></td>
       <td>
         <input
@@ -155,11 +163,17 @@ function ExistingHelferRow(props: ExistingHelferRowProps): JSX.Element {
         <button
           onClick={() => void props.onUpdateHelfer({ helferId: props.rowId, ...props.row })}
           disabled={props.busy || props.isArchived}
+          title="Speichert nur diese Helferzeile"
         >
-          Speichern
+          Zeile speichern
         </button>
-        <button onClick={() => void props.onDeleteHelfer(props.rowId)} disabled={props.busy || props.isArchived}>
-          Löschen
+        <button
+          className="btn-gefahr-schlicht"
+          onClick={() => void props.onDeleteHelfer(props.rowId)}
+          disabled={props.busy || props.isArchived}
+          title="Entfernt diese Helferzeile aus der Einheit"
+        >
+          Zeile löschen
         </button>
       </td>
     </tr>

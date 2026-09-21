@@ -1061,6 +1061,11 @@ td.tactical-sign-cell.compact-sign-cell {
   min-height: 28px;
 }
 
+.sicherung-fehler {
+  color: var(--danger);
+  font-weight: 700;
+}
+
 .status-marke {
   display: inline-block;
   padding: 2px 10px;

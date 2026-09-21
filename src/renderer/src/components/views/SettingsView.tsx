@@ -1,3 +1,5 @@
+import { useEffect, useState } from 'react';
+import type { SicherungsZustand } from '@shared/ipc';
 import type { ActiveClientInfo, PeerUpdateStatus } from '@shared/types';
 import type { AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 import type { JSX } from 'react';
@@ -18,6 +20,46 @@ interface SettingsViewProps {
   onToggleLanPeerUpdates: (enabled: boolean) => void;
   anzeigeThema: AnzeigeThema;
   onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
+}
+
+/**
+ * Zeigt, wann zuletzt gesichert wurde und ob dabei etwas schiefging.
+ */
+function SicherungsHinweis(): JSX.Element {
+  const [zustand, setZustand] = useState<SicherungsZustand | null>(null);
+
+  useEffect(() => {
+    const lesen = async (): Promise<void> => {
+      try {
+        setZustand(await window.api.getSicherungsZustand());
+      } catch {
+        // Ohne Angabe bleibt der Hinweis leer.
+      }
+    };
+    void lesen();
+    const timer = window.setInterval(() => void lesen(), 30_000);
+    return () => window.clearInterval(timer);
+  }, []);
+
+  if (!zustand) {
+    return <></>;
+  }
+  if (zustand.fehler) {
+    return (
+      <p className="sicherung-fehler">
+        Die automatische Sicherung ist zuletzt gescheitert: {zustand.fehler}
+      </p>
+    );
+  }
+  if (!zustand.letzteSicherung) {
+    return <p>Noch keine automatische Sicherung in dieser Sitzung.</p>;
+  }
+  return (
+    <p>
+      Letzte Sicherung: {new Date(zustand.letzteSicherung).toLocaleString('de-DE')}
+      {zustand.pfad ? ` (${zustand.pfad})` : ''}
+    </p>
+  );
 }
 
 /**
@@ -263,8 +305,9 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
           disabled={props.busy}
         />
       </label>
+      <SicherungsHinweis />
       <p>
-        Für jeden Einsatz wird eine eigene SQLite-Datei mit der Endung <code>.s1control</code> erstellt. Backups
+        Für jeden Einsatz wird eine eigene Datei mit der Endung <code>.s1control</code> erstellt. Sicherungen
         liegen alle 5 Minuten im Unterordner <code>backup</code> neben der Einsatzdatei.
       </p>
 

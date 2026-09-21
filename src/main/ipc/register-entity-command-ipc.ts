@@ -4,6 +4,7 @@ import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command'
 import { hasUndoableCommand, splitEinheit } from '../services/einsatz';
 import { describeLastUndoableCommand } from '../services/command-beschreibung';
 import { debugSync } from '../services/debug';
+import { stelleSicherDassNichtFremdBearbeitet } from '../services/record-lock';
 import type { EntityIpcHelpers, RegistrarCommon } from './register-support';
 
 /**
@@ -32,7 +33,16 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const splitCtx = state.getDbContext();
-      await splitCtx.mutate(() => splitEinheit(splitCtx, input));
+      await splitCtx.mutate(() => {
+        // Aufteilen ändert die Quell-Einheit: wer sie gerade bearbeitet, darf
+        // dabei nicht überfahren werden.
+        stelleSicherDassNichtFremdBearbeitet(splitCtx, {
+          einsatzId: input.einsatzId,
+          entityType: 'EINHEIT',
+          entityId: input.sourceEinheitId,
+        }, helpers.lockIdentity(requireUser()));
+        splitEinheit(splitCtx, input);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'split-einheit');
     }),
   );
@@ -57,7 +67,14 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const moveEinCtx = state.getDbContext();
-      await moveEinCtx.mutate(() => moveEinheit(moveEinCtx, input, user));
+      await moveEinCtx.mutate(() => {
+        stelleSicherDassNichtFremdBearbeitet(moveEinCtx, {
+          einsatzId: input.einsatzId,
+          entityType: 'EINHEIT',
+          entityId: input.einheitId,
+        }, helpers.lockIdentity(user));
+        moveEinheit(moveEinCtx, input, user);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-einheit');
     }),
   );
@@ -82,7 +99,14 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const moveFzCtx = state.getDbContext();
-      await moveFzCtx.mutate(() => moveFahrzeug(moveFzCtx, input, user));
+      await moveFzCtx.mutate(() => {
+        stelleSicherDassNichtFremdBearbeitet(moveFzCtx, {
+          einsatzId: input.einsatzId,
+          entityType: 'FAHRZEUG',
+          entityId: input.fahrzeugId,
+        }, helpers.lockIdentity(user));
+        moveFahrzeug(moveFzCtx, input, user);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-fahrzeug');
     }),
   );

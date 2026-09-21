@@ -152,6 +152,29 @@ export function ensureRecordEditLockOwnership(ctx: DbContext, target: LockTarget
   }
 }
 
+/**
+ * Blockiert eine Änderung, wenn ein anderer Platz den Datensatz gerade
+ * bearbeitet. Anders als ensureRecordEditLockOwnership verlangt sie keine
+ * eigene Sperre: Verschieben und Aufteilen laufen ohne Bearbeiten-Dialog.
+ */
+export function stelleSicherDassNichtFremdBearbeitet(
+  ctx: DbContext,
+  target: LockTarget,
+  identity: LockIdentity,
+): void {
+  const system = readSystemFile(getSysPath(ctx));
+  const locks = cleanupExpired(system.recordEditLocks, toIso(Date.now()));
+  const existing = locks.find(
+    (l) => l.entityType === target.entityType && l.entityId === target.entityId,
+  );
+  if (existing && existing.clientId !== identity.clientId) {
+    throw new Error(
+      `Der Datensatz wird gerade von ${existing.computerName} (${existing.userName}) bearbeitet. ` +
+        'Bitte kurz warten und erneut versuchen.',
+    );
+  }
+}
+
 export function listRecordEditLocks(ctx: DbContext, einsatzId: string, selfClientId: string): RecordEditLockInfo[] {
   const nowIso = toIso(Date.now());
   const system = readSystemFile(getSysPath(ctx));

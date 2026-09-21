@@ -86,16 +86,32 @@ export function EinheitCoreFields<TForm extends EinheitCoreForm>({
           ))}
         </select>
       </label>
+      <p className="feld-hinweis staerke-hinweis">
+        Stärke in der Schreibweise Führung / Unterführung / Mannschaft. Die Summe ergibt sich daraus;
+        Namen einzelner Helfer werden im Editor der Einheit erfasst.
+      </p>
       <label>
         Führung
-        <input data-testid="einheit-fuehrung" type="number" min={0} value={form.fuehrung} onChange={(event) => update('fuehrung', event.target.value as TForm['fuehrung'])} />
+        <input
+          data-testid="einheit-fuehrung"
+          type="number"
+          inputMode="numeric"
+          min={0}
+          max={999}
+          required
+          value={form.fuehrung}
+          onChange={(event) => update('fuehrung', event.target.value as TForm['fuehrung'])}
+        />
       </label>
       <label>
         Unterführung
         <input
           data-testid="einheit-unterfuehrung"
           type="number"
+          inputMode="numeric"
           min={0}
+          max={999}
+          required
           value={form.unterfuehrung}
           onChange={(event) => update('unterfuehrung', event.target.value as TForm['unterfuehrung'])}
         />
@@ -105,7 +121,10 @@ export function EinheitCoreFields<TForm extends EinheitCoreForm>({
         <input
           data-testid="einheit-mannschaft"
           type="number"
+          inputMode="numeric"
           min={0}
+          max={999}
+          required
           value={form.mannschaft}
           onChange={(event) => update('mannschaft', event.target.value as TForm['mannschaft'])}
         />
@@ -145,14 +164,14 @@ export function EinheitCaptureFields<TForm extends EinheitCaptureForm>({
         />
       </label>
       <label><span>OV</span><input value={form.ovName} onChange={(event) => update('ovName', event.target.value as TForm['ovName'])} /></label>
-      <label><span>OV Telefon</span><input value={form.ovTelefon} onChange={(event) => update('ovTelefon', event.target.value as TForm['ovTelefon'])} /></label>
-      <label><span>OV Fax</span><input value={form.ovFax} onChange={(event) => update('ovFax', event.target.value as TForm['ovFax'])} /></label>
+      <label><span>OV Telefon</span><input type="tel" inputMode="tel" value={form.ovTelefon} onChange={(event) => update('ovTelefon', event.target.value as TForm['ovTelefon'])} /></label>
+      <label><span>OV Fax</span><input type="tel" inputMode="tel" value={form.ovFax} onChange={(event) => update('ovFax', event.target.value as TForm['ovFax'])} /></label>
       <label><span>RB</span><input value={form.rbName} onChange={(event) => update('rbName', event.target.value as TForm['rbName'])} /></label>
-      <label><span>RB Telefon</span><input value={form.rbTelefon} onChange={(event) => update('rbTelefon', event.target.value as TForm['rbTelefon'])} /></label>
-      <label><span>RB Fax</span><input value={form.rbFax} onChange={(event) => update('rbFax', event.target.value as TForm['rbFax'])} /></label>
+      <label><span>RB Telefon</span><input type="tel" inputMode="tel" value={form.rbTelefon} onChange={(event) => update('rbTelefon', event.target.value as TForm['rbTelefon'])} /></label>
+      <label><span>RB Fax</span><input type="tel" inputMode="tel" value={form.rbFax} onChange={(event) => update('rbFax', event.target.value as TForm['rbFax'])} /></label>
       <label><span>LV</span><input value={form.lvName} onChange={(event) => update('lvName', event.target.value as TForm['lvName'])} /></label>
-      <label><span>LV Telefon</span><input value={form.lvTelefon} onChange={(event) => update('lvTelefon', event.target.value as TForm['lvTelefon'])} /></label>
-      <label><span>LV Fax</span><input value={form.lvFax} onChange={(event) => update('lvFax', event.target.value as TForm['lvFax'])} /></label>
+      <label><span>LV Telefon</span><input type="tel" inputMode="tel" value={form.lvTelefon} onChange={(event) => update('lvTelefon', event.target.value as TForm['lvTelefon'])} /></label>
+      <label><span>LV Fax</span><input type="tel" inputMode="tel" value={form.lvFax} onChange={(event) => update('lvFax', event.target.value as TForm['lvFax'])} /></label>
       <label>
         Bemerkung
         <textarea rows={2} value={form.bemerkung} onChange={(event) => update('bemerkung', event.target.value as TForm['bemerkung'])} />

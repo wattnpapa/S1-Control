@@ -15,8 +15,8 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Export-Vorgabepfad ist das Arbeitsverzeichnis des Programms (analog P2-4)
 - [ ] Kein Konfliktbegriff im Bedienablauf: Konflikt wird gemeldet, aber nicht geführt aufgelöst (offline P1-1)
 - [ ] Bearbeitungssperre verfällt bei Netzausfall lautlos (offline P1-2)
-- [ ] Scheitern der Sicherung bleibt unsichtbar (offline P1-7)
-- [ ] Neuer Einsatz kann bestehende Datei überschreiben (destructive P2-6)
+- [x] Scheitern der Sicherung bleibt unsichtbar (offline P1-7)
+- [x] Neuer Einsatz kann bestehende Datei überschreiben (destructive P2-6)
 
 ## Stärke und Lagebild
 
@@ -26,7 +26,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] "Einheiten gesamt" zeigt die Personenzahl, "Führungsstärke" die volle Stärke (command P0-3, new-user P0-5)
 - [x] Kein Datenstand und kein Verbindungszustand neben laufender Uhr (command P0-4, offline P0-3)
 - [x] Fehler im zyklischen Refresh werden verschluckt (command P0-4)
-- [ ] Zwei Schreibweisen derselben Stärke (mehrere Reviewer, P2)
+- [x] Zwei Schreibweisen derselben Stärke (mehrere Reviewer, P2)
 - [ ] Keine Suche, Sortierung, Statusfilter in den Gesamtlisten (command P1-10)
 - [x] Kein Bewegungs- oder Ereignisprotokoll in der Oberfläche (workflow P1-4, destructive P3-1)
 - [x] Status als technischer Rohtext ohne Abstufung (mehrere Reviewer, P1/P2)
@@ -42,7 +42,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] "Bestätigen" nicht gegen Doppelauslösung gesperrt (destructive P2-1, offline P1-4)
 - [ ] Statuswechsel ABGEMELDET/AUSSER_BETRIEB bleibt folgenlos (destructive P1-4)
 - [ ] Abschnitt umhängen wirkt auf den ganzen Teilbaum ohne Rückfrage (destructive P1-6)
-- [ ] Move, Split und Undo umgehen die Bearbeitungssperre (destructive P1-7)
+- [x] Move, Split und Undo umgehen die Bearbeitungssperre (destructive P1-7)
 - [x] Archivieren ist einseitig — Beenden und Archivieren sind jetzt umkehrbar (workflow P1-7, analog P3-3)
 
 - [x] Entwicklerbegriffe "Systemtyp" und "Parent-Abschnitt", Abschnittsart ohne Erklärung (new-user P3-2, P2-3)
@@ -63,11 +63,11 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Leere Zahlenfelder werden still zu 0, keine Plausibilitätsgrenze (error-recovery P1-1)
 - [x] Fehlermeldungen liegen hinter dem Dialog und löschen sich selbst (error-recovery P1-2, stress P1-1)
 - [ ] Kein Schutz beim Verlassen mit ungespeicherten Änderungen (error-recovery P1-3)
-- [ ] Drei gleichnamige "Speichern" mit unterschiedlicher Reichweite (error-recovery P1-4)
+- [x] Drei gleichnamige "Speichern" mit unterschiedlicher Reichweite (error-recovery P1-4)
 - [ ] Abgelaufene Sperre führt in eine Sackgasse (error-recovery P1-6)
 - [x] Dialoge nicht mit der Tastatur bedienbar, kein Enter, Escape, Autofokus (error-recovery P2-7, stress P2-3)
 - [ ] Globales busy legt die gesamte Oberfläche stumm (stress P1-3)
-- [ ] Pflichtfelder nicht gekennzeichnet, technische Fehlertexte (mehrere Reviewer, P3)
+- [x] Pflichtfelder nicht gekennzeichnet, technische Fehlertexte (mehrere Reviewer, P3)
 
 ## Darstellung und Bedienbarkeit
 
@@ -89,5 +89,5 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Keine Druckausgabe, kein Druck-Stylesheet, kein PDF (analog P0-2)
 - [x] Exportinhalt taugt nicht als Papierstand (analog P1-1)
 - [ ] Keine Import- oder Nacherfassungsschnittstelle (analog P1-2)
-- [ ] Sicherungsabstand und Sicherungszustand nicht sichtbar (analog P2-2)
+- [x] Sicherungsabstand und Sicherungszustand nicht sichtbar (analog P2-2)
 - [x] NATO-Zeit ohne Zeitzonenkennung (drei Reviewer, P1/P3)
