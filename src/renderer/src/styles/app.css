@@ -1615,3 +1615,72 @@ td.tactical-sign-cell.compact-sign-cell {
     transform: translateX(-50%);
   }
 }
+
+
+/*
+ * Druckausgabe: Was auf dem Bildschirm steht, muss sich ausdrucken lassen —
+ * als Rückfallebene, wenn Gerät, Akku oder Netz ausfallen.
+ */
+@media print {
+  :root {
+    --surface: #ffffff;
+    --surface-2: #ffffff;
+    --bg: #ffffff;
+    --bg-verlauf: #ffffff;
+    --ink: #000000;
+    --muted: #333333;
+    --border: #666666;
+  }
+
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .workspace-rail,
+  .topbar-actions,
+  .update-banner,
+  .error-banner-fixed,
+  .debug-log-panel,
+  .modal-backdrop,
+  .table-icon-button,
+  .inline-actions,
+  button {
+    display: none !important;
+  }
+
+  .app-shell,
+  .workspace-main {
+    display: block;
+    height: auto;
+    overflow: visible;
+  }
+
+  .topbar {
+    border-bottom: 2px solid #000;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th,
+  td {
+    border: 1px solid #666;
+    font-size: 11px;
+    padding: 4px 6px;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tr {
+    break-inside: avoid;
+  }
+
+  .abschnitt-sidebar {
+    break-after: avoid;
+  }
+}

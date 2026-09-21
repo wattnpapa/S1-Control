@@ -86,8 +86,8 @@ Legende: [x] erledigt, [ ] offen.
 
 ## Papier und Ausleitung
 
-- [ ] Keine Druckausgabe, kein Druck-Stylesheet, kein PDF (analog P0-2)
-- [ ] Exportinhalt taugt nicht als Papierstand (analog P1-1)
+- [x] Keine Druckausgabe, kein Druck-Stylesheet, kein PDF (analog P0-2)
+- [x] Exportinhalt taugt nicht als Papierstand (analog P1-1)
 - [ ] Keine Import- oder Nacherfassungsschnittstelle (analog P1-2)
 - [ ] Sicherungsabstand und Sicherungszustand nicht sichtbar (analog P2-2)
 - [x] NATO-Zeit ohne Zeitzonenkennung (drei Reviewer, P1/P3)

@@ -37,11 +37,15 @@ export function AbschlussView(props: AbschlussViewProps): JSX.Element {
         <h3>Einsatzakte</h3>
         <p>
           Erzeugt ein ZIP mit einer Kopie der Einsatzdatei, einem Bericht zum Ausdrucken und CSV-Dateien
-          für Kräfte, Fahrzeuge und Bewegungen.
+          für Kräfte, Fahrzeuge und Bewegungen. "Lage drucken" gibt die gerade geöffnete Ansicht auf
+          Papier oder als PDF aus — als Rückfallebene, wenn Gerät oder Netz ausfallen.
         </p>
-        <button onClick={props.onExport} disabled={props.busy || !props.selectedEinsatzId}>
-          Einsatzakte exportieren
-        </button>
+        <div className="abschluss-aktionen">
+          <button onClick={props.onExport} disabled={props.busy || !props.selectedEinsatzId}>
+            Einsatzakte exportieren
+          </button>
+          <button onClick={() => window.print()}>Lage drucken</button>
+        </div>
       </section>
 
       <section className="abschluss-block">

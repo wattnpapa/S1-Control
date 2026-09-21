@@ -42,7 +42,10 @@ describe('export service - payload', () => {
     const dbCopy = await zip.file('einsatzakte/einsatz.s1control')?.async('nodebuffer');
 
     expect(html).toContain('Einsatzakte: Übung Nord');
-    expect(html).toContain('Kräfteübersicht Einheiten');
+    expect(html).toContain('<h2>Kräfte</h2>');
+    expect(html).toContain('<h2>Fahrzeuge</h2>');
+    expect(html).toContain('Stärke vor Ort');
+    expect(html).toContain('Unterschrift');
     expect(einheitenCsv).toContain('name_im_einsatz');
     expect(bewegungenCsv).toContain('typ');
     expect(dbCopy && dbCopy.length > 0).toBe(true);
