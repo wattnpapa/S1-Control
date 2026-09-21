@@ -27,9 +27,12 @@ interface UseAppControllersParams {
 function createWithBusy(rootState: ReturnType<typeof useAppCoreState>) {
   return async (fn: () => Promise<void>) => {
     rootState.setBusy(true);
-    rootState.setError(null);
     try {
       await fn();
+      // Erst der Erfolg raeumt die Meldung ab. Wird sie schon beim Start
+      // geloescht, verschwindet ein Fehler beim naechsten Tastendruck,
+      // bevor ihn jemand gelesen hat.
+      rootState.setError(null);
     } catch (err) {
       rootState.setError(readError(err));
     } finally {

@@ -68,7 +68,16 @@ function toStanKonformPayload(value: 'JA' | 'NEIN' | 'UNBEKANNT'): boolean | nul
  */
 function buildOpenCreateDialog(props: UseFahrzeugActionsProps) {
   return () => {
-    if (!props.selectedEinsatzId || !props.selectedAbschnittId || props.isArchived) {
+    if (!props.selectedEinsatzId) {
+      props.setError('Es ist kein Einsatz geöffnet.');
+      return;
+    }
+    if (props.isArchived) {
+      props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
+      return;
+    }
+    if (!props.selectedAbschnittId) {
+      props.setError('Bitte zuerst links einen Abschnitt auswählen.');
       return;
     }
     if (props.allKraefte.length === 0) {
@@ -85,7 +94,12 @@ function buildOpenCreateDialog(props: UseFahrzeugActionsProps) {
  */
 function buildSubmitCreate(props: UseFahrzeugActionsProps) {
   return async () => {
-    if (!props.selectedEinsatzId || props.isArchived) {
+    if (!props.selectedEinsatzId) {
+      props.setError('Es ist kein Einsatz geöffnet.');
+      return;
+    }
+    if (props.isArchived) {
+      props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
       return;
     }
     if (!props.createFahrzeugForm.name.trim()) {
@@ -127,7 +141,12 @@ function buildOpenEditDialog(props: UseFahrzeugActionsProps) {
  * Opens an existing vehicle and acquires edit lock if possible.
  */
 async function openEditDialogAsync(props: UseFahrzeugActionsProps, fahrzeugId: string): Promise<void> {
-  if (!props.selectedEinsatzId || props.isArchived) {
+  if (!props.selectedEinsatzId) {
+    props.setError('Es ist kein Einsatz geöffnet.');
+    return;
+  }
+  if (props.isArchived) {
+    props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
     return;
   }
   props.closeEditEinheitDialog();
@@ -181,7 +200,12 @@ function toEditFahrzeugForm(fahrzeug: FahrzeugOverviewItem): EditFahrzeugForm {
  */
 function buildSubmitEdit(props: UseFahrzeugActionsProps) {
   return async () => {
-    if (!props.selectedEinsatzId || props.isArchived) {
+    if (!props.selectedEinsatzId) {
+      props.setError('Es ist kein Einsatz geöffnet.');
+      return;
+    }
+    if (props.isArchived) {
+      props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
       return;
     }
     if (!props.editFahrzeugForm.name.trim()) {

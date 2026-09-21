@@ -52,6 +52,7 @@ function toWorkspaceBuilderArgs(params: {
   undoAction: ReturnType<typeof useAppControllers>['undoAction'];
   bearbeiterName: string;
   onBearbeiterSpeichern: (name: string) => void;
+  setError: (message: string | null) => void;
   abschlussActions: ReturnType<typeof useAppControllers>['abschlussActions'];
 }): Parameters<typeof buildWorkspaceProps>[0] {
   return {
@@ -84,6 +85,7 @@ function toWorkspaceBuilderArgs(params: {
     undoAction: params.undoAction,
     bearbeiterName: params.bearbeiterName,
     onBearbeiterSpeichern: params.onBearbeiterSpeichern,
+    setError: params.setError,
     abschlussActions: params.abschlussActions,
   };
 }
@@ -197,6 +199,7 @@ export function useAppViewModel(): AppViewModel {
         undoAction,
         abschlussActions,
         bearbeiterName: rootState.session?.name ?? '',
+        setError: rootState.setError,
         onBearbeiterSpeichern: (name: string) => {
           void (async () => {
             try {

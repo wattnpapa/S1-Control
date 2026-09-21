@@ -1,6 +1,7 @@
 import type { EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
 import { FahrzeugFormFields } from '@renderer/components/dialogs/FahrzeugFormFields';
 import type { JSX } from 'react';
+import { useDialogTastatur } from '@renderer/app/useDialogTastatur';
 
 interface EditFahrzeugDialogProps {
   visible: boolean;
@@ -17,13 +18,18 @@ interface EditFahrzeugDialogProps {
  * Handles Edit Fahrzeug Dialog.
  */
 export function EditFahrzeugDialog(props: EditFahrzeugDialogProps): JSX.Element | null {
+  const rahmenRef = useDialogTastatur({
+    visible: props.visible,
+    onClose: props.onClose,
+    onSubmit: props.onSubmit,
+  });
   if (!props.visible) {
     return null;
   }
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={rahmenRef}>
         <h3>Fahrzeug bearbeiten</h3>
         <FahrzeugFormFields form={props.form} allKraefte={props.allKraefte} onChange={props.onChange} />
         <div className="modal-actions">

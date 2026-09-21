@@ -97,6 +97,7 @@ export interface BuildWorkspacePropsArgs {
   undoAction: ReturnType<typeof useUndoAction>;
   bearbeiterName: string;
   onBearbeiterSpeichern: (name: string) => void;
+  setError: (message: string | null) => void;
   abschlussActions: ReturnType<typeof useAbschlussActions>;
 }
 
@@ -142,7 +143,17 @@ function buildWorkspaceStateProps(
     updaterState: args.updaterState,
     kraefteOrgFilter: args.uiState.kraefteOrgFilter,
     setKraefteOrgFilter: args.uiState.setKraefteOrgFilter,
-    setActiveView: args.uiState.setActiveView,
+    // Ein Ansichtswechsel schließt offene Editoren ordentlich, statt sie
+    // auszublenden und die Bearbeitungssperre weiterlaufen zu lassen.
+    setActiveView: (view) => {
+      if (args.uiState.showEditEinheitDialog) {
+        args.closeEditEinheitDialog();
+      }
+      if (args.uiState.showEditFahrzeugDialog) {
+        args.closeEditFahrzeugDialog();
+      }
+      args.uiState.setActiveView(view);
+    },
     setSelectedAbschnittId: args.setSelectedAbschnittId,
     showAbschnittSidebar: args.derivedState.showAbschnittSidebar,
     selectedAbschnittLockedByOther:
@@ -196,6 +207,7 @@ type WorkspaceCallbacks = Pick<
   AppWorkspaceShellProps,
   | 'onUndo'
   | 'onBearbeiterWechseln'
+  | 'onCloseError'
   | 'onBearbeiterSpeichern'
   | 'onCloseBearbeiter'
   | 'onOpenStrengthDisplay'
@@ -258,6 +270,7 @@ function buildWorkspaceCallbacks(
   return {
     onUndo: args.undoAction.undoLast,
     onBearbeiterWechseln: () => args.uiState.setShowBearbeiterDialog(true),
+    onCloseError: () => args.setError(null),
     onBearbeiterSpeichern: args.onBearbeiterSpeichern,
     onCloseBearbeiter: () => args.uiState.setShowBearbeiterDialog(false),
     onOpenStrengthDisplay: args.systemActions.openStrengthDisplay,

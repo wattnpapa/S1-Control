@@ -64,6 +64,24 @@ function buildEditFahrzeuge(fahrzeuge: InlineEinheitEditorProps['fahrzeuge'], ei
 }
 
 /**
+ * Fuehrt frisch geladene Serverzeilen mit den Eingaben im Formular zusammen.
+ *
+ * Bereits offene Zeilen behalten ihren Stand, neue Zeilen kommen hinzu,
+ * entfernte fallen weg.
+ */
+function uebernehmeOhneEingabenZuVerlieren<T>(
+  vorhanden: Record<string, T>,
+  vomServer: Record<string, T>,
+): Record<string, T> {
+  const zusammengefuehrt: Record<string, T> = {};
+  for (const [id, serverStand] of Object.entries(vomServer)) {
+    const eingabe = vorhanden[id];
+    zusammengefuehrt[id] = eingabe ?? serverStand;
+  }
+  return zusammengefuehrt;
+}
+
+/**
  * Pushes auto helper keys for a role into target list.
  */
 function appendRoleKeys(target: string[], role: 'FUEHRER' | 'UNTERFUEHRER' | 'HELFER', count: number) {
@@ -121,12 +139,16 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   });
   const [editFahrzeuge, setEditFahrzeuge] = useState<Record<string, FahrzeugDraft>>({});
 
+  // Zyklisch nachgeladene Serverdaten duerfen Eingaben nicht ueberschreiben:
+  // sonst springen halb getippte Namen und Kennzeichen zurueck.
   useEffect(() => {
-    setEditRows(buildEditRows(props.helfer));
+    setEditRows((prev) => uebernehmeOhneEingabenZuVerlieren(prev, buildEditRows(props.helfer)));
   }, [props.helfer]);
 
   useEffect(() => {
-    setEditFahrzeuge(buildEditFahrzeuge(props.fahrzeuge, props.form.einheitId));
+    setEditFahrzeuge((prev) =>
+      uebernehmeOhneEingabenZuVerlieren(prev, buildEditFahrzeuge(props.fahrzeuge, props.form.einheitId)),
+    );
   }, [props.fahrzeuge, props.form.einheitId]);
 
   useEffect(() => {

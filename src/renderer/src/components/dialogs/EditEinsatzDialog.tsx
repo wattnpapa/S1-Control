@@ -1,5 +1,6 @@
 import type { EditEinsatzForm } from '@renderer/types/ui';
 import type { JSX } from 'react';
+import { useDialogTastatur } from '@renderer/app/useDialogTastatur';
 
 interface EditEinsatzDialogProps {
   visible: boolean;
@@ -15,13 +16,18 @@ interface EditEinsatzDialogProps {
  * Handles Edit Einsatz Basisdaten Dialog.
  */
 export function EditEinsatzDialog(props: EditEinsatzDialogProps): JSX.Element | null {
+  const rahmenRef = useDialogTastatur({
+    visible: props.visible,
+    onClose: props.onClose,
+    onSubmit: props.onSubmit,
+  });
   if (!props.visible) {
     return null;
   }
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={rahmenRef}>
         <h3>Basisdaten bearbeiten</h3>
         <label>
           Einsatzname

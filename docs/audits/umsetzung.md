@@ -53,19 +53,19 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Einsatz beenden, schließen oder wechseln nur über "Verzeichnis speichern" (new-user P0-4, workflow P1-2)
 - [x] Anmeldung läuft unsichtbar als admin — Bearbeitername ist sichtbar und setzbar (workflow P1-1)
 - [ ] Stärke doppelt pflegen: Zahlenfelder und Helferliste (workflow P1-5)
-- [ ] Aktionen brechen ohne Rückmeldung ab (workflow P1-6, stress P1-2)
+- [x] Aktionen brechen ohne Rückmeldung ab (workflow P1-6, stress P1-2)
 - [x] Entwicklerwerkzeuge in Start- und Hauptansicht (mehrere Reviewer, P1/P2)
 - [ ] Abschnitt anlegen erzwingt Ansichtswechsel (workflow P2-1)
 
 ## Eingabe, Fehler, Unterbrechung
 
-- [ ] Polling überschreibt halb eingetippte Fahrzeugzeilen (error-recovery P0-3, field P1)
-- [ ] Leere Zahlenfelder werden still zu 0, keine Plausibilitätsgrenze (error-recovery P1-1)
-- [ ] Fehlermeldungen liegen hinter dem Dialog und löschen sich selbst (error-recovery P1-2, stress P1-1)
+- [x] Polling überschreibt halb eingetippte Fahrzeugzeilen (error-recovery P0-3, field P1)
+- [x] Leere Zahlenfelder werden still zu 0, keine Plausibilitätsgrenze (error-recovery P1-1)
+- [x] Fehlermeldungen liegen hinter dem Dialog und löschen sich selbst (error-recovery P1-2, stress P1-1)
 - [ ] Kein Schutz beim Verlassen mit ungespeicherten Änderungen (error-recovery P1-3)
 - [ ] Drei gleichnamige "Speichern" mit unterschiedlicher Reichweite (error-recovery P1-4)
 - [ ] Abgelaufene Sperre führt in eine Sackgasse (error-recovery P1-6)
-- [ ] Dialoge nicht mit der Tastatur bedienbar, kein Enter, Escape, Autofokus (error-recovery P2-7, stress P2-3)
+- [x] Dialoge nicht mit der Tastatur bedienbar, kein Enter, Escape, Autofokus (error-recovery P2-7, stress P2-3)
 - [ ] Globales busy legt die gesamte Oberfläche stumm (stress P1-3)
 - [ ] Pflichtfelder nicht gekennzeichnet, technische Fehlertexte (mehrere Reviewer, P3)
 

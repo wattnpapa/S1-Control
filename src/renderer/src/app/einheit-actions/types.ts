@@ -67,6 +67,27 @@ interface StrengthValidationInput {
   errorMessage: string;
 }
 
+/** Obergrenze je Feld: darüber liegt fast immer ein Zahlendreher. */
+const PLAUSIBEL_MAX = 999;
+
+/**
+ * Liest ein Stärkefeld.
+ *
+ * Ein leeres Feld ist keine Null: `Number('')` ergibt 0 und würde eine
+ * vergessene Eingabe still als "keine Kräfte" übernehmen.
+ */
+function leseZahl(rohwert: string): number | null {
+  const getrimmt = rohwert.trim();
+  if (getrimmt === '') {
+    return null;
+  }
+  const wert = Number(getrimmt);
+  if (!Number.isInteger(wert) || wert < 0 || wert > PLAUSIBEL_MAX) {
+    return null;
+  }
+  return wert;
+}
+
 /**
  * Parses tactical strength fields and validates numeric, non-negative values.
  */
@@ -74,11 +95,13 @@ export function parseAndValidateStrength(
   setError: (message: string | null) => void,
   input: StrengthValidationInput,
 ): { fuehrung: number; unterfuehrung: number; mannschaft: number; gesamt: number } | null {
-  const fuehrung = Number(input.fuehrungRaw);
-  const unterfuehrung = Number(input.unterfuehrungRaw);
-  const mannschaft = Number(input.mannschaftRaw);
-  if ([fuehrung, unterfuehrung, mannschaft].some((value) => Number.isNaN(value) || value < 0)) {
-    setError(input.errorMessage);
+  const fuehrung = leseZahl(input.fuehrungRaw);
+  const unterfuehrung = leseZahl(input.unterfuehrungRaw);
+  const mannschaft = leseZahl(input.mannschaftRaw);
+  if (fuehrung === null || unterfuehrung === null || mannschaft === null) {
+    setError(
+      `${input.errorMessage} Bitte ganze Zahlen von 0 bis ${PLAUSIBEL_MAX} in allen drei Feldern eintragen.`,
+    );
     return null;
   }
   return { fuehrung, unterfuehrung, mannschaft, gesamt: fuehrung + unterfuehrung + mannschaft };

@@ -41,7 +41,18 @@ function initialCreateEinheitForm(selectedAbschnittId: string) {
  */
 function buildOpenCreateDialog(props: UseEinheitActionsProps) {
   return () => {
-    if (!props.selectedEinsatzId || !props.selectedAbschnittId || props.isArchived) {
+    // Stumme Knöpfe sind im Einsatz schlimmer als eine Fehlermeldung: der
+    // Grund muss benannt werden.
+    if (!props.selectedEinsatzId) {
+      props.setError('Es ist kein Einsatz geöffnet.');
+      return;
+    }
+    if (props.isArchived) {
+      props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
+      return;
+    }
+    if (!props.selectedAbschnittId) {
+      props.setError('Bitte zuerst links einen Abschnitt auswählen.');
       return;
     }
     props.closeEditEinheitDialog();
@@ -55,7 +66,12 @@ function buildOpenCreateDialog(props: UseEinheitActionsProps) {
  */
 function buildSubmitCreate(props: UseEinheitActionsProps) {
   return async () => {
-    if (!props.selectedEinsatzId || props.isArchived) {
+    if (!props.selectedEinsatzId) {
+      props.setError('Es ist kein Einsatz geöffnet.');
+      return;
+    }
+    if (props.isArchived) {
+      props.setError('Der Einsatz ist archiviert und kann nicht geändert werden.');
       return;
     }
     if (!props.createEinheitForm.nameImEinsatz.trim()) {

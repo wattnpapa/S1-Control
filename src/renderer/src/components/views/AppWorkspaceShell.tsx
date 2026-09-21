@@ -50,6 +50,7 @@ export interface AppWorkspaceShellProps {
   onUndo: () => void;
   bearbeiterName: string;
   onBearbeiterWechseln: () => void;
+  onCloseError: () => void;
   showBearbeiterDialog: boolean;
   onBearbeiterSpeichern: (name: string) => void;
   onCloseBearbeiter: () => void;
@@ -379,11 +380,24 @@ function buildDialogsProps(props: AppWorkspaceShellProps): WorkspaceDialogsProps
 /**
  * Renders workspace status banners.
  */
-function WorkspaceStatusBanners({ isArchived, error }: Pick<AppWorkspaceShellProps, 'isArchived' | 'error'>): JSX.Element {
+function WorkspaceStatusBanners({
+  isArchived,
+  error,
+  onCloseError,
+}: Pick<AppWorkspaceShellProps, 'isArchived' | 'error'> & { onCloseError: () => void }): JSX.Element {
   return (
     <>
       {isArchived && <div className="banner">Einsatz ist archiviert (nur lesen).</div>}
-      {error && <div className="error-banner">{error}</div>}
+      {/* Liegt ueber offenen Dialogen: eine Meldung hinter dem Abdunkelungs-
+          schleier wird im Einsatz nicht gelesen. */}
+      {error && (
+        <div className="error-banner error-banner-fixed" role="alert">
+          <span>{error}</span>
+          <button className="notice-close-button" onClick={onCloseError} aria-label="Meldung schließen">
+            ×
+          </button>
+        </div>
+      )}
     </>
   );
 }
@@ -416,7 +430,11 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
         onOpenReleasePage={props.onOpenReleasePage}
       />
 
-      <WorkspaceStatusBanners isArchived={props.isArchived} error={props.error} />
+      <WorkspaceStatusBanners
+        isArchived={props.isArchived}
+        error={props.error}
+        onCloseError={props.onCloseError}
+      />
       <WorkspaceMainArea {...mainAreaProps} />
       <WorkspaceDialogs {...dialogsProps} />
       <BearbeiterDialog

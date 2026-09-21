@@ -5,6 +5,7 @@ import {
 } from '@renderer/constants/abschnitt';
 import type { CreateAbschnittForm } from '@renderer/types/ui';
 import type { JSX } from 'react';
+import { useDialogTastatur } from '@renderer/app/useDialogTastatur';
 
 interface CreateAbschnittDialogProps {
   visible: boolean;
@@ -21,13 +22,18 @@ interface CreateAbschnittDialogProps {
  * Handles Create Abschnitt Dialog.
  */
 export function CreateAbschnittDialog(props: CreateAbschnittDialogProps): JSX.Element | null {
+  const rahmenRef = useDialogTastatur({
+    visible: props.visible,
+    onClose: props.onClose,
+    onSubmit: props.onSubmit,
+  });
   if (!props.visible) {
     return null;
   }
 
   return (
     <div className="modal-backdrop">
-      <div className="modal">
+      <div className="modal" ref={rahmenRef}>
         <h3>Abschnitt anlegen</h3>
         <label>
           Name
