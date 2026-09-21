@@ -1,6 +1,7 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ConfirmProvider } from './app/ConfirmProvider';
 import { StrengthDisplayView } from './components/views/StrengthDisplayView';
 import './styles/app.css';
 
@@ -10,7 +11,9 @@ if (displayMode === 'strength') {
 } else {
   createRoot(document.getElementById('root')!).render(
     <React.StrictMode>
-      <App />
+      <ConfirmProvider>
+        <App />
+      </ConfirmProvider>
     </React.StrictMode>,
   );
 }

@@ -49,6 +49,7 @@ const api: RendererApi = {
   checkForUpdates: () => ipcRenderer.invoke(IPC_CHANNEL.CHECK_UPDATES),
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
+  describeLastCommand: (einsatzId: string) => ipcRenderer.invoke(IPC_CHANNEL.DESCRIBE_LAST_COMMAND, einsatzId),
   openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>

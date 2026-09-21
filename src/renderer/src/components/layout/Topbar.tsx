@@ -10,6 +10,8 @@ interface TopbarProps {
   staerkeUebersicht: StaerkeUebersicht;
   onOpenStrengthDisplay: () => void;
   onCloseStrengthDisplay: () => void;
+  undoMoeglich: boolean;
+  onUndo: () => void;
   busy: boolean;
 }
 
@@ -54,6 +56,17 @@ export function Topbar(props: TopbarProps): JSX.Element {
         </span>
       </div>
       <div className="topbar-actions">
+        <button
+          onClick={props.onUndo}
+          disabled={props.busy || !props.undoMoeglich}
+          title={
+            props.undoMoeglich
+              ? 'Letzte Bewegung zurücknehmen'
+              : 'Zurzeit gibt es keine Bewegung, die zurückgenommen werden kann'
+          }
+        >
+          Rückgängig
+        </button>
         <button onClick={props.onOpenStrengthDisplay} disabled={props.busy}>
           Stärke-Monitor öffnen
         </button>

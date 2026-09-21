@@ -2,6 +2,7 @@ import { ipcMain } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
 import { moveEinheit, moveFahrzeug, undoLastCommand } from '../services/command';
 import { hasUndoableCommand, splitEinheit } from '../services/einsatz';
+import { describeLastUndoableCommand } from '../services/command-beschreibung';
 import { debugSync } from '../services/debug';
 import type { EntityIpcHelpers, RegistrarCommon } from './register-support';
 
@@ -133,6 +134,15 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       return hasUndoableCommand(ctx.einsatz, einsatzId);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.DESCRIBE_LAST_COMMAND,
+    wrap(async (einsatzId: string) => {
+      const ctx = state.getDbContext();
+      ctx.reload();
+      return describeLastUndoableCommand(ctx.einsatz, einsatzId);
     }),
   );
 }

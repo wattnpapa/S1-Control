@@ -1,3 +1,4 @@
+import { useConfirm } from '@renderer/app/confirm-context';
 import { toTaktischeStaerke } from '@renderer/utils/tactical';
 import type { PeerUpdateStatus } from '@shared/types';
 import type { MoveDialogState, TacticalStrength } from '@renderer/types/ui';
@@ -34,13 +35,25 @@ interface UseSystemActionsProps {
  * Provides settings actions for db path and LAN peer updater toggles.
  */
 function useSystemSettingsActions(props: UseSystemActionsProps) {
+  const confirm = useConfirm();
   const saveDbPath = useCallback(async () => {
+    if (props.selectedEinsatzId) {
+      const bestaetigt = await confirm({
+        titel: 'Verzeichnis wechseln und Einsatz schließen?',
+        text: 'Mit dem neuen Verzeichnis wird der offene Einsatz an diesem Platz geschlossen.',
+        folgen: ['Offene Formulare werden verworfen.', 'Der Einsatz selbst bleibt auf der Freigabe erhalten.'],
+        bestaetigenText: 'Wechseln',
+      });
+      if (!bestaetigt) {
+        return;
+      }
+    }
     await props.withBusy(async () => {
       await window.api.setDbPath(props.dbPath);
       props.clearSelectedEinsatz();
       await props.refreshEinsaetze();
     });
-  }, [props]);
+  }, [confirm, props]);
 
   const toggleLanPeerUpdates = useCallback(async (enabled: boolean) => {
     await props.withBusy(async () => {
@@ -57,6 +70,21 @@ function useSystemSettingsActions(props: UseSystemActionsProps) {
       return;
     }
 
+    const bestaetigt = await confirm({
+      titel: 'Sicherung einspielen?',
+      text: 'Der aktuelle Stand des Einsatzes wird durch die gewählte Sicherung ersetzt.',
+      folgen: [
+        'Alles, was seit der Sicherung erfasst wurde, ist danach nicht mehr im Einsatz.',
+        'Der ersetzte Stand wird vorher selbst gesichert und liegt im Unterordner "backup".',
+        'Andere Stationen arbeiten anschließend auf dem eingespielten Stand weiter.',
+      ],
+      bestaetigenText: 'Sicherung einspielen',
+      gefahr: true,
+    });
+    if (!bestaetigt) {
+      return;
+    }
+
     await props.withBusy(async () => {
       const restored = await window.api.restoreBackup(props.selectedEinsatzId);
       if (!restored) {
@@ -70,7 +98,7 @@ function useSystemSettingsActions(props: UseSystemActionsProps) {
 
       await props.loadEinsatz(props.selectedEinsatzId, props.selectedAbschnittId);
     });
-  }, [props]);
+  }, [confirm, props]);
 
   return { saveDbPath, toggleLanPeerUpdates, restoreBackup };
 }

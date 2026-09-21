@@ -119,6 +119,10 @@ export interface BuildWorkspacePropsArgs {
     toggleLanPeerUpdates: (enabled: boolean) => Promise<void>;
     move: () => Promise<void>;
   };
+  undoAction: {
+    undoMoeglich: boolean;
+    undoLast: () => Promise<void>;
+  };
 }
 
 /**
@@ -157,6 +161,7 @@ function buildWorkspaceStateProps(
     allFahrzeuge: args.allFahrzeuge,
     gesamtStaerke: args.uiState.gesamtStaerke,
     staerkeUebersicht: args.uiState.staerkeUebersicht,
+    undoMoeglich: args.undoAction.undoMoeglich,
     updaterState: args.updaterState,
     kraefteOrgFilter: args.uiState.kraefteOrgFilter,
     setKraefteOrgFilter: args.uiState.setKraefteOrgFilter,
@@ -212,6 +217,7 @@ function buildWorkspaceStateProps(
  */
 type WorkspaceCallbacks = Pick<
   AppWorkspaceShellProps,
+  | 'onUndo'
   | 'onOpenStrengthDisplay'
   | 'onCloseStrengthDisplay'
   | 'onCheckForUpdates'
@@ -262,6 +268,7 @@ function buildWorkspaceCallbacks(
   const moveCallbacks = buildWorkspaceMoveCallbacks(args);
   const storageCallbacks = buildWorkspaceStorageCallbacks(args);
   return {
+    onUndo: args.undoAction.undoLast,
     onOpenStrengthDisplay: args.systemActions.openStrengthDisplay,
     onCloseStrengthDisplay: args.systemActions.closeStrengthDisplay,
     onDownloadUpdate: args.systemActions.downloadUpdate,

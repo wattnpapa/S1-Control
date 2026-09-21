@@ -33,11 +33,11 @@ Legende: [x] erledigt, [ ] offen.
 
 ## Riskante Aktionen und Korrekturwege
 
-- [ ] Keine einzige Bestätigungsabfrage im Renderer (sieben Reviewer, P0/P1)
-- [ ] Undo ist im Kern vorhanden, aber nicht in der Oberfläche angebunden (sieben Reviewer, P0)
+- [x] Keine einzige Bestätigungsabfrage im Renderer (sieben Reviewer, P0/P1)
+- [x] Undo ist im Kern vorhanden, aber nicht in der Oberfläche angebunden (sieben Reviewer, P0)
 - [ ] Einheiten, Fahrzeuge, Abschnitte lassen sich nicht löschen (error-recovery P0-1, field P0)
-- [ ] Splitten ist irreversibel, ohne Vorschau (destructive P1-2)
-- [ ] "Updaten" beendet die App ohne Rückfrage (stress P0-1)
+- [x] Splitten ist irreversibel, ohne Vorschau — jetzt mit Rückfrage und Vorschau der Folgen (destructive P1-2)
+- [x] "Updaten" beendet die App ohne Rückfrage (stress P0-1)
 - [ ] Verschieben-Dialog ohne Objekt, Quelle und Hierarchie, Ziel vorbelegt (fünf Reviewer, P0/P1)
 - [ ] "Bestätigen" nicht gegen Doppelauslösung gesperrt (destructive P2-1, offline P1-4)
 - [ ] Statuswechsel ABGEMELDET/AUSSER_BETRIEB bleibt folgenlos (destructive P1-4)
@@ -73,7 +73,7 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] Stärke-Monitor startet weiß, Umschalter unsichtbar und flüchtig (night P0-2)
 - [ ] Unsichtbare, aber aktive Eckflächen im Stärke-Monitor (glove P0-1)
 - [ ] Trefferflächen durchgängig zu klein, Löschen neben Speichern (glove P0-2, P1-1)
-- [ ] Modale Dialoge ohne max-height und Scrollmöglichkeit (glove P0-3)
+- [x] Modale Dialoge ohne max-height und Scrollmöglichkeit (glove P0-3)
 - [ ] Zwei verwendete CSS-Klassen sind nicht definiert (glove P2-1, night P2-11)
 - [ ] Ausgewählter Abschnitt kaum erkennbar, Kontrast 1,19:1 (night P1-3)
 - [ ] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)

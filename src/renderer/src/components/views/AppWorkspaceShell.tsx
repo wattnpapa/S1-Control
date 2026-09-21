@@ -44,6 +44,8 @@ export interface AppWorkspaceShellProps {
   allFahrzeuge: FahrzeugOverviewItem[];
   gesamtStaerke: TacticalStrength;
   staerkeUebersicht: StaerkeUebersicht;
+  undoMoeglich: boolean;
+  onUndo: () => void;
   updaterState: UpdaterState;
   kraefteOrgFilter: OrganisationKey | 'ALLE';
   setKraefteOrgFilter: (value: OrganisationKey | 'ALLE') => void;
@@ -328,6 +330,8 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
         einsatzName={props.selectedEinsatz?.name ?? '-'}
         gesamtStaerke={props.gesamtStaerke}
         staerkeUebersicht={props.staerkeUebersicht}
+        undoMoeglich={props.undoMoeglich}
+        onUndo={props.onUndo}
         onOpenStrengthDisplay={props.onOpenStrengthDisplay}
         onCloseStrengthDisplay={props.onCloseStrengthDisplay}
         busy={props.busy}

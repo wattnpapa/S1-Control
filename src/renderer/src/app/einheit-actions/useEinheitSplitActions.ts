@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { useConfirm } from '@renderer/app/confirm-context';
 import { parseAndValidateStrength } from './types';
 import type { UseEinheitActionsProps } from './types';
 
@@ -6,6 +7,7 @@ import type { UseEinheitActionsProps } from './types';
  * Provides split dialog open/submit actions for Einheiten.
  */
 export function useEinheitSplitActions(props: UseEinheitActionsProps) {
+  const confirm = useConfirm();
   const openSplitDialog = useCallback(
     (sourceEinheitId: string) => {
       const source = props.allKraefte.find((einheit) => einheit.id === sourceEinheitId);
@@ -42,6 +44,23 @@ export function useEinheitSplitActions(props: UseEinheitActionsProps) {
       errorMessage: 'Split-Stärke muss aus Zahlen >= 0 bestehen.',
     });
     if (!parsed) {
+      return;
+    }
+    const quelle = props.allKraefte?.find((k) => k.id === props.splitEinheitForm.sourceEinheitId);
+    const bestaetigt = await confirm({
+      titel: 'Einheit aufteilen?',
+      text:
+        `Aus ${quelle?.nameImEinsatz ?? 'der gewählten Einheit'} wird die Teileinheit ` +
+        `"${props.splitEinheitForm.nameImEinsatz.trim()}" mit der Stärke ` +
+        `${parsed.fuehrung}/${parsed.unterfuehrung}/${parsed.mannschaft} gebildet.`,
+      folgen: [
+        'Die Stärke der Quell-Einheit verringert sich entsprechend.',
+        'Das Aufteilen lässt sich nicht rückgängig machen.',
+      ],
+      bestaetigenText: 'Aufteilen',
+      gefahr: true,
+    });
+    if (!bestaetigt) {
       return;
     }
     await props.withBusy(async () => {

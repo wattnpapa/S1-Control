@@ -49,6 +49,7 @@ function toWorkspaceBuilderArgs(params: {
   einheitActions: ReturnType<typeof useAppControllers>['einheitActions'];
   fahrzeugActions: ReturnType<typeof useAppControllers>['fahrzeugActions'];
   systemActions: ReturnType<typeof useAppControllers>['systemActions'];
+  undoAction: ReturnType<typeof useAppControllers>['undoAction'];
 }): Parameters<typeof buildWorkspaceProps>[0] {
   return {
     busy: params.rootState.busy,
@@ -76,6 +77,7 @@ function toWorkspaceBuilderArgs(params: {
     einheitActions: params.einheitActions,
     fahrzeugActions: params.fahrzeugActions,
     systemActions: params.systemActions,
+    undoAction: params.undoAction,
   };
 }
 
@@ -125,6 +127,7 @@ export function useAppViewModel(): AppViewModel {
     closeEditFahrzeugDialog,
     startActions,
     systemActions,
+    undoAction,
     abschnittActions,
     fahrzeugActions,
     einheitActions,
@@ -182,6 +185,7 @@ export function useAppViewModel(): AppViewModel {
         einheitActions,
         fahrzeugActions,
         systemActions,
+        undoAction,
       }),
     ),
   };

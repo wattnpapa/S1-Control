@@ -6,6 +6,7 @@ import { useEntityActionsBundle } from '@renderer/app/useEntityActionsBundle';
 import { useStartActions } from '@renderer/app/useStartActions';
 import { useSyncEvents } from '@renderer/app/useSyncEvents';
 import { useSystemActions } from '@renderer/app/useSystemActions';
+import { useUndoAction } from './useUndoAction';
 import { useWorkspaceDerivedState } from '@renderer/app/useWorkspaceDerivedState';
 import { useWorkspaceLifecycle } from '@renderer/app/useWorkspaceLifecycle';
 import type { WorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
@@ -146,6 +147,7 @@ function useStartAndSystemActions(
   params: UseAppControllersParams,
   dataState: ReturnType<typeof useLifecycleAndDataState>,
   withBusy: (fn: () => Promise<void>) => Promise<void>,
+  isArchived: boolean,
 ) {
   const { rootState, selectedAbschnittId, uiState } = params;
   const startActions = useStartActions({
@@ -179,7 +181,14 @@ function useStartAndSystemActions(
     setMoveTarget: uiState.setMoveTarget,
     withBusy,
   });
-  return { startActions, systemActions };
+  const undoAction = useUndoAction({
+    selectedEinsatzId: rootState.selectedEinsatzId,
+    isArchived,
+    refreshAll: dataState.refreshAll,
+    setError: rootState.setError,
+    withBusy,
+  });
+  return { startActions, systemActions, undoAction };
 }
 
 /**
@@ -244,7 +253,12 @@ export function useAppControllers(params: UseAppControllersParams) {
   const dataState = useLifecycleAndDataState(params, lockState);
   const withBusy = createWithBusy(params.rootState);
   useRuntimeSync(params, dataState, withBusy);
-  const { startActions, systemActions } = useStartAndSystemActions(params, dataState, withBusy);
+  const { startActions, systemActions, undoAction } = useStartAndSystemActions(
+    params,
+    dataState,
+    withBusy,
+    Boolean(lockState.derivedState.isArchived),
+  );
   const { abschnittActions, fahrzeugActions, einheitActions } = useEntityActions(params, lockState, dataState, withBusy);
   const einsatzBasisdatenActions = useEinsatzBasisdatenActions({
     selectedEinsatzId: params.rootState.selectedEinsatzId,
@@ -269,6 +283,7 @@ export function useAppControllers(params: UseAppControllersParams) {
     closeEditFahrzeugDialog: dataState.closeEditFahrzeugDialog,
     startActions,
     systemActions,
+    undoAction,
     abschnittActions,
     fahrzeugActions,
     einheitActions,

@@ -1,10 +1,12 @@
 import { useCallback } from 'react';
+import { useConfirm } from '@renderer/app/confirm-context';
 import type { HelferInput, UseEinheitActionsProps } from './types';
 
 /**
  * Provides create/update/delete operations for Einheit helper rows.
  */
 export function useEinheitHelferActions(props: UseEinheitActionsProps) {
+  const confirm = useConfirm();
   const reloadHelfer = useCallback(async () => {
     if (props.editEinheitForm.einheitId) {
       props.setEditEinheitHelfer(await window.api.listEinheitHelfer(props.editEinheitForm.einheitId));
@@ -66,12 +68,25 @@ export function useEinheitHelferActions(props: UseEinheitActionsProps) {
       if (!props.selectedEinsatzId || props.isArchived) {
         return;
       }
+      const helfer = props.editEinheitHelfer?.find((eintrag) => eintrag.id === helferId);
+      const bestaetigt = await confirm({
+        titel: 'Helfer löschen?',
+        text: helfer?.name
+          ? `"${helfer.name}" wird aus der Einheit entfernt.`
+          : 'Der Eintrag wird aus der Einheit entfernt.',
+        folgen: ['Der Eintrag lässt sich nicht zurückholen.', 'Die Stärke der Einheit ändert sich dadurch.'],
+        bestaetigenText: 'Löschen',
+        gefahr: true,
+      });
+      if (!bestaetigt) {
+        return;
+      }
       await props.withBusy(async () => {
         await window.api.deleteEinheitHelfer({ einsatzId: props.selectedEinsatzId, helferId });
         await reloadHelfer();
       });
     },
-    [props, reloadHelfer],
+    [confirm, props, reloadHelfer],
   );
 
   return { createHelfer, updateHelfer, deleteHelfer };

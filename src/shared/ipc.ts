@@ -124,6 +124,11 @@ export interface UpdateFahrzeugInput {
   nutzlast?: string;
 }
 
+export interface LetzteAktionInfo {
+  beschreibung: string;
+  zeitpunkt: string;
+}
+
 export interface MoveEinheitInput {
   einsatzId: string;
   einheitId: string;
@@ -229,6 +234,8 @@ export interface RendererApi {
   checkForUpdates(): Promise<void>;
   downloadUpdate(): Promise<void>;
   installDownloadedUpdate(): Promise<void>;
+  /** Beschreibt die letzte rücknehmbare Aktion, für die Rückfrage vor dem Rückgängigmachen. */
+  describeLastCommand(einsatzId: string): Promise<LetzteAktionInfo | null>;
   openMainDevTools(): Promise<void>;
   openExternalUrl(url: string): Promise<void>;
   getTacticalFormationSvg(input: {
@@ -345,6 +352,7 @@ export const IPC_CHANNEL = {
   CHECK_UPDATES: 'updater:check',
   DOWNLOAD_UPDATE: 'updater:download',
   INSTALL_UPDATE: 'updater:install',
+  DESCRIBE_LAST_COMMAND: 'einsatz:describe-last-command',
   OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',
