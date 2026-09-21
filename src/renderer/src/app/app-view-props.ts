@@ -329,13 +329,15 @@ function buildWorkspaceCloseCallbacks(args: BuildWorkspacePropsArgs) {
  */
 function buildWorkspaceMoveCallbacks(args: BuildWorkspacePropsArgs) {
   return {
+    // Kein vorbelegtes Ziel: ein einzelner Tipp darf keine Bewegung auslösen,
+    // und der aktuelle Abschnitt wäre als Ziel ohnehin sinnlos.
     onMoveEinheit: (id: string) => {
       args.uiState.setMoveDialog({ type: 'einheit', id });
-      args.uiState.setMoveTarget(args.uiState.selectedAbschnittId);
+      args.uiState.setMoveTarget('');
     },
     onMoveFahrzeug: (id: string) => {
       args.uiState.setMoveDialog({ type: 'fahrzeug', id });
-      args.uiState.setMoveTarget(args.uiState.selectedAbschnittId);
+      args.uiState.setMoveTarget('');
     },
   };
 }

@@ -27,6 +27,26 @@ function parsePayload(payloadJson: string): MovePayload | null {
 }
 
 /**
+ * Beschreibt eine Einheitenbewegung im Klartext.
+ */
+function beschreibeEinheitMove(data: EinsatzJsonFile, payload: MovePayload, von: string, nach: string): string {
+  const einheit = data.einheiten.find((e) => e.id === payload.einheitId);
+  const name = einheit ? einheit.nameImEinsatz : 'Einheit';
+  const mitFahrzeugen = (payload.mitgefuehrteFahrzeugIds ?? []).length;
+  const zusatz = mitFahrzeugen > 0 ? ` samt ${mitFahrzeugen} Fahrzeug(en)` : '';
+  return `${name} von ${von} nach ${nach} verschoben${zusatz}`;
+}
+
+/**
+ * Beschreibt eine Fahrzeugbewegung im Klartext.
+ */
+function beschreibeFahrzeugMove(data: EinsatzJsonFile, payload: MovePayload, von: string, nach: string): string {
+  const fahrzeug = data.fahrzeuge.find((f) => f.id === payload.fahrzeugId);
+  const name = fahrzeug ? fahrzeug.name : 'Fahrzeug';
+  return `${name} von ${von} nach ${nach} verschoben`;
+}
+
+/**
  * Beschreibt die letzte rücknehmbare Aktion, damit die Rückfrage vor dem
  * Rückgängigmachen benennt, was genau zurückgeht.
  */
@@ -50,21 +70,11 @@ export function describeLastUndoableCommand(
   const nach = abschnittName(data, payload.nachAbschnittId);
 
   if (command.commandTyp === 'MOVE_EINHEIT') {
-    const einheit = data.einheiten.find((e) => e.id === payload.einheitId);
-    const mitFahrzeugen = (payload.mitgefuehrteFahrzeugIds ?? []).length;
-    const zusatz = mitFahrzeugen > 0 ? ` samt ${mitFahrzeugen} Fahrzeug(en)` : '';
-    return {
-      beschreibung: `${einheit?.nameImEinsatz ?? 'Einheit'} von ${von} nach ${nach} verschoben${zusatz}`,
-      zeitpunkt: command.timestamp,
-    };
+    return { beschreibung: beschreibeEinheitMove(data, payload, von, nach), zeitpunkt: command.timestamp };
   }
 
   if (command.commandTyp === 'MOVE_FAHRZEUG') {
-    const fahrzeug = data.fahrzeuge.find((f) => f.id === payload.fahrzeugId);
-    return {
-      beschreibung: `${fahrzeug?.name ?? 'Fahrzeug'} von ${von} nach ${nach} verschoben`,
-      zeitpunkt: command.timestamp,
-    };
+    return { beschreibung: beschreibeFahrzeugMove(data, payload, von, nach), zeitpunkt: command.timestamp };
   }
 
   return { beschreibung: 'Letzte Änderung', zeitpunkt: command.timestamp };

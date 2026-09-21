@@ -264,14 +264,61 @@ function buildMainAreaProps(props: AppWorkspaceShellProps): WorkspaceMainAreaPro
 }
 
 /**
+ * Ermittelt, was genau verschoben wird und woher — für den Verschiebedialog.
+ */
+function buildMoveKontext(props: AppWorkspaceShellProps): {
+  moveObjektName: string;
+  moveQuelleAbschnittId: string;
+  moveQuelleName: string;
+  moveMitgefuehrteFahrzeuge: number;
+} {
+  const leer = {
+    moveObjektName: '',
+    moveQuelleAbschnittId: '',
+    moveQuelleName: '',
+    moveMitgefuehrteFahrzeuge: 0,
+  };
+  const dialog = props.moveDialog;
+  if (!dialog) {
+    return leer;
+  }
+  if (dialog.type === 'einheit') {
+    const einheit = props.allKraefte.find((eintrag) => eintrag.id === dialog.id);
+    if (!einheit) {
+      return leer;
+    }
+    return {
+      moveObjektName: einheit.nameImEinsatz,
+      moveQuelleAbschnittId: einheit.aktuellerAbschnittId,
+      moveQuelleName: einheit.abschnittName,
+      moveMitgefuehrteFahrzeuge: props.allFahrzeuge.filter(
+        (fahrzeug) => fahrzeug.aktuelleEinsatzEinheitId === einheit.id,
+      ).length,
+    };
+  }
+  const fahrzeug = props.allFahrzeuge.find((eintrag) => eintrag.id === dialog.id);
+  if (!fahrzeug) {
+    return leer;
+  }
+  return {
+    moveObjektName: fahrzeug.funkrufname ? `${fahrzeug.name} (${fahrzeug.funkrufname})` : fahrzeug.name,
+    moveQuelleAbschnittId: fahrzeug.aktuellerAbschnittId ?? '',
+    moveQuelleName: fahrzeug.abschnittName,
+    moveMitgefuehrteFahrzeuge: 0,
+  };
+}
+
+/**
  * Builds props for global workspace dialogs.
  */
 function buildDialogsProps(props: AppWorkspaceShellProps): WorkspaceDialogsProps {
   return {
+    ...buildMoveKontext(props),
     busy: props.busy,
     isArchived: props.isArchived,
     abschnitte: props.abschnitte,
     allKraefte: props.allKraefte,
+    allFahrzeuge: props.allFahrzeuge,
     updaterState: props.updaterState,
     moveDialog: props.moveDialog,
     moveTarget: props.moveTarget,

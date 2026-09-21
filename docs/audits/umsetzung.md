@@ -75,6 +75,7 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] Trefferflächen durchgängig zu klein, Löschen neben Speichern (glove P0-2, P1-1)
 - [x] Modale Dialoge ohne max-height und Scrollmöglichkeit (glove P0-3)
 - [ ] Zwei verwendete CSS-Klassen sind nicht definiert (glove P2-1, night P2-11)
+- [x] Overlays und Dialoge zu schwach abgedunkelt (night P2-7)
 - [ ] Ausgewählter Abschnitt kaum erkennbar, Kontrast 1,19:1 (night P1-3)
 - [ ] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)
 - [ ] Navigation nur als Einzelbuchstaben E/G/K/F (fünf Reviewer, P2/P3)

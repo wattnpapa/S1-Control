@@ -6,6 +6,7 @@ import { MoveDialog } from '@renderer/components/dialogs/MoveDialog';
 import { SplitEinheitDialog } from '@renderer/components/dialogs/SplitEinheitDialog';
 import { UpdaterOverlay } from '@renderer/components/common/UpdaterUi';
 import type {
+  FahrzeugOverviewItem,
   CreateAbschnittForm,
   CreateFahrzeugForm,
   EditAbschnittForm,
@@ -22,9 +23,14 @@ interface WorkspaceDialogsProps {
   isArchived: boolean;
   abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>;
   allKraefte: KraftOverviewItem[];
+  allFahrzeuge: FahrzeugOverviewItem[];
   updaterState: UpdaterState;
   moveDialog: MoveDialogState | null;
   moveTarget: string;
+  moveObjektName: string;
+  moveQuelleAbschnittId: string;
+  moveQuelleName: string;
+  moveMitgefuehrteFahrzeuge: number;
   setMoveDialog: Dispatch<SetStateAction<MoveDialogState | null>>;
   setMoveTarget: Dispatch<SetStateAction<string>>;
   showCreateAbschnittDialog: boolean;
@@ -67,6 +73,10 @@ export function WorkspaceDialogs(props: WorkspaceDialogsProps): JSX.Element {
         abschnitte={props.abschnitte}
         moveTarget={props.moveTarget}
         isArchived={props.isArchived}
+        objektName={props.moveObjektName}
+        quelleAbschnittId={props.moveQuelleAbschnittId}
+        quelleName={props.moveQuelleName}
+        mitgefuehrteFahrzeuge={props.moveMitgefuehrteFahrzeuge}
         onChangeTarget={props.setMoveTarget}
         onConfirm={props.onMoveConfirm}
         onClose={() => {
