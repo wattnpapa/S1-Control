@@ -16,6 +16,8 @@ interface FuehrungsstrukturViewProps {
 
 interface NodeStats {
   taktisch: TacticalStrength;
+  /** Anzahl der Einheiten — nicht zu verwechseln mit der Personenzahl. */
+  einheiten: number;
   organisations: Map<OrganisationKey, number>;
 }
 
@@ -72,12 +74,18 @@ function createStatsCollector(
     }
     const result: NodeStats = {
       taktisch: { fuehrung: 0, unterfuehrung: 0, mannschaft: 0, gesamt: 0 },
+      einheiten: 0,
       organisations: new Map<OrganisationKey, number>(),
     };
 
     const abschnitt = indexes.byId.get(abschnittId);
+    // Gleiche Regel wie in der gemeldeten Gesamtstärke: anrückende und
+    // abgemeldete Kräfte zählen nicht als Stärke vor Ort.
     if (abschnitt?.systemTyp !== 'ANFAHRT') {
-      addDirectStats(result, indexes.kraefteByAbschnitt.get(abschnittId) ?? []);
+      const kraefte = (indexes.kraefteByAbschnitt.get(abschnittId) ?? []).filter(
+        (kraft) => kraft.status !== 'ABGEMELDET',
+      );
+      addDirectStats(result, kraefte);
     }
     for (const child of indexes.byParent.get(abschnittId) ?? []) {
       addChildStats(result, collectStats(child.id));
@@ -93,6 +101,7 @@ function createStatsCollector(
  * Adds direct unit stats to accumulated node stats.
  */
 function addDirectStats(target: NodeStats, kraefte: KraftOverviewItem[]): void {
+  target.einheiten += kraefte.length;
   for (const kraft of kraefte) {
     const parsed = parseTaktischeStaerke(
       kraft.aktuelleStaerkeTaktisch,
@@ -113,6 +122,7 @@ function addDirectStats(target: NodeStats, kraefte: KraftOverviewItem[]): void {
  * Adds child subtree stats to parent stats.
  */
 function addChildStats(target: NodeStats, child: NodeStats): void {
+  target.einheiten += child.einheiten;
   target.taktisch.fuehrung += child.taktisch.fuehrung;
   target.taktisch.unterfuehrung += child.taktisch.unterfuehrung;
   target.taktisch.mannschaft += child.taktisch.mannschaft;
@@ -192,11 +202,13 @@ function HierarchyNode({
             )}
           </header>
           <p>
-            Führungsstärke:{' '}
-            <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
+            Stärke vor Ort: <strong>{toTaktischeStaerke(stats.taktisch)}</strong>
           </p>
           <p>
-            Einheiten gesamt: <strong>{stats.taktisch.gesamt}</strong>
+            Personen gesamt: <strong>{stats.taktisch.gesamt}</strong>
+          </p>
+          <p>
+            Einheiten: <strong>{stats.einheiten}</strong>
           </p>
           <div className="org-chips">
             <OrganisationChips

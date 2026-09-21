@@ -95,6 +95,7 @@ function useLifecycleAndDataState(
     setAllKraefte: rootState.setAllKraefte,
     setAllFahrzeuge: rootState.setAllFahrzeuge,
     setGesamtStaerke: uiState.setGesamtStaerke,
+    setStaerkeUebersicht: uiState.setStaerkeUebersicht,
     clearSelectedEinsatz: lifecycleState.clearSelectedEinsatz,
     refreshEditLocks: lockState.refreshEditLocks,
     emptyDetails: EMPTY_DETAILS,

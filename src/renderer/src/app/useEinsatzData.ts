@@ -2,7 +2,7 @@ import { useCallback, useRef } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
 import type { AbschnittDetails, EinsatzListItem } from '@shared/types';
 import type { FahrzeugOverviewItem, KraftOverviewItem, TacticalStrength } from '@renderer/types/ui';
-import { parseTaktischeStaerke } from '@renderer/utils/tactical';
+import { aggregateStaerkeUebersicht, type StaerkeUebersicht } from '@renderer/utils/staerke';
 import { prewarmFormationSigns, prewarmVehicleSigns } from './tactical-sign-cache';
 
 interface UseEinsatzDataProps {
@@ -15,6 +15,7 @@ interface UseEinsatzDataProps {
   setAllKraefte: Dispatch<SetStateAction<KraftOverviewItem[]>>;
   setAllFahrzeuge: Dispatch<SetStateAction<FahrzeugOverviewItem[]>>;
   setGesamtStaerke: Dispatch<SetStateAction<TacticalStrength>>;
+  setStaerkeUebersicht: Dispatch<SetStateAction<StaerkeUebersicht>>;
   clearSelectedEinsatz: () => void;
   refreshEditLocks: (einsatzId: string) => Promise<void>;
   emptyDetails: AbschnittDetails;
@@ -71,8 +72,11 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         const selectedAbschnittMeta = nextAbschnitte.filter((item) => item.id === effectiveAbschnittId);
         const quickKraefte = mapAllKraefte(selectedOnly, selectedAbschnittMeta);
         const quickFahrzeuge = mapAllFahrzeuge(selectedOnly, selectedAbschnittMeta, quickKraefte);
-        props.setAllKraefte(quickKraefte);
-        props.setAllFahrzeuge(quickFahrzeuge);
+        // Nur als erster Aufbau, solange noch nichts da ist. Im laufenden
+        // Betrieb darf die Gesamtliste nicht auf den gewählten Abschnitt
+        // zusammenschrumpfen — das ergäbe ein falsches Lagebild.
+        props.setAllKraefte((prev) => (prev.length === 0 ? quickKraefte : prev));
+        props.setAllFahrzeuge((prev) => (prev.length === 0 ? quickFahrzeuge : prev));
         // Do NOT set gesamtStaerke here — it must always reflect ALL sections.
       } else {
         props.setDetails(props.emptyDetails);
@@ -90,17 +94,21 @@ export function useEinsatzData(props: UseEinsatzDataProps) {
         props.setAllKraefte(nextAllKraefte);
         props.setAllFahrzeuge(nextAllFahrzeuge);
         scheduleSignPrewarm(nextAllKraefte, nextAllFahrzeuge);
-        // gesamtStaerke is always the sum of ALL sections.
-        props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
+        applyStaerke(props, allDetails, nextAbschnitte);
       };
       // Always run loadFullOverview (at minimum for gesamtStaerke correctness).
       const includeFullOverview = options?.includeFullOverview ?? true;
       if (!includeFullOverview) {
-        // Still update gesamtStaerke from the batch, but skip kraefte/fahrzeuge lists.
+        // Der Stapel wird ohnehin für die Stärke geladen; die Gesamtlisten
+        // daraus mitzusetzen kostet nichts und verhindert, dass Kräfte-,
+        // Fahrzeug- und Führungsansicht auf einem Abschnitt hängenbleiben.
         void (async () => {
           const allDetails = await loadAllAbschnittDetails(einsatzId, nextAbschnitte);
           if (revision !== loadRevisionRef.current) return;
-          props.setGesamtStaerke(aggregateTacticalStrength(allDetails, nextAbschnitte, props.emptyStrength));
+          const nextAllKraefte = mapAllKraefte(allDetails, nextAbschnitte);
+          props.setAllKraefte(nextAllKraefte);
+          props.setAllFahrzeuge(mapAllFahrzeuge(allDetails, nextAbschnitte, nextAllKraefte));
+          applyStaerke(props, allDetails, nextAbschnitte);
         })();
         return;
       }
@@ -234,27 +242,17 @@ function mapAllFahrzeuge(
 }
 
 /**
- * Aggregates tactical strength while excluding ANFAHRT sections.
+ * Setzt gemeldete Stärke und ihre Aufschlüsselung aus allen Abschnitten.
  */
-function aggregateTacticalStrength(
+function applyStaerke(
+  props: UseEinsatzDataProps,
   allDetails: AbschnittDetails[],
   abschnitte: Awaited<ReturnType<typeof window.api.listAbschnitte>>,
-  emptyStrength: TacticalStrength,
-): TacticalStrength {
-  return allDetails.reduce<TacticalStrength>(
-    (sum, detail, index) => {
-      if (abschnitte[index]?.systemTyp === 'ANFAHRT') {
-        return sum;
-      }
-      for (const einheit of detail.einheiten) {
-        const parsed = parseTaktischeStaerke(einheit.aktuelleStaerkeTaktisch, einheit.aktuelleStaerke);
-        sum.fuehrung += parsed.fuehrung;
-        sum.unterfuehrung += parsed.unterfuehrung;
-        sum.mannschaft += parsed.mannschaft;
-        sum.gesamt += parsed.gesamt;
-      }
-      return sum;
-    },
-    { ...emptyStrength },
+): void {
+  const uebersicht = aggregateStaerkeUebersicht(
+    allDetails,
+    abschnitte.map((abschnitt) => abschnitt.systemTyp),
   );
+  props.setStaerkeUebersicht(uebersicht);
+  props.setGesamtStaerke(uebersicht.vorOrt);
 }

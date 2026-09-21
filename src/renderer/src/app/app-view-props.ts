@@ -156,6 +156,7 @@ function buildWorkspaceStateProps(
     allKraefte: args.allKraefte,
     allFahrzeuge: args.allFahrzeuge,
     gesamtStaerke: args.uiState.gesamtStaerke,
+    staerkeUebersicht: args.uiState.staerkeUebersicht,
     updaterState: args.updaterState,
     kraefteOrgFilter: args.uiState.kraefteOrgFilter,
     setKraefteOrgFilter: args.uiState.setKraefteOrgFilter,

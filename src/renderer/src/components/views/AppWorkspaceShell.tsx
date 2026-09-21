@@ -26,6 +26,7 @@ import type {
   TacticalStrength,
   WorkspaceView,
 } from '@renderer/types/ui';
+import type { StaerkeUebersicht } from '@renderer/utils/staerke';
 import type { ComponentProps, JSX } from 'react';
 
 export interface AppWorkspaceShellProps {
@@ -42,6 +43,7 @@ export interface AppWorkspaceShellProps {
   allKraefte: KraftOverviewItem[];
   allFahrzeuge: FahrzeugOverviewItem[];
   gesamtStaerke: TacticalStrength;
+  staerkeUebersicht: StaerkeUebersicht;
   updaterState: UpdaterState;
   kraefteOrgFilter: OrganisationKey | 'ALLE';
   setKraefteOrgFilter: (value: OrganisationKey | 'ALLE') => void;
@@ -325,6 +327,7 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
       <Topbar
         einsatzName={props.selectedEinsatz?.name ?? '-'}
         gesamtStaerke={props.gesamtStaerke}
+        staerkeUebersicht={props.staerkeUebersicht}
         onOpenStrengthDisplay={props.onOpenStrengthDisplay}
         onCloseStrengthDisplay={props.onCloseStrengthDisplay}
         busy={props.busy}

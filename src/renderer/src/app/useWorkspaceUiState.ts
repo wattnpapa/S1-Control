@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Dispatch, SetStateAction } from 'react';
+import { emptyStaerkeUebersicht, type StaerkeUebersicht } from '@renderer/utils/staerke';
 import type { ActiveClientInfo, EinheitHelfer, OrganisationKey, PeerUpdateStatus } from '@shared/types';
 import type {
   CreateAbschnittForm,
@@ -80,6 +81,8 @@ export interface WorkspaceUiStateResult {
   setKraefteOrgFilter: Dispatch<SetStateAction<OrganisationKey | 'ALLE'>>;
   gesamtStaerke: TacticalStrength;
   setGesamtStaerke: Dispatch<SetStateAction<TacticalStrength>>;
+  staerkeUebersicht: StaerkeUebersicht;
+  setStaerkeUebersicht: Dispatch<SetStateAction<StaerkeUebersicht>>;
   activeClients: ActiveClientInfo[];
   setActiveClients: Dispatch<SetStateAction<ActiveClientInfo[]>>;
   peerUpdateStatus: PeerUpdateStatus | null;
@@ -186,6 +189,7 @@ function useWorkspaceRuntimeUiState() {
   const [activeView, setActiveView] = useState<WorkspaceView>('einsatz');
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
+  const [staerkeUebersicht, setStaerkeUebersicht] = useState<StaerkeUebersicht>(emptyStaerkeUebersicht);
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
@@ -204,6 +208,8 @@ function useWorkspaceRuntimeUiState() {
     setKraefteOrgFilter,
     gesamtStaerke,
     setGesamtStaerke,
+    staerkeUebersicht,
+    setStaerkeUebersicht,
     activeClients,
     setActiveClients,
     peerUpdateStatus,
