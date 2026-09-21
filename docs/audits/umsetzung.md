@@ -13,7 +13,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] "Backup laden" ohne Sicherung des ersetzten Standes (fünf Reviewer, P0)
 - [x] Start ohne Freigabe stellt den Pfad dauerhaft auf lokal um (offline P0-4)
 - [x] Export-Vorgabepfad ist das Arbeitsverzeichnis des Programms (analog P2-4)
-- [ ] Kein Konfliktbegriff im Bedienablauf: Konflikt wird gemeldet, aber nicht geführt aufgelöst (offline P1-1)
+- [x] Kein Konfliktbegriff im Bedienablauf: Konflikt wird gemeldet, aber nicht geführt aufgelöst (offline P1-1)
 - [x] Bearbeitungssperre verfällt bei Netzausfall lautlos (offline P1-2)
 - [x] Scheitern der Sicherung bleibt unsichtbar (offline P1-7)
 - [x] Neuer Einsatz kann bestehende Datei überschreiben (destructive P2-6)
@@ -41,7 +41,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Verschieben-Dialog ohne Objekt, Quelle und Hierarchie, Ziel vorbelegt (fünf Reviewer, P0/P1)
 - [x] "Bestätigen" nicht gegen Doppelauslösung gesperrt (destructive P2-1, offline P1-4)
 - [x] Statuswechsel ABGEMELDET/AUSSER_BETRIEB bleibt folgenlos (destructive P1-4)
-- [ ] Abschnitt umhängen wirkt auf den ganzen Teilbaum ohne Rückfrage (destructive P1-6)
+- [x] Abschnitt umhängen wirkt auf den ganzen Teilbaum ohne Rückfrage (destructive P1-6)
 - [x] Move, Split und Undo umgehen die Bearbeitungssperre (destructive P1-7)
 - [x] Archivieren ist einseitig — Beenden und Archivieren sind jetzt umkehrbar (workflow P1-7, analog P3-3)
 
@@ -55,7 +55,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Stärke doppelt pflegen: Zahlenfelder und Helferliste — Reichweite benannt (workflow P1-5)
 - [x] Aktionen brechen ohne Rückmeldung ab (workflow P1-6, stress P1-2)
 - [x] Entwicklerwerkzeuge in Start- und Hauptansicht (mehrere Reviewer, P1/P2)
-- [ ] Abschnitt anlegen erzwingt Ansichtswechsel (workflow P2-1)
+- [x] Abschnitt anlegen erzwingt Ansichtswechsel (workflow P2-1)
 
 ## Eingabe, Fehler, Unterbrechung
 
@@ -64,7 +64,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Fehlermeldungen liegen hinter dem Dialog und löschen sich selbst (error-recovery P1-2, stress P1-1)
 - [x] Kein Schutz beim Verlassen mit ungespeicherten Änderungen (error-recovery P1-3)
 - [x] Drei gleichnamige "Speichern" mit unterschiedlicher Reichweite (error-recovery P1-4)
-- [ ] Abgelaufene Sperre führt in eine Sackgasse (error-recovery P1-6)
+- [x] Abgelaufene Sperre führt in eine Sackgasse (error-recovery P1-6)
 - [x] Dialoge nicht mit der Tastatur bedienbar, kein Enter, Escape, Autofokus (error-recovery P2-7, stress P2-3)
 - [x] Globales busy legt die gesamte Oberfläche stumm (stress P1-3)
 - [x] Pflichtfelder nicht gekennzeichnet, technische Fehlertexte (mehrere Reviewer, P3)
@@ -88,6 +88,6 @@ Legende: [x] erledigt, [ ] offen.
 
 - [x] Keine Druckausgabe, kein Druck-Stylesheet, kein PDF (analog P0-2)
 - [x] Exportinhalt taugt nicht als Papierstand (analog P1-1)
-- [ ] Keine Import- oder Nacherfassungsschnittstelle (analog P1-2)
+- [x] Keine Import- oder Nacherfassungsschnittstelle (analog P1-2)
 - [x] Sicherungsabstand und Sicherungszustand nicht sichtbar (analog P2-2)
 - [x] NATO-Zeit ohne Zeitzonenkennung (drei Reviewer, P1/P3)

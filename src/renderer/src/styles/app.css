@@ -1061,6 +1061,16 @@ td.tactical-sign-cell.compact-sign-cell {
   min-height: 28px;
 }
 
+.konflikt-hinweis {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: rgba(255, 196, 0, 0.2);
+  border: 1px solid rgba(255, 196, 0, 0.6);
+  font-size: 13px;
+  flex: 1 1 100%;
+}
+
 .listen-filter {
   display: flex;
   flex-wrap: wrap;

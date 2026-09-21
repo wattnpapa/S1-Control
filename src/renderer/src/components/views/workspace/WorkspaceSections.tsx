@@ -378,6 +378,8 @@ export function WorkspaceViewBody(props: WorkspaceContentProps): JSX.Element {
         onBeenden={props.onBeendeEinsatz}
         onArchivieren={props.onArchiviereEinsatz}
         onWiederOeffnen={props.onOeffneEinsatzWieder}
+        onKraefteEinlesen={props.onKraefteEinlesen}
+        onVorlageAblegen={props.onVorlageAblegen}
       />
     ),
     einstellungen: <EinstellungenView {...props} />,

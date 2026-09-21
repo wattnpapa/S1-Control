@@ -61,6 +61,9 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC_CHANNEL.SET_EINSATZ_STATUS, input),
   listJournal: (einsatzId: string) => ipcRenderer.invoke(IPC_CHANNEL.LIST_JOURNAL, einsatzId),
   getSicherungsZustand: () => ipcRenderer.invoke(IPC_CHANNEL.SICHERUNGS_ZUSTAND),
+  importiereKraefte: (einsatzId: string) => ipcRenderer.invoke(IPC_CHANNEL.IMPORT_KRAEFTE, einsatzId),
+  exportiereNacherfassungsVorlage: (einsatzId: string) =>
+    ipcRenderer.invoke(IPC_CHANNEL.EXPORT_NACHERFASSUNG, einsatzId),
   openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>

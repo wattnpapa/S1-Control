@@ -245,6 +245,8 @@ type WorkspaceCallbacks = Pick<
   | 'onBeendeEinsatz'
   | 'onArchiviereEinsatz'
   | 'onOeffneEinsatzWieder'
+  | 'onKraefteEinlesen'
+  | 'onVorlageAblegen'
   | 'onRemoveFahrzeug'
   | 'onMoveFahrzeug'
   | 'onEditFahrzeug'
@@ -308,6 +310,8 @@ function buildWorkspaceCallbacks(
     onBeendeEinsatz: args.abschlussActions.beendeEinsatz,
     onArchiviereEinsatz: args.abschlussActions.archiviereEinsatz,
     onOeffneEinsatzWieder: args.abschlussActions.oeffneEinsatzWieder,
+    onKraefteEinlesen: args.abschlussActions.kraefteEinlesen,
+    onVorlageAblegen: args.abschlussActions.vorlageAblegen,
     onRemoveFahrzeug: args.fahrzeugActions.removeFahrzeug,
     onMoveFahrzeug: moveCallbacks.onMoveFahrzeug,
     onEditFahrzeug: args.fahrzeugActions.openEditDialog,

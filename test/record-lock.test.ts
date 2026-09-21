@@ -91,10 +91,17 @@ describe('record lock service - ownership and expiry', () => {
 
     acquireRecordEditLock(ctx, target, owner);
     expect(() => ensureRecordEditLockOwnership(ctx, target, owner)).not.toThrow();
-    expect(() => ensureRecordEditLockOwnership(ctx, target, other)).toThrow('Datensatz wird gerade');
+    expect(() => ensureRecordEditLockOwnership(ctx, target, other)).toThrow('wird gerade von');
 
+    // Ohne fremde Sperre wird die eigene, abgelaufene Sperre stillschweigend
+    // neu erworben: ein ausgefülltes Formular darf daran nicht scheitern.
     releaseRecordEditLock(ctx, target, owner);
-    expect(() => ensureRecordEditLockOwnership(ctx, target, owner)).toThrow('Datensatz ist nicht zur Bearbeitung gesperrt');
+    expect(() => ensureRecordEditLockOwnership(ctx, target, owner)).not.toThrow();
+
+    // Hält ein anderer Platz den Datensatz, bleibt es beim Abbruch.
+    releaseRecordEditLock(ctx, target, owner);
+    acquireRecordEditLock(ctx, target, other);
+    expect(() => ensureRecordEditLockOwnership(ctx, target, owner)).toThrow('wird gerade von');
   });
 
   test('cleans up expired locks and allows takeover', () => {

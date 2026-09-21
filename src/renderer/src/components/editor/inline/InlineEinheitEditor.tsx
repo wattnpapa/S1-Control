@@ -64,6 +64,19 @@ function buildEditFahrzeuge(fahrzeuge: InlineEinheitEditorProps['fahrzeuge'], ei
 }
 
 /**
+ * Erkennt, ob sich bereits offene Zeilen auf der Freigabe geaendert haben.
+ */
+function weichtAb<T>(vorhanden: Record<string, T>, vomServer: Record<string, T>): boolean {
+  for (const [id, serverStand] of Object.entries(vomServer)) {
+    const eingabe = vorhanden[id];
+    if (eingabe && JSON.stringify(eingabe) !== JSON.stringify(serverStand)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/**
  * Fuehrt frisch geladene Serverzeilen mit den Eingaben im Formular zusammen.
  *
  * Bereits offene Zeilen behalten ihren Stand, neue Zeilen kommen hinzu,
@@ -139,16 +152,28 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
   });
   const [editFahrzeuge, setEditFahrzeuge] = useState<Record<string, FahrzeugDraft>>({});
 
+  const [fremdGeaendert, setFremdGeaendert] = useState(false);
+
   // Zyklisch nachgeladene Serverdaten duerfen Eingaben nicht ueberschreiben:
   // sonst springen halb getippte Namen und Kennzeichen zurueck.
   useEffect(() => {
-    setEditRows((prev) => uebernehmeOhneEingabenZuVerlieren(prev, buildEditRows(props.helfer)));
+    setEditRows((prev) => {
+      const vomServer = buildEditRows(props.helfer);
+      if (weichtAb(prev, vomServer)) {
+        setFremdGeaendert(true);
+      }
+      return uebernehmeOhneEingabenZuVerlieren(prev, vomServer);
+    });
   }, [props.helfer]);
 
   useEffect(() => {
-    setEditFahrzeuge((prev) =>
-      uebernehmeOhneEingabenZuVerlieren(prev, buildEditFahrzeuge(props.fahrzeuge, props.form.einheitId)),
-    );
+    setEditFahrzeuge((prev) => {
+      const vomServer = buildEditFahrzeuge(props.fahrzeuge, props.form.einheitId);
+      if (weichtAb(prev, vomServer)) {
+        setFremdGeaendert(true);
+      }
+      return uebernehmeOhneEingabenZuVerlieren(prev, vomServer);
+    });
   }, [props.fahrzeuge, props.form.einheitId]);
 
   useEffect(() => {
@@ -163,6 +188,13 @@ export function InlineEinheitEditor(props: InlineEinheitEditorProps): JSX.Elemen
     <section className="inline-editor">
       <header className="inline-editor-header">
         <h3>Einheit bearbeiten</h3>
+        {fremdGeaendert && (
+          <p className="konflikt-hinweis" role="status">
+            Diese Einheit wurde inzwischen an einem anderen Platz geändert. Die eigenen Eingaben stehen
+            noch hier; beim Speichern überschreiben sie den fremden Stand. Zum Verwerfen den Editor
+            schließen und neu öffnen.
+          </p>
+        )}
         <div className="inline-editor-actions">
           <button
             onClick={props.onSubmit}

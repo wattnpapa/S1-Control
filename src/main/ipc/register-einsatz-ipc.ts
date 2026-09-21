@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import path from 'node:path';
 import { dialog, ipcMain } from 'electron';
 import { IPC_CHANNEL, type RendererApi } from '../../shared/ipc';
@@ -18,6 +19,7 @@ import {
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
 import { listJournal } from '../services/journal';
+import { IMPORT_KOPFZEILE, importiereKraefte } from '../services/import-kraefte';
 import { ensureRecordEditLockOwnership } from '../services/record-lock';
 import {
   reopenDbContextAfterRestore,
@@ -165,6 +167,51 @@ function registerEinsatzCreateHandlers(
       requireUser();
       const ctx = contextFromDisk(common);
       return listJournal(ctx.einsatz, einsatzId);
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.IMPORT_KRAEFTE,
+    wrap(async (einsatzId: string) => {
+      const user = requireUser();
+      const auswahl = await dialog.showOpenDialog({
+        title: 'Nacherfassungsliste einlesen',
+        filters: [{ name: 'Liste', extensions: ['csv', 'txt'] }],
+        properties: ['openFile'],
+      });
+      if (auswahl.canceled || !auswahl.filePaths[0]) {
+        return null;
+      }
+      const ctx = state.getDbContext();
+      const dateiPfad = auswahl.filePaths[0];
+      const ergebnis = await ctx.mutate(() => importiereKraefte(ctx, { einsatzId, dateiPfad }, user));
+      helpers.notifyEinsatzChanged(einsatzId, 'import-kraefte');
+      return ergebnis;
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.EXPORT_NACHERFASSUNG,
+    wrap(async (einsatzId: string) => {
+      requireUser();
+      const einsatzDbPath = helpers.resolveRecentDbPathByEinsatzId(einsatzId);
+      const defaultDir = einsatzDbPath ? path.dirname(einsatzDbPath) : helpers.getBaseDir();
+      const ergebnis = await dialog.showSaveDialog({
+        title: 'Vorlage für die Nacherfassung ablegen',
+        defaultPath: path.join(defaultDir, 'nacherfassung-vorlage.csv'),
+        filters: [{ name: 'Liste', extensions: ['csv'] }],
+      });
+      if (ergebnis.canceled || !ergebnis.filePath) {
+        return null;
+      }
+      // Kopfzeile plus Beispielzeile: die Liste wird auf Papier geführt und
+      // später hier wieder eingelesen.
+      fs.writeFileSync(
+        ergebnis.filePath,
+        `${IMPORT_KOPFZEILE}\n"1. Bergungsgruppe";"THW";0;1;8;"Einsatzstelle Nord";""\n`,
+        'utf8',
+      );
+      return ergebnis.filePath;
     }),
   );
 

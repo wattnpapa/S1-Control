@@ -11,6 +11,15 @@ import type { EntityIpcHelpers, RegistrarCommon } from './register-support';
  * Registers movement, split and undo handlers.
  */
 export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: EntityIpcHelpers): void {
+  registriereSplit(common, helpers);
+  registriereBewegungen(common, helpers);
+  registriereRuecknahme(common, helpers);
+}
+
+/**
+ * Aufteilen einer Einheit.
+ */
+function registriereSplit(common: RegistrarCommon, helpers: EntityIpcHelpers): void {
   const { state, wrap, requireUser } = common;
 
   ipcMain.handle(
@@ -46,6 +55,14 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
       helpers.notifyEinsatzChanged(input.einsatzId, 'split-einheit');
     }),
   );
+
+}
+
+/**
+ * Verschieben von Einheiten und Fahrzeugen.
+ */
+function registriereBewegungen(common: RegistrarCommon, helpers: EntityIpcHelpers): void {
+  const { state, wrap, requireUser } = common;
 
   ipcMain.handle(
     IPC_CHANNEL.MOVE_EINHEIT,
@@ -110,6 +127,14 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-fahrzeug');
     }),
   );
+
+}
+
+/**
+ * Rücknahme und Beschreibung der letzten Aktion.
+ */
+function registriereRuecknahme(common: RegistrarCommon, helpers: EntityIpcHelpers): void {
+  const { state, wrap, requireUser } = common;
 
   ipcMain.handle(
     IPC_CHANNEL.UNDO_LAST,

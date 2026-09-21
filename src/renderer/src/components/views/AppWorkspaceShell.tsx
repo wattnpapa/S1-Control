@@ -175,6 +175,8 @@ export interface AppWorkspaceShellProps {
   onBeendeEinsatz: () => void;
   onArchiviereEinsatz: () => void;
   onOeffneEinsatzWieder: () => void;
+  onKraefteEinlesen: () => void;
+  onVorlageAblegen: () => void;
   onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;
@@ -267,6 +269,8 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onBeendeEinsatz: props.onBeendeEinsatz,
     onArchiviereEinsatz: props.onArchiviereEinsatz,
     onOeffneEinsatzWieder: props.onOeffneEinsatzWieder,
+    onKraefteEinlesen: props.onKraefteEinlesen,
+    onVorlageAblegen: props.onVorlageAblegen,
     onRemoveFahrzeug: props.onRemoveFahrzeug,
     onMoveFahrzeug: props.onMoveFahrzeug,
     onEditFahrzeug: props.onEditFahrzeug,

@@ -124,6 +124,12 @@ export interface UpdateFahrzeugInput {
   nutzlast?: string;
 }
 
+export interface ImportErgebnisInfo {
+  angelegt: number;
+  uebersprungen: number;
+  meldungen: string[];
+}
+
 export interface SicherungsZustand {
   letzteSicherung: string | null;
   pfad: string | null;
@@ -228,6 +234,10 @@ export interface RendererApi {
   listJournal(einsatzId: string): Promise<JournalEintragInfo[]>;
   /** Zustand der automatischen Sicherungen. */
   getSicherungsZustand(): Promise<SicherungsZustand>;
+  /** Liest eine Nacherfassungsliste (CSV) ein und legt die Einheiten an. */
+  importiereKraefte(einsatzId: string): Promise<ImportErgebnisInfo | null>;
+  /** Legt eine leere Nacherfassungsliste zum Ausdrucken und Ausfüllen ab. */
+  exportiereNacherfassungsVorlage(einsatzId: string): Promise<string | null>;
   updateEinsatz(input: UpdateEinsatzInput): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
@@ -388,6 +398,8 @@ export const IPC_CHANNEL = {
   SET_EINSATZ_STATUS: 'einsatz:set-status',
   LIST_JOURNAL: 'einsatz:list-journal',
   SICHERUNGS_ZUSTAND: 'einsatz:sicherungs-zustand',
+  IMPORT_KRAEFTE: 'einsatz:import-kraefte',
+  EXPORT_NACHERFASSUNG: 'einsatz:export-nacherfassung',
   OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',

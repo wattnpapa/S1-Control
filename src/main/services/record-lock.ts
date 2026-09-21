@@ -145,10 +145,17 @@ export function ensureRecordEditLockOwnership(ctx: DbContext, target: LockTarget
     (l) => l.entityType === target.entityType && l.entityId === target.entityId,
   );
   if (!existing) {
-    throw new Error('Datensatz ist nicht zur Bearbeitung gesperrt. Bitte Datensatz erneut öffnen.');
+    // Eine abgelaufene eigene Sperre darf kein ausgefülltes Formular
+    // entwerten: solange niemand anders den Datensatz hält, wird sie beim
+    // Speichern stillschweigend neu erworben.
+    acquireRecordEditLock(ctx, target, identity);
+    return;
   }
   if (existing.clientId !== identity.clientId) {
-    throw new Error(`Datensatz wird gerade von ${existing.computerName} (${existing.userName}) bearbeitet.`);
+    throw new Error(
+      `Der Datensatz wird gerade von ${existing.computerName} (${existing.userName}) bearbeitet. ` +
+        'Die Eingaben bleiben stehen — bitte kurz warten und erneut speichern.',
+    );
   }
 }
 

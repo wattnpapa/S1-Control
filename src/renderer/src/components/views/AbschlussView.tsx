@@ -9,6 +9,8 @@ interface AbschlussViewProps {
   onBeenden: () => void;
   onArchivieren: () => void;
   onWiederOeffnen: () => void;
+  onKraefteEinlesen: () => void;
+  onVorlageAblegen: () => void;
 }
 
 const STATUS_TEXT: Record<string, string> = {
@@ -45,6 +47,22 @@ export function AbschlussView(props: AbschlussViewProps): JSX.Element {
             Einsatzakte exportieren
           </button>
           <button onClick={() => window.print()}>Lage drucken</button>
+        </div>
+      </section>
+
+      <section className="abschluss-block">
+        <h3>Nacherfassung nach Papierbetrieb</h3>
+        <p>
+          Wurde zwischenzeitlich auf Papier geführt, lässt sich der Stand als Liste einlesen. Die Vorlage
+          enthält die erwarteten Spalten und kann ausgedruckt und handschriftlich geführt werden.
+        </p>
+        <div className="abschluss-aktionen">
+          <button onClick={props.onVorlageAblegen} disabled={props.busy || !props.selectedEinsatzId}>
+            Vorlage ablegen
+          </button>
+          <button onClick={props.onKraefteEinlesen} disabled={props.busy || !props.selectedEinsatzId}>
+            Liste einlesen
+          </button>
         </div>
       </section>
 

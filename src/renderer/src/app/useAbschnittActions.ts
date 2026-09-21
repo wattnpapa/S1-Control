@@ -53,7 +53,7 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
   const openEditSelectedDialog = buildOpenEditSelectedDialog(props);
   const openEditDialog = buildOpenEditDialog(props);
   const submitCreate = buildSubmitCreate(props);
-  const submitEdit = buildSubmitEdit(props);
+  const submitEdit = useSubmitEditMitRueckfrage(props);
   const removeAbschnitt = useRemoveAbschnitt(props);
 
   return {
@@ -65,6 +65,46 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
     submitCreate,
     submitEdit,
   };
+}
+
+/**
+ * Speichert Änderungen an einem Abschnitt. Umhängen und Typwechsel wirken auf
+ * den ganzen Teilbaum und werden deshalb vorher benannt.
+ */
+function useSubmitEditMitRueckfrage(props: UseAbschnittActionsProps) {
+  const confirm = useConfirm();
+  const speichern = buildSubmitEdit(props);
+  return useCallback(async () => {
+    const abschnittId = props.editAbschnittForm.abschnittId;
+    const vorher = props.abschnitte.find((eintrag) => eintrag.id === abschnittId);
+    const neuerParent = props.editAbschnittForm.parentId || null;
+    const parentWechsel = Boolean(vorher) && (vorher?.parentId ?? null) !== neuerParent;
+    const typWechsel = Boolean(vorher) && vorher?.systemTyp !== props.editAbschnittForm.systemTyp;
+
+    if (parentWechsel || typWechsel) {
+      const kinder = props.abschnitte.filter((eintrag) => eintrag.parentId === abschnittId).length;
+      const folgen: string[] = [];
+      if (parentWechsel && kinder > 0) {
+        folgen.push(`${kinder} Unterabschnitt(e) wandern mit.`);
+      }
+      if (typWechsel && props.editAbschnittForm.systemTyp === 'ANFAHRT') {
+        folgen.push('Kräfte in diesem Abschnitt zählen danach nicht mehr zur gemeldeten Stärke.');
+      }
+      if (typWechsel && vorher?.systemTyp === 'ANFAHRT') {
+        folgen.push('Kräfte in diesem Abschnitt zählen danach zur gemeldeten Stärke.');
+      }
+      const bestaetigt = await confirm({
+        titel: 'Abschnitt umhängen?',
+        text: `Die Gliederung unter "${vorher?.name ?? ''}" ändert sich.`,
+        folgen: folgen.length > 0 ? folgen : undefined,
+        bestaetigenText: 'Übernehmen',
+      });
+      if (!bestaetigt) {
+        return;
+      }
+    }
+    await speichern();
+  }, [confirm, props, speichern]);
 }
 
 /**
@@ -253,7 +293,9 @@ function buildSubmitCreate(props: UseAbschnittActionsProps) {
         parentId: props.createAbschnittForm.parentId || null,
       });
       props.setShowCreateAbschnittDialog(false);
-      await props.loadEinsatz(props.selectedEinsatzId, created.id);
+      // Der gewählte Abschnitt bleibt stehen: mitten in der Kräfteerfassung
+      // in einen neuen, leeren Abschnitt zu springen kostet den Faden.
+      await props.loadEinsatz(props.selectedEinsatzId, props.selectedAbschnittId || created.id);
     });
   };
 }

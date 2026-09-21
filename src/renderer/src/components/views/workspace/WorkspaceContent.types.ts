@@ -122,6 +122,8 @@ export interface WorkspaceContentProps {
   onBeendeEinsatz: () => void;
   onArchiviereEinsatz: () => void;
   onOeffneEinsatzWieder: () => void;
+  onKraefteEinlesen: () => void;
+  onVorlageAblegen: () => void;
   onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;

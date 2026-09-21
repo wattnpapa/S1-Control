@@ -16,6 +16,15 @@ interface UseAbschlussActionsProps {
  * öffnen. Alle Zustandswechsel werden bestätigt.
  */
 export function useAbschlussActions(props: UseAbschlussActionsProps) {
+  const statusAktionen = useStatusAktionen(props);
+  const papierAktionen = usePapierAktionen(props);
+  return { ...statusAktionen, ...papierAktionen };
+}
+
+/**
+ * Beenden, Archivieren und Wiederöffnen — jeweils mit Rückfrage.
+ */
+function useStatusAktionen(props: UseAbschlussActionsProps) {
   const confirm = useConfirm();
 
   const statusSetzen = useCallback(
@@ -36,6 +45,13 @@ export function useAbschlussActions(props: UseAbschlussActionsProps) {
     [props],
   );
 
+  return useStatusRueckfragen(props, confirm, statusSetzen);
+}
+
+/**
+ * Einsatzakte, Vorlage und Nacherfassung.
+ */
+function usePapierAktionen(props: UseAbschlussActionsProps) {
   const exportEinsatzakte = useCallback(async () => {
     if (!props.selectedEinsatzId) {
       return;
@@ -49,6 +65,17 @@ export function useAbschlussActions(props: UseAbschlussActionsProps) {
     });
   }, [props]);
 
+  return useDateiAktionen(props, exportEinsatzakte);
+}
+
+/**
+ * Rückfragen zu den Zustandswechseln.
+ */
+function useStatusRueckfragen(
+  props: UseAbschlussActionsProps,
+  confirm: ReturnType<typeof useConfirm>,
+  statusSetzen: (status: 'AKTIV' | 'BEENDET' | 'ARCHIVIERT') => Promise<void>,
+) {
   const beendeEinsatz = useCallback(async () => {
     const bestaetigt = await confirm({
       titel: 'Einsatz beenden?',
@@ -92,5 +119,52 @@ export function useAbschlussActions(props: UseAbschlussActionsProps) {
     }
   }, [confirm, props.einsatzName, statusSetzen]);
 
-  return { exportEinsatzakte, beendeEinsatz, archiviereEinsatz, oeffneEinsatzWieder };
+  return { beendeEinsatz, archiviereEinsatz, oeffneEinsatzWieder };
+}
+
+/**
+ * Ablegen der Vorlage und Einlesen der Nacherfassungsliste.
+ */
+function useDateiAktionen(
+  props: UseAbschlussActionsProps,
+  exportEinsatzakte: () => Promise<void>,
+) {
+  const kraefteEinlesen = useCallback(async () => {
+    if (!props.selectedEinsatzId) {
+      return;
+    }
+    await props.withBusy(async () => {
+      try {
+        const ergebnis = await window.api.importiereKraefte(props.selectedEinsatzId);
+        if (!ergebnis) {
+          return;
+        }
+        await props.refreshCurrentEinsatz({ includeFullOverview: true });
+        const meldung =
+          `${ergebnis.angelegt} Einheit(en) übernommen, ${ergebnis.uebersprungen} übersprungen.` +
+          (ergebnis.meldungen.length > 0 ? ` ${ergebnis.meldungen.join(' ')}` : '');
+        props.setError(meldung);
+      } catch (error) {
+        props.setError(readError(error));
+      }
+    });
+  }, [props]);
+
+  const vorlageAblegen = useCallback(async () => {
+    if (!props.selectedEinsatzId) {
+      return;
+    }
+    await props.withBusy(async () => {
+      try {
+        const pfad = await window.api.exportiereNacherfassungsVorlage(props.selectedEinsatzId);
+        if (pfad) {
+          props.setError(`Vorlage abgelegt: ${pfad}`);
+        }
+      } catch (error) {
+        props.setError(readError(error));
+      }
+    });
+  }, [props]);
+
+  return { exportEinsatzakte, kraefteEinlesen, vorlageAblegen };
 }
