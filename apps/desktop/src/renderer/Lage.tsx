@@ -10,6 +10,7 @@
  */
 
 import { useMemo, useState } from "react";
+import { Ruecknahme } from "./Ruecknahme.js";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
@@ -17,7 +18,6 @@ import { Ausgaben } from "./Ausgaben.js";
 import { Monitorwahl } from "./Monitorwahl.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
-import { useLaden } from "./laden.js";
 import { useKuerzel } from "./tastatur.js";
 import type { Lageblatt } from "./blaetter.js";
 
@@ -27,7 +27,6 @@ export interface LageEigenschaften {
 }
 
 export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
-  const laden = useLaden();
   const [abschnittId, setzeAbschnittId] = useState<string | undefined>(undefined);
   const [einheitId, setzeEinheitId] = useState<string | undefined>(undefined);
   const [scannerOffen, setzeScannerOffen] = useState(false);
@@ -61,14 +60,7 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
           Erfassungsbogen einlesen
         </button>
         <Monitorwahl />
-        <button
-          type="button"
-          disabled={laden.lagebild === undefined || laden.lagebild.undoTiefe === 0}
-          onClick={() => void laden.zurueck()}
-        >
-          Rückgängig
-          {laden.lagebild?.undoObersteArt === undefined ? "" : ` (${laden.lagebild.undoObersteArt})`}
-        </button>
+        <Ruecknahme />
       </div>
 
       <div className="lagespalten" hidden={blatt !== "lage"}>

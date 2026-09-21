@@ -12,13 +12,19 @@
  * Escape kommt hinzu, weil ein Formular es nicht kennt.
  */
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 export interface MaskeEigenschaften {
   readonly titel: string;
-  /** Wird bei Enter und beim Bestätigungsknopf gerufen. */
-  readonly aufBestaetigen: () => void;
+  /**
+   * Wird bei Enter und beim Bestätigungsknopf gerufen.
+   *
+   * Gibt der Aufrufer ein Versprechen zurück, bleibt der Knopf bis zu dessen
+   * Ende gesperrt — sonst legt ein zweiter Druck denselben Vorgang ein
+   * zweites Mal an.
+   */
+  readonly aufBestaetigen: () => void | Promise<unknown>;
   /** Wird bei Escape und beim Abbrechen-Knopf gerufen. */
   readonly aufAbbrechen: () => void;
   readonly bestaetigungstext?: string;
@@ -43,6 +49,21 @@ export function Maske({
   children,
 }: MaskeEigenschaften): React.JSX.Element {
   const formular = useRef<HTMLFormElement>(null);
+  const [laeuft, setzeLaeuft] = useState(false);
+
+  // Ein zweiter Druck auf Bestätigen — oder ein zweites Enter — darf den
+  // Vorgang nicht wiederholen. Beim Anlegen entstünden sonst zwei Einheiten
+  // mit verschiedenen Kennungen, beim Verschieben zwei Bewegungen.
+  const bestaetigen = (): void => {
+    if (!bereit || laeuft) return;
+    const ergebnis = aufBestaetigen();
+    if (!(ergebnis instanceof Promise)) return;
+    setzeLaeuft(true);
+    void ergebnis.finally(() => {
+      // Bleibt die Maske nach einem Fehlschlag offen, ist sie wieder bedienbar.
+      if (formular.current?.isConnected) setzeLaeuft(false);
+    });
+  };
 
   useEffect(() => {
     // Der Fokus springt in das erste Feld. Ohne das müsste der Bediener nach
@@ -66,7 +87,7 @@ export function Maske({
         aria-label={titel}
         onSubmit={(ereignis) => {
           ereignis.preventDefault();
-          if (bereit) aufBestaetigen();
+          bestaetigen();
         }}
         onKeyDown={(ereignis) => {
           if (ereignis.key !== "Escape") return;
@@ -81,8 +102,8 @@ export function Maske({
         <h3>{titel}</h3>
         {children}
         <div className="maskenknoepfe">
-          <button type="submit" disabled={!bereit}>
-            {bestaetigungstext}
+          <button type="submit" disabled={!bereit || laeuft}>
+            {laeuft ? "…" : bestaetigungstext}
           </button>
           <button type="button" onClick={aufAbbrechen}>
             Abbrechen

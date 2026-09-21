@@ -243,6 +243,8 @@ export interface Laden {
   bediene(entwurf: Entwurf): Promise<Bedienergebnis | undefined>;
   zurueck(grund?: string): Promise<Bedienergebnis | undefined>;
   nimmMitteilung(mitteilung: Mitteilung): void;
+  /** Trägt einen Hinweis in die Leiste ein — für Antworten, die keine Maske öffnen. */
+  melde(stufe: Hinweis["stufe"], text: string): void;
   loescheFehler(): void;
 }
 
@@ -770,6 +772,10 @@ export const useLaden = create<Laden>((setze, hole) => {
       return mitFehlerbild(() =>
         rufe({ art: "zurueck", akteId, ...(grund === undefined ? {} : { grund }) }),
       );
+    },
+
+    melde(stufe, text) {
+      merkeHinweis(stufe, text);
     },
 
     nimmMitteilung(mitteilung) {

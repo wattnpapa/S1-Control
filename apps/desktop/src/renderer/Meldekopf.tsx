@@ -20,6 +20,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { Ruecknahme } from "./Ruecknahme.js";
 
 import { Eingangskorb } from "./Eingangskorb.js";
 import { Scanner } from "./Scanner.js";
@@ -74,13 +75,7 @@ export function Meldekopf(): React.JSX.Element {
         >
           Bogen scannen
         </button>
-        <button
-          type="button"
-          disabled={laden.lagebild === undefined || laden.lagebild.undoTiefe === 0}
-          onClick={() => void laden.zurueck()}
-        >
-          Rückgängig
-        </button>
+        <Ruecknahme />
       </div>
 
       {/* Der Baum wird geholt, weil die Auswahl oben ihn braucht — aber er
