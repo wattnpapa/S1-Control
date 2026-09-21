@@ -6,6 +6,8 @@ import {
   InlineFahrzeugEditor,
 } from '@renderer/components/editor/InlineEditors';
 import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
+import { useListenFilter } from '@renderer/app/useListenFilter';
+import { ListenFilterLeiste } from '@renderer/components/common/ListenFilterLeiste';
 import { AbschlussView } from '@renderer/components/views/AbschlussView';
 import { JournalView } from '@renderer/components/views/JournalView';
 import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
@@ -220,12 +222,18 @@ function FuehrungView(props: WorkspaceContentProps): JSX.Element {
  */
 function KraefteView(props: WorkspaceContentProps): JSX.Element {
   const einheitEditorsProps = toEinheitEditorsProps(props);
-  const einheiten =
+  const nachOrganisation =
     props.kraefteOrgFilter === 'ALLE'
       ? props.allKraefte
       : props.allKraefte.filter(
           (einheit) => einheit.organisation === props.kraefteOrgFilter,
         );
+  const filter = useListenFilter(nachOrganisation, (einheit) => [
+    einheit.nameImEinsatz,
+    einheit.abschnittName,
+    einheit.grFuehrerName ?? '',
+  ]);
+  const einheiten = filter.gefiltert;
   return (
     <>
       <EinheitEditors {...einheitEditorsProps} />
@@ -259,6 +267,14 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
           Einheit anlegen
         </button>
       </div>
+      <ListenFilterLeiste
+        suche={filter.suche}
+        onSucheChange={filter.setSuche}
+        statusFilter={filter.statusFilter}
+        onStatusFilterChange={filter.setStatusFilter}
+        platzhalter="Einheit, Abschnitt oder Führer suchen"
+        trefferText={`${einheiten.length} von ${props.allKraefte.length} Einheiten`}
+      />
       <KraefteOverviewTable
         einheiten={einheiten}
         isArchived={props.isArchived}
@@ -277,6 +293,13 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
  */
 function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
   const fahrzeugEditorProps = toFahrzeugEditorProps(props);
+  const filter = useListenFilter(props.allFahrzeuge, (fahrzeug) => [
+    fahrzeug.name,
+    fahrzeug.funkrufname ?? '',
+    fahrzeug.kennzeichen ?? '',
+    fahrzeug.abschnittName,
+    fahrzeug.einheitName ?? '',
+  ]);
   return (
     <>
       <FahrzeugEditor {...fahrzeugEditorProps} />
@@ -286,8 +309,16 @@ function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
       >
         Fahrzeug anlegen
       </button>
+      <ListenFilterLeiste
+        suche={filter.suche}
+        onSucheChange={filter.setSuche}
+        statusFilter={filter.statusFilter}
+        onStatusFilterChange={filter.setStatusFilter}
+        platzhalter="Fahrzeug, Funkrufname oder Kennzeichen suchen"
+        trefferText={`${filter.gefiltert.length} von ${props.allFahrzeuge.length} Fahrzeugen`}
+      />
       <FahrzeugeOverviewTable
-        fahrzeuge={props.allFahrzeuge}
+        fahrzeuge={filter.gefiltert}
         isArchived={props.isArchived}
         onMove={props.onMoveFahrzeug}
         onEdit={props.onEditFahrzeug}

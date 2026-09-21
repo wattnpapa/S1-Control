@@ -7,6 +7,7 @@ import { buildEntryProps, buildWorkspaceProps } from '@renderer/app/app-view-pro
 import { useAppCoreState } from '@renderer/app/useAppCoreState';
 import { useWorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
 import { useAnzeigeThema, type AnzeigeThema } from '@renderer/app/useAnzeigeThema';
+import { useOffeneAenderungen } from '@renderer/app/useOffeneAenderungen';
 
 /**
  * Holds root view model for the app root view switching.
@@ -132,6 +133,14 @@ export function useAppViewModel(): AppViewModel {
 
   const uiState = useWorkspaceUiState();
   const { thema, setThema } = useAnzeigeThema();
+  // Offene Editoren und Dialoge gelten als ungespeicherte Arbeit.
+  useOffeneAenderungen(
+    uiState.showEditEinheitDialog ||
+      uiState.showEditFahrzeugDialog ||
+      uiState.showCreateEinheitDialog ||
+      uiState.showCreateFahrzeugDialog ||
+      uiState.showCreateAbschnittDialog,
+  );
   const {
     derivedState,
     lockByEinheitId,

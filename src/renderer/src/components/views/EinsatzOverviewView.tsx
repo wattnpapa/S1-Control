@@ -24,6 +24,10 @@ interface EinsatzOverviewViewProps {
  * Handles Einsatz Overview View.
  */
 export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Element {
+  // Ein Statuswechsel muss sichtbar wirken, sonst bleibt er folgenlos.
+  const abgemeldete = props.details.einheiten.filter((einheit) => einheit.status === 'ABGEMELDET').length;
+  const ausserBetrieb = props.details.fahrzeuge.filter((fahrzeug) => fahrzeug.status === 'AUSSER_BETRIEB').length;
+
   return (
     <>
       <h2>Einsatz Übersicht</h2>
@@ -31,10 +35,12 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
         <div className="summary-card">
           <p>Einheiten im Abschnitt</p>
           <strong>{props.details.einheiten.length}</strong>
+          {abgemeldete > 0 && <span className="summary-zusatz">davon {abgemeldete} abgemeldet</span>}
         </div>
         <div className="summary-card">
           <p>Fahrzeuge im Abschnitt</p>
           <strong>{props.details.fahrzeuge.length}</strong>
+          {ausserBetrieb > 0 && <span className="summary-zusatz">davon {ausserBetrieb} außer Betrieb</span>}
         </div>
         <div className="summary-card">
           <p>Status</p>

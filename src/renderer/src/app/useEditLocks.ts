@@ -39,9 +39,11 @@ function useEditLockHeartbeat(params: {
   selectedEinsatzId: string;
   ownedEditLocks: OwnedEditLock[];
   refreshEditLocks: (einsatzId: string) => Promise<void>;
+  onWarnung: (meldung: string) => void;
 }) {
   const { ownedEditLocks, refreshEditLocks, selectedEinsatzId, sessionActive } = params;
   const heartbeatInFlightRef = useRef(false);
+  const fehlerFolgeRef = useRef(0);
   const lockRefreshTickRef = useRef(0);
   useEffect(() => {
     if (!sessionActive || !selectedEinsatzId || ownedEditLocks.length === 0) {
@@ -60,8 +62,18 @@ function useEditLockHeartbeat(params: {
               entityType: lock.entityType,
               entityId: lock.entityId,
             });
-          } catch {
-            // ignore transient refresh errors
+            fehlerFolgeRef.current = 0;
+          } catch (fehler) {
+            // Eine Sperre, die lautlos verfällt, kostet die Arbeit am Ende
+            // beim Speichern. Nach mehreren Fehlversuchen wird gewarnt.
+            fehlerFolgeRef.current += 1;
+            if (fehlerFolgeRef.current === 3) {
+              params.onWarnung(
+                'Die Bearbeitungssperre lässt sich gerade nicht auffrischen (' +
+                  (fehler instanceof Error ? fehler.message : String(fehler)) +
+                  '). Bitte die offene Bearbeitung bald speichern.',
+              );
+            }
           }
         }
         lockRefreshTickRef.current += 1;
@@ -143,7 +155,7 @@ export function useEditLocks(params: UseEditLocksParams): UseEditLocksResult {
   const lockByFahrzeugId = useMemo(() => indexLocksByType(editLocks, 'FAHRZEUG'), [editLocks]);
   const lockByAbschnittId = useMemo(() => indexLocksByType(editLocks, 'ABSCHNITT'), [editLocks]);
 
-  useEditLockHeartbeat({ sessionActive, selectedEinsatzId, ownedEditLocks, refreshEditLocks });
+  useEditLockHeartbeat({ sessionActive, selectedEinsatzId, ownedEditLocks, refreshEditLocks, onWarnung: onError });
 
   return {
     editLocks,

@@ -1061,6 +1061,30 @@ td.tactical-sign-cell.compact-sign-cell {
   min-height: 28px;
 }
 
+.listen-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.listen-filter input[type='search'] {
+  min-width: 260px;
+  flex: 1 1 260px;
+}
+
+.listen-filter-treffer {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.summary-zusatz {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+}
+
 .sicherung-fehler {
   color: var(--danger);
   font-weight: 700;

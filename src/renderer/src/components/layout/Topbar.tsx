@@ -109,12 +109,10 @@ export function Topbar(props: TopbarProps): JSX.Element {
         >
           Rückgängig
         </button>
-        <button onClick={props.onOpenStrengthDisplay} disabled={props.busy}>
-          Stärke-Monitor öffnen
-        </button>
-        <button onClick={props.onCloseStrengthDisplay} disabled={props.busy}>
-          Monitor schließen
-        </button>
+        {/* Anzeigefunktionen bleiben bedienbar, auch während geschrieben
+            wird: sie ändern nichts an den Einsatzdaten. */}
+        <button onClick={props.onOpenStrengthDisplay}>Stärke-Monitor öffnen</button>
+        <button onClick={props.onCloseStrengthDisplay}>Monitor schließen</button>
       </div>
     </header>
   );
