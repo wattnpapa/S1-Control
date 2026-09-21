@@ -71,17 +71,17 @@ Legende: [x] erledigt, [ ] offen.
 
 ## Darstellung und Bedienbarkeit
 
-- [ ] Kein Dark Mode, color-scheme fest auf hell (night P0-1)
-- [ ] Stärke-Monitor startet weiß, Umschalter unsichtbar und flüchtig (night P0-2)
-- [ ] Unsichtbare, aber aktive Eckflächen im Stärke-Monitor (glove P0-1)
-- [ ] Trefferflächen durchgängig zu klein, Löschen neben Speichern (glove P0-2, P1-1)
+- [x] Kein Dark Mode, color-scheme fest auf hell (night P0-1)
+- [x] Stärke-Monitor startet weiß, Umschalter unsichtbar und flüchtig (night P0-2)
+- [x] Unsichtbare, aber aktive Eckflächen im Stärke-Monitor (glove P0-1)
+- [x] Trefferflächen durchgängig zu klein, Löschen neben Speichern (glove P0-2, P1-1)
 - [x] Modale Dialoge ohne max-height und Scrollmöglichkeit (glove P0-3)
-- [ ] Zwei verwendete CSS-Klassen sind nicht definiert (glove P2-1, night P2-11)
+- [x] Zwei verwendete CSS-Klassen sind nicht definiert (glove P2-1, night P2-11)
 - [x] Overlays und Dialoge zu schwach abgedunkelt (night P2-7)
-- [ ] Ausgewählter Abschnitt kaum erkennbar, Kontrast 1,19:1 (night P1-3)
-- [ ] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)
+- [x] Ausgewählter Abschnitt kaum erkennbar, Kontrast 1,19:1 (night P1-3)
+- [x] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)
 - [x] Navigation nur als Einzelbuchstaben E/G/K/F (fünf Reviewer, P2/P3)
-- [ ] Kein Fokusstil, keine Rückmeldung beim Antippen (night P3-12, glove P2-4)
+- [x] Kein Fokusstil, keine Rückmeldung beim Antippen (night P3-12, glove P2-4)
 - [x] Icon-Aktionen ohne Beschriftung und Abstand — Entfernen ist abgesetzt (glove P1-2, new-user P2-2)
 
 ## Papier und Ausleitung

@@ -6,6 +6,7 @@ import { useAppControllers } from '@renderer/app/useAppControllers';
 import { buildEntryProps, buildWorkspaceProps } from '@renderer/app/app-view-props';
 import { useAppCoreState } from '@renderer/app/useAppCoreState';
 import { useWorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
+import { useAnzeigeThema, type AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 
 /**
  * Holds root view model for the app root view switching.
@@ -53,6 +54,8 @@ function toWorkspaceBuilderArgs(params: {
   bearbeiterName: string;
   onBearbeiterSpeichern: (name: string) => void;
   setError: (message: string | null) => void;
+  anzeigeThema: AnzeigeThema;
+  onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
   abschlussActions: ReturnType<typeof useAppControllers>['abschlussActions'];
 }): Parameters<typeof buildWorkspaceProps>[0] {
   return {
@@ -86,6 +89,8 @@ function toWorkspaceBuilderArgs(params: {
     bearbeiterName: params.bearbeiterName,
     onBearbeiterSpeichern: params.onBearbeiterSpeichern,
     setError: params.setError,
+    anzeigeThema: params.anzeigeThema,
+    onChangeAnzeigeThema: params.onChangeAnzeigeThema,
     abschlussActions: params.abschlussActions,
   };
 }
@@ -126,6 +131,7 @@ export function useAppViewModel(): AppViewModel {
   const [selectedAbschnittId, setSelectedAbschnittId] = useState('');
 
   const uiState = useWorkspaceUiState();
+  const { thema, setThema } = useAnzeigeThema();
   const {
     derivedState,
     lockByEinheitId,
@@ -200,6 +206,8 @@ export function useAppViewModel(): AppViewModel {
         abschlussActions,
         bearbeiterName: rootState.session?.name ?? '',
         setError: rootState.setError,
+        anzeigeThema: thema,
+        onChangeAnzeigeThema: setThema,
         onBearbeiterSpeichern: (name: string) => {
           void (async () => {
             try {

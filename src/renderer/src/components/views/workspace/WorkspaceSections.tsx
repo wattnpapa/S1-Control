@@ -316,6 +316,8 @@ function EinstellungenView(props: WorkspaceContentProps): JSX.Element {
       onRestoreBackup={props.onRestoreBackup}
       onCheckForUpdates={props.onCheckForUpdates}
       onToggleLanPeerUpdates={props.onToggleLanPeerUpdates}
+      anzeigeThema={props.anzeigeThema}
+      onChangeAnzeigeThema={props.onChangeAnzeigeThema}
     />
   );
 }

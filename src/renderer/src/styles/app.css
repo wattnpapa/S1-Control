@@ -1,17 +1,59 @@
 :root {
-  color-scheme: light;
+  color-scheme: light dark;
   font-family: "Lato", "Segoe UI", sans-serif;
   --thw-blue: #0038a8;
   --thw-blue-dark: #0a2764;
   --workspace: #1a1d21;
   --channel-rail: #23272f;
   --bg: #eef1f7;
+  --bg-verlauf: linear-gradient(135deg, #dde6fb 0%, var(--bg) 45%, #e9eef8 100%);
   --surface: #ffffff;
+  --surface-2: #f5f8fe;
   --ink: #1f2430;
   --muted: #5d6675;
   --brand: var(--thw-blue);
   --danger: #b42318;
   --border: #d8dfea;
+  --auswahl: #cfe0ff;
+  --auswahl-ink: #0b2350;
+  --fokus: #1a73e8;
+}
+
+/*
+ * Dunkle Darstellung für Nacht und abgedunkelte Führungsräume. Sie folgt der
+ * Einstellung des Betriebssystems und lässt sich in den Einstellungen fest
+ * auf hell oder dunkel stellen.
+ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='hell']) {
+    --bg: #12151c;
+    --bg-verlauf: linear-gradient(135deg, #10131a 0%, var(--bg) 45%, #141922 100%);
+    --surface: #1b2027;
+    --surface-2: #232933;
+    --ink: #e8edf7;
+    --muted: #a6b0c2;
+    --border: #39414f;
+    --auswahl: #1d3c78;
+    --auswahl-ink: #eaf1ff;
+    --thw-blue: #4d84e8;
+    --danger: #ff8a80;
+    --fokus: #7ab0ff;
+  }
+}
+
+:root[data-theme='dunkel'] {
+  --bg: #12151c;
+  --bg-verlauf: linear-gradient(135deg, #10131a 0%, var(--bg) 45%, #141922 100%);
+  --surface: #1b2027;
+  --surface-2: #232933;
+  --ink: #e8edf7;
+  --muted: #a6b0c2;
+  --border: #39414f;
+  --auswahl: #1d3c78;
+  --auswahl-ink: #eaf1ff;
+  --thw-blue: #4d84e8;
+  --danger: #ff8a80;
+  --fokus: #7ab0ff;
 }
 
 * {
@@ -20,7 +62,7 @@
 
 body {
   margin: 0;
-  background: linear-gradient(135deg, #dde6fb 0%, var(--bg) 45%, #e9eef8 100%);
+  background: var(--bg-verlauf);
   color: var(--ink);
 }
 
@@ -34,10 +76,22 @@ textarea {
 button {
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 6px 12px;
-  background: #f8fafe;
+  /* Mindesthöhe für die Bedienung mit Arbeitshandschuhen. */
+  min-height: 40px;
+  padding: 8px 14px;
+  background: var(--surface-2);
   color: var(--ink);
   cursor: pointer;
+}
+
+button:active:not(:disabled) {
+  transform: translateY(1px);
+  filter: brightness(0.95);
+}
+
+:focus-visible {
+  outline: 3px solid var(--fokus);
+  outline-offset: 2px;
 }
 
 button:hover:not(:disabled) {
@@ -46,7 +100,12 @@ button:hover:not(:disabled) {
 }
 
 button:disabled {
-  opacity: 0.6;
+  /* Nicht nur blasser: gesperrte Schaltflächen bekommen eine eigene Fläche,
+     sonst sind sie bei Sonne und im Dunkeln nicht zu unterscheiden. */
+  opacity: 0.75;
+  background: var(--bg);
+  border-style: dashed;
+  color: var(--muted);
   cursor: not-allowed;
 }
 
@@ -55,8 +114,10 @@ select,
 textarea {
   border: 1px solid var(--border);
   border-radius: 8px;
+  min-height: 40px;
   padding: 8px 10px;
-  background: #fff;
+  background: var(--surface);
+  color: var(--ink);
 }
 
 textarea {
@@ -444,7 +505,7 @@ textarea {
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
-  background: #fff;
+  background: var(--surface);
 }
 
 .summary-card p {
@@ -460,7 +521,7 @@ textarea {
 .export-panel {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   padding: 16px;
   display: grid;
   gap: 12px;
@@ -543,7 +604,7 @@ textarea {
   width: min(420px, 100%);
   border: 1px solid var(--border);
   border-radius: 10px;
-  background: #fff;
+  background: var(--surface);
   display: grid;
   grid-template-columns: 88px 1fr;
   box-shadow: 0 6px 16px rgba(20, 28, 45, 0.06);
@@ -720,14 +781,18 @@ textarea {
 }
 
 .tree-item.selected {
-  background: rgba(0, 56, 168, 0.42);
-  border-color: rgba(160, 196, 255, 0.48);
+  /* Der gewählte Abschnitt muss auf einen Blick erkennbar sein: volle
+     Fläche statt halbtransparenter Tönung, dazu eine Markierung links. */
+  background: #1d4ed8;
+  border-color: #93b4ff;
+  border-left: 5px solid #ffd54a;
   color: #fff;
+  font-weight: 700;
 }
 
 .tree-item.selected:hover:not(:disabled) {
-  background: rgba(0, 56, 168, 0.52);
-  border-color: rgba(160, 196, 255, 0.58);
+  background: #2563eb;
+  border-color: #b7cdff;
   color: #fff;
 }
 
@@ -754,8 +819,10 @@ th {
 }
 
 .table-icon-button {
-  width: 34px;
-  height: 34px;
+  /* Trefferfläche für grobe Fingerbewegungen. */
+  width: 44px;
+  height: 44px;
+  min-height: 44px;
   padding: 0;
   display: inline-flex;
   align-items: center;
@@ -846,7 +913,7 @@ td.tactical-sign-cell.compact-sign-cell {
 }
 
 .modal {
-  background: white;
+  background: var(--surface);
   border-radius: 10px;
   padding: 16px;
   min-width: 300px;
@@ -924,6 +991,28 @@ td.tactical-sign-cell.compact-sign-cell {
 .feld-hinweis {
   font-size: 12px;
   color: var(--muted, #4a4a4a);
+}
+
+.inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.settings-toggle {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+}
+
+.settings-block {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: grid;
+  gap: 10px;
 }
 
 .move-objekt {
@@ -1006,7 +1095,7 @@ td.tactical-sign-cell.compact-sign-cell {
 .inline-editor {
   border: 1px solid var(--border);
   border-radius: 12px;
-  background: #fff;
+  background: var(--surface);
   padding: 10px;
   margin-bottom: 12px;
 }
@@ -1105,7 +1194,7 @@ td.tactical-sign-cell.compact-sign-cell {
   height: 28px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  background: #fff;
+  background: var(--surface);
   color: #3d4a67;
   display: inline-flex;
   align-items: center;
@@ -1159,7 +1248,7 @@ td.tactical-sign-cell.compact-sign-cell {
 
 .overlay-panel {
   width: min(420px, 90vw);
-  background: #fff;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
   padding: 18px;
@@ -1217,6 +1306,8 @@ td.tactical-sign-cell.compact-sign-cell {
   min-height: 100vh;
   background: #ffffff;
   color: #000000;
+  /* Die Wahl hell/dunkel bleibt erhalten; im Dunkelmodus startet die
+     Anzeige dunkel, statt den Raum aufzuhellen. */
   display: grid;
   place-items: center;
   user-select: none;
@@ -1226,6 +1317,28 @@ td.tactical-sign-cell.compact-sign-cell {
 .strength-display.is-inverted {
   background: #000000;
   color: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='hell']) .strength-display:not(.is-inverted) {
+    background: #000000;
+    color: #ffffff;
+  }
+
+  :root:not([data-theme='hell']) .strength-display.is-inverted {
+    background: #ffffff;
+    color: #000000;
+  }
+}
+
+:root[data-theme='dunkel'] .strength-display:not(.is-inverted) {
+  background: #000000;
+  color: #ffffff;
+}
+
+:root[data-theme='dunkel'] .strength-display.is-inverted {
+  background: #ffffff;
+  color: #000000;
 }
 
 .strength-display-inner {
@@ -1266,12 +1379,14 @@ td.tactical-sign-cell.compact-sign-cell {
 .strength-display-corner {
   position: fixed;
   top: 0;
-  width: 180px;
-  height: 120px;
+  /* Nur die Schaltfläche selbst nimmt Eingaben an. Die alte Großfläche
+     reagierte auch dort, wo nichts zu sehen war, und schloss die Anzeige. */
+  width: 74px;
+  height: 74px;
   z-index: 50;
   display: flex;
   align-items: flex-start;
-  pointer-events: auto;
+  pointer-events: none;
 }
 
 .strength-display-corner-left {
@@ -1287,8 +1402,9 @@ td.tactical-sign-cell.compact-sign-cell {
 }
 
 .strength-display-corner-button {
-  width: 42px;
-  height: 42px;
+  pointer-events: auto;
+  width: 48px;
+  height: 48px;
   border-radius: 999px;
   border: 1px solid rgba(120, 138, 173, 0.5);
   background: rgba(255, 255, 255, 0.92);
@@ -1299,9 +1415,10 @@ td.tactical-sign-cell.compact-sign-cell {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  opacity: 0;
-  transform: translateY(-8px);
-  transition: opacity 150ms ease, transform 150ms ease, background-color 150ms ease;
+  /* Sichtbar, aber zurückhaltend: eine Schaltfläche, die man erst durch
+     Herumfahren findet, gibt es im Einsatz nicht. */
+  opacity: 0.45;
+  transition: opacity 150ms ease, background-color 150ms ease;
 }
 
 .strength-display.is-inverted .strength-display-corner-button {
@@ -1313,7 +1430,6 @@ td.tactical-sign-cell.compact-sign-cell {
 .strength-display-corner:hover .strength-display-corner-button,
 .strength-display-corner:focus-within .strength-display-corner-button {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .strength-display-corner-button:hover {

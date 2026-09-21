@@ -1,5 +1,6 @@
 import { UpdaterNotices } from '@renderer/components/common/UpdaterUi';
 import { Topbar } from '@renderer/components/layout/Topbar';
+import type { AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 import { BearbeiterDialog } from '@renderer/components/dialogs/BearbeiterDialog';
 import { WorkspaceDialogs } from '@renderer/components/views/WorkspaceDialogs';
 import { WorkspaceMainArea } from '@renderer/components/views/WorkspaceMainArea';
@@ -167,6 +168,8 @@ export interface AppWorkspaceShellProps {
   onSplitEinheit: (id: string) => void;
   onRemoveEinheit: (id: string) => void;
   onExportEinsatzakte: () => void;
+  anzeigeThema: AnzeigeThema;
+  onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
   onBeendeEinsatz: () => void;
   onArchiviereEinsatz: () => void;
   onOeffneEinsatzWieder: () => void;
@@ -256,6 +259,8 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onSplitEinheit: props.onSplitEinheit,
     onRemoveEinheit: props.onRemoveEinheit,
     onExportEinsatzakte: props.onExportEinsatzakte,
+    anzeigeThema: props.anzeigeThema,
+    onChangeAnzeigeThema: props.onChangeAnzeigeThema,
     onBeendeEinsatz: props.onBeendeEinsatz,
     onArchiviereEinsatz: props.onArchiviereEinsatz,
     onOeffneEinsatzWieder: props.onOeffneEinsatzWieder,

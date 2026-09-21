@@ -1,4 +1,5 @@
 import type { ActiveClientInfo, PeerUpdateStatus } from '@shared/types';
+import type { AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 import type { JSX } from 'react';
 
 interface SettingsViewProps {
@@ -15,6 +16,8 @@ interface SettingsViewProps {
   onRestoreBackup: () => void;
   onCheckForUpdates: () => void;
   onToggleLanPeerUpdates: (enabled: boolean) => void;
+  anzeigeThema: AnzeigeThema;
+  onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
 }
 
 /**
@@ -217,6 +220,22 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
   return (
     <div className="export-panel settings-panel">
       <h2>Einstellungen</h2>
+
+      <fieldset className="settings-block">
+        <legend>Anzeige</legend>
+        <label className="settings-toggle">
+          Darstellung
+          <select
+            value={props.anzeigeThema}
+            onChange={(event) => props.onChangeAnzeigeThema(event.target.value as AnzeigeThema)}
+          >
+            <option value="automatisch">Automatisch (wie das System)</option>
+            <option value="hell">Hell</option>
+            <option value="dunkel">Dunkel (Nacht, abgedunkelter Raum)</option>
+          </select>
+        </label>
+      </fieldset>
+
       <label>
         Einsatz-Verzeichnis
         <input value={props.dbPath} onChange={(e) => props.onChangeDbPath(e.target.value)} />
@@ -224,8 +243,13 @@ export function SettingsView(props: SettingsViewProps): JSX.Element {
       <button onClick={props.onSaveDbPath} disabled={props.busy}>
         Verzeichnis speichern
       </button>
-      <button onClick={props.onRestoreBackup} disabled={props.busy || !props.selectedEinsatzId}>
-        Backup laden
+      <button
+        className="btn-gefahr-schlicht"
+        onClick={props.onRestoreBackup}
+        disabled={props.busy || !props.selectedEinsatzId}
+        title="Ersetzt den aktuellen Stand durch eine Sicherung"
+      >
+        Sicherung einspielen (ersetzt den aktuellen Stand)
       </button>
       <button onClick={props.onCheckForUpdates} disabled={props.busy}>
         Auf Updates prüfen

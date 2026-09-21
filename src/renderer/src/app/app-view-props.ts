@@ -7,6 +7,7 @@ import type { useFahrzeugActions } from '@renderer/app/useFahrzeugActions';
 import type { useFahrzeugRemoveActions } from '@renderer/app/useFahrzeugRemoveActions';
 import type { useSystemActions } from '@renderer/app/useSystemActions';
 import type { useUndoAction } from '@renderer/app/useUndoAction';
+import type { AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 import type { useAbschlussActions } from '@renderer/app/useAbschlussActions';
 import type { useEinsatzBasisdatenActions } from '@renderer/app/useEinsatzBasisdatenActions';
 
@@ -98,6 +99,8 @@ export interface BuildWorkspacePropsArgs {
   bearbeiterName: string;
   onBearbeiterSpeichern: (name: string) => void;
   setError: (message: string | null) => void;
+  anzeigeThema: AnzeigeThema;
+  onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
   abschlussActions: ReturnType<typeof useAbschlussActions>;
 }
 
@@ -139,6 +142,7 @@ function buildWorkspaceStateProps(
     staerkeUebersicht: args.uiState.staerkeUebersicht,
     undoMoeglich: args.undoAction.undoMoeglich,
     bearbeiterName: args.bearbeiterName,
+    anzeigeThema: args.anzeigeThema,
     showBearbeiterDialog: args.uiState.showBearbeiterDialog,
     updaterState: args.updaterState,
     kraefteOrgFilter: args.uiState.kraefteOrgFilter,
@@ -208,6 +212,7 @@ type WorkspaceCallbacks = Pick<
   | 'onUndo'
   | 'onBearbeiterWechseln'
   | 'onCloseError'
+  | 'onChangeAnzeigeThema'
   | 'onBearbeiterSpeichern'
   | 'onCloseBearbeiter'
   | 'onOpenStrengthDisplay'
@@ -271,6 +276,7 @@ function buildWorkspaceCallbacks(
     onUndo: args.undoAction.undoLast,
     onBearbeiterWechseln: () => args.uiState.setShowBearbeiterDialog(true),
     onCloseError: () => args.setError(null),
+    onChangeAnzeigeThema: args.onChangeAnzeigeThema,
     onBearbeiterSpeichern: args.onBearbeiterSpeichern,
     onCloseBearbeiter: () => args.uiState.setShowBearbeiterDialog(false),
     onOpenStrengthDisplay: args.systemActions.openStrengthDisplay,

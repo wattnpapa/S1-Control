@@ -8,6 +8,7 @@ import type {
   PeerUpdateStatus,
   RecordEditLockInfo,
 } from '@shared/types';
+import type { AnzeigeThema } from '@renderer/app/useAnzeigeThema';
 import type {
   CreateEinheitForm,
   EditEinsatzForm,
@@ -114,6 +115,8 @@ export interface WorkspaceContentProps {
   onSplitEinheit: (id: string) => void;
   onRemoveEinheit: (id: string) => void;
   onExportEinsatzakte: () => void;
+  anzeigeThema: AnzeigeThema;
+  onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
   onBeendeEinsatz: () => void;
   onArchiviereEinsatz: () => void;
   onOeffneEinsatzWieder: () => void;
