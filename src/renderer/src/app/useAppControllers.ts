@@ -7,6 +7,7 @@ import { useStartActions } from '@renderer/app/useStartActions';
 import { useSyncEvents } from '@renderer/app/useSyncEvents';
 import { useSystemActions } from '@renderer/app/useSystemActions';
 import { useUndoAction } from './useUndoAction';
+import { useAbschlussActions } from './useAbschlussActions';
 import { useWorkspaceDerivedState } from '@renderer/app/useWorkspaceDerivedState';
 import { useWorkspaceLifecycle } from '@renderer/app/useWorkspaceLifecycle';
 import type { WorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
@@ -181,6 +182,14 @@ function useStartAndSystemActions(
     setMoveTarget: uiState.setMoveTarget,
     withBusy,
   });
+  const abschlussActions = useAbschlussActions({
+    selectedEinsatzId: params.rootState.selectedEinsatzId,
+    einsatzName: params.rootState.einsaetze.find((e) => e.id === params.rootState.selectedEinsatzId)?.name ?? '',
+    refreshEinsaetze: dataState.refreshEinsaetze,
+    refreshCurrentEinsatz: dataState.refreshCurrentEinsatz,
+    setError: params.rootState.setError,
+    withBusy,
+  });
   const undoAction = useUndoAction({
     selectedEinsatzId: rootState.selectedEinsatzId,
     isArchived,
@@ -188,7 +197,7 @@ function useStartAndSystemActions(
     setError: rootState.setError,
     withBusy,
   });
-  return { startActions, systemActions, undoAction };
+  return { startActions, systemActions, undoAction, abschlussActions };
 }
 
 /**
@@ -253,7 +262,7 @@ export function useAppControllers(params: UseAppControllersParams) {
   const dataState = useLifecycleAndDataState(params, lockState);
   const withBusy = createWithBusy(params.rootState);
   useRuntimeSync(params, dataState, withBusy);
-  const { startActions, systemActions, undoAction } = useStartAndSystemActions(
+  const { startActions, systemActions, undoAction, abschlussActions } = useStartAndSystemActions(
     params,
     dataState,
     withBusy,
@@ -284,6 +293,7 @@ export function useAppControllers(params: UseAppControllersParams) {
     startActions,
     systemActions,
     undoAction,
+    abschlussActions,
     abschnittActions,
     fahrzeugActions,
     einheitActions,

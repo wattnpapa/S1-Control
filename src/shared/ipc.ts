@@ -193,6 +193,8 @@ export interface RendererApi {
     perfSafeMode: boolean;
   }>;
   getSession(): Promise<SessionUser | null>;
+  /** Setzt den Namen des Bearbeiters dieser Sitzung für die Protokolle. */
+  setBearbeiter(name: string): Promise<SessionUser>;
   login(input: LoginInput): Promise<SessionUser>;
   logout(): Promise<void>;
   getSettings(): Promise<AppSettings>;
@@ -206,6 +208,8 @@ export interface RendererApi {
   createEinsatz(input: CreateEinsatzInput): Promise<EinsatzListItem>;
   createEinsatzWithDialog(input: CreateEinsatzInput): Promise<EinsatzListItem | null>;
   archiveEinsatz(einsatzId: string): Promise<void>;
+  /** Setzt den Einsatzstatus: laufend, beendet oder archiviert. */
+  setEinsatzStatus(input: { einsatzId: string; status: 'AKTIV' | 'BEENDET' | 'ARCHIVIERT' }): Promise<void>;
   updateEinsatz(input: UpdateEinsatzInput): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
@@ -317,6 +321,7 @@ export const IPC_CHANNEL = {
   GET_RUNTIME_FLAGS: 'app:get-runtime-flags',
   GET_SESSION: 'session:get',
   LOGIN: 'auth:login',
+  SET_BEARBEITER: 'auth:set-bearbeiter',
   LOGOUT: 'auth:logout',
   GET_SETTINGS: 'settings:get',
   SET_DB_PATH: 'settings:set-db-path',
@@ -362,6 +367,7 @@ export const IPC_CHANNEL = {
   REMOVE_EINHEIT: 'einheit:remove',
   REMOVE_FAHRZEUG: 'fahrzeug:remove',
   REMOVE_ABSCHNITT: 'abschnitt:remove',
+  SET_EINSATZ_STATUS: 'einsatz:set-status',
   OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',

@@ -7,6 +7,7 @@ import type { useFahrzeugActions } from '@renderer/app/useFahrzeugActions';
 import type { useFahrzeugRemoveActions } from '@renderer/app/useFahrzeugRemoveActions';
 import type { useSystemActions } from '@renderer/app/useSystemActions';
 import type { useUndoAction } from '@renderer/app/useUndoAction';
+import type { useAbschlussActions } from '@renderer/app/useAbschlussActions';
 import type { useEinsatzBasisdatenActions } from '@renderer/app/useEinsatzBasisdatenActions';
 
 type WorkspaceDerivedState = ReturnType<typeof useWorkspaceDerivedState>;
@@ -57,6 +58,8 @@ export function buildEntryProps(args: BuildEntryPropsArgs): AppEntryViewProps {
     onOpenReleasePage: args.openReleasePage,
     onOpenExisting: args.openExisting,
     onOpenKnownEinsatz: args.openKnownEinsatz,
+    // Entwicklerwerkzeuge gehören nicht in die Bedienoberfläche im Einsatz.
+    zeigeEntwicklerwerkzeuge: import.meta.env.DEV,
     onCreate: args.createEinsatz,
   };
 }
@@ -92,6 +95,9 @@ export interface BuildWorkspacePropsArgs {
   fahrzeugActions: ReturnType<typeof useFahrzeugActions> & ReturnType<typeof useFahrzeugRemoveActions>;
   systemActions: ReturnType<typeof useSystemActions>;
   undoAction: ReturnType<typeof useUndoAction>;
+  bearbeiterName: string;
+  onBearbeiterSpeichern: (name: string) => void;
+  abschlussActions: ReturnType<typeof useAbschlussActions>;
 }
 
 /**
@@ -131,6 +137,8 @@ function buildWorkspaceStateProps(
     gesamtStaerke: args.uiState.gesamtStaerke,
     staerkeUebersicht: args.uiState.staerkeUebersicht,
     undoMoeglich: args.undoAction.undoMoeglich,
+    bearbeiterName: args.bearbeiterName,
+    showBearbeiterDialog: args.uiState.showBearbeiterDialog,
     updaterState: args.updaterState,
     kraefteOrgFilter: args.uiState.kraefteOrgFilter,
     setKraefteOrgFilter: args.uiState.setKraefteOrgFilter,
@@ -187,6 +195,9 @@ function buildWorkspaceStateProps(
 type WorkspaceCallbacks = Pick<
   AppWorkspaceShellProps,
   | 'onUndo'
+  | 'onBearbeiterWechseln'
+  | 'onBearbeiterSpeichern'
+  | 'onCloseBearbeiter'
   | 'onOpenStrengthDisplay'
   | 'onCloseStrengthDisplay'
   | 'onCheckForUpdates'
@@ -212,6 +223,10 @@ type WorkspaceCallbacks = Pick<
   | 'onEditAbschnitt'
   | 'onSplitEinheit'
   | 'onRemoveEinheit'
+  | 'onExportEinsatzakte'
+  | 'onBeendeEinsatz'
+  | 'onArchiviereEinsatz'
+  | 'onOeffneEinsatzWieder'
   | 'onRemoveFahrzeug'
   | 'onMoveFahrzeug'
   | 'onEditFahrzeug'
@@ -242,6 +257,9 @@ function buildWorkspaceCallbacks(
   const storageCallbacks = buildWorkspaceStorageCallbacks(args);
   return {
     onUndo: args.undoAction.undoLast,
+    onBearbeiterWechseln: () => args.uiState.setShowBearbeiterDialog(true),
+    onBearbeiterSpeichern: args.onBearbeiterSpeichern,
+    onCloseBearbeiter: () => args.uiState.setShowBearbeiterDialog(false),
     onOpenStrengthDisplay: args.systemActions.openStrengthDisplay,
     onCloseStrengthDisplay: args.systemActions.closeStrengthDisplay,
     onDownloadUpdate: args.systemActions.downloadUpdate,
@@ -266,6 +284,10 @@ function buildWorkspaceCallbacks(
     onEditEinheit: args.einheitActions.openEditDialog,
     onSplitEinheit: args.einheitActions.openSplitDialog,
     onRemoveEinheit: args.einheitActions.removeEinheit,
+    onExportEinsatzakte: args.abschlussActions.exportEinsatzakte,
+    onBeendeEinsatz: args.abschlussActions.beendeEinsatz,
+    onArchiviereEinsatz: args.abschlussActions.archiviereEinsatz,
+    onOeffneEinsatzWieder: args.abschlussActions.oeffneEinsatzWieder,
     onRemoveFahrzeug: args.fahrzeugActions.removeFahrzeug,
     onMoveFahrzeug: moveCallbacks.onMoveFahrzeug,
     onEditFahrzeug: args.fahrzeugActions.openEditDialog,

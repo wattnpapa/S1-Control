@@ -66,6 +66,25 @@ export function login(ctx: DbContext, name: string, passwort: string): SessionUs
   return { id: row.id, name: row.name, rolle: row.rolle as BenutzerRolle };
 }
 
+/**
+ * Legt den Bearbeiter dieser Sitzung fest.
+ *
+ * Ohne Namen stehen alle Eintragungen auf demselben Sammelkonto; bei einer
+ * Übergabe ist dann nicht mehr nachvollziehbar, wer was erfasst hat.
+ */
+export function setzeBearbeiter(ctx: DbContext, name: string): SessionUser {
+  const sauber = name.trim();
+  if (!sauber) {
+    throw new AppError('Bitte einen Namen angeben.', 'INVALID_INPUT');
+  }
+  const vorhanden = ctx.system.benutzer.find((b) => b.name === sauber);
+  if (vorhanden) {
+    return { id: vorhanden.id, name: vorhanden.name, rolle: vorhanden.rolle as BenutzerRolle };
+  }
+  const neu: SessionUser = { id: crypto.randomUUID(), name: sauber, rolle: 'S1' };
+  return ensureSessionUserInSystem(ctx.system, neu);
+}
+
 export function ensureSessionUserRecord(ctx: DbContext, user: SessionUser): SessionUser {
   return ensureSessionUserInSystem(ctx.system, user);
 }

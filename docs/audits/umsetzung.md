@@ -43,18 +43,18 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] Statuswechsel ABGEMELDET/AUSSER_BETRIEB bleibt folgenlos (destructive P1-4)
 - [ ] Abschnitt umhängen wirkt auf den ganzen Teilbaum ohne Rückfrage (destructive P1-6)
 - [ ] Move, Split und Undo umgehen die Bearbeitungssperre (destructive P1-7)
-- [ ] Archivieren ist einseitig, archivierter Einsatz nicht mehr einsehbar (workflow P1-7, analog P3-3)
+- [x] Archivieren ist einseitig — Beenden und Archivieren sind jetzt umkehrbar (workflow P1-7, analog P3-3)
 
 - [x] Entwicklerbegriffe "Systemtyp" und "Parent-Abschnitt", Abschnittsart ohne Erklärung (new-user P3-2, P2-3)
 
 ## Abläufe und Erreichbarkeit
 
-- [ ] Export und Einsatzakte aus der Oberfläche nicht erreichbar (fünf Reviewer, P0)
-- [ ] Einsatz beenden, schließen oder wechseln nur über "Verzeichnis speichern" (new-user P0-4, workflow P1-2)
-- [ ] Anmeldung läuft unsichtbar als admin, LoginView ist toter Code (workflow P1-1)
+- [x] Export und Einsatzakte aus der Oberfläche nicht erreichbar (fünf Reviewer, P0)
+- [x] Einsatz beenden, schließen oder wechseln nur über "Verzeichnis speichern" (new-user P0-4, workflow P1-2)
+- [x] Anmeldung läuft unsichtbar als admin — Bearbeitername ist sichtbar und setzbar (workflow P1-1)
 - [ ] Stärke doppelt pflegen: Zahlenfelder und Helferliste (workflow P1-5)
 - [ ] Aktionen brechen ohne Rückmeldung ab (workflow P1-6, stress P1-2)
-- [ ] Entwicklerwerkzeuge in Start- und Hauptansicht (mehrere Reviewer, P1/P2)
+- [x] Entwicklerwerkzeuge in Start- und Hauptansicht (mehrere Reviewer, P1/P2)
 - [ ] Abschnitt anlegen erzwingt Ansichtswechsel (workflow P2-1)
 
 ## Eingabe, Fehler, Unterbrechung
@@ -80,7 +80,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Overlays und Dialoge zu schwach abgedunkelt (night P2-7)
 - [ ] Ausgewählter Abschnitt kaum erkennbar, Kontrast 1,19:1 (night P1-3)
 - [ ] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)
-- [ ] Navigation nur als Einzelbuchstaben E/G/K/F (fünf Reviewer, P2/P3)
+- [x] Navigation nur als Einzelbuchstaben E/G/K/F (fünf Reviewer, P2/P3)
 - [ ] Kein Fokusstil, keine Rückmeldung beim Antippen (night P3-12, glove P2-4)
 - [x] Icon-Aktionen ohne Beschriftung und Abstand — Entfernen ist abgesetzt (glove P1-2, new-user P2-2)
 

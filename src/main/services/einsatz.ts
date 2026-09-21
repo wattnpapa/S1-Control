@@ -9,6 +9,7 @@ export {
 } from './einsatz-read-service';
 export {
   archiveEinsatz,
+  setEinsatzStatus,
   updateEinsatz,
   createAbschnitt,
   createEinheit,

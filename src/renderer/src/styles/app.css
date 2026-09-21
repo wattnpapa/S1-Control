@@ -357,20 +357,30 @@ textarea {
   border-right: 1px solid #0d1017;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: stretch;
   gap: 10px;
   padding: 12px 8px;
+  min-width: 96px;
 }
 
 .rail-button {
-  width: 42px;
-  height: 42px;
+  min-width: 80px;
+  min-height: 56px;
   border-radius: 12px;
   border: 1px solid transparent;
   background: #2a2f38;
   color: #d8e1f5;
   font-weight: 700;
-  padding: 0;
+  padding: 6px 4px;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+}
+
+.rail-text {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .rail-button:hover:not(:disabled) {
@@ -927,6 +937,49 @@ td.tactical-sign-cell.compact-sign-cell {
 .move-ziel-label select {
   min-height: 44px;
   font-size: 15px;
+}
+
+.topbar-bearbeiter {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: inherit;
+  font: inherit;
+  padding: 2px 8px;
+  border-radius: 6px;
+  min-height: 28px;
+}
+
+.abschluss-panel {
+  display: grid;
+  gap: 18px;
+  max-width: 720px;
+}
+
+.abschluss-block {
+  border: 1px solid var(--border, #d7dde5);
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.abschluss-block h3 {
+  margin: 0;
+}
+
+.abschluss-block p {
+  margin: 0;
+}
+
+.abschluss-aktionen {
+  display: flex;
+  gap: 12px;
+}
+
+.abschluss-panel button {
+  min-height: 44px;
+  justify-self: start;
+  padding: 0 18px;
 }
 
 .topbar-meta-note {

@@ -13,6 +13,8 @@ interface TopbarProps {
   onCloseStrengthDisplay: () => void;
   undoMoeglich: boolean;
   onUndo: () => void;
+  bearbeiterName: string;
+  onBearbeiterWechseln: () => void;
   busy: boolean;
 }
 
@@ -50,6 +52,17 @@ export function Topbar(props: TopbarProps): JSX.Element {
           <span className="topbar-meta-label">Stärke vor Ort</span>
           <span className="topbar-meta-value">{toTaktischeStaerke(props.gesamtStaerke)}</span>
           {zusatz && <span className="topbar-meta-note">{zusatz}</span>}
+        </span>
+        <span className="topbar-meta-item">
+          <span className="topbar-meta-label">Bearbeiter</span>
+          <button
+            className="topbar-bearbeiter"
+            onClick={props.onBearbeiterWechseln}
+            disabled={props.busy}
+            title="Namen ändern — er steht an jeder Eintragung"
+          >
+            {props.bearbeiterName || 'nicht gesetzt'}
+          </button>
         </span>
         <span className="topbar-meta-item">
           <span className="topbar-meta-label">Zeit</span>

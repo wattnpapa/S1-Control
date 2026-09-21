@@ -8,7 +8,6 @@ interface EinsatzOverviewViewProps {
   details: AbschnittDetails;
   selectedEinsatz: EinsatzListItem | null;
   isArchived: boolean;
-  broadcastLogs: string[];
   einheitLocksById?: Record<string, RecordEditLockInfo | undefined>;
   fahrzeugLocksById?: Record<string, RecordEditLockInfo | undefined>;
   onMoveEinheit: (id: string) => void;
@@ -60,10 +59,6 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
         onEdit={props.onEditFahrzeug}
         onRemove={props.onRemoveFahrzeug}
       />
-      <h3>UDP Broadcast Monitor</h3>
-      <div className="debug-log-panel">
-        <pre>{props.broadcastLogs.length ? props.broadcastLogs.join('\n') : 'Noch keine Broadcast-Nachrichten empfangen.'}</pre>
-      </div>
     </>
   );
 }

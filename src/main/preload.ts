@@ -5,6 +5,7 @@ import type { EinsatzChangedSignal } from '../shared/types';
 const api: RendererApi = {
   getRuntimeFlags: () => ipcRenderer.invoke(IPC_CHANNEL.GET_RUNTIME_FLAGS),
   getSession: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SESSION),
+  setBearbeiter: (name: string) => ipcRenderer.invoke(IPC_CHANNEL.SET_BEARBEITER, name),
   login: (input) => ipcRenderer.invoke(IPC_CHANNEL.LOGIN, input),
   logout: () => ipcRenderer.invoke(IPC_CHANNEL.LOGOUT),
   getSettings: () => ipcRenderer.invoke(IPC_CHANNEL.GET_SETTINGS),
@@ -56,6 +57,8 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC_CHANNEL.REMOVE_FAHRZEUG, input),
   removeAbschnitt: (input: { einsatzId: string; abschnittId: string }) =>
     ipcRenderer.invoke(IPC_CHANNEL.REMOVE_ABSCHNITT, input),
+  setEinsatzStatus: (input: { einsatzId: string; status: 'AKTIV' | 'BEENDET' | 'ARCHIVIERT' }) =>
+    ipcRenderer.invoke(IPC_CHANNEL.SET_EINSATZ_STATUS, input),
   openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>

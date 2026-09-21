@@ -14,6 +14,8 @@ interface StartViewProps {
   appVersion?: string;
   onCheckForUpdates: () => void;
   onOpenMainDevTools: () => void;
+  /** Entwicklerwerkzeuge erscheinen nur, wenn sie ausdrücklich verlangt werden. */
+  zeigeEntwicklerwerkzeuge: boolean;
   onOpenExisting: () => void;
   onOpenKnownEinsatz: (einsatzId: string) => void;
   onCreate: () => void;
@@ -40,9 +42,9 @@ export function StartView(props: StartViewProps): JSX.Element {
           <button onClick={props.onCheckForUpdates} disabled={props.busy}>
             Auf Updates prüfen
           </button>
-          <button onClick={props.onOpenMainDevTools}>
-            DevTools öffnen
-          </button>
+          {props.zeigeEntwicklerwerkzeuge && (
+            <button onClick={props.onOpenMainDevTools}>DevTools öffnen</button>
+          )}
         </div>
 
         <div className="start-options">

@@ -113,6 +113,10 @@ export interface WorkspaceContentProps {
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
   onRemoveEinheit: (id: string) => void;
+  onExportEinsatzakte: () => void;
+  onBeendeEinsatz: () => void;
+  onArchiviereEinsatz: () => void;
+  onOeffneEinsatzWieder: () => void;
   onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;

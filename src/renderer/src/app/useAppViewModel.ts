@@ -50,6 +50,9 @@ function toWorkspaceBuilderArgs(params: {
   fahrzeugActions: ReturnType<typeof useAppControllers>['fahrzeugActions'];
   systemActions: ReturnType<typeof useAppControllers>['systemActions'];
   undoAction: ReturnType<typeof useAppControllers>['undoAction'];
+  bearbeiterName: string;
+  onBearbeiterSpeichern: (name: string) => void;
+  abschlussActions: ReturnType<typeof useAppControllers>['abschlussActions'];
 }): Parameters<typeof buildWorkspaceProps>[0] {
   return {
     busy: params.rootState.busy,
@@ -79,6 +82,9 @@ function toWorkspaceBuilderArgs(params: {
     fahrzeugActions: params.fahrzeugActions,
     systemActions: params.systemActions,
     undoAction: params.undoAction,
+    bearbeiterName: params.bearbeiterName,
+    onBearbeiterSpeichern: params.onBearbeiterSpeichern,
+    abschlussActions: params.abschlussActions,
   };
 }
 
@@ -129,6 +135,7 @@ export function useAppViewModel(): AppViewModel {
     startActions,
     systemActions,
     undoAction,
+    abschlussActions,
     abschnittActions,
     fahrzeugActions,
     einheitActions,
@@ -188,6 +195,18 @@ export function useAppViewModel(): AppViewModel {
         fahrzeugActions,
         systemActions,
         undoAction,
+        abschlussActions,
+        bearbeiterName: rootState.session?.name ?? '',
+        onBearbeiterSpeichern: (name: string) => {
+          void (async () => {
+            try {
+              rootState.setSession(await window.api.setBearbeiter(name));
+              uiState.setShowBearbeiterDialog(false);
+            } catch (error) {
+              rootState.setError(error instanceof Error ? error.message : String(error));
+            }
+          })();
+        },
         einsatzBasisdatenActions,
       }),
     ),

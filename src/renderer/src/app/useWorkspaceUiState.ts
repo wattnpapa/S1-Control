@@ -83,6 +83,8 @@ export interface WorkspaceUiStateResult {
   setGesamtStaerke: Dispatch<SetStateAction<TacticalStrength>>;
   staerkeUebersicht: StaerkeUebersicht;
   setStaerkeUebersicht: Dispatch<SetStateAction<StaerkeUebersicht>>;
+  showBearbeiterDialog: boolean;
+  setShowBearbeiterDialog: Dispatch<SetStateAction<boolean>>;
   activeClients: ActiveClientInfo[];
   setActiveClients: Dispatch<SetStateAction<ActiveClientInfo[]>>;
   peerUpdateStatus: PeerUpdateStatus | null;
@@ -190,6 +192,7 @@ function useWorkspaceRuntimeUiState() {
   const [kraefteOrgFilter, setKraefteOrgFilter] = useState<OrganisationKey | 'ALLE'>('ALLE');
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
   const [staerkeUebersicht, setStaerkeUebersicht] = useState<StaerkeUebersicht>(emptyStaerkeUebersicht);
+  const [showBearbeiterDialog, setShowBearbeiterDialog] = useState(false);
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
@@ -210,6 +213,8 @@ function useWorkspaceRuntimeUiState() {
     setGesamtStaerke,
     staerkeUebersicht,
     setStaerkeUebersicht,
+    showBearbeiterDialog,
+    setShowBearbeiterDialog,
     activeClients,
     setActiveClients,
     peerUpdateStatus,

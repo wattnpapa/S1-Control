@@ -1,5 +1,6 @@
 import { UpdaterNotices } from '@renderer/components/common/UpdaterUi';
 import { Topbar } from '@renderer/components/layout/Topbar';
+import { BearbeiterDialog } from '@renderer/components/dialogs/BearbeiterDialog';
 import { WorkspaceDialogs } from '@renderer/components/views/WorkspaceDialogs';
 import { WorkspaceMainArea } from '@renderer/components/views/WorkspaceMainArea';
 import type {
@@ -47,6 +48,11 @@ export interface AppWorkspaceShellProps {
   staerkeUebersicht: StaerkeUebersicht;
   undoMoeglich: boolean;
   onUndo: () => void;
+  bearbeiterName: string;
+  onBearbeiterWechseln: () => void;
+  showBearbeiterDialog: boolean;
+  onBearbeiterSpeichern: (name: string) => void;
+  onCloseBearbeiter: () => void;
   updaterState: UpdaterState;
   kraefteOrgFilter: OrganisationKey | 'ALLE';
   setKraefteOrgFilter: (value: OrganisationKey | 'ALLE') => void;
@@ -159,6 +165,10 @@ export interface AppWorkspaceShellProps {
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
   onRemoveEinheit: (id: string) => void;
+  onExportEinsatzakte: () => void;
+  onBeendeEinsatz: () => void;
+  onArchiviereEinsatz: () => void;
+  onOeffneEinsatzWieder: () => void;
   onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;
@@ -244,6 +254,10 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onEditEinheit: props.onEditEinheit,
     onSplitEinheit: props.onSplitEinheit,
     onRemoveEinheit: props.onRemoveEinheit,
+    onExportEinsatzakte: props.onExportEinsatzakte,
+    onBeendeEinsatz: props.onBeendeEinsatz,
+    onArchiviereEinsatz: props.onArchiviereEinsatz,
+    onOeffneEinsatzWieder: props.onOeffneEinsatzWieder,
     onRemoveFahrzeug: props.onRemoveFahrzeug,
     onMoveFahrzeug: props.onMoveFahrzeug,
     onEditFahrzeug: props.onEditFahrzeug,
@@ -388,6 +402,8 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
         staerkeUebersicht={props.staerkeUebersicht}
         undoMoeglich={props.undoMoeglich}
         onUndo={props.onUndo}
+        bearbeiterName={props.bearbeiterName}
+        onBearbeiterWechseln={props.onBearbeiterWechseln}
         onOpenStrengthDisplay={props.onOpenStrengthDisplay}
         onCloseStrengthDisplay={props.onCloseStrengthDisplay}
         busy={props.busy}
@@ -403,6 +419,13 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
       <WorkspaceStatusBanners isArchived={props.isArchived} error={props.error} />
       <WorkspaceMainArea {...mainAreaProps} />
       <WorkspaceDialogs {...dialogsProps} />
+      <BearbeiterDialog
+        visible={props.showBearbeiterDialog}
+        aktuellerName={props.bearbeiterName}
+        busy={props.busy}
+        onSpeichern={props.onBearbeiterSpeichern}
+        onClose={props.onCloseBearbeiter}
+      />
       {props.einsatzInitialLoading && (
         <div className="overlay-backdrop">
           <div className="overlay-panel">

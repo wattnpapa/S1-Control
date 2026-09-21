@@ -8,6 +8,7 @@ import {
 } from '../services/einsatz-files';
 import {
   archiveEinsatz,
+  setEinsatzStatus,
   updateEinsatz,
   createAbschnitt,
   listAbschnittDetails,
@@ -154,6 +155,16 @@ function registerEinsatzCreateHandlers(
       const ctx = state.getDbContext();
       await ctx.mutate(() => archiveEinsatz(ctx, einsatzId));
       helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.SET_EINSATZ_STATUS,
+    wrap(async (input: Parameters<RendererApi['setEinsatzStatus']>[0]) => {
+      requireUser();
+      const ctx = state.getDbContext();
+      await ctx.mutate(() => setEinsatzStatus(ctx, input));
+      helpers.notifyEinsatzChanged(input.einsatzId, 'set-einsatz-status');
     }),
   );
 

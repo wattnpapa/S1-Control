@@ -16,6 +16,7 @@ export type WorkspaceView =
   | 'fuehrung'
   | 'kraefte'
   | 'fahrzeuge'
+  | 'abschluss'
   | 'einstellungen';
 
 export interface CreateAbschnittForm {

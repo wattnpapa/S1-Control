@@ -6,6 +6,7 @@ import {
   InlineFahrzeugEditor,
 } from '@renderer/components/editor/InlineEditors';
 import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
+import { AbschlussView } from '@renderer/components/views/AbschlussView';
 import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
 import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
 import { FuehrungsstrukturView } from '@renderer/components/views/FuehrungsstrukturView';
@@ -174,7 +175,6 @@ function EinsatzView(props: WorkspaceContentProps): JSX.Element {
         details={props.details}
         selectedEinsatz={props.selectedEinsatz}
         isArchived={props.isArchived}
-        broadcastLogs={props.broadcastMonitorLogs}
         onMoveEinheit={props.onMoveEinheit}
         onEditEinheit={props.onEditEinheit}
         onSplitEinheit={props.onSplitEinheit}
@@ -329,6 +329,17 @@ export function WorkspaceViewBody(props: WorkspaceContentProps): JSX.Element {
     fuehrung: <FuehrungView {...props} />,
     kraefte: <KraefteView {...props} />,
     fahrzeuge: <FahrzeugeView {...props} />,
+    abschluss: (
+      <AbschlussView
+        busy={props.busy}
+        selectedEinsatzId={props.selectedEinsatzId}
+        selectedEinsatz={props.selectedEinsatz}
+        onExport={props.onExportEinsatzakte}
+        onBeenden={props.onBeendeEinsatz}
+        onArchivieren={props.onArchiviereEinsatz}
+        onWiederOeffnen={props.onOeffneEinsatzWieder}
+      />
+    ),
     einstellungen: <EinstellungenView {...props} />,
   };
   return views[props.activeView];

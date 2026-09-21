@@ -1,5 +1,5 @@
 import crypto from 'node:crypto';
-import type { EinsatzWriteCtx } from '../../json-store/types';
+import type { EinsatzWriteCtx, EinsatzStatus } from '../../json-store/types';
 import type { EinsatzListItem } from '../../../shared/types';
 import { AppError } from '../errors';
 import { nowIso } from '../einsatz-transaction-guards';
@@ -41,9 +41,22 @@ export function updateEinsatz(ctx: EinsatzWriteCtx, input: { einsatzId: string; 
 }
 
 export function archiveEinsatz(ctx: EinsatzWriteCtx, einsatzId: string): void {
-  if (ctx.einsatz.einsatz.id !== einsatzId) {
+  setEinsatzStatus(ctx, { einsatzId, status: 'ARCHIVIERT' });
+}
+
+/**
+ * Setzt den Status des Einsatzes.
+ *
+ * Beenden und Archivieren sind keine Einbahnstraßen: ein zu früh beendeter
+ * Einsatz lässt sich wieder öffnen, ohne dass Daten verloren gehen.
+ */
+export function setEinsatzStatus(
+  ctx: EinsatzWriteCtx,
+  input: { einsatzId: string; status: EinsatzStatus },
+): void {
+  if (ctx.einsatz.einsatz.id !== input.einsatzId) {
     throw new AppError('Einsatz nicht gefunden', 'NOT_FOUND');
   }
-  ctx.einsatz.einsatz.status = 'ARCHIVIERT';
-  ctx.einsatz.einsatz.end = nowIso();
+  ctx.einsatz.einsatz.status = input.status;
+  ctx.einsatz.einsatz.end = input.status === 'AKTIV' ? null : nowIso();
 }
