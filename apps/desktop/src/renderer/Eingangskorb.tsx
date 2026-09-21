@@ -16,6 +16,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useGrundabfrage } from "./Grundabfrage.js";
 
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
@@ -159,6 +160,7 @@ function Zeile({
   readonly aufReihe: () => void;
 }): React.JSX.Element {
   const laden = useLaden();
+  const grundabfrage = useGrundabfrage();
 
   return (
     <tr className={zeile.zustand === "ABGELEHNT" ? "abgelehnt" : ""}>
@@ -201,9 +203,15 @@ function Zeile({
             onClick={() => {
               // §2.4: Der Grund gehört zur Ablehnung. Ohne ihn wäre sie im
               // Nachhinein nicht von einem Versehen zu unterscheiden.
-              const grund = globalThis.prompt("Grund der Ablehnung");
-              if (grund === null || grund.trim() === "") return;
-              void laden.bediene(meldungAbgelehnt(zeile.id, grund.trim()));
+              grundabfrage.frage({
+                titel: "Meldung ablehnen",
+                erlaeuterung:
+                  "Die Ablehnung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
+                bestaetigungstext: "Ablehnen",
+                aufGrund: (grund) => {
+                  void laden.bediene(meldungAbgelehnt(zeile.id, grund));
+                },
+              });
             }}
           >
             Ablehnen
@@ -236,6 +244,7 @@ function Zeile({
             </option>
           ))}
         </select>
+        {grundabfrage.maske}
       </td>
     </tr>
   );

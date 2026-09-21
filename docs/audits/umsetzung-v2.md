@@ -42,7 +42,7 @@ Legende: [x] erledigt, [ ] offen.
 
 ## Eingabe, Fehler, Darstellung
 
-- [ ] Pflichtgründe laufen über eine Browserabfrage, die im Anwendungsfenster nicht unterstützt wird
+- [x] Pflichtgründe laufen über eine Browserabfrage, die im Anwendungsfenster nicht unterstützt wird
 - [ ] Nachgeladene Daten überschreiben die gerade bearbeitete Tabellenzelle
 - [ ] In den Masken werden leere und unsinnige Zahlen still zu 0; es gibt keine Obergrenze gegen Zahlendreher
 - [ ] Das Fehlerbild liegt hinter dem Maskengrund

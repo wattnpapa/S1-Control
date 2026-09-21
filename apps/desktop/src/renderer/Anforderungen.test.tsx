@@ -9,7 +9,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Anforderungszeile } from "@s1/domaene";
 
@@ -127,24 +127,32 @@ describe("Die Anforderungsansicht", () => {
   });
 
   it("verlangt beim Storno einen Grund und schickt ihn mit (§2.4)", async () => {
-    const frage = vi.spyOn(globalThis, "prompt").mockReturnValue("Kräfte anderweitig gebunden");
     await zeige();
     fireEvent.click(screen.getByText("Stornieren"));
+
+    // Die Maske tritt an die Stelle von window.prompt: im Anwendungsfenster
+    // von Electron liefert prompt sofort null, das Storno bliebe folgenlos.
+    fireEvent.change(screen.getByLabelText(/Grund/), {
+      target: { value: "Kräfte anderweitig gebunden" },
+    });
+    fireEvent.click(screen.getByText("Stornieren", { selector: "button[type=submit]" }));
+
     await waitFor(() => {
       expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
     });
     expect(attrappe.letzterRuf("bedienen")?.entwurf.grund).toBe("Kräfte anderweitig gebunden");
-    frage.mockRestore();
   });
 
   it("schickt nichts, wenn der Grund des Stornos leer bleibt", async () => {
-    const frage = vi.spyOn(globalThis, "prompt").mockReturnValue("");
     await zeige();
     fireEvent.click(screen.getByText("Stornieren"));
-    // Ohne Grund weist der Aktendienst das Ereignis ab (§2.4); die Abweisung
-    // wäre für den Bediener nicht erklärbar.
+
+    // Ohne Grund weist der Aktendienst das Ereignis ab (§2.4); die Maske
+    // lässt das Bestätigen deshalb gar nicht erst zu.
+    const bestaetigen = screen.getByText("Stornieren", { selector: "button[type=submit]" });
+    expect((bestaetigen as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(bestaetigen);
     expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
-    frage.mockRestore();
   });
 
   it("filtert über die Zustände und deutet keine Auswahl als „alle“", async () => {

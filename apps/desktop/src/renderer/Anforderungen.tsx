@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useGrundabfrage } from "./Grundabfrage.js";
 
 import type { Anforderungszeile, Anforderungszustand } from "@s1/domaene";
 
@@ -202,6 +203,7 @@ export function Anforderungen(): React.JSX.Element {
 
 function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
   const laden = useLaden();
+  const grundabfrage = useGrundabfrage();
 
   return (
     <tr className={zeile.zustand === "STORNIERT" ? "storniert" : ""}>
@@ -280,14 +282,21 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
               // §2.4: Das Storno ist einer der Pflichtfälle für `grund`. Ohne
               // ihn weist der Aktendienst das Ereignis ab, und die Abweisung
               // wäre für den Bediener nicht erklärbar.
-              const grund = globalThis.prompt("Grund der Stornierung");
-              if (grund === null || grund.trim() === "") return;
-              void laden.bediene(anforderungStorniert(zeile.id, grund.trim()));
+              grundabfrage.frage({
+                titel: "Anforderung stornieren",
+                erlaeuterung:
+                  "Die Stornierung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
+                bestaetigungstext: "Stornieren",
+                aufGrund: (grund) => {
+                  void laden.bediene(anforderungStorniert(zeile.id, grund));
+                },
+              });
             }}
           >
             Stornieren
           </button>
         )}
+        {grundabfrage.maske}
       </td>
     </tr>
   );

@@ -9,7 +9,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Fuestansicht } from "../kontrakt/index.js";
 
@@ -127,14 +127,20 @@ describe("Das Blatt der Führungsstelle", () => {
   });
 
   it("verlangt beim Entfernen einen Grund (§2.4)", async () => {
-    const frage = vi.spyOn(globalThis, "prompt").mockReturnValue("Sachgebiet nicht besetzt");
     await zeige();
     fireEvent.click(screen.getAllByText("Entfernen")[0] as HTMLElement);
+
+    // Die Maske tritt an die Stelle von window.prompt, das im
+    // Anwendungsfenster von Electron nicht unterstützt wird.
+    fireEvent.change(screen.getByLabelText(/Grund/), {
+      target: { value: "Sachgebiet nicht besetzt" },
+    });
+    fireEvent.click(screen.getByText("Entfernen", { selector: "button[type=submit]" }));
+
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("DienstpostenEntfernt");
     });
     expect(attrappe.letzterRuf("bedienen")?.entwurf.grund).toBe("Sachgebiet nicht besetzt");
-    frage.mockRestore();
   });
 
   it("legt einen Posten ans Ende seines Teilbereichs", async () => {

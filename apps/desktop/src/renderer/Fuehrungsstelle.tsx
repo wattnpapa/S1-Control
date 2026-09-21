@@ -17,6 +17,7 @@
  */
 
 import { useEffect, useState } from "react";
+import { useGrundabfrage } from "./Grundabfrage.js";
 
 import type { Dienstpostenzeile, Teilbereichsblock } from "@s1/domaene";
 
@@ -265,6 +266,7 @@ function Block({ block }: { readonly block: Teilbereichsblock }): React.JSX.Elem
 
 function Postenzeile({ zeile }: { readonly zeile: Dienstpostenzeile }): React.JSX.Element {
   const laden = useLaden();
+  const grundabfrage = useGrundabfrage();
   const [entwurf, setzeEntwurf] = useState<string | undefined>(undefined);
 
   function uebernimm(): void {
@@ -316,14 +318,21 @@ function Postenzeile({ zeile }: { readonly zeile: Dienstpostenzeile }): React.JS
             onClick={() => {
               // §2.4: Auch hier ist der Grund Pflicht — ein Dienstposten
               // verschwindet nicht ohne Erklärung aus dem Blatt.
-              const grund = globalThis.prompt("Grund für das Entfernen");
-              if (grund === null || grund.trim() === "") return;
-              void laden.bediene(dienstpostenEntfernt(zeile.id, grund.trim()));
+              grundabfrage.frage({
+                titel: "Dienstposten entfernen",
+                erlaeuterung:
+                  "Der Dienstposten bleibt im Einsatztagebuch stehen und lässt sich wiederherstellen.",
+                bestaetigungstext: "Entfernen",
+                aufGrund: (grund) => {
+                  void laden.bediene(dienstpostenEntfernt(zeile.id, grund));
+                },
+              });
             }}
           >
             Entfernen
           </button>
         )}
+        {grundabfrage.maske}
       </td>
     </tr>
   );

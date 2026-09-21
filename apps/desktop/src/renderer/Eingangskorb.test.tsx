@@ -8,7 +8,7 @@
  */
 
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Meldungszeile } from "@s1/domaene";
 
@@ -84,9 +84,14 @@ describe("Der Eingangskorb", () => {
   });
 
   it("verlangt beim Ablehnen einen Grund und schickt ihn mit (§2.4)", async () => {
-    const frage = vi.spyOn(globalThis, "prompt").mockReturnValue("Doppelt gemeldet");
     await zeige();
     fireEvent.click(screen.getByText("Ablehnen"));
+
+    // Die Maske tritt an die Stelle von window.prompt, das im
+    // Anwendungsfenster von Electron nicht unterstützt wird.
+    fireEvent.change(screen.getByLabelText(/Grund/), { target: { value: "Doppelt gemeldet" } });
+    fireEvent.click(screen.getByText("Ablehnen", { selector: "button[type=submit]" }));
+
     await waitFor(() => {
       expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
     });
@@ -94,17 +99,17 @@ describe("Der Eingangskorb", () => {
     expect(entwurf?.typ).toBe("EebMeldungAbgelehnt");
     expect(entwurf?.grund).toBe("Doppelt gemeldet");
     expect(entwurf?.neu).toBe(true);
-    frage.mockRestore();
   });
 
   it("schickt nichts, wenn der Grund leer bleibt", async () => {
-    const frage = vi.spyOn(globalThis, "prompt").mockReturnValue("");
     await zeige();
     fireEvent.click(screen.getByText("Ablehnen"));
-    // Der Aktendienst wiese es ab (§2.4); eine Abweisung wäre für den
-    // Bediener nicht erklärbar.
+    // Der Aktendienst wiese es ab (§2.4); die Maske lässt das Bestätigen
+    // ohne Grund deshalb gar nicht erst zu.
+    const bestaetigen = screen.getByText("Ablehnen", { selector: "button[type=submit]" });
+    expect((bestaetigen as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(bestaetigen);
     expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
-    frage.mockRestore();
   });
 
   it("nimmt die Ablehnung ohne Grund zurück", async () => {
