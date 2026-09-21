@@ -129,12 +129,18 @@ export interface MoveEinheitInput {
   einheitId: string;
   nachAbschnittId: string;
   kommentar?: string;
+  /** Tatsächlicher Zeitpunkt der Bewegung (ISO). Fehlt er, gilt "jetzt". */
+  zeitpunkt?: string;
+  /** Fahrzeuge der Einheit mitnehmen (Vorgabe: ja). */
+  fahrzeugeMitnehmen?: boolean;
 }
 
 export interface MoveFahrzeugInput {
   einsatzId: string;
   fahrzeugId: string;
   nachAbschnittId: string;
+  /** Tatsächlicher Zeitpunkt der Bewegung (ISO). Fehlt er, gilt "jetzt". */
+  zeitpunkt?: string;
 }
 
 export interface CreateEinheitHelferInput {

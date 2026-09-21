@@ -152,8 +152,7 @@ function registerEinsatzCreateHandlers(
     wrap(async (einsatzId: string) => {
       requireUser();
       const ctx = state.getDbContext();
-      archiveEinsatz(ctx, einsatzId);
-      await ctx.save();
+      await ctx.mutate(() => archiveEinsatz(ctx, einsatzId));
       helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
     }),
   );
@@ -163,8 +162,7 @@ function registerEinsatzCreateHandlers(
     wrap(async (input: Parameters<RendererApi['updateEinsatz']>[0]) => {
       requireUser();
       const ctx = state.getDbContext();
-      updateEinsatz(ctx, input);
-      await ctx.save();
+      await ctx.mutate(() => updateEinsatz(ctx, input));
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-einsatz');
     }),
   );
@@ -212,8 +210,7 @@ function registerAbschnittHandlers(
           debugSync('db-bridge', 'fallback:create-abschnitt', { einsatzId: input.einsatzId, message });
         }
       }
-      abschnitt = createAbschnitt(ctx, input);
-      await ctx.save();
+      abschnitt = await ctx.mutate(() => createAbschnitt(ctx, input));
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-abschnitt');
       return abschnitt;
     }),
@@ -251,8 +248,7 @@ function registerAbschnittHandlers(
           debugSync('db-bridge', 'fallback:update-abschnitt', { einsatzId: input.einsatzId, message });
         }
       }
-      updateAbschnitt(ctx, input);
-      await ctx.save();
+      await ctx.mutate(() => updateAbschnitt(ctx, input));
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-abschnitt');
     }),
   );
@@ -273,6 +269,18 @@ function registerAbschnittHandlers(
 }
 
 /**
+ * Liefert den Einsatzkontext und übernimmt dabei Änderungen, die andere
+ * Stationen inzwischen auf die Freigabe geschrieben haben.
+ */
+function contextFromDisk(common: RegistrarCommon) {
+  const ctx = common.state.getDbContext();
+  if (ctx.reload()) {
+    common.state.einsatzReadCache.clearAll();
+  }
+  return ctx;
+}
+
+/**
  * Reads abschnitte with high-priority utility-process delegation and local fallback.
  */
 async function readAbschnitte(
@@ -280,7 +288,7 @@ async function readAbschnitte(
   einsatzId: string,
 ): Promise<AbschnittNode[]> {
   const { state } = common;
-  const ctx = state.getDbContext();
+  const ctx = contextFromDisk(common);
   if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
     try {
       return await state.dbBridge.request(
@@ -308,7 +316,7 @@ async function readAbschnittDetails(
   abschnittId: string,
 ): Promise<AbschnittDetails> {
   const { state } = common;
-  const ctx = state.getDbContext();
+  const ctx = contextFromDisk(common);
   if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
     try {
       return await state.dbBridge.request(
@@ -338,7 +346,7 @@ async function readAbschnittDetailsBatch(
   einsatzId: string,
 ): Promise<Record<string, AbschnittDetails>> {
   const { state } = common;
-  const ctx = state.getDbContext();
+  const ctx = contextFromDisk(common);
   if (state.useDbUtilityProcess && state.dbBridge.isEnabled()) {
     try {
       return await state.dbBridge.request(
@@ -390,7 +398,11 @@ function registerEinsatzRecoveryHandlers(
     IPC_CHANNEL.EXPORT_EINSATZAKTE,
     wrap(async (einsatzId: string) => {
       requireUser();
-      const defaultPath = path.join(process.cwd(), `einsatzakte-${einsatzId}.zip`);
+      // Vorgabe ist das Verzeichnis des Einsatzes, nicht das Arbeitsverzeichnis
+      // des Programms — dort sucht niemand eine Einsatzakte.
+      const einsatzDbPath = helpers.resolveRecentDbPathByEinsatzId(einsatzId);
+      const defaultDir = einsatzDbPath ? path.dirname(einsatzDbPath) : helpers.getBaseDir();
+      const defaultPath = path.join(defaultDir, `einsatzakte-${einsatzId}.zip`);
       const result = await dialog.showSaveDialog({
         title: 'Einsatzakte exportieren',
         defaultPath,

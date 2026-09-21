@@ -56,9 +56,45 @@ export class BackupCoordinator {
     }
   }
 
-  public async restoreBackup(dbPath: string, backupFilePath: string): Promise<void> {
+  /**
+   * Spielt eine Sicherung ein. Der Stand, der dabei ersetzt wird, wird zuvor
+   * selbst gesichert — sonst wäre er unwiederbringlich verloren.
+   *
+   * @returns Pfad der Sicherung des ersetzten Standes, falls angelegt.
+   */
+  public async restoreBackup(
+    dbPath: string,
+    backupFilePath: string,
+  ): Promise<string | null> {
     this.stop();
+    const safetyCopy = this.backupCurrentState(dbPath);
     fs.copyFileSync(backupFilePath, dbPath);
+    return safetyCopy;
+  }
+
+  /**
+   * Legt eine Sicherung des aktuellen Standes an, bevor er überschrieben wird.
+   */
+  public backupCurrentState(
+    dbPath: string,
+    suffix = 'vor-wiederherstellung',
+  ): string | null {
+    if (!fs.existsSync(dbPath)) {
+      return null;
+    }
+    try {
+      const backupDir = resolveBackupDir(dbPath);
+      fs.mkdirSync(backupDir, { recursive: true });
+      const baseName = path.basename(dbPath, path.extname(dbPath));
+      const target = path.join(
+        backupDir,
+        `${baseName}-${nowStamp()}-${suffix}.s1control`,
+      );
+      fs.copyFileSync(dbPath, target);
+      return target;
+    } catch {
+      return null;
+    }
   }
 
   private async runOnce(ctx: DbContext): Promise<void> {

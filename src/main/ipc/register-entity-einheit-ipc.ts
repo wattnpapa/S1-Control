@@ -31,8 +31,7 @@ export function registerEinheitHandlers(common: RegistrarCommon, helpers: Entity
         }
       }
       const createCtx = state.getDbContext();
-      createEinheit(createCtx, input);
-      await createCtx.save();
+      await createCtx.mutate(() => createEinheit(createCtx, input));
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-einheit');
     }),
   );
@@ -58,13 +57,14 @@ export function registerEinheitHandlers(common: RegistrarCommon, helpers: Entity
         }
       }
       const updateCtx = state.getDbContext();
-      ensureRecordEditLockOwnership(
-        updateCtx,
-        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einheitId },
-        identity,
-      );
-      updateEinheit(updateCtx, input);
-      await updateCtx.save();
+      await updateCtx.mutate(() => {
+        ensureRecordEditLockOwnership(
+          updateCtx,
+          { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einheitId },
+          identity,
+        );
+        updateEinheit(updateCtx, input);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-einheit');
     }),
   );

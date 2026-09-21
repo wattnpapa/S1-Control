@@ -31,8 +31,7 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const splitCtx = state.getDbContext();
-      splitEinheit(splitCtx, input);
-      await splitCtx.save();
+      await splitCtx.mutate(() => splitEinheit(splitCtx, input));
       helpers.notifyEinsatzChanged(input.einsatzId, 'split-einheit');
     }),
   );
@@ -57,8 +56,7 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const moveEinCtx = state.getDbContext();
-      moveEinheit(moveEinCtx, input, user);
-      await moveEinCtx.save();
+      await moveEinCtx.mutate(() => moveEinheit(moveEinCtx, input, user));
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-einheit');
     }),
   );
@@ -83,8 +81,7 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const moveFzCtx = state.getDbContext();
-      moveFahrzeug(moveFzCtx, input, user);
-      await moveFzCtx.save();
+      await moveFzCtx.mutate(() => moveFahrzeug(moveFzCtx, input, user));
       helpers.notifyEinsatzChanged(input.einsatzId, 'move-fahrzeug');
     }),
   );
@@ -111,9 +108,8 @@ export function registerEntityCommandHandlers(common: RegistrarCommon, helpers: 
         }
       }
       const undoCtx = state.getDbContext();
-      const undone = undoLastCommand(undoCtx, einsatzId, user);
+      const undone = await undoCtx.mutate(() => undoLastCommand(undoCtx, einsatzId, user));
       if (undone) {
-        await undoCtx.save();
         helpers.notifyEinsatzChanged(einsatzId, 'undo-command');
       }
       return undone;

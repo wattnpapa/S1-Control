@@ -13,6 +13,8 @@ interface MoveEinheitPayload {
   vonAbschnittId: string;
   nachAbschnittId: string;
   kommentar?: string;
+  /** Fahrzeuge, die mit der Einheit mitgeführt wurden (für Undo). */
+  mitgefuehrteFahrzeugIds?: string[];
 }
 
 interface MoveFahrzeugPayload {
@@ -23,7 +25,14 @@ interface MoveFahrzeugPayload {
 
 export function moveEinheit(
   ctx: DbContext,
-  input: { einsatzId: string; einheitId: string; nachAbschnittId: string; kommentar?: string },
+  input: {
+    einsatzId: string;
+    einheitId: string;
+    nachAbschnittId: string;
+    kommentar?: string;
+    zeitpunkt?: string;
+    fahrzeugeMitnehmen?: boolean;
+  },
   user: SessionUser,
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -39,6 +48,7 @@ export function moveEinheit(
   }
 
   const vonAbschnittId = einheit.aktuellerAbschnittId;
+  const zeitpunkt = input.zeitpunkt ?? nowIso();
   einheit.aktuellerAbschnittId = input.nachAbschnittId;
 
   ctx.einsatz.einheitBewegungen.push({
@@ -46,16 +56,45 @@ export function moveEinheit(
     einsatzEinheitId: einheit.id,
     vonAbschnittId,
     nachAbschnittId: input.nachAbschnittId,
-    zeitpunkt: nowIso(),
+    zeitpunkt,
     benutzer: user.name,
     kommentar: input.kommentar ?? null,
   });
+
+  // Fahrzeuge der Einheit wandern mit, sonst steht die Einheit im neuen
+  // Abschnitt und ihr Gerät im alten.
+  const mitgefuehrteFahrzeugIds: string[] = [];
+  if (input.fahrzeugeMitnehmen !== false) {
+    for (const fahrzeug of ctx.einsatz.fahrzeuge) {
+      if (fahrzeug.einsatzId !== input.einsatzId) {
+        continue;
+      }
+      if (fahrzeug.aktuelleEinsatzEinheitId !== einheit.id) {
+        continue;
+      }
+      if (fahrzeug.aktuellerAbschnittId === input.nachAbschnittId) {
+        continue;
+      }
+      const fahrzeugVonAbschnittId = fahrzeug.aktuellerAbschnittId;
+      fahrzeug.aktuellerAbschnittId = input.nachAbschnittId;
+      mitgefuehrteFahrzeugIds.push(fahrzeug.id);
+      ctx.einsatz.fahrzeugBewegungen.push({
+        id: crypto.randomUUID(),
+        einsatzFahrzeugId: fahrzeug.id,
+        vonAbschnittId: fahrzeugVonAbschnittId,
+        nachAbschnittId: input.nachAbschnittId,
+        zeitpunkt,
+        benutzer: user.name,
+      });
+    }
+  }
 
   const payload: MoveEinheitPayload = {
     einheitId: einheit.id,
     vonAbschnittId,
     nachAbschnittId: input.nachAbschnittId,
     kommentar: input.kommentar,
+    mitgefuehrteFahrzeugIds,
   };
   ctx.einsatz.commandLog.push({
     id: crypto.randomUUID(),
@@ -70,7 +109,12 @@ export function moveEinheit(
 
 export function moveFahrzeug(
   ctx: DbContext,
-  input: { einsatzId: string; fahrzeugId: string; nachAbschnittId: string },
+  input: {
+    einsatzId: string;
+    fahrzeugId: string;
+    nachAbschnittId: string;
+    zeitpunkt?: string;
+  },
   user: SessionUser,
 ): void {
   ensureNotArchived(ctx, input.einsatzId);
@@ -82,7 +126,10 @@ export function moveFahrzeug(
     throw new AppError('Fahrzeug nicht gefunden', 'NOT_FOUND');
   }
   if (!fahrzeug.aktuellerAbschnittId) {
-    throw new AppError('Fahrzeug hat keinen aktuellen Abschnitt', 'INVALID_STATE');
+    throw new AppError(
+      'Fahrzeug hat keinen aktuellen Abschnitt',
+      'INVALID_STATE',
+    );
   }
   if (fahrzeug.aktuellerAbschnittId === input.nachAbschnittId) {
     return;
@@ -96,7 +143,7 @@ export function moveFahrzeug(
     einsatzFahrzeugId: fahrzeug.id,
     vonAbschnittId,
     nachAbschnittId: input.nachAbschnittId,
-    zeitpunkt: nowIso(),
+    zeitpunkt: input.zeitpunkt ?? nowIso(),
     benutzer: user.name,
   });
 
@@ -116,7 +163,11 @@ export function moveFahrzeug(
   });
 }
 
-export function undoLastCommand(ctx: DbContext, einsatzId: string, user: SessionUser): boolean {
+export function undoLastCommand(
+  ctx: DbContext,
+  einsatzId: string,
+  user: SessionUser,
+): boolean {
   ensureNotArchived(ctx, einsatzId);
 
   const command = [...ctx.einsatz.commandLog]
@@ -129,9 +180,26 @@ export function undoLastCommand(ctx: DbContext, einsatzId: string, user: Session
 
   if (command.commandTyp === 'MOVE_EINHEIT') {
     const payload = JSON.parse(command.payloadJson) as MoveEinheitPayload;
-    const einheit = ctx.einsatz.einheiten.find((e) => e.id === payload.einheitId);
+    const einheit = ctx.einsatz.einheiten.find(
+      (e) => e.id === payload.einheitId,
+    );
     if (einheit) {
       einheit.aktuellerAbschnittId = payload.vonAbschnittId;
+    }
+    for (const fahrzeugId of payload.mitgefuehrteFahrzeugIds ?? []) {
+      const fahrzeug = ctx.einsatz.fahrzeuge.find((f) => f.id === fahrzeugId);
+      if (!fahrzeug) {
+        continue;
+      }
+      fahrzeug.aktuellerAbschnittId = payload.vonAbschnittId;
+      ctx.einsatz.fahrzeugBewegungen.push({
+        id: crypto.randomUUID(),
+        einsatzFahrzeugId: fahrzeugId,
+        vonAbschnittId: payload.nachAbschnittId,
+        nachAbschnittId: payload.vonAbschnittId,
+        zeitpunkt: nowIso(),
+        benutzer: `${user.name} (undo)`,
+      });
     }
     ctx.einsatz.einheitBewegungen.push({
       id: crypto.randomUUID(),
@@ -144,7 +212,9 @@ export function undoLastCommand(ctx: DbContext, einsatzId: string, user: Session
     });
   } else if (command.commandTyp === 'MOVE_FAHRZEUG') {
     const payload = JSON.parse(command.payloadJson) as MoveFahrzeugPayload;
-    const fahrzeug = ctx.einsatz.fahrzeuge.find((f) => f.id === payload.fahrzeugId);
+    const fahrzeug = ctx.einsatz.fahrzeuge.find(
+      (f) => f.id === payload.fahrzeugId,
+    );
     if (fahrzeug) {
       fahrzeug.aktuellerAbschnittId = payload.vonAbschnittId;
     }
@@ -157,7 +227,10 @@ export function undoLastCommand(ctx: DbContext, einsatzId: string, user: Session
       benutzer: `${user.name} (undo)`,
     });
   } else {
-    throw new AppError('Undo für diesen Command-Typ noch nicht implementiert', 'UNSUPPORTED');
+    throw new AppError(
+      'Undo für diesen Command-Typ noch nicht implementiert',
+      'UNSUPPORTED',
+    );
   }
 
   command.undone = true;

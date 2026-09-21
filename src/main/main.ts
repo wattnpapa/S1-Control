@@ -162,10 +162,15 @@ function openSystemDbWithFallback(
     const initialMessage = initialError instanceof Error ? initialError.message : String(initialError);
     const firstWarning = `Konfigurierter DB-Pfad konnte nicht geöffnet werden (${paths.configuredSystemDbPath}).\n${initialMessage}`;
     try {
-      settingsStore.set({ dbPath: paths.defaultBaseDir });
+      // Der konfigurierte Pfad (in der Regel die Freigabe) wird bewusst NICHT
+      // dauerhaft umgestellt: sonst arbeitet die Station nach Rückkehr des
+      // Netzes still auf einem lokalen Stand weiter.
+      const localHint =
+        `\nFür diese Sitzung wird lokal gearbeitet (${paths.defaultSystemDbPath}).` +
+        '\nDie eingestellte Freigabe bleibt unverändert und wird beim nächsten Start erneut versucht.';
       return {
         dbContext: openDatabaseWithRetry(paths.defaultSystemDbPath),
-        startupWarning: firstWarning,
+        startupWarning: `${firstWarning}${localHint}`,
       };
     } catch (fallbackError) {
       const fallbackMessage = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);

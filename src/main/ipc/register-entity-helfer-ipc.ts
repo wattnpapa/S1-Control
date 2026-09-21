@@ -43,13 +43,14 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
         }
       }
       const createHelferCtx = state.getDbContext();
-      ensureRecordEditLockOwnership(
-        createHelferCtx,
-        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einsatzEinheitId },
-        identity,
-      );
-      createEinheitHelfer(createHelferCtx, input);
-      await createHelferCtx.save();
+      await createHelferCtx.mutate(() => {
+        ensureRecordEditLockOwnership(
+          createHelferCtx,
+          { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: input.einsatzEinheitId },
+          identity,
+        );
+        createEinheitHelfer(createHelferCtx, input);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'create-helfer');
     }),
   );
@@ -75,14 +76,15 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
         }
       }
       const updateHelferCtx = state.getDbContext();
-      const einsatzEinheitIdU = resolveHelferEinheitId(updateHelferCtx, input.helferId);
-      ensureRecordEditLockOwnership(
-        updateHelferCtx,
-        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitIdU },
-        identity,
-      );
-      updateEinheitHelfer(updateHelferCtx, input);
-      await updateHelferCtx.save();
+      await updateHelferCtx.mutate(() => {
+        const einsatzEinheitIdU = resolveHelferEinheitId(updateHelferCtx, input.helferId);
+        ensureRecordEditLockOwnership(
+          updateHelferCtx,
+          { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitIdU },
+          identity,
+        );
+        updateEinheitHelfer(updateHelferCtx, input);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'update-helfer');
     }),
   );
@@ -108,14 +110,15 @@ export function registerHelferHandlers(common: RegistrarCommon, helpers: EntityI
         }
       }
       const deleteHelferCtx = state.getDbContext();
-      const einsatzEinheitId = resolveHelferEinheitId(deleteHelferCtx, input.helferId);
-      ensureRecordEditLockOwnership(
-        deleteHelferCtx,
-        { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
-        identity,
-      );
-      deleteEinheitHelfer(deleteHelferCtx, input);
-      await deleteHelferCtx.save();
+      await deleteHelferCtx.mutate(() => {
+        const einsatzEinheitId = resolveHelferEinheitId(deleteHelferCtx, input.helferId);
+        ensureRecordEditLockOwnership(
+          deleteHelferCtx,
+          { einsatzId: input.einsatzId, entityType: 'EINHEIT', entityId: einsatzEinheitId },
+          identity,
+        );
+        deleteEinheitHelfer(deleteHelferCtx, input);
+      });
       helpers.notifyEinsatzChanged(input.einsatzId, 'delete-helfer');
     }),
   );
