@@ -1,4 +1,5 @@
 import type { ActiveClientInfo, PeerUpdateStatus } from '@shared/types';
+import type { JSX } from 'react';
 
 interface SettingsViewProps {
   busy: boolean;

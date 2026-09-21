@@ -1,15 +1,24 @@
 import os from 'node:os';
 import path from 'node:path';
 import { existsSync } from 'node:fs';
-import type { UpdateArtifactMeta } from '../../shared/types';
 import { normalizeVersion } from './updater-versioning';
+
+interface ArtifactMeta {
+  version: string;
+  platform: string;
+  arch: string;
+  channel: string;
+  artifactName: string;
+  sha512: string;
+  size: number;
+}
 
 /**
  * Builds artifact metadata from updater info payload.
  */
 export function toArtifactMeta(
   info: { version?: string; files?: Array<{ url?: string; sha512?: string; size?: number }> } | undefined,
-): UpdateArtifactMeta | null {
+): ArtifactMeta | null {
   const normalizedVersion = resolveNormalizedVersion(info?.version);
   const firstFile = resolveFirstFile(info);
   const artifactName = toArtifactName(firstFile?.url);
@@ -92,4 +101,4 @@ export function resolveDownloadedArtifactPath(
 /**
  * Represents validated update artifact metadata.
  */
-export type UpdateArtifactMeta = NonNullable<ReturnType<typeof toArtifactMeta>>;
+export type UpdateArtifactMeta = ArtifactMeta;

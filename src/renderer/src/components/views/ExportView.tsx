@@ -1,4 +1,5 @@
 import type { AbschnittNode } from '@shared/types';
+import type { JSX } from 'react';
 
 interface ExportViewProps {
   busy: boolean;

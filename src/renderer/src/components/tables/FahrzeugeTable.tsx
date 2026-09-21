@@ -2,6 +2,7 @@ import type { FahrzeugListItem, RecordEditLockInfo } from '@shared/types';
 import { useEffect } from 'react';
 import { prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
 import { FahrzeugRow } from '@renderer/components/tables/FahrzeugRow';
+import type { JSX } from 'react';
 
 interface FahrzeugeTableProps {
   fahrzeuge: FahrzeugListItem[];

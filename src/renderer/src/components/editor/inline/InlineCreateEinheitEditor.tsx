@@ -7,6 +7,7 @@ import {
   EinheitTacticalRows,
 } from './EinheitFormRows';
 import type { InlineCreateEinheitEditorProps } from './types';
+import type { JSX } from 'react';
 
 /**
  * Renders inline create form for new unit records.

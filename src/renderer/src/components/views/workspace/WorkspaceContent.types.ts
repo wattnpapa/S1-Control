@@ -1,4 +1,6 @@
 import type {
+  AbschnittDetails,
+  AbschnittNode,
   ActiveClientInfo,
   EinsatzListItem,
   EinheitHelfer,
@@ -7,8 +9,6 @@ import type {
   RecordEditLockInfo,
 } from '@shared/types';
 import type {
-  AbschnittDetails,
-  AbschnittNode,
   CreateEinheitForm,
   EditEinsatzForm,
   EditEinheitForm,
@@ -79,7 +79,16 @@ export interface WorkspaceContentProps {
     sondergeraet: string;
     nutzlast: string;
   }) => Promise<void>;
-  onUpdateEinheitFahrzeug: WorkspaceContentProps['onCreateEinheitFahrzeug'];
+  onUpdateEinheitFahrzeug: (input: {
+    fahrzeugId: string;
+    name: string;
+    kennzeichen: string;
+    status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'AUSSER_BETRIEB';
+    funkrufname: string;
+    stanKonform: 'JA' | 'NEIN' | 'UNBEKANNT';
+    sondergeraet: string;
+    nutzlast: string;
+  }) => Promise<void>;
   showCreateEinheitDialog: boolean;
   createEinheitForm: CreateEinheitForm;
   setCreateEinheitForm: (value: CreateEinheitForm) => void;

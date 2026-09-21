@@ -10,6 +10,7 @@ import type {
   OrganisationKey,
   PeerUpdateStatus,
   UpdaterState,
+  RecordEditLockInfo,
 } from '@shared/types';
 import type {
   CreateAbschnittForm,
@@ -27,7 +28,7 @@ import type {
   WorkspaceView,
 } from '@renderer/types/ui';
 import type { StaerkeUebersicht } from '@renderer/utils/staerke';
-import type { ComponentProps, JSX } from 'react';
+import type { ComponentProps, Dispatch, SetStateAction, JSX } from 'react';
 
 export interface AppWorkspaceShellProps {
   busy: boolean;
@@ -53,9 +54,9 @@ export interface AppWorkspaceShellProps {
   setSelectedAbschnittId: (id: string) => void;
   showAbschnittSidebar: boolean;
   selectedAbschnittLockedByOther: boolean;
-  lockByAbschnittId: Record<string, { isSelf: boolean; computerName: string; userName: string }>;
-  lockByEinheitId: Record<string, { isSelf: boolean; computerName: string; userName: string }>;
-  lockByFahrzeugId: Record<string, { isSelf: boolean; computerName: string; userName: string }>;
+  lockByAbschnittId: Record<string, RecordEditLockInfo | undefined>;
+  lockByEinheitId: Record<string, RecordEditLockInfo | undefined>;
+  lockByFahrzeugId: Record<string, RecordEditLockInfo | undefined>;
   showEditEinheitDialog: boolean;
   editEinheitForm: EditEinheitForm;
   setEditEinheitForm: (next: EditEinheitForm) => void;
@@ -68,26 +69,26 @@ export interface AppWorkspaceShellProps {
   setEditFahrzeugForm: (next: EditFahrzeugForm) => void;
   showCreateAbschnittDialog: boolean;
   createAbschnittForm: CreateAbschnittForm;
-  setCreateAbschnittForm: (next: CreateAbschnittForm) => void;
+  setCreateAbschnittForm: Dispatch<SetStateAction<CreateAbschnittForm>>;
   showEditAbschnittDialog: boolean;
   editAbschnittForm: EditAbschnittForm;
-  setEditAbschnittForm: (next: EditAbschnittForm) => void;
+  setEditAbschnittForm: Dispatch<SetStateAction<EditAbschnittForm>>;
   showEditEinsatzDialog: boolean;
   editEinsatzForm: EditEinsatzForm;
-  setEditEinsatzForm: (next: EditEinsatzForm) => void;
+  setEditEinsatzForm: Dispatch<SetStateAction<EditEinsatzForm>>;
   onOpenEditEinsatz: () => void;
   onSubmitEditEinsatz: () => void;
   onCloseEditEinsatz: () => void;
   showSplitEinheitDialog: boolean;
   splitEinheitForm: SplitEinheitForm;
-  setSplitEinheitForm: (next: SplitEinheitForm) => void;
+  setSplitEinheitForm: Dispatch<SetStateAction<SplitEinheitForm>>;
   showCreateFahrzeugDialog: boolean;
   createFahrzeugForm: CreateFahrzeugForm;
-  setCreateFahrzeugForm: (next: CreateFahrzeugForm) => void;
+  setCreateFahrzeugForm: Dispatch<SetStateAction<CreateFahrzeugForm>>;
   moveDialog: MoveDialogState | null;
   moveTarget: string;
-  setMoveDialog: (value: MoveDialogState | null) => void;
-  setMoveTarget: (value: string) => void;
+  setMoveDialog: Dispatch<SetStateAction<MoveDialogState | null>>;
+  setMoveTarget: Dispatch<SetStateAction<string>>;
   dbPath: string;
   lanPeerUpdatesEnabled: boolean;
   peerUpdateStatus: PeerUpdateStatus | null;

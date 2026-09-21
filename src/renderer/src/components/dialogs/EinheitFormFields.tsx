@@ -1,6 +1,7 @@
 import { ORGANISATION_OPTIONS } from '@renderer/constants/organisation';
 import type { KraftOverviewItem, SplitEinheitForm } from '@renderer/types/ui';
 import type { OrganisationKey, AbschnittNode } from '@shared/types';
+import type { JSX } from 'react';
 
 type EinheitCoreForm = {
   nameImEinsatz: string;

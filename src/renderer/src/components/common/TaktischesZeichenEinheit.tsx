@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import { buildFallbackFormationSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
 import { getFormationSignSrc, toFormationCacheKey } from '@renderer/app/tactical-sign-cache';
+import type { JSX } from 'react';
 
 interface TaktischesZeichenEinheitProps {
   organisation: OrganisationKey;

@@ -1,5 +1,6 @@
 import type { EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
 import { FahrzeugFormFields } from '@renderer/components/dialogs/FahrzeugFormFields';
+import type { JSX } from 'react';
 
 interface EditFahrzeugDialogProps {
   visible: boolean;

@@ -21,6 +21,9 @@ function fromSemverToBuildVersion(value: string): string | null {
     return null;
   }
   const [, year, month, day, hour, minute] = match;
+  if (!year || !month || !day || !hour || !minute) {
+    return null;
+  }
   return `${year}.${month.padStart(2, '0')}.${day.padStart(2, '0')}.${hour.padStart(2, '0')}.${minute.padStart(2, '0')}`;
 }
 
@@ -56,7 +59,8 @@ export function withVersion(details: string): string {
 export function setupVersionMetadata(): string {
   const envSemver = process.env.S1_APP_SEMVER;
   if (envSemver) {
-    app.setVersion(envSemver);
+    // setVersion fehlt in den Electron-Typen, ist zur Laufzeit aber vorhanden.
+    (app as unknown as { setVersion(version: string): void }).setVersion(envSemver);
   }
   const versionLabel = resolveAppVersionLabel();
   app.setAboutPanelOptions({

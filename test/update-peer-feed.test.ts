@@ -36,12 +36,12 @@ let result: Res;
 
 describe('update peer local feed server', () => {
   it('serves channel yaml and artifact via handler', async () => {
-    let handler: ((req: Req, res: Res) => void) | null = null;
+    const handlerRef: { current: ((req: Req, res: Res) => void) | null } = { current: null };
     const listenSpy = vi.fn((_port: number, _host: string, cb: () => void) => cb());
     const closeSpy = vi.fn((cb?: () => void) => cb?.());
 
     vi.spyOn(http, 'createServer').mockImplementation(((fn: (req: Req, res: Res) => void) => {
-      handler = fn;
+      handlerRef.current = fn;
       return {
         on: vi.fn(),
         listen: listenSpy,
@@ -64,7 +64,7 @@ describe('update peer local feed server', () => {
     });
 
     expect(feed.feedUrl).toBe('http://127.0.0.1:43210');
-    expect(handler).not.toBeNull();
+    expect(handlerRef.current).not.toBeNull();
 
     result = {
       statusCode: 200,
@@ -75,7 +75,7 @@ describe('update peer local feed server', () => {
         result.body = value;
       },
     };
-    handler?.({ url: '/latest-mac.yml?x=1' }, result);
+    handlerRef.current?.({ url: '/latest-mac.yml?x=1' }, result);
     const yml = String(result.body ?? '');
     expect(result.headers.get('content-type')).toBe('text/yaml; charset=utf-8');
     expect(yml).toContain('version: 2026.03.21.12.30');
@@ -92,7 +92,7 @@ describe('update peer local feed server', () => {
         result.body = value;
       },
     };
-    handler?.({ url: '/S1-Control.zip' }, result);
+    handlerRef.current?.({ url: '/S1-Control.zip' }, result);
     expect(result.body).toBe('artifact-bytes');
 
     result = {
@@ -104,7 +104,7 @@ describe('update peer local feed server', () => {
         result.body = value;
       },
     };
-    handler?.({ url: '/missing' }, result);
+    handlerRef.current?.({ url: '/missing' }, result);
     expect(result.statusCode).toBe(404);
 
     await feed.close();
@@ -112,9 +112,9 @@ describe('update peer local feed server', () => {
   });
 
   it('handles bad request and stream errors', async () => {
-    let handler: ((req: Req, res: Res) => void) | null = null;
+    const handlerRef: { current: ((req: Req, res: Res) => void) | null } = { current: null };
     vi.spyOn(http, 'createServer').mockImplementation(((fn: (req: Req, res: Res) => void) => {
-      handler = fn;
+      handlerRef.current = fn;
       return {
         on: vi.fn(),
         listen: (_port: number, _host: string, cb: () => void) => cb(),
@@ -145,7 +145,7 @@ describe('update peer local feed server', () => {
         result.body = value;
       },
     };
-    handler?.({}, result);
+    handlerRef.current?.({}, result);
     expect(result.statusCode).toBe(400);
 
     result = {
@@ -157,7 +157,7 @@ describe('update peer local feed server', () => {
         result.body = value;
       },
     };
-    handler?.({ url: '/S1-Control.zip' }, result);
+    handlerRef.current?.({ url: '/S1-Control.zip' }, result);
     expect(result.statusCode).toBe(500);
   });
 });

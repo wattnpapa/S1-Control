@@ -12,6 +12,7 @@ import { FuehrungsstrukturView } from '@renderer/components/views/Fuehrungsstruk
 import { SettingsView } from '@renderer/components/views/SettingsView';
 import type { WorkspaceView } from '@renderer/types/ui';
 import type { WorkspaceContentProps } from './WorkspaceContent.types';
+import type { JSX } from 'react';
 
 type EinheitEditorsProps = Pick<
   WorkspaceContentProps,

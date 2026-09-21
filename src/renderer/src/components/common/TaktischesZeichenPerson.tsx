@@ -1,5 +1,6 @@
 import type { HelferRolle, OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
+import type { JSX } from 'react';
 
 interface TaktischesZeichenPersonProps {
   organisation: OrganisationKey;

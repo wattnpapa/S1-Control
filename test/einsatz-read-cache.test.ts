@@ -5,7 +5,15 @@ import type { AbschnittDetails, AbschnittNode } from '../src/shared/types';
 import type { DbContext } from '../src/main/db/connection';
 
 function dbCtx(path: string): DbContext {
-  return { path, einsatz: {} as never, system: {} as never, save: async () => {} };
+  return {
+    path,
+    einsatz: {} as never,
+    system: {} as never,
+    save: async () => {},
+    mutate: async (fn) => fn(),
+    reload: () => false,
+    baseWriteSeq: () => 0,
+  };
 }
 
 describe('einsatz read cache', () => {

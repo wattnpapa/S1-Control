@@ -1,4 +1,5 @@
 import type { EinsatzListItem } from '@shared/types';
+import type { JSX } from 'react';
 
 interface StartViewProps {
   startChoice: 'none' | 'open' | 'create';

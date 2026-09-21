@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { prewarmFormationSigns } from '@renderer/app/tactical-sign-cache';
 import { EinheitRow } from '@renderer/components/tables/EinheitRow';
 import type { KraftOverviewItem } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface KraefteOverviewTableProps {
   einheiten: KraftOverviewItem[];

@@ -1,6 +1,7 @@
 import { faGear } from '@fortawesome/free-solid-svg-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { WorkspaceView } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface WorkspaceRailProps {
   activeView: WorkspaceView;

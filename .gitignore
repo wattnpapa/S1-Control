@@ -18,3 +18,7 @@ einsatz/
 *.s1control
 *.s1control.lock
 *.s1control.tmp
+
+# Ausgabe der Typprüfung (tsc --build)
+.tsbuild/
+*.tsbuildinfo

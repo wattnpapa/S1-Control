@@ -18,7 +18,7 @@ interface UseFahrzeugActionsProps {
   setShowEditFahrzeugDialog: Dispatch<SetStateAction<boolean>>;
   closeEditEinheitDialog: () => void;
   acquireEditLock: (einsatzId: string, entityType: 'FAHRZEUG', entityId: string) => Promise<boolean>;
-  releaseEditLock: (einsatzId: string, entityType: 'FAHRZEUG', entityId: string) => Promise<boolean>;
+  releaseEditLock: (einsatzId: string, entityType: 'FAHRZEUG', entityId: string) => Promise<unknown>;
   refreshCurrentEinsatz: (options?: { includeFullOverview?: boolean }) => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }

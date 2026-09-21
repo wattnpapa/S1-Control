@@ -4,6 +4,7 @@ import {
   abschnittTypErklaerung,
 } from '@renderer/constants/abschnitt';
 import type { EditAbschnittForm } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface EditAbschnittDialogProps {
   visible: boolean;

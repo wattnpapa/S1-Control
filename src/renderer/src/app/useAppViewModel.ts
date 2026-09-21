@@ -64,6 +64,7 @@ function toWorkspaceBuilderArgs(params: {
     lanPeerUpdatesEnabled: params.rootState.lanPeerUpdatesEnabled,
     setDbPath: params.rootState.setDbPath,
     setSelectedAbschnittId: params.setSelectedAbschnittId,
+    selectedAbschnittId: params.selectedAbschnittId,
     uiState: params.uiState,
     derivedState: params.derivedState,
     lockByAbschnittId: params.lockByAbschnittId,
@@ -131,6 +132,7 @@ export function useAppViewModel(): AppViewModel {
     abschnittActions,
     fahrzeugActions,
     einheitActions,
+    einsatzBasisdatenActions,
   } = useAppControllers({
     rootState,
     uiState,
@@ -186,6 +188,7 @@ export function useAppViewModel(): AppViewModel {
         fahrzeugActions,
         systemActions,
         undoAction,
+        einsatzBasisdatenActions,
       }),
     ),
   };

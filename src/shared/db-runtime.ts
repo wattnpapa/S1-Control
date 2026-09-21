@@ -511,12 +511,24 @@ export type DbRuntimeResponseUnion =
       }
     >;
 
+/** Nutzlast eines Kanals. */
+export type DbRuntimePayload<TType extends DbRuntimeOpType> = Extract<
+  DbRuntimeRequest,
+  { type: TType }
+>['payload'];
+
+/** Ergebnis eines Kanals im Erfolgsfall. */
+export type DbRuntimeResult<TType extends DbRuntimeOpType> = Extract<
+  DbRuntimeResponseUnion,
+  { type: TType; ok: true }
+>['result'];
+
 export interface DbRuntimeClient {
   request<TType extends DbRuntimeOpType>(
     type: TType,
-    payload: Extract<DbRuntimeRequest, { type: TType }>['payload'],
+    payload: DbRuntimePayload<TType>,
     priority: DbOpPriority,
-  ): Promise<Extract<DbRuntimeResponseUnion, { type: TType; ok: true }>['result']>;
+  ): Promise<DbRuntimeResult<TType>>;
 }
 
 export const DB_RUNTIME_TIMEOUT_MS: Record<DbOpPriority, number> = {

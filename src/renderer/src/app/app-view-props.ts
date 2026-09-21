@@ -1,6 +1,15 @@
 import type { AppEntryViewProps } from '@renderer/components/views/AppEntryView';
 import type { AppWorkspaceShellProps } from '@renderer/components/views/AppWorkspaceShell';
-import type { WorkspaceDerivedState } from '@renderer/app/useWorkspaceDerivedState';
+import type { useWorkspaceDerivedState } from '@renderer/app/useWorkspaceDerivedState';
+import type { useAbschnittActions } from '@renderer/app/useAbschnittActions';
+import type { useEinheitActions } from '@renderer/app/useEinheitActions';
+import type { useFahrzeugActions } from '@renderer/app/useFahrzeugActions';
+import type { useFahrzeugRemoveActions } from '@renderer/app/useFahrzeugRemoveActions';
+import type { useSystemActions } from '@renderer/app/useSystemActions';
+import type { useUndoAction } from '@renderer/app/useUndoAction';
+import type { useEinsatzBasisdatenActions } from '@renderer/app/useEinsatzBasisdatenActions';
+
+type WorkspaceDerivedState = ReturnType<typeof useWorkspaceDerivedState>;
 import type { WorkspaceUiState } from '@renderer/app/useWorkspaceUiState';
 
 /**
@@ -68,6 +77,7 @@ export interface BuildWorkspacePropsArgs {
   lanPeerUpdatesEnabled: boolean;
   setDbPath: (value: string) => void;
   setSelectedAbschnittId: (value: string) => void;
+  selectedAbschnittId: string;
   uiState: WorkspaceUiState;
   derivedState: WorkspaceDerivedState;
   lockByAbschnittId: AppWorkspaceShellProps['lockByAbschnittId'];
@@ -76,56 +86,12 @@ export interface BuildWorkspacePropsArgs {
   closeEditEinheitDialog: () => void;
   closeEditFahrzeugDialog: () => void;
   updaterState: AppWorkspaceShellProps['updaterState'];
-  einsatzBasisdatenActions: {
-    openEditEinsatzDialog: () => void;
-    submitEditEinsatz: () => Promise<void>;
-    closeEditEinsatzDialog: () => void;
-  };
-  abschnittActions: {
-    openEditSelectedDialog: () => void;
-    openEditDialog: (id: string) => void;
-    openCreateDialog: () => void;
-    submitCreate: () => Promise<void>;
-    submitEdit: () => Promise<void>;
-    removeAbschnitt: () => Promise<void>;
-    closeEditDialog: () => void;
-  };
-  einheitActions: {
-    removeEinheit: (einheitId: string) => Promise<void>;
-    submitEdit: () => Promise<void>;
-    createHelfer: () => Promise<void>;
-    updateHelfer: (helferId: string) => Promise<void>;
-    deleteHelfer: (helferId: string) => Promise<void>;
-    createEinheitFahrzeug: () => Promise<void>;
-    updateEinheitFahrzeug: (fahrzeugId: string) => Promise<void>;
-    submitCreate: () => Promise<void>;
-    openCreateDialog: () => void;
-    openEditDialog: (einheitId: string) => void;
-    openSplitDialog: (einheitId: string) => void;
-    submitSplit: () => Promise<void>;
-  };
-  fahrzeugActions: {
-    removeFahrzeug: (fahrzeugId: string) => Promise<void>;
-    submitEdit: () => Promise<void>;
-    openCreateDialog: () => void;
-    openEditDialog: (fahrzeugId: string) => void;
-    submitCreate: () => Promise<void>;
-  };
-  systemActions: {
-    checkForUpdates: () => Promise<void>;
-    openStrengthDisplay: () => void;
-    closeStrengthDisplay: () => void;
-    downloadUpdate: () => void;
-    openReleasePage: () => void;
-    saveDbPath: () => Promise<void>;
-    restoreBackup: () => Promise<void>;
-    toggleLanPeerUpdates: (enabled: boolean) => Promise<void>;
-    move: () => Promise<void>;
-  };
-  undoAction: {
-    undoMoeglich: boolean;
-    undoLast: () => Promise<void>;
-  };
+  einsatzBasisdatenActions: ReturnType<typeof useEinsatzBasisdatenActions>;
+  abschnittActions: ReturnType<typeof useAbschnittActions>;
+  einheitActions: ReturnType<typeof useEinheitActions>;
+  fahrzeugActions: ReturnType<typeof useFahrzeugActions> & ReturnType<typeof useFahrzeugRemoveActions>;
+  systemActions: ReturnType<typeof useSystemActions>;
+  undoAction: ReturnType<typeof useUndoAction>;
 }
 
 /**
@@ -157,7 +123,7 @@ function buildWorkspaceStateProps(
     activeView: args.uiState.activeView,
     selectedEinsatz: args.derivedState.selectedEinsatz,
     selectedEinsatzId: args.selectedEinsatzId,
-    selectedAbschnittId: args.uiState.selectedAbschnittId,
+    selectedAbschnittId: args.selectedAbschnittId,
     abschnitte: args.abschnitte,
     details: args.details,
     allKraefte: args.allKraefte,
@@ -243,6 +209,7 @@ type WorkspaceCallbacks = Pick<
   | 'onCreateFahrzeug'
   | 'onMoveEinheit'
   | 'onEditEinheit'
+  | 'onEditAbschnitt'
   | 'onSplitEinheit'
   | 'onRemoveEinheit'
   | 'onRemoveFahrzeug'

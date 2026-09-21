@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { toNatoDateTime } from '@renderer/utils/datetime';
 import type { StrengthDisplayState } from '@shared/types';
+import type { JSX } from 'react';
 
 const DEFAULT_STATE: StrengthDisplayState = { taktischeStaerke: '0/0/0//0' };
 

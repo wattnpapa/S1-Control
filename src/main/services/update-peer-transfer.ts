@@ -54,7 +54,7 @@ export async function downloadPeerFile(input: DownloadPeerFileInput): Promise<Pe
       at: nowIso(),
       ok: true,
     };
-    debugSync('peer-download', 'ok', stats);
+    debugSync('peer-download', 'ok', { ...stats });
     return { targetPath: input.targetPath, stats };
   } catch (error) {
     const stats: PeerTransferStats = {
@@ -68,7 +68,7 @@ export async function downloadPeerFile(input: DownloadPeerFileInput): Promise<Pe
       ok: false,
       reason: error instanceof Error ? error.message : String(error),
     };
-    debugSync('peer-download', 'failed', stats);
+    debugSync('peer-download', 'failed', { ...stats });
     throw Object.assign(error instanceof Error ? error : new Error(String(error)), { peerStats: stats });
   } finally {
     clearTimeout(timeout);

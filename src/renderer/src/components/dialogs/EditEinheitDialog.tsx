@@ -1,5 +1,6 @@
 import { EinheitCaptureFields, EinheitCoreFields } from '@renderer/components/dialogs/EinheitFormFields';
 import type { EditEinheitForm } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface EditEinheitDialogProps {
   visible: boolean;

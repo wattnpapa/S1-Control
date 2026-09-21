@@ -63,7 +63,7 @@ function entryScore(queryTokens: Set<string>, entry: RawStanEntry): number {
 }
 
 function buildSuggestions(): RawStanEntry[] {
-  const raw = (stanData as { entries?: RawStanEntry[] }).entries ?? [];
+  const raw = (stanData as unknown as { entries?: RawStanEntry[] }).entries ?? [];
   return raw.filter((entry) => !EXCLUDED_IDS.has(entry.id));
 }
 
@@ -145,7 +145,7 @@ function heuristicTacticalSign(title: string): NonNullable<ThwStanPresetSuggesti
     name: title,
     organisationsname: 'THW',
     typ,
-    verwaltungsstufe: denominatorMatch ? denominatorMatch[1].toUpperCase() : '',
+    verwaltungsstufe: denominatorMatch?.[1]?.toUpperCase() ?? '',
   };
 }
 

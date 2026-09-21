@@ -53,9 +53,9 @@ export interface UseEinheitActionsProps {
   closeEditEinheitDialog: () => void;
   closeEditFahrzeugDialog: () => void;
   acquireEinheitLock: (einsatzId: string, einheitId: string) => Promise<boolean>;
-  releaseEinheitLock: (einsatzId: string, einheitId: string) => Promise<boolean>;
+  releaseEinheitLock: (einsatzId: string, einheitId: string) => Promise<unknown>;
   acquireFahrzeugLock: (einsatzId: string, fahrzeugId: string) => Promise<boolean>;
-  releaseFahrzeugLock: (einsatzId: string, fahrzeugId: string) => Promise<boolean>;
+  releaseFahrzeugLock: (einsatzId: string, fahrzeugId: string) => Promise<unknown>;
   refreshCurrentEinsatz: (options?: { includeFullOverview?: boolean }) => Promise<void>;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
 }

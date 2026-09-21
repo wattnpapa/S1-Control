@@ -2,6 +2,7 @@ import type { OrganisationKey } from '@shared/types';
 import { useEffect, useState } from 'react';
 import { buildFallbackVehicleSignDataUrl } from '@renderer/utils/tactical-sign-fallback';
 import { getVehicleSignSrc, prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
+import type { JSX } from 'react';
 
 interface TaktischesZeichenFahrzeugProps {
   organisation: OrganisationKey | null;

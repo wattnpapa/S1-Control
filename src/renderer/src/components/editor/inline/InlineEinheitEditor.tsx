@@ -9,6 +9,7 @@ import {
 } from './EinheitFormRows';
 import { useEffect, useState } from 'react';
 import type { FahrzeugDraft, HelferDraft, InlineEinheitEditorProps } from './types';
+import type { JSX } from 'react';
 
 const DEFAULT_HELFER_DRAFT: HelferDraft = {
   name: '',

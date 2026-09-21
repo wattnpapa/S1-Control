@@ -3,6 +3,7 @@ import type { TacticalStrength } from '@renderer/types/ui';
 import { toNatoDateTime } from '@renderer/utils/datetime';
 import { staerkeZusatz, type StaerkeUebersicht } from '@renderer/utils/staerke';
 import { toTaktischeStaerke } from '@renderer/utils/tactical';
+import type { JSX } from 'react';
 
 interface TopbarProps {
   einsatzName: string;

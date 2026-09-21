@@ -1,4 +1,5 @@
 import type { EditEinsatzForm } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface EditEinsatzDialogProps {
   visible: boolean;

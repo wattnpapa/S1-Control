@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { TaktischesZeichenEinheit } from '@renderer/components/common/TaktischesZeichenEinheit';
 import type { CreateEinheitForm } from '@renderer/types/ui';
 import type { TacticalSignConfig } from '@shared/types';
+import type { JSX } from 'react';
 
 type TacticalFormSlice = Pick<
   CreateEinheitForm,

@@ -1,3 +1,5 @@
+import type { JSX } from 'react';
+
 interface LoginViewProps {
   loginName: string;
   loginPasswort: string;

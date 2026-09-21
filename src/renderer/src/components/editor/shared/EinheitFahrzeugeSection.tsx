@@ -177,7 +177,7 @@ export function EinheitFahrzeugeSection(props: EinheitFahrzeugeSectionProps): JS
                 return (
                   <ExistingFahrzeugRow
                     key={item.id}
-                    organisation={item.organisation}
+                    organisation={item.organisation ?? props.organisation}
                     rowId={item.id}
                     row={row}
                     updateRow={updateRow}

@@ -126,21 +126,22 @@ function useSystemProcessActions(props: UseSystemActionsProps) {
   }, [props]);
 
   const move = useCallback(async () => {
-    if (!props.moveDialog || !props.selectedEinsatzId || !props.moveTarget) {
+    const dialog = props.moveDialog;
+    if (!dialog || !props.selectedEinsatzId || !props.moveTarget) {
       return;
     }
 
     await props.withBusy(async () => {
-      if (props.moveDialog.type === 'einheit') {
+      if (dialog.type === 'einheit') {
         await window.api.moveEinheit({
           einsatzId: props.selectedEinsatzId,
-          einheitId: props.moveDialog.id,
+          einheitId: dialog.id,
           nachAbschnittId: props.moveTarget,
         });
       } else {
         await window.api.moveFahrzeug({
           einsatzId: props.selectedEinsatzId,
-          fahrzeugId: props.moveDialog.id,
+          fahrzeugId: dialog.id,
           nachAbschnittId: props.moveTarget,
         });
       }

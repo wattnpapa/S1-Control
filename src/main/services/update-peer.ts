@@ -143,13 +143,14 @@ export class UpdatePeerService {
    * Queries LAN peers for matching update artifacts.
    */
   public async queryPeersForVersion(query: PeerQueryMessage): Promise<PeerOffer[]> {
-    if (!this.enabled || !this.socket || !this.httpPort) {
+    const socket = this.socket;
+    if (!this.enabled || !socket || !this.httpPort) {
       return [];
     }
     return new Promise<PeerOffer[]>((resolve) => {
       const timer = setTimeout(() => this.finishPendingQuery(query.requestId), DISCOVERY_TIMEOUT_MS);
       this.pendingQueries.set(query.requestId, { startedAt: Date.now(), offers: [], resolve, timer });
-      broadcastQuery(this.socket, { type: 's1-update-query', payload: query } satisfies WireMessage);
+      broadcastQuery(socket, { type: 's1-update-query', payload: query } satisfies WireMessage);
       debugSync('peer-discovery', 'query', {
         requestId: query.requestId,
         version: query.versionWanted,

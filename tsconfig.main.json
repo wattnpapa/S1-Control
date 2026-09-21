@@ -4,8 +4,17 @@
     "composite": true,
     "module": "CommonJS",
     "moduleResolution": "Node",
-    "lib": ["ES2022"],
-    "outDir": "dist-electron"
+    "lib": [
+      "ES2022"
+    ],
+    "outDir": "dist-electron",
+    "resolveJsonModule": true,
+    "tsBuildInfoFile": ".tsbuild/tsconfig.main.tsbuildinfo"
   },
-  "include": ["src/main/**/*.ts", "src/shared/**/*.ts", "test/**/*.ts", "drizzle.config.ts"]
+  "include": [
+    "src/main/**/*.ts",
+    "src/main/**/*.json",
+    "src/shared/**/*.ts",
+    "drizzle.config.ts"
+  ]
 }

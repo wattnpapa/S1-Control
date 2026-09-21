@@ -1,6 +1,7 @@
 import { AbschnittField, EinheitCaptureFields, EinheitCoreFields } from '@renderer/components/dialogs/EinheitFormFields';
 import type { CreateEinheitForm } from '@renderer/types/ui';
 import type { AbschnittNode } from '@shared/types';
+import type { JSX } from 'react';
 
 interface CreateEinheitDialogProps {
   visible: boolean;

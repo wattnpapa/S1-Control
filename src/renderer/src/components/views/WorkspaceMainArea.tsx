@@ -1,3 +1,4 @@
+import type { RecordEditLockInfo } from '@shared/types';
 import { AbschnittSidebar } from '@renderer/components/layout/AbschnittSidebar';
 import { WorkspaceRail } from '@renderer/components/layout/WorkspaceRail';
 import { WorkspaceContent } from '@renderer/components/views/WorkspaceContent';
@@ -10,7 +11,7 @@ interface WorkspaceMainAreaProps {
   contentProps: WorkspaceContentProps;
   showAbschnittSidebar: boolean;
   selectedAbschnittLockedByOther: boolean;
-  lockByAbschnittId: Record<string, { isSelf: boolean; computerName: string; userName: string }>;
+  lockByAbschnittId: Record<string, RecordEditLockInfo | undefined>;
   onSetActiveView: (value: WorkspaceView) => void;
   onSetSelectedAbschnittId: (id: string) => void;
   onEditSelectedAbschnitt: () => void;

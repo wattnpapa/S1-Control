@@ -1,5 +1,6 @@
 import { WorkspaceViewBody } from './workspace/WorkspaceSections';
 import type { WorkspaceContentProps } from './workspace/WorkspaceContent.types';
+import type { JSX } from 'react';
 
 /**
  * Renders the active workspace view inside the main content area.

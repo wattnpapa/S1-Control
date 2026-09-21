@@ -35,7 +35,7 @@ interface UseAbschnittActionsProps {
     einsatzId: string,
     entityType: 'ABSCHNITT',
     entityId: string,
-  ) => Promise<boolean>;
+  ) => Promise<unknown>;
   loadEinsatz: (
     einsatzId: string,
     preferredAbschnittId?: string,

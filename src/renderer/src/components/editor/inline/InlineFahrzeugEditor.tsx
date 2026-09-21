@@ -1,4 +1,5 @@
 import type { InlineFahrzeugEditorProps } from './types';
+import type { JSX } from 'react';
 
 /**
  * Renders form body for inline vehicle editing.

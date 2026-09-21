@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import type { EinsatzListItem } from '@shared/types';
+import type { EinsatzListItem, RecordEditLockInfo } from '@shared/types';
 import type { WorkspaceView } from '@renderer/types/ui';
 import { selectBroadcastMonitorLogs, selectUdpDebugMonitorLogs } from './diagnostics-log';
 
@@ -8,7 +8,7 @@ interface UseWorkspaceDerivedStateOptions {
   selectedEinsatzId: string;
   selectedAbschnittId: string;
   debugSyncLogs: string[];
-  lockByAbschnittId: Record<string, { isSelf: boolean; computerName: string; userName: string }>;
+  lockByAbschnittId: Record<string, RecordEditLockInfo | undefined>;
   activeView: WorkspaceView;
 }
 

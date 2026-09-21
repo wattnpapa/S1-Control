@@ -2,6 +2,7 @@ import type { EinheitListItem, RecordEditLockInfo } from '@shared/types';
 import { useEffect } from 'react';
 import { prewarmFormationSigns } from '@renderer/app/tactical-sign-cache';
 import { EinheitRow } from '@renderer/components/tables/EinheitRow';
+import type { JSX } from 'react';
 
 interface EinheitenTableProps {
   einheiten: EinheitListItem[];

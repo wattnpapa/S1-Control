@@ -51,7 +51,7 @@ describe('Entfernen als Korrekturweg', () => {
     const details = listAbschnittDetails(ctx.einsatz, ctx.system, einsatzId, abschnittId);
     expect(details.einheiten).toHaveLength(0);
     expect(details.fahrzeuge).toHaveLength(0);
-    expect(ctx.einsatz.einheiten[0].aufgeloest).not.toBeNull();
+    expect(ctx.einsatz.einheiten[0]?.aufgeloest).not.toBeNull();
   });
 
   it('holt ein Entfernen per Rückgängig zurück', () => {

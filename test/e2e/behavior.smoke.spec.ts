@@ -42,8 +42,7 @@ test('sichtbarer smoke-clickthrough', async () => {
     );
   }
 
-  const app = await electron.launch(
-    fs.existsSync(PACKAGED_EXECUTABLE)
+  const startOptionen = fs.existsSync(PACKAGED_EXECUTABLE)
       ? {
           executablePath: PACKAGED_EXECUTABLE,
           args: [],
@@ -66,8 +65,16 @@ test('sichtbarer smoke-clickthrough', async () => {
             CI: '1',
             S1_OPEN_DEVTOOLS: '0',
           },
-        },
-  );
+        };
+
+  // Die Umgebung darf keine undefined-Werte enthalten, sonst passt sie nicht
+  // auf die Startoptionen von Playwright.
+  const app = await electron.launch({
+    ...startOptionen,
+    env: Object.fromEntries(
+      Object.entries(startOptionen.env).filter((eintrag): eintrag is [string, string] => eintrag[1] !== undefined),
+    ),
+  });
 
   try {
     const page = await Promise.race([

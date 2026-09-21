@@ -1,4 +1,5 @@
 import type { AbschnittNode, RecordEditLockInfo } from '@shared/types';
+import type { JSX } from 'react';
 
 interface AbschnittSidebarProps {
   abschnitte: AbschnittNode[];

@@ -2,6 +2,7 @@ import type { EinsatzListItem, RecordEditLockInfo } from '@shared/types';
 import { EinheitenTable } from '@renderer/components/tables/EinheitenTable';
 import { FahrzeugeTable } from '@renderer/components/tables/FahrzeugeTable';
 import type { AbschnittDetails } from '@shared/types';
+import type { JSX } from 'react';
 
 interface EinsatzOverviewViewProps {
   details: AbschnittDetails;

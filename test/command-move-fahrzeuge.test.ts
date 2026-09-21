@@ -126,8 +126,8 @@ describe('Einheit verschieben', () => {
       user,
     );
 
-    expect(ctx.einsatz.einheitBewegungen[0].zeitpunkt).toBe(zeitpunkt);
-    expect(ctx.einsatz.fahrzeugBewegungen[0].zeitpunkt).toBe(zeitpunkt);
+    expect(ctx.einsatz.einheitBewegungen[0]?.zeitpunkt).toBe(zeitpunkt);
+    expect(ctx.einsatz.fahrzeugBewegungen[0]?.zeitpunkt).toBe(zeitpunkt);
   });
 
   it('holt beim Rückgängigmachen auch die mitgenommenen Fahrzeuge zurück', () => {

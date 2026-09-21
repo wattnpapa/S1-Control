@@ -27,7 +27,7 @@
     "build:linux:deb": "npm run -s clean:dist && npm run -s lint && npm run -s typecheck && npm run -s build:renderer && npm run -s build:main && npm run -s rebuild:native && node scripts/run-electron-builder.cjs --linux --x64 --config.linux.target=deb",
     "build:renderer": "vite build",
     "build:main": "tsup src/main/main.ts src/main/preload.ts src/main/db-runtime.ts --format cjs --target node20 --out-dir dist-electron --clean --external electron",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --build --force tsconfig.json",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",

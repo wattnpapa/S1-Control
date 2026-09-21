@@ -14,6 +14,14 @@ import type { AppState } from './register-support';
 /**
  * Handles Register Ipc.
  */
+/**
+ * Liest den IPC-Kanal aus dem Ereignis. Electron liefert ihn zur Laufzeit,
+ * die Typen kennen das Feld nicht.
+ */
+function ipcKanal(event: unknown): string {
+  return (event as { channel?: string }).channel ?? 'unbekannt';
+}
+
 export function registerIpc(state: AppState): void {
   const SLOW_IPC_THRESHOLD_MS = 120;
   const wrap = <T extends unknown[], R>(handler: (...args: T) => R | Promise<R>) => {
@@ -24,7 +32,7 @@ export function registerIpc(state: AppState): void {
         const durationMs = Date.now() - startedAt;
         if (durationMs >= SLOW_IPC_THRESHOLD_MS) {
           debugSync('ipc', 'slow', {
-            channel: event.channel,
+            channel: ipcKanal(event),
             durationMs,
             argsCount: args.length,
           });
@@ -34,7 +42,7 @@ export function registerIpc(state: AppState): void {
         const durationMs = Date.now() - startedAt;
         if (durationMs >= SLOW_IPC_THRESHOLD_MS) {
           debugSync('ipc', 'slow-error', {
-            channel: event.channel,
+            channel: ipcKanal(event),
             durationMs,
             argsCount: args.length,
           });

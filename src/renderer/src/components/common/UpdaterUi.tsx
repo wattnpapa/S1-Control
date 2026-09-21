@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { UpdaterState } from '@shared/types';
 import { useConfirm } from '@renderer/app/confirm-context';
+import type { JSX } from 'react';
 
 interface UpdaterNoticesProps {
   updaterState: UpdaterState;

@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { prewarmVehicleSigns } from '@renderer/app/tactical-sign-cache';
 import type { FahrzeugOverviewItem } from '@renderer/types/ui';
 import { FahrzeugRow } from '@renderer/components/tables/FahrzeugRow';
+import type { JSX } from 'react';
 
 interface FahrzeugeOverviewTableProps {
   fahrzeuge: FahrzeugOverviewItem[];

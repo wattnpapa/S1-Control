@@ -10,7 +10,7 @@ interface UseEinsatzDataProps {
   selectedAbschnittId: string;
   setEinsaetze: Dispatch<SetStateAction<EinsatzListItem[]>>;
   setAbschnitte: Dispatch<SetStateAction<Awaited<ReturnType<typeof window.api.listAbschnitte>>>>;
-  setSelectedAbschnittId: Dispatch<SetStateAction<string>>;
+  setSelectedAbschnittId: (value: string) => void;
   setDetails: Dispatch<SetStateAction<AbschnittDetails>>;
   setAllKraefte: Dispatch<SetStateAction<KraftOverviewItem[]>>;
   setAllFahrzeuge: Dispatch<SetStateAction<FahrzeugOverviewItem[]>>;

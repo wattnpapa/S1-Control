@@ -60,7 +60,7 @@ function scoreCandidate(name: string, candidate: RankedCatalogItem): number {
   if (normalizedName.includes(candidate.normalizedLabel)) {
     score += 0.55;
   }
-  if (candidate.unit && normalizedName.includes(normalizeText(candidate.unit))) {
+  if (candidate.einheit && normalizedName.includes(normalizeText(candidate.einheit))) {
     score += 0.25;
   }
 

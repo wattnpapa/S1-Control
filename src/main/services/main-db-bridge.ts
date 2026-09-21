@@ -7,8 +7,10 @@ import {
   type DbOpPriority,
   type DbRuntimeClient,
   type DbRuntimeOpType,
+  type DbRuntimePayload,
   type DbRuntimeRequest,
   type DbRuntimeResponseUnion,
+  type DbRuntimeResult,
 } from '../../shared/db-runtime';
 import { debugSync } from './debug';
 
@@ -59,9 +61,9 @@ export class MainDbBridge implements DbRuntimeClient {
 
   public async request<TType extends DbRuntimeOpType>(
     type: TType,
-    payload: Extract<DbRuntimeRequest, { type: TType }>['payload'],
+    payload: DbRuntimePayload<TType>,
     priority: DbOpPriority,
-  ): Promise<Extract<DbRuntimeResponseUnion, { type: TType; ok: true }>['result']> {
+  ): Promise<DbRuntimeResult<TType>> {
     if (!this.enabled) {
       throw new Error('DB-Runtime ist deaktiviert.');
     }
@@ -84,7 +86,9 @@ export class MainDbBridge implements DbRuntimeClient {
     } as Extract<DbRuntimeRequest, { type: TType }>;
     const startedAt = Date.now();
 
-    return await new Promise((resolve, reject) => {
+    // Über die Kanalvarianten hinweg lässt sich der Ergebnistyp nicht
+    // generisch herleiten; die Zuordnung sichert der Kanalvertrag zu.
+    return (await new Promise<unknown>((resolve, reject) => {
       const timeout = setTimeout(() => {
         this.pending.delete(requestId);
         reject(new Error(`DB-Runtime Timeout (${type}, ${timeoutMs}ms)`));
@@ -123,7 +127,7 @@ export class MainDbBridge implements DbRuntimeClient {
         settle(false);
         originalReject(error);
       };
-    }) as Promise<Extract<DbRuntimeResponseUnion, { type: TType; ok: true }>['result']>;
+    })) as DbRuntimeResult<TType>;
   }
 
   private spawn(): void {

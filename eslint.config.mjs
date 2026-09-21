@@ -8,7 +8,7 @@ import sonarjs from 'eslint-plugin-sonarjs';
 
 export default tseslint.config(
   {
-    ignores: ['dist-electron/**', 'dist-renderer/**', 'node_modules/**', 'scripts/**', 'eslint.config.mjs', '.features-gen/**'],
+    ignores: ['dist-electron/**', 'dist-renderer/**', 'node_modules/**', 'scripts/**', 'eslint.config.mjs', '.features-gen/**', '.tsbuild/**'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,
@@ -49,7 +49,9 @@ export default tseslint.config(
     files: ['src/main/**/*.ts', 'src/shared/**/*.ts', 'test/**/*.ts', 'drizzle.config.ts'],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.main.json'],
+        // Tests liegen in einem eigenen Projekt, weil sie Haupt- und
+        // Renderer-Code gemeinsam prüfen.
+        project: ['./tsconfig.main.json', './tsconfig.test.json'],
         tsconfigRootDir: import.meta.dirname,
       },
       globals: globals.node,

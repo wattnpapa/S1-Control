@@ -1,5 +1,6 @@
 import { EinheitCoreFields, SplitSourceField } from '@renderer/components/dialogs/EinheitFormFields';
 import type { KraftOverviewItem, SplitEinheitForm } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 interface SplitEinheitDialogProps {
   visible: boolean;

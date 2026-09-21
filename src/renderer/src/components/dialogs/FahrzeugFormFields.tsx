@@ -1,4 +1,5 @@
 import type { CreateFahrzeugForm, EditFahrzeugForm, KraftOverviewItem } from '@renderer/types/ui';
+import type { JSX } from 'react';
 
 type FahrzeugForm = CreateFahrzeugForm | EditFahrzeugForm;
 

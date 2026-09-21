@@ -2,6 +2,8 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "composite": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
     "lib": [
       "ES2022",
       "DOM",
@@ -9,7 +11,7 @@
     ],
     "jsx": "react-jsx",
     "types": [
-      "vite/client"
+      "node"
     ],
     "baseUrl": ".",
     "paths": {
@@ -20,12 +22,13 @@
         "src/shared/*"
       ]
     },
-    "outDir": ".tsbuild/renderer",
-    "tsBuildInfoFile": ".tsbuild/tsconfig.renderer.tsbuildinfo"
+    "outDir": ".tsbuild/test",
+    "tsBuildInfoFile": ".tsbuild/tsconfig.test.tsbuildinfo"
   },
   "include": [
-    "src/renderer/src/**/*.ts",
-    "src/renderer/src/**/*.tsx",
-    "src/shared/**/*.ts"
+    "test/**/*.ts",
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.json"
   ]
 }

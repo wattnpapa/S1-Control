@@ -49,7 +49,8 @@ function baseParams(overrides?: {
     states,
     peerService,
     params: {
-      peerService,
+      // Der Mock bildet nur die im Ablauf genutzten Methoden ab.
+      peerService: peerService as unknown as Parameters<typeof tryPeerFirstDownload>[0]['peerService'],
       pendingArtifact: {
         version: '2026.03.21.13.00',
         platform: 'darwin',
@@ -61,7 +62,9 @@ function baseParams(overrides?: {
       },
       updateCacheDir: '/tmp/cache',
       genericFeedUrl: 'https://updates.example.test/latest',
-      setState: (next: Record<string, unknown>) => states.push(next),
+      setState: ((next: Record<string, unknown>) => states.push(next)) as unknown as Parameters<
+        typeof tryPeerFirstDownload
+      >[0]['setState'],
       nowIso: () => '2026-03-21T13:00:00.000Z',
     },
   };

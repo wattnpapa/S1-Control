@@ -38,7 +38,7 @@ describe('main-window service', () => {
     } else {
       process.env.VITE_DEV_SERVER_URL = originalDevUrl;
     }
-    hoisted.BrowserWindowMock.mockClear();
+    (hoisted.BrowserWindowMock as unknown as ReturnType<typeof vi.fn>).mockClear();
     (hoisted.BrowserWindowMock.getAllWindows as unknown as ReturnType<typeof vi.fn>).mockClear();
     hoisted.windows.length = 0;
   });
@@ -59,10 +59,12 @@ describe('main-window service', () => {
     await createMainWindow();
 
     expect(hoisted.BrowserWindowMock).toHaveBeenCalledTimes(1);
-    const firstCall = hoisted.BrowserWindowMock.mock.calls[0]?.[0] as { webPreferences?: { preload?: string } };
+    const firstCall = (hoisted.BrowserWindowMock as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as {
+      webPreferences?: { preload?: string };
+    };
     expect(firstCall.webPreferences?.preload).toContain('preload.js');
 
-    const created = hoisted.windows[0] as { loadURL: ReturnType<typeof vi.fn> };
+    const created = hoisted.windows[0] as unknown as { loadURL: ReturnType<typeof vi.fn> };
     expect(created.loadURL).toHaveBeenCalledWith('http://localhost:5173');
   });
 
