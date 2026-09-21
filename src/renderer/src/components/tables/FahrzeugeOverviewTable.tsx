@@ -10,6 +10,7 @@ interface FahrzeugeOverviewTableProps {
   editLocksById?: Record<string, RecordEditLockInfo | undefined>;
   onMove: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 /**
@@ -51,6 +52,7 @@ export function FahrzeugeOverviewTable(props: FahrzeugeOverviewTableProps): JSX.
               lock={props.editLocksById?.[item.id]}
               onMove={props.onMove}
               onEdit={props.onEdit}
+              onRemove={props.onRemove}
             />
           ))}
         </tbody>

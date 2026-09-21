@@ -10,6 +10,9 @@ interface EinheitenTableProps {
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
+  /** Name des Abschnitts, damit die Überschrift den Kontext nennt. */
+  abschnittName?: string;
 }
 
 /**
@@ -29,7 +32,7 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
 
   return (
     <>
-      <h2>Einheiten im Abschnitt</h2>
+      <h2>{props.abschnittName ? `Einheiten in ${props.abschnittName}` : 'Einheiten im Abschnitt'}</h2>
       <table>
         <thead>
           <tr>
@@ -53,6 +56,7 @@ export function EinheitenTable(props: EinheitenTableProps): JSX.Element {
               onMove={props.onMove}
               onEdit={props.onEdit}
               onSplit={props.onSplit}
+              onRemove={props.onRemove}
             />
           ))}
         </tbody>

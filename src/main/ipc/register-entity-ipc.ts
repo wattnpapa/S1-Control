@@ -1,5 +1,6 @@
 import type { EntityIpcHelpers, RegistrarCommon } from './register-support';
 import { registerEntityCommandHandlers } from './register-entity-command-ipc';
+import { registerEntityRemoveHandlers } from './register-entity-remove-ipc';
 import { registerEditLockHandlers } from './register-entity-lock-ipc';
 import { registerEinheitHandlers } from './register-entity-einheit-ipc';
 import { registerFahrzeugHandlers } from './register-entity-fahrzeug-ipc';
@@ -13,5 +14,6 @@ export function registerEntityIpc(common: RegistrarCommon, helpers: EntityIpcHel
   registerFahrzeugHandlers(common, helpers);
   registerHelferHandlers(common, helpers);
   registerEntityCommandHandlers(common, helpers);
+  registerEntityRemoveHandlers(common, helpers);
   registerEditLockHandlers(common, helpers);
 }

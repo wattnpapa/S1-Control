@@ -1,5 +1,5 @@
 import type { FahrzeugListItem, RecordEditLockInfo } from '@shared/types';
-import { faArrowsUpDownLeftRight, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { faArrowsUpDownLeftRight, faPenToSquare , faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
 import { TaktischesZeichenFahrzeug } from '@renderer/components/common/TaktischesZeichenFahrzeug';
 import type { JSX } from 'react';
@@ -13,6 +13,7 @@ interface FahrzeugRowProps {
   lock?: RecordEditLockInfo;
   onMove: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 /**
@@ -39,6 +40,7 @@ function FahrzeugRowActions({
   editLabel,
   onMove,
   onEdit,
+  onRemove,
 }: {
   itemId: string;
   isArchived: boolean;
@@ -46,6 +48,7 @@ function FahrzeugRowActions({
   editLabel: string;
   onMove: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
 }): JSX.Element {
   return (
     <>
@@ -60,6 +63,13 @@ function FahrzeugRowActions({
         icon={faPenToSquare}
         onClick={() => onEdit(itemId)}
         disabled={isArchived || lockedByOther}
+      />
+      <ActionIconButton
+        label="Aus dem Einsatz nehmen"
+        icon={faTrashCan}
+        onClick={() => onRemove(itemId)}
+        disabled={isArchived || lockedByOther}
+        abgesetzt
       />
     </>
   );
@@ -101,6 +111,7 @@ export function FahrzeugRow(props: FahrzeugRowProps): JSX.Element {
           editLabel={lock.editLabel}
           onMove={props.onMove}
           onEdit={props.onEdit}
+          onRemove={props.onRemove}
         />
       </td>
     </tr>

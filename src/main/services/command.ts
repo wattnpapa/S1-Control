@@ -3,6 +3,7 @@ import type { DbContext } from '../db/connection';
 import type { SessionUser } from '../../shared/types';
 import { AppError } from './errors';
 import { ensureNotArchived } from './einsatz';
+import type { RemovePayload } from './einsatz-write/entfernen';
 
 function nowIso(): string {
   return new Date().toISOString();
@@ -163,6 +164,50 @@ export function moveFahrzeug(
   });
 }
 
+/**
+ * Nimmt das Entfernen einer Einheit, eines Fahrzeugs oder eines Abschnitts
+ * zurück.
+ */
+function holeEntferntesZurueck(ctx: DbContext, payload: RemovePayload): void {
+  if (payload.entityTyp === 'EINHEIT') {
+    const einheit = ctx.einsatz.einheiten.find((e) => e.id === payload.entityId);
+    if (einheit) {
+      einheit.aufgeloest = null;
+    }
+    return;
+  }
+  if (payload.entityTyp === 'FAHRZEUG') {
+    const fahrzeug = ctx.einsatz.fahrzeuge.find((f) => f.id === payload.entityId);
+    if (fahrzeug) {
+      fahrzeug.entfernt = null;
+    }
+    return;
+  }
+  if (payload.abschnitt && !ctx.einsatz.abschnitte.some((a) => a.id === payload.entityId)) {
+    ctx.einsatz.abschnitte.push(payload.abschnitt);
+  }
+}
+
+/**
+ * Sucht die zuletzt ausgeführte, noch nicht zurückgenommene Aktion.
+ *
+ * Bei gleichem Zeitstempel entscheidet die Reihenfolge im Protokoll: mehrere
+ * Aktionen können in dieselbe Millisekunde fallen, und dann muss die zuletzt
+ * eingetragene zuerst zurückgehen.
+ */
+function letzterOffenerCommand(ctx: DbContext, einsatzId: string) {
+  let treffer: (typeof ctx.einsatz.commandLog)[number] | undefined;
+  for (const eintrag of ctx.einsatz.commandLog) {
+    if (eintrag.einsatzId !== einsatzId || eintrag.undone) {
+      continue;
+    }
+    if (!treffer || eintrag.timestamp.localeCompare(treffer.timestamp) >= 0) {
+      treffer = eintrag;
+    }
+  }
+  return treffer;
+}
+
 export function undoLastCommand(
   ctx: DbContext,
   einsatzId: string,
@@ -170,9 +215,7 @@ export function undoLastCommand(
 ): boolean {
   ensureNotArchived(ctx, einsatzId);
 
-  const command = [...ctx.einsatz.commandLog]
-    .filter((c) => c.einsatzId === einsatzId && !c.undone)
-    .sort((a, b) => b.timestamp.localeCompare(a.timestamp))[0];
+  const command = letzterOffenerCommand(ctx, einsatzId);
 
   if (!command) {
     return false;
@@ -226,6 +269,8 @@ export function undoLastCommand(
       zeitpunkt: nowIso(),
       benutzer: `${user.name} (undo)`,
     });
+  } else if (command.commandTyp === 'REMOVE_ENTITY') {
+    holeEntferntesZurueck(ctx, JSON.parse(command.payloadJson) as RemovePayload);
   } else {
     throw new AppError(
       'Undo für diesen Command-Typ noch nicht implementiert',

@@ -157,6 +157,8 @@ export interface AppWorkspaceShellProps {
   onMoveEinheit: (id: string) => void;
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
+  onRemoveEinheit: (id: string) => void;
+  onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;
   onSaveDbPath: () => void;
@@ -167,6 +169,7 @@ export interface AppWorkspaceShellProps {
   onSubmitCreateAbschnitt: () => void;
   onCloseCreateAbschnitt: () => void;
   onSubmitEditAbschnitt: () => void;
+  onRemoveAbschnitt: () => void;
   onCloseEditAbschnitt: () => void;
   onSubmitSplitEinheit: () => void;
   onCloseSplitEinheit: () => void;
@@ -188,6 +191,8 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     selectedEinsatz: props.selectedEinsatz,
     selectedEinsatzId: props.selectedEinsatzId,
     selectedAbschnittId: props.selectedAbschnittId,
+    selectedAbschnittName:
+      props.abschnitte.find((abschnitt) => abschnitt.id === props.selectedAbschnittId)?.name ?? '',
     abschnitte: props.abschnitte,
     details: props.details,
     allKraefte: props.allKraefte,
@@ -237,6 +242,8 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onMoveEinheit: props.onMoveEinheit,
     onEditEinheit: props.onEditEinheit,
     onSplitEinheit: props.onSplitEinheit,
+    onRemoveEinheit: props.onRemoveEinheit,
+    onRemoveFahrzeug: props.onRemoveFahrzeug,
     onMoveFahrzeug: props.onMoveFahrzeug,
     onEditFahrzeug: props.onEditFahrzeug,
     onSaveDbPath: props.onSaveDbPath,
@@ -333,6 +340,7 @@ function buildDialogsProps(props: AppWorkspaceShellProps): WorkspaceDialogsProps
     editAbschnittForm: props.editAbschnittForm,
     setEditAbschnittForm: props.setEditAbschnittForm,
     onSubmitEditAbschnitt: props.onSubmitEditAbschnitt,
+    onRemoveAbschnitt: props.onRemoveAbschnitt,
     onCloseEditAbschnitt: props.onCloseEditAbschnitt,
     showEditEinsatzDialog: props.showEditEinsatzDialog,
     editEinsatzForm: props.editEinsatzForm,

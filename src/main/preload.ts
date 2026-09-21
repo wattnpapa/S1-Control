@@ -50,6 +50,12 @@ const api: RendererApi = {
   downloadUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.DOWNLOAD_UPDATE),
   installDownloadedUpdate: () => ipcRenderer.invoke(IPC_CHANNEL.INSTALL_UPDATE),
   describeLastCommand: (einsatzId: string) => ipcRenderer.invoke(IPC_CHANNEL.DESCRIBE_LAST_COMMAND, einsatzId),
+  removeEinheit: (input: { einsatzId: string; einheitId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNEL.REMOVE_EINHEIT, input),
+  removeFahrzeug: (input: { einsatzId: string; fahrzeugId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNEL.REMOVE_FAHRZEUG, input),
+  removeAbschnitt: (input: { einsatzId: string; abschnittId: string }) =>
+    ipcRenderer.invoke(IPC_CHANNEL.REMOVE_ABSCHNITT, input),
   openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>

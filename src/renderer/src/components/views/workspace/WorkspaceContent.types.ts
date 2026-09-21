@@ -25,6 +25,8 @@ export interface WorkspaceContentProps {
   selectedEinsatz: EinsatzListItem | null;
   selectedEinsatzId: string;
   selectedAbschnittId: string;
+  /** Name des gewählten Abschnitts, damit Überschriften den Kontext nennen. */
+  selectedAbschnittName: string;
   abschnitte: AbschnittNode[];
   details: AbschnittDetails;
   allKraefte: KraftOverviewItem[];
@@ -101,6 +103,8 @@ export interface WorkspaceContentProps {
   onMoveEinheit: (id: string) => void;
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
+  onRemoveEinheit: (id: string) => void;
+  onRemoveFahrzeug: (id: string) => void;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;
   onSaveDbPath: () => void;

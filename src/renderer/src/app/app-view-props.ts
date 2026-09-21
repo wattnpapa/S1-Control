@@ -87,9 +87,11 @@ export interface BuildWorkspacePropsArgs {
     openCreateDialog: () => void;
     submitCreate: () => Promise<void>;
     submitEdit: () => Promise<void>;
+    removeAbschnitt: () => Promise<void>;
     closeEditDialog: () => void;
   };
   einheitActions: {
+    removeEinheit: (einheitId: string) => Promise<void>;
     submitEdit: () => Promise<void>;
     createHelfer: () => Promise<void>;
     updateHelfer: (helferId: string) => Promise<void>;
@@ -103,6 +105,7 @@ export interface BuildWorkspacePropsArgs {
     submitSplit: () => Promise<void>;
   };
   fahrzeugActions: {
+    removeFahrzeug: (fahrzeugId: string) => Promise<void>;
     submitEdit: () => Promise<void>;
     openCreateDialog: () => void;
     openEditDialog: (fahrzeugId: string) => void;
@@ -241,6 +244,8 @@ type WorkspaceCallbacks = Pick<
   | 'onMoveEinheit'
   | 'onEditEinheit'
   | 'onSplitEinheit'
+  | 'onRemoveEinheit'
+  | 'onRemoveFahrzeug'
   | 'onMoveFahrzeug'
   | 'onEditFahrzeug'
   | 'onSaveDbPath'
@@ -251,6 +256,7 @@ type WorkspaceCallbacks = Pick<
   | 'onSubmitCreateAbschnitt'
   | 'onCloseCreateAbschnitt'
   | 'onSubmitEditAbschnitt'
+  | 'onRemoveAbschnitt'
   | 'onCloseEditAbschnitt'
   | 'onOpenEditEinsatz'
   | 'onSubmitEditEinsatz'
@@ -292,6 +298,8 @@ function buildWorkspaceCallbacks(
     onMoveEinheit: moveCallbacks.onMoveEinheit,
     onEditEinheit: args.einheitActions.openEditDialog,
     onSplitEinheit: args.einheitActions.openSplitDialog,
+    onRemoveEinheit: args.einheitActions.removeEinheit,
+    onRemoveFahrzeug: args.fahrzeugActions.removeFahrzeug,
     onMoveFahrzeug: moveCallbacks.onMoveFahrzeug,
     onEditFahrzeug: args.fahrzeugActions.openEditDialog,
     ...storageCallbacks,
@@ -299,6 +307,7 @@ function buildWorkspaceCallbacks(
     onSubmitCreateAbschnitt: args.abschnittActions.submitCreate,
     onCloseCreateAbschnitt: closeCallbacks.onCloseCreateAbschnitt,
     onSubmitEditAbschnitt: args.abschnittActions.submitEdit,
+    onRemoveAbschnitt: args.abschnittActions.removeAbschnitt,
     onCloseEditAbschnitt: args.abschnittActions.closeEditDialog,
     onOpenEditEinsatz: args.einsatzBasisdatenActions.openEditEinsatzDialog,
     onSubmitEditEinsatz: args.einsatzBasisdatenActions.submitEditEinsatz,

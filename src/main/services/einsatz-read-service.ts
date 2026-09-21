@@ -101,10 +101,10 @@ export function listAbschnittDetails(
   abschnittId: string,
 ): AbschnittDetails {
   const einheiten = data.einheiten
-    .filter((e) => e.einsatzId === einsatzId && e.aktuellerAbschnittId === abschnittId)
+    .filter((e) => e.einsatzId === einsatzId && e.aktuellerAbschnittId === abschnittId && !e.aufgeloest)
     .map((e) => mapEinheit(e, system));
   const fahrzeuge = data.fahrzeuge
-    .filter((f) => f.einsatzId === einsatzId && f.aktuellerAbschnittId === abschnittId)
+    .filter((f) => f.einsatzId === einsatzId && f.aktuellerAbschnittId === abschnittId && !f.entfernt)
     .map((f) => mapFahrzeug(f, data.einheiten));
   return { einheiten, fahrzeuge };
 }
@@ -116,13 +116,13 @@ export function listAbschnittDetailsBatch(
 ): Record<string, AbschnittDetails> {
   const grouped: Record<string, AbschnittDetails> = {};
   for (const e of data.einheiten) {
-    if (e.einsatzId !== einsatzId) continue;
+    if (e.einsatzId !== einsatzId || e.aufgeloest) continue;
     const item = mapEinheit(e, system);
     const bucket = (grouped[item.aktuellerAbschnittId] ??= { einheiten: [], fahrzeuge: [] });
     bucket.einheiten.push(item);
   }
   for (const f of data.fahrzeuge) {
-    if (f.einsatzId !== einsatzId) continue;
+    if (f.einsatzId !== einsatzId || f.entfernt) continue;
     const item = mapFahrzeug(f, data.einheiten);
     if (!item.aktuellerAbschnittId) continue;
     const bucket = (grouped[item.aktuellerAbschnittId] ??= { einheiten: [], fahrzeuge: [] });

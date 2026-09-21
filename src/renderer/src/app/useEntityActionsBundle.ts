@@ -1,6 +1,7 @@
 import { useAbschnittActions } from '@renderer/app/useAbschnittActions';
 import { useEinheitActions } from '@renderer/app/useEinheitActions';
 import { useFahrzeugActions } from '@renderer/app/useFahrzeugActions';
+import { useFahrzeugRemoveActions } from '@renderer/app/useFahrzeugRemoveActions';
 import type { EinheitHelfer } from '@shared/types';
 import type { Dispatch, SetStateAction } from 'react';
 import type {
@@ -68,11 +69,18 @@ interface UseEntityActionsBundleOptions {
 export function useEntityActionsBundle(options: UseEntityActionsBundleOptions) {
   const abschnittActions = useAbschnittActions(createAbschnittActionsProps(options));
   const fahrzeugActions = useFahrzeugActions(createFahrzeugActionsProps(options));
+  const fahrzeugRemoveActions = useFahrzeugRemoveActions({
+    selectedEinsatzId: options.selectedEinsatzId,
+    isArchived: options.isArchived,
+    allFahrzeuge: options.allFahrzeuge,
+    refreshCurrentEinsatz: options.refreshCurrentEinsatz,
+    withBusy: options.withBusy,
+  });
   const einheitActions = useEinheitActions(createEinheitActionsProps(options));
 
   return {
     abschnittActions,
-    fahrzeugActions,
+    fahrzeugActions: { ...fahrzeugActions, ...fahrzeugRemoveActions },
     einheitActions,
   };
 }

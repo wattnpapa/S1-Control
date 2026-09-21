@@ -1,3 +1,5 @@
+import { useCallback } from 'react';
+import { useConfirm } from '@renderer/app/confirm-context';
 import { readError } from '@renderer/utils/error';
 import type { AbschnittNode } from '@shared/types';
 import type {
@@ -52,8 +54,10 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
   const openEditDialog = buildOpenEditDialog(props);
   const submitCreate = buildSubmitCreate(props);
   const submitEdit = buildSubmitEdit(props);
+  const removeAbschnitt = useRemoveAbschnitt(props);
 
   return {
+    removeAbschnitt,
     closeEditDialog,
     openCreateDialog,
     openEditSelectedDialog,
@@ -61,6 +65,42 @@ export function useAbschnittActions(props: UseAbschnittActionsProps) {
     submitCreate,
     submitEdit,
   };
+}
+
+/**
+ * Entfernt einen leeren Abschnitt nach Rückfrage.
+ */
+function useRemoveAbschnitt(props: UseAbschnittActionsProps) {
+  const confirm = useConfirm();
+  return useCallback(async () => {
+    const abschnittId = props.editAbschnittForm.abschnittId;
+    if (!props.selectedEinsatzId || !abschnittId || props.isArchived) {
+      return;
+    }
+    const abschnitt = props.abschnitte.find((eintrag) => eintrag.id === abschnittId);
+    const bestaetigt = await confirm({
+      titel: 'Abschnitt entfernen?',
+      text: `Der Abschnitt "${abschnitt?.name ?? ''}" wird aus der Gliederung genommen.`,
+      folgen: [
+        'Das geht nur, solange der Abschnitt keine Kräfte, Fahrzeuge oder Unterabschnitte trägt.',
+        'Der Vorgang steht im Protokoll und lässt sich mit "Rückgängig" zurückholen.',
+      ],
+      bestaetigenText: 'Entfernen',
+      gefahr: true,
+    });
+    if (!bestaetigt) {
+      return;
+    }
+    await props.withBusy(async () => {
+      try {
+        await window.api.removeAbschnitt({ einsatzId: props.selectedEinsatzId, abschnittId });
+        props.setShowEditAbschnittDialog(false);
+        await props.loadEinsatz(props.selectedEinsatzId);
+      } catch (error) {
+        props.setError(readError(error));
+      }
+    });
+  }, [confirm, props]);
 }
 
 /**

@@ -1,5 +1,5 @@
 import type { EinheitListItem, RecordEditLockInfo } from '@shared/types';
-import { faArrowsUpDownLeftRight, faCodeBranch, faPenToSquare } from '@fortawesome/free-solid-svg-icons';
+import { faArrowsUpDownLeftRight, faCodeBranch, faPenToSquare, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import { TaktischesZeichenEinheit } from '@renderer/components/common/TaktischesZeichenEinheit';
@@ -16,6 +16,7 @@ interface EinheitRowProps {
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 /**
@@ -66,6 +67,7 @@ function RowActions({
   onMove,
   onEdit,
   onSplit,
+  onRemove,
 }: {
   itemId: string;
   isArchived: boolean;
@@ -74,6 +76,7 @@ function RowActions({
   onMove: (id: string) => void;
   onEdit: (id: string) => void;
   onSplit: (id: string) => void;
+  onRemove: (id: string) => void;
 }): JSX.Element {
   return (
     <>
@@ -90,10 +93,17 @@ function RowActions({
         disabled={isArchived || lockedByOther}
       />
       <ActionIconButton
-        label="Splitten"
+        label="Aufteilen"
         icon={faCodeBranch}
         onClick={() => onSplit(itemId)}
         disabled={isArchived || lockedByOther}
+      />
+      <ActionIconButton
+        label="Aus dem Einsatz nehmen"
+        icon={faTrashCan}
+        onClick={() => onRemove(itemId)}
+        disabled={isArchived || lockedByOther}
+        abgesetzt
       />
     </>
   );
@@ -125,6 +135,7 @@ export function EinheitRow(props: EinheitRowProps): JSX.Element {
           onMove={props.onMove}
           onEdit={props.onEdit}
           onSplit={props.onSplit}
+          onRemove={props.onRemove}
         />
       </td>
     </tr>

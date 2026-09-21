@@ -42,6 +42,7 @@ interface WorkspaceDialogsProps {
   editAbschnittForm: EditAbschnittForm;
   setEditAbschnittForm: Dispatch<SetStateAction<EditAbschnittForm>>;
   onSubmitEditAbschnitt: () => void;
+  onRemoveAbschnitt: () => void;
   onCloseEditAbschnitt: () => void;
   showSplitEinheitDialog: boolean;
   splitEinheitForm: SplitEinheitForm;
@@ -104,6 +105,7 @@ export function WorkspaceDialogs(props: WorkspaceDialogsProps): JSX.Element {
         abschnitte={props.abschnitte}
         onChange={props.setEditAbschnittForm}
         onSubmit={props.onSubmitEditAbschnitt}
+        onRemove={props.onRemoveAbschnitt}
         onClose={props.onCloseEditAbschnitt}
       />
 

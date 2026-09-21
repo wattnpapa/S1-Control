@@ -1,4 +1,8 @@
 import type { AbschnittNode } from '@shared/types';
+import {
+  ABSCHNITT_TYP_OPTIONEN,
+  abschnittTypErklaerung,
+} from '@renderer/constants/abschnitt';
 import type { EditAbschnittForm } from '@renderer/types/ui';
 
 interface EditAbschnittDialogProps {
@@ -9,6 +13,7 @@ interface EditAbschnittDialogProps {
   abschnitte: AbschnittNode[];
   onChange: (next: EditAbschnittForm) => void;
   onSubmit: () => void;
+  onRemove: () => void;
   onClose: () => void;
 }
 
@@ -32,25 +37,26 @@ export function EditAbschnittDialog(props: EditAbschnittDialogProps): JSX.Elemen
           />
         </label>
         <label>
-          Systemtyp
+          Art des Abschnitts
           <select
             value={props.form.systemTyp}
             onChange={(e) => props.onChange({ ...props.form, systemTyp: e.target.value as AbschnittNode['systemTyp'] })}
           >
-            <option value="NORMAL">NORMAL</option>
-            <option value="FUEST">FUEST</option>
-            <option value="ANFAHRT">ANFAHRT</option>
-            <option value="LOGISTIK">LOGISTIK</option>
-            <option value="BEREITSTELLUNGSRAUM">BEREITSTELLUNGSRAUM</option>
+            {ABSCHNITT_TYP_OPTIONEN.map((option) => (
+              <option key={option.wert} value={option.wert}>
+                {option.bezeichnung}
+              </option>
+            ))}
           </select>
+          <span className="feld-hinweis">{abschnittTypErklaerung(props.form.systemTyp)}</span>
         </label>
         <label>
-          Parent-Abschnitt (optional)
+          Übergeordneter Abschnitt (optional)
           <select
             value={props.form.parentId}
             onChange={(e) => props.onChange({ ...props.form, parentId: e.target.value })}
           >
-            <option value="">Kein Parent (Root)</option>
+            <option value="">Keiner — steht direkt unter dem Einsatz</option>
             {props.abschnitte
               .filter((abschnitt) => abschnitt.id !== props.form.abschnittId)
               .map((abschnitt) => (
@@ -61,11 +67,19 @@ export function EditAbschnittDialog(props: EditAbschnittDialogProps): JSX.Elemen
           </select>
         </label>
         <div className="modal-actions">
-          <button onClick={props.onSubmit} disabled={props.busy || props.isArchived}>
-            Speichern
+          <button
+            className="btn-gefahr-schlicht"
+            onClick={props.onRemove}
+            disabled={props.busy || props.isArchived}
+            title="Nur möglich, wenn der Abschnitt leer ist"
+          >
+            Abschnitt entfernen
           </button>
           <button onClick={props.onClose} disabled={props.busy}>
             Abbrechen
+          </button>
+          <button onClick={props.onSubmit} disabled={props.busy || props.isArchived}>
+            Speichern
           </button>
         </div>
       </div>

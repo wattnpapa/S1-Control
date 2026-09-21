@@ -1,4 +1,8 @@
 import type { AbschnittNode } from '@shared/types';
+import {
+  ABSCHNITT_TYP_OPTIONEN,
+  abschnittTypErklaerung,
+} from '@renderer/constants/abschnitt';
 import type { CreateAbschnittForm } from '@renderer/types/ui';
 
 interface CreateAbschnittDialogProps {
@@ -34,25 +38,26 @@ export function CreateAbschnittDialog(props: CreateAbschnittDialogProps): JSX.El
           />
         </label>
         <label>
-          Systemtyp
+          Art des Abschnitts
           <select
             value={props.form.systemTyp}
             onChange={(e) => props.onChange({ ...props.form, systemTyp: e.target.value as AbschnittNode['systemTyp'] })}
           >
-            <option value="NORMAL">NORMAL</option>
-            <option value="FUEST">FUEST</option>
-            <option value="ANFAHRT">ANFAHRT</option>
-            <option value="LOGISTIK">LOGISTIK</option>
-            <option value="BEREITSTELLUNGSRAUM">BEREITSTELLUNGSRAUM</option>
+            {ABSCHNITT_TYP_OPTIONEN.map((option) => (
+              <option key={option.wert} value={option.wert}>
+                {option.bezeichnung}
+              </option>
+            ))}
           </select>
+          <span className="feld-hinweis">{abschnittTypErklaerung(props.form.systemTyp)}</span>
         </label>
         <label>
-          Parent-Abschnitt (optional)
+          Übergeordneter Abschnitt (optional)
           <select
             value={props.form.parentId}
             onChange={(e) => props.onChange({ ...props.form, parentId: e.target.value })}
           >
-            <option value="">Kein Parent (Root)</option>
+            <option value="">Keiner — steht direkt unter dem Einsatz</option>
             {props.abschnitte.map((abschnitt) => (
               <option key={abschnitt.id} value={abschnitt.id}>
                 {abschnitt.name} [{abschnitt.systemTyp}]

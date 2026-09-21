@@ -13,6 +13,9 @@ interface EinsatzOverviewViewProps {
   onMoveEinheit: (id: string) => void;
   onEditEinheit: (id: string) => void;
   onSplitEinheit: (id: string) => void;
+  onRemoveEinheit: (id: string) => void;
+  onRemoveFahrzeug: (id: string) => void;
+  selectedAbschnittName?: string;
   onMoveFahrzeug: (id: string) => void;
   onEditFahrzeug: (id: string) => void;
 }
@@ -45,6 +48,8 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
         onMove={props.onMoveEinheit}
         onEdit={props.onEditEinheit}
         onSplit={props.onSplitEinheit}
+        onRemove={props.onRemoveEinheit}
+        abschnittName={props.selectedAbschnittName}
       />
       <FahrzeugeTable
         fahrzeuge={props.details.fahrzeuge}
@@ -52,6 +57,7 @@ export function EinsatzOverviewView(props: EinsatzOverviewViewProps): JSX.Elemen
         editLocksById={props.fahrzeugLocksById}
         onMove={props.onMoveFahrzeug}
         onEdit={props.onEditFahrzeug}
+        onRemove={props.onRemoveFahrzeug}
       />
       <h3>UDP Broadcast Monitor</h3>
       <div className="debug-log-panel">

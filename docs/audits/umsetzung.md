@@ -35,15 +35,17 @@ Legende: [x] erledigt, [ ] offen.
 
 - [x] Keine einzige Bestätigungsabfrage im Renderer (sieben Reviewer, P0/P1)
 - [x] Undo ist im Kern vorhanden, aber nicht in der Oberfläche angebunden (sieben Reviewer, P0)
-- [ ] Einheiten, Fahrzeuge, Abschnitte lassen sich nicht löschen (error-recovery P0-1, field P0)
+- [x] Einheiten, Fahrzeuge, Abschnitte lassen sich nicht löschen (error-recovery P0-1, field P0)
 - [x] Splitten ist irreversibel, ohne Vorschau — jetzt mit Rückfrage und Vorschau der Folgen (destructive P1-2)
 - [x] "Updaten" beendet die App ohne Rückfrage (stress P0-1)
-- [ ] Verschieben-Dialog ohne Objekt, Quelle und Hierarchie, Ziel vorbelegt (fünf Reviewer, P0/P1)
-- [ ] "Bestätigen" nicht gegen Doppelauslösung gesperrt (destructive P2-1, offline P1-4)
+- [x] Verschieben-Dialog ohne Objekt, Quelle und Hierarchie, Ziel vorbelegt (fünf Reviewer, P0/P1)
+- [x] "Bestätigen" nicht gegen Doppelauslösung gesperrt (destructive P2-1, offline P1-4)
 - [ ] Statuswechsel ABGEMELDET/AUSSER_BETRIEB bleibt folgenlos (destructive P1-4)
 - [ ] Abschnitt umhängen wirkt auf den ganzen Teilbaum ohne Rückfrage (destructive P1-6)
 - [ ] Move, Split und Undo umgehen die Bearbeitungssperre (destructive P1-7)
 - [ ] Archivieren ist einseitig, archivierter Einsatz nicht mehr einsehbar (workflow P1-7, analog P3-3)
+
+- [x] Entwicklerbegriffe "Systemtyp" und "Parent-Abschnitt", Abschnittsart ohne Erklärung (new-user P3-2, P2-3)
 
 ## Abläufe und Erreichbarkeit
 
@@ -80,7 +82,7 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] Gesperrt und archiviert nur über Transparenz erkennbar (night P1-5)
 - [ ] Navigation nur als Einzelbuchstaben E/G/K/F (fünf Reviewer, P2/P3)
 - [ ] Kein Fokusstil, keine Rückmeldung beim Antippen (night P3-12, glove P2-4)
-- [ ] Icon-Aktionen ohne Beschriftung und Abstand (glove P1-2, new-user P2-2)
+- [x] Icon-Aktionen ohne Beschriftung und Abstand — Entfernen ist abgesetzt (glove P1-2, new-user P2-2)
 
 ## Papier und Ausleitung
 

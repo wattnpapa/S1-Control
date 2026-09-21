@@ -885,6 +885,22 @@ td.tactical-sign-cell.compact-sign-cell {
   margin-right: 24px;
 }
 
+/* Folgenschwere Icon-Aktion mit Abstand zu den übrigen, damit ein
+   ungenauer Griff nicht daneben trifft. */
+.table-icon-button.is-abgesetzt {
+  margin-left: 14px;
+}
+
+.btn-gefahr-schlicht {
+  color: #b3261e;
+  margin-right: auto;
+}
+
+.feld-hinweis {
+  font-size: 12px;
+  color: var(--muted, #4a4a4a);
+}
+
 .move-objekt {
   margin: 0;
   display: grid;

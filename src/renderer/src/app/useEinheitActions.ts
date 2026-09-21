@@ -3,6 +3,7 @@ import { useEinheitEditActions } from '@renderer/app/einheit-actions/useEinheitE
 import { useEinheitFahrzeugActions } from '@renderer/app/einheit-actions/useEinheitFahrzeugActions';
 import { useEinheitHelferActions } from '@renderer/app/einheit-actions/useEinheitHelferActions';
 import { useEinheitSplitActions } from '@renderer/app/einheit-actions/useEinheitSplitActions';
+import { useEinheitRemoveActions } from '@renderer/app/einheit-actions/useEinheitRemoveActions';
 import type { UseEinheitActionsProps } from '@renderer/app/einheit-actions/types';
 
 /**
@@ -15,8 +16,10 @@ export function useEinheitActions(props: UseEinheitActionsProps) {
   const fahrzeugActions = useEinheitFahrzeugActions(props);
   const splitActions = useEinheitSplitActions(props);
 
+  const removeActions = useEinheitRemoveActions(props);
   return {
     ...createActions,
+    ...removeActions,
     ...editActions,
     ...helferActions,
     ...fahrzeugActions,

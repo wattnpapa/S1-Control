@@ -177,6 +177,9 @@ function EinsatzView(props: WorkspaceContentProps): JSX.Element {
         onMoveEinheit={props.onMoveEinheit}
         onEditEinheit={props.onEditEinheit}
         onSplitEinheit={props.onSplitEinheit}
+        onRemoveEinheit={props.onRemoveEinheit}
+        onRemoveFahrzeug={props.onRemoveFahrzeug}
+        selectedAbschnittName={props.selectedAbschnittName}
         einheitLocksById={props.einheitLocksById}
         onMoveFahrzeug={props.onMoveFahrzeug}
         onEditFahrzeug={props.onEditFahrzeug}
@@ -260,6 +263,7 @@ function KraefteView(props: WorkspaceContentProps): JSX.Element {
         onMove={props.onMoveEinheit}
         onEdit={props.onEditEinheit}
         onSplit={props.onSplitEinheit}
+        onRemove={props.onRemoveEinheit}
         editLocksById={props.einheitLocksById}
       />
     </>
@@ -285,6 +289,7 @@ function FahrzeugeView(props: WorkspaceContentProps): JSX.Element {
         isArchived={props.isArchived}
         onMove={props.onMoveFahrzeug}
         onEdit={props.onEditFahrzeug}
+        onRemove={props.onRemoveFahrzeug}
         editLocksById={props.fahrzeugLocksById}
       />
     </>

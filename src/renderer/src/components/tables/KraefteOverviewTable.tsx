@@ -11,6 +11,7 @@ interface KraefteOverviewTableProps {
   onMove: (id: string) => void;
   onSplit: (id: string) => void;
   onEdit: (id: string) => void;
+  onRemove: (id: string) => void;
 }
 
 /**
@@ -55,6 +56,7 @@ export function KraefteOverviewTable(props: KraefteOverviewTableProps): JSX.Elem
               onMove={props.onMove}
               onEdit={props.onEdit}
               onSplit={props.onSplit}
+              onRemove={props.onRemove}
             />
           ))}
         </tbody>

@@ -5,6 +5,8 @@ interface ActionIconButtonProps {
   label: string;
   icon: IconDefinition;
   disabled?: boolean;
+  /** Setzt die Schaltfläche mit Abstand ab — für folgenschwere Aktionen. */
+  abgesetzt?: boolean;
   onClick: () => void;
 }
 
@@ -14,7 +16,7 @@ interface ActionIconButtonProps {
 export function ActionIconButton(props: ActionIconButtonProps): JSX.Element {
   return (
     <button
-      className="table-icon-button"
+      className={`table-icon-button${props.abgesetzt ? ' is-abgesetzt' : ''}`}
       onClick={props.onClick}
       disabled={props.disabled}
       aria-label={props.label}

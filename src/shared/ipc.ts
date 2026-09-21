@@ -236,6 +236,12 @@ export interface RendererApi {
   installDownloadedUpdate(): Promise<void>;
   /** Beschreibt die letzte rücknehmbare Aktion, für die Rückfrage vor dem Rückgängigmachen. */
   describeLastCommand(einsatzId: string): Promise<LetzteAktionInfo | null>;
+  /** Nimmt eine Einheit aus dem Einsatz; der Datensatz bleibt protokolliert erhalten. */
+  removeEinheit(input: { einsatzId: string; einheitId: string }): Promise<void>;
+  /** Nimmt ein Fahrzeug aus dem Einsatz. */
+  removeFahrzeug(input: { einsatzId: string; fahrzeugId: string }): Promise<void>;
+  /** Entfernt einen leeren Abschnitt. */
+  removeAbschnitt(input: { einsatzId: string; abschnittId: string }): Promise<void>;
   openMainDevTools(): Promise<void>;
   openExternalUrl(url: string): Promise<void>;
   getTacticalFormationSvg(input: {
@@ -353,6 +359,9 @@ export const IPC_CHANNEL = {
   DOWNLOAD_UPDATE: 'updater:download',
   INSTALL_UPDATE: 'updater:install',
   DESCRIBE_LAST_COMMAND: 'einsatz:describe-last-command',
+  REMOVE_EINHEIT: 'einheit:remove',
+  REMOVE_FAHRZEUG: 'fahrzeug:remove',
+  REMOVE_ABSCHNITT: 'abschnitt:remove',
   OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',
