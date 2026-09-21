@@ -59,6 +59,7 @@ const api: RendererApi = {
     ipcRenderer.invoke(IPC_CHANNEL.REMOVE_ABSCHNITT, input),
   setEinsatzStatus: (input: { einsatzId: string; status: 'AKTIV' | 'BEENDET' | 'ARCHIVIERT' }) =>
     ipcRenderer.invoke(IPC_CHANNEL.SET_EINSATZ_STATUS, input),
+  listJournal: (einsatzId: string) => ipcRenderer.invoke(IPC_CHANNEL.LIST_JOURNAL, einsatzId),
   openMainDevTools: () => ipcRenderer.invoke(IPC_CHANNEL.OPEN_MAIN_DEVTOOLS),
   openExternalUrl: (url) => ipcRenderer.invoke(IPC_CHANNEL.OPEN_EXTERNAL_URL, url),
   getTacticalFormationSvg: (input) =>

@@ -16,6 +16,7 @@ export type WorkspaceView =
   | 'fuehrung'
   | 'kraefte'
   | 'fahrzeuge'
+  | 'journal'
   | 'abschluss'
   | 'einstellungen';
 
@@ -124,6 +125,17 @@ export interface SplitEinheitForm {
   unterfuehrung: string;
   mannschaft: string;
   status: 'AKTIV' | 'IN_BEREITSTELLUNG' | 'ABGEMELDET';
+}
+
+/**
+ * Stand des letzten Abgleichs mit der Einsatzdatei.
+ *
+ * Ohne diese Angabe ist eine eingefrorene Lage nicht von einer aktuellen zu
+ * unterscheiden — die Uhr läuft ja weiter.
+ */
+export interface AbgleichStand {
+  zeitpunkt: string | null;
+  fehler: string | null;
 }
 
 export interface TacticalStrength {

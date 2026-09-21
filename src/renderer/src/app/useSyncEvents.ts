@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
-import type { MutableRefObject } from 'react';
+import type { Dispatch, MutableRefObject, SetStateAction } from 'react';
+import type { AbgleichStand } from '@renderer/types/ui';
 import type {
   ActiveClientInfo,
   AbschnittDetails,
@@ -39,6 +40,7 @@ interface UseSyncEventsOptions {
   ) => Promise<void>;
   setEinsatzInitialLoading: (value: boolean) => void;
   withBusy: (fn: () => Promise<void>) => Promise<void>;
+  setLetzterAbgleich: Dispatch<SetStateAction<AbgleichStand>>;
 }
 
 /**
@@ -58,9 +60,21 @@ function usePeriodicRefreshEffect(
         return;
       }
       refreshInFlightRef.current = true;
-      void loadEinsatz(selectedEinsatzId, selectedAbschnittId, { includeFullOverview: false }).finally(() => {
-        refreshInFlightRef.current = false;
-      });
+      void loadEinsatz(selectedEinsatzId, selectedAbschnittId, { includeFullOverview: false })
+        .then(() => {
+          // Erfolgreicher Abgleich: Zeitpunkt des Standes merken.
+          options.setLetzterAbgleich({ zeitpunkt: new Date().toISOString(), fehler: null });
+        })
+        .catch((fehler: unknown) => {
+          // Ein verschluckter Fehler sieht aus wie eine aktuelle Lage.
+          options.setLetzterAbgleich((vorher) => ({
+            zeitpunkt: vorher.zeitpunkt,
+            fehler: fehler instanceof Error ? fehler.message : String(fehler),
+          }));
+        })
+        .finally(() => {
+          refreshInFlightRef.current = false;
+        });
     }, 6000);
     return () => window.clearInterval(timer);
   }, [loadEinsatz, perfSafeMode, refreshInFlightRef, selectedAbschnittId, selectedEinsatzId, session]);

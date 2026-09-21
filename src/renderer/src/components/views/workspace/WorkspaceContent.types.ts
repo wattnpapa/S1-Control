@@ -1,3 +1,4 @@
+import type { AbgleichStand } from '@renderer/types/ui';
 import type {
   AbschnittDetails,
   AbschnittNode,
@@ -115,6 +116,7 @@ export interface WorkspaceContentProps {
   onSplitEinheit: (id: string) => void;
   onRemoveEinheit: (id: string) => void;
   onExportEinsatzakte: () => void;
+  letzterAbgleich: AbgleichStand;
   anzeigeThema: AnzeigeThema;
   onChangeAnzeigeThema: (thema: AnzeigeThema) => void;
   onBeendeEinsatz: () => void;

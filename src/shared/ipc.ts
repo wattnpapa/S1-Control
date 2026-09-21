@@ -124,6 +124,14 @@ export interface UpdateFahrzeugInput {
   nutzlast?: string;
 }
 
+export interface JournalEintragInfo {
+  id: string;
+  zeitpunkt: string;
+  vorgang: string;
+  benutzer: string;
+  kommentar: string | null;
+}
+
 export interface LetzteAktionInfo {
   beschreibung: string;
   zeitpunkt: string;
@@ -210,6 +218,8 @@ export interface RendererApi {
   archiveEinsatz(einsatzId: string): Promise<void>;
   /** Setzt den Einsatzstatus: laufend, beendet oder archiviert. */
   setEinsatzStatus(input: { einsatzId: string; status: 'AKTIV' | 'BEENDET' | 'ARCHIVIERT' }): Promise<void>;
+  /** Bewegungen des Einsatzes als lesbares Journal, neueste zuerst. */
+  listJournal(einsatzId: string): Promise<JournalEintragInfo[]>;
   updateEinsatz(input: UpdateEinsatzInput): Promise<void>;
   listAbschnitte(einsatzId: string): Promise<AbschnittNode[]>;
   createAbschnitt(input: CreateAbschnittInput): Promise<AbschnittNode>;
@@ -368,6 +378,7 @@ export const IPC_CHANNEL = {
   REMOVE_FAHRZEUG: 'fahrzeug:remove',
   REMOVE_ABSCHNITT: 'abschnitt:remove',
   SET_EINSATZ_STATUS: 'einsatz:set-status',
+  LIST_JOURNAL: 'einsatz:list-journal',
   OPEN_MAIN_DEVTOOLS: 'app:open-main-devtools',
   UPDATER_STATE_CHANGED: 'updater:state-changed',
   PENDING_OPEN_FILE: 'app:pending-open-file',

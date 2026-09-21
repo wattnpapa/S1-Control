@@ -141,6 +141,7 @@ function useRuntimeSync(
     setStartChoice: uiState.setStartChoice,
     loadEinsatz: dataState.loadEinsatz,
     withBusy,
+    setLetzterAbgleich: uiState.setLetzterAbgleich,
   });
 }
 

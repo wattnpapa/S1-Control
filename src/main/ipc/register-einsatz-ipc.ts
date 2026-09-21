@@ -17,6 +17,7 @@ import {
   updateAbschnitt,
 } from '../services/einsatz';
 import { exportEinsatzakte } from '../services/export';
+import { listJournal } from '../services/journal';
 import { ensureRecordEditLockOwnership } from '../services/record-lock';
 import {
   reopenDbContextAfterRestore,
@@ -155,6 +156,15 @@ function registerEinsatzCreateHandlers(
       const ctx = state.getDbContext();
       await ctx.mutate(() => archiveEinsatz(ctx, einsatzId));
       helpers.notifyEinsatzChanged(einsatzId, 'archive-einsatz');
+    }),
+  );
+
+  ipcMain.handle(
+    IPC_CHANNEL.LIST_JOURNAL,
+    wrap(async (einsatzId: string) => {
+      requireUser();
+      const ctx = contextFromDisk(common);
+      return listJournal(ctx.einsatz, einsatzId);
     }),
   );
 

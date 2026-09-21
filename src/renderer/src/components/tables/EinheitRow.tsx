@@ -1,6 +1,7 @@
 import type { EinheitListItem, RecordEditLockInfo } from '@shared/types';
 import { faArrowsUpDownLeftRight, faCodeBranch, faPenToSquare, faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
+import { einheitStatusText, statusKlasse } from '@renderer/constants/status';
 import { prettyOrganisation } from '@renderer/constants/organisation';
 import { TaktischesZeichenEinheit } from '@renderer/components/common/TaktischesZeichenEinheit';
 import type { JSX } from 'react';
@@ -125,7 +126,9 @@ export function EinheitRow(props: EinheitRowProps): JSX.Element {
       <td>{prettyOrganisation(props.item.organisation)}</td>
       {props.includeAbschnitt ? <td>{props.item.abschnittName}</td> : null}
       <td>{props.item.aktuelleStaerkeTaktisch ?? `0/0/${props.item.aktuelleStaerke}/${props.item.aktuelleStaerke}`}</td>
-      <td>{props.item.status}</td>
+      <td>
+        <span className={statusKlasse(props.item.status)}>{einheitStatusText(props.item.status)}</span>
+      </td>
       <td>
         <RowActions
           itemId={props.item.id}

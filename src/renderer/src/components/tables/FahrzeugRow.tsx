@@ -1,6 +1,7 @@
 import type { FahrzeugListItem, RecordEditLockInfo } from '@shared/types';
 import { faArrowsUpDownLeftRight, faPenToSquare , faTrashCan } from '@fortawesome/free-solid-svg-icons';
 import { ActionIconButton } from '@renderer/components/common/ActionIconButton';
+import { fahrzeugStatusText, statusKlasse } from '@renderer/constants/status';
 import { TaktischesZeichenFahrzeug } from '@renderer/components/common/TaktischesZeichenFahrzeug';
 import type { JSX } from 'react';
 
@@ -102,7 +103,9 @@ export function FahrzeugRow(props: FahrzeugRowProps): JSX.Element {
           <td>{props.item.abschnittName}</td>
         </>
       ) : null}
-      <td>{props.item.status}</td>
+      <td>
+        <span className={statusKlasse(props.item.status)}>{fahrzeugStatusText(props.item.status)}</span>
+      </td>
       <td>
         <FahrzeugRowActions
           itemId={props.item.id}

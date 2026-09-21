@@ -1,6 +1,7 @@
 import {
   faBoxesStacked,
   faClipboardCheck,
+  faClockRotateLeft,
   faGear,
   faSitemap,
   faTruck,
@@ -25,6 +26,7 @@ const EINTRAEGE: Array<{ view: WorkspaceView; text: string; icon: IconDefinition
   { view: 'fuehrung', text: 'Gliederung', icon: faSitemap },
   { view: 'kraefte', text: 'Kräfte', icon: faUsers },
   { view: 'fahrzeuge', text: 'Fahrzeuge', icon: faTruck },
+  { view: 'journal', text: 'Bewegungen', icon: faClockRotateLeft },
   { view: 'abschluss', text: 'Abschluss', icon: faClipboardCheck },
 ];
 

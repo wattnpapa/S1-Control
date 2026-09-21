@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { TacticalStrength } from '@renderer/types/ui';
+import type { AbgleichStand, TacticalStrength } from '@renderer/types/ui';
 import { toNatoDateTime } from '@renderer/utils/datetime';
 import { staerkeZusatz, type StaerkeUebersicht } from '@renderer/utils/staerke';
 import { toTaktischeStaerke } from '@renderer/utils/tactical';
@@ -15,6 +15,7 @@ interface TopbarProps {
   onUndo: () => void;
   bearbeiterName: string;
   onBearbeiterWechseln: () => void;
+  letzterAbgleich: AbgleichStand;
   busy: boolean;
 }
 
@@ -31,11 +32,30 @@ function useTopbarClock(): Date {
 }
 
 /**
+ * Beschreibt, wie frisch der angezeigte Stand ist.
+ */
+function beschreibeAbgleich(stand: AbgleichStand, jetzt: Date): { text: string; gestoert: boolean } {
+  if (!stand.zeitpunkt) {
+    return { text: 'wird geladen', gestoert: Boolean(stand.fehler) };
+  }
+  const alterSekunden = Math.max(0, Math.round((jetzt.getTime() - new Date(stand.zeitpunkt).getTime()) / 1000));
+  if (alterSekunden < 20) {
+    return { text: 'aktuell', gestoert: Boolean(stand.fehler) };
+  }
+  if (alterSekunden < 120) {
+    return { text: `vor ${alterSekunden} s`, gestoert: true };
+  }
+  const minuten = Math.round(alterSekunden / 60);
+  return { text: `vor ${minuten} min`, gestoert: true };
+}
+
+/**
  * Handles Topbar.
  */
 export function Topbar(props: TopbarProps): JSX.Element {
   const now = useTopbarClock();
   const zusatz = staerkeZusatz(props.staerkeUebersicht);
+  const abgleich = beschreibeAbgleich(props.letzterAbgleich, now);
   return (
     <header className="topbar">
       <h1>
@@ -52,6 +72,14 @@ export function Topbar(props: TopbarProps): JSX.Element {
           <span className="topbar-meta-label">Stärke vor Ort</span>
           <span className="topbar-meta-value">{toTaktischeStaerke(props.gesamtStaerke)}</span>
           {zusatz && <span className="topbar-meta-note">{zusatz}</span>}
+        </span>
+        <span
+          className={`topbar-meta-item ${abgleich.gestoert ? 'is-gestoert' : ''}`}
+          title={props.letzterAbgleich.fehler ?? 'Zeitpunkt des letzten Abgleichs mit der Einsatzdatei'}
+        >
+          <span className="topbar-meta-label">Stand</span>
+          <span className="topbar-meta-value">{abgleich.text}</span>
+          {props.letzterAbgleich.fehler && <span className="topbar-meta-note">Abgleich gestört</span>}
         </span>
         <span className="topbar-meta-item">
           <span className="topbar-meta-label">Bearbeiter</span>

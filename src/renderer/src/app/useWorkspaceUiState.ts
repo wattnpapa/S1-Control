@@ -3,6 +3,7 @@ import type { Dispatch, SetStateAction } from 'react';
 import { emptyStaerkeUebersicht, type StaerkeUebersicht } from '@renderer/utils/staerke';
 import type { ActiveClientInfo, EinheitHelfer, OrganisationKey, PeerUpdateStatus } from '@shared/types';
 import type {
+  AbgleichStand,
   CreateAbschnittForm,
   CreateEinheitForm,
   CreateFahrzeugForm,
@@ -85,6 +86,8 @@ export interface WorkspaceUiStateResult {
   setStaerkeUebersicht: Dispatch<SetStateAction<StaerkeUebersicht>>;
   showBearbeiterDialog: boolean;
   setShowBearbeiterDialog: Dispatch<SetStateAction<boolean>>;
+  letzterAbgleich: AbgleichStand;
+  setLetzterAbgleich: Dispatch<SetStateAction<AbgleichStand>>;
   activeClients: ActiveClientInfo[];
   setActiveClients: Dispatch<SetStateAction<ActiveClientInfo[]>>;
   peerUpdateStatus: PeerUpdateStatus | null;
@@ -193,6 +196,7 @@ function useWorkspaceRuntimeUiState() {
   const [gesamtStaerke, setGesamtStaerke] = useState<TacticalStrength>(EMPTY_STRENGTH);
   const [staerkeUebersicht, setStaerkeUebersicht] = useState<StaerkeUebersicht>(emptyStaerkeUebersicht);
   const [showBearbeiterDialog, setShowBearbeiterDialog] = useState(false);
+  const [letzterAbgleich, setLetzterAbgleich] = useState<AbgleichStand>({ zeitpunkt: null, fehler: null });
   const [activeClients, setActiveClients] = useState<ActiveClientInfo[]>([]);
   const [peerUpdateStatus, setPeerUpdateStatus] = useState<PeerUpdateStatus | null>(null);
   const [debugSyncLogs, setDebugSyncLogs] = useState<string[]>([]);
@@ -215,6 +219,8 @@ function useWorkspaceRuntimeUiState() {
     setStaerkeUebersicht,
     showBearbeiterDialog,
     setShowBearbeiterDialog,
+    letzterAbgleich,
+    setLetzterAbgleich,
     activeClients,
     setActiveClients,
     peerUpdateStatus,

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { toNatoDateTime } from '../src/renderer/src/utils/datetime';
+import { natoZeitzonenKennung, toNatoDateTime } from '../src/renderer/src/utils/datetime';
 import { parseTaktischeStaerke, toTaktischeStaerke } from '../src/renderer/src/utils/tactical';
 import { AppError, toSafeError } from '../src/main/services/errors';
 import { iconPath } from '../src/renderer/src/utils/assets';
@@ -68,8 +68,9 @@ describe('renderer utils - tactical strength', () => {
 
 describe('renderer utils - datetime and assets', () => {
   it('formats NATO date-time string', () => {
-    const d = new Date(2026, 1, 25, 14, 7, 0); // local time
-    expect(toNatoDateTime(d)).toBe('251407FEB26');
+    const d = new Date(2026, 1, 25, 14, 7, 0); // Ortszeit
+    // Die Zeitzonenkennung hängt an der Ortszeit des Rechners.
+    expect(toNatoDateTime(d)).toBe(`251407${natoZeitzonenKennung(d)}FEB26`);
   });
 
   it('uses JAN fallback for out-of-range month value', () => {
@@ -81,7 +82,7 @@ describe('renderer utils - datetime and assets', () => {
       getFullYear: () => 2026,
     } as unknown as Date;
 
-    expect(toNatoDateTime(fakeDate)).toBe('010203JAN26');
+    expect(toNatoDateTime(fakeDate)).toBe('010203ZJAN26');
   });
 
   it('builds icon paths with fallback key', () => {
@@ -122,5 +123,21 @@ describe('error utils', () => {
   it('returns safe standard errors and unknown errors', () => {
     expect(toSafeError(new Error('x'))).toEqual({ message: 'x' });
     expect(toSafeError('oops')).toEqual({ message: 'Unbekannter Fehler' });
+  });
+});
+
+describe('Zeitzonenkennung', () => {
+  it('kennzeichnet UTC mit Z', () => {
+    const utc = { getTimezoneOffset: () => 0 } as unknown as Date;
+    expect(natoZeitzonenKennung(utc)).toBe('Z');
+  });
+
+  it('kennzeichnet mitteleuropäische Zeit mit A und Sommerzeit mit B', () => {
+    expect(natoZeitzonenKennung({ getTimezoneOffset: () => -60 } as unknown as Date)).toBe('A');
+    expect(natoZeitzonenKennung({ getTimezoneOffset: () => -120 } as unknown as Date)).toBe('B');
+  });
+
+  it('lässt halbe Stunden ohne Buchstaben', () => {
+    expect(natoZeitzonenKennung({ getTimezoneOffset: () => -330 } as unknown as Date)).toBe('');
   });
 });

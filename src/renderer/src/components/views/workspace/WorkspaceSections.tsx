@@ -7,6 +7,7 @@ import {
 } from '@renderer/components/editor/InlineEditors';
 import { FahrzeugeOverviewTable } from '@renderer/components/tables/FahrzeugeOverviewTable';
 import { AbschlussView } from '@renderer/components/views/AbschlussView';
+import { JournalView } from '@renderer/components/views/JournalView';
 import { KraefteOverviewTable } from '@renderer/components/tables/KraefteOverviewTable';
 import { EinsatzOverviewView } from '@renderer/components/views/EinsatzOverviewView';
 import { FuehrungsstrukturView } from '@renderer/components/views/FuehrungsstrukturView';
@@ -331,6 +332,12 @@ export function WorkspaceViewBody(props: WorkspaceContentProps): JSX.Element {
     fuehrung: <FuehrungView {...props} />,
     kraefte: <KraefteView {...props} />,
     fahrzeuge: <FahrzeugeView {...props} />,
+    journal: (
+      <JournalView
+        selectedEinsatzId={props.selectedEinsatzId}
+        aktualisierungsMerker={props.letzterAbgleich.zeitpunkt ?? ''}
+      />
+    ),
     abschluss: (
       <AbschlussView
         busy={props.busy}

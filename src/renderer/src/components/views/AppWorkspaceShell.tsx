@@ -15,6 +15,7 @@ import type {
   RecordEditLockInfo,
 } from '@shared/types';
 import type {
+  AbgleichStand,
   CreateAbschnittForm,
   CreateEinheitForm,
   CreateFahrzeugForm,
@@ -51,6 +52,7 @@ export interface AppWorkspaceShellProps {
   onUndo: () => void;
   bearbeiterName: string;
   onBearbeiterWechseln: () => void;
+  letzterAbgleich: AbgleichStand;
   onCloseError: () => void;
   showBearbeiterDialog: boolean;
   onBearbeiterSpeichern: (name: string) => void;
@@ -259,6 +261,7 @@ function buildWorkspaceContentProps(props: AppWorkspaceShellProps): WorkspaceMai
     onSplitEinheit: props.onSplitEinheit,
     onRemoveEinheit: props.onRemoveEinheit,
     onExportEinsatzakte: props.onExportEinsatzakte,
+    letzterAbgleich: props.letzterAbgleich,
     anzeigeThema: props.anzeigeThema,
     onChangeAnzeigeThema: props.onChangeAnzeigeThema,
     onBeendeEinsatz: props.onBeendeEinsatz,
@@ -423,6 +426,7 @@ export function AppWorkspaceShell(props: AppWorkspaceShellProps): JSX.Element {
         onUndo={props.onUndo}
         bearbeiterName={props.bearbeiterName}
         onBearbeiterWechseln={props.onBearbeiterWechseln}
+        letzterAbgleich={props.letzterAbgleich}
         onOpenStrengthDisplay={props.onOpenStrengthDisplay}
         onCloseStrengthDisplay={props.onCloseStrengthDisplay}
         busy={props.busy}

@@ -142,6 +142,7 @@ function buildWorkspaceStateProps(
     staerkeUebersicht: args.uiState.staerkeUebersicht,
     undoMoeglich: args.undoAction.undoMoeglich,
     bearbeiterName: args.bearbeiterName,
+    letzterAbgleich: args.uiState.letzterAbgleich,
     anzeigeThema: args.anzeigeThema,
     showBearbeiterDialog: args.uiState.showBearbeiterDialog,
     updaterState: args.updaterState,

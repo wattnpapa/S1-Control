@@ -1043,6 +1043,14 @@ td.tactical-sign-cell.compact-sign-cell {
   font-size: 15px;
 }
 
+.topbar-meta-item.is-gestoert {
+  /* Ein alter Stand darf nicht wie ein aktueller aussehen. */
+  background: rgba(255, 196, 0, 0.22);
+  border: 1px solid rgba(255, 196, 0, 0.6);
+  border-radius: 8px;
+  padding: 2px 8px;
+}
+
 .topbar-bearbeiter {
   background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.35);
@@ -1051,6 +1059,51 @@ td.tactical-sign-cell.compact-sign-cell {
   padding: 2px 8px;
   border-radius: 6px;
   min-height: 28px;
+}
+
+.status-marke {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  border: 1px solid currentColor;
+  white-space: nowrap;
+}
+
+.status-aktiv {
+  color: #14612f;
+}
+
+.status-bereit {
+  color: #8a5a00;
+}
+
+.status-aus {
+  color: #8c1d18;
+}
+
+:root[data-theme='dunkel'] .status-aktiv,
+:root[data-theme='dunkel'] .status-bereit,
+:root[data-theme='dunkel'] .status-aus {
+  color: var(--ink);
+}
+
+.journal-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.journal-kopf {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.journal-fehler {
+  color: var(--danger);
+  margin: 0;
 }
 
 .abschluss-panel {

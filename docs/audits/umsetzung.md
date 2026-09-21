@@ -24,12 +24,12 @@ Legende: [x] erledigt, [ ] offen.
 - [x] ANFAHRT fällt still aus der Stärke, ABGEMELDET zählt mit (fünf Reviewer, P0)
 - [x] Regel der Stärkezählung ist nirgends erklärt (stress P0-4)
 - [x] "Einheiten gesamt" zeigt die Personenzahl, "Führungsstärke" die volle Stärke (command P0-3, new-user P0-5)
-- [ ] Kein Datenstand und kein Verbindungszustand neben laufender Uhr (command P0-4, offline P0-3)
-- [ ] Fehler im zyklischen Refresh werden verschluckt (command P0-4)
+- [x] Kein Datenstand und kein Verbindungszustand neben laufender Uhr (command P0-4, offline P0-3)
+- [x] Fehler im zyklischen Refresh werden verschluckt (command P0-4)
 - [ ] Zwei Schreibweisen derselben Stärke (mehrere Reviewer, P2)
 - [ ] Keine Suche, Sortierung, Statusfilter in den Gesamtlisten (command P1-10)
-- [ ] Kein Bewegungs- oder Ereignisprotokoll in der Oberfläche (workflow P1-4, destructive P3-1)
-- [ ] Status als technischer Rohtext ohne Abstufung (mehrere Reviewer, P1/P2)
+- [x] Kein Bewegungs- oder Ereignisprotokoll in der Oberfläche (workflow P1-4, destructive P3-1)
+- [x] Status als technischer Rohtext ohne Abstufung (mehrere Reviewer, P1/P2)
 
 ## Riskante Aktionen und Korrekturwege
 
@@ -90,4 +90,4 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] Exportinhalt taugt nicht als Papierstand (analog P1-1)
 - [ ] Keine Import- oder Nacherfassungsschnittstelle (analog P1-2)
 - [ ] Sicherungsabstand und Sicherungszustand nicht sichtbar (analog P2-2)
-- [ ] NATO-Zeit ohne Zeitzonenkennung (drei Reviewer, P1/P3)
+- [x] NATO-Zeit ohne Zeitzonenkennung (drei Reviewer, P1/P3)
