@@ -155,7 +155,10 @@ export async function grundlage(a: Platz): Promise<void> {
       name: "Hochwasser Weser-Ems",
       art: "EINSATZ",
       fuestName: "FueSt Oldenburg",
-      beginn: "2026-09-10T08:00:00+02:00",
+      // Relativ zur Systemuhr: §2.5 haelt Ist-Zeiten gegen die Wanduhr (zwoelf
+      // Stunden), und ein fester Beginn erzeugte ab dem Folgetag in jeder
+      // Werkstatt einen `meldezeitUnplausibel`-Hinweis, den kein Szenario meint.
+      beginn: new Date(Date.now() - 4 * 3_600_000).toISOString(),
       schichtmodell: "ZWEI_SCHICHT",
       kosten: { psaKostenProSatz: 180, vdaProTag: 150, ukVerpflegungProTag: 20, geplanteEinsatztage: 5 },
     },
