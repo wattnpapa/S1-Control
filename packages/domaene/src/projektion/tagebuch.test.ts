@@ -112,7 +112,7 @@ describe("tagebuchzeile", () => {
   it("zeigt bei einem setzenden Ereignis den Übergang von vorher nach neu (§2.2)", () => {
     const ereignis = statusGesetzt(hlc(4, 0, "a"), 4, "U1", "ANMARSCH", "IM_EINSATZ");
     const zeile = tagebuchzeile(falte([...GRUNDLAGE, ereignis]), ereignis);
-    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Status gesetzt: ANMARSCH → IM_EINSATZ");
+    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Status gesetzt: Anmarsch → Einsatz");
   });
 
   it("schreibt eine Stärke als Tripel und nicht als JSON", () => {

@@ -25,7 +25,16 @@
  *    sie sagt nur, **dass** etwas fehlt.
  */
 
-import { kennzahlen, type Staerke, type Zustand } from "@s1/domaene";
+import {
+  EINHEIT_STATUS,
+  SCHICHTEN,
+  kennzahlen,
+  organisationTitel,
+  schichtTitel,
+  statusTitel,
+  type Staerke,
+  type Zustand,
+} from "@s1/domaene";
 
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
@@ -82,12 +91,29 @@ function summe(staerke: Staerke): number {
   return staerke.fuehrer + staerke.unterfuehrer + staerke.mannschaft;
 }
 
-function verteilung(matrix: { readonly [wert: string]: kennzahlen.Matrixzeile }): Verteilungszeile[] {
-  return Object.entries(matrix).map(([wert, zeile]) => ({
-    wert,
-    staerke: zeile.staerke,
-    gesamt: zeile.gesamt,
-  }));
+/**
+ * Die Zeilen einer Verteilung in der Reihenfolge der Vorlage und mit ihren
+ * Wörtern: Das Blatt „Status“ führt die Statuswerte von „Rufbereitschaft“
+ * bis „Nicht einsatzbereit“ (Zeilen 21–29) und die Schichten als Tag, Nacht,
+ * Früh, Spät — nicht alphabetisch nach Schlüssel. Werte, die die Vorlage
+ * nicht kennt (§3.7), folgen am Ende in Schlüsselordnung.
+ */
+function verteilung(
+  matrix: { readonly [wert: string]: kennzahlen.Matrixzeile },
+  reihenfolge: readonly string[],
+  wort: (schluessel: string) => string,
+): Verteilungszeile[] {
+  const rang = (schluessel: string): number => {
+    const stelle = reihenfolge.indexOf(schluessel);
+    return stelle === -1 ? reihenfolge.length : stelle;
+  };
+  return Object.entries(matrix)
+    .sort(([a], [b]) => rang(a) - rang(b) || a.localeCompare(b))
+    .map(([schluessel, zeile]) => ({
+      wert: wort(schluessel),
+      staerke: zeile.staerke,
+      gesamt: zeile.gesamt,
+    }));
 }
 
 /**
@@ -176,8 +202,8 @@ export function statusdaten(zustand: Zustand): Statusdaten {
     },
   );
 
-  const status = verteilung(kennzahlen.matrixStatus(zustand));
-  const schichten = verteilung(kennzahlen.matrixSchicht(zustand));
+  const status = verteilung(kennzahlen.matrixStatus(zustand), EINHEIT_STATUS, statusTitel);
+  const schichten = verteilung(kennzahlen.matrixSchicht(zustand), SCHICHTEN, schichtTitel);
 
   return {
     einsatzName: typeof zustand.einsatz?.name.wert === "string" ? zustand.einsatz.name.wert : "(ohne Namen)",
@@ -243,7 +269,7 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
   const organisationszeilen = [...daten.organisationen, daten.organisationenSumme].map((zeile, nummer) =>
     [
       `      <tr${nummer === daten.organisationen.length ? ' class="summenzeile"' : ""}>`,
-      `        <th scope="row">${htmlMaskieren(zeile.organisation)}</th>`,
+      `        <th scope="row">${htmlMaskieren(zeile.organisation === "Gesamt" ? zeile.organisation : organisationTitel(zeile.organisation))}</th>`,
       `        ${zahl(zeile.staerke.fuehrer)}`,
       `        ${zahl(zeile.staerke.unterfuehrer)}`,
       `        ${zahl(zeile.staerke.mannschaft)}`,

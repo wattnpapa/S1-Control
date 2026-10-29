@@ -27,6 +27,7 @@ import { hlcAlsText, vergleicheHlc, type Hlc } from "../hlc.js";
 import type { EreignisId } from "../ereignis.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Zustand } from "../zustand.js";
+import { schichtTitel, statusTitel } from "../beschriftungen.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -325,10 +326,22 @@ export function tagebuchsatz(
   // Form (a): ein Feld, und der Wert steht im Rahmen (§2.2).
   const feld = feldname(ereignis, eintrag);
   const beschriftung = feld === undefined ? undefined : (FELD_TEXT[feld] ?? feld);
-  const von = "vorher" in ereignis ? alsSatzwert(ereignis.vorher) : "—";
-  const auf = alsSatzwert(ereignis.neu);
+  const von = "vorher" in ereignis ? satzwertMitWort(ereignis.typ, ereignis.vorher) : "—";
+  const auf = satzwertMitWort(ereignis.typ, ereignis.neu);
   const feldteil = beschriftung === undefined || eintrag.feld?.art === "fest" ? "" : ` (${beschriftung})`;
   return `${betreff}${feldteil}: ${von} → ${auf}`;
+}
+
+/**
+ * Status und Schicht stehen im Tagebuch als Wort der Excel, nicht als Schlüssel:
+ * „Anmarsch → Einsatz“ liest sich, „ANMARSCH → IM_EINSATZ“ wird entziffert.
+ */
+function satzwertMitWort(typ: string, wert: unknown): string {
+  if (typeof wert === "string") {
+    if (typ === "StatusGesetzt") return statusTitel(wert);
+    if (typ === "SchichtGesetzt") return schichtTitel(wert);
+  }
+  return alsSatzwert(wert);
 }
 
 /**

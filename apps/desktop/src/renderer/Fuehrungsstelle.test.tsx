@@ -201,6 +201,6 @@ describe("Das Blatt der Führungsstelle", () => {
 
   it("zeigt die Stärke aus K17 je Teileinheit und Schicht", async () => {
     await zeige();
-    expect(screen.getByText(/Stab · TAG: 1\/0\/0/)).toBeDefined();
+    expect(screen.getByText(/Stab · Tag: 1\/0\/0/)).toBeDefined();
   });
 });

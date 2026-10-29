@@ -27,7 +27,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { ABSCHNITTSTYPEN, projektion, type Baumknoten } from "@s1/domaene";
+import { ABSCHNITTSTYPEN, abschnittstypTitel, projektion, type Baumknoten } from "@s1/domaene";
 
 import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
@@ -195,7 +195,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                 {/* Der Typ als Wort nur dort, wo kein Zeichen ihn zeigt: Beides
                     nebeneinander sagt dasselbe zweimal und nimmt dem Namen den
                     Platz. Am Zeichen steht die Bedeutung im `title`. */}
-                {abschnittszeichen(zeile) === undefined && <span className="typ">{zeile.typ}</span>}
+                {abschnittszeichen(zeile) === undefined && <span className="typ">{abschnittstypTitel(zeile.typ)}</span>}
                 <span className="zahlen">
                   {String(zeile.einheitenSumme)} Einh. · {zeile.summenStaerke.fuehrer}/
                   {zeile.summenStaerke.unterfuehrer}/{zeile.summenStaerke.mannschaft}
@@ -409,7 +409,7 @@ function Typwahl({ wert, aufWahl }: { wert: string; aufWahl: (typ: string) => vo
     <select value={wert} onChange={(e) => { aufWahl(e.target.value); }}>
       {ABSCHNITTSTYPEN.filter((typ) => typ !== "ARCHIV" && typ !== "EINGANG").map((typ) => (
         <option key={typ} value={typ}>
-          {typ}
+          {abschnittstypTitel(typ)}
         </option>
       ))}
     </select>

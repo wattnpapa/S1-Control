@@ -29,6 +29,7 @@ import {
   SCHICHTEN,
   TAKTISCHE_EBENEN,
 } from "../ereignis.js";
+import { spaltenwertTitel } from "../beschriftungen.js";
 import { anzeigename, auftragsText, erreichbarkeit, gesamtstaerke, geraeteText, herkunftText, logistik } from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
@@ -211,6 +212,8 @@ export interface Zelle {
 export interface Tabellenzeile {
   readonly einheitId: Id;
   readonly abschnittId: Id;
+  /** Der Name des wirksamen Abschnitts — die Kopfzelle „FüSt.“ der Excel liest sich als Wort, nicht als Kennung. */
+  readonly abschnittName: string;
   readonly reihenfolge: number;
   readonly anzeige: string;
   readonly staerke: Staerke;
@@ -313,7 +316,8 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     }
     const feld = beobachtung(einheit, sp.feldpfad ?? sp.schluessel);
     zellen[sp.schluessel] = {
-      text: alsText(feld?.wert),
+      // Auswahlspalten zeigen das Wort der Excel; `wert` bleibt der Schluessel.
+      text: sp.art === "auswahl" ? spaltenwertTitel(sp.schluessel, alsText(feld?.wert)) : alsText(feld?.wert),
       wert: feld?.wert ?? null,
       umstritten: umstritten.has(`${pfad}/${sp.feldpfad ?? sp.schluessel}`),
       ...(feld?.wanduhr === undefined ? {} : { wanduhr: feld.wanduhr }),
@@ -323,6 +327,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
   return {
     einheitId: einheit.id,
     abschnittId: einheit.wirksamerAbschnittId,
+    abschnittName: alsText(zustand.abschnitte[einheit.wirksamerAbschnittId]?.name.wert) || einheit.wirksamerAbschnittId,
     reihenfolge: typeof einheit.reihenfolge.wert === "number" ? einheit.reihenfolge.wert : 0,
     anzeige: anzeigename(einheit),
     staerke: einheit.wirksameStaerke,

@@ -19,9 +19,9 @@
  * schnelleres Zeichnen, sondern weniger zu zeichnen.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
-import { projektion, type Spalte, type Spaltengruppe, type Tabellenzeile } from "@s1/domaene";
+import { projektion, spaltenwertTitel, statusTon, type Spalte, type Spaltengruppe, type Tabellenzeile } from "@s1/domaene";
 
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
@@ -43,21 +43,6 @@ const GRUPPENTITEL: Record<string, string> = {
   RESSOURCENPLANUNG: "Ressourcen",
   LOGISTIKDATEN: "Logistik",
   KOSTENUEBERSICHT: "Kosten",
-};
-
-/**
- * Der Ton einer Statusmarke.
- *
- * **Farbe und Wort, nie Farbe allein** (§9-Regel der Oberfläche): Die Marke
- * trägt den Status ausgeschrieben; die Farbe ist die zweite Auskunft für den
- * Blick über die Spalte, nicht die erste.
- */
-const STATUSTON: Record<string, string> = {
-  IM_EINSATZ: "ok",
-  EINSATZBEREIT: "ok",
-  ANMARSCH: "warn",
-  ANGEFORDERT: "warn",
-  NICHT_EINSATZBEREIT: "fehler",
 };
 
 /** Zahlenspalten stehen rechts: Wer Stärken vergleicht, liest Spalten. */
@@ -276,7 +261,9 @@ export function Einheitentabelle({
                   aufEinheit(zeile.einheitId);
                 }}
               >
-                <th scope="row">{zeile.abschnittId}</th>
+                <th scope="row" title={zeile.abschnittId}>
+                  {zeile.abschnittName}
+                </th>
                 {spalten.map((spalte) => (
                   <Zelle
                     key={spalte.schluessel}
@@ -371,10 +358,21 @@ function Zelle({
 }: ZelleEigenschaften): React.JSX.Element {
   const zelle = zeile.zellen[spalte.schluessel];
   const [eingabe, setzeEingabe] = useState("");
+  const warBearbeitet = useRef(false);
 
+  // Der Startwert wird **einmal** beim Öffnen der Zelle gesetzt. Vorher hing
+  // er am Zellentext, und jedes nachgeladene Lagebild — alle paar Sekunden,
+  // sobald ein anderer Arbeitsplatz schreibt — setzte die halb getippte
+  // Eingabe zurück. Auswahlspalten beginnen mit dem Schlüssel, nicht mit dem
+  // angezeigten Wort: Die Optionen tragen den Schlüssel als Wert.
   useEffect(() => {
-    if (bearbeitet) setzeEingabe(zelle?.text ?? "");
-  }, [bearbeitet, zelle?.text]);
+    if (bearbeitet && !warBearbeitet.current) {
+      setzeEingabe(
+        spalte.art === "auswahl" ? (typeof zelle?.wert === "string" ? zelle.wert : "") : (zelle?.text ?? ""),
+      );
+    }
+    warBearbeitet.current = bearbeitet;
+  }, [bearbeitet, spalte.art, zelle]);
 
   if (zelle === undefined) return <td />;
 
@@ -396,7 +394,7 @@ function Zelle({
         onDoubleClick={spalte.schreibt === undefined ? undefined : aufBearbeiten}
       >
         {spalte.schluessel === "status" && zelle.text !== "" ? (
-          <span className={`marke-zustand ${STATUSTON[zelle.text] ?? "neutral"}`}>{zelle.text}</span>
+          <span className={`marke-zustand ${statusTon(typeof zelle.wert === "string" ? zelle.wert : "")}`}>{zelle.text}</span>
         ) : (
           zelle.text
         )}
@@ -443,7 +441,7 @@ function Zelle({
           <option value="">—</option>
           {(spalte.werte ?? []).map((wert) => (
             <option key={wert} value={wert}>
-              {wert}
+              {spaltenwertTitel(spalte.schluessel, wert)}
             </option>
           ))}
         </select>

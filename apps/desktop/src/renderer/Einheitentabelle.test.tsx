@@ -27,6 +27,7 @@ function zeile(id: string, bezeichnung: string, teil: Partial<Tabellenzeile> = {
   return {
     einheitId: id,
     abschnittId: "EO",
+    abschnittName: "Deich Nord",
     reihenfolge: 1,
     anzeige: bezeichnung,
     staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },

@@ -19,7 +19,7 @@
 import { useEffect, useState } from "react";
 import { useGrundabfrage } from "./Grundabfrage.js";
 
-import type { Dienstpostenzeile, Teilbereichsblock } from "@s1/domaene";
+import { schichtTitel, type Dienstpostenzeile, type Teilbereichsblock } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
@@ -106,7 +106,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
           <ul>
             {ansicht.staerke.map((zeile) => (
               <li key={`${zeile.teileinheit}-${zeile.schicht}`}>
-                {zeile.teileinheit} · {zeile.schicht}: {zeile.staerke.fuehrer}/
+                {zeile.teileinheit} · {schichtTitel(zeile.schicht)}: {zeile.staerke.fuehrer}/
                 {zeile.staerke.unterfuehrer}/{zeile.staerke.mannschaft}
               </li>
             ))}
@@ -153,7 +153,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
           >
             {SCHICHTEN.map((wert) => (
               <option key={wert} value={wert}>
-                {wert}
+                {schichtTitel(wert)}
               </option>
             ))}
           </select>
@@ -211,7 +211,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
             {ansicht.plan.zeilen.map((zeile) => (
               <tr key={zeile.dienstpostenId}>
                 <th scope="row">
-                  {zeile.funktion} · {zeile.schicht}
+                  {zeile.funktion} · {schichtTitel(zeile.schicht)}
                 </th>
                 {tage.map((tag) => (
                   <Planzelle
@@ -284,7 +284,7 @@ function Postenzeile({ zeile }: { readonly zeile: Dienstpostenzeile }): React.JS
   return (
     <tr className={zeile.entfernt ? "entfernt" : ""}>
       <th scope="row">{zeile.funktion}</th>
-      <td>{zeile.schicht}</td>
+      <td>{schichtTitel(zeile.schicht)}</td>
       <td>{ROLLENTEXT[zeile.rolle] ?? zeile.rolle}</td>
       <td>
         <input
