@@ -290,6 +290,7 @@ export const zRuf = z.discriminatedUnion("art", [
     abschnittId: z.string().optional(),
     suche: z.string().optional(),
     mitStillgelegten: z.boolean().optional(),
+    status: z.array(z.string()).optional(),
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),

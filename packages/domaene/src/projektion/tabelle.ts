@@ -346,10 +346,22 @@ export interface Tabellenoptionen {
   readonly suche?: string;
   /** Entfernte und aufgegangene Einheiten mitzeigen (§5.4.5). Vorbelegung: nein. */
   readonly mitStillgelegten?: boolean;
+  /**
+   * Nur Einheiten mit einem dieser Statuswerte. Leer oder fehlend heißt alle.
+   * Die Zählung je Status ({@link Tabellenausschnitt.jeStatus}) läuft **vor**
+   * diesem Filter, damit die Leiste auch die abgewählten Werte noch nennt.
+   */
+  readonly status?: readonly string[];
   /** Ausschnitt für die Übertragung: ab welcher Zeile. */
   readonly von?: number;
   /** Ausschnitt: wie viele Zeilen höchstens. */
   readonly anzahl?: number;
+}
+
+/** Einheiten und Stärke je Statuswert — die „Stärke nach Status“ des Blatts Status, auf den Ausschnitt bezogen. */
+export interface Statuszaehler {
+  readonly anzahl: number;
+  readonly gesamt: number;
 }
 
 export interface Tabellenausschnitt {
@@ -357,6 +369,11 @@ export interface Tabellenausschnitt {
   /** Wie viele Zeilen der Filter insgesamt trifft — die Zahl unter der Tabelle. */
   readonly gesamtzahl: number;
   readonly von: number;
+  /**
+   * Zählung je Status über Abschnitt und Suche, aber **ohne** den Statusfilter
+   * selbst. Fehlende Schlüssel heißen null; entfernte Einheiten zählen nicht.
+   */
+  readonly jeStatus: { readonly [status: string]: Statuszaehler };
 }
 
 /**
@@ -375,7 +392,7 @@ export function einheitentabelle(
   optionen: Tabellenoptionen = {},
 ): Tabellenausschnitt {
   const suche = optionen.suche?.trim().toLocaleLowerCase("de-DE") ?? "";
-  const gefiltert = Object.values(zustand.einheiten).filter((einheit) => {
+  const vorStatusfilter = Object.values(zustand.einheiten).filter((einheit) => {
     if (optionen.mitStillgelegten !== true && (einheit.entfernt?.wert === true || einheit.wirksamAufgegangen)) {
       return false;
     }
@@ -396,6 +413,23 @@ export function einheitentabelle(
     return heuhaufen.includes(suche);
   });
 
+  const jeStatus: Record<string, Statuszaehler> = {};
+  for (const einheit of vorStatusfilter) {
+    if (einheit.entfernt?.wert === true || einheit.wirksamAufgegangen) continue;
+    const status = typeof einheit.status.wert === "string" ? einheit.status.wert : "";
+    if (status === "") continue;
+    const bisher = jeStatus[status] ?? { anzahl: 0, gesamt: 0 };
+    jeStatus[status] = { anzahl: bisher.anzahl + 1, gesamt: bisher.gesamt + gesamtstaerke(einheit) };
+  }
+
+  const statuswahl = optionen.status ?? [];
+  const gefiltert =
+    statuswahl.length === 0
+      ? vorStatusfilter
+      : vorStatusfilter.filter((einheit) =>
+          statuswahl.includes(typeof einheit.status.wert === "string" ? einheit.status.wert : ""),
+        );
+
   // §5.3, „Sekundärsortierung“: erst `reihenfolge`, dann die Id in
   // Codepoint-Ordnung — für Einheiten wie für Abschnitte. Ohne die zweite
   // Stufe hinge die Reihenfolge zweier gleichrangiger Zeilen an der
@@ -414,6 +448,7 @@ export function einheitentabelle(
     zeilen: gefiltert.slice(von, von + anzahl).map((einheit) => tabellenzeile(zustand, einheit)),
     gesamtzahl: gefiltert.length,
     von,
+    jeStatus,
   };
 }
 

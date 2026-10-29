@@ -139,6 +139,7 @@ export type {
   Schichtplanzeile,
   Spalte,
   Spaltengruppe,
+  Statuszaehler,
   Tabellenausschnitt,
   Tabellenzeile,
   Tagebuchfilter,

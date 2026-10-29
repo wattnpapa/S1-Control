@@ -300,7 +300,8 @@ describe("Funktionalität: Einheiten", () => {
     expect(zeile?.zellen["status"]?.umstritten).toBe(true);
     expect(zeile?.hinweise.some((hinweis) => hinweis.art === "vorherPasstNicht")).toBe(true);
     // Der Wert gilt trotzdem: Last-Writer-Wins mit Hinweis, nicht ohne (§3.4).
-    expect(zeile?.zellen["status"]?.text).toBe("RUHE");
+    expect(zeile?.zellen["status"]?.text).toBe("Ruhe");
+    expect(zeile?.zellen["status"]?.wert).toBe("RUHE");
   });
 
   it("Szenario: die Spaltengruppen der Excel lassen sich zuschalten", async () => {

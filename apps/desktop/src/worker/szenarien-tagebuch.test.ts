@@ -74,8 +74,8 @@ describe("Funktionalität: Einsatztagebuch", () => {
       (zeile) => zeile.typ === "StatusGesetzt",
     );
     expect(zeilen).toHaveLength(5);
-    expect(zeilen[0]?.satz).toContain("RUHE → RUECKMARSCH");
-    expect(zeilen[4]?.satz).toContain("→ ANMARSCH");
+    expect(zeilen[0]?.satz).toContain("Ruhe → Rückmarsch");
+    expect(zeilen[4]?.satz).toContain("→ Anmarsch");
   });
 
   it("Szenario: eine Rücknahme steht als eigene Zeile neben dem Original", async () => {

@@ -33,6 +33,7 @@ export {
   type Schreibweg,
   type Spalte,
   type Spaltengruppe,
+  type Statuszaehler,
   type Tabellenausschnitt,
   type Tabellenoptionen,
   type Tabellenzeile,

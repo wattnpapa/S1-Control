@@ -755,6 +755,7 @@ export class Aktendienst {
       ...(ruf.abschnittId === undefined ? {} : { abschnittId: ruf.abschnittId }),
       ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
       ...(ruf.mitStillgelegten === undefined ? {} : { mitStillgelegten: ruf.mitStillgelegten }),
+      ...(ruf.status === undefined ? {} : { status: ruf.status }),
       ...(ruf.von === undefined ? {} : { von: ruf.von }),
       ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
     });

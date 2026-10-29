@@ -57,6 +57,7 @@ beforeEach(() => {
     zeilen: [zeile("U1", "Bergungsgruppe 1"), zeile("U2", "Fachgruppe N")],
     gesamtzahl: 2,
     von: 0,
+    jeStatus: { IM_EINSATZ: { anzahl: 2, gesamt: 18 }, ANGEFORDERT: { anzahl: 1, gesamt: 9 } },
   });
   attrappe.antwortet("untertabelleAnfordern", {
     lageZeiger: 5,
@@ -202,6 +203,21 @@ describe("Die Einheitentabelle", () => {
     });
     await zeigeTabelle();
     expect(screen.getByText("1 von 150 Einheiten")).toBeDefined();
+  });
+
+  it("zählt je Status in der Reihenfolge der Excel und filtert per Klick", async () => {
+    await zeigeTabelle();
+    const leiste = screen.getByRole("group", { name: "Status" });
+    const knoepfe = leiste.querySelectorAll("button");
+    expect(Array.from(knoepfe).map((k) => k.textContent)).toEqual(["Angefordert1", "Einsatz2"]);
+    fireEvent.click(screen.getByRole("button", { name: /Angefordert/ }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.status).toEqual(["ANGEFORDERT"]);
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Alle zeigen" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.status).toBeUndefined();
+    });
   });
 
   it("reicht die Suche als Filter an den Worker weiter", async () => {

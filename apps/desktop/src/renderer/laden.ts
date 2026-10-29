@@ -78,6 +78,8 @@ export interface Tabellenfilter {
   readonly abschnittId?: string;
   readonly suche?: string;
   readonly mitStillgelegten?: boolean;
+  /** Nur diese Statuswerte; leer heißt alle. */
+  readonly status?: readonly string[];
   readonly von?: number;
 }
 
@@ -471,6 +473,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         ...(filter.abschnittId === undefined ? {} : { abschnittId: filter.abschnittId }),
         ...(filter.suche === undefined ? {} : { suche: filter.suche }),
         ...(filter.mitStillgelegten === undefined ? {} : { mitStillgelegten: filter.mitStillgelegten }),
+        ...(filter.status === undefined || filter.status.length === 0 ? {} : { status: [...filter.status] }),
       }));
     },
 

@@ -287,6 +287,23 @@ describe("einheitentabelle — Filter", () => {
   });
 });
 
+describe("einheitentabelle — Statusfilter", () => {
+  it("zählt je Status vor dem Filter und filtert danach", () => {
+    const zustand = falte([...GRUNDMENGE, einheit(10, 4, "U1"), einheit(11, 5, "U2"), einheit(12, 6, "U3", { abschnittId: "EA-SUED" })]);
+    const alle = einheitentabelle(zustand);
+    const summe = Object.values(alle.jeStatus).reduce((s, z) => s + z.anzahl, 0);
+    expect(summe).toBe(alle.gesamtzahl);
+    const [status] = Object.keys(alle.jeStatus);
+    expect(status).toBeDefined();
+    const gefiltert = einheitentabelle(zustand, { status: [status ?? ""] });
+    expect(gefiltert.gesamtzahl).toBe(alle.jeStatus[status ?? ""]?.anzahl);
+    expect(gefiltert.zeilen.every((z) => z.zellen["status"]?.wert === status)).toBe(true);
+    // Die Zählung bleibt die der ungefilterten Menge.
+    expect(gefiltert.jeStatus).toEqual(alle.jeStatus);
+    expect(einheitentabelle(zustand, { status: ["WARTET"] }).gesamtzahl).toBe(0);
+  });
+});
+
 describe("einheitentabelle — Ausschnitt", () => {
   it("schneidet mit von/anzahl und nennt trotzdem die volle Trefferzahl", () => {
     // Die Zahl unter der Tabelle ist die Trefferzahl des Filters, nicht die
