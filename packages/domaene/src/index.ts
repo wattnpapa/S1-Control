@@ -410,4 +410,5 @@ export {
   spaltenwertTitel,
   statusTitel,
   statusTon,
+  zeitpunktText,
 } from "./beschriftungen.js";

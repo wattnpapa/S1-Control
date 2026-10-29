@@ -77,7 +77,67 @@ export function eingabeAlsWert(spalte: Spalte, eingabe: string): unknown {
     const zahl = Number.parseInt(geputzt, 10);
     return Number.isNaN(zahl) ? null : zahl;
   }
+  // Die Stärkezelle zeigt „0/1/8“, das Ereignis trägt das Tripel (§5.4).
+  // Vorher ging der Text als `neu` ins Protokoll, und jede Summe darüber
+  // wurde NaN — an allen Arbeitsplätzen, ohne Hinweis.
+  if (spalte.art === "staerke") return staerkeAusEingabe(geputzt) ?? UNGUELTIGE_EINGABE;
+  if (spalte.art === "zeitpunkt") return zeitpunktAusEingabe(geputzt) ?? UNGUELTIGE_EINGABE;
   return geputzt;
+}
+
+/**
+ * Der Wert, den {@link eingabeAlsWert} für eine Eingabe liefert, die kein
+ * Ereignis tragen darf. Die Tabelle schreibt dann nichts und nennt die Regel.
+ */
+export const UNGUELTIGE_EINGABE: unique symbol = Symbol("ungültige Eingabe");
+
+/**
+ * „Fü/UFü/He“ oder „Fü/UFü/He/Gesamt“ als Tripel; die Gesamtzahl der Excel
+ * wird mitgelesen, aber nicht geglaubt — sie ist dort eine Formel.
+ */
+export function staerkeAusEingabe(eingabe: string): Staerke | undefined {
+  const teile = eingabe.trim().split("/").map((teil) => teil.trim());
+  if (teile.length !== 3 && teile.length !== 4) return undefined;
+  if (!teile.every((teil) => /^\d{1,3}$/.test(teil))) return undefined;
+  const [fuehrer, unterfuehrer, mannschaft] = teile.map((teil) => Number.parseInt(teil, 10));
+  return { fuehrer: fuehrer ?? 0, unterfuehrer: unterfuehrer ?? 0, mannschaft: mannschaft ?? 0 };
+}
+
+/**
+ * Eine Zeitangabe, wie die Führungsstelle sie schreibt, als ISO-Zeitpunkt:
+ * „29.10.2026 14:30“, „29.10. 14:30“ (dieses Jahr), „14:30“ (heute) oder ein
+ * ISO-Zeitpunkt. Ortszeit des Rechners; was nicht lesbar ist, ist undefined.
+ */
+export function zeitpunktAusEingabe(eingabe: string, jetzt: Date = new Date()): string | undefined {
+  const text = eingabe.trim();
+  if (text === "") return undefined;
+  const iso = /^\d{4}-\d{2}-\d{2}T/.test(text) ? new Date(text) : undefined;
+  if (iso !== undefined) return Number.isNaN(iso.getTime()) ? undefined : iso.toISOString();
+  const voll = /^(\d{1,2})\.(\d{1,2})\.(\d{4})[ T]+(\d{1,2}):(\d{2})$/.exec(text);
+  const kurz = /^(\d{1,2})\.(\d{1,2})\.[ T]*(\d{1,2}):(\d{2})$/.exec(text);
+  const nurZeit = /^(\d{1,2}):(\d{2})$/.exec(text);
+  let tag: number;
+  let monat: number;
+  let jahr: number;
+  let stunde: number;
+  let minute: number;
+  if (voll !== null) {
+    [tag, monat, jahr, stunde, minute] = voll.slice(1).map(Number) as [number, number, number, number, number];
+  } else if (kurz !== null) {
+    [tag, monat, stunde, minute] = kurz.slice(1).map(Number) as [number, number, number, number];
+    jahr = jetzt.getFullYear();
+  } else if (nurZeit !== null) {
+    [stunde, minute] = nurZeit.slice(1).map(Number) as [number, number];
+    tag = jetzt.getDate();
+    monat = jetzt.getMonth() + 1;
+    jahr = jetzt.getFullYear();
+  } else {
+    return undefined;
+  }
+  if (monat < 1 || monat > 12 || tag < 1 || tag > 31 || stunde > 23 || minute > 59) return undefined;
+  const zeit = new Date(jahr, monat - 1, tag, stunde, minute);
+  if (zeit.getMonth() !== monat - 1 || zeit.getDate() !== tag) return undefined;
+  return zeit.toISOString();
 }
 
 /** Die Obergrenze einer Teilstärke in einer Maske — ein Zahlendreher wie 80 statt 8 bleibt drin, 800 nicht. */

@@ -284,6 +284,27 @@ describe("Funktionalität: Einheiten", () => {
     expect(gesamtstaerke(platz)).toBe(9);
   });
 
+  it("Szenario: eine Stärke als Text wird abgewiesen, bevor sie das Protokoll erreicht", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const vorher = gesamtstaerke(platz);
+    const ergebnis = await platz.dienst.bediene({
+      typ: "StaerkeGeaendert",
+      nutzlast: { einheitId: "U1" },
+      vorher: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+      neu: "1/2/1",
+    });
+    expect(ergebnis.art).toBe("abgewiesen");
+    expect(gesamtstaerke(platz)).toBe(vorher);
+    const zeit = await platz.dienst.bediene({
+      typ: "ZeitpunktGesetzt",
+      nutzlast: { einheitId: "U1", feld: "eingetroffenAm" },
+      vorher: null,
+      neu: "morgen früh",
+    });
+    expect(zeit.art).toBe("abgewiesen");
+  });
+
   it("Szenario: eine Inline-Änderung mit falschem Vorher-Wert erzeugt einen Hinweis an der Zelle", async () => {
     const platz = await angenommenEinEinsatz();
     // §2.2a, Auflage 6: Der Bediener schickt mit, was er gesehen hat. Weicht

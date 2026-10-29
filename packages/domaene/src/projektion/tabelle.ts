@@ -29,7 +29,7 @@ import {
   SCHICHTEN,
   TAKTISCHE_EBENEN,
 } from "../ereignis.js";
-import { spaltenwertTitel } from "../beschriftungen.js";
+import { spaltenwertTitel, zeitpunktText } from "../beschriftungen.js";
 import { anzeigename, auftragsText, erreichbarkeit, gesamtstaerke, geraeteText, herkunftText, logistik } from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
@@ -317,7 +317,12 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     const feld = beobachtung(einheit, sp.feldpfad ?? sp.schluessel);
     zellen[sp.schluessel] = {
       // Auswahlspalten zeigen das Wort der Excel; `wert` bleibt der Schluessel.
-      text: sp.art === "auswahl" ? spaltenwertTitel(sp.schluessel, alsText(feld?.wert)) : alsText(feld?.wert),
+      text:
+        sp.art === "auswahl"
+          ? spaltenwertTitel(sp.schluessel, alsText(feld?.wert))
+          : sp.art === "zeitpunkt"
+            ? zeitpunktText(alsText(feld?.wert))
+            : alsText(feld?.wert),
       wert: feld?.wert ?? null,
       umstritten: umstritten.has(`${pfad}/${sp.feldpfad ?? sp.schluessel}`),
       ...(feld?.wanduhr === undefined ? {} : { wanduhr: feld.wanduhr }),

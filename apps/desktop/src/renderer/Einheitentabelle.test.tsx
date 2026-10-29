@@ -138,6 +138,47 @@ describe("Die Einheitentabelle", () => {
     expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
   });
 
+  it("schreibt die Stärke als Tripel und nichts bei unveränderter Eingabe", async () => {
+    await zeigeTabelle();
+    const zelle = screen.getAllByText("0/1/8")[0]!;
+    fireEvent.doubleClick(zelle);
+    const feld = screen.getByLabelText("Fü / UFü / He");
+    fireEvent.keyDown(feld, { key: "Enter" });
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+    fireEvent.doubleClick(screen.getAllByText("0/1/8")[0]!);
+    const feld2 = screen.getByLabelText("Fü / UFü / He");
+    fireEvent.change(feld2, { target: { value: "0/1/6" } });
+    fireEvent.keyDown(feld2, { key: "Enter" });
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("StaerkeGeaendert");
+    });
+    expect(attrappe.letzterRuf("bedienen")?.entwurf.neu).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 6 });
+  });
+
+  it("schreibt keinen Text in die Stärke, sondern nennt die Regel und lässt die Zelle offen", async () => {
+    await zeigeTabelle();
+    fireEvent.doubleClick(screen.getAllByText("0/1/8")[0]!);
+    const feld = screen.getByLabelText("Fü / UFü / He");
+    fireEvent.change(feld, { target: { value: "acht" } });
+    fireEvent.keyDown(feld, { key: "Enter" });
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+    expect(screen.getByText(/Stärke als Fü\/UFü\/He/)).toBeDefined();
+    expect(screen.getByLabelText("Fü / UFü / He")).toBeDefined();
+    fireEvent.keyDown(screen.getByLabelText("Fü / UFü / He"), { key: "Escape" });
+    expect(screen.queryByLabelText("Fü / UFü / He")).toBeNull();
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+  });
+
+  it("schreibt nach Escape auch dann nichts, wenn das Feld beim Verschwinden den Fokus verliert", async () => {
+    await zeigeTabelle();
+    fireEvent.doubleClick(screen.getAllByText("0/1/8")[0]!);
+    const feld = screen.getByLabelText("Fü / UFü / He");
+    fireEvent.change(feld, { target: { value: "1/2/1" } });
+    fireEvent.keyDown(feld, { key: "Escape" });
+    fireEvent.blur(feld);
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+  });
+
   it("verwirft die Bearbeitung mit Escape", async () => {
     await zeigeTabelle();
     fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));

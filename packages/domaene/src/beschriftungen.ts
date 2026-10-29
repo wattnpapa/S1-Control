@@ -104,6 +104,19 @@ const ORGANISATION: Readonly<Record<Organisation, string>> = {
   SONSTIGE: "Sonstige",
 };
 
+/**
+ * Ein Zeitpunkt (ISO 8601) als „TT.MM.JJJJ HH:MM“ in der Ortszeit des Rechners —
+ * die Schreibweise der Excel-Spalten „Dat. / Zeit“. Was kein Zeitpunkt ist,
+ * bleibt, wie es ist; leer bleibt leer.
+ */
+export function zeitpunktText(wert: string | null | undefined): string {
+  if (wert === null || wert === undefined || wert === "") return "";
+  const zeit = new Date(wert);
+  if (Number.isNaN(zeit.getTime())) return wert;
+  const zwei = (n: number): string => String(n).padStart(2, "0");
+  return `${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}.${String(zeit.getFullYear())} ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())}`;
+}
+
 function titel<K extends string>(liste: Readonly<Record<K, string>>, wert: string): string {
   return (liste as Readonly<Record<string, string>>)[wert] ?? wert;
 }

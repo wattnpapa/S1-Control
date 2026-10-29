@@ -20,7 +20,10 @@ import {
   inlineEntwurf,
   verschiebung,
   zusammenfuehrung,
+  UNGUELTIGE_EINGABE,
   istStaerkeEingabe,
+  staerkeAusEingabe,
+  zeitpunktAusEingabe,
 } from "./bedienschritte.js";
 
 function spalte(schluessel: string): Spalte {
@@ -95,6 +98,28 @@ describe("eingabeAlsWert", () => {
   it("liest Zahlenspalten als ganze Zahlen", () => {
     expect(eingabeAlsWert(spalte("weiblich"), "3")).toBe(3);
     expect(eingabeAlsWert(spalte("weiblich"), "keine")).toBeNull();
+  });
+});
+
+describe("eingabeAlsWert — Stärke und Zeitpunkt", () => {
+  it("liest die Stärkezelle als Tripel und weist Text zurück", () => {
+    expect(eingabeAlsWert(spalte("staerke"), "0/1/8")).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 8 });
+    expect(eingabeAlsWert(spalte("staerke"), " 1 / 2 / 9 / 12 ")).toEqual({ fuehrer: 1, unterfuehrer: 2, mannschaft: 9 });
+    expect(eingabeAlsWert(spalte("staerke"), "abc")).toBe(UNGUELTIGE_EINGABE);
+    expect(eingabeAlsWert(spalte("staerke"), "1/2")).toBe(UNGUELTIGE_EINGABE);
+    expect(staerkeAusEingabe("1/-2/3")).toBeUndefined();
+  });
+
+  it("liest Zeitangaben in der Schreibweise der Führungsstelle", () => {
+    const jetzt = new Date(2026, 9, 29, 12, 0);
+    expect(zeitpunktAusEingabe("29.10.2026 14:30", jetzt)).toBe(new Date(2026, 9, 29, 14, 30).toISOString());
+    expect(zeitpunktAusEingabe("5.11. 06:00", jetzt)).toBe(new Date(2026, 10, 5, 6, 0).toISOString());
+    expect(zeitpunktAusEingabe("14:30", jetzt)).toBe(new Date(2026, 9, 29, 14, 30).toISOString());
+    expect(zeitpunktAusEingabe("2026-10-29T12:00:00Z", jetzt)).toBe("2026-10-29T12:00:00.000Z");
+    expect(zeitpunktAusEingabe("31.11.2026 10:00", jetzt)).toBeUndefined();
+    expect(zeitpunktAusEingabe("morgen", jetzt)).toBeUndefined();
+    expect(eingabeAlsWert(spalte("verfuegbarBis"), "morgen")).toBe(UNGUELTIGE_EINGABE);
+    expect(eingabeAlsWert(spalte("verfuegbarBis"), "")).toBeNull();
   });
 });
 

@@ -597,6 +597,10 @@ export class Aktendienst {
         dauerhafterHinweis: false,
       };
     }
+    const neuFehler = pruefeNeu(entwurf);
+    if (neuFehler !== undefined) {
+      return { art: "abgewiesen", meldung: neuFehler, code: "SCHEMA", dauerhafterHinweis: false };
+    }
     const geprueft = eintrag.schema.safeParse(entwurf.nutzlast ?? {});
     if (geprueft.success) return undefined;
     const erste = geprueft.error.issues[0];
@@ -1419,4 +1423,26 @@ function dateimarke(zeitpunkt: Date): string {
     zwei(zeitpunkt.getHours()),
     zwei(zeitpunkt.getMinutes()),
   ].join("");
+}
+
+/**
+ * Der Rahmenwert `neu` der Arten mit festem Feld (§2.5) wird hier geprueft,
+ * weil der Katalog nur die Nutzlast kennt: Eine Staerke, die als Text
+ * ankommt, stuende sonst im Protokoll, und jede Summe darueber wuerde NaN —
+ * an jedem Arbeitsplatz, ohne Hinweis. Ebenso ein Zeitpunkt, der keiner ist.
+ */
+function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
+  if (entwurf.typ === "StaerkeGeaendert") {
+    const neu = entwurf.neu as { fuehrer?: unknown; unterfuehrer?: unknown; mannschaft?: unknown } | null | undefined;
+    const zahl = (wert: unknown): boolean => typeof wert === "number" && Number.isInteger(wert) && wert >= 0;
+    if (neu === null || typeof neu !== "object" || !zahl(neu.fuehrer) || !zahl(neu.unterfuehrer) || !zahl(neu.mannschaft)) {
+      return "Die Stärke muss aus drei ganzen Zahlen (Fü/UFü/He) bestehen.";
+    }
+  }
+  if (entwurf.typ === "ZeitpunktGesetzt" && entwurf.neu !== null && entwurf.neu !== undefined) {
+    if (typeof entwurf.neu !== "string" || Number.isNaN(new Date(entwurf.neu).getTime())) {
+      return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
+    }
+  }
+  return undefined;
 }

@@ -200,8 +200,9 @@ describe("Funktionalität: Tastaturbedienung", () => {
     fireEvent.keyDown(feld, { key: "d", ctrlKey: true });
 
     // Das Kürzel der Excel für genau diesen Handgriff (`=Now` in die aktive
-    // Zelle). Geprüft wird die Form, nicht die Sekunde.
-    expect((feld as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    // Zelle). Geprüft wird die Form, nicht die Minute — und die Form ist die
+    // der Excel-Spalten „Dat. / Zeit“, nicht ISO.
+    expect((feld as HTMLInputElement).value).toMatch(/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/);
   });
 
   it("Szenario: die Abkürzungsliste steht als Hilfefenster bereit", () => {

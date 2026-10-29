@@ -27,6 +27,7 @@ import {
   spaltenwertTitel,
   statusTitel,
   statusTon,
+  zeitpunktText,
   type Spalte,
   type Spaltengruppe,
   type Tabellenzeile,
@@ -34,7 +35,7 @@ import {
 
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
-import { eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
+import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
@@ -141,6 +142,8 @@ export function Einheitentabelle({
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
   const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
   const [bearbeitet, setzeBearbeitet] = useState<{ zeile: string; spalte: string } | undefined>(undefined);
+  /** Die Regel, gegen die die offene Zelle verstößt — die Zelle bleibt offen, bis sie stimmt oder verworfen wird. */
+  const [zellenfehler, setzeZellenfehler] = useState<string | undefined>(undefined);
 
   const setzeTabellenfilter = laden.setzeTabellenfilter;
   const akteId = laden.akteId;
@@ -217,8 +220,19 @@ export function Einheitentabelle({
   }
 
   async function schreibeZelle(zeile: Tabellenzeile, spalte: Spalte, eingabe: string): Promise<void> {
-    setzeBearbeitet(undefined);
     const neu = eingabeAlsWert(spalte, eingabe);
+    if (neu === UNGUELTIGE_EINGABE) {
+      // Nicht schließen, nichts schreiben: Die Regel steht an der Zelle,
+      // und Escape verwirft wie immer.
+      setzeZellenfehler(
+        spalte.art === "staerke"
+          ? "Stärke als Fü/UFü/He, z. B. 0/1/8"
+          : "Zeit als TT.MM.JJJJ HH:MM, „29.10. 14:30“ oder „14:30“ (heute)",
+      );
+      return;
+    }
+    setzeZellenfehler(undefined);
+    setzeBearbeitet(undefined);
     const zelle = zeile.zellen[spalte.schluessel];
     if (zelle === undefined) return;
     // Nichts geändert, nichts geschrieben: Ein Ereignis, das denselben Wert
@@ -345,11 +359,18 @@ export function Einheitentabelle({
                     bearbeitet={
                       bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
                     }
+                    fehler={
+                      bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
+                        ? zellenfehler
+                        : undefined
+                    }
                     aufBearbeiten={() => {
+                      setzeZellenfehler(undefined);
                       setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
                     }}
                     aufFertig={(eingabe) => void schreibeZelle(zeile, spalte, eingabe)}
                     aufAbbrechen={() => {
+                      setzeZellenfehler(undefined);
                       setzeBearbeitet(undefined);
                     }}
                   />
@@ -408,6 +429,8 @@ interface ZelleEigenschaften {
   readonly zeile: Tabellenzeile;
   readonly spalte: Spalte;
   readonly bearbeitet: boolean;
+  /** Die Regel, gegen die die Eingabe verstößt; die Zelle zeigt sie unter dem Feld. */
+  readonly fehler?: string;
   readonly aufBearbeiten: () => void;
   readonly aufFertig: (eingabe: string) => void;
   readonly aufAbbrechen: () => void;
@@ -425,6 +448,7 @@ function Zelle({
   zeile,
   spalte,
   bearbeitet,
+  fehler,
   aufBearbeiten,
   aufFertig,
   aufAbbrechen,
@@ -432,6 +456,8 @@ function Zelle({
   const zelle = zeile.zellen[spalte.schluessel];
   const [eingabe, setzeEingabe] = useState("");
   const warBearbeitet = useRef(false);
+  /** Escape setzt sie, damit der Blur des verschwindenden Feldes nicht doch schreibt. */
+  const verworfen = useRef(false);
 
   // Der Startwert wird **einmal** beim Öffnen der Zelle gesetzt. Vorher hing
   // er am Zellentext, und jedes nachgeladene Lagebild — alle paar Sekunden,
@@ -440,6 +466,7 @@ function Zelle({
   // angezeigten Wort: Die Optionen tragen den Schlüssel als Wert.
   useEffect(() => {
     if (bearbeitet && !warBearbeitet.current) {
+      verworfen.current = false;
       setzeEingabe(
         spalte.art === "auswahl" ? (typeof zelle?.wert === "string" ? zelle.wert : "") : (zelle?.text ?? ""),
       );
@@ -480,6 +507,7 @@ function Zelle({
     autoFocus: true,
     value: eingabe,
     onBlur: () => {
+      if (verworfen.current) return;
       aufFertig(eingabe);
     },
     onKeyDown: (ereignis: React.KeyboardEvent) => {
@@ -490,13 +518,14 @@ function Zelle({
       if (ereignis.key === "Escape") {
         ereignis.preventDefault();
         ereignis.stopPropagation();
+        verworfen.current = true;
         aufAbbrechen();
       }
       // Strg+D schreibt „jetzt“ in ein Zeitfeld — das Kürzel der Excel für
       // genau diesen Handgriff (m_makroFunktionen, `=Now`).
       if (spalte.art === "zeitpunkt" && (ereignis.ctrlKey || ereignis.metaKey) && ereignis.key.toLowerCase() === "d") {
         ereignis.preventDefault();
-        setzeEingabe(new Date().toISOString());
+        setzeEingabe(zeitpunktText(new Date().toISOString()));
       }
     },
   };
@@ -522,11 +551,13 @@ function Zelle({
         <input
           {...gemeinsam}
           aria-label={spalte.kopf}
+          aria-invalid={fehler !== undefined}
           onChange={(e) => {
             setzeEingabe(e.target.value);
           }}
         />
       )}
+      {fehler !== undefined && <span className="feldfehler">{fehler}</span>}
     </td>
   );
 }
