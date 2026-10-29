@@ -15,7 +15,7 @@ Legende: [x] erledigt, [ ] offen.
 - [x] Bestätigen ist nicht gegen Doppelauslösung gesperrt; ein zweiter Druck legt denselben Vorgang erneut an
 - [x] Die Rücknahme wertet die Antwort des Dienstes nicht aus: bei Grundpflicht, strukturellem Rückweg und Ablehnung passiert sichtbar nichts
 - [ ] Fahrzeuge und Personen lassen sich in der Oberfläche nicht entfernen, obwohl die Ereignisse im Kern vorhanden sind
-- [ ] Der Verschiebedialog hat den gewählten Abschnitt als Ziel vorbelegt
+- [x] Der Verschiebedialog hat den gewählten Abschnitt als Ziel vorbelegt
 - [ ] Umhängen und Typwechsel eines Abschnitts nennen die Folgen für den Teilbaum und die Gesamtstärke nicht
 
 ## Lagebild und Stärke
@@ -23,9 +23,9 @@ Legende: [x] erledigt, [ ] offen.
 - [ ] An der Stärkezahl steht nicht, welche Abschnitte und Einheiten eingehen
 - [ ] Die Stärke steht im Hauptfenster und auf dem Monitor in zwei Schreibweisen, dazu abweichende Monatskürzel
 - [ ] Die Zeit im Kopfband trägt keine Zonenkennung
-- [ ] Statuswerte erscheinen als technische Rohtexte; die Abstufung deckt nur fünf von neun Werten
-- [ ] Die Stärke nach Status wird berechnet, aber nirgends angezeigt, obwohl der Hilfetext sie zusagt
-- [ ] Keine wählbare Sortierung, kein Statusfilter in der Einheitentabelle, keine Suche in Anforderungen, Eingangskorb, Kosten und Führungsstelle
+- [x] Statuswerte erscheinen als technische Rohtexte; die Abstufung deckt nur fünf von neun Werten
+- [x] Die Stärke nach Status wird berechnet, aber nirgends angezeigt, obwohl der Hilfetext sie zusagt
+- [ ] Keine wählbare Sortierung in der Einheitentabelle (Statusfilter vorhanden), keine Suche in Anforderungen, Eingangskorb, Kosten und Führungsstelle
 
 ## Abläufe und Erreichbarkeit
 
@@ -43,8 +43,8 @@ Legende: [x] erledigt, [ ] offen.
 ## Eingabe, Fehler, Darstellung
 
 - [x] Pflichtgründe laufen über eine Browserabfrage, die im Anwendungsfenster nicht unterstützt wird
-- [ ] Nachgeladene Daten überschreiben die gerade bearbeitete Tabellenzelle
-- [ ] In den Masken werden leere und unsinnige Zahlen still zu 0; es gibt keine Obergrenze gegen Zahlendreher
+- [x] Nachgeladene Daten überschreiben die gerade bearbeitete Tabellenzelle
+- [x] In den Masken werden leere und unsinnige Zahlen still zu 0; es gibt keine Obergrenze gegen Zahlendreher
 - [ ] Das Fehlerbild liegt hinter dem Maskengrund
 - [ ] Kein Schutz beim Schließen mit offener Maske
 - [ ] Pflichtfelder sind nur an zwei Stellen gekennzeichnet
