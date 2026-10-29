@@ -20,6 +20,7 @@ import {
   inlineEntwurf,
   verschiebung,
   zusammenfuehrung,
+  istStaerkeEingabe,
 } from "./bedienschritte.js";
 
 function spalte(schluessel: string): Spalte {
@@ -94,6 +95,18 @@ describe("eingabeAlsWert", () => {
   it("liest Zahlenspalten als ganze Zahlen", () => {
     expect(eingabeAlsWert(spalte("weiblich"), "3")).toBe(3);
     expect(eingabeAlsWert(spalte("weiblich"), "keine")).toBeNull();
+  });
+});
+
+describe("istStaerkeEingabe", () => {
+  it("nimmt leere und ganze Zahlen bis zur Obergrenze, sonst nichts", () => {
+    expect(istStaerkeEingabe("")).toBe(true);
+    expect(istStaerkeEingabe(" 8 ")).toBe(true);
+    expect(istStaerkeEingabe("999")).toBe(true);
+    expect(istStaerkeEingabe("1000")).toBe(false);
+    expect(istStaerkeEingabe("-3")).toBe(false);
+    expect(istStaerkeEingabe("8a")).toBe(false);
+    expect(istStaerkeEingabe("1e2")).toBe(false);
   });
 });
 

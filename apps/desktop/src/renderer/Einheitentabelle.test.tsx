@@ -194,6 +194,30 @@ describe("Die Einheitentabelle", () => {
     expect(screen.getByLabelText("2 Einheit(en) verschieben")).toBeDefined();
   });
 
+  it("belegt beim Verschieben kein Ziel vor und sperrt das Übernehmen, bis ein anderer Abschnitt gewählt ist", async () => {
+    useLaden.setState({
+      baum: {
+        lageZeiger: 5,
+        baum: [
+          { id: "EO", name: "Deich Nord", typ: "EINSATZORT", tiefe: 0, kinder: [] },
+          { id: "EA-SUED", name: "Deich Süd", typ: "EINSATZORT", tiefe: 0, kinder: [] },
+        ],
+      } as never,
+    });
+    await zeigeTabelle();
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    fireEvent.click(screen.getByRole("button", { name: /Verschieben/ }));
+    const maske = screen.getByLabelText("1 Einheit(en) verschieben");
+    const uebernehmen = maske.querySelector<HTMLButtonElement>("button.haupt, button[type=submit]") ?? screen.getByRole("button", { name: "Übernehmen" });
+    expect(uebernehmen.disabled).toBe(true);
+    const wahl = maske.querySelector("select") as HTMLSelectElement;
+    expect(wahl.value).toBe("");
+    fireEvent.change(wahl, { target: { value: "EO" } });
+    expect(uebernehmen.disabled).toBe(true);
+    fireEvent.change(wahl, { target: { value: "EA-SUED" } });
+    expect(uebernehmen.disabled).toBe(false);
+  });
+
   it("nennt unter der Tabelle den Ausschnitt, wenn nicht alles gezeigt wird", async () => {
     attrappe.antwortet("tabelleAnfordern", {
       lageZeiger: 5,

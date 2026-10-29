@@ -935,6 +935,15 @@
       }
       /* Die Statusleiste: Marken mit Zahl, als Filter anklickbar. Sie steht
          zwischen Spaltengruppen und Tabelle, weil sie die Zeilen bestimmt. */
+      .feldfehler {
+        display: block;
+        margin-top: 2px;
+        font-size: 0.85em;
+        color: var(--err-text);
+      }
+      input[aria-invalid="true"] {
+        border-color: var(--err-linie);
+      }
       .statusfilter {
         display: flex;
         flex-wrap: wrap;

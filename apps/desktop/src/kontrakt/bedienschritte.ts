@@ -80,6 +80,24 @@ export function eingabeAlsWert(spalte: Spalte, eingabe: string): unknown {
   return geputzt;
 }
 
+/** Die Obergrenze einer Teilstärke in einer Maske — ein Zahlendreher wie 80 statt 8 bleibt drin, 800 nicht. */
+export const STAERKE_OBERGRENZE = 999;
+
+/**
+ * Ob eine Eingabe in ein Stärkefeld der Masken gilt: leer (heißt null) oder
+ * eine ganze Zahl von null bis {@link STAERKE_OBERGRENZE}.
+ *
+ * Vorher wurde alles Ungültige still zu null — „8a“, „-3“, „1e9“ —, und die
+ * Maske schrieb, was niemand eingegeben hatte. Die Excel verweigert eine
+ * solche Zelle mit einer Meldung; das soll die Maske auch.
+ */
+export function istStaerkeEingabe(eingabe: string): boolean {
+  const geputzt = eingabe.trim();
+  if (geputzt === "") return true;
+  if (!/^\d{1,3}$/.test(geputzt)) return false;
+  return Number.parseInt(geputzt, 10) <= STAERKE_OBERGRENZE;
+}
+
 export interface AnlageAusVorlage {
   readonly einheitId: string;
   readonly abschnittId: string;

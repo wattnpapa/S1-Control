@@ -29,7 +29,15 @@ import {
 
 import { Maske } from "./Maske.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
-import { anlageAusVorlage, aufteilung, entfernung, verschiebung, zusammenfuehrung } from "../kontrakt/bedienschritte.js";
+import {
+  STAERKE_OBERGRENZE,
+  anlageAusVorlage,
+  aufteilung,
+  entfernung,
+  istStaerkeEingabe,
+  verschiebung,
+  zusammenfuehrung,
+} from "../kontrakt/bedienschritte.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 
@@ -59,7 +67,10 @@ export function Einheitenmasken({
   const [mannschaft, setzeMannschaft] = useState("0");
 
   useEffect(() => {
-    setzeZiel(abschnittId ?? "");
+    // Beim Verschieben ist der gewählte Abschnitt der **Herkunftsort** der
+    // markierten Einheiten; ihn als Ziel vorzubelegen hieße, ein Übernehmen
+    // anzubieten, das nichts bewegt. Beim Anlegen ist er das richtige Ziel.
+    setzeZiel(maske === "verschieben" ? "" : (abschnittId ?? ""));
   }, [abschnittId, maske]);
 
   const kataloge = gefuellteKataloge();
@@ -162,7 +173,7 @@ export function Einheitenmasken({
     return (
       <Maske
         titel={`${String(gewaehlte.length)} Einheit(en) verschieben`}
-        bereit={ziel !== ""}
+        bereit={ziel !== "" && gewaehlte.some((zeile) => zeile.abschnittId !== ziel)}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           void (async () => {
@@ -185,7 +196,7 @@ export function Einheitenmasken({
         <ul className="hinweistext">
           {gewaehlte.map((zeile) => (
             <li key={zeile.einheitId}>
-              {zeile.anzeige} ({zeile.abschnittId})
+              {zeile.anzeige} (bisher {zeile.abschnittName})
             </li>
           ))}
         </ul>
@@ -203,7 +214,7 @@ export function Einheitenmasken({
     return (
       <Maske
         titel={`„${erste.anzeige}“ aufteilen`}
-        bereit={bezeichnung.trim().length > 0 && summe > 0}
+        bereit={bezeichnung.trim().length > 0 && summe > 0 && [fuehrer, unterfuehrer, mannschaft].every(istStaerkeEingabe)}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           void schreibe(
@@ -328,8 +339,37 @@ export function Einheitenmasken({
 }
 
 function zahl(eingabe: string): number {
+  if (!istStaerkeEingabe(eingabe)) return 0;
   const wert = Number.parseInt(eingabe, 10);
-  return Number.isNaN(wert) || wert < 0 ? 0 : wert;
+  return Number.isNaN(wert) ? 0 : wert;
+}
+
+/** Ein Stärkefeld der Masken: markiert eine ungültige Eingabe, statt sie still zu null zu machen. */
+function Staerkefeld({
+  titel,
+  wert,
+  aufWert,
+}: {
+  readonly titel: string;
+  readonly wert: string;
+  readonly aufWert: (wert: string) => void;
+}): React.JSX.Element {
+  const gueltig = istStaerkeEingabe(wert);
+  return (
+    <label>
+      {titel}
+      <input
+        value={wert}
+        onChange={(e) => {
+          aufWert(e.target.value);
+        }}
+        inputMode="numeric"
+        aria-invalid={!gueltig}
+        title={gueltig ? undefined : `Ganze Zahl von 0 bis ${String(STAERKE_OBERGRENZE)}`}
+      />
+      {!gueltig && <span className="feldfehler">Ganze Zahl von 0 bis {STAERKE_OBERGRENZE}</span>}
+    </label>
+  );
 }
 
 function text(wert: unknown): string | undefined {
@@ -390,18 +430,9 @@ function Staerkefelder({
 }): React.JSX.Element {
   return (
     <>
-      <label>
-        Führer
-        <input value={fuehrer} onChange={(e) => { aufFuehrer(e.target.value); }} inputMode="numeric" />
-      </label>
-      <label>
-        Unterführer
-        <input value={unterfuehrer} onChange={(e) => { aufUnterfuehrer(e.target.value); }} inputMode="numeric" />
-      </label>
-      <label>
-        Mannschaft
-        <input value={mannschaft} onChange={(e) => { aufMannschaft(e.target.value); }} inputMode="numeric" />
-      </label>
+      <Staerkefeld titel="Führer" wert={fuehrer} aufWert={aufFuehrer} />
+      <Staerkefeld titel="Unterführer" wert={unterfuehrer} aufWert={aufUnterfuehrer} />
+      <Staerkefeld titel="Mannschaft" wert={mannschaft} aufWert={aufMannschaft} />
     </>
   );
 }
