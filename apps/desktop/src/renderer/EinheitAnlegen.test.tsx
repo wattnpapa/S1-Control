@@ -85,7 +85,7 @@ describe("Einheit anlegen", () => {
       ebene: "ZUG",
       staerke: { fuehrer: 1, unterfuehrer: 3, mannschaft: 18 },
       status: "ANGEFORDERT",
-      hierarchie: [{ art: "ORTSVERBAND", name: "FF Hude" }],
+      hierarchie: [{ art: "HERKUNFT", name: "FF Hude" }],
     });
     expect("vorlageId" in werte).toBe(false);
   });

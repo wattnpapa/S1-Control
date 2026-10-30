@@ -189,7 +189,7 @@ describe("anlageAusVorlage", () => {
     // §5.1: Die Stufe heißt `art` und `name`. Der Aktendienst prüft die
     // Nutzlast gegen dieses Schema, bevor er schreibt.
     expect((entwurf.nutzlast as Record<string, unknown>)["hierarchie"]).toEqual([
-      { art: "ORTSVERBAND", name: "THW OV Oldenburg" },
+      { art: "HERKUNFT", name: "THW OV Oldenburg" },
     ]);
   });
 });

@@ -650,7 +650,7 @@ export function herkunftText(einheit: EinheitZustand): string {
   const kurz = alsText(oberste.kurz);
   const name = alsText(oberste.name);
   const art = alsText(oberste.art);
-  const artWort = art === undefined ? undefined : hierarchieArtTitel(art);
+  const artWort = art === undefined || hierarchieArtTitel(art) === "" ? undefined : hierarchieArtTitel(art);
   return [nenntArtNicht(name, artWort) ? artWort : undefined, name, kurz === undefined ? undefined : `(${kurz})`]
     .filter((s): s is string => s !== undefined)
     .join(" ");

@@ -350,7 +350,7 @@ describe("Die Einheitentabelle", () => {
         ebene: "GRUPPE",
         staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
         status: "ANGEFORDERT",
-        hierarchie: [{ art: "ORTSVERBAND", name: "THW OV Hude" }],
+        hierarchie: [{ art: "HERKUNFT", name: "THW OV Hude" }],
         vorlageId: "thw-b",
       });
       expect(nutzlast["einheitId"]).not.toBe("U1");

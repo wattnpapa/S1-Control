@@ -131,6 +131,9 @@ const SCHICHTMODELL: Readonly<Record<string, string>> = {
  * „Ortsverband“. Unbekannte Arten bleiben, wie sie sind.
  */
 const HIERARCHIE_ART: Readonly<Record<string, string>> = {
+  // Eine frei eingegebene Herkunft („THW OV Hude“, „DRK KV Oldenburg“) hat
+  // keine Stufe; die Masken schreiben `HERKUNFT`, und davor steht kein Wort.
+  HERKUNFT: "",
   ORTSVERBAND: "Ortsverband",
   REGIONALSTELLE: "Regionalstelle",
   LANDESVERBAND: "Landesverband",

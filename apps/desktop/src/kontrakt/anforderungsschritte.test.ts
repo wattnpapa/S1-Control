@@ -30,7 +30,7 @@ describe("Einheit aus Anforderung", () => {
   it("trägt die Herkunft als Ortsverband und den Status „Angefordert“", () => {
     const nutzlast = entwurf.nutzlast as Record<string, unknown>;
     expect(nutzlast["bezeichnung"]).toBe("BGr Varel");
-    expect(nutzlast["hierarchie"]).toEqual([{ art: "ORTSVERBAND", name: "THW OV Varel" }]);
+    expect(nutzlast["hierarchie"]).toEqual([{ art: "HERKUNFT", name: "THW OV Varel" }]);
     expect(nutzlast["status"]).toBe("ANGEFORDERT");
   });
 });

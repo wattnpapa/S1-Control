@@ -44,7 +44,7 @@ export function anlageAusAnforderung(anlage: AnlageAusAnforderung): Entwurf {
       abschnittId: anlage.abschnittId,
       bezeichnung: anlage.bezeichnung.trim(),
       organisation: anlage.organisation,
-      hierarchie: herkunft === "" ? [] : [{ art: "ORTSVERBAND", name: herkunft }],
+      hierarchie: herkunft === "" ? [] : [{ art: "HERKUNFT", name: herkunft }],
       ebene: anlage.ebene,
       staerke: anlage.staerke,
       personalErfassung: "NUR_STAERKE",

@@ -631,6 +631,10 @@ describe("K29 — die Herkunft als Wort", () => {
     );
   });
 
+  it("lässt eine frei eingegebene Herkunft ohne Stufenwort", () => {
+    expect(K.herkunftText(mit([{ art: "HERKUNFT", name: "DRK KV Oldenburg" }]))).toBe("DRK KV Oldenburg");
+  });
+
   it("lässt eine unbekannte Art stehen, wie sie ist", () => {
     expect(K.herkunftText(mit([{ art: "Zweckverband", name: "Weser" }]))).toBe("Zweckverband Weser");
   });

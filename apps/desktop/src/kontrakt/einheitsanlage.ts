@@ -52,7 +52,7 @@ export function einheitsanlage(auftrag: Einheitsanlage): Entwurf {
       // `ebene` und `bezeichnung` — der Typ `HierarchieEbene` in `werte.ts`
       // nennt sie anders, und maßgeblich ist das Schema, gegen das der
       // Aktendienst prüft (Befund H-B1 im Bericht zu M3).
-      hierarchie: herkunft === "" ? [] : [{ art: "ORTSVERBAND", name: herkunft }],
+      hierarchie: herkunft === "" ? [] : [{ art: "HERKUNFT", name: herkunft }],
       ebene: auftrag.ebene,
       staerke: auftrag.staerke,
       personalErfassung: "NUR_STAERKE",

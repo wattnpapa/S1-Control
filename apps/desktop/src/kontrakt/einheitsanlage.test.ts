@@ -25,7 +25,7 @@ describe("einheitsanlage", () => {
     const nutzlast = entwurf.nutzlast as Record<string, unknown>;
     expect(nutzlast["bezeichnung"]).toBe("Pumpengruppe");
     expect(nutzlast["status"]).toBe(STATUS_VORBELEGUNG);
-    expect(nutzlast["hierarchie"]).toEqual([{ art: "ORTSVERBAND", name: "FF Musterstadt" }]);
+    expect(nutzlast["hierarchie"]).toEqual([{ art: "HERKUNFT", name: "FF Musterstadt" }]);
     expect("vorlageId" in nutzlast).toBe(false);
   });
 
