@@ -1,9 +1,9 @@
 /**
  * Die Kernausgaben in der Oberfläche (M4.1).
  *
- * Die Ausgaben der Meilensteine M4 und M5: Druck und Status je als HTML und
- * als PDF, die Auswertung und der Oldenburger Block als XLSX, das
- * Logistikblatt als PDF und als Wertekopie. Jede entspricht einem Blatt der
+ * Die Ausgaben der Meilensteine M4 und M5: Druck, Status und Einheitenliste
+ * je als HTML und als PDF, die Auswertung und der Oldenburger Block als XLSX,
+ * das Logistikblatt als PDF und als Wertekopie. Jede entspricht einem Blatt der
  * Vorlage; keine rechnet selbst.
  *
  * **Der Pfad wird genannt.** Ein „fertig“ ohne Pfad zwingt den Bediener, die
@@ -33,7 +33,8 @@ export function Ausgaben(): React.JSX.Element {
       | "log"
       | "logfrei"
       | "kosten"
-      | "fueorg",
+      | "fueorg"
+      | "einheitenliste",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeMeldung(undefined);
@@ -77,6 +78,16 @@ export function Ausgaben(): React.JSX.Element {
       </button>
       <button type="button" onClick={() => { erzeuge("status", "html"); }}>
         Status als HTML
+      </button>
+      {/* Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche
+          mit Zwischensumme, darunter jede Einheit. Der Druck sagt „wie viele
+          wo“, sie sagt „wer genau“ — die Rückfallebene, wenn der Rechner
+          ausfällt, und die Unterlage für die Lagebesprechung. */}
+      <button type="button" onClick={() => { erzeuge("einheitenliste", "pdf"); }}>
+        Einheitenliste als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("einheitenliste", "html"); }}>
+        Einheitenliste als HTML
       </button>
       {/* Die Auswertung ist die einzige Ausgabe, die die Bereichszugehörigkeit
           als Attribut führt — erst damit lässt sich filtern und

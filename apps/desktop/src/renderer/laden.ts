@@ -204,7 +204,8 @@ export interface Laden {
       | "log"
       | "logfrei"
       | "kosten"
-      | "fueorg",
+      | "fueorg"
+      | "einheitenliste",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;
