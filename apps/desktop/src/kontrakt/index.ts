@@ -107,6 +107,14 @@ export const zUmgebung = z.object({
   rechnername: z.string(),
   /** Die Kennung dieses Arbeitsplatzes (§4.1) — sie steht in jeder HLC. */
   clientId: z.string(),
+  /**
+   * Ob diese Schale eine erzeugte Datei öffnen, im Ordner zeigen und drucken
+   * kann (`ausgabeZeigen`). Die Electron-Schale kann es, die Web-Schale nicht:
+   * Sie liefert keine Dateien des Shares aus, und ein Öffnen auf dem Server
+   * hülfe dem Browser nicht. Fehlt das Feld, gilt „nein" — der Renderer
+   * blendet die Knöpfe dann aus, statt einen Weg anzubieten, der scheitert.
+   */
+  dateienZeigen: z.boolean().optional(),
 });
 export type Umgebung = z.infer<typeof zUmgebung>;
 
@@ -509,6 +517,15 @@ export const zRuf = z.discriminatedUnion("art", [
   // Die Einsatzakte (M4.4) als ZIP im Ordner des Einsatzes — derselbe Kern
   // wie `s1 akte exportiere`.
   z.object({ art: z.literal("akteErzeugen"), akteId: zAkteId }),
+  // Eine erzeugte Datei öffnen, im Ordner zeigen oder drucken. Der Pfad ist
+  // der, den `ausgabeErzeugen` oder `akteErzeugen` gemeldet hat; der Main
+  // prüft, dass er im Ordner dieses Einsatzes liegt (`ausgabezeiger.ts`).
+  z.object({
+    art: z.literal("ausgabeZeigen"),
+    akteId: zAkteId,
+    pfad: zText,
+    wie: z.enum(["oeffnen", "ordner", "drucken"]),
+  }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -613,6 +630,7 @@ export interface Antworten {
   tagebuchAnfordern: Tagebuchansicht;
   einsatzArchivieren: Bedienergebnis;
   akteErzeugen: Akteergebnis;
+  ausgabeZeigen: null;
 }
 
 /**

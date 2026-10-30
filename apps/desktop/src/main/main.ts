@@ -28,6 +28,7 @@ import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof } from "./arbeiterhof.js";
 import { elektronDrucker } from "./drucker.js";
+import { elektronSchreibtisch } from "./elektronSchreibtisch.js";
 import { Protokoll } from "./protokoll.js";
 import { knotenNetzholer } from "./netzholer.js";
 import { Vermittlung, type Fenstersteuerung } from "./vermittlung.js";
@@ -148,6 +149,7 @@ function starte(): void {
     hof,
     fenstersteuerung,
     drucker: elektronDrucker(),
+    schreibtisch: elektronSchreibtisch(),
     dateisystem: knotenDateisystem(),
     einstellungsdatei: path.join(app.getPath("userData"), "einstellungen.json"),
     spiegelwurzel: path.join(app.getPath("userData"), "spiegel"),

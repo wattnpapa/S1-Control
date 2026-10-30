@@ -30,6 +30,7 @@ import {
   type Dateisystem,
 } from "@s1/speicher";
 
+import { zeigeAusgabe, type Schreibtisch } from "./ausgabezeiger.js";
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
 import { holePaket, type Netzholer } from "./programmbezug.js";
 import {
@@ -105,6 +106,12 @@ export interface VermittlungOptionen {
    * Bildschirm nicht baut.
    */
   readonly fenstersteuerung?: Fenstersteuerung;
+  /**
+   * Öffnen, Ordner zeigen und Drucken einer Ausgabe. Fehlt er — in der
+   * Web-Schale und in den Tests zum Datenpfad —, meldet `umgebung` das, und
+   * der Renderer blendet die Knöpfe aus.
+   */
+  readonly schreibtisch?: Schreibtisch;
   readonly dateisystem: Dateisystem;
   /** Wo `einstellungen.json` liegt — im Profil des Benutzers. */
   readonly einstellungsdatei: string;
@@ -265,6 +272,8 @@ export class Vermittlung {
         })) as Bedienergebnis;
       case "akteErzeugen":
         return this.#erzeugeAkte(ruf.akteId);
+      case "ausgabeZeigen":
+        return this.#zeigeAusgabe(ruf);
       case "bildschirmeAuflisten":
         return this.#fenstersteuerung().bildschirme();
       case "monitorOeffnen":
@@ -357,6 +366,17 @@ export class Vermittlung {
       `Einsatzakte erzeugt: ${ergebnis.pfad} (${String(ergebnis.bytes)} Bytes, ${String(ergebnis.befunde)} Befunde)`,
     );
     return ergebnis;
+  }
+
+  async #zeigeAusgabe(ruf: Extract<Ruf, { art: "ausgabeZeigen" }>): Promise<null> {
+    const schreibtisch = this.#o.schreibtisch;
+    if (schreibtisch === undefined) {
+      throw new Error("Auf diesem Arbeitsplatz lassen sich Dateien nicht öffnen.");
+    }
+    const ordner = this.#ordnerJeAkte.get(ruf.akteId);
+    if (ordner === undefined) throw new Error("Der Einsatz ist nicht geöffnet.");
+    const platz = await this.arbeitsplatz();
+    return zeigeAusgabe(schreibtisch, path.join(platz.sharePfad, ORDNER_EINSAETZE, ordner), ruf);
   }
 
   #fenstersteuerung(): Fenstersteuerung {
@@ -466,6 +486,7 @@ export class Vermittlung {
       programmversion: this.#o.programmversion,
       rechnername: this.#o.rechnername,
       clientId: platz.clientId,
+      dateienZeigen: this.#o.schreibtisch !== undefined,
     };
   }
 
