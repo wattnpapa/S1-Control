@@ -44,6 +44,7 @@ import type {
   Diagnose,
   Programmbefund,
   Protokollzeile,
+  Akteergebnis,
   Antwort,
   Ausgabeergebnis,
   Bildschirm,
@@ -257,6 +258,13 @@ export class Vermittlung {
         return this.#o.hof.frage(ruf.akteId, { art: "buendelSchreiben" });
       case "htmlMonitorSchalten":
         return this.#o.hof.frage(ruf.akteId, { art: "htmlMonitorSchalten", ruf });
+      case "einsatzArchivieren":
+        return (await this.#o.hof.frage(ruf.akteId, {
+          art: "einsatzArchivieren",
+          zeitpunkt: ruf.zeitpunkt,
+        })) as Bedienergebnis;
+      case "akteErzeugen":
+        return this.#erzeugeAkte(ruf.akteId);
       case "bildschirmeAuflisten":
         return this.#fenstersteuerung().bildschirme();
       case "monitorOeffnen":
@@ -339,6 +347,16 @@ export class Vermittlung {
     })) as { pfad: string };
     this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(bytes.length)} Bytes)`);
     return { pfad, bytes: bytes.length };
+  }
+
+  /** Die Einsatzakte entsteht im Worker — er hält Ablage und Dateisystem; hier wird nur protokolliert. */
+  async #erzeugeAkte(akteId: string): Promise<Akteergebnis> {
+    const ergebnis = (await this.#o.hof.frage(akteId, { art: "akteErzeugen" })) as Akteergebnis;
+    this.#o.protokolliere(
+      ergebnis.befunde > 0 ? "warnung" : "info",
+      `Einsatzakte erzeugt: ${ergebnis.pfad} (${String(ergebnis.bytes)} Bytes, ${String(ergebnis.befunde)} Befunde)`,
+    );
+    return ergebnis;
   }
 
   #fenstersteuerung(): Fenstersteuerung {

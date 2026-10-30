@@ -90,6 +90,7 @@ import {
 
 import {
   lagebildDelta,
+  type Akteergebnis,
   type Baumansicht,
   type Anforderungsansicht,
   type Buendelergebnis,
@@ -108,6 +109,13 @@ import {
   type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
+import { dateimarke } from "./dateimarke.js";
+import {
+  archivierungsentwurf,
+  archivierungszeitFehler,
+  erzeugeEinsatzakte,
+  pruefeAbschluss,
+} from "./einsatzabschluss.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
 /**
@@ -594,6 +602,10 @@ export class Aktendienst {
         dauerhafterHinweis: false,
       };
     }
+    // Ein beendeter oder archivierter Einsatz nimmt nichts mehr an — vor
+    // allen anderen Prüfungen, damit die Meldung den Grund nennt, der zählt.
+    const gesperrt = pruefeAbschluss(this.#zustand, entwurf);
+    if (gesperrt !== undefined) return gesperrt;
     // §2.4: Der Grund ist bei manchen Arten Pflicht, und die Regel steht im
     // Katalog — dieselbe, die auch der Fold anwendet. Ohne diese Pruefung
     // naehme der Dienst den Bedienschritt an, schriebe ihn in ein
@@ -654,6 +666,31 @@ export class Aktendienst {
       };
     }
     return this.bediene(kompensation.entwurf);
+  }
+
+  /**
+   * Archiviert den Einsatz — mit dem Beleg, den nur der Worker bilden kann
+   * (`einsatzabschluss.ts`). Ob archiviert werden darf, entscheidet dieselbe
+   * Prüfung wie bei jedem Bedienschritt.
+   */
+  async archiviere(zeitpunkt: string): Promise<Bedienergebnis> {
+    const fehler = archivierungszeitFehler(zeitpunkt);
+    if (fehler !== undefined) return fehler;
+    return this.bediene(archivierungsentwurf(this.#zustand, this.#o.einsatzId, zeitpunkt));
+  }
+
+  /**
+   * Erzeugt die Einsatzakte (M4.4) im Ordner des Einsatzes auf dem Share.
+   *
+   * Vorher wird gespiegelt: Gepackt wird der Share, und eigene Zeilen, die
+   * noch im lokalen Spiegel stehen, fehlten sonst in der Akte. Scheitert die
+   * Spiegelung, wird trotzdem gepackt — die Zahl der Ereignisse im Ergebnis
+   * zeigt, was drin ist. Die Akte geht auch bei einem archivierten Einsatz:
+   * Lesen ist nie gesperrt.
+   */
+  async erzeugeAkte(): Promise<Akteergebnis> {
+    await this.#spiegle();
+    return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
   }
 
   // -------------------------------------------------------------------------
@@ -1350,6 +1387,8 @@ export class Aktendienst {
       einsatzName: alsText(zustand.einsatz?.name.wert),
       einsatzArt: alsText(zustand.einsatz?.art.wert),
       ...(stammdaten === undefined ? {} : { stammdaten }),
+      einsatzStatus: zustand.einsatz?.status ?? "AKTIV",
+      einsatzEnde: alsText(zustand.einsatz?.ende?.wert),
       standHlc: this.#hoechsteHlc === undefined ? "" : hlcAlsText(this.#hoechsteHlc),
       standWanduhr: this.#letzteWanduhr,
       letzterShareKontakt: this.#letzterShareKontakt,
@@ -1423,27 +1462,6 @@ function signaturbefund(
   if (zustand === "GUELTIG") return { zustand: "gueltig", pubkey: "", kurzform: "" };
   if (zustand === "UNGUELTIG") return { zustand: "ungueltig", pubkey: "", kurzform: "" };
   return { zustand: "unsigniert" };
-}
-
-/**
- * Die Zeitmarke im Dateinamen einer Ausgabe: `2026-09-10_1430`.
- *
- * Ortszeit und keine Zone — der Dateiname wird von einem Menschen gelesen,
- * der neben dem Rechner steht, und nicht von einem Programm sortiert. Was
- * geordnet werden muss, steht im Manifest der Einsatzakte (M4.4).
- */
-function dateimarke(zeitpunkt: Date): string {
-  const zwei = (zahl: number): string => String(zahl).padStart(2, "0");
-  return [
-    zeitpunkt.getFullYear(),
-    "-",
-    zwei(zeitpunkt.getMonth() + 1),
-    "-",
-    zwei(zeitpunkt.getDate()),
-    "_",
-    zwei(zeitpunkt.getHours()),
-    zwei(zeitpunkt.getMinutes()),
-  ].join("");
 }
 
 /**

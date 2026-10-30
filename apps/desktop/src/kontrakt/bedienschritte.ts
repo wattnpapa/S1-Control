@@ -377,6 +377,40 @@ export function stammdatenAenderung(
 }
 
 // ---------------------------------------------------------------------------
+// Der Abschluss des Einsatzes (§5.2)
+// ---------------------------------------------------------------------------
+
+/**
+ * Den Einsatz beenden — die Excel schließt hier mit „Speichern mit
+ * Einsatzname und Datum" ab.
+ *
+ * `vorher` ist das Ende, das dieses Fenster sah (`null`: keines, §2.2a);
+ * `neu` der Zeitpunkt des Endes, und das ist zugleich die fachliche Zeit der
+ * Zeile im Tagebuch (§2.5). Die Nutzlast kennt keine Bemerkung — sie reist
+ * als `grund` im Rahmen und steht im Tagebuch neben dem Satz.
+ */
+export function einsatzBeendet(
+  einsatzId: string,
+  vorher: string | null,
+  zeitpunkt: string,
+  bemerkung?: string,
+): Entwurf {
+  const grund = bemerkung?.trim() ?? "";
+  return {
+    typ: "EinsatzBeendet",
+    nutzlast: { einsatzId },
+    vorher,
+    neu: zeitpunkt,
+    ...(grund === "" ? {} : { grund }),
+  };
+}
+
+/** Wiedereröffnen setzt das Ende auf `null` — der feste Wert des Katalogs (§2.2). */
+export function einsatzWiedereroeffnet(einsatzId: string, vorher: string | null): Entwurf {
+  return { typ: "EinsatzWiedereroeffnet", nutzlast: { einsatzId }, vorher, neu: null };
+}
+
+// ---------------------------------------------------------------------------
 // Anforderungen (M5.3)
 // ---------------------------------------------------------------------------
 

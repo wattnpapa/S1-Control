@@ -67,6 +67,8 @@ export type Auftrag =
   | { readonly art: "eebZuruecksetzen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebZuruecksetzen" }> }
   | { readonly art: "eebUebernehmen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebUebernehmen" }> }
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
+  | { readonly art: "einsatzArchivieren"; readonly nummer: number; readonly zeitpunkt: string }
+  | { readonly art: "akteErzeugen"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };
 
 /**

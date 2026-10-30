@@ -9,13 +9,17 @@
 
 import { describe, expect, it } from "vitest";
 
-import { projektion, type Spalte, type Tabellenzeile } from "@s1/domaene";
+import { KATALOG, projektion, type Spalte, type Tabellenzeile } from "@s1/domaene";
+
+import { zRuf } from "./index.js";
 
 import {
   STATUS_VORBELEGUNG,
   anlageAusVorlage,
   aufteilung,
   eingabeAlsWert,
+  einsatzBeendet,
+  einsatzWiedereroeffnet,
   entfernung,
   inlineEntwurf,
   stammdatenAenderung,
@@ -286,5 +290,37 @@ describe("stammdatenAenderung", () => {
       neu: "TEL Landkreis",
     });
     expect(projektion.stammdatenwertFehler("uebergeordneteFuestName", entwurf.neu)).toBeUndefined();
+  });
+});
+
+describe("Einsatz beenden und wiedereröffnen", () => {
+  it("trägt das gesehene Ende als vorher und die Bemerkung als Grund", () => {
+    const entwurf = einsatzBeendet("E1", null, "2026-10-30T17:00:00.000Z", "  Lage bereinigt ");
+    expect(entwurf).toEqual({
+      typ: "EinsatzBeendet",
+      nutzlast: { einsatzId: "E1" },
+      vorher: null,
+      neu: "2026-10-30T17:00:00.000Z",
+      grund: "Lage bereinigt",
+    });
+    expect(KATALOG.get("EinsatzBeendet")?.schema.safeParse(entwurf.nutzlast).success).toBe(true);
+  });
+
+  it("lässt eine leere Bemerkung weg, statt einen leeren Grund zu schreiben", () => {
+    expect(einsatzBeendet("E1", null, "2026-10-30T17:00:00.000Z", "   ")).not.toHaveProperty("grund");
+  });
+
+  it("setzt beim Wiedereröffnen den festen Wert null des Katalogs", () => {
+    const entwurf = einsatzWiedereroeffnet("E1", "2026-10-30T17:00:00.000Z");
+    expect(entwurf.neu).toBe(KATALOG.get("EinsatzWiedereroeffnet")?.festerWert);
+    expect(entwurf.vorher).toBe("2026-10-30T17:00:00.000Z");
+  });
+});
+
+describe("Rufe des Einsatzabschlusses", () => {
+  it("nimmt Archivieren und Einsatzakte an, aber nicht ohne Zeitpunkt", () => {
+    expect(zRuf.safeParse({ art: "einsatzArchivieren", akteId: "akte-1", zeitpunkt: "2026-10-30T17:00:00.000Z" }).success).toBe(true);
+    expect(zRuf.safeParse({ art: "einsatzArchivieren", akteId: "akte-1", zeitpunkt: "" }).success).toBe(false);
+    expect(zRuf.safeParse({ art: "akteErzeugen", akteId: "akte-1" }).success).toBe(true);
   });
 });
