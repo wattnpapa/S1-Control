@@ -104,6 +104,19 @@ const ORGANISATION: Readonly<Record<Organisation, string>> = {
   SONSTIGE: "Sonstige",
 };
 
+/** Die Einsatzart des Blattes „Stammdaten“ (§5.2, `zEinsatzArt`). */
+const EINSATZART: Readonly<Record<string, string>> = {
+  EINSATZ: "Einsatz",
+  UEBUNG: "Übung",
+  VERANSTALTUNG: "Veranstaltung",
+};
+
+/** Das Schichtmodell des Einsatzes (§5.2, `zSchichtmodell`). */
+const SCHICHTMODELL: Readonly<Record<string, string>> = {
+  ZWEI_SCHICHT: "Zwei Schichten",
+  DREI_SCHICHT: "Drei Schichten",
+};
+
 /**
  * Ein Zeitpunkt (ISO 8601) als „TT.MM.JJJJ HH:MM“ in der Ortszeit des Rechners —
  * die Schreibweise der Excel-Spalten „Dat. / Zeit“. Was kein Zeitpunkt ist,
@@ -131,6 +144,14 @@ export function statusTon(wert: string): "ok" | "warn" | "ruhe" | "fehler" | "ne
 
 export function schichtTitel(wert: string): string {
   return titel(SCHICHT, wert);
+}
+
+export function einsatzArtTitel(wert: string): string {
+  return titel(EINSATZART, wert);
+}
+
+export function schichtmodellTitel(wert: string): string {
+  return titel(SCHICHTMODELL, wert);
 }
 
 export function ebeneTitel(wert: string): string {
