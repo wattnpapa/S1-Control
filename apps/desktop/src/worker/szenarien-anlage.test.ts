@@ -9,9 +9,9 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { vorlage, type Tabellenzeile } from "@s1/domaene";
+import { projektion, vorlage, type Tabellenzeile } from "@s1/domaene";
 
-import { anlageAusVorlage } from "../kontrakt/bedienschritte.js";
+import { anlageAusVorlage, inlineEntwurf } from "../kontrakt/bedienschritte.js";
 import { einheitsanlage } from "../kontrakt/einheitsanlage.js";
 import { grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz } from "./pruefhilfen/werkstatt.js";
 
@@ -84,5 +84,57 @@ describe("Funktionalität: Einheit anlegen", () => {
     expect(platz.dienst.zustand.einheiten["E-VORLAGE"]?.vorlageId?.wert).toBe("kats-z-sb");
     expect(platz.dienst.zustand.einheiten["E-FREI"]?.vorlageId).toBeUndefined();
     expect(platz.dienst.zustand.einheiten["E-FREI"]?.organisation.wert).toBe("MHD");
+  });
+
+  it("Szenario: eine Zeile kopieren ergibt eine zweite, angeforderte Einheit mit eigener Kennung", async () => {
+    // „Zeile kopieren“ (Strg+K) liest Bauart, Herkunft und Vorlage aus der
+    // Tabellenzeile und schreibt sie über dieselbe Anlage (einheitKopie.ts im
+    // Renderer). Hier steht, dass die Zeile dafür trägt, was sie braucht, und
+    // dass die Kopie eine eigene Zeile wird — ohne Status der Quelle.
+    const platz = await angenommenEinEinsatz();
+    const zsb = vorlage("kats-z-sb");
+    if (zsb === undefined) throw new Error("Vorlage kats-z-sb fehlt");
+    await platz.dienst.bediene(
+      anlageAusVorlage({
+        einheitId: "E-QUELLE",
+        abschnittId: "EO",
+        vorlage: zsb,
+        reihenfolge: 2,
+        organisation: "MHD",
+        herkunft: "MHD Oldenburg",
+      }),
+    );
+    const statusspalte = projektion.spalte("status");
+    const status = statusspalte === undefined ? undefined : inlineEntwurf(statusspalte, "E-QUELLE", "ANGEFORDERT", "IM_EINSATZ");
+    if (status === undefined) throw new Error("Statusspalte schreibt nicht");
+    expect((await platz.dienst.bediene(status)).art).toBe("geschrieben");
+
+    const quelle = zeileVon(platz, "E-QUELLE");
+    expect(quelle.vorlageId).toBe("kats-z-sb");
+    expect(quelle.herkunftName).toBe("MHD Oldenburg");
+    const ergebnis = await platz.dienst.bediene(
+      einheitsanlage({
+        einheitId: "E-KOPIE",
+        abschnittId: quelle.abschnittId,
+        bezeichnung: `${String(quelle.zellen["bezeichnung"]?.wert)} (2)`,
+        organisation: quelle.zellen["organisation"]?.wert as never,
+        ebene: quelle.zellen["ebene"]?.wert as never,
+        staerke: quelle.staerke,
+        reihenfolge: 3,
+        herkunft: quelle.herkunftName ?? "",
+        ...(quelle.vorlageId === undefined ? {} : { vorlageId: quelle.vorlageId }),
+      }),
+    );
+    expect(ergebnis.art).toBe("geschrieben");
+
+    const zeilen = platz.dienst.tabelle({ art: "tabelleAnfordern", akteId: "akte-1" }).zeilen;
+    const kopie = zeileVon(platz, "E-KOPIE");
+    expect(zeilen.map((zeile) => zeile.einheitId).filter((id) => id.startsWith("E-"))).toEqual(["E-QUELLE", "E-KOPIE"]);
+    expect(kopie.anzeige).not.toBe(quelle.anzeige);
+    expect(kopie.staerke).toEqual(quelle.staerke);
+    expect(kopie.vorlageId).toBe("kats-z-sb");
+    expect(kopie.herkunftName).toBe("MHD Oldenburg");
+    expect(platz.dienst.zustand.einheiten["E-QUELLE"]?.status.wert).toBe("IM_EINSATZ");
+    expect(platz.dienst.zustand.einheiten["E-KOPIE"]?.status.wert).toBe("ANGEFORDERT");
   });
 });
