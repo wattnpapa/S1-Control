@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { EINHEIT_STATUS, SCHICHTEN, TAKTISCHE_EBENEN } from "../../domaene/src/ereignis.js";
 import { zeitpunktText } from "../../domaene/src/beschriftungen.js";
-import { falteHinzu, leereFaltung, materialisiere } from "../../domaene/src/fold.js";
+import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../../domaene/src/fold.js";
 import { feldEreignis, hlc } from "../../domaene/src/pruefhilfen/ereignisbau.js";
 import { prueflageEreignisse } from "../../domaene/src/pruefhilfen/pruefage.js";
 import { ARCHIV_ABSCHNITT_ID, type Zustand } from "../../domaene/src/zustand.js";
@@ -23,7 +23,7 @@ import { statusdaten } from "./status.js";
 
 const KOPF = { datum: "2026-09-08", einsatzName: "Übung Weser-Ems", stand: "Stand: 08.09.2026, 08:00" };
 
-function lage(...dazu: Parameters<typeof falteHinzu>[1]): Zustand {
+function lage(...dazu: EingehendesEreignis[]): Zustand {
   return materialisiere(falteHinzu(leereFaltung(), [...prueflageEreignisse(), ...dazu]));
 }
 
