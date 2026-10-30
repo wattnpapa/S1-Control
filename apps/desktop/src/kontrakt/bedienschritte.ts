@@ -24,12 +24,13 @@
  * Konflikthinweis erst möglich.
  */
 
-import type { EinheitVorlage, Spalte, Staerke, Stammdatenfeld, Tabellenzeile } from "@s1/domaene";
+import type { EinheitVorlage, Organisation, Spalte, Staerke, Stammdatenfeld, Tabellenzeile } from "@s1/domaene";
 
+import { STATUS_VORBELEGUNG, einheitsanlage } from "./einheitsanlage.js";
 import type { Entwurf } from "./index.js";
 
-/** Der Vorbelegungsstatus einer neu angelegten Einheit (§5.4, Blatt „Stärke“ Spalte Z). */
-export const STATUS_VORBELEGUNG = "ANGEFORDERT";
+// Der Vorbelegungsstatus gehört der Anlage; Aufteilen setzt ihn ebenfalls.
+export { STATUS_VORBELEGUNG };
 
 /**
  * Baut den Entwurf einer Inline-Änderung.
@@ -166,6 +167,11 @@ export interface AnlageAusVorlage {
   /** Abweichende Stärke; ohne sie gilt die Soll-Stärke der Vorlage. */
   readonly staerke?: Staerke;
   readonly herkunft?: string;
+  /**
+   * Abweichende Organisation; ohne sie gilt die der Vorlage. Die KatS-Vorlagen
+   * haben mehrere mögliche Träger, und die Vorlage kennt nur die Vorbelegung.
+   */
+  readonly organisation?: Organisation;
 }
 
 /**
@@ -176,37 +182,22 @@ export interface AnlageAusVorlage {
  * steht 0/0/0 da — und nicht ein geschätzter Wert. Eine Zahl, die niemand
  * gemeldet hat, ist in einer Stärkeübersicht der gefährlichere Fehler.
  *
- * Der Status ist `ANGEFORDERT` und nicht `IM_EINSATZ`: Wer aus dem
- * Vorlagenkatalog anlegt, plant Kräfte — er meldet sie nicht als anwesend.
- * `vorlageId` bleibt an der Einheit stehen, damit später nachvollziehbar ist,
- * woher die Soll-Werte kamen (ZDM §3.2).
+ * Gebaut wird der Entwurf von {@link einheitsanlage}, derselben Funktion wie
+ * für die freie Zeile ohne Vorlage. `vorlageId` bleibt an der Einheit stehen,
+ * damit später nachvollziehbar ist, woher die Soll-Werte kamen (ZDM §3.2).
  */
 export function anlageAusVorlage(auftrag: AnlageAusVorlage): Entwurf {
-  const staerke = auftrag.staerke ?? auftrag.vorlage.sollStaerke ?? { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 };
-  return {
-    typ: "EinheitGemeldet",
-    nutzlast: {
-      einheitId: auftrag.einheitId,
-      abschnittId: auftrag.abschnittId,
-      bezeichnung: auftrag.vorlage.bezeichnung,
-      organisation: auftrag.vorlage.organisation,
-      // §5.1, `zHierarchieEbene`: Die Stufe heißt `art` und `name`, nicht
-      // `ebene` und `bezeichnung` — der Typ `HierarchieEbene` in `werte.ts`
-      // nennt sie anders, und maßgeblich ist das Schema, gegen das der
-      // Aktendienst prüft (Befund H-B1 im Bericht zu M3).
-      hierarchie:
-        auftrag.herkunft === undefined || auftrag.herkunft.trim() === ""
-          ? []
-          : [{ art: "ORTSVERBAND", name: auftrag.herkunft.trim() }],
-      ebene: auftrag.vorlage.ebene,
-      staerke,
-      personalErfassung: "NUR_STAERKE",
-      status: STATUS_VORBELEGUNG,
-      reihenfolge: auftrag.reihenfolge,
-      istFuehrungDesAbschnitts: false,
-      vorlageId: auftrag.vorlage.id,
-    },
-  };
+  return einheitsanlage({
+    einheitId: auftrag.einheitId,
+    abschnittId: auftrag.abschnittId,
+    bezeichnung: auftrag.vorlage.bezeichnung,
+    organisation: auftrag.organisation ?? auftrag.vorlage.organisation,
+    ebene: auftrag.vorlage.ebene,
+    staerke: auftrag.staerke ?? auftrag.vorlage.sollStaerke ?? { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
+    reihenfolge: auftrag.reihenfolge,
+    ...(auftrag.herkunft === undefined ? {} : { herkunft: auftrag.herkunft }),
+    vorlageId: auftrag.vorlage.id,
+  });
 }
 
 /**
