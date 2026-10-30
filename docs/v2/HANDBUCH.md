@@ -52,6 +52,10 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
    seit wann, wie lange noch.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
+   Eine Ablösung wird an der Einheit angefordert („Ablösung anfordern“) oder im
+   Blatt Anforderungen mit „Ablösung für“. Beim Eintreffen entsteht die neue
+   Einheit aus der Anforderung, und die abgelöste Zeile nennt sie unter
+   „Ablösung durch“.
 8. **Ausgaben erzeugen**, wenn die Führung sie braucht: Druck, Status-Matrix,
    Einheitenliste, Auswertung, Log, Kosten. Die Einheitenliste vor jeder
    Lagebesprechung ausdrucken — sie ist der Stand, mit dem bei einem
@@ -128,7 +132,7 @@ Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum B
 
 **Zuerst:** Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen.
 
-**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben.
+**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18).
 
 **Kürzel:** Strg+N · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
 
@@ -158,7 +162,7 @@ Was angefordert, zugesagt, eingetroffen oder storniert ist.
 
 **Zuerst:** Mit Strg+N eine Anforderung anlegen.
 
-**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2).
+**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an — vorbelegt, aber zu prüfen — und trägt sie als „Ablösung durch“ an der abgelösten Einheit ein.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 
