@@ -1,11 +1,11 @@
 /**
  * `@s1/ausgaben` — Ring 3: die Ausgabeprodukte als HTML.
  *
- * Hier entstehen Druck, Status-Matrix, Auswertung, der HTML-Monitor und die
- * Einsatzakte. Das PDF entsteht ausdruecklich nicht hier, sondern in der
- * Schale ueber `webContents.printToPDF` — deshalb darf dieses Paket Electron
- * nicht importieren, und deshalb liefert jede Vorlage hier eine
- * **Zeichenkette**.
+ * Hier entstehen Druck, Status-Matrix, Einheitenliste, Auswertung, der
+ * HTML-Monitor und die Einsatzakte. Das PDF entsteht ausdruecklich nicht
+ * hier, sondern in der Schale ueber `webContents.printToPDF` — deshalb darf
+ * dieses Paket Electron nicht importieren, und deshalb liefert jede Vorlage
+ * hier eine **Zeichenkette**.
  *
  * Das Paket ist auch ohne `node:` gehalten (`types: []` in der tsconfig). Das
  * ist strenger, als der Ring verlangt, und mit Absicht: Eine Vorlage, die
@@ -118,3 +118,14 @@ export {
 // Die Führungsharke (M8.3) — das Blatt „FüOrg“ der Excel, gezeichnet aus
 // Abschnittsbaum und Dienstposten.
 export { FUEORG_STIL, harke, harkeAlsHtml, staerkeText, type Harke, type Harkenknoten } from "./fueorg.js";
+
+// Die Einheitenliste — das Blatt „Stärke“ als Ausdruck: alle Bereiche mit
+// Zwischensumme, darunter die Einheiten. Die Papier-Rückfallebene für
+// Lagebesprechung und Rechnerausfall.
+export { EINHEITENLISTE_STIL, einheitenlisteAlsHtml } from "./einheitenliste.js";
+export {
+  einheitenlistendaten,
+  type Einheitenlistenbereich,
+  type Einheitenlistendaten,
+  type Einheitenlistenzeile,
+} from "./einheitenliste-daten.js";
