@@ -49,7 +49,8 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    hineingehören können. Unterabschnitte gehen beliebig tief.
 5. **Einheiten erfassen** — von Hand („Ohne Vorlage“), aus einer Vorlage
    (THW StAN, Feuerwehr, KatS-StAN Nds), per Handscanner vom Erfassungsbogen
-   oder über den Eingangskorb aus einer Bündeldatei.
+   oder über den Eingangskorb aus einer Bündeldatei. Eine zweite Teileinheit
+   gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
    seit wann, wie lange noch.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
@@ -133,9 +134,9 @@ Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum B
 
 **Zuerst:** Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen — aus einer Vorlage (THW StAN, Feuerwehr, KatS-StAN Nds; Tippen filtert, Enter wählt) oder „Ohne Vorlage“ als freie Zeile.
 
-**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18).
+**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). „Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.
 
-**Kürzel:** Strg+N · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
+**Kürzel:** Strg+N · Strg+K · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
 
 ### Tagebuch
 
