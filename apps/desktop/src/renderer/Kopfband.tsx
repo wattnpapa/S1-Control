@@ -151,13 +151,18 @@ function Zustandszeile({
     return <div className="zustandszeile gestoert">Kein Einsatz geöffnet</div>;
   }
   const wache = lagebild.peers.filter((peer) => !peer.veraltet).length;
+  // Der FüSt-Name aus den Stammdaten steht neben dem Einsatz: Wer zwei
+  // Einsätze an zwei Fenstern führt, erkennt so, für welche Stelle er
+  // gerade schreibt. Fehlen die Stammdaten noch, entfällt er ohne Lücke.
+  const fuest = lagebild.stammdaten?.fuestName ?? "";
   const stand =
     lagebild.standWanduhr === "" ? "keine Ereignisse" : alter(lagebild.standWanduhr, jetzt);
 
   return (
     <div className={`zustandszeile${lagebild.shareErreichbar ? "" : " gestoert"}`}>
       {lagebild.shareErreichbar ? "✓ " : "⚠ "}
-      {lagebild.einsatzName} · Stand {stand} ·{" "}
+      {lagebild.einsatzName}
+      {fuest === "" ? "" : ` · ${fuest}`} · Stand {stand} ·{" "}
       {lagebild.shareErreichbar ? "Share erreichbar" : "Share nicht erreichbar"}
       {wache > 0 ? ` — ${String(wache)} weitere Arbeitsplätze` : " — allein am Einsatz"}
     </div>

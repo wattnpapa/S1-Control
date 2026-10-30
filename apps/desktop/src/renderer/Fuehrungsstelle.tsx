@@ -23,6 +23,7 @@ import { schichtTitel, type Dienstpostenzeile, type Teilbereichsblock } from "@s
 
 import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { Stammdatenblock } from "./Stammdatenmaske.js";
 import {
   dienstpostenAnlegen,
   dienstpostenBesetzt,
@@ -98,6 +99,10 @@ export function Fuehrungsstelle(): React.JSX.Element {
   return (
     <section aria-label="Führungsstelle" className="fuehrungsstelle">
       <h2>Führungsstelle <Hilfemarke kennung="fuehrungsstelle" /></h2>
+
+      {/* Oben die Stammdaten: Das Blatt „Stammdaten“ der Excel trägt den
+          Namen, unter dem diese Führungsstelle auf jedem Ausdruck steht. */}
+      <Stammdatenblock />
 
       <div className="fuestsumme">
         {ansicht.staerke.length === 0 ? (

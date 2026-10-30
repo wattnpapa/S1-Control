@@ -74,6 +74,26 @@ describe("Kopfband", () => {
     ).toBeDefined();
   });
 
+  it("nennt den FüSt-Namen aus den Stammdaten neben dem Einsatz", () => {
+    const stammdaten = {
+      name: "Hochwasser Oldenburg",
+      art: "EINSATZ",
+      fuestName: "FüSt Weser-Ems",
+      beginn: "2026-09-10T08:00:00+02:00",
+      schichtmodell: "ZWEI_SCHICHT",
+    };
+    render(
+      <Kopfband
+        lagebild={{ ...LAGEBILD, stammdaten }}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+      />,
+    );
+    expect(screen.getByText(/Hochwasser Oldenburg · FüSt Weser-Ems · Stand vor 6 s/)).toBeDefined();
+  });
+
   it("meldet den unerreichbaren Share auch oben, nicht nur unten", () => {
     render(
       <Kopfband
