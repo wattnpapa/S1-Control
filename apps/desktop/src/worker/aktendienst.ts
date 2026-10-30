@@ -106,6 +106,7 @@ import {
   type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
+import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
@@ -1444,5 +1445,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return undefined;
+  return pruefeEinheitsteil(entwurf);
 }
