@@ -34,6 +34,7 @@ import {
   statusTitel,
   zeitpunktText,
 } from "../beschriftungen.js";
+import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -252,7 +253,9 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
     case "abschnitt":
       return feldtext(zustand.abschnitte[id]?.name) ?? id;
     case "fahrzeug":
-      return feldtext(zustand.fahrzeuge[id]?.bezeichnung) ?? id;
+      return fahrzeugname(zustand, id);
+    case "auftrag":
+      return auftragsname(zustand, id);
     case "person": {
       const person = zustand.personen[id];
       const nachname = feldtext(person?.nachname);
@@ -328,7 +331,9 @@ export function tagebuchsatz(
   }
 
   // Form (b): eine Anlage. Der Wert steht in der Nutzlast, nicht in `neu`.
-  if (eintrag.form === "b") return betreff;
+  // Auftrag, Fahrzeug und Person nennen ihre Angaben mit — ohne sie stünde
+  // dort nur eine Kennung (`tagebuch-einheitsteile.ts`).
+  if (eintrag.form === "b") return einheitsteilAnlagesatz(zustand, ereignis, kopf) ?? betreff;
 
   // Form (a): ein Feld, und der Wert steht im Rahmen (§2.2).
   const feld = feldname(ereignis, eintrag);
@@ -350,6 +355,9 @@ function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): 
   if (typ === "StatusGesetzt") return statusTitel(wert);
   if (typ === "SchichtGesetzt") return schichtTitel(wert);
   if (typ === "EinsatzStammdatenGeaendert") return stammdatenwortFuer(feld, wert);
+  // Das Ende eines Auftrags ist ein Zeitpunkt; „30.10.2026 16:00“ liest
+  // sich, ein ISO-Zeitpunkt wird entziffert.
+  if (typ === "AuftragBeendet") return zeitpunktText(wert);
   return alsSatzwert(wert);
 }
 
@@ -391,7 +399,7 @@ function bezug(
 }
 
 /** Die fachliche Zeit einer Art, sofern sie eine trägt (§2.5). */
-const ZEITFELDER = ["zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm"] as const;
+const ZEITFELDER = ["zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm", "von"] as const;
 
 function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   // Ein geänderter Einsatzbeginn ist der **Wert** der Zeile und nicht ihre

@@ -22,6 +22,7 @@ import { describe, expect, it } from "vitest";
 
 import { SCHEMA_VERSION, ereignisId } from "./ereignis.js";
 import { falte, type EingehendesEreignis } from "./fold.js";
+import { zeitpunktText } from "./beschriftungen.js";
 import * as K from "./kennzahlen.js";
 import {
   abschnittAngelegt,
@@ -394,9 +395,26 @@ describe("K9 bis K12 — Texte und Verweise", () => {
   });
 
   it("K11: die Auftragsspalte", () => {
-    expect(K.auftragsText(zustand, "U1")).toBe(
-      "2026-09-08T09:00:00+02:00–2026-09-08T12:00:00+02:00; Abschnitt EO; Deich sichern",
-    );
+    // Die Zeiten in Ortszeit, wie die Zelle sie zeigt — über dieselbe
+    // Formatierung gerechnet, damit der Test in jeder Zeitzone gilt.
+    const von = zeitpunktText("2026-09-08T09:00:00+02:00");
+    const bis = zeitpunktText("2026-09-08T12:00:00+02:00");
+    expect(K.auftragsText(zustand, "U1")).toBe(`${von}–${bis}; Abschnitt EO; Deich sichern`);
+    expect(von).toMatch(/^\d{2}\.\d{2}\.2026 \d{2}:\d{2}$/);
+  });
+
+  it("K11: ein offener Auftrag ohne Abschnitt endet auf „–“ und lässt das leere Glied weg", () => {
+    const offen = falte([
+      ...referenzlage(),
+      bau(200, "AuftragErfasst", {
+        auftragId: "A9",
+        einheitId: "U2",
+        von: "2026-09-08T10:00:00+02:00",
+        text: "Sandsäcke füllen",
+        quelle: "MANUELL",
+      }),
+    ]);
+    expect(K.auftragsText(offen, "U2")).toBe(`${zeitpunktText("2026-09-08T10:00:00+02:00")}–; Sandsäcke füllen`);
   });
 
   it("K12: die juengste nicht stornierte Anforderung", () => {

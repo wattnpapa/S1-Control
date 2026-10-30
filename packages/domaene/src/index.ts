@@ -419,3 +419,11 @@ export {
   statusTon,
   zeitpunktText,
 } from "./beschriftungen.js";
+export {
+  ERNAEHRUNG_AUSWAHL,
+  FAHRZEUGSTATUS_AUSWAHL,
+  GESCHLECHT_AUSWAHL,
+  ROLLEN_AUSWAHL,
+  einheitsteilTitel,
+  type Auswahlwert,
+} from "./beschriftungen-einheitsteile.js";

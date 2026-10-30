@@ -106,7 +106,8 @@ describe("tagebuchzeile", () => {
       status: "EINSATZBEREIT",
     });
     const zeile = tagebuchzeile(falte([...GRUNDLAGE, ereignis]), ereignis);
-    expect(zeile.satz).toBe("F1: Fahrzeug angelegt");
+    // Ohne Bezeichnung trägt der Typ den Satz, und die Einheit steht vorn.
+    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Fahrzeug angelegt — MLW IV");
   });
 
   it("zeigt bei einem setzenden Ereignis den Übergang von vorher nach neu (§2.2)", () => {
