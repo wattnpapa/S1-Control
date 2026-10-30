@@ -315,14 +315,14 @@ Auf dem Server als `root`, das Skript erledigt Holen, `.env`, Bauen, Starten
 und die Prüfung von `/gesundheit`:
 
 ```
-curl -fsSL https://raw.githubusercontent.com/wattnpapa/S1-Control/v2-architektur/deploy/plesk/deploy.sh -o deploy.sh
+curl -fsSL https://raw.githubusercontent.com/wattnpapa/S1-Control/main/deploy/plesk/deploy.sh -o deploy.sh
 bash deploy.sh            # legt /opt/s1-control/.env an und hält an
 vi /opt/s1-control/.env   # S1_WEB_ANMELDENAME, S1_WEB_PASSWORT
 bash deploy.sh            # baut und startet
 ```
 
-`S1_ZIEL` (Vorgabe `/opt/s1-control`) und `S1_ZWEIG` (Vorgabe
-`v2-architektur`) lassen sich als Umgebungsvariablen vorgeben. Ein erneuter
+`S1_ZIEL` (Vorgabe `/opt/s1-control`) und `S1_ZWEIG` (Vorgabe `main`)
+lassen sich als Umgebungsvariablen vorgeben. Ein erneuter
 Lauf aktualisiert Quelle und Bild.
 
 Danach einmalig in Plesk, Websites & Domains:

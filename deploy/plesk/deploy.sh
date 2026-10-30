@@ -5,7 +5,7 @@
 # Aufruf auf dem Server als root:
 #
 #   bash deploy/plesk/deploy.sh                 # aus einem Checkout heraus
-#   S1_ZWEIG=v2-architektur bash deploy.sh      # anderer Zweig
+#   S1_ZWEIG=v2-architektur bash deploy.sh     # anderer Zweig
 #
 # Was das Skript tut, in dieser Reihenfolge:
 #   1. Quelle nach $S1_ZIEL holen oder aktualisieren (git, Submodule).
@@ -20,7 +20,7 @@ set -euo pipefail
 
 S1_ZIEL="${S1_ZIEL:-/opt/s1-control}"
 S1_QUELLE="${S1_QUELLE:-https://github.com/wattnpapa/S1-Control.git}"
-S1_ZWEIG="${S1_ZWEIG:-v2-architektur}"
+S1_ZWEIG="${S1_ZWEIG:-main}"
 COMPOSE="docker compose -f docker-compose.plesk.yml"
 
 fehlt() { echo "FEHLT: $1" >&2; exit 1; }
