@@ -73,8 +73,9 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
       "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben. " +
       "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. " +
       "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. " +
-      "Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18).",
-    kuerzel: ["anlegen", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
+      "Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). " +
+      "„Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.",
+    kuerzel: ["anlegen", "kopieren", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
   },
   {
     kennung: "tagebuch",

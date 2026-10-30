@@ -30,6 +30,9 @@ describe("die Tastenkarte", () => {
     expect(kuerzel("jetzt")?.taste).toBe("d");
     expect(kuerzel("eeb")?.taste).toBe("q");
     expect(kuerzel("hilfe")?.taste).toBe("h");
+    // Strg+K kopiert in der Excel die markierte Zeile (m_zlKopieren).
+    expect(kuerzel("kopieren")?.taste).toBe("k");
+    expect(kuerzelText(kuerzel("kopieren") as never)).toBe("Strg+K");
   });
 
   it("belegt Strg+A nicht", () => {

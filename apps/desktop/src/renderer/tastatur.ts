@@ -10,9 +10,10 @@
  * `m_makroFunktionen` (Bestandsaufnahme `excel-domaenenmodell.md` §2,
  * „Tastenkürzel"): Strg+N fügt eine Zeile ein, Strg+E entfernt, Strg+M
  * verschiebt, Strg+D schreibt „jetzt“ in die aktive Zelle, Strg+Q liest einen
- * digitalen EEB ein, Strg+H öffnet die Abkürzungsliste. Dieselben Buchstaben
- * hier zu vergeben ist kein Zitat, sondern der billigste Teil der Umstellung:
- * Wer die Excel seit Jahren bedient, hat sie in den Fingern.
+ * digitalen EEB ein, Strg+K kopiert die markierte Zeile, Strg+H öffnet die
+ * Abkürzungsliste. Dieselben Buchstaben hier zu vergeben ist kein Zitat,
+ * sondern der billigste Teil der Umstellung: Wer die Excel seit Jahren
+ * bedient, hat sie in den Fingern.
  *
  * Zwei Kürzel kommen hinzu, weil die Excel sie von Haus aus mitbrachte:
  * Strg+F sucht, Strg+Z nimmt zurück.

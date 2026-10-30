@@ -243,6 +243,17 @@ export interface Tabellenzeile {
   readonly zellen: { readonly [schluessel: string]: Zelle };
   /** K12 als Marke der Zeile — nur, wenn eine Ablösung angefordert ist. */
   readonly abloesung?: Marke;
+  /**
+   * Die Vorlage, aus der die Einheit angelegt wurde — nur, wenn es eine gab.
+   * „Zeile kopieren“ legt die Kopie mit demselben Verweis an (ZDM §3.2).
+   */
+  readonly vorlageId?: Id;
+  /**
+   * Der Name der obersten Herkunftsstufe, so wie die Anlage ihn schreibt.
+   * Die Zelle „Herkunft“ setzt Stufe, Name und Kürzel zusammen (K27); wer
+   * die Zeile kopiert, braucht den Namen allein.
+   */
+  readonly herkunftName?: string;
 }
 
 function beobachtung(einheit: EinheitZustand, feld: string): Beobachtung<unknown> | undefined {
@@ -362,6 +373,18 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     hinweise,
     zellen,
     ...(abloesung === undefined ? {} : { abloesung: abloesung.marke }),
+    ...kopierquelle(einheit),
+  };
+}
+
+/** Was „Zeile kopieren“ braucht und die Zellen nicht als Rohwert tragen. */
+function kopierquelle(einheit: EinheitZustand): { vorlageId?: Id; herkunftName?: string } {
+  const vorlageId = einheit.vorlageId?.wert;
+  const hierarchie = einheit.hierarchie?.wert as readonly { name?: unknown }[] | null | undefined;
+  const name = alsText(hierarchie?.[0]?.name);
+  return {
+    ...(typeof vorlageId === "string" && vorlageId !== "" ? { vorlageId } : {}),
+    ...(name === "" ? {} : { herkunftName: name }),
   };
 }
 

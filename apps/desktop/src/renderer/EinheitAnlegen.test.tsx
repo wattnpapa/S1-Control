@@ -151,6 +151,45 @@ describe("Einheit anlegen", () => {
     });
   });
 
+  it("beginnt mit Vorbelegung auf „Ohne Vorlage“ und schreibt, was in der Maske steht", async () => {
+    render(
+      <EinheitAnlegen
+        abschnittId={undefined}
+        vorbelegung={{
+          quelle: "BtTr OV Jever",
+          bezeichnung: "BtTr (2)",
+          organisation: "DRK",
+          ebene: "TRUPP",
+          staerke: { fuehrer: "0", unterfuehrer: "1", mannschaft: "3" },
+          herkunft: "",
+          abschnittId: "EO",
+        }}
+        aufSchliessen={() => {
+          geschlossen += 1;
+        }}
+      />,
+    );
+    const maske = screen.getByLabelText("„BtTr OV Jever“ kopieren") as HTMLFormElement;
+    // Der Fokus steht in der Bezeichnung: Den Zähler überschreibt man zuerst.
+    expect(document.activeElement).toBe(screen.getByLabelText("Bezeichnung"));
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "BtTr Süd" } });
+    fireEvent.submit(maske);
+    await waitFor(() => {
+      expect(geschlossen).toBe(1);
+    });
+    const werte = nutzlast();
+    expect(werte).toMatchObject({
+      abschnittId: "EO",
+      bezeichnung: "BtTr Süd",
+      organisation: "DRK",
+      ebene: "TRUPP",
+      staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 3 },
+      status: "ANGEFORDERT",
+      hierarchie: [],
+    });
+    expect("vorlageId" in werte).toBe(false);
+  });
+
   it("belegt die Organisation einer Vorlage mit ihrem ersten Träger vor", () => {
     const maske = zeigeMaske();
     fireEvent.change(screen.getByLabelText("Vorlage suchen"), { target: { value: "Gr Tau" } });
