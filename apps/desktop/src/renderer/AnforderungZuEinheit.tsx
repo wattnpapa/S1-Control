@@ -6,7 +6,7 @@
  * abtippen, was in der Anforderung schon steht. Diese Maske legt die Einheit
  * aus der Anforderung an — vorbelegt mit dem Vorschlag der Projektion
  * (`einheitsvorschlag`: vorgesehene Einheit, Herkunft aus der Zusage,
- * Organisation, Ebene und Stärke der abzulösenden Einheit, Bereich
+ * Organisation und Ebene der abzulösenden Einheit, Stärke 0/0/0, Bereich
  * „Angefordert / Anmarsch“) — und hält in der Erledigung fest, welche Einheit
  * es war. Damit füllt sich „Ablösung durch“ an der abgelösten Zeile.
  *
@@ -204,8 +204,8 @@ function Einheitsfelder({ eingabe, aufEingabe, abschnitte, nachVorbildVon }: Ein
       </label>
       {nachVorbildVon !== undefined && (
         <p className="hinweistext">
-          Organisation, Ebene und Stärke sind von „{nachVorbildVon}“ übernommen, die
-          abgelöst wird. Bitte mit der Meldung der eintreffenden Einheit abgleichen.
+          Organisation und Ebene sind von „{nachVorbildVon}“ übernommen, die abgelöst
+          wird. Die Stärke trägt ein, was die eintreffende Einheit meldet.
         </p>
       )}
     </>

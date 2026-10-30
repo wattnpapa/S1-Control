@@ -22,7 +22,7 @@ const VORSCHLAG = {
   bezeichnung: "BGr THW OV Varel",
   organisation: "THW",
   ebene: "GRUPPE",
-  staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+  staerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
   herkunft: "THW RB Oldenburg",
   abschnittId: "ANF",
   nachVorbildVon: "BGr 1 Oldenburg",
@@ -113,7 +113,7 @@ describe("Anforderung und Einheit", () => {
     fireEvent.click(screen.getByText("Eingetroffen"));
     expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("BGr THW OV Varel");
     expect((screen.getByLabelText("Herkunft") as HTMLInputElement).value).toBe("THW RB Oldenburg");
-    expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("8");
+    expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("0");
     expect((screen.getByLabelText("Abschnitt") as HTMLSelectElement).value).toBe("ANF");
     expect(screen.getByText(/von „BGr 1 Oldenburg“ übernommen/)).toBeDefined();
 
@@ -125,7 +125,7 @@ describe("Anforderung und Einheit", () => {
     const [anlage, erledigung] = entwuerfe();
     expect(anlage?.typ).toBe("EinheitGemeldet");
     const nutzlast = anlage?.nutzlast as { einheitId: string; staerke: unknown; abschnittId: string };
-    expect(nutzlast.staerke).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 7 });
+    expect(nutzlast.staerke).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 7 });
     expect(nutzlast.abschnittId).toBe("ANF");
     expect(erledigung?.typ).toBe("AnforderungErledigt");
     expect((erledigung?.neu as { abloesendeEinheitId?: string }).abloesendeEinheitId).toBe(nutzlast.einheitId);

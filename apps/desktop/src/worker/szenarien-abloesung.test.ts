@@ -64,7 +64,7 @@ describe("Szenario: Ablösung anfordern, zusagen, eintreffen", () => {
 
     const vorschlag = projektion.anforderungsliste(platz.dienst.zustand).zeilen[0]?.vorschlag;
     expect(vorschlag?.herkunft).toBe("THW RB Oldenburg");
-    expect(vorschlag?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 8 });
+    expect(vorschlag?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 0 });
 
     const anlage = await platz.dienst.bediene(
       anlageAusAnforderung({

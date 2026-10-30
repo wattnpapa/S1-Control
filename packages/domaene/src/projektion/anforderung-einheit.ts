@@ -55,7 +55,11 @@ export function einheitsvorschlag(zustand: Zustand, anforderung: AnforderungZust
     bezeichnung: feldtext(anforderung.vorgeseheneEinheitText, feldtext(vorbild?.bezeichnung, "")),
     organisation: feldtext(vorbild?.organisation, "THW"),
     ebene: feldtext(vorbild?.ebene, "GRUPPE"),
-    staerke: vorbild?.wirksameStaerke ?? NULLSTAERKE,
+    // Die Stärke bleibt 0/0/0, auch wenn ein Vorbild da ist: Was die
+    // eintreffende Einheit stark ist, weiß nur ihre Meldung. Eine Zahl, die
+    // niemand gemeldet hat, ist in der Stärkeübersicht der gefährlichere
+    // Fehler als eine Null, die auffällt.
+    staerke: NULLSTAERKE,
     herkunft: typeof zusage?.zugesagtVon === "string" ? zusage.zugesagtVon : "",
     ...(abschnittId === undefined ? {} : { abschnittId }),
     ...(vorbild === undefined ? {} : { nachVorbildVon: feldtext(vorbild.bezeichnung, vorbild.id) }),

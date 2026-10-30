@@ -131,7 +131,7 @@ describe("K18 als Marke an „Verfügbar bis“", () => {
 });
 
 describe("Die Einheit aus einer Anforderung", () => {
-  it("schlägt Organisation, Ebene und Stärke der abzulösenden Einheit vor, die Herkunft aus der Zusage", () => {
+  it("schlägt Organisation und Ebene der abzulösenden Einheit vor, die Herkunft aus der Zusage — die Stärke nicht", () => {
     const zustand = lage(ZUSAGE);
     const anforderung = zustand.anforderungen["A1"];
     if (anforderung === undefined) throw new Error("A1 fehlt");
@@ -139,7 +139,7 @@ describe("Die Einheit aus einer Anforderung", () => {
       bezeichnung: "BGr THW OV Varel",
       organisation: "THW",
       ebene: "GRUPPE",
-      staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+      staerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
       herkunft: "THW RB Oldenburg",
       abschnittId: "ANF",
       nachVorbildVon: "BGr 1 Oldenburg",
