@@ -121,8 +121,12 @@ export {
 // Kostenuebersicht.
 export * as projektion from "./projektion/index.js";
 export type {
+  Abloesungsstand,
   Anforderungsausschnitt,
   Anforderungszeile,
+  Einheitenwahl,
+  Einheitsvorschlag,
+  Marke,
   Anforderungszustand,
   Baumknoten,
   Bereichskopf,

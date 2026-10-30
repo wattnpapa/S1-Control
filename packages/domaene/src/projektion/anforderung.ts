@@ -17,6 +17,7 @@
 
 import type { Id } from "../werte.js";
 import type { AnforderungZustand, Konflikthinweis, Zustand } from "../zustand.js";
+import { einheitenwahl, einheitsvorschlag, type Einheitenwahl, type Einheitsvorschlag } from "./anforderung-einheit.js";
 
 /**
  * Die vier Zustände in der Ordnung, in der die Liste sie zeigt.
@@ -48,7 +49,16 @@ export interface Anforderungszeile {
   /** Wer zugesagt hat — Spalte Q. */
   readonly zugesagtVon?: string;
   readonly erledigtAm?: string;
+  /**
+   * Die Einheit, die aus dieser Anforderung angelegt wurde und ablöst — aus
+   * der Erledigung (`zErledigung.abloesendeEinheitId`), sonst aus der Zusage.
+   * Die Spalte „Ablösung durch“ der Einheitentabelle liest sie.
+   */
+  readonly abloesendeEinheitId?: Id;
+  readonly abloesendeEinheit?: string;
   readonly storniert: boolean;
+  /** Die Vorbelegung für „Einheit aus Anforderung anlegen“. */
+  readonly vorschlag?: Einheitsvorschlag;
   /** Hinweise, deren Feldpfad auf diese Anforderung zeigt (§3.8a). */
   readonly hinweise: readonly Konflikthinweis[];
 }
@@ -56,6 +66,20 @@ export interface Anforderungszeile {
 /** Der Feldpfad, unter dem Hinweise zu dieser Anforderung stehen (§3.8a). */
 export function anforderungspfad(anforderungId: Id): string {
   return `anforderung/${anforderungId}`;
+}
+
+/**
+ * Die ablösende Einheit einer Anforderung: aus der Erledigung, sonst aus der
+ * Zusage. Beide Werte dürfen sie tragen (`zZusage`, `zErledigung`); die
+ * Erledigung ist die jüngere Auskunft und geht vor.
+ */
+export function abloesendeEinheitId(anforderung: AnforderungZustand): Id | undefined {
+  for (const wert of [anforderung.erledigung?.wert, anforderung.zusage?.wert] as unknown[]) {
+    if (typeof wert !== "object" || wert === null) continue;
+    const id = (wert as { abloesendeEinheitId?: unknown }).abloesendeEinheitId;
+    if (typeof id === "string" && id !== "") return id;
+  }
+  return undefined;
 }
 
 function text(wert: unknown, ersatz = ""): string {
@@ -86,6 +110,8 @@ export function anforderungszeile(
   const zusage: unknown = anforderung.zusage?.wert;
   const erledigung: unknown = anforderung.erledigung?.wert;
   const storno: unknown = anforderung.storno?.wert;
+  const abloesendeId = abloesendeEinheitId(anforderung);
+  const abloesende = abloesendeId === undefined ? undefined : zustand.einheiten[abloesendeId];
 
   return {
     id: anforderung.id,
@@ -114,11 +140,18 @@ export function anforderungszeile(
     ...(gilt(erledigung)
       ? { erledigtAm: text((erledigung as { erledigtAm?: string }).erledigtAm) }
       : {}),
+    ...(abloesendeId === undefined
+      ? {}
+      : {
+          abloesendeEinheitId: abloesendeId,
+          abloesendeEinheit: text(abloesende?.bezeichnung.wert, abloesendeId),
+        }),
     // `storno` trägt nach dem Katalog den **festen** Wert `true`
     // (`festerWert: true`), nicht `{storniertAm}` wie `zustand.ts` es
     // beschreibt. Angezeigt wird deshalb nur, **dass** storniert wurde; wann
     // und von wem, steht im Tagebuch. Auch das ist ein Befund.
     storniert: gilt(storno),
+    vorschlag: einheitsvorschlag(zustand, anforderung),
     hinweise: zustand.hinweise.filter((hinweis) => hinweis.feldpfad.startsWith(pfad)),
   };
 }
@@ -139,6 +172,8 @@ export interface Anforderungsausschnitt {
   readonly gesamtzahl: number;
   /** Zahl je Zustand — die Führungsstelle will wissen, wie viel offen ist. */
   readonly jeZustand: { readonly [zustand: string]: number };
+  /** Die Einheiten zur Wahl der abzulösenden — über den ganzen Einsatz, nicht über einen Ausschnitt. */
+  readonly einheitenwahl?: readonly Einheitenwahl[];
 }
 
 /**
@@ -189,6 +224,7 @@ export function anforderungsliste(
     von,
     gesamtzahl: gefiltert.length,
     jeZustand,
+    einheitenwahl: einheitenwahl(zustand),
   };
 }
 

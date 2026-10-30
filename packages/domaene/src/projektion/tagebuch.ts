@@ -35,6 +35,7 @@ import {
   zeitpunktText,
 } from "../beschriftungen.js";
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
+import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -264,6 +265,8 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
     }
     case "einsatz":
       return feldtext(zustand.einsatz?.name) ?? id;
+    case "anforderung":
+      return anforderungsname(zustand, id);
     default:
       return id;
   }
@@ -330,6 +333,13 @@ export function tagebuchsatz(
     return `${quelle}: ${kopf} — aufgegangen in ${name}`;
   }
 
+  // Anfordern, zusagen, eintreffen: Zeiten und Einheiten als Wörter
+  // (`tagebuch-anforderung.ts`), nicht als Schlüssel und ISO-Zeit.
+  if (eintrag.entitaet === "anforderung") {
+    const satz = anforderungssatz(zustand, ereignis);
+    if (satz !== undefined) return satz;
+  }
+
   // Form (b): eine Anlage. Der Wert steht in der Nutzlast, nicht in `neu`.
   // Auftrag, Fahrzeug und Person nennen ihre Angaben mit — ohne sie stünde
   // dort nur eine Kennung (`tagebuch-einheitsteile.ts`).
@@ -386,7 +396,8 @@ function bezug(
 ): { einheitId?: Id; abschnittId?: Id } {
   const einheitId =
     alsId(nutzlastfeld(ereignis, "einheitId")) ??
-    (eintrag.entitaet === "einheit" ? alsId(nutzlastfeld(ereignis, eintrag.idFeld)) : undefined);
+    (eintrag.entitaet === "einheit" ? alsId(nutzlastfeld(ereignis, eintrag.idFeld)) : undefined) ??
+    (eintrag.entitaet === "anforderung" ? anforderungsbezug(zustand, ereignis) : undefined);
   const abschnittAusNutzlast =
     alsId(nutzlastfeld(ereignis, "abschnittId")) ??
     (eintrag.entitaet === "abschnitt" ? alsId(nutzlastfeld(ereignis, eintrag.idFeld)) : undefined);
