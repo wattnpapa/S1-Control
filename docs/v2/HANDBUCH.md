@@ -171,7 +171,7 @@ Was angefordert, zugesagt, eingetroffen oder storniert ist.
 
 **Zuerst:** Mit Strg+N eine Anforderung anlegen.
 
-**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an — vorbelegt, aber zu prüfen — und trägt sie als „Ablösung durch“ an der abgelösten Einheit ein.
+**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation und Ebene vorbelegt, Stärke 0/0/0 bis zur Meldung) oder verknüpft eine schon erfasste Einheit; sie steht dann als „Ablösung durch“ an der abgelösten Einheit.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 

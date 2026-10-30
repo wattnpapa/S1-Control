@@ -10,6 +10,11 @@
  * „Angefordert / Anmarsch“) — und hält in der Erledigung fest, welche Einheit
  * es war. Damit füllt sich „Ablösung durch“ an der abgelösten Zeile.
  *
+ * Drei Wege: die Einheit aus der Anforderung neu anlegen, eine **bestehende**
+ * Einheit verknüpfen (sie wurde schon erfasst — über den Erfassungsbogen,
+ * den Eingangskorb, einen anderen Arbeitsplatz oder nach einer Anlage, deren
+ * Verknüpfung abgewiesen wurde), oder bei `eintreffen` nur den Zustand setzen.
+ *
  * Zwei Fälle: `eintreffen` setzt die Anforderung auf eingetroffen und bietet
  * die Anlage an (abwählbar); `nachtragen` legt an einer schon eingetroffenen
  * Anforderung die Einheit nachträglich an.
@@ -34,6 +39,9 @@ import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 
 export type Eintreffart = "eintreffen" | "nachtragen";
+
+/** Wie die Anforderung zu ihrer Einheit kommt. */
+type Weg = "anlegen" | "verknuepfen" | "ohne";
 
 export interface AnforderungZuEinheitEigenschaften {
   readonly zeile: Anforderungszeile;
@@ -88,13 +96,21 @@ function verknuepfung(zeile: Anforderungszeile, art: Eintreffart, einheitId: str
 
 export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZuEinheitEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [anlegen, setzeAnlegen] = useState(true);
+  const [weg, setzeWeg] = useState<Weg>("anlegen");
+  const [bestehende, setzeBestehende] = useState("");
   const [eingabe, setzeEingabe] = useState(() => ausVorschlag(zeile.vorschlag));
   const abschnitte = projektion.baumZeilen(laden.baum?.baum ?? []);
+  // Die abzulösende Einheit löst sich nicht selbst ab.
+  const einheiten = (laden.anforderungen?.einheitenwahl ?? []).filter((e) => e.id !== zeile.abzuloesendeEinheitId);
 
   async function bestaetige(): Promise<void> {
-    if (!anlegen) {
+    if (weg === "ohne") {
       const ergebnis = await laden.bediene(anforderungErledigt(zeile.id, new Date().toISOString()));
+      if (ergebnis?.art === "geschrieben") aufSchliessen();
+      return;
+    }
+    if (weg === "verknuepfen") {
+      const ergebnis = await laden.bediene(verknuepfung(zeile, art, bestehende));
       if (ergebnis?.art === "geschrieben") aufSchliessen();
       return;
     }
@@ -123,24 +139,29 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
   return (
     <Maske
       titel={art === "eintreffen" ? `${zeile.kennung} eingetroffen` : `Einheit aus ${zeile.kennung} anlegen`}
-      bestaetigungstext={art === "eintreffen" && !anlegen ? "Eingetroffen" : "Anlegen"}
-      bereit={!anlegen || vollstaendig(eingabe)}
+      bestaetigungstext={bestaetigungstext(weg)}
+      bereit={weg === "ohne" || (weg === "verknuepfen" ? bestehende !== "" : vollstaendig(eingabe))}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={bestaetige}
     >
-      {art === "eintreffen" && (
+      <Wegwahl weg={weg} aufWeg={setzeWeg} mitOhne={art === "eintreffen"} />
+      {weg === "verknuepfen" && (
         <label>
-          <input
-            type="checkbox"
-            checked={anlegen}
+          Bestehende Einheit
+          <select
+            value={bestehende}
             onChange={(e) => {
-              setzeAnlegen(e.target.checked);
+              setzeBestehende(e.target.value);
             }}
-          />
-          Einheit aus der Anforderung anlegen
+          >
+            <option value="">— bitte wählen —</option>
+            {einheiten.map((e) => (
+              <option key={e.id} value={e.id}>{e.name}</option>
+            ))}
+          </select>
         </label>
       )}
-      {anlegen && (
+      {weg === "anlegen" && (
         <Einheitsfelder
           eingabe={eingabe}
           aufEingabe={setzeEingabe}
@@ -149,6 +170,47 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
         />
       )}
     </Maske>
+  );
+}
+
+function bestaetigungstext(weg: Weg): string {
+  if (weg === "ohne") return "Eingetroffen";
+  return weg === "verknuepfen" ? "Verknüpfen" : "Anlegen";
+}
+
+const WEGE: readonly { readonly weg: Weg; readonly titel: string }[] = [
+  { weg: "anlegen", titel: "Einheit aus der Anforderung anlegen" },
+  { weg: "verknuepfen", titel: "Bestehende Einheit verknüpfen" },
+  { weg: "ohne", titel: "Nur eingetroffen, ohne Einheit" },
+];
+
+function Wegwahl({
+  weg,
+  aufWeg,
+  mitOhne,
+}: {
+  readonly weg: Weg;
+  readonly aufWeg: (weg: Weg) => void;
+  readonly mitOhne: boolean;
+}): React.JSX.Element {
+  return (
+    <fieldset className="wegwahl">
+      <legend>Einheit</legend>
+      {WEGE.filter((w) => mitOhne || w.weg !== "ohne").map((w) => (
+        <label key={w.weg}>
+          <input
+            type="radio"
+            name="anforderung-weg"
+            value={w.weg}
+            checked={weg === w.weg}
+            onChange={() => {
+              aufWeg(w.weg);
+            }}
+          />
+          {w.titel}
+        </label>
+      ))}
+    </fieldset>
   );
 }
 

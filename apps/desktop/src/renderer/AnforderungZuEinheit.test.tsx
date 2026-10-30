@@ -134,13 +134,30 @@ describe("Anforderung und Einheit", () => {
   it("setzt nur auf eingetroffen, wenn die Anlage abgewählt ist", async () => {
     await zeige();
     fireEvent.click(screen.getByText("Eingetroffen"));
-    fireEvent.click(screen.getByLabelText("Einheit aus der Anforderung anlegen"));
+    fireEvent.click(screen.getByLabelText("Nur eingetroffen, ohne Einheit"));
     fireEvent.click(screen.getByText("Eingetroffen", { selector: "button[type=submit]" }));
     await waitFor(() => {
       expect(entwuerfe()).toHaveLength(1);
     });
     expect(entwuerfe()[0]?.typ).toBe("AnforderungErledigt");
     expect(entwuerfe()[0]?.neu).not.toHaveProperty("abloesendeEinheitId");
+  });
+
+  it("verknüpft eine bestehende Einheit statt eine neue anzulegen", async () => {
+    antworte([zeile({ zustand: "EINGETROFFEN", erledigtAm: "2026-09-10T15:40:00+02:00" })]);
+    await zeige();
+    fireEvent.click(screen.getByText("Einheit anlegen"));
+    fireEvent.click(screen.getByLabelText("Bestehende Einheit verknüpfen"));
+    // Die abzulösende Einheit (E12) steht nicht zur Wahl.
+    const wahl = screen.getByLabelText("Bestehende Einheit") as HTMLSelectElement;
+    expect(Array.from(wahl.options).map((o) => o.value)).toEqual(["", "E20"]);
+    fireEvent.change(wahl, { target: { value: "E20" } });
+    fireEvent.click(screen.getByText("Verknüpfen", { selector: "button[type=submit]" }));
+    await waitFor(() => {
+      expect(entwuerfe()).toHaveLength(1);
+    });
+    expect(entwuerfe()[0]?.typ).toBe("AnforderungErledigt");
+    expect(entwuerfe()[0]?.neu).toEqual({ erledigtAm: "2026-09-10T15:40:00+02:00", abloesendeEinheitId: "E20" });
   });
 
   it("trägt an einer eingetroffenen Anforderung ohne Einheit die Einheit nach", async () => {

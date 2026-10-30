@@ -771,6 +771,26 @@
         margin: 0 0 0.8rem;
         font-size: 1rem;
       }
+      /* Die Wegwahl einer Maske: Radioknöpfe in einer Zeile, ohne Rahmen. */
+      .wegwahl {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.4rem 1rem;
+        margin: 0 0 0.6rem;
+        padding: 0;
+        border: 0;
+      }
+      .wegwahl legend {
+        font-size: 0.8rem;
+        color: var(--text-gedaempft, inherit);
+        padding: 0;
+        margin-bottom: 0.2rem;
+      }
+      .wegwahl label {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.3rem;
+      }
       .maskenknoepfe {
         display: flex;
         gap: 0.5rem;

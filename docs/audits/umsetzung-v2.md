@@ -74,5 +74,5 @@ Oberfläche noch nicht hatte.
 - [ ] Rückgängig über Fenster und Neuladen hinweg; Begriffe Rückgängig / Rücknahme / Berichtigung vereinheitlichen
 - [ ] Masken und Zellen sperren sich nach „Einsatz beendet“ nicht selbst (der Dienst weist ab, das Kopfband zeigt den Zustand)
 - [ ] `archiv.marker` wird beim Archivieren nicht geschrieben; die Einsatzliste zeigt archivierte Einsätze nicht als solche
-- [ ] Nach einer fehlgeschlagenen Verknüpfung Anforderung → Einheit lässt sich keine bestehende Einheit nachträglich zuordnen
+- [x] Nach einer fehlgeschlagenen Verknüpfung Anforderung → Einheit lässt sich keine bestehende Einheit nachträglich zuordnen (Maske „Eingetroffen“/„Einheit anlegen“ bietet „Bestehende Einheit verknüpfen“)
 
