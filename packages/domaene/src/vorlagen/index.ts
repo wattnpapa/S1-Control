@@ -1,15 +1,16 @@
 /**
  * Der Vorlagenkatalog, zusammengesetzt aus seinen Quellen (M1.4).
  *
- * Zwei der drei Kataloge aus Zieldatenmodell §2.10 sind gefuellt; `KATS_STAN_NDS`
- * fehlt, weil die Arbeitsmappe nicht vorliegt (siehe `feuerwehr.ts`).
+ * Alle drei Kataloge aus Zieldatenmodell §2.10 sind gefuellt; die KatS-Zeilen
+ * stammen aus der Arbeitsmappe (siehe `kats-nds.ts`).
  */
 
 import { FEUERWEHR_VORLAGEN } from "./feuerwehr.js";
+import { KATS_NDS_VORLAGEN } from "./kats-nds.js";
 import { THW_VORLAGEN } from "./thw.js";
 import type { EinheitVorlage, Vorlagenkatalog } from "./katalog.js";
 
-const ALLE: readonly EinheitVorlage[] = [...THW_VORLAGEN, ...FEUERWEHR_VORLAGEN];
+const ALLE: readonly EinheitVorlage[] = [...THW_VORLAGEN, ...FEUERWEHR_VORLAGEN, ...KATS_NDS_VORLAGEN];
 
 /** Alle Vorlagen, in stabiler Reihenfolge (Katalog, dann Kennung). */
 export function vorlagen(): readonly EinheitVorlage[] {

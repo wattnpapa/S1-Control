@@ -6,13 +6,8 @@
  * Fahrzeug. Mehr gibt die Quelle nicht her: **Sollstaerken stehen dort nicht**,
  * und sie werden hier nicht erfunden — dieselbe Regel wie beim STAN-Datensatz.
  *
- * Der dritte Katalog `KATS_STAN_NDS` (Excel `Staerke!C83:C121` mit Fahrzeugen
- * in Spalte J) fehlt: Seine 39 Zeilen sind in der Bestandsaufnahme nur als
- * Bereichsangabe genannt, nicht aufgelistet, und die Arbeitsmappe selbst liegt
- * nicht im Repository. Er ist als offener Punkt gefuehrt (M1.4) und wird aus
- * der Mappe nachgezogen, sobald sie vorliegt. Ein aus der Bereichsangabe
- * geratener Katalog waere genau der Platzhalter, der spaeter wie eine
- * Festlegung aussieht.
+ * Der dritte Katalog `KATS_STAN_NDS` (Excel `Staerke!C83:J121`) steht in
+ * `kats-nds.ts`, aus der Arbeitsmappe uebernommen.
  */
 
 import type { EinheitVorlage } from "./katalog.js";
