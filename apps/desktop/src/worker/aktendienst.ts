@@ -81,6 +81,8 @@ import {
   oldenburgAlsXlsx,
   druckAlsHtml,
   druckdaten,
+  einheitenlisteAlsHtml,
+  einheitenlistendaten,
   monitorAlsHtml,
   statusAlsHtml,
   statusdaten,
@@ -114,6 +116,14 @@ import {
  * nicht als Konstante, weil M0.5 sie am echten Geraet nachmisst und die Tests
  * sie herunterdrehen.
  */
+/**
+ * Die Ausgaben, die als HTML-Seite entstehen — und damit auch als PDF.
+ *
+ * Eine Liste an einer Stelle: Worker, Vermittlung und Auftragsweg lesen sie
+ * von hier, damit eine neue Seite nicht an drei Orten nachgetragen wird.
+ */
+export type Seitenausgabe = "druck" | "status" | "log" | "kosten" | "fueorg" | "einheitenliste";
+
 export interface Takte {
   readonly spiegelungMs: number;
   readonly taktAMs: number;
@@ -817,7 +827,7 @@ export class Aktendienst {
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
    */
   ausgabeHtml(
-    ausgabe: "druck" | "status" | "log" | "kosten" | "fueorg",
+    ausgabe: Seitenausgabe,
     organisation?: string,
   ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
@@ -838,6 +848,12 @@ export class Aktendienst {
     }
     if (ausgabe === "fueorg") {
       return { dateiname: `fueorg_${marke}`, html: harkeAlsHtml(this.#zustand, kopf) };
+    }
+    if (ausgabe === "einheitenliste") {
+      return {
+        dateiname: `einheitenliste_${marke}`,
+        html: einheitenlisteAlsHtml(einheitenlistendaten(this.#zustand), kopf),
+      };
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };

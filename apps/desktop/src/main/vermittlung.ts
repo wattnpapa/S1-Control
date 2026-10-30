@@ -54,6 +54,7 @@ import type {
   Umgebung,
 } from "../kontrakt/index.js";
 import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
+import type { Seitenausgabe } from "../worker/aktendienst.js";
 
 /**
  * Was die Vermittlung ueber Fenster wissen muss — und mehr nicht (M3.5).
@@ -71,6 +72,9 @@ export interface Fenstersteuerung {
   monitorOeffnen(bildschirmId?: string): void;
   monitorSchliessen(): void;
 }
+
+/** Die Seitenausgaben, deren Vorlage quer gedruckt wird. */
+const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste"]);
 
 /**
  * Was die Vermittlung zum Drucken braucht — und mehr nicht (M4.1).
@@ -301,10 +305,10 @@ export class Vermittlung {
       return { pfad, bytes: xlsx.length };
     }
 
-    // Was hier ankommt, ist eine der drei Seiten — die drei Byte-Ausgaben
-    // sind oben schon zurueck. Der Zuschnitt steht im Typ und nicht in einer
-    // Zusicherung: `ausgabeHtml` kennt genau diese drei.
-    const seite = ruf.ausgabe as "druck" | "status" | "log" | "kosten";
+    // Was hier ankommt, ist eine der Seiten — die drei Byte-Ausgaben sind
+    // oben schon zurueck. Der Zuschnitt steht im Typ und nicht in einer
+    // Zusicherung: `ausgabeHtml` kennt genau die Seitenausgaben.
+    const seite = ruf.ausgabe as Seitenausgabe;
     const gerendert = (await this.#o.hof.frage(ruf.akteId, {
       art: "ausgabeHtml",
       ausgabe: seite,
@@ -318,9 +322,9 @@ export class Vermittlung {
       if (drucker === undefined) {
         throw new Error("Auf diesem Arbeitsplatz ist kein Drucker eingerichtet.");
       }
-      // Der Druck liegt quer, die Status-Matrix hochkant — so wie die
-      // Vorlagen der Excel gedruckt werden (`excel-domaenenmodell.md` §4).
-      bytes = await drucker.alsPdf(gerendert.html, ruf.ausgabe === "druck");
+      // Druck und Einheitenliste liegen quer, die Status-Matrix hochkant — so
+      // wie die Vorlagen der Excel gedruckt werden (`excel-domaenenmodell.md` §4).
+      bytes = await drucker.alsPdf(gerendert.html, QUERFORMAT.has(seite));
       endung = "pdf";
     } else {
       bytes = new TextEncoder().encode(gerendert.html);

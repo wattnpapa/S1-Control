@@ -96,6 +96,20 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     expect(dateiname).toMatch(/^kosten_\d{4}-\d{2}-\d{2}_\d{4}$/);
   });
 
+  it("rendert die Einheitenliste mit Bereichen und Einheiten", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const { dateiname, html } = platz.dienst.ausgabeHtml("einheitenliste");
+
+    // Das Blatt „Stärke“ als Ausdruck: der Bereich als Kopfzeile, die eine
+    // Einheit aus `grundlage` darunter, ihre Stärke in der Zwischensumme.
+    expect(html).toContain("<title>Einheitenliste — Hochwasser Weser-Ems</title>");
+    expect(html).toContain("Deich Nord");
+    expect(html).toContain('<tr class="einheit">');
+    expect(html).toContain("size: A4 landscape");
+    expect(dateiname).toMatch(/^einheitenliste_\d{4}-\d{2}-\d{2}_\d{4}$/);
+  });
+
   it("rendert die Führungsharke aus Baum und Dienstposten (M8.3)", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

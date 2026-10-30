@@ -428,6 +428,9 @@ export const zRuf = z.discriminatedUnion("art", [
       "kosten",
       // Die Führungsharke (M8.3) — das Blatt „FüOrg“ der Excel.
       "fueorg",
+      // Die Einheitenliste — das Blatt „Stärke“ als Ausdruck, die
+      // Papier-Rückfallebene für Lagebesprechung und Rechnerausfall.
+      "einheitenliste",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
