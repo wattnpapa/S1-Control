@@ -255,6 +255,12 @@ außerhalb des NAS. Das Archiv enthält Ereignisse, Schnappschüsse, Anhänge un
 Ausgaben; die Präsenzdateien bleiben draußen, weil sie nur beschreiben, wer
 gerade da war (§6.4).
 
+Aus der Oberfläche: Blatt **Ausgaben**, „Einsatz abschließen“ → „Einsatzakte
+erzeugen“. Das ZIP liegt dann im Einsatzordner auf dem Share
+(`<einsatzId>_akte_<JJJJ-MM-TT_HHMM>.zip`, neben `einsatz.json` und nicht in
+`ausgaben\`, damit keine Akte die vorige mitnimmt). Es entsteht mit demselben
+Kern wie bei der Kommandozeile und lässt sich genauso prüfen:
+
 ```
 s1 akte exportiere <einsatzordner> --ziel E:\uebergabe\einsatz.zip
 s1 akte importiere E:\uebergabe\einsatz.zip --ziel D:\einsatz-kopie
