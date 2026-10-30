@@ -27,7 +27,13 @@ import { hlcAlsText, vergleicheHlc, type Hlc } from "../hlc.js";
 import type { EreignisId } from "../ereignis.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Zustand } from "../zustand.js";
-import { schichtTitel, statusTitel } from "../beschriftungen.js";
+import {
+  einsatzArtTitel,
+  schichtTitel,
+  schichtmodellTitel,
+  statusTitel,
+  zeitpunktText,
+} from "../beschriftungen.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -159,6 +165,7 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   beginn: "Beginn",
   schichtmodell: "Schichtmodell",
   fuestName: "Führungsstelle",
+  uebergeordneteFuestName: "übergeordnete Führungsstelle",
 };
 
 // ---------------------------------------------------------------------------
@@ -326,8 +333,8 @@ export function tagebuchsatz(
   // Form (a): ein Feld, und der Wert steht im Rahmen (§2.2).
   const feld = feldname(ereignis, eintrag);
   const beschriftung = feld === undefined ? undefined : (FELD_TEXT[feld] ?? feld);
-  const von = "vorher" in ereignis ? satzwertMitWort(ereignis.typ, ereignis.vorher) : "—";
-  const auf = satzwertMitWort(ereignis.typ, ereignis.neu);
+  const von = "vorher" in ereignis ? satzwertMitWort(ereignis.typ, ereignis.vorher, feld) : "—";
+  const auf = satzwertMitWort(ereignis.typ, ereignis.neu, feld);
   const feldteil = beschriftung === undefined || eintrag.feld?.art === "fest" ? "" : ` (${beschriftung})`;
   return `${betreff}${feldteil}: ${von} → ${auf}`;
 }
@@ -335,12 +342,21 @@ export function tagebuchsatz(
 /**
  * Status und Schicht stehen im Tagebuch als Wort der Excel, nicht als Schlüssel:
  * „Anmarsch → Einsatz“ liest sich, „ANMARSCH → IM_EINSATZ“ wird entziffert.
+ * Dasselbe gilt für die Stammdaten des Einsatzes: Art und Schichtmodell als
+ * Wort, der Beginn als „TT.MM.JJJJ HH:MM“ statt als ISO-Zeichenkette.
  */
-function satzwertMitWort(typ: string, wert: unknown): string {
-  if (typeof wert === "string") {
-    if (typ === "StatusGesetzt") return statusTitel(wert);
-    if (typ === "SchichtGesetzt") return schichtTitel(wert);
-  }
+function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): string {
+  if (typeof wert !== "string") return alsSatzwert(wert);
+  if (typ === "StatusGesetzt") return statusTitel(wert);
+  if (typ === "SchichtGesetzt") return schichtTitel(wert);
+  if (typ === "EinsatzStammdatenGeaendert") return stammdatenwortFuer(feld, wert);
+  return alsSatzwert(wert);
+}
+
+function stammdatenwortFuer(feld: string | undefined, wert: string): string {
+  if (feld === "art") return einsatzArtTitel(wert);
+  if (feld === "schichtmodell") return schichtmodellTitel(wert);
+  if (feld === "beginn") return zeitpunktText(wert);
   return alsSatzwert(wert);
 }
 
@@ -378,6 +394,9 @@ function bezug(
 const ZEITFELDER = ["zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm"] as const;
 
 function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
+  // Ein geänderter Einsatzbeginn ist der **Wert** der Zeile und nicht ihre
+  // fachliche Zeit: Die Änderung geschah jetzt, nicht zum neuen Beginn.
+  if (ereignis.typ === "EinsatzStammdatenGeaendert") return undefined;
   for (const feld of ZEITFELDER) {
     const wert = nutzlastfeld(ereignis, feld);
     if (typeof wert === "string") return wert;

@@ -110,6 +110,15 @@ export {
 } from "./kosten.js";
 
 export {
+  FREIE_STAMMDATENFELDER,
+  STAMMDATENFELDER,
+  einsatzstammdaten,
+  stammdatenwertFehler,
+  type Einsatzstammdaten,
+  type Stammdatenfeld,
+} from "./stammdaten.js";
+
+export {
   MELDE_ZUSTAENDE,
   eingangskorb,
   fassungsvergleich,

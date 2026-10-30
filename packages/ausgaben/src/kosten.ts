@@ -23,6 +23,7 @@
 
 import { projektion, type Zustand } from "@s1/domaene";
 
+import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /**
@@ -55,8 +56,6 @@ function geld(wert: number): string {
 export function kostenAlsHtml(zustand: Zustand, kopf: Ausgabekopf): string {
   const blatt = projektion.kostenblatt(zustand);
   const p = blatt.parameter;
-  const fuestName =
-    typeof zustand.einsatz?.fuestName.wert === "string" ? zustand.einsatz.fuestName.wert : "";
 
   const zeilen = blatt.zeilen.map((zeile) =>
     [
@@ -86,7 +85,7 @@ export function kostenAlsHtml(zustand: Zustand, kopf: Ausgabekopf): string {
     "</head>",
     "<body>",
     kopfAlsHtml(kopf),
-    `  <p class="fuest">${htmlMaskieren(fuestName)}</p>`,
+    fuestzeileAlsHtml(fuestangaben(zustand)),
     "  <h2>Kostenparameter</h2>",
     '  <table class="parameter">',
     "    <tbody>",

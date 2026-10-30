@@ -1286,6 +1286,24 @@
         font-size: 0.9rem;
         margin: 0.8rem 0 0.3rem;
       }
+      /* Die Stammdaten des Einsatzes: eine Zeile, der Knopf daneben. */
+      .stammdaten {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+        align-items: end;
+        margin: 0 0 0.5rem;
+        font-size: 0.85rem;
+      }
+      .stammdaten table {
+        border-collapse: collapse;
+      }
+      .stammdaten th,
+      .stammdaten td {
+        border: 1px solid var(--rahmen);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+      }
       .fuestsumme ul {
         display: flex;
         flex-wrap: wrap;

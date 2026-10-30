@@ -422,6 +422,9 @@ export const useLaden = create<Laden>((setze, hole) => {
           // beginnt; geändert werden sie danach über die Stammdaten. Die Maske
           // „Einsatz anlegen“ ist der falsche Ort für eine Entscheidung über
           // das Schichtmodell (Startwert S6).
+          // Der Anzeigename ist nur der Platzhalter, den die Anlage als
+          // Pflichtangabe verlangt (§5.2); den richtigen FüSt-Namen trägt
+          // die Stammdatenmaske im Blatt Führungsstelle ein.
           einsatzArt: "EINSATZ",
           fuestName: hole().einstellungen.anzeigename,
           beginn: new Date().toISOString(),

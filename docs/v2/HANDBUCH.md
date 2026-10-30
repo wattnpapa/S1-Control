@@ -38,6 +38,11 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Statuszeile der anderen; „Zugtrupp“ ist nützlicher als „PC-3“.
 2. **Einsatz anlegen** — einmal, von einem Rechner. Name und Datum ergeben den
    Ordner; danach ist der Einsatz unveränderlich verankert (§5.6).
+   Gleich danach im Blatt **Führungsstelle** über „Stammdaten bearbeiten“ den
+   Namen der Führungsstelle (FüSt), die übergeordnete Führungsstelle, Ort und
+   Beginn eintragen — wie im Blatt „Stammdaten“ der Excel. Bis dahin steht als
+   FüSt-Name der Anzeigename des anlegenden Arbeitsplatzes auf den Ausdrucken.
+   Jede Änderung ist ein Ereignis und steht im Einsatztagebuch.
 3. **Alle anderen öffnen ihn** aus der Liste. Ab jetzt sehen sich alle in der
    Statuszeile.
 4. **Abschnitte anlegen.** Die Führungsorganisation zuerst, damit Einheiten
@@ -159,9 +164,9 @@ Was angefordert, zugesagt, eingetroffen oder storniert ist.
 
 ### Führungsstelle
 
-Dienstposten der eigenen Führungsstelle und der Schichtplan dazu.
+Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schichtplan dazu.
 
-**Zuerst:** Einen Dienstposten anlegen; besetzt wird er je Tag und Schicht.
+**Zuerst:** Über „Stammdaten bearbeiten“ den Namen der Führungsstelle und die übergeordnete Führungsstelle eintragen — sie stehen auf jedem Ausdruck.
 
 **Gut zu wissen:** Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt am Paar aus Posten und Datum (§5.7).
 

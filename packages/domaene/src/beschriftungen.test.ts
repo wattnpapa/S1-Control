@@ -4,8 +4,10 @@ import { ABSCHNITTSTYPEN, EINHEIT_STATUS, ORGANISATIONEN, SCHICHTEN, TAKTISCHE_E
 import {
   abschnittstypTitel,
   ebeneTitel,
+  einsatzArtTitel,
   organisationTitel,
   schichtTitel,
+  schichtmodellTitel,
   spaltenwertTitel,
   statusTitel,
   statusTon,
@@ -37,5 +39,14 @@ describe("Die Beschriftungen", () => {
     expect(spaltenwertTitel("ebene", "ZUGTRUPP")).toBe("Zugtrupp");
     expect(spaltenwertTitel("organisation", "FEUERWEHR")).toBe("Feuerwehr");
     expect(spaltenwertTitel("einheitSchluessel", "EEB-7")).toBe("EEB-7");
+  });
+});
+
+describe("Die Beschriftungen der Stammdaten", () => {
+  it("geben Einsatzart und Schichtmodell ein Wort und lassen Unbekanntes stehen", () => {
+    expect(einsatzArtTitel("UEBUNG")).toBe("Übung");
+    expect(einsatzArtTitel("VERANSTALTUNG")).toBe("Veranstaltung");
+    expect(schichtmodellTitel("DREI_SCHICHT")).toBe("Drei Schichten");
+    expect(schichtmodellTitel("VIER_SCHICHT")).toBe("VIER_SCHICHT");
   });
 });
