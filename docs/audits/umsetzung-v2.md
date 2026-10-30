@@ -70,7 +70,7 @@ Oberfläche noch nicht hatte.
 - [x] Einsatz beenden, wiedereröffnen, archivieren und Einsatzakte aus der Oberfläche
 - [x] Ausgaben öffnen, im Ordner zeigen, drucken (Electron; in der Web-Schale ausgeblendet)
 - [x] Herkunft als Wort statt Schlüssel („THW OV Oldenburg“ statt „ORTSVERBAND THW OV Oldenburg“)
-- [ ] Zeile kopieren (in Arbeit)
+- [x] Zeile kopieren (Knopf und Strg+K wie in der Excel; Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten)
 - [ ] Rückgängig über Fenster und Neuladen hinweg; Begriffe Rückgängig / Rücknahme / Berichtigung vereinheitlichen
 - [ ] Masken und Zellen sperren sich nach „Einsatz beendet“ nicht selbst (der Dienst weist ab, das Kopfband zeigt den Zustand)
 - [ ] `archiv.marker` wird beim Archivieren nicht geschrieben; die Einsatzliste zeigt archivierte Einsätze nicht als solche
