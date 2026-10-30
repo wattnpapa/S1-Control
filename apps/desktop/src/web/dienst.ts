@@ -15,10 +15,12 @@
  *  * `GET  /mitteilungen`  — der Strom der Mitteilungen (wie `webContents.send`).
  *  * `GET  /...`           — der Renderer aus `out/renderer`.
  *
- * **Was der Dienst nicht ist: eine Anmeldung.** Er laeuft im Netz der
- * Fuehrungsstelle, und wer ihn erreicht, arbeitet mit — so wie auf dem Share
- * jeder schreibt, der das Verzeichnis sieht (Entscheidung 9: keine Rollen und
- * Rechte). Was er trotzdem tut: Er nimmt Rufe nur aus derselben Herkunft an
+ * **Was der Dienst selbst nicht ist: eine Anmeldung.** Im Netz der
+ * Fuehrungsstelle arbeitet mit, wer ihn erreicht — so wie auf dem Share jeder
+ * schreibt, der das Verzeichnis sieht (Entscheidung 9: keine Rollen und
+ * Rechte). Fuer das Internet steht eine {@link Zugangskontrolle} davor
+ * (`anmeldung.ts`, ADR-006); sie entscheidet vor jedem Weg ausser
+ * `/gesundheit`, ob die Anfrage weiter darf. Was der Dienst immer tut: Er nimmt Rufe nur aus derselben Herkunft an
  * (`Origin`, `Sec-Fetch-Site`), damit eine fremde Seite im selben Browser
  * nicht ueber das Cookie mitarbeitet, und er liefert keine Datei ausserhalb
  * des Renderer-Ordners.
@@ -62,6 +64,22 @@ export interface WebdienstOptionen {
   readonly rendererOrdner: string;
   readonly protokolliere: (stufe: "info" | "warnung" | "fehler", text: string) => void;
   readonly herzschlagMs?: number;
+  /**
+   * Fehlt sie, ist der Dienst offen (ADR-005); ist sie da, laeuft jede
+   * Anfrage ausser `/gesundheit` zuerst durch sie (ADR-006).
+   */
+  readonly zugang?: Zugangskontrolle;
+}
+
+/** Was vor dem Dienst steht, wenn er eine Anmeldung verlangt. */
+export interface Zugangskontrolle {
+  /**
+   * Prueft eine Anfrage, bevor der Dienst sie sieht.
+   *
+   * @returns `true`, wenn die Antwort schon geschrieben ist (Anmeldeseite,
+   * Weiterleitung, 401) — dann endet die Anfrage hier.
+   */
+  vorpruefe(anfrage: http.IncomingMessage, antwort: http.ServerResponse, pfad: string): Promise<boolean>;
 }
 
 export class Webdienst {
@@ -110,6 +128,7 @@ export class Webdienst {
       antwort.end("ok");
       return;
     }
+    if (this.#o.zugang !== undefined && (await this.#o.zugang.vorpruefe(anfrage, antwort, url.pathname))) return;
     if (url.pathname === "/ruf") {
       if (methode !== "POST") return nichtErlaubt(antwort, "POST");
       return this.#ruf(anfrage, antwort);
@@ -145,9 +164,14 @@ export class Webdienst {
     // Geprueft wird **hier**, an der Grenze zum Browser — wie im Main. Ein
     // unbekannter Ruf ist kein Absturz, sondern eine Antwort.
     const geprueft = zRuf.safeParse(roh);
-    const ergebnis = geprueft.success
+    let ergebnis = geprueft.success
       ? await this.#o.arbeitsplaetze.beantworte(schluessel, geprueft.data)
       : { ok: false as const, meldung: "Die Anfrage entspricht nicht dem Kontrakt." };
+    // Ob „Abmelden" im Kopfband steht, weiss nur der Dienst: Der Arbeitsplatz
+    // dahinter kennt die Anmeldung nicht und soll sie nicht kennen.
+    if (this.#o.zugang !== undefined && geprueft.data?.art === "umgebung" && ergebnis.ok) {
+      ergebnis = { ok: true, wert: { ...(ergebnis.wert as object), anmeldung: true } };
+    }
     if (!geprueft.success) this.#o.protokolliere("warnung", `Ungültiger Ruf: ${geprueft.error.message}`);
     antwort.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     antwort.end(JSON.stringify(ergebnis));
@@ -272,7 +296,7 @@ export function gleicheHerkunft(anfrage: http.IncomingMessage): boolean {
   }
 }
 
-function liesKoerper(anfrage: http.IncomingMessage, maxBytes: number): Promise<string> {
+export function liesKoerper(anfrage: http.IncomingMessage, maxBytes: number): Promise<string> {
   return new Promise((aufloesen, ablehnen) => {
     const teile: Buffer[] = [];
     let groesse = 0;

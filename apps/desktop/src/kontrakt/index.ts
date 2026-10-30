@@ -115,6 +115,13 @@ export const zUmgebung = z.object({
    * blendet die Knöpfe dann aus, statt einen Weg anzubieten, der scheitert.
    */
   dateienZeigen: z.boolean().optional(),
+  /**
+   * Ob diese Sitzung hinter der Anmeldung der Web-Schale läuft (ADR-006).
+   * Dann zeigt das Kopfband „Abmelden". Es ist ein gemeinsamer Zugang ohne
+   * Namen je Person; der Akteur bleibt der Anzeigename. Fehlt das Feld, gibt
+   * es keine Anmeldung — Desktop und Web-Schale im Netz der Führungsstelle.
+   */
+  anmeldung: z.boolean().optional(),
 });
 export type Umgebung = z.infer<typeof zUmgebung>;
 
