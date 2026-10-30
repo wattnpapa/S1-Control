@@ -18,7 +18,7 @@
  * "Angefordert")` in zwanzig Auswertungen (ZDM §3.3, Entscheidung 2).
  */
 
-import { zeitpunktText } from "./beschriftungen.js";
+import { hierarchieArtTitel, zeitpunktText } from "./beschriftungen.js";
 import { STAERKE_NULL, staerkePlus, type Staerke, type Zeitpunkt } from "./werte.js";
 import type {
   AnforderungZustand,
@@ -632,7 +632,14 @@ export function anzeigename(einheit: EinheitZustand): string {
   return etikett === undefined ? bezeichnung : `${bezeichnung} (${etikett})`;
 }
 
-/** **K29** — die Herkunftsspalte aus der obersten Hierarchieebene. */
+/**
+ * **K29** — die Herkunftsspalte aus der obersten Hierarchieebene.
+ *
+ * Die Art steht als Wort davor („Ortsverband Oldenburg“), nicht als Schlüssel
+ * (`ORTSVERBAND`). Nennt der Name die Art schon selbst — „THW OV Oldenburg“,
+ * wie die Masken sie schreiben —, entfällt das Wort: „Ortsverband THW OV
+ * Oldenburg“ sagt es zweimal.
+ */
 export function herkunftText(einheit: EinheitZustand): string {
   const hierarchie = einheit.hierarchie?.wert as
     | readonly { art?: string; name?: string; kurz?: string }[]
@@ -641,10 +648,19 @@ export function herkunftText(einheit: EinheitZustand): string {
   const oberste = hierarchie?.[0];
   if (oberste === undefined) return "";
   const kurz = alsText(oberste.kurz);
-  return [oberste.art, oberste.name, kurz === undefined ? undefined : `(${kurz})`]
-    .map(alsText)
+  const name = alsText(oberste.name);
+  const art = alsText(oberste.art);
+  const artWort = art === undefined ? undefined : hierarchieArtTitel(art);
+  return [nenntArtNicht(name, artWort) ? artWort : undefined, name, kurz === undefined ? undefined : `(${kurz})`]
     .filter((s): s is string => s !== undefined)
     .join(" ");
+}
+
+function nenntArtNicht(name: string | undefined, artWort: string | undefined): boolean {
+  if (name === undefined || artWort === undefined) return true;
+  const klein = name.toLowerCase();
+  if (klein.includes(artWort.toLowerCase())) return false;
+  return !(artWort === "Ortsverband" && /(^|\s)ov(\s|$)/i.test(name));
 }
 
 /**

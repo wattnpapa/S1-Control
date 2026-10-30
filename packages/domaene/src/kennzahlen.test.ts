@@ -613,3 +613,25 @@ describe("K28 bis K30 — die Textspalten", () => {
     expect(K.bemerkungText(echt, echt.einheiten["U1"] as never)).toBe("Pumpe defekt");
   });
 });
+
+describe("K29 — die Herkunft als Wort", () => {
+  const mit = (hierarchie: readonly { art: string; name: string; kurz?: string }[]) =>
+    ({ hierarchie: { wert: hierarchie } }) as unknown as Parameters<typeof K.herkunftText>[0];
+
+  it("übersetzt den Schlüssel der Art in das Wort der Excel", () => {
+    expect(K.herkunftText(mit([{ art: "ORTSVERBAND", name: "Oldenburg", kurz: "OL" }]))).toBe(
+      "Ortsverband Oldenburg (OL)",
+    );
+  });
+
+  it("nennt die Art nicht doppelt, wenn der Name sie schon trägt", () => {
+    expect(K.herkunftText(mit([{ art: "ORTSVERBAND", name: "THW OV Oldenburg" }]))).toBe("THW OV Oldenburg");
+    expect(K.herkunftText(mit([{ art: "ORTSVERBAND", name: "Ortsverband Nordenham" }]))).toBe(
+      "Ortsverband Nordenham",
+    );
+  });
+
+  it("lässt eine unbekannte Art stehen, wie sie ist", () => {
+    expect(K.herkunftText(mit([{ art: "Zweckverband", name: "Weser" }]))).toBe("Zweckverband Weser");
+  });
+});

@@ -414,6 +414,7 @@ export { ANSICHTEN, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } fr
 // Die Beschriftungen der Aufzaehlungswerte — die Woerter der Excel statt der Schluessel.
 export {
   abschnittstypTitel,
+  hierarchieArtTitel,
   ebeneTitel,
   einsatzArtTitel,
   organisationTitel,

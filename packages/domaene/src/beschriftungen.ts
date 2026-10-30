@@ -126,6 +126,29 @@ const SCHICHTMODELL: Readonly<Record<string, string>> = {
 };
 
 /**
+ * Die Art einer Hierarchieebene des Erfassungsbogens. Der Bogen schreibt
+ * Schlüssel wie `ORTSVERBAND`; die Herkunftsspalte der Excel liest sich als
+ * „Ortsverband“. Unbekannte Arten bleiben, wie sie sind.
+ */
+const HIERARCHIE_ART: Readonly<Record<string, string>> = {
+  ORTSVERBAND: "Ortsverband",
+  REGIONALSTELLE: "Regionalstelle",
+  LANDESVERBAND: "Landesverband",
+  LEITUNG: "Leitung",
+  KREISVERBAND: "Kreisverband",
+  ORTSVEREIN: "Ortsverein",
+  LANDKREIS: "Landkreis",
+  STADT: "Stadt",
+  GEMEINDE: "Gemeinde",
+  FEUERWEHR: "Feuerwehr",
+  DIENSTSTELLE: "Dienststelle",
+};
+
+export function hierarchieArtTitel(wert: string): string {
+  return titel(HIERARCHIE_ART, wert);
+}
+
+/**
  * Ein Zeitpunkt (ISO 8601) als „TT.MM.JJJJ HH:MM“ in der Ortszeit des Rechners —
  * die Schreibweise der Excel-Spalten „Dat. / Zeit“. Was kein Zeitpunkt ist,
  * bleibt, wie es ist; leer bleibt leer.
