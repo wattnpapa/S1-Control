@@ -24,7 +24,7 @@
  * Konflikthinweis erst möglich.
  */
 
-import type { EinheitVorlage, Spalte, Staerke, Tabellenzeile } from "@s1/domaene";
+import type { EinheitVorlage, Spalte, Staerke, Stammdatenfeld, Tabellenzeile } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
 
@@ -356,6 +356,24 @@ export function kostenParameter(
   neu: number,
 ): Entwurf {
   return { typ: "KostenParameterGeaendert", nutzlast: { einsatzId, feld }, vorher, neu };
+}
+
+/**
+ * Eine Angabe des Blattes „Stammdaten“ (§5.2): ein Feld je Ereignis.
+ *
+ * Ein Feld und nicht die ganze Maske in einem Ereignis, weil der Fold je
+ * Feldpfad entscheidet (§2.3): Ändern zwei Arbeitsplätze gleichzeitig den
+ * Ort und den FüSt-Namen, gelten beide — ein Sammelereignis überschriebe
+ * das eine mit dem gesehenen Altwert des anderen. Ein geleertes freies Feld
+ * trägt `null` (§3.2).
+ */
+export function stammdatenAenderung(
+  einsatzId: string,
+  feld: Stammdatenfeld,
+  vorher: string | null,
+  neu: string | null,
+): Entwurf {
+  return { typ: "EinsatzStammdatenGeaendert", nutzlast: { einsatzId, feld }, vorher, neu };
 }
 
 // ---------------------------------------------------------------------------

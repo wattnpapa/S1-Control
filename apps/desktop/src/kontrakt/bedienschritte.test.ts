@@ -18,6 +18,7 @@ import {
   eingabeAlsWert,
   entfernung,
   inlineEntwurf,
+  stammdatenAenderung,
   verschiebung,
   zusammenfuehrung,
   UNGUELTIGE_EINGABE,
@@ -272,5 +273,18 @@ describe("entfernung", () => {
     const entwurf = entfernung("U1", "Doppelt gemeldet");
     expect(entwurf.grund).toBe("Doppelt gemeldet");
     expect(entwurf.neu).toBe(true);
+  });
+});
+
+describe("stammdatenAenderung", () => {
+  it("baut ein EinsatzStammdatenGeaendert, das der Katalog annimmt", () => {
+    const entwurf = stammdatenAenderung("E1", "uebergeordneteFuestName", null, "TEL Landkreis");
+    expect(entwurf).toEqual({
+      typ: "EinsatzStammdatenGeaendert",
+      nutzlast: { einsatzId: "E1", feld: "uebergeordneteFuestName" },
+      vorher: null,
+      neu: "TEL Landkreis",
+    });
+    expect(projektion.stammdatenwertFehler("uebergeordneteFuestName", entwurf.neu)).toBeUndefined();
   });
 });

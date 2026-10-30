@@ -1325,10 +1325,12 @@ export class Aktendienst {
       staerkeJeStatus[status] = zeile.gesamt;
     }
     const oberster = this.#stapel.oberster();
+    const stammdaten = projektion.einsatzstammdaten(zustand);
     return {
       einsatzId: this.#o.einsatzId,
       einsatzName: alsText(zustand.einsatz?.name.wert),
       einsatzArt: alsText(zustand.einsatz?.art.wert),
+      ...(stammdaten === undefined ? {} : { stammdaten }),
       standHlc: this.#hoechsteHlc === undefined ? "" : hlcAlsText(this.#hoechsteHlc),
       standWanduhr: this.#letzteWanduhr,
       letzterShareKontakt: this.#letzterShareKontakt,
@@ -1438,6 +1440,10 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
     if (neu === null || typeof neu !== "object" || !zahl(neu.fuehrer) || !zahl(neu.unterfuehrer) || !zahl(neu.mannschaft)) {
       return "Die Stärke muss aus drei ganzen Zahlen (Fü/UFü/He) bestehen.";
     }
+  }
+  if (entwurf.typ === "EinsatzStammdatenGeaendert") {
+    const feld = (entwurf.nutzlast as { feld?: unknown } | null | undefined)?.feld;
+    return projektion.stammdatenwertFehler(typeof feld === "string" ? feld : "", entwurf.neu);
   }
   if (entwurf.typ === "ZeitpunktGesetzt" && entwurf.neu !== null && entwurf.neu !== undefined) {
     if (typeof entwurf.neu !== "string" || Number.isNaN(new Date(entwurf.neu).getTime())) {

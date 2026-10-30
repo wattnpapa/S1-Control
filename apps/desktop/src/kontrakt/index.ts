@@ -177,10 +177,31 @@ export type Peer = z.infer<typeof zPeer>;
  * kein Lagebild im fachlichen Sinn; die Tabellen kommen mit M3, und sie
  * bekommen dann ihren eigenen Ruf statt eines aufgeblaehten Dauerstroms.
  */
+/**
+ * Die Stammdaten des Einsatzes (Blatt „Stammdaten“ der Excel).
+ *
+ * Sie reisen im Lagebild mit, weil Kopfband und Maske sie dauernd zeigen und
+ * sie sich fast nie ändern: Der Delta-Weg schickt sie einmal und danach nur
+ * bei einer Änderung. Ein eigener Ruf hieße, für sieben kurze Texte eine
+ * zweite Ansicht mit Ladezustand zu führen.
+ */
+export const zEinsatzstammdaten = z.object({
+  name: z.string(),
+  art: z.string(),
+  fuestName: z.string(),
+  uebergeordneteFuestName: z.string().optional(),
+  ort: z.string().optional(),
+  beginn: z.string(),
+  schichtmodell: z.string(),
+});
+export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
+
 export const zLagebild = z.object({
   einsatzId: z.string(),
   einsatzName: z.string(),
   einsatzArt: z.string(),
+  /** Fehlt, solange `EinsatzAngelegt` noch nicht gefaltet ist. */
+  stammdaten: zEinsatzstammdaten.optional(),
   /** Hoechste gesehene HLC in Textform fester Stellenzahl (§3.2). */
   standHlc: z.string(),
   /** Wanduhr des zuletzt eingetroffenen Ereignisses — Anzeige, nie Ordnung (§2.6). */
