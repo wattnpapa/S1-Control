@@ -23,7 +23,9 @@ export const ANMELDESEITE_KOEPFE = {
   "cache-control": "no-store",
   "content-security-policy": "default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'",
   "x-frame-options": "DENY",
-  "referrer-policy": "no-referrer",
+  // Nicht `no-referrer`: Damit schickte der Browser beim Formular
+  // `Origin: null`, und die Herkunftspruefung wiese die Anmeldung ab.
+  "referrer-policy": "same-origin",
 } as const;
 
 function maskiere(text: string): string {

@@ -17,7 +17,10 @@
 	header {
 		Strict-Transport-Security "max-age=31536000"
 		X-Content-Type-Options "nosniff"
-		Referrer-Policy "no-referrer"
+		# `same-origin` und nicht `no-referrer`: Sonst schickt der Browser bei
+		# Formularen (Anmelden, Abmelden) `Origin: null`, und die
+		# Herkunftspruefung der Web-Schale weist sie ab.
+		Referrer-Policy "same-origin"
 		-Server
 	}
 }

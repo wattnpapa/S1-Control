@@ -155,6 +155,14 @@ describe("ohne Sitzung", () => {
       expect(html).toContain(text);
     }
     expect(html).not.toContain("<script");
+    // Regressionsschutz: Mit `no-referrer` schickt Chromium beim Formular
+    // `Origin: null`, und die Herkunftspruefung wiese jede Anmeldung ab.
+    expect(antwort.headers.get("referrer-policy")).not.toBe("no-referrer");
+  });
+
+  it("weist `Origin: null` ab, wie es ein Browser bei falscher Referrer-Policy schickt", async () => {
+    const w = await baue(ordner());
+    expect((await melde(w, NAME, PASSWORT, { origin: "null" })).status).toBe(403);
   });
 
   it("berechnet den relativen Weg zur Anmeldung", () => {
