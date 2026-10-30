@@ -429,12 +429,21 @@ export function abloesungZugesagt(
   };
 }
 
-export function anforderungErledigt(anforderungId: string, erledigtAm: string): Entwurf {
+/**
+ * „Eingetroffen“ (§5.6.2). Mit `abloesendeEinheitId` trägt der Wert die
+ * Einheit, die aus der Anforderung angelegt wurde (`zErledigung`) — die
+ * Spalte „Ablösung durch“ der Einheitentabelle liest sie dort.
+ */
+export function anforderungErledigt(
+  anforderungId: string,
+  erledigtAm: string,
+  abloesendeEinheitId?: string,
+): Entwurf {
   return {
     typ: "AnforderungErledigt",
     nutzlast: { anforderungId },
     vorher: null,
-    neu: { erledigtAm },
+    neu: abloesendeEinheitId === undefined ? { erledigtAm } : { erledigtAm, abloesendeEinheitId },
   };
 }
 

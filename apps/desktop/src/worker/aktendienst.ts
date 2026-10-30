@@ -108,6 +108,7 @@ import {
   type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
+import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
 /**
@@ -1469,5 +1470,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return pruefeEinheitsteil(entwurf);
+  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf);
 }

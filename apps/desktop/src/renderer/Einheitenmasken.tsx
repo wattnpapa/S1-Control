@@ -21,6 +21,7 @@ import { useEffect, useState } from "react";
 
 import type { Tabellenzeile } from "@s1/domaene";
 
+import { AbloesungAnfordern } from "./AbloesungAnfordern.js";
 import { EinheitAnlegen } from "./EinheitAnlegen.js";
 import { Maske } from "./Maske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
@@ -68,6 +69,11 @@ export function Einheitenmasken({
   }
 
   if (maske === undefined) return null;
+
+  // Die Ablösung hat ihre eigene Maske (M5.3); hier steht nur die Weiche.
+  if (maske === "abloesung" && erste !== undefined) {
+    return <AbloesungAnfordern zeile={erste} aufSchliessen={aufSchliessen} />;
+  }
 
   if (maske === "anlegen") return <EinheitAnlegen abschnittId={abschnittId} aufSchliessen={aufSchliessen} />;
 

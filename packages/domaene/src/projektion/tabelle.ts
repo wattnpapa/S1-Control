@@ -33,6 +33,7 @@ import { spaltenwertTitel, zeitpunktText } from "../beschriftungen.js";
 import { anzeigename, auftragsText, erreichbarkeit, gesamtstaerke, geraeteText, herkunftText, logistik } from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
+import { abloesungDerEinheit, type Marke } from "./abloesung.js";
 import { gliedereEinheiten, type Tabellengliederung } from "./gliederung.js";
 
 // ---------------------------------------------------------------------------
@@ -144,6 +145,20 @@ export const SPALTEN: readonly Spalte[] = [
       feldpfad: "erreichbarkeitOverride" }),
   s({ schluessel: "verfuegbarBis", kopf: "Verfügbar bis", excel: "M", gruppe: "RESSOURCENPLANUNG",
       art: "zeitpunkt", schreibt: { art: "zeitpunkt", feld: "verfuegbarBis" }, feldpfad: "verfuegbarBis" }),
+  // N..S — die Ablösung. Berechnet aus der Anforderung, die diese Einheit
+  // ablösen soll (K12, `abloesung.ts`); geschrieben wird im Blatt Anforderungen.
+  s({ schluessel: "abloesungAngefordert", kopf: "Ablösung angefordert", excel: "N",
+      gruppe: "RESSOURCENPLANUNG", art: "berechnet" }),
+  s({ schluessel: "anforderungsKennung", kopf: "Anforderungs-ID", excel: "O",
+      gruppe: "RESSOURCENPLANUNG", art: "berechnet" }),
+  s({ schluessel: "zugesagtFuer", kopf: "Zugesagt für", excel: "P", gruppe: "RESSOURCENPLANUNG",
+      art: "berechnet" }),
+  s({ schluessel: "zugesagtVon", kopf: "Zugesagt von", excel: "Q", gruppe: "RESSOURCENPLANUNG",
+      art: "berechnet" }),
+  s({ schluessel: "abloesungDurch", kopf: "Ablösung durch", excel: "R", gruppe: "RESSOURCENPLANUNG",
+      art: "berechnet" }),
+  s({ schluessel: "vorgesehenerAuftrag", kopf: "Vorgesehener Auftrag", excel: "S",
+      gruppe: "RESSOURCENPLANUNG", art: "berechnet" }),
   s({ schluessel: "eingetroffenAm", kopf: "Eingetroffen", excel: "T", gruppe: "RESSOURCENPLANUNG",
       art: "zeitpunkt", schreibt: { art: "zeitpunkt", feld: "eingetroffenAm" }, feldpfad: "eingetroffenAm" }),
   s({ schluessel: "einsatzendeAm", kopf: "Einsatzende", excel: "U", gruppe: "RESSOURCENPLANUNG",
@@ -226,6 +241,8 @@ export interface Tabellenzeile {
   /** Hinweise, deren Feldpfad auf diese Einheit zeigt (§3.8a). */
   readonly hinweise: readonly Konflikthinweis[];
   readonly zellen: { readonly [schluessel: string]: Zelle };
+  /** K12 als Marke der Zeile — nur, wenn eine Ablösung angefordert ist. */
+  readonly abloesung?: Marke;
 }
 
 function beobachtung(einheit: EinheitZustand, feld: string): Beobachtung<unknown> | undefined {
@@ -268,8 +285,10 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
   );
   const umstritten = new Set(hinweise.map((hinweis) => hinweis.feldpfad));
   const zahlen = logistik(zustand, einheit);
+  const abloesung = abloesungDerEinheit(zustand, einheit.id);
 
   const berechnet: Readonly<Record<string, string>> = {
+    ...abloesung?.zellen,
     herkunft: herkunftText(einheit),
     geraete: geraeteText(zustand, einheit.id),
     auftraege: auftragsText(zustand, einheit.id),
@@ -342,6 +361,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     aufgegangen: einheit.wirksamAufgegangen,
     hinweise,
     zellen,
+    ...(abloesung === undefined ? {} : { abloesung: abloesung.marke }),
   };
 }
 

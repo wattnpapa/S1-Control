@@ -73,7 +73,25 @@ export {
   type Anforderungsoptionen,
   type Anforderungszeile,
   type Anforderungszustand,
+  abloesendeEinheitId,
 } from "./anforderung.js";
+
+export {
+  anmarschabschnitt,
+  einheitenwahl,
+  einheitsvorschlag,
+  type Einheitenwahl,
+  type Einheitsvorschlag,
+} from "./anforderung-einheit.js";
+
+export {
+  ABLOESUNGSSPALTEN,
+  abloesungDerEinheit,
+  verfuegbarkeitsmarke,
+  type Abloesungsstand,
+  type Marke,
+  type Markenton,
+} from "./abloesung.js";
 
 export {
   TEILBEREICHE,

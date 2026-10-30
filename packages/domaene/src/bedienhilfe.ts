@@ -71,7 +71,9 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     ueberraschung:
       "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). " +
       "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben. " +
-      "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen.",
+      "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. " +
+      "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. " +
+      "Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18).",
     kuerzel: ["anlegen", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
   },
   {
@@ -98,7 +100,8 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Was angefordert, zugesagt, eingetroffen oder storniert ist.",
     zuerst: "Mit Strg+N eine Anforderung anlegen.",
     ueberraschung:
-      "Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2).",
+      "Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). " +
+      "„Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an — vorbelegt, aber zu prüfen — und trägt sie als „Ablösung durch“ an der abgelösten Einheit ein.",
     kuerzel: ["anlegen", "suchen", "jetzt"],
   },
   {
