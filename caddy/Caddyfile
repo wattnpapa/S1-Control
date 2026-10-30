@@ -1,0 +1,26 @@
+# S1-Control v2 — Reverse-Proxy vor der Web-Schale im Internet (ADR-006).
+#
+# Caddy holt das TLS-Zertifikat fuer S1_DOMAIN selbst (Let's Encrypt) und
+# leitet http auf https um. Voraussetzung: Der DNS-Eintrag zeigt auf diesen
+# Server, und die Ports 80 und 443 sind von aussen erreichbar.
+#
+# Die Web-Schale vertraut `X-Forwarded-For` und `X-Forwarded-Proto` nur,
+# weil sie mit S1_WEB_HINTER_PROXY=1 laeuft und nur hier erreichbar ist.
+# Caddy ersetzt diese Koepfe von aussen (ohne `trusted_proxies` nimmt er die
+# des Clients nicht an); ein Client kann sich also keinen Absender ausdenken.
+
+{$S1_DOMAIN} {
+	# Kein `encode`: Der Strom `/mitteilungen` sind Server-Sent Events, und
+	# eine Kompression puffert sie. `reverse_proxy` leitet SSE ungepuffert.
+	reverse_proxy s1-web:8080
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		# `same-origin` und nicht `no-referrer`: Sonst schickt der Browser bei
+		# Formularen (Anmelden, Abmelden) `Origin: null`, und die
+		# Herkunftspruefung der Web-Schale weist sie ab.
+		Referrer-Policy "same-origin"
+		-Server
+	}
+}

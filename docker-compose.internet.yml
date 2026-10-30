@@ -1,0 +1,65 @@
+# S1-Control v2 — Web-Schale im Internet, mit Anmeldung und TLS (ADR-006).
+#
+#   cp .env.beispiel .env      # S1_DOMAIN, S1_WEB_ANMELDENAME, S1_WEB_PASSWORT ausfuellen
+#   docker compose -f docker-compose.internet.yml up -d --build
+#   https://<S1_DOMAIN>
+#
+# Unterschiede zur docker-compose.yml (Netz der Fuehrungsstelle):
+#
+#  * Der Dienst laeuft mit Anmeldung (S1_WEB_ZUGANG=anmeldung) und lauscht
+#    nur im Compose-Netz. Nach aussen offen sind allein 80/443 von Caddy, der
+#    das Zertifikat holt und TLS abschliesst.
+#  * Der Share ist ein benanntes Volume auf diesem Server. Es gibt kein NAS:
+#    Das Verzeichnis selbst ist der Share, und Desktop-Arbeitsplaetze nehmen
+#    an diesem Betrieb nicht teil.
+#
+# Neben docker-compose.yml und nicht in einem Unterordner, damit derselbe
+# Bau-Kontext (`.`) und dieselbe `.env` gelten.
+
+services:
+  s1-web:
+    build:
+      context: .
+      args:
+        S1_APP_VERSION: "0.0.0"
+    image: s1-control-web
+    container_name: s1-control-web-internet
+    restart: unless-stopped
+    # Keine `ports:` — erreichbar nur ueber Caddy.
+    environment:
+      S1_WEB_ZUGANG: anmeldung
+      S1_WEB_HINTER_PROXY: "1"
+      S1_WEB_ANMELDENAME: ${S1_WEB_ANMELDENAME:?S1_WEB_ANMELDENAME fehlt in .env}
+      S1_WEB_PASSWORT: ${S1_WEB_PASSWORT:?S1_WEB_PASSWORT fehlt in .env}
+      # Lebensdauer einer Sitzung ab letzter Nutzung (Stunden).
+      S1_WEB_SITZUNG_H: ${S1_WEB_SITZUNG_H:-12}
+      S1_WEB_GNADENFRIST_S: "120"
+    volumes:
+      - s1-daten:/daten
+      - s1-share:/share
+
+  caddy:
+    image: caddy:2.8
+    container_name: s1-control-caddy
+    restart: unless-stopped
+    depends_on:
+      - s1-web
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      S1_DOMAIN: ${S1_DOMAIN:?S1_DOMAIN fehlt in .env}
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-daten:/data
+      - caddy-konfig:/config
+
+volumes:
+  # Profile, Spiegel, Protokoll und Sitzungen der Web-Arbeitsplaetze.
+  s1-daten:
+  # Die Einsaetze — hier liegt die Wahrheit. Sichern wie einen Share.
+  s1-share:
+  # Zertifikate von Caddy; geht es verloren, holt Caddy neue.
+  caddy-daten:
+  caddy-konfig:

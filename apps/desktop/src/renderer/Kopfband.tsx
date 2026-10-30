@@ -38,6 +38,8 @@ export interface KopfbandEigenschaften {
   waehleBlatt?: ((blatt: Blatt) => void) | undefined;
   /** Wie viele Meldungen im Eingangskorb offen sind — 0 zeigt keine Marke. */
   offeneMeldungen?: number | undefined;
+  /** Läuft die Web-Schale hinter der Anmeldung (ADR-006)? Dann steht „Abmelden“ da. */
+  angemeldet?: boolean | undefined;
 }
 
 export function Kopfband({
@@ -50,6 +52,7 @@ export function Kopfband({
   blatt,
   waehleBlatt,
   offeneMeldungen = 0,
+  angemeldet = false,
 }: KopfbandEigenschaften): React.JSX.Element {
   // Ohne offenen Einsatz steht hier ein Strich und nicht `0/0/0 // 0`: Eine
   // Null ist eine Aussage über die Lage, und ohne Akte gibt es keine.
@@ -88,6 +91,17 @@ export function Kopfband({
         >
           Hilfe
         </button>
+
+        {/* Ein Formular und kein Ruf: Die Abmeldung ist ein Seitenwechsel,
+            und das Formular geht auch, wenn der Strom schon tot ist. Relativ,
+            wie die Brücke es für `ruf` erklärt. */}
+        {angemeldet && (
+          <form method="post" action="abmeldung" className="abmeldung">
+            <button type="submit" title="Den gemeinsamen Zugang in diesem Browser beenden">
+              Abmelden
+            </button>
+          </form>
+        )}
 
         <div className="themenschalter" role="group" aria-label="Erscheinungsbild">
           {THEMEN.map((kennung) => (

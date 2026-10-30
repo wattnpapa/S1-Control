@@ -170,6 +170,10 @@ Browser aus wie ein weiterer Windows-Rechner. Der Staerke-Monitor ist unter
 | `S1_WEB_HOST` / `S1_WEB_PORT` | Adresse und Port | `127.0.0.1` / `8080` |
 | `S1_WEB_GNADENFRIST_S` | wie lange ein Arbeitsplatz ohne Browser offen bleibt | `120` |
 | `S1_APP_VERSION` | Programmversion fuer Praesenz und Statuszeile | `0.0.0` |
+| `S1_WEB_ZUGANG` | `offen` oder `anmeldung` (ADR-006) | `offen` |
+| `S1_WEB_ANMELDENAME` / `S1_WEB_PASSWORT` | der gemeinsame Zugang bei `anmeldung` (Passwort mind. 12 Zeichen) | — |
+| `S1_WEB_SITZUNG_H` | Lebensdauer einer Sitzung ab letzter Nutzung, Stunden | `12` |
+| `S1_WEB_HINTER_PROXY` / `S1_WEB_SICHER` | `1`: hinter einem TLS-Proxy / Sitzungscookie immer `Secure` | — |
 
 Im Container (`Dockerfile`, zwei Stufen; das Laufbild enthaelt nur Node und
 `out/`) sind `S1_SHARE=/share` und `S1_DATEN=/daten` vorbelegt. Die
@@ -190,6 +194,13 @@ erreicht, arbeitet mit, wie auf dem Share jeder schreibt, der das Verzeichnis
 sieht; Rufe werden nur aus derselben Herkunft angenommen. Was im Browser
 fehlt: PDF-Ausgaben (sie brauchen `printToPDF` aus Electron; HTML und XLSX
 gehen), die Kamera und das Oeffnen des Monitors als eigenes Fenster.
+
+Fuer die zentrale Bereitstellung im Internet gibt es eine zuschaltbare
+Anmeldung mit einem gemeinsamen Zugang (`S1_WEB_ZUGANG=anmeldung`, ADR-006);
+`docker-compose.internet.yml` stellt den Dienst dafuer hinter Caddy mit
+automatischem TLS (`docker compose -f docker-compose.internet.yml up -d
+--build`, Zugangsdaten und `S1_DOMAIN` in `.env`). Einrichtung und Grenzen:
+`docs/v2/BETRIEB.md`, „Bereitstellung im Internet mit Anmeldung“.
 
 ### Die Rauchprobe
 

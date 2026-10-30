@@ -14,6 +14,10 @@
  * der letzte Zuhoerer geht. `EventSource` verbindet nach einem Abriss selbst
  * neu; die Luecke, die dabei entstehen kann, faengt der Store ueber die Folge
  * der Standmitteilungen (`standAnfordern`).
+ *
+ * Hinter der Anmeldung der Web-Schale (ADR-006) antwortet `ruf` mit 401,
+ * sobald die Sitzung abgelaufen ist. Dann geht das Fenster zur Anmeldeseite,
+ * statt den Bediener mit einer Statusnummer stehen zu lassen.
  */
 
 import type { Bruecke } from "./bruecke.js";
@@ -23,11 +27,21 @@ export interface WebbrueckeOptionen {
   /** `fetch` und `EventSource` des Fensters — injizierbar fuer die Tests. */
   readonly hole?: typeof fetch;
   readonly Quelle?: typeof EventSource;
+  /** Wohin das Fenster bei abgelaufener Anmeldung geht — injizierbar fuer die Tests. */
+  readonly weiterleiten?: (ziel: string) => void;
 }
+
+/** Die Meldung, die noch kurz steht, bis die Anmeldeseite geladen ist. */
+export const MELDUNG_ABGEMELDET = "Die Anmeldung ist abgelaufen. Bitte neu anmelden.";
 
 export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
   const hole = optionen.hole ?? ((eingabe, init) => fetch(eingabe, init));
   const Quelle = optionen.Quelle ?? EventSource;
+  const weiterleiten =
+    optionen.weiterleiten ??
+    ((ziel: string) => {
+      window.location.assign(ziel);
+    });
   const zuhoerer = new Set<(mitteilung: Mitteilung) => void>();
   let quelle: EventSource | undefined;
 
@@ -54,6 +68,10 @@ export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
         });
       } catch (fehler) {
         return { ok: false, meldung: `Der Dienst ist nicht erreichbar: ${(fehler as Error).message}` };
+      }
+      if (antwort.status === 401) {
+        weiterleiten("anmeldung");
+        return { ok: false, meldung: MELDUNG_ABGEMELDET };
       }
       if (!antwort.ok) {
         return { ok: false, meldung: `Der Dienst antwortete mit ${String(antwort.status)}.` };

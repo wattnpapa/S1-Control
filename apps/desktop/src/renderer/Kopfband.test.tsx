@@ -125,6 +125,30 @@ describe("Kopfband", () => {
     expect(waehleTheme).toHaveBeenCalledWith("feld");
   });
 
+  it("zeigt „Abmelden“ nur hinter der Anmeldung, als Formular POST abmeldung", () => {
+    const { rerender } = render(
+      <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.queryByRole("button", { name: "Abmelden" })).toBeNull();
+
+    rerender(
+      <Kopfband
+        lagebild={LAGEBILD}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+        angemeldet
+      />,
+    );
+    const knopf = screen.getByRole("button", { name: "Abmelden" });
+    expect(knopf.getAttribute("type")).toBe("submit");
+    const formular = knopf.closest("form");
+    expect(formular?.getAttribute("method")).toBe("post");
+    // Relativ, damit es auch hinter einem Unterpfad stimmt.
+    expect(formular?.getAttribute("action")).toBe("abmeldung");
+  });
+
   it("zeigt den Weg zurück nur, wenn ein Einsatz offen ist", async () => {
     const zurueck = vi.fn();
     render(
