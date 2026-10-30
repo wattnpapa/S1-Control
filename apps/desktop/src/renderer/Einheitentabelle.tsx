@@ -310,7 +310,7 @@ export function Einheitentabelle({
           onClick={() => {
             setzeMaske("anlegen");
           }}
-          title={`Einheit aus Vorlage anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
+          title={`Einheit anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
         >
           Aus Vorlage
         </button>
