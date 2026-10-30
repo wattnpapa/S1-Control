@@ -48,7 +48,9 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    seit wann, wie lange noch.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
 8. **Ausgaben erzeugen**, wenn die Führung sie braucht: Druck, Status-Matrix,
-   Auswertung, Log, Kosten.
+   Einheitenliste, Auswertung, Log, Kosten. Die Einheitenliste vor jeder
+   Lagebesprechung ausdrucken — sie ist der Stand, mit dem bei einem
+   Rechnerausfall auf Papier weitergearbeitet wird.
 9. **Zum Schichtwechsel:** Nichts. Die Ablösung setzt sich an denselben
    Rechner oder öffnet den Einsatz an einem anderen.
 10. **Nach dem Einsatz:** `s1 akte exportiere` und das Archiv sichern. Wie das
@@ -175,7 +177,7 @@ Die Abrechnung: PSA, VDA, Unterkunft und Verpflegung je Einheit.
 
 ### Ausgaben
 
-Druck, Status-Matrix, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle.
+Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall.
 
 **Zuerst:** Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes.
 

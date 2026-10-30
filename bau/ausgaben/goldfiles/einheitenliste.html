@@ -1,0 +1,896 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <title>Einheitenliste — Übung Weser-Ems</title>
+  <style>
+    @page { size: A4 landscape; margin: 10mm; }
+    body { font-family: system-ui, sans-serif; font-size: 7.5pt; margin: 0; }
+    h1 { font-size: 13pt; margin: 0 0 1.5mm; }
+    .ausgabe-kopf p { margin: 0; font-size: 8pt; color: #444; }
+    .fuest { margin: 0 0 3mm; font-size: 9pt; }
+    table.einheitenliste { border-collapse: collapse; width: 100%; }
+    table.einheitenliste th, table.einheitenliste td { border: 0.3mm solid #999; padding: 0.6mm 1mm; vertical-align: top; text-align: left; }
+    table.einheitenliste thead th { background: #eee; font-size: 7.5pt; }
+    thead { display: table-header-group; }
+    tr { break-inside: avoid; page-break-inside: avoid; }
+    tr.bereich { break-after: avoid; page-break-after: avoid; }
+    tr.bereich th, tr.bereich td { background: #e3e3e3; font-weight: 700; font-size: 8.5pt; }
+    tr.bereich .typ { font-weight: 400; font-size: 7.5pt; color: #444; margin-left: 2mm; }
+    tr.bereich.tiefe-1 th { padding-left: 5mm; }
+    tr.bereich.tiefe-2 th { padding-left: 9mm; }
+    tr.bereich.tiefe-3 th { padding-left: 13mm; }
+    tr.leer td { color: #666; font-style: italic; }
+    td.zahl { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+    td.gesamt { font-weight: 700; }
+    td.nr { text-align: right; color: #666; }
+    td.name { font-weight: 600; }
+    td.zeit { white-space: nowrap; }
+    table.summen { border-collapse: collapse; margin: 3mm 0 0; break-inside: avoid; }
+    table.summen th, table.summen td { border: 0.3mm solid #999; padding: 0.8mm 2mm; font-size: 9pt; }
+    table.summen th[scope="row"] { text-align: left; font-weight: 400; }
+    table.summen td { font-weight: 700; }
+    .fussnote { font-size: 8pt; color: #444; margin: 2mm 0 0; }
+  </style>
+</head>
+<body>
+<header class="ausgabe-kopf">
+  <h1>Übung Weser-Ems</h1>
+  <p class="kennung">2026-09-08_uebung-weser-ems_227e68</p>
+  <p class="stand">Stand: 08.09.2026, 08:15</p>
+  <p class="kern">@bos/eeb-format 0.0.0</p>
+</header>
+  <p class="fuest">FüSt Oldenburg</p>
+  <table class="einheitenliste">
+    <thead>
+      <tr>
+        <th scope="col">Nr.</th>
+        <th scope="col">FüSt.</th>
+        <th scope="col">Einheit</th>
+        <th scope="col">Organisation</th>
+        <th scope="col">Herkunft</th>
+        <th scope="col">Ebene</th>
+        <th scope="col">Führer / Erreichbarkeit</th>
+        <th scope="col">Aufträge</th>
+        <th scope="col">Geräte / Fahrzeuge</th>
+        <th scope="col">Status</th>
+        <th scope="col">Schicht</th>
+        <th scope="col">Fü</th>
+        <th scope="col">UFü</th>
+        <th scope="col">He</th>
+        <th scope="col">Gesamt</th>
+        <th scope="col">Eingetroffen</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">FüSt Oldenburg <span class="typ">Führungsstelle · 2 Einheiten</span></th>
+        <td class="zahl">3</td>
+        <td class="zahl">5</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">10</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">1</td>
+        <td></td>
+        <td class="name">Stab FüSt</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Oldenburg</td>
+        <td>Zugtrupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">2</td>
+        <td class="zahl">3</td>
+        <td class="zahl">1</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">2</td>
+        <td></td>
+        <td class="name">Stab FüSt Nacht</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Oldenburg</td>
+        <td>Zugtrupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Nacht</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">1</td>
+        <td class="zahl gesamt">4</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">Meldekopf <span class="typ">Meldekopf · 2 Einheiten</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">3</td>
+        <td class="zahl gesamt">6</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">3</td>
+        <td></td>
+        <td class="name">Meldekopf</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Delmenhorst</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Früh</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">4</td>
+        <td></td>
+        <td class="name">Meldekopf Spät</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Delmenhorst</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzbereit</td>
+        <td>Spät</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">Logistik <span class="typ">Logistik · 5 Einheiten</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl">23</td>
+        <td class="zahl gesamt">30</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">5</td>
+        <td></td>
+        <td class="name">FGr Logistik-Verpflegung</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Wildeshausen</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl gesamt">7</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">6</td>
+        <td></td>
+        <td class="name">Betreuungsgruppe</td>
+        <td>DRK</td>
+        <td>ORTSVERBAND DRK KV Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">9</td>
+        <td class="zahl gesamt">12</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">7</td>
+        <td></td>
+        <td class="name">Verpflegungstrupp</td>
+        <td>JUH</td>
+        <td>ORTSVERBAND JUH RV Weser-Ems</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Ruhe</td>
+        <td>Nacht</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl gesamt">5</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">8</td>
+        <td></td>
+        <td class="name">Tr Log Schlauch</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Bad Zwischenahn</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Früh</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">9</td>
+        <td></td>
+        <td class="name">Tr Log WT</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Bad Zwischenahn</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Spät</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">Bereitstellungsraum Hafen <span class="typ">Bereitstellungsraum · 4 Einheiten</span></th>
+        <td class="zahl">4</td>
+        <td class="zahl">13</td>
+        <td class="zahl">63</td>
+        <td class="zahl gesamt">80</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">10</td>
+        <td></td>
+        <td class="name">TZ THW Bereitstellung</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Varel</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzbereit</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl">14</td>
+        <td class="zahl gesamt">18</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">11</td>
+        <td></td>
+        <td class="name">LZ FW Bereitstellung</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Rastede</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzbereit</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">17</td>
+        <td class="zahl gesamt">22</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">12</td>
+        <td></td>
+        <td class="name">SanZ Bereitstellung</td>
+        <td>ASB</td>
+        <td>ORTSVERBAND ASB RV Oldenburg</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Rufbereitschaft</td>
+        <td>Nacht</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl">12</td>
+        <td class="zahl gesamt">15</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">13</td>
+        <td></td>
+        <td class="name">Pioniermaschinenzug</td>
+        <td>Bundeswehr</td>
+        <td>ORTSVERBAND PiBtl 130</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Ruhe</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">20</td>
+        <td class="zahl gesamt">25</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">EA Deich Nord <span class="typ">Einsatzort · 8 Einheiten</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">7</td>
+        <td class="zahl">37</td>
+        <td class="zahl gesamt">45</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">14</td>
+        <td></td>
+        <td class="name">ZTr THW Deich</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Oldenburg</td>
+        <td>Zugtrupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">4</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">15</td>
+        <td></td>
+        <td class="name">BGr 1 Oldenburg</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">8</td>
+        <td class="zahl gesamt">9</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">16</td>
+        <td></td>
+        <td class="name">BGr 2 Oldenburg</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Nacht</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">8</td>
+        <td class="zahl gesamt">9</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">17</td>
+        <td></td>
+        <td class="name">FGr Wasserschaden</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Brake</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">18</td>
+        <td></td>
+        <td class="name">FGr Notversorgung</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Leer</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzvorbehalt</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">19</td>
+        <td></td>
+        <td class="name">Rettungsdienst Vorhaltung</td>
+        <td>Rettungsdienst</td>
+        <td>ORTSVERBAND RKiSH</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl gesamt">2</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">20</td>
+        <td></td>
+        <td class="name">BGr Teilbar</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Nordenham</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">21</td>
+        <td></td>
+        <td class="name">BGr Teilbar — Trupp</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Nordenham</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">3</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-1">
+        <th scope="rowgroup" colspan="11">UA Deichfuß <span class="typ">Einsatzort · 3 Einheiten</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">33</td>
+        <td class="zahl gesamt">38</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">22</td>
+        <td></td>
+        <td class="name">FGr Räumen A</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Jever</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl gesamt">7</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">23</td>
+        <td></td>
+        <td class="name">LG Rastede</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Rastede</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">7</td>
+        <td class="zahl gesamt">9</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">24</td>
+        <td></td>
+        <td class="name">Sandsackkolonne</td>
+        <td>Regie</td>
+        <td>ORTSVERBAND Landkreis Ammerland</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">20</td>
+        <td class="zahl gesamt">22</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">EA Pumpwerk Süd <span class="typ">Einsatzort · 6 Einheiten</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl">22</td>
+        <td class="zahl gesamt">29</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">25</td>
+        <td></td>
+        <td class="name">ZTr THW Pumpwerk</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Wilhelmshaven</td>
+        <td>Zugtrupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">4</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">26</td>
+        <td></td>
+        <td class="name">FGr Wasserschaden/Pumpen</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Wilhelmshaven</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">27</td>
+        <td></td>
+        <td class="name">FGr Elektroversorgung</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Aurich</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Nacht</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl gesamt">5</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">28</td>
+        <td></td>
+        <td class="name">AB HFS Bereitschaft</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Oldenburg</td>
+        <td>Staffel</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzbereit</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">29</td>
+        <td></td>
+        <td class="name">Trupp Aufklärung</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Emden</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Rückmarsch</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">2</td>
+        <td class="zahl gesamt">3</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">30</td>
+        <td></td>
+        <td class="name">GTr Wassergefahren</td>
+        <td>DLRG</td>
+        <td>ORTSVERBAND DLRG Bezirk Ammerland</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Anmarsch</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl gesamt">5</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">EA Schule Mitte <span class="typ">Einsatzort · 7 Einheiten</span></th>
+        <td class="zahl">3</td>
+        <td class="zahl">10</td>
+        <td class="zahl">42</td>
+        <td class="zahl gesamt">55</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">31</td>
+        <td></td>
+        <td class="name">Betreuungszug</td>
+        <td>DRK</td>
+        <td>ORTSVERBAND DRK KV Oldenburg</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl">16</td>
+        <td class="zahl gesamt">20</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">32</td>
+        <td></td>
+        <td class="name">Gr Betreuung Nacht</td>
+        <td>DRK</td>
+        <td>ORTSVERBAND DRK KV Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Nacht</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">8</td>
+        <td class="zahl gesamt">9</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">33</td>
+        <td></td>
+        <td class="name">St PSNV</td>
+        <td>MHD</td>
+        <td>ORTSVERBAND MHD Weser-Ems</td>
+        <td>Staffel</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl gesamt">4</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">34</td>
+        <td></td>
+        <td class="name">St Registrierung</td>
+        <td>JUH</td>
+        <td>ORTSVERBAND JUH RV Weser-Ems</td>
+        <td>Staffel</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatzbereit</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">3</td>
+        <td class="zahl gesamt">4</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">35</td>
+        <td></td>
+        <td class="name">Sanitätsgruppe</td>
+        <td>ASB</td>
+        <td>ORTSVERBAND ASB RV Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Spät</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl gesamt">8</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">36</td>
+        <td></td>
+        <td class="name">Streifenwagen Absperrung</td>
+        <td>Polizei</td>
+        <td>ORTSVERBAND PI Oldenburg</td>
+        <td>Trupp</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Einsatz</td>
+        <td>Tag</td>
+        <td class="zahl">0</td>
+        <td class="zahl">2</td>
+        <td class="zahl">0</td>
+        <td class="zahl gesamt">2</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">37</td>
+        <td></td>
+        <td class="name">Gr Wasserrettung</td>
+        <td>DLRG</td>
+        <td>ORTSVERBAND DLRG Bezirk Oldenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Nicht einsatzbereit</td>
+        <td>Tag</td>
+        <td class="zahl">1</td>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl gesamt">8</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">EA Reserve <span class="typ">Einsatzort · 0 Einheiten</span></th>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl">0</td>
+        <td class="zahl gesamt">0</td>
+        <td></td>
+      </tr>
+      <tr class="leer"><td colspan="16">keine Einheiten</td></tr>
+    </tbody>
+    <tbody>
+      <tr class="bereich tiefe-0">
+        <th scope="rowgroup" colspan="11">Angefordert / Anmarsch <span class="typ">Angefordert / Anmarsch · 3 Einheiten · zählt nicht in die Gesamtstärke</span></th>
+        <td class="zahl">1</td>
+        <td class="zahl">6</td>
+        <td class="zahl">30</td>
+        <td class="zahl gesamt">37</td>
+        <td></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">38</td>
+        <td></td>
+        <td class="name">FGr Räumen B (angefordert)</td>
+        <td>THW</td>
+        <td>ORTSVERBAND THW OV Cloppenburg</td>
+        <td>Gruppe</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Angefordert</td>
+        <td></td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">8</td>
+        <td class="zahl gesamt">9</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">39</td>
+        <td></td>
+        <td class="name">LZ FW (angefordert)</td>
+        <td>Feuerwehr</td>
+        <td>ORTSVERBAND FF Cloppenburg</td>
+        <td>Zug</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Angefordert</td>
+        <td></td>
+        <td class="zahl">1</td>
+        <td class="zahl">4</td>
+        <td class="zahl">17</td>
+        <td class="zahl gesamt">22</td>
+        <td class="zeit"></td>
+      </tr>
+      <tr class="einheit">
+        <td class="nr">40</td>
+        <td></td>
+        <td class="name">Bergwacht (angefordert)</td>
+        <td>Bergwacht</td>
+        <td>ORTSVERBAND Bergwacht Harz</td>
+        <td>Staffel</td>
+        <td></td>
+        <td></td>
+        <td></td>
+        <td>Rufbereitschaft</td>
+        <td></td>
+        <td class="zahl">0</td>
+        <td class="zahl">1</td>
+        <td class="zahl">5</td>
+        <td class="zahl gesamt">6</td>
+        <td class="zeit"></td>
+      </tr>
+    </tbody>
+  </table>
+  <table class="summen">
+    <tbody>
+      <tr><th scope="row">Alle aufgeführten Bereiche</th><td class="zahl">16 / 59 / 255 = 330</td></tr>
+      <tr><th scope="row">davon Angefordert / Anmarsch</th><td class="zahl">1 / 6 / 30 = 37</td></tr>
+      <tr><th scope="row">Stärke auf der Lagekarte (wie Druck)</th><td class="zahl">15 / 53 / 225 = 293</td></tr>
+    </tbody>
+  </table>
+  <p class="fussnote">40 Einheiten in 10 Bereichen.</p>
+</body>
+</html>

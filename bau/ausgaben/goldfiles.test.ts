@@ -28,6 +28,8 @@ import {
   harke,
   harkeAlsHtml,
   druckdaten,
+  einheitenlisteAlsHtml,
+  einheitenlistendaten,
   kostenAlsHtml,
   logAlsHtml,
   statusAlsHtml,
@@ -88,6 +90,15 @@ describe("Der Druck", () => {
 describe("Die Status-Matrix", () => {
   it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
     gegenGoldfile("status.html", statusAlsHtml(statusdaten(lage()), KOPF));
+  });
+});
+
+describe("Die Einheitenliste", () => {
+  it("bleibt Zeile für Zeile, wie sie abgenommen wurde", () => {
+    // Das Blatt „Stärke“ als Ausdruck: die Papier-Rückfallebene. Das
+    // Goldfile ist zugleich die Datei, die jemand ohne die Anwendung im
+    // Browser öffnet — es muss allein lesbar sein.
+    gegenGoldfile("einheitenliste.html", einheitenlisteAlsHtml(einheitenlistendaten(lage()), KOPF));
   });
 });
 

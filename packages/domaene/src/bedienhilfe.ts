@@ -119,7 +119,8 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
   {
     kennung: "ausgaben",
     titel: "Ausgaben",
-    wozu: "Druck, Status-Matrix, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle.",
+    wozu:
+      "Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall.",
     zuerst: "Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes.",
     ueberraschung:
       "Der Dateiname trägt den Zeitpunkt. Eine zweite Ausgabe überschreibt die erste nicht.",

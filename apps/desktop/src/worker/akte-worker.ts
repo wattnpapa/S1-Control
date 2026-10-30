@@ -19,7 +19,7 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 
 import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
-import { Aktendienst, type Takte } from "./aktendienst.js";
+import { Aktendienst, type Seitenausgabe, type Takte } from "./aktendienst.js";
 import { bearbeiteAuftrag } from "./auftraege.js";
 import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
 
@@ -57,7 +57,7 @@ export type Auftrag =
   | { readonly art: "buendelSchreiben"; readonly nummer: number }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
-  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: "druck" | "status" | "log" | "kosten"; readonly organisation?: string }
+  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: Seitenausgabe; readonly organisation?: string }
   | { readonly art: "auswertungXlsx"; readonly nummer: number }
   | { readonly art: "oldenburgXlsx"; readonly nummer: number }
   | { readonly art: "logFreiXlsx"; readonly nummer: number }
