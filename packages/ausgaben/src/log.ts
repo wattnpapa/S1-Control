@@ -23,6 +23,7 @@
 
 import { projektion, type Zustand } from "@s1/domaene";
 
+import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /** Die Fußnote, die die Rechnung hinter Spalte „Männl.“ nennt. */
@@ -79,8 +80,6 @@ export function logAlsHtml(
     zustand,
     optionen.mitLeeren === true ? { mitLeeren: true } : {},
   );
-  const fuestName =
-    typeof zustand.einsatz?.fuestName.wert === "string" ? zustand.einsatz.fuestName.wert : "";
 
   return [
     "<!doctype html>",
@@ -94,7 +93,7 @@ export function logAlsHtml(
     "</head>",
     "<body>",
     kopfAlsHtml(kopf),
-    `  <p class="fuest">${htmlMaskieren(fuestName)}</p>`,
+    fuestzeileAlsHtml(fuestangaben(zustand)),
     "  <h2>Logistik Details</h2>",
     '  <table class="log">',
     "    <thead>",

@@ -33,6 +33,7 @@
 
 import { kennzahlen, projektion, type Staerke, type Zustand } from "@s1/domaene";
 
+import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /** Eine Zeile des Druckblatts — ein Bereich. */
@@ -54,6 +55,8 @@ export interface Druckzeile {
 export interface Druckdaten {
   readonly einsatzName: string;
   readonly fuestName: string;
+  /** Aus dem Blatt „Stammdaten“; fehlt, wenn keine eingetragen ist. */
+  readonly uebergeordneteFuestName?: string;
   /** Die Organisation des Filters — „Davon Stärke: <Org>“. */
   readonly organisation: string;
   readonly zeilen: readonly Druckzeile[];
@@ -132,7 +135,7 @@ export function druckdaten(zustand: Zustand, optionen: Druckoptionen = {}): Druc
 
   return {
     einsatzName: text(zustand.einsatz?.name.wert, "(ohne Namen)"),
-    fuestName: text(zustand.einsatz?.fuestName.wert),
+    ...fuestangaben(zustand),
     organisation,
     zeilen,
     gesamt,
@@ -198,7 +201,7 @@ export function druckAlsHtml(daten: Druckdaten, kopf: Ausgabekopf): string {
     "</head>",
     "<body>",
     kopfAlsHtml(kopf),
-    `  <p class="fuest">${htmlMaskieren(daten.fuestName)}</p>`,
+    fuestzeileAlsHtml(daten),
     '  <table class="druck">',
     "    <thead>",
     "      <tr>",

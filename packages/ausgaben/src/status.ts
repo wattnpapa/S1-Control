@@ -36,6 +36,7 @@ import {
   type Zustand,
 } from "@s1/domaene";
 
+import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /** Eine Zeile der Organisationsmatrix — Block 1 der Vorlage (Z. 7–18). */
@@ -63,6 +64,8 @@ export interface Verteilungszeile {
 export interface Statusdaten {
   readonly einsatzName: string;
   readonly fuestName: string;
+  /** Aus dem Blatt „Stammdaten“; fehlt, wenn keine eingetragen ist. */
+  readonly uebergeordneteFuestName?: string;
   readonly organisationen: readonly Organisationszeile[];
   readonly organisationenSumme: Organisationszeile;
   readonly status: readonly Verteilungszeile[];
@@ -207,7 +210,7 @@ export function statusdaten(zustand: Zustand): Statusdaten {
 
   return {
     einsatzName: typeof zustand.einsatz?.name.wert === "string" ? zustand.einsatz.name.wert : "(ohne Namen)",
-    fuestName: typeof zustand.einsatz?.fuestName.wert === "string" ? zustand.einsatz.fuestName.wert : "",
+    ...fuestangaben(zustand),
     organisationen: zeilen,
     organisationenSumme: gesamtzeile,
     status,
@@ -301,7 +304,7 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
     "</head>",
     "<body>",
     kopfAlsHtml(kopf),
-    `  <p class="fuest">${htmlMaskieren(daten.fuestName)}</p>`,
+    fuestzeileAlsHtml(daten),
     "  <h2>Stärke nach Organisationen</h2>",
     '  <table class="status">',
     "    <thead>",

@@ -58,6 +58,18 @@ describe("Szenario: Die Führungsstelle trägt ihre Stammdaten ein", () => {
     });
   });
 
+  it("druckt den eingetragenen FüSt-Namen statt des Arbeitsplatznamens", async () => {
+    const platz = await angenommenEinEinsatz();
+    await platz.dienst.bediene(stammdatenAenderung(EINSATZ_ID, "fuestName", "FueSt Oldenburg", "FüSt Weser-Ems"));
+    await platz.dienst.bediene(stammdatenAenderung(EINSATZ_ID, "uebergeordneteFuestName", null, "TEL Landkreis"));
+    for (const ausgabe of ["druck", "status", "log", "kosten"] as const) {
+      const { html } = platz.dienst.ausgabeHtml(ausgabe);
+      expect(html, ausgabe).toContain("FüSt Weser-Ems");
+      expect(html, ausgabe).toContain("übergeordnete Führungsstelle: TEL Landkreis");
+      expect(html, ausgabe).not.toContain("FueSt Oldenburg");
+    }
+  });
+
   it("weist einen leeren FüSt-Namen ab, bevor eine Zeile entsteht", async () => {
     const platz = await angenommenEinEinsatz();
     const vorher = platz.dienst.zustand;
