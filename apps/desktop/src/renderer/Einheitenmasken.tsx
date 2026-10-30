@@ -1,8 +1,8 @@
 /**
  * Die fünf Masken der Einheitentabelle (M3.2).
  *
- * Anlegen aus Vorlage, verschieben (auch mehrere), aufteilen,
- * zusammenführen, entfernen. Jede baut ihren Entwurf über die reinen
+ * Anlegen (aus Vorlage oder ohne, in `EinheitAnlegen.tsx`), verschieben
+ * (auch mehrere), aufteilen, zusammenführen, entfernen. Jede baut ihren Entwurf über die reinen
  * Funktionen aus `bedienschritte.ts` — hier steht die Eingabe, dort die
  * Regel. Die Trennung ist der Grund, aus dem sich die Regeln aus §5.4 ohne
  * DOM prüfen lassen.
@@ -19,25 +19,13 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  gefuellteKataloge,
-  vorlagenAus,
-  type EinheitVorlage,
-  type Tabellenzeile,
-  type Vorlagenkatalog,
-} from "@s1/domaene";
+import type { Tabellenzeile } from "@s1/domaene";
 
+import { EinheitAnlegen } from "./EinheitAnlegen.js";
 import { Maske } from "./Maske.js";
+import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
-import {
-  STAERKE_OBERGRENZE,
-  anlageAusVorlage,
-  aufteilung,
-  entfernung,
-  istStaerkeEingabe,
-  verschiebung,
-  zusammenfuehrung,
-} from "../kontrakt/bedienschritte.js";
+import { aufteilung, entfernung, istStaerkeEingabe, verschiebung, zusammenfuehrung } from "../kontrakt/bedienschritte.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 
@@ -56,15 +44,10 @@ export function Einheitenmasken({
   aufSchliessen,
 }: EinheitenmaskenEigenschaften): React.JSX.Element | null {
   const laden = useLaden();
-  const [katalog, setzeKatalog] = useState<Vorlagenkatalog | undefined>(undefined);
-  const [vorlageId, setzeVorlageId] = useState("");
-  const [herkunft, setzeHerkunft] = useState("");
   const [ziel, setzeZiel] = useState(abschnittId ?? "");
   const [grund, setzeGrund] = useState("");
   const [bezeichnung, setzeBezeichnung] = useState("");
-  const [fuehrer, setzeFuehrer] = useState("0");
-  const [unterfuehrer, setzeUnterfuehrer] = useState("0");
-  const [mannschaft, setzeMannschaft] = useState("0");
+  const [staerke, setzeStaerke] = useState<Staerkeeingabe>({ fuehrer: "0", unterfuehrer: "0", mannschaft: "0" });
 
   useEffect(() => {
     // Beim Verschieben ist der gewählte Abschnitt der **Herkunftsort** der
@@ -73,11 +56,6 @@ export function Einheitenmasken({
     setzeZiel(maske === "verschieben" ? "" : (abschnittId ?? ""));
   }, [abschnittId, maske]);
 
-  const kataloge = gefuellteKataloge();
-  const gewaehlterKatalog = katalog ?? kataloge[0];
-  const vorlagen: readonly EinheitVorlage[] =
-    gewaehlterKatalog === undefined ? [] : vorlagenAus(gewaehlterKatalog);
-  const vorlage = vorlagen.find((eintrag) => eintrag.id === vorlageId);
   const erste = gewaehlte[0];
   const abschnitte = laden.baum?.baum ?? [];
 
@@ -91,83 +69,7 @@ export function Einheitenmasken({
 
   if (maske === undefined) return null;
 
-  if (maske === "anlegen") {
-    return (
-      <Maske
-        titel="Einheit aus Vorlage anlegen"
-        bereit={vorlage !== undefined && ziel !== ""}
-        aufAbbrechen={aufSchliessen}
-        aufBestaetigen={() => {
-          if (vorlage === undefined) return;
-          void schreibe(
-            anlageAusVorlage({
-              einheitId: neueId("E"),
-              abschnittId: ziel,
-              vorlage,
-              reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1,
-              ...(herkunft.trim() === "" ? {} : { herkunft: herkunft.trim() }),
-            }),
-          );
-        }}
-      >
-        <label>
-          Katalog
-          <select
-            value={gewaehlterKatalog ?? ""}
-            onChange={(e) => {
-              setzeKatalog(e.target.value as Vorlagenkatalog);
-              setzeVorlageId("");
-            }}
-          >
-            {kataloge.map((eintrag) => (
-              <option key={eintrag} value={eintrag}>
-                {eintrag}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Vorlage
-          <select
-            value={vorlageId}
-            onChange={(e) => {
-              setzeVorlageId(e.target.value);
-            }}
-          >
-            <option value="">— bitte wählen —</option>
-            {vorlagen.map((eintrag) => (
-              <option key={eintrag.id} value={eintrag.id}>
-                {eintrag.bezeichnung}
-                {eintrag.sollStaerke === undefined
-                  ? ""
-                  : ` (${String(eintrag.sollStaerke.fuehrer)}/${String(eintrag.sollStaerke.unterfuehrer)}/${String(eintrag.sollStaerke.mannschaft)})`}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          Herkunft
-          <input
-            value={herkunft}
-            onChange={(e) => {
-              setzeHerkunft(e.target.value);
-            }}
-            placeholder="z. B. THW OV Oldenburg"
-          />
-        </label>
-        <label>
-          Abschnitt
-          <Abschnittswahl wert={ziel} abschnitte={abschnitte} aufWahl={setzeZiel} />
-        </label>
-        <p className="hinweistext">
-          Die Soll-Stärke der Vorlage wird übernommen; fehlt sie, steht 0/0/0 da. Eine Zahl, die
-          niemand gemeldet hat, ist in einer Stärkeübersicht der gefährlichere Fehler. Der Status
-          ist „Angefordert“: Wer aus dem Katalog anlegt, plant Kräfte und meldet sie nicht als
-          anwesend.
-        </p>
-      </Maske>
-    );
-  }
+  if (maske === "anlegen") return <EinheitAnlegen abschnittId={abschnittId} aufSchliessen={aufSchliessen} />;
 
   if (maske === "verschieben") {
     return (
@@ -206,15 +108,15 @@ export function Einheitenmasken({
 
   if (maske === "aufteilen" && erste !== undefined) {
     const abgeteilt = {
-      fuehrer: zahl(fuehrer),
-      unterfuehrer: zahl(unterfuehrer),
-      mannschaft: zahl(mannschaft),
+      fuehrer: zahl(staerke.fuehrer),
+      unterfuehrer: zahl(staerke.unterfuehrer),
+      mannschaft: zahl(staerke.mannschaft),
     };
     const summe = abgeteilt.fuehrer + abgeteilt.unterfuehrer + abgeteilt.mannschaft;
     return (
       <Maske
         titel={`„${erste.anzeige}“ aufteilen`}
-        bereit={bezeichnung.trim().length > 0 && summe > 0 && [fuehrer, unterfuehrer, mannschaft].every(istStaerkeEingabe)}
+        bereit={bezeichnung.trim().length > 0 && summe > 0 && Object.values(staerke).every(istStaerkeEingabe)}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           void schreibe(
@@ -240,14 +142,7 @@ export function Einheitenmasken({
             }}
           />
         </label>
-        <Staerkefelder
-          fuehrer={fuehrer}
-          unterfuehrer={unterfuehrer}
-          mannschaft={mannschaft}
-          aufFuehrer={setzeFuehrer}
-          aufUnterfuehrer={setzeUnterfuehrer}
-          aufMannschaft={setzeMannschaft}
-        />
+        <Staerkefelder wert={staerke} aufWert={setzeStaerke} />
         <label>
           Abschnitt
           <Abschnittswahl wert={ziel === "" ? erste.abschnittId : ziel} abschnitte={abschnitte} aufWahl={setzeZiel} />
@@ -338,101 +233,6 @@ export function Einheitenmasken({
   return null;
 }
 
-function zahl(eingabe: string): number {
-  if (!istStaerkeEingabe(eingabe)) return 0;
-  const wert = Number.parseInt(eingabe, 10);
-  return Number.isNaN(wert) ? 0 : wert;
-}
-
-/** Ein Stärkefeld der Masken: markiert eine ungültige Eingabe, statt sie still zu null zu machen. */
-function Staerkefeld({
-  titel,
-  wert,
-  aufWert,
-}: {
-  readonly titel: string;
-  readonly wert: string;
-  readonly aufWert: (wert: string) => void;
-}): React.JSX.Element {
-  const gueltig = istStaerkeEingabe(wert);
-  return (
-    <label>
-      {titel}
-      <input
-        value={wert}
-        onChange={(e) => {
-          aufWert(e.target.value);
-        }}
-        inputMode="numeric"
-        aria-invalid={!gueltig}
-        title={gueltig ? undefined : `Ganze Zahl von 0 bis ${String(STAERKE_OBERGRENZE)}`}
-      />
-      {!gueltig && <span className="feldfehler">Ganze Zahl von 0 bis {STAERKE_OBERGRENZE}</span>}
-    </label>
-  );
-}
-
 function text(wert: unknown): string | undefined {
   return typeof wert === "string" && wert !== "" ? wert : undefined;
-}
-
-function Abschnittswahl({
-  wert,
-  abschnitte,
-  aufWahl,
-}: {
-  readonly wert: string;
-  readonly abschnitte: readonly { readonly id: string; readonly name: string; readonly kinder: readonly unknown[] }[];
-  readonly aufWahl: (id: string) => void;
-}): React.JSX.Element {
-  const alle = flach(abschnitte);
-  return (
-    <select
-      value={wert}
-      onChange={(e) => {
-        aufWahl(e.target.value);
-      }}
-    >
-      <option value="">— bitte wählen —</option>
-      {alle.map((eintrag) => (
-        <option key={eintrag.id} value={eintrag.id}>
-          {eintrag.name}
-        </option>
-      ))}
-    </select>
-  );
-}
-
-interface FlacherKnoten {
-  readonly id: string;
-  readonly name: string;
-  readonly kinder: readonly unknown[];
-}
-
-function flach(knoten: readonly FlacherKnoten[]): readonly FlacherKnoten[] {
-  return knoten.flatMap((eintrag) => [eintrag, ...flach(eintrag.kinder as readonly FlacherKnoten[])]);
-}
-
-function Staerkefelder({
-  fuehrer,
-  unterfuehrer,
-  mannschaft,
-  aufFuehrer,
-  aufUnterfuehrer,
-  aufMannschaft,
-}: {
-  readonly fuehrer: string;
-  readonly unterfuehrer: string;
-  readonly mannschaft: string;
-  readonly aufFuehrer: (wert: string) => void;
-  readonly aufUnterfuehrer: (wert: string) => void;
-  readonly aufMannschaft: (wert: string) => void;
-}): React.JSX.Element {
-  return (
-    <>
-      <Staerkefeld titel="Führer" wert={fuehrer} aufWert={aufFuehrer} />
-      <Staerkefeld titel="Unterführer" wert={unterfuehrer} aufWert={aufUnterfuehrer} />
-      <Staerkefeld titel="Mannschaft" wert={mannschaft} aufWert={aufMannschaft} />
-    </>
-  );
 }
