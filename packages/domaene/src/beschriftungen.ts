@@ -20,6 +20,7 @@
  */
 
 import type { Abschnittstyp, EinheitStatus, Organisation, Schicht, TaktischeEbene } from "./ereignis.js";
+import type { Vorlagenkatalog } from "./vorlagen/katalog.js";
 
 const STATUS: Readonly<Record<EinheitStatus, string>> = {
   RUFBEREITSCHAFT: "Rufbereitschaft",
@@ -104,6 +105,13 @@ const ORGANISATION: Readonly<Record<Organisation, string>> = {
   SONSTIGE: "Sonstige",
 };
 
+/** Die Vorlagenkataloge mit den Namen der Kopiervorlagen-Bereiche im Blatt „Stärke“. */
+const VORLAGENKATALOG: Readonly<Record<Vorlagenkatalog, string>> = {
+  THW_STAN: "THW StAN",
+  FEUERWEHR: "Feuerwehr",
+  KATS_STAN_NDS: "KatS-StAN Nds",
+};
+
 /** Die Einsatzart des Blattes „Stammdaten“ (§5.2, `zEinsatzArt`). */
 const EINSATZART: Readonly<Record<string, string>> = {
   EINSATZ: "Einsatz",
@@ -164,6 +172,10 @@ export function abschnittstypTitel(wert: string): string {
 
 export function organisationTitel(wert: string): string {
   return titel(ORGANISATION, wert);
+}
+
+export function vorlagenkatalogTitel(wert: string): string {
+  return titel(VORLAGENKATALOG, wert);
 }
 
 /**
