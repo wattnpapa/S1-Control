@@ -231,6 +231,7 @@ Wer sonst am Einsatz arbeitet, wie weit die Stände auseinander sind, wo die Pro
 | Taste | Was sie tut | In der Excel |
 |---|---|---|
 | Strg+Q | Erfassungsbogen vom Handscanner einlesen | Strg+Q (digitaler EEB in neue Zeile) |
+| Strg+K | Markierte Einheit als neue, angeforderte Zeile kopieren — ohne Aufträge, Fahrzeuge, Personen und Zeiten | Strg+K (Zeilen kopieren) |
 
 <!-- TASTENKARTE ENDE -->
 
