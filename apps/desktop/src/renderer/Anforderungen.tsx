@@ -56,7 +56,6 @@ export function Anforderungen(): React.JSX.Element {
   }, [holeAnforderungen]);
 
   const ansicht = laden.anforderungen;
-  const filter = laden.anforderungsfilter;
 
   function lege(): void {
     const entwurf = anforderungAusEingabe(neu, jetzt());
@@ -69,33 +68,7 @@ export function Anforderungen(): React.JSX.Element {
     <section aria-label="Anforderungen" className="anforderungen">
       <h2>Anforderungen <Hilfemarke kennung="anforderungen" /></h2>
 
-      <div className="anforderungsfilter">
-        {ZUSTAENDE.map((zustand) => {
-          const gewaehlt = filter.zustaende?.includes(zustand.wert) ?? false;
-          return (
-            <label key={zustand.wert}>
-              <input
-                type="checkbox"
-                checked={gewaehlt}
-                onChange={() => {
-                  const bisher = filter.zustaende ?? [];
-                  const naechste = gewaehlt
-                    ? bisher.filter((wert) => wert !== zustand.wert)
-                    : [...bisher, zustand.wert];
-                  // Keine Auswahl heißt „alle“ und nicht „nichts“: Eine leere
-                  // Liste, die eine leere Tabelle ergibt, liest sich wie ein
-                  // Fehler.
-                  void laden.setzeAnforderungsfilter(
-                    naechste.length === 0 ? {} : { zustaende: naechste },
-                  );
-                }}
-              />
-              {zustand.titel}
-              {ansicht === undefined ? "" : ` (${String(ansicht.jeZustand[zustand.wert] ?? 0)})`}
-            </label>
-          );
-        })}
-      </div>
+      <Zustandsfilter />
 
       <div className="anforderungneu">
         <Anforderungsfelder
@@ -144,17 +117,46 @@ export function Anforderungen(): React.JSX.Element {
   );
 }
 
+/** Die Zustandsfilter über der Liste, mit der Zahl je Zustand. */
+function Zustandsfilter(): React.JSX.Element {
+  const laden = useLaden();
+  const ansicht = laden.anforderungen;
+  const filter = laden.anforderungsfilter;
+  return (
+  <div className="anforderungsfilter">
+    {ZUSTAENDE.map((zustand) => {
+      const gewaehlt = filter.zustaende?.includes(zustand.wert) ?? false;
+      return (
+        <label key={zustand.wert}>
+          <input
+            type="checkbox"
+            checked={gewaehlt}
+            onChange={() => {
+              const bisher = filter.zustaende ?? [];
+              const naechste = gewaehlt
+                ? bisher.filter((wert) => wert !== zustand.wert)
+                : [...bisher, zustand.wert];
+              // Keine Auswahl heißt „alle“ und nicht „nichts“: Eine leere
+              // Liste, die eine leere Tabelle ergibt, liest sich wie ein
+              // Fehler.
+              void laden.setzeAnforderungsfilter(
+                naechste.length === 0 ? {} : { zustaende: naechste },
+              );
+            }}
+          />
+          {zustand.titel}
+          {ansicht === undefined ? "" : ` (${String(ansicht.jeZustand[zustand.wert] ?? 0)})`}
+        </label>
+      );
+    })}
+  </div>
+  );
+}
+
 /** Welche Maske an einer Zeile offen ist. */
 type Zeilenmaske = "zusage" | Eintreffart | undefined;
 
 function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
-  const laden = useLaden();
-  const grundabfrage = useGrundabfrage();
-  const [maske, setzeMaske] = useState<Zeilenmaske>(undefined);
-  const schliesse = (): void => {
-    setzeMaske(undefined);
-  };
-
   return (
     <tr className={zeile.zustand === "STORNIERT" ? "storniert" : ""}>
       <td>
@@ -177,85 +179,108 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
           ? ""
           : `${zeitpunktText(zeile.zugesagtFuer)}${zeile.zugesagtVon === "" ? "" : ` · ${zeile.zugesagtVon ?? ""}`}`}
       </td>
-      <td className="handlungen">
-        {/* Die Knöpfe folgen dem abgeleiteten Zustand (§5.6.2). Angeboten wird
-            nur, was den Zustand ändert — und die Rücknahme dessen, was gilt.
-            Eine Zusage auf eine bereits geltende Erledigung wäre wirkungslos
-            und trüge einen Hinweis; einen Knopf dafür anzubieten, wäre ein
-            Versprechen, das der Fold nicht hält. */}
-        {zeile.zustand === "OFFEN" && (
-          <button type="button" onClick={() => { setzeMaske("zusage"); }}>
-            Zusagen
-          </button>
-        )}
-        {zeile.zustand === "ZUGESAGT" && (
-          <>
-            <button type="button" onClick={() => { setzeMaske("eintreffen"); }}>
-              Eingetroffen
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                void laden.bediene(ruecknahme(zeile.id, "zusage"));
-              }}
-            >
-              Zusage zurück
-            </button>
-          </>
-        )}
-        {zeile.zustand === "EINGETROFFEN" && (
-          <>
-            {zeile.abloesendeEinheitId === undefined && (
-              <button type="button" onClick={() => { setzeMaske("nachtragen"); }}>
-                Einheit anlegen
-              </button>
-            )}
-            <button
-              type="button"
-              onClick={() => {
-                void laden.bediene(ruecknahme(zeile.id, "erledigung"));
-              }}
-            >
-              Eintreffen zurück
-            </button>
-          </>
-        )}
-        {zeile.zustand === "STORNIERT" ? (
-          <button
-            type="button"
-            onClick={() => {
-              void laden.bediene(ruecknahme(zeile.id, "storno"));
-            }}
-          >
-            Storno zurück
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              // §2.4: Das Storno ist einer der Pflichtfälle für `grund`. Ohne
-              // ihn weist der Aktendienst das Ereignis ab, und die Abweisung
-              // wäre für den Bediener nicht erklärbar.
-              grundabfrage.frage({
-                titel: "Anforderung stornieren",
-                erlaeuterung:
-                  "Die Stornierung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
-                bestaetigungstext: "Stornieren",
-                aufGrund: (grund) => {
-                  void laden.bediene(anforderungStorniert(zeile.id, grund));
-                },
-              });
-            }}
-          >
-            Stornieren
-          </button>
-        )}
-        {grundabfrage.maske}
-        {maske === "zusage" && <AnforderungZusage zeile={zeile} aufSchliessen={schliesse} />}
-        {(maske === "eintreffen" || maske === "nachtragen") && (
-          <AnforderungZuEinheit zeile={zeile} art={maske} aufSchliessen={schliesse} />
-        )}
-      </td>
+      <Handlungen zeile={zeile} />
     </tr>
+  );
+}
+
+/** Die Handlungen einer Zeile und die Masken, die sie öffnen. */
+function Handlungen({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
+  const laden = useLaden();
+  const [maske, setzeMaske] = useState<Zeilenmaske>(undefined);
+  const schliesse = (): void => {
+    setzeMaske(undefined);
+  };
+  return (
+    <td className="handlungen">
+      {/* Die Knöpfe folgen dem abgeleiteten Zustand (§5.6.2). Angeboten wird
+          nur, was den Zustand ändert — und die Rücknahme dessen, was gilt.
+          Eine Zusage auf eine bereits geltende Erledigung wäre wirkungslos
+          und trüge einen Hinweis; einen Knopf dafür anzubieten, wäre ein
+          Versprechen, das der Fold nicht hält. */}
+      {zeile.zustand === "OFFEN" && (
+        <button type="button" onClick={() => { setzeMaske("zusage"); }}>
+          Zusagen
+        </button>
+      )}
+      {zeile.zustand === "ZUGESAGT" && (
+        <>
+          <button type="button" onClick={() => { setzeMaske("eintreffen"); }}>
+            Eingetroffen
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              void laden.bediene(ruecknahme(zeile.id, "zusage"));
+            }}
+          >
+            Zusage zurück
+          </button>
+        </>
+      )}
+      {zeile.zustand === "EINGETROFFEN" && (
+        <>
+          {zeile.abloesendeEinheitId === undefined && (
+            <button type="button" onClick={() => { setzeMaske("nachtragen"); }}>
+              Einheit anlegen
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={() => {
+              void laden.bediene(ruecknahme(zeile.id, "erledigung"));
+            }}
+          >
+            Eintreffen zurück
+          </button>
+        </>
+      )}
+      <StornoKnopf zeile={zeile} />
+      {maske === "zusage" && <AnforderungZusage zeile={zeile} aufSchliessen={schliesse} />}
+      {(maske === "eintreffen" || maske === "nachtragen") && (
+        <AnforderungZuEinheit zeile={zeile} art={maske} aufSchliessen={schliesse} />
+      )}
+    </td>
+  );
+}
+
+/** Stornieren — mit Pflichtgrund (§2.4) — oder die Rücknahme des Stornos. */
+function StornoKnopf({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
+  const laden = useLaden();
+  const grundabfrage = useGrundabfrage();
+  return (
+    <>
+      {zeile.zustand === "STORNIERT" ? (
+        <button
+          type="button"
+          onClick={() => {
+            void laden.bediene(ruecknahme(zeile.id, "storno"));
+          }}
+        >
+          Storno zurück
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={() => {
+            // §2.4: Das Storno ist einer der Pflichtfälle für `grund`. Ohne
+            // ihn weist der Aktendienst das Ereignis ab, und die Abweisung
+            // wäre für den Bediener nicht erklärbar.
+            grundabfrage.frage({
+              titel: "Anforderung stornieren",
+              erlaeuterung:
+                "Die Stornierung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
+              bestaetigungstext: "Stornieren",
+              aufGrund: (grund) => {
+                void laden.bediene(anforderungStorniert(zeile.id, grund));
+              },
+            });
+          }}
+        >
+          Stornieren
+        </button>
+      )}
+      {grundabfrage.maske}
+    </>
   );
 }

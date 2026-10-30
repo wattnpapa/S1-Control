@@ -120,16 +120,6 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
     if (ergebnis?.art === "geschrieben") aufSchliessen();
   }
 
-  const setze = (schluessel: keyof Einheitseingabe) => (e: { target: { value: string } }) => {
-    setzeEingabe((bisher) => ({ ...bisher, [schluessel]: e.target.value }));
-  };
-  const feld = (titel: string, schluessel: keyof Einheitseingabe): React.JSX.Element => (
-    <label>
-      {titel}
-      <input value={eingabe[schluessel]} onChange={setze(schluessel)} />
-    </label>
-  );
-
   return (
     <Maske
       titel={art === "eintreffen" ? `${zeile.kennung} eingetroffen` : `Einheit aus ${zeile.kennung} anlegen`}
@@ -151,45 +141,73 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
         </label>
       )}
       {anlegen && (
-        <>
-          {feld("Bezeichnung", "bezeichnung")}
-          <label>
-            Organisation
-            <select value={eingabe.organisation} onChange={setze("organisation")}>
-              {ORGANISATIONEN.map((wert) => (
-                <option key={wert} value={wert}>{spaltenwertTitel("organisation", wert)}</option>
-              ))}
-            </select>
-          </label>
-          <label>
-            Gliederungsebene
-            <select value={eingabe.ebene} onChange={setze("ebene")}>
-              {TAKTISCHE_EBENEN.map((wert) => (
-                <option key={wert} value={wert}>{spaltenwertTitel("ebene", wert)}</option>
-              ))}
-            </select>
-          </label>
-          {feld("Führer", "fuehrer")}
-          {feld("Unterführer", "unterfuehrer")}
-          {feld("Mannschaft", "mannschaft")}
-          {feld("Herkunft", "herkunft")}
-          <label>
-            Abschnitt
-            <select value={eingabe.abschnittId} onChange={setze("abschnittId")}>
-              <option value="">— bitte wählen —</option>
-              {abschnitte.map((knoten) => (
-                <option key={knoten.id} value={knoten.id}>{knoten.name}</option>
-              ))}
-            </select>
-          </label>
-          {zeile.vorschlag?.nachVorbildVon !== undefined && (
-            <p className="hinweistext">
-              Organisation, Ebene und Stärke sind von „{zeile.vorschlag.nachVorbildVon}“ übernommen, die
-              abgelöst wird. Bitte mit der Meldung der eintreffenden Einheit abgleichen.
-            </p>
-          )}
-        </>
+        <Einheitsfelder
+          eingabe={eingabe}
+          aufEingabe={setzeEingabe}
+          abschnitte={abschnitte}
+          nachVorbildVon={zeile.vorschlag?.nachVorbildVon}
+        />
       )}
     </Maske>
+  );
+}
+
+interface EinheitsfelderEigenschaften {
+  readonly eingabe: Einheitseingabe;
+  readonly aufEingabe: (neu: (bisher: Einheitseingabe) => Einheitseingabe) => void;
+  readonly abschnitte: readonly { readonly id: string; readonly name: string }[];
+  readonly nachVorbildVon: string | undefined;
+}
+
+/** Die Felder der neuen Einheit — vorbelegt, jedes änderbar. */
+function Einheitsfelder({ eingabe, aufEingabe, abschnitte, nachVorbildVon }: EinheitsfelderEigenschaften): React.JSX.Element {
+  const setze = (schluessel: keyof Einheitseingabe) => (e: { target: { value: string } }) => {
+    aufEingabe((bisher) => ({ ...bisher, [schluessel]: e.target.value }));
+  };
+  const feld = (titel: string, schluessel: keyof Einheitseingabe): React.JSX.Element => (
+    <label>
+      {titel}
+      <input value={eingabe[schluessel]} onChange={setze(schluessel)} />
+    </label>
+  );
+  return (
+    <>
+      {feld("Bezeichnung", "bezeichnung")}
+      <label>
+        Organisation
+        <select value={eingabe.organisation} onChange={setze("organisation")}>
+          {ORGANISATIONEN.map((wert) => (
+            <option key={wert} value={wert}>{spaltenwertTitel("organisation", wert)}</option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Gliederungsebene
+        <select value={eingabe.ebene} onChange={setze("ebene")}>
+          {TAKTISCHE_EBENEN.map((wert) => (
+            <option key={wert} value={wert}>{spaltenwertTitel("ebene", wert)}</option>
+          ))}
+        </select>
+      </label>
+      {feld("Führer", "fuehrer")}
+      {feld("Unterführer", "unterfuehrer")}
+      {feld("Mannschaft", "mannschaft")}
+      {feld("Herkunft", "herkunft")}
+      <label>
+        Abschnitt
+        <select value={eingabe.abschnittId} onChange={setze("abschnittId")}>
+          <option value="">— bitte wählen —</option>
+          {abschnitte.map((knoten) => (
+            <option key={knoten.id} value={knoten.id}>{knoten.name}</option>
+          ))}
+        </select>
+      </label>
+      {nachVorbildVon !== undefined && (
+        <p className="hinweistext">
+          Organisation, Ebene und Stärke sind von „{nachVorbildVon}“ übernommen, die
+          abgelöst wird. Bitte mit der Meldung der eintreffenden Einheit abgleichen.
+        </p>
+      )}
+    </>
   );
 }
