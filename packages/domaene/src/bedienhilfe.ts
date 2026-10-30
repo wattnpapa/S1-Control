@@ -101,8 +101,9 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
   {
     kennung: "fuehrungsstelle",
     titel: "Führungsstelle",
-    wozu: "Dienstposten der eigenen Führungsstelle und der Schichtplan dazu.",
-    zuerst: "Einen Dienstposten anlegen; besetzt wird er je Tag und Schicht.",
+    wozu: "Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schichtplan dazu.",
+    zuerst:
+      "Über „Stammdaten bearbeiten“ den Namen der Führungsstelle und die übergeordnete Führungsstelle eintragen — sie stehen auf jedem Ausdruck.",
     ueberraschung:
       "Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt am Paar aus Posten und Datum (§5.7).",
     kuerzel: ["anlegen", "entfernen"],
