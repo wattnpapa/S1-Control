@@ -39,6 +39,7 @@ import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/b
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
 
 /**
  * Die Spaltengruppen, wie sie am Umschalter stehen.
@@ -138,6 +139,8 @@ export function Einheitentabelle({
   const [suche, setzeSuche] = useState("");
   /** Der Statusfilter — leer heißt alle; die Leiste zählt auch die Abgewählten. */
   const [statuswahl, setzeStatuswahl] = useState<readonly string[]>([]);
+  /** Gliederung nach Bereichen mit Zwischensummen — kombinierbar mit Status und Suche. */
+  const [gliederung, setzeGliederung] = useState<Gliederungswahl>(GLIEDERUNG_AUS);
   const [maske, setzeMaske] = useState<Einheitenmaske>(undefined);
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
   const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
@@ -153,8 +156,9 @@ export function Einheitentabelle({
       ...(abschnittId === undefined ? {} : { abschnittId }),
       ...(suche === "" ? {} : { suche }),
       ...(statuswahl.length === 0 ? {} : { status: statuswahl }),
+      ...(gliederung.an ? { gliederung: true, ohneLeereBereiche: gliederung.ohneLeere } : {}),
     });
-  }, [akteId, abschnittId, suche, statuswahl, setzeTabellenfilter]);
+  }, [akteId, abschnittId, suche, statuswahl, gliederung, setzeTabellenfilter]);
 
   const spalten = useMemo(() => projektion.spaltenDerGruppen(gruppen), [gruppen]);
   const zeilen = laden.tabelle?.zeilen ?? [];
@@ -244,6 +248,54 @@ export function Einheitentabelle({
     await laden.bediene(entwurf);
   }
 
+  /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
+  function einheitszeile(zeile: Tabellenzeile, tiefe?: number): React.JSX.Element {
+    return (
+      <tr
+        key={zeile.einheitId}
+        className={[
+          markiert.includes(zeile.einheitId) ? "markiert" : "",
+          zeile.einheitId === einheitId ? "gewaehlt" : "",
+          zeile.entfernt ? "entfernt" : "",
+        ]
+          .filter((klasse) => klasse !== "")
+          .join(" ")}
+        onClick={(ereignis) => {
+          schalteMarkierung(zeile.einheitId, ereignis.ctrlKey || ereignis.metaKey);
+          aufEinheit(zeile.einheitId);
+        }}
+      >
+        <th scope="row" title={zeile.abschnittId} style={tiefe === undefined ? undefined : einzug(tiefe)}>
+          {zeile.abschnittName}
+        </th>
+        {spalten.map((spalte) => (
+          <Zelle
+            key={spalte.schluessel}
+            zeile={zeile}
+            spalte={spalte}
+            bearbeitet={
+              bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
+            }
+            fehler={
+              bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
+                ? zellenfehler
+                : undefined
+            }
+            aufBearbeiten={() => {
+              setzeZellenfehler(undefined);
+              setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
+            }}
+            aufFertig={(eingabe) => void schreibeZelle(zeile, spalte, eingabe)}
+            aufAbbrechen={() => {
+              setzeZellenfehler(undefined);
+              setzeBearbeitet(undefined);
+            }}
+          />
+        ))}
+      </tr>
+    );
+  }
+
   return (
     <section aria-label="Einheiten" className="einheiten">
       <div className="einheitenkopf">
@@ -313,7 +365,10 @@ export function Einheitentabelle({
           Ausschnitt bezogen, und zugleich der Filter: Wer „Angefordert“
           anklickt, sieht, was noch nicht da ist. Gezählt wird vor dem Filter,
           damit ein abgewählter Wert seine Zahl behält. */}
-      <StatusLeiste jeStatus={laden.tabelle?.jeStatus ?? {}} wahl={statuswahl} aufSchalten={schalteStatus} aufAlle={() => { setzeStatuswahl([]); }} />
+      <div className="tabellenleiste">
+        <StatusLeiste jeStatus={laden.tabelle?.jeStatus ?? {}} wahl={statuswahl} aufSchalten={schalteStatus} aufAlle={() => { setzeStatuswahl([]); }} />
+        <Gliederungsschalter wahl={gliederung} aufWahl={setzeGliederung} />
+      </div>
 
       <div className="tabellenrahmen">
         <table>
@@ -332,52 +387,21 @@ export function Einheitentabelle({
               ))}
             </tr>
           </thead>
-          <tbody>
-            {zeilen.map((zeile) => (
-              <tr
-                key={zeile.einheitId}
-                className={[
-                  markiert.includes(zeile.einheitId) ? "markiert" : "",
-                  zeile.einheitId === einheitId ? "gewaehlt" : "",
-                  zeile.entfernt ? "entfernt" : "",
-                ]
-                  .filter((klasse) => klasse !== "")
-                  .join(" ")}
-                onClick={(ereignis) => {
-                  schalteMarkierung(zeile.einheitId, ereignis.ctrlKey || ereignis.metaKey);
-                  aufEinheit(zeile.einheitId);
-                }}
-              >
-                <th scope="row" title={zeile.abschnittId}>
-                  {zeile.abschnittName}
-                </th>
-                {spalten.map((spalte) => (
-                  <Zelle
-                    key={spalte.schluessel}
-                    zeile={zeile}
-                    spalte={spalte}
-                    bearbeitet={
-                      bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
-                    }
-                    fehler={
-                      bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
-                        ? zellenfehler
-                        : undefined
-                    }
-                    aufBearbeiten={() => {
-                      setzeZellenfehler(undefined);
-                      setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
-                    }}
-                    aufFertig={(eingabe) => void schreibeZelle(zeile, spalte, eingabe)}
-                    aufAbbrechen={() => {
-                      setzeZellenfehler(undefined);
-                      setzeBearbeitet(undefined);
-                    }}
-                  />
-                ))}
-              </tr>
-            ))}
-          </tbody>
+          {laden.tabelle?.gliederung === undefined ? (
+            <tbody>{zeilen.map((zeile) => einheitszeile(zeile))}</tbody>
+          ) : (
+            <GegliederteZeilen
+              gliederung={laden.tabelle.gliederung}
+              zeilen={zeilen}
+              fenster={{
+                von: laden.tabelle.von,
+                gesamtzahl: laden.tabelle.gesamtzahl,
+                gefiltert: statuswahl.length > 0 || suche !== "",
+              }}
+              spalten={spalten}
+              zeileFuer={einheitszeile}
+            />
+          )}
           {/* Die Summe steht unter der Tabelle und zählt genau das, was
               darüber steht — den Ausschnitt, nicht den Einsatz. Entfernte
               Einheiten bleiben sichtbar, zählen aber nicht mit (§5.4.5); die

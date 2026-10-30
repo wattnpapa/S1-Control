@@ -975,6 +975,51 @@
         font-variant-numeric: tabular-nums;
         font-weight: 700;
       }
+      /* Statusleiste und Gliederungsschalter teilen sich eine Zeile: Beide
+         filtern bzw. ordnen die Tabelle, und eine zweite Leiste kostet eine
+         Tabellenzeile Höhe. */
+      .tabellenleiste {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        gap: 6px 18px;
+      }
+      .gliederungsschalter {
+        display: flex;
+        gap: 6px;
+        margin: 0 0 9px;
+      }
+      .gliederungsschalter button {
+        padding: 2px 8px;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        background: var(--karte);
+        color: var(--text);
+      }
+      .gliederungsschalter button[aria-pressed="true"] {
+        border-color: var(--text);
+        box-shadow: inset 0 0 0 1px var(--text);
+      }
+      /* Die Kopfzeile eines Bereichs trägt den Kopfgrund wie die Summenzeile:
+         Sie ist Zwischensumme und keine Einheit. */
+      .einheiten tbody tr.bereichskopf th,
+      .einheiten tbody tr.bereichskopf td {
+        background: var(--kopf-bg);
+        font-weight: 700;
+        border-top: var(--rahmenbreite) solid var(--rahmen);
+      }
+      .einheiten tbody tr.bereichskopf:hover {
+        background: none;
+      }
+      .einheiten tr.bereichskopf.zaehlt-nicht th,
+      .einheiten tr.bereichskopf.zaehlt-nicht td {
+        font-weight: 400;
+        font-style: italic;
+      }
+      .einheiten tr.bereichskopf .nebenwert {
+        font-weight: 400;
+        font-size: 0.85em;
+        color: var(--text-leise);
+      }
       .spaltengruppen button:disabled[aria-pressed="true"] {
         background: var(--kopf-bg);
         color: var(--text-leise);
