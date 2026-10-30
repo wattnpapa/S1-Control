@@ -226,6 +226,32 @@ describe("tabellenzeile", () => {
     expect(zeile.zellen["gesamt"]?.wert).toBeUndefined();
     expect(zeile.gesamt).toBe(12);
   });
+
+  it("trägt Vorlage und Herkunftsnamen für „Zeile kopieren“ — und nur, wenn es sie gibt", () => {
+    // Die Zelle „Herkunft“ setzt Stufe und Name zusammen (K27); eine Kopie
+    // braucht den Namen allein, sonst stünde die Stufe danach doppelt da.
+    const mitVorlage = einheitGemeldet(hlc(20, 0, "aa"), 5, {
+      einheitId: "U2",
+      abschnittId: "EA-NORD",
+      bezeichnung: "B",
+      organisation: "THW",
+      ebene: "GRUPPE",
+      staerke: staerke(0, 1, 8),
+      personalErfassung: "NUR_STAERKE",
+      status: "ANGEFORDERT",
+      hierarchie: [{ art: "ORTSVERBAND", name: "THW OV Hude" }],
+      vorlageId: "thw-b",
+    } as never);
+    const beide = falte([...GRUNDMENGE, einheit(10, 4, "U1"), mitVorlage]);
+    const kopierbar = tabellenzeile(beide, beide.einheiten["U2"] as never);
+    expect(kopierbar.vorlageId).toBe("thw-b");
+    expect(kopierbar.herkunftName).toBe("THW OV Hude");
+    expect(kopierbar.zellen["herkunft"]?.text).toContain("THW OV Hude");
+
+    const schlicht = tabellenzeile(beide, beide.einheiten["U1"] as never);
+    expect("vorlageId" in schlicht).toBe(false);
+    expect("herkunftName" in schlicht).toBe(false);
+  });
 });
 
 describe("einheitentabelle — Sortierung", () => {
