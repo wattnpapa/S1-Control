@@ -1,0 +1,42 @@
+# S1-Control v2 — Web-Schale im Internet hinter dem nginx eines Plesk-Servers
+# (ADR-006). Die Variante zu docker-compose.internet.yml fuer Server, auf
+# denen Plesk die Ports 80 und 443 schon belegt: Kein Caddy, das Zertifikat
+# holt Plesk (SSL It!/Let's Encrypt), und die Domain in Plesk leitet an den
+# Dienst weiter, der nur auf 127.0.0.1 lauscht.
+#
+#   cp .env.beispiel .env      # S1_WEB_ANMELDENAME, S1_WEB_PASSWORT ausfuellen
+#   docker compose -f docker-compose.plesk.yml up -d --build
+#   nginx-Direktiven der Domain: deploy/plesk/nginx-direktiven.conf
+#
+# Alles Weitere wie in docker-compose.internet.yml: Anmeldung an, Share als
+# Volume auf diesem Server, keine Desktop-Arbeitsplaetze.
+
+services:
+  s1-web:
+    build:
+      context: .
+      args:
+        S1_APP_VERSION: "0.0.0"
+    image: s1-control-web
+    container_name: s1-control-web-plesk
+    restart: unless-stopped
+    ports:
+      # Nur auf dem Loopback des Servers; von aussen kommt man nur ueber
+      # den nginx von Plesk hierher. Den Port passt S1_PLESK_PORT in .env an.
+      - "127.0.0.1:${S1_PLESK_PORT:-8085}:8080"
+    environment:
+      S1_WEB_ZUGANG: anmeldung
+      S1_WEB_HINTER_PROXY: "1"
+      S1_WEB_ANMELDENAME: ${S1_WEB_ANMELDENAME:?S1_WEB_ANMELDENAME fehlt in .env}
+      S1_WEB_PASSWORT: ${S1_WEB_PASSWORT:?S1_WEB_PASSWORT fehlt in .env}
+      S1_WEB_SITZUNG_H: ${S1_WEB_SITZUNG_H:-12}
+      S1_WEB_GNADENFRIST_S: "120"
+    volumes:
+      - s1-daten:/daten
+      - s1-share:/share
+
+volumes:
+  # Profile, Spiegel, Protokoll und Sitzungen der Web-Arbeitsplaetze.
+  s1-daten:
+  # Die Einsaetze — hier liegt die Wahrheit. Sichern wie einen Share.
+  s1-share:

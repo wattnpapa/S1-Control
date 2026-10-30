@@ -303,6 +303,45 @@ Technisches: Der Dienst `s1-web` lauscht nur im Compose-Netz;
 beim Start, dass Passwort und Sitzung unverschlüsselt reisen. Der Healthcheck
 (`/gesundheit`) braucht keine Anmeldung.
 
+### Plesk-Server
+
+Auf einem Server mit Plesk belegt dessen nginx die Ports 80 und 443; Caddy
+hat dort keinen Platz. Dafür gibt es `docker-compose.plesk.yml`: derselbe
+Dienst mit Anmeldung, aber ohne Caddy, lauschend nur auf
+`127.0.0.1:<S1_PLESK_PORT>` (Vorgabe 8085). Das Zertifikat holt Plesk, und
+die Domain leitet an den Dienst weiter.
+
+Auf dem Server als `root`, das Skript erledigt Holen, `.env`, Bauen, Starten
+und die Prüfung von `/gesundheit`:
+
+```
+curl -fsSL https://raw.githubusercontent.com/wattnpapa/S1-Control/v2-architektur/deploy/plesk/deploy.sh -o deploy.sh
+bash deploy.sh            # legt /opt/s1-control/.env an und hält an
+vi /opt/s1-control/.env   # S1_WEB_ANMELDENAME, S1_WEB_PASSWORT
+bash deploy.sh            # baut und startet
+```
+
+`S1_ZIEL` (Vorgabe `/opt/s1-control`) und `S1_ZWEIG` (Vorgabe
+`v2-architektur`) lassen sich als Umgebungsvariablen vorgeben. Ein erneuter
+Lauf aktualisiert Quelle und Bild.
+
+Danach einmalig in Plesk, Websites & Domains:
+
+1. Die Domain (z. B. `s1control.thw-fk-oldenburg.de`) anlegen; der DNS-Name
+   muss auf den Server zeigen. Unter „SSL/TLS-Zertifikate“ mit SSL It! ein
+   Let's-Encrypt-Zertifikat holen und „Permanente SEO-sichere 301-Umleitung
+   von HTTP zu HTTPS“ einschalten.
+2. „Apache & nginx Settings“: „Proxy mode“ bleibt an, „Smart static files
+   processing“ aus; in „Additional nginx directives“ den Inhalt von
+   `deploy/plesk/nginx-direktiven.conf` eintragen (Port wie `S1_PLESK_PORT`).
+   Die Direktiven schalten für `/mitteilungen` die Pufferung ab — ohne das
+   kämen die Server-Sent Events erst mit Verzögerung an.
+3. `https://<Domain>` öffnen; die Anmeldeseite erscheint.
+
+Aktualisieren: `bash deploy.sh` erneut; Zugang ändern und Sitzungen beenden
+wie oben, nur mit `-f docker-compose.plesk.yml`. Das Protokoll des Dienstes:
+`docker compose -f /opt/s1-control/docker-compose.plesk.yml logs -f s1-web`.
+
 ## Notverfahren bei NAS-Ausfall
 
 **Der Ausfall ist der Normalpfad, nicht der Fehlerpfad** (§1.3, Satz 2). Jedes
