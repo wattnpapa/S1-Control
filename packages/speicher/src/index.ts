@@ -234,6 +234,33 @@ export {
   type Reaktion,
 } from "./akte.js";
 
+// Pruefung eines abgelegten Ordners (M2.4) und die Einsatzakte als Archiv
+// (M4.4) — der gemeinsame Kern von Kommandozeile und Oberflaeche.
+export {
+  endgueltigeBefunde,
+  fundstelle,
+  pruefeOrdner,
+  widerspruechlicheDoppel,
+  type Befund,
+  type Befundklasse,
+  type Dateibefund,
+  type Doppelbefund,
+  type Pruefergebnis,
+} from "./aktenpruefung.js";
+export {
+  EXPORT_FASSUNG,
+  EXPORT_ORDNER,
+  MANIFEST_DATEI,
+  archivName,
+  legeArchivAb,
+  packeAkte,
+  sammleDateien,
+  type Akteneintrag,
+  type Aktenpacker,
+  type Manifest,
+  type Manifesteintrag,
+} from "./aktenarchiv.js";
+
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [
   "ereignisse",

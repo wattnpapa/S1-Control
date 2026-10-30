@@ -17,25 +17,28 @@ import os from "node:os";
 import path from "node:path";
 
 import { HlcUhr } from "@s1/domaene";
-import { liesZip } from "@s1/ausgaben";
+import { liesZip, schreibeZip } from "@s1/ausgaben";
 import {
   EINSATZ_UNTERORDNER,
+  EXPORT_FASSUNG,
+  MANIFEST_DATEI,
+  archivName,
+  packeAkte as packeAkteMit,
+  type Manifest,
   Einsatzablage,
   knotenDateisystem,
   legeEinsatzAn,
   oeffneAkte,
   sha256HexBytes,
+  type Dateisystem,
   type Einsatzanker,
 } from "@s1/speicher";
 
 import { fuehreAus } from "../index.js";
-import {
-  EXPORT_FASSUNG,
-  MANIFEST_DATEI,
-  archivName,
-  packeAkte,
-  type Manifest,
-} from "./exportiere.js";
+
+/** Der Kern mit dem Packer, den auch die Kommandozeile hineinreicht. */
+const packeAkte = (dateisystem: Dateisystem, ordner: string, zeitpunkt: Date) =>
+  packeAkteMit(dateisystem, ordner, zeitpunkt, schreibeZip);
 
 const EINSATZ_ID = "2026-09-08_uebung-nord_ab12cd";
 
