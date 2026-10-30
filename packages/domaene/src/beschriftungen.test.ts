@@ -11,7 +11,9 @@ import {
   spaltenwertTitel,
   statusTitel,
   statusTon,
+  vorlagenkatalogTitel,
 } from "./beschriftungen.js";
+import { VORLAGENKATALOGE } from "./vorlagen/katalog.js";
 
 describe("Die Beschriftungen", () => {
   it("geben jedem Statuswert das Wort der Excel und einen Ton", () => {
@@ -29,6 +31,8 @@ describe("Die Beschriftungen", () => {
     for (const wert of ABSCHNITTSTYPEN) expect(abschnittstypTitel(wert)).not.toContain("_");
     for (const wert of ORGANISATIONEN) expect(organisationTitel(wert)).not.toBe("");
     expect(abschnittstypTitel("ARCHIV")).toBe("Einsatz beendet");
+    for (const wert of VORLAGENKATALOGE) expect(vorlagenkatalogTitel(wert)).not.toContain("_");
+    expect(vorlagenkatalogTitel("KATS_STAN_NDS")).toBe("KatS-StAN Nds");
   });
 
   it("lassen unbekannte Werte sichtbar (§3.7) und beschriften je Spalte", () => {

@@ -26,12 +26,24 @@ export interface EinheitVorlage {
   readonly katalog: Vorlagenkatalog;
   /** Fassung des Katalogs; Vorlagen sind pflegbar und versioniert (EXH F-J2). */
   readonly katalogVersion: string;
+  /** Bei mehreren moeglichen Traegern die Vorbelegung — der erste aus `traeger`. */
   readonly organisation: Organisation;
+  /**
+   * Alle Organisationen, die diese Einheit ueblicherweise stellen; fehlt, wo es
+   * genau eine ist. Die Suche findet die Vorlage unter jeder davon, und die
+   * Anlegemaske bietet sie zur Wahl an.
+   */
+  readonly traeger?: readonly Organisation[];
   readonly bezeichnung: string;
   readonly lang?: string;
   readonly ebene: TaktischeEbene;
   /** Fehlt, wo die Quelle keine hergibt — sie wird nicht geraten. */
   readonly sollStaerke?: Staerke;
+  /**
+   * `true`, wenn die Sollstaerke keine Quellenzahl ist, sondern eine plausible
+   * Grundgliederung (KatS Nds). Die Maske nennt sie dann „Annahme“.
+   */
+  readonly sollStaerkeAnnahme?: boolean;
   readonly fahrzeuge: readonly { readonly typ: string; readonly anzahl: number }[];
   /** Zug → seine Trupps und Gruppen (in der Excel die Zugbloecke). */
   readonly teilVon?: string;
