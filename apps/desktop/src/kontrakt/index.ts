@@ -291,6 +291,10 @@ export const zRuf = z.discriminatedUnion("art", [
     suche: z.string().optional(),
     mitStillgelegten: z.boolean().optional(),
     status: z.array(z.string()).optional(),
+    // Gliederung nach Bereichen wie im Blatt „Stärke“; additiv, ohne sie
+    // bleibt die Antwort flach.
+    gliederung: z.boolean().optional(),
+    ohneLeereBereiche: z.boolean().optional(),
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),

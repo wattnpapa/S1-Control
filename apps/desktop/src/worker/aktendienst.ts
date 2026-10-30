@@ -760,6 +760,8 @@ export class Aktendienst {
       ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
       ...(ruf.mitStillgelegten === undefined ? {} : { mitStillgelegten: ruf.mitStillgelegten }),
       ...(ruf.status === undefined ? {} : { status: ruf.status }),
+      ...(ruf.gliederung === undefined ? {} : { gliederung: ruf.gliederung }),
+      ...(ruf.ohneLeereBereiche === undefined ? {} : { ohneLeereBereiche: ruf.ohneLeereBereiche }),
       ...(ruf.von === undefined ? {} : { von: ruf.von }),
       ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
     });
