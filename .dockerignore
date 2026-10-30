@@ -13,3 +13,5 @@ pruefdaten
 *.log
 .DS_Store
 .idea
+# Zugangsdaten bleiben aus dem Bau-Kontext, auch wenn das Bild sie nie kopiert.
+.env

@@ -48,8 +48,10 @@ COPY --from=bau /quelle/apps/desktop/out/renderer ./renderer
 # /share ist der Einhaengepunkt des NAS-Shares, /daten haelt Profile, Spiegel
 # und Protokoll der Web-Arbeitsplaetze (local-first, §5.1). Beides liegt
 # ausserhalb des Bildes; /daten als Volume, damit die Client-Kennungen und die
-# Upload-Staende einen Neustart ueberleben.
-RUN mkdir -p /share /daten && chown node:node /daten
+# Upload-Staende einen Neustart ueberleben. /share gehoert `node`, damit ein
+# benanntes Volume (docker-compose.internet.yml) beim ersten Anlegen schreibbar
+# ist; ein Bind- oder cifs-Mount ueberdeckt das ohnehin.
+RUN mkdir -p /share /daten && chown node:node /share /daten
 USER node
 VOLUME ["/daten"]
 EXPOSE 8080
