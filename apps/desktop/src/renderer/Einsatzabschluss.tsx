@@ -47,6 +47,9 @@ export function Einsatzabschluss(): React.JSX.Element | null {
   const bediene = useLaden((zustand) => zustand.bediene);
   const [offen, setzeOffen] = useState<Offen>(undefined);
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  // Die Akte steht unter allen Knöpfen und nicht neben ihrem: Der Pfad ist
+  // lang und nimmt die volle Breite — zwischen den Knöpfen risse er die Reihe.
+  const [akte, setzeAkte] = useState<Akteergebnis | undefined>(undefined);
   if (lagebild === undefined) return null;
   const status = lagebild.einsatzStatus ?? "AKTIV";
   const vorher = lagebild.einsatzEnde === undefined || lagebild.einsatzEnde === "" ? null : lagebild.einsatzEnde;
@@ -71,12 +74,13 @@ export function Einsatzabschluss(): React.JSX.Element | null {
           Einsatz wiedereröffnen
         </button>
       )}
-      <Aktenknopf />
+      <Aktenknopf aufErzeugt={setzeAkte} />
       {status === "BEENDET" && (
         <button type="button" onClick={() => { setzeOffen("archivieren"); }}>
           Archivieren
         </button>
       )}
+      {akte !== undefined && <Ausgabedatei pfad={akte.pfad} vorsatz="Einsatzakte" zusatz={aktenzusatz(akte)} />}
       {meldung !== undefined && <p className="hinweistext" role="alert">{meldung}</p>}
       {offen === "beenden" && (
         <Beendenmaske einsatzId={lagebild.einsatzId} vorher={vorher} aufSchliessen={() => { setzeOffen(undefined); }} />
@@ -171,18 +175,23 @@ function Archivmaske({ aufSchliessen }: { aufSchliessen(): void }): React.JSX.El
   );
 }
 
-/** „Einsatzakte erzeugen“ und der Pfad der Akte mit Öffnen und Ordner zeigen. */
-function Aktenknopf(): React.JSX.Element {
+/** Größe, Ereignisse und — falls offen — die Befunde der Akte. */
+function aktenzusatz(akte: Akteergebnis): string {
+  const befunde = akte.befunde > 0 ? `, ${String(akte.befunde)} Befunde — „s1 akte pruefe“ zeigt sie` : "";
+  return `${String(akte.bytes)} Bytes, ${String(akte.ereignisse)} Ereignisse${befunde}`;
+}
+
+/** „Einsatzakte erzeugen“ — gesperrt, solange sie entsteht; der Pfad steht beim Aufrufer. */
+function Aktenknopf({ aufErzeugt }: { aufErzeugt(akte: Akteergebnis): void }): React.JSX.Element {
   const akteId = useLaden((zustand) => zustand.akteId);
   const melde = useLaden((zustand) => zustand.melde);
   const [laeuft, setzeLaeuft] = useState(false);
-  const [akte, setzeAkte] = useState<Akteergebnis | undefined>(undefined);
 
   async function erzeuge(): Promise<void> {
     if (akteId === undefined) return;
     setzeLaeuft(true);
     try {
-      setzeAkte(await rufe({ art: "akteErzeugen", akteId }));
+      aufErzeugt(await rufe({ art: "akteErzeugen", akteId }));
     } catch (fehler) {
       melde("warnung", fehler instanceof Error ? fehler.message : String(fehler));
     } finally {
@@ -190,18 +199,9 @@ function Aktenknopf(): React.JSX.Element {
     }
   }
 
-  const zusatz =
-    akte === undefined
-      ? undefined
-      : `${String(akte.bytes)} Bytes, ${String(akte.ereignisse)} Ereignisse${
-          akte.befunde > 0 ? `, ${String(akte.befunde)} Befunde — „s1 akte pruefe“ zeigt sie` : ""
-        }`;
   return (
-    <>
-      <button type="button" disabled={laeuft} onClick={() => { void erzeuge(); }}>
-        {laeuft ? "Einsatzakte wird erzeugt …" : "Einsatzakte erzeugen"}
-      </button>
-      {akte !== undefined && <Ausgabedatei pfad={akte.pfad} vorsatz="Einsatzakte" {...(zusatz === undefined ? {} : { zusatz })} />}
-    </>
+    <button type="button" disabled={laeuft} onClick={() => { void erzeuge(); }}>
+      {laeuft ? "Einsatzakte wird erzeugt …" : "Einsatzakte erzeugen"}
+    </button>
   );
 }
