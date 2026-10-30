@@ -68,7 +68,8 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum Blatt „Stärke“ der Excel.",
     zuerst: "Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen.",
     ueberraschung:
-      "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5).",
+      "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). " +
+      "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben.",
     kuerzel: ["anlegen", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
   },
   {

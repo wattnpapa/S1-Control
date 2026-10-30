@@ -80,6 +80,10 @@ export interface Tabellenfilter {
   readonly mitStillgelegten?: boolean;
   /** Nur diese Statuswerte; leer heißt alle. */
   readonly status?: readonly string[];
+  /** Nach Bereichen gegliedert, mit Kopfzeilen und Zwischensummen. */
+  readonly gliederung?: boolean;
+  /** Mit Gliederung: Bereiche ohne Einheiten weglassen. */
+  readonly ohneLeereBereiche?: boolean;
   readonly von?: number;
 }
 
@@ -475,6 +479,8 @@ export const useLaden = create<Laden>((setze, hole) => {
         ...(filter.suche === undefined ? {} : { suche: filter.suche }),
         ...(filter.mitStillgelegten === undefined ? {} : { mitStillgelegten: filter.mitStillgelegten }),
         ...(filter.status === undefined || filter.status.length === 0 ? {} : { status: [...filter.status] }),
+        ...(filter.gliederung === true ? { gliederung: true } : {}),
+        ...(filter.gliederung === true && filter.ohneLeereBereiche === true ? { ohneLeereBereiche: true } : {}),
       }));
     },
 

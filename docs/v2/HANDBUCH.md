@@ -123,7 +123,7 @@ Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum B
 
 **Zuerst:** Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen.
 
-**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5).
+**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile zählt wie das Kopfband ohne Angefordert, Angefordert steht daneben.
 
 **Kürzel:** Strg+N · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
 

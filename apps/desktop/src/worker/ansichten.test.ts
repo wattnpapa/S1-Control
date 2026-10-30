@@ -132,6 +132,31 @@ describe("tabelleAnfordern", () => {
     expect(ausschnitt.zeilen.map((zeile) => zeile.einheitId)).toEqual(["U1"]);
     expect(ausschnitt.lageZeiger).toBe(3);
   });
+
+  it("reicht die Gliederung nach Bereichen durch und bleibt ohne sie flach", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    await zweiteEinheit(a, "U2", 1);
+
+    const flach = a.dienst.tabelle({ art: "tabelleAnfordern", akteId: "akte-1" });
+    expect(flach.gliederung).toBeUndefined();
+
+    const gegliedert = a.dienst.tabelle({ art: "tabelleAnfordern", akteId: "akte-1", gliederung: true });
+    const eo = gegliedert.gliederung?.bereiche.find((bereich) => bereich.abschnittId === "EO");
+    expect(eo?.name).toBe("Deich Nord");
+    expect(eo?.zeilen).toBe(2);
+    expect(eo?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 2, mannschaft: 13 });
+    // Die Einsatzsumme ist die des Kopfbands.
+    expect(gegliedert.gliederung?.einsatz.staerke).toEqual(letzterStand(a)?.gesamtstaerke);
+
+    const ohneLeere = a.dienst.tabelle({
+      art: "tabelleAnfordern",
+      akteId: "akte-1",
+      gliederung: true,
+      ohneLeereBereiche: true,
+    });
+    expect(ohneLeere.gliederung?.bereiche.map((bereich) => bereich.abschnittId)).toEqual(["EO"]);
+  });
 });
 
 describe("tagebuchAnfordern", () => {
@@ -216,6 +241,12 @@ describe("Das Schema der Ansichtsrufe", () => {
     expect(zuGross.success).toBe(false);
     const gerade = zRuf.safeParse({ art: "tabelleAnfordern", akteId: "akte-1", anzahl: AUSSCHNITT_MAX });
     expect(gerade.success).toBe(true);
+  });
+
+  it("nimmt die Gliederung als Wahrheitswert an und sonst nichts", () => {
+    const gut = zRuf.safeParse({ art: "tabelleAnfordern", akteId: "akte-1", gliederung: true, ohneLeereBereiche: false });
+    expect(gut.success).toBe(true);
+    expect(zRuf.safeParse({ art: "tabelleAnfordern", akteId: "akte-1", gliederung: "ja" }).success).toBe(false);
   });
 
   it("nimmt einen Ansichtsruf ohne Filter an", () => {

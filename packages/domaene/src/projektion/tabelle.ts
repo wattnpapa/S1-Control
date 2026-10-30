@@ -33,6 +33,7 @@ import { spaltenwertTitel, zeitpunktText } from "../beschriftungen.js";
 import { anzeigename, auftragsText, erreichbarkeit, gesamtstaerke, geraeteText, herkunftText, logistik } from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
+import { gliedereEinheiten, type Tabellengliederung } from "./gliederung.js";
 
 // ---------------------------------------------------------------------------
 // Die Spalten
@@ -357,6 +358,15 @@ export interface Tabellenoptionen {
    * diesem Filter, damit die Leiste auch die abgewählten Werte noch nennt.
    */
   readonly status?: readonly string[];
+  /**
+   * Nach Bereichen gliedern (Blatt „Stärke“ der Excel): Die Zeilen folgen
+   * dann der Ordnung des Abschnittsbaums, und der Ausschnitt trägt je Bereich
+   * eine Kopfzeile mit Zwischensumme ({@link Tabellenausschnitt.gliederung}).
+   * Ohne die Option bleibt die flache Ausgabe, wie sie war.
+   */
+  readonly gliederung?: boolean;
+  /** Mit `gliederung`: Bereiche ohne Zeilen weglassen. Vorbelegung: nein, wie in der Excel. */
+  readonly ohneLeereBereiche?: boolean;
   /** Ausschnitt für die Übertragung: ab welcher Zeile. */
   readonly von?: number;
   /** Ausschnitt: wie viele Zeilen höchstens. */
@@ -379,6 +389,13 @@ export interface Tabellenausschnitt {
    * selbst. Fehlende Schlüssel heißen null; entfernte Einheiten zählen nicht.
    */
   readonly jeStatus: { readonly [status: string]: Statuszaehler };
+  /**
+   * Nur mit der Option `gliederung`: die Kopfzeilen über **alle** Treffer,
+   * nicht nur über den Ausschnitt. `Bereichskopf.von` nennt den Index der
+   * ersten Zeile in der gegliederten Gesamtliste, an dem die Ansicht die
+   * Kopfzeile zwischen die Zeilen des Ausschnitts setzt.
+   */
+  readonly gliederung?: Tabellengliederung;
 }
 
 /**
@@ -447,13 +464,23 @@ export function einheitentabelle(
     return a.id < b.id ? -1 : a.id > b.id ? 1 : 0;
   });
 
+  const gegliedert =
+    optionen.gliederung === true
+      ? gliedereEinheiten(zustand, gefiltert, {
+          ...(optionen.abschnittId === undefined ? {} : { abschnittId: optionen.abschnittId }),
+          ...(optionen.ohneLeereBereiche === undefined ? {} : { ohneLeereBereiche: optionen.ohneLeereBereiche }),
+        })
+      : undefined;
+  const reihe = gegliedert?.einheiten ?? gefiltert;
+
   const von = Math.max(0, optionen.von ?? 0);
-  const anzahl = optionen.anzahl ?? gefiltert.length;
+  const anzahl = optionen.anzahl ?? reihe.length;
   return {
-    zeilen: gefiltert.slice(von, von + anzahl).map((einheit) => tabellenzeile(zustand, einheit)),
-    gesamtzahl: gefiltert.length,
+    zeilen: reihe.slice(von, von + anzahl).map((einheit) => tabellenzeile(zustand, einheit)),
+    gesamtzahl: reihe.length,
     von,
     jeStatus,
+    ...(gegliedert === undefined ? {} : { gliederung: gegliedert.gliederung }),
   };
 }
 
