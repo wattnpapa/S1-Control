@@ -285,6 +285,89 @@ describe("Die Einheitentabelle", () => {
     });
   });
 
+  it("nennt am Anlegeknopf beide Wege und nicht nur die Vorlage", async () => {
+    await zeigeTabelle();
+    expect(screen.getByRole("button", { name: "Aus Vorlage" }).getAttribute("title")).toBe("Einheit anlegen (Strg+N)");
+  });
+
+  describe("Zeile kopieren", () => {
+    function mitQuelle(): void {
+      useLaden.setState({
+        baum: { lageZeiger: 5, baum: [{ id: "EO", name: "Deich Nord", typ: "EINSATZORT", tiefe: 0, kinder: [] }] } as never,
+      });
+      attrappe.antwortet("tabelleAnfordern", {
+        lageZeiger: 5,
+        zeilen: [
+          zeile("U1", "Bergungsgruppe 1", {
+            zellen: { ...zeile("U1", "Bergungsgruppe 1").zellen, ebene: zelle("Gruppe", "GRUPPE") },
+            herkunftName: "THW OV Hude",
+            vorlageId: "thw-b",
+          }),
+          zeile("U2", "Fachgruppe N"),
+        ],
+        gesamtzahl: 2,
+        von: 0,
+      });
+    }
+
+    it("ist nur bei genau einer markierten Zeile bedienbar", async () => {
+      mitQuelle();
+      await zeigeTabelle();
+      const knopf = screen.getByRole("button", { name: "Kopieren" });
+      expect(knopf.hasAttribute("disabled")).toBe(true);
+      expect(knopf.getAttribute("title")).toMatch(/\(Strg\+K\)$/u);
+      fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+      expect(knopf.hasAttribute("disabled")).toBe(false);
+      fireEvent.click(screen.getByText("Fachgruppe N"), { ctrlKey: true });
+      expect(knopf.hasAttribute("disabled")).toBe(true);
+    });
+
+    it("öffnet die Anlegemaske vorbelegt und schreibt eine neue, angeforderte Einheit", async () => {
+      mitQuelle();
+      await zeigeTabelle();
+      fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+      fireEvent.click(screen.getByRole("button", { name: "Kopieren" }));
+
+      const maske = screen.getByLabelText("„Bergungsgruppe 1“ kopieren");
+      expect(screen.getByRole("button", { name: "Ohne Vorlage" }).getAttribute("aria-pressed")).toBe("true");
+      expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("Bergungsgruppe 1 (2)");
+      expect((screen.getByLabelText("Ebene") as HTMLSelectElement).value).toBe("GRUPPE");
+      expect((screen.getByLabelText("Herkunft") as HTMLInputElement).value).toBe("THW OV Hude");
+      expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("8");
+      expect(maske.textContent).toMatch(/Aufträge, Fahrzeuge, Personen, Status und Zeiten der Quelle werden nicht übernommen/u);
+
+      fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+      await waitFor(() => {
+        expect(attrappe.letzterRuf("bedienen")).toBeDefined();
+      });
+      const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
+      expect(entwurf?.typ).toBe("EinheitGemeldet");
+      const nutzlast = entwurf?.nutzlast as Record<string, unknown>;
+      expect(nutzlast).toMatchObject({
+        abschnittId: "EO",
+        bezeichnung: "Bergungsgruppe 1 (2)",
+        organisation: "THW",
+        ebene: "GRUPPE",
+        staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+        status: "ANGEFORDERT",
+        hierarchie: [{ art: "ORTSVERBAND", name: "THW OV Hude" }],
+        vorlageId: "thw-b",
+      });
+      expect(nutzlast["einheitId"]).not.toBe("U1");
+    });
+
+    it("öffnet die Kopie mit Strg+K, aber nicht ohne markierte Zeile", async () => {
+      mitQuelle();
+      await zeigeTabelle();
+      fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+      expect(screen.queryByLabelText(/kopieren$/u)).toBeNull();
+      fireEvent.click(screen.getByText("Fachgruppe N"));
+      fireEvent.keyDown(window, { key: "k", ctrlKey: true });
+      expect(screen.getByLabelText("„Fachgruppe N“ kopieren")).toBeDefined();
+      expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("Fachgruppe N (2)");
+    });
+  });
+
   it("reicht die Suche als Filter an den Worker weiter", async () => {
     await zeigeTabelle();
     fireEvent.change(screen.getByLabelText("Suche"), { target: { value: "Fachgruppe" } });

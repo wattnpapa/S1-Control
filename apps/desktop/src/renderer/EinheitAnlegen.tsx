@@ -9,6 +9,10 @@
  * Der Umschalter sind zwei Knöpfe und keine Optionsfelder: Die Maske setzt den
  * Fokus ins erste Eingabefeld, und das soll das Suchfeld bzw. die Bezeichnung
  * sein — nicht der Umschalter, den man seltener braucht als das Tippen.
+ *
+ * „Zeile kopieren“ ist dieselbe Maske mit einer `vorbelegung` (aus
+ * `einheitKopie.ts`): Sie beginnt auf „Ohne Vorlage“ mit den Werten der
+ * Quellzeile und schreibt, was dann dasteht — eine Kopie ist eine Anlage.
  */
 
 import { useState } from "react";
@@ -27,6 +31,7 @@ import {
 import { Maske } from "./Maske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
 import { Vorlagenwahl, sollText } from "./Vorlagenwahl.js";
+import type { Anlagevorbelegung } from "./einheitKopie.js";
 import { anlageAusVorlage, istStaerkeEingabe } from "../kontrakt/bedienschritte.js";
 import { einheitsanlage } from "../kontrakt/einheitsanlage.js";
 import type { Entwurf } from "../kontrakt/index.js";
@@ -40,6 +45,8 @@ interface FreieEingabe {
   readonly organisation: Organisation | "";
   readonly ebene: TaktischeEbene | "";
   readonly staerke: Staerkeeingabe;
+  /** Nur bei einer Kopie aus einer Zeile, die selbst aus einer Vorlage stammt. */
+  readonly vorlageId?: string;
 }
 
 const LEER: FreieEingabe = {
@@ -80,7 +87,13 @@ function freierEntwurf(eingabe: FreieEingabe, gemeinsam: Gemeinsam): Entwurf | u
     staerke: { fuehrer: zahl(fuehrer), unterfuehrer: zahl(unterfuehrer), mannschaft: zahl(mannschaft) },
     reihenfolge: gemeinsam.reihenfolge,
     herkunft: gemeinsam.herkunft,
+    ...(eingabe.vorlageId === undefined ? {} : { vorlageId: eingabe.vorlageId }),
   });
+}
+
+function freiAus(vorbelegung: Anlagevorbelegung): FreieEingabe {
+  const { bezeichnung, organisation, ebene, staerke, vorlageId } = vorbelegung;
+  return { bezeichnung, organisation, ebene, staerke, ...(vorlageId === undefined ? {} : { vorlageId }) };
 }
 
 function vorlagenEntwurf(vorlageId: string, organisation: Organisation | "", gemeinsam: Gemeinsam): Entwurf | undefined {
@@ -99,16 +112,18 @@ function vorlagenEntwurf(vorlageId: string, organisation: Organisation | "", gem
 export interface EinheitAnlegenEigenschaften {
   readonly abschnittId: string | undefined;
   readonly aufSchliessen: () => void;
+  /** „Zeile kopieren“: beginnt auf „Ohne Vorlage“ mit diesen Werten. */
+  readonly vorbelegung?: Anlagevorbelegung;
 }
 
-export function EinheitAnlegen({ abschnittId, aufSchliessen }: EinheitAnlegenEigenschaften): React.JSX.Element {
+export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: EinheitAnlegenEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [weg, setzeWeg] = useState<Weg>("vorlage");
+  const [weg, setzeWeg] = useState<Weg>(vorbelegung === undefined ? "vorlage" : "frei");
   const [vorlageId, setzeVorlageId] = useState("");
   const [vorlagenOrganisation, setzeVorlagenOrganisation] = useState<Organisation | "">("");
-  const [frei, setzeFrei] = useState<FreieEingabe>(LEER);
-  const [herkunft, setzeHerkunft] = useState("");
-  const [ziel, setzeZiel] = useState(abschnittId ?? "");
+  const [frei, setzeFrei] = useState<FreieEingabe>(vorbelegung === undefined ? LEER : freiAus(vorbelegung));
+  const [herkunft, setzeHerkunft] = useState(vorbelegung?.herkunft ?? "");
+  const [ziel, setzeZiel] = useState(vorbelegung?.abschnittId ?? abschnittId ?? "");
 
   const bereit = ziel !== "" && (weg === "frei" ? freiVollstaendig(frei, ziel) : vorlageNach(vorlageId) !== undefined);
 
@@ -131,7 +146,12 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen }: EinheitAnlegenEig
   }
 
   return (
-    <Maske titel="Einheit anlegen" bereit={bereit} aufAbbrechen={aufSchliessen} aufBestaetigen={schreibe}>
+    <Maske
+      titel={vorbelegung === undefined ? "Einheit anlegen" : `„${vorbelegung.quelle}“ kopieren`}
+      bereit={bereit}
+      aufAbbrechen={aufSchliessen}
+      aufBestaetigen={schreibe}
+    >
       <div className="spaltengruppen" role="group" aria-label="Anlegen">
         <button
           type="button"
@@ -179,13 +199,21 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen }: EinheitAnlegenEig
         Abschnitt
         <Abschnittswahl wert={ziel} abschnitte={laden.baum?.baum ?? []} aufWahl={setzeZiel} />
       </label>
-      <p className="hinweistext">
-        Der Status ist „Angefordert“: Wer anlegt, plant Kräfte und meldet sie nicht als anwesend.
-        {weg === "vorlage"
-          ? " Die Soll-Stärke der Vorlage wird übernommen; fehlt sie, steht 0/0/0 da. „Annahme“ heißt: Die Excel nennt keine Stärke, eingetragen ist die übliche Gliederung — am Standort prüfen."
-          : " Die Stärke steht so da, wie sie hier eingetragen ist."}
-      </p>
+      <Anlagehinweis weg={weg} kopie={vorbelegung !== undefined} />
     </Maske>
+  );
+}
+
+function Anlagehinweis({ weg, kopie }: { readonly weg: Weg; readonly kopie: boolean }): React.JSX.Element {
+  return (
+    <p className="hinweistext">
+      Der Status ist „Angefordert“: Wer anlegt, plant Kräfte und meldet sie nicht als anwesend.
+      {weg === "vorlage"
+        ? " Die Soll-Stärke der Vorlage wird übernommen; fehlt sie, steht 0/0/0 da. „Annahme“ heißt: Die Excel nennt keine Stärke, eingetragen ist die übliche Gliederung — am Standort prüfen."
+        : " Die Stärke steht so da, wie sie hier eingetragen ist."}
+      {kopie &&
+        " Eine Kopie ist eine neue, angeforderte Einheit: Aufträge, Fahrzeuge, Personen, Status und Zeiten der Quelle werden nicht übernommen."}
+    </p>
   );
 }
 

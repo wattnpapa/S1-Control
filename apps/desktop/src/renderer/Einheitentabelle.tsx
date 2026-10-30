@@ -119,6 +119,7 @@ export type Einheitenmaske =
   | "zusammenfuehren"
   | "entfernen"
   | "abloesung"
+  | "kopieren"
   | undefined;
 
 export interface EinheitentabelleEigenschaften {
@@ -192,6 +193,9 @@ export function Einheitentabelle({
         },
         entfernen: () => {
           if (markiert.length === 1) setzeMaske("entfernen");
+        },
+        kopieren: () => {
+          if (markiert.length === 1) setzeMaske("kopieren");
         },
         suchen: () => {
           document.getElementById("einheitensuche")?.focus();
@@ -314,7 +318,7 @@ export function Einheitentabelle({
         >
           Aus Vorlage
         </button>
-        {/* Die drei Schritte, die auf einer Auswahl arbeiten, stehen
+        {/* Die Schritte, die auf einer Auswahl arbeiten, stehen
             zusammen und durch einen Strich von Anlegen getrennt: Sie sind
             gesperrt, solange nichts markiert ist, und das soll man sehen,
             ohne die Knöpfe zu lesen. */}
@@ -327,6 +331,14 @@ export function Einheitentabelle({
         </button>
         <button type="button" disabled={markiert.length < 2} onClick={() => { setzeMaske("zusammenfuehren"); }}>
           Zusammenführen
+        </button>
+        <button
+          type="button"
+          disabled={markiert.length !== 1}
+          onClick={() => { setzeMaske("kopieren"); }}
+          title={`Markierte Zeile als neue, angeforderte Einheit kopieren (${kuerzelText(kuerzel("kopieren") as never)})`}
+        >
+          Kopieren
         </button>
         <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("entfernen"); }}>
           Entfernen

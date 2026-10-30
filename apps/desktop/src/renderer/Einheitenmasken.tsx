@@ -1,7 +1,8 @@
 /**
  * Die fünf Masken der Einheitentabelle (M3.2).
  *
- * Anlegen (aus Vorlage oder ohne, in `EinheitAnlegen.tsx`), verschieben
+ * Anlegen (aus Vorlage oder ohne, in `EinheitAnlegen.tsx`; „Zeile kopieren“
+ * ist dieselbe Maske mit Vorbelegung aus `einheitKopie.ts`), verschieben
  * (auch mehrere), aufteilen, zusammenführen, entfernen. Jede baut ihren Entwurf über die reinen
  * Funktionen aus `bedienschritte.ts` — hier steht die Eingabe, dort die
  * Regel. Die Trennung ist der Grund, aus dem sich die Regeln aus §5.4 ohne
@@ -23,6 +24,7 @@ import type { Tabellenzeile } from "@s1/domaene";
 
 import { AbloesungAnfordern } from "./AbloesungAnfordern.js";
 import { EinheitAnlegen } from "./EinheitAnlegen.js";
+import { kopieVorbelegung } from "./einheitKopie.js";
 import { Maske } from "./Maske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
@@ -75,7 +77,23 @@ export function Einheitenmasken({
     return <AbloesungAnfordern zeile={erste} aufSchliessen={aufSchliessen} />;
   }
 
-  if (maske === "anlegen") return <EinheitAnlegen abschnittId={abschnittId} aufSchliessen={aufSchliessen} />;
+  // Der Schlüssel trennt Anlegen und Kopieren: Wer aus der offenen Kopie mit
+  // Strg+N in die leere Anlage wechselt, soll keine Werte der Quelle erben.
+  if (maske === "anlegen") {
+    return <EinheitAnlegen key="anlegen" abschnittId={abschnittId} aufSchliessen={aufSchliessen} />;
+  }
+
+  if (maske === "kopieren" && erste !== undefined) {
+    const vorhandene = (laden.tabelle?.zeilen ?? []).map((zeile) => text(zeile.zellen["bezeichnung"]?.wert) ?? zeile.anzeige);
+    return (
+      <EinheitAnlegen
+        key={`kopie-${erste.einheitId}`}
+        abschnittId={abschnittId}
+        vorbelegung={kopieVorbelegung(erste, vorhandene)}
+        aufSchliessen={aufSchliessen}
+      />
+    );
+  }
 
   if (maske === "verschieben") {
     return (
