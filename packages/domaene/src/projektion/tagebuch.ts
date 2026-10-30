@@ -263,7 +263,10 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       if (nachname === undefined) return id;
       return `${feldtext(person?.vorname) ?? ""} ${nachname}`.trim();
     }
+    // Die Archivierung führt ihren Eintrag unter der Ereignis-Id (§7.2) — im
+    // Tagebuch spricht sie trotzdem über den Einsatz und nicht über eine Kennung.
     case "einsatz":
+    case "archivierungen":
       return feldtext(zustand.einsatz?.name) ?? id;
     case "anforderung":
       return anforderungsname(zustand, id);
@@ -367,7 +370,10 @@ function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): 
   if (typ === "EinsatzStammdatenGeaendert") return stammdatenwortFuer(feld, wert);
   // Das Ende eines Auftrags ist ein Zeitpunkt; „30.10.2026 16:00“ liest
   // sich, ein ISO-Zeitpunkt wird entziffert.
-  if (typ === "AuftragBeendet") return zeitpunktText(wert);
+  // Dasselbe für das Ende des Einsatzes, in beide Richtungen.
+  if (typ === "AuftragBeendet" || typ === "EinsatzBeendet" || typ === "EinsatzWiedereroeffnet") {
+    return zeitpunktText(wert);
+  }
   return alsSatzwert(wert);
 }
 

@@ -107,6 +107,14 @@ export const zUmgebung = z.object({
   rechnername: z.string(),
   /** Die Kennung dieses Arbeitsplatzes (§4.1) — sie steht in jeder HLC. */
   clientId: z.string(),
+  /**
+   * Ob diese Schale eine erzeugte Datei öffnen, im Ordner zeigen und drucken
+   * kann (`ausgabeZeigen`). Die Electron-Schale kann es, die Web-Schale nicht:
+   * Sie liefert keine Dateien des Shares aus, und ein Öffnen auf dem Server
+   * hülfe dem Browser nicht. Fehlt das Feld, gilt „nein" — der Renderer
+   * blendet die Knöpfe dann aus, statt einen Weg anzubieten, der scheitert.
+   */
+  dateienZeigen: z.boolean().optional(),
 });
 export type Umgebung = z.infer<typeof zUmgebung>;
 
@@ -202,6 +210,21 @@ export const zLagebild = z.object({
   einsatzArt: z.string(),
   /** Fehlt, solange `EinsatzAngelegt` noch nicht gefaltet ist. */
   stammdaten: zEinsatzstammdaten.optional(),
+  /**
+   * Der abgeleitete Zustand des Einsatzes (§5.2): laufend, beendet oder
+   * archiviert. Er reist im Lagebild, weil Kopfband und Abschlussblock ihn
+   * dauernd zeigen und weil eine Maske, die schreibt, ihn kennen muss, bevor
+   * der Worker sie abweist. Fehlt er, gilt „laufend" — so wie bei einem
+   * Worker einer Fassung, die ihn noch nicht schickt.
+   */
+  einsatzStatus: z.enum(["AKTIV", "BEENDET", "ARCHIVIERT"]).optional(),
+  /**
+   * Das Einsatzende (ISO-Zeitpunkt) — der `vorher`-Wert für Beenden und
+   * Wiedereröffnen (§2.2a). Leer, solange keines gilt: als leere Zeichenkette
+   * und nicht als fehlendes Feld, weil ein Delta über die Web-Schale als JSON
+   * reist und ein `undefined` dort verschwände — das alte Ende bliebe stehen.
+   */
+  einsatzEnde: z.string().optional(),
   /** Hoechste gesehene HLC in Textform fester Stellenzahl (§3.2). */
   standHlc: z.string(),
   /** Wanduhr des zuletzt eingetroffenen Ereignisses — Anzeige, nie Ordnung (§2.6). */
@@ -483,6 +506,26 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("bildschirmeAuflisten") }),
   z.object({ art: z.literal("monitorOeffnen"), bildschirmId: z.string().optional() }),
   z.object({ art: z.literal("monitorSchliessen") }),
+  // ---- Der Abschluss des Einsatzes ----------------------------------------
+  //
+  // Beenden und Wiedereröffnen gehen als gewöhnliche Bedienschritte über
+  // `bedienen`. Das Archivieren hat einen eigenen Ruf, weil sein Ereignis
+  // einen Beleg trägt, den nur der Worker bilden kann: den `zustandsHash`
+  // der Lage, die archiviert wird (`snapshotHash`, KONZEPT-EREIGNISSE.md
+  // §7). Ein Renderer, der ihn rechnete, hätte den Fachzustand.
+  z.object({ art: z.literal("einsatzArchivieren"), akteId: zAkteId, zeitpunkt: zText }),
+  // Die Einsatzakte (M4.4) als ZIP im Ordner des Einsatzes — derselbe Kern
+  // wie `s1 akte exportiere`.
+  z.object({ art: z.literal("akteErzeugen"), akteId: zAkteId }),
+  // Eine erzeugte Datei öffnen, im Ordner zeigen oder drucken. Der Pfad ist
+  // der, den `ausgabeErzeugen` oder `akteErzeugen` gemeldet hat; der Main
+  // prüft, dass er im Ordner dieses Einsatzes liegt (`ausgabezeiger.ts`).
+  z.object({
+    art: z.literal("ausgabeZeigen"),
+    akteId: zAkteId,
+    pfad: zText,
+    wie: z.enum(["oeffnen", "ordner", "drucken"]),
+  }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -520,6 +563,17 @@ export const zBedienergebnis = z.discriminatedUnion("art", [
   z.object({ art: z.literal("nichtMoeglich"), meldung: z.string() }),
 ]);
 export type Bedienergebnis = z.infer<typeof zBedienergebnis>;
+
+/**
+ * Der Code einer Abweisung, weil der Einsatz beendet oder archiviert ist.
+ *
+ * Er steht im Kontrakt, weil beide Seiten ihn kennen: Der Worker weist mit
+ * ihm ab, der Renderer macht daraus einen sichtbaren Hinweis — gleich, welche
+ * Maske oder Zelle geschrieben hat. Viele Masken werten ein `abgewiesen` gar
+ * nicht aus; ohne den zentralen Hinweis bliebe ein Schreibversuch nach dem
+ * Einsatzende dort stumm.
+ */
+export const CODE_EINSATZ_ABGESCHLOSSEN = "EINSATZ_ABGESCHLOSSEN";
 
 export const zStapelEintrag = z.object({
   id: z.string(),
@@ -574,6 +628,9 @@ export interface Antworten {
   monitorOeffnen: null;
   monitorSchliessen: null;
   tagebuchAnfordern: Tagebuchansicht;
+  einsatzArchivieren: Bedienergebnis;
+  akteErzeugen: Akteergebnis;
+  ausgabeZeigen: null;
 }
 
 /**
@@ -767,6 +824,18 @@ export interface EebVorschau {
 export interface Ausgabeergebnis {
   readonly pfad: string;
   readonly bytes: number;
+}
+
+/**
+ * Wo die Einsatzakte liegt und was sie trägt (M4.4).
+ *
+ * `befunde` ist die Zahl der endgültigen Befunde nach §8.2, die beim Packen
+ * offen waren — die Akte wird trotzdem geschrieben, weil sie gerade dann
+ * gebraucht wird; die Oberfläche sagt es dazu.
+ */
+export interface Akteergebnis extends Ausgabeergebnis {
+  readonly ereignisse: number;
+  readonly befunde: number;
 }
 
 /**

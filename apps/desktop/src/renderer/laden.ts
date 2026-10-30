@@ -25,7 +25,7 @@ import { create } from "zustand";
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { rufe } from "./bruecke.js";
-import { lagebildMit } from "../kontrakt/index.js";
+import { CODE_EINSATZ_ABGESCHLOSSEN, lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
   Buendelergebnis,
@@ -776,7 +776,15 @@ export const useLaden = create<Laden>((setze, hole) => {
     async bediene(entwurf) {
       const akteId = hole().akteId;
       if (akteId === undefined) return undefined;
-      return mitFehlerbild(() => rufe({ art: "bedienen", akteId, entwurf }));
+      const ergebnis = await mitFehlerbild(() => rufe({ art: "bedienen", akteId, entwurf }));
+      // Ein beendeter oder archivierter Einsatz weist jedes Schreiben ab. Viele
+      // Masken und Zellen werten ein `abgewiesen` nicht aus; ohne diesen
+      // Hinweis bliebe der Versuch dort stumm, und der Bediener hielte die
+      // Eingabe für angekommen.
+      if (ergebnis?.art === "abgewiesen" && ergebnis.code === CODE_EINSATZ_ABGESCHLOSSEN) {
+        merkeHinweis("warnung", ergebnis.meldung);
+      }
+      return ergebnis;
     },
 
     async zurueck(grund) {

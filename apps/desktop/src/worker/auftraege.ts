@@ -76,6 +76,10 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.eebUebernehmen(auftrag.ruf.abschnittId);
     case "tagebuchAnfordern":
       return dienst.tagebuch(auftrag.ruf);
+    case "einsatzArchivieren":
+      return dienst.archiviere(auftrag.zeitpunkt);
+    case "akteErzeugen":
+      return dienst.erzeugeAkte();
     case "schliesse":
       // Hier bewusst nicht behandelt: Der Worker-Einstieg faengt ihn ab, weil
       // er neben dem Dienst seinen Zeitgeber abraeumen muss.

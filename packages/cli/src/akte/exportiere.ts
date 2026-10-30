@@ -33,175 +33,32 @@
  * Vergleich des `zustandsHash` gegen den, der beim Export galt (§7.6). Erst
  * dieser Vergleich sagt: Es ist derselbe Einsatz, nicht bloß dieselbe Menge
  * Bytes.
+ *
+ * **Der Kern steht in `@s1/speicher`** (`aktenarchiv.ts`): Prüfen, Sammeln,
+ * Manifest und Ablegen. Die Oberfläche erzeugt dieselbe Akte über den
+ * Worker; hier bleiben Aufruf, Bericht und der Reimport.
  */
 
 import path from "node:path";
 
-import { liesZip, schreibeZip, textEintrag, type Zipeintrag } from "@s1/ausgaben";
+import { liesZip, schreibeZip } from "@s1/ausgaben";
 import {
-  DATEI_EINSATZ,
-  DateisystemFehler,
-  ORDNER_ANHAENGE,
-  ORDNER_AUSGABEN,
-  ORDNER_EREIGNISSE,
-  ORDNER_SCHNAPPSCHUESSE,
+  EXPORT_FASSUNG,
+  MANIFEST_DATEI,
+  archivName,
+  endgueltigeBefunde,
   knotenDateisystem,
+  legeArchivAb,
+  packeAkte,
+  pruefeOrdner,
   sha256HexBytes,
+  widerspruechlicheDoppel,
   type Dateisystem,
+  type Manifest,
 } from "@s1/speicher";
 
-import { berichte, endgueltigeBefunde, pruefeOrdner, widerspruechlicheDoppel } from "./pruefe.js";
+import { berichte } from "./pruefe.js";
 import type { Ergebnis } from "./pruefe.js";
-
-/**
- * Die Ordner, die mitfahren — in dieser Reihenfolge, damit zwei Exporte
- * desselben Bestands dieselbe Datei ergeben.
- *
- * `praesenz/` fehlt mit Absicht (§6.4, siehe Modulkopf).
- */
-export const EXPORT_ORDNER = [
-  ORDNER_EREIGNISSE,
-  ORDNER_SCHNAPPSCHUESSE,
-  ORDNER_ANHAENGE,
-  ORDNER_AUSGABEN,
-] as const;
-
-/** Der Name des Manifests im Archiv. */
-export const MANIFEST_DATEI = "manifest.json";
-
-/**
- * Die Fassung des Archivformats.
- *
- * Sie steht im Manifest, damit ein späterer Leser eine ältere Datei erkennt,
- * statt an ihr zu scheitern — dieselbe Überlegung wie bei `foldVersion`
- * (KONZEPT-EREIGNISSE.md §7.4).
- */
-export const EXPORT_FASSUNG = 1;
-
-/** Ein Eintrag im Manifest: was drin ist, wie groß, und mit welcher Prüfsumme. */
-export interface Manifesteintrag {
-  readonly pfad: string;
-  readonly bytes: number;
-  readonly sha256: string;
-}
-
-/** Das Manifest — die Inhaltsangabe des Archivs. */
-export interface Manifest {
-  readonly fassung: number;
-  /** Wanduhrzeit des Exports, ISO-8601 mit Zone; rein informativ. */
-  readonly erzeugt: string;
-  readonly einsatzId?: string;
-  readonly einsatzName?: string;
-  readonly einsatzDatum?: string;
-  /** Gefaltete fachliche Ereignisse zum Zeitpunkt des Exports. */
-  readonly ereignisse: number;
-  readonly foldVersion: number;
-  /** SHA-256 über die kanonische Serialisierung des Zustands (§7.6). */
-  readonly zustandsHash: string;
-  /** Waren beim Export endgültige Befunde offen (§8.2)? */
-  readonly befunde: number;
-  readonly dateien: readonly Manifesteintrag[];
-}
-
-/**
- * Sammelt alle Dateien unterhalb von `ordner` rekursiv, mit Pfaden relativ zu
- * ihm und `/` als Trenner.
- *
- * **Warum die Unterscheidung Datei/Ordner über `EISDIR` läuft.** Die
- * Dateisystem-Schnittstelle aus `@s1/speicher` kennt bewusst kein `stat`: Sie
- * hat genau die Rufe, die §2.2 und §6.6 brauchen, und jeder weitere Ruf wäre
- * eine Zusage, die über SMB einzuhalten wäre. Der Leseversuch beantwortet die
- * Frage ohnehin — was sich lesen lässt, ist eine Datei.
- *
- * Sortiert wird nach Codepunkten und nicht nach Gebietsschema: Ein Archiv, das
- * auf zwei Rechnern verschieden herauskommt, ließe sich nicht vergleichen
- * (dieselbe Begründung wie beim Zweitschlüssel in §5.3).
- */
-export async function sammleDateien(
-  dateisystem: Dateisystem,
-  ordner: string,
-  praefix = "",
-): Promise<readonly Zipeintrag[]> {
-  const namen = [...(await dateisystem.listeVerzeichnis(ordner))].sort();
-  const gefunden: Zipeintrag[] = [];
-  for (const name of namen) {
-    const voll = path.join(ordner, name);
-    const relativ = praefix === "" ? name : `${praefix}/${name}`;
-    let bytes: Uint8Array;
-    try {
-      bytes = await dateisystem.liesAb(voll, 0);
-    } catch (fehler) {
-      if (fehler instanceof DateisystemFehler && fehler.code === "EISDIR") {
-        gefunden.push(...(await sammleDateien(dateisystem, voll, relativ)));
-        continue;
-      }
-      throw fehler;
-    }
-    gefunden.push({ pfad: relativ, bytes });
-  }
-  return gefunden;
-}
-
-/**
- * Baut das Archiv im Speicher.
- *
- * Der Zeitpunkt geht als Parameter hinein und wird nicht der Systemuhr
- * entnommen: Nur so ist ein Export in einem Test bitgleich wiederholbar, und
- * die Wiederholbarkeit ist es, die den Goldfile-Vergleich trägt (dieselbe
- * Begründung wie bei den Ausgaben aus M4.1).
- */
-export async function packeAkte(
-  dateisystem: Dateisystem,
-  ordner: string,
-  zeitpunkt: Date,
-): Promise<{ readonly bytes: Uint8Array; readonly manifest: Manifest }> {
-  const ergebnis = await pruefeOrdner(dateisystem, ordner);
-
-  const inhalte: Zipeintrag[] = [];
-  // `einsatz.json` zuerst: Sie ist der Anker (§5.6), und wer das Archiv von
-  // Hand aufmacht, soll als Erstes sehen, welcher Einsatz das ist.
-  try {
-    const anker = await dateisystem.liesAb(path.join(ordner, DATEI_EINSATZ), 0);
-    inhalte.push({ pfad: DATEI_EINSATZ, bytes: anker });
-  } catch (fehler) {
-    if (!(fehler instanceof DateisystemFehler) || fehler.code !== "ENOENT") throw fehler;
-  }
-  for (const unterordner of EXPORT_ORDNER) {
-    inhalte.push(...(await sammleDateien(dateisystem, path.join(ordner, unterordner), unterordner)));
-  }
-
-  const manifest: Manifest = {
-    fassung: EXPORT_FASSUNG,
-    erzeugt: zeitpunkt.toISOString(),
-    ...(ergebnis.anker === undefined
-      ? {}
-      : {
-          einsatzId: ergebnis.anker.einsatzId,
-          einsatzName: ergebnis.anker.name,
-          einsatzDatum: ergebnis.anker.datum,
-        }),
-    ereignisse: ergebnis.ereignisse,
-    foldVersion: ergebnis.foldVersion,
-    zustandsHash: ergebnis.zustandsHash,
-    befunde: endgueltigeBefunde(ergebnis).length + widerspruechlicheDoppel(ergebnis).length,
-    dateien: inhalte.map((eintrag) => ({
-      pfad: eintrag.pfad,
-      bytes: eintrag.bytes.length,
-      sha256: sha256HexBytes(eintrag.bytes),
-    })),
-  };
-
-  // Das Manifest steht am Ende und trägt keine Prüfsumme über sich selbst —
-  // das ginge nicht. Seine Unversehrtheit sichert die CRC-32 des Formats
-  // (APPNOTE 4.4.7), die `liesZip` bei jedem Eintrag prüft.
-  const eintraege = [...inhalte, textEintrag(MANIFEST_DATEI, `${JSON.stringify(manifest, undefined, 2)}\n`)];
-  return { bytes: schreibeZip(eintraege, { zeitpunkt }), manifest };
-}
-
-/** Der vorgeschlagene Dateiname, wenn `--ziel` fehlt. */
-export function archivName(manifest: Manifest): string {
-  return `${manifest.einsatzId ?? "einsatz"}.zip`;
-}
 
 const ERLAUBTE_OPTIONEN = new Set(["ziel"]);
 
@@ -244,18 +101,9 @@ export async function exportiere(
   jetzt: () => number = Date.now,
 ): Promise<Ergebnis> {
   const { stelle, ziel } = deute(argv);
-  const { bytes, manifest } = await packeAkte(dateisystem, stelle, new Date(jetzt()));
+  const { bytes, manifest } = await packeAkte(dateisystem, stelle, new Date(jetzt()), schreibeZip);
   const datei = ziel ?? path.join(process.cwd(), archivName(manifest));
-
-  await dateisystem.legeVerzeichnisAn(path.dirname(datei));
-  // Anhängen an eine geleerte Datei statt Überschreiben: Die Schnittstelle
-  // kennt kein „schreibe ganz mit fsync", und `haengeAnUndSynchronisiere` ist
-  // der einzige Ruf, der synchronisiert (§2.2) — ein Archiv ohne `fsync` wäre
-  // nach einem Stromausfall genau das, wogegen es geschrieben wurde. `loesche`
-  // davor, weil ein zweiter Lauf sonst an das erste Archiv anhängte; eine
-  // fehlende Datei ist dort kein Fehler.
-  await dateisystem.loesche(datei);
-  await dateisystem.haengeAnUndSynchronisiere(datei, bytes);
+  await legeArchivAb(dateisystem, datei, bytes);
 
   const zeilen = [
     `Einsatz:       ${manifest.einsatzName ?? "(ohne Anker)"} (${manifest.einsatzId ?? "?"})`,

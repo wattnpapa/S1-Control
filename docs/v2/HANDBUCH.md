@@ -63,8 +63,15 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Rechnerausfall auf Papier weitergearbeitet wird.
 9. **Zum Schichtwechsel:** Nichts. Die Ablösung setzt sich an denselben
    Rechner oder öffnet den Einsatz an einem anderen.
-10. **Nach dem Einsatz:** `s1 akte exportiere` und das Archiv sichern. Wie das
-    geht, steht in [BETRIEB.md](BETRIEB.md).
+10. **Nach dem Einsatz:** Im Blatt **Ausgaben** unter „Einsatz abschließen“
+    den Einsatz beenden (Zeitpunkt und Bemerkung), die letzten Ausdrucke
+    machen und „Einsatzakte erzeugen“ — das ZIP liegt im Ordner des Einsatzes
+    auf dem Share, der Pfad steht daneben, „Ordner zeigen“ führt hin. Die Akte
+    sichern und erst dann „Archivieren“: Danach kann an diesem Einsatz
+    nichts mehr geschrieben werden, an keinem Arbeitsplatz. Ein beendeter
+    Einsatz lässt sich dagegen jederzeit wiedereröffnen. Dieselbe Akte
+    erzeugt `s1 akte exportiere`; wie man sie prüft und ablegt, steht in
+    [BETRIEB.md](BETRIEB.md).
 
 ## Was ein Zurücknehmen tut
 
@@ -187,11 +194,11 @@ Die Abrechnung: PSA, VDA, Unterkunft und Verpflegung je Einheit.
 
 ### Ausgaben
 
-Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall.
+Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall. Darunter wird der Einsatz abgeschlossen: beenden, Einsatzakte erzeugen, archivieren.
 
-**Zuerst:** Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes.
+**Zuerst:** Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes. Mit „Öffnen“, „Ordner zeigen“ und bei HTML „Drucken“ geht es von dort weiter.
 
-**Gut zu wissen:** Der Dateiname trägt den Zeitpunkt. Eine zweite Ausgabe überschreibt die erste nicht.
+**Gut zu wissen:** Der Dateiname trägt den Zeitpunkt. Eine zweite Ausgabe überschreibt die erste nicht. Ein beendeter Einsatz nimmt keine Eingaben mehr an, bis er wiedereröffnet wird; ein archivierter gar keine mehr — an keinem Arbeitsplatz.
 
 ### Diagnose
 

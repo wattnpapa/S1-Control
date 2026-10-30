@@ -198,4 +198,19 @@ describe("Kopfband", () => {
     expect(screen.getByRole("tab", { name: "Eingangskorb" })).toBeDefined();
     expect(screen.getByRole("tab", { name: "Kosten", selected: true })).toBeDefined();
   });
+
+  it("sagt in der Zustandszeile, dass ein beendeter oder archivierter Einsatz gesperrt ist", () => {
+    const { rerender } = render(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "BEENDET" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.getByText(/BEENDET — Eingaben gesperrt/u)).toBeDefined();
+    rerender(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "ARCHIVIERT" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.getByText(/ARCHIVIERT — nur lesen/u)).toBeDefined();
+    rerender(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "AKTIV" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.queryByText(/gesperrt|nur lesen/u)).toBeNull();
+  });
 });

@@ -21,11 +21,12 @@ import {
   knotenDateisystem,
   legeEinsatzAn,
   oeffneAkte,
+  pruefeOrdner,
   type Einsatzanker,
 } from "@s1/speicher";
 
 import { fuehreAus } from "../index.js";
-import { pruefeOrdner, pruefe } from "./pruefe.js";
+import { pruefe } from "./pruefe.js";
 
 const EINSATZ_ID = "2026-09-08_uebung-nord_ab12cd";
 
