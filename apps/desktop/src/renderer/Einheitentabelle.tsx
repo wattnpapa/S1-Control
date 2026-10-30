@@ -39,6 +39,7 @@ import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/b
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { Zellmarken } from "./Ressourcenmarken.js";
 import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
 
 /**
@@ -117,6 +118,7 @@ export type Einheitenmaske =
   | "aufteilen"
   | "zusammenfuehren"
   | "entfernen"
+  | "abloesung"
   | undefined;
 
 export interface EinheitentabelleEigenschaften {
@@ -329,6 +331,9 @@ export function Einheitentabelle({
         <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("entfernen"); }}>
           Entfernen
         </button>
+        <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("abloesung"); }}>
+          Ablösung anfordern
+        </button>
         <label className="suchfeld">
           Suche
           <input
@@ -522,6 +527,7 @@ function Zelle({
         ) : (
           zelle.text
         )}
+        <Zellmarken zeile={zeile} spalte={spalte} />
         {zelle.umstritten && <span aria-label="Konflikthinweis"> ⚠</span>}
       </td>
     );

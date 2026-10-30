@@ -72,9 +72,10 @@ describe("Die Anforderungsansicht", () => {
     expect(attrappe.letzterRuf("anforderungenAnfordern")?.akteId).toBe("akte-1");
   });
 
-  it("zeigt den abgeleiteten Zustand als eigene Spalte", async () => {
+  it("zeigt den abgeleiteten Zustand als eigene Spalte — als Wort, nicht als Schlüssel", async () => {
     await zeige();
-    expect(screen.getByText("OFFEN")).toBeDefined();
+    expect(screen.getByText("Offen", { selector: "span" })).toBeDefined();
+    expect(screen.queryByText("OFFEN")).toBeNull();
   });
 
   it("legt eine Anforderung als Form (b) an — ohne vorher und ohne neu", async () => {
@@ -118,12 +119,20 @@ describe("Die Anforderungsansicht", () => {
   it("schickt die Zusage mit dem Schlüssel, den der Fold plausibilisiert", async () => {
     await zeige();
     fireEvent.click(screen.getByText("Zusagen"));
+    // Die Maske fragt „Zugesagt für“ und „Zugesagt von“ ab — vorher stand
+    // dort „jetzt“ und nichts (Spalten P und Q der Excel).
+    const bestaetigen = screen.getByText("Zusagen", { selector: "button[type=submit]" }) as HTMLButtonElement;
+    expect(bestaetigen.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Zugesagt für"), { target: { value: "30.10.2099 16:00" } });
+    fireEvent.change(screen.getByLabelText("Zugesagt von"), { target: { value: "THW RB Oldenburg" } });
+    fireEvent.click(bestaetigen);
     await waitFor(() => {
       expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
     });
     const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
     expect(entwurf?.typ).toBe("AbloesungZugesagt");
     expect((entwurf?.neu as { zugesagtFuer?: string }).zugesagtFuer).toBeDefined();
+    expect((entwurf?.neu as { zugesagtVon?: string }).zugesagtVon).toBe("THW RB Oldenburg");
   });
 
   it("verlangt beim Storno einen Grund und schickt ihn mit (§2.4)", async () => {

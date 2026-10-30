@@ -19,17 +19,14 @@
 import { useEffect, useState } from "react";
 import { useGrundabfrage } from "./Grundabfrage.js";
 
-import type { Anforderungszeile, Anforderungszustand } from "@s1/domaene";
+import { zeitpunktText, type Anforderungszeile, type Anforderungszustand } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
-import {
-  abloesungZugesagt,
-  anforderungAnlegen,
-  anforderungErledigt,
-  anforderungStorniert,
-  ruecknahme,
-} from "../kontrakt/bedienschritte.js";
+import { AnforderungZuEinheit, type Eintreffart } from "./AnforderungZuEinheit.js";
+import { AnforderungZusage } from "./AnforderungZusage.js";
+import { Anforderungsfelder, LEERE_ANFORDERUNG, anforderungAusEingabe } from "./Anforderungsformular.js";
+import { anforderungStorniert, ruecknahme } from "../kontrakt/bedienschritte.js";
 
 /** Die vier Zustände mit ihrer Beschriftung, in der Ordnung der Liste. */
 const ZUSTAENDE: readonly { readonly wert: Anforderungszustand; readonly titel: string }[] = [
@@ -39,25 +36,9 @@ const ZUSTAENDE: readonly { readonly wert: Anforderungszustand; readonly titel: 
   { wert: "STORNIERT", titel: "Storniert" },
 ];
 
-/**
- * Eine Kennung für eine neue Anforderung.
- *
- * Sie wird im Renderer gebildet und nicht im Worker, weil sie zur **Anlage**
- * gehört und die Anlage von hier kommt (§3.11: Zwei Anlagen derselben Id sind
- * geregelt, aber die Id muss jemand vergeben). Zeitstempel plus Zufall reicht:
- * Kollidieren zwei Clients doch, gilt die kleinere HLC, und die zweite Anlage
- * steht in `verworfeneAnlagen`.
- */
-function neueKennung(): string {
-  return `anf-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-}
-
-/** Formatiert einen ISO-Zeitpunkt für die Anzeige; leer bleibt leer. */
-function zeit(wert: string): string {
-  if (wert === "") return "";
-  const zeitpunkt = new Date(wert);
-  if (Number.isNaN(zeitpunkt.getTime())) return wert;
-  return zeitpunkt.toLocaleString("de-DE");
+/** Das Wort zum Zustand — die Liste zeigt keine Schlüssel. */
+function zustandTitel(wert: Anforderungszustand): string {
+  return ZUSTAENDE.find((zustand) => zustand.wert === wert)?.titel ?? wert;
 }
 
 /** Der Zeitpunkt „jetzt“ als ISO-Zeichenkette mit Zone — für die Anlage. */
@@ -68,7 +49,7 @@ function jetzt(): string {
 export function Anforderungen(): React.JSX.Element {
   const laden = useLaden();
   const holeAnforderungen = laden.holeAnforderungen;
-  const [neu, setzeNeu] = useState({ vorgeseheneEinheitText: "", vorgesehenerAuftrag: "", kennung: "" });
+  const [neu, setzeNeu] = useState(LEERE_ANFORDERUNG);
 
   useEffect(() => {
     void holeAnforderungen();
@@ -78,21 +59,10 @@ export function Anforderungen(): React.JSX.Element {
   const filter = laden.anforderungsfilter;
 
   function lege(): void {
-    if (neu.vorgeseheneEinheitText.trim() === "" && neu.vorgesehenerAuftrag.trim() === "") return;
-    void laden.bediene(
-      anforderungAnlegen({
-        anforderungId: neueKennung(),
-        angefordertAm: jetzt(),
-        ...(neu.kennung.trim() === "" ? {} : { kennung: neu.kennung.trim() }),
-        ...(neu.vorgeseheneEinheitText.trim() === ""
-          ? {}
-          : { vorgeseheneEinheitText: neu.vorgeseheneEinheitText.trim() }),
-        ...(neu.vorgesehenerAuftrag.trim() === ""
-          ? {}
-          : { vorgesehenerAuftrag: neu.vorgesehenerAuftrag.trim() }),
-      }),
-    );
-    setzeNeu({ vorgeseheneEinheitText: "", vorgesehenerAuftrag: "", kennung: "" });
+    const entwurf = anforderungAusEingabe(neu, jetzt());
+    if (entwurf === undefined) return;
+    void laden.bediene(entwurf);
+    setzeNeu(LEERE_ANFORDERUNG);
   }
 
   return (
@@ -128,39 +98,12 @@ export function Anforderungen(): React.JSX.Element {
       </div>
 
       <div className="anforderungneu">
-        <label>
-          Kennung
-          <input
-            type="text"
-            value={neu.kennung}
-            onChange={(e) => {
-              setzeNeu((bisher) => ({ ...bisher, kennung: e.target.value }));
-            }}
-          />
-        </label>
-        <label>
-          Vorgesehene Einheit
-          <input
-            type="text"
-            value={neu.vorgeseheneEinheitText}
-            onChange={(e) => {
-              setzeNeu((bisher) => ({ ...bisher, vorgeseheneEinheitText: e.target.value }));
-            }}
-          />
-        </label>
-        <label>
-          Vorgesehener Auftrag
-          <input
-            type="text"
-            value={neu.vorgesehenerAuftrag}
-            onChange={(e) => {
-              setzeNeu((bisher) => ({ ...bisher, vorgesehenerAuftrag: e.target.value }));
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") lege();
-            }}
-          />
-        </label>
+        <Anforderungsfelder
+          eingabe={neu}
+          aufEingabe={setzeNeu}
+          einheitenwahl={ansicht?.einheitenwahl ?? []}
+          aufEnter={lege}
+        />
         <button type="button" onClick={lege}>
           Anfordern
         </button>
@@ -201,24 +144,38 @@ export function Anforderungen(): React.JSX.Element {
   );
 }
 
+/** Welche Maske an einer Zeile offen ist. */
+type Zeilenmaske = "zusage" | Eintreffart | undefined;
+
 function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
   const laden = useLaden();
   const grundabfrage = useGrundabfrage();
+  const [maske, setzeMaske] = useState<Zeilenmaske>(undefined);
+  const schliesse = (): void => {
+    setzeMaske(undefined);
+  };
 
   return (
     <tr className={zeile.zustand === "STORNIERT" ? "storniert" : ""}>
       <td>
-        <span className={`zustand zustand-${zeile.zustand.toLowerCase()}`}>{zeile.zustand}</span>
+        <span className={`zustand zustand-${zeile.zustand.toLowerCase()}`}>{zustandTitel(zeile.zustand)}</span>
       </td>
       <th scope="row">{zeile.kennung}</th>
-      <td>{zeit(zeile.angefordertAm)}</td>
+      <td>{zeitpunktText(zeile.angefordertAm)}</td>
       <td>{zeile.abzuloesendeEinheit ?? ""}</td>
-      <td>{zeile.vorgeseheneEinheitText}</td>
+      <td>
+        {zeile.vorgeseheneEinheitText}
+        {/* Die Einheit, die aus der Anforderung angelegt wurde — „Ablösung
+            durch“ in der Einheitentabelle. */}
+        {zeile.abloesendeEinheit !== undefined && (
+          <span className="hinweistext"> → angelegt: {zeile.abloesendeEinheit}</span>
+        )}
+      </td>
       <td>{zeile.vorgesehenerAuftrag}</td>
       <td>
         {zeile.zugesagtFuer === undefined
           ? ""
-          : `${zeit(zeile.zugesagtFuer)}${zeile.zugesagtVon === "" ? "" : ` · ${zeile.zugesagtVon ?? ""}`}`}
+          : `${zeitpunktText(zeile.zugesagtFuer)}${zeile.zugesagtVon === "" ? "" : ` · ${zeile.zugesagtVon ?? ""}`}`}
       </td>
       <td className="handlungen">
         {/* Die Knöpfe folgen dem abgeleiteten Zustand (§5.6.2). Angeboten wird
@@ -227,23 +184,13 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
             und trüge einen Hinweis; einen Knopf dafür anzubieten, wäre ein
             Versprechen, das der Fold nicht hält. */}
         {zeile.zustand === "OFFEN" && (
-          <button
-            type="button"
-            onClick={() => {
-              void laden.bediene(abloesungZugesagt(zeile.id, jetzt(), ""));
-            }}
-          >
+          <button type="button" onClick={() => { setzeMaske("zusage"); }}>
             Zusagen
           </button>
         )}
         {zeile.zustand === "ZUGESAGT" && (
           <>
-            <button
-              type="button"
-              onClick={() => {
-                void laden.bediene(anforderungErledigt(zeile.id, jetzt()));
-              }}
-            >
+            <button type="button" onClick={() => { setzeMaske("eintreffen"); }}>
               Eingetroffen
             </button>
             <button
@@ -257,14 +204,21 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
           </>
         )}
         {zeile.zustand === "EINGETROFFEN" && (
-          <button
-            type="button"
-            onClick={() => {
-              void laden.bediene(ruecknahme(zeile.id, "erledigung"));
-            }}
-          >
-            Eintreffen zurück
-          </button>
+          <>
+            {zeile.abloesendeEinheitId === undefined && (
+              <button type="button" onClick={() => { setzeMaske("nachtragen"); }}>
+                Einheit anlegen
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => {
+                void laden.bediene(ruecknahme(zeile.id, "erledigung"));
+              }}
+            >
+              Eintreffen zurück
+            </button>
+          </>
         )}
         {zeile.zustand === "STORNIERT" ? (
           <button
@@ -297,6 +251,10 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
           </button>
         )}
         {grundabfrage.maske}
+        {maske === "zusage" && <AnforderungZusage zeile={zeile} aufSchliessen={schliesse} />}
+        {(maske === "eintreffen" || maske === "nachtragen") && (
+          <AnforderungZuEinheit zeile={zeile} art={maske} aufSchliessen={schliesse} />
+        )}
       </td>
     </tr>
   );
