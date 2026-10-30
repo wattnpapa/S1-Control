@@ -214,13 +214,94 @@ Was der Bediener wissen muss:
 * **Was fehlt:** PDF-Ausgaben (HTML und XLSX gehen; das PDF entsteht auf einem
   Desktop-Arbeitsplatz), die Kamera, und das Programmpaket wird nicht über den
   Share eingespielt — ein Container wird durch ein neues Bild aktualisiert.
-* **Keine Anmeldung.** Wer den Dienst im Netz erreicht, arbeitet mit — wie
-  auf dem Share jeder schreibt, der das Verzeichnis sieht. Der Dienst gehört
-  in das Netz der Führungsstelle und nirgendwo sonst hin.
+* **Keine Anmeldung im Netz der Führungsstelle.** Wer den Dienst dort
+  erreicht, arbeitet mit — wie auf dem Share jeder schreibt, der das
+  Verzeichnis sieht. In dieser Form gehört der Dienst in das Netz der
+  Führungsstelle und nirgendwo sonst hin; für das Internet siehe
+  „Bereitstellung im Internet mit Anmeldung“.
 
 Beim Stoppen (`docker compose stop`) schließt der Dienst alle Arbeitsplätze
 geordnet; der Upload-Stand wird fortgeschrieben, die Präsenz bleibt liegen und
 altert sichtbar (§6.4).
+
+## Bereitstellung im Internet mit Anmeldung
+
+Dieselbe Web-Schale kann zentral auf einem Server im Internet laufen (ADR-006).
+Dann steht vor der Anwendung **ein gemeinsamer Zugang** (Anmeldename und
+Passwort für alle), und vor dem Dienst ein Reverse-Proxy (Caddy), der das
+TLS-Zertifikat selbst holt. Auf dem Server gibt es kein NAS: Ein Docker-Volume
+ist der Share. Desktop-Arbeitsplätze nehmen an diesem Betrieb nicht teil.
+
+Voraussetzungen: ein Server mit Docker, ein DNS-Name, der auf ihn zeigt, und
+die Ports 80 und 443 offen. Einrichten:
+
+```
+git clone … S1-Control && cd S1-Control
+git submodule update --init --recursive
+cp .env.beispiel .env
+#   S1_DOMAIN=s1.beispiel.de
+#   S1_WEB_ANMELDENAME=fuest
+#   S1_WEB_PASSWORT=<mindestens 12 Zeichen; mit `$` in '…' setzen>
+#   S1_WEB_SITZUNG_H=12
+docker compose -f docker-compose.internet.yml up -d --build
+docker compose -f docker-compose.internet.yml logs s1-web   # „Zugang mit Anmeldung“
+```
+
+Danach ist die Anwendung unter `https://<S1_DOMAIN>` erreichbar. Fehlt der
+Anmeldename, ist das Passwort kürzer als 12 Zeichen oder steht in
+`S1_WEB_ZUGANG` etwas anderes als `offen` oder `anmeldung`, startet der Dienst
+nicht und sagt im Protokoll, warum. Das Passwort steht nie im Protokoll.
+
+**Zugang ändern** (etwa wenn jemand ausscheidet): `S1_WEB_PASSWORT` in `.env`
+ändern und `docker compose -f docker-compose.internet.yml up -d` — der Dienst
+startet mit dem neuen Passwort. Wer schon angemeldet ist, bleibt es bis zum
+Ablauf seiner Sitzung. Sofort hinaus sind alle, wenn bei angehaltenem Dienst
+`sitzungen.json` im Daten-Volume gelöscht wird:
+
+```
+docker compose -f docker-compose.internet.yml stop s1-web
+docker compose -f docker-compose.internet.yml run --rm --no-deps s1-web rm -f /daten/sitzungen.json
+docker compose -f docker-compose.internet.yml up -d
+```
+
+Was der Bediener sieht:
+
+* **Beim ersten Öffnen die Anmeldeseite** — „Anmeldename“, „Passwort“,
+  „Anmelden“. Sie funktioniert ohne JavaScript. Bei falscher Angabe steht dort
+  nur „Anmeldename oder Passwort falsch“, ohne zu sagen, was falsch war.
+* **Nach fünf Fehlversuchen in 15 Minuten** von derselben Adresse wird die
+  Anmeldung für den Rest der 15 Minuten abgewiesen, auch mit richtigem
+  Passwort; die Seite nennt die Wartezeit. Fehlversuche stehen mit Anmeldename
+  und IP-Adresse im Protokoll.
+* **Danach die gewohnte Anwendung**, im Kopfband zusätzlich „Abmelden“. Der
+  Anzeigename in den Einstellungen bleibt der Akteur im Einsatztagebuch — der
+  gemeinsame Anmeldename sagt nichts über die Person und steht in keinem
+  Ereignis. Jeder Browser bleibt ein eigener Arbeitsplatz wie im Netz der
+  Führungsstelle.
+* **Sitzungen** gelten `S1_WEB_SITZUNG_H` Stunden (Vorgabe 12) ab der letzten
+  Nutzung und überleben einen Neustart des Dienstes. Läuft eine ab, springt das
+  Fenster beim nächsten Ruf auf die Anmeldeseite; nach dem Anmelden geht es mit
+  demselben Arbeitsplatz weiter.
+
+Was die Anmeldung **nicht** schützt:
+
+* **Die Volumes.** Wer auf dem Server das Share-Volume (`s1-share`) oder das
+  Daten-Volume (`s1-daten`) lesen kann, liest alles — Einsätze, Spiegel,
+  Protokoll. Sicherungen dieser Volumes sind wie die Einsatzakte selbst zu
+  behandeln.
+* **Die Personen.** Alle teilen ein Passwort; es gibt keine Rollen und keine
+  Rechte (Entscheidung 9). Wer angemeldet ist, kann alles, was jeder
+  Arbeitsplatz kann.
+* **Den Server selbst.** Updates des Betriebssystems und von Docker, eine
+  Firewall, die nur 80/443 (und SSH) öffnet, und die Sicherung der Volumes
+  liegen beim Betreiber des Servers.
+
+Technisches: Der Dienst `s1-web` lauscht nur im Compose-Netz;
+`S1_WEB_HINTER_PROXY=1` lässt ihn Absender und HTTPS aus den
+`X-Forwarded-*`-Köpfen von Caddy lesen, dann trägt das Sitzungscookie
+`Secure`. Ohne dieses Kennzeichen (oder `S1_WEB_SICHER=1`) warnt der Dienst
+beim Start, dass Passwort und Sitzung unverschlüsselt reisen. Der Healthcheck
+(`/gesundheit`) braucht keine Anmeldung.
 
 ## Notverfahren bei NAS-Ausfall
 
