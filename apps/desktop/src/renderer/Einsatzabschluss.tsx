@@ -42,21 +42,21 @@ function meldungAus(ergebnis: Bedienergebnis | undefined): string | undefined {
   return "meldung" in ergebnis ? ergebnis.meldung : "Der Schritt ist nicht durchgegangen.";
 }
 
+/** Das gesehene Ende als `vorher`-Wert (§2.2a): `null`, solange keines gilt. */
+function gesehenesEnde(lagebild: Lagebild): string | null {
+  return lagebild.einsatzEnde === undefined || lagebild.einsatzEnde === "" ? null : lagebild.einsatzEnde;
+}
+
 export function Einsatzabschluss(): React.JSX.Element | null {
   const lagebild = useLaden((zustand) => zustand.lagebild);
-  const bediene = useLaden((zustand) => zustand.bediene);
   const [offen, setzeOffen] = useState<Offen>(undefined);
-  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
   // Die Akte steht unter allen Knöpfen und nicht neben ihrem: Der Pfad ist
   // lang und nimmt die volle Breite — zwischen den Knöpfen risse er die Reihe.
   const [akte, setzeAkte] = useState<Akteergebnis | undefined>(undefined);
   if (lagebild === undefined) return null;
-  const status = lagebild.einsatzStatus ?? "AKTIV";
-  const vorher = lagebild.einsatzEnde === undefined || lagebild.einsatzEnde === "" ? null : lagebild.einsatzEnde;
-
-  async function wiedereroeffne(): Promise<void> {
-    setzeMeldung(meldungAus(await bediene(einsatzWiedereroeffnet(lagebild?.einsatzId ?? "", vorher))));
-  }
+  const schliesse = (): void => {
+    setzeOffen(undefined);
+  };
 
   return (
     <section aria-label="Einsatz abschließen" className="einsatzabschluss">
@@ -64,8 +64,36 @@ export function Einsatzabschluss(): React.JSX.Element | null {
       <p>
         Zustand: <strong>{zustandstext(lagebild)}</strong>
       </p>
+      <Abschlussknoepfe lagebild={lagebild} oeffne={setzeOffen} aufAkte={setzeAkte} />
+      {akte !== undefined && <Ausgabedatei pfad={akte.pfad} vorsatz="Einsatzakte" zusatz={aktenzusatz(akte)} />}
+      {offen === "beenden" && (
+        <Beendenmaske einsatzId={lagebild.einsatzId} vorher={gesehenesEnde(lagebild)} aufSchliessen={schliesse} />
+      )}
+      {offen === "archivieren" && <Archivmaske aufSchliessen={schliesse} />}
+    </section>
+  );
+}
+
+interface AbschlussknoepfeEigenschaften {
+  readonly lagebild: Lagebild;
+  oeffne(welche: Offen): void;
+  aufAkte(akte: Akteergebnis): void;
+}
+
+/** Die Knöpfe in der Reihenfolge des Vorgangs — je Zustand nur die, die gehen. */
+function Abschlussknoepfe({ lagebild, oeffne, aufAkte }: AbschlussknoepfeEigenschaften): React.JSX.Element {
+  const bediene = useLaden((zustand) => zustand.bediene);
+  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const status = lagebild.einsatzStatus ?? "AKTIV";
+
+  async function wiedereroeffne(): Promise<void> {
+    setzeMeldung(meldungAus(await bediene(einsatzWiedereroeffnet(lagebild.einsatzId, gesehenesEnde(lagebild)))));
+  }
+
+  return (
+    <>
       {status === "AKTIV" && (
-        <button type="button" onClick={() => { setzeOffen("beenden"); }}>
+        <button type="button" onClick={() => { oeffne("beenden"); }}>
           Einsatz beenden
         </button>
       )}
@@ -74,19 +102,14 @@ export function Einsatzabschluss(): React.JSX.Element | null {
           Einsatz wiedereröffnen
         </button>
       )}
-      <Aktenknopf aufErzeugt={setzeAkte} />
+      <Aktenknopf aufErzeugt={aufAkte} />
       {status === "BEENDET" && (
-        <button type="button" onClick={() => { setzeOffen("archivieren"); }}>
+        <button type="button" onClick={() => { oeffne("archivieren"); }}>
           Archivieren
         </button>
       )}
-      {akte !== undefined && <Ausgabedatei pfad={akte.pfad} vorsatz="Einsatzakte" zusatz={aktenzusatz(akte)} />}
       {meldung !== undefined && <p className="hinweistext" role="alert">{meldung}</p>}
-      {offen === "beenden" && (
-        <Beendenmaske einsatzId={lagebild.einsatzId} vorher={vorher} aufSchliessen={() => { setzeOffen(undefined); }} />
-      )}
-      {offen === "archivieren" && <Archivmaske aufSchliessen={() => { setzeOffen(undefined); }} />}
-    </section>
+    </>
   );
 }
 

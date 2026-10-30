@@ -50,20 +50,23 @@ function istZeitpunkt(wert: unknown): boolean {
   return typeof wert === "string" && /^\d{4}-\d{2}-\d{2}T/.test(wert) && !Number.isNaN(new Date(wert).getTime());
 }
 
-/**
- * Prüft einen Entwurf gegen den Zustand des Einsatzes — `undefined` heißt
- * „darf geschrieben werden".
- */
-export function pruefeAbschluss(zustand: Zustand, entwurf: Ereignisentwurf): Bedienergebnis | undefined {
-  const status = zustand.einsatz?.status ?? "AKTIV";
-  if (status === "ARCHIVIERT" && !NACH_DER_ARCHIVIERUNG.has(entwurf.typ)) {
+type Einsatzstatus = "AKTIV" | "BEENDET" | "ARCHIVIERT";
+
+/** Die Sperre selbst: Was darf in diesem Zustand überhaupt noch geschrieben werden? */
+function sperre(status: Einsatzstatus, typ: string): Bedienergebnis | undefined {
+  if (status === "ARCHIVIERT" && !NACH_DER_ARCHIVIERUNG.has(typ)) {
     return abgewiesen("Der Einsatz ist archiviert. Es kann nichts mehr geschrieben werden.");
   }
-  if (status === "BEENDET" && !NACH_DEM_ENDE.has(entwurf.typ)) {
+  if (status === "BEENDET" && !NACH_DEM_ENDE.has(typ)) {
     return abgewiesen(
       "Der Einsatz ist beendet. Zum Weiterschreiben im Blatt „Ausgaben“ zuerst „Einsatz wiedereröffnen“ wählen.",
     );
   }
+  return undefined;
+}
+
+/** Die Übergänge des Abschlusses: wiedereröffnen und archivieren nur aus „beendet“, beenden nur mit Zeitpunkt. */
+function uebergang(status: Einsatzstatus, entwurf: Ereignisentwurf): Bedienergebnis | undefined {
   if (entwurf.typ === "EinsatzWiedereroeffnet" && status !== "BEENDET") {
     return abgewiesen("Der Einsatz läuft noch; es gibt nichts wiederzueröffnen.", "EINSATZ_ZUSTAND");
   }
@@ -74,6 +77,15 @@ export function pruefeAbschluss(zustand: Zustand, entwurf: Ereignisentwurf): Bed
     return abgewiesen("Das Einsatzende ist keine lesbare Zeitangabe.", "SCHEMA");
   }
   return undefined;
+}
+
+/**
+ * Prüft einen Entwurf gegen den Zustand des Einsatzes — `undefined` heißt
+ * „darf geschrieben werden".
+ */
+export function pruefeAbschluss(zustand: Zustand, entwurf: Ereignisentwurf): Bedienergebnis | undefined {
+  const status = zustand.einsatz?.status ?? "AKTIV";
+  return sperre(status, entwurf.typ) ?? uebergang(status, entwurf);
 }
 
 /**
