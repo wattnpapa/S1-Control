@@ -8,7 +8,7 @@
 
 import { describe, expect, it, vi } from "vitest";
 
-import { webBruecke } from "./webBruecke.js";
+import { MELDUNG_ABGEMELDET, webBruecke } from "./webBruecke.js";
 import type { Mitteilung } from "../kontrakt/index.js";
 
 class Quelle extends EventTarget {
@@ -55,6 +55,26 @@ describe("webBruecke", () => {
       ok: false,
       meldung: "Der Dienst antwortete mit 503.",
     });
+  });
+
+  it("geht bei 401 (Anmeldung abgelaufen) zur Anmeldeseite", async () => {
+    const hole = vi.fn(async () => antwortMit(401, { ok: false, meldung: "Nicht angemeldet." }));
+    const weiterleiten = vi.fn();
+    const bruecke = webBruecke({ hole, Quelle: Quelle as unknown as typeof EventSource, weiterleiten });
+    expect(await bruecke.ruf({ art: "umgebung" })).toEqual({ ok: false, meldung: MELDUNG_ABGEMELDET });
+    // Relativ, wie `ruf` und `mitteilungen` — auch hinter einem Unterpfad.
+    expect(weiterleiten).toHaveBeenCalledWith("anmeldung");
+  });
+
+  it("leitet bei anderen Fehlern nicht weiter", async () => {
+    const weiterleiten = vi.fn();
+    const bruecke = webBruecke({
+      hole: vi.fn(async () => antwortMit(403, {})),
+      Quelle: Quelle as unknown as typeof EventSource,
+      weiterleiten,
+    });
+    await bruecke.ruf({ art: "umgebung" });
+    expect(weiterleiten).not.toHaveBeenCalled();
   });
 
   it("macht aus einem Netzfehler eine Antwort mit ok: false", async () => {

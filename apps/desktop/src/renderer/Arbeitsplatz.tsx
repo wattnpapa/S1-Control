@@ -101,6 +101,7 @@ export function Arbeitsplatz(): React.JSX.Element {
         zurueckZurAuswahl={
           laden.akteId === undefined ? undefined : () => void laden.schliesseEinsatz()
         }
+        angemeldet={laden.umgebung?.anmeldung === true}
         {...(laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf"
           ? { blatt, waehleBlatt: setzeBlatt, offeneMeldungen: laden.eingangskorb?.offen ?? 0 }
           : {})}
