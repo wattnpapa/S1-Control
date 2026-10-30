@@ -21,6 +21,15 @@ export {
 } from "./baum.js";
 
 export {
+  gliedereEinheiten,
+  type Bereichskopf,
+  type Einsatzsumme,
+  type GegliederteEinheiten,
+  type Gliederungsoptionen,
+  type Tabellengliederung,
+} from "./gliederung.js";
+
+export {
   SICHTBARE_GRUPPEN_VORBELEGUNG,
   SPALTEN,
   SPALTENGRUPPEN,
