@@ -91,11 +91,16 @@ beforeEach(() => {
     spalten: [],
   });
   attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 1, zeilen: [], von: 0, gesamtzahl: 0 });
+  // Die Antwort hat die Form der Kostenansicht (`blatt`), sonst liest die
+  // Kostenansicht `parameter` von undefined, sobald das Blatt aufgeschlagen wird.
   attrappe.antwortet("kostenAnfordern", {
     lageZeiger: 1,
-    zeilen: [],
-    summe: 0,
-    parameter: { stundensatz: 0, tagessatz: 0, verpflegungssatz: 0 },
+    blatt: {
+      parameter: { psaKostenProSatz: 0, vdaProTag: 0, ukVerpflegungProTag: 0, geplanteEinsatztage: 0 },
+      zeilen: [],
+      summe: { koepfe: 0, psaProTag: 0, vdaUkProTag: 0, personentage: 0, gesamt: 0 },
+      ausgenommen: 0,
+    },
   });
   useLaden.setState({
     akteId: "akte-1",
