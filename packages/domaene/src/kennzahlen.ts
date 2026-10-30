@@ -18,6 +18,7 @@
  * "Angefordert")` in zwanzig Auswertungen (ZDM §3.3, Entscheidung 2).
  */
 
+import { zeitpunktText } from "./beschriftungen.js";
 import { STAERKE_NULL, staerkePlus, type Staerke, type Zeitpunkt } from "./werte.js";
 import type {
   AnforderungZustand,
@@ -278,7 +279,15 @@ export function geraeteText(zustand: Zustand, einheitId: string): string {
     .join(",\n");
 }
 
-/** **K11** — die Auftragsspalte: je Auftrag eine Zeile „von–bis; Abschnitt; Text". */
+/**
+ * **K11** — die Auftragsspalte: je Auftrag eine Zeile „von–bis; Abschnitt; Text".
+ *
+ * Die Zeiten stehen so, wie die Führungsstelle sie in die Spalte K schreibt
+ * („08.09.2026 09:00“), und nicht als ISO-Zeitpunkt: Die Zelle wird gelesen,
+ * nicht ausgewertet. Ein offener Auftrag endet auf „–“ — das ist die Aussage
+ * „läuft noch“. Ein Auftrag ohne Abschnitt lässt das leere Glied weg, statt
+ * „; ;“ in die Zelle zu schreiben.
+ */
 export function auftragsText(zustand: Zustand, einheitId: string): string {
   return Object.values(zustand.auftraege)
     .filter((a) => a.einheitId?.wert === einheitId && a.zurueckgenommen?.wert !== true)
@@ -287,8 +296,8 @@ export function auftragsText(zustand: Zustand, einheitId: string): string {
       const id = alsText(a.abschnittId?.wert);
       const abschnitt =
         id === undefined ? "" : (alsText(zustand.abschnitte[id]?.name.wert) ?? id);
-      const spanne = `${String(a.von?.wert ?? "")}–${String(a.bis?.wert ?? "")}`;
-      return [spanne, abschnitt, String(a.text.wert ?? "")].join("; ");
+      const spanne = `${zeitpunktText(alsText(a.von?.wert))}–${zeitpunktText(alsText(a.bis?.wert))}`;
+      return [spanne, abschnitt, String(a.text.wert ?? "")].filter((teil) => teil !== "").join("; ");
     })
     .join("\n");
 }
