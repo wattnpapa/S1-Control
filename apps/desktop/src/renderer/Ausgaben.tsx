@@ -9,7 +9,9 @@
  * **Der Pfad wird genannt.** Ein „fertig“ ohne Pfad zwingt den Bediener, die
  * Datei zu suchen; sie liegt im Ordner `ausgaben\` des Einsatzes auf dem
  * Share (KONZEPT-SPEICHER.md §1.4), und der ist im Zweifel drei Klicks weit
- * weg.
+ * weg. Daneben stehen „Öffnen“, „Ordner zeigen“ und bei HTML „Drucken“
+ * (`Ausgabedatei.tsx`); darunter der Abschluss des Einsatzes
+ * (`Einsatzabschluss.tsx`).
  */
 
 import { useState } from "react";
@@ -17,12 +19,14 @@ import { useState } from "react";
 import { ORGANISATIONEN } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Ausgabedatei } from "./Ausgabedatei.js";
+import { Einsatzabschluss } from "./Einsatzabschluss.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 
 export function Ausgaben(): React.JSX.Element {
   const laden = useLaden();
   const [organisation, setzeOrganisation] = useState("THW");
-  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const [erzeugt, setzeErzeugt] = useState<{ pfad: string; bytes: number } | undefined>(undefined);
 
   function erzeuge(
     ausgabe:
@@ -37,7 +41,7 @@ export function Ausgaben(): React.JSX.Element {
       | "einheitenliste",
     format: "html" | "pdf" | "xlsx",
   ): void {
-    setzeMeldung(undefined);
+    setzeErzeugt(undefined);
     void (async () => {
       const ergebnis = await laden.erzeugeAusgabe(
         ausgabe,
@@ -45,7 +49,7 @@ export function Ausgaben(): React.JSX.Element {
         ausgabe === "druck" ? organisation : undefined,
       );
       if (ergebnis === undefined) return;
-      setzeMeldung(`${ergebnis.pfad} (${String(ergebnis.bytes)} Bytes)`);
+      setzeErzeugt(ergebnis);
     })();
   }
 
@@ -142,11 +146,10 @@ export function Ausgaben(): React.JSX.Element {
       {laden.htmlMonitor !== undefined && (
         <p className="hinweistext">Monitorseite: {laden.htmlMonitor}</p>
       )}
-      {meldung !== undefined && (
-        <p role="status" className="hinweistext">
-          Geschrieben: {meldung}
-        </p>
+      {erzeugt !== undefined && (
+        <Ausgabedatei pfad={erzeugt.pfad} vorsatz="Geschrieben" zusatz={`${String(erzeugt.bytes)} Bytes`} />
       )}
+      <Einsatzabschluss />
     </section>
   );
 }

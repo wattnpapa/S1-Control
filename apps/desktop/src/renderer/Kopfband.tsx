@@ -158,11 +158,22 @@ function Zustandszeile({
   const stand =
     lagebild.standWanduhr === "" ? "keine Ereignisse" : alter(lagebild.standWanduhr, jetzt);
 
+  // Ein beendeter oder archivierter Einsatz steht so hier, dass ihn niemand
+  // für den laufenden hält: Wer schreiben will, erfährt vorher, warum es
+  // nicht geht (die Sperre selbst liegt im Worker).
+  const abschluss =
+    lagebild.einsatzStatus === "ARCHIVIERT"
+      ? " · ARCHIVIERT — nur lesen"
+      : lagebild.einsatzStatus === "BEENDET"
+        ? " · BEENDET — Eingaben gesperrt"
+        : "";
+
   return (
     <div className={`zustandszeile${lagebild.shareErreichbar ? "" : " gestoert"}`}>
       {lagebild.shareErreichbar ? "✓ " : "⚠ "}
       {lagebild.einsatzName}
-      {fuest === "" ? "" : ` · ${fuest}`} · Stand {stand} ·{" "}
+      {fuest === "" ? "" : ` · ${fuest}`}
+      {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} ·{" "}
       {lagebild.shareErreichbar ? "Share erreichbar" : "Share nicht erreichbar"}
       {wache > 0 ? ` — ${String(wache)} weitere Arbeitsplätze` : " — allein am Einsatz"}
     </div>

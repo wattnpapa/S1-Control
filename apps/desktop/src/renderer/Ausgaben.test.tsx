@@ -54,3 +54,49 @@ describe("Die Einheitenliste in den Ausgaben", () => {
     });
   });
 });
+
+describe("Öffnen, Ordner zeigen und Drucken an der erzeugten Ausgabe", () => {
+  const UMGEBUNG = { plattform: "linux", electron: "43", programmversion: "0", rechnername: "r", clientId: "c" };
+  const HTML = "/share/ausgaben/einheitenliste_2026-09-08_0815.html";
+
+  it("bietet bei HTML alle drei Knöpfe an und ruft die Schale mit dem gemeldeten Pfad", async () => {
+    attrappe.antwortet("ausgabeErzeugen", { pfad: HTML, bytes: 512 });
+    useLaden.setState({ umgebung: { ...UMGEBUNG, dateienZeigen: true } });
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als HTML" }));
+    for (const [knopf, wie] of [["Öffnen", "oeffnen"], ["Ordner zeigen", "ordner"], ["Drucken", "drucken"]] as const) {
+      await userEvent.click(await screen.findByRole("button", { name: knopf }));
+      await waitFor(() => {
+        expect(attrappe.letzterRuf("ausgabeZeigen")).toEqual({ art: "ausgabeZeigen", akteId: "akte-1", pfad: HTML, wie });
+      });
+    }
+  });
+
+  it("bietet bei PDF kein Drucken an — das macht das Programm, das es öffnet", async () => {
+    useLaden.setState({ umgebung: { ...UMGEBUNG, dateienZeigen: true } });
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als PDF" }));
+    expect(await screen.findByRole("button", { name: "Öffnen" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Drucken" })).toBeNull();
+  });
+
+  it("blendet die Knöpfe in der Web-Schale aus und nennt nur den Pfad", async () => {
+    useLaden.setState({ umgebung: { ...UMGEBUNG, plattform: "web", dateienZeigen: false } });
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als PDF" }));
+    expect(await screen.findByText(/einheitenliste_2026-09-08_0815\.pdf/)).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Öffnen" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Ordner zeigen" })).toBeNull();
+  });
+
+  it("meldet ein gescheitertes Öffnen als Hinweis statt still", async () => {
+    attrappe.scheitert("ausgabeZeigen", "Die Datei ließ sich nicht öffnen: kein Programm");
+    useLaden.setState({ umgebung: { ...UMGEBUNG, dateienZeigen: true } });
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als PDF" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Öffnen" }));
+    await waitFor(() => {
+      expect(useLaden.getState().hinweise.map((h) => h.text)).toContain("Die Datei ließ sich nicht öffnen: kein Programm");
+    });
+  });
+});
