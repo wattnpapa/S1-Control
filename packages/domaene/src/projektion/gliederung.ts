@@ -68,9 +68,12 @@ export interface Einsatzsumme {
   /** Noch nicht vor Ort: angefordert, Anmarsch, Eingang, Rufbereitschaft. */
   readonly erwartetEinheiten: number;
   readonly erwartet: Staerke;
-  /** Alle erfassten Einheiten des Ausschnitts (Ist + erwartet + beendet), ohne entfernte. */
+  /** Alle erfassten Einheiten des Ausschnitts: Ist plus erwartet, ohne beendet/Rückmarsch und ohne entfernte. */
   readonly alleEinheiten: number;
   readonly alle: Staerke;
+  /** Beendet oder im Rückmarsch — steht nicht in `alle`, wird aber ausgewiesen, damit die Zahlen aufgehen. */
+  readonly beendetEinheiten: number;
+  readonly beendet: Staerke;
 }
 
 export interface Tabellengliederung {
@@ -235,7 +238,12 @@ function einsatzsumme(zustand: Zustand, einheiten: readonly EinheitZustand[]): E
   const angefordert = einheiten.filter(
     (e) => inDerLage(e) && zustand.abschnitte[e.wirksamerAbschnittId]?.typ.wert === "ANGEFORDERT",
   );
-  const alle = einheiten.filter((e) => zaehlklasse(zustand, e) !== "ausserhalb");
+  // Ist plus erwartet, ohne beendet/Rückmarsch — dieselbe Regel wie die Status-Matrizen und die
+  // Einheitenliste. Was herausfällt, steht ausdrücklich daneben (`beendet`), damit die Zahlen aufgehen.
+  const alle = einheiten.filter((e) => {
+    const klasse = zaehlklasse(zustand, e);
+    return klasse === "ist" || klasse === "erwartet";
+  });
   return {
     einheiten: stand.einheitenIst,
     staerke: stand.ist,
@@ -245,6 +253,8 @@ function einsatzsumme(zustand: Zustand, einheiten: readonly EinheitZustand[]): E
     erwartet: stand.erwartet,
     alleEinheiten: alle.length,
     alle: summe(alle),
+    beendetEinheiten: stand.einheitenBeendet,
+    beendet: stand.beendet,
   };
 }
 
