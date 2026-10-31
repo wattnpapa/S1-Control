@@ -244,7 +244,7 @@ export function Einheitentabelle({
               setzeZellenfehler(undefined);
               setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
             }}
-            aufFertig={(eingabe) => void schreibeZelle(zeile, spalte, eingabe)}
+            aufFertig={(eingabe) => schreibeZelle(zeile, spalte, eingabe)}
             aufAbbrechen={() => {
               setzeZellenfehler(undefined);
               setzeBearbeitet(undefined);
@@ -308,7 +308,6 @@ export function Einheitentabelle({
                   key={spalte.schluessel}
                   scope="col"
                   className={[istZahl(spalte) ? "zahl" : "", spalte.schluessel === "bezeichnung" ? "namensspalte" : ""].join(" ").trim() || undefined}
-                  title={`Excel-Spalte ${spalte.excel}`}
                 >
                   {spalte.kopf}
                 </th>
@@ -349,7 +348,7 @@ export function Einheitentabelle({
             : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
         </span>
         <span className="hinweistext">
-          Doppelklick bearbeitet die Zelle, ein Tipp auf den Status öffnet die Auswahl · Enter oder „Übernehmen“ schreibt · Esc oder Wegklicken verwirft ·{" "}
+          Doppelklick bearbeitet die Zelle · Textzelle: Enter oder Wegklicken schreibt, Esc verwirft · Auswahl (Status u. a.): Tipp öffnet sie, Enter oder „Übernehmen“ schreibt, Esc oder Wegklicken verwirft ·{" "}
           {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
         </span>
       </p>
@@ -362,6 +361,11 @@ export function Einheitentabelle({
         abschnittId={abschnittId}
         aufSchliessen={() => {
           setzeMaske(undefined);
+        }}
+        aufGeschrieben={() => {
+          // Die Auswahl gehörte zur Maske: Nach Verschieben oder Entfernen
+          // zeigte sie sonst „Verschieben (1)“ für eine Einheit, die nicht mehr da ist.
+          setzeMarkiert([]);
         }}
       />
     </section>

@@ -74,6 +74,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
 
   const baum = laden.baum?.baum ?? [];
   const zeilen = useMemo(() => projektion.baumZeilen(baum), [baum]);
+  const namen = useMemo(() => new Map(zeilen.map((zeile) => [zeile.id, zeile.name])), [zeilen]);
   const knoten = zeilen.find((zeile) => zeile.id === gewaehlt);
 
   function schliesse(): void {
@@ -117,9 +118,9 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
           onClick={() => {
             setzeMaske("anlegen");
           }}
-          title={`Neuer Abschnitt (${kuerzelText(kuerzel("anlegen") as never)})`}
+          title={`Neuen Abschnitt anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
         >
-          Neu
+          Abschnitt anlegen
         </button>
         <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeEingabe(knoten?.name ?? ""); setzeMaske("umbenennen"); }}>
           Umbenennen
@@ -202,15 +203,15 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                   {zeile.erwartetSumme > 0 && ` · ${kennzahlen.erwartetKurz(zeile.erwartetSumme)}`}
                 </span>
                 {zeile.aufgeloestNach !== undefined && (
-                  <span className="warnung">aufgelöst → {zeile.aufgeloestNach}</span>
+                  <span className="warnung">aufgelöst → {namen.get(zeile.aufgeloestNach) ?? "ein anderer Abschnitt"}</span>
                 )}
                 {zeile.zyklusGeloest === true && (
-                  <span className="warnung" title="Die Umhängung schloss einen Zyklus und wurde nicht wirksam (§5.3.1)">
+                  <span className="warnung" title="Die Umhängung schloss einen Zyklus und wurde nicht wirksam">
                     Zyklus gelöst
                   </span>
                 )}
                 {zeile.elternUnbekannt !== undefined && (
-                  <span className="warnung" title="Der übergeordnete Abschnitt ist noch nicht eingetroffen (§3.10)">
+                  <span className="warnung" title="Der übergeordnete Abschnitt ist noch nicht eingetroffen">
                     Elternabschnitt fehlt
                   </span>
                 )}
@@ -231,10 +232,11 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
       {maske === "umbenennen" && knoten !== undefined && (
         <Maske
           titel={`„${knoten.name}“ umbenennen`}
+          bestaetigungstext="Name speichern"
           bereit={eingabe.trim().length > 0}
           aufAbbrechen={schliesse}
           aufBestaetigen={() => {
-            void bediene({
+            return bediene({
               typ: "AbschnittUmbenannt",
               nutzlast: { abschnittId: knoten.id },
               vorher: knoten.name,
@@ -252,13 +254,14 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
       {maske === "typ" && knoten !== undefined && (
         <Maske
           titel={`Typ von „${knoten.name}“ ändern`}
+          bestaetigungstext="Typ speichern"
           // §2.4: `AbschnittTypGeaendert` verlangt einen Grund. Am Typ hängt
           // `zaehltInGesamtstaerke` — eine Änderung verschiebt die
           // Gesamtstärke, und wer sie später liest, soll wissen, warum.
           bereit={eingabe !== knoten.typ && grund.trim().length > 0}
           aufAbbrechen={schliesse}
           aufBestaetigen={() => {
-            void bediene({
+            return bediene({
               typ: "AbschnittTypGeaendert",
               nutzlast: { abschnittId: knoten.id },
               vorher: knoten.typ,
@@ -287,7 +290,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
           bereit={eingabe !== (knoten.zeichen ?? "")}
           aufAbbrechen={schliesse}
           aufBestaetigen={() => {
-            void bediene({
+            return bediene({
               typ: "AbschnittZeichenGesetzt",
               nutzlast: { abschnittId: knoten.id },
               vorher: knoten.zeichen ?? null,
@@ -308,9 +311,10 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
       {maske === "umhaengen" && knoten !== undefined && (
         <Maske
           titel={`„${knoten.name}“ umhängen`}
+          bestaetigungstext="Abschnitt umhängen"
           aufAbbrechen={schliesse}
           aufBestaetigen={() => {
-            void bediene({
+            return bediene({
               typ: "AbschnittUmgehaengt",
               nutzlast: { abschnittId: knoten.id },
               vorher: elternVon(zeilen, knoten.id) ?? null,
@@ -332,7 +336,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
             </select>
           </label>
           <p className="hinweistext">
-            Abschnitte, die einen Zyklus schlössen, stehen nicht zur Wahl (§5.3.1).
+            Abschnitte, die einen Zyklus schlössen, stehen nicht zur Wahl.
           </p>
         </Maske>
       )}
@@ -342,9 +346,10 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
           titel={`„${knoten.name}“ auflösen`}
           bestaetigungstext="Auflösen"
           bereit={ziel !== ""}
+          bereitGrund="Zielabschnitt wählen"
           aufAbbrechen={schliesse}
           aufBestaetigen={() => {
-            void bediene({
+            return bediene({
               typ: "AbschnittAufgeloest",
               nutzlast: { abschnittId: knoten.id },
               vorher: null,
@@ -371,9 +376,13 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                 ))}
             </select>
           </label>
+          <p className="hinweistext" data-testid="aufloesen-betrifft">
+            Betrifft „{knoten.name}“: {String(knoten.einheitenSumme)} Einheit(en), Stärke{" "}
+            {knoten.summenStaerke.fuehrer}/{knoten.summenStaerke.unterfuehrer}/{knoten.summenStaerke.mannschaft}.
+          </p>
           <p className="hinweistext">
             Der Abschnitt bleibt sichtbar und lässt sich wiederherstellen; seine Einheiten stehen ab
-            sofort im gewählten Ziel (§5.3.2).
+            sofort im gewählten Ziel.
           </p>
         </Maske>
       )}
