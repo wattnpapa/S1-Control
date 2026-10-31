@@ -223,6 +223,10 @@ function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
   const { spalte, start, zeile, aufAbbrechen } = eigenschaften;
   const { laeuft, fertig } = useEinmalig(eigenschaften.aufFertig);
   const [auswahl, setzeAuswahl] = useState(start);
+  // Ein Kollege setzt den Wert, während das Blatt offen ist: Das Blatt zeigt weiter
+  // die eigene Wahl, sagt aber, dass sich der Wert inzwischen geändert hat.
+  const ursprung = useRef(start);
+  const inzwischen = start !== ursprung.current ? start : undefined;
   const [leerenFrage, setzeLeerenFrage] = useState(false);
   // Ein Status wird nie geleert: Die Zelle bliebe ohne Chip und wäre auf dem
   // Touchgerät nicht mehr zu bearbeiten. Andere Auswahlen leeren nach Rückfrage.
@@ -305,6 +309,11 @@ function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
   const sichtbar = (
     <>
       {grund !== undefined && <span className="hinweistext auswahlgrund-text">{grund}</span>}
+      {inzwischen !== undefined && (
+        <span className="warnung" role="status">
+          ⚠ Inzwischen geändert (neu: {inzwischen === "" ? "leer" : spaltenwertTitel(spalte.schluessel, inzwischen)})
+        </span>
+      )}
       {leerenFrage && (
         <span className="warnung" role="alert">
           {TEXT_LEEREN_FRAGE}
