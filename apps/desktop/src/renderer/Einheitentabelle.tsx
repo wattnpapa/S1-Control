@@ -37,6 +37,7 @@ import { Einheitenkopf } from "./Einheitenkopf.js";
 import { hinweisAusErgebnis } from "./Anlegeversuch.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { VORWERT_WAHL, istVorwertKonflikt, mitVorwertpruefung, useEditorbasis } from "./Editorbasis.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { Zelle, istZahl } from "./Einheitenzelle.js";
 import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
@@ -83,6 +84,7 @@ export function Einheitentabelle({
   aufEinheit,
 }: EinheitentabelleEigenschaften): React.JSX.Element {
   const laden = useLaden();
+  const basis = useEditorbasis();
   const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(
     projektion.SICHTBARE_GRUPPEN_VORBELEGUNG,
   );
@@ -192,17 +194,29 @@ export function Einheitentabelle({
     // Nichts geändert, nichts geschrieben: Ein Ereignis, das denselben Wert
     // noch einmal setzt, steht für immer im Protokoll und erzeugt bei einem
     // zweiten Arbeitsplatz einen Konfliktkandidaten ohne fachlichen Anlass.
-    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, zelle.wert, neu);
+    const schluessel = `${zeile.einheitId}/${spalte.schluessel}`;
+    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, basis.vorwert(schluessel, zelle.wert), neu);
     if (entwurf === undefined) {
+      basis.vergiss(schluessel);
       setzeBearbeitet(undefined);
       return;
     }
-    const ergebnis = await laden.bediene(entwurf);
+    const ergebnis = await laden.bediene(mitVorwertpruefung(entwurf));
+    if (istVorwertKonflikt(ergebnis)) {
+      // Nicht still überschreiben: Die Zelle zeigt, was der Kollege gesetzt hat; ein
+      // zweites Enter gilt dann dem neu geladenen Wert und übernimmt bewusst.
+      basis.vergiss(schluessel);
+      void laden.frischeAnsichten();
+      setzeZellenfehler(`${hinweisAusErgebnis(ergebnis) ?? ""} ${VORWERT_WAHL}`.trim());
+      return;
+    }
     // Geschlossen wird nur nach bestätigtem Schreiben; sonst bleibt der Text
     // stehen, und die Zelle sagt, ob nicht gespeichert oder unklar ist.
     const hinweis = hinweisAusErgebnis(ergebnis);
-    if (hinweis === undefined) setzeBearbeitet(undefined);
-    else setzeZellenfehler(hinweis);
+    if (hinweis === undefined) {
+      basis.vergiss(schluessel);
+      setzeBearbeitet(undefined);
+    } else setzeZellenfehler(hinweis);
   }
 
   /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
@@ -242,10 +256,12 @@ export function Einheitentabelle({
             }
             aufBearbeiten={() => {
               setzeZellenfehler(undefined);
+              basis.merke(`${zeile.einheitId}/${spalte.schluessel}`, zeile.zellen[spalte.schluessel]?.wert);
               setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
             }}
             aufFertig={(eingabe) => schreibeZelle(zeile, spalte, eingabe)}
             aufAbbrechen={() => {
+              basis.vergiss(`${zeile.einheitId}/${spalte.schluessel}`);
               setzeZellenfehler(undefined);
               setzeBearbeitet(undefined);
             }}

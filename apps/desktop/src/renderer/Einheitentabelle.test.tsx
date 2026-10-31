@@ -129,6 +129,39 @@ describe("Die Einheitentabelle", () => {
     expect(entwurf?.neu).toBe("Bergungsgruppe Nord");
   });
 
+  it("schickt den Wert vom Öffnen als Vorwert und lehnt ein fremd geändertes Feld ab, statt zu überschreiben", async () => {
+    await zeigeTabelle();
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    const feld = screen.getByLabelText("Bezeichnung");
+    // Während der Editor offen ist, setzt ein Kollege einen anderen Wert.
+    attrappe.antwortet("tabelleAnfordern", {
+      lageZeiger: 6,
+      zeilen: [zeile("U1", "Bergungsgruppe Kollege"), zeile("U2", "Fachgruppe N")],
+      gesamtzahl: 2,
+      von: 0,
+      jeStatus: {},
+    });
+    attrappe.antwortet("bedienen", {
+      art: "abgewiesen",
+      meldung: "Wurde inzwischen von Lage 2 geändert (neu: Bergungsgruppe Kollege). Neu laden?",
+      code: "VORWERT",
+      dauerhafterHinweis: false,
+    });
+    fireEvent.change(feld, { target: { value: "Bergungsgruppe Nord" } });
+    fireEvent.keyDown(feld, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")).toBeDefined();
+    });
+    const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
+    expect(entwurf?.vorher).toBe("Bergungsgruppe 1");
+    expect(entwurf?.vorwertPruefen).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByText(/Wurde inzwischen von Lage 2 geändert/)).toBeDefined();
+    });
+    expect(screen.getByText(/Enter übernimmt Ihren Wert trotzdem/)).toBeDefined();
+  });
+
   it("schreibt nichts, wenn sich der Wert nicht geändert hat", async () => {
     await zeigeTabelle();
     fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));

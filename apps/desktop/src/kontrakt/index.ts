@@ -310,6 +310,12 @@ export type Entwurf = z.infer<typeof zEntwurf>;
 
 // ---------------------------------------------------------------------------
 // Rufe
+  /**
+   * Additiv: `vorher` ist der Wert, den der Editor beim Öffnen sah. Gilt im
+   * Zustand inzwischen ein anderer, den ein anderer Arbeitsplatz gesetzt hat,
+   * weist der Worker ab (`VORWERT`) statt still zu überschreiben.
+   */
+  vorwertPruefen: z.boolean().optional(),
 // ---------------------------------------------------------------------------
 
 /**
@@ -633,6 +639,9 @@ export const zStapelEintrag = z.object({
  * Ein Fehler kommt als `{ ok: false }` zurueck und nicht als geworfene
  * Ausnahme: Ueber `ipcRenderer.invoke` wuerde eine Ausnahme im Main als
  * Zeichenkette mit angehaengtem Stapelabzug im Renderer landen — eine
+/** Der Code der Abweisung, weil ein anderer Arbeitsplatz das Feld inzwischen geändert hat. */
+export const CODE_VORWERT = "VORWERT";
+
  * Auskunft ueber den Aufbau der Schale, die dort niemanden angeht.
  */
 export type Antwort<T> = { readonly ok: true; readonly wert: T } | { readonly ok: false; readonly meldung: string; readonly code?: string };

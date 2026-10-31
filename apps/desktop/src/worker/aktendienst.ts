@@ -126,6 +126,7 @@ import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { schreibhinweise } from "./schreibhinweise.js";
+import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
@@ -682,6 +683,16 @@ export class Aktendienst {
     if (!grundPasst(eintrag, entwurf)) {
       return {
         art: "abgewiesen",
+    // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
+    // abziehen, als da ist).
+    const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
+    if (unstimmig !== undefined) return unstimmig;
+    // Optimistische Prüfung auf Verlangen: nicht still über einen fremden neueren Wert schreiben.
+    const veraendert = pruefeVorwert(this.#zustand, entwurf, {
+      eigeneClientId: this.#clientId,
+      nameVon: (id) => this.#peers.find((p) => p.clientId === id)?.anzeigename,
+    });
+    if (veraendert !== undefined) return veraendert;
     // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
     // abziehen, als da ist).
     const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
