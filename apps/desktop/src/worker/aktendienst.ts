@@ -86,6 +86,7 @@ import {
   druckdaten,
   einheitenlisteAlsHtml,
   einheitenlistendaten,
+  bildschirmtauglich,
   monitorAlsHtml,
   statusAlsHtml,
   statusdaten,
@@ -114,6 +115,7 @@ import {
 } from "../kontrakt/index.js";
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
+import { LISTENAUSGABEN, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -142,7 +144,14 @@ import { pruefeGegenZustand } from "./zustandspruefung.js";
  * Eine Liste an einer Stelle: Worker, Vermittlung und Auftragsweg lesen sie
  * von hier, damit eine neue Seite nicht an drei Orten nachgetragen wird.
  */
-export type Seitenausgabe = "druck" | "status" | "log" | "kosten" | "fueorg" | "einheitenliste";
+export type Seitenausgabe =
+  | "druck"
+  | "status"
+  | "log"
+  | "kosten"
+  | "fueorg"
+  | "einheitenliste"
+  | Listenausgabe;
 
 export interface Takte {
   readonly spiegelungMs: number;
@@ -789,9 +798,31 @@ export class Aktendienst {
    * noch im lokalen Spiegel stehen, fehlten sonst in der Akte. Scheitert die
    * Spiegelung, wird trotzdem gepackt — die Zahl der Ereignisse im Ergebnis
    * zeigt, was drin ist. Die Akte geht auch bei einem archivierten Einsatz:
+    await this.#legeTagebuchInDieAkte();
    * Lesen ist nie gesperrt.
    */
   async erzeugeAkte(): Promise<Akteergebnis> {
+  /**
+   * Legt das lesbare Tagebuch (HTML) in `ausgaben/`, bevor die Akte gepackt
+   * wird — so liegt neben den Rohereignissen eine Fassung, die man ohne
+   * Programm im Browser lesen kann. Scheitert das Schreiben, entsteht die
+   * Akte trotzdem: Das Tagebuch ist Zugabe, nicht Voraussetzung.
+   */
+  async #legeTagebuchInDieAkte(): Promise<void> {
+    try {
+      const jetzt = new Date(this.#o.zeit());
+      const kopf = {
+        datum: this.#o.einsatzId.slice(0, 10),
+        einsatzName: alsText(this.#zustand.einsatz?.name.wert),
+        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+      };
+      const html = bildschirmtauglich(tagebuchHtml(this.#zustand, this.#ereignisse, kopf));
+      await this.ausgabeSchreiben(`tagebuch_${dateimarke(jetzt)}.html`, new TextEncoder().encode(html));
+    } catch {
+      // Zugabe: kein Grund, die Akte zu verweigern.
+    }
+  }
+
     await this.#spiegle();
     return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
   }
@@ -968,6 +999,15 @@ export class Aktendienst {
    * Der Dateiname traegt den Stand in der Uhrzeit und nicht bloss „druck.pdf“:
    * Eine Fuehrungsstelle druckt im Einsatz mehrmals, und eine Datei, die sich
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
+  ): { dateiname: string; html: string } {
+    const gerendert = this.#rendereSeite(ausgabe, organisation);
+    // Bildschirmhülle (viewport, scrollbare Tabellen): wirkt nur am Bildschirm, nicht im Druck.
+    return { dateiname: gerendert.dateiname, html: bildschirmtauglich(gerendert.html) };
+  }
+
+  #rendereSeite(
+    ausgabe: Seitenausgabe,
+    organisation?: string,
    */
   ausgabeHtml(
     ausgabe: Seitenausgabe,
@@ -976,6 +1016,9 @@ export class Aktendienst {
     const jetzt = new Date(this.#o.zeit());
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
+    if (LISTENAUSGABEN.has(ausgabe)) {
+      return listenausgabe(ausgabe as Listenausgabe, this.#zustand, this.#ereignisse, kopf, marke);
+    }
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
       stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
     };

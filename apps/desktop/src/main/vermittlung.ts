@@ -76,7 +76,7 @@ export interface Fenstersteuerung {
 }
 
 /** Die Seitenausgaben, deren Vorlage quer gedruckt wird. */
-const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste"]);
+const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste", "anforderungen"]);
 
 /**
  * Was die Vermittlung zum Drucken braucht — und mehr nicht (M4.1).

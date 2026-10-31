@@ -530,6 +530,11 @@ export const zRuf = z.discriminatedUnion("art", [
   }),
 
   // Der HTML-Monitor (M4.3): eine Datei in `ausgaben\`, die sich alle sechzig
+      // Druckbare Listen und der leere Papier-Vordruck (additiv): nur als HTML
+      // und PDF; Anforderungen und Tagebuch tragen Seitenzahl und Notizspalte.
+      "anforderungen",
+      "tagebuch",
+      "papier",
   // Sekunden selbst neu laedt und die ein **zweites Geraet** ueber das Netz
   // oeffnet. Nicht zu verwechseln mit dem Staerke-Monitor aus M3.5: Der ist
   // ein Fenster dieser Anwendung auf einem zweiten Bildschirm, dieser hier

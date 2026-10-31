@@ -28,6 +28,8 @@ beforeEach(async () => {
   writeFileSync(html, "<!doctype html><html><head><title>x</title></head><body><p>Liste</p></body></html>");
   writeFileSync(path.join(ausgaben, "a.pdf"), "%PDF-1.4");
   writeFileSync(path.join(ausgaben, "b.txt"), "kein Ausgabetyp");
+  writeFileSync(path.join(share, "einsaetze", "E1", "E1_akte_2026-10-31_0630.zip"), "PK\u0003\u0004");
+  writeFileSync(path.join(ausgaben, "tabelle.html"), "<html><head></head><body><table><tr><td>x</td></tr></table></body></html>");
   writeFileSync(path.join(share, "einsaetze", "E1", "einsatz.json"), "{}");
   writeFileSync(path.join(wurzel, "geheim.html"), "<p>geheim</p>");
   symlinkSync(path.join(wurzel, "geheim.html"), path.join(ausgaben, "link.html"));
@@ -76,6 +78,30 @@ describe("GET /ausgabe", () => {
     const antwort = await hole(path.join(path.dirname(html), "a.pdf"));
     expect(antwort.status).toBe(200);
     expect(antwort.headers.get("content-type")).toBe("application/pdf");
+  });
+
+  it("liefert die Einsatzakte (ZIP) nur als Download, nie inline", async () => {
+    const akte = path.join(share, "einsaetze", "E1", "E1_akte_2026-10-31_0630.zip");
+    const antwort = await hole(akte);
+    expect(antwort.status).toBe(200);
+    expect(antwort.headers.get("content-type")).toBe("application/zip");
+    expect(antwort.headers.get("content-disposition")).toMatch(/^attachment/u);
+    expect(antwort.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("lässt kein ZIP außerhalb von Einsatz- und Ausgabeordner zu", async () => {
+    writeFileSync(path.join(share, "einsaetze", "x.zip"), "PK");
+    writeFileSync(path.join(share, "einsaetze", "E1", "ausgaben", "..", "..", "..", "y.zip"), "PK");
+    expect((await hole(path.join(share, "einsaetze", "x.zip"))).status).toBe(404);
+    expect((await hole(path.join(share, "y.zip"))).status).toBe(404);
+    expect((await hole(path.join(share, "einsaetze", "E1", "ausgaben", "..", "..", "..", "y.zip"))).status).toBe(404);
+  });
+
+  it("macht Tabellen am Bildschirm scrollbar (kein Seitenüberlauf am Handy)", async () => {
+    const text = await (await hole(path.join(path.dirname(html), "tabelle.html"))).text();
+    expect(text).toContain('class="tabellenrahmen"');
+    expect(text).toContain("overflow-x:auto");
+    expect(text.match(/name="viewport"/gu)).toHaveLength(1);
   });
 
   it.each([
