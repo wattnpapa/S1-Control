@@ -19,7 +19,10 @@
 import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
+import { useFeldversuch } from "./Feldschreiben.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { KOSTENFELDER, kostenParameter, type Kostenfeld } from "../kontrakt/bedienschritte.js";
 
 /** Die Beschriftungen der vier Parameter, in der Reihenfolge der Vorlage. */
@@ -48,7 +51,6 @@ function euro(betrag: number): string {
 export function Kosten(): React.JSX.Element {
   const laden = useLaden();
   const holeKosten = laden.holeKosten;
-  const [entwurf, setzeEntwurf] = useState<Partial<Record<Kostenfeld, string>>>({});
 
   useEffect(() => {
     void holeKosten();
@@ -64,55 +66,18 @@ export function Kosten(): React.JSX.Element {
   }
 
   const blatt = ansicht.blatt;
-  const einsatzId = laden.lagebild?.einsatzId;
-
-  function uebernimm(feld: Kostenfeld): void {
-    const eingabe = entwurf[feld];
-    if (eingabe === undefined || einsatzId === undefined) return;
-    // Komma als Dezimaltrennzeichen: Wer 180,50 tippt, meint 180,50 — und
-    // `Number("180,50")` ist NaN.
-    const neu = Number(eingabe.replace(",", "."));
-    if (!Number.isFinite(neu)) return;
-    const vorher = blatt.parameter[feld];
-    setzeEntwurf((bisher) => ({ ...bisher, [feld]: undefined }));
-    // §2.2a: `vorher` ist der Wert, den **dieses Fenster** gezeigt hat — nicht
-    // der, der gerade gilt. Genau daran erkennt der Fold den Konflikt.
-    if (neu !== vorher) void laden.bediene(kostenParameter(einsatzId, feld, vorher, neu));
-  }
 
   return (
     <section aria-label="Kosten" className="kosten">
       <h2>Kosten <Hilfemarke kennung="kosten" /></h2>
 
+      <NurLesenHinweis />
+
       <h3>Parameter des Einsatzes</h3>
       <table className="parameter">
         <tbody>
           {KOSTENFELDER.map((feld) => (
-            <tr key={feld}>
-              <th scope="row">
-                <label htmlFor={`kosten-${feld}`}>{BESCHRIFTUNG[feld]}</label>
-              </th>
-              <td>
-                <input
-                  id={`kosten-${feld}`}
-                  type="text"
-                  inputMode="decimal"
-                  value={entwurf[feld] ?? String(blatt.parameter[feld])}
-                  onChange={(e) => {
-                    setzeEntwurf((bisher) => ({ ...bisher, [feld]: e.target.value }));
-                  }}
-                  onBlur={() => {
-                    uebernimm(feld);
-                  }}
-                  onKeyDown={(e) => {
-                    // Die Konvention aus M3.6a: Enter bestätigt, Escape
-                    // verwirft den Entwurf und stellt den Wert wieder her.
-                    if (e.key === "Enter") uebernimm(feld);
-                    if (e.key === "Escape") setzeEntwurf((bisher) => ({ ...bisher, [feld]: undefined }));
-                  }}
-                />
-              </td>
-            </tr>
+            <Parameterzeile key={feld} feld={feld} vorher={blatt.parameter[feld]} />
           ))}
         </tbody>
       </table>
@@ -165,9 +130,79 @@ export function Kosten(): React.JSX.Element {
       {blatt.ausgenommen > 0 && (
         <p className="hinweistext">
           {blatt.ausgenommen} Einheit(en) fallen aus der Rechnung: angeforderte und archivierte
-          Kräfte zählen nach dem Zieldatenmodell §2.4 nicht mit.
+          Kräfte zählen in der Abrechnung nicht mit.
         </p>
       )}
     </section>
+  );
+}
+
+/**
+ * Ein Parameter des Einsatzes als Feld mit Entwurf.
+ *
+ * Der Entwurf bleibt stehen, bis der Dienst das Schreiben bestätigt hat; eine
+ * Zahl, die keine ist, wird am Feld benannt und nicht still verworfen.
+ */
+function Parameterzeile({ feld, vorher }: { readonly feld: Kostenfeld; readonly vorher: number }): React.JSX.Element {
+  const einsatzId = useLaden((zustand) => zustand.lagebild?.einsatzId);
+  const versuch = useFeldversuch();
+  const nurLesen = useNurLesen();
+  const [entwurf, setzeEntwurf] = useState<string | undefined>(undefined);
+  const [fehler, setzeFehler] = useState<string | undefined>(undefined);
+
+  async function uebernimm(): Promise<void> {
+    if (entwurf === undefined || einsatzId === undefined) return;
+    // Komma als Dezimaltrennzeichen: Wer 180,50 tippt, meint 180,50 — und
+    // `Number("180,50")` ist NaN.
+    const neu = Number(entwurf.trim().replace(",", "."));
+    if (entwurf.trim() === "" || !Number.isFinite(neu) || neu < 0) {
+      setzeFehler("Bitte eine Zahl ab 0 eingeben, z. B. 180,50.");
+      return;
+    }
+    setzeFehler(undefined);
+    if (neu === vorher) {
+      setzeEntwurf(undefined);
+      return;
+    }
+    // §2.2a: `vorher` ist der Wert, den **dieses Fenster** gezeigt hat — nicht
+    // der, der gerade gilt. Genau daran erkennt der Fold den Konflikt.
+    if (await versuch.schreibe(kostenParameter(einsatzId, feld, vorher, neu))) setzeEntwurf(undefined);
+  }
+
+  return (
+    <tr>
+      <th scope="row">
+        <label htmlFor={`kosten-${feld}`}>{BESCHRIFTUNG[feld]}</label>
+      </th>
+      <td>
+        <input
+          id={`kosten-${feld}`}
+          type="text"
+          inputMode="decimal"
+          value={entwurf ?? String(vorher)}
+          disabled={nurLesen}
+          title={nurLesen ? TEXT_NUR_LESEN : undefined}
+          aria-invalid={fehler !== undefined}
+          aria-busy={versuch.laeuft}
+          onChange={(e) => {
+            setzeEntwurf(e.target.value);
+            setzeFehler(undefined);
+          }}
+          onBlur={() => void uebernimm()}
+          onKeyDown={(e) => {
+            // Die Konvention aus M3.6a: Enter bestätigt, Escape
+            // verwirft den Entwurf und stellt den Wert wieder her.
+            if (e.key === "Enter") void uebernimm();
+            if (e.key === "Escape") {
+              setzeEntwurf(undefined);
+              setzeFehler(undefined);
+              versuch.verwerfe();
+            }
+          }}
+        />
+        {fehler !== undefined && <span className="feldfehler">{fehler}</span>}
+        {versuch.anzeige}
+      </td>
+    </tr>
   );
 }

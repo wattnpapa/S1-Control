@@ -21,7 +21,10 @@ import { useGrundabfrage } from "./Grundabfrage.js";
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { useFeldversuch } from "./Feldschreiben.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import {
   MELDESTATUS,
   ablehnungZurueckgenommen,
@@ -63,6 +66,8 @@ export function Eingangskorb(): React.JSX.Element {
         Eingangskorb
         {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`} <Hilfemarke kennung="eingangskorb" />
       </h2>
+
+      <NurLesenHinweis />
 
       <Buendel />
 
@@ -161,6 +166,11 @@ function Zeile({
 }): React.JSX.Element {
   const laden = useLaden();
   const grundabfrage = useGrundabfrage();
+  const aktion = useFeldversuch();
+  const nurLesen = useNurLesen();
+  // Beendeter Einsatz, laufender Schritt oder unterbrochene Verbindung: gesperrt.
+  const zu = nurLesen || aktion.laeuft || aktion.gesperrt;
+  const grund = nurLesen ? TEXT_NUR_LESEN : undefined;
 
   return (
     <tr className={zeile.zustand === "ABGELEHNT" ? "abgelehnt" : ""}>
@@ -191,8 +201,10 @@ function Zeile({
         {zeile.zustand === "ABGELEHNT" ? (
           <button
             type="button"
+            disabled={zu}
+            title={grund}
             onClick={() => {
-              void laden.bediene(ablehnungZurueckgenommen(zeile.id));
+              void aktion.schreibe(ablehnungZurueckgenommen(zeile.id));
             }}
           >
             Ablehnung zurück
@@ -200,6 +212,8 @@ function Zeile({
         ) : (
           <button
             type="button"
+            disabled={nurLesen}
+            title={grund}
             onClick={() => {
               // §2.4: Der Grund gehört zur Ablehnung. Ohne ihn wäre sie im
               // Nachhinein nicht von einem Versehen zu unterscheiden.
@@ -208,9 +222,9 @@ function Zeile({
                 erlaeuterung:
                   "Die Ablehnung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
                 bestaetigungstext: "Ablehnen",
-                aufGrund: (grund) => {
-                  void laden.bediene(meldungAbgelehnt(zeile.id, grund));
-                },
+                // Das Versprechen geht an die Abfrage zurück: Der Dialog bleibt mit dem
+                // Grund stehen, bis der Dienst das Schreiben bestätigt hat.
+                aufGrund: (text) => laden.bediene(meldungAbgelehnt(zeile.id, text)),
               });
             }}
           >
@@ -220,8 +234,10 @@ function Zeile({
         {zeile.einheitId !== undefined && (
           <button
             type="button"
+            disabled={zu}
+            title={grund}
             onClick={() => {
-              void laden.bediene(uebernahmeZurueckgenommen(zeile.id));
+              void aktion.schreibe(uebernahmeZurueckgenommen(zeile.id));
             }}
           >
             Übernahme zurück
@@ -230,11 +246,11 @@ function Zeile({
         <select
           aria-label={`Meldestatus ${zeile.bezeichnung}`}
           value=""
+          disabled={zu}
+          title={grund}
           onChange={(e) => {
             if (e.target.value === "") return;
-            void laden.bediene(
-              meldeStatusGesetzt(zeile.id, null, e.target.value as Meldestatus),
-            );
+            void aktion.schreibe(meldeStatusGesetzt(zeile.id, null, e.target.value as Meldestatus));
           }}
         >
           <option value="">Meldestatus …</option>
@@ -244,6 +260,7 @@ function Zeile({
             </option>
           ))}
         </select>
+        {aktion.anzeige}
         {grundabfrage.maske}
       </td>
     </tr>

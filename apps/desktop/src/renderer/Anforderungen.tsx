@@ -26,6 +26,9 @@ import { Hilfemarke } from "./Hilfemarke.js";
 import { AnforderungZuEinheit, type Eintreffart } from "./AnforderungZuEinheit.js";
 import { AnforderungZusage } from "./AnforderungZusage.js";
 import { Anforderungsneu } from "./Anforderungsneu.js";
+import { useFeldversuch } from "./Feldschreiben.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { anforderungStorniert, ruecknahme } from "../kontrakt/bedienschritte.js";
 
 /** Die vier Zustände mit ihrer Beschriftung, in der Ordnung der Liste. */
@@ -54,6 +57,8 @@ export function Anforderungen(): React.JSX.Element {
   return (
     <section aria-label="Anforderungen" className="anforderungen">
       <h2>Anforderungen <Hilfemarke kennung="anforderungen" /></h2>
+
+      <NurLesenHinweis />
 
       <Zustandsfilter />
 
@@ -136,13 +141,13 @@ type Zeilenmaske = "zusage" | Eintreffart | undefined;
 function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
   return (
     <tr className={zeile.zustand === "STORNIERT" ? "storniert" : ""}>
-      <td>
+      <td data-label="Zustand">
         <span className={`zustand zustand-${zeile.zustand.toLowerCase()}`}>{zustandTitel(zeile.zustand)}</span>
       </td>
-      <th scope="row">{zeile.kennung}</th>
-      <td>{zeitpunktText(zeile.angefordertAm)}</td>
-      <td>{zeile.abzuloesendeEinheit ?? ""}</td>
-      <td>
+      <th scope="row" data-label="Kennung">{zeile.kennung}</th>
+      <td data-label="Angefordert">{zeitpunktText(zeile.angefordertAm)}</td>
+      <td data-label="Ablösung für">{zeile.abzuloesendeEinheit ?? ""}</td>
+      <td data-label="Vorgesehen">
         {zeile.vorgeseheneEinheitText}
         {/* Die Einheit, die aus der Anforderung angelegt wurde — „Ablösung
             durch“ in der Einheitentabelle. */}
@@ -150,8 +155,8 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
           <span className="hinweistext"> → angelegt: {zeile.abloesendeEinheit}</span>
         )}
       </td>
-      <td>{zeile.vorgesehenerAuftrag}</td>
-      <td>
+      <td data-label="Auftrag">{zeile.vorgesehenerAuftrag}</td>
+      <td data-label="Zusage">
         {zeile.zugesagtFuer === undefined
           ? ""
           : `${zeitpunktText(zeile.zugesagtFuer)}${zeile.zugesagtVon === "" ? "" : ` · ${zeile.zugesagtVon ?? ""}`}`}
@@ -163,56 +168,66 @@ function Zeile({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Elem
 
 /** Die Handlungen einer Zeile und die Masken, die sie öffnen. */
 function Handlungen({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
-  const laden = useLaden();
+  const aktion = useFeldversuch();
+  const nurLesen = useNurLesen();
   const [maske, setzeMaske] = useState<Zeilenmaske>(undefined);
+  // Beendeter Einsatz oder unterbrochene Verbindung: Die Knöpfe sind gesperrt,
+  // der Grund steht im Blatt (Banner bzw. Verbindungsband) und als Tooltip.
+  const zu = nurLesen || aktion.laeuft;
+  const grund = nurLesen ? TEXT_NUR_LESEN : undefined;
   const schliesse = (): void => {
     setzeMaske(undefined);
   };
   return (
-    <td className="handlungen">
+    <td className="handlungen" data-label="Handlung">
       {/* Die Knöpfe folgen dem abgeleiteten Zustand (§5.6.2). Angeboten wird
           nur, was den Zustand ändert — und die Rücknahme dessen, was gilt.
           Eine Zusage auf eine bereits geltende Erledigung wäre wirkungslos
           und trüge einen Hinweis; einen Knopf dafür anzubieten, wäre ein
           Versprechen, das der Fold nicht hält. */}
       {zeile.zustand === "OFFEN" && (
-        <button type="button" onClick={() => { setzeMaske("zusage"); }}>
+        <button type="button" disabled={nurLesen} title={grund} onClick={() => { setzeMaske("zusage"); }}>
           Zusagen
         </button>
       )}
       {zeile.zustand === "ZUGESAGT" && (
         <>
-          <button type="button" onClick={() => { setzeMaske("eintreffen"); }}>
+          <button type="button" disabled={nurLesen} title={grund} onClick={() => { setzeMaske("eintreffen"); }}>
             Eingetroffen
           </button>
           <button
             type="button"
+            disabled={zu || aktion.gesperrt}
+            title={grund}
             onClick={() => {
-              void laden.bediene(ruecknahme(zeile.id, "zusage"));
+              void aktion.schreibe(ruecknahme(zeile.id, "zusage"));
             }}
           >
-            Zusage zurück
+            {aktion.laeuft ? "…" : "Zusage zurück"}
           </button>
         </>
       )}
       {zeile.zustand === "EINGETROFFEN" && (
         <>
           {zeile.abloesendeEinheitId === undefined && (
-            <button type="button" onClick={() => { setzeMaske("nachtragen"); }}>
+            <button type="button" disabled={nurLesen} title={grund} onClick={() => { setzeMaske("nachtragen"); }}>
               Einheit anlegen
             </button>
           )}
           <button
             type="button"
+            disabled={zu || aktion.gesperrt}
+            title={grund}
             onClick={() => {
-              void laden.bediene(ruecknahme(zeile.id, "erledigung"));
+              void aktion.schreibe(ruecknahme(zeile.id, "erledigung"));
             }}
           >
-            Eintreffen zurück
+            {aktion.laeuft ? "…" : "Eintreffen zurück"}
           </button>
         </>
       )}
       <StornoKnopf zeile={zeile} />
+      {aktion.anzeige}
       {maske === "zusage" && <AnforderungZusage zeile={zeile} aufSchliessen={schliesse} />}
       {(maske === "eintreffen" || maske === "nachtragen") && (
         <AnforderungZuEinheit zeile={zeile} art={maske} aufSchliessen={schliesse} />
@@ -225,20 +240,26 @@ function Handlungen({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX
 function StornoKnopf({ zeile }: { readonly zeile: Anforderungszeile }): React.JSX.Element {
   const laden = useLaden();
   const grundabfrage = useGrundabfrage();
+  const aktion = useFeldversuch();
+  const nurLesen = useNurLesen();
   return (
     <>
       {zeile.zustand === "STORNIERT" ? (
         <button
           type="button"
+          disabled={nurLesen || aktion.laeuft || aktion.gesperrt}
+          title={nurLesen ? TEXT_NUR_LESEN : undefined}
           onClick={() => {
-            void laden.bediene(ruecknahme(zeile.id, "storno"));
+            void aktion.schreibe(ruecknahme(zeile.id, "storno"));
           }}
         >
-          Storno zurück
+          {aktion.laeuft ? "…" : "Storno zurück"}
         </button>
       ) : (
         <button
           type="button"
+          disabled={nurLesen}
+          title={nurLesen ? TEXT_NUR_LESEN : undefined}
           onClick={() => {
             // §2.4: Das Storno ist einer der Pflichtfälle für `grund`. Ohne
             // ihn weist der Aktendienst das Ereignis ab, und die Abweisung
@@ -248,15 +269,14 @@ function StornoKnopf({ zeile }: { readonly zeile: Anforderungszeile }): React.JS
               erlaeuterung:
                 "Die Stornierung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
               bestaetigungstext: "Stornieren",
-              aufGrund: (grund) => {
-                void laden.bediene(anforderungStorniert(zeile.id, grund));
-              },
+              aufGrund: (grund) => laden.bediene(anforderungStorniert(zeile.id, grund)),
             });
           }}
         >
           Stornieren
         </button>
       )}
+      {zeile.zustand === "STORNIERT" && aktion.anzeige}
       {grundabfrage.maske}
     </>
   );
