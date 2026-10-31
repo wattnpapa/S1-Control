@@ -33,6 +33,7 @@ export function Einheitenkopf({
   const knopf = (maske: Einheitenmaske, text: string, gesperrt: boolean, hinweis?: string): React.JSX.Element => (
     <button
       type="button"
+      className={maske === "entfernen" ? "entfernen" : undefined}
       disabled={nurLesen || gesperrt}
       title={titel(hinweis)}
       onClick={() => {
