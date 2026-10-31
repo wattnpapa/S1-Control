@@ -130,7 +130,6 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
                 ))}
               </ol>
               <p className="nicht">Nicht: {fall.nicht}</p>
-              <p className="quelle">{fall.quelle}</p>
             </li>
           ))}
         </ul>

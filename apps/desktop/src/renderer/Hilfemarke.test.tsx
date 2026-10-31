@@ -10,7 +10,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { ansichtshilfe } from "@s1/domaene";
+import { ANSICHTEN, ansichtshilfe } from "@s1/domaene";
 
 import { Hilfemarke } from "./Hilfemarke.js";
 
@@ -35,6 +35,21 @@ describe("Die Hilfemarke", () => {
 
     fireEvent.click(knopf);
     expect(screen.queryByText(hilfe.wozu)).toBeNull();
+  });
+
+  it("schließt die Hilfeblase mit Esc", () => {
+    render(<Hilfemarke kennung="abschnitte" />);
+    fireEvent.click(screen.getByRole("button", { name: "Hilfe zu Abschnittsbaum" }));
+    expect(screen.getByRole("note")).toBeDefined();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("enthält in keiner Ansichtshilfe Paragrafenverweise oder Excel-Bezüge außer als Vorlage", () => {
+    for (const ansicht of ANSICHTEN) {
+      const text = `${ansicht.wozu} ${ansicht.zuerst} ${ansicht.ueberraschung}`;
+      expect(text, ansicht.kennung).not.toMatch(/§|KONZEPT|NUR_STAERKE|die Excel\b|der Excel\b/u);
+    }
   });
 
   it("nennt die Kürzel dieser Ansicht in ihrer Schreibweise", () => {

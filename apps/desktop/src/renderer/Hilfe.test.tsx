@@ -13,7 +13,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { AKUELI, ANSICHTEN, STOERFAELLE } from "@s1/domaene";
 
-import { Hilfe } from "./Hilfe.js";
+import { Hilfe, klartext } from "./Hilfe.js";
+import { useLaden } from "./laden.js";
 import { KUERZEL, kuerzelText } from "./tastatur.js";
 
 afterEach(cleanup);
@@ -32,17 +33,60 @@ describe("Das Hilfefenster", () => {
     }
   });
 
-  it("nennt bei den übernommenen Kürzeln ihre Herkunft aus der Excel", () => {
+  it("beginnt mit den ersten Schritten in Klartext und zeigt die Tastenkürzel danach", () => {
     render(<Hilfe aufSchliessen={() => undefined} />);
-    // Wer die Excel bedient hat, erkennt sie wieder und muss nichts Neues
-    // lernen — das ist der Grund, aus dem die Buchstaben übernommen wurden.
-    expect(screen.getByText(/in der Excel: Strg\+N/)).toBeDefined();
-    expect(screen.getByText(/in der Excel: Strg\+H/)).toBeDefined();
+    const ersteSchritte = screen.getByText("Erste Schritte");
+    const tasten = screen.getByText("Tastenkürzel");
+    expect(ersteSchritte.compareDocumentPosition(tasten) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByText(/Einsatz anlegen oder öffnen/)).toBeDefined();
+  });
+
+  it("verweist weder auf die Excel noch auf Paragrafen noch auf Konzeptdateien", () => {
+    const { container } = render(<Hilfe aufSchliessen={() => undefined} />);
+    for (const bereich of ["Erste Schritte und Tasten", "Abkürzungen", "Ansichten", "Störfälle"]) {
+      fireEvent.click(screen.getByRole("tab", { name: bereich }));
+      const text = container.textContent ?? "";
+      expect(text, bereich).not.toMatch(/§|Excel|KONZEPT|\*\*/u);
+    }
+  });
+
+  it("schließt mit Esc", () => {
+    let geschlossen = 0;
+    render(<Hilfe aufSchliessen={() => (geschlossen += 1)} />);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(geschlossen).toBe(1);
+  });
+
+  it("schließt bei einem Tipp außerhalb, nicht aber im Fenster und nicht am Hilfeknopf", () => {
+    let geschlossen = 0;
+    render(
+      <>
+        <button type="button" className="hilfeknopf">Hilfe</button>
+        <p>Außerhalb</p>
+        <Hilfe aufSchliessen={() => (geschlossen += 1)} />
+      </>,
+    );
+    fireEvent.pointerDown(screen.getByText("Erste Schritte"));
+    fireEvent.pointerDown(screen.getByText("Hilfe", { selector: "button.hilfeknopf" }));
+    expect(geschlossen).toBe(0);
+    fireEvent.pointerDown(screen.getByText("Außerhalb"));
+    expect(geschlossen).toBe(1);
+  });
+
+  it("verschweigt im Browser den Startstörfall und den lokalen Zwischenspeicher", () => {
+    useLaden.setState({ umgebung: { plattform: "web" } as never });
+    try {
+      zeige("Störfälle");
+      expect(screen.queryByText("Die Anwendung startet nicht")).toBeNull();
+      expect(screen.queryByText(/Spiegel/)).toBeNull();
+    } finally {
+      useLaden.setState({ umgebung: undefined });
+    }
   });
 
   it("zeigt die vollständige Abkürzungsliste", () => {
     zeige("Abkürzungen");
-    expect(screen.getByText(`${String(AKUELI.length)} Einträge aus dem Blatt „AküLi“ der Excel`)).toBeDefined();
+    expect(screen.getByText(`${String(AKUELI.length)} Abkürzungen aus dem Abkürzungsverzeichnis`)).toBeDefined();
     expect(screen.getByText("Zugtrupp")).toBeDefined();
   });
 
@@ -70,7 +114,7 @@ describe("Das Hilfefenster", () => {
     for (const fall of STOERFAELLE) {
       expect(screen.getByText(fall.titel), fall.kennung).toBeDefined();
       for (const schritt of fall.schritte) {
-        expect(screen.getByText(schritt), fall.kennung).toBeDefined();
+        expect(screen.getByText(klartext(schritt)), fall.kennung).toBeDefined();
       }
     }
   });
@@ -79,7 +123,7 @@ describe("Das Hilfefenster", () => {
     zeige();
     expect(screen.queryByText(STOERFAELLE[0]?.titel ?? "")).toBeNull();
     fireEvent.click(screen.getByRole("tab", { name: "Störfälle" }));
-    expect(screen.queryByText(/Einträge aus dem Blatt/)).toBeNull();
+    expect(screen.queryByText(/Abkürzungen aus dem Abkürzungsverzeichnis/)).toBeNull();
   });
 
   it("lässt sich schließen", () => {

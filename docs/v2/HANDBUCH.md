@@ -131,17 +131,17 @@ Die Führungsorganisation: Einsatzabschnitte, Unterabschnitte und was daran hän
 
 **Zuerst:** Mit Strg+N einen Abschnitt anlegen; Einheiten kommen danach hinein.
 
-**Gut zu wissen:** Ein aufgelöster Abschnitt verschwindet nicht, er wird als aufgelöst geführt. Seine Einheiten stehen dann wieder frei (§5.3).
+**Gut zu wissen:** Ein aufgelöster Abschnitt verschwindet nicht, er wird als aufgelöst geführt. Seine Einheiten stehen dann wieder frei.
 
 **Kürzel:** Strg+N · Strg+E · Strg+M · Strg+F · Strg+Z
 
 ### Einheitentabelle
 
-Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum Blatt „Stärke“ der Excel.
+Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zur bisherigen Stärketabelle auf Papier.
 
 **Zuerst:** Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen — aus einer Vorlage (THW StAN, Feuerwehr, KatS-StAN Nds; Tippen filtert, Enter wählt) oder „Ohne Vorlage“ als freie Zeile.
 
-**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). „Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.
+**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, nur die Summen zählen sie nicht mehr. „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie in der Stärketabelle auf Papier; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Vorlage nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). „Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.
 
 **Kürzel:** Strg+N · Strg+K · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
 
@@ -151,7 +151,7 @@ Was wann geschehen ist, aus den Ereignissen abgeleitet.
 
 **Zuerst:** Filtern — nach Einheit, Abschnitt oder Text.
 
-**Gut zu wissen:** Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch (§5.9.1).
+**Gut zu wissen:** Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu.
 
 **Kürzel:** Strg+F
 
@@ -161,7 +161,7 @@ Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.
 
 **Zuerst:** Eine Meldung wählen und übernehmen oder ablehnen.
 
-**Gut zu wissen:** Derselbe Bogen zweimal eingelesen ergibt eine Meldung, keine zwei — die Kennung ist der Inhalt (§3.6, §5.8.1).
+**Gut zu wissen:** Derselbe Bogen zweimal eingelesen ergibt eine Meldung, keine zwei — der Inhalt des Bogens entscheidet, nicht der Zeitpunkt des Einlesens.
 
 **Kürzel:** Strg+Q · Strg+F
 
@@ -171,7 +171,7 @@ Was angefordert, zugesagt, eingetroffen oder storniert ist.
 
 **Zuerst:** Mit Strg+N eine Anforderung anlegen.
 
-**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation, Ebene, Stärke und Auftrag vorbelegt, Status „Einsatzbereit“, Bereich zu wählen — erst in einem Einsatzbereich zählt sie in die Ist-Stärke) oder verknüpft eine schon erfasste Einheit; sie steht dann als „Ablösung durch“ an der abgelösten Einheit.
+**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette. „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation, Ebene, Stärke und Auftrag vorbelegt, Status „Einsatzbereit“, Bereich zu wählen — erst in einem Einsatzbereich zählt sie in die Ist-Stärke) oder verknüpft eine schon erfasste Einheit; sie steht dann bei einer Ablösung als „Ablösung durch“ an der abgelösten Einheit.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 
@@ -181,7 +181,7 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 **Zuerst:** Über „Stammdaten bearbeiten“ den Namen der Führungsstelle und die übergeordnete Führungsstelle eintragen — sie stehen auf jedem Ausdruck.
 
-**Gut zu wissen:** Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt am Paar aus Posten und Datum (§5.7).
+**Gut zu wissen:** Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt an der Kombination aus Posten und Datum.
 
 **Kürzel:** Strg+N · Strg+E
 
@@ -191,11 +191,11 @@ Die Abrechnung: PSA, VDA, Unterkunft und Verpflegung je Einheit.
 
 **Zuerst:** Oben die vier Parameter des Einsatzes setzen.
 
-**Gut zu wissen:** Die Parameter gehören zum Einsatz und nicht zu diesem Rechner: Sie gelten für alle Arbeitsplätze (§5.2).
+**Gut zu wissen:** Die Parameter gehören zum Einsatz und nicht zu diesem Rechner: Sie gelten für alle Arbeitsplätze.
 
 ### Ausgaben
 
-Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall. Alle Ausgaben nennen die Ist-Stärke wie das Kopfband und trennen davon die erwarteten Kräfte; Summen über alle Einheiten heißen „Alle erfassten Einheiten“. Das Log-Blatt ist Bedarfsplanung (Verpflegung, Unterbringung) und zählt alle Einheiten der Einsatzbereiche, auch im Anmarsch. Die Kontrollsummen der Status-Matrix nennen bei einer Abweichung die Menge und die betroffenen Einheiten mit Namen. Darunter wird der Einsatz abgeschlossen: beenden, Einsatzakte erzeugen, archivieren.
+Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist die Stärketabelle auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall. Alle Ausgaben nennen die Ist-Stärke wie das Kopfband und trennen davon die erwarteten Kräfte; Summen über alle Einheiten heißen „Alle erfassten Einheiten“. Das Log-Blatt ist Bedarfsplanung (Verpflegung, Unterbringung) und zählt alle Einheiten der Einsatzbereiche, auch im Anmarsch. Die Kontrollsummen der Status-Matrix nennen bei einer Abweichung die Menge und die betroffenen Einheiten mit Namen. Darunter wird der Einsatz abgeschlossen: beenden, Einsatzakte erzeugen, archivieren.
 
 **Zuerst:** Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes. Mit „Öffnen“, „Ordner zeigen“ und bei HTML „Drucken“ geht es von dort weiter.
 
@@ -220,10 +220,10 @@ Wer sonst am Einsatz arbeitet, wie weit die Stände auseinander sind, wo die Pro
 | Taste | Was sie tut | In der Excel |
 |---|---|---|
 | Strg+N | Neuen Eintrag anlegen — Abschnitt oder Einheit, je nach gewählter Ansicht | Strg+N (Zeilen einfügen) |
-| Strg+E | Gewählten Eintrag entfernen; verlangt einen Grund (§2.4) | Strg+E (Zeilen entfernen) |
+| Strg+E | Gewählten Eintrag entfernen; verlangt einen Grund | Strg+E (Zeilen entfernen) |
 | Strg+M | Gewählte Einheiten in einen anderen Abschnitt verschieben | Strg+M (Zeilen verschieben) |
 | Strg+F | In die Suche springen | — |
-| Strg+Z | Letzte eigene Aktion zurücknehmen (§6 U3) | — |
+| Strg+Z | Letzte eigene Aktion zurücknehmen | — |
 | Strg+H | Abkürzungsliste und Tastenkarte öffnen | Strg+H (AküLi) |
 
 ### Masken
@@ -254,12 +254,13 @@ Im Programm: **Nebenblätter → Diagnose**, oder Strg+H und der Reiter
 
 **Woran es auffällt:** Die Statuszeile zeigt „Share nicht erreichbar“, die Liste der anderen Arbeitsplätze altert, und die Zahl der unübertragenen Bytes wächst.
 
-**Was dahintersteckt:** Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den lokalen Spiegel.
+**Was dahintersteckt:** Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den Zwischenspeicher.
 
-1. Weiterarbeiten. Alles Eingetippte liegt im lokalen Spiegel und geht nicht verloren (§5.3).
-2. Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.
-3. Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.
-4. Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.
+1. Weiterarbeiten, solange das Fenster den Dienst erreicht. Alles Eingetippte bleibt erhalten und wird übertragen, sobald der Share wieder da ist.
+2. Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Ausgaben“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.
+3. Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.
+4. Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.
+5. Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.
 
 **Nicht:** Die Anwendung neu starten. Das holt den Share nicht zurück und kostet den offenen Stand der Masken.
 
@@ -272,7 +273,7 @@ Grundlage: KONZEPT-SPEICHER.md §5.3, §6.4
 **Was dahintersteckt:** Auf dem betroffenen Rechner geht die Systemuhr falsch, meist nach einem Kaltstart ohne Netz.
 
 1. Die Uhr des betroffenen Rechners stellen — Zeitzone mit prüfen.
-2. Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief (§2.6).
+2. Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief.
 3. Zeitpunkte, die für die Auswertung zählen, dort nachtragen, wo sie eingetippt werden — sie sind ein Feld und keine Systemzeit.
 
 **Nicht:** Die Uhr während einer laufenden Erfassung zurückstellen und darauf hoffen, dass sich die Reihenfolge korrigiert. Sie tut es nicht, weil sie nie daran hing.
@@ -285,7 +286,7 @@ Grundlage: KONZEPT-EREIGNISSE.md §2.5, §2.6
 
 **Was dahintersteckt:** Zwei Bediener haben dasselbe Feld geändert, ohne den Stand des anderen gesehen zu haben. Der Fold entscheidet dann nach fester Regel und merkt sich, was er verdrängt hat.
 
-1. Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert (§3.8).
+1. Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert.
 2. Fachlich klären, welcher Wert stimmt — das entscheidet ein Mensch und kein Programm.
 3. Den richtigen Wert neu eintragen. Damit ist er der jüngste und gewinnt.
 
@@ -316,7 +317,7 @@ Grundlage: M7.2, Entscheidung 7
 1. Die Protokolldatei öffnen — ihr Ort steht in der Diagnoseansicht und in der Kurzanleitung.
 2. Startet die Anwendung ohne Einsatz, aber nicht mit: Ein anderer Rechner führt den Einsatz weiter, dieser wird nachgezogen.
 3. Startet sie gar nicht: Die portable Fassung vom Stick starten. Sie braucht keine Installation und keinen Spiegel.
-4. Der lokale Spiegel darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort (§1.3).
+4. Der lokale Zwischenspeicher darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort.
 
 **Nicht:** Dateien im Einsatzordner auf dem Share löschen oder von Hand bearbeiten. Das ist der einzige Griff, der Daten kostet.
 

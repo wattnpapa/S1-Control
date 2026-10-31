@@ -412,7 +412,7 @@ export {
 
 // Die Kurzhilfe je Ansicht (M8.1) — gelesen von der Ansicht selbst, dem
 // Hilfefenster und dem Handbuch.
-export { ANSICHTEN, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } from "./bedienhilfe.js";
+export { ANSICHTEN, ERSTE_SCHRITTE, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } from "./bedienhilfe.js";
 
 // Die Beschriftungen der Aufzaehlungswerte — die Woerter der Excel statt der Schluessel.
 export {
