@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Arbeitsplatz } from "./Arbeitsplatz.js";
 import { useLaden } from "./laden.js";
+import { ladeMerker, speichereMerker } from "./sitzung.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
 afterEach(cleanup);
@@ -78,6 +79,9 @@ function sichtbar(name: string): boolean {
 }
 
 beforeEach(() => {
+  // Der Reload-Merker gehört in den Browser, nicht in den nächsten Test.
+  sessionStorage.clear();
+  localStorage.clear();
   attrappe = baueAttrappe();
   attrappe.antwortet("umgebung", UMGEBUNG);
   attrappe.antwortet("einstellungenLesen", EINSTELLUNGEN);
@@ -161,5 +165,54 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(attrappe.rufeDerArt("kostenAnfordern").length).toBeGreaterThan(0);
     });
+  });
+
+  it("merkt Einsatz und Blatt für den Reload und löscht den Merker beim ausdrücklichen Zurück", async () => {
+    render(<Arbeitsplatz />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Einsatztagebuch" }));
+    await waitFor(() => {
+      expect(ladeMerker()).toMatchObject({ ordner: LAGEBILD.einsatzId, blatt: "tagebuch" });
+    });
+
+    await userEvent.click(screen.getByRole("button", { name: /Einsatzauswahl|Einsätze|Zurück/ }));
+    await waitFor(() => {
+      expect(ladeMerker()).toBeUndefined();
+    });
+    expect(attrappe.rufeDerArt("einsatzSchliessen")).toHaveLength(1);
+  });
+});
+
+describe("Der Arbeitsplatz nach einem Reload", () => {
+  const ORDNER = "2026-09-10_hochwasser_ab12cd";
+
+  beforeEach(() => {
+    attrappe.antwortet("einsaetzeAuflisten", [{ ordner: ORDNER, name: "Hochwasser Oldenburg", datum: "2026-09-10" }]);
+    attrappe.antwortet("einsatzOeffnen", { akteId: "akte-neu", einsatzId: ORDNER, ordner: ORDNER });
+    useLaden.setState({ akteId: undefined, lagebild: undefined, einsaetze: [], umgebung: undefined });
+  });
+
+  it("öffnet den gemerkten Einsatz wieder, mit dem gemerkten Blatt", async () => {
+    speichereMerker(ORDNER, "tagebuch");
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(useLaden.getState().akteId).toBe("akte-neu");
+    });
+    expect(attrappe.letzterRuf("einsatzOeffnen")?.ordner).toBe(ORDNER);
+    expect(screen.getByRole("tab", { name: "Einsatztagebuch" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("landet ohne Merker in der Einsatzliste", async () => {
+    render(<Arbeitsplatz />);
+    expect(await screen.findByRole("button", { name: /Hochwasser Oldenburg/ })).toBeDefined();
+    expect(attrappe.rufeDerArt("einsatzOeffnen")).toHaveLength(0);
+    expect(useLaden.getState().akteId).toBeUndefined();
+  });
+
+  it("zeigt die Einsatzliste mit Hinweis, wenn der Einsatz nicht aufgeht", async () => {
+    speichereMerker(ORDNER, "lage");
+    attrappe.scheitert("einsatzOeffnen", "Der Share antwortet nicht.");
+    render(<Arbeitsplatz />);
+    expect(await screen.findByText(/Einsatz konnte nicht wieder geöffnet werden: Der Share antwortet nicht\./)).toBeDefined();
+    expect(screen.getByRole("button", { name: /Hochwasser Oldenburg/ })).toBeDefined();
   });
 });
