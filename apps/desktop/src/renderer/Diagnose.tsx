@@ -33,6 +33,7 @@ import { useLaden } from "./laden.js";
 import { zeichensatzHerkunft } from "./zeichensatz.js";
 import { alter, bytes } from "./Statuszeile.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
 import type { Lagebild, Peer } from "../kontrakt/index.js";
 
 /** Eine Abweichung in Sekunden oder Minuten, mit Vorzeichen und in Worten. */
@@ -53,7 +54,10 @@ export function abweichung(ms: number): string {
  */
 export function befundAus(lagebild: Lagebild | undefined, paketAbgelehnt: boolean) {
   const peers = lagebild?.peers ?? [];
-  const groesste = peers.reduce((bisher, p) => Math.max(bisher, Math.abs(p.uhrAbweichungMs)), 0);
+  // Nur lebende Arbeitsplätze: Die Uhr eines fortgegangenen Platzes lässt sich nicht ablesen.
+  const groesste = peers
+    .filter((p) => !p.veraltet)
+    .reduce((bisher, p) => Math.max(bisher, Math.abs(p.uhrAbweichungMs)), 0);
   return {
     shareErreichbar: lagebild?.shareErreichbar ?? true,
     groessteUhrabweichungMs: groesste,
@@ -80,8 +84,8 @@ function Peerzeile({ peer, jetzt }: { readonly peer: Peer; readonly jetzt: numbe
       <td className="zahl">{bytes(peer.offset)}</td>
       <td className="zahl">{bytes(peer.gelesenerOffset)}</td>
       <td className="zahl">{rueckstand > 0 ? bytes(rueckstand) : "—"}</td>
-      <td className={Math.abs(peer.uhrAbweichungMs) >= UHR_GRENZE_MS ? "warnung" : undefined}>
-        {abweichung(peer.uhrAbweichungMs)}
+      <td className={!peer.veraltet && Math.abs(peer.uhrAbweichungMs) >= UHR_GRENZE_MS ? "warnung" : undefined}>
+        {peer.veraltet ? "—" : abweichung(peer.uhrAbweichungMs)}
       </td>
       <td className="zahl">{peer.quarantaene === 0 ? "—" : String(peer.quarantaene)}</td>
     </tr>
@@ -136,6 +140,11 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
       {lagebild === undefined || lagebild.peers.length === 0 ? (
         <p className="hinweistext">Kein weiterer Arbeitsplatz am Einsatz.</p>
       ) : (
+        <>
+        <p className="hinweistext">
+          {aktiveArbeitsplaetze(lagebild) === 0 ? "Kein aktiver weiterer Arbeitsplatz" : weitereText(aktiveArbeitsplaetze(lagebild))}
+          {" "}am Einsatz; fortgegangene Arbeitsplätze stehen grau darunter.
+        </p>
         <table>
           <thead>
             <tr>
@@ -157,6 +166,7 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
             ))}
           </tbody>
         </table>
+        </>
       )}
 
       <h3>Dieser Arbeitsplatz</h3>

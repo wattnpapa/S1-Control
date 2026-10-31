@@ -6,7 +6,7 @@
  * ändert, aber die dasselbe sagt, ist dieselbe Statuszeile.
  */
 
-import { render, screen, cleanup } from "@testing-library/react";
+import { fireEvent, render, screen, cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { Statuszeile, alter, bytes } from "./Statuszeile.js";
@@ -89,17 +89,29 @@ describe("Statuszeile", () => {
 
   it("nennt den unerreichbaren Share mit seiner Meldung", () => {
     zeige({ shareErreichbar: false, shareMeldung: "ENOENT" });
-    expect(screen.getByText(/Share nicht erreichbar — ENOENT/)).toBeDefined();
+    expect(screen.getByText(/⚠ Share nicht erreichbar — ENOENT/)).toBeDefined();
   });
 
-  it("zählt die wachen und die veralteten Arbeitsplätze getrennt (§6.4)", () => {
+  it("zählt nur aktive Arbeitsplätze und sagt „weiterer“ in der Einzahl (§6.4)", () => {
     zeige({
       peers: [
         peer({ clientId: "b", anzeigename: "B", rechnername: "rb", veraltet: false }),
         peer({ clientId: "c", anzeigename: "C", rechnername: "rc", veraltet: true }),
       ],
     });
-    expect(screen.getByText("1 weitere, 1 veraltet")).toBeDefined();
+    const zaehler = screen.getByText("1 weiterer Arbeitsplatz");
+    // Der Fortgegangene steht nicht in der Zahl, nur im Hinweis darauf.
+    expect(zaehler.getAttribute("title")).toMatch(/1 weitere nicht mehr aktiv/);
+  });
+
+  it("sagt „weitere Arbeitsplätze“ in der Mehrzahl", () => {
+    zeige({ peers: [peer({ clientId: "b" }), peer({ clientId: "c" }), peer({ clientId: "d" })] });
+    expect(screen.getByText("3 weitere Arbeitsplätze")).toBeDefined();
+  });
+
+  it("zeigt nur veraltete Arbeitsplätze als allein am Einsatz", () => {
+    zeige({ peers: [peer({ clientId: "b", veraltet: true })] });
+    expect(screen.getByText("allein am Einsatz")).toBeDefined();
   });
 
   it("sagt allein am Einsatz, wenn niemand sonst da ist", () => {
@@ -112,18 +124,38 @@ describe("Statuszeile", () => {
     expect(screen.queryByText(/nicht übertragen/)).toBeNull();
     cleanup();
     zeige({ unuebertrageneBytes: 4096 });
-    expect(screen.getByText("4.0 kB noch nicht übertragen")).toBeDefined();
+    expect(screen.getByText("⚠ 4.0 kB noch nicht übertragen")).toBeDefined();
   });
 
   it("verschweigt eine Quarantäne nicht (§8.2)", () => {
     zeige({ quarantaene: ["aa.000001.jsonl@1234"] });
-    expect(screen.getByText("1 Stelle(n) in Quarantäne")).toBeDefined();
+    expect(screen.getByText("✖ 1 Stelle in Quarantäne")).toBeDefined();
   });
 
   it("nennt Konflikthinweise und unbekannte Ereignisse", () => {
     zeige({ hinweise: 2, unbekannteEreignisse: 5 });
-    expect(screen.getByText("2 Konflikthinweis(e)")).toBeDefined();
-    expect(screen.getByText("5 unbekannte Ereignisse")).toBeDefined();
+    expect(screen.getByText("⚠ 2 Konflikthinweise")).toBeDefined();
+    expect(screen.getByText("⚠ 5 unbekannte Ereignisse")).toBeDefined();
+  });
+
+  it("erklärt einen Konflikthinweis per Tipp und klappt die Erklärung wieder zu", () => {
+    zeige({ hinweise: 1 });
+    const knopf = screen.getByRole("button", { name: /1 Konflikthinweis/ });
+    expect(knopf.getAttribute("aria-expanded")).toBe("false");
+    expect(screen.queryByRole("note")).toBeNull();
+    fireEvent.click(knopf);
+    expect(knopf.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("note").textContent).toMatch(/dasselbe Feld .* verschieden geändert.*neu eintragen/s);
+    fireEvent.click(knopf);
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("erklärt die Quarantäne mit den betroffenen Stellen und den Share ohne Stacktrace", () => {
+    zeige({ quarantaene: ["aa.000001.jsonl@1234"], shareErreichbar: false });
+    fireEvent.click(screen.getByRole("button", { name: /Quarantäne/ }));
+    expect(screen.getByRole("note").textContent).toMatch(/aa\.000001\.jsonl@1234/);
+    fireEvent.click(screen.getByRole("button", { name: /Share nicht erreichbar/ }));
+    expect(screen.getByRole("note").textContent).toMatch(/Sie können weiterarbeiten/);
   });
 });
 
