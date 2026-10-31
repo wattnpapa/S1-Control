@@ -11,10 +11,12 @@
  * Statuswechsel auslösen.
  */
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 import { statusTon, spaltenwertTitel, zeitpunktText, type Spalte, type Tabellenzeile } from "@s1/domaene";
 
+import { TEXT_NUR_LESEN } from "./Maske.js";
 import { Zellmarken } from "./Ressourcenmarken.js";
 
 /** Zahlenspalten stehen rechts: Wer Stärken vergleicht, liest Spalten. */
@@ -26,8 +28,12 @@ export interface ZelleEigenschaften {
   readonly zeile: Tabellenzeile;
   readonly spalte: Spalte;
   readonly bearbeitet: boolean;
+  /** Einsatz beendet oder archiviert: Anzeige ja, Bearbeiten nein. */
+  readonly gesperrt?: boolean;
   /** Die Regel, gegen die die Eingabe verstößt; die Zelle zeigt sie unter dem Feld. */
   readonly fehler?: string;
+  /** Keine Verbindung: der Grund; „Übernehmen“ ist gesperrt, der Text bleibt stehen. */
+  readonly sperre?: string;
   readonly aufBearbeiten: () => void;
   readonly aufFertig: (eingabe: string) => void;
   readonly aufAbbrechen: () => void;
@@ -37,7 +43,7 @@ export function Zelle(eigenschaften: ZelleEigenschaften): React.JSX.Element {
   const { zeile, spalte, bearbeitet } = eigenschaften;
   const zelle = zeile.zellen[spalte.schluessel];
   if (zelle === undefined) return <td />;
-  if (bearbeitet && spalte.schreibt !== undefined) {
+  if (bearbeitet && spalte.schreibt !== undefined && eigenschaften.gesperrt !== true) {
     const start = spalte.art === "auswahl" ? (typeof zelle.wert === "string" ? zelle.wert : "") : zelle.text;
     return spalte.art === "auswahl" ? (
       <Auswahlzelle {...eigenschaften} start={start} />
@@ -48,13 +54,14 @@ export function Zelle(eigenschaften: ZelleEigenschaften): React.JSX.Element {
   return <Anzeigezelle {...eigenschaften} />;
 }
 
-function Anzeigezelle({ zeile, spalte, aufBearbeiten }: ZelleEigenschaften): React.JSX.Element {
+function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten }: ZelleEigenschaften): React.JSX.Element {
   const zelle = zeile.zellen[spalte.schluessel];
   if (zelle === undefined) return <td />;
   const titel = zelle.umstritten
     ? "An diesem Feld hängt ein Konflikthinweis: Ein anderer Arbeitsplatz hat es zuletzt anders gesehen (§3.8)."
     : (zelle.wanduhr ?? "");
   const schreibbar = spalte.schreibt !== undefined;
+  const gesperrtHier = schreibbar && gesperrt === true;
   const ton = statusTon(typeof zelle.wert === "string" ? zelle.wert : "");
   return (
     <td
@@ -68,7 +75,7 @@ function Anzeigezelle({ zeile, spalte, aufBearbeiten }: ZelleEigenschaften): Rea
         .filter((klasse) => klasse !== "")
         .join(" ")}
       title={titel}
-      onDoubleClick={schreibbar ? aufBearbeiten : undefined}
+      onDoubleClick={schreibbar && !gesperrtHier ? aufBearbeiten : undefined}
     >
       {spalte.schluessel === "status" && zelle.text !== "" ? (
         schreibbar ? (
@@ -76,8 +83,11 @@ function Anzeigezelle({ zeile, spalte, aufBearbeiten }: ZelleEigenschaften): Rea
           <button
             type="button"
             className={`marke-zustand statuschip ${ton}`}
-            title="Status ändern"
-            aria-label={`Status ändern, aktuell ${zelle.text}`}
+            disabled={gesperrtHier}
+            title={gesperrtHier ? TEXT_NUR_LESEN : "Status ändern"}
+            aria-label={
+              gesperrtHier ? `Status ${zelle.text} – ${TEXT_NUR_LESEN}` : `Status ändern, aktuell ${zelle.text}`
+            }
             onClick={(ereignis) => {
               ereignis.stopPropagation();
               aufBearbeiten();
@@ -141,16 +151,109 @@ function Eingabezelle({ spalte, start, fehler, aufFertig, aufAbbrechen }: FeldEi
   );
 }
 
+/** Schmale Anzeige (Handy): Die Auswahl öffnet als Blatt am unteren Bildrand. */
+const SCHMAL = "(max-width: 700px)";
+
+function istSchmal(): boolean {
+  return typeof window !== "undefined" && typeof window.matchMedia === "function" && window.matchMedia(SCHMAL).matches;
+}
+
+/** Text, wenn neben das Blatt getippt wurde: Die Wahl ist nicht übernommen. */
+export const TEXT_NICHT_UEBERNOMMEN = "Nicht übernommen – bitte „Übernehmen“ oder „Abbrechen“ tippen.";
+
 /**
  * Die Auswahl mit ausdrücklicher Bestätigung. Die Knöpfe nehmen dem Feld den
  * Fokus nicht (`onMouseDown` verhindert den Blur), sonst würde der Tipp auf
  * „Übernehmen“ zuerst als Wegklicken verwerfen.
+ *
+ * Am Desktop steht die Auswahl in der Zelle (Enter/Esc, Wegklicken verwirft).
+ * Auf dem Handy liegt sie als Blatt über der ganzen Breite am unteren Rand,
+ * unabhängig von der Scrollposition der Tabelle; ein Tipp daneben verwirft
+ * nicht stumm, sondern meldet „Nicht übernommen“ und lässt das Blatt stehen.
  */
-function Auswahlzelle({ spalte, start, aufFertig, aufAbbrechen }: FeldEigenschaften): React.JSX.Element {
+function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
+  const { spalte, start, zeile, aufFertig, aufAbbrechen } = eigenschaften;
   const [auswahl, setzeAuswahl] = useState(start);
+  const [schmal] = useState(istSchmal);
+  const [nichtUebernommen, setzeNichtUebernommen] = useState(false);
   const behalteFokus = (ereignis: React.SyntheticEvent): void => {
     ereignis.preventDefault();
   };
+  const feld = (
+    <select
+      autoFocus
+      value={auswahl}
+      aria-label={spalte.kopf}
+      onChange={(e) => {
+        setzeAuswahl(e.target.value);
+        setzeNichtUebernommen(false);
+      }}
+      onKeyDown={(ereignis) => {
+        if (ereignis.key === "Enter") {
+          ereignis.preventDefault();
+          aufFertig(auswahl);
+        }
+        if (ereignis.key === "Escape") {
+          ereignis.preventDefault();
+          ereignis.stopPropagation();
+          aufAbbrechen();
+        }
+      }}
+    >
+      <option value="">—</option>
+      {(spalte.werte ?? []).map((wert) => (
+        <option key={wert} value={wert}>
+          {spaltenwertTitel(spalte.schluessel, wert)}
+        </option>
+      ))}
+    </select>
+  );
+  const knoepfe = (
+    <span className="auswahlknoepfe">
+      <button
+        type="button"
+        className="haupt"
+        disabled={eigenschaften.sperre !== undefined}
+        title={eigenschaften.sperre ?? "Übernehmen (Enter)"}
+        onMouseDown={behalteFokus}
+        onClick={(ereignis) => {
+          ereignis.stopPropagation();
+          aufFertig(auswahl);
+        }}
+      >
+        Übernehmen
+      </button>
+      <button
+        type="button"
+        title="Abbrechen (Esc)"
+        onMouseDown={behalteFokus}
+        onClick={(ereignis) => {
+          ereignis.stopPropagation();
+          aufAbbrechen();
+        }}
+      >
+        Abbrechen
+      </button>
+    </span>
+  );
+  if (schmal) {
+    return (
+      <td className="bearbeitet">
+        <Auswahlblatt
+          titel={`${spalte.kopf} ändern: ${zeile.anzeige}`}
+          hinweis={nichtUebernommen}
+          aufDaneben={() => {
+            setzeNichtUebernommen(true);
+          }}
+          aufAbbrechen={aufAbbrechen}
+        >
+          {feld}
+          {knoepfe}
+          {eigenschaften.fehler !== undefined && <span className="feldfehler">{eigenschaften.fehler}</span>}
+        </Auswahlblatt>
+      </td>
+    );
+  }
   return (
     <td
       className="bearbeitet auswahlzelle"
@@ -160,57 +263,61 @@ function Auswahlzelle({ spalte, start, aufFertig, aufAbbrechen }: FeldEigenschaf
         aufAbbrechen();
       }}
     >
-      <select
-        autoFocus
-        value={auswahl}
-        aria-label={spalte.kopf}
-        onChange={(e) => {
-          setzeAuswahl(e.target.value);
-        }}
-        onKeyDown={(ereignis) => {
-          if (ereignis.key === "Enter") {
-            ereignis.preventDefault();
-            aufFertig(auswahl);
-          }
-          if (ereignis.key === "Escape") {
-            ereignis.preventDefault();
-            ereignis.stopPropagation();
-            aufAbbrechen();
-          }
+      {feld}
+      {knoepfe}
+      {eigenschaften.fehler !== undefined && <span className="feldfehler">{eigenschaften.fehler}</span>}
+    </td>
+  );
+}
+
+interface BlattEigenschaften {
+  readonly titel: string;
+  readonly hinweis: boolean;
+  readonly aufDaneben: () => void;
+  readonly aufAbbrechen: () => void;
+  readonly children: React.ReactNode;
+}
+
+/** Das Blatt am unteren Bildrand; der Grund dahinter fängt Tipps daneben ab. */
+function Auswahlblatt({ titel, hinweis, aufDaneben, aufAbbrechen, children }: BlattEigenschaften): React.JSX.Element {
+  const blatt = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    // Das Blatt steht über der Tabelle; Escape am Gerät mit Tastatur verwirft.
+    const aufTaste = (ereignis: KeyboardEvent): void => {
+      if (ereignis.key === "Escape") aufAbbrechen();
+    };
+    document.addEventListener("keydown", aufTaste);
+    return () => {
+      document.removeEventListener("keydown", aufTaste);
+    };
+  }, [aufAbbrechen]);
+  return createPortal(
+    <div className="auswahlgrund" 
+      onClick={(ereignis) => {
+        ereignis.stopPropagation();
+        aufDaneben();
+      }}
+      data-testid="auswahlgrund"
+    >
+      <div
+        ref={blatt}
+        className="auswahlblatt"
+        role="dialog"
+        aria-modal="true"
+        aria-label={titel}
+        onClick={(ereignis) => {
+          ereignis.stopPropagation();
         }}
       >
-        <option value="">—</option>
-        {(spalte.werte ?? []).map((wert) => (
-          <option key={wert} value={wert}>
-            {spaltenwertTitel(spalte.schluessel, wert)}
-          </option>
-        ))}
-      </select>
-      <span className="auswahlknoepfe">
-        <button
-          type="button"
-          className="haupt"
-          title="Übernehmen (Enter)"
-          onMouseDown={behalteFokus}
-          onClick={(ereignis) => {
-            ereignis.stopPropagation();
-            aufFertig(auswahl);
-          }}
-        >
-          Übernehmen
-        </button>
-        <button
-          type="button"
-          title="Abbrechen (Esc)"
-          onMouseDown={behalteFokus}
-          onClick={(ereignis) => {
-            ereignis.stopPropagation();
-            aufAbbrechen();
-          }}
-        >
-          Abbrechen
-        </button>
-      </span>
-    </td>
+        <strong className="auswahltitel">{titel}</strong>
+        {children}
+        {hinweis && (
+          <p className="hinweistext auswahlhinweis" role="alert">
+            {TEXT_NICHT_UEBERNOMMEN}
+          </p>
+        )}
+      </div>
+    </div>,
+    document.body,
   );
 }

@@ -123,12 +123,13 @@ describe("einheitentabelle mit gliederung", () => {
     expect(bereiche.find((b) => b.abschnittId === "ANF")?.zaehlt).toBe(false);
   });
 
-  it("nennt am Bereich „Einsatz beendet“ die Stärke der Einheiten darunter, ohne dass sie zählt", () => {
+  it("führt am Bereich „Einsatz beendet“ die Einheiten darunter, ohne dass ihre Stärke als Ist zählt", () => {
     const archiv = einheitentabelle(lage(), { gliederung: true }).gliederung?.bereiche.find(
       (b) => b.abschnittId === "ARCHIV",
     );
     expect(archiv?.name).toBe("Einsatz beendet");
-    expect(archiv?.staerke).toEqual(staerke(0, 1, 2));
+    expect(archiv?.staerke).toEqual(staerke(0, 0, 0));
+    expect(archiv?.einheiten).toBe(1);
     expect(archiv?.zaehlt).toBe(false);
   });
 

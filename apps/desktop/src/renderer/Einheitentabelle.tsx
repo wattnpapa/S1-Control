@@ -33,10 +33,14 @@ import { Untertabellen } from "./Untertabellen.js";
 import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
-import { Hilfemarke } from "./Hilfemarke.js";
+import { Einheitenkopf } from "./Einheitenkopf.js";
+import { hinweisAusErgebnis } from "./Anlegeversuch.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { useSchreibsperre } from "./useVerbindungsstatus.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { Zelle, istZahl } from "./Einheitenzelle.js";
 import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
+import { Tabellensumme } from "./Tabellensumme.js";
 import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
 
 /**
@@ -94,6 +98,12 @@ export function Einheitentabelle({
   /** Die Regel, gegen die die offene Zelle verstößt — die Zelle bleibt offen, bis sie stimmt oder verworfen wird. */
   const [zellenfehler, setzeZellenfehler] = useState<string | undefined>(undefined);
 
+  /** Ohne Verbindung: Die Zelle bleibt mit ihrem Text offen, „Übernehmen“ ist gesperrt. */
+  const verbindungssperre = useSchreibsperre();
+
+  /** Beendet oder archiviert: Die Tabelle zeigt, schreibt aber nichts. */
+  const nurLesen = (laden.lagebild?.einsatzStatus ?? "AKTIV") !== "AKTIV";
+
   const setzeTabellenfilter = laden.setzeTabellenfilter;
   const akteId = laden.akteId;
   useEffect(() => {
@@ -109,36 +119,20 @@ export function Einheitentabelle({
   const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
   const zeilen = laden.tabelle?.zeilen ?? [];
   const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
-  const summe = useMemo(
-    () =>
-      zeilen.reduce(
-        (bisher, zeile) =>
-          zeile.entfernt
-            ? bisher
-            : {
-                fuehrer: bisher.fuehrer + zeile.staerke.fuehrer,
-                unterfuehrer: bisher.unterfuehrer + zeile.staerke.unterfuehrer,
-                mannschaft: bisher.mannschaft + zeile.staerke.mannschaft,
-              },
-        { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
-      ),
-    [zeilen],
-  );
-
   useKuerzel(
     useMemo(
       () => ({
         anlegen: () => {
-          setzeMaske("anlegen");
+          if (!nurLesen) setzeMaske("anlegen");
         },
         verschieben: () => {
-          if (markiert.length > 0) setzeMaske("verschieben");
+          if (!nurLesen && markiert.length > 0) setzeMaske("verschieben");
         },
         entfernen: () => {
-          if (markiert.length === 1) setzeMaske("entfernen");
+          if (!nurLesen && markiert.length === 1) setzeMaske("entfernen");
         },
         kopieren: () => {
-          if (markiert.length === 1) setzeMaske("kopieren");
+          if (!nurLesen && markiert.length === 1) setzeMaske("kopieren");
         },
         suchen: () => {
           document.getElementById("einheitensuche")?.focus();
@@ -149,7 +143,7 @@ export function Einheitentabelle({
           else setzeMarkiert([]);
         },
       }),
-      [markiert, maske, bearbeitet],
+      [markiert, maske, bearbeitet, nurLesen],
     ),
   );
 
@@ -184,17 +178,31 @@ export function Einheitentabelle({
       );
       return;
     }
+    if (verbindungssperre !== undefined) {
+      // Kein stummes Verwerfen: Der Text bleibt in der Zelle, der Grund steht dabei.
+      setzeZellenfehler(verbindungssperre);
+      return;
+    }
     setzeZellenfehler(undefined);
-    setzeBearbeitet(undefined);
     const zelle = zeile.zellen[spalte.schluessel];
-    if (zelle === undefined) return;
+    if (zelle === undefined) {
+      setzeBearbeitet(undefined);
+      return;
+    }
     // Nichts geändert, nichts geschrieben: Ein Ereignis, das denselben Wert
     // noch einmal setzt, steht für immer im Protokoll und erzeugt bei einem
     // zweiten Arbeitsplatz einen Konfliktkandidaten ohne fachlichen Anlass.
-    if (JSON.stringify(neu) === JSON.stringify(zelle.wert)) return;
-    const entwurf = inlineEntwurf(spalte, zeile.einheitId, zelle.wert, neu);
-    if (entwurf === undefined) return;
-    await laden.bediene(entwurf);
+    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, zelle.wert, neu);
+    if (entwurf === undefined) {
+      setzeBearbeitet(undefined);
+      return;
+    }
+    const ergebnis = await laden.bediene(entwurf);
+    // Geschlossen wird nur nach bestätigtem Schreiben; sonst bleibt der Text
+    // stehen, und die Zelle sagt, ob nicht gespeichert oder unklar ist.
+    const hinweis = hinweisAusErgebnis(ergebnis);
+    if (hinweis === undefined) setzeBearbeitet(undefined);
+    else setzeZellenfehler(hinweis);
   }
 
   /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
@@ -222,6 +230,8 @@ export function Einheitentabelle({
             key={spalte.schluessel}
             zeile={zeile}
             spalte={spalte}
+            gesperrt={nurLesen}
+            {...(verbindungssperre === undefined ? {} : { sperre: verbindungssperre })}
             bearbeitet={
               bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
             }
@@ -247,61 +257,19 @@ export function Einheitentabelle({
 
   return (
     <section aria-label="Einheiten" className="einheiten">
-      <div className="einheitenkopf">
-        <h2>
-          Einheiten ({String(laden.tabelle?.gesamtzahl ?? 0)}) <Hilfemarke kennung="einheiten" />
-        </h2>
-        <button
-          type="button"
-          className="haupt"
-          onClick={() => {
-            setzeMaske("anlegen");
-          }}
-          title={`Einheit anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
-        >
-          Aus Vorlage
-        </button>
-        {/* Die Schritte, die auf einer Auswahl arbeiten, stehen
-            zusammen und durch einen Strich von Anlegen getrennt: Sie sind
-            gesperrt, solange nichts markiert ist, und das soll man sehen,
-            ohne die Knöpfe zu lesen. */}
-        <span className="trenner" aria-hidden="true" />
-        <button type="button" disabled={markiert.length === 0} onClick={() => { setzeMaske("verschieben"); }}>
-          Verschieben ({markiert.length})
-        </button>
-        <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("aufteilen"); }}>
-          Aufteilen
-        </button>
-        <button type="button" disabled={markiert.length < 2} onClick={() => { setzeMaske("zusammenfuehren"); }}>
-          Zusammenführen
-        </button>
-        <button
-          type="button"
-          disabled={markiert.length !== 1}
-          onClick={() => { setzeMaske("kopieren"); }}
-          title={`Markierte Zeile als neue, angeforderte Einheit kopieren (${kuerzelText(kuerzel("kopieren") as never)})`}
-        >
-          Kopieren
-        </button>
-        <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("entfernen"); }}>
-          Entfernen
-        </button>
-        <button type="button" disabled={markiert.length !== 1} onClick={() => { setzeMaske("abloesung"); }}>
-          Ablösung anfordern
-        </button>
-        <label className="suchfeld">
-          Suche
-          <input
-            id="einheitensuche"
-            value={suche}
-            placeholder="Einheit, Organisation, Ort, Kennzeichen …"
-            onChange={(e) => {
-              setzeSuche(e.target.value);
-            }}
-            title={`In die Suche springen (${kuerzelText(kuerzel("suchen") as never)})`}
-          />
-        </label>
-      </div>
+      <Einheitenkopf
+        gesamtzahl={laden.tabelle?.gesamtzahl ?? 0}
+        markiert={markiert.length}
+        nurLesen={nurLesen}
+        suche={suche}
+        aufSuche={setzeSuche}
+        aufMaske={setzeMaske}
+      />
+      {nurLesen && (
+        <p className="sperrhinweis" role="status">
+          {TEXT_NUR_LESEN}: Status ändern, Anlegen, Verschieben und Entfernen sind gesperrt.
+        </p>
+      )}
 
       <div className="spaltengruppen" role="group" aria-label="Spaltengruppen">
         {projektion.SPALTENGRUPPEN.map((gruppe) => (
@@ -365,21 +333,12 @@ export function Einheitentabelle({
           {/* Die Summe steht unter der Tabelle und zählt genau das, was
               darüber steht — den Ausschnitt, nicht den Einsatz. Entfernte
               Einheiten bleiben sichtbar, zählen aber nicht mit (§5.4.5); die
-              Gesamtstärke des Einsatzes steht im Kopfband. */}
-          <tfoot>
-            <tr className="summenzeile">
-              <th scope="row">{zeilen.length === (laden.tabelle?.gesamtzahl ?? 0) ? "Summe" : "Summe (Ausschnitt)"}</th>
-              {spalten.map((spalte) => (
-                <td key={spalte.schluessel} className={istZahl(spalte) ? "zahl" : undefined}>
-                  {spalte.schluessel === "staerke"
-                    ? `${String(summe.fuehrer)}/${String(summe.unterfuehrer)}/${String(summe.mannschaft)}`
-                    : spalte.schluessel === "gesamt"
-                      ? String(summe.fuehrer + summe.unterfuehrer + summe.mannschaft)
-                      : ""}
-                </td>
-              ))}
-            </tr>
-          </tfoot>
+              Ist-Stärke des Einsatzes steht im Kopfband. */}
+          <Tabellensumme
+            zeilen={zeilen}
+            spalten={spalten}
+            ausschnitt={zeilen.length !== (laden.tabelle?.gesamtzahl ?? 0)}
+          />
         </table>
       </div>
 

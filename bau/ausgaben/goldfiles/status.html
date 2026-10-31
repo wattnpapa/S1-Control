@@ -20,6 +20,8 @@
     .ok { color: #157a3c; }
     .fehler { color: #b91c1c; font-weight: 700; }
     .hinweis { font-size: 9pt; color: #444; }
+    .ist { font-size: 11pt; margin: 0 0 1mm; }
+    li.hinweis { color: #444; font-size: 10pt; }
   </style>
 </head>
 <body>
@@ -30,7 +32,9 @@
   <p class="kern">@bos/eeb-format 0.0.0</p>
 </header>
   <p class="fuest">FüSt Oldenburg</p>
-  <h2>Stärke nach Organisationen</h2>
+  <p class="ist"><strong>Ist-Stärke (vor Ort): 14/48/202 // 264 · +63 erwartet (angefordert/Anmarsch/Eingang) · 3 beendet/Rückmarsch</strong></p>
+  <p class="hinweis">Ist-Stärke: Kräfte, die vor Ort sind (Status Einsatzbereit, Einsatz, Ruhe, Nicht einsatzbereit in einem Einsatzbereich). Erwartet: angefordert, im Anmarsch, in Rufbereitschaft oder im Eingang. Nicht gezählt: „Einsatz beendet“ und Rückmarsch. Die Tabellen darunter zählen dagegen alle erfassten Einheiten (Ist plus erwartet), ohne „Einsatz beendet“ und Rückmarsch.</p>
+  <h2>Stärke nach Organisationen — alle erfassten Einheiten, auch erwartete</h2>
   <table class="status">
     <thead>
       <tr>
@@ -210,10 +214,10 @@
       <tr>
         <th scope="row">THW</th>
         <td class="zahl">7</td>
-        <td class="zahl">23</td>
-        <td class="zahl">88</td>
-        <td class="zahl">118</td>
-        <td class="zahl">109</td>
+        <td class="zahl">22</td>
+        <td class="zahl">86</td>
+        <td class="zahl">115</td>
+        <td class="zahl">106</td>
         <td class="zahl">8</td>
         <td class="zahl">1</td>
         <td class="zahl">4</td>
@@ -225,10 +229,10 @@
       <tr class="summenzeile">
         <th scope="row">Gesamt</th>
         <td class="zahl">16</td>
-        <td class="zahl">59</td>
-        <td class="zahl">255</td>
-        <td class="zahl">330</td>
-        <td class="zahl">306</td>
+        <td class="zahl">58</td>
+        <td class="zahl">253</td>
+        <td class="zahl">327</td>
+        <td class="zahl">303</td>
         <td class="zahl">21</td>
         <td class="zahl">3</td>
         <td class="zahl">11</td>
@@ -239,7 +243,7 @@
       </tr>
     </tbody>
   </table>
-  <h2>Status der Einsatzkräfte</h2>
+  <h2>Status der Einsatzkräfte — alle erfassten Einheiten, auch erwartete</h2>
   <table class="status">
     <thead><tr><th scope="col">Wert</th><th scope="col">Fü</th><th scope="col">UFü</th><th scope="col">He</th><th scope="col">Gesamt</th></tr></thead>
     <tbody>
@@ -299,30 +303,23 @@
         <td class="zahl">6</td>
         <td class="zahl">8</td>
       </tr>
-      <tr>
-        <th scope="row">Rückmarsch</th>
-        <td class="zahl">0</td>
-        <td class="zahl">1</td>
-        <td class="zahl">2</td>
-        <td class="zahl">3</td>
-      </tr>
       <tr class="summenzeile">
-        <th scope="row">Summe</th>
+        <th scope="row">Alle erfassten Einheiten</th>
         <td></td><td></td><td></td>
-        <td class="zahl">330</td>
+        <td class="zahl">327</td>
       </tr>
     </tbody>
   </table>
-  <h2>Schichten</h2>
+  <h2>Schichten — alle erfassten Einheiten, auch erwartete</h2>
   <table class="status">
     <thead><tr><th scope="col">Wert</th><th scope="col">Fü</th><th scope="col">UFü</th><th scope="col">He</th><th scope="col">Gesamt</th></tr></thead>
     <tbody>
       <tr>
         <th scope="row">Tag</th>
         <td class="zahl">11</td>
-        <td class="zahl">40</td>
-        <td class="zahl">175</td>
-        <td class="zahl">226</td>
+        <td class="zahl">39</td>
+        <td class="zahl">173</td>
+        <td class="zahl">223</td>
       </tr>
       <tr>
         <th scope="row">Nacht</th>
@@ -346,16 +343,16 @@
         <td class="zahl">14</td>
       </tr>
       <tr class="summenzeile">
-        <th scope="row">Summe</th>
+        <th scope="row">Alle erfassten Einheiten</th>
         <td></td><td></td><td></td>
-        <td class="zahl">293</td>
+        <td class="zahl">290</td>
       </tr>
     </tbody>
   </table>
   <h2>Kontrollsummen</h2>
   <ul class="proben">
-    <li class="ok">Status: o.k.</li>
-    <li class="ok">Schicht: o.k.</li>
+    <li class="ok">Status: o.k. — alle Einheiten tragen Status und Organisation.</li>
+    <li class="ok">Schicht: o.k. — alle Einheiten tragen eine Schicht.</li>
   </ul>
   <p class="hinweis">Alle Einheiten tragen Organisation, Status und Schicht.</p>
 </body>

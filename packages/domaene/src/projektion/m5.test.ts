@@ -170,9 +170,11 @@ describe("Das Blatt „Log“ (§4.3)", () => {
     const blatt = logistikblatt(zustand);
     const ausZeilen = blatt.zeilen.reduce((s, z) => s + z.gesamt, 0);
     expect(blatt.gesamt.gesamt).toBe(ausZeilen);
-    // Dieselbe Zahl, die K3 als Gesamtstärke der Lage führt.
-    const k3 = kennzahlen.einsatzGesamtstaerke(zustand).gesamt;
-    expect(blatt.gesamt.gesamt).toBe(k3.fuehrer + k3.unterfuehrer + k3.mannschaft);
+    // Das Blatt ist Bedarfsplanung (Verpflegung, Unterbringung): Es zählt nach
+    // Bereich, also auch Einheiten im Anmarsch in Einsatzbereichen — E*, nicht
+    // die Ist-Stärke (K3). Die Fußnote der Ausgabe sagt das.
+    const eStern = kennzahlen.einheitenDerGesamtstaerke(zustand).reduce((s, e) => s + kennzahlen.gesamtstaerke(e), 0);
+    expect(blatt.gesamt.gesamt).toBe(eStern);
   });
 
   it("führt leere Bereiche mit, wenn man es verlangt", () => {

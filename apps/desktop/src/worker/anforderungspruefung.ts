@@ -25,8 +25,25 @@ function lesbareZeit(wert: unknown): boolean {
   return typeof wert === "string" && !Number.isNaN(new Date(wert).getTime());
 }
 
+const ANLAGEFELDER = ["kennung", "abzuloesendeEinheitId", "vorgeseheneEinheitText", "vorgesehenerAuftrag"] as const;
+
+/**
+ * Eine Anforderung muss etwas anfordern: Kennung, abzulösende Einheit,
+ * vorgesehene Einheit oder Auftrag. Eine Anlage ohne jede Angabe stünde
+ * leer im Protokoll und erschiene als Zeile ohne Inhalt.
+ */
+function pruefeAnlage(nutzlast: unknown): string | undefined {
+  const felder = (nutzlast ?? {}) as Record<string, unknown>;
+  const angegeben = ANLAGEFELDER.some((feld) => {
+    const wert = felder[feld];
+    return typeof wert === "string" && wert.trim() !== "";
+  });
+  return angegeben ? undefined : "Bitte mindestens die Einheit, die Kennung oder den Auftrag der Anforderung angeben.";
+}
+
 /** Liefert die Meldung, wenn der Entwurf nicht geschrieben werden darf. */
 export function pruefeAnforderung(entwurf: Ereignisentwurf): string | undefined {
+  if (entwurf.typ === "AnforderungAngelegt") return pruefeAnlage(entwurf.nutzlast);
   const zeit = ZEITEN[entwurf.typ];
   if (zeit === undefined || entwurf.neu === null || entwurf.neu === undefined) return undefined;
   if (typeof entwurf.neu !== "object") return "Der Wert muss eine Zeitangabe mit Angaben tragen.";

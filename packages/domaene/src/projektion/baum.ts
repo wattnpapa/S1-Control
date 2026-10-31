@@ -14,7 +14,7 @@
  * es zwei Wahrheiten über denselben Baum.
  */
 
-import { abschnittStaerke, einheitenImAbschnitt } from "../kennzahlen.js";
+import { abschnittErwartet, abschnittIstStaerke, einheitenImAbschnitt } from "../kennzahlen.js";
 import { staerkePlus, type Id, type Staerke } from "../werte.js";
 import { ARCHIV_ABSCHNITT_ID, EINGANG_ABSCHNITT_ID, type AbschnittZustand, type Zustand } from "../zustand.js";
 
@@ -27,12 +27,12 @@ import { ARCHIV_ABSCHNITT_ID, EINGANG_ABSCHNITT_ID, type AbschnittZustand, type 
  * auseinanderzurechnen ist Sache dieser Projektion und nicht der Anzeige —
  * eine Anzeige, die selbst summiert, summiert bei jedem Neuzeichnen erneut.
  *
- * **`summenStaerke` ist nicht K3.** Sie summiert den Teilbaum, wie ihn die
- * Excel zeigt, ohne Rücksicht auf `zaehltInGesamtstaerke`: Ein Bediener, der
- * einen Abschnitt `ANGEFORDERT` aufklappt, will dessen Kräfte sehen. Die
- * Gesamtstärke des Einsatzes liefert `kennzahlen.einsatzGesamtstaerke` (K3)
- * und nichts sonst — zwei Summenfunktionen über derselben Größe wären zwei
- * Wahrheiten, und die Statuszeile zeigt bereits die eine.
+ * **Eine Zählregel.** `eigeneStaerke` und `summenStaerke` zählen die
+ * Ist-Stärke nach `kennzahlen.zaehlklasse`; was noch nicht vor Ort ist
+ * (angefordert, Anmarsch, Eingang), steht getrennt in `erwartet` und
+ * `erwartetSumme`. Ohne Filter ist die Summe der Wurzeln die Kopfzahl
+ * (`kennzahlen.einsatzGesamtstaerke`, K3) — zwei Zählweisen über derselben
+ * Größe wären zwei Wahrheiten.
  */
 export interface Baumknoten {
   readonly id: Id;
@@ -40,10 +40,14 @@ export interface Baumknoten {
   readonly typ: string;
   readonly reihenfolge: number;
   readonly tiefe: number;
-  /** Stärke der Einheiten, die unmittelbar in diesem Abschnitt stehen (K2). */
+  /** Ist-Stärke der Einheiten, die unmittelbar in diesem Abschnitt stehen (Zählregel, `zaehlklasse`). */
   readonly eigeneStaerke: Staerke;
   /** Diese Stärke plus die aller Unterabschnitte. */
   readonly summenStaerke: Staerke;
+  /** Erwartete Köpfe (angefordert/Anmarsch/Eingang) unmittelbar in diesem Abschnitt — nicht in der Ist-Stärke. */
+  readonly erwartet: number;
+  /** Diese Zahl plus die aller Unterabschnitte. */
+  readonly erwartetSumme: number;
   /** Zahl der Einheiten unmittelbar in diesem Abschnitt. */
   readonly einheiten: number;
   /** Diese Zahl plus die aller Unterabschnitte. */
@@ -155,7 +159,8 @@ export function abschnittsbaum(zustand: Zustand, optionen: Baumoptionen = {}): r
 
   const baue = (id: Id, tiefe: number): Baumknoten => {
     const abschnitt = sichtbar.get(id) as AbschnittZustand;
-    const eigeneStaerke = abschnittStaerke(zustand, id);
+    const eigeneStaerke = abschnittIstStaerke(zustand, id);
+    const erwartet = abschnittErwartet(zustand, id);
     const einheiten = einheitenImAbschnitt(zustand, id).length;
     const kinder = (kinderVon.get(id) ?? []).map((kind) => baue(kind, tiefe + 1));
     kinder.sort(vergleiche);
@@ -175,6 +180,8 @@ export function abschnittsbaum(zustand: Zustand, optionen: Baumoptionen = {}): r
         : {}),
       eigeneStaerke,
       summenStaerke: kinder.reduce<Staerke>((summe, kind) => staerkePlus(summe, kind.summenStaerke), eigeneStaerke),
+      erwartet,
+      erwartetSumme: kinder.reduce((summe, kind) => summe + kind.erwartetSumme, erwartet),
       einheiten,
       einheitenSumme: kinder.reduce((summe, kind) => summe + kind.einheitenSumme, einheiten),
       zaehlt: abschnitt.zaehltInGesamtstaerke,

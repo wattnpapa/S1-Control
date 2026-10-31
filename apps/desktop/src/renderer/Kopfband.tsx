@@ -13,29 +13,12 @@
 
 import { THEMEN, type Lagebild, type Theme } from "../kontrakt/index.js";
 import { BLAETTER, type Blatt } from "./blaetter.js";
-import { staerkeText, taktischeZeit } from "./formate.js";
+import { taktischeZeit } from "./formate.js";
+import { Staerkekennzahl } from "./Staerkekennzahl.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { alter } from "./Statuszeile.js";
-
-/**
- * Die Zählregel der Kopfzahl, als Tooltip und für Vorlesegeräte. Sie steht
- * hier und in der Hilfe („Überblick“) gleichlautend.
- */
-export const STAERKE_REGEL =
-  "Ist-Stärke Fü/UFü/He // Gesamt: Kräfte in den Einsatzbereichen. " +
-  "Nicht gezählt: Angefordert/Anmarsch, Eingang und „Einsatz beendet“.";
-
-/** „+6 erwartet · 2 beendet“ — leer, wenn nichts neben der Kopfzahl steht. */
-export function staerkeNebenText(lagebild: Lagebild | undefined): string {
-  const erwartet = lagebild?.staerkeErwartet ?? 0;
-  const beendet = lagebild?.staerkeBeendet ?? 0;
-  return [
-    erwartet > 0 ? `+${String(erwartet)} im Eingang/angefordert` : "",
-    beendet > 0 ? `${String(beendet)} beendet` : "",
-  ]
-    .filter((teil) => teil !== "")
-    .join(" · ");
-}
+import { unterbrochenText } from "./verbindung.js";
+import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 
 const BESCHRIFTUNG: Record<Theme, string> = {
   standard: "Standard",
@@ -74,11 +57,6 @@ export function Kopfband({
   offeneMeldungen = 0,
   angemeldet = false,
 }: KopfbandEigenschaften): React.JSX.Element {
-  // Ohne offenen Einsatz steht hier ein Strich und nicht `0/0/0 // 0`: Eine
-  // Null ist eine Aussage über die Lage, und ohne Akte gibt es keine.
-  const staerke = lagebild === undefined ? "—" : staerkeText(lagebild.gesamtstaerke);
-  const staerkeNeben = staerkeNebenText(lagebild);
-
   return (
     <header className="kopfband">
       {zurueckZurAuswahl !== undefined && (
@@ -95,11 +73,7 @@ export function Kopfband({
         </span>
         <h1>S1-Control</h1>
 
-        <span className="kennzahl" title={STAERKE_REGEL}>
-          <span className="label">Ist-Stärke</span>
-          <span className="wert">{staerke}</span>
-          {staerkeNeben !== "" && <span className="nebenwert">{staerkeNeben}</span>}
-        </span>
+        <Staerkekennzahl lagebild={lagebild} />
         <span className="kennzahl">
           <span className="label">Zeit</span>
           <span className="wert">{taktischeZeit(jetzt)}</span>
@@ -183,6 +157,9 @@ function Zustandszeile({
   readonly lagebild: Lagebild | undefined;
   readonly jetzt: number;
 }): React.JSX.Element {
+  // Dieselbe Quelle wie Banner und Fußzeile: Bei Unterbrechung gilt „Share
+  // erreichbar" nicht mehr — die Angabe stammt vom Dienst, den wir nicht erreichen.
+  const verbindung = useVerbindungsstatus();
   if (lagebild === undefined) {
     return <div className="zustandszeile gestoert">Kein Einsatz geöffnet</div>;
   }
@@ -203,6 +180,18 @@ function Zustandszeile({
       : lagebild.einsatzStatus === "BEENDET"
         ? " · BEENDET — Eingaben gesperrt"
         : "";
+
+  if (verbindung.zustand === "unterbrochen") {
+    return (
+      <div className="zustandszeile gestoert">
+        {verbindung.stufe === "rot" ? "✖ " : "⚠ "}
+        {lagebild.einsatzName}
+        {fuest === "" ? "" : ` · ${fuest}`}
+        {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} (veraltet) ·{" "}
+        {unterbrochenText(verbindung.seitMs)} — Share und Arbeitsplätze unbekannt
+      </div>
+    );
+  }
 
   return (
     <div className={`zustandszeile${lagebild.shareErreichbar ? "" : " gestoert"}`}>

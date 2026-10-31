@@ -21,6 +21,7 @@ import { useGrundabfrage } from "./Grundabfrage.js";
 
 import { schichtTitel, type Dienstpostenzeile, type Teilbereichsblock } from "@s1/domaene";
 
+import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { Stammdatenblock } from "./Stammdatenmaske.js";
@@ -52,6 +53,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
   const laden = useLaden();
   const holeFuest = laden.holeFuest;
   const [neu, setzeNeu] = useState({ teileinheit: "Stab", funktion: "", schicht: "TAG" });
+  const versuch = useAnlegeversuch();
   /**
    * Tage, die dieses Fenster zusätzlich zeigt.
    *
@@ -71,12 +73,14 @@ export function Fuehrungsstelle(): React.JSX.Element {
   const ansicht = laden.fuest;
   const tage = [...new Set([...(ansicht?.plan.tage ?? []), ...zusaetzlicheTage])].sort();
 
-  function lege(): void {
-    if (neu.funktion.trim() === "") return;
+  async function lege(): Promise<void> {
+    if (neu.funktion.trim() === "" || versuch.gesperrt) return;
     const bisher = ansicht?.bloecke.find((block) => block.teileinheit === neu.teileinheit);
-    void laden.bediene(
+    // Die Kennung bleibt bei einer Wiederholung gleich (`Anlegeversuch.tsx`);
+    // die Eingabe wird erst nach bestätigtem Schreiben geleert.
+    const ergebnis = await versuch.schreibe(
       dienstpostenAnlegen({
-        dienstpostenId: neueKennung(),
+        dienstpostenId: versuch.kennung(neueKennung),
         teileinheit: neu.teileinheit,
         funktion: neu.funktion.trim(),
         schicht: neu.schicht,
@@ -85,6 +89,8 @@ export function Fuehrungsstelle(): React.JSX.Element {
         reihenfolge: (bisher?.zeilen.length ?? 0) + 1,
       }),
     );
+    if (ergebnis?.art !== "geschrieben") return;
+    versuch.verwerfe();
     setzeNeu((wert) => ({ ...wert, funktion: "" }));
   }
 
@@ -144,7 +150,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
               setzeNeu((wert) => ({ ...wert, funktion: e.target.value }));
             }}
             onKeyDown={(e) => {
-              if (e.key === "Enter") lege();
+              if (e.key === "Enter") void lege();
             }}
           />
         </label>
@@ -163,9 +169,10 @@ export function Fuehrungsstelle(): React.JSX.Element {
             ))}
           </select>
         </label>
-        <button type="button" onClick={lege}>
+        <button type="button" disabled={versuch.gesperrt} title={versuch.sperre} onClick={() => void lege()}>
           Dienstposten anlegen
         </button>
+        {versuch.anzeige}
       </div>
 
       {ansicht.bloecke.map((block) => (

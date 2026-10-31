@@ -85,7 +85,7 @@ function druckzeilen(daten: Druckdaten): string {
 
 function statusblock(daten: Statusdaten): string {
   return [
-    "  <h2>Status</h2>",
+    "  <h2>Status (alle erfassten Einheiten)</h2>",
     '  <table class="monitor">',
     "    <tbody>",
     ...daten.status.map(
@@ -133,7 +133,7 @@ export function monitorAlsHtml(
       ? ""
       : `  <p class="geschrieben">Bild geschrieben: ${htmlMaskieren(optionen.geschriebenUm)}</p>`,
     '  <p class="gesamt-gross">',
-    `    ${staerkeText(daten.gesamt)} = ${String(daten.gesamtSumme)}`,
+    `    Ist-Stärke ${staerkeText(daten.gesamt)} = ${String(daten.gesamtSumme)}`,
     "  </p>",
     '  <table class="monitor">',
     "    <thead>",
@@ -148,7 +148,7 @@ export function monitorAlsHtml(
     druckzeilen(daten),
     "    </tbody>",
     "  </table>",
-    `  <p class="fussnote">Angefordert / Anmarsch: ${staerkeText(daten.angefordert)} = ${String(daten.angefordertSumme)} (nicht mitgezählt)</p>`,
+    `  <p class="fussnote">Erwartet (angefordert/Anmarsch/Eingang): ${staerkeText(daten.angefordert)} = ${String(daten.angefordertSumme)} (nicht in der Ist-Stärke)</p>`,
     optionen.mitStatus === true ? statusblock(statusdaten(zustand)) : "",
     `  <p class="fussnote">Diese Seite lädt sich alle ${String(RELOAD_SEKUNDEN)} Sekunden neu.</p>`,
     "</body>",

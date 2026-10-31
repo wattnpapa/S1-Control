@@ -26,6 +26,7 @@ function quelle(teil: Partial<Tabellenzeile> = {}): Tabellenzeile {
     staerke: { fuehrer: 0, unterfuehrer: 2, mannschaft: 7 },
     gesamt: 9,
     entfernt: false,
+    zaehlklasse: "ist",
     aufgegangen: false,
     hinweise: [],
     zellen: {

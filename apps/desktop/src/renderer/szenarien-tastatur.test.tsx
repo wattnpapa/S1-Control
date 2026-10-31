@@ -35,7 +35,7 @@ function knoten(id: string, name: string): Baumknoten {
     eigeneStaerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
     summenStaerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
     einheiten: 0,
-    einheitenSumme: 0,
+    einheitenSumme: 0, erwartet: 0, erwartetSumme: 0,
     zaehlt: true,
     systemAbschnitt: false,
     kinder: [],
@@ -56,6 +56,7 @@ function zeile(id: string, bezeichnung: string): Tabellenzeile {
     staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     gesamt: 9,
     entfernt: false,
+    zaehlklasse: "ist",
     aufgegangen: false,
     hinweise: [],
     zellen: {

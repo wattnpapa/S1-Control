@@ -37,26 +37,28 @@ describe("Die Zahlen der Einheitenliste", () => {
     expect(daten.einheiten).toBe(ids.length);
   });
 
-  it("die Zwischensumme eines Bereichs ist die Summe seiner Einheiten", () => {
+  it("die Zwischensumme eines Bereichs ist die Ist-Stärke seiner Einheiten", () => {
     for (const bereich of einheitenlistendaten(lage()).bereiche) {
-      const summe = bereich.zeilen.reduce((s, z) => s + z.gesamt, 0);
-      expect(bereich.gesamt, bereich.name).toBe(summe);
-      expect(bereich.staerke.fuehrer, bereich.name).toBe(
-        bereich.zeilen.reduce((s, z) => s + z.staerke.fuehrer, 0),
-      );
+      const ist = bereich.zeilen.filter((z) => z.klasse === "ist");
+      expect(bereich.gesamt, bereich.name).toBe(ist.reduce((s, z) => s + z.gesamt, 0));
+      expect(bereich.staerke.fuehrer, bereich.name).toBe(ist.reduce((s, z) => s + z.staerke.fuehrer, 0));
+      const erwartet = bereich.zeilen.filter((z) => z.klasse === "erwartet");
+      expect(bereich.erwartet, bereich.name).toBe(erwartet.reduce((s, z) => s + z.gesamt, 0));
     }
   });
 
   it("geht mit Druck und Status-Matrix auf", () => {
-    // Die Liste führt die angeforderten Kräfte mit wie der Status; der Druck
-    // lässt sie weg. Beides muss stimmen, sonst sucht am Tisch jemand einen
-    // Fehler, der keiner ist.
+    // Eine Zählregel: Die Ist-Stärke der Liste ist die des Drucks und des
+    // Kopfbands; „alle aufgeführten“ ist die Summe der Status-Matrix.
     const zustand = lage();
     const daten = einheitenlistendaten(zustand);
     const druck = druckdaten(zustand);
-    expect(daten.summeGesamt).toBe(statusdaten(zustand).organisationenSumme.gesamt);
-    expect(daten.lagekarteGesamt).toBe(druck.gesamtSumme);
-    expect(daten.angefordertGesamt).toBe(druck.angefordertSumme);
+    expect(daten.alleGesamt).toBe(statusdaten(zustand).organisationenSumme.gesamt);
+    expect(daten.istGesamt).toBe(druck.gesamtSumme);
+    expect(daten.istGesamt).toBe(statusdaten(zustand).ist.fuehrer + statusdaten(zustand).ist.unterfuehrer + statusdaten(zustand).ist.mannschaft);
+    expect(daten.erwartetGesamt).toBe(druck.angefordertSumme);
+    // „Alle erfassten“ = Ist + erwartet; Rückmarsch (beendet) steht in der Liste, aber in keiner Summe.
+    expect(daten.alleGesamt).toBe(daten.istGesamt + daten.erwartetGesamt);
     for (const zeile of druck.zeilen) {
       const bereich = daten.bereiche.find((b) => b.abschnittId === zeile.abschnittId);
       expect(bereich?.gesamt, zeile.name).toBe(zeile.gesamt);
@@ -126,7 +128,7 @@ describe("Die Einheitenliste als HTML", () => {
     const daten = einheitenlistendaten(materialisiere(leereFaltung()));
     expect(daten.einsatzName).toBe("(ohne Namen)");
     expect(daten.einheiten).toBe(0);
-    expect(daten.summeGesamt).toBe(0);
+    expect(daten.alleGesamt).toBe(0);
     const html = einheitenlisteAlsHtml(daten, KOPF);
     expect(html).toContain("0 / 0 / 0 = 0");
     expect(html).toContain("0 Einheiten in");

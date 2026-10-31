@@ -7,11 +7,28 @@
  * Wiederverbindung steht kurz die Bestätigung, dann verschwindet er.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { unterbrochenText, useVerbindung } from "./verbindung.js";
 import { useVerbindungsabgleich } from "./verbindungsabgleich.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
+
+/**
+ * Meldet die Höhe des Banners als `--bannerhoehe` an die Seite: Ein Dialog
+ * rückt damit unter das Banner, das dann fest über ihm steht (`index.html`).
+ */
+function useBannerhoehe(): (knoten: HTMLElement | null) => void {
+  return useCallback((knoten: HTMLElement | null) => {
+    const wurzel = document.documentElement.style;
+    if (knoten === null) {
+      wurzel.removeProperty("--bannerhoehe");
+      return;
+    }
+    const setze = (): void => wurzel.setProperty("--bannerhoehe", `${String(knoten.offsetHeight)}px`);
+    setze();
+    if (typeof ResizeObserver !== "undefined") new ResizeObserver(setze).observe(knoten);
+  }, []);
+}
 
 /**
  * Inline statt im Stylesheet: Die Seite (`index.html`) gehört dem Gesamtentwurf,
@@ -35,6 +52,7 @@ export function Verbindungsbanner(): React.JSX.Element | null {
   const status = useVerbindungsstatus();
   const wiederverbundenUm = useVerbindung((z) => z.wiederverbundenUm);
   const [bestaetigung, setzeBestaetigung] = useState(false);
+  const meldeHoehe = useBannerhoehe();
 
   useEffect(() => {
     if (wiederverbundenUm === undefined) return undefined;
@@ -45,7 +63,7 @@ export function Verbindungsbanner(): React.JSX.Element | null {
 
   if (status.zustand === "unterbrochen") {
     return (
-      <div role="alert" className="verbindungsbanner" style={stil(status.stufe === "rot" ? "err" : "warn")}>
+      <div ref={meldeHoehe} role="alert" className="verbindungsbanner" style={stil(status.stufe === "rot" ? "err" : "warn")}>
         <strong>{status.stufe === "rot" ? "✖" : "⚠"} {unterbrochenText(status.seitMs)}.</strong>{" "}
         Die Anzeige ist veraltet, Eingaben werden nicht gespeichert und sind gesperrt. Es wird automatisch neu
         verbunden; offene Formulare behalten ihre Eingaben.
@@ -54,7 +72,7 @@ export function Verbindungsbanner(): React.JSX.Element | null {
   }
   if (bestaetigung && status.zustand === "verbunden") {
     return (
-      <div role="status" className="verbindungsbanner" style={stil("ok")}>
+      <div ref={meldeHoehe} role="status" className="verbindungsbanner" style={stil("ok")}>
         ✓ Wieder verbunden – Daten wurden neu geladen.
       </div>
     );

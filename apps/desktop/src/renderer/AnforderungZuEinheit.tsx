@@ -36,6 +36,7 @@ import {
 import { abloesungNachtragen, anlageAusAnforderung, auftragAusAnforderung } from "../kontrakt/anforderungsschritte.js";
 import { anforderungErledigt, istStaerkeEingabe } from "../kontrakt/bedienschritte.js";
 import type { Entwurf } from "../kontrakt/index.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
@@ -103,8 +104,33 @@ function verknuepfung(zeile: Anforderungszeile, art: Eintreffart, einheitId: str
   );
 }
 
+interface Kennungen {
+  readonly einheitId: string;
+  readonly auftragId: string;
+  readonly zeit: string;
+  readonly reihenfolge: number;
+}
+
+function anlageEntwurf(eingabe: Einheitseingabe, k: Kennungen): Entwurf {
+  return anlageAusAnforderung({
+    einheitId: k.einheitId,
+    abschnittId: eingabe.abschnittId,
+    bezeichnung: eingabe.bezeichnung,
+    organisation: eingabe.organisation,
+    ebene: eingabe.ebene,
+    staerke: {
+      fuehrer: Number.parseInt(eingabe.fuehrer, 10),
+      unterfuehrer: Number.parseInt(eingabe.unterfuehrer, 10),
+      mannschaft: Number.parseInt(eingabe.mannschaft, 10),
+    },
+    herkunft: eingabe.herkunft,
+    reihenfolge: k.reihenfolge,
+  });
+}
+
 export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZuEinheitEigenschaften): React.JSX.Element {
   const laden = useLaden();
+  const versuch = useAnlegeversuch();
   const [weg, setzeWeg] = useState<Weg>("anlegen");
   const [bestehende, setzeBestehende] = useState("");
   const [eingabe, setzeEingabe] = useState(() => ausVorschlag(zeile.vorschlag));
@@ -113,40 +139,35 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
   const einheiten = (laden.anforderungen?.einheitenwahl ?? []).filter((e) => e.id !== zeile.abzuloesendeEinheitId);
 
   async function bestaetige(): Promise<void> {
+    // Kennungen und Zeit gelten für die Dialoginstanz: Eine Wiederholung nach
+    // „Unklar, ob gespeichert" ist dieselbe Anlage (`Anlegeversuch.tsx`).
+    const k = versuch.kennung<Kennungen>(() => ({
+      einheitId: neueId("E"),
+      auftragId: neueId("A"),
+      zeit: new Date().toISOString(),
+      reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1,
+    }));
     if (weg === "ohne") {
-      const ergebnis = await laden.bediene(anforderungErledigt(zeile.id, new Date().toISOString()));
+      const ergebnis = await versuch.schreibe(anforderungErledigt(zeile.id, k.zeit));
       if (ergebnis?.art === "geschrieben") aufSchliessen();
       return;
     }
     if (weg === "verknuepfen") {
-      const ergebnis = await laden.bediene(verknuepfung(zeile, art, bestehende));
+      const ergebnis = await versuch.schreibe(verknuepfung(zeile, art, bestehende));
       if (ergebnis?.art === "geschrieben") aufSchliessen();
       return;
     }
-    const einheitId = neueId("E");
-    const anlage = await laden.bediene(
-      anlageAusAnforderung({
-        einheitId,
-        abschnittId: eingabe.abschnittId,
-        bezeichnung: eingabe.bezeichnung,
-        organisation: eingabe.organisation,
-        ebene: eingabe.ebene,
-        staerke: {
-          fuehrer: Number.parseInt(eingabe.fuehrer, 10),
-          unterfuehrer: Number.parseInt(eingabe.unterfuehrer, 10),
-          mannschaft: Number.parseInt(eingabe.mannschaft, 10),
-        },
-        herkunft: eingabe.herkunft,
-        reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1,
-      }),
-    );
+    const anlage = await versuch.schreibe(anlageEntwurf(eingabe, k));
     if (anlage?.art !== "geschrieben") return;
-    const ergebnis = await laden.bediene(verknuepfung(zeile, art, einheitId));
+    const ergebnis = await versuch.schreibe(verknuepfung(zeile, art, k.einheitId));
     if (ergebnis?.art !== "geschrieben") return;
     // Der Auftrag zuletzt: Scheitert er, steht die Einheit trotzdem da und
-    // verknüpft; die Fehlermeldung des Ladens nennt den Rest.
-    const auftrag = auftragAusAnforderung(neueId("A"), einheitId, eingabe.auftrag, new Date().toISOString());
-    if (auftrag !== undefined) await laden.bediene(auftrag);
+    // verknüpft; der Hinweis im Dialog nennt den Rest.
+    const auftrag = auftragAusAnforderung(k.auftragId, k.einheitId, eingabe.auftrag, k.zeit);
+    if (auftrag !== undefined) {
+      const letzter = await versuch.schreibe(auftrag);
+      if (letzter?.art !== "geschrieben") return;
+    }
     aufSchliessen();
   }
 
@@ -154,10 +175,11 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
     <Maske
       titel={art === "eintreffen" ? `${zeile.kennung} eingetroffen` : `Einheit aus ${zeile.kennung} anlegen`}
       bestaetigungstext={bestaetigungstext(weg)}
-      bereit={weg === "ohne" || (weg === "verknuepfen" ? bestehende !== "" : vollstaendig(eingabe))}
+      bereit={!versuch.gesperrt && (weg === "ohne" || (weg === "verknuepfen" ? bestehende !== "" : vollstaendig(eingabe)))}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={bestaetige}
     >
+      {versuch.anzeige}
       <Wegwahl weg={weg} aufWeg={setzeWeg} mitOhne={art === "eintreffen"} />
       {weg === "verknuepfen" && (
         <label>

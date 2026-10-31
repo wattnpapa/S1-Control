@@ -109,11 +109,14 @@ export function druckdaten(zustand: Zustand, optionen: Druckoptionen = {}): Druc
   const zeilen: Druckzeile[] = [];
   for (const knoten of baum) {
     if (!kennzahlen.imDruckSichtbar(zustand, knoten.id)) continue;
+    // Eine Zählregel (`kennzahlen.zaehlklasse`): Die Zeile zeigt die Ist-Stärke,
+    // erwartete Kräfte stehen getrennt unter der Tabelle.
     const einheiten = kennzahlen.einheitenImAbschnitt(zustand, knoten.id);
-    const staerke = einheiten.reduce<Staerke>((s, e) => plus(s, e.wirksameStaerke), NULL);
-    const davon = einheiten
-      .filter((e) => text(e.organisation.wert) === organisation)
-      .reduce<Staerke>((s, e) => plus(s, e.wirksameStaerke), NULL);
+    const staerke = kennzahlen.zaehlstand(zustand, einheiten).ist;
+    const davon = kennzahlen.zaehlstand(
+      zustand,
+      einheiten.filter((e) => text(e.organisation.wert) === organisation),
+    ).ist;
     zeilen.push({
       abschnittId: knoten.id,
       name: knoten.name,
@@ -149,7 +152,8 @@ export function druckdaten(zustand: Zustand, optionen: Druckoptionen = {}): Druc
 }
 
 /** Die Fußnote der Vorlage, wörtlich (`Druck!E35`). */
-export const DRUCK_FUSSNOTE = "(ohne Kräfte aus dem Bereich „Angefordert / Anmarsch“)";
+export const DRUCK_FUSSNOTE =
+  "(Ist-Stärke: ohne erwartete Kräfte aus dem Bereich „Angefordert / Anmarsch“, dem Eingang und ohne „Einsatz beendet“)";
 
 function zelle(inhalt: string | number, klasse = ""): string {
   const text = typeof inhalt === "number" ? String(inhalt) : htmlMaskieren(inhalt);
@@ -216,7 +220,7 @@ export function druckAlsHtml(daten: Druckdaten, kopf: Ausgabekopf): string {
     "    <tbody>",
     "      <tr class=\"summenzeile\">",
     '        <td class="nr"></td>',
-    "        <td>Gesamt</td>",
+    "        <td>Gesamt (Ist-Stärke)</td>",
     `        ${zelle(daten.gesamt.fuehrer, "zahl")}`,
     '        <td class="trenner">/</td>',
     `        ${zelle(daten.gesamt.unterfuehrer, "zahl")}`,
@@ -234,7 +238,7 @@ export function druckAlsHtml(daten: Druckdaten, kopf: Ausgabekopf): string {
     "    </tbody>",
     "  </table>",
     `  <p class="fussnote">${htmlMaskieren(DRUCK_FUSSNOTE)}</p>`,
-    `  <p class="angefordert">Angefordert / Anmarsch: ${String(daten.angefordert.fuehrer)}/${String(daten.angefordert.unterfuehrer)}/${String(daten.angefordert.mannschaft)} = ${String(daten.angefordertSumme)}</p>`,
+    `  <p class="angefordert">Erwartet (angefordert/Anmarsch/Eingang): ${String(daten.angefordert.fuehrer)}/${String(daten.angefordert.unterfuehrer)}/${String(daten.angefordert.mannschaft)} = ${String(daten.angefordertSumme)}</p>`,
     "</body>",
     "</html>",
     "",

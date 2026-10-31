@@ -30,7 +30,17 @@ import {
   TAKTISCHE_EBENEN,
 } from "../ereignis.js";
 import { spaltenwertTitel, zeitpunktText } from "../beschriftungen.js";
-import { anzeigename, auftragsText, erreichbarkeit, gesamtstaerke, geraeteText, herkunftText, logistik } from "../kennzahlen.js";
+import {
+  anzeigename,
+  auftragsText,
+  erreichbarkeit,
+  gesamtstaerke,
+  geraeteText,
+  herkunftText,
+  logistik,
+  zaehlklasse,
+  type Zaehlklasse,
+} from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
 import { abloesungDerEinheit, type Marke } from "./abloesung.js";
@@ -234,6 +244,8 @@ export interface Tabellenzeile {
   readonly anzeige: string;
   readonly staerke: Staerke;
   readonly gesamt: number;
+  /** Die Zählklasse nach der einen Zählregel (`kennzahlen.zaehlklasse`): Ist, erwartet, beendet. */
+  readonly zaehlklasse: Zaehlklasse;
   /** §5.4.5: entfernte Einheiten bleiben im Zustand und sind hier gekennzeichnet. */
   readonly entfernt: boolean;
   /** §5.4.3: die Einheit ist in einer anderen aufgegangen und zählt nicht mehr. */
@@ -368,6 +380,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     anzeige: anzeigename(einheit),
     staerke: einheit.wirksameStaerke,
     gesamt: gesamtstaerke(einheit),
+    zaehlklasse: zaehlklasse(zustand, einheit),
     entfernt: einheit.entfernt?.wert === true,
     aufgegangen: einheit.wirksamAufgegangen,
     hinweise,

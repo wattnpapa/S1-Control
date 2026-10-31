@@ -27,7 +27,7 @@ import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /** Die Fußnote, die die Rechnung hinter Spalte „Männl.“ nennt. */
-export const LOG_FUSSNOTE = `Männl. ist abgeleitet: ${projektion.LOG_MAENNLICH}. Das Blatt „Status“ der Vorlage rechnet an dieser Stelle abweichend ohne die diversen Kräfte; die Abweichung ist bekannt und noch nicht entschieden.`;
+export const LOG_FUSSNOTE = `Männl. ist abgeleitet: ${projektion.LOG_MAENNLICH}. Das Blatt „Status“ der Vorlage rechnet an dieser Stelle abweichend ohne die diversen Kräfte; die Abweichung ist bekannt und noch nicht entschieden. Bedarfsplanung: Die Summe zählt alle Einheiten der Einsatzbereiche, auch im Anmarsch — sie ist nicht die Ist-Stärke des Kopfbands.`;
 
 /** Die Kopfzeilen der Schichtspalten, in der Reihenfolge des Blattes. */
 const SCHICHT_KOPF: Readonly<Record<string, string>> = {

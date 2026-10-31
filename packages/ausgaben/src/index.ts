@@ -66,8 +66,6 @@ export {
 } from "./druck.js";
 export {
   STATUS_STIL,
-  meldungSchicht,
-  meldungStatus,
   statusAlsHtml,
   statusdaten,
   type Organisationszeile,

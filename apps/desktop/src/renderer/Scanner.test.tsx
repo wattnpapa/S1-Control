@@ -28,7 +28,7 @@ const BAUM = {
       eigeneStaerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
       summenStaerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
       einheiten: 0,
-      einheitenSumme: 0,
+      einheitenSumme: 0, erwartet: 0, erwartetSumme: 0,
       zaehlt: true,
       systemAbschnitt: false,
       kinder: [],

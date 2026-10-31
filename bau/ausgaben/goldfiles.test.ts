@@ -35,6 +35,7 @@ import {
   statusAlsHtml,
   statusdaten,
 } from "../../packages/ausgaben/src/index.js";
+import * as kennzahlen from "../../packages/domaene/src/kennzahlen.js";
 import { falteHinzu, leereFaltung, materialisiere } from "../../packages/domaene/src/fold.js";
 import { prueflageEreignisse } from "../../packages/domaene/src/pruefhilfen/pruefage.js";
 import type { Zustand } from "../../packages/domaene/src/zustand.js";
@@ -195,10 +196,11 @@ describe("Die Zahlen hinter den Ausgaben", () => {
    * Der Unterschied zwischen Druck und Status in einer Zeile.
    *
    * §4.2 der Bestandsaufnahme: „Gesamtsumme J20 zählt inkl. Angefordert (im
-   * Gegensatz zu Druck)." Der Druck zeigt die Lagekarte, der Status die
-   * Kräftebilanz.
+   * Gegensatz zu Druck)." Der Druck zeigt die Lagekarte (Ist-Stärke), der
+   * Status die Kräftebilanz (Ist + erwartet). Kräfte der Zählklasse „beendet“
+   * (Einsatz beendet, Rückmarsch) fehlen in beiden.
    */
-  it("Status zählt die angeforderten Kräfte mit, der Druck nicht", () => {
+  it("Status zählt Ist plus erwartet, der Druck nur die Ist-Stärke; „beendet“ steht in keinem von beiden", () => {
     const zustand = lage();
     const druck = druckdaten(zustand);
     const status = statusdaten(zustand);
@@ -213,17 +215,24 @@ describe("Die Zahlen hinter den Ausgaben", () => {
   });
 
   it("Status: die Statusmatrix summiert sich auf die Organisationsmatrix", () => {
-    // K21 in Zahlen: Beide Matrizen laufen über dieselbe Menge `E`.
+    // K21 in Zahlen: Beide Matrizen laufen über dieselbe Menge (Ist + erwartet).
     const daten = statusdaten(lage());
     expect(daten.statusSumme).toBe(daten.organisationenSumme.gesamt);
   });
 
-  it("Status: die Schichtmatrix lässt genau die angeforderten Kräfte aus", () => {
-    // K23: Angeforderte Kräfte dürfen ohne Schicht sein. Die Differenz ist
-    // deshalb nicht null, sondern genau ihr Anteil.
+  it("Status: die Schichtmatrix lässt genau die erwarteten Kräfte ohne Schicht aus", () => {
+    // K23: Erwartete Kräfte (angefordert, Anmarsch, Eingang) dürfen ohne
+    // Schicht sein. Die Differenz ist deshalb nicht null, sondern genau ihr
+    // Anteil ohne Schicht — und höchstens die erwarteten Kräfte insgesamt.
     const zustand = lage();
     const daten = statusdaten(zustand);
     const druck = druckdaten(zustand);
-    expect(daten.organisationenSumme.gesamt - daten.schichtenSumme).toBe(druck.angefordertSumme);
+    const differenz = daten.organisationenSumme.gesamt - daten.schichtenSumme;
+    expect(differenz).toBe(
+      kennzahlen.einheitenDerLage(zustand)
+        .filter((e) => kennzahlen.zaehlklasse(zustand, e) === "erwartet" && !e.schicht?.wert)
+        .reduce((s, e) => s + kennzahlen.gesamtstaerke(e), 0),
+    );
+    expect(differenz).toBeLessThanOrEqual(druck.angefordertSumme);
   });
 });

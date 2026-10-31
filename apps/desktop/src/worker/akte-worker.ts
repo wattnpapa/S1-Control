@@ -21,6 +21,7 @@ import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
 import { Aktendienst, type Seitenausgabe, type Takte } from "./aktendienst.js";
 import { bearbeiteAuftrag } from "./auftraege.js";
+import { klartextFehler } from "./klartextfehler.js";
 import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 /** Was der Main-Prozess dem Worker beim Start mitgibt — alles serialisierbar. */
@@ -153,7 +154,7 @@ if (parentPort !== null) {
             art: "hinweis",
             akteId: start.akteId,
             stufe: "fehler",
-            text: `Takt: ${(fehler as Error).message}`,
+            text: klartextFehler(fehler, "Takt"),
           },
         } satisfies WorkerBotschaft);
       })
@@ -174,7 +175,7 @@ if (parentPort !== null) {
         port.postMessage({
           art: "fehler",
           nummer: auftrag.nummer,
-          meldung: (fehler as Error).message,
+          meldung: klartextFehler(fehler),
         } satisfies WorkerBotschaft);
       }
     })();

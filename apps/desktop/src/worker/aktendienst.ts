@@ -117,6 +117,7 @@ import {
   erzeugeEinsatzakte,
   pruefeAbschluss,
 } from "./einsatzabschluss.js";
+import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
 /**
@@ -1499,5 +1500,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf);
+  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf);
 }

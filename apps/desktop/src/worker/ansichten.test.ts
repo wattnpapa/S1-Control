@@ -145,7 +145,10 @@ describe("tabelleAnfordern", () => {
     const eo = gegliedert.gliederung?.bereiche.find((bereich) => bereich.abschnittId === "EO");
     expect(eo?.name).toBe("Deich Nord");
     expect(eo?.zeilen).toBe(2);
-    expect(eo?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 2, mannschaft: 13 });
+    // U1 ist im Einsatz (Ist), U2 im Anmarsch (erwartet): Die Bereichsstärke
+    // ist die Ist-Stärke, die erwarteten Köpfe stehen daneben.
+    expect(eo?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 8 });
+    expect(eo?.erwartet).toBe(6);
     // Die Einsatzsumme ist die des Kopfbands.
     expect(gegliedert.gliederung?.einsatz.staerke).toEqual(letzterStand(a)?.gesamtstaerke);
 

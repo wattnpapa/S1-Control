@@ -115,7 +115,7 @@ export function anforderungszeile(
 
   return {
     id: anforderung.id,
-    kennung: text(anforderung.kennung.wert),
+    kennung: text(anforderung.kennung?.wert),
     zustand: anforderung.zustand,
     angefordertAm: text(anforderung.angefordertAm?.wert),
     ...(typeof abzuloesendeId === "string" ? { abzuloesendeEinheitId: abzuloesendeId } : {}),
@@ -174,6 +174,12 @@ export interface Anforderungsausschnitt {
   readonly jeZustand: { readonly [zustand: string]: number };
   /** Die Einheiten zur Wahl der abzulösenden — über den ganzen Einsatz, nicht über einen Ausschnitt. */
   readonly einheitenwahl?: readonly Einheitenwahl[];
+  /**
+   * Zahl der Anforderungen, die sich nicht darstellen ließen (Beschädigter
+   * Eintrag). Sie fehlen in `zeilen`, bleiben aber im Protokoll; die Liste
+   * der übrigen bleibt lesbar.
+   */
+  readonly beschaedigt?: number;
 }
 
 /**
@@ -207,7 +213,7 @@ export function anforderungsliste(
   const suche = optionen.suche?.trim().toLocaleLowerCase("de-DE") ?? "";
   const erlaubt = optionen.zustaende === undefined ? undefined : new Set(optionen.zustaende);
 
-  const alle = Object.values(zustand.anforderungen).map((a) => anforderungszeile(zustand, a));
+  const { zeilen: alle, beschaedigt } = baueZeilen(zustand);
   const jeZustand: Record<string, number> = Object.fromEntries(
     ANFORDERUNG_ZUSTAENDE.map((wert) => [wert, 0]),
   );
@@ -225,7 +231,25 @@ export function anforderungsliste(
     gesamtzahl: gefiltert.length,
     jeZustand,
     einheitenwahl: einheitenwahl(zustand),
+    ...(beschaedigt > 0 ? { beschaedigt } : {}),
   };
+}
+
+/**
+ * Baut alle Zeilen; eine Anforderung, deren Zeile nicht entsteht, bleibt aus
+ * der Liste und wird gezählt — sie macht die übrigen nicht unlesbar.
+ */
+function baueZeilen(zustand: Zustand): { zeilen: Anforderungszeile[]; beschaedigt: number } {
+  const zeilen: Anforderungszeile[] = [];
+  let beschaedigt = 0;
+  for (const anforderung of Object.values(zustand.anforderungen)) {
+    try {
+      zeilen.push(anforderungszeile(zustand, anforderung));
+    } catch {
+      beschaedigt += 1;
+    }
+  }
+  return { zeilen, beschaedigt };
 }
 
 /**
@@ -242,7 +266,13 @@ export function anforderungZurEinheit(
 ): Anforderungszeile | undefined {
   const treffer = Object.values(zustand.anforderungen)
     .filter((a) => a.abzuloesendeEinheitId?.wert === einheitId && a.zustand !== "STORNIERT")
-    .map((a) => anforderungszeile(zustand, a))
+    .flatMap((a) => {
+      try {
+        return [anforderungszeile(zustand, a)];
+      } catch {
+        return [];
+      }
+    })
     .sort((links, rechts) => {
       const nachZeit = rechts.angefordertAm.localeCompare(links.angefordertAm);
       return nachZeit !== 0 ? nachZeit : links.id < rechts.id ? -1 : 1;

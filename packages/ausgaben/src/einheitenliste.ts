@@ -18,6 +18,8 @@
  *     Einheiten zum vorigen Bereich.
  */
 
+import { kennzahlen } from "@s1/domaene";
+
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 import type {
   Einheitenlistenbereich,
@@ -43,7 +45,7 @@ function zelle(inhalt: string | number, klasse = ""): string {
 
 function einheitAlsHtml(zeile: Einheitenlistenzeile): string {
   return [
-    "      <tr class=\"einheit\">",
+    `      <tr class="einheit${zeile.klasse === "erwartet" ? " erwartet" : ""}">`,
     `        ${zelle(zeile.nr, "nr")}`,
     `        ${zelle(zeile.fuest)}`,
     `        ${zelle(zeile.einheit, "name")}`,
@@ -53,7 +55,7 @@ function einheitAlsHtml(zeile: Einheitenlistenzeile): string {
     `        ${zelle(zeile.erreichbarkeit)}`,
     `        ${zelle(zeile.auftraege)}`,
     `        ${zelle(zeile.geraete)}`,
-    `        ${zelle(zeile.status)}`,
+    `        ${zelle(zeile.klasse === "erwartet" ? `${zeile.status} (erwartet)` : zeile.status)}`,
     `        ${zelle(zeile.schicht)}`,
     `        ${zelle(zeile.staerke.fuehrer, "zahl")}`,
     `        ${zelle(zeile.staerke.unterfuehrer, "zahl")}`,
@@ -76,7 +78,10 @@ function anzahlText(anzahl: number): string {
  * Lagekarte hinzu.
  */
 function bereichskopf(bereich: Einheitenlistenbereich): string {
-  const hinweis = bereich.zaehlt ? "" : " · zählt nicht in die Gesamtstärke";
+  const hinweis = [
+    bereich.zaehlt ? "" : " · zählt nicht in die Ist-Stärke",
+    bereich.erwartet > 0 ? ` · ${kennzahlen.erwartetKurz(bereich.erwartet)}` : "",
+  ].join("");
   const titel = `${htmlMaskieren(bereich.name)} <span class="typ">${htmlMaskieren(bereich.typ)} · ${anzahlText(bereich.zeilen.length)}${hinweis}</span>`;
   return [
     `      <tr class="bereich tiefe-${String(Math.min(bereich.tiefe, 3))}">`,
@@ -103,18 +108,18 @@ function staerkeText(staerke: { fuehrer: number; unterfuehrer: number; mannschaf
 }
 
 /**
- * Die Summen unter der Liste — mit den Zahlen der beiden anderen Ausdrucke.
+ * Die Summen unter der Liste — dieselbe Zählregel wie Kopfband, Druck und Status.
  *
- * Die Liste führt die angeforderten Kräfte mit, wie die Status-Matrix; der
- * Druck lässt sie weg. Beide Zahlen stehen deshalb hier, damit am Tisch
- * niemand die Liste gegen den Druck nachrechnet und einen Fehler sucht, der
- * keiner ist.
+ * Die Liste führt die erwarteten Kräfte (angefordert, Anmarsch, Eingang) mit
+ * auf, damit am Tisch nichts fehlt. Die Ist-Stärke steht deshalb getrennt von
+ * „Alle aufgeführten Einheiten“: Wer beide Zahlen nebeneinander liest, soll
+ * nicht die größere für die Stärke halten.
  */
 function summenAlsHtml(daten: Einheitenlistendaten): string {
   const zeilen = [
-    ["Alle aufgeführten Bereiche", staerkeText(daten.summe, daten.summeGesamt)],
-    ["davon Angefordert / Anmarsch", staerkeText(daten.angefordert, daten.angefordertGesamt)],
-    ["Stärke auf der Lagekarte (wie Druck)", staerkeText(daten.lagekarte, daten.lagekarteGesamt)],
+    ["Ist-Stärke (vor Ort, wie Kopfband und Druck)", staerkeText(daten.ist, daten.istGesamt)],
+    ["Erwartet (angefordert/Anmarsch/Eingang)", staerkeText(daten.erwartet, daten.erwartetGesamt)],
+    ["Alle erfassten Einheiten (Ist + erwartet, nicht die Ist-Stärke)", staerkeText(daten.alle, daten.alleGesamt)],
   ];
   return [
     '  <table class="summen">',

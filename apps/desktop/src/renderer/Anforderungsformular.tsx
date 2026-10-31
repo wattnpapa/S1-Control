@@ -53,11 +53,21 @@ export function anforderungBereit(eingabe: Anforderungseingabe): boolean {
   );
 }
 
-/** Der Entwurf aus der Eingabe — oder `undefined`, wenn nichts angefordert ist. */
-export function anforderungAusEingabe(eingabe: Anforderungseingabe, angefordertAm: string): Entwurf | undefined {
+/**
+ * Der Entwurf aus der Eingabe — oder `undefined`, wenn nichts angefordert ist.
+ *
+ * `anforderungId` und `angefordertAm` gehören zur Dialoginstanz und bleiben bei
+ * einer Wiederholung gleich (`Anlegeversuch.tsx`); ohne Angabe entsteht eine
+ * neue Kennung.
+ */
+export function anforderungAusEingabe(
+  eingabe: Anforderungseingabe,
+  angefordertAm: string,
+  anforderungId: string = neueAnforderungsId(),
+): Entwurf | undefined {
   if (!anforderungBereit(eingabe)) return undefined;
   return anforderungAnlegen({
-    anforderungId: neueAnforderungsId(),
+    anforderungId,
     angefordertAm,
     ...optional("kennung", eingabe.kennung),
     ...optional("abzuloesendeEinheitId", eingabe.abzuloesendeEinheitId),

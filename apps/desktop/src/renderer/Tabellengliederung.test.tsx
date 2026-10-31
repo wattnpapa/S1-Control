@@ -34,6 +34,7 @@ function zeile(id: string, bezeichnung: string, abschnittId: string): Tabellenze
     staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     gesamt: 9,
     entfernt: false,
+    zaehlklasse: "ist",
     aufgegangen: false,
     hinweise: [],
     zellen: {
@@ -54,6 +55,8 @@ function bereich(teil: Partial<Bereichskopf> & Pick<Bereichskopf, "abschnittId" 
     staerke: s,
     einheitenSumme: teil.zeilen,
     summenStaerke: s,
+    erwartet: 0,
+    erwartetSumme: 0,
     zaehlt: true,
     ...teil,
   };
@@ -61,7 +64,7 @@ function bereich(teil: Partial<Bereichskopf> & Pick<Bereichskopf, "abschnittId" 
 
 const GLIEDERUNG: Tabellengliederung = {
   bereiche: [
-    bereich({ abschnittId: "ANF", name: "Angefordert", typ: "ANGEFORDERT", von: 0, zeilen: 1, zaehlt: false }),
+    bereich({ abschnittId: "ANF", name: "Angefordert", typ: "ANGEFORDERT", von: 0, zeilen: 1, zaehlt: false, erwartet: 9, erwartetSumme: 9 }),
     bereich({
       abschnittId: "EA1",
       name: "EA Deich Nord",
@@ -78,6 +81,10 @@ const GLIEDERUNG: Tabellengliederung = {
     staerke: { fuehrer: 0, unterfuehrer: 2, mannschaft: 16 },
     angefordertEinheiten: 1,
     angefordert: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+    erwartetEinheiten: 1,
+    erwartet: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+    alleEinheiten: 3,
+    alle: { fuehrer: 0, unterfuehrer: 3, mannschaft: 24 },
   },
 };
 
@@ -157,8 +164,8 @@ describe("Die Gliederung der Einheitentabelle", () => {
     await zeigeTabelle();
     const koepfe = screen.getAllByRole("rowheader").filter((kopf) => kopf.getAttribute("scope") === "rowgroup");
     expect(koepfe.map((kopf) => kopf.textContent)).toEqual([
-      "Einsatz gesamt ohne Angefordert · Angefordert 1 Einh. 0/1/8",
-      "Angefordert · zählt nicht",
+      "Ist-Stärke gesamt · +9 erwartet (angefordert/Anmarsch/Eingang) · Alle erfassten Einheiten 3 Einh. 0/3/24",
+      "Angefordert · zählt nicht · +9 erwartet",
       "EA Deich Nord mit Unterabschnitten",
       "UA Deichfuß",
       "EA Reserve",
@@ -174,11 +181,11 @@ describe("Die Gliederung der Einheitentabelle", () => {
     expect(within(screen.getByRole("rowgroup", { name: "EA Reserve" })).getAllByRole("row")).toHaveLength(1);
   });
 
-  it("nennt am Einsatz dieselbe Zahl wie das Kopfband und sagt, was fehlt", async () => {
+  it("nennt am Einsatz dieselbe Ist-Stärke wie das Kopfband und trennt erwartet und alle erfassten", async () => {
     await zeigeTabelle();
-    const einsatz = screen.getByRole("rowgroup", { name: "Einsatz gesamt" });
+    const einsatz = screen.getByRole("rowgroup", { name: "Ist-Stärke gesamt" });
     expect(within(einsatz).getByText("0/2/16")).toBeDefined();
-    expect(within(einsatz).getByRole("rowheader").getAttribute("title")).toContain("Zählt wie das Kopfband");
+    expect(within(einsatz).getByRole("rowheader").getAttribute("title")).toContain("Ist-Stärke: Kräfte, die vor Ort sind");
   });
 
   it("rückt Einheiten nach der Tiefe ihres Bereichs ein", async () => {

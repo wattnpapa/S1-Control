@@ -18,7 +18,7 @@
  * Feld, Enter übernimmt, Escape verwirft.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   ERNAEHRUNG_AUSWAHL,
@@ -34,6 +34,7 @@ import { Maske } from "./Maske.js";
 import { Zeitfeld } from "./Zeitfeld.js";
 import { useEinheitsteilSchreiben } from "./einheitsteilSchreiben.js";
 import { neueId } from "./kennungen.js";
+import { useSchreibsperre } from "./useVerbindungsstatus.js";
 
 export interface ErfassungEigenschaften {
   readonly einheitId: string;
@@ -43,13 +44,22 @@ export interface ErfassungEigenschaften {
 /** Schreibt und schließt — oder zeigt den Grund, aus dem nichts geschrieben wurde. */
 export function useAbschluss(einheitId: string, aufSchliessen: () => void) {
   const schreibe = useEinheitsteilSchreiben(einheitId);
-  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const sperre = useSchreibsperre();
+  const gehalten = useRef<unknown>(undefined);
+  const [eigene, setzeMeldung] = useState<string | undefined>(undefined);
   async function abschliessen(entwurf: Parameters<typeof schreibe>[0]): Promise<void> {
+    setzeMeldung(undefined);
     const ausgang = await schreibe(entwurf);
     if (ausgang === undefined) aufSchliessen();
     else setzeMeldung(ausgang);
   }
-  return { meldung, setzeMeldung, abschliessen };
+  /** Die Kennung der Dialoginstanz: eine Wiederholung ist dieselbe Anlage (`Anlegeversuch.tsx`). */
+  function kennung(erzeuge: () => string): string {
+    gehalten.current ??= erzeuge();
+    return gehalten.current as string;
+  }
+  // Ohne Verbindung steht der Sperrgrund da; ein Ausgang des Versuchs bleibt bis zum Schließen.
+  return { meldung: eigene ?? sperre, setzeMeldung, abschliessen, kennung, gesperrt: sperre !== undefined };
 }
 
 export function Meldungszeile({ meldung }: { readonly meldung: string | undefined }): React.JSX.Element | null {
@@ -77,24 +87,29 @@ export function AuftragErfassung({
 }: AuftragErfassungEigenschaften): React.JSX.Element {
   const [text, setzeText] = useState("");
   const [von, setzeVon] = useState("");
-  const { meldung, setzeMeldung, abschliessen } = useAbschluss(einheitId, aufSchliessen);
+  const { meldung, setzeMeldung, abschliessen, kennung, gesperrt } = useAbschluss(einheitId, aufSchliessen);
   // Leer heißt „jetzt“ — der häufigste Fall, und er soll keinen Handgriff kosten.
-  const beginn = von.trim() === "" ? new Date().toISOString() : zeitpunktAusEingabe(von);
+  // „Jetzt“ ist der Zeitpunkt des ersten Bestätigens und bleibt bei einer
+  // Wiederholung gleich: Sonst wäre der Körper ein anderer und der Dienst
+  // erkennte die Wiederholung nicht.
+  const jetztBeimBestaetigen = useRef<string | undefined>(undefined);
 
   return (
     <Maske
       titel="Auftrag erfassen"
       bestaetigungstext="Erfassen"
-      bereit={text.trim() !== ""}
+      bereit={text.trim() !== "" && !gesperrt}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={() => {
+        jetztBeimBestaetigen.current ??= new Date().toISOString();
+        const beginn = von.trim() === "" ? jetztBeimBestaetigen.current : zeitpunktAusEingabe(von);
         if (beginn === undefined) {
           setzeMeldung("Der Beginn ist keine lesbare Zeitangabe — z. B. „14:30“ oder „30.10. 14:30“.");
           return;
         }
         return abschliessen(
           auftragErfassen({
-            auftragId: neueId("A"),
+            auftragId: kennung(() => neueId("A")),
             einheitId,
             text,
             von: beginn,
@@ -124,16 +139,16 @@ export function FahrzeugErfassung({ einheitId, aufSchliessen }: ErfassungEigensc
   const [bezeichnung, setzeBezeichnung] = useState("");
   const [kennzeichen, setzeKennzeichen] = useState("");
   const [status, setzeStatus] = useState("EINSATZBEREIT");
-  const { meldung, abschliessen } = useAbschluss(einheitId, aufSchliessen);
+  const { meldung, abschliessen, kennung, gesperrt } = useAbschluss(einheitId, aufSchliessen);
 
   return (
     <Maske
       titel="Fahrzeug erfassen"
       bestaetigungstext="Erfassen"
-      bereit={typ.trim() !== ""}
+      bereit={typ.trim() !== "" && !gesperrt}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={() =>
-        abschliessen(fahrzeugAnlegen({ fahrzeugId: neueId("F"), einheitId, typ, bezeichnung, kennzeichen, status }))
+        abschliessen(fahrzeugAnlegen({ fahrzeugId: kennung(() => neueId("F")), einheitId, typ, bezeichnung, kennzeichen, status }))
       }
     >
       <label>
@@ -166,19 +181,19 @@ export function PersonErfassung({ einheitId, aufSchliessen }: ErfassungEigenscha
   const [funktionen, setzeFunktionen] = useState("");
   const [geschlecht, setzeGeschlecht] = useState("");
   const [ernaehrung, setzeErnaehrung] = useState("");
-  const { meldung, abschliessen } = useAbschluss(einheitId, aufSchliessen);
+  const { meldung, abschliessen, kennung, gesperrt } = useAbschluss(einheitId, aufSchliessen);
   const vollstaendig = [nachname, vorname, geschlecht, ernaehrung].every((wert) => wert.trim() !== "");
 
   return (
     <Maske
       titel="Person erfassen"
       bestaetigungstext="Erfassen"
-      bereit={vollstaendig}
+      bereit={vollstaendig && !gesperrt}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={() =>
         abschliessen(
           personHinzufuegen({
-            personId: neueId("P"),
+            personId: kennung(() => neueId("P")),
             einheitId,
             vorname,
             nachname,

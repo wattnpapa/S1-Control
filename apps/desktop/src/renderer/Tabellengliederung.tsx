@@ -18,7 +18,7 @@
 
 import type React from "react";
 
-import { abschnittstypTitel, type Bereichskopf, type Spalte, type Staerke, type Tabellengliederung, type Tabellenzeile } from "@s1/domaene";
+import { abschnittstypTitel, kennzahlen, type Bereichskopf, type Spalte, type Staerke, type Tabellengliederung, type Tabellenzeile } from "@s1/domaene";
 
 export interface Gliederungswahl {
   readonly an: boolean;
@@ -154,7 +154,7 @@ function Bereichskopfzeile({ bereich, spalten }: KopfzeileEigenschaften): React.
   const titel = [
     abschnittstypTitel(bereich.typ),
     mitUnterabschnitten ? `eigene Stärke ${staerkeText(bereich.staerke)}, mit Unterabschnitten ${staerkeText(bereich.summenStaerke)}` : "",
-    bereich.zaehlt ? "" : "zählt nicht in die Gesamtstärke",
+    bereich.zaehlt ? "" : "zählt nicht in die Ist-Stärke",
   ]
     .filter((teil) => teil !== "")
     .join(" · ");
@@ -164,6 +164,7 @@ function Bereichskopfzeile({ bereich, spalten }: KopfzeileEigenschaften): React.
         {bereich.name}
         {mitUnterabschnitten && <span className="nebenwert"> mit Unterabschnitten</span>}
         {!bereich.zaehlt && <span className="nebenwert"> · zählt nicht</span>}
+        {bereich.erwartetSumme > 0 && <span className="nebenwert"> · {kennzahlen.erwartetKurz(bereich.erwartetSumme)}</span>}
       </th>
       <Kopfzellen spalten={spalten} staerke={bereich.summenStaerke} einheiten={bereich.einheitenSumme} />
     </tr>
@@ -178,28 +179,25 @@ interface EinsatzkopfEigenschaften {
 }
 
 /**
- * Die oberste Kopfzeile: der Einsatz gesamt.
+ * Die oberste Kopfzeile: die Ist-Stärke des Einsatzes.
  *
- * Sie zeigt dieselbe Zahl wie das Kopfband und sagt, was darin fehlt —
- * „ohne Angefordert“ —, und nennt Angefordert daneben. Zwei Gesamtzahlen
- * ohne Erklärung waren der Befund; zwei mit Erklärung sind eine Auskunft.
+ * Sie zeigt dieselbe Zahl wie das Kopfband (eine Zählregel,
+ * `kennzahlen.zaehlklasse`) und nennt daneben, was nicht darin steht: die
+ * erwarteten Kräfte und alle erfassten Einheiten.
  */
 function Einsatzkopf({ gliederung, spalten, gefiltert }: EinsatzkopfEigenschaften): React.JSX.Element {
   const { einsatz } = gliederung;
-  const titel =
-    "Zählt wie das Kopfband: ohne Angefordert/Anmarsch, Eingang und Einsatz beendet" +
-    (gefiltert ? " — hier über die gefilterten Einheiten" : "");
+  const titel = `${kennzahlen.ZAEHLREGEL_TEXT}${gefiltert ? " — hier über die gefilterten Einheiten" : ""}`;
+  const erwartet = summe(einsatz.erwartet);
   return (
-    <tbody aria-label="Einsatz gesamt">
+    <tbody aria-label="Ist-Stärke gesamt">
       <tr className="bereichskopf einsatzkopf">
         <th scope="rowgroup" title={titel}>
-          {gefiltert ? "Auswahl gesamt" : "Einsatz gesamt"}
-          <span className="nebenwert"> ohne Angefordert</span>
-          {einsatz.angefordertEinheiten > 0 && (
-            <span className="nebenwert">
-              {` · Angefordert ${String(einsatz.angefordertEinheiten)} Einh. ${staerkeText(einsatz.angefordert)}`}
-            </span>
-          )}
+          {gefiltert ? "Auswahl: Ist-Stärke" : "Ist-Stärke gesamt"}
+          {erwartet > 0 && <span className="nebenwert">{` · ${kennzahlen.erwartetText(erwartet)}`}</span>}
+          <span className="nebenwert">
+            {` · Alle erfassten Einheiten ${String(einsatz.alleEinheiten)} Einh. ${staerkeText(einsatz.alle)}`}
+          </span>
         </th>
         <Kopfzellen spalten={spalten} staerke={einsatz.staerke} einheiten={einsatz.einheiten} />
       </tr>

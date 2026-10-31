@@ -80,7 +80,7 @@
         --knopf-fuellung-text: #ffffff;
         --harke-linie: #000000;
         --gesperrt-bg: #e3e6ef;
-        --gesperrt-text: #8b93ad;
+        --gesperrt-text: #5c6484;
         --rahmenbreite: 1px;
         --schrift: 12px;
         --knopfhoehe: 31px;
@@ -118,7 +118,7 @@
         --knopf-fuellung: #3b4383;
         --harke-linie: #c3c8e4;
         --gesperrt-bg: #262b4d;
-        --gesperrt-text: #7d85ad;
+        --gesperrt-text: #9199c0;
         color-scheme: dark;
       }
 
@@ -176,7 +176,7 @@
         --knopf-fuellung-text: #14120a;
         --harke-linie: #c8a232;
         --gesperrt-bg: #241f0c;
-        --gesperrt-text: #8d7a34;
+        --gesperrt-text: #a58d3c;
         color-scheme: dark;
       }
 
@@ -373,8 +373,8 @@
         gap: 2px;
       }
       .kopfband .kennzahl .label {
-        font: 400 9.5px/1 var(--mono);
-        letter-spacing: 0.14em;
+        font: 400 11px/1 var(--mono);
+        letter-spacing: 0.1em;
         text-transform: uppercase;
         color: var(--kopfband-leise);
       }
@@ -383,6 +383,43 @@
         font-weight: 700;
         font-variant-numeric: tabular-nums;
         line-height: 1;
+      }
+      .kopfband .kennzahl.staerke {
+        position: relative;
+      }
+      .kopfband .kennzahl .regelknopf {
+        margin-left: 8px;
+        min-height: 28px;
+        padding: 2px 10px;
+        background: transparent;
+        border: 1px solid var(--kopfband-leise);
+        border-radius: 4px;
+        color: var(--kopfband-text);
+        font: 400 11px/1 var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: none;
+        cursor: pointer;
+      }
+      .kopfband .kennzahl .nebenwert {
+        font-size: 12px;
+        color: var(--kopfband-leise);
+      }
+      .kopfband .kennzahl .zaehlregel {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        z-index: 20;
+        margin-top: 6px;
+        width: min(30rem, 86vw);
+        padding: 10px 12px;
+        background: var(--karte);
+        color: var(--text);
+        border: 1px solid var(--rahmen);
+        border-radius: 6px;
+        font: 400 14px/1.4 var(--sans, system-ui, sans-serif);
+        letter-spacing: 0;
+        text-transform: none;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       }
       .kopfband .hilfeknopf {
         margin-left: auto;
@@ -506,7 +543,9 @@
         font-size: 0.92em;
       }
       input,
-      select {
+      select,
+      textarea {
+        box-sizing: border-box;
         display: block;
         width: min(30rem, 100%);
         margin-top: 4px;
@@ -1248,6 +1287,99 @@
       .einheiten .auswahlknoepfe button {
         min-height: 44px;
         min-width: 44px;
+      }
+      /* Beendet oder archiviert: Der Grund steht direkt über der Tabelle. */
+      .einheiten .sperrhinweis {
+        margin: 6px 0;
+        padding: 8px 10px;
+        border: 1px solid var(--rahmen);
+        border-left: 4px solid var(--warn-linie);
+        color: var(--warn-text);
+        background: var(--warn-bg);
+        font-weight: 600;
+      }
+      .einheiten button.statuschip:disabled {
+        cursor: not-allowed;
+        opacity: 0.7;
+      }
+      @media (pointer: coarse) {
+        .einheiten button.statuschip {
+          min-height: 44px;
+        }
+      }
+      /* Handy: Nur die Bezeichnung bleibt links stehen (Abschnitt scrollt weg,
+         ist schmal), der Status folgt unmittelbar und ist vollständig lesbar
+         (bricht bei Bedarf auf zwei Zeilen). Die Auswahl liegt als Blatt am
+         unteren Bildrand, Knöpfe immer sichtbar und 48 px hoch. */
+      @media (max-width: 700px) {
+        .einheiten th[scope="row"],
+        .einheiten thead th:first-child {
+          position: static;
+          width: 4.5rem;
+          min-width: 4.5rem;
+          max-width: 4.5rem;
+        }
+        .einheiten td.namensspalte,
+        .einheiten thead th.namensspalte {
+          left: 0;
+          max-width: 8.5rem;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .einheiten td.statusspalte {
+          white-space: normal;
+          min-width: 7rem;
+        }
+        .einheiten button.statuschip {
+          min-height: 44px;
+          white-space: normal;
+          text-align: left;
+          line-height: 1.15;
+        }
+        .auswahlgrund {
+          position: fixed;
+          inset: 0;
+          z-index: 60;
+          display: flex;
+          align-items: flex-end;
+          background: rgba(0, 0, 0, 0.45);
+        }
+        .auswahlblatt {
+          box-sizing: border-box;
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          width: 100%;
+          padding: 14px 16px calc(14px + env(safe-area-inset-bottom, 0px));
+          background: var(--karte);
+          color: var(--text);
+          border-top: 3px solid var(--rahmen);
+        }
+        .auswahlblatt .auswahltitel {
+          flex: 1 1 100%;
+        }
+        .auswahlblatt select {
+          flex: 1 1 100%;
+          min-height: 48px;
+          font: inherit;
+          font-size: 1.1rem;
+        }
+        .auswahlblatt .auswahlknoepfe {
+          display: flex;
+          flex: 1 1 100%;
+          gap: 10px;
+          margin: 0;
+        }
+        .auswahlblatt .auswahlknoepfe button {
+          flex: 1 1 0;
+          min-height: 48px;
+          font-size: 1rem;
+        }
+        .auswahlblatt .auswahlhinweis {
+          flex: 1 1 100%;
+          margin: 0;
+          font-weight: 700;
+        }
       }
       .tabellenfuss {
         display: flex;
@@ -1998,7 +2130,7 @@
         font: 400 var(--schrift) / 1.2 var(--ui);
       }
 
-      @media (max-width: 700px) {
+      @media (max-width: 900px) {
         html,
         body {
           max-width: 100vw;
@@ -2046,6 +2178,8 @@
         main {
           min-width: 0;
         }
+      }
+      @media (max-width: 700px) {
         .lagespalten {
           flex-direction: column;
           align-items: stretch;
@@ -2062,6 +2196,8 @@
           min-width: 0;
           width: 100%;
         }
+      }
+      @media (max-width: 900px) {
         /* Tabellen ohne eigenen Rahmen scrollen als Block in sich. */
         table {
           display: block;
@@ -2091,6 +2227,8 @@
           flex: 0 0 auto;
           white-space: nowrap;
         }
+      }
+      @media (max-width: 700px) {
         /* Dialoge nutzen die Breite des Geraets statt 22 rem Mindestbreite. */
         .maskengrund {
           padding: 8px;
@@ -2110,9 +2248,6 @@
       }
 
       @media (max-width: 480px) {
-        .kopfband .kennzahl .label {
-          font-size: 9px;
-        }
         main {
           padding: 8px;
         }
@@ -2144,6 +2279,195 @@
           padding: 10px 16px;
           background: var(--karte);
           border-top: 1px solid var(--rahmen);
+        }
+      }
+
+      /* ---- Zwischenbreiten, Querformat, Banner, Ausgabe ------------------
+         Ergaenzt die Bloecke oben: Tablet hochkant und Handy quer (bis
+         900 px) umbrechen das Kopfband, die Reiter scrollen in sich. Bei
+         flacher Anzeige (Handy quer) belegt das Kopfband eine Zeile, und
+         Dialoge halten ihre Knopfleiste im Bild. */
+
+      /* Das Verbindungsbanner haftet oben und liegt ueber jedem Dialog. */
+      .verbindungsbanner {
+        position: sticky;
+        top: 0;
+        z-index: 150;
+        box-sizing: border-box;
+      }
+      body:has(.maskengrund) .verbindungsbanner {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        margin: 0 !important;
+        max-height: 40vh;
+        overflow-y: auto;
+      }
+      body:has(.verbindungsbanner) .maskengrund {
+        padding-top: calc(var(--bannerhoehe, 0px) + 8px);
+      }
+
+      /* Ausgabe: Knoepfe mit Abstand, nichts laeuft rechts aus dem Bild. */
+      .ausgabedatei {
+        max-width: 100%;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .ausgabedatei .ausgabeknoepfe {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 4px;
+      }
+
+      @media (pointer: coarse) {
+        label:has(> input[type="checkbox"]) {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          min-height: 44px;
+        }
+        label > input[type="checkbox"] {
+          flex: 0 0 auto;
+          margin: 0;
+        }
+        button:disabled {
+          opacity: 1;
+        }
+      }
+
+      @media (max-width: 900px), (max-height: 500px) {
+        .maskengrund {
+          padding: 8px;
+        }
+        .maske {
+          min-width: 0;
+          max-width: min(32rem, 100%);
+          max-height: 100%;
+        }
+        /* Die Knopfleiste haftet unten, der Inhalt scrollt in der Maske. */
+        .maskenknoepfe {
+          position: sticky;
+          /* -16 px hebt das Polster der Maske auf: Die Leiste sitzt bündig unten. */
+          bottom: -16px;
+          z-index: 1;
+          flex-wrap: wrap;
+          margin: 1rem -16px -16px;
+          padding: 10px 16px;
+          background: var(--karte);
+          border-top: 1px solid var(--rahmen);
+        }
+        .maskenknoepfe button {
+          height: auto;
+          min-height: var(--knopfhoehe);
+          padding-top: 6px;
+          padding-bottom: 6px;
+          white-space: normal;
+        }
+        @media (pointer: coarse) {
+          .maskenknoepfe button {
+            min-height: 44px;
+          }
+        }
+        .maskenknoepfe > p,
+        .maskenknoepfe > .hinweistext {
+          flex: 1 1 100%;
+          margin: 0;
+        }
+      }
+      @media (max-width: 480px) {
+        .maske {
+          max-width: 100%;
+        }
+      }
+
+      /* Flache Anzeige (Handy quer): das Kopfband ist eine Zeile plus Reiter. */
+      @media (max-height: 500px) and (max-width: 1000px) {
+        .kopfband {
+          display: flex;
+          flex-wrap: wrap;
+          align-items: center;
+          gap: 0 10px;
+          padding: 2px 12px 0;
+        }
+        .kopfband > .weg {
+          flex: 0 0 auto;
+        }
+        .kopfband > .weg button.alsLink {
+          min-height: 36px;
+          min-width: 0;
+        }
+        .kopfband > .zeile {
+          flex: 1 1 0;
+          min-width: 0;
+          flex-wrap: wrap;
+          gap: 2px 12px;
+          padding: 0;
+        }
+        .kopfband > .zustandszeile,
+        .kopfband > .reiter {
+          flex: 1 1 100%;
+          min-width: 0;
+        }
+        .kopfband .marke,
+        .kopfband h1 {
+          display: none;
+        }
+        .kopfband .kennzahl {
+          flex-direction: row;
+          align-items: baseline;
+          gap: 6px;
+        }
+        .kopfband .kennzahl .wert {
+          font-size: 20px;
+        }
+        .kopfband .kennzahl .nebenwert {
+          font-size: 11px;
+          white-space: nowrap;
+        }
+        .kopfband .hilfeknopf {
+          margin-left: auto;
+        }
+        .kopfband .themenschalter {
+          flex: 0 0 auto;
+        }
+        .kopfband .themenschalter button {
+          flex: 0 0 auto;
+        }
+        .kopfband .zustandszeile {
+          padding-bottom: 2px;
+          font-size: 11px;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .vorlagenliste {
+          max-height: 6rem;
+        }
+      }
+
+      /* Sehr schmal (320 px): Suchfelder und Bloecke bleiben im Bild. */
+      @media (max-width: 480px) {
+        .suchfeld input {
+          width: 100%;
+          max-width: 100%;
+        }
+        main,
+        main > * {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .fueorgflaeche {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .einrichtungen {
+          flex: 0 1 auto;
+          min-width: 0;
+          border-left: 0;
+          padding-left: 0;
         }
       }
 
