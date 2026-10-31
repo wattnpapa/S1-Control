@@ -75,6 +75,40 @@ describe("Wiederverbindung", () => {
   });
 });
 
+describe("Strom liefert weiter, Rufe scheitern (Regression: seit 0 s)", () => {
+  it("lässt die Dauer weiterzählen und erreicht die rote Stufe", () => {
+    const s = useVerbindung.getState();
+    s.meldeKontakt(1000);
+    s.meldeAusfall(2000);
+    // Jede Sekunde kommt eine Mitteilung, jede zweite Sekunde scheitert der Herzschlag.
+    for (let t = 3000; t <= 70_000; t += 1000) {
+      useVerbindung.getState().meldeStromKontakt(t);
+      if (t % 2000 === 0) useVerbindung.getState().meldeAusfall(t);
+    }
+    const z = useVerbindung.getState();
+    expect(z.wiederverbunden).toBe(0);
+    const status = bewerte(z, 70_000);
+    expect(status).toMatchObject({ zustand: "unterbrochen", stufe: "rot" });
+    expect(status.zustand === "unterbrochen" && status.seitMs).toBe(69_000);
+  });
+
+  it("zählt den Strom als Kontakt, solange keine Störung festgestellt ist", () => {
+    useVerbindung.getState().meldeKontakt(1000);
+    useVerbindung.getState().meldeStromKontakt(9000);
+    expect(bewerte(useVerbindung.getState(), 12_000)).toEqual({ zustand: "verbunden", letzterKontakt: 9000 });
+  });
+
+  it("heilt erst ein beantworteter Ruf oder Herzschlag", () => {
+    const s = useVerbindung.getState();
+    s.meldeKontakt(1000);
+    s.meldeAusfall(2000);
+    useVerbindung.getState().meldeStromKontakt(3000);
+    expect(bewerte(useVerbindung.getState(), 3000).zustand).toBe("unterbrochen");
+    useVerbindung.getState().meldeKontakt(4000);
+    expect(bewerte(useVerbindung.getState(), 4000).zustand).toBe("verbunden");
+  });
+});
+
 describe("Herzschlag-Abfrage", () => {
   beforeEach(() => {
     vi.useFakeTimers();

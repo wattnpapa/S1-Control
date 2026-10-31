@@ -18,6 +18,7 @@ import { useEffect, useState } from "react";
 
 import { kennzahlen, type Baumknoten } from "@s1/domaene";
 
+import { Ausgabedatei } from "./Ausgabedatei.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
 import { Zeichen } from "./zeichen.js";
@@ -33,7 +34,7 @@ const AUSSCHNITT_KREIS = "56 56 144 144";
 export function Fuehrungsorganisation(): React.JSX.Element {
   const laden = useLaden();
   const [beschriftung, setzeBeschriftung] = useState<Beschriftung>("kurz");
-  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const [meldung, setzeMeldung] = useState<{ pfad: string; bytes: number } | undefined>(undefined);
 
   const holeBaum = laden.holeBaum;
   const akteId = laden.akteId;
@@ -43,12 +44,12 @@ export function Fuehrungsorganisation(): React.JSX.Element {
 
   const bild = harkenbild(laden.baum?.baum ?? []);
 
-  function alsPdf(): void {
+  function erzeuge(format: "pdf" | "html"): void {
     setzeMeldung(undefined);
     void (async () => {
-      const ergebnis = await laden.erzeugeAusgabe("fueorg", "pdf", undefined);
+      const ergebnis = await laden.erzeugeAusgabe("fueorg", format, undefined);
       if (ergebnis === undefined) return;
-      setzeMeldung(`${ergebnis.pfad} (${String(ergebnis.bytes)} Bytes)`);
+      setzeMeldung(ergebnis);
     })();
   }
 
@@ -69,12 +70,18 @@ export function Fuehrungsorganisation(): React.JSX.Element {
             Ausgeschrieben
           </button>
         </div>
-        <button type="button" className="haupt" onClick={alsPdf}>
+        <button type="button" className="haupt" onClick={() => { erzeuge("pdf"); }}>
           Als PDF (Lagekarte)
+        </button>
+        {/* Im Browser gibt es kein PDF: Die HTML-Seite lässt sich öffnen, laden und drucken. */}
+        <button type="button" onClick={() => { erzeuge("html"); }}>
+          Als HTML (druckbar)
         </button>
       </div>
 
-      {meldung !== undefined && <p className="hinweistext">Geschrieben: {meldung}</p>}
+      {meldung !== undefined && (
+        <Ausgabedatei pfad={meldung.pfad} vorsatz="Geschrieben" zusatz={`${String(meldung.bytes)} Bytes`} />
+      )}
 
       <div className="fueorgflaeche">
         <div className="harke">

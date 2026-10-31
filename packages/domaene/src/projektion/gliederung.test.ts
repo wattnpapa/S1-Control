@@ -143,6 +143,16 @@ describe("einheitentabelle mit gliederung", () => {
     expect(einsatz?.angefordertEinheiten).toBe(1);
   });
 
+  it("zählt „Alle erfassten Einheiten“ ohne beendet und weist beendet/Rückmarsch ausdrücklich aus", () => {
+    const einsatz = einheitentabelle(lage(), { gliederung: true }).gliederung?.einsatz;
+    expect(einsatz?.beendetEinheiten).toBeGreaterThan(0);
+    // Ist + erwartet + beendet ergeben alle erfassten Einheiten des früheren Zählstands.
+    const gesamtKoepfe = (s: { fuehrer: number; unterfuehrer: number; mannschaft: number } | undefined): number =>
+      (s?.fuehrer ?? 0) + (s?.unterfuehrer ?? 0) + (s?.mannschaft ?? 0);
+    expect(gesamtKoepfe(einsatz?.alle)).toBe(gesamtKoepfe(einsatz?.staerke) + gesamtKoepfe(einsatz?.erwartet));
+    expect(einsatz?.alleEinheiten).toBe((einsatz?.einheiten ?? 0) + (einsatz?.erwartetEinheiten ?? 0));
+  });
+
   it("lässt leere Bereiche auf Wunsch weg — und Eingang ohnehin, solange dort nichts wartet", () => {
     const zustand = lage();
     const mit = einheitentabelle(zustand, { gliederung: true }).gliederung?.bereiche ?? [];

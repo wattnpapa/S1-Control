@@ -17,6 +17,7 @@ import { taktischeZeit } from "./formate.js";
 import { Staerkekennzahl } from "./Staerkekennzahl.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { alter } from "./Statuszeile.js";
+import { weitereText } from "./arbeitsplatzzahl.js";
 import { unterbrochenText } from "./verbindung.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 
@@ -200,7 +201,7 @@ function Zustandszeile({
       {fuest === "" ? "" : ` · ${fuest}`}
       {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} ·{" "}
       {lagebild.shareErreichbar ? "Share erreichbar" : "Share nicht erreichbar"}
-      {wache > 0 ? ` — ${String(wache)} weitere Arbeitsplätze` : " — allein am Einsatz"}
+      {wache > 0 ? ` — ${weitereText(wache)}` : " — allein am Einsatz"}
     </div>
   );
 }

@@ -10,7 +10,21 @@
  * Aufrufer gibt die Uhr, und im Betrieb tickt sie im Fenster.
  */
 
+import { useState } from "react";
+
 import { staerkeText } from "./formate.js";
+import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
+import { Statuserklaerung, Statushinweis } from "./Statushinweis.js";
+import {
+  ERKLAERUNG_KONFLIKT,
+  ERKLAERUNG_SHARE,
+  ERKLAERUNG_UNBEKANNT,
+  erklaerungQuarantaene,
+  erklaerungUebertragung,
+  konflikthinweisText,
+  quarantaeneText,
+  unbekanntText,
+} from "./statushinweise.js";
 import type { Lagebild } from "../kontrakt/index.js";
 import { unterbrochenText, type Verbindungsstatus } from "./verbindung.js";
 
@@ -60,7 +74,62 @@ function Unterbrochen({ status }: { readonly status: UnterbrochenerStatus }): Re
   );
 }
 
+interface Warnung {
+  readonly kennung: string;
+  readonly ton: "warnung" | "fehler";
+  readonly text: string;
+  readonly erklaerung: string;
+}
+
+/** Die Warnungen dieses Lagebilds in fester Reihenfolge – jede mit Symbol, Wort und Erklärung. */
+function warnungen(lagebild: Lagebild, getrennt: boolean): readonly Warnung[] {
+  const liste: Warnung[] = [];
+  if (!getrennt && !lagebild.shareErreichbar) {
+    // §1.3: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Die Zeile
+    // sagt deshalb, was gilt, und nicht, dass etwas kaputt ist.
+    const grund = lagebild.shareMeldung === undefined ? "" : ` — ${lagebild.shareMeldung}`;
+    liste.push({ kennung: "share", ton: "warnung", text: `Share nicht erreichbar${grund}`, erklaerung: ERKLAERUNG_SHARE });
+  }
+  if (lagebild.unuebertrageneBytes > 0) {
+    const menge = bytes(lagebild.unuebertrageneBytes);
+    liste.push({
+      kennung: "uebertragung",
+      ton: "warnung",
+      text: `${menge} noch nicht übertragen`,
+      erklaerung: erklaerungUebertragung(menge),
+    });
+  }
+  if (lagebild.quarantaene.length > 0) {
+    // §8.2: Eine endgültige Quarantäne nimmt diesen Arbeitsplatz aus dem
+    // Konvergenzvergleich (§8.6.1 Regel 3). Sie zu verschweigen hieße, ihm
+    // einen Stand zu zeigen, für den niemand mehr geradesteht.
+    liste.push({
+      kennung: "quarantaene",
+      ton: "fehler",
+      text: quarantaeneText(lagebild.quarantaene.length),
+      erklaerung: erklaerungQuarantaene(lagebild.quarantaene),
+    });
+  }
+  if (lagebild.hinweise > 0) {
+    liste.push({ kennung: "konflikt", ton: "warnung", text: konflikthinweisText(lagebild.hinweise), erklaerung: ERKLAERUNG_KONFLIKT });
+  }
+  if (lagebild.unbekannteEreignisse > 0) {
+    // §3.7: Ein unbekanntes Ereignis heißt fast immer, dass ein anderer
+    // Arbeitsplatz eine neuere Fassung fährt.
+    liste.push({ kennung: "unbekannt", ton: "warnung", text: unbekanntText(lagebild.unbekannteEreignisse), erklaerung: ERKLAERUNG_UNBEKANNT });
+  }
+  return liste;
+}
+
+function Arbeitsplaetze({ lagebild }: { readonly lagebild: Lagebild }): React.JSX.Element {
+  const aktiv = aktiveArbeitsplaetze(lagebild);
+  const inaktiv = lagebild.peers.length - aktiv;
+  const hinweis = inaktiv > 0 ? `${String(inaktiv)} weitere nicht mehr aktiv (seit Kurzem kein Lebenszeichen)` : undefined;
+  return <span title={hinweis}>{aktiv === 0 ? "allein am Einsatz" : weitereText(aktiv)}</span>;
+}
+
 export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigenschaften): React.JSX.Element {
+  const [offen, setzeOffen] = useState<string | undefined>(undefined);
   if (lagebild === undefined) {
     return (
       <footer className="statuszeile" aria-label="Statuszeile">
@@ -74,8 +143,8 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
   // **nicht** mehr belegt. Statt „Share erreichbar (gerade eben)" steht, was
   // gilt – sonst hielte der Bediener veraltete Zahlen für aktuell.
   const getrennt = verbindung?.zustand === "unterbrochen" ? verbindung : undefined;
-  const wache = lagebild.peers.filter((p) => !p.veraltet).length;
-  const veraltet = lagebild.peers.length - wache;
+  const liste = warnungen(lagebild, getrennt !== undefined);
+  const aufgeklappt = liste.find((w) => w.kennung === offen);
 
   return (
     <footer className="statuszeile" aria-label="Statuszeile">
@@ -86,51 +155,24 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
         {getrennt !== undefined && " (veraltet)"}
       </span>
 
-      <span>
-        {getrennt !== undefined ? (
-          "Share-Stand unbekannt"
-        ) : lagebild.shareErreichbar ? (
-          <>Share erreichbar ({alter(lagebild.letzterShareKontakt, jetzt)})</>
-        ) : (
-          // §1.3: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Die
-          // Zeile sagt deshalb, was gilt, und nicht, dass etwas kaputt ist.
-          <strong className="warnung">
-            Share nicht erreichbar{lagebild.shareMeldung === undefined ? "" : ` — ${lagebild.shareMeldung}`}
-          </strong>
-        )}
-      </span>
-
-      <span>
-        {getrennt !== undefined
-          ? "Arbeitsplätze unbekannt"
-          : wache === 0 && veraltet === 0
-          ? "allein am Einsatz"
-          : `${String(wache)} weitere${veraltet > 0 ? `, ${String(veraltet)} veraltet` : ""}`}
-      </span>
-
-      {lagebild.unuebertrageneBytes > 0 && (
-        <span className="warnung">{bytes(lagebild.unuebertrageneBytes)} noch nicht übertragen</span>
+      {getrennt !== undefined ? (
+        <span>Share-Stand unbekannt</span>
+      ) : (
+        lagebild.shareErreichbar && <span>Share erreichbar ({alter(lagebild.letzterShareKontakt, jetzt)})</span>
       )}
 
-      {lagebild.quarantaene.length > 0 && (
-        // §8.2: Eine endgültige Quarantäne nimmt diesen Arbeitsplatz aus dem
-        // Konvergenzvergleich (§8.6.1 Regel 3). Sie zu verschweigen hieße, ihm
-        // einen Stand zu zeigen, für den niemand mehr geradesteht.
-        <strong className="fehler">
-          {String(lagebild.quarantaene.length)} Stelle(n) in Quarantäne
-        </strong>
-      )}
+      {getrennt !== undefined ? <span>Arbeitsplätze unbekannt</span> : <Arbeitsplaetze lagebild={lagebild} />}
 
-      {lagebild.hinweise > 0 && (
-        <span className="warnung">{String(lagebild.hinweise)} Konflikthinweis(e)</span>
-      )}
-      {lagebild.unbekannteEreignisse > 0 && (
-        // §3.7: Ein unbekanntes Ereignis heißt fast immer, dass ein anderer
-        // Arbeitsplatz eine neuere Fassung fährt.
-        <span className="warnung">
-          {String(lagebild.unbekannteEreignisse)} unbekannte Ereignisse
-        </span>
-      )}
+      {liste.map((w) => (
+        <Statushinweis
+          key={w.kennung}
+          kennung={w.kennung}
+          ton={w.ton}
+          text={w.text}
+          offen={offen === w.kennung}
+          umschalten={() => setzeOffen(offen === w.kennung ? undefined : w.kennung)}
+        />
+      ))}
 
       {/* Rechts steht die Stärke in derselben Schreibweise wie im Kopfband
           (Entwurf „Oberfläche"): `42 EINH · 24/61/183 // 268`. Sie ist die
@@ -139,6 +181,7 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
       <span className="staerke">
         {String(lagebild.einheiten)} EINH · {staerkeText(lagebild.gesamtstaerke)}
       </span>
+      {aufgeklappt !== undefined && <Statuserklaerung kennung={aufgeklappt.kennung} text={aufgeklappt.erklaerung} />}
     </footer>
   );
 }

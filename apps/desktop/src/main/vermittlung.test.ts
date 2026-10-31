@@ -171,13 +171,36 @@ describe("Einsatz anlegen und öffnen (M2.3)", () => {
     const werkstatt = await mitShare();
     await ruf(werkstatt, ANLEGEN);
     const liste = await ruf<readonly EinsatzEintrag[]>(werkstatt, { art: "einsaetzeAuflisten" });
-    expect(liste).toEqual([
-      {
-        ordner: ORDNER,
-        name: "Hochwasser Weser-Ems",
-        datum: "2026-09-10",
-      },
-    ]);
+    expect(liste).toHaveLength(1);
+    expect(liste[0]).toMatchObject({ ordner: ORDNER, name: "Hochwasser Weser-Ems", datum: "2026-09-10" });
+    // Additiv: die Zeit der letzten Änderung der Ereignisse, für „zuletzt genutzt“.
+    expect(Number.isNaN(Date.parse(liste[0]?.geaendert ?? ""))).toBe(false);
+  });
+
+  it("nennt bei doppeltem Einsatznamen einen Klartext ohne Serverpfad", async () => {
+    const werkstatt = await mitShare();
+    await ruf(werkstatt, ANLEGEN);
+    const antwort = await werkstatt.vermittlung.beantworte(ANLEGEN);
+    expect(antwort).toEqual({ ok: false, meldung: "Ein Einsatz mit diesem Namen existiert bereits." });
+    expect(JSON.stringify(antwort)).not.toContain(werkstatt.sharePfad);
+    expect(JSON.stringify(antwort)).not.toContain("EEXIST");
+    // Es blieb bei einem Einsatz.
+    expect(await ruf<readonly EinsatzEintrag[]>(werkstatt, { art: "einsaetzeAuflisten" })).toHaveLength(1);
+  });
+
+  it("erkennt den Doppelnamen auch bei anderer Schreibweise am selben Tag", async () => {
+    const werkstatt = await mitShare();
+    await ruf(werkstatt, ANLEGEN);
+    const antwort = await werkstatt.vermittlung.beantworte({ ...ANLEGEN, name: "hochwasser  WESER-ems" });
+    expect(antwort).toEqual({ ok: false, meldung: "Ein Einsatz mit diesem Namen existiert bereits." });
+  });
+
+  it("ordnet die Liste nach zuletzt geändertem Einsatz", async () => {
+    const werkstatt = await mitShare();
+    await ruf(werkstatt, { ...ANLEGEN, name: "Erster", datum: "2026-09-12" });
+    await ruf(werkstatt, { ...ANLEGEN, name: "Zweiter", datum: "2026-09-01" });
+    const liste = await ruf<readonly EinsatzEintrag[]>(werkstatt, { art: "einsaetzeAuflisten" });
+    expect(liste.map((e) => e.name)).toEqual(["Zweiter", "Erster"]);
   });
 
   it("liefert eine leere Liste, solange kein Share eingestellt ist", async () => {

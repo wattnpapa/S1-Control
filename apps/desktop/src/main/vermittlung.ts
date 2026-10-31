@@ -24,6 +24,7 @@ import {
 import {
   EINSATZ_UNTERORDNER,
   Einsatzablage,
+  DateisystemFehler,
   legeEinsatzAn,
   liesEinsatzanker,
   sha256HexBytes,
@@ -32,6 +33,7 @@ import {
 
 import { zeigeAusgabe, type Schreibtisch } from "./ausgabezeiger.js";
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
+import { EINSATZ_DOPPELT, gibtEsDenEinsatz, listeneintrag, ordneEinsaetze } from "./einsatzliste.js";
 import { holePaket, type Netzholer } from "./programmbezug.js";
 import {
   MANIFEST_GRENZE_BYTES,
@@ -76,7 +78,7 @@ export interface Fenstersteuerung {
 }
 
 /** Die Seitenausgaben, deren Vorlage quer gedruckt wird. */
-const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste"]);
+const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste", "anforderungen"]);
 
 /**
  * Was die Vermittlung zum Drucken braucht — und mehr nicht (M4.1).
@@ -225,6 +227,12 @@ export class Vermittlung {
         return null;
       case "standAnfordern":
         return this.#o.hof.frage(ruf.akteId, { art: "standAnfordern" });
+      case "sperre":
+        return this.#o.hof.frage(ruf.akteId, {
+          art: "sperre",
+          entitaetId: ruf.entitaetId,
+          frei: ruf.frei === true,
+        });
       case "bedienen":
         return (await this.#o.hof.frage(ruf.akteId, {
           art: "bediene",
@@ -626,16 +634,11 @@ export class Vermittlung {
     const namen = await this.#o.dateisystem.listeVerzeichnis(wurzel);
     const eintraege: EinsatzEintrag[] = [];
     for (const name of namen) {
-      const anker = await liesEinsatzanker(
-        this.#o.dateisystem,
-        path.join(wurzel, name, "einsatz.json"),
-      );
-      if (anker === undefined) continue;
-      eintraege.push({ ordner: name, name: anker.name, datum: anker.datum });
+      const eintrag = await listeneintrag(this.#o.dateisystem, wurzel, name);
+      if (eintrag !== undefined) eintraege.push(eintrag);
     }
-    // Neueste zuerst: Wer einen Einsatz oeffnet, meint fast immer den letzten.
-    eintraege.sort((a, b) => (a.datum < b.datum ? 1 : a.datum > b.datum ? -1 : 0));
-    return eintraege;
+    // Zuletzt genutzt zuerst: Wer einen Einsatz oeffnet, meint fast immer den letzten.
+    return ordneEinsaetze(eintraege);
   }
 
   async #legeEinsatzAn(ruf: Extract<Ruf, { art: "einsatzAnlegen" }>): Promise<unknown> {
@@ -643,19 +646,35 @@ export class Vermittlung {
     if (platz.sharePfad.length === 0) throw new Error("Es ist kein Share-Pfad eingestellt.");
     const kennung = einsatzKennung(ruf.datum, ruf.name);
     const ablage = this.#ablage(platz.sharePfad, kennung.ordner);
+    // Vor dem Anlegen pruefen: Der Bediener bekommt einen Satz, nicht den
+    // Dateisystemfehler samt Serverpfad.
+    if (
+      (await this.#o.dateisystem.existiert(ablage.shareEinsatzDatei)) ||
+      gibtEsDenEinsatz(await this.#listeEinsaetze(), ruf.datum, ruf.name)
+    ) {
+      throw new Error(EINSATZ_DOPPELT);
+    }
 
-    await legeEinsatzAn(
-      this.#o.dateisystem,
-      ablage,
-      {
-        einsatzId: kennung.ordner,
-        name: ruf.name,
-        datum: ruf.datum,
-        angelegtAm: new Date().toISOString(),
-        angelegtVon: this.#benutzer(platz),
-      },
-      EINSATZ_UNTERORDNER,
-    );
+    try {
+      await legeEinsatzAn(
+        this.#o.dateisystem,
+        ablage,
+        {
+          einsatzId: kennung.ordner,
+          name: ruf.name,
+          datum: ruf.datum,
+          angelegtAm: new Date().toISOString(),
+          angelegtVon: this.#benutzer(platz),
+        },
+        EINSATZ_UNTERORDNER,
+      );
+    } catch (fehler) {
+      // Zwei Arbeitsplaetze legen im selben Augenblick an: der zweite sieht EEXIST.
+      if (fehler instanceof DateisystemFehler && fehler.code === "EEXIST") {
+        throw new Error(EINSATZ_DOPPELT, { cause: fehler });
+      }
+      throw fehler;
+    }
     this.#o.protokolliere("info", `Einsatz angelegt: ${kennung.ordner}`);
 
     const akteId = await this.#starteUndOeffne(platz, kennung.ordner);

@@ -52,7 +52,7 @@ export interface AnforderungZuEinheitEigenschaften {
   readonly aufSchliessen: () => void;
 }
 
-interface Einheitseingabe {
+export interface Einheitseingabe {
   readonly bezeichnung: string;
   readonly organisation: string;
   readonly ebene: string;
@@ -81,14 +81,22 @@ function ausVorschlag(vorschlag: Einheitsvorschlag | undefined): Einheitseingabe
   };
 }
 
-function vollstaendig(e: Einheitseingabe): boolean {
-  return (
-    e.bezeichnung.trim() !== "" &&
-    e.abschnittId !== "" &&
-    [e.fuehrer, e.unterfuehrer, e.mannschaft].every(istStaerkeEingabe) &&
-    // Eine eingetroffene Einheit ohne Köpfe wäre im Kopf unsichtbar.
-    [e.fuehrer, e.unterfuehrer, e.mannschaft].some((wert) => Number.parseInt(wert, 10) > 0)
-  );
+/** Was der Knopf noch braucht, in Worten – oder `undefined`, wenn die Einheit vollständig ist. */
+export function fehlendes(e: Einheitseingabe): string | undefined {
+  if (e.bezeichnung.trim() === "") return "Bezeichnung eintragen";
+  if (e.abschnittId === "") return "Abschnitt wählen";
+  const staerke = [e.fuehrer, e.unterfuehrer, e.mannschaft];
+  if (!staerke.every(istStaerkeEingabe)) return "Stärke prüfen (ganze Zahlen von 0 bis 999)";
+  // Eine eingetroffene Einheit ohne Köpfe wäre im Kopf unsichtbar.
+  if (!staerke.some((wert) => Number.parseInt(wert, 10) > 0)) return "Stärke eintragen (mindestens eine Kraft)";
+  return undefined;
+}
+
+/** Der Grund, aus dem „Anlegen“ bzw. „Verknüpfen“ gesperrt ist. */
+function sperrgrund(weg: Weg, bestehende: string, e: Einheitseingabe): string | undefined {
+  if (weg === "ohne") return undefined;
+  if (weg === "verknuepfen") return bestehende === "" ? "Bestehende Einheit wählen" : undefined;
+  return fehlendes(e);
 }
 
 /** Die Verknüpfung nach der Anlage: eintreffen mit Einheit oder Einheit nachtragen. */
@@ -135,6 +143,7 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
   const [bestehende, setzeBestehende] = useState("");
   const [eingabe, setzeEingabe] = useState(() => ausVorschlag(zeile.vorschlag));
   const abschnitte = projektion.baumZeilen(laden.baum?.baum ?? []);
+  const grund = sperrgrund(weg, bestehende, eingabe);
   // Die abzulösende Einheit löst sich nicht selbst ab.
   const einheiten = (laden.anforderungen?.einheitenwahl ?? []).filter((e) => e.id !== zeile.abzuloesendeEinheitId);
 
@@ -175,7 +184,8 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
     <Maske
       titel={art === "eintreffen" ? `${zeile.kennung} eingetroffen` : `Einheit aus ${zeile.kennung} anlegen`}
       bestaetigungstext={bestaetigungstext(weg)}
-      bereit={!versuch.gesperrt && (weg === "ohne" || (weg === "verknuepfen" ? bestehende !== "" : vollstaendig(eingabe)))}
+      bereit={!versuch.gesperrt && grund === undefined}
+      bereitGrund={grund}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={bestaetige}
     >

@@ -18,6 +18,7 @@ import {
   anlageEreignis,
   einheitGemeldet,
   einheitVerschoben,
+  feldEreignis,
   einsatzAngelegt,
   hlc,
   staerke,
@@ -141,7 +142,7 @@ describe("tagebuchzeile", () => {
   it("spricht bei einer Verschiebung über beide Abschnitte", () => {
     const ereignis = einheitVerschoben(hlc(7, 0, "a"), 7, "U1", "EA-NORD", "EINGANG");
     const zeile = tagebuchzeile(falte([...GRUNDLAGE, ereignis]), ereignis);
-    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Einheit verschoben: EA-NORD → EINGANG");
+    expect(zeile.satz).toBe("TZ THW OV Oldenburg: Einheit verschoben: EA Nord → Eingang");
   });
 
   it("gibt den frei getippten Eintrag als Text wieder, nicht als Feldübergang", () => {
@@ -224,5 +225,84 @@ describe("trifftFilter", () => {
     expect(trifftFilter(zeile, { nurRuecknahmen: true })).toBe(false);
     expect(trifftFilter({ ...zeile, undoOf: "a-0000000001" }, { nurRuecknahmen: true })).toBe(true);
     expect(trifftFilter({ ...zeile, korrekturVon: "a-0000000001" }, { nurRuecknahmen: true })).toBe(true);
+  });
+});
+
+describe("tagebuchzeile — Zusammenführen", () => {
+  const zweite = einheitGemeldet(hlc(4, 0, "a"), 4, {
+    einheitId: "U2",
+    abschnittId: "EA-NORD",
+    bezeichnung: "GRUND2",
+    organisation: "THW",
+    ebene: "ZUG",
+    staerke: staerke(0, 1, 3),
+    personalErfassung: "NUR_STAERKE",
+    status: "EINSATZBEREIT",
+  });
+  const dritte = einheitGemeldet(hlc(5, 0, "a"), 5, {
+    einheitId: "U3",
+    abschnittId: "EA-NORD",
+    bezeichnung: "RACE-B",
+    organisation: "THW",
+    ebene: "ZUG",
+    staerke: staerke(0, 0, 2),
+    personalErfassung: "NUR_STAERKE",
+    status: "EINSATZBEREIT",
+  });
+
+  it("nennt Ziel und alle aufgegangenen Einheiten beim Namen", () => {
+    const zusammen = anlageEreignis(hlc(6, 0, "a"), 6, "EinheitZusammengefuehrt", {
+      zielEinheitId: "U2",
+      quellen: [
+        { einheitId: "U1", gesehen: staerke(1, 2, 9) },
+        { einheitId: "U3", gesehen: staerke(0, 1, 3) },
+      ],
+    });
+    const zustand = falte([...GRUNDLAGE, zweite, dritte, zusammen]);
+    expect(tagebuchzeile(zustand, zusammen).satz).toBe(
+      "Einheiten zusammengeführt: TZ THW OV Oldenburg und RACE-B aufgegangen in GRUND2",
+    );
+  });
+
+  it("bleibt bei einer einzigen Quelle lesbar", () => {
+    const zusammen = anlageEreignis(hlc(6, 0, "a"), 6, "EinheitZusammengefuehrt", {
+      zielEinheitId: "U2",
+      quellen: [{ einheitId: "U1", gesehen: staerke(1, 2, 9) }],
+    });
+    const zustand = falte([...GRUNDLAGE, zweite, zusammen]);
+    expect(tagebuchzeile(zustand, zusammen).satz).toBe(
+      "Einheiten zusammengeführt: TZ THW OV Oldenburg aufgegangen in GRUND2",
+    );
+  });
+});
+
+describe("tagebuchzeile — fachliche Zeit (ereignisZeit)", () => {
+  it("zeigt bei einem Statuswechsel mit ereignisZeit die Funkzeit als fachliche Zeit", () => {
+    const wechsel = {
+      ...statusGesetzt(hlc(8, 0, "a"), 8, "U1", "ANMARSCH", "EINSATZBEREIT"),
+      nutzlast: { einheitId: "U1", ereignisZeit: "2026-09-08T10:15:00+02:00" },
+    };
+    const zeile = tagebuchzeile(falte(GRUNDLAGE), wechsel);
+    expect(zeile.zeitpunkt).toBe("2026-09-08T10:15:00+02:00");
+    expect(zeile.satz).toContain("Fachliche Zeit");
+  });
+
+  it("lässt den Satz unverändert, wenn keine ereignisZeit mitkommt", () => {
+    const wechsel = statusGesetzt(hlc(8, 0, "a"), 8, "U1", "ANMARSCH", "EINSATZBEREIT");
+    const zeile = tagebuchzeile(falte(GRUNDLAGE), wechsel);
+    expect(zeile.zeitpunkt).toBeUndefined();
+    expect(zeile.satz).not.toContain("Fachliche Zeit");
+  });
+
+  it("nimmt für das Eintreffen einer Anforderung erledigtAm als fachliche Zeit", () => {
+    const eintreffen = feldEreignis(
+      hlc(9, 0, "a"),
+      9,
+      "AnforderungErledigt",
+      { anforderungId: "ANF1" },
+      null,
+      { erledigtAm: "2026-09-08T11:00:00+02:00", abloesendeEinheitId: "U1" },
+    );
+    expect(tagebuchzeile(falte(GRUNDLAGE), eintreffen).zeitpunkt).toBe("2026-09-08T11:00:00+02:00");
   });
 });

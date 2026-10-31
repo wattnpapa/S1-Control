@@ -93,6 +93,8 @@ export {
   type Markenton,
 } from "./abloesung.js";
 
+export { offeneAbloesungen, type OffeneAbloesung } from "./abloesung-offen.js";
+
 export {
   TEILBEREICHE,
   dienstpostenblatt,

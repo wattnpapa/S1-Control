@@ -78,9 +78,10 @@ export const STOERFAELLE: readonly Stoerfall[] = [
     woran:
       "Die Statuszeile zeigt „Share nicht erreichbar“, die Liste der anderen Arbeitsplätze altert, und die Zahl der unübertragenen Bytes wächst.",
     ursache:
-      "Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den lokalen Spiegel.",
+      "Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den Zwischenspeicher.",
     schritte: [
-      "Weiterarbeiten. Alles Eingetippte liegt im lokalen Spiegel und geht nicht verloren (§5.3).",
+      "Weiterarbeiten, solange das Fenster den Dienst erreicht. Alles Eingetippte bleibt erhalten und wird übertragen, sobald der Share wieder da ist.",
+      "Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Ausgaben“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.",
       "Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.",
       "Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.",
       "Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.",
@@ -97,7 +98,7 @@ export const STOERFAELLE: readonly Stoerfall[] = [
     ursache: "Auf dem betroffenen Rechner geht die Systemuhr falsch, meist nach einem Kaltstart ohne Netz.",
     schritte: [
       "Die Uhr des betroffenen Rechners stellen — Zeitzone mit prüfen.",
-      "Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief (§2.6).",
+      "Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief.",
       "Zeitpunkte, die für die Auswertung zählen, dort nachtragen, wo sie eingetippt werden — sie sind ein Feld und keine Systemzeit.",
     ],
     nicht: "Die Uhr während einer laufenden Erfassung zurückstellen und darauf hoffen, dass sich die Reihenfolge korrigiert. Sie tut es nicht, weil sie nie daran hing.",
@@ -111,7 +112,7 @@ export const STOERFAELLE: readonly Stoerfall[] = [
     ursache:
       "Zwei Bediener haben dasselbe Feld geändert, ohne den Stand des anderen gesehen zu haben. Der Fold entscheidet dann nach fester Regel und merkt sich, was er verdrängt hat.",
     schritte: [
-      "Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert (§3.8).",
+      "Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert.",
       "Fachlich klären, welcher Wert stimmt — das entscheidet ein Mensch und kein Programm.",
       "Den richtigen Wert neu eintragen. Damit ist er der jüngste und gewinnt.",
     ],
@@ -144,7 +145,7 @@ export const STOERFAELLE: readonly Stoerfall[] = [
       "Die Protokolldatei öffnen — ihr Ort steht in der Diagnoseansicht und in der Kurzanleitung.",
       "Startet die Anwendung ohne Einsatz, aber nicht mit: Ein anderer Rechner führt den Einsatz weiter, dieser wird nachgezogen.",
       "Startet sie gar nicht: Die portable Fassung vom Stick starten. Sie braucht keine Installation und keinen Spiegel.",
-      "Der lokale Spiegel darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort (§1.3).",
+      "Der lokale Zwischenspeicher darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort.",
     ],
     nicht: "Dateien im Einsatzordner auf dem Share löschen oder von Hand bearbeiten. Das ist der einzige Griff, der Daten kostet.",
     dringlichkeit: "sofort",

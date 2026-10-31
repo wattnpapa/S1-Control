@@ -16,34 +16,24 @@
  * K17, und wer wann Dienst hatte, steht damit auch im Tagebuch.
  */
 
-import { useEffect, useState } from "react";
-import { useGrundabfrage } from "./Grundabfrage.js";
+import { useEffect, useRef, useState } from "react";
 
-import { schichtTitel, type Dienstpostenzeile, type Teilbereichsblock } from "@s1/domaene";
+import { schichtTitel } from "@s1/domaene";
 
 import { useAnlegeversuch } from "./Anlegeversuch.js";
+import { Block, Planzelle } from "./Fuehrungsstellenzeilen.js";
 import { useLaden } from "./laden.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { Stammdatenblock } from "./Stammdatenmaske.js";
-import {
-  dienstpostenAnlegen,
-  dienstpostenBesetzt,
-  dienstpostenEntfernt,
-  dienstpostenWiederhergestellt,
-  schichtplanEintrag,
-} from "../kontrakt/bedienschritte.js";
+import { dienstpostenAnlegen } from "../kontrakt/bedienschritte.js";
 
 /** Die fünf Teilbereiche der Vorlage — die Vorbelegung der Anlegemaske. */
 const TEILBEREICHE = ["Stab", "ZTr FK", "FGr F", "FGr K", "Externe"] as const;
 
 /** Die Schichten, die das Blatt führt. Die Vorlage kennt Tag und Nacht paarweise. */
 const SCHICHTEN = ["TAG", "NACHT", "FRUEH", "SPAET"] as const;
-
-const ROLLENTEXT: Readonly<Record<string, string>> = {
-  fuehrer: "Fü",
-  unterfuehrer: "UFü",
-  mannschaft: "He",
-};
 
 function neueKennung(): string {
   return `dp-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -54,6 +44,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
   const holeFuest = laden.holeFuest;
   const [neu, setzeNeu] = useState({ teileinheit: "Stab", funktion: "", schicht: "TAG" });
   const versuch = useAnlegeversuch();
+  const nurLesen = useNurLesen();
   /**
    * Tage, die dieses Fenster zusätzlich zeigt.
    *
@@ -65,6 +56,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
    */
   const [zusaetzlicheTage, setzeZusaetzlicheTage] = useState<readonly string[]>([]);
   const [neuerTag, setzeNeuenTag] = useState("");
+  const anlageLaeuft = useRef(false);
 
   useEffect(() => {
     void holeFuest();
@@ -74,7 +66,16 @@ export function Fuehrungsstelle(): React.JSX.Element {
   const tage = [...new Set([...(ansicht?.plan.tage ?? []), ...zusaetzlicheTage])].sort();
 
   async function lege(): Promise<void> {
-    if (neu.funktion.trim() === "" || versuch.gesperrt) return;
+    if (neu.funktion.trim() === "" || versuch.gesperrt || nurLesen || anlageLaeuft.current) return;
+    anlageLaeuft.current = true;
+    try {
+      await legeAn();
+    } finally {
+      anlageLaeuft.current = false;
+    }
+  }
+
+  async function legeAn(): Promise<void> {
     const bisher = ansicht?.bloecke.find((block) => block.teileinheit === neu.teileinheit);
     // Die Kennung bleibt bei einer Wiederholung gleich (`Anlegeversuch.tsx`);
     // die Eingabe wird erst nach bestätigtem Schreiben geleert.
@@ -108,6 +109,8 @@ export function Fuehrungsstelle(): React.JSX.Element {
 
       {/* Oben die Stammdaten: Das Blatt „Stammdaten“ der Excel trägt den
           Namen, unter dem diese Führungsstelle auf jedem Ausdruck steht. */}
+      <NurLesenHinweis />
+
       <Stammdatenblock />
 
       <div className="fuestsumme">
@@ -146,6 +149,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
           <input
             type="text"
             value={neu.funktion}
+            disabled={nurLesen}
             onChange={(e) => {
               setzeNeu((wert) => ({ ...wert, funktion: e.target.value }));
             }}
@@ -169,9 +173,19 @@ export function Fuehrungsstelle(): React.JSX.Element {
             ))}
           </select>
         </label>
-        <button type="button" disabled={versuch.gesperrt} title={versuch.sperre} onClick={() => void lege()}>
+        <button
+          type="button"
+          disabled={versuch.gesperrt || nurLesen}
+          title={versuch.sperre ?? (nurLesen ? TEXT_NUR_LESEN : undefined)}
+          onClick={() => void lege()}
+        >
           Dienstposten anlegen
         </button>
+        {neu.funktion.trim() === "" && !nurLesen && (
+          <span className="hinweistext" data-testid="dienstposten-fehlt">
+            Funktion eintragen
+          </span>
+        )}
         {versuch.anzeige}
       </div>
 
@@ -205,7 +219,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
       {tage.length === 0 ? (
         <p className="hinweistext">
           Noch kein Tag beschrieben. Die Spalten entstehen aus den Einträgen und nicht aus einem
-          Kalender (§5.7); für den ersten Eintrag eines Tages öffnet der Knopf oben eine Spalte.
+          Kalender; für den ersten Eintrag eines Tages öffnet der Knopf oben eine Spalte.
         </p>
       ) : (
         <table className="schichtplan">
@@ -239,154 +253,5 @@ export function Fuehrungsstelle(): React.JSX.Element {
         </table>
       )}
     </section>
-  );
-}
-
-function Block({ block }: { readonly block: Teilbereichsblock }): React.JSX.Element {
-  return (
-    <div className="teilbereich">
-      <h3>{block.teileinheit}</h3>
-      <table className="dienstposten">
-        <thead>
-          <tr>
-            <th scope="col">Funktion</th>
-            <th scope="col">Schicht</th>
-            <th scope="col">Rolle</th>
-            <th scope="col">Besetzung</th>
-            <th scope="col">Handlung</th>
-          </tr>
-        </thead>
-        <tbody>
-          {block.zeilen.map((zeile) => (
-            <Postenzeile key={zeile.id} zeile={zeile} />
-          ))}
-          {Object.entries(block.summeJeSchicht).map(([schicht, staerke]) => (
-            <tr key={schicht} className="summenzeile">
-              <th scope="row" colSpan={3}>
-                Besetzt · {schicht}
-              </th>
-              <td colSpan={2}>
-                {staerke.fuehrer}/{staerke.unterfuehrer}/{staerke.mannschaft}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function Postenzeile({ zeile }: { readonly zeile: Dienstpostenzeile }): React.JSX.Element {
-  const laden = useLaden();
-  const grundabfrage = useGrundabfrage();
-  const [entwurf, setzeEntwurf] = useState<string | undefined>(undefined);
-
-  function uebernimm(): void {
-    if (entwurf === undefined) return;
-    const neu = entwurf.trim();
-    setzeEntwurf(undefined);
-    if (neu === zeile.besetzung) return;
-    // §2.2a: `vorher` ist der Wert, den dieses Fenster gezeigt hat. Ein leeres
-    // Feld heißt „unbesetzt“, und das ist im Zustand `null` und nicht "".
-    void laden.bediene(
-      dienstpostenBesetzt(zeile.id, zeile.besetzung === "" ? null : zeile.besetzung, neu),
-    );
-  }
-
-  return (
-    <tr className={zeile.entfernt ? "entfernt" : ""}>
-      <th scope="row">{zeile.funktion}</th>
-      <td>{schichtTitel(zeile.schicht)}</td>
-      <td>{ROLLENTEXT[zeile.rolle] ?? zeile.rolle}</td>
-      <td>
-        <input
-          type="text"
-          aria-label={`Besetzung ${zeile.funktion} ${zeile.schicht}`}
-          value={entwurf ?? zeile.besetzung}
-          disabled={zeile.entfernt}
-          onChange={(e) => {
-            setzeEntwurf(e.target.value);
-          }}
-          onBlur={uebernimm}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") uebernimm();
-            if (e.key === "Escape") setzeEntwurf(undefined);
-          }}
-        />
-      </td>
-      <td>
-        {zeile.entfernt ? (
-          <button
-            type="button"
-            onClick={() => {
-              void laden.bediene(dienstpostenWiederhergestellt(zeile.id));
-            }}
-          >
-            Wiederherstellen
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => {
-              // §2.4: Auch hier ist der Grund Pflicht — ein Dienstposten
-              // verschwindet nicht ohne Erklärung aus dem Blatt.
-              grundabfrage.frage({
-                titel: "Dienstposten entfernen",
-                erlaeuterung:
-                  "Der Dienstposten bleibt im Einsatztagebuch stehen und lässt sich wiederherstellen.",
-                bestaetigungstext: "Entfernen",
-                aufGrund: (grund) => {
-                  void laden.bediene(dienstpostenEntfernt(zeile.id, grund));
-                },
-              });
-            }}
-          >
-            Entfernen
-          </button>
-        )}
-        {grundabfrage.maske}
-      </td>
-    </tr>
-  );
-}
-
-function Planzelle({
-  dienstpostenId,
-  datum,
-  text,
-}: {
-  readonly dienstpostenId: string;
-  readonly datum: string;
-  readonly text: string;
-}): React.JSX.Element {
-  const laden = useLaden();
-  const [entwurf, setzeEntwurf] = useState<string | undefined>(undefined);
-
-  return (
-    <td>
-      <input
-        type="text"
-        aria-label={`Plan ${dienstpostenId} ${datum}`}
-        value={entwurf ?? text}
-        onChange={(e) => {
-          setzeEntwurf(e.target.value);
-        }}
-        onBlur={() => {
-          if (entwurf === undefined || entwurf === text) {
-            setzeEntwurf(undefined);
-            return;
-          }
-          const neu = entwurf;
-          setzeEntwurf(undefined);
-          void laden.bediene(
-            schichtplanEintrag(dienstpostenId, datum, text === "" ? null : text, neu),
-          );
-        }}
-        onKeyDown={(e) => {
-          if (e.key === "Escape") setzeEntwurf(undefined);
-          if (e.key === "Enter") e.currentTarget.blur();
-        }}
-      />
-    </td>
   );
 }

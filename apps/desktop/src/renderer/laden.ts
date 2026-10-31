@@ -26,6 +26,7 @@ import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { rufe } from "./bruecke.js";
 import { VERBINDUNGSMELDUNGEN } from "./verbindung.js";
+import { meldungsklartext } from "./Ereignisnamen.js";
 import { CODE_EINSATZ_ABGESCHLOSSEN, lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
@@ -210,7 +211,10 @@ export interface Laden {
       | "logfrei"
       | "kosten"
       | "fueorg"
-      | "einheitenliste",
+      | "einheitenliste"
+      | "anforderungen"
+      | "tagebuch"
+      | "papier",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;
@@ -315,7 +319,7 @@ export const useLaden = create<Laden>((setze, hole) => {
       setze({ fehler: undefined });
       return wert;
     } catch (fehler) {
-      setze({ fehler: fehler instanceof Error ? fehler.message : String(fehler) });
+      setze({ fehler: meldungsklartext(fehler instanceof Error ? fehler.message : String(fehler)) });
       return undefined;
     } finally {
       setze({ beschaeftigt: false });
@@ -363,7 +367,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     // Dieselbe Verbindungsmeldung steht nur einmal da, nicht je fehlgeschlagenem Ansichtsruf.
     if (VERBINDUNGSMELDUNGEN.includes(text) && hole().hinweise.some((h) => h.text === text)) return;
     hinweisNummer += 1;
-    const hinweise = [...hole().hinweise, { nummer: hinweisNummer, stufe, text }];
+    const hinweise = [...hole().hinweise, { nummer: hinweisNummer, stufe, text: meldungsklartext(text) }];
     setze({ hinweise: hinweise.slice(-HINWEISE_MAX) });
   }
 

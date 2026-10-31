@@ -42,6 +42,64 @@
         min-height: 48px;
         padding: 0 20px;
         font: inherit;
+        margin: 4px 8px 4px 0;
+      }
+      /* Der Papier-Vordruck steht nur im Druck: Auf dem Bildschirm bleibt die Seite ein Hinweis. */
+      #vordruck {
+        display: none;
+      }
+      @media print {
+        @page {
+          size: A4 portrait;
+          margin: 12mm 10mm 14mm;
+        }
+        body {
+          background: #fff;
+          color: #000;
+          font: 10pt/1.3 system-ui, sans-serif;
+        }
+        main {
+          display: none;
+        }
+        #vordruck {
+          display: block;
+        }
+        #vordruck section {
+          break-after: page;
+        }
+        #vordruck section:last-child {
+          break-after: auto;
+        }
+        #vordruck h2 {
+          font-size: 13pt;
+          margin: 0 0 3mm;
+        }
+        #vordruck .feld {
+          display: inline-block;
+          border-bottom: 0.3mm solid #000;
+          min-width: 40mm;
+          height: 7mm;
+          margin-right: 4mm;
+        }
+        #vordruck .block {
+          border: 0.3mm solid #666;
+          min-height: 70mm;
+          padding: 2mm;
+          margin-bottom: 3mm;
+        }
+        #vordruck table {
+          border-collapse: collapse;
+          width: 100%;
+        }
+        #vordruck th,
+        #vordruck td {
+          border: 0.3mm solid #666;
+          padding: 0 1.5mm;
+          text-align: left;
+        }
+        #vordruck td {
+          height: 10mm;
+        }
       }
     </style>
   </head>
@@ -50,12 +108,48 @@
       <h1>⚠ Dienst nicht erreichbar</h1>
       <p>Es wird neu verbunden. Diese Seite lädt sich selbst, sobald der Dienst wieder antwortet.</p>
       <p>
-        Bis dahin wird nichts gespeichert. Bereits Gespeichertes bleibt erhalten; was Sie jetzt melden, halten Sie
-        bitte auf Papier fest.
+        Solange der Dienst nicht antwortet, ist die Eingabe gesperrt und es wird nichts gespeichert. Bereits
+        Gespeichertes bleibt erhalten. Arbeiten Sie jetzt auf Papier weiter und tragen Sie die Meldungen später nach.
       </p>
       <p id="stand">Nächster Versuch in wenigen Sekunden …</p>
       <button type="button" id="jetzt">Jetzt erneut versuchen</button>
+      <button type="button" id="papier">Papier-Vordruck drucken</button>
+      <p>Der Vordruck enthält Meldeblock, Einheitenliste und Funkprotokoll (A4, je eine Seite).</p>
     </main>
+    <div id="vordruck" aria-hidden="true">
+      <section>
+        <h2>Papier-Vordruck: Meldeblock</h2>
+        <p><span>Datum <span class="feld"></span></span> <span>Uhrzeit <span class="feld"></span></span></p>
+        <p><span>Von <span class="feld"></span></span> <span>An <span class="feld"></span></span></p>
+        <p>Weg: ☐ Funk &nbsp; ☐ Telefon &nbsp; ☐ Melder &nbsp; ☐ Mündlich &nbsp; Dringlichkeit: ☐ normal ☐ dringend</p>
+        <div class="block"><strong>Meldung</strong></div>
+        <div class="block" style="min-height: 40mm"><strong>Maßnahme / Antwort</strong></div>
+        <p><span>Aufgenommen von <span class="feld"></span></span> <span>Quittiert (Uhrzeit) <span class="feld"></span></span></p>
+        <p>☐ im Rechner nachgetragen &nbsp; <span class="feld"></span></p>
+      </section>
+      <section>
+        <h2>Papier-Vordruck: Einheitenliste</h2>
+        <p><span>Stand: Datum <span class="feld"></span></span> <span>Uhrzeit <span class="feld"></span></span></p>
+        <table data-zeilen="16">
+          <thead>
+            <tr>
+              <th>Einheit</th><th>Org.</th><th>Fü</th><th>UFü</th><th>He</th><th>Gesamt</th><th>Abschnitt</th><th>Status</th><th>Funkruf / Kontakt</th><th>Eintreffen</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+      <section>
+        <h2>Papier-Vordruck: Funkprotokoll</h2>
+        <p><span>Datum <span class="feld"></span></span> <span>Funkkreis / Kanal <span class="feld"></span></span> <span>Funker <span class="feld"></span></span></p>
+        <table data-zeilen="18">
+          <thead>
+            <tr><th>Uhrzeit</th><th>Von</th><th>An</th><th>Inhalt der Meldung</th><th>Quittiert</th><th>Nachgetragen</th></tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </div>
     <script>
       (function () {
         var versuche = 0;
@@ -76,6 +170,20 @@
               setTimeout(pruefe, 3000);
             });
         }
+        // Leere Zeilen der Vordruck-Tabellen: so bleibt die Datei klein.
+        document.querySelectorAll("#vordruck table").forEach(function (tabelle) {
+          var spalten = tabelle.querySelectorAll("thead th").length;
+          var zeilen = Number(tabelle.getAttribute("data-zeilen")) || 10;
+          var rumpf = tabelle.querySelector("tbody");
+          for (var i = 0; i < zeilen; i += 1) {
+            var zeile = document.createElement("tr");
+            for (var j = 0; j < spalten; j += 1) zeile.appendChild(document.createElement("td"));
+            rumpf.appendChild(zeile);
+          }
+        });
+        document.getElementById("papier").addEventListener("click", function () {
+          window.print();
+        });
         document.getElementById("jetzt").addEventListener("click", function () {
           stand.textContent = "Es wird verbunden …";
           pruefe();

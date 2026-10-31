@@ -73,20 +73,63 @@ describe("Die Tagebuch-Ansicht", () => {
     expect(screen.getByText("fuest-laptop")).toBeDefined();
   });
 
-  it("beschränkt sich auf die gewählte Einheit, solange der Schalter steht", async () => {
+  it("zeigt standardmäßig alle Einträge und beschränkt sich erst auf Wunsch auf die gewählte Einheit", async () => {
     await zeigeTagebuch("U1");
     await waitFor(() => {
-      expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBe("U1");
+      expect(attrappe.letzterRuf("tagebuchAnfordern")).toBeDefined();
     });
+    expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBeUndefined();
+    expect(screen.queryByText("Alle anzeigen")).toBeNull();
 
     fireEvent.click(screen.getByLabelText("Auf die Auswahl beschränken"));
     await waitFor(() => {
+      expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBe("U1");
+    });
+  });
+
+  it("nennt den wirksamen Filter mit Zählung und bietet „Alle anzeigen“ an", async () => {
+    await zeigeTagebuch("U1");
+    const elf = Array.from({ length: 11 }, (_, nummer) => zeile({ ereignisId: `a-${String(nummer).padStart(10, "0")}` }));
+    attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 9, zeilen: elf, gesamtzahl: 11, von: 0 });
+    fireEvent.change(screen.getByLabelText("Suche"), { target: { value: "x" } });
+    fireEvent.change(screen.getByLabelText("Suche"), { target: { value: "" } });
+    await waitFor(() => {
+      expect(screen.getByText("11 Einträge")).toBeDefined();
+    });
+    attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 9, zeilen: [zeile(), zeile()], gesamtzahl: 2, von: 0 });
+    fireEvent.click(screen.getByLabelText("Auf die Auswahl beschränken"));
+    await waitFor(() => {
+      expect(screen.getByText(/2 von 11 Einträgen \(Filter: Auswahl\)/)).toBeDefined();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Alle anzeigen" }));
+    await waitFor(() => {
       expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBeUndefined();
     });
+    expect((screen.getByLabelText("Auf die Auswahl beschränken") as HTMLInputElement).checked).toBe(false);
+  });
+
+  it("trägt eine freie Meldung mit Quelle und Zeit als Tagebucheintrag ein", async () => {
+    await zeigeTagebuch();
+    attrappe.antwortet("bedienen", { art: "geschrieben", ereignisse: 1 } as never);
+    fireEvent.click(screen.getByRole("button", { name: "Eintrag hinzufügen" }));
+    const speichern = screen.getByRole("button", { name: "Eintrag speichern" }) as HTMLButtonElement;
+    expect(speichern.disabled).toBe(true);
+    fireEvent.change(screen.getByLabelText("Was wurde gemeldet?"), { target: { value: "Deich bei km 4 sickert" } });
+    fireEvent.change(screen.getByLabelText("Quelle"), { target: { value: "Telefon" } });
+    fireEvent.change(screen.getByLabelText("Zeit der Meldung"), { target: { value: "0630" } });
+    fireEvent.click(speichern);
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("EtbEintragErfasst");
+    });
+    const nutzlast = attrappe.letzterRuf("bedienen")?.entwurf.nutzlast as Record<string, string>;
+    expect(nutzlast["text"]).toBe("Telefon: Deich bei km 4 sickert");
+    expect(new Date(nutzlast["zeitpunkt"] ?? "").getMinutes()).toBe(30);
+    expect(nutzlast["etbId"]).toMatch(/^ETB-/);
   });
 
   it("nimmt den Abschnitt, wenn keine Einheit gewählt ist", async () => {
     await zeigeTagebuch(undefined, "EO");
+    fireEvent.click(screen.getByLabelText("Auf die Auswahl beschränken"));
     await waitFor(() => {
       expect(attrappe.letzterRuf("tagebuchAnfordern")?.abschnittId).toBe("EO");
     });

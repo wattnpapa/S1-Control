@@ -25,21 +25,26 @@
 
 import { useEffect, useState } from "react";
 
+import { taktischeZeit } from "./formate.js";
 import { alter } from "./Statuszeile.js";
 import { natoZeit, schriftgroesse, staerketext } from "./monitorZahlen.js";
+import { Verbindungswarnung } from "./Monitorwarnung.js";
+import type { Verbindungsstatus } from "./verbindung.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
 export interface MonitorEigenschaften {
   readonly lagebild: Lagebild | undefined;
   readonly jetzt: number;
   /**
-   * Der Zonenbuchstabe der Datum-Zeit-Gruppe; Vorbelegung `A` (MEZ, UTC+1).
-   *
-   * Er steht hier und nicht in der Komponente, weil ihn die Führungsstelle
-   * festlegt und nicht der Rechner — die Begründung im Langen steht bei
-   * {@link natoZeit}.
+   * Der Zonenbuchstabe der Datum-Zeit-Gruppe (NATO-Schreibweise). Ohne ihn
+   * zeigt der Monitor **dieselbe Zeit wie das Kopfband** ({@link taktischeZeit}):
+   * Zwei Uhren an einem Arbeitsplatz, die um eine Stunde auseinanderliegen,
+   * ließen den Bediener raten, welcher er glauben soll. Die Begründung im
+   * Langen steht bei {@link natoZeit}.
    */
   readonly zone?: string;
+  /** Die Verbindung Browser↔Dienst; bei Unterbrechung steht ein Warnstreifen über der Zahl. */
+  readonly verbindung?: Verbindungsstatus;
 }
 
 /** Die Fenstermasse in Pixeln — die einzige Grösse, die der Monitor selbst misst. */
@@ -83,9 +88,10 @@ function useFenstermass(): Fenstermass {
   return mass;
 }
 
-export function Monitor({ lagebild, jetzt, zone = "A" }: MonitorEigenschaften): React.JSX.Element {
+export function Monitor({ lagebild, jetzt, zone, verbindung }: MonitorEigenschaften): React.JSX.Element {
   const mass = useFenstermass();
-  const zeit = natoZeit(jetzt, zone);
+  const zeit = zone === undefined ? taktischeZeit(jetzt) : natoZeit(jetzt, zone);
+  const warnung = verbindung?.zustand === "unterbrochen" ? <Verbindungswarnung status={verbindung} jetzt={jetzt} /> : null;
 
   if (lagebild === undefined) {
     // Ruhig und ohne Zahl: Ein Monitor, der „0/0/0 = 0“ zeigt, behauptet, es
@@ -94,6 +100,7 @@ export function Monitor({ lagebild, jetzt, zone = "A" }: MonitorEigenschaften): 
     // stehen: Sie ist die einzige Auskunft, die auch ohne Akte gilt.
     return (
       <section className="monitor monitorruhig" aria-label="Stärke-Monitor">
+        {warnung}
         <p className="monitorhinweis">Kein Einsatz geöffnet</p>
         <p className="monitorzeit">{zeit}</p>
       </section>
@@ -105,10 +112,13 @@ export function Monitor({ lagebild, jetzt, zone = "A" }: MonitorEigenschaften): 
 
   return (
     <section className="monitor" aria-label="Stärke-Monitor">
+      {warnung}
       {/* Die Beschriftung steht über der Zahl und in der Reihenfolge der
           Spalten AJ/AK/AL/AM des Blatts Stärke: Wer aus fünf Metern liest,
           soll nicht raten müssen, welche der drei Zahlen die Führer sind. */}
-      <p className="monitorbeschriftung">Fü / UFü / He = Gesamt</p>
+      <p className="monitorbeschriftung" style={{ opacity: 0.9 }}>
+        <strong>Ist-Stärke</strong> · Fü / UFü / He = Gesamt
+      </p>
       <p className="monitorstaerke" style={{ fontSize: `${String(grad)}px` }}>
         {text}
       </p>
@@ -120,7 +130,7 @@ export function Monitor({ lagebild, jetzt, zone = "A" }: MonitorEigenschaften): 
             `alter` ist importiert und nicht nachgebaut. Zwei Fassungen
             derselben Angabe wären zwei Gelegenheiten, verschieden zu runden —
             und der Monitor steht neben dem Arbeitsplatz an der Wand. */}
-        <span className="monitorstand" title={lagebild.standHlc}>
+        <span className="monitorstand" title={lagebild.standHlc} style={{ opacity: 1 }}>
           Stand:{" "}
           {lagebild.standWanduhr === "" ? "keine Ereignisse" : alter(lagebild.standWanduhr, jetzt)}
         </span>

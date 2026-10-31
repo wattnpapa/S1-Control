@@ -71,6 +71,7 @@ export function Beendenmaske({ lagebild, aufSchliessen }: { lagebild: Lagebild; 
       bestaetigungstext="Einsatz beenden"
       bereit={zeitpunkt !== undefined}
       nurKnopf
+      startfokus="abbrechen"
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={beende}
     >

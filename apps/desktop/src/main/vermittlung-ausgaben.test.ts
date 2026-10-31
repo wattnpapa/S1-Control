@@ -14,6 +14,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { liesZip } from "@s1/ausgaben";
 import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof } from "./arbeiterhof.js";
@@ -145,5 +146,53 @@ describe("Die Einheitenliste als Ausgabe", () => {
       expect(meldung).toMatch(/HTML/u);
       if (plattform === "web") expect(meldung).toMatch(/nur in der Desktop-App/u);
     }
+  });
+});
+
+describe("HTML-Ausgaben für den Browser: Logistik, Kosten, Führungsorganisation, Listen, Papier", () => {
+  const FAELLE: readonly (readonly [string, RegExp, string])[] = [
+    ["log", /^logistik_.*\.html$/, "Logistik"],
+    ["kosten", /^kosten_.*\.html$/, "Kosten"],
+    ["fueorg", /^fueorg_.*\.html$/, "Hochwasser Weser-Ems"],
+    ["anforderungen", /^anforderungen_.*\.html$/, "Anforderungen"],
+    ["tagebuch", /^tagebuch_.*\.html$/, "Einsatztagebuch"],
+    ["papier", /^papier-vordruck_.*\.html$/, "Papier-Vordruck: Funkprotokoll"],
+  ];
+
+  it.each(FAELLE)("%s entsteht ohne Drucker als HTML in „ausgaben“ und ist bildschirmtauglich", async (ausgabe, muster, inhalt) => {
+    const { vermittlung, akteId } = await vermittlungMitEinsatz(undefined, "web");
+    const { pfad } = await ruf<{ pfad: string }>(vermittlung, {
+      art: "ausgabeErzeugen",
+      akteId,
+      ausgabe,
+      format: "html",
+    } as Ruf);
+    expect(path.basename(pfad)).toMatch(muster);
+    const html = readFileSync(pfad, "utf8");
+    expect(html).toContain(inhalt);
+    expect(html).toContain('name="viewport"');
+  });
+
+  it("Anforderungen und Tagebuch tragen Seitenzahl, Stand und Notizspalte", async () => {
+    const { vermittlung, akteId } = await vermittlungMitEinsatz(undefined, "web");
+    for (const ausgabe of ["anforderungen", "tagebuch"]) {
+      const { pfad } = await ruf<{ pfad: string }>(vermittlung, {
+        art: "ausgabeErzeugen",
+        akteId,
+        ausgabe,
+        format: "html",
+      } as Ruf);
+      const html = readFileSync(pfad, "utf8");
+      expect(html).toContain('counter(page) " von " counter(pages)');
+      expect(html).toContain("Stand: ");
+      expect(html).toContain("Notiz");
+    }
+  });
+
+  it("die Einsatzakte enthält ein lesbares Tagebuch als HTML", async () => {
+    const { vermittlung, akteId } = await vermittlungMitEinsatz(undefined, "web");
+    const akte = await ruf<{ pfad: string }>(vermittlung, { art: "akteErzeugen", akteId });
+    const eintraege = liesZip(new Uint8Array(readFileSync(akte.pfad))).map((e) => e.pfad);
+    expect(eintraege.some((pfad) => /ausgaben\/tagebuch_.*\.html$/.test(pfad))).toBe(true);
   });
 });

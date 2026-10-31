@@ -80,8 +80,27 @@ describe("Kopfband", () => {
     // Auf Touch gibt es keinen Tooltip: Ein Tipp auf „Regel“ zeigt den Text.
     expect(screen.queryByRole("note")).toBeNull();
     await userEvent.click(screen.getByRole("button", { name: "Regel" }));
-    expect(screen.getByRole("note").textContent).toBe(STAERKE_REGEL);
+    expect(screen.getByRole("note").textContent).toContain(STAERKE_REGEL);
     await userEvent.click(screen.getByRole("button", { name: "Regel" }));
+    expect(screen.queryByRole("note")).toBeNull();
+  });
+
+  it("schließt die Zählregel per Esc, Tipp daneben und „Schließen“", async () => {
+    render(
+      <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    const oeffne = async (): Promise<void> => {
+      await userEvent.click(screen.getByRole("button", { name: "Regel" }));
+      expect(screen.getByRole("note")).toBeDefined();
+    };
+    await oeffne();
+    await userEvent.keyboard("{Escape}");
+    expect(screen.queryByRole("note")).toBeNull();
+    await oeffne();
+    await userEvent.click(document.body);
+    expect(screen.queryByRole("note")).toBeNull();
+    await oeffne();
+    await userEvent.click(screen.getByRole("button", { name: "Schließen" }));
     expect(screen.queryByRole("note")).toBeNull();
   });
 

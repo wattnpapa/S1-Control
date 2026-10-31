@@ -12,6 +12,7 @@ import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Monitor } from "./Monitor.js";
+import { taktischeZeit } from "./formate.js";
 import { SCHRIFT_MIN } from "./monitorZahlen.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
@@ -64,12 +65,17 @@ describe("Monitor", () => {
   it("zeigt die Gesamtstärke in der Schreibweise des Blatts Stärke", () => {
     zeige();
     expect(screen.getByText("1/2/20 = 23")).toBeDefined();
-    expect(screen.getByText("Fü / UFü / He = Gesamt")).toBeDefined();
+    expect(screen.getByText(/Fü \/ UFü \/ He = Gesamt/)).toBeDefined();
   });
 
-  it("zeigt die NATO-Zeit in der Zone A", () => {
+  it("beschriftet die Zahl als Ist-Stärke", () => {
     zeige();
-    expect(screen.getByText("101430A SEP 26")).toBeDefined();
+    expect(screen.getByText("Ist-Stärke")).toBeDefined();
+  });
+
+  it("zeigt dieselbe Zeit wie das Kopfband, nicht eine andere Zone", () => {
+    zeige();
+    expect(screen.getByText(taktischeZeit(JETZT))).toBeDefined();
   });
 
   it("nimmt einen anderen Zonenbuchstaben von aussen entgegen", () => {
@@ -93,7 +99,28 @@ describe("Monitor", () => {
     expect(screen.getByText("Kein Einsatz geöffnet")).toBeDefined();
     expect(screen.queryByText(/=/)).toBeNull();
     // Die Uhr gilt auch ohne Akte und bleibt deshalb stehen.
-    expect(screen.getByText("101430A SEP 26")).toBeDefined();
+    expect(screen.getByText(taktischeZeit(JETZT))).toBeDefined();
+  });
+
+  it("warnt bei Verbindungsverlust mit Symbol, Wort und Stand – Zahl bleibt stehen", () => {
+    const status = { zustand: "unterbrochen", stufe: "gelb", seitMs: 90_000 } as const;
+    render(<Monitor lagebild={GRUND} jetzt={JETZT} verbindung={status} />);
+    const streifen = screen.getByRole("alert");
+    const stand = new Date(JETZT - 90_000);
+    const hhmm = `${String(stand.getHours()).padStart(2, "0")}:${String(stand.getMinutes()).padStart(2, "0")}`;
+    expect(streifen.textContent).toBe(`⚠ Keine Verbindung – Stand ${hhmm}`);
+    expect(screen.getByText("1/2/20 = 23")).toBeDefined();
+  });
+
+  it("wird nach langer Unterbrechung rot mit ✖ und warnt auch ohne Einsatz", () => {
+    const status = { zustand: "unterbrochen", stufe: "rot", seitMs: 120_000 } as const;
+    render(<Monitor lagebild={undefined} jetzt={JETZT} verbindung={status} />);
+    expect(screen.getByRole("alert").textContent).toMatch(/^✖ Keine Verbindung – Stand \d\d:\d\d$/);
+  });
+
+  it("zeigt bei bestehender Verbindung keinen Streifen", () => {
+    render(<Monitor lagebild={GRUND} jetzt={JETZT} verbindung={{ zustand: "verbunden", letzterKontakt: JETZT }} />);
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 
   it("trägt seine Beschriftung für die Fensterwahl", () => {

@@ -1,7 +1,8 @@
 /**
  * Der Hinweis über der Lage, solange die Verbindung zum Dienst fehlt.
  *
- * Er steht fest unter dem Kopfband und nicht in der Hinweisliste am Seitenende
+ * Er steht fest am oberen Bildrand (`position: fixed` in `index.html`, der Körper
+ * rückt um `--bannerhoehe` nach unten) und nicht in der Hinweisliste am Seitenende
  * (auf dem Handy erst nach langem Scrollen zu sehen) und sagt die praktische
  * Folge: Die Anzeige ist veraltet, Eingaben werden nicht gespeichert. Nach der
  * Wiederverbindung steht kurz die Bestätigung, dann verschwindet er.
@@ -14,8 +15,9 @@ import { useVerbindungsabgleich } from "./verbindungsabgleich.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 
 /**
- * Meldet die Höhe des Banners als `--bannerhoehe` an die Seite: Ein Dialog
- * rückt damit unter das Banner, das dann fest über ihm steht (`index.html`).
+ * Meldet die Höhe des Banners als `--bannerhoehe` an die Seite: Der Körper und
+ * jeder Dialog rücken damit unter das Banner, das fest über ihnen steht
+ * (`index.html`).
  */
 function useBannerhoehe(): (knoten: HTMLElement | null) => void {
   return useCallback((knoten: HTMLElement | null) => {
@@ -36,7 +38,7 @@ function useBannerhoehe(): (knoten: HTMLElement | null) => void {
  */
 function stil(art: "warn" | "err" | "ok"): React.CSSProperties {
   return {
-    margin: "14px 14px 0",
+    margin: 0,
     padding: "9px 13px",
     background: `var(--${art}-bg)`,
     border: `var(--rahmenbreite, 1px) solid var(--${art}-linie)`,

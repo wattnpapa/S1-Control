@@ -38,6 +38,7 @@ import {
   schreibenGesperrt,
   useVerbindung,
 } from "./verbindung.js";
+import { meldeBeimSchliessenAb } from "./abmeldung.js";
 import { starteUeberwachung } from "./verbindungsueberwachung.js";
 
 export interface WebbrueckeOptionen {
@@ -83,9 +84,9 @@ export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
     quelle = new Quelle("mitteilungen");
     const verbindung = useVerbindung.getState();
     verbindung.starte(uhr());
-    quelle.addEventListener("open", () => useVerbindung.getState().meldeKontakt(uhr()));
+    quelle.addEventListener("open", () => useVerbindung.getState().meldeStromKontakt(uhr()));
     quelle.addEventListener("mitteilung", (ereignis) => {
-      useVerbindung.getState().meldeKontakt(uhr());
+      useVerbindung.getState().meldeStromKontakt(uhr());
       const mitteilung = JSON.parse((ereignis as MessageEvent<string>).data) as Mitteilung;
       for (const hoerer of zuhoerer) hoerer(mitteilung);
     });
@@ -99,6 +100,15 @@ export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
         },
         ...(typeof window === "undefined" ? {} : { fenster: window }),
       });
+    }
+    if (typeof window !== "undefined" && optionen.ueberwachen !== false) {
+      const beacon = typeof navigator === "undefined" ? undefined : navigator.sendBeacon?.bind(navigator);
+      const ohneAbmeldung = meldeBeimSchliessenAb(window, beacon);
+      const bisher = anhalten;
+      anhalten = () => {
+        bisher?.();
+        ohneAbmeldung();
+      };
     }
   }
 

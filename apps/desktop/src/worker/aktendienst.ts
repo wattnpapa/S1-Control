@@ -54,14 +54,17 @@ import {
 } from "@s1/domaene";
 import {
   Akte,
+  PRAESENZ_TAKT_MS,
   Praesenzbeobachtung,
   clientPraefix,
+  entfernePraesenz,
   istVerwaltungsereignis,
   liesFremdePraesenz,
   liesLokaleHistorie,
   oeffneAkte,
   schreibePraesenz,
   segmentText,
+  uhrAbweichungMs,
   type Dateisystem,
   type Einsatzablage,
   type Ereignisentwurf,
@@ -83,6 +86,7 @@ import {
   druckdaten,
   einheitenlisteAlsHtml,
   einheitenlistendaten,
+  bildschirmtauglich,
   monitorAlsHtml,
   statusAlsHtml,
   statusdaten,
@@ -111,6 +115,7 @@ import {
 } from "../kontrakt/index.js";
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
+import { LISTENAUSGABEN, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -118,6 +123,12 @@ import {
   pruefeAbschluss,
 } from "./einsatzabschluss.js";
 import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
+import { buendelUrsachen } from "./buendelablehnung.js";
+import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
+import { schreibhinweise } from "./schreibhinweise.js";
+import { Bearbeitungssperren } from "./bearbeitungssperren.js";
+import { pruefeVorwert } from "./vorwertpruefung.js";
+import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
 /**
@@ -133,7 +144,14 @@ import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
  * Eine Liste an einer Stelle: Worker, Vermittlung und Auftragsweg lesen sie
  * von hier, damit eine neue Seite nicht an drei Orten nachgetragen wird.
  */
-export type Seitenausgabe = "druck" | "status" | "log" | "kosten" | "fueorg" | "einheitenliste";
+export type Seitenausgabe =
+  | "druck"
+  | "status"
+  | "log"
+  | "kosten"
+  | "fueorg"
+  | "einheitenliste"
+  | Listenausgabe;
 
 export interface Takte {
   readonly spiegelungMs: number;
@@ -155,7 +173,7 @@ export const TAKTE_VORBELEGUNG: Takte = {
   spiegelungMs: 1_000,
   taktAMs: 1_000,
   taktBMs: 4_000,
-  praesenzMs: 15_000,
+  praesenzMs: PRAESENZ_TAKT_MS,
   monitorMs: 30_000,
 };
 
@@ -235,10 +253,24 @@ export class Aktendienst {
   #letzterTaktA = Number.NEGATIVE_INFINITY;
   #letzterTaktB = Number.NEGATIVE_INFINITY;
   #letztePraesenz = Number.NEGATIVE_INFINITY;
+  readonly #sperren = new Bearbeitungssperren();
 
   #gesendet: Lagebild;
   #folge = 0;
   #geschlossen = false;
+
+  /**
+   * Die Warteschlange der Schreibwege.
+   *
+   * Prüfung (Einsatzstatus, Bestand) und Schreiben liegen in einem
+   * `await`-Abstand; ohne Reihenfolge liefen zwei Bedienschritte ineinander:
+   * Eine Einheitenanlage, die kurz vor „Einsatz beenden“ geprüft wurde,
+   * landete nach dem Ende noch im Einsatz. Jeder Schreibweg läuft deshalb
+   * hintereinander, und jeder prüft gegen den Zustand, den der vorige schon
+   * gefaltet hat. Mehrere Arbeitsplätze mit eigenem Worker schreiben je ein
+   * eigenes Segment (append-only); dort greift der Fold (`nachArchivierungEingegangen`).
+   */
+  #schlange: Promise<unknown> = Promise.resolve();
 
   /**
    * Zaehlt jedes gefaltete fachliche Ereignis (M3.7).
@@ -383,6 +415,30 @@ export class Aktendienst {
     return ergebnis;
   }
 
+  /**
+   * Setzt, verlängert oder gibt eine Bearbeitungssperre frei (`frei`). Die
+   * Präsenz wird beim nächsten Takt sofort geschrieben, damit die Kollegen die
+   * Änderung nach höchstens einem eigenen Präsenztakt sehen.
+   */
+  sperre(entitaetId: string, frei: boolean): void {
+    const jetzt = this.#o.zeit();
+    const geaendert = frei ? this.#sperren.gib(entitaetId) : this.#sperren.setze(entitaetId, jetzt);
+    if (geaendert) this.#letztePraesenz = Number.NEGATIVE_INFINITY;
+  }
+
+  /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
+  async meldeAb(): Promise<void> {
+    await entfernePraesenz({
+      dateisystem: this.#o.dateisystem,
+      zeit: this.#o.zeit,
+      ablage: this.#o.ablage,
+      clientId: this.#clientId,
+      anzeigename: this.#o.anzeigename,
+      rechnername: this.#o.rechnername,
+      programmversion: this.#o.programmversion,
+    });
+  }
+
   /** Beendet den Dienst. Weitere Takte tun nichts mehr. */
   schliesse(meldung = "Der Einsatz wurde geschlossen."): void {
     if (this.#geschlossen) return;
@@ -514,8 +570,8 @@ export class Aktendienst {
         this.akte.leser.quarantaenen
           .filter((q) => !q.vorlaeufig)
           .map((q) => ({ datei: q.datei, offset: q.offset })),
+        this.#sperren.aktive(this.#o.zeit()),
       );
-      const jetzt = this.#o.zeit();
       this.#peers = (await liesFremdePraesenz(praesenzOptionen, this.#praesenzbeobachtung)).map(
         (fremd) => {
           // §6.4: Die Praesenzdatei traegt Segment und Offset des anderen
@@ -528,7 +584,6 @@ export class Aktendienst {
           // §2.6: Die Abweichung ordnet nichts; sie erklaert Anzeigen und die
           // Schwellen aus §2.5. Vorzeichenbehaftet, weil „geht vor" und „geht
           // nach" verschiedene Ursachen haben.
-          const dann = Date.parse(fremd.praesenz.wanduhr);
           return {
             clientId: fremd.praesenz.clientId,
             anzeigename: fremd.praesenz.anzeigename,
@@ -539,8 +594,12 @@ export class Aktendienst {
             segment: fremd.praesenz.segment,
             offset: fremd.praesenz.offset,
             gelesenerOffset: gelesen,
-            uhrAbweichungMs: Number.isNaN(dann) ? 0 : dann - jetzt,
+            uhrAbweichungMs: uhrAbweichungMs(
+              fremd,
+              this.#praesenzbeobachtung.gesehenSeit(fremd.praesenz.clientId),
+            ),
             quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
+            ...(fremd.veraltet || fremd.praesenz.bearbeitet === undefined ? {} : { bearbeitet: fremd.praesenz.bearbeitet }),
           };
         },
       );
@@ -556,8 +615,39 @@ export class Aktendienst {
   // Bedienen und Zuruecknehmen
   // -------------------------------------------------------------------------
 
-  /** Ein fachlicher Bedienschritt (§5.2). */
-  async bediene(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+  /** Ein fachlicher Bedienschritt (§5.2) — in der Reihenfolge des Eintreffens. */
+  bediene(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+    return this.#hintereinander(() => this.#bedieneMitFolgen(entwurf));
+  }
+
+  /** Führt `arbeit` aus, sobald alle früher angenommenen Schreibwege fertig sind. */
+  #hintereinander<T>(arbeit: () => Promise<T>): Promise<T> {
+    const lauf = this.#schlange.then(arbeit, arbeit);
+    this.#schlange = lauf.catch(() => undefined);
+    return lauf;
+  }
+
+  /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
+  async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+    const plan = planeFolgen(this.#zustand, entwurf);
+    const ergebnis = await this.#schreibe(entwurf);
+    if (ergebnis.art !== "geschrieben") return ergebnis;
+    const vorab = [...plan.hinweise];
+    for (const folge of plan.folgen) {
+      const folgeErgebnis = await this.#schreibe(folge.entwurf);
+      vorab.push(folgeErgebnis.art === "geschrieben" ? folge.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(folgeErgebnis)}`);
+    }
+    const bereich = anwesendBereichshinweis(this.#zustand, entwurf);
+    if (bereich !== undefined) vorab.push(bereich);
+    return { ...ergebnis, ...schreibhinweise(this.#zustand, entwurf, vorab) };
+  }
+
+  #meldungVon(ergebnis: Bedienergebnis): string {
+    return "meldung" in ergebnis ? ergebnis.meldung : "nicht möglich.";
+  }
+
+  /** Prüft und schreibt einen einzelnen Entwurf — ohne Folgeschritte. */
+  async #schreibe(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
     if (this.#geschlossen) {
       return { art: "nichtMoeglich", meldung: "Die Akte ist geschlossen." };
     }
@@ -608,6 +698,16 @@ export class Aktendienst {
     // allen anderen Prüfungen, damit die Meldung den Grund nennt, der zählt.
     const gesperrt = pruefeAbschluss(this.#zustand, entwurf);
     if (gesperrt !== undefined) return gesperrt;
+    // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
+    // abziehen, als da ist).
+    const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
+    if (unstimmig !== undefined) return unstimmig;
+    // Optimistische Prüfung auf Verlangen: nicht still über einen fremden neueren Wert schreiben.
+    const veraendert = pruefeVorwert(this.#zustand, entwurf, {
+      eigeneClientId: this.#clientId,
+      nameVon: (id) => this.#peers.find((p) => p.clientId === id)?.anzeigename,
+    });
+    if (veraendert !== undefined) return veraendert;
     // §2.4: Der Grund ist bei manchen Arten Pflicht, und die Regel steht im
     // Katalog — dieselbe, die auch der Fold anwendet. Ohne diese Pruefung
     // naehme der Dienst den Bedienschritt an, schriebe ihn in ein
@@ -648,7 +748,11 @@ export class Aktendienst {
    * Dienst entscheidet hier nichts selbst: Ob eine Art ruecknehmbar ist, was
    * die Kompensation setzt und ob sie einen Grund braucht, steht im Katalog.
    */
-  async zurueck(grund?: string): Promise<Bedienergebnis> {
+  zurueck(grund?: string): Promise<Bedienergebnis> {
+    return this.#hintereinander(() => this.#nimmZurueck(grund));
+  }
+
+  async #nimmZurueck(grund?: string): Promise<Bedienergebnis> {
     const oberster = this.#stapel.oberster();
     if (oberster === undefined) {
       return { art: "nichtMoeglich", meldung: "Es ist nichts zurückzunehmen." };
@@ -667,7 +771,7 @@ export class Aktendienst {
         meldung: kompensation.meldung,
       };
     }
-    return this.bediene(kompensation.entwurf);
+    return this.#bedieneMitFolgen(kompensation.entwurf);
   }
 
   /**
@@ -675,10 +779,12 @@ export class Aktendienst {
    * (`einsatzabschluss.ts`). Ob archiviert werden darf, entscheidet dieselbe
    * Prüfung wie bei jedem Bedienschritt.
    */
-  async archiviere(zeitpunkt: string): Promise<Bedienergebnis> {
+  archiviere(zeitpunkt: string): Promise<Bedienergebnis> {
     const fehler = archivierungszeitFehler(zeitpunkt);
-    if (fehler !== undefined) return fehler;
-    return this.bediene(archivierungsentwurf(this.#zustand, this.#o.einsatzId, zeitpunkt));
+    if (fehler !== undefined) return Promise.resolve(fehler);
+    return this.#hintereinander(() =>
+      this.#bedieneMitFolgen(archivierungsentwurf(this.#zustand, this.#o.einsatzId, zeitpunkt)),
+    );
   }
 
   /**
@@ -692,7 +798,29 @@ export class Aktendienst {
    */
   async erzeugeAkte(): Promise<Akteergebnis> {
     await this.#spiegle();
+    await this.#legeTagebuchInDieAkte();
     return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
+  }
+
+  /**
+   * Legt das lesbare Tagebuch (HTML) in `ausgaben/`, bevor die Akte gepackt
+   * wird — so liegt neben den Rohereignissen eine Fassung, die man ohne
+   * Programm im Browser lesen kann. Scheitert das Schreiben, entsteht die
+   * Akte trotzdem: Das Tagebuch ist Zugabe, nicht Voraussetzung.
+   */
+  async #legeTagebuchInDieAkte(): Promise<void> {
+    try {
+      const jetzt = new Date(this.#o.zeit());
+      const kopf = {
+        datum: this.#o.einsatzId.slice(0, 10),
+        einsatzName: alsText(this.#zustand.einsatz?.name.wert),
+        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+      };
+      const html = bildschirmtauglich(tagebuchHtml(this.#zustand, this.#ereignisse, kopf));
+      await this.ausgabeSchreiben(`tagebuch_${dateimarke(jetzt)}.html`, new TextEncoder().encode(html));
+    } catch {
+      // Zugabe: kein Grund, die Akte zu verweigern.
+    }
   }
 
   // -------------------------------------------------------------------------
@@ -872,6 +1000,15 @@ export class Aktendienst {
     ausgabe: Seitenausgabe,
     organisation?: string,
   ): { dateiname: string; html: string } {
+    const gerendert = this.#rendereSeite(ausgabe, organisation);
+    // Bildschirmhülle (viewport, scrollbare Tabellen): wirkt nur am Bildschirm, nicht im Druck.
+    return { dateiname: gerendert.dateiname, html: bildschirmtauglich(gerendert.html) };
+  }
+
+  #rendereSeite(
+    ausgabe: Seitenausgabe,
+    organisation?: string,
+  ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
@@ -879,6 +1016,9 @@ export class Aktendienst {
       stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
     };
     const marke = dateimarke(jetzt);
+    if (LISTENAUSGABEN.has(ausgabe)) {
+      return listenausgabe(ausgabe as Listenausgabe, this.#zustand, this.#ereignisse, kopf, marke);
+    }
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
     }
@@ -1179,6 +1319,7 @@ export class Aktendienst {
     const befund = liesBuendel(text);
     let aufgenommen = 0;
     let bekannt = 0;
+    const abgelehnt = buendelUrsachen(text, befund.eintraege.length, befund.uebersprungen);
 
     for (const eintrag of befund.eintraege) {
       // §3.6: Kennt die Akte die Meldung schon, ist nichts zu tun. Der Fold
@@ -1220,13 +1361,20 @@ export class Aktendienst {
             bekannt,
             uebersprungen: befund.uebersprungen + (befund.eintraege.length - aufgenommen - bekannt),
             name: befund.name,
+            abgelehnt: [...abgelehnt, { grund: `Das Schreiben wurde abgewiesen: ${this.#meldungVon(ergebnis)}` }],
           };
         }
       }
       aufgenommen += 1;
     }
 
-    return { aufgenommen, bekannt, uebersprungen: befund.uebersprungen, name: befund.name };
+    return {
+      aufgenommen,
+      bekannt,
+      uebersprungen: befund.uebersprungen,
+      name: befund.name,
+      ...(abgelehnt.length === 0 ? {} : { abgelehnt }),
+    };
   }
 
   /**
@@ -1385,6 +1533,7 @@ export class Aktendienst {
     const ausserhalb = kennzahlen.staerkeAusserhalbDerGesamtstaerke(zustand);
     const oberster = this.#stapel.oberster();
     const stammdaten = projektion.einsatzstammdaten(zustand);
+    const offeneAbloesungen = projektion.offeneAbloesungen(zustand);
     return {
       einsatzId: this.#o.einsatzId,
       einsatzName: alsText(zustand.einsatz?.name.wert),
@@ -1392,6 +1541,7 @@ export class Aktendienst {
       ...(stammdaten === undefined ? {} : { stammdaten }),
       einsatzStatus: zustand.einsatz?.status ?? "AKTIV",
       einsatzEnde: alsText(zustand.einsatz?.ende?.wert),
+      ...(offeneAbloesungen.length === 0 ? {} : { abloesungenOffen: [...offeneAbloesungen] }),
       standHlc: this.#hoechsteHlc === undefined ? "" : hlcAlsText(this.#hoechsteHlc),
       standWanduhr: this.#letzteWanduhr,
       letzterShareKontakt: this.#letzterShareKontakt,

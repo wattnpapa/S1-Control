@@ -9,7 +9,9 @@
  *
  * **Was ausgeliefert wird.** Genau eine Datei im Ausgabeordner eines
  * Einsatzes: `<share>/einsaetze/<einsatz>/ausgaben/<datei>` mit der Endung
- * `.html`, `.pdf` oder `.xlsx`. Der Pfad kommt aus der Anfrage und wird
+ * `.html`, `.pdf` oder `.xlsx`; dazu die Einsatzakte (`.zip`), die eine Ebene
+ * höher im Einsatzordner liegt und **nie** inline, sondern nur als Download
+ * ausgeliefert wird. Der Pfad kommt aus der Anfrage und wird
  * aufgelöst (`..`, Schrägstriche, Symlinks) und erst danach gegen diese Form
  * geprüft; alles andere ist 404, ohne zu verraten, was es sonst gäbe.
  */
@@ -18,6 +20,8 @@ import * as fsp from "node:fs/promises";
 import type http from "node:http";
 import path from "node:path";
 
+import { bildschirmtauglich } from "@s1/ausgaben";
+
 const ORDNER_EINSAETZE = "einsaetze";
 const ORDNER_AUSGABEN = "ausgaben";
 
@@ -25,6 +29,7 @@ const TYPEN: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
   ".pdf": "application/pdf",
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".zip": "application/zip",
 };
 
 /**
@@ -37,10 +42,12 @@ export async function loeseAusgabePfad(sharePfad: string, gewuenscht: string): P
   const datei = path.resolve(gewuenscht);
   if (!(path.extname(datei).toLowerCase() in TYPEN)) return undefined;
   const teile = path.relative(wurzel, datei).split(path.sep);
-  // <einsatz>/ausgaben/<datei> — genau drei Teile, keiner zeigt nach oben.
-  if (teile.length !== 3 || teile[1] !== ORDNER_AUSGABEN || teile.some((t) => t === ".." || t === "")) {
-    return undefined;
-  }
+  if (teile.some((t) => t === ".." || t === "")) return undefined;
+  // <einsatz>/ausgaben/<datei> — genau drei Teile; die Einsatzakte (.zip)
+  // liegt dagegen unmittelbar im Einsatzordner: <einsatz>/<datei>.zip.
+  const alsAusgabe = teile.length === 3 && teile[1] === ORDNER_AUSGABEN;
+  const alsAkte = teile.length === 2 && path.extname(datei).toLowerCase() === ".zip";
+  if (!alsAusgabe && !alsAkte) return undefined;
   try {
     // Ein Symlink im Ausgabeordner darf nicht aus dem Share hinausführen.
     const echt = await fsp.realpath(datei);
@@ -54,9 +61,9 @@ export async function loeseAusgabePfad(sharePfad: string, gewuenscht: string): P
 }
 
 /** Macht aus der gerenderten Ausgabe eine Bildschirmseite mit „Drucken“-Knopf. */
-export function mitDruckknopf(html: string): string {
+export function mitDruckknopf(roh: string): string {
+  const html = bildschirmtauglich(roh);
   const kopf =
-    '<meta name="viewport" content="width=device-width, initial-scale=1" />' +
     "<style>@media screen{body{font-size:12pt!important;margin:8px!important}" +
     ".druckleiste{position:sticky;top:0;background:#fff;padding:8px 0;z-index:1}" +
     ".druckleiste button{font-size:16px;min-height:44px;padding:0 20px}}" +
@@ -95,7 +102,7 @@ export async function liefereAusgabe(
   antwort.writeHead(200, {
     "content-type": TYPEN[endung] ?? "application/octet-stream",
     "content-length": inhalt.length,
-    "content-disposition": `${laden || endung === ".xlsx" ? "attachment" : "inline"}; filename*=UTF-8''${name}`,
+    "content-disposition": `${laden || endung === ".xlsx" || endung === ".zip" ? "attachment" : "inline"}; filename*=UTF-8''${name}`,
     "cache-control": "no-store",
     "x-content-type-options": "nosniff",
     // Die Seite ist unsere eigene, aber ihr Inhalt stammt aus Freitext: kein

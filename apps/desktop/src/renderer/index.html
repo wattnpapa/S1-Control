@@ -421,6 +421,41 @@
         text-transform: none;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       }
+      .kopfband .kennzahl .zaehlregel .regelschliessen {
+        display: block;
+        margin: 8px 0 0 auto;
+        min-height: 44px;
+        padding: 6px 16px;
+        border: 1px solid var(--rahmen);
+        background: var(--karte);
+        color: var(--text);
+        font: 400 14px/1 var(--ui);
+        cursor: pointer;
+      }
+      /* Schmal: Die Erklaerung haengt am Kopfband (nicht an der Kennzahl) und
+         nutzt dessen volle Breite, damit sie nie rechts aus dem Bild laeuft. */
+      @media (max-width: 900px) {
+        .kopfband {
+          position: relative;
+        }
+        .kopfband .kennzahl.staerke {
+          position: static;
+        }
+        .kopfband .kennzahl .zaehlregel {
+          left: 8px;
+          right: 8px;
+          width: auto;
+          max-width: calc(100vw - 16px);
+          box-sizing: border-box;
+        }
+      }
+      @media (pointer: coarse) {
+        .kopfband .kennzahl .regelknopf {
+          min-height: 44px;
+          min-width: 44px;
+          padding: 6px 14px;
+        }
+      }
       .kopfband .hilfeknopf {
         margin-left: auto;
         height: auto;
@@ -1200,6 +1235,19 @@
         font-weight: 700;
         border-top: var(--rahmenbreite) solid var(--rahmen);
       }
+      /* „Entfernen“ ist folgenreich: Warnfarbe und Abstand zu den Nachbarn,
+         damit der Griff daneben nicht dort landet. */
+      .einheitenkopf button.entfernen {
+        margin-left: 14px;
+        border-color: var(--err-linie);
+        color: var(--err-text);
+        background: var(--err-bg);
+      }
+      .einheitenkopf button.entfernen:disabled {
+        background: var(--gesperrt-bg);
+        border-color: var(--knopf-rahmen);
+        color: var(--gesperrt-text);
+      }
       .einheiten td.berechnet {
         opacity: 0.7;
         font-variant-numeric: tabular-nums;
@@ -1244,8 +1292,38 @@
         z-index: 3;
         background: var(--kopf-bg);
       }
+      /* Summenzeilen: Beschriftung und Zahlen kleben gemeinsam links im Bild,
+         unabhaengig von der Scrollposition; der volle Name bricht um statt
+         abgeschnitten zu werden. */
       .einheiten tfoot th[scope="row"] {
+        position: static;
+        width: auto;
+        min-width: 0;
+        max-width: none;
+        overflow: visible;
+        text-align: left;
         background: var(--kopf-bg);
+      }
+      .einheiten .summeninhalt {
+        position: sticky;
+        left: 0;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 2px 14px;
+        width: max-content;
+        max-width: calc(100vw - 2rem);
+        padding: 2px 0;
+        font-variant-numeric: tabular-nums;
+      }
+      .einheiten .summentitel {
+        flex: 0 1 auto;
+        white-space: normal;
+      }
+      .einheiten .summengesamt::before {
+        content: "= ";
+        font-weight: 400;
       }
       .einheiten td.namensspalte,
       .einheiten thead th.namensspalte {
@@ -1309,8 +1387,8 @@
       }
       /* Handy: Nur die Bezeichnung bleibt links stehen (Abschnitt scrollt weg,
          ist schmal), der Status folgt unmittelbar und ist vollständig lesbar
-         (bricht bei Bedarf auf zwei Zeilen). Die Auswahl liegt als Blatt am
-         unteren Bildrand, Knöpfe immer sichtbar und 48 px hoch. */
+         (bricht bei Bedarf auf zwei Zeilen). Das Auswahlblatt (unten) hat
+         seine eigene, weitere Bedingung. */
       @media (max-width: 700px) {
         .einheiten th[scope="row"],
         .einheiten thead th:first-child {
@@ -1336,6 +1414,11 @@
           text-align: left;
           line-height: 1.15;
         }
+      }
+      /* Das Blatt gilt nicht nur am Handy, sondern bei jeder schmalen, flachen
+         (Querformat) oder grob bedienten (Touch) Anzeige: Dieselbe Bedingung
+         steht als SCHMAL in Einheitenzelle.tsx. */
+      @media (max-width: 900px), (pointer: coarse), (max-height: 500px) {
         .auswahlgrund {
           position: fixed;
           inset: 0;
@@ -1557,6 +1640,73 @@
         display: flex;
         gap: 0.3rem;
         flex-wrap: wrap;
+      }
+      /* Handy: Jede Anforderung ist eine Karte. Die Handlungen stehen als
+         sichtbare Leiste unter den Angaben, volle Breite, Knoepfe >= 44 px
+         mit Abstand; nichts liegt hinter einem Wisch. */
+      @media (max-width: 700px) {
+        .anforderungstabelle,
+        .anforderungstabelle tbody,
+        .anforderungstabelle tr {
+          display: block;
+          width: 100%;
+        }
+        .anforderungstabelle thead {
+          display: none;
+        }
+        .anforderungstabelle tr {
+          box-sizing: border-box;
+          margin: 0 0 12px;
+          border: 1px solid var(--rahmen);
+          border-radius: 4px;
+          background: var(--karte);
+        }
+        .anforderungstabelle th,
+        .anforderungstabelle td {
+          display: flex;
+          gap: 8px;
+          justify-content: space-between;
+          border: 0;
+          border-bottom: 1px solid var(--rahmen);
+          padding: 6px 10px;
+          overflow-wrap: anywhere;
+        }
+        .anforderungstabelle td:empty {
+          display: none;
+        }
+        .anforderungstabelle th[scope="row"] {
+          font-weight: 700;
+          background: var(--kopf-bg);
+        }
+        .anforderungstabelle td[data-label]::before,
+        .anforderungstabelle th[data-label]::before {
+          content: attr(data-label);
+          flex: 0 0 6.5rem;
+          font-weight: 400;
+          color: var(--text-gedaempft, inherit);
+        }
+        .anforderungstabelle td.handlungen {
+          flex-wrap: wrap;
+          gap: 10px;
+          justify-content: stretch;
+          border-bottom: 0;
+          padding: 10px;
+        }
+        .anforderungstabelle td.handlungen::before {
+          flex: 1 1 100%;
+        }
+        .anforderungstabelle td.handlungen button {
+          flex: 1 1 8rem;
+          min-height: 44px;
+        }
+      }
+      @media (pointer: coarse) {
+        .handlungen {
+          gap: 10px;
+        }
+        .handlungen button {
+          min-height: 44px;
+        }
       }
 
       .fuehrungsstelle h2 {
@@ -1917,6 +2067,49 @@
       .tagebuch tr.ruecknahme,
       .tagebuch tr.berichtigung {
         background: var(--zeile-alt);
+      }
+      /* Handy: Jeder Eintrag ist eine Karte — Zeiten klein oben, der Vorgang
+         ueber die volle Breite, Akteur und Rechner klein darunter. So wird der
+         Vorgang nicht in eine 112-px-Spalte gequetscht. */
+      @media (max-width: 700px) {
+        .tagebuch table,
+        .tagebuch tbody {
+          display: block;
+          width: 100%;
+        }
+        .tagebuch thead {
+          display: none;
+        }
+        .tagebuch tr {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 0 12px;
+          padding: 6px 4px;
+          border-bottom: 1px solid var(--rahmen-weich);
+        }
+        .tagebuch td {
+          order: 2;
+          padding: 0;
+          border: 0;
+          font-size: 0.8rem;
+          color: var(--text-gedaempft, inherit);
+        }
+        .tagebuch td:first-child,
+        .tagebuch td:nth-child(2) {
+          order: 0;
+        }
+        .tagebuch td:empty {
+          display: none;
+        }
+        .tagebuch td.satz {
+          order: 1;
+          flex: 1 1 100%;
+          width: auto;
+          padding: 2px 0;
+          font-size: 0.9rem;
+          color: var(--text);
+          overflow-wrap: anywhere;
+        }
       }
       .tagebuch .marke {
         font-size: 0.75rem;
@@ -2288,22 +2481,25 @@
          flacher Anzeige (Handy quer) belegt das Kopfband eine Zeile, und
          Dialoge halten ihre Knopfleiste im Bild. */
 
-      /* Das Verbindungsbanner haftet oben und liegt ueber jedem Dialog. */
+      /* Das Verbindungsbanner steht immer fest am oberen Bildrand und liegt
+         ueber jedem Dialog. `position: sticky` genuegt nicht: Bei
+         `overflow-x: hidden` auf html/body (bis 900 px) scrollt das Banner
+         mit weg. Der Koerper rueckt um die gemessene Hoehe
+         (--bannerhoehe, Verbindungsbanner.tsx) nach unten, nichts wird
+         verdeckt und es entsteht kein Seitenscroll (left/right statt 100vw). */
       .verbindungsbanner {
-        position: sticky;
-        top: 0;
-        z-index: 150;
-        box-sizing: border-box;
-      }
-      body:has(.maskengrund) .verbindungsbanner {
         position: fixed;
         top: 0;
         left: 0;
         right: 0;
         z-index: 200;
+        box-sizing: border-box;
         margin: 0 !important;
         max-height: 40vh;
         overflow-y: auto;
+      }
+      body:has(.verbindungsbanner) {
+        padding-top: var(--bannerhoehe, 0px);
       }
       body:has(.verbindungsbanner) .maskengrund {
         padding-top: calc(var(--bannerhoehe, 0px) + 8px);

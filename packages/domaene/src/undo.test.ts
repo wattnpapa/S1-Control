@@ -170,7 +170,7 @@ describe("U5 — Redo gibt es nicht", () => {
     );
     expect(kompensationFuer(zurueck, zustand)).toEqual({
       art: "nichtMoeglich",
-      meldung: "Ein Redo gibt es nicht (§6 U5).",
+      meldung: "Eine Rücknahme lässt sich nicht erneut zurücknehmen.",
     });
   });
 });

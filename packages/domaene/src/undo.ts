@@ -27,6 +27,12 @@ import { vergleicheNachCodepunkt } from "./kanonisch.js";
 import type { EingehendesEreignis } from "./fold.js";
 import type { EreignisId } from "./ereignis.js";
 import type { Feld, Zustand } from "./zustand.js";
+import { ART_TEXT } from "./projektion/tagebuch.js";
+
+/** Die Ereignisart in Worten für Meldungen an den Bediener. */
+function artwort(typ: string): string {
+  return ART_TEXT[typ] ?? typ;
+}
 
 /**
  * Startwert S4: die Tiefe des Stapels.
@@ -291,22 +297,22 @@ export function kompensationFuer(
 ): Kompensation {
   const eintrag = KATALOG.get(original.typ);
   if (eintrag === undefined) {
-    return { art: "nichtMoeglich", meldung: `Unbekannte Ereignisart: ${original.typ}` };
+    return { art: "nichtMoeglich", meldung: `Dieser Schritt („${artwort(original.typ)}“) ist in dieser Programmfassung unbekannt.` };
   }
   if (eintrag.ohneUndo === true) {
     return {
       art: "nichtMoeglich",
-      meldung: `${original.typ} ist nach §6 U2 nicht rücknehmbar.`,
+      meldung: `„${artwort(original.typ)}“ lässt sich nicht zurücknehmen.`,
     };
   }
   if (original.undoOf !== undefined) {
-    return { art: "nichtMoeglich", meldung: "Ein Redo gibt es nicht (§6 U5)." };
+    return { art: "nichtMoeglich", meldung: "Eine Rücknahme lässt sich nicht erneut zurücknehmen." };
   }
 
   if (eintrag.form === "c") {
     const inverse = eintrag.gegenereignis;
     if (inverse === undefined) {
-      return { art: "nichtMoeglich", meldung: `${original.typ} nennt kein Gegenereignis.` };
+      return { art: "nichtMoeglich", meldung: `„${artwort(original.typ)}“ lässt sich nicht zurücknehmen.` };
     }
     return {
       art: "strukturell",
@@ -321,7 +327,7 @@ export function kompensationFuer(
   if (zielArt === undefined) {
     return {
       art: "nichtMoeglich",
-      meldung: `${original.typ} legt an und nennt kein Gegenereignis.`,
+      meldung: `„${artwort(original.typ)}“ legt etwas an und lässt sich nicht zurücknehmen.`,
     };
   }
   const ziel = KATALOG.get(zielArt);

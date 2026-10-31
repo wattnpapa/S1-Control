@@ -12,10 +12,11 @@ import { useState } from "react";
 
 import type { Anforderungszeile } from "@s1/domaene";
 
-import { abloesungZugesagt, zeitpunktAusEingabe } from "../kontrakt/bedienschritte.js";
+import { abloesungZugesagt } from "../kontrakt/bedienschritte.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Maske } from "./Maske.js";
 import { Zeitfeld } from "./Zeitfeld.js";
-import { useLaden } from "./laden.js";
+import { TEXT_ZEITFORMAT, funkzeitAusEingabe } from "./funkzeit.js";
 
 export interface AnforderungZusageEigenschaften {
   readonly zeile: Anforderungszeile;
@@ -23,29 +24,30 @@ export interface AnforderungZusageEigenschaften {
 }
 
 export function AnforderungZusage({ zeile, aufSchliessen }: AnforderungZusageEigenschaften): React.JSX.Element {
-  const laden = useLaden();
+  const versuch = useAnlegeversuch();
   const [fuer, setzeFuer] = useState("");
   const [von, setzeVon] = useState("");
-  const zeitpunkt = zeitpunktAusEingabe(fuer);
+  const zeitpunkt = funkzeitAusEingabe(fuer);
 
   return (
     <Maske
-      titel={`Ablösung ${zeile.kennung === "" ? "" : `${zeile.kennung} `}zusagen`}
+      titel={`Zusage zu Anforderung${zeile.kennung === "" ? "" : ` ${zeile.kennung}`} erfassen`}
       bestaetigungstext="Zusagen"
-      bereit={zeitpunkt !== undefined}
+      bereit={zeitpunkt !== undefined && !versuch.gesperrt}
+      bereitGrund="Zeit „Zugesagt für“ eintragen"
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={async () => {
         if (zeitpunkt === undefined) return;
-        const ergebnis = await laden.bediene(abloesungZugesagt(zeile.id, zeitpunkt, von.trim()));
+        const ergebnis = await versuch.schreibe(abloesungZugesagt(zeile.id, zeitpunkt, von.trim()));
         if (ergebnis?.art === "geschrieben") aufSchliessen();
       }}
     >
       <label>
         Zugesagt für
-        <Zeitfeld wert={fuer} aufAenderung={setzeFuer} platzhalter="TT.MM. HH:MM oder HH:MM" />
+        <Zeitfeld wert={fuer} aufAenderung={setzeFuer} platzhalter="HH:MM, HHMM oder TT.MM. HH:MM" />
       </label>
       {fuer.trim() !== "" && zeitpunkt === undefined && (
-        <span className="feldfehler">Zeit als TT.MM.JJJJ HH:MM, „30.10. 14:30“ oder „14:30“ (heute)</span>
+        <span className="feldfehler">{TEXT_ZEITFORMAT}</span>
       )}
       <label>
         Zugesagt von
@@ -57,6 +59,7 @@ export function AnforderungZusage({ zeile, aufSchliessen }: AnforderungZusageEig
           }}
         />
       </label>
+      {versuch.anzeige}
     </Maske>
   );
 }

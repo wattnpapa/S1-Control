@@ -37,6 +37,8 @@ import { Einheitenkopf } from "./Einheitenkopf.js";
 import { hinweisAusErgebnis } from "./Anlegeversuch.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
+import { VORWERT_WAHL, istVorwertKonflikt, mitVorwertpruefung, useEditorbasis } from "./Editorbasis.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { Zelle, istZahl } from "./Einheitenzelle.js";
 import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
@@ -83,6 +85,7 @@ export function Einheitentabelle({
   aufEinheit,
 }: EinheitentabelleEigenschaften): React.JSX.Element {
   const laden = useLaden();
+  const basis = useEditorbasis();
   const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(
     projektion.SICHTBARE_GRUPPEN_VORBELEGUNG,
   );
@@ -95,6 +98,9 @@ export function Einheitentabelle({
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
   const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
   const [bearbeitet, setzeBearbeitet] = useState<{ zeile: string; spalte: string } | undefined>(undefined);
+  // Datensatz-Sperre: solange ein Editor offen ist, sehen die Kollegen „wird bearbeitet“.
+  useSperreHalten(bearbeitet?.zeile);
+  const fremd = useFremdsperren();
   /** Die Regel, gegen die die offene Zelle verstößt — die Zelle bleibt offen, bis sie stimmt oder verworfen wird. */
   const [zellenfehler, setzeZellenfehler] = useState<string | undefined>(undefined);
 
@@ -192,17 +198,29 @@ export function Einheitentabelle({
     // Nichts geändert, nichts geschrieben: Ein Ereignis, das denselben Wert
     // noch einmal setzt, steht für immer im Protokoll und erzeugt bei einem
     // zweiten Arbeitsplatz einen Konfliktkandidaten ohne fachlichen Anlass.
-    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, zelle.wert, neu);
+    const schluessel = `${zeile.einheitId}/${spalte.schluessel}`;
+    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, basis.vorwert(schluessel, zelle.wert), neu);
     if (entwurf === undefined) {
+      basis.vergiss(schluessel);
       setzeBearbeitet(undefined);
       return;
     }
-    const ergebnis = await laden.bediene(entwurf);
+    const ergebnis = await laden.bediene(mitVorwertpruefung(entwurf));
+    if (istVorwertKonflikt(ergebnis)) {
+      // Nicht still überschreiben: Die Zelle zeigt, was der Kollege gesetzt hat; ein
+      // zweites Enter gilt dann dem neu geladenen Wert und übernimmt bewusst.
+      basis.vergiss(schluessel);
+      void laden.frischeAnsichten();
+      setzeZellenfehler(`${hinweisAusErgebnis(ergebnis) ?? ""} ${VORWERT_WAHL}`.trim());
+      return;
+    }
     // Geschlossen wird nur nach bestätigtem Schreiben; sonst bleibt der Text
     // stehen, und die Zelle sagt, ob nicht gespeichert oder unklar ist.
     const hinweis = hinweisAusErgebnis(ergebnis);
-    if (hinweis === undefined) setzeBearbeitet(undefined);
-    else setzeZellenfehler(hinweis);
+    if (hinweis === undefined) {
+      basis.vergiss(schluessel);
+      setzeBearbeitet(undefined);
+    } else setzeZellenfehler(hinweis);
   }
 
   /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
@@ -224,6 +242,12 @@ export function Einheitentabelle({
       >
         <th scope="row" title={zeile.abschnittId} style={tiefe === undefined ? undefined : einzug(tiefe)}>
           {zeile.abschnittName}
+          {fremd.von(zeile.einheitId) !== undefined && (
+            <span className="warnung" role="status">
+              {" "}
+              {sperrtext(fremd.von(zeile.einheitId) ?? "")}
+            </span>
+          )}
         </th>
         {spalten.map((spalte) => (
           <Zelle
@@ -241,11 +265,19 @@ export function Einheitentabelle({
                 : undefined
             }
             aufBearbeiten={() => {
+              const gesperrt = fremd.pruefeStart(zeile.einheitId);
+              if (gesperrt !== undefined) {
+                // Ein anderer Arbeitsplatz bearbeitet diese Einheit: erst Hinweis, dann bewusstes Übernehmen.
+                laden.melde("warnung", gesperrt);
+                return;
+              }
               setzeZellenfehler(undefined);
+              basis.merke(`${zeile.einheitId}/${spalte.schluessel}`, zeile.zellen[spalte.schluessel]?.wert);
               setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
             }}
-            aufFertig={(eingabe) => void schreibeZelle(zeile, spalte, eingabe)}
+            aufFertig={(eingabe) => schreibeZelle(zeile, spalte, eingabe)}
             aufAbbrechen={() => {
+              basis.vergiss(`${zeile.einheitId}/${spalte.schluessel}`);
               setzeZellenfehler(undefined);
               setzeBearbeitet(undefined);
             }}
@@ -271,21 +303,30 @@ export function Einheitentabelle({
         </p>
       )}
 
-      <div className="spaltengruppen" role="group" aria-label="Spaltengruppen">
+      {/* Mehrfachwahl und kein Reiter: Mehrere Spaltengruppen stehen zugleich
+          offen. Deshalb Kontrollkästchen unter der Beschriftung „Spalten:“ —
+          Reiter würden „eins von fünf“ versprechen. */}
+      <div
+        className="spaltenwahl"
+        role="group"
+        aria-label="Spalten anzeigen"
+        style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem 0.9rem", margin: "9px 0" }}
+      >
+        <strong>Spalten:</strong>
         {projektion.SPALTENGRUPPEN.map((gruppe) => (
-          <button
-            key={gruppe}
-            type="button"
-            aria-pressed={gruppen.includes(gruppe)}
-            // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
-            // ohne Bezeichnung und Status ist keine Lage.
-            disabled={gruppe === "GRUNDDATEN"}
-            onClick={() => {
-              schalteGruppe(gruppe);
-            }}
-          >
+          <label key={gruppe} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+            <input
+              type="checkbox"
+              checked={gruppen.includes(gruppe)}
+              // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
+              // ohne Bezeichnung und Status ist keine Lage.
+              disabled={gruppe === "GRUNDDATEN"}
+              onChange={() => {
+                schalteGruppe(gruppe);
+              }}
+            />
             {GRUPPENTITEL[gruppe] ?? gruppe}
-          </button>
+          </label>
         ))}
       </div>
 
@@ -308,7 +349,6 @@ export function Einheitentabelle({
                   key={spalte.schluessel}
                   scope="col"
                   className={[istZahl(spalte) ? "zahl" : "", spalte.schluessel === "bezeichnung" ? "namensspalte" : ""].join(" ").trim() || undefined}
-                  title={`Excel-Spalte ${spalte.excel}`}
                 >
                   {spalte.kopf}
                 </th>
@@ -349,7 +389,7 @@ export function Einheitentabelle({
             : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
         </span>
         <span className="hinweistext">
-          Doppelklick bearbeitet die Zelle, ein Tipp auf den Status öffnet die Auswahl · Enter oder „Übernehmen“ schreibt · Esc oder Wegklicken verwirft ·{" "}
+          Doppelklick bearbeitet die Zelle · Textzelle: Enter oder Wegklicken schreibt, Esc verwirft · Auswahl (Status u. a.): Tipp öffnet sie, Enter oder „Übernehmen“ schreibt, Esc oder Wegklicken verwirft ·{" "}
           {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
         </span>
       </p>
@@ -362,6 +402,11 @@ export function Einheitentabelle({
         abschnittId={abschnittId}
         aufSchliessen={() => {
           setzeMaske(undefined);
+        }}
+        aufGeschrieben={() => {
+          // Die Auswahl gehörte zur Maske: Nach Verschieben oder Entfernen
+          // zeigte sie sonst „Verschieben (1)“ für eine Einheit, die nicht mehr da ist.
+          setzeMarkiert([]);
         }}
       />
     </section>

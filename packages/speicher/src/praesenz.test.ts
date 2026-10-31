@@ -2,11 +2,13 @@ import { describe, expect, it } from "vitest";
 
 import {
   deutePraesenz,
+  entfernePraesenz,
   hinweiseAufEigeneDateien,
   istVeraltet,
   Praesenzbeobachtung,
   liesFremdePraesenz,
   schreibePraesenz,
+  uhrAbweichungMs,
   type PraesenzOptionen,
 } from "./praesenz.js";
 import { arbeitsplatz } from "./pruefhilfen/aufbau.js";
@@ -68,7 +70,7 @@ describe("Präsenz nach §6.4", () => {
     expect(fremde).toEqual([]);
   });
 
-  it("gilt nach 60 Sekunden ohne Fortschreibung als veraltet (§6.4, §10)", async () => {
+  it("gilt nach 30 Sekunden ohne Fortschreibung als veraltet (§6.4, §10)", async () => {
     await using platz = await arbeitsplatz();
     await schreibePraesenz(optionen(platz, "8899aabb"), stand);
     const frisch = await liesFremdePraesenz(optionen(platz, "9f3c1a20"));
@@ -81,6 +83,34 @@ describe("Präsenz nach §6.4", () => {
     expect(await platz.dateisystem.listeVerzeichnis(platz.ablage.sharePraesenz)).toContain(
       "8899aabb.json",
     );
+  });
+
+  it("nimmt beim Abmelden nur die eigene Datei weg und verträgt eine fehlende", async () => {
+    await using platz = await arbeitsplatz();
+    await schreibePraesenz(optionen(platz, "8899aabb"), stand);
+    await schreibePraesenz(optionen(platz, "9f3c1a20"), stand);
+    await entfernePraesenz(optionen(platz, "8899aabb"));
+    expect(await platz.dateisystem.listeVerzeichnis(platz.ablage.sharePraesenz)).toEqual(["9f3c1a20.json"]);
+    await expect(entfernePraesenz(optionen(platz, "8899aabb"))).resolves.toBeUndefined();
+  });
+
+  it("rechnet die Uhrabweichung gegen den Sehzeitpunkt, nicht gegen das Alter des Lebenszeichens", async () => {
+    await using platz = await arbeitsplatz();
+    const beobachtung = new Praesenzbeobachtung();
+    await schreibePraesenz(optionen(platz, "8899aabb"), stand);
+    const erste = (await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung))[0];
+    if (erste === undefined) throw new Error("Präsenz fehlt");
+    expect(uhrAbweichungMs(erste, beobachtung.gesehenSeit("8899aabb"))).toBe(0);
+    // Eine wirklich vorgehende Fremduhr (5 min) bleibt sichtbar.
+    const vor = { ...erste, praesenz: { ...erste.praesenz, wanduhr: new Date(Date.parse(erste.praesenz.wanduhr) + 300_000).toISOString() } };
+    expect(uhrAbweichungMs(vor, beobachtung.gesehenSeit("8899aabb"))).toBe(300_000);
+
+    // Der Arbeitsplatz verschwindet; Minuten später ist seine Datei „alt", seine Uhr aber nicht falsch.
+    platz.uhr.weiter(9 * 60_000);
+    const alt = (await liesFremdePraesenz(optionen(platz, "9f3c1a20"), beobachtung))[0];
+    if (alt === undefined) throw new Error("Präsenz fehlt");
+    expect(alt.veraltet).toBe(true);
+    expect(uhrAbweichungMs(alt, beobachtung.gesehenSeit("8899aabb"))).toBe(0);
   });
 
   it("hält eine unbrauchbare Wanduhr für veraltet, statt sie für frisch zu halten", () => {

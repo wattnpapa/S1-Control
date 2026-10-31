@@ -18,10 +18,13 @@
  * sondern nach HLC — das entscheidet der Worker.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+
+import type { Tagebuchzeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
+import { TagebuchEintrag } from "./TagebuchEintrag.js";
 
 export interface TagebuchEigenschaften {
   /** Filter „nur diese Einheit“ — kommt aus der Auswahl in der Tabelle. */
@@ -33,7 +36,11 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
   const laden = useLaden();
   const [suche, setzeSuche] = useState("");
   const [nurRuecknahmen, setzeNurRuecknahmen] = useState(false);
-  const [aufBezug, setzeAufBezug] = useState(true);
+  // Standard „Alle“: Wer das Tagebuch aufschlägt, soll das ganze Tagebuch sehen,
+  // nicht unbemerkt einen Ausschnitt (zwei statt elf Einträge).
+  const [aufBezug, setzeAufBezug] = useState(false);
+  const [eintragOffen, setzeEintragOffen] = useState(false);
+  const gesamtOhneFilter = useRef<number | undefined>(undefined);
 
   const setzeTagebuchfilter = laden.setzeTagebuchfilter;
   const akteId = laden.akteId;
@@ -49,6 +56,19 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
 
   const zeilen = laden.tagebuch?.zeilen ?? [];
   const gesamtzahl = laden.tagebuch?.gesamtzahl ?? 0;
+  const bezugGewaehlt = einheitId !== undefined || abschnittId !== undefined;
+  const filter = [
+    ...(aufBezug && bezugGewaehlt ? ["Auswahl"] : []),
+    ...(suche.trim() === "" ? [] : [`Suche „${suche.trim()}“`]),
+    ...(nurRuecknahmen ? ["nur Rücknahmen und Berichtigungen"] : []),
+  ];
+  if (filter.length === 0 && laden.tagebuch !== undefined) gesamtOhneFilter.current = gesamtzahl;
+  const fusszeile = tagebuchfusszeile(zeilen.length, gesamtzahl, filter, gesamtOhneFilter.current);
+  const alleAnzeigen = (): void => {
+    setzeSuche("");
+    setzeNurRuecknahmen(false);
+    setzeAufBezug(false);
+  };
 
   return (
     <section aria-label="Einsatztagebuch" className="tagebuch">
@@ -63,6 +83,14 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
             }}
           />
         </label>
+        <button
+          type="button"
+          onClick={() => {
+            setzeEintragOffen(true);
+          }}
+        >
+          Eintrag hinzufügen
+        </button>
         <label className="schalter">
           <input
             type="checkbox"
@@ -89,8 +117,8 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
         <table>
           <thead>
             <tr>
-              <th scope="col">Zeit</th>
-              <th scope="col">Fachliche Zeit</th>
+              <th scope="col" title="Wann der Eintrag am Rechner geschrieben wurde">Erfasst</th>
+              <th scope="col" title="Fachliche Zeit: wann es geschah (z. B. die Funkzeit)">Zeit der Meldung</th>
               <th scope="col">Vorgang</th>
               <th scope="col">Akteur</th>
               <th scope="col">Rechner</th>
@@ -98,54 +126,97 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <tr
-                key={zeile.ereignisId}
-                className={
-                  zeile.undoOf !== undefined
-                    ? "ruecknahme"
-                    : zeile.korrekturVon !== undefined
-                      ? "berichtigung"
-                      : ""
-                }
-              >
-                <td title={`HLC ${zeile.hlcText}`}>{uhrzeit(zeile.wanduhr)}</td>
-                <td>{zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}</td>
-                <td className="satz">
-                  {zeile.satz}
-                  {zeile.grund === undefined ? "" : ` — Grund: ${zeile.grund}`}
-                  {/* §6 U1: Eine Kompensation ist ein gewöhnliches Ereignis.
-                      Sie ist trotzdem gekennzeichnet, weil im Tagebuch beide
-                      Zeilen stehen bleiben (U4) und sonst niemand erkennt,
-                      welche die andere zurücknimmt. */}
-                  {zeile.undoOf !== undefined && (
-                    <span className="marke" title={`nimmt ${zeile.undoOf} zurück`}>
-                      {" "}
-                      Rücknahme
-                    </span>
-                  )}
-                  {zeile.korrekturVon !== undefined && (
-                    <span className="marke" title={`berichtigt ${zeile.korrekturVon}`}>
-                      {" "}
-                      Berichtigung
-                    </span>
-                  )}
-                </td>
-                <td>{zeile.akteur}</td>
-                <td>{zeile.rechner}</td>
-              </tr>
+              <Tagebuchreihe key={zeile.ereignisId} zeile={zeile} />
             ))}
           </tbody>
         </table>
       </div>
 
       <p className="tabellenfuss">
-        {zeilen.length === gesamtzahl
-          ? `${String(gesamtzahl)} Einträge`
-          : `${String(zeilen.length)} von ${String(gesamtzahl)} Einträgen`}
-        {gesamtzahl === 0 && " — für diese Auswahl gibt es keinen Eintrag."}
+        {fusszeile}
+        {filter.length > 0 && (
+          <>
+            {" "}
+            <button type="button" onClick={alleAnzeigen}>
+              Alle anzeigen
+            </button>
+          </>
+        )}
       </p>
+
+      {eintragOffen && (
+        <TagebuchEintrag
+          aufSchliessen={() => {
+            setzeEintragOffen(false);
+          }}
+        />
+      )}
     </section>
   );
+}
+
+/** Eine Zeile des Tagebuchs; Rücknahmen und Berichtigungen sind gekennzeichnet. */
+function Tagebuchreihe({ zeile }: { readonly zeile: Tagebuchzeile }): React.JSX.Element {
+  return (
+    <tr
+      className={
+        zeile.undoOf !== undefined
+          ? "ruecknahme"
+          : zeile.korrekturVon !== undefined
+            ? "berichtigung"
+            : ""
+      }
+    >
+      <td title={`HLC ${zeile.hlcText}`}>{uhrzeit(zeile.wanduhr)}</td>
+      <td>{zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}</td>
+      <td className="satz">
+        {zeile.satz}
+        {zeile.grund === undefined ? "" : ` — Grund: ${zeile.grund}`}
+        {/* §6 U1: Eine Kompensation ist ein gewöhnliches Ereignis.
+            Sie ist trotzdem gekennzeichnet, weil im Tagebuch beide
+            Zeilen stehen bleiben (U4) und sonst niemand erkennt,
+            welche die andere zurücknimmt. */}
+        {zeile.undoOf !== undefined && (
+          <span className="marke" title={`nimmt ${zeile.undoOf} zurück`}>
+            {" "}
+            Rücknahme
+          </span>
+        )}
+        {zeile.korrekturVon !== undefined && (
+          <span className="marke" title={`berichtigt ${zeile.korrekturVon}`}>
+            {" "}
+            Berichtigung
+          </span>
+        )}
+      </td>
+      <td>{zeile.akteur}</td>
+      <td>{zeile.rechner}</td>
+    </tr>
+  );
+}
+
+/**
+ * Die Zeile unter der Liste: wie viele Einträge zu sehen sind und, wenn ein
+ * Filter wirkt, welcher — damit niemand einen Ausschnitt für das ganze
+ * Tagebuch hält.
+ */
+export function tagebuchfusszeile(
+  gezeigt: number,
+  treffer: number,
+  filter: readonly string[],
+  insgesamt: number | undefined,
+): string {
+  // Die Liste zeigt höchstens einen Ausschnitt der Treffer (die neuesten).
+  const ausschnitt = gezeigt < treffer ? `, die neuesten ${String(gezeigt)} stehen in der Liste` : "";
+  if (filter.length === 0) {
+    return gezeigt < treffer ? `${String(gezeigt)} von ${String(treffer)} Einträgen` : `${String(treffer)} Einträge`;
+  }
+  const zaehlung =
+    insgesamt !== undefined && insgesamt > treffer
+      ? `${String(treffer)} von ${String(insgesamt)} Einträgen`
+      : `${String(treffer)} Einträge`;
+  const leer = treffer === 0 ? " — für diesen Filter gibt es keinen Eintrag" : "";
+  return `${zaehlung} (Filter: ${filter.join(", ")})${ausschnitt}${leer}`;
 }
 
 /**

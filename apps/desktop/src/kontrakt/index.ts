@@ -129,6 +129,13 @@ export const zEinsatzEintrag = z.object({
   ordner: zText,
   name: z.string(),
   datum: z.string(),
+  /**
+   * Additiv: Zeit der letzten Änderung der Ereignisse auf dem Share (ISO).
+   * Fehlt, wenn das Dateisystem sie nicht nennt. Status und Zahl der
+   * Einheiten stehen nicht im Anker; sie kennt nur, wer den Einsatz geöffnet
+   * hat (Renderer merkt sie sich).
+   */
+  geaendert: z.string().optional(),
 });
 export type EinsatzEintrag = z.infer<typeof zEinsatzEintrag>;
 
@@ -136,9 +143,11 @@ export const zPeer = z.object({
   clientId: z.string(),
   anzeigename: z.string(),
   rechnername: z.string(),
-  /** §6.4: ab 60 Sekunden ohne Fortschreibung gilt ein Arbeitsplatz als veraltet. */
+  /** §6.4: ab 30 Sekunden ohne Fortschreibung gilt ein Arbeitsplatz als veraltet. */
   veraltet: z.boolean(),
   wanduhr: z.string(),
+  /** Additiv: Datensätze (Ids), die dieser Arbeitsplatz gerade zum Bearbeiten gesperrt hat. */
+  bearbeitet: z.array(z.string()).readonly().optional(),
   // ---- Was M7.3 hinzunimmt: die Zahlen, aus denen eine Diagnose wird -------
   //
   // Sie stehen **am Peer** und nicht in einem eigenen Diagnoseruf, weil sie
@@ -211,6 +220,16 @@ export const zEinsatzstammdaten = z.object({
 });
 export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
 
+/** Eine eingetroffene Ablösung, deren abgelöste Einheit noch zur Ist-Stärke zählt. */
+export const zOffeneAbloesung = z.object({
+  anforderungId: z.string(),
+  abgeloesteEinheitId: z.string(),
+  abgeloesteBezeichnung: z.string(),
+  abloesendeEinheitId: z.string(),
+  abloesendeBezeichnung: z.string(),
+});
+export type OffeneAbloesungInfo = z.infer<typeof zOffeneAbloesung>;
+
 export const zLagebild = z.object({
   einsatzId: z.string(),
   einsatzName: z.string(),
@@ -263,6 +282,11 @@ export const zLagebild = z.object({
   /** Anforderungen, die noch nicht eingetroffen oder storniert sind — für die Rückfrage beim Beenden. */
   offeneAnforderungen: z.number().int().min(0).optional(),
   /**
+   * Additiv: Ablösungen, bei denen die ablösende Einheit eingetroffen ist, die
+   * abgelöste aber noch zur Ist-Stärke zählt. Leer oder fehlend: nichts offen.
+   */
+  abloesungenOffen: z.array(zOffeneAbloesung).optional(),
+  /**
    * Zaehlt bei jeder fachlichen Aenderung um eins hoch (M3.7).
    *
    * **Das ist der einzige Zuwachs, den das Lagebild in M3 erfaehrt, und er
@@ -288,6 +312,12 @@ export const zEntwurf = z.object({
   vorher: z.unknown().optional(),
   neu: z.unknown().optional(),
   grund: z.string().optional(),
+  /**
+   * Additiv: `vorher` ist der Wert, den der Editor beim Öffnen sah. Gilt im
+   * Zustand inzwischen ein anderer, den ein anderer Arbeitsplatz gesetzt hat,
+   * weist der Worker ab (`VORWERT`) statt still zu überschreiben.
+   */
+  vorwertPruefen: z.boolean().optional(),
   korrekturVon: z.string().optional(),
   schemaVersion: z.number().int().min(1).optional(),
 });
@@ -326,6 +356,12 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("einsatzOeffnen"), ordner: zText }),
   z.object({ art: z.literal("einsatzSchliessen"), akteId: zAkteId }),
   z.object({ art: z.literal("standAnfordern"), akteId: zAkteId }),
+  /**
+   * Additiv: Bearbeitungssperre für einen Datensatz (Einheit, Fahrzeug,
+   * Abschnitt). Setzen und Verlängern ohne `frei`, Freigeben mit `frei: true`.
+   * Eine Sperre läuft nach 30 s ab; der offene Editor verlängert sie.
+   */
+  z.object({ art: z.literal("sperre"), akteId: zAkteId, entitaetId: zText, frei: z.boolean().optional() }),
   z.object({ art: z.literal("bedienen"), akteId: zAkteId, entwurf: zEntwurf }),
   z.object({ art: z.literal("zurueck"), akteId: zAkteId, grund: z.string().optional() }),
   z.object({ art: z.literal("undoStapel"), akteId: zAkteId }),
@@ -494,6 +530,11 @@ export const zRuf = z.discriminatedUnion("art", [
       // Die Einheitenliste — das Blatt „Stärke“ als Ausdruck, die
       // Papier-Rückfallebene für Lagebesprechung und Rechnerausfall.
       "einheitenliste",
+      // Druckbare Listen und der leere Papier-Vordruck (additiv): nur als HTML
+      // und PDF; Anforderungen und Tagebuch tragen Seitenzahl und Notizspalte.
+      "anforderungen",
+      "tagebuch",
+      "papier",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
@@ -563,7 +604,23 @@ export type Ruf = z.infer<typeof zRuf>;
  * hiesse, ihn im Renderer irgendwo abfangen zu muessen, wo er nicht hingehoert.
  */
 export const zBedienergebnis = z.discriminatedUnion("art", [
-  z.object({ art: z.literal("geschrieben"), ereignisId: z.string() }),
+  z.object({
+    art: z.literal("geschrieben"),
+    ereignisId: z.string(),
+    /**
+     * Additiv: Hinweise des Workers zu einem **geschriebenen** Schritt —
+     * mögliche Dubletten (gleiche Kennung/gleicher Name im selben Elternteil),
+     * Folgen („Einheit entfernt“) und Offenes. Klartext, deutsch, zur Anzeige
+     * als Hinweis; das Schreiben selbst ist gelungen.
+     */
+    warnungen: z.array(z.string()).optional(),
+    /**
+     * Additiv: Nach „Eingetroffen“ zählt die abgelöste Einheit noch zur
+     * Ist-Stärke. Der Worker ändert nichts; die Oberfläche kann fragen, ob
+     * sie zurückgeführt wird.
+     */
+    abloesungOffen: zOffeneAbloesung.optional(),
+  }),
   z.object({
     art: z.literal("abgewiesen"),
     meldung: z.string(),
@@ -589,6 +646,9 @@ export type Bedienergebnis = z.infer<typeof zBedienergebnis>;
  * Einsatzende dort stumm.
  */
 export const CODE_EINSATZ_ABGESCHLOSSEN = "EINSATZ_ABGESCHLOSSEN";
+
+/** Der Code der Abweisung, weil ein anderer Arbeitsplatz das Feld inzwischen geändert hat. */
+export const CODE_VORWERT = "VORWERT";
 
 export const zStapelEintrag = z.object({
   id: z.string(),
@@ -616,6 +676,7 @@ export interface Antworten {
   einsatzOeffnen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   einsatzSchliessen: null;
   standAnfordern: null;
+  sperre: null;
   bedienen: Bedienergebnis;
   zurueck: Bedienergebnis;
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
@@ -765,6 +826,12 @@ export interface Buendelergebnis {
   /** Eintraege, die die Datei fuehrt und die nicht lesbar waren. */
   readonly uebersprungen: number;
   readonly name: string;
+  /**
+   * Additiv: Warum nichts oder nicht alles aufgenommen wurde — Klartext je
+   * Ursache (Datei nicht lesbar, falsches Format, Einträge unlesbar, Schreiben
+   * abgewiesen). Leer oder fehlend, wenn alles in Ordnung war.
+   */
+  readonly abgelehnt?: readonly { readonly grund: string }[];
 }
 
 /** Der Eingangskorb des Meldekopfs (M6.1) — mit Ausschnitt, wie jede Liste. */

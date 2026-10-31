@@ -35,7 +35,7 @@ const BENENNUNGEN: Readonly<Record<string, Benennung>> = {
   AnforderungAngelegt: { gegenstand: "Anforderung", tat: "angelegt" },
   AnforderungStorniert: { gegenstand: "Anforderung", tat: "storniert" },
   AnforderungErledigt: { gegenstand: "Anforderung", tat: "erledigt" },
-  AbloesungZugesagt: { gegenstand: "Ablösung", tat: "zugesagt" },
+  AbloesungZugesagt: { gegenstand: "Zusage", tat: "erfasst" },
   EinsatzBeendet: { gegenstand: "Einsatz", tat: "beendet" },
   EinsatzWiedereroeffnet: { gegenstand: "Einsatz", tat: "wiedereröffnet" },
 };
@@ -58,4 +58,24 @@ export function ereignisMitObjekt(typ: string, objekt: string | undefined): stri
   return name === undefined
     ? `${benennung.gegenstand} ${benennung.tat}`
     : `${benennung.gegenstand} ‚${name}‘ ${benennung.tat}`;
+}
+
+/** Ein Ereignisname im CamelCase-Stil, wie er in Meldungen des Dienstes vorkommen kann. */
+const EREIGNISWORT = /\b[A-Z][a-z0-9]+(?:[A-Z][a-z0-9]+)+\b/gu;
+/** Verweise auf Konzeptabschnitte: „(§2.4)“, „nach §6 U2“. */
+const PARAGRAFENVERWEIS = /\s*\((?:siehe\s+)?§[^)]*\)|\s+(?:nach\s+)?§\s?\d[\d.]*[a-z]?(?:\s[A-Z]\d)?/gu;
+
+/**
+ * Bringt eine Meldung des Dienstes in Klartext: bekannte Ereignisnamen werden
+ * zu Worten („EinheitZusammengefuehrt“ → „Einheiten zusammengeführt“),
+ * Paragrafenverweise entfallen. Unbekanntes bleibt unverändert stehen — eine
+ * Meldung wird nie geraten.
+ */
+export function meldungsklartext(text: string): string {
+  return text
+    .replace(EREIGNISWORT, (wort) => {
+      const klar = ereignisname(wort);
+      return klar === wort ? wort : `„${klar}“`;
+    })
+    .replace(PARAGRAFENVERWEIS, "");
 }

@@ -44,6 +44,7 @@ export type Auftrag =
   | { readonly art: "zurueck"; readonly nummer: number; readonly grund?: string }
   | { readonly art: "undoStapel"; readonly nummer: number }
   | { readonly art: "standAnfordern"; readonly nummer: number }
+  | { readonly art: "sperre"; readonly nummer: number; readonly entitaetId: string; readonly frei: boolean }
   // Die drei Ansichtsrufe reisen als **der Ruf selbst** durch (M3.7). Ihre
   // Felder hier ein zweites Mal aufzuzaehlen hiesse, jeden neuen Filter an
   // zwei Stellen nachzutragen — und der Kontrakt hat sie bereits geprueft,
@@ -191,8 +192,9 @@ if (parentPort !== null) {
    */
   async function bearbeite(auftrag: Auftrag): Promise<unknown> {
     if (auftrag.art === "schliesse") {
-      dienst.schliesse();
       clearInterval(zeitgeber);
+      dienst.schliesse();
+      await dienst.meldeAb();
       return null;
     }
     return bearbeiteAuftrag(dienst, auftrag);

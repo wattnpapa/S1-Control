@@ -152,6 +152,17 @@ describe("Rückfrage beim Beenden", () => {
     expect(within(maske).getByText(/3 offene Anforderungen; 7 Einheiten nicht abgeschlossen/u)).toBeDefined();
   });
 
+  it("setzt den Fokus beim Öffnen auf „Abbrechen“ (nicht ins Datumsfeld) und betont das Beenden", async () => {
+    setze({});
+    render(<Einsatzabschluss />);
+    await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
+    const maske = screen.getByRole("form", { name: BEENDEN });
+    const abbrechen = within(maske).getByRole("button", { name: "Abbrechen" });
+    expect(document.activeElement).toBe(abbrechen);
+    expect(within(maske).getByRole("button", { name: "Einsatz beenden" }).className).toContain("haupt");
+    expect(abbrechen.className).not.toContain("haupt");
+  });
+
   it("löst durch Enter im vorbelegten Zeitfeld nichts aus", async () => {
     setze({});
     render(<Einsatzabschluss />);

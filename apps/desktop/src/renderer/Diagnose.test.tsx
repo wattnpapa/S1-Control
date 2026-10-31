@@ -114,7 +114,7 @@ describe("Die Ansicht", () => {
     useLaden.setState({ lagebild: lagebild({ shareErreichbar: false }) });
     render(<Diagnose jetzt={JETZT} />);
     await waitFor(() => {
-      expect(screen.getByText(/Alles Eingetippte liegt im lokalen Spiegel/)).toBeDefined();
+      expect(screen.getByText(/Alles Eingetippte bleibt erhalten/)).toBeDefined();
     });
   });
 
@@ -143,6 +143,20 @@ describe("Die Ansicht", () => {
     // Zweimal: einmal oben als zutreffender Fall, einmal unten in der Liste
     // zum Nachlesen. Dass es dieselbe Zeile ist, ist der Zweck der Matrix.
     expect(screen.getAllByText(/Die Uhr eines Arbeitsplatzes weicht ab/)).toHaveLength(2);
+  });
+
+  it("meldet keine Uhrabweichung für einen fortgegangenen Arbeitsplatz (Fehlalarm „9 min nach“)", async () => {
+    useLaden.setState({
+      lagebild: lagebild({
+        peers: [peer({ clientId: "b", veraltet: true, uhrAbweichungMs: -9 * 60_000 })],
+      }),
+    });
+    render(<Diagnose jetzt={JETZT} />);
+    await waitFor(() => {
+      expect(screen.getByText(/Kein aktiver weiterer Arbeitsplatz/)).toBeDefined();
+    });
+    expect(screen.queryByText("9 min nach")).toBeNull();
+    expect(screen.getAllByText(/Die Uhr eines Arbeitsplatzes weicht ab/)).toHaveLength(1);
   });
 
   it("steht auch ohne Auskunft aus der Schale", async () => {

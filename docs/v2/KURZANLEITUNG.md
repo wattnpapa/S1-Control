@@ -66,12 +66,13 @@ letzten Meldungen dieser Sitzung. Alles Weitere: [BETRIEB.md](BETRIEB.md).
 
 **Woran es auffällt:** Die Statuszeile zeigt „Share nicht erreichbar“, die Liste der anderen Arbeitsplätze altert, und die Zahl der unübertragenen Bytes wächst.
 
-**Was dahintersteckt:** Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den lokalen Spiegel.
+**Was dahintersteckt:** Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den Zwischenspeicher.
 
-1. Weiterarbeiten. Alles Eingetippte liegt im lokalen Spiegel und geht nicht verloren (§5.3).
-2. Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.
-3. Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.
-4. Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.
+1. Weiterarbeiten, solange das Fenster den Dienst erreicht. Alles Eingetippte bleibt erhalten und wird übertragen, sobald der Share wieder da ist.
+2. Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Ausgaben“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.
+3. Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.
+4. Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.
+5. Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.
 
 **Nicht:** Die Anwendung neu starten. Das holt den Share nicht zurück und kostet den offenen Stand der Masken.
 
@@ -84,7 +85,7 @@ Grundlage: KONZEPT-SPEICHER.md §5.3, §6.4
 **Was dahintersteckt:** Auf dem betroffenen Rechner geht die Systemuhr falsch, meist nach einem Kaltstart ohne Netz.
 
 1. Die Uhr des betroffenen Rechners stellen — Zeitzone mit prüfen.
-2. Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief (§2.6).
+2. Die bereits erfassten Einträge stehen richtig in der Reihenfolge; nur ihre angezeigten Zeitpunkte sind schief.
 3. Zeitpunkte, die für die Auswertung zählen, dort nachtragen, wo sie eingetippt werden — sie sind ein Feld und keine Systemzeit.
 
 **Nicht:** Die Uhr während einer laufenden Erfassung zurückstellen und darauf hoffen, dass sich die Reihenfolge korrigiert. Sie tut es nicht, weil sie nie daran hing.
@@ -97,7 +98,7 @@ Grundlage: KONZEPT-EREIGNISSE.md §2.5, §2.6
 
 **Was dahintersteckt:** Zwei Bediener haben dasselbe Feld geändert, ohne den Stand des anderen gesehen zu haben. Der Fold entscheidet dann nach fester Regel und merkt sich, was er verdrängt hat.
 
-1. Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert (§3.8).
+1. Den Hinweis lesen: Er nennt Feld, Gewinner und verdrängten Wert.
 2. Fachlich klären, welcher Wert stimmt — das entscheidet ein Mensch und kein Programm.
 3. Den richtigen Wert neu eintragen. Damit ist er der jüngste und gewinnt.
 
@@ -128,7 +129,7 @@ Grundlage: M7.2, Entscheidung 7
 1. Die Protokolldatei öffnen — ihr Ort steht in der Diagnoseansicht und in der Kurzanleitung.
 2. Startet die Anwendung ohne Einsatz, aber nicht mit: Ein anderer Rechner führt den Einsatz weiter, dieser wird nachgezogen.
 3. Startet sie gar nicht: Die portable Fassung vom Stick starten. Sie braucht keine Installation und keinen Spiegel.
-4. Der lokale Spiegel darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort (§1.3).
+4. Der lokale Zwischenspeicher darf gelöscht werden. Er wird vom Share neu aufgebaut; die Wahrheit liegt dort.
 
 **Nicht:** Dateien im Einsatzordner auf dem Share löschen oder von Hand bearbeiten. Das ist der einzige Griff, der Daten kostet.
 

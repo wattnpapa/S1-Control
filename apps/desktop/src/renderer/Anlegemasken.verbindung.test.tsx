@@ -130,7 +130,7 @@ describe("Abschnitt anlegen", () => {
   it("legt bei verlorener Antwort nur einen Abschnitt an: gleiche Kennung, Eingabe und Hinweis bleiben", async () => {
     const hole = baue();
     maske();
-    const knopf = (): HTMLElement => screen.getByRole("button", { name: "Übernehmen" });
+    const knopf = (): HTMLElement => screen.getByRole("button", { name: "Abschnitt anlegen" });
     await klicke(knopf());
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("ES Nord");
     expect(screen.getByText(/Unklar, ob gespeichert/)).toBeTruthy();
@@ -145,7 +145,7 @@ describe("Abschnitt anlegen", () => {
     baue();
     maske();
     offline();
-    expect((screen.getByRole("button", { name: "Übernehmen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Abschnitt anlegen" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByRole("alert").textContent).toContain("Eingaben bleiben stehen");
     expect((screen.getByLabelText("Name") as HTMLInputElement).value).toBe("ES Nord");
   });

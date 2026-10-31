@@ -33,6 +33,8 @@ export function Ausgabedatei({ pfad, vorsatz, zusatz }: AusgabedateiEigenschafte
   const imBrowser = useLaden((zustand) => zustand.umgebung?.plattform === "web");
   const melde = useLaden((zustand) => zustand.melde);
   const istHtml = pfad.toLowerCase().endsWith(".html");
+  // Ein ZIP (Einsatzakte) lässt sich nicht anzeigen; im Browser gibt es nur den Download.
+  const nurDownload = pfad.toLowerCase().endsWith(".zip");
   // Relativ, wie die Brücke es für `ruf` erklärt: Die Schale kann unter einem Unterpfad liegen.
   const adresse = `ausgabe?pfad=${encodeURIComponent(pfad)}`;
 
@@ -64,9 +66,11 @@ export function Ausgabedatei({ pfad, vorsatz, zusatz }: AusgabedateiEigenschafte
       </span>
       {imBrowser && (
         <span className="ausgabeknoepfe">
-          <button type="button" onClick={() => { imBrowserZeigen(false); }}>
-            Öffnen
-          </button>
+          {!nurDownload && (
+            <button type="button" onClick={() => { imBrowserZeigen(false); }}>
+              Öffnen
+            </button>
+          )}
           <a className="knopf" href={`${adresse}&laden=1`} download>
             Herunterladen
           </a>

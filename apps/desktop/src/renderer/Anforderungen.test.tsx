@@ -102,7 +102,7 @@ describe("Die Anforderungsansicht", () => {
   it("schreibt bei leerem Formular nichts und sagt in Klartext, was fehlt", async () => {
     await zeige();
     fireEvent.click(screen.getByText("Anfordern"));
-    expect(screen.getByRole("alert").textContent).toMatch(/Einheit, Kennung oder Auftrag/);
+    expect(screen.getByRole("alert").textContent).toMatch(/vorgesehene Einheit oder Auftrag/);
     expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
   });
 

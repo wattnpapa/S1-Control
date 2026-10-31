@@ -16,6 +16,7 @@ import { projektion, type Tabellenzeile, type Zelle } from "@s1/domaene";
 import { Einheitentabelle } from "./Einheitentabelle.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
+import { peer } from "../kontrakt/pruefhilfen.js";
 
 afterEach(cleanup);
 
@@ -68,8 +69,10 @@ beforeEach(() => {
     auftraege: [],
   });
   attrappe.antwortet("bedienen", { art: "geschrieben", ereignisId: "a-0000000001" });
+  attrappe.antwortet("sperre", null);
   useLaden.setState({
     akteId: "akte-1",
+    lagebild: undefined,
     baum: undefined,
     tabelle: undefined,
     tagebuch: undefined,
@@ -101,16 +104,16 @@ describe("Die Einheitentabelle", () => {
 
   it("schaltet eine Spaltengruppe zu und wieder ab", async () => {
     await zeigeTabelle();
-    fireEvent.click(screen.getByRole("button", { name: "Logistik" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Logistik" }));
     expect(screen.getByRole("columnheader", { name: "Weibl." })).toBeDefined();
-    fireEvent.click(screen.getByRole("button", { name: "Logistik" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: "Logistik" }));
     expect(screen.queryByRole("columnheader", { name: "Weibl." })).toBeNull();
   });
 
   it("lässt die Grunddaten nicht wegschalten", async () => {
     await zeigeTabelle();
     // Eine Tabelle ohne Bezeichnung und Status ist keine Lage.
-    expect(screen.getByRole("button", { name: "Grunddaten" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.getByRole("checkbox", { name: "Grunddaten" }).hasAttribute("disabled")).toBe(true);
   });
 
   it("schreibt eine Inline-Änderung mit dem gesehenen Vorher-Wert (§2.2a)", async () => {
@@ -127,6 +130,57 @@ describe("Die Einheitentabelle", () => {
     expect(entwurf?.typ).toBe("EinheitStammdatenGeaendert");
     expect(entwurf?.vorher).toBe("Bergungsgruppe 1");
     expect(entwurf?.neu).toBe("Bergungsgruppe Nord");
+  });
+
+  it("schickt den Wert vom Öffnen als Vorwert und lehnt ein fremd geändertes Feld ab, statt zu überschreiben", async () => {
+    await zeigeTabelle();
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    const feld = screen.getByLabelText("Bezeichnung");
+    // Während der Editor offen ist, setzt ein Kollege einen anderen Wert.
+    attrappe.antwortet("tabelleAnfordern", {
+      lageZeiger: 6,
+      zeilen: [zeile("U1", "Bergungsgruppe Kollege"), zeile("U2", "Fachgruppe N")],
+      gesamtzahl: 2,
+      von: 0,
+      jeStatus: {},
+    });
+    attrappe.antwortet("bedienen", {
+      art: "abgewiesen",
+      meldung: "Wurde inzwischen von Lage 2 geändert (neu: Bergungsgruppe Kollege). Neu laden?",
+      code: "VORWERT",
+      dauerhafterHinweis: false,
+    });
+    fireEvent.change(feld, { target: { value: "Bergungsgruppe Nord" } });
+    fireEvent.keyDown(feld, { key: "Enter" });
+
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")).toBeDefined();
+    });
+    const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
+    expect(entwurf?.vorher).toBe("Bergungsgruppe 1");
+    expect(entwurf?.vorwertPruefen).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByText(/Wurde inzwischen von Lage 2 geändert/)).toBeDefined();
+    });
+    expect(screen.getByText(/Enter übernimmt Ihren Wert trotzdem/)).toBeDefined();
+  });
+
+  it("zeigt die Sperre eines Kollegen an der Zeile und lässt erst beim zweiten Versuch bewusst bearbeiten", async () => {
+    useLaden.setState({
+      lagebild: { peers: [peer({ clientId: "b", anzeigename: "Lage 2", bearbeitet: ["U1"] })] } as never,
+    });
+    await zeigeTabelle();
+    expect(screen.getByText(/🔒 wird von Lage 2 bearbeitet/)).toBeDefined();
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    expect(screen.queryByLabelText("Bezeichnung")).toBeNull();
+    expect(useLaden.getState().hinweise.at(-1)?.text).toMatch(/Zum Bearbeiten trotzdem erneut tippen/);
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    expect(screen.getByLabelText("Bezeichnung")).toBeDefined();
+    // Der offene Editor setzt seinerseits die Sperre.
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("sperre")).toMatchObject({ entitaetId: "U1" });
+    });
+    useLaden.setState({ lagebild: undefined });
   });
 
   it("schreibt nichts, wenn sich der Wert nicht geändert hat", async () => {
@@ -337,7 +391,7 @@ describe("Die Einheitentabelle", () => {
       expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("8");
       expect(maske.textContent).toMatch(/Aufträge, Fahrzeuge, Personen, Status und Zeiten der Quelle werden nicht übernommen/u);
 
-      fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+      fireEvent.click(screen.getByRole("button", { name: "Kopie anlegen" }));
       await waitFor(() => {
         expect(attrappe.letzterRuf("bedienen")).toBeDefined();
       });

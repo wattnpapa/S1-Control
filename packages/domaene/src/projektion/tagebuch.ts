@@ -29,6 +29,7 @@ import type { Id, Staerke } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 import {
   einsatzArtTitel,
+  personalErfassungTitel,
   schichtTitel,
   schichtmodellTitel,
   statusTitel,
@@ -36,6 +37,7 @@ import {
 } from "../beschriftungen.js";
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
 import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
+import { klartextsatz } from "./tagebuch-klartext.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -106,7 +108,7 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   AuftragZurueckgenommen: "Auftrag zurückgenommen",
   AnforderungAngelegt: "Anforderung angelegt",
   AnforderungGeaendert: "Anforderung geändert",
-  AbloesungZugesagt: "Ablösung zugesagt",
+  AbloesungZugesagt: "Zusage erfasst",
   ZusageZurueckgenommen: "Zusage zurückgenommen",
   AnforderungErledigt: "Anforderung erledigt",
   ErledigungZurueckgenommen: "Erledigung zurückgenommen",
@@ -301,6 +303,31 @@ function feldname(ereignis: EingehendesEreignis, eintrag: Katalogeintrag): strin
   return typeof ausNutzlast === "string" ? ausNutzlast : undefined;
 }
 
+/** „A“, „A und B“, „A, B und C“ — für die Liste der aufgegangenen Einheiten. */
+function aufzaehlung(namen: readonly string[]): string {
+  if (namen.length <= 1) return namen.join("");
+  return `${namen.slice(0, -1).join(", ")} und ${namen[namen.length - 1] as string}`;
+}
+
+/**
+ * „Einheiten zusammengeführt: A und B aufgegangen in C“. Die Quellen stehen
+ * in der Nutzlast (`quellen[].einheitId`), das Ziel ist der Gegenstand.
+ */
+function zusammenfuehrungssatz(
+  zustand: Zustand,
+  eintrag: Katalogeintrag,
+  ereignis: EingehendesEreignis,
+  ziel: string,
+): string {
+  const roh = nutzlastfeld(ereignis, "quellen");
+  const namen = (Array.isArray(roh) ? roh : [])
+    .map((q) => alsId((q as Record<string, unknown> | null)?.["einheitId"]))
+    .filter((id): id is Id => id !== undefined)
+    .map((id) => gegenstand(zustand, eintrag, id));
+  const kopf = ART_TEXT["EinheitZusammengefuehrt"] ?? "Einheiten zusammengeführt";
+  return namen.length === 0 ? `${kopf}: aufgegangen in ${ziel}` : `${kopf}: ${aufzaehlung(namen)} aufgegangen in ${ziel}`;
+}
+
 /**
  * Baut den lesbaren Satz.
  *
@@ -332,8 +359,7 @@ export function tagebuchsatz(
     return `${quelle}: ${kopf} — ${staerke} nach ${name}`;
   }
   if (ereignis.typ === "EinheitZusammengefuehrt") {
-    const quelle = gegenstand(zustand, eintrag, alsId(nutzlastfeld(ereignis, "quellEinheitId")));
-    return `${quelle}: ${kopf} — aufgegangen in ${name}`;
+    return zusammenfuehrungssatz(zustand, eintrag, ereignis, name);
   }
 
   // Anfordern, zusagen, eintreffen: Zeiten und Einheiten als Wörter
@@ -348,13 +374,19 @@ export function tagebuchsatz(
   // dort nur eine Kennung (`tagebuch-einheitsteile.ts`).
   if (eintrag.form === "b") return einheitsteilAnlagesatz(zustand, ereignis, kopf) ?? betreff;
 
+  // Vorgänge, bei denen „vorher → nachher“ nur Kennungen zeigte: Klartext.
+  const klar = klartextsatz(zustand, ereignis, betreff);
+  if (klar !== undefined) return klar;
+
   // Form (a): ein Feld, und der Wert steht im Rahmen (§2.2).
   const feld = feldname(ereignis, eintrag);
   const beschriftung = feld === undefined ? undefined : (FELD_TEXT[feld] ?? feld);
   const von = "vorher" in ereignis ? satzwertMitWort(ereignis.typ, ereignis.vorher, feld) : "—";
   const auf = satzwertMitWort(ereignis.typ, ereignis.neu, feld);
   const feldteil = beschriftung === undefined || eintrag.feld?.art === "fest" ? "" : ` (${beschriftung})`;
-  return `${betreff}${feldteil}: ${von} → ${auf}`;
+  const funkzeit = nutzlastfeld(ereignis, "ereignisZeit");
+  const zeitteil = typeof funkzeit === "string" ? ` — Fachliche Zeit ${zeitpunktText(funkzeit)}` : "";
+  return `${betreff}${feldteil}: ${von} → ${auf}${zeitteil}`;
 }
 
 /**
@@ -367,6 +399,7 @@ function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): 
   if (typeof wert !== "string") return alsSatzwert(wert);
   if (typ === "StatusGesetzt") return statusTitel(wert);
   if (typ === "SchichtGesetzt") return schichtTitel(wert);
+  if (feld === "personalErfassung") return personalErfassungTitel(wert);
   if (typ === "EinsatzStammdatenGeaendert") return stammdatenwortFuer(feld, wert);
   // Das Ende eines Auftrags ist ein Zeitpunkt; „30.10.2026 16:00“ liest
   // sich, ein ISO-Zeitpunkt wird entziffert.
@@ -416,7 +449,7 @@ function bezug(
 }
 
 /** Die fachliche Zeit einer Art, sofern sie eine trägt (§2.5). */
-const ZEITFELDER = ["zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm", "von"] as const;
+const ZEITFELDER = ["ereignisZeit", "zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm", "von"] as const;
 
 function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   // Ein geänderter Einsatzbeginn ist der **Wert** der Zeile und nicht ihre
@@ -425,6 +458,11 @@ function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   for (const feld of ZEITFELDER) {
     const wert = nutzlastfeld(ereignis, feld);
     if (typeof wert === "string") return wert;
+  }
+  // Das Eintreffen einer Anforderung trägt seine Zeit im Wert (`erledigtAm`).
+  if (ereignis.typ === "AnforderungErledigt") {
+    const am = (ereignis.neu as { erledigtAm?: unknown } | null | undefined)?.erledigtAm;
+    if (typeof am === "string") return am;
   }
   // Die Arten mit fester fachlicher Zeit tragen sie in `neu` (§2.5):
   // `ZeitpunktGesetzt`, `EinsatzBeendet`, `AbschnittAufgeloest`.

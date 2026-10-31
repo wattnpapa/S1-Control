@@ -255,6 +255,38 @@ describe("Mitteilungen", () => {
   });
 });
 
+describe("Abmelden", () => {
+  it("meldet den Arbeitsplatz des Cookies ab und antwortet immer mit 204", async () => {
+    const erst = await rufe({ art: "umgebung" });
+    const keks = keksAus(erst);
+    const abgemeldet: string[] = [];
+    const original = Arbeitsplaetze.prototype.abmelde;
+    Arbeitsplaetze.prototype.abmelde = function (schluessel: string): void {
+      abgemeldet.push(schluessel);
+      original.call(this, schluessel);
+    };
+    try {
+      const antwort = await fetch(`${werkstatt.adresse}/abmelden`, {
+        method: "POST",
+        headers: { cookie: `${COOKIE}=${keks}` },
+      });
+      expect(antwort.status).toBe(204);
+      expect(abgemeldet).toEqual([keks]);
+      const ohne = await fetch(`${werkstatt.adresse}/abmelden`, { method: "POST" });
+      expect(ohne.status).toBe(204);
+      expect(abgemeldet).toHaveLength(1);
+      const fremd = await fetch(`${werkstatt.adresse}/abmelden`, {
+        method: "POST",
+        headers: { cookie: `${COOKIE}=${keks}`, origin: "http://boese.example" },
+      });
+      expect(fremd.status).toBe(204);
+      expect(abgemeldet).toHaveLength(1);
+    } finally {
+      Arbeitsplaetze.prototype.abmelde = original;
+    }
+  });
+});
+
 describe("Hilfen", () => {
   it("liest einen Cookie-Wert aus dem Kopf", () => {
     expect(cookieWert("a=1; s1-arbeitsplatz=xyz=; b=2", COOKIE)).toBe("xyz=");

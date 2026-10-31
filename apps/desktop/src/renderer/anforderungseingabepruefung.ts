@@ -17,18 +17,22 @@ function belegt(wert: string): boolean {
  * Die Meldung, solange die Eingabe nicht reicht — sonst `undefined`.
  *
  * Eine Ablösung nennt schon die abzulösende Einheit; verlangt wird deshalb,
- * *wer oder was* kommen soll: vorgesehene Einheit, Auftrag oder Kennung.
+ * *wer oder was* kommen soll: vorgesehene Einheit oder Auftrag (bei der
+ * Ablösung auch die Kennung; im Blatt genügt die Kennung allein nicht).
  */
 export function anforderungEingabeFehler(
   eingabe: Anforderungseingabe,
   alsAbloesung: boolean,
 ): string | undefined {
-  const nennt = [eingabe.kennung, eingabe.vorgeseheneEinheitText, eingabe.vorgesehenerAuftrag].some(belegt);
-  if (nennt) return undefined;
   if (alsAbloesung) {
-    return "Bitte angeben, was angefordert wird: Vorgesehene Einheit, Vorgesehener Auftrag oder Kennung.";
+    const nennt = [eingabe.kennung, eingabe.vorgeseheneEinheitText, eingabe.vorgesehenerAuftrag].some(belegt);
+    return nennt
+      ? undefined
+      : "Bitte angeben, was angefordert wird: Vorgesehene Einheit, Vorgesehener Auftrag oder Kennung.";
   }
-  return belegt(eingabe.abzuloesendeEinheitId)
+  // Im Blatt reicht die Kennung allein nicht: Sie sagt nicht, was kommen soll.
+  const nennt = [eingabe.abzuloesendeEinheitId, eingabe.vorgeseheneEinheitText, eingabe.vorgesehenerAuftrag].some(belegt);
+  return nennt
     ? undefined
-    : "Bitte angeben, was angefordert wird: Einheit, Kennung oder Auftrag.";
+    : "Bitte angeben, was angefordert wird: Ablösung für, vorgesehene Einheit oder Auftrag – die Kennung allein genügt nicht.";
 }

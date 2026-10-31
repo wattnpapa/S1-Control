@@ -85,6 +85,8 @@ const GLIEDERUNG: Tabellengliederung = {
     erwartet: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     alleEinheiten: 3,
     alle: { fuehrer: 0, unterfuehrer: 3, mannschaft: 24 },
+    beendetEinheiten: 0,
+    beendet: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
   },
 };
 

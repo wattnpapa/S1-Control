@@ -12,6 +12,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Anforderungen } from "./Anforderungen.js";
 import { bruecke } from "./bruecke.js";
 import { Diagnose } from "./Diagnose.js";
+import { Auswahl } from "./Einsatzauswahl.js";
 import { Eingangskorb } from "./Eingangskorb.js";
 import { Fuehrungsorganisation } from "./Fuehrungsorganisation.js";
 import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
@@ -19,7 +20,7 @@ import { Hilfe } from "./Hilfe.js";
 import { Kopfband } from "./Kopfband.js";
 import { Kosten } from "./Kosten.js";
 import { Programmversorgung } from "./Programmversorgung.js";
-import { gehoertZurLage, type Blatt } from "./blaetter.js";
+import { BLAETTER, gehoertZurLage, type Blatt } from "./blaetter.js";
 import { Lage } from "./Lage.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
@@ -27,7 +28,10 @@ import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { Verbindungsbanner } from "./Verbindungsbanner.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
+import { useBrowserNavigation } from "./navigation.js";
+import { ladeMerker, loescheMerker, merkeStand, speichereMerker } from "./sitzung.js";
 import { useKuerzel } from "./tastatur.js";
+import { wiederoeffneZuletzt } from "./wiederoeffnen.js";
 
 /**
  * Die Uhr des Fensters — sie tickt, damit „vor 8 s" auch dann altert, wenn
@@ -45,6 +49,12 @@ function useJetzt(): number {
   return jetzt;
 }
 
+/** Das Blatt aus dem Merker des Reloads — nur, wenn es das Blatt noch gibt. */
+function blattAusMerker(): Blatt {
+  const gemerkt = ladeMerker()?.blatt;
+  return BLAETTER.find((eintrag) => eintrag.schluessel === gemerkt)?.schluessel ?? "lage";
+}
+
 export function Arbeitsplatz(): React.JSX.Element {
   const laden = useLaden();
   const jetzt = useJetzt();
@@ -53,7 +63,35 @@ export function Arbeitsplatz(): React.JSX.Element {
   // Welches Blatt aufgeschlagen ist, ist eine Sache **dieses Fensters**: Zwei
   // Arbeitsplätze am selben Einsatz sehen verschiedene Blätter, und beim
   // Schließen der Akte ist die Frage hinfällig.
-  const [blatt, setzeBlatt] = useState<Blatt>("lage");
+  // Nach einem Reload steht das zuletzt aufgeschlagene Blatt wieder oben.
+  const [blatt, setzeBlatt] = useState<Blatt>(blattAusMerker);
+  const einsatzId = laden.lagebild?.einsatzId;
+  const einsatzStatus = laden.lagebild?.einsatzStatus ?? "AKTIV";
+  const einheiten = laden.lagebild?.einheiten;
+
+  // Merker für den Reload: zuletzt geöffneter Einsatz und Blatt.
+  useEffect(() => {
+    if (laden.akteId !== undefined && einsatzId !== undefined) speichereMerker(einsatzId, blatt);
+  }, [laden.akteId, einsatzId, blatt]);
+
+  // Zuletzt gesehener Stand für die Einsatzliste (nur Anzeige).
+  useEffect(() => {
+    if (laden.akteId === undefined || einsatzId === undefined || einheiten === undefined) return;
+    merkeStand(einsatzId, { status: einsatzStatus, einheiten, genutzt: Date.now() });
+  }, [laden.akteId, einsatzId, einsatzStatus, einheiten]);
+
+  const zurueckZurAuswahl = (): void => {
+    loescheMerker();
+    void laden.schliesseEinsatz();
+  };
+  useBrowserNavigation({
+    aktiv: laden.umgebung?.plattform === "web" && laden.akteId !== undefined,
+    blatt,
+    waehleBlatt: (neu) => {
+      if (BLAETTER.some((eintrag) => eintrag.schluessel === neu)) setzeBlatt(neu as Blatt);
+    },
+    zurueckZurAuswahl,
+  });
 
   // Strg+H, wie in der Excel (m_makroFunktionen). Das Kürzel wird hier
   // angemeldet und nicht in einer Ansicht: Die Hilfe gehört zum Fenster und
@@ -87,7 +125,7 @@ export function Arbeitsplatz(): React.JSX.Element {
     // laufen, und `laden` ändert sich bei jeder Zustandsänderung. Ein erneuter
     // Lauf hängte einen zweiten Hörer ein, und der Store bekäme danach jede
     // Mitteilung doppelt.
-    void useLaden.getState().starte();
+    void useLaden.getState().starte().then(wiederoeffneZuletzt);
     return abmelden;
   }, []);
 
@@ -102,7 +140,7 @@ export function Arbeitsplatz(): React.JSX.Element {
           setzeHilfeOffen((bisher) => !bisher);
         }}
         zurueckZurAuswahl={
-          laden.akteId === undefined ? undefined : () => void laden.schliesseEinsatz()
+          laden.akteId === undefined ? undefined : zurueckZurAuswahl
         }
         angemeldet={laden.umgebung?.anmeldung === true}
         {...(laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf"
@@ -177,120 +215,5 @@ export function Arbeitsplatz(): React.JSX.Element {
 
       <Statuszeile lagebild={laden.lagebild} jetzt={jetzt} verbindung={verbindung} />
     </div>
-  );
-}
-
-/** Einstellungen und Einsatzauswahl — das, was vor dem ersten Einsatz zu tun ist. */
-function Auswahl(): React.JSX.Element {
-  const laden = useLaden();
-  const [share, setzeShare] = useState(laden.einstellungen.sharePfad);
-  const [name, setzeName] = useState(laden.einstellungen.anzeigename);
-  const [neuerEinsatz, setzeNeuerEinsatz] = useState("");
-  const [betriebsart, setzeBetriebsart] = useState(
-    laden.einstellungen.betriebsart ?? "fuehrungsstelle",
-  );
-  // Im Browser gibt der Dienst den Share vor (ADR-005) — er hat ihn eingehängt,
-  // und ein Bediener könnte ihn ohnehin nicht auf ein anderes Verzeichnis des
-  // Servers umstellen. Das Feld zeigt ihn deshalb nur.
-  const shareFest = laden.umgebung?.plattform === "web";
-
-  // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
-  useEffect(() => {
-    setzeShare(laden.einstellungen.sharePfad);
-    setzeName(laden.einstellungen.anzeigename);
-    setzeBetriebsart(laden.einstellungen.betriebsart ?? "fuehrungsstelle");
-  }, [laden.einstellungen]);
-
-  return (
-    <>
-      <section aria-label="Einstellungen">
-        <h2>Einstellungen</h2>
-        <label>
-          Share-Pfad
-          {shareFest ? (
-            <output className="hinweistext">{share} (vom Dienst vorgegeben)</output>
-          ) : (
-            <input value={share} onChange={(e) => setzeShare(e.target.value)} />
-          )}
-        </label>
-        <label>
-          Anzeigename
-          <input value={name} onChange={(e) => setzeName(e.target.value)} />
-        </label>
-        <label>
-          Betriebsart
-          <select
-            value={betriebsart}
-            onChange={(e) => {
-              setzeBetriebsart(e.target.value as "fuehrungsstelle" | "meldekopf");
-            }}
-          >
-            <option value="fuehrungsstelle">Führungsstelle</option>
-            <option value="meldekopf">Meldekopf</option>
-          </select>
-        </label>
-        {betriebsart === "meldekopf" && (
-          <p className="hinweistext">
-            Der Meldekopf sieht Scanner, Eingangskorb und Bündeldatei — kein Lagebild. Er schreibt
-            in dieselbe Akte auf demselben Share; die Betriebsart ist ein Zuschnitt der Oberfläche
-            und kein Recht.
-          </p>
-        )}
-        <button
-          type="button"
-          disabled={laden.beschaeftigt}
-          onClick={() =>
-            void laden.setzeEinstellungen({
-              sharePfad: share,
-              anzeigename: name,
-              betriebsart,
-              // Das Erscheinungsbild gehört dem Schalter im Kopfband; diese
-              // Maske reicht es durch, statt es auf den Stand beim Öffnen
-              // zurückzudrehen.
-              ...(laden.einstellungen.theme === undefined
-                ? {}
-                : { theme: laden.einstellungen.theme }),
-            })
-          }
-        >
-          Übernehmen
-        </button>
-      </section>
-
-      <section aria-label="Einsätze">
-        <h2>Einsätze</h2>
-        {laden.einsaetze.length === 0 ? (
-          <p className="hinweistext">
-            {laden.einstellungen.sharePfad === ""
-              ? "Zuerst den Share-Pfad eintragen."
-              : "Unter diesem Pfad liegt noch kein Einsatz."}
-          </p>
-        ) : (
-          <ul>
-            {laden.einsaetze.map((einsatz) => (
-              <li key={einsatz.ordner}>
-                <button type="button" onClick={() => void laden.oeffneEinsatz(einsatz.ordner)}>
-                  {einsatz.name} ({einsatz.datum})
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <label>
-          Neuer Einsatz
-          <input value={neuerEinsatz} onChange={(e) => setzeNeuerEinsatz(e.target.value)} />
-        </label>
-        <button
-          type="button"
-          disabled={neuerEinsatz.trim().length === 0 || laden.beschaeftigt}
-          onClick={() => {
-            void laden.legeEinsatzAn(neuerEinsatz.trim(), new Date().toISOString().slice(0, 10));
-            setzeNeuerEinsatz("");
-          }}
-        >
-          Anlegen
-        </button>
-      </section>
-    </>
   );
 }

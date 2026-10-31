@@ -13,14 +13,14 @@
  *
  *  * **Entfernen** verlangt einen Grund (§2.4), weil es eine gemeldete Kraft
  *    aus allen Summen nimmt, ohne sie zu löschen (§5.4.5).
- *  * **Zusammenführen** ist nicht umkehrbar (§5.9.2): Der Rückweg teilt aus
+ *  * **Zusammenführen** ist nicht umkehrbar: Der Rückweg teilt aus
  *    dem Ziel eine Einheit mit **neuer** Id ab; alles, was auf die alte
  *    zeigte, zeigt weiter dorthin.
  */
 
 import { useEffect, useState } from "react";
 
-import type { Tabellenzeile } from "@s1/domaene";
+import { aufteilungPruefen, type Tabellenzeile } from "@s1/domaene";
 
 import { AbloesungAnfordern } from "./AbloesungAnfordern.js";
 import { EinheitAnlegen } from "./EinheitAnlegen.js";
@@ -39,6 +39,8 @@ export interface EinheitenmaskenEigenschaften {
   /** Der gewählte Abschnitt — Ziel der Anlage und Vorbelegung der Verschiebung. */
   readonly abschnittId: string | undefined;
   readonly aufSchliessen: () => void;
+  /** Nach einem bestätigten Schreiben: Die Auswahl der Tabelle gehört zur Maske und ist danach veraltet. */
+  readonly aufGeschrieben?: () => void;
 }
 
 export function Einheitenmasken({
@@ -46,6 +48,7 @@ export function Einheitenmasken({
   gewaehlte,
   abschnittId,
   aufSchliessen,
+  aufGeschrieben,
 }: EinheitenmaskenEigenschaften): React.JSX.Element | null {
   const laden = useLaden();
   const [ziel, setzeZiel] = useState(abschnittId ?? "");
@@ -66,6 +69,8 @@ export function Einheitenmasken({
   // andere öffnet, beginnt neu.
   useEffect(() => {
     verwerfeVersuch();
+    // Der Grund der vorigen Entfernung gilt nicht für die nächste.
+    setzeGrund("");
   }, [maske, verwerfeVersuch]);
 
   const erste = gewaehlte[0];
@@ -75,6 +80,8 @@ export function Einheitenmasken({
     const ergebnis = await versuch.schreibe(entwurf);
     if (ergebnis?.art !== "geschrieben") return;
     aufSchliessen();
+    aufGeschrieben?.();
+    setzeGrund("");
     await laden.holeTabelle();
     await laden.holeBaum();
   }
@@ -104,11 +111,16 @@ export function Einheitenmasken({
     );
   }
 
+  // Ohne Auswahl gibt es nichts zu verschieben (die Auswahl war veraltet): kein Dialog „0 Einheit(en)“.
+  if (maske === "verschieben" && gewaehlte.length === 0) return null;
+
   if (maske === "verschieben") {
     return (
       <Maske
         titel={`${String(gewaehlte.length)} Einheit(en) verschieben`}
+        bestaetigungstext="Verschieben"
         bereit={!versuch.gesperrt && ziel !== "" && gewaehlte.some((zeile) => zeile.abschnittId !== ziel)}
+        bereitGrund={ziel === "" ? "Zielabschnitt wählen" : "Ziel ist der bisherige Abschnitt – anderen Abschnitt wählen"}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           return (async () => {
@@ -122,6 +134,7 @@ export function Einheitenmasken({
               if (ergebnis?.art !== "geschrieben") return;
             }
             aufSchliessen();
+            aufGeschrieben?.();
             await laden.holeTabelle();
             await laden.holeBaum();
           })();
@@ -150,10 +163,23 @@ export function Einheitenmasken({
       mannschaft: zahl(staerke.mannschaft),
     };
     const summe = abgeteilt.fuehrer + abgeteilt.unterfuehrer + abgeteilt.mannschaft;
+    const staerkeGueltig = Object.values(staerke).every(istStaerkeEingabe);
+    // Dieselbe Regel und derselbe Wortlaut wie im Worker (`aufteilungPruefen`):
+    // Mehr Abzug als vorhanden sperrt schon hier, statt erst beim Übernehmen abzuweisen.
+    const befund = staerkeGueltig && summe > 0 ? aufteilungPruefen(erste.staerke, abgeteilt) : undefined;
+    const zuViel = befund !== undefined && !befund.ok ? befund.meldung : undefined;
+    const aufteilGrund =
+      bezeichnung.trim().length === 0
+        ? "Bezeichnung der neuen Einheit eintragen"
+        : !staerkeGueltig
+          ? "Stärke prüfen"
+          : (zuViel ?? (summe > 0 ? undefined : "Stärke der neuen Einheit eintragen"));
     return (
       <Maske
         titel={`„${erste.anzeige}“ aufteilen`}
-        bereit={!versuch.gesperrt && bezeichnung.trim().length > 0 && summe > 0 && Object.values(staerke).every(istStaerkeEingabe)}
+        bestaetigungstext="Aufteilen"
+        bereit={!versuch.gesperrt && aufteilGrund === undefined}
+        bereitGrund={aufteilGrund}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           return schreibe(
@@ -184,8 +210,13 @@ export function Einheitenmasken({
           Abschnitt
           <Abschnittswahl wert={ziel === "" ? erste.abschnittId : ziel} abschnitte={abschnitte} aufWahl={setzeZiel} />
         </label>
+        {zuViel !== undefined && (
+          <p className="feldfehler" role="alert">
+            {zuViel}
+          </p>
+        )}
         <p className="hinweistext">
-          Abgezogen werden {summe} von {String(erste.gesamt)}. Die Wirkung ist relativ (§5.4.2): Der
+          Abgezogen werden {summe} von {String(erste.gesamt)}. Die Wirkung ist relativ: Der
           Abzug steht an der neuen Einheit, nicht als neue Gesamtzahl an der Quelle — zwei
           gleichzeitige Aufteilungen derselben Einheit gehen so beide auf.
         </p>
@@ -201,6 +232,7 @@ export function Einheitenmasken({
         titel="Einheiten zusammenführen"
         bestaetigungstext="Zusammenführen"
         bereit={!versuch.gesperrt && ziel !== "" && quellen.length > 0}
+        bereitGrund={ziel === "" ? "Ziel wählen – die Einheit, die bestehen bleibt" : "Mindestens zwei Einheiten markieren"}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           return schreibe(zusammenfuehrung(ziel, quellen));
@@ -223,7 +255,7 @@ export function Einheitenmasken({
           </select>
         </label>
         <p className="warnung">
-          Das ist nicht umkehrbar (§5.9.2): Der Rückweg teilt aus dem Ziel eine Einheit mit
+          Das ist nicht umkehrbar: Der Rückweg teilt aus dem Ziel eine Einheit mit
           <strong> neuer </strong>
           Kennung ab. Alles, was auf die aufgegangenen Einheiten zeigt — Aufträge, Anforderungen —,
           zeigt danach weiterhin dorthin.
@@ -246,11 +278,16 @@ export function Einheitenmasken({
         titel={`„${erste.anzeige}“ entfernen`}
         bestaetigungstext="Entfernen"
         bereit={!versuch.gesperrt && grund.trim().length > 0}
+        bereitGrund="Grund eintragen (Pflicht)"
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
           return schreibe(entfernung(erste.einheitId, grund.trim()));
         }}
       >
+        <p className="hinweistext" data-testid="entfernen-betrifft">
+          Betrifft: „{erste.anzeige}“, Stärke {erste.staerke.fuehrer}/{erste.staerke.unterfuehrer}/
+          {erste.staerke.mannschaft} ({String(erste.gesamt)} Kräfte).
+        </p>
         <label>
           Grund (Pflicht)
           <input
@@ -261,9 +298,9 @@ export function Einheitenmasken({
           />
         </label>
         <p className="hinweistext">
-          Entfernen ist kein Löschen (§5.4.5): Die Einheit bleibt in der Akte und im Tagebuch, fällt
+          Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, fällt
           aber aus allen Summen. Wer das später liest, soll erfahren, warum eine gemeldete Kraft
-          nicht mehr zählt — deshalb ist der Grund Pflicht (§2.4).
+          nicht mehr zählt — deshalb ist der Grund Pflicht.
         </p>
         {versuch.anzeige}
       </Maske>

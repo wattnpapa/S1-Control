@@ -102,7 +102,7 @@ describe("Der Abschnittsbaum", () => {
     fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
     const feld = screen.getByLabelText("Neuer Name");
     fireEvent.change(feld, { target: { value: "Deich Nordwest" } });
-    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Name speichern" }));
 
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")).toBeDefined();
@@ -117,14 +117,14 @@ describe("Der Abschnittsbaum", () => {
     await zeigeBaum("EO");
     fireEvent.click(screen.getByRole("button", { name: "Typ ändern" }));
     fireEvent.change(screen.getByLabelText("Typ"), { target: { value: "ANGEFORDERT" } });
-    const uebernehmen = screen.getByRole("button", { name: "Übernehmen" });
+    const uebernehmen = screen.getByRole("button", { name: "Typ speichern" });
     expect(uebernehmen.hasAttribute("disabled")).toBe(true);
 
     fireEvent.change(screen.getByLabelText("Grund (Pflicht)"), {
       target: { value: "Noch nicht eingetroffen" },
     });
-    expect(screen.getByRole("button", { name: "Übernehmen" }).hasAttribute("disabled")).toBe(false);
-    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(screen.getByRole("button", { name: "Typ speichern" }).hasAttribute("disabled")).toBe(false);
+    fireEvent.click(screen.getByRole("button", { name: "Typ speichern" }));
 
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("AbschnittTypGeaendert");
@@ -240,7 +240,7 @@ describe("Der Abschnittsbaum", () => {
     await zeigeBaum("EO");
     fireEvent.click(screen.getByRole("button", { name: "Umbenennen" }));
     fireEvent.change(screen.getByLabelText("Neuer Name"), { target: { value: "Neu" } });
-    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Name speichern" }));
 
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")).toBeDefined();
@@ -252,9 +252,10 @@ describe("Der Abschnittsbaum", () => {
 
   it("legt einen neuen Abschnitt unter dem gewählten an", async () => {
     await zeigeBaum("EO");
-    fireEvent.click(screen.getByRole("button", { name: "Neu" }));
+    fireEvent.click(screen.getByRole("button", { name: "Abschnitt anlegen" }));
     fireEvent.change(screen.getByLabelText("Name"), { target: { value: "UA Deichfuß" } });
-    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    // Der Knopf in der Maske trägt denselben Namen wie der in der Leiste; der Dialog liegt zuletzt.
+    fireEvent.click(screen.getAllByRole("button", { name: "Abschnitt anlegen" }).at(-1) as HTMLElement);
 
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("AbschnittAngelegt");

@@ -198,6 +198,11 @@ function Einsatzkopf({ gliederung, spalten, gefiltert }: EinsatzkopfEigenschafte
           <span className="nebenwert">
             {` · Alle erfassten Einheiten ${String(einsatz.alleEinheiten)} Einh. ${staerkeText(einsatz.alle)}`}
           </span>
+          {einsatz.beendetEinheiten > 0 && (
+            <span className="nebenwert" title="Nicht in der Ist-Stärke und nicht in „Alle erfassten Einheiten“.">
+              {` · Beendet/Rückmarsch: ${String(einsatz.beendetEinheiten)} Einh. ${staerkeText(einsatz.beendet)}`}
+            </span>
+          )}
         </th>
         <Kopfzellen spalten={spalten} staerke={einsatz.staerke} einheiten={einsatz.einheiten} />
       </tr>

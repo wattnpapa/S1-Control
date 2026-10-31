@@ -66,6 +66,9 @@ export {
   type TaktischeEbene,
 } from "./ereignis.js";
 
+// Vorab-Check fuer das Aufteilen (§5.4.2) — Maske und Worker teilen die Regel.
+export { aufteilungPruefen, type Aufteilungsbefund } from "./aufteilung.js";
+
 // CRC-32 (§2.1) — geteilt zwischen Speicherschicht und Ausgaben (M4.0).
 export { crc32, crc32Hex } from "./pruefsumme.js";
 
@@ -409,7 +412,7 @@ export {
 
 // Die Kurzhilfe je Ansicht (M8.1) — gelesen von der Ansicht selbst, dem
 // Hilfefenster und dem Handbuch.
-export { ANSICHTEN, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } from "./bedienhilfe.js";
+export { ANSICHTEN, ERSTE_SCHRITTE, ansichtshilfe, type Ansichtshilfe, type Ansichtskennung } from "./bedienhilfe.js";
 
 // Die Beschriftungen der Aufzaehlungswerte — die Woerter der Excel statt der Schluessel.
 export {

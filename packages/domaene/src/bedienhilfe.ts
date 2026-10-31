@@ -12,10 +12,28 @@
  * überrascht mich hier, wenn niemand es mir sagt? Das dritte Feld ist das
  * wichtigste, weil es das ist, was in keiner Beschriftung steht.
  *
- * Die Verweise auf die Paragraphen stehen dabei, weil die Überraschungen
- * Zusagen sind und keine Eigenheiten: Dass eine entfernte Einheit sichtbar
- * bleibt, ist §5.4.5 und kein Versehen.
+ * Die Texte stehen in Klartext, so wie ein Helfer sie sagt: keine Verweise auf
+ * Konzeptabschnitte, keine internen Bezeichner. Wo ein Verhalten eine Zusage
+ * ist und kein Versehen, steht das als Satz da; die Begründung gehört in die
+ * Entwicklerdokumentation.
  */
+
+/**
+ * Die ersten Schritte in Klartext — das Erste, was die Hilfe zeigt.
+ *
+ * Kurz und in der Reihenfolge eines Einsatzes. Die Namen sind die der Reiter
+ * und Knöpfe auf dem Bildschirm; die Tastenkürzel stehen darunter.
+ */
+export const ERSTE_SCHRITTE: readonly string[] = [
+  "Einsatz anlegen oder öffnen: Auf der Startseite steht die Liste der Einsätze; ein neuer Einsatz braucht nur einen Namen.",
+  "Abschnitte anlegen: Im Reiter „Lage“ links mit „Abschnitt anlegen“ die Einsatzabschnitte aufbauen, zum Beispiel „Einsatzort“ oder „Bereitstellungsraum“.",
+  "Einheiten melden: Mit „Aus Vorlage“ eine Einheit aus der Vorlage anlegen (Tippen sucht, Enter wählt) oder ohne Vorlage frei eintragen. Die Einheit kommt in den gewählten Abschnitt.",
+  "Status pflegen: In der Spalte „Status“ eine Einheit antippen oder anklicken, den neuen Status wählen und mit „Übernehmen“ bestätigen. Erst dann gilt er für alle Arbeitsplätze.",
+  "Kräfte anfordern: Im Reiter „Anforderungen“ eine Anforderung anlegen, die Zusage erfassen und beim Eintreffen „Eingetroffen“ wählen.",
+  "Nachlesen: Der Reiter „Einsatztagebuch“ zeigt, wer wann was getan hat. Eigene Notizen und Funkmeldungen trägt man dort mit „Eintrag hinzufügen“ ein.",
+  "Fehler zurücknehmen: Der Knopf „Rückgängig“ nimmt den letzten eigenen Schritt zurück. Die Rücknahme steht im Tagebuch.",
+  "Ausgaben und Abschluss: Im Reiter „Ausgaben“ stehen Druck, Listen und Auswertungen; ganz unten wird der Einsatz beendet.",
+];
 
 /** Kennung einer Ansicht — die Ansicht meldet sich damit an ihrem Text an. */
 export type Ansichtskennung =
@@ -37,7 +55,7 @@ export interface Ansichtshilfe {
   readonly wozu: string;
   /** Was jemand hier als erstes tut. */
   readonly zuerst: string;
-  /** Was überrascht, wenn es niemand sagt — mit dem Paragraphen, der es zusagt. */
+  /** Was überrascht, wenn es niemand sagt. */
   readonly ueberraschung: string;
   /** Die Namen der Kürzel aus der Tastenkarte, die hier greifen. */
   readonly kuerzel: readonly string[];
@@ -61,20 +79,20 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Die Führungsorganisation: Einsatzabschnitte, Unterabschnitte und was daran hängt.",
     zuerst: "Mit Strg+N einen Abschnitt anlegen; Einheiten kommen danach hinein.",
     ueberraschung:
-      "Ein aufgelöster Abschnitt verschwindet nicht, er wird als aufgelöst geführt. Seine Einheiten stehen dann wieder frei (§5.3).",
+      "Ein aufgelöster Abschnitt verschwindet nicht, er wird als aufgelöst geführt. Seine Einheiten stehen dann wieder frei.",
     kuerzel: ["anlegen", "entfernen", "verschieben", "suchen", "zurueck"],
   },
   {
     kennung: "einheiten",
     titel: "Einheitentabelle",
-    wozu: "Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zum Blatt „Stärke“ der Excel.",
+    wozu: "Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zur bisherigen Stärketabelle auf Papier.",
     zuerst:
       "Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen — aus einer Vorlage (THW StAN, Feuerwehr, KatS-StAN Nds; Tippen filtert, Enter wählt) oder „Ohne Vorlage“ als freie Zeile.",
     ueberraschung:
-      "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen (§5.4.5). " +
-      "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie im Blatt „Stärke“; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. " +
-      "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Excel nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. " +
-      "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus dem Blatt Anforderungen und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. " +
+      "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, nur die Summen zählen sie nicht mehr. " +
+      "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie in der Stärketabelle auf Papier; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. " +
+      "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Vorlage nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. " +
+      "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. " +
       "Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). " +
       "„Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.",
     kuerzel: ["anlegen", "kopieren", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
@@ -85,7 +103,7 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Was wann geschehen ist, aus den Ereignissen abgeleitet.",
     zuerst: "Filtern — nach Einheit, Abschnitt oder Text.",
     ueberraschung:
-      "Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch (§5.9.1).",
+      "Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu.",
     kuerzel: ["suchen"],
   },
   {
@@ -94,7 +112,7 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.",
     zuerst: "Eine Meldung wählen und übernehmen oder ablehnen.",
     ueberraschung:
-      "Derselbe Bogen zweimal eingelesen ergibt eine Meldung, keine zwei — die Kennung ist der Inhalt (§3.6, §5.8.1).",
+      "Derselbe Bogen zweimal eingelesen ergibt eine Meldung, keine zwei — der Inhalt des Bogens entscheidet, nicht der Zeitpunkt des Einlesens.",
     kuerzel: ["eeb", "suchen"],
   },
   {
@@ -103,8 +121,8 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Was angefordert, zugesagt, eingetroffen oder storniert ist.",
     zuerst: "Mit Strg+N eine Anforderung anlegen.",
     ueberraschung:
-      "Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). " +
-      "„Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation, Ebene, Stärke und Auftrag vorbelegt, Status „Einsatzbereit“, Bereich zu wählen — erst in einem Einsatzbereich zählt sie in die Ist-Stärke) oder verknüpft eine schon erfasste Einheit; sie steht dann als „Ablösung durch“ an der abgelösten Einheit.",
+      "Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette. " +
+      "„Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation, Ebene, Stärke und Auftrag vorbelegt, Status „Einsatzbereit“, Bereich zu wählen — erst in einem Einsatzbereich zählt sie in die Ist-Stärke) oder verknüpft eine schon erfasste Einheit; sie steht dann bei einer Ablösung als „Ablösung durch“ an der abgelösten Einheit.",
     kuerzel: ["anlegen", "suchen", "jetzt"],
   },
   {
@@ -114,7 +132,7 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     zuerst:
       "Über „Stammdaten bearbeiten“ den Namen der Führungsstelle und die übergeordnete Führungsstelle eintragen — sie stehen auf jedem Ausdruck.",
     ueberraschung:
-      "Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt am Paar aus Posten und Datum (§5.7).",
+      "Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt an der Kombination aus Posten und Datum.",
     kuerzel: ["anlegen", "entfernen"],
   },
   {
@@ -123,14 +141,14 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Die Abrechnung: PSA, VDA, Unterkunft und Verpflegung je Einheit.",
     zuerst: "Oben die vier Parameter des Einsatzes setzen.",
     ueberraschung:
-      "Die Parameter gehören zum Einsatz und nicht zu diesem Rechner: Sie gelten für alle Arbeitsplätze (§5.2).",
+      "Die Parameter gehören zum Einsatz und nicht zu diesem Rechner: Sie gelten für alle Arbeitsplätze.",
     kuerzel: [],
   },
   {
     kennung: "ausgaben",
     titel: "Ausgaben",
     wozu:
-      "Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall. Alle Ausgaben nennen die Ist-Stärke wie das Kopfband und trennen davon die erwarteten Kräfte; Summen über alle Einheiten heißen „Alle erfassten Einheiten“. Das Log-Blatt ist Bedarfsplanung (Verpflegung, Unterbringung) und zählt alle Einheiten der Einsatzbereiche, auch im Anmarsch. Die Kontrollsummen der Status-Matrix nennen bei einer Abweichung die Menge und die betroffenen Einheiten mit Namen. Darunter wird der Einsatz abgeschlossen: beenden, Einsatzakte erzeugen, archivieren.",
+      "Druck, Status-Matrix, Einheitenliste, Auswertung, Log und Kostenübersicht als HTML, PDF oder Tabelle. Die Einheitenliste ist die Stärketabelle auf Papier: alle Bereiche mit Zwischensumme und jede Einheit darunter — für die Lagebesprechung und für den Rechnerausfall. Alle Ausgaben nennen die Ist-Stärke wie das Kopfband und trennen davon die erwarteten Kräfte; Summen über alle Einheiten heißen „Alle erfassten Einheiten“. Das Log-Blatt ist Bedarfsplanung (Verpflegung, Unterbringung) und zählt alle Einheiten der Einsatzbereiche, auch im Anmarsch. Die Kontrollsummen der Status-Matrix nennen bei einer Abweichung die Menge und die betroffenen Einheiten mit Namen. Darunter wird der Einsatz abgeschlossen: beenden, Einsatzakte erzeugen, archivieren.",
     zuerst: "Ausgabe und Format wählen; die Datei landet im Ordner „ausgaben“ des Einsatzes. Mit „Öffnen“, „Ordner zeigen“ und bei HTML „Drucken“ geht es von dort weiter.",
     ueberraschung:
       "Der Dateiname trägt den Zeitpunkt. Eine zweite Ausgabe überschreibt die erste nicht. Ein beendeter Einsatz nimmt keine Eingaben mehr an, bis er wiedereröffnet wird; ein archivierter gar keine mehr — an keinem Arbeitsplatz.",

@@ -15,7 +15,7 @@
  * Worker.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { ansichtshilfe, kuerzel, kuerzelText, type Ansichtskennung } from "@s1/domaene";
 
@@ -26,6 +26,18 @@ export interface HilfemarkeEigenschaften {
 export function Hilfemarke({ kennung }: HilfemarkeEigenschaften): React.JSX.Element {
   const [offen, setzeOffen] = useState(false);
   const hilfe = ansichtshilfe(kennung);
+
+  // Esc schließt die Blase, solange sie offen ist.
+  useEffect(() => {
+    if (!offen) return undefined;
+    const beiTaste = (ereignis: KeyboardEvent): void => {
+      if (ereignis.key === "Escape") setzeOffen(false);
+    };
+    document.addEventListener("keydown", beiTaste);
+    return () => {
+      document.removeEventListener("keydown", beiTaste);
+    };
+  }, [offen]);
 
   return (
     <span className="hilfemarke">

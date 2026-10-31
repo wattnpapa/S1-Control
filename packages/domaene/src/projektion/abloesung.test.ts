@@ -186,7 +186,7 @@ describe("Das Tagebuch der Ablösung", () => {
   it("schreibt Zusage und Eintreffen mit Zeiten als Wort und dem Namen der ablösenden Einheit", () => {
     const zustand = lage(ZUSAGE, NEUE_EINHEIT, ERLEDIGT);
     expect(satz(zustand, ZUSAGE)).toBe(
-      `Anforderung ANF-2026-001: Ablösung zugesagt für ${zeitpunktText("2026-09-08T18:00:00+02:00")} von THW RB Oldenburg`,
+      `Anforderung ANF-2026-001: Zusage erfasst für ${zeitpunktText("2026-09-08T18:00:00+02:00")} von THW RB Oldenburg`,
     );
     expect(satz(zustand, ERLEDIGT)).toBe(
       `Anforderung ANF-2026-001: eingetroffen ${zeitpunktText("2026-09-08T09:15:00+02:00")} — Ablösung durch BGr Varel`,

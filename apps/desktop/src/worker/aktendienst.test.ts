@@ -59,6 +59,17 @@ describe("Zwei Arbeitsplätze auf demselben Verzeichnis", () => {
     expect(lageA?.peers[0]?.anzeigename).toBe("Arbeitsplatz 2");
   });
 
+  it("verschwindet nach dem Abmelden sofort aus der Präsenz der Kollegen", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await takteBis([a, b]);
+    expect(letztesLagebild(b)?.peers).toHaveLength(1);
+
+    await a.dienst.meldeAb();
+    a.dienst.schliesse();
+    await takteBis([b]);
+    expect(letztesLagebild(b)?.peers).toHaveLength(0);
+  });
+
   it("tragen die Zahlen mit, aus denen die Diagnose wird (M7.3)", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);

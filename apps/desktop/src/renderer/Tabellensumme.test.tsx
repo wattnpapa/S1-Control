@@ -43,7 +43,9 @@ describe("tabellensummen", () => {
     const summen = tabellensummen(ZEILEN);
     expect(summen.ist).toEqual({ fuehrer: 1, unterfuehrer: 1, mannschaft: 11 });
     expect(summen.erwartet).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 5 });
-    expect(summen.alle).toEqual({ fuehrer: 1, unterfuehrer: 2, mannschaft: 18 });
+    expect(summen.beendet).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 2 });
+    // Ist plus erwartet, ohne Beendet/Rückmarsch — wie Gliederung und Einheitenliste.
+    expect(summen.alle).toEqual({ fuehrer: 1, unterfuehrer: 2, mannschaft: 16 });
   });
 
   it("ändert die Ist-Summe, wenn sich der Status (die Klasse) einer Zeile ändert", () => {
@@ -66,12 +68,14 @@ describe("Tabellensumme", () => {
         <Tabellensumme zeilen={ZEILEN} spalten={spalten} ausschnitt={false} />
       </table>,
     );
-    const ist = screen.getByRole("rowheader", { name: "Ist-Stärke" }).closest("tr") as HTMLElement;
+    const ist = screen.getByText("Ist-Stärke").closest("tr") as HTMLElement;
     expect(within(ist).getByText("1/1/11")).toBeDefined();
     expect(within(ist).getByText("13")).toBeDefined();
-    const alle = screen.getByRole("rowheader", { name: "Alle erfassten Einheiten" }).closest("tr") as HTMLElement;
-    expect(within(alle).getByText("1/2/18")).toBeDefined();
-    expect(screen.getByRole("rowheader", { name: "Erwartet" })).toBeDefined();
+    const alle = screen.getByText("Alle erfassten Einheiten").closest("tr") as HTMLElement;
+    expect(within(alle).getByText("1/2/16")).toBeDefined();
+    expect(screen.getByText("Erwartet")).toBeDefined();
+    const beendet = screen.getByText("Beendet/Rückmarsch").closest("tr") as HTMLElement;
+    expect(within(beendet).getByText("0/0/2")).toBeDefined();
   });
 
   it("nennt den Ausschnitt und lässt die Erwartet-Zeile ohne erwartete Kräfte weg", () => {
@@ -80,7 +84,19 @@ describe("Tabellensumme", () => {
         <Tabellensumme zeilen={[ZEILEN[0] as Tabellenzeile]} spalten={spalten} ausschnitt />
       </table>,
     );
-    expect(screen.getByRole("rowheader", { name: "Ist-Stärke (Ausschnitt)" })).toBeDefined();
-    expect(screen.queryByRole("rowheader", { name: /^Erwartet/ })).toBeNull();
+    expect(screen.getByText("Ist-Stärke (Ausschnitt)")).toBeDefined();
+    expect(screen.queryByText(/^Erwartet/)).toBeNull();
+  });
+
+  it("fasst Beschriftung und Zahlen in einer Zelle zusammen, damit sie beim Scrollen beisammen bleiben", () => {
+    render(
+      <table>
+        <Tabellensumme zeilen={ZEILEN} spalten={spalten} ausschnitt={false} />
+      </table>,
+    );
+    const zelle = screen.getByText("Alle erfassten Einheiten").closest("th") as HTMLElement;
+    expect(zelle.getAttribute("colspan")).toBe(String(spalten.length + 1));
+    expect(within(zelle).getByText("1/2/16")).toBeDefined();
+    expect(within(zelle).getByText("19")).toBeDefined();
   });
 });

@@ -60,6 +60,13 @@ export interface Praesenz {
   readonly offset: number;
   /** §4.6.1, Auslöser 2. Leer, solange dieser Leser nichts in Quarantäne hat. */
   readonly quarantaene?: readonly Quarantaenehinweis[];
+  /**
+   * Datensätze (Ids), die dieser Arbeitsplatz gerade zum Bearbeiten gesperrt
+   * hat. Eine weiche Sperre als Anzeige, ephemer wie die Präsenz selbst: Fällt
+   * sie aus, fällt nur die Warnung „wird bearbeitet" weg, kein Datenpfad hängt
+   * daran (die Vorwert-Prüfung des Workers fängt den Rest).
+   */
+  readonly bearbeitet?: readonly string[];
 }
 
 export interface PraesenzOptionen {
@@ -77,6 +84,7 @@ export async function schreibePraesenz(
   optionen: PraesenzOptionen,
   stand: { readonly hlc: Hlc; readonly segment: number; readonly offset: number },
   quarantaene: readonly Quarantaenehinweis[] = [],
+  bearbeitet: readonly string[] = [],
 ): Promise<void> {
   const inhalt: Praesenz = {
     clientId: optionen.clientId,
@@ -88,12 +96,30 @@ export async function schreibePraesenz(
     segment: stand.segment,
     offset: stand.offset,
     ...(quarantaene.length === 0 ? {} : { quarantaene }),
+    ...(bearbeitet.length === 0 ? {} : { bearbeitet }),
   };
   await optionen.dateisystem.legeVerzeichnisAn(optionen.ablage.sharePraesenz);
   await optionen.dateisystem.schreibeUeberOhneSync(
     optionen.ablage.praesenzDatei(optionen.clientId),
     kodierer.encode(JSON.stringify(inhalt, undefined, 2)),
   );
+}
+
+/**
+ * Nimmt die **eigene** Präsenzdatei weg, wenn der Arbeitsplatz fortgeht
+ * (Fenster geschlossen, Einsatz geschlossen). Die Kollegen zählen ihn dann
+ * sofort nicht mehr, statt bis zum Ablauf der Veraltet-Schwelle zu warten.
+ *
+ * Nur die eigene Datei (§6.4: kein Client löscht eine fremde). Best effort: Ein
+ * Fehler (Share weg, Datei schon fort) ist hier kein Fehler, die Schwelle
+ * erledigt es dann ohnehin.
+ */
+export async function entfernePraesenz(optionen: PraesenzOptionen): Promise<void> {
+  try {
+    await optionen.dateisystem.loesche(optionen.ablage.praesenzDatei(optionen.clientId));
+  } catch {
+    // Die Schwelle (PRAESENZ_VERALTET_MS) räumt es in der Anzeige auf.
+  }
 }
 
 /** Ein gelesener fremder Arbeitsplatz. */
@@ -128,6 +154,32 @@ export class Praesenzbeobachtung {
     }
     return jetzt - bisher.seit > PRAESENZ_VERALTET_MS;
   }
+
+  /** Wann (eigene Uhr) der zuletzt gesehene Inhalt dieses Arbeitsplatzes zuerst auftauchte. */
+  gesehenSeit(clientId: string): number | undefined {
+    return this.#gesehen.get(clientId)?.seit;
+  }
+}
+
+/**
+ * Die Uhrabweichung eines fremden Arbeitsplatzes in Millisekunden (positiv:
+ * seine Uhr geht vor).
+ *
+ * Die Wanduhr in der Präsenzdatei ist der Zeitpunkt des **Schreibens** und
+ * damit je nach Takt bis zu Sekunden alt, bei einem verschwundenen
+ * Arbeitsplatz Minuten. Gegen die Uhr von „jetzt" gerechnet, wäre das Alter
+ * des Lebenszeichens eine „Abweichung" („9 min nach" bei „vor 9 min"). Deshalb
+ * wird gegen den Zeitpunkt gerechnet, an dem dieser Inhalt zuerst gesehen
+ * wurde; bei veralteter oder unlesbarer Präsenz ist die Abweichung unbekannt
+ * (0), denn aus einer alten Datei lässt sich keine Uhr ablesen.
+ */
+export function uhrAbweichungMs(
+  fremd: { readonly praesenz: Praesenz; readonly veraltet: boolean },
+  gesehenSeit: number | undefined,
+): number {
+  if (fremd.veraltet || gesehenSeit === undefined) return 0;
+  const dann = Date.parse(fremd.praesenz.wanduhr);
+  return Number.isNaN(dann) ? 0 : dann - gesehenSeit;
 }
 
 /**

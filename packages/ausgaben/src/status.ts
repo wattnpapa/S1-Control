@@ -37,6 +37,7 @@ import {
 } from "@s1/domaene";
 
 import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
+import { GESCHLECHT_FUSSNOTE, geschlechtszellen } from "./geschlecht.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 import { istZeile, kontrollzeilen, namenListe } from "./status-kontrolle.js";
 
@@ -284,9 +285,7 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
       `        ${zahl(zeile.staerke.unterfuehrer)}`,
       `        ${zahl(zeile.staerke.mannschaft)}`,
       `        ${zahl(zeile.gesamt)}`,
-      `        ${zahl(zeile.maennlich)}`,
-      `        ${zahl(zeile.weiblich)}`,
-      `        ${zahl(zeile.divers)}`,
+      `        ${geschlechtszellen(zeile)}`,
       `        ${zahl(zeile.vegetarisch)}`,
       `        ${zahl(zeile.vegan)}`,
       `        ${zahl(zeile.uebernachtungM)}`,
@@ -334,6 +333,7 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
       (zeile) => `    <li class="${zeile.art === "fehler" ? "fehler" : zeile.art}">${htmlMaskieren(zeile.text)}</li>`,
     ),
     "  </ul>",
+    `  <p class="hinweis">${htmlMaskieren(GESCHLECHT_FUSSNOTE)}</p>`,
     // K25 nennt die Einheiten, an denen es liegt — mit Namen, nie mit Kennungen.
     daten.ohnePflichtangabe.length === 0
       ? '  <p class="hinweis">Alle Einheiten tragen Organisation, Status und Schicht.</p>'

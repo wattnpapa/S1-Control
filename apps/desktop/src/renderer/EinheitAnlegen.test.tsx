@@ -61,7 +61,7 @@ describe("Einheit anlegen", () => {
   it("legt ohne Vorlage eine freie Zeile an", async () => {
     const maske = zeigeMaske();
     fireEvent.click(screen.getByRole("button", { name: "Ohne Vorlage" }));
-    const knopf = within(maske).getByRole("button", { name: "Übernehmen" }) as HTMLButtonElement;
+    const knopf = within(maske).getByRole("button", { name: "Einheit anlegen" }) as HTMLButtonElement;
     expect(knopf.disabled).toBe(true);
 
     fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "FW LZ Hude" } });
@@ -97,7 +97,7 @@ describe("Einheit anlegen", () => {
     fireEvent.change(screen.getByLabelText("Organisation"), { target: { value: "DRK" } });
     fireEvent.change(screen.getByLabelText("Ebene"), { target: { value: "TRUPP" } });
     fireEvent.change(screen.getByLabelText("Mannschaft"), { target: { value: "8a" } });
-    expect((within(maske).getByRole("button", { name: "Übernehmen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(maske).getByRole("button", { name: "Einheit anlegen" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("filtert nach Text, Katalog und Organisation", () => {
