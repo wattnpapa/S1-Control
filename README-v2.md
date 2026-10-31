@@ -202,6 +202,13 @@ automatischem TLS (`docker compose -f docker-compose.internet.yml up -d
 --build`, Zugangsdaten und `S1_DOMAIN` in `.env`). Einrichtung und Grenzen:
 `docs/v2/BETRIEB.md`, „Bereitstellung im Internet mit Anmeldung“.
 
+**Verbindungsausfall.** Die Web-Schale zeigt den Kontakt zum Dienst ehrlich an
+(„Keine Verbindung zum Dienst seit …"), sperrt dann Schreibaktionen und lädt
+nach der Wiederverbindung neu. Ein **Offline-Schreiben ohne Dienst ist nicht
+vorgesehen** — Datenintegrität geht vor Funktionsumfang; Begründung und
+Grenzen in ADR-007. Schreibrufe tragen eine Anfrage-ID, damit eine Wiederholung
+nach verlorener Antwort nichts doppelt anlegt.
+
 ### Die Rauchprobe
 
 `S1_SMOKE=1` lässt die Schale sich selbst beenden, sobald das Fenster sichtbar

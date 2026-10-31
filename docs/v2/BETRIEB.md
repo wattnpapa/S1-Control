@@ -224,6 +224,29 @@ Beim Stoppen (`docker compose stop`) schließt der Dienst alle Arbeitsplätze
 geordnet; der Upload-Stand wird fortgeschrieben, die Präsenz bleibt liegen und
 altert sichtbar (§6.4).
 
+## Verbindungsausfall in der Web-Schale
+
+Fällt die Verbindung zwischen Browser und Dienst aus, **gibt es kein
+Offline-Schreiben** (ADR-007): keine Warteschlange, keine Entwürfe für später.
+Das ist Absicht — nachträglich geschriebene Eingaben träfen auf einen Stand, den
+andere Arbeitsplätze inzwischen geändert haben, und Datenintegrität geht vor
+Funktionsumfang. Stattdessen:
+
+- Statuszeile und ein fester Hinweis zeigen nach 10 s „Keine Verbindung zum
+  Dienst seit …" (gelb, ab 1 min rot) und nennen die Folge: Anzeige veraltet,
+  Eingaben werden nicht gespeichert.
+- Schreibaktionen sind gesperrt; Eingaben in offenen Formularen bleiben stehen.
+- Bleibt nur die Antwort aus, steht „Unklar, ob gespeichert – bitte Liste
+  prüfen." Eine Wiederholung derselben Eingabe legt nichts doppelt an (der Dienst
+  erkennt sie an der Anfrage-ID).
+- Nach der Wiederverbindung werden Stand und Ansichten automatisch neu geladen,
+  die Fehlermeldungen verschwinden.
+- Das Neuladen ohne Dienst zeigt eine Seite „Dienst nicht erreichbar – es wird
+  neu verbunden" und lädt selbst nach. Das gelingt nur über https oder
+  `localhost` (Service Worker); im reinen http-Netz zeigt der Browser seine
+  eigene Fehlerseite.
+- Ohne Dienst arbeiten: Meldeblock (Papier) oder die Desktop-Schale am Share.
+
 ## Bereitstellung im Internet mit Anmeldung
 
 Dieselbe Web-Schale kann zentral auf einem Server im Internet laufen (ADR-006).
