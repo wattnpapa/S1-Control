@@ -21,6 +21,7 @@ import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 afterEach(cleanup);
 
 const ENDE = "2026-10-30T16:00:00.000Z";
+const BEENDEN = "Einsatz „Hochwasser Weser“ beenden";
 
 const LAGEBILD: Lagebild = {
   einsatzId: "2026-10-30_hochwasser_ab12cd",
@@ -88,7 +89,7 @@ describe("Einsatz beenden", () => {
     setze({});
     render(<Einsatzabschluss />);
     await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
-    const maske = screen.getByRole("form", { name: "Einsatz beenden" });
+    const maske = screen.getByRole("form", { name: BEENDEN });
     const zeit = within(maske).getByLabelText(/Einsatzende/u) as HTMLInputElement;
     expect(zeit.value).toMatch(/^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/u);
     await userEvent.clear(zeit);
@@ -105,7 +106,7 @@ describe("Einsatz beenden", () => {
       });
     });
     await waitFor(() => {
-      expect(screen.queryByRole("form", { name: "Einsatz beenden" })).toBeNull();
+      expect(screen.queryByRole("form", { name: BEENDEN })).toBeNull();
     });
   });
 
@@ -113,7 +114,7 @@ describe("Einsatz beenden", () => {
     setze({});
     render(<Einsatzabschluss />);
     await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
-    const maske = screen.getByRole("form", { name: "Einsatz beenden" });
+    const maske = screen.getByRole("form", { name: BEENDEN });
     const zeit = within(maske).getByLabelText(/Einsatzende/u);
     await userEvent.clear(zeit);
     await userEvent.type(zeit, "irgendwann");
@@ -126,9 +127,40 @@ describe("Einsatz beenden", () => {
     setze({});
     render(<Einsatzabschluss />);
     await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
-    const maske = screen.getByRole("form", { name: "Einsatz beenden" });
+    const maske = screen.getByRole("form", { name: BEENDEN });
     await userEvent.click(within(maske).getByRole("button", { name: "Einsatz beenden" }));
     expect(await within(maske).findByText("Das Einsatzende ist keine lesbare Zeitangabe.")).toBeDefined();
+  });
+});
+
+describe("Rückfrage beim Beenden", () => {
+  const PEER = { clientId: "p", anzeigename: "A2", rechnername: "r2", veraltet: false, wanduhr: "" };
+  const lagebildMitPeers = (veraltet: boolean[]): Partial<Lagebild> => ({
+    peers: veraltet.map((v, i) => ({ ...PEER, clientId: `p${String(i)}`, veraltet: v })) as unknown as Lagebild["peers"],
+    einheiten: 7,
+    offeneAnforderungen: 3,
+  });
+
+  it("nennt Einsatzname, Wirkung auf die anderen Arbeitsplätze und die offenen Posten", async () => {
+    setze(lagebildMitPeers([false, false, true]));
+    render(<Einsatzabschluss />);
+    await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
+    const maske = screen.getByRole("form", { name: BEENDEN });
+    expect(within(maske).getByText(/sperrt den Einsatz für Sie und 2 weitere Arbeitsplätze/u)).toBeDefined();
+    expect(within(maske).getByText(/Schreiben ist nicht mehr\s+möglich/u)).toBeDefined();
+    expect(within(maske).getByText(/Wiedereröffnen ist möglich/u)).toBeDefined();
+    expect(within(maske).getByText(/3 offene Anforderungen; 7 Einheiten nicht abgeschlossen/u)).toBeDefined();
+  });
+
+  it("löst durch Enter im vorbelegten Zeitfeld nichts aus", async () => {
+    setze({});
+    render(<Einsatzabschluss />);
+    await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
+    const maske = screen.getByRole("form", { name: BEENDEN });
+    await userEvent.type(within(maske).getByLabelText(/Einsatzende/u), "{Enter}");
+    await userEvent.type(within(maske).getByLabelText("Bemerkung"), "{Enter}");
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+    expect(screen.getByRole("form", { name: BEENDEN })).toBeDefined();
   });
 });
 
@@ -144,6 +176,8 @@ describe("Ein beendeter Einsatz", () => {
     setze({ einsatzStatus: "BEENDET", einsatzEnde: ENDE });
     render(<Einsatzabschluss />);
     await userEvent.click(screen.getByRole("button", { name: "Einsatz wiedereröffnen" }));
+    const maske = screen.getByRole("form", { name: "Einsatz „Hochwasser Weser“ wiedereröffnen" });
+    await userEvent.click(within(maske).getByRole("button", { name: "Wiedereröffnen" }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("bedienen")?.entwurf).toEqual({
         typ: "EinsatzWiedereroeffnet",
@@ -154,12 +188,31 @@ describe("Ein beendeter Einsatz", () => {
     });
   });
 
+  it("fragt vor dem Wiedereröffnen nach und schreibt bei Abbrechen nichts", async () => {
+    setze({ einsatzStatus: "BEENDET", einsatzEnde: ENDE, peers: [{ clientId: "p", anzeigename: "A2", rechnername: "r", veraltet: false, wanduhr: "" }] as unknown as Lagebild["peers"] });
+    render(<Einsatzabschluss />);
+    await userEvent.click(screen.getByRole("button", { name: "Einsatz wiedereröffnen" }));
+    const maske = screen.getByRole("form", { name: "Einsatz „Hochwasser Weser“ wiedereröffnen" });
+    expect(within(maske).getByText(/Sie und 1 weiteren Arbeitsplatz können wieder schreiben/u)).toBeDefined();
+    await userEvent.click(within(maske).getByRole("button", { name: "Abbrechen" }));
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+  });
+
+  it("setzt Archivieren abgesetzt vom Wiedereröffnen und nennt den Einsatz in der Maske", async () => {
+    setze({ einsatzStatus: "BEENDET", einsatzEnde: ENDE });
+    render(<Einsatzabschluss />);
+    const gruppe = screen.getByRole("group", { name: "Unumkehrbar" });
+    expect(within(gruppe).getByRole("button", { name: "Archivieren" })).toBeDefined();
+    expect(within(gruppe).queryByRole("button", { name: "Einsatz wiedereröffnen" })).toBeNull();
+    expect(within(gruppe).getByText(/„Hochwasser Weser“/u)).toBeDefined();
+  });
+
   it("archiviert erst nach ausdrücklicher Bestätigung des Hinweises", async () => {
     attrappe.antwortet("einsatzArchivieren", { art: "geschrieben", ereignisId: "e2" });
     setze({ einsatzStatus: "BEENDET", einsatzEnde: ENDE });
     render(<Einsatzabschluss />);
     await userEvent.click(screen.getByRole("button", { name: "Archivieren" }));
-    const maske = screen.getByRole("form", { name: "Einsatz archivieren" });
+    const maske = screen.getByRole("form", { name: "Einsatz „Hochwasser Weser“ archivieren" });
     expect(within(maske).getByText("nichts mehr geschrieben werden")).toBeDefined();
     const bestaetigen = within(maske).getByRole("button", { name: "Archivieren" }) as HTMLButtonElement;
     expect(bestaetigen.disabled).toBe(true);
