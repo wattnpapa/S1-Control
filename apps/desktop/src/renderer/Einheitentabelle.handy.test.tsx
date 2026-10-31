@@ -11,7 +11,7 @@ import type { Tabellenzeile } from "@s1/domaene";
 
 import type { Lagebild } from "../kontrakt/index.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
-import { TEXT_NICHT_UEBERNOMMEN } from "./Einheitenzelle.js";
+import { SCHMAL, TEXT_NICHT_UEBERNOMMEN } from "./Einheitenzelle.js";
 import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
@@ -48,7 +48,7 @@ let attrappe: Attrappe;
 
 function bereite(einsatzStatus: string, schmal: boolean): void {
   vi.stubGlobal("matchMedia", (abfrage: string) => ({
-    matches: schmal && abfrage.includes("max-width: 700px"),
+    matches: schmal && abfrage === SCHMAL,
     media: abfrage,
     addEventListener: () => undefined,
     removeEventListener: () => undefined,
@@ -73,6 +73,14 @@ function bereite(einsatzStatus: string, schmal: boolean): void {
 function zeige(): void {
   render(<Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} />);
 }
+
+describe("Bedingung für das Statusblatt", () => {
+  it("gilt bis 900 px, bei Touch und im Querformat (max. 500 px Höhe)", () => {
+    expect(SCHMAL).toContain("max-width: 900px");
+    expect(SCHMAL).toContain("pointer: coarse");
+    expect(SCHMAL).toContain("max-height: 500px");
+  });
+});
 
 describe("Statuswahl als Blatt auf dem Handy", () => {
   beforeEach(() => {
