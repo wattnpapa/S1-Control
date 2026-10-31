@@ -9,7 +9,6 @@
  */
 
 import { kennzahlen, type Spalte, type Staerke, type Tabellenzeile } from "@s1/domaene";
-import { istZahl } from "./Einheitenzelle.js";
 
 const NULL: Staerke = { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 };
 
@@ -58,21 +57,24 @@ interface Eigenschaften {
   readonly ausschnitt: boolean;
 }
 
+/**
+ * Eine Summenzeile: Beschriftung und Zahlen stehen in **einer** Zelle über der
+ * ganzen Zeile und kleben links (`.summeninhalt`). So bleiben sie beim
+ * waagerechten Scrollen beisammen im Bild — auf dem Handy wie bei breiter
+ * Tabelle — und der volle Name wird nie abgeschnitten.
+ */
 function Summenzeile({ werte, spalten }: { werte: Zeilenwerte; spalten: readonly Spalte[] }): React.JSX.Element {
   return (
     <tr className="summenzeile">
-      <th scope="row" title={werte.hinweis}>
-        {werte.titel}
+      <th scope="row" colSpan={spalten.length + 1} title={werte.hinweis}>
+        <div className="summeninhalt">
+          <span className="summentitel">{werte.titel}</span>
+          <span className="summenstaerke">
+            {`${String(werte.staerke.fuehrer)}/${String(werte.staerke.unterfuehrer)}/${String(werte.staerke.mannschaft)}`}
+          </span>
+          <span className="summengesamt">{String(koepfe(werte.staerke))}</span>
+        </div>
       </th>
-      {spalten.map((spalte) => (
-        <td key={spalte.schluessel} className={istZahl(spalte) ? "zahl" : undefined}>
-          {spalte.schluessel === "staerke"
-            ? `${String(werte.staerke.fuehrer)}/${String(werte.staerke.unterfuehrer)}/${String(werte.staerke.mannschaft)}`
-            : spalte.schluessel === "gesamt"
-              ? String(koepfe(werte.staerke))
-              : ""}
-        </td>
-      ))}
     </tr>
   );
 }
