@@ -9,7 +9,8 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Kopfband, STAERKE_REGEL, staerkeNebenText } from "./Kopfband.js";
+import { Kopfband } from "./Kopfband.js";
+import { STAERKE_REGEL, staerkeNebenText } from "./Staerkekennzahl.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
 afterEach(cleanup);
@@ -63,7 +64,7 @@ describe("Kopfband", () => {
     expect(screen.getByText("101443SEP26")).toBeDefined();
   });
 
-  it("erklärt die Zählregel und zeigt Köpfe im Eingang/angefordert neben der Kopfzahl", () => {
+  it("erklärt die Zählregel sichtbar und zeigt erwartete Köpfe neben der Kopfzahl", async () => {
     const { container } = render(
       <Kopfband
         lagebild={{ ...LAGEBILD, staerkeErwartet: 6, staerkeBeendet: 2 }}
@@ -74,8 +75,14 @@ describe("Kopfband", () => {
       />,
     );
     expect(screen.getByText("Ist-Stärke")).toBeDefined();
-    expect(screen.getByText("+6 im Eingang/angefordert · 2 beendet")).toBeDefined();
+    expect(screen.getByText("+6 erwartet (angefordert/Anmarsch/Eingang) · 2 beendet")).toBeDefined();
     expect(container.querySelector(".kennzahl")?.getAttribute("title")).toBe(STAERKE_REGEL);
+    // Auf Touch gibt es keinen Tooltip: Ein Tipp auf „Regel“ zeigt den Text.
+    expect(screen.queryByRole("note")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Regel" }));
+    expect(screen.getByRole("note").textContent).toBe(STAERKE_REGEL);
+    await userEvent.click(screen.getByRole("button", { name: "Regel" }));
+    expect(screen.queryByRole("note")).toBeNull();
   });
 
   it("zeigt ohne Köpfe außerhalb der Zählung keine Nebenzahl", () => {

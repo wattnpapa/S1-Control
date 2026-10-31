@@ -16,7 +16,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Baumknoten } from "@s1/domaene";
+import { kennzahlen, type Baumknoten } from "@s1/domaene";
 
 import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
@@ -121,7 +121,9 @@ export function Fuehrungsorganisation(): React.JSX.Element {
 /** „14 Einh. · 8/21/64" — dieselbe Schreibweise wie im Baum. */
 function unterschrift(knoten: Baumknoten): string {
   const { fuehrer, unterfuehrer, mannschaft } = knoten.summenStaerke;
-  return `${String(knoten.einheitenSumme)} Einh. · ${String(fuehrer)}/${String(unterfuehrer)}/${String(mannschaft)}`;
+  const erwartet = kennzahlen.erwartetKurz(knoten.erwartetSumme);
+  const basis = `${String(knoten.einheitenSumme)} Einh. · ${String(fuehrer)}/${String(unterfuehrer)}/${String(mannschaft)}`;
+  return erwartet === "" ? basis : `${basis} · ${erwartet}`;
 }
 
 interface EbeneEigenschaften {

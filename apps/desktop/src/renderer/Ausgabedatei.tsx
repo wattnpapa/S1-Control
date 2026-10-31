@@ -52,10 +52,14 @@ export function Ausgabedatei({ pfad, vorsatz, zusatz }: AusgabedateiEigenschafte
     });
   }
 
+  // Im Browser ist der Serverpfad für den Leser ohne Wert (und verrät Interna):
+  // Dort steht nur der Dateiname.
+  const anzeige = imBrowser ? (pfad.split(/[\\/]/).pop() ?? pfad) : pfad;
+
   return (
     <div className="ausgabedatei" role="status">
       <span className="hinweistext">
-        {vorsatz}: {pfad}
+        {vorsatz}: {anzeige}
         {zusatz === undefined ? "" : ` (${zusatz})`}
       </span>
       {imBrowser && (
