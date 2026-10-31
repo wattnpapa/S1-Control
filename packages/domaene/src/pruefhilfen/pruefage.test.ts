@@ -50,9 +50,11 @@ describe("Die Prüflage", () => {
   });
 
   it("belegt jeden der neun Statuswerte", () => {
-    const matrix = kennzahlen.matrixStatus(lage());
+    // Die Matrix lässt die Klasse „beendet“ (Rückmarsch) aus; belegt ist ein
+    // Status, wenn eine Einheit der Lage ihn trägt.
+    const belegt = kennzahlen.einheitenDerLage(lage()).map((e) => String(e.status.wert));
     for (const status of PRUEFLAGE_ZUSICHERUNGEN.statuswerte) {
-      expect(Object.keys(matrix), `Status ${status} fehlt in der Prüflage`).toContain(status);
+      expect(belegt, `Status ${status} fehlt in der Prüflage`).toContain(status);
     }
   });
 

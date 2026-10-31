@@ -75,7 +75,7 @@ export interface Einheitenlistendaten {
   /** Erwartete Kräfte (angefordert/Anmarsch/Eingang): in der Liste aufgeführt, aber nicht in der Ist-Stärke. */
   readonly erwartet: Staerke;
   readonly erwartetGesamt: number;
-  /** Alle aufgeführten Einheiten (Summe der Zeilen) — ausdrücklich nicht die Ist-Stärke. */
+  /** Alle erfassten Einheiten (Ist + erwartet, ohne beendet/Rückmarsch; wie die Status-Matrix) — nicht die Ist-Stärke. */
   readonly alle: Staerke;
   readonly alleGesamt: number;
   /** Einheiten im Bereich „Einsatz beendet“: Sie stehen nicht in der Liste, ihre Zahl schon. */
@@ -164,7 +164,7 @@ export function einheitenlistendaten(zustand: Zustand): Einheitenlistendaten {
   const zeilen = bereiche.flatMap((b) => b.zeilen);
   const ist = bereiche.reduce<Staerke>((s, b) => plus(s, b.staerke), NULL);
   const erwartet = zeilen.filter((z) => z.klasse === "erwartet").reduce<Staerke>((s, z) => plus(s, z.staerke), NULL);
-  const alle = zeilen.reduce<Staerke>((s, z) => plus(s, z.staerke), NULL);
+  const alle = zeilen.filter((z) => z.klasse === "ist" || z.klasse === "erwartet").reduce<Staerke>((s, z) => plus(s, z.staerke), NULL);
   return {
     einsatzName: text(zustand.einsatz?.name.wert, "(ohne Namen)"),
     fuestName: text(zustand.einsatz?.fuestName.wert),

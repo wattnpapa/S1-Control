@@ -57,12 +57,8 @@ describe("Die Zahlen der Einheitenliste", () => {
     expect(daten.istGesamt).toBe(druck.gesamtSumme);
     expect(daten.istGesamt).toBe(statusdaten(zustand).ist.fuehrer + statusdaten(zustand).ist.unterfuehrer + statusdaten(zustand).ist.mannschaft);
     expect(daten.erwartetGesamt).toBe(druck.angefordertSumme);
-    // Auf Rückmarsch ist weder Ist noch erwartet: Die Liste führt sie trotzdem auf.
-    const rueckmarsch = daten.bereiche
-      .flatMap((b) => b.zeilen)
-      .filter((z) => z.klasse === "beendet")
-      .reduce((s, z) => s + z.gesamt, 0);
-    expect(daten.alleGesamt).toBe(daten.istGesamt + daten.erwartetGesamt + rueckmarsch);
+    // „Alle erfassten“ = Ist + erwartet; Rückmarsch (beendet) steht in der Liste, aber in keiner Summe.
+    expect(daten.alleGesamt).toBe(daten.istGesamt + daten.erwartetGesamt);
     for (const zeile of druck.zeilen) {
       const bereich = daten.bereiche.find((b) => b.abschnittId === zeile.abschnittId);
       expect(bereich?.gesamt, zeile.name).toBe(zeile.gesamt);

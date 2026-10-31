@@ -119,7 +119,7 @@ function summenAlsHtml(daten: Einheitenlistendaten): string {
   const zeilen = [
     ["Ist-Stärke (vor Ort, wie Kopfband und Druck)", staerkeText(daten.ist, daten.istGesamt)],
     ["Erwartet (angefordert/Anmarsch/Eingang)", staerkeText(daten.erwartet, daten.erwartetGesamt)],
-    ["Alle aufgeführten Einheiten (nicht die Ist-Stärke)", staerkeText(daten.alle, daten.alleGesamt)],
+    ["Alle erfassten Einheiten (Ist + erwartet, nicht die Ist-Stärke)", staerkeText(daten.alle, daten.alleGesamt)],
   ];
   return [
     '  <table class="summen">',

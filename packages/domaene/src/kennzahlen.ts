@@ -609,7 +609,7 @@ function gruppiere(
 }
 
 /**
- * **Die drei Matrizen laufen ueber `E`, nicht ueber `E*`** — abweichend vom
+ * **Die Matrizen laufen ueber Ist plus erwartet (ohne „beendet“), nicht ueber `E*`** — abweichend vom
  * Wortlaut von ZDM §3.3 und mit dessen eigener Arithmetik begruendet.
  *
  * K23 verlangt `Σ_Schicht − Σ_Organisation + Σ_ANGEFORDERT = 0`. Liefen beide
@@ -627,19 +627,28 @@ function gruppiere(
  * wird nicht von hier aus geaendert.
  */
 
+/**
+ * Die Menge der Matrizen: Ist plus erwartet, ohne die Klasse „beendet“
+ * (Einsatz beendet, Rückmarsch). Dieselbe Zählregel wie der Kopf — die
+ * Matrizen zeigen Ist und erwartet nur zusammen, der Kopf getrennt.
+ */
+export function einheitenDerMatrizen(zustand: Zustand): EinheitZustand[] {
+  return einheitenDerLage(zustand).filter((e) => zaehlklasse(zustand, e) !== "beendet");
+}
+
 /** **K19** — Organisation × Kennzahl. */
 export function matrixOrganisation(zustand: Zustand): { readonly [org: string]: Matrixzeile } {
-  return gruppiere(zustand, einheitenDerLage(zustand), (e) => alsText(e.organisation.wert));
+  return gruppiere(zustand, einheitenDerMatrizen(zustand), (e) => alsText(e.organisation.wert));
 }
 
 /** **K20** — Status × Kennzahl. */
 export function matrixStatus(zustand: Zustand): { readonly [status: string]: Matrixzeile } {
-  return gruppiere(zustand, einheitenDerLage(zustand), (e) => alsText(e.status.wert));
+  return gruppiere(zustand, einheitenDerMatrizen(zustand), (e) => alsText(e.status.wert));
 }
 
 /** **K22** — Schicht × Kennzahl; angeforderte Einheiten fehlen hier mangels Schicht. */
 export function matrixSchicht(zustand: Zustand): { readonly [schicht: string]: Matrixzeile } {
-  return gruppiere(zustand, einheitenDerLage(zustand), (e) => alsText(e.schicht?.wert));
+  return gruppiere(zustand, einheitenDerMatrizen(zustand), (e) => alsText(e.schicht?.wert));
 }
 
 /** **K24** — Abschnitt × Schicht, je Rolle. */
@@ -669,28 +678,31 @@ export function konsistenzStatus(zustand: Zustand): number {
 /**
  * **K23** — die Konsistenzprobe der Schichtmatrix.
  *
- * `Σ_Schicht − Σ_Organisation + Σ_ANGEFORDERT = 0`: Bei `ANGEFORDERT` ist die
- * Schicht keine Pflicht (ZDM §2.4), die Einheiten fehlen also zu Recht in der
- * Schichtmatrix — und stehen dafuer im dritten Summanden.
+ * `Σ_Schicht − Σ_Organisation + Σ_erwartet-ohne-Schicht = 0`: Bei erwarteten
+ * Kräften (Zählklasse „erwartet“: angefordert, Anmarsch, Eingang) ist die
+ * Schicht keine Pflicht (ZDM §2.4); ihr Anteil ohne Schicht fehlt zu Recht in
+ * der Schichtmatrix und steht dafür im dritten Summanden.
  */
 export function konsistenzSchicht(zustand: Zustand): number {
-  const angefordert = einheitenDerLage(zustand).filter(
-    (e) => typDesAbschnitts(zustand, e.wirksamerAbschnittId) === ANGEFORDERT,
+  // Erwartete Kräfte dürfen ohne Schicht sein; nur ihr Anteil ohne Schicht
+  // fehlt zu Recht in der Schichtmatrix.
+  const erwartetOhneSchicht = einheitenDerMatrizen(zustand).filter(
+    (e) => zaehlklasse(zustand, e) === "erwartet" && alsText(e.schicht?.wert) === undefined,
   );
   return (
     summeDerZeilen(matrixSchicht(zustand)) -
     summeDerZeilen(matrixOrganisation(zustand)) +
-    angefordert.reduce((s, e) => s + gesamtstaerke(e), 0)
+    erwartetOhneSchicht.reduce((s, e) => s + gesamtstaerke(e), 0)
   );
 }
 
 /** **K25** — Einheiten ohne Pflichtangabe, nach Id geordnet. */
 export function einheitenOhnePflichtangabe(zustand: Zustand): EinheitZustand[] {
-  return einheitenDerLage(zustand)
+  return einheitenDerMatrizen(zustand)
     .filter((e) => {
       if (alsText(e.status.wert) === undefined) return true;
       if (alsText(e.organisation.wert) === undefined) return true;
-      const schichtPflicht = typDesAbschnitts(zustand, e.wirksamerAbschnittId) !== ANGEFORDERT;
+      const schichtPflicht = zaehlklasse(zustand, e) !== "erwartet";
       return schichtPflicht && alsText(e.schicht?.wert) === undefined;
     })
     .sort((a, b) => a.id.localeCompare(b.id));

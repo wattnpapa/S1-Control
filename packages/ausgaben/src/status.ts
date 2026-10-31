@@ -142,7 +142,7 @@ export function statusdaten(zustand: Zustand): Statusdaten {
   const zeilen: Organisationszeile[] = [];
   for (const [organisation] of Object.entries(kennzahlen.matrixOrganisation(zustand))) {
     const einheiten = kennzahlen
-      .einheitenDerLage(zustand)
+      .einheitenDerMatrizen(zustand)
       .filter((e) => (typeof e.organisation.wert === "string" ? e.organisation.wert : "") === organisation);
     let staerke: Staerke = NULL;
     let maennlich = 0;
@@ -310,7 +310,7 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
     kopfAlsHtml(kopf),
     fuestzeileAlsHtml(daten),
     `  <p class="ist"><strong>${htmlMaskieren(istZeile(daten))}</strong></p>`,
-    `  <p class="hinweis">${htmlMaskieren(kennzahlen.ZAEHLREGEL_TEXT)} Die Tabellen darunter zählen dagegen alle erfassten Einheiten (Ist plus erwartet), ohne „Einsatz beendet“.</p>`,
+    `  <p class="hinweis">${htmlMaskieren(kennzahlen.ZAEHLREGEL_TEXT)} Die Tabellen darunter zählen dagegen alle erfassten Einheiten (Ist plus erwartet), ohne „Einsatz beendet“ und Rückmarsch.</p>`,
     `  <h2>Stärke nach Organisationen${UEBERSCHRIFT_ZUSATZ}</h2>`,
     '  <table class="status">',
     "    <thead>",
