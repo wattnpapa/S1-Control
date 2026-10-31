@@ -12,6 +12,7 @@ import { act } from "react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { MonitorFenster } from "./MonitorFenster.js";
+import { useVerbindung } from "./verbindung.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import type { Lagebild, Mitteilung } from "../kontrakt/index.js";
 
@@ -65,6 +66,22 @@ describe("Das Monitorfenster", () => {
     await waitFor(() => {
       expect(screen.getByText(/2\/5\/40/)).toBeDefined();
     });
+  });
+
+  it("zeigt den Warnstreifen, sobald die Verbindung zum Dienst abreißt", async () => {
+    useVerbindung.getState().zuruecksetzen();
+    const jetzt = Date.now();
+    render(<MonitorFenster />);
+    act(() => {
+      attrappe.schiebe(stand(0, { voll: LAGEBILD }));
+      useVerbindung.getState().meldeKontakt(jetzt - 5000);
+      useVerbindung.getState().meldeAusfall(jetzt);
+    });
+    await waitFor(() => {
+      expect(screen.getByRole("alert").textContent).toMatch(/Keine Verbindung – Stand \d\d:\d\d/);
+    });
+    expect(screen.getByText(/2\/5\/40/)).toBeDefined();
+    useVerbindung.getState().zuruecksetzen();
   });
 
   it("trägt ein Delta auf das Bild auf", async () => {

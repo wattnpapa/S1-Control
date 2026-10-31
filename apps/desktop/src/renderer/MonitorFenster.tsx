@@ -22,6 +22,7 @@ import { useEffect, useState } from "react";
 
 import { Monitor } from "./Monitor.js";
 import { bruecke, rufe } from "./bruecke.js";
+import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
 /**
@@ -45,6 +46,7 @@ function useJetzt(): number {
 
 export function MonitorFenster(): React.JSX.Element {
   const jetzt = useJetzt();
+  const verbindung = useVerbindungsstatus();
   const [lagebild, setzeLagebild] = useState<Lagebild | undefined>(undefined);
 
   useEffect(() => {
@@ -93,5 +95,5 @@ export function MonitorFenster(): React.JSX.Element {
     });
   }, []);
 
-  return <Monitor lagebild={lagebild} jetzt={jetzt} />;
+  return <Monitor lagebild={lagebild} jetzt={jetzt} verbindung={verbindung} />;
 }
