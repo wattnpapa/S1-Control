@@ -28,11 +28,11 @@ import {
   type Auswahlwert,
 } from "@s1/domaene";
 
-import { zeitpunktAusEingabe } from "../kontrakt/bedienschritte.js";
 import { auftragErfassen, fahrzeugAnlegen, personHinzufuegen } from "../kontrakt/einheitsteile.js";
 import { Maske } from "./Maske.js";
 import { Zeitfeld } from "./Zeitfeld.js";
 import { useEinheitsteilSchreiben } from "./einheitsteilSchreiben.js";
+import { funkzeitAusEingabe } from "./funkzeit.js";
 import { neueId } from "./kennungen.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
 
@@ -102,9 +102,9 @@ export function AuftragErfassung({
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={() => {
         jetztBeimBestaetigen.current ??= new Date().toISOString();
-        const beginn = von.trim() === "" ? jetztBeimBestaetigen.current : zeitpunktAusEingabe(von);
+        const beginn = von.trim() === "" ? jetztBeimBestaetigen.current : funkzeitAusEingabe(von);
         if (beginn === undefined) {
-          setzeMeldung("Der Beginn ist keine lesbare Zeitangabe — z. B. „14:30“ oder „30.10. 14:30“.");
+          setzeMeldung("Der Beginn ist keine lesbare Zeitangabe — z. B. „14:30“, „1430“ oder „30.10. 14:30“.");
           return;
         }
         return abschliessen(
