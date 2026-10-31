@@ -318,7 +318,8 @@ export interface AuftragZustand extends Anlage {
 
 export interface AnforderungZustand extends Anlage {
   readonly id: Id;
-  readonly kennung: Feld<string>;
+  /** Fehlt, wenn die Anlage keine Kennung trug (Altbestand): nie `.wert` ohne `?.`. */
+  readonly kennung?: Feld<string>;
   readonly abzuloesendeEinheitId?: Feld<Id>;
   readonly vorgeseheneEinheitText?: Feld<string>;
   readonly vorgesehenerAuftrag?: Feld<string>;

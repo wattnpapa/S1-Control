@@ -30,7 +30,7 @@ function einheitsname(zustand: Zustand, id: Id | undefined): string | undefined 
 
 /** „Anforderung ANF-001“ — mit der Kennung, sonst mit der Id. */
 export function anforderungsname(zustand: Zustand, id: Id): string {
-  const kennung = zustand.anforderungen[id]?.kennung.wert;
+  const kennung = zustand.anforderungen[id]?.kennung?.wert;
   return `Anforderung ${typeof kennung === "string" && kennung !== "" ? kennung : id}`;
 }
 

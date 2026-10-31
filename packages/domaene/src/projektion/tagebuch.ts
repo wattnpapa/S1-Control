@@ -443,8 +443,31 @@ export function ereignisgegenstand(zustand: Zustand, ereignis: EingehendesEreign
   return gegenstand(zustand, eintrag, alsId(nutzlastfeld(ereignis, eintrag.idFeld)));
 }
 
-/** Baut eine Zeile aus einem Ereignis. */
+/**
+ * Baut eine Zeile aus einem Ereignis.
+ *
+ * Scheitert der Bau an einem fehlerhaften Ereignis, steht an seiner Stelle
+ * ein „Beschädigter Eintrag“ — das Ereignis bleibt im Protokoll, das
+ * Tagebuch der übrigen bleibt lesbar.
+ */
 export function tagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tagebuchzeile {
+  try {
+    return baueTagebuchzeile(zustand, ereignis);
+  } catch {
+    return {
+      ereignisId: ereignis.id,
+      typ: ereignis.typ,
+      hlcText: hlcAlsText(ereignis.hlc),
+      wanduhr: ereignis.wanduhr,
+      akteur: ereignis.akteur.benutzer,
+      rechner: ereignis.akteur.host,
+      clientId: ereignis.akteur.clientId,
+      satz: `Beschädigter Eintrag (${ereignis.typ}) — er lässt sich nicht darstellen, bleibt aber im Protokoll.`,
+    };
+  }
+}
+
+function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tagebuchzeile {
   const eintrag = KATALOG.get(ereignis.typ);
   if (eintrag === undefined) {
     // §3.7: Eine unbekannte Art wird nach `unbekannt` gefaltet — und sie
