@@ -44,7 +44,7 @@ export function hinweisAusFehler(fehler: string | undefined): string {
 
 /** Der Hinweis zum Ausgang eines Schreibrufs; `undefined` heißt geschrieben. */
 export function hinweisAusErgebnis(ergebnis: Bedienergebnis | undefined): string | undefined {
-  if (ergebnis === undefined) return hinweisAusFehler(useLaden.getState().fehler);
+  if (!ergebnis) return hinweisAusFehler(useLaden.getState().fehler);
   if (ergebnis.art === "geschrieben") return undefined;
   if ("meldung" in ergebnis) return `Nicht gespeichert – ${ergebnis.meldung}`;
   return "Nicht gespeichert.";
