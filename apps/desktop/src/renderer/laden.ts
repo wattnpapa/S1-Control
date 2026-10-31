@@ -210,7 +210,10 @@ export interface Laden {
       | "logfrei"
       | "kosten"
       | "fueorg"
-      | "einheitenliste",
+      | "einheitenliste"
+      | "anforderungen"
+      | "tagebuch"
+      | "papier",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;

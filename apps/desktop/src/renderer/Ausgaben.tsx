@@ -38,7 +38,10 @@ export function Ausgaben(): React.JSX.Element {
       | "logfrei"
       | "kosten"
       | "fueorg"
-      | "einheitenliste",
+      | "einheitenliste"
+      | "anforderungen"
+      | "tagebuch"
+      | "papier",
     format: "html" | "pdf" | "xlsx",
   ): void {
     setzeErzeugt(undefined);
@@ -56,8 +59,8 @@ export function Ausgaben(): React.JSX.Element {
   return (
     <section aria-label="Ausgaben" className="ausgaben">
       <h2>Ausgaben <Hilfemarke kennung="ausgaben" /></h2>
-      <label className="schalter">
-        Davon Stärke
+      <label className="schalter" title="Die Ausgaben weisen zusätzlich die Stärke dieser Organisation aus">
+        Davon Stärke der Organisation
         <select
           value={organisation}
           onChange={(e) => {
@@ -106,8 +109,15 @@ export function Ausgaben(): React.JSX.Element {
       <button type="button" onClick={() => { erzeuge("log", "pdf"); }}>
         Logistik als PDF
       </button>
-      <button type="button" onClick={() => { erzeuge("logfrei", "xlsx"); }}>
-        Logistik als XLSX (LogFrei)
+      <button type="button" onClick={() => { erzeuge("log", "html"); }}>
+        Logistik als HTML
+      </button>
+      <button
+        type="button"
+        title="Wertekopie der Logistik ohne Blattschutz, zum Weiterschicken und Weiterrechnen"
+        onClick={() => { erzeuge("logfrei", "xlsx"); }}
+      >
+        Logistik als XLSX (ungeschützt)
       </button>
       {/* Die Führungsharke (M8.3) ist das Gegenstück zum Blatt „FüOrg“ der
           Excel — und dort ein reines Zeichenblatt. Gezeichnet wird hier, was
@@ -116,18 +126,55 @@ export function Ausgaben(): React.JSX.Element {
       <button type="button" onClick={() => { erzeuge("fueorg", "pdf"); }}>
         Führungsorganisation als PDF
       </button>
+      <button type="button" onClick={() => { erzeuge("fueorg", "html"); }}>
+        Führungsorganisation als HTML
+      </button>
       {/* Die Kostenübersicht (M5.2) ist der einzige Ausdruck, der nicht an
           die Wand gehört, sondern in die Abrechnung. */}
       <button type="button" onClick={() => { erzeuge("kosten", "pdf"); }}>
         Kosten als PDF
       </button>
+      <button type="button" onClick={() => { erzeuge("kosten", "html"); }}>
+        Kosten als HTML
+      </button>
+      {/* Anforderungen und Tagebuch auf Papier: mit Seitenzahl, Stand und freier
+          Notizspalte — die Übergabe an die nächste Schicht und die Rückfallebene. */}
+      <button type="button" onClick={() => { erzeuge("anforderungen", "pdf"); }}>
+        Anforderungen als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("anforderungen", "html"); }}>
+        Anforderungen als HTML
+      </button>
+      <button type="button" onClick={() => { erzeuge("tagebuch", "pdf"); }}>
+        Tagebuch als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("tagebuch", "html"); }}>
+        Tagebuch als HTML
+      </button>
+      {/* Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste,
+          Funkprotokoll. Sie hängen an keinem Datenstand und lassen sich vorab
+          ausdrucken und kopieren. */}
+      <button type="button" onClick={() => { erzeuge("papier", "pdf"); }}>
+        Papier-Vordruck als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("papier", "html"); }}>
+        Papier-Vordruck als HTML
+      </button>
       {/* Der Oldenburger Block (M4.2) ist derselbe Bestand in der
           Spaltenordnung der Vorlage — zum Einfügen in die gewohnte Excel.
           Er steht neben der Auswertung und nicht an ihrer Stelle: Die eine
           ist unsere Ausgabe, der andere der Übergabeweg. */}
-      <button type="button" onClick={() => { erzeuge("oldenburg", "xlsx"); }}>
+      <button
+        type="button"
+        title="Alle Einheiten in der Spaltenordnung der bisherigen Excel-Vorlage, zum Einfügen dort"
+        onClick={() => { erzeuge("oldenburg", "xlsx"); }}
+      >
         Oldenburger Block als XLSX
       </button>
+      <span className="hinweistext">
+        „Oldenburger Block“: alle Einheiten in der Spaltenreihenfolge der bisherigen Excel-Vorlage. „Ungeschützt“:
+        Logistik als reine Wertetabelle zum Weitergeben.
+      </span>
       {/* Der HTML-Monitor (M4.3) ist keine einmalige Ausgabe, sondern eine
           Datei, die sich fortschreibt — deshalb ein Schalter und kein Knopf.
           Nicht zu verwechseln mit dem Stärke-Monitor aus M3.5: Der ist ein
