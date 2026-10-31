@@ -22,9 +22,10 @@ const VORSCHLAG = {
   bezeichnung: "BGr THW OV Varel",
   organisation: "THW",
   ebene: "GRUPPE",
-  staerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
+  staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
   herkunft: "THW RB Oldenburg",
-  abschnittId: "ANF",
+  auftrag: "Deich Nord",
+  abschnittId: "EO",
   nachVorbildVon: "BGr 1 Oldenburg",
 };
 
@@ -69,6 +70,7 @@ const BAUM = {
   baum: [
     { id: "ANF", name: "Angefordert / Anmarsch", typ: "ANGEFORDERT", kinder: [] },
     { id: "BR", name: "Bereitstellungsraum", typ: "BEREITSTELLUNGSRAUM", kinder: [] },
+    { id: "EO", name: "Einsatzort Nord", typ: "EINSATZORT", kinder: [] },
   ],
 };
 
@@ -113,22 +115,40 @@ describe("Anforderung und Einheit", () => {
     fireEvent.click(screen.getByText("Eingetroffen"));
     expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("BGr THW OV Varel");
     expect((screen.getByLabelText("Herkunft") as HTMLInputElement).value).toBe("THW RB Oldenburg");
-    expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("0");
-    expect((screen.getByLabelText("Abschnitt") as HTMLSelectElement).value).toBe("ANF");
+    expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("8");
+    expect((screen.getByLabelText("Auftrag") as HTMLInputElement).value).toBe("Deich Nord");
+    expect((screen.getByLabelText("Abschnitt") as HTMLSelectElement).value).toBe("EO");
     expect(screen.getByText(/von „BGr 1 Oldenburg“ übernommen/)).toBeDefined();
+    expect(screen.queryByRole("alert")).toBeNull();
 
     fireEvent.change(screen.getByLabelText("Mannschaft"), { target: { value: "7" } });
     fireEvent.click(screen.getByText("Anlegen", { selector: "button[type=submit]" }));
     await waitFor(() => {
-      expect(entwuerfe()).toHaveLength(2);
+      expect(entwuerfe()).toHaveLength(3);
     });
-    const [anlage, erledigung] = entwuerfe();
+    const [anlage, erledigung, auftrag] = entwuerfe();
     expect(anlage?.typ).toBe("EinheitGemeldet");
-    const nutzlast = anlage?.nutzlast as { einheitId: string; staerke: unknown; abschnittId: string };
-    expect(nutzlast.staerke).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 7 });
-    expect(nutzlast.abschnittId).toBe("ANF");
+    const nutzlast = anlage?.nutzlast as { einheitId: string; staerke: unknown; abschnittId: string; status: string };
+    expect(nutzlast.staerke).toEqual({ fuehrer: 0, unterfuehrer: 1, mannschaft: 7 });
+    expect(nutzlast.abschnittId).toBe("EO");
+    // Regression: Die eingetroffene Einheit ist nicht mehr „Angefordert“ mit 0/0/0.
+    expect(nutzlast.status).toBe("EINSATZBEREIT");
+    expect(auftrag?.typ).toBe("AuftragErfasst");
+    expect(auftrag?.nutzlast).toMatchObject({ einheitId: nutzlast.einheitId, text: "Deich Nord" });
     expect(erledigung?.typ).toBe("AnforderungErledigt");
     expect((erledigung?.neu as { abloesendeEinheitId?: string }).abloesendeEinheitId).toBe(nutzlast.einheitId);
+  });
+
+  it("warnt bei einem nicht zählenden Bereich und verlangt Köpfe", async () => {
+    await zeige();
+    fireEvent.click(screen.getByText("Eingetroffen"));
+    fireEvent.change(screen.getByLabelText("Abschnitt"), { target: { value: "ANF" } });
+    expect(screen.getByRole("alert").textContent).toMatch(/zählt nicht in die Ist-Stärke/);
+    for (const feld of ["Führer", "Unterführer", "Mannschaft"]) {
+      fireEvent.change(screen.getByLabelText(feld), { target: { value: "0" } });
+    }
+    const knopf = screen.getByText("Anlegen", { selector: "button[type=submit]" }) as HTMLButtonElement;
+    expect(knopf.disabled).toBe(true);
   });
 
   it("setzt nur auf eingetroffen, wenn die Anlage abgewählt ist", async () => {

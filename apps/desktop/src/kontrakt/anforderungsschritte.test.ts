@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 
 import { KATALOG } from "@s1/domaene";
 
-import { abloesungNachtragen, anlageAusAnforderung } from "./anforderungsschritte.js";
+import { abloesungNachtragen, anlageAusAnforderung, auftragAusAnforderung } from "./anforderungsschritte.js";
 import { anforderungErledigt } from "./bedienschritte.js";
 
 describe("Einheit aus Anforderung", () => {
@@ -27,11 +27,24 @@ describe("Einheit aus Anforderung", () => {
     expect(KATALOG.get("EinheitGemeldet")?.schema.safeParse(entwurf.nutzlast).success).toBe(true);
   });
 
-  it("trägt die Herkunft als Ortsverband und den Status „Angefordert“", () => {
+  it("trägt die Herkunft als Ortsverband und den Status „Einsatzbereit“ (eingetroffen, nicht mehr angefordert)", () => {
     const nutzlast = entwurf.nutzlast as Record<string, unknown>;
     expect(nutzlast["bezeichnung"]).toBe("BGr Varel");
     expect(nutzlast["hierarchie"]).toEqual([{ art: "HERKUNFT", name: "THW OV Varel" }]);
-    expect(nutzlast["status"]).toBe("ANGEFORDERT");
+    expect(nutzlast["status"]).toBe("EINSATZBEREIT");
+  });
+});
+
+describe("Auftrag der Anforderung", () => {
+  it("wird als AuftragErfasst an der neuen Einheit erfasst, das Katalogschema nimmt ihn an", () => {
+    const entwurf = auftragAusAnforderung("A9", "E9", " Deich Nord ", "2026-10-30T10:00:00.000Z");
+    expect(entwurf?.typ).toBe("AuftragErfasst");
+    expect(entwurf?.nutzlast).toMatchObject({ einheitId: "E9", text: "Deich Nord" });
+    expect(KATALOG.get("AuftragErfasst")?.schema.safeParse(entwurf?.nutzlast).success).toBe(true);
+  });
+
+  it("entfällt, wenn die Anforderung keinen Auftrag nennt", () => {
+    expect(auftragAusAnforderung("A9", "E9", "  ", "2026-10-30T10:00:00.000Z")).toBeUndefined();
   });
 });
 

@@ -6,9 +6,11 @@
  * abtippen, was in der Anforderung schon steht. Diese Maske legt die Einheit
  * aus der Anforderung an — vorbelegt mit dem Vorschlag der Projektion
  * (`einheitsvorschlag`: vorgesehene Einheit, Herkunft aus der Zusage,
- * Organisation und Ebene der abzulösenden Einheit, Stärke 0/0/0, Bereich
- * „Angefordert / Anmarsch“) — und hält in der Erledigung fest, welche Einheit
- * es war. Damit füllt sich „Ablösung durch“ an der abgelösten Zeile.
+ * Organisation, Ebene, Stärke und Bereich der abzulösenden Einheit, Auftrag
+ * der Anforderung) — und hält in der Erledigung fest, welche Einheit
+ * es war. Damit füllt sich „Ablösung durch“ an der abgelösten Zeile. Die Einheit
+ * ist eingetroffen („Einsatzbereit“), der Auftrag wird als Auftrag erfasst,
+ * und sie zählt in die Ist-Stärke, sobald ihr Bereich ein Einsatzbereich ist.
  *
  * Drei Wege: die Einheit aus der Anforderung neu anlegen, eine **bestehende**
  * Einheit verknüpfen (sie wurde schon erfasst — über den Erfassungsbogen,
@@ -31,7 +33,7 @@ import {
   type Einheitsvorschlag,
 } from "@s1/domaene";
 
-import { abloesungNachtragen, anlageAusAnforderung } from "../kontrakt/anforderungsschritte.js";
+import { abloesungNachtragen, anlageAusAnforderung, auftragAusAnforderung } from "../kontrakt/anforderungsschritte.js";
 import { anforderungErledigt, istStaerkeEingabe } from "../kontrakt/bedienschritte.js";
 import type { Entwurf } from "../kontrakt/index.js";
 import { Maske } from "./Maske.js";
@@ -57,8 +59,12 @@ interface Einheitseingabe {
   readonly unterfuehrer: string;
   readonly mannschaft: string;
   readonly herkunft: string;
+  readonly auftrag: string;
   readonly abschnittId: string;
 }
+
+/** Bereiche, in denen eine eingetroffene Einheit nicht in die Ist-Stärke zählt. */
+const NICHT_ZAEHLEND: ReadonlySet<string> = new Set(["ANGEFORDERT", "EINGANG", "ARCHIV"]);
 
 function ausVorschlag(vorschlag: Einheitsvorschlag | undefined): Einheitseingabe {
   return {
@@ -69,6 +75,7 @@ function ausVorschlag(vorschlag: Einheitsvorschlag | undefined): Einheitseingabe
     unterfuehrer: String(vorschlag?.staerke.unterfuehrer ?? 0),
     mannschaft: String(vorschlag?.staerke.mannschaft ?? 0),
     herkunft: vorschlag?.herkunft ?? "",
+    auftrag: vorschlag?.auftrag ?? "",
     abschnittId: vorschlag?.abschnittId ?? "",
   };
 }
@@ -77,7 +84,9 @@ function vollstaendig(e: Einheitseingabe): boolean {
   return (
     e.bezeichnung.trim() !== "" &&
     e.abschnittId !== "" &&
-    [e.fuehrer, e.unterfuehrer, e.mannschaft].every(istStaerkeEingabe)
+    [e.fuehrer, e.unterfuehrer, e.mannschaft].every(istStaerkeEingabe) &&
+    // Eine eingetroffene Einheit ohne Köpfe wäre im Kopf unsichtbar.
+    [e.fuehrer, e.unterfuehrer, e.mannschaft].some((wert) => Number.parseInt(wert, 10) > 0)
   );
 }
 
@@ -133,7 +142,12 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
     );
     if (anlage?.art !== "geschrieben") return;
     const ergebnis = await laden.bediene(verknuepfung(zeile, art, einheitId));
-    if (ergebnis?.art === "geschrieben") aufSchliessen();
+    if (ergebnis?.art !== "geschrieben") return;
+    // Der Auftrag zuletzt: Scheitert er, steht die Einheit trotzdem da und
+    // verknüpft; die Fehlermeldung des Ladens nennt den Rest.
+    const auftrag = auftragAusAnforderung(neueId("A"), einheitId, eingabe.auftrag, new Date().toISOString());
+    if (auftrag !== undefined) await laden.bediene(auftrag);
+    aufSchliessen();
   }
 
   return (
@@ -217,7 +231,7 @@ function Wegwahl({
 interface EinheitsfelderEigenschaften {
   readonly eingabe: Einheitseingabe;
   readonly aufEingabe: (neu: (bisher: Einheitseingabe) => Einheitseingabe) => void;
-  readonly abschnitte: readonly { readonly id: string; readonly name: string }[];
+  readonly abschnitte: readonly { readonly id: string; readonly name: string; readonly typ: string }[];
   readonly nachVorbildVon: string | undefined;
 }
 
@@ -255,19 +269,27 @@ function Einheitsfelder({ eingabe, aufEingabe, abschnitte, nachVorbildVon }: Ein
       {feld("Unterführer", "unterfuehrer")}
       {feld("Mannschaft", "mannschaft")}
       {feld("Herkunft", "herkunft")}
+      {feld("Auftrag", "auftrag")}
       <label>
         Abschnitt
         <select value={eingabe.abschnittId} onChange={setze("abschnittId")}>
           <option value="">— bitte wählen —</option>
           {abschnitte.map((knoten) => (
-            <option key={knoten.id} value={knoten.id}>{knoten.name}</option>
+            <option key={knoten.id} value={knoten.id}>
+              {NICHT_ZAEHLEND.has(knoten.typ) ? `${knoten.name} (zählt nicht)` : knoten.name}
+            </option>
           ))}
         </select>
       </label>
+      {NICHT_ZAEHLEND.has(abschnitte.find((k) => k.id === eingabe.abschnittId)?.typ ?? "") && (
+        <p className="hinweistext" role="alert">
+          Dieser Bereich zählt nicht in die Ist-Stärke im Kopf. Eine eingetroffene Einheit gehört in einen Einsatzbereich.
+        </p>
+      )}
       {nachVorbildVon !== undefined && (
         <p className="hinweistext">
-          Organisation und Ebene sind von „{nachVorbildVon}“ übernommen, die abgelöst
-          wird. Die Stärke trägt ein, was die eintreffende Einheit meldet.
+          Organisation, Ebene, Stärke und Bereich sind von „{nachVorbildVon}“ übernommen,
+          die abgelöst wird. Die Stärke ist zu prüfen und einzutragen, was die eintreffende Einheit meldet.
         </p>
       )}
     </>

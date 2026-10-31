@@ -9,7 +9,7 @@
  */
 
 import type { Id, Staerke } from "../werte.js";
-import type { AnforderungZustand, Zustand } from "../zustand.js";
+import type { AnforderungZustand, EinheitZustand, Zustand } from "../zustand.js";
 
 /**
  * Was die Maske „Einheit aus Anforderung anlegen“ vorbelegt.
@@ -26,7 +26,9 @@ export interface Einheitsvorschlag {
   readonly ebene: string;
   readonly staerke: Staerke;
   readonly herkunft: string;
-  /** Der Bereich „Angefordert / Anmarsch“, wenn es ihn gibt. */
+  /** Der vorgesehene Auftrag der Anforderung; leer, wenn keiner genannt ist. */
+  readonly auftrag: string;
+  /** Der Einsatzbereich der abzulösenden Einheit, wenn er in die Stärke zählt. */
   readonly abschnittId?: Id;
   /** Von welcher Einheit Organisation, Ebene und Stärke stammen. */
   readonly nachVorbildVon?: string;
@@ -38,28 +40,34 @@ function feldtext(feld: { readonly wert: unknown } | undefined, ersatz: string):
   return typeof feld?.wert === "string" && feld.wert !== "" ? feld.wert : ersatz;
 }
 
-/** Der erste nicht aufgelöste Abschnitt vom Typ „Angefordert / Anmarsch“, nach Id geordnet. */
-export function anmarschabschnitt(zustand: Zustand): Id | undefined {
-  return Object.values(zustand.abschnitte)
-    .filter((abschnitt) => abschnitt.typ.wert === "ANGEFORDERT" && (abschnitt.aufgeloest?.wert ?? null) === null)
-    .map((abschnitt) => abschnitt.id)
-    .sort()[0];
+/**
+ * Der Bereich der abzulösenden Einheit, wenn er in die Gesamtstärke zählt.
+ *
+ * Nicht vorgeschlagen wird „Angefordert / Anmarsch“: Eine dort angelegte,
+ * eingetroffene Einheit stünde in der Lage, zählte aber nicht in die
+ * Ist-Stärke. Ohne zählenden Bereich bleibt die Wahl leer und ist zu treffen.
+ */
+function zaehlenderBereich(zustand: Zustand, vorbild: EinheitZustand | undefined): Id | undefined {
+  if (vorbild === undefined) return undefined;
+  const bereich = zustand.abschnitte[vorbild.wirksamerAbschnittId];
+  return bereich?.zaehltInGesamtstaerke === true ? bereich.id : undefined;
 }
 
 export function einheitsvorschlag(zustand: Zustand, anforderung: AnforderungZustand): Einheitsvorschlag {
   const vorbildId = anforderung.abzuloesendeEinheitId?.wert;
   const vorbild = typeof vorbildId === "string" ? zustand.einheiten[vorbildId] : undefined;
   const zusage = anforderung.zusage?.wert as { zugesagtVon?: unknown } | null | undefined;
-  const abschnittId = anmarschabschnitt(zustand);
+  const abschnittId = zaehlenderBereich(zustand, vorbild);
   return {
     bezeichnung: feldtext(anforderung.vorgeseheneEinheitText, feldtext(vorbild?.bezeichnung, "")),
     organisation: feldtext(vorbild?.organisation, "THW"),
     ebene: feldtext(vorbild?.ebene, "GRUPPE"),
-    // Die Stärke bleibt 0/0/0, auch wenn ein Vorbild da ist: Was die
-    // eintreffende Einheit stark ist, weiß nur ihre Meldung. Eine Zahl, die
-    // niemand gemeldet hat, ist in der Stärkeübersicht der gefährlichere
-    // Fehler als eine Null, die auffällt.
-    staerke: NULLSTAERKE,
+    // Die Stärke der abzulösenden Einheit ist die Vorbelegung: Eine Ablösung
+    // ist in aller Regel gleich stark, und eine Null im Kopf wäre die
+    // falschere Aussage. Die Maske zeigt sie änderbar und nennt die Herkunft
+    // („nachVorbildVon“); ohne Vorbild bleibt es bei 0/0/0.
+    staerke: vorbild?.wirksameStaerke ?? NULLSTAERKE,
+    auftrag: feldtext(anforderung.vorgesehenerAuftrag, ""),
     herkunft: typeof zusage?.zugesagtVon === "string" ? zusage.zugesagtVon : "",
     ...(abschnittId === undefined ? {} : { abschnittId }),
     ...(vorbild === undefined ? {} : { nachVorbildVon: feldtext(vorbild.bezeichnung, vorbild.id) }),

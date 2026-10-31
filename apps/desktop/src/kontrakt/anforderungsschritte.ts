@@ -14,8 +14,15 @@
 
 import type { Staerke } from "@s1/domaene";
 
-import { STATUS_VORBELEGUNG } from "./bedienschritte.js";
+import { auftragErfassen } from "./einheitsteile.js";
 import type { Entwurf } from "./index.js";
+
+/**
+ * Der Status einer Einheit, die aus „Eingetroffen“ entsteht: Sie ist da, aber
+ * noch nicht im Einsatz — „Einsatzbereit“ wie nach der Meldung am Eingang.
+ * „Angefordert“ wäre falsch: Das ist der Status vor dem Eintreffen.
+ */
+export const STATUS_EINGETROFFEN = "EINSATZBEREIT";
 
 /** Was die Maske „Einheit aus Anforderung anlegen“ abschickt. */
 export interface AnlageAusAnforderung {
@@ -29,11 +36,21 @@ export interface AnlageAusAnforderung {
   readonly reihenfolge: number;
 }
 
+/** Der Auftrag der Anforderung an der neuen Einheit — leer, wenn keiner genannt ist. */
+export function auftragAusAnforderung(
+  auftragId: string,
+  einheitId: string,
+  text: string,
+  von: string,
+): Entwurf | undefined {
+  return text.trim() === "" ? undefined : auftragErfassen({ auftragId, einheitId, text, von });
+}
+
 /**
  * Die Einheit aus einer Anforderung — ein `EinheitGemeldet` wie aus der
- * Vorlage, nur mit den Angaben der Anforderung. Status „Angefordert“, wie
- * jede Anlage aus der Einheitentabelle: Ob die Einheit schon einsatzbereit
- * ist, meldet sie selbst.
+ * Vorlage, nur mit den Angaben der Anforderung. Die Einheit ist
+ * eingetroffen, also „Einsatzbereit“ (`STATUS_EINGETROFFEN`) und nicht mehr
+ * „Angefordert“; weiter meldet sie selbst.
  */
 export function anlageAusAnforderung(anlage: AnlageAusAnforderung): Entwurf {
   const herkunft = anlage.herkunft?.trim() ?? "";
@@ -48,7 +65,7 @@ export function anlageAusAnforderung(anlage: AnlageAusAnforderung): Entwurf {
       ebene: anlage.ebene,
       staerke: anlage.staerke,
       personalErfassung: "NUR_STAERKE",
-      status: STATUS_VORBELEGUNG,
+      status: STATUS_EINGETROFFEN,
       reihenfolge: anlage.reihenfolge,
       istFuehrungDesAbschnitts: false,
     },
