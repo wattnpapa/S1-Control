@@ -36,6 +36,7 @@ import {
 } from "../beschriftungen.js";
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
 import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
+import { klartextsatz } from "./tagebuch-klartext.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -106,7 +107,7 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   AuftragZurueckgenommen: "Auftrag zurückgenommen",
   AnforderungAngelegt: "Anforderung angelegt",
   AnforderungGeaendert: "Anforderung geändert",
-  AbloesungZugesagt: "Ablösung zugesagt",
+  AbloesungZugesagt: "Zusage erfasst",
   ZusageZurueckgenommen: "Zusage zurückgenommen",
   AnforderungErledigt: "Anforderung erledigt",
   ErledigungZurueckgenommen: "Erledigung zurückgenommen",
@@ -372,13 +373,19 @@ export function tagebuchsatz(
   // dort nur eine Kennung (`tagebuch-einheitsteile.ts`).
   if (eintrag.form === "b") return einheitsteilAnlagesatz(zustand, ereignis, kopf) ?? betreff;
 
+  // Vorgänge, bei denen „vorher → nachher“ nur Kennungen zeigte: Klartext.
+  const klar = klartextsatz(zustand, ereignis, betreff);
+  if (klar !== undefined) return klar;
+
   // Form (a): ein Feld, und der Wert steht im Rahmen (§2.2).
   const feld = feldname(ereignis, eintrag);
   const beschriftung = feld === undefined ? undefined : (FELD_TEXT[feld] ?? feld);
   const von = "vorher" in ereignis ? satzwertMitWort(ereignis.typ, ereignis.vorher, feld) : "—";
   const auf = satzwertMitWort(ereignis.typ, ereignis.neu, feld);
   const feldteil = beschriftung === undefined || eintrag.feld?.art === "fest" ? "" : ` (${beschriftung})`;
-  return `${betreff}${feldteil}: ${von} → ${auf}`;
+  const funkzeit = nutzlastfeld(ereignis, "ereignisZeit");
+  const zeitteil = typeof funkzeit === "string" ? ` — Fachliche Zeit ${zeitpunktText(funkzeit)}` : "";
+  return `${betreff}${feldteil}: ${von} → ${auf}${zeitteil}`;
 }
 
 /**
@@ -440,7 +447,7 @@ function bezug(
 }
 
 /** Die fachliche Zeit einer Art, sofern sie eine trägt (§2.5). */
-const ZEITFELDER = ["zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm", "von"] as const;
+const ZEITFELDER = ["ereignisZeit", "zeitpunkt", "aufgeloestAm", "empfangenAm", "hinzugefuegtAm", "angefordertAm", "von"] as const;
 
 function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   // Ein geänderter Einsatzbeginn ist der **Wert** der Zeile und nicht ihre
@@ -449,6 +456,11 @@ function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   for (const feld of ZEITFELDER) {
     const wert = nutzlastfeld(ereignis, feld);
     if (typeof wert === "string") return wert;
+  }
+  // Das Eintreffen einer Anforderung trägt seine Zeit im Wert (`erledigtAm`).
+  if (ereignis.typ === "AnforderungErledigt") {
+    const am = (ereignis.neu as { erledigtAm?: unknown } | null | undefined)?.erledigtAm;
+    if (typeof am === "string") return am;
   }
   // Die Arten mit fester fachlicher Zeit tragen sie in `neu` (§2.5):
   // `ZeitpunktGesetzt`, `EinsatzBeendet`, `AbschnittAufgeloest`.

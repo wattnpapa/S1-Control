@@ -173,7 +173,12 @@ export const EinheitStammdatenGeaendert = z.object({
 });
 
 export const StaerkeGeaendert = z.object({ einheitId: zId, meldezeit: zZeitpunkt.optional() });
-export const StatusGesetzt = z.object({ einheitId: zId });
+/**
+ * `ereignisZeit` ist die fachliche Zeit des Statuswechsels (Funkzeit): wann
+ * er geschah, nicht wann er getippt wurde. Optional und additiv — ohne sie
+ * gilt die Tippzeit des Rahmens.
+ */
+export const StatusGesetzt = z.object({ einheitId: zId, ereignisZeit: zZeitpunkt.optional() });
 export const SchichtGesetzt = z.object({ einheitId: zId });
 
 export const ZeitpunktGesetzt = z.object({

@@ -66,6 +66,9 @@ export {
   type TaktischeEbene,
 } from "./ereignis.js";
 
+// Vorab-Check fuer das Aufteilen (§5.4.2) — Maske und Worker teilen die Regel.
+export { aufteilungPruefen, type Aufteilungsbefund } from "./aufteilung.js";
+
 // CRC-32 (§2.1) — geteilt zwischen Speicherschicht und Ausgaben (M4.0).
 export { crc32, crc32Hex } from "./pruefsumme.js";
 
