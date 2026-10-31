@@ -29,6 +29,7 @@ import { Maske } from "./Maske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
 import { aufteilung, entfernung, istStaerkeEingabe, verschiebung, zusammenfuehrung } from "../kontrakt/bedienschritte.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 
@@ -59,11 +60,19 @@ export function Einheitenmasken({
     setzeZiel(maske === "verschieben" ? "" : (abschnittId ?? ""));
   }, [abschnittId, maske]);
 
+  const versuch = useAnlegeversuch();
+  const verwerfeVersuch = versuch.verwerfe;
+  // Kennungen und Hinweis gelten für **eine** Maske: Wer sie schließt und eine
+  // andere öffnet, beginnt neu.
+  useEffect(() => {
+    verwerfeVersuch();
+  }, [maske, verwerfeVersuch]);
+
   const erste = gewaehlte[0];
   const abschnitte = laden.baum?.baum ?? [];
 
   async function schreibe(entwurf: Parameters<typeof laden.bediene>[0]): Promise<void> {
-    const ergebnis = await laden.bediene(entwurf);
+    const ergebnis = await versuch.schreibe(entwurf);
     if (ergebnis?.art !== "geschrieben") return;
     aufSchliessen();
     await laden.holeTabelle();
@@ -99,15 +108,18 @@ export function Einheitenmasken({
     return (
       <Maske
         titel={`${String(gewaehlte.length)} Einheit(en) verschieben`}
-        bereit={ziel !== "" && gewaehlte.some((zeile) => zeile.abschnittId !== ziel)}
+        bereit={!versuch.gesperrt && ziel !== "" && gewaehlte.some((zeile) => zeile.abschnittId !== ziel)}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
-          void (async () => {
+          return (async () => {
             // Je Einheit ein Ereignis, und zwar nacheinander: Jede trägt ihren
             // eigenen `vorher`-Wert (§2.2a), und ein gemeinsames Ereignis für
             // mehrere Einheiten gibt es im Katalog nicht.
             for (const zeile of gewaehlte) {
-              await laden.bediene(verschiebung(zeile.einheitId, zeile.abschnittId, ziel));
+              const ergebnis = await versuch.schreibe(verschiebung(zeile.einheitId, zeile.abschnittId, ziel));
+              // Scheitert eine, bleibt die Maske offen; die bereits verschobenen
+              // stehen schon am Ziel, die Wiederholung ändert an ihnen nichts.
+              if (ergebnis?.art !== "geschrieben") return;
             }
             aufSchliessen();
             await laden.holeTabelle();
@@ -126,6 +138,7 @@ export function Einheitenmasken({
             </li>
           ))}
         </ul>
+        {versuch.anzeige}
       </Maske>
     );
   }
@@ -140,13 +153,13 @@ export function Einheitenmasken({
     return (
       <Maske
         titel={`„${erste.anzeige}“ aufteilen`}
-        bereit={bezeichnung.trim().length > 0 && summe > 0 && Object.values(staerke).every(istStaerkeEingabe)}
+        bereit={!versuch.gesperrt && bezeichnung.trim().length > 0 && summe > 0 && Object.values(staerke).every(istStaerkeEingabe)}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
-          void schreibe(
+          return schreibe(
             aufteilung({
               quelle: erste,
-              neueEinheitId: neueId("E"),
+              neueEinheitId: versuch.kennung(() => neueId("E")),
               bezeichnung: bezeichnung.trim(),
               abgeteilteStaerke: abgeteilt,
               abschnittId: ziel === "" ? erste.abschnittId : ziel,
@@ -176,6 +189,7 @@ export function Einheitenmasken({
           Abzug steht an der neuen Einheit, nicht als neue Gesamtzahl an der Quelle — zwei
           gleichzeitige Aufteilungen derselben Einheit gehen so beide auf.
         </p>
+        {versuch.anzeige}
       </Maske>
     );
   }
@@ -186,10 +200,10 @@ export function Einheitenmasken({
       <Maske
         titel="Einheiten zusammenführen"
         bestaetigungstext="Zusammenführen"
-        bereit={ziel !== "" && quellen.length > 0}
+        bereit={!versuch.gesperrt && ziel !== "" && quellen.length > 0}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
-          void schreibe(zusammenfuehrung(ziel, quellen));
+          return schreibe(zusammenfuehrung(ziel, quellen));
         }}
       >
         <label>
@@ -221,6 +235,7 @@ export function Einheitenmasken({
             </li>
           ))}
         </ul>
+        {versuch.anzeige}
       </Maske>
     );
   }
@@ -230,10 +245,10 @@ export function Einheitenmasken({
       <Maske
         titel={`„${erste.anzeige}“ entfernen`}
         bestaetigungstext="Entfernen"
-        bereit={grund.trim().length > 0}
+        bereit={!versuch.gesperrt && grund.trim().length > 0}
         aufAbbrechen={aufSchliessen}
         aufBestaetigen={() => {
-          void schreibe(entfernung(erste.einheitId, grund.trim()));
+          return schreibe(entfernung(erste.einheitId, grund.trim()));
         }}
       >
         <label>
@@ -250,6 +265,7 @@ export function Einheitenmasken({
           aber aus allen Summen. Wer das später liest, soll erfahren, warum eine gemeldete Kraft
           nicht mehr zählt — deshalb ist der Grund Pflicht (§2.4).
         </p>
+        {versuch.anzeige}
       </Maske>
     );
   }

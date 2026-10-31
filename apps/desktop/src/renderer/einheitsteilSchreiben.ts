@@ -16,6 +16,7 @@
 import { useCallback } from "react";
 
 import type { Entwurf } from "../kontrakt/index.js";
+import { hinweisAusFehler } from "./Anlegeversuch.js";
 import { useLaden } from "./laden.js";
 
 /** `undefined` heißt geschrieben; sonst der Grund, aus dem nichts geschrieben wurde. */
@@ -29,7 +30,9 @@ export function useEinheitsteilSchreiben(einheitId: string): (entwurf: Entwurf) 
   return useCallback(
     async (entwurf: Entwurf): Promise<Schreibausgang> => {
       const ergebnis = await bediene(entwurf);
-      if (ergebnis === undefined) return "Es ist kein Einsatz geöffnet.";
+      // Kein Ergebnis heißt: Der Ruf scheiterte (Verbindung, Dienst) oder es ist
+      // kein Einsatz offen; der Text sagt, ob gespeichert ist oder unklar bleibt.
+      if (ergebnis === undefined) return hinweisAusFehler(useLaden.getState().fehler);
       if (ergebnis.art !== "geschrieben") {
         return "meldung" in ergebnis ? ergebnis.meldung : "Der Schritt wurde nicht geschrieben.";
       }

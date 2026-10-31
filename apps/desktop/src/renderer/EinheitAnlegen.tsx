@@ -15,7 +15,7 @@
  * Quellzeile und schreibt, was dann dasteht — eine Kopie ist eine Anlage.
  */
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 
 import {
   ORGANISATIONEN,
@@ -37,7 +37,7 @@ import { einheitsanlage } from "../kontrakt/einheitsanlage.js";
 import type { Entwurf } from "../kontrakt/index.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
-import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
 
 type Weg = "vorlage" | "frei";
 
@@ -139,20 +139,22 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: Einh
   const [herkunft, setzeHerkunft] = useState(vorbelegung?.herkunft ?? "");
   const [ziel, setzeZiel] = useState(vorbelegung?.abschnittId ?? abschnittId ?? "");
 
-  const kennung = useRef<Anlagekennung | undefined>(undefined);
-  const sperre = useSchreibsperre();
+  const versuch = useAnlegeversuch();
 
-  const bereit = sperre === undefined && ziel !== "" && (weg === "frei" ? freiVollstaendig(frei, ziel) : vorlageNach(vorlageId) !== undefined);
+  const bereit = !versuch.gesperrt && ziel !== "" && (weg === "frei" ? freiVollstaendig(frei, ziel) : vorlageNach(vorlageId) !== undefined);
 
   async function schreibe(): Promise<void> {
     // Die Kennung entsteht erst beim Bestätigen: Jede Anlage bekommt ihre eigene –
     // und behält sie, bis der Dialog schließt (siehe `Anlagekennung`).
-    kennung.current ??= { einheitId: neueId("E"), reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1 };
-    const gemeinsam: Gemeinsam = { ...kennung.current, ziel, herkunft };
+    const kennung = versuch.kennung<Anlagekennung>(() => ({
+      einheitId: neueId("E"),
+      reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1,
+    }));
+    const gemeinsam: Gemeinsam = { ...kennung, ziel, herkunft };
     const entwurf =
       weg === "frei" ? freierEntwurf(frei, gemeinsam) : vorlagenEntwurf(vorlageId, vorlagenOrganisation, gemeinsam);
     if (entwurf === undefined) return;
-    const ergebnis = await laden.bediene(entwurf);
+    const ergebnis = await versuch.schreibe(entwurf);
     if (ergebnis?.art !== "geschrieben") return;
     aufSchliessen();
     await laden.holeTabelle();
@@ -166,11 +168,7 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: Einh
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={schreibe}
     >
-      {sperre !== undefined && (
-        <p role="alert" className="warnung">
-          {sperre}
-        </p>
-      )}
+      {versuch.anzeige}
       <div className="spaltengruppen" role="group" aria-label="Anlegen">
         <button
           type="button"

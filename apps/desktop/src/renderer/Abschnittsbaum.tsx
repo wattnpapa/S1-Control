@@ -27,10 +27,10 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { ABSCHNITTSTYPEN, abschnittstypTitel, projektion, type Baumknoten } from "@s1/domaene";
+import { ABSCHNITTSTYPEN, abschnittstypTitel, kennzahlen, projektion, type Baumknoten } from "@s1/domaene";
 
 import { Maske } from "./Maske.js";
-import { neueId } from "./kennungen.js";
+import { AbschnittAnlegen } from "./AbschnittAnlegen.js";
 import { useLaden } from "./laden.js";
 import { abschnittszeichen, langform } from "./harke.js";
 import { Zeichen } from "./zeichen.js";
@@ -199,6 +199,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
                 <span className="zahlen">
                   {String(zeile.einheitenSumme)} Einh. · {zeile.summenStaerke.fuehrer}/
                   {zeile.summenStaerke.unterfuehrer}/{zeile.summenStaerke.mannschaft}
+                  {zeile.erwartetSumme > 0 && ` · ${kennzahlen.erwartetKurz(zeile.erwartetSumme)}`}
                 </span>
                 {zeile.aufgeloestNach !== undefined && (
                   <span className="warnung">aufgelöst → {zeile.aufgeloestNach}</span>
@@ -219,35 +220,12 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
       </ul>
 
       {maske === "anlegen" && (
-        <Maske
-          titel="Abschnitt anlegen"
-          bereit={eingabe.trim().length > 0}
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            void bediene({
-              typ: "AbschnittAngelegt",
-              nutzlast: {
-                abschnittId: neueId("A"),
-                name: eingabe.trim(),
-                typ: ziel === "" ? "EINSATZORT" : ziel,
-                // Der neue Abschnitt hängt unter dem gewählten, wenn einer
-                // gewählt ist: Das ist fast immer gemeint, und der Weg zurück
-                // an die Wurzel ist ein Umhängen.
-                ...(gewaehlt === undefined || knoten?.systemAbschnitt === true ? {} : { parentId: gewaehlt }),
-                reihenfolge: naechsteReihenfolge(zeilen, gewaehlt),
-              },
-            });
-          }}
-        >
-          <label>
-            Name
-            <input value={eingabe} onChange={(e) => { setzeEingabe(e.target.value); }} />
-          </label>
-          <label>
-            Typ
-            <Typwahl wert={ziel === "" ? "EINSATZORT" : ziel} aufWahl={setzeZiel} />
-          </label>
-        </Maske>
+        <AbschnittAnlegen
+          elternId={gewaehlt === undefined || knoten?.systemAbschnitt === true ? undefined : gewaehlt}
+          reihenfolge={naechsteReihenfolge(zeilen, gewaehlt)}
+          aufSchliessen={schliesse}
+          typwahl={(wert, aufWahl) => <Typwahl wert={wert} aufWahl={aufWahl} />}
+        />
       )}
 
       {maske === "umbenennen" && knoten !== undefined && (
