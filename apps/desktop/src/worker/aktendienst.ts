@@ -54,14 +54,17 @@ import {
 } from "@s1/domaene";
 import {
   Akte,
+  PRAESENZ_TAKT_MS,
   Praesenzbeobachtung,
   clientPraefix,
+  entfernePraesenz,
   istVerwaltungsereignis,
   liesFremdePraesenz,
   liesLokaleHistorie,
   oeffneAkte,
   schreibePraesenz,
   segmentText,
+  uhrAbweichungMs,
   type Dateisystem,
   type Einsatzablage,
   type Ereignisentwurf,
@@ -155,7 +158,7 @@ export const TAKTE_VORBELEGUNG: Takte = {
   spiegelungMs: 1_000,
   taktAMs: 1_000,
   taktBMs: 4_000,
-  praesenzMs: 15_000,
+  praesenzMs: PRAESENZ_TAKT_MS,
   monitorMs: 30_000,
 };
 
@@ -409,6 +412,19 @@ export class Aktendienst {
     if (this.#geschlossen || this.#akte === undefined) return;
     const jetzt = this.#o.zeit();
 
+  /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
+  async meldeAb(): Promise<void> {
+    await entfernePraesenz({
+      dateisystem: this.#o.dateisystem,
+      zeit: this.#o.zeit,
+      ablage: this.#o.ablage,
+      clientId: this.#clientId,
+      anzeigename: this.#o.anzeigename,
+      rechnername: this.#o.rechnername,
+      programmversion: this.#o.programmversion,
+    });
+  }
+
     if (jetzt - this.#letzteSpiegelung >= this.#takte.spiegelungMs) {
       this.#letzteSpiegelung = jetzt;
       await this.#spiegle();
@@ -515,7 +531,6 @@ export class Aktendienst {
           .filter((q) => !q.vorlaeufig)
           .map((q) => ({ datei: q.datei, offset: q.offset })),
       );
-      const jetzt = this.#o.zeit();
       this.#peers = (await liesFremdePraesenz(praesenzOptionen, this.#praesenzbeobachtung)).map(
         (fremd) => {
           // §6.4: Die Praesenzdatei traegt Segment und Offset des anderen
@@ -528,7 +543,6 @@ export class Aktendienst {
           // §2.6: Die Abweichung ordnet nichts; sie erklaert Anzeigen und die
           // Schwellen aus §2.5. Vorzeichenbehaftet, weil „geht vor" und „geht
           // nach" verschiedene Ursachen haben.
-          const dann = Date.parse(fremd.praesenz.wanduhr);
           return {
             clientId: fremd.praesenz.clientId,
             anzeigename: fremd.praesenz.anzeigename,
@@ -539,7 +553,10 @@ export class Aktendienst {
             segment: fremd.praesenz.segment,
             offset: fremd.praesenz.offset,
             gelesenerOffset: gelesen,
-            uhrAbweichungMs: Number.isNaN(dann) ? 0 : dann - jetzt,
+            uhrAbweichungMs: uhrAbweichungMs(
+              fremd,
+              this.#praesenzbeobachtung.gesehenSeit(fremd.praesenz.clientId),
+            ),
             quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
           };
         },

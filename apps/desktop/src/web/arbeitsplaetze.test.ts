@@ -25,6 +25,7 @@ function baue(): { plaetze: Arbeitsplaetze; attrappen: Map<string, Attrappe> } {
   const attrappen = new Map<string, Attrappe>();
   const plaetze = new Arbeitsplaetze({
     gnadenfristMs: 1_000,
+    abmeldefristMs: 500,
     fabrik: (schluessel, sende) => {
       const rufe: Ruf[] = [];
       const attrappe: Attrappe = {
@@ -51,6 +52,36 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("Abmelden", () => {
+  it("schließt nach der kurzen Abmeldefrist, wenn niemand mehr zuhört", async () => {
+    const { plaetze, attrappen } = baue();
+    const ab = plaetze.hoere(SCHLUESSEL_A, () => undefined);
+    plaetze.abmelde(SCHLUESSEL_A);
+    ab();
+    await vi.advanceTimersByTimeAsync(400);
+    expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(true);
+  });
+
+  it("behält einen Platz, der nach dem Abmelden wieder zuhört (Neuladen)", async () => {
+    const { plaetze, attrappen } = baue();
+    const ab = plaetze.hoere(SCHLUESSEL_A, () => undefined);
+    plaetze.abmelde(SCHLUESSEL_A);
+    ab();
+    await vi.advanceTimersByTimeAsync(300);
+    plaetze.hoere(SCHLUESSEL_A, () => undefined);
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(false);
+  });
+
+  it("kennt keinen unbekannten Schlüssel und legt dafür nichts an", () => {
+    const { plaetze } = baue();
+    plaetze.abmelde(SCHLUESSEL_B);
+    expect(plaetze.offene).toEqual([]);
+  });
 });
 
 describe("Arbeitsplaetze", () => {

@@ -58,6 +58,12 @@ export interface ArbeitsplaetzeOptionen {
    * halten und eine Praesenz fortschreiben, hinter der niemand sitzt.
    */
   readonly gnadenfristMs: number;
+  /**
+   * Die verkürzte Frist nach einer Abmeldung (Seite geschlossen), in
+   * Millisekunden. Länger als ein Neuladen, kürzer als die Gnadenfrist: Wer
+   * nur neu lädt, hört gleich wieder zu und behält seinen Platz.
+   */
+  readonly abmeldefristMs?: number;
   readonly zeit?: () => number;
   readonly protokolliere?: (stufe: "info" | "warnung" | "fehler", text: string) => void;
 }
@@ -66,7 +72,12 @@ interface Platz {
   readonly schale: Arbeitsplatzschale;
   readonly zuhoerer: Set<(mitteilung: Mitteilung) => void>;
   schliessung: ReturnType<typeof setTimeout> | undefined;
+  /** Der Browser hat sich abgemeldet: Nach dem letzten Zuhörer gilt die kurze Frist. */
+  abgemeldet: boolean;
 }
+
+/** Vorgabe der verkürzten Frist nach einer Abmeldung. */
+export const ABMELDEFRIST_MS = 15_000;
 
 /** Form des Schluessels: `base64url` aus 24 Bytes — nichts, was in einen Pfad gehoert. */
 export const SCHLUESSEL_FORM = /^[A-Za-z0-9_-]{32}$/;
@@ -97,6 +108,7 @@ export class Arbeitsplaetze {
   hoere(schluessel: string, zuhoerer: (mitteilung: Mitteilung) => void): () => void {
     const platz = this.#platz(schluessel);
     platz.zuhoerer.add(zuhoerer);
+    platz.abgemeldet = false;
     if (platz.schliessung !== undefined) {
       clearTimeout(platz.schliessung);
       platz.schliessung = undefined;
@@ -105,6 +117,18 @@ export class Arbeitsplaetze {
       platz.zuhoerer.delete(zuhoerer);
       if (platz.zuhoerer.size === 0) this.#gnadenfristStarten(schluessel, platz);
     };
+  }
+
+  /**
+   * Der Browser meldet sich ab (`pagehide`): Der Platz schliesst nach der
+   * kurzen Frist, sofern niemand mehr zuhört — dann verschwindet auch seine
+   * Präsenz bei den Kollegen. Ein Neuladen ist nach Sekunden wieder da.
+   */
+  abmelde(schluessel: string): void {
+    const platz = this.#plaetze.get(schluessel);
+    if (platz === undefined) return;
+    platz.abgemeldet = true;
+    if (platz.zuhoerer.size === 0) this.#gnadenfristStarten(schluessel, platz);
   }
 
   /** Schliesst einen Arbeitsplatz jetzt — seine Akten geordnet, seine Zuhoerer verwaist. */
@@ -130,13 +154,18 @@ export class Arbeitsplaetze {
     const schale = this.#o.fabrik(schluessel, (mitteilung) => {
       for (const hoerer of zuhoerer) hoerer(mitteilung);
     });
-    const platz: Platz = { schale, zuhoerer, schliessung: undefined };
+    const platz: Platz = { schale, zuhoerer, schliessung: undefined, abgemeldet: false };
     this.#plaetze.set(schluessel, platz);
     this.#o.protokolliere?.("info", `Arbeitsplatz ${schluessel.slice(0, 8)}… geöffnet`);
     // Ein Arbeitsplatz, der nur einen Ruf gestellt hat und nie zuhoert, soll
     // nicht ewig stehen bleiben: Die Frist laeuft ab dem ersten Kontakt.
     this.#gnadenfristStarten(schluessel, platz);
     return platz;
+  }
+
+  #frist(platz: Platz): number {
+    if (!platz.abgemeldet) return this.#o.gnadenfristMs;
+    return Math.min(this.#o.gnadenfristMs, this.#o.abmeldefristMs ?? ABMELDEFRIST_MS);
   }
 
   #gnadenfristStarten(schluessel: string, platz: Platz): void {
@@ -147,7 +176,7 @@ export class Arbeitsplaetze {
       void this.schliesse(schluessel).catch((fehler: unknown) => {
         this.#o.protokolliere?.("fehler", `Schließen: ${(fehler as Error).message}`);
       });
-    }, this.#o.gnadenfristMs);
+    }, this.#frist(platz));
     // Der Zeitgeber darf den Prozess nicht am Leben halten — sonst haengt ein
     // beendeter Dienst an einem Arbeitsplatz, den niemand mehr braucht.
     platz.schliessung.unref();

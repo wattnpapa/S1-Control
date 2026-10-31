@@ -46,11 +46,16 @@ export const UNVOLLSTAENDIG_FRIST_MS = VERFALL_MS;
 /** Rückstau-Staffel der Spiegelung — 2 / 5 / 15 / 30 s, danach dauerhaft 30 s (§5.4.4, §10). */
 export const RUECKSTAU_STAFFEL_MS = [2_000, 5_000, 15_000, 30_000] as const;
 
-/** Präsenztakt — alle 15 s, zusätzlich bei jedem Segmentwechsel (§6.4, §10). */
-export const PRAESENZ_TAKT_MS = 15_000;
+/**
+ * Präsenztakt — alle 10 s, zusätzlich bei jedem Segmentwechsel (§6.4, §10).
+ *
+ * Höchstens ein Drittel der Veraltet-Schwelle: Zwei verspätete Takte (SMB-
+ * Latenz) lassen einen lebenden Arbeitsplatz nicht sofort als fort erscheinen.
+ */
+export const PRAESENZ_TAKT_MS = 10_000;
 
-/** Präsenz gilt als veraltet — 60 s ohne Fortschreibung (§6.4, §10). */
-export const PRAESENZ_VERALTET_MS = 60_000;
+/** Präsenz gilt als veraltet — 30 s ohne Fortschreibung (§6.4, §10). */
+export const PRAESENZ_VERALTET_MS = 30_000;
 
 /** Zeitausstieg der Oberfläche — 20 s, muss unter dem SMB-`SessTimeout` von 60 s bleiben (§8.4, §10). */
 export const ZEITAUSSTIEG_MS = 20_000;

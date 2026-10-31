@@ -38,6 +38,7 @@ import {
   schreibenGesperrt,
   useVerbindung,
 } from "./verbindung.js";
+import { meldeBeimSchliessenAb } from "./abmeldung.js";
 import { starteUeberwachung } from "./verbindungsueberwachung.js";
 
 export interface WebbrueckeOptionen {
@@ -99,6 +100,15 @@ export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
         },
         ...(typeof window === "undefined" ? {} : { fenster: window }),
       });
+    }
+    if (typeof window !== "undefined" && optionen.ueberwachen !== false) {
+      const beacon = typeof navigator === "undefined" ? undefined : navigator.sendBeacon?.bind(navigator);
+      const ohneAbmeldung = meldeBeimSchliessenAb(window, beacon);
+      const bisher = anhalten;
+      anhalten = () => {
+        bisher?.();
+        ohneAbmeldung();
+      };
     }
   }
 

@@ -191,8 +191,9 @@ if (parentPort !== null) {
    */
   async function bearbeite(auftrag: Auftrag): Promise<unknown> {
     if (auftrag.art === "schliesse") {
-      dienst.schliesse();
       clearInterval(zeitgeber);
+      dienst.schliesse();
+      await dienst.meldeAb();
       return null;
     }
     return bearbeiteAuftrag(dienst, auftrag);

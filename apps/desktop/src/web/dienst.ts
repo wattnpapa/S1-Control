@@ -141,6 +141,10 @@ export class Webdienst {
       if (methode !== "POST") return nichtErlaubt(antwort, "POST");
       return this.#ruf(anfrage, antwort);
     }
+    if (url.pathname === "/abmelden") {
+      if (methode !== "POST") return nichtErlaubt(antwort, "POST");
+      return this.#abmelden(anfrage, antwort);
+    }
     if (url.pathname === "/mitteilungen") {
       if (methode !== "GET") return nichtErlaubt(antwort, "GET");
       return this.#mitteilungen(anfrage, antwort);
@@ -195,6 +199,20 @@ export class Webdienst {
   #beantworte(schluessel: string, ruf: Ruf, id: string | undefined): Promise<Antwort<unknown>> {
     const tue = (): Promise<Antwort<unknown>> => this.#o.arbeitsplaetze.beantworte(schluessel, ruf);
     return id === undefined ? tue() : this.#wiederholung.fuehreAus(schluessel, id, ruf.art, tue);
+  }
+
+  /**
+   * `POST /abmelden` — das `sendBeacon` der schließenden Seite. Es legt keinen
+   * Arbeitsplatz an (nur das Cookie einer bestehenden Sitzung zählt) und
+   * antwortet immer 204: Der Browser wartet nicht auf die Antwort.
+   */
+  #abmelden(anfrage: http.IncomingMessage, antwort: http.ServerResponse): void {
+    if (gleicheHerkunft(anfrage)) {
+      const vorhanden = cookieWert(anfrage.headers.cookie, COOKIE);
+      if (vorhanden !== undefined && SCHLUESSEL_FORM.test(vorhanden)) this.#o.arbeitsplaetze.abmelde(vorhanden);
+    }
+    antwort.writeHead(204);
+    antwort.end();
   }
 
   async #mitteilungen(anfrage: http.IncomingMessage, antwort: http.ServerResponse): Promise<void> {
