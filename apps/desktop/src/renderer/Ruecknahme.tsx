@@ -8,7 +8,7 @@
  */
 
 import { useState } from "react";
-import { ereignisMitObjekt } from "./Ereignisnamen.js";
+import { ereignisMitObjekt, ereignisname } from "./Ereignisnamen.js";
 import { Maske, TEXT_NUR_LESEN } from "./Maske.js";
 import { useLaden } from "./laden.js";
 
@@ -38,7 +38,7 @@ export function Ruecknahme(): React.JSX.Element {
     if (ergebnis.art === "strukturell") {
       laden.melde(
         "warnung",
-        `${ergebnis.meldung} Bitte über den Fachvorgang "${ergebnis.inverseArt}" zurücknehmen.`,
+        `${ergebnis.meldung} Bitte über den Vorgang „${ereignisname(ergebnis.inverseArt)}“ zurücknehmen.`,
       );
       return;
     }
@@ -106,7 +106,7 @@ export function Ruecknahme(): React.JSX.Element {
           }}
         >
           <p>
-            Die Rücknahme wird als eigener Vorgang der Art „{grundFuer}“ eingetragen und verlangt
+            Die Rücknahme wird als eigener Vorgang („{ereignisname(grundFuer)}“) eingetragen und verlangt
             einen Grund. Er steht später im Einsatztagebuch.
           </p>
           <label>

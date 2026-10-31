@@ -43,6 +43,8 @@ describe("Die Beschriftungen", () => {
     expect(spaltenwertTitel("ebene", "ZUGTRUPP")).toBe("Zugtrupp");
     expect(spaltenwertTitel("organisation", "FEUERWEHR")).toBe("Feuerwehr");
     expect(spaltenwertTitel("einheitSchluessel", "EEB-7")).toBe("EEB-7");
+    expect(spaltenwertTitel("personalErfassung", "NUR_STAERKE")).toBe("Nur Stärke");
+    expect(spaltenwertTitel("personalErfassung", "VOLLSTAENDIG")).toBe("Mit Personen");
   });
 });
 

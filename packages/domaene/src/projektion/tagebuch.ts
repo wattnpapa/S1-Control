@@ -29,6 +29,7 @@ import type { Id, Staerke } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 import {
   einsatzArtTitel,
+  personalErfassungTitel,
   schichtTitel,
   schichtmodellTitel,
   statusTitel,
@@ -398,6 +399,7 @@ function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): 
   if (typeof wert !== "string") return alsSatzwert(wert);
   if (typ === "StatusGesetzt") return statusTitel(wert);
   if (typ === "SchichtGesetzt") return schichtTitel(wert);
+  if (feld === "personalErfassung") return personalErfassungTitel(wert);
   if (typ === "EinsatzStammdatenGeaendert") return stammdatenwortFuer(feld, wert);
   // Das Ende eines Auftrags ist ein Zeitpunkt; „30.10.2026 16:00“ liest
   // sich, ein ISO-Zeitpunkt wird entziffert.

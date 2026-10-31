@@ -196,6 +196,13 @@ export function abschnittstypTitel(wert: string): string {
   return titel(ABSCHNITTSTYP, wert);
 }
 
+/** Wie die Einheit erfasst wird: nur als Zahl oder mit den einzelnen Personen. */
+export function personalErfassungTitel(wert: string): string {
+  if (wert === "NUR_STAERKE") return "Nur Stärke";
+  if (wert === "VOLLSTAENDIG") return "Mit Personen";
+  return wert;
+}
+
 export function organisationTitel(wert: string): string {
   return titel(ORGANISATION, wert);
 }
@@ -207,8 +214,8 @@ export function vorlagenkatalogTitel(wert: string): string {
 /**
  * Die Beschriftung einer Auswahlspalte der Einheitentabelle nach ihrem
  * Schlüssel — damit die Tabelle nicht je Spalte eine eigene Fallunterscheidung
- * führt. Spalten ohne Wörterbuch (der Erfassungsbogen-Schlüssel, die
- * Personalerfassung) zeigen den Wert selbst.
+ * führt. Spalten ohne Wörterbuch (der Erfassungsbogen-Schlüssel) zeigen den Wert
+ * selbst.
  */
 export function spaltenwertTitel(spaltenSchluessel: string, wert: string): string {
   switch (spaltenSchluessel) {
@@ -220,6 +227,8 @@ export function spaltenwertTitel(spaltenSchluessel: string, wert: string): strin
       return ebeneTitel(wert);
     case "organisation":
       return organisationTitel(wert);
+    case "personalErfassung":
+      return personalErfassungTitel(wert);
     default:
       return wert;
   }
