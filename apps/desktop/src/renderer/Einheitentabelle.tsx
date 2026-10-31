@@ -303,21 +303,30 @@ export function Einheitentabelle({
         </p>
       )}
 
-      <div className="spaltengruppen" role="group" aria-label="Spaltengruppen">
+      {/* Mehrfachwahl und kein Reiter: Mehrere Spaltengruppen stehen zugleich
+          offen. Deshalb Kontrollkästchen unter der Beschriftung „Spalten:“ —
+          Reiter würden „eins von fünf“ versprechen. */}
+      <div
+        className="spaltenwahl"
+        role="group"
+        aria-label="Spalten anzeigen"
+        style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem 0.9rem", margin: "9px 0" }}
+      >
+        <strong>Spalten:</strong>
         {projektion.SPALTENGRUPPEN.map((gruppe) => (
-          <button
-            key={gruppe}
-            type="button"
-            aria-pressed={gruppen.includes(gruppe)}
-            // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
-            // ohne Bezeichnung und Status ist keine Lage.
-            disabled={gruppe === "GRUNDDATEN"}
-            onClick={() => {
-              schalteGruppe(gruppe);
-            }}
-          >
+          <label key={gruppe} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+            <input
+              type="checkbox"
+              checked={gruppen.includes(gruppe)}
+              // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
+              // ohne Bezeichnung und Status ist keine Lage.
+              disabled={gruppe === "GRUNDDATEN"}
+              onChange={() => {
+                schalteGruppe(gruppe);
+              }}
+            />
             {GRUPPENTITEL[gruppe] ?? gruppe}
-          </button>
+          </label>
         ))}
       </div>
 

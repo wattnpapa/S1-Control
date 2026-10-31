@@ -31,7 +31,7 @@ export function AnforderungZusage({ zeile, aufSchliessen }: AnforderungZusageEig
 
   return (
     <Maske
-      titel={`Ablösung ${zeile.kennung === "" ? "" : `${zeile.kennung} `}zusagen`}
+      titel={`Zusage zu Anforderung${zeile.kennung === "" ? "" : ` ${zeile.kennung}`} erfassen`}
       bestaetigungstext="Zusagen"
       bereit={zeitpunkt !== undefined && !versuch.gesperrt}
       bereitGrund="Zeit „Zugesagt für“ eintragen"

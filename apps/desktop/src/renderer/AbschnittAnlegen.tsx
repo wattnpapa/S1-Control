@@ -50,6 +50,7 @@ export function AbschnittAnlegen({ elternId, reihenfolge, aufSchliessen, typwahl
   return (
     <Maske
       titel="Abschnitt anlegen"
+      bestaetigungstext="Abschnitt anlegen"
       bereit={name.trim().length > 0 && !versuch.gesperrt}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={schreibe}

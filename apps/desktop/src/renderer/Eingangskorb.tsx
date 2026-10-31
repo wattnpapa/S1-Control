@@ -15,7 +15,7 @@
  * werden bis Einsatzende nicht gelöscht".
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGrundabfrage } from "./Grundabfrage.js";
 
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
@@ -409,13 +409,15 @@ function Buendel(): React.JSX.Element {
   const laden = useLaden();
   const [abschnittId, setzeAbschnittId] = useState("");
   const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const [dateiname, setzeDateiname] = useState<string | undefined>(undefined);
+  const dateifeld = useRef<HTMLInputElement>(null);
 
   const abschnitte = laden.baum?.baum ?? [];
 
   return (
     <div className="buendel">
       <label>
-        Bündel einlesen nach
+        Meldungen aus Datei einlesen in Abschnitt
         <select
           value={abschnittId}
           onChange={(e) => {
@@ -430,21 +432,38 @@ function Buendel(): React.JSX.Element {
           ))}
         </select>
       </label>
+      {/* Das Dateifeld des Browsers beschriftet sich in dessen Sprache
+          („Choose File / No file chosen“); deshalb ein deutscher Knopf, der es
+          öffnet, und der Dateiname daneben. */}
+      <button
+        type="button"
+        disabled={abschnittId === ""}
+        title={abschnittId === "" ? "Zuerst den Abschnitt wählen, in den die Meldungen kommen" : undefined}
+        onClick={() => {
+          dateifeld.current?.click();
+        }}
+      >
+        Datei wählen
+      </button>
+      <span className="hinweistext">{dateiname ?? "Keine Datei gewählt"}</span>
       <input
+        ref={dateifeld}
         type="file"
         accept="application/json,.json"
-        aria-label="Bündeldatei"
+        aria-label="Meldungsdatei"
+        style={{ display: "none" }}
         disabled={abschnittId === ""}
         onChange={(e) => {
           const datei = e.target.files?.[0];
           if (datei === undefined) return;
+          setzeDateiname(datei.name);
           void (async () => {
             const text = await datei.text();
             const ergebnis = await laden.lieseBuendel(text, abschnittId);
             if (ergebnis === undefined) return;
-            // §3.6: Ein zweimal eingelesenes Bündel ist kein Fehler, sondern
-            // ein Vorgang ohne Wirkung. Genau das muss dastehen, sonst hält
-            // der Bediener es für einen Fehlschlag.
+            // Eine zweimal eingelesene Datei ist kein Fehler, sondern ein
+            // Vorgang ohne Wirkung. Genau das muss dastehen, sonst hält der
+            // Bediener es für einen Fehlschlag.
             setzeMeldung(
               `${String(ergebnis.aufgenommen)} aufgenommen, ${String(ergebnis.bekannt)} schon bekannt` +
                 (ergebnis.uebersprungen > 0
@@ -463,7 +482,7 @@ function Buendel(): React.JSX.Element {
           })();
         }}
       >
-        Bündel schreiben
+        Meldungen als Datei speichern
       </button>
       {meldung !== undefined && (
         <span role="status" className="hinweistext">

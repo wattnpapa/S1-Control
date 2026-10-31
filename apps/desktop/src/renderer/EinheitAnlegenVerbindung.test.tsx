@@ -52,7 +52,7 @@ function fuelleFrei(): HTMLButtonElement {
   fireEvent.change(screen.getByLabelText("Führer"), { target: { value: "1" } });
   fireEvent.change(screen.getByLabelText("Unterführer"), { target: { value: "2" } });
   fireEvent.change(screen.getByLabelText("Mannschaft"), { target: { value: "6" } });
-  return within(screen.getByLabelText("Einheit anlegen")).getByRole("button", { name: "Übernehmen" }) as HTMLButtonElement;
+  return within(screen.getByLabelText("Einheit anlegen")).getByRole("button", { name: "Einheit anlegen" }) as HTMLButtonElement;
 }
 
 function sendungen(hole: ReturnType<typeof vi.fn>): { id: string | undefined; koerper: string }[] {

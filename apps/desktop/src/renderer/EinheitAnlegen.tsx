@@ -164,6 +164,7 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: Einh
   return (
     <Maske
       titel={vorbelegung === undefined ? "Einheit anlegen" : `„${vorbelegung.quelle}“ kopieren`}
+      bestaetigungstext={vorbelegung === undefined ? "Einheit anlegen" : "Kopie anlegen"}
       bereit={bereit}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={schreibe}
@@ -226,7 +227,7 @@ function Anlagehinweis({ weg, kopie }: { readonly weg: Weg; readonly kopie: bool
     <p className="hinweistext">
       Der Status ist „Angefordert“: Wer anlegt, plant Kräfte und meldet sie nicht als anwesend.
       {weg === "vorlage"
-        ? " Die Soll-Stärke der Vorlage wird übernommen; fehlt sie, steht 0/0/0 da. „Annahme“ heißt: Die Excel nennt keine Stärke, eingetragen ist die übliche Gliederung — am Standort prüfen."
+        ? " Die Soll-Stärke der Vorlage wird übernommen; fehlt sie, steht 0/0/0 da. „Annahme“ heißt: Die Vorlage nennt keine Stärke, eingetragen ist die übliche Gliederung — am Standort prüfen."
         : " Die Stärke steht so da, wie sie hier eingetragen ist."}
       {kopie &&
         " Eine Kopie ist eine neue, angeforderte Einheit: Aufträge, Fahrzeuge, Personen, Status und Zeiten der Quelle werden nicht übernommen."}

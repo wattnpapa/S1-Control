@@ -233,15 +233,29 @@ describe("Der Eingangskorb", () => {
   it("liest ein Bündel erst, wenn ein Abschnitt gewählt ist", async () => {
     useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
     await zeige();
-    const feld = screen.getByLabelText("Bündeldatei") as HTMLInputElement;
+    const feld = screen.getByLabelText("Meldungsdatei") as HTMLInputElement;
     // Ohne Ziel gibt es kein Einlesen: Eine Meldung ohne Abschnitt hätte im
     // Lagebild keinen Ort.
     expect(feld.disabled).toBe(true);
 
-    fireEvent.change(screen.getByLabelText("Bündel einlesen nach"), { target: { value: "EO" } });
+    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
     await waitFor(() => {
-      expect((screen.getByLabelText("Bündeldatei") as HTMLInputElement).disabled).toBe(false);
+      expect((screen.getByLabelText("Meldungsdatei") as HTMLInputElement).disabled).toBe(false);
     });
+  });
+
+  it("beschriftet das Dateifeld deutsch: Knopf „Datei wählen“ und der Name der Datei", async () => {
+    attrappe.antwortet("buendelEinlesen", { aufgenommen: 1, bekannt: 0, uebersprungen: 0, name: "BR" });
+    useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
+    await zeige();
+    const knopf = screen.getByRole("button", { name: "Datei wählen" }) as HTMLButtonElement;
+    expect(knopf.disabled).toBe(true);
+    expect(screen.getByText("Keine Datei gewählt")).toBeDefined();
+    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
+    expect(knopf.disabled).toBe(false);
+    const datei = new File(["[]"], "meldungen.json", { type: "application/json" });
+    fireEvent.change(screen.getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
+    expect(screen.getByText("meldungen.json")).toBeDefined();
   });
 
   it("nennt beim Bündel auch die schon bekannten Meldungen (§3.6)", async () => {
@@ -253,10 +267,10 @@ describe("Der Eingangskorb", () => {
     });
     useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
     await zeige();
-    fireEvent.change(screen.getByLabelText("Bündel einlesen nach"), { target: { value: "EO" } });
+    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
 
     const datei = new File(['[]'], "buendel.json", { type: "application/json" });
-    fireEvent.change(screen.getByLabelText("Bündeldatei"), { target: { files: [datei] } });
+    fireEvent.change(screen.getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
 
     // Ein zweimal eingelesenes Bündel ist kein Fehler, sondern ein Vorgang
     // ohne Wirkung — genau das muss dastehen.
@@ -268,7 +282,7 @@ describe("Der Eingangskorb", () => {
   it("schreibt ein Bündel und nennt den Pfad", async () => {
     attrappe.antwortet("buendelSchreiben", { pfad: "/share/ausgaben/buendel_2026-09-10_1430.json", bytes: 4096 });
     await zeige();
-    fireEvent.click(screen.getByText("Bündel schreiben"));
+    fireEvent.click(screen.getByText("Meldungen als Datei speichern"));
     await waitFor(() => {
       expect(screen.getByText(/buendel_2026-09-10_1430\.json/)).toBeDefined();
     });
