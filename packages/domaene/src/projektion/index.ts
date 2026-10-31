@@ -53,6 +53,7 @@ export {
 export {
   ART_TEXT,
   FELD_TEXT,
+  ereignisgegenstand,
   tagebuchausschnitt,
   tagebuchsatz,
   tagebuchzeile,
@@ -77,7 +78,6 @@ export {
 } from "./anforderung.js";
 
 export {
-  anmarschabschnitt,
   einheitenwahl,
   einheitsvorschlag,
   type Einheitenwahl,

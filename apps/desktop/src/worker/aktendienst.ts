@@ -1381,6 +1381,7 @@ export class Aktendienst {
     for (const [status, zeile] of Object.entries(kennzahlen.matrixStatus(zustand))) {
       staerkeJeStatus[status] = zeile.gesamt;
     }
+    const ausserhalb = kennzahlen.staerkeAusserhalbDerGesamtstaerke(zustand);
     const oberster = this.#stapel.oberster();
     const stammdaten = projektion.einsatzstammdaten(zustand);
     return {
@@ -1407,10 +1408,20 @@ export class Aktendienst {
       einheiten: kennzahlen.einheitenDerLage(zustand).length,
       gesamtstaerke: gesamt,
       staerkeJeStatus,
+      staerkeErwartet: ausserhalb.erwartet,
+      staerkeBeendet: ausserhalb.beendet,
       hinweise: zustand.hinweise.length,
       unbekannteEreignisse: zustand.unbekannt.length,
       undoTiefe: this.#stapel.eintraege.length,
-      ...(oberster === undefined ? {} : { undoObersteArt: oberster.typ }),
+      ...(oberster === undefined
+        ? {}
+        : {
+            undoObersteArt: oberster.typ,
+            undoObersteObjekt: projektion.ereignisgegenstand(zustand, oberster.ereignis),
+          }),
+      offeneAnforderungen: Object.values(zustand.anforderungen).filter(
+        (a) => a.zustand === "OFFEN" || a.zustand === "ZUGESAGT",
+      ).length,
       lageZeiger: this.#lageZeiger,
     };
   }

@@ -432,6 +432,17 @@ function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   return undefined;
 }
 
+/**
+ * Der Name des Gegenstands, über den ein Ereignis spricht — „TZ“, „Zug A“ —
+ * oder leer, wenn die Art keinen nennt. Die Rücknahme nennt ihn vor dem
+ * Ausführen, damit niemand einen Schritt zurücknimmt, den er nicht meint.
+ */
+export function ereignisgegenstand(zustand: Zustand, ereignis: EingehendesEreignis): string {
+  const eintrag = KATALOG.get(ereignis.typ);
+  if (eintrag === undefined) return "";
+  return gegenstand(zustand, eintrag, alsId(nutzlastfeld(ereignis, eintrag.idFeld)));
+}
+
 /** Baut eine Zeile aus einem Ereignis. */
 export function tagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tagebuchzeile {
   const eintrag = KATALOG.get(ereignis.typ);

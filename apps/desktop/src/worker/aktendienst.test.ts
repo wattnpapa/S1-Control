@@ -219,6 +219,18 @@ describe("Undo über zwei Arbeitsplätze (§6 U1 bis U6)", () => {
     expect(lage?.undoTiefe).toBe(2);
     expect(lage?.undoObersteArt).toBe("EinheitGemeldet");
   });
+
+  it("nennt den Gegenstand des obersten Schritts und zählt offene Anforderungen mit", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    await takteBis([a, b]);
+    const lage = letztesLagebild(a);
+    // Der Name der gemeldeten Einheit steht im Lagebild, damit die Rückfrage
+    // „Einheit ‚…‘ rückgängig machen?“ sagen kann, was sie trifft.
+    expect(lage?.undoObersteObjekt).toBe(a.dienst.zustand.einheiten["U1"]?.bezeichnung.wert);
+    expect(lage?.undoObersteObjekt).not.toBe("");
+    expect(lage?.offeneAnforderungen).toBe(0);
+  });
 });
 
 describe("Die Statuszeile (M2.2)", () => {
