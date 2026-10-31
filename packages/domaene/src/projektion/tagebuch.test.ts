@@ -239,7 +239,16 @@ describe("tagebuchzeile — Zusammenführen", () => {
     personalErfassung: "NUR_STAERKE",
     status: "EINSATZBEREIT",
   });
-  const dritte = einheitGemeldet(hlc(5, 0, "a"), 5, { ...zweite.nutzlast, einheitId: "U3", bezeichnung: "RACE-B" } as never);
+  const dritte = einheitGemeldet(hlc(5, 0, "a"), 5, {
+    einheitId: "U3",
+    abschnittId: "EA-NORD",
+    bezeichnung: "RACE-B",
+    organisation: "THW",
+    ebene: "ZUG",
+    staerke: staerke(0, 0, 2),
+    personalErfassung: "NUR_STAERKE",
+    status: "EINSATZBEREIT",
+  });
 
   it("nennt Ziel und alle aufgegangenen Einheiten beim Namen", () => {
     const zusammen = anlageEreignis(hlc(6, 0, "a"), 6, "EinheitZusammengefuehrt", {

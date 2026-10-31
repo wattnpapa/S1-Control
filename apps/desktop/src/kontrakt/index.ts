@@ -218,6 +218,16 @@ export const zLagebild = z.object({
   /** Fehlt, solange `EinsatzAngelegt` noch nicht gefaltet ist. */
   stammdaten: zEinsatzstammdaten.optional(),
   /**
+/** Eine eingetroffene Ablösung, deren abgelöste Einheit noch zur Ist-Stärke zählt. */
+export const zOffeneAbloesung = z.object({
+  anforderungId: z.string(),
+  abgeloesteEinheitId: z.string(),
+  abgeloesteBezeichnung: z.string(),
+  abloesendeEinheitId: z.string(),
+  abloesendeBezeichnung: z.string(),
+});
+export type OffeneAbloesungInfo = z.infer<typeof zOffeneAbloesung>;
+
    * Der abgeleitete Zustand des Einsatzes (§5.2): laufend, beendet oder
    * archiviert. Er reist im Lagebild, weil Kopfband und Abschlussblock ihn
    * dauernd zeigen und weil eine Maske, die schreibt, ihn kennen muss, bevor
@@ -269,6 +279,11 @@ export const zLagebild = z.object({
    * ist das Gegenteil von Wachstum.** M2 hat festgelegt, dass hier keine
    * Tabelle, kein Baum und kein Tagebuch hineinwandert; ein Dauerstrom des
    * vollen Zustands waere bei 150 Einheiten das Falsche. Der Zeiger ist die
+  /**
+   * Additiv: Ablösungen, bei denen die ablösende Einheit eingetroffen ist, die
+   * abgelöste aber noch zur Ist-Stärke zählt. Leer oder fehlend: nichts offen.
+   */
+  abloesungenOffen: z.array(zOffeneAbloesung).optional(),
    * kleinste Auskunft, mit der eine offene Ansicht erfaehrt, dass ihr Bild
    * veraltet ist: eine Zahl. **Was** sich geaendert hat, sagt er nicht — das
    * holt sich die Ansicht mit ihrem eigenen Ruf, gefiltert und auf ihren
@@ -563,7 +578,23 @@ export type Ruf = z.infer<typeof zRuf>;
  * hiesse, ihn im Renderer irgendwo abfangen zu muessen, wo er nicht hingehoert.
  */
 export const zBedienergebnis = z.discriminatedUnion("art", [
-  z.object({ art: z.literal("geschrieben"), ereignisId: z.string() }),
+  z.object({
+    art: z.literal("geschrieben"),
+    ereignisId: z.string(),
+    /**
+     * Additiv: Hinweise des Workers zu einem **geschriebenen** Schritt —
+     * mögliche Dubletten (gleiche Kennung/gleicher Name im selben Elternteil),
+     * Folgen („Einheit entfernt“) und Offenes. Klartext, deutsch, zur Anzeige
+     * als Hinweis; das Schreiben selbst ist gelungen.
+     */
+    warnungen: z.array(z.string()).optional(),
+    /**
+     * Additiv: Nach „Eingetroffen“ zählt die abgelöste Einheit noch zur
+     * Ist-Stärke. Der Worker ändert nichts; die Oberfläche kann fragen, ob
+     * sie zurückgeführt wird.
+     */
+    abloesungOffen: zOffeneAbloesung.optional(),
+  }),
   z.object({
     art: z.literal("abgewiesen"),
     meldung: z.string(),
@@ -777,6 +808,12 @@ export interface Fuestansicht extends Ansichtsstand {
   /** K17: je Teileinheit und Schicht die Staerke der besetzten Posten. */
   readonly staerke: readonly {
     readonly teileinheit: string;
+  /**
+   * Additiv: Warum nichts oder nicht alles aufgenommen wurde — Klartext je
+   * Ursache (Datei nicht lesbar, falsches Format, Einträge unlesbar, Schreiben
+   * abgewiesen). Leer oder fehlend, wenn alles in Ordnung war.
+   */
+  readonly abgelehnt?: readonly { readonly grund: string }[];
     readonly schicht: string;
     readonly staerke: { readonly fuehrer: number; readonly unterfuehrer: number; readonly mannschaft: number };
   }[];

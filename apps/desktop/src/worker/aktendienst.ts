@@ -123,6 +123,10 @@ import {
 import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 
+import { buendelUrsachen } from "./buendelablehnung.js";
+import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
+import { schreibhinweise } from "./schreibhinweise.js";
+import { pruefeGegenZustand } from "./zustandspruefung.js";
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
  *
@@ -252,6 +256,19 @@ export class Aktendienst {
    * an der Projektion haengt, meldete diesen Fall nie.
    */
   #lageZeiger = 0;
+  /**
+   * Die Warteschlange der Schreibwege.
+   *
+   * Prüfung (Einsatzstatus, Bestand) und Schreiben liegen in einem
+   * `await`-Abstand; ohne Reihenfolge liefen zwei Bedienschritte ineinander:
+   * Eine Einheitenanlage, die kurz vor „Einsatz beenden“ geprüft wurde,
+   * landete nach dem Ende noch im Einsatz. Jeder Schreibweg läuft deshalb
+   * hintereinander, und jeder prüft gegen den Zustand, den der vorige schon
+   * gefaltet hat. Mehrere Arbeitsplätze mit eigenem Worker schreiben je ein
+   * eigenes Segment (append-only); dort greift der Fold (`nachArchivierungEingegangen`).
+   */
+  #schlange: Promise<unknown> = Promise.resolve();
+
 
   /**
    * Die fachlichen Ereignisse dieser Akte, in Eintreffreihenfolge.
@@ -573,8 +590,39 @@ export class Aktendienst {
   // Bedienen und Zuruecknehmen
   // -------------------------------------------------------------------------
 
-  /** Ein fachlicher Bedienschritt (§5.2). */
-  async bediene(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+  /** Ein fachlicher Bedienschritt (§5.2) — in der Reihenfolge des Eintreffens. */
+  bediene(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+    return this.#hintereinander(() => this.#bedieneMitFolgen(entwurf));
+  }
+
+  /** Führt `arbeit` aus, sobald alle früher angenommenen Schreibwege fertig sind. */
+  #hintereinander<T>(arbeit: () => Promise<T>): Promise<T> {
+    const lauf = this.#schlange.then(arbeit, arbeit);
+    this.#schlange = lauf.catch(() => undefined);
+    return lauf;
+  }
+
+  /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
+  async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+    const plan = planeFolgen(this.#zustand, entwurf);
+    const ergebnis = await this.#schreibe(entwurf);
+    if (ergebnis.art !== "geschrieben") return ergebnis;
+    const vorab = [...plan.hinweise];
+    for (const folge of plan.folgen) {
+      const folgeErgebnis = await this.#schreibe(folge.entwurf);
+      vorab.push(folgeErgebnis.art === "geschrieben" ? folge.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(folgeErgebnis)}`);
+    }
+    const bereich = anwesendBereichshinweis(this.#zustand, entwurf);
+    if (bereich !== undefined) vorab.push(bereich);
+    return { ...ergebnis, ...schreibhinweise(this.#zustand, entwurf, vorab) };
+  }
+
+  #meldungVon(ergebnis: Bedienergebnis): string {
+    return "meldung" in ergebnis ? ergebnis.meldung : "nicht möglich.";
+  }
+
+  /** Prüft und schreibt einen einzelnen Entwurf — ohne Folgeschritte. */
+  async #schreibe(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
     if (this.#geschlossen) {
       return { art: "nichtMoeglich", meldung: "Die Akte ist geschlossen." };
     }
@@ -634,6 +682,10 @@ export class Aktendienst {
     if (!grundPasst(eintrag, entwurf)) {
       return {
         art: "abgewiesen",
+    // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
+    // abziehen, als da ist).
+    const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
+    if (unstimmig !== undefined) return unstimmig;
         meldung: `${entwurf.typ} braucht einen Grund (§2.4).`,
         code: "GRUND",
         dauerhafterHinweis: false,
@@ -665,7 +717,11 @@ export class Aktendienst {
    * Dienst entscheidet hier nichts selbst: Ob eine Art ruecknehmbar ist, was
    * die Kompensation setzt und ob sie einen Grund braucht, steht im Katalog.
    */
-  async zurueck(grund?: string): Promise<Bedienergebnis> {
+  zurueck(grund?: string): Promise<Bedienergebnis> {
+    return this.#hintereinander(() => this.#nimmZurueck(grund));
+  }
+
+  async #nimmZurueck(grund?: string): Promise<Bedienergebnis> {
     const oberster = this.#stapel.oberster();
     if (oberster === undefined) {
       return { art: "nichtMoeglich", meldung: "Es ist nichts zurückzunehmen." };
@@ -684,7 +740,7 @@ export class Aktendienst {
         meldung: kompensation.meldung,
       };
     }
-    return this.bediene(kompensation.entwurf);
+    return this.#bedieneMitFolgen(kompensation.entwurf);
   }
 
   /**
@@ -692,10 +748,12 @@ export class Aktendienst {
    * (`einsatzabschluss.ts`). Ob archiviert werden darf, entscheidet dieselbe
    * Prüfung wie bei jedem Bedienschritt.
    */
-  async archiviere(zeitpunkt: string): Promise<Bedienergebnis> {
+  archiviere(zeitpunkt: string): Promise<Bedienergebnis> {
     const fehler = archivierungszeitFehler(zeitpunkt);
-    if (fehler !== undefined) return fehler;
-    return this.bediene(archivierungsentwurf(this.#zustand, this.#o.einsatzId, zeitpunkt));
+    if (fehler !== undefined) return Promise.resolve(fehler);
+    return this.#hintereinander(() =>
+      this.#bedieneMitFolgen(archivierungsentwurf(this.#zustand, this.#o.einsatzId, zeitpunkt)),
+    );
   }
 
   /**
@@ -1239,11 +1297,18 @@ export class Aktendienst {
             name: befund.name,
           };
         }
+    const abgelehnt = buendelUrsachen(text, befund.eintraege.length, befund.uebersprungen);
       }
       aufgenommen += 1;
     }
 
-    return { aufgenommen, bekannt, uebersprungen: befund.uebersprungen, name: befund.name };
+    return {
+      aufgenommen,
+      bekannt,
+      uebersprungen: befund.uebersprungen,
+      name: befund.name,
+      ...(abgelehnt.length === 0 ? {} : { abgelehnt }),
+    };
   }
 
   /**
@@ -1280,6 +1345,7 @@ export class Aktendienst {
   /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
   #vorschau(befund: {
     readonly bogen: import("@bos/eeb-format").Erfassungsbogen;
+            abgelehnt: [...abgelehnt, { grund: `Das Schreiben wurde abgewiesen: ${this.#meldungVon(ergebnis)}` }],
     readonly signatur: import("@bos/eeb-format").SignaturStatus;
     readonly meldungId: string;
   }): EebVorschau {
@@ -1445,6 +1511,7 @@ export class Aktendienst {
   }
 
   /**
+    const offeneAbloesungen = projektion.offeneAbloesungen(zustand);
    * Eigene Bytes, die noch nicht auf dem Share liegen (§5.3) — **fuer das
    * laufende Segment**.
    *
@@ -1452,6 +1519,7 @@ export class Aktendienst {
    * abgeschlossenes Segment holt die Spiegelung im naechsten Lauf nach, und die
    * Zahl in der Statuszeile beantwortet die Frage des Bedieners „ist meine
    * letzte Eingabe drueben?" Sie ueber alle je geschriebenen Dateien zu
+      ...(offeneAbloesungen.length === 0 ? {} : { abloesungenOffen: [...offeneAbloesungen] }),
    * bilden hiesse, in jedem Takt den ganzen lokalen Spiegel zu lesen — genau
    * das, was §6.2 dem Takt A erspart.
    */

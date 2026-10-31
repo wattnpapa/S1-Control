@@ -22,8 +22,8 @@ function eintrag(quelle: unknown, schluessel: string): string | undefined {
   return typeof wert === "string" && wert.trim() !== "" ? wert.trim() : undefined;
 }
 
-function einheitsname(zustand: Zustand, id: Id | undefined): string | undefined {
-  if (id === undefined) return undefined;
+function einheitsname(zustand: Zustand, id: Id | null | undefined): string | undefined {
+  if (id === undefined || id === null) return undefined;
   const wert = zustand.einheiten[id]?.bezeichnung.wert;
   return typeof wert === "string" && wert !== "" ? wert : id;
 }
