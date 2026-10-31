@@ -47,6 +47,7 @@ function zeile(id: string, teil: Partial<Tabellenzeile> = {}): Tabellenzeile {
     staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     gesamt: 9,
     entfernt: false,
+    zaehlklasse: "ist",
     aufgegangen: false,
     hinweise: [],
     zellen: {},

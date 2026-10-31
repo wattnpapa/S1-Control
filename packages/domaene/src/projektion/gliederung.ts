@@ -9,22 +9,22 @@
  * Diese Datei liefert genau das: die Einheiten in der Ordnung des
  * Abschnittsbaums und je Bereich eine Kopfzeile mit Zwischensumme.
  *
- * **Gerechnet wird wie im Baum, nicht neu.** Die eigene Stärke eines Bereichs
- * folgt K2 (`abschnittStaerke`): alles, was in der Lage steht, also weder
- * entfernt noch aufgegangen. Die Summe mit Unterabschnitten folgt
- * `Baumknoten.summenStaerke`. Die Summe des Einsatzes folgt K3: nur Einheiten
- * mit `zaehlt` — ohne Angefordert, Eingang und „Einsatz beendet“ —, und die
- * angeforderten stehen daneben. Ohne Filter sind das dieselben Zahlen wie in
- * Baum und Kopfband; mit Filter dieselben Regeln über die gefilterte Menge.
+ * **Eine Zählregel (`kennzahlen.zaehlklasse`).** Die Stärke eines Bereichs
+ * und die Summe des Einsatzes sind die Ist-Stärke: nur Kräfte, die vor Ort
+ * sind. Was angefordert, im Anmarsch oder im Eingang ist, steht getrennt als
+ * „erwartet“ daneben, ebenso die „alle erfassten Einheiten“ des Ausschnitts.
+ * Ohne Filter sind das dieselben Zahlen wie in Baum und Kopfband; mit Filter
+ * dieselbe Regel über die gefilterte Menge.
  *
  * **Eine bewusste Abweichung:** K2 nimmt den Abschnitt „Einsatz beendet“
- * (`ARCHIV`) aus der Lage, der Baum zeigt dort deshalb null. Unter der
+ * (`ARCHIV`) aus der Lage, der Baum zeigt dort deshalb null Stärke. Unter der
  * Kopfzeile stehen in der Tabelle aber die beendeten Einheiten, und eine
  * Kopfzeile, die über drei Einheiten „0 Einh.“ sagt, ist ein Widerspruch im
  * selben Blick. Die Kopfzeile summiert sie deshalb und trägt `zaehlt: false` —
  * wie die Excel, deren Bereich „Einsatz beendet“ seine Stärke ebenfalls nennt.
  */
 
+import { zaehlklasse, zaehlstand } from "../kennzahlen.js";
 import { STAERKE_NULL, staerkePlus, type Id, type Staerke } from "../werte.js";
 import { EINGANG_ABSCHNITT_ID, type EinheitZustand, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
@@ -42,8 +42,12 @@ export interface Bereichskopf {
   readonly zeilen: number;
   /** Einheiten unmittelbar in diesem Bereich, die in der Lage stehen. */
   readonly einheiten: number;
-  /** Deren Stärke (K2). */
+  /** Deren Ist-Stärke (Zählregel `zaehlklasse`). */
   readonly staerke: Staerke;
+  /** Erwartete Köpfe (angefordert/Anmarsch/Eingang) unmittelbar in diesem Bereich. */
+  readonly erwartet: number;
+  /** Erwartete Köpfe dieses Bereichs und aller Unterabschnitte. */
+  readonly erwartetSumme: number;
   /** Einheiten dieses Bereichs und aller Unterabschnitte. */
   readonly einheitenSumme: number;
   /** Deren Stärke — dieselbe Zahl wie `Baumknoten.summenStaerke`. */
@@ -54,13 +58,19 @@ export interface Bereichskopf {
 
 /** Die oberste Kopfzeile: der Einsatz gesamt. */
 export interface Einsatzsumme {
-  /** Einheiten, die in die Gesamtstärke zählen (K3, `E*`). */
+  /** Einheiten, die vor Ort sind (Ist, Zählregel `zaehlklasse`). */
   readonly einheiten: number;
   /** Ihre Stärke — ohne Filter dieselbe Zahl wie im Kopfband. */
   readonly staerke: Staerke;
-  /** Einheiten in Abschnitten vom Typ `ANGEFORDERT`, getrennt ausgewiesen. */
+  /** Einheiten in Abschnitten vom Typ `ANGEFORDERT`, getrennt ausgewiesen (Altfeld). */
   readonly angefordertEinheiten: number;
   readonly angefordert: Staerke;
+  /** Noch nicht vor Ort: angefordert, Anmarsch, Eingang, Rufbereitschaft. */
+  readonly erwartetEinheiten: number;
+  readonly erwartet: Staerke;
+  /** Alle erfassten Einheiten des Ausschnitts (Ist + erwartet + beendet), ohne entfernte. */
+  readonly alleEinheiten: number;
+  readonly alle: Staerke;
 }
 
 export interface Tabellengliederung {
@@ -96,6 +106,10 @@ function summe(einheiten: readonly EinheitZustand[]): Staerke {
   return einheiten.reduce<Staerke>((bisher, e) => staerkePlus(bisher, e.wirksameStaerke), STAERKE_NULL);
 }
 
+function koepfe(staerke: Staerke): number {
+  return staerke.fuehrer + staerke.unterfuehrer + staerke.mannschaft;
+}
+
 function nachAbschnitt(einheiten: readonly EinheitZustand[]): Map<Id, EinheitZustand[]> {
   const gruppen = new Map<Id, EinheitZustand[]>();
   for (const einheit of einheiten) {
@@ -112,12 +126,18 @@ function nachAbschnitt(einheiten: readonly EinheitZustand[]): Map<Id, EinheitZus
  * Die Summen entstehen beim Aufstieg — wie in `abschnittsbaum` —, damit die
  * Kostenordnung linear in der Zahl der Abschnitte bleibt.
  */
-function bereicheDesTeilbaums(knoten: Baumknoten, gruppen: ReadonlyMap<Id, EinheitZustand[]>): Rohbereich[] {
+function bereicheDesTeilbaums(
+  zustand: Zustand,
+  knoten: Baumknoten,
+  gruppen: ReadonlyMap<Id, EinheitZustand[]>,
+): Rohbereich[] {
   const mitglieder = gruppen.get(knoten.id) ?? [];
   const gezaehlt = mitglieder.filter(inDerLage);
-  const unten = knoten.kinder.flatMap((kind) => bereicheDesTeilbaums(kind, gruppen));
+  const unten = knoten.kinder.flatMap((kind) => bereicheDesTeilbaums(zustand, kind, gruppen));
   const kinder = unten.filter((bereich) => bereich.tiefe === knoten.tiefe + 1);
-  const staerke = summe(gezaehlt);
+  const stand = zaehlstand(zustand, gezaehlt);
+  const staerke = stand.ist;
+  const erwartet = koepfe(stand.erwartet);
   const kopf: Rohbereich = {
     abschnittId: knoten.id,
     name: knoten.name,
@@ -128,6 +148,8 @@ function bereicheDesTeilbaums(knoten: Baumknoten, gruppen: ReadonlyMap<Id, Einhe
     staerke,
     einheitenSumme: kinder.reduce((n, kind) => n + kind.einheitenSumme, gezaehlt.length),
     summenStaerke: kinder.reduce<Staerke>((s, kind) => staerkePlus(s, kind.summenStaerke), staerke),
+    erwartet,
+    erwartetSumme: kinder.reduce((n, kind) => n + kind.erwartetSumme, erwartet),
     zaehlt: knoten.zaehlt,
     mitglieder,
     zeilenSumme: kinder.reduce((n, kind) => n + kind.zeilenSumme, mitglieder.length),
@@ -142,14 +164,20 @@ function bereicheDesTeilbaums(knoten: Baumknoten, gruppen: ReadonlyMap<Id, Einhe
  * Einheiten bekommen eine eigene Kopfzeile am Ende — weglassen hieße, eine
  * gemeldete Kraft aus der Tabelle zu nehmen, weil ein fremdes Ereignis fehlt.
  */
-function verwaisteBereiche(gruppen: ReadonlyMap<Id, EinheitZustand[]>, bekannt: ReadonlySet<Id>): Rohbereich[] {
+function verwaisteBereiche(
+  zustand: Zustand,
+  gruppen: ReadonlyMap<Id, EinheitZustand[]>,
+  bekannt: ReadonlySet<Id>,
+): Rohbereich[] {
   return [...gruppen.keys()]
     .filter((id) => !bekannt.has(id))
     .sort()
     .map((id) => {
       const mitglieder = gruppen.get(id) ?? [];
       const gezaehlt = mitglieder.filter(inDerLage);
-      const staerke = summe(gezaehlt);
+      const stand = zaehlstand(zustand, gezaehlt);
+      const staerke = stand.ist;
+      const erwartet = koepfe(stand.erwartet);
       return {
         abschnittId: id,
         name: id,
@@ -160,6 +188,8 @@ function verwaisteBereiche(gruppen: ReadonlyMap<Id, EinheitZustand[]>, bekannt: 
         staerke,
         einheitenSumme: gezaehlt.length,
         summenStaerke: staerke,
+        erwartet,
+        erwartetSumme: erwartet,
         zaehlt: mitglieder.some((e) => e.zaehlt),
         mitglieder,
         zeilenSumme: mitglieder.length,
@@ -194,20 +224,27 @@ function alsKopf(bereich: Rohbereich, von: number): Bereichskopf {
     staerke: bereich.staerke,
     einheitenSumme: bereich.einheitenSumme,
     summenStaerke: bereich.summenStaerke,
+    erwartet: bereich.erwartet,
+    erwartetSumme: bereich.erwartetSumme,
     zaehlt: bereich.zaehlt,
   };
 }
 
 function einsatzsumme(zustand: Zustand, einheiten: readonly EinheitZustand[]): Einsatzsumme {
-  const zaehlend = einheiten.filter((e) => e.zaehlt);
+  const stand = zaehlstand(zustand, einheiten);
   const angefordert = einheiten.filter(
     (e) => inDerLage(e) && zustand.abschnitte[e.wirksamerAbschnittId]?.typ.wert === "ANGEFORDERT",
   );
+  const alle = einheiten.filter((e) => zaehlklasse(zustand, e) !== "ausserhalb");
   return {
-    einheiten: zaehlend.length,
-    staerke: summe(zaehlend),
+    einheiten: stand.einheitenIst,
+    staerke: stand.ist,
     angefordertEinheiten: angefordert.length,
     angefordert: summe(angefordert),
+    erwartetEinheiten: stand.einheitenErwartet,
+    erwartet: stand.erwartet,
+    alleEinheiten: alle.length,
+    alle: summe(alle),
   };
 }
 
@@ -226,9 +263,9 @@ export function gliedereEinheiten(
   // Aufgelöste Abschnitte tragen keine wirksamen Einheiten mehr (§5.3.2);
   // ihre Unterabschnitte hängen der Baum dann an die Wurzel.
   const baum = abschnittsbaum(zustand, { ohneAufgeloeste: true });
-  const ausBaum = baum.flatMap((knoten) => bereicheDesTeilbaums(knoten, gruppen));
+  const ausBaum = baum.flatMap((knoten) => bereicheDesTeilbaums(zustand, knoten, gruppen));
   const bekannt = new Set(ausBaum.map((bereich) => bereich.abschnittId));
-  const roh = [...ausBaum, ...verwaisteBereiche(gruppen, bekannt)].filter((b) => bleibtStehen(b, optionen));
+  const roh = [...ausBaum, ...verwaisteBereiche(zustand, gruppen, bekannt)].filter((b) => bleibtStehen(b, optionen));
 
   let von = 0;
   const bereiche: Bereichskopf[] = [];

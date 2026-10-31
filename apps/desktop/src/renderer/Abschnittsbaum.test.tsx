@@ -29,7 +29,7 @@ function knoten(id: string, name: string, teil: Partial<Baumknoten> = {}): Baumk
     eigeneStaerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     summenStaerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
     einheiten: 1,
-    einheitenSumme: 1,
+    einheitenSumme: 1, erwartet: 0, erwartetSumme: 0,
     zaehlt: true,
     systemAbschnitt: false,
     kinder: [],

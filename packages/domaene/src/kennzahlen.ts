@@ -95,9 +95,114 @@ export function abschnittStaerke(zustand: Zustand, abschnittId: string): Staerke
   return summiere(einheitenImAbschnitt(zustand, abschnittId));
 }
 
+// ---------------------------------------------------------------------------
+// Die eine Zaehlregel (Fuehrung Runde 2, P0-1)
+// ---------------------------------------------------------------------------
+
 /**
- * **K3** — die Gesamtstaerke des Einsatzes, je Rolle, mit `ANGEFORDERT`
- * **separat** ausgewiesen.
+ * Wohin eine Einheit in der Staerkezahl gehoert — **die** Regel, die Kopfband,
+ * Statuszeile, Tabellensumme, Abschnittsliste, Gliederung und alle Ausgaben
+ * gemeinsam benutzen. Eine zweite Zaehlung gibt es nicht.
+ *
+ * - `ist`: vor Ort. Die Einheit steht in einem zaehlenden Einsatzbereich (nicht
+ *   `ANGEFORDERT`, `EINGANG`, `ARCHIV`) und hat einen Status, der Anwesenheit
+ *   meint: einsatzbereit, im Einsatz, Ruhe, nicht einsatzbereit. Ein fehlender
+ *   oder unbekannter Status zaehlt als `ist` (wie ein unbekannter Abschnittstyp,
+ *   §3.7); K25 meldet die fehlende Angabe.
+ * - `erwartet`: noch nicht vor Ort — Status Angefordert, Anmarsch,
+ *   Rufbereitschaft, Einsatzvorbehalt, oder die Einheit steht im Bereich
+ *   Angefordert/Anmarsch bzw. im Eingang. **Der Status entscheidet**, nicht
+ *   allein der Bereich: Wechselt eine Einheit auf „Einsatzbereit“, geht sie
+ *   sofort in die Ist-Staerke ein, ohne den Bereich zu wechseln.
+ * - `beendet`: im Archivbereich „Einsatz beendet“ oder auf Rueckmarsch.
+ * - `ausserhalb`: entfernt oder in einer anderen aufgegangen (§5.4).
+ *
+ * Begruendung gegenueber der Excel: Sie zaehlt nach Bereich (ZDM §2.4). Ein
+ * Fuehrer meldet aber „Kraefte vor Ort“; eine angeforderte Einheit in einem
+ * Einsatzabschnitt ist noch nicht da. Die Bereichsregel bleibt als Vorfilter
+ * erhalten, der Status verfeinert sie.
+ */
+export type Zaehlklasse = "ist" | "erwartet" | "beendet" | "ausserhalb";
+
+/** Status, die „noch nicht vor Ort“ bedeuten. */
+const STATUS_ERWARTET: ReadonlySet<string> = new Set([
+  ANGEFORDERT,
+  "ANMARSCH",
+  "RUFBEREITSCHAFT",
+  "EINSATZVORBEHALT",
+]);
+
+export function zaehlklasse(zustand: Zustand, einheit: EinheitZustand): Zaehlklasse {
+  if (!inDerLage(einheit)) return "ausserhalb";
+  const typ = typDesAbschnitts(zustand, einheit.wirksamerAbschnittId);
+  if (typ === "ARCHIV") return "beendet";
+  if (typ === ANGEFORDERT || typ === "EINGANG") return "erwartet";
+  const status = typeof einheit.status.wert === "string" ? einheit.status.wert : undefined;
+  if (status === "RUECKMARSCH") return "beendet";
+  return status !== undefined && STATUS_ERWARTET.has(status) ? "erwartet" : "ist";
+}
+
+/** Die Zaehlung einer Einheitenmenge nach der einen Regel. */
+export interface Zaehlstand {
+  readonly ist: Staerke;
+  readonly erwartet: Staerke;
+  readonly beendet: Staerke;
+  readonly einheitenIst: number;
+  readonly einheitenErwartet: number;
+  readonly einheitenBeendet: number;
+}
+
+/** Zaehlt `einheiten` (Standard: alle des Einsatzes) nach `zaehlklasse`. */
+export function zaehlstand(
+  zustand: Zustand,
+  einheiten: readonly EinheitZustand[] = Object.values(zustand.einheiten),
+): Zaehlstand {
+  const staerke = { ist: STAERKE_NULL, erwartet: STAERKE_NULL, beendet: STAERKE_NULL };
+  const anzahl = { ist: 0, erwartet: 0, beendet: 0 };
+  for (const einheit of einheiten) {
+    const klasse = zaehlklasse(zustand, einheit);
+    if (klasse === "ausserhalb") continue;
+    staerke[klasse] = staerkePlus(staerke[klasse], einheit.wirksameStaerke);
+    anzahl[klasse] += 1;
+  }
+  return {
+    ...staerke,
+    einheitenIst: anzahl.ist,
+    einheitenErwartet: anzahl.erwartet,
+    einheitenBeendet: anzahl.beendet,
+  };
+}
+
+/** Die Ist-Staerke (nur `ist`) eines Abschnitts, je Rolle. */
+export function abschnittIstStaerke(zustand: Zustand, abschnittId: string): Staerke {
+  return zaehlstand(zustand, einheitenImAbschnitt(zustand, abschnittId)).ist;
+}
+
+/** Die erwarteten Koepfe (nur `erwartet`) eines Abschnitts. */
+export function abschnittErwartet(zustand: Zustand, abschnittId: string): number {
+  const stand = zaehlstand(zustand, einheitenImAbschnitt(zustand, abschnittId));
+  return stand.erwartet.fuehrer + stand.erwartet.unterfuehrer + stand.erwartet.mannschaft;
+}
+
+/** Der Satz zur Kopfzahl, ueberall gleichlautend (Kopfband, Hilfe, Ausgaben). */
+export const ZAEHLREGEL_TEXT =
+  "Ist-Stärke: Kräfte, die vor Ort sind (Status Einsatzbereit, Einsatz, Ruhe, Nicht einsatzbereit " +
+  "in einem Einsatzbereich). Erwartet: angefordert, im Anmarsch, in Rufbereitschaft oder im Eingang. " +
+  "Nicht gezählt: „Einsatz beendet“ und Rückmarsch.";
+
+/** „+4 erwartet“ für enge Listen (Abschnittsbaum, Gliederung) — leer bei 0. */
+export function erwartetKurz(koepfe: number): string {
+  return koepfe > 0 ? `+${String(koepfe)} erwartet` : "";
+}
+
+/** „+4 erwartet (angefordert/Anmarsch/Eingang)“ — leer bei 0. */
+export function erwartetText(koepfe: number): string {
+  return koepfe > 0 ? `+${String(koepfe)} erwartet (angefordert/Anmarsch/Eingang)` : "";
+}
+
+/**
+ * **K3** — die Ist-Staerke des Einsatzes, je Rolle, mit den **erwarteten**
+ * Kraeften separat (`angefordert` heisst hier „noch nicht vor Ort“).
  *
  * Die Trennung ist der Sinn der Kennzahl: Wer angefordert ist, ist noch nicht
  * da. Sie steht deshalb im Ergebnis daneben und nicht in der Summe.
@@ -106,36 +211,24 @@ export function einsatzGesamtstaerke(zustand: Zustand): {
   readonly gesamt: Staerke;
   readonly angefordert: Staerke;
 } {
-  const angefordert = einheitenDerLage(zustand).filter(
-    (e) => typDesAbschnitts(zustand, e.wirksamerAbschnittId) === ANGEFORDERT,
-  );
-  return {
-    gesamt: summiere(einheitenDerGesamtstaerke(zustand)),
-    angefordert: summiere(angefordert),
-  };
+  const stand = zaehlstand(zustand);
+  return { gesamt: stand.ist, angefordert: stand.erwartet };
 }
 
 /**
- * Die Köpfe **neben** der Gesamtstärke, damit die Kopfzahl nichts verschweigt.
+ * Die Koepfe **neben** der Ist-Staerke, damit die Kopfzahl nichts verschweigt.
  *
- * `erwartet`: Einheiten in `ANGEFORDERT` und `EINGANG` — angefordert,
- * unterwegs oder noch nicht einem Bereich zugewiesen. `beendet`: Einheiten
- * im Archivbereich „Einsatz beendet“. Beide zählen **nicht** in `E*`; hier
- * stehen sie nur, damit die Führung sieht, was die Kopfzahl auslässt.
+ * `erwartet`: noch nicht vor Ort (Angefordert, Anmarsch, Eingang, Ruf-
+ * bereitschaft). `beendet`: „Einsatz beendet“ und Rueckmarsch. Beide zaehlen
+ * **nicht** in die Ist-Staerke.
  */
 export function staerkeAusserhalbDerGesamtstaerke(zustand: Zustand): {
   readonly erwartet: number;
   readonly beendet: number;
 } {
-  let erwartet = 0;
-  let beendet = 0;
-  for (const einheit of Object.values(zustand.einheiten)) {
-    if (!inDerLage(einheit) || einheit.zaehlt) continue;
-    const typ = typDesAbschnitts(zustand, einheit.wirksamerAbschnittId);
-    if (typ === "ARCHIV") beendet += gesamtstaerke(einheit);
-    else erwartet += gesamtstaerke(einheit);
-  }
-  return { erwartet, beendet };
+  const stand = zaehlstand(zustand);
+  const koepfe = (s: Staerke): number => s.fuehrer + s.unterfuehrer + s.mannschaft;
+  return { erwartet: koepfe(stand.erwartet), beendet: koepfe(stand.beendet) };
 }
 
 // ---------------------------------------------------------------------------
@@ -237,7 +330,9 @@ export function imDruckSichtbar(zustand: Zustand, abschnittId: string): boolean 
 export function druckPlausibel(zustand: Zustand): boolean {
   const { gesamt } = einsatzGesamtstaerke(zustand);
   const summe = gesamt.fuehrer + gesamt.unterfuehrer + gesamt.mannschaft;
-  const koepfe = einheitenDerGesamtstaerke(zustand).reduce((s, e) => s + gesamtstaerke(e), 0);
+  const koepfe = einheitenDerLage(zustand)
+    .filter((e) => zaehlklasse(zustand, e) === "ist")
+    .reduce((s, e) => s + gesamtstaerke(e), 0);
   return summe - koepfe === 0;
 }
 
