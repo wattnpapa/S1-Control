@@ -39,17 +39,20 @@ function merkenderDrucker(): Drucker & { readonly rufe: { html: string; quer: bo
   };
 }
 
-async function vermittlungMitEinsatz(drucker: Drucker): Promise<{ vermittlung: Vermittlung; akteId: string }> {
+async function vermittlungMitEinsatz(
+  drucker: Drucker | undefined,
+  plattform = "linux",
+): Promise<{ vermittlung: Vermittlung; akteId: string }> {
   const wurzel = mkdtempSync(path.join(os.tmpdir(), "s1-ausgaben-vermittlung-"));
   wegwerf.push(wurzel);
   const dienste = new Map<string, Aktendienst>();
   const vermittlung = new Vermittlung({
     hof: new Arbeiterhof({ fabrik: (start) => baueDirektenArbeiter(start, dienste), sende: () => undefined }),
-    drucker,
+    ...(drucker === undefined ? {} : { drucker }),
     dateisystem: knotenDateisystem(),
     einstellungsdatei: path.join(wurzel, "profil", "einstellungen.json"),
     spiegelwurzel: path.join(wurzel, "profil", "spiegel"),
-    plattform: "linux",
+    plattform,
     electron: "43.0.0",
     programmversion: "0.0.0-test",
     rechnername: "pruefrechner",
@@ -125,5 +128,22 @@ describe("Die Einheitenliste als Ausgabe", () => {
     const { vermittlung, akteId } = await vermittlungMitEinsatz(drucker);
     await ruf(vermittlung, { art: "ausgabeErzeugen", akteId, ausgabe: "status", format: "pdf" });
     expect(drucker.rufe[0]?.quer).toBe(false);
+  });
+
+  it("sagt ohne PDF-Erzeugung nie „kein Drucker“, sondern nennt den HTML-Weg", async () => {
+    for (const plattform of ["web", "linux"]) {
+      const { vermittlung, akteId } = await vermittlungMitEinsatz(undefined, plattform);
+      const antwort = await vermittlung.beantworte({
+        art: "ausgabeErzeugen",
+        akteId,
+        ausgabe: "einheitenliste",
+        format: "pdf",
+      });
+      expect(antwort.ok).toBe(false);
+      const meldung = antwort.ok ? "" : antwort.meldung;
+      expect(meldung).not.toMatch(/Drucker/u);
+      expect(meldung).toMatch(/HTML/u);
+      if (plattform === "web") expect(meldung).toMatch(/nur in der Desktop-App/u);
+    }
   });
 });

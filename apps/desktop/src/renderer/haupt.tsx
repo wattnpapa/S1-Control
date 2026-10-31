@@ -18,11 +18,14 @@ import { createRoot } from "react-dom/client";
 import { Arbeitsplatz } from "./Arbeitsplatz.js";
 import { MonitorFenster } from "./MonitorFenster.js";
 import { setzeBruecke } from "./bruecke.js";
+import { registriereOfflineSchale } from "./offlineSchale.js";
 import { webBruecke } from "./webBruecke.js";
 import { BRUECKE } from "../kontrakt/index.js";
 
 if ((globalThis as Record<string, unknown>)[BRUECKE] === undefined) {
   setzeBruecke(webBruecke());
+  // Erst nach dem Laden, damit die Anmeldung nichts vom Start wegnimmt.
+  globalThis.addEventListener("load", () => void registriereOfflineSchale());
 }
 
 /**

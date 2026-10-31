@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Dienst nicht erreichbar</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --grund: #ffffff;
+        --text: #1b1f24;
+        --warn-bg: #fff3cd;
+        --warn-linie: #b8860b;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --grund: #14181d;
+          --text: #e8eaed;
+          --warn-bg: #3b3210;
+          --warn-linie: #d4a72c;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--grund);
+        color: var(--text);
+        font: 18px/1.5 system-ui, sans-serif;
+      }
+      main {
+        max-width: 36em;
+        margin: 8vh auto 0;
+        padding: 16px;
+        background: var(--warn-bg);
+        border: 3px solid var(--warn-linie);
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 1.3em;
+      }
+      button {
+        min-height: 48px;
+        padding: 0 20px;
+        font: inherit;
+      }
+    </style>
+  </head>
+  <body>
+    <main role="alert">
+      <h1>⚠ Dienst nicht erreichbar</h1>
+      <p>Es wird neu verbunden. Diese Seite lädt sich selbst, sobald der Dienst wieder antwortet.</p>
+      <p>
+        Bis dahin wird nichts gespeichert. Bereits Gespeichertes bleibt erhalten; was Sie jetzt melden, halten Sie
+        bitte auf Papier fest.
+      </p>
+      <p id="stand">Nächster Versuch in wenigen Sekunden …</p>
+      <button type="button" id="jetzt">Jetzt erneut versuchen</button>
+    </main>
+    <script>
+      (function () {
+        var versuche = 0;
+        var stand = document.getElementById("stand");
+        function pruefe() {
+          versuche += 1;
+          // Relativ, wie die App selbst: Sie darf hinter einem Unterpfad laufen.
+          fetch("gesundheit", { cache: "no-store" })
+            .then(function (antwort) {
+              if (antwort.ok) {
+                location.reload();
+                return;
+              }
+              throw new Error("nicht bereit");
+            })
+            .catch(function () {
+              stand.textContent = "Versuch " + versuche + " ohne Antwort. Nächster Versuch in 3 Sekunden …";
+              setTimeout(pruefe, 3000);
+            });
+        }
+        document.getElementById("jetzt").addEventListener("click", function () {
+          stand.textContent = "Es wird verbunden …";
+          pruefe();
+        });
+        setTimeout(pruefe, 3000);
+        window.addEventListener("online", pruefe);
+      })();
+    </script>
+  </body>
+</html>

@@ -115,6 +115,29 @@ export function einsatzGesamtstaerke(zustand: Zustand): {
   };
 }
 
+/**
+ * Die Köpfe **neben** der Gesamtstärke, damit die Kopfzahl nichts verschweigt.
+ *
+ * `erwartet`: Einheiten in `ANGEFORDERT` und `EINGANG` — angefordert,
+ * unterwegs oder noch nicht einem Bereich zugewiesen. `beendet`: Einheiten
+ * im Archivbereich „Einsatz beendet“. Beide zählen **nicht** in `E*`; hier
+ * stehen sie nur, damit die Führung sieht, was die Kopfzahl auslässt.
+ */
+export function staerkeAusserhalbDerGesamtstaerke(zustand: Zustand): {
+  readonly erwartet: number;
+  readonly beendet: number;
+} {
+  let erwartet = 0;
+  let beendet = 0;
+  for (const einheit of Object.values(zustand.einheiten)) {
+    if (!inDerLage(einheit) || einheit.zaehlt) continue;
+    const typ = typDesAbschnitts(zustand, einheit.wirksamerAbschnittId);
+    if (typ === "ARCHIV") beendet += gesamtstaerke(einheit);
+    else erwartet += gesamtstaerke(einheit);
+  }
+  return { erwartet, beendet };
+}
+
 // ---------------------------------------------------------------------------
 // K4 bis K6 — Logistik
 // ---------------------------------------------------------------------------

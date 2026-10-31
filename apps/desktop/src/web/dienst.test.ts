@@ -273,3 +273,50 @@ describe("Hilfen", () => {
     expect(gleicheHerkunft(anfrage({ "sec-fetch-site": "same-site" }))).toBe(false);
   });
 });
+
+describe("Wiederholung nach verlorener Antwort", () => {
+  const SCHREIBEN = { art: "einsatzSchliessen", akteId: "akte-1" };
+  const ID = "a1b2c3d4e5f6a7b8c9d0e1f2";
+
+  it("führt einen Ruf mit gleicher Anfrage-ID nur einmal aus und liefert das erste Ergebnis", async () => {
+    const keks = keksAus(await fetch(`${werkstatt.adresse}/`));
+    const erste = await (await rufe(SCHREIBEN, keks, { "x-anfrage-id": ID })).json();
+    const zweite = await (await rufe(SCHREIBEN, keks, { "x-anfrage-id": ID })).json();
+    expect(zweite).toEqual(erste);
+    expect(werkstatt.rufe.get(keks)).toHaveLength(1);
+  });
+
+  it("hängt gleichzeitige Wiederholungen an den laufenden Vorgang", async () => {
+    const keks = keksAus(await fetch(`${werkstatt.adresse}/`));
+    await Promise.all([
+      rufe(SCHREIBEN, keks, { "x-anfrage-id": ID }),
+      rufe(SCHREIBEN, keks, { "x-anfrage-id": ID }),
+    ]);
+    expect(werkstatt.rufe.get(keks)).toHaveLength(1);
+  });
+
+  it("führt Rufe mit neuer ID, ohne ID oder mit ungültiger ID jeweils aus", async () => {
+    const keks = keksAus(await fetch(`${werkstatt.adresse}/`));
+    await rufe(SCHREIBEN, keks, { "x-anfrage-id": ID });
+    await rufe(SCHREIBEN, keks, { "x-anfrage-id": "b1b2c3d4e5f6a7b8c9d0e1f2" });
+    await rufe(SCHREIBEN, keks);
+    await rufe(SCHREIBEN, keks, { "x-anfrage-id": "zu kurz!" });
+    expect(werkstatt.rufe.get(keks)).toHaveLength(4);
+  });
+
+  it("teilt IDs nicht zwischen Arbeitsplätzen", async () => {
+    const a = keksAus(await fetch(`${werkstatt.adresse}/`));
+    const b = keksAus(await fetch(`${werkstatt.adresse}/`));
+    await rufe(SCHREIBEN, a, { "x-anfrage-id": ID });
+    await rufe(SCHREIBEN, b, { "x-anfrage-id": ID });
+    expect(werkstatt.rufe.get(a)).toHaveLength(1);
+    expect(werkstatt.rufe.get(b)).toHaveLength(1);
+  });
+
+  it("liefert die Offline-Schale ohne langen Zwischenspeicher aus", async () => {
+    writeFileSync(path.join(werkstatt.wurzel, "renderer", "sw.js"), "// sw");
+    const antwort = await fetch(`${werkstatt.adresse}/sw.js`);
+    expect(antwort.status).toBe(200);
+    expect(antwort.headers.get("cache-control")).toBe("no-cache");
+  });
+});

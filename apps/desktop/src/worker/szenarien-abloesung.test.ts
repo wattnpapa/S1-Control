@@ -11,7 +11,7 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { projektion, zeitpunktText } from "@s1/domaene";
+import { kennzahlen, projektion, zeitpunktText } from "@s1/domaene";
 
 import { abloesungNachtragen, anlageAusAnforderung } from "../kontrakt/anforderungsschritte.js";
 import { abloesungZugesagt, anforderungAnlegen, anforderungErledigt } from "../kontrakt/bedienschritte.js";
@@ -64,7 +64,10 @@ describe("Szenario: Ablösung anfordern, zusagen, eintreffen", () => {
 
     const vorschlag = projektion.anforderungsliste(platz.dienst.zustand).zeilen[0]?.vorschlag;
     expect(vorschlag?.herkunft).toBe("THW RB Oldenburg");
-    expect(vorschlag?.staerke).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 0 });
+    const staerkeVorher = kennzahlen.einsatzGesamtstaerke(platz.dienst.zustand).gesamt;
+    expect(vorschlag?.staerke).toEqual(platz.dienst.zustand.einheiten["U1"]?.wirksameStaerke);
+    expect(vorschlag?.abschnittId).toBe("EO");
+    expect(vorschlag?.auftrag).toBe("Deich Nord halten");
 
     const anlage = await platz.dienst.bediene(
       anlageAusAnforderung({
@@ -81,11 +84,19 @@ describe("Szenario: Ablösung anfordern, zusagen, eintreffen", () => {
       }),
     );
     expect(anlage.art).toBe("geschrieben");
+    // Regression: Die eingetroffene Einheit zählt in der Kopfstärke mit.
+    const nachher = kennzahlen.einsatzGesamtstaerke(platz.dienst.zustand).gesamt;
+    const dazu = vorschlag?.staerke ?? staerkeVorher;
+    expect(nachher).toEqual({
+      fuehrer: staerkeVorher.fuehrer + dazu.fuehrer,
+      unterfuehrer: staerkeVorher.unterfuehrer + dazu.unterfuehrer,
+      mannschaft: staerkeVorher.mannschaft + dazu.mannschaft,
+    });
     await platz.dienst.bediene(anforderungErledigt("A1", ERLEDIGT_AM, "U2"));
 
     expect(vorschlag?.bezeichnung).toBe("BGr THW OV Varel");
     expect(zellen(platz, "U1")["abloesungDurch"]).toBe("BGr Varel");
-    expect(platz.dienst.zustand.einheiten["U2"]?.status.wert).toBe("ANGEFORDERT");
+    expect(platz.dienst.zustand.einheiten["U2"]?.status.wert).toBe("EINSATZBEREIT");
     expect(projektion.anforderungZurEinheit(platz.dienst.zustand, "U1")?.zustand).toBe("EINGETROFFEN");
     expect(projektion.anforderungZurEinheit(platz.dienst.zustand, "U1")?.abloesendeEinheitId).toBe("U2");
     // Die neue Einheit trägt die Herkunft aus der Zusage — nicht abgetippt.

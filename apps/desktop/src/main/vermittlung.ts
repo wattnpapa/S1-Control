@@ -337,7 +337,11 @@ export class Vermittlung {
     if (ruf.format === "pdf") {
       const drucker = this.#o.drucker;
       if (drucker === undefined) {
-        throw new Error("Auf diesem Arbeitsplatz ist kein Drucker eingerichtet.");
+        throw new Error(
+          this.#o.plattform === "web"
+            ? "PDF gibt es nur in der Desktop-App. Im Browser die Ausgabe als HTML erzeugen und mit „Drucken“ ausgeben."
+            : "PDF lässt sich auf diesem Arbeitsplatz nicht erzeugen. Die Ausgabe als HTML erzeugen und aus dem Browser drucken.",
+        );
       }
       // Druck und Einheitenliste liegen quer, die Status-Matrix hochkant — so
       // wie die Vorlagen der Excel gedruckt werden (`excel-domaenenmodell.md` §4).

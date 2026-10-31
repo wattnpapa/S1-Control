@@ -15,7 +15,7 @@
  * Quellzeile und schreibt, was dann dasteht — eine Kopie ist eine Anlage.
  */
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 
 import {
   ORGANISATIONEN,
@@ -37,6 +37,7 @@ import { einheitsanlage } from "../kontrakt/einheitsanlage.js";
 import type { Entwurf } from "../kontrakt/index.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
+import { useSchreibsperre } from "./useVerbindungsstatus.js";
 
 type Weg = "vorlage" | "frei";
 
@@ -116,6 +117,19 @@ export interface EinheitAnlegenEigenschaften {
   readonly vorbelegung?: Anlagevorbelegung;
 }
 
+/**
+ * Kennung und Reihenfolge, die ein Dialog für seine Anlage einmal vergibt.
+ *
+ * Bleibt die Antwort aus („Unklar, ob gespeichert"), schickt der Bediener
+ * dieselbe Eingabe erneut. Mit frischer Kennung wäre das eine **zweite**
+ * Einheit; mit derselben ist es dieselbe Anfrage, und der Dienst legt sie nur
+ * einmal an (`web/wiederholung.ts`).
+ */
+interface Anlagekennung {
+  readonly einheitId: string;
+  readonly reihenfolge: number;
+}
+
 export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: EinheitAnlegenEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [weg, setzeWeg] = useState<Weg>(vorbelegung === undefined ? "vorlage" : "frei");
@@ -125,16 +139,16 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: Einh
   const [herkunft, setzeHerkunft] = useState(vorbelegung?.herkunft ?? "");
   const [ziel, setzeZiel] = useState(vorbelegung?.abschnittId ?? abschnittId ?? "");
 
-  const bereit = ziel !== "" && (weg === "frei" ? freiVollstaendig(frei, ziel) : vorlageNach(vorlageId) !== undefined);
+  const kennung = useRef<Anlagekennung | undefined>(undefined);
+  const sperre = useSchreibsperre();
+
+  const bereit = sperre === undefined && ziel !== "" && (weg === "frei" ? freiVollstaendig(frei, ziel) : vorlageNach(vorlageId) !== undefined);
 
   async function schreibe(): Promise<void> {
-    // Die Kennung entsteht erst beim Bestätigen: Jede Anlage bekommt ihre eigene.
-    const gemeinsam: Gemeinsam = {
-      einheitId: neueId("E"),
-      ziel,
-      herkunft,
-      reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1,
-    };
+    // Die Kennung entsteht erst beim Bestätigen: Jede Anlage bekommt ihre eigene –
+    // und behält sie, bis der Dialog schließt (siehe `Anlagekennung`).
+    kennung.current ??= { einheitId: neueId("E"), reihenfolge: (laden.tabelle?.gesamtzahl ?? 0) + 1 };
+    const gemeinsam: Gemeinsam = { ...kennung.current, ziel, herkunft };
     const entwurf =
       weg === "frei" ? freierEntwurf(frei, gemeinsam) : vorlagenEntwurf(vorlageId, vorlagenOrganisation, gemeinsam);
     if (entwurf === undefined) return;
@@ -152,6 +166,11 @@ export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: Einh
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={schreibe}
     >
+      {sperre !== undefined && (
+        <p role="alert" className="warnung">
+          {sperre}
+        </p>
+      )}
       <div className="spaltengruppen" role="group" aria-label="Anlegen">
         <button
           type="button"

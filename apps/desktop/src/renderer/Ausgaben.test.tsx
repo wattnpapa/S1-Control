@@ -8,7 +8,7 @@
 
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Ausgaben } from "./Ausgaben.js";
 import { useLaden } from "./laden.js";
@@ -80,13 +80,34 @@ describe("Öffnen, Ordner zeigen und Drucken an der erzeugten Ausgabe", () => {
     expect(screen.queryByRole("button", { name: "Drucken" })).toBeNull();
   });
 
-  it("blendet die Knöpfe in der Web-Schale aus und nennt nur den Pfad", async () => {
+  it("bietet in der Web-Schale Öffnen, Herunterladen und Drucken über den Browser an", async () => {
+    attrappe.antwortet("ausgabeErzeugen", { pfad: HTML, bytes: 512 });
+    useLaden.setState({ umgebung: { ...UMGEBUNG, plattform: "web", dateienZeigen: false } });
+    const fenster = { addEventListener: vi.fn(), print: vi.fn() };
+    const auf = vi.spyOn(window, "open").mockReturnValue(fenster as unknown as Window);
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als HTML" }));
+    const adresse = `ausgabe?pfad=${encodeURIComponent(HTML)}`;
+
+    await userEvent.click(await screen.findByRole("button", { name: "Öffnen" }));
+    expect(auf).toHaveBeenLastCalledWith(adresse, "_blank");
+    expect(screen.getByRole("link", { name: "Herunterladen" }).getAttribute("href")).toBe(`${adresse}&laden=1`);
+    expect(screen.queryByRole("button", { name: "Ordner zeigen" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Drucken" }));
+    const [ereignis, ruf] = fenster.addEventListener.mock.calls[0] as [string, () => void];
+    expect(ereignis).toBe("load");
+    ruf();
+    expect(fenster.print).toHaveBeenCalledTimes(1);
+    auf.mockRestore();
+  });
+
+  it("bietet in der Web-Schale bei PDF kein Drucken an", async () => {
     useLaden.setState({ umgebung: { ...UMGEBUNG, plattform: "web", dateienZeigen: false } });
     render(<Ausgaben />);
     await userEvent.click(screen.getByRole("button", { name: "Einheitenliste als PDF" }));
-    expect(await screen.findByText(/einheitenliste_2026-09-08_0815\.pdf/)).toBeDefined();
-    expect(screen.queryByRole("button", { name: "Öffnen" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Ordner zeigen" })).toBeNull();
+    expect(await screen.findByRole("button", { name: "Öffnen" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Drucken" })).toBeNull();
   });
 
   it("meldet ein gescheitertes Öffnen als Hinweis statt still", async () => {

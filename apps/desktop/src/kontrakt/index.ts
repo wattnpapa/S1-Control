@@ -249,11 +249,19 @@ export const zLagebild = z.object({
   einheiten: z.number().int().min(0),
   gesamtstaerke: zStaerke,
   staerkeJeStatus: z.record(z.string(), z.number().int()),
+  /** Köpfe in Angefordert/Eingang — zählen nicht in `gesamtstaerke`, stehen nur daneben. */
+  staerkeErwartet: z.number().int().min(0).optional(),
+  /** Köpfe im Archivbereich „Einsatz beendet“ — zählen ebenfalls nicht. */
+  staerkeBeendet: z.number().int().min(0).optional(),
   hinweise: z.number().int().min(0),
   unbekannteEreignisse: z.number().int().min(0),
   /** Wie viele Schritte „rueckgaengig“ noch gehen (§6 U3). */
   undoTiefe: z.number().int().min(0),
   undoObersteArt: z.string().optional(),
+  /** Der Name des Gegenstands des obersten Schritts („TZ“) — leer, wenn die Art keinen nennt. */
+  undoObersteObjekt: z.string().optional(),
+  /** Anforderungen, die noch nicht eingetroffen oder storniert sind — für die Rückfrage beim Beenden. */
+  offeneAnforderungen: z.number().int().min(0).optional(),
   /**
    * Zaehlt bei jeder fachlichen Aenderung um eins hoch (M3.7).
    *

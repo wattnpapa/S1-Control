@@ -34,8 +34,10 @@ import * as fsp from "node:fs/promises";
 import http from "node:http";
 import path from "node:path";
 
-import { zRuf } from "../kontrakt/index.js";
+import { zRuf, type Antwort, type Ruf } from "../kontrakt/index.js";
 import { SCHLUESSEL_FORM, type Arbeitsplaetze } from "./arbeitsplaetze.js";
+import { KOPF_ANFRAGE_ID, Wiederholungsspeicher, anfrageId } from "./wiederholung.js";
+import { liefereAusgabe } from "./ausgaberoute.js";
 
 export const COOKIE = "s1-arbeitsplatz";
 /** Mehr als das ist kein Ruf, sondern ein Versehen. */
@@ -69,6 +71,11 @@ export interface WebdienstOptionen {
    * Anfrage ausser `/gesundheit` zuerst durch sie (ADR-006).
    */
   readonly zugang?: Zugangskontrolle;
+  /**
+   * Der eingehaengte Share. Mit ihm liefert `GET /ausgabe` erzeugte Dateien
+   * an den Browser (Papier-Rueckfallebene); ohne ihn gibt es die Route nicht.
+   */
+  readonly sharePfad?: string;
 }
 
 /** Was vor dem Dienst steht, wenn er eine Anmeldung verlangt. */
@@ -85,6 +92,7 @@ export interface Zugangskontrolle {
 export class Webdienst {
   readonly #o: WebdienstOptionen;
   readonly #server: http.Server;
+  readonly #wiederholung = new Wiederholungsspeicher();
 
   constructor(optionen: WebdienstOptionen) {
     this.#o = optionen;
@@ -138,6 +146,9 @@ export class Webdienst {
       return this.#mitteilungen(anfrage, antwort);
     }
     if (methode !== "GET" && methode !== "HEAD") return nichtErlaubt(antwort, "GET, HEAD");
+    if (url.pathname === "/ausgabe" && this.#o.sharePfad !== undefined) {
+      return liefereAusgabe(this.#o.sharePfad, url, antwort, methode === "HEAD");
+    }
     return this.#datei(url.pathname, anfrage, antwort);
   }
 
@@ -165,7 +176,7 @@ export class Webdienst {
     // unbekannter Ruf ist kein Absturz, sondern eine Antwort.
     const geprueft = zRuf.safeParse(roh);
     let ergebnis = geprueft.success
-      ? await this.#o.arbeitsplaetze.beantworte(schluessel, geprueft.data)
+      ? await this.#beantworte(schluessel, geprueft.data, anfrageId(anfrage.headers[KOPF_ANFRAGE_ID]))
       : { ok: false as const, meldung: "Die Anfrage entspricht nicht dem Kontrakt." };
     // Ob „Abmelden" im Kopfband steht, weiss nur der Dienst: Der Arbeitsplatz
     // dahinter kennt die Anmeldung nicht und soll sie nicht kennen.
@@ -175,6 +186,15 @@ export class Webdienst {
     if (!geprueft.success) this.#o.protokolliere("warnung", `Ungültiger Ruf: ${geprueft.error.message}`);
     antwort.writeHead(200, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store" });
     antwort.end(JSON.stringify(ergebnis));
+  }
+
+  /**
+   * Beantwortet den Ruf — mit Anfrage-ID höchstens einmal je Arbeitsplatz.
+   * Eine Wiederholung nach verlorener Antwort bekommt das erste Ergebnis.
+   */
+  #beantworte(schluessel: string, ruf: Ruf, id: string | undefined): Promise<Antwort<unknown>> {
+    const tue = (): Promise<Antwort<unknown>> => this.#o.arbeitsplaetze.beantworte(schluessel, ruf);
+    return id === undefined ? tue() : this.#wiederholung.fuehreAus(schluessel, id, ruf.art, tue);
   }
 
   async #mitteilungen(anfrage: http.IncomingMessage, antwort: http.ServerResponse): Promise<void> {
@@ -228,7 +248,7 @@ export class Webdienst {
       "content-length": inhalt.length,
       // Die Seite selbst immer frisch, damit ein neuer Bau sofort ankommt;
       // die Assets tragen einen Hash im Namen und duerfen liegen bleiben.
-      "cache-control": endung === ".html" ? "no-cache" : "public, max-age=31536000, immutable",
+      "cache-control": veraenderlich(datei) ? "no-cache" : "public, max-age=31536000, immutable",
     };
     if (endung === ".html") this.#schluessel(anfrage, antwort);
     antwort.writeHead(200, koepfe);
@@ -254,6 +274,11 @@ export class Webdienst {
     );
     return neu;
   }
+}
+
+/** Seiten und die Offline-Schale tragen keinen Hash im Namen und müssen frisch bleiben. */
+function veraenderlich(datei: string): boolean {
+  return path.extname(datei) === ".html" || path.basename(datei) === "sw.js";
 }
 
 function nichtErlaubt(antwort: http.ServerResponse, erlaubt: string): void {

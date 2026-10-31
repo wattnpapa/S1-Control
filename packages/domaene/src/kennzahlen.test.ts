@@ -275,6 +275,13 @@ describe("K1 bis K3 — Staerkesummen", () => {
   });
 });
 
+describe("K3 — Köpfe neben der Gesamtstärke", () => {
+  it("nennt erwartete (angefordert/Eingang) und beendete Köpfe getrennt, entfernte nie", () => {
+    // U3 (0/1/5) liegt in ANGEFORDERT, U6 (0/0/2) im Archiv, U5 ist entfernt.
+    expect(K.staerkeAusserhalbDerGesamtstaerke(zustand)).toEqual({ erwartet: 6, beendet: 2 });
+  });
+});
+
 describe("K4 bis K6 — Logistik", () => {
   it("K4 und K5: gezaehlt ueber die Personen, `maennlich` als Rest", () => {
     expect(K.logistik(zustand, u("U1"))).toEqual({

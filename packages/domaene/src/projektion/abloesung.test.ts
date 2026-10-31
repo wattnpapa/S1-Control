@@ -17,7 +17,7 @@ import type { Zustand } from "../zustand.js";
 
 import { abloesungDerEinheit, verfuegbarkeitsmarke } from "./abloesung.js";
 import { anforderungZurEinheit, anforderungsliste } from "./anforderung.js";
-import { anmarschabschnitt, einheitenwahl, einheitsvorschlag } from "./anforderung-einheit.js";
+import { einheitenwahl, einheitsvorschlag } from "./anforderung-einheit.js";
 import { spaltenDerGruppen, tabellenzeile } from "./tabelle.js";
 import { tagebuchzeile } from "./tagebuch.js";
 
@@ -131,7 +131,7 @@ describe("K18 als Marke an „Verfügbar bis“", () => {
 });
 
 describe("Die Einheit aus einer Anforderung", () => {
-  it("schlägt Organisation und Ebene der abzulösenden Einheit vor, die Herkunft aus der Zusage — die Stärke nicht", () => {
+  it("schlägt Organisation, Ebene, Stärke und Bereich der abzulösenden Einheit vor, Herkunft aus der Zusage, Auftrag aus der Anforderung", () => {
     const zustand = lage(ZUSAGE);
     const anforderung = zustand.anforderungen["A1"];
     if (anforderung === undefined) throw new Error("A1 fehlt");
@@ -139,9 +139,11 @@ describe("Die Einheit aus einer Anforderung", () => {
       bezeichnung: "BGr THW OV Varel",
       organisation: "THW",
       ebene: "GRUPPE",
-      staerke: { fuehrer: 0, unterfuehrer: 0, mannschaft: 0 },
+      staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
       herkunft: "THW RB Oldenburg",
-      abschnittId: "ANF",
+      auftrag: "Ablösung Deichverteidigung Nord",
+      // Der zählende Bereich der abgelösten Einheit, nicht „Angefordert / Anmarsch“.
+      abschnittId: "EO1",
       nachVorbildVon: "BGr 1 Oldenburg",
     });
   });
@@ -153,10 +155,6 @@ describe("Die Einheit aus einer Anforderung", () => {
     const vorschlag = einheitsvorschlag(zustand, anforderung);
     expect(vorschlag.staerke).toEqual({ fuehrer: 0, unterfuehrer: 0, mannschaft: 0 });
     expect(vorschlag.nachVorbildVon).toBeUndefined();
-  });
-
-  it("findet den Bereich „Angefordert / Anmarsch“", () => {
-    expect(anmarschabschnitt(lage())).toBe("ANF");
   });
 
   it("bietet alle aktiven Einheiten zur Wahl an, nach Namen geordnet, und trägt die Liste im Ausschnitt", () => {

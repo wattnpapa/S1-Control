@@ -8,13 +8,22 @@
  */
 
 import { useState } from "react";
-import { Maske } from "./Maske.js";
+import { ereignisMitObjekt } from "./Ereignisnamen.js";
+import { Maske, TEXT_NUR_LESEN } from "./Maske.js";
 import { useLaden } from "./laden.js";
+
+/** Diese Schritte gehen auch im beendeten Einsatz zurück — sie öffnen ihn wieder. */
+const OEFFNENDE_SCHRITTE: ReadonlySet<string> = new Set(["EinsatzBeendet"]);
+
+const TEXT_LEER =
+  "Nichts zum Rückgängigmachen. Der Verlauf gilt nur für diese Sitzung und ist nach dem Neuladen oder " +
+  "Neustart leer — bereits Eingetragenes bleibt im Einsatztagebuch.";
 
 export function Ruecknahme(): React.JSX.Element {
   const laden = useLaden();
   const [grundFuer, setzeGrundFuer] = useState<string | undefined>(undefined);
   const [grund, setzeGrund] = useState("");
+  const [frage, setzeFrage] = useState(false);
 
   const auswerten = async (grundtext?: string): Promise<void> => {
     const ergebnis = await laden.zurueck(grundtext);
@@ -44,22 +53,47 @@ export function Ruecknahme(): React.JSX.Element {
 
   const tiefe = laden.lagebild?.undoTiefe ?? 0;
   const oberste = laden.lagebild?.undoObersteArt;
+  const status = laden.lagebild?.einsatzStatus ?? "AKTIV";
+  const schreibsperre = status !== "AKTIV" && !(status === "BEENDET" && OEFFNENDE_SCHRITTE.has(oberste ?? ""));
+  const schritt = oberste === undefined ? "" : ereignisMitObjekt(oberste, laden.lagebild?.undoObersteObjekt);
+  const leer = laden.lagebild !== undefined && tiefe === 0;
+  const hinweis = schreibsperre ? TEXT_NUR_LESEN : leer ? TEXT_LEER : `Nimmt Ihren letzten Schritt zurück: ${schritt}`;
 
   return (
     <>
       <button
         type="button"
-        disabled={laden.lagebild === undefined || tiefe === 0}
-        title={
-          tiefe === 0
-            ? "Zurzeit gibt es nichts zurückzunehmen"
-            : `Nimmt den letzten eigenen Schritt zurück${oberste === undefined ? "" : `: ${oberste}`}`
-        }
-        onClick={() => void auswerten()}
+        disabled={laden.lagebild === undefined || tiefe === 0 || schreibsperre}
+        title={hinweis}
+        onClick={() => {
+          setzeFrage(true);
+        }}
       >
-        Rückgängig
-        {oberste === undefined ? "" : ` (${oberste})`}
+        {leer ? "Rückgängig (Verlauf leer)" : schritt === "" ? "Rückgängig" : `Rückgängig: ${schritt}`}
       </button>
+
+      {frage && (
+        <Maske
+          titel="Rückgängig machen?"
+          bestaetigungstext="Rückgängig machen"
+          trotzSperre
+          aufBestaetigen={async () => {
+            setzeFrage(false);
+            await auswerten();
+          }}
+          aufAbbrechen={() => {
+            setzeFrage(false);
+          }}
+        >
+          <p>
+            <strong>{schritt}</strong> rückgängig machen?
+          </p>
+          <p className="hinweistext">
+            Das gilt für alle Arbeitsplätze. Es nimmt nur Ihren letzten eigenen Schritt zurück, nicht den eines
+            anderen Arbeitsplatzes. Die Rücknahme steht im Einsatztagebuch.
+          </p>
+        </Maske>
+      )}
 
       {grundFuer !== undefined && (
         <Maske

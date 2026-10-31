@@ -121,7 +121,7 @@ Der Überblick: Stärke nach Status, Zahl der Abschnitte und Einheiten, der Stan
 
 **Zuerst:** Nichts. Diese Ansicht bleibt offen, während gearbeitet wird.
 
-**Gut zu wissen:** Die Zahlen ändern sich, ohne dass jemand an diesem Rechner etwas tut. Sie kommen von den anderen Arbeitsplätzen.
+**Gut zu wissen:** Die Zahlen ändern sich, ohne dass jemand an diesem Rechner etwas tut. Sie kommen von den anderen Arbeitsplätzen. Die Kopfzahl „Ist-Stärke“ (Fü/UFü/He // Gesamt) zählt die Kräfte in den Einsatzbereichen. Einheiten im Bereich „Angefordert / Anmarsch“ und im Eingang zählen noch nicht, Einheiten in „Einsatz beendet“ nicht mehr; sie stehen daneben als „+N im Eingang/angefordert“ und „N beendet“. Gezählt wird nach dem Bereich der Einheit, nicht nach ihrem Status: Wer eintrifft, wird in einen Einsatzbereich gesetzt und zählt ab dann.
 
 **Kürzel:** Strg+H
 
@@ -171,7 +171,7 @@ Was angefordert, zugesagt, eingetroffen oder storniert ist.
 
 **Zuerst:** Mit Strg+N eine Anforderung anlegen.
 
-**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation und Ebene vorbelegt, Stärke 0/0/0 bis zur Meldung) oder verknüpft eine schon erfasste Einheit; sie steht dann als „Ablösung durch“ an der abgelösten Einheit.
+**Gut zu wissen:** Eine erledigte oder stornierte Anforderung nimmt keine Änderung mehr an; sie ist am Ende ihrer Kette (§5.6.2). „Eingetroffen“ legt auf Wunsch die Einheit aus der Anforderung an (Organisation, Ebene, Stärke und Auftrag vorbelegt, Status „Einsatzbereit“, Bereich zu wählen — erst in einem Einsatzbereich zählt sie in die Ist-Stärke) oder verknüpft eine schon erfasste Einheit; sie steht dann als „Ablösung durch“ an der abgelösten Einheit.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 
