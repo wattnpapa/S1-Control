@@ -17,12 +17,6 @@ function text(wert: unknown): string | undefined {
   return typeof wert === "string" && wert !== "" ? wert : undefined;
 }
 
-function nutzlastText(ereignis: EingehendesEreignis, schluessel: string): string | undefined {
-  const nutzlast = ereignis.nutzlast;
-  if (typeof nutzlast !== "object" || nutzlast === null) return undefined;
-  return text((nutzlast as Record<string, unknown>)[schluessel]);
-}
-
 /** Der Anzeigename eines Abschnitts; der Eingang heißt „Eingang“, nie `EINGANG`. */
 export function abschnittsname(zustand: Zustand, id: unknown): string {
   const kennung = text(id);
