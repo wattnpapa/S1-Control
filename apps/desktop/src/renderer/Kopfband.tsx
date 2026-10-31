@@ -16,6 +16,8 @@ import { BLAETTER, type Blatt } from "./blaetter.js";
 import { staerkeText, taktischeZeit } from "./formate.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { alter } from "./Statuszeile.js";
+import { unterbrochenText } from "./verbindung.js";
+import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 
 /**
  * Die Zählregel der Kopfzahl, als Tooltip und für Vorlesegeräte. Sie steht
@@ -183,6 +185,9 @@ function Zustandszeile({
   readonly lagebild: Lagebild | undefined;
   readonly jetzt: number;
 }): React.JSX.Element {
+  // Dieselbe Quelle wie Banner und Fußzeile: Bei Unterbrechung gilt „Share
+  // erreichbar" nicht mehr — die Angabe stammt vom Dienst, den wir nicht erreichen.
+  const verbindung = useVerbindungsstatus();
   if (lagebild === undefined) {
     return <div className="zustandszeile gestoert">Kein Einsatz geöffnet</div>;
   }
@@ -203,6 +208,18 @@ function Zustandszeile({
       : lagebild.einsatzStatus === "BEENDET"
         ? " · BEENDET — Eingaben gesperrt"
         : "";
+
+  if (verbindung.zustand === "unterbrochen") {
+    return (
+      <div className="zustandszeile gestoert">
+        {verbindung.stufe === "rot" ? "✖ " : "⚠ "}
+        {lagebild.einsatzName}
+        {fuest === "" ? "" : ` · ${fuest}`}
+        {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} (veraltet) ·{" "}
+        {unterbrochenText(verbindung.seitMs)} — Share und Arbeitsplätze unbekannt
+      </div>
+    );
+  }
 
   return (
     <div className={`zustandszeile${lagebild.shareErreichbar ? "" : " gestoert"}`}>
