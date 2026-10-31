@@ -37,6 +37,8 @@ export interface Harkenknoten {
   readonly typ: string;
   readonly staerke: Staerke;
   readonly einheiten: number;
+  /** Erwartete Köpfe (angefordert/Anmarsch/Eingang) an diesem Abschnitt und darunter — nicht in `staerke`. */
+  readonly erwartet: number;
   /** §5.3.2: aufgelöst — im Blatt durchgestrichen und nicht weggelassen. */
   readonly aufgeloest: boolean;
   readonly kinder: readonly Harkenknoten[];
@@ -47,7 +49,10 @@ export interface Harke {
   readonly fuest: readonly { readonly bezeichnung: string; readonly staerke: Staerke }[];
   readonly fuestGesamt: Staerke;
   readonly knoten: readonly Harkenknoten[];
+  /** Die Ist-Stärke des Einsatzes — dieselbe Zahl wie im Kopfband. */
   readonly gesamt: Staerke;
+  /** Erwartete Köpfe außerhalb der Ist-Stärke. */
+  readonly erwartet: number;
 }
 
 /** Addiert Stärketripel — die Summenzeile des Kastens der Führungsstelle. */
@@ -68,6 +73,7 @@ function harkenknoten(knoten: Baumknoten): Harkenknoten {
     typ: knoten.typ,
     staerke: knoten.summenStaerke,
     einheiten: knoten.einheitenSumme,
+    erwartet: knoten.erwartetSumme,
     aufgeloest: knoten.aufgeloestNach !== undefined,
     kinder: knoten.kinder.map(harkenknoten),
   };
@@ -95,6 +101,7 @@ export function harke(zustand: Zustand): Harke {
     fuestGesamt: addiere(fuest.map((z) => z.staerke)),
     knoten: baum.map(harkenknoten),
     gesamt: kennzahlen.einsatzGesamtstaerke(zustand).gesamt,
+    erwartet: kennzahlen.staerkeAusserhalbDerGesamtstaerke(zustand).erwartet,
   };
 }
 
@@ -115,7 +122,7 @@ function knotenAlsHtml(knoten: Harkenknoten): string {
     `  <span class="name">${htmlMaskieren(knoten.name)}</span>`,
     `  <span class="typ">${htmlMaskieren(knoten.typ)}</span>`,
     `  <span class="staerke">${staerkeText(knoten.staerke)}</span>`,
-    `  <span class="einheiten">${String(knoten.einheiten)} Einh.</span>`,
+    `  <span class="einheiten">${String(knoten.einheiten)} Einh.${knoten.erwartet > 0 ? ` · ${kennzahlen.erwartetKurz(knoten.erwartet)}` : ""}</span>`,
     kinder,
     "</li>",
   ].join("\n");
@@ -179,8 +186,8 @@ export function harkeAlsHtml(zustand: Zustand, kopf: Ausgabekopf): string {
     blatt.knoten.length === 0
       ? "  <p>Keine Abschnitte angelegt.</p>"
       : `  <ul>\n${blatt.knoten.map(knotenAlsHtml).join("\n")}\n  </ul>`,
-    `  <p class="gesamt">Einsatz gesamt: ${staerkeText(blatt.gesamt)}</p>`,
-    "  <p class=\"fussnote\">Fü / UFü / He = Gesamt. Aufgelöste Abschnitte sind durchgestrichen (§5.3.2); die Führungsstelle steht außerhalb des Baums, weil sie aus den Dienstposten entsteht (§5.7, K17).</p>",
+    `  <p class="gesamt">Einsatz gesamt (Ist-Stärke): ${staerkeText(blatt.gesamt)}${blatt.erwartet > 0 ? ` · ${htmlMaskieren(kennzahlen.erwartetText(blatt.erwartet))}` : ""}</p>`,
+    "  <p class=\"fussnote\">Fü / UFü / He = Gesamt, gezählt als Ist-Stärke (vor Ort); erwartete Kräfte stehen daneben. Aufgelöste Abschnitte sind durchgestrichen (§5.3.2); die Führungsstelle steht außerhalb des Baums, weil sie aus den Dienstposten entsteht (§5.7, K17).</p>",
     "</section>",
     "</body>",
     "</html>",

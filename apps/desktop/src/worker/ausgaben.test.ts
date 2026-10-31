@@ -121,7 +121,7 @@ describe("Der Aktendienst als Ausgabestelle", () => {
     // Diese Grundlage hat keine Dienstposten — dann sagt der Kasten das,
     // statt eine Null zu zeigen, die wie eine unbesetzte FüSt aussähe.
     expect(html).toContain("Keine Dienstposten erfasst.");
-    expect(html).toContain("Einsatz gesamt:");
+    expect(html).toContain("Einsatz gesamt (Ist-Stärke):");
     expect(dateiname).toMatch(/^fueorg_\d{4}-\d{2}-\d{2}_\d{4}$/);
   });
 

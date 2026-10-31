@@ -38,6 +38,7 @@ import {
 
 import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
+import { istZeile, kontrollzeilen, namenListe } from "./status-kontrolle.js";
 
 /** Eine Zeile der Organisationsmatrix — Block 1 der Vorlage (Z. 7–18). */
 export interface Organisationszeile {
@@ -68,6 +69,12 @@ export interface Statusdaten {
   readonly uebergeordneteFuestName?: string;
   readonly organisationen: readonly Organisationszeile[];
   readonly organisationenSumme: Organisationszeile;
+  /** Die Ist-Stärke nach der einen Zählregel — dieselbe Zahl wie im Kopfband. */
+  readonly ist: Staerke;
+  /** Erwartete Köpfe (angefordert/Anmarsch/Eingang) — nicht in der Ist-Stärke. */
+  readonly erwartet: number;
+  /** Köpfe in „Einsatz beendet“ oder auf Rückmarsch — nicht in der Ist-Stärke. */
+  readonly beendet: number;
   readonly status: readonly Verteilungszeile[];
   readonly statusSumme: number;
   readonly schichten: readonly Verteilungszeile[];
@@ -205,6 +212,7 @@ export function statusdaten(zustand: Zustand): Statusdaten {
     },
   );
 
+  const zaehlung = kennzahlen.zaehlstand(zustand);
   const status = verteilung(kennzahlen.matrixStatus(zustand), EINHEIT_STATUS, statusTitel);
   const schichten = verteilung(kennzahlen.matrixSchicht(zustand), SCHICHTEN, schichtTitel);
 
@@ -213,6 +221,9 @@ export function statusdaten(zustand: Zustand): Statusdaten {
     ...fuestangaben(zustand),
     organisationen: zeilen,
     organisationenSumme: gesamtzeile,
+    ist: zaehlung.ist,
+    erwartet: summe(zaehlung.erwartet),
+    beendet: summe(zaehlung.beendet),
     status,
     statusSumme: status.reduce((s, z) => s + z.gesamt, 0),
     schichten,
@@ -224,16 +235,6 @@ export function statusdaten(zustand: Zustand): Statusdaten {
       bezeichnung: typeof einheit.bezeichnung.wert === "string" ? einheit.bezeichnung.wert : einheit.id,
     })),
   };
-}
-
-/** Die Meldung zu K21, im Wortlaut der Vorlage (`Status!G36`). */
-export function meldungStatus(probe: number): string {
-  return probe === 0 ? "o.k." : "Einheiten ohne Statusangabe oder Organisation";
-}
-
-/** Die Meldung zu K23, im Wortlaut der Vorlage (`Status!G43`). */
-export function meldungSchicht(probe: number): string {
-  return probe === 0 ? "o.k." : "Einheiten ohne Schichtangabe oder Organisation";
 }
 
 function zahl(wert: number): string {
@@ -258,7 +259,7 @@ function verteilungstabelle(titel: string, zeilen: readonly Verteilungszeile[], 
       ].join("\n"),
     ),
     '      <tr class="summenzeile">',
-    '        <th scope="row">Summe</th>',
+    `        <th scope="row">${GESAMT_ALLE}</th>`,
     "        <td></td><td></td><td></td>",
     `        ${zahl(gesamt)}`,
     "      </tr>",
@@ -266,6 +267,12 @@ function verteilungstabelle(titel: string, zeilen: readonly Verteilungszeile[], 
     "  </table>",
   ].join("\n");
 }
+
+/** Die Summenbeschriftung der Matrizen: Sie zählen alle erfassten Einheiten, nicht die Ist-Stärke. */
+const GESAMT_ALLE = "Alle erfassten Einheiten";
+
+/** Die Matrizen laufen über die Lage ohne „Einsatz beendet“ (K19–K23), nicht über die Ist-Stärke. */
+const UEBERSCHRIFT_ZUSATZ = " — alle erfassten Einheiten, auch erwartete";
 
 /** Setzt die Status-Matrix als HTML. */
 export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
@@ -289,9 +296,6 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
     ].join("\n"),
   );
 
-  const probeStatusOk = daten.probeStatus === 0;
-  const probeSchichtOk = daten.probeSchicht === 0;
-
   return [
     "<!doctype html>",
     '<html lang="de">',
@@ -305,7 +309,9 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
     "<body>",
     kopfAlsHtml(kopf),
     fuestzeileAlsHtml(daten),
-    "  <h2>Stärke nach Organisationen</h2>",
+    `  <p class="ist"><strong>${htmlMaskieren(istZeile(daten))}</strong></p>`,
+    `  <p class="hinweis">${htmlMaskieren(kennzahlen.ZAEHLREGEL_TEXT)} Die Tabellen darunter zählen dagegen alle erfassten Einheiten (Ist plus erwartet), ohne „Einsatz beendet“.</p>`,
+    `  <h2>Stärke nach Organisationen${UEBERSCHRIFT_ZUSATZ}</h2>`,
     '  <table class="status">',
     "    <thead>",
     "      <tr>",
@@ -320,25 +326,18 @@ export function statusAlsHtml(daten: Statusdaten, kopf: Ausgabekopf): string {
     ...organisationszeilen,
     "    </tbody>",
     "  </table>",
-    verteilungstabelle("Status der Einsatzkräfte", daten.status, daten.statusSumme),
-    verteilungstabelle("Schichten", daten.schichten, daten.schichtenSumme),
+    verteilungstabelle(`Status der Einsatzkräfte${UEBERSCHRIFT_ZUSATZ}`, daten.status, daten.statusSumme),
+    verteilungstabelle(`Schichten${UEBERSCHRIFT_ZUSATZ}`, daten.schichten, daten.schichtenSumme),
     '  <h2>Kontrollsummen</h2>',
     '  <ul class="proben">',
-    `    <li class="${probeStatusOk ? "ok" : "fehler"}">Status: ${htmlMaskieren(meldungStatus(daten.probeStatus))}${probeStatusOk ? "" : ` (${String(daten.probeStatus)})`}</li>`,
-    `    <li class="${probeSchichtOk ? "ok" : "fehler"}">Schicht: ${htmlMaskieren(meldungSchicht(daten.probeSchicht))}${probeSchichtOk ? "" : ` (${String(daten.probeSchicht)})`}</li>`,
+    ...kontrollzeilen(daten).map(
+      (zeile) => `    <li class="${zeile.art === "fehler" ? "fehler" : zeile.art}">${htmlMaskieren(zeile.text)}</li>`,
+    ),
     "  </ul>",
-    // K25 nennt die Einheiten, an denen es liegt. Die Vorlage kann das nicht;
-    // sie sagt nur, **dass** etwas fehlt — und dann sucht jemand von Hand.
+    // K25 nennt die Einheiten, an denen es liegt — mit Namen, nie mit Kennungen.
     daten.ohnePflichtangabe.length === 0
       ? '  <p class="hinweis">Alle Einheiten tragen Organisation, Status und Schicht.</p>'
-      : [
-          '  <p class="hinweis">Ohne Pflichtangabe:</p>',
-          '  <ul class="fehlende">',
-          ...daten.ohnePflichtangabe.map(
-            (einheit) => `    <li>${htmlMaskieren(einheit.bezeichnung)} (${htmlMaskieren(einheit.id)})</li>`,
-          ),
-          "  </ul>",
-        ].join("\n"),
+      : `  <p class="hinweis">Ohne Pflichtangabe: ${htmlMaskieren(namenListe(daten.ohnePflichtangabe.map((e) => e.bezeichnung)))}.</p>`,
     "</body>",
     "</html>",
     "",
@@ -362,4 +361,6 @@ export const STATUS_STIL = [
   "    .ok { color: #157a3c; }",
   "    .fehler { color: #b91c1c; font-weight: 700; }",
   "    .hinweis { font-size: 9pt; color: #444; }",
+  "    .ist { font-size: 11pt; margin: 0 0 1mm; }",
+  "    li.hinweis { color: #444; font-size: 10pt; }",
 ].join("\n");

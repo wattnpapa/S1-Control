@@ -112,12 +112,12 @@ describe("Der HTML-Monitor", () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
     const ohne = readFileSync(await schalteEin(platz), "utf8");
-    expect(ohne).not.toContain("<h2>Status</h2>");
+    expect(ohne).not.toContain("<h2>Status (alle erfassten Einheiten)</h2>");
 
     const mit = readFileSync(await schalteEin(platz, { mitStatus: true }), "utf8");
     // „Druck (optional Status)" der Vorlage: Wer die Wand für die Lagekarte
     // braucht, will die Bilanz nicht daneben.
-    expect(mit).toContain("<h2>Status</h2>");
+    expect(mit).toContain("<h2>Status (alle erfassten Einheiten)</h2>");
   });
 
   it("hört auf zu schreiben, sobald er ausgeschaltet ist", async () => {

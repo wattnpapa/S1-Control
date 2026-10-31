@@ -24,8 +24,6 @@ import {
   type Zustand,
 } from "@s1/domaene";
 
-import { druckdaten } from "./druck.js";
-
 /** Eine Einheit der Liste — alle Zellen schon als Wort, wie sie auf dem Papier stehen. */
 export interface Einheitenlistenzeile {
   /** Laufende Nummer über die ganze Liste; auf Papier spricht man von „Zeile 17“. */
@@ -44,6 +42,8 @@ export interface Einheitenlistenzeile {
   readonly staerke: Staerke;
   readonly gesamt: number;
   readonly eingetroffen: string;
+  /** Die Zählklasse der einen Zählregel: Ist, erwartet oder beendet (Rückmarsch). */
+  readonly klasse: "ist" | "erwartet" | "beendet" | "ausserhalb";
 }
 
 /** Ein Bereich mit seiner Kopfzeile und seinen Einheiten. */
@@ -53,9 +53,11 @@ export interface Einheitenlistenbereich {
   /** Der Abschnittstyp als Wort, etwa „Bereitstellungsraum“. */
   readonly typ: string;
   readonly tiefe: number;
-  /** Die eigene Stärke des Bereichs (K2) — dieselbe Zahl wie in der Druckzeile. */
+  /** Die Ist-Stärke des Bereichs (Zählregel) — dieselbe Zahl wie in der Druckzeile. */
   readonly staerke: Staerke;
   readonly gesamt: number;
+  /** Erwartete Köpfe (angefordert/Anmarsch/Eingang) in diesem Bereich — nicht in `staerke`. */
+  readonly erwartet: number;
   /** §5.3: geht die Stärke dieses Bereichs in die Gesamtstärke ein? */
   readonly zaehlt: boolean;
   readonly zeilen: readonly Einheitenlistenzeile[];
@@ -67,14 +69,15 @@ export interface Einheitenlistendaten {
   readonly bereiche: readonly Einheitenlistenbereich[];
   /** Zahl der aufgeführten Einheiten. */
   readonly einheiten: number;
-  /** Alle aufgeführten Bereiche zusammen — mit den angeforderten Kräften, wie die Status-Matrix. */
-  readonly summe: Staerke;
-  readonly summeGesamt: number;
-  /** Die Stärke auf der Lagekarte — die Gesamtzeile des Drucks, ohne Angefordert. */
-  readonly lagekarte: Staerke;
-  readonly lagekarteGesamt: number;
-  readonly angefordert: Staerke;
-  readonly angefordertGesamt: number;
+  /** Die Ist-Stärke aller Bereiche — dieselbe Zahl wie Kopfband, Druck und Status. */
+  readonly ist: Staerke;
+  readonly istGesamt: number;
+  /** Erwartete Kräfte (angefordert/Anmarsch/Eingang): in der Liste aufgeführt, aber nicht in der Ist-Stärke. */
+  readonly erwartet: Staerke;
+  readonly erwartetGesamt: number;
+  /** Alle aufgeführten Einheiten (Summe der Zeilen) — ausdrücklich nicht die Ist-Stärke. */
+  readonly alle: Staerke;
+  readonly alleGesamt: number;
   /** Einheiten im Bereich „Einsatz beendet“: Sie stehen nicht in der Liste, ihre Zahl schon. */
   readonly beendet: number;
 }
@@ -119,6 +122,7 @@ function listenzeile(zeile: projektion.Tabellenzeile, nr: number): Einheitenlist
     staerke: zeile.staerke,
     gesamt: zeile.gesamt,
     eingetroffen: zellentext(zeile, "eingetroffenAm"),
+    klasse: zeile.zaehlklasse,
   };
 }
 
@@ -151,24 +155,27 @@ export function einheitenlistendaten(zustand: Zustand): Einheitenlistendaten {
       tiefe: k.tiefe,
       staerke: k.eigeneStaerke,
       gesamt: summe(k.eigeneStaerke),
+      erwartet: k.erwartet,
       zaehlt: k.zaehlt,
       zeilen: tabelle.zeilen.map((zeile) => listenzeile(zeile, (nr += 1))),
     });
   }
 
-  const gesamt = bereiche.reduce<Staerke>((s, b) => plus(s, b.staerke), NULL);
-  const druck = druckdaten(zustand);
+  const zeilen = bereiche.flatMap((b) => b.zeilen);
+  const ist = bereiche.reduce<Staerke>((s, b) => plus(s, b.staerke), NULL);
+  const erwartet = zeilen.filter((z) => z.klasse === "erwartet").reduce<Staerke>((s, z) => plus(s, z.staerke), NULL);
+  const alle = zeilen.reduce<Staerke>((s, z) => plus(s, z.staerke), NULL);
   return {
     einsatzName: text(zustand.einsatz?.name.wert, "(ohne Namen)"),
     fuestName: text(zustand.einsatz?.fuestName.wert),
     bereiche,
     einheiten: nr,
-    summe: gesamt,
-    summeGesamt: summe(gesamt),
-    lagekarte: druck.gesamt,
-    lagekarteGesamt: druck.gesamtSumme,
-    angefordert: druck.angefordert,
-    angefordertGesamt: druck.angefordertSumme,
+    ist,
+    istGesamt: summe(ist),
+    erwartet,
+    erwartetGesamt: summe(erwartet),
+    alle,
+    alleGesamt: summe(alle),
     beendet: projektion.einheitentabelle(zustand, { abschnittId: ARCHIV_ABSCHNITT_ID, anzahl: 0 }).gesamtzahl,
   };
 }
