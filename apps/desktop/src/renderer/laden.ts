@@ -25,6 +25,7 @@ import { create } from "zustand";
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { rufe } from "./bruecke.js";
+import { VERBINDUNGSMELDUNGEN } from "./verbindung.js";
 import { CODE_EINSATZ_ABGESCHLOSSEN, lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
@@ -253,6 +254,8 @@ export interface Laden {
   /** Trägt einen Hinweis in die Leiste ein — für Antworten, die keine Maske öffnen. */
   melde(stufe: Hinweis["stufe"], text: string): void;
   loescheFehler(): void;
+  /** Nimmt Fehlerbild und Hinweise zurück, die nur die Unterbrechung betrafen (Wiederverbindung). */
+  entferneVerbindungsmeldungen(): void;
 }
 
 const LEERE_EINSTELLUNGEN: Einstellungen = { sharePfad: "", anzeigename: "" };
@@ -357,6 +360,8 @@ export const useLaden = create<Laden>((setze, hole) => {
   }
 
   function merkeHinweis(stufe: Hinweis["stufe"], text: string): void {
+    // Dieselbe Verbindungsmeldung steht nur einmal da, nicht je fehlgeschlagenem Ansichtsruf.
+    if (VERBINDUNGSMELDUNGEN.includes(text) && hole().hinweise.some((h) => h.text === text)) return;
     hinweisNummer += 1;
     const hinweise = [...hole().hinweise, { nummer: hinweisNummer, stufe, text }];
     setze({ hinweise: hinweise.slice(-HINWEISE_MAX) });
@@ -842,6 +847,15 @@ export const useLaden = create<Laden>((setze, hole) => {
 
     loescheFehler() {
       setze({ fehler: undefined });
+    },
+
+    entferneVerbindungsmeldungen() {
+      const zustand = hole();
+      const fehler = zustand.fehler !== undefined && VERBINDUNGSMELDUNGEN.includes(zustand.fehler);
+      setze({
+        ...(fehler ? { fehler: undefined } : {}),
+        hinweise: zustand.hinweise.filter((h) => !VERBINDUNGSMELDUNGEN.includes(h.text)),
+      });
     },
   };
 });

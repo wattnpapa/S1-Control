@@ -9,6 +9,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { MELDUNG_ABGEMELDET, webBruecke } from "./webBruecke.js";
+import { MELDUNG_KEINE_VERBINDUNG } from "./verbindung.js";
 import type { Mitteilung } from "../kontrakt/index.js";
 
 class Quelle extends EventTarget {
@@ -49,11 +50,11 @@ describe("webBruecke", () => {
   });
 
   it("macht aus einem HTTP-Fehler eine Antwort mit ok: false", async () => {
-    const hole = vi.fn(async () => antwortMit(503, {}));
+    const hole = vi.fn(async () => antwortMit(500, {}));
     const bruecke = webBruecke({ hole, Quelle: Quelle as unknown as typeof EventSource });
     expect(await bruecke.ruf({ art: "umgebung" })).toEqual({
       ok: false,
-      meldung: "Der Dienst antwortete mit 503.",
+      meldung: "Der Dienst antwortete mit 500.",
     });
   });
 
@@ -84,7 +85,7 @@ describe("webBruecke", () => {
     const bruecke = webBruecke({ hole, Quelle: Quelle as unknown as typeof EventSource });
     expect(await bruecke.ruf({ art: "umgebung" })).toEqual({
       ok: false,
-      meldung: "Der Dienst ist nicht erreichbar: Failed to fetch",
+      meldung: MELDUNG_KEINE_VERBINDUNG,
     });
   });
 

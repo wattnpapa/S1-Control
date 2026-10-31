@@ -25,6 +25,8 @@ import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
+import { Verbindungsbanner } from "./Verbindungsbanner.js";
+import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import { useKuerzel } from "./tastatur.js";
 
 /**
@@ -46,6 +48,7 @@ function useJetzt(): number {
 export function Arbeitsplatz(): React.JSX.Element {
   const laden = useLaden();
   const jetzt = useJetzt();
+  const verbindung = useVerbindungsstatus();
   const [hilfeOffen, setzeHilfeOffen] = useState(false);
   // Welches Blatt aufgeschlagen ist, ist eine Sache **dieses Fensters**: Zwei
   // Arbeitsplätze am selben Einsatz sehen verschiedene Blätter, und beim
@@ -106,6 +109,8 @@ export function Arbeitsplatz(): React.JSX.Element {
           ? { blatt, waehleBlatt: setzeBlatt, offeneMeldungen: laden.eingangskorb?.offen ?? 0 }
           : {})}
       />
+
+      <Verbindungsbanner />
 
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">
@@ -170,7 +175,7 @@ export function Arbeitsplatz(): React.JSX.Element {
         )}
       </main>
 
-      <Statuszeile lagebild={laden.lagebild} jetzt={jetzt} />
+      <Statuszeile lagebild={laden.lagebild} jetzt={jetzt} verbindung={verbindung} />
     </div>
   );
 }

@@ -12,6 +12,7 @@
 
 import { staerkeText } from "./formate.js";
 import type { Lagebild } from "../kontrakt/index.js";
+import { unterbrochenText, type Verbindungsstatus } from "./verbindung.js";
 
 /**
  * „vor 8 s", „vor 3 min", „vor 2 h".
@@ -39,31 +40,56 @@ export function bytes(zahl: number): string {
   return `${(zahl / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+type UnterbrochenerStatus = Extract<Verbindungsstatus, { zustand: "unterbrochen" }>;
+
 export interface StatuszeileEigenschaften {
   readonly lagebild: Lagebild | undefined;
   readonly jetzt: number;
+  /**
+   * Die Verbindung Browser↔Dienst. Fehlt sie oder ist sie „unbekannt"
+   * (Electron), verhält sich die Zeile wie bisher.
+   */
+  readonly verbindung?: Verbindungsstatus;
 }
 
-export function Statuszeile({ lagebild, jetzt }: StatuszeileEigenschaften): React.JSX.Element {
+function Unterbrochen({ status }: { readonly status: UnterbrochenerStatus }): React.JSX.Element {
+  return (
+    <strong className={status.stufe === "rot" ? "fehler" : "warnung"} role="status">
+      {status.stufe === "rot" ? "✖" : "⚠"} {unterbrochenText(status.seitMs)}
+    </strong>
+  );
+}
+
+export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigenschaften): React.JSX.Element {
   if (lagebild === undefined) {
     return (
       <footer className="statuszeile" aria-label="Statuszeile">
+        {verbindung?.zustand === "unterbrochen" && <Unterbrochen status={verbindung} />}
         <span>Kein Einsatz geöffnet</span>
       </footer>
     );
   }
 
+  // Unterbrochen: Share-Status und Peers stammen vom Dienst und sind jetzt
+  // **nicht** mehr belegt. Statt „Share erreichbar (gerade eben)" steht, was
+  // gilt – sonst hielte der Bediener veraltete Zahlen für aktuell.
+  const getrennt = verbindung?.zustand === "unterbrochen" ? verbindung : undefined;
   const wache = lagebild.peers.filter((p) => !p.veraltet).length;
   const veraltet = lagebild.peers.length - wache;
 
   return (
     <footer className="statuszeile" aria-label="Statuszeile">
+      {getrennt !== undefined && <Unterbrochen status={getrennt} />}
+
       <span title={lagebild.standHlc}>
         Stand: {lagebild.standWanduhr === "" ? "keine Ereignisse" : alter(lagebild.standWanduhr, jetzt)}
+        {getrennt !== undefined && " (veraltet)"}
       </span>
 
       <span>
-        {lagebild.shareErreichbar ? (
+        {getrennt !== undefined ? (
+          "Share-Stand unbekannt"
+        ) : lagebild.shareErreichbar ? (
           <>Share erreichbar ({alter(lagebild.letzterShareKontakt, jetzt)})</>
         ) : (
           // §1.3: „Der NAS-Ausfall ist der Normalpfad, kein Fehlerpfad." Die
@@ -75,7 +101,9 @@ export function Statuszeile({ lagebild, jetzt }: StatuszeileEigenschaften): Reac
       </span>
 
       <span>
-        {wache === 0 && veraltet === 0
+        {getrennt !== undefined
+          ? "Arbeitsplätze unbekannt"
+          : wache === 0 && veraltet === 0
           ? "allein am Einsatz"
           : `${String(wache)} weitere${veraltet > 0 ? `, ${String(veraltet)} veraltet` : ""}`}
       </span>

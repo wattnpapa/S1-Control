@@ -126,3 +126,59 @@ describe("Statuszeile", () => {
     expect(screen.getByText("5 unbekannte Ereignisse")).toBeDefined();
   });
 });
+
+describe("Verbindung zum Dienst (P0-2)", () => {
+  const verbunden = { zustand: "verbunden", letzterKontakt: JETZT } as const;
+
+  it("bleibt bei bestehender Verbindung wie bisher", () => {
+    render(<Statuszeile lagebild={GRUND} jetzt={JETZT} verbindung={verbunden} />);
+    expect(screen.getByText(/Share erreichbar/)).toBeDefined();
+    expect(screen.queryByText(/Keine Verbindung/)).toBeNull();
+  });
+
+  it("zeigt in Electron (unbekannt) nichts Zusätzliches", () => {
+    render(<Statuszeile lagebild={GRUND} jetzt={JETZT} verbindung={{ zustand: "unbekannt" }} />);
+    expect(screen.getByText(/Share erreichbar/)).toBeDefined();
+  });
+
+  it("sagt bei Unterbrechung ehrlich, seit wann, statt grün „Share erreichbar“ zu zeigen", () => {
+    render(
+      <Statuszeile
+        lagebild={GRUND}
+        jetzt={JETZT}
+        verbindung={{ zustand: "unterbrochen", stufe: "gelb", seitMs: 14_000 }}
+      />,
+    );
+    expect(screen.getByText(/Keine Verbindung zum Dienst seit 14 s/)).toBeDefined();
+    expect(screen.queryByText(/Share erreichbar/)).toBeNull();
+    expect(screen.getByText("Share-Stand unbekannt")).toBeDefined();
+    expect(screen.getByText(/Stand: vor 8 s \(veraltet\)/)).toBeDefined();
+    expect(screen.getByText("Arbeitsplätze unbekannt")).toBeDefined();
+    expect(screen.getByRole("status").className).toBe("warnung");
+  });
+
+  it("wird nach langer Unterbrechung rot und trägt ein Symbol zusätzlich zur Farbe", () => {
+    render(
+      <Statuszeile
+        lagebild={GRUND}
+        jetzt={JETZT}
+        verbindung={{ zustand: "unterbrochen", stufe: "rot", seitMs: 190_000 }}
+      />,
+    );
+    const marke = screen.getByRole("status");
+    expect(marke.className).toBe("fehler");
+    expect(marke.textContent).toContain("✖");
+    expect(marke.textContent).toContain("seit 3 min");
+  });
+
+  it("zeigt die Unterbrechung auch ohne geöffneten Einsatz", () => {
+    render(
+      <Statuszeile
+        lagebild={undefined}
+        jetzt={JETZT}
+        verbindung={{ zustand: "unterbrochen", stufe: "gelb", seitMs: 12_000 }}
+      />,
+    );
+    expect(screen.getByText(/Keine Verbindung zum Dienst seit 12 s/)).toBeDefined();
+  });
+});
