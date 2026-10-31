@@ -171,6 +171,16 @@ describe("offline.html", () => {
     expect(OFFLINE).toContain("location.reload()");
     expect(OFFLINE).not.toMatch(/src="http|href="http/);
   });
+
+  it("nennt die Sperre der Eingabe und bietet den Papier-Vordruck zum Drucken an", () => {
+    expect(OFFLINE).toContain("Eingabe gesperrt");
+    expect(OFFLINE).not.toContain("Weiterarbeiten");
+    for (const titel of ["Meldeblock", "Einheitenliste", "Funkprotokoll"]) {
+      expect(OFFLINE).toContain(`Papier-Vordruck: ${titel}`);
+    }
+    expect(OFFLINE).toContain("window.print()");
+    expect(OFFLINE).toContain("size: A4 portrait");
+  });
 });
 
 describe("Auslieferung durch den Dienst", () => {

@@ -80,7 +80,8 @@ export const STOERFAELLE: readonly Stoerfall[] = [
     ursache:
       "Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den lokalen Spiegel.",
     schritte: [
-      "Weiterarbeiten. Alles Eingetippte liegt im lokalen Spiegel und geht nicht verloren (§5.3).",
+      "Weiterarbeiten, solange das Fenster den Dienst erreicht. Alles Eingetippte bleibt erhalten und wird übertragen, sobald der Share wieder da ist.",
+      "Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Ausgaben“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.",
       "Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.",
       "Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.",
       "Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.",
