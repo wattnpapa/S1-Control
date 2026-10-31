@@ -123,14 +123,14 @@ import {
   pruefeAbschluss,
 } from "./einsatzabschluss.js";
 import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
-import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
-
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { schreibhinweise } from "./schreibhinweise.js";
 import { Bearbeitungssperren } from "./bearbeitungssperren.js";
 import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
+import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
+
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
  *
@@ -260,15 +260,6 @@ export class Aktendienst {
   #geschlossen = false;
 
   /**
-   * Zaehlt jedes gefaltete fachliche Ereignis (M3.7).
-   *
-   * Er zaehlt **Ereignisse** und nicht Aenderungen am Lagebild: Eine
-   * Statusaenderung an einer von 150 Einheiten laesst die flache Projektion
-   * unberuehrt, und trotzdem ist die Tabelle danach veraltet. Ein Zeiger, der
-   * an der Projektion haengt, meldete diesen Fall nie.
-   */
-  #lageZeiger = 0;
-  /**
    * Die Warteschlange der Schreibwege.
    *
    * Prüfung (Einsatzstatus, Bestand) und Schreiben liegen in einem
@@ -281,6 +272,15 @@ export class Aktendienst {
    */
   #schlange: Promise<unknown> = Promise.resolve();
 
+  /**
+   * Zaehlt jedes gefaltete fachliche Ereignis (M3.7).
+   *
+   * Er zaehlt **Ereignisse** und nicht Aenderungen am Lagebild: Eine
+   * Statusaenderung an einer von 150 Einheiten laesst die flache Projektion
+   * unberuehrt, und trotzdem ist die Tabelle danach veraltet. Ein Zeiger, der
+   * an der Projektion haengt, meldete diesen Fall nie.
+   */
+  #lageZeiger = 0;
 
   /**
    * Die fachlichen Ereignisse dieser Akte, in Eintreffreihenfolge.
@@ -415,6 +415,30 @@ export class Aktendienst {
     return ergebnis;
   }
 
+  /**
+   * Setzt, verlängert oder gibt eine Bearbeitungssperre frei (`frei`). Die
+   * Präsenz wird beim nächsten Takt sofort geschrieben, damit die Kollegen die
+   * Änderung nach höchstens einem eigenen Präsenztakt sehen.
+   */
+  sperre(entitaetId: string, frei: boolean): void {
+    const jetzt = this.#o.zeit();
+    const geaendert = frei ? this.#sperren.gib(entitaetId) : this.#sperren.setze(entitaetId, jetzt);
+    if (geaendert) this.#letztePraesenz = Number.NEGATIVE_INFINITY;
+  }
+
+  /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
+  async meldeAb(): Promise<void> {
+    await entfernePraesenz({
+      dateisystem: this.#o.dateisystem,
+      zeit: this.#o.zeit,
+      ablage: this.#o.ablage,
+      clientId: this.#clientId,
+      anzeigename: this.#o.anzeigename,
+      rechnername: this.#o.rechnername,
+      programmversion: this.#o.programmversion,
+    });
+  }
+
   /** Beendet den Dienst. Weitere Takte tun nichts mehr. */
   schliesse(meldung = "Der Einsatz wurde geschlossen."): void {
     if (this.#geschlossen) return;
@@ -440,30 +464,6 @@ export class Aktendienst {
   async takt(): Promise<void> {
     if (this.#geschlossen || this.#akte === undefined) return;
     const jetzt = this.#o.zeit();
-
-  /**
-   * Setzt, verlängert oder gibt eine Bearbeitungssperre frei (`frei`). Die
-   * Präsenz wird beim nächsten Takt sofort geschrieben, damit die Kollegen die
-   * Änderung nach höchstens einem eigenen Präsenztakt sehen.
-   */
-  sperre(entitaetId: string, frei: boolean): void {
-    const jetzt = this.#o.zeit();
-    const geaendert = frei ? this.#sperren.gib(entitaetId) : this.#sperren.setze(entitaetId, jetzt);
-    if (geaendert) this.#letztePraesenz = Number.NEGATIVE_INFINITY;
-  }
-
-  /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
-  async meldeAb(): Promise<void> {
-    await entfernePraesenz({
-      dateisystem: this.#o.dateisystem,
-      zeit: this.#o.zeit,
-      ablage: this.#o.ablage,
-      clientId: this.#clientId,
-      anzeigename: this.#o.anzeigename,
-      rechnername: this.#o.rechnername,
-      programmversion: this.#o.programmversion,
-    });
-  }
 
     if (jetzt - this.#letzteSpiegelung >= this.#takte.spiegelungMs) {
       this.#letzteSpiegelung = jetzt;
@@ -698,15 +698,6 @@ export class Aktendienst {
     // allen anderen Prüfungen, damit die Meldung den Grund nennt, der zählt.
     const gesperrt = pruefeAbschluss(this.#zustand, entwurf);
     if (gesperrt !== undefined) return gesperrt;
-    // §2.4: Der Grund ist bei manchen Arten Pflicht, und die Regel steht im
-    // Katalog — dieselbe, die auch der Fold anwendet. Ohne diese Pruefung
-    // naehme der Dienst den Bedienschritt an, schriebe ihn in ein
-    // append-only-Protokoll und wuerfe ihn beim naechsten Falten als
-    // `unbekannt` weg (§3.7 Regel 4): Der Bediener saehe „geschrieben" und
-    // keine Wirkung.
-    if (!grundPasst(eintrag, entwurf)) {
-      return {
-        art: "abgewiesen",
     // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
     // abziehen, als da ist).
     const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
@@ -717,10 +708,15 @@ export class Aktendienst {
       nameVon: (id) => this.#peers.find((p) => p.clientId === id)?.anzeigename,
     });
     if (veraendert !== undefined) return veraendert;
-    // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
-    // abziehen, als da ist).
-    const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());
-    if (unstimmig !== undefined) return unstimmig;
+    // §2.4: Der Grund ist bei manchen Arten Pflicht, und die Regel steht im
+    // Katalog — dieselbe, die auch der Fold anwendet. Ohne diese Pruefung
+    // naehme der Dienst den Bedienschritt an, schriebe ihn in ein
+    // append-only-Protokoll und wuerfe ihn beim naechsten Falten als
+    // `unbekannt` weg (§3.7 Regel 4): Der Bediener saehe „geschrieben" und
+    // keine Wirkung.
+    if (!grundPasst(eintrag, entwurf)) {
+      return {
+        art: "abgewiesen",
         meldung: `${entwurf.typ} braucht einen Grund (§2.4).`,
         code: "GRUND",
         dauerhafterHinweis: false,
@@ -798,10 +794,14 @@ export class Aktendienst {
    * noch im lokalen Spiegel stehen, fehlten sonst in der Akte. Scheitert die
    * Spiegelung, wird trotzdem gepackt — die Zahl der Ereignisse im Ergebnis
    * zeigt, was drin ist. Die Akte geht auch bei einem archivierten Einsatz:
-    await this.#legeTagebuchInDieAkte();
    * Lesen ist nie gesperrt.
    */
   async erzeugeAkte(): Promise<Akteergebnis> {
+    await this.#spiegle();
+    await this.#legeTagebuchInDieAkte();
+    return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
+  }
+
   /**
    * Legt das lesbare Tagebuch (HTML) in `ausgaben/`, bevor die Akte gepackt
    * wird — so liegt neben den Rohereignissen eine Fassung, die man ohne
@@ -821,10 +821,6 @@ export class Aktendienst {
     } catch {
       // Zugabe: kein Grund, die Akte zu verweigern.
     }
-  }
-
-    await this.#spiegle();
-    return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
   }
 
   // -------------------------------------------------------------------------
@@ -999,6 +995,10 @@ export class Aktendienst {
    * Der Dateiname traegt den Stand in der Uhrzeit und nicht bloss „druck.pdf“:
    * Eine Fuehrungsstelle druckt im Einsatz mehrmals, und eine Datei, die sich
    * selbst ueberschreibt, nimmt ihr den Vergleich mit dem vorigen Ausdruck.
+   */
+  ausgabeHtml(
+    ausgabe: Seitenausgabe,
+    organisation?: string,
   ): { dateiname: string; html: string } {
     const gerendert = this.#rendereSeite(ausgabe, organisation);
     // Bildschirmhülle (viewport, scrollbare Tabellen): wirkt nur am Bildschirm, nicht im Druck.
@@ -1008,21 +1008,17 @@ export class Aktendienst {
   #rendereSeite(
     ausgabe: Seitenausgabe,
     organisation?: string,
-   */
-  ausgabeHtml(
-    ausgabe: Seitenausgabe,
-    organisation?: string,
   ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
-    if (LISTENAUSGABEN.has(ausgabe)) {
-      return listenausgabe(ausgabe as Listenausgabe, this.#zustand, this.#ereignisse, kopf, marke);
-    }
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
       stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
     };
     const marke = dateimarke(jetzt);
+    if (LISTENAUSGABEN.has(ausgabe)) {
+      return listenausgabe(ausgabe as Listenausgabe, this.#zustand, this.#ereignisse, kopf, marke);
+    }
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
     }
@@ -1323,6 +1319,7 @@ export class Aktendienst {
     const befund = liesBuendel(text);
     let aufgenommen = 0;
     let bekannt = 0;
+    const abgelehnt = buendelUrsachen(text, befund.eintraege.length, befund.uebersprungen);
 
     for (const eintrag of befund.eintraege) {
       // §3.6: Kennt die Akte die Meldung schon, ist nichts zu tun. Der Fold
@@ -1364,9 +1361,9 @@ export class Aktendienst {
             bekannt,
             uebersprungen: befund.uebersprungen + (befund.eintraege.length - aufgenommen - bekannt),
             name: befund.name,
+            abgelehnt: [...abgelehnt, { grund: `Das Schreiben wurde abgewiesen: ${this.#meldungVon(ergebnis)}` }],
           };
         }
-    const abgelehnt = buendelUrsachen(text, befund.eintraege.length, befund.uebersprungen);
       }
       aufgenommen += 1;
     }
@@ -1414,7 +1411,6 @@ export class Aktendienst {
   /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
   #vorschau(befund: {
     readonly bogen: import("@bos/eeb-format").Erfassungsbogen;
-            abgelehnt: [...abgelehnt, { grund: `Das Schreiben wurde abgewiesen: ${this.#meldungVon(ergebnis)}` }],
     readonly signatur: import("@bos/eeb-format").SignaturStatus;
     readonly meldungId: string;
   }): EebVorschau {
@@ -1537,6 +1533,7 @@ export class Aktendienst {
     const ausserhalb = kennzahlen.staerkeAusserhalbDerGesamtstaerke(zustand);
     const oberster = this.#stapel.oberster();
     const stammdaten = projektion.einsatzstammdaten(zustand);
+    const offeneAbloesungen = projektion.offeneAbloesungen(zustand);
     return {
       einsatzId: this.#o.einsatzId,
       einsatzName: alsText(zustand.einsatz?.name.wert),
@@ -1544,6 +1541,7 @@ export class Aktendienst {
       ...(stammdaten === undefined ? {} : { stammdaten }),
       einsatzStatus: zustand.einsatz?.status ?? "AKTIV",
       einsatzEnde: alsText(zustand.einsatz?.ende?.wert),
+      ...(offeneAbloesungen.length === 0 ? {} : { abloesungenOffen: [...offeneAbloesungen] }),
       standHlc: this.#hoechsteHlc === undefined ? "" : hlcAlsText(this.#hoechsteHlc),
       standWanduhr: this.#letzteWanduhr,
       letzterShareKontakt: this.#letzterShareKontakt,
@@ -1580,7 +1578,6 @@ export class Aktendienst {
   }
 
   /**
-    const offeneAbloesungen = projektion.offeneAbloesungen(zustand);
    * Eigene Bytes, die noch nicht auf dem Share liegen (§5.3) — **fuer das
    * laufende Segment**.
    *
@@ -1588,7 +1585,6 @@ export class Aktendienst {
    * abgeschlossenes Segment holt die Spiegelung im naechsten Lauf nach, und die
    * Zahl in der Statuszeile beantwortet die Frage des Bedieners „ist meine
    * letzte Eingabe drueben?" Sie ueber alle je geschriebenen Dateien zu
-      ...(offeneAbloesungen.length === 0 ? {} : { abloesungenOffen: [...offeneAbloesungen] }),
    * bilden hiesse, in jedem Takt den ganzen lokalen Spiegel zu lesen — genau
    * das, was §6.2 dem Takt A erspart.
    */

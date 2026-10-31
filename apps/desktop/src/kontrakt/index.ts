@@ -220,13 +220,6 @@ export const zEinsatzstammdaten = z.object({
 });
 export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
 
-export const zLagebild = z.object({
-  einsatzId: z.string(),
-  einsatzName: z.string(),
-  einsatzArt: z.string(),
-  /** Fehlt, solange `EinsatzAngelegt` noch nicht gefaltet ist. */
-  stammdaten: zEinsatzstammdaten.optional(),
-  /**
 /** Eine eingetroffene Ablösung, deren abgelöste Einheit noch zur Ist-Stärke zählt. */
 export const zOffeneAbloesung = z.object({
   anforderungId: z.string(),
@@ -237,6 +230,13 @@ export const zOffeneAbloesung = z.object({
 });
 export type OffeneAbloesungInfo = z.infer<typeof zOffeneAbloesung>;
 
+export const zLagebild = z.object({
+  einsatzId: z.string(),
+  einsatzName: z.string(),
+  einsatzArt: z.string(),
+  /** Fehlt, solange `EinsatzAngelegt` noch nicht gefaltet ist. */
+  stammdaten: zEinsatzstammdaten.optional(),
+  /**
    * Der abgeleitete Zustand des Einsatzes (§5.2): laufend, beendet oder
    * archiviert. Er reist im Lagebild, weil Kopfband und Abschlussblock ihn
    * dauernd zeigen und weil eine Maske, die schreibt, ihn kennen muss, bevor
@@ -282,17 +282,17 @@ export type OffeneAbloesungInfo = z.infer<typeof zOffeneAbloesung>;
   /** Anforderungen, die noch nicht eingetroffen oder storniert sind — für die Rückfrage beim Beenden. */
   offeneAnforderungen: z.number().int().min(0).optional(),
   /**
+   * Additiv: Ablösungen, bei denen die ablösende Einheit eingetroffen ist, die
+   * abgelöste aber noch zur Ist-Stärke zählt. Leer oder fehlend: nichts offen.
+   */
+  abloesungenOffen: z.array(zOffeneAbloesung).optional(),
+  /**
    * Zaehlt bei jeder fachlichen Aenderung um eins hoch (M3.7).
    *
    * **Das ist der einzige Zuwachs, den das Lagebild in M3 erfaehrt, und er
    * ist das Gegenteil von Wachstum.** M2 hat festgelegt, dass hier keine
    * Tabelle, kein Baum und kein Tagebuch hineinwandert; ein Dauerstrom des
    * vollen Zustands waere bei 150 Einheiten das Falsche. Der Zeiger ist die
-  /**
-   * Additiv: Ablösungen, bei denen die ablösende Einheit eingetroffen ist, die
-   * abgelöste aber noch zur Ist-Stärke zählt. Leer oder fehlend: nichts offen.
-   */
-  abloesungenOffen: z.array(zOffeneAbloesung).optional(),
    * kleinste Auskunft, mit der eine offene Ansicht erfaehrt, dass ihr Bild
    * veraltet ist: eine Zahl. **Was** sich geaendert hat, sagt er nicht — das
    * holt sich die Ansicht mit ihrem eigenen Ruf, gefiltert und auf ihren
@@ -312,6 +312,12 @@ export const zEntwurf = z.object({
   vorher: z.unknown().optional(),
   neu: z.unknown().optional(),
   grund: z.string().optional(),
+  /**
+   * Additiv: `vorher` ist der Wert, den der Editor beim Öffnen sah. Gilt im
+   * Zustand inzwischen ein anderer, den ein anderer Arbeitsplatz gesetzt hat,
+   * weist der Worker ab (`VORWERT`) statt still zu überschreiben.
+   */
+  vorwertPruefen: z.boolean().optional(),
   korrekturVon: z.string().optional(),
   schemaVersion: z.number().int().min(1).optional(),
 });
@@ -319,12 +325,6 @@ export type Entwurf = z.infer<typeof zEntwurf>;
 
 // ---------------------------------------------------------------------------
 // Rufe
-  /**
-   * Additiv: `vorher` ist der Wert, den der Editor beim Öffnen sah. Gilt im
-   * Zustand inzwischen ein anderer, den ein anderer Arbeitsplatz gesetzt hat,
-   * weist der Worker ab (`VORWERT`) statt still zu überschreiben.
-   */
-  vorwertPruefen: z.boolean().optional(),
 // ---------------------------------------------------------------------------
 
 /**
@@ -530,6 +530,11 @@ export const zRuf = z.discriminatedUnion("art", [
       // Die Einheitenliste — das Blatt „Stärke“ als Ausdruck, die
       // Papier-Rückfallebene für Lagebesprechung und Rechnerausfall.
       "einheitenliste",
+      // Druckbare Listen und der leere Papier-Vordruck (additiv): nur als HTML
+      // und PDF; Anforderungen und Tagebuch tragen Seitenzahl und Notizspalte.
+      "anforderungen",
+      "tagebuch",
+      "papier",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
@@ -537,11 +542,6 @@ export const zRuf = z.discriminatedUnion("art", [
   }),
 
   // Der HTML-Monitor (M4.3): eine Datei in `ausgaben\`, die sich alle sechzig
-      // Druckbare Listen und der leere Papier-Vordruck (additiv): nur als HTML
-      // und PDF; Anforderungen und Tagebuch tragen Seitenzahl und Notizspalte.
-      "anforderungen",
-      "tagebuch",
-      "papier",
   // Sekunden selbst neu laedt und die ein **zweites Geraet** ueber das Netz
   // oeffnet. Nicht zu verwechseln mit dem Staerke-Monitor aus M3.5: Der ist
   // ein Fenster dieser Anwendung auf einem zweiten Bildschirm, dieser hier
@@ -647,6 +647,9 @@ export type Bedienergebnis = z.infer<typeof zBedienergebnis>;
  */
 export const CODE_EINSATZ_ABGESCHLOSSEN = "EINSATZ_ABGESCHLOSSEN";
 
+/** Der Code der Abweisung, weil ein anderer Arbeitsplatz das Feld inzwischen geändert hat. */
+export const CODE_VORWERT = "VORWERT";
+
 export const zStapelEintrag = z.object({
   id: z.string(),
   typ: z.string(),
@@ -659,9 +662,6 @@ export const zStapelEintrag = z.object({
  * Ein Fehler kommt als `{ ok: false }` zurueck und nicht als geworfene
  * Ausnahme: Ueber `ipcRenderer.invoke` wuerde eine Ausnahme im Main als
  * Zeichenkette mit angehaengtem Stapelabzug im Renderer landen — eine
-/** Der Code der Abweisung, weil ein anderer Arbeitsplatz das Feld inzwischen geändert hat. */
-export const CODE_VORWERT = "VORWERT";
-
  * Auskunft ueber den Aufbau der Schale, die dort niemanden angeht.
  */
 export type Antwort<T> = { readonly ok: true; readonly wert: T } | { readonly ok: false; readonly meldung: string; readonly code?: string };
@@ -826,6 +826,12 @@ export interface Buendelergebnis {
   /** Eintraege, die die Datei fuehrt und die nicht lesbar waren. */
   readonly uebersprungen: number;
   readonly name: string;
+  /**
+   * Additiv: Warum nichts oder nicht alles aufgenommen wurde — Klartext je
+   * Ursache (Datei nicht lesbar, falsches Format, Einträge unlesbar, Schreiben
+   * abgewiesen). Leer oder fehlend, wenn alles in Ordnung war.
+   */
+  readonly abgelehnt?: readonly { readonly grund: string }[];
 }
 
 /** Der Eingangskorb des Meldekopfs (M6.1) — mit Ausschnitt, wie jede Liste. */
@@ -838,12 +844,6 @@ export interface Fuestansicht extends Ansichtsstand {
   /** K17: je Teileinheit und Schicht die Staerke der besetzten Posten. */
   readonly staerke: readonly {
     readonly teileinheit: string;
-  /**
-   * Additiv: Warum nichts oder nicht alles aufgenommen wurde — Klartext je
-   * Ursache (Datei nicht lesbar, falsches Format, Einträge unlesbar, Schreiben
-   * abgewiesen). Leer oder fehlend, wenn alles in Ordnung war.
-   */
-  readonly abgelehnt?: readonly { readonly grund: string }[];
     readonly schicht: string;
     readonly staerke: { readonly fuehrer: number; readonly unterfuehrer: number; readonly mannschaft: number };
   }[];
