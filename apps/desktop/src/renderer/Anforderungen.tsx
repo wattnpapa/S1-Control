@@ -25,7 +25,7 @@ import { useLaden } from "./laden.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { AnforderungZuEinheit, type Eintreffart } from "./AnforderungZuEinheit.js";
 import { AnforderungZusage } from "./AnforderungZusage.js";
-import { Anforderungsfelder, LEERE_ANFORDERUNG, anforderungAusEingabe } from "./Anforderungsformular.js";
+import { Anforderungsneu } from "./Anforderungsneu.js";
 import { anforderungStorniert, ruecknahme } from "../kontrakt/bedienschritte.js";
 
 /** Die vier Zustände mit ihrer Beschriftung, in der Ordnung der Liste. */
@@ -41,15 +41,9 @@ function zustandTitel(wert: Anforderungszustand): string {
   return ZUSTAENDE.find((zustand) => zustand.wert === wert)?.titel ?? wert;
 }
 
-/** Der Zeitpunkt „jetzt“ als ISO-Zeichenkette mit Zone — für die Anlage. */
-function jetzt(): string {
-  return new Date().toISOString();
-}
-
 export function Anforderungen(): React.JSX.Element {
   const laden = useLaden();
   const holeAnforderungen = laden.holeAnforderungen;
-  const [neu, setzeNeu] = useState(LEERE_ANFORDERUNG);
 
   useEffect(() => {
     void holeAnforderungen();
@@ -57,30 +51,13 @@ export function Anforderungen(): React.JSX.Element {
 
   const ansicht = laden.anforderungen;
 
-  function lege(): void {
-    const entwurf = anforderungAusEingabe(neu, jetzt());
-    if (entwurf === undefined) return;
-    void laden.bediene(entwurf);
-    setzeNeu(LEERE_ANFORDERUNG);
-  }
-
   return (
     <section aria-label="Anforderungen" className="anforderungen">
       <h2>Anforderungen <Hilfemarke kennung="anforderungen" /></h2>
 
       <Zustandsfilter />
 
-      <div className="anforderungneu">
-        <Anforderungsfelder
-          eingabe={neu}
-          aufEingabe={setzeNeu}
-          einheitenwahl={ansicht?.einheitenwahl ?? []}
-          aufEnter={lege}
-        />
-        <button type="button" onClick={lege}>
-          Anfordern
-        </button>
-      </div>
+      <Anforderungsneu einheitenwahl={ansicht?.einheitenwahl ?? []} />
 
       {ansicht === undefined ? (
         <p className="hinweistext">Wird geladen …</p>

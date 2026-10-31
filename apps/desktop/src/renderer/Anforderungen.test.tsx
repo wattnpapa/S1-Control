@@ -99,6 +99,13 @@ describe("Die Anforderungsansicht", () => {
     expect(nutzlast.angefordertAm).toBeDefined();
   });
 
+  it("schreibt bei leerem Formular nichts und sagt in Klartext, was fehlt", async () => {
+    await zeige();
+    fireEvent.click(screen.getByText("Anfordern"));
+    expect(screen.getByRole("alert").textContent).toMatch(/Einheit, Kennung oder Auftrag/);
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
+  });
+
   it("bietet bei OFFEN nur Zusagen und Stornieren an", async () => {
     await zeige();
     expect(screen.getByText("Zusagen")).toBeDefined();

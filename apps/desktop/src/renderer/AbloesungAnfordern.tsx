@@ -13,8 +13,10 @@ import { useState } from "react";
 import type { Tabellenzeile } from "@s1/domaene";
 
 import { Anforderungsfelder, LEERE_ANFORDERUNG, anforderungAusEingabe } from "./Anforderungsformular.js";
+import { anforderungEingabeFehler } from "./anforderungseingabepruefung.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
+import { neueAnforderungsId } from "./Anforderungsformular.js";
 import { Maske } from "./Maske.js";
-import { useLaden } from "./laden.js";
 
 export interface AbloesungAnfordernEigenschaften {
   readonly zeile: Tabellenzeile;
@@ -22,22 +24,34 @@ export interface AbloesungAnfordernEigenschaften {
 }
 
 export function AbloesungAnfordern({ zeile, aufSchliessen }: AbloesungAnfordernEigenschaften): React.JSX.Element {
-  const laden = useLaden();
   const [eingabe, setzeEingabe] = useState({ ...LEERE_ANFORDERUNG, abzuloesendeEinheitId: zeile.einheitId });
+
+  const fehler = anforderungEingabeFehler(eingabe, true);
+  const versuch = useAnlegeversuch();
 
   return (
     <Maske
+      bereit={fehler === undefined && !versuch.gesperrt}
       titel={`Ablösung für „${zeile.anzeige}“ anfordern`}
       bestaetigungstext="Anfordern"
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={async () => {
-        const entwurf = anforderungAusEingabe(eingabe, new Date().toISOString());
+        if (fehler !== undefined) return;
+        // Kennung und Zeit je Dialoginstanz: Die Wiederholung ist dieselbe Anforderung.
+        const k = versuch.kennung(() => ({ id: neueAnforderungsId(), am: new Date().toISOString() }));
+        const entwurf = anforderungAusEingabe(eingabe, k.am, k.id);
         if (entwurf === undefined) return;
-        const ergebnis = await laden.bediene(entwurf);
+        const ergebnis = await versuch.schreibe(entwurf);
         if (ergebnis?.art === "geschrieben") aufSchliessen();
       }}
     >
       <Anforderungsfelder eingabe={eingabe} aufEingabe={setzeEingabe} />
+      {versuch.anzeige}
+      {fehler !== undefined && (
+        <p className="hinweistext" role="alert">
+          {fehler}
+        </p>
+      )}
       {zeile.abloesung !== undefined && (
         <p className="warnung">
           Für diese Einheit steht schon „{zeile.abloesung.text}“ (Anforderungs-ID{" "}
