@@ -140,7 +140,7 @@ export const zPeer = z.object({
   veraltet: z.boolean(),
   wanduhr: z.string(),
   /** Additiv: Datensätze (Ids), die dieser Arbeitsplatz gerade zum Bearbeiten gesperrt hat. */
-  bearbeitet: z.array(z.string()).optional(),
+  bearbeitet: z.array(z.string()).readonly().optional(),
   // ---- Was M7.3 hinzunimmt: die Zahlen, aus denen eine Diagnose wird -------
   //
   // Sie stehen **am Peer** und nicht in einem eigenen Diagnoseruf, weil sie
