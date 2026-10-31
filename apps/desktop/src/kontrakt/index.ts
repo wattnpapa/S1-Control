@@ -129,6 +129,13 @@ export const zEinsatzEintrag = z.object({
   ordner: zText,
   name: z.string(),
   datum: z.string(),
+  /**
+   * Additiv: Zeit der letzten Änderung der Ereignisse auf dem Share (ISO).
+   * Fehlt, wenn das Dateisystem sie nicht nennt. Status und Zahl der
+   * Einheiten stehen nicht im Anker; sie kennt nur, wer den Einsatz geöffnet
+   * hat (Renderer merkt sie sich).
+   */
+  geaendert: z.string().optional(),
 });
 export type EinsatzEintrag = z.infer<typeof zEinsatzEintrag>;
 
