@@ -1960,6 +1960,193 @@
         color: var(--warn-text);
       }
 
+      /* ---- Schmale Bildschirme (Handy, Tablet hochkant) ------------------
+         Die Desktop-Regeln oben bleiben unberuehrt; hier wird nur
+         zurueckgenommen, was ueber die Breite hinausragt. Die Seite scrollt
+         nie waagerecht: Reiter, Tabellen und die Hilfe scrollen in sich. */
+
+      /* Touch: jedes Ziel mindestens 44 px, auch mit Handschuh. */
+      @media (pointer: coarse) {
+        button,
+        .ausgabeknoepfe a,
+        .kopfband .reiter button,
+        .kopfband .themenschalter button,
+        .kopfband .hilfeknopf,
+        .kopfband .abmeldung button,
+        .kopfband .weg button.alsLink {
+          min-height: 44px;
+          min-width: 44px;
+        }
+        input:not([type="checkbox"]):not([type="radio"]),
+        select {
+          min-height: 44px;
+        }
+        input[type="checkbox"],
+        input[type="radio"] {
+          width: 24px;
+          height: 24px;
+        }
+      }
+      .ausgabeknoepfe a {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 13px;
+        border: var(--rahmenbreite) solid var(--knopf-rahmen);
+        color: var(--text);
+        text-decoration: none;
+        font: 400 var(--schrift) / 1.2 var(--ui);
+      }
+
+      @media (max-width: 700px) {
+        html,
+        body {
+          max-width: 100vw;
+          overflow-x: hidden;
+        }
+        .kopfband {
+          padding: 8px 12px 0;
+        }
+        .kopfband .zeile {
+          flex-wrap: wrap;
+          gap: 6px 14px;
+          padding: 4px 0 6px;
+        }
+        .kopfband h1 {
+          font-size: 18px;
+        }
+        .kopfband .kennzahl .wert {
+          font-size: 24px;
+        }
+        .kopfband .hilfeknopf {
+          margin-left: auto;
+        }
+        .kopfband .themenschalter {
+          flex: 1 1 100%;
+        }
+        .kopfband .themenschalter button {
+          flex: 1 1 0;
+          padding: 9px 4px;
+        }
+        /* Die Reiter scrollen in einer eigenen Flaeche; die Seite bleibt stehen. */
+        .kopfband .reiter {
+          overflow-x: auto;
+          overflow-y: hidden;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: thin;
+        }
+        .kopfband .reiter button {
+          flex: 0 0 auto;
+          white-space: nowrap;
+          padding: 10px 12px 8px;
+        }
+        .kopfband .reiter button.rechts {
+          margin-left: 0;
+        }
+        main {
+          min-width: 0;
+        }
+        .lagespalten {
+          flex-direction: column;
+          align-items: stretch;
+        }
+        .lagespalten > * {
+          box-sizing: border-box;
+          min-width: 0;
+          max-width: 100%;
+        }
+        .baum,
+        :root[data-theme="feld"] .baum {
+          box-sizing: border-box;
+          flex: 1 1 auto;
+          min-width: 0;
+          width: 100%;
+        }
+        /* Tabellen ohne eigenen Rahmen scrollen als Block in sich. */
+        table {
+          display: block;
+          max-width: 100%;
+          overflow-x: auto;
+        }
+        .tabellenrahmen table {
+          display: table;
+        }
+        .tabellenrahmen {
+          max-width: 100%;
+        }
+        .hilfespalten > div {
+          flex-basis: 100%;
+        }
+        .hilfekopf {
+          position: sticky;
+          top: 0;
+          z-index: 2;
+          background: var(--karte);
+          flex-wrap: wrap;
+        }
+        .reiterleiste {
+          overflow-x: auto;
+        }
+        .reiterleiste button {
+          flex: 0 0 auto;
+          white-space: nowrap;
+        }
+        /* Dialoge nutzen die Breite des Geraets statt 22 rem Mindestbreite. */
+        .maskengrund {
+          padding: 8px;
+        }
+        .maske,
+        .maske:has(.zeichenwahl) {
+          min-width: 0;
+          width: 100%;
+          max-width: 100vw;
+        }
+        .maskenknoepfe {
+          flex-wrap: wrap;
+        }
+        .maskenknoepfe button {
+          flex: 1 1 auto;
+        }
+      }
+
+      @media (max-width: 480px) {
+        .kopfband .kennzahl .label {
+          font-size: 9px;
+        }
+        main {
+          padding: 8px;
+        }
+        main > section,
+        .lagespalten > .baum,
+        .lagespalten > .einheiten,
+        .lage > .ausgaben,
+        .lage > .blaetter,
+        .lage > .tagebuch,
+        .karte {
+          padding: 10px;
+        }
+        /* Vollbild: Titel oben, Knoepfe erreichbar, der Rest scrollt in sich. */
+        .maskengrund {
+          padding: 0;
+          align-items: stretch;
+        }
+        .maske {
+          height: 100%;
+          max-height: 100%;
+          border-left: 0;
+          border-right: 0;
+          box-shadow: none;
+        }
+        .maskenknoepfe {
+          position: sticky;
+          bottom: 0;
+          margin: 1rem -16px -16px;
+          padding: 10px 16px;
+          background: var(--karte);
+          border-top: 1px solid var(--rahmen);
+        }
+      }
+
     </style>
   </head>
   <body>
