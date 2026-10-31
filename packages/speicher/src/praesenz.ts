@@ -60,6 +60,13 @@ export interface Praesenz {
   readonly offset: number;
   /** §4.6.1, Auslöser 2. Leer, solange dieser Leser nichts in Quarantäne hat. */
   readonly quarantaene?: readonly Quarantaenehinweis[];
+  /**
+   * Datensätze (Ids), die dieser Arbeitsplatz gerade zum Bearbeiten gesperrt
+   * hat. Eine weiche Sperre als Anzeige, ephemer wie die Präsenz selbst: Fällt
+   * sie aus, fällt nur die Warnung „wird bearbeitet" weg, kein Datenpfad hängt
+   * daran (die Vorwert-Prüfung des Workers fängt den Rest).
+   */
+  readonly bearbeitet?: readonly string[];
 }
 
 export interface PraesenzOptionen {
@@ -77,6 +84,7 @@ export async function schreibePraesenz(
   optionen: PraesenzOptionen,
   stand: { readonly hlc: Hlc; readonly segment: number; readonly offset: number },
   quarantaene: readonly Quarantaenehinweis[] = [],
+  bearbeitet: readonly string[] = [],
 ): Promise<void> {
   const inhalt: Praesenz = {
     clientId: optionen.clientId,
@@ -88,6 +96,7 @@ export async function schreibePraesenz(
     segment: stand.segment,
     offset: stand.offset,
     ...(quarantaene.length === 0 ? {} : { quarantaene }),
+    ...(bearbeitet.length === 0 ? {} : { bearbeitet }),
   };
   await optionen.dateisystem.legeVerzeichnisAn(optionen.ablage.sharePraesenz);
   await optionen.dateisystem.schreibeUeberOhneSync(

@@ -33,6 +33,9 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
     case "standAnfordern":
       dienst.sendeVollenStand();
       return null;
+    case "sperre":
+      dienst.sperre(auftrag.entitaetId, auftrag.frei);
+      return null;
     case "kostenAnfordern":
       return dienst.kosten();
     case "anforderungenAnfordern":

@@ -225,6 +225,12 @@ export class Vermittlung {
         return null;
       case "standAnfordern":
         return this.#o.hof.frage(ruf.akteId, { art: "standAnfordern" });
+      case "sperre":
+        return this.#o.hof.frage(ruf.akteId, {
+          art: "sperre",
+          entitaetId: ruf.entitaetId,
+          frei: ruf.frei === true,
+        });
       case "bedienen":
         return (await this.#o.hof.frage(ruf.akteId, {
           art: "bediene",

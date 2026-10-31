@@ -126,6 +126,7 @@ import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { schreibhinweise } from "./schreibhinweise.js";
+import { Bearbeitungssperren } from "./bearbeitungssperren.js";
 import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
 /**
@@ -243,6 +244,7 @@ export class Aktendienst {
   #letzterTaktA = Number.NEGATIVE_INFINITY;
   #letzterTaktB = Number.NEGATIVE_INFINITY;
   #letztePraesenz = Number.NEGATIVE_INFINITY;
+  readonly #sperren = new Bearbeitungssperren();
 
   #gesendet: Lagebild;
   #folge = 0;
@@ -430,6 +432,17 @@ export class Aktendienst {
     if (this.#geschlossen || this.#akte === undefined) return;
     const jetzt = this.#o.zeit();
 
+  /**
+   * Setzt, verlängert oder gibt eine Bearbeitungssperre frei (`frei`). Die
+   * Präsenz wird beim nächsten Takt sofort geschrieben, damit die Kollegen die
+   * Änderung nach höchstens einem eigenen Präsenztakt sehen.
+   */
+  sperre(entitaetId: string, frei: boolean): void {
+    const jetzt = this.#o.zeit();
+    const geaendert = frei ? this.#sperren.gib(entitaetId) : this.#sperren.setze(entitaetId, jetzt);
+    if (geaendert) this.#letztePraesenz = Number.NEGATIVE_INFINITY;
+  }
+
   /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
   async meldeAb(): Promise<void> {
     await entfernePraesenz({
@@ -548,6 +561,7 @@ export class Aktendienst {
         this.akte.leser.quarantaenen
           .filter((q) => !q.vorlaeufig)
           .map((q) => ({ datei: q.datei, offset: q.offset })),
+        this.#sperren.aktive(this.#o.zeit()),
       );
       this.#peers = (await liesFremdePraesenz(praesenzOptionen, this.#praesenzbeobachtung)).map(
         (fremd) => {
@@ -576,6 +590,7 @@ export class Aktendienst {
               this.#praesenzbeobachtung.gesehenSeit(fremd.praesenz.clientId),
             ),
             quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
+            ...(fremd.veraltet || fremd.praesenz.bearbeitet === undefined ? {} : { bearbeitet: fremd.praesenz.bearbeitet }),
           };
         },
       );

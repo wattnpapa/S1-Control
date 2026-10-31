@@ -10,7 +10,8 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { Ereignisentwurf } from "@s1/speicher";
 
-import { grundlage, raeumeAuf, takteBis, werkstattMitZweiPlaetzen } from "./pruefhilfen/werkstatt.js";
+import { lagebildMit, type Lagebild } from "../kontrakt/index.js";
+import { grundlage, raeumeAuf, takteBis, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 import { CODE_VORWERT } from "../kontrakt/index.js";
 import { werttext, type PruefbarerEntwurf } from "./vorwertpruefung.js";
 
@@ -74,5 +75,32 @@ describe("werttext", () => {
     expect(werttext(null)).toBe("leer");
     expect(werttext("")).toBe("leer");
     expect(werttext("RUHE")).toBe("RUHE");
+  });
+});
+
+function lageVon(platz: Platz): Lagebild | undefined {
+  let bild: Lagebild | undefined;
+  for (const mitteilung of platz.mitteilungen) {
+    if (mitteilung.art !== "stand") continue;
+    if (mitteilung.voll !== undefined) bild = mitteilung.voll;
+    else if (bild !== undefined) bild = lagebildMit(bild, mitteilung.geaendert ?? {});
+  }
+  return bild;
+}
+
+describe("Bearbeitungssperre über die Präsenz", () => {
+  it("zeigt dem Kollegen, was gesperrt ist, und nimmt es mit der Freigabe zurück", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    await takteBis([a, b]);
+    expect(lageVon(b)?.peers[0]?.bearbeitet ?? []).toEqual([]);
+
+    a.dienst.sperre("U1", false);
+    await takteBis([a, b]);
+    expect(lageVon(b)?.peers[0]?.bearbeitet).toEqual(["U1"]);
+
+    a.dienst.sperre("U1", true);
+    await takteBis([a, b]);
+    expect(lageVon(b)?.peers[0]?.bearbeitet ?? []).toEqual([]);
   });
 });

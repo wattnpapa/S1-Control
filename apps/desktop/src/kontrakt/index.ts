@@ -136,9 +136,11 @@ export const zPeer = z.object({
   clientId: z.string(),
   anzeigename: z.string(),
   rechnername: z.string(),
-  /** §6.4: ab 60 Sekunden ohne Fortschreibung gilt ein Arbeitsplatz als veraltet. */
+  /** §6.4: ab 30 Sekunden ohne Fortschreibung gilt ein Arbeitsplatz als veraltet. */
   veraltet: z.boolean(),
   wanduhr: z.string(),
+  /** Additiv: Datensätze (Ids), die dieser Arbeitsplatz gerade zum Bearbeiten gesperrt hat. */
+  bearbeitet: z.array(z.string()).optional(),
   // ---- Was M7.3 hinzunimmt: die Zahlen, aus denen eine Diagnose wird -------
   //
   // Sie stehen **am Peer** und nicht in einem eigenen Diagnoseruf, weil sie
@@ -347,6 +349,12 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("einsatzOeffnen"), ordner: zText }),
   z.object({ art: z.literal("einsatzSchliessen"), akteId: zAkteId }),
   z.object({ art: z.literal("standAnfordern"), akteId: zAkteId }),
+  /**
+   * Additiv: Bearbeitungssperre für einen Datensatz (Einheit, Fahrzeug,
+   * Abschnitt). Setzen und Verlängern ohne `frei`, Freigeben mit `frei: true`.
+   * Eine Sperre läuft nach 30 s ab; der offene Editor verlängert sie.
+   */
+  z.object({ art: z.literal("sperre"), akteId: zAkteId, entitaetId: zText, frei: z.boolean().optional() }),
   z.object({ art: z.literal("bedienen"), akteId: zAkteId, entwurf: zEntwurf }),
   z.object({ art: z.literal("zurueck"), akteId: zAkteId, grund: z.string().optional() }),
   z.object({ art: z.literal("undoStapel"), akteId: zAkteId }),
@@ -656,6 +664,7 @@ export interface Antworten {
   einsatzOeffnen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   einsatzSchliessen: null;
   standAnfordern: null;
+  sperre: null;
   bedienen: Bedienergebnis;
   zurueck: Bedienergebnis;
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];

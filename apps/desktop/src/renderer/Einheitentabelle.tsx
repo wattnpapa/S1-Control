@@ -37,6 +37,7 @@ import { Einheitenkopf } from "./Einheitenkopf.js";
 import { hinweisAusErgebnis } from "./Anlegeversuch.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { VORWERT_WAHL, istVorwertKonflikt, mitVorwertpruefung, useEditorbasis } from "./Editorbasis.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { Zelle, istZahl } from "./Einheitenzelle.js";
@@ -97,6 +98,9 @@ export function Einheitentabelle({
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
   const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
   const [bearbeitet, setzeBearbeitet] = useState<{ zeile: string; spalte: string } | undefined>(undefined);
+  // Datensatz-Sperre: solange ein Editor offen ist, sehen die Kollegen „wird bearbeitet“.
+  useSperreHalten(bearbeitet?.zeile);
+  const fremd = useFremdsperren();
   /** Die Regel, gegen die die offene Zelle verstößt — die Zelle bleibt offen, bis sie stimmt oder verworfen wird. */
   const [zellenfehler, setzeZellenfehler] = useState<string | undefined>(undefined);
 
@@ -238,6 +242,12 @@ export function Einheitentabelle({
       >
         <th scope="row" title={zeile.abschnittId} style={tiefe === undefined ? undefined : einzug(tiefe)}>
           {zeile.abschnittName}
+          {fremd.von(zeile.einheitId) !== undefined && (
+            <span className="warnung" role="status">
+              {" "}
+              {sperrtext(fremd.von(zeile.einheitId) ?? "")}
+            </span>
+          )}
         </th>
         {spalten.map((spalte) => (
           <Zelle
@@ -255,6 +265,12 @@ export function Einheitentabelle({
                 : undefined
             }
             aufBearbeiten={() => {
+              const gesperrt = fremd.pruefeStart(zeile.einheitId);
+              if (gesperrt !== undefined) {
+                // Ein anderer Arbeitsplatz bearbeitet diese Einheit: erst Hinweis, dann bewusstes Übernehmen.
+                laden.melde("warnung", gesperrt);
+                return;
+              }
               setzeZellenfehler(undefined);
               basis.merke(`${zeile.einheitId}/${spalte.schluessel}`, zeile.zellen[spalte.schluessel]?.wert);
               setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });

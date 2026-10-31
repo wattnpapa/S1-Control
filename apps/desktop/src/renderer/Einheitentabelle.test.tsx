@@ -16,6 +16,7 @@ import { projektion, type Tabellenzeile, type Zelle } from "@s1/domaene";
 import { Einheitentabelle } from "./Einheitentabelle.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
+import { peer } from "../kontrakt/pruefhilfen.js";
 
 afterEach(cleanup);
 
@@ -68,8 +69,10 @@ beforeEach(() => {
     auftraege: [],
   });
   attrappe.antwortet("bedienen", { art: "geschrieben", ereignisId: "a-0000000001" });
+  attrappe.antwortet("sperre", null);
   useLaden.setState({
     akteId: "akte-1",
+    lagebild: undefined,
     baum: undefined,
     tabelle: undefined,
     tagebuch: undefined,
@@ -160,6 +163,24 @@ describe("Die Einheitentabelle", () => {
       expect(screen.getByText(/Wurde inzwischen von Lage 2 geändert/)).toBeDefined();
     });
     expect(screen.getByText(/Enter übernimmt Ihren Wert trotzdem/)).toBeDefined();
+  });
+
+  it("zeigt die Sperre eines Kollegen an der Zeile und lässt erst beim zweiten Versuch bewusst bearbeiten", async () => {
+    useLaden.setState({
+      lagebild: { peers: [peer({ clientId: "b", anzeigename: "Lage 2", bearbeitet: ["U1"] })] } as never,
+    });
+    await zeigeTabelle();
+    expect(screen.getByText(/🔒 wird von Lage 2 bearbeitet/)).toBeDefined();
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    expect(screen.queryByLabelText("Bezeichnung")).toBeNull();
+    expect(useLaden.getState().hinweise.at(-1)?.text).toMatch(/Zum Bearbeiten trotzdem erneut tippen/);
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    expect(screen.getByLabelText("Bezeichnung")).toBeDefined();
+    // Der offene Editor setzt seinerseits die Sperre.
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("sperre")).toMatchObject({ entitaetId: "U1" });
+    });
+    useLaden.setState({ lagebild: undefined });
   });
 
   it("schreibt nichts, wenn sich der Wert nicht geändert hat", async () => {
