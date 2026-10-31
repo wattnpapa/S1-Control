@@ -1185,6 +1185,70 @@
         padding: 2px 4px;
         font: inherit;
       }
+      /* Einheitentabelle: Abschnitt und Bezeichnung bleiben beim waagerechten
+         Scrollen links stehen, Status folgt direkt danach. Ohne Namen ist eine
+         Statusmarke keine Auskunft. */
+      .einheiten th[scope="row"],
+      .einheiten thead th:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 2;
+        box-sizing: border-box;
+        width: 9rem;
+        min-width: 9rem;
+        max-width: 9rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        background: var(--karte);
+      }
+      .einheiten thead th:first-child {
+        z-index: 3;
+        background: var(--kopf-bg);
+      }
+      .einheiten tfoot th[scope="row"] {
+        background: var(--kopf-bg);
+      }
+      .einheiten td.namensspalte,
+      .einheiten thead th.namensspalte {
+        position: sticky;
+        left: 9rem;
+        z-index: 2;
+        background: var(--karte);
+        box-shadow: 1px 0 0 var(--rahmen);
+      }
+      .einheiten thead th.namensspalte {
+        z-index: 3;
+        background: var(--kopf-bg);
+      }
+      .einheiten tbody tr.markiert th[scope="row"],
+      .einheiten tbody tr.markiert td.namensspalte {
+        background: var(--zeile-gewaehlt);
+      }
+      /* Status-Chip als Knopf: Er sieht bedienbar aus und ist es (ein Tipp
+         öffnet die Auswahl); Zielgröße für Handschuhe. */
+      .einheiten button.statuschip {
+        min-height: 36px;
+        min-width: 44px;
+        cursor: pointer;
+        font-family: inherit;
+      }
+      .einheiten button.statuschip::after {
+        content: " ▾";
+      }
+      .einheiten td.auswahlzelle select {
+        display: inline-block;
+        min-height: 36px;
+      }
+      .einheiten .auswahlknoepfe {
+        display: inline-flex;
+        gap: 6px;
+        margin-left: 6px;
+        vertical-align: middle;
+      }
+      .einheiten .auswahlknoepfe button {
+        min-height: 44px;
+        min-width: 44px;
+      }
       .tabellenfuss {
         display: flex;
         flex-wrap: wrap;

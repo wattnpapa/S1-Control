@@ -19,15 +19,10 @@
  * schnelleres Zeichnen, sondern weniger zu zeichnen.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import {
-  EINHEIT_STATUS,
   projektion,
-  spaltenwertTitel,
-  statusTitel,
-  statusTon,
-  zeitpunktText,
   type Spalte,
   type Spaltengruppe,
   type Tabellenzeile,
@@ -39,7 +34,9 @@ import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/b
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Hilfemarke } from "./Hilfemarke.js";
-import { Zellmarken } from "./Ressourcenmarken.js";
+import { StatusLeiste } from "./Statusleiste.js";
+import { Zelle, istZahl } from "./Einheitenzelle.js";
+import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
 
 /**
@@ -56,60 +53,6 @@ const GRUPPENTITEL: Record<string, string> = {
   LOGISTIKDATEN: "Logistik",
   KOSTENUEBERSICHT: "Kosten",
 };
-
-interface StatusLeisteEigenschaften {
-  readonly jeStatus: { readonly [status: string]: { readonly anzahl: number; readonly gesamt: number } };
-  readonly wahl: readonly string[];
-  readonly aufSchalten: (status: string) => void;
-  readonly aufAlle: () => void;
-}
-
-/**
- * Die Statusleiste über der Tabelle: ein Knopf je Statuswert in der Reihenfolge
- * der Excel, mit Zahl der Einheiten und — im Titel — der Stärke. Werte ohne
- * Einheit stehen nicht in der Leiste; ein gewählter Wert bleibt stehen, auch
- * wenn seine Zahl auf null fällt, damit die Abwahl erreichbar bleibt.
- */
-function StatusLeiste({ jeStatus, wahl, aufSchalten, aufAlle }: StatusLeisteEigenschaften): React.JSX.Element | null {
-  const bekannte = EINHEIT_STATUS.filter((status) => (jeStatus[status]?.anzahl ?? 0) > 0 || wahl.includes(status));
-  const fremde = Object.keys(jeStatus)
-    .filter((status) => !(EINHEIT_STATUS as readonly string[]).includes(status))
-    .sort();
-  const werte = [...bekannte, ...fremde];
-  if (werte.length === 0) return null;
-  return (
-    <div className="statusfilter" role="group" aria-label="Status">
-      <span className="statusfilter-titel">Status</span>
-      {werte.map((status) => {
-        const zaehler = jeStatus[status] ?? { anzahl: 0, gesamt: 0 };
-        return (
-          <button
-            key={status}
-            type="button"
-            aria-pressed={wahl.includes(status)}
-            title={`Stärke ${String(zaehler.gesamt)} — klicken filtert die Tabelle`}
-            onClick={() => {
-              aufSchalten(status);
-            }}
-          >
-            <span className={`marke-zustand ${statusTon(status)}`}>{statusTitel(status)}</span>
-            <span className="statusfilter-zahl">{zaehler.anzahl}</span>
-          </button>
-        );
-      })}
-      {wahl.length > 0 && (
-        <button type="button" className="alsLink" onClick={aufAlle}>
-          Alle zeigen
-        </button>
-      )}
-    </div>
-  );
-}
-
-/** Zahlenspalten stehen rechts: Wer Stärken vergleicht, liest Spalten. */
-function istZahl(spalte: Spalte): boolean {
-  return spalte.art === "zahl" || spalte.schluessel === "gesamt" || spalte.schluessel === "staerke";
-}
 
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
@@ -163,7 +106,7 @@ export function Einheitentabelle({
     });
   }, [akteId, abschnittId, suche, statuswahl, gliederung, setzeTabellenfilter]);
 
-  const spalten = useMemo(() => projektion.spaltenDerGruppen(gruppen), [gruppen]);
+  const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
   const zeilen = laden.tabelle?.zeilen ?? [];
   const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
   const summe = useMemo(
@@ -396,7 +339,7 @@ export function Einheitentabelle({
                 <th
                   key={spalte.schluessel}
                   scope="col"
-                  className={istZahl(spalte) ? "zahl" : undefined}
+                  className={[istZahl(spalte) ? "zahl" : "", spalte.schluessel === "bezeichnung" ? "namensspalte" : ""].join(" ").trim() || undefined}
                   title={`Excel-Spalte ${spalte.excel}`}
                 >
                   {spalte.kopf}
@@ -447,7 +390,7 @@ export function Einheitentabelle({
             : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
         </span>
         <span className="hinweistext">
-          Doppelklick bearbeitet die Zelle · Enter schreibt · Esc verwirft ·{" "}
+          Doppelklick bearbeitet die Zelle, ein Tipp auf den Status öffnet die Auswahl · Enter oder „Übernehmen“ schreibt · Esc oder Wegklicken verwirft ·{" "}
           {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
         </span>
       </p>
@@ -463,143 +406,5 @@ export function Einheitentabelle({
         }}
       />
     </section>
-  );
-}
-
-interface ZelleEigenschaften {
-  readonly zeile: Tabellenzeile;
-  readonly spalte: Spalte;
-  readonly bearbeitet: boolean;
-  /** Die Regel, gegen die die Eingabe verstößt; die Zelle zeigt sie unter dem Feld. */
-  readonly fehler?: string;
-  readonly aufBearbeiten: () => void;
-  readonly aufFertig: (eingabe: string) => void;
-  readonly aufAbbrechen: () => void;
-}
-
-/**
- * Eine Zelle — anzeigend oder bearbeitend.
- *
- * Enter schreibt, Escape verwirft, der Verlust des Fokus schreibt ebenfalls
- * (M3.6). Das letzte ist die Regel der Excel: Wer in die nächste Zelle klickt,
- * hat die vorige bestätigt. Eine Bearbeitung, die beim Wegklicken verfällt,
- * kostet die Eingabe, und der Bediener merkt es erst später.
- */
-function Zelle({
-  zeile,
-  spalte,
-  bearbeitet,
-  fehler,
-  aufBearbeiten,
-  aufFertig,
-  aufAbbrechen,
-}: ZelleEigenschaften): React.JSX.Element {
-  const zelle = zeile.zellen[spalte.schluessel];
-  const [eingabe, setzeEingabe] = useState("");
-  const warBearbeitet = useRef(false);
-  /** Escape setzt sie, damit der Blur des verschwindenden Feldes nicht doch schreibt. */
-  const verworfen = useRef(false);
-
-  // Der Startwert wird **einmal** beim Öffnen der Zelle gesetzt. Vorher hing
-  // er am Zellentext, und jedes nachgeladene Lagebild — alle paar Sekunden,
-  // sobald ein anderer Arbeitsplatz schreibt — setzte die halb getippte
-  // Eingabe zurück. Auswahlspalten beginnen mit dem Schlüssel, nicht mit dem
-  // angezeigten Wort: Die Optionen tragen den Schlüssel als Wert.
-  useEffect(() => {
-    if (bearbeitet && !warBearbeitet.current) {
-      verworfen.current = false;
-      setzeEingabe(
-        spalte.art === "auswahl" ? (typeof zelle?.wert === "string" ? zelle.wert : "") : (zelle?.text ?? ""),
-      );
-    }
-    warBearbeitet.current = bearbeitet;
-  }, [bearbeitet, spalte.art, zelle]);
-
-  if (zelle === undefined) return <td />;
-
-  const titel = zelle.umstritten
-    ? "An diesem Feld hängt ein Konflikthinweis: Ein anderer Arbeitsplatz hat es zuletzt anders gesehen (§3.8)."
-    : (zelle.wanduhr ?? "");
-
-  if (!bearbeitet || spalte.schreibt === undefined) {
-    return (
-      <td
-        className={[
-          zelle.umstritten ? "umstritten" : "",
-          spalte.schreibt === undefined ? "berechnet" : "",
-          istZahl(spalte) ? "zahl" : "",
-        ]
-          .filter((klasse) => klasse !== "")
-          .join(" ")}
-        title={titel}
-        onDoubleClick={spalte.schreibt === undefined ? undefined : aufBearbeiten}
-      >
-        {spalte.schluessel === "status" && zelle.text !== "" ? (
-          <span className={`marke-zustand ${statusTon(typeof zelle.wert === "string" ? zelle.wert : "")}`}>{zelle.text}</span>
-        ) : (
-          zelle.text
-        )}
-        <Zellmarken zeile={zeile} spalte={spalte} />
-        {zelle.umstritten && <span aria-label="Konflikthinweis"> ⚠</span>}
-      </td>
-    );
-  }
-
-  const gemeinsam = {
-    autoFocus: true,
-    value: eingabe,
-    onBlur: () => {
-      if (verworfen.current) return;
-      aufFertig(eingabe);
-    },
-    onKeyDown: (ereignis: React.KeyboardEvent) => {
-      if (ereignis.key === "Enter") {
-        ereignis.preventDefault();
-        aufFertig(eingabe);
-      }
-      if (ereignis.key === "Escape") {
-        ereignis.preventDefault();
-        ereignis.stopPropagation();
-        verworfen.current = true;
-        aufAbbrechen();
-      }
-      // Strg+D schreibt „jetzt“ in ein Zeitfeld — das Kürzel der Excel für
-      // genau diesen Handgriff (m_makroFunktionen, `=Now`).
-      if (spalte.art === "zeitpunkt" && (ereignis.ctrlKey || ereignis.metaKey) && ereignis.key.toLowerCase() === "d") {
-        ereignis.preventDefault();
-        setzeEingabe(zeitpunktText(new Date().toISOString()));
-      }
-    },
-  };
-
-  return (
-    <td className="bearbeitet">
-      {spalte.art === "auswahl" ? (
-        <select
-          {...gemeinsam}
-          aria-label={spalte.kopf}
-          onChange={(e) => {
-            setzeEingabe(e.target.value);
-          }}
-        >
-          <option value="">—</option>
-          {(spalte.werte ?? []).map((wert) => (
-            <option key={wert} value={wert}>
-              {spaltenwertTitel(spalte.schluessel, wert)}
-            </option>
-          ))}
-        </select>
-      ) : (
-        <input
-          {...gemeinsam}
-          aria-label={spalte.kopf}
-          aria-invalid={fehler !== undefined}
-          onChange={(e) => {
-            setzeEingabe(e.target.value);
-          }}
-        />
-      )}
-      {fehler !== undefined && <span className="feldfehler">{fehler}</span>}
-    </td>
   );
 }
