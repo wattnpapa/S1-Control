@@ -194,6 +194,7 @@ async function starte(): Promise<void> {
   const dienst = new Webdienst({
     arbeitsplaetze,
     rendererOrdner: path.join(hierher, "renderer"),
+    sharePfad: u.sharePfad,
     protokolliere,
     ...(anmeldung.zugang === undefined ? {} : { zugang: anmeldung.zugang }),
   });

@@ -37,6 +37,7 @@ import path from "node:path";
 import { zRuf, type Antwort, type Ruf } from "../kontrakt/index.js";
 import { SCHLUESSEL_FORM, type Arbeitsplaetze } from "./arbeitsplaetze.js";
 import { KOPF_ANFRAGE_ID, Wiederholungsspeicher, anfrageId } from "./wiederholung.js";
+import { liefereAusgabe } from "./ausgaberoute.js";
 
 export const COOKIE = "s1-arbeitsplatz";
 /** Mehr als das ist kein Ruf, sondern ein Versehen. */
@@ -70,6 +71,11 @@ export interface WebdienstOptionen {
    * Anfrage ausser `/gesundheit` zuerst durch sie (ADR-006).
    */
   readonly zugang?: Zugangskontrolle;
+  /**
+   * Der eingehaengte Share. Mit ihm liefert `GET /ausgabe` erzeugte Dateien
+   * an den Browser (Papier-Rueckfallebene); ohne ihn gibt es die Route nicht.
+   */
+  readonly sharePfad?: string;
 }
 
 /** Was vor dem Dienst steht, wenn er eine Anmeldung verlangt. */
@@ -140,6 +146,9 @@ export class Webdienst {
       return this.#mitteilungen(anfrage, antwort);
     }
     if (methode !== "GET" && methode !== "HEAD") return nichtErlaubt(antwort, "GET, HEAD");
+    if (url.pathname === "/ausgabe" && this.#o.sharePfad !== undefined) {
+      return liefereAusgabe(this.#o.sharePfad, url, antwort, methode === "HEAD");
+    }
     return this.#datei(url.pathname, anfrage, antwort);
   }
 
