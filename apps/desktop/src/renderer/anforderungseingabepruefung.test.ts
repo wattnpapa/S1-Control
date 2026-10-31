@@ -13,7 +13,9 @@ describe("Pflichtangaben einer Anforderung", () => {
   });
 
   it("verlangt im Blatt irgendeine Angabe", () => {
-    expect(anforderungEingabeFehler(LEERE_ANFORDERUNG, false)).toMatch(/Einheit, Kennung oder Auftrag/);
+    expect(anforderungEingabeFehler(LEERE_ANFORDERUNG, false)).toMatch(/Ablösung für, vorgesehene Einheit oder Auftrag/);
+    // Die Kennung allein sagt nicht, was kommen soll.
+    expect(anforderungEingabeFehler({ ...LEERE_ANFORDERUNG, kennung: "ANF-1" }, false)).toMatch(/Kennung allein genügt nicht/);
     expect(anforderungEingabeFehler({ ...LEERE_ANFORDERUNG, abzuloesendeEinheitId: "E1" }, false)).toBeUndefined();
   });
 });
