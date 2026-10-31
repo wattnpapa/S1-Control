@@ -34,13 +34,13 @@ function satz(...weitere: EingehendesEreignis[]): string {
 describe("Das Tagebuch zum Abschluss des Einsatzes", () => {
   it("schreibt das Ende als Uhrzeit", () => {
     const ende = feldEreignis(hlc(2, 0, "a"), 2, "EinsatzBeendet", { einsatzId: "E1" }, null, ENDE, "Lage bereinigt");
-    expect(satz(ende)).toBe(`Hochwasser Weser: Einsatz beendet: (leer) → ${zeitpunktText(ENDE)}`);
+    expect(satz(ende)).toBe(`Hochwasser Weser: Einsatz beendet: ${zeitpunktText(ENDE)}`);
   });
 
   it("nennt beim Wiedereröffnen das aufgehobene Ende", () => {
     const ende = feldEreignis(hlc(2, 0, "a"), 2, "EinsatzBeendet", { einsatzId: "E1" }, null, ENDE);
     const auf = feldEreignis(hlc(3, 0, "a"), 3, "EinsatzWiedereroeffnet", { einsatzId: "E1" }, ENDE, null);
-    expect(satz(ende, auf)).toBe(`Hochwasser Weser: Einsatz wiedereröffnet: ${zeitpunktText(ENDE)} → (leer)`);
+    expect(satz(ende, auf)).toBe(`Hochwasser Weser: Einsatz wiedereröffnet (Ende ${zeitpunktText(ENDE)} aufgehoben)`);
   });
 
   it("nennt bei der Archivierung den Einsatz und nicht die Kennung", () => {

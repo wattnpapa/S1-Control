@@ -28,10 +28,19 @@ function einheitsname(zustand: Zustand, id: Id | undefined): string | undefined 
   return typeof wert === "string" && wert !== "" ? wert : id;
 }
 
-/** „Anforderung ANF-001“ — mit der Kennung, sonst mit der Id. */
+/**
+ * „Anforderung ANF-001“ — mit der Kennung; ohne Kennung mit dem, woran man sie
+ * erkennt (Ablösung für …, vorgesehene Einheit), nie mit der inneren Id.
+ */
 export function anforderungsname(zustand: Zustand, id: Id): string {
-  const kennung = zustand.anforderungen[id]?.kennung?.wert;
-  return `Anforderung ${typeof kennung === "string" && kennung !== "" ? kennung : id}`;
+  const anforderung = zustand.anforderungen[id];
+  const kennung = anforderung?.kennung?.wert;
+  if (typeof kennung === "string" && kennung.trim() !== "") return `Anforderung ${kennung.trim()}`;
+  const abzuloesende = einheitsname(zustand, anforderung?.abzuloesendeEinheitId?.wert);
+  if (abzuloesende !== undefined) return `Anforderung (Ablösung für ${abzuloesende})`;
+  const vorgesehen = anforderung?.vorgeseheneEinheitText?.wert;
+  if (typeof vorgesehen === "string" && vorgesehen.trim() !== "") return `Anforderung (${vorgesehen.trim()})`;
+  return "Anforderung ohne Kennung";
 }
 
 function teile(...stuecke: readonly (string | undefined)[]): string {
@@ -55,7 +64,7 @@ function zusage(ereignis: EingehendesEreignis): string {
   const fuer = eintrag(ereignis.neu, "zugesagtFuer");
   const von = eintrag(ereignis.neu, "zugesagtVon");
   return [
-    "Ablösung zugesagt",
+    "Zusage erfasst",
     fuer === undefined ? undefined : `für ${zeitpunktText(fuer)}`,
     von === undefined ? undefined : `von ${von}`,
   ]
@@ -63,11 +72,14 @@ function zusage(ereignis: EingehendesEreignis): string {
     .join(" ");
 }
 
-function eintreffen(zustand: Zustand, ereignis: EingehendesEreignis): string {
+function eintreffen(zustand: Zustand, ereignis: EingehendesEreignis, anforderungId: Id): string {
   const am = eintrag(ereignis.neu, "erledigtAm");
   const durch = einheitsname(zustand, eintrag(ereignis.neu, "abloesendeEinheitId"));
   const kopf = am === undefined ? "eingetroffen" : `eingetroffen ${zeitpunktText(am)}`;
-  return durch === undefined ? kopf : `${kopf} — Ablösung durch ${durch}`;
+  if (durch === undefined) return kopf;
+  // „Ablösung“ nur, wo die Anforderung auch eine Einheit ablöst.
+  const loestAb = zustand.anforderungen[anforderungId]?.abzuloesendeEinheitId?.wert !== undefined;
+  return `${kopf} — ${loestAb ? "Ablösung durch" : "als Einheit"} ${durch}`;
 }
 
 /**
@@ -84,7 +96,7 @@ export function anforderungssatz(zustand: Zustand, ereignis: EingehendesEreignis
     case "AbloesungZugesagt":
       return `${name}: ${zusage(ereignis)}`;
     case "AnforderungErledigt":
-      return `${name}: ${eintreffen(zustand, ereignis)}`;
+      return `${name}: ${eintreffen(zustand, ereignis, id)}`;
     default:
       return undefined;
   }
