@@ -83,9 +83,9 @@ export function webBruecke(optionen: WebbrueckeOptionen = {}): Bruecke {
     quelle = new Quelle("mitteilungen");
     const verbindung = useVerbindung.getState();
     verbindung.starte(uhr());
-    quelle.addEventListener("open", () => useVerbindung.getState().meldeKontakt(uhr()));
+    quelle.addEventListener("open", () => useVerbindung.getState().meldeStromKontakt(uhr()));
     quelle.addEventListener("mitteilung", (ereignis) => {
-      useVerbindung.getState().meldeKontakt(uhr());
+      useVerbindung.getState().meldeStromKontakt(uhr());
       const mitteilung = JSON.parse((ereignis as MessageEvent<string>).data) as Mitteilung;
       for (const hoerer of zuhoerer) hoerer(mitteilung);
     });

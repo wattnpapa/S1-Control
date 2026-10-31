@@ -49,6 +49,8 @@ export interface VerbindungsZustand {
 export interface Verbindungsspeicher extends VerbindungsZustand {
   starte(jetzt: number): void;
   meldeKontakt(jetzt: number): void;
+  /** Kontakt über den Mitteilungsstrom: hebt eine festgestellte Störung nicht auf. */
+  meldeStromKontakt(jetzt: number): void;
   meldeAusfall(jetzt: number): void;
   meldeUnklar(): void;
   zuruecksetzen(): void;
@@ -78,6 +80,14 @@ export const useVerbindung = create<Verbindungsspeicher>((setze, hole) => ({
       ausfallSeit: undefined,
       ...(warGestoert ? { wiederverbunden: z.wiederverbunden + 1, wiederverbundenUm: jetzt } : {}),
     });
+  },
+  meldeStromKontakt(jetzt) {
+    // Der Strom kann weiterliefern, während Rufe und Herzschlag scheitern (halb
+    // tote Verbindung, Proxy, Browser-Offline mit offenem Strom). Würde jede
+    // Mitteilung die Störung beenden, finge die Zählung „seit N s" sekündlich
+    // neu an und die rote Stufe käme nie. Nur ein beantworteter Ruf heilt.
+    if (hole().ausfallSeit !== undefined) return;
+    hole().meldeKontakt(jetzt);
   },
   meldeAusfall(jetzt) {
     const z = hole();
