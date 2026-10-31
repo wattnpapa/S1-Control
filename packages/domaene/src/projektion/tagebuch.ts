@@ -301,6 +301,31 @@ function feldname(ereignis: EingehendesEreignis, eintrag: Katalogeintrag): strin
   return typeof ausNutzlast === "string" ? ausNutzlast : undefined;
 }
 
+/** „A“, „A und B“, „A, B und C“ — für die Liste der aufgegangenen Einheiten. */
+function aufzaehlung(namen: readonly string[]): string {
+  if (namen.length <= 1) return namen.join("");
+  return `${namen.slice(0, -1).join(", ")} und ${namen[namen.length - 1] as string}`;
+}
+
+/**
+ * „Einheiten zusammengeführt: A und B aufgegangen in C“. Die Quellen stehen
+ * in der Nutzlast (`quellen[].einheitId`), das Ziel ist der Gegenstand.
+ */
+function zusammenfuehrungssatz(
+  zustand: Zustand,
+  eintrag: Katalogeintrag,
+  ereignis: EingehendesEreignis,
+  ziel: string,
+): string {
+  const roh = nutzlastfeld(ereignis, "quellen");
+  const namen = (Array.isArray(roh) ? roh : [])
+    .map((q) => alsId((q as Record<string, unknown> | null)?.["einheitId"]))
+    .filter((id): id is Id => id !== undefined)
+    .map((id) => gegenstand(zustand, eintrag, id));
+  const kopf = ART_TEXT["EinheitZusammengefuehrt"] ?? "Einheiten zusammengeführt";
+  return namen.length === 0 ? `${kopf}: aufgegangen in ${ziel}` : `${kopf}: ${aufzaehlung(namen)} aufgegangen in ${ziel}`;
+}
+
 /**
  * Baut den lesbaren Satz.
  *
@@ -332,8 +357,7 @@ export function tagebuchsatz(
     return `${quelle}: ${kopf} — ${staerke} nach ${name}`;
   }
   if (ereignis.typ === "EinheitZusammengefuehrt") {
-    const quelle = gegenstand(zustand, eintrag, alsId(nutzlastfeld(ereignis, "quellEinheitId")));
-    return `${quelle}: ${kopf} — aufgegangen in ${name}`;
+    return zusammenfuehrungssatz(zustand, eintrag, ereignis, name);
   }
 
   // Anfordern, zusagen, eintreffen: Zeiten und Einheiten als Wörter

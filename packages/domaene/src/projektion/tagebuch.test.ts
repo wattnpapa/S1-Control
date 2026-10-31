@@ -226,3 +226,42 @@ describe("trifftFilter", () => {
     expect(trifftFilter({ ...zeile, korrekturVon: "a-0000000001" }, { nurRuecknahmen: true })).toBe(true);
   });
 });
+
+describe("tagebuchzeile — Zusammenführen", () => {
+  const zweite = einheitGemeldet(hlc(4, 0, "a"), 4, {
+    einheitId: "U2",
+    abschnittId: "EA-NORD",
+    bezeichnung: "GRUND2",
+    organisation: "THW",
+    ebene: "ZUG",
+    staerke: staerke(0, 1, 3),
+    personalErfassung: "NUR_STAERKE",
+    status: "EINSATZBEREIT",
+  });
+  const dritte = einheitGemeldet(hlc(5, 0, "a"), 5, { ...zweite.nutzlast, einheitId: "U3", bezeichnung: "RACE-B" } as never);
+
+  it("nennt Ziel und alle aufgegangenen Einheiten beim Namen", () => {
+    const zusammen = anlageEreignis(hlc(6, 0, "a"), 6, "EinheitZusammengefuehrt", {
+      zielEinheitId: "U2",
+      quellen: [
+        { einheitId: "U1", gesehen: staerke(1, 2, 9) },
+        { einheitId: "U3", gesehen: staerke(0, 1, 3) },
+      ],
+    });
+    const zustand = falte([...GRUNDLAGE, zweite, dritte, zusammen]);
+    expect(tagebuchzeile(zustand, zusammen).satz).toBe(
+      "Einheiten zusammengeführt: TZ THW OV Oldenburg und RACE-B aufgegangen in GRUND2",
+    );
+  });
+
+  it("bleibt bei einer einzigen Quelle lesbar", () => {
+    const zusammen = anlageEreignis(hlc(6, 0, "a"), 6, "EinheitZusammengefuehrt", {
+      zielEinheitId: "U2",
+      quellen: [{ einheitId: "U1", gesehen: staerke(1, 2, 9) }],
+    });
+    const zustand = falte([...GRUNDLAGE, zweite, zusammen]);
+    expect(tagebuchzeile(zustand, zusammen).satz).toBe(
+      "Einheiten zusammengeführt: TZ THW OV Oldenburg aufgegangen in GRUND2",
+    );
+  });
+});
