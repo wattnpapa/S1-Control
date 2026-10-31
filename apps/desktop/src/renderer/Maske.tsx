@@ -15,6 +15,11 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
+import { useLaden } from "./laden.js";
+
+/** Der Satz, der im Dialog steht, wenn der Einsatz keine Eingaben mehr annimmt. */
+export const TEXT_NUR_LESEN = "Einsatz beendet – nur lesen";
+
 export interface MaskeEigenschaften {
   readonly titel: string;
   /**
@@ -31,6 +36,18 @@ export interface MaskeEigenschaften {
   /** Sperrt den Bestätigungsknopf, solange die Eingabe unvollständig ist. */
   readonly bereit?: boolean;
   /**
+   * Nur der Bestätigungsknopf bestätigt, nicht Enter in einem Feld.
+   *
+   * Für Vorgänge, die alle Arbeitsplätze treffen: Ein Enter im vorbelegten
+   * Zeitfeld darf sie nicht auslösen.
+   */
+  readonly nurKnopf?: boolean;
+  /**
+   * Die Maske darf auch im beendeten Einsatz bestätigen (Wiedereröffnen,
+   * Archivieren). Sonst sperrt sie dort und sagt es im Dialog.
+   */
+  readonly trotzSperre?: boolean;
+  /**
    * Der Inhalt der Maske.
    *
    * Heißt als einziges Feld dieses Projekts englisch: React vergibt den Namen
@@ -46,22 +63,32 @@ export function Maske({
   aufAbbrechen,
   bestaetigungstext = "Übernehmen",
   bereit = true,
+  nurKnopf = false,
+  trotzSperre = false,
   children,
 }: MaskeEigenschaften): React.JSX.Element {
   const formular = useRef<HTMLFormElement>(null);
   const [laeuft, setzeLaeuft] = useState(false);
+  const [abweisung, setzeAbweisung] = useState<string | undefined>(undefined);
+  const status = useLaden((zustand) => zustand.lagebild?.einsatzStatus ?? "AKTIV");
+  const gesperrt = status !== "AKTIV" && !trotzSperre;
 
   // Ein zweiter Druck auf Bestätigen — oder ein zweites Enter — darf den
   // Vorgang nicht wiederholen. Beim Anlegen entstünden sonst zwei Einheiten
   // mit verschiedenen Kennungen, beim Verschieben zwei Bewegungen.
   const bestaetigen = (): void => {
-    if (!bereit || laeuft) return;
+    if (!bereit || laeuft || gesperrt) return;
+    const davor = hoechsteHinweisnummer();
     const ergebnis = aufBestaetigen();
     if (!(ergebnis instanceof Promise)) return;
     setzeLaeuft(true);
     void ergebnis.finally(() => {
       // Bleibt die Maske nach einem Fehlschlag offen, ist sie wieder bedienbar.
-      if (formular.current?.isConnected) setzeLaeuft(false);
+      if (!formular.current?.isConnected) return;
+      setzeLaeuft(false);
+      // Die Ablehnung steht auch im Hinweise-Kasten — aber der liegt hinter
+      // der Abdunkelung. Wer die Maske bedient, muss sie hier lesen.
+      setzeAbweisung(neuesterHinweis(davor));
     });
   };
 
@@ -87,7 +114,7 @@ export function Maske({
         aria-label={titel}
         onSubmit={(ereignis) => {
           ereignis.preventDefault();
-          bestaetigen();
+          if (!nurKnopf) bestaetigen();
         }}
         onKeyDown={(ereignis) => {
           if (ereignis.key !== "Escape") return;
@@ -101,8 +128,18 @@ export function Maske({
       >
         <h3>{titel}</h3>
         {children}
+        {gesperrt && (
+          <p className="hinweistext" role="alert">
+            {TEXT_NUR_LESEN}. Eingaben werden nicht gespeichert.
+          </p>
+        )}
+        {abweisung !== undefined && !gesperrt && <p className="hinweistext" role="alert">{abweisung}</p>}
         <div className="maskenknoepfe">
-          <button type="submit" disabled={!bereit || laeuft}>
+          <button
+            type={nurKnopf ? "button" : "submit"}
+            disabled={!bereit || laeuft || gesperrt}
+            onClick={nurKnopf ? bestaetigen : undefined}
+          >
             {laeuft ? "…" : bestaetigungstext}
           </button>
           <button type="button" onClick={aufAbbrechen}>
@@ -113,4 +150,14 @@ export function Maske({
     </div>,
     document.body,
   );
+}
+
+function hoechsteHinweisnummer(): number {
+  return useLaden.getState().hinweise.reduce((m, h) => Math.max(m, h.nummer), 0);
+}
+
+/** Die jüngste Warnung oder Störung, die seit `davor` gemeldet wurde. */
+function neuesterHinweis(davor: number): string | undefined {
+  const neue = useLaden.getState().hinweise.filter((h) => h.nummer > davor && h.stufe !== "info");
+  return neue.at(-1)?.text;
 }
