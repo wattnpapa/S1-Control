@@ -9,7 +9,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { Kopfband } from "./Kopfband.js";
+import { Kopfband, STAERKE_REGEL, staerkeNebenText } from "./Kopfband.js";
 import type { Lagebild } from "../kontrakt/index.js";
 
 afterEach(cleanup);
@@ -61,6 +61,26 @@ describe("Kopfband", () => {
     );
     expect(screen.getByText("24/61/183 // 268")).toBeDefined();
     expect(screen.getByText("101443SEP26")).toBeDefined();
+  });
+
+  it("erklärt die Zählregel und zeigt Köpfe im Eingang/angefordert neben der Kopfzahl", () => {
+    const { container } = render(
+      <Kopfband
+        lagebild={{ ...LAGEBILD, staerkeErwartet: 6, staerkeBeendet: 2 }}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+      />,
+    );
+    expect(screen.getByText("Ist-Stärke")).toBeDefined();
+    expect(screen.getByText("+6 im Eingang/angefordert · 2 beendet")).toBeDefined();
+    expect(container.querySelector(".kennzahl")?.getAttribute("title")).toBe(STAERKE_REGEL);
+  });
+
+  it("zeigt ohne Köpfe außerhalb der Zählung keine Nebenzahl", () => {
+    expect(staerkeNebenText(LAGEBILD)).toBe("");
+    expect(staerkeNebenText({ ...LAGEBILD, staerkeBeendet: 3 })).toBe("3 beendet");
   });
 
   it("nennt in einer Zeile Einsatz, Stand, Share und die anderen Arbeitsplätze", () => {

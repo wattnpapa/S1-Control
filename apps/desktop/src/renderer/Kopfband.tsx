@@ -17,6 +17,26 @@ import { staerkeText, taktischeZeit } from "./formate.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { alter } from "./Statuszeile.js";
 
+/**
+ * Die Zählregel der Kopfzahl, als Tooltip und für Vorlesegeräte. Sie steht
+ * hier und in der Hilfe („Überblick“) gleichlautend.
+ */
+export const STAERKE_REGEL =
+  "Ist-Stärke Fü/UFü/He // Gesamt: Kräfte in den Einsatzbereichen. " +
+  "Nicht gezählt: Angefordert/Anmarsch, Eingang und „Einsatz beendet“.";
+
+/** „+6 erwartet · 2 beendet“ — leer, wenn nichts neben der Kopfzahl steht. */
+export function staerkeNebenText(lagebild: Lagebild | undefined): string {
+  const erwartet = lagebild?.staerkeErwartet ?? 0;
+  const beendet = lagebild?.staerkeBeendet ?? 0;
+  return [
+    erwartet > 0 ? `+${String(erwartet)} im Eingang/angefordert` : "",
+    beendet > 0 ? `${String(beendet)} beendet` : "",
+  ]
+    .filter((teil) => teil !== "")
+    .join(" · ");
+}
+
 const BESCHRIFTUNG: Record<Theme, string> = {
   standard: "Standard",
   dunkel: "Dunkel",
@@ -57,6 +77,7 @@ export function Kopfband({
   // Ohne offenen Einsatz steht hier ein Strich und nicht `0/0/0 // 0`: Eine
   // Null ist eine Aussage über die Lage, und ohne Akte gibt es keine.
   const staerke = lagebild === undefined ? "—" : staerkeText(lagebild.gesamtstaerke);
+  const staerkeNeben = staerkeNebenText(lagebild);
 
   return (
     <header className="kopfband">
@@ -74,9 +95,10 @@ export function Kopfband({
         </span>
         <h1>S1-Control</h1>
 
-        <span className="kennzahl">
-          <span className="label">Stärke</span>
+        <span className="kennzahl" title={STAERKE_REGEL}>
+          <span className="label">Ist-Stärke</span>
           <span className="wert">{staerke}</span>
+          {staerkeNeben !== "" && <span className="nebenwert">{staerkeNeben}</span>}
         </span>
         <span className="kennzahl">
           <span className="label">Zeit</span>
