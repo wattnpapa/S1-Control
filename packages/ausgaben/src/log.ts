@@ -24,6 +24,7 @@
 import { projektion, type Zustand } from "@s1/domaene";
 
 import { fuestangaben, fuestzeileAlsHtml } from "./fuestzeile.js";
+import { GESCHLECHT_FUSSNOTE, geschlechtszellen } from "./geschlecht.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 /** Die Fußnote, die die Rechnung hinter Spalte „Männl.“ nennt. */
@@ -47,9 +48,7 @@ function zeileAlsHtml(zeile: projektion.Logistikzeile, klasse = ""): string {
     `        <th scope="row">${htmlMaskieren(zeile.name)}</th>`,
     ...projektion.LOG_SCHICHTEN.map((schicht) => `        ${zahl(zeile.jeSchicht[schicht] ?? 0)}`),
     `        ${zahl(zeile.gesamt)}`,
-    `        ${zahl(zeile.maennlich)}`,
-    `        ${zahl(zeile.weiblich)}`,
-    `        ${zahl(zeile.divers)}`,
+    `        ${geschlechtszellen(zeile)}`,
     `        ${zahl(zeile.vegetarisch)}`,
     `        ${zahl(zeile.vegan)}`,
     `        ${zahl(zeile.uebernachtung.m)}`,
@@ -127,7 +126,7 @@ export function logAlsHtml(
     zeileAlsHtml(blatt.angefordert),
     "    </tbody>",
     "  </table>",
-    `  <p class="hinweis">${htmlMaskieren(LOG_FUSSNOTE)}</p>`,
+    `  <p class="hinweis">${htmlMaskieren(LOG_FUSSNOTE)} ${htmlMaskieren(GESCHLECHT_FUSSNOTE)}</p>`,
     "</body>",
     "</html>",
     "",

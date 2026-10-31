@@ -120,6 +120,10 @@ function summenAlsHtml(daten: Einheitenlistendaten): string {
     ["Ist-Stärke (vor Ort, wie Kopfband und Druck)", staerkeText(daten.ist, daten.istGesamt)],
     ["Erwartet (angefordert/Anmarsch/Eingang)", staerkeText(daten.erwartet, daten.erwartetGesamt)],
     ["Alle erfassten Einheiten (Ist + erwartet, nicht die Ist-Stärke)", staerkeText(daten.alle, daten.alleGesamt)],
+    // Damit die Zahlen aufgehen: Was in keiner der drei Zeilen steht, steht hier.
+    ...(daten.beendet > 0
+      ? [["Beendet/Rückmarsch (nicht in den Zeilen darüber)", `${String(daten.beendet)} Einheit(en)`]]
+      : []),
   ];
   return [
     '  <table class="summen">',
