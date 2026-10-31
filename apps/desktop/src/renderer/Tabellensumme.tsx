@@ -4,7 +4,8 @@
  * Sie zählen nach derselben Regel wie Kopfband und Ausgaben
  * (`kennzahlen.zaehlklasse`, an der Zeile als `zaehlklasse`): Die erste Zeile
  * ist die Ist-Stärke, die zweite nennt die erwarteten Kräfte, die dritte alle
- * erfassten Einheiten — ausdrücklich so benannt und getrennt von der Ist-Stärke.
+ * erfassten Einheiten (Ist plus erwartet) — ausdrücklich so benannt und getrennt
+ * von der Ist-Stärke; Beendet/Rückmarsch steht als eigene Zeile darunter.
  * Ohne Filter ist die erste Zeile die Zahl des Kopfbands.
  */
 
@@ -32,6 +33,8 @@ function summiere(zeilen: readonly Tabellenzeile[], wahl: (klasse: string) => bo
 export interface TabellensummeSummen {
   readonly ist: Staerke;
   readonly erwartet: Staerke;
+  readonly beendet: Staerke;
+  /** Ist plus erwartet — wie Gliederung und Einheitenliste, ohne Beendet/Rückmarsch. */
   readonly alle: Staerke;
 }
 
@@ -40,7 +43,8 @@ export function tabellensummen(zeilen: readonly Tabellenzeile[]): TabellensummeS
   return {
     ist: summiere(zeilen, (k) => k === "ist"),
     erwartet: summiere(zeilen, (k) => k === "erwartet"),
-    alle: summiere(zeilen, (k) => k !== "ausserhalb"),
+    beendet: summiere(zeilen, (k) => k === "beendet"),
+    alle: summiere(zeilen, (k) => k === "ist" || k === "erwartet"),
   };
 }
 
@@ -103,9 +107,19 @@ export function Tabellensumme({ zeilen, spalten, ausschnitt }: Eigenschaften): R
         werte={{
           titel: `Alle erfassten Einheiten${zusatz}`,
           staerke: summen.alle,
-          hinweis: "Ist-Stärke plus erwartet plus beendet. Nicht die Ist-Stärke.",
+          hinweis: "Ist-Stärke plus erwartet, ohne Beendet/Rückmarsch. Nicht die Ist-Stärke.",
         }}
       />
+      {koepfe(summen.beendet) > 0 && (
+        <Summenzeile
+          spalten={spalten}
+          werte={{
+            titel: `Beendet/Rückmarsch${zusatz}`,
+            staerke: summen.beendet,
+            hinweis: "Einsatz beendet oder Rückmarsch: in keiner der Summen darüber enthalten.",
+          }}
+        />
+      )}
     </tfoot>
   );
 }
