@@ -16,7 +16,7 @@ import { projektion, type Logistikzeile } from "@s1/domaene";
 import { alter } from "./Statuszeile.js";
 import { schriftgroesse } from "./monitorZahlen.js";
 import type { Fenstermass } from "./Monitor.js";
-import { mahlzeitText, nachtText, restzeitText, tagText, uhrzeitText, vorzeichen } from "./versorgungstext.js";
+import { einheitenText, mahlzeitText, nachtText, restzeitText, tagText, uhrzeitText, vorzeichen } from "./versorgungstext.js";
 import type { Lagebild, Versorgungsansicht } from "../kontrakt/index.js";
 
 export interface Ansichtseigenschaften {
@@ -114,7 +114,11 @@ export function MonitorUnterbringung(e: Ansichtseigenschaften): React.JSX.Elemen
   const v = e.lagebild.versorgung;
   if (v === undefined) return <OhneZahlen titel="Unterbringung" e={e} />;
   const text = String(v.betten.gesamt);
-  const grad = schriftgroesse(Math.max(text.length, 3), e.mass.breite, e.mass.hoehe * ANTEIL_GROSSE_ZAHL);
+  // Stehen die Unterkünfte darunter, bekommt die Zahl weniger Höhe — sonst
+  // schöbe die Liste den Fuß aus dem Bild.
+  const zeilen = Math.min(5, (e.ansicht?.blatt.belegung.unterkuenfte ?? []).filter((k) => !k.aufgeloest).length);
+  const anteil = ANTEIL_GROSSE_ZAHL - 0.07 * zeilen;
+  const grad = schriftgroesse(Math.max(text.length, 3), e.mass.breite, e.mass.hoehe * anteil);
   return (
     <section className="monitor" aria-label="Monitor Unterbringung">
       <p className="monitorbeschriftung">Unterbringung · {nachtText(e.jetzt)}</p>
@@ -130,7 +134,7 @@ export function MonitorUnterbringung(e: Ansichtseigenschaften): React.JSX.Elemen
           {v.belegt === undefined ? "" : `belegt ${String(v.belegt)} · frei ${String(v.frei ?? 0)}`}
           {(v.ohneZuweisung ?? 0) > 0 && (
             <span className="monitorwarn">
-              {v.belegt === undefined ? "" : " · "}ohne Zuweisung {v.ohneZuweisung} ({v.ohneZuweisungEinheiten ?? 0} Einheiten)
+              {v.belegt === undefined ? "" : " · "}ohne Zuweisung {v.ohneZuweisung} ({einheitenText(v.ohneZuweisungEinheiten ?? 0)})
             </span>
           )}
         </p>
@@ -147,7 +151,7 @@ function Unterkunftszeilen({ e }: { readonly e: Ansichtseigenschaften }): React.
   const karten = (e.ansicht?.blatt.belegung.unterkuenfte ?? []).filter((k) => !k.aufgeloest).slice(0, 5);
   if (karten.length === 0) return null;
   return (
-    <table className="monitorunterkuenfte" style={{ fontSize: `${String(tafelgrad(e.mass, 56, karten.length + 9))}px` }}>
+    <table className="monitorunterkuenfte" style={{ fontSize: `${String(tafelgrad(e.mass, 56, karten.length + 12))}px` }}>
       <tbody>
         {karten.map((k) => (
           <tr key={k.unterkunftId} className={k.ueberbelegt ? "monitorwarn" : undefined}>

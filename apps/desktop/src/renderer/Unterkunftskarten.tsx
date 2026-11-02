@@ -10,6 +10,7 @@ import type { Unterkunftskarte } from "@s1/domaene";
 
 import { useGrundabfrage } from "./Grundabfrage.js";
 import { useLaden } from "./laden.js";
+import { einheitenText } from "./versorgungstext.js";
 import { unterkunftAufgeloest, unterkunftWiederhergestellt } from "../kontrakt/versorgungsschritte.js";
 
 function anteil(wert: number, kapazitaet: number, belegt: number): string {
@@ -46,7 +47,7 @@ function Karte(props: {
       </div>
       <p className="belegungszahlen">
         <strong>{k.belegt.gesamt}</strong> / {k.kapazitaet} · m {k.belegt.m} · w {k.belegt.w} · d {k.belegt.d} ·{" "}
-        {k.einheiten.length === 0 ? "keine Einheit" : `${String(k.einheiten.length)} Einheiten`}
+        {k.einheiten.length === 0 ? "keine Einheit" : einheitenText(k.einheiten.length)}
       </p>
       {!props.nurLesen && (
         <p className="kartenknoepfe">
@@ -80,7 +81,7 @@ export function Unterkunftskarten(props: {
   const aufAufloesen = (k: Unterkunftskarte): void => {
     abfrage.frage({
       titel: `Unterkunft „${k.name}“ auflösen`,
-      erlaeuterung: `${String(k.einheiten.length)} Einheiten verlieren ihre Zuweisung und stehen danach als „ohne Unterkunft“.`,
+      erlaeuterung: `${einheitenText(k.einheiten.length)} verlieren ihre Zuweisung und stehen danach als „ohne Unterkunft“.`,
       bestaetigungstext: "Auflösen",
       aufGrund: (grund) => bediene(unterkunftAufgeloest(k.unterkunftId, grund)),
     });

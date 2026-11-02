@@ -85,3 +85,8 @@ const SCHICHTEN: Readonly<Record<string, string>> = { TAG: "Tag", NACHT: "Nacht"
 export function schichtText(schicht: string): string {
   return SCHICHTEN[schicht] ?? schicht;
 }
+
+/** „1 Einheit", „3 Einheiten" — Zahl und Wort in der richtigen Form. */
+export function einheitenText(anzahl: number): string {
+  return `${String(anzahl)} ${anzahl === 1 ? "Einheit" : "Einheiten"}`;
+}
