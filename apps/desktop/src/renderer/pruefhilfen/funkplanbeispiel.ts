@@ -24,6 +24,8 @@ function teilnehmer(einheitId: string, einheit: string, abschnittId: string, ber
     rufgruppeAufgeloest: false,
     bereichWeichtAb: false,
     hinweis: "",
+    funkhinweis: "",
+    weitereRufgruppen: [],
     ...weiteres,
   };
 }
@@ -63,7 +65,7 @@ const E6 = teilnehmer("E6", "SEG DLRG Oldenburg", "ANG", "Angefordert", {
   erwartet: true,
 });
 
-const R1: Rufgruppenkarte = { rufgruppeId: "R1", betriebsart: "TMO", name: "THW_OL_FUE", zweck: "Führung", hoert: "FmZ Platz 1", aufgeloest: false, teilnehmer: [E1] };
+const R1: Rufgruppenkarte = { rufgruppeId: "R1", betriebsart: "TMO", name: "THW_OL_FUE", zweck: "Führung", hoert: "FmZ Platz 1", aufgeloest: false, teilnehmer: [E1], mithoerer: [] };
 const R2: Rufgruppenkarte = {
   rufgruppeId: "R2",
   betriebsart: "TMO",
@@ -75,10 +77,11 @@ const R2: Rufgruppenkarte = {
   bereich: "EA 2 Pumpen Süd",
   aufgeloest: false,
   teilnehmer: [E2, E3],
+  mithoerer: [],
 };
-const R3: Rufgruppenkarte = { rufgruppeId: "R3", betriebsart: "DMO", name: "DMO 310", zweck: "EA 3 Evakuierung", gateway: "Heros Varel 25/10", aufgeloest: false, teilnehmer: [E4] };
-const R4: Rufgruppenkarte = { rufgruppeId: "R4", betriebsart: "ANALOG", name: "2 m K 55 G/U", zweck: "Ortsfunk FF Hude", aufgeloest: false, teilnehmer: [] };
-const R5: Rufgruppenkarte = { rufgruppeId: "R5", betriebsart: "TMO", name: "THW_OL_BR", aufgeloest: true, aufgeloestAm: new Date(2026, 8, 10, 12, 10).toISOString(), teilnehmer: [] };
+const R3: Rufgruppenkarte = { rufgruppeId: "R3", betriebsart: "DMO", name: "DMO 310", zweck: "EA 3 Evakuierung", gateway: "Heros Varel 25/10", aufgeloest: false, teilnehmer: [E4], mithoerer: [] };
+const R4: Rufgruppenkarte = { rufgruppeId: "R4", betriebsart: "ANALOG", name: "2 m K 55 G/U", zweck: "Ortsfunk FF Hude", aufgeloest: false, teilnehmer: [], mithoerer: [] };
+const R5: Rufgruppenkarte = { rufgruppeId: "R5", betriebsart: "TMO", name: "THW_OL_BR", aufgeloest: true, aufgeloestAm: new Date(2026, 8, 10, 12, 10).toISOString(), teilnehmer: [], mithoerer: [] };
 
 export const FUNK_ANSICHT: Funkplanansicht = {
   lageZeiger: 7,

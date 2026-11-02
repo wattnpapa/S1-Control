@@ -15,6 +15,12 @@
  * **„Bereich ≠ Gruppe"** steht, wenn eine geltende Gruppe einen Bereich trägt
  * und der wirksame Bereich der Einheit weder dieser noch einer seiner
  * Unterabschnitte ist (Entscheidung 3). Ein Hinweis, keine Automatik.
+ *
+ * **Weitere Rufgruppen** (F2): Eine Einheit hört außer auf ihrer
+ * Hauptrufgruppe auf weiteren mit. Unter jeder dieser Gruppen steht sie als
+ * Mithörer, getrennt von den Teilnehmern: Gerufen wird sie über die
+ * Hauptgruppe, und „zugeordnet" zählt nur die. Der Funkhinweis ist Freitext
+ * und steht neben „Bereich ≠ Gruppe", nicht an dessen Stelle.
  */
 
 import { anzeigename, erreichbarkeit, funkrufnameDerEinheit, zaehlklasse } from "../kennzahlen.js";
@@ -23,8 +29,15 @@ import type { EinheitZustand, RufgruppeZustand, Zustand } from "../zustand.js";
 import { abschnittsbaum, baumZeilen } from "./baum.js";
 import { rufgruppeGilt, rufgruppenAnzeige, rufgruppenListe } from "./rufgruppen.js";
 
-/** Der Text der Spalte „Hinweis", solange es keinen Funkhinweis gibt (F2). */
+/** Der Hinweis, wenn der Bereich der Einheit nicht zum Bereich ihrer Gruppe passt. */
 export const HINWEIS_BEREICH_ABWEICHEND = "Bereich ≠ Gruppe";
+
+/** Eine weitere Rufgruppe der Einheit, mit Namen; eine unbekannte heißt nach ihrer Kennung. */
+export interface WeitereRufgruppe {
+  readonly rufgruppeId: Id;
+  readonly name: string;
+  readonly aufgeloest: boolean;
+}
 
 export interface Funkteilnehmer {
   readonly einheitId: Id;
@@ -45,8 +58,15 @@ export interface Funkteilnehmer {
   /** Die gesetzte Gruppe ist aufgelöst — die Einheit steht deshalb ohne. */
   readonly rufgruppeAufgeloest: boolean;
   readonly bereichWeichtAb: boolean;
-  /** Was in der Spalte „Hinweis" steht; in F1 nur „Bereich ≠ Gruppe". */
+  /** „Bereich ≠ Gruppe" oder leer — der eigene Hinweis neben dem Funkhinweis. */
   readonly hinweis: string;
+  /** Der Funkhinweis der Einheit (Freitext), sonst leer. */
+  readonly funkhinweis: string;
+  /** Die weiteren Rufgruppen in der Reihenfolge der Liste, auch aufgelöste und unbekannte. */
+  readonly weitereRufgruppen: readonly WeitereRufgruppe[];
+  /** Die gesetzten Overrides — der Vorher-Wert der Maske; fehlt, wo die Ableitung gilt. */
+  readonly funkrufnameOverride?: string;
+  readonly erreichbarkeitOverride?: string;
 }
 
 export interface Rufgruppenkarte {
@@ -63,6 +83,8 @@ export interface Rufgruppenkarte {
   /** Wann aufgelöst wurde (Wanduhr des Ereignisses). */
   readonly aufgeloestAm?: string;
   readonly teilnehmer: readonly Funkteilnehmer[];
+  /** Wer diese Gruppe als weitere trägt; nicht in „zugeordnet" gezählt. */
+  readonly mithoerer: readonly Funkteilnehmer[];
 }
 
 export interface Funkbereich {
@@ -109,6 +131,27 @@ function liegtIn(zustand: Zustand, abschnittId: Id, ziel: Id): boolean {
   return false;
 }
 
+function weitereRufgruppen(zustand: Zustand, einheit: EinheitZustand): WeitereRufgruppe[] {
+  const liste = einheit.weitereRufgruppenIds?.wert;
+  if (!Array.isArray(liste)) return [];
+  return liste
+    .filter((id): id is Id => typeof id === "string" && id !== "")
+    .map((id) => {
+      const gruppe = zustand.rufgruppen?.[id];
+      return { rufgruppeId: id, name: gruppe === undefined ? id : rufgruppenAnzeige(gruppe), aufgeloest: gruppe !== undefined && !rufgruppeGilt(gruppe) };
+    });
+}
+
+/** Die Overrides als Rohwert: nur gesetzte Texte, `null` und leer heißen „Ableitung". */
+function overrides(einheit: EinheitZustand): { funkrufnameOverride?: string; erreichbarkeitOverride?: string } {
+  const funkrufname = text(einheit.funkrufnameOverride?.wert);
+  const erreichbar = text(einheit.erreichbarkeitOverride?.wert);
+  return {
+    ...(funkrufname === undefined ? {} : { funkrufnameOverride: funkrufname }),
+    ...(erreichbar === undefined ? {} : { erreichbarkeitOverride: erreichbar }),
+  };
+}
+
 function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean): Funkteilnehmer {
   const id = text(einheit.rufgruppeId?.wert);
   const gruppe = id === undefined ? undefined : zustand.rufgruppen?.[id];
@@ -127,7 +170,20 @@ function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean
     rufgruppeAufgeloest: gruppe !== undefined && !rufgruppeGilt(gruppe),
     bereichWeichtAb: weichtAb,
     hinweis: weichtAb ? HINWEIS_BEREICH_ABWEICHEND : "",
+    funkhinweis: text(einheit.funkHinweis?.wert) ?? "",
+    weitereRufgruppen: weitereRufgruppen(zustand, einheit),
+    ...overrides(einheit),
   };
+}
+
+/**
+ * Die Spalte „Hinweis" der Ausgabe in einem Text: Funkhinweis, dahinter
+ * „Bereich ≠ Gruppe", dahinter „auch: …" mit den geltenden weiteren Gruppen
+ * außer der Hauptgruppe — über eine aufgelöste wird nicht mehr gehört.
+ */
+export function hinweisspalte(t: Funkteilnehmer): string {
+  const auch = t.weitereRufgruppen.filter((w) => !w.aufgeloest && w.rufgruppeId !== t.rufgruppeId).map((w) => w.name);
+  return [t.funkhinweis, t.hinweis, auch.length === 0 ? "" : `auch: ${[...new Set(auch)].join(", ")}`].filter((teil) => teil !== "").join(" · ");
 }
 
 /** Die Einheiten des Plans in der Ordnung der Einheitentabelle: Bereich im Baum, Reihenfolge, Name. */
@@ -154,6 +210,7 @@ function karte(zustand: Zustand, r: RufgruppeZustand, alle: readonly Funkteilneh
     aufgeloest: !gilt,
     ...(!gilt && r.aufgeloest?.wanduhr !== undefined ? { aufgeloestAm: r.aufgeloest.wanduhr } : {}),
     teilnehmer: gilt ? alle.filter((t) => t.rufgruppeId === r.id) : [],
+    mithoerer: gilt ? alle.filter((t) => t.rufgruppeId !== r.id && t.weitereRufgruppen.some((w) => w.rufgruppeId === r.id)) : [],
   };
 }
 

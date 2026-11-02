@@ -122,6 +122,7 @@ export function klartextsatz(
     case "RufgruppeAufgeloest":
     case "RufgruppeWiederhergestellt":
     case "EinheitRufgruppeGesetzt":
+    case "EinheitStammdatenGeaendert":
       return funksatz(zustand, ereignis, betreff);
     case "AbschnittAufgeloest": {
       const ziel = zielDerAufloesung(zustand, ereignis);

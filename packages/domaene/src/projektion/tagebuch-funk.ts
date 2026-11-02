@@ -5,10 +5,16 @@
  * Tagebuch und nicht als Kennung; der Grund steht wie bei jeder Zeile in
  * seiner eigenen Spalte. Gesucht wird der Name **heute**, wie im übrigen
  * Tagebuch; eine Gruppe, die es nicht mehr gibt, heißt nach ihrer Kennung.
+ *
+ * Dazu der Funkauszug einer Einheit (Maske „Funk und Erreichbarkeit"): welche
+ * Zeilen zum Funkplan gehören, entscheidet {@link istFunkzeile} an einer
+ * Stelle, damit der Auszug nicht im Renderer nach Wörtern im Satz sucht.
  */
 
 import type { EingehendesEreignis } from "../fold.js";
 import type { Zustand } from "../zustand.js";
+
+import type { Tagebuchzeile } from "./tagebuch.js";
 
 const BETRIEBSART_WORT: Readonly<Record<string, string>> = { TMO: "TMO", DMO: "DMO", ANALOG: "Analog" };
 
@@ -53,9 +59,43 @@ function aenderungssatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff
   return undefined;
 }
 
+/** „THW_OL_FUE, DMO 311" — die Namen einer Liste weiterer Rufgruppen; leer heißt „keine". */
+function rufgruppenliste(zustand: Zustand, wert: unknown): string {
+  const ids = Array.isArray(wert) ? wert.filter((id): id is string => typeof id === "string" && id !== "") : [];
+  return ids.length === 0 ? "keine" : ids.map((id) => rufgruppenname(zustand, id)).join(", ");
+}
+
+/** Die weiteren Rufgruppen mit Namen; die übrigen Stammdaten baut der allgemeine Satz. */
+function stammdatensatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff: string): string | undefined {
+  const feld = (ereignis.nutzlast as { feld?: unknown } | null)?.feld;
+  if (feld !== "weitereRufgruppenIds") return undefined;
+  const vorher = "vorher" in ereignis ? ereignis.vorher : undefined;
+  return `${betreff} (weitere Rufgruppen): ${rufgruppenliste(zustand, vorher)} → ${rufgruppenliste(zustand, ereignis.neu)}`;
+}
+
+/**
+ * Die Stammdatenfelder der Einheit, die zum Funkplan gehören — der Inhalt des
+ * Reiters „Funk und Erreichbarkeit". Die Erreichbarkeit steht dabei, weil sie
+ * die Antwort auf „wen rufe ich an, wenn Funk nicht geht" ist (§2).
+ */
+export const FUNKFELDER_DER_EINHEIT: ReadonlySet<string> = new Set([
+  "weitereRufgruppenIds",
+  "funkHinweis",
+  "funkrufnameOverride",
+  "erreichbarkeitOverride",
+]);
+
+/** Gehört die Zeile in den Funkauszug einer Einheit? */
+export function istFunkzeile(zeile: Pick<Tagebuchzeile, "typ" | "feld">): boolean {
+  if (zeile.typ === "EinheitRufgruppeGesetzt") return true;
+  return zeile.typ === "EinheitStammdatenGeaendert" && zeile.feld !== undefined && FUNKFELDER_DER_EINHEIT.has(zeile.feld);
+}
+
 /** Der Satz für die Arten des Funkplans; `undefined`, wenn der allgemeine Zusammenbau gilt. */
 export function funksatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff: string): string | undefined {
   switch (ereignis.typ) {
+    case "EinheitStammdatenGeaendert":
+      return stammdatensatz(zustand, ereignis, betreff);
     case "RufgruppeAngelegt":
       return anlagesatz(ereignis, betreff);
     case "RufgruppeGeaendert":

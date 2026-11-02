@@ -13,7 +13,8 @@ import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } fr
 import { funkrufnameDerEinheit } from "../kennzahlen.js";
 import { abschnittAngelegt, anlageEreignis, einheitGemeldet, einsatzAngelegt, feldEreignis, hlc, staerke } from "../pruefhilfen/ereignisbau.js";
 import type { EinheitZustand, Zustand } from "../zustand.js";
-import { HINWEIS_BEREICH_ABWEICHEND, funkplan } from "./funkplan.js";
+import type { Funkteilnehmer } from "./funkplan.js";
+import { HINWEIS_BEREICH_ABWEICHEND, funkplan, hinweisspalte } from "./funkplan.js";
 
 let n = 0;
 function h(): ReturnType<typeof hlc> {
@@ -148,6 +149,58 @@ describe("Der Funkplan je Bereich", () => {
     const basis = grundlage();
     const gateway = feldEreignis(h(), n, "RufgruppeGeaendert", { rufgruppeId: "R2", feld: "gateway" }, null, "Heros Varel 25/10");
     expect(funkplan(zustand([...basis, gateway])).zahlen.dmoOderGateway).toBe(2);
+  });
+});
+
+function stamm(einheitId: string, feld: string, neu: unknown): EingehendesEreignis {
+  return feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId, feld }, null, neu);
+}
+
+describe("Weitere Rufgruppen, Mithörer und Funkhinweis (F2)", () => {
+  it("führt eine Einheit unter ihren weiteren Gruppen als Mithörer, ohne sie dort zuzuordnen", () => {
+    const basis = grundlage();
+    const plan = funkplan(zustand([...basis, setze("E1", "R2"), setze("E3", "R1"), stamm("E1", "weitereRufgruppenIds", ["R1", "R3"]), stamm("E5", "weitereRufgruppenIds", ["R1"])]));
+    const r1 = plan.rufgruppen.find((r) => r.rufgruppeId === "R1");
+    expect(r1?.teilnehmer.map((t) => t.einheitId)).toEqual(["E3"]);
+    expect(r1?.mithoerer.map((t) => t.einheitId)).toEqual(["E1", "E5"]);
+    expect(plan.rufgruppen.find((r) => r.rufgruppeId === "R3")?.mithoerer.map((t) => t.einheitId)).toEqual(["E1"]);
+    // Ein Mithörer ohne Hauptgruppe bleibt „ohne Rufgruppe"; gezählt wird nur die Hauptgruppe.
+    expect(plan.ohneRufgruppe.map((t) => t.einheitId)).toContain("E5");
+    expect(plan.zahlen.zugeordnet).toBe(2);
+  });
+
+  it("nennt die weiteren Gruppen mit Namen, kennzeichnet aufgelöste und lässt die Hauptgruppe nicht mithören", () => {
+    const basis = grundlage();
+    const aufl = feldEreignis(h(), n, "RufgruppeAufgeloest", { rufgruppeId: "R3" }, null, true, "abgeschaltet");
+    const plan = funkplan(zustand([...basis, setze("E1", "R2"), stamm("E1", "weitereRufgruppenIds", ["R2", "R3", "R9"]), aufl]));
+    const e1 = plan.rufgruppen.find((r) => r.rufgruppeId === "R2")?.teilnehmer[0];
+    expect(e1?.weitereRufgruppen).toEqual([
+      { rufgruppeId: "R2", name: "THW_OL_EA1", aufgeloest: false },
+      { rufgruppeId: "R3", name: "DMO 310", aufgeloest: true },
+      { rufgruppeId: "R9", name: "R9", aufgeloest: false },
+    ]);
+    expect(plan.rufgruppen.find((r) => r.rufgruppeId === "R2")?.mithoerer).toEqual([]);
+    expect(plan.rufgruppen.find((r) => r.rufgruppeId === "R3")?.mithoerer).toEqual([]);
+  });
+
+  it("hält Funkhinweis und „Bereich ≠ Gruppe“ getrennt und setzt sie für die Ausgabe zusammen", () => {
+    const basis = grundlage();
+    const plan = funkplan(zustand([...basis, setze("E3", "R2"), stamm("E3", "funkHinweis", "nachts nur Telefon"), stamm("E3", "weitereRufgruppenIds", ["R1", "R2"])]));
+    const e3 = plan.rufgruppen.find((r) => r.rufgruppeId === "R2")?.teilnehmer[0];
+    expect(e3).toMatchObject({ funkhinweis: "nachts nur Telefon", hinweis: HINWEIS_BEREICH_ABWEICHEND });
+    expect(hinweisspalte(e3 as Funkteilnehmer)).toBe("nachts nur Telefon · Bereich ≠ Gruppe · auch: THW_OL_FUE");
+    const e1 = plan.ohneRufgruppe.find((t) => t.einheitId === "E1") as Funkteilnehmer;
+    expect(e1).toMatchObject({ funkhinweis: "", weitereRufgruppen: [] });
+    expect(hinweisspalte(e1)).toBe("");
+  });
+
+  it("gibt die gesetzten Overrides als Vorher-Wert der Maske mit, leere nicht", () => {
+    const basis = grundlage();
+    const plan = funkplan(zustand([...basis, stamm("E1", "funkrufnameOverride", "Heros Delmenhorst 22/10"), stamm("E1", "erreichbarkeitOverride", "Funk Kanal 31"), stamm("E3", "funkrufnameOverride", null)]));
+    expect(plan.ohneRufgruppe.find((t) => t.einheitId === "E1")).toMatchObject({ funkrufnameOverride: "Heros Delmenhorst 22/10", erreichbarkeitOverride: "Funk Kanal 31", erreichbarkeit: "Funk Kanal 31" });
+    const e3 = plan.ohneRufgruppe.find((t) => t.einheitId === "E3");
+    expect(e3).not.toHaveProperty("funkrufnameOverride");
+    expect(e3).not.toHaveProperty("erreichbarkeitOverride");
   });
 });
 

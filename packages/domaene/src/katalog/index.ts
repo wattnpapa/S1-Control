@@ -168,7 +168,9 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
       nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId", feld: ausNutzlast("feld"),
       klasse: "LWW_FELD",
       klasseJeFeld: { hierarchie: "LWW_ENTITAET", fuehrungskraft: "LWW_ENTITAET",
-                      taktischesZeichen: "LWW_ENTITAET" } }),
+                      taktischesZeichen: "LWW_ENTITAET",
+                      // Funkplan F2: die Liste gilt als Ganzes wie `hierarchie`.
+                      weitereRufgruppenIds: "LWW_ENTITAET" } }),
   e({ typ: "StaerkeGeaendert", form: "a", schema: S.StaerkeGeaendert, nutzlastVersion: 1,
       entitaet: "einheit", idFeld: "einheitId", feld: fest("staerke"), klasse: "LWW_ENTITAET" }),
   e({ typ: "StatusGesetzt", form: "a", schema: S.StatusGesetzt, nutzlastVersion: 1,

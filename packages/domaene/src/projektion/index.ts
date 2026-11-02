@@ -227,11 +227,13 @@ export {
 export {
   HINWEIS_BEREICH_ABWEICHEND,
   funkplan,
+  hinweisspalte,
   type Funkbereich,
   type Funkplan,
   type Funkteilnehmer,
   type Funkzahlen,
   type Rufgruppenkarte,
+  type WeitereRufgruppe,
 } from "./funkplan.js";
 export { rufgruppeGilt, rufgruppenAnzeige, rufgruppenAuswahl, rufgruppenListe } from "./rufgruppen.js";
-export { betriebsartWort, rufgruppenname } from "./tagebuch-funk.js";
+export { FUNKFELDER_DER_EINHEIT, betriebsartWort, istFunkzeile, rufgruppenname } from "./tagebuch-funk.js";

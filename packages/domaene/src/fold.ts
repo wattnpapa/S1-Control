@@ -1013,6 +1013,8 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
   ["abschnitt.ausgabestelleId", "ausgabestelle"],
   ["bestellung.ausgabestelleId", "ausgabestelle"],
   ["einheit.rufgruppeId", "rufgruppe"],
+  // Funkplan F2: eine Liste — jede Kennung wird für sich geprüft.
+  ["einheit.weitereRufgruppenIds", "rufgruppe"],
   ["rufgruppe.abschnittId", "abschnitt"],
 ]);
 
@@ -1026,6 +1028,16 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
  * keinem Konflikt teil, weil ihre Ids reserviert sind.
  */
 const SYSTEM_HLC: Hlc = { millisekunden: 0, zaehler: 0, clientId: "system" };
+
+/**
+ * Die Kennungen, auf die ein Feldwert verweist: eine einzelne oder, bei einer
+ * Liste (`weitereRufgruppenIds`), jede Zeichenkette darin. `null` und alles
+ * andere verweist auf nichts.
+ */
+function verweiseIn(wert: unknown): readonly string[] {
+  if (typeof wert === "string") return [wert];
+  return Array.isArray(wert) ? wert.filter((eintrag): eintrag is string => typeof eintrag === "string") : [];
+}
 
 /** `ANGEFORDERT`, `EINGANG` und `ARCHIV` zaehlen nicht; ein **unbekannter** Typ zaehlt (§3.7). */
 const NICHT_ZAEHLENDE_TYPEN: ReadonlySet<string> = new Set(["ANGEFORDERT", "EINGANG", "ARCHIV"]);
@@ -1914,21 +1926,22 @@ export function materialisiere(faltung: Faltung): Zustand {
       for (const [name, feld] of entitaet.felder) {
         const zielart = FREMDREFERENZEN.get(`${art}.${name}`);
         if (zielart === undefined) continue;
-        if (typeof feld.wert !== "string") continue;
-        // Einheiten und Abschnitte aus den fertigen Sammlungen: Dort stehen auch
-        // die aufgegangenen Einheiten und die beiden Systemabschnitte.
-        const vorhanden =
-          zielart === "einheit"
-            ? einheiten.has(feld.wert)
-            : zielart === "abschnitt"
-              ? abschnitte.has(feld.wert)
-              : (gebaut.get(zielart)?.has(feld.wert) ?? false);
-        if (!vorhanden) {
-          hinweise.push({
-            art: "fremdreferenzUnbekannt",
-            feldpfad: `${art}/${id}/${name}`,
-            verweistAuf: feld.wert,
-          });
+        for (const verweis of verweiseIn(feld.wert)) {
+          // Einheiten und Abschnitte aus den fertigen Sammlungen: Dort stehen auch
+          // die aufgegangenen Einheiten und die beiden Systemabschnitte.
+          const vorhanden =
+            zielart === "einheit"
+              ? einheiten.has(verweis)
+              : zielart === "abschnitt"
+                ? abschnitte.has(verweis)
+                : (gebaut.get(zielart)?.has(verweis) ?? false);
+          if (!vorhanden) {
+            hinweise.push({
+              art: "fremdreferenzUnbekannt",
+              feldpfad: `${art}/${id}/${name}`,
+              verweistAuf: verweis,
+            });
+          }
         }
       }
     }

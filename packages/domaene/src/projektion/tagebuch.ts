@@ -212,6 +212,8 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   reihenfolge: "Reihenfolge",
   abschnittId: "Bereich",
   funkrufnameOverride: "Funkrufname",
+  weitereRufgruppenIds: "weitere Rufgruppen",
+  funkHinweis: "Funkhinweis",
 };
 
 // ---------------------------------------------------------------------------
@@ -237,6 +239,12 @@ export interface Tagebuchzeile {
   readonly undoOf?: EreignisId;
   /** §5.9.2 U4: gesetzt, wenn diese Zeile eine Berichtigung ist. */
   readonly korrekturVon?: EreignisId;
+  /**
+   * Das Feld, das die Zeile setzt, wo die Art es in der Nutzlast benennt
+   * (`EinheitStammdatenGeaendert` und Verwandte). Für Auszüge, die nach Feld
+   * filtern — etwa den Funkauszug der Einheit (`istFunkzeile`).
+   */
+  readonly feld?: string;
   /** Für den Filter „nur diese Einheit" (DoD M3.3). */
   readonly einheitId?: Id;
   /** Für den Filter „nur dieser Abschnitt". */
@@ -576,6 +584,7 @@ function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tag
     };
   }
   const zeit = fachlicheZeit(ereignis);
+  const feld = eintrag.feld?.art === "ausNutzlast" ? feldname(ereignis, eintrag) : undefined;
   return {
     ereignisId: ereignis.id,
     typ: ereignis.typ,
@@ -589,6 +598,7 @@ function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tag
     ...(ereignis.grund === undefined ? {} : { grund: ereignis.grund }),
     ...(ereignis.undoOf === undefined ? {} : { undoOf: ereignis.undoOf }),
     ...(ereignis.korrekturVon === undefined ? {} : { korrekturVon: ereignis.korrekturVon }),
+    ...(feld === undefined ? {} : { feld }),
     ...bezug(zustand, ereignis, eintrag),
   };
 }

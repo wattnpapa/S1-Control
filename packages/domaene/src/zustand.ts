@@ -47,9 +47,12 @@ import type {
  * Ausgabestellen und Bestellungen (S4.3). **6** mit der Abarbeitung des
  * Sofortbedarfs je Feld (S4.4). **7** mit dem Funkplan (F1): Rufgruppe als
  * Entitaet, die Felder `rufgruppeId` und `funkrufnameOverride` an der Einheit
- * und die Betriebsart als offener Bereich.
+ * und die Betriebsart als offener Bereich. **8** mit dem Funkplan (F2): die
+ * Stammdatenfelder `weitereRufgruppenIds` und `funkHinweis` (eine Fassung 7
+ * faltete sie als unbekannt nach dem Schema) und die Fremdreferenzprüfung je
+ * Kennung der Liste.
  */
-export const FOLD_VERSION = 7;
+export const FOLD_VERSION = 8;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -261,6 +264,13 @@ export interface EinheitZustand extends Anlage {
   readonly rufgruppeId?: Feld<Id>;
   /** Funkplan: der Funkrufname der Einheit, wo die Ableitung (K31) nicht passt. */
   readonly funkrufnameOverride?: Feld<string>;
+  /**
+   * Funkplan F2: die Rufgruppen, auf denen die Einheit außer der Hauptgruppe
+   * mithört. LWW über die ganze Liste wie `hierarchie`; `null` = keine.
+   */
+  readonly weitereRufgruppenIds?: Feld<readonly Id[]>;
+  /** Funkplan F2: was die Sprechfunker zu dieser Einheit wissen müssen. */
+  readonly funkHinweis?: Feld<string>;
   readonly psaSaetzeProTag?: Feld<number>;
   readonly abgeteiltVon?: Erstwert<{
     readonly quellEinheitId: Id;

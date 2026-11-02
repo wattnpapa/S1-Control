@@ -46,8 +46,9 @@ describe("Die Spaltengruppe FUNK", () => {
     expect(SICHTBARE_GRUPPEN_VORBELEGUNG).not.toContain("FUNK");
   });
 
-  it("führt Rufgruppe und Funkrufname; die Erreichbarkeit bleibt in der Ressourcenplanung", () => {
-    expect(spaltenDerGruppen(["FUNK"]).map((sp) => sp.schluessel)).toEqual(["rufgruppe", "funkrufname"]);
+  it("führt Rufgruppe, Funkrufname und Funkhinweis; die Erreichbarkeit bleibt in der Ressourcenplanung", () => {
+    expect(spaltenDerGruppen(["FUNK"]).map((sp) => sp.schluessel)).toEqual(["rufgruppe", "funkrufname", "funkhinweis"]);
+    expect(spalte("funkhinweis")).toMatchObject({ art: "text", schreibt: { art: "stammdaten", feld: "funkHinweis" }, feldpfad: "funkHinweis" });
     expect(spalte("erreichbarkeit")?.gruppe).toBe("RESSOURCENPLANUNG");
     expect(spalte("rufgruppe")).toMatchObject({
       art: "auswahl",
@@ -101,6 +102,13 @@ describe("Die Zellen der Gruppe FUNK", () => {
     const vonA = feldEreignis(hlc(50_000, 0, "a"), 50, "EinheitRufgruppeGesetzt", { einheitId: "E1" }, null, "R1");
     const vonB = feldEreignis(hlc(60_000, 0, "b"), 1, "EinheitRufgruppeGesetzt", { einheitId: "E1" }, null, "R2");
     expect(zeile(zustand([...basis, vonA, vonB])).zellen["rufgruppe"]).toMatchObject({ text: "THW_OL_EA1", umstritten: true });
+  });
+
+  it("zeigt den Funkhinweis als Text und schickt ihn als Wert", () => {
+    const basis = grundlage();
+    expect(zeile(zustand(basis)).zellen["funkhinweis"]).toMatchObject({ text: "", wert: null });
+    const z = zustand([...basis, feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E1", feld: "funkHinweis" }, null, "auch 2 m K 55")]);
+    expect(zeile(z).zellen["funkhinweis"]).toMatchObject({ text: "auch 2 m K 55", wert: "auch 2 m K 55", umstritten: false });
   });
 
   it("berechnet den Funkrufnamen (K31)", () => {

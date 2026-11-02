@@ -185,6 +185,7 @@ export type {
   Funkteilnehmer,
   Funkzahlen,
   Rufgruppenkarte,
+  WeitereRufgruppe,
 } from "./projektion/index.js";
 
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3) und K31 (Funkrufname).

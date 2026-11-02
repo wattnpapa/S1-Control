@@ -171,6 +171,10 @@ export const EinheitStammdatenGeaendert = z.object({
     "einheitSchluessel",
     // Funkplan: der Funkrufname der Einheit, wo die Ableitung aus dem Fahrzeug nicht passt.
     "funkrufnameOverride",
+    // Funkplan F2: wo die Einheit sonst noch mithört (Liste von Rufgruppen-Ids,
+    // `null` für keine) und der Freitext für die Sprechfunker.
+    "weitereRufgruppenIds",
+    "funkHinweis",
   ]),
 });
 

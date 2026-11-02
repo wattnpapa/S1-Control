@@ -221,6 +221,9 @@ export const SPALTEN: readonly Spalte[] = [
       werteAus: "rufgruppen", schreibt: { art: "festeArt", typ: "EinheitRufgruppeGesetzt" },
       feldpfad: "rufgruppeId" }),
   s({ schluessel: "funkrufname", kopf: "Funkrufname", excel: "—", gruppe: "FUNK", art: "berechnet" }),
+  // Funkplan F2: der Funkhinweis als Textspalte, dieselbe Zelle wie im Blatt.
+  s({ schluessel: "funkhinweis", kopf: "Funkhinweis", excel: "—", gruppe: "FUNK", art: "text",
+      schreibt: { art: "stammdaten", feld: "funkHinweis" }, feldpfad: "funkHinweis" }),
 ];
 
 /** Die Spalte zu einem Schlüssel — die Tabelle wird oft und punktuell gefragt. */
