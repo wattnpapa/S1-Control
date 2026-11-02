@@ -368,6 +368,41 @@ Aktualisieren: `bash deploy.sh` erneut; Zugang ändern und Sitzungen beenden
 wie oben, nur mit `-f docker-compose.plesk.yml`. Das Protokoll des Dienstes:
 `docker compose -f /opt/s1-control/docker-compose.plesk.yml logs -f s1-web`.
 
+#### Automatisch bei Push auf `main`
+
+Der Workflow `.github/workflows/deploy-plesk.yml` startet nach jedem Push auf
+`main` (und von Hand über „Run workflow“) per SSH `deploy/plesk/deploy.sh` auf
+dem Server. Voraussetzung ist der einmalige manuelle Lauf von oben, denn die
+`.env` kann GitHub nicht ausfüllen. Einrichtung:
+
+1. Schlüsselpaar nur für diesen Zweck erzeugen, auf dem eigenen Rechner:
+   `ssh-keygen -t ed25519 -N "" -C "github-actions s1-control" -f s1-deploy`.
+2. Den öffentlichen Schlüssel auf dem Server in `/root/.ssh/authorized_keys`
+   eintragen, gebunden an ein erzwungenes Kommando. So kann der Schlüssel
+   nichts anderes als das Deploy-Skript starten:
+
+   ```
+   command="S1_ZWEIG=main bash /opt/s1-control/deploy/plesk/deploy.sh",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAA… github-actions s1-control
+   ```
+
+   `PermitRootLogin` in `/etc/ssh/sshd_config` muss `yes` oder
+   `prohibit-password` sein. Statt `root` geht auch ein Benutzer in der
+   Gruppe `docker` mit Schreibrecht auf `/opt/s1-control`.
+3. Host-Schlüssel des Servers holen: `ssh-keyscan -p 22 <Host>`.
+4. In GitHub unter Settings → Environments das Environment `plesk` anlegen
+   und dort die Secrets eintragen: `PLESK_HOST`, `PLESK_USER`,
+   `PLESK_SSH_KEY` (Inhalt der privaten Datei `s1-deploy`),
+   `PLESK_KNOWN_HOSTS` (Ausgabe von `ssh-keyscan`), optional
+   `PLESK_SSH_PORT`. Im Environment lässt sich bei Bedarf eine Freigabe vor
+   jedem Deploy erzwingen.
+
+GitHub-Runner kommen von wechselnden IP-Adressen; die Plesk-Firewall und
+fail2ban müssen SSH per Schlüssel von außen zulassen. Der Workflow läuft
+unabhängig von `build-main.yml`, also auch wenn dessen Tests rot sind.
+Zwei Deploys laufen nie gleichzeitig, der zweite wartet. Schlägt das Skript
+fehl (etwa `/gesundheit` antwortet nicht), ist der Lauf rot und das Protokoll
+des Skripts steht im Actions-Log.
+
 ## Notverfahren bei NAS-Ausfall
 
 **Der Ausfall ist der Normalpfad, nicht der Fehlerpfad** (§1.3, Satz 2). Jedes
