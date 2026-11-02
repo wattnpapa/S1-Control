@@ -43,6 +43,8 @@ export type Entitaetsart =
   | "anhang"
   | "etbEintrag"
   | "unterkunft"
+  | "ausgabestelle"
+  | "bestellung"
   | "archivierungen";
 
 /**
@@ -336,6 +338,34 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "UnterbringungAufgehoben", form: "a", schema: S.UnterbringungAufgehoben,
       nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId", feld: fest("unterkunftId"),
       festerWert: null, klasse: "LWW_FELD", gegenereignis: "EinheitUntergebracht" }),
+
+  // S4.3 Mahlzeitenregel, Ausgabestellen, Bestellung (KONZEPT-S4.md §6)
+  e({ typ: "MahlzeitenregelGesetzt", form: "a", schema: S.MahlzeitenregelGesetzt, nutzlastVersion: 1,
+      entitaet: "einsatz", idFeld: "einsatzId", feld: fest("mahlzeitenregel"),
+      klasse: "LWW_ENTITAET" }),
+  e({ typ: "AusgabestelleAngelegt", form: "b", schema: S.AusgabestelleAngelegt, nutzlastVersion: 1,
+      entitaet: "ausgabestelle", idFeld: "ausgabestelleId", klasse: "ADDITIV",
+      gegenereignis: "AusgabestelleEntfernt" }),
+  e({ typ: "AusgabestelleEntfernt", form: "a", schema: S.AusgabestelleEntfernt, nutzlastVersion: 1,
+      entitaet: "ausgabestelle", idFeld: "ausgabestelleId", feld: fest("entfernt"), festerWert: true,
+      klasse: "LWW_FELD", gegenereignis: "AusgabestelleWiederhergestellt" }),
+  e({ typ: "AusgabestelleWiederhergestellt", form: "a", schema: S.AusgabestelleWiederhergestellt,
+      nutzlastVersion: 1, entitaet: "ausgabestelle", idFeld: "ausgabestelleId", feld: fest("entfernt"),
+      festerWert: false, klasse: "LWW_FELD" }),
+  e({ typ: "AbschnittAusgabestelleGesetzt", form: "a", schema: S.AbschnittAusgabestelleGesetzt,
+      nutzlastVersion: 1, entitaet: "abschnitt", idFeld: "abschnittId", feld: fest("ausgabestelleId"),
+      klasse: "LWW_FELD" }),
+  e({ typ: "MahlzeitBestellt", form: "b", schema: S.MahlzeitBestellt, nutzlastVersion: 1,
+      entitaet: "bestellung", idFeld: "bestellungId", klasse: "ADDITIV",
+      gegenereignis: "MahlzeitStorniert" }),
+  e({ typ: "MahlzeitGeliefert", form: "a", schema: S.MahlzeitGeliefert, nutzlastVersion: 1,
+      entitaet: "bestellung", idFeld: "bestellungId", feld: fest("geliefert"), klasse: "LWW_FELD" }),
+  e({ typ: "MahlzeitStorniert", form: "a", schema: S.MahlzeitStorniert, nutzlastVersion: 1,
+      entitaet: "bestellung", idFeld: "bestellungId", feld: fest("storniert"), festerWert: true,
+      klasse: "LWW_FELD", grundPflicht: true, gegenereignis: "MahlzeitStornoZurueckgenommen" }),
+  e({ typ: "MahlzeitStornoZurueckgenommen", form: "a", schema: S.MahlzeitStornoZurueckgenommen,
+      nutzlastVersion: 1, entitaet: "bestellung", idFeld: "bestellungId", feld: fest("storniert"),
+      festerWert: false, klasse: "LWW_FELD" }),
 
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,

@@ -13,6 +13,8 @@ import { zeitpunktText } from "../beschriftungen.js";
 import type { EingehendesEreignis } from "../fold.js";
 import type { Zustand } from "../zustand.js";
 
+import { verpflegungssatz } from "./tagebuch-versorgung.js";
+
 function text(wert: unknown): string | undefined {
   return typeof wert === "string" && wert !== "" ? wert : undefined;
 }
@@ -94,6 +96,12 @@ export function klartextsatz(
     case "EinheitUntergebracht":
     case "UnterbringungAufgehoben":
       return unterbringungssatz(zustand, ereignis, betreff);
+    case "MahlzeitenregelGesetzt":
+    case "AusgabestelleAngelegt":
+    case "AbschnittAusgabestelleGesetzt":
+    case "MahlzeitBestellt":
+    case "MahlzeitGeliefert":
+      return verpflegungssatz(zustand, ereignis, betreff);
     case "AbschnittAufgeloest": {
       const ziel = zielDerAufloesung(zustand, ereignis);
       return ziel === undefined ? betreff : `${betreff} — Einheiten gehen nach ${ziel}`;

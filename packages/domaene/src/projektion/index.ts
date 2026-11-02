@@ -183,6 +183,7 @@ export {
   sofortbedarfsliste,
   versorgungsblatt,
   versorgungszahlen,
+  type Bestellstand,
   type Mahlzeitenplan,
   type Mahlzeitzahlen,
   type Planzeile,
@@ -191,6 +192,17 @@ export {
   type Versorgungsblatt,
   type Versorgungszahlen,
 } from "./versorgung-blatt.js";
+
+export {
+  ausgabestelleDes,
+  ausgabestellen,
+  bestellverlauf,
+  geltendeBestellung,
+  type Ausgabestellenzeile,
+  type Bestellzeile,
+} from "./bestellung.js";
+
+export { mahlzeitenregelDes, regelFehler, regelstand } from "./mahlzeitenregel.js";
 
 export {
   belegung,

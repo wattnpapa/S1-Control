@@ -206,6 +206,8 @@ const SAMMLUNG: Readonly<Record<string, keyof Zustand>> = {
   anhang: "anhaenge",
   etbEintrag: "etbEintraege",
   unterkunft: "unterkuenfte",
+  ausgabestelle: "ausgabestellen",
+  bestellung: "bestellungen",
   archivierungen: "archivierungen",
 };
 

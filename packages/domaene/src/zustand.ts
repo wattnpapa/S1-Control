@@ -43,9 +43,10 @@ import type {
  * `EINGANG` traegt und nicht mehr in die Gesamtstaerke zaehlt (§5.3.4).
  * **4** mit der Versorgung (S4): Unterkunft als Entitaet und das Feld
  * `unterkunftId` an der Einheit — ein Schnappschuss der Fassung 3 haette
- * diese Ereignisse als unbekannt gefaltet.
+ * diese Ereignisse als unbekannt gefaltet. **5** mit Mahlzeitenregel,
+ * Ausgabestellen und Bestellungen (S4.3).
  */
-export const FOLD_VERSION = 4;
+export const FOLD_VERSION = 5;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -167,6 +168,8 @@ export interface EinsatzZustand extends Anlage {
   readonly schichtmodell: Feld<string>;
   /** `null` = wiedereroeffnet; fehlt = nie beendet (§3.2). */
   readonly ende?: Feld<Zeitpunkt>;
+  /** S4.3: die Mahlzeitenregel des Einsatzes; fehlt sie, gilt die Vorbelegung. */
+  readonly mahlzeitenregel?: Feld<KanonischerWert>;
   readonly kosten: {
     readonly psaKostenProSatz?: Feld<number>;
     readonly vdaProTag?: Feld<number>;
@@ -205,6 +208,8 @@ export interface AbschnittZustand {
    */
   readonly taktischesZeichen?: Feld<string>;
   readonly aufgeloest?: Feld<{ readonly zielAbschnittId: Id; readonly aufgeloestAm: Zeitpunkt }>;
+  /** S4.3: die Ausgabestelle, die den Bereich verpflegt. */
+  readonly ausgabestelleId?: Feld<Id>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
   /** `true` bei `EINGANG` und `ARCHIV` (§5.3.4). */
   readonly systemAbschnitt?: true;
@@ -347,6 +352,33 @@ export interface UnterkunftZustand extends Anlage {
   readonly kapazitaet: Feld<number>;
   readonly bemerkung?: Feld<string>;
   readonly aufgeloest?: Feld<boolean>;
+  readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
+}
+
+/** Eine Ausgabestelle der Verpflegung (S4.3) — Feldküche, Lieferung, Kantine. */
+export interface AusgabestelleZustand extends Anlage {
+  readonly id: Id;
+  readonly name: Feld<string>;
+  readonly ort?: Feld<string>;
+  readonly traeger?: Feld<string>;
+  readonly mahlzeiten?: Feld<readonly string[]>;
+  readonly entfernt?: Feld<boolean>;
+  readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
+}
+
+/** Eine Bestellung einer Mahlzeit (S4.3). */
+export interface BestellungZustand extends Anlage {
+  readonly id: Id;
+  readonly datum: Feld<string>;
+  readonly mahlzeit: Feld<string>;
+  readonly ausgabestelleId?: Feld<Id>;
+  readonly portionen: Feld<number>;
+  readonly vegetarisch: Feld<number>;
+  readonly vegan: Feld<number>;
+  readonly bestelltBei?: Feld<string>;
+  readonly bestelltVon?: Feld<string>;
+  readonly geliefert?: Feld<number>;
+  readonly storniert?: Feld<boolean>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
 }
 
@@ -668,6 +700,9 @@ export interface Zustand {
    * Serialisierung eines Einsatzes ohne Versorgung unverändert.
    */
   readonly unterkuenfte?: { readonly [unterkunftId: string]: UnterkunftZustand };
+  /** S4.3: Ausgabestellen und Bestellungen — ebenfalls nur, wenn es welche gibt. */
+  readonly ausgabestellen?: { readonly [ausgabestelleId: string]: AusgabestelleZustand };
+  readonly bestellungen?: { readonly [bestellungId: string]: BestellungZustand };
   /** Deterministisch geordnet, und eine **Menge**: bytegleiche Eintraege fallen zusammen (§3.8). */
   readonly hinweise: readonly Konflikthinweis[];
   /** Nach `id` geordnet (§3.7). */

@@ -1008,6 +1008,8 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
   ["anforderung.abzuloesendeEinheitId", "einheit"],
   ["anhang.einheitId", "einheit"],
   ["einheit.unterkunftId", "unterkunft"],
+  ["abschnitt.ausgabestelleId", "ausgabestelle"],
+  ["bestellung.ausgabestelleId", "ausgabestelle"],
 ]);
 
 /**
@@ -2125,6 +2127,8 @@ export function materialisiere(faltung: Faltung): Zustand {
   // S4.2: Die Unterkünfte sind eine gewöhnliche Sammlung; sie erscheint im
   // Zustand nur, wenn es eine gibt (siehe `Zustand.unterkuenfte`).
   const unterkuenfte = sammlung("unterkunft");
+  const ausgabestellen = sammlung("ausgabestelle");
+  const bestellungen = sammlung("bestellung");
 
   return {
     foldVersion: faltung.foldVersion,
@@ -2142,6 +2146,8 @@ export function materialisiere(faltung: Faltung): Zustand {
     etbEintraege: alsDatensammlung(sammlung("etbEintrag")) as Zustand["etbEintraege"],
     archivierungen: alsDatensammlung(archivierungen),
     ...(unterkuenfte.size === 0 ? {} : { unterkuenfte: alsDatensammlung(unterkuenfte) as Zustand["unterkuenfte"] }),
+    ...(ausgabestellen.size === 0 ? {} : { ausgabestellen: alsDatensammlung(ausgabestellen) as Zustand["ausgabestellen"] }),
+    ...(bestellungen.size === 0 ? {} : { bestellungen: alsDatensammlung(bestellungen) as Zustand["bestellungen"] }),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),

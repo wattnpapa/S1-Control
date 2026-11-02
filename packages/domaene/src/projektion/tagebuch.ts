@@ -38,6 +38,7 @@ import {
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
 import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
 import { klartextsatz } from "./tagebuch-klartext.js";
+import { bestellungsname } from "./tagebuch-versorgung.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -138,6 +139,16 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   UnterkunftWiederhergestellt: "Unterkunft wiederhergestellt",
   EinheitUntergebracht: "Einheit untergebracht",
   UnterbringungAufgehoben: "Unterbringung aufgehoben",
+  // S4.3 Verpflegung
+  MahlzeitenregelGesetzt: "Mahlzeitenregel gesetzt",
+  AusgabestelleAngelegt: "Ausgabestelle angelegt",
+  AusgabestelleEntfernt: "Ausgabestelle entfernt",
+  AusgabestelleWiederhergestellt: "Ausgabestelle wiederhergestellt",
+  AbschnittAusgabestelleGesetzt: "Ausgabestelle des Bereichs gesetzt",
+  MahlzeitBestellt: "Mahlzeit bestellt",
+  MahlzeitGeliefert: "Lieferung gemeldet",
+  MahlzeitStorniert: "Bestellung storniert",
+  MahlzeitStornoZurueckgenommen: "Stornierung der Bestellung zurückgenommen",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -282,6 +293,10 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       return anforderungsname(zustand, id);
     case "unterkunft":
       return feldtext(zustand.unterkuenfte?.[id]?.name) ?? id;
+    case "ausgabestelle":
+      return feldtext(zustand.ausgabestellen?.[id]?.name) ?? id;
+    case "bestellung":
+      return bestellungsname(zustand, id);
     default:
       return id;
   }

@@ -23,7 +23,7 @@ const k = (portionen: number, vegetarisch: number, vegan: number): Kost => ({ po
 export const BEISPIEL_ZAHLEN: Versorgungszahlen = {
   naechste: { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 268, vegetarisch: 31, vegan: 6 },
   mahlzeiten: [
-    { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 292, vegetarisch: 33, vegan: 6, bestand: 268, zugang: 24, abgang: 0 },
+    { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 292, vegetarisch: 33, vegan: 6, bestand: 268, zugang: 24, abgang: 0, bestellt: 280 },
     { mahlzeit: "NACHT", zeitpunkt: um(11, 0), portionen: 60, vegetarisch: 8, vegan: 2, bestand: 60, zugang: 0, abgang: 0 },
     { mahlzeit: "FRUEHSTUECK", zeitpunkt: um(11, 6), portionen: 278, vegetarisch: 32, vegan: 6, bestand: 268, zugang: 24, abgang: 14 },
     { mahlzeit: "MITTAG", zeitpunkt: um(11, 12), portionen: 212, vegetarisch: 24, vegan: 4, bestand: 208, zugang: 24, abgang: 20 },
@@ -58,6 +58,33 @@ const ZEILEN = [
   zeile("EA1", "EA 1 Deich Nord", 64, 32, [12, 1, 12, 3, 61, 12, 1]),
 ];
 
+const BESTELLUNG_ABEND = {
+  bestellungId: "B1",
+  datum: "2026-09-10",
+  mahlzeit: "ABEND",
+  ausgabestelleId: "AS1",
+  ausgabestelle: "Feldküche Bereitstellungsraum",
+  portionen: 280,
+  vegetarisch: 34,
+  vegan: 6,
+  bestelltBei: "JUH Küche",
+  bestelltVon: "Meier (S4)",
+  bestelltUm: new Date(2026, 8, 10, 12, 10).toISOString(),
+  storniert: false,
+  ersetzt: false,
+};
+
+const BESTELLUNG_MITTAG = {
+  ...BESTELLUNG_ABEND,
+  bestellungId: "B0",
+  mahlzeit: "MITTAG",
+  portionen: 210,
+  vegetarisch: 20,
+  vegan: 4,
+  bestelltUm: new Date(2026, 8, 10, 6, 12).toISOString(),
+  geliefert: 210,
+};
+
 const plan = (id: string, bereich: string, f: number, mi: number, a: number, n: number, veg: number, vegan: number) => ({
   abschnittId: id,
   bereich,
@@ -85,7 +112,10 @@ export const BEISPIEL_ANSICHT: Versorgungsansicht = {
         { mahlzeit: "ABEND", uhrzeit: "1800", schichten: ["TAG", "NACHT"] },
         { mahlzeit: "NACHT", uhrzeit: "0000", schichten: ["NACHT"] },
       ],
-      zeilen: [plan("FUEST", "Führungsstelle", 12, 8, 12, 4, 2, 0), plan("EA1", "EA 1 Deich Nord", 96, 64, 96, 32, 12, 3)],
+      zeilen: [
+        { ...plan("FUEST", "Führungsstelle", 12, 8, 12, 4, 2, 0), ausgabestelle: { name: "Logistik", vorbelegt: true } },
+        { ...plan("EA1", "EA 1 Deich Nord", 96, 64, 96, 32, 12, 3), ausgabestelle: { id: "AS2", name: "Lieferung Deich Nord", vorbelegt: false } },
+      ],
       summe: plan("GESAMT", "Gesamt", 108, 72, 108, 36, 14, 3),
       anmarsch: plan("ANGEFORDERT", "Angefordert / Anmarsch", 24, 24, 24, 0, 2, 0),
     },
@@ -95,6 +125,7 @@ export const BEISPIEL_ANSICHT: Versorgungsansicht = {
         mahlzeit: m.mahlzeit as "ABEND",
         uhrzeit: ["1800", "0000", "0600", "1200"][i] ?? "",
         zeitpunkt: m.zeitpunkt,
+        datum: i === 0 ? "2026-09-10" : "2026-09-11",
         tag: i === 0 ? 0 : 1,
         bestand: k(m.bestand, 31, 6),
         zugang: k(m.zugang, 2, 0),
@@ -148,6 +179,17 @@ export const BEISPIEL_ANSICHT: Versorgungsansicht = {
       frei: 24,
       ohneZuweisung: { koepfe: 18, einheiten: 2 },
     },
+    regelVorbelegung: true,
+    ausgabestellen: [
+      { ausgabestelleId: "AS1", name: "Feldküche Bereitstellungsraum", traeger: "JUH" },
+      { ausgabestelleId: "AS2", name: "Lieferung Deich Nord" },
+    ],
+    bestellungen: [BESTELLUNG_ABEND, { ...BESTELLUNG_MITTAG }],
+    bestellstand: BEISPIEL_ZAHLEN.mahlzeiten.map((m, i) =>
+      i === 0
+        ? { zeitpunkt: m.zeitpunkt, datum: "2026-09-10", bestellung: BESTELLUNG_ABEND, differenz: -12 }
+        : { zeitpunkt: m.zeitpunkt, datum: "2026-09-11" },
+    ),
     sofortbedarf: {
       zeilen: [
         { einheitId: "E1", einheit: "2. Zug FF Rastede", bereich: "EA 1 Deich Nord", eingetroffenAm: um(10, 14), verpflegungPersonen: 22, dieselLiter: 400, benzinLiter: 60, gemischLiter: 0, unterbringung: true, ruhezeit: true },

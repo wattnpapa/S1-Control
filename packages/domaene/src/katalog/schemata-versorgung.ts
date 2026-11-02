@@ -39,3 +39,50 @@ export const UnterkunftWiederhergestellt = z.object({ unterkunftId: zId });
  */
 export const EinheitUntergebracht = z.object({ einheitId: zId, ab: zZeitpunkt.optional() });
 export const UnterbringungAufgehoben = z.object({ einheitId: zId });
+
+// --- Mahlzeitenregel, Ausgabestellen, Bestellung (S4.3) --------------------
+
+export const zMahlzeit = z.enum(["FRUEHSTUECK", "MITTAG", "ABEND", "NACHT"]);
+
+/** Die Regel steht als Ganzes in `neu` (LWW über die ganze Regel); die Nutzlast nennt den Einsatz. */
+export const MahlzeitenregelGesetzt = z.object({ einsatzId: zId });
+
+/** Eine Zeile der Regel, wie sie in `neu` steht — vom Worker vor dem Schreiben geprüft. */
+export const zMahlzeitregelzeile = z.object({
+  mahlzeit: zMahlzeit,
+  uhrzeit: z.string().regex(/^([01]\d|2[0-3])[0-5]\d$/),
+  schichten: z.array(zPflichttext),
+});
+
+export const AusgabestelleAngelegt = z.object({
+  ausgabestelleId: zId,
+  name: zPflichttext,
+  ort: zText.optional(),
+  traeger: zText.optional(),
+  mahlzeiten: z.array(zMahlzeit).optional(),
+});
+
+export const AusgabestelleEntfernt = z.object({ ausgabestelleId: zId });
+export const AusgabestelleWiederhergestellt = z.object({ ausgabestelleId: zId });
+
+/** Der Bereich bekommt seine Ausgabestelle als Feld (Form a, Wert in `neu`). */
+export const AbschnittAusgabestelleGesetzt = z.object({ abschnittId: zId });
+
+export const MahlzeitBestellt = z.object({
+  bestellungId: zId,
+  /** Der Kalendertag der Mahlzeit in Ortszeit, `JJJJ-MM-TT`. */
+  datum: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  mahlzeit: zMahlzeit,
+  ausgabestelleId: zId.optional(),
+  portionen: zAnzahl,
+  vegetarisch: zAnzahl,
+  vegan: zAnzahl,
+  bestelltBei: zText.optional(),
+  bestelltVon: zText.optional(),
+});
+
+/** Die gelieferte Menge steht in `neu`. */
+export const MahlzeitGeliefert = z.object({ bestellungId: zId });
+/** `grund` ist Pflicht: Eine Stornierung lässt eine Küche umsonst kochen. */
+export const MahlzeitStorniert = z.object({ bestellungId: zId });
+export const MahlzeitStornoZurueckgenommen = z.object({ bestellungId: zId });

@@ -29,10 +29,13 @@
 
 import { ANGEFORDERT, gesamtstaerke, logistik } from "../kennzahlen.js";
 import { SCHICHTEN } from "../ereignis.js";
-import { MAHLZEITENREGEL_VORBELEGUNG, type Mahlzeit, type Mahlzeitenregel } from "../werte.js";
+import type { Mahlzeitenregel } from "../werte.js";
 import type { EinheitZustand, Zustand } from "../zustand.js";
 
 import { abschnittsbaum, baumZeilen } from "./baum.js";
+import { ausgabetermine, mahlzeitenregelDes, type Ausgabetermin } from "./mahlzeitenregel.js";
+
+export { ausgabetermine, type Ausgabetermin } from "./mahlzeitenregel.js";
 
 /** Portionen und Kostformen — die drei Zahlen jeder Verpflegungszelle. */
 export interface Kost {
@@ -197,67 +200,6 @@ export function bezeichnung(eintrag: Versorgungseinheit): string {
 }
 
 // ---------------------------------------------------------------------------
-// Die Zeitfolge der Mahlzeiten
-// ---------------------------------------------------------------------------
-
-const TAG_MS = 24 * 60 * 60 * 1000;
-
-/** Eine Mahlzeit als Zeitpunkt im Horizont. */
-export interface Ausgabetermin {
-  readonly mahlzeit: Mahlzeit;
-  readonly uhrzeit: string;
-  readonly ms: number;
-  readonly zeitpunkt: string;
-  /** 0 heute, 1 morgen, 2 übermorgen — in Ortszeit. */
-  readonly tag: number;
-  readonly schichten: readonly string[];
-}
-
-function uhrzeitMs(uhrzeit: string): number | undefined {
-  const treffer = /^(\d{2})(\d{2})$/.exec(uhrzeit);
-  if (treffer === null) return undefined;
-  const stunden = Number(treffer[1]);
-  const minuten = Number(treffer[2]);
-  if (stunden > 23 || minuten > 59) return undefined;
-  return (stunden * 60 + minuten) * 60 * 1000;
-}
-
-/**
- * Die Mahlzeiten im Horizont `[jetzt, jetzt + stunden)`, in Zeitfolge.
- *
- * Eine Mahlzeit genau „jetzt" gehört dazu: Sie wird gerade ausgegeben.
- */
-export function ausgabetermine(
-  regel: Mahlzeitenregel,
-  jetzt: number,
-  versatzMinuten: number,
-  stunden: number,
-): readonly Ausgabetermin[] {
-  if (!Number.isFinite(jetzt) || !Number.isFinite(versatzMinuten)) return [];
-  const versatz = versatzMinuten * 60 * 1000;
-  const heute = Math.floor((jetzt + versatz) / TAG_MS) * TAG_MS;
-  const bis = jetzt + stunden * 60 * 60 * 1000;
-  const termine: Ausgabetermin[] = [];
-  for (let tag = 0; tag * 24 <= stunden + 24; tag += 1) {
-    for (const zeile of regel) {
-      const uhr = uhrzeitMs(zeile.uhrzeit);
-      if (uhr === undefined) continue;
-      const ms = heute + tag * TAG_MS + uhr - versatz;
-      if (ms < jetzt || ms >= bis) continue;
-      termine.push({
-        mahlzeit: zeile.mahlzeit,
-        uhrzeit: zeile.uhrzeit,
-        ms,
-        zeitpunkt: new Date(ms).toISOString(),
-        tag,
-        schichten: zeile.schichten,
-      });
-    }
-  }
-  return termine.sort((a, b) => a.ms - b.ms);
-}
-
-// ---------------------------------------------------------------------------
 // Die Vorausschau
 // ---------------------------------------------------------------------------
 
@@ -298,6 +240,7 @@ export interface Versorgungsoptionen {
   readonly versatzMinuten?: number;
   /** Der Horizont, 24 oder 48 Stunden. */
   readonly stunden?: number;
+  /** Ohne Angabe die Regel des Einsatzes, sonst die Vorbelegung. */
   readonly regel?: Mahlzeitenregel;
 }
 
@@ -334,6 +277,7 @@ function rechneMahlzeit(
     mahlzeit: termin.mahlzeit,
     uhrzeit: termin.uhrzeit,
     zeitpunkt: termin.zeitpunkt,
+    datum: termin.datum,
     tag: termin.tag,
     bestand,
     zugang,
@@ -386,10 +330,10 @@ export function versorgungsbewegungen(
 export function vorausschauAus(
   einheiten: readonly Versorgungseinheit[],
   jetzt: number,
-  optionen: Omit<Versorgungsoptionen, "jetzt">,
+  optionen: Omit<Versorgungsoptionen, "jetzt"> & { readonly regel: Mahlzeitenregel },
 ): Vorausschau {
   const stunden = optionen.stunden ?? 24;
-  const termine = ausgabetermine(optionen.regel ?? MAHLZEITENREGEL_VORBELEGUNG, jetzt, optionen.versatzMinuten ?? 0, stunden);
+  const termine = ausgabetermine(optionen.regel, jetzt, optionen.versatzMinuten ?? 0, stunden);
   return {
     stunden,
     mahlzeiten: termine.map((termin) => rechneMahlzeit(einheiten, termin)),
@@ -401,5 +345,5 @@ export function vorausschauAus(
 export function vorausschau(zustand: Zustand, optionen: Versorgungsoptionen): Vorausschau {
   const jetzt = Date.parse(optionen.jetzt);
   if (Number.isNaN(jetzt)) return { stunden: optionen.stunden ?? 24, mahlzeiten: [], bewegungen: [] };
-  return vorausschauAus(versorgungseinheiten(zustand, jetzt), jetzt, optionen);
+  return vorausschauAus(versorgungseinheiten(zustand, jetzt), jetzt, { ...optionen, regel: optionen.regel ?? mahlzeitenregelDes(zustand) });
 }
