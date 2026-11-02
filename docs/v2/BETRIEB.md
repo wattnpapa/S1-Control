@@ -209,8 +209,11 @@ Was der Bediener wissen muss:
 * **Der Arbeitsplatz hängt am Browser.** Cookies löschen oder ein anderer
   Browser heißt: ein neuer Arbeitsplatz mit neuer Kennung. Der alte bleibt
   auf dem Share als das, was er war.
-* **Der Stärke-Monitor** ist dieselbe Adresse mit `#monitor` — auf einem
-  Fernseher mit Browser oder in einem zweiten Reiter.
+* **Der Stärke-Monitor** ist dieselbe Adresse mit `#monitor`. Der Knopf
+  „Stärke-Monitor“ in der Lage öffnet sie in einem neuen Fenster, das sich auf
+  das Anzeigegerät ziehen lässt; auf einem Fernseher mit Browser wird die
+  Adresse direkt eingegeben. Blockiert der Browser das Fenster, Pop-ups für
+  die Seite erlauben.
 * **Was fehlt:** PDF-Ausgaben (HTML und XLSX gehen; das PDF entsteht auf einem
   Desktop-Arbeitsplatz), die Kamera, und das Programmpaket wird nicht über den
   Share eingespielt — ein Container wird durch ein neues Bild aktualisiert.

@@ -52,10 +52,11 @@ export interface SchalenOptionen {
 /**
  * Die Fenstersteuerung eines Browsers: Es gibt keine.
  *
- * Der Staerke-Monitor ist dieselbe Seite mit dem Fragment `#monitor`; ein
- * Browser oeffnet sie selbst in einem zweiten Reiter oder auf einem zweiten
- * Geraet. Die drei Monitorrufe antworten deshalb mit dem Weg dorthin statt
- * mit „nicht eingerichtet".
+ * Der Staerke-Monitor ist dieselbe Seite mit dem Fragment `#monitor`; der
+ * Renderer oeffnet sie im Browser selbst in einem neuen Fenster
+ * (`Monitorwahl.tsx`) und ruft diese Steuerung gar nicht erst. Kommt der Ruf
+ * doch an — ein alter Renderer, ein Skript —, antwortet er mit dem Weg dorthin
+ * statt mit „nicht eingerichtet".
  */
 const BROWSER_FENSTER: Fenstersteuerung = {
   bildschirme: () => [],
