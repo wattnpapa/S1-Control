@@ -141,6 +141,26 @@ describe("Einstellungen und Umgebung", () => {
     expect(nachher.clientId).toBe(vorher.clientId);
   });
 
+  it("merkt die Monitorwahl und verliert sie nicht, wenn ein Fenster ohne sie schreibt (S4.1)", async () => {
+    const werkstatt = await mitShare();
+    const monitor = { ansicht: "verpflegung", wechsel: true } as const;
+    await ruf(werkstatt, {
+      art: "einstellungenSetzen",
+      einstellungen: { sharePfad: werkstatt.sharePfad, anzeigename: "Führungsstelle 1", monitor },
+    });
+    // Das Arbeitsplatzfenster schaltet das Theme mit seiner älteren Kopie um.
+    await ruf(werkstatt, {
+      art: "einstellungenSetzen",
+      einstellungen: { sharePfad: werkstatt.sharePfad, anzeigename: "Führungsstelle 1", theme: "nacht" },
+    });
+    expect(await ruf(werkstatt, { art: "einstellungenLesen" })).toEqual({
+      sharePfad: werkstatt.sharePfad,
+      anzeigename: "Führungsstelle 1",
+      theme: "nacht",
+      monitor,
+    });
+  });
+
   it("gibt die eingestellten Werte zurück", async () => {
     const werkstatt = await mitShare();
     expect(await ruf(werkstatt, { art: "einstellungenLesen" })).toEqual({

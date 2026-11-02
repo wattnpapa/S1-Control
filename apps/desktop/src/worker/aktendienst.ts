@@ -101,6 +101,7 @@ import {
   type Eingangskorbansicht,
   type Fuestansicht,
   type Kostenansicht,
+  type Versorgungsansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
@@ -130,6 +131,7 @@ import { Bearbeitungssperren } from "./bearbeitungssperren.js";
 import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
+import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
@@ -857,6 +859,11 @@ export class Aktendienst {
     return { lageZeiger: this.#lageZeiger, blatt: projektion.kostenblatt(this.#zustand) };
   }
 
+  /** Das Blatt „Versorgung" (S4.1) — gerechnet für die Uhr dieses Workers. */
+  versorgung(ruf: Extract<Ruf, { art: "versorgungAnfordern" }>): Versorgungsansicht {
+    return versorgungsansicht(this.#zustand, ruf, this.#o.zeit(), this.#lageZeiger);
+  }
+
   /**
    * Die Anforderungsliste (M5.3), gefiltert und auf den Ausschnitt beschnitten.
    *
@@ -1574,6 +1581,7 @@ export class Aktendienst {
         (a) => a.zustand === "OFFEN" || a.zustand === "ZUGESAGT",
       ).length,
       lageZeiger: this.#lageZeiger,
+      versorgung: versorgungFuerLagebild(zustand, this.#o.zeit()),
     };
   }
 

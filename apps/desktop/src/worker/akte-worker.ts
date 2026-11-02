@@ -51,6 +51,7 @@ export type Auftrag =
   // bevor der Main sie weiterreicht.
   | { readonly art: "baumAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "baumAnfordern" }> }
   | { readonly art: "kostenAnfordern"; readonly nummer: number }
+  | { readonly art: "versorgungAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "versorgungAnfordern" }> }
   | { readonly art: "anforderungenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "anforderungenAnfordern" }> }
   | { readonly art: "fuestAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "fuestAnfordern" }> }
   | { readonly art: "eingangskorbAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eingangskorbAnfordern" }> }

@@ -255,6 +255,7 @@ export class Vermittlung {
       // faengt eine zu grosse `anzahl` ab, bevor sie den Worker erreicht.
       case "baumAnfordern":
       case "kostenAnfordern":
+      case "versorgungAnfordern":
       case "anforderungenAnfordern":
       case "fuestAnfordern":
       case "eingangskorbAnfordern":
@@ -509,6 +510,7 @@ export class Vermittlung {
       anzeigename: platz.anzeigename,
       ...(platz.betriebsart === undefined ? {} : { betriebsart: platz.betriebsart }),
       ...(platz.theme === undefined ? {} : { theme: platz.theme }),
+      ...(platz.monitor === undefined ? {} : { monitor: platz.monitor }),
     };
   }
 
@@ -612,11 +614,19 @@ export class Vermittlung {
     // Die `clientId` wird **nicht** aus dem Renderer gesetzt. Sie ist die
     // Kennung dieses Profils (§4.1); sie von aussen aendern zu lassen hiesse,
     // die Fremdschreiber-Erkennung aus §4.5 aushebelbar zu machen.
-    const gemerkt: Arbeitsplatz = { ...neu, clientId: platz.clientId };
+    // Die Monitorwahl (S4.1) setzt nur das Monitorfenster. Ein Arbeitsplatz-
+    // fenster, das mit seiner älteren Kopie der Einstellungen das Theme
+    // umschaltet, soll sie nicht stillschweigend löschen.
+    const monitor = neu.monitor ?? platz.monitor;
+    const gemerkt: Arbeitsplatz = {
+      ...neu,
+      ...(monitor === undefined ? {} : { monitor }),
+      clientId: platz.clientId,
+    };
     await schreibeArbeitsplatz(this.#o.einstellungsdatei, gemerkt);
     this.#arbeitsplatz = gemerkt;
     this.#o.protokolliere("info", `Einstellungen geändert: Share ${neu.sharePfad}`);
-    return neu;
+    return monitor === undefined ? neu : { ...neu, monitor };
   }
 
   /**

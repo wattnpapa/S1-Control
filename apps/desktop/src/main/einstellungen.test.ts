@@ -35,10 +35,12 @@ describe("liesArbeitsplatz", () => {
       anzeigename: "Führungsstelle 1",
       betriebsart: "meldekopf",
       theme: "nacht",
+      monitor: { ansicht: "tafel", wechsel: true },
       clientId: "aabbccddeeff00112233445566778899",
     });
 
     const gelesen = await liesArbeitsplatz(ziel);
+    expect(gelesen.monitor).toEqual({ ansicht: "tafel", wechsel: true });
     expect(gelesen.betriebsart).toBe("meldekopf");
     expect(gelesen.theme).toBe("nacht");
     expect(gelesen.clientId).toBe("aabbccddeeff00112233445566778899");

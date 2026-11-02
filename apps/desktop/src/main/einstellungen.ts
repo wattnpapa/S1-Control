@@ -65,6 +65,10 @@ export async function liesArbeitsplatz(datei: string, vorbelegterShare = ""): Pr
     ...(geprueft.success && geprueft.data.theme !== undefined
       ? { theme: geprueft.data.theme }
       : {}),
+    // Die Monitorwahl (S4.1) aus demselben Grund: Sie ist Geräteeinstellung.
+    ...(geprueft.success && geprueft.data.monitor !== undefined
+      ? { monitor: geprueft.data.monitor }
+      : {}),
     clientId,
   };
   if (!geprueft.success || wert["clientId"] !== clientId) {

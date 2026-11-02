@@ -31,12 +31,14 @@ import type {
   Baumknoten,
   Kostenblatt,
   Fassungsvergleich,
+  Logistikblatt,
   Meldungsausschnitt,
   Schichtplanblatt,
   Tabellenausschnitt,
   Tagebuchzeile,
   Teilbereichsblock,
   Untertabelle,
+  Versorgungsblatt,
 } from "@s1/domaene";
 
 export { BRUECKE, KANAL_MITTEILUNG, KANAL_RUF } from "./kanaele.js";
@@ -65,6 +67,11 @@ export const zAkteId = z.string().regex(/^akte-\d+$/);
 export const THEMEN = ["standard", "dunkel", "feld", "nacht"] as const;
 export const zTheme = z.enum(THEMEN);
 export type Theme = z.infer<typeof zTheme>;
+
+/** Die fünf Ansichten des Monitors (KONZEPT-S4.md §4), in der Reihenfolge der Tasten 1 bis 5. */
+export const MONITOR_ANSICHTEN = ["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel"] as const;
+export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
+export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 
 export const zEinstellungen = z.object({
   /** Wurzel des Shares, unterhalb derer `einsaetze/` liegt. */
@@ -97,6 +104,14 @@ export const zEinstellungen = z.object({
    * Ohne Angabe `standard`.
    */
   theme: zTheme.optional(),
+  /**
+   * Additiv (S4.1): die Ansicht des Monitors und ob er wechselt.
+   *
+   * Fensterzustand dieses Geräts wie `theme` und nicht in der Akte: Der
+   * Monitor im Zelt zeigt Verpflegung, der im Fahrzeug Stärke, und beide
+   * hängen an derselben Einsatzdatei. Ohne Angabe Stärke, ohne Wechsel.
+   */
+  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean() }).optional(),
 });
 export type Einstellungen = z.infer<typeof zEinstellungen>;
 
@@ -230,6 +245,34 @@ export const zOffeneAbloesung = z.object({
 });
 export type OffeneAbloesungInfo = z.infer<typeof zOffeneAbloesung>;
 
+const zZahl = z.number().int();
+const zKost = { portionen: zZahl, vegetarisch: zZahl, vegan: zZahl };
+
+/** Die Zahlen der Versorgung im Lagebild — gerechnet in Ring 2 (`projektion.versorgungszahlen`). */
+export const zVersorgungszahlen = z.object({
+  naechste: z.object({ mahlzeit: z.string(), zeitpunkt: z.string(), ...zKost }).optional(),
+  mahlzeiten: z
+    .array(
+      z.object({
+        mahlzeit: z.string(),
+        zeitpunkt: z.string(),
+        ...zKost,
+        bestand: zZahl,
+        zugang: zZahl,
+        abgang: zZahl,
+        bestellt: zZahl.optional(),
+      }),
+    )
+    .readonly(),
+  anmarsch: zZahl,
+  betten: z.object({ m: zZahl, w: zZahl, d: zZahl }),
+  belegt: zZahl.optional(),
+  frei: zZahl.optional(),
+  ohneZuweisung: zZahl.optional(),
+  ohneZuweisungEinheiten: zZahl.optional(),
+});
+export type Versorgungszahlen = z.infer<typeof zVersorgungszahlen>;
+
 export const zLagebild = z.object({
   einsatzId: z.string(),
   einsatzName: z.string(),
@@ -302,6 +345,13 @@ export const zLagebild = z.object({
    * ist ein oberster Schluessel wie jeder andere.
    */
   lageZeiger: z.number().int().min(0),
+  /**
+   * Additiv (S4.1): die Zahlen der Versorgung für Monitor und KPI-Band
+   * (KONZEPT-S4.md §6) — nächste Mahlzeit, je Mahlzeit der nächsten 24 h
+   * sieben Zahlen, Anmarsch und Betten. Keine Tabelle: Mahlzeitenplan,
+   * Bedarfsliste und Tafel holt das Blatt mit `versorgungAnfordern`.
+   */
+  versorgung: zVersorgungszahlen.optional(),
 });
 export type Lagebild = z.infer<typeof zLagebild>;
 
@@ -412,6 +462,14 @@ export const zRuf = z.discriminatedUnion("art", [
   // und eine Abrechnung mit der ersten Seite waere keine. Bei 150 Einheiten
   // sind es 150 Zeilen mit je acht Zahlen — das traegt ein Ruf.
   z.object({ art: z.literal("kostenAnfordern"), akteId: zAkteId }),
+  // Das Blatt „Versorgung" (S4.1): Vorausschau, Mahlzeitenplan, Bedarf,
+  // Sofortbedarf und das Logistikblatt in einem Ruf. Die Liste ist eine je
+  // Bereich bzw. je Einheit mit Bedarf — kein Ausschnitt, wie die Kosten.
+  z.object({
+    art: z.literal("versorgungAnfordern"),
+    akteId: zAkteId,
+    stunden: z.union([z.literal(24), z.literal(48)]).optional(),
+  }),
   // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
@@ -682,6 +740,7 @@ export interface Antworten {
   undoStapel: readonly z.infer<typeof zStapelEintrag>[];
   baumAnfordern: Baumansicht;
   kostenAnfordern: Kostenansicht;
+  versorgungAnfordern: Versorgungsansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
@@ -855,6 +914,15 @@ export interface Anforderungsansicht extends Ansichtsstand, Anforderungsausschni
 /** Die Kostenuebersicht (M5.2) — Parameter, Zeilen, Summe. */
 export interface Kostenansicht extends Ansichtsstand {
   readonly blatt: Kostenblatt;
+}
+
+/** Das Blatt „Versorgung" (S4.1) — aus derselben Projektion wie `Lagebild.versorgung`. */
+export interface Versorgungsansicht extends Ansichtsstand {
+  /** Der Zeitpunkt, für den gerechnet wurde (ISO). */
+  readonly jetzt: string;
+  readonly blatt: Versorgungsblatt;
+  /** Das Logistikblatt unverändert (Bereiche · Schichten, Tafel 4c). */
+  readonly logistik: Logistikblatt;
 }
 
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {
