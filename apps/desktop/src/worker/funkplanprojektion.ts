@@ -23,11 +23,18 @@
  * Und die Auswahl der Tabellenzellen mit `werteAus` (Gruppe FUNK der
  * Einheitentabelle): `projektion.auswahlwerte`, bei Rufgruppen mit der
  * Betriebsart für die Marke „DMO“.
+ *
+ * F4: die fünf Zahlen für `Lagebild.funk`. Das Lagebild wird in jedem Takt
+ * gebaut, also einmal je Sekunde; „kein Kontakt über der Schwelle“ hängt an
+ * der Uhr, aber eine Minute Auflösung genügt dafür. Gemerkt wird deshalb wie
+ * bei der Versorgung das letzte Ergebnis je Zustand und Minute.
  */
 
 import { projektion, type EingehendesEreignis, type Funkplan, type Funkprobenzeile, type Funkteilnehmer, type Zustand } from "@s1/domaene";
 
-import type { Funkplanansicht, Funkplanbereich, Ruf, Zustandswahl } from "../kontrakt/index.js";
+import type { Funklage, Funkplanansicht, Funkplanbereich, Ruf, Zustandswahl } from "../kontrakt/index.js";
+
+const MINUTE_MS = 60_000;
 
 function passt(nadel: string, ...heu: readonly (string | undefined)[]): boolean {
   return heu.some((text) => text !== undefined && text.toLocaleLowerCase("de-DE").includes(nadel));
@@ -108,4 +115,22 @@ export function tabellenauswahl(zustand: Zustand): { readonly [spalte: string]: 
     });
   }
   return ergebnis;
+}
+
+let gemerkt: { zustand: Zustand; minute: number; zahlen: Funklage } | undefined;
+
+/** Die Zahlen fürs Lagebild; gleicher Zustand in derselben Minute rechnet nicht neu. */
+export function funkFuerLagebild(zustand: Zustand, jetztMs: number): Funklage {
+  const minute = Math.floor(jetztMs / MINUTE_MS);
+  if (gemerkt !== undefined && gemerkt.zustand === zustand && gemerkt.minute === minute) return gemerkt.zahlen;
+  const z = projektion.funkplan(zustand, new Date(minute * MINUTE_MS).toISOString()).zahlen;
+  const zahlen: Funklage = {
+    rufgruppen: z.rufgruppen,
+    zugeordnet: z.zugeordnet,
+    ohneRufgruppe: z.ohneRufgruppe,
+    ohneKontakt: z.ohneKontakt,
+    ...(z.letzteFunkprobe === undefined ? {} : { letzteFunkprobe: z.letzteFunkprobe }),
+  };
+  gemerkt = { zustand, minute, zahlen };
+  return zahlen;
 }

@@ -118,7 +118,7 @@ import {
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
 import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
-import { funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
+import { funkFuerLagebild, funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -1608,6 +1608,7 @@ export class Aktendienst {
       ).length,
       lageZeiger: this.#lageZeiger,
       versorgung: versorgungFuerLagebild(zustand, this.#o.zeit()),
+      funk: funkFuerLagebild(zustand, this.#o.zeit()),
     };
   }
 

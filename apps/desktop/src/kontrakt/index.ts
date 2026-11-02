@@ -277,6 +277,21 @@ export const zVersorgungszahlen = z.object({
 });
 export type Versorgungszahlen = z.infer<typeof zVersorgungszahlen>;
 
+/**
+ * Die Zahlen des Funkplans im Lagebild (KONZEPT-FUNKPLAN.md §4, F4) —
+ * `projektion.funkplan(…).zahlen`, gegen die Uhr des Workers gerechnet:
+ * geltende Rufgruppen, zugeordnete Einheiten, Einheiten ohne Rufgruppe,
+ * Einheiten ohne Kontakt über der Schwelle und die jüngste Funkprobe (ISO).
+ */
+export const zFunklage = z.object({
+  rufgruppen: zZahl,
+  zugeordnet: zZahl,
+  ohneRufgruppe: zZahl,
+  ohneKontakt: zZahl,
+  letzteFunkprobe: z.string().optional(),
+});
+export type Funklage = z.infer<typeof zFunklage>;
+
 export const zLagebild = z.object({
   einsatzId: z.string(),
   einsatzName: z.string(),
@@ -356,6 +371,12 @@ export const zLagebild = z.object({
    * Bedarfsliste und Tafel holt das Blatt mit `versorgungAnfordern`.
    */
   versorgung: zVersorgungszahlen.optional(),
+  /**
+   * Additiv (Funkplan F4): die fünf Zahlen des Funkplans für Monitor und
+   * Band. Die Tafel mit Rufgruppen und Teilnehmern holt der Monitor mit
+   * `funkplanAnfordern`, wie die Versorgungstafel mit `versorgungAnfordern`.
+   */
+  funk: zFunklage.optional(),
 });
 export type Lagebild = z.infer<typeof zLagebild>;
 
