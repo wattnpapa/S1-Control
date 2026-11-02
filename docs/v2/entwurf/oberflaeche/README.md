@@ -159,3 +159,15 @@ je Rufgruppe, je Bereich und Funkproben, Maske, Einheitentabelle mit der
 Gruppe „Funk", Monitor 960×540 Standard und Nacht) liegen unter
 `../funkplan/stand/`; den Stand und die Abweichungen nennt
 `../funkplan/UMSETZUNGSBERICHT.md`.
+
+Runde 6 liegt in einem eigenen Ordner: `../entlastung/KONZEPT-ENTLASTUNG.md`
+und `../entlastung/mockups-entlastung.html` entwerfen die Entlastung der
+Oberfläche, nachdem mehrere Helfer sie als überladen empfunden haben
+(Stand 2026-11-02, **nicht umgesetzt**). Die Gestaltung bleibt Option 2a;
+geändert wird, was wann sichtbar ist: Kopfband mit zwei Zeilen und
+Fenstermenü, Reiter nach Arbeitsplatzprofil, ein Hauptknopf je Karte und
+„⋯" für den Rest, Auswahlleiste und Kontextmenü statt dauerhaft sichtbarer
+Zeilenwerkzeuge, jede Zahl einmal, Einstiegszeile je Blatt statt der
+Hilfemarken. Die Aufnahmen unter `stand/` zeigen weiterhin den Stand vom
+2026-09-10; der Ist-Zustand für Runde 6 ist
+`../funkplan/stand/einheitentabelle-funk.png` vom 2026-11-02.
