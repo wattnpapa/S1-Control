@@ -378,8 +378,9 @@ dem Server. Voraussetzung ist der einmalige manuelle Lauf von oben, denn die
 1. Schlüsselpaar nur für diesen Zweck erzeugen, auf dem eigenen Rechner:
    `ssh-keygen -t ed25519 -N "" -C "github-actions s1-control" -f s1-deploy`.
 2. Den öffentlichen Schlüssel auf dem Server in `/root/.ssh/authorized_keys`
-   eintragen, gebunden an ein erzwungenes Kommando. So kann der Schlüssel
-   nichts anderes als das Deploy-Skript starten:
+   eintragen, am besten gebunden an ein erzwungenes Kommando. So kann der
+   Schlüssel nichts anderes als das Deploy-Skript starten; der Workflow
+   funktioniert aber auch ohne `command=`, er schickt den Aufruf selbst mit:
 
    ```
    command="S1_ZWEIG=main bash /opt/s1-control/deploy/plesk/deploy.sh",no-port-forwarding,no-agent-forwarding,no-X11-forwarding,no-pty ssh-ed25519 AAAA… github-actions s1-control
