@@ -32,9 +32,10 @@ async function geladen(): Promise<void> {
 }
 
 describe("Das Blatt „Versorgung“", () => {
-  it("steht als Reiter zwischen Führungsstelle und Kosten", () => {
+  it("steht als Reiter zwischen Funkplan und Kosten", () => {
     const schluessel = BLAETTER.map((b) => b.schluessel);
-    expect(schluessel.indexOf("versorgung")).toBe(schluessel.indexOf("fuest") + 1);
+    // Seit dem Funkplan (F1) steht dessen Reiter zwischen Führungsstelle und Versorgung.
+    expect(schluessel.indexOf("versorgung")).toBe(schluessel.indexOf("funkplan") + 1);
     expect(schluessel.indexOf("kosten")).toBe(schluessel.indexOf("versorgung") + 1);
   });
 

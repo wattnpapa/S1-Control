@@ -220,6 +220,16 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 **Kürzel:** Strg+N · Strg+E
 
+### Funkplan
+
+Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname und Erreichbarkeit, je Rufgruppe oder je Bereich. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen.
+
+**Zuerst:** Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen, dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Strg+E bearbeitet die links gewählte Rufgruppe.
+
+**Gut zu wissen:** Die Rufgruppe gilt für die ganze Einheit, nicht je Fahrzeug, und sie bleibt beim Verschieben in einen anderen Bereich stehen; „Bereich ≠ Gruppe“ weist nur darauf hin. Eine aufgelöste Rufgruppe setzt ihre Einheiten nicht um: Sie stehen danach als „ohne Rufgruppe“, bis jemand sie neu zuordnet. Der Funkrufname kommt aus dem ersten Fahrzeug der Einheit mit Funkrufnamen.
+
+**Kürzel:** Strg+N · Strg+F
+
 ### Versorgung
 
 Die Ansicht des S4: Mahlzeitenplan je Bereich mit Ausgabestelle und Bestellung der nächsten Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, Unterkünfte mit Belegung und Zuweisung, das Logistikblatt am Bildschirm und die Abarbeitung des Sofortbedarfs aus den Bögen.

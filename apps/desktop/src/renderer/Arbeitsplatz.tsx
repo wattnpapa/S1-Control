@@ -16,6 +16,7 @@ import { Auswahl } from "./Einsatzauswahl.js";
 import { Eingangskorb } from "./Eingangskorb.js";
 import { Fuehrungsorganisation } from "./Fuehrungsorganisation.js";
 import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
+import { Funkplan } from "./Funkplan.js";
 import { Hilfe } from "./Hilfe.js";
 import { Kopfband } from "./Kopfband.js";
 import { Kosten } from "./Kosten.js";
@@ -191,6 +192,7 @@ export function Arbeitsplatz(): React.JSX.Element {
             {blatt === "eingang" && <Eingangskorb />}
             {blatt === "anforderungen" && <Anforderungen />}
             {blatt === "fuest" && <Fuehrungsstelle />}
+            {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}
             {blatt === "fueorg" && <Fuehrungsorganisation />}

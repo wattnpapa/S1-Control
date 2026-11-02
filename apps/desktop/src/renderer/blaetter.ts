@@ -19,6 +19,7 @@ export interface Reiter {
     | "eingang"
     | "anforderungen"
     | "fuest"
+    | "funkplan"
     | "versorgung"
     | "kosten"
     | "fueorg"
@@ -35,6 +36,10 @@ export const BLAETTER: readonly Reiter[] = [
   { schluessel: "eingang", titel: "Eingangskorb" },
   { schluessel: "anforderungen", titel: "Anforderungen" },
   { schluessel: "fuest", titel: "Führungsstelle" },
+  // Funkplan F1: zwischen Führungsstelle und Versorgung, für alle sichtbar
+  // (KONZEPT-FUNKPLAN.md Entscheidung 1) — die Vermeldezentrale arbeitet den
+  // ganzen Einsatz in diesem Blatt.
+  { schluessel: "funkplan", titel: "Funkplan" },
   // S4.1: zwischen Führungsstelle und Kosten, für alle sichtbar (Entscheidung 1).
   { schluessel: "versorgung", titel: "Versorgung" },
   { schluessel: "kosten", titel: "Kosten" },

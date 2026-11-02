@@ -44,6 +44,7 @@ export type Ansichtskennung =
   | "eingangskorb"
   | "anforderungen"
   | "fuehrungsstelle"
+  | "funkplan"
   | "versorgung"
   | "kosten"
   | "ausgaben"
@@ -135,6 +136,17 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     ueberraschung:
       "Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt an der Kombination aus Posten und Datum.",
     kuerzel: ["anlegen", "entfernen"],
+  },
+  {
+    kennung: "funkplan",
+    titel: "Funkplan",
+    wozu:
+      "Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname und Erreichbarkeit, je Rufgruppe oder je Bereich. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen.",
+    zuerst:
+      "Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen, dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Strg+E bearbeitet die links gewählte Rufgruppe.",
+    ueberraschung:
+      "Die Rufgruppe gilt für die ganze Einheit, nicht je Fahrzeug, und sie bleibt beim Verschieben in einen anderen Bereich stehen; „Bereich ≠ Gruppe“ weist nur darauf hin. Eine aufgelöste Rufgruppe setzt ihre Einheiten nicht um: Sie stehen danach als „ohne Rufgruppe“, bis jemand sie neu zuordnet. Der Funkrufname kommt aus dem ersten Fahrzeug der Einheit mit Funkrufnamen.",
+    kuerzel: ["anlegen", "suchen"],
   },
   {
     kennung: "versorgung",

@@ -1593,7 +1593,8 @@
 
       /* Wie die Lage keine Karte, sondern die Fläche, auf der Band,
          Werkzeugzeile und Karten liegen. Alle Farben kommen aus den Marken. */
-      main > section.versorgung {
+      main > section.versorgung,
+      main > section.funkplan {
         background: transparent;
         border: 0;
         padding: 0;
@@ -1601,7 +1602,8 @@
         flex-direction: column;
         gap: 12px;
       }
-      .versorgung h2 {
+      .versorgung h2,
+      .funkplan h2 {
         margin: 0;
       }
       .kpiband {
@@ -1670,7 +1672,8 @@
       .versorgungskarte h3 {
         margin: 0 0 8px;
       }
-      .versorgung .leise {
+      .versorgung .leise,
+      .funkplan .leise {
         color: var(--text-leise);
         font-weight: 400;
       }
@@ -1976,13 +1979,142 @@
         color: var(--text-leise);
         font-size: 0.92em;
       }
+      /* Funkplan (Option 5b): Rufgruppen links, Zuordnung rechts. Alle Farben
+         aus den Marken, damit Dunkel, Feld und Nacht mitgehen. */
+      .kpiband.funkband {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .funkflaeche {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        gap: 14px;
+        align-items: start;
+      }
+      .funkkarte h3 {
+        margin: 0 0 8px;
+      }
+      .funksuche {
+        display: inline-block;
+        width: 220px;
+        margin: 0;
+      }
+      .funktabelle {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95em;
+      }
+      .funktabelle th,
+      .funktabelle td {
+        padding: 4px 8px;
+        border-bottom: var(--rahmenbreite) solid var(--rahmen-weich);
+        text-align: left;
+        font-weight: 400;
+        vertical-align: top;
+      }
+      .funktabelle thead th {
+        background: var(--kopf-bg);
+        color: var(--text-leise);
+        font: 600 0.78em/1.3 var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .funktabelle .zahl {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .funktabelle .mono,
+      .funkkastentitel {
+        font-family: var(--mono);
+      }
+      .rufgruppenkarte .funktabelle tbody tr {
+        cursor: pointer;
+      }
+      .funktabelle tr.gewaehlt th,
+      .funktabelle tr.gewaehlt td {
+        background: var(--zeile-gewaehlt);
+      }
+      .funktabelle tr.blass th,
+      .funktabelle tr.blass td {
+        opacity: 0.5;
+      }
+      .funktabelle tr.gruppenkopf th {
+        background: var(--zeile-alt);
+        border-top: var(--rahmenbreite) solid var(--rahmen);
+        font-weight: 700;
+      }
+      .funktabelle tr.gruppenkopf small {
+        margin-left: 8px;
+        font-weight: 400;
+        color: var(--text-leise);
+      }
+      .funktabelle tr.erwartet th,
+      .funktabelle tr.erwartet td {
+        color: var(--text-leise);
+      }
+      .funktabelle td.bearbeitbar {
+        cursor: text;
+        white-space: nowrap;
+      }
+      .funktabelle td.bearbeitbar:focus-visible {
+        outline: 2px solid var(--knopf-rahmen);
+        outline-offset: -2px;
+      }
+      .funktabelle td.offen select {
+        width: 100%;
+        margin: 0;
+      }
+      .marke-zustand.betriebsart {
+        font-family: var(--mono);
+      }
+      /* Analog: gestrichelt — weder Netz noch Direktbetrieb, sondern Kanal. */
+      .marke-zustand.analog {
+        border-style: dashed;
+        border-color: var(--text-leise);
+        background: transparent;
+      }
+      .durchgestrichen {
+        text-decoration: line-through;
+        color: var(--text-leise);
+      }
+      .funkkasten {
+        margin-top: 10px;
+        padding: 9px 12px;
+        border: var(--rahmenbreite) solid var(--rahmen-weich);
+        background: var(--zeile-alt);
+      }
+      .funkkastentitel {
+        margin: 0 0 8px;
+        color: var(--text-leise);
+        font-size: 0.82em;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+      .funkkasten dl {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 3px 12px;
+        margin: 0;
+      }
+      .funkkasten dl > div {
+        display: contents;
+      }
+      .funkkasten dt {
+        color: var(--text-leise);
+      }
+      .funkkasten dd {
+        margin: 0;
+      }
       @media (max-width: 900px) {
         .kpiband {
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
+        .kpiband.funkband {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
         .vorausschauflaeche,
         .unterbringungsflaeche,
-        .verpflegungsflaeche {
+        .verpflegungsflaeche,
+        .funkflaeche {
           grid-template-columns: minmax(0, 1fr);
         }
       }
