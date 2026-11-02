@@ -9,6 +9,12 @@
  * Bereich gruppiert, die Sicht des S1, der fragt, ob sein Abschnitt
  * vollständig erreichbar ist.
  *
+ * F2: Unter jeder Gruppe stehen nach den Teilnehmern die Mithörer — Einheiten,
+ * die sie als weitere Gruppe tragen —, gekennzeichnet und nicht gezählt; in
+ * der Sicht „Je Bereich" stehen die weiteren Gruppen als „auch: …" hinter der
+ * Hauptgruppe. Der Funkhinweis ist eine Textzelle wie in der
+ * Einheitentabelle; „Bereich ≠ Gruppe" bleibt ein eigener Hinweis.
+ *
  * Der Name der Einheit öffnet die Maske „Funk und Erreichbarkeit"
  * (Doppelklick, Enter oder ✎), wie die Lage sie über „Funk …" öffnet.
  *
@@ -19,13 +25,14 @@
 
 import { statusTitel, statusTon, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
+import { Funkhinweiszelle } from "./Funkhinweiszelle.js";
 import { Betriebsartmarke, OhneRufgruppe } from "./Funkmarken.js";
 import { Rufgruppenzelle } from "./Rufgruppenzelle.js";
 import { einheitenText } from "./versorgungstext.js";
 
 export type Funksicht = "rufgruppe" | "bereich";
 
-const SPALTEN = ["Einheit", "Bereich", "Status", "Rufgruppe", "Funkrufname", "Erreichbarkeit", "Hinweis"] as const;
+const SPALTEN = ["Einheit", "Bereich", "Status", "Rufgruppe", "Funkrufname", "Erreichbarkeit", "Funkhinweis", "Hinweis"] as const;
 
 export interface FunkzuordnungEigenschaften {
   readonly plan: Funkplan;
@@ -37,7 +44,7 @@ export interface FunkzuordnungEigenschaften {
 }
 
 /** Der Name der Einheit: Doppelklick, Enter oder ✎ öffnen die Maske „Funk und Erreichbarkeit". */
-function Einheitenname({ t, aufEinheit }: { readonly t: Funkteilnehmer; readonly aufEinheit: (t: Funkteilnehmer) => void }): React.JSX.Element {
+function Einheitenname({ t, aufEinheit, mithoerer }: { readonly t: Funkteilnehmer; readonly aufEinheit: (t: Funkteilnehmer) => void; readonly mithoerer: boolean }): React.JSX.Element {
   return (
     <th
       scope="row"
@@ -49,6 +56,7 @@ function Einheitenname({ t, aufEinheit }: { readonly t: Funkteilnehmer; readonly
       }}
     >
       {t.einheit}{" "}
+      {mithoerer && <span className="marke-zustand">hört mit</span>}{" "}
       <button type="button" className="symbolknopf" aria-label={`Funk und Erreichbarkeit von ${t.einheit} bearbeiten`} title="Einheit bearbeiten: Funk und Erreichbarkeit" onClick={() => aufEinheit(t)}>
         ✎
       </button>
@@ -56,18 +64,27 @@ function Einheitenname({ t, aufEinheit }: { readonly t: Funkteilnehmer; readonly
   );
 }
 
-function Zeile(props: { readonly t: Funkteilnehmer } & Omit<FunkzuordnungEigenschaften, "sicht">): React.JSX.Element {
+interface ZeilenEigenschaften extends Omit<FunkzuordnungEigenschaften, "sicht"> {
+  readonly t: Funkteilnehmer;
+  /** Unter einer weiteren Gruppe: hört mit, wird dort nicht gerufen. */
+  readonly mithoerer?: boolean;
+  readonly mitWeiteren?: boolean;
+}
+
+function Zeile(props: ZeilenEigenschaften): React.JSX.Element {
   const { t } = props;
+  const klassen = [t.erwartet ? "erwartet" : "", props.mithoerer === true ? "mithoerer" : ""].filter((k) => k !== "").join(" ");
   return (
-    <tr className={t.erwartet ? "erwartet" : undefined}>
-      <Einheitenname t={t} aufEinheit={props.aufEinheit} />
+    <tr className={klassen === "" ? undefined : klassen}>
+      <Einheitenname t={t} aufEinheit={props.aufEinheit} mithoerer={props.mithoerer === true} />
       <td className="leise">{t.bereich}</td>
       <td>
         <span className={`marke-zustand ${statusTon(t.status)}`}>{t.status === "" ? "—" : statusTitel(t.status)}</span>
       </td>
-      <Rufgruppenzelle teilnehmer={t} rufgruppen={props.plan.rufgruppen} nurLesen={props.nurLesen} aufNeu={props.aufNeu} />
+      <Rufgruppenzelle teilnehmer={t} rufgruppen={props.plan.rufgruppen} nurLesen={props.nurLesen} aufNeu={props.aufNeu} mitWeiteren={props.mitWeiteren === true} />
       <td className="mono">{t.funkrufname === "" ? "—" : t.funkrufname}</td>
       <td className="leise">{t.erreichbarkeit === "" ? "—" : t.erreichbarkeit}</td>
+      <Funkhinweiszelle teilnehmer={t} nurLesen={props.nurLesen} />
       <td>{t.hinweis === "" ? <span className="leise">—</span> : <span className="marke-zustand warn">{t.hinweis}</span>}</td>
     </tr>
   );
@@ -84,7 +101,8 @@ function Kopf({ children }: { readonly children: React.ReactNode }): React.JSX.E
 }
 
 function gruppenzusatz(r: Rufgruppenkarte): string {
-  const teile = [r.zweck, `${String(r.teilnehmer.length)} Teilnehmer`, r.gateway === undefined ? undefined : `Gateway ${r.gateway}`, r.hoert === undefined ? undefined : `hört ${r.hoert}`];
+  const mit = r.mithoerer.length === 0 ? undefined : `${String(r.mithoerer.length)} hören mit`;
+  const teile = [r.zweck, `${String(r.teilnehmer.length)} Teilnehmer`, mit, r.gateway === undefined ? undefined : `Gateway ${r.gateway}`, r.hoert === undefined ? undefined : `hört ${r.hoert}`];
   return teile.filter((t): t is string => t !== undefined).join(" · ");
 }
 
@@ -101,6 +119,9 @@ function JeRufgruppe(props: Omit<FunkzuordnungEigenschaften, "sicht">): React.JS
             </Kopf>
             {r.teilnehmer.map((t) => (
               <Zeile key={t.einheitId} t={t} {...props} />
+            ))}
+            {r.mithoerer.map((t) => (
+              <Zeile key={`mit-${t.einheitId}`} t={t} {...props} mithoerer />
             ))}
           </tbody>
         ))}
@@ -127,7 +148,7 @@ function JeBereich(props: Omit<FunkzuordnungEigenschaften, "sicht">): React.JSX.
               {b.name} <small>{einheitenText(b.teilnehmer.length)}{ohne > 0 ? ` · ${String(ohne)} ohne Rufgruppe` : " · alle erreichbar"}</small>
             </Kopf>
             {b.teilnehmer.map((t) => (
-              <Zeile key={t.einheitId} t={t} {...props} />
+              <Zeile key={t.einheitId} t={t} {...props} mitWeiteren />
             ))}
           </tbody>
         );
@@ -162,8 +183,9 @@ export function Funkzuordnung({ sicht, ...props }: FunkzuordnungEigenschaften): 
         </table>
       </div>
       <p className="hinweistext">
-        Zuordnung = Hauptrufgruppe der Einheit: die Gruppe, über die die Führungsstelle sie ruft. Doppelklick auf die Rufgruppe bearbeitet die Zelle · Enter
-        schreibt · Esc verwirft. Funkrufname und Erreichbarkeit kommen aus Fahrzeug und Führungskraft und werden hier nur gelesen.
+        Zuordnung = Hauptrufgruppe der Einheit: die Gruppe, über die die Führungsstelle sie ruft; „hört mit“ steht, wer die Gruppe als weitere trägt.
+        Doppelklick auf Rufgruppe oder Funkhinweis bearbeitet die Zelle · Enter schreibt · Esc verwirft. Funkrufname und Erreichbarkeit kommen aus
+        Fahrzeug und Führungskraft; überschrieben werden sie in der Maske der Einheit (Doppelklick auf den Namen).
       </p>
     </section>
   );

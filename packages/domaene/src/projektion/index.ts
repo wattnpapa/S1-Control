@@ -226,6 +226,7 @@ export {
 // Funkplan F1 (KONZEPT-FUNKPLAN.md §3, §5, §7)
 export {
   HINWEIS_BEREICH_ABWEICHEND,
+  auchRufgruppen,
   funkplan,
   hinweisspalte,
   type Funkbereich,

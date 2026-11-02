@@ -4,7 +4,7 @@
  *
  * Oben das KPI-Band mit den Zahlen des Plans, darunter die Werkzeugzeile:
  * Umschalter „Je Rufgruppe" / „Je Bereich", „Rufgruppe anlegen" (Strg+N),
- * die Suche über Einheit, Funkrufname und Rufgruppe (Strg+F) und der Funkplan
+ * die Suche über Einheit, Funkrufname, Rufgruppen und Funkhinweis (Strg+F) und der Funkplan
  * als Ausgabe. Links die Rufgruppen mit dem Kasten der gewählten, rechts die
  * Zuordnung. Jede Karte ist eine eigene Datei; diese hier holt die Ansicht,
  * hält die Wahl und verteilt.
@@ -95,7 +95,7 @@ function Werkzeugzeile(props: WerkzeugzeileEigenschaften): React.JSX.Element {
         id="funkplansuche"
         type="search"
         className="funksuche"
-        aria-label="Suche nach Einheit, Funkrufname oder Rufgruppe"
+        aria-label="Suche nach Einheit, Funkrufname, Rufgruppe oder Funkhinweis"
         placeholder={`Suchen … ${kuerzelText(kuerzel("suchen") as never)}`}
         value={props.suche}
         onChange={(e) => props.aufSuche(e.target.value)}

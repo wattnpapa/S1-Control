@@ -8,7 +8,8 @@
  * Gruppe danach an dieser Einheit. Geschrieben wird mit `rufgruppenwahl`,
  * also über denselben Bedienschritt wie die Einheitentabelle, mit dem Wert,
  * den die Zelle beim Öffnen sah. Solange sie offen ist, sperrt sie die
- * Einheit für die anderen Arbeitsplätze.
+ * Einheit für die anderen Arbeitsplätze. In der Sicht „Je Bereich" stehen die
+ * weiteren Gruppen der Einheit als „auch: …" dahinter (F2).
  */
 
 import { useState } from "react";
@@ -30,6 +31,8 @@ export interface RufgruppenzelleEigenschaften {
   readonly rufgruppen: readonly Rufgruppenkarte[];
   readonly nurLesen: boolean;
   readonly aufNeu: (teilnehmer: Funkteilnehmer) => void;
+  /** Sicht „Je Bereich": die weiteren Gruppen als „auch: …" hinter der Hauptgruppe. */
+  readonly mitWeiteren?: boolean;
 }
 
 function Anzeige({ t, karte }: { readonly t: Funkteilnehmer; readonly karte: Rufgruppenkarte | undefined }): React.JSX.Element {
@@ -46,6 +49,12 @@ function Anzeige({ t, karte }: { readonly t: Funkteilnehmer; readonly karte: Ruf
       {karte?.betriebsart === "DMO" && <Betriebsartmarke betriebsart="DMO" />} <span className="mono">{t.rufgruppe}</span>
     </>
   );
+}
+
+/** „auch: THW_OL_FUE, DMO 311" — die geltenden weiteren Gruppen, klein hinter der Hauptgruppe. */
+function Weitere({ t }: { readonly t: Funkteilnehmer }): React.JSX.Element | null {
+  const auch = projektion.auchRufgruppen(t);
+  return auch.length === 0 ? null : <small className="leise weitere"> auch: {auch.join(", ")}</small>;
 }
 
 /** „THW_OL_FUE (TMO · Führung)" — so steht eine Gruppe in der Auswahl (Zelle und Maske). */
@@ -97,7 +106,7 @@ function Wahlliste(props: WahllisteEigenschaften): React.JSX.Element {
   );
 }
 
-export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu }: RufgruppenzelleEigenschaften): React.JSX.Element {
+export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu, mitWeiteren = false }: RufgruppenzelleEigenschaften): React.JSX.Element {
   const [offen, setzeOffen] = useState<{ readonly vorher: string | undefined } | undefined>(undefined);
   // Eine aufgelöste Gruppe steht nicht zur Wahl; die Zelle beginnt dann bei „keine".
   const start = t.rufgruppeAufgeloest ? "" : (t.rufgruppeId ?? "");
@@ -143,6 +152,7 @@ export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu }:
         }}
       >
         <Anzeige t={t} karte={karte} />
+        {mitWeiteren && <Weitere t={t} />}
         {gesperrtVon !== undefined && <span className="warnung"> {sperrtext(gesperrtVon)}</span>}
       </td>
     );

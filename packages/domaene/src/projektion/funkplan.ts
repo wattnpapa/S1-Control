@@ -177,13 +177,21 @@ function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean
 }
 
 /**
+ * Die Namen der weiteren Gruppen, auf denen die Einheit wirklich mithört:
+ * geltend, nicht die Hauptgruppe, jede einmal — über eine aufgelöste wird
+ * nicht mehr gehört. Für „auch: …" in Ausgabe und Blatt.
+ */
+export function auchRufgruppen(t: Funkteilnehmer): readonly string[] {
+  return [...new Set(t.weitereRufgruppen.filter((w) => !w.aufgeloest && w.rufgruppeId !== t.rufgruppeId).map((w) => w.name))];
+}
+
+/**
  * Die Spalte „Hinweis" der Ausgabe in einem Text: Funkhinweis, dahinter
- * „Bereich ≠ Gruppe", dahinter „auch: …" mit den geltenden weiteren Gruppen
- * außer der Hauptgruppe — über eine aufgelöste wird nicht mehr gehört.
+ * „Bereich ≠ Gruppe", dahinter „auch: …" mit {@link auchRufgruppen}.
  */
 export function hinweisspalte(t: Funkteilnehmer): string {
-  const auch = t.weitereRufgruppen.filter((w) => !w.aufgeloest && w.rufgruppeId !== t.rufgruppeId).map((w) => w.name);
-  return [t.funkhinweis, t.hinweis, auch.length === 0 ? "" : `auch: ${[...new Set(auch)].join(", ")}`].filter((teil) => teil !== "").join(" · ");
+  const auch = auchRufgruppen(t);
+  return [t.funkhinweis, t.hinweis, auch.length === 0 ? "" : `auch: ${auch.join(", ")}`].filter((teil) => teil !== "").join(" · ");
 }
 
 /** Die Einheiten des Plans in der Ordnung der Einheitentabelle: Bereich im Baum, Reihenfolge, Name. */
