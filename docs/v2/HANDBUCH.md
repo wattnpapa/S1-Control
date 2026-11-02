@@ -138,10 +138,17 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
 - **Ausgaben.** Belegungsliste, Bestellliste, Vorausschau und Kraftstoffliste
   stehen in der jeweiligen Unteransicht als PDF oder HTML.
 
-Der **Monitor** zeigt neben der Stärke vier weitere Ansichten: Verpflegung,
-Nächste 24 h, Unterbringung und die Tafel „Bereiche · Schichten“.
+Der **Monitor** zeigt neben der Stärke fünf weitere Ansichten: Verpflegung,
+Nächste 24 h, Unterbringung, die Tafel „Bereiche · Schichten“ und den
+Funkplan. Der Funkplan steht als Tafel mit einer Zeile je Rufgruppe
+(Betriebsart, Zweck, wer abhört) und den Teilnehmern als Kacheln: die linke
+Kante in der Statusfarbe, ein Bernsteinrahmen mit der Zeit des letzten
+Kontakts, wenn er älter ist als die Schwelle, Mithörer gestrichelt mit „hört
+mit“. Der Fuß nennt in Bernstein die Einheiten ohne Rufgruppe und die Zahl
+ohne Kontakt. Viele Rufgruppen verkleinern die Schrift, aufgelöste stehen
+nicht an der Wand.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
-Mausbewegung oben erscheint, oder mit den Tasten 1 bis 5; R schaltet den
+Mausbewegung oben erscheint, oder mit den Tasten 1 bis 6; R schaltet den
 Wechsel alle 20 Sekunden ein und aus, die Leertaste hält ihn an, F11 schaltet
 Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —
 der Monitor im Zelt kann Verpflegung zeigen, der im Fahrzeug Stärke.
@@ -222,7 +229,7 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 ### Funkplan
 
-Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen.
+Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen; der Monitor zeigt ihn als sechste Ansicht (Taste 6) mit einer Zeile je Rufgruppe und den Teilnehmern als Kacheln.
 
 **Zuerst:** Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen, dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Der Funkhinweis wird ebenso in seiner Zelle geschrieben. Doppelklick auf den Namen einer Einheit (oder ✎) öffnet „Funk und Erreichbarkeit“: weitere Rufgruppen, Funkrufname und Erreichbarkeit überschreiben, Funkprobe eintragen, Funkauszug des Tagebuchs. Strg+E bearbeitet die links gewählte Rufgruppe. Für die Funkprobe eine Einheit in der Zuordnung anklicken, dann Strg+P (Kontakt, Funkzeit jetzt) oder „kein Kontakt …“ (fragt nach dem Grund).
 
