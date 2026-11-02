@@ -1,5 +1,6 @@
 /**
- * Die fünf Masken der Einheitentabelle (M3.2).
+ * Die fünf Masken der Einheitentabelle (M3.2), dazu die Weichen zu Ablösung
+ * und „Funk und Erreichbarkeit".
  *
  * Anlegen (aus Vorlage oder ohne, in `EinheitAnlegen.tsx`; „Zeile kopieren“
  * ist dieselbe Maske mit Vorbelegung aus `einheitKopie.ts`), verschieben
@@ -24,6 +25,7 @@ import { aufteilungPruefen, type Tabellenzeile } from "@s1/domaene";
 
 import { AbloesungAnfordern } from "./AbloesungAnfordern.js";
 import { EinheitAnlegen } from "./EinheitAnlegen.js";
+import { FunkUndErreichbarkeitAusLage } from "./FunkUndErreichbarkeit.js";
 import { kopieVorbelegung } from "./einheitKopie.js";
 import { Maske } from "./Maske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
@@ -91,6 +93,11 @@ export function Einheitenmasken({
   // Die Ablösung hat ihre eigene Maske (M5.3); hier steht nur die Weiche.
   if (maske === "abloesung" && erste !== undefined) {
     return <AbloesungAnfordern zeile={erste} aufSchliessen={aufSchliessen} />;
+  }
+
+  // Funk und Erreichbarkeit (Funkplan F2) ebenso: eigene Maske, hier die Weiche.
+  if (maske === "funk" && erste !== undefined) {
+    return <FunkUndErreichbarkeitAusLage key={erste.einheitId} einheitId={erste.einheitId} aufSchliessen={aufSchliessen} />;
   }
 
   // Der Schlüssel trennt Anlegen und Kopieren: Wer aus der offenen Kopie mit

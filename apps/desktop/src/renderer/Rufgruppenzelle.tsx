@@ -48,8 +48,8 @@ function Anzeige({ t, karte }: { readonly t: Funkteilnehmer; readonly karte: Ruf
   );
 }
 
-/** „THW_OL_FUE (TMO · Führung)" — so steht eine Gruppe in der Auswahl. */
-function wahltext(r: Rufgruppenkarte): string {
+/** „THW_OL_FUE (TMO · Führung)" — so steht eine Gruppe in der Auswahl (Zelle und Maske). */
+export function wahltext(r: Rufgruppenkarte): string {
   return `${r.name} (${projektion.betriebsartWort(r.betriebsart)}${r.zweck === undefined ? "" : ` · ${r.zweck}`})`;
 }
 

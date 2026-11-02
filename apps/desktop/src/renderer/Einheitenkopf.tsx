@@ -74,6 +74,7 @@ export function Einheitenkopf({
       )}
       {knopf("entfernen", "Entfernen", markiert !== 1)}
       {knopf("abloesung", "Ablösung anfordern", markiert !== 1)}
+      {knopf("funk", "Funk …", markiert !== 1, "Funk und Erreichbarkeit der markierten Einheit bearbeiten")}
       <label className="suchfeld">
         Suche
         <input

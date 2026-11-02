@@ -2107,6 +2107,113 @@
       .funkkasten dd {
         margin: 0;
       }
+      /* Funkplan F2: der Name der Einheit öffnet ihre Maske; das Symbol ist
+         klein wie ein Zeichen und zeigt erst beim Zeigen auf die Zeile. */
+      .funktabelle th[scope="row"] {
+        cursor: pointer;
+      }
+      .funktabelle .symbolknopf {
+        margin-left: 4px;
+        padding: 0 0.3rem;
+        font-size: 0.85em;
+        line-height: 1.3;
+        opacity: 0.35;
+      }
+      .funktabelle tr:hover .symbolknopf,
+      .funktabelle .symbolknopf:focus-visible {
+        opacity: 1;
+      }
+      .funktabelle tr.mithoerer th,
+      .funktabelle tr.mithoerer td {
+        color: var(--text-leise);
+        font-style: italic;
+      }
+      .funktabelle td.funkhinweis {
+        white-space: normal;
+        min-width: 10rem;
+      }
+      .funktabelle td.offen input {
+        width: 100%;
+        margin: 0;
+      }
+      /* Die Maske „Funk und Erreichbarkeit" (Option 5d). */
+      fieldset.funkmaske {
+        border: 0;
+        margin: 0;
+        padding: 0;
+        min-width: 0;
+      }
+      .funkmaske .feldtitel,
+      .funkauszug .feldtitel {
+        display: block;
+        color: var(--text-leise);
+        font-size: 0.92em;
+        margin-bottom: 3px;
+      }
+      .funkmaske small {
+        color: var(--text-leise);
+        font-weight: 400;
+      }
+      .rufgruppenchips,
+      .ableitungsfeld {
+        margin-bottom: 9px;
+      }
+      .rufgruppenchips ul.chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px 6px;
+        margin: 0 0 4px;
+        padding: 0;
+        list-style: none;
+      }
+      .rufgruppenchips li.chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 1px 2px 1px 8px;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        border-radius: 999px;
+        background: var(--zeile-alt);
+      }
+      .rufgruppenchips .chipweg {
+        border: 0;
+        background: transparent;
+        padding: 0 5px;
+        line-height: 1.2;
+      }
+      .rufgruppenchips select.chipwahl {
+        width: auto;
+        margin: 0;
+      }
+      .ableitungszeile {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
+      .ableitungszeile input {
+        flex: 1 1 12rem;
+        margin: 0;
+      }
+      .ableitungszeile.lesen output {
+        font-family: var(--mono);
+      }
+      .funkauszug {
+        margin-top: 10px;
+        padding: 6px 10px;
+        border-left: 3px solid var(--rahmen);
+        background: var(--zeile-alt);
+        font-size: 0.88em;
+      }
+      .funkauszug ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .funkauszug b {
+        font-family: var(--mono);
+        margin-right: 4px;
+      }
       @media (max-width: 900px) {
         .kpiband {
           grid-template-columns: repeat(3, minmax(0, 1fr));

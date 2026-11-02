@@ -16,12 +16,15 @@
  *
  * Strg+E öffnet die gewählte Rufgruppe zum Bearbeiten, wie der Knopf im
  * Kasten (Option 5b); in der Lage entfernt dasselbe Kürzel einen Eintrag.
+ * Der Name einer Einheit in der Zuordnung öffnet ihre Maske „Funk und
+ * Erreichbarkeit" (Option 5d).
  */
 
 import { useCallback, useMemo, useState } from "react";
 
 import type { Funkteilnehmer, Funkzahlen, Rufgruppenkarte } from "@s1/domaene";
 
+import { FunkUndErreichbarkeit } from "./FunkUndErreichbarkeit.js";
 import { Funkzuordnung, type Funksicht } from "./Funkzuordnung.js";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
@@ -104,7 +107,11 @@ function Werkzeugzeile(props: WerkzeugzeileEigenschaften): React.JSX.Element {
   );
 }
 
-type Offen = { readonly art: "anlegen"; readonly fuer?: Anlagezeile } | { readonly art: "bearbeiten"; readonly karte: Rufgruppenkarte } | undefined;
+type Offen =
+  | { readonly art: "anlegen"; readonly fuer?: Anlagezeile }
+  | { readonly art: "bearbeiten"; readonly karte: Rufgruppenkarte }
+  | { readonly art: "einheit"; readonly teilnehmer: Funkteilnehmer }
+  | undefined;
 
 function anlagezeile(t: Funkteilnehmer): Anlagezeile {
   return { einheitId: t.einheitId, einheit: t.einheit, ...(t.rufgruppeId === undefined ? {} : { vorher: t.rufgruppeId }) };
@@ -134,6 +141,20 @@ export function Funkplan(): React.JSX.Element {
         return;
       }
       setzeOffen({ art: "bearbeiten", karte });
+    },
+    [nurLesen, fremd, melde],
+  );
+
+  // Die Maske der Einheit hält den Teilnehmer, wie er beim Öffnen war: Das
+  // sind ihre Vorher-Werte, auch wenn der Plan sich derweil auffrischt.
+  const oeffneEinheit = useCallback(
+    (t: Funkteilnehmer): void => {
+      const hinweis = nurLesen ? undefined : fremd.pruefeStart(t.einheitId);
+      if (hinweis !== undefined) {
+        melde("warnung", hinweis);
+        return;
+      }
+      setzeOffen({ art: "einheit", teilnehmer: t });
     },
     [nurLesen, fremd, melde],
   );
@@ -171,10 +192,13 @@ export function Funkplan(): React.JSX.Element {
       ) : (
         <div className="funkflaeche">
           <Rufgruppenliste rufgruppen={plan.rufgruppen} gewaehlt={gewaehlt} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufBearbeiten={bearbeite} />
-          <Funkzuordnung plan={plan} sicht={sicht} nurLesen={nurLesen} aufNeu={(t) => setzeOffen({ art: "anlegen", fuer: anlagezeile(t) })} />
+          <Funkzuordnung plan={plan} sicht={sicht} nurLesen={nurLesen} aufNeu={(t) => setzeOffen({ art: "anlegen", fuer: anlagezeile(t) })} aufEinheit={oeffneEinheit} />
         </div>
       )}
-      {offen !== undefined && (
+      {offen?.art === "einheit" && (
+        <FunkUndErreichbarkeit teilnehmer={offen.teilnehmer} rufgruppen={plan?.rufgruppen ?? []} nurLesen={nurLesen} aufSchliessen={() => setzeOffen(undefined)} />
+      )}
+      {offen !== undefined && offen.art !== "einheit" && (
         <RufgruppeMaske
           {...(offen.art === "bearbeiten" ? { karte: offen.karte } : {})}
           {...(offen.art === "anlegen" && offen.fuer !== undefined ? { fuer: offen.fuer } : {})}

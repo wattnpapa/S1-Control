@@ -55,6 +55,7 @@ export type Einheitenmaske =
   | "entfernen"
   | "abloesung"
   | "kopieren"
+  | "funk"
   | undefined;
 
 export interface EinheitentabelleEigenschaften {

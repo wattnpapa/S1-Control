@@ -9,6 +9,9 @@
  * Bereich gruppiert, die Sicht des S1, der fragt, ob sein Abschnitt
  * vollständig erreichbar ist.
  *
+ * Der Name der Einheit öffnet die Maske „Funk und Erreichbarkeit"
+ * (Doppelklick, Enter oder ✎), wie die Lage sie über „Funk …" öffnet.
+ *
  * Gerechnet wird nichts: Die Gruppen, die Reihenfolge und der Hinweis
  * „Bereich ≠ Gruppe" kommen aus `projektion.funkplan`. Funkrufname und
  * Erreichbarkeit sind hier Ableitungen und werden nur gelesen.
@@ -29,13 +32,35 @@ export interface FunkzuordnungEigenschaften {
   readonly sicht: Funksicht;
   readonly nurLesen: boolean;
   readonly aufNeu: (teilnehmer: Funkteilnehmer) => void;
+  /** Öffnet „Funk und Erreichbarkeit" der Einheit (Doppelklick auf den Namen oder ✎). */
+  readonly aufEinheit: (teilnehmer: Funkteilnehmer) => void;
+}
+
+/** Der Name der Einheit: Doppelklick, Enter oder ✎ öffnen die Maske „Funk und Erreichbarkeit". */
+function Einheitenname({ t, aufEinheit }: { readonly t: Funkteilnehmer; readonly aufEinheit: (t: Funkteilnehmer) => void }): React.JSX.Element {
+  return (
+    <th
+      scope="row"
+      tabIndex={0}
+      title="Doppelklick oder Enter: Funk und Erreichbarkeit bearbeiten"
+      onDoubleClick={() => aufEinheit(t)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && e.target === e.currentTarget) aufEinheit(t);
+      }}
+    >
+      {t.einheit}{" "}
+      <button type="button" className="symbolknopf" aria-label={`Funk und Erreichbarkeit von ${t.einheit} bearbeiten`} title="Einheit bearbeiten: Funk und Erreichbarkeit" onClick={() => aufEinheit(t)}>
+        ✎
+      </button>
+    </th>
+  );
 }
 
 function Zeile(props: { readonly t: Funkteilnehmer } & Omit<FunkzuordnungEigenschaften, "sicht">): React.JSX.Element {
   const { t } = props;
   return (
     <tr className={t.erwartet ? "erwartet" : undefined}>
-      <th scope="row">{t.einheit}</th>
+      <Einheitenname t={t} aufEinheit={props.aufEinheit} />
       <td className="leise">{t.bereich}</td>
       <td>
         <span className={`marke-zustand ${statusTon(t.status)}`}>{t.status === "" ? "—" : statusTitel(t.status)}</span>
