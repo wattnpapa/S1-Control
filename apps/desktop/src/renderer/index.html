@@ -1851,6 +1851,31 @@
       .versorgungstabelle tr.blass td {
         opacity: 0.5;
       }
+      .versorgungstabelle tr.gewaehlt th,
+      .versorgungstabelle tr.gewaehlt td {
+        background: var(--zeile-gewaehlt);
+      }
+      .versorgungstabelle input[type="checkbox"] {
+        display: inline;
+        width: auto;
+        margin: 0;
+      }
+      .versorgungstabelle tr.offenzeile th,
+      .versorgungstabelle tr.offenzeile td {
+        color: var(--warn-text);
+        background: var(--warn-bg);
+      }
+      .erledigtspalte .erledigt {
+        color: var(--ok-text);
+      }
+      .erledigtspalte .offen {
+        color: var(--text-leise);
+      }
+      .versorgungskarte .werkzeugzeile select {
+        display: inline;
+        width: auto;
+        margin: 0 0 0 4px;
+      }
       .regeltabelle input:not([type="checkbox"]) {
         width: 5em;
         margin: 0;

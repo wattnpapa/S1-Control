@@ -599,6 +599,8 @@ export const zRuf = z.discriminatedUnion("art", [
       "belegung",
       "bestellliste",
       "vorausschau",
+      // Die Kraftstoffliste (S4.4): Liter je Einheit für den Tankwagen.
+      "kraftstoff",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */

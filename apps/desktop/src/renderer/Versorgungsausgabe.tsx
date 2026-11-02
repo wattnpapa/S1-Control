@@ -13,7 +13,7 @@ export function Versorgungsausgabe({
   ausgabe,
   titel,
 }: {
-  readonly ausgabe: "belegung" | "bestellliste" | "vorausschau";
+  readonly ausgabe: "belegung" | "bestellliste" | "vorausschau" | "kraftstoff";
   readonly titel: string;
 }): React.JSX.Element {
   const erzeugeAusgabe = useLaden((z) => z.erzeugeAusgabe);

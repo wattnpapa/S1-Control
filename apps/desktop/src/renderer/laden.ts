@@ -217,7 +217,8 @@ export interface Laden {
       | "papier"
       | "belegung"
       | "bestellliste"
-      | "vorausschau",
+      | "vorausschau"
+      | "kraftstoff",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;

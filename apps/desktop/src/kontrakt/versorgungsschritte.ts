@@ -109,3 +109,46 @@ export function mahlzeitGeliefert(bestellungId: string, vorher: number | null, p
 export function mahlzeitStorniert(bestellungId: string, grund: string): Entwurf {
   return { typ: "MahlzeitStorniert", nutzlast: { bestellungId }, vorher: null, neu: true, grund };
 }
+
+// --- Sofortbedarf (S4.4) -----------------------------------------------------
+
+export const SOFORTBEDARF_FELDER = ["VERPFLEGUNG", "DIESEL", "BENZIN", "GEMISCH", "UNTERBRINGUNG", "RUHEZEIT"] as const;
+export type Sofortfeld = (typeof SOFORTBEDARF_FELDER)[number];
+
+export function sofortbedarfErledigt(einheitId: string, feld: Sofortfeld): Entwurf {
+  return { typ: "SofortbedarfErledigt", nutzlast: { einheitId, feld }, vorher: null, neu: true };
+}
+
+export function sofortbedarfWiederOffen(einheitId: string, feld: Sofortfeld): Entwurf {
+  return { typ: "SofortbedarfWiederOffen", nutzlast: { einheitId, feld }, vorher: true, neu: false };
+}
+
+interface Abarbeitungszeile {
+  readonly einheitId: string;
+  readonly felder: readonly Sofortfeld[];
+  readonly erledigt: { readonly [feld in Sofortfeld]?: string };
+}
+
+/**
+ * Die Schritte für „Als erledigt melden" bzw. „Wieder öffnen" über eine
+ * Auswahl: je gewählter Zeile und Feld ein Ereignis — nur dort, wo sich
+ * etwas ändert. `feld` ohne Angabe heißt: alle Felder mit Bedarf.
+ */
+export function abarbeitung(
+  zeilen: readonly Abarbeitungszeile[],
+  auswahl: ReadonlySet<string>,
+  art: "erledigt" | "offen",
+  feld?: Sofortfeld,
+): Entwurf[] {
+  const schritte: Entwurf[] = [];
+  for (const zeile of zeilen) {
+    if (!auswahl.has(zeile.einheitId)) continue;
+    for (const f of zeile.felder) {
+      if (feld !== undefined && f !== feld) continue;
+      const ist = zeile.erledigt[f] !== undefined;
+      if (art === "erledigt" && !ist) schritte.push(sofortbedarfErledigt(zeile.einheitId, f));
+      if (art === "offen" && ist) schritte.push(sofortbedarfWiederOffen(zeile.einheitId, f));
+    }
+  }
+  return schritte;
+}

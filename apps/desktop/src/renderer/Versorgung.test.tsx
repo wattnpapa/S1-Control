@@ -86,6 +86,7 @@ describe("Das Blatt „Versorgung“", () => {
     fireEvent.click(screen.getByRole("button", { name: "Sofortbedarf" }));
     const sofort = screen.getByRole("table", { name: "Sofortbedarf" });
     expect(within(sofort).getAllByText("400")).toHaveLength(2);
+    expect(within(sofort).getByText("500")).toBeDefined();
   });
 
   it("holt beim neuen Zeigerstand neu", async () => {

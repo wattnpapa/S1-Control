@@ -3,11 +3,12 @@
  *
  * Belegungsliste (S4.2): je Unterkunft die Einheiten mit Köpfen, für den
  * Zettel an der Hallentür. Bestellliste und Vorausschau (S4.3): für den
- * Verpflegungsträger, der morgen früh kocht. Die Rechnung steht in Ring 2
+ * Verpflegungsträger, der morgen früh kocht. Kraftstoffliste (S4.4): für
+ * Tankstelle oder Tankwagen. Die Rechnung steht in Ring 2
  * (`projektion.versorgungsblatt`); hier entsteht nur die Seite.
  */
 
-import type { Belegung, Unterkunftskarte, Versorgungsblatt } from "@s1/domaene";
+import type { Belegung, Sofortbedarfsliste, Unterkunftskarte, Versorgungsblatt } from "@s1/domaene";
 
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
@@ -151,5 +152,35 @@ export function vorausschauAlsHtml(blatt: Versorgungsblatt, kopf: Ausgabekopf, v
     "    </tbody>",
     "  </table>",
     '  <p class="hinweis">Bestand = Einheiten der Einsatzbereiche je Mahlzeit nach Mahlzeitenregel und Schicht. Zugänge zählen ab der gemeldeten Eintreffzeit, Abgänge ab „verfügbar bis“, Einsatzende oder Rückführung. Was keine Zeit trägt, steht in der Liste, aber nicht in der Zahl.</p>',
+  ]);
+}
+
+// ---------------------------------------------------------------------------
+// Kraftstoffliste (S4.4)
+// ---------------------------------------------------------------------------
+
+/**
+ * Die Kraftstoffliste für Tankstelle oder Tankwagen: je Einheit mit
+ * Kraftstoffbedarf die Fahrzeugtypen (K10), Liter je Sorte und ob erledigt.
+ * Verbrauch und Nachbestellung sind nicht Teil dieses Blattes.
+ */
+export function kraftstofflisteAlsHtml(liste: Sofortbedarfsliste, kopf: Ausgabekopf): string {
+  const mitKraftstoff = liste.zeilen.filter((z) => z.dieselLiter + z.benzinLiter + z.gemischLiter > 0);
+  const zelle = (liter: number, erledigt: string | undefined): string =>
+    `<td class="zahl">${String(liter)}${liter > 0 && erledigt !== undefined ? " ✓" : ""}</td>`;
+  return seite("Kraftstoffliste", kopf, [
+    "  <table>",
+    '    <thead><tr><th scope="col">Einheit</th><th scope="col">Bereich</th><th scope="col">Fahrzeuge</th><th scope="col" class="zahl">Diesel l</th><th scope="col" class="zahl">Benzin l</th><th scope="col" class="zahl">Gemisch l</th></tr></thead>',
+    "    <tbody>",
+    ...(mitKraftstoff.length === 0 ? ['      <tr><td colspan="6">Kein Kraftstoffbedarf gemeldet.</td></tr>'] : []),
+    ...mitKraftstoff.map(
+      (z) =>
+        `      <tr><th scope="row">${htmlMaskieren(z.einheit)}</th><td>${htmlMaskieren(z.bereich)}</td><td>${htmlMaskieren(z.fahrzeuge)}</td>${zelle(z.dieselLiter, z.erledigt.DIESEL)}${zelle(z.benzinLiter, z.erledigt.BENZIN)}${zelle(z.gemischLiter, z.erledigt.GEMISCH)}</tr>`,
+    ),
+    `      <tr class="summenzeile"><th scope="row" colspan="3">Summe gemeldet</th>${zahlzelle(liste.summe.dieselLiter)}${zahlzelle(liste.summe.benzinLiter)}${zahlzelle(liste.summe.gemischLiter)}</tr>`,
+    `      <tr class="summenzeile"><th scope="row" colspan="3">davon offen</th>${zahlzelle(liste.offen.dieselLiter)}${zahlzelle(liste.offen.benzinLiter)}${zahlzelle(liste.offen.gemischLiter)}</tr>`,
+    "    </tbody>",
+    "  </table>",
+    '  <p class="hinweis">Erstmeldung aus dem Erfassungsbogen beim Eintreffen, kein laufender Verbrauch. ✓ = als erledigt gemeldet.</p>',
   ]);
 }

@@ -4,14 +4,14 @@
  * Ring 2 — für die Uhr dieses Workers, wie das Blatt.
  */
 
-import { belegungAlsHtml, bestelllisteAlsHtml, vorausschauAlsHtml, type Ausgabekopf } from "@s1/ausgaben";
+import { belegungAlsHtml, bestelllisteAlsHtml, kraftstofflisteAlsHtml, vorausschauAlsHtml, type Ausgabekopf } from "@s1/ausgaben";
 import { projektion, type Zustand } from "@s1/domaene";
 
 import { ortsversatz } from "./versorgungsprojektion.js";
 
-export type Versorgungsausgabe = "belegung" | "bestellliste" | "vorausschau";
+export type Versorgungsausgabe = "belegung" | "bestellliste" | "vorausschau" | "kraftstoff";
 
-export const VERSORGUNGSAUSGABEN: ReadonlySet<string> = new Set<Versorgungsausgabe>(["belegung", "bestellliste", "vorausschau"]);
+export const VERSORGUNGSAUSGABEN: ReadonlySet<string> = new Set<Versorgungsausgabe>(["belegung", "bestellliste", "vorausschau", "kraftstoff"]);
 
 /** Rendert eine Versorgungsausgabe; `marke` ist der Zeitstempel für den Dateinamen. */
 export function versorgungsausgabe(
@@ -32,5 +32,7 @@ export function versorgungsausgabe(
       return { dateiname: `bestellliste_${kopf.marke}`, html: bestelllisteAlsHtml(blatt, kopf, versatz) };
     case "vorausschau":
       return { dateiname: `vorausschau_${kopf.marke}`, html: vorausschauAlsHtml(blatt, kopf, versatz) };
+    case "kraftstoff":
+      return { dateiname: `kraftstoff_${kopf.marke}`, html: kraftstofflisteAlsHtml(blatt.sofortbedarf, kopf) };
   }
 }

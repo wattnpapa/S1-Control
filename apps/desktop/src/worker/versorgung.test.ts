@@ -121,4 +121,19 @@ describe("Die Versorgung im Worker", () => {
     expect(liste.html).toContain(differenz > 0 ? `+${String(differenz)}` : differenz < 0 ? `−${String(-differenz)}` : "±0");
     expect(a.dienst.ausgabeHtml("vorausschau").html).toContain("Zu- und Abgänge");
   });
+
+  it("meldet Sofortbedarf je Feld als erledigt und führt die Kraftstoffliste mit offenen Litern", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    await a.dienst.bediene({ typ: "SofortbedarfGesetzt", nutzlast: { einheitId: "U1" }, vorher: null, neu: { verpflegungPersonen: 9, dieselLiter: 300, benzinLiter: 40, gemischLiter: 0, unterbringung: true, ruhezeitErforderlich: false } });
+    const ergebnis = await a.dienst.bediene({ typ: "SofortbedarfErledigt", nutzlast: { einheitId: "U1", feld: "DIESEL" }, vorher: null, neu: true });
+    expect(ergebnis.art).toBe("geschrieben");
+    const liste = a.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-1" }).blatt.sofortbedarf;
+    expect(liste.offen.dieselLiter).toBe(0);
+    expect(liste.offen.benzinLiter).toBe(40);
+    const seite = a.dienst.ausgabeHtml("kraftstoff");
+    expect(seite.dateiname).toMatch(/^kraftstoff_/);
+    expect(seite.html).toContain("300 ✓");
+    expect(seite.html).toContain("davon offen");
+  });
 });
