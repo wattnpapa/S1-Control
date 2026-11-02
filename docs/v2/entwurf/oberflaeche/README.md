@@ -118,3 +118,9 @@ Brücke durch eine Attrappe mit einer erfundenen Lage ersetzt): `standard.png`,
 `dunkel.png`, `feld.png`, `nacht.png`, dazu `fuehrungsorganisation.png` und
 `einheitentabelle-status.png` (die Tabelle an ihr rechtes Ende gescrollt). Sie zeigen den Stand vom 2026-09-10 und
 sind bei der nächsten Änderung an der Gestaltung neu zu erzeugen.
+
+Runde 4 liegt in einem eigenen Ordner: `../s4/KONZEPT-S4.md` und
+`../s4/mockups-s4.html` entwerfen die Versorgungsansichten für den S4
+(Monitor mit mehreren Ansichten und Kontextmenü, Blatt „Versorgung" mit
+Verpflegung, Unterbringung, Bereiche · Schichten, Sofortbedarf). Nichts davon
+ist umgesetzt; die Gestaltung folgt Option 2a.

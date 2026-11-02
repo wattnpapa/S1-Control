@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S1-Control Mockups — Runde 4: Versorgung (S4)</title>
+<style>
+body{margin:0;background:#e7e3dc;font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif}
+a{color:#1546c8}a:hover{color:#0b2a86}
+code{font:12px ui-monospace,Menlo,monospace}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px;max-width:100%}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:auto}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:0 0 18px;max-width:78ch;font:13px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.62)}
+.dv-sub{margin:-4px 0 0;max-width:120ch;font:12px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+
+/* ---- Monitor (Zweitfenster, 960×540, schwarz) ---- */
+.mon{width:960px;height:540px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;text-align:center;font-variant-numeric:tabular-nums;font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;overflow:hidden}
+.mon p{margin:0}
+.mon .beschr{font:400 15px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.65}
+.mon .titel{font:700 36px/1.1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.01em}
+.mon .gross{font:700 150px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.02em}
+.mon .einheit{font:400 15px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.65;margin-top:-4px}
+.mon .neben{font:400 30px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.mon .klein{font:400 20px/1.3 -apple-system,Helvetica,Arial,sans-serif;opacity:.8}
+.mon .zeit{font:400 44px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.06em;margin-top:6px}
+.mon .fuss{font:400 16px/1.3 -apple-system,Helvetica,Arial,sans-serif;opacity:.7}
+.mon .amber{color:#f0c368}
+.mon .punkte{position:absolute;right:16px;bottom:12px;display:flex;gap:6px}
+.mon .punkte i{width:7px;height:7px;border:1px solid rgba(255,255,255,.6);display:block}
+.mon .punkte i.an{background:#fff}
+/* Hover-Leiste: erscheint bei Mausbewegung, verschwindet nach 3 s */
+.mon .leiste{position:absolute;top:0;left:0;right:0;display:flex;align-items:stretch;background:rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.28);font:400 14px/1 -apple-system,Helvetica,Arial,sans-serif;text-align:left}
+.mon .leiste span{padding:11px 16px;color:rgba(255,255,255,.78);border-right:1px solid rgba(255,255,255,.18)}
+.mon .leiste span.aktiv{background:#fff;color:#000;font-weight:700}
+.mon .leiste span.rechts{margin-left:auto;border-right:0;border-left:1px solid rgba(255,255,255,.18);opacity:.8}
+/* Kontextmenü: ein Element des Renderers, kein Electron-Menü */
+.menu{position:absolute;background:#fff;color:#14183a;border:1px solid #c9cfe0;box-shadow:0 14px 40px rgba(9,20,48,.22);text-align:left;font:400 13px/1 -apple-system,Helvetica,Arial,sans-serif;min-width:270px;padding:4px 0;z-index:2}
+.menu div{padding:9px 14px 9px 34px;position:relative;display:flex;gap:12px}
+.menu div.haken::before{content:"✓";position:absolute;left:13px;font-weight:700}
+.menu div.aktiv{background:#eaedf7}
+.menu div .kurz{margin-left:auto;color:#8b93ad;font:400 11px/1 ui-monospace,Menlo,monospace}
+.menu hr{border:0;border-top:1px solid #dde1ec;margin:4px 0}
+.menu .titel{padding:6px 14px 4px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484;text-transform:uppercase}
+.cursor{position:absolute;width:0;height:0;border-left:11px solid #fff;border-bottom:11px solid transparent;border-top:0;transform:rotate(-20deg);filter:drop-shadow(0 0 1px #000)}
+/* Tafel auf dem Monitor */
+.tafel{border-collapse:collapse;font:400 22px/1.2 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.tafel th{font:400 12px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;opacity:.65;padding:0 14px 8px;text-align:right;border-bottom:1px solid rgba(255,255,255,.35)}
+.tafel th:first-child{text-align:left}
+.tafel td{padding:7px 14px;text-align:right;border-bottom:1px solid rgba(255,255,255,.12)}
+.tafel td:first-child{text-align:left}
+.tafel tr.sum td{font-weight:700;border-top:2px solid #fff;border-bottom:0}
+.tafel tr.getrennt td{opacity:.7;border-bottom:0;padding-top:16px}
+.tafel td.grp,.tafel th.grp{border-left:1px solid rgba(255,255,255,.25)}
+
+/* ---- Arbeitsplatz (1320×860, Theme Standard) ---- */
+.scr{width:1320px;height:860px;display:flex;flex-direction:column;background:#eef0f6;font:13px/1.45 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;color:#14183a;overflow:hidden}
+.scr.kurz{height:auto}
+.kopf{flex:none;background:#1c2251;color:#fff;padding:11px 22px 0}
+.kopf .brot{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#a9b0d4}
+.kopf .zeile{display:flex;align-items:center;gap:12px;margin-top:9px}
+.kopf .logo{width:44px;height:30px;border:1px solid #6b74a8;background:#1a3fb0;display:flex;align-items:center;justify-content:center;font:700 9px/1 -apple-system,Helvetica,Arial,sans-serif}
+.kopf .wort{font:700 21px/1.1 -apple-system,Helvetica,Arial,sans-serif}
+.kopf .kpi{display:flex;align-items:baseline;gap:8px}
+.kopf .kpi b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#a9b0d4}
+.kopf .kpi span{font:700 30px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.kopf .themen{margin-left:auto;display:flex;border:1px solid #fff}
+.kopf .themen span{padding:7px 12px;font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;border-left:1px solid #6b74a8}
+.kopf .themen span:first-child{background:#fff;color:#1c2251;font-weight:700;border-left:0}
+.kopf .zustand{margin-top:7px;font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#8fe3a8}
+.kopf .reiter{display:flex;gap:26px;margin-top:11px;border-top:1px solid #3a4278;padding-top:9px}
+.kopf .reiter span{font:400 13px/1 -apple-system,Helvetica,Arial,sans-serif;color:#c3c8e4;padding-bottom:9px}
+.kopf .reiter span.aktiv{font-weight:700;color:#fff;border-bottom:2px solid #fff}
+.kopf .reiter span.rechts{margin-left:auto}
+.kopf .reiter i{font-style:normal;color:#f0c368}
+.band{flex:none;display:flex;background:#fff;border-bottom:1px solid #c9cfe0}
+.band div{flex:1;padding:13px 20px;border-right:1px solid #dde1ec}
+.band div:last-child{border-right:0;background:#f6f7fb}
+.band b{display:block;font:700 27px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.band span{display:block;margin-top:5px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484}
+.band .warn b{color:#7a5c12}
+.flaeche{flex:1;display:flex;gap:14px;padding:14px;min-height:0}
+.werkzeuge{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.btn{height:31px;padding:0 13px;border:1px solid #1c2251;background:#fff;color:#14183a;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;display:inline-block;box-sizing:border-box;white-space:nowrap}
+.btn.haupt{background:#1c2251;color:#fff;font-weight:700}
+.btn.aus{border-color:#c9cfe0;color:#8b93ad}
+.umschalter{display:flex;border:1px solid #1c2251;height:31px;box-sizing:border-box}
+.umschalter span{padding:0 13px;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;border-left:1px solid #1c2251}
+.umschalter span:first-child{border-left:0}
+.umschalter span.aktiv{background:#1c2251;color:#fff;font-weight:700}
+.rechts{margin-left:auto}
+.karte{background:#fff;border:1px solid #c9cfe0;border-top:3px solid #14183a;display:flex;flex-direction:column;min-height:0}
+.karte .kk{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid #dde1ec;font:700 14px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.karte .kk small{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484}
+.karte .rollen{flex:1;min-height:0;overflow:auto}
+.karte .fussnote{flex:none;padding:8px 13px;font:400 11px/1.45 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484;border-top:1px solid #dde1ec}
+table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
+.t th{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;background:#e7eaf3;padding:8px;text-align:left;border-bottom:1px solid #c9cfe0;color:#3a4266;white-space:nowrap}
+.t td{padding:7px 8px;border-bottom:1px solid #dde1ec;font-variant-numeric:tabular-nums;vertical-align:middle}
+.t td.z,.t th.z{text-align:right}
+.t td.sek{color:#3a4266}
+.t tr.sum td{background:#e7eaf3;font-weight:700;white-space:nowrap}
+.t tr.getrennt td{border-top:2px solid #c9cfe0;color:#3a4266}
+.t tr.gewaehlt td{background:#eaedf7}
+.t tr.blass td{opacity:.55}
+.t td.edit{outline:2px solid #1c2251;outline-offset:-2px}
+.t th.grp,.t td.grp{border-left:1px solid #c9cfe0}
+.t th.mitte{text-align:center}
+.marke{display:inline-block;padding:2px 6px;font:700 9.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;border:1px solid;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.ok{background:#e0f0e6;border-color:#a8d3b8;color:#14652f}
+.warn{background:#fbeccd;border-color:#e3c987;color:#7a5c12}
+.err{background:#f7dede;border-color:#dda9a9;color:#8f1717}
+.neu{background:#eceef4;border-color:#c9cfe0;color:#3a4266}
+.mono{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.t td.nw{white-space:nowrap}
+.status{flex:none;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 14px;background:#fff;border-top:1px solid #c9cfe0;font:400 11.5px/1 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266}
+.status .rechts{font:600 11.5px/1 ui-monospace,Menlo,monospace;color:#14183a}
+.kasten{padding:11px 13px;border-bottom:1px solid #dde1ec}
+.kasten .lbl{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484;margin-bottom:8px}
+.kasten .gross{font:700 25px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.kasten dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12px}
+.kasten dt{color:#5c6484}
+.kasten dd{margin:0;font-variant-numeric:tabular-nums}
+.hinweis{padding:10px 13px;background:#f6f7fb;font:400 11px/1.45 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;border-top:1px solid #dde1ec}
+/* Unterkunftskarte */
+.uk{border:1px solid #c9cfe0;background:#fff;padding:11px 13px;display:flex;flex-direction:column;gap:7px}
+.uk.gewaehlt{outline:2px solid #1c2251;outline-offset:-2px}
+.uk .name{display:flex;align-items:baseline;gap:8px;font:700 13px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.uk .name small{font:400 11px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484}
+.uk .zahlen{display:flex;gap:16px;font-size:12px;color:#3a4266;font-variant-numeric:tabular-nums}
+.uk .zahlen b{color:#14183a}
+.balken{height:10px;background:#eceef4;border:1px solid #c9cfe0;display:flex;overflow:hidden}
+.balken i{display:block;height:100%}
+.balken .m{background:#1c2251}.balken .w{background:#5b6bc7}.balken .d{background:#a9b0d4}
+.legende{display:flex;gap:12px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.08em;color:#5c6484}
+.legende i{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
+.legende i.m{background:#1c2251}.legende i.w{background:#5b6bc7}.legende i.d{background:#a9b0d4}
+.kurzliste{font:400 11px/1.7 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;padding:9px 13px;border-top:1px solid #dde1ec}
+.kurzliste b{font-family:ui-monospace,Menlo,monospace;font-weight:400;color:#14183a;margin-right:8px}
+</style>
+</head>
+<body>
+
+<section class="dv-turn" id="t4">
+<div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Versorgung (S4) — Unterbringung und Verpflegung aus der Kräfteübersicht</span></div>
+<p class="dv-note">Die S1-Übersicht trägt bereits alles, was der S4 zum Planen braucht: Köpfe je Bereich und Schicht, Kostformen, Übernachtungsbedarf nach m/w/d, Sofortbedarf aus dem Bogen. Heute kommt das nur als Blatt „Log" aus dem Drucker. Runde 4 zeigt dieselben Zahlen an zwei Stellen: auf dem <b>Monitor</b> als weitere Ansichten mit Kontextmenü und Hover-Leiste (<a href="#4a">4a</a>–<a href="#4c">4c</a>) und als neues Blatt <b>„Versorgung"</b> im Arbeitsplatz (<a href="#4d">4d</a>–<a href="#4f">4f</a>). Gestaltung aus <code>../oberflaeche/mockups.html</code> Option 2a. Die Rechnung läuft in Ring 2 (<code>projektion.logistikblatt</code>), die Oberfläche faltet nichts. Fachliche Festlegungen und offene Entscheidungen in <code>KONZEPT-S4.md</code>.</p>
+<div class="dv-opts">
+
+<!-- ================= 4a Monitor: Verpflegung + Kontextmenü ================= -->
+<div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Monitor — Ansicht „Verpflegung" mit Hover-Leiste (Maus bewegt) und Kontextmenü (Rechtsklick)</div>
+<div class="dv-card" style="width:960px;border-color:#000">
+<div class="mon" data-screen-label="Monitor Verpflegung">
+<div class="leiste"><span>Stärke</span><span class="aktiv">Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="rechts">Wechsel: aus</span><span class="rechts" style="margin-left:0">⋮</span></div>
+<p class="beschr" style="margin-top:28px">Verpflegung · nächste Mahlzeit</p>
+<p class="titel" style="font-size:32px">Abendessen 1800 · in 3 h 17 min</p>
+<p class="gross">268</p>
+<p class="einheit">Portionen</p>
+<p class="neben">davon 31 vegetarisch · 6 vegan</p>
+<p class="klein">bestellt 280 · Feldküche Bereitstellungsraum (JUH) · <span class="amber">Anmarsch +24 nicht enthalten</span></p>
+<p class="zeit">101443SEP26</p>
+<p class="fuss">Hochwasser Oldenburg · Stand: vor 6 s · Zählung: alle erfassten Einheiten der Einsatzbereiche</p>
+<div class="punkte"><i></i><i class="an"></i><i></i><i></i></div>
+
+<div class="menu" style="left:684px;top:54px">
+<div class="titel">Ansicht</div>
+<div>Stärke<span class="kurz">1</span></div>
+<div class="haken aktiv">Verpflegung<span class="kurz">2</span></div>
+<div>Unterbringung<span class="kurz">3</span></div>
+<div>Bereiche und Schichten<span class="kurz">4</span></div>
+<hr>
+<div>Ansichten wechseln alle 20 s<span class="kurz">R</span></div>
+<div>Vollbild<span class="kurz">F11</span></div>
+<hr>
+<div>Monitor schließen</div>
+</div>
+<div class="cursor" style="left:676px;top:44px"></div>
+</div>
+</div>
+<p class="dv-sub">Große Zahl = Portionen der nächsten Mahlzeit nach Mahlzeitenregel; Schriftgrad wie heute aus <code>schriftgroesse()</code>. Die Zählregel steht im Fuß, die Anmarschzahl in Bernstein daneben, nie darin. Vier Punkte rechts unten: die Ansichten, die aktive gefüllt; bei eingeschaltetem Wechsel wandert der Punkt. Leiste und Menü sind Renderer-Elemente — gleich in Electron und in der Web-Schale.</p>
+</div>
+
+<!-- ================= 4b Monitor: Unterbringung ================= -->
+<div class="dv-opt" id="4b"><div class="dv-olabel"><a class="dv-oid" href="#4b">4b</a>Monitor — Ansicht „Unterbringung" (ohne Maus: keine Leiste)</div>
+<div class="dv-card" style="width:960px;border-color:#000">
+<div class="mon" data-screen-label="Monitor Unterbringung">
+<p class="beschr">Unterbringung · Nacht 10./11. SEP</p>
+<p class="gross">142</p>
+<p class="einheit">Betten benötigt</p>
+<p class="neben">m 118 · w 22 · d 2</p>
+<p class="klein">belegt 124 · frei 220 · <span class="amber">ohne Zuweisung 18 (2 Einheiten)</span></p>
+<table class="tafel" style="margin-top:10px;font-size:18px">
+<tr><td>Turnhalle BBS Haarentor</td><td>96 / 120</td><td class="grp">m 80 · w 14 · d 2</td></tr>
+<tr><td>Feldlager Kaserne Donnerschwee</td><td>28 / 200</td><td class="grp">m 22 · w 6 · d 0</td></tr>
+<tr><td>Unterkunft THW OV Oldenburg</td><td>0 / 24</td><td class="grp">—</td></tr>
+</table>
+<p class="zeit">101443SEP26</p>
+<p class="fuss">Hochwasser Oldenburg · Stand: vor 6 s · Bedarf aus Bogen (Unterbringung ja) und Personen, Overrides je Einheit</p>
+<div class="punkte"><i></i><i></i><i class="an"></i><i></i></div>
+</div>
+</div>
+<p class="dv-sub">Bedarf (K6) ist da, belegt/frei/ohne Zuweisung braucht die Unterkünfte aus Schnitt S4.2; bis dahin zeigt die Ansicht nur die ersten drei Zeilen. „Ohne Zuweisung" ist die Arbeit, die ansteht, deshalb Bernstein.</p>
+</div>
+
+<!-- ================= 4c Monitor: Tafel Bereiche × Schichten ================= -->
+<div class="dv-opt" id="4c"><div class="dv-olabel"><a class="dv-oid" href="#4c">4c</a>Monitor — Tafel „Bereiche und Schichten" (das Logistikblatt in groß, Wechsel eingeschaltet)</div>
+<div class="dv-card" style="width:960px;border-color:#000">
+<div class="mon" data-screen-label="Monitor Tafel" style="justify-content:flex-start;padding-top:26px;box-sizing:border-box">
+<p class="beschr">Bereiche und Schichten · Köpfe, Kostform, Betten</p>
+<table class="tafel" style="margin-top:14px">
+<tr><th>Bereich</th><th>Tag</th><th>Nacht</th><th>Summe</th><th class="grp">Veg.</th><th>Vegan</th><th class="grp">ÜN m</th><th>ÜN w</th><th>ÜN d</th></tr>
+<tr><td>Führungsstelle</td><td>8</td><td>4</td><td>12</td><td class="grp">2</td><td>0</td><td class="grp">6</td><td>2</td><td>0</td></tr>
+<tr><td>Logistik</td><td>14</td><td>0</td><td>14</td><td class="grp">1</td><td>0</td><td class="grp">5</td><td>1</td><td>0</td></tr>
+<tr><td>Bereitstellungsraum</td><td>38</td><td>0</td><td>38</td><td class="grp">4</td><td>1</td><td class="grp">0</td><td>0</td><td>0</td></tr>
+<tr><td>EA 1 Deich Nord</td><td>64</td><td>32</td><td>96</td><td class="grp">12</td><td>3</td><td class="grp">61</td><td>12</td><td>1</td></tr>
+<tr><td>EA 2 Pumpen Süd</td><td>50</td><td>24</td><td>74</td><td class="grp">9</td><td>2</td><td class="grp">38</td><td>6</td><td>1</td></tr>
+<tr><td>EA 3 Evakuierung</td><td>34</td><td>0</td><td>34</td><td class="grp">3</td><td>0</td><td class="grp">8</td><td>1</td><td>0</td></tr>
+<tr class="sum"><td>Gesamt</td><td>208</td><td>60</td><td>268</td><td class="grp">31</td><td>6</td><td class="grp">118</td><td>22</td><td>2</td></tr>
+<tr class="getrennt"><td>Angefordert / Anmarsch</td><td>—</td><td>—</td><td>24</td><td class="grp">2</td><td>0</td><td class="grp">18</td><td>4</td><td>0</td></tr>
+</table>
+<p class="fuss" style="position:absolute;left:0;right:0;bottom:12px">Hochwasser Oldenburg · 101443SEP26 · Stand: vor 6 s · Wechsel alle 20 s, weiter: Stärke</p>
+<div class="punkte"><i></i><i></i><i></i><i class="an"></i></div>
+</div>
+</div>
+<p class="dv-sub">Dieselben Zeilen wie <code>packages/ausgaben/src/log.ts</code>, aus derselben Projektion. Die Fußnote des Blattes (Männl. = Summe − Weibl. − Div.) steht als <code>title</code> am Spaltenkopf. Die Schichten Früh/Spät erscheinen nur, wenn eine Einheit sie trägt — eine Tafel an der Wand soll keine leeren Spalten haben. Bei mehr als acht Bereichen läuft die Tafel im Takt des Wechsels seitenweise durch.</p>
+</div>
+
+<!-- ================= 4d Blatt Versorgung · Verpflegung ================= -->
+<div class="dv-opt" id="4d"><div class="dv-olabel"><a class="dv-oid" href="#4d">4d</a>Blatt „Versorgung" — Unteransicht Verpflegung: Mahlzeitenplan je Bereich und Bestellung der nächsten Mahlzeit</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr" data-screen-label="Versorgung Verpflegung">
+<div class="kopf">
+<div class="brot">‹ Einsatzauswahl</div>
+<div class="zeile">
+<div class="logo">THW</div><span class="wort">S1-Control</span>
+<div class="kpi" style="margin-left:6px"><b>STÄRKE</b><span>24/61/183 // 268</span></div>
+<div class="kpi"><b>ZEIT</b><span>101443SEP26</span></div>
+<div class="themen"><span>Standard</span><span>Dunkel</span><span>Feld</span><span>Nacht</span></div>
+</div>
+<div class="zustand">✓ Hochwasser Oldenburg · Stand vor 6 s · Share erreichbar — 2 weitere Arbeitsplätze</div>
+<div class="reiter"><span>Lage</span><span>Eingangskorb <i>7</i></span><span>Anforderungen</span><span>Führungsstelle</span><span class="aktiv">Versorgung</span><span>Kosten</span><span>Führungsorganisation</span><span>Ausgaben</span><span>Einsatztagebuch</span><span class="rechts">Diagnose</span></div>
+</div>
+<div class="band">
+<div><b>268</b><span>PORTIONEN ABEND 1800</span></div>
+<div><b>31</b><span>VEGETARISCH</span></div>
+<div><b>6</b><span>VEGAN</span></div>
+<div><b>142</b><span>BETTEN HEUTE NACHT</span></div>
+<div class="warn"><b>18</b><span>OHNE UNTERKUNFT</span></div>
+<div><b>+24</b><span>ANMARSCH (GETRENNT)</span></div>
+</div>
+<div class="flaeche" style="flex-direction:column;gap:0">
+<div class="werkzeuge">
+<div class="umschalter"><span class="aktiv">Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
+<span class="btn" style="margin-left:10px">Mahlzeitenregel: Standard (Tag/Nacht) ▾</span>
+<span class="btn">Tag: 10. SEP ▾</span>
+<span class="btn rechts">Bestellliste als PDF</span>
+<span class="btn">Logistikblatt als PDF</span>
+</div>
+<div style="display:flex;gap:14px;flex:1;min-height:0">
+<div class="karte" style="flex:1">
+<div class="kk">Mahlzeitenplan 10. SEP <small>· 6 Bereiche · Ausgabezeiten aus der Mahlzeitenregel</small></div>
+<div class="rollen"><table class="t">
+<thead><tr><th style="width:21%">Bereich</th><th class="z">Frühstück 0600</th><th class="z">Mittag 1200</th><th class="z">Abend 1800</th><th class="z">Nacht 0000</th><th class="z grp">Veg.</th><th class="z">Vegan</th><th class="grp">Ausgabestelle</th></tr></thead>
+<tbody>
+<tr><td>Führungsstelle</td><td class="z">12</td><td class="z">8</td><td class="z">12</td><td class="z">4</td><td class="z grp">2</td><td class="z">0</td><td class="sek grp">Feldküche Bereitstellungsraum</td></tr>
+<tr><td>Logistik</td><td class="z">14</td><td class="z">14</td><td class="z">14</td><td class="z">0</td><td class="z grp">1</td><td class="z">0</td><td class="sek grp">Feldküche Bereitstellungsraum</td></tr>
+<tr><td>Bereitstellungsraum</td><td class="z">38</td><td class="z">38</td><td class="z">38</td><td class="z">0</td><td class="z grp">4</td><td class="z">1</td><td class="sek grp">Feldküche Bereitstellungsraum</td></tr>
+<tr class="gewaehlt"><td>EA 1 Deich Nord</td><td class="z">96</td><td class="z">64</td><td class="z">96</td><td class="z">32</td><td class="z grp">12</td><td class="z">3</td><td class="sek grp edit">Lieferung Deich Nord (Lunchpakete) ▾</td></tr>
+<tr><td>EA 2 Pumpen Süd</td><td class="z">74</td><td class="z">50</td><td class="z">74</td><td class="z">24</td><td class="z grp">9</td><td class="z">2</td><td class="sek grp">Lieferung Pumpwerk Süd</td></tr>
+<tr><td>EA 3 Evakuierung</td><td class="z">34</td><td class="z">34</td><td class="z">34</td><td class="z">0</td><td class="z grp">3</td><td class="z">0</td><td class="sek grp">Turnhalle BBS Haarentor</td></tr>
+<tr class="sum"><td>Gesamt</td><td class="z">268</td><td class="z">208</td><td class="z">268</td><td class="z">60</td><td class="z grp">31</td><td class="z">6</td><td class="grp"></td></tr>
+<tr class="getrennt"><td>Angefordert / Anmarsch <span class="marke warn">nicht enthalten</span></td><td class="z">—</td><td class="z">—</td><td class="z">24</td><td class="z">—</td><td class="z grp">2</td><td class="z">0</td><td class="sek grp">Eintreffen ab ca. 1630</td></tr>
+</tbody>
+</table></div>
+<div class="fussnote">Zählung: alle erfassten Einheiten der Einsatzbereiche, auch Ruhe. Mahlzeitenregel Standard: TAG → Frühstück, Mittag, Abend · NACHT → Abend, Nacht, Frühstück. Doppelklick auf die Ausgabestelle bearbeitet die Zelle · Enter schreibt · Esc verwirft. Weitere Kostformen (halal, Allergien) kennt der Bogen nicht — offene Entscheidung 3.</div>
+</div>
+<div class="karte" style="width:360px;flex:none">
+<div class="kk">Bestellung · Abendessen 1800</div>
+<div class="kasten">
+<div class="lbl">BEDARF AUS DEM PLAN</div>
+<div class="gross">268 <span style="font:400 13px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484">Portionen · 31 veg. · 6 vegan</span></div>
+</div>
+<div class="kasten">
+<div class="lbl">BESTELLT</div>
+<dl>
+<dt>Portionen</dt><dd><b>280</b> <span class="marke ok">+12 Reserve</span></dd>
+<dt>davon</dt><dd>34 vegetarisch · 6 vegan</dd>
+<dt>bei</dt><dd>Feldküche Bereitstellungsraum (JUH)</dd>
+<dt>bestellt</dt><dd>101210SEP26 · Meier (S4)</dd>
+<dt>geliefert</dt><dd><span class="marke neu">offen</span></dd>
+</dl>
+</div>
+<div class="kasten" style="display:flex;gap:8px;flex-wrap:wrap">
+<span class="btn haupt">Als geliefert melden ⏎</span>
+<span class="btn">Bestellung ändern…</span>
+<span class="btn">Stornieren…</span>
+</div>
+<div class="kurzliste">
+<b>101210</b>Abend 1800 bestellt: 280 (Meier)<br>
+<b>100935</b>Mittag 1200 geliefert: 210 von 210<br>
+<b>100612</b>Mittag 1200 bestellt: 210 (Meier)<br>
+<b>092140</b>Frühstück 0600 bestellt: 244 (Koch)
+</div>
+<div class="hinweis">Eine Bestellung ist ein Ereignis: Sie steht im Einsatztagebuch und ist mit ⌃Z rücknehmbar. Der Anmarsch (24) ist nicht enthalten — wer für ihn mitbestellt, trägt die Reserve ein.</div>
+</div>
+</div>
+</div>
+<div class="status">Stand: vor 6 s · Share erreichbar (vor 3 s) · 2 weitere Arbeitsplätze · 1 Konflikthinweis<span class="rechts">42 EINH · 24/61/183 // 268</span></div>
+</div>
+</div>
+<p class="dv-sub">Reiter „Versorgung" neu zwischen Führungsstelle und Kosten (additiv in <code>blaetter.ts</code>). Das KPI-Band nennt die Zahlen des Tages, „ohne Unterkunft" in Bernstein, sobald größer null. Die Spalten des Plans folgen der Mahlzeitenregel; Früh/Spät kämen als weitere Schichten hinzu, nicht als weitere Mahlzeiten.</p>
+</div>
+
+<!-- ================= 4e Blatt Versorgung · Unterbringung ================= -->
+<div class="dv-opt" id="4e"><div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Blatt „Versorgung" — Unteransicht Unterbringung: Unterkünfte mit Belegung, Einheiten mit Übernachtungsbedarf und Zuweisung in der Zelle</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr" data-screen-label="Versorgung Unterbringung">
+<div class="kopf">
+<div class="brot">‹ Einsatzauswahl</div>
+<div class="zeile">
+<div class="logo">THW</div><span class="wort">S1-Control</span>
+<div class="kpi" style="margin-left:6px"><b>STÄRKE</b><span>24/61/183 // 268</span></div>
+<div class="kpi"><b>ZEIT</b><span>101443SEP26</span></div>
+<div class="themen"><span>Standard</span><span>Dunkel</span><span>Feld</span><span>Nacht</span></div>
+</div>
+<div class="zustand">✓ Hochwasser Oldenburg · Stand vor 6 s · Share erreichbar — 2 weitere Arbeitsplätze</div>
+<div class="reiter"><span>Lage</span><span>Eingangskorb <i>7</i></span><span>Anforderungen</span><span>Führungsstelle</span><span class="aktiv">Versorgung</span><span>Kosten</span><span>Führungsorganisation</span><span>Ausgaben</span><span>Einsatztagebuch</span><span class="rechts">Diagnose</span></div>
+</div>
+<div class="band">
+<div><b>268</b><span>PORTIONEN ABEND 1800</span></div>
+<div><b>31</b><span>VEGETARISCH</span></div>
+<div><b>6</b><span>VEGAN</span></div>
+<div><b>142</b><span>BETTEN HEUTE NACHT</span></div>
+<div class="warn"><b>18</b><span>OHNE UNTERKUNFT</span></div>
+<div><b>+24</b><span>ANMARSCH (GETRENNT)</span></div>
+</div>
+<div class="flaeche" style="flex-direction:column;gap:0">
+<div class="werkzeuge">
+<div class="umschalter"><span>Verpflegung</span><span class="aktiv">Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
+<span class="btn haupt" style="margin-left:10px">Unterkunft anlegen ⌃N</span>
+<span class="btn">Ändern</span>
+<span class="btn">Auflösen…</span>
+<span class="btn">Nacht: 10./11. SEP ▾</span>
+<span class="btn rechts">Belegungsliste als PDF</span>
+</div>
+<div style="display:flex;gap:14px;flex:1;min-height:0">
+<div class="karte" style="width:330px;flex:none">
+<div class="kk">Unterkünfte <small>· 3 · 344 Plätze · 124 belegt</small></div>
+<div style="padding:10px;display:flex;flex-direction:column;gap:10px">
+<div class="uk gewaehlt">
+<div class="name">Turnhalle BBS Haarentor <small>Ammerländer Heerstr. · 1,8 km</small><span class="marke ok" style="margin-left:auto">24 frei</span></div>
+<div class="balken"><i class="m" style="width:66.7%"></i><i class="w" style="width:11.7%"></i><i class="d" style="width:1.6%"></i></div>
+<div class="zahlen"><span><b>96</b> / 120</span><span>m 80 · w 14 · d 2</span><span>4 Einheiten</span></div>
+</div>
+<div class="uk">
+<div class="name">Feldlager Kaserne Donnerschwee <small>BR · 0,4 km</small><span class="marke ok" style="margin-left:auto">172 frei</span></div>
+<div class="balken"><i class="m" style="width:11%"></i><i class="w" style="width:3%"></i></div>
+<div class="zahlen"><span><b>28</b> / 200</span><span>m 22 · w 6 · d 0</span><span>2 Einheiten</span></div>
+</div>
+<div class="uk">
+<div class="name">Unterkunft THW OV Oldenburg <small>Unterkunftsräume · 3,2 km</small><span class="marke neu" style="margin-left:auto">24 frei</span></div>
+<div class="balken"></div>
+<div class="zahlen"><span><b>0</b> / 24</span><span>—</span><span>keine Einheit</span></div>
+</div>
+<div class="legende"><span><i class="m"></i>MÄNNL.</span><span><i class="w"></i>WEIBL.</span><span><i class="d"></i>DIV.</span></div>
+</div>
+<div class="hinweis" style="margin-top:auto">Eine Zuweisung über die Kapazität wird nicht verweigert, sondern an der Karte mit „⚠ überbelegt" gezeigt. Kapazität als eine Zahl oder m/w/d getrennt: offene Entscheidung 2.</div>
+</div>
+<div class="karte" style="flex:1">
+<div class="kk">Einheiten mit Übernachtungsbedarf <small>· 14 von 42 · ohne Zuweisung zuerst</small><span class="rechts" style="font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#8b93ad;border:1px solid #c9cfe0;padding:6px 10px;width:220px">Einheit, Bereich, Unterkunft…</span></div>
+<div class="rollen"><table class="t">
+<thead><tr><th>Einheit</th><th>Bereich</th><th>Schicht</th><th class="z grp">ÜN m</th><th class="z">w</th><th class="z">d</th><th class="grp">Ruhezeit</th><th class="grp">Unterkunft</th><th>Zustand</th></tr></thead>
+<tbody>
+<tr><td>2. Zug FF Rastede</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Nacht</td><td class="z grp">14</td><td class="z">2</td><td class="z">0</td><td class="sek grp">ja, ab 0600</td><td class="grp edit">— bitte wählen — ▾</td><td><span class="marke warn">ohne Unterkunft</span></td></tr>
+<tr><td>SEG JUH Weser-Ems</td><td class="sek">EA 3 Evakuierung</td><td class="sek">Tag</td><td class="z grp">2</td><td class="z">0</td><td class="z">0</td><td class="sek grp">—</td><td class="grp sek">—</td><td><span class="marke warn">ohne Unterkunft</span></td></tr>
+<tr><td>FGr N 1 OV Oldenburg</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Tag</td><td class="z grp">9</td><td class="z">2</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr WP OV Wildeshausen</td><td class="sek">EA 2 Pumpen Süd</td><td class="sek">Nacht</td><td class="z grp">12</td><td class="z">1</td><td class="z">0</td><td class="sek grp">ja, ab 0600</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>B 2 OV Bremen-Nord</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Tag</td><td class="z grp">7</td><td class="z">2</td><td class="z">1</td><td class="sek grp">—</td><td class="grp">Feldlager Kaserne Donnerschwee</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr Log-V OV Wildeshausen</td><td class="sek">Logistik</td><td class="sek">Tag</td><td class="z grp">5</td><td class="z">1</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Feldlager Kaserne Donnerschwee</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>1. Zug FF Wiefelstede</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Nacht</td><td class="z grp">16</td><td class="z">2</td><td class="z">0</td><td class="sek grp">ja, ab 0600</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr R OV Delmenhorst</td><td class="sek">EA 2 Pumpen Süd</td><td class="sek">Nacht</td><td class="z grp">10</td><td class="z">2</td><td class="z">0</td><td class="sek grp">ja, ab 0600</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr WP OV Cloppenburg</td><td class="sek">EA 2 Pumpen Süd</td><td class="sek">Tag</td><td class="z grp">11</td><td class="z">1</td><td class="z">1</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr N 2 OV Vechta</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Tag</td><td class="z grp">8</td><td class="z">2</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>Zugtrupp OV Oldenburg</td><td class="sek">Führungsstelle</td><td class="sek">Nacht</td><td class="z grp">3</td><td class="z">1</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>Stab FüSt</td><td class="sek">Führungsstelle</td><td class="sek">Tag</td><td class="z grp">3</td><td class="z">1</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>B 1 OV Oldenburg</td><td class="sek">EA 1 Deich Nord</td><td class="sek">Nacht</td><td class="z grp">11</td><td class="z">4</td><td class="z">0</td><td class="sek grp">ja, ab 0600</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr><td>FGr E OV Ammerland</td><td class="sek">EA 2 Pumpen Süd</td><td class="sek">Tag</td><td class="z grp">7</td><td class="z">1</td><td class="z">0</td><td class="sek grp">—</td><td class="grp">Turnhalle BBS Haarentor</td><td><span class="marke ok">zugewiesen</span></td></tr>
+<tr class="sum"><td>Summe</td><td></td><td></td><td class="z grp">118</td><td class="z">22</td><td class="z">2</td><td class="grp"></td><td class="grp">124 zugewiesen · 18 offen</td><td></td></tr>
+</tbody>
+</table></div>
+<div class="fussnote">Bedarf (K6): „Unterbringung ja" aus dem Bogen, Köpfe nach m/w/d aus den Personen oder dem Override der Einheit. Doppelklick auf „Unterkunft" bearbeitet die Zelle und bietet Unterkünfte mit freien Plätzen zuerst · Enter schreibt · Esc verwirft · ⌃Z nimmt zurück.</div>
+</div>
+</div>
+</div>
+<div class="status">Stand: vor 6 s · Share erreichbar (vor 3 s) · 2 weitere Arbeitsplätze<span class="rechts">42 EINH · 24/61/183 // 268</span></div>
+</div>
+</div>
+<p class="dv-sub">Die Zuweisung hängt als Feld an der Einheit (<code>unterkunftId</code>): Verschieben, Entfernen und Undo nehmen sie mit. Die Unterkunft ist eine neue Entität mit Anlage, Feldern und Pflichtgrund beim Auflösen — gleiche Rahmenfelder wie Abschnitt und Einheit.</p>
+</div>
+
+<!-- ================= 4f Blatt Versorgung · Sofortbedarf (Auszug) ================= -->
+<div class="dv-opt" id="4f"><div class="dv-olabel"><a class="dv-oid" href="#4f">4f</a>Blatt „Versorgung" — Unteransicht Sofortbedarf: Abarbeitungsliste der Erstmeldungen aus dem Bogen (Auszug ohne Kopfband)</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr kurz" data-screen-label="Versorgung Sofortbedarf">
+<div class="flaeche" style="flex-direction:column;gap:0">
+<div class="werkzeuge">
+<div class="umschalter"><span>Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="aktiv">Sofortbedarf</span></div>
+<span class="btn haupt" style="margin-left:10px">Als erledigt melden (2)</span>
+<span class="btn">Wieder öffnen</span>
+<span class="btn">Erledigte ausblenden</span>
+<span class="btn rechts">Kraftstoffliste als PDF</span>
+</div>
+<div class="karte">
+<div class="kk">Sofortbedarf aus dem Erfassungsbogen <small>· 9 Einheiten mit Meldung · 2 gewählt</small></div>
+<table class="t">
+<thead><tr><th style="width:28px"></th><th>Einheit</th><th>Bereich</th><th class="z">Eingetroffen</th><th class="z grp">Verpfl. Pers.</th><th class="z grp">Diesel l</th><th class="z">Benzin l</th><th class="z">Gemisch l</th><th class="grp">Unterbringung</th><th>Ruhezeit</th><th class="grp">Stand Bogen</th><th>Erledigt</th></tr></thead>
+<tbody>
+<tr class="gewaehlt"><td>☑</td><td class="nw">2. Zug FF Rastede</td><td class="sek nw">EA 1 Deich Nord</td><td class="z">101402</td><td class="z grp">22</td><td class="z grp">400</td><td class="z">60</td><td class="z">0</td><td class="grp"><span class="marke warn">ja · offen</span></td><td><span class="marke warn">ja</span></td><td class="z grp mono">101355SEP26 · F. 2</td><td class="sek nw">Verpfl. ✓ · Diesel —</td></tr>
+<tr class="gewaehlt"><td>☑</td><td class="nw">SEG JUH Weser-Ems</td><td class="sek nw">EA 3 Evakuierung</td><td class="z">101120</td><td class="z grp">6</td><td class="z grp">0</td><td class="z">0</td><td class="z">0</td><td class="grp"><span class="marke warn">ja · offen</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">101108SEP26 · F. 1</td><td class="sek nw">Verpfl. ✓</td></tr>
+<tr><td>☐</td><td class="nw">FGr WP OV Wildeshausen</td><td class="sek nw">EA 2 Pumpen Süd</td><td class="z">100830</td><td class="z grp">15</td><td class="z grp">800</td><td class="z">0</td><td class="z">20</td><td class="grp"><span class="marke ok">ja · Turnhalle</span></td><td><span class="marke warn">ja</span></td><td class="z grp mono">100815SEP26 · F. 1</td><td class="sek nw">Verpfl. ✓ · Diesel ✓ · Gemisch —</td></tr>
+<tr><td>☐</td><td class="nw">FGr WP OV Cloppenburg</td><td class="sek nw">EA 2 Pumpen Süd</td><td class="z">100910</td><td class="z grp">14</td><td class="z grp">600</td><td class="z">0</td><td class="z">0</td><td class="grp"><span class="marke ok">ja · Turnhalle</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100855SEP26 · F. 1</td><td class="sek nw">Verpfl. ✓ · Diesel ✓</td></tr>
+<tr><td>☐</td><td class="nw">FGr N 1 OV Oldenburg</td><td class="sek nw">EA 1 Deich Nord</td><td class="z">100640</td><td class="z grp">12</td><td class="z grp">150</td><td class="z">40</td><td class="z">10</td><td class="grp"><span class="marke ok">ja · Turnhalle</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100630SEP26 · F. 3</td><td class="sek nw">Verpfl. ✓ · Diesel ✓ · Benzin —</td></tr>
+<tr><td>☐</td><td class="nw">B 2 OV Bremen-Nord</td><td class="sek nw">EA 1 Deich Nord</td><td class="z">100715</td><td class="z grp">11</td><td class="z grp">250</td><td class="z">0</td><td class="z">0</td><td class="grp"><span class="marke ok">ja · Feldlager</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100700SEP26 · F. 1</td><td class="sek nw">Verpfl. ✓ · Diesel ✓</td></tr>
+<tr class="blass"><td>☐</td><td class="nw">FGr Log-V OV Wildeshausen</td><td class="sek nw">Logistik</td><td class="z">100520</td><td class="z grp">6</td><td class="z grp">0</td><td class="z">0</td><td class="z">0</td><td class="grp"><span class="marke ok">ja · Feldlager</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100505SEP26 · F. 1</td><td class="sek nw">alles ✓ 100610 (Koch)</td></tr>
+<tr class="blass"><td>☐</td><td class="nw">Zugtrupp OV Oldenburg</td><td class="sek nw">Führungsstelle</td><td class="z">100455</td><td class="z grp">4</td><td class="z grp">100</td><td class="z">0</td><td class="z">0</td><td class="grp"><span class="marke ok">ja · Turnhalle</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100440SEP26 · F. 1</td><td class="sek nw">alles ✓ 100550 (Koch)</td></tr>
+<tr class="blass"><td>☐</td><td class="nw">FGr E OV Ammerland</td><td class="sek nw">EA 2 Pumpen Süd</td><td class="z">100610</td><td class="z grp">8</td><td class="z grp">0</td><td class="z">20</td><td class="z">0</td><td class="grp"><span class="marke ok">ja · Turnhalle</span></td><td><span class="marke neu">nein</span></td><td class="z grp mono">100600SEP26 · F. 1</td><td class="sek nw">alles ✓ 100700 (Koch)</td></tr>
+<tr class="sum"><td></td><td>Summe · offen</td><td></td><td></td><td class="z grp">98</td><td class="z grp">2 300 · <span style="color:#7a5c12">400 offen</span></td><td class="z">120 · <span style="color:#7a5c12">100 offen</span></td><td class="z">30 · <span style="color:#7a5c12">30 offen</span></td><td class="grp">2 offen</td><td>3 ja</td><td class="grp"></td><td></td></tr>
+</tbody>
+</table>
+<div class="fussnote">Der Sofortbedarf ist die Erstmeldung beim Eintreffen (Bogen, Fassung F. n), kein laufender Verbrauch. „Erledigt" ist ein Ereignis je Feld — Diesel kann erledigt sein und Unterbringung noch offen. Erledigte Zeilen bleiben blass sichtbar; „Wieder öffnen" nimmt die Erledigung zurück.</div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-sub">Die Kraftstoffliste als PDF ist für die Tankstelle oder den Tankwagen: je Einheit Fahrzeugtypen (K10), Liter je Sorte, Bereich. Verbrauch und Nachbestellung sind nicht Teil dieses Entwurfs.</p>
+</div>
+
+</div>
+<p class="dv-next" style="margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)">Nächster Schritt: Entscheidungen 1–7 aus <code>KONZEPT-S4.md</code> klären, dann Schnitt S4.1 (Blatt mit „Bereiche · Schichten", Monitoransichten, Kontextmenü) ohne neue Ereignisse.</p>
+</section>
+
+</body>
+</html>
