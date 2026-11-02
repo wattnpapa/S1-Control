@@ -142,3 +142,35 @@ export const KOSTEN_VORBELEGUNG = {
   ukVerpflegungProTag: 20,
   geplanteEinsatztage: 5,
 } as const;
+
+/** Die vier Mahlzeiten der Versorgung (S4, KONZEPT-S4.md §5.1). */
+export const MAHLZEITEN = ["FRUEHSTUECK", "MITTAG", "ABEND", "NACHT"] as const;
+export type Mahlzeit = (typeof MAHLZEITEN)[number];
+
+/** Eine Zeile der Mahlzeitenregel: wann ausgegeben wird und welche Schichten essen. */
+export interface Mahlzeitregelzeile {
+  readonly mahlzeit: Mahlzeit;
+  /** Ausgabezeit als `HHMM` in Ortszeit, z. B. `"1800"`. */
+  readonly uhrzeit: string;
+  readonly schichten: readonly string[];
+}
+
+/** Die Mahlzeitenregel eines Einsatzes — eine Zeile je Mahlzeit. */
+export type Mahlzeitenregel = readonly Mahlzeitregelzeile[];
+
+/**
+ * Die Vorbelegung der Mahlzeitenregel (KONZEPT-S4.md §5.1, Entscheidung 4).
+ *
+ * Wie {@link KOSTEN_VORBELEGUNG} eine fachliche Zahl und keine Einstellung des
+ * Rechners: Jeder Arbeitsplatz rechnet mit derselben Regel, bis der Einsatz
+ * eine eigene setzt. TAG isst Frühstück, Mittag, Abend; NACHT isst Abend,
+ * Nacht, Frühstück. Im Drei-Schicht-Modell bekommt jede Schicht die zwei
+ * Mahlzeiten, die in ihre acht Stunden fallen oder an ihrem Wechsel liegen:
+ * FRUEH (0600–1400) Frühstück und Mittag, SPAET (1400–2200) Mittag und Abend.
+ */
+export const MAHLZEITENREGEL_VORBELEGUNG: Mahlzeitenregel = [
+  { mahlzeit: "FRUEHSTUECK", uhrzeit: "0600", schichten: ["TAG", "NACHT", "FRUEH"] },
+  { mahlzeit: "MITTAG", uhrzeit: "1200", schichten: ["TAG", "FRUEH", "SPAET"] },
+  { mahlzeit: "ABEND", uhrzeit: "1800", schichten: ["TAG", "NACHT", "SPAET"] },
+  { mahlzeit: "NACHT", uhrzeit: "0000", schichten: ["NACHT"] },
+];
