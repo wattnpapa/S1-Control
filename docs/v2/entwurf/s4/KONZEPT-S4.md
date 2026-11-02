@@ -1,9 +1,11 @@
 # S4-Ansichten: Unterbringung und Verpflegung aus der Kräfteübersicht
 
-Stand 2026-11-02. Das ist ein Entwurf, nichts davon ist umgesetzt. Der Text
-legt fest, was gebaut würde und aus welchen Daten; `mockups-s4.html` im selben
-Ordner zeigt, wie es aussähe (Runde 4, Optionen 4a bis 4h, Beispiellage
-„Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html`).
+Stand 2026-11-02: **umgesetzt** in den Schnitten S4.1 bis S4.4 (Abschnitt
+7). Der Text legt fest, was gebaut ist und aus welchen Daten; `mockups-s4.html`
+im selben Ordner zeigt den Entwurf (Runde 4, Optionen 4a bis 4h, Beispiellage
+„Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html`), `stand/` die
+Aufnahmen des gebauten Renderers. Was bewusst vom Entwurf abweicht und was
+offen bleibt, steht in `UMSETZUNGSBERICHT.md`.
 
 Begriffe: S1 führt die Kräfte, S4 versorgt sie. In der THW-Führungsstelle ist
 S4 der Sachgebietsleiter Versorgung; er kümmert sich um Unterbringung,
@@ -308,7 +310,35 @@ S4.4 Sofortbedarf-Abarbeitung mit Erledigt je Feld und Kraftstoffsumme.
 Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei S4.2 und S4.3
 (Fold, Sync) der volle Lauf.
 
-## 8. Offene Entscheidungen
+Umgesetzt wie geschnitten. Gebaut ist in Ring 2 `projektion/versorgung.ts`
+(Vorausschau), `mahlzeitenregel.ts`, `versorgung-blatt.ts`, `unterkunft.ts`,
+`bestellung.ts` und `sofortbedarf.ts`; die Ausgaben stehen in
+`packages/ausgaben/src/versorgung.ts`, der Kontrakt wächst additiv um
+`Lagebild.versorgung`, den Ruf `versorgungAnfordern`, die Ausgaben
+`belegung`, `bestellliste`, `vorausschau`, `kraftstoff` und um
+`Einstellungen.monitor`. Der Renderer hat `Versorgung.tsx` mit je einer Datei
+je Unteransicht, der Monitor `Monitorbild.tsx`, `Monitoransichten.tsx`,
+`Monitormenue.tsx`, `Monitorleiste.tsx` und `monitorSteuerung.ts`. Der Main
+und die Web-Schale haben bis auf das Merken von `monitor` in den
+Einstellungen nichts Neues bekommen. `FOLD_VERSION` steht auf 6.
+
+## 8. Entscheidungen (getroffen)
+
+Getroffen am 2026-11-02 mit dem Umsetzungsauftrag; die ursprünglichen
+Fragen stehen darunter zum Nachlesen.
+
+1. Der Reiter „Versorgung" ist für alle sichtbar.
+2. Die Kapazität einer Unterkunft ist eine Zahl; die Belegung zeigt m/w/d.
+3. Keine weiteren Kostformen über vegetarisch und vegan hinaus.
+4. Die Mahlzeitenregel ist ein Parameter je Einsatz mit Vorbelegung
+   (`MAHLZEITENREGEL_VORBELEGUNG` in `werte.ts`, gesetzt mit
+   `MahlzeitenregelGesetzt`).
+5. Keine zweite Monitordatei `versorgung.html`; es reicht das Zweitfenster mit
+   seinen Ansichten.
+6. Eine Ablösung ohne Eintreffzeit bleibt „nicht eingerechnet".
+7. Ruhezeit nur als Ja/Nein des Bogens.
+
+### Die Fragen, wie sie standen
 
 1. Reiter „Versorgung" im Kopfband für alle, oder nur sichtbar, wenn der
    Arbeitsplatz die Rolle S4 trägt? Der Entwurf zeigt ihn für alle; eine

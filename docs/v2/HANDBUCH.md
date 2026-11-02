@@ -111,6 +111,41 @@ Installiert wird nichts von selbst; es gibt keinen Auto-Updater. Nach dem
 Holen liegt eine Datei auf dem Share, und ein Mensch startet sie. Alles
 Weitere in [BETRIEB.md](BETRIEB.md).
 
+## Versorgung und Monitoransichten
+
+Das Blatt **Versorgung** ist der Arbeitsplatz des S4. Es liest, was der S1
+an den Einheiten pflegt (Stärke, Schicht, Kostform, Übernachtungsbedarf,
+Zeiten, Sofortbedarf aus dem Bogen), und führt dazu, was der S4 selbst
+entscheidet: Unterkünfte und wer dort schläft, Ausgabestellen, Bestellungen,
+die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
+
+- **Zählregel.** Gezählt werden alle erfassten Einheiten der Einsatzbereiche,
+  auch in Ruhe. Das ist nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht
+  daneben und nie darin; nur die Vorausschau rechnet ihn ein, und nur ab der
+  gemeldeten Eintreffzeit.
+- **Nächste 24 h.** Je Mahlzeit Bestand nach Mahlzeitenregel und Schicht, plus
+  Zugänge ab Eintreffzeit, minus Abgänge ab „verfügbar bis“, Einsatzende oder
+  Rückführung. Wer genau zur Ausgabezeit eintrifft, isst mit; wer genau dann
+  geht, nicht mehr. Einheiten ohne Schicht essen wie die Tagschicht.
+- **Bestellen.** Die Vorausschau ist der Vorschlag, die Bestellung die
+  Entscheidung. Liegt die Bestellung darunter, zeigt die Karte die Differenz in
+  Bernstein. „Bestellung ändern“ legt eine neue an, die jüngste gilt.
+- **Unterbringen.** In der Zelle „Unterkunft“ doppelklicken, wählen, Enter.
+  Eine Zuweisung über die Kapazität wird gezeigt („⚠ überbelegt“), nicht
+  verweigert.
+- **Sofortbedarf.** Einheiten anhaken, Feld wählen, „Als erledigt melden“ —
+  je Feld ein Ereignis. Erledigte Zeilen bleiben blass stehen.
+- **Ausgaben.** Belegungsliste, Bestellliste, Vorausschau und Kraftstoffliste
+  stehen in der jeweiligen Unteransicht als PDF oder HTML.
+
+Der **Monitor** zeigt neben der Stärke vier weitere Ansichten: Verpflegung,
+Nächste 24 h, Unterbringung und die Tafel „Bereiche · Schichten“.
+Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
+Mausbewegung oben erscheint, oder mit den Tasten 1 bis 5; R schaltet den
+Wechsel alle 20 Sekunden ein und aus, die Leertaste hält ihn an, F11 schaltet
+Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —
+der Monitor im Zelt kann Verpflegung zeigen, der im Fahrzeug Stärke.
+
 ## Die Ansichten
 
 <!-- ANSICHTEN ANFANG — erzeugt, nicht von Hand ändern -->
@@ -187,11 +222,11 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 ### Versorgung
 
-Die Ansicht des S4: Verpflegung je Bereich und Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, das Logistikblatt am Bildschirm, der Übernachtungsbedarf nach m/w/d und der Sofortbedarf aus den Bögen.
+Die Ansicht des S4: Mahlzeitenplan je Bereich mit Ausgabestelle und Bestellung der nächsten Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, Unterkünfte mit Belegung und Zuweisung, das Logistikblatt am Bildschirm und die Abarbeitung des Sofortbedarfs aus den Bögen.
 
-**Zuerst:** Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird.
+**Zuerst:** Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird; „Unterbringung“ zeigt, wer noch kein Bett hat.
 
-**Gut zu wissen:** Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit. Was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste.
+**Gut zu wissen:** Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit; was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste. Bestellung, Zuweisung, Mahlzeitenregel und „erledigt“ sind Ereignisse: Sie gelten für alle Arbeitsplätze, stehen im Tagebuch und lassen sich zurücknehmen.
 
 ### Kosten
 

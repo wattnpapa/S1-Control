@@ -123,5 +123,13 @@ Runde 4 liegt in einem eigenen Ordner: `../s4/KONZEPT-S4.md` und
 `../s4/mockups-s4.html` entwerfen die Versorgungsansichten für den S4
 (Monitor mit mehreren Ansichten und Kontextmenü, Blatt „Versorgung" mit
 Verpflegung, Vorausschau der nächsten 24 Stunden je Mahlzeit, Unterbringung,
-Bereiche · Schichten, Sofortbedarf). Nichts davon
-ist umgesetzt; die Gestaltung folgt Option 2a.
+Bereiche · Schichten, Sofortbedarf). Sie sind **umgesetzt** (Schnitte S4.1
+bis S4.4, Stand 2026-11-02); die Gestaltung folgt Option 2a und hängt an
+denselben Marken. Das Blatt nutzt die Bausteine KPI-Band (`.kpiband`),
+Umschalter (`.umschalter`), Versorgungstabelle (`.versorgungstabelle`),
+Vorausschau- und Unterkunftskarten; der Monitor bekommt eigene Marken
+(`--monitor-grund`, `--monitor-text`, `--monitor-warn` …), die im Nachtbild auf
+Bernstein gehen und sonst Schwarz auf Weiß bleiben. Aufnahmen des gebauten
+Renderers (1320×860 Standard, Nächste 24 h zusätzlich in Dunkel, Feld und
+Nacht, Monitor 960×540) liegen unter `../s4/stand/`; den Stand und die
+Abweichungen nennt `../s4/UMSETZUNGSBERICHT.md`.

@@ -140,11 +140,11 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     kennung: "versorgung",
     titel: "Versorgung",
     wozu:
-      "Die Ansicht des S4: Verpflegung je Bereich und Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, das Logistikblatt am Bildschirm, der Übernachtungsbedarf nach m/w/d und der Sofortbedarf aus den Bögen.",
+      "Die Ansicht des S4: Mahlzeitenplan je Bereich mit Ausgabestelle und Bestellung der nächsten Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, Unterkünfte mit Belegung und Zuweisung, das Logistikblatt am Bildschirm und die Abarbeitung des Sofortbedarfs aus den Bögen.",
     zuerst:
-      "Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird.",
+      "Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird; „Unterbringung“ zeigt, wer noch kein Bett hat.",
     ueberraschung:
-      "Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit. Was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste.",
+      "Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit; was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste. Bestellung, Zuweisung, Mahlzeitenregel und „erledigt“ sind Ereignisse: Sie gelten für alle Arbeitsplätze, stehen im Tagebuch und lassen sich zurücknehmen.",
     kuerzel: [],
   },
   {
