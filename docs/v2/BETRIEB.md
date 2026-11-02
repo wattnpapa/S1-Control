@@ -389,12 +389,11 @@ dem Server. Voraussetzung ist der einmalige manuelle Lauf von oben, denn die
    `prohibit-password` sein. Statt `root` geht auch ein Benutzer in der
    Gruppe `docker` mit Schreibrecht auf `/opt/s1-control`.
 3. Host-Schlüssel des Servers holen: `ssh-keyscan -p 22 <Host>`.
-4. In GitHub unter Settings → Environments das Environment `plesk` anlegen
-   und dort die Secrets eintragen: `PLESK_HOST`, `PLESK_USER`,
+4. In GitHub unter Settings → Secrets and variables → Actions die
+   Repository-Secrets eintragen: `PLESK_HOST`, `PLESK_USER`,
    `PLESK_SSH_KEY` (Inhalt der privaten Datei `s1-deploy`),
    `PLESK_KNOWN_HOSTS` (Ausgabe von `ssh-keyscan`), optional
-   `PLESK_SSH_PORT`. Im Environment lässt sich bei Bedarf eine Freigabe vor
-   jedem Deploy erzwingen.
+   `PLESK_SSH_PORT`.
 
 GitHub-Runner kommen von wechselnden IP-Adressen; die Plesk-Firewall und
 fail2ban müssen SSH per Schlüssel von außen zulassen. Der Workflow läuft
