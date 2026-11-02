@@ -186,6 +186,12 @@ export type {
   Funkzahlen,
   Rufgruppenkarte,
   WeitereRufgruppe,
+  Funkprobenzeile,
+  KeinKontaktGemeldet,
+  Kontaktart,
+  Kontaktstand,
+  LetzteFunkproben,
+  LetzterKontakt,
 } from "./projektion/index.js";
 
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3) und K31 (Funkrufname).
@@ -217,6 +223,7 @@ export {
 
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
+  FUNK_KONTAKT_SCHWELLE_VORBELEGUNG,
   KOSTEN_VORBELEGUNG,
   MAHLZEITEN,
   MAHLZEITENREGEL_VORBELEGUNG,
@@ -254,6 +261,7 @@ export {
   type Beobachtung,
   type DienstpostenZustand,
   type RufgruppeZustand,
+  type Funkprobenwert,
   type UnterkunftZustand,
   type EinheitZustand,
   type EinsatzZustand,

@@ -73,7 +73,7 @@ describe("Der Funkplan je Rufgruppe", () => {
     // Ruhende und angeforderte stehen im Plan; sie müssen erreichbar sein.
     expect(plan.ohneRufgruppe.map((t) => t.einheitId)).toEqual(["E5", "E4"]);
     expect(plan.ohneRufgruppe.find((t) => t.einheitId === "E4")?.erwartet).toBe(true);
-    expect(plan.zahlen).toEqual({ rufgruppen: 3, zugeordnet: 3, ohneRufgruppe: 2, dmoOderGateway: 1 });
+    expect(plan.zahlen).toEqual({ rufgruppen: 3, zugeordnet: 3, ohneRufgruppe: 2, dmoOderGateway: 1, ohneKontakt: 0 });
   });
 
   it("lässt eine aufgelöste Gruppe ohne Teilnehmer am Ende stehen; ihre Einheiten zählen als ohne Rufgruppe", () => {
@@ -142,7 +142,7 @@ describe("Der Funkplan je Bereich", () => {
     const basis = grundlage();
     const plan = funkplan(zustand(basis.filter((e) => e.typ !== "EinheitGemeldet")));
     expect(plan.jeBereich).toEqual([]);
-    expect(plan.zahlen).toEqual({ rufgruppen: 3, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 1 });
+    expect(plan.zahlen).toEqual({ rufgruppen: 3, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 1, ohneKontakt: 0 });
   });
 
   it("zählt eine Gruppe mit Gateway mit", () => {

@@ -238,3 +238,22 @@ export {
 } from "./funkplan.js";
 export { rufgruppeGilt, rufgruppenAnzeige, rufgruppenAuswahl, rufgruppenListe } from "./rufgruppen.js";
 export { FUNKFELDER_DER_EINHEIT, betriebsartWort, istFunkzeile, rufgruppenname } from "./tagebuch-funk.js";
+// Funkplan F3: letzter Kontakt, Schwelle und Funkproben
+export {
+  STATUS_OHNE_KONTAKTPFLICHT,
+  alterText,
+  funkKontaktSchwelle,
+  istUeberSchwelle,
+  kontaktartWort,
+  kontaktmarke,
+  kontaktpflicht,
+  kontaktText,
+  uhrzeitKurz,
+  type KeinKontaktGemeldet,
+  type Kontaktart,
+  type Kontaktmarke,
+  type Kontaktstand,
+  type LetzteFunkproben,
+  type LetzterKontakt,
+} from "./funkkontakt.js";
+export { FUNKPROBEN_GRENZE, funkprobenfolge, type Funkprobenzeile } from "./funkproben.js";

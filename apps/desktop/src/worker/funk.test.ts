@@ -79,7 +79,7 @@ describe("Der Funkplan an der Naht zum Renderer", () => {
     expect(ansicht.lageZeiger).toBeGreaterThan(0);
     expect(ansicht.plan.rufgruppen.map((r) => r.name)).toEqual(["THW_OL_FUE", "DMO 310"]);
     expect(ansicht.plan.rufgruppen[0]?.teilnehmer.map((t) => t.einheit)).toEqual(["Bergungsgruppe Oldenburg"]);
-    expect(ansicht.plan.zahlen).toEqual({ rufgruppen: 2, zugeordnet: 1, ohneRufgruppe: 0, dmoOderGateway: 1 });
+    expect(ansicht.plan.zahlen).toEqual({ rufgruppen: 2, zugeordnet: 1, ohneRufgruppe: 0, dmoOderGateway: 1, ohneKontakt: 0 });
     expect(ansicht.bereiche).toEqual([{ abschnittId: "EO", name: "Deich Nord", tiefe: 0 }]);
     expect(funkplanbereiche(a.dienst.zustand).some((b) => b.abschnittId === "EINGANG")).toBe(false);
   });

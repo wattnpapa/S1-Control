@@ -715,10 +715,27 @@ function nimmAuf(faltung: Faltung, ereignis: EingehendesEreignis): void {
     ...rahmen,
     neu: wert,
     ...("vorher" in ereignis ? { vorher: { wert: ereignis.vorher } } : {}),
-    ...(typeof nutzlast["meldezeit"] === "string"
-      ? { fachlicheZeit: nutzlast["meldezeit"], zeitklasse: "IST" as const }
-      : {}),
+    ...fachlicheZeitAus(nutzlast),
   });
+}
+
+/**
+ * Die fachliche Zeit, die eine Form-a-Art in der Nutzlast trägt.
+ *
+ * `meldezeit` datiert eine Stärkemeldung und ist eine Ist-Zeit (§2.5).
+ * `ereignisZeit` ist die Funkzeit einer Statusmeldung; der Funkplan liest sie
+ * als Zeit des letzten Kontakts (KONZEPT-FUNKPLAN.md §3). Sie bekommt keine
+ * Zeitklasse: Der Fold prüfte sie bisher nicht, und eine Klasse erzeugte
+ * nachträglich Hinweise an Statusmeldungen, die längst gelesen sind; die
+ * Prüfung „nicht in der Zukunft" macht der Worker vor dem Schreiben. Eine
+ * Rücknahme trägt die Nutzlast des Originals und damit dessen Funkzeit mit;
+ * der Fold unterscheidet sie nicht (§6 U1), der Funkplan liest ein
+ * zurückgenommenes Statusfeld deshalb nicht als Meldung (`undoOf`).
+ */
+function fachlicheZeitAus(nutzlast: Record<string, unknown>): { fachlicheZeit?: string; zeitklasse?: "IST" } {
+  if (typeof nutzlast["meldezeit"] === "string") return { fachlicheZeit: nutzlast["meldezeit"], zeitklasse: "IST" };
+  if (typeof nutzlast["ereignisZeit"] === "string") return { fachlicheZeit: nutzlast["ereignisZeit"] };
+  return {};
 }
 
 /**
@@ -961,6 +978,9 @@ const ZEITEN: ReadonlyMap<string, { klasse: "IST" | "PLAN"; schluessel?: string 
   ["anforderung.erledigung", { klasse: "IST" as const, schluessel: "erledigtAm" }],
   ["anhang.hinzugefuegtAm", { klasse: "IST" as const }],
   ["etbEintrag.zeitpunkt", { klasse: "IST" as const }],
+  // Funkplan F3: die Funkzeit einer Probe steht im Wert, damit die Rücknahme sie mitbringt.
+  ["einheit.letzteFunkprobe/KONTAKT", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["einheit.letzteFunkprobe/KEIN_KONTAKT", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
 ]);
 
 /** Startwert S1: Abweichung einer Ist-Zeit von der Wanduhr in eine der beiden Richtungen. */

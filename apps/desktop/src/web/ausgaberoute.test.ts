@@ -126,7 +126,7 @@ describe("GET /ausgabe", () => {
   });
 
   it("liefert den Funkplan als Bildschirmseite mit Drucken-Knopf und scrollbarer Tabelle", () => {
-    const plan = { rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0 } };
+    const plan = { rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0, ohneKontakt: 0 }, schwelleMinuten: 60 };
     const seite = mitDruckknopf(funkplanAlsHtml(plan, { datum: "2026-09-10", einsatzName: "Hochwasser", stand: "Stand: jetzt" }));
     expect(seite).toContain('class="druckleiste"');
     expect(seite).toContain('class="tabellenrahmen"');

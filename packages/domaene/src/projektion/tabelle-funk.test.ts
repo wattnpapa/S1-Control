@@ -46,8 +46,8 @@ describe("Die Spaltengruppe FUNK", () => {
     expect(SICHTBARE_GRUPPEN_VORBELEGUNG).not.toContain("FUNK");
   });
 
-  it("führt Rufgruppe, Funkrufname und Funkhinweis; die Erreichbarkeit bleibt in der Ressourcenplanung", () => {
-    expect(spaltenDerGruppen(["FUNK"]).map((sp) => sp.schluessel)).toEqual(["rufgruppe", "funkrufname", "funkhinweis"]);
+  it("führt Rufgruppe, Funkrufname, Funkhinweis und letzten Kontakt; die Erreichbarkeit bleibt in der Ressourcenplanung", () => {
+    expect(spaltenDerGruppen(["FUNK"]).map((sp) => sp.schluessel)).toEqual(["rufgruppe", "funkrufname", "funkhinweis", "letzterKontakt"]);
     expect(spalte("funkhinweis")).toMatchObject({ art: "text", schreibt: { art: "stammdaten", feld: "funkHinweis" }, feldpfad: "funkHinweis" });
     expect(spalte("erreichbarkeit")?.gruppe).toBe("RESSOURCENPLANUNG");
     expect(spalte("rufgruppe")).toMatchObject({

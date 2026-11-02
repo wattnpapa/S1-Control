@@ -94,7 +94,8 @@ export const FUNK_ANSICHT: Funkplanansicht = {
       { abschnittId: "EA3", name: "EA 3 Evakuierung", teilnehmer: [E4] },
       { abschnittId: "ANG", name: "Angefordert", teilnehmer: [E5, E6] },
     ],
-    zahlen: { rufgruppen: 4, zugeordnet: 4, ohneRufgruppe: 2, dmoOderGateway: 1 },
+    zahlen: { rufgruppen: 4, zugeordnet: 4, ohneRufgruppe: 2, dmoOderGateway: 1, ohneKontakt: 0 },
+    schwelleMinuten: 60,
   },
   bereiche: [
     { abschnittId: "EA1", name: "EA 1 Deich Nord", tiefe: 0 },

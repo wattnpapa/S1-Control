@@ -12,6 +12,7 @@
  */
 
 import type { EingehendesEreignis } from "../fold.js";
+import { FUNK_KONTAKT_SCHWELLE_VORBELEGUNG } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 
 import type { Tagebuchzeile } from "./tagebuch.js";
@@ -87,8 +88,30 @@ export const FUNKFELDER_DER_EINHEIT: ReadonlySet<string> = new Set([
 
 /** Gehört die Zeile in den Funkauszug einer Einheit? */
 export function istFunkzeile(zeile: Pick<Tagebuchzeile, "typ" | "feld">): boolean {
-  if (zeile.typ === "EinheitRufgruppeGesetzt") return true;
+  if (zeile.typ === "EinheitRufgruppeGesetzt" || zeile.typ === "FunkprobeDurchgefuehrt") return true;
   return zeile.typ === "EinheitStammdatenGeaendert" && zeile.feld !== undefined && FUNKFELDER_DER_EINHEIT.has(zeile.feld);
+}
+
+const ERGEBNIS_WORT: Readonly<Record<string, string>> = { KONTAKT: "Kontakt", KEIN_KONTAKT: "kein Kontakt" };
+
+/**
+ * „Funkprobe THW_OL_EA2: Kontakt" — die Gruppe beim Namen, das Ergebnis als
+ * Wort; Funkzeit und Grund stehen in ihren eigenen Spalten. Eine Rücknahme
+ * setzt den Vorher-Wert und ist keine Probe; sie heißt so.
+ */
+function funkprobensatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff: string): string {
+  const ergebnis = (ereignis.nutzlast as { ergebnis?: unknown } | null)?.ergebnis;
+  const wort = ERGEBNIS_WORT[String(ergebnis)] ?? String(ergebnis);
+  if (ereignis.undoOf !== undefined) return `${betreff} zurückgenommen (${wort})`;
+  const gruppe = text((ereignis.neu as { rufgruppeId?: unknown } | null | undefined)?.rufgruppeId);
+  return `${betreff}${gruppe === undefined ? "" : ` ${rufgruppenname(zustand, gruppe)}`}: ${wort}`;
+}
+
+/** „Schwelle „kein Kontakt“: 60 → 45 min"; ohne Vorher-Wert gilt die Vorbelegung. */
+function schwellensatz(ereignis: EingehendesEreignis, betreff: string): string {
+  const vorher = "vorher" in ereignis && typeof ereignis.vorher === "number" ? ereignis.vorher : FUNK_KONTAKT_SCHWELLE_VORBELEGUNG;
+  const neu = typeof ereignis.neu === "number" ? ereignis.neu : FUNK_KONTAKT_SCHWELLE_VORBELEGUNG;
+  return `${betreff}: ${String(vorher)} → ${String(neu)} min`;
 }
 
 /** Der Satz für die Arten des Funkplans; `undefined`, wenn der allgemeine Zusammenbau gilt. */
@@ -103,6 +126,10 @@ export function funksatz(zustand: Zustand, ereignis: EingehendesEreignis, betref
     case "RufgruppeAufgeloest":
     case "RufgruppeWiederhergestellt":
       return betreff;
+    case "FunkprobeDurchgefuehrt":
+      return funkprobensatz(zustand, ereignis, betreff);
+    case "FunkParameterGesetzt":
+      return schwellensatz(ereignis, betreff);
     case "EinheitRufgruppeGesetzt": {
       const vorher = "vorher" in ereignis ? ereignis.vorher : undefined;
       const von = text(vorher) === undefined ? "" : `${rufgruppenname(zustand, vorher)} → `;

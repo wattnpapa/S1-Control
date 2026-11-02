@@ -47,6 +47,7 @@ import { funkrufnameText } from "../funkrufname.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
 import { abloesungDerEinheit, type Marke } from "./abloesung.js";
+import { kontaktstand, kontaktText, type Kontaktstand } from "./funkkontakt.js";
 import { gliedereEinheiten, type Tabellengliederung } from "./gliederung.js";
 import { rufgruppeGilt, rufgruppenAnzeige, rufgruppenAuswahl } from "./rufgruppen.js";
 
@@ -224,6 +225,11 @@ export const SPALTEN: readonly Spalte[] = [
   // Funkplan F2: der Funkhinweis als Textspalte, dieselbe Zelle wie im Blatt.
   s({ schluessel: "funkhinweis", kopf: "Funkhinweis", excel: "—", gruppe: "FUNK", art: "text",
       schreibt: { art: "stammdaten", feld: "funkHinweis" }, feldpfad: "funkHinweis" }),
+  // Funkplan F3: der letzte Kontakt (Funkprobe oder Statusmeldung). Die Zeile
+  // trägt ihn ohne Uhr (`Tabellenzeile.letzterKontakt`); die Marke ab der
+  // Schwelle setzt die Oberfläche mit ihrer Minutenuhr, wie „läuft ab" an
+  // „Verfügbar bis" (K18).
+  s({ schluessel: "letzterKontakt", kopf: "Letzter Kontakt", excel: "—", gruppe: "FUNK", art: "berechnet" }),
 ];
 
 /** Die Spalte zu einem Schlüssel — die Tabelle wird oft und punktuell gefragt. */
@@ -292,6 +298,12 @@ export interface Tabellenzeile {
   /** K12 als Marke der Zeile — nur, wenn eine Ablösung angefordert ist. */
   readonly abloesung?: Marke;
   /**
+   * Funkplan F3: der letzte Kontakt ohne Uhr, mit Schwelle und
+   * Kontaktpflicht — Grundlage der Marke `kontaktmarke` an der Zelle
+   * „Letzter Kontakt". Fehlt ohne Funkprobe und Statusmeldung.
+   */
+  readonly letzterKontakt?: Kontaktstand;
+  /**
    * Die Vorlage, aus der die Einheit angelegt wurde — nur, wenn es eine gab.
    * „Zeile kopieren“ legt die Kopie mit demselben Verweis an (ZDM §3.2).
    */
@@ -345,6 +357,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
   const umstritten = new Set(hinweise.map((hinweis) => hinweis.feldpfad));
   const zahlen = logistik(zustand, einheit);
   const abloesung = abloesungDerEinheit(zustand, einheit.id);
+  const kontakt = kontaktstand(zustand, einheit);
 
   const berechnet: Readonly<Record<string, string>> = {
     ...abloesung?.zellen,
@@ -353,6 +366,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     auftraege: auftragsText(zustand, einheit.id),
     gesamt: String(gesamtstaerke(einheit)),
     funkrufname: funkrufnameDerEinheit(zustand, einheit),
+    letzterKontakt: kontakt === undefined ? "" : kontaktText(kontakt),
   };
 
   const zellen: Record<string, Zelle> = {};
@@ -427,6 +441,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     hinweise,
     zellen,
     ...(abloesung === undefined ? {} : { abloesung: abloesung.marke }),
+    ...(kontakt === undefined ? {} : { letzterKontakt: kontakt }),
     ...kopierquelle(einheit),
   };
 }

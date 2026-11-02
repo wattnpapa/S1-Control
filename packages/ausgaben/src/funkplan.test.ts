@@ -98,7 +98,7 @@ describe("Die Ausgabe Funkplan", () => {
   });
 
   it("bleibt ohne Rufgruppen eine ausfüllbare Seite", () => {
-    const html = funkplanAlsHtml({ rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0 } }, { datum: "2026-09-08", einsatzName: "Leer", stand: "Stand: jetzt" });
+    const html = funkplanAlsHtml({ rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0, ohneKontakt: 0 }, schwelleMinuten: 60 }, { datum: "2026-09-08", einsatzName: "Leer", stand: "Stand: jetzt" });
     expect(html).toContain("Ohne Rufgruppe");
     expect(html.match(/<tr class="leer">/g)).toHaveLength(2);
     expect(html).not.toContain("<dt>Erstellt</dt>");

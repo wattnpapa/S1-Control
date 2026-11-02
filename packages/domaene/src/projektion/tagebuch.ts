@@ -159,6 +159,9 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   RufgruppeAufgeloest: "Rufgruppe aufgelöst",
   RufgruppeWiederhergestellt: "Rufgruppe wiederhergestellt",
   EinheitRufgruppeGesetzt: "Rufgruppe gesetzt",
+  // Funkplan F3
+  FunkprobeDurchgefuehrt: "Funkprobe",
+  FunkParameterGesetzt: "Schwelle „kein Kontakt“",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -214,6 +217,7 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   funkrufnameOverride: "Funkrufname",
   weitereRufgruppenIds: "weitere Rufgruppen",
   funkHinweis: "Funkhinweis",
+  funkKontaktSchwelleMinuten: "Schwelle „kein Kontakt“",
 };
 
 // ---------------------------------------------------------------------------
@@ -518,6 +522,12 @@ function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
   for (const feld of ZEITFELDER) {
     const wert = nutzlastfeld(ereignis, feld);
     if (typeof wert === "string") return wert;
+  }
+  // Die Funkprobe trägt ihre Funkzeit im Wert; eine Rücknahme ist keine Probe
+  // und steht zur Zeit ihres Schreibens.
+  if (ereignis.typ === "FunkprobeDurchgefuehrt") {
+    const zeit = (ereignis.neu as { zeitpunkt?: unknown } | null | undefined)?.zeitpunkt;
+    return ereignis.undoOf === undefined && typeof zeit === "string" ? zeit : undefined;
   }
   // Das Eintreffen einer Anforderung trägt seine Zeit im Wert (`erledigtAm`).
   if (ereignis.typ === "AnforderungErledigt") {

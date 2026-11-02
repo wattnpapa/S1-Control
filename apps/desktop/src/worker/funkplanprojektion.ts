@@ -48,6 +48,7 @@ export function funkplanGefiltert(plan: Funkplan, suche: string | undefined): Fu
       .map((b) => ({ ...b, teilnehmer: b.teilnehmer.filter(bleibt) }))
       .filter((b) => b.teilnehmer.length > 0),
     zahlen: plan.zahlen,
+    schwelleMinuten: plan.schwelleMinuten,
   };
 }
 

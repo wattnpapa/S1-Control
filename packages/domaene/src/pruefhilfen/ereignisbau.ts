@@ -221,3 +221,28 @@ export function anlageEreignis(
 ): EingehendesEreignis {
   return { ...rahmen(h, laufnummer), typ, nutzlast };
 }
+
+/** Was eine Funkprobe angibt (Funkplan F3): Ergebnis und Funkzeit, Rufgruppe und Grund nach Bedarf. */
+export interface Funkprobenangabe {
+  readonly einheitId: string;
+  readonly ergebnis: "KONTAKT" | "KEIN_KONTAKT";
+  readonly zeitpunkt: string;
+  readonly rufgruppeId?: string;
+  readonly grund?: string;
+}
+
+/**
+ * Ein `FunkprobeDurchgefuehrt` wie der Bedienschritt es baut: Das Ergebnis
+ * wählt den Pfad, der Grund steht im Rahmen und im Wert. `vorher` ist die
+ * gesehene Probe desselben Ergebnisses, `null` für „noch keine".
+ */
+export function funkprobeDurchgefuehrt(
+  h: Hlc,
+  laufnummer: number,
+  angabe: Funkprobenangabe,
+  vorher: unknown = null,
+): EingehendesEreignis {
+  const { einheitId, ergebnis, zeitpunkt, rufgruppeId, grund } = angabe;
+  const neu = { zeitpunkt, ...(rufgruppeId === undefined ? {} : { rufgruppeId }), ...(grund === undefined ? {} : { grund }) };
+  return feldEreignis(h, laufnummer, "FunkprobeDurchgefuehrt", { einheitId, ergebnis }, vorher, neu, grund);
+}

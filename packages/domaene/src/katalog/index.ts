@@ -398,6 +398,16 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
       nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId", feld: fest("rufgruppeId"),
       klasse: "LWW_FELD" }),
 
+  // Funkplan F3: Funkprobe und Schwelle „kein Kontakt" (KONZEPT-FUNKPLAN.md §3, §8).
+  // Das Ergebnis wählt den Pfad, damit „kein Kontakt" den letzten Kontakt
+  // nicht verdrängt; die Rücknahme ist dieselbe Art mit dem Vorher-Wert.
+  e({ typ: "FunkprobeDurchgefuehrt", form: "a", schema: S.FunkprobeDurchgefuehrt, nutzlastVersion: 1,
+      entitaet: "einheit", idFeld: "einheitId", feld: ausNutzlast("ergebnis", "letzteFunkprobe"),
+      klasse: "LWW_ENTITAET" }),
+  e({ typ: "FunkParameterGesetzt", form: "a", schema: S.FunkParameterGesetzt, nutzlastVersion: 1,
+      entitaet: "einsatz", idFeld: "einsatzId", feld: fest("funkKontaktSchwelleMinuten"),
+      klasse: "LWW_FELD", gegenereignis: "FunkParameterGesetzt" }),
+
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,
       entitaet: "etbEintrag", idFeld: "etbId", klasse: "ADDITIV", ohneUndo: true }),

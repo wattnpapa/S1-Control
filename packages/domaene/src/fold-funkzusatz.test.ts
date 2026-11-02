@@ -49,8 +49,8 @@ function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
 }
 
 describe("Weitere Rufgruppen und Funkhinweis im Fold", () => {
-  it("steht auf Fassung 8 und führt die Liste als Ganzes (LWW_ENTITAET)", () => {
-    expect(FOLD_VERSION).toBe(8);
+  it("steht mindestens auf Fassung 8 und führt die Liste als Ganzes (LWW_ENTITAET)", () => {
+    expect(FOLD_VERSION).toBeGreaterThanOrEqual(8);
     expect(KATALOG.get("EinheitStammdatenGeaendert")?.klasseJeFeld?.["weitereRufgruppenIds"]).toBe("LWW_ENTITAET");
   });
 

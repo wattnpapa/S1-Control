@@ -50,9 +50,13 @@ import type {
  * und die Betriebsart als offener Bereich. **8** mit dem Funkplan (F2): die
  * Stammdatenfelder `weitereRufgruppenIds` und `funkHinweis` (eine Fassung 7
  * faltete sie als unbekannt nach dem Schema) und die Fremdreferenzprüfung je
- * Kennung der Liste.
+ * Kennung der Liste. **9** mit dem Funkplan (F3): `FunkprobeDurchgefuehrt` auf
+ * `letzteFunkprobe/<ergebnis>` der Einheit mit der Funkzeit als Ist-Zeit,
+ * `FunkParameterGesetzt` auf `funkKontaktSchwelleMinuten` des Einsatzes und
+ * die Funkzeit `ereignisZeit` einer Statusmeldung als `fachlicheZeit` am
+ * Statusfeld.
  */
-export const FOLD_VERSION = 8;
+export const FOLD_VERSION = 9;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -176,6 +180,8 @@ export interface EinsatzZustand extends Anlage {
   readonly ende?: Feld<Zeitpunkt>;
   /** S4.3: die Mahlzeitenregel des Einsatzes; fehlt sie, gilt die Vorbelegung. */
   readonly mahlzeitenregel?: Feld<KanonischerWert>;
+  /** Funkplan F3: die Schwelle „kein Kontakt" in Minuten; fehlt sie, gilt die Vorbelegung (60). */
+  readonly funkKontaktSchwelleMinuten?: Feld<number>;
   readonly kosten: {
     readonly psaKostenProSatz?: Feld<number>;
     readonly vdaProTag?: Feld<number>;
@@ -271,6 +277,15 @@ export interface EinheitZustand extends Anlage {
   readonly weitereRufgruppenIds?: Feld<readonly Id[]>;
   /** Funkplan F2: was die Sprechfunker zu dieser Einheit wissen müssen. */
   readonly funkHinweis?: Feld<string>;
+  /**
+   * Funkplan F3: die letzte Funkprobe je Ergebnis. Getrennt, weil „kein
+   * Kontakt" den letzten Kontakt nicht verdrängen darf; die Zeitfolge aller
+   * Proben ist eine Projektion des Ereignisstroms, nicht Teil des Zustands.
+   */
+  readonly letzteFunkprobe?: {
+    readonly KONTAKT?: Feld<Funkprobenwert>;
+    readonly KEIN_KONTAKT?: Feld<Funkprobenwert>;
+  };
   readonly psaSaetzeProTag?: Feld<number>;
   readonly abgeteiltVon?: Erstwert<{
     readonly quellEinheitId: Id;
@@ -289,6 +304,18 @@ export interface EinheitZustand extends Anlage {
   readonly wirksameStaerke: Staerke;
   readonly wirksamAufgegangen: boolean;
   readonly zaehlt: boolean;
+}
+
+/**
+ * Der Wert einer Funkprobe (Funkplan F3): die Funkzeit, die Rufgruppe, über
+ * die geprobt wurde, und bei „kein Kontakt" der Grund. Der Grund steht hier
+ * und nicht nur im Rahmen, weil der Zustand den Rahmen nicht hält und der
+ * Funkplan ihn neben dem letzten Kontakt zeigt.
+ */
+export interface Funkprobenwert {
+  readonly zeitpunkt: Zeitpunkt;
+  readonly rufgruppeId?: Id;
+  readonly grund?: string;
 }
 
 export interface FahrzeugZustand extends Anlage {

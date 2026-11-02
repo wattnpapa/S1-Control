@@ -143,6 +143,17 @@ export const KOSTEN_VORBELEGUNG = {
   geplanteEinsatztage: 5,
 } as const;
 
+/**
+ * Die Vorbelegung der Schwelle „kein Kontakt" im Funkplan, in Minuten
+ * (KONZEPT-FUNKPLAN.md §3, Entscheidung 4).
+ *
+ * Wie {@link KOSTEN_VORBELEGUNG} eine fachliche Zahl des Einsatzes und keine
+ * Einstellung des Rechners: Alle Arbeitsplätze färben dieselbe Einheit zur
+ * selben Minute Bernstein, bis der Einsatz über `FunkParameterGesetzt` eine
+ * eigene Schwelle setzt.
+ */
+export const FUNK_KONTAKT_SCHWELLE_VORBELEGUNG = 60;
+
 /** Die vier Mahlzeiten der Versorgung (S4, KONZEPT-S4.md §5.1). */
 export const MAHLZEITEN = ["FRUEHSTUECK", "MITTAG", "ABEND", "NACHT"] as const;
 export type Mahlzeit = (typeof MAHLZEITEN)[number];

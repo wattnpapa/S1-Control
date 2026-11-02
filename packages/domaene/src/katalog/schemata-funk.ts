@@ -54,3 +54,37 @@ export const EinheitRufgruppeGesetzt = z.object({ einheitId: zId });
 /** Für Prüfungen außerhalb des Katalogs: welche Felder `RufgruppeGeaendert` kennt. */
 export const RUFGRUPPE_FELDER = RufgruppeGeaendert.shape.feld.options;
 export type Rufgruppenfeld = (typeof RUFGRUPPE_FELDER)[number];
+
+// --- Funkplan F3: Funkprobe und Schwelle „kein Kontakt" ----------------------
+
+/**
+ * Die Ergebnisse einer Funkprobe. Ein geschlossener Bereich: An ihm hängt der
+ * Feldpfad (`letzteFunkprobe/<ergebnis>`), und ein Ergebnis, das dieser Client
+ * nicht kennt, wüsste er keinem Pfad zuzuordnen.
+ */
+export const FUNKPROBE_ERGEBNISSE = ["KONTAKT", "KEIN_KONTAKT"] as const;
+export type Funkprobenergebnis = (typeof FUNKPROBE_ERGEBNISSE)[number];
+
+/**
+ * Eine Funkprobe an der Einheit (Form a). Das Ergebnis wählt den Feldpfad:
+ * `letzteFunkprobe/KONTAKT` hält die letzte gelungene, `…/KEIN_KONTAKT` die
+ * letzte gescheiterte Probe. Zwei Pfade und nicht einer, weil ein „kein
+ * Kontakt" den letzten Kontakt nicht zurücksetzen darf (§3): Auf einem
+ * gemeinsamen Feld verdrängte er ihn.
+ *
+ * Der Wert in `neu` ist `{ zeitpunkt, rufgruppeId?, grund? }`. `zeitpunkt` ist
+ * die Funkzeit — die fachliche Zeit wie `ereignisZeit` bei `StatusGesetzt` —
+ * und steht im Wert, damit eine Rücknahme mit dem Vorher-Wert auch die Zeit
+ * der vorigen Probe zurückbringt. `grund` ist bei KEIN_KONTAKT Pflicht; die
+ * Pflicht hängt am Ergebnis und nicht an der Art, deshalb prüft sie der
+ * Worker und nicht der Katalog.
+ */
+export const FunkprobeDurchgefuehrt = z.object({ einheitId: zId, ergebnis: z.enum(FUNKPROBE_ERGEBNISSE) });
+
+/**
+ * Die Schwelle „kein Kontakt" des Einsatzes in Minuten (Entscheidung 4), Wert
+ * in `neu`. Ein eigenes Ereignis und kein weiteres Feld von
+ * `KostenParameterGeaendert`: Die Schwelle ist kein Kostenparameter, und ihr
+ * Pfad läge sonst unter `einsatz/kosten`.
+ */
+export const FunkParameterGesetzt = z.object({ einsatzId: zId });

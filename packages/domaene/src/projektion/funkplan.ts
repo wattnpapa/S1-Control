@@ -21,12 +21,27 @@
  * Mithörer, getrennt von den Teilnehmern: Gerufen wird sie über die
  * Hauptgruppe, und „zugeordnet" zählt nur die. Der Funkhinweis ist Freitext
  * und steht neben „Bereich ≠ Gruppe", nicht an dessen Stelle.
+ *
+ * **Letzter Kontakt** (F3): je Teilnehmer der jüngere aus Funkprobe
+ * „Kontakt" und Statusmeldung, gegen das übergebene `jetzt` und die Schwelle
+ * des Einsatzes gerechnet (`funkkontakt.ts`); „kein Kontakt" steht daneben.
+ * Ohne `jetzt` ist nichts über der Schwelle — Ring 2 liest keine Uhr.
  */
 
 import { anzeigename, erreichbarkeit, funkrufnameDerEinheit, zaehlklasse } from "../kennzahlen.js";
-import type { Id } from "../werte.js";
+import type { Id, Zeitpunkt } from "../werte.js";
 import type { EinheitZustand, RufgruppeZustand, Zustand } from "../zustand.js";
 import { abschnittsbaum, baumZeilen } from "./baum.js";
+import {
+  funkKontaktSchwelle,
+  juengste,
+  keinKontaktGemeldet,
+  letzteFunkproben,
+  letzterKontakt,
+  type KeinKontaktGemeldet,
+  type LetzteFunkproben,
+  type LetzterKontakt,
+} from "./funkkontakt.js";
 import { rufgruppeGilt, rufgruppenAnzeige, rufgruppenListe } from "./rufgruppen.js";
 
 /** Der Hinweis, wenn der Bereich der Einheit nicht zum Bereich ihrer Gruppe passt. */
@@ -67,6 +82,12 @@ export interface Funkteilnehmer {
   /** Die gesetzten Overrides — der Vorher-Wert der Maske; fehlt, wo die Ableitung gilt. */
   readonly funkrufnameOverride?: string;
   readonly erreichbarkeitOverride?: string;
+  /** F3: der jüngere aus Funkprobe „Kontakt" und Statusmeldung; fehlt ohne beides. */
+  readonly letzterKontakt?: LetzterKontakt;
+  /** F3: eine Probe „kein Kontakt", nach der noch kein Kontakt gelang. */
+  readonly keinKontaktGemeldet?: KeinKontaktGemeldet;
+  /** F3: die gesetzten Proben als Rohwert — der Vorher-Wert, den „Funkprobe eintragen" mitschickt. */
+  readonly letzteFunkproben?: LetzteFunkproben;
 }
 
 export interface Rufgruppenkarte {
@@ -100,6 +121,10 @@ export interface Funkzahlen {
   readonly ohneRufgruppe: number;
   /** Geltende Gruppen im Direktbetrieb oder über einen Gateway. */
   readonly dmoOderGateway: number;
+  /** F3: Einheiten im Plan, deren letzter Kontakt älter ist als die Schwelle. */
+  readonly ohneKontakt: number;
+  /** F3: die jüngste Funkprobe im Plan, gleich mit welchem Ergebnis. */
+  readonly letzteFunkprobe?: Zeitpunkt;
 }
 
 export interface Funkplan {
@@ -109,6 +134,14 @@ export interface Funkplan {
   /** Dieselben Zeilen nach wirksamem Bereich, in der Ordnung des Abschnittsbaums. */
   readonly jeBereich: readonly Funkbereich[];
   readonly zahlen: Funkzahlen;
+  /** F3: die Schwelle „kein Kontakt" des Einsatzes in Minuten. */
+  readonly schwelleMinuten: number;
+}
+
+/** Gegen welche Zeit und Schwelle der letzte Kontakt gerechnet wird. */
+interface Funkuhr {
+  readonly jetzt: Zeitpunkt | undefined;
+  readonly schwelleMinuten: number;
 }
 
 function text(wert: unknown): string | undefined {
@@ -152,7 +185,19 @@ function overrides(einheit: EinheitZustand): { funkrufnameOverride?: string; err
   };
 }
 
-function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean): Funkteilnehmer {
+/** Letzter Kontakt, „kein Kontakt" und die Rohwerte der Proben — nur, was gesetzt ist. */
+function kontaktfelder(einheit: EinheitZustand, uhr: Funkuhr): Pick<Funkteilnehmer, "letzterKontakt" | "keinKontaktGemeldet" | "letzteFunkproben"> {
+  const kontakt = letzterKontakt(einheit, uhr.jetzt, uhr.schwelleMinuten);
+  const kein = keinKontaktGemeldet(einheit);
+  const proben = letzteFunkproben(einheit);
+  return {
+    ...(kontakt === undefined ? {} : { letzterKontakt: kontakt }),
+    ...(kein === undefined ? {} : { keinKontaktGemeldet: kein }),
+    ...(Object.keys(proben).length === 0 ? {} : { letzteFunkproben: proben }),
+  };
+}
+
+function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean, uhr: Funkuhr): Funkteilnehmer {
   const id = text(einheit.rufgruppeId?.wert);
   const gruppe = id === undefined ? undefined : zustand.rufgruppen?.[id];
   const bezug = rufgruppeGilt(gruppe) ? text(gruppe.abschnittId?.wert) : undefined;
@@ -173,6 +218,7 @@ function teilnehmer(zustand: Zustand, einheit: EinheitZustand, erwartet: boolean
     funkhinweis: text(einheit.funkHinweis?.wert) ?? "",
     weitereRufgruppen: weitereRufgruppen(zustand, einheit),
     ...overrides(einheit),
+    ...kontaktfelder(einheit, uhr),
   };
 }
 
@@ -195,14 +241,14 @@ export function hinweisspalte(t: Funkteilnehmer): string {
 }
 
 /** Die Einheiten des Plans in der Ordnung der Einheitentabelle: Bereich im Baum, Reihenfolge, Name. */
-function teilnehmerDerLage(zustand: Zustand, bereichsrang: ReadonlyMap<Id, number>): Funkteilnehmer[] {
+function teilnehmerDerLage(zustand: Zustand, bereichsrang: ReadonlyMap<Id, number>, uhr: Funkuhr): Funkteilnehmer[] {
   const rang = (e: EinheitZustand): number => bereichsrang.get(e.wirksamerAbschnittId) ?? Number.MAX_SAFE_INTEGER;
   const reihe = (e: EinheitZustand): number => (typeof e.reihenfolge.wert === "number" ? e.reihenfolge.wert : 0);
   return Object.values(zustand.einheiten)
     .map((einheit) => ({ einheit, klasse: zaehlklasse(zustand, einheit) }))
     .filter(({ klasse }) => klasse === "ist" || klasse === "erwartet")
     .sort((a, b) => rang(a.einheit) - rang(b.einheit) || reihe(a.einheit) - reihe(b.einheit) || anzeigename(a.einheit).localeCompare(anzeigename(b.einheit), "de"))
-    .map(({ einheit, klasse }) => teilnehmer(zustand, einheit, klasse === "erwartet"));
+    .map(({ einheit, klasse }) => teilnehmer(zustand, einheit, klasse === "erwartet", uhr));
 }
 
 function karte(zustand: Zustand, r: RufgruppeZustand, alle: readonly Funkteilnehmer[]): Rufgruppenkarte {
@@ -222,6 +268,12 @@ function karte(zustand: Zustand, r: RufgruppeZustand, alle: readonly Funkteilneh
   };
 }
 
+/** „kein Kontakt über der Schwelle" und die jüngste Funkprobe der Einheiten im Plan. */
+function kontaktzahlen(alle: readonly Funkteilnehmer[]): Pick<Funkzahlen, "ohneKontakt" | "letzteFunkprobe"> {
+  const letzte = juengste(alle.flatMap((t) => [t.letzteFunkproben?.KONTAKT?.zeitpunkt, t.letzteFunkproben?.KEIN_KONTAKT?.zeitpunkt]));
+  return { ohneKontakt: alle.filter((t) => t.letzterKontakt?.ueberSchwelle === true).length, ...(letzte === undefined ? {} : { letzteFunkprobe: letzte }) };
+}
+
 function jeBereich(alle: readonly Funkteilnehmer[]): Funkbereich[] {
   const bereiche = new Map<Id, Funkbereich & { teilnehmer: Funkteilnehmer[] }>();
   for (const t of alle) {
@@ -232,10 +284,15 @@ function jeBereich(alle: readonly Funkteilnehmer[]): Funkbereich[] {
   return [...bereiche.values()];
 }
 
-/** Der Funkplan des Einsatzes: Zuordnung je Rufgruppe und je Bereich, ohne Rufgruppe, Zahlen. */
-export function funkplan(zustand: Zustand): Funkplan {
+/**
+ * Der Funkplan des Einsatzes: Zuordnung je Rufgruppe und je Bereich, ohne
+ * Rufgruppe, Zahlen. `jetzt` ist die Uhr des Aufrufers für „über der
+ * Schwelle"; ohne sie ist kein Kontakt zu alt.
+ */
+export function funkplan(zustand: Zustand, jetzt?: Zeitpunkt): Funkplan {
   const bereichsrang = new Map(baumZeilen(abschnittsbaum(zustand)).map((knoten, stelle) => [knoten.id, stelle]));
-  const alle = teilnehmerDerLage(zustand, bereichsrang);
+  const uhr: Funkuhr = { jetzt, schwelleMinuten: funkKontaktSchwelle(zustand) };
+  const alle = teilnehmerDerLage(zustand, bereichsrang, uhr);
   const rufgruppen = rufgruppenListe(zustand).map((r) => karte(zustand, r, alle));
   const geltend = rufgruppen.filter((r) => !r.aufgeloest);
   const zugeordnet = new Set(geltend.flatMap((r) => r.teilnehmer.map((t) => t.einheitId)));
@@ -249,6 +306,8 @@ export function funkplan(zustand: Zustand): Funkplan {
       zugeordnet: zugeordnet.size,
       ohneRufgruppe: ohneRufgruppe.length,
       dmoOderGateway: geltend.filter((r) => r.betriebsart === "DMO" || r.gateway !== undefined).length,
+      ...kontaktzahlen(alle),
     },
+    schwelleMinuten: uhr.schwelleMinuten,
   };
 }
