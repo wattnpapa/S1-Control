@@ -54,11 +54,12 @@ describe("Tagebuch als HTML", () => {
 });
 
 describe("Papier-Vordruck", () => {
-  it("enthält Meldeblock, Einheitenliste und Funkprotokoll als leere A4-Formulare", () => {
+  it("enthält Meldeblock, Einheitenliste, Funkprotokoll und leeren Funkplan als leere A4-Formulare", () => {
     const html = papierVordruckAlsHtml(KOPF);
     expect(html).toContain("Papier-Vordruck: Meldeblock");
     expect(html).toContain("Papier-Vordruck: Einheitenliste");
     expect(html).toContain("Papier-Vordruck: Funkprotokoll");
+    expect(html).toContain("Papier-Vordruck: Funkplan (leer)");
     expect(html).toContain("size: A4 portrait");
     expect(html.match(/<td><\/td>/g)?.length).toBeGreaterThan(100);
   });

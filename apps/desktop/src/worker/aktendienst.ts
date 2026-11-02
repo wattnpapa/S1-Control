@@ -132,6 +132,7 @@ import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { pruefeVersorgung } from "./versorgungspruefung.js";
+import { pruefeFunk } from "./funkpruefung.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
 
@@ -1664,5 +1665,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf) ?? pruefeVersorgung(entwurf);
+  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf) ?? pruefeVersorgung(entwurf) ?? pruefeFunk(entwurf);
 }

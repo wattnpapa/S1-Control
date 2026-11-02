@@ -130,4 +130,6 @@ export {
   type Einheitenlistendaten,
   type Einheitenlistenzeile,
 } from "./einheitenliste-daten.js";
+// Der Funkplan (KONZEPT-FUNKPLAN.md §7) — der Aushang am Platz der Sprechfunker.
+export { FUNKPLAN_FUSSNOTE, FUNKPLAN_SPALTEN, FUNKPLAN_STIL, funkplanAlsHtml, type Funkplankopf } from "./funkplan.js";
 export { VERSORGUNG_STIL, belegungAlsHtml, bestelllisteAlsHtml, kraftstofflisteAlsHtml, vorausschauAlsHtml } from "./versorgung.js";

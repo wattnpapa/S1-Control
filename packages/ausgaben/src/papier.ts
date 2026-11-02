@@ -3,17 +3,20 @@
  *
  * Fällt der Rechner, das Netz oder der Akku aus, arbeitet die Führungsstelle
  * auf Papier weiter — und überträgt später. Dafür braucht es Vordrucke, die
- * schon vorher im Schrank liegen: **Meldeblock**, **Einheitenliste** und
- * **Funkprotokoll**, je eine A4-Seite hoch, mit Einsatzkopf, leeren Zeilen
+ * schon vorher im Schrank liegen: **Meldeblock**, **Einheitenliste**,
+ * **Funkprotokoll** und **Funkplan (leer)**, je eine A4-Seite hoch, mit Einsatzkopf, leeren Zeilen
  * und Platz für Datum und Uhrzeit. Bewusst ohne Einsatzdaten: Die Seite soll
  * sich auch ausdrucken lassen, wenn es keinen Einsatz mehr gibt, und sie
  * soll mehrfach kopierbar sein.
  *
  * Die Spalten der Einheitenliste entsprechen den Pflichtfeldern der
  * Erfassung (Name, Organisation, Stärke Fü/UFü/He, Abschnitt, Status), damit
- * das spätere Übertragen Zeile für Zeile geht.
+ * das spätere Übertragen Zeile für Zeile geht. Der leere Funkplan trägt die
+ * Spalten der Ausgabe „Funkplan" (`funkplan.ts`), für den Fall, dass vor dem
+ * Einsatz noch nichts erfasst ist (KONZEPT-FUNKPLAN.md §7).
  */
 
+import { FUNKPLAN_FUSSNOTE, FUNKPLAN_SPALTEN } from "./funkplan.js";
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 const VORDRUCK_STIL = [
@@ -31,6 +34,7 @@ const VORDRUCK_STIL = [
   "    table.vordruck th, table.vordruck td { border: 0.3mm solid #666; padding: 0 1.5mm; }",
   "    table.vordruck th { background: #eee; font-size: 8pt; text-align: left; height: 7mm; }",
   "    table.vordruck td { height: 10mm; }",
+  "    table.vordruck tr.rg td { height: 8mm; background: #f2f2f2; font-size: 8.5pt; }",
   "    .block { border: 0.3mm solid #666; min-height: 70mm; padding: 2mm; margin-bottom: 3mm; }",
   "    .hinweis { font-size: 8pt; color: #444; }",
   "    .tabellenrahmen { max-width: 100%; }",
@@ -99,7 +103,37 @@ function funkprotokoll(): string {
   ].join("\n");
 }
 
-/** Die drei Vordrucke als eine druckbare A4-Datei, je Vordruck eine Seite. */
+/** Eine Kopfzeile je Rufgruppe zum Ausfüllen, darunter leere Teilnehmerzeilen. */
+function funkplanGruppe(kopfzeile: string, zeilen: number): string {
+  return [
+    `      <tr class="rg"><td colspan="${String(FUNKPLAN_SPALTEN.length)}">${kopfzeile}</td></tr>`,
+    leereZeilen(FUNKPLAN_SPALTEN.length, zeilen),
+  ].join("\n");
+}
+
+function funkplanLeer(): string {
+  const rufgruppe = "☐ TMO &nbsp; ☐ DMO &nbsp; ☐ Analog &nbsp; Rufgruppe / Kanal ____________ &nbsp; Zweck ____________ &nbsp; hört ____________";
+  return [
+    '<section class="vordruck" aria-label="Funkplan (leer)">',
+    "  <h2>Papier-Vordruck: Funkplan (leer)</h2>",
+    `  <p class="zeile">${feld("Stand: Datum")} ${feld("Uhrzeit")} ${feld("Geführt von")}</p>`,
+    '  <div class="tabellenrahmen">',
+    '  <table class="vordruck">',
+    `    <thead><tr>${FUNKPLAN_SPALTEN.map((s) => `<th scope="col">${htmlMaskieren(s.kopf)}</th>`).join("")}</tr></thead>`,
+    "    <tbody>",
+    funkplanGruppe(rufgruppe, 5),
+    funkplanGruppe(rufgruppe, 5),
+    funkplanGruppe(rufgruppe, 5),
+    funkplanGruppe("Ohne Rufgruppe — mit Ankunft zuordnen", 3),
+    "    </tbody>",
+    "  </table>",
+    "  </div>",
+    `  <p class="hinweis">${htmlMaskieren(FUNKPLAN_FUSSNOTE)}</p>`,
+    "</section>",
+  ].join("\n");
+}
+
+/** Die vier Vordrucke als eine druckbare A4-Datei, je Vordruck eine Seite. */
 export function papierVordruckAlsHtml(kopf: Ausgabekopf): string {
   return [
     "<!doctype html>",
@@ -114,10 +148,11 @@ export function papierVordruckAlsHtml(kopf: Ausgabekopf): string {
     "</head>",
     "<body>",
     kopfAlsHtml(kopf),
-    '  <p class="hinweis">Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste, Funkprotokoll. Später im Rechner nachtragen und den Vordruck abheften.</p>',
+    '  <p class="hinweis">Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste, Funkprotokoll, Funkplan. Später im Rechner nachtragen und den Vordruck abheften.</p>',
     meldeblock(),
     einheitenliste(),
     funkprotokoll(),
+    funkplanLeer(),
     "</body>",
     "</html>",
     "",
