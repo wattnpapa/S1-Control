@@ -164,7 +164,7 @@ export const SCHRIFT_MAX = 420;
  * Tabellenziffer bei rund 0,6 der Schrifthöhe; 0,62 lässt etwas Luft für die
  * Schrägstriche und das Gleichheitszeichen.
  */
-const ZEICHENBREITE = 0.62;
+export const ZEICHENBREITE = 0.62;
 
 /**
  * Wie viel der Fensterhöhe die große Zeile bekommen darf.

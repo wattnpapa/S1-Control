@@ -71,8 +71,13 @@ export const THEMEN = ["standard", "dunkel", "feld", "nacht"] as const;
 export const zTheme = z.enum(THEMEN);
 export type Theme = z.infer<typeof zTheme>;
 
-/** Die fünf Ansichten des Monitors (KONZEPT-S4.md §4), in der Reihenfolge der Tasten 1 bis 5. */
-export const MONITOR_ANSICHTEN = ["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel"] as const;
+/**
+ * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 6: Stärke,
+ * die vier Versorgungsbilder (KONZEPT-S4.md §4) und additiv der Funkplan
+ * (KONZEPT-FUNKPLAN.md §4). Nur anhängen — die gemerkte Wahl eines Geräts
+ * steht als Name in den Einstellungen, und die Tasten sind eingeübt.
+ */
+export const MONITOR_ANSICHTEN = ["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 

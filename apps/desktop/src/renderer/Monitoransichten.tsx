@@ -17,7 +17,7 @@ import { alter } from "./Statuszeile.js";
 import { schriftgroesse } from "./monitorZahlen.js";
 import type { Fenstermass } from "./Monitor.js";
 import { einheitenText, mahlzeitText, nachtText, restzeitText, tagText, uhrzeitText, vorzeichen } from "./versorgungstext.js";
-import type { Lagebild, Versorgungsansicht } from "../kontrakt/index.js";
+import type { Funkplanansicht, Lagebild, Versorgungsansicht } from "../kontrakt/index.js";
 
 export interface Ansichtseigenschaften {
   readonly lagebild: Lagebild;
@@ -25,12 +25,16 @@ export interface Ansichtseigenschaften {
   readonly zeit: string;
   readonly mass: Fenstermass;
   readonly ansicht?: Versorgungsansicht | undefined;
+  /** Funkplan F4: das Blatt „Funkplan" für die Tafel `MonitorFunkplan`. */
+  readonly funkplan?: Funkplanansicht | undefined;
   readonly fusszusatz?: string;
 }
 
-function Fuss({ lagebild, jetzt, zusatz }: { readonly lagebild: Lagebild; readonly jetzt: number; readonly zusatz: string }): React.JSX.Element {
+export function Fuss(props: { readonly lagebild: Lagebild; readonly jetzt: number; readonly zusatz: string; readonly vorne?: React.ReactNode }): React.JSX.Element {
+  const { lagebild, jetzt, zusatz, vorne } = props;
   return (
     <p className="monitorfuss">
+      {vorne !== undefined && <>{vorne} · </>}
       <span className="monitoreinsatz">{lagebild.einsatzName}</span>
       {" · "}
       <span className="monitorstand" title={lagebild.standHlc}>
@@ -41,11 +45,12 @@ function Fuss({ lagebild, jetzt, zusatz }: { readonly lagebild: Lagebild; readon
   );
 }
 
-function OhneZahlen({ titel, e }: { readonly titel: string; readonly e: Ansichtseigenschaften }): React.JSX.Element {
+export function OhneZahlen(props: { readonly titel: string; readonly e: Ansichtseigenschaften; readonly hinweis?: string }): React.JSX.Element {
+  const { titel, e, hinweis = "Noch keine Versorgungszahlen" } = props;
   return (
     <section className="monitor monitorruhig" aria-label={`Monitor ${titel}`}>
       <p className="monitorbeschriftung">{titel}</p>
-      <p className="monitorhinweis">Noch keine Versorgungszahlen</p>
+      <p className="monitorhinweis">{hinweis}</p>
       <p className="monitorzeit">{e.zeit}</p>
     </section>
   );
@@ -168,7 +173,7 @@ function Unterkunftszeilen({ e }: { readonly e: Ansichtseigenschaften }): React.
 }
 
 /** Wie groß eine Tafelzeile sein darf: so breit wie die Zeile, so hoch wie die Zeilenzahl erlaubt. */
-function tafelgrad(mass: Fenstermass, zeichen: number, zeilen: number): number {
+export function tafelgrad(mass: Fenstermass, zeichen: number, zeilen: number): number {
   return Math.min(schriftgroesse(zeichen, mass.breite, mass.hoehe), Math.floor(mass.hoehe / (zeilen * 1.9 + 6)));
 }
 

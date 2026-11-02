@@ -92,6 +92,12 @@
         --monitor-linie: rgba(255, 255, 255, 0.28);
         --monitor-warn: #e3c06b;
         --monitor-leiste: #1a1a1a;
+        /* Statuskanten der Funkplan-Kacheln (F4): die Statusfarben der
+           dunklen Bilder („dunkel", „nacht"), weil der Monitor immer auf
+           Schwarz steht — das Grün und Rot des hellen Bildes verschwänden
+           dort. Bernstein ist `--monitor-warn`, Grau `--monitor-leise`. */
+        --monitor-ok: #9ed17e;
+        --monitor-fehler: #ffa8a8;
         --ui: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
         --mono: ui-monospace, Menlo, monospace;
         color-scheme: light;
@@ -2791,6 +2797,116 @@
       }
       .monitorunterkuenfte .trenner {
         border-left: 1px solid var(--monitor-linie);
+      }
+      /* Die Tafel „Funkplan" (F4, Option 5a): links die Rufgruppe, rechts
+         die Teilnehmer als Kacheln. Den Grad setzt die Komponente; alles
+         hier ist relativ dazu. Namen brechen nicht um — eine Kachel bricht
+         als Ganzes in die nächste Reihe. */
+      .monitorfunkplan {
+        justify-content: flex-start;
+      }
+      /* Der Fuß trägt hier die offene Arbeit mit Namen und wird lang; er
+         steht kleiner als bei den Zahlenbildern und unten am Rand, damit die
+         Tafel den Platz bekommt. */
+      .monitorfunkplan .monitorfuss {
+        margin-top: auto;
+        padding: 0 110px;
+        font-size: clamp(0.8rem, 1.7vw, 1.3rem);
+      }
+      .monitorfunkplan table {
+        border-collapse: collapse;
+        width: 100%;
+        line-height: 1.2;
+        text-align: left;
+      }
+      .monitorfunkplan th,
+      .monitorfunkplan td {
+        padding: 0.25em 0.5em;
+        border-bottom: 1px solid var(--monitor-linie);
+        font-weight: 400;
+        vertical-align: top;
+        text-align: left;
+      }
+      .monitorfunkplan thead th {
+        font-size: 0.5em;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--monitor-leise);
+      }
+      .monitorfunkplan .funkname {
+        font: 700 1.3em/1.2 var(--mono);
+        letter-spacing: 0.02em;
+        white-space: nowrap;
+      }
+      .monitorfunkplan th small {
+        display: block;
+        margin-top: 0.15em;
+        font-size: 0.75em;
+        line-height: 1.3;
+        color: var(--monitor-leise);
+      }
+      .monitorfunkplan .marke-zustand.betriebsart {
+        margin-left: 0.3em;
+        padding: 0 0.35em;
+        border: 1px solid var(--monitor-leise);
+        background: transparent;
+        color: var(--monitor-leise);
+        font-size: 0.7em;
+        vertical-align: 0.2em;
+      }
+      .monitorfunkplan .marke-zustand.betriebsart.warn {
+        border-color: var(--monitor-warn);
+        color: var(--monitor-warn);
+      }
+      .monitorfunkplan .marke-zustand.betriebsart.analog {
+        border-style: dashed;
+      }
+      .funkkacheln {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.3em;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .funkkachel {
+        display: inline-flex;
+        flex-direction: column;
+        gap: 0.05em;
+        padding: 0.1em 0.45em 0.15em 0.5em;
+        border: 1px solid var(--monitor-linie);
+        border-left: 0.3em solid var(--monitor-linie);
+        white-space: nowrap;
+      }
+      .funkkachel small {
+        font: 0.75em/1.25 var(--mono);
+        color: var(--monitor-leise);
+      }
+      .funkkachel.ton-ok {
+        border-left-color: var(--monitor-ok);
+      }
+      .funkkachel.ton-warn {
+        border-left-color: var(--monitor-warn);
+      }
+      .funkkachel.ton-fehler {
+        border-left-color: var(--monitor-fehler);
+      }
+      .funkkachel.ton-ruhe {
+        border-left-color: var(--monitor-leise);
+        opacity: 0.75;
+      }
+      /* Kein Kontakt über der Schwelle: der ganze Rahmen in Bernstein, die
+         linke Kante behält den Status. */
+      .funkkachel.still {
+        border-top-color: var(--monitor-warn);
+        border-right-color: var(--monitor-warn);
+        border-bottom-color: var(--monitor-warn);
+        box-shadow: inset 0 0 0 1px var(--monitor-warn);
+      }
+      .funkkachel.mithoerer {
+        border-top-style: dashed;
+        border-right-style: dashed;
+        border-bottom-style: dashed;
       }
       /* Die Leiste erscheint nur bei Mausbewegung und liegt über dem Bild. */
       .monitorleiste {

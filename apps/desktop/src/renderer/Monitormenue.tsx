@@ -6,7 +6,7 @@
  * Menü aus dem Main nicht. Ein Menü, das in beiden Hüllen gleich aussieht,
  * ist auch in beiden gleich zu prüfen (jsdom).
  *
- * Darin: die fünf Ansichten mit Haken an der aktiven und ihrer Taste, der
+ * Darin: die sechs Ansichten mit Haken an der aktiven und ihrer Taste, der
  * Schalter „Ansichten wechseln alle 20 s", „Vollbild" und „Monitor
  * schließen". Ein Klick daneben oder Esc schließt es.
  */
@@ -30,7 +30,9 @@ export function Monitormenue({ steuerung }: { readonly steuerung: Monitorsteueru
         className="monitormenue"
         role="menu"
         aria-label="Monitor"
-        style={{ left: `${String(Math.min(ort.x, window.innerWidth - 280))}px`, top: `${String(Math.min(ort.y, window.innerHeight - 320))}px` }}
+        // 420 px: so hoch wird das Menü mit sechs Ansichten im Feldbild (größere
+        // Knöpfe); weiter unten geöffnet, rutscht es hoch statt aus dem Fenster.
+        style={{ left: `${String(Math.min(ort.x, window.innerWidth - 280))}px`, top: `${String(Math.max(0, Math.min(ort.y, window.innerHeight - 420)))}px` }}
         onClick={(ereignis) => {
           ereignis.stopPropagation();
         }}

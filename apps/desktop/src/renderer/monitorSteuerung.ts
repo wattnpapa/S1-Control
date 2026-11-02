@@ -2,7 +2,7 @@
  * Die Steuerung des Monitors (S4.1, KONZEPT-S4.md §4) — alles im Renderer.
  *
  * Drei Wege schalten die Ansicht um: Kontextmenü, Hover-Leiste und Tastatur
- * (1 bis 5 wählen, R schaltet den Wechsel, Leertaste hält ihn an, F11
+ * (1 bis 6 wählen, R schaltet den Wechsel, Leertaste hält ihn an, F11
  * Vollbild, Esc verlässt Menü oder Vollbild). Keiner davon braucht den Main:
  * Der Monitor läuft auch als Browsertab in der Web-Schale (ADR-005).
  *
@@ -28,6 +28,7 @@ export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
   vorausschau: "Nächste 24 h",
   unterbringung: "Unterbringung",
   tafel: "Bereiche · Schichten",
+  funkplan: "Funkplan",
 };
 
 /** Die Ansicht, die im Wechsel als nächste kommt. */
@@ -36,7 +37,7 @@ export function naechsteAnsicht(ansicht: MonitorAnsicht): MonitorAnsicht {
   return MONITOR_ANSICHTEN[(stelle + 1) % MONITOR_ANSICHTEN.length] ?? "staerke";
 }
 
-/** Taste „1" bis „5" → Ansicht; sonst `undefined`. */
+/** Taste „1" bis „6" → Ansicht; sonst `undefined`. */
 export function ansichtAusTaste(taste: string): MonitorAnsicht | undefined {
   const zahl = Number(taste);
   return Number.isInteger(zahl) && zahl >= 1 ? MONITOR_ANSICHTEN[zahl - 1] : undefined;

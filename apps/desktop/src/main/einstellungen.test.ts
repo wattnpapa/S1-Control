@@ -46,6 +46,17 @@ describe("liesArbeitsplatz", () => {
     expect(gelesen.clientId).toBe("aabbccddeeff00112233445566778899");
   });
 
+  it("findet den Funkplan als gemerkte Monitoransicht wieder (F4)", async () => {
+    const ziel = datei();
+    await schreibeArbeitsplatz(ziel, {
+      sharePfad: "/share",
+      anzeigename: "Führungsstelle 1",
+      monitor: { ansicht: "funkplan", wechsel: false },
+      clientId: "aabbccddeeff00112233445566778899",
+    });
+    expect((await liesArbeitsplatz(ziel)).monitor).toEqual({ ansicht: "funkplan", wechsel: false });
+  });
+
   it("lässt beides weg, wenn die Datei nichts dazu sagt", async () => {
     const ziel = datei();
     await fsp.mkdir(path.dirname(ziel), { recursive: true });
