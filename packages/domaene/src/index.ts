@@ -180,9 +180,14 @@ export type {
   Teilbereichsblock,
   Untertabelle,
   Zelle,
+  Funkbereich,
+  Funkplan,
+  Funkteilnehmer,
+  Funkzahlen,
+  Rufgruppenkarte,
 } from "./projektion/index.js";
 
-// Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).
+// Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3) und K31 (Funkrufname).
 export * as kennzahlen from "./kennzahlen.js";
 export type {
   FuestZeile,

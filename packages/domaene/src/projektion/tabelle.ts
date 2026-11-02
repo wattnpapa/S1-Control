@@ -30,10 +30,12 @@ import {
   TAKTISCHE_EBENEN,
 } from "../ereignis.js";
 import { spaltenwertTitel, zeitpunktText } from "../beschriftungen.js";
+import type { Auswahlwert } from "../beschriftungen-einheitsteile.js";
 import {
   anzeigename,
   auftragsText,
   erreichbarkeit,
+  funkrufnameDerEinheit,
   gesamtstaerke,
   geraeteText,
   herkunftText,
@@ -41,10 +43,12 @@ import {
   zaehlklasse,
   type Zaehlklasse,
 } from "../kennzahlen.js";
+import { funkrufnameText } from "../funkrufname.js";
 import type { Id, Staerke } from "../werte.js";
 import type { Beobachtung, EinheitZustand, Konflikthinweis, Zustand } from "../zustand.js";
 import { abloesungDerEinheit, type Marke } from "./abloesung.js";
 import { gliedereEinheiten, type Tabellengliederung } from "./gliederung.js";
+import { rufgruppeGilt, rufgruppenAnzeige, rufgruppenAuswahl } from "./rufgruppen.js";
 
 // ---------------------------------------------------------------------------
 // Die Spalten
@@ -64,7 +68,8 @@ export type Spaltengruppe =
   | "STAERKE"
   | "RESSOURCENPLANUNG"
   | "LOGISTIKDATEN"
-  | "KOSTENUEBERSICHT";
+  | "KOSTENUEBERSICHT"
+  | "FUNK";
 
 export const SPALTENGRUPPEN: readonly Spaltengruppe[] = [
   "GRUNDDATEN",
@@ -72,6 +77,9 @@ export const SPALTENGRUPPEN: readonly Spaltengruppe[] = [
   "RESSOURCENPLANUNG",
   "LOGISTIKDATEN",
   "KOSTENUEBERSICHT",
+  // Funkplan (KONZEPT-FUNKPLAN.md §6): keine Spalte der Excel, deshalb am
+  // Ende und in der Vorbelegung ausgeblendet wie Logistik und Kosten.
+  "FUNK",
 ];
 
 /** Die Gruppen, die ohne Zutun sichtbar sind (Excel `sheet2.xml <cols>`). */
@@ -102,6 +110,12 @@ export interface Spalte {
   readonly art: "text" | "zahl" | "auswahl" | "zeitpunkt" | "staerke" | "berechnet";
   /** Bei `auswahl`: die bekannte Liste (§3.7 — der Bereich bleibt offen). */
   readonly werte?: readonly string[];
+  /**
+   * Bei `auswahl` ohne feste Liste: woher die Werte kommen. Die Rufgruppen
+   * sind Daten des Einsatzes, keine Wertebereiche; {@link auswahlwerte}
+   * liefert sie aus dem Zustand.
+   */
+  readonly werteAus?: "rufgruppen";
   /** Fehlt bei berechneten Spalten und bei den Sammelspalten aus Untertabellen. */
   readonly schreibt?: Schreibweg;
   /** Der Feldpfad im Zustand, an dem Hinweise dieser Spalte hängen (§3.8a). */
@@ -198,6 +212,15 @@ export const SPALTEN: readonly Spalte[] = [
   // Übrige dort ist Formel und gehört nach Stufe 2 (Entscheidung 1).
   s({ schluessel: "psaSaetzeProTag", kopf: "PSA-Sätze pro Tag", excel: "AO", gruppe: "KOSTENUEBERSICHT",
       art: "zahl", schreibt: { art: "festeArt", typ: "PsaBedarfGesetzt" }, feldpfad: "psaSaetzeProTag" }),
+
+  // Funk — die Hauptrufgruppe (schreibt `EinheitRufgruppeGesetzt`, leer heißt
+  // „keine") und der Funkrufname der Einheit (K31). Die Erreichbarkeit bleibt
+  // in der Ressourcenplanung: Eine Spalte gehört genau einer Gruppe
+  // (Entscheidung 7).
+  s({ schluessel: "rufgruppe", kopf: "Rufgruppe", excel: "—", gruppe: "FUNK", art: "auswahl",
+      werteAus: "rufgruppen", schreibt: { art: "festeArt", typ: "EinheitRufgruppeGesetzt" },
+      feldpfad: "rufgruppeId" }),
+  s({ schluessel: "funkrufname", kopf: "Funkrufname", excel: "—", gruppe: "FUNK", art: "berechnet" }),
 ];
 
 /** Die Spalte zu einem Schlüssel — die Tabelle wird oft und punktuell gefragt. */
@@ -212,6 +235,16 @@ export function spalte(schluessel: string): Spalte | undefined {
 export function spaltenDerGruppen(gruppen: readonly Spaltengruppe[]): readonly Spalte[] {
   const gewaehlt = new Set(gruppen);
   return SPALTEN.filter((sp) => gewaehlt.has(sp.gruppe));
+}
+
+/**
+ * Die Auswahlliste einer Spalte: die feste Liste mit dem Wort der Excel, oder
+ * bei `werteAus` die Werte aus dem Zustand (die nicht aufgelösten Rufgruppen,
+ * Anzeige Name). „Keine" ist kein Eintrag; die Zelle schreibt dafür `null`.
+ */
+export function auswahlwerte(zustand: Zustand, sp: Spalte): readonly Auswahlwert[] {
+  if (sp.werteAus === "rufgruppen") return rufgruppenAuswahl(zustand);
+  return (sp.werte ?? []).map((wert) => ({ wert, titel: spaltenwertTitel(sp.schluessel, wert) }));
 }
 
 // ---------------------------------------------------------------------------
@@ -316,6 +349,7 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     geraete: geraeteText(zustand, einheit.id),
     auftraege: auftragsText(zustand, einheit.id),
     gesamt: String(gesamtstaerke(einheit)),
+    funkrufname: funkrufnameDerEinheit(zustand, einheit),
   };
 
   const zellen: Record<string, Zelle> = {};
@@ -334,6 +368,10 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
         umstritten: umstritten.has(`${pfad}/erreichbarkeitOverride`),
         ...(feld?.wanduhr === undefined ? {} : { wanduhr: feld.wanduhr }),
       };
+      continue;
+    }
+    if (sp.schluessel === "rufgruppe") {
+      zellen[sp.schluessel] = rufgruppenzelle(zustand, einheit, umstritten.has(`${pfad}/rufgruppeId`));
       continue;
     }
     if (sp.schluessel === "staerke") {
@@ -387,6 +425,24 @@ export function tabellenzeile(zustand: Zustand, einheit: EinheitZustand): Tabell
     zellen,
     ...(abloesung === undefined ? {} : { abloesung: abloesung.marke }),
     ...kopierquelle(einheit),
+  };
+}
+
+/**
+ * Die Zelle der Hauptrufgruppe: Angezeigt wird der Name, geschickt die
+ * Kennung. Eine aufgelöste Gruppe steht mit Vermerk da, damit die Zelle nicht
+ * leer aussieht, obwohl die Einheit noch auf ihr steht.
+ */
+function rufgruppenzelle(zustand: Zustand, einheit: EinheitZustand, umstritten: boolean): Zelle {
+  const feld = einheit.rufgruppeId;
+  const id = typeof feld?.wert === "string" ? feld.wert : undefined;
+  const gruppe = id === undefined ? undefined : zustand.rufgruppen?.[id];
+  const name = gruppe === undefined ? (id ?? "") : rufgruppenAnzeige(gruppe);
+  return {
+    text: gruppe !== undefined && !rufgruppeGilt(gruppe) ? `${name} (aufgelöst)` : name,
+    wert: feld?.wert ?? null,
+    umstritten,
+    ...(feld?.wanduhr === undefined ? {} : { wanduhr: feld.wanduhr }),
   };
 }
 
@@ -613,33 +669,6 @@ function feldtext(feld: { readonly wert: unknown } | undefined): string {
 
 function textOptional(wert: unknown): string | undefined {
   return typeof wert === "string" && wert !== "" ? wert : undefined;
-}
-
-/**
- * Setzt den Funkrufnamen zu der Form zusammen, in der er gesprochen wird.
- *
- * `kennwort` plus, wenn der eigene Standort gemeint ist, der Ort und die
- * Kennzahlen mit Schrägstrich (§5.5). Fehlt das Kennwort, fehlt der ganze
- * Name — ein Funkrufname aus Kennzahlen allein wäre über Funk nicht
- * zuzuordnen.
- */
-function funkrufnameText(wert: unknown): string | undefined {
-  if (typeof wert !== "object" || wert === null) return undefined;
-  const teil = wert as {
-    kennwort?: unknown;
-    ort?: unknown;
-    eigenerStandort?: unknown;
-    teile?: unknown;
-  };
-  const kennwort = textOptional(teil.kennwort);
-  if (kennwort === undefined) return undefined;
-  const ort = textOptional(teil.ort);
-  const kennzahlen = Array.isArray(teil.teile)
-    ? teil.teile.filter((zahl): zahl is number => typeof zahl === "number").join("/")
-    : "";
-  return [kennwort, ort, kennzahlen === "" ? undefined : kennzahlen]
-    .filter((stueck): stueck is string => stueck !== undefined)
-    .join(" ");
 }
 
 /**

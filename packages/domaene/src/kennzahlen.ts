@@ -1,5 +1,6 @@
 /**
- * Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3).
+ * Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3) und K31
+ * (Funkrufname der Einheit, KONZEPT-FUNKPLAN.md §3).
  *
  * **Keine Kennzahl wird gespeichert.** v1 haelt `aktuelleStaerke` neben
  * `aktuelleStaerkeTaktisch` und muss beide bei jedem Schreibzugriff
@@ -19,6 +20,7 @@
  */
 
 import { hierarchieArtTitel, zeitpunktText } from "./beschriftungen.js";
+import { funkrufnameText } from "./funkrufname.js";
 import { STAERKE_NULL, staerkePlus, type Staerke, type Zeitpunkt } from "./werte.js";
 import type {
   AnforderungZustand,
@@ -804,4 +806,31 @@ export function bemerkungText(zustand: Zustand, einheit: EinheitZustand): string
   return [uebung, alsText(einheit.bemerkung?.wert)]
     .filter((s): s is string => s !== undefined)
     .join(" — ");
+}
+
+// ---------------------------------------------------------------------------
+// K31 — der Funkrufname der Einheit (KONZEPT-FUNKPLAN.md §3)
+// ---------------------------------------------------------------------------
+
+/**
+ * **K31** — der Funkrufname der Einheit, in drei Stufen wie K9.
+ *
+ * Override an der Einheit, sonst der Funkrufname des ersten Fahrzeugs der
+ * Einheit, das einen trägt, in der Reihenfolge der Untertabelle (nach
+ * Kennung), sonst leer. Entfernte Fahrzeuge zählen nicht: Wer nicht mehr da
+ * ist, wird nicht gerufen. Welches Fahrzeug das Führungsfahrzeug ist, weiß
+ * das Modell nicht (Entscheidung 5); eine falsche Automatik wäre hier
+ * schlimmer als eine leere Zelle, und wer einen anderen Namen will,
+ * überschreibt.
+ */
+export function funkrufnameDerEinheit(zustand: Zustand, einheit: EinheitZustand): string {
+  const uebersteuert = alsText(einheit.funkrufnameOverride?.wert);
+  if (uebersteuert !== undefined) return uebersteuert;
+  for (const id of Object.keys(zustand.fahrzeuge).sort()) {
+    const fahrzeug = zustand.fahrzeuge[id];
+    if (fahrzeug?.einheitId?.wert !== einheit.id || fahrzeug.entfernt?.wert === true) continue;
+    const name = funkrufnameText(fahrzeug.funkrufname?.wert);
+    if (name !== undefined) return name;
+  }
+  return "";
 }

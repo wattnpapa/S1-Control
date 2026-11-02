@@ -33,6 +33,7 @@ export {
   SICHTBARE_GRUPPEN_VORBELEGUNG,
   SPALTEN,
   SPALTENGRUPPEN,
+  auswahlwerte,
   einheitentabelle,
   einheitspfad,
   spalte,
@@ -221,3 +222,16 @@ export {
   type Sofortbedarfssumme,
   type Sofortbedarfszeile,
 } from "./sofortbedarf.js";
+
+// Funkplan F1 (KONZEPT-FUNKPLAN.md §3, §5, §7)
+export {
+  HINWEIS_BEREICH_ABWEICHEND,
+  funkplan,
+  type Funkbereich,
+  type Funkplan,
+  type Funkteilnehmer,
+  type Funkzahlen,
+  type Rufgruppenkarte,
+} from "./funkplan.js";
+export { rufgruppeGilt, rufgruppenAnzeige, rufgruppenAuswahl, rufgruppenListe } from "./rufgruppen.js";
+export { betriebsartWort, rufgruppenname } from "./tagebuch-funk.js";
