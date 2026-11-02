@@ -23,7 +23,7 @@ const k = (portionen: number, vegetarisch: number, vegan: number): Kost => ({ po
 export const BEISPIEL_ZAHLEN: Versorgungszahlen = {
   naechste: { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 268, vegetarisch: 31, vegan: 6 },
   mahlzeiten: [
-    { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 292, vegetarisch: 33, vegan: 6, bestand: 268, zugang: 24, abgang: 0, bestellt: 280 },
+    { mahlzeit: "ABEND", zeitpunkt: um(10, 18), portionen: 292, vegetarisch: 33, vegan: 6, bestand: 268, zugang: 24, abgang: 0, bestellt: 280, differenz: -12 },
     { mahlzeit: "NACHT", zeitpunkt: um(11, 0), portionen: 60, vegetarisch: 8, vegan: 2, bestand: 60, zugang: 0, abgang: 0 },
     { mahlzeit: "FRUEHSTUECK", zeitpunkt: um(11, 6), portionen: 278, vegetarisch: 32, vegan: 6, bestand: 268, zugang: 24, abgang: 14 },
     { mahlzeit: "MITTAG", zeitpunkt: um(11, 12), portionen: 212, vegetarisch: 24, vegan: 4, bestand: 208, zugang: 24, abgang: 20 },

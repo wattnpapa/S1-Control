@@ -56,3 +56,56 @@ export function zuweisung(einheitId: string, vorher: string | undefined, gewaehl
   if (gewaehlt === "") return vorher === undefined ? undefined : unterbringungAufgehoben(einheitId, vorher);
   return einheitUntergebracht(einheitId, vorher ?? null, gewaehlt);
 }
+
+// --- Verpflegung (S4.3) ------------------------------------------------------
+
+export interface Regelzeile {
+  readonly mahlzeit: string;
+  readonly uhrzeit: string;
+  readonly schichten: readonly string[];
+}
+
+/** Setzt die Mahlzeitenregel des Einsatzes als Ganzes; `vorher` ist die eigene Regel oder `null`. */
+export function mahlzeitenregelGesetzt(einsatzId: string, vorher: readonly Regelzeile[] | null, neu: readonly Regelzeile[]): Entwurf {
+  return { typ: "MahlzeitenregelGesetzt", nutzlast: { einsatzId }, vorher, neu };
+}
+
+export interface Ausgabestellenanlage {
+  readonly ausgabestelleId: string;
+  readonly name: string;
+  readonly ort?: string;
+  readonly traeger?: string;
+}
+
+export function ausgabestelleAnlegen(anlage: Ausgabestellenanlage): Entwurf {
+  return { typ: "AusgabestelleAngelegt", nutzlast: { ...anlage } };
+}
+
+/** Die Ausgabestelle eines Bereichs; `null` stellt die Vorbelegung wieder her. */
+export function abschnittAusgabestelle(abschnittId: string, vorher: string | null, neu: string | null): Entwurf {
+  return { typ: "AbschnittAusgabestelleGesetzt", nutzlast: { abschnittId }, vorher, neu, vorwertPruefen: true };
+}
+
+export interface Bestellanlage {
+  readonly bestellungId: string;
+  readonly datum: string;
+  readonly mahlzeit: string;
+  readonly ausgabestelleId?: string;
+  readonly portionen: number;
+  readonly vegetarisch: number;
+  readonly vegan: number;
+  readonly bestelltBei?: string;
+  readonly bestelltVon?: string;
+}
+
+export function mahlzeitBestellt(anlage: Bestellanlage): Entwurf {
+  return { typ: "MahlzeitBestellt", nutzlast: { ...anlage } };
+}
+
+export function mahlzeitGeliefert(bestellungId: string, vorher: number | null, portionen: number): Entwurf {
+  return { typ: "MahlzeitGeliefert", nutzlast: { bestellungId }, vorher, neu: portionen };
+}
+
+export function mahlzeitStorniert(bestellungId: string, grund: string): Entwurf {
+  return { typ: "MahlzeitStorniert", nutzlast: { bestellungId }, vorher: null, neu: true, grund };
+}

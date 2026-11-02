@@ -99,7 +99,7 @@ describe("Die Bestellung", () => {
     expect(b.vorausschau.mahlzeiten[0]?.vorausschau.portionen).toBe(16);
     expect(b.bestellstand[0]).toMatchObject({ differenz: -4, bestellung: { bestellungId: "B1", portionen: 12 } });
     expect(b.bestellstand[1]?.bestellung).toBeUndefined();
-    expect(versorgungszahlen(z, { jetzt: JETZT, versatzMinuten: MESZ }).mahlzeiten[0]?.bestellt).toBe(12);
+    expect(versorgungszahlen(z, { jetzt: JETZT, versatzMinuten: MESZ }).mahlzeiten[0]).toMatchObject({ bestellt: 12, differenz: -4 });
   });
 
   it("ersetzt eine ältere Bestellung derselben Mahlzeit durch die jüngere", () => {

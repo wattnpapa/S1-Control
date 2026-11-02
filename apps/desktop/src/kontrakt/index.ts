@@ -261,6 +261,7 @@ export const zVersorgungszahlen = z.object({
         zugang: zZahl,
         abgang: zZahl,
         bestellt: zZahl.optional(),
+        differenz: zZahl.optional(),
       }),
     )
     .readonly(),

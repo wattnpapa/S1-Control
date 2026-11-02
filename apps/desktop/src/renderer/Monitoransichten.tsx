@@ -77,10 +77,35 @@ export function MonitorVerpflegung(e: Ansichtseigenschaften): React.JSX.Element 
       <p className="monitorunterzeile">
         davon {n.vegetarisch} vegetarisch · {n.vegan} vegan
       </p>
+      <Bestellzeile e={e} />
       {v.anmarsch > 0 && <p className="monitornebenzeile monitorwarn">Anmarsch +{v.anmarsch} nicht enthalten</p>}
       <p className="monitorzeit">{e.zeit}</p>
       <Fuss lagebild={e.lagebild} jetzt={e.jetzt} zusatz="Zählung: alle erfassten Einheiten der Einsatzbereiche" />
     </section>
+  );
+}
+
+/** „bestellt 280" unter den Portionen, sofern für die nächste Mahlzeit bestellt ist. */
+function Bestellzeile({ e }: { readonly e: Ansichtseigenschaften }): React.JSX.Element | null {
+  const m = e.lagebild.versorgung?.mahlzeiten[0];
+  if (m?.bestellt === undefined) return null;
+  return (
+    <p className={m.differenz !== undefined && m.differenz < 0 ? "monitornebenzeile monitorwarn" : "monitornebenzeile"}>
+      bestellt {m.bestellt}
+      {m.differenz !== undefined && m.differenz < 0 ? ` · Vorausschau ${String(m.portionen)}, es fehlen ${String(-m.differenz)}` : ""}
+    </p>
+  );
+}
+
+/** Die Zelle „Bestellt" der Tafel 4h: Menge und Differenz, Bernstein, wenn Portionen fehlen. */
+function Bestelltzelle({ bestellt, differenz }: { readonly bestellt?: number; readonly differenz?: number }): React.JSX.Element {
+  if (bestellt === undefined) return <td className="trenner monitorleise">offen</td>;
+  const d = differenz ?? 0;
+  return (
+    <td className={d < 0 ? "trenner monitorwarn" : "trenner"}>
+      {bestellt}
+      {d === 0 ? "" : ` · ${d > 0 ? "+" : "−"}${String(Math.abs(d))}`}
+    </td>
   );
 }
 
@@ -147,9 +172,9 @@ function tafelgrad(mass: Fenstermass, zeichen: number, zeilen: number): number {
 export function MonitorVorausschau(e: Ansichtseigenschaften): React.JSX.Element {
   const v = e.lagebild.versorgung;
   if (v === undefined || v.mahlzeiten.length === 0) return <OhneZahlen titel="Nächste 24 h" e={e} />;
-  // 68 Zeichen: Bezeichnung mit Tag und Restzeit plus sechs Zahlenspalten
+  // 78 Zeichen: Bezeichnung mit Tag und Restzeit plus sieben Zahlenspalten
   // samt Zellabstand — so passt die Zeile auch bei 960 px ohne Anschnitt.
-  const grad = tafelgrad(e.mass, 68, v.mahlzeiten.length + 1);
+  const grad = tafelgrad(e.mass, 78, v.mahlzeiten.length + 1);
   const bewegungen = e.ansicht?.blatt.vorausschau.bewegungen ?? [];
   return (
     <section className="monitor monitortafel" aria-label="Monitor Nächste 24 h">
@@ -164,6 +189,7 @@ export function MonitorVorausschau(e: Ansichtseigenschaften): React.JSX.Element 
             <th scope="col" className="trenner">Bestand</th>
             <th scope="col">Zugang</th>
             <th scope="col">Abgang</th>
+            <th scope="col" className="trenner">Bestellt</th>
           </tr>
         </thead>
         <tbody>
@@ -182,6 +208,7 @@ export function MonitorVorausschau(e: Ansichtseigenschaften): React.JSX.Element 
               <td className="trenner">{m.bestand}</td>
               <td>{vorzeichen(m.zugang, "plus")}</td>
               <td>{vorzeichen(m.abgang, "minus")}</td>
+              <Bestelltzelle {...(m.bestellt === undefined ? {} : { bestellt: m.bestellt })} {...(m.differenz === undefined ? {} : { differenz: m.differenz })} />
             </tr>
           ))}
         </tbody>

@@ -222,6 +222,8 @@ export interface Mahlzeitzahlen extends Kost {
   readonly zugang: number;
   readonly abgang: number;
   readonly bestellt?: number;
+  /** `bestellt − portionen`, sofern bestellt ist; negativ heißt, es fehlen Portionen. */
+  readonly differenz?: number;
 }
 
 export interface Versorgungszahlen {
@@ -241,9 +243,14 @@ export interface Versorgungszahlen {
   readonly ohneZuweisungEinheiten: number;
 }
 
-function bestelltFuer(verlauf: readonly Bestellzeile[], datum: string, mahlzeit: string): { bestellt?: number } {
+function bestelltFuer(
+  verlauf: readonly Bestellzeile[],
+  datum: string,
+  mahlzeit: string,
+  bedarf: number,
+): { bestellt?: number; differenz?: number } {
   const b = geltendeBestellung(verlauf, datum, mahlzeit);
-  return b === undefined ? {} : { bestellt: b.portionen };
+  return b === undefined ? {} : { bestellt: b.portionen, differenz: b.portionen - bedarf };
 }
 
 function bettenAus(un: { readonly m: number; readonly w: number; readonly d: number }): Bettensumme {
@@ -270,7 +277,7 @@ export function versorgungszahlen(zustand: Zustand, optionen: Versorgungsoptione
       bestand: m.bestand.portionen,
       zugang: m.zugang.portionen,
       abgang: m.abgang.portionen,
-      ...bestelltFuer(verlauf, m.datum, m.mahlzeit),
+      ...bestelltFuer(verlauf, m.datum, m.mahlzeit, m.vorausschau.portionen),
     })),
     anmarsch,
     betten: bettenAus(logistikblatt(zustand).gesamt.uebernachtung),

@@ -7,11 +7,20 @@
  * der Zu- und Abgänge. Alle Zahlen stammen aus `projektion.vorausschau`.
  */
 
-import { projektion, type Kost, type Mahlzeitvorausschau, type Versorgungsbewegung, type Vorausschau } from "@s1/domaene";
+import { projektion, type Bestellstand, type Kost, type Mahlzeitvorausschau, type Versorgungsbewegung, type Vorausschau } from "@s1/domaene";
 
 import { kurzzeit, mahlzeitText, restzeitText, tagText, vorzeichen } from "./versorgungstext.js";
 
-function Karte({ m, jetzt, erste }: { readonly m: Mahlzeitvorausschau; readonly jetzt: number; readonly erste: boolean }): React.JSX.Element {
+/** Der Stand der Bestellung an der Karte: offen, oder bestellt mit Differenz — Bernstein, wenn Portionen fehlen. */
+function Bestellmarke({ stand }: { readonly stand: Bestellstand | undefined }): React.JSX.Element {
+  const b = stand?.bestellung;
+  if (b === undefined || stand?.differenz === undefined) return <span className="marke-zustand">offen</span>;
+  const d = stand.differenz;
+  const text = d === 0 ? "" : ` · ${d > 0 ? "+" : "−"}${String(Math.abs(d))}`;
+  return <span className={d < 0 ? "marke-zustand warn" : "marke-zustand ok"}>bestellt {b.portionen}{text}</span>;
+}
+
+function Karte({ m, jetzt, erste, stand }: { readonly m: Mahlzeitvorausschau; readonly jetzt: number; readonly erste: boolean; readonly stand?: Bestellstand }): React.JSX.Element {
   return (
     <article className={erste ? "vorausschaukarte naechste" : "vorausschaukarte"} aria-label={`${mahlzeitText(m.mahlzeit)} ${m.uhrzeit}`}>
       <header>
@@ -21,6 +30,7 @@ function Karte({ m, jetzt, erste }: { readonly m: Mahlzeitvorausschau; readonly 
         <span className="leise">
           {tagText(m.zeitpunkt, jetzt)} · {restzeitText(m.zeitpunkt, jetzt)}
         </span>
+        <Bestellmarke stand={stand} />
       </header>
       <p className="grosszahl">
         {m.vorausschau.portionen}{" "}
@@ -125,7 +135,15 @@ function Bewegung({ b }: { readonly b: Versorgungsbewegung }): React.JSX.Element
   );
 }
 
-export function VersorgungVorausschau({ schau, jetzt }: { readonly schau: Vorausschau; readonly jetzt: number }): React.JSX.Element {
+export function VersorgungVorausschau({
+  schau,
+  jetzt,
+  bestellstand = [],
+}: {
+  readonly schau: Vorausschau;
+  readonly jetzt: number;
+  readonly bestellstand?: readonly Bestellstand[];
+}): React.JSX.Element {
   return (
     <div className="karte versorgungskarte">
       <h3>
@@ -133,7 +151,7 @@ export function VersorgungVorausschau({ schau, jetzt }: { readonly schau: Voraus
       </h3>
       <div className="vorausschaukarten">
         {schau.mahlzeiten.map((m, i) => (
-          <Karte key={m.zeitpunkt} m={m} jetzt={jetzt} erste={i === 0} />
+          <Karte key={m.zeitpunkt} m={m} jetzt={jetzt} erste={i === 0} {...(bestellstand[i] === undefined ? {} : { stand: bestellstand[i] })} />
         ))}
       </div>
       <div className="vorausschauflaeche">

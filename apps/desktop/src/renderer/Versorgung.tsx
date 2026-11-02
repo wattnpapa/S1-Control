@@ -17,6 +17,7 @@ import { projektion } from "@s1/domaene";
 import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
 import { useVersorgungsansicht } from "./useVersorgungsansicht.js";
+import { Werkzeuge } from "./Versorgungswerkzeuge.js";
 import { VersorgungBereiche } from "./VersorgungBereiche.js";
 import { VersorgungSofortbedarf } from "./VersorgungSofortbedarf.js";
 import { VersorgungUnterbringung } from "./VersorgungUnterbringung.js";
@@ -108,7 +109,7 @@ export function Versorgung(): React.JSX.Element {
             ))}
           </div>
         )}
-        <span className="werkzeughinweis">Mahlzeitenregel: Vorbelegung</span>
+        {daten !== undefined && <Werkzeuge ansicht={ansicht} blatt={daten.blatt} />}
       </div>
 
       {abruf.fehler !== undefined && <p className="hinweistext fehler">{abruf.fehler}</p>}
@@ -116,8 +117,10 @@ export function Versorgung(): React.JSX.Element {
         <p className="hinweistext">Wird geladen …</p>
       ) : (
         <>
-          {ansicht === "verpflegung" && <VersorgungVerpflegung plan={daten.blatt.plan} regeltext={daten.blatt.regeltext} />}
-          {ansicht === "vorausschau" && <VersorgungVorausschau schau={daten.blatt.vorausschau} jetzt={Date.parse(daten.jetzt)} />}
+          {ansicht === "verpflegung" && <VersorgungVerpflegung blatt={daten.blatt} jetzt={Date.parse(daten.jetzt)} />}
+          {ansicht === "vorausschau" && (
+            <VersorgungVorausschau schau={daten.blatt.vorausschau} jetzt={Date.parse(daten.jetzt)} bestellstand={daten.blatt.bestellstand} />
+          )}
           {ansicht === "unterbringung" && <VersorgungUnterbringung bedarf={daten.blatt.unterbringung} belegung={daten.blatt.belegung} />}
           {ansicht === "bereiche" && <VersorgungBereiche blatt={daten.logistik} fussnote={daten.logistikFussnote} />}
           {ansicht === "sofortbedarf" && <VersorgungSofortbedarf liste={daten.blatt.sofortbedarf} />}

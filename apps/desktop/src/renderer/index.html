@@ -1803,6 +1803,58 @@
       .bewegungsliste .bewegung-ohne_zeit .zahl {
         color: var(--text-leise);
       }
+      /* Verpflegung (4d): Plan links, Bestellkarte rechts. */
+      .verpflegungsflaeche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 340px;
+        gap: 12px;
+        align-items: start;
+      }
+      .werkzeugrechts {
+        margin-left: auto;
+      }
+      .bestellkarte .bedarfzeile {
+        margin: 0 0 8px;
+      }
+      .bestellkarte .grosszahl {
+        font: 700 24px/1.1 var(--ui);
+        font-variant-numeric: tabular-nums;
+      }
+      .bestelldaten {
+        display: grid;
+        grid-template-columns: 6em 1fr;
+        gap: 3px 8px;
+        margin: 0 0 6px;
+        font-variant-numeric: tabular-nums;
+      }
+      .bestelldaten dt {
+        color: var(--text-leise);
+      }
+      .bestelldaten dd {
+        margin: 0;
+      }
+      .bestellverlauf {
+        margin: 10px 0 0;
+        padding: 8px 0 0;
+        list-style: none;
+        border-top: var(--rahmenbreite) solid var(--rahmen-weich);
+        font-variant-numeric: tabular-nums;
+      }
+      .bestellverlauf li {
+        padding: 2px 0;
+      }
+      .bestellverlauf .wann {
+        font-family: var(--mono);
+      }
+      .bestellverlauf li.blass,
+      .versorgungstabelle tr.blass th,
+      .versorgungstabelle tr.blass td {
+        opacity: 0.5;
+      }
+      .regeltabelle input:not([type="checkbox"]) {
+        width: 5em;
+        margin: 0;
+      }
       /* Unterbringung (4e): Karten links, Bedarfstabelle rechts. */
       .unterbringungsflaeche {
         display: grid;
@@ -1904,7 +1956,8 @@
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
         .vorausschauflaeche,
-        .unterbringungsflaeche {
+        .unterbringungsflaeche,
+        .verpflegungsflaeche {
           grid-template-columns: minmax(0, 1fr);
         }
       }
@@ -2367,6 +2420,9 @@
       }
       .monitor .monitorwarn {
         color: var(--monitor-warn);
+      }
+      .monitor .monitorleise {
+        color: var(--monitor-leise);
       }
       /* Die Tafeln (4c, 4h): Zeilen statt einer Zahl, die Größe setzt die
          Komponente aus `schriftgroesse`. */
