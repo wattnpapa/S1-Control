@@ -19,6 +19,7 @@ import { statusTon, spaltenwertTitel, zeitpunktText, type Spalte, type Tabellenz
 import { Auswahlblatt } from "./Auswahlblatt.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { Zellmarken } from "./Ressourcenmarken.js";
+import type { Zustandswahl } from "../kontrakt/index.js";
 
 /** Zahlenspalten stehen rechts: Wer Stärken vergleicht, liest Spalten. */
 export function istZahl(spalte: Spalte): boolean {
@@ -35,6 +36,12 @@ export interface ZelleEigenschaften {
   readonly fehler?: string;
   /** Keine Verbindung: der Grund; „Übernehmen“ ist gesperrt, der Text bleibt stehen. */
   readonly sperre?: string;
+  /**
+   * Bei Spalten mit `werteAus` (Rufgruppe): die Auswahl aus der
+   * Tabellenansicht (`Tabellenansicht.auswahlwerte`), gerechnet mit
+   * `projektion.auswahlwerte` im Worker — der Renderer hat keinen Zustand.
+   */
+  readonly werteliste?: readonly Zustandswahl[];
   readonly aufBearbeiten: () => void;
   /** Gibt der Aufrufer das Versprechen zurück, ist die Zelle bis zum Ergebnis gesperrt („…“). */
   readonly aufFertig: (eingabe: string) => void | Promise<void>;
@@ -87,7 +94,7 @@ function useEinmalig(aufFertig: (eingabe: string) => void | Promise<void>): {
   return { laeuft, fertig };
 }
 
-function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten }: ZelleEigenschaften): React.JSX.Element {
+function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste }: ZelleEigenschaften): React.JSX.Element {
   const zelle = zeile.zellen[spalte.schluessel];
   if (zelle === undefined) return <td />;
   const titel = zelle.umstritten
@@ -138,7 +145,7 @@ function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten }: ZelleEigenscha
       ) : (
         zelle.text
       )}
-      <Zellmarken zeile={zeile} spalte={spalte} />
+      <Zellmarken zeile={zeile} spalte={spalte} {...(werteliste === undefined ? {} : { werteliste })} />
       {zelle.umstritten && <span aria-label="Konflikthinweis"> ⚠</span>}
     </td>
   );
@@ -207,6 +214,19 @@ export const TEXT_LEEREN_FRAGE = "Feld wirklich leeren? Noch einmal „Übernehm
 export const TEXT_STATUS_WAEHLEN = "Status wählen";
 
 /**
+ * Die Einträge einer Auswahl: die feste Liste mit dem Wort der Excel oder, bei
+ * `werteAus`, die Liste der Tabellenansicht. Ein gesetzter Wert, der nicht
+ * mehr zur Wahl steht (eine aufgelöste Rufgruppe), bleibt mit dem Text der
+ * Zelle sichtbar, statt still auf den ersten Eintrag zu springen.
+ */
+export function auswahleintraege(spalte: Spalte, werteliste: readonly Zustandswahl[] | undefined, gesetzt?: Zustandswahl): readonly Zustandswahl[] {
+  const liste = spalte.werteAus === undefined
+    ? (spalte.werte ?? []).map((wert) => ({ wert, titel: spaltenwertTitel(spalte.schluessel, wert) }))
+    : (werteliste ?? []);
+  return gesetzt === undefined || gesetzt.wert === "" || liste.some((w) => w.wert === gesetzt.wert) ? liste : [gesetzt, ...liste];
+}
+
+/**
  * Die Auswahl mit ausdrücklicher Bestätigung. Die Knöpfe nehmen dem Feld den
  * Fokus nicht (`onMouseDown` verhindert den Blur), sonst würde der Tipp auf
  * „Übernehmen“ zuerst als Wegklicken verwerfen.
@@ -228,6 +248,8 @@ function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
   // Ein Status wird nie geleert: Die Zelle bliebe ohne Chip und wäre auf dem
   // Touchgerät nicht mehr zu bearbeiten. Andere Auswahlen leeren nach Rückfrage.
   const istStatus = spalte.schluessel === "status";
+  const eintraege = auswahleintraege(spalte, eigenschaften.werteliste, { wert: start, titel: zeile.zellen[spalte.schluessel]?.text ?? start });
+  const titelVon = (wert: string): string => eintraege.find((w) => w.wert === wert)?.titel ?? wert;
   const grund = istStatus && auswahl === "" ? TEXT_STATUS_WAEHLEN : undefined;
   const uebernehme = (): void => {
     if (grund !== undefined) return;
@@ -266,9 +288,9 @@ function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
     >
       {!istStatus && <option value="">—</option>}
       {istStatus && start === "" && <option value="">— bitte wählen —</option>}
-      {(spalte.werte ?? []).map((wert) => (
-        <option key={wert} value={wert}>
-          {spaltenwertTitel(spalte.schluessel, wert)}
+      {eintraege.map((w) => (
+        <option key={w.wert} value={w.wert}>
+          {w.titel}
         </option>
       ))}
     </select>
@@ -308,7 +330,7 @@ function Auswahlzelle(eigenschaften: FeldEigenschaften): React.JSX.Element {
       {grund !== undefined && <span className="hinweistext auswahlgrund-text">{grund}</span>}
       {inzwischen !== undefined && (
         <span className="warnung" role="status">
-          ⚠ Inzwischen geändert (neu: {inzwischen === "" ? "leer" : spaltenwertTitel(spalte.schluessel, inzwischen)})
+          ⚠ Inzwischen geändert (neu: {inzwischen === "" ? "leer" : titelVon(inzwischen)})
         </span>
       )}
       {leerenFrage && (

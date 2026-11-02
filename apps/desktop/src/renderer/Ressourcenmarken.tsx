@@ -1,5 +1,6 @@
 /**
- * Die Marken der Ressourcenplanung in der Einheitentabelle (K12, K18).
+ * Die Marken der Ressourcenplanung in der Einheitentabelle (K12, K18) — und
+ * die Weiche zu den Marken der Gruppe Funk (`Funkmarken.tsx`).
  *
  * Beide Kennzahlen wurden gerechnet und nirgends gezeichnet. K12 steht als
  * Marke „Ablösung angefordert / zugesagt / eingetroffen“ an der Bezeichnung —
@@ -18,6 +19,9 @@
 import { useSyncExternalStore } from "react";
 
 import { projektion, type Spalte, type Tabellenzeile } from "@s1/domaene";
+
+import { Rufgruppenzellmarke } from "./Funkmarken.js";
+import type { Zustandswahl } from "../kontrakt/index.js";
 
 const TAKT_MS = 60_000;
 const hoerer = new Set<() => void>();
@@ -60,10 +64,13 @@ function Ablaufmarke({ bis }: { readonly bis: unknown }): React.JSX.Element | nu
 export interface ZellmarkenEigenschaften {
   readonly zeile: Tabellenzeile;
   readonly spalte: Spalte;
+  /** Bei Spalten mit `werteAus`: die Auswahl der Tabellenansicht (Betriebsart der Rufgruppe). */
+  readonly werteliste?: readonly Zustandswahl[];
 }
 
 /** Die Marken, die zu dieser Zelle gehören — oder nichts. */
-export function Zellmarken({ zeile, spalte }: ZellmarkenEigenschaften): React.JSX.Element | null {
+export function Zellmarken({ zeile, spalte, werteliste }: ZellmarkenEigenschaften): React.JSX.Element | null {
+  if (spalte.werteAus === "rufgruppen") return <Rufgruppenzellmarke zeile={zeile} werteliste={werteliste} />;
   if (spalte.schluessel === "bezeichnung" && zeile.abloesung !== undefined) {
     return <> <Marke marke={zeile.abloesung} /></>;
   }

@@ -31,6 +31,7 @@ import {
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
 import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
+import type { Zustandswahl } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
@@ -41,24 +42,9 @@ import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssp
 import { VORWERT_WAHL, istVorwertKonflikt, mitVorwertpruefung, useEditorbasis } from "./Editorbasis.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { Zelle, istZahl } from "./Einheitenzelle.js";
-import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
+import { GRUPPENTITEL, spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { Tabellensumme } from "./Tabellensumme.js";
 import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
-
-/**
- * Die Spaltengruppen, wie sie am Umschalter stehen.
- *
- * In der Projektion heißen sie wie in der Excel (`KOSTENUEBERSICHT`); über
- * einer Tabelle gelesen sind Versalien ohne Umlaute keine Beschriftung,
- * sondern ein Bezeichner.
- */
-const GRUPPENTITEL: Record<string, string> = {
-  GRUNDDATEN: "Grunddaten",
-  STAERKE: "Stärke",
-  RESSOURCENPLANUNG: "Ressourcen",
-  LOGISTIKDATEN: "Logistik",
-  KOSTENUEBERSICHT: "Kosten",
-};
 
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
@@ -223,6 +209,12 @@ export function Einheitentabelle({
     } else setzeZellenfehler(hinweis);
   }
 
+  /** Die Auswahl einer Spalte mit `werteAus` (Rufgruppe) aus der Tabellenansicht. */
+  function werteDer(spalte: Spalte): { werteliste?: readonly Zustandswahl[] } {
+    const liste = laden.tabelle?.auswahlwerte?.[spalte.schluessel];
+    return liste === undefined ? {} : { werteliste: liste };
+  }
+
   /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
   function einheitszeile(zeile: Tabellenzeile, tiefe?: number): React.JSX.Element {
     return (
@@ -256,6 +248,7 @@ export function Einheitentabelle({
             spalte={spalte}
             gesperrt={nurLesen}
             {...(verbindungssperre === undefined ? {} : { sperre: verbindungssperre })}
+            {...werteDer(spalte)}
             bearbeitet={
               bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
             }
