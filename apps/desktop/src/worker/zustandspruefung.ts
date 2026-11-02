@@ -6,8 +6,9 @@
  *   übersteigen (§5.4.2). Sonst entstünde Personal aus dem Nichts („60 von
  *   12“): Die Quelle würde auf 0 geklemmt, die neue Einheit trüge die volle
  *   Stärke, die Gesamtsumme wüchse.
- * - Funkzeit (`ereignisZeit`): nicht in der Zukunft. Eine Funkzeit ist die
- *   Zeit, zu der etwas geschah; sie kann nicht nach jetzt liegen.
+ * - Funkzeit (`ereignisZeit`, bei der Funkprobe `neu.zeitpunkt`): nicht in
+ *   der Zukunft. Eine Funkzeit ist die Zeit, zu der etwas geschah; sie kann
+ *   nicht nach jetzt liegen.
  *
  * Eine eigene Datei, weil `aktendienst.ts` weit über der Grenze für neue
  * Dateien liegt; dort steht nur der Aufruf.
@@ -44,8 +45,16 @@ function pruefeAufteilung(zustand: Zustand, entwurf: Ereignisentwurf): Bedienerg
   return befund.ok ? undefined : { art: "abgewiesen", meldung: befund.meldung, code: "AUFTEILUNG", dauerhafterHinweis: false };
 }
 
+/** Die Funkzeit eines Entwurfs; die Rücknahme einer Funkprobe bringt eine alte zurück und hat keine eigene. */
+function funkzeitDes(entwurf: Ereignisentwurf): unknown {
+  if (entwurf.typ === "FunkprobeDurchgefuehrt") {
+    return entwurf.undoOf === undefined ? (entwurf.neu as { zeitpunkt?: unknown } | null | undefined)?.zeitpunkt : undefined;
+  }
+  return (entwurf.nutzlast as { ereignisZeit?: unknown } | null | undefined)?.ereignisZeit;
+}
+
 function pruefeFunkzeit(entwurf: Ereignisentwurf, jetztMs: number): Bedienergebnis | undefined {
-  const zeit = (entwurf.nutzlast as { ereignisZeit?: unknown } | null | undefined)?.ereignisZeit;
+  const zeit = funkzeitDes(entwurf);
   if (zeit === undefined) return undefined;
   const ms = typeof zeit === "string" ? Date.parse(zeit) : Number.NaN;
   if (Number.isNaN(ms)) return schemaFehler("Die Zeit des Ereignisses (Funkzeit) ist keine lesbare Zeitangabe.");
@@ -58,6 +67,6 @@ function pruefeFunkzeit(entwurf: Ereignisentwurf, jetztMs: number): Bedienergebn
 /** Liefert die Abweisung, wenn der Entwurf gegen den Zustand nicht geschrieben werden darf. */
 export function pruefeGegenZustand(zustand: Zustand, entwurf: Ereignisentwurf, jetztMs: number): Bedienergebnis | undefined {
   if (entwurf.typ === "EinheitAufgeteilt") return pruefeAufteilung(zustand, entwurf);
-  if (entwurf.typ === "StatusGesetzt") return pruefeFunkzeit(entwurf, jetztMs);
+  if (entwurf.typ === "StatusGesetzt" || entwurf.typ === "FunkprobeDurchgefuehrt") return pruefeFunkzeit(entwurf, jetztMs);
   return undefined;
 }

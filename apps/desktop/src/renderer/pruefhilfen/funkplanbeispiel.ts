@@ -102,4 +102,6 @@ export const FUNK_ANSICHT: Funkplanansicht = {
     { abschnittId: "EA2", name: "EA 2 Pumpen Süd", tiefe: 0 },
     { abschnittId: "EA3", name: "EA 3 Evakuierung", tiefe: 0 },
   ],
+  jetzt: new Date(2026, 8, 10, 14, 43).toISOString(),
+  funkproben: [],
 };

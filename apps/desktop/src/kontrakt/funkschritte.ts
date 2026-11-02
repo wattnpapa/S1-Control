@@ -20,7 +20,7 @@
  * Feld inzwischen anders gesetzt hat, wird nicht still überschrieben.
  */
 
-import { projektion } from "@s1/domaene";
+import { projektion, type Funkteilnehmer } from "@s1/domaene";
 
 import { inlineEntwurf } from "./bedienschritte.js";
 import type { Entwurf } from "./index.js";
@@ -149,4 +149,47 @@ export function weitereRufgruppenDerEinheit(einheitId: string, vorher: readonly 
     neu: liste.length === 0 ? null : liste,
     vorwertPruefen: true,
   };
+}
+
+// --- Funkplan F3: Funkprobe und Schwelle „kein Kontakt" ----------------------
+
+/** Was „Funkprobe eintragen" von der Einheit braucht: ihre Gruppe und die gesehenen Proben. */
+export type Funkprobenziel = Pick<Funkteilnehmer, "einheitId" | "rufgruppeId" | "rufgruppeAufgeloest" | "letzteFunkproben">;
+
+/**
+ * Eine Funkprobe für die Einheit: über ihre geltende Hauptrufgruppe, mit der
+ * Funkzeit `zeitpunkt` (die Oberfläche schickt „jetzt"). Das Ergebnis wählt
+ * den Feldpfad; `vorher` ist die Probe desselben Ergebnisses, die das Blatt
+ * zuletzt sah — die Rücknahme setzt sie wieder. Ohne Vorwert-Prüfung: Eine
+ * Probe ist eine neue Beobachtung, keine Korrektur eines fremden Wertes, und
+ * zwei Sprechfunker, die dieselbe Einheit kurz nacheinander proben, haben
+ * beide recht. Bei „kein Kontakt" steht der Grund im Rahmen (Tagebuch) und im
+ * Wert (Funkplan); Pflicht ist er dort, der Worker weist ohne ihn ab.
+ */
+export function funkprobe(ziel: Funkprobenziel, ergebnis: "KONTAKT" | "KEIN_KONTAKT", zeitpunkt: string, grund?: string): Entwurf {
+  const rufgruppeId = ziel.rufgruppeAufgeloest ? undefined : ziel.rufgruppeId;
+  const begruendet = grund?.trim() ?? "";
+  const neu = {
+    zeitpunkt,
+    ...(rufgruppeId === undefined ? {} : { rufgruppeId }),
+    ...(ergebnis === "KEIN_KONTAKT" && begruendet !== "" ? { grund: begruendet } : {}),
+  };
+  return {
+    typ: "FunkprobeDurchgefuehrt",
+    nutzlast: { einheitId: ziel.einheitId, ergebnis },
+    vorher: ziel.letzteFunkproben?.[ergebnis] ?? null,
+    neu,
+    ...(ergebnis === "KEIN_KONTAKT" && begruendet !== "" ? { grund: begruendet } : {}),
+  };
+}
+
+/**
+ * Die Schwelle „kein Kontakt" des Einsatzes in Minuten. `vorher` ist die
+ * Schwelle, die das Blatt zeigte — auch die Vorbelegung, wie bei den
+ * Kostenparametern —; dieselbe Zahl schreibt nichts. Ohne Vorwert-Prüfung:
+ * Der Einsatz hat einen Wert, und der zuletzt gesetzte gilt.
+ */
+export function funkSchwelleSetzen(einsatzId: string, vorher: number, neu: number): Entwurf | undefined {
+  if (neu === vorher) return undefined;
+  return { typ: "FunkParameterGesetzt", nutzlast: { einsatzId }, vorher, neu };
 }

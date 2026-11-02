@@ -24,8 +24,8 @@ function h(): ReturnType<typeof hlc> {
   return hlc(9_000_000 + n * 1000, 0, "fmz");
 }
 
-/** Die Prüflage mit drei Rufgruppen, einer aufgelösten und einigen Zuordnungen. */
-function lage() {
+/** Drei Rufgruppen, eine aufgelöste und einige Zuordnungen auf der Prüflage. */
+function funkEreignisse(): EingehendesEreignis[] {
   n = 0;
   const funk: EingehendesEreignis[] = [
     anlageEreignis(h(), n, "RufgruppeAngelegt", { rufgruppeId: "R1", betriebsart: "TMO", name: "THW_OL_FUE", zweck: "Führung", hoert: "FmZ Platz 1", reihenfolge: 1 }),
@@ -43,7 +43,12 @@ function lage() {
     feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E01", feld: "weitereRufgruppenIds" }, null, ["R2", "R4"]),
     feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E19", feld: "funkHinweis" }, null, "zweites HRT"),
   );
-  const zustand = materialisiere(falteHinzu(leereFaltung(), [...prueflageEreignisse(), ...funk]));
+  return funk;
+}
+
+/** Die Prüflage mit drei Rufgruppen, einer aufgelösten und einigen Zuordnungen. */
+function lage() {
+  const zustand = materialisiere(falteHinzu(leereFaltung(), [...prueflageEreignisse(), ...funkEreignisse()]));
   return projektion.funkplan(zustand);
 }
 
@@ -97,6 +102,20 @@ describe("Die Ausgabe Funkplan", () => {
     expect(html).toContain("S1-Control · ausgaben\\funkplan-081443SEP26.pdf");
   });
 
+  it("führt „Letzter Kontakt“ als letzte Spalte: über der Schwelle in Worten, „kein Kontakt“ dahinter", () => {
+    const um = (stunde: number, minute: number): string => new Date(2026, 8, 8, stunde, minute).toISOString();
+    const proben = [
+      feldEreignis(h(), n, "FunkprobeDurchgefuehrt", { einheitId: "E01", ergebnis: "KONTAKT" }, null, { zeitpunkt: um(12, 50), rufgruppeId: "R1" }),
+      feldEreignis(h(), n, "FunkprobeDurchgefuehrt", { einheitId: "E01", ergebnis: "KEIN_KONTAKT" }, null, { zeitpunkt: um(13, 5), grund: "Funkloch" }, "Funkloch"),
+      feldEreignis(h(), n, "FunkprobeDurchgefuehrt", { einheitId: "E12", ergebnis: "KONTAKT" }, null, { zeitpunkt: um(14, 31) }),
+    ];
+    const zustand = materialisiere(falteHinzu(leereFaltung(), [...prueflageEreignisse(), ...funkEreignisse(), ...proben]));
+    const html = funkplanAlsHtml(projektion.funkplan(zustand, um(14, 43)), KOPF);
+    expect(html).toContain('<th scope="col">Hinweis</th><th scope="col" style="width:12%">Letzter Kontakt</th>');
+    expect(html).toContain("<td>1250 Funkprobe · über 60 min · kein Kontakt 1305</td></tr>");
+    expect(html).toContain("<td>1431 Funkprobe</td></tr>");
+  });
+
   it("bleibt ohne Rufgruppen eine ausfüllbare Seite", () => {
     const html = funkplanAlsHtml({ rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0, ohneKontakt: 0 }, schwelleMinuten: 60 }, { datum: "2026-09-08", einsatzName: "Leer", stand: "Stand: jetzt" });
     expect(html).toContain("Ohne Rufgruppe");
@@ -110,7 +129,7 @@ describe("Der leere Funkplan im Papier-Vordruck", () => {
     const html = papierVordruckAlsHtml({ datum: "2026-09-08", einsatzName: "Übung", stand: "Stand: jetzt" });
     const seite = html.slice(html.indexOf('aria-label="Funkplan (leer)"'));
     expect(html.indexOf("Papier-Vordruck: Funkprotokoll")).toBeLessThan(html.indexOf("Papier-Vordruck: Funkplan (leer)"));
-    expect(seite).toContain('<th scope="col">Einheit</th><th scope="col">Bereich</th><th scope="col">Funkrufname</th><th scope="col">Erreichbarkeit</th><th scope="col">Hinweis</th>');
+    expect(seite).toContain('<th scope="col">Einheit</th><th scope="col">Bereich</th><th scope="col">Funkrufname</th><th scope="col">Erreichbarkeit</th><th scope="col">Hinweis</th><th scope="col">Letzter Kontakt</th>');
     expect(seite.match(/<tr class="rg">/g)).toHaveLength(4);
     expect(seite).toContain("Ohne Rufgruppe");
   });

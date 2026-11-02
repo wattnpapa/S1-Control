@@ -14,12 +14,18 @@
  * mit, weil er den Baum nicht immer geholt hat (die Lage muss nicht offen
  * gewesen sein).
  *
+ * F3: Der Plan wird gegen die Uhr des Workers gerechnet (letzter Kontakt über
+ * der Schwelle), und die Ansicht trägt die Funkproben als Zeitfolge aus dem
+ * Ereignisstrom — die jüngsten {@link projektion.FUNKPROBEN_GRENZE}, mit
+ * derselben Suche zugeschnitten. Die Folge läuft über alle Ereignisse der
+ * Akte; das ist ein Durchgang ohne Faltung, wie beim Tagebuch.
+ *
  * Und die Auswahl der Tabellenzellen mit `werteAus` (Gruppe FUNK der
  * Einheitentabelle): `projektion.auswahlwerte`, bei Rufgruppen mit der
  * Betriebsart für die Marke „DMO“.
  */
 
-import { projektion, type Funkplan, type Funkteilnehmer, type Zustand } from "@s1/domaene";
+import { projektion, type EingehendesEreignis, type Funkplan, type Funkprobenzeile, type Funkteilnehmer, type Zustand } from "@s1/domaene";
 
 import type { Funkplanansicht, Funkplanbereich, Ruf, Zustandswahl } from "../kontrakt/index.js";
 
@@ -52,6 +58,13 @@ export function funkplanGefiltert(plan: Funkplan, suche: string | undefined): Fu
   };
 }
 
+/** Die Funkproben, auf die Treffer der Suche zugeschnitten (Einheit, Rufgruppe, Grund, Akteur). */
+export function funkprobenGefiltert(folge: readonly Funkprobenzeile[], suche: string | undefined): readonly Funkprobenzeile[] {
+  const nadel = (suche ?? "").trim().toLocaleLowerCase("de-DE");
+  if (nadel === "") return folge;
+  return folge.filter((z) => passt(nadel, z.einheit, z.rufgruppe, z.grund, z.akteur));
+}
+
 /** Die geltenden Bereiche ohne Systemabschnitte, in der Ordnung des Baums. */
 export function funkplanbereiche(zustand: Zustand): readonly Funkplanbereich[] {
   const baum = projektion.abschnittsbaum(zustand, { ohneAufgeloeste: true, ohneArchiv: true });
@@ -61,16 +74,26 @@ export function funkplanbereiche(zustand: Zustand): readonly Funkplanbereich[] {
     .map((k) => ({ abschnittId: k.id, name: k.name, tiefe: k.tiefe }));
 }
 
+/** Was der Worker neben dem Zustand mitgibt: Zeigerstand, Uhr und die Ereignisse der Akte. */
+export interface Funkplanumfeld {
+  readonly lageZeiger: number;
+  readonly jetztMs: number;
+  readonly ereignisse: readonly EingehendesEreignis[];
+}
+
 /** Das Blatt „Funkplan" für den Ruf `funkplanAnfordern`. */
 export function funkplanansicht(
   zustand: Zustand,
   ruf: Extract<Ruf, { art: "funkplanAnfordern" }>,
-  lageZeiger: number,
+  umfeld: Funkplanumfeld,
 ): Funkplanansicht {
+  const jetzt = new Date(umfeld.jetztMs).toISOString();
   return {
-    lageZeiger,
-    plan: funkplanGefiltert(projektion.funkplan(zustand), ruf.suche),
+    lageZeiger: umfeld.lageZeiger,
+    plan: funkplanGefiltert(projektion.funkplan(zustand, jetzt), ruf.suche),
     bereiche: funkplanbereiche(zustand),
+    jetzt,
+    funkproben: funkprobenGefiltert(projektion.funkprobenfolge(zustand, umfeld.ereignisse), ruf.suche),
   };
 }
 

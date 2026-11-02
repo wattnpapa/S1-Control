@@ -17,6 +17,11 @@
  * weiteren Gruppen als „auch: …" (`projektion.hinweisspalte`). Mithörer
  * stehen nicht als eigene Zeilen unter ihren weiteren Gruppen: Auf dem Papier
  * steht jede Einheit einmal, dort, wo sie gerufen wird.
+ *
+ * „Letzter Kontakt" (F3) steht als „1431 Funkprobe", über der Schwelle mit
+ * „über 60 min" in Worten — das Papier hat kein Bernstein —, und ein „kein
+ * Kontakt" ohne späteren Kontakt dahinter. Gerechnet ist er zur Zeit der
+ * Ausgabe; auf dem Blatt wird er mit Stift weitergeführt wie alles andere.
  */
 
 import { projektion, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
@@ -37,11 +42,12 @@ export const FUNKPLAN_FUSSNOTE =
 
 /** Die Spalten des Funkplans — Ausgabe und leerer Vordruck teilen sie. */
 export const FUNKPLAN_SPALTEN: readonly { readonly kopf: string; readonly breite?: string }[] = [
-  { kopf: "Einheit", breite: "27%" },
-  { kopf: "Bereich", breite: "11%" },
-  { kopf: "Funkrufname", breite: "21%" },
-  { kopf: "Erreichbarkeit", breite: "22%" },
+  { kopf: "Einheit", breite: "24%" },
+  { kopf: "Bereich", breite: "10%" },
+  { kopf: "Funkrufname", breite: "18%" },
+  { kopf: "Erreichbarkeit", breite: "19%" },
   { kopf: "Hinweis" },
+  { kopf: "Letzter Kontakt", breite: "12%" },
 ];
 
 export const FUNKPLAN_STIL = [
@@ -87,15 +93,28 @@ function gruppenzeile(titel: string, zusatz: readonly (string | undefined)[]): s
   return `      <tr class="rg"><td colspan="${String(FUNKPLAN_SPALTEN.length)}">${htmlMaskieren(titel)}${small}</td></tr>`;
 }
 
-function teilnehmerzeile(t: Funkteilnehmer): string {
-  const zellen = [t.einheit, t.bereich, t.funkrufname, t.erreichbarkeit, projektion.hinweisspalte(t)];
+/** „1250 Funkprobe · über 60 min · kein Kontakt 1305" — die Spalte „Letzter Kontakt" in Worten. */
+export function kontaktspalte(t: Funkteilnehmer, schwelleMinuten: number): string {
+  const kontakt = t.letzterKontakt;
+  const kein = t.keinKontaktGemeldet;
+  return [
+    kontakt === undefined ? "" : projektion.kontaktText(kontakt),
+    kontakt?.ueberSchwelle === true ? `über ${String(schwelleMinuten)} min` : "",
+    kein === undefined ? "" : `kein Kontakt ${projektion.uhrzeitKurz(kein.zeitpunkt)}`,
+  ]
+    .filter((teil) => teil !== "")
+    .join(" · ");
+}
+
+function teilnehmerzeile(t: Funkteilnehmer, schwelleMinuten: number): string {
+  const zellen = [t.einheit, t.bereich, t.funkrufname, t.erreichbarkeit, projektion.hinweisspalte(t), kontaktspalte(t, schwelleMinuten)];
   return `      <tr>${zellen.map((z) => `<td>${htmlMaskieren(z)}</td>`).join("")}</tr>`;
 }
 
-function rufgruppeAlsHtml(r: Rufgruppenkarte): string[] {
+function rufgruppeAlsHtml(r: Rufgruppenkarte, schwelleMinuten: number): string[] {
   const titel = `${projektion.betriebsartWort(r.betriebsart)} · ${r.name}`;
   const zusatz = [r.zweck, r.gateway === undefined ? undefined : `Gateway ${r.gateway}`, r.hoert === undefined ? undefined : `hört ${r.hoert}`];
-  return [gruppenzeile(titel, zusatz), ...r.teilnehmer.map(teilnehmerzeile), LEERE_ZEILE];
+  return [gruppenzeile(titel, zusatz), ...r.teilnehmer.map((t) => teilnehmerzeile(t, schwelleMinuten)), LEERE_ZEILE];
 }
 
 /** Der Funkplan als druckbare A4-Seite; `dateiname` erscheint rechts im Fuß. */
@@ -117,9 +136,9 @@ export function funkplanAlsHtml(plan: Funkplan, kopf: Funkplankopf, dateiname?: 
     '  <table class="funkplan">',
     `    <thead><tr>${FUNKPLAN_SPALTEN.map((s) => `<th scope="col"${s.breite === undefined ? "" : ` style="width:${s.breite}"`}>${htmlMaskieren(s.kopf)}</th>`).join("")}</tr></thead>`,
     "    <tbody>",
-    ...geltend.flatMap(rufgruppeAlsHtml),
+    ...geltend.flatMap((r) => rufgruppeAlsHtml(r, plan.schwelleMinuten)),
     gruppenzeile("Ohne Rufgruppe", ["mit Ankunft zuordnen"]),
-    ...plan.ohneRufgruppe.map(teilnehmerzeile),
+    ...plan.ohneRufgruppe.map((t) => teilnehmerzeile(t, plan.schwelleMinuten)),
     LEERE_ZEILE,
     LEERE_ZEILE,
     "    </tbody>",

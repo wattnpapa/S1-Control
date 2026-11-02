@@ -14,7 +14,9 @@ import { inlineEntwurf } from "./bedienschritte.js";
 import {
   erreichbarkeitUeberschreiben,
   funkhinweisDerEinheit,
+  funkprobe,
   funkrufnameUeberschreiben,
+  funkSchwelleSetzen,
   rufgruppeAnlegen,
   rufgruppeAufgeloest,
   rufgruppeDerEinheit,
@@ -97,5 +99,38 @@ describe("Die Bedienschritte des Funkplans an der Einheit (F2)", () => {
     expect(weitereRufgruppenDerEinheit("E1", ["R1", "R2"], ["R1", "R2"])).toBeUndefined();
     // Eine andere Reihenfolge ist eine andere Liste.
     expect(weitereRufgruppenDerEinheit("E1", ["R1", "R2"], ["R2", "R1"])).toMatchObject({ neu: ["R2", "R1"] });
+  });
+
+  it("trägt eine Funkprobe „Kontakt“ über die geltende Hauptrufgruppe ein, mit der gesehenen Probe als Vorher-Wert", () => {
+    const gesehen = { zeitpunkt: "2026-09-10T10:50:00.000Z", rufgruppeId: "R1" };
+    const ziel = { einheitId: "E1", rufgruppeId: "R1", rufgruppeAufgeloest: false, letzteFunkproben: { KONTAKT: gesehen } };
+    const entwurf = funkprobe(ziel, "KONTAKT", "2026-09-10T12:31:00.000Z");
+    expect(entwurf).toEqual({
+      typ: "FunkprobeDurchgefuehrt",
+      nutzlast: { einheitId: "E1", ergebnis: "KONTAKT" },
+      vorher: gesehen,
+      neu: { zeitpunkt: "2026-09-10T12:31:00.000Z", rufgruppeId: "R1" },
+    });
+    expect(zEntwurf.safeParse(entwurf).success).toBe(true);
+  });
+
+  it("schreibt „kein Kontakt“ mit Grund in Rahmen und Wert, ohne aufgelöste Gruppe und mit null für die erste Probe", () => {
+    const ziel = { einheitId: "E1", rufgruppeId: "R9", rufgruppeAufgeloest: true };
+    expect(funkprobe(ziel, "KEIN_KONTAKT", "2026-09-10T12:31:00.000Z", " Funkloch Deich ")).toEqual({
+      typ: "FunkprobeDurchgefuehrt",
+      nutzlast: { einheitId: "E1", ergebnis: "KEIN_KONTAKT" },
+      vorher: null,
+      neu: { zeitpunkt: "2026-09-10T12:31:00.000Z", grund: "Funkloch Deich" },
+      grund: "Funkloch Deich",
+    });
+    // Ohne Grund entsteht der Entwurf trotzdem; abweisen tut der Worker.
+    expect(funkprobe(ziel, "KEIN_KONTAKT", "2026-09-10T12:31:00.000Z", "")).not.toHaveProperty("grund");
+  });
+
+  it("setzt die Schwelle „kein Kontakt“ mit dem gezeigten Wert als Vorher-Wert; dieselbe Zahl schreibt nichts", () => {
+    const entwurf = funkSchwelleSetzen("X", 60, 45);
+    expect(entwurf).toEqual({ typ: "FunkParameterGesetzt", nutzlast: { einsatzId: "X" }, vorher: 60, neu: 45 });
+    expect(zEntwurf.safeParse(entwurf).success).toBe(true);
+    expect(funkSchwelleSetzen("X", 60, 60)).toBeUndefined();
   });
 });

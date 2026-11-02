@@ -58,12 +58,14 @@ function text(wert: unknown): string | undefined {
  * Stammdaten des Einsatzes und wer ihn erstellt hat — der Ausdruck hängt am
  * Platz und wird mit Stift weitergeführt; die Frage „von wann, von wem“ muss
  * er selbst beantworten. Der Dateiname steht im Fuß, damit ein Blatt auf dem
- * Tisch zu seiner Datei findet.
+ * Tisch zu seiner Datei findet. Der letzte Kontakt ist gegen `jetzt`
+ * gerechnet, die Zeit der Ausgabe.
  */
 export function funkplanausgabe(
   zustand: Zustand,
   kopf: Ausgabekopf & { readonly erstelltVon?: string },
   marke: string,
+  jetzt: string,
 ): { dateiname: string; html: string } {
   const dateiname = `funkplan_${marke}`;
   const fuestName = text(zustand.einsatz?.fuestName.wert);
@@ -73,5 +75,5 @@ export function funkplanausgabe(
     ...(fuestName === undefined ? {} : { fuestName }),
     ...(uebergeordneteFuestName === undefined ? {} : { uebergeordneteFuestName }),
   };
-  return { dateiname, html: funkplanAlsHtml(projektion.funkplan(zustand), funkkopf, dateiname) };
+  return { dateiname, html: funkplanAlsHtml(projektion.funkplan(zustand, jetzt), funkkopf, dateiname) };
 }

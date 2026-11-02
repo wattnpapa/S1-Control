@@ -871,9 +871,9 @@ export class Aktendienst {
     return versorgungsansicht(this.#zustand, ruf, this.#o.zeit(), this.#lageZeiger);
   }
 
-  /** Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5), mit Suche zugeschnitten. */
+  /** Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5), mit Suche zugeschnitten und gegen die Uhr dieses Workers gerechnet. */
   funkplan(ruf: Extract<Ruf, { art: "funkplanAnfordern" }>): Funkplanansicht {
-    return funkplanansicht(this.#zustand, ruf, this.#lageZeiger);
+    return funkplanansicht(this.#zustand, ruf, { lageZeiger: this.#lageZeiger, jetztMs: this.#o.zeit(), ereignisse: this.#ereignisse });
   }
 
   /**
@@ -1042,7 +1042,7 @@ export class Aktendienst {
       return versorgungsausgabe(ausgabe as Versorgungsausgabe, this.#zustand, jetzt.getTime(), { ...kopf, marke });
     }
     if (ausgabe === "funkplan") {
-      return funkplanausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke);
+      return funkplanausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke, jetzt.toISOString());
     }
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };

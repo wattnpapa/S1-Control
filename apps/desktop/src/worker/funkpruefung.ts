@@ -8,6 +8,12 @@
  * Funkplans an der Einheit (F2): die weiteren Rufgruppen als Liste von
  * Kennungen, Funkhinweis und Funkrufname als Text. Ein Teil von `pruefeNeu`
  * im Aktendienst.
+ *
+ * F3: Eine Funkprobe trägt im Wert eine lesbare Funkzeit, bei „kein Kontakt"
+ * ist der Grund Pflicht — die Pflicht hängt am Ergebnis, nicht an der Art,
+ * und steht deshalb hier und nicht im Katalog. Eine Rücknahme setzt den
+ * Vorher-Wert und ist keine Probe: Sie darf leeren (`null`) und braucht
+ * keinen Grund. Die Schwelle „kein Kontakt" ist eine ganze Zahl ab 1.
  */
 
 import type { Ereignisentwurf } from "@s1/speicher";
@@ -49,8 +55,35 @@ function pruefeStammdatum(feld: string | undefined, neu: unknown): string | unde
   return undefined;
 }
 
+function istFunkprobenwert(neu: unknown): boolean {
+  if (typeof neu !== "object" || neu === null) return false;
+  const wert = neu as { zeitpunkt?: unknown; rufgruppeId?: unknown; grund?: unknown };
+  if (typeof wert.zeitpunkt !== "string" || Number.isNaN(Date.parse(wert.zeitpunkt))) return false;
+  return (wert.rufgruppeId === undefined || istText(wert.rufgruppeId)) && (wert.grund === undefined || typeof wert.grund === "string");
+}
+
+function pruefeFunkprobe(entwurf: Ereignisentwurf): string | undefined {
+  const zurueck = entwurf.undoOf !== undefined;
+  if (!(istFunkprobenwert(entwurf.neu) || (zurueck && entwurf.neu === null))) {
+    return "Die Funkprobe braucht eine lesbare Funkzeit.";
+  }
+  const ergebnis = (entwurf.nutzlast as { ergebnis?: unknown } | null | undefined)?.ergebnis;
+  if (!zurueck && ergebnis === "KEIN_KONTAKT" && !istText(entwurf.grund)) {
+    return "Bei „kein Kontakt“ ist ein Grund Pflicht — etwa „keine Antwort“ oder „Funkloch Deich“.";
+  }
+  return undefined;
+}
+
+function pruefeSchwelle(entwurf: Ereignisentwurf): string | undefined {
+  const neu = entwurf.neu;
+  if (entwurf.undoOf !== undefined && neu === null) return undefined;
+  return typeof neu === "number" && Number.isInteger(neu) && neu >= 1 ? undefined : "Die Schwelle „kein Kontakt“ muss eine ganze Zahl ab 1 (Minuten) sein.";
+}
+
 /** Liefert eine Fehlermeldung in Klartext, oder `undefined`, wenn alles passt. */
 export function pruefeFunk(entwurf: Ereignisentwurf): string | undefined {
+  if (entwurf.typ === "FunkprobeDurchgefuehrt") return pruefeFunkprobe(entwurf);
+  if (entwurf.typ === "FunkParameterGesetzt") return pruefeSchwelle(entwurf);
   if (entwurf.typ === "RufgruppeAngelegt") {
     const nutzlast = (entwurf.nutzlast ?? {}) as Record<string, unknown>;
     if (typeof nutzlast["name"] === "string" && !istText(nutzlast["name"])) return PFLICHT["name"];

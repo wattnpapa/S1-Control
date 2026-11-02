@@ -31,6 +31,7 @@ import type {
   Auswahlwert,
   Baumknoten,
   Funkplan,
+  Funkprobenzeile,
   Kostenblatt,
   Fassungsvergleich,
   Logistikblatt,
@@ -965,6 +966,16 @@ export interface Funkplanansicht extends Ansichtsstand {
   readonly plan: Funkplan;
   /** Die geltenden Bereiche ohne Systemabschnitte — der optionale Bereichsbezug der Rufgruppe. */
   readonly bereiche: readonly Funkplanbereich[];
+  /**
+   * F3: die Uhr des Workers, gegen die der letzte Kontakt und die Schwelle
+   * (`plan.schwelleMinuten`) gerechnet sind (ISO).
+   */
+  readonly jetzt: string;
+  /**
+   * F3: die jüngsten Funkproben (höchstens `FUNKPROBEN_GRENZE`), jüngste
+   * zuerst, mit der Suche zugeschnitten — die Sicht „Funkproben".
+   */
+  readonly funkproben: readonly Funkprobenzeile[];
 }
 
 /** Das Blatt „Versorgung" (S4.1) — aus derselben Projektion wie `Lagebild.versorgung`. */
