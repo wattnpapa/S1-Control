@@ -125,3 +125,12 @@ Runde 4 liegt in einem eigenen Ordner: `../s4/KONZEPT-S4.md` und
 Verpflegung, Vorausschau der nächsten 24 Stunden je Mahlzeit, Unterbringung,
 Bereiche · Schichten, Sofortbedarf). Nichts davon
 ist umgesetzt; die Gestaltung folgt Option 2a.
+
+Runde 5 liegt ebenfalls in einem eigenen Ordner: `../funkplan/KONZEPT-FUNKPLAN.md`
+und `../funkplan/mockups-funkplan.html` entwerfen den Funkplan für die
+Vermeldezentrale der Führungsstelle (Rufgruppen als Entität, Hauptrufgruppe je
+Einheit, Funkhinweis, Funkprobe und letzter Kontakt; Monitoransicht „Funkplan"
+als Tafel je Rufgruppe mit Teilnehmerkacheln, Blatt „Funkplan", Spaltengruppe
+„Funk" in der Einheitentabelle, Reiter „Funk und Erreichbarkeit" in der
+Einheitenmaske, Ausgabe „Funkplan" als A4). Nichts davon ist umgesetzt; die
+Gestaltung folgt Option 2a.

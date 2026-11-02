@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>S1-Control Mockups — Runde 5: Funkplan (Vermeldezentrale)</title>
+<style>
+body{margin:0;background:#e7e3dc;font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif}
+a{color:#1546c8}a:hover{color:#0b2a86}
+code{font:12px ui-monospace,Menlo,monospace}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px;max-width:100%}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:auto}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-note{margin:0 0 18px;max-width:78ch;font:13px/1.6 system-ui,sans-serif;color:rgba(0,0,0,.62)}
+.dv-sub{margin:-4px 0 0;max-width:120ch;font:12px/1.55 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+
+/* ---- Monitor (Zweitfenster, 960×540, schwarz) ---- */
+.mon{width:960px;height:540px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#000;color:#fff;text-align:center;font-variant-numeric:tabular-nums;font-family:-apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;overflow:hidden}
+.mon p{margin:0}
+.mon .beschr{font:400 15px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.65}
+.mon .gross{font:700 150px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.02em}
+.mon .einheit{font:400 15px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.18em;text-transform:uppercase;opacity:.65;margin-top:-4px}
+.mon .neben{font:400 30px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.mon .klein{font:400 20px/1.3 -apple-system,Helvetica,Arial,sans-serif;opacity:.8}
+.mon .zeit{font:400 44px/1 -apple-system,Helvetica,Arial,sans-serif;letter-spacing:.06em;margin-top:6px}
+.mon .fuss{font:400 16px/1.3 -apple-system,Helvetica,Arial,sans-serif;opacity:.7}
+.mon .amber{color:#f0c368}
+.mon .rot{color:#ff8a8a}
+.mon .punkte{position:absolute;right:16px;bottom:12px;display:flex;gap:6px}
+.mon .punkte i{width:7px;height:7px;border:1px solid rgba(255,255,255,.6);display:block}
+.mon .punkte i.an{background:#fff}
+.mon .leiste{position:absolute;top:0;left:0;right:0;display:flex;align-items:stretch;background:rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.28);font:400 14px/1 -apple-system,Helvetica,Arial,sans-serif;text-align:left}
+.mon .leiste span{padding:11px 16px;color:rgba(255,255,255,.78);border-right:1px solid rgba(255,255,255,.18)}
+.mon .leiste span.aktiv{background:#fff;color:#000;font-weight:700}
+.mon .leiste span.rechts{margin-left:auto;border-right:0;border-left:1px solid rgba(255,255,255,.18);opacity:.8}
+/* Funkplan-Tafel: eine Zeile je Rufgruppe, Teilnehmer als Kacheln */
+.funktafel{width:100%;border-collapse:collapse;text-align:left;font:400 15px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.funktafel th{font:400 11px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;text-transform:uppercase;opacity:.65;padding:0 12px 6px;border-bottom:1px solid rgba(255,255,255,.35)}
+.funktafel td{padding:4px 12px;border-bottom:1px solid rgba(255,255,255,.12);vertical-align:top}
+.funktafel td.rg{width:290px}
+.funktafel td.rg b .betrieb{font-size:10px;vertical-align:middle;margin-left:6px}
+.funktafel td.rg b{display:block;white-space:nowrap;font:700 19px/1.1 ui-monospace,Menlo,monospace;letter-spacing:.02em}
+.funktafel td.rg small{display:block;margin-top:2px;font:400 11.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;opacity:.65}
+.funktafel td.art{white-space:nowrap}
+.funktafel .betrieb{display:inline-block;padding:2px 7px;border:1px solid rgba(255,255,255,.6);font:700 11px/1.2 ui-monospace,Menlo,monospace;letter-spacing:.08em}
+.funktafel .betrieb.dmo{border-color:#f0c368;color:#f0c368}
+.funktafel .betrieb.analog{border-style:dashed}
+.funktafel .platz{font:400 11.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;opacity:.65;white-space:nowrap}
+.kacheln{display:flex;flex-wrap:wrap;gap:4px}
+.kachel{display:inline-flex;flex-direction:column;gap:1px;padding:2px 7px 2px 8px;border:1px solid rgba(255,255,255,.35);border-left:5px solid #9ed17e;font:400 12.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;white-space:nowrap}
+.kachel small{font:400 10px/1 ui-monospace,Menlo,monospace;opacity:.7}
+.kachel.ruhe{border-left-color:rgba(255,255,255,.35);opacity:.75}
+.kachel.anmarsch{border-left-color:#f0c368}
+.kachel.nichtbereit{border-left-color:#ff8a8a}
+.kachel.still{border-color:#f0c368}
+.kachel.still small{color:#f0c368}
+/* Kontextmenü: ein Element des Renderers, kein Electron-Menü */
+.menu{position:absolute;background:#fff;color:#14183a;border:1px solid #c9cfe0;box-shadow:0 14px 40px rgba(9,20,48,.22);text-align:left;font:400 13px/1 -apple-system,Helvetica,Arial,sans-serif;min-width:270px;padding:4px 0;z-index:2}
+.menu div{padding:9px 14px 9px 34px;position:relative;display:flex;gap:12px}
+.menu div.haken::before{content:"✓";position:absolute;left:13px;font-weight:700}
+.menu div.aktiv{background:#eaedf7}
+.menu div .kurz{margin-left:auto;color:#8b93ad;font:400 11px/1 ui-monospace,Menlo,monospace}
+.menu hr{border:0;border-top:1px solid #dde1ec;margin:4px 0}
+.menu .titel{padding:6px 14px 4px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484;text-transform:uppercase}
+.cursor{position:absolute;width:0;height:0;border-left:11px solid #fff;border-bottom:11px solid transparent;border-top:0;transform:rotate(-20deg);filter:drop-shadow(0 0 1px #000)}
+
+/* ---- Arbeitsplatz (1320×860, Theme Standard) ---- */
+.scr{width:1320px;height:860px;display:flex;flex-direction:column;background:#eef0f6;font:13px/1.45 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif;color:#14183a;overflow:hidden}
+.scr.kurz{height:auto}
+.kopf{flex:none;background:#1c2251;color:#fff;padding:11px 22px 0}
+.kopf .brot{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#a9b0d4}
+.kopf .zeile{display:flex;align-items:center;gap:12px;margin-top:9px}
+.kopf .logo{width:44px;height:30px;border:1px solid #6b74a8;background:#1a3fb0;display:flex;align-items:center;justify-content:center;font:700 9px/1 -apple-system,Helvetica,Arial,sans-serif}
+.kopf .wort{font:700 21px/1.1 -apple-system,Helvetica,Arial,sans-serif}
+.kopf .kpi{display:flex;align-items:baseline;gap:8px}
+.kopf .kpi b{font:700 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#a9b0d4}
+.kopf .kpi span{font:700 30px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.kopf .themen{margin-left:auto;display:flex;border:1px solid #fff}
+.kopf .themen span{padding:7px 12px;font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;border-left:1px solid #6b74a8}
+.kopf .themen span:first-child{background:#fff;color:#1c2251;font-weight:700;border-left:0}
+.kopf .zustand{margin-top:7px;font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#8fe3a8}
+.kopf .reiter{display:flex;gap:22px;margin-top:11px;border-top:1px solid #3a4278;padding-top:9px}
+.kopf .reiter span{font:400 13px/1 -apple-system,Helvetica,Arial,sans-serif;color:#c3c8e4;padding-bottom:9px;white-space:nowrap}
+.kopf .reiter span.aktiv{font-weight:700;color:#fff;border-bottom:2px solid #fff}
+.kopf .reiter span.rechts{margin-left:auto}
+.kopf .reiter i{font-style:normal;color:#f0c368}
+.band{flex:none;display:flex;background:#fff;border-bottom:1px solid #c9cfe0}
+.band div{flex:1;padding:13px 20px;border-right:1px solid #dde1ec}
+.band div:last-child{border-right:0;background:#f6f7fb}
+.band b{display:block;font:700 27px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.band span{display:block;margin-top:5px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484}
+.band .warn b{color:#7a5c12}
+.band .err b{color:#8f1717}
+.flaeche{flex:1;display:flex;gap:14px;padding:14px;min-height:0}
+.werkzeuge{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.btn{height:31px;padding:0 13px;border:1px solid #1c2251;background:#fff;color:#14183a;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;display:inline-block;box-sizing:border-box;white-space:nowrap}
+.btn.haupt{background:#1c2251;color:#fff;font-weight:700}
+.btn.aus{border-color:#c9cfe0;color:#8b93ad}
+.umschalter{display:flex;border:1px solid #1c2251;height:31px;box-sizing:border-box}
+.umschalter span{padding:0 13px;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;border-left:1px solid #1c2251;white-space:nowrap}
+.umschalter span:first-child{border-left:0}
+.umschalter span.aktiv{background:#1c2251;color:#fff;font-weight:700}
+.rechts{margin-left:auto}
+.suche{height:31px;box-sizing:border-box;border:1px solid #c9cfe0;background:#fff;padding:0 10px;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;color:#8b93ad;width:220px}
+.karte{background:#fff;border:1px solid #c9cfe0;border-top:3px solid #14183a;display:flex;flex-direction:column;min-height:0}
+.karte .kk{display:flex;align-items:center;gap:10px;padding:10px 13px;border-bottom:1px solid #dde1ec;font:700 14px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.karte .kk small{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484}
+.karte .rollen{flex:1;min-height:0;overflow:auto}
+.karte .fussnote{flex:none;padding:8px 13px;font:400 11px/1.45 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484;border-top:1px solid #dde1ec}
+table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
+.t th{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;text-transform:uppercase;background:#e7eaf3;padding:8px;text-align:left;border-bottom:1px solid #c9cfe0;color:#3a4266;white-space:nowrap}
+.t td{padding:7px 8px;border-bottom:1px solid #dde1ec;font-variant-numeric:tabular-nums;vertical-align:middle}
+.t td.z,.t th.z{text-align:right}
+.t td.sek{color:#3a4266}
+.t tr.sum td{background:#e7eaf3;font-weight:700;white-space:nowrap}
+.t tr.gruppe td{background:#f6f7fb;font-weight:700;border-top:2px solid #c9cfe0}
+.t tr.gruppe td small{font-weight:400;color:#5c6484;margin-left:8px}
+.t tr.gewaehlt td{background:#eaedf7}
+.t tr.blass td{opacity:.55}
+.t td.edit{outline:2px solid #1c2251;outline-offset:-2px}
+.t th.grp,.t td.grp{border-left:1px solid #c9cfe0}
+.t.dicht td{padding:4px 8px}.t.dicht th{padding:6px 8px}
+.marke{display:inline-block;padding:2px 6px;font:700 9.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;border:1px solid;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+.ok{background:#e0f0e6;border-color:#a8d3b8;color:#14652f}
+.warn{background:#fbeccd;border-color:#e3c987;color:#7a5c12}
+.err{background:#f7dede;border-color:#dda9a9;color:#8f1717}
+.neu{background:#eceef4;border-color:#c9cfe0;color:#3a4266}
+.marke.mono{font-family:ui-monospace,Menlo,monospace;text-transform:none;letter-spacing:.02em}
+.mono{font-family:ui-monospace,Menlo,monospace;white-space:nowrap}
+.t td.nw{white-space:nowrap}
+.status{flex:none;height:30px;box-sizing:border-box;display:flex;align-items:center;gap:18px;padding:0 14px;background:#fff;border-top:1px solid #c9cfe0;font:400 11.5px/1 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266}
+.status .rechts{font:600 11.5px/1 ui-monospace,Menlo,monospace;color:#14183a}
+.kasten{padding:11px 13px;border-bottom:1px solid #dde1ec}
+.kasten .lbl{font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484;margin-bottom:8px}
+.kasten dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:5px 14px;font-size:12px}
+.kasten dt{color:#5c6484}
+.kasten dd{margin:0;font-variant-numeric:tabular-nums}
+.hinweis{padding:10px 13px;background:#f6f7fb;font:400 11px/1.45 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;border-top:1px solid #dde1ec}
+.kurzliste{font:400 11px/1.7 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;padding:9px 13px;border-top:1px solid #dde1ec}
+.kurzliste b{font-family:ui-monospace,Menlo,monospace;font-weight:400;color:#14183a;margin-right:8px}
+/* Auswahlliste in einer Zelle (Rufgruppe wählen) */
+.liste{position:absolute;background:#fff;border:1px solid #1c2251;box-shadow:0 10px 30px rgba(9,20,48,.2);font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;min-width:300px;z-index:2}
+.liste div{padding:7px 10px;display:flex;gap:10px;align-items:center;border-bottom:1px solid #eef0f6}
+.liste div.aktiv{background:#eaedf7}
+.liste div .sek{margin-left:auto;color:#5c6484;font-size:11px;white-space:nowrap}
+.liste .titel{padding:6px 10px 4px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.14em;color:#5c6484;text-transform:uppercase;border-bottom:0}
+/* Maske */
+.maske{position:absolute;left:0;top:0;right:0;bottom:0;background:rgba(20,24,58,.35);display:flex;align-items:center;justify-content:center}
+.dialog{width:760px;background:#fff;border:1px solid #c9cfe0;border-top:3px solid #14183a;display:flex;flex-direction:column}
+.dialog .dk{padding:12px 16px;border-bottom:1px solid #dde1ec;display:flex;align-items:baseline;gap:10px;font:700 15px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.dialog .dk small{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484}
+.dialog .dk .rechts{font:400 11px/1 ui-monospace,Menlo,monospace;color:#8b93ad}
+.felder{padding:12px 16px;display:grid;grid-template-columns:160px 1fr;gap:10px 14px;align-items:start;font-size:12px}
+.felder label{color:#3a4266;padding-top:7px}
+.felder label small{display:block;color:#8b93ad;font-size:10.5px;margin-top:2px}
+.feld{height:31px;box-sizing:border-box;border:1px solid #c9cfe0;background:#fff;padding:0 9px;font:400 12px/29px -apple-system,Helvetica,Arial,sans-serif;color:#14183a;display:flex;align-items:center;gap:8px}
+.feld.fokus{border-color:#1c2251;outline:2px solid #1c2251;outline-offset:-2px}
+.feld.lesen{background:#f6f7fb;color:#3a4266}
+.feld .pfeil{margin-left:auto;color:#8b93ad}
+.feld.hoch{height:auto;min-height:60px;line-height:1.45;padding:7px 9px;align-items:flex-start}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;padding:4px 8px;border:1px solid #c9cfe0;background:#f6f7fb;font:400 11.5px/1 ui-monospace,Menlo,monospace}
+.chip i{font-style:normal;color:#8b93ad}
+.chip.plus{border-style:dashed;color:#5c6484;font-family:-apple-system,Helvetica,Arial,sans-serif}
+.dialog .fussleiste{padding:10px 16px;border-top:1px solid #dde1ec;display:flex;gap:8px;align-items:center;background:#f6f7fb}
+.dialog .fussleiste .sek{font-size:11px;color:#5c6484}
+/* Druckblatt A4 (Vorschau) */
+.a4{width:794px;min-height:1000px;background:#fff;color:#000;padding:40px 48px;box-sizing:border-box;font:400 11.5px/1.4 -apple-system,"Helvetica Neue",Helvetica,Arial,sans-serif}
+.a4 h1{margin:0;font:700 18px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.a4 .dkopf{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #000;padding-bottom:8px;margin-bottom:12px}
+.a4 .dkopf dl{margin:0;display:grid;grid-template-columns:auto auto;gap:2px 12px;font-size:11px}
+.a4 .dkopf dt{color:#444}.a4 .dkopf dd{margin:0}
+.a4 table{width:100%;border-collapse:collapse;font-size:11px;margin-bottom:12px}
+.a4 th{text-align:left;font:700 10px/1.2 -apple-system,Helvetica,Arial,sans-serif;text-transform:uppercase;letter-spacing:.06em;border-bottom:1px solid #000;padding:4px 6px}
+.a4 td{padding:4px 6px;border-bottom:1px solid #bbb;vertical-align:top}
+.a4 tr.rg td{background:#eee;font-weight:700;border-top:1.5px solid #000}
+.a4 tr.rg td small{font-weight:400;margin-left:8px}
+.a4 .leer td{height:22px}
+.a4 .fussz{margin-top:14px;font-size:10px;color:#444;border-top:1px solid #000;padding-top:6px;display:flex;justify-content:space-between}
+</style>
+</head>
+<body>
+
+<section class="dv-turn" id="t5">
+<div class="dv-thd"><a class="dv-tid" href="#t5">5</a><span class="dv-tname">Funkplan — die Vermeldezentrale der Führungsstelle aus der S1-Übersicht versorgen</span></div>
+<p class="dv-note">Die S1-Übersicht kennt jede Einheit, ihren Bereich, ihren Status, ihre Fahrzeuge mit Funkrufnamen und die Erreichbarkeit der Führungskraft. Was fehlt, ist die Frage der Sprechfunker: über welche Rufgruppe erreiche ich diese Einheit, wer hört wo mit, und wo stehe ich mit dem Kontakt. Runde 5 zeigt dafür drei Dinge. Den <b>Monitor</b> bekommt eine Ansicht „Funkplan" (<a href="#5a">5a</a>), eine Tafel je Rufgruppe mit den Teilnehmern als Kacheln. Der Arbeitsplatz bekommt das Blatt <b>„Funkplan"</b> (<a href="#5b">5b</a>) für die Vermeldezentrale selbst, dazu eine Spaltengruppe „Funk" in der Einheitentabelle (<a href="#5c">5c</a>) und einen Block „Funk und Erreichbarkeit" in der Einheitenmaske (<a href="#5d">5d</a>), damit der S1 die Angaben beim Erfassen gleich mitnimmt. Für den Rechnerausfall gibt es den <b>Ausdruck</b> (<a href="#5e">5e</a>). Gestaltung aus <code>../oberflaeche/mockups.html</code> Option 2a; Beispiellage „Hochwasser Oldenburg". Die Rufgruppennamen sind erfunden und folgen keiner echten Fleetmap. Fachliche Festlegungen, Ereignisse und offene Entscheidungen in <code>KONZEPT-FUNKPLAN.md</code>.</p>
+<div class="dv-opts">
+
+<!-- ================= 5a Monitor: Funkplan ================= -->
+<div class="dv-opt" id="5a"><div class="dv-olabel"><a class="dv-oid" href="#5a">5a</a>Monitor — Ansicht „Funkplan": eine Zeile je Rufgruppe, Teilnehmer als Kacheln mit Status; Hover-Leiste eingeblendet (Maus bewegt)</div>
+<div class="dv-card" style="width:960px;border-color:#000">
+<div class="mon" data-screen-label="Monitor Funkplan" style="justify-content:flex-start;padding-top:46px;box-sizing:border-box">
+<div class="leiste"><span>Stärke</span><span>Verpflegung</span><span>Nächste 24 h</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="aktiv">Funkplan</span><span class="rechts">Wechsel: aus</span><span class="rechts" style="margin-left:0">⋮</span></div>
+<p class="beschr">Funkplan · wer ist auf welcher Rufgruppe</p>
+<table class="funktafel" style="margin-top:10px">
+<tr><th>Rufgruppe · Betrieb · hört</th><th>Teilnehmer</th></tr>
+<tr>
+<td class="rg"><b>THW_OL_FUE <span class="betrieb">TMO</span></b><small>Führung · FüSt ↔ Abschnitte · hört FmZ Platz 1</small></td>
+<td><div class="kacheln">
+<span class="kachel">EA 1 Deich Nord<small>Heros Delmenhorst 22/10</small></span>
+<span class="kachel">EA 2 Pumpen Süd<small>Heros Oldenburg 21/19</small></span>
+<span class="kachel">EA 3 Evakuierung<small>Heros Varel 25/10</small></span>
+<span class="kachel ruhe">Logistik<small>Heros Oldenburg 21/10</small></span>
+<span class="kachel">Bereitstellungsraum<small>Heros Brake 26/10</small></span>
+</div></td></tr>
+<tr>
+<td class="rg"><b>ZA_OL_HW_1 <span class="betrieb">TMO</span></b><small>Zusammenarbeit · Kreis OL, FF, JUH · hört FmZ Platz 2</small></td>
+<td><div class="kacheln">
+<span class="kachel">KFB Kreis Oldenburg<small>Florian Oldenburg-Land 10/1</small></span>
+<span class="kachel anmarsch">2. Zug FF Hude<small>Florian Hude 20/1 · Anmarsch</small></span>
+<span class="kachel">SEG JUH Weser-Ems<small>Akkon Oldenburg 71/1</small></span>
+</div></td></tr>
+<tr>
+<td class="rg"><b>THW_OL_EA1 <span class="betrieb">TMO</span></b><small>Arbeitsgruppe EA 1 Deich Nord · hört EA 1 · FmZ mit</small></td>
+<td><div class="kacheln">
+<span class="kachel">FGr Räumen A OV Delmenhorst<small>Heros Delmenhorst 23/51</small></span>
+<span class="kachel">FGr WP 1 OV Oldenburg<small>Heros Oldenburg 21/51</small></span>
+<span class="kachel">FGr E OV Wildeshausen<small>Heros Wildeshausen 24/58</small></span>
+<span class="kachel ruhe">FGr Wassergefahren 2 OV Brake<small>Heros Brake 27/61</small></span>
+</div></td></tr>
+<tr>
+<td class="rg"><b>THW_OL_EA2 <span class="betrieb">TMO</span></b><small>Arbeitsgruppe EA 2 Pumpen Süd · hört EA 2</small></td>
+<td><div class="kacheln">
+<span class="kachel">FGr WP OV Cloppenburg<small>Heros Cloppenburg 28/51</small></span>
+<span class="kachel nichtbereit">FGr Ortung 1 OV Varel<small>Heros Varel 25/42 · n. einsatzber.</small></span>
+<span class="kachel still">FGr WP 2 OV Oldenburg<small>Heros Oldenburg 21/52 · letzter Kontakt 1250</small></span>
+</div></td></tr>
+<tr>
+<td class="rg"><b>DMO 310 <span class="betrieb dmo">DMO</span></b><small>EA 3 Evakuierung · Netz gestört seit 1320 · Gateway Heros Varel 25/10</small></td>
+<td><div class="kacheln">
+<span class="kachel">FGr N 2 OV Cloppenburg<small>Heros Cloppenburg 28/71</small></span>
+<span class="kachel">Bergungsgruppe OV Varel<small>Heros Varel 25/22</small></span>
+<span class="kachel">ZTr OV Varel<small>Heros Varel 25/10</small></span>
+</div></td></tr>
+<tr>
+<td class="rg"><b>2 m Kanal 55 G/U <span class="betrieb analog">ANALOG</span></b><small>Ortsfunk FF Hude · bis Umstellung · hört Melder BR</small></td>
+<td><div class="kacheln">
+<span class="kachel anmarsch">2. Zug FF Hude<small>auch ZA_OL_HW_1</small></span>
+</div></td></tr>
+</table>
+<p class="fuss" style="position:absolute;left:0;right:0;bottom:8px;padding:0 100px 0 40px;font-size:13px"><span class="amber">Ohne Rufgruppe: 2 (FGr N 2 OV Cloppenburg, SEG DLRG) · kein Kontakt &gt; 60 min: 1</span> · Hochwasser Oldenburg · 101443SEP26 · Stand: vor 6 s</p>
+<div class="punkte"><i></i><i></i><i></i><i></i><i></i><i class="an"></i></div>
+
+
+</div>
+</div>
+<p class="dv-sub">Eine Zeile je Rufgruppe, der Name groß in Mono, darunter der Zweck; Betriebsart als Rahmenmarke (DMO in Bernstein, weil die Reichweite begrenzt ist; Analog gestrichelt). Jede Kachel ist eine Einheit mit Funkrufname; die linke Kante trägt den Einheitenstatus (grün einsatzbereit oder im Einsatz, grau Ruhe, Bernstein Anmarsch, Rot nicht einsatzbereit). Eine Kachel mit Bernsteinrahmen hat seit mehr als 60 Minuten keinen Kontakt (Funkprobe oder Meldung). Der Fuß nennt, was ansteht: Einheiten ohne Rufgruppe und ohne Kontakt, immer in Bernstein. Bei mehr als sechs Rufgruppen läuft die Tafel seitenweise im Takt des Wechsels. Leiste, Kontextmenü und Tasten wie in Runde 4 (<code>../s4/mockups-s4.html</code> 4a); der Funkplan kommt als sechster Eintrag „Funkplan · 6" ins Menü.</p>
+</div>
+
+<!-- ================= 5b Blatt Funkplan ================= -->
+<div class="dv-opt" id="5b"><div class="dv-olabel"><a class="dv-oid" href="#5b">5b</a>Blatt „Funkplan" — links die Rufgruppen, rechts die Zuordnung je Rufgruppe mit Funkrufname, Erreichbarkeit, Hinweis und letztem Kontakt; eine Zelle offen</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr" data-screen-label="Funkplan" style="position:relative">
+<div class="kopf">
+<div class="brot">‹ Einsatzauswahl</div>
+<div class="zeile">
+<div class="logo">THW</div><span class="wort">S1-Control</span>
+<div class="kpi" style="margin-left:6px"><b>STÄRKE</b><span>24/61/183 // 268</span></div>
+<div class="kpi"><b>ZEIT</b><span>101443SEP26</span></div>
+<div class="themen"><span>Standard</span><span>Dunkel</span><span>Feld</span><span>Nacht</span></div>
+</div>
+<div class="zustand">✓ Hochwasser Oldenburg · Stand vor 6 s · Share erreichbar — 2 weitere Arbeitsplätze</div>
+<div class="reiter"><span>Lage</span><span>Eingangskorb <i>7</i></span><span>Anforderungen</span><span>Führungsstelle</span><span class="aktiv">Funkplan</span><span>Versorgung</span><span>Kosten</span><span>Führungsorganisation</span><span>Ausgaben</span><span>Einsatztagebuch</span><span class="rechts">Diagnose</span></div>
+</div>
+<div class="band">
+<div><b>6</b><span>RUFGRUPPEN</span></div>
+<div><b>40</b><span>EINHEITEN ZUGEORDNET</span></div>
+<div class="warn"><b>2</b><span>OHNE RUFGRUPPE</span></div>
+<div class="warn"><b>1</b><span>KEIN KONTAKT &gt; 60 MIN</span></div>
+<div><b>1</b><span>DMO · GATEWAY</span></div>
+<div><b>1431</b><span>LETZTE FUNKPROBE</span></div>
+</div>
+<div class="flaeche" style="flex-direction:column;gap:0">
+<div class="werkzeuge">
+<div class="umschalter"><span class="aktiv">Je Rufgruppe</span><span>Je Bereich</span><span>Funkproben</span></div>
+<span class="btn haupt" style="margin-left:10px">Rufgruppe anlegen ⌃N</span>
+<span class="btn">Funkprobe eintragen ⌃P</span>
+<span class="suche rechts">Suchen … ⌃F</span>
+<span class="btn">Funkplan als PDF</span>
+</div>
+<div style="display:flex;gap:14px;flex:1;min-height:0">
+<div class="karte" style="width:360px;flex:none">
+<div class="kk">Rufgruppen <small>· 6 · 5 TMO · 1 DMO</small></div>
+<div class="rollen"><table class="t dicht">
+<thead><tr><th>Betrieb</th><th>Name</th><th>Zweck · hört</th><th class="z">Einh.</th></tr></thead>
+<tbody>
+<tr><td><span class="marke neu mono">TMO</span></td><td class="mono">THW_OL_FUE</td><td class="sek">Führung · FmZ Platz 1</td><td class="z">5</td></tr>
+<tr><td><span class="marke neu mono">TMO</span></td><td class="mono">ZA_OL_HW_1</td><td class="sek">Zusammenarbeit · FmZ Platz 2</td><td class="z">3</td></tr>
+<tr><td><span class="marke neu mono">TMO</span></td><td class="mono">THW_OL_EA1</td><td class="sek">EA 1 · Abschnitt, FmZ mit</td><td class="z">4</td></tr>
+<tr class="gewaehlt"><td><span class="marke neu mono">TMO</span></td><td class="mono">THW_OL_EA2</td><td class="sek">EA 2 · Abschnitt</td><td class="z">3</td></tr>
+<tr><td><span class="marke warn mono">DMO</span></td><td class="mono">DMO 310</td><td class="sek">EA 3 · Gateway Heros Varel 25/10</td><td class="z">3</td></tr>
+<tr><td><span class="marke neu mono">ANALOG</span></td><td class="mono">2 m K 55 G/U</td><td class="sek">Ortsfunk FF Hude · Melder BR</td><td class="z">1</td></tr>
+<tr class="blass"><td><span class="marke neu mono">TMO</span></td><td class="mono">THW_OL_BR</td><td class="sek">aufgelöst 1210 · in ZA_OL_HW_1 aufgegangen</td><td class="z">0</td></tr>
+</tbody>
+</table></div>
+<div class="kasten">
+<div class="lbl">THW_OL_EA2 · GEWÄHLT</div>
+<dl>
+<dt>Betrieb</dt><dd>TMO</dd>
+<dt>Zweck</dt><dd>Arbeitsgruppe EA 2 Pumpen Süd</dd>
+<dt>hört mit</dt><dd>Abschnittsleitung EA 2 (Heros Oldenburg 21/19)</dd>
+<dt>gültig ab</dt><dd>100930SEP26 · Meier (FmZ)</dd>
+<dt>Bemerkung</dt><dd>Bei Netzausfall auf DMO 311 ausweichen</dd>
+</dl>
+</div>
+<div class="kasten" style="display:flex;gap:8px;flex-wrap:wrap">
+<span class="btn">Bearbeiten ⌃E</span>
+<span class="btn">Auflösen…</span>
+</div>
+<div class="hinweis">Eine Rufgruppe ist eine Entität der Akte: anlegen, ändern und auflösen sind Ereignisse, stehen im Tagebuch und sind mit ⌃Z rücknehmbar. Auflösen braucht einen Grund und verschiebt die Teilnehmer nicht von selbst.</div>
+</div>
+<div class="karte" style="flex:1">
+<div class="kk">Zuordnung je Rufgruppe <small>· 42 Einheiten · 2 ohne Rufgruppe</small></div>
+<div class="rollen"><table class="t dicht">
+<thead><tr><th style="width:24%">Einheit</th><th>Bereich</th><th>Status</th><th class="grp">Funkrufname</th><th>Erreichbarkeit</th><th>Funkhinweis</th><th class="grp">Letzter Kontakt</th></tr></thead>
+<tbody>
+<tr class="gruppe"><td colspan="7"><span class="marke neu mono">TMO</span> &nbsp;THW_OL_FUE <small>Führung · 5 Teilnehmer · hört FmZ Platz 1</small></td></tr>
+<tr><td>Abschnittsleitung EA 1 Deich Nord</td><td class="sek">EA 1 Deich Nord</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Delmenhorst 22/10</td><td class="sek">ZFü Albers / 0170-5512</td><td class="sek">—</td><td class="sek grp">1431 Funkprobe</td></tr>
+<tr><td>Abschnittsleitung EA 2 Pumpen Süd</td><td class="sek">EA 2 Pumpen Süd</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Oldenburg 21/19</td><td class="sek">ZFü Meyer / 0172-8801</td><td class="sek">—</td><td class="sek grp">1431 Funkprobe</td></tr>
+<tr><td>Abschnittsleitung EA 3 Evakuierung</td><td class="sek">EA 3 Evakuierung</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Varel 25/10</td><td class="sek">ZFü Lübben / 0160-4490</td><td class="sek">zusätzlich DMO 310 als Gateway</td><td class="sek grp">1428 Meldung</td></tr>
+<tr><td>Logistik (FGr Log OV Oldenburg)</td><td class="sek">Logistik</td><td><span class="marke neu">Ruhe</span></td><td class="mono grp">Heros Oldenburg 21/10</td><td class="sek">GrFü Hinrichs / 0441-7720</td><td class="sek">nachts nur Telefon</td><td class="sek grp">1105 Funkprobe</td></tr>
+<tr><td>Bereitstellungsraum (ZTr OV Brake)</td><td class="sek">Bereitstellungsraum</td><td><span class="marke ok">Einsatzbereit</span></td><td class="mono grp">Heros Brake 26/10</td><td class="sek">ZTrFü Janssen / 0151-2033</td><td class="sek">—</td><td class="sek grp">1431 Funkprobe</td></tr>
+<tr class="gruppe"><td colspan="7"><span class="marke neu mono">TMO</span> &nbsp;THW_OL_EA2 <small>Arbeitsgruppe EA 2 · 3 Teilnehmer · hört Abschnittsleitung EA 2</small></td></tr>
+<tr><td>FGr WP OV Cloppenburg</td><td class="sek">EA 2 Pumpen Süd</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Cloppenburg 28/51</td><td class="sek">GrFü Tebben / 0171-3044</td><td class="sek">—</td><td class="sek grp">1431 Funkprobe</td></tr>
+<tr><td>FGr Ortung 1 OV Varel</td><td class="sek">EA 2 Pumpen Süd</td><td><span class="marke err">N. einsatzbereit</span></td><td class="mono grp">Heros Varel 25/42</td><td class="sek">GrFü Peters / 0176-1109</td><td class="sek">Gerätedefekt, Rückmeldung über EA 2</td><td class="sek grp">1402 Meldung</td></tr>
+<tr class="gewaehlt"><td>FGr WP 2 OV Oldenburg</td><td class="sek">EA 2 Pumpen Süd</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp edit" style="position:relative">THW_OL_EA2 ▾</td><td class="sek">GrFü Rode / 0170-2177</td><td class="sek">—</td><td class="grp"><span class="marke warn">1250 · 1 h 53 min</span></td></tr>
+<tr class="gruppe"><td colspan="7"><span class="marke warn mono">DMO</span> &nbsp;DMO 310 <small>EA 3 Evakuierung · 3 Teilnehmer · Gateway Heros Varel 25/10 · Netz gestört seit 1320</small></td></tr>
+<tr><td>FGr N 2 OV Cloppenburg</td><td class="sek">EA 3 Evakuierung</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Cloppenburg 28/71</td><td class="sek">GrFü Kuhlmann / 0152-6618</td><td class="sek">nur über Gateway erreichbar</td><td class="sek grp">1420 Funkprobe</td></tr>
+<tr><td>Bergungsgruppe OV Varel</td><td class="sek">EA 3 Evakuierung</td><td><span class="marke ok">Einsatz</span></td><td class="mono grp">Heros Varel 25/22</td><td class="sek">GrFü Schröder / 0162-9015</td><td class="sek">—</td><td class="sek grp">1420 Funkprobe</td></tr>
+<tr class="gruppe"><td colspan="7"><span class="marke warn">ohne Rufgruppe</span> <small>2 Einheiten · hier beginnt die Arbeit</small></td></tr>
+<tr><td>FGr Notversorgung 2 OV Cloppenburg</td><td class="sek">Angefordert / Anmarsch</td><td><span class="marke warn">Anmarsch</span></td><td class="mono grp">Heros Cloppenburg 28/72</td><td class="sek">GrFü Wessels / 0170-8023</td><td class="sek">Eintreffen ca. 1630, Rufgruppe mit Ankunft</td><td class="sek grp">—</td></tr>
+<tr><td>SEG DLRG Oldenburg</td><td class="sek">Eingang</td><td><span class="marke warn">Angefordert</span></td><td class="mono grp">—</td><td class="sek">Leitstelle 0441-19222</td><td class="sek">Rufgruppe mit Leitstelle klären</td><td class="sek grp">—</td></tr>
+</tbody>
+</table></div>
+<div class="fussnote">Zuordnung = Hauptrufgruppe der Einheit: die Gruppe, über die die Führungsstelle sie ruft. Weitere Gruppen stehen im Funkhinweis oder in der Maske (5d). Doppelklick auf die Rufgruppe bearbeitet die Zelle · Enter schreibt · Esc verwirft. „Letzter Kontakt" ist die jüngere von Funkprobe und Statusmeldung; älter als 60 Minuten wird Bernstein. Funkrufname und Erreichbarkeit kommen aus Fahrzeug und Führungskraft (K9) und werden hier nur gelesen.</div>
+</div>
+</div>
+</div>
+<div class="status">Stand: vor 6 s · Share erreichbar (vor 3 s) · 2 weitere Arbeitsplätze · 1 Konflikthinweis<span class="rechts">42 EINH · 24/61/183 // 268</span></div>
+
+<div class="liste" style="left:792px;top:426px">
+<div class="titel">Rufgruppe für FGr WP 2 OV Oldenburg</div>
+<div><span class="marke neu mono">TMO</span> THW_OL_FUE <span class="sek">Führung</span></div>
+<div><span class="marke neu mono">TMO</span> ZA_OL_HW_1 <span class="sek">Zusammenarbeit</span></div>
+<div><span class="marke neu mono">TMO</span> THW_OL_EA1 <span class="sek">EA 1</span></div>
+<div class="aktiv"><span class="marke neu mono">TMO</span> THW_OL_EA2 <span class="sek">EA 2 · aktuell</span></div>
+<div><span class="marke warn mono">DMO</span> DMO 310 <span class="sek">EA 3 · Gateway</span></div>
+<div><span class="marke neu mono">ANALOG</span> 2 m K 55 G/U <span class="sek">FF Hude</span></div>
+<div><span class="sek" style="margin-left:0">keine Rufgruppe</span></div>
+<div><span class="sek" style="margin-left:0">Neue Rufgruppe anlegen …</span></div>
+</div>
+</div>
+</div>
+<p class="dv-sub">Reiter „Funkplan" neu zwischen Führungsstelle und Versorgung (additiv in <code>blaetter.ts</code>). Das Band nennt, was zählt: Rufgruppen, Zuordnungen, offene Arbeit in Bernstein. Links die Rufgruppen mit Bearbeitungskasten darunter, rechts die Zuordnung, gruppiert wie die Gliederung der Einheitentabelle; die Gruppe „ohne Rufgruppe" steht immer zuletzt und immer sichtbar. Der Umschalter „Je Bereich" kehrt die Gruppierung um, „Funkproben" listet die Funkproben als Zeitfolge. Die Auswahlliste in der Zelle ist dieselbe wie in der Einheitentabelle (5c); „Neue Rufgruppe anlegen" wechselt in die Anlage, ohne die Zeile zu verlieren.</p>
+</div>
+
+<!-- ================= 5c Einheitentabelle mit Spaltengruppe Funk ================= -->
+<div class="dv-opt" id="5c"><div class="dv-olabel"><a class="dv-oid" href="#5c">5c</a>Einheitentabelle — Spaltengruppe „Funk" zugeschaltet: Rufgruppe, Funkrufname, Erreichbarkeit, Funkhinweis, letzter Kontakt</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr kurz" data-screen-label="Einheitentabelle Funk">
+<div class="flaeche" style="flex-direction:column;gap:0;padding-bottom:0">
+<div class="karte" style="flex:1">
+<div class="kk">Einheiten <small>· 42 · Gliederung · 7 Spalten „Funk"</small>
+<span class="btn haupt rechts">Aus Vorlage ⌃N</span><span class="btn">Kopieren ⌃K</span><span class="btn">Bearbeiten ⌃E</span><span class="btn">Verschieben ⌃M</span><span class="suche" style="width:180px">Suchen … ⌃F</span></div>
+<div class="werkzeuge" style="padding:8px 13px 0;margin:0">
+<div class="umschalter"><span class="aktiv">Grunddaten</span><span class="aktiv">Stärke</span><span>Ressourcen</span><span>Logistik</span><span>Kosten</span><span class="aktiv">Funk</span></div>
+<span class="sek" style="font-size:11px;color:#5c6484;margin-left:10px">Spaltengruppen · Strg+1 bis Strg+6</span>
+</div>
+<div class="rollen" style="margin-top:8px"><table class="t dicht">
+<thead><tr><th>FüSt.</th><th style="width:19%">Bezeichnung</th><th>Org.</th><th>Ebene</th><th>Status</th><th class="z grp">Fü / UFü / He</th><th class="z">Ges.</th><th class="grp">Rufgruppe</th><th>Funkrufname</th><th>Erreichbarkeit</th><th>Funkhinweis</th><th>Letzter Kontakt</th></tr></thead>
+<tbody>
+<tr class="gruppe"><td colspan="12">EA 2 Pumpen Süd <small>4 Einheiten · 3/10/37 // 50</small></td></tr>
+<tr><td class="mono">EA2-F</td><td>Abschnittsleitung EA 2 Pumpen Süd</td><td>THW</td><td class="sek">Zugtrupp</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">1/1/2</td><td class="z">4</td><td class="mono grp">THW_OL_FUE</td><td class="mono">Heros Oldenburg 21/19</td><td class="sek">ZFü Meyer / 0172-8801</td><td class="sek">hört THW_OL_EA2 mit</td><td class="sek">1431 Funkprobe</td></tr>
+<tr><td class="mono">EA2-1</td><td>FGr WP OV Cloppenburg</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">1/3/14</td><td class="z">18</td><td class="mono grp">THW_OL_EA2</td><td class="mono">Heros Cloppenburg 28/51</td><td class="sek">GrFü Tebben / 0171-3044</td><td class="sek">—</td><td class="sek">1431 Funkprobe</td></tr>
+<tr><td class="mono">EA2-2</td><td>FGr Ortung 1 OV Varel</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke err">N. einsatzbereit</span></td><td class="z grp">0/3/9</td><td class="z">12</td><td class="mono grp">THW_OL_EA2</td><td class="mono">Heros Varel 25/42</td><td class="sek">GrFü Peters / 0176-1109</td><td class="sek">Gerätedefekt, Rückmeldung über EA 2</td><td class="sek">1402 Meldung</td></tr>
+<tr class="gewaehlt"><td class="mono">EA2-3</td><td>FGr WP 2 OV Oldenburg</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">1/3/12</td><td class="z">16</td><td class="mono grp edit">THW_OL_EA2 ▾</td><td class="mono">Heros Oldenburg 21/52</td><td class="sek">GrFü Rode / 0170-2177</td><td class="sek">—</td><td><span class="marke warn">1250 · 1 h 53 min</span></td></tr>
+<tr class="gruppe"><td colspan="12">EA 3 Evakuierung <small>3 Einheiten · 2/7/25 // 34</small></td></tr>
+<tr><td class="mono">EA3-F</td><td>Abschnittsleitung EA 3 Evakuierung</td><td>THW</td><td class="sek">Zugtrupp</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">1/1/2</td><td class="z">4</td><td class="mono grp">THW_OL_FUE</td><td class="mono">Heros Varel 25/10</td><td class="sek">ZFü Lübben / 0160-4490</td><td class="sek">zusätzlich DMO 310 als Gateway</td><td class="sek">1428 Meldung</td></tr>
+<tr><td class="mono">EA3-1</td><td>FGr N 2 OV Cloppenburg</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">1/3/14</td><td class="z">18</td><td class="grp"><span class="marke warn mono">DMO</span> <span class="mono">DMO 310</span></td><td class="mono">Heros Cloppenburg 28/71</td><td class="sek">GrFü Kuhlmann / 0152-6618</td><td class="sek">nur über Gateway erreichbar</td><td class="sek">1420 Funkprobe</td></tr>
+<tr><td class="mono">EA3-2</td><td>Bergungsgruppe OV Varel</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke ok">Einsatz</span></td><td class="z grp">0/3/9</td><td class="z">12</td><td class="grp"><span class="marke warn mono">DMO</span> <span class="mono">DMO 310</span></td><td class="mono">Heros Varel 25/22</td><td class="sek">GrFü Schröder / 0162-9015</td><td class="sek">—</td><td class="sek">1420 Funkprobe</td></tr>
+<tr class="gruppe"><td colspan="12">Angefordert / Anmarsch <small>2 Einheiten · 1/4/19 // 24 · nicht in der Ist-Stärke</small></td></tr>
+<tr><td class="mono">—</td><td>FGr Notversorgung 2 OV Cloppenburg</td><td>THW</td><td class="sek">Gruppe</td><td><span class="marke warn">Anmarsch</span></td><td class="z grp">1/2/9</td><td class="z">12</td><td class="grp"><span class="marke warn">ohne</span></td><td class="mono">Heros Cloppenburg 28/72</td><td class="sek">GrFü Wessels / 0170-8023</td><td class="sek">Eintreffen ca. 1630</td><td class="sek">—</td></tr>
+<tr><td class="mono">—</td><td>2. Zug FF Hude</td><td>FW</td><td class="sek">Zug</td><td><span class="marke warn">Anmarsch</span></td><td class="z grp">0/2/10</td><td class="z">12</td><td class="mono grp">ZA_OL_HW_1</td><td class="mono">Florian Hude 20/1</td><td class="sek">ZFü Brinkmann / 0171-6240</td><td class="sek">auch 2 m K 55 G/U</td><td class="sek">1402 Meldung</td></tr>
+<tr class="sum"><td colspan="5">Ist-Stärke</td><td class="z grp">24/61/183</td><td class="z">268</td><td colspan="5" class="sek" style="font-weight:400">40 von 42 Einheiten mit Rufgruppe · 1 ohne Kontakt &gt; 60 min</td></tr>
+</tbody>
+</table></div>
+<div class="fussnote">Spaltengruppe FUNK additiv in <code>projektion/tabelle.ts</code>: „Rufgruppe" ist eine Auswahlspalte (schreibt <code>EinheitRufgruppeGesetzt</code>), „Funkhinweis" eine Textspalte, die übrigen sind berechnet. Doppelklick bearbeitet · Enter schreibt · Esc verwirft · Strg+6 schaltet die Gruppe. Die Spaltenbreite folgt der Tabelle; wer Ressourcen und Funk zugleich sieht, scrollt waagerecht im Rahmen der Karte.</div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-sub">Derselbe Weg wie heute für Logistik und Kosten: eine sechste Spaltengruppe, über den Umschalter zuschaltbar. Der S1 kann damit beim Erfassen die Rufgruppe gleich setzen, ohne das Blatt zu wechseln; die Vermeldezentrale arbeitet im Blatt „Funkplan" (5b) mit derselben Zelle. Die DMO-Marke steht in der Zelle, weil DMO für den Sprechfunker eine andere Handlung ist als TMO: er muss wissen, ob er den Gateway braucht.</p>
+</div>
+
+<!-- ================= 5d Maske Einheit bearbeiten · Funk ================= -->
+<div class="dv-opt" id="5d"><div class="dv-olabel"><a class="dv-oid" href="#5d">5d</a>Maske „Einheit bearbeiten" — Block „Funk und Erreichbarkeit": Hauptrufgruppe, weitere Gruppen, Funkrufname mit Vorbelegung aus dem Fahrzeug, Funkhinweis, Funkprobe</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr" data-screen-label="Maske Funk" style="height:620px;position:relative;background:#dfe2ec">
+<div class="maske">
+<div class="dialog">
+<div class="dk">FGr WP 2 OV Oldenburg <small>· EA 2 Pumpen Süd · Einsatz</small><span class="rechts">Bearbeitungssperre: dieser Arbeitsplatz · seit 0:41</span></div>
+<div style="display:flex;border-bottom:1px solid #dde1ec;font-size:12px"><span style="padding:9px 16px;color:#5c6484">Stammdaten</span><span style="padding:9px 16px;color:#5c6484">Stärke · Status · Zeiten</span><span style="padding:9px 16px;font-weight:700;border-bottom:2px solid #1c2251">Funk und Erreichbarkeit</span><span style="padding:9px 16px;color:#5c6484">Logistik</span></div>
+<div class="felder">
+<label>Hauptrufgruppe<small>über diese Gruppe ruft die FüSt</small></label>
+<div class="feld fokus"><span class="marke neu mono">TMO</span> <span class="mono">THW_OL_EA2</span> <span class="sek" style="color:#5c6484">Arbeitsgruppe EA 2 Pumpen Süd</span><span class="pfeil">▾</span></div>
+<label>Weitere Rufgruppen<small>hört mit, ist dort ansprechbar</small></label>
+<div class="chips"><span class="chip">THW_OL_FUE <i>×</i></span><span class="chip">DMO 311 <i>×</i></span><span class="chip plus">+ Rufgruppe</span></div>
+<label>Funkrufname<small>Vorbelegung aus dem Führungsfahrzeug</small></label>
+<div class="feld lesen"><span class="mono">Heros Oldenburg 21/52</span> <span class="sek" style="color:#5c6484">aus Fahrzeug GKW I · Überschreiben…</span></div>
+<label>Erreichbarkeit<small>K9 · Führungskraft und Kontakte</small></label>
+<div class="feld lesen">GrFü Rode / 0170-2177 / rode@thw-oldenburg.de <span class="sek" style="color:#5c6484;margin-left:auto">Überschreiben…</span></div>
+<label>Funkhinweis<small>frei · für die Sprechfunker</small></label>
+<div class="feld hoch">Bei Netzausfall EA 2 auf DMO 311 ausweichen. GrFü Rode führt ein zweites HRT auf THW_OL_FUE mit. Nachts (ab 2200) nur Rufgruppe, kein Telefon.</div>
+<label>Letzter Kontakt<small>Funkprobe oder Statusmeldung</small></label>
+<div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="marke warn">1250 Funkprobe · vor 1 h 53 min</span><span class="btn">Funkprobe jetzt: Kontakt ⌃P</span><span class="btn">kein Kontakt…</span></div>
+</div>
+<div class="kurzliste">
+<b>101250</b>Funkprobe THW_OL_EA2: Kontakt (Meier, FmZ)<br>
+<b>100935</b>Rufgruppe gesetzt: THW_OL_EA2 (vorher THW_OL_BR) · Grund: Abschnitt EA 2 gebildet (Meier, FmZ)<br>
+<b>100902</b>Funkhinweis geändert (Rudolph, S1)
+</div>
+<div class="fussleiste"><span class="btn haupt">Schreiben ⏎</span><span class="btn">Verwerfen Esc</span><span class="sek" style="margin-left:auto">Jede Änderung ist ein Ereignis mit gesehenem Vorher-Wert; ein zweiter Arbeitsplatz am selben Feld erzeugt einen Konflikthinweis, nichts geht verloren.</span></div>
+</div>
+</div>
+</div>
+</div>
+<p class="dv-sub">Ein vierter Karteireiter in der bestehenden Maske, keine zweite Maske. Hauptrufgruppe und weitere Gruppen trennen die Frage „wie rufe ich" von „wo hört sie noch". Funkrufname und Erreichbarkeit sind Ableitungen mit Override, wie K9 heute: leer gelassen folgt der Wert dem Fahrzeug beziehungsweise der Führungskraft, und ein Override steht als eigener Wert in der Akte. „Funkprobe jetzt" schreibt ein Ereignis mit der Funkzeit; „kein Kontakt" fragt nach einem Grund. Die Kurzliste darunter ist der Tagebuchauszug zu dieser Einheit, gefiltert auf Funk.</p>
+</div>
+
+<!-- ================= 5e Ausdruck Funkplan ================= -->
+<div class="dv-opt" id="5e"><div class="dv-olabel"><a class="dv-oid" href="#5e">5e</a>Ausgabe „Funkplan" — A4 für die Vermeldezentrale und den Rechnerausfall: je Rufgruppe die Teilnehmer mit Funkrufname und Erreichbarkeit, freie Zeilen zum Nachtragen</div>
+<div class="dv-card" style="width:794px;border-radius:2px">
+<div class="a4" data-screen-label="Druck Funkplan">
+<div class="dkopf">
+<div><h1>Funkplan</h1><div style="margin-top:4px">Hochwasser Oldenburg · Führungsstelle THW OV Oldenburg · übergeordnet: Kreis OL, FüSt Wardenburg</div></div>
+<dl><dt>Stand</dt><dd>101443SEP26</dd><dt>Erstellt</dt><dd>Meier (FmZ)</dd><dt>Blatt</dt><dd>1 von 2</dd></dl>
+</div>
+<table>
+<thead><tr><th style="width:27%">Einheit</th><th style="width:9%">Bereich</th><th style="width:22%">Funkrufname</th><th style="width:23%">Erreichbarkeit</th><th>Hinweis</th></tr></thead>
+<tbody>
+<tr class="rg"><td colspan="5">TMO · THW_OL_FUE <small>Führung · FüSt ↔ Abschnittsleitungen · hört FmZ Platz 1</small></td></tr>
+<tr><td>Abschnittsleitung EA 1 Deich Nord</td><td>EA 1</td><td>Heros Delmenhorst 22/10</td><td>ZFü Albers / 0170-5512</td><td></td></tr>
+<tr><td>Abschnittsleitung EA 2 Pumpen Süd</td><td>EA 2</td><td>Heros Oldenburg 21/19</td><td>ZFü Meyer / 0172-8801</td><td>hört THW_OL_EA2 mit</td></tr>
+<tr><td>Abschnittsleitung EA 3 Evakuierung</td><td>EA 3</td><td>Heros Varel 25/10</td><td>ZFü Lübben / 0160-4490</td><td>Gateway DMO 310</td></tr>
+<tr><td>Logistik (FGr Log OV Oldenburg)</td><td>Logistik</td><td>Heros Oldenburg 21/10</td><td>GrFü Hinrichs / 0441-7720</td><td>nachts nur Telefon</td></tr>
+<tr><td>Bereitstellungsraum (ZTr OV Brake)</td><td>BR</td><td>Heros Brake 26/10</td><td>ZTrFü Janssen / 0151-2033</td><td></td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+<tr class="rg"><td colspan="5">TMO · ZA_OL_HW_1 <small>Zusammenarbeit · Kreis OL, FF, JUH · hört FmZ Platz 2</small></td></tr>
+<tr><td>KFB Kreis Oldenburg</td><td>—</td><td>Florian Oldenburg-Land 10/1</td><td>Leitstelle 04431-19222</td><td></td></tr>
+<tr><td>2. Zug FF Hude</td><td>Anmarsch</td><td>Florian Hude 20/1</td><td>ZFü Brinkmann / 0171-6240</td><td>auch 2 m K 55 G/U</td></tr>
+<tr><td>SEG JUH Weser-Ems</td><td>EA 3</td><td>Akkon Oldenburg 71/1</td><td>EL Fischer / 0160-7731</td><td></td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+<tr class="rg"><td colspan="5">TMO · THW_OL_EA1 <small>Arbeitsgruppe EA 1 Deich Nord · hört Abschnittsleitung EA 1, FmZ mit</small></td></tr>
+<tr><td>FGr Räumen A OV Delmenhorst</td><td>EA 1</td><td>Heros Delmenhorst 23/51</td><td>GrFü Bruns / 0173-4008</td><td></td></tr>
+<tr><td>FGr WP 1 OV Oldenburg</td><td>EA 1</td><td>Heros Oldenburg 21/51</td><td>GrFü Harms / 0170-3365</td><td></td></tr>
+<tr><td>FGr E OV Wildeshausen</td><td>EA 1</td><td>Heros Wildeshausen 24/58</td><td>GrFü Kramer / 0151-9810</td><td></td></tr>
+<tr><td>FGr Wassergefahren 2 OV Brake</td><td>EA 1</td><td>Heros Brake 27/61</td><td>GrFü Ahlers / 0176-5172</td><td>Ruhe bis 1800</td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+<tr class="rg"><td colspan="5">DMO · DMO 310 <small>EA 3 Evakuierung · Netz gestört seit 1320 · Gateway Heros Varel 25/10</small></td></tr>
+<tr><td>FGr N 2 OV Cloppenburg</td><td>EA 3</td><td>Heros Cloppenburg 28/71</td><td>GrFü Kuhlmann / 0152-6618</td><td>nur über Gateway</td></tr>
+<tr><td>Bergungsgruppe OV Varel</td><td>EA 3</td><td>Heros Varel 25/22</td><td>GrFü Schröder / 0162-9015</td><td></td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+<tr class="rg"><td colspan="5">Ohne Rufgruppe <small>mit Ankunft zuordnen</small></td></tr>
+<tr><td>FGr Notversorgung 2 OV Cloppenburg</td><td>Anmarsch</td><td>Heros Cloppenburg 28/72</td><td>GrFü Wessels / 0170-8023</td><td>Eintreffen ca. 1630</td></tr>
+<tr><td>SEG DLRG Oldenburg</td><td>Eingang</td><td></td><td>Leitstelle 0441-19222</td><td>mit Leitstelle klären</td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+<tr class="leer"><td></td><td></td><td></td><td></td><td></td></tr>
+</tbody>
+</table>
+<div class="fussz"><span>Änderungen handschriftlich nachtragen und im Rechner übernehmen. Funkprotokoll: eigener Vordruck.</span><span>S1-Control · ausgaben\funkplan-101443SEP26.pdf</span></div>
+</div>
+</div>
+<p class="dv-sub">Dieselbe Projektion wie das Blatt (5b), als Datei im Ordner <code>ausgaben\</code> wie Einheitenliste und Status-Matrix, HTML oder PDF. Die leere Zeile je Rufgruppe und die zwei am Ende sind Absicht: Der Ausdruck hängt am Platz der Sprechfunker und wird mit Stift weitergeführt, wenn der Rechner steht. Der Vordruck „Funkprotokoll" (schon da) bezieht sich mit „Funkkreis / Kanal" auf genau diese Namen.</p>
+</div>
+
+</div>
+</section>
+
+</body>
+</html>
