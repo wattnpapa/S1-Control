@@ -19,7 +19,8 @@
  * Die Faktoren stehen für die
  * Größen aus index.html (`.monitorfunkplan`): Name 1,3-fach in Mono, Zweck und
  * Kleingedrucktes 0,75-fach. Lieber eine Zeile zu viel geschätzt als ein
- * abgeschnittener Teilnehmer.
+ * abgeschnittener Teilnehmer: Die Schätzung ist nur der Anfang, den
+ * `useFunktafelgrad` nach dem Zeichnen an der gemessenen Tafel nachzieht.
  */
 
 import { projektion, statusTitel, statusTon, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
@@ -130,6 +131,15 @@ export function zeichenBeiGrad(mass: Fenstermass, grad: number): number {
   return Math.floor((mass.breite - SEITENRAND) / (Math.max(1, grad) * ZEICHENBREITE));
 }
 
+function tafelflaeche(mass: Fenstermass, fusszeichen: number): Fenstermass {
+  return { breite: mass.breite, hoehe: Math.max(1, mass.hoehe - rahmenhoehe(mass, fusszeichen)) };
+}
+
+/** Größer wird die Tafel nie: so groß, wie die schmalste Zeile in die Breite passt. */
+export function funktafelhoechstgrad(mass: Fenstermass, fusszeichen: number): number {
+  return tafelgrad(tafelflaeche(mass, fusszeichen), ZEICHEN_MINDESTENS, 0);
+}
+
 /**
  * Der Grad der Grundschrift der Tafel: der größte, bei dem die Tafel mit den
  * Zeichen, die bei ihm in eine Zeile passen, noch in die Höhe passt. Je
@@ -138,10 +148,10 @@ export function zeichenBeiGrad(mass: Fenstermass, grad: number): number {
  * halbiert, statt jeden Grad zu probieren.
  */
 export function funktafelgrad(mass: Fenstermass, gruppen: readonly Rufgruppenkarte[], fusszeichen: number): number {
-  const tafel = { breite: mass.breite, hoehe: Math.max(1, mass.hoehe - rahmenhoehe(mass, fusszeichen)) };
+  const tafel = tafelflaeche(mass, fusszeichen);
   const passt = (grad: number): boolean => grad <= tafelgrad(tafel, ZEICHEN_MINDESTENS, funktafelzeilen(gruppen, zeichenBeiGrad(mass, grad)));
   let unten = 1;
-  let oben = tafelgrad(tafel, ZEICHEN_MINDESTENS, 0);
+  let oben = funktafelhoechstgrad(mass, fusszeichen);
   if (passt(oben)) return oben;
   while (oben - unten > 1) {
     const mitte = Math.floor((oben + unten) / 2);

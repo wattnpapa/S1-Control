@@ -14,8 +14,8 @@
  *
  * Aufgelöste Rufgruppen stehen nicht an der Wand. Eine Gruppe ohne
  * Teilnehmer bleibt mit leerer Zelle stehen — sie ist dann gerade die Frage.
- * Viele Gruppen verkleinern die Schrift (`funktafelmass.ts`), statt zu
- * blättern. Der Fuß nennt in Bernstein, was ansteht: Einheiten ohne
+ * Viele Gruppen verkleinern die Schrift (`funktafelmass.ts` schätzt,
+ * `useFunktafelgrad.ts` misst nach und nutzt die Fläche), statt zu blättern. Der Fuß nennt in Bernstein, was ansteht: Einheiten ohne
  * Rufgruppe mit Namen und die Zahl ohne Kontakt.
  *
  * Gerechnet wird nichts: Kacheln, Zahlen und Schwelle kommen aus der
@@ -26,8 +26,9 @@ import { statusTon, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } f
 
 import { Betriebsartmarke } from "./Funkmarken.js";
 import { Fuss, OhneZahlen, type Ansichtseigenschaften } from "./Monitoransichten.js";
-import { funktafelgrad, kachelzeile, rufgruppenbreite, rufgruppenzeile } from "./funktafelmass.js";
+import { funktafelgrad, funktafelhoechstgrad, kachelzeile, rufgruppenbreite, rufgruppenzeile } from "./funktafelmass.js";
 import { ZEICHENBREITE } from "./monitorZahlen.js";
+import { useFunktafelgrad } from "./useFunktafelgrad.js";
 
 /** So viele Namen ohne Rufgruppe nennt der Fuß; der Rest steht als Zahl. */
 export const FUSS_NAMEN = 3;
@@ -105,15 +106,28 @@ export function MonitorFunkplan(e: Ansichtseigenschaften): React.JSX.Element {
   }
   const gruppen = plan.rufgruppen.filter((r) => !r.aufgeloest);
   if (gruppen.length === 0) return <OhneZahlen titel="Funkplan" e={e} hinweis="Noch keine Rufgruppen" />;
-  const warnung = fusswarnung(plan);
+  return <Funktafel e={e} gruppen={gruppen} warnung={fusswarnung(plan)} />;
+}
+
+interface Tafeleigenschaften {
+  readonly e: Ansichtseigenschaften;
+  readonly gruppen: readonly Rufgruppenkarte[];
+  readonly warnung: string;
+}
+
+/** Die Tafel selbst: eigene Komponente, weil der nachgezogene Grad ein Hook ist. */
+function Funktafel({ e, gruppen, warnung }: Tafeleigenschaften): React.JSX.Element {
   const zusatz = `${e.zeit}${e.fusszusatz ?? ""}`;
   const fusszeichen = warnung.length + e.lagebild.einsatzName.length + zusatz.length + 24;
-  const grad = funktafelgrad(e.mass, gruppen, fusszeichen);
+  // Neu gesucht wird, wenn sich Fenster oder Inhalt ändern — nicht bei jeder
+  // Sekunde der Uhr im Fuß.
+  const schluessel = `${String(e.mass.breite)}×${String(e.mass.hoehe)}|${warnung}|${JSON.stringify(gruppen)}`;
+  const { grad, bild } = useFunktafelgrad(funktafelgrad(e.mass, gruppen, fusszeichen), schluessel, funktafelhoechstgrad(e.mass, fusszeichen));
   // Die Spalte bekommt die geschätzte Breite, damit Zweck und „hört"
   // darunter umbrechen, statt die Kacheln zu verdrängen.
   const breite = rufgruppenbreite(gruppen) * ZEICHENBREITE;
   return (
-    <section className="monitor monitorfunkplan" aria-label="Monitor Funkplan">
+    <section ref={bild} className="monitor monitorfunkplan" aria-label="Monitor Funkplan">
       <p className="monitorbeschriftung">Funkplan · wer ist auf welcher Rufgruppe</p>
       <table style={{ fontSize: `${String(grad)}px` }}>
         <thead>
