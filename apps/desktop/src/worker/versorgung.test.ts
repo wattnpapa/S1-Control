@@ -62,4 +62,29 @@ describe("Die Versorgung im Worker", () => {
     expect(versorgungFuerLagebild(zustand, jetzt + 60_000)).not.toBe(erste);
     expect(Number.isInteger(ortsversatz(jetzt))).toBe(true);
   });
+
+  it("legt eine Unterkunft an, bringt unter und zeigt Belegung in Lagebild, Blatt und Belegungsliste", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    const angelegt = await a.dienst.bediene({ typ: "UnterkunftAngelegt", nutzlast: { unterkunftId: "UK1", name: "Turnhalle", kapazitaet: 6 } });
+    expect(angelegt.art).toBe("geschrieben");
+    await a.dienst.bediene({ typ: "EinheitUntergebracht", nutzlast: { einheitId: "U1" }, vorher: null, neu: "UK1" });
+    const versorgung = letzterStand(a)?.versorgung;
+    expect(versorgung?.belegt).toBe(9);
+    expect(versorgung?.frei).toBe(0);
+    const ansicht = a.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-1" });
+    expect(ansicht.blatt.belegung.unterkuenfte[0]).toMatchObject({ name: "Turnhalle", ueberbelegt: true, frei: -3 });
+    const seite = a.dienst.ausgabeHtml("belegung");
+    expect(seite.dateiname).toMatch(/^belegung_/);
+    expect(seite.html).toContain("Turnhalle");
+    expect(seite.html).toContain("Bergungsgruppe Oldenburg");
+  });
+
+  it("weist eine Kapazität ab, die keine ganze Zahl ist", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    await a.dienst.bediene({ typ: "UnterkunftAngelegt", nutzlast: { unterkunftId: "UK1", name: "Turnhalle", kapazitaet: 6 } });
+    const ergebnis = await a.dienst.bediene({ typ: "UnterkunftGeaendert", nutzlast: { unterkunftId: "UK1", feld: "kapazitaet" }, vorher: 6, neu: "zwölf" });
+    expect(ergebnis.art).toBe("abgewiesen");
+  });
 });

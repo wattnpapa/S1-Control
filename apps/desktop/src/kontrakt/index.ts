@@ -593,6 +593,8 @@ export const zRuf = z.discriminatedUnion("art", [
       "anforderungen",
       "tagebuch",
       "papier",
+      // Die Ausgaben der Versorgung (S4, additiv): Belegungsliste je Unterkunft.
+      "belegung",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */

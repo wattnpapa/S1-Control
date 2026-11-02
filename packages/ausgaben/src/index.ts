@@ -130,3 +130,4 @@ export {
   type Einheitenlistendaten,
   type Einheitenlistenzeile,
 } from "./einheitenliste-daten.js";
+export { VERSORGUNG_STIL, belegungAlsHtml } from "./versorgung.js";

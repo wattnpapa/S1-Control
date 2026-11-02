@@ -131,7 +131,9 @@ import { Bearbeitungssperren } from "./bearbeitungssperren.js";
 import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
+import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
+import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
 
 /**
  * Die Takte in Millisekunden (§6.2, §6.4, §5.4).
@@ -153,7 +155,8 @@ export type Seitenausgabe =
   | "kosten"
   | "fueorg"
   | "einheitenliste"
-  | Listenausgabe;
+  | Listenausgabe
+  | Versorgungsausgabe;
 
 export interface Takte {
   readonly spiegelungMs: number;
@@ -1026,6 +1029,9 @@ export class Aktendienst {
     if (LISTENAUSGABEN.has(ausgabe)) {
       return listenausgabe(ausgabe as Listenausgabe, this.#zustand, this.#ereignisse, kopf, marke);
     }
+    if (VERSORGUNGSAUSGABEN.has(ausgabe)) {
+      return versorgungsausgabe(ausgabe as Versorgungsausgabe, this.#zustand, jetzt.getTime(), { ...kopf, marke });
+    }
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
     }
@@ -1658,5 +1664,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf);
+  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf) ?? pruefeVersorgung(entwurf);
 }

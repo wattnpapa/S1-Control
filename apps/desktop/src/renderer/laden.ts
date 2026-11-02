@@ -214,7 +214,8 @@ export interface Laden {
       | "einheitenliste"
       | "anforderungen"
       | "tagebuch"
-      | "papier",
+      | "papier"
+      | "belegung",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;
