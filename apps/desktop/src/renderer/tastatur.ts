@@ -23,7 +23,7 @@
  * Bedienung überschreibt, kostet mehr, als es einbringt.
  */
 
-import { useEffect } from "react";
+import { createContext, useContext, useEffect } from "react";
 
 import { findeKuerzel } from "@s1/domaene";
 
@@ -49,6 +49,17 @@ export function inEingabefeld(ziel: EventTarget | null): boolean {
 export type Kuerzelhandlungen = Partial<Record<string, () => void>>;
 
 /**
+ * Ob die Ansichten darunter ihre Kürzel anmelden dürfen.
+ *
+ * Die Lage bleibt eingehängt, wenn ein anderes Blatt oben liegt (sie hält die
+ * Auswahl von Abschnitt und Einheit). Ihre Kürzel griffen dann weiter: Strg+N
+ * im Blatt „Funkplan" öffnete zusätzlich „Abschnitt anlegen" und „Einheit
+ * anlegen", denn die Masken stehen als Portal über allem. Der Arbeitsplatz
+ * schaltet sie für die verdeckte Lage ab; ohne Angabe gilt „an".
+ */
+export const KuerzelAktiv = createContext(true);
+
+/**
  * Hängt die angemeldeten Kürzel an das Fenster.
  *
  * **Angemeldet wird je Ansicht und nicht global.** Eine Ansicht, die
@@ -61,7 +72,9 @@ export type Kuerzelhandlungen = Partial<Record<string, () => void>>;
  * Suche soll die Suchleiste des Fensters öffnen dürfen.
  */
 export function useKuerzel(handlungen: Kuerzelhandlungen): void {
+  const aktiv = useContext(KuerzelAktiv);
   useEffect(() => {
+    if (!aktiv) return undefined;
     function beiTaste(ereignis: KeyboardEvent): void {
       const gefunden = findeKuerzel(ereignis, inEingabefeld(ereignis.target));
       if (gefunden === undefined) return;
@@ -74,5 +87,5 @@ export function useKuerzel(handlungen: Kuerzelhandlungen): void {
     return () => {
       window.removeEventListener("keydown", beiTaste);
     };
-  }, [handlungen]);
+  }, [handlungen, aktiv]);
 }

@@ -31,7 +31,7 @@ import { Versorgung } from "./Versorgung.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import { useBrowserNavigation } from "./navigation.js";
 import { ladeMerker, loescheMerker, merkeStand, speichereMerker } from "./sitzung.js";
-import { useKuerzel } from "./tastatur.js";
+import { KuerzelAktiv, useKuerzel } from "./tastatur.js";
 import { wiederoeffneZuletzt } from "./wiederoeffnen.js";
 
 /**
@@ -184,7 +184,9 @@ export function Arbeitsplatz(): React.JSX.Element {
           // beziehen, und die soll ein Blick in die Kosten nicht löschen.
           <>
             <div hidden={!gehoertZurLage(blatt)}>
-              <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} />
+              <KuerzelAktiv.Provider value={gehoertZurLage(blatt)}>
+                <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} />
+              </KuerzelAktiv.Provider>
             </div>
             {blatt === "eingang" && <Eingangskorb />}
             {blatt === "anforderungen" && <Anforderungen />}

@@ -22,6 +22,7 @@ import { Einheitentabelle } from "./Einheitentabelle.js";
 import { Hilfe } from "./Hilfe.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
+import { KuerzelAktiv } from "./tastatur.js";
 
 afterEach(cleanup);
 
@@ -109,6 +110,19 @@ describe("Funktionalität: Tastaturbedienung", () => {
 
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     expect(screen.getByLabelText("Abschnitt anlegen")).toBeDefined();
+  });
+
+  it("Szenario: Strg+N greift nicht in der verdeckten Lage, wenn ein anderes Blatt oben liegt", async () => {
+    render(
+      <KuerzelAktiv.Provider value={false}>
+        <Abschnittsbaum gewaehlt={undefined} aufWahl={() => undefined} />
+      </KuerzelAktiv.Provider>,
+    );
+    await waitFor(() => {
+      expect(screen.getByText("Deich Nord")).toBeDefined();
+    });
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    expect(screen.queryByLabelText("Abschnitt anlegen")).toBeNull();
   });
 
   it("Szenario: Escape schließt die Maske, ohne zu schreiben", async () => {
