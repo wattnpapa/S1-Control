@@ -52,7 +52,10 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    oder über den Eingangskorb aus einer Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
-   seit wann, wie lange noch.
+   seit wann, wie lange noch. Daneben führt die Vermeldezentrale im Blatt
+   **Funkplan**, über welche Rufgruppe jede Einheit gerufen wird und wann sie
+   sich zuletzt gemeldet hat; wer länger schweigt als die Schwelle, wird
+   Bernstein, und dann ist eine Funkprobe fällig.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
    Eine Ablösung wird an der Einheit angefordert („Ablösung anfordern“) oder im
    Blatt Anforderungen mit „Ablösung für“. Beim Eintreffen entsteht die neue
@@ -145,8 +148,9 @@ Funkplan. Der Funkplan steht als Tafel mit einer Zeile je Rufgruppe
 Kante in der Statusfarbe, ein Bernsteinrahmen mit der Zeit des letzten
 Kontakts, wenn er älter ist als die Schwelle, Mithörer gestrichelt mit „hört
 mit“. Der Fuß nennt in Bernstein die Einheiten ohne Rufgruppe und die Zahl
-ohne Kontakt. Viele Rufgruppen verkleinern die Schrift, aufgelöste stehen
-nicht an der Wand.
+ohne Kontakt. Die Schrift wird so groß, wie das Fenster es zulässt; viele
+Rufgruppen verkleinern sie, statt zu blättern, aufgelöste stehen nicht an der
+Wand.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
 Mausbewegung oben erscheint, oder mit den Tasten 1 bis 6; R schaltet den
 Wechsel alle 20 Sekunden ein und aus, die Leertaste hält ihn an, F11 schaltet
@@ -403,6 +407,16 @@ Grundlage: KONZEPT-EREIGNISSE.md §5.8, EXH C159–C172
 ## Abkürzungen
 
 Dieselbe Liste zeigt Strg+H. Sie stammt aus dem Blatt „AküLi“ der Excel.
+Der Funkplan bringt einige Wörter mit, die dort nicht stehen:
+
+- **FmZ** — Fernmeldezentrale, die Vermeldezentrale der Führungsstelle; dort
+  sitzen die Sprechfunker (SprFu).
+- **Rufgruppe** — die Gruppe im Digitalfunk, über die gerufen wird; im
+  Analogfunk der Kanal. Jede Einheit hat eine Hauptrufgruppe und kann weitere
+  mithören.
+- **TMO** — Netzbetrieb über die Basisstationen des Digitalfunks BOS.
+- **DMO** — Direktbetrieb von Gerät zu Gerät, begrenzte Reichweite; über ein
+  Fahrzeugfunkgerät als **Gateway** ins Netz verbunden, wenn eines steht.
 
 <!-- AKÜLI ANFANG — erzeugt, nicht von Hand ändern -->
 

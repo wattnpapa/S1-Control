@@ -1,9 +1,11 @@
 # Funkplan: die Vermeldezentrale der Führungsstelle aus der S1-Übersicht versorgen
 
-Stand 2026-11-02. Das ist ein Entwurf, nichts davon ist umgesetzt. Der Text
-legt fest, was gebaut würde und aus welchen Daten; `mockups-funkplan.html` im
-selben Ordner zeigt, wie es aussähe (Runde 5, Optionen 5a bis 5e, Beispiellage
-„Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html` und `../s4/`).
+Stand 2026-11-02: **umgesetzt** in den Schnitten F1 bis F4 (Abschnitt 9).
+Der Text legt fest, was gebaut ist und aus welchen Daten; `mockups-funkplan.html`
+im selben Ordner zeigt den Entwurf (Runde 5, Optionen 5a bis 5e, Beispiellage
+„Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html` und `../s4/`),
+`stand/` die Aufnahmen des gebauten Renderers. Was bewusst vom Entwurf abweicht
+und was offen bleibt, steht in `UMSETZUNGSBERICHT.md`.
 
 Begriffe: Die Vermeldezentrale ist der Platz in der Führungsstelle, an dem
 die Sprechfunker sitzen. Im THW heißt sie meist Fernmeldezentrale (FmZ) und
@@ -132,8 +134,10 @@ Der Fuß nennt die offene Arbeit, immer in Bernstein: Einheiten ohne
 Rufgruppe mit Namen, Einheiten ohne Kontakt als Zahl. Dann Einsatz, Zeit und
 Stand wie bei jeder Ansicht.
 
-Bei mehr als sechs Rufgruppen läuft die Tafel seitenweise im Takt des
-Wechsels, wie die Versorgungstafel bei mehr als acht Bereichen. Aufgelöste
+Anmerkung zur Umsetzung: Das Blättern bei mehr als sechs Rufgruppen ist
+umgesetzt als Verkleinern. Die Tafel setzt die Schrift so groß, wie das
+Fenster es zulässt, und kleiner, je mehr Gruppen und Teilnehmer dastehen; sie
+blättert so wenig wie die Versorgungstafel aus S4. Aufgelöste
 Rufgruppen erscheinen auf dem Monitor nicht; eine Gruppe ohne Teilnehmer
 erscheint mit leerer Teilnehmerzelle, weil sie dann gerade die Frage ist.
 
@@ -322,7 +326,37 @@ Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei F1 und F3
 den Abschnitt „Funkplan" in der erzeugten Ansichtenliste, `README.md` den
 Reiter.
 
-## 10. Offene Entscheidungen
+## 10. Entscheidungen (getroffen)
+
+Getroffen am 2026-11-02 mit dem Umsetzungsauftrag; die ursprünglichen
+Fragen stehen darunter zum Nachlesen.
+
+1. Eigener Reiter „Funkplan" im Kopfband, zwischen Führungsstelle und
+   Versorgung.
+2. Eine Hauptrufgruppe je Einheit (`rufgruppeId`) plus eine Liste weiterer
+   Gruppen (`weitereRufgruppenIds`).
+3. Die Rufgruppe hat einen optionalen Bereichsbezug (`abschnittId`); die
+   Zuordnung zeigt „Bereich ≠ Gruppe" als Hinweis, beim Verschieben ändert
+   sich nichts von selbst.
+4. Die Schwelle „kein Kontakt" ist ein Parameter je Einsatz
+   (`funkKontaktSchwelleMinuten`, Vorbelegung 60 in `werte.ts`), gesetzt mit
+   einem eigenen Ereignis `FunkParameterGesetzt`.
+5. Der Funkrufname der Einheit ist der Override `funkrufnameOverride`, sonst
+   der des ersten Fahrzeugs der Einheit mit Funkrufnamen, sonst leer. Keine
+   Markierung „Führungsfahrzeug".
+6. Keine zweite Monitordatei auf dem Share; es reicht das Zweitfenster.
+7. Die Spalte „Erreichbarkeit" bleibt in RESSOURCENPLANUNG. Eine Spalte gehört
+   in `tabelle.ts` genau einer Gruppe; die Gruppe FUNK bekommt sie deshalb
+   nicht.
+8. Keine Fernmeldeskizze.
+9. Kein Zusammenführen von Rufgruppen; eine doppelt angelegte wird mit Grund
+   aufgelöst, ihre Teilnehmer werden von Hand umgesetzt.
+10. Keine Änderung am geteilten Kern `vendor/eeb-format`; die Rufgruppe kommt
+    nur aus der Führungsstelle.
+11. Rufgruppe je Einheit, nicht je Fahrzeug.
+12. Kein Vertraulichkeitshinweis in der Ausgabe.
+
+### Die Fragen, wie sie standen
 
 1. Eigener Reiter „Funkplan" im Kopfband oder Unteransicht des Blattes
    „Führungsstelle"? Der Entwurf zeigt den Reiter: Die Vermeldezentrale

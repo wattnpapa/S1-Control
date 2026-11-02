@@ -140,5 +140,22 @@ Vermeldezentrale der Führungsstelle (Rufgruppen als Entität, Hauptrufgruppe je
 Einheit, Funkhinweis, Funkprobe und letzter Kontakt; Monitoransicht „Funkplan"
 als Tafel je Rufgruppe mit Teilnehmerkacheln, Blatt „Funkplan", Spaltengruppe
 „Funk" in der Einheitentabelle, Reiter „Funk und Erreichbarkeit" in der
-Einheitenmaske, Ausgabe „Funkplan" als A4). Nichts davon ist umgesetzt; die
-Gestaltung folgt Option 2a.
+Einheitenmaske, Ausgabe „Funkplan" als A4). Sie sind **umgesetzt** (Schnitte
+F1 bis F4, Stand 2026-11-02); die Gestaltung folgt Option 2a und hängt an
+denselben Marken. „Funk und Erreichbarkeit" ist eine eigene Maske und kein
+Reiter, weil es eine Einheitenmaske mit Reitern nicht gibt. Das Blatt nutzt
+KPI-Band (`.kpiband.funkband`), Umschalter und die Funktabelle
+(`.funktabelle` mit Gruppenköpfen, blassen, erwarteten und gewählten Zeilen),
+dazu den Kasten der gewählten Rufgruppe (`.funkkasten`), die Schwelle in der
+Werkzeugzeile (`.funkschwelle`) und in der Maske die Ableitungszeile mit
+„Überschreiben …" (`.ableitungszeile`) und den Funkauszug des Tagebuchs
+(`.funkauszug`). Die Betriebsart ist eine Rahmenmarke
+(`.marke-zustand.betriebsart`, DMO in Bernstein, Analog gestrichelt). Der
+Monitor bekommt die Kacheln `.funkkachel` mit der Statuskante `ton-ok`,
+`ton-warn`, `ton-fehler`, `ton-ruhe`, dem Bernsteinrahmen `still` und dem
+gestrichelten `mithoerer`, dazu die Marken `--monitor-ok` und
+`--monitor-fehler`. Aufnahmen des gebauten Renderers (Blatt 1320×860 Standard
+je Rufgruppe, je Bereich und Funkproben, Maske, Einheitentabelle mit der
+Gruppe „Funk", Monitor 960×540 Standard und Nacht) liegen unter
+`../funkplan/stand/`; den Stand und die Abweichungen nennt
+`../funkplan/UMSETZUNGSBERICHT.md`.
