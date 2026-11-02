@@ -44,6 +44,8 @@ export const zSchicht = zPflichttext;
 export const zOrganisation = zPflichttext;
 export const zEbene = zPflichttext;
 export const zAbschnittstyp = zPflichttext;
+/** Die Betriebsart einer Rufgruppe: TMO, DMO, ANALOG und, was eine neuere Fassung kennt. */
+export const zBetriebsart = zPflichttext;
 
 /**
  * Geschlossene Wertebereiche: an ihnen haengt eine Regel ohne sinnvollen

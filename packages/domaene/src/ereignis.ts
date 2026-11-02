@@ -7,8 +7,8 @@
  * KONZEPT-EREIGNISSE.md §5); die fuenf Ereignisarten des Minimalfolds aus
  * M0.2 sind mit ihm entfallen.
  *
- * Die Wertelisten hier sind die **bekannten** Werte der fuenf offenen
- * Bereiche (§3.7). Sie schliessen nichts aus: Ein unbekannter Wert wird
+ * Die Wertelisten hier sind die **bekannten** Werte der offenen Bereiche
+ * (§3.7; seit dem Funkplan sechs). Sie schliessen nichts aus: Ein unbekannter Wert wird
  * gefaltet, gespeichert und unveraendert weitergespiegelt, und der Fold
  * erzeugt `unbekannterWert`. Jede Aenderung an ihnen erhoeht `foldVersion`
  * (§3.9) — zwei Clients mit verschiedenen Listen fuehren verschiedene
@@ -145,6 +145,15 @@ export const EINHEIT_STATUS = [
   "RUECKMARSCH",
 ] as const;
 export type EinheitStatus = (typeof EINHEIT_STATUS)[number];
+
+/**
+ * Die Betriebsarten einer Rufgruppe (KONZEPT-FUNKPLAN.md §8): Digitalfunk im
+ * Netz (TMO) oder direkt (DMO) und analoger Sprechfunk mit Kanalnummer. Ein
+ * offener Bereich wie der Status: Eine Fassung, die eine weitere Art kennt,
+ * hält die Faltung dieses Clients nicht an.
+ */
+export const RUFGRUPPE_BETRIEBSARTEN = ["TMO", "DMO", "ANALOG"] as const;
+export type Betriebsart = (typeof RUFGRUPPE_BETRIEBSARTEN)[number];
 
 /** Zieldatenmodell §2.3. */
 export const SCHICHTEN = ["TAG", "NACHT", "FRUEH", "SPAET"] as const;

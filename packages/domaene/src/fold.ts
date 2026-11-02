@@ -45,6 +45,7 @@ import {
   ABSCHNITTSTYPEN,
   EINHEIT_STATUS,
   ORGANISATIONEN,
+  RUFGRUPPE_BETRIEBSARTEN,
   SCHICHTEN,
   TAKTISCHE_EBENEN,
   type Akteur,
@@ -928,6 +929,7 @@ const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["einheit.organisation", new Set<string>(ORGANISATIONEN)],
   ["einheit.ebene", new Set<string>(TAKTISCHE_EBENEN)],
   ["abschnitt.typ", new Set<string>(ABSCHNITTSTYPEN)],
+  ["rufgruppe.betriebsart", new Set<string>(RUFGRUPPE_BETRIEBSARTEN)],
 ]);
 
 /**
@@ -1010,6 +1012,8 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
   ["einheit.unterkunftId", "unterkunft"],
   ["abschnitt.ausgabestelleId", "ausgabestelle"],
   ["bestellung.ausgabestelleId", "ausgabestelle"],
+  ["einheit.rufgruppeId", "rufgruppe"],
+  ["rufgruppe.abschnittId", "abschnitt"],
 ]);
 
 /**
@@ -1911,8 +1915,14 @@ export function materialisiere(faltung: Faltung): Zustand {
         const zielart = FREMDREFERENZEN.get(`${art}.${name}`);
         if (zielart === undefined) continue;
         if (typeof feld.wert !== "string") continue;
+        // Einheiten und Abschnitte aus den fertigen Sammlungen: Dort stehen auch
+        // die aufgegangenen Einheiten und die beiden Systemabschnitte.
         const vorhanden =
-          zielart === "einheit" ? einheiten.has(feld.wert) : (gebaut.get(zielart)?.has(feld.wert) ?? false);
+          zielart === "einheit"
+            ? einheiten.has(feld.wert)
+            : zielart === "abschnitt"
+              ? abschnitte.has(feld.wert)
+              : (gebaut.get(zielart)?.has(feld.wert) ?? false);
         if (!vorhanden) {
           hinweise.push({
             art: "fremdreferenzUnbekannt",
@@ -2129,6 +2139,7 @@ export function materialisiere(faltung: Faltung): Zustand {
   const unterkuenfte = sammlung("unterkunft");
   const ausgabestellen = sammlung("ausgabestelle");
   const bestellungen = sammlung("bestellung");
+  const rufgruppen = sammlung("rufgruppe");
 
   return {
     foldVersion: faltung.foldVersion,
@@ -2148,6 +2159,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     ...(unterkuenfte.size === 0 ? {} : { unterkuenfte: alsDatensammlung(unterkuenfte) as Zustand["unterkuenfte"] }),
     ...(ausgabestellen.size === 0 ? {} : { ausgabestellen: alsDatensammlung(ausgabestellen) as Zustand["ausgabestellen"] }),
     ...(bestellungen.size === 0 ? {} : { bestellungen: alsDatensammlung(bestellungen) as Zustand["bestellungen"] }),
+    ...(rufgruppen.size === 0 ? {} : { rufgruppen: alsDatensammlung(rufgruppen) as Zustand["rufgruppen"] }),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),

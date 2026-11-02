@@ -169,6 +169,8 @@ export const EinheitStammdatenGeaendert = z.object({
     "standortRef",
     "personalErfassung",
     "einheitSchluessel",
+    // Funkplan: der Funkrufname der Einheit, wo die Ableitung aus dem Fahrzeug nicht passt.
+    "funkrufnameOverride",
   ]),
 });
 
@@ -490,3 +492,7 @@ export const KorrekturVon = z.object({
 // --- S4 Versorgung (KONZEPT-S4.md §6) ---------------------------------------
 
 export * from "./schemata-versorgung.js";
+
+// --- Funkplan (KONZEPT-FUNKPLAN.md §8) ----------------------------------------
+
+export * from "./schemata-funk.js";

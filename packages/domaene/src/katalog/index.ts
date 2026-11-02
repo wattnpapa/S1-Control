@@ -45,6 +45,7 @@ export type Entitaetsart =
   | "unterkunft"
   | "ausgabestelle"
   | "bestellung"
+  | "rufgruppe"
   | "archivierungen";
 
 /**
@@ -375,6 +376,25 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
       nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId",
       feld: ausNutzlast("feld", "sofortbedarfErledigt"), festerWert: false, klasse: "LWW_FELD",
       gegenereignis: "SofortbedarfErledigt" }),
+
+  // Funkplan F1: Rufgruppe und Hauptrufgruppe der Einheit (KONZEPT-FUNKPLAN.md §8)
+  e({ typ: "RufgruppeAngelegt", form: "b", schema: S.RufgruppeAngelegt, nutzlastVersion: 1,
+      entitaet: "rufgruppe", idFeld: "rufgruppeId", klasse: "ADDITIV",
+      gegenereignis: "RufgruppeAufgeloest" }),
+  e({ typ: "RufgruppeGeaendert", form: "a", schema: S.RufgruppeGeaendert, nutzlastVersion: 1,
+      entitaet: "rufgruppe", idFeld: "rufgruppeId", feld: ausNutzlast("feld"),
+      klasse: "LWW_FELD" }),
+  e({ typ: "RufgruppeAufgeloest", form: "a", schema: S.RufgruppeAufgeloest, nutzlastVersion: 1,
+      entitaet: "rufgruppe", idFeld: "rufgruppeId", feld: fest("aufgeloest"), festerWert: true,
+      klasse: "LWW_FELD", grundPflicht: true, gegenereignis: "RufgruppeWiederhergestellt" }),
+  // Die Rücknahme einer Wiederherstellung löst wieder auf, mit Grund; dieselbe
+  // Art mit `festerWert: false` noch einmal zu schreiben, nähme nichts zurück.
+  e({ typ: "RufgruppeWiederhergestellt", form: "a", schema: S.RufgruppeWiederhergestellt,
+      nutzlastVersion: 1, entitaet: "rufgruppe", idFeld: "rufgruppeId", feld: fest("aufgeloest"),
+      festerWert: false, klasse: "LWW_FELD", gegenereignis: "RufgruppeAufgeloest" }),
+  e({ typ: "EinheitRufgruppeGesetzt", form: "a", schema: S.EinheitRufgruppeGesetzt,
+      nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId", feld: fest("rufgruppeId"),
+      klasse: "LWW_FELD" }),
 
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,

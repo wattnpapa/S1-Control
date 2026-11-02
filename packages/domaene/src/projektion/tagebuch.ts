@@ -38,6 +38,7 @@ import {
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
 import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
 import { klartextsatz } from "./tagebuch-klartext.js";
+import { rufgruppenname } from "./tagebuch-funk.js";
 import { bestellungsname } from "./tagebuch-versorgung.js";
 
 // ---------------------------------------------------------------------------
@@ -152,6 +153,12 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   // S4.4 Sofortbedarf
   SofortbedarfErledigt: "Sofortbedarf erledigt",
   SofortbedarfWiederOffen: "Sofortbedarf wieder offen",
+  // Funkplan F1
+  RufgruppeAngelegt: "Rufgruppe angelegt",
+  RufgruppeGeaendert: "Rufgruppe geändert",
+  RufgruppeAufgeloest: "Rufgruppe aufgelöst",
+  RufgruppeWiederhergestellt: "Rufgruppe wiederhergestellt",
+  EinheitRufgruppeGesetzt: "Rufgruppe gesetzt",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -198,6 +205,13 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   GEMISCH: "Gemisch",
   UNTERBRINGUNG: "Unterbringung",
   RUHEZEIT: "Ruhezeit",
+  betriebsart: "Betriebsart",
+  zweck: "Zweck",
+  hoert: "hört mit",
+  gateway: "Gateway",
+  reihenfolge: "Reihenfolge",
+  abschnittId: "Bereich",
+  funkrufnameOverride: "Funkrufname",
 };
 
 // ---------------------------------------------------------------------------
@@ -306,6 +320,8 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       return feldtext(zustand.ausgabestellen?.[id]?.name) ?? id;
     case "bestellung":
       return bestellungsname(zustand, id);
+    case "rufgruppe":
+      return rufgruppenname(zustand, id);
     default:
       return id;
   }

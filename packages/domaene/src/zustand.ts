@@ -45,9 +45,11 @@ import type {
  * `unterkunftId` an der Einheit — ein Schnappschuss der Fassung 3 haette
  * diese Ereignisse als unbekannt gefaltet. **5** mit Mahlzeitenregel,
  * Ausgabestellen und Bestellungen (S4.3). **6** mit der Abarbeitung des
- * Sofortbedarfs je Feld (S4.4).
+ * Sofortbedarfs je Feld (S4.4). **7** mit dem Funkplan (F1): Rufgruppe als
+ * Entitaet, die Felder `rufgruppeId` und `funkrufnameOverride` an der Einheit
+ * und die Betriebsart als offener Bereich.
  */
-export const FOLD_VERSION = 6;
+export const FOLD_VERSION = 7;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -255,6 +257,10 @@ export interface EinheitZustand extends Anlage {
   readonly sofortbedarfErledigt?: { readonly [feld: string]: Feld<boolean> };
   /** S4.2: die Unterkunft, in der die Einheit schläft; `null` nach Aufhebung. */
   readonly unterkunftId?: Feld<Id>;
+  /** Funkplan F1: die Hauptrufgruppe, über die die Führungsstelle ruft; `null` = keine. */
+  readonly rufgruppeId?: Feld<Id>;
+  /** Funkplan: der Funkrufname der Einheit, wo die Ableitung (K31) nicht passt. */
+  readonly funkrufnameOverride?: Feld<string>;
   readonly psaSaetzeProTag?: Feld<number>;
   readonly abgeteiltVon?: Erstwert<{
     readonly quellEinheitId: Id;
@@ -354,6 +360,27 @@ export interface UnterkunftZustand extends Anlage {
   /** Eine Zahl, nicht nach m/w/d getrennt (Entscheidung 2). */
   readonly kapazitaet: Feld<number>;
   readonly bemerkung?: Feld<string>;
+  readonly aufgeloest?: Feld<boolean>;
+  readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
+}
+
+/**
+ * Eine Rufgruppe des Funkplans (KONZEPT-FUNKPLAN.md §8) — Rahmenfelder wie
+ * Abschnitt und Unterkunft. `aufgeloest` ist ein Schalter wie bei der
+ * Unterkunft; wann aufgelöst wurde, steht in seiner `wanduhr`.
+ */
+export interface RufgruppeZustand extends Anlage {
+  readonly id: Id;
+  /** TMO, DMO, ANALOG — offener Bereich (§3.7). */
+  readonly betriebsart: Feld<string>;
+  readonly name: Feld<string>;
+  readonly zweck?: Feld<string>;
+  readonly hoert?: Feld<string>;
+  readonly gateway?: Feld<string>;
+  readonly bemerkung?: Feld<string>;
+  readonly reihenfolge?: Feld<number>;
+  /** Bereichsbezug ohne Automatik (Entscheidung 3). */
+  readonly abschnittId?: Feld<Id>;
   readonly aufgeloest?: Feld<boolean>;
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
 }
@@ -706,6 +733,8 @@ export interface Zustand {
   /** S4.3: Ausgabestellen und Bestellungen — ebenfalls nur, wenn es welche gibt. */
   readonly ausgabestellen?: { readonly [ausgabestelleId: string]: AusgabestelleZustand };
   readonly bestellungen?: { readonly [bestellungId: string]: BestellungZustand };
+  /** Funkplan F1: die Rufgruppen. Fehlt, solange es keine gibt — wie `unterkuenfte`. */
+  readonly rufgruppen?: { readonly [rufgruppeId: string]: RufgruppeZustand };
   /** Deterministisch geordnet, und eine **Menge**: bytegleiche Eintraege fallen zusammen (§3.8). */
   readonly hinweise: readonly Konflikthinweis[];
   /** Nach `id` geordnet (§3.7). */
