@@ -112,6 +112,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 .t tr.blass td{opacity:.55}
 .t td.edit{outline:2px solid #1c2251;outline-offset:-2px}
 .t th.grp,.t td.grp{border-left:1px solid #c9cfe0}
+.t.dicht td{padding:4px 8px}.t.dicht th{padding:6px 8px}
 .t th.mitte{text-align:center}
 .marke{display:inline-block;padding:2px 6px;font:700 9.5px/1.2 -apple-system,Helvetica,Arial,sans-serif;border:1px solid;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
 .ok{background:#e0f0e6;border-color:#a8d3b8;color:#14652f}
@@ -143,6 +144,21 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 .legende i{display:inline-block;width:9px;height:9px;margin-right:4px;vertical-align:-1px}
 .legende i.m{background:#1c2251}.legende i.w{background:#5b6bc7}.legende i.d{background:#a9b0d4}
 .kurzliste{font:400 11px/1.7 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;padding:9px 13px;border-top:1px solid #dde1ec}
+.mahlzeiten{display:flex;gap:10px;padding:8px 10px;border-bottom:1px solid #dde1ec}
+.mz{flex:1;border:1px solid #c9cfe0;padding:8px 11px;display:flex;flex-direction:column;gap:5px;background:#fff}
+.mz.naechste{outline:2px solid #1c2251;outline-offset:-2px}
+.mz .wann{display:flex;align-items:baseline;gap:8px;white-space:nowrap;font:700 13px/1.2 -apple-system,Helvetica,Arial,sans-serif}
+.mz .wann small{font:400 11px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484}
+.mz .zahl{font:700 24px/1 -apple-system,Helvetica,Arial,sans-serif;font-variant-numeric:tabular-nums}
+.mz .zahl small{font:400 12px/1 -apple-system,Helvetica,Arial,sans-serif;color:#5c6484;margin-left:6px}
+.mz .rechnung{font:400 11px/1.4 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;font-variant-numeric:tabular-nums}
+.mz .rechnung b{color:#14652f;font-weight:600}.mz .rechnung i{font-style:normal;color:#8f1717}
+.zeitleiste{font:400 11px/1.5 -apple-system,Helvetica,Arial,sans-serif;color:#3a4266;padding:0 13px 9px;width:300px;flex:none;border-left:1px solid #dde1ec;overflow:auto}
+.zeitleiste h4{margin:10px 0 4px;font:400 10px/1 ui-monospace,Menlo,monospace;letter-spacing:.1em;color:#3a4266}
+.zeitleiste div{display:flex;gap:8px;align-items:baseline;padding:6px 0;border-bottom:1px solid #dde1ec;flex-wrap:wrap}
+.zeitleiste div span:last-child{flex-basis:100%}
+.zeitleiste b{font:400 11px/1 ui-monospace,Menlo,monospace;color:#14183a;min-width:92px}
+.zeitleiste .plus{color:#14652f;font-weight:700;min-width:30px;text-align:right}.zeitleiste .minus{color:#8f1717;font-weight:700;min-width:30px;text-align:right}.zeitleiste .null{color:#8b93ad;font-weight:700;min-width:30px;text-align:right}
 .kurzliste b{font-family:ui-monospace,Menlo,monospace;font-weight:400;color:#14183a;margin-right:8px}
 </style>
 </head>
@@ -150,14 +166,14 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 
 <section class="dv-turn" id="t4">
 <div class="dv-thd"><a class="dv-tid" href="#t4">4</a><span class="dv-tname">Versorgung (S4) — Unterbringung und Verpflegung aus der Kräfteübersicht</span></div>
-<p class="dv-note">Die S1-Übersicht trägt bereits alles, was der S4 zum Planen braucht: Köpfe je Bereich und Schicht, Kostformen, Übernachtungsbedarf nach m/w/d, Sofortbedarf aus dem Bogen. Heute kommt das nur als Blatt „Log" aus dem Drucker. Runde 4 zeigt dieselben Zahlen an zwei Stellen: auf dem <b>Monitor</b> als weitere Ansichten mit Kontextmenü und Hover-Leiste (<a href="#4a">4a</a>–<a href="#4c">4c</a>) und als neues Blatt <b>„Versorgung"</b> im Arbeitsplatz (<a href="#4d">4d</a>–<a href="#4f">4f</a>). Gestaltung aus <code>../oberflaeche/mockups.html</code> Option 2a. Die Rechnung läuft in Ring 2 (<code>projektion.logistikblatt</code>), die Oberfläche faltet nichts. Fachliche Festlegungen und offene Entscheidungen in <code>KONZEPT-S4.md</code>.</p>
+<p class="dv-note">Die S1-Übersicht trägt bereits alles, was der S4 zum Planen braucht: Köpfe je Bereich und Schicht, Kostformen, Übernachtungsbedarf nach m/w/d, Sofortbedarf aus dem Bogen. Heute kommt das nur als Blatt „Log" aus dem Drucker. Runde 4 zeigt dieselben Zahlen an zwei Stellen: auf dem <b>Monitor</b> als weitere Ansichten mit Kontextmenü und Hover-Leiste (<a href="#4a">4a</a>–<a href="#4c">4c</a>, <a href="#4h">4h</a>) und als neues Blatt <b>„Versorgung"</b> im Arbeitsplatz (<a href="#4d">4d</a>–<a href="#4g">4g</a>). Die Vorausschau <a href="#4g">4g</a>/<a href="#4h">4h</a> nennt je Mahlzeit der nächsten 24 Stunden, wie viel Essen gebraucht wird, mit den erwarteten Zu- und Abgängen. Gestaltung aus <code>../oberflaeche/mockups.html</code> Option 2a. Die Rechnung läuft in Ring 2 (<code>projektion.logistikblatt</code>), die Oberfläche faltet nichts. Fachliche Festlegungen und offene Entscheidungen in <code>KONZEPT-S4.md</code>.</p>
 <div class="dv-opts">
 
 <!-- ================= 4a Monitor: Verpflegung + Kontextmenü ================= -->
 <div class="dv-opt" id="4a"><div class="dv-olabel"><a class="dv-oid" href="#4a">4a</a>Monitor — Ansicht „Verpflegung" mit Hover-Leiste (Maus bewegt) und Kontextmenü (Rechtsklick)</div>
 <div class="dv-card" style="width:960px;border-color:#000">
 <div class="mon" data-screen-label="Monitor Verpflegung">
-<div class="leiste"><span>Stärke</span><span class="aktiv">Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="rechts">Wechsel: aus</span><span class="rechts" style="margin-left:0">⋮</span></div>
+<div class="leiste"><span>Stärke</span><span class="aktiv">Verpflegung</span><span>Nächste 24 h</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="rechts">Wechsel: aus</span><span class="rechts" style="margin-left:0">⋮</span></div>
 <p class="beschr" style="margin-top:28px">Verpflegung · nächste Mahlzeit</p>
 <p class="titel" style="font-size:32px">Abendessen 1800 · in 3 h 17 min</p>
 <p class="gross">268</p>
@@ -166,14 +182,15 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 <p class="klein">bestellt 280 · Feldküche Bereitstellungsraum (JUH) · <span class="amber">Anmarsch +24 nicht enthalten</span></p>
 <p class="zeit">101443SEP26</p>
 <p class="fuss">Hochwasser Oldenburg · Stand: vor 6 s · Zählung: alle erfassten Einheiten der Einsatzbereiche</p>
-<div class="punkte"><i></i><i class="an"></i><i></i><i></i></div>
+<div class="punkte"><i></i><i class="an"></i><i></i><i></i><i></i></div>
 
 <div class="menu" style="left:684px;top:54px">
 <div class="titel">Ansicht</div>
 <div>Stärke<span class="kurz">1</span></div>
 <div class="haken aktiv">Verpflegung<span class="kurz">2</span></div>
-<div>Unterbringung<span class="kurz">3</span></div>
-<div>Bereiche und Schichten<span class="kurz">4</span></div>
+<div>Nächste 24 h<span class="kurz">3</span></div>
+<div>Unterbringung<span class="kurz">4</span></div>
+<div>Bereiche und Schichten<span class="kurz">5</span></div>
 <hr>
 <div>Ansichten wechseln alle 20 s<span class="kurz">R</span></div>
 <div>Vollbild<span class="kurz">F11</span></div>
@@ -183,7 +200,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 <div class="cursor" style="left:676px;top:44px"></div>
 </div>
 </div>
-<p class="dv-sub">Große Zahl = Portionen der nächsten Mahlzeit nach Mahlzeitenregel; Schriftgrad wie heute aus <code>schriftgroesse()</code>. Die Zählregel steht im Fuß, die Anmarschzahl in Bernstein daneben, nie darin. Vier Punkte rechts unten: die Ansichten, die aktive gefüllt; bei eingeschaltetem Wechsel wandert der Punkt. Leiste und Menü sind Renderer-Elemente — gleich in Electron und in der Web-Schale.</p>
+<p class="dv-sub">Große Zahl = Portionen der nächsten Mahlzeit nach Mahlzeitenregel; Schriftgrad wie heute aus <code>schriftgroesse()</code>. Die Zählregel steht im Fuß, die Anmarschzahl in Bernstein daneben, nie darin. Fünf Punkte rechts unten: die Ansichten, die aktive gefüllt; bei eingeschaltetem Wechsel wandert der Punkt. Leiste und Menü sind Renderer-Elemente — gleich in Electron und in der Web-Schale.</p>
 </div>
 
 <!-- ================= 4b Monitor: Unterbringung ================= -->
@@ -202,7 +219,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 </table>
 <p class="zeit">101443SEP26</p>
 <p class="fuss">Hochwasser Oldenburg · Stand: vor 6 s · Bedarf aus Bogen (Unterbringung ja) und Personen, Overrides je Einheit</p>
-<div class="punkte"><i></i><i></i><i class="an"></i><i></i></div>
+<div class="punkte"><i></i><i></i><i></i><i class="an"></i><i></i></div>
 </div>
 </div>
 <p class="dv-sub">Bedarf (K6) ist da, belegt/frei/ohne Zuweisung braucht die Unterkünfte aus Schnitt S4.2; bis dahin zeigt die Ansicht nur die ersten drei Zeilen. „Ohne Zuweisung" ist die Arbeit, die ansteht, deshalb Bernstein.</p>
@@ -224,11 +241,31 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 <tr class="sum"><td>Gesamt</td><td>208</td><td>60</td><td>268</td><td class="grp">31</td><td>6</td><td class="grp">118</td><td>22</td><td>2</td></tr>
 <tr class="getrennt"><td>Angefordert / Anmarsch</td><td>—</td><td>—</td><td>24</td><td class="grp">2</td><td>0</td><td class="grp">18</td><td>4</td><td>0</td></tr>
 </table>
-<p class="fuss" style="position:absolute;left:0;right:0;bottom:12px">Hochwasser Oldenburg · 101443SEP26 · Stand: vor 6 s · Wechsel alle 20 s, weiter: Stärke</p>
-<div class="punkte"><i></i><i></i><i></i><i class="an"></i></div>
+<p class="fuss" style="position:absolute;left:0;right:0;bottom:12px;padding:0 90px">Hochwasser Oldenburg · 101443SEP26 · Stand: vor 6 s · Wechsel alle 20 s, weiter: Stärke</p>
+<div class="punkte"><i></i><i></i><i></i><i></i><i class="an"></i></div>
 </div>
 </div>
 <p class="dv-sub">Dieselben Zeilen wie <code>packages/ausgaben/src/log.ts</code>, aus derselben Projektion. Die Fußnote des Blattes (Männl. = Summe − Weibl. − Div.) steht als <code>title</code> am Spaltenkopf. Die Schichten Früh/Spät erscheinen nur, wenn eine Einheit sie trägt — eine Tafel an der Wand soll keine leeren Spalten haben. Bei mehr als acht Bereichen läuft die Tafel im Takt des Wechsels seitenweise durch.</p>
+</div>
+
+<!-- ================= 4h Monitor: Nächste 24 h ================= -->
+<div class="dv-opt" id="4h"><div class="dv-olabel"><a class="dv-oid" href="#4h">4h</a>Monitor — Ansicht „Nächste 24 h": je Mahlzeit in Zeitfolge, mit Zu- und Abgängen gerechnet</div>
+<div class="dv-card" style="width:960px;border-color:#000">
+<div class="mon" data-screen-label="Monitor Nächste 24 h" style="justify-content:flex-start;padding-top:26px;box-sizing:border-box">
+<p class="beschr">Verpflegung · nächste 24 h · Vorausschau</p>
+<table class="tafel" style="margin-top:14px;font-size:24px">
+<tr><th>Mahlzeit</th><th>Portionen</th><th class="grp">Veg.</th><th>Vegan</th><th class="grp">Bestand</th><th>Zugang</th><th>Abgang</th><th class="grp">Bestellt</th></tr>
+<tr style="font-weight:700"><td style="white-space:nowrap">Abend 1800 <span style="font-size:16px;opacity:.65;font-weight:400">heute · in 3 h 17 min</span></td><td>292</td><td class="grp">33</td><td>6</td><td class="grp" style="font-weight:400">268</td><td style="font-weight:400">+24</td><td style="font-weight:400">—</td><td class="grp amber" style="white-space:nowrap">280 · −12</td></tr>
+<tr><td>Nacht 0000</td><td>60</td><td class="grp">8</td><td>2</td><td class="grp">60</td><td>—</td><td>—</td><td class="grp" style="opacity:.6">offen</td></tr>
+<tr><td>Frühstück 0600 <span style="font-size:16px;opacity:.65">morgen</span></td><td>278</td><td class="grp">32</td><td>6</td><td class="grp">268</td><td>+24</td><td>−14</td><td class="grp" style="opacity:.6">offen</td></tr>
+<tr><td>Mittag 1200 <span style="font-size:16px;opacity:.65">morgen</span></td><td>212</td><td class="grp">24</td><td>4</td><td class="grp">208</td><td>+24</td><td>−20</td><td class="grp" style="opacity:.6">offen</td></tr>
+</table>
+<p class="klein" style="margin-top:18px;font-size:18px">Zugänge: 2. Zug FF Hude +24 ab 1630 · Abgänge: FGr WP Cloppenburg −14 ab 0600, SEG JUH −6 ab 1000</p>
+<p class="fuss" style="position:absolute;left:0;right:0;bottom:12px;padding:0 90px">Hochwasser Oldenburg · 101443SEP26 · Stand: vor 6 s · ohne gemeldete Zeit zählt nichts</p>
+<div class="punkte"><i></i><i></i><i class="an"></i><i></i><i></i></div>
+</div>
+</div>
+<p class="dv-sub">Dieselben vier Zahlen je Mahlzeit wie in <a href="#4g">4g</a>, aus derselben Projektion. Die nächste Mahlzeit steht fett; eine Bestellung unter der Vorausschau steht in Bernstein mit der Differenz. Bei 48 h Horizont läuft die Tafel im Takt des Wechsels seitenweise.</p>
 </div>
 
 <!-- ================= 4d Blatt Versorgung · Verpflegung ================= -->
@@ -256,7 +293,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 </div>
 <div class="flaeche" style="flex-direction:column;gap:0">
 <div class="werkzeuge">
-<div class="umschalter"><span class="aktiv">Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
+<div class="umschalter"><span class="aktiv">Verpflegung</span><span>Nächste 24 h</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
 <span class="btn" style="margin-left:10px">Mahlzeitenregel: Standard (Tag/Nacht) ▾</span>
 <span class="btn">Tag: 10. SEP ▾</span>
 <span class="btn rechts">Bestellliste als PDF</span>
@@ -317,6 +354,77 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 <p class="dv-sub">Reiter „Versorgung" neu zwischen Führungsstelle und Kosten (additiv in <code>blaetter.ts</code>). Das KPI-Band nennt die Zahlen des Tages, „ohne Unterkunft" in Bernstein, sobald größer null. Die Spalten des Plans folgen der Mahlzeitenregel; Früh/Spät kämen als weitere Schichten hinzu, nicht als weitere Mahlzeiten.</p>
 </div>
 
+<!-- ================= 4g Blatt Versorgung · Nächste 24 h ================= -->
+<div class="dv-opt" id="4g"><div class="dv-olabel"><a class="dv-oid" href="#4g">4g</a>Blatt „Versorgung" — Unteransicht Nächste 24 h: was zu welcher Mahlzeit an Essen gebraucht wird, je Bereich, mit erwarteten Zu- und Abgängen</div>
+<div class="dv-card" style="width:1320px;border-radius:2px">
+<div class="scr" data-screen-label="Versorgung Nächste 24 h">
+<div class="kopf">
+<div class="brot">‹ Einsatzauswahl</div>
+<div class="zeile">
+<div class="logo">THW</div><span class="wort">S1-Control</span>
+<div class="kpi" style="margin-left:6px"><b>STÄRKE</b><span>24/61/183 // 268</span></div>
+<div class="kpi"><b>ZEIT</b><span>101443SEP26</span></div>
+<div class="themen"><span>Standard</span><span>Dunkel</span><span>Feld</span><span>Nacht</span></div>
+</div>
+<div class="zustand">✓ Hochwasser Oldenburg · Stand vor 6 s · Share erreichbar — 2 weitere Arbeitsplätze</div>
+<div class="reiter"><span>Lage</span><span>Eingangskorb <i>7</i></span><span>Anforderungen</span><span>Führungsstelle</span><span class="aktiv">Versorgung</span><span>Kosten</span><span>Führungsorganisation</span><span>Ausgaben</span><span>Einsatztagebuch</span><span class="rechts">Diagnose</span></div>
+</div>
+<div class="band">
+<div><b>268</b><span>PORTIONEN ABEND 1800</span></div>
+<div><b>31</b><span>VEGETARISCH</span></div>
+<div><b>6</b><span>VEGAN</span></div>
+<div><b>142</b><span>BETTEN HEUTE NACHT</span></div>
+<div class="warn"><b>18</b><span>OHNE UNTERKUNFT</span></div>
+<div><b>+24</b><span>ANMARSCH (GETRENNT)</span></div>
+</div>
+<div class="flaeche" style="flex-direction:column;gap:0">
+<div class="werkzeuge">
+<div class="umschalter"><span>Verpflegung</span><span class="aktiv">Nächste 24 h</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
+<div class="umschalter" style="margin-left:10px"><span class="aktiv">24 h</span><span>48 h</span></div>
+<span class="btn">Mahlzeitenregel: Standard (Tag/Nacht) ▾</span>
+<span class="btn haupt rechts">Bestellung Nacht 0000…</span>
+<span class="btn">Vorausschau als PDF</span>
+</div>
+<div class="karte" style="flex:1">
+<div class="kk">Vorausschau ab 101443SEP26 <small>· vier Mahlzeiten · Zugänge ab gemeldeter Eintreffzeit, Abgänge ab „verfügbar bis", Einsatzende oder Rückführung</small></div>
+<div class="mahlzeiten">
+<div class="mz naechste"><div class="wann">Abend 1800 <small>heute · in 3 h 17 min</small><span class="marke warn" style="margin-left:auto">bestellt 280 · −12</span></div><div class="zahl">292<small>33 veg. · 6 vegan</small></div><div class="rechnung">268 Bestand <b>+24</b> Zugang · kein Abgang</div></div>
+<div class="mz"><div class="wann">Nacht 0000 <small>in 9 h 17 min</small><span class="marke neu" style="margin-left:auto">offen</span></div><div class="zahl">60<small>8 veg. · 2 vegan</small></div><div class="rechnung">60 Bestand · Nachtschicht · kein Zu-/Abgang</div></div>
+<div class="mz"><div class="wann">Frühstück 0600 <small>morgen · in 15 h 17 min</small><span class="marke neu" style="margin-left:auto">offen</span></div><div class="zahl">278<small>32 veg. · 6 vegan</small></div><div class="rechnung">268 Bestand <b>+24</b> Zugang <i>−14</i> Abgang</div></div>
+<div class="mz"><div class="wann">Mittag 1200 <small>morgen · in 21 h 17 min</small><span class="marke neu" style="margin-left:auto">offen</span></div><div class="zahl">212<small>24 veg. · 4 vegan</small></div><div class="rechnung">208 Bestand (Tag) <b>+24</b> Zugang <i>−20</i> Abgang</div></div>
+</div>
+<div style="display:flex;flex:1;min-height:0"><div class="rollen" style="flex:1"><table class="t dicht">
+<thead><tr><th style="width:19%" rowspan="2">Bereich</th><th class="mitte grp" colspan="3">Abend 1800 heute</th><th class="mitte grp" colspan="3">Nacht 0000</th><th class="mitte grp" colspan="3">Frühstück 0600 morgen</th><th class="mitte grp" colspan="3">Mittag 1200 morgen</th></tr>
+<tr><th class="z grp">Port.</th><th class="z">Veg.</th><th class="z">Vegan</th><th class="z grp">Port.</th><th class="z">Veg.</th><th class="z">Vegan</th><th class="z grp">Port.</th><th class="z">Veg.</th><th class="z">Vegan</th><th class="z grp">Port.</th><th class="z">Veg.</th><th class="z">Vegan</th></tr></thead>
+<tbody>
+<tr><td>Führungsstelle</td><td class="z grp">12</td><td class="z">2</td><td class="z">0</td><td class="z grp">4</td><td class="z">1</td><td class="z">0</td><td class="z grp">12</td><td class="z">2</td><td class="z">0</td><td class="z grp">8</td><td class="z">1</td><td class="z">0</td></tr>
+<tr><td>Logistik</td><td class="z grp">14</td><td class="z">1</td><td class="z">0</td><td class="z grp">0</td><td class="z">0</td><td class="z">0</td><td class="z grp">14</td><td class="z">1</td><td class="z">0</td><td class="z grp">14</td><td class="z">1</td><td class="z">0</td></tr>
+<tr><td>Bereitstellungsraum</td><td class="z grp">38</td><td class="z">4</td><td class="z">1</td><td class="z grp">0</td><td class="z">0</td><td class="z">0</td><td class="z grp">38</td><td class="z">4</td><td class="z">1</td><td class="z grp">38</td><td class="z">4</td><td class="z">1</td></tr>
+<tr><td>EA 1 Deich Nord</td><td class="z grp">96</td><td class="z">12</td><td class="z">3</td><td class="z grp">32</td><td class="z">4</td><td class="z">1</td><td class="z grp">96</td><td class="z">12</td><td class="z">3</td><td class="z grp">64</td><td class="z">8</td><td class="z">2</td></tr>
+<tr><td>EA 2 Pumpen Süd</td><td class="z grp">74</td><td class="z">9</td><td class="z">2</td><td class="z grp">24</td><td class="z">3</td><td class="z">1</td><td class="z grp">74</td><td class="z">9</td><td class="z">2</td><td class="z grp">50</td><td class="z">6</td><td class="z">1</td></tr>
+<tr><td>EA 3 Evakuierung</td><td class="z grp">34</td><td class="z">3</td><td class="z">0</td><td class="z grp">0</td><td class="z">0</td><td class="z">0</td><td class="z grp">34</td><td class="z">3</td><td class="z">0</td><td class="z grp">34</td><td class="z">3</td><td class="z">0</td></tr>
+<tr class="sum"><td>Bestand (erfasst)</td><td class="z grp">268</td><td class="z">31</td><td class="z">6</td><td class="z grp">60</td><td class="z">8</td><td class="z">2</td><td class="z grp">268</td><td class="z">31</td><td class="z">6</td><td class="z grp">208</td><td class="z">23</td><td class="z">4</td></tr>
+<tr class="getrennt"><td>Zugänge <span class="sek">(Anmarsch, Eintreffzeit)</span></td><td class="z grp" style="color:#14652f">+24</td><td class="z" style="color:#14652f">+2</td><td class="z">0</td><td class="z grp">—</td><td class="z">—</td><td class="z">—</td><td class="z grp" style="color:#14652f">+24</td><td class="z" style="color:#14652f">+2</td><td class="z">0</td><td class="z grp" style="color:#14652f">+24</td><td class="z" style="color:#14652f">+2</td><td class="z">0</td></tr>
+<tr><td>Abgänge <span class="sek">(verfügbar bis, Ende)</span></td><td class="z grp">—</td><td class="z">—</td><td class="z">—</td><td class="z grp">—</td><td class="z">—</td><td class="z">—</td><td class="z grp" style="color:#8f1717">−14</td><td class="z" style="color:#8f1717">−1</td><td class="z">0</td><td class="z grp" style="color:#8f1717">−20</td><td class="z" style="color:#8f1717">−1</td><td class="z">0</td></tr>
+<tr class="sum"><td>Vorausschau</td><td class="z grp">292</td><td class="z">33</td><td class="z">6</td><td class="z grp">60</td><td class="z">8</td><td class="z">2</td><td class="z grp">278</td><td class="z">32</td><td class="z">6</td><td class="z grp">212</td><td class="z">24</td><td class="z">4</td></tr>
+</tbody>
+</table></div>
+<div class="zeitleiste">
+<h4>ZU- UND ABGÄNGE BIS 111443SEP26</h4>
+<div><b>heute 1630</b><span class="plus">+24</span><span>2. Zug FF Hude · EA 1 Deich Nord · Tag · Anmarsch, Eintreffen gemeldet 1402</span></div>
+<div><b>morgen 0600</b><span class="minus">−14</span><span>FGr WP OV Cloppenburg · EA 2 Pumpen Süd · verfügbar bis 110600SEP26</span></div>
+<div><b>morgen 1000</b><span class="minus">−6</span><span>SEG JUH Weser-Ems · EA 3 Evakuierung · Einsatzende 111000SEP26</span></div>
+<div><b>ohne Zeit</b><span class="null">+14</span><span>FGr WP OV Vechta · Ablösung für FGr WP OV Cloppenburg zugesagt, keine Eintreffzeit <span class="marke warn">nicht eingerechnet</span></span></div>
+</div></div>
+<div class="fussnote">Bestand = alle erfassten Einheiten der Einsatzbereiche, je Mahlzeit nach Mahlzeitenregel und Schicht. Zugänge zählen ab der gemeldeten Eintreffzeit, Abgänge ab „verfügbar bis", Einsatzende oder Rückführung. Was keine Zeit trägt, steht in der Liste, aber nicht in der Zahl. Die Bestellung von heute (280) lag vor der Anmarschmeldung, deshalb −12.</div>
+</div>
+</div>
+<div class="status">Stand: vor 6 s · Share erreichbar (vor 3 s) · 2 weitere Arbeitsplätze<span class="rechts">42 EINH · 24/61/183 // 268</span></div>
+</div>
+</div>
+<p class="dv-sub">Die Vorausschau ist die Antwort auf „was brauchen wir zu welcher Mahlzeit": vier Mahlzeiten in Zeitfolge statt eines Kalendertags, und anders als der Plan in <a href="#4d">4d</a> rechnet sie gemeldete Zu- und Abgänge ein. Die nächste Mahlzeit ist gewählt (2-px-Rahmen); „Bestellung …" bestellt die erste noch unbestellte.</p>
+</div>
+
 <!-- ================= 4e Blatt Versorgung · Unterbringung ================= -->
 <div class="dv-opt" id="4e"><div class="dv-olabel"><a class="dv-oid" href="#4e">4e</a>Blatt „Versorgung" — Unteransicht Unterbringung: Unterkünfte mit Belegung, Einheiten mit Übernachtungsbedarf und Zuweisung in der Zelle</div>
 <div class="dv-card" style="width:1320px;border-radius:2px">
@@ -342,7 +450,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 </div>
 <div class="flaeche" style="flex-direction:column;gap:0">
 <div class="werkzeuge">
-<div class="umschalter"><span>Verpflegung</span><span class="aktiv">Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
+<div class="umschalter"><span>Verpflegung</span><span>Nächste 24 h</span><span class="aktiv">Unterbringung</span><span>Bereiche · Schichten</span><span>Sofortbedarf</span></div>
 <span class="btn haupt" style="margin-left:10px">Unterkunft anlegen ⌃N</span>
 <span class="btn">Ändern</span>
 <span class="btn">Auflösen…</span>
@@ -410,7 +518,7 @@ table.t{width:100%;border-collapse:collapse;font-size:12px;line-height:1.35}
 <div class="scr kurz" data-screen-label="Versorgung Sofortbedarf">
 <div class="flaeche" style="flex-direction:column;gap:0">
 <div class="werkzeuge">
-<div class="umschalter"><span>Verpflegung</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="aktiv">Sofortbedarf</span></div>
+<div class="umschalter"><span>Verpflegung</span><span>Nächste 24 h</span><span>Unterbringung</span><span>Bereiche · Schichten</span><span class="aktiv">Sofortbedarf</span></div>
 <span class="btn haupt" style="margin-left:10px">Als erledigt melden (2)</span>
 <span class="btn">Wieder öffnen</span>
 <span class="btn">Erledigte ausblenden</span>

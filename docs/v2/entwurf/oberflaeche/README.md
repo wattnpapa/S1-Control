@@ -122,5 +122,6 @@ sind bei der nächsten Änderung an der Gestaltung neu zu erzeugen.
 Runde 4 liegt in einem eigenen Ordner: `../s4/KONZEPT-S4.md` und
 `../s4/mockups-s4.html` entwerfen die Versorgungsansichten für den S4
 (Monitor mit mehreren Ansichten und Kontextmenü, Blatt „Versorgung" mit
-Verpflegung, Unterbringung, Bereiche · Schichten, Sofortbedarf). Nichts davon
+Verpflegung, Vorausschau der nächsten 24 Stunden je Mahlzeit, Unterbringung,
+Bereiche · Schichten, Sofortbedarf). Nichts davon
 ist umgesetzt; die Gestaltung folgt Option 2a.

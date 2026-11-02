@@ -2,7 +2,7 @@
 
 Stand 2026-11-02. Das ist ein Entwurf, nichts davon ist umgesetzt. Der Text
 legt fest, was gebaut würde und aus welchen Daten; `mockups-s4.html` im selben
-Ordner zeigt, wie es aussähe (Runde 4, Optionen 4a bis 4f, Beispiellage
+Ordner zeigt, wie es aussähe (Runde 4, Optionen 4a bis 4h, Beispiellage
 „Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html`).
 
 Begriffe: S1 führt die Kräfte, S4 versorgt sie. In der THW-Führungsstelle ist
@@ -45,6 +45,7 @@ der Abgleich Bedarf gegen Bestellung.
 | Frage des S4 | Quelle im Modell | Stand |
 |---|---|---|
 | Wie viele Essen braucht die nächste Mahlzeit, je Bereich? | Gesamtstärke je Bereich (K2) und je Schicht (K24), Mahlzeitenregel je Schicht (neu, Parameter) | ableitbar |
+| Wie viel Essen zu welcher Mahlzeit in den nächsten 24 Stunden? | dasselbe je Mahlzeit in Zeitfolge, dazu Zugänge ab `eingetroffenAm` (erwartet) und Abgänge ab `verfuegbarBis`, `einsatzendeAm`, `rueckfuehrungAm` | ableitbar, Rechnung neu |
 | Wie viele davon vegetarisch oder vegan? | K4 aus Personen oder Override `vegetarisch`/`vegan` | vorhanden |
 | Weitere Kostformen (halal, Allergien, Diät)? | nicht im Bogen, nicht im Modell | neu, offen (Entscheidung 3) |
 | Wer braucht heute Nacht ein Bett, getrennt nach m/w/d? | K6 aus `sofortbedarf.unterbringung` und Personen, Override `uebernachtungM/W/D` | vorhanden |
@@ -79,8 +80,8 @@ die Ansicht am Bildschirm zeigen dieselbe Zahl, weil es dieselbe Funktion ist.
 ## 4. Der Monitor: Ansichten und Umschaltung
 
 Der Monitor bleibt ein Fenster mit einem Bild, bekommt aber mehrere Ansichten.
-Vier zum Start: Stärke (das heutige Bild, unverändert), Verpflegung,
-Unterbringung und die Tafel „Bereiche und Schichten". Jede Ansicht folgt den
+Fünf zum Start: Stärke (das heutige Bild, unverändert), Verpflegung, Nächste
+24 h, Unterbringung und die Tafel „Bereiche und Schichten". Jede Ansicht folgt den
 Regeln des heutigen Monitors: eine große Zahl, wenige Worte, Beschriftung über
 der Zahl, taktische Zeit darunter, Einsatz und Stand im Fuß, dynamische
 Schrift nach Fenstergröße (`schriftgroesse` in `monitorZahlen.ts` wird für
@@ -89,7 +90,10 @@ den Text der jeweiligen Ansicht wiederverwendet, keine zweite Heuristik).
 Verpflegung (Option 4a) nennt die nächste Mahlzeit mit Uhrzeit und Restzeit,
 darunter die Portionen als große Zahl, darunter vegetarisch und vegan, dann
 die Bestellung, falls eine vorliegt, und die Anmarschzahl mit dem Zusatz
-„nicht enthalten". Unterbringung (4b) nennt die Nacht, die Betten als große
+„nicht enthalten". Nächste 24 h (4h) ist die Vorausschau aus 5.2 als Tafel:
+eine Zeile je Mahlzeit in Zeitfolge mit Portionen, Kostformen, Bestand,
+Zugang, Abgang und Bestellung, die nächste Mahlzeit fett. Unterbringung (4b)
+nennt die Nacht, die Betten als große
 Zahl, die Aufteilung m/w/d, dann belegt, frei und ohne Zuweisung; die Zeile
 „ohne Zuweisung" ist in Bernstein, denn sie ist die Arbeit, die noch ansteht.
 Die Tafel (4c) ist das Logistikblatt in groß: eine Zeile je Bereich, Spalten
@@ -110,7 +114,7 @@ drei Sekunden ohne Bewegung verschwindet. Auf einem Monitor an der Wand ist
 die Maus meist nicht da; die Leiste ist für den Moment, in dem jemand mit dem
 Laptop danebensteht und ausprobiert.
 
-Tastatur: 1 bis 4 wählen die Ansicht, R schaltet den Wechsel ein und aus,
+Tastatur: 1 bis 5 wählen die Ansicht, R schaltet den Wechsel ein und aus,
 Leertaste hält einen laufenden Wechsel an, F11 Vollbild, Esc verlässt es.
 
 Der Wechsel ist absichtlich kein Standard: Ein Monitor, der von allein
@@ -131,9 +135,9 @@ einer anderen Tabelle darin.
 ## 5. Das Blatt „Versorgung"
 
 Ein neuer Reiter im Kopfband, zwischen Führungsstelle und Kosten, nur additiv
-in `blaetter.ts`. Das Blatt hat vier Unteransichten als Umschalter in der
-Werkzeugzeile (Option 4d bis 4f): Verpflegung, Unterbringung, Bereiche und
-Schichten, Sofortbedarf. Das KPI-Band über dem Blatt nennt die Zahlen des
+in `blaetter.ts`. Das Blatt hat fünf Unteransichten als Umschalter in der
+Werkzeugzeile (Option 4d bis 4g): Verpflegung, Nächste 24 h, Unterbringung,
+Bereiche und Schichten, Sofortbedarf. Das KPI-Band über dem Blatt nennt die Zahlen des
 Tages: Portionen der nächsten Mahlzeit, vegetarisch, vegan, Betten heute
 Nacht, ohne Unterkunft (Bernstein, wenn größer null) und Anmarsch. Das Blatt
 setzt nicht auf der Auswahl der Lage auf (`gehoertZurLage` bleibt falsch); es
@@ -159,7 +163,39 @@ zeigt den Verlauf der letzten Bestellungen des Tages als kurze Liste. Die
 Bestellliste als PDF ist eine neue Ausgabe in `@s1/ausgaben`, die den Plan
 mit der Bestellung zusammenführt.
 
-### 5.2 Unterbringung (4e)
+### 5.2 Nächste 24 h (4g)
+
+Die Frage des S4 am Nachmittag lautet nicht „wie viele sind heute da",
+sondern „was brauche ich zu welcher Mahlzeit bis morgen um diese Zeit". Die
+Vorausschau beantwortet sie: die Mahlzeiten der nächsten 24 Stunden in
+Zeitfolge, bei 1443 also Abend 1800 heute, Nacht 0000, Frühstück 0600 und
+Mittag 1200 morgen; ein Umschalter weitet auf 48 Stunden.
+
+Je Mahlzeit stehen oben vier Karten mit der Vorausschau als große Zahl,
+Kostformen, der Rechnung dahinter und dem Stand der Bestellung; die nächste
+Mahlzeit trägt den 2-px-Rahmen. Darunter die Tabelle: eine Zeile je Bereich,
+je Mahlzeit drei Spalten (Portionen, vegetarisch, vegan), dann die Zeilen
+Bestand, Zugänge, Abgänge und Vorausschau. Rechts daneben die Liste der Zu-
+und Abgänge mit Uhrzeit, Einheit, Bereich und Grund.
+
+Die Rechnung je Mahlzeit: Bestand sind alle erfassten Einheiten der
+Einsatzbereiche, nach Mahlzeitenregel und Schicht gefiltert, dieselbe Zahl
+wie im Mahlzeitenplan. Zugänge sind Einheiten im Anmarsch, deren gemeldete
+Eintreffzeit vor der Ausgabezeit liegt. Abgänge sind Einheiten, deren
+„verfügbar bis", Einsatzende oder Rückführung vor der Ausgabezeit liegt. Was
+keine Zeit trägt, etwa eine zugesagte Ablösung ohne Eintreffzeit, steht in
+der Liste mit der Marke „nicht eingerechnet", aber nicht in der Zahl: Eine
+Vorausschau, die rät, ist schlechter als eine, die sagt, was sie nicht weiß.
+
+Das ist die eine Stelle, an der der Anmarsch in eine Zahl eingeht, und sie
+ist als Vorausschau beschriftet. Die Bestellung der nächsten Mahlzeit nimmt
+die Vorausschau als Vorschlag; wer die Reserve anders setzt, überschreibt die
+Zahl in der Bestellmaske. Liegt eine Bestellung unter der Vorausschau, weil
+nach der Bestellung noch eine Einheit gemeldet wurde, zeigt die Karte die
+Differenz in Bernstein. Die Vorausschau als PDF ist die dritte neue Ausgabe,
+für den Verpflegungsträger, der morgen früh kocht.
+
+### 5.3 Unterbringung (4e)
 
 Links die Unterkünfte als Karten: Name, Ort, Kapazität, Belegung als Balken
 in m/w/d, frei, dazu eine Marke „voll" oder „frei". „Unterkunft anlegen" ist
@@ -177,7 +213,7 @@ verhindern.
 Die Belegungsliste als PDF ist die zweite neue Ausgabe: je Unterkunft die
 Einheiten mit Köpfen, für den Zettel an der Hallentür.
 
-### 5.3 Bereiche und Schichten
+### 5.4 Bereiche und Schichten
 
 Das Logistikblatt am Bildschirm, aus `projektion.logistikblatt` ohne jede
 Änderung an der Rechnung, mit Live-Aktualisierung über den Zeiger des
@@ -185,7 +221,7 @@ Lagebilds (M3.7) statt über ein neu erzeugtes PDF. Die Fußnote zur Rechnung
 hinter „Männl." (`LOG_FUSSNOTE`) steht auch hier. Dieses Stück ist das
 kleinste und kommt zuerst (Abschnitt 7).
 
-### 5.4 Sofortbedarf (4f)
+### 5.5 Sofortbedarf (4f)
 
 Eine Tabelle über alle Einheiten mit Sofortbedarf aus dem Bogen: eingetroffen
 um, Verpflegung für n Personen, Diesel, Benzin, Gemisch in Litern,
@@ -225,9 +261,11 @@ Mahlzeitenregel: `MahlzeitenregelGesetzt` am Einsatz, Nutzlast je Mahlzeit
 die Ausgabezeit und die Schichten, die sie bekommen; Vorbelegung in `werte.ts`
 neben `KOSTEN_VORBELEGUNG`.
 
-Das `Lagebild` wächst um ein kleines Feld `versorgung` mit rund zehn Zahlen
-(Portionen und Kostformen der nächsten Mahlzeit, Mahlzeit und Zeit, Betten
-m/w/d, belegt, frei, ohne Zuweisung, Anmarsch). Das ist derselbe Umfang wie
+Das `Lagebild` wächst um ein kleines Feld `versorgung`: Portionen und
+Kostformen der nächsten Mahlzeit, Mahlzeit und Zeit, Betten m/w/d, belegt,
+frei, ohne Zuweisung, Anmarsch, dazu je Mahlzeit der nächsten 24 Stunden
+Portionen, vegetarisch, vegan, Bestand, Zugang, Abgang und bestellte Menge,
+also vier mal sieben Zahlen. Das ist derselbe Umfang wie
 `gesamtstaerke` und `staerkeJeStatus` und damit mit der Festlegung aus M2
 vereinbar, keine Tabelle in das Lagebild zu legen. Der Monitor braucht genau
 diese Zahlen und nichts weiter. Alles Weitere (Mahlzeitenplan, Unterkünfte,
@@ -247,12 +285,14 @@ Umschaltung im Renderer liegen.
 
 Senkrecht geschnitten, jeder Schnitt für sich prüfbar und nützlich:
 
-S4.1 Blatt „Versorgung" mit der Unteransicht „Bereiche und Schichten" aus
-der bestehenden Projektion, dazu der Monitor mit den Ansichten Verpflegung
-(ohne Bestellung), Unterbringung (nur Bedarf) und Tafel, Kontextmenü,
-Hover-Leiste, Tasten, Wechselschalter. Keine neuen Ereignisse. Tests: Monitor
-in jsdom je Ansicht, Menü und Tasten; `versorgung`-Feld im Lagebild gegen
-`logistikblatt` geprüft.
+S4.1 Blatt „Versorgung" mit den Unteransichten „Bereiche und Schichten" aus
+der bestehenden Projektion und „Nächste 24 h" mit fester Mahlzeitenregel
+(Vorbelegung, noch ohne Parameter), dazu der Monitor mit den Ansichten
+Verpflegung (ohne Bestellung), Nächste 24 h (ohne Bestellung), Unterbringung
+(nur Bedarf) und Tafel, Kontextmenü, Hover-Leiste, Tasten, Wechselschalter.
+Keine neuen Ereignisse. Tests: Monitor in jsdom je Ansicht, Menü und Tasten;
+`versorgung`-Feld im Lagebild gegen `logistikblatt` geprüft; Vorausschau mit
+Zugang vor und nach der Ausgabezeit, Abgang, Einheit ohne Zeit.
 
 S4.2 Unterkünfte und Zuweisung: Entität, Ereignisse, Fold, Unteransicht
 Unterbringung, Belegungsliste, Monitor zeigt belegt/frei/ohne Zuweisung.
@@ -283,9 +323,10 @@ Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei S4.2 und S4.3
    Vorbelegung, weil Nachtverpflegung je nach Lage um 0000 oder um 0200 liegt.
 5. `versorgung.html` als zweite Monitordatei auf dem Share, oder reicht das
    Zweitfenster?
-6. Soll die Bestellung auch die Anmarschkräfte mitplanen können (Schalter
-   „Anmarsch mitzählen" mit Eintreffzeit aus `eingetroffenAm`), oder bleibt
-   der Anmarsch immer getrennt? Der Entwurf lässt ihn getrennt und zeigt die
-   Zahl daneben.
+6. Der Anmarsch geht nur in die Vorausschau (5.2) ein, mit Eintreffzeit;
+   Mahlzeitenplan und Monitoransicht „Verpflegung" zeigen ihn getrennt
+   daneben. Offen bleibt, ob eine zugesagte Ablösung ohne Eintreffzeit eine
+   Vorgabezeit bekommen darf (etwa die Ausgabezeit der übernächsten
+   Mahlzeit) oder immer „nicht eingerechnet" bleibt.
 7. Ruhezeit: nur das Ja/Nein des Bogens, oder eine Zeit „ab wann", damit die
    Unterbringung sagen kann, wann eine Halle wieder frei wird?
