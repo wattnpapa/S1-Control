@@ -367,6 +367,15 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
       nutzlastVersion: 1, entitaet: "bestellung", idFeld: "bestellungId", feld: fest("storniert"),
       festerWert: false, klasse: "LWW_FELD" }),
 
+  // S4.4 Sofortbedarf-Abarbeitung
+  e({ typ: "SofortbedarfErledigt", form: "a", schema: S.SofortbedarfErledigt, nutzlastVersion: 1,
+      entitaet: "einheit", idFeld: "einheitId", feld: ausNutzlast("feld", "sofortbedarfErledigt"),
+      festerWert: true, klasse: "LWW_FELD", gegenereignis: "SofortbedarfWiederOffen" }),
+  e({ typ: "SofortbedarfWiederOffen", form: "a", schema: S.SofortbedarfWiederOffen,
+      nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId",
+      feld: ausNutzlast("feld", "sofortbedarfErledigt"), festerWert: false, klasse: "LWW_FELD",
+      gegenereignis: "SofortbedarfErledigt" }),
+
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,
       entitaet: "etbEintrag", idFeld: "etbId", klasse: "ADDITIV", ohneUndo: true }),

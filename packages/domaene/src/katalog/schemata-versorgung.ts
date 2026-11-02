@@ -86,3 +86,13 @@ export const MahlzeitGeliefert = z.object({ bestellungId: zId });
 /** `grund` ist Pflicht: Eine Stornierung lässt eine Küche umsonst kochen. */
 export const MahlzeitStorniert = z.object({ bestellungId: zId });
 export const MahlzeitStornoZurueckgenommen = z.object({ bestellungId: zId });
+
+// --- Sofortbedarf-Abarbeitung (S4.4) ----------------------------------------
+
+/** Die Felder des Sofortbedarfs aus dem Bogen, je einzeln erledigbar. */
+export const SOFORTBEDARF_FELDER = ["VERPFLEGUNG", "DIESEL", "BENZIN", "GEMISCH", "UNTERBRINGUNG", "RUHEZEIT"] as const;
+export const zSofortbedarfFeld = z.enum(SOFORTBEDARF_FELDER);
+
+/** Je Feld ein Ereignis: Diesel kann erledigt sein und Unterbringung noch nicht. */
+export const SofortbedarfErledigt = z.object({ einheitId: zId, feld: zSofortbedarfFeld });
+export const SofortbedarfWiederOffen = z.object({ einheitId: zId, feld: zSofortbedarfFeld });

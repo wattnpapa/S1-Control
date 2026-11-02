@@ -180,15 +180,12 @@ export {
   MAHLZEIT_TEXT,
   mahlzeitenplan,
   regeltext,
-  sofortbedarfsliste,
   versorgungsblatt,
   versorgungszahlen,
   type Bestellstand,
   type Mahlzeitenplan,
   type Mahlzeitzahlen,
   type Planzeile,
-  type Sofortbedarfsliste,
-  type Sofortbedarfszeile,
   type Versorgungsblatt,
   type Versorgungszahlen,
 } from "./versorgung-blatt.js";
@@ -216,3 +213,11 @@ export {
   type Unterbringungszustand,
   type Unterkunftskarte,
 } from "./unterkunft.js";
+
+export {
+  sofortbedarfsliste,
+  type Sofortbedarfsfeld,
+  type Sofortbedarfsliste,
+  type Sofortbedarfssumme,
+  type Sofortbedarfszeile,
+} from "./sofortbedarf.js";

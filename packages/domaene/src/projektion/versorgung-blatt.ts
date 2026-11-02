@@ -22,12 +22,10 @@ import {
   type Bestellzeile,
 } from "./bestellung.js";
 import { regelstand } from "./mahlzeitenregel.js";
+import { sofortbedarfsliste, type Sofortbedarfsliste } from "./sofortbedarf.js";
 import {
   versorgungseinheiten,
   vorausschauAus,
-  bezeichnung,
-  bogenbedarf,
-  zahl,
   type Kost,
   type Versorgungseinheit,
   type Versorgungsoptionen,
@@ -147,67 +145,6 @@ export function mahlzeitenplan(
     summe: liste.reduce(zeilenSumme, leerePlanzeile("GESAMT", "Gesamt")),
     anmarsch,
   };
-}
-
-// ---------------------------------------------------------------------------
-// Sofortbedarf (4f)
-// ---------------------------------------------------------------------------
-
-export interface Sofortbedarfszeile {
-  readonly einheitId: string;
-  readonly einheit: string;
-  readonly bereich: string;
-  readonly eingetroffenAm?: string;
-  readonly verpflegungPersonen: number;
-  readonly dieselLiter: number;
-  readonly benzinLiter: number;
-  readonly gemischLiter: number;
-  readonly unterbringung: boolean;
-  readonly ruhezeit: boolean;
-  /** Der Stand des Bogens, aus dem der Bedarf stammt. */
-  readonly stand?: string;
-}
-
-export interface Sofortbedarfsliste {
-  readonly zeilen: readonly Sofortbedarfszeile[];
-  readonly summe: { readonly verpflegungPersonen: number; readonly dieselLiter: number; readonly benzinLiter: number; readonly gemischLiter: number; readonly unterbringung: number; readonly ruhezeit: number };
-}
-
-/** Die Abarbeitungsliste der Erstmeldungen aus dem Bogen (4f). */
-export function sofortbedarfsliste(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): Sofortbedarfsliste {
-  const zeilen: Sofortbedarfszeile[] = [];
-  for (const eintrag of einheiten) {
-    const bedarf = bogenbedarf(eintrag);
-    if (bedarf === undefined) continue;
-    const eingetroffen = eintrag.einheit.eingetroffenAm?.wert;
-    const meldungId = eintrag.einheit.meldungId?.wert;
-    const stand = typeof meldungId === "string" ? zustand.meldungen[meldungId]?.stand.wert : undefined;
-    zeilen.push({
-      einheitId: eintrag.einheit.id,
-      einheit: bezeichnung(eintrag),
-      bereich: eintrag.bereich,
-      ...(typeof eingetroffen === "string" ? { eingetroffenAm: eingetroffen } : {}),
-      verpflegungPersonen: zahl(bedarf.verpflegungPersonen),
-      dieselLiter: zahl(bedarf.dieselLiter),
-      benzinLiter: zahl(bedarf.benzinLiter),
-      gemischLiter: zahl(bedarf.gemischLiter),
-      unterbringung: bedarf.unterbringung === true,
-      ruhezeit: bedarf.ruhezeitErforderlich === true,
-      ...(typeof stand === "string" ? { stand } : {}),
-    });
-  }
-  const summe = zeilen.reduce(
-    (s, z) => ({
-      verpflegungPersonen: s.verpflegungPersonen + z.verpflegungPersonen,
-      dieselLiter: s.dieselLiter + z.dieselLiter,
-      benzinLiter: s.benzinLiter + z.benzinLiter,
-      gemischLiter: s.gemischLiter + z.gemischLiter,
-      unterbringung: s.unterbringung + (z.unterbringung ? 1 : 0),
-      ruhezeit: s.ruhezeit + (z.ruhezeit ? 1 : 0),
-    }),
-    { verpflegungPersonen: 0, dieselLiter: 0, benzinLiter: 0, gemischLiter: 0, unterbringung: 0, ruhezeit: 0 },
-  );
-  return { zeilen, summe };
 }
 
 // ---------------------------------------------------------------------------

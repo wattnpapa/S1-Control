@@ -47,6 +47,15 @@ function zielDerAufloesung(zustand: Zustand, ereignis: EingehendesEreignis): str
  *
  * @param betreff „Name: Vorgang“, wie `tagebuchsatz` ihn bildet.
  */
+const SOFORT_WORT: Readonly<Record<string, string>> = {
+  VERPFLEGUNG: "Verpflegung",
+  DIESEL: "Diesel",
+  BENZIN: "Benzin",
+  GEMISCH: "Gemisch",
+  UNTERBRINGUNG: "Unterbringung",
+  RUHEZEIT: "Ruhezeit",
+};
+
 /** Der Name einer Unterkunft statt ihrer Kennung (S4.2). */
 export function unterkunftsname(zustand: Zustand, id: unknown): string {
   if (typeof id !== "string") return "—";
@@ -96,6 +105,11 @@ export function klartextsatz(
     case "EinheitUntergebracht":
     case "UnterbringungAufgehoben":
       return unterbringungssatz(zustand, ereignis, betreff);
+    case "SofortbedarfErledigt":
+    case "SofortbedarfWiederOffen": {
+      const feld = (ereignis.nutzlast as { feld?: unknown } | null)?.feld;
+      return `${betreff}: ${SOFORT_WORT[String(feld)] ?? String(feld)}`;
+    }
     case "MahlzeitenregelGesetzt":
     case "AusgabestelleAngelegt":
     case "AbschnittAusgabestelleGesetzt":

@@ -44,9 +44,10 @@ import type {
  * **4** mit der Versorgung (S4): Unterkunft als Entitaet und das Feld
  * `unterkunftId` an der Einheit — ein Schnappschuss der Fassung 3 haette
  * diese Ereignisse als unbekannt gefaltet. **5** mit Mahlzeitenregel,
- * Ausgabestellen und Bestellungen (S4.3).
+ * Ausgabestellen und Bestellungen (S4.3). **6** mit der Abarbeitung des
+ * Sofortbedarfs je Feld (S4.4).
  */
-export const FOLD_VERSION = 5;
+export const FOLD_VERSION = 6;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -250,6 +251,8 @@ export interface EinheitZustand extends Anlage {
   /** Override je Feld (§5.4). */
   readonly logistik: { readonly [feld: string]: Feld<number> };
   readonly sofortbedarf?: Feld<Sofortbedarf>;
+  /** S4.4: je Feld des Sofortbedarfs erledigt (`true`) oder wieder offen (`false`). */
+  readonly sofortbedarfErledigt?: { readonly [feld: string]: Feld<boolean> };
   /** S4.2: die Unterkunft, in der die Einheit schläft; `null` nach Aufhebung. */
   readonly unterkunftId?: Feld<Id>;
   readonly psaSaetzeProTag?: Feld<number>;

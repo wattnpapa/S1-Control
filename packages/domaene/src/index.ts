@@ -152,6 +152,8 @@ export type {
   Planzeile,
   Schichtplanblatt,
   Sofortbedarfsliste,
+  Sofortbedarfszeile,
+  Sofortbedarfsfeld,
   Belegung,
   Bestellstand,
   Bestellzeile,

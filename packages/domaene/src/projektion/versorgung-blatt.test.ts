@@ -22,12 +22,12 @@ import { MAHLZEITENREGEL_VORBELEGUNG } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 
 import { logistikblatt } from "./logistik.js";
+import { sofortbedarfsliste } from "./sofortbedarf.js";
 import { unterbringungsbedarf } from "./unterkunft.js";
 import { versorgungseinheiten } from "./versorgung.js";
 import {
   mahlzeitenplan,
   regeltext,
-  sofortbedarfsliste,
   versorgungsblatt,
   versorgungszahlen,
 } from "./versorgung-blatt.js";

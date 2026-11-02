@@ -149,6 +149,9 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   MahlzeitGeliefert: "Lieferung gemeldet",
   MahlzeitStorniert: "Bestellung storniert",
   MahlzeitStornoZurueckgenommen: "Stornierung der Bestellung zurückgenommen",
+  // S4.4 Sofortbedarf
+  SofortbedarfErledigt: "Sofortbedarf erledigt",
+  SofortbedarfWiederOffen: "Sofortbedarf wieder offen",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -189,6 +192,12 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   fuestName: "Führungsstelle",
   uebergeordneteFuestName: "übergeordnete Führungsstelle",
   kapazitaet: "Kapazität",
+  VERPFLEGUNG: "Verpflegung",
+  DIESEL: "Diesel",
+  BENZIN: "Benzin",
+  GEMISCH: "Gemisch",
+  UNTERBRINGUNG: "Unterbringung",
+  RUHEZEIT: "Ruhezeit",
 };
 
 // ---------------------------------------------------------------------------
