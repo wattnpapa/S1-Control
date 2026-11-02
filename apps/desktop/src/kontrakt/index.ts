@@ -265,7 +265,7 @@ export const zVersorgungszahlen = z.object({
     )
     .readonly(),
   anmarsch: zZahl,
-  betten: z.object({ m: zZahl, w: zZahl, d: zZahl }),
+  betten: z.object({ m: zZahl, w: zZahl, d: zZahl, gesamt: zZahl }),
   belegt: zZahl.optional(),
   frei: zZahl.optional(),
   ohneZuweisung: zZahl.optional(),
@@ -923,6 +923,8 @@ export interface Versorgungsansicht extends Ansichtsstand {
   readonly blatt: Versorgungsblatt;
   /** Das Logistikblatt unverändert (Bereiche · Schichten, Tafel 4c). */
   readonly logistik: Logistikblatt;
+  /** Die Fußnote des Blattes „Log" (`LOG_FUSSNOTE`), wörtlich wie auf Papier. */
+  readonly logistikFussnote: string;
 }
 
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {

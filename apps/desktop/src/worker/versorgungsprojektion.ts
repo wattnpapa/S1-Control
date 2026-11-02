@@ -14,6 +14,7 @@
  * deshalb das letzte Ergebnis je Zustand und Minute.
  */
 
+import { LOG_FUSSNOTE } from "@s1/ausgaben";
 import { projektion, type Zustand } from "@s1/domaene";
 
 import type { Ruf, Versorgungsansicht, Versorgungszahlen } from "../kontrakt/index.js";
@@ -57,5 +58,6 @@ export function versorgungsansicht(
       stunden: ruf.stunden ?? 24,
     }),
     logistik: projektion.logistikblatt(zustand),
+    logistikFussnote: LOG_FUSSNOTE,
   };
 }

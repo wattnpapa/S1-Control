@@ -96,7 +96,8 @@ describe("Die Zahlen des Monitors (Lagebild.versorgung)", () => {
     const zahlen = versorgungszahlen(z, { jetzt: PRUEFJETZT, versatzMinuten: 120 });
     expect(zahlen.mahlzeiten).toHaveLength(4);
     expect(zahlen.mahlzeiten[0]?.mahlzeit).toBe("ABEND");
-    expect(zahlen.betten).toEqual(logistikblatt(z).gesamt.uebernachtung);
+    const un = logistikblatt(z).gesamt.uebernachtung;
+    expect(zahlen.betten).toEqual({ ...un, gesamt: un.m + un.w + un.d });
     expect(zahlen.anmarsch).toBe(logistikblatt(z).angefordert.gesamt);
     const erste = zahlen.mahlzeiten[0];
     expect(erste?.portionen).toBe((erste?.bestand ?? 0) + (erste?.zugang ?? 0) - (erste?.abgang ?? 0));
@@ -105,7 +106,7 @@ describe("Die Zahlen des Monitors (Lagebild.versorgung)", () => {
 
   it("nennt im leeren Einsatz Nullen und keine nächste Mahlzeit ohne Zeit", () => {
     const leer = materialisiere(leereFaltung());
-    expect(versorgungszahlen(leer, { jetzt: "kaputt" })).toEqual({ mahlzeiten: [], anmarsch: 0, betten: { m: 0, w: 0, d: 0 } });
+    expect(versorgungszahlen(leer, { jetzt: "kaputt" })).toEqual({ mahlzeiten: [], anmarsch: 0, betten: { m: 0, w: 0, d: 0, gesamt: 0 } });
   });
 
   it("baut das Blatt aus derselben Klassifizierung", () => {
@@ -113,5 +114,6 @@ describe("Die Zahlen des Monitors (Lagebild.versorgung)", () => {
     expect(blatt.vorausschau.mahlzeiten).toHaveLength(8);
     expect(blatt.plan.summe.koepfe).toBe(logistikblatt(lage()).gesamt.gesamt);
     expect(blatt.regeltext).toContain("Nacht →");
+    expect(blatt.unterbringung.summe.gesamt).toBe(blatt.unterbringung.zeilen.filter((z) => !z.anmarsch).reduce((s, z) => s + z.m + z.w + z.d, 0));
   });
 });

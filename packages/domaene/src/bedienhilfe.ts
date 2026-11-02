@@ -44,6 +44,7 @@ export type Ansichtskennung =
   | "eingangskorb"
   | "anforderungen"
   | "fuehrungsstelle"
+  | "versorgung"
   | "kosten"
   | "ausgaben"
   | "diagnose";
@@ -134,6 +135,17 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     ueberraschung:
       "Ein angelegter Dienstposten belegt noch keinen Platz im Schichtplan. Der Plan hängt an der Kombination aus Posten und Datum.",
     kuerzel: ["anlegen", "entfernen"],
+  },
+  {
+    kennung: "versorgung",
+    titel: "Versorgung",
+    wozu:
+      "Die Ansicht des S4: Verpflegung je Bereich und Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, das Logistikblatt am Bildschirm, der Übernachtungsbedarf nach m/w/d und der Sofortbedarf aus den Bögen.",
+    zuerst:
+      "Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird.",
+    ueberraschung:
+      "Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit. Was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste.",
+    kuerzel: [],
   },
   {
     kennung: "kosten",

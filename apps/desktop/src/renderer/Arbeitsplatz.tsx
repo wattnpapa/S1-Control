@@ -27,6 +27,7 @@ import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { Verbindungsbanner } from "./Verbindungsbanner.js";
+import { Versorgung } from "./Versorgung.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import { useBrowserNavigation } from "./navigation.js";
 import { ladeMerker, loescheMerker, merkeStand, speichereMerker } from "./sitzung.js";
@@ -188,6 +189,7 @@ export function Arbeitsplatz(): React.JSX.Element {
             {blatt === "eingang" && <Eingangskorb />}
             {blatt === "anforderungen" && <Anforderungen />}
             {blatt === "fuest" && <Fuehrungsstelle />}
+            {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}
             {blatt === "fueorg" && <Fuehrungsorganisation />}
             {blatt === "diagnose" && (

@@ -1576,6 +1576,234 @@
         text-align: right;
       }
 
+      /* ---- Das Blatt „Versorgung" (S4.1, KONZEPT-S4.md §5) ------------- */
+
+      /* Wie die Lage keine Karte, sondern die Fläche, auf der Band,
+         Werkzeugzeile und Karten liegen. Alle Farben kommen aus den Marken. */
+      main > section.versorgung {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .versorgung h2 {
+        margin: 0;
+      }
+      .kpiband {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        margin: 0;
+        background: var(--karte);
+        border: var(--rahmenbreite) solid var(--rahmen);
+      }
+      .kpiband .kpi {
+        display: flex;
+        flex-direction: column-reverse;
+        padding: 10px 14px;
+        border-left: var(--rahmenbreite) solid var(--rahmen-weich);
+      }
+      .kpiband .kpi:first-child {
+        border-left: 0;
+      }
+      .kpiband dd {
+        margin: 0;
+        font: 700 26px/1.1 var(--ui);
+        font-variant-numeric: tabular-nums;
+        color: var(--text);
+      }
+      .kpiband dt {
+        margin-top: 4px;
+        font: 600 0.78em/1.2 var(--mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--text-leise);
+      }
+      /* „ohne Unterkunft" ist die Arbeit, die ansteht: Bernstein. */
+      .kpiband .kpi.warn {
+        background: var(--warn-bg);
+      }
+      .kpiband .kpi.warn dd,
+      .kpiband .kpi.warn dt {
+        color: var(--warn-text);
+      }
+      .kpiband .kpi.leise {
+        background: var(--zeile-alt);
+      }
+      .werkzeugzeile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+      }
+      .werkzeughinweis {
+        color: var(--text-leise);
+        font-size: 0.92em;
+      }
+      /* Der Umschalter: Knöpfe ohne Zwischenraum, der gewählte gefüllt. */
+      .umschalter {
+        display: inline-flex;
+      }
+      .umschalter button + button {
+        border-left-width: 0;
+      }
+      .umschalter button[aria-pressed="true"] {
+        background: var(--knopf-fuellung);
+        border-color: var(--knopf-fuellung);
+        color: var(--knopf-fuellung-text);
+        font-weight: 700;
+      }
+      .versorgungskarte h3 {
+        margin: 0 0 8px;
+      }
+      .versorgung .leise {
+        color: var(--text-leise);
+        font-weight: 400;
+      }
+      .versorgungstabelle {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.95em;
+      }
+      .versorgungstabelle th,
+      .versorgungstabelle td {
+        padding: 4px 8px;
+        border-bottom: var(--rahmenbreite) solid var(--rahmen-weich);
+        text-align: left;
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .versorgungstabelle thead th {
+        background: var(--kopf-bg);
+        color: var(--text-leise);
+        font: 600 0.78em/1.3 var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .versorgungstabelle .zahl {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .versorgungstabelle .trenner {
+        border-left: var(--rahmenbreite) solid var(--rahmen);
+      }
+      .versorgungstabelle tr.summenzeile th,
+      .versorgungstabelle tr.summenzeile td {
+        font-weight: 700;
+        background: var(--kopf-bg);
+      }
+      .versorgungstabelle tr.anmarschzeile th,
+      .versorgungstabelle tr.anmarschzeile td {
+        color: var(--text-leise);
+      }
+      .versorgungstabelle tr.anmarschzeile .marke-zustand {
+        margin-left: 8px;
+      }
+      .versorgungstabelle tr.zugangszeile td,
+      .vorausschaukarte .zugang {
+        color: var(--ok-text);
+      }
+      .versorgungstabelle tr.abgangszeile td,
+      .vorausschaukarte .abgang {
+        color: var(--err-text);
+      }
+      .vorausschaukarten {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+        gap: 10px;
+        margin-bottom: 12px;
+      }
+      .vorausschaukarte {
+        padding: 9px 12px;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        background: var(--karte);
+      }
+      /* Die nächste Mahlzeit trägt den 2-px-Rahmen. */
+      .vorausschaukarte.naechste {
+        border: 2px solid var(--kartenkante-farbe);
+      }
+      .vorausschaukarte header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .vorausschaukarte header .marke-zustand {
+        margin-left: auto;
+      }
+      .vorausschaukarte .grosszahl {
+        margin: 6px 0 2px;
+        font: 700 26px/1.1 var(--ui);
+        font-variant-numeric: tabular-nums;
+      }
+      .vorausschaukarte .grosszahl .leise {
+        font-size: 13px;
+      }
+      .vorausschaukarte .rechnung {
+        margin: 0;
+        color: var(--text-leise);
+        font-variant-numeric: tabular-nums;
+      }
+      .vorausschauflaeche {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) 300px;
+        gap: 12px;
+        align-items: start;
+      }
+      .vorausschauflaeche .tabellenrahmen {
+        overflow-x: auto;
+      }
+      .bewegungsliste h4 {
+        margin: 0 0 6px;
+        font: 600 0.78em/1.3 var(--mono);
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+        color: var(--text-leise);
+      }
+      .bewegungsliste ul {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .bewegungsliste li {
+        display: grid;
+        grid-template-columns: 5.5em 3.5em 1fr;
+        gap: 2px 8px;
+        padding: 5px 0;
+        border-bottom: var(--rahmenbreite) solid var(--rahmen-weich);
+        font-variant-numeric: tabular-nums;
+      }
+      .bewegungsliste li .marke-zustand {
+        grid-column: 3;
+        justify-self: start;
+      }
+      .bewegungsliste .wann {
+        font-family: var(--mono);
+      }
+      .bewegungsliste .bewegung-zugang .zahl {
+        color: var(--ok-text);
+      }
+      .bewegungsliste .bewegung-abgang .zahl {
+        color: var(--err-text);
+      }
+      .bewegungsliste .bewegung-ohne_zeit .zahl {
+        color: var(--text-leise);
+      }
+      .versorgungsfuss {
+        margin: 0;
+        color: var(--text-leise);
+        font-size: 0.92em;
+      }
+      @media (max-width: 900px) {
+        .kpiband {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+        .vorausschauflaeche {
+          grid-template-columns: minmax(0, 1fr);
+        }
+      }
+
       .anforderungen h2,
       .kosten h2 {
         font-size: 1rem;

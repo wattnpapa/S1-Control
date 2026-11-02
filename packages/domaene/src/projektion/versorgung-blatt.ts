@@ -169,6 +169,36 @@ function bezeichnung(eintrag: Versorgungseinheit): string {
   return typeof wert === "string" ? wert : eintrag.einheit.id;
 }
 
+export interface Bettensumme {
+  readonly m: number;
+  readonly w: number;
+  readonly d: number;
+  readonly gesamt: number;
+}
+
+export interface Unterbringungsbedarf {
+  readonly zeilen: readonly Bedarfszeile[];
+  /** Die Summe der Einsatzbereiche — ohne Anmarsch, wie K6 im Logistikblatt. */
+  readonly summe: Bettensumme & { readonly einheiten: number };
+  readonly anmarsch: Bettensumme & { readonly einheiten: number };
+}
+
+function bettenPlus(s: Bettensumme & { einheiten: number }, z: Bedarfszeile): Bettensumme & { einheiten: number } {
+  return { m: s.m + z.m, w: s.w + z.w, d: s.d + z.d, gesamt: s.gesamt + z.m + z.w + z.d, einheiten: s.einheiten + 1 };
+}
+
+const BETTEN_NULL = { m: 0, w: 0, d: 0, gesamt: 0, einheiten: 0 };
+
+/** Der Übernachtungsbedarf (K6) mit Summen, Anmarsch getrennt. */
+export function unterbringung(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): Unterbringungsbedarf {
+  const zeilen = unterbringungsbedarf(zustand, einheiten);
+  return {
+    zeilen,
+    summe: zeilen.filter((z) => !z.anmarsch).reduce(bettenPlus, BETTEN_NULL),
+    anmarsch: zeilen.filter((z) => z.anmarsch).reduce(bettenPlus, BETTEN_NULL),
+  };
+}
+
 /** Die Einheiten mit Übernachtungsbedarf (K6), Anmarsch zuletzt. */
 export function unterbringungsbedarf(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): readonly Bedarfszeile[] {
   const zeilen: Bedarfszeile[] = [];
@@ -266,8 +296,12 @@ export interface Versorgungszahlen {
   readonly mahlzeiten: readonly Mahlzeitzahlen[];
   /** Köpfe im Anmarsch — stehen daneben, nie darin. */
   readonly anmarsch: number;
-  /** Übernachtungsbedarf der Einsatzbereiche nach m/w/d (K6). */
-  readonly betten: { readonly m: number; readonly w: number; readonly d: number };
+  /** Übernachtungsbedarf der Einsatzbereiche nach m/w/d (K6) und zusammen. */
+  readonly betten: Bettensumme;
+}
+
+function bettenAus(un: { readonly m: number; readonly w: number; readonly d: number }): Bettensumme {
+  return { ...un, gesamt: un.m + un.w + un.d };
 }
 
 /** Die kleine Zusammenfassung fürs Lagebild — aus derselben Vorausschau wie das Blatt. */
@@ -290,7 +324,7 @@ export function versorgungszahlen(zustand: Zustand, optionen: Versorgungsoptione
       abgang: m.abgang.portionen,
     })),
     anmarsch,
-    betten: logistikblatt(zustand).gesamt.uebernachtung,
+    betten: bettenAus(logistikblatt(zustand).gesamt.uebernachtung),
   };
 }
 
@@ -299,7 +333,7 @@ export interface Versorgungsblatt {
   readonly vorausschau: Vorausschau;
   readonly plan: Mahlzeitenplan;
   readonly regeltext: string;
-  readonly unterbringung: readonly Bedarfszeile[];
+  readonly unterbringung: Unterbringungsbedarf;
   readonly sofortbedarf: Sofortbedarfsliste;
 }
 
@@ -313,7 +347,7 @@ export function versorgungsblatt(zustand: Zustand, optionen: Versorgungsoptionen
       : vorausschauAus(einheiten, jetzt, { ...optionen, regel }),
     plan: mahlzeitenplan(einheiten, regel),
     regeltext: regeltext(regel),
-    unterbringung: unterbringungsbedarf(zustand, einheiten),
+    unterbringung: unterbringung(zustand, einheiten),
     sofortbedarf: sofortbedarfsliste(zustand, einheiten),
   };
 }

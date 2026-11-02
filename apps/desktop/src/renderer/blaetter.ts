@@ -19,6 +19,7 @@ export interface Reiter {
     | "eingang"
     | "anforderungen"
     | "fuest"
+    | "versorgung"
     | "kosten"
     | "fueorg"
     | "ausgaben"
@@ -34,6 +35,8 @@ export const BLAETTER: readonly Reiter[] = [
   { schluessel: "eingang", titel: "Eingangskorb" },
   { schluessel: "anforderungen", titel: "Anforderungen" },
   { schluessel: "fuest", titel: "Führungsstelle" },
+  // S4.1: zwischen Führungsstelle und Kosten, für alle sichtbar (Entscheidung 1).
+  { schluessel: "versorgung", titel: "Versorgung" },
   { schluessel: "kosten", titel: "Kosten" },
   { schluessel: "fueorg", titel: "Führungsorganisation" },
   { schluessel: "ausgaben", titel: "Ausgaben" },

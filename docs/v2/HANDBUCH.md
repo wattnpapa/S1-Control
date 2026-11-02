@@ -185,6 +185,14 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 **Kürzel:** Strg+N · Strg+E
 
+### Versorgung
+
+Die Ansicht des S4: Verpflegung je Bereich und Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, das Logistikblatt am Bildschirm, der Übernachtungsbedarf nach m/w/d und der Sofortbedarf aus den Bögen.
+
+**Zuerst:** Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird.
+
+**Gut zu wissen:** Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit. Was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste.
+
 ### Kosten
 
 Die Abrechnung: PSA, VDA, Unterkunft und Verpflegung je Einheit.
