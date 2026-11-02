@@ -94,7 +94,7 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
       "Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, nur die Summen zählen sie nicht mehr. " +
       "„Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie in der Stärketabelle auf Papier; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. " +
       "Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Vorlage nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. " +
-      "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an. " +
+      "Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an; „Funk …“ öffnet für sie Rufgruppen, Funkrufname, Erreichbarkeit und Funkhinweis. " +
       "Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). " +
       "„Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.",
     kuerzel: ["anlegen", "kopieren", "entfernen", "verschieben", "suchen", "eeb", "jetzt", "zurueck"],
@@ -141,11 +141,11 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     kennung: "funkplan",
     titel: "Funkplan",
     wozu:
-      "Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname und Erreichbarkeit, je Rufgruppe oder je Bereich. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen.",
+      "Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit und Funkhinweis, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen.",
     zuerst:
-      "Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen, dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Strg+E bearbeitet die links gewählte Rufgruppe.",
+      "Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen, dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Der Funkhinweis wird ebenso in seiner Zelle geschrieben. Doppelklick auf den Namen einer Einheit (oder ✎) öffnet „Funk und Erreichbarkeit“: weitere Rufgruppen, Funkrufname und Erreichbarkeit überschreiben, Funkauszug des Tagebuchs. Strg+E bearbeitet die links gewählte Rufgruppe.",
     ueberraschung:
-      "Die Rufgruppe gilt für die ganze Einheit, nicht je Fahrzeug, und sie bleibt beim Verschieben in einen anderen Bereich stehen; „Bereich ≠ Gruppe“ weist nur darauf hin. Eine aufgelöste Rufgruppe setzt ihre Einheiten nicht um: Sie stehen danach als „ohne Rufgruppe“, bis jemand sie neu zuordnet. Der Funkrufname kommt aus dem ersten Fahrzeug der Einheit mit Funkrufnamen.",
+      "Die Rufgruppe gilt für die ganze Einheit, nicht je Fahrzeug, und sie bleibt beim Verschieben in einen anderen Bereich stehen; „Bereich ≠ Gruppe“ weist nur darauf hin. Eine aufgelöste Rufgruppe setzt ihre Einheiten nicht um: Sie stehen danach als „ohne Rufgruppe“, bis jemand sie neu zuordnet. Der Funkrufname kommt aus dem ersten Fahrzeug der Einheit mit Funkrufnamen; ein Override in der Maske ersetzt ihn, ein leerer Override gibt ihn zurück. Mithörer zählen nicht als „zugeordnet“: Gerufen wird eine Einheit über ihre Hauptrufgruppe.",
     kuerzel: ["anlegen", "suchen"],
   },
   {
