@@ -55,6 +55,18 @@ describe("Die Einheitenliste in den Ausgaben", () => {
   });
 });
 
+describe("Der Funkplan in den Ausgaben", () => {
+  it("steht als PDF und als HTML vor dem Papier-Vordruck und ruft die Ausgabe „funkplan“", async () => {
+    render(<Ausgaben />);
+    const knoepfe = screen.getAllByRole("button").map((knopf) => knopf.textContent);
+    expect(knoepfe.indexOf("Funkplan als HTML")).toBe(knoepfe.indexOf("Papier-Vordruck als PDF") - 1);
+    await userEvent.click(screen.getByRole("button", { name: "Funkplan als HTML" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("ausgabeErzeugen")).toMatchObject({ ausgabe: "funkplan", format: "html" });
+    });
+  });
+});
+
 describe("Öffnen, Ordner zeigen und Drucken an der erzeugten Ausgabe", () => {
   const UMGEBUNG = { plattform: "linux", electron: "43", programmversion: "0", rechnername: "r", clientId: "c" };
   const HTML = "/share/ausgaben/einheitenliste_2026-09-08_0815.html";

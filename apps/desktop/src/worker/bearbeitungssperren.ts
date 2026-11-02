@@ -1,9 +1,11 @@
 /**
  * Die weichen Bearbeitungssperren dieses Arbeitsplatzes.
  *
- * Wer eine Zelle, ein Blatt oder eine Maske für eine Einheit, ein Fahrzeug oder
- * einen Abschnitt öffnet, setzt eine kurze Sperre; der offene Editor
- * verlängert sie im Takt. Sie läuft nach {@link SPERRE_MS} von selbst ab – ein
+ * Wer eine Zelle, ein Blatt oder eine Maske für eine Einheit, ein Fahrzeug,
+ * einen Abschnitt oder eine Rufgruppe öffnet, setzt eine kurze Sperre; der
+ * offene Editor verlängert sie im Takt. Gesperrt wird die Kennung des
+ * Datensatzes, nicht seine Art: Die Kennungen sind über alle Entitäten
+ * eindeutig (`neueId` mit Präfix), und eine neue Entität braucht hier nichts. Sie läuft nach {@link SPERRE_MS} von selbst ab – ein
  * abgestürzter Browser hält nichts fest. Die Liste reist in der eigenen
  * Präsenzdatei zu den Kollegen, die dann „wird von … bearbeitet" zeigen.
  *

@@ -41,6 +41,7 @@ export function Ausgaben(): React.JSX.Element {
       | "einheitenliste"
       | "anforderungen"
       | "tagebuch"
+      | "funkplan"
       | "papier",
     format: "html" | "pdf" | "xlsx",
   ): void {
@@ -151,8 +152,17 @@ export function Ausgaben(): React.JSX.Element {
       <button type="button" onClick={() => { erzeuge("tagebuch", "html"); }}>
         Tagebuch als HTML
       </button>
+      {/* Der Funkplan hängt am Platz der Sprechfunker: je Rufgruppe die
+          Teilnehmer, darunter leere Zeilen zum Weiterführen mit Stift, wenn
+          der Rechner steht. Bedient wird er im Blatt „Funkplan“. */}
+      <button type="button" onClick={() => { erzeuge("funkplan", "pdf"); }}>
+        Funkplan als PDF
+      </button>
+      <button type="button" onClick={() => { erzeuge("funkplan", "html"); }}>
+        Funkplan als HTML
+      </button>
       {/* Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste,
-          Funkprotokoll. Sie hängen an keinem Datenstand und lassen sich vorab
+          Funkprotokoll, Funkplan. Sie hängen an keinem Datenstand und lassen sich vorab
           ausdrucken und kopieren. */}
       <button type="button" onClick={() => { erzeuge("papier", "pdf"); }}>
         Papier-Vordruck als PDF

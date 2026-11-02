@@ -256,6 +256,7 @@ export class Vermittlung {
       case "baumAnfordern":
       case "kostenAnfordern":
       case "versorgungAnfordern":
+      case "funkplanAnfordern":
       case "anforderungenAnfordern":
       case "fuestAnfordern":
       case "eingangskorbAnfordern":

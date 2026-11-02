@@ -36,6 +36,8 @@ const SAMMLUNGEN: Readonly<Record<string, keyof Zustand>> = {
   person: "personen",
   auftrag: "auftraege",
   anforderung: "anforderungen",
+  // Funkplan F1: Die Sammlung fehlt im Zustand, solange es keine Rufgruppe gibt.
+  rufgruppe: "rufgruppen",
 };
 
 interface Beobachtet {
@@ -77,7 +79,7 @@ function geltendes(zustand: Zustand, entwurf: PruefbarerEntwurf): Beobachtet | u
   const id = alsText(werte[eintrag.idFeld]);
   const pfad = feldpfad(eintrag, werte);
   if (id === undefined || pfad === undefined) return undefined;
-  const feld = gehe((zustand[sammlung] as Record<string, unknown>)[id], pfad) as
+  const feld = gehe((zustand[sammlung] as Record<string, unknown> | undefined)?.[id], pfad) as
     | { wert?: unknown; hlc?: { clientId?: unknown } }
     | undefined;
   const clientId = feld?.hlc?.clientId;

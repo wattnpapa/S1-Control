@@ -24,6 +24,13 @@ describe("Ereignisnamen", () => {
     expect(ereignisname("GibtEsNicht")).toBe("GibtEsNicht");
   });
 
+  it("benennt die Ereignisse des Funkplans mit Gegenstand", () => {
+    expect(ereignisMitObjekt("RufgruppeAufgeloest", "DMO 310")).toBe("Rufgruppe ‚DMO 310‘ aufgelöst");
+    expect(ereignisMitObjekt("RufgruppeWiederhergestellt", "THW_OL_FUE")).toBe("Rufgruppe ‚THW_OL_FUE‘ wiederhergestellt");
+    expect(ereignisMitObjekt("EinheitRufgruppeGesetzt", "FGr N Brake")).toBe("Rufgruppe der Einheit ‚FGr N Brake‘ gesetzt");
+    for (const art of ["RufgruppeAngelegt", "RufgruppeGeaendert"]) expect(ereignisname(art)).toMatch(/^Rufgruppe /u);
+  });
+
   it("nennt die Zusage einer Anforderung nicht „Ablösung“", () => {
     expect(ereignisMitObjekt("AbloesungZugesagt", "ANF-1")).toBe("Zusage ‚ANF-1‘ erfasst");
   });

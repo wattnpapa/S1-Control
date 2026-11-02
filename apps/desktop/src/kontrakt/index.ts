@@ -28,7 +28,9 @@ import { z } from "zod";
 
 import type {
   Anforderungsausschnitt,
+  Auswahlwert,
   Baumknoten,
+  Funkplan,
   Kostenblatt,
   Fassungsvergleich,
   Logistikblatt,
@@ -409,7 +411,7 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("standAnfordern"), akteId: zAkteId }),
   /**
    * Additiv: Bearbeitungssperre für einen Datensatz (Einheit, Fahrzeug,
-   * Abschnitt). Setzen und Verlängern ohne `frei`, Freigeben mit `frei: true`.
+   * Abschnitt, Rufgruppe). Setzen und Verlängern ohne `frei`, Freigeben mit `frei: true`.
    * Eine Sperre läuft nach 30 s ab; der offene Editor verlängert sie.
    */
   z.object({ art: z.literal("sperre"), akteId: zAkteId, entitaetId: zText, frei: z.boolean().optional() }),
@@ -471,6 +473,11 @@ export const zRuf = z.discriminatedUnion("art", [
     akteId: zAkteId,
     stunden: z.union([z.literal(24), z.literal(48)]).optional(),
   }),
+  // Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5, additiv): Rufgruppen,
+  // Zuordnung je Rufgruppe und je Bereich, Zahlen des Bandes. Die Suche
+  // schneidet nur die Teilnehmer zu, nie die Zahlen; kein Ausschnitt, der
+  // Plan ist eine Zeile je Einheit wie die Kosten.
+  z.object({ art: z.literal("funkplanAnfordern"), akteId: zAkteId, suche: z.string().max(200).optional() }),
   // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
@@ -601,6 +608,9 @@ export const zRuf = z.discriminatedUnion("art", [
       "vorausschau",
       // Die Kraftstoffliste (S4.4): Liter je Einheit für den Tankwagen.
       "kraftstoff",
+      // Der Funkplan (KONZEPT-FUNKPLAN.md §7, additiv): A4 hoch für den
+      // Platz der Sprechfunker, mit leeren Zeilen zum Nachtragen.
+      "funkplan",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
@@ -749,6 +759,7 @@ export interface Antworten {
   baumAnfordern: Baumansicht;
   kostenAnfordern: Kostenansicht;
   versorgungAnfordern: Versorgungsansicht;
+  funkplanAnfordern: Funkplanansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
@@ -794,7 +805,21 @@ export interface Baumansicht extends Ansichtsstand {
   readonly baum: readonly Baumknoten[];
 }
 
-export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {}
+export interface Tabellenansicht extends Ansichtsstand, Tabellenausschnitt {
+  /**
+   * Additiv (Funkplan F1): die Auswahl der Spalten mit `werteAus` je
+   * Spaltenschlüssel, gerechnet mit `projektion.auswahlwerte`. Die Rufgruppen
+   * sind Daten des Einsatzes und keine feste Liste; der Renderer hat keinen
+   * Zustand, aus dem er sie holen könnte. Fehlt das Feld, bietet die Zelle
+   * nur „—" an.
+   */
+  readonly auswahlwerte?: { readonly [spalte: string]: readonly Zustandswahl[] };
+}
+
+/** Ein Eintrag einer Auswahl aus dem Zustand; bei Rufgruppen mit Betriebsart für die Marke „DMO". */
+export interface Zustandswahl extends Auswahlwert {
+  readonly betriebsart?: string;
+}
 
 /**
  * Was die Pruefung des Programmordners ergeben hat (M7.2).
@@ -922,6 +947,24 @@ export interface Anforderungsansicht extends Ansichtsstand, Anforderungsausschni
 /** Die Kostenuebersicht (M5.2) — Parameter, Zeilen, Summe. */
 export interface Kostenansicht extends Ansichtsstand {
   readonly blatt: Kostenblatt;
+}
+
+/** Ein Bereich zur Wahl in der Maske der Rufgruppe, in der Ordnung des Abschnittsbaums. */
+export interface Funkplanbereich {
+  readonly abschnittId: string;
+  readonly name: string;
+  readonly tiefe: number;
+}
+
+/**
+ * Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5) — `projektion.funkplan`,
+ * mit `suche` auf die passenden Teilnehmer zugeschnitten; `plan.zahlen` gilt
+ * immer für den ganzen Einsatz.
+ */
+export interface Funkplanansicht extends Ansichtsstand {
+  readonly plan: Funkplan;
+  /** Die geltenden Bereiche ohne Systemabschnitte — der optionale Bereichsbezug der Rufgruppe. */
+  readonly bereiche: readonly Funkplanbereich[];
 }
 
 /** Das Blatt „Versorgung" (S4.1) — aus derselben Projektion wie `Lagebild.versorgung`. */

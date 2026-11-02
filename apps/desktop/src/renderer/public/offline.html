@@ -100,6 +100,11 @@
         #vordruck td {
           height: 10mm;
         }
+        #vordruck tr.rg td {
+          height: 8mm;
+          background: #f2f2f2;
+          font-size: 8.5pt;
+        }
       }
     </style>
   </head>
@@ -114,7 +119,7 @@
       <p id="stand">Nächster Versuch in wenigen Sekunden …</p>
       <button type="button" id="jetzt">Jetzt erneut versuchen</button>
       <button type="button" id="papier">Papier-Vordruck drucken</button>
-      <p>Der Vordruck enthält Meldeblock, Einheitenliste und Funkprotokoll (A4, je eine Seite).</p>
+      <p>Der Vordruck enthält Meldeblock, Einheitenliste, Funkprotokoll und Funkplan (A4, je eine Seite).</p>
     </main>
     <div id="vordruck" aria-hidden="true">
       <section>
@@ -149,6 +154,20 @@
           <tbody></tbody>
         </table>
       </section>
+      <section>
+        <h2>Papier-Vordruck: Funkplan (leer)</h2>
+        <p><span>Stand: Datum <span class="feld"></span></span> <span>Uhrzeit <span class="feld"></span></span> <span>Geführt von <span class="feld"></span></span></p>
+        <table>
+          <thead>
+            <tr><th>Einheit</th><th>Bereich</th><th>Funkrufname</th><th>Erreichbarkeit</th><th>Hinweis</th></tr>
+          </thead>
+          <tbody data-zeilen="5"><tr class="rg"><td colspan="5">☐ TMO &nbsp; ☐ DMO &nbsp; ☐ Analog &nbsp; Rufgruppe / Kanal ____________ &nbsp; Zweck ____________ &nbsp; hört ____________</td></tr></tbody>
+          <tbody data-zeilen="5"><tr class="rg"><td colspan="5">☐ TMO &nbsp; ☐ DMO &nbsp; ☐ Analog &nbsp; Rufgruppe / Kanal ____________ &nbsp; Zweck ____________ &nbsp; hört ____________</td></tr></tbody>
+          <tbody data-zeilen="5"><tr class="rg"><td colspan="5">☐ TMO &nbsp; ☐ DMO &nbsp; ☐ Analog &nbsp; Rufgruppe / Kanal ____________ &nbsp; Zweck ____________ &nbsp; hört ____________</td></tr></tbody>
+          <tbody data-zeilen="3"><tr class="rg"><td colspan="5">Ohne Rufgruppe — mit Ankunft zuordnen</td></tr></tbody>
+        </table>
+        <p>Änderungen handschriftlich nachtragen und im Rechner übernehmen. Funkprotokoll: eigener Vordruck.</p>
+      </section>
     </div>
     <script>
       (function () {
@@ -170,16 +189,18 @@
               setTimeout(pruefe, 3000);
             });
         }
-        // Leere Zeilen der Vordruck-Tabellen: so bleibt die Datei klein.
+        // Leere Zeilen der Vordruck-Tabellen: so bleibt die Datei klein. Der
+        // Funkplan hat einen Rumpf je Rufgruppe mit eigener Zeilenzahl.
         document.querySelectorAll("#vordruck table").forEach(function (tabelle) {
           var spalten = tabelle.querySelectorAll("thead th").length;
-          var zeilen = Number(tabelle.getAttribute("data-zeilen")) || 10;
-          var rumpf = tabelle.querySelector("tbody");
-          for (var i = 0; i < zeilen; i += 1) {
-            var zeile = document.createElement("tr");
-            for (var j = 0; j < spalten; j += 1) zeile.appendChild(document.createElement("td"));
-            rumpf.appendChild(zeile);
-          }
+          tabelle.querySelectorAll("tbody").forEach(function (rumpf) {
+            var zeilen = Number(rumpf.getAttribute("data-zeilen") || tabelle.getAttribute("data-zeilen")) || 10;
+            for (var i = 0; i < zeilen; i += 1) {
+              var zeile = document.createElement("tr");
+              for (var j = 0; j < spalten; j += 1) zeile.appendChild(document.createElement("td"));
+              rumpf.appendChild(zeile);
+            }
+          });
         });
         document.getElementById("papier").addEventListener("click", function () {
           window.print();

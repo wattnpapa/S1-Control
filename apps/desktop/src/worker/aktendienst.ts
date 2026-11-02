@@ -102,6 +102,7 @@ import {
   type Fuestansicht,
   type Kostenansicht,
   type Versorgungsansicht,
+  type Funkplanansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
@@ -116,7 +117,8 @@ import {
 } from "../kontrakt/index.js";
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
-import { LISTENAUSGABEN, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
+import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
+import { funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -156,6 +158,7 @@ export type Seitenausgabe =
   | "kosten"
   | "fueorg"
   | "einheitenliste"
+  | "funkplan"
   | Listenausgabe
   | Versorgungsausgabe;
 
@@ -868,6 +871,11 @@ export class Aktendienst {
     return versorgungsansicht(this.#zustand, ruf, this.#o.zeit(), this.#lageZeiger);
   }
 
+  /** Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5), mit Suche zugeschnitten. */
+  funkplan(ruf: Extract<Ruf, { art: "funkplanAnfordern" }>): Funkplanansicht {
+    return funkplanansicht(this.#zustand, ruf, this.#lageZeiger);
+  }
+
   /**
    * Die Anforderungsliste (M5.3), gefiltert und auf den Ausschnitt beschnitten.
    *
@@ -954,7 +962,7 @@ export class Aktendienst {
       ...(ruf.von === undefined ? {} : { von: ruf.von }),
       ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
     });
-    return { lageZeiger: this.#lageZeiger, ...ausschnitt };
+    return { lageZeiger: this.#lageZeiger, ...ausschnitt, auswahlwerte: tabellenauswahl(this.#zustand) };
   }
 
   /** Fahrzeuge, Personen und Auftraege **einer** Einheit (M3.2). */
@@ -1033,6 +1041,9 @@ export class Aktendienst {
     if (VERSORGUNGSAUSGABEN.has(ausgabe)) {
       return versorgungsausgabe(ausgabe as Versorgungsausgabe, this.#zustand, jetzt.getTime(), { ...kopf, marke });
     }
+    if (ausgabe === "funkplan") {
+      return funkplanausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke);
+    }
     if (ausgabe === "status") {
       return { dateiname: `status_${marke}`, html: statusAlsHtml(statusdaten(this.#zustand), kopf) };
     }
@@ -1053,6 +1064,14 @@ export class Aktendienst {
     }
     const daten = druckdaten(this.#zustand, organisation === undefined ? {} : { organisation });
     return { dateiname: `druck_${marke}`, html: druckAlsHtml(daten, kopf) };
+  }
+
+  /** Wer eine Ausgabe erstellt: „Meier (Führungsstelle 1)“, ohne Benutzernamen nur der Platz. */
+  #erstellerText(): string {
+    const benutzer = this.#o.akteur.benutzer.trim();
+    const platz = this.#o.anzeigename.trim();
+    if (benutzer === "" || benutzer === platz) return platz;
+    return platz === "" ? benutzer : `${benutzer} (${platz})`;
   }
 
   /**

@@ -175,7 +175,7 @@ describe("offline.html", () => {
   it("nennt die Sperre der Eingabe und bietet den Papier-Vordruck zum Drucken an", () => {
     expect(OFFLINE).toContain("Eingabe gesperrt");
     expect(OFFLINE).not.toContain("Weiterarbeiten");
-    for (const titel of ["Meldeblock", "Einheitenliste", "Funkprotokoll"]) {
+    for (const titel of ["Meldeblock", "Einheitenliste", "Funkprotokoll", "Funkplan (leer)"]) {
       expect(OFFLINE).toContain(`Papier-Vordruck: ${titel}`);
     }
     expect(OFFLINE).toContain("window.print()");

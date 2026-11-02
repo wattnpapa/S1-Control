@@ -9,6 +9,8 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import { funkplanAlsHtml } from "@s1/ausgaben";
+
 import { Arbeitsplaetze } from "./arbeitsplaetze.js";
 import { loeseAusgabePfad, mitDruckknopf } from "./ausgaberoute.js";
 import { Webdienst } from "./dienst.js";
@@ -121,6 +123,14 @@ describe("GET /ausgabe", () => {
     expect(await loeseAusgabePfad(share, html)).toBe(html);
     expect(await loeseAusgabePfad(share, `${html}\0.pdf`)).toBeUndefined();
     expect(await loeseAusgabePfad(share, path.join(share, "einsaetze", "E1", "tief", "x", "a.html"))).toBeUndefined();
+  });
+
+  it("liefert den Funkplan als Bildschirmseite mit Drucken-Knopf und scrollbarer Tabelle", () => {
+    const plan = { rufgruppen: [], ohneRufgruppe: [], jeBereich: [], zahlen: { rufgruppen: 0, zugeordnet: 0, ohneRufgruppe: 0, dmoOderGateway: 0 } };
+    const seite = mitDruckknopf(funkplanAlsHtml(plan, { datum: "2026-09-10", einsatzName: "Hochwasser", stand: "Stand: jetzt" }));
+    expect(seite).toContain('class="druckleiste"');
+    expect(seite).toContain('class="tabellenrahmen"');
+    expect(seite).toContain("Ohne Rufgruppe");
   });
 
   it("setzt den Knopf nur in die Bildschirmansicht", () => {

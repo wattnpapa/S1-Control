@@ -2,6 +2,9 @@
  * Die Knöpfe einer Versorgungsausgabe (S4): als PDF und als HTML, darunter
  * die erzeugte Datei mit „Öffnen" — derselbe Weg wie im Blatt „Ausgaben".
  * Im Browser gibt es kein PDF (ADR-005); dort steht nur HTML.
+ *
+ * Das Blatt „Funkplan" nimmt denselben Baustein für seinen Funkplan; ein
+ * zweiter mit anderem Namen wäre dieselbe Komponente zweimal.
  */
 
 import { useState } from "react";
@@ -13,7 +16,7 @@ export function Versorgungsausgabe({
   ausgabe,
   titel,
 }: {
-  readonly ausgabe: "belegung" | "bestellliste" | "vorausschau" | "kraftstoff";
+  readonly ausgabe: "belegung" | "bestellliste" | "vorausschau" | "kraftstoff" | "funkplan";
   readonly titel: string;
 }): React.JSX.Element {
   const erzeugeAusgabe = useLaden((z) => z.erzeugeAusgabe);

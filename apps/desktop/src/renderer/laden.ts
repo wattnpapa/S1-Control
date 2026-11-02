@@ -218,7 +218,8 @@ export interface Laden {
       | "belegung"
       | "bestellliste"
       | "vorausschau"
-      | "kraftstoff",
+      | "kraftstoff"
+      | "funkplan",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;

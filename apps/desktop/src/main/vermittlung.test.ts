@@ -393,6 +393,7 @@ describe("Jeder Ansichtsruf erreicht den Aktendienst", () => {
       { art: "tabelleAnfordern", akteId },
       { art: "tagebuchAnfordern", akteId },
       { art: "kostenAnfordern", akteId },
+      { art: "funkplanAnfordern", akteId },
       { art: "anforderungenAnfordern", akteId },
       { art: "fuestAnfordern", akteId },
       { art: "eingangskorbAnfordern", akteId },

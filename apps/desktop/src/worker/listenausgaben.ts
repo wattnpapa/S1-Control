@@ -1,5 +1,6 @@
 /**
- * Die Listenausgaben des Workers: Anforderungen, Tagebuch, Papier-Vordruck.
+ * Die Listenausgaben des Workers: Anforderungen, Tagebuch, Papier-Vordruck
+ * und der Funkplan.
  *
  * Aus `aktendienst.ts` herausgehalten, damit die Datei nicht mit jeder Seite
  * wächst: Hier steht, welche Zeilen in die Seite kommen; wie sie aussieht,
@@ -8,6 +9,7 @@
 
 import {
   anforderungenAlsHtml,
+  funkplanAlsHtml,
   papierVordruckAlsHtml,
   tagebuchAlsHtml,
   type Ausgabekopf,
@@ -44,4 +46,32 @@ export function listenausgabe(
   }
   const liste = projektion.anforderungsliste(zustand);
   return { dateiname: `anforderungen_${marke}`, html: anforderungenAlsHtml(liste.zeilen, liste.jeZustand, kopf) };
+}
+
+function text(wert: unknown): string | undefined {
+  return typeof wert === "string" && wert.trim() !== "" ? wert : undefined;
+}
+
+/**
+ * Der Funkplan als Seite (KONZEPT-FUNKPLAN.md §7): derselbe Plan wie im Blatt,
+ * ohne Suche. Der Kopf nennt die Führungsstelle und die übergeordnete aus den
+ * Stammdaten des Einsatzes und wer ihn erstellt hat — der Ausdruck hängt am
+ * Platz und wird mit Stift weitergeführt; die Frage „von wann, von wem“ muss
+ * er selbst beantworten. Der Dateiname steht im Fuß, damit ein Blatt auf dem
+ * Tisch zu seiner Datei findet.
+ */
+export function funkplanausgabe(
+  zustand: Zustand,
+  kopf: Ausgabekopf & { readonly erstelltVon?: string },
+  marke: string,
+): { dateiname: string; html: string } {
+  const dateiname = `funkplan_${marke}`;
+  const fuestName = text(zustand.einsatz?.fuestName.wert);
+  const uebergeordneteFuestName = text(zustand.einsatz?.uebergeordneteFuestName?.wert);
+  const funkkopf = {
+    ...kopf,
+    ...(fuestName === undefined ? {} : { fuestName }),
+    ...(uebergeordneteFuestName === undefined ? {} : { uebergeordneteFuestName }),
+  };
+  return { dateiname, html: funkplanAlsHtml(projektion.funkplan(zustand), funkkopf, dateiname) };
 }
