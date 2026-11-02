@@ -22,12 +22,12 @@ import { MAHLZEITENREGEL_VORBELEGUNG } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 
 import { logistikblatt } from "./logistik.js";
+import { unterbringungsbedarf } from "./unterkunft.js";
 import { versorgungseinheiten } from "./versorgung.js";
 import {
   mahlzeitenplan,
   regeltext,
   sofortbedarfsliste,
-  unterbringungsbedarf,
   versorgungsblatt,
   versorgungszahlen,
 } from "./versorgung-blatt.js";
@@ -78,7 +78,7 @@ describe("Unterbringung und Sofortbedarf", () => {
     const z = kleineLage();
     const zeilen = unterbringungsbedarf(z, versorgungseinheiten(z, Date.parse(PRUEFJETZT)));
     expect(zeilen).toEqual([
-      expect.objectContaining({ einheitId: "E1", m: 10, w: 2, d: 0, ruhezeit: true, anmarsch: false, schicht: "NACHT" }),
+      expect.objectContaining({ einheitId: "E1", m: 10, w: 2, d: 0, ruhezeit: true, anmarsch: false, schicht: "NACHT", zustand: "OHNE_UNTERKUNFT" }),
     ]);
   });
 
@@ -106,7 +106,7 @@ describe("Die Zahlen des Monitors (Lagebild.versorgung)", () => {
 
   it("nennt im leeren Einsatz Nullen und keine nächste Mahlzeit ohne Zeit", () => {
     const leer = materialisiere(leereFaltung());
-    expect(versorgungszahlen(leer, { jetzt: "kaputt" })).toEqual({ mahlzeiten: [], anmarsch: 0, betten: { m: 0, w: 0, d: 0, gesamt: 0 } });
+    expect(versorgungszahlen(leer, { jetzt: "kaputt" })).toEqual({ mahlzeiten: [], anmarsch: 0, betten: { m: 0, w: 0, d: 0, gesamt: 0 }, ohneZuweisung: 0, ohneZuweisungEinheiten: 0 });
   });
 
   it("baut das Blatt aus derselben Klassifizierung", () => {

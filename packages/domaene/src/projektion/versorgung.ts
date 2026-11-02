@@ -172,6 +172,30 @@ export function versorgungseinheiten(zustand: Zustand, jetzt: number): readonly 
   return liste;
 }
 
+/** Der Sofortbedarf aus dem Bogen, wie er an der Einheit steht (`zSofortbedarf`). */
+export interface Bogenbedarf {
+  readonly verpflegungPersonen?: number;
+  readonly dieselLiter?: number;
+  readonly benzinLiter?: number;
+  readonly gemischLiter?: number;
+  readonly unterbringung?: boolean;
+  readonly ruhezeitErforderlich?: boolean;
+}
+
+export function bogenbedarf(eintrag: Versorgungseinheit): Bogenbedarf | undefined {
+  const wert: unknown = eintrag.einheit.sofortbedarf?.wert;
+  return typeof wert === "object" && wert !== null ? (wert as Bogenbedarf) : undefined;
+}
+
+export function zahl(wert: unknown): number {
+  return typeof wert === "number" && Number.isFinite(wert) ? wert : 0;
+}
+
+export function bezeichnung(eintrag: Versorgungseinheit): string {
+  const wert = eintrag.einheit.bezeichnung.wert;
+  return typeof wert === "string" ? wert : eintrag.einheit.id;
+}
+
 // ---------------------------------------------------------------------------
 // Die Zeitfolge der Mahlzeiten
 // ---------------------------------------------------------------------------

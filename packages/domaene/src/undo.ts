@@ -205,6 +205,7 @@ const SAMMLUNG: Readonly<Record<string, keyof Zustand>> = {
   meldung: "meldungen",
   anhang: "anhaenge",
   etbEintrag: "etbEintraege",
+  unterkunft: "unterkuenfte",
   archivierungen: "archivierungen",
 };
 
@@ -290,6 +291,24 @@ function nutzlastAls(ereignis: EingehendesEreignis): Record<string, unknown> {
  *  2. dem `vorher` des Originals, wenn dieselbe Art die Ruecknahme traegt;
  *  3. `null`, wenn das Original nichts verdraengt hat — „Wert loeschen" (§2.2).
  */
+/**
+ * Setzt das Gegenereignis **dasselbe Feld** derselben Entität wie das
+ * Original (beide Form a, gleicher fester Feldpfad)? Dann ist sein Wert
+ * ableitbar: das `vorher` des Originals. Der Fall ist
+ * `UnterbringungAufgehoben` → `EinheitUntergebracht` (S4.2): Wer eine
+ * Aufhebung zurücknimmt, bringt die Einheit dorthin zurück, wo sie war.
+ */
+function gleichesFeld(original: Katalogeintrag, ziel: Katalogeintrag): boolean {
+  return (
+    original.form === "a" &&
+    ziel.form === "a" &&
+    original.entitaet === ziel.entitaet &&
+    original.feld?.art === "fest" &&
+    ziel.feld?.art === "fest" &&
+    original.feld.pfad === ziel.feld.pfad
+  );
+}
+
 export function kompensationFuer(
   original: EingehendesEreignis,
   zustand: Zustand,
@@ -349,7 +368,7 @@ export function kompensationFuer(
    * (`festerWert: null`) vollstaendig ableitbar. Die Unterscheidung liegt
    * damit im Katalog und nicht in einer Namensliste, die veralten koennte.
    */
-  if (zielArt !== eintrag.typ && !Object.hasOwn(ziel, "festerWert")) {
+  if (zielArt !== eintrag.typ && !Object.hasOwn(ziel, "festerWert") && !gleichesFeld(eintrag, ziel)) {
     return {
       art: "strukturell",
       inverseArt: zielArt,

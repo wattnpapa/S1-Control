@@ -42,6 +42,7 @@ export type Entitaetsart =
   | "meldung"
   | "anhang"
   | "etbEintrag"
+  | "unterkunft"
   | "archivierungen";
 
 /**
@@ -316,6 +317,25 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "AnhangWiederhergestellt", form: "a", schema: S.AnhangWiederhergestellt,
       nutzlastVersion: 1, entitaet: "anhang", idFeld: "anhangId", feld: fest("entfernt"),
       festerWert: false, klasse: "LWW_FELD" }),
+
+  // S4.2 Unterkunft und Zuweisung (KONZEPT-S4.md §6)
+  e({ typ: "UnterkunftAngelegt", form: "b", schema: S.UnterkunftAngelegt, nutzlastVersion: 1,
+      entitaet: "unterkunft", idFeld: "unterkunftId", klasse: "ADDITIV",
+      gegenereignis: "UnterkunftAufgeloest" }),
+  e({ typ: "UnterkunftGeaendert", form: "a", schema: S.UnterkunftGeaendert, nutzlastVersion: 1,
+      entitaet: "unterkunft", idFeld: "unterkunftId", feld: ausNutzlast("feld"),
+      klasse: "LWW_FELD" }),
+  e({ typ: "UnterkunftAufgeloest", form: "a", schema: S.UnterkunftAufgeloest, nutzlastVersion: 1,
+      entitaet: "unterkunft", idFeld: "unterkunftId", feld: fest("aufgeloest"), festerWert: true,
+      klasse: "LWW_FELD", grundPflicht: true, gegenereignis: "UnterkunftWiederhergestellt" }),
+  e({ typ: "UnterkunftWiederhergestellt", form: "a", schema: S.UnterkunftWiederhergestellt,
+      nutzlastVersion: 1, entitaet: "unterkunft", idFeld: "unterkunftId", feld: fest("aufgeloest"),
+      festerWert: false, klasse: "LWW_FELD" }),
+  e({ typ: "EinheitUntergebracht", form: "a", schema: S.EinheitUntergebracht, nutzlastVersion: 1,
+      entitaet: "einheit", idFeld: "einheitId", feld: fest("unterkunftId"), klasse: "LWW_FELD" }),
+  e({ typ: "UnterbringungAufgehoben", form: "a", schema: S.UnterbringungAufgehoben,
+      nutzlastVersion: 1, entitaet: "einheit", idFeld: "einheitId", feld: fest("unterkunftId"),
+      festerWert: null, klasse: "LWW_FELD", gegenereignis: "EinheitUntergebracht" }),
 
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,

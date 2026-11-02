@@ -45,6 +45,28 @@ function zielDerAufloesung(zustand: Zustand, ereignis: EingehendesEreignis): str
  *
  * @param betreff „Name: Vorgang“, wie `tagebuchsatz` ihn bildet.
  */
+/** Der Name einer Unterkunft statt ihrer Kennung (S4.2). */
+export function unterkunftsname(zustand: Zustand, id: unknown): string {
+  if (typeof id !== "string") return "—";
+  const name = zustand.unterkuenfte?.[id]?.name.wert;
+  return typeof name === "string" ? name : id;
+}
+
+function unterbringungssatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff: string): string {
+  const vorher = "vorher" in ereignis ? ereignis.vorher : undefined;
+  if (ereignis.typ === "UnterkunftAngelegt") {
+    const n = ereignis.nutzlast as { kapazitaet?: unknown; ort?: unknown } | null;
+    const ort = text(n?.ort);
+    return `${betreff} (${String(n?.kapazitaet ?? "?")} Plätze${ort === undefined ? "" : `, ${ort}`})`;
+  }
+  if (ereignis.typ === "UnterbringungAufgehoben") {
+    return typeof vorher === "string" ? `${betreff} (war ${unterkunftsname(zustand, vorher)})` : betreff;
+  }
+  if (typeof ereignis.neu !== "string") return `${betreff}: Zuweisung aufgehoben`;
+  const von = typeof vorher === "string" ? `${unterkunftsname(zustand, vorher)} → ` : "";
+  return `${betreff}: ${von}${unterkunftsname(zustand, ereignis.neu)}`;
+}
+
 export function klartextsatz(
   zustand: Zustand,
   ereignis: EingehendesEreignis,
@@ -68,6 +90,10 @@ export function klartextsatz(
       const von = "vorher" in ereignis ? ereignis.vorher : undefined;
       return `${betreff}: ${abschnittsname(zustand, von)} → ${abschnittsname(zustand, ereignis.neu)}`;
     }
+    case "UnterkunftAngelegt":
+    case "EinheitUntergebracht":
+    case "UnterbringungAufgehoben":
+      return unterbringungssatz(zustand, ereignis, betreff);
     case "AbschnittAufgeloest": {
       const ziel = zielDerAufloesung(zustand, ereignis);
       return ziel === undefined ? betreff : `${betreff} — Einheiten gehen nach ${ziel}`;

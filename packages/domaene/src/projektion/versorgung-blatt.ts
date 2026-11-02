@@ -8,14 +8,17 @@
  * Sofortbedarfs und die kleine Zusammenfassung für das Lagebild.
  */
 
-import { uebernachtung } from "../kennzahlen.js";
 import { MAHLZEITEN, MAHLZEITENREGEL_VORBELEGUNG, type Mahlzeit, type Mahlzeitenregel } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 
 import { logistikblatt } from "./logistik.js";
+import { belegung, unterbringung, type Belegung, type Bettensumme, type Unterbringungsbedarf } from "./unterkunft.js";
 import {
   versorgungseinheiten,
   vorausschauAus,
+  bezeichnung,
+  bogenbedarf,
+  zahl,
   type Kost,
   type Versorgungseinheit,
   type Versorgungsoptionen,
@@ -130,93 +133,8 @@ export function mahlzeitenplan(
 }
 
 // ---------------------------------------------------------------------------
-// Unterbringung (4e) und Sofortbedarf (4f)
+// Sofortbedarf (4f)
 // ---------------------------------------------------------------------------
-
-export interface Bedarfszeile {
-  readonly einheitId: string;
-  readonly einheit: string;
-  readonly bereich: string;
-  readonly schicht: string;
-  readonly m: number;
-  readonly w: number;
-  readonly d: number;
-  readonly ruhezeit: boolean;
-  /** Noch im Anmarsch — der Bedarf kommt, ist aber nicht da. */
-  readonly anmarsch: boolean;
-}
-
-interface Bogenbedarf {
-  readonly verpflegungPersonen?: number;
-  readonly dieselLiter?: number;
-  readonly benzinLiter?: number;
-  readonly gemischLiter?: number;
-  readonly unterbringung?: boolean;
-  readonly ruhezeitErforderlich?: boolean;
-}
-
-function bogenbedarf(eintrag: Versorgungseinheit): Bogenbedarf | undefined {
-  const wert: unknown = eintrag.einheit.sofortbedarf?.wert;
-  return typeof wert === "object" && wert !== null ? (wert as Bogenbedarf) : undefined;
-}
-
-function zahl(wert: unknown): number {
-  return typeof wert === "number" && Number.isFinite(wert) ? wert : 0;
-}
-
-function bezeichnung(eintrag: Versorgungseinheit): string {
-  const wert = eintrag.einheit.bezeichnung.wert;
-  return typeof wert === "string" ? wert : eintrag.einheit.id;
-}
-
-export interface Bettensumme {
-  readonly m: number;
-  readonly w: number;
-  readonly d: number;
-  readonly gesamt: number;
-}
-
-export interface Unterbringungsbedarf {
-  readonly zeilen: readonly Bedarfszeile[];
-  /** Die Summe der Einsatzbereiche — ohne Anmarsch, wie K6 im Logistikblatt. */
-  readonly summe: Bettensumme & { readonly einheiten: number };
-  readonly anmarsch: Bettensumme & { readonly einheiten: number };
-}
-
-function bettenPlus(s: Bettensumme & { einheiten: number }, z: Bedarfszeile): Bettensumme & { einheiten: number } {
-  return { m: s.m + z.m, w: s.w + z.w, d: s.d + z.d, gesamt: s.gesamt + z.m + z.w + z.d, einheiten: s.einheiten + 1 };
-}
-
-const BETTEN_NULL = { m: 0, w: 0, d: 0, gesamt: 0, einheiten: 0 };
-
-/** Der Übernachtungsbedarf (K6) mit Summen, Anmarsch getrennt. */
-export function unterbringung(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): Unterbringungsbedarf {
-  const zeilen = unterbringungsbedarf(zustand, einheiten);
-  return {
-    zeilen,
-    summe: zeilen.filter((z) => !z.anmarsch).reduce(bettenPlus, BETTEN_NULL),
-    anmarsch: zeilen.filter((z) => z.anmarsch).reduce(bettenPlus, BETTEN_NULL),
-  };
-}
-
-/** Die Einheiten mit Übernachtungsbedarf (K6), Anmarsch zuletzt. */
-export function unterbringungsbedarf(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): readonly Bedarfszeile[] {
-  const zeilen: Bedarfszeile[] = [];
-  for (const eintrag of einheiten) {
-    const bedarf = uebernachtung(zustand, eintrag.einheit);
-    if (bedarf.m + bedarf.w + bedarf.d === 0) continue;
-    zeilen.push({
-      einheitId: eintrag.einheit.id,
-      einheit: bezeichnung(eintrag),
-      bereich: eintrag.bereich,
-      schicht: eintrag.schicht,
-      ...bedarf,
-      ruhezeit: bogenbedarf(eintrag)?.ruhezeitErforderlich === true,
-      anmarsch: eintrag.klasse !== "BESTAND",
-    });
-  }
-  return zeilen.sort((a, b) => Number(a.anmarsch) - Number(b.anmarsch));
-}
 
 export interface Sofortbedarfszeile {
   readonly einheitId: string;
@@ -298,6 +216,12 @@ export interface Versorgungszahlen {
   readonly anmarsch: number;
   /** Übernachtungsbedarf der Einsatzbereiche nach m/w/d (K6) und zusammen. */
   readonly betten: Bettensumme;
+  /** S4.2: belegt und frei über die geltenden Unterkünfte — nur, wenn es welche gibt. */
+  readonly belegt?: number;
+  readonly frei?: number;
+  /** S4.2: Bedarf der Einsatzbereiche ohne Unterkunft, Köpfe und Einheiten. */
+  readonly ohneZuweisung: number;
+  readonly ohneZuweisungEinheiten: number;
 }
 
 function bettenAus(un: { readonly m: number; readonly w: number; readonly d: number }): Bettensumme {
@@ -313,6 +237,7 @@ export function versorgungszahlen(zustand: Zustand, optionen: Versorgungsoptione
     .filter((e) => e.klasse !== "BESTAND")
     .reduce((summe, e) => summe + e.kost.portionen, 0);
   const erste = schau.mahlzeiten[0];
+  const b = belegung(zustand, einheiten);
   return {
     ...(erste === undefined ? {} : { naechste: { mahlzeit: erste.mahlzeit, zeitpunkt: erste.zeitpunkt, ...erste.bestand } }),
     mahlzeiten: schau.mahlzeiten.map((m) => ({
@@ -325,6 +250,9 @@ export function versorgungszahlen(zustand: Zustand, optionen: Versorgungsoptione
     })),
     anmarsch,
     betten: bettenAus(logistikblatt(zustand).gesamt.uebernachtung),
+    ...(b.unterkuenfte.length === 0 ? {} : { belegt: b.belegt, frei: b.frei }),
+    ohneZuweisung: b.ohneZuweisung.koepfe,
+    ohneZuweisungEinheiten: b.ohneZuweisung.einheiten,
   };
 }
 
@@ -334,6 +262,7 @@ export interface Versorgungsblatt {
   readonly plan: Mahlzeitenplan;
   readonly regeltext: string;
   readonly unterbringung: Unterbringungsbedarf;
+  readonly belegung: Belegung;
   readonly sofortbedarf: Sofortbedarfsliste;
 }
 
@@ -348,6 +277,7 @@ export function versorgungsblatt(zustand: Zustand, optionen: Versorgungsoptionen
     plan: mahlzeitenplan(einheiten, regel),
     regeltext: regeltext(regel),
     unterbringung: unterbringung(zustand, einheiten),
+    belegung: belegung(zustand, einheiten),
     sofortbedarf: sofortbedarfsliste(zustand, einheiten),
   };
 }

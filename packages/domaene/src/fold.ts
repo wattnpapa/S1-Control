@@ -1007,6 +1007,7 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
   ["auftrag.einheitId", "einheit"],
   ["anforderung.abzuloesendeEinheitId", "einheit"],
   ["anhang.einheitId", "einheit"],
+  ["einheit.unterkunftId", "unterkunft"],
 ]);
 
 /**
@@ -1908,7 +1909,8 @@ export function materialisiere(faltung: Faltung): Zustand {
         const zielart = FREMDREFERENZEN.get(`${art}.${name}`);
         if (zielart === undefined) continue;
         if (typeof feld.wert !== "string") continue;
-        const vorhanden = zielart === "einheit" ? einheiten.has(feld.wert) : false;
+        const vorhanden =
+          zielart === "einheit" ? einheiten.has(feld.wert) : (gebaut.get(zielart)?.has(feld.wert) ?? false);
         if (!vorhanden) {
           hinweise.push({
             art: "fremdreferenzUnbekannt",
@@ -2120,6 +2122,10 @@ export function materialisiere(faltung: Faltung): Zustand {
     .sort(vergleicheNachCodepunkt)
     .map((schluessel) => nachSerialisierung.get(schluessel) as Konflikthinweis);
 
+  // S4.2: Die Unterkünfte sind eine gewöhnliche Sammlung; sie erscheint im
+  // Zustand nur, wenn es eine gibt (siehe `Zustand.unterkuenfte`).
+  const unterkuenfte = sammlung("unterkunft");
+
   return {
     foldVersion: faltung.foldVersion,
     einsatz: einsatz as Zustand["einsatz"],
@@ -2135,6 +2141,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     anhaenge: alsDatensammlung(sammlung("anhang")) as Zustand["anhaenge"],
     etbEintraege: alsDatensammlung(sammlung("etbEintrag")) as Zustand["etbEintraege"],
     archivierungen: alsDatensammlung(archivierungen),
+    ...(unterkuenfte.size === 0 ? {} : { unterkuenfte: alsDatensammlung(unterkuenfte) as Zustand["unterkuenfte"] }),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),

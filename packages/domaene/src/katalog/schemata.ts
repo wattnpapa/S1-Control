@@ -486,3 +486,7 @@ export const KorrekturVon = z.object({
   zielTyp: zPflichttext,
   zielNutzlast: z.unknown(),
 });
+
+// --- S4 Versorgung (KONZEPT-S4.md §6) ---------------------------------------
+
+export * from "./schemata-versorgung.js";

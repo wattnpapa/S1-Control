@@ -131,6 +131,13 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   AnhangHinzugefuegt: "Anhang hinzugefügt",
   AnhangEntfernt: "Anhang entfernt",
   AnhangWiederhergestellt: "Anhang wiederhergestellt",
+  // S4.2 Unterkunft und Zuweisung
+  UnterkunftAngelegt: "Unterkunft angelegt",
+  UnterkunftGeaendert: "Unterkunft geändert",
+  UnterkunftAufgeloest: "Unterkunft aufgelöst",
+  UnterkunftWiederhergestellt: "Unterkunft wiederhergestellt",
+  EinheitUntergebracht: "Einheit untergebracht",
+  UnterbringungAufgehoben: "Unterbringung aufgehoben",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -170,6 +177,7 @@ export const FELD_TEXT: Readonly<Record<string, string>> = {
   schichtmodell: "Schichtmodell",
   fuestName: "Führungsstelle",
   uebergeordneteFuestName: "übergeordnete Führungsstelle",
+  kapazitaet: "Kapazität",
 };
 
 // ---------------------------------------------------------------------------
@@ -272,6 +280,8 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       return feldtext(zustand.einsatz?.name) ?? id;
     case "anforderung":
       return anforderungsname(zustand, id);
+    case "unterkunft":
+      return feldtext(zustand.unterkuenfte?.[id]?.name) ?? id;
     default:
       return id;
   }
@@ -372,7 +382,9 @@ export function tagebuchsatz(
   // Form (b): eine Anlage. Der Wert steht in der Nutzlast, nicht in `neu`.
   // Auftrag, Fahrzeug und Person nennen ihre Angaben mit — ohne sie stünde
   // dort nur eine Kennung (`tagebuch-einheitsteile.ts`).
-  if (eintrag.form === "b") return einheitsteilAnlagesatz(zustand, ereignis, kopf) ?? betreff;
+  if (eintrag.form === "b") {
+    return einheitsteilAnlagesatz(zustand, ereignis, kopf) ?? klartextsatz(zustand, ereignis, betreff) ?? betreff;
+  }
 
   // Vorgänge, bei denen „vorher → nachher“ nur Kennungen zeigte: Klartext.
   const klar = klartextsatz(zustand, ereignis, betreff);

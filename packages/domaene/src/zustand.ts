@@ -41,8 +41,11 @@ import type {
  * jetzt die Eingangsdaten der Hinweise mit, die M0.2 nur im Akkumulator
  * hielt (§3.8). **3**, seit der systemseitige Eingang den eigenen Typ
  * `EINGANG` traegt und nicht mehr in die Gesamtstaerke zaehlt (§5.3.4).
+ * **4** mit der Versorgung (S4): Unterkunft als Entitaet und das Feld
+ * `unterkunftId` an der Einheit — ein Schnappschuss der Fassung 3 haette
+ * diese Ereignisse als unbekannt gefaltet.
  */
-export const FOLD_VERSION = 3;
+export const FOLD_VERSION = 4;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -242,6 +245,8 @@ export interface EinheitZustand extends Anlage {
   /** Override je Feld (§5.4). */
   readonly logistik: { readonly [feld: string]: Feld<number> };
   readonly sofortbedarf?: Feld<Sofortbedarf>;
+  /** S4.2: die Unterkunft, in der die Einheit schläft; `null` nach Aufhebung. */
+  readonly unterkunftId?: Feld<Id>;
   readonly psaSaetzeProTag?: Feld<number>;
   readonly abgeteiltVon?: Erstwert<{
     readonly quellEinheitId: Id;
@@ -331,6 +336,18 @@ export interface AnforderungZustand extends Anlage {
   readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
   // abgeleitet (§5.6.2):
   readonly zustand: "OFFEN" | "ZUGESAGT" | "EINGETROFFEN" | "STORNIERT";
+}
+
+/** Eine Unterkunft der Versorgung (S4.2, KONZEPT-S4.md §6) — Rahmenfelder wie Abschnitt. */
+export interface UnterkunftZustand extends Anlage {
+  readonly id: Id;
+  readonly name: Feld<string>;
+  readonly ort?: Feld<string>;
+  /** Eine Zahl, nicht nach m/w/d getrennt (Entscheidung 2). */
+  readonly kapazitaet: Feld<number>;
+  readonly bemerkung?: Feld<string>;
+  readonly aufgeloest?: Feld<boolean>;
+  readonly verworfeneAnlagen: readonly VerworfeneAnlage[];
 }
 
 export interface DienstpostenZustand extends Anlage {
@@ -646,6 +663,11 @@ export interface Zustand {
   readonly anhaenge: { readonly [anhangId: string]: AnhangZustand };
   readonly etbEintraege: { readonly [etbId: string]: EtbEintragZustand };
   readonly archivierungen: { readonly [ereignisId: string]: ArchivierungZustand };
+  /**
+   * S4.2: die Unterkünfte. **Fehlt, solange es keine gibt** — so bleibt die
+   * Serialisierung eines Einsatzes ohne Versorgung unverändert.
+   */
+  readonly unterkuenfte?: { readonly [unterkunftId: string]: UnterkunftZustand };
   /** Deterministisch geordnet, und eine **Menge**: bytegleiche Eintraege fallen zusammen (§3.8). */
   readonly hinweise: readonly Konflikthinweis[];
   /** Nach `id` geordnet (§3.7). */

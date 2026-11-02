@@ -30,6 +30,8 @@ export const BEISPIEL_ZAHLEN: Versorgungszahlen = {
   ],
   anmarsch: 24,
   betten: { m: 118, w: 22, d: 2, gesamt: 142 },
+  ohneZuweisung: 18,
+  ohneZuweisungEinheiten: 2,
 };
 
 function zeile(abschnittId: string, name: string, tag: number, nacht: number, rest: readonly number[]): Logistikzeile {
@@ -111,11 +113,40 @@ export const BEISPIEL_ANSICHT: Versorgungsansicht = {
     },
     unterbringung: {
       zeilen: [
-        { einheitId: "E1", einheit: "2. Zug FF Rastede", bereich: "EA 1 Deich Nord", schicht: "NACHT", m: 14, w: 2, d: 0, ruhezeit: true, anmarsch: false },
-        { einheitId: "Z1", einheit: "2. Zug FF Hude", bereich: "Anmarsch", schicht: "TAG", m: 18, w: 4, d: 0, ruhezeit: false, anmarsch: true },
+        { einheitId: "E1", einheit: "2. Zug FF Rastede", bereich: "EA 1 Deich Nord", schicht: "NACHT", m: 14, w: 2, d: 0, ruhezeit: true, anmarsch: false, zustand: "ZUGEWIESEN", unterkunftId: "U1", unterkunft: "Turnhalle BBS Haarentor" },
+        { einheitId: "Z1", einheit: "2. Zug FF Hude", bereich: "Anmarsch", schicht: "TAG", m: 18, w: 4, d: 0, ruhezeit: false, anmarsch: true, zustand: "OHNE_UNTERKUNFT" },
       ],
       summe: { m: 14, w: 2, d: 0, gesamt: 16, einheiten: 1 },
       anmarsch: { m: 18, w: 4, d: 0, gesamt: 22, einheiten: 1 },
+    },
+    belegung: {
+      unterkuenfte: [
+        {
+          unterkunftId: "U1",
+          name: "Turnhalle BBS Haarentor",
+          ort: "Ammerländer Heerstr.",
+          kapazitaet: 120,
+          aufgeloest: false,
+          belegt: { m: 80, w: 14, d: 2, gesamt: 96 },
+          frei: 24,
+          ueberbelegt: false,
+          einheiten: [{ einheitId: "E1", einheit: "2. Zug FF Rastede", bereich: "EA 1 Deich Nord", m: 14, w: 2, d: 0 }],
+        },
+        {
+          unterkunftId: "U2",
+          name: "Gerätehaus Rastede",
+          kapazitaet: 12,
+          aufgeloest: false,
+          belegt: { m: 18, w: 2, d: 0, gesamt: 20 },
+          frei: -8,
+          ueberbelegt: true,
+          einheiten: [],
+        },
+      ],
+      kapazitaet: 132,
+      belegt: 116,
+      frei: 24,
+      ohneZuweisung: { koepfe: 18, einheiten: 2 },
     },
     sofortbedarf: {
       zeilen: [
