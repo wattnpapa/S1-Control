@@ -20,7 +20,7 @@
 
 import { useEffect, useState } from "react";
 
-import { Monitor } from "./Monitor.js";
+import { Monitorbild } from "./Monitorbild.js";
 import { bruecke, rufe } from "./bruecke.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import type { Lagebild } from "../kontrakt/index.js";
@@ -48,15 +48,11 @@ export function MonitorFenster(): React.JSX.Element {
   const jetzt = useJetzt();
   const verbindung = useVerbindungsstatus();
   const [lagebild, setzeLagebild] = useState<Lagebild | undefined>(undefined);
-
-  useEffect(() => {
-    // Der Fenstertitel wird **hier** gesetzt und nicht im Main: `loadFile`
-    // laedt dieselbe Seite wie der Arbeitsplatz, und deren `<title>`
-    // ueberschreibt den, den `new BrowserWindow` mitbekommen hat. Auf einer
-    // Taskleiste mit zwei Eintraegen namens „S1-Control“ findet niemand den
-    // Monitor wieder.
-    document.title = "S1-Control — Stärke";
-  }, []);
+  // Die Akte des Monitors — die Tafel und die Vorausschau holen mit ihr die
+  // Versorgungsansicht (S4.1). Den Fenstertitel setzt `Monitorbild` je
+  // Ansicht und nicht der Main: `loadFile` laedt dieselbe Seite wie der
+  // Arbeitsplatz, und deren `<title>` ueberschriebe ihn.
+  const [akteId, setzeAkteId] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     let akteId: string | undefined;
@@ -67,6 +63,7 @@ export function MonitorFenster(): React.JSX.Element {
         akteId = undefined;
         folge = -1;
         setzeLagebild(undefined);
+        setzeAkteId(undefined);
         return;
       }
       if (mitteilung.art !== "stand") return;
@@ -79,6 +76,7 @@ export function MonitorFenster(): React.JSX.Element {
       if (mitteilung.voll !== undefined) {
         folge = mitteilung.folge;
         setzeLagebild(mitteilung.voll);
+        setzeAkteId(mitteilung.akteId);
         return;
       }
       if (mitteilung.folge !== folge + 1) {
@@ -95,5 +93,5 @@ export function MonitorFenster(): React.JSX.Element {
     });
   }, []);
 
-  return <Monitor lagebild={lagebild} jetzt={jetzt} verbindung={verbindung} />;
+  return <Monitorbild lagebild={lagebild} akteId={akteId} jetzt={jetzt} verbindung={verbindung} />;
 }

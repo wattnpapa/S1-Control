@@ -48,7 +48,7 @@ export interface MonitorEigenschaften {
 }
 
 /** Die Fenstermasse in Pixeln — die einzige Grösse, die der Monitor selbst misst. */
-interface Fenstermass {
+export interface Fenstermass {
   readonly breite: number;
   readonly hoehe: number;
 }
@@ -69,7 +69,7 @@ function messeFenster(): Fenstermass {
  * wieder abgemeldet: Ein Zweitfenster geht auf und zu, und ein Hörer, der
  * das überlebt, schreibt in eine abgeräumte Komponente.
  */
-function useFenstermass(): Fenstermass {
+export function useFenstermass(): Fenstermass {
   const [mass, setzeMass] = useState<Fenstermass>(messeFenster);
 
   useEffect(() => {

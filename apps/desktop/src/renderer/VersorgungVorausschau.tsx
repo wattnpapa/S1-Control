@@ -21,7 +21,6 @@ function Karte({ m, jetzt, erste }: { readonly m: Mahlzeitvorausschau; readonly 
         <span className="leise">
           {tagText(m.zeitpunkt, jetzt)} · {restzeitText(m.zeitpunkt, jetzt)}
         </span>
-        <span className="marke-zustand">offen</span>
       </header>
       <p className="grosszahl">
         {m.vorausschau.portionen}{" "}

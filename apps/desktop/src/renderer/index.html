@@ -84,6 +84,14 @@
         --rahmenbreite: 1px;
         --schrift: 12px;
         --knopfhoehe: 31px;
+        /* Der Monitor (M3.5, S4.1): fester Kontrast an der Wand, unabhängig
+           vom Erscheinungsbild — nur „nacht" dimmt ihn auf Bernstein. */
+        --monitor-grund: #000000;
+        --monitor-text: #ffffff;
+        --monitor-leise: rgba(255, 255, 255, 0.65);
+        --monitor-linie: rgba(255, 255, 255, 0.28);
+        --monitor-warn: #e3c06b;
+        --monitor-leiste: #1a1a1a;
         --ui: -apple-system, "Helvetica Neue", Helvetica, Arial, sans-serif;
         --mono: ui-monospace, Menlo, monospace;
         color-scheme: light;
@@ -177,6 +185,11 @@
         --harke-linie: #c8a232;
         --gesperrt-bg: #241f0c;
         --gesperrt-text: #a58d3c;
+        --monitor-text: #e8dfae;
+        --monitor-leise: rgba(232, 223, 174, 0.65);
+        --monitor-linie: rgba(200, 162, 50, 0.35);
+        --monitor-warn: #e0b84a;
+        --monitor-leiste: #14120a;
         color-scheme: dark;
       }
 
@@ -2202,10 +2215,11 @@
         min-height: 100vh;
         margin: 0;
         padding: 1rem;
-        background: #000;
-        color: #fff;
+        background: var(--monitor-grund);
+        color: var(--monitor-text);
         text-align: center;
         font-variant-numeric: tabular-nums;
+        box-sizing: border-box;
       }
       .monitor p {
         margin: 0;
@@ -2245,6 +2259,173 @@
         font-size: clamp(1rem, 4vw, 2.4rem);
         opacity: 0.55;
       }
+      /* ---- Monitor: Ansichten, Leiste, Menü, Punkte (S4.1) ------------- */
+
+      .monitorrahmen {
+        position: relative;
+        min-height: 100vh;
+        background: var(--monitor-grund);
+      }
+      .monitor .monitorunterzeile {
+        font-size: clamp(1rem, 3.6vw, 2.6rem);
+      }
+      .monitor .monitornebenzeile {
+        font-size: clamp(0.85rem, 2.4vw, 1.7rem);
+        color: var(--monitor-leise);
+      }
+      .monitor .monitorwarn {
+        color: var(--monitor-warn);
+      }
+      /* Die Tafeln (4c, 4h): Zeilen statt einer Zahl, die Größe setzt die
+         Komponente aus `schriftgroesse`. */
+      .monitortafel table {
+        border-collapse: collapse;
+        width: min(100%, 1400px);
+        line-height: 1.35;
+      }
+      .monitortafel th,
+      .monitortafel td {
+        padding: 0.12em 0.5em;
+        border-bottom: 1px solid var(--monitor-linie);
+        text-align: right;
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .monitortafel th[scope="row"],
+      .monitortafel thead th:first-child {
+        text-align: left;
+      }
+      .monitortafel thead th {
+        font-size: 0.5em;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--monitor-leise);
+      }
+      .monitortafel .trenner {
+        border-left: 1px solid var(--monitor-linie);
+      }
+      .monitortafel small {
+        font-size: 0.6em;
+        color: var(--monitor-leise);
+      }
+      .monitortafel tr.naechste th,
+      .monitortafel tr.naechste td,
+      .monitortafel tr.summe th,
+      .monitortafel tr.summe td {
+        font-weight: 700;
+      }
+      .monitortafel tr.summe th,
+      .monitortafel tr.summe td {
+        border-top: 2px solid var(--monitor-text);
+      }
+      .monitortafel tr.anmarsch th,
+      .monitortafel tr.anmarsch td {
+        color: var(--monitor-leise);
+        border-bottom: 0;
+        padding-top: 0.5em;
+      }
+      /* Die Leiste erscheint nur bei Mausbewegung und liegt über dem Bild. */
+      .monitorleiste {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 10;
+        display: flex;
+        background: var(--monitor-leiste);
+        border-bottom: 1px solid var(--monitor-linie);
+      }
+      .monitorleiste button {
+        height: 40px;
+        border: 0;
+        border-right: 1px solid var(--monitor-linie);
+        background: transparent;
+        color: var(--monitor-leise);
+        font-size: 15px;
+      }
+      .monitorleiste button[aria-pressed="true"] {
+        background: var(--monitor-text);
+        color: var(--monitor-grund);
+        font-weight: 700;
+      }
+      .monitorleistefrei {
+        flex: 1;
+      }
+      .monitorpunkte {
+        position: absolute;
+        right: 14px;
+        bottom: 14px;
+        display: flex;
+        gap: 6px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .monitorpunkte li {
+        width: 9px;
+        height: 9px;
+        border: 1px solid var(--monitor-leise);
+      }
+      .monitorpunkte li.aktiv {
+        background: var(--monitor-text);
+        border-color: var(--monitor-text);
+      }
+      .monitorpunkte li.naechste {
+        border: 2px solid var(--monitor-warn);
+      }
+      /* Das Kontextmenü ist ein Renderer-Element und sieht in Electron und
+         im Browser gleich aus; seine Farben folgen dem Erscheinungsbild. */
+      .monitormenuegrund {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+      }
+      .monitormenue {
+        position: absolute;
+        min-width: 270px;
+        padding: 6px 0;
+        background: var(--karte);
+        color: var(--text);
+        border: var(--rahmenbreite) solid var(--rahmen);
+        box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
+        text-align: left;
+      }
+      .monitormenuetitel {
+        margin: 4px 14px 6px;
+        font: 600 0.78em/1.2 var(--mono);
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-leise);
+      }
+      .monitormenue button {
+        display: flex;
+        align-items: center;
+        width: 100%;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        text-align: left;
+      }
+      .monitormenue button:hover,
+      .monitormenue button[aria-checked="true"] {
+        background: var(--zeile-gewaehlt);
+      }
+      .monitormenue .haken {
+        display: inline-block;
+        width: 1.4em;
+      }
+      .monitormenue kbd {
+        margin-left: auto;
+        padding-left: 18px;
+        font: 0.8em var(--mono);
+        color: var(--text-leiser);
+      }
+      .monitormenue hr {
+        margin: 6px 0;
+        border: 0;
+        border-top: var(--rahmenbreite) solid var(--rahmen-weich);
+      }
+
       /* ---- Das Einsatztagebuch (M3.3) ----------------------------------- */
 
       .tagebuch {
