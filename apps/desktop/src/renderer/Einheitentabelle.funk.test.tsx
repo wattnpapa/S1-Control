@@ -7,7 +7,8 @@
  * (die Rufgruppen sind Daten des Einsatzes, keine feste Liste), dass „DMO"
  * und „ohne" als Marke an der Zelle stehen und dass die Zelle
  * `EinheitRufgruppeGesetzt` mit dem gesehenen Vorwert schreibt — dasselbe
- * Ereignis wie die Zelle im Blatt „Funkplan".
+ * Ereignis wie die Zelle im Blatt „Funkplan". F3: „Letzter Kontakt" steht als
+ * Marke, über der Schwelle Bernstein mit Alter, gerechnet mit der Minutenuhr.
  */
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -46,6 +47,8 @@ function zeile(id: string, bezeichnung: string, rufgruppe: Zelle, teil: Partial<
       gesamt: zelle("9", undefined),
       rufgruppe,
       funkrufname: zelle("Heros Oldenburg 21/52", undefined),
+      // Der Text ist der Marke gleich; die Zelle zeigt nur die Marke.
+      letzterKontakt: zelle("— Text der Zelle —", undefined),
     },
     ...teil,
   };
@@ -58,16 +61,28 @@ const AUSWAHL = [
 
 let attrappe: Attrappe;
 
+/** Ein Zeitpunkt vor so vielen Minuten — die Marke rechnet mit der echten Minutenuhr. */
+function vor(minuten: number): string {
+  return new Date(Date.now() - minuten * 60_000).toISOString();
+}
+
 beforeEach(() => {
   attrappe = baueAttrappe();
   attrappe.antwortet("tabelleAnfordern", {
     lageZeiger: 5,
     zeilen: [
-      zeile("U1", "Bergungsgruppe 1", zelle("THW_OL_FUE", "R1")),
-      zeile("U2", "Fachgruppe N", zelle("DMO 310", "R3")),
+      zeile("U1", "Bergungsgruppe 1", zelle("THW_OL_FUE", "R1"), {
+        letzterKontakt: { art: "FUNKPROBE", zeitpunkt: vor(10), schwelleMinuten: 60, kontaktpflicht: true },
+      }),
+      zeile("U2", "Fachgruppe N", zelle("DMO 310", "R3"), {
+        letzterKontakt: { art: "MELDUNG", zeitpunkt: vor(120), schwelleMinuten: 60, kontaktpflicht: true },
+      }),
       zeile("U3", "FGr Notversorgung", zelle("", null), { zaehlklasse: "erwartet" }),
       zeile("U4", "SEG DLRG", zelle("THW_OL_BR (aufgelöst)", "R5")),
-      zeile("U5", "Abgerückte Gruppe", zelle("", null), { zaehlklasse: "beendet" }),
+      zeile("U5", "Abgerückte Gruppe", zelle("", null), {
+        zaehlklasse: "beendet",
+        letzterKontakt: { art: "MELDUNG", zeitpunkt: vor(300), schwelleMinuten: 60, kontaktpflicht: false },
+      }),
     ],
     gesamtzahl: 5,
     von: 0,
@@ -102,6 +117,20 @@ describe("Die Spaltengruppe „Funk“ der Einheitentabelle", () => {
     expect(screen.getByRole("columnheader", { name: "Rufgruppe" })).toBeDefined();
     expect(screen.getByRole("columnheader", { name: "Funkrufname" })).toBeDefined();
     expect(screen.getAllByText("Heros Oldenburg 21/52").length).toBeGreaterThan(0);
+  });
+
+  it("zeigt „Letzter Kontakt“ als Marke: Bernstein mit Alter über der Schwelle, nie ohne Kontaktpflicht", async () => {
+    await mitFunk();
+    expect(screen.getByRole("columnheader", { name: "Letzter Kontakt" })).toBeDefined();
+    const frisch = within(screen.getByRole("row", { name: /Bergungsgruppe 1/ })).getByText(/^\d{4} Funkprobe$/);
+    expect(frisch.className).not.toContain("warn");
+    const still = within(screen.getByRole("row", { name: /Fachgruppe N/ })).getByText(/^\d{4} · 2 h 0 min$/);
+    expect(still.className).toContain("warn");
+    expect(still.getAttribute("title")).toMatch(/Meldung · vor 2 h 0 min — kein Kontakt seit mehr als 60 min/);
+    expect(within(screen.getByRole("row", { name: /Abgerückte Gruppe/ })).getByText(/^\d{4} Meldung$/).className).not.toContain("warn");
+    // Ohne Kontakt bleibt die Zelle leer; der Text der Zelle steht nirgends doppelt.
+    expect(within(screen.getByRole("row", { name: /FGr Notversorgung/ })).queryByText(/Funkprobe|Meldung/)).toBeNull();
+    expect(screen.queryByText("— Text der Zelle —")).toBeNull();
   });
 
   it("setzt „DMO“ und „ohne“ als Marke, aber nicht an beendeten Einheiten", async () => {

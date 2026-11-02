@@ -41,6 +41,8 @@ const BENENNUNGEN: Readonly<Record<string, Benennung>> = {
   RufgruppeAufgeloest: { gegenstand: "Rufgruppe", tat: "aufgelöst" },
   RufgruppeWiederhergestellt: { gegenstand: "Rufgruppe", tat: "wiederhergestellt" },
   EinheitRufgruppeGesetzt: { gegenstand: "Rufgruppe der Einheit", tat: "gesetzt" },
+  FunkprobeDurchgefuehrt: { gegenstand: "Funkprobe der Einheit", tat: "eingetragen" },
+  FunkParameterGesetzt: { gegenstand: "Schwelle „kein Kontakt“", tat: "gesetzt" },
   EinsatzBeendet: { gegenstand: "Einsatz", tat: "beendet" },
   EinsatzWiedereroeffnet: { gegenstand: "Einsatz", tat: "wiedereröffnet" },
 };

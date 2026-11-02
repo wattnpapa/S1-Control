@@ -1,6 +1,7 @@
 /**
  * Die Marken der Ressourcenplanung in der Einheitentabelle (K12, K18) — und
- * die Weiche zu den Marken der Gruppe Funk (`Funkmarken.tsx`).
+ * die Weiche zu den Marken der Gruppe Funk (`Funkmarken.tsx`), dort auch
+ * „Letzter Kontakt" mit derselben Minutenuhr wie K18.
  *
  * Beide Kennzahlen wurden gerechnet und nirgends gezeichnet. K12 steht als
  * Marke „Ablösung angefordert / zugesagt / eingetroffen“ an der Bezeichnung —
@@ -20,7 +21,7 @@ import { useSyncExternalStore } from "react";
 
 import { projektion, type Spalte, type Tabellenzeile } from "@s1/domaene";
 
-import { Rufgruppenzellmarke } from "./Funkmarken.js";
+import { Kontaktmarke, Rufgruppenzellmarke } from "./Funkmarken.js";
 import type { Zustandswahl } from "../kontrakt/index.js";
 
 const TAKT_MS = 60_000;
@@ -61,6 +62,17 @@ function Ablaufmarke({ bis }: { readonly bis: unknown }): React.JSX.Element | nu
   return marke === undefined ? null : <> <Marke marke={marke} /></>;
 }
 
+/**
+ * „Letzter Kontakt" (Funkplan F3): Die Zeile trägt den Kontakt ohne Uhr, die
+ * Marke entsteht mit der Minutenuhr — wie „läuft ab" an „Verfügbar bis". Die
+ * Zelle zeigt nur die Marke; ihr Text ist derselbe.
+ */
+function Kontaktzellmarke({ zeile }: { readonly zeile: Tabellenzeile }): React.JSX.Element | null {
+  const jetzt = useMinutenuhr();
+  if (zeile.letzterKontakt === undefined) return null;
+  return <Kontaktmarke marke={projektion.kontaktmarke(zeile.letzterKontakt, jetzt)} />;
+}
+
 export interface ZellmarkenEigenschaften {
   readonly zeile: Tabellenzeile;
   readonly spalte: Spalte;
@@ -74,6 +86,7 @@ export function Zellmarken({ zeile, spalte, werteliste }: ZellmarkenEigenschafte
   if (spalte.schluessel === "bezeichnung" && zeile.abloesung !== undefined) {
     return <> <Marke marke={zeile.abloesung} /></>;
   }
+  if (spalte.schluessel === "letzterKontakt") return <Kontaktzellmarke zeile={zeile} />;
   if (spalte.schluessel === "verfuegbarBis") {
     return <Ablaufmarke bis={zeile.zellen["verfuegbarBis"]?.wert} />;
   }

@@ -1,6 +1,6 @@
 /**
- * Die Marken des Funkplans (KONZEPT-FUNKPLAN.md §4 bis §6): Betriebsart und
- * „ohne Rufgruppe".
+ * Die Marken des Funkplans (KONZEPT-FUNKPLAN.md §4 bis §6): Betriebsart,
+ * „ohne Rufgruppe" und (F3) der letzte Kontakt mit „kein Kontakt".
  *
  * Eine Stelle für beides, weil vier Ansichten sie zeigen — Rufgruppenliste,
  * Zuordnung, Zelle im Blatt und Zelle der Einheitentabelle — und die Marke
@@ -10,7 +10,7 @@
  * **und** Wort, wie jede Zustandsmarke.
  */
 
-import { projektion, type Tabellenzeile } from "@s1/domaene";
+import { projektion, type Funkteilnehmer, type Tabellenzeile } from "@s1/domaene";
 
 import type { Zustandswahl } from "../kontrakt/index.js";
 
@@ -50,4 +50,40 @@ export function Rufgruppenzellmarke(props: {
   const eintrag = werteliste.find((w) => w.wert === gesetzt);
   if (eintrag === undefined) return <> <OhneRufgruppe /></>;
   return eintrag.betriebsart === "DMO" ? <> <Betriebsartmarke betriebsart="DMO" /></> : null;
+}
+
+/**
+ * Die Marke „Letzter Kontakt" eines Teilnehmers (F3): „1431 Funkprobe",
+ * über der Schwelle Bernstein mit Alter „1250 · 1 h 53 min". Gerechnet wird
+ * mit `projektion.kontaktmarke` gegen das `jetzt` der Ansicht, damit Marke und
+ * Zahl im Band dieselbe Uhr haben.
+ */
+export function teilnehmerKontaktmarke(t: Pick<Funkteilnehmer, "status" | "letzterKontakt">, jetzt: string, schwelleMinuten: number): projektion.Kontaktmarke | undefined {
+  const kontakt = t.letzterKontakt;
+  if (kontakt === undefined) return undefined;
+  return projektion.kontaktmarke({ art: kontakt.art, zeitpunkt: kontakt.zeitpunkt, schwelleMinuten, kontaktpflicht: projektion.kontaktpflicht(t.status) }, jetzt);
+}
+
+/** Die Marke selbst; ohne Kontakt ein leiser Strich. */
+export function Kontaktmarke({ marke }: { readonly marke: projektion.Kontaktmarke | undefined }): React.JSX.Element {
+  if (marke === undefined) return <span className="leise">—</span>;
+  return (
+    <span className={`marke-zustand kontakt ${marke.ton === "warn" ? "warn" : ""}`.trim()} title={marke.titel}>
+      {marke.text}
+    </span>
+  );
+}
+
+/** „kein Kontakt 1305" — eine Probe ohne Kontakt, nach der noch keiner gelang; der Grund im Tooltip. */
+export function KeinKontaktmarke({ t }: { readonly t: Pick<Funkteilnehmer, "keinKontaktGemeldet"> }): React.JSX.Element | null {
+  const kein = t.keinKontaktGemeldet;
+  if (kein === undefined) return null;
+  return (
+    <>
+      {" "}
+      <span className="marke-zustand warn" title={kein.grund === undefined ? undefined : `Grund: ${kein.grund}`}>
+        kein Kontakt {projektion.uhrzeitKurz(kein.zeitpunkt)}
+      </span>
+    </>
+  );
 }

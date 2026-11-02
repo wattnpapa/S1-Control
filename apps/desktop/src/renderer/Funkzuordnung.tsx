@@ -18,6 +18,10 @@
  * Der Name der Einheit öffnet die Maske „Funk und Erreichbarkeit"
  * (Doppelklick, Enter oder ✎), wie die Lage sie über „Funk …" öffnet.
  *
+ * F3: „Letzter Kontakt" als Marke — Bernstein über der Schwelle, mit Alter —
+ * und „kein Kontakt" daneben. Ein Klick markiert die Zeile; die markierte
+ * Einheit ist die, für die „Funkprobe eintragen" (Strg+P) schreibt.
+ *
  * Gerechnet wird nichts: Die Gruppen, die Reihenfolge und der Hinweis
  * „Bereich ≠ Gruppe" kommen aus `projektion.funkplan`. Funkrufname und
  * Erreichbarkeit sind hier Ableitungen und werden nur gelesen.
@@ -26,17 +30,24 @@
 import { statusTitel, statusTon, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
 import { Funkhinweiszelle } from "./Funkhinweiszelle.js";
-import { Betriebsartmarke, OhneRufgruppe } from "./Funkmarken.js";
+import { Betriebsartmarke, KeinKontaktmarke, Kontaktmarke, OhneRufgruppe, teilnehmerKontaktmarke } from "./Funkmarken.js";
 import { Rufgruppenzelle } from "./Rufgruppenzelle.js";
 import { einheitenText } from "./versorgungstext.js";
 
-export type Funksicht = "rufgruppe" | "bereich";
+/** Die drei Sichten des Blattes; „Funkproben" zeigt `Funkprobenliste.tsx`, die beiden anderen diese Karte. */
+export type Funksicht = "rufgruppe" | "bereich" | "funkproben";
+export type Zuordnungssicht = Exclude<Funksicht, "funkproben">;
 
-const SPALTEN = ["Einheit", "Bereich", "Status", "Rufgruppe", "Funkrufname", "Erreichbarkeit", "Funkhinweis", "Hinweis"] as const;
+const SPALTEN = ["Einheit", "Bereich", "Status", "Rufgruppe", "Funkrufname", "Erreichbarkeit", "Funkhinweis", "Hinweis", "Letzter Kontakt"] as const;
 
 export interface FunkzuordnungEigenschaften {
   readonly plan: Funkplan;
-  readonly sicht: Funksicht;
+  readonly sicht: Zuordnungssicht;
+  /** Die Uhr der Ansicht (Worker), gegen die das Alter des letzten Kontakts steht. */
+  readonly jetzt: string;
+  /** Die markierte Einheit — Ziel von „Funkprobe eintragen". */
+  readonly markiertId: string | undefined;
+  readonly aufMarkieren: (teilnehmer: Funkteilnehmer) => void;
   readonly nurLesen: boolean;
   readonly aufNeu: (teilnehmer: Funkteilnehmer) => void;
   /** Öffnet „Funk und Erreichbarkeit" der Einheit (Doppelklick auf den Namen oder ✎). */
@@ -73,9 +84,10 @@ interface ZeilenEigenschaften extends Omit<FunkzuordnungEigenschaften, "sicht"> 
 
 function Zeile(props: ZeilenEigenschaften): React.JSX.Element {
   const { t } = props;
-  const klassen = [t.erwartet ? "erwartet" : "", props.mithoerer === true ? "mithoerer" : ""].filter((k) => k !== "").join(" ");
+  const markiert = props.markiertId === t.einheitId && props.mithoerer !== true;
+  const klassen = [t.erwartet ? "erwartet" : "", props.mithoerer === true ? "mithoerer" : "", markiert ? "gewaehlt" : ""].filter((k) => k !== "").join(" ");
   return (
-    <tr className={klassen === "" ? undefined : klassen}>
+    <tr className={klassen === "" ? undefined : klassen} aria-selected={markiert} onClick={() => props.aufMarkieren(t)}>
       <Einheitenname t={t} aufEinheit={props.aufEinheit} mithoerer={props.mithoerer === true} />
       <td className="leise">{t.bereich}</td>
       <td>
@@ -86,6 +98,10 @@ function Zeile(props: ZeilenEigenschaften): React.JSX.Element {
       <td className="leise">{t.erreichbarkeit === "" ? "—" : t.erreichbarkeit}</td>
       <Funkhinweiszelle teilnehmer={t} nurLesen={props.nurLesen} />
       <td>{t.hinweis === "" ? <span className="leise">—</span> : <span className="marke-zustand warn">{t.hinweis}</span>}</td>
+      <td className="kontaktzelle">
+        <Kontaktmarke marke={teilnehmerKontaktmarke(t, props.jetzt, props.plan.schwelleMinuten)} />
+        <KeinKontaktmarke t={t} />
+      </td>
     </tr>
   );
 }
@@ -185,7 +201,8 @@ export function Funkzuordnung({ sicht, ...props }: FunkzuordnungEigenschaften): 
       <p className="hinweistext">
         Zuordnung = Hauptrufgruppe der Einheit: die Gruppe, über die die Führungsstelle sie ruft; „hört mit“ steht, wer die Gruppe als weitere trägt.
         Doppelklick auf Rufgruppe oder Funkhinweis bearbeitet die Zelle · Enter schreibt · Esc verwirft. Funkrufname und Erreichbarkeit kommen aus
-        Fahrzeug und Führungskraft; überschrieben werden sie in der Maske der Einheit (Doppelklick auf den Namen).
+        Fahrzeug und Führungskraft; überschrieben werden sie in der Maske der Einheit (Doppelklick auf den Namen). „Letzter Kontakt“ ist die jüngere
+        von Funkprobe und Statusmeldung; älter als {props.plan.schwelleMinuten} Minuten wird Bernstein. Klick markiert eine Einheit für „Funkprobe eintragen“.
       </p>
     </section>
   );

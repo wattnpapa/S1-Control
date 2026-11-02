@@ -1,7 +1,8 @@
 /**
  * Die Maske „Funk und Erreichbarkeit" einer Einheit (KONZEPT-FUNKPLAN.md §6,
  * Option 5d): Hauptrufgruppe, weitere Rufgruppen, Funkrufname,
- * Erreichbarkeit, Funkhinweis und darunter der Tagebuchauszug zu Funk.
+ * Erreichbarkeit, Funkhinweis, (F3) die Zeile „Letzter Kontakt" mit den
+ * Knöpfen für die Funkprobe und darunter der Tagebuchauszug zu Funk.
  *
  * Das Konzept sieht einen vierten Karteireiter einer Maske „Einheit
  * bearbeiten" vor; eine solche Maske gibt es nicht — die Stammdaten der
@@ -18,23 +19,27 @@
 
 import { useState } from "react";
 
-import type { Funkteilnehmer, Rufgruppenkarte } from "@s1/domaene";
+import { FUNK_KONTAKT_SCHWELLE_VORBELEGUNG, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
 import { Ableitungsfeld } from "./Ableitungsfeld.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Funkauszug } from "./Funkauszug.js";
 import { funkeingabeAus, funkentwuerfe, type Funkeingabe } from "./funkmaskenwerte.js";
+import { Kontaktzeile, kontaktanzeigeVon, nachProbe } from "./Kontaktzeile.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { Rufgruppenchips } from "./Rufgruppenchips.js";
 import { wahltext } from "./Rufgruppenzelle.js";
 import { useSperreHalten } from "./useBearbeitungssperre.js";
 import { useFunkplanansicht } from "./useFunkplanansicht.js";
+import { useFunkprobe } from "./useFunkprobe.js";
 
 export interface FunkUndErreichbarkeitEigenschaften {
   /** Der Teilnehmer, wie der Funkplan ihn beim Öffnen zeigte — die Vorher-Werte. */
   readonly teilnehmer: Funkteilnehmer;
   readonly rufgruppen: readonly Rufgruppenkarte[];
+  /** Die Schwelle „kein Kontakt" des Einsatzes; ohne Plan die Vorbelegung. */
+  readonly schwelleMinuten?: number | undefined;
   /** Beendeter Einsatz: Felder gesperrt, die Maske zeigt nur. */
   readonly nurLesen?: boolean;
   readonly aufSchliessen: () => void;
@@ -61,8 +66,16 @@ function Hauptrufgruppe(props: { readonly t: Funkteilnehmer; readonly rufgruppen
   );
 }
 
-export function FunkUndErreichbarkeit({ teilnehmer: t, rufgruppen, nurLesen = false, aufSchliessen }: FunkUndErreichbarkeitEigenschaften): React.JSX.Element {
+export function FunkUndErreichbarkeit({ teilnehmer: t, rufgruppen, schwelleMinuten, nurLesen = false, aufSchliessen }: FunkUndErreichbarkeitEigenschaften): React.JSX.Element {
   const [eingabe, setzeEingabe] = useState<Funkeingabe>(() => funkeingabeAus(t));
+  // Die Proben schreiben sofort; die Zeile führt Anzeige und Vorher-Wert selbst nach.
+  const [anzeige, setzeAnzeige] = useState(() => kontaktanzeigeVon(t));
+  const [proben, setzeProben] = useState(t.letzteFunkproben ?? {});
+  const funkprobe = useFunkprobe((probe) => {
+    setzeAnzeige((bisher) => nachProbe(bisher, probe));
+    setzeProben((bisher) => ({ ...bisher, [probe.ergebnis]: probe.wert }));
+  });
+  const ziel = { ...t, letzteFunkproben: proben };
   const versuch = useAnlegeversuch();
   useSperreHalten(nurLesen ? undefined : t.einheitId);
   const setze = <F extends keyof Funkeingabe>(feld: F, wert: Funkeingabe[F]): void => setzeEingabe((bisher) => ({ ...bisher, [feld]: wert }));
@@ -77,41 +90,52 @@ export function FunkUndErreichbarkeit({ teilnehmer: t, rufgruppen, nurLesen = fa
   }
 
   return (
-    <Maske titel={`„${t.einheit}“ — Funk und Erreichbarkeit`} bereit={!versuch.gesperrt && !nurLesen} aufAbbrechen={aufSchliessen} aufBestaetigen={schreibe}>
-      <p className="hinweistext funkmaskenkopf">
-        {t.bereich}
-        {t.funkrufname === "" ? "" : ` · ${t.funkrufname}`}
-      </p>
-      <fieldset className="funkmaske" disabled={nurLesen}>
-        <Hauptrufgruppe t={t} rufgruppen={rufgruppen} wert={eingabe.rufgruppeId} aufWert={(wert) => setze("rufgruppeId", wert)} />
-        <Rufgruppenchips gewaehlt={eingabe.weitere} rufgruppen={rufgruppen} bekannt={t.weitereRufgruppen} hauptgruppe={eingabe.rufgruppeId} aufWahl={(liste) => setze("weitere", liste)} />
-        <Ableitungsfeld
-          titel="Funkrufname"
-          erklaerung="Vorbelegung aus dem Fahrzeug"
-          angezeigt={t.funkrufname}
-          quelle="aus dem Fahrzeug"
-          ueberschrieben={t.funkrufnameOverride !== undefined}
-          wert={eingabe.funkrufname}
-          aufWert={(wert) => setze("funkrufname", wert)}
-        />
-        <Ableitungsfeld
-          titel="Erreichbarkeit"
-          erklaerung="Führungskraft und Kontakte"
-          angezeigt={t.erreichbarkeit}
-          quelle="aus Führungskraft und Kontakten"
-          ueberschrieben={t.erreichbarkeitOverride !== undefined}
-          wert={eingabe.erreichbarkeit}
-          aufWert={(wert) => setze("erreichbarkeit", wert)}
-        />
-        <label>
-          Funkhinweis <small>frei · für die Sprechfunker</small>
-          <textarea rows={3} value={eingabe.funkhinweis} onChange={(e) => setze("funkhinweis", e.target.value)} />
-        </label>
-      </fieldset>
-      <Funkauszug einheitId={t.einheitId} />
-      <p className="hinweistext">Jede Änderung ist ein Ereignis mit dem Wert, den diese Maske beim Öffnen sah; hat ein anderer Arbeitsplatz das Feld inzwischen geändert, wird nicht still überschrieben.</p>
-      {versuch.anzeige}
-    </Maske>
+    <>
+      <Maske titel={`„${t.einheit}“ — Funk und Erreichbarkeit`} bereit={!versuch.gesperrt && !nurLesen} aufAbbrechen={aufSchliessen} aufBestaetigen={schreibe}>
+        <p className="hinweistext funkmaskenkopf">
+          {t.bereich}
+          {t.funkrufname === "" ? "" : ` · ${t.funkrufname}`}
+        </p>
+        <fieldset className="funkmaske" disabled={nurLesen}>
+          <Hauptrufgruppe t={t} rufgruppen={rufgruppen} wert={eingabe.rufgruppeId} aufWert={(wert) => setze("rufgruppeId", wert)} />
+          <Rufgruppenchips gewaehlt={eingabe.weitere} rufgruppen={rufgruppen} bekannt={t.weitereRufgruppen} hauptgruppe={eingabe.rufgruppeId} aufWahl={(liste) => setze("weitere", liste)} />
+          <Ableitungsfeld
+            titel="Funkrufname"
+            erklaerung="Vorbelegung aus dem Fahrzeug"
+            angezeigt={t.funkrufname}
+            quelle="aus dem Fahrzeug"
+            ueberschrieben={t.funkrufnameOverride !== undefined}
+            wert={eingabe.funkrufname}
+            aufWert={(wert) => setze("funkrufname", wert)}
+          />
+          <Ableitungsfeld
+            titel="Erreichbarkeit"
+            erklaerung="Führungskraft und Kontakte"
+            angezeigt={t.erreichbarkeit}
+            quelle="aus Führungskraft und Kontakten"
+            ueberschrieben={t.erreichbarkeitOverride !== undefined}
+            wert={eingabe.erreichbarkeit}
+            aufWert={(wert) => setze("erreichbarkeit", wert)}
+          />
+          <label>
+            Funkhinweis <small>frei · für die Sprechfunker</small>
+            <textarea rows={3} value={eingabe.funkhinweis} onChange={(e) => setze("funkhinweis", e.target.value)} />
+          </label>
+          <Kontaktzeile
+            t={t}
+            anzeige={anzeige}
+            schwelleMinuten={schwelleMinuten ?? FUNK_KONTAKT_SCHWELLE_VORBELEGUNG}
+            aufKontakt={() => funkprobe.kontakt(ziel)}
+            aufKeinKontakt={() => funkprobe.keinKontakt(ziel)}
+          />
+        </fieldset>
+        <Funkauszug einheitId={t.einheitId} />
+        <p className="hinweistext">Jede Änderung ist ein Ereignis mit dem Wert, den diese Maske beim Öffnen sah; hat ein anderer Arbeitsplatz das Feld inzwischen geändert, wird nicht still überschrieben.</p>
+        {versuch.anzeige}
+      </Maske>
+      {/* Neben der Maske, nicht in ihr: Das Absenden der Grundabfrage stiege sonst in diese Maske. */}
+      {funkprobe.maske}
+    </>
   );
 }
 
@@ -137,5 +161,5 @@ export function FunkUndErreichbarkeitAusLage({ einheitId, aufSchliessen }: { rea
       </Maske>
     );
   }
-  return <FunkUndErreichbarkeit teilnehmer={t} rufgruppen={plan.rufgruppen} nurLesen={einsatzStatus !== "AKTIV"} aufSchliessen={aufSchliessen} />;
+  return <FunkUndErreichbarkeit teilnehmer={t} rufgruppen={plan.rufgruppen} schwelleMinuten={plan.schwelleMinuten} nurLesen={einsatzStatus !== "AKTIV"} aufSchliessen={aufSchliessen} />;
 }

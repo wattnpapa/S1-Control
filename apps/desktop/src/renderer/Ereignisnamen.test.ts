@@ -29,6 +29,7 @@ describe("Ereignisnamen", () => {
     expect(ereignisMitObjekt("RufgruppeWiederhergestellt", "THW_OL_FUE")).toBe("Rufgruppe ‚THW_OL_FUE‘ wiederhergestellt");
     expect(ereignisMitObjekt("EinheitRufgruppeGesetzt", "FGr N Brake")).toBe("Rufgruppe der Einheit ‚FGr N Brake‘ gesetzt");
     for (const art of ["RufgruppeAngelegt", "RufgruppeGeaendert"]) expect(ereignisname(art)).toMatch(/^Rufgruppe /u);
+    expect(ereignisMitObjekt("FunkprobeDurchgefuehrt", "FGr N Brake")).toBe("Funkprobe der Einheit ‚FGr N Brake‘ eingetragen");
   });
 
   it("nennt die Zusage einer Anforderung nicht „Ablösung“", () => {

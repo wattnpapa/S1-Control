@@ -170,9 +170,15 @@ describe("Das Blatt „Funkplan“", () => {
     const peer = { clientId: "c2", anzeigename: "Lage 2", rechnername: "r2", veraltet: false, bearbeitet: ["R1"] };
     useLaden.setState({ lagebild: { ...BEISPIEL_LAGEBILD, peers: [peer] } as never });
     await geladen();
-    fireEvent.keyDown(window, { key: "e", ctrlKey: true });
+    // Der Hörer des Kürzels hängt an einem Effekt, der die frisch geladene Wahl
+    // erst nach dem Zeichnen sieht. Unter Last trifft ein sofortiges Strg+E noch
+    // den alten Hörer (keine Wahl) und bewirkt nichts — gedrückt wird deshalb,
+    // bis die Warnung steht; der erste Druck beim neuen Hörer warnt.
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: "e", ctrlKey: true });
+      expect(useLaden.getState().hinweise.at(-1)?.text).toMatch(/wird von Lage 2 bearbeitet/);
+    });
     expect(screen.queryByRole("form", { name: /bearbeiten/ })).toBeNull();
-    expect(useLaden.getState().hinweise.at(-1)?.text).toMatch(/wird von Lage 2 bearbeitet/);
     fireEvent.keyDown(window, { key: "e", ctrlKey: true });
     expect(screen.getByRole("form", { name: "Rufgruppe „THW_OL_FUE“ bearbeiten" })).toBeDefined();
   });

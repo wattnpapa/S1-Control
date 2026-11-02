@@ -1981,8 +1981,11 @@
       }
       /* Funkplan (Option 5b): Rufgruppen links, Zuordnung rechts. Alle Farben
          aus den Marken, damit Dunkel, Feld und Nacht mitgehen. */
-      .kpiband.funkband {
-        grid-template-columns: repeat(4, minmax(0, 1fr));
+      /* Sechs Kacheln wie die Grundform des Bandes; bei schmalem Fenster drei je Zeile. */
+      @media (max-width: 900px) {
+        .kpiband.funkband {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
       }
       .funkflaeche {
         display: grid;
@@ -2127,6 +2130,38 @@
       .funktabelle tr.mithoerer td {
         color: var(--text-leise);
         font-style: italic;
+      }
+      /* Funkplan F3: die Zuordnung markiert eine Einheit für „Funkprobe
+         eintragen"; die Schwelle steht in der Werkzeugzeile, der letzte
+         Kontakt als Zeile in der Maske. */
+      .zuordnungskarte .funktabelle tbody tr:not(.gruppenkopf) {
+        cursor: pointer;
+      }
+      .funktabelle td.kontaktzelle {
+        white-space: nowrap;
+      }
+      .funkschwelle {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        color: var(--text-leise);
+      }
+      .funkschwelle select {
+        margin: 0;
+        width: auto;
+      }
+      .kontaktzeile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+      }
+      .kontaktzeile .feldtitel {
+        flex-basis: 100%;
+      }
+      .kontaktzeile .feldtitel small {
+        margin-left: 6px;
+        color: var(--text-leise);
       }
       .funktabelle td.funkhinweis {
         white-space: normal;

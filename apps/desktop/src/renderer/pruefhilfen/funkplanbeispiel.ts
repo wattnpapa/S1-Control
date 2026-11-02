@@ -7,9 +7,14 @@
  * fertigen Plan macht. Die Rufgruppennamen sind erfunden.
  */
 
-import type { Funkteilnehmer, Rufgruppenkarte } from "@s1/domaene";
+import type { Funkprobenzeile, Funkteilnehmer, Rufgruppenkarte } from "@s1/domaene";
 
 import type { Funkplanansicht } from "../../kontrakt/index.js";
+
+/** Eine Uhrzeit am 10.09.2026 in der Ortszeit — die Marken zeigen Ortszeit. */
+export function um(stunde: number, minute: number): string {
+  return new Date(2026, 8, 10, stunde, minute).toISOString();
+}
 
 function teilnehmer(einheitId: string, einheit: string, abschnittId: string, bereich: string, weiteres: Partial<Funkteilnehmer> = {}): Funkteilnehmer {
   return {
@@ -35,11 +40,20 @@ const E1 = teilnehmer("E1", "Abschnittsleitung EA 1 Deich Nord", "EA1", "EA 1 De
   rufgruppe: "THW_OL_FUE",
   funkrufname: "Heros Delmenhorst 22/10",
   erreichbarkeit: "ZFü Albers / 0170-5512",
+  letzterKontakt: { art: "FUNKPROBE", zeitpunkt: um(14, 31), ueberSchwelle: false },
+  letzteFunkproben: { KONTAKT: { zeitpunkt: um(14, 31), rufgruppeId: "R1" } },
 });
 const E2 = teilnehmer("E2", "FGr WP OV Cloppenburg", "EA2", "EA 2 Pumpen Süd", {
   rufgruppeId: "R2",
   rufgruppe: "THW_OL_EA2",
   funkrufname: "Heros Cloppenburg 28/51",
+  // Seit 1250 still, um 1305 ohne Kontakt geprobt: Bernstein und „kein Kontakt" daneben.
+  letzterKontakt: { art: "FUNKPROBE", zeitpunkt: um(12, 50), ueberSchwelle: true },
+  keinKontaktGemeldet: { zeitpunkt: um(13, 5), rufgruppeId: "R2", grund: "Funkloch Deich" },
+  letzteFunkproben: {
+    KONTAKT: { zeitpunkt: um(12, 50), rufgruppeId: "R2" },
+    KEIN_KONTAKT: { zeitpunkt: um(13, 5), rufgruppeId: "R2", grund: "Funkloch Deich" },
+  },
 });
 const E3 = teilnehmer("E3", "FGr Ortung 1 OV Varel", "EA1", "EA 1 Deich Nord", {
   rufgruppeId: "R2",
@@ -83,6 +97,12 @@ const R3: Rufgruppenkarte = { rufgruppeId: "R3", betriebsart: "DMO", name: "DMO 
 const R4: Rufgruppenkarte = { rufgruppeId: "R4", betriebsart: "ANALOG", name: "2 m K 55 G/U", zweck: "Ortsfunk FF Hude", aufgeloest: false, teilnehmer: [], mithoerer: [] };
 const R5: Rufgruppenkarte = { rufgruppeId: "R5", betriebsart: "TMO", name: "THW_OL_BR", aufgeloest: true, aufgeloestAm: new Date(2026, 8, 10, 12, 10).toISOString(), teilnehmer: [], mithoerer: [] };
 
+const FUNKPROBEN: readonly Funkprobenzeile[] = [
+  { ereignisId: "a-3", einheitId: "E1", einheit: E1.einheit, rufgruppeId: "R1", rufgruppe: "THW_OL_FUE", ergebnis: "KONTAKT", zeitpunkt: um(14, 31), akteur: "Meier", zurueckgenommen: false },
+  { ereignisId: "a-2", einheitId: "E2", einheit: E2.einheit, rufgruppeId: "R2", rufgruppe: "THW_OL_EA2", ergebnis: "KEIN_KONTAKT", zeitpunkt: um(13, 5), akteur: "Meier", grund: "Funkloch Deich", zurueckgenommen: false },
+  { ereignisId: "a-1", einheitId: "E2", einheit: E2.einheit, rufgruppeId: "R2", rufgruppe: "THW_OL_EA2", ergebnis: "KONTAKT", zeitpunkt: um(11, 40), akteur: "Rudolph", zurueckgenommen: true },
+];
+
 export const FUNK_ANSICHT: Funkplanansicht = {
   lageZeiger: 7,
   plan: {
@@ -94,7 +114,7 @@ export const FUNK_ANSICHT: Funkplanansicht = {
       { abschnittId: "EA3", name: "EA 3 Evakuierung", teilnehmer: [E4] },
       { abschnittId: "ANG", name: "Angefordert", teilnehmer: [E5, E6] },
     ],
-    zahlen: { rufgruppen: 4, zugeordnet: 4, ohneRufgruppe: 2, dmoOderGateway: 1, ohneKontakt: 0 },
+    zahlen: { rufgruppen: 4, zugeordnet: 4, ohneRufgruppe: 2, dmoOderGateway: 1, ohneKontakt: 1, letzteFunkprobe: um(14, 31) },
     schwelleMinuten: 60,
   },
   bereiche: [
@@ -102,6 +122,6 @@ export const FUNK_ANSICHT: Funkplanansicht = {
     { abschnittId: "EA2", name: "EA 2 Pumpen Süd", tiefe: 0 },
     { abschnittId: "EA3", name: "EA 3 Evakuierung", tiefe: 0 },
   ],
-  jetzt: new Date(2026, 8, 10, 14, 43).toISOString(),
-  funkproben: [],
+  jetzt: um(14, 43),
+  funkproben: FUNKPROBEN,
 };

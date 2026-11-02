@@ -142,7 +142,8 @@ function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste }: Ze
         ) : (
           <span className={`marke-zustand ${ton}`}>{zelle.text}</span>
         )
-      ) : (
+      ) : spalte.schluessel === "letzterKontakt" ? null : (
+        // „Letzter Kontakt" steht nur als Marke (`Zellmarken`): Ihr Text ist derselbe, mit Alter ab der Schwelle.
         zelle.text
       )}
       <Zellmarken zeile={zeile} spalte={spalte} {...(werteliste === undefined ? {} : { werteliste })} />

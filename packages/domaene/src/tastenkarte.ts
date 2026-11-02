@@ -68,6 +68,8 @@ export const KUERZEL: readonly Kuerzel[] = [
   k({ name: "kopieren", taste: "k", strg: true, bereich: "Einheiten",
       beschreibung: "Markierte Einheit als neue, angeforderte Zeile kopieren — ohne Aufträge, Fahrzeuge, Personen und Zeiten",
       excel: "Strg+K (Zeilen kopieren)" }),
+  k({ name: "funkprobe", taste: "p", strg: true, bereich: "Einheiten",
+      beschreibung: "Funkprobe „Kontakt“ für die markierte Einheit eintragen (Blatt Funkplan), Funkzeit jetzt" }),
   k({ name: "hilfe", taste: "h", strg: true, bereich: "Allgemein",
       beschreibung: "Abkürzungsliste und Tastenkarte öffnen",
       excel: "Strg+H (AküLi)" }),
