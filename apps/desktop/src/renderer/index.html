@@ -1803,6 +1803,97 @@
       .bewegungsliste .bewegung-ohne_zeit .zahl {
         color: var(--text-leise);
       }
+      /* Unterbringung (4e): Karten links, Bedarfstabelle rechts. */
+      .unterbringungsflaeche {
+        display: grid;
+        grid-template-columns: 330px minmax(0, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+      .unterkunftskarten {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .unterkunftskarte {
+        padding: 9px 12px;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        background: var(--karte);
+      }
+      .unterkunftskarte.aufgeloest {
+        opacity: 0.6;
+      }
+      .unterkunftskarte header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 6px;
+      }
+      .unterkunftskarte header .marke-zustand {
+        margin-left: auto;
+      }
+      .belegungsbalken {
+        display: flex;
+        height: 10px;
+        margin: 8px 0 4px;
+        background: var(--zeile-alt);
+        border: var(--rahmenbreite) solid var(--rahmen-weich);
+        overflow: hidden;
+      }
+      .belegungsbalken .m,
+      .legende .m {
+        background: var(--navy-900);
+      }
+      .belegungsbalken .w,
+      .legende .w {
+        background: var(--navy-600);
+      }
+      .belegungsbalken .d,
+      .legende .d {
+        background: var(--navy-300);
+      }
+      .belegungszahlen {
+        margin: 0;
+        font-variant-numeric: tabular-nums;
+        color: var(--text-leise);
+      }
+      .belegungszahlen strong {
+        color: var(--text);
+      }
+      .kartenknoepfe {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin: 8px 0 0;
+      }
+      .legende {
+        margin: 0;
+        color: var(--text-leise);
+        font: 0.78em var(--mono);
+      }
+      .legende span {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        margin: 0 3px 0 8px;
+      }
+      .versorgungstabelle td.bearbeitbar {
+        cursor: text;
+      }
+      .versorgungstabelle td.bearbeitbar:focus-visible {
+        outline: 2px solid var(--knopf-rahmen);
+        outline-offset: -2px;
+      }
+      .versorgungstabelle td.offen select {
+        width: 100%;
+        margin: 0;
+      }
+      .versorgungsausgabe {
+        display: inline-flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        align-items: center;
+      }
       .versorgungsfuss {
         margin: 0;
         color: var(--text-leise);
@@ -1812,7 +1903,8 @@
         .kpiband {
           grid-template-columns: repeat(3, minmax(0, 1fr));
         }
-        .vorausschauflaeche {
+        .vorausschauflaeche,
+        .unterbringungsflaeche {
           grid-template-columns: minmax(0, 1fr);
         }
       }
@@ -2323,6 +2415,24 @@
         color: var(--monitor-leise);
         border-bottom: 0;
         padding-top: 0.5em;
+      }
+      .monitorunterkuenfte {
+        border-collapse: collapse;
+        margin: 0.4em 0;
+      }
+      .monitorunterkuenfte th,
+      .monitorunterkuenfte td {
+        padding: 0.1em 0.6em;
+        border-bottom: 1px solid var(--monitor-linie);
+        text-align: right;
+        font-weight: 400;
+        white-space: nowrap;
+      }
+      .monitorunterkuenfte th {
+        text-align: left;
+      }
+      .monitorunterkuenfte .trenner {
+        border-left: 1px solid var(--monitor-linie);
       }
       /* Die Leiste erscheint nur bei Mausbewegung und liegt über dem Bild. */
       .monitorleiste {

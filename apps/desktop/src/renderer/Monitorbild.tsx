@@ -7,9 +7,9 @@
  * Hover-Leiste und das Kontextmenü, rechts unten die Punkte. Alles im
  * Renderer, damit es in Electron und in der Web-Schale gleich geht.
  *
- * Die Tafel und die Zeile der Zu- und Abgänge brauchen mehr als das
- * Lagebild; sie holen die Versorgungsansicht mit eigenem Ruf, und zwar nur,
- * solange eine dieser beiden Ansichten zu sehen ist.
+ * Die Tafel, die Zeile der Zu- und Abgänge und die Unterkünfte brauchen mehr
+ * als das Lagebild; sie holen die Versorgungsansicht mit eigenem Ruf, und
+ * zwar nur, solange eine dieser Ansichten zu sehen ist.
  */
 
 import { useEffect } from "react";
@@ -48,7 +48,7 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
 export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: MonitorbildEigenschaften): React.JSX.Element {
   const steuerung = useMonitorsteuerung();
   const mass = useFenstermass();
-  const braucheAnsicht = lagebild !== undefined && (steuerung.ansicht === "tafel" || steuerung.ansicht === "vorausschau");
+  const braucheAnsicht = lagebild !== undefined && ["tafel", "vorausschau", "unterbringung"].includes(steuerung.ansicht);
   const abruf = useVersorgungsansicht(akteId, lagebild?.lageZeiger, 24, braucheAnsicht);
 
   useEffect(() => {

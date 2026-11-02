@@ -118,7 +118,7 @@ export function Versorgung(): React.JSX.Element {
         <>
           {ansicht === "verpflegung" && <VersorgungVerpflegung plan={daten.blatt.plan} regeltext={daten.blatt.regeltext} />}
           {ansicht === "vorausschau" && <VersorgungVorausschau schau={daten.blatt.vorausschau} jetzt={Date.parse(daten.jetzt)} />}
-          {ansicht === "unterbringung" && <VersorgungUnterbringung bedarf={daten.blatt.unterbringung} />}
+          {ansicht === "unterbringung" && <VersorgungUnterbringung bedarf={daten.blatt.unterbringung} belegung={daten.blatt.belegung} />}
           {ansicht === "bereiche" && <VersorgungBereiche blatt={daten.logistik} fussnote={daten.logistikFussnote} />}
           {ansicht === "sofortbedarf" && <VersorgungSofortbedarf liste={daten.blatt.sofortbedarf} />}
         </>

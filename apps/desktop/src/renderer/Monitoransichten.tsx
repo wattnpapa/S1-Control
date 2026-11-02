@@ -100,20 +100,41 @@ export function MonitorUnterbringung(e: Ansichtseigenschaften): React.JSX.Elemen
       <p className="monitorunterzeile">
         m {v.betten.m} · w {v.betten.w} · d {v.betten.d}
       </p>
-      {v.belegt !== undefined && (
+      {(v.belegt !== undefined || (v.ohneZuweisung ?? 0) > 0) && (
         <p className="monitornebenzeile">
-          belegt {v.belegt} · frei {v.frei ?? 0}
+          {v.belegt === undefined ? "" : `belegt ${String(v.belegt)} · frei ${String(v.frei ?? 0)}`}
           {(v.ohneZuweisung ?? 0) > 0 && (
             <span className="monitorwarn">
-              {" "}
-              · ohne Zuweisung {v.ohneZuweisung} ({v.ohneZuweisungEinheiten ?? 0} Einheiten)
+              {v.belegt === undefined ? "" : " · "}ohne Zuweisung {v.ohneZuweisung} ({v.ohneZuweisungEinheiten ?? 0} Einheiten)
             </span>
           )}
         </p>
       )}
+      <Unterkunftszeilen e={e} />
       <p className="monitorzeit">{e.zeit}</p>
       <Fuss lagebild={e.lagebild} jetzt={e.jetzt} zusatz="Bedarf aus Bogen (Unterbringung ja) und Personen, Overrides je Einheit" />
     </section>
+  );
+}
+
+/** Die Unterkünfte unter den Betten: belegt/Kapazität und m/w/d, höchstens fünf. */
+function Unterkunftszeilen({ e }: { readonly e: Ansichtseigenschaften }): React.JSX.Element | null {
+  const karten = (e.ansicht?.blatt.belegung.unterkuenfte ?? []).filter((k) => !k.aufgeloest).slice(0, 5);
+  if (karten.length === 0) return null;
+  return (
+    <table className="monitorunterkuenfte" style={{ fontSize: `${String(tafelgrad(e.mass, 56, karten.length + 9))}px` }}>
+      <tbody>
+        {karten.map((k) => (
+          <tr key={k.unterkunftId} className={k.ueberbelegt ? "monitorwarn" : undefined}>
+            <th scope="row">{k.name}</th>
+            <td>
+              {k.belegt.gesamt} / {k.kapazitaet}
+            </td>
+            <td className="trenner">{k.belegt.gesamt === 0 ? "—" : `m ${String(k.belegt.m)} · w ${String(k.belegt.w)} · d ${String(k.belegt.d)}`}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
   );
 }
 
