@@ -39,6 +39,9 @@ function lage() {
     feldEreignis(h(), n, "EinheitRufgruppeGesetzt", { einheitId: "E19" }, null, "R2"),
     feldEreignis(h(), n, "EinheitRufgruppeGesetzt", { einheitId: "E05" }, null, "R4"),
     feldEreignis(h(), n, "RufgruppeAufgeloest", { rufgruppeId: "R4" }, null, true, "abgeschaltet"),
+    feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E01", feld: "funkHinweis" }, null, "nachts nur Telefon"),
+    feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E01", feld: "weitereRufgruppenIds" }, null, ["R2", "R4"]),
+    feldEreignis(h(), n, "EinheitStammdatenGeaendert", { einheitId: "E19", feld: "funkHinweis" }, null, "zweites HRT"),
   );
   const zustand = materialisiere(falteHinzu(leereFaltung(), [...prueflageEreignisse(), ...funk]));
   return projektion.funkplan(zustand);
@@ -62,6 +65,18 @@ describe("Die Ausgabe Funkplan", () => {
     expect(html).toContain("Bereich ≠ Gruppe");
     // Drei Gruppen mit je einer leeren Zeile, dazu zwei am Ende.
     expect(html.match(/<tr class="leer">/g)).toHaveLength(5);
+  });
+
+  it("zeigt im Hinweis den Funkhinweis, dahinter „Bereich ≠ Gruppe“ und die weiteren Gruppen als „auch: …“", () => {
+    const plan = lage();
+    const html = funkplanAlsHtml(plan, KOPF);
+    // Die aufgelöste ALT_GRUPPE steht nicht im „auch".
+    expect(html).toContain("<td>nachts nur Telefon · auch: DMO 310</td>");
+    const e19 = plan.rufgruppen.flatMap((r) => r.teilnehmer).find((t) => t.einheitId === "E19");
+    expect(e19?.hinweis).toBe("Bereich ≠ Gruppe");
+    expect(html).toContain("<td>zweites HRT · Bereich ≠ Gruppe</td>");
+    // Ein Mithörer steht nicht ein zweites Mal unter seiner weiteren Gruppe.
+    expect(html.match(/<td>Stab FüSt<\/td>/g)).toHaveLength(1);
   });
 
   it("führt am Ende die Einheiten ohne Rufgruppe, auch die der aufgelösten Gruppe", () => {

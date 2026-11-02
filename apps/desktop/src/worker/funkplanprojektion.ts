@@ -3,10 +3,11 @@
  * und Ring 2.
  *
  * Gerechnet wird in `projektion.funkplan`; hier wird nur zugeschnitten: Die
- * Suche findet Einheit, Funkrufname und Rufgruppe (§5) und lässt die Zahlen
- * des Bandes stehen. Wer „EA2“ sucht, sieht die Gruppe THW_OL_EA2 mit allen
- * Teilnehmern und dazu jede Einheit, deren Name es trägt — die Antwort auf
- * „wer hört dort“, nicht nur auf „wie heißt die Gruppe“.
+ * Suche findet Einheit, Funkrufname, Rufgruppe, weitere Rufgruppen und
+ * Funkhinweis (§5, F2) und lässt die Zahlen des Bandes stehen. Wer „EA2“
+ * sucht, sieht die Gruppe THW_OL_EA2 mit allen Teilnehmern und Mithörern und
+ * dazu jede Einheit, deren Name es trägt — die Antwort auf „wer hört dort“,
+ * nicht nur auf „wie heißt die Gruppe“.
  *
  * Dazu die Bereiche für die Maske der Rufgruppe: geltende Abschnitte in der
  * Ordnung des Baums, ohne Eingang und Archiv. Der Renderer bekommt sie hier
@@ -27,17 +28,18 @@ function passt(nadel: string, ...heu: readonly (string | undefined)[]): boolean 
 }
 
 function trifftTeilnehmer(nadel: string, t: Funkteilnehmer): boolean {
-  return passt(nadel, t.einheit, t.funkrufname, t.rufgruppe);
+  return passt(nadel, t.einheit, t.funkrufname, t.rufgruppe, t.funkhinweis, ...t.weitereRufgruppen.map((w) => w.name));
 }
 
 /** Der Plan, auf die Treffer der Suche zugeschnitten; leere Suche lässt ihn unverändert. */
 export function funkplanGefiltert(plan: Funkplan, suche: string | undefined): Funkplan {
   const nadel = (suche ?? "").trim().toLocaleLowerCase("de-DE");
   if (nadel === "") return plan;
+  const trifft = (t: Funkteilnehmer): boolean => trifftTeilnehmer(nadel, t);
   const rufgruppen = plan.rufgruppen.map((r) =>
-    passt(nadel, r.name, r.zweck) ? r : { ...r, teilnehmer: r.teilnehmer.filter((t) => trifftTeilnehmer(nadel, t)) },
+    passt(nadel, r.name, r.zweck) ? r : { ...r, teilnehmer: r.teilnehmer.filter(trifft), mithoerer: r.mithoerer.filter(trifft) },
   );
-  const sichtbar = new Set(rufgruppen.flatMap((r) => r.teilnehmer.map((t) => t.einheitId)));
+  const sichtbar = new Set(rufgruppen.flatMap((r) => [...r.teilnehmer, ...r.mithoerer].map((t) => t.einheitId)));
   const bleibt = (t: Funkteilnehmer): boolean => sichtbar.has(t.einheitId) || trifftTeilnehmer(nadel, t);
   return {
     rufgruppen,

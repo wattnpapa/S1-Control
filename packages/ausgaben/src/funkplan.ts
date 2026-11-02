@@ -12,6 +12,11 @@
  * Die Rechnung steht in Ring 2 (`projektion.funkplan`); hier entsteht nur
  * die Seite. Aufgelöste Gruppen stehen nicht auf dem Papier — über sie wird
  * nicht mehr gerufen.
+ *
+ * Der Hinweis (F2) ist der Funkhinweis, dahinter „Bereich ≠ Gruppe" und die
+ * weiteren Gruppen als „auch: …" (`projektion.hinweisspalte`). Mithörer
+ * stehen nicht als eigene Zeilen unter ihren weiteren Gruppen: Auf dem Papier
+ * steht jede Einheit einmal, dort, wo sie gerufen wird.
  */
 
 import { projektion, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
@@ -83,7 +88,7 @@ function gruppenzeile(titel: string, zusatz: readonly (string | undefined)[]): s
 }
 
 function teilnehmerzeile(t: Funkteilnehmer): string {
-  const zellen = [t.einheit, t.bereich, t.funkrufname, t.erreichbarkeit, t.hinweis];
+  const zellen = [t.einheit, t.bereich, t.funkrufname, t.erreichbarkeit, projektion.hinweisspalte(t)];
   return `      <tr>${zellen.map((z) => `<td>${htmlMaskieren(z)}</td>`).join("")}</tr>`;
 }
 

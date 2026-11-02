@@ -8,16 +8,20 @@
 
 import { describe, expect, it } from "vitest";
 
-import { projektion } from "@s1/domaene";
+import { projektion, type Spalte } from "@s1/domaene";
 
 import { inlineEntwurf } from "./bedienschritte.js";
 import {
+  erreichbarkeitUeberschreiben,
+  funkhinweisDerEinheit,
+  funkrufnameUeberschreiben,
   rufgruppeAnlegen,
   rufgruppeAufgeloest,
   rufgruppeDerEinheit,
   rufgruppeGeaendert,
   rufgruppeWiederhergestellt,
   rufgruppenwahl,
+  weitereRufgruppenDerEinheit,
 } from "./funkschritte.js";
 import { zEntwurf } from "./index.js";
 
@@ -55,5 +59,43 @@ describe("Die Bedienschritte des Funkplans", () => {
     expect(rufgruppenwahl("E1", "RG-1", "")).toMatchObject({ vorher: "RG-1", neu: null });
     expect(rufgruppenwahl("E1", "RG-1", "RG-1")).toBeUndefined();
     expect(rufgruppenwahl("E1", undefined, "")).toBeUndefined();
+  });
+});
+
+describe("Die Bedienschritte des Funkplans an der Einheit (F2)", () => {
+  const spalte = (schluessel: string): Spalte => {
+    const gefunden = projektion.spalte(schluessel);
+    if (gefunden === undefined) throw new Error(`Spalte ${schluessel} fehlt`);
+    return gefunden;
+  };
+
+  it("schreibt den Funkhinweis wie die Zelle der Einheitentabelle; leer wird null, unverändert nichts", () => {
+    expect(funkhinweisDerEinheit("E1", undefined, " nachts nur Telefon ")).toEqual({ ...inlineEntwurf(spalte("funkhinweis"), "E1", null, "nachts nur Telefon"), vorwertPruefen: true });
+    expect(funkhinweisDerEinheit("E1", "alt", "")).toMatchObject({ typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId: "E1", feld: "funkHinweis" }, vorher: "alt", neu: null });
+    expect(funkhinweisDerEinheit("E1", "alt", "alt ")).toBeUndefined();
+    expect(funkhinweisDerEinheit("E1", undefined, "  ")).toBeUndefined();
+  });
+
+  it("überschreibt die Erreichbarkeit über die Spalte und nimmt den Override mit leer zurück", () => {
+    expect(erreichbarkeitUeberschreiben("E1", undefined, "Funk Kanal 31")).toEqual({ ...inlineEntwurf(spalte("erreichbarkeit"), "E1", null, "Funk Kanal 31"), vorwertPruefen: true });
+    expect(erreichbarkeitUeberschreiben("E1", "Funk Kanal 31", "")).toMatchObject({ nutzlast: { feld: "erreichbarkeitOverride" }, vorher: "Funk Kanal 31", neu: null });
+  });
+
+  it("überschreibt den Funkrufnamen als Stammdatum; leer heißt wieder Ableitung", () => {
+    const entwurf = funkrufnameUeberschreiben("E1", undefined, "Heros Oldenburg 21/10");
+    expect(entwurf).toEqual({ typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId: "E1", feld: "funkrufnameOverride" }, vorher: null, neu: "Heros Oldenburg 21/10", vorwertPruefen: true });
+    expect(zEntwurf.safeParse(entwurf).success).toBe(true);
+    expect(funkrufnameUeberschreiben("E1", "Heros Oldenburg 21/10", "")).toMatchObject({ vorher: "Heros Oldenburg 21/10", neu: null });
+    expect(funkrufnameUeberschreiben("E1", undefined, "")).toBeUndefined();
+  });
+
+  it("schreibt die weiteren Rufgruppen als ganze Liste, ohne Doppelte; leer wird null", () => {
+    const entwurf = weitereRufgruppenDerEinheit("E1", [], ["R1", "R2", "R1"]);
+    expect(entwurf).toEqual({ typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId: "E1", feld: "weitereRufgruppenIds" }, vorher: null, neu: ["R1", "R2"], vorwertPruefen: true });
+    expect(zEntwurf.safeParse(entwurf).success).toBe(true);
+    expect(weitereRufgruppenDerEinheit("E1", ["R1", "R2"], [])).toMatchObject({ vorher: ["R1", "R2"], neu: null });
+    expect(weitereRufgruppenDerEinheit("E1", ["R1", "R2"], ["R1", "R2"])).toBeUndefined();
+    // Eine andere Reihenfolge ist eine andere Liste.
+    expect(weitereRufgruppenDerEinheit("E1", ["R1", "R2"], ["R2", "R1"])).toMatchObject({ neu: ["R2", "R1"] });
   });
 });

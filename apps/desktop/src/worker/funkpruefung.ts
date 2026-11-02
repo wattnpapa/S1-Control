@@ -4,7 +4,10 @@
  * Der Katalog prüft die Nutzlast; der Wert der Form-a-Arten steht aber in
  * `neu`, und den kennt er nicht. Eine Rufgruppe ohne Namen, eine Reihenfolge
  * als Text oder eine Hauptrufgruppe, die keine Kennung ist, stünde sonst für
- * immer im append-only-Protokoll. Ein Teil von `pruefeNeu` im Aktendienst.
+ * immer im append-only-Protokoll. Dasselbe gilt für die Stammdaten des
+ * Funkplans an der Einheit (F2): die weiteren Rufgruppen als Liste von
+ * Kennungen, Funkhinweis und Funkrufname als Text. Ein Teil von `pruefeNeu`
+ * im Aktendienst.
  */
 
 import type { Ereignisentwurf } from "@s1/speicher";
@@ -35,6 +38,17 @@ function pruefeAenderung(feld: string | undefined, neu: unknown): string | undef
   return neu === null || typeof neu === "string" ? undefined : "Der Wert muss ein Text sein.";
 }
 
+/** Die Stammdatenfelder des Funkplans an der Einheit; die übrigen prüft der Aufrufer nicht hier. */
+function pruefeStammdatum(feld: string | undefined, neu: unknown): string | undefined {
+  if (feld === "weitereRufgruppenIds") {
+    return neu === null || (Array.isArray(neu) && neu.every(istText)) ? undefined : "Die weiteren Rufgruppen müssen eine Liste von Kennungen sein.";
+  }
+  if (feld === "funkHinweis" || feld === "funkrufnameOverride") {
+    return neu === null || typeof neu === "string" ? undefined : "Der Wert muss ein Text sein.";
+  }
+  return undefined;
+}
+
 /** Liefert eine Fehlermeldung in Klartext, oder `undefined`, wenn alles passt. */
 export function pruefeFunk(entwurf: Ereignisentwurf): string | undefined {
   if (entwurf.typ === "RufgruppeAngelegt") {
@@ -43,6 +57,7 @@ export function pruefeFunk(entwurf: Ereignisentwurf): string | undefined {
     if (typeof nutzlast["betriebsart"] === "string" && !istText(nutzlast["betriebsart"])) return PFLICHT["betriebsart"];
   }
   if (entwurf.typ === "RufgruppeGeaendert") return pruefeAenderung(feldDer(entwurf), entwurf.neu);
+  if (entwurf.typ === "EinheitStammdatenGeaendert") return pruefeStammdatum(feldDer(entwurf), entwurf.neu);
   if (entwurf.typ === "EinheitRufgruppeGesetzt" && entwurf.neu !== null && !istText(entwurf.neu)) {
     return "Die Rufgruppe ist keine gültige Kennung.";
   }

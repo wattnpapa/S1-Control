@@ -4,12 +4,13 @@
  * dazu die Naht zum Renderer: der Ruf `funkplanAnfordern` mit Zeigerstand und
  * Suche, die Ausgabe „Funkplan", die Auswahl der Tabellenzelle, die Sperre
  * einer Rufgruppe über die Präsenz und die Vorwert-Prüfung ihrer Felder.
+ * F2: weitere Rufgruppen und Funkhinweis — Prüfung, Suche, Mithörer, Vorwert.
  */
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CODE_VORWERT, lagebildMit, zRuf, type Lagebild } from "../kontrakt/index.js";
-import { rufgruppeAnlegen, rufgruppeDerEinheit, rufgruppeGeaendert } from "../kontrakt/funkschritte.js";
+import { CODE_VORWERT, lagebildMit, zRuf, type Entwurf, type Lagebild } from "../kontrakt/index.js";
+import { funkhinweisDerEinheit, rufgruppeAnlegen, rufgruppeDerEinheit, rufgruppeGeaendert, weitereRufgruppenDerEinheit } from "../kontrakt/funkschritte.js";
 import { grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 import { funkplanbereiche } from "./funkplanprojektion.js";
 
@@ -166,5 +167,64 @@ describe("Sperre und Vorwert der Rufgruppe zwischen zwei Arbeitsplätzen", () =>
     await takteBis([a, b]);
     const ergebnis = await b.dienst.bediene(rufgruppeDerEinheit("U1", null, "R2"));
     expect(ergebnis).toMatchObject({ art: "abgewiesen", code: CODE_VORWERT });
+  });
+});
+
+/** Ein Schritt, der etwas ändert, liefert einen Entwurf; fehlt er, ist der Test falsch gebaut. */
+function gewiss(entwurf: Entwurf | undefined): Entwurf {
+  if (entwurf === undefined) throw new Error("Entwurf erwartet");
+  return entwurf;
+}
+
+describe("Weitere Rufgruppen und Funkhinweis im Worker (F2)", () => {
+  async function mitZusatz(a: Platz): Promise<void> {
+    await mitZweiGruppen(a);
+    await a.dienst.bediene(rufgruppeDerEinheit("U1", null, "R1"));
+    expect((await a.dienst.bediene(gewiss(weitereRufgruppenDerEinheit("U1", [], ["R2"])))).art).toBe("geschrieben");
+    expect((await a.dienst.bediene(gewiss(funkhinweisDerEinheit("U1", undefined, "nachts nur Telefon")))).art).toBe("geschrieben");
+  }
+
+  it("weist eine Liste weiterer Rufgruppen ab, die keine Liste von Kennungen ist, und einen Funkhinweis, der kein Text ist", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await mitZweiGruppen(a);
+    const stamm = (feld: string, neu: unknown) => a.dienst.bediene({ typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId: "U1", feld }, vorher: null, neu });
+    expect((await stamm("weitereRufgruppenIds", "R2")).art).toBe("abgewiesen");
+    expect((await stamm("weitereRufgruppenIds", ["R2", ""])).art).toBe("abgewiesen");
+    expect((await stamm("funkHinweis", 7)).art).toBe("abgewiesen");
+    expect((await stamm("weitereRufgruppenIds", ["R2"])).art).toBe("geschrieben");
+    expect((await stamm("weitereRufgruppenIds", null)).art).toBe("geschrieben");
+  });
+
+  it("führt die Einheit unter ihrer weiteren Gruppe als Mithörer und findet sie über Funkhinweis und weitere Gruppe", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await mitZusatz(a);
+    const ganz = a.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-1" });
+    expect(ganz.plan.rufgruppen[1]?.mithoerer.map((t) => t.einheitId)).toEqual(["U1"]);
+    expect(ganz.plan.zahlen.zugeordnet).toBe(1);
+    const telefon = a.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-1", suche: "Telefon" });
+    expect(telefon.plan.rufgruppen[0]?.teilnehmer.map((t) => t.funkhinweis)).toEqual(["nachts nur Telefon"]);
+    // Die weitere Gruppe ist ein Suchwort am Teilnehmer: Wer „310" sucht, findet ihn auch unter der Hauptgruppe.
+    const weitere = a.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-1", suche: "310" });
+    expect(weitere.plan.rufgruppen[0]?.teilnehmer).toHaveLength(1);
+    expect(weitere.plan.rufgruppen[1]?.mithoerer).toHaveLength(1);
+    const nichts = a.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-1", suche: "Brake" });
+    expect(nichts.plan.rufgruppen.flatMap((r) => [...r.teilnehmer, ...r.mithoerer])).toEqual([]);
+  });
+
+  it("setzt Funkhinweis und weitere Gruppen in der Ausgabe in den Hinweis", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await mitZusatz(a);
+    expect(a.dienst.ausgabeHtml("funkplan").html).toContain("nachts nur Telefon · auch: DMO 310");
+  });
+
+  it("weist eine Liste ab, die ein Kollege inzwischen anders gesetzt hat", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await mitZweiGruppen(a);
+    await takteBis([a, b]);
+    await a.dienst.bediene(gewiss(weitereRufgruppenDerEinheit("U1", [], ["R1"])));
+    await takteBis([a, b]);
+    const ergebnis = await b.dienst.bediene(gewiss(weitereRufgruppenDerEinheit("U1", [], ["R2"])));
+    expect(ergebnis).toMatchObject({ art: "abgewiesen", code: CODE_VORWERT });
+    expect(b.dienst.zustand.einheiten["U1"]?.weitereRufgruppenIds?.wert).toEqual(["R1"]);
   });
 });

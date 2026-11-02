@@ -11,7 +11,13 @@
  * Blatt „Funkplan" und die Zelle der Einheitentabelle schreiben dasselbe
  * Ereignis; die Zuordnung Spalte → Ereignisart steht in Ring 2
  * (`projektion/tabelle.ts`), und eine zweite Bauweise hier wäre dieselbe
- * Tabelle ein zweites Mal.
+ * Tabelle ein zweites Mal. Dasselbe gilt für Funkhinweis und
+ * Erreichbarkeit (F2): Die Zelle im Blatt, die Zelle der Einheitentabelle und
+ * die Maske „Funk und Erreichbarkeit" bauen denselben Entwurf.
+ *
+ * Jeder Schritt an der Einheit schickt den Wert, den Zelle oder Maske beim
+ * Öffnen sah, und verlangt die Vorwert-Prüfung: Ein Kollege, der dasselbe
+ * Feld inzwischen anders gesetzt hat, wird nicht still überschrieben.
  */
 
 import { projektion } from "@s1/domaene";
@@ -78,4 +84,69 @@ export function rufgruppeDerEinheit(einheitId: string, vorher: string | null, ne
 export function rufgruppenwahl(einheitId: string, vorher: string | undefined, gewaehlt: string): Entwurf | undefined {
   if (gewaehlt === (vorher ?? "")) return undefined;
   return rufgruppeDerEinheit(einheitId, vorher ?? null, gewaehlt === "" ? null : gewaehlt);
+}
+
+/** Leere Eingabe heißt „ausdrücklich leer" (`null`), wie in der Einheitentabelle. */
+function textwert(eingabe: string): string | null {
+  const geputzt = eingabe.trim();
+  return geputzt === "" ? null : geputzt;
+}
+
+/** Das Stammdatenfeld, das die Spalte schreibt — nur für den Rückfall in {@link ueberSpalte}. */
+const STAMMFELD_DER_SPALTE = { funkhinweis: "funkHinweis", erreichbarkeit: "erreichbarkeitOverride" } as const;
+
+/** Ein Entwurf über die Spalte der Einheitentabelle, mit Vorwert-Prüfung. */
+function ueberSpalte(schluessel: keyof typeof STAMMFELD_DER_SPALTE, einheitId: string, vorher: string | null, neu: string | null): Entwurf {
+  const spalte = projektion.spalte(schluessel);
+  const entwurf = spalte === undefined ? undefined : inlineEntwurf(spalte, einheitId, vorher, neu);
+  // Wie bei der Rufgruppe: Fehlte die Spalte, wäre das ein Baufehler, und der
+  // Entwurf entsteht trotzdem in derselben Form.
+  const rueckfall = { typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId, feld: STAMMFELD_DER_SPALTE[schluessel] }, vorher, neu };
+  return { ...(entwurf ?? rueckfall), vorwertPruefen: true };
+}
+
+/**
+ * Der Funkhinweis aus einer Eingabe: über die Spalte `funkhinweis`, also
+ * derselbe Entwurf wie die Zelle der Einheitentabelle. Eine unveränderte
+ * Eingabe schreibt nichts.
+ */
+export function funkhinweisDerEinheit(einheitId: string, vorher: string | undefined, eingabe: string): Entwurf | undefined {
+  const neu = textwert(eingabe);
+  if (neu === (vorher ?? null)) return undefined;
+  return ueberSpalte("funkhinweis", einheitId, vorher ?? null, neu);
+}
+
+/** Der Override der Erreichbarkeit (K9); leer heißt „wieder aus Führungskraft und Kontakten". */
+export function erreichbarkeitUeberschreiben(einheitId: string, vorher: string | undefined, eingabe: string): Entwurf | undefined {
+  const neu = textwert(eingabe);
+  if (neu === (vorher ?? null)) return undefined;
+  return ueberSpalte("erreichbarkeit", einheitId, vorher ?? null, neu);
+}
+
+/**
+ * Der Override des Funkrufnamens (K31); leer heißt „wieder aus dem
+ * Fahrzeug". Keine Spalte schreibt ihn — der Funkrufname ist dort berechnet —,
+ * deshalb hier unmittelbar als Stammdatum.
+ */
+export function funkrufnameUeberschreiben(einheitId: string, vorher: string | undefined, eingabe: string): Entwurf | undefined {
+  const neu = textwert(eingabe);
+  if (neu === (vorher ?? null)) return undefined;
+  return { typ: "EinheitStammdatenGeaendert", nutzlast: { einheitId, feld: "funkrufnameOverride" }, vorher: vorher ?? null, neu, vorwertPruefen: true };
+}
+
+/**
+ * Die weiteren Rufgruppen als ganze Liste (LWW über die Liste). Eine leere
+ * Liste wird `null`; dieselbe Liste in derselben Reihenfolge schreibt nichts.
+ * `vorher` ist die Liste, die die Maske beim Öffnen sah.
+ */
+export function weitereRufgruppenDerEinheit(einheitId: string, vorher: readonly string[], neu: readonly string[]): Entwurf | undefined {
+  const liste = [...new Set(neu)];
+  if (liste.length === vorher.length && liste.every((id, stelle) => id === vorher[stelle])) return undefined;
+  return {
+    typ: "EinheitStammdatenGeaendert",
+    nutzlast: { einheitId, feld: "weitereRufgruppenIds" },
+    vorher: vorher.length === 0 ? null : [...vorher],
+    neu: liste.length === 0 ? null : liste,
+    vorwertPruefen: true,
+  };
 }
