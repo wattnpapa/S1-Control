@@ -4,14 +4,14 @@
  * Ring 2 — für die Uhr dieses Workers, wie das Blatt.
  */
 
-import { belegungAlsHtml, type Ausgabekopf } from "@s1/ausgaben";
+import { belegungAlsHtml, bestelllisteAlsHtml, vorausschauAlsHtml, type Ausgabekopf } from "@s1/ausgaben";
 import { projektion, type Zustand } from "@s1/domaene";
 
 import { ortsversatz } from "./versorgungsprojektion.js";
 
-export type Versorgungsausgabe = "belegung";
+export type Versorgungsausgabe = "belegung" | "bestellliste" | "vorausschau";
 
-export const VERSORGUNGSAUSGABEN: ReadonlySet<string> = new Set<Versorgungsausgabe>(["belegung"]);
+export const VERSORGUNGSAUSGABEN: ReadonlySet<string> = new Set<Versorgungsausgabe>(["belegung", "bestellliste", "vorausschau"]);
 
 /** Rendert eine Versorgungsausgabe; `marke` ist der Zeitstempel für den Dateinamen. */
 export function versorgungsausgabe(
@@ -20,12 +20,17 @@ export function versorgungsausgabe(
   jetztMs: number,
   kopf: Ausgabekopf & { readonly marke: string },
 ): { dateiname: string; html: string } {
+  const versatz = ortsversatz(jetztMs);
   const blatt = projektion.versorgungsblatt(zustand, {
     jetzt: new Date(jetztMs).toISOString(),
-    versatzMinuten: ortsversatz(jetztMs),
+    versatzMinuten: versatz,
   });
   switch (ausgabe) {
     case "belegung":
       return { dateiname: `belegung_${kopf.marke}`, html: belegungAlsHtml(blatt.belegung, kopf) };
+    case "bestellliste":
+      return { dateiname: `bestellliste_${kopf.marke}`, html: bestelllisteAlsHtml(blatt, kopf, versatz) };
+    case "vorausschau":
+      return { dateiname: `vorausschau_${kopf.marke}`, html: vorausschauAlsHtml(blatt, kopf, versatz) };
   }
 }

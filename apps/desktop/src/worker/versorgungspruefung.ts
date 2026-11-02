@@ -7,6 +7,7 @@
  * Arbeitsplatz, ohne Hinweis.
  */
 
+import { projektion } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 function feldDer(entwurf: Ereignisentwurf): string | undefined {
@@ -27,6 +28,15 @@ export function pruefeVersorgung(entwurf: Ereignisentwurf): string | undefined {
   }
   if (entwurf.typ === "EinheitUntergebracht" && entwurf.neu !== null && typeof entwurf.neu !== "string") {
     return "Die Unterkunft ist keine gültige Kennung.";
+  }
+  if (entwurf.typ === "AbschnittAusgabestelleGesetzt" && entwurf.neu !== null && typeof entwurf.neu !== "string") {
+    return "Die Ausgabestelle ist keine gültige Kennung.";
+  }
+  if (entwurf.typ === "MahlzeitenregelGesetzt" && entwurf.neu !== null) {
+    return projektion.regelFehler(entwurf.neu);
+  }
+  if (entwurf.typ === "MahlzeitGeliefert" && !(typeof entwurf.neu === "number" && Number.isInteger(entwurf.neu) && entwurf.neu >= 0)) {
+    return "Die gelieferte Menge muss eine ganze Zahl ab 0 sein.";
   }
   return undefined;
 }

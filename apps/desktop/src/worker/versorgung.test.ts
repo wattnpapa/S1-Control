@@ -87,4 +87,38 @@ describe("Die Versorgung im Worker", () => {
     const ergebnis = await a.dienst.bediene({ typ: "UnterkunftGeaendert", nutzlast: { unterkunftId: "UK1", feld: "kapazitaet" }, vorher: 6, neu: "zwölf" });
     expect(ergebnis.art).toBe("abgewiesen");
   });
+
+  it("weist eine Mahlzeitenregel ohne lesbare Ausgabezeit ab und nimmt eine gültige an", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    const falsch = await a.dienst.bediene({ typ: "MahlzeitenregelGesetzt", nutzlast: { einsatzId: "2026-09-10_hochwasser" }, vorher: null, neu: [{ mahlzeit: "ABEND", uhrzeit: "18:00", schichten: ["TAG"] }] });
+    expect(falsch.art).toBe("abgewiesen");
+    const einsatzId = a.dienst.zustand.einsatz?.id ?? "";
+    const gut = await a.dienst.bediene({ typ: "MahlzeitenregelGesetzt", nutzlast: { einsatzId }, vorher: null, neu: [{ mahlzeit: "ABEND", uhrzeit: "1900", schichten: ["TAG"] }] });
+    expect(gut.art).toBe("geschrieben");
+    const ansicht = a.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-1" });
+    expect(ansicht.blatt.regelVorbelegung).toBe(false);
+    expect(ansicht.blatt.vorausschau.mahlzeiten.every((m) => m.mahlzeit === "ABEND")).toBe(true);
+  });
+
+  it("schreibt eine Bestellung und führt sie in Bestellliste und Vorausschau als Ausgabe", async () => {
+    const a = await werkstattMitEinemPlatz();
+    await grundlage(a);
+    const vorher = a.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-1" });
+    const erste = vorher.blatt.vorausschau.mahlzeiten[0];
+    const geschrieben = await a.dienst.bediene({
+      typ: "MahlzeitBestellt",
+      nutzlast: { bestellungId: "B1", datum: erste?.datum ?? "", mahlzeit: erste?.mahlzeit ?? "", portionen: 7, vegetarisch: 0, vegan: 0, bestelltBei: "Küche" },
+    });
+    expect(geschrieben.art).toBe("geschrieben");
+    const ansicht = a.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-1" });
+    expect(ansicht.blatt.bestellstand[0]?.differenz).toBe(7 - (erste?.vorausschau.portionen ?? 0));
+    expect(letzterStand(a)?.versorgung?.mahlzeiten[0]?.bestellt).toBe(7);
+    const liste = a.dienst.ausgabeHtml("bestellliste");
+    expect(liste.dateiname).toMatch(/^bestellliste_/);
+    expect(liste.html).toContain("Bestellliste Verpflegung");
+    const differenz = 7 - (erste?.vorausschau.portionen ?? 0);
+    expect(liste.html).toContain(differenz > 0 ? `+${String(differenz)}` : differenz < 0 ? `−${String(-differenz)}` : "±0");
+    expect(a.dienst.ausgabeHtml("vorausschau").html).toContain("Zu- und Abgänge");
+  });
 });
