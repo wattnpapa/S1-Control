@@ -11,7 +11,8 @@ import type { Tabellenzeile } from "@s1/domaene";
 
 import type { Lagebild } from "../kontrakt/index.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
-import { SCHMAL, TEXT_NICHT_UEBERNOMMEN } from "./Einheitenzelle.js";
+import { TEXT_NICHT_UEBERNOMMEN } from "./Auswahlblatt.js";
+import { SCHMAL } from "./Einheitenzelle.js";
 import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
