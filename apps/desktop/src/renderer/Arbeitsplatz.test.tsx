@@ -197,6 +197,42 @@ describe("Der Arbeitsplatz", () => {
     expect(screen.queryByRole("button", { name: /^Hilfe zu / })).toBeNull();
   });
 
+  it("schlägt mit „Im Tagebuch zeigen“ das Tagebuch der Einheit auf", async () => {
+    attrappe.antwortet("tabelleAnfordern", {
+      lageZeiger: 1,
+      zeilen: [
+        {
+          einheitId: "U1",
+          abschnittId: "EA1",
+          abschnittName: "EA 1 Deich Nord",
+          reihenfolge: 1,
+          anzeige: "FGr WP 1",
+          staerke: { fuehrer: 0, unterfuehrer: 1, mannschaft: 8 },
+          gesamt: 9,
+          entfernt: false,
+          zaehlklasse: "ist",
+          aufgegangen: false,
+          hinweise: [],
+          zellen: { bezeichnung: { text: "FGr WP 1", wert: "FGr WP 1", umstritten: false } },
+        },
+      ],
+      von: 0,
+      gesamtzahl: 1,
+    });
+    attrappe.antwortet("untertabelleAnfordern", { lageZeiger: 1, einheitId: "U1", fahrzeuge: [], personen: [], auftraege: [] });
+    render(<Arbeitsplatz />);
+    const zeile = (await screen.findByText("FGr WP 1")).closest("tr") as HTMLElement;
+    zeile.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    await userEvent.click(await screen.findByRole("menuitem", { name: "Im Tagebuch zeigen" }));
+    await waitFor(() => {
+      expect(sichtbar("Einsatztagebuch")).toBe(true);
+    });
+    expect(screen.getByRole("tab", { name: "Einsatztagebuch" }).getAttribute("aria-selected")).toBe("true");
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBe("U1");
+    });
+  });
+
   it("schlägt die Diagnose über das Fenstermenü auf, nicht über einen Reiter", async () => {
     render(<Arbeitsplatz />);
     await waitFor(() => {

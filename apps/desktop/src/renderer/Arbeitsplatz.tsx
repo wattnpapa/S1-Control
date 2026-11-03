@@ -193,7 +193,7 @@ export function Arbeitsplatz(): React.JSX.Element {
           <>
             <div hidden={!gehoertZurLage(blatt)}>
               <KuerzelAktiv.Provider value={gehoertZurLage(blatt)}>
-                <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} />
+                <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} aufBlatt={setzeBlatt} />
               </KuerzelAktiv.Provider>
             </div>
             {blatt === "eingang" && <Eingangskorb />}

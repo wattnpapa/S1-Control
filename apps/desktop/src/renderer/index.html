@@ -1297,14 +1297,6 @@
       .einheitenkopf h2 {
         margin: 0 0.5rem 0 0;
       }
-      /* Ein senkrechter Strich statt eines Umbruchs: Er trennt das Anlegen
-         von den Schritten, die auf einer Auswahl arbeiten. */
-      .einheitenkopf .trenner {
-        width: 1px;
-        align-self: stretch;
-        margin: 0 4px;
-        background: var(--rahmen);
-      }
       /* Die Suche steht rechts und ist breit genug fuer den Platzhalter:
          Gesucht wird nach Bezeichnung, Organisation, Ort und Kennzeichen. */
       .suchfeld {
@@ -1501,18 +1493,66 @@
         font-weight: 700;
         border-top: var(--rahmenbreite) solid var(--rahmen);
       }
+      /* Die Auswahlleiste (Einheitenauswahl.tsx): am Fuss der Karte, sobald
+         eine Zeile gewaehlt ist, in den Farben des Kopfbands (Entwurf
+         „Entlastung", 6c). Sie klebt unten im Fenster, solange die Tabelle
+         im Bild ist: Wer weit unten waehlt, muss nicht zurueckscrollen. */
+      .auswahlleiste {
+        position: sticky;
+        bottom: 0;
+        z-index: 5;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 8px;
+        margin-top: 8px;
+        padding: 7px 13px;
+        background: var(--kopfband-bg);
+        color: var(--kopfband-text);
+        border: var(--rahmenbreite) solid var(--kopfband-bg);
+      }
+      .auswahlleiste .auswahlzahl {
+        margin-right: 8px;
+      }
+      .auswahlleiste button {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+        height: auto;
+        min-height: 27px;
+        padding: 0 10px;
+        border: var(--rahmenbreite) solid var(--kopfband-leise);
+        background: transparent;
+        color: var(--kopfband-text);
+        font-size: 0.96em;
+      }
+      .auswahlleiste button:hover:not([aria-disabled="true"]) {
+        background: var(--kopfband-text);
+        color: var(--kopfband-bg);
+      }
+      .auswahlleiste button[aria-disabled="true"] {
+        color: var(--kopfband-leise);
+        border-style: dashed;
+        cursor: default;
+      }
+      .auswahlleiste .kurz {
+        color: var(--kopfband-leise);
+        font: 400 10px/1 var(--mono);
+      }
       /* „Entfernen“ ist folgenreich: Warnfarbe und Abstand zu den Nachbarn,
          damit der Griff daneben nicht dort landet. */
-      .einheitenkopf button.entfernen {
+      .auswahlleiste button.entfernen {
         margin-left: 14px;
-        border-color: var(--err-linie);
-        color: var(--err-text);
-        background: var(--err-bg);
+        border-color: var(--kopfband-fehler);
+        color: var(--kopfband-fehler);
       }
-      .einheitenkopf button.entfernen:disabled {
-        background: var(--gesperrt-bg);
-        border-color: var(--knopf-rahmen);
-        color: var(--gesperrt-text);
+      .auswahlleiste .auswahlsperre {
+        color: var(--kopfband-warn);
+      }
+      .auswahlleiste .auswahlschluss {
+        margin-left: auto;
+        color: var(--kopfband-leise);
+        font-size: 0.92em;
       }
       .einheiten td.berechnet {
         opacity: 0.7;
@@ -3654,6 +3694,31 @@
         .reiterleiste button {
           flex: 0 0 auto;
           white-space: nowrap;
+        }
+      }
+      @media (max-width: 700px) {
+        /* Die Auswahlleiste bricht um: Zahl oben, Schritte darunter. */
+        .auswahlleiste .auswahlzahl,
+        .auswahlleiste .auswahlschluss {
+          flex: 1 1 100%;
+          margin: 0;
+        }
+        .auswahlleiste button.entfernen {
+          margin-left: 0;
+        }
+        /* Das Kontextmenue liegt unten am Rand, in voller Breite, statt an
+           einer Mausposition, die es auf dem Handy nicht gibt. */
+        .kontextmenue {
+          left: 8px;
+          right: 8px;
+          top: auto;
+          bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+        }
+        .kontextmenue > .klappmenueliste {
+          min-width: 0;
+          width: 100%;
+          max-height: 70vh;
+          overflow-y: auto;
         }
       }
       @media (max-width: 700px) {

@@ -205,7 +205,7 @@ describe("Die Gliederung der Einheitentabelle", () => {
     fireEvent.click(kopf);
     fireEvent.doubleClick(within(screen.getByRole("rowgroup", { name: "UA Deichfuß" })).getByText("1 Einh."));
     expect(gewaehlt).toEqual([]);
-    expect(screen.getByRole("button", { name: /Verschieben/ }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Bezeichnung" })).toBeNull();
     // Strg+M öffnet ohne markierte Einheit nichts, auch nach dem Klick auf den Kopf.
     fireEvent.keyDown(window, { key: "m", ctrlKey: true });

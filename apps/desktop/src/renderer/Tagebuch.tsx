@@ -28,16 +28,19 @@ import { TagebuchEintrag } from "./TagebuchEintrag.js";
 export interface TagebuchEigenschaften {
   /** Filter „nur diese Einheit“ — kommt aus der Auswahl in der Tabelle. */
   readonly einheitId: string | undefined;
+  /** Beginnt auf die Auswahl beschränkt — so öffnet „Im Tagebuch zeigen“ das Blatt. */
+  readonly aufAuswahl?: boolean;
   readonly abschnittId: string | undefined;
 }
 
-export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): React.JSX.Element {
+export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: TagebuchEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [suche, setzeSuche] = useState("");
   const [nurRuecknahmen, setzeNurRuecknahmen] = useState(false);
   // Standard „Alle“: Wer das Tagebuch aufschlägt, soll das ganze Tagebuch sehen,
   // nicht unbemerkt einen Ausschnitt (zwei statt elf Einträge).
-  const [aufBezug, setzeAufBezug] = useState(false);
+  // Ausnahme: „Im Tagebuch zeigen“ an einer Einheit will genau deren Einträge.
+  const [aufBezug, setzeAufBezug] = useState(aufAuswahl);
   const [eintragOffen, setzeEintragOffen] = useState(false);
   const gesamtOhneFilter = useRef<number | undefined>(undefined);
 

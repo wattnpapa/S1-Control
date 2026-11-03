@@ -9,7 +9,7 @@
  * überlebt keinen Wechsel der Akte.
  */
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
@@ -22,12 +22,19 @@ import type { Lageblatt } from "./blaetter.js";
 export interface LageEigenschaften {
   /** Welches der drei Blätter der Lage oben liegt (`blaetter.ts`). */
   readonly blatt: Lageblatt;
+  /** Schlägt ein anderes Blatt der Lage auf — für „Im Tagebuch zeigen“. */
+  readonly aufBlatt?: ((blatt: Lageblatt) => void) | undefined;
 }
 
-export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
+export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element {
   const [abschnittId, setzeAbschnittId] = useState<string | undefined>(undefined);
   const [einheitId, setzeEinheitId] = useState<string | undefined>(undefined);
   const [scannerOffen, setzeScannerOffen] = useState(false);
+  /** „Im Tagebuch zeigen“: Das Tagebuch beginnt dann auf die gewählte Einheit beschränkt. */
+  const [tagebuchAufEinheit, setzeTagebuchAufEinheit] = useState(false);
+  useEffect(() => {
+    if (blatt !== "tagebuch") setzeTagebuchAufEinheit(false);
+  }, [blatt]);
 
   // Strg+Q öffnet den Scanner — der Buchstabe der Excel für „digitalen EEB in
   // neue Zeile" (m_makroFunktionen). Er wird hier angemeldet und nicht in der
@@ -77,6 +84,17 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
           abschnittId={abschnittId}
           einheitId={einheitId}
           aufEinheit={setzeEinheitId}
+          // Die Auswahl hält die Lage, das Blatt der Arbeitsplatz: Das
+          // Tagebuch filtert dann nach genau dieser Einheit.
+          aufTagebuch={
+            aufBlatt === undefined
+              ? undefined
+              : (gewaehlt) => {
+                  setzeEinheitId(gewaehlt);
+                  setzeTagebuchAufEinheit(true);
+                  aufBlatt("tagebuch");
+                }
+          }
         />
       </div>
 
@@ -91,7 +109,7 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
         />
       )}
 
-      {blatt === "tagebuch" && <Tagebuch einheitId={einheitId} abschnittId={abschnittId} />}
+      {blatt === "tagebuch" && <Tagebuch einheitId={einheitId} abschnittId={abschnittId} aufAuswahl={tagebuchAufEinheit} />}
     </section>
   );
 }

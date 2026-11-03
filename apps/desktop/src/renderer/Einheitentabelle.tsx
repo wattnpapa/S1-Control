@@ -30,6 +30,8 @@ import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
 import { Einheitenzeile, type Zeilenumgebung } from "./Einheitenzeile.js";
+import { Auswahlleiste, Einheitenkontextmenue } from "./Einheitenauswahl.js";
+import type { Kontextort } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { useFremdsperren } from "./useBearbeitungssperre.js";
 import { useZellbearbeitung, type Zellbearbeitung } from "./useZellbearbeitung.js";
@@ -57,6 +59,8 @@ export interface EinheitentabelleEigenschaften {
   /** Die gewählte Einheit filtert das Tagebuch. */
   readonly einheitId: string | undefined;
   readonly aufEinheit: (einheitId: string | undefined) => void;
+  /** „Im Tagebuch zeigen": wählt die Einheit und schlägt das Blatt Tagebuch auf. */
+  readonly aufTagebuch?: ((einheitId: string) => void) | undefined;
 }
 
 interface Filterwahl {
@@ -128,7 +132,7 @@ function umgeschaltet<T>(liste: readonly T[], wert: T): readonly T[] {
   return liste.includes(wert) ? liste.filter((eintrag) => eintrag !== wert) : [...liste, wert];
 }
 
-export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: EinheitentabelleEigenschaften): React.JSX.Element {
+export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebuch }: EinheitentabelleEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG);
   const [suche, setzeSuche] = useState("");
@@ -139,6 +143,8 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: Einheit
   const [maske, setzeMaske] = useState<Einheitenmaske>(undefined);
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
   const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
+  /** Wo das Kontextmenü der Auswahl aufging; es gilt nur, solange etwas markiert ist. */
+  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
   const fremd = useFremdsperren();
   const zellen = useZellbearbeitung(fremd);
   /** Beendet oder archiviert: Die Tabelle zeigt, schreibt aber nichts. */
@@ -166,8 +172,18 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: Einheit
       });
       aufEinheit(id);
     },
-    aufKontext: () => undefined,
+    aufKontext: (id, ereignis) => {
+      // Das Menü des Browsers trüge hier nichts bei (Entwurf, offene Fragen).
+      ereignis.preventDefault();
+      // Ohne Strg ist die Zeile danach allein markiert, mit Strg kommt sie dazu.
+      const mitStrg = ereignis.ctrlKey || ereignis.metaKey;
+      setzeMarkiert((bisher) => (!mitStrg ? [id] : bisher.includes(id) ? bisher : [...bisher, id]));
+      aufEinheit(id);
+      setzeKontext({ x: ereignis.clientX, y: ereignis.clientY });
+    },
   };
+  const auswahl = { gewaehlte, anzahl: markiert.length, nurLesen, aufMaske: setzeMaske };
+  const erste = gewaehlte[0];
   const zeileFuer = (zeile: Tabellenzeile, tiefe?: number): React.JSX.Element => (
     <Einheitenzeile
       key={zeile.einheitId}
@@ -183,7 +199,6 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: Einheit
     <section aria-label="Einheiten" className="einheiten">
       <Einheitenkopf
         gesamtzahl={laden.tabelle?.gesamtzahl ?? 0}
-        markiert={markiert.length}
         nurLesen={nurLesen}
         suche={suche}
         aufSuche={setzeSuche}
@@ -212,6 +227,17 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: Einheit
       </div>
 
       <Tabelle tabelle={laden.tabelle} spalten={spalten} gefiltert={statuswahl.length > 0 || suche !== ""} zeileFuer={zeileFuer} />
+      <Auswahlleiste {...auswahl} />
+      {kontext !== undefined && markiert.length > 0 && (
+        <Einheitenkontextmenue
+          {...auswahl}
+          ort={kontext}
+          aufSchliessen={() => {
+            setzeKontext(undefined);
+          }}
+          aufTagebuch={aufTagebuch === undefined || erste === undefined ? undefined : () => { aufTagebuch(erste.einheitId); }}
+        />
+      )}
       <Tabellenfuss gezeigt={zeilen.length} gesamtzahl={laden.tabelle?.gesamtzahl} />
 
       {einheitId !== undefined && <Untertabellen einheitId={einheitId} />}

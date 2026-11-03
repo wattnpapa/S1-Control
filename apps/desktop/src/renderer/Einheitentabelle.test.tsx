@@ -8,7 +8,7 @@
  * `szenarien-einheiten.test.ts`, die Regeln in `bedienschritte.test.ts`.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { projektion, type Tabellenzeile, type Zelle } from "@s1/domaene";
@@ -270,16 +270,116 @@ describe("Die Einheitentabelle", () => {
     expect(screen.getByLabelText("Konflikthinweis")).toBeDefined();
   });
 
-  it("sperrt die Mehrfachhandlungen, solange nichts markiert ist", async () => {
+  it("zeigt ohne Auswahl keine Zeilenwerkzeuge, auch nicht grau (Entlastung, Leitsatz 2)", async () => {
     await zeigeTabelle();
-    expect(screen.getByRole("button", { name: /Verschieben/ }).hasAttribute("disabled")).toBe(true);
-    expect(screen.getByRole("button", { name: "Zusammenführen" }).hasAttribute("disabled")).toBe(true);
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    for (const name of [/Verschieben/, /Aufteilen/, /Zusammenführen/, /Kopieren/, /Entfernen/, /Ablösung/, /Funk/]) {
+      expect(screen.queryByRole("button", { name })).toBeNull();
+    }
+  });
 
+  it("zeigt mit einer gewählten Zeile die Auswahlleiste mit den Schritten für eine Einheit", async () => {
+    await zeigeTabelle();
     fireEvent.click(screen.getByText("Bergungsgruppe 1"));
-    expect(screen.getByRole("button", { name: /Verschieben/ }).hasAttribute("disabled")).toBe(false);
-    // Zusammenführen braucht mindestens zwei — mit einer einzigen Einheit
-    // gäbe es nichts zusammenzuführen.
-    expect(screen.getByRole("button", { name: "Zusammenführen" }).hasAttribute("disabled")).toBe(true);
+    const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
+    expect(leiste.textContent).toContain("1 gewählt · Bergungsgruppe 1");
+    expect(leiste.textContent).toContain("Esc hebt die Auswahl auf");
+    expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual([
+      "VerschiebenStrg+M",
+      "Aufteilen",
+      "Zusammenführen",
+      "KopierenStrg+K",
+      "Ablösung anfordern",
+      "Funk …",
+      "EntfernenStrg+E",
+    ]);
+    // Zusammenführen braucht mindestens zwei — es steht grau da und sagt, was fehlt.
+    const zusammen = within(leiste).getByRole("button", { name: "Zusammenführen" });
+    expect(zusammen.getAttribute("aria-disabled")).toBe("true");
+    expect(zusammen.getAttribute("title")).toBe("Zwei Einheiten wählen");
+    fireEvent.click(zusammen);
+    expect(screen.queryByRole("form")).toBeNull();
+    // Die Leiste steht am Fuß der Karte, nach der Tabelle und vor dem Tabellenfuß.
+    expect(screen.getByRole("table").compareDocumentPosition(leiste) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("lässt bei zwei gewählten Zeilen nur, was mit zweien geht", async () => {
+    await zeigeTabelle();
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    fireEvent.click(screen.getByText("Fachgruppe N"), { ctrlKey: true });
+    const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
+    expect(leiste.textContent).toContain("2 gewählt");
+    expect(within(leiste).getAllByRole("button").map((k) => k.getAttribute("aria-disabled") ?? k.textContent)).toEqual([
+      "VerschiebenStrg+M",
+      "Zusammenführen",
+    ]);
+    fireEvent.click(within(leiste).getByRole("button", { name: "Zusammenführen" }));
+    expect(screen.getByRole("form")).toBeDefined();
+  });
+
+  it("hebt die Auswahl mit Esc auf, und die Leiste verschwindet", async () => {
+    await zeigeTabelle();
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    expect(screen.getByRole("toolbar", { name: "Auswahl" })).toBeDefined();
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+  });
+
+  it("markiert per Rechtsklick und öffnet dasselbe als Kontextmenü; Esc schließt nur das Menü", async () => {
+    const tagebuch: string[] = [];
+    render(
+      <Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} aufTagebuch={(id) => tagebuch.push(id)} />,
+    );
+    await screen.findByText("Bergungsgruppe 1");
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    const zeile = screen.getByText("Fachgruppe N").closest("tr") as HTMLElement;
+    const ereignis = new MouseEvent("contextmenu", { bubbles: true, cancelable: true, clientX: 30, clientY: 40 });
+    zeile.dispatchEvent(ereignis);
+    expect(ereignis.defaultPrevented).toBe(true);
+
+    // Ohne Strg ist die Zeile danach allein markiert.
+    await waitFor(() => {
+      expect(screen.getByRole("toolbar", { name: "Auswahl" }).textContent).toContain("1 gewählt · Fachgruppe N");
+    });
+    const menue = screen.getByRole("menu", { name: "1 gewählt · Fachgruppe N" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual([
+      "Verschieben …Strg+M",
+      "Aufteilen …",
+      "Zusammenführen …",
+      "KopierenStrg+K",
+      "Ablösung anfordern …",
+      "Funk und Erreichbarkeit …",
+      "Im Tagebuch zeigen",
+      "Entfernen …Strg+E",
+    ]);
+    expect(within(menue).getByRole("menuitem", { name: "Zusammenführen …" }).getAttribute("title")).toBe("Zwei Einheiten wählen");
+    expect(document.activeElement).toBe(within(menue).getAllByRole("menuitem")[0]);
+
+    fireEvent.keyDown(document.activeElement as HTMLElement, { key: "Escape" });
+    expect(screen.queryByRole("menu")).toBeNull();
+    expect(screen.getByRole("toolbar", { name: "Auswahl" })).toBeDefined();
+
+    zeile.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: "Im Tagebuch zeigen" }));
+    expect(tagebuch).toEqual(["U2"]);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("öffnet aus dem Kontextmenü die Maske des Schritts", async () => {
+    await zeigeTabelle();
+    const zeile = screen.getByText("Bergungsgruppe 1").closest("tr") as HTMLElement;
+    zeile.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
+    fireEvent.click(await screen.findByRole("menuitem", { name: /^Verschieben/ }));
+    expect(screen.getByLabelText("1 Einheit(en) verschieben")).toBeDefined();
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("nimmt mit Strg und Rechtsklick eine Zeile zur Auswahl dazu", async () => {
+    await zeigeTabelle();
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    const zeile = screen.getByText("Fachgruppe N").closest("tr") as HTMLElement;
+    zeile.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true, ctrlKey: true }));
+    expect(await screen.findByRole("menu", { name: "2 gewählt" })).toBeDefined();
   });
 
   it("markiert mehrere Einheiten mit Strg und öffnet die Verschiebemaske", async () => {
@@ -365,16 +465,15 @@ describe("Die Einheitentabelle", () => {
       });
     }
 
-    it("ist nur bei genau einer markierten Zeile bedienbar", async () => {
+    it("steht nur bei genau einer markierten Zeile in der Auswahlleiste", async () => {
       mitQuelle();
       await zeigeTabelle();
-      const knopf = screen.getByRole("button", { name: "Kopieren" });
-      expect(knopf.hasAttribute("disabled")).toBe(true);
-      expect(knopf.getAttribute("title")).toMatch(/\(Strg\+K\)$/u);
+      expect(screen.queryByRole("button", { name: "Kopieren" })).toBeNull();
       fireEvent.click(screen.getByText("Bergungsgruppe 1"));
-      expect(knopf.hasAttribute("disabled")).toBe(false);
+      const knopf = screen.getByRole("button", { name: "Kopieren" });
+      expect(knopf.getAttribute("title")).toMatch(/\(Strg\+K\)$/u);
       fireEvent.click(screen.getByText("Fachgruppe N"), { ctrlKey: true });
-      expect(knopf.hasAttribute("disabled")).toBe(true);
+      expect(screen.queryByRole("button", { name: "Kopieren" })).toBeNull();
     });
 
     it("öffnet die Anlegemaske vorbelegt und schreibt eine neue, angeforderte Einheit", async () => {

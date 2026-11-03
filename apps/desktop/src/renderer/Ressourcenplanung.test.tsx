@@ -95,10 +95,10 @@ describe("Die Ressourcenplanung in der Einheitentabelle", () => {
 
   it("öffnet an einer markierten Zeile „Ablösung anfordern“ und schreibt die Einheit als abzulösende", async () => {
     await zeige();
-    const knopf = screen.getByText("Ablösung anfordern") as HTMLButtonElement;
-    expect(knopf.disabled).toBe(true);
+    // Ohne Auswahl steht der Schritt nicht da; mit ihr in der Auswahlleiste.
+    expect(screen.queryByText("Ablösung anfordern")).toBeNull();
     fireEvent.click(screen.getByText("Fachgruppe N"));
-    fireEvent.click(knopf);
+    fireEvent.click(screen.getByRole("button", { name: "Ablösung anfordern" }));
 
     expect(screen.getByText("Ablösung für „Fachgruppe N“ anfordern")).toBeDefined();
     fireEvent.change(screen.getByLabelText("Vorgesehene Einheit"), { target: { value: "FGr N Jever" } });
