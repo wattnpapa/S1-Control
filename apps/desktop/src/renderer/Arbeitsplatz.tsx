@@ -179,7 +179,12 @@ export function Arbeitsplatz(): React.JSX.Element {
         }
         angemeldet={laden.umgebung?.anmeldung === true}
         {...(laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf"
-          ? { blatt, waehleBlatt: setzeBlatt, offeneMeldungen: laden.eingangskorb?.offen ?? 0 }
+          ? {
+              blatt,
+              waehleBlatt: setzeBlatt,
+              offeneMeldungen: laden.eingangskorb?.offen ?? 0,
+              profil: laden.einstellungen.profil ?? "fuehrungsstelle",
+            }
           : {})}
       />
 

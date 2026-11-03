@@ -16,16 +16,20 @@
  *  * der Reiter „Diagnose" — im Fenstermenü; sie ist kein Blatt des
  *    Betriebs, sondern das, was man liest, wenn etwas klemmt.
  *
+ * Seit E3 trägt Zeile 2 die Reiter des **Profils** und „Mehr ▾" für den
+ * Rest (`Reiterzeile.tsx`).
+ *
  * Das Wortbild „S1-Control" wird klein: Was der Bediener wissen muss, ist
  * der Einsatz, nicht das Programm. Ohne Einsatz steht es als Überschrift.
  * Die Stärke steht nur hier (Leitsatz 4: jede Zahl einmal); die Statuszeile
  * führt sie nicht mehr.
  */
 
-import type { Lagebild, Theme } from "../kontrakt/index.js";
-import { BLAETTER, type Blatt } from "./blaetter.js";
+import type { Lagebild, Profil, Theme } from "../kontrakt/index.js";
+import type { Blatt } from "./blaetter.js";
 import { Fenstermenue } from "./Fenstermenue.js";
 import { taktischeZeit } from "./formate.js";
+import { Reiterzeile } from "./Reiterzeile.js";
 import { Staerkekennzahl } from "./Staerkekennzahl.js";
 import { Zustandsmarke, abschlussText } from "./Zustandsmarke.js";
 
@@ -45,6 +49,8 @@ export interface KopfbandEigenschaften {
   offeneMeldungen?: number | undefined;
   /** Läuft die Web-Schale hinter der Anmeldung (ADR-006)? Dann steht „Abmelden“ im Menü. */
   angemeldet?: boolean | undefined;
+  /** Das Profil des Arbeitsplatzes — es wählt die Reiter im Band; ohne Angabe Führungsstelle. */
+  profil?: Profil | undefined;
 }
 
 /** „FüSt OV Oldenburg · S1-Control“ — der Name aus den Stammdaten, wenn es ihn gibt. */
@@ -97,6 +103,7 @@ export function Kopfband({
   waehleBlatt,
   offeneMeldungen = 0,
   angemeldet = false,
+  profil,
 }: KopfbandEigenschaften): React.JSX.Element {
   return (
     <header className="kopfband">
@@ -128,29 +135,7 @@ export function Kopfband({
           Lage. Damit trägt die Arbeitsfläche zu jedem Zeitpunkt eine Sache
           statt sechs untereinander. */}
       {blatt !== undefined && waehleBlatt !== undefined && (
-        <div className="reiter" role="tablist" aria-label="Ansichten">
-          {BLAETTER.filter((eintrag) => eintrag.imFenstermenue !== true).map((eintrag) => (
-            <button
-              key={eintrag.schluessel}
-              type="button"
-              role="tab"
-              aria-selected={blatt === eintrag.schluessel}
-              // Der Zähler steht im Namen und nicht nur als Zahl daneben:
-              // Vorgelesen wäre „Eingangskorb 7" sonst „Eingangskorb sieben"
-              // ohne Bezug — und zwischen zwei Textknoten fällt der Abstand
-              // im zugänglichen Namen ohnehin weg.
-              {...(eintrag.schluessel === "eingang" && offeneMeldungen > 0
-                ? { "aria-label": `${eintrag.titel} ${String(offeneMeldungen)} offen` }
-                : {})}
-              onClick={() => waehleBlatt(eintrag.schluessel)}
-            >
-              {eintrag.titel}
-              {eintrag.schluessel === "eingang" && offeneMeldungen > 0 && (
-                <span className="zaehler">{String(offeneMeldungen)}</span>
-              )}
-            </button>
-          ))}
-        </div>
+        <Reiterzeile blatt={blatt} waehleBlatt={waehleBlatt} offeneMeldungen={offeneMeldungen} profil={profil} />
       )}
     </header>
   );

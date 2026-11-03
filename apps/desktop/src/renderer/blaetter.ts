@@ -11,7 +11,14 @@
  * Die Liste steht in einer eigenen Datei, weil zwei Seiten sie brauchen: das
  * Kopfband zeichnet die Reiter, der Arbeitsplatz entscheidet, was darunter
  * steht.
+ *
+ * **Reiter je Profil** (Entwurf „Entlastung", 3.2, Schnitt E3): Das Profil
+ * des Arbeitsplatzes wählt, welche Blätter im Kopfband stehen; die übrigen
+ * stehen unter „Mehr". Ein Zuschnitt und kein Recht — jedes Blatt bleibt
+ * erreichbar, die Diagnose wie bisher über das Fenstermenü.
  */
+
+import type { Profil } from "../kontrakt/index.js";
 
 export interface Reiter {
   readonly schluessel:
@@ -71,4 +78,32 @@ export function istBlatt(wert: unknown): wert is Blatt {
 
 export function blatttitel(blatt: Blatt): string {
   return BLAETTER.find((eintrag) => eintrag.schluessel === blatt)?.titel ?? blatt;
+}
+
+/**
+ * Die Reiter im Band je Profil, in der Reihenfolge des Bands. Das erste Blatt
+ * ist das der Rolle: Die Vermeldezentrale arbeitet im Funkplan, die S4 in
+ * der Versorgung. „alle" fehlt hier — das ist das Band, wie es bis E3 war.
+ */
+const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
+  fuehrungsstelle: ["lage", "eingang", "fuest", "ausgaben", "tagebuch"],
+  vermeldezentrale: ["funkplan", "lage", "tagebuch"],
+  versorgung: ["versorgung", "lage", "ausgaben"],
+};
+
+export interface Reiterzuschnitt {
+  readonly imBand: readonly Reiter[];
+  /** In der Reihenfolge der Blätter; leer heißt: kein „Mehr". */
+  readonly unterMehr: readonly Reiter[];
+}
+
+/** Welche Reiter ein Profil im Band zeigt und welche unter „Mehr" stehen. */
+export function reiterFuer(profil: Profil = "fuehrungsstelle"): Reiterzuschnitt {
+  const reiter = BLAETTER.filter((eintrag) => eintrag.imFenstermenue !== true);
+  if (profil === "alle") return { imBand: reiter, unterMehr: [] };
+  const band = BAND[profil];
+  return {
+    imBand: band.flatMap((schluessel) => reiter.filter((eintrag) => eintrag.schluessel === schluessel)),
+    unterMehr: reiter.filter((eintrag) => !band.includes(eintrag.schluessel)),
+  };
 }

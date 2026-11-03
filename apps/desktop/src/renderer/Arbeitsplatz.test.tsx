@@ -78,6 +78,12 @@ function sichtbar(name: string): boolean {
   return knoten !== null && knoten.closest("[hidden]") === null;
 }
 
+/** Schlägt ein Blatt auf, das das Profil Führungsstelle unter „Mehr“ führt. */
+async function ausMehr(name: string): Promise<void> {
+  await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+  await userEvent.click(screen.getByRole("menuitemradio", { name }));
+}
+
 beforeEach(() => {
   // Der Reload-Merker gehört in den Browser, nicht in den nächsten Test.
   sessionStorage.clear();
@@ -179,7 +185,7 @@ describe("Der Arbeitsplatz", () => {
     });
     expect(attrappe.rufeDerArt("kostenAnfordern")).toHaveLength(0);
 
-    await userEvent.click(screen.getByRole("tab", { name: "Kosten" }));
+    await ausMehr("Kosten");
     await waitFor(() => {
       expect(attrappe.rufeDerArt("kostenAnfordern").length).toBeGreaterThan(0);
     });
@@ -214,7 +220,7 @@ describe("Der Arbeitsplatz", () => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
     expect(screen.getByRole("complementary", { name: "Einstieg: Lage" })).toBeDefined();
-    await userEvent.click(screen.getByRole("tab", { name: "Kosten" }));
+    await ausMehr("Kosten");
     expect(screen.getByRole("complementary", { name: "Einstieg: Kosten" })).toBeDefined();
     // Keine Hilfemarke „?“ mehr an den Karten (3.6).
     expect(screen.queryByRole("button", { name: /^Hilfe zu / })).toBeNull();
@@ -294,6 +300,22 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(attrappe.letzterRuf("tagebuchAnfordern")?.einheitId).toBe("U1");
     });
+  });
+
+  it("stellt die Reiter des gespeicherten Profils ins Band (E3)", async () => {
+    const einstellungen = { ...EINSTELLUNGEN, profil: "versorgung" } as const;
+    attrappe.antwortet("einstellungenLesen", einstellungen);
+    useLaden.setState({ einstellungen });
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(sichtbar("Abschnitte")).toBe(true);
+    });
+    expect(screen.getAllByRole("tab").map((reiter) => reiter.textContent)).toEqual(["Versorgung", "Lage", "Ausgaben"]);
+    await ausMehr("Einsatztagebuch");
+    await waitFor(() => {
+      expect(sichtbar("Einsatztagebuch")).toBe(true);
+    });
+    expect(screen.getByRole("tab", { name: "Einsatztagebuch", selected: true })).toBeDefined();
   });
 
   it("schlägt die Diagnose über das Fenstermenü auf, nicht über einen Reiter", async () => {

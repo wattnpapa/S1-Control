@@ -236,6 +236,77 @@ describe("Kopfband", () => {
     expect(waehleBlatt).toHaveBeenCalledWith("eingang");
   });
 
+  it("stellt je Profil andere Reiter ins Band und den Rest unter „Mehr“ (E3)", async () => {
+    const zeige = (profil: "fuehrungsstelle" | "vermeldezentrale" | "versorgung" | "alle" | undefined): void => {
+      cleanup();
+      render(
+        <Kopfband
+          lagebild={LAGEBILD}
+          jetzt={JETZT}
+          theme="standard"
+          waehleTheme={() => undefined}
+          aufHilfe={() => undefined}
+          blatt="lage"
+          waehleBlatt={() => undefined}
+          profil={profil}
+        />,
+      );
+    };
+    const reiter = (): string[] => screen.getAllByRole("tab").map((knopf) => knopf.textContent);
+
+    zeige(undefined);
+    expect(reiter()).toEqual(["Lage", "Eingang", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
+    zeige("vermeldezentrale");
+    expect(reiter()).toEqual(["Funkplan", "Lage", "Einsatztagebuch"]);
+    await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+    expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
+      "Eingang",
+      "Führungsstelle",
+      "Versorgung",
+      "Kosten",
+      "Ausgaben",
+    ]);
+    zeige("versorgung");
+    expect(reiter()).toEqual(["Versorgung", "Lage", "Ausgaben"]);
+    zeige("alle");
+    expect(reiter()).toHaveLength(8);
+    expect(screen.queryByRole("button", { name: "Mehr ▾" })).toBeNull();
+  });
+
+  it("schlägt ein Blatt aus „Mehr“ auf und zeigt es dann als vorübergehenden Reiter mit Häkchen (E3)", async () => {
+    const waehleBlatt = vi.fn();
+    const eigenschaften = {
+      lagebild: LAGEBILD,
+      jetzt: JETZT,
+      theme: "standard",
+      waehleTheme: () => undefined,
+      aufHilfe: () => undefined,
+      waehleBlatt,
+      offeneMeldungen: 4,
+      profil: "vermeldezentrale",
+    } as const;
+    const { rerender } = render(<Kopfband {...eigenschaften} blatt="funkplan" />);
+    await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+    const menue = screen.getByRole("menu", { name: "Weitere Blätter" });
+    // Der Zähler offener Meldungen steht auch im Menü, als Zahl und im Namen.
+    expect(within(menue).getByRole("menuitemradio", { name: "Eingang 4 offen" }).textContent).toBe("Eingang4");
+    await userEvent.click(within(menue).getByRole("menuitemradio", { name: "Kosten" }));
+    expect(waehleBlatt).toHaveBeenCalledWith("kosten");
+    expect(screen.queryByRole("menu")).toBeNull();
+
+    rerender(<Kopfband {...eigenschaften} blatt="kosten" />);
+    const kosten = screen.getByRole("tab", { name: "Kosten", selected: true });
+    expect(kosten.className).toBe("aus-mehr");
+    expect(screen.getAllByRole("tab").map((knopf) => knopf.textContent)).toEqual(["Funkplan", "Lage", "Einsatztagebuch", "Kosten"]);
+    await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+    expect(screen.getByRole("menuitemradio", { name: "Kosten" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("menuitemradio", { name: "Versorgung" }).getAttribute("aria-checked")).toBe("false");
+
+    // Zurück in ein Blatt des Bands: Der vorübergehende Reiter geht wieder.
+    rerender(<Kopfband {...eigenschaften} blatt="lage" />);
+    expect(screen.queryByRole("tab", { name: "Kosten" })).toBeNull();
+  });
+
   it("lässt die Reiterzeile weg, solange kein Einsatz offen ist", () => {
     render(
       <Kopfband

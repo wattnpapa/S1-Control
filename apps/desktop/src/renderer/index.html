@@ -690,6 +690,39 @@
         color: var(--kopfband-warn);
         font-variant-numeric: tabular-nums;
       }
+      /* Reiter des Profils links, „Mehr ▾" rechts daneben (Entlastung E3).
+         „Mehr" steht ausserhalb der Tabliste: Die scrollt auf schmalen
+         Bildschirmen in sich, das Menü soll das nicht. */
+      .kopfband .reiterzeile {
+        display: flex;
+        align-items: flex-end;
+        gap: 2px;
+      }
+      .kopfband .reiterzeile > .reiter {
+        flex: 0 1 auto;
+        min-width: 0;
+      }
+      .kopfband .mehr {
+        flex: none;
+        margin-left: auto;
+      }
+      .kopfband .mehrknopf {
+        height: auto;
+        padding: 7px 13px 6px;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        background: transparent;
+        color: var(--kopfband-leise);
+        font: 400 13px/1.2 var(--ui);
+      }
+      .kopfband .mehrknopf[aria-expanded="true"] {
+        color: var(--kopfband-text);
+        border-bottom-color: var(--kopfband-leise);
+      }
+      /* Ein Blatt aus „Mehr" steht nur, solange es offen ist: abgesetzt. */
+      .kopfband .reiter button.aus-mehr {
+        border-left: 1px dashed var(--kopfband-leise);
+      }
 
       /* ---- Arbeitsfläche ------------------------------------------------- */
 
@@ -3576,6 +3609,7 @@
         button,
         .ausgabeknoepfe a,
         .kopfband .reiter button,
+        .kopfband .mehrknopf,
         .kopfband .fenstermenueknopf,
         .klappmenueliste [role^="menuitem"],
         .monitorauswahl button {
@@ -3902,7 +3936,7 @@
           gap: 2px 12px;
           padding: 0;
         }
-        .kopfband > .reiter {
+        .kopfband > .reiterzeile {
           flex: 1 1 100%;
           min-width: 0;
         }
