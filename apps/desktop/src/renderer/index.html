@@ -914,20 +914,35 @@
       /* ---- Das Lagebild (M3) ------------------------------------------- */
 
       .lagekopf {
-        gap: 8px;
-        margin-bottom: 0;
-      }
-      .lagekopf,
-      .baumkopf {
         display: flex;
         align-items: center;
         flex-wrap: wrap;
-        gap: 0.5rem;
+        gap: 8px;
+        margin-bottom: 0;
+      }
+      .lagekopf h2 {
+        margin: 0 0.5rem 0 0;
+      }
+      /* Der Kopf des Baums: Titel links, der eine Hauptknopf rechts
+         (Entwurf „Entlastung", 3.4). */
+      .baumkopf {
+        display: flex;
+        align-items: center;
+        gap: 10px;
         margin-bottom: 0.5rem;
       }
-      .lagekopf h2,
       .baumkopf h2 {
-        margin: 0 0.5rem 0 0;
+        margin: 0 auto 0 0;
+      }
+      /* Einmal die Spaltenkoepfe der Zahlen statt „Einh." in jeder Zeile. */
+      .baumspalten {
+        margin: 0;
+        padding: 4px 0.4rem 3px;
+        text-align: right;
+        color: var(--text-leise);
+        font: 400 10px/1 var(--mono);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
       }
       .lagespalten {
         display: flex;
@@ -940,7 +955,10 @@
       .baum {
         flex: 0 0 300px;
         min-width: 300px;
-        overflow: hidden;
+        /* Sichtbar und nicht abgeschnitten: Das Menue „⋯" der gewaehlten
+           Zeile klappt ueber den Rand der Karte. Die Namen kuerzen sich in
+           der Zeile selbst (.baumzeile .name). */
+        overflow: visible;
       }
       /* Im Feldbild ist die Schrift groesser — der Baum bekommt die Breite,
          die er dafuer braucht, statt jeden zweiten Namen zu kuerzen. */
@@ -952,6 +970,42 @@
         list-style: none;
         margin: 0;
         padding: 0;
+      }
+      /* Zeile und „⋯" nebeneinander: Das Menue ist ein eigener Knopf, kein
+         Knopf im Knopf. */
+      .baumliste li {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .baumliste li > .baumzeile {
+        flex: 1 1 auto;
+        min-width: 0;
+      }
+      /* „Alle Bereiche" ist keine Abteilung, sondern die Aufhebung der Wahl:
+         leiser Grund und ein Strich darunter. */
+      .baum .alle {
+        margin-bottom: 2px;
+        border-bottom: var(--rahmenbreite) solid var(--rahmen-weich);
+      }
+      .baum .alle .baumzeile:not(.gewaehlt) {
+        background: var(--zeile-alt);
+        color: var(--text-leise);
+      }
+      .baum .zeilenmenue > button {
+        width: 26px;
+        height: 24px;
+        padding: 0;
+        font: 700 13px/1 var(--ui);
+      }
+      .baum .zeilenmenue > button[aria-expanded="true"] {
+        background: var(--knopf-fuellung);
+        color: var(--knopf-fuellung-text);
+      }
+      .baumfuss {
+        margin-top: 8px;
+        padding-top: 8px;
+        border-top: var(--rahmenbreite) solid var(--rahmen-weich);
       }
       /* Name links, Zahlen rechts, und der Name gibt nach: In einer schmalen
          Spalte ist die Stelle, an der gekuerzt werden darf, der Name — die

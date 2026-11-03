@@ -4,48 +4,33 @@
  * Sechs Bedienschritte aus der DoD: anlegen, umbenennen, Typ ändern, umhängen
  * (mit Zyklusregel), sortieren, auflösen mit Zielabschnitt — dazu die freie
  * Wahl des taktischen Zeichens. Jeder von ihnen ist genau **ein** Ereignis aus
- * §5.3 — die Maske baut den Entwurf, der Aktendienst schreibt ihn, und der
- * Baum kommt beim nächsten Zeigerwechsel neu.
+ * §5.3 (`Abschnittsmasken.tsx`), der Aktendienst schreibt ihn, und der Baum
+ * kommt beim nächsten Zeigerwechsel neu.
  *
- * **Zeichen und Typ sind zweierlei.** Der Typ entscheidet, ob die Stärke des
- * Abschnitts in die Gesamtstärke eingeht (§5.3.3), und eine Änderung daran
- * verlangt einen Grund (§2.4). Das Zeichen entscheidet nichts davon; es sagt,
- * womit der Abschnitt auf der Karte und in der Harke steht. Deshalb hat es
- * eine eigene Art und keine Grundpflicht.
+ * **Ein Knopf im Kopf** (Entwurf „Entlastung", 3.4, Optionen 6b, 6c): „Abschnitt
+ * anlegen". Was einer Zeile gilt, steht in ihrem Menü „⋯" und im
+ * Kontextmenü (`Abschnittsmenue.tsx`), erst wenn sie gewählt ist. Oben steht
+ * „Alle Bereiche": Sie hebt die Auswahl auf und nennt Einheiten und
+ * Ist-Stärke des Einsatzes, darüber einmal die Spaltenköpfe der Zahlen.
  *
  * **Die Komponente rechnet nicht.** Sortierung, Zyklusregel und
- * Auflösungskette stehen in `@s1/domaene/projektion`; was hier steht, ist die
- * Zuordnung Knopf → Ereignisentwurf. Der einzige Ort, an dem diese
- * Komponente eine fachliche Frage stellt, ist {@link schluesseZyklus} vor dem
- * Umhängen — und auch die Antwort kommt aus Ring 2.
- *
- * **Jeder gesetzte Schritt trägt seinen `vorher`-Wert** (§2.2a, Auflage 6).
- * Der Wert kommt aus dem Knoten, den dieser Arbeitsplatz gerade sieht; genau
- * das ist die Aussage, die §2.2a verlangt — „was ich gesehen habe", nicht
- * „was gilt".
+ * Auflösungskette stehen in `@s1/domaene/projektion`; was hier und in
+ * `baumordnung.ts` steht, ist die Zuordnung Schritt → Ereignisentwurf.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { ABSCHNITTSTYPEN, abschnittstypTitel, kennzahlen, projektion, type Baumknoten } from "@s1/domaene";
+import { abschnittstypTitel, kennzahlen, projektion, type Baumknoten, type Staerke } from "@s1/domaene";
 
-import { Maske } from "./Maske.js";
-import { AbschnittAnlegen } from "./AbschnittAnlegen.js";
-import { useLaden } from "./laden.js";
+import { Abschnittskontextmenue, Zeilenmenue, type AbschnittsschritteEigenschaften } from "./Abschnittsmenue.js";
+import { Abschnittsmasken, type Abschnittsentwurf, type Abschnittsmaske } from "./Abschnittsmasken.js";
+import { nachbarInReihenfolge } from "./baumordnung.js";
 import { abschnittszeichen, langform } from "./harke.js";
-import { Zeichen } from "./zeichen.js";
-import { Zeichenwahl } from "./Zeichenwahl.js";
+import type { Kontextort } from "./Klappmenue.js";
+import { useLaden } from "./laden.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
 import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
-
-/** Welche Maske gerade offen ist — höchstens eine. */
-type Maskenart =
-  | "anlegen"
-  | "umbenennen"
-  | "typ"
-  | "zeichen"
-  | "umhaengen"
-  | "aufloesen"
-  | undefined;
+import { Zeichen } from "./zeichen.js";
 
 export interface AbschnittsbaumEigenschaften {
   /** Der gewählte Abschnitt; er filtert zugleich die Einheitentabelle. */
@@ -53,13 +38,58 @@ export interface AbschnittsbaumEigenschaften {
   readonly aufWahl: (abschnittId: string | undefined) => void;
 }
 
+function staerkeText(staerke: Staerke): string {
+  return `${String(staerke.fuehrer)}/${String(staerke.unterfuehrer)}/${String(staerke.mannschaft)}`;
+}
+
+/**
+ * Schreiben aus Masken und Menü: Nach bestätigtem Schreiben schließt die
+ * Maske und der Baum kommt neu.
+ */
+function useAbschnittsbedienung(schliesse: () => void): (entwurf: Abschnittsentwurf) => Promise<void> {
+  const laden = useLaden();
+  return async (entwurf) => {
+    const ergebnis = await laden.bediene(entwurf);
+    // §8.8 Punkt 1: Ein gescheiterter Bedienschritt wird sichtbar abgewiesen.
+    // Die Maske bleibt dann offen — der Bediener soll seine Eingabe nicht
+    // verlieren, nur weil der Schreibversuch nicht durchging.
+    if (ergebnis?.art !== "geschrieben") return;
+    schliesse();
+    await laden.holeBaum();
+  };
+}
+
+/**
+ * Eine Stelle nach oben oder unten. Getauscht werden die
+ * **Reihenfolgewerte** und nicht die Positionen: §5.3 sortiert nach
+ * `reihenfolge`, und ein Tausch sind genau zwei `AbschnittUmsortiert` mit
+ * `vorher` und `neu`. Ein Neudurchnummerieren aller Geschwister wären so
+ * viele Ereignisse wie Geschwister — und jedes davon ein Konfliktkandidat
+ * gegen einen zweiten Arbeitsplatz.
+ */
+async function verschiebeInReihenfolge(
+  knoten: Baumknoten | undefined,
+  zeilen: readonly Baumknoten[],
+  richtung: -1 | 1,
+  bediene: (entwurf: Abschnittsentwurf) => Promise<void>,
+): Promise<void> {
+  const nachbar = knoten === undefined ? undefined : nachbarInReihenfolge(knoten, zeilen, richtung);
+  if (knoten === undefined || nachbar === undefined) return;
+  const tausch = (a: Baumknoten, b: Baumknoten): Abschnittsentwurf => ({
+    typ: "AbschnittUmsortiert",
+    nutzlast: { abschnittId: a.id },
+    vorher: a.reihenfolge,
+    neu: b.reihenfolge,
+  });
+  await bediene(tausch(knoten, nachbar));
+  await bediene(tausch(nachbar, knoten));
+}
+
 export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [maske, setzeMaske] = useState<Maskenart>(undefined);
-  const [eingabe, setzeEingabe] = useState("");
-  const [grund, setzeGrund] = useState("");
-  const [ziel, setzeZiel] = useState("");
-  const [ohneAufgeloeste, setzeOhneAufgeloeste] = useState(false);
+  const [maske, setzeMaske] = useState<Abschnittsmaske | undefined>(undefined);
+  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const nurLesen = (laden.lagebild?.einsatzStatus ?? "AKTIV") !== "AKTIV";
 
   // Der erste Baum wird beim Öffnen der Akte geholt; alles Weitere holt
   // `frischeAnsichten` über den Lagezeiger (M3.7). Der Effekt hängt deshalb an
@@ -73,407 +103,221 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
 
   const baum = laden.baum?.baum ?? [];
   const zeilen = useMemo(() => projektion.baumZeilen(baum), [baum]);
-  const namen = useMemo(() => new Map(zeilen.map((zeile) => [zeile.id, zeile.name])), [zeilen]);
   const knoten = zeilen.find((zeile) => zeile.id === gewaehlt);
 
-  function schliesse(): void {
+  const schliesse = useCallback(() => {
     setzeMaske(undefined);
-    setzeEingabe("");
-    setzeGrund("");
-    setzeZiel("");
-  }
-
-  async function bediene(entwurf: Parameters<typeof laden.bediene>[0]): Promise<void> {
-    const ergebnis = await laden.bediene(entwurf);
-    // §8.8 Punkt 1: Ein gescheiterter Bedienschritt wird sichtbar abgewiesen.
-    // Die Maske bleibt dann offen — der Bediener soll seine Eingabe nicht
-    // verlieren, nur weil der Schreibversuch nicht durchging.
-    if (ergebnis?.art !== "geschrieben") return;
-    schliesse();
-    await laden.holeBaum();
-  }
+  }, []);
+  const bediene = useAbschnittsbedienung(schliesse);
 
   useKuerzel(
     useMemo(
       () => ({
         anlegen: () => {
-          setzeMaske("anlegen");
+          if (!nurLesen) setzeMaske("anlegen");
         },
         abbrechen: () => {
           if (maske !== undefined) schliesse();
           else aufWahl(undefined);
         },
       }),
-      [maske, aufWahl],
+      [maske, aufWahl, nurLesen, schliesse],
     ),
   );
 
+  const schritte: Omit<AbschnittsschritteEigenschaften, "knoten"> = {
+    zeilen,
+    nurLesen,
+    aufMaske: setzeMaske,
+    aufVerschieben: (richtung) => void verschiebeInReihenfolge(knoten, zeilen, richtung, bediene),
+  };
+
   return (
     <section aria-label="Abschnitte" className="baum">
-      <div className="baumkopf">
-        <h2>Abschnitte</h2>
-        <button
-          type="button"
-          onClick={() => {
-            setzeMaske("anlegen");
+      <Baumkopf
+        nurLesen={nurLesen}
+        aufAnlegen={() => {
+          setzeMaske("anlegen");
+        }}
+      />
+
+      <Baumliste zeilen={zeilen} gewaehlt={gewaehlt} aufWahl={aufWahl} aufKontext={setzeKontext} schritte={schritte} />
+
+      {kontext !== undefined && knoten !== undefined && (
+        <Abschnittskontextmenue
+          ort={kontext}
+          knoten={knoten}
+          {...schritte}
+          aufSchliessen={() => {
+            setzeKontext(undefined);
           }}
-          title={`Neuen Abschnitt anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
-        >
-          Abschnitt anlegen
-        </button>
-        <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeEingabe(knoten?.name ?? ""); setzeMaske("umbenennen"); }}>
-          Umbenennen
-        </button>
-        <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeEingabe(knoten?.typ ?? ""); setzeMaske("typ"); }}>
-          Typ ändern
-        </button>
-        <button
-          type="button"
-          disabled={!aenderbar(knoten)}
-          onClick={() => { setzeEingabe(knoten?.zeichen ?? ""); setzeMaske("zeichen"); }}
-          title="Das taktische Zeichen dieses Abschnitts frei wählen"
-        >
-          Zeichen
-        </button>
-        <button type="button" disabled={!aenderbar(knoten)} onClick={() => { setzeMaske("umhaengen"); }}>
-          Umhängen
-        </button>
-        <button
-          type="button"
-          disabled={!aenderbar(knoten)}
-          onClick={() => void verschiebeInReihenfolge(knoten, zeilen, -1, bediene)}
-          title="Eine Stelle nach oben"
-        >
-          ↑
-        </button>
-        <button
-          type="button"
-          disabled={!aenderbar(knoten)}
-          onClick={() => void verschiebeInReihenfolge(knoten, zeilen, 1, bediene)}
-          title="Eine Stelle nach unten"
-        >
-          ↓
-        </button>
-        <button
-          type="button"
-          disabled={!aenderbar(knoten) || knoten?.aufgeloestNach !== undefined}
-          onClick={() => { setzeMaske("aufloesen"); }}
-        >
-          Auflösen
-        </button>
-        <label className="schalter">
-          <input
-            type="checkbox"
-            checked={ohneAufgeloeste}
-            onChange={(e) => {
-              setzeOhneAufgeloeste(e.target.checked);
-            }}
-          />
-          Aufgelöste ausblenden
-        </label>
-      </div>
-
-      <ul className="baumliste">
-        {zeilen
-          .filter((zeile) => !ohneAufgeloeste || zeile.aufgeloestNach === undefined)
-          .map((zeile) => (
-            <li key={zeile.id} style={{ paddingLeft: `${String(zeile.tiefe * 1.2)}rem` }}>
-              <button
-                type="button"
-                className={zeile.id === gewaehlt ? "baumzeile gewaehlt" : "baumzeile"}
-                aria-pressed={zeile.id === gewaehlt}
-                onClick={() => {
-                  aufWahl(zeile.id === gewaehlt ? undefined : zeile.id);
-                }}
-              >
-                {/* Das taktische Zeichen des Abschnitts — dasselbe, das in
-                    der Führungsharke steht und auf der Lagekarte klebt. Wer
-                    den Baum liest, soll die Struktur ohne Umweg über die
-                    Typbezeichnung erkennen. */}
-                <ZeichenDesAbschnitts knoten={zeile} />
-                <span className="name">{zeile.name}</span>
-                {/* Der Typ als Wort nur dort, wo kein Zeichen ihn zeigt: Beides
-                    nebeneinander sagt dasselbe zweimal und nimmt dem Namen den
-                    Platz. Am Zeichen steht die Bedeutung im `title`. */}
-                {abschnittszeichen(zeile) === undefined && <span className="typ">{abschnittstypTitel(zeile.typ)}</span>}
-                <span className="zahlen">
-                  {String(zeile.einheitenSumme)} Einh. · {zeile.summenStaerke.fuehrer}/
-                  {zeile.summenStaerke.unterfuehrer}/{zeile.summenStaerke.mannschaft}
-                  {zeile.erwartetSumme > 0 && ` · ${kennzahlen.erwartetKurz(zeile.erwartetSumme)}`}
-                </span>
-                {zeile.aufgeloestNach !== undefined && (
-                  <span className="warnung">aufgelöst → {namen.get(zeile.aufgeloestNach) ?? "ein anderer Abschnitt"}</span>
-                )}
-                {zeile.zyklusGeloest === true && (
-                  <span className="warnung" title="Die Umhängung schloss einen Zyklus und wurde nicht wirksam">
-                    Zyklus gelöst
-                  </span>
-                )}
-                {zeile.elternUnbekannt !== undefined && (
-                  <span className="warnung" title="Der übergeordnete Abschnitt ist noch nicht eingetroffen">
-                    Elternabschnitt fehlt
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-      </ul>
-
-      {maske === "anlegen" && (
-        <AbschnittAnlegen
-          elternId={gewaehlt === undefined || knoten?.systemAbschnitt === true ? undefined : gewaehlt}
-          reihenfolge={naechsteReihenfolge(zeilen, gewaehlt)}
-          aufSchliessen={schliesse}
-          typwahl={(wert, aufWahl) => <Typwahl wert={wert} aufWahl={aufWahl} />}
         />
       )}
 
-      {maske === "umbenennen" && knoten !== undefined && (
-        <Maske
-          titel={`„${knoten.name}“ umbenennen`}
-          bestaetigungstext="Name speichern"
-          bereit={eingabe.trim().length > 0}
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            return bediene({
-              typ: "AbschnittUmbenannt",
-              nutzlast: { abschnittId: knoten.id },
-              vorher: knoten.name,
-              neu: eingabe.trim(),
-            });
-          }}
-        >
-          <label>
-            Neuer Name
-            <input value={eingabe} onChange={(e) => { setzeEingabe(e.target.value); }} />
-          </label>
-        </Maske>
-      )}
-
-      {maske === "typ" && knoten !== undefined && (
-        <Maske
-          titel={`Typ von „${knoten.name}“ ändern`}
-          bestaetigungstext="Typ speichern"
-          // §2.4: `AbschnittTypGeaendert` verlangt einen Grund. Am Typ hängt
-          // `zaehltInGesamtstaerke` — eine Änderung verschiebt die
-          // Gesamtstärke, und wer sie später liest, soll wissen, warum.
-          bereit={eingabe !== knoten.typ && grund.trim().length > 0}
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            return bediene({
-              typ: "AbschnittTypGeaendert",
-              nutzlast: { abschnittId: knoten.id },
-              vorher: knoten.typ,
-              neu: eingabe,
-              grund: grund.trim(),
-            });
-          }}
-        >
-          <label>
-            Typ
-            <Typwahl wert={eingabe} aufWahl={setzeEingabe} />
-          </label>
-          <label>
-            Grund (Pflicht)
-            <input value={grund} onChange={(e) => { setzeGrund(e.target.value); }} />
-          </label>
-        </Maske>
-      )}
-
-      {maske === "zeichen" && knoten !== undefined && (
-        <Maske
-          titel={`Zeichen von „${knoten.name}“`}
-          // Kein Grund und keine Pflichtangabe: Das Zeichen ist eine Aussage
-          // ueber die Darstellung und nicht ueber die Lage — es verschiebt
-          // keine Staerke und keine Zaehlregel, anders als der Typ (§2.4).
-          bereit={eingabe !== (knoten.zeichen ?? "")}
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            return bediene({
-              typ: "AbschnittZeichenGesetzt",
-              nutzlast: { abschnittId: knoten.id },
-              vorher: knoten.zeichen ?? null,
-              neu: eingabe === "" ? null : eingabe,
-            });
-          }}
-        >
-          <Zeichenwahl
-            wert={eingabe === "" ? undefined : eingabe}
-            abgeleitet={`${langform(knoten.typ, knoten.tiefe)} (aus dem Typ)`}
-            aufWahl={(kennung) => {
-              setzeEingabe(kennung ?? "");
-            }}
-          />
-        </Maske>
-      )}
-
-      {maske === "umhaengen" && knoten !== undefined && (
-        <Maske
-          titel={`„${knoten.name}“ umhängen`}
-          bestaetigungstext="Abschnitt umhängen"
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            return bediene({
-              typ: "AbschnittUmgehaengt",
-              nutzlast: { abschnittId: knoten.id },
-              vorher: elternVon(zeilen, knoten.id) ?? null,
-              neu: ziel === "" ? null : ziel,
-            });
-          }}
-        >
-          <label>
-            Übergeordneter Abschnitt
-            <select value={ziel} onChange={(e) => { setzeZiel(e.target.value); }}>
-              <option value="">— an die Wurzel —</option>
-              {zeilen
-                .filter((zeile) => !schliessteZyklus(zeilen, knoten.id, zeile.id))
-                .map((zeile) => (
-                  <option key={zeile.id} value={zeile.id}>
-                    {zeile.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <p className="hinweistext">
-            Abschnitte, die einen Zyklus schlössen, stehen nicht zur Wahl.
-          </p>
-        </Maske>
-      )}
-
-      {maske === "aufloesen" && knoten !== undefined && (
-        <Maske
-          titel={`„${knoten.name}“ auflösen`}
-          bestaetigungstext="Auflösen"
-          bereit={ziel !== ""}
-          bereitGrund="Zielabschnitt wählen"
-          aufAbbrechen={schliesse}
-          aufBestaetigen={() => {
-            return bediene({
-              typ: "AbschnittAufgeloest",
-              nutzlast: { abschnittId: knoten.id },
-              vorher: null,
-              neu: { zielAbschnittId: ziel, aufgeloestAm: new Date().toISOString() },
-            });
-          }}
-        >
-          <label>
-            Einheiten laufen weiter in
-            <select value={ziel} onChange={(e) => { setzeZiel(e.target.value); }}>
-              <option value="">— bitte wählen —</option>
-              {zeilen
-                .filter(
-                  (zeile) =>
-                    zeile.id !== knoten.id &&
-                    zeile.aufgeloestNach === undefined &&
-                    zeile.typ !== "ARCHIV" &&
-                    zeile.typ !== "EINGANG",
-                )
-                .map((zeile) => (
-                  <option key={zeile.id} value={zeile.id}>
-                    {zeile.name}
-                  </option>
-                ))}
-            </select>
-          </label>
-          <p className="hinweistext" data-testid="aufloesen-betrifft">
-            Betrifft „{knoten.name}“: {String(knoten.einheitenSumme)} Einheit(en), Stärke{" "}
-            {knoten.summenStaerke.fuehrer}/{knoten.summenStaerke.unterfuehrer}/{knoten.summenStaerke.mannschaft}.
-          </p>
-          <p className="hinweistext">
-            Der Abschnitt bleibt sichtbar und lässt sich wiederherstellen; seine Einheiten stehen ab
-            sofort im gewählten Ziel.
-          </p>
-        </Maske>
-      )}
+      <Abschnittsmasken
+        key={`${maske ?? ""}-${knoten?.id ?? ""}`}
+        maske={maske}
+        knoten={knoten}
+        gewaehlt={gewaehlt}
+        zeilen={zeilen}
+        aufSchliessen={schliesse}
+        bediene={bediene}
+      />
     </section>
   );
 }
 
-/** Die bekannten Abschnittstypen (§5.3) ohne die beiden systemseitigen; der Bereich bleibt offen (§3.7). */
-function Typwahl({ wert, aufWahl }: { wert: string; aufWahl: (typ: string) => void }): React.JSX.Element {
+/** Der Kopf: Titel, der eine Hauptknopf und einmal die Spaltenköpfe der Zahlen (Audit P2-2). */
+function Baumkopf({ nurLesen, aufAnlegen }: { readonly nurLesen: boolean; readonly aufAnlegen: () => void }): React.JSX.Element {
   return (
-    <select value={wert} onChange={(e) => { aufWahl(e.target.value); }}>
-      {ABSCHNITTSTYPEN.filter((typ) => typ !== "ARCHIV" && typ !== "EINGANG").map((typ) => (
-        <option key={typ} value={typ}>
-          {abschnittstypTitel(typ)}
-        </option>
-      ))}
-    </select>
+    <>
+      <div className="baumkopf">
+        <h2>Abschnitte</h2>
+        <button
+          type="button"
+          className="haupt"
+          disabled={nurLesen}
+          onClick={aufAnlegen}
+          title={nurLesen ? TEXT_NUR_LESEN : `Neuen Abschnitt anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
+        >
+          Abschnitt anlegen
+        </button>
+      </div>
+      <p className="baumspalten">Einh. · Fü/UFü/He</p>
+    </>
   );
 }
 
+interface BaumlisteEigenschaften {
+  readonly zeilen: readonly Baumknoten[];
+  readonly gewaehlt: string | undefined;
+  readonly aufWahl: (abschnittId: string | undefined) => void;
+  /** Rechtsklick: Die Zeile ist schon gewählt, das Menü geht an dieser Stelle auf. */
+  readonly aufKontext: (ort: Kontextort) => void;
+  readonly schritte: Omit<AbschnittsschritteEigenschaften, "knoten">;
+}
+
 /**
- * Die beiden Systemabschnitte lassen sich nicht ändern (§5.3.4).
- *
- * Jedes ändernde Ereignis auf `EINGANG` oder `ARCHIV` ist wirkungslos und
- * erzeugt `reservierteIdVerworfen`. Einen Knopf anzubieten, dessen Wirkung der
- * Fold anschließend verwirft, wäre ein Versprechen, das die Anwendung nicht
- * hält.
+ * Die Liste mit „Alle Bereiche" oben und dem Schalter für Aufgelöste am Fuß.
+ * Aufgelöste stehen in der Vorgabe nicht da: Sie sind Geschichte, und ihre
+ * Einheiten stehen längst im Ziel. Der Schalter erscheint nur, wenn es welche
+ * gibt.
  */
-function aenderbar(knoten: Baumknoten | undefined): boolean {
-  return knoten !== undefined && !knoten.systemAbschnitt;
-}
-
-function elternVon(zeilen: readonly Baumknoten[], id: string): string | undefined {
-  return zeilen.find((zeile) => zeile.kinder.some((kind) => kind.id === id))?.id;
-}
-
-/** Wie {@link projektion.schluesseZyklus}, aber über den Zeilen der Ansicht. */
-function schliessteZyklus(zeilen: readonly Baumknoten[], abschnittId: string, kandidat: string): boolean {
-  if (abschnittId === kandidat) return true;
-  let lauf: string | undefined = kandidat;
-  const gesehen = new Set<string>([abschnittId]);
-  while (lauf !== undefined) {
-    if (gesehen.has(lauf)) return true;
-    gesehen.add(lauf);
-    lauf = elternVon(zeilen, lauf);
-  }
-  return false;
-}
-
-/** Die nächste freie Reihenfolge unter demselben Elternteil. */
-function naechsteReihenfolge(zeilen: readonly Baumknoten[], parentId: string | undefined): number {
-  const geschwister = zeilen.filter((zeile) =>
-    parentId === undefined ? zeile.tiefe === 0 : elternVon(zeilen, zeile.id) === parentId,
+function Baumliste({ zeilen, gewaehlt, aufWahl, aufKontext, schritte }: BaumlisteEigenschaften): React.JSX.Element {
+  const [aufgeloesteZeigen, setzeAufgeloesteZeigen] = useState(false);
+  const namen = useMemo(() => new Map(zeilen.map((zeile) => [zeile.id, zeile.name])), [zeilen]);
+  const aufgeloeste = zeilen.filter((zeile) => zeile.aufgeloestNach !== undefined).length;
+  return (
+    <>
+      <ul className="baumliste">
+        <AlleBereiche gewaehlt={gewaehlt === undefined} aufWahl={aufWahl} />
+        {zeilen
+          .filter((zeile) => aufgeloesteZeigen || zeile.aufgeloestNach === undefined)
+          .map((zeile) => (
+            <li
+              key={zeile.id}
+              className={zeile.id === gewaehlt ? "gewaehlt" : undefined}
+              style={{ paddingLeft: `${String(zeile.tiefe * 1.2)}rem` }}
+              onContextMenu={(ereignis) => {
+                // Das Menü des Browsers trüge hier nichts bei (Entwurf, offene Fragen).
+                ereignis.preventDefault();
+                if (zeile.id !== gewaehlt) aufWahl(zeile.id);
+                aufKontext({ x: ereignis.clientX, y: ereignis.clientY });
+              }}
+            >
+              <Baumzeile zeile={zeile} gewaehlt={zeile.id === gewaehlt} namen={namen} aufWahl={aufWahl} />
+              {zeile.id === gewaehlt && <Zeilenmenue knoten={zeile} {...schritte} />}
+            </li>
+          ))}
+      </ul>
+      {aufgeloeste > 0 && (
+        <div className="baumfuss">
+          <label className="schalter">
+            <input
+              type="checkbox"
+              checked={aufgeloesteZeigen}
+              onChange={(e) => {
+                setzeAufgeloesteZeigen(e.target.checked);
+              }}
+            />
+            Aufgelöste zeigen ({aufgeloeste})
+          </label>
+        </div>
+      )}
+    </>
   );
-  return geschwister.reduce((groesste, zeile) => Math.max(groesste, zeile.reihenfolge), 0) + 1;
 }
 
-/**
- * Verschiebt einen Abschnitt eine Stelle nach oben oder unten.
- *
- * Getauscht werden die **Reihenfolgewerte** und nicht die Positionen: `§5.3`
- * sortiert nach `reihenfolge`, und ein Tausch ist genau ein
- * `AbschnittUmsortiert` mit `vorher` und `neu`. Ein Neudurchnummerieren aller
- * Geschwister wären so viele Ereignisse wie Geschwister — und jedes davon
- * ein Konfliktkandidat gegen einen zweiten Arbeitsplatz.
- */
-async function verschiebeInReihenfolge(
-  knoten: Baumknoten | undefined,
-  zeilen: readonly Baumknoten[],
-  richtung: -1 | 1,
-  bediene: (entwurf: { typ: string; nutzlast: unknown; vorher?: unknown; neu?: unknown }) => Promise<void>,
-): Promise<void> {
-  if (knoten === undefined) return;
-  const eltern = elternVon(zeilen, knoten.id);
-  const geschwister = zeilen
-    .filter((zeile) => elternVon(zeilen, zeile.id) === eltern)
-    .sort((a, b) => (a.reihenfolge === b.reihenfolge ? (a.id < b.id ? -1 : 1) : a.reihenfolge - b.reihenfolge));
-  const stelle = geschwister.findIndex((zeile) => zeile.id === knoten.id);
-  const nachbar = geschwister[stelle + richtung];
-  if (nachbar === undefined) return;
-  await bediene({
-    typ: "AbschnittUmsortiert",
-    nutzlast: { abschnittId: knoten.id },
-    vorher: knoten.reihenfolge,
-    neu: nachbar.reihenfolge,
-  });
-  await bediene({
-    typ: "AbschnittUmsortiert",
-    nutzlast: { abschnittId: nachbar.id },
-    vorher: nachbar.reihenfolge,
-    neu: knoten.reihenfolge,
-  });
+/** „Alle Bereiche": hebt die Auswahl auf und nennt Einheiten und Ist-Stärke des Einsatzes. */
+function AlleBereiche({ gewaehlt, aufWahl }: { readonly gewaehlt: boolean; readonly aufWahl: (id: undefined) => void }): React.JSX.Element {
+  const lagebild = useLaden((zustand) => zustand.lagebild);
+  return (
+    <li className={gewaehlt ? "alle gewaehlt" : "alle"}>
+      <button
+        type="button"
+        className={gewaehlt ? "baumzeile gewaehlt" : "baumzeile"}
+        aria-pressed={gewaehlt}
+        title="Alle Einheiten des Einsatzes; hebt die Wahl eines Abschnitts auf"
+        onClick={() => {
+          aufWahl(undefined);
+        }}
+      >
+        <span className="name">Alle Bereiche</span>
+        {lagebild !== undefined && (
+          <span className="zahlen" title={`${String(lagebild.einheiten)} Einheiten, Ist-Stärke ${staerkeText(lagebild.gesamtstaerke)}`}>
+            {String(lagebild.einheiten)} · {staerkeText(lagebild.gesamtstaerke)}
+          </span>
+        )}
+      </button>
+    </li>
+  );
+}
+
+interface BaumzeileEigenschaften {
+  readonly zeile: Baumknoten;
+  readonly gewaehlt: boolean;
+  readonly namen: ReadonlyMap<string, string>;
+  readonly aufWahl: (abschnittId: string | undefined) => void;
+}
+
+function Baumzeile({ zeile, gewaehlt, namen, aufWahl }: BaumzeileEigenschaften): React.JSX.Element {
+  const staerke = staerkeText(zeile.summenStaerke);
+  return (
+    <button
+      type="button"
+      className={gewaehlt ? "baumzeile gewaehlt" : "baumzeile"}
+      aria-pressed={gewaehlt}
+      onClick={() => {
+        aufWahl(gewaehlt ? undefined : zeile.id);
+      }}
+    >
+      {/* Das taktische Zeichen des Abschnitts — dasselbe, das in der
+          Führungsharke steht und auf der Lagekarte klebt. */}
+      <ZeichenDesAbschnitts knoten={zeile} />
+      <span className="name">{zeile.name}</span>
+      {/* Der Typ als Wort nur dort, wo kein Zeichen ihn zeigt: Beides
+          nebeneinander sagt dasselbe zweimal und nimmt dem Namen den Platz. */}
+      {abschnittszeichen(zeile) === undefined && <span className="typ">{abschnittstypTitel(zeile.typ)}</span>}
+      {/* Die Spaltenköpfe „Einh. · Fü/UFü/He" stehen einmal über der Liste. */}
+      <span className="zahlen" title={`${String(zeile.einheitenSumme)} Einheiten, Stärke ${staerke} (Fü/UFü/He)`}>
+        {String(zeile.einheitenSumme)} · {staerke}
+        {zeile.erwartetSumme > 0 && ` · ${kennzahlen.erwartetKurz(zeile.erwartetSumme)}`}
+      </span>
+      {zeile.aufgeloestNach !== undefined && (
+        <span className="warnung">aufgelöst → {namen.get(zeile.aufgeloestNach) ?? "ein anderer Abschnitt"}</span>
+      )}
+      {zeile.zyklusGeloest === true && (
+        <span className="warnung" title="Die Umhängung schloss einen Zyklus und wurde nicht wirksam">
+          Zyklus gelöst
+        </span>
+      )}
+      {zeile.elternUnbekannt !== undefined && (
+        <span className="warnung" title="Der übergeordnete Abschnitt ist noch nicht eingetroffen">
+          Elternabschnitt fehlt
+        </span>
+      )}
+    </button>
+  );
 }
 
 /**
@@ -483,11 +327,7 @@ async function verschiebeInReihenfolge(
  * nachgebaut: Ein Abschnitt, der in der Harke eine Einsatzabschnittsleitung
  * ist, darf im Baum keine andere sein.
  */
-function ZeichenDesAbschnitts({
-  knoten,
-}: {
-  readonly knoten: Baumknoten;
-}): React.JSX.Element | null {
+function ZeichenDesAbschnitts({ knoten }: { readonly knoten: Baumknoten }): React.JSX.Element | null {
   const gewaehlt = abschnittszeichen(knoten);
   if (gewaehlt === undefined) return null;
   return (
@@ -495,8 +335,8 @@ function ZeichenDesAbschnitts({
       <Zeichen
         kennung={gewaehlt.kennung}
         // Die Langform nur beim abgeleiteten Zeichen: Bei einem frei
-        // gewaehlten benennt der Satz selbst, was es bedeutet, und der Typ
-        // waere dann die falsche Auskunft.
+        // gewählten benennt der Satz selbst, was es bedeutet, und der Typ
+        // wäre dann die falsche Auskunft.
         bedeutung={knoten.zeichen === undefined ? langform(knoten.typ, knoten.tiefe) : undefined}
         breite={26}
         ausschnitt={gewaehlt.ausschnitt}
