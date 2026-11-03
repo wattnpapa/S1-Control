@@ -1,9 +1,11 @@
 /**
  * Die Monitorwahl (M3.5).
  *
- * Zwei Knöpfe und eine Liste — mehr ist es nicht, und mehr soll es nicht
+ * Ein Menüeintrag und eine Liste — mehr ist es nicht, und mehr soll es nicht
  * sein: Der Stärke-Monitor wird einmal zu Beginn eines Einsatzes aufgezogen
- * und danach nicht mehr angefasst.
+ * und danach nicht mehr angefasst. Deshalb steht er seit Runde 6
+ * („Entlastung", 3.3) im Fenstermenü „⋯" und nicht mehr als Knopf in der
+ * Werkzeugzeile der Lage; diese Datei liefert, was der Eintrag braucht.
  *
  * **Die Bildschirme werden erst beim Aufklappen geholt.** Ein Kabel wird
  * mitten im Einsatz umgesteckt; eine Liste, die beim Start geladen wurde,
@@ -11,14 +13,14 @@
  * überleben ohnehin keinen Neustart und werden deshalb auch nicht gemerkt.
  *
  * **Im Browser gibt es keine Bildschirme und keinen Ruf an die Schale.** Der
- * Monitor ist dieselbe Seite mit dem Fragment `#monitor`; der Knopf öffnet
+ * Monitor ist dieselbe Seite mit dem Fragment `#monitor`; der Eintrag öffnet
  * sie selbst in einem neuen Fenster oder Reiter — wie „Öffnen“ an einer
  * Ausgabedatei. Von dort zieht der Bediener sie auf das Anzeigegerät. Ein
  * zweiter Klick holt das offene Fenster nach vorn, statt ein drittes
  * aufzumachen — dasselbe, was die Electron-Schale mit ihrem Fenster tut.
  */
 
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 import { useLaden } from "./laden.js";
 import { useDraussenSchliessen } from "./useDraussenSchliessen.js";
@@ -116,35 +118,5 @@ export function Monitorauswahl({ aufSchliessen }: { readonly aufSchliessen: () =
         Abbrechen
       </button>
     </div>
-  );
-}
-
-export function Monitorwahl(): React.JSX.Element {
-  const start = useMonitorstart();
-  const [offen, setzeOffen] = useState(false);
-  return (
-    <span className="monitorwahl">
-      <button
-        type="button"
-        onClick={() => {
-          if (start.imBrowser) start.oeffneImBrowser();
-          else setzeOffen(!offen);
-        }}
-        title={
-          start.imBrowser
-            ? "Öffnet den Stärke-Monitor in einem neuen Fenster; von dort auf das Anzeigegerät ziehen"
-            : undefined
-        }
-      >
-        Stärke-Monitor
-      </button>
-      {offen && (
-        <Monitorauswahl
-          aufSchliessen={() => {
-            setzeOffen(false);
-          }}
-        />
-      )}
-    </span>
   );
 }

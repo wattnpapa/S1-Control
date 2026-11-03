@@ -14,7 +14,6 @@ import { useMemo, useState } from "react";
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
 import { Ausgaben } from "./Ausgaben.js";
-import { Monitorwahl } from "./Monitorwahl.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
 import { useKuerzel } from "./tastatur.js";
@@ -47,8 +46,11 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
   return (
     <section aria-label="Lagebild" className="lage">
       {/* Die Werkzeugzeile trägt, was die ganze Lage betrifft, und sonst
-          nichts: Der Weg aus dem Einsatz steht im Kopfband, das Anlegen und
-          Verschieben in den Köpfen von Baum und Tabelle. */}
+          nichts. Seit Runde 6 („Entlastung", 3.3) ist das nur noch der
+          Erfassungsbogen: Stärke-Monitor und Einsatz schließen stehen im
+          Fenstermenü, „Rückgängig“ in der Statuszeile, das Anlegen und
+          Verschieben in den Köpfen von Baum und Tabelle. Schnitt E2 zieht
+          auch den Bogen in den Hauptknopf der Einheitenkarte. */}
       <div className="lagekopf" hidden={blatt !== "lage"}>
         <button
           type="button"
@@ -58,7 +60,6 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
         >
           Erfassungsbogen einlesen
         </button>
-        <Monitorwahl />
       </div>
 
       <div className="lagespalten" hidden={blatt !== "lage"}>

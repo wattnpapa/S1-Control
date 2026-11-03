@@ -9,7 +9,7 @@
  * Ausgaben und Tagebuch sich auf sie beziehen.
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
@@ -164,6 +164,39 @@ describe("Der Arbeitsplatz", () => {
     await userEvent.click(screen.getByRole("tab", { name: "Kosten" }));
     await waitFor(() => {
       expect(attrappe.rufeDerArt("kostenAnfordern").length).toBeGreaterThan(0);
+    });
+  });
+
+  it("führt in der Werkzeugzeile der Lage weder Monitor noch Rückgängig — Rückgängig steht einmal, unten", async () => {
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(sichtbar("Abschnitte")).toBe(true);
+    });
+    const lage = screen.getByLabelText("Lagebild");
+    expect(within(lage).getByRole("button", { name: "Erfassungsbogen einlesen" })).toBeDefined();
+    expect(within(lage).queryByRole("button", { name: /Stärke-Monitor/ })).toBeNull();
+    expect(within(lage).queryByRole("button", { name: /Rückgängig/ })).toBeNull();
+    const ruecknahmen = screen.getAllByRole("button", { name: /Rückgängig/ });
+    expect(ruecknahmen).toHaveLength(1);
+    expect(ruecknahmen[0]?.closest("footer")?.getAttribute("aria-label")).toBe("Statuszeile");
+    // Der Monitor ist über das Fenstermenü erreichbar.
+    await userEvent.click(screen.getByRole("button", { name: "Fenstermenü" }));
+    expect(screen.getByRole("menuitem", { name: "Stärke-Monitor öffnen …" })).toBeDefined();
+  });
+
+  it("schlägt die Diagnose über das Fenstermenü auf, nicht über einen Reiter", async () => {
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(sichtbar("Abschnitte")).toBe(true);
+    });
+    expect(screen.queryByRole("tab", { name: "Diagnose" })).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Fenstermenü" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Diagnose" }));
+    await waitFor(() => {
+      expect(sichtbar("Abschnitte")).toBe(false);
+    });
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("diagnoseAnfordern").length).toBeGreaterThan(0);
     });
   });
 
