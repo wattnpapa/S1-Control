@@ -138,8 +138,10 @@ export function Arbeitsplatz(): React.JSX.Element {
         jetzt={jetzt}
         theme={laden.einstellungen.theme ?? "standard"}
         waehleTheme={(gewaehlt) => void laden.waehleTheme(gewaehlt)}
+        // Aus dem Fenstermenü öffnet „Hilfe“ und schaltet nicht um: Wer den
+        // Eintrag wählt, will die Hilfe sehen. Strg+H schaltet weiter um.
         aufHilfe={() => {
-          setzeHilfeOffen((bisher) => !bisher);
+          setzeHilfeOffen(true);
         }}
         zurueckZurAuswahl={
           laden.akteId === undefined ? undefined : zurueckZurAuswahl

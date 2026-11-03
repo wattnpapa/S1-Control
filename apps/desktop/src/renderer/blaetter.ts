@@ -27,8 +27,12 @@ export interface Reiter {
     | "tagebuch"
     | "diagnose";
   readonly titel: string;
-  /** Steht am rechten Rand der Leiste statt in der Reihe. */
-  readonly rechts?: boolean;
+  /**
+   * Steht nicht in der Reiterzeile, sondern im Fenstermenü „⋯" (Entwurf
+   * „Entlastung", 3.2). Das Blatt bleibt ein Blatt: Der Arbeitsplatz schlägt
+   * es auf wie jedes andere, nur der Weg dorthin ist ein anderer.
+   */
+  readonly imFenstermenue?: boolean;
 }
 
 export const BLAETTER: readonly Reiter[] = [
@@ -46,10 +50,10 @@ export const BLAETTER: readonly Reiter[] = [
   { schluessel: "fueorg", titel: "Führungsorganisation" },
   { schluessel: "ausgaben", titel: "Ausgaben" },
   { schluessel: "tagebuch", titel: "Einsatztagebuch" },
-  // Ganz rechts und als letztes Blatt: Die Diagnose wird nicht im Betrieb
-  // gelesen, sondern wenn etwas klemmt (M7.3). Sie steht deshalb dort, wo
-  // niemand sie versehentlich aufschlägt — und trotzdem im selben Griff.
-  { schluessel: "diagnose", titel: "Diagnose", rechts: true },
+  // Die Diagnose wird nicht im Betrieb gelesen, sondern wenn etwas klemmt
+  // (M7.3). Sie steht deshalb nicht in der Reiterzeile, sondern im
+  // Fenstermenü — dort, wo niemand sie versehentlich aufschlägt.
+  { schluessel: "diagnose", titel: "Diagnose", imFenstermenue: true },
 ];
 
 export type Blatt = Reiter["schluessel"];

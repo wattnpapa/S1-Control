@@ -174,7 +174,8 @@ describe("Der Arbeitsplatz", () => {
       expect(ladeMerker()).toMatchObject({ ordner: LAGEBILD.einsatzId, blatt: "tagebuch" });
     });
 
-    await userEvent.click(screen.getByRole("button", { name: /Einsatzauswahl|Einsätze|Zurück/ }));
+    await userEvent.click(screen.getByRole("button", { name: "Fenstermenü" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Einsatz schließen" }));
     await waitFor(() => {
       expect(ladeMerker()).toBeUndefined();
     });

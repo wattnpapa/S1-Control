@@ -1,32 +1,33 @@
 /**
- * Das Kopfband (Entwurf „Oberfläche", Option 2a).
+ * Das Kopfband (Entwurf „Entlastung", 3.1, Optionen 6b und 6d).
  *
- * Es trägt vier Zeilen und in ihnen genau das, was ohne Suchen sichtbar sein
- * muss: den Weg zurück zur Einsatzauswahl, das Wortbild, **Stärke und
- * taktische Zeit** in Zahlen, die man aus zwei Metern liest, und darunter in
- * einer Zeile, ob der Stand aktuell und der Share erreichbar ist.
+ * **Zwei Zeilen statt vier.** Zeile 1 trägt links die Marke und den
+ * **Einsatznamen** mit der Führungsstelle darunter, in der Mitte Ist-Stärke
+ * und taktische Zeit in der Größe, die man aus zwei Metern liest, rechts die
+ * Zustandsmarke und das Fenstermenü „⋯". Zeile 2 trägt die Reiter.
  *
- * Die Stärke steht nur hier (und in der Statuszeile). Das frühere Stärkeband
- * unter dem Kopfband wiederholte sie in Kacheln und ist seit dem 21.09.2026
- * entfernt.
+ * Was bis Runde 6 hier stand und jetzt woanders steht:
+ *
+ *  * „‹ Einsatzauswahl" — als „Einsatz schließen" im Fenstermenü;
+ *  * die Zustandszeile — sie sagte Stand, Share und Arbeitsplätze ein
+ *    zweites Mal; das tut die Statuszeile am Fuß, oben bleibt die
+ *    Zustandsmarke mit der Ausführung im Tooltip;
+ *  * Hilfeknopf, Themenschalter, Abmelden — im Fenstermenü;
+ *  * der Reiter „Diagnose" — im Fenstermenü; sie ist kein Blatt des
+ *    Betriebs, sondern das, was man liest, wenn etwas klemmt.
+ *
+ * Das Wortbild „S1-Control" wird klein: Was der Bediener wissen muss, ist
+ * der Einsatz, nicht das Programm. Ohne Einsatz steht es als Überschrift.
+ * Die Stärke steht nur hier (Leitsatz 4: jede Zahl einmal); die Statuszeile
+ * führt sie nicht mehr.
  */
 
-import { THEMEN, type Lagebild, type Theme } from "../kontrakt/index.js";
+import type { Lagebild, Theme } from "../kontrakt/index.js";
 import { BLAETTER, type Blatt } from "./blaetter.js";
+import { Fenstermenue } from "./Fenstermenue.js";
 import { taktischeZeit } from "./formate.js";
 import { Staerkekennzahl } from "./Staerkekennzahl.js";
-import { kuerzel, kuerzelText } from "./tastatur.js";
-import { alter } from "./Statuszeile.js";
-import { weitereText } from "./arbeitsplatzzahl.js";
-import { unterbrochenText } from "./verbindung.js";
-import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
-
-const BESCHRIFTUNG: Record<Theme, string> = {
-  standard: "Standard",
-  dunkel: "Dunkel",
-  feld: "Feld",
-  nacht: "Nacht",
-};
+import { Zustandsmarke, abschlussText } from "./Zustandsmarke.js";
 
 export interface KopfbandEigenschaften {
   readonly lagebild: Lagebild | undefined;
@@ -35,15 +36,54 @@ export interface KopfbandEigenschaften {
   waehleTheme(theme: Theme): void;
   /** Die Tastenkarte — sie gehört zum Fenster und nicht zu einer Ansicht. */
   aufHilfe(): void;
-  /** Der Weg zurück — fehlt er, ist kein Einsatz offen und die Zeile entfällt. */
+  /** Der Weg zurück — fehlt er, ist kein Einsatz offen und das Menü führt ihn nicht. */
   zurueckZurAuswahl?: (() => void) | undefined;
   /** Das aufgeschlagene Blatt; ohne offenen Einsatz entfällt die Reiterzeile. */
   blatt?: Blatt | undefined;
   waehleBlatt?: ((blatt: Blatt) => void) | undefined;
   /** Wie viele Meldungen im Eingangskorb offen sind — 0 zeigt keine Marke. */
   offeneMeldungen?: number | undefined;
-  /** Läuft die Web-Schale hinter der Anmeldung (ADR-006)? Dann steht „Abmelden“ da. */
+  /** Läuft die Web-Schale hinter der Anmeldung (ADR-006)? Dann steht „Abmelden“ im Menü. */
   angemeldet?: boolean | undefined;
+}
+
+/** „FüSt OV Oldenburg · S1-Control“ — der Name aus den Stammdaten, wenn es ihn gibt. */
+export function fuestZeile(lagebild: Lagebild): string {
+  const name = (lagebild.stammdaten?.fuestName ?? "").trim();
+  if (name === "") return "S1-Control";
+  // Die Stammdaten tragen den Namen mal mit, mal ohne „FüSt“ davor.
+  return `${/^füst\b/iu.test(name) ? name : `FüSt ${name}`} · S1-Control`;
+}
+
+/**
+ * Der Einsatz als Überschrift. Ein beendeter oder archivierter Einsatz steht
+ * so darunter, dass ihn niemand für den laufenden hält: Wer schreiben will,
+ * erfährt vorher, warum es nicht geht (die Sperre selbst liegt im Worker).
+ */
+function Einsatztitel({ lagebild }: { readonly lagebild: Lagebild | undefined }): React.JSX.Element {
+  if (lagebild === undefined) {
+    return (
+      <div className="einsatztitel">
+        <h1>S1-Control</h1>
+        <span className="untertitel">Einsatzführung für die Führungsstelle</span>
+      </div>
+    );
+  }
+  const abschluss = abschlussText(lagebild);
+  return (
+    <div className="einsatztitel">
+      <h1>{lagebild.einsatzName === "" ? "S1-Control" : lagebild.einsatzName}</h1>
+      <span className="untertitel">
+        {fuestZeile(lagebild)}
+        {abschluss !== "" && (
+          <>
+            {" · "}
+            <strong className="abgeschlossen">{abschluss}</strong>
+          </>
+        )}
+      </span>
+    </div>
+  );
 }
 
 export function Kopfband({
@@ -60,19 +100,11 @@ export function Kopfband({
 }: KopfbandEigenschaften): React.JSX.Element {
   return (
     <header className="kopfband">
-      {zurueckZurAuswahl !== undefined && (
-        <div className="weg">
-          <button type="button" className="alsLink" onClick={zurueckZurAuswahl}>
-            ‹ Einsatzauswahl
-          </button>
-        </div>
-      )}
-
       <div className="zeile">
         <span className="marke" aria-hidden="true">
           THW
         </span>
-        <h1>S1-Control</h1>
+        <Einsatztitel lagebild={lagebild} />
 
         <Staerkekennzahl lagebild={lagebild} />
         <span className="kennzahl">
@@ -80,41 +112,16 @@ export function Kopfband({
           <span className="wert">{taktischeZeit(jetzt)}</span>
         </span>
 
-        <button
-          type="button"
-          className="hilfeknopf"
-          onClick={aufHilfe}
-          title={`Tastenkarte und Abkürzungen (${kuerzelText(kuerzel("hilfe") as never)})`}
-        >
-          Hilfe
-        </button>
-
-        {/* Ein Formular und kein Ruf: Die Abmeldung ist ein Seitenwechsel,
-            und das Formular geht auch, wenn der Strom schon tot ist. Relativ,
-            wie die Brücke es für `ruf` erklärt. */}
-        {angemeldet && (
-          <form method="post" action="abmeldung" className="abmeldung">
-            <button type="submit" title="Den gemeinsamen Zugang in diesem Browser beenden">
-              Abmelden
-            </button>
-          </form>
-        )}
-
-        <div className="themenschalter" role="group" aria-label="Erscheinungsbild">
-          {THEMEN.map((kennung) => (
-            <button
-              key={kennung}
-              type="button"
-              aria-pressed={kennung === theme}
-              onClick={() => waehleTheme(kennung)}
-            >
-              {BESCHRIFTUNG[kennung]}
-            </button>
-          ))}
-        </div>
+        <Zustandsmarke lagebild={lagebild} jetzt={jetzt} />
+        <Fenstermenue
+          theme={theme}
+          waehleTheme={waehleTheme}
+          aufHilfe={aufHilfe}
+          zurueckZurAuswahl={zurueckZurAuswahl}
+          aufDiagnose={waehleBlatt === undefined ? undefined : () => waehleBlatt("diagnose")}
+          angemeldet={angemeldet}
+        />
       </div>
-
-      <Zustandszeile lagebild={lagebild} jetzt={jetzt} />
 
       {/* Die Reiter stehen im Kopfband und nicht über dem Tagebuch: Sie
           führen die **ganze** Ansicht und nicht ein Nebenblatt unter der
@@ -122,12 +129,11 @@ export function Kopfband({
           statt sechs untereinander. */}
       {blatt !== undefined && waehleBlatt !== undefined && (
         <div className="reiter" role="tablist" aria-label="Ansichten">
-          {BLAETTER.map((eintrag) => (
+          {BLAETTER.filter((eintrag) => eintrag.imFenstermenue !== true).map((eintrag) => (
             <button
               key={eintrag.schluessel}
               type="button"
               role="tab"
-              className={eintrag.rechts === true ? "rechts" : undefined}
               aria-selected={blatt === eintrag.schluessel}
               // Der Zähler steht im Namen und nicht nur als Zahl daneben:
               // Vorgelesen wäre „Eingangskorb 7" sonst „Eingangskorb sieben"
@@ -147,61 +153,5 @@ export function Kopfband({
         </div>
       )}
     </header>
-  );
-}
-
-/** Die eine Zeile, die sagt, ob dem Bild zu trauen ist. */
-function Zustandszeile({
-  lagebild,
-  jetzt,
-}: {
-  readonly lagebild: Lagebild | undefined;
-  readonly jetzt: number;
-}): React.JSX.Element {
-  // Dieselbe Quelle wie Banner und Fußzeile: Bei Unterbrechung gilt „Share
-  // erreichbar" nicht mehr — die Angabe stammt vom Dienst, den wir nicht erreichen.
-  const verbindung = useVerbindungsstatus();
-  if (lagebild === undefined) {
-    return <div className="zustandszeile gestoert">Kein Einsatz geöffnet</div>;
-  }
-  const wache = lagebild.peers.filter((peer) => !peer.veraltet).length;
-  // Der FüSt-Name aus den Stammdaten steht neben dem Einsatz: Wer zwei
-  // Einsätze an zwei Fenstern führt, erkennt so, für welche Stelle er
-  // gerade schreibt. Fehlen die Stammdaten noch, entfällt er ohne Lücke.
-  const fuest = lagebild.stammdaten?.fuestName ?? "";
-  const stand =
-    lagebild.standWanduhr === "" ? "keine Ereignisse" : alter(lagebild.standWanduhr, jetzt);
-
-  // Ein beendeter oder archivierter Einsatz steht so hier, dass ihn niemand
-  // für den laufenden hält: Wer schreiben will, erfährt vorher, warum es
-  // nicht geht (die Sperre selbst liegt im Worker).
-  const abschluss =
-    lagebild.einsatzStatus === "ARCHIVIERT"
-      ? " · ARCHIVIERT — nur lesen"
-      : lagebild.einsatzStatus === "BEENDET"
-        ? " · BEENDET — Eingaben gesperrt"
-        : "";
-
-  if (verbindung.zustand === "unterbrochen") {
-    return (
-      <div className="zustandszeile gestoert">
-        {verbindung.stufe === "rot" ? "✖ " : "⚠ "}
-        {lagebild.einsatzName}
-        {fuest === "" ? "" : ` · ${fuest}`}
-        {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} (veraltet) ·{" "}
-        {unterbrochenText(verbindung.seitMs)} — Share und Arbeitsplätze unbekannt
-      </div>
-    );
-  }
-
-  return (
-    <div className={`zustandszeile${lagebild.shareErreichbar ? "" : " gestoert"}`}>
-      {lagebild.shareErreichbar ? "✓ " : "⚠ "}
-      {lagebild.einsatzName}
-      {fuest === "" ? "" : ` · ${fuest}`}
-      {abschluss !== "" && <strong className="abgeschlossen">{abschluss}</strong>} · Stand {stand} ·{" "}
-      {lagebild.shareErreichbar ? "Share erreichbar" : "Share nicht erreichbar"}
-      {wache > 0 ? ` — ${weitereText(wache)}` : " — allein am Einsatz"}
-    </div>
   );
 }

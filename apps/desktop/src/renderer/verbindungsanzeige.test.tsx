@@ -1,5 +1,5 @@
 /**
- * Dauer und Stufe der Unterbrechung sowie die obere Kopfzeile.
+ * Dauer und Stufe der Unterbrechung sowie die Zustandsmarke im Kopfband.
  */
 
 import { act, cleanup, render, screen } from "@testing-library/react";
@@ -40,7 +40,7 @@ const LAGE = {
   lageZeiger: 0,
 } as unknown as Lagebild;
 
-it("zählt „seit N s“ hoch, wird nach 60 s rot und färbt die Kopfzeile mit", async () => {
+it("zählt „seit N s“ hoch, wird nach 60 s rot und färbt die Zustandsmarke mit", async () => {
   const jetzt = Date.now();
   act(() => {
     useVerbindung.getState().meldeKontakt(jetzt);
@@ -56,13 +56,16 @@ it("zählt „seit N s“ hoch, wird nach 60 s rot und färbt die Kopfzeile mit"
     await vi.advanceTimersByTimeAsync(30_000);
   });
   expect(screen.getByRole("alert").textContent).toContain("seit 30 s");
-  expect(document.querySelector(".zustandszeile")?.textContent).toContain("Keine Verbindung zum Dienst seit 30 s");
-  expect(document.querySelector(".zustandszeile")?.textContent).not.toContain("Share erreichbar");
+  const marke = (): Element | null => document.querySelector(".zustandsmarke");
+  expect(marke()?.textContent).toBe("⚠ Verbindung unterbrochen");
+  expect(marke()?.getAttribute("title")).toContain("Keine Verbindung zum Dienst seit 30 s");
+  expect(marke()?.getAttribute("title")).not.toContain("Share erreichbar");
 
   await act(async () => {
     await vi.advanceTimersByTimeAsync(35_000);
   });
   expect(screen.getByRole("alert").textContent).toContain("✖");
   expect(screen.getByRole("alert").textContent).toContain("seit 1 min");
-  expect(document.querySelector(".zustandszeile")?.textContent).toContain("✖");
+  expect(marke()?.textContent).toBe("✖ Verbindung unterbrochen");
+  expect(marke()?.className).toBe("zustandsmarke fehler");
 });

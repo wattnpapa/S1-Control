@@ -42,8 +42,9 @@ export interface HilfeEigenschaften {
 /**
  * Schließt die Hilfe bei Esc und bei einem Tipp außerhalb des Fensters.
  *
- * Der Hilfeknopf im Kopfband zählt nicht als „außerhalb“: Er schaltet selbst
- * um, und ein Schließen davor ließe ihn die Hilfe gleich wieder öffnen.
+ * Das Fenstermenü im Kopfband zählt nicht als „außerhalb“: Aus ihm wird die
+ * Hilfe geöffnet, und wer bei offener Hilfe das Erscheinungsbild wechselt,
+ * will dabei nicht die Hilfe verlieren.
  */
 function useSchliessen(aufSchliessen: () => void): React.RefObject<HTMLElement | null> {
   const bereich = useRef<HTMLElement | null>(null);
@@ -55,7 +56,7 @@ function useSchliessen(aufSchliessen: () => void): React.RefObject<HTMLElement |
       const ziel = ereignis.target;
       if (!(ziel instanceof Node)) return;
       if (bereich.current?.contains(ziel) === true) return;
-      if (ziel instanceof Element && ziel.closest(".hilfeknopf, [role='dialog']") !== null) return;
+      if (ziel instanceof Element && ziel.closest(".fenstermenue, [role='dialog']") !== null) return;
       aufSchliessen();
     };
     document.addEventListener("keydown", beiTaste);

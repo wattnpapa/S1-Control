@@ -18,9 +18,10 @@
  * aufzumachen — dasselbe, was die Electron-Schale mit ihrem Fenster tut.
  */
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
+import { useDraussenSchliessen } from "./useDraussenSchliessen.js";
 
 /** Die Adresse des Monitors, relativ: Die Schale kann unter einem Unterpfad liegen. */
 const MONITOR_ADRESSE = "#monitor";
@@ -41,79 +42,108 @@ export function oeffneMonitorImBrowser(): boolean {
   return true;
 }
 
-function BrowserMonitorknopf(): React.JSX.Element {
+export interface Monitorstart {
+  /** Im Browser gibt es keine Bildschirmwahl — der Monitor geht direkt auf. */
+  readonly imBrowser: boolean;
+  /** Öffnet ihn im Browser und meldet ein blockiertes Fenster als Hinweis. */
+  oeffneImBrowser(): void;
+}
+
+/** Wie der Stärke-Monitor in dieser Schale aufgeht — für jeden Knopf und Menüeintrag dazu. */
+export function useMonitorstart(): Monitorstart {
+  const imBrowser = useLaden((zustand) => zustand.umgebung?.plattform === "web");
   const melde = useLaden((zustand) => zustand.melde);
+  return {
+    imBrowser,
+    oeffneImBrowser: () => {
+      if (!oeffneMonitorImBrowser()) {
+        melde("warnung", "Der Browser hat das neue Fenster blockiert. Pop-ups für diese Seite erlauben.");
+      }
+    },
+  };
+}
+
+/**
+ * Die Bildschirmwahl der Electron-Schale: Zweitbildschirm, ein bestimmter
+ * Bildschirm oder den Monitor schließen. Esc und ein Tipp daneben schließen
+ * die Wahl, ohne etwas zu tun.
+ */
+export function Monitorauswahl({ aufSchliessen }: { readonly aufSchliessen: () => void }): React.JSX.Element {
+  const laden = useLaden();
+  const ladeBildschirme = laden.ladeBildschirme;
+  const huelle = useDraussenSchliessen<HTMLDivElement>(true, aufSchliessen);
+  useEffect(() => {
+    void ladeBildschirme();
+  }, [ladeBildschirme]);
+
   return (
-    <span className="monitorwahl">
+    <div ref={huelle} role="dialog" aria-label="Stärke-Monitor öffnen" className="monitorauswahl">
+      <p className="titel">Stärke-Monitor auf …</p>
       <button
         type="button"
         onClick={() => {
-          if (!oeffneMonitorImBrowser()) {
-            melde("warnung", "Der Browser hat das neue Fenster blockiert. Pop-ups für diese Seite erlauben.");
-          }
+          void laden.oeffneMonitor();
+          aufSchliessen();
         }}
-        title="Öffnet den Stärke-Monitor in einem neuen Fenster; von dort auf das Anzeigegerät ziehen"
+        title="Ohne Wahl geht der Monitor auf dem zweiten Bildschirm auf"
       >
-        Stärke-Monitor
+        Auf dem Zweitbildschirm öffnen
       </button>
-    </span>
+      {(laden.bildschirme ?? []).map((bildschirm) => (
+        <button
+          key={bildschirm.id}
+          type="button"
+          onClick={() => {
+            void laden.oeffneMonitor(bildschirm.id);
+            aufSchliessen();
+          }}
+        >
+          {bildschirm.name} ({bildschirm.breite}×{bildschirm.hoehe}
+          {bildschirm.primaer ? ", Hauptbildschirm" : ""})
+        </button>
+      ))}
+      <hr />
+      <button
+        type="button"
+        onClick={() => {
+          void laden.schliesseMonitor();
+          aufSchliessen();
+        }}
+      >
+        Monitor schließen
+      </button>
+      <button type="button" onClick={aufSchliessen}>
+        Abbrechen
+      </button>
+    </div>
   );
 }
 
 export function Monitorwahl(): React.JSX.Element {
-  const laden = useLaden();
-  const imBrowser = laden.umgebung?.plattform === "web";
+  const start = useMonitorstart();
   const [offen, setzeOffen] = useState(false);
-
-  if (imBrowser) return <BrowserMonitorknopf />;
-
   return (
     <span className="monitorwahl">
       <button
         type="button"
         onClick={() => {
-          setzeOffen((bisher) => !bisher);
-          if (!offen) void laden.ladeBildschirme();
+          if (start.imBrowser) start.oeffneImBrowser();
+          else setzeOffen(!offen);
         }}
+        title={
+          start.imBrowser
+            ? "Öffnet den Stärke-Monitor in einem neuen Fenster; von dort auf das Anzeigegerät ziehen"
+            : undefined
+        }
       >
         Stärke-Monitor
       </button>
-
       {offen && (
-        <span className="monitorwahlliste">
-          <button
-            type="button"
-            onClick={() => {
-              void laden.oeffneMonitor();
-              setzeOffen(false);
-            }}
-            title="Ohne Wahl geht der Monitor auf dem zweiten Bildschirm auf"
-          >
-            Auf dem Zweitbildschirm öffnen
-          </button>
-          {(laden.bildschirme ?? []).map((bildschirm) => (
-            <button
-              key={bildschirm.id}
-              type="button"
-              onClick={() => {
-                void laden.oeffneMonitor(bildschirm.id);
-                setzeOffen(false);
-              }}
-            >
-              {bildschirm.name} ({bildschirm.breite}×{bildschirm.hoehe}
-              {bildschirm.primaer ? ", Hauptbildschirm" : ""})
-            </button>
-          ))}
-          <button
-            type="button"
-            onClick={() => {
-              void laden.schliesseMonitor();
-              setzeOffen(false);
-            }}
-          >
-            Schließen
-          </button>
-        </span>
+        <Monitorauswahl
+          aufSchliessen={() => {
+            setzeOffen(false);
+          }}
+        />
       )}
     </span>
   );

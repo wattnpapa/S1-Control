@@ -74,6 +74,11 @@
         --kopfband-text: #ffffff;
         --kopfband-leise: var(--navy-300);
         --kopfband-gut: #8fe3a8;
+        /* Bernstein und Rot auf dem Navy des Kopfbands (Zustandsmarke,
+           Zähler am Reiter): die hellen Töne aus HANDOFF-OBERFLAECHE.md, weil
+           --warn-text und --err-text für helle Karten gemacht sind. */
+        --kopfband-warn: #f0c368;
+        --kopfband-fehler: #ffa8a8;
         --kartenkante-farbe: var(--navy-800);
         --knopf-rahmen: var(--navy-900);
         --knopf-fuellung: var(--navy-900);
@@ -184,6 +189,8 @@
         --kopfband-text: #f0e5b0;
         --kopfband-leise: #c8a232;
         --kopfband-gut: #9ed17e;
+        --kopfband-warn: #e0b84a;
+        --kopfband-fehler: #ffa8a8;
         --kartenkante-farbe: #c8a232;
         --knopf-rahmen: #5a4c1e;
         --knopf-fuellung: #c8a232;
@@ -352,18 +359,6 @@
         color: var(--kopfband-text);
         padding: 11px 20px 0;
       }
-      .kopfband .weg button.alsLink {
-        height: auto;
-        padding: 0;
-        border: 0;
-        background: transparent;
-        color: var(--kopfband-leise);
-        font: 400 12px/1.4 var(--ui);
-        cursor: pointer;
-      }
-      .kopfband .weg button.alsLink:hover {
-        color: var(--kopfband-text);
-      }
       .kopfband .zeile {
         display: flex;
         align-items: center;
@@ -381,10 +376,31 @@
         font: 700 9px/1 var(--ui);
         letter-spacing: 0.08em;
       }
+      /* Der Einsatz ist die Überschrift (Entwurf „Entlastung", 3.1); das
+         Wortbild steht klein darunter, neben der Führungsstelle. */
+      .kopfband .einsatztitel {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        min-width: 0;
+      }
       .kopfband h1 {
-        font-size: 21px;
-        font-weight: 700;
         margin: 0;
+        font: 700 19px/1.1 var(--ui);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .kopfband .einsatztitel .untertitel {
+        font: 400 11.5px/1.2 var(--ui);
+        color: var(--kopfband-leise);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .kopfband .einsatztitel .abgeschlossen {
+        color: var(--kopfband-warn);
+        font-weight: 700;
       }
       .kopfband .kennzahl {
         display: flex;
@@ -475,49 +491,132 @@
           padding: 6px 14px;
         }
       }
-      .kopfband .hilfeknopf {
+      /* Die Zustandsmarke: Zeichen und Wort, die Farbe kommt dazu und
+         traegt nie allein (Entwurf „Entlastung", 6d). */
+      .kopfband .zustandsmarke {
         margin-left: auto;
-        height: auto;
-        padding: 6px 12px;
-        background: transparent;
-        border: 1px solid var(--kopfband-leise);
-        color: var(--kopfband-text);
-      }
-      /* Nur hinter der Anmeldung der Web-Schale (ADR-006). */
-      .kopfband .abmeldung {
-        margin: 0;
-      }
-      .kopfband .abmeldung button {
-        height: auto;
-        padding: 6px 12px;
-        background: transparent;
-        border: 1px solid var(--kopfband-leise);
-        color: var(--kopfband-text);
-      }
-      .kopfband .themenschalter {
-        display: flex;
-        border: 1px solid var(--kopfband-text);
-      }
-      .kopfband .themenschalter button {
-        border: 0;
-        height: auto;
-        padding: 7px 12px;
-        background: transparent;
-        color: var(--kopfband-leise);
+        display: inline-flex;
+        align-items: center;
+        min-height: var(--knopfhoehe);
+        padding: 0 11px;
+        border: var(--rahmenbreite) solid var(--kopfband-leise);
+        color: var(--kopfband-gut);
         font: 400 12px/1 var(--ui);
+        white-space: nowrap;
+        cursor: help;
       }
-      .kopfband .themenschalter button[aria-pressed="true"] {
+      .kopfband .zustandsmarke.warnung {
+        border-color: var(--kopfband-warn);
+        color: var(--kopfband-warn);
+      }
+      .kopfband .zustandsmarke.fehler {
+        border-color: var(--kopfband-fehler);
+        color: var(--kopfband-fehler);
+      }
+      /* Das Fenstermenü „⋯": rechts aussen; ohne Zustandsmarke (kein
+         Einsatz) schiebt es sich selbst dorthin. */
+      .kopfband .fenstermenue {
+        position: relative;
+        margin-left: auto;
+      }
+      .kopfband .zustandsmarke + .fenstermenue {
+        margin-left: 0;
+      }
+      .kopfband .fenstermenueknopf {
+        width: var(--knopfhoehe);
+        height: var(--knopfhoehe);
+        padding: 0;
+        border: var(--rahmenbreite) solid var(--kopfband-text);
+        background: transparent;
+        color: var(--kopfband-text);
+        font: 700 17px/1 var(--ui);
+      }
+      .kopfband .fenstermenueknopf[aria-expanded="true"] {
         background: var(--kopfband-text);
         color: var(--kopfband-bg);
+      }
+      .fenstermenueliste,
+      .monitorauswahl {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        z-index: 30;
+        display: flex;
+        flex-direction: column;
+        min-width: 250px;
+        max-width: calc(100vw - 16px);
+        margin: 6px 0 0;
+        padding: 4px 0;
+        box-sizing: border-box;
+        background: var(--karte);
+        color: var(--text);
+        border: var(--rahmenbreite) solid var(--rahmen);
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+        text-align: left;
+      }
+      .fenstermenueliste [role^="menuitem"],
+      .monitorauswahl button {
+        position: relative;
+        display: flex;
+        align-items: baseline;
+        gap: 12px;
+        width: 100%;
+        height: auto;
+        min-height: 34px;
+        padding: 9px 14px 9px 32px;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        font: 400 max(13px, var(--schrift)) / 1.2 var(--ui);
+        text-align: left;
+        white-space: nowrap;
+      }
+      .monitorauswahl button {
+        padding-left: 14px;
+      }
+      .fenstermenueliste [role^="menuitem"]:hover,
+      .fenstermenueliste [role^="menuitem"]:focus-visible,
+      .monitorauswahl button:hover,
+      .monitorauswahl button:focus-visible {
+        background: var(--zeile-gewaehlt);
+      }
+      .fenstermenueliste [role^="menuitem"]:focus-visible,
+      .monitorauswahl button:focus-visible {
+        outline: var(--rahmenbreite) solid var(--knopf-rahmen);
+        outline-offset: -2px;
+      }
+      .fenstermenueliste [aria-checked="true"] {
         font-weight: 700;
       }
-      .kopfband .zustandszeile {
-        font-size: 12px;
-        padding-bottom: 9px;
-        color: var(--kopfband-gut);
+      .fenstermenueliste [aria-checked="true"]::before {
+        content: "✓";
+        position: absolute;
+        left: 12px;
       }
-      .kopfband .zustandszeile.gestoert {
-        color: var(--warn-linie);
+      .fenstermenueliste .kurz {
+        margin-left: auto;
+        color: var(--text-leiser);
+        font: 400 11px/1 var(--mono);
+      }
+      .fenstermenueliste .titel,
+      .monitorauswahl .titel {
+        display: block;
+        margin: 0;
+        padding: 7px 14px 5px;
+        color: var(--text-leise);
+        font: 400 10px/1 var(--mono);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+      .fenstermenueliste hr,
+      .monitorauswahl hr {
+        width: 100%;
+        margin: 4px 0;
+        border: 0;
+        border-top: var(--rahmenbreite) solid var(--rahmen-weich);
+      }
+      .fenstermenueliste form {
+        margin: 0;
       }
       /* Die Reiterzeile schliesst das Kopfband nach unten ab: Der gewaehlte
          Reiter traegt seine Marke dort, wo die Arbeitsflaeche beginnt. */
@@ -539,12 +638,9 @@
         font-weight: 700;
         border-bottom-color: var(--kopfband-text);
       }
-      .kopfband .reiter button.rechts {
-        margin-left: auto;
-      }
       .kopfband .reiter .zaehler {
         margin-left: 6px;
-        color: #f0c368;
+        color: var(--kopfband-warn);
         font-variant-numeric: tabular-nums;
       }
 
@@ -3153,9 +3249,6 @@
 
       /* ---- Hilfe: Tastenkarte und Abkuerzungen (M3.6) -------------------- */
 
-      .hilfeknopf {
-        margin-left: auto;
-      }
       .hilfe {
         border: 1px solid var(--rahmen);
         border-radius: 6px;
@@ -3274,9 +3367,6 @@
         flex-basis: auto;
         margin: 0;
       }
-      .zustandszeile .abgeschlossen {
-        color: var(--warn-text);
-      }
 
       /* ---- Schmale Bildschirme (Handy, Tablet hochkant) ------------------
          Die Desktop-Regeln oben bleiben unberuehrt; hier wird nur
@@ -3288,12 +3378,15 @@
         button,
         .ausgabeknoepfe a,
         .kopfband .reiter button,
-        .kopfband .themenschalter button,
-        .kopfband .hilfeknopf,
-        .kopfband .abmeldung button,
-        .kopfband .weg button.alsLink {
+        .kopfband .fenstermenueknopf,
+        .fenstermenueliste [role^="menuitem"],
+        .monitorauswahl button {
           min-height: 44px;
           min-width: 44px;
+        }
+        .kopfband .fenstermenueknopf {
+          width: 44px;
+          height: 44px;
         }
         input:not([type="checkbox"]):not([type="radio"]),
         select {
@@ -3331,20 +3424,21 @@
           padding: 4px 0 6px;
         }
         .kopfband h1 {
-          font-size: 18px;
+          font-size: 17px;
         }
         .kopfband .kennzahl .wert {
           font-size: 24px;
         }
-        .kopfband .hilfeknopf {
-          margin-left: auto;
+        /* Das Menü haengt am Kopfband und nutzt dessen Breite, damit es nie
+           links oder rechts aus dem Bild laeuft (wie die Zaehlregel). */
+        .kopfband .fenstermenue {
+          position: static;
         }
-        .kopfband .themenschalter {
-          flex: 1 1 100%;
-        }
-        .kopfband .themenschalter button {
-          flex: 1 1 0;
-          padding: 9px 4px;
+        .fenstermenueliste,
+        .monitorauswahl {
+          left: 8px;
+          right: 8px;
+          min-width: 0;
         }
         /* Die Reiter scrollen in einer eigenen Flaeche; die Seite bleibt stehen. */
         .kopfband .reiter {
@@ -3357,9 +3451,6 @@
           flex: 0 0 auto;
           white-space: nowrap;
           padding: 10px 12px 8px;
-        }
-        .kopfband .reiter button.rechts {
-          margin-left: 0;
         }
         main {
           min-width: 0;
@@ -3581,13 +3672,6 @@
           gap: 0 10px;
           padding: 2px 12px 0;
         }
-        .kopfband > .weg {
-          flex: 0 0 auto;
-        }
-        .kopfband > .weg button.alsLink {
-          min-height: 36px;
-          min-width: 0;
-        }
         .kopfband > .zeile {
           flex: 1 1 0;
           min-width: 0;
@@ -3595,14 +3679,15 @@
           gap: 2px 12px;
           padding: 0;
         }
-        .kopfband > .zustandszeile,
         .kopfband > .reiter {
           flex: 1 1 100%;
           min-width: 0;
         }
-        .kopfband .marke,
-        .kopfband h1 {
+        .kopfband .marke {
           display: none;
+        }
+        .kopfband h1 {
+          font-size: 15px;
         }
         .kopfband .kennzahl {
           flex-direction: row;
@@ -3615,22 +3700,6 @@
         .kopfband .kennzahl .nebenwert {
           font-size: 11px;
           white-space: nowrap;
-        }
-        .kopfband .hilfeknopf {
-          margin-left: auto;
-        }
-        .kopfband .themenschalter {
-          flex: 0 0 auto;
-        }
-        .kopfband .themenschalter button {
-          flex: 0 0 auto;
-        }
-        .kopfband .zustandszeile {
-          padding-bottom: 2px;
-          font-size: 11px;
-          white-space: nowrap;
-          overflow: hidden;
-          text-overflow: ellipsis;
         }
         .vorlagenliste {
           max-height: 6rem;

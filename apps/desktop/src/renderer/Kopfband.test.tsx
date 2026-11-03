@@ -1,19 +1,41 @@
 /**
- * Das Kopfband (Entwurf „Oberfläche", Option 2a).
+ * Das Kopfband (Entwurf „Entlastung", Optionen 6b und 6d).
  *
- * Geprüft wird, was oben am Fenster steht und was der Themenschalter meldet —
- * nicht, aus welchen Elementen das Band gebaut ist.
+ * Geprüft wird, was oben am Fenster steht und was das Fenstermenü meldet —
+ * nicht, aus welchen Elementen das Band gebaut ist. Seit Runde 6 („Entlastung")
+ * hat es zwei Zeilen: Einsatz, Stärke, Zeit, Zustandsmarke und „⋯", darunter
+ * die Reiter. Was vorher als Knopf im Band stand, wird über das Menü gefunden.
  */
 
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { Kopfband } from "./Kopfband.js";
+import { Kopfband, fuestZeile } from "./Kopfband.js";
 import { STAERKE_REGEL, staerkeNebenText } from "./Staerkekennzahl.js";
 import type { Lagebild } from "../kontrakt/index.js";
+import { useLaden } from "./laden.js";
+import { baueAttrappe } from "./pruefhilfen/attrappe.js";
+import { useVerbindung } from "./verbindung.js";
 
-afterEach(cleanup);
+const UMGEBUNG = { plattform: "linux", electron: "43", programmversion: "0", rechnername: "r", clientId: "c" };
+
+beforeEach(() => {
+  baueAttrappe();
+  useVerbindung.getState().zuruecksetzen();
+  useLaden.setState({ akteId: "akte-1", umgebung: UMGEBUNG, bildschirme: undefined, fehler: undefined, hinweise: [] });
+});
+
+/** Klappt das Fenstermenü auf und gibt es zurück. */
+async function oeffneMenue(): Promise<HTMLElement> {
+  await userEvent.click(screen.getByRole("button", { name: "Fenstermenü" }));
+  return screen.getByRole("menu", { name: "Fenstermenü" });
+}
+
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 const JETZT = new Date(2026, 8, 10, 14, 43).getTime();
 
@@ -109,22 +131,11 @@ describe("Kopfband", () => {
     expect(staerkeNebenText({ ...LAGEBILD, staerkeBeendet: 3 })).toBe("3 beendet");
   });
 
-  it("nennt in einer Zeile Einsatz, Stand, Share und die anderen Arbeitsplätze", () => {
-    render(
-      <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
-    );
-    expect(
-      screen.getByText(
-        /Hochwasser Oldenburg · Stand vor 6 s · Share erreichbar — 2 weitere Arbeitsplätze/,
-      ),
-    ).toBeDefined();
-  });
-
-  it("nennt den FüSt-Namen aus den Stammdaten neben dem Einsatz", () => {
+  it("trägt den Einsatz als Überschrift und die Führungsstelle klein darunter", () => {
     const stammdaten = {
       name: "Hochwasser Oldenburg",
       art: "EINSATZ",
-      fuestName: "FüSt Weser-Ems",
+      fuestName: "OV Oldenburg",
       beginn: "2026-09-10T08:00:00+02:00",
       schichtmodell: "ZWEI_SCHICHT",
     };
@@ -137,84 +148,69 @@ describe("Kopfband", () => {
         aufHilfe={() => undefined}
       />,
     );
-    expect(screen.getByText(/Hochwasser Oldenburg · FüSt Weser-Ems · Stand vor 6 s/)).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Hochwasser Oldenburg");
+    expect(screen.getByText("FüSt OV Oldenburg · S1-Control")).toBeDefined();
   });
 
-  it("meldet den unerreichbaren Share auch oben, nicht nur unten", () => {
-    render(
-      <Kopfband
-        lagebild={{ ...LAGEBILD, shareErreichbar: false }}
-        jetzt={JETZT}
-        theme="standard"
-        waehleTheme={() => undefined}
-        aufHilfe={() => undefined}
-      />,
-    );
-    expect(screen.getByText(/Share nicht erreichbar/)).toBeDefined();
+  it("setzt „FüSt“ nur vor einen Namen, der es nicht schon trägt", () => {
+    const mit = (fuestName: string): Lagebild =>
+      ({ ...LAGEBILD, stammdaten: { fuestName } }) as unknown as Lagebild;
+    expect(fuestZeile(mit("FüSt Weser-Ems"))).toBe("FüSt Weser-Ems · S1-Control");
+    expect(fuestZeile(mit("OV Oldenburg"))).toBe("FüSt OV Oldenburg · S1-Control");
+    expect(fuestZeile(mit(""))).toBe("S1-Control");
+    expect(fuestZeile(LAGEBILD)).toBe("S1-Control");
   });
 
-  it("sagt ohne offenen Einsatz, dass keiner offen ist", () => {
+  it("nennt ohne offenen Einsatz das Programm und keine Zustandsmarke", () => {
     render(
       <Kopfband lagebild={undefined} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
     );
-    expect(screen.getByText("Kein Einsatz geöffnet")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("S1-Control");
+    expect(screen.getByText("Einsatzführung für die Führungsstelle")).toBeDefined();
+    expect(document.querySelector(".zustandsmarke")).toBeNull();
   });
 
-  it("zeigt das gewählte Erscheinungsbild als gedrückt und meldet den Wechsel", async () => {
-    const waehleTheme = vi.fn();
+  it("zeigt die Zustandsmarke mit der Ausführung im Tooltip statt einer Zustandszeile", () => {
     render(
-      <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="nacht" waehleTheme={waehleTheme} aufHilfe={() => undefined} />,
-    );
-    expect(screen.getByRole("button", { name: "Nacht", pressed: true })).toBeDefined();
-
-    await userEvent.click(screen.getByRole("button", { name: "Feld" }));
-    expect(waehleTheme).toHaveBeenCalledWith("feld");
-  });
-
-  it("zeigt „Abmelden“ nur hinter der Anmeldung, als Formular POST abmeldung", () => {
-    const { rerender } = render(
       <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
     );
-    expect(screen.queryByRole("button", { name: "Abmelden" })).toBeNull();
+    const marke = screen.getByText("✓ aktuell");
+    expect(marke.getAttribute("title")).toBe("Stand vor 6 s · Share erreichbar · 2 weitere Arbeitsplätze");
+    expect(document.querySelector(".zustandszeile")).toBeNull();
+  });
 
+  it("sagt in der Untertitelzeile, dass ein beendeter oder archivierter Einsatz gesperrt ist", () => {
+    const { rerender } = render(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "BEENDET" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.getByText(/BEENDET — Eingaben gesperrt/u)).toBeDefined();
     rerender(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "ARCHIVIERT" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.getByText(/ARCHIVIERT — nur lesen/u)).toBeDefined();
+    expect(screen.getByText(/ARCHIVIERT/u).closest(".untertitel")).not.toBeNull();
+    rerender(
+      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "AKTIV" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+    );
+    expect(screen.queryByText(/gesperrt|nur lesen/u)).toBeNull();
+  });
+
+  it("trägt weder Hilfeknopf noch Themenschalter noch den Weg zur Einsatzauswahl im Band", () => {
+    render(
       <Kopfband
         lagebild={LAGEBILD}
         jetzt={JETZT}
         theme="standard"
         waehleTheme={() => undefined}
         aufHilfe={() => undefined}
+        zurueckZurAuswahl={() => undefined}
         angemeldet
       />,
     );
-    const knopf = screen.getByRole("button", { name: "Abmelden" });
-    expect(knopf.getAttribute("type")).toBe("submit");
-    const formular = knopf.closest("form");
-    expect(formular?.getAttribute("method")).toBe("post");
-    // Relativ, damit es auch hinter einem Unterpfad stimmt.
-    expect(formular?.getAttribute("action")).toBe("abmeldung");
-  });
-
-  it("zeigt den Weg zurück nur, wenn ein Einsatz offen ist", async () => {
-    const zurueck = vi.fn();
-    render(
-      <Kopfband
-        lagebild={LAGEBILD}
-        jetzt={JETZT}
-        theme="standard"
-        waehleTheme={() => undefined}
-        aufHilfe={() => undefined}
-        zurueckZurAuswahl={zurueck}
-      />,
-    );
-    await userEvent.click(screen.getByRole("button", { name: /Einsatzauswahl/ }));
-    expect(zurueck).toHaveBeenCalledOnce();
-
-    cleanup();
-    render(
-      <Kopfband lagebild={undefined} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
-    );
+    expect(screen.queryByRole("button", { name: "Hilfe" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Dunkel" })).toBeNull();
     expect(screen.queryByRole("button", { name: /Einsatzauswahl/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Abmelden" })).toBeNull();
   });
 
   it("zeigt die Reiter erst mit offenem Einsatz und meldet die Wahl", async () => {
@@ -269,18 +265,24 @@ describe("Kopfband", () => {
     expect(screen.getByRole("tab", { name: "Kosten", selected: true })).toBeDefined();
   });
 
-  it("sagt in der Zustandszeile, dass ein beendeter oder archivierter Einsatz gesperrt ist", () => {
-    const { rerender } = render(
-      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "BEENDET" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
+  it("führt die Diagnose nicht mehr als Reiter, aber im Fenstermenü", async () => {
+    const waehleBlatt = vi.fn();
+    render(
+      <Kopfband
+        lagebild={LAGEBILD}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+        zurueckZurAuswahl={() => undefined}
+        blatt="lage"
+        waehleBlatt={waehleBlatt}
+      />,
     );
-    expect(screen.getByText(/BEENDET — Eingaben gesperrt/u)).toBeDefined();
-    rerender(
-      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "ARCHIVIERT" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
-    );
-    expect(screen.getByText(/ARCHIVIERT — nur lesen/u)).toBeDefined();
-    rerender(
-      <Kopfband lagebild={{ ...LAGEBILD, einsatzStatus: "AKTIV" }} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
-    );
-    expect(screen.queryByText(/gesperrt|nur lesen/u)).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Diagnose" })).toBeNull();
+    const menue = await oeffneMenue();
+    await userEvent.click(within(menue).getByRole("menuitem", { name: "Diagnose" }));
+    expect(waehleBlatt).toHaveBeenCalledWith("diagnose");
+    expect(screen.queryByRole("menu")).toBeNull();
   });
 });

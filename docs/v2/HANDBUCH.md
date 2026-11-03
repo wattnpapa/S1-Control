@@ -77,6 +77,22 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
     erzeugt `s1 akte exportiere`; wie man sie prüft und ablegt, steht in
     [BETRIEB.md](BETRIEB.md).
 
+## Das Fenster
+
+Oben steht das **Kopfband** in zwei Zeilen. Die erste nennt den Einsatz und
+darunter die Führungsstelle, dann Ist-Stärke und Zeit, rechts die
+**Zustandsmarke** und das **Fenstermenü „⋯“**. Die Zustandsmarke sagt in einem
+Wort, ob dem Bild zu trauen ist: „✓ aktuell“, „⚠ Share nicht erreichbar“ oder
+„✖ Verbindung unterbrochen“; wer mit der Maus darauf zeigt, liest Stand, Share
+und Arbeitsplätze. Ein beendeter oder archivierter Einsatz steht neben der
+Führungsstelle als „BEENDET — Eingaben gesperrt“ oder „ARCHIVIERT — nur
+lesen“. Die zweite Zeile trägt die Reiter.
+
+Im Fenstermenü steht, was zum Fenster gehört und selten gebraucht wird: Hilfe
+und Tastenkarte (Strg+H), das Erscheinungsbild (Standard, Dunkel, Feld,
+Nacht), „Stärke-Monitor öffnen …“, die Diagnose, in der Web-Schale
+„Abmelden“ und „Einsatz schließen“, der Weg zurück zur Liste der Einsätze.
+
 ## Was ein Zurücknehmen tut
 
 Strg+Z nimmt die letzte **eigene** Handlung zurück. Es löscht nichts: Die
@@ -310,7 +326,7 @@ Wer sonst am Einsatz arbeitet, wie weit die Stände auseinander sind, wo die Pro
 
 ## Wenn etwas klemmt
 
-Im Programm: **Nebenblätter → Diagnose**, oder Strg+H und der Reiter
+Im Programm: Fenstermenü **„⋯“ → Diagnose**, oder Strg+H und der Reiter
 „Störfälle“.
 
 <!-- STÖRFALLMATRIX ANFANG — erzeugt, nicht von Hand ändern -->

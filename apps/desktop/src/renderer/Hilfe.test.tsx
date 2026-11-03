@@ -57,17 +57,19 @@ describe("Das Hilfefenster", () => {
     expect(geschlossen).toBe(1);
   });
 
-  it("schließt bei einem Tipp außerhalb, nicht aber im Fenster und nicht am Hilfeknopf", () => {
+  it("schließt bei einem Tipp außerhalb, nicht aber im Fenster und nicht im Fenstermenü", () => {
     let geschlossen = 0;
     render(
       <>
-        <button type="button" className="hilfeknopf">Hilfe</button>
+        <div className="fenstermenue">
+          <button type="button">Fenstermenü</button>
+        </div>
         <p>Außerhalb</p>
         <Hilfe aufSchliessen={() => (geschlossen += 1)} />
       </>,
     );
     fireEvent.pointerDown(screen.getByText("Erste Schritte"));
-    fireEvent.pointerDown(screen.getByText("Hilfe", { selector: "button.hilfeknopf" }));
+    fireEvent.pointerDown(screen.getByText("Fenstermenü", { selector: ".fenstermenue button" }));
     expect(geschlossen).toBe(0);
     fireEvent.pointerDown(screen.getByText("Außerhalb"));
     expect(geschlossen).toBe(1);
