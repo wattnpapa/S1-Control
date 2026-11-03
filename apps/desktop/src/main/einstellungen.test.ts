@@ -35,11 +35,13 @@ describe("liesArbeitsplatz", () => {
       anzeigename: "Führungsstelle 1",
       betriebsart: "meldekopf",
       theme: "nacht",
+      profil: "vermeldezentrale",
       monitor: { ansicht: "tafel", wechsel: true },
       clientId: "aabbccddeeff00112233445566778899",
     });
 
     const gelesen = await liesArbeitsplatz(ziel);
+    expect(gelesen.profil).toBe("vermeldezentrale");
     expect(gelesen.monitor).toEqual({ ansicht: "tafel", wechsel: true });
     expect(gelesen.betriebsart).toBe("meldekopf");
     expect(gelesen.theme).toBe("nacht");
@@ -69,7 +71,20 @@ describe("liesArbeitsplatz", () => {
     const gelesen = await liesArbeitsplatz(ziel);
     expect(gelesen.betriebsart).toBeUndefined();
     expect(gelesen.theme).toBeUndefined();
+    expect(gelesen.profil).toBeUndefined();
     expect(gelesen.sharePfad).toBe("/share");
+  });
+
+  it("verliert bei einem unbekannten Profil nur das Profil, nicht Share und Namen (E3)", async () => {
+    const ziel = datei();
+    await fsp.mkdir(path.dirname(ziel), { recursive: true });
+    const inhalt = { sharePfad: "/share", anzeigename: "S4", theme: "feld", profil: "abrechnung", clientId: "1".repeat(32) };
+    writeFileSync(ziel, JSON.stringify(inhalt), "utf8");
+
+    const gelesen = await liesArbeitsplatz(ziel);
+    expect(gelesen).toMatchObject({ sharePfad: "/share", anzeigename: "S4", theme: "feld" });
+    expect(gelesen.profil).toBeUndefined();
+    expect(gelesen.clientId).toBe("1".repeat(32));
   });
 
   it("startet mit den Vorbelegungen, wenn die Datei unlesbar ist", async () => {

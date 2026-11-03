@@ -72,6 +72,16 @@ export const zTheme = z.enum(THEMEN);
 export type Theme = z.infer<typeof zTheme>;
 
 /**
+ * Die Profile des Arbeitsplatzes (Entwurf „Entlastung", 3.2): welche Reiter
+ * im Kopfband stehen und welche unter „Mehr". Ein Zuschnitt der Oberfläche,
+ * kein Recht — wie die Betriebsart. Nur anhängen: Der Wert steht als Name in
+ * den Einstellungen des Geräts.
+ */
+export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle"] as const;
+export const zProfil = z.enum(PROFILE);
+export type Profil = z.infer<typeof zProfil>;
+
+/**
  * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 6: Stärke,
  * die vier Versorgungsbilder (KONZEPT-S4.md §4) und additiv der Funkplan
  * (KONZEPT-FUNKPLAN.md §4). Nur anhängen — die gemerkte Wahl eines Geräts
@@ -112,6 +122,15 @@ export const zEinstellungen = z.object({
    * Ohne Angabe `standard`.
    */
   theme: zTheme.optional(),
+  /**
+   * Additiv (Entwurf „Entlastung", E3): das Profil dieses Arbeitsplatzes.
+   *
+   * Es bestimmt nur, welche Reiter im Kopfband stehen; jedes Blatt bleibt
+   * unter „Mehr" erreichbar. Geräteeinstellung wie `betriebsart` und
+   * `theme`, nicht in der Akte: Die Vermeldezentrale und die S4 führen
+   * denselben Einsatz. Ohne Angabe `fuehrungsstelle`.
+   */
+  profil: zProfil.optional(),
   /**
    * Additiv (S4.1): die Ansicht des Monitors und ob er wechselt.
    *

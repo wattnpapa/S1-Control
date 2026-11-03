@@ -17,7 +17,7 @@ import { randomUUID } from "node:crypto";
 import * as fsp from "node:fs/promises";
 import path from "node:path";
 
-import { zEinstellungen, type Einstellungen } from "../kontrakt/index.js";
+import { zEinstellungen, zProfil, type Einstellungen } from "../kontrakt/index.js";
 
 /** Was tatsaechlich in der Datei steht: die Einstellungen plus die Kennung. */
 export interface Arbeitsplatz extends Einstellungen {
@@ -45,7 +45,11 @@ export async function liesArbeitsplatz(datei: string, vorbelegterShare = ""): Pr
     roh = undefined;
   }
   const wert = typeof roh === "object" && roh !== null ? (roh as Record<string, unknown>) : {};
-  const geprueft = zEinstellungen.safeParse(wert);
+  // Das Profil wird für sich geprüft: Ein Wert, den erst ein späteres
+  // Programm kennt, soll das Profil verlieren und nicht Share und Namen.
+  const { profil: rohesProfil, ...ohneProfil } = wert;
+  const geprueft = zEinstellungen.safeParse(ohneProfil);
+  const profil = zProfil.safeParse(rohesProfil);
   const clientId = typeof wert["clientId"] === "string" && wert["clientId"].length >= 8
     ? wert["clientId"]
     : neueClientId();
@@ -55,26 +59,29 @@ export async function liesArbeitsplatz(datei: string, vorbelegterShare = ""): Pr
     anzeigename: geprueft.success && geprueft.data.anzeigename.length > 0
       ? geprueft.data.anzeigename
       : "Arbeitsplatz",
-    // Betriebsart und Erscheinungsbild werden **mitgelesen**. Ohne diese
-    // beiden Zeilen schriebe `#setzeEinstellungen` sie zwar in die Datei, der
-    // naechste Start liesse sie aber fallen — ein Meldekopf waere nach jedem
-    // Neustart wieder eine Fuehrungsstelle und das Nachtbild wieder hell.
-    ...(geprueft.success && geprueft.data.betriebsart !== undefined
-      ? { betriebsart: geprueft.data.betriebsart }
-      : {}),
-    ...(geprueft.success && geprueft.data.theme !== undefined
-      ? { theme: geprueft.data.theme }
-      : {}),
-    // Die Monitorwahl (S4.1) aus demselben Grund: Sie ist Geräteeinstellung.
-    ...(geprueft.success && geprueft.data.monitor !== undefined
-      ? { monitor: geprueft.data.monitor }
-      : {}),
+    ...(geprueft.success ? geraetefelder(geprueft.data) : {}),
+    ...(profil.success ? { profil: profil.data } : {}),
     clientId,
   };
   if (!geprueft.success || wert["clientId"] !== clientId) {
     await schreibeArbeitsplatz(datei, arbeitsplatz);
   }
   return arbeitsplatz;
+}
+
+/**
+ * Die Felder, die zum Gerät gehören — sie werden **mitgelesen**. Ohne sie
+ * schriebe `#setzeEinstellungen` sie zwar in die Datei, der nächste Start
+ * ließe sie aber fallen: Ein Meldekopf wäre nach jedem Neustart wieder eine
+ * Führungsstelle, das Nachtbild wieder hell, die Monitorwahl (S4.1) wieder
+ * Stärke. Das Profil (E3) liest `liesArbeitsplatz` für sich.
+ */
+function geraetefelder(gelesen: Einstellungen): Partial<Einstellungen> {
+  return {
+    ...(gelesen.betriebsart === undefined ? {} : { betriebsart: gelesen.betriebsart }),
+    ...(gelesen.theme === undefined ? {} : { theme: gelesen.theme }),
+    ...(gelesen.monitor === undefined ? {} : { monitor: gelesen.monitor }),
+  };
 }
 
 /** Schreibt die Datei; das Verzeichnis wird angelegt, wenn es fehlt. */

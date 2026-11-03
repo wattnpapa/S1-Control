@@ -511,6 +511,7 @@ export class Vermittlung {
       anzeigename: platz.anzeigename,
       ...(platz.betriebsart === undefined ? {} : { betriebsart: platz.betriebsart }),
       ...(platz.theme === undefined ? {} : { theme: platz.theme }),
+      ...(platz.profil === undefined ? {} : { profil: platz.profil }),
       ...(platz.monitor === undefined ? {} : { monitor: platz.monitor }),
     };
   }

@@ -171,6 +171,24 @@ describe("Web-Schale eines Arbeitsplatzes", () => {
     });
   });
 
+  it("merkt das Profil je Browser über einen Neustart des Dienstes (Entlastung E3)", async () => {
+    const werkstatt = baueWerkstatt();
+    await ruf(werkstatt.oeffne(SCHLUESSEL_A), {
+      art: "einstellungenSetzen",
+      einstellungen: { sharePfad: "", anzeigename: "S4", profil: "versorgung" },
+    });
+    await ruf(werkstatt.oeffne(SCHLUESSEL_B), { art: "einstellungenSetzen", einstellungen: { sharePfad: "", anzeigename: "S1" } });
+
+    // Neue Schalen sind ein Neustart: Das Profil steht in der Datei des Schlüssels.
+    expect(await ruf(werkstatt.oeffne(SCHLUESSEL_A), { art: "einstellungenLesen" })).toEqual({
+      sharePfad: werkstatt.sharePfad,
+      anzeigename: "S4",
+      profil: "versorgung",
+    });
+    const fremd = await ruf<Einstellungen>(werkstatt.oeffne(SCHLUESSEL_B), { art: "einstellungenLesen" });
+    expect(fremd.profil).toBeUndefined();
+  });
+
   it("schreibt den Anzeigenamen als Akteur in Anker und Ereignisse", async () => {
     const werkstatt = baueWerkstatt();
     const schale = werkstatt.oeffne(SCHLUESSEL_A);

@@ -161,6 +161,13 @@ describe("Einstellungen und Umgebung", () => {
     });
   });
 
+  it("reicht das Profil beim Lesen und Schreiben durch (Entlastung E3)", async () => {
+    const werkstatt = await mitShare();
+    const einstellungen = { sharePfad: werkstatt.sharePfad, anzeigename: "Führungsstelle 1", profil: "vermeldezentrale" } as const;
+    expect(await ruf(werkstatt, { art: "einstellungenSetzen", einstellungen })).toEqual(einstellungen);
+    expect(await ruf(werkstatt, { art: "einstellungenLesen" })).toEqual(einstellungen);
+  });
+
   it("gibt die eingestellten Werte zurück", async () => {
     const werkstatt = await mitShare();
     expect(await ruf(werkstatt, { art: "einstellungenLesen" })).toEqual({
