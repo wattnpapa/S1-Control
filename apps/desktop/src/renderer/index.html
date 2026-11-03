@@ -535,17 +535,20 @@
         background: var(--kopfband-text);
         color: var(--kopfband-bg);
       }
-      .fenstermenueliste,
+      /* Klappmenüs (Klappmenue.tsx): Fenstermenü, „Einheit anlegen ▾",
+         „Spalten ▾", „⋯" an der Baumzeile und die Kontextmenüs. Eckig, mit
+         Schatten, das Kürzel rechts in Mono (Entwurf „Entlastung", 6e). */
+      .klappmenue {
+        position: relative;
+        display: inline-block;
+      }
+      .klappmenueliste,
       .monitorauswahl {
-        position: absolute;
-        top: 100%;
-        right: 0;
         z-index: 30;
         display: flex;
         flex-direction: column;
         min-width: 250px;
         max-width: calc(100vw - 16px);
-        margin: 6px 0 0;
         padding: 4px 0;
         box-sizing: border-box;
         background: var(--karte);
@@ -554,7 +557,20 @@
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
         text-align: left;
       }
-      .fenstermenueliste [role^="menuitem"],
+      .klappmenue > .klappmenueliste,
+      .monitorauswahl {
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin: 6px 0 0;
+      }
+      .fenstermenue > .klappmenueliste,
+      .monitorauswahl,
+      .klappmenue.rechts > .klappmenueliste {
+        left: auto;
+        right: 0;
+      }
+      .klappmenueliste [role^="menuitem"],
       .monitorauswahl button {
         position: relative;
         display: flex;
@@ -574,31 +590,39 @@
       .monitorauswahl button {
         padding-left: 14px;
       }
-      .fenstermenueliste [role^="menuitem"]:hover,
-      .fenstermenueliste [role^="menuitem"]:focus-visible,
+      .klappmenueliste [role^="menuitem"]:hover,
+      .klappmenueliste [role^="menuitem"]:focus-visible,
       .monitorauswahl button:hover,
       .monitorauswahl button:focus-visible {
         background: var(--zeile-gewaehlt);
       }
-      .fenstermenueliste [role^="menuitem"]:focus-visible,
+      .klappmenueliste [role^="menuitem"]:focus-visible,
       .monitorauswahl button:focus-visible {
         outline: var(--rahmenbreite) solid var(--knopf-rahmen);
         outline-offset: -2px;
       }
-      .fenstermenueliste [aria-checked="true"] {
+      .klappmenueliste [aria-checked="true"] {
         font-weight: 700;
       }
-      .fenstermenueliste [aria-checked="true"]::before {
+      .klappmenueliste [aria-checked="true"]::before {
         content: "✓";
         position: absolute;
         left: 12px;
       }
-      .fenstermenueliste .kurz {
+      /* Was gerade nicht geht, steht grau da und nennt den Grund im Titel. */
+      .klappmenueliste [aria-disabled="true"] {
+        color: var(--text-leiser);
+        cursor: default;
+      }
+      .klappmenueliste [role^="menuitem"].rot:not([aria-disabled="true"]) {
+        color: var(--err-text);
+      }
+      .klappmenueliste .kurz {
         margin-left: auto;
         color: var(--text-leiser);
         font: 400 11px/1 var(--mono);
       }
-      .fenstermenueliste .titel,
+      .klappmenueliste .titel,
       .monitorauswahl .titel {
         display: block;
         margin: 0;
@@ -608,15 +632,29 @@
         letter-spacing: 0.14em;
         text-transform: uppercase;
       }
-      .fenstermenueliste hr,
+      .klappmenueliste .hinweis {
+        display: block;
+        max-width: 22rem;
+        padding: 7px 14px;
+        color: var(--text-leise);
+        white-space: normal;
+      }
+      .klappmenueliste hr,
       .monitorauswahl hr {
         width: 100%;
         margin: 4px 0;
         border: 0;
         border-top: var(--rahmenbreite) solid var(--rahmen-weich);
       }
-      .fenstermenueliste form {
+      .klappmenueliste form {
         margin: 0;
+      }
+      /* Das Kontextmenü steht an der Mausposition (Marken aus Klappmenue.tsx). */
+      .kontextmenue {
+        position: fixed;
+        left: var(--menue-x, 0);
+        top: var(--menue-y, 0);
+        z-index: 90;
       }
       /* Die Reiterzeile schliesst das Kopfband nach unten ab: Der gewaehlte
          Reiter traegt seine Marke dort, wo die Arbeitsflaeche beginnt. */
@@ -3403,7 +3441,7 @@
         .ausgabeknoepfe a,
         .kopfband .reiter button,
         .kopfband .fenstermenueknopf,
-        .fenstermenueliste [role^="menuitem"],
+        .klappmenueliste [role^="menuitem"],
         .monitorauswahl button {
           min-height: 44px;
           min-width: 44px;
@@ -3458,7 +3496,7 @@
         .kopfband .fenstermenue {
           position: static;
         }
-        .fenstermenueliste,
+        .fenstermenue > .klappmenueliste,
         .monitorauswahl {
           left: 8px;
           right: 8px;

@@ -10,12 +10,10 @@
  * Einsatz aufgezogen. Nichts fällt weg (Leitsatz 5): Jeder Eintrag ist hier
  * erreichbar, Strg+H bleibt Strg+H.
  *
- * **Ein reines Renderer-Element.** Electron hätte ein natives Menü, die
- * Web-Schale nicht; zwei Menüs mit zwei Bedienungen wären genau die Drift,
- * die der Entwurf vermeiden soll. Das Menü ist deshalb ein `<button
- * aria-haspopup="menu">` mit einer Liste `role="menu"`: Esc und ein Tipp
- * daneben schließen, Pfeiltasten wandern, auf dem Handy ist jeder Eintrag
- * mindestens 44 px hoch (`pointer: coarse` in index.html).
+ * **Ein reines Renderer-Element** aus dem Baustein `Klappmenue.tsx`, den
+ * auch die Lage nutzt: Esc und ein Tipp daneben schließen, Pfeiltasten
+ * wandern, auf dem Handy ist jeder Eintrag mindestens 44 px hoch
+ * (`pointer: coarse` in index.html).
  *
  * **Abmelden bleibt ein Formular** (POST `abmeldung`) und kein Ruf: Die
  * Abmeldung ist ein Seitenwechsel, und das Formular geht auch, wenn der
@@ -23,12 +21,12 @@
  * erklärt.
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useState } from "react";
 
 import { THEMEN, type Theme } from "../kontrakt/index.js";
+import { Klappmenue, type Waehle } from "./Klappmenue.js";
 import { Monitorauswahl, useMonitorstart } from "./Monitorwahl.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
-import { useDraussenSchliessen } from "./useDraussenSchliessen.js";
 
 const BESCHRIFTUNG: Record<Theme, string> = {
   standard: "Standard",
@@ -49,94 +47,42 @@ export interface FenstermenueEigenschaften {
   readonly angemeldet: boolean;
 }
 
-/** Pfeiltasten, Pos1 und Ende wandern zwischen den Einträgen; am Ende geht es oben weiter. */
-function wandere(liste: HTMLElement, taste: string): boolean {
-  const eintraege = Array.from(liste.querySelectorAll<HTMLElement>("[role^='menuitem']"));
-  if (eintraege.length === 0) return false;
-  const hier = eintraege.indexOf(document.activeElement as HTMLElement);
-  const ziel: Record<string, number> = {
-    ArrowDown: (hier + 1) % eintraege.length,
-    ArrowUp: (hier - 1 + eintraege.length) % eintraege.length,
-    Home: 0,
-    End: eintraege.length - 1,
-  };
-  const stelle = ziel[taste];
-  if (stelle === undefined) return false;
-  eintraege[stelle]?.focus();
-  return true;
-}
-
 export function Fenstermenue(eigenschaften: FenstermenueEigenschaften): React.JSX.Element {
-  const [offen, setzeOffen] = useState(false);
   const [monitorwahl, setzeMonitorwahl] = useState(false);
-  const knopf = useRef<HTMLButtonElement>(null);
-  const liste = useRef<HTMLDivElement>(null);
-  const schliesse = useCallback(() => {
-    setzeOffen(false);
-  }, []);
-  const huelle = useDraussenSchliessen<HTMLDivElement>(offen, schliesse);
-
-  // Beim Öffnen steht der Fokus auf dem ersten Eintrag (WAI-ARIA, Menü-Knopf):
-  // Wer mit der Tastatur kommt, kann sofort mit den Pfeilen wandern.
-  useEffect(() => {
-    if (offen) liste.current?.querySelector<HTMLElement>("[role^='menuitem']")?.focus();
-  }, [offen]);
-
-  /** Führt einen Eintrag aus und schließt das Menü. */
-  const waehle = (tue: () => void) => () => {
-    setzeOffen(false);
-    tue();
-  };
-
   return (
-    <div ref={huelle} className="fenstermenue">
-      <button
-        ref={knopf}
-        type="button"
-        className="fenstermenueknopf"
-        aria-haspopup="menu"
-        aria-expanded={offen}
-        aria-controls={offen ? "fenstermenue" : undefined}
-        aria-label="Fenstermenü"
-        title="Hilfe, Erscheinungsbild, Stärke-Monitor, Diagnose, Einsatz schließen"
-        onClick={() => {
-          setzeOffen(!offen);
-        }}
-      >
-        ⋯
-      </button>
-      {offen && (
-        <div
-          ref={liste}
-          id="fenstermenue"
-          role="menu"
-          aria-label="Fenstermenü"
-          className="fenstermenueliste"
-          onKeyDown={(ereignis) => {
-            if (ereignis.key === "Escape") {
-              setzeOffen(false);
-              knopf.current?.focus();
-              return;
-            }
-            if (liste.current !== null && wandere(liste.current, ereignis.key)) ereignis.preventDefault();
-          }}
-        >
-          <Menueinhalt {...eigenschaften} waehle={waehle} aufMonitor={() => setzeMonitorwahl(true)} />
-        </div>
-      )}
-      {monitorwahl && (
-        <Monitorauswahl
-          aufSchliessen={() => {
-            setzeMonitorwahl(false);
+    <Klappmenue
+      huelle="fenstermenue"
+      knopf={{
+        inhalt: "⋯",
+        klasse: "fenstermenueknopf",
+        beschriftung: "Fenstermenü",
+        titel: "Hilfe, Erscheinungsbild, Stärke-Monitor, Diagnose, Einsatz schließen",
+      }}
+      menue={{ beschriftung: "Fenstermenü", id: "fenstermenue", klasse: "fenstermenueliste" }}
+      inhalt={(waehle) => (
+        <Menueinhalt
+          {...eigenschaften}
+          waehle={waehle}
+          aufMonitor={() => {
+            setzeMonitorwahl(true);
           }}
         />
       )}
-    </div>
+      dazu={
+        monitorwahl && (
+          <Monitorauswahl
+            aufSchliessen={() => {
+              setzeMonitorwahl(false);
+            }}
+          />
+        )
+      }
+    />
   );
 }
 
 interface Menueinhaltseigenschaften extends FenstermenueEigenschaften {
-  waehle(tue: () => void): () => void;
+  readonly waehle: Waehle;
   /** Öffnet die Bildschirmwahl der Electron-Schale. */
   aufMonitor(): void;
 }
