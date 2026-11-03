@@ -1532,7 +1532,7 @@
         font-weight: 700;
         border-top: var(--rahmenbreite) solid var(--rahmen);
       }
-      /* Die Auswahlleiste (Einheitenauswahl.tsx): am Fuss der Karte, sobald
+      /* Die Auswahlleiste (Auswahlleiste.tsx): am Fuss der Karte, sobald
          eine Zeile gewaehlt ist, in den Farben des Kopfbands (Entwurf
          „Entlastung", 6c). Sie klebt unten im Fenster, solange die Tabelle
          im Bild ist: Wer weit unten waehlt, muss nicht zurueckscrollen. */
@@ -1568,6 +1568,16 @@
       .auswahlleiste button:hover:not([aria-disabled="true"]) {
         background: var(--kopfband-text);
         color: var(--kopfband-bg);
+      }
+      /* Der Hauptweg einer Auswahl (Funkprobe: Kontakt) steht gefuellt. */
+      .auswahlleiste button.haupt {
+        background: var(--kopfband-text);
+        color: var(--kopfband-bg);
+        font-weight: 600;
+      }
+      .auswahlleiste button.haupt .kurz {
+        color: var(--kopfband-bg);
+        opacity: 0.75;
       }
       .auswahlleiste button[aria-disabled="true"] {
         color: var(--kopfband-leise);

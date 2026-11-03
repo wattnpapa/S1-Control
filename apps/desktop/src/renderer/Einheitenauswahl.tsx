@@ -12,11 +12,14 @@
  * will, beginnt mit einer Zeile.
  *
  * Die Sperrregeln sind dieselben wie vorher im Kopf; die Kürzel (Strg+M,
- * Strg+K, Strg+E) hängen weiter an der Tabelle und ändern sich nicht.
+ * Strg+K, Strg+E) hängen weiter an der Tabelle und ändern sich nicht. Die
+ * Leiste selbst ist der allgemeine Baustein `Auswahlleiste.tsx`, den auch
+ * Funkplan und Anforderungen nutzen; hier stehen nur die Schritte.
  */
 
 import type { Tabellenzeile } from "@s1/domaene";
 
+import { Auswahlleiste, type Leistenknopf } from "./Auswahlleiste.js";
 import { Kontextmenue, Menueeintrag, type Kontextort } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
@@ -73,7 +76,7 @@ export function auswahltitel(gewaehlte: readonly Tabellenzeile[], anzahl: number
   return anzahl === 1 && erste !== undefined ? `1 gewählt · ${erste.anzeige}` : `${String(anzahl)} gewählt`;
 }
 
-export interface AuswahlleisteEigenschaften {
+export interface EinheitenauswahlEigenschaften {
   /** Die markierten Zeilen, soweit sie im Ausschnitt stehen. */
   readonly gewaehlte: readonly Tabellenzeile[];
   /** Wie viele markiert sind — auch außerhalb des Ausschnitts. */
@@ -82,45 +85,34 @@ export interface AuswahlleisteEigenschaften {
   readonly aufMaske: (maske: Einheitenmaske) => void;
 }
 
+/** Die Schritte als Knöpfe der allgemeinen Leiste. */
+function leistenknoepfe(anzahl: number, aufMaske: (maske: Einheitenmaske) => void): readonly Leistenknopf[] {
+  return auswahlschritte(anzahl).map((schritt) => ({
+    schluessel: schritt.maske,
+    text: schritt.text,
+    ...(schritt.kurz === undefined ? {} : { kurz: schritt.kurz }),
+    ...(schritt.titel === undefined ? {} : { titel: schritt.titel }),
+    ...(schritt.sperre === undefined ? {} : { sperre: schritt.sperre }),
+    ...(schritt.rot === undefined ? {} : { rot: schritt.rot }),
+    aufWahl: () => {
+      aufMaske(schritt.maske);
+    },
+  }));
+}
+
 /** Die Leiste am Fuß der Karte; ohne Auswahl steht nichts davon im Dokument. */
-export function Auswahlleiste({ gewaehlte, anzahl, nurLesen, aufMaske }: AuswahlleisteEigenschaften): React.JSX.Element | null {
+export function Einheitenleiste({ gewaehlte, anzahl, nurLesen, aufMaske }: EinheitenauswahlEigenschaften): React.JSX.Element | null {
   if (anzahl === 0) return null;
   return (
-    <div role="toolbar" aria-label="Auswahl" className="auswahlleiste">
-      <strong className="auswahlzahl">{auswahltitel(gewaehlte, anzahl)}</strong>
-      {nurLesen ? (
-        <span className="auswahlsperre">{TEXT_NUR_LESEN}: Verschieben, Aufteilen, Kopieren und Entfernen sind gesperrt.</span>
-      ) : (
-        auswahlschritte(anzahl).map((schritt) => (
-          <button
-            key={schritt.maske}
-            type="button"
-            className={schritt.rot === true ? "entfernen" : undefined}
-            aria-disabled={schritt.sperre === undefined ? undefined : true}
-            title={schritt.sperre ?? [schritt.titel, schritt.kurz === undefined ? undefined : `(${schritt.kurz})`].filter(Boolean).join(" ")}
-            onClick={
-              schritt.sperre === undefined
-                ? () => {
-                    aufMaske(schritt.maske);
-                  }
-                : undefined
-            }
-          >
-            {schritt.text}
-            {schritt.kurz !== undefined && (
-              <span className="kurz" aria-hidden="true">
-                {schritt.kurz}
-              </span>
-            )}
-          </button>
-        ))
-      )}
-      <span className="auswahlschluss">Esc hebt die Auswahl auf</span>
-    </div>
+    <Auswahlleiste
+      titel={auswahltitel(gewaehlte, anzahl)}
+      knoepfe={leistenknoepfe(anzahl, aufMaske)}
+      sperrtext={nurLesen ? `${TEXT_NUR_LESEN}: Verschieben, Aufteilen, Kopieren und Entfernen sind gesperrt.` : undefined}
+    />
   );
 }
 
-export interface EinheitenkontextmenueEigenschaften extends AuswahlleisteEigenschaften {
+export interface EinheitenkontextmenueEigenschaften extends EinheitenauswahlEigenschaften {
   readonly ort: Kontextort;
   readonly aufSchliessen: () => void;
   /** Wählt die Einheit und schlägt das Blatt Tagebuch auf; fehlt er, fehlt der Eintrag. */
@@ -195,7 +187,7 @@ export function Auswahlbereich({ markierung, gewaehlte, nurLesen, aufMaske, aufT
   const erste = gewaehlte[0];
   return (
     <>
-      <Auswahlleiste {...auswahl} />
+      <Einheitenleiste {...auswahl} />
       {markierung.kontext !== undefined && (
         <Einheitenkontextmenue
           {...auswahl}
