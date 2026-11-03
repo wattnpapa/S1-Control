@@ -3,44 +3,48 @@
  * der Vermeldezentrale.
  *
  * Oben das KPI-Band mit den sechs Zahlen des Plans, darunter die
- * Werkzeugzeile (`Funkwerkzeuge.tsx`): Umschalter „Je Rufgruppe" / „Je
- * Bereich" / „Funkproben", „Rufgruppe anlegen" (Strg+N), „Funkprobe
- * eintragen" (Strg+P) und „kein Kontakt …" für die markierte Einheit, die
- * Schwelle „kein Kontakt", die Suche über Einheit, Funkrufname, Rufgruppen und
- * Funkhinweis (Strg+F) und der Funkplan als Ausgabe. Links die Rufgruppen mit
- * dem Kasten der gewählten, rechts die Zuordnung oder die Funkproben. Jede
- * Karte ist eine eigene Datei; diese hier holt die Ansicht, hält Wahl und
- * Markierung und verteilt.
+ * Werkzeugzeile (`Funkwerkzeuge.tsx`, seit Runde 6 nach Option 6f):
+ * Umschalter „Je Rufgruppe" / „Je Bereich" / „Funkproben", der Hauptknopf
+ * „Rufgruppe anlegen" (Strg+N), die Suche über Einheit, Funkrufname,
+ * Rufgruppen und Funkhinweis (Strg+F) und „⋯" mit Schwelle und Ausdruck.
+ * Links die Rufgruppen mit „⋯" an der gewählten Zeile und dem Kasten der
+ * gewählten, rechts die Zuordnung oder die Funkproben. Für die gewählte
+ * Einheit steht die Auswahlleiste am Fuß der Zuordnung (`Funkauswahl.tsx`:
+ * Funkprobe mit Strg+P, „kein Kontakt …", Funkmaske, Rufgruppe ändern),
+ * dieselben Schritte als Kontextmenü an der Zeile; Esc hebt die Wahl auf.
+ * Jede Karte ist eine eigene Datei; diese hier holt die Ansicht, hält Wahl
+ * und Markierung und verteilt.
  *
  * **Nichts wird hier gerechnet.** Plan und Zahlen kommen aus Ring 2 über den
  * Ruf `funkplanAnfordern`; die Suche schneidet der Worker zu, die Zahlen im
  * Band bleiben die des ganzen Einsatzes. Das Blatt setzt nicht auf der
  * Auswahl der Lage auf (`gehoertZurLage` bleibt falsch).
  *
- * Strg+E öffnet die gewählte Rufgruppe zum Bearbeiten, wie der Knopf im
- * Kasten (Option 5b); in der Lage entfernt dasselbe Kürzel einen Eintrag.
+ * Strg+E öffnet die gewählte Rufgruppe zum Bearbeiten, wie „Bearbeiten …"
+ * an ihrer Zeile; in der Lage entfernt dasselbe Kürzel einen Eintrag.
  * Der Name einer Einheit in der Zuordnung öffnet ihre Maske „Funk und
  * Erreichbarkeit" (Option 5d).
  */
 
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 
-import { projektion, type Funkplan as Funkplandaten, type Funkteilnehmer, type Funkzahlen, type Rufgruppenkarte } from "@s1/domaene";
+import { projektion, type Funkteilnehmer, type Funkzahlen, type Rufgruppenkarte } from "@s1/domaene";
 
 import type { Funkplanansicht } from "../kontrakt/index.js";
 
+import { Funkkontextmenue, Funkleiste, type FunkauswahlEigenschaften } from "./Funkauswahl.js";
 import { FunkUndErreichbarkeit } from "./FunkUndErreichbarkeit.js";
 import { Funkprobenliste } from "./Funkprobenliste.js";
 import { Werkzeugzeile } from "./Funkwerkzeuge.js";
 import { Funkzuordnung, type Funksicht } from "./Funkzuordnung.js";
+import type { Kontextort } from "./Klappmenue.js";
 import { useLaden } from "./laden.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
-import { RufgruppeMaske, type Anlagezeile } from "./RufgruppeMaske.js";
+import { RufgruppeMaske } from "./RufgruppeMaske.js";
 import { Rufgruppenliste } from "./Rufgruppenliste.js";
 import { useKuerzel } from "./tastatur.js";
-import { useFremdsperren } from "./useBearbeitungssperre.js";
 import { useFunkplanansicht } from "./useFunkplanansicht.js";
-import { useFunkprobe } from "./useFunkprobe.js";
+import { anlagezeile, teilnehmerVon, useFunkplanmasken, useProbeFuerGewaehlte, type Funkplanmasken } from "./useFunkplanmasken.js";
 
 /** Eine Kachel des Bandes; `warn` färbt Bernstein. */
 function Kachel({ wert, titel, warn = false }: { readonly wert: React.ReactNode; readonly titel: string; readonly warn?: boolean }): React.JSX.Element {
@@ -73,62 +77,11 @@ export function Funkband({ zahlen, schwelleMinuten }: { readonly zahlen: Funkzah
   );
 }
 
-type Offen =
-  | { readonly art: "anlegen"; readonly fuer?: Anlagezeile }
-  | { readonly art: "bearbeiten"; readonly karte: Rufgruppenkarte }
-  | { readonly art: "einheit"; readonly teilnehmer: Funkteilnehmer }
-  | undefined;
-
-function anlagezeile(t: Funkteilnehmer): Anlagezeile {
-  return { einheitId: t.einheitId, einheit: t.einheit, ...(t.rufgruppeId === undefined ? {} : { vorher: t.rufgruppeId }) };
-}
-
-/** Die markierte Einheit im aktuellen Plan — frisch, damit ihre Proben der richtige Vorher-Wert sind. */
-function teilnehmerVon(plan: Funkplandaten | undefined, einheitId: string | undefined): Funkteilnehmer | undefined {
-  if (plan === undefined || einheitId === undefined) return undefined;
-  return [...plan.rufgruppen.flatMap((r) => r.teilnehmer), ...plan.ohneRufgruppe].find((t) => t.einheitId === einheitId);
-}
-
-/**
- * Welche Maske offen ist, und die beiden Wege hinein: eine Rufgruppe
- * bearbeiten und eine Einheit öffnen — jeweils erst nach der Sperrprüfung.
- */
-function useFunkplanmasken(nurLesen: boolean): {
-  readonly offen: Offen;
-  readonly setzeOffen: (offen: Offen) => void;
-  readonly bearbeite: (karte: Rufgruppenkarte) => void;
-  readonly oeffneEinheit: (t: Funkteilnehmer) => void;
-} {
-  const melde = useLaden((z) => z.melde);
-  const fremd = useFremdsperren();
-  const [offen, setzeOffen] = useState<Offen>(undefined);
-  const bearbeite = useCallback(
-    (karte: Rufgruppenkarte): void => {
-      if (nurLesen || karte.aufgeloest) return;
-      // Ein anderer Arbeitsplatz hat die Gruppe offen: erst Hinweis, dann bewusstes Übernehmen.
-      const hinweis = fremd.pruefeStart(karte.rufgruppeId);
-      if (hinweis !== undefined) {
-        melde("warnung", hinweis);
-        return;
-      }
-      setzeOffen({ art: "bearbeiten", karte });
-    },
-    [nurLesen, fremd, melde],
-  );
-  // Die Maske der Einheit hält den Teilnehmer, wie er beim Öffnen war: Das
-  // sind ihre Vorher-Werte, auch wenn der Plan sich derweil auffrischt.
-  const oeffneEinheit = useCallback(
-    (t: Funkteilnehmer): void => {
-      const hinweis = nurLesen ? undefined : fremd.pruefeStart(t.einheitId);
-      if (hinweis !== undefined) {
-        melde("warnung", hinweis);
-        return;
-      }
-      setzeOffen({ art: "einheit", teilnehmer: t });
-    },
-    [nurLesen, fremd, melde],
-  );
-  return { offen, setzeOffen, bearbeite, oeffneEinheit };
+/** Was die Zuordnung für die gewählte Einheit braucht: Leiste, Kontextmenü, „Rufgruppe ändern …". */
+interface Auswahlstand {
+  readonly auswahl: FunkauswahlEigenschaften | undefined;
+  readonly aufKontext: (ort: Kontextort) => void;
+  readonly rufgruppeOeffnen: { readonly einheitId: string; readonly nr: number } | undefined;
 }
 
 interface FlaecheEigenschaften {
@@ -137,14 +90,15 @@ interface FlaecheEigenschaften {
   readonly nurLesen: boolean;
   readonly gewaehlt: Rufgruppenkarte | undefined;
   readonly aufWahl: (rufgruppeId: string) => void;
-  readonly masken: ReturnType<typeof useFunkplanmasken>;
+  readonly masken: Funkplanmasken;
   readonly markiertId: string | undefined;
   readonly aufMarkieren: (t: Funkteilnehmer) => void;
+  readonly stand: Auswahlstand;
 }
 
 /** Links die Rufgruppen, rechts die Zuordnung oder die Funkproben. */
 function Funkflaeche(props: FlaecheEigenschaften): React.JSX.Element {
-  const { ansicht, sicht, nurLesen, masken } = props;
+  const { ansicht, sicht, nurLesen, masken, stand } = props;
   return (
     <div className="funkflaeche">
       <Rufgruppenliste rufgruppen={ansicht.plan.rufgruppen} gewaehlt={props.gewaehlt} nurLesen={nurLesen} aufWahl={props.aufWahl} aufBearbeiten={masken.bearbeite} />
@@ -160,29 +114,67 @@ function Funkflaeche(props: FlaecheEigenschaften): React.JSX.Element {
           aufMarkieren={props.aufMarkieren}
           aufNeu={(t) => masken.setzeOffen({ art: "anlegen", fuer: anlagezeile(t) })}
           aufEinheit={masken.oeffneEinheit}
+          aufKontext={stand.aufKontext}
+          rufgruppeOeffnen={stand.rufgruppeOeffnen}
+          fuss={stand.auswahl === undefined ? undefined : <Funkleiste {...stand.auswahl} />}
         />
       )}
     </div>
   );
 }
 
-/** „Funkprobe eintragen" und „kein Kontakt …" für die markierte Einheit; ohne Markierung ein Hinweis. */
-function useProbeFuerMarkierte(
+/**
+ * Die gewählte Einheit der Zuordnung: die Schritte der Leiste, der Ort des
+ * Kontextmenüs und die Anfrage „Rufgruppe ändern …" an ihre Zelle.
+ */
+function useFunkauswahl(
   nurLesen: boolean,
   markiert: Funkteilnehmer | undefined,
-): { readonly probe: (ergebnis: "KONTAKT" | "KEIN_KONTAKT") => void; readonly maske: React.JSX.Element | null } {
-  const melde = useLaden((z) => z.melde);
-  const funkprobe = useFunkprobe();
-  const probe = (ergebnis: "KONTAKT" | "KEIN_KONTAKT"): void => {
-    if (nurLesen) return;
-    if (markiert === undefined) {
-      melde("info", "Funkprobe: erst eine Einheit in der Zuordnung markieren.");
-      return;
-    }
-    if (ergebnis === "KONTAKT") funkprobe.kontakt(markiert);
-    else funkprobe.keinKontakt(markiert);
-  };
-  return { probe, maske: funkprobe.maske };
+  masken: Funkplanmasken,
+): {
+  readonly probe: (ergebnis: "KONTAKT" | "KEIN_KONTAKT") => void;
+  readonly stand: Auswahlstand;
+  readonly kontextmenue: React.JSX.Element | null;
+  readonly grundmaske: React.JSX.Element | null;
+} {
+  const { probe, maske } = useProbeFuerGewaehlte(nurLesen, markiert);
+  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const [rufgruppeOeffnen, setzeRufgruppeOeffnen] = useState<{ readonly einheitId: string; readonly nr: number } | undefined>(undefined);
+  const auswahl: FunkauswahlEigenschaften | undefined =
+    markiert === undefined
+      ? undefined
+      : {
+          markiert,
+          nurLesen,
+          aufKontakt: () => probe("KONTAKT"),
+          aufKeinKontakt: () => probe("KEIN_KONTAKT"),
+          aufEinheit: () => masken.oeffneEinheit(markiert),
+          aufRufgruppe: () => setzeRufgruppeOeffnen((bisher) => ({ einheitId: markiert.einheitId, nr: (bisher?.nr ?? 0) + 1 })),
+        };
+  const stand: Auswahlstand = { auswahl, aufKontext: setzeKontext, rufgruppeOeffnen };
+  const kontextmenue =
+    kontext === undefined || auswahl === undefined ? null : <Funkkontextmenue {...auswahl} ort={kontext} aufSchliessen={() => setzeKontext(undefined)} />;
+  return { probe, stand, kontextmenue, grundmaske: maske };
+}
+
+/** Die offene Maske: Funk und Erreichbarkeit einer Einheit oder eine Rufgruppe. */
+function Funkplanmaske({ masken, ansicht, nurLesen }: { readonly masken: Funkplanmasken; readonly ansicht: Funkplanansicht | undefined; readonly nurLesen: boolean }): React.JSX.Element | null {
+  const { offen, setzeOffen } = masken;
+  const plan = ansicht?.plan;
+  if (offen === undefined) return null;
+  if (offen.art === "einheit") {
+    return (
+      <FunkUndErreichbarkeit teilnehmer={offen.teilnehmer} rufgruppen={plan?.rufgruppen ?? []} schwelleMinuten={plan?.schwelleMinuten} nurLesen={nurLesen} aufSchliessen={() => setzeOffen(undefined)} />
+    );
+  }
+  return (
+    <RufgruppeMaske
+      {...(offen.art === "bearbeiten" ? { karte: offen.karte } : {})}
+      {...(offen.art === "anlegen" && offen.fuer !== undefined ? { fuer: offen.fuer } : {})}
+      bereiche={ansicht?.bereiche ?? []}
+      aufSchliessen={() => setzeOffen(undefined)}
+    />
+  );
 }
 
 export function Funkplan(): React.JSX.Element {
@@ -197,9 +189,8 @@ export function Funkplan(): React.JSX.Element {
   const abruf = useFunkplanansicht(akteId, lageZeiger, suche, true);
   const plan = abruf.ansicht?.plan;
   const gewaehlt = plan?.rufgruppen.find((r) => r.rufgruppeId === gewaehltId) ?? plan?.rufgruppen.find((r) => !r.aufgeloest);
-  const markiert = teilnehmerVon(plan, markiertId);
-  const { probe, maske: grundmaske } = useProbeFuerMarkierte(nurLesen, markiert);
-  const { offen, setzeOffen, bearbeite } = masken;
+  const { probe, stand, kontextmenue, grundmaske } = useFunkauswahl(nurLesen, teilnehmerVon(plan, markiertId), masken);
+  const { setzeOffen, bearbeite } = masken;
 
   useKuerzel(
     useMemo(
@@ -214,6 +205,7 @@ export function Funkplan(): React.JSX.Element {
           document.getElementById("funkplansuche")?.focus();
         },
         funkprobe: () => probe("KONTAKT"),
+        abbrechen: () => setzeMarkiertId(undefined),
       }),
       [nurLesen, gewaehlt, bearbeite, setzeOffen, probe],
     ),
@@ -230,9 +222,6 @@ export function Funkplan(): React.JSX.Element {
         suche={suche}
         aufSuche={setzeSuche}
         aufAnlegen={nurLesen ? undefined : () => setzeOffen({ art: "anlegen" })}
-        markiert={markiert}
-        aufKontakt={() => probe("KONTAKT")}
-        aufKeinKontakt={() => probe("KEIN_KONTAKT")}
         schwelleMinuten={plan?.schwelleMinuten}
         nurLesen={nurLesen}
       />
@@ -240,19 +229,20 @@ export function Funkplan(): React.JSX.Element {
       {abruf.ansicht === undefined ? (
         <p className="hinweistext">Wird geladen …</p>
       ) : (
-        <Funkflaeche ansicht={abruf.ansicht} sicht={sicht} nurLesen={nurLesen} gewaehlt={gewaehlt} aufWahl={setzeGewaehltId} masken={masken} markiertId={markiertId} aufMarkieren={(t) => setzeMarkiertId(t.einheitId)} />
-      )}
-      {offen?.art === "einheit" && (
-        <FunkUndErreichbarkeit teilnehmer={offen.teilnehmer} rufgruppen={plan?.rufgruppen ?? []} schwelleMinuten={plan?.schwelleMinuten} nurLesen={nurLesen} aufSchliessen={() => setzeOffen(undefined)} />
-      )}
-      {offen !== undefined && offen.art !== "einheit" && (
-        <RufgruppeMaske
-          {...(offen.art === "bearbeiten" ? { karte: offen.karte } : {})}
-          {...(offen.art === "anlegen" && offen.fuer !== undefined ? { fuer: offen.fuer } : {})}
-          bereiche={abruf.ansicht?.bereiche ?? []}
-          aufSchliessen={() => setzeOffen(undefined)}
+        <Funkflaeche
+          ansicht={abruf.ansicht}
+          sicht={sicht}
+          nurLesen={nurLesen}
+          gewaehlt={gewaehlt}
+          aufWahl={setzeGewaehltId}
+          masken={masken}
+          markiertId={markiertId}
+          aufMarkieren={(t) => setzeMarkiertId(t.einheitId)}
+          stand={stand}
         />
       )}
+      {kontextmenue}
+      <Funkplanmaske masken={masken} ansicht={abruf.ansicht} nurLesen={nurLesen} />
       {grundmaske}
     </section>
   );

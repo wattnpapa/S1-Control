@@ -12,7 +12,7 @@
  * weiteren Gruppen der Einheit als „auch: …" dahinter (F2).
  */
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { projektion, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
@@ -33,6 +33,21 @@ export interface RufgruppenzelleEigenschaften {
   readonly aufNeu: (teilnehmer: Funkteilnehmer) => void;
   /** Sicht „Je Bereich": die weiteren Gruppen als „auch: …" hinter der Hauptgruppe. */
   readonly mitWeiteren?: boolean;
+  /**
+   * Eine Anfrage von außen, die Wahl zu öffnen („Rufgruppe ändern …" in der
+   * Auswahlleiste): Jede neue Zahl öffnet einmal, die Zahl beim Zeichnen nicht.
+   */
+  readonly oeffnen?: number | undefined;
+}
+
+/** Öffnet die Wahl, sobald eine neue Anfrage kommt — nicht für die, die beim ersten Zeichnen schon stand. */
+function useOeffnenAufAnfrage(anfrage: number | undefined, oeffne: () => void): void {
+  const gesehen = useRef(anfrage);
+  useEffect(() => {
+    if (anfrage === undefined || anfrage === gesehen.current) return;
+    gesehen.current = anfrage;
+    oeffne();
+  });
 }
 
 function Anzeige({ t, karte }: { readonly t: Funkteilnehmer; readonly karte: Rufgruppenkarte | undefined }): React.JSX.Element {
@@ -106,7 +121,7 @@ function Wahlliste(props: WahllisteEigenschaften): React.JSX.Element {
   );
 }
 
-export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu, mitWeiteren = false }: RufgruppenzelleEigenschaften): React.JSX.Element {
+export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu, mitWeiteren = false, oeffnen }: RufgruppenzelleEigenschaften): React.JSX.Element {
   const [offen, setzeOffen] = useState<{ readonly vorher: string | undefined } | undefined>(undefined);
   // Eine aufgelöste Gruppe steht nicht zur Wahl; die Zelle beginnt dann bei „keine".
   const start = t.rufgruppeAufgeloest ? "" : (t.rufgruppeId ?? "");
@@ -128,6 +143,7 @@ export function Rufgruppenzelle({ teilnehmer: t, rufgruppen, nurLesen, aufNeu, m
     setzeWahl(start);
     setzeOffen({ vorher: t.rufgruppeId });
   };
+  useOeffnenAufAnfrage(oeffnen, oeffne);
 
   const schreibe = (): void => {
     const vorher = offen?.vorher;

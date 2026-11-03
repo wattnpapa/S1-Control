@@ -19,18 +19,23 @@
  * (Doppelklick, Enter oder ✎), wie die Lage sie über „Funk …" öffnet.
  *
  * F3: „Letzter Kontakt" als Marke — Bernstein über der Schwelle, mit Alter —
- * und „kein Kontakt" daneben. Ein Klick markiert die Zeile; die markierte
- * Einheit ist die, für die „Funkprobe eintragen" (Strg+P) schreibt.
+ * und „kein Kontakt" daneben. Ein Klick wählt die Zeile; für die gewählte
+ * Einheit steht seit Runde 6 die Auswahlleiste am Fuß der Karte (Funkprobe
+ * mit Strg+P, „kein Kontakt …", Funkmaske, Rufgruppe ändern), dieselben
+ * Schritte öffnet der Rechtsklick (`Funkauswahl.tsx`).
  *
  * Gerechnet wird nichts: Die Gruppen, die Reihenfolge und der Hinweis
  * „Bereich ≠ Gruppe" kommen aus `projektion.funkplan`. Funkrufname und
  * Erreichbarkeit sind hier Ableitungen und werden nur gelesen.
  */
 
+import type { ReactNode } from "react";
+
 import { statusTitel, statusTon, type Funkplan, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
 import { Funkhinweiszelle } from "./Funkhinweiszelle.js";
 import { Betriebsartmarke, KeinKontaktmarke, Kontaktmarke, OhneRufgruppe, teilnehmerKontaktmarke } from "./Funkmarken.js";
+import type { Kontextort } from "./Klappmenue.js";
 import { Rufgruppenzelle } from "./Rufgruppenzelle.js";
 import { einheitenText } from "./versorgungstext.js";
 
@@ -45,13 +50,19 @@ export interface FunkzuordnungEigenschaften {
   readonly sicht: Zuordnungssicht;
   /** Die Uhr der Ansicht (Worker), gegen die das Alter des letzten Kontakts steht. */
   readonly jetzt: string;
-  /** Die markierte Einheit — Ziel von „Funkprobe eintragen". */
+  /** Die gewählte Einheit — Ziel der Funkprobe und der Auswahlleiste. */
   readonly markiertId: string | undefined;
   readonly aufMarkieren: (teilnehmer: Funkteilnehmer) => void;
   readonly nurLesen: boolean;
   readonly aufNeu: (teilnehmer: Funkteilnehmer) => void;
   /** Öffnet „Funk und Erreichbarkeit" der Einheit (Doppelklick auf den Namen oder ✎). */
   readonly aufEinheit: (teilnehmer: Funkteilnehmer) => void;
+  /** Rechtsklick: Die Zeile ist schon gewählt, das Menü geht an dieser Stelle auf. */
+  readonly aufKontext?: ((ort: Kontextort) => void) | undefined;
+  /** „Rufgruppe ändern …": jede neue Anfrage öffnet die Zelle Rufgruppe dieser Einheit. */
+  readonly rufgruppeOeffnen?: { readonly einheitId: string; readonly nr: number } | undefined;
+  /** Was am Fuß der Karte steht — die Auswahlleiste. */
+  readonly fuss?: ReactNode;
 }
 
 /** Der Name der Einheit: Doppelklick, Enter oder ✎ öffnen die Maske „Funk und Erreichbarkeit". */
@@ -87,13 +98,30 @@ function Zeile(props: ZeilenEigenschaften): React.JSX.Element {
   const markiert = props.markiertId === t.einheitId && props.mithoerer !== true;
   const klassen = [t.erwartet ? "erwartet" : "", props.mithoerer === true ? "mithoerer" : "", markiert ? "gewaehlt" : ""].filter((k) => k !== "").join(" ");
   return (
-    <tr className={klassen === "" ? undefined : klassen} aria-selected={markiert} onClick={() => props.aufMarkieren(t)}>
+    <tr
+      className={klassen === "" ? undefined : klassen}
+      aria-selected={markiert}
+      onClick={() => props.aufMarkieren(t)}
+      onContextMenu={(ereignis) => {
+        // Das Menü des Browsers trüge hier nichts bei (Entwurf, offene Fragen).
+        ereignis.preventDefault();
+        props.aufMarkieren(t);
+        props.aufKontext?.({ x: ereignis.clientX, y: ereignis.clientY });
+      }}
+    >
       <Einheitenname t={t} aufEinheit={props.aufEinheit} mithoerer={props.mithoerer === true} />
       <td className="leise">{t.bereich}</td>
       <td>
         <span className={`marke-zustand ${statusTon(t.status)}`}>{t.status === "" ? "—" : statusTitel(t.status)}</span>
       </td>
-      <Rufgruppenzelle teilnehmer={t} rufgruppen={props.plan.rufgruppen} nurLesen={props.nurLesen} aufNeu={props.aufNeu} mitWeiteren={props.mitWeiteren === true} />
+      <Rufgruppenzelle
+        teilnehmer={t}
+        rufgruppen={props.plan.rufgruppen}
+        nurLesen={props.nurLesen}
+        aufNeu={props.aufNeu}
+        mitWeiteren={props.mitWeiteren === true}
+        oeffnen={markiert && props.rufgruppeOeffnen?.einheitId === t.einheitId ? props.rufgruppeOeffnen.nr : undefined}
+      />
       <td className="mono">{t.funkrufname === "" ? "—" : t.funkrufname}</td>
       <td className="leise">{t.erreichbarkeit === "" ? "—" : t.erreichbarkeit}</td>
       <Funkhinweiszelle teilnehmer={t} nurLesen={props.nurLesen} />
@@ -173,7 +201,7 @@ function JeBereich(props: Omit<FunkzuordnungEigenschaften, "sicht">): React.JSX.
   );
 }
 
-export function Funkzuordnung({ sicht, ...props }: FunkzuordnungEigenschaften): React.JSX.Element {
+export function Funkzuordnung({ sicht, fuss, ...props }: FunkzuordnungEigenschaften): React.JSX.Element {
   const { plan } = props;
   const zugeordnet = plan.rufgruppen.reduce((summe, r) => summe + r.teilnehmer.length, 0);
   return (
@@ -198,11 +226,13 @@ export function Funkzuordnung({ sicht, ...props }: FunkzuordnungEigenschaften): 
           {sicht === "rufgruppe" ? <JeRufgruppe {...props} /> : <JeBereich {...props} />}
         </table>
       </div>
+      {fuss}
       <p className="hinweistext">
         Zuordnung = Hauptrufgruppe der Einheit: die Gruppe, über die die Führungsstelle sie ruft; „hört mit“ steht, wer die Gruppe als weitere trägt.
         Doppelklick auf Rufgruppe oder Funkhinweis bearbeitet die Zelle · Enter schreibt · Esc verwirft. Funkrufname und Erreichbarkeit kommen aus
         Fahrzeug und Führungskraft; überschrieben werden sie in der Maske der Einheit (Doppelklick auf den Namen). „Letzter Kontakt“ ist die jüngere
-        von Funkprobe und Statusmeldung; älter als {props.plan.schwelleMinuten} Minuten wird Bernstein. Klick markiert eine Einheit für „Funkprobe eintragen“.
+        von Funkprobe und Statusmeldung; älter als {props.plan.schwelleMinuten} Minuten wird Bernstein. Klick wählt eine Einheit: Funkprobe und Funkmaske stehen dann in der Leiste
+        darunter, der Rechtsklick öffnet dieselben Schritte.
       </p>
     </section>
   );

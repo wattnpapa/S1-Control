@@ -5,8 +5,8 @@
  * Gemessen wird die Verdrahtung: das Band mit sechs Kacheln, die Spalte
  * „Letzter Kontakt" mit Bernstein über der Schwelle und „kein Kontakt"
  * daneben, die Sicht „Funkproben", „Funkprobe eintragen" mit Strg+P für die
- * markierte Einheit, „kein Kontakt …" mit Grund und die Schwelle in der
- * Werkzeugzeile. Die Rechnung prüft Ring 2.
+ * gewählte Einheit, „kein Kontakt …" mit Grund in der Auswahlleiste und
+ * die Schwelle im Menü „⋯". Die Rechnung prüft Ring 2.
  */
 
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
@@ -97,7 +97,8 @@ describe("Der letzte Kontakt im Blatt „Funkplan“", () => {
 
   it("schreibt mit Strg+P ohne markierte Einheit nichts und sagt, was fehlt", async () => {
     await geladen();
-    expect((screen.getByRole("button", { name: "Funkprobe eintragen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Funkprobe: Kontakt" })).toBeNull();
     await waitFor(() => {
       fireEvent.keyDown(window, { key: "p", ctrlKey: true });
       expect(useLaden.getState().hinweise.at(-1)?.text).toMatch(/erst eine Einheit in der Zuordnung markieren/);
@@ -126,11 +127,14 @@ describe("Der letzte Kontakt im Blatt „Funkplan“", () => {
     });
   });
 
-  it("stellt die Schwelle in der Werkzeugzeile ein und schreibt sie mit dem gezeigten Wert als Vorher-Wert", async () => {
+  it("stellt die Schwelle im Menü „⋯“ ein und schreibt sie mit dem gezeigten Wert als Vorher-Wert", async () => {
     await geladen();
-    const wahl = screen.getByLabelText("Schwelle „kein Kontakt“ in Minuten") as HTMLSelectElement;
-    expect(wahl.value).toBe("60");
-    fireEvent.change(wahl, { target: { value: "90" } });
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte im Funkplan" }));
+    const gruppe = screen.getByRole("group", { name: "Schwelle „kein Kontakt“ in Minuten" });
+    expect(within(gruppe).getByRole("menuitemradio", { name: "60 min" }).getAttribute("aria-checked")).toBe("true");
+    expect(within(gruppe).getByText("Schwelle „kein Kontakt“: 60 min")).toBeDefined();
+    fireEvent.click(within(gruppe).getByRole("menuitemradio", { name: "90 min" }));
+    expect(screen.queryByRole("menu", { name: "Funkplan" })).toBeNull();
     await waitFor(() => {
       expect(bedient()).toEqual([{ typ: "FunkParameterGesetzt", nutzlast: { einsatzId: "E1" }, vorher: 60, neu: 90 }]);
     });
@@ -139,10 +143,56 @@ describe("Der letzte Kontakt im Blatt „Funkplan“", () => {
   it("bietet im beendeten Einsatz weder Funkprobe noch Schwelle an", async () => {
     useLaden.setState({ lagebild: { ...BEISPIEL_LAGEBILD, einsatzStatus: "BEENDET" } });
     const tabelle = await geladen();
-    expect(screen.queryByRole("button", { name: "Funkprobe eintragen" })).toBeNull();
-    expect((screen.getByLabelText("Schwelle „kein Kontakt“ in Minuten") as HTMLSelectElement).disabled).toBe(true);
     fireEvent.click(within(tabelle).getByRole("row", { name: /FGr WP OV Cloppenburg/ }));
+    const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
+    expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual(["Funk und Erreichbarkeit …"]);
     fireEvent.keyDown(window, { key: "p", ctrlKey: true });
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte im Funkplan" }));
+    const neunzig = screen.getByRole("menuitemradio", { name: "90 min" });
+    expect(neunzig.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(neunzig);
     expect(bedient()).toEqual([]);
+  });
+
+  it("zeigt die Auswahlleiste erst mit einer gewählten Einheit, mit Funkprobe als Hauptweg, und hebt sie mit Esc auf", async () => {
+    const tabelle = await geladen();
+    expect(screen.queryByRole("button", { name: "Funkprobe eintragen" })).toBeNull();
+    fireEvent.click(within(tabelle).getByRole("row", { name: /FGr WP OV Cloppenburg/ }));
+    const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
+    expect(within(leiste).getByText("1 gewählt · FGr WP OV Cloppenburg")).toBeDefined();
+    expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual([
+      "Funkprobe: KontaktStrg+P",
+      "kein Kontakt …",
+      "Funk und Erreichbarkeit …",
+      "Rufgruppe ändern …",
+    ]);
+    expect(within(leiste).getByRole("button", { name: "Funkprobe: Kontakt" }).className).toBe("haupt");
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    });
+  });
+
+  it("öffnet per Rechtsklick dieselben Schritte; „Funk und Erreichbarkeit …“ öffnet die Maske", async () => {
+    const tabelle = await geladen();
+    fireEvent.contextMenu(within(tabelle).getByRole("row", { name: /Abschnittsleitung EA 1 Deich Nord/ }));
+    const menue = screen.getByRole("menu", { name: "Abschnittsleitung EA 1 Deich Nord" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual([
+      "Funkprobe: KontaktStrg+P",
+      "kein Kontakt …",
+      "Funk und Erreichbarkeit …",
+      "Rufgruppe ändern …",
+    ]);
+    expect(within(tabelle).getByRole("row", { name: /Abschnittsleitung EA 1 Deich Nord/ }).getAttribute("aria-selected")).toBe("true");
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Funk und Erreichbarkeit …" }));
+    expect(screen.getByRole("form", { name: /Abschnittsleitung EA 1 Deich Nord/ })).toBeDefined();
+  });
+
+  it("öffnet mit „Rufgruppe ändern …“ die Zelle Rufgruppe der gewählten Zeile", async () => {
+    const tabelle = await geladen();
+    fireEvent.click(within(tabelle).getByRole("row", { name: /FGr WP OV Cloppenburg/ }));
+    expect(screen.queryByLabelText("Rufgruppe für FGr WP OV Cloppenburg")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Rufgruppe ändern …" }));
+    expect(screen.getByLabelText("Rufgruppe für FGr WP OV Cloppenburg")).toBeDefined();
   });
 });

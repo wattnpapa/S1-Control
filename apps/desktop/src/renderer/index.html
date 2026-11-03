@@ -2172,7 +2172,39 @@
         align-items: start;
       }
       .werkzeugrechts {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 10px;
         margin-left: auto;
+      }
+      /* „⋯" einer Werkzeugzeile (Funkplan, Versorgung, Eingangskorb): ein
+         Menue fuer das Seltene, rechts neben der Suche (Entlastung, 3.7). */
+      .menueknopf {
+        min-width: 36px;
+        padding: 0 10px;
+        font-weight: 700;
+      }
+      .menueknopf[aria-expanded="true"] {
+        background: var(--knopf-fuellung);
+        color: var(--knopf-fuellung-text);
+      }
+      /* Das „⋯" an der gewaehlten Rufgruppe, wie im Abschnittsbaum. */
+      .funktabelle .schrittspalte {
+        width: 30px;
+        padding-left: 0;
+        padding-right: 4px;
+        text-align: right;
+      }
+      .funktabelle .zeilenmenue > button {
+        width: 26px;
+        height: 24px;
+        padding: 0;
+        font: 700 13px/1 var(--ui);
+      }
+      .funktabelle .zeilenmenue > button[aria-expanded="true"] {
+        background: var(--knopf-fuellung);
+        color: var(--knopf-fuellung-text);
       }
       .bestellkarte .bedarfzeile {
         margin: 0 0 8px;

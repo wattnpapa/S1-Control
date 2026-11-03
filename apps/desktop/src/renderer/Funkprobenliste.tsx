@@ -45,7 +45,7 @@ export function Funkprobenliste({ funkproben }: { readonly funkproben: readonly 
         Funkproben <span className="leise">· {funkproben.length} · jüngste zuerst{ohne > 0 ? ` · ${String(ohne)} ohne Kontakt` : ""}</span>
       </h3>
       {funkproben.length === 0 ? (
-        <p className="hinweistext">Noch keine Funkprobe eingetragen. Einheit in „Je Rufgruppe“ markieren, dann „Funkprobe eintragen“ (Strg+P).</p>
+        <p className="hinweistext">Noch keine Funkprobe eingetragen. Einheit in „Je Rufgruppe“ wählen, dann „Funkprobe: Kontakt“ in der Leiste darunter (Strg+P).</p>
       ) : (
         <div className="tabellenrahmen">
           <table className="funktabelle funkproben" aria-label="Funkproben als Zeitfolge">

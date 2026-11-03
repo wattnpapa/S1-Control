@@ -149,7 +149,8 @@ describe("Das Blatt „Funkplan“", () => {
     await geladen();
     const liste = screen.getByRole("table", { name: "Liste der Rufgruppen" });
     fireEvent.click(within(liste).getByText("DMO 310"));
-    fireEvent.click(screen.getByRole("button", { name: "Auflösen …" }));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte für DMO 310" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Auflösen …" }));
     const maske = screen.getByRole("form", { name: /auflösen/ });
     expect(within(maske).getByText(/1 Einheit stehen danach als „ohne Rufgruppe“/)).toBeDefined();
     expect((within(maske).getByRole("button", { name: "Auflösen" }) as HTMLButtonElement).disabled).toBe(true);
@@ -159,7 +160,8 @@ describe("Das Blatt „Funkplan“", () => {
       expect(bedient()).toEqual([{ typ: "RufgruppeAufgeloest", nutzlast: { rufgruppeId: "R3" }, vorher: null, neu: true, grund: "Netz wieder da" }]);
     });
     fireEvent.click(within(liste).getByText("THW_OL_BR"));
-    fireEvent.click(screen.getByRole("button", { name: "Wiederherstellen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte für THW_OL_BR" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Wiederherstellen" }));
     await waitFor(() => {
       expect(bedient()).toHaveLength(2);
     });
@@ -189,13 +191,31 @@ describe("Das Blatt „Funkplan“", () => {
     expect(document.activeElement).toBe(screen.getByLabelText(/Suche nach Einheit/));
   });
 
-  it("bietet den Funkplan als Ausgabe an", async () => {
+  it("bietet den Funkplan als Ausdruck im Menü „⋯“ an", async () => {
     attrappe.antwortet("ausgabeErzeugen", { pfad: "/share/ausgaben/funkplan_1.html", bytes: 10 });
     await geladen();
-    fireEvent.click(screen.getByRole("button", { name: "Funkplan als HTML" }));
+    expect(screen.queryByRole("button", { name: "Funkplan als HTML" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte im Funkplan" }));
+    expect(screen.getByRole("menuitem", { name: "Funkplan als PDF" })).toBeDefined();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Funkplan als HTML" }));
     await waitFor(() => {
       expect(attrappe.rufeDerArt("ausgabeErzeugen")[0]).toMatchObject({ ausgabe: "funkplan", format: "html" });
     });
+    await waitFor(() => {
+      expect(screen.getByText(/funkplan_1\.html/)).toBeDefined();
+    });
+  });
+
+  it("trägt „⋯“ nur an der gewählten Rufgruppe und öffnet dieselben Schritte per Rechtsklick", async () => {
+    await geladen();
+    const liste = screen.getByRole("table", { name: "Liste der Rufgruppen" });
+    expect(within(liste).getAllByRole("button", { name: /^Weitere Schritte für/ })).toHaveLength(1);
+    expect(within(liste).getByRole("button", { name: "Weitere Schritte für THW_OL_FUE" })).toBeDefined();
+    fireEvent.contextMenu(within(liste).getByText("THW_OL_EA2"));
+    const menue = screen.getByRole("menu", { name: "Rufgruppe THW_OL_EA2" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual(["Bearbeiten …Strg+E", "Auflösen …"]);
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Bearbeiten …" }));
+    expect(screen.getByRole("form", { name: "Rufgruppe „THW_OL_EA2“ bearbeiten" })).toBeDefined();
   });
 
   it("zeigt im beendeten Einsatz alles, schreibt aber nichts", async () => {
