@@ -24,10 +24,10 @@ import { Maske } from "./Maske.js";
 import type { Stammdateneingabe } from "./stammdatenformular.js";
 import { Stammdatenfelder } from "./Stammdatenmaske.js";
 
-/** Heute als `JJJJ-MM-TT` in der Ortszeit des Arbeitsplatzes. */
+/** Heute als `TT.MM.JJJJ` in der Ortszeit des Arbeitsplatzes. */
 export function heute(jetzt: Date = new Date()): string {
   const zwei = (n: number): string => String(n).padStart(2, "0");
-  return `${String(jetzt.getFullYear())}-${zwei(jetzt.getMonth() + 1)}-${zwei(jetzt.getDate())}`;
+  return `${zwei(jetzt.getDate())}.${zwei(jetzt.getMonth() + 1)}.${String(jetzt.getFullYear())}`;
 }
 
 function leereStammdaten(): Stammdateneingabe {
@@ -69,8 +69,8 @@ export function Einsatzanlage({ aufSchliessen }: { readonly aufSchliessen: () =>
         nachName={
           <>
             <label>
-              Datum
-              <input type="date" value={datum} aria-describedby="erklaerung-datum" onChange={(e) => setzeDatum(e.target.value)} />
+              Datum (TT.MM.JJJJ)
+              <input type="text" inputMode="numeric" value={datum} aria-describedby="erklaerung-datum" onChange={(e) => setzeDatum(e.target.value)} />
             </label>
             <p id="erklaerung-datum" className="hinweistext feldsatz">
               Steht mit dem Namen im Namen der Einsatzdatei auf dem Share.

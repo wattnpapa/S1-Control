@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Auswahl } from "./Einsatzauswahl.js";
+import { datumAusEingabe } from "./einsatzanlage.js";
 import { Einsatzliste, ordneEinsatzliste, zeitText } from "./Einsatzliste.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
@@ -103,10 +104,10 @@ describe("Neuer Einsatz", () => {
 
   it("öffnet eine Maske mit Name, Datum und den Stammdaten; ohne Name und FüSt sagt sie, was fehlt", async () => {
     const m = await maske();
-    for (const feld of ["Einsatzname / Bezeichnung", "Datum", "Name der Führungsstelle (FüSt)", "Übergeordnete Führungsstelle", "Einsatzort", "Einsatzart", "Schichtmodell"]) {
+    for (const feld of ["Einsatzname / Bezeichnung", "Datum (TT.MM.JJJJ)", "Name der Führungsstelle (FüSt)", "Übergeordnete Führungsstelle", "Einsatzort", "Einsatzart", "Schichtmodell"]) {
       expect(within(m).getByLabelText(feld)).toBeDefined();
     }
-    expect((within(m).getByLabelText("Datum") as HTMLInputElement).value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect((within(m).getByLabelText("Datum (TT.MM.JJJJ)") as HTMLInputElement).value).toMatch(/^\d{2}\.\d{2}\.\d{4}$/);
     expect((within(m).getByRole("button", { name: "Einsatz anlegen" }) as HTMLButtonElement).disabled).toBe(true);
     expect(within(m).getByTestId("bereitgrund").textContent).toBe("Der Einsatzname darf nicht leer sein.");
     await userEvent.type(within(m).getByLabelText("Einsatzname / Bezeichnung"), "Übung Weser");
@@ -118,8 +119,8 @@ describe("Neuer Einsatz", () => {
     attrappe.antwortet("bedienen", { art: "geschrieben", ereignisId: "a-0000000001" });
     const m = await maske();
     await userEvent.type(within(m).getByLabelText("Einsatzname / Bezeichnung"), "Übung Weser");
-    await userEvent.clear(within(m).getByLabelText("Datum"));
-    await userEvent.type(within(m).getByLabelText("Datum"), "2026-11-03");
+    await userEvent.clear(within(m).getByLabelText("Datum (TT.MM.JJJJ)"));
+    await userEvent.type(within(m).getByLabelText("Datum (TT.MM.JJJJ)"), "3.11.2026");
     await userEvent.type(within(m).getByLabelText("Name der Führungsstelle (FüSt)"), "FüSt OV Oldenburg");
     await userEvent.type(within(m).getByLabelText("Übergeordnete Führungsstelle"), "FüSt LV NI");
     await userEvent.type(within(m).getByLabelText("Einsatzort"), "Brake");
@@ -140,6 +141,19 @@ describe("Neuer Einsatz", () => {
       { typ: "EinsatzStammdatenGeaendert", nutzlast: { einsatzId: "2026-11-03_uebung", feld: "ort" }, vorher: null, neu: "Brake" },
     ]);
     expect(useLaden.getState().akteId).toBe("akte-9");
+  });
+
+  it("liest das Datum deutsch und weist einen Tag ab, den es nicht gibt", async () => {
+    expect(datumAusEingabe("03.11.2026")).toBe("2026-11-03");
+    expect(datumAusEingabe(" 3.1.2027 ")).toBe("2027-01-03");
+    expect(datumAusEingabe("31.02.2026")).toBeUndefined();
+    expect(datumAusEingabe("2026-11-03")).toBeUndefined();
+    const m = await maske();
+    await userEvent.type(within(m).getByLabelText("Einsatzname / Bezeichnung"), "Sturm");
+    await userEvent.type(within(m).getByLabelText("Name der Führungsstelle (FüSt)"), "FüSt");
+    await userEvent.clear(within(m).getByLabelText("Datum (TT.MM.JJJJ)"));
+    await userEvent.type(within(m).getByLabelText("Datum (TT.MM.JJJJ)"), "11/03/2026");
+    expect(within(m).getByTestId("bereitgrund").textContent).toBe("Das Datum ist nicht lesbar (TT.MM.JJJJ).");
   });
 
   it("schreibt ohne übergeordnete FüSt und Ort nichts nach", async () => {

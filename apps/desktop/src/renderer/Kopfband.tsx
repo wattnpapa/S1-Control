@@ -113,7 +113,9 @@ export function Kopfband({
         </span>
         <Einsatztitel lagebild={lagebild} />
 
-        <Staerkekennzahl lagebild={lagebild} />
+        {/* Ohne Einsatz gibt es keine Stärke: Die Einsatzauswahl trägt nur
+            Wortbild, Zeit und „⋯" (Entwurf „Entlastung", 6g). */}
+        {(lagebild !== undefined || zurueckZurAuswahl !== undefined) && <Staerkekennzahl lagebild={lagebild} />}
         <span className="kennzahl">
           <span className="label">Zeit</span>
           <span className="wert">{taktischeZeit(jetzt)}</span>

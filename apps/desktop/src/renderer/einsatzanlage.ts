@@ -18,7 +18,7 @@ import { useLaden } from "./laden.js";
 import { eingabeFehler, stammdatenEntwuerfe, type Stammdateneingabe } from "./stammdatenformular.js";
 
 export interface Einsatzanlage {
-  /** Das Datum für den Ordner der Einsatzdatei, `JJJJ-MM-TT`. */
+  /** Das Datum für den Ordner der Einsatzdatei, wie getippt: `TT.MM.JJJJ`. */
   readonly datum: string;
   readonly stammdaten: Stammdateneingabe;
 }
@@ -26,9 +26,24 @@ export interface Einsatzanlage {
 export const TEXT_STAMMDATEN_NACHTRAGEN =
   "Der Einsatz ist angelegt, aber übergeordnete Führungsstelle oder Einsatzort sind nicht gespeichert – bitte im Blatt Führungsstelle unter Stammdaten nachtragen.";
 
+/**
+ * „03.11.2026" als `2026-11-03` — oder `undefined`, wenn es kein Tag ist.
+ * Ein Textfeld und kein Datumsfeld des Browsers: Dessen Schreibweise folgt
+ * der Sprache des Betriebssystems, und „11/03/2026" liest ein deutscher
+ * Helfer als 11. März.
+ */
+export function datumAusEingabe(eingabe: string): string | undefined {
+  const teile = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/u.exec(eingabe.trim());
+  if (teile === null) return undefined;
+  const [tag, monat, jahr] = [Number(teile[1]), Number(teile[2]), Number(teile[3])];
+  const datum = new Date(Date.UTC(jahr, monat - 1, tag));
+  if (datum.getUTCDate() !== tag || datum.getUTCMonth() !== monat - 1) return undefined;
+  return datum.toISOString().slice(0, 10);
+}
+
 /** Was gegen die Anlage spricht, als Satz — sonst `undefined`. */
 export function anlagefehler(anlage: Einsatzanlage): string | undefined {
-  if (!/^\d{4}-\d{2}-\d{2}$/u.test(anlage.datum)) return "Das Datum fehlt.";
+  if (datumAusEingabe(anlage.datum) === undefined) return "Das Datum ist nicht lesbar (TT.MM.JJJJ).";
   return eingabeFehler(anlage.stammdaten);
 }
 
@@ -36,7 +51,8 @@ export function anlagefehler(anlage: Einsatzanlage): string | undefined {
 export async function legeEinsatzMitStammdatenAn(anlage: Einsatzanlage): Promise<boolean> {
   const eingabe = anlage.stammdaten;
   const beginn = zeitpunktAusEingabe(eingabe.beginn.trim());
-  if (beginn === undefined || anlagefehler(anlage) !== undefined) return false;
+  const datum = datumAusEingabe(anlage.datum);
+  if (beginn === undefined || datum === undefined || anlagefehler(anlage) !== undefined) return false;
   const angelegt: Einsatzstammdaten = {
     name: eingabe.name.trim(),
     art: eingabe.art,
@@ -44,7 +60,7 @@ export async function legeEinsatzMitStammdatenAn(anlage: Einsatzanlage): Promise
     beginn,
     schichtmodell: eingabe.schichtmodell,
   };
-  const einsatzId = await useLaden.getState().legeEinsatzAn(angelegt.name, anlage.datum, {
+  const einsatzId = await useLaden.getState().legeEinsatzAn(angelegt.name, datum, {
     einsatzArt: angelegt.art,
     fuestName: angelegt.fuestName,
     beginn,

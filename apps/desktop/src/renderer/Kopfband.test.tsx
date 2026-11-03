@@ -78,6 +78,13 @@ const LAGEBILD: Lagebild = {
 };
 
 describe("Kopfband", () => {
+  it("lässt die Stärke ohne Einsatz weg, die Zeit bleibt", () => {
+    render(<Kopfband lagebild={undefined} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />);
+    expect(screen.queryByText("Ist-Stärke")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Regel" })).toBeNull();
+    expect(screen.getByText("101443SEP26")).toBeDefined();
+  });
+
   it("zeigt Stärke und taktische Zeit in der vereinbarten Schreibweise", () => {
     render(
       <Kopfband lagebild={LAGEBILD} jetzt={JETZT} theme="standard" waehleTheme={() => undefined} aufHilfe={() => undefined} />,
