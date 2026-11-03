@@ -36,7 +36,6 @@ import { abschnittszeichen, langform } from "./harke.js";
 import { Zeichen } from "./zeichen.js";
 import { Zeichenwahl } from "./Zeichenwahl.js";
 import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 
 /** Welche Maske gerade offen ist — höchstens eine. */
 type Maskenart =
@@ -112,7 +111,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
   return (
     <section aria-label="Abschnitte" className="baum">
       <div className="baumkopf">
-        <h2>Abschnitte <Hilfemarke kennung="abschnitte" /></h2>
+        <h2>Abschnitte</h2>
         <button
           type="button"
           onClick={() => {

@@ -22,7 +22,6 @@ import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { useFeldversuch } from "./Feldschreiben.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import {
@@ -64,7 +63,7 @@ export function Eingangskorb(): React.JSX.Element {
     <section aria-label="Eingangskorb" className="eingangskorb">
       <h2>
         Eingangskorb
-        {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`} <Hilfemarke kennung="eingangskorb" />
+        {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`}
       </h2>
 
       <NurLesenHinweis />

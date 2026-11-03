@@ -20,7 +20,6 @@ import { useEffect, useState } from "react";
 
 import { useLaden } from "./laden.js";
 import { useFeldversuch } from "./Feldschreiben.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { KOSTENFELDER, kostenParameter, type Kostenfeld } from "../kontrakt/bedienschritte.js";
@@ -69,7 +68,7 @@ export function Kosten(): React.JSX.Element {
 
   return (
     <section aria-label="Kosten" className="kosten">
-      <h2>Kosten <Hilfemarke kennung="kosten" /></h2>
+      <h2>Kosten</h2>
 
       <NurLesenHinweis />
 

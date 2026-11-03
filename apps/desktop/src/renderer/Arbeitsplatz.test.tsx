@@ -184,6 +184,19 @@ describe("Der Arbeitsplatz", () => {
     expect(screen.getByRole("menuitem", { name: "Stärke-Monitor öffnen …" })).toBeDefined();
   });
 
+  it("zeigt unter dem Kopfband die Einstiegszeile des aufgeschlagenen Blatts", async () => {
+    localStorage.clear();
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(sichtbar("Abschnitte")).toBe(true);
+    });
+    expect(screen.getByRole("complementary", { name: "Einstieg: Lage" })).toBeDefined();
+    await userEvent.click(screen.getByRole("tab", { name: "Kosten" }));
+    expect(screen.getByRole("complementary", { name: "Einstieg: Kosten" })).toBeDefined();
+    // Keine Hilfemarke „?“ mehr an den Karten (3.6).
+    expect(screen.queryByRole("button", { name: /^Hilfe zu / })).toBeNull();
+  });
+
   it("schlägt die Diagnose über das Fenstermenü auf, nicht über einen Reiter", async () => {
     render(<Arbeitsplatz />);
     await waitFor(() => {

@@ -19,7 +19,6 @@ import { useEffect, useState } from "react";
 import { kennzahlen, type Baumknoten } from "@s1/domaene";
 
 import { Ausgabedatei } from "./Ausgabedatei.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
 import { Zeichen } from "./zeichen.js";
 import { harkenbild, knotenbreite, kurzform, langform, stummel, zeichenkennung } from "./harke.js";
@@ -56,9 +55,7 @@ export function Fuehrungsorganisation(): React.JSX.Element {
   return (
     <section aria-label="Führungsorganisation" className="fueorg">
       <div className="fueorgkopf">
-        <h2>
-          Führungsorganisation <Hilfemarke kennung="abschnitte" />
-        </h2>
+        <h2>Führungsorganisation</h2>
         <span className="hinweistext">
           Gezeichnet aus dem Abschnittsbaum. Angelegt, umgehängt und aufgelöst wird dort.
         </span>

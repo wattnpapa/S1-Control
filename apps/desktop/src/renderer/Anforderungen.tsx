@@ -22,7 +22,6 @@ import { useGrundabfrage } from "./Grundabfrage.js";
 import { zeitpunktText, type Anforderungszeile, type Anforderungszustand } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { AnforderungZuEinheit, type Eintreffart } from "./AnforderungZuEinheit.js";
 import { AnforderungZusage } from "./AnforderungZusage.js";
 import { Anforderungsneu } from "./Anforderungsneu.js";
@@ -56,7 +55,7 @@ export function Anforderungen(): React.JSX.Element {
 
   return (
     <section aria-label="Anforderungen" className="anforderungen">
-      <h2>Anforderungen <Hilfemarke kennung="anforderungen" /></h2>
+      <h2>Anforderungen</h2>
 
       <NurLesenHinweis />
 

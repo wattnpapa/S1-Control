@@ -23,7 +23,6 @@ import { useEffect, useRef, useState } from "react";
 import type { Tagebuchzeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { TagebuchEintrag } from "./TagebuchEintrag.js";
 
 export interface TagebuchEigenschaften {
@@ -73,7 +72,7 @@ export function Tagebuch({ einheitId, abschnittId }: TagebuchEigenschaften): Rea
   return (
     <section aria-label="Einsatztagebuch" className="tagebuch">
       <div className="tagebuchkopf">
-        <h2>Einsatztagebuch <Hilfemarke kennung="tagebuch" /></h2>
+        <h2>Einsatztagebuch</h2>
         <label className="suchfeld">
           Suche
           <input

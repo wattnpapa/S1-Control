@@ -5,7 +5,6 @@
  * der Grund steht im Titel jedes Knopfes und als Hinweis über der Tabelle.
  */
 
-import { Hilfemarke } from "./Hilfemarke.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
@@ -46,7 +45,7 @@ export function Einheitenkopf({
   return (
     <div className="einheitenkopf">
       <h2>
-        Einheiten ({String(gesamtzahl)}) <Hilfemarke kennung="einheiten" />
+        Einheiten ({String(gesamtzahl)})
       </h2>
       <button
         type="button"

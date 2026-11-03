@@ -25,7 +25,6 @@ import { Block, Planzelle } from "./Fuehrungsstellenzeilen.js";
 import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { Stammdatenblock } from "./Stammdatenmaske.js";
 import { dienstpostenAnlegen } from "../kontrakt/bedienschritte.js";
 
@@ -105,7 +104,7 @@ export function Fuehrungsstelle(): React.JSX.Element {
 
   return (
     <section aria-label="Führungsstelle" className="fuehrungsstelle">
-      <h2>Führungsstelle <Hilfemarke kennung="fuehrungsstelle" /></h2>
+      <h2>Führungsstelle</h2>
 
       {/* Oben die Stammdaten: Das Blatt „Stammdaten“ der Excel trägt den
           Namen, unter dem diese Führungsstelle auf jedem Ausdruck steht. */}

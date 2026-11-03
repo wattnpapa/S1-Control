@@ -14,7 +14,6 @@ import { useState } from "react";
 
 import { projektion } from "@s1/domaene";
 
-import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
 import { useVersorgungsansicht } from "./useVersorgungsansicht.js";
 import { Werkzeuge } from "./Versorgungswerkzeuge.js";
@@ -80,9 +79,7 @@ export function Versorgung(): React.JSX.Element {
 
   return (
     <section aria-label="Versorgung" className="versorgung">
-      <h2>
-        Versorgung <Hilfemarke kennung="versorgung" />
-      </h2>
+      <h2>Versorgung</h2>
       <Kpiband zahlen={lagebild?.versorgung} />
 
       <div className="werkzeugzeile">

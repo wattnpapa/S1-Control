@@ -70,6 +70,10 @@
         --err-linie: #dda9a9;
         --err-text: #8f1717;
         --neutral-bg: #eceef4;
+        /* Einstiegszeile je Blatt: der Grund des Übungsstreifens aus
+           HANDOFF-OBERFLAECHE.md (übung-streifen), ohne Streifen. */
+        --einstieg-bg: #fbf5e2;
+        --einstieg-linie: #d8c47a;
         --kopfband-bg: var(--navy-900);
         --kopfband-text: #ffffff;
         --kopfband-leise: var(--navy-300);
@@ -132,6 +136,8 @@
         --err-linie: #6d3434;
         --err-text: #ffa8a8;
         --neutral-bg: #232746;
+        --einstieg-bg: #2a2614;
+        --einstieg-linie: #6d5a24;
         --kartenkante-farbe: #6b74a8;
         --knopf-rahmen: #6b74a8;
         --knopf-fuellung: #3b4383;
@@ -145,6 +151,7 @@
          Handschuhe und fuer Sonne auf dem Bildschirm. */
       :root[data-theme="feld"] {
         --grund: #e9ebf0;
+        --einstieg-linie: #000000;
         --rahmen: #000000;
         --rahmen-weich: #000000;
         --text: #000000;
@@ -185,6 +192,8 @@
         --err-linie: #7a3535;
         --err-text: #ffa8a8;
         --neutral-bg: #191509;
+        --einstieg-bg: #1c1809;
+        --einstieg-linie: #5a4c1e;
         --kopfband-bg: #14120a;
         --kopfband-text: #f0e5b0;
         --kopfband-leise: #c8a232;
@@ -874,6 +883,32 @@
       .hinweise ul {
         margin: 0;
         padding-left: 1.2rem;
+      }
+
+      /* Die Einstiegszeile je Blatt (Einstiegszeile.tsx): unter dem Kopfband,
+         bis „Verstanden" (Entwurf „Entlastung", 3.6). */
+      .einstiegszeile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+        padding: 8px 14px;
+        background: var(--einstieg-bg);
+        border-bottom: var(--rahmenbreite) solid var(--einstieg-linie);
+        color: var(--text);
+        font-size: 0.96em;
+        line-height: 1.4;
+      }
+      .einstiegszeile p {
+        flex: 1 1 24rem;
+        margin: 0;
+      }
+      .einstiegszeile .nebenwert {
+        color: var(--text-leise);
+      }
+      .einstiegszeile button {
+        flex: none;
+        font-weight: 700;
       }
 
       /* ---- Das Lagebild (M3) ------------------------------------------- */

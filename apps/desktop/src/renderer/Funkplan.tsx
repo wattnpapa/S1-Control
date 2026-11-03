@@ -33,7 +33,6 @@ import { FunkUndErreichbarkeit } from "./FunkUndErreichbarkeit.js";
 import { Funkprobenliste } from "./Funkprobenliste.js";
 import { Werkzeugzeile } from "./Funkwerkzeuge.js";
 import { Funkzuordnung, type Funksicht } from "./Funkzuordnung.js";
-import { Hilfemarke } from "./Hilfemarke.js";
 import { useLaden } from "./laden.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { RufgruppeMaske, type Anlagezeile } from "./RufgruppeMaske.js";
@@ -222,9 +221,7 @@ export function Funkplan(): React.JSX.Element {
 
   return (
     <section aria-label="Funkplan" className="funkplan">
-      <h2>
-        Funkplan <Hilfemarke kennung="funkplan" />
-      </h2>
+      <h2>Funkplan</h2>
       <NurLesenHinweis />
       <Funkband zahlen={plan?.zahlen} schwelleMinuten={plan?.schwelleMinuten} />
       <Werkzeugzeile

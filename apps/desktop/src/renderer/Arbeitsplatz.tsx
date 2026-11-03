@@ -23,6 +23,7 @@ import { Kosten } from "./Kosten.js";
 import { Programmversorgung } from "./Programmversorgung.js";
 import { BLAETTER, gehoertZurLage, type Blatt } from "./blaetter.js";
 import { Lage } from "./Lage.js";
+import { Einstiegszeile } from "./Einstiegszeile.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
 import { useLaden } from "./laden.js";
@@ -153,6 +154,10 @@ export function Arbeitsplatz(): React.JSX.Element {
       />
 
       <Verbindungsbanner />
+
+      {/* Ein Satz je Blatt beim ersten Aufschlagen, statt einer Hilfemarke
+          an jeder Karte (Entwurf „Entlastung", 3.6). */}
+      {laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf" && <Einstiegszeile blatt={blatt} />}
 
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">
