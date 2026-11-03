@@ -144,6 +144,8 @@ describe("Die Einheitentabelle", () => {
       "Kosten",
       "Funk",
       "Gliederung nach Bereich",
+      // Ohne gewählten Abschnitt ist die Gliederung vorgegeben an, also steht dies da.
+      "Leere Bereiche ausblenden",
       "Stillgelegte zeigen",
     ]);
     fireEvent.click(within(menue).getByRole("menuitemcheckbox", { name: "Stillgelegte zeigen" }));
@@ -610,6 +612,32 @@ describe("Die Einheitentabelle", () => {
       expect(screen.getByLabelText("„Fachgruppe N“ kopieren")).toBeDefined();
       expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("Fachgruppe N (2)");
     });
+  });
+
+  it("zeigt den Hinweis zur Zelle, bis an diesem Gerät die erste Zelle geschrieben ist", async () => {
+    localStorage.removeItem("s1.zellehinweis");
+    const { unmount } = render(<Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} />);
+    await screen.findByText("Bergungsgruppe 1");
+    expect(screen.getByText(/Doppelklick bearbeitet die Zelle/)).toBeDefined();
+    // Ein unveränderter Wert schreibt nichts und zählt nicht.
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    fireEvent.keyDown(screen.getByLabelText("Bezeichnung"), { key: "Enter" });
+    expect(screen.getByText(/Doppelklick bearbeitet die Zelle/)).toBeDefined();
+
+    fireEvent.doubleClick(screen.getByText("Bergungsgruppe 1"));
+    fireEvent.change(screen.getByLabelText("Bezeichnung"), { target: { value: "Bergungsgruppe Nord" } });
+    fireEvent.keyDown(screen.getByLabelText("Bezeichnung"), { key: "Enter" });
+    await waitFor(() => {
+      expect(screen.queryByText(/Doppelklick bearbeitet die Zelle/)).toBeNull();
+    });
+    expect(localStorage.getItem("s1.zellehinweis")).toBe("1");
+    // Die Zählung bleibt.
+    expect(screen.getByText("2 Einheiten")).toBeDefined();
+    unmount();
+    render(<Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} />);
+    await screen.findByText("Bergungsgruppe 1");
+    expect(screen.queryByText(/Doppelklick bearbeitet die Zelle/)).toBeNull();
+    localStorage.removeItem("s1.zellehinweis");
   });
 
   it("reicht die Suche als Filter an den Worker weiter", async () => {

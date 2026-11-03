@@ -124,6 +124,8 @@ describe("Statusauswahl", () => {
 
 describe("Hilfetext", () => {
   it("unterscheidet Textzellen (Wegklicken schreibt) und Auswahlen (Wegklicken verwirft)", async () => {
+    // Der Hinweis steht nur, bis an diesem Gerät die erste Zelle geschrieben ist.
+    localStorage.removeItem("s1.zellehinweis");
     zeigeTabelle();
     const text = (await screen.findByText(/Doppelklick bearbeitet die Zelle/)).textContent ?? "";
     expect(text).toMatch(/Textzelle: Enter oder Wegklicken schreibt, Esc verwirft/);

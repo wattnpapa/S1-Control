@@ -1,6 +1,10 @@
 /**
  * Die Gliederung der Einheitentabelle nach Bereichen.
  *
+ * Seit Runde 6 („Entlastung", 3.5) die Vorgabe, solange im Baum kein
+ * Abschnitt gewählt ist, und ohne Spalte Abschnitt: Die Kopfzeile sagt, wo
+ * eine Einheit steht. Die Kopfzelle reicht bis zur ersten Zahlenspalte.
+ *
  * Das Blatt „Stärke“ der Excel liest sich als Gliederung: Jeder Bereich hat
  * eine Kopfzeile mit Namen und Summe, darunter stehen seine Einheiten. Diese
  * Datei setzt die Kopfzeilen, die die Projektion liefert, zwischen die Zeilen
@@ -74,26 +78,30 @@ export function bereichsbloecke(
     });
 }
 
+/**
+ * Wie viele Spalten links vor der ersten Zahl stehen. So weit reicht die
+ * Kopfzelle eines Bereichs: Name und Zahl der Einheiten brauchen die Breite,
+ * und unter Status, Schicht oder Organisation hat eine Zwischensumme nichts
+ * zu sagen.
+ */
+export function vorlauf(spalten: readonly Spalte[]): number {
+  const erste = spalten.findIndex((spalte) => spalte.schluessel === "staerke" || spalte.schluessel === "gesamt");
+  return Math.max(1, erste === -1 ? spalten.length : erste);
+}
+
 interface KopfzellenEigenschaften {
   readonly spalten: readonly Spalte[];
   readonly staerke: Staerke;
-  readonly einheiten: number;
 }
 
-/** Die Zellen einer Kopfzeile unter den Spalten: Zahl der Einheiten, Stärke, Gesamt. */
-function Kopfzellen({ spalten, staerke, einheiten }: KopfzellenEigenschaften): React.JSX.Element {
+/** Die Zahlenzellen einer Kopfzeile rechts der Kopfzelle: Stärke und Gesamt. */
+function Kopfzellen({ spalten, staerke }: KopfzellenEigenschaften): React.JSX.Element {
   return (
     <>
-      {spalten.map((spalte) => {
+      {spalten.slice(vorlauf(spalten)).map((spalte) => {
         const zahl = spalte.schluessel === "staerke" || spalte.schluessel === "gesamt";
         const inhalt =
-          spalte.schluessel === "staerke"
-            ? staerkeText(staerke)
-            : spalte.schluessel === "gesamt"
-              ? String(summe(staerke))
-              : spalte.schluessel === "bezeichnung"
-                ? `${String(einheiten)} Einh.`
-                : "";
+          spalte.schluessel === "staerke" ? staerkeText(staerke) : spalte.schluessel === "gesamt" ? String(summe(staerke)) : "";
         return (
           <td key={spalte.schluessel} className={zahl ? "zahl" : undefined}>
             {inhalt}
@@ -125,13 +133,14 @@ function Bereichskopfzeile({ bereich, spalten }: KopfzeileEigenschaften): React.
     .join(" · ");
   return (
     <tr className={bereich.zaehlt ? "bereichskopf" : "bereichskopf zaehlt-nicht"}>
-      <th scope="rowgroup" style={einzug(bereich.tiefe)} title={titel}>
+      <th scope="rowgroup" colSpan={vorlauf(spalten)} style={einzug(bereich.tiefe)} title={titel}>
         {bereich.name}
         {mitUnterabschnitten && <span className="nebenwert"> mit Unterabschnitten</span>}
+        <span className="nebenwert"> · {String(bereich.einheitenSumme)} Einh.</span>
         {!bereich.zaehlt && <span className="nebenwert"> · zählt nicht</span>}
         {bereich.erwartetSumme > 0 && <span className="nebenwert"> · {kennzahlen.erwartetKurz(bereich.erwartetSumme)}</span>}
       </th>
-      <Kopfzellen spalten={spalten} staerke={bereich.summenStaerke} einheiten={bereich.einheitenSumme} />
+      <Kopfzellen spalten={spalten} staerke={bereich.summenStaerke} />
     </tr>
   );
 }
@@ -157,8 +166,9 @@ function Einsatzkopf({ gliederung, spalten, gefiltert }: EinsatzkopfEigenschafte
   return (
     <tbody aria-label="Ist-Stärke gesamt">
       <tr className="bereichskopf einsatzkopf">
-        <th scope="rowgroup" title={titel}>
+        <th scope="rowgroup" colSpan={vorlauf(spalten)} title={titel}>
           {gefiltert ? "Auswahl: Ist-Stärke" : "Ist-Stärke gesamt"}
+          <span className="nebenwert">{` · ${String(einsatz.einheiten)} Einh.`}</span>
           {erwartet > 0 && <span className="nebenwert">{` · ${kennzahlen.erwartetText(erwartet)}`}</span>}
           <span className="nebenwert">
             {` · Alle erfassten Einheiten ${String(einsatz.alleEinheiten)} Einh. ${staerkeText(einsatz.alle)}`}
@@ -169,7 +179,7 @@ function Einsatzkopf({ gliederung, spalten, gefiltert }: EinsatzkopfEigenschafte
             </span>
           )}
         </th>
-        <Kopfzellen spalten={spalten} staerke={einsatz.staerke} einheiten={einsatz.einheiten} />
+        <Kopfzellen spalten={spalten} staerke={einsatz.staerke} />
       </tr>
     </tbody>
   );

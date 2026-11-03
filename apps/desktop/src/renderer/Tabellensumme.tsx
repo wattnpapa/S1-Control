@@ -59,6 +59,8 @@ interface Eigenschaften {
   readonly spalten: readonly Spalte[];
   /** Zeigt die Tabelle nur einen Ausschnitt des Einsatzes? */
   readonly ausschnitt: boolean;
+  /** Steht vor den Spalten die Spalte Abschnitt? Nur in der flachen Gesamtliste. */
+  readonly mitAbschnitt?: boolean;
 }
 
 /**
@@ -67,10 +69,10 @@ interface Eigenschaften {
  * waagerechten Scrollen beisammen im Bild — auf dem Handy wie bei breiter
  * Tabelle — und der volle Name wird nie abgeschnitten.
  */
-function Summenzeile({ werte, spalten }: { werte: Zeilenwerte; spalten: readonly Spalte[] }): React.JSX.Element {
+function Summenzeile({ werte, breite }: { werte: Zeilenwerte; breite: number }): React.JSX.Element {
   return (
     <tr className="summenzeile">
-      <th scope="row" colSpan={spalten.length + 1} title={werte.hinweis}>
+      <th scope="row" colSpan={breite} title={werte.hinweis}>
         <div className="summeninhalt">
           <span className="summentitel">{werte.titel}</span>
           <span className="summenstaerke">
@@ -83,18 +85,19 @@ function Summenzeile({ werte, spalten }: { werte: Zeilenwerte; spalten: readonly
   );
 }
 
-export function Tabellensumme({ zeilen, spalten, ausschnitt }: Eigenschaften): React.JSX.Element {
+export function Tabellensumme({ zeilen, spalten, ausschnitt, mitAbschnitt = true }: Eigenschaften): React.JSX.Element {
   const summen = tabellensummen(zeilen);
+  const breite = spalten.length + (mitAbschnitt ? 1 : 0);
   const zusatz = ausschnitt ? " (Ausschnitt)" : "";
   return (
     <tfoot>
       <Summenzeile
-        spalten={spalten}
+        breite={breite}
         werte={{ titel: `Ist-Stärke${zusatz}`, staerke: summen.ist, hinweis: kennzahlen.ZAEHLREGEL_TEXT }}
       />
       {koepfe(summen.erwartet) > 0 && (
         <Summenzeile
-          spalten={spalten}
+          breite={breite}
           werte={{
             titel: `Erwartet${zusatz}`,
             staerke: summen.erwartet,
@@ -103,7 +106,7 @@ export function Tabellensumme({ zeilen, spalten, ausschnitt }: Eigenschaften): R
         />
       )}
       <Summenzeile
-        spalten={spalten}
+        breite={breite}
         werte={{
           titel: `Alle erfassten Einheiten${zusatz}`,
           staerke: summen.alle,
@@ -112,7 +115,7 @@ export function Tabellensumme({ zeilen, spalten, ausschnitt }: Eigenschaften): R
       />
       {koepfe(summen.beendet) > 0 && (
         <Summenzeile
-          spalten={spalten}
+          breite={breite}
           werte={{
             titel: `Beendet/Rückmarsch${zusatz}`,
             staerke: summen.beendet,

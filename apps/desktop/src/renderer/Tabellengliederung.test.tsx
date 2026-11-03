@@ -135,14 +135,22 @@ async function zeigeTabelle(): Promise<string[]> {
 }
 
 describe("Die Gliederung der Einheitentabelle", () => {
-  it("bestellt die Gliederung beim Umschalten im Menü „Spalten“ und blendet leere Bereiche auf Wunsch aus", async () => {
+  it("bestellt ohne gewählten Abschnitt die Gliederung und schaltet sie im Menü „Spalten“ um", async () => {
     await zeigeTabelle();
-    expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBeUndefined();
+    // Vorgabe ohne Abschnitt: gegliedert wie die Stärketabelle auf Papier.
+    expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBe(true);
     fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    const schalter = screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" });
+    expect(schalter.getAttribute("aria-checked")).toBe("true");
+
+    fireEvent.click(schalter);
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBeUndefined();
+    });
     // „Leere Bereiche ausblenden“ steht nur mit Gliederung da.
     expect(screen.queryByRole("menuitemcheckbox", { name: "Leere Bereiche ausblenden" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
+    fireEvent.click(schalter);
     await waitFor(() => {
       expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBe(true);
     });
@@ -156,9 +164,6 @@ describe("Die Gliederung der Einheitentabelle", () => {
 
   it("kombiniert Gliederung und Statusfilter in einem Ruf", async () => {
     await zeigeTabelle();
-    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
-    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
-    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
     fireEvent.click(screen.getByRole("button", { name: /^Einsatz/ }));
     await waitFor(() => {
       const ruf = attrappe.letzterRuf("tabelleAnfordern");
@@ -171,17 +176,19 @@ describe("Die Gliederung der Einheitentabelle", () => {
     await zeigeTabelle();
     const koepfe = screen.getAllByRole("rowheader").filter((kopf) => kopf.getAttribute("scope") === "rowgroup");
     expect(koepfe.map((kopf) => kopf.textContent)).toEqual([
-      "Ist-Stärke gesamt · +9 erwartet (angefordert/Anmarsch/Eingang) · Alle erfassten Einheiten 3 Einh. 0/3/24",
-      "Angefordert · zählt nicht · +9 erwartet",
-      "EA Deich Nord mit Unterabschnitten",
-      "UA Deichfuß",
-      "EA Reserve",
+      "Ist-Stärke gesamt · 2 Einh. · +9 erwartet (angefordert/Anmarsch/Eingang) · Alle erfassten Einheiten 3 Einh. 0/3/24",
+      "Angefordert · 1 Einh. · zählt nicht · +9 erwartet",
+      "EA Deich Nord mit Unterabschnitten · 2 Einh.",
+      "UA Deichfuß · 1 Einh.",
+      "EA Reserve · 0 Einh.",
     ]);
+    // Die Kopfzelle reicht bis zur ersten Zahlenspalte.
+    const spaltenkoepfe = screen.getAllByRole("columnheader").map((kopf) => kopf.textContent);
+    expect(koepfe[2]?.getAttribute("colspan")).toBe(String(spaltenkoepfe.indexOf("Fü / UFü / He")));
 
     // Jeder Bereich ist eine eigene Zeilengruppe, die Einheiten stehen darin.
     const nord = screen.getByRole("rowgroup", { name: "EA Deich Nord" });
     expect(within(nord).getByText("Bergungsgruppe 1")).toBeDefined();
-    expect(within(nord).getByText("2 Einh.")).toBeDefined();
     expect(within(nord).getByText("0/2/16")).toBeDefined();
     expect(within(nord).getByText("18")).toBeDefined();
     // Der leere Bereich steht als Kopfzeile ohne Einheiten da.
@@ -199,16 +206,18 @@ describe("Die Gliederung der Einheitentabelle", () => {
     await zeigeTabelle();
     const ua = within(screen.getByRole("rowgroup", { name: "UA Deichfuß" }));
     const kopf = ua.getAllByRole("rowheader")[0] as HTMLElement;
-    const einheit = ua.getAllByRole("rowheader")[1] as HTMLElement;
+    // Ohne Spalte Abschnitt rückt die Bezeichnung ein.
+    const einheit = ua.getByText("Fachgruppe W").closest("td") as HTMLElement;
     expect(kopf.style.paddingLeft).toBe("1.7em");
     expect(einheit.style.paddingLeft).toBe("2.9em");
+    expect(einheit.className).toContain("namensspalte");
   });
 
   it("lässt Kopfzeilen nicht markieren und nicht bearbeiten — Kürzel treffen nur Einheiten", async () => {
     const gewaehlt = await zeigeTabelle();
     const kopf = screen.getByText("UA Deichfuß");
     fireEvent.click(kopf);
-    fireEvent.doubleClick(within(screen.getByRole("rowgroup", { name: "UA Deichfuß" })).getByText("1 Einh."));
+    fireEvent.doubleClick(within(screen.getByRole("rowgroup", { name: "UA Deichfuß" })).getAllByRole("rowheader")[0] as HTMLElement);
     expect(gewaehlt).toEqual([]);
     expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
     expect(screen.queryByRole("textbox", { name: "Bezeichnung" })).toBeNull();
@@ -251,5 +260,74 @@ describe("bereichsbloecke", () => {
     const erste = [ZEILEN[0], ZEILEN[1], ZEILEN[2]] as Tabellenzeile[];
     const nichtLetzte = bereichsbloecke(GLIEDERUNG, erste, { von: 0, gesamtzahl: 10 });
     expect(nichtLetzte.map((b) => b.bereich.abschnittId)).toEqual(["ANF", "EA1", "UA1"]);
+  });
+});
+
+describe("Die Spalte Abschnitt (Entlastung, Leitsatz 4)", () => {
+  function flach(): void {
+    attrappe.antwortet("tabelleAnfordern", { lageZeiger: 5, zeilen: ZEILEN, gesamtzahl: 3, von: 0, jeStatus: {} });
+  }
+
+  it("fehlt in der Gliederung ohne gewählten Abschnitt", async () => {
+    await zeigeTabelle();
+    expect(screen.queryByRole("columnheader", { name: "Abschnitt" })).toBeNull();
+    expect(screen.getByRole("table").className).toBe("ohne-abschnitt");
+    // Nur Kopfzeilen tragen eine Zeilenkopfzelle, Einheiten nicht.
+    expect(screen.getAllByRole("rowheader").every((kopf) => kopf.getAttribute("scope") !== "row" || kopf.closest("tfoot") !== null)).toBe(true);
+  });
+
+  it("steht nur in der flachen Gesamtliste, wenn die Gliederung abgeschaltet ist", async () => {
+    flach();
+    await zeigeTabelle();
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
+    await waitFor(() => {
+      expect(screen.getByRole("columnheader", { name: "Abschnitt" })).toBeDefined();
+    });
+    expect(screen.getByRole("rowheader", { name: "EA1" })).toBeDefined();
+  });
+
+  it("fehlt bei gewähltem Abschnitt; dort ist die Liste flach, und die Wahl je Fall bleibt", async () => {
+    flach();
+    const { rerender } = render(<Einheitentabelle abschnittId="EA1" einheitId={undefined} aufEinheit={() => undefined} />);
+    await screen.findByText("Bergungsgruppe 1");
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.abschnittId).toBe("EA1");
+    });
+    expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBeUndefined();
+    expect(screen.queryByRole("columnheader", { name: "Abschnitt" })).toBeNull();
+
+    // Im Fall „mit Abschnitt“ gegliedert …
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBe(true);
+    });
+    // … ändert den Fall „ohne Abschnitt“ nicht: Der bleibt gegliedert, wie vorgegeben.
+    rerender(<Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} />);
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.abschnittId).toBeUndefined();
+    });
+    expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBe(true);
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBeUndefined();
+    });
+    // Zurück zum Abschnitt: dessen Wahl (gegliedert) gilt noch.
+    rerender(<Einheitentabelle abschnittId="EA1" einheitId={undefined} aufEinheit={() => undefined} />);
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")).toMatchObject({ abschnittId: "EA1", gliederung: true });
+    });
+  });
+
+  it("trägt die Sperre „wird bearbeitet“ an der Bezeichnung", async () => {
+    useLaden.setState({
+      lagebild: { peers: [{ clientId: "b", anzeigename: "Lage 2", bearbeitet: ["U2"] }] } as never,
+    });
+    await zeigeTabelle();
+    const vermerk = screen.getByText(/wird von Lage 2 bearbeitet/);
+    expect(vermerk.closest("td")?.className).toContain("namensspalte");
+    expect(vermerk.closest("td")?.textContent).toContain("Bergungsgruppe 1");
+    useLaden.setState({ lagebild: undefined });
   });
 });

@@ -46,6 +46,10 @@ export interface ZelleEigenschaften {
   /** Gibt der Aufrufer das Versprechen zurück, ist die Zelle bis zum Ergebnis gesperrt („…“). */
   readonly aufFertig: (eingabe: string) => void | Promise<void>;
   readonly aufAbbrechen: () => void;
+  /** Nur an der Bezeichnung: Einrückung nach der Tiefe des Bereichs (Gliederung). */
+  readonly einzug?: React.CSSProperties | undefined;
+  /** Nur an der Bezeichnung: „🔒 wird von … bearbeitet", wenn ein Kollege die Einheit offen hat. */
+  readonly vermerk?: string | undefined;
 }
 
 export function Zelle(eigenschaften: ZelleEigenschaften): React.JSX.Element {
@@ -94,7 +98,7 @@ function useEinmalig(aufFertig: (eingabe: string) => void | Promise<void>): {
   return { laeuft, fertig };
 }
 
-function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste }: ZelleEigenschaften): React.JSX.Element {
+function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste, einzug, vermerk }: ZelleEigenschaften): React.JSX.Element {
   const zelle = zeile.zellen[spalte.schluessel];
   if (zelle === undefined) return <td />;
   const titel = zelle.umstritten
@@ -115,6 +119,7 @@ function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste }: Ze
         .filter((klasse) => klasse !== "")
         .join(" ")}
       title={titel}
+      style={einzug}
       onDoubleClick={schreibbar && !gesperrtHier ? aufBearbeiten : undefined}
     >
       {spalte.schluessel === "status" && (zelle.text !== "" || (schreibbar && !gesperrtHier)) ? (
@@ -148,6 +153,12 @@ function Anzeigezelle({ zeile, spalte, gesperrt, aufBearbeiten, werteliste }: Ze
       )}
       <Zellmarken zeile={zeile} spalte={spalte} {...(werteliste === undefined ? {} : { werteliste })} />
       {zelle.umstritten && <span aria-label="Konflikthinweis"> ⚠</span>}
+      {vermerk !== undefined && (
+        <span className="warnung" role="status">
+          {" "}
+          {vermerk}
+        </span>
+      )}
     </td>
   );
 }

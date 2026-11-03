@@ -9,7 +9,7 @@
 import type { Spalte, Tabellenzeile } from "@s1/domaene";
 
 import type { Zustandswahl } from "../kontrakt/index.js";
-import { Zelle } from "./Einheitenzelle.js";
+import { Zelle, type ZelleEigenschaften } from "./Einheitenzelle.js";
 import { einzug } from "./Tabellengliederung.js";
 import { sperrtext, type Fremdsperren } from "./useBearbeitungssperre.js";
 import type { Zellbearbeitung } from "./useZellbearbeitung.js";
@@ -19,6 +19,11 @@ export interface EinheitenzeileEigenschaften {
   readonly spalten: readonly Spalte[];
   /** Mit Gliederung: die Tiefe des Bereichs, unter dem die Zeile steht. */
   readonly tiefe?: number | undefined;
+  /**
+   * Die Spalte Abschnitt steht nur in der flachen Gesamtliste: Mit gewähltem
+   * Abschnitt sagt es der Baum, mit Gliederung die Kopfzeile (Leitsatz 4).
+   */
+  readonly mitAbschnitt: boolean;
   readonly zustand: { readonly markiert: boolean; readonly gewaehlt: boolean };
   readonly umgebung: Zeilenumgebung;
 }
@@ -33,9 +38,15 @@ export interface Zeilenumgebung {
   readonly aufKontext: (einheitId: string, ereignis: React.MouseEvent) => void;
 }
 
-export function Einheitenzeile({ zeile, spalten, tiefe, zustand, umgebung }: EinheitenzeileEigenschaften): React.JSX.Element {
+export function Einheitenzeile({ zeile, spalten, tiefe, mitAbschnitt, zustand, umgebung }: EinheitenzeileEigenschaften): React.JSX.Element {
   const { nurLesen, zellen, fremd, auswahlwerte } = umgebung;
   const sperre = fremd.von(zeile.einheitId);
+  // Sperre und Einrückung stehen an der Bezeichnung: Sie ist die Spalte, die
+  // in jeder Ansicht steht.
+  const anDerBezeichnung = (spalte: Spalte): Pick<ZelleEigenschaften, "einzug" | "vermerk"> =>
+    spalte.schluessel === "bezeichnung"
+      ? { einzug: tiefe === undefined ? undefined : einzug(tiefe), vermerk: sperre === undefined ? undefined : sperrtext(sperre) }
+      : {};
   return (
     <tr
       className={[zustand.markiert ? "markiert" : "", zustand.gewaehlt ? "gewaehlt" : "", zeile.entfernt ? "entfernt" : ""]
@@ -48,15 +59,11 @@ export function Einheitenzeile({ zeile, spalten, tiefe, zustand, umgebung }: Ein
         umgebung.aufKontext(zeile.einheitId, ereignis);
       }}
     >
-      <th scope="row" title={zeile.abschnittId} style={tiefe === undefined ? undefined : einzug(tiefe)}>
-        {zeile.abschnittName}
-        {sperre !== undefined && (
-          <span className="warnung" role="status">
-            {" "}
-            {sperrtext(sperre)}
-          </span>
-        )}
-      </th>
+      {mitAbschnitt && (
+        <th scope="row" title={zeile.abschnittId}>
+          {zeile.abschnittName}
+        </th>
+      )}
       {spalten.map((spalte) => {
         const hier = zellen.offen?.zeile === zeile.einheitId && zellen.offen.spalte === spalte.schluessel;
         const werteliste = auswahlwerte?.[spalte.schluessel];
@@ -68,6 +75,7 @@ export function Einheitenzeile({ zeile, spalten, tiefe, zustand, umgebung }: Ein
             gesperrt={nurLesen}
             {...(zellen.verbindungssperre === undefined ? {} : { sperre: zellen.verbindungssperre })}
             {...(werteliste === undefined ? {} : { werteliste })}
+            {...anDerBezeichnung(spalte)}
             bearbeitet={hier}
             fehler={hier ? zellen.fehler : undefined}
             aufBearbeiten={() => {

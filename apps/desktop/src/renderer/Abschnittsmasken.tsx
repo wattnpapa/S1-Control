@@ -59,19 +59,8 @@ export function Abschnittsmasken({ maske, knoten, gewaehlt, ...gemeinsam }: Absc
     );
   }
   if (maske === undefined || knoten === undefined) return null;
-  const eigenschaften = { knoten, ...gemeinsam };
-  switch (maske) {
-    case "umbenennen":
-      return <Umbenennen {...eigenschaften} />;
-    case "typ":
-      return <TypAendern {...eigenschaften} />;
-    case "zeichen":
-      return <ZeichenSetzen {...eigenschaften} />;
-    case "umhaengen":
-      return <Umhaengen {...eigenschaften} />;
-    case "aufloesen":
-      return <Aufloesen {...eigenschaften} />;
-  }
+  const Inhalt = MASKEN[maske];
+  return <Inhalt knoten={knoten} {...gemeinsam} />;
 }
 
 function Umbenennen({ knoten, aufSchliessen, bediene }: MaskenEigenschaften): React.JSX.Element {
@@ -238,6 +227,14 @@ function Aufloesen({ knoten, zeilen, aufSchliessen, bediene }: MaskenEigenschaft
     </Maske>
   );
 }
+
+const MASKEN: Readonly<Record<Exclude<Abschnittsmaske, "anlegen">, (eigenschaften: MaskenEigenschaften) => React.JSX.Element>> = {
+  umbenennen: Umbenennen,
+  typ: TypAendern,
+  zeichen: ZeichenSetzen,
+  umhaengen: Umhaengen,
+  aufloesen: Aufloesen,
+};
 
 /** Die bekannten Abschnittstypen (§5.3) ohne die beiden systemseitigen; der Bereich bleibt offen (§3.7). */
 function Typwahl({ wert, aufWahl }: { wert: string; aufWahl: (typ: string) => void }): React.JSX.Element {

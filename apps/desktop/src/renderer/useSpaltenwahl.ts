@@ -21,9 +21,13 @@ import { GLIEDERUNG_AUS, type Gliederungswahl } from "./Tabellengliederung.js";
 
 type Fall = "ohneAbschnitt" | "mitAbschnitt";
 
-/** Die Vorgabe der Gliederung je Fall. */
+/**
+ * Die Vorgabe der Gliederung je Fall: ohne gewählten Abschnitt nach Bereich
+ * gegliedert, wie die Stärketabelle auf Papier (sie ersetzt die Spalte
+ * Abschnitt), mit gewähltem Abschnitt flach (Entwurf „Entlastung", 3.5).
+ */
 export const VORGABE_GLIEDERUNG: Readonly<Record<Fall, Gliederungswahl>> = {
-  ohneAbschnitt: GLIEDERUNG_AUS,
+  ohneAbschnitt: { an: true, ohneLeere: false },
   mitAbschnitt: GLIEDERUNG_AUS,
 };
 

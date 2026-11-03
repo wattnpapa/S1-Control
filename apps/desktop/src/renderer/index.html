@@ -1637,6 +1637,15 @@
       .einheiten tbody tr.markiert td.namensspalte {
         background: var(--zeile-gewaehlt);
       }
+      /* Ohne Spalte Abschnitt (Gliederung oder gewaehlter Abschnitt) klebt
+         die Bezeichnung selbst am linken Rand. */
+      .einheiten table.ohne-abschnitt td.namensspalte,
+      .einheiten table.ohne-abschnitt thead th.namensspalte {
+        left: 0;
+      }
+      .einheiten tbody tr.gewaehlt td.namensspalte {
+        font-weight: 700;
+      }
       /* Status-Chip als Knopf: Er sieht bedienbar aus und ist es (ein Tipp
          öffnet die Auswahl); Zielgröße für Handschuhe. */
       .einheiten button.statuschip {
