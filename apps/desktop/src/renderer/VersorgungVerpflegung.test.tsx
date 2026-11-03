@@ -105,9 +105,11 @@ describe("Mahlzeitenplan und Werkzeuge", () => {
   it("setzt die Mahlzeitenregel über die Maske", async () => {
     render(<Versorgung />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Mahlzeitenregel: Vorbelegung/ })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" })).toBeDefined();
     });
-    fireEvent.click(screen.getByRole("button", { name: /Mahlzeitenregel: Vorbelegung/ }));
+    expect(screen.queryByRole("button", { name: /Mahlzeitenregel/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /Mahlzeitenregel: Vorbelegung/ }));
     const maske = screen.getByRole("form", { name: "Mahlzeitenregel des Einsatzes" });
     fireEvent.change(within(maske).getByLabelText("Ausgabezeit Nacht"), { target: { value: "0200" } });
     fireEvent.click(within(maske).getByLabelText("Nacht für Früh"));
@@ -126,9 +128,10 @@ describe("Mahlzeitenplan und Werkzeuge", () => {
   it("legt eine Ausgabestelle an", async () => {
     render(<Versorgung />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: "Ausgabestelle anlegen" })).toBeDefined();
+      expect(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" })).toBeDefined();
     });
-    fireEvent.click(screen.getByRole("button", { name: "Ausgabestelle anlegen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ausgabestelle anlegen …" }));
     const maske = screen.getByRole("form", { name: "Ausgabestelle anlegen" });
     fireEvent.change(within(maske).getByLabelText("Name"), { target: { value: "Feldküche Süd" } });
     fireEvent.change(within(maske).getByLabelText("Träger"), { target: { value: "DRK" } });

@@ -123,13 +123,4 @@ describe("Die Unteransicht „Unterbringung“", () => {
       expect(bedient()).toEqual([{ typ: "UnterbringungAufgehoben", nutzlast: { einheitId: "E1" }, vorher: "U1", neu: null, vorwertPruefen: true }]);
     });
   });
-
-  it("bietet die Belegungsliste als Ausgabe an", async () => {
-    attrappe.antwortet("ausgabeErzeugen", { pfad: "/share/ausgaben/belegung_1.html", bytes: 10 });
-    zeichne();
-    fireEvent.click(screen.getByRole("button", { name: "Belegungsliste als HTML" }));
-    await waitFor(() => {
-      expect(attrappe.rufeDerArt("ausgabeErzeugen")[0]).toMatchObject({ ausgabe: "belegung", format: "html" });
-    });
-  });
 });

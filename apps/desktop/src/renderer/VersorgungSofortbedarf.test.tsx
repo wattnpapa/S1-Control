@@ -79,14 +79,9 @@ describe("Die Unteransicht „Sofortbedarf“", () => {
     expect(bedient().map((e) => (e as { typ: string }).typ)).toEqual(["SofortbedarfWiederOffen", "SofortbedarfWiederOffen"]);
   });
 
-  it("blendet erledigte Zeilen auf Wunsch aus und bietet die Kraftstoffliste an", async () => {
-    attrappe.antwortet("ausgabeErzeugen", { pfad: "/share/ausgaben/kraftstoff_1.html", bytes: 10 });
+  it("blendet erledigte Zeilen auf Wunsch aus", () => {
     render(<VersorgungSofortbedarf liste={LISTE} />);
     fireEvent.click(screen.getByRole("button", { name: "Erledigte ausblenden" }));
     expect(screen.queryByRole("row", { name: /FGr Log-V/ })).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "Kraftstoffliste als HTML" }));
-    await waitFor(() => {
-      expect(attrappe.rufeDerArt("ausgabeErzeugen")[0]).toMatchObject({ ausgabe: "kraftstoff", format: "html" });
-    });
   });
 });

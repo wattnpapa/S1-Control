@@ -5,7 +5,8 @@
  * als Maske. Rechts die Einheiten mit Übernachtungsbedarf (K6) oder
  * Zuweisung: ohne Unterkunft oben mit der Marke in Bernstein, die Zelle
  * „Unterkunft" in der Zeile bearbeitbar. Ruhezeit nur als Ja/Nein
- * (Entscheidung 7).
+ * (Entscheidung 7). Die Belegungsliste steht seit Runde 6 im Menü „⋯" der
+ * Werkzeugzeile (`Versorgungswerkzeuge.tsx`).
  */
 
 import { useState } from "react";
@@ -15,7 +16,6 @@ import type { Bedarfszeile, Belegung, Unterbringungsbedarf, Unterkunftskarte } f
 import { useNurLesen } from "./Nurlesen.js";
 import { UnterkunftMaske } from "./UnterkunftMaske.js";
 import { Unterkunftskarten } from "./Unterkunftskarten.js";
-import { Versorgungsausgabe } from "./Versorgungsausgabe.js";
 import { Zuweisungszelle } from "./Zuweisungszelle.js";
 import { schichtText } from "./versorgungstext.js";
 
@@ -126,7 +126,6 @@ export function VersorgungUnterbringung({
           Einheit. Doppelklick auf „Unterkunft“ wählt die Unterkunft, Enter schreibt, Esc verwirft. Rückgängig nimmt
           die Zuweisung zurück.
         </p>
-        <Versorgungsausgabe ausgabe="belegung" titel="Belegungsliste" />
       </section>
       {maske !== undefined && (
         <UnterkunftMaske {...(maske.unterkunft === undefined ? {} : { unterkunft: maske.unterkunft })} aufSchliessen={() => setzeMaske(undefined)} />

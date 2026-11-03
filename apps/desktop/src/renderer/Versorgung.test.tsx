@@ -90,6 +90,44 @@ describe("Das Blatt „Versorgung“", () => {
     expect(within(sofort).getByText("500")).toBeDefined();
   });
 
+  it("legt Regel, Ausgabestelle und die Ausgaben je Unteransicht in das Menü „⋯“", async () => {
+    render(<Versorgung />);
+    await geladen();
+    const werkzeuge = screen.getByRole("group", { name: "Unteransicht" }).parentElement as HTMLElement;
+    expect(within(werkzeuge).queryByRole("button", { name: /Mahlzeitenregel|Ausgabestelle anlegen|als PDF|als HTML/ })).toBeNull();
+    const eintraege = async (): Promise<(string | null)[]> => {
+      fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" }));
+      const menue = await screen.findByRole("menu", { name: "Versorgung" });
+      const texte = within(menue).getAllByRole("menuitem").map((e) => e.textContent);
+      fireEvent.keyDown(menue, { key: "Escape" });
+      return texte;
+    };
+    expect(await eintraege()).toEqual(["Mahlzeitenregel: Vorbelegung …", "Ausgabestelle anlegen …", "Bestellliste als PDF", "Bestellliste als HTML"]);
+    fireEvent.click(screen.getByRole("button", { name: "Nächste 24 h" }));
+    expect(screen.getByRole("button", { name: /^Bestellung .* …$/ }).className).toBe("haupt");
+    expect(await eintraege()).toEqual(["Mahlzeitenregel: Vorbelegung …", "Vorausschau als PDF", "Vorausschau als HTML"]);
+    fireEvent.click(screen.getByRole("button", { name: "Unterbringung" }));
+    expect(screen.getByRole("button", { name: "Unterkunft anlegen" }).className).toBe("haupt");
+    expect(await eintraege()).toEqual(["Belegungsliste als PDF", "Belegungsliste als HTML"]);
+    fireEvent.click(screen.getByRole("button", { name: "Bereiche · Schichten" }));
+    expect(screen.queryByRole("button", { name: "Weitere Schritte in der Versorgung" })).toBeNull();
+  });
+
+  it("erzeugt die Ausgabe der Unteransicht aus dem Menü und zeigt die Datei", async () => {
+    attrappe.antwortet("ausgabeErzeugen", { pfad: "/share/ausgaben/kraftstoff_1.html", bytes: 10 });
+    render(<Versorgung />);
+    await geladen();
+    fireEvent.click(screen.getByRole("button", { name: "Sofortbedarf" }));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte in der Versorgung" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Kraftstoffliste als HTML" }));
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("ausgabeErzeugen")[0]).toMatchObject({ ausgabe: "kraftstoff", format: "html" });
+    });
+    await waitFor(() => {
+      expect(screen.getByText(/kraftstoff_1\.html/)).toBeDefined();
+    });
+  });
+
   it("holt beim neuen Zeigerstand neu", async () => {
     render(<Versorgung />);
     await geladen();

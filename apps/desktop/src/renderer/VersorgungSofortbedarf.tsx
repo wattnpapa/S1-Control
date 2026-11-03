@@ -15,7 +15,6 @@ import type { Sofortbedarfsliste, Sofortbedarfszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 import { useNurLesen } from "./Nurlesen.js";
-import { Versorgungsausgabe } from "./Versorgungsausgabe.js";
 import { kurzzeit } from "./versorgungstext.js";
 import { SOFORTBEDARF_FELDER, abarbeitung, type Sofortfeld } from "../kontrakt/versorgungsschritte.js";
 
@@ -127,9 +126,6 @@ export function VersorgungSofortbedarf({ liste }: { readonly liste: Sofortbedarf
         <button type="button" aria-pressed={ausblenden} onClick={() => setzeAusblenden((b) => !b)}>
           Erledigte ausblenden
         </button>
-        <span className="werkzeugrechts">
-          <Versorgungsausgabe ausgabe="kraftstoff" titel="Kraftstoffliste" />
-        </span>
       </p>
       {liste.zeilen.length === 0 ? (
         <p className="hinweistext">Kein Bogen mit Sofortbedarf übernommen.</p>
