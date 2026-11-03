@@ -15,6 +15,6 @@
     "tsBuildInfoFile": "dist/renderer/.tsbuildinfo",
     "rootDir": "src/renderer"
   },
-  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx"],
+  "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/renderer/fleetmapping/*.json"],
   "references": [{ "path": "./tsconfig.kontrakt.json" }, { "path": "../../packages/domaene" }]
 }
