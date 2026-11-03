@@ -7,8 +7,10 @@
 
 import { useEffect, useState } from "react";
 
+import type { Profil } from "../kontrakt/index.js";
 import { Einsatzliste } from "./Einsatzliste.js";
 import { useLaden } from "./laden.js";
+import { Profilwahl } from "./Profilwahl.js";
 
 export function Auswahl(): React.JSX.Element {
   const laden = useLaden();
@@ -18,6 +20,7 @@ export function Auswahl(): React.JSX.Element {
   const [betriebsart, setzeBetriebsart] = useState(
     laden.einstellungen.betriebsart ?? "fuehrungsstelle",
   );
+  const [profil, setzeProfil] = useState<Profil>(laden.einstellungen.profil ?? "fuehrungsstelle");
   // Im Browser gibt der Dienst den Share vor (ADR-005) — er hat ihn eingehängt,
   // und ein Bediener könnte ihn ohnehin nicht auf ein anderes Verzeichnis des
   // Servers umstellen. Das Feld zeigt ihn deshalb nur.
@@ -28,6 +31,7 @@ export function Auswahl(): React.JSX.Element {
     setzeShare(laden.einstellungen.sharePfad);
     setzeName(laden.einstellungen.anzeigename);
     setzeBetriebsart(laden.einstellungen.betriebsart ?? "fuehrungsstelle");
+    setzeProfil(laden.einstellungen.profil ?? "fuehrungsstelle");
   }, [laden.einstellungen]);
 
   return (
@@ -65,6 +69,7 @@ export function Auswahl(): React.JSX.Element {
             und kein Recht.
           </p>
         )}
+        <Profilwahl profil={profil} aufWahl={setzeProfil} gesperrt={betriebsart === "meldekopf"} />
         <button
           type="button"
           disabled={laden.beschaeftigt}
@@ -73,6 +78,8 @@ export function Auswahl(): React.JSX.Element {
               sharePfad: share,
               anzeigename: name,
               betriebsart,
+              // Auch im Meldekopf: Das Profil bleibt gemerkt, es gilt nur nicht.
+              profil,
               // Das Erscheinungsbild gehört dem Schalter im Kopfband; diese
               // Maske reicht es durch, statt es auf den Stand beim Öffnen
               // zurückzudrehen.
