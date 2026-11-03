@@ -1,7 +1,8 @@
 /**
  * Die Maske „Rufgruppe anlegen" und „Rufgruppe bearbeiten" (KONZEPT-FUNKPLAN.md
  * §5): Betriebsart, Name, Zweck, hört, Gateway, Bereich (optional),
- * Bemerkung.
+ * Bemerkung. Der Name schlägt Rufgruppen des Standard-Fleetmappings vor
+ * (`Rufgruppenvorschlag.tsx`), lässt aber jeden anderen Namen zu.
  *
  * Wie „Unterkunft anlegen": Enter bestätigt, Esc verwirft, die Kennung gilt
  * für die ganze Dialoginstanz (`Anlegeversuch.tsx`). Beim Bearbeiten geht je
@@ -21,6 +22,7 @@ import type { Rufgruppenkarte } from "@s1/domaene";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { neueId } from "./kennungen.js";
 import { Maske } from "./Maske.js";
+import { Rufgruppenvorschlag } from "./Rufgruppenvorschlag.js";
 import { useSperreHalten } from "./useBearbeitungssperre.js";
 import {
   BETRIEBSARTEN,
@@ -133,7 +135,11 @@ export function RufgruppeMaske({ karte, fuer, bereiche, aufSchliessen }: Rufgrup
           ))}
         </select>
       </label>
-      {text("name", "Name")}
+      <Rufgruppenvorschlag
+        wert={werte.name}
+        aufAenderung={(name) => setze("name", name)}
+        aufWahl={(eintrag) => setzeWerte((bisher) => ({ ...bisher, name: eintrag.name, betriebsart: "TMO" }))}
+      />
       {text("zweck", "Zweck")}
       {text("hoert", "hört")}
       {text("gateway", "Gateway")}
