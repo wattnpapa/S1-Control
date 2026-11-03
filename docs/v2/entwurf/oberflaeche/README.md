@@ -162,12 +162,20 @@ Gruppe „Funk", Monitor 960×540 Standard und Nacht) liegen unter
 
 Runde 6 liegt in einem eigenen Ordner: `../entlastung/KONZEPT-ENTLASTUNG.md`
 und `../entlastung/mockups-entlastung.html` entwerfen die Entlastung der
-Oberfläche, nachdem mehrere Helfer sie als überladen empfunden haben
-(Stand 2026-11-02, **nicht umgesetzt**). Die Gestaltung bleibt Option 2a;
-geändert wird, was wann sichtbar ist: Kopfband mit zwei Zeilen und
-Fenstermenü, Reiter nach Arbeitsplatzprofil, ein Hauptknopf je Karte und
-„⋯" für den Rest, Auswahlleiste und Kontextmenü statt dauerhaft sichtbarer
-Zeilenwerkzeuge, jede Zahl einmal, Einstiegszeile je Blatt statt der
-Hilfemarken. Die Aufnahmen unter `stand/` zeigen weiterhin den Stand vom
-2026-09-10; der Ist-Zustand für Runde 6 ist
-`../funkplan/stand/einheitentabelle-funk.png` vom 2026-11-02.
+Oberfläche, nachdem mehrere Helfer sie als überladen empfunden haben. Sie ist
+**umgesetzt** (Schnitte E1 bis E4, Stand 2026-11-03). Die Gestaltung bleibt
+Option 2a; geändert ist, was wann sichtbar ist: Kopfband mit zwei Zeilen,
+Zustandsmarke und Fenstermenü, Reiter nach Arbeitsplatzprofil mit „Mehr",
+ein Hauptknopf je Karte und „⋯" für den Rest, Auswahlleiste und
+Kontextmenü statt dauerhaft sichtbarer Zeilenwerkzeuge (Lage, Funkplan,
+Eingangskorb, Anforderungen), Filterzeilen mit Chips, jede Zahl einmal,
+Einstiegszeile je Blatt statt der Hilfemarken und eine Einsatzauswahl mit
+den Einsätzen zuerst. Die Bausteine dazu sind `Klappmenue.tsx`
+(`.klappmenue`, `.kontextmenue`), `Auswahlleiste.tsx` (`.auswahlleiste`),
+`Filterchips.tsx` (`.statusfilter.filterzeile`), `.menueknopf` für „⋯" und
+`.einstiegszeile`. Aufnahmen des gebauten Renderers (Einsatzauswahl, Lage
+ohne und mit Auswahl, Funkplan, Eingang, Lage in Dunkel, Feld und Nacht,
+1320×860) liegen unter `../entlastung/stand/`; den Stand, die Zahlen
+vorher und nachher und die Abweichungen nennt
+`../entlastung/UMSETZUNGSBERICHT.md`. Die Aufnahmen unter `stand/` dieses
+Ordners zeigen weiterhin den Stand vom 2026-09-10.

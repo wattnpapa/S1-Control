@@ -1,6 +1,9 @@
 # Entlastung der Oberfläche: weniger auf einmal, nichts weniger
 
-Stand 2026-11-02: Entwurf, nicht umgesetzt. `mockups-entlastung.html` im
+Stand 2026-11-03: umgesetzt in den Schnitten E1 bis E4 (Abschnitt 6);
+Abweichungen in UMSETZUNGSBERICHT.md, Aufnahmen unter `stand/`.
+
+Entwurf vom 2026-11-02. `mockups-entlastung.html` im
 selben Ordner zeigt die Bilder (Runde 6, Optionen 6a bis 6g, Beispiellage
 „Hochwasser Oldenburg" wie in `../oberflaeche/mockups.html`, Zahlen wie in der
 Aufnahme `../funkplan/stand/einheitentabelle-funk.png` vom 02.11.2026). Die

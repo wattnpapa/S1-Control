@@ -26,15 +26,24 @@ ausschließlich Modelle, in denen mehrere Rechner dieselbe Datei schreiben.
 1. Auf dem NAS eine Freigabe anlegen, etwa `\\nas\einsatz`.
 2. Darin **keinen** Ordner von Hand anlegen. Die Anwendung legt beim ersten
    Einsatz `S1-Control\einsaetze\` selbst an.
-3. In der Anwendung unter Einstellungen den Pfad der Freigabe eintragen und
-   einen Anzeigenamen setzen. Der Anzeigename steht später in der Statuszeile
-   der anderen Arbeitsplätze; „Zugtrupp“ ist nützlicher als „PC-3“.
+3. In der Anwendung auf der Einsatzauswahl unter „Dieser Arbeitsplatz“ den
+   Pfad der Freigabe eintragen und einen Anzeigenamen setzen. Beim ersten
+   Start sind diese Einstellungen offen; danach stehen sie als eine Zeile
+   unter der Liste der Einsätze und gehen mit „Ändern“ auf. Unter jedem Feld
+   steht ein Satz, was es bewirkt. Der Anzeigename steht später in der
+   Statuszeile der anderen Arbeitsplätze; „Zugtrupp“ ist nützlicher als „PC-3“.
    Je Arbeitsplatz ein **Profil** wählen: Führungsstelle (S1, Vorgabe),
    Vermeldezentrale, Versorgung (S4) oder Alle Blätter. Es bestimmt nur,
    welche Reiter im Kopfband stehen; die übrigen Blätter stehen unter „Mehr“.
    Profil, Betriebsart und Erscheinungsbild liegen in der
    Einstellungsdatei des Geräts (in der Web-Schale je Browser), nicht in der
    Akte.
+4. Den ersten Einsatz legt **ein** Arbeitsplatz mit „Neuer Einsatz …“ an. Die
+   Maske nimmt Name, Datum und die Stammdaten (Führungsstelle, übergeordnete
+   Führungsstelle, Ort, Beginn, Art, Schichtmodell) in einem Schritt; die
+   beiden freien Felder (übergeordnete Führungsstelle, Ort) schreibt sie
+   gleich nach der Anlage als Stammdatenänderung. Alle anderen öffnen den
+   Einsatz danach aus der Liste.
 
 Der Ordner unter der Freigabe sieht danach so aus (KONZEPT-SPEICHER.md §1.4):
 
@@ -427,8 +436,8 @@ niemand hat währenddessen ein vollständiges Bild. Wer eine Ausgabe braucht,
 erzeugt sie auf dem führenden Rechner.
 
 **NAS kommt nicht wieder.** Einen zweiten Share einrichten (auch ein
-freigegebener Ordner auf einem der Arbeitsplätze genügt) und in den
-Einstellungen eintragen. Die lokalen Spiegel werden auf den neuen Share
+freigegebener Ordner auf einem der Arbeitsplätze genügt) und auf der
+Einsatzauswahl unter „Dieser Arbeitsplatz“ → „Ändern“ eintragen. Die lokalen Spiegel werden auf den neuen Share
 hochgespielt; die Einsatzakte ist danach dort vollständig.
 
 **Was in keinem dieser Fälle geschieht:** Dateien im Einsatzordner löschen

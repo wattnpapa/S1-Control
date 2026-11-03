@@ -34,17 +34,20 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
 
 ## Ein Einsatz von Anfang bis Ende
 
-1. **Einstellungen prüfen.** Sharepfad, Anzeigename und Profil. Der Name
-   steht in der Statuszeile der anderen; „Zugtrupp“ ist nützlicher als
-   „PC-3“. Das Profil bestimmt, welche Reiter oben stehen (siehe „Das
-   Fenster“).
-2. **Einsatz anlegen** — einmal, von einem Rechner. Name und Datum ergeben den
-   Ordner; danach ist der Einsatz unveränderlich verankert (§5.6).
-   Gleich danach im Blatt **Führungsstelle** über „Stammdaten bearbeiten“ den
-   Namen der Führungsstelle (FüSt), die übergeordnete Führungsstelle, Ort und
-   Beginn eintragen — wie im Blatt „Stammdaten“ der Excel. Bis dahin steht als
-   FüSt-Name der Anzeigename des anlegenden Arbeitsplatzes auf den Ausdrucken.
-   Jede Änderung ist ein Ereignis und steht im Einsatztagebuch.
+1. **Arbeitsplatz prüfen.** Auf der Einsatzauswahl steht unter der Liste die
+   Zeile „Dieser Arbeitsplatz“ mit Anzeigename, Profil und Share; „Ändern“
+   klappt die Einstellungen auf. Der Name steht in der Statuszeile der
+   anderen; „Zugtrupp“ ist nützlicher als „PC-3“. Das Profil bestimmt, welche
+   Reiter oben stehen (siehe „Das Fenster“).
+2. **Einsatz anlegen** — einmal, von einem Rechner, mit **„Neuer Einsatz …“**.
+   Die Maske fragt Name und Datum (TT.MM.JJJJ) und gleich die Stammdaten wie
+   das Blatt „Stammdaten“ der Excel: Name der Führungsstelle (FüSt),
+   übergeordnete Führungsstelle, Einsatzort, Beginn, Einsatzart und
+   Schichtmodell. Name und Datum ergeben den Ordner; danach ist der Einsatz
+   unveränderlich verankert (§5.6). FüSt und übergeordnete Führungsstelle
+   stehen auf jedem Ausdruck; geändert werden sie später im Blatt
+   **Führungsstelle** über „Stammdaten bearbeiten“. Jede Änderung ist ein
+   Ereignis und steht im Einsatztagebuch.
 3. **Alle anderen öffnen ihn** aus der Liste. Ab jetzt sehen sich alle in der
    Statuszeile.
 4. **Abschnitte anlegen.** Die Führungsorganisation zuerst, damit Einheiten
@@ -60,9 +63,10 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Bernstein, und dann ist eine Funkprobe fällig.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
    Eine Ablösung wird an der Einheit angefordert („Ablösung anfordern“) oder im
-   Blatt **Eingang** unter „Anforderungen“ mit „Ablösung für“. Beim Eintreffen entsteht die neue
-   Einheit aus der Anforderung, und die abgelöste Zeile nennt sie unter
-   „Ablösung durch“.
+   Blatt **Eingang** unter „Anforderungen“ mit „Anforderung anlegen“ (Strg+N)
+   und „Ablösung für“. Zusagen und Eintreffen stehen in der Leiste der
+   gewählten Anforderung. Beim Eintreffen entsteht die neue Einheit aus der
+   Anforderung, und die abgelöste Zeile nennt sie unter „Ablösung durch“.
 8. **Ausgaben erzeugen**, wenn die Führung sie braucht: Druck, Status-Matrix,
    Einheitenliste, Auswertung, Log, Kosten. Die Einheitenliste vor jeder
    Lagebesprechung ausdrucken — sie ist der Stand, mit dem bei einem
@@ -78,6 +82,34 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
     Einsatz lässt sich dagegen jederzeit wiedereröffnen. Dieselbe Akte
     erzeugt `s1 akte exportiere`; wie man sie prüft und ablegt, steht in
     [BETRIEB.md](BETRIEB.md).
+
+## Die Einsatzauswahl
+
+Ohne geöffneten Einsatz zeigt das Fenster die **Einsatzauswahl**. Oben steht
+die Karte „Einsätze auf <Share>“: je Einsatz eine Zeile mit Name und Datum,
+Status als Marke, Zahl der Einheiten und Stand (letzte Änderung), rechts
+„Öffnen“. Der zuletzt genutzte steht oben, sein „Öffnen“ ist gefüllt.
+Beendete und archivierte Einsätze stehen blass darunter mit „Ansehen“: Sie
+lassen sich lesen, aber nicht mehr ändern. Status und Einheiten nennt die
+Liste so, wie dieser Arbeitsplatz den Einsatz zuletzt gesehen hat; wo er ihn
+noch nie geöffnet hat, steht ein Strich.
+
+Im Kopf der Karte öffnet **„Neuer Einsatz …“** die Maske mit Name, Datum und
+Stammdaten (siehe „Ein Einsatz von Anfang bis Ende“). „Einsatz anlegen“ geht
+erst, wenn Name, Datum und Führungsstelle dastehen; was fehlt, steht neben
+dem Knopf. Gibt es den Namen am selben Tag schon, bleibt die Maske mit allen
+Eingaben offen und nennt den Grund.
+
+Darunter steht in einer Zeile **„Dieser Arbeitsplatz“**: Anzeigename, Profil
+(im Meldekopf die Betriebsart) und Share, rechts „Ändern“. „Ändern“ klappt die
+Einstellungen auf — Share-Pfad, Anzeigename, Betriebsart, Profil und
+„Übernehmen“ —, unter jedem Feld ein Satz, was es bewirkt. Ohne Share-Pfad
+oder ohne Anzeigenamen sind die Einstellungen von Anfang an offen. In der
+Web-Schale gibt der Dienst den Share vor; dort steht er nur zum Lesen.
+
+Ohne Einsatz trägt das Kopfband nur Wortbild, Zeit und das Fenstermenü; eine
+Ist-Stärke gibt es noch nicht, und ob der Share erreichbar ist, sagt die
+Zustandsmarke erst mit geöffnetem Einsatz.
 
 ## Das Fenster
 
@@ -174,6 +206,46 @@ Schritte.
 Unter der Tabelle steht, wie man eine Zelle bearbeitet (Doppelklick, Enter,
 Esc), bis an diesem Gerät die erste Zelle geschrieben ist.
 
+## Funkplan, Eingang und Anforderungen
+
+Die Fachblätter folgen demselben Muster wie die Lage: ein Hauptknopf, „⋯“
+für das Seltene, und was einer Zeile gilt, erscheint erst mit ihrer Wahl —
+als **Auswahlleiste** am Fuß der Karte und als **Kontextmenü** per
+Rechtsklick. Esc hebt die Wahl auf.
+
+**Funkplan.** Das Band mit den sechs Zahlen bleibt. Darunter der Umschalter
+„Je Rufgruppe | Je Bereich | Funkproben“, der Hauptknopf „Rufgruppe anlegen“
+(Strg+N), die Suche (Strg+F) und rechts **„⋯“** mit der Schwelle „kein
+Kontakt“ (Häkchen am geltenden Wert; gilt für alle Arbeitsplätze) und dem
+Funkplan als PDF oder HTML. Ein Klick auf eine Einheit der Zuordnung wählt
+sie; die Leiste darunter bietet „Funkprobe: Kontakt“ (Strg+P, gefüllt),
+„kein Kontakt …“ (fragt den Grund), „Funk und Erreichbarkeit …“ und
+„Rufgruppe ändern …“, das die Zelle Rufgruppe der Zeile zur Wahl öffnet.
+Links trägt die gewählte Rufgruppe „⋯“ an ihrer Zeile mit „Bearbeiten …“
+(Strg+E) und „Auflösen …“, bei einer aufgelösten „Wiederherstellen“;
+dasselbe öffnet ein Rechtsklick auf jede Gruppe.
+
+**Eingangskorb.** Im Kopf der Hauptknopf **„Bündel einlesen …“**: Die Maske
+fragt den Abschnitt und die Datei („Datei wählen …“, der Name steht
+daneben); „Einlesen“ geht erst mit beidem, das Ergebnis steht danach über
+dem Korb („3 aufgenommen, 2 schon bekannt“). Im „⋯“ daneben steht
+„Meldungen als Datei speichern“ für den Weg ohne Netz. Darunter die
+Filterzeile: Neu, Geändert, Übernommen, Abgelehnt mit ihrer Zahl, dazu
+„Nur jüngste Fassung“. Für die gewählte Meldung bietet die Leiste „Ablehnen
+mit Grund …“ (bei einer abgelehnten „Ablehnung zurück“), „Übernahme zurück“,
+„Fassungen …“ und den Meldestatus. Übernommen wird eine Meldung nicht hier,
+sondern beim Einlesen des Bogens in der Lage (Strg+Q) oder mit dem Bündel.
+
+**Anforderungen.** Im Kopf **„Anforderung anlegen“** (Strg+N); die Felder
+stehen in der Maske und nicht mehr über der Liste. Eine halb ausgefüllte
+Anforderung bleibt beim Schließen stehen, bis sie angelegt oder verworfen
+ist. Darunter die Filterzeile mit Offen, Zugesagt, Eingetroffen, Storniert.
+Die gewählte Anforderung bietet in der Leiste nur, was ihren Zustand ändert:
+offen „Zusagen …“, zugesagt „Eingetroffen …“ und „Zusage zurück“,
+eingetroffen „Einheit anlegen …“ (wenn noch keine verknüpft ist) und
+„Eintreffen zurück“, storniert „Storno zurück“; „Stornieren …“ steht
+abgesetzt in Warnfarbe und fragt den Grund.
+
 ## Was ein Zurücknehmen tut
 
 Strg+Z nimmt die letzte **eigene** Handlung zurück. Es löscht nichts: Die
@@ -205,8 +277,8 @@ Diagnoseansicht.
 
 ## Ein neues Programmpaket holen
 
-Unter dem Lagebild steht der Knopf **„Neues Paket für die Führungsstelle
-holen“**. Ihn drückt **eine** Person an **einem** Rechner: Sie holt das Paket
+In der **Diagnose** (Fenstermenü „⋯“) steht der Knopf **„Neues Paket für die
+Führungsstelle holen“**. Ihn drückt **eine** Person an **einem** Rechner: Sie holt das Paket
 aus der Veröffentlichung, die Anwendung prüft Signatur und Prüfsumme und legt
 es auf den Share. Alle anderen Arbeitsplätze bekommen es danach angeboten,
 ohne selbst ins Netz zu gehen.
@@ -243,8 +315,14 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
   verweigert.
 - **Sofortbedarf.** Einheiten anhaken, Feld wählen, „Als erledigt melden“ —
   je Feld ein Ereignis. Erledigte Zeilen bleiben blass stehen.
-- **Ausgaben.** Belegungsliste, Bestellliste, Vorausschau und Kraftstoffliste
-  stehen in der jeweiligen Unteransicht als PDF oder HTML.
+- **Werkzeuge.** Neben dem Umschalter steht je Unteransicht höchstens ein
+  Hauptknopf: in „Nächste 24 h“ die Bestellung der nächsten noch
+  unbestellten Mahlzeit, in „Unterbringung“ „Unterkunft anlegen“ in der
+  Karte. Alles Weitere steht rechts im **„⋯“**: die Mahlzeitenregel
+  (Verpflegung, Nächste 24 h), „Ausgabestelle anlegen …“ (Verpflegung) und
+  die Ausgabe der Unteransicht als PDF oder HTML — Bestellliste,
+  Vorausschau, Belegungsliste, Kraftstoffliste. Die erzeugte Datei steht
+  danach neben dem Menü mit „Öffnen“.
 
 Der **Monitor** zeigt neben der Stärke fünf weitere Ansichten: Verpflegung,
 Nächste 24 h, Unterbringung, die Tafel „Bereiche · Schichten“ und den
