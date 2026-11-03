@@ -1572,7 +1572,7 @@
          Scrollen links stehen, Status folgt direkt danach. Ohne Namen ist eine
          Statusmarke keine Auskunft. */
       .einheiten th[scope="row"],
-      .einheiten thead th:first-child {
+      .einheiten table:not(.ohne-abschnitt) thead th:first-child {
         position: sticky;
         left: 0;
         z-index: 2;
@@ -1584,7 +1584,7 @@
         text-overflow: ellipsis;
         background: var(--karte);
       }
-      .einheiten thead th:first-child {
+      .einheiten table:not(.ohne-abschnitt) thead th:first-child {
         z-index: 3;
         background: var(--kopf-bg);
       }
@@ -1696,7 +1696,7 @@
          seine eigene, weitere Bedingung. */
       @media (max-width: 700px) {
         .einheiten th[scope="row"],
-        .einheiten thead th:first-child {
+        .einheiten table:not(.ohne-abschnitt) thead th:first-child {
           position: static;
           width: 4.5rem;
           min-width: 4.5rem;
@@ -3565,6 +3565,7 @@
 
       /* Touch: jedes Ziel mindestens 44 px, auch mit Handschuh. */
       @media (pointer: coarse) {
+        .auswahlleiste button,
         button,
         .ausgabeknoepfe a,
         .kopfband .reiter button,
