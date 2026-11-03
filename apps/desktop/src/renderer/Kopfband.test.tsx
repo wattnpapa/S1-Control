@@ -230,9 +230,9 @@ describe("Kopfband", () => {
     expect(screen.getByRole("tab", { name: "Lage", selected: true })).toBeDefined();
     // Der Zähler steht am Reiter, weil dort die Entscheidung fällt, ob man
     // hinsieht — nicht erst im Blatt.
-    expect(screen.getByRole("tab", { name: "Eingangskorb 7 offen" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Eingang 7 offen" })).toBeDefined();
 
-    await userEvent.click(screen.getByRole("tab", { name: /Eingangskorb/ }));
+    await userEvent.click(screen.getByRole("tab", { name: /Eingang/ }));
     expect(waehleBlatt).toHaveBeenCalledWith("eingang");
   });
 
@@ -261,7 +261,7 @@ describe("Kopfband", () => {
         waehleBlatt={() => undefined}
       />,
     );
-    expect(screen.getByRole("tab", { name: "Eingangskorb" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Eingang" })).toBeDefined();
     expect(screen.getByRole("tab", { name: "Kosten", selected: true })).toBeDefined();
   });
 

@@ -106,6 +106,22 @@ beforeEach(() => {
       ausgenommen: 0,
     },
   });
+  attrappe.antwortet("eingangskorbAnfordern", {
+    lageZeiger: 1,
+    zeilen: [],
+    von: 0,
+    gesamtzahl: 0,
+    jeZustand: { NEU: 3, GEAENDERT: 0, UEBERNOMMEN: 0, ABGELEHNT: 0 },
+    offen: 3,
+  });
+  attrappe.antwortet("anforderungenAnfordern", {
+    lageZeiger: 1,
+    zeilen: [],
+    von: 0,
+    gesamtzahl: 0,
+    jeZustand: { OFFEN: 0, ZUGESAGT: 0, EINGETROFFEN: 0, STORNIERT: 0 },
+  });
+  attrappe.antwortet("fuestAnfordern", { lageZeiger: 1, bloecke: [], plan: { tage: [], zeilen: [] }, staerke: [] });
   useLaden.setState({
     akteId: "akte-1",
     einstellungen: EINSTELLUNGEN,
@@ -116,6 +132,8 @@ beforeEach(() => {
     tagebuch: undefined,
     kosten: undefined,
     eingangskorb: undefined,
+    anforderungen: undefined,
+    fuest: undefined,
     tabellenfilter: {},
     fehler: undefined,
     hinweise: [],
@@ -200,6 +218,46 @@ describe("Der Arbeitsplatz", () => {
     expect(screen.getByRole("complementary", { name: "Einstieg: Kosten" })).toBeDefined();
     // Keine Hilfemarke „?“ mehr an den Karten (3.6).
     expect(screen.queryByRole("button", { name: /^Hilfe zu / })).toBeNull();
+  });
+
+  it("trägt Eingangskorb und Anforderungen als Umschalter im Blatt „Eingang“ (E3)", async () => {
+    render(<Arbeitsplatz />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Eingang" }));
+    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingang" });
+    const korb = await within(umschalter).findByRole("button", { name: "Eingangskorb (3 offen)" });
+    expect(korb.getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("region", { name: "Eingangskorb" })).toBeDefined();
+    // Nur die gewählte Unteransicht ist eingehängt — ihre Kürzel gelten allein.
+    expect(screen.queryByRole("region", { name: "Anforderungen" })).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Eingangskorb" })).toBeDefined();
+
+    await userEvent.click(within(umschalter).getByRole("button", { name: "Anforderungen" }));
+    expect(screen.getByRole("region", { name: "Anforderungen" })).toBeDefined();
+    expect(screen.queryByRole("region", { name: "Eingangskorb" })).toBeNull();
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Anforderungen" })).toBeDefined();
+    await waitFor(() => {
+      expect(ladeMerker()?.blatt).toBe("eingang.anforderungen");
+    });
+
+    // Die Unteransicht bleibt, solange das Fenster offen ist.
+    await userEvent.click(screen.getByRole("tab", { name: "Lage" }));
+    await userEvent.click(screen.getByRole("tab", { name: /^Eingang/ }));
+    expect(screen.getByRole("region", { name: "Anforderungen" })).toBeDefined();
+  });
+
+  it("trägt Stammdaten und Führungsorganisation als Umschalter im Blatt „Führungsstelle“ (E3)", async () => {
+    render(<Arbeitsplatz />);
+    await userEvent.click(await screen.findByRole("tab", { name: "Führungsstelle" }));
+    const umschalter = screen.getByRole("group", { name: "Unteransicht Führungsstelle" });
+    expect(within(umschalter).getByRole("button", { name: "Stammdaten und Schichtplan" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("region", { name: "Führungsstelle" })).toBeDefined();
+    expect(screen.queryByRole("region", { name: "Führungsorganisation" })).toBeNull();
+
+    await userEvent.click(within(umschalter).getByRole("button", { name: "Führungsorganisation" }));
+    expect(screen.getByRole("region", { name: "Führungsorganisation" })).toBeDefined();
+    expect(screen.queryByRole("region", { name: "Führungsstelle" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Führungsorganisation" })).toBeNull();
+    expect(screen.queryByRole("tab", { name: "Anforderungen" })).toBeNull();
   });
 
   it("schlägt mit „Im Tagebuch zeigen“ das Tagebuch der Einheit auf", async () => {
@@ -287,6 +345,36 @@ describe("Der Arbeitsplatz nach einem Reload", () => {
     });
     expect(attrappe.letzterRuf("einsatzOeffnen")?.ordner).toBe(ORDNER);
     expect(screen.getByRole("tab", { name: "Einsatztagebuch" }).getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("schlägt einen alten Merker „anforderungen“ als Eingang mit Anforderungen auf (E3)", async () => {
+    speichereMerker(ORDNER, "anforderungen");
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(useLaden.getState().akteId).toBe("akte-neu");
+    });
+    expect(screen.getByRole("tab", { name: /^Eingang/ }).getAttribute("aria-selected")).toBe("true");
+    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingang" });
+    expect(within(umschalter).getByRole("button", { name: "Anforderungen" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("schlägt einen alten Merker „fueorg“ als Führungsstelle mit Führungsorganisation auf, Unbekanntes als Lage", async () => {
+    speichereMerker(ORDNER, "fueorg");
+    const { unmount } = render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(useLaden.getState().akteId).toBe("akte-neu");
+    });
+    expect(screen.getByRole("tab", { name: "Führungsstelle" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("button", { name: "Führungsorganisation" }).getAttribute("aria-pressed")).toBe("true");
+    unmount();
+
+    useLaden.setState({ akteId: undefined, lagebild: undefined });
+    speichereMerker(ORDNER, "gibtsnicht");
+    render(<Arbeitsplatz />);
+    await waitFor(() => {
+      expect(useLaden.getState().akteId).toBe("akte-neu");
+    });
+    expect(screen.getByRole("tab", { name: "Lage" }).getAttribute("aria-selected")).toBe("true");
   });
 
   it("landet ohne Merker in der Einsatzliste", async () => {

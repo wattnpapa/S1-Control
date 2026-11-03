@@ -12,34 +12,39 @@
  * „Wozu"; die Lage nimmt den Text der Einheitentabelle, weil das Blatt im
  * Wesentlichen diese Tabelle ist.
  *
- * Gemerkt wird je Gerät (`s1.einstieg.<blatt>`, `geraetemerker.ts`): Die
- * Zeile betrifft keinen Einsatz.
+ * Gemerkt wird je Gerät (`s1.einstieg.<ort>`, `geraetemerker.ts`): Die
+ * Zeile betrifft keinen Einsatz. Der Ort ist das Blatt, bei „Eingang" und
+ * „Führungsstelle" mit Unteransicht (`eingang.anforderungen`,
+ * `unterblaetter.ts`): Jede Unteransicht hat ihren eigenen Satz und wird
+ * für sich bestätigt.
  */
 
 import { useState } from "react";
 
 import { ansichtshilfe, type Ansichtskennung } from "@s1/domaene";
 
-import { BLAETTER, type Blatt } from "./blaetter.js";
 import { istGemerkt, merke } from "./geraetemerker.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
+import { orttitel, type Blattort } from "./unterblaetter.js";
 
-const KENNUNG: Readonly<Record<Blatt, Ansichtskennung>> = {
+const KENNUNG: Readonly<Record<Blattort, Ansichtskennung>> = {
   lage: "einheiten",
-  eingang: "eingangskorb",
-  anforderungen: "anforderungen",
-  fuest: "fuehrungsstelle",
+  "eingang.eingangskorb": "eingangskorb",
+  "eingang.anforderungen": "anforderungen",
+  "fuest.stammdaten": "fuehrungsstelle",
+  // Die Führungsorganisation hat keinen eigenen Text; sie ist die Harke der
+  // Abschnitte, und deren Text sagt genau das.
+  "fuest.fueorg": "abschnitte",
   funkplan: "funkplan",
   versorgung: "versorgung",
   kosten: "kosten",
-  fueorg: "abschnitte",
   ausgaben: "ausgaben",
   tagebuch: "tagebuch",
   diagnose: "diagnose",
 };
 
-export function einstiegsschluessel(blatt: Blatt): string {
-  return `s1.einstieg.${blatt}`;
+export function einstiegsschluessel(ort: Blattort): string {
+  return `s1.einstieg.${ort}`;
 }
 
 /** Der erste Satz eines Hilfetexts — bis zum ersten Satzzeichen vor Leerraum oder Ende. */
@@ -47,13 +52,13 @@ export function ersterSatz(text: string): string {
   return /^.*?[.!?](?=\s|$)/su.exec(text)?.[0] ?? text;
 }
 
-export function Einstiegszeile({ blatt }: { readonly blatt: Blatt }): React.JSX.Element | null {
+export function Einstiegszeile({ ort }: { readonly ort: Blattort }): React.JSX.Element | null {
   // Auch ohne Speicher bleibt die Zeile weg, nachdem sie in dieser Sitzung
   // bestätigt wurde; erst das nächste Öffnen zeigt sie wieder.
-  const [bestaetigt, setzeBestaetigt] = useState<readonly Blatt[]>([]);
-  if (bestaetigt.includes(blatt) || istGemerkt(einstiegsschluessel(blatt))) return null;
-  const titel = BLAETTER.find((eintrag) => eintrag.schluessel === blatt)?.titel ?? blatt;
-  const satz = ersterSatz(ansichtshilfe(KENNUNG[blatt]).wozu);
+  const [bestaetigt, setzeBestaetigt] = useState<readonly Blattort[]>([]);
+  if (bestaetigt.includes(ort) || istGemerkt(einstiegsschluessel(ort))) return null;
+  const titel = orttitel(ort);
+  const satz = ersterSatz(ansichtshilfe(KENNUNG[ort]).wozu);
   return (
     <aside className="einstiegszeile" aria-label={`Einstieg: ${titel}`}>
       <p>
@@ -62,8 +67,8 @@ export function Einstiegszeile({ blatt }: { readonly blatt: Blatt }): React.JSX.
       <button
         type="button"
         onClick={() => {
-          merke(einstiegsschluessel(blatt));
-          setzeBestaetigt([...bestaetigt, blatt]);
+          merke(einstiegsschluessel(ort));
+          setzeBestaetigt([...bestaetigt, ort]);
         }}
       >
         Verstanden

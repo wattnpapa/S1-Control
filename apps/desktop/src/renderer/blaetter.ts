@@ -17,12 +17,10 @@ export interface Reiter {
   readonly schluessel:
     | "lage"
     | "eingang"
-    | "anforderungen"
     | "fuest"
     | "funkplan"
     | "versorgung"
     | "kosten"
-    | "fueorg"
     | "ausgaben"
     | "tagebuch"
     | "diagnose";
@@ -37,8 +35,11 @@ export interface Reiter {
 
 export const BLAETTER: readonly Reiter[] = [
   { schluessel: "lage", titel: "Lage" },
-  { schluessel: "eingang", titel: "Eingangskorb" },
-  { schluessel: "anforderungen", titel: "Anforderungen" },
+  // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
+  // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
+  { schluessel: "eingang", titel: "Eingang" },
+  // Ebenso Stammdaten mit Schichtplan und die Führungsorganisation: Beide
+  // beschreiben die Struktur der Führung.
   { schluessel: "fuest", titel: "Führungsstelle" },
   // Funkplan F1: zwischen Führungsstelle und Versorgung, für alle sichtbar
   // (KONZEPT-FUNKPLAN.md Entscheidung 1) — die Vermeldezentrale arbeitet den
@@ -47,7 +48,6 @@ export const BLAETTER: readonly Reiter[] = [
   // S4.1: zwischen Führungsstelle und Kosten, für alle sichtbar (Entscheidung 1).
   { schluessel: "versorgung", titel: "Versorgung" },
   { schluessel: "kosten", titel: "Kosten" },
-  { schluessel: "fueorg", titel: "Führungsorganisation" },
   { schluessel: "ausgaben", titel: "Ausgaben" },
   { schluessel: "tagebuch", titel: "Einsatztagebuch" },
   // Die Diagnose wird nicht im Betrieb gelesen, sondern wenn etwas klemmt
@@ -63,4 +63,12 @@ export type Lageblatt = Extract<Blatt, "lage" | "ausgaben" | "tagebuch">;
 
 export function gehoertZurLage(blatt: Blatt): blatt is Lageblatt {
   return blatt === "lage" || blatt === "ausgaben" || blatt === "tagebuch";
+}
+
+export function istBlatt(wert: unknown): wert is Blatt {
+  return BLAETTER.some((eintrag) => eintrag.schluessel === wert);
+}
+
+export function blatttitel(blatt: Blatt): string {
+  return BLAETTER.find((eintrag) => eintrag.schluessel === blatt)?.titel ?? blatt;
 }

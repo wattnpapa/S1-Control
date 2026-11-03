@@ -9,23 +9,20 @@
 
 import { useEffect, useMemo, useState } from "react";
 
-import { Anforderungen } from "./Anforderungen.js";
 import { bruecke } from "./bruecke.js";
 import { Diagnose } from "./Diagnose.js";
 import { Auswahl } from "./Einsatzauswahl.js";
-import { Eingangskorb } from "./Eingangskorb.js";
-import { Fuehrungsorganisation } from "./Fuehrungsorganisation.js";
-import { Fuehrungsstelle } from "./Fuehrungsstelle.js";
 import { Funkplan } from "./Funkplan.js";
 import { Hilfe } from "./Hilfe.js";
 import { Kopfband } from "./Kopfband.js";
 import { Kosten } from "./Kosten.js";
 import { Programmversorgung } from "./Programmversorgung.js";
-import { BLAETTER, gehoertZurLage, type Blatt } from "./blaetter.js";
+import { gehoertZurLage, type Blatt } from "./blaetter.js";
 import { Lage } from "./Lage.js";
 import { Einstiegszeile } from "./Einstiegszeile.js";
 import { Meldekopf } from "./Meldekopf.js";
 import { Programmstand } from "./Programmstand.js";
+import { Eingangsblatt, Fuehrungsblatt } from "./Sammelblaetter.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { Verbindungsbanner } from "./Verbindungsbanner.js";
@@ -34,6 +31,7 @@ import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import { useBrowserNavigation } from "./navigation.js";
 import { ladeMerker, loescheMerker, merkeStand, speichereMerker } from "./sitzung.js";
 import { KuerzelAktiv, useKuerzel } from "./tastatur.js";
+import { aufschlagAus, blattort, VORGABE_UNTERWAHL, type Aufschlag, type Unterwahl } from "./unterblaetter.js";
 import { wiederoeffneZuletzt } from "./wiederoeffnen.js";
 
 /**
@@ -52,10 +50,39 @@ function useJetzt(): number {
   return jetzt;
 }
 
-/** Das Blatt aus dem Merker des Reloads — nur, wenn es das Blatt noch gibt. */
-function blattAusMerker(): Blatt {
-  const gemerkt = ladeMerker()?.blatt;
-  return BLAETTER.find((eintrag) => eintrag.schluessel === gemerkt)?.schluessel ?? "lage";
+/**
+ * Blatt und Unteransicht aus dem Merker des Reloads — nur, wenn es das Blatt
+ * noch gibt. Ein Merker von vor E3 (`anforderungen`, `fueorg`) landet im
+ * Blatt, das die Ansicht heute trägt (`unterblaetter.ts`).
+ */
+function blattAusMerker(): Aufschlag {
+  return aufschlagAus(ladeMerker()?.blatt) ?? { blatt: "lage" };
+}
+
+/** Blatt und Unteransicht dieses Fensters; ein Aufschlag setzt beides zugleich. */
+function useBlattwahl(): {
+  readonly blatt: Blatt;
+  readonly unterwahl: Unterwahl;
+  readonly schlageAuf: (aufschlag: Aufschlag) => void;
+  readonly setzeBlatt: (blatt: Blatt) => void;
+  readonly setzeUnterwahl: (teil: Partial<Unterwahl>) => void;
+} {
+  const [anfang] = useState(blattAusMerker);
+  const [blatt, setzeBlatt] = useState<Blatt>(anfang.blatt);
+  const [unterwahl, setzeWahl] = useState<Unterwahl>({ ...VORGABE_UNTERWAHL, ...anfang.unterwahl });
+  const setzeUnterwahl = (teil: Partial<Unterwahl>): void => {
+    setzeWahl((bisher) => ({ ...bisher, ...teil }));
+  };
+  return {
+    blatt,
+    unterwahl,
+    setzeBlatt,
+    setzeUnterwahl,
+    schlageAuf: (aufschlag) => {
+      setzeBlatt(aufschlag.blatt);
+      if (aufschlag.unterwahl !== undefined) setzeUnterwahl(aufschlag.unterwahl);
+    },
+  };
 }
 
 export function Arbeitsplatz(): React.JSX.Element {
@@ -67,15 +94,17 @@ export function Arbeitsplatz(): React.JSX.Element {
   // Arbeitsplätze am selben Einsatz sehen verschiedene Blätter, und beim
   // Schließen der Akte ist die Frage hinfällig.
   // Nach einem Reload steht das zuletzt aufgeschlagene Blatt wieder oben.
-  const [blatt, setzeBlatt] = useState<Blatt>(blattAusMerker);
+  // Die Unteransicht von „Eingang" und „Führungsstelle" ebenso.
+  const { blatt, unterwahl, schlageAuf, setzeBlatt, setzeUnterwahl } = useBlattwahl();
+  const ort = blattort(blatt, unterwahl);
   const einsatzId = laden.lagebild?.einsatzId;
   const einsatzStatus = laden.lagebild?.einsatzStatus ?? "AKTIV";
   const einheiten = laden.lagebild?.einheiten;
 
-  // Merker für den Reload: zuletzt geöffneter Einsatz und Blatt.
+  // Merker für den Reload: zuletzt geöffneter Einsatz und Blatt samt Unteransicht.
   useEffect(() => {
-    if (laden.akteId !== undefined && einsatzId !== undefined) speichereMerker(einsatzId, blatt);
-  }, [laden.akteId, einsatzId, blatt]);
+    if (laden.akteId !== undefined && einsatzId !== undefined) speichereMerker(einsatzId, ort);
+  }, [laden.akteId, einsatzId, ort]);
 
   // Zuletzt gesehener Stand für die Einsatzliste (nur Anzeige).
   useEffect(() => {
@@ -91,7 +120,8 @@ export function Arbeitsplatz(): React.JSX.Element {
     aktiv: laden.umgebung?.plattform === "web" && laden.akteId !== undefined,
     blatt,
     waehleBlatt: (neu) => {
-      if (BLAETTER.some((eintrag) => eintrag.schluessel === neu)) setzeBlatt(neu as Blatt);
+      const aufschlag = aufschlagAus(neu);
+      if (aufschlag !== undefined) schlageAuf(aufschlag);
     },
     zurueckZurAuswahl,
   });
@@ -157,7 +187,7 @@ export function Arbeitsplatz(): React.JSX.Element {
 
       {/* Ein Satz je Blatt beim ersten Aufschlagen, statt einer Hilfemarke
           an jeder Karte (Entwurf „Entlastung", 3.6). */}
-      {laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf" && <Einstiegszeile blatt={blatt} />}
+      {laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf" && <Einstiegszeile ort={ort} />}
 
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">
@@ -196,13 +226,25 @@ export function Arbeitsplatz(): React.JSX.Element {
                 <Lage blatt={gehoertZurLage(blatt) ? blatt : "lage"} aufBlatt={setzeBlatt} />
               </KuerzelAktiv.Provider>
             </div>
-            {blatt === "eingang" && <Eingangskorb />}
-            {blatt === "anforderungen" && <Anforderungen />}
-            {blatt === "fuest" && <Fuehrungsstelle />}
+            {blatt === "eingang" && (
+              <Eingangsblatt
+                gewaehlt={unterwahl.eingang}
+                aufWahl={(eingang) => {
+                  setzeUnterwahl({ eingang });
+                }}
+              />
+            )}
+            {blatt === "fuest" && (
+              <Fuehrungsblatt
+                gewaehlt={unterwahl.fuest}
+                aufWahl={(fuest) => {
+                  setzeUnterwahl({ fuest });
+                }}
+              />
+            )}
             {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}
-            {blatt === "fueorg" && <Fuehrungsorganisation />}
             {blatt === "diagnose" && (
               <>
                 <Diagnose />
