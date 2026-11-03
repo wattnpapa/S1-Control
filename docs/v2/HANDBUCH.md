@@ -34,8 +34,10 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
 
 ## Ein Einsatz von Anfang bis Ende
 
-1. **Einstellungen prüfen.** Sharepfad und Anzeigename. Der Name steht in der
-   Statuszeile der anderen; „Zugtrupp“ ist nützlicher als „PC-3“.
+1. **Einstellungen prüfen.** Sharepfad, Anzeigename und Profil. Der Name
+   steht in der Statuszeile der anderen; „Zugtrupp“ ist nützlicher als
+   „PC-3“. Das Profil bestimmt, welche Reiter oben stehen (siehe „Das
+   Fenster“).
 2. **Einsatz anlegen** — einmal, von einem Rechner. Name und Datum ergeben den
    Ordner; danach ist der Einsatz unveränderlich verankert (§5.6).
    Gleich danach im Blatt **Führungsstelle** über „Stammdaten bearbeiten“ den
@@ -58,7 +60,7 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Bernstein, und dann ist eine Funkprobe fällig.
 7. **Anforderungen führen.** Was fehlt, was zugesagt ist, was eingetroffen ist.
    Eine Ablösung wird an der Einheit angefordert („Ablösung anfordern“) oder im
-   Blatt Anforderungen mit „Ablösung für“. Beim Eintreffen entsteht die neue
+   Blatt **Eingang** unter „Anforderungen“ mit „Ablösung für“. Beim Eintreffen entsteht die neue
    Einheit aus der Anforderung, und die abgelöste Zeile nennt sie unter
    „Ablösung durch“.
 8. **Ausgaben erzeugen**, wenn die Führung sie braucht: Druck, Status-Matrix,
@@ -86,7 +88,32 @@ Wort, ob dem Bild zu trauen ist: „✓ aktuell“, „⚠ Share nicht erreichba
 „✖ Verbindung unterbrochen“; wer mit der Maus darauf zeigt, liest Stand, Share
 und Arbeitsplätze. Ein beendeter oder archivierter Einsatz steht neben der
 Führungsstelle als „BEENDET — Eingaben gesperrt“ oder „ARCHIVIERT — nur
-lesen“. Die zweite Zeile trägt die Reiter.
+lesen“. Die zweite Zeile trägt die Reiter und rechts **„Mehr ▾“**.
+
+Welche Reiter im Band stehen, bestimmt das **Profil** dieses Arbeitsplatzes.
+Es wird auf der Einsatzauswahl neben der Betriebsart gewählt und gilt für
+dieses Gerät, nicht für den Einsatz:
+
+| Profil | Reiter im Band | unter „Mehr“ |
+|---|---|---|
+| Führungsstelle (S1), Vorgabe | Lage · Eingang · Führungsstelle · Ausgaben · Einsatztagebuch | Funkplan, Versorgung, Kosten |
+| Vermeldezentrale | Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
+| Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
+| Alle Blätter | alle acht Blätter | — |
+
+Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt
+unter „Mehr“ erreichbar. Wer dort ein Blatt aufschlägt, sieht es, solange es
+offen ist, als letzten Reiter im Band; im Menü trägt es ein Häkchen. Die
+Zahl offener Meldungen steht am Reiter Eingang und ebenso im Menü. Der
+Meldekopf hat seinen eigenen Zuschnitt ohne Reiter; dort ist das Profil
+gesperrt.
+
+Zwei Blätter tragen oben einen **Umschalter**: **Eingang** zwischen
+„Eingangskorb“ (mit der Zahl der offenen Meldungen) und „Anforderungen“,
+**Führungsstelle** zwischen „Stammdaten und Schichtplan“ und
+„Führungsorganisation“. Der Umschalter merkt sich die Wahl, solange das
+Fenster offen ist, und nach einem Neuladen im Browser. Die Kürzel eines
+Unterblatts (etwa Strg+N) gelten nur, solange es zu sehen ist.
 
 Im Fenstermenü steht, was zum Fenster gehört und selten gebraucht wird: Hilfe
 und Tastenkarte (Strg+H), das Erscheinungsbild (Standard, Dunkel, Feld,
@@ -94,7 +121,8 @@ Nacht), „Stärke-Monitor öffnen …“, die Diagnose, in der Web-Schale
 „Abmelden“ und „Einsatz schließen“, der Weg zurück zur Liste der Einsätze.
 
 Unter dem Kopfband steht beim ersten Aufschlagen eines Blatts eine
-**Einstiegszeile**: in einem Satz, was das Blatt ist, und „Verstanden“.
+**Einstiegszeile**: in einem Satz, was das Blatt ist, und „Verstanden“. Bei
+Eingang und Führungsstelle hat jede Seite des Umschalters ihre eigene Zeile.
 Danach bleibt sie an diesem Gerät weg; derselbe Text steht in der Hilfe
 (Strg+H). Ein Browser ohne Speicher (privates Fenster) zeigt sie bei jedem
 Öffnen wieder.

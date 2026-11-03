@@ -29,6 +29,12 @@ ausschließlich Modelle, in denen mehrere Rechner dieselbe Datei schreiben.
 3. In der Anwendung unter Einstellungen den Pfad der Freigabe eintragen und
    einen Anzeigenamen setzen. Der Anzeigename steht später in der Statuszeile
    der anderen Arbeitsplätze; „Zugtrupp“ ist nützlicher als „PC-3“.
+   Je Arbeitsplatz ein **Profil** wählen: Führungsstelle (S1, Vorgabe),
+   Vermeldezentrale, Versorgung (S4) oder Alle Blätter. Es bestimmt nur,
+   welche Reiter im Kopfband stehen; die übrigen Blätter stehen unter „Mehr“.
+   Profil, Betriebsart und Erscheinungsbild liegen in der
+   Einstellungsdatei des Geräts (in der Web-Schale je Browser), nicht in der
+   Akte.
 
 Der Ordner unter der Freigabe sieht danach so aus (KONZEPT-SPEICHER.md §1.4):
 
