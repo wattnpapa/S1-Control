@@ -27,41 +27,6 @@ export interface Gliederungswahl {
 
 export const GLIEDERUNG_AUS: Gliederungswahl = { an: false, ohneLeere: false };
 
-interface SchalterEigenschaften {
-  readonly wahl: Gliederungswahl;
-  readonly aufWahl: (wahl: Gliederungswahl) => void;
-}
-
-/** Der Umschalter neben der Statusleiste — zwei Knöpfe, der zweite nur mit Gliederung. */
-export function Gliederungsschalter({ wahl, aufWahl }: SchalterEigenschaften): React.JSX.Element {
-  return (
-    <div className="gliederungsschalter" role="group" aria-label="Gliederung">
-      <button
-        type="button"
-        aria-pressed={wahl.an}
-        title="Nach Bereichen gliedern: Kopfzeile mit Zwischensumme je Abschnitt, wie im Blatt „Stärke“"
-        onClick={() => {
-          aufWahl({ ...wahl, an: !wahl.an });
-        }}
-      >
-        Gliederung
-      </button>
-      {wahl.an && (
-        <button
-          type="button"
-          aria-pressed={wahl.ohneLeere}
-          title="Bereiche ohne Einheiten aus- oder einblenden"
-          onClick={() => {
-            aufWahl({ ...wahl, ohneLeere: !wahl.ohneLeere });
-          }}
-        >
-          Leere ausblenden
-        </button>
-      )}
-    </div>
-  );
-}
-
 export function staerkeText(staerke: Staerke): string {
   return `${String(staerke.fuehrer)}/${String(staerke.unterfuehrer)}/${String(staerke.mannschaft)}`;
 }

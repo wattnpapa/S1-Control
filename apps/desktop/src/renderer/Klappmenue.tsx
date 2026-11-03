@@ -129,6 +129,34 @@ export function Menueeintrag({ text, kurz, titel, sperre, rot, aufWahl }: Menuee
   );
 }
 
+export interface MenuehakenEigenschaften extends Omit<MenueeintragEigenschaften, "rot"> {
+  readonly an: boolean;
+}
+
+/**
+ * Ein Eintrag zum An- und Abhaken (`menuitemcheckbox`). Er schließt das Menü
+ * nicht: Wer Spalten zuschaltet, schaltet selten nur eine.
+ */
+export function Menuehaken({ text, kurz, titel, sperre, an, aufWahl }: MenuehakenEigenschaften): React.JSX.Element {
+  return (
+    <button
+      type="button"
+      role="menuitemcheckbox"
+      aria-checked={an}
+      aria-disabled={sperre === undefined ? undefined : true}
+      title={sperre ?? titel}
+      onClick={sperre === undefined ? aufWahl : undefined}
+    >
+      {text}
+      {kurz !== undefined && (
+        <span className="kurz" aria-hidden="true">
+          {kurz}
+        </span>
+      )}
+    </button>
+  );
+}
+
 export interface Knopfangaben {
   readonly inhalt: ReactNode;
   readonly klasse?: string | undefined;

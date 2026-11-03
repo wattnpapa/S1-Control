@@ -148,7 +148,9 @@ describe.each(["BEENDET", "ARCHIVIERT"])("Einsatz %s", (status) => {
   it("sperrt Anlegen, Verschieben und Entfernen", async () => {
     zeige();
     await screen.findByText("Bergungsgruppe 1");
-    expect((screen.getByRole("button", { name: /Aus Vorlage/ }) as HTMLButtonElement).disabled).toBe(true);
+    const anlegen = screen.getByRole("button", { name: "Einheit anlegen" }) as HTMLButtonElement;
+    expect(anlegen.disabled).toBe(true);
+    expect(anlegen.getAttribute("title")).toBe(TEXT_NUR_LESEN);
     // Mit Markierung nennt die Auswahlleiste die Sperre statt der Schritte.
     fireEvent.click(screen.getByText("Deich Nord"));
     const leiste = screen.getByRole("toolbar", { name: "Auswahl" });

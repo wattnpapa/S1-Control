@@ -102,8 +102,15 @@ export function Einheitenmasken({
 
   // Der Schlüssel trennt Anlegen und Kopieren: Wer aus der offenen Kopie mit
   // Strg+N in die leere Anlage wechselt, soll keine Werte der Quelle erben.
-  if (maske === "anlegen") {
-    return <EinheitAnlegen key="anlegen" abschnittId={abschnittId} aufSchliessen={aufSchliessen} />;
+  if (maske === "anlegen" || maske === "anlegenFrei") {
+    return (
+      <EinheitAnlegen
+        key={maske}
+        abschnittId={abschnittId}
+        aufSchliessen={aufSchliessen}
+        anfangsweg={maske === "anlegen" ? "vorlage" : "frei"}
+      />
+    );
   }
 
   if (maske === "kopieren" && erste !== undefined) {

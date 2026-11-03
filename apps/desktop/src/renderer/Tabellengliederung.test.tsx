@@ -135,17 +135,20 @@ async function zeigeTabelle(): Promise<string[]> {
 }
 
 describe("Die Gliederung der Einheitentabelle", () => {
-  it("bestellt die Gliederung beim Umschalten und blendet leere Bereiche auf Wunsch aus", async () => {
+  it("bestellt die Gliederung beim Umschalten im Menü „Spalten“ und blendet leere Bereiche auf Wunsch aus", async () => {
     await zeigeTabelle();
     expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBeUndefined();
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    // „Leere Bereiche ausblenden“ steht nur mit Gliederung da.
+    expect(screen.queryByRole("menuitemcheckbox", { name: "Leere Bereiche ausblenden" })).toBeNull();
 
-    fireEvent.click(screen.getByRole("button", { name: "Gliederung" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("tabelleAnfordern")?.gliederung).toBe(true);
     });
     expect(attrappe.letzterRuf("tabelleAnfordern")?.ohneLeereBereiche).toBeUndefined();
 
-    fireEvent.click(screen.getByRole("button", { name: "Leere ausblenden" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Leere Bereiche ausblenden" }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("tabelleAnfordern")?.ohneLeereBereiche).toBe(true);
     });
@@ -153,7 +156,9 @@ describe("Die Gliederung der Einheitentabelle", () => {
 
   it("kombiniert Gliederung und Statusfilter in einem Ruf", async () => {
     await zeigeTabelle();
-    fireEvent.click(screen.getByRole("button", { name: "Gliederung" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Gliederung nach Bereich" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
     fireEvent.click(screen.getByRole("button", { name: /^Einsatz/ }));
     await waitFor(() => {
       const ruf = attrappe.letzterRuf("tabelleAnfordern");

@@ -39,7 +39,7 @@ import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 
-type Weg = "vorlage" | "frei";
+export type Weg = "vorlage" | "frei";
 
 interface FreieEingabe {
   readonly bezeichnung: string;
@@ -115,6 +115,8 @@ export interface EinheitAnlegenEigenschaften {
   readonly aufSchliessen: () => void;
   /** „Zeile kopieren“: beginnt auf „Ohne Vorlage“ mit diesen Werten. */
   readonly vorbelegung?: Anlagevorbelegung;
+  /** Mit welchem Weg die Maske beginnt — „Ohne Vorlage“ aus dem Menü „Einheit anlegen ▾“. */
+  readonly anfangsweg?: Weg;
 }
 
 /**
@@ -130,9 +132,9 @@ interface Anlagekennung {
   readonly reihenfolge: number;
 }
 
-export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung }: EinheitAnlegenEigenschaften): React.JSX.Element {
+export function EinheitAnlegen({ abschnittId, aufSchliessen, vorbelegung, anfangsweg }: EinheitAnlegenEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [weg, setzeWeg] = useState<Weg>(vorbelegung === undefined ? "vorlage" : "frei");
+  const [weg, setzeWeg] = useState<Weg>(anfangsweg ?? (vorbelegung === undefined ? "vorlage" : "frei"));
   const [vorlageId, setzeVorlageId] = useState("");
   const [vorlagenOrganisation, setzeVorlagenOrganisation] = useState<Organisation | "">("");
   const [frei, setzeFrei] = useState<FreieEingabe>(vorbelegung === undefined ? LEER : freiAus(vorbelegung));

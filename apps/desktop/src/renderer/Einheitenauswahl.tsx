@@ -21,6 +21,7 @@ import { Kontextmenue, Menueeintrag, type Kontextort } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
+import type { Einheitenmarkierung } from "./useEinheitenmarkierung.js";
 
 export interface Auswahlschritt {
   readonly maske: Exclude<Einheitenmaske, undefined>;
@@ -177,5 +178,32 @@ export function Einheitenkontextmenue({
         );
       }}
     />
+  );
+}
+
+export interface AuswahlbereichEigenschaften {
+  readonly markierung: Einheitenmarkierung;
+  readonly gewaehlte: readonly Tabellenzeile[];
+  readonly nurLesen: boolean;
+  readonly aufMaske: (maske: Einheitenmaske) => void;
+  readonly aufTagebuch?: ((einheitId: string) => void) | undefined;
+}
+
+/** Leiste und Kontextmenü zusammen, wie die Tabelle sie einhängt. */
+export function Auswahlbereich({ markierung, gewaehlte, nurLesen, aufMaske, aufTagebuch }: AuswahlbereichEigenschaften): React.JSX.Element {
+  const auswahl = { gewaehlte, anzahl: markierung.markiert.length, nurLesen, aufMaske };
+  const erste = gewaehlte[0];
+  return (
+    <>
+      <Auswahlleiste {...auswahl} />
+      {markierung.kontext !== undefined && (
+        <Einheitenkontextmenue
+          {...auswahl}
+          ort={markierung.kontext}
+          aufSchliessen={markierung.schliesseKontext}
+          aufTagebuch={aufTagebuch === undefined || erste === undefined ? undefined : () => { aufTagebuch(erste.einheitId); }}
+        />
+      )}
+    </>
   );
 }

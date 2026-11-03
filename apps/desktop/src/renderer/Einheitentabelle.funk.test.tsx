@@ -108,7 +108,10 @@ async function mitFunk(): Promise<void> {
     expect(screen.getByText("Bergungsgruppe 1")).toBeDefined();
   });
   expect(screen.queryByRole("columnheader", { name: "Rufgruppe" })).toBeNull();
-  fireEvent.click(screen.getByRole("checkbox", { name: "Funk" }));
+  fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+  fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Funk" }));
+  // Das Menü bleibt beim Abhaken offen; zu, damit es die Zellen nicht verdeckt.
+  fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
 }
 
 describe("Die Spaltengruppe „Funk“ der Einheitentabelle", () => {

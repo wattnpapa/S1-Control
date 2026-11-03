@@ -199,7 +199,9 @@ describe("Funktionalität: Tastaturbedienung", () => {
       expect(screen.getByText("Bergungsgruppe 1")).toBeDefined();
     });
     // Die Ressourcenplanung zuschalten — dort steht „Verfügbar bis".
-    fireEvent.click(screen.getByRole("checkbox", { name: "Ressourcen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Ressourcen" }));
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
     const spalte = screen.getByRole("columnheader", { name: "Verfügbar bis" });
     expect(spalte).toBeDefined();
 

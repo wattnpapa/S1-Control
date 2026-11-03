@@ -50,6 +50,12 @@ function zeile(id: string, bezeichnung: string, teil: Partial<Tabellenzeile> = {
   };
 }
 
+/** Schaltet im Menü „Spalten ▾“ einen Eintrag um; das Menü bleibt dabei offen. */
+function spaltenmenue(name: string): void {
+  if (screen.queryByRole("menu", { name: "Spalten" }) === null) fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+  fireEvent.click(screen.getByRole("menuitemcheckbox", { name }));
+}
+
 let attrappe: Attrappe;
 
 beforeEach(() => {
@@ -102,18 +108,64 @@ describe("Die Einheitentabelle", () => {
     expect(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG).toEqual(["GRUNDDATEN", "STAERKE"]);
   });
 
-  it("schaltet eine Spaltengruppe zu und wieder ab", async () => {
+  it("schaltet eine Spaltengruppe im Menü „Spalten“ zu und wieder ab", async () => {
     await zeigeTabelle();
-    fireEvent.click(screen.getByRole("checkbox", { name: "Logistik" }));
+    // Keine Reihe „Spalten:“ mit Kontrollkästchen mehr über der Tabelle.
+    expect(screen.queryByRole("checkbox", { name: "Logistik" })).toBeNull();
+    const knopf = screen.getByRole("button", { name: "Spalten" });
+    expect(knopf.getAttribute("aria-haspopup")).toBe("menu");
+    spaltenmenue("Logistik");
     expect(screen.getByRole("columnheader", { name: "Weibl." })).toBeDefined();
-    fireEvent.click(screen.getByRole("checkbox", { name: "Logistik" }));
+    expect(screen.getByRole("menuitemcheckbox", { name: "Logistik" }).getAttribute("aria-checked")).toBe("true");
+    spaltenmenue("Logistik");
     expect(screen.queryByRole("columnheader", { name: "Weibl." })).toBeNull();
   });
 
   it("lässt die Grunddaten nicht wegschalten", async () => {
     await zeigeTabelle();
     // Eine Tabelle ohne Bezeichnung und Status ist keine Lage.
-    expect(screen.getByRole("checkbox", { name: "Grunddaten" }).hasAttribute("disabled")).toBe(true);
+    spaltenmenue("Grunddaten");
+    const grunddaten = screen.getByRole("menuitemcheckbox", { name: "Grunddaten" });
+    expect(grunddaten.getAttribute("aria-checked")).toBe("true");
+    expect(grunddaten.getAttribute("aria-disabled")).toBe("true");
+    expect(grunddaten.textContent).toContain("immer");
+    expect(screen.getByRole("columnheader", { name: "Bezeichnung" })).toBeDefined();
+  });
+
+  it("führt im Menü „Spalten“ die sechs Gruppen, die Gliederung, Stillgelegte und das Zurücksetzen", async () => {
+    await zeigeTabelle();
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    const menue = screen.getByRole("menu", { name: "Spalten" });
+    expect(within(menue).getAllByRole("menuitemcheckbox").map((e) => e.textContent)).toEqual([
+      "Grunddatenimmer",
+      "Stärke",
+      "Ressourcen",
+      "Logistik",
+      "Kosten",
+      "Funk",
+      "Gliederung nach Bereich",
+      "Stillgelegte zeigen",
+    ]);
+    fireEvent.click(within(menue).getByRole("menuitemcheckbox", { name: "Stillgelegte zeigen" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.mitStillgelegten).toBe(true);
+    });
+    fireEvent.click(within(menue).getByRole("menuitemcheckbox", { name: "Kosten" }));
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Spalten zurücksetzen" }));
+    expect(screen.queryByRole("menu")).toBeNull();
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tabelleAnfordern")?.mitStillgelegten).toBeUndefined();
+    });
+    expect(screen.getByRole("group", { name: "Filter nach Status" }).textContent).toContain("Spalten Grunddaten, Stärke");
+  });
+
+  it("nennt in der Filterzeile rechts, was das Menü „Spalten“ eingestellt hat", async () => {
+    await zeigeTabelle();
+    const filter = screen.getByRole("group", { name: "Filter nach Status" });
+    expect(filter.textContent).toMatch(/^Filter/);
+    expect(filter.textContent).toContain("Spalten Grunddaten, Stärke");
+    spaltenmenue("Funk");
+    expect(filter.textContent).toContain("Spalten Grunddaten, Stärke, Funk");
   });
 
   it("schreibt eine Inline-Änderung mit dem gesehenen Vorher-Wert (§2.2a)", async () => {
@@ -427,7 +479,7 @@ describe("Die Einheitentabelle", () => {
 
   it("zählt je Status in der Reihenfolge der Excel und filtert per Klick", async () => {
     await zeigeTabelle();
-    const leiste = screen.getByRole("group", { name: "Status" });
+    const leiste = screen.getByRole("group", { name: "Filter nach Status" });
     const knoepfe = leiste.querySelectorAll("button");
     expect(Array.from(knoepfe).map((k) => k.textContent)).toEqual(["Angefordert1", "Einsatz2"]);
     fireEvent.click(screen.getByRole("button", { name: /Angefordert/ }));
@@ -440,9 +492,47 @@ describe("Die Einheitentabelle", () => {
     });
   });
 
-  it("nennt am Anlegeknopf beide Wege und nicht nur die Vorlage", async () => {
-    await zeigeTabelle();
-    expect(screen.getByRole("button", { name: "Aus Vorlage" }).getAttribute("title")).toBe("Einheit anlegen (Strg+N)");
+  it("führt im Hauptknopf „Einheit anlegen ▾“ Vorlage, ohne Vorlage und den Erfassungsbogen", async () => {
+    let scanner = 0;
+    render(
+      <Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} aufScanner={() => { scanner += 1; }} />,
+    );
+    await screen.findByText("Bergungsgruppe 1");
+    const knopf = screen.getByRole("button", { name: "Einheit anlegen" });
+    expect(knopf.className).toBe("haupt");
+    expect(knopf.getAttribute("title")).toContain("Strg+N");
+    expect(knopf.getAttribute("title")).toContain("Strg+Q");
+    fireEvent.click(knopf);
+    const menue = screen.getByRole("menu", { name: "Einheit anlegen" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual([
+      "Aus Vorlage …Strg+N",
+      "Ohne Vorlage",
+      "Erfassungsbogen einlesen …Strg+Q",
+    ]);
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Erfassungsbogen einlesen …" }));
+    expect(scanner).toBe(1);
+    expect(screen.queryByRole("menu")).toBeNull();
+
+    fireEvent.click(knopf);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Aus Vorlage …" }));
+    expect(screen.getByRole("button", { name: "Aus Vorlage" }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.keyDown(window, { key: "Escape" });
+
+    fireEvent.click(knopf);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Ohne Vorlage" }));
+    expect(screen.getByRole("button", { name: "Ohne Vorlage" }).getAttribute("aria-pressed")).toBe("true");
+  });
+
+  it("nennt im Kopf die Zahl, mit gewähltem Abschnitt „n in <Abschnitt>“", async () => {
+    useLaden.setState({
+      baum: { lageZeiger: 5, baum: [{ id: "EO", name: "Deich Nord", typ: "EINSATZORT", tiefe: 0, kinder: [] }] } as never,
+    });
+    const { rerender } = render(<Einheitentabelle abschnittId={undefined} einheitId={undefined} aufEinheit={() => undefined} />);
+    await screen.findByText("Bergungsgruppe 1");
+    expect(screen.getByRole("heading", { name: /^Einheiten/ }).textContent).toBe("Einheiten 2");
+    rerender(<Einheitentabelle abschnittId="EO" einheitId={undefined} aufEinheit={() => undefined} />);
+    expect(screen.getByRole("heading", { name: /^Einheiten/ }).textContent).toBe("Einheiten 2 in Deich Nord");
+    expect(screen.queryByRole("button", { name: /Hilfe zu/ })).toBeNull();
   });
 
   describe("Zeile kopieren", () => {

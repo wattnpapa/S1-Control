@@ -38,7 +38,9 @@ export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element 
 
   // Strg+Q öffnet den Scanner — der Buchstabe der Excel für „digitalen EEB in
   // neue Zeile" (m_makroFunktionen). Er wird hier angemeldet und nicht in der
-  // Tabelle: Der Scanner gehört zur Lage, nicht zu einer ihrer Ansichten.
+  // Tabelle: Der Scanner braucht den gewählten Abschnitt, und den hält die
+  // Lage. Seit Runde 6 („Entlastung", 3.3) gibt es keine Werkzeugzeile der
+  // Lage mehr; der Weg mit der Maus ist „Einheit anlegen ▾" der Tabelle.
   useKuerzel(
     useMemo(
       () => ({
@@ -52,23 +54,6 @@ export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element 
 
   return (
     <section aria-label="Lagebild" className="lage">
-      {/* Die Werkzeugzeile trägt, was die ganze Lage betrifft, und sonst
-          nichts. Seit Runde 6 („Entlastung", 3.3) ist das nur noch der
-          Erfassungsbogen: Stärke-Monitor und Einsatz schließen stehen im
-          Fenstermenü, „Rückgängig“ in der Statuszeile, das Anlegen und
-          Verschieben in den Köpfen von Baum und Tabelle. Schnitt E2 zieht
-          auch den Bogen in den Hauptknopf der Einheitenkarte. */}
-      <div className="lagekopf" hidden={blatt !== "lage"}>
-        <button
-          type="button"
-          onClick={() => {
-            setzeScannerOffen(true);
-          }}
-        >
-          Erfassungsbogen einlesen
-        </button>
-      </div>
-
       <div className="lagespalten" hidden={blatt !== "lage"}>
         <Abschnittsbaum
           gewaehlt={abschnittId}
@@ -84,6 +69,9 @@ export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element 
           abschnittId={abschnittId}
           einheitId={einheitId}
           aufEinheit={setzeEinheitId}
+          aufScanner={() => {
+            setzeScannerOffen(true);
+          }}
           // Die Auswahl hält die Lage, das Blatt der Arbeitsplatz: Das
           // Tagebuch filtert dann nach genau dieser Einheit.
           aufTagebuch={

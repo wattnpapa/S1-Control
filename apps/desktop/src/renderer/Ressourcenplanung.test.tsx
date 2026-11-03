@@ -87,7 +87,8 @@ describe("Die Ressourcenplanung in der Einheitentabelle", () => {
   it("zeigt K18 als „läuft ab“ an „Verfügbar bis“, sobald die Gruppe zu sehen ist", async () => {
     await zeige();
     expect(screen.queryByText("läuft ab")).toBeNull();
-    fireEvent.click(screen.getByText("Ressourcen"));
+    fireEvent.click(screen.getByRole("button", { name: "Spalten" }));
+    fireEvent.click(screen.getByRole("menuitemcheckbox", { name: "Ressourcen" }));
     expect(screen.getByText("läuft ab")).toBeDefined();
     expect(screen.getByText("Anforderungs-ID")).toBeDefined();
     expect(screen.getByText("ANF-001")).toBeDefined();

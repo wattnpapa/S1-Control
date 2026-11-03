@@ -167,13 +167,18 @@ describe("Der Arbeitsplatz", () => {
     });
   });
 
-  it("führt in der Werkzeugzeile der Lage weder Monitor noch Rückgängig — Rückgängig steht einmal, unten", async () => {
+  it("führt in der Lage keine Werkzeugzeile, weder Monitor noch Rückgängig — Rückgängig steht einmal, unten", async () => {
     render(<Arbeitsplatz />);
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
     const lage = screen.getByLabelText("Lagebild");
-    expect(within(lage).getByRole("button", { name: "Erfassungsbogen einlesen" })).toBeDefined();
+    // Die Werkzeugzeile der Lage ist ganz weg; der Bogen steckt im Hauptknopf der Einheitenkarte.
+    expect(document.querySelector(".lagekopf")).toBeNull();
+    expect(within(lage).queryByRole("button", { name: "Erfassungsbogen einlesen" })).toBeNull();
+    await userEvent.click(within(lage).getByRole("button", { name: "Einheit anlegen" }));
+    await userEvent.click(screen.getByRole("menuitem", { name: "Erfassungsbogen einlesen …" }));
+    expect(screen.getByRole("region", { name: "Erfassungsbogen einlesen" })).toBeDefined();
     expect(within(lage).queryByRole("button", { name: /Stärke-Monitor/ })).toBeNull();
     expect(within(lage).queryByRole("button", { name: /Rückgängig/ })).toBeNull();
     const ruecknahmen = screen.getAllByRole("button", { name: /Rückgängig/ });

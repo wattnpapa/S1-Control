@@ -19,9 +19,9 @@
  * schnelleres Zeichnen, sondern weniger zu zeichnen.
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
-import { projektion, type Spalte, type Spaltengruppe, type Tabellenzeile } from "@s1/domaene";
+import { projektion, type Spalte, type Tabellenzeile } from "@s1/domaene";
 
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
@@ -30,20 +30,21 @@ import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
 import { Einheitenzeile, type Zeilenumgebung } from "./Einheitenzeile.js";
-import { Auswahlleiste, Einheitenkontextmenue } from "./Einheitenauswahl.js";
-import type { Kontextort } from "./Klappmenue.js";
-import { TEXT_NUR_LESEN } from "./Maske.js";
+import { Auswahlbereich } from "./Einheitenauswahl.js";
+import { useEinheitenmarkierung } from "./useEinheitenmarkierung.js";
 import { useFremdsperren } from "./useBearbeitungssperre.js";
 import { useZellbearbeitung, type Zellbearbeitung } from "./useZellbearbeitung.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { istZahl } from "./Einheitenzelle.js";
-import { GRUPPENTITEL, spaltenFuerAnzeige } from "./Einheitenspalten.js";
+import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { Tabellensumme } from "./Tabellensumme.js";
-import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, type Gliederungswahl } from "./Tabellengliederung.js";
+import { GegliederteZeilen, type Gliederungswahl } from "./Tabellengliederung.js";
+import { spaltenzustand, umgeschaltet, useSpaltenwahl } from "./useSpaltenwahl.js";
 
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
   | "anlegen"
+  | "anlegenFrei"
   | "verschieben"
   | "aufteilen"
   | "zusammenfuehren"
@@ -61,6 +62,8 @@ export interface EinheitentabelleEigenschaften {
   readonly aufEinheit: (einheitId: string | undefined) => void;
   /** „Im Tagebuch zeigen": wählt die Einheit und schlägt das Blatt Tagebuch auf. */
   readonly aufTagebuch?: ((einheitId: string) => void) | undefined;
+  /** „Erfassungsbogen einlesen …" im Hauptknopf: Der Scanner hängt an der Lage. */
+  readonly aufScanner?: (() => void) | undefined;
 }
 
 interface Filterwahl {
@@ -68,10 +71,11 @@ interface Filterwahl {
   readonly suche: string;
   readonly statuswahl: readonly string[];
   readonly gliederung: Gliederungswahl;
+  readonly stillgelegte: boolean;
 }
 
 /** Bestellt den Ausschnitt beim Worker, sobald sich ein Filter ändert. */
-function useTabellenfilter({ abschnittId, suche, statuswahl, gliederung }: Filterwahl): void {
+function useTabellenfilter({ abschnittId, suche, statuswahl, gliederung, stillgelegte }: Filterwahl): void {
   const setzeTabellenfilter = useLaden((zustand) => zustand.setzeTabellenfilter);
   const akteId = useLaden((zustand) => zustand.akteId);
   useEffect(() => {
@@ -81,8 +85,18 @@ function useTabellenfilter({ abschnittId, suche, statuswahl, gliederung }: Filte
       ...(suche === "" ? {} : { suche }),
       ...(statuswahl.length === 0 ? {} : { status: statuswahl }),
       ...(gliederung.an ? { gliederung: true, ohneLeereBereiche: gliederung.ohneLeere } : {}),
+      ...(stillgelegte ? { mitStillgelegten: true } : {}),
     });
-  }, [akteId, abschnittId, suche, statuswahl, gliederung, setzeTabellenfilter]);
+  }, [akteId, abschnittId, suche, statuswahl, gliederung, stillgelegte, setzeTabellenfilter]);
+}
+
+/** Der Name des gewählten Abschnitts aus dem Baum, den dieses Fenster sieht. */
+function useAbschnittsname(abschnittId: string | undefined): string | undefined {
+  const baum = useLaden((zustand) => zustand.baum?.baum);
+  return useMemo(
+    () => (abschnittId === undefined ? undefined : projektion.baumZeilen(baum ?? []).find((zeile) => zeile.id === abschnittId)?.name),
+    [abschnittId, baum],
+  );
 }
 
 interface Kuerzelstand {
@@ -127,37 +141,28 @@ function useTabellenkuerzel({ markiert, maske, nurLesen, zellen, setzeMaske, heb
   );
 }
 
-/** Schaltet einen Wert in einer Liste an oder ab. */
-function umgeschaltet<T>(liste: readonly T[], wert: T): readonly T[] {
-  return liste.includes(wert) ? liste.filter((eintrag) => eintrag !== wert) : [...liste, wert];
-}
-
-export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebuch }: EinheitentabelleEigenschaften): React.JSX.Element {
+export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebuch, aufScanner }: EinheitentabelleEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG);
+  const wahl = useSpaltenwahl(abschnittId !== undefined);
   const [suche, setzeSuche] = useState("");
   /** Der Statusfilter — leer heißt alle; die Leiste zählt auch die Abgewählten. */
   const [statuswahl, setzeStatuswahl] = useState<readonly string[]>([]);
-  /** Gliederung nach Bereichen mit Zwischensummen — kombinierbar mit Status und Suche. */
-  const [gliederung, setzeGliederung] = useState<Gliederungswahl>(GLIEDERUNG_AUS);
   const [maske, setzeMaske] = useState<Einheitenmaske>(undefined);
   /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
-  const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
-  /** Wo das Kontextmenü der Auswahl aufging; es gilt nur, solange etwas markiert ist. */
-  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const markierung = useEinheitenmarkierung(aufEinheit);
+  const { markiert } = markierung;
   const fremd = useFremdsperren();
   const zellen = useZellbearbeitung(fremd);
   /** Beendet oder archiviert: Die Tabelle zeigt, schreibt aber nichts. */
   const nurLesen = (laden.lagebild?.einsatzStatus ?? "AKTIV") !== "AKTIV";
 
-  useTabellenfilter({ abschnittId, suche, statuswahl, gliederung });
-  const hebeAuswahlAuf = useCallback(() => {
-    setzeMarkiert([]);
-  }, []);
-  useTabellenkuerzel({ markiert: markiert.length, maske, nurLesen, zellen, setzeMaske, hebeAuswahlAuf });
+  useTabellenfilter({ abschnittId, suche, statuswahl, gliederung: wahl.gliederung, stillgelegte: wahl.stillgelegte });
+  useTabellenkuerzel({ markiert: markiert.length, maske, nurLesen, zellen, setzeMaske, hebeAuswahlAuf: markierung.hebeAuf });
 
+  const gruppen = wahl.gruppen;
   const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
   const zeilen = laden.tabelle?.zeilen ?? [];
+  const abschnittName = useAbschnittsname(abschnittId);
   const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
 
   const umgebung: Zeilenumgebung = {
@@ -165,79 +170,33 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebu
     zellen,
     fremd,
     auswahlwerte: laden.tabelle?.auswahlwerte,
-    aufKlick: (id, mitStrg) => {
-      setzeMarkiert((bisher) => {
-        if (!mitStrg) return bisher.length === 1 && bisher[0] === id ? [] : [id];
-        return umgeschaltet(bisher, id);
-      });
-      aufEinheit(id);
-    },
-    aufKontext: (id, ereignis) => {
-      // Das Menü des Browsers trüge hier nichts bei (Entwurf, offene Fragen).
-      ereignis.preventDefault();
-      // Ohne Strg ist die Zeile danach allein markiert, mit Strg kommt sie dazu.
-      const mitStrg = ereignis.ctrlKey || ereignis.metaKey;
-      setzeMarkiert((bisher) => (!mitStrg ? [id] : bisher.includes(id) ? bisher : [...bisher, id]));
-      aufEinheit(id);
-      setzeKontext({ x: ereignis.clientX, y: ereignis.clientY });
-    },
+    aufKlick: markierung.klick,
+    aufKontext: markierung.rechtsklick,
   };
-  const auswahl = { gewaehlte, anzahl: markiert.length, nurLesen, aufMaske: setzeMaske };
-  const erste = gewaehlte[0];
-  const zeileFuer = (zeile: Tabellenzeile, tiefe?: number): React.JSX.Element => (
-    <Einheitenzeile
-      key={zeile.einheitId}
-      zeile={zeile}
-      spalten={spalten}
-      tiefe={tiefe}
-      zustand={{ markiert: markiert.includes(zeile.einheitId), gewaehlt: zeile.einheitId === einheitId }}
-      umgebung={umgebung}
-    />
-  );
+  const zeileFuer = zeilenbauer(spalten, umgebung, markiert, einheitId);
 
   return (
     <section aria-label="Einheiten" className="einheiten">
       <Einheitenkopf
-        gesamtzahl={laden.tabelle?.gesamtzahl ?? 0}
+        zahl={einheitenzahl(laden.tabelle?.gesamtzahl ?? 0, abschnittName)}
         nurLesen={nurLesen}
-        suche={suche}
-        aufSuche={setzeSuche}
+        suche={{ wert: suche, aufSuche: setzeSuche }}
         aufMaske={setzeMaske}
+        aufScanner={aufScanner}
+        spalten={wahl}
       />
-      {nurLesen && (
-        <p className="sperrhinweis" role="status">
-          {TEXT_NUR_LESEN}: Status ändern, Anlegen, Verschieben und Entfernen sind gesperrt.
-        </p>
-      )}
-
-      <Spaltenwahl gruppen={gruppen} aufSchalten={(gruppe) => { setzeGruppen((bisher) => umgeschaltet(bisher, gruppe)); }} />
-
-      {/* Die Leiste ist die „Stärke nach Status“ des Blatts Status, auf den
-          Ausschnitt bezogen, und zugleich der Filter: Wer „Angefordert“
-          anklickt, sieht, was noch nicht da ist. Gezählt wird vor dem Filter,
-          damit ein abgewählter Wert seine Zahl behält. */}
-      <div className="tabellenleiste">
-        <StatusLeiste
-          jeStatus={laden.tabelle?.jeStatus ?? {}}
-          wahl={statuswahl}
-          aufSchalten={(status) => { setzeStatuswahl((bisher) => umgeschaltet(bisher, status)); }}
-          aufAlle={() => { setzeStatuswahl([]); }}
-        />
-        <Gliederungsschalter wahl={gliederung} aufWahl={setzeGliederung} />
-      </div>
+      {/* Die Filterzeile ist die „Stärke nach Status“, auf den Ausschnitt
+          bezogen, und zugleich der Filter. Gezählt wird vor dem Filter. */}
+      <StatusLeiste
+        jeStatus={laden.tabelle?.jeStatus ?? {}}
+        wahl={statuswahl}
+        aufSchalten={(status) => { setzeStatuswahl((bisher) => umgeschaltet(bisher, status)); }}
+        aufAlle={() => { setzeStatuswahl([]); }}
+        zustand={spaltenzustand(wahl)}
+      />
 
       <Tabelle tabelle={laden.tabelle} spalten={spalten} gefiltert={statuswahl.length > 0 || suche !== ""} zeileFuer={zeileFuer} />
-      <Auswahlleiste {...auswahl} />
-      {kontext !== undefined && markiert.length > 0 && (
-        <Einheitenkontextmenue
-          {...auswahl}
-          ort={kontext}
-          aufSchliessen={() => {
-            setzeKontext(undefined);
-          }}
-          aufTagebuch={aufTagebuch === undefined || erste === undefined ? undefined : () => { aufTagebuch(erste.einheitId); }}
-        />
-      )}
+      <Auswahlbereich markierung={markierung} gewaehlte={gewaehlte} nurLesen={nurLesen} aufMaske={setzeMaske} aufTagebuch={aufTagebuch} />
       <Tabellenfuss gezeigt={zeilen.length} gesamtzahl={laden.tabelle?.gesamtzahl} />
 
       {einheitId !== undefined && <Untertabellen einheitId={einheitId} />}
@@ -249,47 +208,36 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebu
         aufSchliessen={() => {
           setzeMaske(undefined);
         }}
-        aufGeschrieben={() => {
-          // Die Auswahl gehörte zur Maske: Nach Verschieben oder Entfernen
-          // zeigte sie sonst eine Einheit, die nicht mehr da ist.
-          setzeMarkiert([]);
-        }}
+        // Die Auswahl gehörte zur Maske: Nach Verschieben oder Entfernen
+        // zeigte sie sonst eine Einheit, die nicht mehr da ist.
+        aufGeschrieben={markierung.hebeAuf}
       />
     </section>
   );
 }
 
-/**
- * Mehrfachwahl und kein Reiter: Mehrere Spaltengruppen stehen zugleich offen.
- * Deshalb Kontrollkästchen unter der Beschriftung „Spalten:“ — Reiter würden
- * „eins von fünf“ versprechen.
- */
-function Spaltenwahl({ gruppen, aufSchalten }: { readonly gruppen: readonly Spaltengruppe[]; readonly aufSchalten: (gruppe: Spaltengruppe) => void }): React.JSX.Element {
-  return (
-    <div
-      className="spaltenwahl"
-      role="group"
-      aria-label="Spalten anzeigen"
-      style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem 0.9rem", margin: "9px 0" }}
-    >
-      <strong>Spalten:</strong>
-      {projektion.SPALTENGRUPPEN.map((gruppe) => (
-        <label key={gruppe} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-          <input
-            type="checkbox"
-            checked={gruppen.includes(gruppe)}
-            // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
-            // ohne Bezeichnung und Status ist keine Lage.
-            disabled={gruppe === "GRUNDDATEN"}
-            onChange={() => {
-              aufSchalten(gruppe);
-            }}
-          />
-          {GRUPPENTITEL[gruppe] ?? gruppe}
-        </label>
-      ))}
-    </div>
+/** Baut die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
+function zeilenbauer(
+  spalten: readonly Spalte[],
+  umgebung: Zeilenumgebung,
+  markiert: readonly string[],
+  einheitId: string | undefined,
+): (zeile: Tabellenzeile, tiefe?: number) => React.JSX.Element {
+  return (zeile, tiefe) => (
+    <Einheitenzeile
+      key={zeile.einheitId}
+      zeile={zeile}
+      spalten={spalten}
+      tiefe={tiefe}
+      zustand={{ markiert: markiert.includes(zeile.einheitId), gewaehlt: zeile.einheitId === einheitId }}
+      umgebung={umgebung}
+    />
   );
+}
+
+/** „20" ohne gewählten Abschnitt, „6 in EA 1 Deich Nord" mit ihm. */
+function einheitenzahl(gesamtzahl: number, abschnittName: string | undefined): string {
+  return abschnittName === undefined ? String(gesamtzahl) : `${String(gesamtzahl)} in ${abschnittName}`;
 }
 
 interface TabelleEigenschaften {
