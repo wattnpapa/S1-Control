@@ -19,32 +19,25 @@
  * schnelleres Zeichnen, sondern weniger zu zeichnen.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
-import {
-  projektion,
-  type Spalte,
-  type Spaltengruppe,
-  type Tabellenzeile,
-} from "@s1/domaene";
+import { projektion, type Spalte, type Spaltengruppe, type Tabellenzeile } from "@s1/domaene";
 
 import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
-import { UNGUELTIGE_EINGABE, eingabeAlsWert, inlineEntwurf } from "../kontrakt/bedienschritte.js";
-import type { Zustandswahl } from "../kontrakt/index.js";
+import type { Tabellenansicht } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
-import { hinweisAusErgebnis } from "./Anlegeversuch.js";
+import { Einheitenzeile, type Zeilenumgebung } from "./Einheitenzeile.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
-import { useSchreibsperre } from "./useVerbindungsstatus.js";
-import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
-import { VORWERT_WAHL, istVorwertKonflikt, mitVorwertpruefung, useEditorbasis } from "./Editorbasis.js";
+import { useFremdsperren } from "./useBearbeitungssperre.js";
+import { useZellbearbeitung, type Zellbearbeitung } from "./useZellbearbeitung.js";
 import { StatusLeiste } from "./Statusleiste.js";
-import { Zelle, istZahl } from "./Einheitenzelle.js";
+import { istZahl } from "./Einheitenzelle.js";
 import { GRUPPENTITEL, spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { Tabellensumme } from "./Tabellensumme.js";
-import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, einzug, type Gliederungswahl } from "./Tabellengliederung.js";
+import { GLIEDERUNG_AUS, GegliederteZeilen, Gliederungsschalter, type Gliederungswahl } from "./Tabellengliederung.js";
 
 /** Welche Maske offen ist — höchstens eine. */
 export type Einheitenmaske =
@@ -66,39 +59,17 @@ export interface EinheitentabelleEigenschaften {
   readonly aufEinheit: (einheitId: string | undefined) => void;
 }
 
-export function Einheitentabelle({
-  abschnittId,
-  einheitId,
-  aufEinheit,
-}: EinheitentabelleEigenschaften): React.JSX.Element {
-  const laden = useLaden();
-  const basis = useEditorbasis();
-  const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(
-    projektion.SICHTBARE_GRUPPEN_VORBELEGUNG,
-  );
-  const [suche, setzeSuche] = useState("");
-  /** Der Statusfilter — leer heißt alle; die Leiste zählt auch die Abgewählten. */
-  const [statuswahl, setzeStatuswahl] = useState<readonly string[]>([]);
-  /** Gliederung nach Bereichen mit Zwischensummen — kombinierbar mit Status und Suche. */
-  const [gliederung, setzeGliederung] = useState<Gliederungswahl>(GLIEDERUNG_AUS);
-  const [maske, setzeMaske] = useState<Einheitenmaske>(undefined);
-  /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
-  const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
-  const [bearbeitet, setzeBearbeitet] = useState<{ zeile: string; spalte: string } | undefined>(undefined);
-  // Datensatz-Sperre: solange ein Editor offen ist, sehen die Kollegen „wird bearbeitet“.
-  useSperreHalten(bearbeitet?.zeile);
-  const fremd = useFremdsperren();
-  /** Die Regel, gegen die die offene Zelle verstößt — die Zelle bleibt offen, bis sie stimmt oder verworfen wird. */
-  const [zellenfehler, setzeZellenfehler] = useState<string | undefined>(undefined);
+interface Filterwahl {
+  readonly abschnittId: string | undefined;
+  readonly suche: string;
+  readonly statuswahl: readonly string[];
+  readonly gliederung: Gliederungswahl;
+}
 
-  /** Ohne Verbindung: Die Zelle bleibt mit ihrem Text offen, „Übernehmen“ ist gesperrt. */
-  const verbindungssperre = useSchreibsperre();
-
-  /** Beendet oder archiviert: Die Tabelle zeigt, schreibt aber nichts. */
-  const nurLesen = (laden.lagebild?.einsatzStatus ?? "AKTIV") !== "AKTIV";
-
-  const setzeTabellenfilter = laden.setzeTabellenfilter;
-  const akteId = laden.akteId;
+/** Bestellt den Ausschnitt beim Worker, sobald sich ein Filter ändert. */
+function useTabellenfilter({ abschnittId, suche, statuswahl, gliederung }: Filterwahl): void {
+  const setzeTabellenfilter = useLaden((zustand) => zustand.setzeTabellenfilter);
+  const akteId = useLaden((zustand) => zustand.akteId);
   useEffect(() => {
     if (akteId === undefined) return;
     void setzeTabellenfilter({
@@ -108,10 +79,21 @@ export function Einheitentabelle({
       ...(gliederung.an ? { gliederung: true, ohneLeereBereiche: gliederung.ohneLeere } : {}),
     });
   }, [akteId, abschnittId, suche, statuswahl, gliederung, setzeTabellenfilter]);
+}
 
-  const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
-  const zeilen = laden.tabelle?.zeilen ?? [];
-  const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
+interface Kuerzelstand {
+  readonly markiert: number;
+  readonly maske: Einheitenmaske;
+  readonly nurLesen: boolean;
+  readonly zellen: Zellbearbeitung;
+  readonly setzeMaske: (maske: Einheitenmaske) => void;
+  readonly hebeAuswahlAuf: () => void;
+}
+
+/** Die Kürzel der Excel an der Tabelle (M3.6): Strg+N, Strg+M, Strg+E, Strg+K, Strg+F, Esc. */
+function useTabellenkuerzel({ markiert, maske, nurLesen, zellen, setzeMaske, hebeAuswahlAuf }: Kuerzelstand): void {
+  const offen = zellen.offen !== undefined;
+  const schliesseZelle = zellen.schliesse;
   useKuerzel(
     useMemo(
       () => ({
@@ -119,167 +101,83 @@ export function Einheitentabelle({
           if (!nurLesen) setzeMaske("anlegen");
         },
         verschieben: () => {
-          if (!nurLesen && markiert.length > 0) setzeMaske("verschieben");
+          if (!nurLesen && markiert > 0) setzeMaske("verschieben");
         },
         entfernen: () => {
-          if (!nurLesen && markiert.length === 1) setzeMaske("entfernen");
+          if (!nurLesen && markiert === 1) setzeMaske("entfernen");
         },
         kopieren: () => {
-          if (!nurLesen && markiert.length === 1) setzeMaske("kopieren");
+          if (!nurLesen && markiert === 1) setzeMaske("kopieren");
         },
         suchen: () => {
           document.getElementById("einheitensuche")?.focus();
         },
         abbrechen: () => {
           if (maske !== undefined) setzeMaske(undefined);
-          else if (bearbeitet !== undefined) setzeBearbeitet(undefined);
-          else setzeMarkiert([]);
+          else if (offen) schliesseZelle();
+          else hebeAuswahlAuf();
         },
       }),
-      [markiert, maske, bearbeitet, nurLesen],
+      [markiert, maske, offen, nurLesen, setzeMaske, schliesseZelle, hebeAuswahlAuf],
     ),
   );
+}
 
-  function schalteGruppe(gruppe: Spaltengruppe): void {
-    setzeGruppen((bisher) =>
-      bisher.includes(gruppe) ? bisher.filter((eintrag) => eintrag !== gruppe) : [...bisher, gruppe],
-    );
-  }
+/** Schaltet einen Wert in einer Liste an oder ab. */
+function umgeschaltet<T>(liste: readonly T[], wert: T): readonly T[] {
+  return liste.includes(wert) ? liste.filter((eintrag) => eintrag !== wert) : [...liste, wert];
+}
 
-  function schalteStatus(status: string): void {
-    setzeStatuswahl((bisher) =>
-      bisher.includes(status) ? bisher.filter((eintrag) => eintrag !== status) : [...bisher, status],
-    );
-  }
+export function Einheitentabelle({ abschnittId, einheitId, aufEinheit }: EinheitentabelleEigenschaften): React.JSX.Element {
+  const laden = useLaden();
+  const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG);
+  const [suche, setzeSuche] = useState("");
+  /** Der Statusfilter — leer heißt alle; die Leiste zählt auch die Abgewählten. */
+  const [statuswahl, setzeStatuswahl] = useState<readonly string[]>([]);
+  /** Gliederung nach Bereichen mit Zwischensummen — kombinierbar mit Status und Suche. */
+  const [gliederung, setzeGliederung] = useState<Gliederungswahl>(GLIEDERUNG_AUS);
+  const [maske, setzeMaske] = useState<Einheitenmaske>(undefined);
+  /** Mehrfachauswahl für „verschieben (auch mehrere)“ und das Zusammenführen. */
+  const [markiert, setzeMarkiert] = useState<readonly string[]>([]);
+  const fremd = useFremdsperren();
+  const zellen = useZellbearbeitung(fremd);
+  /** Beendet oder archiviert: Die Tabelle zeigt, schreibt aber nichts. */
+  const nurLesen = (laden.lagebild?.einsatzStatus ?? "AKTIV") !== "AKTIV";
 
-  function schalteMarkierung(id: string, mitStrg: boolean): void {
-    setzeMarkiert((bisher) => {
-      if (!mitStrg) return bisher.length === 1 && bisher[0] === id ? [] : [id];
-      return bisher.includes(id) ? bisher.filter((eintrag) => eintrag !== id) : [...bisher, id];
-    });
-  }
+  useTabellenfilter({ abschnittId, suche, statuswahl, gliederung });
+  const hebeAuswahlAuf = useCallback(() => {
+    setzeMarkiert([]);
+  }, []);
+  useTabellenkuerzel({ markiert: markiert.length, maske, nurLesen, zellen, setzeMaske, hebeAuswahlAuf });
 
-  async function schreibeZelle(zeile: Tabellenzeile, spalte: Spalte, eingabe: string): Promise<void> {
-    const neu = eingabeAlsWert(spalte, eingabe);
-    if (neu === UNGUELTIGE_EINGABE) {
-      // Nicht schließen, nichts schreiben: Die Regel steht an der Zelle,
-      // und Escape verwirft wie immer.
-      setzeZellenfehler(
-        spalte.art === "staerke"
-          ? "Stärke als Fü/UFü/He, z. B. 0/1/8"
-          : "Zeit als TT.MM.JJJJ HH:MM, „29.10. 14:30“ oder „14:30“ (heute)",
-      );
-      return;
-    }
-    if (verbindungssperre !== undefined) {
-      // Kein stummes Verwerfen: Der Text bleibt in der Zelle, der Grund steht dabei.
-      setzeZellenfehler(verbindungssperre);
-      return;
-    }
-    setzeZellenfehler(undefined);
-    const zelle = zeile.zellen[spalte.schluessel];
-    if (zelle === undefined) {
-      setzeBearbeitet(undefined);
-      return;
-    }
-    // Nichts geändert, nichts geschrieben: Ein Ereignis, das denselben Wert
-    // noch einmal setzt, steht für immer im Protokoll und erzeugt bei einem
-    // zweiten Arbeitsplatz einen Konfliktkandidaten ohne fachlichen Anlass.
-    const schluessel = `${zeile.einheitId}/${spalte.schluessel}`;
-    const entwurf = JSON.stringify(neu) === JSON.stringify(zelle.wert) ? undefined : inlineEntwurf(spalte, zeile.einheitId, basis.vorwert(schluessel, zelle.wert), neu);
-    if (entwurf === undefined) {
-      basis.vergiss(schluessel);
-      setzeBearbeitet(undefined);
-      return;
-    }
-    const ergebnis = await laden.bediene(mitVorwertpruefung(entwurf));
-    if (istVorwertKonflikt(ergebnis)) {
-      // Nicht still überschreiben: Die Zelle zeigt, was der Kollege gesetzt hat; ein
-      // zweites Enter gilt dann dem neu geladenen Wert und übernimmt bewusst.
-      basis.vergiss(schluessel);
-      void laden.frischeAnsichten();
-      setzeZellenfehler(`${hinweisAusErgebnis(ergebnis) ?? ""} ${VORWERT_WAHL}`.trim());
-      return;
-    }
-    // Geschlossen wird nur nach bestätigtem Schreiben; sonst bleibt der Text
-    // stehen, und die Zelle sagt, ob nicht gespeichert oder unklar ist.
-    const hinweis = hinweisAusErgebnis(ergebnis);
-    if (hinweis === undefined) {
-      basis.vergiss(schluessel);
-      setzeBearbeitet(undefined);
-    } else setzeZellenfehler(hinweis);
-  }
+  const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
+  const zeilen = laden.tabelle?.zeilen ?? [];
+  const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
 
-  /** Die Auswahl einer Spalte mit `werteAus` (Rufgruppe) aus der Tabellenansicht. */
-  function werteDer(spalte: Spalte): { werteliste?: readonly Zustandswahl[] } {
-    const liste = laden.tabelle?.auswahlwerte?.[spalte.schluessel];
-    return liste === undefined ? {} : { werteliste: liste };
-  }
-
-  /** Die Zeile einer Einheit — flach oder, mit Gliederung, um `tiefe` eingerückt. */
-  function einheitszeile(zeile: Tabellenzeile, tiefe?: number): React.JSX.Element {
-    return (
-      <tr
-        key={zeile.einheitId}
-        className={[
-          markiert.includes(zeile.einheitId) ? "markiert" : "",
-          zeile.einheitId === einheitId ? "gewaehlt" : "",
-          zeile.entfernt ? "entfernt" : "",
-        ]
-          .filter((klasse) => klasse !== "")
-          .join(" ")}
-        onClick={(ereignis) => {
-          schalteMarkierung(zeile.einheitId, ereignis.ctrlKey || ereignis.metaKey);
-          aufEinheit(zeile.einheitId);
-        }}
-      >
-        <th scope="row" title={zeile.abschnittId} style={tiefe === undefined ? undefined : einzug(tiefe)}>
-          {zeile.abschnittName}
-          {fremd.von(zeile.einheitId) !== undefined && (
-            <span className="warnung" role="status">
-              {" "}
-              {sperrtext(fremd.von(zeile.einheitId) ?? "")}
-            </span>
-          )}
-        </th>
-        {spalten.map((spalte) => (
-          <Zelle
-            key={spalte.schluessel}
-            zeile={zeile}
-            spalte={spalte}
-            gesperrt={nurLesen}
-            {...(verbindungssperre === undefined ? {} : { sperre: verbindungssperre })}
-            {...werteDer(spalte)}
-            bearbeitet={
-              bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
-            }
-            fehler={
-              bearbeitet?.zeile === zeile.einheitId && bearbeitet.spalte === spalte.schluessel
-                ? zellenfehler
-                : undefined
-            }
-            aufBearbeiten={() => {
-              const gesperrt = fremd.pruefeStart(zeile.einheitId);
-              if (gesperrt !== undefined) {
-                // Ein anderer Arbeitsplatz bearbeitet diese Einheit: erst Hinweis, dann bewusstes Übernehmen.
-                laden.melde("warnung", gesperrt);
-                return;
-              }
-              setzeZellenfehler(undefined);
-              basis.merke(`${zeile.einheitId}/${spalte.schluessel}`, zeile.zellen[spalte.schluessel]?.wert);
-              setzeBearbeitet({ zeile: zeile.einheitId, spalte: spalte.schluessel });
-            }}
-            aufFertig={(eingabe) => schreibeZelle(zeile, spalte, eingabe)}
-            aufAbbrechen={() => {
-              basis.vergiss(`${zeile.einheitId}/${spalte.schluessel}`);
-              setzeZellenfehler(undefined);
-              setzeBearbeitet(undefined);
-            }}
-          />
-        ))}
-      </tr>
-    );
-  }
+  const umgebung: Zeilenumgebung = {
+    nurLesen,
+    zellen,
+    fremd,
+    auswahlwerte: laden.tabelle?.auswahlwerte,
+    aufKlick: (id, mitStrg) => {
+      setzeMarkiert((bisher) => {
+        if (!mitStrg) return bisher.length === 1 && bisher[0] === id ? [] : [id];
+        return umgeschaltet(bisher, id);
+      });
+      aufEinheit(id);
+    },
+    aufKontext: () => undefined,
+  };
+  const zeileFuer = (zeile: Tabellenzeile, tiefe?: number): React.JSX.Element => (
+    <Einheitenzeile
+      key={zeile.einheitId}
+      zeile={zeile}
+      spalten={spalten}
+      tiefe={tiefe}
+      zustand={{ markiert: markiert.includes(zeile.einheitId), gewaehlt: zeile.einheitId === einheitId }}
+      umgebung={umgebung}
+    />
+  );
 
   return (
     <section aria-label="Einheiten" className="einheiten">
@@ -297,96 +195,24 @@ export function Einheitentabelle({
         </p>
       )}
 
-      {/* Mehrfachwahl und kein Reiter: Mehrere Spaltengruppen stehen zugleich
-          offen. Deshalb Kontrollkästchen unter der Beschriftung „Spalten:“ —
-          Reiter würden „eins von fünf“ versprechen. */}
-      <div
-        className="spaltenwahl"
-        role="group"
-        aria-label="Spalten anzeigen"
-        style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem 0.9rem", margin: "9px 0" }}
-      >
-        <strong>Spalten:</strong>
-        {projektion.SPALTENGRUPPEN.map((gruppe) => (
-          <label key={gruppe} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
-            <input
-              type="checkbox"
-              checked={gruppen.includes(gruppe)}
-              // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
-              // ohne Bezeichnung und Status ist keine Lage.
-              disabled={gruppe === "GRUNDDATEN"}
-              onChange={() => {
-                schalteGruppe(gruppe);
-              }}
-            />
-            {GRUPPENTITEL[gruppe] ?? gruppe}
-          </label>
-        ))}
-      </div>
+      <Spaltenwahl gruppen={gruppen} aufSchalten={(gruppe) => { setzeGruppen((bisher) => umgeschaltet(bisher, gruppe)); }} />
 
       {/* Die Leiste ist die „Stärke nach Status“ des Blatts Status, auf den
           Ausschnitt bezogen, und zugleich der Filter: Wer „Angefordert“
           anklickt, sieht, was noch nicht da ist. Gezählt wird vor dem Filter,
           damit ein abgewählter Wert seine Zahl behält. */}
       <div className="tabellenleiste">
-        <StatusLeiste jeStatus={laden.tabelle?.jeStatus ?? {}} wahl={statuswahl} aufSchalten={schalteStatus} aufAlle={() => { setzeStatuswahl([]); }} />
+        <StatusLeiste
+          jeStatus={laden.tabelle?.jeStatus ?? {}}
+          wahl={statuswahl}
+          aufSchalten={(status) => { setzeStatuswahl((bisher) => umgeschaltet(bisher, status)); }}
+          aufAlle={() => { setzeStatuswahl([]); }}
+        />
         <Gliederungsschalter wahl={gliederung} aufWahl={setzeGliederung} />
       </div>
 
-      <div className="tabellenrahmen">
-        <table>
-          <thead>
-            <tr>
-              <th scope="col">Abschnitt</th>
-              {spalten.map((spalte) => (
-                <th
-                  key={spalte.schluessel}
-                  scope="col"
-                  className={[istZahl(spalte) ? "zahl" : "", spalte.schluessel === "bezeichnung" ? "namensspalte" : ""].join(" ").trim() || undefined}
-                >
-                  {spalte.kopf}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          {laden.tabelle?.gliederung === undefined ? (
-            <tbody>{zeilen.map((zeile) => einheitszeile(zeile))}</tbody>
-          ) : (
-            <GegliederteZeilen
-              gliederung={laden.tabelle.gliederung}
-              zeilen={zeilen}
-              fenster={{
-                von: laden.tabelle.von,
-                gesamtzahl: laden.tabelle.gesamtzahl,
-                gefiltert: statuswahl.length > 0 || suche !== "",
-              }}
-              spalten={spalten}
-              zeileFuer={einheitszeile}
-            />
-          )}
-          {/* Die Summe steht unter der Tabelle und zählt genau das, was
-              darüber steht — den Ausschnitt, nicht den Einsatz. Entfernte
-              Einheiten bleiben sichtbar, zählen aber nicht mit (§5.4.5); die
-              Ist-Stärke des Einsatzes steht im Kopfband. */}
-          <Tabellensumme
-            zeilen={zeilen}
-            spalten={spalten}
-            ausschnitt={zeilen.length !== (laden.tabelle?.gesamtzahl ?? 0)}
-          />
-        </table>
-      </div>
-
-      <p className="tabellenfuss">
-        <span>
-          {zeilen.length === laden.tabelle?.gesamtzahl
-            ? `${String(zeilen.length)} Einheiten`
-            : `${String(zeilen.length)} von ${String(laden.tabelle?.gesamtzahl ?? 0)} Einheiten`}
-        </span>
-        <span className="hinweistext">
-          Doppelklick bearbeitet die Zelle · Textzelle: Enter oder Wegklicken schreibt, Esc verwirft · Auswahl (Status u. a.): Tipp öffnet sie, Enter oder „Übernehmen“ schreibt, Esc oder Wegklicken verwirft ·{" "}
-          {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
-        </span>
-      </p>
+      <Tabelle tabelle={laden.tabelle} spalten={spalten} gefiltert={statuswahl.length > 0 || suche !== ""} zeileFuer={zeileFuer} />
+      <Tabellenfuss gezeigt={zeilen.length} gesamtzahl={laden.tabelle?.gesamtzahl} />
 
       {einheitId !== undefined && <Untertabellen einheitId={einheitId} />}
 
@@ -399,10 +225,109 @@ export function Einheitentabelle({
         }}
         aufGeschrieben={() => {
           // Die Auswahl gehörte zur Maske: Nach Verschieben oder Entfernen
-          // zeigte sie sonst „Verschieben (1)“ für eine Einheit, die nicht mehr da ist.
+          // zeigte sie sonst eine Einheit, die nicht mehr da ist.
           setzeMarkiert([]);
         }}
       />
     </section>
+  );
+}
+
+/**
+ * Mehrfachwahl und kein Reiter: Mehrere Spaltengruppen stehen zugleich offen.
+ * Deshalb Kontrollkästchen unter der Beschriftung „Spalten:“ — Reiter würden
+ * „eins von fünf“ versprechen.
+ */
+function Spaltenwahl({ gruppen, aufSchalten }: { readonly gruppen: readonly Spaltengruppe[]; readonly aufSchalten: (gruppe: Spaltengruppe) => void }): React.JSX.Element {
+  return (
+    <div
+      className="spaltenwahl"
+      role="group"
+      aria-label="Spalten anzeigen"
+      style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: "0.3rem 0.9rem", margin: "9px 0" }}
+    >
+      <strong>Spalten:</strong>
+      {projektion.SPALTENGRUPPEN.map((gruppe) => (
+        <label key={gruppe} style={{ display: "inline-flex", alignItems: "center", gap: "0.3rem" }}>
+          <input
+            type="checkbox"
+            checked={gruppen.includes(gruppe)}
+            // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle
+            // ohne Bezeichnung und Status ist keine Lage.
+            disabled={gruppe === "GRUNDDATEN"}
+            onChange={() => {
+              aufSchalten(gruppe);
+            }}
+          />
+          {GRUPPENTITEL[gruppe] ?? gruppe}
+        </label>
+      ))}
+    </div>
+  );
+}
+
+interface TabelleEigenschaften {
+  readonly tabelle: Tabellenansicht | undefined;
+  readonly spalten: readonly Spalte[];
+  /** Status oder Suche schränken ein: Die Kopfzeile der Gliederung heißt dann „Auswahl“. */
+  readonly gefiltert: boolean;
+  readonly zeileFuer: (zeile: Tabellenzeile, tiefe?: number) => React.JSX.Element;
+}
+
+/** Kopf, Zeilen (flach oder gegliedert) und Summen. */
+function Tabelle({ tabelle, spalten, gefiltert, zeileFuer }: TabelleEigenschaften): React.JSX.Element {
+  const zeilen = tabelle?.zeilen ?? [];
+  return (
+    <div className="tabellenrahmen">
+      <table>
+        <thead>
+          <tr>
+            <th scope="col">Abschnitt</th>
+            {spalten.map((spalte) => (
+              <th
+                key={spalte.schluessel}
+                scope="col"
+                className={[istZahl(spalte) ? "zahl" : "", spalte.schluessel === "bezeichnung" ? "namensspalte" : ""].join(" ").trim() || undefined}
+              >
+                {spalte.kopf}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        {tabelle?.gliederung === undefined ? (
+          <tbody>{zeilen.map((zeile) => zeileFuer(zeile))}</tbody>
+        ) : (
+          <GegliederteZeilen
+            gliederung={tabelle.gliederung}
+            zeilen={zeilen}
+            fenster={{ von: tabelle.von, gesamtzahl: tabelle.gesamtzahl, gefiltert }}
+            spalten={spalten}
+            zeileFuer={zeileFuer}
+          />
+        )}
+        {/* Die Summe steht unter der Tabelle und zählt genau das, was
+            darüber steht — den Ausschnitt, nicht den Einsatz. Entfernte
+            Einheiten bleiben sichtbar, zählen aber nicht mit (§5.4.5); die
+            Ist-Stärke des Einsatzes steht im Kopfband. */}
+        <Tabellensumme zeilen={zeilen} spalten={spalten} ausschnitt={zeilen.length !== (tabelle?.gesamtzahl ?? 0)} />
+      </table>
+    </div>
+  );
+}
+
+/** Unter der Tabelle: wie viele von wie vielen, und wie man eine Zelle bearbeitet. */
+function Tabellenfuss({ gezeigt, gesamtzahl }: { readonly gezeigt: number; readonly gesamtzahl: number | undefined }): React.JSX.Element {
+  return (
+    <p className="tabellenfuss">
+      <span>
+        {gezeigt === gesamtzahl
+          ? `${String(gezeigt)} Einheiten`
+          : `${String(gezeigt)} von ${String(gesamtzahl ?? 0)} Einheiten`}
+      </span>
+      <span className="hinweistext">
+        Doppelklick bearbeitet die Zelle · Textzelle: Enter oder Wegklicken schreibt, Esc verwirft · Auswahl (Status u. a.): Tipp öffnet sie, Enter oder „Übernehmen“ schreibt, Esc oder Wegklicken verwirft ·{" "}
+        {kuerzelText(kuerzel("jetzt") as never)} setzt „jetzt"
+      </span>
+    </p>
   );
 }
