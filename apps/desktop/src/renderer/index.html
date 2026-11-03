@@ -385,6 +385,12 @@
         font: 700 9px/1 var(--ui);
         letter-spacing: 0.08em;
       }
+      /* Im Nachtbild kein Blau: Die Marke traegt die Farben des Kopfbands. */
+      :root[data-theme="nacht"] .kopfband .marke {
+        background: transparent;
+        border-color: var(--kopfband-leise);
+        color: var(--kopfband-text);
+      }
       /* Der Einsatz ist die Überschrift (Entwurf „Entlastung", 3.1); das
          Wortbild steht klein darunter, neben der Führungsstelle. */
       .kopfband .einsatztitel {
@@ -1438,6 +1444,12 @@
       .statusfilter button[aria-pressed="true"] {
         border-color: var(--text);
         box-shadow: inset 0 0 0 1px var(--text);
+      }
+      /* Ein Schalter in der Filterzeile („Nur jüngste Fassung") traegt keine
+         Marke und braucht deshalb eigenen Innenabstand. */
+      .statusfilter .filterschalter {
+        margin-left: 8px;
+        padding: 2px 9px;
       }
       .statusfilter-zahl {
         font-variant-numeric: tabular-nums;

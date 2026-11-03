@@ -10,6 +10,18 @@ import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 
+const ZUSTANDSWORT: Readonly<Record<string, string>> = {
+  NEU: "Neu",
+  GEAENDERT: "Geändert",
+  UEBERNOMMEN: "Übernommen",
+  ABGELEHNT: "Abgelehnt",
+};
+
+/** Das Wort zur Ampel, mit Umlaut, statt des Schlüssels („UEBERNOMMEN"). */
+export function zustandswort(zustand: string): string {
+  return ZUSTANDSWORT[zustand] ?? zustand;
+}
+
 /** „10.09.2026, 08:00:00" — so steht ein Zeitpunkt im Korb. */
 export function zeit(wert: string): string {
   if (wert === "") return "";
@@ -69,7 +81,7 @@ export function Revisionen({
         <ol className="fassungen">
           {zeilen.map((zeile) => (
             <li key={zeile.id} className={zeile.kopf ? "kopf" : ""}>
-              <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zeile.zustand}</span>{" "}
+              <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zustandswort(zeile.zustand)}</span>{" "}
               Stand {zeit(zeile.stand)} · Stärke {zeile.staerke} · empfangen{" "}
               {zeit(zeile.empfangenAm)}
               {zeile.kopf && " · jüngste Fassung"}

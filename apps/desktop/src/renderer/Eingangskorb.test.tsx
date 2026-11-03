@@ -92,9 +92,12 @@ describe("Der Eingangskorb", () => {
     expect(screen.getByText(/1 offen/)).toBeDefined();
   });
 
-  it("zeigt den abgeleiteten Zustand als Ampel", async () => {
+  it("zeigt den abgeleiteten Zustand als Ampel — als Wort mit Umlaut, nicht als Schlüssel", async () => {
+    antworte([zeile("m1", { zustand: "UEBERNOMMEN", einheitId: "E-abc" })], 0);
     await zeige();
-    expect(screen.getByText("NEU")).toBeDefined();
+    const tabelle = screen.getByRole("table", { name: "Meldungen im Eingangskorb" });
+    expect(within(tabelle).getByText("Übernommen").className).toBe("ampel ampel-uebernommen");
+    expect(within(tabelle).queryByText("UEBERNOMMEN")).toBeNull();
   });
 
   it("zeigt ohne Wahl keine Schritte und mit Wahl die Auswahlleiste", async () => {

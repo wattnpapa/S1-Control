@@ -26,7 +26,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { Meldungszeile } from "@s1/domaene";
 
 import { Buendelmaske, useBuendelSchreiben } from "./Buendel.js";
-import { Revisionen, zeit } from "./Eingangsrevisionen.js";
+import { Revisionen, zeit, zustandswort } from "./Eingangsrevisionen.js";
 import { Filterchips } from "./Filterchips.js";
 import { useFeldversuch } from "./Feldschreiben.js";
 import { useGrundabfrage } from "./Grundabfrage.js";
@@ -254,7 +254,7 @@ function Zeile({ zeile, gewaehlt, aufWahl, aufKontext, aufReihe }: ZeilenEigensc
       }}
     >
       <td>
-        <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zeile.zustand}</span>
+        <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zustandswort(zeile.zustand)}</span>
       </td>
       <th scope="row">{zeile.bezeichnung}</th>
       <td>{zeile.organisation}</td>
