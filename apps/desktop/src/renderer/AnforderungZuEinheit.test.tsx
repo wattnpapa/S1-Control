@@ -102,6 +102,7 @@ function entwuerfe(): readonly { typ: string; nutzlast?: unknown; neu?: unknown;
 describe("Anforderung und Einheit", () => {
   it("lässt beim Anlegen die abzulösende Einheit aus der Einheitenliste wählen", async () => {
     await zeige();
+    fireEvent.click(screen.getByRole("button", { name: "Anforderung anlegen" }));
     fireEvent.change(screen.getByLabelText("Ablösung für"), { target: { value: "E20" } });
     fireEvent.click(screen.getByText("Anfordern"));
     await waitFor(() => {
@@ -112,7 +113,8 @@ describe("Anforderung und Einheit", () => {
 
   it("legt bei „Eingetroffen“ die Einheit vorbelegt an und verknüpft sie in der Erledigung", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Eingetroffen"));
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Eingetroffen …"));
     expect((screen.getByLabelText("Bezeichnung") as HTMLInputElement).value).toBe("BGr THW OV Varel");
     expect((screen.getByLabelText("Herkunft") as HTMLInputElement).value).toBe("THW RB Oldenburg");
     expect((screen.getByLabelText("Mannschaft") as HTMLInputElement).value).toBe("8");
@@ -141,7 +143,8 @@ describe("Anforderung und Einheit", () => {
 
   it("warnt bei einem nicht zählenden Bereich und verlangt Köpfe", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Eingetroffen"));
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Eingetroffen …"));
     fireEvent.change(screen.getByLabelText("Abschnitt"), { target: { value: "ANF" } });
     expect(screen.getByRole("alert").textContent).toMatch(/zählt nicht in die Ist-Stärke/);
     for (const feld of ["Führer", "Unterführer", "Mannschaft"]) {
@@ -153,7 +156,8 @@ describe("Anforderung und Einheit", () => {
 
   it("setzt nur auf eingetroffen, wenn die Anlage abgewählt ist", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Eingetroffen"));
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Eingetroffen …"));
     fireEvent.click(screen.getByLabelText("Nur eingetroffen, ohne Einheit"));
     fireEvent.click(screen.getByText("Eingetroffen", { selector: "button[type=submit]" }));
     await waitFor(() => {
@@ -166,7 +170,8 @@ describe("Anforderung und Einheit", () => {
   it("verknüpft eine bestehende Einheit statt eine neue anzulegen", async () => {
     antworte([zeile({ zustand: "EINGETROFFEN", erledigtAm: "2026-09-10T15:40:00+02:00" })]);
     await zeige();
-    fireEvent.click(screen.getByText("Einheit anlegen"));
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Einheit anlegen …"));
     fireEvent.click(screen.getByLabelText("Bestehende Einheit verknüpfen"));
     // Die abzulösende Einheit (E12) steht nicht zur Wahl.
     const wahl = screen.getByLabelText("Bestehende Einheit") as HTMLSelectElement;
@@ -183,7 +188,8 @@ describe("Anforderung und Einheit", () => {
   it("trägt an einer eingetroffenen Anforderung ohne Einheit die Einheit nach", async () => {
     antworte([zeile({ zustand: "EINGETROFFEN", erledigtAm: "2026-09-10T15:40:00+02:00" })]);
     await zeige();
-    fireEvent.click(screen.getByText("Einheit anlegen"));
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Einheit anlegen …"));
     fireEvent.click(screen.getByText("Anlegen", { selector: "button[type=submit]" }));
     await waitFor(() => {
       expect(entwuerfe()).toHaveLength(2);
@@ -198,7 +204,9 @@ describe("Anforderung und Einheit", () => {
       zeile({ zustand: "EINGETROFFEN", erledigtAm: "2026-09-10T15:40:00+02:00", abloesendeEinheitId: "E99", abloesendeEinheit: "BGr Varel" }),
     ]);
     await zeige();
-    expect(screen.queryByText("Einheit anlegen")).toBeNull();
+    fireEvent.click(screen.getByText("ANF-001"));
+    expect(screen.getByRole("toolbar", { name: "Auswahl" })).toBeDefined();
+    expect(screen.queryByText("Einheit anlegen …")).toBeNull();
     expect(screen.getByText(/angelegt: BGr Varel/)).toBeDefined();
   });
 });

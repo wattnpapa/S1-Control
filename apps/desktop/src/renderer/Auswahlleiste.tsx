@@ -14,6 +14,8 @@
  * Zeile, mit dem Titel oben und dem folgenreichen Schritt abgesetzt unten.
  */
 
+import type { ReactNode } from "react";
+
 import { Kontextmenue, Menueeintrag, type Kontextort } from "./Klappmenue.js";
 
 export interface Leistenknopf {
@@ -45,6 +47,8 @@ export interface AuswahlleisteEigenschaften {
   readonly beschriftung?: string;
   /** Der Satz rechts; `null` lässt ihn weg (wo Esc nichts aufhebt). */
   readonly schluss?: string | null;
+  /** Was kein Knopf ist und nach den Knöpfen steht (eine Auswahl wie „Meldestatus …"). */
+  readonly dazu?: ReactNode;
 }
 
 function knopftitel(knopf: Leistenknopf): string {
@@ -83,6 +87,7 @@ export function Auswahlleiste({
   sperrtext,
   beschriftung = "Auswahl",
   schluss = "Esc hebt die Auswahl auf",
+  dazu,
 }: AuswahlleisteEigenschaften): React.JSX.Element {
   return (
     <div role="toolbar" aria-label={beschriftung} className="auswahlleiste">
@@ -92,6 +97,7 @@ export function Auswahlleiste({
       ) : (
         <span className="auswahlsperre">{sperrtext}</span>
       )}
+      {dazu}
       {schluss !== null && <span className="auswahlschluss">{schluss}</span>}
     </div>
   );

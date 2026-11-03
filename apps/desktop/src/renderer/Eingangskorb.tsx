@@ -13,166 +13,246 @@
  * verboten. Wer eine Meldung nicht will, lehnt sie ab — mit Grund (§2.4) —,
  * und sie bleibt im Korb. Dieselbe Regel führt die Excel als „Google-Zeilen
  * werden bis Einsatzende nicht gelöscht".
+ *
+ * Seit Runde 6 (Entwurf „Entlastung", 3.7) folgt der Korb dem Muster der
+ * Lage: im Kopf der Hauptknopf „Bündel einlesen …" und „⋯" mit „Meldungen
+ * als Datei speichern" (`Buendel.tsx`), darunter eine Filterzeile mit Chips
+ * (`Filterchips.tsx`), und was eine Meldung kann, steht erst mit ihrer Wahl
+ * in der Auswahlleiste und im Kontextmenü (`Meldungsauswahl.tsx`).
  */
 
-import { useEffect, useRef, useState } from "react";
-import { useGrundabfrage } from "./Grundabfrage.js";
+import { useEffect, useMemo, useState } from "react";
 
-import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
+import type { Meldungszeile } from "@s1/domaene";
 
-import { useLaden } from "./laden.js";
+import { Buendelmaske, useBuendelSchreiben } from "./Buendel.js";
+import { Revisionen, zeit } from "./Eingangsrevisionen.js";
+import { Filterchips } from "./Filterchips.js";
 import { useFeldversuch } from "./Feldschreiben.js";
+import { useGrundabfrage } from "./Grundabfrage.js";
+import { Klappmenue, Menueeintrag, type Kontextort } from "./Klappmenue.js";
+import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
+import { Meldungskontextmenue, Meldungsleiste, type MeldungsauswahlEigenschaften } from "./Meldungsauswahl.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
-import {
-  MELDESTATUS,
-  ablehnungZurueckgenommen,
-  meldeStatusGesetzt,
-  meldungAbgelehnt,
-  uebernahmeZurueckgenommen,
-  type Meldestatus,
-} from "../kontrakt/bedienschritte.js";
+import { useKuerzel } from "./tastatur.js";
+import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { ablehnungZurueckgenommen, meldeStatusGesetzt, meldungAbgelehnt, uebernahmeZurueckgenommen } from "../kontrakt/bedienschritte.js";
 
-/** Die vier Zustände mit Beschriftung — die Ampel der Vorlage. */
+/** Die vier Zustände mit Beschriftung und Ton — die Ampel der Vorlage. */
 const ZUSTAENDE = [
-  { wert: "NEU", titel: "Neu" },
-  { wert: "GEAENDERT", titel: "Geändert" },
-  { wert: "UEBERNOMMEN", titel: "Übernommen" },
-  { wert: "ABGELEHNT", titel: "Abgelehnt" },
+  { wert: "NEU", titel: "Neu", ton: "warn" },
+  { wert: "GEAENDERT", titel: "Geändert", ton: "warn" },
+  { wert: "UEBERNOMMEN", titel: "Übernommen", ton: "ok" },
+  { wert: "ABGELEHNT", titel: "Abgelehnt", ton: "" },
 ] as const;
 
-function zeit(wert: string): string {
-  if (wert === "") return "";
-  const zeitpunkt = new Date(wert);
-  return Number.isNaN(zeitpunkt.getTime()) ? wert : zeitpunkt.toLocaleString("de-DE");
+type Zustandswahl = NonNullable<ReturnType<typeof useLaden.getState>["eingangsfilter"]["zustaende"]>;
+
+/** Die Zustandsfilter als Chips, „Nur jüngste Fassung" als Schalter rechts daneben. */
+function Eingangsfilter(): React.JSX.Element {
+  const ansicht = useLaden((z) => z.eingangskorb);
+  const filter = useLaden((z) => z.eingangsfilter);
+  const setzeFilter = useLaden((z) => z.setzeEingangsfilter);
+  const chips = ZUSTAENDE.map((z) => ({ ...z, anzahl: ansicht === undefined ? undefined : (ansicht.jeZustand[z.wert] ?? 0) }));
+  return (
+    <Filterchips
+      beschriftung="Filter nach Zustand"
+      chips={chips}
+      wahl={filter.zustaende ?? []}
+      aufWahl={(wahl) => void setzeFilter({ ...filter, zustaende: wahl.length === 0 ? undefined : (wahl as Zustandswahl) })}
+      dazu={
+        // K26: Bei einer Mehrtageslage trägt der Korb je Einheit so viele
+        // Zeilen, wie es Meldetage gab. Gebraucht wird die jüngste; die
+        // anderen stehen in der Revisionsansicht.
+        <button
+          type="button"
+          className="filterschalter"
+          aria-pressed={filter.nurKoepfe === true}
+          onClick={() => void setzeFilter({ ...filter, nurKoepfe: filter.nurKoepfe !== true })}
+        >
+          Nur jüngste Fassung
+        </button>
+      }
+    />
+  );
+}
+
+/** Kopf des Korbs: Titel mit Zahl, „Bündel einlesen …" und „⋯". */
+function Korbkopf({ offen, aufErgebnis }: { readonly offen: number | undefined; readonly aufErgebnis: (text: string) => void }): React.JSX.Element {
+  const [maske, setzeMaske] = useState(false);
+  const schreibe = useBuendelSchreiben(aufErgebnis);
+  const nurLesen = useNurLesen();
+  return (
+    <div className="einheitenkopf eingangskopf">
+      <h2>
+        Eingangskorb
+        {offen === undefined ? "" : ` — ${String(offen)} offen`}
+      </h2>
+      <button
+        type="button"
+        className="haupt"
+        disabled={nurLesen}
+        title={nurLesen ? TEXT_NUR_LESEN : "Meldungen aus einer Bündeldatei des Meldekopfs in einen Abschnitt einlesen"}
+        onClick={() => setzeMaske(true)}
+      >
+        Bündel einlesen …
+      </button>
+      <span className="werkzeugrechts">
+        <Klappmenue
+          huelle="rechts"
+          knopf={{ inhalt: "⋯", klasse: "menueknopf", beschriftung: "Weitere Schritte im Eingangskorb", titel: "Meldungen als Datei speichern" }}
+          menue={{ beschriftung: "Eingangskorb", id: "eingangsmenue" }}
+          inhalt={(waehle) => (
+            <Menueeintrag
+              text="Meldungen als Datei speichern"
+              titel="Schreibt alle Meldungen als Bündeldatei nach „ausgaben“, für den Weg ohne Netz"
+              aufWahl={waehle(schreibe)}
+            />
+          )}
+        />
+      </span>
+      {maske && <Buendelmaske aufSchliessen={() => setzeMaske(false)} aufErgebnis={aufErgebnis} />}
+    </div>
+  );
+}
+
+/** Was die gewählte Meldung schreibt — dieselben Schritte wie bisher in der Spalte „Handlung". */
+function useMeldungsschritte(zeile: Meldungszeile | undefined, aufFassungen: () => void): {
+  readonly auswahl: MeldungsauswahlEigenschaften | undefined;
+  readonly masken: React.ReactNode;
+} {
+  const bediene = useLaden((z) => z.bediene);
+  const grundabfrage = useGrundabfrage();
+  const aktion = useFeldversuch();
+  const nurLesen = useNurLesen();
+  const verbindung = useSchreibsperre();
+  const sperre = nurLesen ? TEXT_NUR_LESEN : aktion.gesperrt ? (verbindung ?? "Gerade nicht möglich") : aktion.laeuft ? "Wird geschrieben …" : undefined;
+  const masken = (
+    <>
+      {aktion.anzeige}
+      {grundabfrage.maske}
+    </>
+  );
+  if (zeile === undefined) return { auswahl: undefined, masken };
+  const auswahl: MeldungsauswahlEigenschaften = {
+    zeile,
+    sperre,
+    ablehnenSperre: nurLesen ? TEXT_NUR_LESEN : undefined,
+    aufAblehnen: () => {
+      // §2.4: Der Grund gehört zur Ablehnung. Ohne ihn wäre sie im
+      // Nachhinein nicht von einem Versehen zu unterscheiden.
+      grundabfrage.frage({
+        titel: "Meldung ablehnen",
+        erlaeuterung: "Die Ablehnung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
+        bestaetigungstext: "Ablehnen",
+        // Das Versprechen geht an die Abfrage zurück: Der Dialog bleibt mit dem
+        // Grund stehen, bis der Dienst das Schreiben bestätigt hat.
+        aufGrund: (text) => bediene(meldungAbgelehnt(zeile.id, text)),
+      });
+    },
+    aufAblehnungZurueck: () => void aktion.schreibe(ablehnungZurueckgenommen(zeile.id)),
+    aufUebernahmeZurueck: () => void aktion.schreibe(uebernahmeZurueckgenommen(zeile.id)),
+    aufMeldestatus: (status) => void aktion.schreibe(meldeStatusGesetzt(zeile.id, null, status)),
+    aufFassungen,
+  };
+  return { auswahl, masken };
+}
+
+interface MeldungstabelleEigenschaften {
+  readonly zeilen: readonly Meldungszeile[];
+  readonly gewaehlt: string | undefined;
+  readonly aufWahl: (id: string) => void;
+  readonly aufKontext: (ort: Kontextort) => void;
+  readonly aufReihe: (zeile: Meldungszeile) => void;
+}
+
+function Meldungstabelle({ zeilen, gewaehlt, aufWahl, aufKontext, aufReihe }: MeldungstabelleEigenschaften): React.JSX.Element {
+  return (
+    <table className="meldungstabelle" aria-label="Meldungen im Eingangskorb">
+      <thead>
+        <tr>
+          <th scope="col">Zustand</th>
+          <th scope="col">Einheit</th>
+          <th scope="col">Org.</th>
+          <th scope="col">Stärke</th>
+          <th scope="col">Stand</th>
+          <th scope="col">Empfangen</th>
+          <th scope="col">Signatur</th>
+          <th scope="col">Fassung</th>
+        </tr>
+      </thead>
+      <tbody>
+        {zeilen.map((zeile) => (
+          <Zeile key={zeile.id} zeile={zeile} gewaehlt={zeile.id === gewaehlt} aufWahl={aufWahl} aufKontext={aufKontext} aufReihe={aufReihe} />
+        ))}
+      </tbody>
+    </table>
+  );
 }
 
 export function Eingangskorb(): React.JSX.Element {
-  const laden = useLaden();
-  const holeEingangskorb = laden.holeEingangskorb;
+  const holeEingangskorb = useLaden((z) => z.holeEingangskorb);
+  const ansicht = useLaden((z) => z.eingangskorb);
   const [reihe, setzeReihe] = useState<string | undefined>(undefined);
+  const [gewaehltId, setzeGewaehltId] = useState<string | undefined>(undefined);
+  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
+  const gewaehlt = ansicht?.zeilen.find((zeile) => zeile.id === gewaehltId);
+  const { auswahl, masken } = useMeldungsschritte(gewaehlt, () => setzeReihe(gewaehlt?.einheitSchluessel));
 
   useEffect(() => {
     void holeEingangskorb();
   }, [holeEingangskorb]);
-
-  const ansicht = laden.eingangskorb;
-  const filter = laden.eingangsfilter;
+  useKuerzel(useMemo(() => ({ abbrechen: () => setzeGewaehltId(undefined) }), []));
 
   return (
     <section aria-label="Eingangskorb" className="eingangskorb">
-      <h2>
-        Eingangskorb
-        {ansicht === undefined ? "" : ` — ${String(ansicht.offen)} offen`}
-      </h2>
-
+      <Korbkopf offen={ansicht?.offen} aufErgebnis={setzeMeldung} />
+      {meldung !== undefined && (
+        <p role="status" className="hinweistext">
+          {meldung}
+        </p>
+      )}
       <NurLesenHinweis />
-
-      <Buendel />
-
-      <div className="eingangsfilter">
-        {ZUSTAENDE.map((zustand) => {
-          const gewaehlt = filter.zustaende?.includes(zustand.wert) ?? false;
-          return (
-            <label key={zustand.wert}>
-              <input
-                type="checkbox"
-                checked={gewaehlt}
-                onChange={() => {
-                  const bisher = filter.zustaende ?? [];
-                  const naechste = gewaehlt
-                    ? bisher.filter((wert) => wert !== zustand.wert)
-                    : [...bisher, zustand.wert];
-                  // Keine Auswahl heißt „alle“: Eine leere Tabelle liest sich
-                  // wie ein Fehler.
-                  void laden.setzeEingangsfilter({
-                    ...filter,
-                    ...(naechste.length === 0 ? { zustaende: undefined } : { zustaende: naechste }),
-                  });
-                }}
-              />
-              {zustand.titel}
-              {ansicht === undefined ? "" : ` (${String(ansicht.jeZustand[zustand.wert] ?? 0)})`}
-            </label>
-          );
-        })}
-        <label>
-          <input
-            type="checkbox"
-            checked={filter.nurKoepfe === true}
-            onChange={(e) => {
-              // K26: Bei einer Mehrtageslage trägt der Korb je Einheit so
-              // viele Zeilen, wie es Meldetage gab. Gebraucht wird die
-              // jüngste; die anderen stehen in der Revisionsansicht.
-              void laden.setzeEingangsfilter({ ...filter, nurKoepfe: e.target.checked });
-            }}
-          />
-          Nur jüngste Fassung
-        </label>
-      </div>
-
+      <Eingangsfilter />
       {ansicht === undefined ? (
         <p className="hinweistext">Wird geladen …</p>
       ) : ansicht.zeilen.length === 0 ? (
         <p className="hinweistext">Keine Meldung im Korb.</p>
       ) : (
-        <table className="meldungstabelle">
-          <thead>
-            <tr>
-              <th scope="col">Zustand</th>
-              <th scope="col">Einheit</th>
-              <th scope="col">Org.</th>
-              <th scope="col">Stärke</th>
-              <th scope="col">Stand</th>
-              <th scope="col">Empfangen</th>
-              <th scope="col">Signatur</th>
-              <th scope="col">Fassung</th>
-              <th scope="col">Handlung</th>
-            </tr>
-          </thead>
-          <tbody>
-            {ansicht.zeilen.map((zeile) => (
-              <Zeile
-                key={zeile.id}
-                zeile={zeile}
-                aufReihe={() => {
-                  setzeReihe(zeile.einheitSchluessel);
-                }}
-              />
-            ))}
-          </tbody>
-        </table>
+        <Meldungstabelle zeilen={ansicht.zeilen} gewaehlt={gewaehltId} aufWahl={setzeGewaehltId} aufKontext={setzeKontext} aufReihe={(zeile) => setzeReihe(zeile.einheitSchluessel)} />
       )}
-
-      {reihe !== undefined && (
-        <Revisionen
-          einheitSchluessel={reihe}
-          aufSchliessen={() => {
-            setzeReihe(undefined);
-          }}
-        />
-      )}
+      {auswahl !== undefined && <Meldungsleiste {...auswahl} />}
+      {auswahl !== undefined && kontext !== undefined && <Meldungskontextmenue {...auswahl} ort={kontext} aufSchliessen={() => setzeKontext(undefined)} />}
+      {masken}
+      {reihe !== undefined && <Revisionen einheitSchluessel={reihe} aufSchliessen={() => setzeReihe(undefined)} />}
     </section>
   );
 }
 
-function Zeile({
-  zeile,
-  aufReihe,
-}: {
+interface ZeilenEigenschaften {
   readonly zeile: Meldungszeile;
-  readonly aufReihe: () => void;
-}): React.JSX.Element {
-  const laden = useLaden();
-  const grundabfrage = useGrundabfrage();
-  const aktion = useFeldversuch();
-  const nurLesen = useNurLesen();
-  // Beendeter Einsatz, laufender Schritt oder unterbrochene Verbindung: gesperrt.
-  const zu = nurLesen || aktion.laeuft || aktion.gesperrt;
-  const grund = nurLesen ? TEXT_NUR_LESEN : undefined;
+  readonly gewaehlt: boolean;
+  readonly aufWahl: (id: string) => void;
+  readonly aufKontext: (ort: Kontextort) => void;
+  readonly aufReihe: (zeile: Meldungszeile) => void;
+}
 
+function Zeile({ zeile, gewaehlt, aufWahl, aufKontext, aufReihe }: ZeilenEigenschaften): React.JSX.Element {
+  const klassen = [zeile.zustand === "ABGELEHNT" ? "abgelehnt" : "", gewaehlt ? "gewaehlt" : ""].filter((k) => k !== "").join(" ");
   return (
-    <tr className={zeile.zustand === "ABGELEHNT" ? "abgelehnt" : ""}>
+    <tr
+      className={klassen === "" ? undefined : klassen}
+      aria-selected={gewaehlt}
+      onClick={() => aufWahl(zeile.id)}
+      onContextMenu={(ereignis) => {
+        // Das Menü des Browsers trüge hier nichts bei (Entwurf, offene Fragen).
+        ereignis.preventDefault();
+        aufWahl(zeile.id);
+        aufKontext({ x: ereignis.clientX, y: ereignis.clientY });
+      }}
+    >
       <td>
         <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zeile.zustand}</span>
       </td>
@@ -189,305 +269,13 @@ function Zeile({
       </td>
       <td>
         {zeile.fassungen > 1 ? (
-          <button type="button" onClick={aufReihe}>
+          <button type="button" onClick={() => aufReihe(zeile)}>
             {zeile.fassung} von {zeile.fassungen}
           </button>
         ) : (
           "1"
         )}
       </td>
-      <td className="handlungen">
-        {zeile.zustand === "ABGELEHNT" ? (
-          <button
-            type="button"
-            disabled={zu}
-            title={grund}
-            onClick={() => {
-              void aktion.schreibe(ablehnungZurueckgenommen(zeile.id));
-            }}
-          >
-            Ablehnung zurück
-          </button>
-        ) : (
-          <button
-            type="button"
-            disabled={nurLesen}
-            title={grund}
-            onClick={() => {
-              // §2.4: Der Grund gehört zur Ablehnung. Ohne ihn wäre sie im
-              // Nachhinein nicht von einem Versehen zu unterscheiden.
-              grundabfrage.frage({
-                titel: "Meldung ablehnen",
-                erlaeuterung:
-                  "Die Ablehnung steht mit diesem Grund im Einsatztagebuch und ist später von einem Versehen zu unterscheiden.",
-                bestaetigungstext: "Ablehnen",
-                // Das Versprechen geht an die Abfrage zurück: Der Dialog bleibt mit dem
-                // Grund stehen, bis der Dienst das Schreiben bestätigt hat.
-                aufGrund: (text) => laden.bediene(meldungAbgelehnt(zeile.id, text)),
-              });
-            }}
-          >
-            Ablehnen
-          </button>
-        )}
-        {zeile.einheitId !== undefined && (
-          <button
-            type="button"
-            disabled={zu}
-            title={grund}
-            onClick={() => {
-              void aktion.schreibe(uebernahmeZurueckgenommen(zeile.id));
-            }}
-          >
-            Übernahme zurück
-          </button>
-        )}
-        <select
-          aria-label={`Meldestatus ${zeile.bezeichnung}`}
-          value=""
-          disabled={zu}
-          title={grund}
-          onChange={(e) => {
-            if (e.target.value === "") return;
-            void aktion.schreibe(meldeStatusGesetzt(zeile.id, null, e.target.value as Meldestatus));
-          }}
-        >
-          <option value="">Meldestatus …</option>
-          {MELDESTATUS.map((wert) => (
-            <option key={wert} value={wert}>
-              {wert}
-            </option>
-          ))}
-        </select>
-        {aktion.anzeige}
-        {grundabfrage.maske}
-      </td>
     </tr>
-  );
-}
-
-/**
- * Die Revisionen einer Reihe (M6.2).
- *
- * Geordnet nach **`stand`** und nicht nach der Empfangszeit: Ein
- * nachgescannter Papierbogen von gestern kommt später an und ist trotzdem die
- * ältere Fassung (§2.6, zwei Ordnungen, die nie vermischt werden).
- */
-function Revisionen({
-  einheitSchluessel,
-  aufSchliessen,
-}: {
-  readonly einheitSchluessel: string;
-  readonly aufSchliessen: () => void;
-}): React.JSX.Element {
-  // **Die Funktionen und nicht der Store.** `useLaden()` ohne Auswahl liefert
-  // bei jeder Änderung ein neues Objekt; stünde `laden` in der
-  // Abhängigkeitsliste, holte dieser Dialog seine Fassungen bei jedem
-  // eintreffenden Delta neu — und solange der Ruf selbst in den Store
-  // schriebe, drehte es sich im Kreis. Die beiden Holefunktionen sind über
-  // die Lebenszeit des Stores dieselben.
-  const holeRevisionen = useLaden((laden) => laden.holeRevisionen);
-  const holeAenderung = useLaden((laden) => laden.holeAenderung);
-  const [zeilen, setzeZeilen] = useState<readonly Meldungszeile[] | undefined>(undefined);
-  const [vergleich, setzeVergleich] = useState<Fassungsvergleich | null>(null);
-
-  useEffect(() => {
-    let gilt = true;
-    void (async () => {
-      const ansicht = await holeRevisionen(einheitSchluessel);
-      if (gilt) setzeZeilen(ansicht);
-      const bewegung = await holeAenderung(einheitSchluessel);
-      if (gilt) setzeVergleich(bewegung);
-    })();
-    return () => {
-      gilt = false;
-    };
-  }, [einheitSchluessel, holeRevisionen, holeAenderung]);
-
-  return (
-    <div className="revisionen" role="dialog" aria-label="Revisionen">
-      <div className="revisionenkopf">
-        <h3>Fassungen dieser Einheit</h3>
-        <button type="button" onClick={aufSchliessen}>
-          Schließen
-        </button>
-      </div>
-      {zeilen === undefined ? (
-        <p className="hinweistext">Wird geladen …</p>
-      ) : (
-        <ol className="fassungen">
-          {zeilen.map((zeile) => (
-            <li key={zeile.id} className={zeile.kopf ? "kopf" : ""}>
-              <span className={`ampel ampel-${zeile.zustand.toLowerCase()}`}>{zeile.zustand}</span>{" "}
-              Stand {zeit(zeile.stand)} · Stärke {zeile.staerke} · empfangen{" "}
-              {zeit(zeile.empfangenAm)}
-              {zeile.kopf && " · jüngste Fassung"}
-              {zeile.uebernommeneFelder.length > 0 && (
-                <div className="felder">
-                  Übernommen: {zeile.uebernommeneFelder.join(", ")}
-                </div>
-              )}
-            </li>
-          ))}
-        </ol>
-      )}
-      {vergleich !== null && <Bewegung vergleich={vergleich} />}
-    </div>
-  );
-}
-
-/**
- * Was sich von der vorletzten zur letzten Fassung geändert hat (M6.2).
- *
- * **Die Historie zeigt Stände, der Diff zeigt Bewegung** — der Satz stammt aus
- * dem Modulkopf von `@bos/meldekopf`, und er ist der Grund für diesen Block:
- * Vor einer Übernahme will die Führungsstelle nicht die ganze Fassung lesen,
- * sondern wissen, was anders ist.
- *
- * Die Texte kommen fertig aus dem geteilten Kern; hier wird nichts
- * formatiert. So zeigt der Erfassungsbogen denselben Wortlaut wie dieses
- * Fenster.
- */
-function Bewegung({ vergleich }: { readonly vergleich: Fassungsvergleich }): React.JSX.Element {
-  const d = vergleich.diff;
-  if (d.anzahl === 0) {
-    return <p className="hinweistext">Gegenüber der vorigen Fassung inhaltlich unverändert.</p>;
-  }
-
-  const gruppen: readonly { readonly titel: string; readonly zeilen: readonly string[] }[] = [
-    { titel: "Stärke", zeilen: d.staerke.map((a) => `${a.feld}: ${a.vorher} → ${a.nachher}`) },
-    { titel: "Personal zugegangen", zeilen: d.personalZugang },
-    { titel: "Personal abgegangen", zeilen: d.personalAbgang },
-    {
-      titel: "Personal geändert",
-      zeilen: d.personalGeaendert.map((a) => `${a.feld}: ${a.vorher} → ${a.nachher}`),
-    },
-    { titel: "Fahrzeuge zugegangen", zeilen: d.fahrzeugeZugang },
-    { titel: "Fahrzeuge abgegangen", zeilen: d.fahrzeugeAbgang },
-    {
-      titel: "Fahrzeuge geändert",
-      zeilen: d.fahrzeugeGeaendert.map((a) => `${a.feld}: ${a.vorher} → ${a.nachher}`),
-    },
-    { titel: "Bedarf", zeilen: d.bedarf.map((a) => `${a.feld}: ${a.vorher} → ${a.nachher}`) },
-    { titel: "Sonstiges", zeilen: d.sonstiges.map((a) => `${a.feld}: ${a.vorher} → ${a.nachher}`) },
-  ];
-
-  return (
-    <div className="bewegung">
-      <h4>Änderungen seit der vorigen Fassung ({d.anzahl})</h4>
-      {gruppen
-        .filter((gruppe) => gruppe.zeilen.length > 0)
-        .map((gruppe) => (
-          <div key={gruppe.titel}>
-            <strong>{gruppe.titel}</strong>
-            <ul>
-              {gruppe.zeilen.map((zeile) => (
-                <li key={zeile}>{zeile}</li>
-              ))}
-            </ul>
-          </div>
-        ))}
-    </div>
-  );
-}
-
-/**
- * Die Bündeldatei (M6.3) — der Meldeweg ohne Netz.
- *
- * Ein Meldekopf steht am Bereitstellungsraum, oft ohne Verbindung zur
- * Führungsstelle. Er sammelt dort Bögen in der Erfassungsbogen-App, und
- * irgendwann fährt jemand mit einem USB-Stick hinüber. Dreißig Bögen einzeln
- * zu scannen wäre eine halbe Stunde Arbeit für etwas, das eine Datei kann.
- *
- * **Der Griff ins Dateisystem geschieht hier und nicht im Worker.** Das
- * Dateifeld des Browsers liefert den Text; der Worker bekommt Text und keinen
- * Pfad. Ein Worker, der Pfade öffnet, die ihm jemand nennt, ist eine Tür, die
- * niemand braucht.
- */
-function Buendel(): React.JSX.Element {
-  const laden = useLaden();
-  const [abschnittId, setzeAbschnittId] = useState("");
-  const [meldung, setzeMeldung] = useState<string | undefined>(undefined);
-  const [dateiname, setzeDateiname] = useState<string | undefined>(undefined);
-  const dateifeld = useRef<HTMLInputElement>(null);
-
-  const abschnitte = laden.baum?.baum ?? [];
-
-  return (
-    <div className="buendel">
-      <label>
-        Meldungen aus Datei einlesen in Abschnitt
-        <select
-          value={abschnittId}
-          onChange={(e) => {
-            setzeAbschnittId(e.target.value);
-          }}
-        >
-          <option value="">Abschnitt wählen …</option>
-          {abschnitte.map((knoten) => (
-            <option key={knoten.id} value={knoten.id}>
-              {knoten.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      {/* Das Dateifeld des Browsers beschriftet sich in dessen Sprache
-          („Choose File / No file chosen“); deshalb ein deutscher Knopf, der es
-          öffnet, und der Dateiname daneben. */}
-      <button
-        type="button"
-        disabled={abschnittId === ""}
-        title={abschnittId === "" ? "Zuerst den Abschnitt wählen, in den die Meldungen kommen" : undefined}
-        onClick={() => {
-          dateifeld.current?.click();
-        }}
-      >
-        Datei wählen
-      </button>
-      <span className="hinweistext">{dateiname ?? "Keine Datei gewählt"}</span>
-      <input
-        ref={dateifeld}
-        type="file"
-        accept="application/json,.json"
-        aria-label="Meldungsdatei"
-        style={{ display: "none" }}
-        disabled={abschnittId === ""}
-        onChange={(e) => {
-          const datei = e.target.files?.[0];
-          if (datei === undefined) return;
-          setzeDateiname(datei.name);
-          void (async () => {
-            const text = await datei.text();
-            const ergebnis = await laden.lieseBuendel(text, abschnittId);
-            if (ergebnis === undefined) return;
-            // Eine zweimal eingelesene Datei ist kein Fehler, sondern ein
-            // Vorgang ohne Wirkung. Genau das muss dastehen, sonst hält der
-            // Bediener es für einen Fehlschlag.
-            setzeMeldung(
-              `${String(ergebnis.aufgenommen)} aufgenommen, ${String(ergebnis.bekannt)} schon bekannt` +
-                (ergebnis.uebersprungen > 0
-                  ? `, ${String(ergebnis.uebersprungen)} nicht lesbar`
-                  : ""),
-            );
-          })();
-        }}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          void (async () => {
-            const ergebnis = await laden.schreibeBuendel();
-            if (ergebnis !== undefined) setzeMeldung(`Geschrieben: ${ergebnis.pfad}`);
-          })();
-        }}
-      >
-        Meldungen als Datei speichern
-      </button>
-      {meldung !== undefined && (
-        <span role="status" className="hinweistext">
-          {meldung}
-        </span>
-      )}
-    </div>
   );
 }

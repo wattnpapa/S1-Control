@@ -7,7 +7,7 @@
  * ohne ihn darf gar nichts geschickt werden.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Meldungszeile } from "@s1/domaene";
@@ -71,6 +71,20 @@ async function zeige(): Promise<void> {
   });
 }
 
+/** Wählt die Meldung „Oldenburg"; erst dann steht die Auswahlleiste da. */
+function waehle(): HTMLElement {
+  fireEvent.click(screen.getByText("Oldenburg"));
+  return screen.getByRole("toolbar", { name: "Auswahl" });
+}
+
+/** Öffnet „Bündel einlesen …" und wählt den Abschnitt. */
+function buendelmaske(abschnitt = "EO"): HTMLElement {
+  fireEvent.click(screen.getByRole("button", { name: "Bündel einlesen …" }));
+  const maske = screen.getByRole("form", { name: "Bündel einlesen" });
+  if (abschnitt !== "") fireEvent.change(within(maske).getByLabelText("In Abschnitt"), { target: { value: abschnitt } });
+  return maske;
+}
+
 describe("Der Eingangskorb", () => {
   it("holt den Korb eigens und nennt die Zahl der offenen Meldungen", async () => {
     await zeige();
@@ -83,9 +97,57 @@ describe("Der Eingangskorb", () => {
     expect(screen.getByText("NEU")).toBeDefined();
   });
 
+  it("zeigt ohne Wahl keine Schritte und mit Wahl die Auswahlleiste", async () => {
+    await zeige();
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Ablehnen/ })).toBeNull();
+    expect(screen.queryByLabelText("Meldestatus Oldenburg")).toBeNull();
+    const leiste = waehle();
+    expect(within(leiste).getByText("1 gewählt · Oldenburg")).toBeDefined();
+    expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual(["Ablehnen mit Grund …"]);
+    expect(within(leiste).getByLabelText("Meldestatus Oldenburg")).toBeDefined();
+    expect(screen.getByRole("row", { name: /Oldenburg/ }).getAttribute("aria-selected")).toBe("true");
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    });
+  });
+
+  it("öffnet per Rechtsklick dieselben Schritte und den Meldestatus", async () => {
+    await zeige();
+    fireEvent.contextMenu(screen.getByText("Oldenburg"));
+    const menue = screen.getByRole("menu", { name: "Oldenburg" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual([
+      "Ablehnen mit Grund …",
+      "Meldestatus: anwesend",
+      "Meldestatus: abgerückt",
+      "Meldestatus: aufgegangen",
+    ]);
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Meldestatus: abgerückt" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.neu).toBe("ABGERUECKT");
+    });
+  });
+
+  it("filtert mit Chips und Zahl, beschriftet „Filter“", async () => {
+    await zeige();
+    const zeile = screen.getByRole("group", { name: "Filter nach Zustand" });
+    expect(within(zeile).getByText("Filter")).toBeDefined();
+    const neu = within(zeile).getByRole("button", { name: /^Neu\s*1$/ });
+    fireEvent.click(neu);
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("eingangskorbAnfordern")?.zustaende).toEqual(["NEU"]);
+    });
+    expect(within(zeile).getByRole("button", { name: /^Neu\s*1$/ }).getAttribute("aria-pressed")).toBe("true");
+    fireEvent.click(within(zeile).getByRole("button", { name: "Alle zeigen" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("eingangskorbAnfordern")?.zustaende).toBeUndefined();
+    });
+  });
+
   it("verlangt beim Ablehnen einen Grund und schickt ihn mit (§2.4)", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Ablehnen"));
+    fireEvent.click(within(waehle()).getByText("Ablehnen mit Grund …"));
 
     // Die Maske tritt an die Stelle von window.prompt, das im
     // Anwendungsfenster von Electron nicht unterstützt wird.
@@ -103,7 +165,7 @@ describe("Der Eingangskorb", () => {
 
   it("schickt nichts, wenn der Grund leer bleibt", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Ablehnen"));
+    fireEvent.click(within(waehle()).getByText("Ablehnen mit Grund …"));
     // Der Aktendienst wiese es ab (§2.4); die Maske lässt das Bestätigen
     // ohne Grund deshalb gar nicht erst zu.
     const bestaetigen = screen.getByText("Ablehnen", { selector: "button[type=submit]" });
@@ -115,7 +177,7 @@ describe("Der Eingangskorb", () => {
   it("nimmt die Ablehnung ohne Grund zurück", async () => {
     antworte([zeile("m1", { zustand: "ABGELEHNT" })], 0);
     await zeige();
-    fireEvent.click(screen.getByText("Ablehnung zurück"));
+    fireEvent.click(within(waehle()).getByText("Ablehnung zurück"));
     await waitFor(() => {
       expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
     });
@@ -128,17 +190,17 @@ describe("Der Eingangskorb", () => {
 
   it("bietet die Rücknahme der Übernahme nur bei einer übernommenen Meldung an", async () => {
     await zeige();
-    expect(screen.queryByText("Übernahme zurück")).toBeNull();
+    expect(within(waehle()).queryByText("Übernahme zurück")).toBeNull();
 
     cleanup();
     antworte([zeile("m1", { zustand: "UEBERNOMMEN", einheitId: "E-abc" })], 0);
     await zeige();
-    expect(screen.getByText("Übernahme zurück")).toBeDefined();
+    expect(within(waehle()).getByText("Übernahme zurück")).toBeDefined();
   });
 
   it("setzt den Meldestatus über die Auswahl", async () => {
     await zeige();
-    fireEvent.change(screen.getByLabelText("Meldestatus Oldenburg"), {
+    fireEvent.change(within(waehle()).getByLabelText("Meldestatus Oldenburg"), {
       target: { value: "ABGERUECKT" },
     });
     await waitFor(() => {
@@ -149,7 +211,9 @@ describe("Der Eingangskorb", () => {
 
   it("schaltet auf die jüngste Fassung je Reihe um (K26)", async () => {
     await zeige();
-    fireEvent.click(screen.getByLabelText("Nur jüngste Fassung"));
+    const schalter = screen.getByRole("button", { name: "Nur jüngste Fassung" });
+    expect(schalter.getAttribute("aria-pressed")).toBe("false");
+    fireEvent.click(schalter);
     await waitFor(() => {
       expect(attrappe.letzterRuf("eingangskorbAnfordern")?.nurKoepfe).toBe(true);
     });
@@ -230,32 +294,32 @@ describe("Der Eingangskorb", () => {
     });
   });
 
-  it("liest ein Bündel erst, wenn ein Abschnitt gewählt ist", async () => {
+  it("liest ein Bündel erst, wenn Abschnitt und Datei gewählt sind", async () => {
     useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
     await zeige();
-    const feld = screen.getByLabelText("Meldungsdatei") as HTMLInputElement;
+    const maske = buendelmaske("");
+    const einlesen = within(maske).getByRole("button", { name: "Einlesen" }) as HTMLButtonElement;
     // Ohne Ziel gibt es kein Einlesen: Eine Meldung ohne Abschnitt hätte im
     // Lagebild keinen Ort.
-    expect(feld.disabled).toBe(true);
-
-    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
-    await waitFor(() => {
-      expect((screen.getByLabelText("Meldungsdatei") as HTMLInputElement).disabled).toBe(false);
-    });
+    expect(einlesen.disabled).toBe(true);
+    expect(within(maske).getByTestId("bereitgrund").textContent).toMatch(/Zuerst den Abschnitt wählen/);
+    fireEvent.change(within(maske).getByLabelText("In Abschnitt"), { target: { value: "EO" } });
+    expect(einlesen.disabled).toBe(true);
+    const datei = new File(["[]"], "meldungen.json", { type: "application/json" });
+    fireEvent.change(within(maske).getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
+    expect(einlesen.disabled).toBe(false);
+    expect(attrappe.rufeDerArt("buendelEinlesen")).toHaveLength(0);
   });
 
-  it("beschriftet das Dateifeld deutsch: Knopf „Datei wählen“ und der Name der Datei", async () => {
-    attrappe.antwortet("buendelEinlesen", { aufgenommen: 1, bekannt: 0, uebersprungen: 0, name: "BR" });
+  it("beschriftet das Dateifeld deutsch: Knopf „Datei wählen …“ und der Name der Datei", async () => {
     useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
     await zeige();
-    const knopf = screen.getByRole("button", { name: "Datei wählen" }) as HTMLButtonElement;
-    expect(knopf.disabled).toBe(true);
-    expect(screen.getByText("Keine Datei gewählt")).toBeDefined();
-    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
-    expect(knopf.disabled).toBe(false);
+    const maske = buendelmaske();
+    expect(within(maske).getByRole("button", { name: "Datei wählen …" })).toBeDefined();
+    expect(within(maske).getByText("Keine Datei gewählt")).toBeDefined();
     const datei = new File(["[]"], "meldungen.json", { type: "application/json" });
-    fireEvent.change(screen.getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
-    expect(screen.getByText("meldungen.json")).toBeDefined();
+    fireEvent.change(within(maske).getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
+    expect(within(maske).getByText("meldungen.json")).toBeDefined();
   });
 
   it("nennt beim Bündel auch die schon bekannten Meldungen (§3.6)", async () => {
@@ -267,22 +331,25 @@ describe("Der Eingangskorb", () => {
     });
     useLaden.setState({ baum: { lageZeiger: 1, baum: [{ id: "EO", name: "Deich Nord" } as never] } });
     await zeige();
-    fireEvent.change(screen.getByLabelText("Meldungen aus Datei einlesen in Abschnitt"), { target: { value: "EO" } });
-
+    const maske = buendelmaske();
     const datei = new File(['[]'], "buendel.json", { type: "application/json" });
-    fireEvent.change(screen.getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
+    fireEvent.change(within(maske).getByLabelText("Meldungsdatei"), { target: { files: [datei] } });
+    fireEvent.click(within(maske).getByRole("button", { name: "Einlesen" }));
 
     // Ein zweimal eingelesenes Bündel ist kein Fehler, sondern ein Vorgang
     // ohne Wirkung — genau das muss dastehen.
     await waitFor(() => {
-      expect(screen.getByText(/2 aufgenommen, 3 schon bekannt, 1 nicht lesbar/)).toBeDefined();
+      expect(screen.getByRole("status").textContent).toMatch(/2 aufgenommen, 3 schon bekannt, 1 nicht lesbar/);
     });
+    expect(attrappe.letzterRuf("buendelEinlesen")).toMatchObject({ text: "[]", abschnittId: "EO" });
+    expect(screen.queryByRole("form", { name: "Bündel einlesen" })).toBeNull();
   });
 
   it("schreibt ein Bündel und nennt den Pfad", async () => {
     attrappe.antwortet("buendelSchreiben", { pfad: "/share/ausgaben/buendel_2026-09-10_1430.json", bytes: 4096 });
     await zeige();
-    fireEvent.click(screen.getByText("Meldungen als Datei speichern"));
+    fireEvent.click(screen.getByRole("button", { name: "Weitere Schritte im Eingangskorb" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Meldungen als Datei speichern" }));
     await waitFor(() => {
       expect(screen.getByText(/buendel_2026-09-10_1430\.json/)).toBeDefined();
     });

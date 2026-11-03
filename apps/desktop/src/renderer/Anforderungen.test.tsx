@@ -8,7 +8,7 @@
  * Fold nicht hält.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Anforderungszeile } from "@s1/domaene";
@@ -66,6 +66,18 @@ async function zeige(): Promise<void> {
   });
 }
 
+/** Wählt die Anforderung; erst dann stehen ihre Schritte in der Leiste. */
+function waehle(kennung = "ANF-A1"): HTMLElement {
+  fireEvent.click(screen.getByText(kennung));
+  return screen.getByRole("toolbar", { name: "Auswahl" });
+}
+
+/** Öffnet die Maske „Anforderung anlegen". */
+function anlegen(): HTMLElement {
+  fireEvent.click(screen.getByRole("button", { name: "Anforderung anlegen" }));
+  return screen.getByRole("dialog", { name: "Anforderung anlegen" });
+}
+
 describe("Die Anforderungsansicht", () => {
   it("holt die Liste eigens, sobald eine Akte offen ist", async () => {
     await zeige();
@@ -74,16 +86,28 @@ describe("Die Anforderungsansicht", () => {
 
   it("zeigt den abgeleiteten Zustand als eigene Spalte — als Wort, nicht als Schlüssel", async () => {
     await zeige();
-    expect(screen.getByText("Offen", { selector: "span" })).toBeDefined();
+    expect(within(screen.getByRole("table", { name: "Liste der Anforderungen" })).getByText("Offen", { selector: "span" })).toBeDefined();
     expect(screen.queryByText("OFFEN")).toBeNull();
   });
 
-  it("legt eine Anforderung als Form (b) an — ohne vorher und ohne neu", async () => {
+  it("zeigt die Felder einer neuen Anforderung erst in der Maske, mit Strg+N", async () => {
     await zeige();
-    fireEvent.change(screen.getByLabelText("Vorgesehene Einheit"), {
+    expect(screen.queryByLabelText("Vorgesehene Einheit")).toBeNull();
+    expect(screen.queryByRole("button", { name: "Anfordern" })).toBeNull();
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    const maske = screen.getByRole("dialog", { name: "Anforderung anlegen" });
+    expect(within(maske).getByLabelText("Vorgesehene Einheit")).toBeDefined();
+    fireEvent.keyDown(within(maske).getByLabelText("Vorgesehene Einheit"), { key: "Escape" });
+    expect(screen.queryByRole("dialog", { name: "Anforderung anlegen" })).toBeNull();
+  });
+
+  it("legt eine Anforderung als Form (b) an — ohne vorher und ohne neu — und schließt die Maske", async () => {
+    await zeige();
+    const maske = anlegen();
+    fireEvent.change(within(maske).getByLabelText("Vorgesehene Einheit"), {
       target: { value: "FGr N THW OV Jever" },
     });
-    fireEvent.click(screen.getByText("Anfordern"));
+    fireEvent.click(within(maske).getByText("Anfordern"));
 
     await waitFor(() => {
       expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
@@ -97,35 +121,65 @@ describe("Die Anforderungsansicht", () => {
     const nutzlast = entwurf?.nutzlast as { vorgeseheneEinheitText?: string; angefordertAm?: string };
     expect(nutzlast.vorgeseheneEinheitText).toBe("FGr N THW OV Jever");
     expect(nutzlast.angefordertAm).toBeDefined();
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog", { name: "Anforderung anlegen" })).toBeNull();
+    });
   });
 
   it("schreibt bei leerem Formular nichts und sagt in Klartext, was fehlt", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Anfordern"));
+    fireEvent.click(within(anlegen()).getByText("Anfordern"));
     expect(screen.getByRole("alert").textContent).toMatch(/vorgesehene Einheit oder Auftrag/);
     expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
   });
 
-  it("bietet bei OFFEN nur Zusagen und Stornieren an", async () => {
+  it("zeigt ohne Wahl keine Handlungen und bietet bei OFFEN nur Zusagen und Stornieren an", async () => {
     await zeige();
-    expect(screen.getByText("Zusagen")).toBeDefined();
-    expect(screen.getByText("Stornieren")).toBeDefined();
-    expect(screen.queryByText("Eingetroffen")).toBeNull();
-    expect(screen.queryByText("Zusage zurück")).toBeNull();
+    expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Zusagen|Stornieren/ })).toBeNull();
+    const leiste = waehle();
+    expect(within(leiste).getByText("1 gewählt · ANF-A1")).toBeDefined();
+    expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual(["Zusagen …", "Stornieren …"]);
+    expect(within(leiste).getByRole("button", { name: "Zusagen …" }).className).toBe("haupt");
+    expect(within(leiste).getByRole("button", { name: "Stornieren …" }).className).toBe("entfernen");
+  });
+
+  it("bietet bei ZUGESAGT Eingetroffen und die Rücknahme der Zusage an, auch per Rechtsklick", async () => {
+    antworte([zeile("A1", { zustand: "ZUGESAGT", zugesagtFuer: "2026-09-10T16:00:00+02:00" })]);
+    await zeige();
+    fireEvent.contextMenu(screen.getByText("ANF-A1"));
+    const menue = screen.getByRole("menu", { name: "Anforderung ANF-A1" });
+    expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual(["Eingetroffen …", "Zusage zurück", "Stornieren …"]);
+    fireEvent.click(within(menue).getByRole("menuitem", { name: "Zusage zurück" }));
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1);
+    });
+    expect(screen.getByRole("toolbar", { name: "Auswahl" })).toBeDefined();
+  });
+
+  it("bietet bei STORNIERT nur „Storno zurück“ an und hebt die Wahl mit Esc auf", async () => {
+    antworte([zeile("A1", { zustand: "STORNIERT", storniert: true })]);
+    await zeige();
+    expect(within(waehle()).getAllByRole("button").map((k) => k.textContent)).toEqual(["Storno zurück"]);
+    await waitFor(() => {
+      fireEvent.keyDown(window, { key: "Escape" });
+      expect(screen.queryByRole("toolbar", { name: "Auswahl" })).toBeNull();
+    });
   });
 
   it("bietet bei EINGETROFFEN keine Zusage mehr an — sie wäre wirkungslos", async () => {
     antworte([zeile("A1", { zustand: "EINGETROFFEN", erledigtAm: "2026-09-10T15:40:00+02:00" })]);
     await zeige();
+    const leiste = waehle();
     // §5.6.2 Nr. 2: Eine Zusage, die auf eine geltende Erledigung trifft,
     // ändert den Zustand nicht. Ein Knopf dafür wäre irreführend.
-    expect(screen.queryByText("Zusagen")).toBeNull();
-    expect(screen.getByText("Eintreffen zurück")).toBeDefined();
+    expect(within(leiste).queryByText("Zusagen …")).toBeNull();
+    expect(within(leiste).getByText("Eintreffen zurück")).toBeDefined();
   });
 
   it("schickt die Zusage mit dem Schlüssel, den der Fold plausibilisiert", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Zusagen"));
+    fireEvent.click(within(waehle()).getByText("Zusagen …"));
     // Die Maske fragt „Zugesagt für“ und „Zugesagt von“ ab — vorher stand
     // dort „jetzt“ und nichts (Spalten P und Q der Excel).
     const bestaetigen = screen.getByText("Zusagen", { selector: "button[type=submit]" }) as HTMLButtonElement;
@@ -144,7 +198,7 @@ describe("Die Anforderungsansicht", () => {
 
   it("verlangt beim Storno einen Grund und schickt ihn mit (§2.4)", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Stornieren"));
+    fireEvent.click(within(waehle()).getByText("Stornieren …"));
 
     // Die Maske tritt an die Stelle von window.prompt: im Anwendungsfenster
     // von Electron liefert prompt sofort null, das Storno bliebe folgenlos.
@@ -161,7 +215,7 @@ describe("Die Anforderungsansicht", () => {
 
   it("schickt nichts, wenn der Grund des Stornos leer bleibt", async () => {
     await zeige();
-    fireEvent.click(screen.getByText("Stornieren"));
+    fireEvent.click(within(waehle()).getByText("Stornieren …"));
 
     // Ohne Grund weist der Aktendienst das Ereignis ab (§2.4); die Maske
     // lässt das Bestätigen deshalb gar nicht erst zu.
@@ -173,11 +227,13 @@ describe("Die Anforderungsansicht", () => {
 
   it("filtert über die Zustände und deutet keine Auswahl als „alle“", async () => {
     await zeige();
-    fireEvent.click(screen.getByLabelText(/Offen/));
+    const filter = screen.getByRole("group", { name: "Filter nach Zustand" });
+    expect(within(filter).getByText("Filter")).toBeDefined();
+    fireEvent.click(within(filter).getByRole("button", { name: /^Offen\s*1$/ }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("anforderungenAnfordern")?.zustaende).toEqual(["OFFEN"]);
     });
-    fireEvent.click(screen.getByLabelText(/Offen/));
+    fireEvent.click(within(filter).getByRole("button", { name: /^Offen\s*1$/ }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("anforderungenAnfordern")?.zustaende).toBeUndefined();
     });

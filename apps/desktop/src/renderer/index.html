@@ -2653,7 +2653,6 @@
         font-size: 1rem;
         margin: 0.6rem 0 0.3rem;
       }
-      .anforderungsfilter,
       .anforderungneu {
         display: flex;
         flex-wrap: wrap;
@@ -2661,6 +2660,10 @@
         align-items: center;
         margin-bottom: 0.5rem;
         font-size: 0.85rem;
+      }
+      /* Die Maske „Anforderung anlegen" traegt sechs Felder nebeneinander. */
+      .maske.anforderungsmaske {
+        max-width: min(46rem, 94vw);
       }
       .anforderungneu label {
         display: flex;
@@ -2708,14 +2711,9 @@
       .anforderungstabelle tr.storniert td {
         opacity: 0.6;
       }
-      .handlungen {
-        display: flex;
-        gap: 0.3rem;
-        flex-wrap: wrap;
-      }
-      /* Handy: Jede Anforderung ist eine Karte. Die Handlungen stehen als
-         sichtbare Leiste unter den Angaben, volle Breite, Knoepfe >= 44 px
-         mit Abstand; nichts liegt hinter einem Wisch. */
+      /* Handy: Jede Anforderung ist eine Karte. Die Handlungen der gewaehlten
+         stehen seit Runde 6 in der Auswahlleiste, die unten klebt; nichts
+         liegt hinter einem Wisch. */
       @media (max-width: 700px) {
         .anforderungstabelle,
         .anforderungstabelle tbody,
@@ -2756,28 +2754,6 @@
           flex: 0 0 6.5rem;
           font-weight: 400;
           color: var(--text-gedaempft, inherit);
-        }
-        .anforderungstabelle td.handlungen {
-          flex-wrap: wrap;
-          gap: 10px;
-          justify-content: stretch;
-          border-bottom: 0;
-          padding: 10px;
-        }
-        .anforderungstabelle td.handlungen::before {
-          flex: 1 1 100%;
-        }
-        .anforderungstabelle td.handlungen button {
-          flex: 1 1 8rem;
-          min-height: 44px;
-        }
-      }
-      @media (pointer: coarse) {
-        .handlungen {
-          gap: 10px;
-        }
-        .handlungen button {
-          min-height: 44px;
         }
       }
 
@@ -2898,14 +2874,6 @@
         font-size: 1rem;
         margin: 0.6rem 0 0.3rem;
       }
-      .eingangsfilter {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.6rem;
-        align-items: center;
-        margin-bottom: 0.5rem;
-        font-size: 0.85rem;
-      }
       .meldungstabelle {
         border-collapse: collapse;
         width: 100%;
@@ -2954,20 +2922,36 @@
       .meldungstabelle tr.abgelehnt td {
         opacity: 0.6;
       }
-      .buendel {
+      /* Seit Runde 6: Zeilen waehlen, die Schritte stehen in der
+         Auswahlleiste darunter (Meldungsauswahl.tsx). */
+      .meldungstabelle tbody tr,
+      .anforderungstabelle tbody tr {
+        cursor: pointer;
+      }
+      .meldungstabelle tr.gewaehlt th,
+      .meldungstabelle tr.gewaehlt td,
+      .anforderungstabelle tr.gewaehlt th,
+      .anforderungstabelle tr.gewaehlt td {
+        background: var(--zeile-gewaehlt);
+      }
+      .meldungstabelle tr.gewaehlt th[scope="row"],
+      .anforderungstabelle tr.gewaehlt th[scope="row"] {
+        font-weight: 700;
+      }
+      .auswahlleiste select {
+        width: auto;
+        min-height: 27px;
+        margin: 0;
+        padding: 0 8px;
+      }
+      /* Das Dateifeld des Browsers ist versteckt; davor ein deutscher Knopf,
+         dahinter der Name der Datei (Buendel.tsx). */
+      .dateiwahl {
         display: flex;
         flex-wrap: wrap;
-        gap: 0.6rem;
         align-items: center;
-        margin-bottom: 0.6rem;
-        padding-bottom: 0.5rem;
-        border-bottom: 1px dashed var(--rahmen);
-        font-size: 0.85rem;
-      }
-      .buendel label {
-        display: flex;
-        gap: 0.3rem;
-        align-items: center;
+        gap: 8px;
+        margin: 0.4rem 0;
       }
       .revisionen {
         margin-top: 0.8rem;

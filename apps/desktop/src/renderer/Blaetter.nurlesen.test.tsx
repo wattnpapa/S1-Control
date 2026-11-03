@@ -134,18 +134,27 @@ describe("Beendeter Einsatz", () => {
     expect(screen.getByTestId("nurlesen")).toBeDefined();
   });
 
-  it("sperrt die Zeilenknöpfe der Anforderungen", async () => {
+  it("sperrt die Schritte der gewählten Anforderung und „Anforderung anlegen“", async () => {
     render(<Anforderungen />);
-    const zusagen = (await screen.findByRole("button", { name: "Zusagen" })) as HTMLButtonElement;
-    expect(zusagen.disabled).toBe(true);
-    expect((screen.getByRole("button", { name: "Stornieren" }) as HTMLButtonElement).disabled).toBe(true);
+    const anlegen = (await screen.findByRole("button", { name: "Anforderung anlegen" })) as HTMLButtonElement;
+    expect(anlegen.disabled).toBe(true);
+    fireEvent.click(await screen.findByText("ANF-1"));
+    const zusagen = screen.getByRole("button", { name: "Zusagen …" });
+    expect(zusagen.getAttribute("aria-disabled")).toBe("true");
+    expect(zusagen.getAttribute("title")).toMatch(/nur lesen/);
+    expect(screen.getByRole("button", { name: "Stornieren …" }).getAttribute("aria-disabled")).toBe("true");
     expect(screen.getByTestId("nurlesen")).toBeDefined();
   });
 
   it("sperrt Ablehnen im Eingangskorb", async () => {
     render(<Eingangskorb />);
-    const knopf = (await screen.findByRole("button", { name: "Ablehnen" })) as HTMLButtonElement;
-    expect(knopf.disabled).toBe(true);
+    const einlesen = (await screen.findByRole("button", { name: "Bündel einlesen …" })) as HTMLButtonElement;
+    expect(einlesen.disabled).toBe(true);
+    fireEvent.click(await screen.findByText("Oldenburg"));
+    const knopf = screen.getByRole("button", { name: "Ablehnen mit Grund …" });
+    expect(knopf.getAttribute("aria-disabled")).toBe("true");
+    fireEvent.click(knopf);
+    expect(screen.queryByRole("form", { name: "Meldung ablehnen" })).toBeNull();
     expect(screen.getByTestId("nurlesen")).toBeDefined();
   });
 });
@@ -194,10 +203,11 @@ describe("Inline-Felder bei nicht angekommenem Schreiben", () => {
 
   it("lässt den Ablehnungsgrund im Dialog stehen, bis das Schreiben bestätigt ist", async () => {
     render(<Eingangskorb />);
-    fireEvent.click(await screen.findByRole("button", { name: "Ablehnen" }));
+    fireEvent.click(await screen.findByText("Oldenburg"));
+    fireEvent.click(screen.getByRole("button", { name: "Ablehnen mit Grund …" }));
     const grund = screen.getByLabelText("Grund (Pflicht)") as HTMLInputElement;
     fireEvent.change(grund, { target: { value: "Doppelt gemeldet" } });
-    fireEvent.click(screen.getAllByRole("button", { name: "Ablehnen" }).at(-1) as HTMLElement);
+    fireEvent.click(screen.getByRole("button", { name: "Ablehnen" }));
     await waitFor(() => {
       expect(screen.getAllByRole("alert").some((a) => /Nicht gespeichert/.test(a.textContent ?? ""))).toBe(true);
     });

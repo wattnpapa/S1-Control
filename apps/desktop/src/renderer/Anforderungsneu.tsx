@@ -1,5 +1,7 @@
 /**
- * „Neue Anforderung" im Blatt Anforderungen: die Felder und der Knopf „Anfordern".
+ * „Neue Anforderung" im Blatt Anforderungen: die Felder und der Knopf
+ * „Anfordern". Seit Runde 6 stehen sie in der Maske „Anforderung anlegen"
+ * (`Anforderungsmaske.tsx`) und nicht mehr dauerhaft über der Liste.
  *
  * Das Blatt schließt nicht wie ein Dialog, deshalb gilt hier das Muster des
  * Anlegeversuchs (`Anlegeversuch.tsx`) mit zwei Besonderheiten: Die Felder
@@ -58,7 +60,13 @@ function normal(kennung: string): string {
   return kennung.trim().toLowerCase();
 }
 
-export function Anforderungsneu({ einheitenwahl }: { readonly einheitenwahl: readonly Einheitenwahl[] }): React.JSX.Element {
+export interface AnforderungsneuEigenschaften {
+  readonly einheitenwahl: readonly Einheitenwahl[];
+  /** Nach bestätigtem Schreiben — die Maske schließt sich damit. */
+  readonly aufAngelegt?: () => void;
+}
+
+export function Anforderungsneu({ einheitenwahl, aufAngelegt }: AnforderungsneuEigenschaften): React.JSX.Element {
   // Der Entwurf liegt im Store (`entwurf.ts`): Er übersteht Blattwechsel und Reload.
   const [neu, setzeNeu] = useAnforderungsentwurf();
   const [laeuft, setzeLaeuft] = useState(false);
@@ -115,6 +123,7 @@ export function Anforderungsneu({ einheitenwahl }: { readonly einheitenwahl: rea
       if (ergebnis?.art === "geschrieben") {
         setzeNeu(LEERE_ANFORDERUNG);
         versuch.verwerfe();
+        aufAngelegt?.();
       }
     } finally {
       laeuftSofort.current = false;
