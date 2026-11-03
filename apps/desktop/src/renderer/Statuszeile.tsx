@@ -5,6 +5,12 @@
  * Mehrbenutzer-Arbeitsplatz dauernd hat: Ist mein Stand aktuell? Wer arbeitet
  * sonst noch daran? Ist meine letzte Eingabe drüben?
  *
+ * Rechts steht seit Runde 6 („Entlastung", 3.3) die Antwort auf die vierte
+ * Frage, „habe ich das jetzt gespeichert?": die Bestätigung des letzten
+ * eigenen Schritts, zehn Sekunden lang, und daneben „Rückgängig" mit dem
+ * Namen dieses Schritts, immer an derselben Stelle. Die Stärke, die bis dahin
+ * rechts stand, steht nur noch im Kopfband (Leitsatz 4: jede Zahl einmal).
+ *
  * **`jetzt` wird übergeben.** Eine Komponente, die selbst `Date.now()` ruft,
  * ist nicht prüfbar: „vor 8 s" hinge dann an der Laufzeit des Tests. Der
  * Aufrufer gibt die Uhr, und im Betrieb tickt sie im Fenster.
@@ -12,8 +18,9 @@
 
 import { useState } from "react";
 
-import { staerkeText } from "./formate.js";
 import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
+import { Ruecknahme } from "./Ruecknahme.js";
+import { Schreibbestaetigung } from "./Schreibbestaetigung.js";
 import { Statuserklaerung, Statushinweis } from "./Statushinweis.js";
 import {
   ERKLAERUNG_KONFLIKT,
@@ -174,13 +181,8 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
         />
       ))}
 
-      {/* Rechts steht die Stärke in derselben Schreibweise wie im Kopfband
-          (Entwurf „Oberfläche"): `42 EINH · 24/61/183 // 268`. Sie ist die
-          Zahl, die abgelesen und weitergegeben wird — sie darf sich zwischen
-          zwei Stellen des Fensters nicht in der Form unterscheiden. */}
-      <span className="staerke">
-        {String(lagebild.einheiten)} EINH · {staerkeText(lagebild.gesamtstaerke)}
-      </span>
+      <Schreibbestaetigung />
+      <Ruecknahme />
       {aufgeklappt !== undefined && <Statuserklaerung kennung={aufgeklappt.kennung} text={aufgeklappt.erklaerung} />}
     </footer>
   );

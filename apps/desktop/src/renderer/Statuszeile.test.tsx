@@ -75,11 +75,12 @@ describe("Statuszeile", () => {
     expect(screen.getByText("Kein Einsatz geöffnet")).toBeDefined();
   });
 
-  it("zeigt Stand, Share und Stärke", () => {
+  it("zeigt Stand und Share, aber nicht mehr die Stärke (sie steht nur im Kopfband)", () => {
     zeige();
     expect(screen.getByText("Stand: vor 8 s")).toBeDefined();
     expect(screen.getByText(/Share erreichbar/)).toBeDefined();
-    expect(screen.getByText("2 EINH · 1/2/20 // 23")).toBeDefined();
+    expect(screen.queryByText(/EINH/)).toBeNull();
+    expect(screen.queryByText(/1\/2\/20/)).toBeNull();
   });
 
   it("meldet einen Einsatz ohne Ereignisse nicht als uralt", () => {

@@ -748,11 +748,35 @@
         border-top: 1px solid var(--rahmen);
         font-size: 0.96em;
       }
-      .statuszeile .staerke {
+      /* Rechts: die Bestaetigung des letzten eigenen Schritts und daneben
+         „Rueckgaengig" mit seinem Namen (Entwurf „Entlastung", 6e). Die
+         Bestaetigung bleibt als leerer Live-Bereich stehen und schiebt beide
+         an den rechten Rand. */
+      .statuszeile .bestaetigung {
         margin-left: auto;
-        font-family: var(--mono);
+        color: var(--ok-text);
         font-weight: 600;
-        font-variant-numeric: tabular-nums;
+      }
+      .statuszeile .ruecknahme {
+        height: auto;
+        min-height: 24px;
+        padding: 2px 0;
+        border: 0;
+        background: transparent;
+        color: var(--text);
+        font-family: var(--ui);
+        font-size: inherit;
+        font-weight: 600;
+        line-height: 1.2;
+        text-align: left;
+      }
+      .statuszeile .ruecknahme:not(:disabled):hover {
+        text-decoration: underline;
+      }
+      .statuszeile .ruecknahme:disabled {
+        background: transparent;
+        color: var(--text-leiser);
+        font-weight: 400;
       }
       /* Zustandsmarken: Status in der Tabelle, Ampeln im Eingangskorb. Farbe
          **und** Wort — eine Auskunft, die nur an der Farbe haengt, faellt bei

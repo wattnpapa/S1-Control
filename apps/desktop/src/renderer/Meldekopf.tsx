@@ -20,7 +20,6 @@
  */
 
 import { useEffect, useState } from "react";
-import { Ruecknahme } from "./Ruecknahme.js";
 
 import { Eingangskorb } from "./Eingangskorb.js";
 import { Scanner } from "./Scanner.js";
@@ -75,7 +74,8 @@ export function Meldekopf(): React.JSX.Element {
         >
           Bogen scannen
         </button>
-        <Ruecknahme />
+        {/* „Rückgängig“ steht seit Runde 6 rechts in der Statuszeile, in
+            jeder Betriebsart an derselben Stelle (Entwurf „Entlastung“, 3.3). */}
       </div>
 
       {/* Der Baum wird geholt, weil die Auswahl oben ihn braucht — aber er

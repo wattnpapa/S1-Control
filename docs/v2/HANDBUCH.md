@@ -98,6 +98,14 @@ Nacht), „Stärke-Monitor öffnen …“, die Diagnose, in der Web-Schale
 Strg+Z nimmt die letzte **eigene** Handlung zurück. Es löscht nichts: Die
 Rücknahme ist selbst ein Ereignis und steht im Tagebuch (§6 U3, §5.9.1).
 
+Der Knopf dazu steht rechts in der **Statuszeile**, immer an derselben Stelle,
+und nennt den Schritt: „↶ Rückgängig: Status der Einheit ‚FGr WP 1‘ geändert“.
+Ist nichts zurückzunehmen, steht dort grau „Rückgängig: nichts
+zurückzunehmen“. Links daneben steht nach jedem eigenen Schritt zehn Sekunden
+lang die Bestätigung „✓ … · gespeichert“, nach einer Rücknahme
+„✓ Zurückgenommen: …“. Die Ist-Stärke steht nicht in der Statuszeile, sondern
+nur im Kopfband.
+
 Zwei Grenzen gehören dazu. Hat ein anderer Arbeitsplatz dieselbe Handlung
 bereits zurückgenommen, ist der alte Stand schon wiederhergestellt — ein
 zweites Zurücknehmen verwürfe fremde Arbeit und findet deshalb nicht statt.

@@ -10,7 +10,6 @@
  */
 
 import { useMemo, useState } from "react";
-import { Ruecknahme } from "./Ruecknahme.js";
 
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
@@ -60,7 +59,6 @@ export function Lage({ blatt }: LageEigenschaften): React.JSX.Element {
           Erfassungsbogen einlesen
         </button>
         <Monitorwahl />
-        <Ruecknahme />
       </div>
 
       <div className="lagespalten" hidden={blatt !== "lage"}>

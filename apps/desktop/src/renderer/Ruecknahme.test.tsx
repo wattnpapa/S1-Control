@@ -84,7 +84,7 @@ describe("Rückgängig", () => {
   it("sagt bei leerem Verlauf ausdrücklich, dass er nach dem Neuladen leer ist", () => {
     setze({ undoTiefe: 0, undoObersteArt: undefined, undoObersteObjekt: undefined });
     render(<Ruecknahme />);
-    const knopf = screen.getByRole("button", { name: "Rückgängig (Verlauf leer)" }) as HTMLButtonElement;
+    const knopf = screen.getByRole("button", { name: "Rückgängig: nichts zurückzunehmen" }) as HTMLButtonElement;
     expect(knopf.disabled).toBe(true);
     expect(knopf.title).toMatch(/nach dem Neuladen oder Neustart leer/u);
     expect(knopf.title).toMatch(/Einsatztagebuch/u);

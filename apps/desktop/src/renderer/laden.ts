@@ -27,6 +27,7 @@ import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 import { rufe } from "./bruecke.js";
 import { VERBINDUNGSMELDUNGEN } from "./verbindung.js";
 import { meldungsklartext } from "./Ereignisnamen.js";
+import { Bestaetigungsfolge, obersterSchritt, ruecknahmeBestaetigung, type Bestaetigung } from "./bestaetigungsfolge.js";
 import { CODE_EINSATZ_ABGESCHLOSSEN, lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
@@ -127,6 +128,11 @@ export interface Laden {
   readonly hinweise: readonly Hinweis[];
   /** Läuft gerade ein Ruf? Die Oberfläche sperrt dann ihre Knöpfe. */
   readonly beschaeftigt: boolean;
+  /**
+   * Die Bestätigung des letzten eigenen Schreibens oder Zurücknehmens
+   * (Entwurf „Entlastung", 3.3) — die Statuszeile zeigt sie zehn Sekunden.
+   */
+  readonly letzteBestaetigung: Bestaetigung | undefined;
 
   starte(): Promise<void>;
   setzeEinstellungen(neu: Einstellungen): Promise<void>;
@@ -291,9 +297,14 @@ const LEERE_ANSICHTEN = {
   // einem Wechsel zeigte der Schalter auf eine Datei, die zu einem anderen
   // Einsatz gehört (M4.3).
   htmlMonitor: undefined,
+  // Und die Bestätigung: „gespeichert“ gilt für die Akte, in der geschrieben wurde.
+  letzteBestaetigung: undefined,
 } as const;
 
 let hinweisNummer = 0;
+
+/** Folgt dem laufenden Schreiben bis zum Lagebild, das seinen Gegenstand nennt. */
+const bestaetigungen = new Bestaetigungsfolge();
 
 /**
  * Eine laufende Nummer je Ansicht — der Schutz gegen die überholte Antwort.
@@ -368,6 +379,12 @@ export const useLaden = create<Laden>((setze, hole) => {
     }
   }
 
+  /** Trägt den Gegenstand in die Bestätigung nach, sobald das Bild ihn nennt. */
+  function nachgetrageneBestaetigung(lagebild: Lagebild): void {
+    const bestaetigung = bestaetigungen.nachgetragen(lagebild);
+    if (bestaetigung !== undefined) setze({ letzteBestaetigung: bestaetigung });
+  }
+
   function merkeHinweis(stufe: Hinweis["stufe"], text: string): void {
     // Dieselbe Verbindungsmeldung steht nur einmal da, nicht je fehlgeschlagenem Ansichtsruf.
     if (VERBINDUNGSMELDUNGEN.includes(text) && hole().hinweise.some((h) => h.text === text)) return;
@@ -386,6 +403,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     fehler: undefined,
     hinweise: [],
     beschaeftigt: false,
+    letzteBestaetigung: undefined,
 
     async starte() {
       await mitFehlerbild(async () => {
@@ -790,7 +808,12 @@ export const useLaden = create<Laden>((setze, hole) => {
     async bediene(entwurf) {
       const akteId = hole().akteId;
       if (akteId === undefined) return undefined;
+      bestaetigungen.beginne(entwurf.typ, hole().lagebild);
       const ergebnis = await mitFehlerbild(() => rufe({ art: "bedienen", akteId, entwurf }));
+      const bestaetigung =
+        ergebnis?.art === "geschrieben" ? bestaetigungen.geschrieben(hole().lagebild, Date.now()) : undefined;
+      if (bestaetigung === undefined) bestaetigungen.vergiss();
+      else setze({ letzteBestaetigung: bestaetigung });
       // Ein beendeter oder archivierter Einsatz weist jedes Schreiben ab. Viele
       // Masken und Zellen werten ein `abgewiesen` nicht aus; ohne diesen
       // Hinweis bliebe der Versuch dort stumm, und der Bediener hielte die
@@ -804,9 +827,14 @@ export const useLaden = create<Laden>((setze, hole) => {
     async zurueck(grund) {
       const akteId = hole().akteId;
       if (akteId === undefined) return undefined;
-      return mitFehlerbild(() =>
+      // Der Name vorher: Nach der Rücknahme steht oben schon der Schritt davor.
+      const schritt = obersterSchritt(hole().lagebild);
+      bestaetigungen.vergiss();
+      const ergebnis = await mitFehlerbild(() =>
         rufe({ art: "zurueck", akteId, ...(grund === undefined ? {} : { grund }) }),
       );
+      if (ergebnis?.art === "geschrieben") setze({ letzteBestaetigung: ruecknahmeBestaetigung(schritt, Date.now()) });
+      return ergebnis;
     },
 
     melde(stufe, text) {
@@ -831,6 +859,7 @@ export const useLaden = create<Laden>((setze, hole) => {
       if (mitteilung.voll !== undefined) {
         const vorher = zustand.lagebild?.lageZeiger;
         setze({ lagebild: mitteilung.voll, folge: mitteilung.folge });
+        nachgetrageneBestaetigung(mitteilung.voll);
         if (vorher !== mitteilung.voll.lageZeiger) void hole().frischeAnsichten();
         return;
       }
@@ -848,6 +877,7 @@ export const useLaden = create<Laden>((setze, hole) => {
       }
       const neuesBild = lagebildMit(zustand.lagebild, mitteilung.geaendert ?? {});
       setze({ lagebild: neuesBild, folge: mitteilung.folge });
+      nachgetrageneBestaetigung(neuesBild);
       // M3.7: Der Zeiger ist die einzige Auskunft, die der Worker über
       // fachliche Änderungen schiebt. Ändert er sich, ist jedes offene Bild
       // veraltet — und nur die offenen werden nachgeholt.

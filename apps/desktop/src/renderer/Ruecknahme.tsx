@@ -1,16 +1,26 @@
 /**
  * Die Rücknahme — ein Knopf, der sagt, was er tut (§6 U2, §2.4).
  *
- * Es gibt sie, weil der Knopf an zwei Stellen steht (Lage und Meldekopf) und
- * weil die Antwort des Dienstes ausgewertet werden muss: Nimmt man sie nicht
+ * Er steht seit Runde 6 („Entlastung", 3.3) rechts in der Statuszeile, immer
+ * an derselben Stelle und in jeder Betriebsart einmal: „↶ Rückgängig: Einheit
+ * ‚TZ‘ entfernt". Vorher stand er in der Werkzeugzeile der Lage und im Kopf
+ * des Meldekopfs, grau und ohne Namen, wenn der Verlauf leer war — wer ihn so
+ * sah, wusste nicht, warum er nicht ging (Audit P0-2). Jetzt sagt er es:
+ * „Rückgängig: nichts zurückzunehmen", der Titel erklärt den Rest.
+ *
+ * Die Antwort des Dienstes wird hier ausgewertet: Nimmt man sie nicht
  * entgegen, passiert bei `brauchtGrund`, `strukturell` und `nichtMoeglich`
  * sichtbar nichts — der Bediener drückt, und die Lage bleibt, wie sie war.
+ * Die Bestätigung einer gelungenen Rücknahme steht links daneben
+ * (`Schreibbestaetigung`, aus `laden.zurueck`).
  */
 
-import { useState } from "react";
-import { ereignisMitObjekt, ereignisname } from "./Ereignisnamen.js";
+import { useMemo, useState } from "react";
+import { obersterSchritt } from "./bestaetigungsfolge.js";
+import { ereignisname } from "./Ereignisnamen.js";
 import { Maske, TEXT_NUR_LESEN } from "./Maske.js";
 import { useLaden } from "./laden.js";
+import { useKuerzel } from "./tastatur.js";
 
 /** Diese Schritte gehen auch im beendeten Einsatz zurück — sie öffnen ihn wieder. */
 const OEFFNENDE_SCHRITTE: ReadonlySet<string> = new Set(["EinsatzBeendet"]);
@@ -55,21 +65,44 @@ export function Ruecknahme(): React.JSX.Element {
   const oberste = laden.lagebild?.undoObersteArt;
   const status = laden.lagebild?.einsatzStatus ?? "AKTIV";
   const schreibsperre = status !== "AKTIV" && !(status === "BEENDET" && OEFFNENDE_SCHRITTE.has(oberste ?? ""));
-  const schritt = oberste === undefined ? "" : ereignisMitObjekt(oberste, laden.lagebild?.undoObersteObjekt);
+  const schritt = obersterSchritt(laden.lagebild);
   const leer = laden.lagebild !== undefined && tiefe === 0;
-  const hinweis = schreibsperre ? TEXT_NUR_LESEN : leer ? TEXT_LEER : `Nimmt Ihren letzten Schritt zurück: ${schritt}`;
+  const hinweis = schreibsperre
+    ? TEXT_NUR_LESEN
+    : leer
+      ? TEXT_LEER
+      : `Nimmt Ihren letzten Schritt zurück: ${schritt} (Strg+Z)`;
+  const gesperrt = laden.lagebild === undefined || tiefe === 0 || schreibsperre;
+
+  // Strg+Z steht seit M3.6 in der Tastenkarte, war aber an keinen Knopf
+  // gebunden. Jetzt, da der Knopf genau einmal im Fenster steht, hängt das
+  // Kürzel an ihm: Es öffnet dieselbe Rückfrage wie der Klick. Im Eingabefeld
+  // bleibt Strg+Z das Zurücknehmen des Tippens (`findeKuerzel`).
+  useKuerzel(
+    useMemo(
+      () => ({
+        zurueck: () => {
+          if (!gesperrt) setzeFrage(true);
+        },
+      }),
+      [gesperrt],
+    ),
+  );
 
   return (
     <>
       <button
         type="button"
-        disabled={laden.lagebild === undefined || tiefe === 0 || schreibsperre}
+        className="ruecknahme"
+        aria-keyshortcuts="Control+Z"
+        disabled={gesperrt}
         title={hinweis}
         onClick={() => {
           setzeFrage(true);
         }}
       >
-        {leer ? "Rückgängig (Verlauf leer)" : schritt === "" ? "Rückgängig" : `Rückgängig: ${schritt}`}
+        <span aria-hidden="true">↶ </span>
+        {leer ? "Rückgängig: nichts zurückzunehmen" : schritt === "" ? "Rückgängig" : `Rückgängig: ${schritt}`}
       </button>
 
       {frage && (
