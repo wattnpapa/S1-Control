@@ -93,6 +93,59 @@ und Tastenkarte (Strg+H), das Erscheinungsbild (Standard, Dunkel, Feld,
 Nacht), „Stärke-Monitor öffnen …“, die Diagnose, in der Web-Schale
 „Abmelden“ und „Einsatz schließen“, der Weg zurück zur Liste der Einsätze.
 
+Unter dem Kopfband steht beim ersten Aufschlagen eines Blatts eine
+**Einstiegszeile**: in einem Satz, was das Blatt ist, und „Verstanden“.
+Danach bleibt sie an diesem Gerät weg; derselbe Text steht in der Hilfe
+(Strg+H). Ein Browser ohne Speicher (privates Fenster) zeigt sie bei jedem
+Öffnen wieder.
+
+Alle Menüs des Fensters gehen gleich: ein Klick öffnet, die Pfeiltasten
+wandern, Enter wählt, Esc oder ein Klick daneben schließt. Was gerade nicht
+geht, steht grau da und nennt im Tooltip den Grund.
+
+## Das Blatt Lage
+
+Links der **Abschnittsbaum**, rechts die **Einheiten**. Jede Karte hat einen
+Hauptknopf; was einer gewählten Zeile gilt, erscheint erst mit der Wahl.
+
+Der Baum trägt oben „Abschnitt anlegen“ (Strg+N) und darunter einmal die
+Spaltenköpfe „Einh. · Fü/UFü/He“. Die Zeile **„Alle Bereiche“** nennt
+Einheiten und Ist-Stärke des Einsatzes und hebt die Wahl eines Abschnitts
+auf, ebenso Esc. Die gewählte Zeile trägt rechts **„⋯“** mit Umbenennen, Typ
+ändern, Zeichen, Umhängen, Nach oben, Nach unten und Auflösen; dasselbe Menü
+öffnet ein Rechtsklick auf jede Zeile. Gibt es aufgelöste Abschnitte, steht
+am Fuß der Karte „Aufgelöste zeigen (n)“.
+
+Die Einheitenkarte trägt im Kopf den Hauptknopf **„Einheit anlegen ▾“**
+(Aus Vorlage … Strg+N, Ohne Vorlage, Erfassungsbogen einlesen … Strg+Q), die
+Suche (Strg+F) und **„Spalten ▾“**: die sechs Spaltengruppen (Grunddaten
+immer), „Gliederung nach Bereich“, „Leere Bereiche ausblenden“,
+„Stillgelegte zeigen“ und „Spalten zurücksetzen“. Darunter steht nur die
+**Filterzeile**: die Status mit ihrer Zahl, ein Klick filtert; rechts klein,
+was „Spalten“ gerade eingestellt hat.
+
+Ist im Baum kein Abschnitt gewählt, steht die Tabelle **nach Bereich
+gegliedert** wie die Stärketabelle auf Papier, mit Zwischensumme je Bereich;
+ist einer gewählt, flach. Beides lässt sich unter „Spalten“ umschalten, und
+die Wahl bleibt je Fall bis zum Schließen. Die Spalte Abschnitt steht nur in
+der flachen Liste aller Einheiten — sonst sagt es der Baum oder die
+Kopfzeile.
+
+Ein Klick wählt eine Zeile, Strg+Klick nimmt weitere dazu. Dann erscheint am
+Fuß der Karte die **Auswahlleiste**: „1 gewählt · <Name>“ und die Schritte
+Verschieben (Strg+M), Aufteilen, Zusammenführen, Kopieren (Strg+K), Ablösung
+anfordern, Funk … und Entfernen (Strg+E). Bei zwei gewählten Zeilen bleiben
+Verschieben und Zusammenführen; Zusammenführen steht bei einer Zeile grau mit
+„Zwei Einheiten wählen“. Esc hebt die Auswahl auf. Ein **Rechtsklick** auf
+eine Zeile wählt sie und öffnet dieselben Schritte als **Kontextmenü**, dazu
+„Im Tagebuch zeigen“: Das Tagebuch geht auf, auf diese Einheit beschränkt.
+Auf dem Handy liegt das Kontextmenü am unteren Rand, und die Auswahlleiste
+bricht um. Im beendeten Einsatz nennt die Leiste die Sperre statt der
+Schritte.
+
+Unter der Tabelle steht, wie man eine Zelle bearbeitet (Doppelklick, Enter,
+Esc), bis an diesem Gerät die erste Zelle geschrieben ist.
+
 ## Was ein Zurücknehmen tut
 
 Strg+Z nimmt die letzte **eigene** Handlung zurück. Es löscht nichts: Die
