@@ -13,7 +13,7 @@
  * verschiedene Felder, gelten beide.
  */
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 
 import { einsatzArtTitel, schichtmodellTitel, zeitpunktText, type Einsatzstammdaten } from "@s1/domaene";
 
@@ -37,6 +37,77 @@ const TEXTFELDER = [
   { feld: "ort", titel: "Einsatzort" },
   { feld: "beginn", titel: "Einsatzbeginn (TT.MM.JJJJ HH:MM)" },
 ] as const;
+
+export interface StammdatenfelderEigenschaften {
+  readonly eingabe: Stammdateneingabe;
+  readonly aufAendern: (feld: keyof Stammdateneingabe, wert: string) => void;
+  /** Was nach dem Einsatznamen steht (das Datum in „Neuer Einsatz …"). */
+  readonly nachName?: ReactNode;
+}
+
+/**
+ * Die Felder der Stammdaten in der Reihenfolge des Blattes. Dieselben Felder
+ * stehen in dieser Maske und in „Neuer Einsatz …" auf der Einsatzauswahl
+ * (Runde 6, 3.8): Wer einen Einsatz anlegt, trägt die Stammdaten gleich mit
+ * ein, statt sie später im Blatt Führungsstelle nachzuholen.
+ */
+export function Stammdatenfelder({ eingabe, aufAendern: aendere, nachName }: StammdatenfelderEigenschaften): React.JSX.Element {
+  return (
+    <>
+      {TEXTFELDER.map(({ feld, titel }) => (
+        <Textfeld key={feld} titel={titel} wert={eingabe[feld]} aufAendern={(wert) => aendere(feld, wert)} danach={feld === "name" ? nachName : undefined} />
+      ))}
+      <label>
+        Einsatzart
+        <select
+          value={eingabe.art}
+          onChange={(e) => {
+            aendere("art", e.target.value);
+          }}
+        >
+          {EINSATZARTEN.map((wert) => (
+            <option key={wert} value={wert}>
+              {einsatzArtTitel(wert)}
+            </option>
+          ))}
+        </select>
+      </label>
+      <label>
+        Schichtmodell
+        <select
+          value={eingabe.schichtmodell}
+          onChange={(e) => {
+            aendere("schichtmodell", e.target.value);
+          }}
+        >
+          {SCHICHTMODELLE.map((wert) => (
+            <option key={wert} value={wert}>
+              {schichtmodellTitel(wert)}
+            </option>
+          ))}
+        </select>
+      </label>
+    </>
+  );
+}
+
+function Textfeld(props: { readonly titel: string; readonly wert: string; readonly aufAendern: (wert: string) => void; readonly danach: ReactNode }): React.JSX.Element {
+  return (
+    <>
+      <label>
+        {props.titel}
+        <input
+          type="text"
+          value={props.wert}
+          onChange={(e) => {
+            props.aufAendern(e.target.value);
+          }}
+        />
+      </label>
+      {props.danach}
+    </>
+  );
+}
 
 export interface StammdatenmaskeEigenschaften {
   readonly einsatzId: string;
@@ -74,48 +145,7 @@ export function Stammdatenmaske({
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={uebernimm}
     >
-      {TEXTFELDER.map(({ feld, titel }) => (
-        <label key={feld}>
-          {titel}
-          <input
-            type="text"
-            value={eingabe[feld]}
-            onChange={(e) => {
-              aendere(feld, e.target.value);
-            }}
-          />
-        </label>
-      ))}
-      <label>
-        Einsatzart
-        <select
-          value={eingabe.art}
-          onChange={(e) => {
-            aendere("art", e.target.value);
-          }}
-        >
-          {EINSATZARTEN.map((wert) => (
-            <option key={wert} value={wert}>
-              {einsatzArtTitel(wert)}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label>
-        Schichtmodell
-        <select
-          value={eingabe.schichtmodell}
-          onChange={(e) => {
-            aendere("schichtmodell", e.target.value);
-          }}
-        >
-          {SCHICHTMODELLE.map((wert) => (
-            <option key={wert} value={wert}>
-              {schichtmodellTitel(wert)}
-            </option>
-          ))}
-        </select>
-      </label>
+      <Stammdatenfelder eingabe={eingabe} aufAendern={aendere} />
       {fehler !== undefined && (
         <p className="hinweistext" role="status">
           {fehler}

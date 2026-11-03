@@ -71,6 +71,15 @@ export const HINWEISE_MAX = 50;
  */
 export const SEITE = 100;
 
+/** Was der Ruf `einsatzAnlegen` neben Name und Datum trägt. */
+export interface Einsatzanlagedaten {
+  readonly einsatzArt: string;
+  readonly fuestName: string;
+  /** ISO-Zeitpunkt. */
+  readonly beginn: string;
+  readonly schichtmodell: string;
+}
+
 export interface Hinweis {
   readonly nummer: number;
   readonly stufe: "info" | "warnung" | "fehler";
@@ -147,7 +156,13 @@ export interface Laden {
    */
   waehleTheme(theme: Theme): Promise<void>;
   ladeEinsaetze(): Promise<void>;
-  legeEinsatzAn(name: string, datum: string): Promise<void>;
+  /**
+   * Legt einen Einsatz an und öffnet ihn; liefert seine Kennung, oder
+   * `undefined`, wenn es nicht ging (der Grund steht dann in `fehler`).
+   * Ohne `anlage` gelten die Vorbelegungen: Art Einsatz, Anzeigename als
+   * FüSt, Beginn jetzt, zwei Schichten.
+   */
+  legeEinsatzAn(name: string, datum: string, anlage?: Einsatzanlagedaten): Promise<string | undefined>;
   oeffneEinsatz(ordner: string): Promise<void>;
   schliesseEinsatz(): Promise<void>;
   /** Die drei Ansichten. `undefined` heißt: noch nie geholt (M3.7). */
@@ -444,26 +459,24 @@ export const useLaden = create<Laden>((setze, hole) => {
       setze({ einsaetze });
     },
 
-    async legeEinsatzAn(name, datum) {
-      await mitFehlerbild(async () => {
+    async legeEinsatzAn(name, datum, anlage) {
+      return mitFehlerbild(async () => {
         const angelegt = await rufe({
           art: "einsatzAnlegen",
           name,
           datum,
-          // Die drei Vorbelegungen sind die Werte, mit denen eine Führungsstelle
-          // beginnt; geändert werden sie danach über die Stammdaten. Die Maske
-          // „Einsatz anlegen“ ist der falsche Ort für eine Entscheidung über
-          // das Schichtmodell (Startwert S6).
-          // Der Anzeigename ist nur der Platzhalter, den die Anlage als
-          // Pflichtangabe verlangt (§5.2); den richtigen FüSt-Namen trägt
-          // die Stammdatenmaske im Blatt Führungsstelle ein.
-          einsatzArt: "EINSATZ",
-          fuestName: hole().einstellungen.anzeigename,
-          beginn: new Date().toISOString(),
-          schichtmodell: "ZWEI_SCHICHT",
+          // Ohne Angaben die Vorbelegungen, mit denen eine Führungsstelle
+          // beginnt (Startwert S6); der Anzeigename ist dann nur der
+          // Platzhalter, den die Anlage als Pflichtangabe verlangt (§5.2).
+          // Die Maske „Neuer Einsatz …" (Runde 6, 3.8) gibt sie mit.
+          einsatzArt: anlage?.einsatzArt ?? "EINSATZ",
+          fuestName: anlage?.fuestName ?? hole().einstellungen.anzeigename,
+          beginn: anlage?.beginn ?? new Date().toISOString(),
+          schichtmodell: anlage?.schichtmodell ?? "ZWEI_SCHICHT",
         });
         setze({ akteId: angelegt.akteId, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
         await hole().ladeEinsaetze();
+        return angelegt.einsatzId;
       });
     },
 

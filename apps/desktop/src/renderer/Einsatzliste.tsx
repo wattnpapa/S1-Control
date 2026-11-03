@@ -1,6 +1,9 @@
 /**
- * Die Einsatzliste der Auswahl: je Einsatz Status, letzte Änderung und Zahl
- * der Einheiten, sortiert nach „zuletzt genutzt“.
+ * Die Einsatzliste der Auswahl: je Einsatz eine Zeile mit Name und Datum,
+ * Status als Marke, Zahl der Einheiten, Stand (letzte Änderung) und rechts
+ * „Öffnen", sortiert nach „zuletzt genutzt“ (Entwurf „Entlastung", 3.8,
+ * Option 6g). Der zuletzt genutzte trägt „Öffnen" gefüllt: Wer die Auswahl
+ * aufschlägt, meint fast immer ihn.
  *
  * **Woher die Angaben kommen.** Der Dienst liest je Einsatz nur den Anker und
  * die Änderungszeit der Ereignisdateien (§2.6) — ein Fold je Einsatz machte die
@@ -9,7 +12,8 @@
  * den zuletzt gesehenen Stand (`sitzung.ts`) und beschriftet ihn als „zuletzt
  * gesehen“. Wo er fehlt, steht ein Strich — keine geratene Zahl.
  *
- * Beendete und archivierte Einsätze stehen abgesetzt darunter und gedämpft.
+ * Beendete und archivierte Einsätze stehen abgesetzt darunter und blass, mit
+ * „Ansehen" statt „Öffnen": Sie sind nur zu lesen.
  */
 
 import type { EinsatzEintrag } from "../kontrakt/index.js";
@@ -56,33 +60,54 @@ export function zeitText(zeit: number, jetzt: number = Date.now()): string {
   return `${zwei(t.getDate())}.${zwei(t.getMonth() + 1)}.${String(t.getFullYear())}, ${uhr}`;
 }
 
-function Angaben({ zeile }: { readonly zeile: Zeile }): React.JSX.Element {
-  const { stand } = zeile;
-  return (
-    <span className="hinweistext" style={{ display: "block" }}>
-      {`Status: ${stand === undefined ? "—" : STATUSTEXT[stand.status]}`}
-      {` · Letzte Änderung: ${zeile.zuletzt === 0 ? "—" : zeitText(zeile.zuletzt)}`}
-      {` · Einheiten: ${stand === undefined ? "—" : String(stand.einheiten)}`}
-      {stand === undefined ? "" : " (zuletzt gesehen)"}
-    </span>
-  );
+const STATUSTON: Readonly<Record<Einsatzstand["status"], string>> = {
+  AKTIV: "ok",
+  BEENDET: "",
+  ARCHIVIERT: "",
+};
+
+/** „2026-10-01" als „01.10.2026"; was anders aussieht, bleibt, wie es ist. */
+export function datumText(datum: string): string {
+  const teile = /^(\d{4})-(\d{2})-(\d{2})$/u.exec(datum);
+  return teile === null ? datum : `${teile[3] ?? ""}.${teile[2] ?? ""}.${teile[1] ?? ""}`;
 }
 
-function Eintrag({ zeile, aufOeffnen, gedaempft }: {
+interface EintragEigenschaften {
   readonly zeile: Zeile;
   readonly aufOeffnen: (ordner: string) => void;
-  readonly gedaempft: boolean;
-}): React.JSX.Element {
+  readonly abgeschlossen: boolean;
+  /** Der zuletzt genutzte: „Öffnen" gefüllt. */
+  readonly erster: boolean;
+}
+
+function Eintrag({ zeile, aufOeffnen, abgeschlossen, erster }: EintragEigenschaften): React.JSX.Element {
+  const { stand, einsatz } = zeile;
+  const wort = abgeschlossen ? "Ansehen" : "Öffnen";
+  const gesehen = "Status und Einheiten: zuletzt an diesem Arbeitsplatz gesehen";
   return (
-    <li style={gedaempft ? { opacity: 0.75 } : undefined}>
-      <button
-        type="button"
-        style={{ display: "block", width: "100%", textAlign: "left" }}
-        onClick={() => { aufOeffnen(zeile.einsatz.ordner); }}
-      >
-        <strong>{zeile.einsatz.name}</strong>
-        {` (${zeile.einsatz.datum})`}
-        <Angaben zeile={zeile} />
+    <li className={abgeschlossen ? "einsatzzeile blass" : "einsatzzeile"} onDoubleClick={() => aufOeffnen(einsatz.ordner)}>
+      <div className="einsatzname">
+        <strong>{einsatz.name}</strong>
+        <small>
+          {datumText(einsatz.datum)}
+          {stand?.status === "ARCHIVIERT" ? " · archiviert, nur lesen" : stand?.status === "BEENDET" ? " · beendet, nur lesen" : ""}
+        </small>
+      </div>
+      {stand === undefined ? (
+        <span className="leise" title="An diesem Arbeitsplatz noch nicht geöffnet">
+          Status —
+        </span>
+      ) : (
+        <span className={`marke-zustand ${STATUSTON[stand.status]}`.trim()} title={gesehen}>
+          {STATUSTEXT[stand.status]}
+        </span>
+      )}
+      <span className="zahl" title={stand === undefined ? undefined : gesehen}>
+        {stand === undefined ? "—" : String(stand.einheiten)} Einh.
+      </span>
+      <span className="zahl">Stand {zeile.zuletzt === 0 ? "—" : zeitText(zeile.zuletzt)}</span>
+      <button type="button" className={erster ? "haupt" : undefined} aria-label={`${einsatz.name} ${wort.toLowerCase()}`} onClick={() => aufOeffnen(einsatz.ordner)}>
+        {wort}
       </button>
     </li>
   );
@@ -96,22 +121,13 @@ export interface EinsatzlisteEigenschaften {
 export function Einsatzliste({ einsaetze, aufOeffnen }: EinsatzlisteEigenschaften): React.JSX.Element {
   const { aktuell, abgeschlossen } = ordneEinsatzliste(einsaetze, ladeStaende());
   return (
-    <>
-      <ul>
-        {aktuell.map((zeile) => (
-          <Eintrag key={zeile.einsatz.ordner} zeile={zeile} aufOeffnen={aufOeffnen} gedaempft={false} />
-        ))}
-      </ul>
-      {abgeschlossen.length > 0 && (
-        <>
-          <h3 className="hinweistext">Beendet und archiviert</h3>
-          <ul>
-            {abgeschlossen.map((zeile) => (
-              <Eintrag key={zeile.einsatz.ordner} zeile={zeile} aufOeffnen={aufOeffnen} gedaempft />
-            ))}
-          </ul>
-        </>
-      )}
-    </>
+    <ul className="einsatzliste" aria-label="Einsätze auf dem Share">
+      {aktuell.map((zeile, stelle) => (
+        <Eintrag key={zeile.einsatz.ordner} zeile={zeile} aufOeffnen={aufOeffnen} abgeschlossen={false} erster={stelle === 0} />
+      ))}
+      {abgeschlossen.map((zeile) => (
+        <Eintrag key={zeile.einsatz.ordner} zeile={zeile} aufOeffnen={aufOeffnen} abgeschlossen erster={false} />
+      ))}
+    </ul>
   );
 }

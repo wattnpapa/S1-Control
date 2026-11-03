@@ -1,129 +1,68 @@
 /**
- * Einstellungen und Einsatzauswahl — das, was vor dem ersten Einsatz zu tun ist.
+ * Die Einsatzauswahl — das, was vor dem ersten Einsatz zu tun ist (Entwurf
+ * „Entlastung", 3.8, Option 6g).
  *
- * Aus `Arbeitsplatz.tsx` herausgelöst; die Einsatzliste selbst (Status,
- * letzte Änderung, Einheiten) steht in `Einsatzliste.tsx`.
+ * Die Einsätze stehen zuerst und groß: je Einsatz eine Zeile mit „Öffnen"
+ * als Hauptweg (`Einsatzliste.tsx`), im Kopf der Karte „Neuer Einsatz …",
+ * der eine Maske mit Name, Datum und Stammdaten öffnet (`Einsatzanlage.tsx`).
+ * Darunter eingeklappt „Dieser Arbeitsplatz" mit „Ändern"
+ * (`Arbeitsplatzeinstellungen.tsx`).
+ *
+ * Eine Zustandsmarke „Share erreichbar" steht ohne Einsatz nicht im
+ * Kopfband: Ob der Share erreichbar ist, meldet der Dienst nur im Lagebild
+ * eines offenen Einsatzes. Ein leerer Share zeigt sich hier als leere Liste
+ * mit dem Satz, was zu tun ist.
  */
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
-import type { Profil } from "../kontrakt/index.js";
+import { Arbeitsplatzzeile } from "./Arbeitsplatzeinstellungen.js";
+import { Einsatzanlage } from "./Einsatzanlage.js";
 import { Einsatzliste } from "./Einsatzliste.js";
 import { useLaden } from "./laden.js";
-import { Profilwahl } from "./Profilwahl.js";
+
+function Einsatzkarte(): React.JSX.Element {
+  const einsaetze = useLaden((z) => z.einsaetze);
+  const share = useLaden((z) => z.einstellungen.sharePfad);
+  const beschaeftigt = useLaden((z) => z.beschaeftigt);
+  const oeffneEinsatz = useLaden((z) => z.oeffneEinsatz);
+  const [anlage, setzeAnlage] = useState(false);
+  const ohneShare = share === "";
+  return (
+    <section aria-label="Einsätze" className="karte einsatzkarte">
+      <div className="einheitenkopf">
+        <h2>
+          Einsätze {!ohneShare && <small>auf {share}</small>}
+        </h2>
+        <button
+          type="button"
+          className="haupt rechts"
+          disabled={ohneShare || beschaeftigt}
+          title={ohneShare ? "Zuerst unten den Share-Pfad eintragen" : "Name, Datum und Stammdaten eintragen und den Einsatz anlegen"}
+          onClick={() => setzeAnlage(true)}
+        >
+          Neuer Einsatz …
+        </button>
+      </div>
+      {einsaetze.length === 0 ? (
+        <p className="hinweistext">{ohneShare ? "Zuerst unten den Share-Pfad eintragen." : "Unter diesem Pfad liegt noch kein Einsatz."}</p>
+      ) : (
+        <Einsatzliste einsaetze={einsaetze} aufOeffnen={(ordner) => void oeffneEinsatz(ordner)} />
+      )}
+      <p className="hinweistext fussnote">
+        Beendete und archivierte Einsätze stehen unten und blass; sie lassen sich ansehen, aber nicht mehr ändern. Status und Einheiten nennt die
+        Liste so, wie dieser Arbeitsplatz den Einsatz zuletzt gesehen hat.
+      </p>
+      {anlage && <Einsatzanlage aufSchliessen={() => setzeAnlage(false)} />}
+    </section>
+  );
+}
 
 export function Auswahl(): React.JSX.Element {
-  const laden = useLaden();
-  const [share, setzeShare] = useState(laden.einstellungen.sharePfad);
-  const [name, setzeName] = useState(laden.einstellungen.anzeigename);
-  const [neuerEinsatz, setzeNeuerEinsatz] = useState("");
-  const [betriebsart, setzeBetriebsart] = useState(
-    laden.einstellungen.betriebsart ?? "fuehrungsstelle",
-  );
-  const [profil, setzeProfil] = useState<Profil>(laden.einstellungen.profil ?? "fuehrungsstelle");
-  // Im Browser gibt der Dienst den Share vor (ADR-005) — er hat ihn eingehängt,
-  // und ein Bediener könnte ihn ohnehin nicht auf ein anderes Verzeichnis des
-  // Servers umstellen. Das Feld zeigt ihn deshalb nur.
-  const shareFest = laden.umgebung?.plattform === "web";
-
-  // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
-  useEffect(() => {
-    setzeShare(laden.einstellungen.sharePfad);
-    setzeName(laden.einstellungen.anzeigename);
-    setzeBetriebsart(laden.einstellungen.betriebsart ?? "fuehrungsstelle");
-    setzeProfil(laden.einstellungen.profil ?? "fuehrungsstelle");
-  }, [laden.einstellungen]);
-
   return (
-    <>
-      <section aria-label="Einstellungen">
-        <h2>Einstellungen</h2>
-        <label>
-          Share-Pfad
-          {shareFest ? (
-            <output className="hinweistext">{share} (vom Dienst vorgegeben)</output>
-          ) : (
-            <input value={share} onChange={(e) => setzeShare(e.target.value)} />
-          )}
-        </label>
-        <label>
-          Anzeigename
-          <input value={name} onChange={(e) => setzeName(e.target.value)} />
-        </label>
-        <label>
-          Betriebsart
-          <select
-            value={betriebsart}
-            onChange={(e) => {
-              setzeBetriebsart(e.target.value as "fuehrungsstelle" | "meldekopf");
-            }}
-          >
-            <option value="fuehrungsstelle">Führungsstelle</option>
-            <option value="meldekopf">Meldekopf</option>
-          </select>
-        </label>
-        {betriebsart === "meldekopf" && (
-          <p className="hinweistext">
-            Der Meldekopf sieht Scanner, Eingangskorb und Bündeldatei — kein Lagebild. Er schreibt
-            in dieselbe Akte auf demselben Share; die Betriebsart ist ein Zuschnitt der Oberfläche
-            und kein Recht.
-          </p>
-        )}
-        <Profilwahl profil={profil} aufWahl={setzeProfil} gesperrt={betriebsart === "meldekopf"} />
-        <button
-          type="button"
-          disabled={laden.beschaeftigt}
-          onClick={() =>
-            void laden.setzeEinstellungen({
-              sharePfad: share,
-              anzeigename: name,
-              betriebsart,
-              // Auch im Meldekopf: Das Profil bleibt gemerkt, es gilt nur nicht.
-              profil,
-              // Das Erscheinungsbild gehört dem Schalter im Kopfband; diese
-              // Maske reicht es durch, statt es auf den Stand beim Öffnen
-              // zurückzudrehen.
-              ...(laden.einstellungen.theme === undefined
-                ? {}
-                : { theme: laden.einstellungen.theme }),
-            })
-          }
-        >
-          Übernehmen
-        </button>
-      </section>
-
-      <section aria-label="Einsätze">
-        <h2>Einsätze</h2>
-        {laden.einsaetze.length === 0 ? (
-          <p className="hinweistext">
-            {laden.einstellungen.sharePfad === ""
-              ? "Zuerst den Share-Pfad eintragen."
-              : "Unter diesem Pfad liegt noch kein Einsatz."}
-          </p>
-        ) : (
-          <Einsatzliste einsaetze={laden.einsaetze} aufOeffnen={(ordner) => void laden.oeffneEinsatz(ordner)} />
-        )}
-        <label>
-          Neuer Einsatz
-          <input value={neuerEinsatz} onChange={(e) => setzeNeuerEinsatz(e.target.value)} />
-        </label>
-        <button
-          type="button"
-          disabled={neuerEinsatz.trim().length === 0 || laden.beschaeftigt}
-          onClick={() => {
-            // Das Feld wird erst geleert, wenn der Einsatz angelegt ist: Bei „existiert bereits“
-            // soll der Name stehen bleiben, damit er sich ändern lässt.
-            void laden
-              .legeEinsatzAn(neuerEinsatz.trim(), new Date().toISOString().slice(0, 10))
-              .then(() => {
-                if (useLaden.getState().akteId !== undefined) setzeNeuerEinsatz("");
-              });
-          }}
-        >
-          Anlegen
-        </button>
-      </section>
-    </>
+    <div className="startflaeche">
+      <Einsatzkarte />
+      <Arbeitsplatzzeile />
+    </div>
   );
 }
