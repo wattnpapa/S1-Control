@@ -5,6 +5,12 @@ Alle Reviews sind code- und dokumentationsbasiert: es lief keine Instanz der Anw
 es gab keine Screenshots. Befunde sind mit Datei:Zeile belegt, Annahmen sind in den
 Einzeldokumenten als solche gekennzeichnet. Es wurde kein Code geändert.
 
+Spätere Durchläufe an der laufenden Anwendung liegen in eigenen Ordnern:
+`v2-2026-10-29/` (fünf Reviews nach den Beschriftungs-Commits) und
+`v2-2026-11-05/` (24 Reviews nach dem UX-Umbau, darunter erstmals je ein
+Rollen-Reviewer pro Sachgebiet und Funktion nach THW-DV 1-100; die Skills
+dazu liegen unter `.claude/skills/`).
+
 | Datei | Perspektive | P0 | P1 | P2 | P3 |
 | --- | --- | --- | --- | --- | --- |
 | thw-field-user-reviewer.md | Helfer im Feld | 2 | 7 | 8 | 5 |
