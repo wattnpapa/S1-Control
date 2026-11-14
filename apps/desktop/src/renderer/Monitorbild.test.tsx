@@ -1,7 +1,7 @@
 /**
  * Die Steuerung des Monitors in jsdom (S4.1, KONZEPT-S4.md §4).
  *
- * Kontextmenü, Hover-Leiste, Tasten 1 bis 6, R, Leertaste und Esc, der
+ * Kontextmenü, Hover-Leiste, Tasten 1 bis 8, R, Leertaste und Esc, der
  * Wechsel alle 20 s und das Merken in den Geräteeinstellungen. Alles liegt
  * im Renderer — deshalb ist es hier prüfbar, und deshalb geht es in der
  * Web-Schale genauso wie in Electron.
@@ -14,6 +14,7 @@ import { Monitorbild } from "./Monitorbild.js";
 import { LEISTE_MS, WECHSEL_MS, ansichtAusTaste, naechsteAnsicht } from "./monitorSteuerung.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { monitorFunkansicht } from "./pruefhilfen/monitorfunkbeispiel.js";
+import { BEISPIEL_STAERKETAFEL } from "./pruefhilfen/staerketafelbeispiel.js";
 import { BEISPIEL_ANSICHT, BEISPIEL_JETZT, BEISPIEL_LAGEBILD } from "./pruefhilfen/versorgungsbeispiel.js";
 import type { Einstellungen } from "../kontrakt/index.js";
 
@@ -26,6 +27,7 @@ beforeEach(() => {
   attrappe.antwortet("einstellungenLesen", GRUND);
   attrappe.antwortet("versorgungAnfordern", BEISPIEL_ANSICHT);
   attrappe.antwortet("funkplanAnfordern", monitorFunkansicht());
+  attrappe.antwortet("staerketafelAnfordern", BEISPIEL_STAERKETAFEL);
 });
 
 afterEach(() => {
@@ -53,13 +55,17 @@ function gemerkt(): Einstellungen["monitor"][] {
 }
 
 describe("Reine Helfer der Steuerung", () => {
-  it("geht im Kreis durch die sechs Ansichten und kennt die Tasten 1 bis 6", () => {
+  it("geht im Kreis durch die acht Ansichten und kennt die Tasten 1 bis 8", () => {
     expect(naechsteAnsicht("staerke")).toBe("verpflegung");
     expect(naechsteAnsicht("tafel")).toBe("funkplan");
-    expect(naechsteAnsicht("funkplan")).toBe("staerke");
+    expect(naechsteAnsicht("funkplan")).toBe("abschnitte");
+    expect(naechsteAnsicht("abschnitte")).toBe("organisationen");
+    expect(naechsteAnsicht("organisationen")).toBe("staerke");
     expect(ansichtAusTaste("3")).toBe("vorausschau");
     expect(ansichtAusTaste("6")).toBe("funkplan");
-    expect(ansichtAusTaste("7")).toBeUndefined();
+    expect(ansichtAusTaste("7")).toBe("abschnitte");
+    expect(ansichtAusTaste("8")).toBe("organisationen");
+    expect(ansichtAusTaste("9")).toBeUndefined();
     expect(ansichtAusTaste("x")).toBeUndefined();
   });
 });
@@ -244,7 +250,8 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
     await zeichne();
     taste("ContextMenu");
     const eintraege = screen.getAllByRole("menuitemradio");
-    expect(eintraege).toHaveLength(6);
+    expect(eintraege).toHaveLength(8);
+    expect(eintraege[7]?.textContent).toBe("Organisationen8");
     expect(eintraege[5]?.textContent).toBe("Funkplan6");
     act(() => {
       fireEvent.click(eintraege[5] as Element);
@@ -256,14 +263,23 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
     });
     expect(screen.getByRole("button", { name: "Funkplan" }).getAttribute("aria-pressed")).toBe("true");
     const punkte = screen.getByRole("list", { name: "Ansichten" }).querySelectorAll("li");
-    expect(punkte).toHaveLength(6);
+    expect(punkte).toHaveLength(8);
     expect(punkte[5]?.getAttribute("aria-current")).toBe("true");
   });
 
-  it("wechselt über alle sechs Ansichten und kommt zur Stärke zurück", async () => {
+  it("wechselt über alle acht Ansichten und kommt zur Stärke zurück", async () => {
     await zeichne();
     taste("r");
-    const folge = ["Monitor Verpflegung", "Monitor Nächste 24 h", "Monitor Unterbringung", "Monitor Bereiche · Schichten", "Monitor Funkplan", "Stärke-Monitor"];
+    const folge = [
+      "Monitor Verpflegung",
+      "Monitor Nächste 24 h",
+      "Monitor Unterbringung",
+      "Monitor Bereiche · Schichten",
+      "Monitor Funkplan",
+      "Monitor Abschnitte",
+      "Monitor Organisationen",
+      "Stärke-Monitor",
+    ];
     for (const name of folge) {
       act(() => {
         vi.advanceTimersByTime(WECHSEL_MS);
@@ -274,3 +290,35 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
   });
 });
 
+
+describe("Die Stärketafeln des Sachgebiets 1 (Tasten 7 und 8)", () => {
+  async function warte(): Promise<void> {
+    await act(async () => {
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+  }
+
+  it("holt die Tafel erst bei Taste 7, zeigt die Abschnitte und merkt die Wahl", async () => {
+    await zeichne();
+    expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(0);
+    taste("7");
+    await warte();
+    expect(screen.getByLabelText("Monitor Abschnitte")).toBeDefined();
+    expect(screen.getByText("LK Friesland")).toBeDefined();
+    expect(attrappe.rufeDerArt("staerketafelAnfordern")).toEqual([{ art: "staerketafelAnfordern", akteId: "akte-1" }]);
+    expect(gemerkt()).toContainEqual({ ansicht: "abschnitte", wechsel: false });
+    expect(document.title).toBe("S1-Control — Abschnitte");
+  });
+
+  it("zeigt mit Taste 8 die Organisationen und holt bei neuem Lagezeiger neu", async () => {
+    attrappe.antwortet("einstellungenLesen", { ...GRUND, monitor: { ansicht: "organisationen", wechsel: false } });
+    const { rerender } = render(<Monitorbild lagebild={BEISPIEL_LAGEBILD} akteId="akte-1" jetzt={BEISPIEL_JETZT} />);
+    await warte();
+    expect(screen.getByLabelText("Monitor Organisationen")).toBeDefined();
+    expect(screen.getByText("Feuerwehr")).toBeDefined();
+    rerender(<Monitorbild lagebild={{ ...BEISPIEL_LAGEBILD, lageZeiger: 13 }} akteId="akte-1" jetzt={BEISPIEL_JETZT} />);
+    await warte();
+    expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(2);
+  });
+});

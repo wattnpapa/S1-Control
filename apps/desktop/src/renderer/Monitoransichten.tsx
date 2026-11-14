@@ -17,7 +17,7 @@ import { alter } from "./Statuszeile.js";
 import { schriftgroesse } from "./monitorZahlen.js";
 import type { Fenstermass } from "./Monitor.js";
 import { einheitenText, mahlzeitText, nachtText, restzeitText, tagText, uhrzeitText, vorzeichen } from "./versorgungstext.js";
-import type { Funkplanansicht, Lagebild, Versorgungsansicht } from "../kontrakt/index.js";
+import type { Funkplanansicht, Lagebild, Staerketafelansicht, Versorgungsansicht } from "../kontrakt/index.js";
 
 export interface Ansichtseigenschaften {
   readonly lagebild: Lagebild;
@@ -27,6 +27,8 @@ export interface Ansichtseigenschaften {
   readonly ansicht?: Versorgungsansicht | undefined;
   /** Funkplan F4: das Blatt „Funkplan" für die Tafel `MonitorFunkplan`. */
   readonly funkplan?: Funkplanansicht | undefined;
+  /** Sachgebiet 1: die Stärketafeln für `MonitorAbschnitte` und `MonitorOrganisationen`. */
+  readonly staerketafel?: Staerketafelansicht | undefined;
   readonly fusszusatz?: string;
 }
 
