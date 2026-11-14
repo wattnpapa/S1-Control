@@ -57,7 +57,8 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    aus einer PDF der Erfassungsbogen-App (in der Maske „Erfassungsbogen
    einlesen“ über „PDF wählen …“ oder durch Hineinziehen; eine Sammel-PDF
    zeigt ihre Bögen nacheinander, „Alle übernehmen (n)“ legt den angezeigten
-   und alle wartenden Bögen in einem Schritt in den gewählten Abschnitt;
+   und alle wartenden Bögen in einem Schritt in den gewählten Abschnitt,
+   ein Balken zeigt dabei, beim wievielten Bogen der Import steht;
    abgewiesene Bögen stehen danach mit Grund unter der Maske) oder über den Eingangskorb aus einer
    Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
