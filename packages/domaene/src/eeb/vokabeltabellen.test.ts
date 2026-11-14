@@ -9,48 +9,9 @@
 import { OrganisationsTyp, type Erfassungsbogen } from "@bos/eeb-format";
 import { describe, expect, it } from "vitest";
 
+import { pruefbogen as bogen } from "../pruefhilfen/pruefbogen.js";
 import { uebersetzeBogen } from "./adapter.js";
 import { vokabeltabellenFuer } from "./vokabeltabellen.js";
-
-/** Gekuerzt aus `pruefdaten/eeb/thw/001-albstadt-ztr-tz.json`. */
-function bogen(): Erfassungsbogen {
-  const funkruf = (zweite: number) => ({
-    kennwort: { code: 1 },
-    eigenerStandort: true,
-    teile: [21, zweite],
-  });
-  return {
-    schemaVersion: 8,
-    stand: 3_440_645,
-    einheit: {
-      organisation: OrganisationsTyp.THW,
-      einheitsTyp: { code: 3 },
-      hierarchie: [
-        { bezeichnung: { code: 1 }, name: "Albstadt", kurz: "OALB" },
-        { bezeichnung: { code: 2 }, name: "Tübingen" },
-        { bezeichnung: { code: 3 }, name: "Baden-Württemberg" },
-      ],
-    },
-    personalErfassung: 0,
-    personal: [
-      {
-        vorname: "Max",
-        nachname: "Muster",
-        staerkeRolle: 2,
-        funktionen: [{ code: 1 }],
-        fahrerlaubnis: 9,
-        geschlecht: 1,
-        ernaehrung: 1,
-        kontakte: [],
-        zusatzqualifikationen: [],
-      },
-    ],
-    fahrzeuge: [
-      { typ: { code: 2 }, stanKonform: true, kennzeichen: "THW-80101", funkrufname: funkruf(10) },
-      { typ: { freitext: "MzKW" }, stanKonform: false, kennzeichen: "THW-80102", funkrufname: funkruf(54) },
-    ],
-  } as unknown as Erfassungsbogen;
-}
 
 const AUFTRAG = { einheitId: "E-1", abschnittId: "A-1" } as const;
 
