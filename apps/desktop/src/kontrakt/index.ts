@@ -371,6 +371,12 @@ export const zLagebild = z.object({
   /** Köpfe im Archivbereich „Einsatz beendet“ — zählen ebenfalls nicht. */
   staerkeBeendet: z.number().int().min(0).optional(),
   hinweise: z.number().int().min(0),
+  /**
+   * Additiv: Einheiten, die aus einem Erfassungsbogen mit rohen
+   * Vokabularcodes („#3") statt Namen übernommen wurden und sich aus dem
+   * gespeicherten Bogen korrigieren lassen. Fehlt das Feld: nichts offen.
+   */
+  vokabelkorrekturen: z.number().int().min(0).optional(),
   unbekannteEreignisse: z.number().int().min(0),
   /** Wie viele Schritte „rueckgaengig“ noch gehen (§6 U3). */
   undoTiefe: z.number().int().min(0),
@@ -575,6 +581,10 @@ export const zRuf = z.discriminatedUnion("art", [
   // Der Rueckweg schreibt in `ausgaben\` wie jede andere Ausgabe (M4.1) und
   // liefert den Pfad: Wer sie weitergibt, muss wissen, wo sie liegt.
   z.object({ art: z.literal("buendelSchreiben"), akteId: zAkteId }),
+  // Die Korrektur übernommener Einheiten mit rohen Vokabularcodes: Der Worker
+  // rechnet aus seinem Zustand, was zu schreiben ist; der Renderer nennt nur
+  // die Akte.
+  z.object({ art: z.literal("vokabelnKorrigieren"), akteId: zAkteId }),
 
   // Der Update-Weg (M7.2). **Ohne Akte**: Er haengt am Share und nicht an
   // einem Einsatz — geprueft wird auch dann, wenn keine Akte offen ist.
@@ -848,6 +858,7 @@ export interface Antworten {
   fassungsvergleichAnfordern: Fassungsvergleich | null;
   buendelEinlesen: Buendelergebnis;
   buendelSchreiben: Ausgabeergebnis;
+  vokabelnKorrigieren: Vokabelkorrekturergebnis;
   programmstandPruefen: Programmbefund;
   programmpaketHolen: Bezugsbefund;
   diagnoseAnfordern: Diagnose;
@@ -1127,6 +1138,16 @@ export interface EebVorschau {
  * Oberflaeche sagen kann, **wohin** geschrieben wurde — ein „fertig“ ohne
  * Pfad zwingt den Bediener, danach zu suchen.
  */
+/**
+ * Der Ausgang der Vokabularkorrektur.
+ *
+ * Ein Abbruch mittendrin lässt das Geschriebene stehen (append-only); der
+ * nächste Lauf findet nur noch, was fehlt.
+ */
+export type Vokabelkorrekturergebnis =
+  | { readonly art: "korrigiert"; readonly einheiten: number; readonly ereignisse: number }
+  | { readonly art: "abgewiesen"; readonly meldung: string; readonly ereignisse: number };
+
 export interface Ausgabeergebnis {
   readonly pfad: string;
   readonly bytes: number;
