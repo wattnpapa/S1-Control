@@ -327,10 +327,11 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
   Vorausschau, Belegungsliste, Kraftstoffliste. Die erzeugte Datei steht
   danach neben dem Menü mit „Öffnen“.
 
-Der **Monitor** zeigt neben der Stärke sieben weitere Ansichten: Verpflegung,
+Der **Monitor** zeigt neben der Stärke acht weitere Ansichten: Verpflegung,
 Nächste 24 h, Unterbringung, die Tafel „Bereiche · Schichten“, den
-Funkplan und für das Sachgebiet 1 die Stärke je Abschnitt und je
-Organisation. Die beiden Stärketafeln nennen je Zeile Fü / UFü / He und
+Funkplan und für das Sachgebiet 1 die Stärke je Abschnitt, je
+Organisation und als Kreuztabelle „Abschnitt × Organisation“ mit den
+Köpfen vor Ort je Zelle und den Erwarteten je Organisation darunter. Die beiden Stärketafeln nennen je Zeile Fü / UFü / He und
 Gesamt nach derselben Regel wie die Kopfzahl, die Gesamtzeile ist die
 Ist-Stärke. Erwartete Kräfte stehen in einer eigenen Spalte und nie in der
 Summe. Unter den Abschnitten folgen Unterabschnitte eingerückt, leere
@@ -343,7 +344,7 @@ ohne Kontakt. Die Schrift wird so groß, wie das Fenster es zulässt; viele
 Rufgruppen verkleinern sie, statt zu blättern, aufgelöste stehen nicht an der
 Wand.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
-Mausbewegung oben erscheint, oder mit den Tasten 1 bis 8; R schaltet den
+Mausbewegung oben erscheint, oder mit den Tasten 1 bis 9; R schaltet den
 Wechsel alle 20 Sekunden ein und aus, die Leertaste hält ihn an, F11 schaltet
 Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —
 der Monitor im Zelt kann Verpflegung zeigen, der im Fahrzeug Stärke.

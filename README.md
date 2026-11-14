@@ -23,7 +23,7 @@ S1-Control unterstützt dich bei der Lageführung im Einsatz:
 - Führungsstruktur-Ansicht und Gesamtübersichten für Kräfte/Fahrzeuge
 - Live-Anzeige der Gesamtstärke und NATO-Zeit im separaten Vollbildfenster (Monitoransicht)
 - Funkplan für die Vermeldezentrale: Rufgruppen, Zuordnung der Einheiten, Funkproben und letzter Kontakt, als Ausdruck und als Monitoransicht
-- Monitoransichten für das Sachgebiet 1: Ist-Stärke (Fü / UFü / He = Gesamt) je Abschnitt und je Organisation, Erwartete getrennt (Tasten 7 und 8)
+- Monitoransichten für das Sachgebiet 1: Ist-Stärke (Fü / UFü / He = Gesamt) je Abschnitt, je Organisation und als Kreuztabelle Abschnitt × Organisation, Erwartete getrennt (Tasten 7 bis 9)
 
 ### Offline- und Fileshare-Betrieb
 
