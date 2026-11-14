@@ -108,6 +108,38 @@ describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
     expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(2);
   });
 
+  it("Szenario: der Massenimport wird abgebrochen und später fortgesetzt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.eebDatei(TEXTE);
+
+    const lauf = platz.dienst.eebAlleUebernehmen("EO");
+    // Der Abbruch kommt, während der erste Bogen geschrieben wird.
+    platz.dienst.eebAbbrechen();
+    const ergebnis = await lauf;
+    expect(ergebnis.abgebrochen).toBe(true);
+    expect(ergebnis.uebernommen).toBe(1);
+    expect(ergebnis.naechster?.art).toBe("vollstaendig");
+    expect(ergebnis.naechster?.wartend).toBe(1);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(1);
+
+    // Die übrigen warten weiter und lassen sich danach übernehmen.
+    const rest = await platz.dienst.eebAlleUebernehmen("EO");
+    expect(rest.abgebrochen).toBeUndefined();
+    expect(rest.uebernommen).toBe(2);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(3);
+  });
+
+  it("Szenario: ein Abbruch ohne laufenden Import wirkt nicht auf den nächsten", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.eebAbbrechen();
+    await platz.dienst.eebDatei(TEXTE);
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("EO");
+    expect(ergebnis.abgebrochen).toBeUndefined();
+    expect(ergebnis.uebernommen).toBe(3);
+  });
+
   it("Szenario: ein abgewiesener Bogen hält den Massenimport nicht an", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

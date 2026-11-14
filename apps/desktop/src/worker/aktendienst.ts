@@ -246,6 +246,16 @@ function leeresLagebild(einsatzId: string): Lagebild {
   };
 }
 
+/** Der Zwischenstand eines Massenimports — nur innerhalb des Workers. */
+interface Sammellauf {
+  uebernommen: number;
+  ereignisse: number;
+  readonly fehlgeschlagen: { bezeichnung: string; meldung: string }[];
+  fertig: number;
+  readonly gesamt: number;
+  naechster: EebStand | undefined;
+}
+
 export class Aktendienst {
   readonly #o: AktendienstOptionen;
   readonly #takte: Takte;
@@ -331,6 +341,8 @@ export class Aktendienst {
   #scanQuelle: "SCAN" | "PDF_IMPORT" = "SCAN";
   /** Die Bezeichnung des angezeigten Bogens — fuer die Fehlerliste des Massenimports. */
   #scanBezeichnung = "";
+  /** Gesetzt von {@link eebAbbrechen}; der Massenimport prueft es zwischen zwei Boegen. */
+  #abbruchGewuenscht = false;
   /**
    * Die weiteren Boegen einer eingelesenen Datei, als Scan-Texte.
    *
@@ -1435,37 +1447,70 @@ export class Aktendienst {
    * Jeder Bogen geht durch {@link eebUebernehmen} — dieselben Ereignisse,
    * dieselben Transaktionen, derselbe Sync wie per Knopf. Ein abgewiesener
    * oder unlesbarer Bogen wird notiert und beiseitegelegt; die uebrigen
-   * laufen weiter. Danach ist der Sammelstand leer.
+   * laufen weiter.
+   *
+   * {@link eebAbbrechen} haelt den Lauf **zwischen** zwei Boegen an: Der
+   * laufende Bogen wird fertig geschrieben, die uebrigen bleiben in der
+   * Schlange, und der naechste kommt als `naechster` zurueck in die Maske.
    */
   async eebAlleUebernehmen(abschnittId: string): Promise<Sammeluebernahme> {
-    let uebernommen = 0;
-    let ereignisse = 0;
-    const fehlgeschlagen: { bezeichnung: string; meldung: string }[] = [];
-    const gesamt = (this.#scanPayload === undefined ? 0 : 1) + this.#scanWartend.length;
-    let fertig = 0;
-    for (;;) {
-      if (this.#scanPayload === undefined) {
-        if (this.#scanWartend.length === 0) break;
-        this.#leereScan();
-        const stand = await this.#naechsterWartender();
-        if (stand.art === "unlesbar") {
-          fehlgeschlagen.push({ bezeichnung: "—", meldung: stand.meldung ?? "unlesbar" });
-          this.#meldeFortschritt((fertig += 1), gesamt);
-        }
-        continue;
-      }
+    this.#abbruchGewuenscht = false;
+    const lauf: Sammellauf = {
+      uebernommen: 0,
+      ereignisse: 0,
+      fehlgeschlagen: [],
+      fertig: 0,
+      gesamt: (this.#scanPayload === undefined ? 0 : 1) + this.#scanWartend.length,
+      naechster: undefined,
+    };
+    while (this.#scanPayload !== undefined || this.#scanWartend.length > 0) {
+      // Erst nach dem ersten Bogen: Davor kennt der Lauf den angezeigten Stand nicht.
+      if (this.#abbruchGewuenscht && lauf.fertig > 0) return this.#abgebrochen(lauf);
+      await this.#sammelschritt(abschnittId, lauf);
+    }
+    return { uebernommen: lauf.uebernommen, ereignisse: lauf.ereignisse, fehlgeschlagen: lauf.fehlgeschlagen };
+  }
+
+  /** Bittet einen laufenden Massenimport, nach dem aktuellen Bogen anzuhalten. */
+  eebAbbrechen(): null {
+    this.#abbruchGewuenscht = true;
+    return null;
+  }
+
+  async #sammelschritt(abschnittId: string, lauf: Sammellauf): Promise<void> {
+    if (this.#scanPayload === undefined) {
+      this.#leereScan();
+      const stand = await this.#naechsterWartender();
+      lauf.naechster = stand;
+      if (stand.art !== "unlesbar") return;
+      lauf.fehlgeschlagen.push({ bezeichnung: "—", meldung: stand.meldung ?? "unlesbar" });
+    } else {
       const bezeichnung = this.#scanBezeichnung;
       const ergebnis = await this.eebUebernehmen(abschnittId);
       if (ergebnis.art === "uebernommen") {
-        uebernommen += 1;
-        ereignisse += ergebnis.ereignisse;
+        lauf.uebernommen += 1;
+        lauf.ereignisse += ergebnis.ereignisse;
+        lauf.naechster = ergebnis.naechster;
       } else {
-        fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
+        lauf.fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
         this.#leereScan();
+        lauf.naechster = undefined;
       }
-      this.#meldeFortschritt((fertig += 1), gesamt);
     }
-    return { uebernommen, ereignisse, fehlgeschlagen };
+    lauf.fertig += 1;
+    this.#meldeFortschritt(lauf.fertig, lauf.gesamt);
+  }
+
+  async #abgebrochen(lauf: Sammellauf): Promise<Sammeluebernahme> {
+    this.#abbruchGewuenscht = false;
+    const naechster = this.#scanPayload === undefined ? await this.#naechsterWartender() : lauf.naechster;
+    return {
+      uebernommen: lauf.uebernommen,
+      ereignisse: lauf.ereignisse,
+      fehlgeschlagen: lauf.fehlgeschlagen,
+      abgebrochen: true,
+      ...(naechster === undefined ? {} : { naechster }),
+    };
   }
 
   #meldeFortschritt(fertig: number, gesamt: number): void {
