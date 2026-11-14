@@ -32,5 +32,12 @@ export const BEISPIEL_STAERKETAFEL: Staerketafelansicht = {
       z("DRK", "DRK", [8, 20, 115], 48),
     ],
     gesamt: z("GESAMT", "Gesamt", [46, 130, 835], 66),
+    kreuz: {
+      LG: { THW: 13 },
+      WTM: { FEUERWEHR: 174 },
+      FRI: { THW: 200, FEUERWEHR: 150, DRK: 86 },
+      "FRI-S": { THW: 110 },
+      WHV: { THW: 57, FEUERWEHR: 164, DRK: 167 },
+    },
   },
 };

@@ -5,7 +5,8 @@
  * welches: die Stärke (`Monitor.tsx`, unverändert), eine der vier
  * Versorgungsansichten (`Monitoransichten.tsx`), der Funkplan
  * (`MonitorFunkplan.tsx`, KONZEPT-FUNKPLAN.md §4) oder eine der beiden
- * Stärketafeln des Sachgebiets 1 (`MonitorStaerketafeln.tsx`). Darüber liegen die
+ * Stärketafeln des Sachgebiets 1 (`MonitorStaerketafeln.tsx`,
+ * `MonitorKreuztafel.tsx`). Darüber liegen die
  * Hover-Leiste und das Kontextmenü, rechts unten die Punkte. Alles im
  * Renderer, damit es in Electron und in der Web-Schale gleich geht.
  *
@@ -20,6 +21,7 @@ import { useEffect } from "react";
 
 import { Monitor, useFenstermass } from "./Monitor.js";
 import { MonitorFunkplan } from "./MonitorFunkplan.js";
+import { MonitorKreuztafel } from "./MonitorKreuztafel.js";
 import { MonitorAbschnitte, MonitorOrganisationen } from "./MonitorStaerketafeln.js";
 import { MonitorTafel, MonitorUnterbringung, MonitorVerpflegung, MonitorVorausschau, type Ansichtseigenschaften } from "./Monitoransichten.js";
 import { Monitorleiste, Monitorpunkte } from "./Monitorleiste.js";
@@ -56,6 +58,8 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
       return <MonitorAbschnitte {...e} />;
     case "organisationen":
       return <MonitorOrganisationen {...e} />;
+    case "kreuz":
+      return <MonitorKreuztafel {...e} />;
   }
 }
 
@@ -66,7 +70,7 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
   const abruf = useVersorgungsansicht(akteId, lagebild?.lageZeiger, 24, braucheAnsicht);
   const braucheFunkplan = lagebild !== undefined && steuerung.ansicht === "funkplan";
   const funk = useFunkplanansicht(braucheFunkplan ? akteId : undefined, lagebild?.lageZeiger, "", braucheFunkplan);
-  const braucheStaerke = lagebild !== undefined && (steuerung.ansicht === "abschnitte" || steuerung.ansicht === "organisationen");
+  const braucheStaerke = lagebild !== undefined && ["abschnitte", "organisationen", "kreuz"].includes(steuerung.ansicht);
   const staerketafel = useStaerketafel(akteId, lagebild?.lageZeiger, braucheStaerke);
 
   useEffect(() => {

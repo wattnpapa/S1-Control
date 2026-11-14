@@ -1,7 +1,7 @@
 /**
  * Die Steuerung des Monitors in jsdom (S4.1, KONZEPT-S4.md §4).
  *
- * Kontextmenü, Hover-Leiste, Tasten 1 bis 8, R, Leertaste und Esc, der
+ * Kontextmenü, Hover-Leiste, Tasten 1 bis 9, R, Leertaste und Esc, der
  * Wechsel alle 20 s und das Merken in den Geräteeinstellungen. Alles liegt
  * im Renderer — deshalb ist es hier prüfbar, und deshalb geht es in der
  * Web-Schale genauso wie in Electron.
@@ -55,17 +55,19 @@ function gemerkt(): Einstellungen["monitor"][] {
 }
 
 describe("Reine Helfer der Steuerung", () => {
-  it("geht im Kreis durch die acht Ansichten und kennt die Tasten 1 bis 8", () => {
+  it("geht im Kreis durch die neun Ansichten und kennt die Tasten 1 bis 9", () => {
     expect(naechsteAnsicht("staerke")).toBe("verpflegung");
     expect(naechsteAnsicht("tafel")).toBe("funkplan");
     expect(naechsteAnsicht("funkplan")).toBe("abschnitte");
     expect(naechsteAnsicht("abschnitte")).toBe("organisationen");
-    expect(naechsteAnsicht("organisationen")).toBe("staerke");
+    expect(naechsteAnsicht("organisationen")).toBe("kreuz");
+    expect(naechsteAnsicht("kreuz")).toBe("staerke");
     expect(ansichtAusTaste("3")).toBe("vorausschau");
     expect(ansichtAusTaste("6")).toBe("funkplan");
     expect(ansichtAusTaste("7")).toBe("abschnitte");
     expect(ansichtAusTaste("8")).toBe("organisationen");
-    expect(ansichtAusTaste("9")).toBeUndefined();
+    expect(ansichtAusTaste("9")).toBe("kreuz");
+    expect(ansichtAusTaste("0")).toBeUndefined();
     expect(ansichtAusTaste("x")).toBeUndefined();
   });
 });
@@ -250,7 +252,7 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
     await zeichne();
     taste("ContextMenu");
     const eintraege = screen.getAllByRole("menuitemradio");
-    expect(eintraege).toHaveLength(8);
+    expect(eintraege).toHaveLength(9);
     expect(eintraege[7]?.textContent).toBe("Organisationen8");
     expect(eintraege[5]?.textContent).toBe("Funkplan6");
     act(() => {
@@ -263,11 +265,11 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
     });
     expect(screen.getByRole("button", { name: "Funkplan" }).getAttribute("aria-pressed")).toBe("true");
     const punkte = screen.getByRole("list", { name: "Ansichten" }).querySelectorAll("li");
-    expect(punkte).toHaveLength(8);
+    expect(punkte).toHaveLength(9);
     expect(punkte[5]?.getAttribute("aria-current")).toBe("true");
   });
 
-  it("wechselt über alle acht Ansichten und kommt zur Stärke zurück", async () => {
+  it("wechselt über alle neun Ansichten und kommt zur Stärke zurück", async () => {
     await zeichne();
     taste("r");
     const folge = [
@@ -278,6 +280,7 @@ describe("Der Funkplan als sechste Ansicht (F4)", () => {
       "Monitor Funkplan",
       "Monitor Abschnitte",
       "Monitor Organisationen",
+      "Monitor Abschnitt × Organisation",
       "Stärke-Monitor",
     ];
     for (const name of folge) {
@@ -320,5 +323,14 @@ describe("Die Stärketafeln des Sachgebiets 1 (Tasten 7 und 8)", () => {
     rerender(<Monitorbild lagebild={{ ...BEISPIEL_LAGEBILD, lageZeiger: 13 }} akteId="akte-1" jetzt={BEISPIEL_JETZT} />);
     await warte();
     expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(2);
+  });
+
+  it("zeigt mit Taste 9 die Kreuztabelle aus derselben Tafel", async () => {
+    await zeichne();
+    taste("9");
+    await warte();
+    expect(screen.getByLabelText("Monitor Abschnitt × Organisation")).toBeDefined();
+    expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(1);
+    expect(document.title).toBe("S1-Control — Abschnitt × Organisation");
   });
 });
