@@ -7,7 +7,7 @@
  * ist lesbar, und die Übernahme geht in den gewählten Abschnitt.
  */
 
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Scanner, fortschrittstext } from "./Scanner.js";
@@ -249,6 +249,35 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     ).toBeDefined();
     // Die Vorschau ist abgeräumt.
     expect(screen.queryByText("Bergungsgruppe 1")).toBeNull();
+  });
+
+  it("zeigt den Fortschritt des Massenimports und sperrt solange die Knöpfe", async () => {
+    let fertigmelden: (wert: unknown) => void = () => undefined;
+    attrappe.antwortet("eebAlleUebernehmen", new Promise((aufloesen) => {
+      fertigmelden = aufloesen;
+    }));
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 55, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (56)" }));
+
+    expect(await screen.findByText("Übernehme Bogen 1 von 56 …")).toBeDefined();
+    act(() => {
+      useLaden.getState().nimmMitteilung({ art: "eebFortschritt", akteId: "akte-1", fertig: 12, gesamt: 56 });
+    });
+    expect(screen.getByText("Übernehme Bogen 13 von 56 …")).toBeDefined();
+    expect((screen.getByLabelText("Fortschritt des Massenimports") as HTMLProgressElement).value).toBe(12);
+    expect((screen.getByRole("button", { name: "Übernehmen" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((screen.getByRole("button", { name: "Von vorn" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fertigmelden({ uebernommen: 56, ereignisse: 560, fehlgeschlagen: [] });
+    expect(await screen.findByText("56 Bögen übernommen (560 Ereignisse).")).toBeDefined();
+    expect(screen.queryByLabelText("Fortschritt des Massenimports")).toBeNull();
+  });
+
+  it("ignoriert eine Fortschrittsmeldung, wenn kein Massenimport läuft", () => {
+    useLaden.setState({ eebFortschritt: undefined });
+    useLaden.getState().nimmMitteilung({ art: "eebFortschritt", akteId: "akte-1", fertig: 3, gesamt: 3 });
+    expect(useLaden.getState().eebFortschritt).toBeUndefined();
   });
 
   it("bietet „Alle übernehmen“ beim Handscanner nicht an", () => {

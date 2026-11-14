@@ -55,6 +55,8 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
   };
   const ablage = useAblage(liesDateien);
   const wartend = stand?.wartend ?? 0;
+  const fortschritt = laden.eebFortschritt;
+  const laeuft = fortschritt !== undefined;
 
   return (
     <section
@@ -151,7 +153,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
           <div className="maskenknoepfe">
             <button
               type="button"
-              disabled={ziel === ""}
+              disabled={ziel === "" || laeuft}
               onClick={() => {
                 void (async () => {
                   const ausgang = await laden.uebernimmScan(ziel);
@@ -171,7 +173,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
             {wartend > 0 && (
               <button
                 type="button"
-                disabled={ziel === ""}
+                disabled={ziel === "" || laeuft}
                 title="Diesen und alle weiteren Bögen der Datei in den gewählten Abschnitt übernehmen"
                 onClick={() => {
                   void (async () => {
@@ -186,6 +188,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
             {wartend > 0 && (
               <button
                 type="button"
+                disabled={laeuft}
                 title="Diesen Bogen nicht übernehmen und den nächsten der Datei zeigen"
                 onClick={() => {
                   setzeErgebnis(undefined);
@@ -197,6 +200,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
             )}
             <button
               type="button"
+              disabled={laeuft}
               onClick={() => {
                 void laden.setzeScanZurueck();
               }}
@@ -204,6 +208,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
               Von vorn
             </button>
           </div>
+          {fortschritt !== undefined && <Importfortschritt {...fortschritt} />}
         </div>
       )}
 
@@ -230,6 +235,22 @@ export function fortschrittstext(stand: { art: string; haben: number; anzahl: nu
 /** „Noch 3 weitere Bögen in der Datei." — steht hinter dem Fortschritt. */
 export function wartendtext(wartend: number): string {
   return wartend === 1 ? "Noch ein weiterer Bogen in der Datei." : `Noch ${String(wartend)} weitere Bögen in der Datei.`;
+}
+
+/** Balken und Zahl, solange der Massenimport läuft. */
+function Importfortschritt({ fertig, gesamt }: { readonly fertig: number; readonly gesamt: number }): React.JSX.Element {
+  return (
+    <div className="importfortschritt" role="status">
+      <progress max={gesamt} value={fertig} aria-label="Fortschritt des Massenimports" />
+      <span>{importfortschrittstext(fertig, gesamt)}</span>
+    </div>
+  );
+}
+
+/** „Übernehme Bogen 13 von 56 …" — nach dem letzten: „56 von 56 Bögen verarbeitet." */
+export function importfortschrittstext(fertig: number, gesamt: number): string {
+  if (fertig >= gesamt) return `${String(gesamt)} von ${String(gesamt)} Bögen verarbeitet.`;
+  return `Übernehme Bogen ${String(fertig + 1)} von ${String(gesamt)} …`;
 }
 
 /** „56 Bögen übernommen (560 Ereignisse). 1 abgewiesen: …" */
