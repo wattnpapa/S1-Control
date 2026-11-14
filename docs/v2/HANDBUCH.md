@@ -60,6 +60,8 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    und alle wartenden Bögen in einem Schritt in den gewählten Abschnitt,
    ein Balken zeigt dabei, beim wievielten Bogen der Import steht, und
    „Abbrechen“ hält nach dem laufenden Bogen an, die übrigen warten weiter;
+   ist eine Einheit schon erfasst, wird sie nur aktualisiert und bleibt in
+   ihrem Abschnitt, die Meldung unter der Maske nennt ihn;
    abgewiesene Bögen stehen danach mit Grund unter der Maske) oder über den Eingangskorb aus einer
    Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
