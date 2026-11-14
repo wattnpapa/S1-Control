@@ -43,6 +43,7 @@ import {
   buendelAusMeldungen,
   einheitIdAus,
   liesBuendel,
+  teilIdsAus,
   uebernahmeEntwuerfe,
   materialisiere,
   projektion,
@@ -102,6 +103,7 @@ import {
   type Buendelergebnis,
   type Eingangskorbansicht,
   type Erfassungsbogenergebnis,
+  type Vokabelkorrekturergebnis,
   type Fuestansicht,
   type Kostenansicht,
   type Versorgungsansicht,
@@ -133,6 +135,7 @@ import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { schreibhinweise } from "./schreibhinweise.js";
+import { offeneVokabelkorrekturen, vokabelnKorrigieren } from "./vokabelkorrektur.js";
 import { Bearbeitungssperren } from "./bearbeitungssperren.js";
 import { pruefeVorwert } from "./vorwertpruefung.js";
 import { pruefeGegenZustand } from "./zustandspruefung.js";
@@ -1394,8 +1397,7 @@ export class Aktendienst {
       // ab und werden nicht gewuerfelt: Scannt ein zweiter Meldekopf denselben
       // Bogen, entstehen dieselben Ids — und §3.6 macht daraus eine
       // verworfene Zweitanlage statt einer Dublette.
-      personIds: befund.bogen.personal.map((_, nummer) => `P-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
-      fahrzeugIds: befund.bogen.fahrzeuge.map((_, nummer) => `F-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
+      ...teilIdsAus(befund.meldungId, befund.bogen),
       empfangenAm: this.#jetztText(),
       quelle: this.#scanQuelle,
       rohPayload: this.#scanText,
@@ -1458,12 +1460,7 @@ export class Aktendienst {
           meldungId: eintrag.meldungId,
           einheitId,
           abschnittId,
-          personIds: eintrag.bogen.personal.map(
-            (_, nummer) => `P-${eintrag.meldungId.slice(0, 10)}-${String(nummer)}`,
-          ),
-          fahrzeugIds: eintrag.bogen.fahrzeuge.map(
-            (_, nummer) => `F-${eintrag.meldungId.slice(0, 10)}-${String(nummer)}`,
-          ),
+          ...teilIdsAus(eintrag.meldungId, eintrag.bogen),
           empfangenAm: eintrag.empfangenAm === "" ? this.#jetztText() : eintrag.empfangenAm,
           quelle: eintrag.quelle,
           einheitSchluessel: eintrag.einheitSchluessel,
@@ -1546,6 +1543,14 @@ export class Aktendienst {
     const bytes = new TextEncoder().encode(text);
     const pfad = await this.ausgabeSchreiben(`erfassungsboegen_${dateimarke(jetzt)}.json`, bytes);
     return { pfad, bytes: bytes.length, boegen: boegen.length, ohneBogen };
+  }
+
+  /**
+   * Ersetzt rohe Vokabularcodes („#3") übernommener Einheiten durch Namen aus
+   * dem gespeicherten Bogen. Rechnet und zählt in `./vokabelkorrektur.ts`.
+   */
+  vokabelnKorrigieren(): Promise<Vokabelkorrekturergebnis> {
+    return vokabelnKorrigieren(this.#zustand, (entwurf) => this.bediene(entwurf));
   }
 
   /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
@@ -1702,6 +1707,7 @@ export class Aktendienst {
       staerkeErwartet: ausserhalb.erwartet,
       staerkeBeendet: ausserhalb.beendet,
       hinweise: zustand.hinweise.length,
+      vokabelkorrekturen: offeneVokabelkorrekturen(zustand),
       unbekannteEreignisse: zustand.unbekannt.length,
       undoTiefe: this.#stapel.eintraege.length,
       ...(oberster === undefined

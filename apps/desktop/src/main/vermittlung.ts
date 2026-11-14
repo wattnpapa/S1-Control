@@ -277,6 +277,8 @@ export class Vermittlung {
         return this.#erzeugeAusgabe(ruf);
       case "buendelSchreiben":
         return this.#o.hof.frage(ruf.akteId, { art: "buendelSchreiben" });
+      case "vokabelnKorrigieren":
+        return this.#o.hof.frage(ruf.akteId, { art: "vokabelnKorrigieren" });
       case "htmlMonitorSchalten":
         return this.#o.hof.frage(ruf.akteId, { art: "htmlMonitorSchalten", ruf });
       case "einsatzArchivieren":

@@ -58,6 +58,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.buendelSchreiben();
     case "erfassungsboegenSchreiben":
       return dienst.erfassungsboegenSchreiben(auftrag.ruf.einheitIds);
+    case "vokabelnKorrigieren":
+      return dienst.vokabelnKorrigieren();
     case "baumAnfordern":
       return dienst.baum(auftrag.ruf);
     case "tabelleAnfordern":
