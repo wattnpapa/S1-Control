@@ -1,9 +1,11 @@
 name: Build Main Releases
 
+# v1-Kette. Sie ruft test:coverage, build:main, rebuild:native und
+# scripts/run-electron-builder.cjs, die es im v2-Baum nicht gibt, und setzte
+# vor dem Bau bei jedem Push einen Versions-Tag. Deshalb nur noch von Hand;
+# main baut über build-v2.yml.
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
