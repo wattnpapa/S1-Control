@@ -16,8 +16,8 @@
 # nicht haben soll; `bau/paket.mjs` schaltet beides ab, wenn sie fehlen, und
 # baut unsigniert weiter. Die Konfiguration dafür steht schon.
 #
-# `build-main.yml` bleibt unverändert und löst weiterhin nur auf `main` aus;
-# die beiden Ketten laufen nebeneinander, bis v2 v1 ablöst.
+# Seit v2 auf `main` liegt, läuft diese Kette auch dort. `build-main.yml` (v1)
+# löst nur noch von Hand aus: Sie ruft v1-Skripte, die es im v2-Baum nicht gibt.
 # ────────────────────────────────────────────────────────────────────────────
 
 name: Build v2
@@ -28,12 +28,14 @@ on:
   workflow_dispatch:
   push:
     branches:
+      - main
       - v2-architektur
   # Pull Requests gegen den v2-Zweig laufen durch dieselben Tore. Sonst wäre
   # der erste Nachweis, dass eine Änderung auf allen drei Plattformen trägt,
   # erst der Merge — und damit zu spät.
   pull_request:
     branches:
+      - main
       - v2-architektur
 
 # Nur Lesezugriff: Dieser Workflow setzt weder Tags noch Releases (siehe
