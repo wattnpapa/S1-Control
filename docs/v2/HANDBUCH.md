@@ -197,14 +197,24 @@ Kopfzeile.
 Ein Klick wählt eine Zeile, Strg+Klick nimmt weitere dazu. Dann erscheint am
 Fuß der Karte die **Auswahlleiste**: „1 gewählt · <Name>“ und die Schritte
 Verschieben (Strg+M), Aufteilen, Zusammenführen, Kopieren (Strg+K), Ablösung
-anfordern, Funk … und Entfernen (Strg+E). Bei zwei gewählten Zeilen bleiben
-Verschieben und Zusammenführen; Zusammenführen steht bei einer Zeile grau mit
+anfordern, Funk …, Erfassungsbögen und Entfernen (Strg+E). Bei zwei gewählten
+Zeilen bleiben Verschieben, Zusammenführen und Erfassungsbögen; Zusammenführen steht bei einer Zeile grau mit
 „Zwei Einheiten wählen“. Esc hebt die Auswahl auf. Ein **Rechtsklick** auf
 eine Zeile wählt sie und öffnet dieselben Schritte als **Kontextmenü**, dazu
 „Im Tagebuch zeigen“: Das Tagebuch geht auf, auf diese Einheit beschränkt.
 Auf dem Handy liegt das Kontextmenü am unteren Rand, und die Auswahlleiste
 bricht um. Im beendeten Einsatz nennt die Leiste die Sperre statt der
-Schritte.
+Schritte; nur „Erfassungsbögen“ bleibt.
+
+**Erfassungsbögen speichern.** Beliebig viele Zeilen markieren, dann
+„Erfassungsbögen“ in der Leiste oder im Kontextmenü: Die Maske nennt die
+Zahl, „Speichern“ schreibt die Bögen als eine Bündeldatei
+(`erfassungsboegen_<Datum>_<Zeit>.json`) nach `ausgaben\`, je Einheit die
+jüngste Fassung. Danach stehen Öffnen und Ordner zeigen da, im Browser
+Herunterladen. Die Erfassungsbogen-App öffnet die Datei und druckt daraus die
+PDFs; eine andere Führungsstelle liest sie mit „Bündel einlesen …“. Von Hand
+angelegte Einheiten haben keinen Bogen — die Maske nennt sie, statt einen zu
+erfinden.
 
 Unter der Tabelle steht, wie man eine Zelle bearbeitet (Doppelklick, Enter,
 Esc), bis an diesem Gerät die erste Zelle geschrieben ist.
@@ -379,7 +389,7 @@ Alle Einheiten der Lage mit Stärke, Status und Zeiten — das Gegenstück zur b
 
 **Zuerst:** Suchen (Strg+F) oder mit Strg+N eine Einheit anlegen — aus einer Vorlage (THW StAN, Feuerwehr, KatS-StAN Nds; Tippen filtert, Enter wählt) oder „Ohne Vorlage“ als freie Zeile.
 
-**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, nur die Summen zählen sie nicht mehr. „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie in der Stärketabelle auf Papier; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Vorlage nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an; „Funk …“ öffnet für sie Rufgruppen, Funkrufname, Erreichbarkeit und Funkhinweis. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). Unter „Funk“ steht „Letzter Kontakt“: die jüngere von Funkprobe und Statusmeldung, Bernstein mit Alter, sobald sie älter ist als die Schwelle des Funkplans. „Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.
+**Gut zu wissen:** Eine entfernte Einheit bleibt sichtbar, wenn „mit Stillgelegten“ gewählt ist. Entfernen ist kein Löschen: Die Einheit bleibt in der Akte und im Tagebuch, nur die Summen zählen sie nicht mehr. „Gliederung“ setzt über jeden Bereich eine Kopfzeile mit Zwischensumme wie in der Stärketabelle auf Papier; die oberste Zeile ist die Ist-Stärke wie im Kopfband, erwartete Kräfte und alle erfassten Einheiten stehen daneben. Bei KatS-Vorlagen steht an der Soll-Stärke „Annahme“: Die Vorlage nennt dort keine, eingetragen ist die übliche Gliederung — am Standort prüfen. Die Spalten der Ablösung („Ablösung angefordert“ bis „Vorgesehener Auftrag“) unter „Ressourcen“ kommen aus der Ansicht „Anforderungen“ und werden dort bearbeitet; „Ablösung anfordern“ legt für die markierte Zeile eine an; „Funk …“ öffnet für sie Rufgruppen, Funkrufname, Erreichbarkeit und Funkhinweis. „Erfassungsbögen“ speichert die Bögen aller markierten Zeilen als eine Bündeldatei nach „ausgaben“, je Einheit die jüngste Fassung; die Erfassungsbogen-App öffnet sie und druckt daraus die PDFs, auch im beendeten Einsatz. Die Marke „läuft ab“ an „Verfügbar bis“ erscheint einen Tag vor Ablauf (K18). Unter „Funk“ steht „Letzter Kontakt“: die jüngere von Funkprobe und Statusmeldung, Bernstein mit Alter, sobald sie älter ist als die Schwelle des Funkplans. „Kopieren“ (Strg+K) öffnet für die markierte Zeile die Anlegemaske mit Bezeichnung, Organisation, Ebene, Herkunft, Stärke, Abschnitt und Vorlage vorbelegt; die Kopie ist eine neue, angeforderte Einheit ohne Aufträge, Fahrzeuge, Personen und Zeiten.
 
 **Kürzel:** Strg+N · Strg+K · Strg+E · Strg+M · Strg+F · Strg+Q · Strg+D · Strg+Z
 
