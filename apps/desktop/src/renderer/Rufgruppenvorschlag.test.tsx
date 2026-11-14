@@ -94,7 +94,7 @@ describe("Rufgruppe anlegen mit Vorschlag", () => {
   it("legt die gewählte Fleetmapping-Gruppe als TMO an, auch wenn vorher DMO stand", async () => {
     const maske = await maskeOeffnen();
     fireEvent.change(within(maske).getByLabelText("Betriebsart"), { target: { value: "DMO" } });
-    fireEvent.change(within(maske).getByRole("combobox"), { target: { value: "t_lvnw-1" } });
+    fireEvent.change(within(maske).getByRole("combobox", { name: "Name" }), { target: { value: "t_lvnw-1" } });
     fireEvent.click(within(maske).getByRole("option", { name: /T_LVNW-1/ }));
     fireEvent.click(within(maske).getByRole("button", { name: "Rufgruppe anlegen" }));
     await waitFor(() => {
@@ -106,7 +106,7 @@ describe("Rufgruppe anlegen mit Vorschlag", () => {
 
   it("legt eine abweichende Rufgruppe mit dem getippten Namen an", async () => {
     const maske = await maskeOeffnen();
-    fireEvent.change(within(maske).getByRole("combobox"), { target: { value: "T_LVNW-1 Sonder" } });
+    fireEvent.change(within(maske).getByRole("combobox", { name: "Name" }), { target: { value: "T_LVNW-1 Sonder" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Rufgruppe anlegen" }));
     await waitFor(() => {
       expect(entwuerfe()).toEqual([
