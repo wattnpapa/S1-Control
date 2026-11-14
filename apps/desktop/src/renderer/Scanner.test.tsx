@@ -304,6 +304,51 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     expect(screen.queryByRole("button", { name: "Abbrechen" })).toBeNull();
   });
 
+  it("nennt beim Massenimport die schon erfassten Einheiten und ihren Abschnitt", async () => {
+    attrappe.antwortet("eebAlleUebernehmen", {
+      uebernommen: 2,
+      ereignisse: 20,
+      fehlgeschlagen: [],
+      aktualisiert: [{ bezeichnung: "1. Sanitätsgruppe Friesoythe", abschnitt: "LK Friesland" }],
+    });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (2)" }));
+    expect(
+      await screen.findByText(
+        "2 Bögen übernommen (20 Ereignisse). 1 Einheit war schon erfasst, wurde nur aktualisiert und bleibt in ihrem Abschnitt: 1. Sanitätsgruppe Friesoythe (LK Friesland).",
+      ),
+    ).toBeDefined();
+  });
+
+  it("frischt nach dem Massenimport Baum und Einheitentabelle auf", async () => {
+    attrappe.antwortet("eebAlleUebernehmen", { uebernommen: 2, ereignisse: 20, fehlgeschlagen: [] });
+    attrappe.antwortet("tabelleAnfordern", { lageZeiger: 9, zeilen: [], gesamtzahl: 0 });
+    attrappe.antwortet("baumAnfordern", BAUM);
+    useLaden.setState({
+      eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 1, vorschau: VORSCHAU },
+      tabelle: { lageZeiger: 3, zeilen: [], gesamtzahl: 0 } as never,
+    });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (2)" }));
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("tabelleAnfordern")).toHaveLength(1);
+      expect(attrappe.rufeDerArt("baumAnfordern")).toHaveLength(1);
+    });
+  });
+
+  it("sagt bei einer Einzelübernahme, wo eine schon erfasste Einheit steht", async () => {
+    attrappe.antwortet("eebUebernehmen", { art: "uebernommen", einheitId: "E-abc", ereignisse: 4, bereitsIn: "LK Friesland" });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(
+      await screen.findByText(
+        "Übernommen: 4 Ereignisse geschrieben. Die Einheit war schon erfasst, wurde nur aktualisiert und steht weiter in „LK Friesland“.",
+      ),
+    ).toBeDefined();
+  });
+
   it("ignoriert eine Fortschrittsmeldung, wenn kein Massenimport läuft", () => {
     useLaden.setState({ eebFortschritt: undefined });
     useLaden.getState().nimmMitteilung({ art: "eebFortschritt", akteId: "akte-1", fertig: 3, gesamt: 3 });

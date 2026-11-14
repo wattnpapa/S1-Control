@@ -160,7 +160,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
                   if (ausgang === undefined) return;
                   setzeErgebnis(
                     ausgang.art === "uebernommen"
-                      ? `Übernommen: ${String(ausgang.ereignisse)} Ereignisse geschrieben.`
+                      ? einzeltext(ausgang.ereignisse, ausgang.bereitsIn)
                       : ausgang.art === "abgewiesen"
                         ? `Abgewiesen bei ${ausgang.beiEreignis}: ${ausgang.meldung}`
                         : ausgang.meldung,
@@ -280,10 +280,28 @@ export function importfortschrittstext(fertig: number, gesamt: number): string {
 export function sammeltext(ausgang: Sammeluebernahme): string {
   const boegen = ausgang.uebernommen === 1 ? "1 Bogen" : `${String(ausgang.uebernommen)} Bögen`;
   const anfang = ausgang.abgebrochen === true ? `Abgebrochen. ${offentext(ausgang.naechster)}` : "";
-  const satz = `${anfang}${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).`;
+  const satz = `${anfang}${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).${aktualisierttext(ausgang.aktualisiert)}`;
   if (ausgang.fehlgeschlagen.length === 0) return satz;
   const gruende = ausgang.fehlgeschlagen.map((f) => `${f.bezeichnung}: ${f.meldung}`).join("; ");
   return `${satz} ${String(ausgang.fehlgeschlagen.length)} nicht übernommen — ${gruende}`;
+}
+
+/**
+ * Bereits erfasste Einheiten werden nur aktualisiert und nicht verschoben —
+ * der Satz sagt, wo sie stehen, damit niemand sie im Zielabschnitt sucht.
+ */
+function aktualisierttext(aktualisiert: Sammeluebernahme["aktualisiert"]): string {
+  if (aktualisiert === undefined || aktualisiert.length === 0) return "";
+  const wo = aktualisiert.map((a) => `${a.bezeichnung} (${a.abschnitt})`).join(", ");
+  const anzahl = aktualisiert.length === 1 ? "1 Einheit war" : `${String(aktualisiert.length)} Einheiten waren`;
+  return ` ${anzahl} schon erfasst, wurde${aktualisiert.length === 1 ? "" : "n"} nur aktualisiert und bleib${aktualisiert.length === 1 ? "t" : "en"} in ihrem Abschnitt: ${wo}.`;
+}
+
+/** Der Satz nach einer Einzelübernahme; bei einer Revision mit dem Abschnitt der Einheit. */
+export function einzeltext(ereignisse: number, bereitsIn: string | undefined): string {
+  const satz = `Übernommen: ${String(ereignisse)} Ereignisse geschrieben.`;
+  if (bereitsIn === undefined) return satz;
+  return `${satz} Die Einheit war schon erfasst, wurde nur aktualisiert und steht weiter in „${bereitsIn}“.`;
 }
 
 /** „Noch 43 Bögen offen. " — was nach einem Abbruch in der Datei bleibt. */
