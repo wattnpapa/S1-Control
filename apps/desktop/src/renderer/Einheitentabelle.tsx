@@ -56,6 +56,7 @@ export type Einheitenmaske =
   | "abloesung"
   | "kopieren"
   | "funk"
+  | "erfassungsboegen"
   | undefined;
 
 export interface EinheitentabelleEigenschaften {
@@ -251,6 +252,7 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebu
       <Einheitenmasken
         maske={maske}
         gewaehlte={gewaehlte}
+        markiert={markiert}
         abschnittId={abschnittId}
         aufSchliessen={() => {
           setzeMaske(undefined);

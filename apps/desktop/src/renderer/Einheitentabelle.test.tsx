@@ -367,6 +367,7 @@ describe("Die Einheitentabelle", () => {
       "KopierenStrg+K",
       "Ablösung anfordern",
       "Funk …",
+      "Erfassungsbögen",
       "EntfernenStrg+E",
     ]);
     // Zusammenführen braucht mindestens zwei — es steht grau da und sagt, was fehlt.
@@ -388,6 +389,7 @@ describe("Die Einheitentabelle", () => {
     expect(within(leiste).getAllByRole("button").map((k) => k.getAttribute("aria-disabled") ?? k.textContent)).toEqual([
       "VerschiebenStrg+M",
       "Zusammenführen",
+      "Erfassungsbögen",
     ]);
     fireEvent.click(within(leiste).getByRole("button", { name: "Zusammenführen" }));
     expect(screen.getByRole("form")).toBeDefined();
@@ -425,6 +427,7 @@ describe("Die Einheitentabelle", () => {
       "KopierenStrg+K",
       "Ablösung anfordern …",
       "Funk und Erreichbarkeit …",
+      "Erfassungsbögen speichern …",
       "Im Tagebuch zeigen",
       "Entfernen …Strg+E",
     ]);
@@ -439,6 +442,31 @@ describe("Die Einheitentabelle", () => {
     fireEvent.click(await screen.findByRole("menuitem", { name: "Im Tagebuch zeigen" }));
     expect(tagebuch).toEqual(["U2"]);
     expect(screen.queryByRole("menu")).toBeNull();
+  });
+
+  it("speichert die Erfassungsbögen aller markierten Einheiten als eine Datei", async () => {
+    attrappe.antwortet("erfassungsboegenSchreiben", {
+      pfad: "/share/ausgaben/erfassungsboegen_2026-09-10_1430.json",
+      bytes: 2048,
+      boegen: 1,
+      ohneBogen: ["Fachgruppe N"],
+    });
+    await zeigeTabelle();
+    fireEvent.click(screen.getByText("Bergungsgruppe 1"));
+    fireEvent.click(screen.getByText("Fachgruppe N"), { ctrlKey: true });
+    fireEvent.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /Erfassungsbögen/ }));
+    const maske = screen.getByLabelText("Erfassungsbögen speichern");
+    expect(maske.textContent).toContain("2 Einheiten gewählt.");
+
+    fireEvent.click(within(maske).getByRole("button", { name: "Speichern" }));
+    await within(maske).findByText("1 Erfassungsbogen gespeichert.");
+    expect(attrappe.rufeDerArt("erfassungsboegenSchreiben")).toEqual([
+      { art: "erfassungsboegenSchreiben", akteId: "akte-1", einheitIds: ["U1", "U2"] },
+    ]);
+    expect(maske.textContent).toContain("erfassungsboegen_2026-09-10_1430.json");
+    expect(maske.textContent).toContain("Ohne Erfassungsbogen (von Hand angelegt): Fachgruppe N");
+    // Der Download schreibt nichts in die Akte.
+    expect(attrappe.rufeDerArt("bedienen")).toHaveLength(0);
   });
 
   it("öffnet aus dem Kontextmenü die Maske des Schritts", async () => {

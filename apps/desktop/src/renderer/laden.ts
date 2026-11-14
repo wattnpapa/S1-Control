@@ -31,6 +31,7 @@ import { Bestaetigungsfolge, obersterSchritt, ruecknahmeBestaetigung, type Besta
 import { CODE_EINSATZ_ABGESCHLOSSEN, lagebildMit } from "../kontrakt/index.js";
 import type {
   Ausgabeergebnis,
+  Erfassungsbogenergebnis,
   Buendelergebnis,
   Anforderungsansicht,
   Baumansicht,
@@ -213,6 +214,8 @@ export interface Laden {
   lieseBuendel(text: string, abschnittId: string): Promise<Buendelergebnis | undefined>;
   /** Schreibt die Meldungen dieser Akte als Bündeldatei nach `ausgaben\`. */
   schreibeBuendel(): Promise<Ausgabeergebnis | undefined>;
+  /** Die Erfassungsbögen der gewählten Einheiten als eine Datei nach `ausgaben\`. */
+  schreibeErfassungsboegen(einheitIds: readonly string[]): Promise<Erfassungsbogenergebnis | undefined>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -619,6 +622,12 @@ export const useLaden = create<Laden>((setze, hole) => {
       const akteId = hole().akteId;
       if (akteId === undefined) return undefined;
       return mitFehlerbild(() => rufe({ art: "buendelSchreiben", akteId }));
+    },
+
+    async schreibeErfassungsboegen(einheitIds) {
+      const akteId = hole().akteId;
+      if (akteId === undefined || einheitIds.length === 0) return undefined;
+      return mitFehlerbild(() => rufe({ art: "erfassungsboegenSchreiben", akteId, einheitIds: [...einheitIds] }));
     },
 
     async setzeEingangsfilter(filter) {

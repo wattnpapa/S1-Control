@@ -61,7 +61,8 @@ function klasse(knopf: Leistenknopf): string | undefined {
   return knopf.haupt === true ? "haupt" : undefined;
 }
 
-function Knopf({ knopf }: { readonly knopf: Leistenknopf }): React.JSX.Element {
+/** Ein Knopf der Leiste — auch für Knöpfe, die neben dem Sperrsatz stehen (`dazu`). */
+export function Knopf({ knopf }: { readonly knopf: Leistenknopf }): React.JSX.Element {
   return (
     <button
       type="button"

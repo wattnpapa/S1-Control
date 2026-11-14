@@ -155,16 +155,17 @@ describe.each(["BEENDET", "ARCHIVIERT"])("Einsatz %s", (status) => {
     fireEvent.click(screen.getByText("Deich Nord"));
     const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
     expect(leiste.textContent).toContain(TEXT_NUR_LESEN);
-    expect(leiste.querySelectorAll("button")).toHaveLength(0);
+    // Nur der lesende Schritt bleibt: Die Erfassungsbögen braucht gerade die Nachbereitung.
+    expect([...leiste.querySelectorAll("button")].map((knopf) => knopf.textContent)).toEqual(["Erfassungsbögen"]);
     for (const name of [/Verschieben/, /Entfernen/, /Aufteilen/]) {
       expect(screen.queryByRole("button", { name })).toBeNull();
     }
-    // Das Kontextmenü nennt die Sperre ebenso und bietet keinen Schritt an.
+    // Das Kontextmenü nennt die Sperre ebenso und bietet nur den lesenden Schritt an.
     const zeile = screen.getByText("Deich Nord").closest("tr") as HTMLElement;
     zeile.dispatchEvent(new MouseEvent("contextmenu", { bubbles: true, cancelable: true }));
     const menue = await screen.findByRole("menu");
     expect(menue.textContent).toContain(TEXT_NUR_LESEN);
-    expect(within(menue).queryAllByRole("menuitem")).toHaveLength(0);
+    expect(within(menue).queryAllByRole("menuitem").map((eintrag) => eintrag.textContent)).toEqual(["Erfassungsbögen speichern …"]);
   });
 });
 

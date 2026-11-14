@@ -11,6 +11,10 @@
  * Zeile: Es steht grau da und sagt, was fehlt, denn wer zusammenführen
  * will, beginnt mit einer Zeile.
  *
+ * „Erfassungsbögen" ist der einzige lesende Schritt: Er schreibt nichts in
+ * die Akte, nur eine Datei nach `ausgaben\`, und bleibt deshalb auch im
+ * beendeten Einsatz stehen — gerade zur Nachbereitung wird er gebraucht.
+ *
  * Die Sperrregeln sind dieselben wie vorher im Kopf; die Kürzel (Strg+M,
  * Strg+K, Strg+E) hängen weiter an der Tabelle und ändern sich nicht. Die
  * Leiste selbst ist der allgemeine Baustein `Auswahlleiste.tsx`, den auch
@@ -19,7 +23,7 @@
 
 import type { Tabellenzeile } from "@s1/domaene";
 
-import { Auswahlleiste, type Leistenknopf } from "./Auswahlleiste.js";
+import { Auswahlleiste, Knopf, type Leistenknopf } from "./Auswahlleiste.js";
 import { Kontextmenue, Menueeintrag, type Kontextort } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
@@ -65,9 +69,24 @@ export function auswahlschritte(anzahl: number): readonly Auswahlschritt[] {
       menuetext: "Funk und Erreichbarkeit …",
       titel: "Funk und Erreichbarkeit der markierten Einheit bearbeiten",
     },
+    {
+      maske: "erfassungsboegen",
+      text: "Erfassungsbögen",
+      menuetext: "Erfassungsbögen speichern …",
+      titel: "Erfassungsbögen der markierten Einheiten als eine Datei speichern",
+    },
     eine && { maske: "entfernen", text: "Entfernen", menuetext: "Entfernen …", kurz: kurz("entfernen"), rot: true },
   ];
   return schritte.filter((schritt): schritt is Auswahlschritt => schritt !== false);
+}
+
+/** Die Schritte, die nichts in die Akte schreiben und im beendeten Einsatz bleiben. */
+const LESENDE: ReadonlySet<Einheitenmaske> = new Set<Einheitenmaske>(["erfassungsboegen"]);
+
+/** Die Schritte für `anzahl` Zeilen — im beendeten Einsatz nur die lesenden. */
+export function erlaubteSchritte(anzahl: number, nurLesen: boolean): readonly Auswahlschritt[] {
+  const alle = auswahlschritte(anzahl);
+  return nurLesen ? alle.filter((schritt) => LESENDE.has(schritt.maske)) : alle;
 }
 
 /** „1 gewählt · FGr WP 1" oder „2 gewählt". */
@@ -86,8 +105,8 @@ export interface EinheitenauswahlEigenschaften {
 }
 
 /** Die Schritte als Knöpfe der allgemeinen Leiste. */
-function leistenknoepfe(anzahl: number, aufMaske: (maske: Einheitenmaske) => void): readonly Leistenknopf[] {
-  return auswahlschritte(anzahl).map((schritt) => ({
+function leistenknoepfe(schritte: readonly Auswahlschritt[], aufMaske: (maske: Einheitenmaske) => void): readonly Leistenknopf[] {
+  return schritte.map((schritt) => ({
     schluessel: schritt.maske,
     text: schritt.text,
     ...(schritt.kurz === undefined ? {} : { kurz: schritt.kurz }),
@@ -103,11 +122,14 @@ function leistenknoepfe(anzahl: number, aufMaske: (maske: Einheitenmaske) => voi
 /** Die Leiste am Fuß der Karte; ohne Auswahl steht nichts davon im Dokument. */
 export function Einheitenleiste({ gewaehlte, anzahl, nurLesen, aufMaske }: EinheitenauswahlEigenschaften): React.JSX.Element | null {
   if (anzahl === 0) return null;
+  const knoepfe = leistenknoepfe(erlaubteSchritte(anzahl, nurLesen), aufMaske);
+  // Im beendeten Einsatz steht der Sperrsatz statt der Knöpfe; die lesenden folgen ihm.
   return (
     <Auswahlleiste
       titel={auswahltitel(gewaehlte, anzahl)}
-      knoepfe={leistenknoepfe(anzahl, aufMaske)}
+      knoepfe={knoepfe}
       sperrtext={nurLesen ? `${TEXT_NUR_LESEN}: Verschieben, Aufteilen, Kopieren und Entfernen sind gesperrt.` : undefined}
+      dazu={nurLesen ? knoepfe.map((knopf) => <Knopf key={knopf.schluessel} knopf={knopf} />) : undefined}
     />
   );
 }
@@ -129,9 +151,10 @@ export function Einheitenkontextmenue({
   nurLesen,
   aufMaske,
 }: EinheitenkontextmenueEigenschaften): React.JSX.Element {
-  const schritte = nurLesen ? [] : auswahlschritte(anzahl);
-  const vorne = schritte.filter((schritt) => !["abloesung", "funk", "entfernen"].includes(schritt.maske));
-  const hinten = schritte.filter((schritt) => ["abloesung", "funk"].includes(schritt.maske));
+  const schritte = erlaubteSchritte(anzahl, nurLesen);
+  const HINTEN: readonly Einheitenmaske[] = ["abloesung", "funk", "erfassungsboegen"];
+  const vorne = schritte.filter((schritt) => schritt.maske !== "entfernen" && !HINTEN.includes(schritt.maske));
+  const hinten = schritte.filter((schritt) => HINTEN.includes(schritt.maske));
   const entfernen = schritte.find((schritt) => schritt.maske === "entfernen");
   const mitTagebuch = aufTagebuch !== undefined && anzahl === 1;
   const mitteTrennen = vorne.length > 0 && (hinten.length > 0 || mitTagebuch);
