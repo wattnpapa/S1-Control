@@ -11,7 +11,7 @@
 
 import { projektion } from "@s1/domaene";
 
-import { GRUPPENTITEL } from "./Einheitenspalten.js";
+import { EINZELN_SCHALTBAR, GRUPPENTITEL } from "./Einheitenspalten.js";
 import { Klappmenue, Menueeintrag, Menuehaken } from "./Klappmenue.js";
 import type { Spaltenwahl } from "./useSpaltenwahl.js";
 
@@ -47,6 +47,23 @@ export function Spaltenmenue({ wahl }: { readonly wahl: Spaltenwahl }): React.JS
               }}
             />
           ))}
+          {wahl.gruppen.includes("GRUNDDATEN") && (
+            <>
+              <span className="titel" role="presentation">
+                Weitere Grunddaten
+              </span>
+              {EINZELN_SCHALTBAR.map((schluessel) => (
+                <Menuehaken
+                  key={schluessel}
+                  text={projektion.spalte(schluessel)?.kopf ?? schluessel}
+                  an={!wahl.ausgeblendet.includes(schluessel)}
+                  aufWahl={() => {
+                    wahl.schalteSpalte(schluessel);
+                  }}
+                />
+              ))}
+            </>
+          )}
           <hr />
           <Menuehaken
             text="Gliederung nach Bereich"
@@ -74,7 +91,7 @@ export function Spaltenmenue({ wahl }: { readonly wahl: Spaltenwahl }): React.JS
           <hr />
           <Menueeintrag
             text="Spalten zurücksetzen"
-            titel="Grunddaten und Stärke, Gliederung wie vorgegeben, ohne Stillgelegte"
+            titel="Grunddaten ohne Zusatzspalten und Stärke, Gliederung wie vorgegeben, ohne Stillgelegte"
             aufWahl={waehle(wahl.setzeZurueck)}
           />
         </>

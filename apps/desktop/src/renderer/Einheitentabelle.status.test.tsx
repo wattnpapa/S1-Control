@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { Spalte, Tabellenzeile, Zelle } from "@s1/domaene";
 
 import { Einheitentabelle } from "./Einheitentabelle.js";
-import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
+import { AUSGEBLENDET_VORBELEGUNG, ohneAusgeblendete, spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
@@ -118,6 +118,13 @@ describe("Spaltenreihenfolge", () => {
     const sp = (schluessel: string): Spalte => ({ schluessel }) as Spalte;
     const ergebnis = spaltenFuerAnzeige([sp("fuestKennung"), sp("bezeichnung"), sp("geraete"), sp("status"), sp("staerke")]);
     expect(ergebnis.map((spalte) => spalte.schluessel)).toEqual(["bezeichnung", "status", "fuestKennung", "geraete", "staerke"]);
+  });
+
+  it("lässt die einzeln ausgeblendeten Spalten weg und behält die übrigen", () => {
+    const sp = (schluessel: string): Spalte => ({ schluessel }) as Spalte;
+    const alle = ["fuestKennung", "bezeichnung", "organisation", "ebene", "einheitSchluessel", "personalErfassung", "staerke"].map(sp);
+    const ergebnis = ohneAusgeblendete(alle, AUSGEBLENDET_VORBELEGUNG);
+    expect(ergebnis.map((spalte) => spalte.schluessel)).toEqual(["bezeichnung", "organisation", "staerke"]);
   });
 
   it("zeigt Status in der Tabelle direkt nach der Bezeichnung", async () => {

@@ -19,6 +19,20 @@ export function spaltenFuerAnzeige(spalten: readonly Spalte[]): readonly Spalte[
 }
 
 /**
+ * Grunddaten-Spalten, die sich einzeln wegschalten lassen. Sie sind für die
+ * laufende Lage selten nötig und kosten Breite; die Vorbelegung blendet sie
+ * deshalb aus. Die Excel-Ausgabe bleibt davon unberührt.
+ */
+export const EINZELN_SCHALTBAR = ["fuestKennung", "ebene", "einheitSchluessel", "personalErfassung"] as const;
+
+/** Was ohne Zutun ausgeblendet ist: alle einzeln schaltbaren Spalten. */
+export const AUSGEBLENDET_VORBELEGUNG: readonly string[] = EINZELN_SCHALTBAR;
+
+export function ohneAusgeblendete(spalten: readonly Spalte[], ausgeblendet: readonly string[]): readonly Spalte[] {
+  return spalten.filter((spalte) => !ausgeblendet.includes(spalte.schluessel));
+}
+
+/**
  * Die Spaltengruppen, wie sie am Umschalter stehen.
  *
  * In der Projektion heißen sie wie in der Excel (`KOSTENUEBERSICHT`); über

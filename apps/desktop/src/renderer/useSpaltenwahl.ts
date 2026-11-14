@@ -1,6 +1,6 @@
 /**
  * Was das Menü „Spalten ▾" einstellt (Entwurf „Entlastung", 3.5, Option 6e):
- * die Spaltengruppen, die Gliederung nach Bereich und ob Stillgelegte
+ * die Spaltengruppen, einzelne Grunddaten-Spalten, die Gliederung nach Bereich und ob Stillgelegte
  * mitgezeigt werden.
  *
  * **Die Gliederung gilt je Fall.** Ohne gewählten Abschnitt ist die Tabelle
@@ -16,7 +16,7 @@ import { useState } from "react";
 
 import { projektion, type Spaltengruppe } from "@s1/domaene";
 
-import { GRUPPENTITEL } from "./Einheitenspalten.js";
+import { AUSGEBLENDET_VORBELEGUNG, GRUPPENTITEL } from "./Einheitenspalten.js";
 import { GLIEDERUNG_AUS, type Gliederungswahl } from "./Tabellengliederung.js";
 
 type Fall = "ohneAbschnitt" | "mitAbschnitt";
@@ -33,13 +33,16 @@ export const VORGABE_GLIEDERUNG: Readonly<Record<Fall, Gliederungswahl>> = {
 
 export interface Spaltenwahl {
   readonly gruppen: readonly Spaltengruppe[];
+  /** Schlüssel einzeln ausgeblendeter Spalten (`EINZELN_SCHALTBAR`). */
+  readonly ausgeblendet: readonly string[];
   /** Die Gliederung des aktuellen Falls. */
   readonly gliederung: Gliederungswahl;
   readonly stillgelegte: boolean;
   schalteGruppe(gruppe: Spaltengruppe): void;
+  schalteSpalte(schluessel: string): void;
   setzeGliederung(wahl: Gliederungswahl): void;
   schalteStillgelegte(): void;
-  /** Gruppen und Stillgelegte auf die Vorgabe, die Gliederung dieses Falls ebenso. */
+  /** Gruppen, Einzelspalten und Stillgelegte auf die Vorgabe, die Gliederung dieses Falls ebenso. */
   setzeZurueck(): void;
 }
 
@@ -51,16 +54,21 @@ export function umgeschaltet<T>(liste: readonly T[], wert: T): readonly T[] {
 export function useSpaltenwahl(mitAbschnitt: boolean): Spaltenwahl {
   const fall: Fall = mitAbschnitt ? "mitAbschnitt" : "ohneAbschnitt";
   const [gruppen, setzeGruppen] = useState<readonly Spaltengruppe[]>(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG);
+  const [ausgeblendet, setzeAusgeblendet] = useState<readonly string[]>(AUSGEBLENDET_VORBELEGUNG);
   const [gliederungen, setzeGliederungen] = useState(VORGABE_GLIEDERUNG);
   const [stillgelegte, setzeStillgelegte] = useState(false);
   return {
     gruppen,
+    ausgeblendet,
     gliederung: gliederungen[fall],
     stillgelegte,
     schalteGruppe: (gruppe) => {
       // Die Grunddaten lassen sich nicht wegschalten: Eine Tabelle ohne
       // Bezeichnung und Status ist keine Lage.
       if (gruppe !== "GRUNDDATEN") setzeGruppen((bisher) => umgeschaltet(bisher, gruppe));
+    },
+    schalteSpalte: (schluessel) => {
+      setzeAusgeblendet((bisher) => umgeschaltet(bisher, schluessel));
     },
     setzeGliederung: (wahl) => {
       setzeGliederungen((bisher) => ({ ...bisher, [fall]: wahl }));
@@ -70,6 +78,7 @@ export function useSpaltenwahl(mitAbschnitt: boolean): Spaltenwahl {
     },
     setzeZurueck: () => {
       setzeGruppen(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG);
+      setzeAusgeblendet(AUSGEBLENDET_VORBELEGUNG);
       setzeGliederungen((bisher) => ({ ...bisher, [fall]: VORGABE_GLIEDERUNG[fall] }));
       setzeStillgelegte(false);
     },

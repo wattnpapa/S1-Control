@@ -108,6 +108,24 @@ describe("Die Einheitentabelle", () => {
     expect(projektion.SICHTBARE_GRUPPEN_VORBELEGUNG).toEqual(["GRUNDDATEN", "STAERKE"]);
   });
 
+  it("blendet FüSt., Gliederungsebene, ID Erfassungsbogen und Personalerfassung in der Vorbelegung aus", async () => {
+    await zeigeTabelle();
+    for (const kopf of ["FüSt.", "Gliederungsebene", "ID Erfassungsbogen", "Personalerfassung"]) {
+      expect(screen.queryByRole("columnheader", { name: kopf })).toBeNull();
+    }
+    expect(screen.getByRole("columnheader", { name: "Organisation" })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "Herkunft" })).toBeDefined();
+  });
+
+  it("schaltet eine einzelne Grunddaten-Spalte zu und setzt sie mit „Spalten zurücksetzen“ wieder aus", async () => {
+    await zeigeTabelle();
+    spaltenmenue("Gliederungsebene");
+    expect(screen.getByRole("columnheader", { name: "Gliederungsebene" })).toBeDefined();
+    expect(screen.getByRole("menuitemcheckbox", { name: "Gliederungsebene" }).getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(screen.getByRole("menuitem", { name: "Spalten zurücksetzen" }));
+    expect(screen.queryByRole("columnheader", { name: "Gliederungsebene" })).toBeNull();
+  });
+
   it("schaltet eine Spaltengruppe im Menü „Spalten“ zu und wieder ab", async () => {
     await zeigeTabelle();
     // Keine Reihe „Spalten:“ mit Kontrollkästchen mehr über der Tabelle.
@@ -143,6 +161,10 @@ describe("Die Einheitentabelle", () => {
       "Logistik",
       "Kosten",
       "Funk",
+      "FüSt.",
+      "Gliederungsebene",
+      "ID Erfassungsbogen",
+      "Personalerfassung",
       "Gliederung nach Bereich",
       // Ohne gewählten Abschnitt ist die Gliederung vorgegeben an, also steht dies da.
       "Leere Bereiche ausblenden",

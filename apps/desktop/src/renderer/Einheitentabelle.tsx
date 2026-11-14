@@ -36,7 +36,7 @@ import { useFremdsperren } from "./useBearbeitungssperre.js";
 import { useZellbearbeitung, type Zellbearbeitung } from "./useZellbearbeitung.js";
 import { StatusLeiste } from "./Statusleiste.js";
 import { istZahl } from "./Einheitenzelle.js";
-import { spaltenFuerAnzeige } from "./Einheitenspalten.js";
+import { ohneAusgeblendete, spaltenFuerAnzeige } from "./Einheitenspalten.js";
 import { Tabellensumme } from "./Tabellensumme.js";
 import { GegliederteZeilen, type Gliederungswahl } from "./Tabellengliederung.js";
 import { spaltenzustand, umgeschaltet, useSpaltenwahl } from "./useSpaltenwahl.js";
@@ -196,8 +196,11 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebu
   useTabellenfilter({ abschnittId, suche, statuswahl, gliederung: wahl.gliederung, stillgelegte: wahl.stillgelegte });
   useTabellenkuerzel({ markiert: markiert.length, maske, nurLesen, zellen, setzeMaske, hebeAuswahlAuf: markierung.hebeAuf });
 
-  const gruppen = wahl.gruppen;
-  const spalten = useMemo(() => spaltenFuerAnzeige(projektion.spaltenDerGruppen(gruppen)), [gruppen]);
+  const { gruppen, ausgeblendet } = wahl;
+  const spalten = useMemo(
+    () => spaltenFuerAnzeige(ohneAusgeblendete(projektion.spaltenDerGruppen(gruppen), ausgeblendet)),
+    [gruppen, ausgeblendet],
+  );
   const { zeilen } = tabelle;
   const abschnittName = useAbschnittsname(abschnittId);
   const gewaehlte = zeilen.filter((zeile) => markiert.includes(zeile.einheitId));
