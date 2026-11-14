@@ -670,6 +670,8 @@ export const zRuf = z.discriminatedUnion("art", [
     akteId: zAkteId,
     abschnittId: zText,
   }),
+  // Haelt einen laufenden Massenimport nach dem aktuellen Bogen an.
+  z.object({ art: z.literal("eebAbbrechen"), akteId: zAkteId }),
 
   // ---- Die Kernausgaben (M4.1) --------------------------------------------
   //
@@ -886,6 +888,7 @@ export interface Antworten {
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
   eebAlleUebernehmen: Sammeluebernahme;
+  eebAbbrechen: null;
   ausgabeErzeugen: Ausgabeergebnis;
   /** Der Pfad der Monitordatei, oder `null` nach dem Ausschalten. */
   htmlMonitorSchalten: string | null;
@@ -1233,6 +1236,10 @@ export interface Sammeluebernahme {
   readonly uebernommen: number;
   readonly ereignisse: number;
   readonly fehlgeschlagen: readonly { readonly bezeichnung: string; readonly meldung: string }[];
+  /** Der Bediener hat abgebrochen; was noch offen ist, wartet weiter. */
+  readonly abgebrochen?: boolean;
+  /** Bei Abbruch: der Bogen, der jetzt in der Maske steht. */
+  readonly naechster?: EebStand;
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {
