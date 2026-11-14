@@ -58,7 +58,8 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    einlesen“ über „PDF wählen …“ oder durch Hineinziehen; eine Sammel-PDF
    zeigt ihre Bögen nacheinander, „Alle übernehmen (n)“ legt den angezeigten
    und alle wartenden Bögen in einem Schritt in den gewählten Abschnitt,
-   ein Balken zeigt dabei, beim wievielten Bogen der Import steht;
+   ein Balken zeigt dabei, beim wievielten Bogen der Import steht, und
+   „Abbrechen“ hält nach dem laufenden Bogen an, die übrigen warten weiter;
    abgewiesene Bögen stehen danach mit Grund unter der Maske) oder über den Eingangskorb aus einer
    Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
