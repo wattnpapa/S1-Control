@@ -688,4 +688,34 @@ describe("Funktionalität: Bündeldatei", () => {
     expect(zurueck.aufgenommen).toBe(0);
     expect(zurueck.bekannt).toBe(2);
   });
+
+  it("Szenario: die Erfassungsbögen gewählter Einheiten kommen als eine Datei", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const einheiten: string[] = [];
+    for (const datei of ALLE.slice(0, 3)) {
+      await platz.dienst.eebScan(encodePayloadUrl(liesDatei(datei), KOMPRESSOR));
+      const ergebnis = await platz.dienst.eebUebernehmen("EO");
+      if (ergebnis.art === "uebernommen") einheiten.push(ergebnis.einheitId);
+    }
+    expect(einheiten).toHaveLength(3);
+
+    // Zwei der drei übernommenen und die von Hand angelegte U1.
+    const geschrieben = await platz.dienst.erfassungsboegenSchreiben([einheiten[0] as string, einheiten[2] as string, "U1"]);
+    expect(geschrieben.boegen).toBe(2);
+    expect(geschrieben.ohneBogen).toEqual(["Bergungsgruppe Oldenburg"]);
+    expect(path.basename(geschrieben.pfad ?? "")).toMatch(/^erfassungsboegen_\d{4}-\d{2}-\d{2}_\d{4}\.json$/);
+
+    // Die Datei ist ein gewöhnliches Bündel: Sie liest sich wieder ein, und nichts ist neu.
+    const zurueck = await platz.dienst.buendelEinlesen(readFileSync(geschrieben.pfad ?? "", "utf8"), "EO");
+    expect(zurueck.aufgenommen).toBe(0);
+    expect(zurueck.bekannt).toBe(2);
+  });
+
+  it("Szenario: ohne Bogen wird keine leere Datei geschrieben", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    const geschrieben = await platz.dienst.erfassungsboegenSchreiben(["U1"]);
+    expect(geschrieben).toEqual({ bytes: 0, boegen: 0, ohneBogen: ["Bergungsgruppe Oldenburg"] });
+  });
 });

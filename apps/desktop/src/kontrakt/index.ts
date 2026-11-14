@@ -575,6 +575,14 @@ export const zRuf = z.discriminatedUnion("art", [
   // Der Rueckweg schreibt in `ausgaben\` wie jede andere Ausgabe (M4.1) und
   // liefert den Pfad: Wer sie weitergibt, muss wissen, wo sie liegt.
   z.object({ art: z.literal("buendelSchreiben"), akteId: zAkteId }),
+  // Die Erfassungsboegen gewaehlter Einheiten als eine Buendeldatei — der
+  // Sammel-Download aus der Einheitentabelle. Dasselbe Format wie der
+  // Rueckweg darueber, nur auf die Auswahl beschraenkt.
+  z.object({
+    art: z.literal("erfassungsboegenSchreiben"),
+    akteId: zAkteId,
+    einheitIds: z.array(zText).min(1).max(AUSSCHNITT_MAX),
+  }),
 
   // Der Update-Weg (M7.2). **Ohne Akte**: Er haengt am Share und nicht an
   // einem Einsatz — geprueft wird auch dann, wenn keine Akte offen ist.
@@ -848,6 +856,7 @@ export interface Antworten {
   fassungsvergleichAnfordern: Fassungsvergleich | null;
   buendelEinlesen: Buendelergebnis;
   buendelSchreiben: Ausgabeergebnis;
+  erfassungsboegenSchreiben: Erfassungsbogenergebnis;
   programmstandPruefen: Programmbefund;
   programmpaketHolen: Bezugsbefund;
   diagnoseAnfordern: Diagnose;
@@ -1130,6 +1139,20 @@ export interface EebVorschau {
 export interface Ausgabeergebnis {
   readonly pfad: string;
   readonly bytes: number;
+}
+
+/**
+ * Was der Sammel-Download der Erfassungsbögen geschrieben hat.
+ *
+ * `pfad` fehlt, wenn keine der gewählten Einheiten einen Bogen hat — eine
+ * leere Datei wäre ein Fund ohne Inhalt. `ohneBogen` nennt die Einheiten, die
+ * von Hand angelegt wurden und deshalb fehlen.
+ */
+export interface Erfassungsbogenergebnis {
+  readonly pfad?: string;
+  readonly bytes: number;
+  readonly boegen: number;
+  readonly ohneBogen: readonly string[];
 }
 
 /**

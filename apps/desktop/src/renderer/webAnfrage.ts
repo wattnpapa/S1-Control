@@ -24,6 +24,7 @@ const SCHREIBENDE_ARTEN: ReadonlySet<Ruf["art"]> = new Set<Ruf["art"]>([
   "zurueck",
   "buendelEinlesen",
   "buendelSchreiben",
+  "erfassungsboegenSchreiben",
   "programmpaketHolen",
   "eebScan",
   "eebDatei",

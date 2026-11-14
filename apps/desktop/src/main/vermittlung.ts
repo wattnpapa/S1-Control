@@ -263,6 +263,7 @@ export class Vermittlung {
       case "eingangskorbAnfordern":
       case "fassungsvergleichAnfordern":
       case "buendelEinlesen":
+      case "erfassungsboegenSchreiben":
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":

@@ -39,6 +39,7 @@ import {
   liesBogen,
   nimmScan,
   boegenAusJsonTexten,
+  boegenDerEinheiten,
   buendelAusMeldungen,
   einheitIdAus,
   liesBuendel,
@@ -100,6 +101,7 @@ import {
   type Anforderungsansicht,
   type Buendelergebnis,
   type Eingangskorbansicht,
+  type Erfassungsbogenergebnis,
   type Fuestansicht,
   type Kostenansicht,
   type Versorgungsansicht,
@@ -1522,6 +1524,28 @@ export class Aktendienst {
     const bytes = new TextEncoder().encode(text);
     const pfad = await this.ausgabeSchreiben(`buendel_${dateimarke(jetzt)}.json`, bytes);
     return { pfad, bytes: bytes.length };
+  }
+
+  /**
+   * Schreibt die Erfassungsboegen der gewaehlten Einheiten als Buendeldatei.
+   *
+   * Dasselbe Format wie `buendelSchreiben` — die Erfassungsbogen-App und
+   * „Buendel einlesen" lesen es —, nur auf die Auswahl beschraenkt und je
+   * Einheit mit der juengsten Fassung. Lesen ist auch im archivierten Einsatz
+   * erlaubt; geschrieben wird nur nach `ausgaben\` (M4.1).
+   */
+  async erfassungsboegenSchreiben(einheitIds: readonly string[]): Promise<Erfassungsbogenergebnis> {
+    const { boegen, ohneBogen } = boegenDerEinheiten(this.#zustand, einheitIds);
+    if (boegen.length === 0) return { bytes: 0, boegen: 0, ohneBogen };
+    const jetzt = new Date(this.#o.zeit());
+    const text = buendelAusMeldungen(boegen, {
+      id: this.#o.einsatzId,
+      name: alsText(this.#zustand.einsatz?.name.wert),
+      jetzt: jetzt.getTime(),
+    });
+    const bytes = new TextEncoder().encode(text);
+    const pfad = await this.ausgabeSchreiben(`erfassungsboegen_${dateimarke(jetzt)}.json`, bytes);
+    return { pfad, bytes: bytes.length, boegen: boegen.length, ohneBogen };
   }
 
   /** Was die Maske vor der Uebernahme zeigt — Klartext, keine Bytes. */
