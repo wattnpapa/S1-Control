@@ -11,7 +11,13 @@ import { MONITOR_ANSICHTEN, zEinstellungen, zLagebild } from "./index.js";
 
 describe("Die Monitoransichten", () => {
   it("hängt den Funkplan als sechste an und lässt die fünf aus S4 an ihrer Taste", () => {
-    expect(MONITOR_ANSICHTEN).toEqual(["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"]);
+    expect(MONITOR_ANSICHTEN.slice(0, 6)).toEqual(["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"]);
+  });
+
+  it("hängt die Stärketafeln des Sachgebiets 1 als siebte und achte an", () => {
+    expect(MONITOR_ANSICHTEN.slice(6)).toEqual(["abschnitte", "organisationen"]);
+    const grund = { sharePfad: "/share", anzeigename: "Zelt" };
+    expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "organisationen", wechsel: false } }).success).toBe(true);
   });
 
   it("nimmt den Funkplan als gemerkte Wahl an und keine unbekannte Ansicht", () => {

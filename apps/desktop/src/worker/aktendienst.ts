@@ -104,6 +104,7 @@ import {
   type Kostenansicht,
   type Versorgungsansicht,
   type Funkplanansicht,
+  type Staerketafelansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
@@ -885,6 +886,11 @@ export class Aktendienst {
   /** Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5), mit Suche zugeschnitten und gegen die Uhr dieses Workers gerechnet. */
   funkplan(ruf: Extract<Ruf, { art: "funkplanAnfordern" }>): Funkplanansicht {
     return funkplanansicht(this.#zustand, ruf, { lageZeiger: this.#lageZeiger, jetztMs: this.#o.zeit(), ereignisse: this.#ereignisse });
+  }
+
+  /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
+  staerketafel(): Staerketafelansicht {
+    return { lageZeiger: this.#lageZeiger, tafel: projektion.staerketafel(this.#zustand) };
   }
 
   /**

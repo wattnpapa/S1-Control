@@ -37,6 +37,7 @@ import type {
   Logistikblatt,
   Meldungsausschnitt,
   Schichtplanblatt,
+  Staerketafel,
   Tabellenausschnitt,
   Tagebuchzeile,
   Teilbereichsblock,
@@ -82,12 +83,22 @@ export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
- * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 6: Stärke,
- * die vier Versorgungsbilder (KONZEPT-S4.md §4) und additiv der Funkplan
- * (KONZEPT-FUNKPLAN.md §4). Nur anhängen — die gemerkte Wahl eines Geräts
- * steht als Name in den Einstellungen, und die Tasten sind eingeübt.
+ * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 8: Stärke,
+ * die vier Versorgungsbilder (KONZEPT-S4.md §4), additiv der Funkplan
+ * (KONZEPT-FUNKPLAN.md §4) und die beiden Stärketafeln des Sachgebiets 1
+ * (je Abschnitt, je Organisation). Nur anhängen — die gemerkte Wahl eines
+ * Geräts steht als Name in den Einstellungen, und die Tasten sind eingeübt.
  */
-export const MONITOR_ANSICHTEN = ["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"] as const;
+export const MONITOR_ANSICHTEN = [
+  "staerke",
+  "verpflegung",
+  "vorausschau",
+  "unterbringung",
+  "tafel",
+  "funkplan",
+  "abschnitte",
+  "organisationen",
+] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 
@@ -530,6 +541,10 @@ export const zRuf = z.discriminatedUnion("art", [
   // schneidet nur die Teilnehmer zu, nie die Zahlen; kein Ausschnitt, der
   // Plan ist eine Zeile je Einheit wie die Kosten.
   z.object({ art: z.literal("funkplanAnfordern"), akteId: zAkteId, suche: z.string().max(200).optional() }),
+  // Die Stärketafeln des Sachgebiets 1 für den Monitor (additiv): Ist-Stärke
+  // je Abschnitt und je Organisation in einem Ruf — eine Zeile je Abschnitt
+  // bzw. Organisation, kein Ausschnitt.
+  z.object({ art: z.literal("staerketafelAnfordern"), akteId: zAkteId }),
   // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
@@ -824,6 +839,7 @@ export interface Antworten {
   kostenAnfordern: Kostenansicht;
   versorgungAnfordern: Versorgungsansicht;
   funkplanAnfordern: Funkplanansicht;
+  staerketafelAnfordern: Staerketafelansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
@@ -1052,6 +1068,11 @@ export interface Versorgungsansicht extends Ansichtsstand {
   readonly logistik: Logistikblatt;
   /** Die Fußnote des Blattes „Log" (`LOG_FUSSNOTE`), wörtlich wie auf Papier. */
   readonly logistikFussnote: string;
+}
+
+/** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
+export interface Staerketafelansicht extends Ansichtsstand {
+  readonly tafel: Staerketafel;
 }
 
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {
