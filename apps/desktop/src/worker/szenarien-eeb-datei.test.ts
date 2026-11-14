@@ -14,7 +14,7 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { encodePayloadUrl, type Erfassungsbogen, type Kompressor } from "@bos/eeb-format";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { einsatzBeendet } from "../kontrakt/bedienschritte.js";
+import { einsatzBeendet, entfernung } from "../kontrakt/bedienschritte.js";
 import { EINSATZ_ID, grundlage, raeumeAuf, werkstattMitEinemPlatz } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
@@ -125,6 +125,32 @@ describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
     expect(ergebnis.aktualisiert?.[0]?.abschnitt).toBe("Deich Nord");
     const abschnitte = Object.values(platz.dienst.zustand.einheiten).map((e) => e.wirksamerAbschnittId).sort();
     expect(abschnitte).toEqual(["ANF", "ANF", "EO", "EO"]);
+  });
+
+  it("Szenario: eine gelöschte Einheit kommt mit erneutem Import im gewählten Abschnitt zurück", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.bediene({
+      typ: "AbschnittAngelegt",
+      nutzlast: { abschnittId: "ANF", name: "Angefordert", typ: "ANGEFORDERT", reihenfolge: 2 },
+    });
+    await platz.dienst.eebDatei(TEXTE);
+    await platz.dienst.eebAlleUebernehmen("EO");
+    const opfer = Object.keys(platz.dienst.zustand.einheiten).find((id) => id !== "U1") as string;
+    await platz.dienst.bediene(entfernung(opfer, "falsch importiert"));
+
+    await platz.dienst.eebDatei(TEXTE);
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("ANF");
+    expect(ergebnis.uebernommen).toBe(3);
+    expect(ergebnis.fehlgeschlagen).toEqual([]);
+    expect(ergebnis.wiederhergestellt).toHaveLength(1);
+    const zurueck = platz.dienst.zustand.einheiten[opfer];
+    expect(zurueck?.entfernt?.wert).toBe(false);
+    expect(zurueck?.wirksamerAbschnittId).toBe("ANF");
+    // Die beiden aktiven stehen weiter in EO und werden als nicht verschoben genannt.
+    expect(ergebnis.aktualisiert).toHaveLength(2);
+    const zeilen = platz.dienst.tabelle({ art: "tabelleAnfordern", akteId: "akte-1", abschnittId: "ANF" }).zeilen;
+    expect(zeilen.map((z) => z.einheitId)).toEqual([opfer]);
   });
 
   it("Szenario: der Massenimport wird abgebrochen und später fortgesetzt", async () => {

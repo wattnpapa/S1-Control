@@ -118,10 +118,12 @@ import {
   type Tagebuchansicht,
   type EebStand,
   type EebVorschau,
+  type Entwurf,
   type Sammeluebernahme,
   type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
+import { einheitWiederhergestellt, verschiebung } from "../kontrakt/bedienschritte.js";
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
 import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
@@ -246,12 +248,20 @@ function leeresLagebild(einsatzId: string): Lagebild {
   };
 }
 
+/** Holt eine entfernte Einheit zurueck und stellt sie in den Zielabschnitt. */
+function wiederherstellung(einheitId: string, vonAbschnittId: string | null, nachAbschnittId: string): Entwurf[] {
+  const zurueck = einheitWiederhergestellt(einheitId);
+  if (vonAbschnittId === nachAbschnittId || vonAbschnittId === null) return [zurueck];
+  return [zurueck, verschiebung(einheitId, vonAbschnittId, nachAbschnittId)];
+}
+
 /** Der Zwischenstand eines Massenimports — nur innerhalb des Workers. */
 interface Sammellauf {
   uebernommen: number;
   ereignisse: number;
   readonly fehlgeschlagen: { bezeichnung: string; meldung: string }[];
   readonly aktualisiert: { bezeichnung: string; abschnitt: string }[];
+  readonly wiederhergestellt: string[];
   fertig: number;
   readonly gesamt: number;
   naechster: EebStand | undefined;
@@ -1408,7 +1418,20 @@ export class Aktendienst {
     // Gibt es die Einheit schon, ist dies eine **Revision**: Die Uebernahme
     // schreibt dann Feldereignisse und keine zweite Anlage (§5.8.2).
     const vorhanden = this.#zustand.einheiten[einheitId];
-    const entwuerfe = uebernahmeEntwuerfe(befund.bogen, befund.signatur, {
+    // Eine aufgegangene Einheit nimmt keine Revision an, die jemand sehen
+    // koennte: Die Ereignisse landeten an einer unsichtbaren Einheit, und die
+    // Maske meldete „uebernommen“. Also abweisen, bevor etwas geschrieben ist.
+    if (vorhanden?.wirksamAufgegangen === true && vorhanden.entfernt?.wert !== true) {
+      return {
+        art: "abgewiesen",
+        meldung: "Die Einheit ist in diesem Einsatz schon erfasst und in einer anderen Einheit aufgegangen. Der Bogen wurde nicht übernommen.",
+        beiEreignis: "EinheitGemeldet",
+      };
+    }
+    // Eine **entfernte** Einheit kommt zurueck: Wer sie geloescht hat und den
+    // Bogen erneut einliest, will sie wieder haben — im gewaehlten Abschnitt.
+    const wiederholt = vorhanden?.entfernt?.wert === true;
+    const roh = uebernahmeEntwuerfe(befund.bogen, befund.signatur, {
       meldungId: befund.meldungId,
       einheitId,
       abschnittId,
@@ -1423,6 +1446,10 @@ export class Aktendienst {
       einheitSchluessel: befund.einheitSchluessel,
     },
     vorhanden);
+    const entwuerfe =
+      wiederholt && vorhanden !== undefined
+        ? [...roh.slice(0, 1), ...wiederherstellung(einheitId, vorhanden.abschnittId.wert, abschnittId), ...roh.slice(1)]
+        : roh;
 
     let geschrieben = 0;
     for (const entwurf of entwuerfe) {
@@ -1440,7 +1467,12 @@ export class Aktendienst {
     // Eine Revision verschiebt nicht: Die Einheit bleibt, wo die Fuehrungsstelle
     // sie hingestellt hat. Die Maske muss sagen, wo das ist — sonst sucht der
     // Bediener sie im gewaehlten Abschnitt und findet sie nicht.
-    const revision = vorhanden === undefined ? {} : { bereitsIn: this.#abschnittsnameDer(einheitId) };
+    const woanders = vorhanden !== undefined && !wiederholt && vorhanden.wirksamerAbschnittId !== abschnittId;
+    const revision = woanders
+      ? { bereitsIn: this.#abschnittsnameDer(einheitId) }
+      : wiederholt
+        ? { wiederhergestellt: true as const }
+        : {};
     const fertig = { art: "uebernommen", einheitId, ereignisse: geschrieben, ...revision } as const;
     if (this.#scanWartend.length === 0) return fertig;
     return { ...fertig, naechster: await this.#naechsterWartender() };
@@ -1472,6 +1504,7 @@ export class Aktendienst {
       ereignisse: 0,
       fehlgeschlagen: [],
       aktualisiert: [],
+      wiederhergestellt: [],
       fertig: 0,
       gesamt: (this.#scanPayload === undefined ? 0 : 1) + this.#scanWartend.length,
       naechster: undefined,
@@ -1505,6 +1538,7 @@ export class Aktendienst {
         lauf.ereignisse += ergebnis.ereignisse;
         lauf.naechster = ergebnis.naechster;
         if (ergebnis.bereitsIn !== undefined) lauf.aktualisiert.push({ bezeichnung, abschnitt: ergebnis.bereitsIn });
+        if (ergebnis.wiederhergestellt === true) lauf.wiederhergestellt.push(bezeichnung);
       } else {
         lauf.fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
         this.#leereScan();
@@ -1527,6 +1561,7 @@ export class Aktendienst {
       ereignisse: lauf.ereignisse,
       fehlgeschlagen: lauf.fehlgeschlagen,
       ...(lauf.aktualisiert.length === 0 ? {} : { aktualisiert: lauf.aktualisiert }),
+      ...(lauf.wiederhergestellt.length === 0 ? {} : { wiederhergestellt: lauf.wiederhergestellt }),
     };
   }
 
