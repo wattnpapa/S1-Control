@@ -108,6 +108,25 @@ describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
     expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(2);
   });
 
+  it("Szenario: bereits erfasste Einheiten bleiben beim Massenimport in ihrem Abschnitt und werden genannt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.bediene({
+      typ: "AbschnittAngelegt",
+      nutzlast: { abschnittId: "ANF", name: "Angefordert", typ: "ANGEFORDERT", reihenfolge: 2 },
+    });
+    await platz.dienst.eebDatei([TEXTE[0] as string]);
+    await platz.dienst.eebAlleUebernehmen("EO");
+
+    await platz.dienst.eebDatei(TEXTE);
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("ANF");
+    expect(ergebnis.uebernommen).toBe(3);
+    expect(ergebnis.aktualisiert).toHaveLength(1);
+    expect(ergebnis.aktualisiert?.[0]?.abschnitt).toBe("Deich Nord");
+    const abschnitte = Object.values(platz.dienst.zustand.einheiten).map((e) => e.wirksamerAbschnittId).sort();
+    expect(abschnitte).toEqual(["ANF", "ANF", "EO", "EO"]);
+  });
+
   it("Szenario: der Massenimport wird abgebrochen und später fortgesetzt", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

@@ -251,6 +251,7 @@ interface Sammellauf {
   uebernommen: number;
   ereignisse: number;
   readonly fehlgeschlagen: { bezeichnung: string; meldung: string }[];
+  readonly aktualisiert: { bezeichnung: string; abschnitt: string }[];
   fertig: number;
   readonly gesamt: number;
   naechster: EebStand | undefined;
@@ -1436,8 +1437,19 @@ export class Aktendienst {
       geschrieben += 1;
     }
     this.#leereScan();
-    if (this.#scanWartend.length === 0) return { art: "uebernommen", einheitId, ereignisse: geschrieben };
-    return { art: "uebernommen", einheitId, ereignisse: geschrieben, naechster: await this.#naechsterWartender() };
+    // Eine Revision verschiebt nicht: Die Einheit bleibt, wo die Fuehrungsstelle
+    // sie hingestellt hat. Die Maske muss sagen, wo das ist — sonst sucht der
+    // Bediener sie im gewaehlten Abschnitt und findet sie nicht.
+    const revision = vorhanden === undefined ? {} : { bereitsIn: this.#abschnittsnameDer(einheitId) };
+    const fertig = { art: "uebernommen", einheitId, ereignisse: geschrieben, ...revision } as const;
+    if (this.#scanWartend.length === 0) return fertig;
+    return { ...fertig, naechster: await this.#naechsterWartender() };
+  }
+
+  #abschnittsnameDer(einheitId: string): string {
+    const einheit = this.#zustand.einheiten[einheitId];
+    const abschnitt = einheit === undefined ? undefined : this.#zustand.abschnitte[einheit.wirksamerAbschnittId];
+    return abschnitt?.name.wert ?? "unbekanntem Abschnitt";
   }
 
   /**
@@ -1459,6 +1471,7 @@ export class Aktendienst {
       uebernommen: 0,
       ereignisse: 0,
       fehlgeschlagen: [],
+      aktualisiert: [],
       fertig: 0,
       gesamt: (this.#scanPayload === undefined ? 0 : 1) + this.#scanWartend.length,
       naechster: undefined,
@@ -1468,7 +1481,7 @@ export class Aktendienst {
       if (this.#abbruchGewuenscht && lauf.fertig > 0) return this.#abgebrochen(lauf);
       await this.#sammelschritt(abschnittId, lauf);
     }
-    return { uebernommen: lauf.uebernommen, ereignisse: lauf.ereignisse, fehlgeschlagen: lauf.fehlgeschlagen };
+    return this.#sammelausgang(lauf);
   }
 
   /** Bittet einen laufenden Massenimport, nach dem aktuellen Bogen anzuhalten. */
@@ -1491,6 +1504,7 @@ export class Aktendienst {
         lauf.uebernommen += 1;
         lauf.ereignisse += ergebnis.ereignisse;
         lauf.naechster = ergebnis.naechster;
+        if (ergebnis.bereitsIn !== undefined) lauf.aktualisiert.push({ bezeichnung, abschnitt: ergebnis.bereitsIn });
       } else {
         lauf.fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
         this.#leereScan();
@@ -1504,12 +1518,15 @@ export class Aktendienst {
   async #abgebrochen(lauf: Sammellauf): Promise<Sammeluebernahme> {
     this.#abbruchGewuenscht = false;
     const naechster = this.#scanPayload === undefined ? await this.#naechsterWartender() : lauf.naechster;
+    return { ...this.#sammelausgang(lauf), abgebrochen: true, ...(naechster === undefined ? {} : { naechster }) };
+  }
+
+  #sammelausgang(lauf: Sammellauf): Sammeluebernahme {
     return {
       uebernommen: lauf.uebernommen,
       ereignisse: lauf.ereignisse,
       fehlgeschlagen: lauf.fehlgeschlagen,
-      abgebrochen: true,
-      ...(naechster === undefined ? {} : { naechster }),
+      ...(lauf.aktualisiert.length === 0 ? {} : { aktualisiert: lauf.aktualisiert }),
     };
   }
 
