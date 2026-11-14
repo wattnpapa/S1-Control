@@ -257,3 +257,6 @@ export {
   type LetzterKontakt,
 } from "./funkkontakt.js";
 export { FUNKPROBEN_GRENZE, funkprobenfolge, type Funkprobenzeile } from "./funkproben.js";
+
+// Stärketafeln des Sachgebiets 1 für den Monitor (je Abschnitt, je Organisation)
+export { OHNE_ORGANISATION, organisationszeilen, staerketafel, type Staerketafel, type Staerketafelzeile } from "./staerketafel.js";
