@@ -118,6 +118,7 @@ import {
   type Tagebuchansicht,
   type EebStand,
   type EebVorschau,
+  type Sammeluebernahme,
   type Uebernahmeergebnis,
   type Untertabellenansicht,
 } from "../kontrakt/index.js";
@@ -328,6 +329,8 @@ export class Aktendienst {
   #scanText = "";
   /** Woher der angezeigte Bogen kam — steht so in `EebMeldungEmpfangen`. */
   #scanQuelle: "SCAN" | "PDF_IMPORT" = "SCAN";
+  /** Die Bezeichnung des angezeigten Bogens — fuer die Fehlerliste des Massenimports. */
+  #scanBezeichnung = "";
   /**
    * Die weiteren Boegen einer eingelesenen Datei, als Scan-Texte.
    *
@@ -1263,11 +1266,13 @@ export class Aktendienst {
     this.#scanText = text;
     try {
       const bogen = await liesBogen(befund.payload, this.#o.kompressor);
+      const vorschau = this.#vorschau(bogen);
+      this.#scanBezeichnung = vorschau.bezeichnung;
       return {
         art: "vollstaendig",
         haben: befund.stand.haben,
         anzahl: befund.stand.anzahl,
-        vorschau: this.#vorschau(bogen),
+        vorschau,
       };
     } catch (fehler) {
       // Der Payload liess sich nicht entpacken. Wie darauf zu reagieren ist,
@@ -1351,6 +1356,7 @@ export class Aktendienst {
     this.#scanPayload = undefined;
     this.#scanText = "";
     this.#scanQuelle = "SCAN";
+    this.#scanBezeichnung = "";
   }
 
   async #naechsterWartender(): Promise<EebStand> {
@@ -1420,6 +1426,40 @@ export class Aktendienst {
     this.#leereScan();
     if (this.#scanWartend.length === 0) return { art: "uebernommen", einheitId, ereignisse: geschrieben };
     return { art: "uebernommen", einheitId, ereignisse: geschrieben, naechster: await this.#naechsterWartender() };
+  }
+
+  /**
+   * Der Massenimport: uebernimmt den angezeigten Bogen und alle wartenden der
+   * Datei in denselben Abschnitt.
+   *
+   * Jeder Bogen geht durch {@link eebUebernehmen} — dieselben Ereignisse,
+   * dieselben Transaktionen, derselbe Sync wie per Knopf. Ein abgewiesener
+   * oder unlesbarer Bogen wird notiert und beiseitegelegt; die uebrigen
+   * laufen weiter. Danach ist der Sammelstand leer.
+   */
+  async eebAlleUebernehmen(abschnittId: string): Promise<Sammeluebernahme> {
+    let uebernommen = 0;
+    let ereignisse = 0;
+    const fehlgeschlagen: { bezeichnung: string; meldung: string }[] = [];
+    for (;;) {
+      if (this.#scanPayload === undefined) {
+        if (this.#scanWartend.length === 0) break;
+        this.#leereScan();
+        const stand = await this.#naechsterWartender();
+        if (stand.art === "unlesbar") fehlgeschlagen.push({ bezeichnung: "—", meldung: stand.meldung ?? "unlesbar" });
+        continue;
+      }
+      const bezeichnung = this.#scanBezeichnung;
+      const ergebnis = await this.eebUebernehmen(abschnittId);
+      if (ergebnis.art === "uebernommen") {
+        uebernommen += 1;
+        ereignisse += ergebnis.ereignisse;
+        continue;
+      }
+      fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
+      this.#leereScan();
+    }
+    return { uebernommen, ereignisse, fehlgeschlagen };
   }
 
   /**

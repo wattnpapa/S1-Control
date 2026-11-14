@@ -14,7 +14,8 @@ import { deflateRawSync, inflateRawSync } from "node:zlib";
 import { encodePayloadUrl, type Erfassungsbogen, type Kompressor } from "@bos/eeb-format";
 import { afterEach, describe, expect, it } from "vitest";
 
-import { grundlage, raeumeAuf, werkstattMitEinemPlatz } from "./pruefhilfen/werkstatt.js";
+import { einsatzBeendet } from "../kontrakt/bedienschritte.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, werkstattMitEinemPlatz } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -72,6 +73,49 @@ describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
     expect(Object.keys(platz.dienst.zustand.einheiten)).toHaveLength(4);
     // Die Schlange ist leer: Ein weiterer Versuch findet nichts mehr.
     expect((await platz.dienst.eebUebernehmen("EO")).art).toBe("nichtMoeglich");
+  });
+
+  it("Szenario: eine Sammel-PDF wird mit einem Klick vollständig übernommen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.eebDatei(TEXTE);
+
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("EO");
+    expect(ergebnis.uebernommen).toBe(3);
+    expect(ergebnis.fehlgeschlagen).toEqual([]);
+    expect(ergebnis.ereignisse).toBeGreaterThanOrEqual(3);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(3);
+    expect(Object.keys(platz.dienst.zustand.einheiten)).toHaveLength(4);
+    // Danach ist nichts mehr da.
+    expect((await platz.dienst.eebUebernehmen("EO")).art).toBe("nichtMoeglich");
+  });
+
+  it("Szenario: der Massenimport übernimmt auch, was nach einem Überspringen noch wartet", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.eebDatei(TEXTE);
+    await platz.dienst.eebUeberspringen();
+
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("EO");
+    expect(ergebnis.uebernommen).toBe(2);
+    expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(2);
+  });
+
+  it("Szenario: ein abgewiesener Bogen hält den Massenimport nicht an", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    await platz.dienst.eebDatei(TEXTE);
+    // Ein archivierter Einsatz nimmt nichts mehr an — jeder Bogen wird abgewiesen.
+    const ende = new Date(Date.now() - 3_600_000).toISOString();
+    await platz.dienst.bediene(einsatzBeendet(EINSATZ_ID, null, ende, "Lage bereinigt"));
+    expect((await platz.dienst.archiviere(new Date().toISOString())).art).toBe("geschrieben");
+
+    const ergebnis = await platz.dienst.eebAlleUebernehmen("EO");
+    expect(ergebnis.uebernommen).toBe(0);
+    expect(ergebnis.fehlgeschlagen).toHaveLength(3);
+    expect(ergebnis.fehlgeschlagen[0]?.bezeichnung.length).toBeGreaterThan(0);
+    // Alle Bögen sind abgearbeitet, keiner hängt mehr in der Schlange.
+    expect((await platz.dienst.eebUeberspringen()).art).toBe("leer");
   });
 
   it("Szenario: ein Bogen der Sammel-PDF wird übersprungen", async () => {
