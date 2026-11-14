@@ -3,8 +3,9 @@
  *
  * Der Monitor bleibt ein Fenster mit einem Bild; diese Datei entscheidet,
  * welches: die Stärke (`Monitor.tsx`, unverändert), eine der vier
- * Versorgungsansichten (`Monitoransichten.tsx`) oder der Funkplan
- * (`MonitorFunkplan.tsx`, KONZEPT-FUNKPLAN.md §4). Darüber liegen die
+ * Versorgungsansichten (`Monitoransichten.tsx`), der Funkplan
+ * (`MonitorFunkplan.tsx`, KONZEPT-FUNKPLAN.md §4) oder eine der beiden
+ * Stärketafeln des Sachgebiets 1 (`MonitorStaerketafeln.tsx`). Darüber liegen die
  * Hover-Leiste und das Kontextmenü, rechts unten die Punkte. Alles im
  * Renderer, damit es in Electron und in der Web-Schale gleich geht.
  *
@@ -19,6 +20,7 @@ import { useEffect } from "react";
 
 import { Monitor, useFenstermass } from "./Monitor.js";
 import { MonitorFunkplan } from "./MonitorFunkplan.js";
+import { MonitorAbschnitte, MonitorOrganisationen } from "./MonitorStaerketafeln.js";
 import { MonitorTafel, MonitorUnterbringung, MonitorVerpflegung, MonitorVorausschau, type Ansichtseigenschaften } from "./Monitoransichten.js";
 import { Monitorleiste, Monitorpunkte } from "./Monitorleiste.js";
 import { Monitormenue } from "./Monitormenue.js";
@@ -26,6 +28,7 @@ import { Verbindungswarnung } from "./Monitorwarnung.js";
 import { taktischeZeit } from "./formate.js";
 import { ANSICHT_TITEL, naechsteAnsicht, useMonitorsteuerung } from "./monitorSteuerung.js";
 import { useFunkplanansicht } from "./useFunkplanansicht.js";
+import { useStaerketafel } from "./useStaerketafel.js";
 import { useVersorgungsansicht } from "./useVersorgungsansicht.js";
 import type { Verbindungsstatus } from "./verbindung.js";
 import type { Lagebild, MonitorAnsicht } from "../kontrakt/index.js";
@@ -49,6 +52,10 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
       return <MonitorTafel {...e} />;
     case "funkplan":
       return <MonitorFunkplan {...e} />;
+    case "abschnitte":
+      return <MonitorAbschnitte {...e} />;
+    case "organisationen":
+      return <MonitorOrganisationen {...e} />;
   }
 }
 
@@ -59,6 +66,8 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
   const abruf = useVersorgungsansicht(akteId, lagebild?.lageZeiger, 24, braucheAnsicht);
   const braucheFunkplan = lagebild !== undefined && steuerung.ansicht === "funkplan";
   const funk = useFunkplanansicht(braucheFunkplan ? akteId : undefined, lagebild?.lageZeiger, "", braucheFunkplan);
+  const braucheStaerke = lagebild !== undefined && (steuerung.ansicht === "abschnitte" || steuerung.ansicht === "organisationen");
+  const staerketafel = useStaerketafel(akteId, lagebild?.lageZeiger, braucheStaerke);
 
   useEffect(() => {
     // Der Titel nennt die Ansicht: Auf einer Taskleiste mit zwei Einträgen
@@ -85,7 +94,7 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
           {verbindung?.zustand === "unterbrochen" && <Verbindungswarnung status={verbindung} jetzt={jetzt} />}
           <Ansicht
             welche={steuerung.ansicht}
-            e={{ lagebild, jetzt, zeit: taktischeZeit(jetzt), mass, ansicht: abruf.ansicht, funkplan: funk.ansicht, fusszusatz: wechseltext }}
+            e={{ lagebild, jetzt, zeit: taktischeZeit(jetzt), mass, ansicht: abruf.ansicht, funkplan: funk.ansicht, staerketafel, fusszusatz: wechseltext }}
           />
         </>
       )}
