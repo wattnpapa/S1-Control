@@ -1752,6 +1752,27 @@
         background: var(--warn-bg);
         font-weight: 600;
       }
+      /* Übernommene Einheiten mit „#3" statt Namen: Hinweis mit Knopf. */
+      .einheiten .vokabelhinweis {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 12px;
+        margin: 6px 0;
+        padding: 6px 10px;
+        border: 1px solid var(--rahmen);
+        border-left: 4px solid var(--warn-linie);
+        color: var(--warn-text);
+        background: var(--warn-bg);
+      }
+      .einheiten .vokabelhinweis button {
+        min-height: 36px;
+      }
+      @media (pointer: coarse) {
+        .einheiten .vokabelhinweis button {
+          min-height: 44px;
+        }
+      }
       .einheiten button.statuschip:disabled {
         cursor: not-allowed;
         opacity: 0.7;

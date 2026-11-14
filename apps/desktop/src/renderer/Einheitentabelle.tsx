@@ -29,6 +29,7 @@ import type { Tabellenansicht } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
+import { Vokabelhinweis } from "./Vokabelhinweis.js";
 import { Einheitenzeile, type Zeilenumgebung } from "./Einheitenzeile.js";
 import { Auswahlbereich } from "./Einheitenauswahl.js";
 import { useEinheitenmarkierung } from "./useEinheitenmarkierung.js";
@@ -228,6 +229,7 @@ export function Einheitentabelle({ abschnittId, einheitId, aufEinheit, aufTagebu
         aufScanner={aufScanner}
         spalten={wahl}
       />
+      {!nurLesen && <Vokabelhinweis />}
       {/* Die Filterzeile ist die „Stärke nach Status“, auf den Ausschnitt
           bezogen, und zugleich der Filter. Gezählt wird vor dem Filter. */}
       <StatusLeiste
