@@ -124,6 +124,13 @@ export {
   type Buendeleintrag,
 } from "./eeb/buendel.js";
 
+// Der Sammel-Download: die Erfassungsbögen gewählter Einheiten.
+export {
+  boegenDerEinheiten,
+  type Einheitsbogen,
+  type Einheitsbogenauswahl,
+} from "./eeb/einheitsboegen.js";
+
 // Die Projektionen: aus M3.0 Baum, Tabelle und Tagebuch, aus M5.0 die
 // Anforderungsliste, das Blatt der Fuehrungsstelle, die Logistikzeilen und die
 // Kostenuebersicht.
