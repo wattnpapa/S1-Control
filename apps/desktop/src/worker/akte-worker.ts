@@ -53,6 +53,7 @@ export type Auftrag =
   | { readonly art: "kostenAnfordern"; readonly nummer: number }
   | { readonly art: "versorgungAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "versorgungAnfordern" }> }
   | { readonly art: "funkplanAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "funkplanAnfordern" }> }
+  | { readonly art: "staerketafelAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "staerketafelAnfordern" }> }
   | { readonly art: "anforderungenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "anforderungenAnfordern" }> }
   | { readonly art: "fuestAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "fuestAnfordern" }> }
   | { readonly art: "eingangskorbAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eingangskorbAnfordern" }> }
