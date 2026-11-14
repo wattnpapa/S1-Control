@@ -1275,6 +1275,16 @@ export const zMitteilung = z.discriminatedUnion("art", [
   }),
   /** Die Akte hat sich geschlossen — Ordner fort (§5.7) oder Bediener. */
   z.object({ art: z.literal("akteGeschlossen"), akteId: zAkteId, meldung: z.string() }),
+  /**
+   * Der Stand eines laufenden Massenimports (`eebAlleUebernehmen`): `fertig`
+   * von `gesamt` Boegen sind abgearbeitet, uebernommen oder abgewiesen.
+   */
+  z.object({
+    art: z.literal("eebFortschritt"),
+    akteId: zAkteId,
+    fertig: z.number().int().min(0),
+    gesamt: z.number().int().min(0),
+  }),
 ]);
 export type Mitteilung = z.infer<typeof zMitteilung>;
 export type StandMitteilung = z.infer<typeof zStandMitteilung>;
