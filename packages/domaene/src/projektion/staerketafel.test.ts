@@ -141,3 +141,20 @@ describe("staerketafel — Organisationen", () => {
     expect(namen.at(-1)).toBe(OHNE_ORGANISATION);
   });
 });
+
+describe("staerketafel — Abschnitt × Organisation", () => {
+  it("zählt je Abschnitt und Organisation die eigenen Ist-Köpfe", () => {
+    const tafel = staerketafel(lage());
+    expect(tafel.kreuz["EA1"]).toEqual({ FEUERWEHR: 13 });
+    expect(tafel.kreuz["UA1"]).toEqual({ THW: 6 });
+    expect(tafel.kreuz["ANF"]).toBeUndefined();
+  });
+
+  it("ergibt je Organisation die Spalte der Organisationstafel", () => {
+    const tafel = staerketafel(lage());
+    for (const org of tafel.organisationen) {
+      const spalte = tafel.abschnitte.reduce((a, z) => a + (tafel.kreuz[z.schluessel]?.[org.schluessel] ?? 0), 0);
+      expect(spalte).toBe(org.gesamt);
+    }
+  });
+});

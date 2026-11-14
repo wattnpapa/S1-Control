@@ -23,8 +23,9 @@ import { organisationTitel } from "../beschriftungen.js";
 import { ORGANISATIONEN } from "../ereignis.js";
 import { ANGEFORDERT, zaehlklasse, zaehlstand } from "../kennzahlen.js";
 import { STAERKE_NULL, staerkePlus, type Staerke } from "../werte.js";
-import { EINGANG_ABSCHNITT_ID, type EinheitZustand, type Zustand } from "../zustand.js";
+import { EINGANG_ABSCHNITT_ID, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
+import { kreuzzellen, organisationsschluessel } from "./staerkematrix.js";
 
 export interface Staerketafelzeile {
   /** Abschnitts-Id oder Organisationsschlüssel; `GESAMT` und `ANMARSCH` für die Sonderzeilen. */
@@ -47,6 +48,11 @@ export interface Staerketafel {
   readonly organisationen: readonly Staerketafelzeile[];
   /** Ist-Stärke des Einsatzes (Kopfband) und alle erwarteten Köpfe. */
   readonly gesamt: Staerketafelzeile;
+  /**
+   * Abschnitt × Organisation: Ist-Köpfe je Zelle, Schlüssel wie in
+   * {@link abschnitte} und {@link organisationen}. Fehlt ein Paar, ist es 0.
+   */
+  readonly kreuz: Readonly<Record<string, Readonly<Record<string, number>>>>;
 }
 
 /** Der Name einer Einheit ohne Organisation. */
@@ -80,11 +86,6 @@ function zeilenDes(zustand: Zustand, knoten: Baumknoten, stand: Abschnittsstand)
   const eigene = zeile(knoten.id, knoten.name, knoten.eigeneStaerke, knoten.erwartet, knoten.tiefe);
   if (unten.length === 0 && eigene.gesamt === 0 && eigene.erwartet === 0) return [];
   return [eigene, ...unten];
-}
-
-function organisationsschluessel(einheit: EinheitZustand): string {
-  const wert = einheit.organisation.wert;
-  return typeof wert === "string" && wert !== "" ? wert : "";
 }
 
 function rang(schluessel: string): number {
@@ -124,5 +125,6 @@ export function staerketafel(zustand: Zustand): Staerketafel {
     anmarsch: zeile("ANMARSCH", "Angefordert / Anmarsch", stand.anmarsch, 0),
     organisationen: organisationszeilen(zustand),
     gesamt: zeile("GESAMT", "Gesamt", gesamt.ist, koepfe(gesamt.erwartet)),
+    kreuz: kreuzzellen(zustand),
   };
 }
