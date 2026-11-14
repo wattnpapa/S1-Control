@@ -113,6 +113,9 @@ export {
   type Uebernahmeentwurf,
 } from "./eeb/scanner.js";
 
+// Der Datei-Weg: Boegen aus dem JSON-Anhang einer PDF der Erfassungsbogen-App.
+export { DATEIBOEGEN_MAX, boegenAusJsonTexten } from "./eeb/datei.js";
+
 // Die Buendeldatei (M6.3) — der Meldeweg ohne Netz.
 export {
   buendelAusMeldungen,
