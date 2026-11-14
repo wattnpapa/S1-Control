@@ -1221,6 +1221,11 @@ export type Uebernahmeergebnis =
       readonly art: "uebernommen";
       readonly einheitId: string;
       readonly ereignisse: number;
+      /**
+       * Nur bei einer Revision: Die Einheit war schon erfasst und bleibt in
+       * diesem Abschnitt — die Uebernahme verschiebt sie nicht.
+       */
+      readonly bereitsIn?: string;
       /** Der naechste Bogen derselben Datei, wenn noch einer ansteht. */
       readonly naechster?: EebStand;
     }
@@ -1236,6 +1241,11 @@ export interface Sammeluebernahme {
   readonly uebernommen: number;
   readonly ereignisse: number;
   readonly fehlgeschlagen: readonly { readonly bezeichnung: string; readonly meldung: string }[];
+  /**
+   * Boegen zu Einheiten, die schon erfasst waren: Sie wurden aktualisiert und
+   * stehen weiter in ihrem bisherigen Abschnitt, nicht im gewaehlten.
+   */
+  readonly aktualisiert?: readonly { readonly bezeichnung: string; readonly abschnitt: string }[];
   /** Der Bediener hat abgebrochen; was noch offen ist, wartet weiter. */
   readonly abgebrochen?: boolean;
   /** Bei Abbruch: der Bogen, der jetzt in der Maske steht. */
