@@ -274,6 +274,36 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     expect(screen.queryByLabelText("Fortschritt des Massenimports")).toBeNull();
   });
 
+  it("bricht den Massenimport ab und zeigt den nächsten offenen Bogen", async () => {
+    let fertigmelden: (wert: unknown) => void = () => undefined;
+    attrappe.antwortet("eebAlleUebernehmen", new Promise((aufloesen) => {
+      fertigmelden = aufloesen;
+    }));
+    attrappe.antwortet("eebAbbrechen", null);
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 55, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (56)" }));
+    fireEvent.click(await screen.findByRole("button", { name: "Abbrechen" }));
+
+    expect(await screen.findByText("Wird nach dem laufenden Bogen angehalten …")).toBeDefined();
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("eebAbbrechen")).toHaveLength(1);
+    });
+    expect((screen.getByRole("button", { name: "Abbrechen" }) as HTMLButtonElement).disabled).toBe(true);
+
+    fertigmelden({
+      uebernommen: 13,
+      ereignisse: 130,
+      fehlgeschlagen: [],
+      abgebrochen: true,
+      naechster: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 42, vorschau: { ...VORSCHAU, bezeichnung: "Fachgruppe Räumen" } },
+    });
+    expect(await screen.findByText("Abgebrochen. Noch 43 Bögen offen. 13 Bögen übernommen (130 Ereignisse).")).toBeDefined();
+    expect(screen.getByText("Fachgruppe Räumen")).toBeDefined();
+    expect(screen.getByRole("button", { name: "Alle übernehmen (43)" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "Abbrechen" })).toBeNull();
+  });
+
   it("ignoriert eine Fortschrittsmeldung, wenn kein Massenimport läuft", () => {
     useLaden.setState({ eebFortschritt: undefined });
     useLaden.getState().nimmMitteilung({ art: "eebFortschritt", akteId: "akte-1", fertig: 3, gesamt: 3 });

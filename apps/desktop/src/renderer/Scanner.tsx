@@ -208,7 +208,14 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
               Von vorn
             </button>
           </div>
-          {fortschritt !== undefined && <Importfortschritt {...fortschritt} />}
+          {fortschritt !== undefined && (
+            <Importfortschritt
+              {...fortschritt}
+              aufAbbrechen={() => {
+                void laden.brecheMassenimportAb();
+              }}
+            />
+          )}
         </div>
       )}
 
@@ -237,12 +244,28 @@ export function wartendtext(wartend: number): string {
   return wartend === 1 ? "Noch ein weiterer Bogen in der Datei." : `Noch ${String(wartend)} weitere Bögen in der Datei.`;
 }
 
-/** Balken und Zahl, solange der Massenimport läuft. */
-function Importfortschritt({ fertig, gesamt }: { readonly fertig: number; readonly gesamt: number }): React.JSX.Element {
+/** Balken und Zahl, solange der Massenimport läuft — mit Abbruch. */
+function Importfortschritt(eigenschaften: {
+  readonly fertig: number;
+  readonly gesamt: number;
+  readonly abbrechend?: boolean;
+  readonly aufAbbrechen: () => void;
+}): React.JSX.Element {
+  const { fertig, gesamt, abbrechend = false, aufAbbrechen } = eigenschaften;
   return (
     <div className="importfortschritt" role="status">
       <progress max={gesamt} value={fertig} aria-label="Fortschritt des Massenimports" />
-      <span>{importfortschrittstext(fertig, gesamt)}</span>
+      <span>
+        {abbrechend ? "Wird nach dem laufenden Bogen angehalten …" : importfortschrittstext(fertig, gesamt)}
+      </span>
+      <button
+        type="button"
+        disabled={abbrechend}
+        title="Nach dem laufenden Bogen anhalten; übernommene Bögen bleiben, die übrigen warten weiter"
+        onClick={aufAbbrechen}
+      >
+        Abbrechen
+      </button>
     </div>
   );
 }
@@ -256,10 +279,18 @@ export function importfortschrittstext(fertig: number, gesamt: number): string {
 /** „56 Bögen übernommen (560 Ereignisse). 1 abgewiesen: …" */
 export function sammeltext(ausgang: Sammeluebernahme): string {
   const boegen = ausgang.uebernommen === 1 ? "1 Bogen" : `${String(ausgang.uebernommen)} Bögen`;
-  const satz = `${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).`;
+  const anfang = ausgang.abgebrochen === true ? `Abgebrochen. ${offentext(ausgang.naechster)}` : "";
+  const satz = `${anfang}${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).`;
   if (ausgang.fehlgeschlagen.length === 0) return satz;
   const gruende = ausgang.fehlgeschlagen.map((f) => `${f.bezeichnung}: ${f.meldung}`).join("; ");
   return `${satz} ${String(ausgang.fehlgeschlagen.length)} nicht übernommen — ${gruende}`;
+}
+
+/** „Noch 43 Bögen offen. " — was nach einem Abbruch in der Datei bleibt. */
+function offentext(naechster: { readonly wartend?: number } | undefined): string {
+  if (naechster === undefined) return "";
+  const offen = (naechster.wartend ?? 0) + 1;
+  return offen === 1 ? "Noch 1 Bogen offen. " : `Noch ${String(offen)} Bögen offen. `;
 }
 
 function signaturtext(zustand: "unsigniert" | "gueltig" | "ungueltig"): string {

@@ -225,7 +225,9 @@ export interface Laden {
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
   readonly eeb: EebStand | undefined;
   /** Der Stand eines laufenden Massenimports; `undefined`, wenn keiner läuft. */
-  readonly eebFortschritt: { readonly fertig: number; readonly gesamt: number } | undefined;
+  readonly eebFortschritt:
+    | { readonly fertig: number; readonly gesamt: number; readonly abbrechend?: boolean }
+    | undefined;
   scanne(text: string): Promise<void>;
   /** Der Datei-Weg: die JSON-Texte aus PDFs der Erfassungsbogen-App. */
   liesBogendateien(texte: readonly string[]): Promise<void>;
@@ -235,6 +237,8 @@ export interface Laden {
   uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
   /** Massenimport: der angezeigte und alle wartenden Bögen in einen Abschnitt. */
   uebernimmAlleScans(abschnittId: string): Promise<Sammeluebernahme | undefined>;
+  /** Hält den laufenden Massenimport nach dem aktuellen Bogen an. */
+  brecheMassenimportAb(): Promise<void>;
 
   /** Erzeugt eine Kernausgabe und liefert, wo sie liegt (M4.1). */
   erzeugeAusgabe(
@@ -735,10 +739,19 @@ export const useLaden = create<Laden>((setze, hole) => {
       );
       setze({ eebFortschritt: undefined });
       if (ergebnis !== undefined) {
-        setze({ eeb: undefined });
+        // Nach einem Abbruch steht der nächste offene Bogen in der Maske.
+        setze({ eeb: ergebnis.naechster });
         await hole().frischeAnsichten();
       }
       return ergebnis;
+    },
+
+    async brecheMassenimportAb() {
+      const akteId = hole().akteId;
+      const fortschritt = hole().eebFortschritt;
+      if (akteId === undefined || fortschritt === undefined) return;
+      setze({ eebFortschritt: { ...fortschritt, abbrechend: true } });
+      await mitFehlerbild(() => rufe({ art: "eebAbbrechen", akteId }));
     },
 
     async erzeugeAusgabe(ausgabe, format, organisation) {
@@ -927,7 +940,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         // Nur solange der Massenimport läuft: Ein Nachzügler nach dem Ende
         // ließe den Balken sonst wieder erscheinen.
         if (mitteilung.akteId !== zustand.akteId || zustand.eebFortschritt === undefined) return;
-        setze({ eebFortschritt: { fertig: mitteilung.fertig, gesamt: mitteilung.gesamt } });
+        setze({ eebFortschritt: { ...zustand.eebFortschritt, fertig: mitteilung.fertig, gesamt: mitteilung.gesamt } });
         return;
       }
       if (mitteilung.art === "akteGeschlossen") {
