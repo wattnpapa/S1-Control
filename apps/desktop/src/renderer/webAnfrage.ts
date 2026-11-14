@@ -32,6 +32,7 @@ const SCHREIBENDE_ARTEN: ReadonlySet<Ruf["art"]> = new Set<Ruf["art"]>([
   "eebUeberspringen",
   "eebZuruecksetzen",
   "eebUebernehmen",
+  "eebAlleUebernehmen",
   "ausgabeErzeugen",
   "htmlMonitorSchalten",
   "einsatzArchivieren",

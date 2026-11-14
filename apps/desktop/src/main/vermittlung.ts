@@ -272,6 +272,7 @@ export class Vermittlung {
       case "eebUeberspringen":
       case "eebZuruecksetzen":
       case "eebUebernehmen":
+      case "eebAlleUebernehmen":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);
       case "ausgabeErzeugen":
         return this.#erzeugeAusgabe(ruf);

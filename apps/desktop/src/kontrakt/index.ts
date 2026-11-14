@@ -663,6 +663,13 @@ export const zRuf = z.discriminatedUnion("art", [
     akteId: zAkteId,
     abschnittId: zText,
   }),
+  // Der Massenimport: der angezeigte Bogen und alle wartenden der Datei in
+  // einen Abschnitt, ohne jeden einzeln zu bestaetigen.
+  z.object({
+    art: z.literal("eebAlleUebernehmen"),
+    akteId: zAkteId,
+    abschnittId: zText,
+  }),
 
   // ---- Die Kernausgaben (M4.1) --------------------------------------------
   //
@@ -878,6 +885,7 @@ export interface Antworten {
   eebUeberspringen: EebStand;
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
+  eebAlleUebernehmen: Sammeluebernahme;
   ausgabeErzeugen: Ausgabeergebnis;
   /** Der Pfad der Monitordatei, oder `null` nach dem Ausschalten. */
   htmlMonitorSchalten: string | null;
@@ -1215,6 +1223,17 @@ export type Uebernahmeergebnis =
     }
   | { readonly art: "nichtMoeglich"; readonly meldung: string }
   | { readonly art: "abgewiesen"; readonly meldung: string; readonly beiEreignis: string };
+
+/**
+ * Der Ausgang des Massenimports: Jeder Bogen geht einzeln durch dieselbe
+ * Uebernahme wie per Knopf. Ein abgewiesener Bogen haelt die anderen nicht
+ * auf; er steht mit Grund in `fehlgeschlagen`.
+ */
+export interface Sammeluebernahme {
+  readonly uebernommen: number;
+  readonly ereignisse: number;
+  readonly fehlgeschlagen: readonly { readonly bezeichnung: string; readonly meldung: string }[];
+}
 
 export interface Tagebuchansicht extends Ansichtsstand {
   readonly zeilen: readonly Tagebuchzeile[];

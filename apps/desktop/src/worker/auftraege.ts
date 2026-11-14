@@ -91,6 +91,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.eebZuruecksetzen();
     case "eebUebernehmen":
       return dienst.eebUebernehmen(auftrag.ruf.abschnittId);
+    case "eebAlleUebernehmen":
+      return dienst.eebAlleUebernehmen(auftrag.ruf.abschnittId);
     case "tagebuchAnfordern":
       return dienst.tagebuch(auftrag.ruf);
     case "einsatzArchivieren":
