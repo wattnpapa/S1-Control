@@ -35,6 +35,7 @@ import type {
   Anforderungsansicht,
   Baumansicht,
   Eingangskorbansicht,
+  Vokabelkorrekturergebnis,
   Fuestansicht,
   Kostenansicht,
   Bedienergebnis,
@@ -213,6 +214,8 @@ export interface Laden {
   lieseBuendel(text: string, abschnittId: string): Promise<Buendelergebnis | undefined>;
   /** Schreibt die Meldungen dieser Akte als Bündeldatei nach `ausgaben\`. */
   schreibeBuendel(): Promise<Ausgabeergebnis | undefined>;
+  /** Ersetzt rohe Vokabularcodes („#3") übernommener Einheiten durch Namen. */
+  korrigiereVokabeln(): Promise<Vokabelkorrekturergebnis | undefined>;
   setzeAnforderungsfilter(filter: Anforderungsfilterwahl): Promise<void>;
 
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
@@ -619,6 +622,12 @@ export const useLaden = create<Laden>((setze, hole) => {
       const akteId = hole().akteId;
       if (akteId === undefined) return undefined;
       return mitFehlerbild(() => rufe({ art: "buendelSchreiben", akteId }));
+    },
+
+    async korrigiereVokabeln() {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      return mitFehlerbild(() => rufe({ art: "vokabelnKorrigieren", akteId }));
     },
 
     async setzeEingangsfilter(filter) {

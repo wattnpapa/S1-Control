@@ -187,6 +187,16 @@ immer), „Gliederung nach Bereich“, „Leere Bereiche ausblenden“,
 **Filterzeile**: die Status mit ihrer Zahl, ein Klick filtert; rechts klein,
 was „Spalten“ gerade eingestellt hat.
 
+Stehen in der Tabelle Einheiten wie „#3 Bückeburg“, Herkunft „#1 Bückeburg
+(OBKB)“ oder Fahrzeuge „#2“, wurden sie mit einer älteren Fassung aus einem
+Erfassungsbogen übernommen: Die Zahlen sind die Codes des Bogens für
+Einheitstyp, Ebene und Fahrzeugtyp. Über der Tabelle steht dann „n Einheiten
+aus Erfassungsbögen zeigen Codes …“ mit dem Knopf **„Namen eintragen“**. Er
+setzt die Namen aus dem gespeicherten Bogen ein („Zugtrupp Technischer Zug
+Bückeburg“, „Ortsverband“, „FüKW“), mit dem Grund „Vokabularkorrektur EEB …“
+im Tagebuch. Was jemand inzwischen von Hand geändert hat, bleibt stehen. Im
+beendeten Einsatz erscheint der Hinweis nicht.
+
 Ist im Baum kein Abschnitt gewählt, steht die Tabelle **nach Bereich
 gegliedert** wie die Stärketabelle auf Papier, mit Zwischensumme je Bereich;
 ist einer gewählt, flach. Beides lässt sich unter „Spalten“ umschalten, und
