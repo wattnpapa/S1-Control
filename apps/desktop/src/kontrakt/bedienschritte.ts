@@ -320,6 +320,19 @@ export function entfernung(einheitId: string, grund: string): Entwurf {
 }
 
 /**
+ * Eine entfernte Einheit zurückholen — das Gegenereignis zu {@link entfernung}.
+ * Der Bogenimport nutzt es, wenn eine früher gelöschte Einheit erneut kommt.
+ */
+export function einheitWiederhergestellt(einheitId: string): Entwurf {
+  return {
+    typ: "EinheitWiederhergestellt",
+    nutzlast: { einheitId },
+    vorher: true,
+    neu: false,
+  };
+}
+
+/**
  * Die vier Kostenparameter des Einsatzes (M5.2).
  *
  * Sie stehen in der Anlage `EinsatzAngelegt.kosten` und belegen die Pfade

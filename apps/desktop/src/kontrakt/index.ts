@@ -1222,10 +1222,13 @@ export type Uebernahmeergebnis =
       readonly einheitId: string;
       readonly ereignisse: number;
       /**
-       * Nur bei einer Revision: Die Einheit war schon erfasst und bleibt in
-       * diesem Abschnitt — die Uebernahme verschiebt sie nicht.
+       * Nur bei einer Revision einer Einheit, die in einem **anderen** als dem
+       * gewaehlten Abschnitt steht: Sie bleibt dort, die Uebernahme
+       * verschiebt sie nicht.
        */
       readonly bereitsIn?: string;
+      /** Die Einheit war entfernt und ist mit diesem Bogen zurueck (im gewaehlten Abschnitt). */
+      readonly wiederhergestellt?: true;
       /** Der naechste Bogen derselben Datei, wenn noch einer ansteht. */
       readonly naechster?: EebStand;
     }
@@ -1246,6 +1249,8 @@ export interface Sammeluebernahme {
    * stehen weiter in ihrem bisherigen Abschnitt, nicht im gewaehlten.
    */
   readonly aktualisiert?: readonly { readonly bezeichnung: string; readonly abschnitt: string }[];
+  /** Frueher entfernte Einheiten, die der Import zurueckgeholt hat. */
+  readonly wiederhergestellt?: readonly string[];
   /** Der Bediener hat abgebrochen; was noch offen ist, wartet weiter. */
   readonly abgebrochen?: boolean;
   /** Bei Abbruch: der Bogen, der jetzt in der Maske steht. */
