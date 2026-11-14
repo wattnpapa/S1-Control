@@ -83,6 +83,13 @@ describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
     const ergebnis = await platz.dienst.eebAlleUebernehmen("EO");
     expect(ergebnis.uebernommen).toBe(3);
     expect(ergebnis.fehlgeschlagen).toEqual([]);
+    // Nach jedem Bogen eine Fortschrittsmeldung an die Fenster.
+    const fortschritt = platz.mitteilungen.filter((m) => m.art === "eebFortschritt");
+    expect(fortschritt.map((m) => m.art === "eebFortschritt" && `${String(m.fertig)}/${String(m.gesamt)}`)).toEqual([
+      "1/3",
+      "2/3",
+      "3/3",
+    ]);
     expect(ergebnis.ereignisse).toBeGreaterThanOrEqual(3);
     expect(Object.keys(platz.dienst.zustand.meldungen)).toHaveLength(3);
     expect(Object.keys(platz.dienst.zustand.einheiten)).toHaveLength(4);

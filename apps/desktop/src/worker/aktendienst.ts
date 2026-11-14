@@ -1441,12 +1441,17 @@ export class Aktendienst {
     let uebernommen = 0;
     let ereignisse = 0;
     const fehlgeschlagen: { bezeichnung: string; meldung: string }[] = [];
+    const gesamt = (this.#scanPayload === undefined ? 0 : 1) + this.#scanWartend.length;
+    let fertig = 0;
     for (;;) {
       if (this.#scanPayload === undefined) {
         if (this.#scanWartend.length === 0) break;
         this.#leereScan();
         const stand = await this.#naechsterWartender();
-        if (stand.art === "unlesbar") fehlgeschlagen.push({ bezeichnung: "—", meldung: stand.meldung ?? "unlesbar" });
+        if (stand.art === "unlesbar") {
+          fehlgeschlagen.push({ bezeichnung: "—", meldung: stand.meldung ?? "unlesbar" });
+          this.#meldeFortschritt((fertig += 1), gesamt);
+        }
         continue;
       }
       const bezeichnung = this.#scanBezeichnung;
@@ -1454,12 +1459,17 @@ export class Aktendienst {
       if (ergebnis.art === "uebernommen") {
         uebernommen += 1;
         ereignisse += ergebnis.ereignisse;
-        continue;
+      } else {
+        fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
+        this.#leereScan();
       }
-      fehlgeschlagen.push({ bezeichnung, meldung: ergebnis.meldung });
-      this.#leereScan();
+      this.#meldeFortschritt((fertig += 1), gesamt);
     }
     return { uebernommen, ereignisse, fehlgeschlagen };
+  }
+
+  #meldeFortschritt(fertig: number, gesamt: number): void {
+    this.#o.sende({ art: "eebFortschritt", akteId: this.#o.akteId, fertig, gesamt });
   }
 
   /**
