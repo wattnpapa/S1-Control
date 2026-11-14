@@ -22,11 +22,11 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { Sammeluebernahme } from "../kontrakt/index.js";
 
 import { useLaden } from "./laden.js";
 import { Dateiknopf, useAblage, useBogendateien } from "./ScannerDatei.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
+import { einzelergebnis, sammelergebnis, type Ergebnistext } from "./uebernahmetexte.js";
 
 export interface ScannerEigenschaften {
   /** Der Abschnitt, in den übernommen wird — die Wahl aus dem Baum. */
@@ -38,7 +38,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
   const laden = useLaden();
   const [eingabe, setzeEingabe] = useState("");
   const [ziel, setzeZiel] = useState(abschnittId ?? "");
-  const [ergebnis, setzeErgebnis] = useState<string | undefined>(undefined);
+  const [ergebnis, setzeErgebnis] = useState<Ergebnistext | undefined>(undefined);
   const feld = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -48,6 +48,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
   const stand = laden.eeb;
   const vorschau = stand?.vorschau;
   const abschnitte = flach(laden.baum?.baum ?? []);
+  const zielname = abschnitte.find((eintrag) => eintrag.id === ziel)?.name ?? "den gewählten Abschnitt";
   const dateien = useBogendateien();
   const liesDateien = (gewaehlt: readonly File[]): void => {
     setzeErgebnis(undefined);
@@ -158,13 +159,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
                 void (async () => {
                   const ausgang = await laden.uebernimmScan(ziel);
                   if (ausgang === undefined) return;
-                  setzeErgebnis(
-                    ausgang.art === "uebernommen"
-                      ? einzeltext(ausgang.ereignisse, ausgang.bereitsIn)
-                      : ausgang.art === "abgewiesen"
-                        ? `Abgewiesen bei ${ausgang.beiEreignis}: ${ausgang.meldung}`
-                        : ausgang.meldung,
-                  );
+                  setzeErgebnis(einzelergebnis(ausgang, zielname));
                 })();
               }}
             >
@@ -178,7 +173,7 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
                 onClick={() => {
                   void (async () => {
                     const ausgang = await laden.uebernimmAlleScans(ziel);
-                    if (ausgang !== undefined) setzeErgebnis(sammeltext(ausgang));
+                    if (ausgang !== undefined) setzeErgebnis(sammelergebnis(ausgang, zielname));
                   })();
                 }}
               >
@@ -220,8 +215,8 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
       )}
 
       {ergebnis !== undefined && (
-        <p role="status" className="hinweistext">
-          {ergebnis}
+        <p role="status" className={ergebnis.warnung ? "warnung" : "hinweistext"}>
+          {ergebnis.text}
         </p>
       )}
     </section>
@@ -274,41 +269,6 @@ function Importfortschritt(eigenschaften: {
 export function importfortschrittstext(fertig: number, gesamt: number): string {
   if (fertig >= gesamt) return `${String(gesamt)} von ${String(gesamt)} Bögen verarbeitet.`;
   return `Übernehme Bogen ${String(fertig + 1)} von ${String(gesamt)} …`;
-}
-
-/** „56 Bögen übernommen (560 Ereignisse). 1 abgewiesen: …" */
-export function sammeltext(ausgang: Sammeluebernahme): string {
-  const boegen = ausgang.uebernommen === 1 ? "1 Bogen" : `${String(ausgang.uebernommen)} Bögen`;
-  const anfang = ausgang.abgebrochen === true ? `Abgebrochen. ${offentext(ausgang.naechster)}` : "";
-  const satz = `${anfang}${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).${aktualisierttext(ausgang.aktualisiert)}`;
-  if (ausgang.fehlgeschlagen.length === 0) return satz;
-  const gruende = ausgang.fehlgeschlagen.map((f) => `${f.bezeichnung}: ${f.meldung}`).join("; ");
-  return `${satz} ${String(ausgang.fehlgeschlagen.length)} nicht übernommen — ${gruende}`;
-}
-
-/**
- * Bereits erfasste Einheiten werden nur aktualisiert und nicht verschoben —
- * der Satz sagt, wo sie stehen, damit niemand sie im Zielabschnitt sucht.
- */
-function aktualisierttext(aktualisiert: Sammeluebernahme["aktualisiert"]): string {
-  if (aktualisiert === undefined || aktualisiert.length === 0) return "";
-  const wo = aktualisiert.map((a) => `${a.bezeichnung} (${a.abschnitt})`).join(", ");
-  const anzahl = aktualisiert.length === 1 ? "1 Einheit war" : `${String(aktualisiert.length)} Einheiten waren`;
-  return ` ${anzahl} schon erfasst, wurde${aktualisiert.length === 1 ? "" : "n"} nur aktualisiert und bleib${aktualisiert.length === 1 ? "t" : "en"} in ihrem Abschnitt: ${wo}.`;
-}
-
-/** Der Satz nach einer Einzelübernahme; bei einer Revision mit dem Abschnitt der Einheit. */
-export function einzeltext(ereignisse: number, bereitsIn: string | undefined): string {
-  const satz = `Übernommen: ${String(ereignisse)} Ereignisse geschrieben.`;
-  if (bereitsIn === undefined) return satz;
-  return `${satz} Die Einheit war schon erfasst, wurde nur aktualisiert und steht weiter in „${bereitsIn}“.`;
-}
-
-/** „Noch 43 Bögen offen. " — was nach einem Abbruch in der Datei bleibt. */
-function offentext(naechster: { readonly wartend?: number } | undefined): string {
-  if (naechster === undefined) return "";
-  const offen = (naechster.wartend ?? 0) + 1;
-  return offen === 1 ? "Noch 1 Bogen offen. " : `Noch ${String(offen)} Bögen offen. `;
 }
 
 function signaturtext(zustand: "unsigniert" | "gueltig" | "ungueltig"): string {

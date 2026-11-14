@@ -316,9 +316,9 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (2)" }));
     expect(
       await screen.findByText(
-        "2 Bögen übernommen (20 Ereignisse). 1 Einheit war schon erfasst, wurde nur aktualisiert und bleibt in ihrem Abschnitt: 1. Sanitätsgruppe Friesoythe (LK Friesland).",
+        "2 Bögen übernommen (20 Ereignisse). 1 Einheit war schon erfasst und wurde nicht nach „Deich Nord“ verschoben, nur aktualisiert: 1. Sanitätsgruppe Friesoythe (steht in „LK Friesland“).",
       ),
-    ).toBeDefined();
+    ).toHaveProperty("className", "warnung");
   });
 
   it("frischt nach dem Massenimport Baum und Einheitentabelle auf", async () => {
@@ -344,9 +344,42 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
     expect(
       await screen.findByText(
-        "Übernommen: 4 Ereignisse geschrieben. Die Einheit war schon erfasst, wurde nur aktualisiert und steht weiter in „LK Friesland“.",
+        "Übernommen: 4 Ereignisse geschrieben. Die Einheit war schon erfasst und wurde nicht nach „Deich Nord“ verschoben, sondern nur aktualisiert. Sie steht weiter in „LK Friesland“.",
       ),
-    ).toBeDefined();
+    ).toHaveProperty("className", "warnung");
+  });
+
+  it("meldet gelöschte Einheiten, die der Massenimport zurückholt", async () => {
+    attrappe.antwortet("eebAlleUebernehmen", {
+      uebernommen: 2,
+      ereignisse: 22,
+      fehlgeschlagen: [],
+      wiederhergestellt: ["1. Sanitätsgruppe Friesoythe"],
+    });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (2)" }));
+    expect(
+      await screen.findByText(
+        "2 Bögen übernommen (22 Ereignisse). 1 gelöschte Einheit ist wieder da, in „Deich Nord“: 1. Sanitätsgruppe Friesoythe.",
+      ),
+    ).toHaveProperty("className", "hinweistext");
+  });
+
+  it("zeigt einen abgewiesenen Bogen als Fehler ohne Ereignisnamen", async () => {
+    attrappe.antwortet("eebUebernehmen", {
+      art: "abgewiesen",
+      beiEreignis: "EinheitGemeldet",
+      meldung: "Die Einheit ist in diesem Einsatz schon erfasst, wurde aber entfernt. Der Bogen wurde nicht übernommen.",
+    });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(
+      await screen.findByText(
+        "Nicht übernommen: Die Einheit ist in diesem Einsatz schon erfasst, wurde aber entfernt. Der Bogen wurde nicht übernommen.",
+      ),
+    ).toHaveProperty("className", "warnung");
   });
 
   it("ignoriert eine Fortschrittsmeldung, wenn kein Massenimport läuft", () => {
