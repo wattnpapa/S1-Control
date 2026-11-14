@@ -38,6 +38,7 @@ import {
   leereFaltung,
   liesBogen,
   nimmScan,
+  boegenAusJsonTexten,
   buendelAusMeldungen,
   einheitIdAus,
   liesBuendel,
@@ -73,7 +74,7 @@ import {
   type Zeitquelle,
 } from "@s1/speicher";
 
-import type { Kompressor } from "@bos/eeb-format";
+import { encodePayloadUrl, type Kompressor } from "@bos/eeb-format";
 import {
   MONITOR_DATEINAME,
   auswertungAlsXlsx,
@@ -319,6 +320,16 @@ export class Aktendienst {
   #scanstand: Sammelstand = LEERER_STAND;
   #scanPayload: Uint8Array | undefined;
   #scanText = "";
+  /** Woher der angezeigte Bogen kam — steht so in `EebMeldungEmpfangen`. */
+  #scanQuelle: "SCAN" | "PDF_IMPORT" = "SCAN";
+  /**
+   * Die weiteren Boegen einer eingelesenen Datei, als Scan-Texte.
+   *
+   * Eine Sammel-PDF traegt viele Boegen, die Maske zeigt einen. Die uebrigen
+   * warten hier in derselben Form, in der ein Handscanner sie lieferte — damit
+   * gibt es hinter der Datei keinen zweiten Weg, sondern denselben.
+   */
+  #scanWartend: string[] = [];
 
   /**
    * Der HTML-Monitor (M4.3): eingeschaltet oder nicht, und mit welchen Wahlen.
@@ -1226,6 +1237,7 @@ export class Aktendienst {
     if (this.#o.kompressor === undefined) {
       return { art: "unlesbar", haben: 0, anzahl: 0, meldung: "Auf diesem Arbeitsplatz ist kein Entpacker eingerichtet." };
     }
+    this.#scanQuelle = "SCAN";
     const vorheriger = this.#scanstand;
     const befund = nimmScan(vorheriger, text);
     if (befund.art === "unlesbar") {
@@ -1270,12 +1282,76 @@ export class Aktendienst {
     }
   }
 
+  /**
+   * Nimmt die Boegen einer Datei auf — der JSON-Anhang einer PDF der
+   * Erfassungsbogen-App, vom Renderer aus der Datei gezogen.
+   *
+   * Jeder Bogen wird in den Text umgerechnet, den sein QR-Code truege, und
+   * geht dann durch {@link eebScan}: Vorschau, `meldungId` und Uebernahme sind
+   * damit **dieselben** wie beim Handscanner, und ein Bogen, der einmal
+   * gescannt und einmal als Datei kommt, ist eine Meldung (§5.8.1).
+   *
+   * Der erste Bogen wird angezeigt, die uebrigen warten. Enthaelt die Datei
+   * keinen Bogen, bleibt stehen, was vorher da war.
+   */
+  async eebDatei(texte: readonly string[]): Promise<EebStand> {
+    const kompressor = this.#o.kompressor;
+    if (kompressor === undefined) {
+      return { art: "unlesbar", haben: 0, anzahl: 0, meldung: "Auf diesem Arbeitsplatz ist kein Entpacker eingerichtet." };
+    }
+    const scans: string[] = [];
+    for (const bogen of boegenAusJsonTexten(texte)) {
+      try {
+        scans.push(encodePayloadUrl(bogen, kompressor));
+      } catch {
+        // Das Geruest stimmte, der Inhalt nicht — kein Bogen.
+      }
+    }
+    if (scans.length === 0) {
+      return {
+        art: "unlesbar",
+        haben: this.#scanstand.haben,
+        anzahl: this.#scanstand.anzahl,
+        ...this.#wartendFeld(),
+        meldung:
+          "Die Datei enthält keinen Erfassungsbogen. Gelesen werden PDFs, die die Erfassungsbogen-App erzeugt hat — kein Scan eines Ausdrucks.",
+      };
+    }
+    this.#scanWartend = scans;
+    return this.#naechsterWartender();
+  }
+
+  /** Legt den angezeigten Bogen beiseite und zeigt den naechsten der Datei. */
+  async eebUeberspringen(): Promise<EebStand> {
+    this.#leereScan();
+    return this.#naechsterWartender();
+  }
+
   /** Verwirft den Sammelstand — der Knopf „Von vorn“ der Maske. */
   eebZuruecksetzen(): EebStand {
+    this.#leereScan();
+    this.#scanWartend = [];
+    return { art: "leer", haben: 0, anzahl: 0 };
+  }
+
+  /** Raeumt den angezeigten Bogen ab; was wartet, wartet weiter. */
+  #leereScan(): void {
     this.#scanstand = LEERER_STAND;
     this.#scanPayload = undefined;
     this.#scanText = "";
-    return { art: "leer", haben: 0, anzahl: 0 };
+    this.#scanQuelle = "SCAN";
+  }
+
+  async #naechsterWartender(): Promise<EebStand> {
+    const text = this.#scanWartend.shift();
+    if (text === undefined) return { art: "leer", haben: 0, anzahl: 0 };
+    const stand = await this.eebScan(text);
+    this.#scanQuelle = "PDF_IMPORT";
+    return { ...stand, ...this.#wartendFeld() };
+  }
+
+  #wartendFeld(): { readonly wartend?: number } {
+    return this.#scanWartend.length === 0 ? {} : { wartend: this.#scanWartend.length };
   }
 
   /**
@@ -1313,7 +1389,7 @@ export class Aktendienst {
       personIds: befund.bogen.personal.map((_, nummer) => `P-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
       fahrzeugIds: befund.bogen.fahrzeuge.map((_, nummer) => `F-${befund.meldungId.slice(0, 10)}-${String(nummer)}`),
       empfangenAm: this.#jetztText(),
-      quelle: "SCAN",
+      quelle: this.#scanQuelle,
       rohPayload: this.#scanText,
       einheitSchluessel: befund.einheitSchluessel,
     },
@@ -1331,8 +1407,9 @@ export class Aktendienst {
       }
       geschrieben += 1;
     }
-    this.eebZuruecksetzen();
-    return { art: "uebernommen", einheitId, ereignisse: geschrieben };
+    this.#leereScan();
+    if (this.#scanWartend.length === 0) return { art: "uebernommen", einheitId, ereignisse: geschrieben };
+    return { art: "uebernommen", einheitId, ereignisse: geschrieben, naechster: await this.#naechsterWartender() };
   }
 
   /**

@@ -438,6 +438,12 @@ export type Entwurf = z.infer<typeof zEntwurf>;
  */
 export const AUSSCHNITT_MAX = 500;
 
+/**
+ * Wie viele Texte ein Ruf `eebDatei` hoechstens traegt. Eine Sammel-PDF fuehrt
+ * je Einheit einen Anhang; fuenfhundert ist mehr, als ein Einsatz Einheiten hat.
+ */
+export const EEB_DATEITEXTE_MAX = 500;
+
 export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("umgebung") }),
   z.object({ art: z.literal("einstellungenLesen") }),
@@ -605,6 +611,18 @@ export const zRuf = z.discriminatedUnion("art", [
   // dort — er besteht aus Byte-Abschnitten, und die haben im Renderer nichts
   // verloren, der sie ohnehin nicht deuten kann.
   z.object({ art: z.literal("eebScan"), akteId: zAkteId, text: z.string() }),
+  // Der Datei-Weg: Die PDF der Erfassungsbogen-App fuehrt den Bogen als
+  // JSON-Anhang. Der Renderer zieht die Texte aus der Datei (sein Dateifeld,
+  // wie beim Buendel) und schickt **nur sie** — die PDF selbst mit Schriften
+  // und Bildern bleibt, wo sie ist. Was davon ein Bogen ist, entscheidet der
+  // Worker.
+  z.object({
+    art: z.literal("eebDatei"),
+    akteId: zAkteId,
+    texte: z.array(z.string()).max(EEB_DATEITEXTE_MAX),
+  }),
+  // Legt den angezeigten Bogen beiseite und zeigt den naechsten der Datei.
+  z.object({ art: z.literal("eebUeberspringen"), akteId: zAkteId }),
   z.object({ art: z.literal("eebZuruecksetzen"), akteId: zAkteId }),
   z.object({
     art: z.literal("eebUebernehmen"),
@@ -819,6 +837,8 @@ export interface Antworten {
   tabelleAnfordern: Tabellenansicht;
   untertabelleAnfordern: Untertabellenansicht;
   eebScan: EebStand;
+  eebDatei: EebStand;
+  eebUeberspringen: EebStand;
   eebZuruecksetzen: EebStand;
   eebUebernehmen: Uebernahmeergebnis;
   ausgabeErzeugen: Ausgabeergebnis;
@@ -1051,6 +1071,11 @@ export interface EebStand {
   readonly haben: number;
   readonly anzahl: number;
   readonly meldung?: string;
+  /**
+   * Wie viele weitere Boegen aus einer eingelesenen Datei noch anstehen.
+   * Fehlt beim Handscanner — der liefert einen Bogen nach dem anderen.
+   */
+  readonly wartend?: number;
   /** Nur bei `vollstaendig` — der Bogen in Klartext, so weit die Maske ihn zeigt. */
   readonly vorschau?: EebVorschau;
 }
@@ -1115,7 +1140,13 @@ export interface Bildschirm {
 
 /** Der Ausgang einer Uebernahme — mehrere Ereignisse, ein Ergebnis. */
 export type Uebernahmeergebnis =
-  | { readonly art: "uebernommen"; readonly einheitId: string; readonly ereignisse: number }
+  | {
+      readonly art: "uebernommen";
+      readonly einheitId: string;
+      readonly ereignisse: number;
+      /** Der naechste Bogen derselben Datei, wenn noch einer ansteht. */
+      readonly naechster?: EebStand;
+    }
   | { readonly art: "nichtMoeglich"; readonly meldung: string }
   | { readonly art: "abgewiesen"; readonly meldung: string; readonly beiEreignis: string };
 

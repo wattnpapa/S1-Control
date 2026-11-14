@@ -77,6 +77,10 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return { pfad: await dienst.ausgabeSchreiben(auftrag.dateiname, auftrag.bytes) };
     case "eebScan":
       return dienst.eebScan(auftrag.ruf.text);
+    case "eebDatei":
+      return dienst.eebDatei(auftrag.ruf.texte);
+    case "eebUeberspringen":
+      return dienst.eebUeberspringen();
     case "eebZuruecksetzen":
       return dienst.eebZuruecksetzen();
     case "eebUebernehmen":

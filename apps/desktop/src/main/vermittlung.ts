@@ -266,6 +266,8 @@ export class Vermittlung {
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":
       case "eebScan":
+      case "eebDatei":
+      case "eebUeberspringen":
       case "eebZuruecksetzen":
       case "eebUebernehmen":
         return this.#o.hof.frage(ruf.akteId, { art: ruf.art, ruf } as Auftragsentwurf);

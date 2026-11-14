@@ -68,6 +68,8 @@ export type Auftrag =
   | { readonly art: "htmlMonitorSchalten"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "htmlMonitorSchalten" }> }
   | { readonly art: "ausgabeSchreiben"; readonly nummer: number; readonly dateiname: string; readonly bytes: Uint8Array }
   | { readonly art: "eebScan"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebScan" }> }
+  | { readonly art: "eebDatei"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebDatei" }> }
+  | { readonly art: "eebUeberspringen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebUeberspringen" }> }
   | { readonly art: "eebZuruecksetzen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebZuruecksetzen" }> }
   | { readonly art: "eebUebernehmen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebUebernehmen" }> }
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
