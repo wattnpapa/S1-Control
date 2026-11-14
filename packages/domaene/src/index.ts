@@ -94,6 +94,7 @@ export {
   type UebersetzungsAuftrag,
   type Vokabeltabellen,
 } from "./eeb/adapter.js";
+export { vokabeltabellenFuer } from "./eeb/vokabeltabellen.js";
 
 // Die Abkuerzungsliste — das Blatt „AküLi“ der Excel (M3.6).
 export { AKUELI, sucheAkueli, type Akueeintrag, type Akuegruppe } from "./akueli.js";

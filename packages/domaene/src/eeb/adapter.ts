@@ -38,6 +38,7 @@ import {
 } from "@bos/eeb-format";
 
 import type { Id, Staerke, Zeitpunkt } from "../werte.js";
+import { vokabeltabellenFuer } from "./vokabeltabellen.js";
 
 // ---------------------------------------------------------------------------
 // Wertebereiche: aus den Zahlen des Bogens in die Namen des Katalogs
@@ -185,7 +186,10 @@ function kontakteAus(
  * „Bergungsgruppe Oldenburg" statt „Bergungsgruppe" allein — in einer Lage mit
  * fünf Ortsverbaenden waere der Typ fuer sich genommen keine Kennung.
  */
-export function bezeichnungAus(bogen: Erfassungsbogen, tabellen: Vokabeltabellen = {}): string {
+export function bezeichnungAus(
+  bogen: Erfassungsbogen,
+  tabellen: Vokabeltabellen = vokabeltabellenFuer(bogen.einheit.organisation),
+): string {
   const typ = vokabelText(bogen.einheit.einheitsTyp, tabellen.einheitstyp) ?? "Einheit";
   const ort = bogen.einheit.hierarchie[0]?.name;
   return ort === undefined || ort.length === 0 ? typ : `${typ} ${ort}`;
@@ -243,6 +247,11 @@ export interface UebersetzungsAuftrag {
   readonly einheitSchluessel?: string;
   /** Die Id der Meldung, aus der diese Einheit entstanden ist (§5.8.2). */
   readonly meldungId?: Id;
+  /**
+   * Fehlt das Feld, gelten die Tabellen der Organisation des Bogens
+   * (`vokabeltabellenFuer`). Ohne sie stuende `#3` statt „Zugtrupp
+   * Technischer Zug" in der Lage.
+   */
   readonly tabellen?: Vokabeltabellen;
 }
 
@@ -265,7 +274,7 @@ export function uebersetzeBogen(
   auftrag: UebersetzungsAuftrag,
 ): UebersetzterBogen {
   const bogen = migriereBogen({ ...roh });
-  const tabellen = auftrag.tabellen ?? {};
+  const tabellen = auftrag.tabellen ?? vokabeltabellenFuer(bogen.einheit.organisation);
   const bemerkung = bemerkungAus(bogen);
   const einheitstyp = vokabelText(bogen.einheit.einheitsTyp, tabellen.einheitstyp);
 
