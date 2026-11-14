@@ -155,3 +155,84 @@ describe("fortschrittstext", () => {
     expect(fortschrittstext({ art: "leer", haben: 0, anzahl: 0 })).toBe("Noch nichts gescannt.");
   });
 });
+
+describe("Der Datei-Weg der Scanner-Maske", () => {
+  const PDF = `%PDF-1.7\n1 0 obj\n<< /Type /EmbeddedFile >>\nstream\n{"schemaVersion":8,"einheit":{"hierarchie":[]}}\nendstream\nendobj\n`;
+
+  function datei(name: string, inhalt: string): File {
+    const bytes = new TextEncoder().encode(inhalt);
+    // jsdom kennt `File.arrayBuffer` nicht in jeder Fassung; die Maske braucht nur das.
+    return Object.assign(new File([bytes], name), { arrayBuffer: () => Promise.resolve(bytes.buffer) });
+  }
+
+  beforeEach(() => {
+    attrappe.antwortet("eebDatei", { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 2, vorschau: VORSCHAU });
+    attrappe.antwortet("eebUeberspringen", { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 1, vorschau: VORSCHAU });
+  });
+
+  it("schickt den Bogen einer abgelegten PDF und zeigt, wie viele noch warten", async () => {
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    const flaeche = screen.getByRole("region", { name: "Erfassungsbogen einlesen" });
+    fireEvent.drop(flaeche, { dataTransfer: { types: ["Files"], files: [datei("bogen.pdf", PDF)] } });
+
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("eebDatei")?.texte).toEqual(['{"schemaVersion":8,"einheit":{"hierarchie":[]}}']);
+    });
+    expect(await screen.findByText(/Noch 2 weitere Bögen in der Datei\./)).toBeDefined();
+  });
+
+  it("nimmt die Datei auch über das Dateifeld", async () => {
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("Erfassungsbogen als PDF"), { target: { files: [datei("bogen.pdf", PDF)] } });
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("eebDatei")).toHaveLength(1);
+    });
+  });
+
+  it("weist eine Datei ab, die keine PDF ist, ohne den Worker zu fragen", async () => {
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("Erfassungsbogen als PDF"), { target: { files: [datei("liste.xlsx", "PK")] } });
+    expect(await screen.findByText("Keine PDF: liste.xlsx")).toBeDefined();
+    expect(attrappe.rufeDerArt("eebDatei")).toHaveLength(0);
+  });
+
+  it("behält die Vorschau, wenn eine Datei ohne Bogen dazukommt", async () => {
+    attrappe.antwortet("eebDatei", { art: "unlesbar", haben: 1, anzahl: 1, meldung: "Die Datei enthält keinen Erfassungsbogen." });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.change(screen.getByLabelText("Erfassungsbogen als PDF"), { target: { files: [datei("leer.pdf", "%PDF-1.7\n")] } });
+    expect(await screen.findByText("Die Datei enthält keinen Erfassungsbogen.")).toBeDefined();
+    expect(screen.getByText("Bergungsgruppe 1")).toBeDefined();
+  });
+
+  it("überspringt den angezeigten Bogen, solange weitere warten", async () => {
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 2, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Überspringen" }));
+    await waitFor(() => {
+      expect(attrappe.rufeDerArt("eebUeberspringen")).toHaveLength(1);
+    });
+    expect(await screen.findByText(/Noch ein weiterer Bogen in der Datei\./)).toBeDefined();
+  });
+
+  it("zeigt nach der Übernahme den nächsten Bogen der Datei", async () => {
+    attrappe.antwortet("eebUebernehmen", {
+      art: "uebernommen",
+      einheitId: "E-abc",
+      ereignisse: 13,
+      naechster: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: { ...VORSCHAU, bezeichnung: "Fachgruppe Räumen" } },
+    });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    expect(await screen.findByText("Fachgruppe Räumen")).toBeDefined();
+    // Ohne wartende Bögen gibt es nichts zu überspringen.
+    expect(screen.queryByRole("button", { name: "Überspringen" })).toBeNull();
+  });
+
+  it("bietet „Überspringen“ beim Handscanner nicht an", () => {
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    expect(screen.queryByRole("button", { name: "Überspringen" })).toBeNull();
+  });
+});

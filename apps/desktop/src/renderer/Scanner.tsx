@@ -14,11 +14,16 @@
  * der Renderer hat kein Node (02-ZIELBILD.md, „Vier Ringe“). Diese Maske
  * schickt Text und bekommt Fortschritt, Signaturbefund und eine Vorschau in
  * Klartext zurück — die Byte-Abschnitte sieht sie nie.
+ *
+ * **Daneben der Datei-Weg** (`ScannerDatei.tsx`): Eine PDF aus der
+ * Erfassungsbogen-App lässt sich auf die Maske ziehen oder über „PDF wählen …“
+ * öffnen. Sie führt danach in dieselbe Vorschau wie ein Scan.
  */
 
 import { useEffect, useRef, useState } from "react";
 
 import { useLaden } from "./laden.js";
+import { Dateiknopf, useAblage, useBogendateien } from "./ScannerDatei.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 
 export interface ScannerEigenschaften {
@@ -41,9 +46,20 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
   const stand = laden.eeb;
   const vorschau = stand?.vorschau;
   const abschnitte = flach(laden.baum?.baum ?? []);
+  const dateien = useBogendateien();
+  const liesDateien = (gewaehlt: readonly File[]): void => {
+    setzeErgebnis(undefined);
+    void dateien.lies(gewaehlt);
+  };
+  const ablage = useAblage(liesDateien);
+  const wartend = stand?.wartend ?? 0;
 
   return (
-    <section aria-label="Erfassungsbogen einlesen" className="scanner">
+    <section
+      aria-label="Erfassungsbogen einlesen"
+      className={ablage.ziehend ? "scanner ziehend" : "scanner"}
+      {...ablage.griffe}
+    >
       <div className="scannerkopf">
         <h2>Erfassungsbogen einlesen</h2>
         <span className="hinweistext">
@@ -74,10 +90,13 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
           }}
         />
       </label>
+      <Dateiknopf aufDateien={liesDateien} />
 
       <p className="fortschritt" aria-live="polite">
         {fortschrittstext(stand)}
+        {wartend > 0 && ` ${wartendtext(wartend)}`}
       </p>
+      {dateien.hinweis !== undefined && <p className="warnung">{dateien.hinweis}</p>}
       {stand?.meldung !== undefined && <p className="warnung">{stand.meldung}</p>}
 
       {vorschau !== undefined && (
@@ -147,6 +166,18 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
             >
               Übernehmen
             </button>
+            {wartend > 0 && (
+              <button
+                type="button"
+                title="Diesen Bogen nicht übernehmen und den nächsten der Datei zeigen"
+                onClick={() => {
+                  setzeErgebnis(undefined);
+                  void laden.ueberspringeScan();
+                }}
+              >
+                Überspringen
+              </button>
+            )}
             <button
               type="button"
               onClick={() => {
@@ -177,6 +208,11 @@ export function fortschrittstext(stand: { art: string; haben: number; anzahl: nu
   if (stand.art === "unlesbar" && stand.anzahl === 0) return "Noch nichts gescannt.";
   if (stand.anzahl === 0) return "Noch nichts gescannt.";
   return `Teil ${String(stand.haben)} von ${String(stand.anzahl)}`;
+}
+
+/** „Noch 3 weitere Bögen in der Datei." — steht hinter dem Fortschritt. */
+export function wartendtext(wartend: number): string {
+  return wartend === 1 ? "Noch ein weiterer Bogen in der Datei." : `Noch ${String(wartend)} weitere Bögen in der Datei.`;
 }
 
 function signaturtext(zustand: "unsigniert" | "gueltig" | "ungueltig"): string {

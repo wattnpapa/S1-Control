@@ -53,8 +53,11 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
 4. **Abschnitte anlegen.** Die Führungsorganisation zuerst, damit Einheiten
    hineingehören können. Unterabschnitte gehen beliebig tief.
 5. **Einheiten erfassen** — von Hand („Ohne Vorlage“), aus einer Vorlage
-   (THW StAN, Feuerwehr, KatS-StAN Nds), per Handscanner vom Erfassungsbogen
-   oder über den Eingangskorb aus einer Bündeldatei. Eine zweite Teileinheit
+   (THW StAN, Feuerwehr, KatS-StAN Nds), per Handscanner vom Erfassungsbogen,
+   aus einer PDF der Erfassungsbogen-App (in der Maske „Erfassungsbogen
+   einlesen“ über „PDF wählen …“ oder durch Hineinziehen; eine Sammel-PDF
+   zeigt ihre Bögen nacheinander) oder über den Eingangskorb aus einer
+   Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
    seit wann, wie lange noch. Daneben führt die Vermeldezentrale im Blatt

@@ -218,6 +218,10 @@ export interface Laden {
   /** Der Sammelstand des Handscanners (M3.4); `undefined` heißt „noch nichts gescannt“. */
   readonly eeb: EebStand | undefined;
   scanne(text: string): Promise<void>;
+  /** Der Datei-Weg: die JSON-Texte aus PDFs der Erfassungsbogen-App. */
+  liesBogendateien(texte: readonly string[]): Promise<void>;
+  /** Legt den angezeigten Bogen beiseite; der nächste der Datei rückt nach. */
+  ueberspringeScan(): Promise<void>;
   setzeScanZurueck(): Promise<void>;
   uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
 
@@ -659,6 +663,24 @@ export const useLaden = create<Laden>((setze, hole) => {
       setze({ eeb: stand });
     },
 
+    async liesBogendateien(texte) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return;
+      // Wie beim Scan: Eine Datei ohne Bogen ist ein Befund, kein Fehlerbild.
+      const stand = await rufe({ art: "eebDatei", akteId, texte: [...texte] });
+      // Eine Datei ohne Bogen verdrängt nichts: Der Worker hält den zuvor
+      // gelesenen Bogen weiter, also bleibt auch seine Vorschau stehen.
+      const vorher = hole().eeb;
+      const bleibt = stand.art === "unlesbar" && vorher?.vorschau !== undefined && stand.meldung !== undefined;
+      setze({ eeb: bleibt ? { ...vorher, meldung: stand.meldung } : stand });
+    },
+
+    async ueberspringeScan() {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return;
+      setze({ eeb: await rufe({ art: "eebUeberspringen", akteId }) });
+    },
+
     async setzeScanZurueck() {
       const akteId = hole().akteId;
       if (akteId === undefined) return;
@@ -672,7 +694,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         rufe({ art: "eebUebernehmen", akteId, abschnittId }),
       );
       if (ergebnis?.art === "uebernommen") {
-        setze({ eeb: undefined });
+        setze({ eeb: ergebnis.naechster });
         await hole().frischeAnsichten();
       }
       return ergebnis;
