@@ -54,6 +54,7 @@ import type {
   Tabellenansicht,
   Tagebuchansicht,
   Theme,
+  Sammeluebernahme,
   Uebernahmeergebnis,
   Umgebung,
   Untertabellenansicht,
@@ -230,6 +231,8 @@ export interface Laden {
   ueberspringeScan(): Promise<void>;
   setzeScanZurueck(): Promise<void>;
   uebernimmScan(abschnittId: string): Promise<Uebernahmeergebnis | undefined>;
+  /** Massenimport: der angezeigte und alle wartenden Bögen in einen Abschnitt. */
+  uebernimmAlleScans(abschnittId: string): Promise<Sammeluebernahme | undefined>;
 
   /** Erzeugt eine Kernausgabe und liefert, wo sie liegt (M4.1). */
   erzeugeAusgabe(
@@ -713,6 +716,19 @@ export const useLaden = create<Laden>((setze, hole) => {
       );
       if (ergebnis?.art === "uebernommen") {
         setze({ eeb: ergebnis.naechster });
+        await hole().frischeAnsichten();
+      }
+      return ergebnis;
+    },
+
+    async uebernimmAlleScans(abschnittId) {
+      const akteId = hole().akteId;
+      if (akteId === undefined) return undefined;
+      const ergebnis = await mitFehlerbild(() =>
+        rufe({ art: "eebAlleUebernehmen", akteId, abschnittId }),
+      );
+      if (ergebnis !== undefined) {
+        setze({ eeb: undefined });
         await hole().frischeAnsichten();
       }
       return ergebnis;

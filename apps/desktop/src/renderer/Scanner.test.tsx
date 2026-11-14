@@ -230,6 +230,33 @@ describe("Der Datei-Weg der Scanner-Maske", () => {
     expect(screen.queryByRole("button", { name: "Überspringen" })).toBeNull();
   });
 
+  it("übernimmt alle Bögen der Datei auf einen Klick", async () => {
+    attrappe.antwortet("eebAlleUebernehmen", {
+      uebernommen: 55,
+      ereignisse: 550,
+      fehlgeschlagen: [{ bezeichnung: "Fachgruppe Räumen", meldung: "Abschnitt unbekannt" }],
+    });
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, wartend: 55, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    fireEvent.click(screen.getByRole("button", { name: "Alle übernehmen (56)" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("eebAlleUebernehmen")?.abschnittId).toBe("EO");
+    });
+    expect(
+      await screen.findByText(
+        "55 Bögen übernommen (550 Ereignisse). 1 nicht übernommen — Fachgruppe Räumen: Abschnitt unbekannt",
+      ),
+    ).toBeDefined();
+    // Die Vorschau ist abgeräumt.
+    expect(screen.queryByText("Bergungsgruppe 1")).toBeNull();
+  });
+
+  it("bietet „Alle übernehmen“ beim Handscanner nicht an", () => {
+    useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
+    render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);
+    expect(screen.queryByRole("button", { name: /Alle übernehmen/ })).toBeNull();
+  });
+
   it("bietet „Überspringen“ beim Handscanner nicht an", () => {
     useLaden.setState({ eeb: { art: "vollstaendig", haben: 1, anzahl: 1, vorschau: VORSCHAU } });
     render(<Scanner abschnittId="EO" aufSchliessen={() => undefined} />);

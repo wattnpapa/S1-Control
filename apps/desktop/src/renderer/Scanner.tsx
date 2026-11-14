@@ -22,6 +22,8 @@
 
 import { useEffect, useRef, useState } from "react";
 
+import type { Sammeluebernahme } from "../kontrakt/index.js";
+
 import { useLaden } from "./laden.js";
 import { Dateiknopf, useAblage, useBogendateien } from "./ScannerDatei.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
@@ -169,6 +171,21 @@ export function Scanner({ abschnittId, aufSchliessen }: ScannerEigenschaften): R
             {wartend > 0 && (
               <button
                 type="button"
+                disabled={ziel === ""}
+                title="Diesen und alle weiteren Bögen der Datei in den gewählten Abschnitt übernehmen"
+                onClick={() => {
+                  void (async () => {
+                    const ausgang = await laden.uebernimmAlleScans(ziel);
+                    if (ausgang !== undefined) setzeErgebnis(sammeltext(ausgang));
+                  })();
+                }}
+              >
+                Alle übernehmen ({String(wartend + 1)})
+              </button>
+            )}
+            {wartend > 0 && (
+              <button
+                type="button"
                 title="Diesen Bogen nicht übernehmen und den nächsten der Datei zeigen"
                 onClick={() => {
                   setzeErgebnis(undefined);
@@ -213,6 +230,15 @@ export function fortschrittstext(stand: { art: string; haben: number; anzahl: nu
 /** „Noch 3 weitere Bögen in der Datei." — steht hinter dem Fortschritt. */
 export function wartendtext(wartend: number): string {
   return wartend === 1 ? "Noch ein weiterer Bogen in der Datei." : `Noch ${String(wartend)} weitere Bögen in der Datei.`;
+}
+
+/** „56 Bögen übernommen (560 Ereignisse). 1 abgewiesen: …" */
+export function sammeltext(ausgang: Sammeluebernahme): string {
+  const boegen = ausgang.uebernommen === 1 ? "1 Bogen" : `${String(ausgang.uebernommen)} Bögen`;
+  const satz = `${boegen} übernommen (${String(ausgang.ereignisse)} Ereignisse).`;
+  if (ausgang.fehlgeschlagen.length === 0) return satz;
+  const gruende = ausgang.fehlgeschlagen.map((f) => `${f.bezeichnung}: ${f.meldung}`).join("; ");
+  return `${satz} ${String(ausgang.fehlgeschlagen.length)} nicht übernommen — ${gruende}`;
 }
 
 function signaturtext(zustand: "unsigniert" | "gueltig" | "ungueltig"): string {
