@@ -83,10 +83,10 @@ export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
- * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 8: Stärke,
+ * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 9: Stärke,
  * die vier Versorgungsbilder (KONZEPT-S4.md §4), additiv der Funkplan
  * (KONZEPT-FUNKPLAN.md §4) und die beiden Stärketafeln des Sachgebiets 1
- * (je Abschnitt, je Organisation). Nur anhängen — die gemerkte Wahl eines
+ * (je Abschnitt, je Organisation, Abschnitt × Organisation). Nur anhängen — die gemerkte Wahl eines
  * Geräts steht als Name in den Einstellungen, und die Tasten sind eingeübt.
  */
 export const MONITOR_ANSICHTEN = [
@@ -98,6 +98,7 @@ export const MONITOR_ANSICHTEN = [
   "funkplan",
   "abschnitte",
   "organisationen",
+  "kreuz",
 ] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;

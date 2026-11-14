@@ -14,8 +14,8 @@ describe("Die Monitoransichten", () => {
     expect(MONITOR_ANSICHTEN.slice(0, 6)).toEqual(["staerke", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"]);
   });
 
-  it("hängt die Stärketafeln des Sachgebiets 1 als siebte und achte an", () => {
-    expect(MONITOR_ANSICHTEN.slice(6)).toEqual(["abschnitte", "organisationen"]);
+  it("hängt die Stärketafeln des Sachgebiets 1 als siebte bis neunte an", () => {
+    expect(MONITOR_ANSICHTEN.slice(6)).toEqual(["abschnitte", "organisationen", "kreuz"]);
     const grund = { sharePfad: "/share", anzeigename: "Zelt" };
     expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "organisationen", wechsel: false } }).success).toBe(true);
   });
