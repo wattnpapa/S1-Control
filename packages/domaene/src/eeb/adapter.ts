@@ -21,16 +21,13 @@
  */
 
 import {
-  Ernaehrung,
-  Geschlecht,
-  KontaktArt,
-  OrganisationsTyp,
   PersonalErfassung,
-  StaerkeRolle,
   EEB_EPOCHE_MS,
+  istEinzelperson,
   migriereBogen,
   staerke as staerkeAusBogen,
   type Erfassungsbogen,
+  type Fahrzeug as EebFahrzeug,
   type HierarchieEbene as EebHierarchieEbene,
   type Kontakt as EebKontakt,
   type Person as EebPerson,
@@ -38,96 +35,17 @@ import {
 } from "@bos/eeb-format";
 
 import type { Id, Staerke, Zeitpunkt } from "../werte.js";
+import { ebeneAusEinheitstyp } from "./ebene.js";
 import { vokabeltabellenFuer } from "./vokabeltabellen.js";
-
-// ---------------------------------------------------------------------------
-// Wertebereiche: aus den Zahlen des Bogens in die Namen des Katalogs
-// ---------------------------------------------------------------------------
-
-/**
- * Die zwoelf Organisationen des Bogens auf die sechzehn des Zielmodells.
- *
- * `SONSTIGE` ist in beiden der Auffang; `organisationName` traegt dann den
- * Freitext (ZDM §2.1). Die vier Werte, die nur das Zielmodell kennt
- * (`BERGWACHT`, `WASSERWIRTSCHAFT`, `REGIE`, `ZIVIL`), kommen aus einem Bogen
- * nie — sie stehen in der Excel und werden von Hand gesetzt.
- */
-const ORGANISATION: Readonly<Record<number, string>> = {
-  [OrganisationsTyp.THW]: "THW",
-  [OrganisationsTyp.FEUERWEHR]: "FEUERWEHR",
-  [OrganisationsTyp.POLIZEI]: "POLIZEI",
-  [OrganisationsTyp.BUNDESPOLIZEI]: "BUNDESPOLIZEI",
-  [OrganisationsTyp.DRK]: "DRK",
-  [OrganisationsTyp.JUH]: "JUH",
-  [OrganisationsTyp.MHD]: "MHD",
-  [OrganisationsTyp.ASB]: "ASB",
-  [OrganisationsTyp.DLRG]: "DLRG",
-  [OrganisationsTyp.BUNDESWEHR]: "BUNDESWEHR",
-  [OrganisationsTyp.RETTUNGSDIENST]: "RETTUNGSDIENST",
-  [OrganisationsTyp.SONSTIGE]: "SONSTIGE",
-};
-
-const ROLLE: Readonly<Record<number, string>> = {
-  [StaerkeRolle.FUEHRER]: "FUEHRER",
-  [StaerkeRolle.UNTERFUEHRER]: "UNTERFUEHRER",
-  [StaerkeRolle.MANNSCHAFT]: "MANNSCHAFT",
-};
-
-const GESCHLECHT: Readonly<Record<number, string>> = {
-  [Geschlecht.M]: "MAENNLICH",
-  [Geschlecht.W]: "WEIBLICH",
-  [Geschlecht.D]: "DIVERS",
-};
-
-const ERNAEHRUNG: Readonly<Record<number, string>> = {
-  [Ernaehrung.FLEISCH]: "FLEISCH",
-  [Ernaehrung.VEGETARISCH]: "VEGETARISCH",
-  [Ernaehrung.VEGAN]: "VEGAN",
-};
-
-const KONTAKTART: Readonly<Record<number, string>> = {
-  [KontaktArt.MOBIL]: "MOBIL",
-  [KontaktArt.FESTNETZ]: "FESTNETZ",
-  [KontaktArt.EMAIL]: "EMAIL",
-};
-
-/**
- * Die taktische Ebene aus dem **ausgeschriebenen** Einheitstyp.
- *
- * Der Bogen fuehrt keine Ebene; die Excel braucht sie fuer das taktische
- * Zeichen (ZDM §2.8). Gelesen wird der Name, nicht der Vokabularcode: Ein
- * Freitext-Einheitstyp einer fremden Organisation („Löschzug",
- * „SEG Sanität") traegt dieselbe Auskunft, und der Code waere dort leer.
- *
- * Die Reihenfolge ist bedeutsam: „Zugtrupp" enthaelt „Zug", und „Fachgruppe"
- * enthaelt „Gruppe". Geprueft wird deshalb vom Spezielleren zum Allgemeinen.
- */
-const EBENEN_MUSTER: readonly (readonly [RegExp, string])[] = [
-  [/zugtrupp/i, "ZUGTRUPP"],
-  [/gro(ß|ss)verband/i, "GROSSVERBAND"],
-  [/abteilung/i, "ABTEILUNG"],
-  [/bereitschaft/i, "BEREITSCHAFT"],
-  [/staffel/i, "STAFFEL"],
-  [/trupp/i, "TRUPP"],
-  [/gruppe/i, "GRUPPE"],
-  [/\bzug\b|löschzug|loeschzug/i, "ZUG"],
-];
-
-/**
- * Leitet die taktische Ebene aus einem Einheitstyp ab.
- *
- * **Ein Vorschlag, keine Tatsache.** Was der Adapter nicht erkennt, wird
- * `UNBESTIMMT` — ZDM §2.8 fuehrt den Wert genau fuer „keine Spalte gefuellt",
- * und ein Fehlschlag an einem fremden Einheitstyp waere der falsche Umgang
- * mit einer Meldung, die trotzdem gilt.
- */
-export function ebeneAusEinheitstyp(text: string | undefined): string {
-  if (text === undefined) return "UNBESTIMMT";
-  for (const [muster, ebene] of EBENEN_MUSTER) {
-    if (muster.test(text)) return ebene;
-  }
-  return "UNBESTIMMT";
-}
+import {
+  ERNAEHRUNG,
+  FAHRERLAUBNIS,
+  GESCHLECHT,
+  KONTAKTART,
+  ORGANISATION,
+  ROLLE,
+  ZEICHENFARBE,
+} from "./wertebereiche.js";
 
 // ---------------------------------------------------------------------------
 // Texte
@@ -190,9 +108,25 @@ export function bezeichnungAus(
   bogen: Erfassungsbogen,
   tabellen: Vokabeltabellen = vokabeltabellenFuer(bogen.einheit.organisation),
 ): string {
-  const typ = vokabelText(bogen.einheit.einheitsTyp, tabellen.einheitstyp) ?? "Einheit";
+  const typ = einheitstypText(bogen, tabellen) ?? "Einheit";
   const ort = bogen.einheit.hierarchie[0]?.name;
-  return ort === undefined || ort.length === 0 ? typ : `${typ} ${ort}`;
+  const grund = ort === undefined || ort.length === 0 ? typ : `${typ} ${ort}`;
+  // Eine Einzelperson (Schema 13) ist ein Mensch mit Sonderaufgabe, keine
+  // Formation: Zwei Baufachberater desselben Ortsverbands hiessen sonst
+  // gleich, und in der Lage stuende zweimal dasselbe.
+  const person = istEinzelperson(bogen) ? bogen.personal[0] : undefined;
+  return person === undefined ? grund : `${grund} (${person.nachname})`;
+}
+
+/**
+ * Der Einheitstyp als Text — bei einer Einzelperson ersatzweise ihre erste
+ * Funktion: Der Bogen traegt dort den Funktionsnamen als Freitext, aber ein
+ * Stand, der das Feld leer liess, soll „Fachberater/in" zeigen statt „Einheit".
+ */
+function einheitstypText(bogen: Erfassungsbogen, tabellen: Vokabeltabellen): string | undefined {
+  const typ = vokabelText(bogen.einheit.einheitsTyp, tabellen.einheitstyp);
+  if (typ !== undefined || !istEinzelperson(bogen)) return typ;
+  return vokabelText(bogen.personal[0]?.funktionen[0], tabellen.funktion);
 }
 
 /**
@@ -276,7 +210,7 @@ export function uebersetzeBogen(
   const bogen = migriereBogen({ ...roh });
   const tabellen = auftrag.tabellen ?? vokabeltabellenFuer(bogen.einheit.organisation);
   const bemerkung = bemerkungAus(bogen);
-  const einheitstyp = vokabelText(bogen.einheit.einheitsTyp, tabellen.einheitstyp);
+  const einheitstyp = einheitstypText(bogen, tabellen);
 
   const einheit: Record<string, unknown> = {
     einheitId: auftrag.einheitId,
@@ -284,7 +218,9 @@ export function uebersetzeBogen(
     bezeichnung: bezeichnungAus(bogen, tabellen),
     organisation: ORGANISATION[bogen.einheit.organisation] ?? "SONSTIGE",
     hierarchie: hierarchieAus(bogen.einheit.hierarchie, tabellen),
-    ebene: ebeneAusEinheitstyp(einheitstyp),
+    // `PERSON` ist die Ebene des Zielmodells fuer die einzeln anrueckende
+    // Kraft (ZDM §2.8); der Bogen sagt es seit Schema 13 ausdruecklich.
+    ebene: istEinzelperson(bogen) ? "PERSON" : ebeneAusEinheitstyp(einheitstyp),
     staerke: staerkeDesBogens(bogen),
     personalErfassung:
       bogen.personalErfassung === PersonalErfassung.NUR_STAERKE ? "NUR_STAERKE" : "VOLLSTAENDIG",
@@ -317,29 +253,13 @@ export function uebersetzeBogen(
     }),
   );
 
-  const fahrzeuge = bogen.fahrzeuge.map((fahrzeug, i) => {
-    const nutzlast: Record<string, unknown> = {
+  const fahrzeuge = bogen.fahrzeuge.map((fahrzeug, i) =>
+    uebersetzeFahrzeug(fahrzeug, {
       fahrzeugId: auftrag.fahrzeugIds?.[i] ?? `${auftrag.einheitId}-F${String(i + 1)}`,
       einheitId: auftrag.einheitId,
-      typ: vokabelText(fahrzeug.typ, tabellen.fahrzeugtyp) ?? "Fahrzeug",
-      // Der Bogen kennt keinen Fahrzeugstatus; wer gemeldet wird, ist
-      // einsatzbereit, bis jemand anderes es sagt.
-      status: "EINSATZBEREIT",
-    };
-    if (fahrzeug.kennzeichen !== undefined) nutzlast["kennzeichen"] = fahrzeug.kennzeichen;
-    if (fahrzeug.stanKonform !== undefined) nutzlast["stanKonform"] = fahrzeug.stanKonform;
-    if (fahrzeug.aenderungen !== undefined) nutzlast["aenderungen"] = fahrzeug.aenderungen;
-    if (fahrzeug.funkrufname !== undefined) {
-      nutzlast["funkrufname"] = {
-        kennwort:
-          vokabelText(fahrzeug.funkrufname.kennwort, tabellen.funkrufKennwort) ?? "Funkrufname",
-        eigenerStandort: fahrzeug.funkrufname.eigenerStandort,
-        ...(fahrzeug.funkrufname.ort === undefined ? {} : { ort: fahrzeug.funkrufname.ort }),
-        teile: fahrzeug.funkrufname.teile,
-      };
-    }
-    return nutzlast;
-  });
+      tabellen,
+    }),
+  );
 
   const ergebnis: UebersetzterBogen = {
     einheit,
@@ -355,6 +275,64 @@ export function uebersetzeBogen(
       : { sofortbedarf: { ...bogen.sofortbedarf } }),
   };
   return ergebnis;
+}
+
+interface FahrzeugAuftrag {
+  readonly fahrzeugId: Id;
+  readonly einheitId: Id;
+  readonly tabellen: Vokabeltabellen;
+}
+
+/**
+ * Uebersetzt ein Fahrzeug des Bogens.
+ *
+ * Sitzplaetze (Schema 9) und Zeichenfarbe (Schema 13) gehen nur mit, wo der
+ * Bogen sie traegt: Ein fehlendes Feld heisst „Richtwert des Typs" bzw.
+ * „Farbe der Organisation", und das soll im Zustand auch fehlen.
+ */
+function uebersetzeFahrzeug(fahrzeug: EebFahrzeug, auftrag: FahrzeugAuftrag): Record<string, unknown> {
+  const nutzlast: Record<string, unknown> = {
+    fahrzeugId: auftrag.fahrzeugId,
+    einheitId: auftrag.einheitId,
+    typ: vokabelText(fahrzeug.typ, auftrag.tabellen.fahrzeugtyp) ?? "Fahrzeug",
+    // Der Bogen kennt keinen Fahrzeugstatus; wer gemeldet wird, ist
+    // einsatzbereit, bis jemand anderes es sagt.
+    status: "EINSATZBEREIT",
+  };
+  if (fahrzeug.kennzeichen !== undefined) nutzlast["kennzeichen"] = fahrzeug.kennzeichen;
+  if (fahrzeug.stanKonform !== undefined) nutzlast["stanKonform"] = fahrzeug.stanKonform;
+  if (fahrzeug.aenderungen !== undefined) nutzlast["aenderungen"] = fahrzeug.aenderungen;
+  if (fahrzeug.sitzplaetze !== undefined) nutzlast["sitzplaetze"] = fahrzeug.sitzplaetze;
+  if (fahrzeug.zeichenfarbe !== undefined) {
+    // Wie bei Vokabularcodes: Eine Farbe, die dieser Client nicht kennt,
+    // bleibt als Zahl stehen, statt zu verschwinden (§3.7).
+    nutzlast["zeichenfarbe"] =
+      ZEICHENFARBE[fahrzeug.zeichenfarbe] ?? `#${String(fahrzeug.zeichenfarbe)}`;
+  }
+  if (fahrzeug.funkrufname !== undefined) {
+    nutzlast["funkrufname"] = {
+      kennwort:
+        vokabelText(fahrzeug.funkrufname.kennwort, auftrag.tabellen.funkrufKennwort) ?? "Funkrufname",
+      eigenerStandort: fahrzeug.funkrufname.eigenerStandort,
+      ...(fahrzeug.funkrufname.ort === undefined ? {} : { ort: fahrzeug.funkrufname.ort }),
+      teile: fahrzeug.funkrufname.teile,
+    };
+  }
+  return nutzlast;
+}
+
+/**
+ * Ersatz fuer einen leeren Namen. Der Bogen laesst beide Felder leer, wenn
+ * eine Position gemeldet wird, aber noch niemand darauf steht (Ausbildung,
+ * „ZF" ohne Helfer); der Katalog verlangt beide (§5.5). Die Zeile bleibt
+ * sichtbar — mit Funktion und Rolle —, statt dass die Meldung daran scheitert.
+ */
+const OHNE_NAMEN = "(ohne Namen)";
+const OHNE_VORNAMEN = "–";
+
+function nameOder(name: string | undefined, ersatz: string): string {
+  const geputzt = name?.trim() ?? "";
+  return geputzt.length === 0 ? ersatz : geputzt;
 }
 
 interface PersonAuftrag {
@@ -378,8 +356,8 @@ function uebersetzePerson(person: EebPerson, auftrag: PersonAuftrag): Record<str
   const nutzlast: Record<string, unknown> = {
     personId: auftrag.personId,
     einheitId: auftrag.einheitId,
-    nachname: person.nachname,
-    vorname: person.vorname,
+    nachname: nameOder(person.nachname, OHNE_NAMEN),
+    vorname: nameOder(person.vorname, OHNE_VORNAMEN),
     rolle: ROLLE[person.staerkeRolle] ?? "MANNSCHAFT",
     funktionen: person.funktionen
       .map((f) => vokabelText(f, auftrag.tabellen.funktion))
@@ -394,21 +372,3 @@ function uebersetzePerson(person: EebPerson, auftrag: PersonAuftrag): Record<str
   };
   return nutzlast;
 }
-
-/** Die EU-Klassen des Bogens als Namen (ZDM §3.4). */
-const FAHRERLAUBNIS: Readonly<Record<number, string>> = {
-  1: "AM",
-  2: "A1",
-  3: "A2",
-  4: "A",
-  5: "B",
-  6: "BE",
-  7: "C1",
-  8: "C1E",
-  9: "C",
-  10: "CE",
-  11: "D1",
-  12: "D1E",
-  13: "D",
-  14: "DE",
-};

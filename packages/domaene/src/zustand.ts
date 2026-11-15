@@ -329,6 +329,10 @@ export interface FahrzeugZustand extends Anlage {
   readonly nutzlastText?: Feld<string>;
   readonly status?: Feld<string>;
   readonly taktischesZeichen?: Feld<KanonischerWert>;
+  /** Sitzplaetze inkl. Fahrer/in, aus dem Bogen (Schema 9). */
+  readonly sitzplaetze?: Feld<number>;
+  /** Abweichende Grundfarbe des taktischen Zeichens (`KOMMUNAL`, `GRAU`), aus dem Bogen (Schema 13). */
+  readonly zeichenfarbe?: Feld<string>;
   readonly abschnittId?: Feld<Id>;
   readonly einheitId?: Feld<Id>;
   readonly entfernt?: Feld<boolean>;

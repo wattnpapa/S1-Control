@@ -186,7 +186,10 @@ export async function liesBogen(payload: Uint8Array, kompressor: Kompressor): Pr
   // nachgebaut: Er ist dieselbe Heuristik, die der Erfassungsbogen fuer seine
   // Sammlung benutzt (`@bos/meldekopf`, `einsaetze.ts`), und zwei
   // Heuristiken ueber derselben Frage zerfielen mit der ersten Aenderung.
-  const einheitSchluessel = fingerabdruck(bogen.einheit);
+  // Das Personal geht mit: Bei einer Einzelperson (Schema 13) traegt der
+  // Name den Unterschied — zwei Fachberater desselben Ortsverbands sind zwei
+  // Reihen, keine Revision voneinander.
+  const einheitSchluessel = fingerabdruck(bogen.einheit, bogen.personal);
   return {
     bogen,
     signatur,

@@ -26,7 +26,8 @@ import { falte, type EingehendesEreignis } from "../../packages/domaene/src/fold
 import { schemata } from "../../packages/domaene/src/katalog/index.js";
 import * as K from "../../packages/domaene/src/kennzahlen.js";
 import { akteur, hlc } from "../../packages/domaene/src/pruefhilfen/ereignisbau.js";
-import { bemerkungAus, ebeneAusEinheitstyp, uebersetzeBogen } from "../../packages/domaene/src/eeb/adapter.js";
+import { bemerkungAus, uebersetzeBogen } from "../../packages/domaene/src/eeb/adapter.js";
+import { ebeneAusEinheitstyp } from "../../packages/domaene/src/eeb/ebene.js";
 
 const WURZEL = path.resolve(import.meta.dirname, "..", "..");
 const PRUEFDATEN = path.join(WURZEL, "pruefdaten", "eeb");

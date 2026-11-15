@@ -138,7 +138,7 @@ export function liesBuendel(text: string): Buendelbefund {
       const schluessel =
         typeof eintrag.einheitSchluessel === "string" && eintrag.einheitSchluessel.length > 0
           ? eintrag.einheitSchluessel
-          : fingerabdruck(bogen.einheit);
+          : fingerabdruck(bogen.einheit, bogen.personal);
       const signatur = signaturAus(eintrag.signatur);
       eintraege.push({
         meldungId: inhaltsHash(kanonischeSerialisierung(bogen as unknown as never)),

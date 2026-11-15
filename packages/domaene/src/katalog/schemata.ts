@@ -281,6 +281,14 @@ export const FahrzeugAngelegt = z.object({
   aenderungen: zText.optional(),
   nutzlastText: zText.optional(),
   status: zFahrzeugStatus,
+  /** Sitzplaetze inkl. Fahrer/in, wie im Bogen erfasst (Bogen-Schema 9). Additiv. */
+  sitzplaetze: z.number().int().min(0).optional(),
+  /**
+   * Abweichende Grundfarbe des taktischen Zeichens — `KOMMUNAL`, `GRAU` oder,
+   * was eine neuere Bogenfassung kennt (Bogen-Schema 13). Offener Bereich
+   * (§3.7): fehlt = Farbe der Organisation. Additiv.
+   */
+  zeichenfarbe: zPflichttext.optional(),
 });
 
 export const FahrzeugGeaendert = z.object({

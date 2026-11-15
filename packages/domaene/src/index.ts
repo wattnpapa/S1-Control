@@ -87,13 +87,13 @@ export {
 export {
   bemerkungAus,
   bezeichnungAus,
-  ebeneAusEinheitstyp,
   uebersetzeBogen,
   type NameJeCode,
   type UebersetzterBogen,
   type UebersetzungsAuftrag,
   type Vokabeltabellen,
 } from "./eeb/adapter.js";
+export { ebeneAusEinheitstyp } from "./eeb/ebene.js";
 export { vokabeltabellenFuer } from "./eeb/vokabeltabellen.js";
 export { teilIdsAus, vokabelkorrekturen } from "./eeb/vokabelkorrektur.js";
 

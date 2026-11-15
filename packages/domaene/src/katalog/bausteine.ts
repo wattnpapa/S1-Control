@@ -68,8 +68,9 @@ export const zMeldeQuelle = z.enum([
 export const zAuftragQuelle = z.enum(["MANUELL", "BEWEGUNG", "EEB"]);
 export const zFahrzeugStatus = z.enum(["EINSATZBEREIT", "NICHT_EINSATZBEREIT"]);
 
+/** `FUNK` ist der Funkrufname einer Person (Bogen-Schema 12), Freitext statt Rufnummer. */
 export const zKontakt = z.object({
-  art: z.enum(["MOBIL", "FESTNETZ", "EMAIL"]),
+  art: z.enum(["MOBIL", "FESTNETZ", "EMAIL", "FUNK"]),
   dienstlich: z.boolean(),
   wert: zPflichttext,
 });
