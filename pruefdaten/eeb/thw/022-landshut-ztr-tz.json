@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439680,
   "einheit": {
@@ -118,7 +118,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Mühldorf"
     }
   ],
   "fahrzeuge": [
@@ -147,5 +148,6 @@
     "gemischLiter": 0,
     "unterbringung": false,
     "ruhezeitErforderlich": true
-  }
+  },
+  "sonstiges": "Verstärkung: 1 Helfer aus OV Mühldorf."
 }

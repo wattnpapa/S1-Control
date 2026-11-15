@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439144,
   "einheit": {
@@ -82,7 +82,8 @@
           "wert": "5558057061"
         }
       ],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Oberhausen"
     },
     {
       "vorname": "Jannik",
@@ -115,7 +116,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Oberhausen"
     }
   ],
   "fahrzeuge": [
@@ -163,5 +165,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "MzKW zusätzlich über StAN-Soll dabei."
+  "sonstiges": "MzKW zusätzlich über StAN-Soll dabei. Verstärkung: 2 Helfer aus OV Oberhausen."
 }

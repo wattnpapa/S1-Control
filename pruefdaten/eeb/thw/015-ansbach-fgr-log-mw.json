@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3441052,
   "einheit": {
@@ -205,7 +205,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Schwabach"
     },
     {
       "vorname": "Simon",
@@ -220,7 +221,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Schwabach"
     },
     {
       "vorname": "Pascal",
@@ -265,7 +267,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Schwabach"
     },
     {
       "vorname": "Julian",
@@ -460,5 +463,5 @@
     "unterbringung": false,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "2 Helfer über StAN-Soll (Reserve aktiviert)."
+  "sonstiges": "2 Helfer über StAN-Soll (Reserve aktiviert). Verstärkung: 3 Helfer aus OV Schwabach."
 }

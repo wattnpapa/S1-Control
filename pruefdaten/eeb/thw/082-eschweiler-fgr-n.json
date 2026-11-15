@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442450,
   "einheit": {
@@ -177,7 +177,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Berufskraftfahrer (Beruf)"
+          "freitext": "Beruf: Berufskraftfahrer"
         }
       ]
     },

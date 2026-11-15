@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439571,
   "einheit": {
@@ -160,7 +160,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Simbach"
     },
     {
       "vorname": "Silke",
@@ -175,7 +176,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Simbach"
     },
     {
       "vorname": "Robert",
@@ -229,5 +231,6 @@
     "gemischLiter": 10,
     "unterbringung": false,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Simbach."
 }

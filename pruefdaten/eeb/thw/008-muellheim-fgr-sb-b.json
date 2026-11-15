@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440831,
   "einheit": {
@@ -91,7 +91,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Freiburg"
     },
     {
       "vorname": "Thomas",
@@ -111,7 +112,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Elektrofachkraft (Beruf)"
+          "freitext": "Beruf: Elektrofachkraft"
         }
       ]
     },
@@ -179,7 +180,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Biberach/Baden"
     },
     {
       "vorname": "Miriam",
@@ -298,5 +300,6 @@
     "gemischLiter": 10,
     "unterbringung": false,
     "ruhezeitErforderlich": true
-  }
+  },
+  "sonstiges": "Verstärkung: 1 Helfer aus OV Biberach/Baden und 1 Helfer aus OV Freiburg."
 }

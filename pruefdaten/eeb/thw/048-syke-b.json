@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440006,
   "einheit": {
@@ -85,7 +85,8 @@
           "wert": "5553140486"
         }
       ],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Achim"
     },
     {
       "vorname": "Robert",
@@ -126,7 +127,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+          "freitext": "Beruf: Gesundheits- und Krankenpfleger"
         }
       ]
     },
@@ -179,7 +180,8 @@
       "geschlecht": 1,
       "ernaehrung": 1,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Sulingen"
     },
     {
       "vorname": "Karsten",
@@ -254,5 +256,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "Anh OV (Plane) zusätzlich über StAN-Soll dabei."
+  "sonstiges": "Anh OV (Plane) zusätzlich über StAN-Soll dabei. Verstärkung: 1 Helfer aus OV Sulingen und 1 Helfer aus OV Achim."
 }

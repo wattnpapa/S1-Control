@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442219,
   "einheit": {
@@ -89,7 +89,8 @@
           "wert": "5555410906"
         }
       ],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Hann. Münden"
     },
     {
       "vorname": "Melanie",
@@ -154,7 +155,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Zimmerer (Beruf)"
+          "freitext": "Beruf: Zimmerer"
         }
       ]
     },
@@ -384,5 +385,5 @@
     "unterbringung": false,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "1 Sollplätze unbesetzt."
+  "sonstiges": "1 Sollplätze unbesetzt. Verstärkung: 1 Helfer aus OV Hann. Münden."
 }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440864,
   "einheit": {
@@ -106,7 +106,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Elektrofachkraft (Beruf)"
+          "freitext": "Beruf: Elektrofachkraft"
         }
       ]
     },
@@ -143,7 +143,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+          "freitext": "Beruf: Gesundheits- und Krankenpfleger"
         }
       ]
     },
@@ -213,7 +213,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Tischler (Beruf)"
+          "freitext": "Beruf: Tischler"
         }
       ]
     },

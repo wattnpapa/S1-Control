@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442523,
   "einheit": {
@@ -81,7 +81,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Tischler (Beruf)"
+          "freitext": "Beruf: Tischler"
         }
       ]
     },
@@ -141,7 +141,8 @@
         {
           "freitext": "Rettungssanitäter (extern)"
         }
-      ]
+      ],
+      "dienststelle": "Mannheim"
     },
     {
       "vorname": "Erik",
@@ -295,5 +296,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "1 Sollplätze unbesetzt. MzKW zusätzlich über StAN-Soll dabei."
+  "sonstiges": "1 Sollplätze unbesetzt. MzKW zusätzlich über StAN-Soll dabei. Verstärkung: 1 Helfer aus OV Mannheim."
 }

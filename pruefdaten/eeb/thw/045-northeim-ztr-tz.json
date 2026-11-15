@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440016,
   "einheit": {
@@ -79,7 +79,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Göttingen"
     },
     {
       "vorname": "Christian",
@@ -100,7 +101,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Holzminden"
     },
     {
       "vorname": "Svenja",
@@ -115,7 +117,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Holzminden"
     }
   ],
   "fahrzeuge": [
@@ -144,5 +147,6 @@
     "gemischLiter": 0,
     "unterbringung": true,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Holzminden und 1 Helfer aus OV Göttingen."
 }

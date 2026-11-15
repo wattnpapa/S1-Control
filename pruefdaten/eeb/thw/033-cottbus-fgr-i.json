@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3441230,
   "einheit": {
@@ -95,7 +95,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Fürstenwalde/Spree"
     },
     {
       "vorname": "Torben",
@@ -200,7 +201,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Fürstenwalde/Spree"
     },
     {
       "vorname": "Sven",
@@ -217,7 +219,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Elektrofachkraft (Beruf)"
+          "freitext": "Beruf: Elektrofachkraft"
         }
       ]
     },
@@ -312,5 +314,6 @@
     "gemischLiter": 0,
     "unterbringung": true,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Fürstenwalde/Spree."
 }

@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3441091,
   "einheit": {
@@ -115,7 +115,8 @@
       "geschlecht": 0,
       "ernaehrung": 1,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "St. Wendel"
     },
     {
       "vorname": "Dennis",
@@ -130,7 +131,8 @@
       "geschlecht": 0,
       "ernaehrung": 2,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "St. Wendel"
     },
     {
       "vorname": "Ulrike",
@@ -212,5 +214,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "1 Sollplätze unbesetzt."
+  "sonstiges": "1 Sollplätze unbesetzt. Verstärkung: 2 Helfer aus OV St. Wendel."
 }

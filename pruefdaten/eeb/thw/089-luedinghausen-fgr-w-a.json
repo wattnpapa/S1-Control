@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3441287,
   "einheit": {
@@ -96,7 +96,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Tischler (Beruf)"
+          "freitext": "Beruf: Tischler"
         }
       ]
     },
@@ -118,7 +118,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Berufskraftfahrer (Beruf)"
+          "freitext": "Beruf: Berufskraftfahrer"
         }
       ]
     },

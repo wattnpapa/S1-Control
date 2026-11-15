@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442043,
   "einheit": {
@@ -117,7 +117,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Tischler (Beruf)"
+          "freitext": "Beruf: Tischler"
         }
       ]
     },
@@ -152,7 +152,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Naila"
     },
     {
       "vorname": "Dirk",
@@ -167,7 +168,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Kulmbach"
     },
     {
       "vorname": "Dirk",
@@ -236,5 +238,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "1 Sollplätze unbesetzt. Anh 2t in Instandsetzung — nicht mit ausgerückt."
+  "sonstiges": "1 Sollplätze unbesetzt. Anh 2t in Instandsetzung — nicht mit ausgerückt. Verstärkung: 1 Helfer aus OV Naila und 1 Helfer aus OV Kulmbach."
 }

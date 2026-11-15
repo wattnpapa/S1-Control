@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440704,
   "einheit": {
@@ -146,7 +146,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Herzberg"
     },
     {
       "vorname": "Erik",
@@ -191,7 +192,8 @@
       "geschlecht": 0,
       "ernaehrung": 1,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Herzberg"
     },
     {
       "vorname": "Pascal",
@@ -304,5 +306,6 @@
     "gemischLiter": 10,
     "unterbringung": false,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Herzberg."
 }

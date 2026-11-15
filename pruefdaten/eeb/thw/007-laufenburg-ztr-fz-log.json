@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439122,
   "einheit": {
@@ -82,7 +82,8 @@
           "wert": "5557940840"
         }
       ],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Singen"
     },
     {
       "vorname": "Kerstin",
@@ -100,7 +101,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Singen"
     },
     {
       "vorname": "Jonas",
@@ -115,7 +117,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Singen"
     }
   ],
   "fahrzeuge": [
@@ -144,5 +147,6 @@
     "gemischLiter": 0,
     "unterbringung": true,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 3 Helfer aus OV Singen."
 }

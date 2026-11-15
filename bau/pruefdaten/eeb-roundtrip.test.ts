@@ -1,5 +1,5 @@
 /**
- * Der Adapter `eeb → EinheitGemeldet` gegen **alle 443 Beispielbögen** (M1.5).
+ * Der Adapter `eeb → EinheitGemeldet` gegen **alle Beispielbögen** (M1.5).
  *
  * Der Roundtrip ist nicht „Bogen rein, Bogen raus" — das Zielmodell ist reicher
  * und ärmer zugleich als der Bogen. Geprüft wird dreierlei:
@@ -63,27 +63,33 @@ function bau(typ: string, nutzlast: unknown): EingehendesEreignis {
 }
 
 describe("Die Prüfdaten sind die, die die DoD nennt", () => {
-  it("enthält 443 Bögen", () => {
-    expect(ALLE).toHaveLength(443);
+  it("enthält die Bögen aus pruefdaten/eeb/HERKUNFT.md", () => {
+    expect(ALLE).toHaveLength(612);
   });
 
-  it("deckt alle drei Schemaversionen ab, die im Umlauf sind (DoD M1.1)", () => {
+  it("deckt die Schemaversionen ab, die im Umlauf sind (DoD M1.1)", () => {
     const versionen = new Map<number, number>();
     for (const { bogen } of ALLE) {
       versionen.set(bogen.schemaVersion, (versionen.get(bogen.schemaVersion) ?? 0) + 1);
     }
-    expect([...versionen.keys()].sort()).toEqual([6, 7, 8]);
+    // Schema 11 und 13 kommen in den Beispielen nicht vor: Die App schreibt
+    // die kleinste tragende Version, und kein Beispiel nutzt Uhrzeit zum
+    // Zeitraum oder Zeichenfarbe. Diese beiden misst `eeb/scanner.test.ts`.
+    expect([...versionen.keys()].sort((a, b) => a - b)).toEqual([6, 7, 8, 9, 10, 12]);
     // Ohne diese Zahlen wäre „alle Schemaversionen" eine Behauptung: Ein
     // einziger Bogen der Version 6 erfüllte den Satz und prüfte die
     // Upcaster-Kette an einem Datensatz statt an hundertneunzehn.
     expect(versionen.get(6)).toBeGreaterThan(100);
     expect(versionen.get(7)).toBeGreaterThan(10);
-    expect(versionen.get(8)).toBeGreaterThan(300);
+    expect(versionen.get(8)).toBeGreaterThan(200);
+    expect(versionen.get(9)).toBeGreaterThan(40);
+    expect(versionen.get(10)).toBeGreaterThan(100);
+    expect(versionen.get(12)).toBeGreaterThan(100);
   });
 });
 
 describe("Jeder Bogen ergibt gültige Nutzlasten (§3.7)", () => {
-  it("besteht für alle 443 Bögen die zod-Schemata des Katalogs", () => {
+  it("besteht für alle Bögen die zod-Schemata des Katalogs", () => {
     const fehler: string[] = [];
     for (const { datei, bogen } of ALLE) {
       const uebersetzt = uebersetzeBogen(bogen, { einheitId: "U1", abschnittId: "A" });
@@ -260,7 +266,7 @@ describe("Die Feldzuordnung im Einzelnen", () => {
     expect(uebung).toBeDefined();
     expect(bemerkungAus(uebung as Erfassungsbogen)).toContain("ÜBUNG (Bogen)");
 
-    // **Alle 443 Beispielbögen tragen `uebung: true`** — sie sind Beispiele,
+    // **Alle Beispielbögen tragen `uebung: true`** — sie sind Beispiele,
     // keine Einsatzdaten. Der Gegenfall wird deshalb von Hand gebaut; ihn aus
     // den Prüfdaten zu suchen ergäbe `undefined` und eine Prüfung, die nichts
     // prüft.

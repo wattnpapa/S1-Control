@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442118,
   "einheit": {
@@ -192,7 +192,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Gesundheits- und Krankenpfleger (Beruf)"
+          "freitext": "Beruf: Gesundheits- und Krankenpfleger"
         }
       ]
     },

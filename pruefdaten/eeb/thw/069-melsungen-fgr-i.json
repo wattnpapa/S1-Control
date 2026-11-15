@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442280,
   "einheit": {
@@ -180,7 +180,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Berufskraftfahrer (Beruf)"
+          "freitext": "Beruf: Berufskraftfahrer"
         }
       ]
     },
@@ -232,7 +232,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Elektrofachkraft (Beruf)"
+          "freitext": "Beruf: Elektrofachkraft"
         }
       ]
     },

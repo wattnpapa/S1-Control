@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440963,
   "einheit": {
@@ -94,7 +94,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Hameln"
     },
     {
       "vorname": "Lisa",
@@ -130,7 +131,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Stadthagen"
     },
     {
       "vorname": "Joachim",
@@ -236,5 +238,6 @@
     "gemischLiter": 0,
     "unterbringung": false,
     "ruhezeitErforderlich": true
-  }
+  },
+  "sonstiges": "Verstärkung: 1 Helfer aus OV Hameln und 1 Helfer aus OV Stadthagen."
 }

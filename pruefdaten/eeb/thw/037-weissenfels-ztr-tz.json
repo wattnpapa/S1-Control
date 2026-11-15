@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440758,
   "einheit": {
@@ -109,7 +109,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Naumburg"
     }
   ],
   "fahrzeuge": [
@@ -157,5 +158,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "MTW OV zusätzlich über StAN-Soll dabei."
+  "sonstiges": "MTW OV zusätzlich über StAN-Soll dabei. Verstärkung: 1 Helfer aus OV Naumburg."
 }

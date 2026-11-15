@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439851,
   "einheit": {
@@ -76,7 +76,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Uelzen"
     },
     {
       "vorname": "Ulrike",
@@ -160,5 +161,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "MzKW zusätzlich über StAN-Soll dabei."
+  "sonstiges": "MzKW zusätzlich über StAN-Soll dabei. Verstärkung: 1 Helfer aus OV Uelzen."
 }

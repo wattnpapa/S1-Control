@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440817,
   "einheit": {
@@ -63,7 +63,7 @@
       ],
       "zusatzqualifikationen": [
         {
-          "freitext": "Elektrofachkraft (Beruf)"
+          "freitext": "Beruf: Elektrofachkraft"
         }
       ]
     },
@@ -91,7 +91,7 @@
       ],
       "zusatzqualifikationen": [
         {
-          "freitext": "Zimmerer (Beruf)"
+          "freitext": "Beruf: Zimmerer"
         }
       ]
     },
@@ -115,7 +115,8 @@
         {
           "freitext": "Motorsägenschein AS Baum I (extern)"
         }
-      ]
+      ],
+      "dienststelle": "Bogen"
     },
     {
       "vorname": "Anja",
@@ -184,7 +185,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Deggendorf"
     },
     {
       "vorname": "Stefan",
@@ -199,7 +201,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Deggendorf"
     },
     {
       "vorname": "Karsten",
@@ -250,5 +253,6 @@
     "gemischLiter": 10,
     "unterbringung": false,
     "ruhezeitErforderlich": true
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Deggendorf und 1 Helfer aus OV Bogen."
 }

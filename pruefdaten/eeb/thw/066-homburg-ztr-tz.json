@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442485,
   "einheit": {
@@ -81,7 +81,7 @@
       "kontakte": [],
       "zusatzqualifikationen": [
         {
-          "freitext": "Zimmerer (Beruf)"
+          "freitext": "Beruf: Zimmerer"
         }
       ]
     },
@@ -116,7 +116,8 @@
       "geschlecht": 0,
       "ernaehrung": 1,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "St. Ingbert"
     }
   ],
   "fahrzeuge": [
@@ -145,5 +146,6 @@
     "gemischLiter": 0,
     "unterbringung": false,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 1 Helfer aus OV St. Ingbert."
 }

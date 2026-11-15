@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3440775,
   "einheit": {
@@ -210,7 +210,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Hauenstein"
     },
     {
       "vorname": "Bernd",
@@ -262,5 +263,5 @@
     "unterbringung": true,
     "ruhezeitErforderlich": false
   },
-  "sonstiges": "1 Sollplätze unbesetzt."
+  "sonstiges": "1 Sollplätze unbesetzt. Verstärkung: 1 Helfer aus OV Hauenstein."
 }

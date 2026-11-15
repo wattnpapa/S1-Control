@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3439458,
   "einheit": {
@@ -83,7 +83,8 @@
       "geschlecht": 1,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Sonthofen"
     },
     {
       "vorname": "Kerstin",
@@ -116,7 +117,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Sonthofen"
     },
     {
       "vorname": "Frank",
@@ -167,7 +169,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Sonthofen"
     }
   ],
   "fahrzeuge": [
@@ -203,5 +206,6 @@
     "gemischLiter": 0,
     "unterbringung": true,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 3 Helfer aus OV Sonthofen."
 }

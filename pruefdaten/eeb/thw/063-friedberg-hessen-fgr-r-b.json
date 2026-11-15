@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 8,
+  "schemaVersion": 10,
   "uebung": true,
   "stand": 3442143,
   "einheit": {
@@ -66,7 +66,7 @@
       ],
       "zusatzqualifikationen": [
         {
-          "freitext": "Zimmerer (Beruf)"
+          "freitext": "Beruf: Zimmerer"
         }
       ]
     },
@@ -107,7 +107,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Idstein"
     },
     {
       "vorname": "Vanessa",
@@ -155,7 +156,8 @@
       "geschlecht": 0,
       "ernaehrung": 0,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Idstein"
     },
     {
       "vorname": "Uwe",
@@ -185,7 +187,8 @@
       "geschlecht": 0,
       "ernaehrung": 2,
       "kontakte": [],
-      "zusatzqualifikationen": []
+      "zusatzqualifikationen": [],
+      "dienststelle": "Hofheim"
     },
     {
       "vorname": "Maren",
@@ -260,5 +263,6 @@
     "gemischLiter": 10,
     "unterbringung": true,
     "ruhezeitErforderlich": false
-  }
+  },
+  "sonstiges": "Verstärkung: 2 Helfer aus OV Idstein und 1 Helfer aus OV Hofheim."
 }
