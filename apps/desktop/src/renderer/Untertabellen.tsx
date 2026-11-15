@@ -27,23 +27,15 @@ import { AuftragErfassung, FahrzeugErfassung, PersonErfassung } from "./Untertab
 import { fahrzeugWiederherstellen, personWiederherstellen } from "../kontrakt/einheitsteile.js";
 import type { Entwurf } from "../kontrakt/index.js";
 import { useEinheitsteilSchreiben } from "./einheitsteilSchreiben.js";
+import { fahrzeugText } from "./fahrzeugzeile.js";
 import { useLaden } from "./laden.js";
 
 export interface UntertabellenEigenschaften {
   readonly einheitId: string;
 }
 
-type Fahrzeug = Untertabelle["fahrzeuge"][number];
 type Auftrag = Untertabelle["auftraege"][number];
 
-function fahrzeugText(fahrzeug: Fahrzeug): string {
-  return [
-    fahrzeug.typ,
-    fahrzeug.bezeichnung === "" ? "" : ` — ${fahrzeug.bezeichnung}`,
-    fahrzeug.kennzeichen === undefined ? "" : ` (${fahrzeug.kennzeichen})`,
-    fahrzeug.funkrufname === undefined ? "" : ` · ${fahrzeug.funkrufname}`,
-  ].join("");
-}
 
 function auftragZeit(auftrag: Auftrag): string {
   if (auftrag.von === undefined && auftrag.bis === undefined) return "";

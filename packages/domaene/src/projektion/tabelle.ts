@@ -648,6 +648,15 @@ export interface Untertabelle {
      * einzeln braucht, greift auf den Zustand, nicht auf diese Projektion.
      */
     readonly funkrufname?: string;
+    /** Sitzplätze inkl. Fahrer/in, wenn der Bogen sie nennt (Schema 9). */
+    readonly sitzplaetze?: number;
+    /**
+     * Abweichende Grundfarbe des taktischen Zeichens (`KOMMUNAL`, `GRAU`,
+     * Schema 13): Gerät, das die Einheit führt, das ihr aber nicht gehört —
+     * der Anhänger der Gemeinde, der Abrollbehälter des Havariekommandos.
+     * Fehlt sie, gilt die Farbe der Organisation.
+     */
+    readonly zeichenfarbe?: string;
     readonly entfernt: boolean;
   }[];
   readonly personen: readonly {
@@ -711,6 +720,12 @@ export function untertabelle(zustand: Zustand, einheitId: Id): Untertabelle {
       ...(funkrufnameText(fahrzeug.funkrufname?.wert) === undefined
         ? {}
         : { funkrufname: funkrufnameText(fahrzeug.funkrufname?.wert) as string }),
+      ...(typeof fahrzeug.sitzplaetze?.wert === "number" && fahrzeug.sitzplaetze.wert > 0
+        ? { sitzplaetze: fahrzeug.sitzplaetze.wert }
+        : {}),
+      ...(textOptional(fahrzeug.zeichenfarbe?.wert) === undefined
+        ? {}
+        : { zeichenfarbe: textOptional(fahrzeug.zeichenfarbe?.wert) as string }),
       entfernt: fahrzeug.entfernt?.wert === true,
     }));
 

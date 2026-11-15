@@ -428,6 +428,10 @@ Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.
 
 **Gut zu wissen:** Derselbe Bogen zweimal eingelesen ergibt eine Meldung, keine zwei — der Inhalt des Bogens entscheidet, nicht der Zeitpunkt des Einlesens.
 
+**Einzelpersonen:** Ein Bogen kann statt einer Einheit eine einzelne Person melden, etwa eine Fachberaterin oder einen Technischen Berater. Sie kommt als eigene Zeile mit der Ebene „Person“ und ihrem Namen in der Bezeichnung an. Zwei Personen mit derselben Funktion aus demselben Ortsverband bleiben zwei Zeilen.
+
+**Fahrzeuge aus dem Bogen:** Nennt der Bogen Sitzplätze oder eine abweichende Farbe des taktischen Zeichens, stehen sie in der Fahrzeugzeile der Einheit, zum Beispiel „Anh Ölwehr (WHV-HK 12) · Zeichen orange (kommunal)“. Orange oder grau heißt: Das Gerät gehört nicht der Einheit, die es mitführt.
+
 **Kürzel:** Strg+Q · Strg+F
 
 ### Anforderungen

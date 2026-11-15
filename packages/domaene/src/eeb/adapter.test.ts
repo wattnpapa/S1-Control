@@ -13,6 +13,7 @@ import { falte, type EingehendesEreignis } from "../fold.js";
 import { schemata } from "../katalog/index.js";
 import { akteur, hlc } from "../pruefhilfen/ereignisbau.js";
 import { pruefbogen } from "../pruefhilfen/pruefbogen.js";
+import { untertabelle } from "../projektion/tabelle.js";
 import { bezeichnungAus, uebersetzeBogen } from "./adapter.js";
 
 const AUFTRAG = { einheitId: "U1", abschnittId: "A" } as const;
@@ -109,6 +110,22 @@ describe("Zeichenfarbe und Sitzplaetze am Fahrzeug (Schema 9 und 13)", () => {
     expect(zustand.fahrzeuge["U1-F1"]?.zeichenfarbe?.wert).toBe("GRAU");
     expect(zustand.fahrzeuge["U1-F1"]?.sitzplaetze?.wert).toBe(3);
     expect(zustand.fahrzeuge["U1-F2"]?.zeichenfarbe).toBeUndefined();
+  });
+
+  it("erscheint in der Untertabelle der Einheit, wo das Fahrzeug gelesen wird", () => {
+    const bogen = pruefbogen();
+    bogen.fahrzeuge[0]!.zeichenfarbe = Zeichenfarbe.KOMMUNAL;
+    bogen.fahrzeuge[0]!.sitzplaetze = 7;
+    const uebersetzt = uebersetzeBogen(bogen, AUFTRAG);
+    const zustand = falte([
+      bau("AbschnittAngelegt", { abschnittId: "A", name: "Meldekopf", typ: "MELDEKOPF", reihenfolge: 1 }),
+      bau("EinheitGemeldet", uebersetzt.einheit),
+      ...uebersetzt.fahrzeuge.map((f) => bau("FahrzeugAngelegt", f)),
+    ]);
+    const [erstes, zweites] = untertabelle(zustand, "U1").fahrzeuge;
+    expect(erstes).toMatchObject({ zeichenfarbe: "KOMMUNAL", sitzplaetze: 7 });
+    expect(zweites).not.toHaveProperty("zeichenfarbe");
+    expect(zweites).not.toHaveProperty("sitzplaetze");
   });
 });
 
