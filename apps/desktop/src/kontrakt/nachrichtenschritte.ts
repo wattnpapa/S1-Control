@@ -39,6 +39,10 @@ export interface Nachrichtenanlage {
   readonly funktion?: string;
   readonly antwortAuf?: string;
   readonly weitergeleitetVon?: string;
+  /** Additiv (N2, §5 „Eingang von außen"): die Gegenstelle draußen, beim Aufnehmen durch die FmZ. */
+  readonly gegenstelle?: string;
+  /** Additiv (N2): der Aufnahmevermerk der FmZ (Feld 1 und 2) — Mittel, Zeit, Handzeichen. */
+  readonly aufnahme?: { readonly mittel: string; readonly zeitpunkt: string; readonly handzeichen: string };
 }
 
 /** Leere optionale Texte fallen weg: Ein leeres Feld ist auf dem Vordruck kein Wert. */

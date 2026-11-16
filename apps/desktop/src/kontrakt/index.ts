@@ -292,6 +292,13 @@ export const zEinsatzstammdaten = z.object({
   ort: z.string().optional(),
   beginn: z.string(),
   schichtmodell: z.string(),
+  /**
+   * Additiv (KONZEPT-NACHRICHTEN.md §5, Entscheidung 8): die Parameter des
+   * Nachrichtenwegs, wie sie im Zustand stehen — fehlen, solange niemand sie
+   * gesetzt hat; dann gilt die Vorbelegung (nein, 20 Minuten).
+   */
+  sichtungAuchAusgang: z.boolean().optional(),
+  fmzSchwelleMinuten: z.number().optional(),
 });
 export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
 
@@ -486,6 +493,20 @@ export const zEntwurf = z.object({
   vorwertPruefen: z.boolean().optional(),
   korrekturVon: z.string().optional(),
   schemaVersion: z.number().int().min(1).optional(),
+  /**
+   * Additiv (KONZEPT-NACHRICHTEN.md §5, Schnitt N2): die Vermerke, die beim
+   * Aufnehmen eines Eingangs oder beim Aufgeben einer Gesprächsnotiz in
+   * **einem** Zug mitgeschrieben werden — die Nachweisungsnummer der FmZ und
+   * die Sichtung des Ersatzsichters. Der Worker plant sie als Folgeschritte
+   * (`schreibfolgen.ts`) und prüft jeden Wert gegen die Schemata der Domäne;
+   * ins Protokoll geht dieses Feld selbst nicht.
+   */
+  nachrichtenfolge: z
+    .object({
+      nachweis: z.unknown().optional(),
+      sichtung: z.unknown().optional(),
+    })
+    .optional(),
 });
 export type Entwurf = z.infer<typeof zEntwurf>;
 
@@ -783,6 +804,9 @@ export const zRuf = z.discriminatedUnion("art", [
       // Der Funkplan (KONZEPT-FUNKPLAN.md §7, additiv): A4 hoch für den
       // Platz der Sprechfunker, mit leeren Zeilen zum Nachtragen.
       "funkplan",
+      // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7, additiv): A4 hoch, eine
+      // Zeile je Nachricht nach Nummer — das Technische Betriebsbuch.
+      "nachweisung",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
@@ -1347,6 +1371,16 @@ export interface Sammeluebernahme {
 export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt {
   readonly jetzt: string;
   readonly anschriften: readonly string[];
+  /**
+   * Additiv (Schnitt N2, §6 „Papier-Rückfall"): die Vorbelegung der
+   * Nachweisungsnummer, höchste bekannte plus eins (Entscheidung 1: Eingang
+   * und Ausgang gemeinsam).
+   */
+  readonly naechsteNummer?: number;
+  /** Additiv (N2, §9): die vergebenen Nummern — die Maske warnt vor einer doppelten, sie sperrt nicht. */
+  readonly vergebeneNummern?: readonly number[];
+  /** Additiv (N2, §6): die Zahlen hinter den Chips des Posteingangs, für die Stellen der Anfrage. */
+  readonly zaehlung?: Readonly<Record<"NEU" | "GELESEN" | "ERLEDIGT", number>>;
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {
