@@ -21,6 +21,7 @@ import {
   einsatzKennung,
   pruefeManifest,
 } from "@s1/domaene";
+import { leererNachrichtenvordruckPdf } from "@s1/ausgaben";
 import {
   EINSATZ_UNTERORDNER,
   Einsatzablage,
@@ -32,6 +33,7 @@ import {
 } from "@s1/speicher";
 
 import { zeigeAusgabe, type Schreibtisch } from "./ausgabezeiger.js";
+import { LEERER_VORDRUCK_DATEI, automatikdruckAus, druckfelder, probedruck, type Druckausgang } from "./druckausgang.js";
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
 import { EINSATZ_DOPPELT, gibtEsDenEinsatz, listeneintrag, ordneEinsaetze } from "./einsatzliste.js";
 import { holePaket, type Netzholer } from "./programmbezug.js";
@@ -59,6 +61,7 @@ import type {
 } from "../kontrakt/index.js";
 import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
 import type { Seitenausgabe } from "../worker/aktendienst.js";
+import { dateimarke } from "../worker/dateimarke.js";
 
 /**
  * Was die Vermittlung ueber Fenster wissen muss — und mehr nicht (M3.5).
@@ -129,6 +132,12 @@ export interface VermittlungOptionen {
    * der Renderer blendet die Knöpfe aus.
    */
   readonly schreibtisch?: Schreibtisch;
+  /**
+   * Additiv (N3, Entscheidung 7): Drucker, Druckerliste und Ordnerdialog.
+   * Nur die Desktop-Schale hat ihn; fehlt er, bietet der Automatikdruck nur
+   * das Verzeichnis an, und `umgebung` sagt es dem Renderer.
+   */
+  readonly druckausgang?: Druckausgang;
   readonly dateisystem: Dateisystem;
   /** Wo `einstellungen.json` liegt — im Profil des Benutzers. */
   readonly einstellungsdatei: string;
@@ -320,6 +329,36 @@ export class Vermittlung {
       case "monitorSchliessen":
         this.#fenstersteuerung().monitorSchliessen();
         return null;
+      // Schnitt N3 (§7, Entscheidung 7).
+      case "nachrichtVordruckErzeugen":
+        return this.#erzeugeVordruck(ruf);
+      case "druckerAuflisten":
+        return this.#druckausgang().drucker();
+      case "ordnerWaehlen":
+        return (await this.#druckausgang().ordnerWaehlen(ruf.titel ?? "Verzeichnis wählen")) ?? null;
+      case "probedruck":
+        return probedruck(ruf.ziel, { dateisystem: this.#o.dateisystem, druckausgang: this.#o.druckausgang, marke: dateimarke(new Date()) });
+    }
+  }
+
+  /** Der Vordruck einer Nachricht (§7): Der Worker zeichnet und schreibt, hier wird nur protokolliert. */
+  async #erzeugeVordruck(ruf: Extract<Ruf, { art: "nachrichtVordruckErzeugen" }>): Promise<Ausgabeergebnis> {
+    const ergebnis = (await this.#o.hof.frage(ruf.akteId, { art: "nachrichtVordruckErzeugen", ruf })) as Ausgabeergebnis;
+    this.#o.protokolliere("info", `Ausgabe erzeugt: ${ergebnis.pfad} (${String(ergebnis.bytes)} Bytes)`);
+    return ergebnis;
+  }
+
+  #druckausgang(): Druckausgang {
+    const ausgang = this.#o.druckausgang;
+    if (ausgang === undefined) throw new Error("Drucker und Ordnerwahl gibt es nur in der Desktop-App.");
+    return ausgang;
+  }
+
+  /** Das Ziel des Automatikdrucks an jede offene Akte — nach dem Ändern der Einstellungen. */
+  async #automatikdruckVerteilen(platz: Arbeitsplatz): Promise<void> {
+    const einstellung = automatikdruckAus(platz, this.#o.druckausgang !== undefined);
+    for (const akteId of this.#ordnerJeAkte.keys()) {
+      await this.#o.hof.frage(akteId, { art: "automatikdruckSetzen", ...(einstellung === undefined ? {} : { einstellung }) });
     }
   }
 
@@ -396,6 +435,20 @@ export class Vermittlung {
       dateiname,
       bytes,
     })) as { pfad: string };
+    this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(bytes.length)} Bytes)`);
+    if (seite === "papier") return { pfad, bytes: bytes.length, weitere: [await this.#leererVordruck(ruf.akteId)] };
+    return { pfad, bytes: bytes.length };
+  }
+
+  /**
+   * Der leere Nachrichtenvordruck neben dem Papier-Vordruck (§7,
+   * Entscheidung 9): ein eigenes PDF aus jsPDF, weil der Papier-Vordruck HTML
+   * ist und der Vordruck seine Geometrie in Millimetern braucht (ADR-008).
+   * Er hängt an keinem Datenstand; derselbe Name überschreibt sich.
+   */
+  async #leererVordruck(akteId: string): Promise<{ pfad: string; bytes: number }> {
+    const bytes = leererNachrichtenvordruckPdf();
+    const { pfad } = (await this.#o.hof.frage(akteId, { art: "ausgabeSchreiben", dateiname: LEERER_VORDRUCK_DATEI, bytes })) as { pfad: string };
     this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(bytes.length)} Bytes)`);
     return { pfad, bytes: bytes.length };
   }
@@ -529,6 +582,8 @@ export class Vermittlung {
       rechnername: this.#o.rechnername,
       clientId: platz.clientId,
       dateienZeigen: this.#o.schreibtisch !== undefined,
+      druckerDrucken: this.#o.druckausgang !== undefined,
+      ordnerWaehlen: this.#o.druckausgang !== undefined,
     };
   }
 
@@ -544,6 +599,7 @@ export class Vermittlung {
       ...(platz.handzeichen === undefined ? {} : { handzeichen: platz.handzeichen }),
       ...(platz.stellenJeEinsatz === undefined ? {} : { stellenJeEinsatz: platz.stellenJeEinsatz }),
       ...(platz.tonBeiBlitz === undefined ? {} : { tonBeiBlitz: platz.tonBeiBlitz }),
+      ...druckfelder(platz),
     };
   }
 
@@ -658,6 +714,8 @@ export class Vermittlung {
     };
     await schreibeArbeitsplatz(this.#o.einstellungsdatei, gemerkt);
     this.#arbeitsplatz = gemerkt;
+    // N3: Ein geändertes Ziel gilt sofort auch in den offenen Einsätzen.
+    await this.#automatikdruckVerteilen(gemerkt);
     this.#o.protokolliere("info", `Einstellungen geändert: Share ${neu.sharePfad}`);
     return monitor === undefined ? neu : { ...neu, monitor };
   }
@@ -788,6 +846,9 @@ export class Vermittlung {
       // Vor dem Öffnen: Dann trägt schon das erste volle Lagebild die Sitzung,
       // und das Fenster fragt nicht ein zweites Mal.
       if (sitzung !== undefined) await this.#o.hof.frage(akteId, { art: "stellenSetzen", ...sitzung });
+      // N3: das Ziel des Automatikdrucks vor dem Öffnen; die Grundlinie zieht der Worker nach der Wiederaufnahme.
+      const automatik = automatikdruckAus(platz, this.#o.druckausgang !== undefined);
+      if (automatik !== undefined) await this.#o.hof.frage(akteId, { art: "automatikdruckSetzen", einstellung: automatik });
       await this.#o.hof.frage(akteId, { art: "oeffne" });
     } catch (fehler) {
       // Ein Worker, der nicht oeffnen konnte, bleibt sonst als Karteileiche

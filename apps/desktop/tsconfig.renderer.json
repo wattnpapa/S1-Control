@@ -16,5 +16,7 @@
     "rootDir": "src/renderer"
   },
   "include": ["src/renderer/**/*.ts", "src/renderer/**/*.tsx", "src/renderer/fleetmapping/*.json"],
-  "references": [{ "path": "./tsconfig.kontrakt.json" }, { "path": "../../packages/domaene" }]
+  // `@s1/ausgaben` nur für den Teileinstieg `@s1/ausgaben/vordruck`, den die
+  // Vorschau des Nachrichtenvordrucks per `import()` nachlädt (Entscheidung 4).
+  "references": [{ "path": "./tsconfig.kontrakt.json" }, { "path": "../../packages/domaene" }, { "path": "../../packages/ausgaben" }]
 }

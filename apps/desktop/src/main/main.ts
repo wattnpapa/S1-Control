@@ -28,6 +28,8 @@ import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof } from "./arbeiterhof.js";
 import { elektronDrucker } from "./drucker.js";
+import { druckauftraegeAnnehmen } from "./druckausgang.js";
+import { elektronDruckausgang } from "./elektronDruckausgang.js";
 import { elektronSchreibtisch } from "./elektronSchreibtisch.js";
 import { Protokoll } from "./protokoll.js";
 import { knotenNetzholer } from "./netzholer.js";
@@ -77,13 +79,19 @@ function starte(): void {
   const protokoll = new Protokoll(path.join(app.getPath("logs"), "s1-control.log"));
   const fenster = new Set<BrowserWindow>();
 
+  const anFenster = (mitteilung: Mitteilung): void => {
+    for (const f of fenster) {
+      if (!f.isDestroyed()) f.webContents.send(KANAL_MITTEILUNG, mitteilung);
+    }
+  };
+  // N3 (Entscheidung 7): Drucker, Druckerliste und Ordnerdialog; die
+  // Druckaufträge des Automatikdrucks kommen aus den Workern hierher.
+  const druckausgang = elektronDruckausgang();
+  const druckauftrag = druckauftraegeAnnehmen(druckausgang, anFenster, (stufe, text) => protokoll.schreibe(stufe, text));
   const hof = new Arbeiterhof({
     fabrik: knotenArbeiterFabrik(path.join(hierher, "akte-worker.mjs")),
-    sende: (mitteilung: Mitteilung) => {
-      for (const f of fenster) {
-        if (!f.isDestroyed()) f.webContents.send(KANAL_MITTEILUNG, mitteilung);
-      }
-    },
+    sende: anFenster,
+    drucke: (auftrag) => void druckauftrag(auftrag),
   });
 
   // Der Staerke-Monitor ist ein **zweites** Fenster auf dieselbe Anwendung
@@ -150,6 +158,7 @@ function starte(): void {
     fenstersteuerung,
     drucker: elektronDrucker(),
     schreibtisch: elektronSchreibtisch(),
+    druckausgang,
     dateisystem: knotenDateisystem(),
     einstellungsdatei: path.join(app.getPath("userData"), "einstellungen.json"),
     spiegelwurzel: path.join(app.getPath("userData"), "spiegel"),

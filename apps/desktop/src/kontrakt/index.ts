@@ -105,6 +105,22 @@ export const MONITOR_ANSICHTEN = [
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 
+/**
+ * Das Ziel des Automatikdrucks (KONZEPT-NACHRICHTEN.md Entscheidung 7): ein
+ * festes Verzeichnis, in das die PDFs fallen, oder ein fest eingestellter
+ * Drucker (nur Desktop-Schale). Großzügig geprüft: Ein zu langer Pfad soll
+ * nicht die ganzen Einstellungen kosten.
+ */
+export const zAutomatikdruckziel = z.discriminatedUnion("ziel", [
+  z.object({ ziel: z.literal("verzeichnis"), pfad: z.string().max(2000) }),
+  z.object({ ziel: z.literal("drucker"), name: z.string().max(500) }),
+]);
+export type Automatikdruckziel = z.infer<typeof zAutomatikdruckziel>;
+
+/** Das Blatt des Vordrucks je Nachricht (§7): A5 hoch oder zwei auf A4 quer. */
+export const zVordruckBlatt = z.enum(["a5", "a4quer"]);
+export type VordruckBlatt = z.infer<typeof zVordruckBlatt>;
+
 export const zEinstellungen = z.object({
   /** Wurzel des Shares, unterhalb derer `einsaetze/` liegt. */
   sharePfad: z.string(),
@@ -165,6 +181,21 @@ export const zEinstellungen = z.object({
   stellenJeEinsatz: z.record(z.string(), z.array(z.string().max(80)).max(20)).optional(),
   /** Additiv (Entscheidung 6): Ton bei einer Blitz-Nachricht; fehlt = an. */
   tonBeiBlitz: z.boolean().optional(),
+  /** Additiv (N3, §7): das Blatt des Vordrucks je Nachricht; fehlt = A5. */
+  vordruckBlatt: zVordruckBlatt.optional(),
+  /**
+   * Additiv (N3, Entscheidung 4): ob die Vorschau des Vordrucks aufgeklappt
+   * ist, je Ort gemerkt. Fehlt = aufgeklappt in der Ansicht, zugeklappt in
+   * der Maske — die Maske ist selbst der Vordruck, die Ansicht zeigt ihn.
+   */
+  vorschau: z.object({ maske: z.boolean().optional(), ansicht: z.boolean().optional() }).optional(),
+  /**
+   * Additiv (N3, Entscheidung 7): der Automatikdruck jeder Nachricht, die für
+   * eine Stelle der Sitzung eintrifft. Ohne Ziel oder mit `automatikdruckAn`
+   * nicht `true` ist er aus; das Ziel bleibt gemerkt, wenn er aus ist.
+   */
+  automatikdruck: zAutomatikdruckziel.optional(),
+  automatikdruckAn: z.boolean().optional(),
 });
 export type Einstellungen = z.infer<typeof zEinstellungen>;
 
@@ -190,6 +221,13 @@ export const zUmgebung = z.object({
    * es keine Anmeldung — Desktop und Web-Schale im Netz der Führungsstelle.
    */
   anmeldung: z.boolean().optional(),
+  /**
+   * Additiv (N3, Entscheidung 7): ob diese Schale ein PDF an einen Drucker
+   * geben und einen Ordner per Dialog wählen kann. Nur die Desktop-Schale;
+   * die Web-Schale bietet für den Automatikdruck nur das Verzeichnis an.
+   */
+  druckerDrucken: z.boolean().optional(),
+  ordnerWaehlen: z.boolean().optional(),
 });
 export type Umgebung = z.infer<typeof zUmgebung>;
 
@@ -867,6 +905,14 @@ export const zRuf = z.discriminatedUnion("art", [
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),
+  // Schnitt N3 (KONZEPT-NACHRICHTEN.md §7, Entscheidung 7, additiv): der
+  // Vordruck je Nachricht als PDF in `ausgaben\nachrichten`; die Drucker
+  // dieses Rechners und die Ordnerwahl (nur Desktop); der Probedruck des
+  // leeren Vordrucks an ein Ziel des Automatikdrucks.
+  z.object({ art: z.literal("nachrichtVordruckErzeugen"), akteId: zAkteId, nachrichtId: zText, blatt: zVordruckBlatt }),
+  z.object({ art: z.literal("druckerAuflisten") }),
+  z.object({ art: z.literal("ordnerWaehlen"), titel: z.string().max(200).optional() }),
+  z.object({ art: z.literal("probedruck"), ziel: zAutomatikdruckziel }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -1003,6 +1049,11 @@ export interface Antworten {
   einsatzArchivieren: Bedienergebnis;
   akteErzeugen: Akteergebnis;
   ausgabeZeigen: null;
+  nachrichtVordruckErzeugen: Ausgabeergebnis;
+  druckerAuflisten: readonly Druckerangabe[];
+  /** Der gewählte Ordner, oder `null`, wenn der Dialog abgebrochen wurde. */
+  ordnerWaehlen: string | null;
+  probedruck: Probedruckergebnis;
 }
 
 /**
@@ -1275,7 +1326,24 @@ export type Vokabelkorrekturergebnis =
 export interface Ausgabeergebnis {
   readonly pfad: string;
   readonly bytes: number;
+  /**
+   * Additiv (N3, Entscheidung 9): weitere Dateien derselben Ausgabe — der
+   * Papier-Vordruck legt den leeren Nachrichtenvordruck als eigenes PDF
+   * daneben, weil er kein HTML ist.
+   */
+  readonly weitere?: readonly { readonly pfad: string; readonly bytes: number }[];
 }
+
+/** Ein Drucker dieses Rechners (`webContents.getPrintersAsync`). `name` ist der Systemname, den `print` verlangt. */
+export interface Druckerangabe {
+  readonly name: string;
+  readonly anzeigename: string;
+}
+
+/** Wohin der Probedruck ging (Entscheidung 7). */
+export type Probedruckergebnis =
+  | { readonly art: "verzeichnis"; readonly pfad: string; readonly bytes: number }
+  | { readonly art: "drucker"; readonly name: string };
 
 /**
  * Was der Sammel-Download der Erfassungsbögen geschrieben hat.

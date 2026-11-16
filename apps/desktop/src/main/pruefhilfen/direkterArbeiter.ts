@@ -42,6 +42,8 @@ export function baueDirektenArbeiter(
     programmversion: start.programmversion,
     neueKennung: () => "9".repeat(32),
     sende: (mitteilung) => botschaft?.({ art: "mitteilung", mitteilung }),
+    // Wie im Worker (N3): Druckaufträge gehen als Botschaft an den Hof.
+    sendeDruck: (auftrag) => botschaft?.({ art: "druckauftrag", akteId: start.akteId, ...auftrag }),
     takte: { spiegelungMs: 0, taktAMs: 0, taktBMs: 0, praesenzMs: 0 },
   });
   dienste.set(start.akteId, dienst);

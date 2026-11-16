@@ -30,6 +30,13 @@ export type ArbeiterFabrik = (start: Startdaten) => Arbeiter;
 export interface ArbeiterhofOptionen {
   readonly fabrik: ArbeiterFabrik;
   readonly sende: (mitteilung: Mitteilung) => void;
+  /**
+   * Additiv (N3, Entscheidung 7): Druckaufträge des Automatikdrucks. Sie
+   * gehen an den Main und nicht an die Fenster; fehlt der Hörer (Web-Schale,
+   * Tests), fällt der Auftrag still weg — der Worker bekommt dort ohnehin
+   * kein Druckerziel.
+   */
+  readonly drucke?: (auftrag: Extract<WorkerBotschaft, { art: "druckauftrag" }>) => void;
 }
 
 interface Platz {
@@ -69,6 +76,10 @@ export class Arbeiterhof {
     arbeiter.aufBotschaft((botschaft) => {
       if (botschaft.art === "mitteilung") {
         this.#o.sende(botschaft.mitteilung);
+        return;
+      }
+      if (botschaft.art === "druckauftrag") {
+        this.#o.drucke?.(botschaft);
         return;
       }
       const wartend = platz.offen.get(botschaft.nummer);

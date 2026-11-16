@@ -18,6 +18,7 @@ import * as fsp from "node:fs/promises";
 import path from "node:path";
 
 import { zEinstellungen, zProfil, type Einstellungen } from "../kontrakt/index.js";
+import { druckfelder } from "./druckausgang.js";
 
 /** Was tatsaechlich in der Datei steht: die Einstellungen plus die Kennung. */
 export interface Arbeitsplatz extends Einstellungen {
@@ -86,6 +87,8 @@ function geraetefelder(gelesen: Einstellungen): Partial<Einstellungen> {
     ...(gelesen.handzeichen === undefined ? {} : { handzeichen: gelesen.handzeichen }),
     ...(gelesen.stellenJeEinsatz === undefined ? {} : { stellenJeEinsatz: gelesen.stellenJeEinsatz }),
     ...(gelesen.tonBeiBlitz === undefined ? {} : { tonBeiBlitz: gelesen.tonBeiBlitz }),
+    // N3: Blatt des Vordrucks, Merker der Vorschau, Automatikdruck.
+    ...druckfelder(gelesen),
   };
 }
 

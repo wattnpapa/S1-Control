@@ -11,6 +11,8 @@
     "@s1/domaene": "*",
     "@s1/netz": "*",
     "@s1/speicher": "*",
+    "bos-nachrichtenvordruck": "file:../../vendor/bos-nachrichtenvordruck",
+    "jspdf": "^4.2.1",
     "react": "19.3.0",
     "react-dom": "19.3.0",
     "zod": "^4.6.1",
