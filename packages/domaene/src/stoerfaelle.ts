@@ -1,5 +1,5 @@
 /**
- * Die Störfallmatrix (M7.3) — sechs Fälle als Daten.
+ * Die Störfallmatrix (M7.3) — sieben Fälle als Daten.
  *
  * **Warum als Daten und nicht als Text in zwei Dokumenten.** Die Fälle werden
  * an zwei Stellen gebraucht: in der Diagnoseansicht, wenn jemand im Einsatz
@@ -14,7 +14,7 @@
  * dem plattformneutralen Ring zuweist. Das Messen des Befunds (Share erreichbar,
  * Uhr, Quarantäne) geschieht in Ring 3 und in der Schale; das Deuten hier.
  *
- * **Warum sechs und nicht mehr.** Die Liste ist keine Fehlersammlung, sondern
+ * **Warum sieben und nicht mehr.** Die Liste ist keine Fehlersammlung, sondern
  * die Antwort auf „was tue ich jetzt“. Aufgenommen ist ein Fall, wenn er im
  * Betrieb an einem Rechner der Führungsstelle vorkommt **und** eine andere
  * Handlung verlangt als die übrigen. Ein siebter Eintrag, der auf denselben
@@ -28,7 +28,8 @@ export type Stoerfallkennung =
   | "KONFLIKTHINWEIS"
   | "UPDATE_ABGELEHNT"
   | "START_SCHEITERT"
-  | "BOGEN_UNLESBAR";
+  | "BOGEN_UNLESBAR"
+  | "NACHRICHTEN_PAPIER";
 
 /** Wie dringend gehandelt werden muss — sortiert die Ansicht, nicht mehr. */
 export type Dringlichkeit = "sofort" | "bald" | "beobachten";
@@ -64,7 +65,7 @@ export interface Stoerfall {
 export const UHR_GRENZE_MS = 2 * 60 * 1000;
 
 /**
- * Die sechs Fälle.
+ * Die sieben Fälle.
  *
  * Die Reihenfolge ist die der Dringlichkeit und zugleich die der Häufigkeit:
  * Der Share fällt aus, weil ein Netzwerkkabel gezogen wird; ein Bogen ist
@@ -165,6 +166,23 @@ export const STOERFAELLE: readonly Stoerfall[] = [
     nicht: "Den Bogen wegwerfen, bevor die Werte erfasst sind. Er ist bis dahin die einzige Fassung.",
     dringlichkeit: "beobachten",
     quelle: "KONZEPT-EREIGNISSE.md §5.8, EXH C159–C172",
+  },
+  {
+    kennung: "NACHRICHTEN_PAPIER",
+    titel: "Rechner oder Netz fällt aus, Nachrichten laufen auf Papier weiter",
+    woran:
+      "Das Blatt „Nachrichten“ lässt sich nicht öffnen oder nimmt nichts mehr an, der Posteingang füllt sich nicht, und Nachrichten kommen per Funk, Telefon oder Zettel herein.",
+    ursache:
+      "Der Arbeitsplatz oder das Netz ist ausgefallen, und der Dienst ist nicht erreichbar. Der Vordruck 1103.1 kommt ohne Rechner aus; die Nachweisung ist dann ein Blatt Papier.",
+    schritte: [
+      "Leere Vordrucke nehmen: im Reiter „Ausgaben“ unter „Papier-Vordruck“ den leeren Nachrichtenvordruck als PDF ausdrucken, am besten schon vorab und in Reserve.",
+      "Nachrichten von Hand auf dem Vordruck schreiben, die Nummer fortlaufend auf dem Blatt vergeben und die Nachweisung auf Papier weiterführen, mit Uhrzeit und Handzeichen für Aufnahme, Annahme und Beförderung.",
+      "Läuft der Rechner wieder, die Blätter nacherfassen: im Blatt „Nachrichten“ die Nachricht verfassen beziehungsweise in der Fernmeldezentrale den Eingang aufnehmen, die Zeiten und die Nummer vom Blatt übernehmen und nicht die Uhrzeit des Nacherfassens.",
+      "Die Nummer nie zurücksetzen und keine Lücke füllen. Eine Nummer, die auf Papier steht, bleibt; kommt sie doppelt vor, markiert die Nachweisung beide Zeilen, und es wird mit neuer Nummer berichtigt.",
+    ],
+    nicht: "Die Nummernfolge nach dem Ausfall neu beginnen oder Nachrichten ohne die Zeiten vom Blatt eintragen. Die Zeiten auf dem Papier sind die Zeiten der Nachricht.",
+    dringlichkeit: "sofort",
+    quelle: "KONZEPT-NACHRICHTEN.md §5, §7, Entscheidung 2",
   },
 ];
 

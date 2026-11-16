@@ -26,10 +26,10 @@ const RUHIG: Stoerfallbefund = {
   unlesbareBoegen: 0,
 };
 
-describe("Die sechs Fälle", () => {
-  it("sind sechs und haben eindeutige Kennungen", () => {
-    expect(STOERFAELLE).toHaveLength(6);
-    expect(new Set(STOERFAELLE.map((s) => s.kennung)).size).toBe(6);
+describe("Die sieben Fälle", () => {
+  it("sind sieben und haben eindeutige Kennungen", () => {
+    expect(STOERFAELLE).toHaveLength(7);
+    expect(new Set(STOERFAELLE.map((s) => s.kennung)).size).toBe(7);
   });
 
   it("tragen alle Felder, die die Kurzanleitung druckt", () => {
@@ -92,7 +92,16 @@ describe("Erkennung", () => {
       programmpaketAbgelehnt: true,
       unlesbareBoegen: 2,
     });
-    expect(treffer.map((s) => s.kennung)).toEqual(STOERFAELLE.map((s) => s.kennung));
+    expect(treffer.map((s) => s.kennung)).toEqual(
+      STOERFAELLE.map((s) => s.kennung).filter((k) => k !== "NACHRICHTEN_PAPIER"),
+    );
+  });
+
+  it("erkennt den Papierfall der Nachrichten nicht selbst: ein ausgefallener Rechner meldet nichts", () => {
+    expect(STOERFAELLE.map((s) => s.kennung)).toContain("NACHRICHTEN_PAPIER");
+    expect(erkannteStoerfaelle({ ...RUHIG, shareErreichbar: false }).map((s) => s.kennung)).not.toContain(
+      "NACHRICHTEN_PAPIER",
+    );
   });
 
   it("meldet den Konflikthinweis, ohne ihn zum Fehler zu erklären", () => {

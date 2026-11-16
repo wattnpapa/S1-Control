@@ -100,7 +100,7 @@ describe("Die Ansicht", () => {
     expect(attrappe.rufe.some((r) => r.art === "diagnoseAnfordern")).toBe(true);
   });
 
-  it("zeigt bei ruhiger Lage keinen Störfall, aber die sechs zum Nachlesen", async () => {
+  it("zeigt bei ruhiger Lage keinen Störfall, aber die sieben zum Nachlesen", async () => {
     render(<Diagnose jetzt={JETZT} />);
     await waitFor(() => {
       expect(screen.getByText(/Kein Störfall erkannt/)).toBeDefined();

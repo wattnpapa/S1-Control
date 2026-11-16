@@ -1,8 +1,8 @@
 /**
  * Erzeugte Abschnitte für die Dokumentation (M7.3, erweitert in M8.2).
  *
- * **Der zweite Leser der Matrix.** Die Diagnoseansicht zeigt die sechs Fälle
- * auf dem Bildschirm; diese Datei setzt dieselben sechs für Papier. Beide
+ * **Der zweite Leser der Matrix.** Die Diagnoseansicht zeigt die sieben Fälle
+ * auf dem Bildschirm; diese Datei setzt dieselben sieben für Papier. Beide
  * lesen `STOERFAELLE` aus Ring 2 — deshalb kann die Karte neben dem Rechner
  * nicht anderes sagen als das Programm darauf. Genau das war der Grund, die
  * Matrix als Daten zu führen und nicht als zwei Texte.

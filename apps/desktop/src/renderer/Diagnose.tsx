@@ -116,7 +116,7 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
 
       <h3>Was gerade zutrifft</h3>
       {zutreffend.length === 0 ? (
-        <p className="hinweistext">Kein Störfall erkannt. Die sechs Fälle stehen unten zum Nachlesen.</p>
+        <p className="hinweistext">Kein Störfall erkannt. Die sieben Fälle stehen unten zum Nachlesen.</p>
       ) : (
         <ul className="stoerfaelle">
           {zutreffend.map((fall) => (
@@ -232,7 +232,7 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
         </table>
       )}
 
-      <h3>Die sechs Störfälle</h3>
+      <h3>Die sieben Störfälle</h3>
       <p className="hinweistext">
         Dieselbe Liste steht in der Kurzanleitung. Ändert sich einer der Fälle, ändern sich beide.
       </p>

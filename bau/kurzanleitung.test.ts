@@ -2,7 +2,7 @@
  * Die Kurzanleitung ist mit der Störfallmatrix im Gleichstand (M7.3).
  *
  * **Warum das ein Test ist und keine Bitte im Kommentar.** Die DoD von M7.3
- * verlangt, dass die sechs Fälle von der Ansicht **und** der Kurzanleitung
+ * verlangt, dass die sieben Fälle von der Ansicht **und** der Kurzanleitung
  * gelesen werden. Ein Erzeugungsskript allein sichert das nicht: Niemand ruft
  * es auf, wenn ein Satz in Ring 2 geändert wird. Dieser Test scheitert dann,
  * und die Meldung nennt den Weg zurück.
@@ -27,7 +27,7 @@ describe("Kurzanleitung", () => {
     expect(mitStoerfallmatrix(INHALT), "npm run doku:kurzanleitung ausführen").toBe(INHALT);
   });
 
-  it("nennt jeden der sechs Fälle mit seinem Titel", () => {
+  it("nennt jeden der sieben Fälle mit seinem Titel", () => {
     for (const fall of STOERFAELLE) {
       expect(INHALT, fall.kennung).toContain(fall.titel);
     }
