@@ -22,6 +22,7 @@ import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 import { Aktendienst, type Seitenausgabe, type Takte } from "./aktendienst.js";
 import { bearbeiteAuftrag } from "./auftraege.js";
 import { klartextFehler } from "./klartextfehler.js";
+import type { Automatikdruckeinstellung } from "./automatikdruck.js";
 import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
 
 /** Was der Main-Prozess dem Worker beim Start mitgibt — alles serialisierbar. */
@@ -81,6 +82,9 @@ export type Auftrag =
   // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9): das Blatt und Stelle/Handzeichen der Sitzung.
   | { readonly art: "nachrichtenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }> }
   | { readonly art: "stellenSetzen"; readonly nummer: number; readonly stellen?: readonly string[]; readonly handzeichen?: string }
+  // Schnitt N3 (§7, Entscheidung 7): Vordruck je Nachricht und Ziel des Automatikdrucks.
+  | { readonly art: "nachrichtVordruckErzeugen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtVordruckErzeugen" }> }
+  | { readonly art: "automatikdruckSetzen"; readonly nummer: number; readonly einstellung?: Automatikdruckeinstellung }
   | { readonly art: "einsatzArchivieren"; readonly nummer: number; readonly zeitpunkt: string }
   | { readonly art: "akteErzeugen"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };
@@ -101,7 +105,10 @@ export type Auftragsentwurf = OhneNummer<Auftrag>;
 export type WorkerBotschaft =
   | { readonly art: "antwort"; readonly nummer: number; readonly wert: unknown }
   | { readonly art: "fehler"; readonly nummer: number; readonly meldung: string }
-  | { readonly art: "mitteilung"; readonly mitteilung: Mitteilung };
+  | { readonly art: "mitteilung"; readonly mitteilung: Mitteilung }
+  // Additiv (N3, Entscheidung 7): ein Vordruck für den Drucker. Er geht an
+  // den Main und nicht an die Fenster — drucken kann nur Electron.
+  | { readonly art: "druckauftrag"; readonly akteId: string; readonly bytes: Uint8Array; readonly drucker: string; readonly dateiname: string };
 
 /**
  * Erzeugt eine neue Client-Kennung fuer §4.5, Reaktion Schritt 1.
@@ -140,6 +147,9 @@ if (parentPort !== null) {
     },
     sende: (mitteilung) => {
       port.postMessage({ art: "mitteilung", mitteilung } satisfies WorkerBotschaft);
+    },
+    sendeDruck: (auftrag) => {
+      port.postMessage({ art: "druckauftrag", akteId: start.akteId, ...auftrag } satisfies WorkerBotschaft);
     },
     ...(start.takte === undefined ? {} : { takte: start.takte }),
   });

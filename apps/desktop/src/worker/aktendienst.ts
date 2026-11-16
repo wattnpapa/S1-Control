@@ -25,6 +25,8 @@
  *    Das ist Sache des Main-Prozesses.
  */
 
+import path from "node:path";
+
 import {
   HlcUhr,
   KATALOG,
@@ -150,6 +152,8 @@ import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { pruefeFunk } from "./funkpruefung.js";
 import { Vorrangwaechter, mitNachrichtenparametern, nachrichtenansicht, nachrichtenFuerLagebild, peerStellen, sitzungAus } from "./nachrichtendienst.js";
 import { pruefeNachricht } from "./nachrichtenpruefung.js";
+import { Automatikdruck, type Automatikdruckeinstellung, type Druckauftrag } from "./automatikdruck.js";
+import { ORDNER_NACHRICHTEN, vordruckDerNachricht } from "./nachrichtenvordruck.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
 
@@ -228,6 +232,12 @@ export interface AktendienstOptionen {
   readonly sende: (mitteilung: Mitteilung) => void;
   readonly takte?: Partial<Takte>;
   readonly segmentgroesse?: number;
+  /**
+   * Additiv (N3, Entscheidung 7): wohin ein Druckauftrag des Automatikdrucks
+   * mit Ziel Drucker geht — im Worker an den Main, der allein Electron hat.
+   * Fehlt er, gibt es nur das Ziel Verzeichnis.
+   */
+  readonly sendeDruck?: (auftrag: Druckauftrag) => void;
 }
 
 /** Das leere Lagebild: was die Statuszeile zeigt, bevor irgendetwas gelesen wurde. */
@@ -391,9 +401,17 @@ export class Aktendienst {
   #sitzung: Sitzungsstellen | undefined;
   /** Meldet eintreffende Nachrichten mit Vorrang für die Stellen der Sitzung (Entscheidung 6). */
   readonly #vorrang = new Vorrangwaechter();
+  /** Druckt jede eintreffende Nachricht, wenn ein Ziel gesetzt ist (N3, Entscheidung 7). */
+  readonly #automatik: Automatikdruck;
 
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
+    this.#automatik = new Automatikdruck({
+      akteId: optionen.akteId,
+      dateisystem: optionen.dateisystem,
+      sende: (mitteilung) => optionen.sende(mitteilung),
+      sendeDruck: optionen.sendeDruck,
+    });
     this.#takte = { ...TAKTE_VORBELEGUNG, ...optionen.takte };
     this.#clientId = optionen.clientId;
     this.#hlcUhr = new HlcUhr({ clientId: optionen.clientId, wanduhr: optionen.zeit });
@@ -481,6 +499,7 @@ export class Aktendienst {
 
     // Was beim Öffnen schon da war, ist kein Eintreffen (Entscheidung 6).
     this.#vorrang.grundlinie(this.#zustand, this.#sitzung?.stellen ?? []);
+    this.#automatik.grundlinie(this.#zustand, this.#sitzung?.stellen ?? []);
 
     this.#folge = 0;
     this.#gesendet = this.#projiziere();
@@ -502,7 +521,23 @@ export class Aktendienst {
     // hier gesetzt, meldete die Wiederaufnahme jede alte Vorrangnachricht.
     if (this.#akte === undefined) return;
     this.#vorrang.grundlinie(this.#zustand, this.#sitzung.stellen);
+    this.#automatik.grundlinie(this.#zustand, this.#sitzung.stellen);
     this.#sendeDelta();
+  }
+
+  /**
+   * Setzt das Ziel des Automatikdrucks (N3, Entscheidung 7) — der Main schickt
+   * es beim Öffnen und nach jeder Änderung der Einstellungen; `undefined`
+   * schaltet ihn aus.
+   */
+  automatikdruckSetzen(einstellung: Automatikdruckeinstellung | undefined): void {
+    const offen = this.#akte === undefined ? undefined : { zustand: this.#zustand, stellen: this.#sitzung?.stellen ?? [] };
+    this.#automatik.setze(einstellung, offen);
+  }
+
+  /** Wartet auf die angestoßenen Ausdrucke des Automatikdrucks — für die Nachweise. */
+  automatikdruckFertig(): Promise<void> {
+    return this.#automatik.fertig();
   }
 
   /**
@@ -1305,6 +1340,21 @@ export class Aktendienst {
    * jederzeit neu erzeugbar. Ein `fsync` je Ausdruck kostete auf einem
    * SMB-Laufwerk Zeit fuer eine Zusicherung, die hier niemand braucht.
    */
+  /**
+   * Der Vordruck einer Nachricht als PDF in `ausgaben\nachrichten`
+   * (KONZEPT-NACHRICHTEN.md §7, Schnitt N3). Ein Unterordner, weil eine
+   * Führungsstelle Dutzende Nachrichten druckt und die Listen sonst darin
+   * untergingen; derselbe Weg ohne `fsync` wie jede Ausgabe.
+   */
+  async nachrichtVordruck(nachrichtId: string, blatt: "a5" | "a4quer"): Promise<{ pfad: string; bytes: number }> {
+    const { dateiname, bytes } = vordruckDerNachricht(this.#zustand, nachrichtId, blatt);
+    const ordner = path.join(this.#o.ablage.shareAusgaben, ORDNER_NACHRICHTEN);
+    const pfad = path.join(ordner, dateiname);
+    await this.#o.dateisystem.legeVerzeichnisAn(ordner);
+    await this.#o.dateisystem.schreibeUeberOhneSync(pfad, bytes);
+    return { pfad, bytes: bytes.length };
+  }
+
   async ausgabeSchreiben(dateiname: string, bytes: Uint8Array): Promise<string> {
     const pfad = this.#o.ablage.ausgabeDatei(dateiname);
     await this.#o.dateisystem.legeVerzeichnisAn(this.#o.ablage.shareAusgaben);
@@ -1873,6 +1923,8 @@ export class Aktendienst {
   #meldeVorrang(): void {
     const stellen = this.#sitzung?.stellen ?? [];
     if (stellen.length === 0) return;
+    // Dieselbe Stelle, aber jede Nachricht: der Automatikdruck (N3, Entscheidung 7).
+    this.#automatik.nachEintreffen(this.#zustand, stellen);
     for (const hinweis of this.#vorrang.neue(this.#zustand, stellen, this.#clientId)) {
       this.#o.sende({
         art: "hinweis",

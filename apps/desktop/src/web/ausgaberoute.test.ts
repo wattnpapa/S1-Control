@@ -137,3 +137,28 @@ describe("GET /ausgabe", () => {
     expect(mitDruckknopf("<head></head><body class=x>t</body>")).toContain("@media print{.druckleiste{display:none}}");
   });
 });
+
+describe("GET /ausgabe — Vordrucke je Nachricht (N3, §7)", () => {
+  it("liefert ein PDF aus ausgaben/nachrichten und lädt es auf Wunsch herunter", async () => {
+    const ordner = path.join(share, "einsaetze", "E1", "ausgaben", "nachrichten");
+    mkdirSync(ordner, { recursive: true });
+    const pdf = path.join(ordner, "nachricht-E26-171045nov26.pdf");
+    writeFileSync(pdf, "%PDF-1.3");
+    const antwort = await hole(pdf);
+    expect(antwort.status).toBe(200);
+    expect(antwort.headers.get("content-type")).toBe("application/pdf");
+    expect(antwort.headers.get("content-disposition")).toMatch(/^inline/u);
+    expect((await hole(pdf, "&laden=1")).headers.get("content-disposition")).toMatch(/^attachment/u);
+  });
+
+  it("liefert aus ausgaben/nachrichten nur PDF und aus keinem anderen Unterordner", async () => {
+    const nachrichten = path.join(share, "einsaetze", "E1", "ausgaben", "nachrichten");
+    const fremd = path.join(share, "einsaetze", "E1", "ausgaben", "fremd");
+    mkdirSync(nachrichten, { recursive: true });
+    mkdirSync(fremd, { recursive: true });
+    writeFileSync(path.join(nachrichten, "x.html"), "<p>x</p>");
+    writeFileSync(path.join(fremd, "x.pdf"), "%PDF-1.3");
+    expect(await loeseAusgabePfad(share, path.join(nachrichten, "x.html"))).toBeUndefined();
+    expect(await loeseAusgabePfad(share, path.join(fremd, "x.pdf"))).toBeUndefined();
+  });
+});

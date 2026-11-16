@@ -100,6 +100,9 @@ export function webSchalenfabrik(o: SchalenOptionen): Schalenfabrik {
       fenstersteuerung: BROWSER_FENSTER,
       // Kein `drucker`: Ein PDF entsteht ueber `printToPDF`, also in Electron.
       // Die Vermittlung meldet das je Ruf; HTML und XLSX gehen auch hier.
+      // Kein `druckausgang` (N3): Der Automatikdruck geht hier nur in ein
+      // Verzeichnis; der Vordruck je Nachricht entsteht im Worker mit jsPDF
+      // und braucht keine Schale (ADR-008).
       ...(o.protokolldatei === undefined ? {} : { protokolldatei: o.protokolldatei }),
       ...(o.letzteMeldungen === undefined ? {} : { letzteMeldungen: o.letzteMeldungen }),
       ...(o.netz === undefined ? {} : { netz: o.netz }),

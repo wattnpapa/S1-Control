@@ -102,6 +102,11 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
     case "stellenSetzen":
       dienst.stellenSetzen(auftrag.stellen, auftrag.handzeichen);
       return null;
+    case "nachrichtVordruckErzeugen":
+      return dienst.nachrichtVordruck(auftrag.ruf.nachrichtId, auftrag.ruf.blatt);
+    case "automatikdruckSetzen":
+      dienst.automatikdruckSetzen(auftrag.einstellung);
+      return null;
     case "einsatzArchivieren":
       return dienst.archiviere(auftrag.zeitpunkt);
     case "akteErzeugen":

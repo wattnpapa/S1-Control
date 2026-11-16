@@ -11,7 +11,9 @@
  * Einsatzes: `<share>/einsaetze/<einsatz>/ausgaben/<datei>` mit der Endung
  * `.html`, `.pdf` oder `.xlsx`; dazu die Einsatzakte (`.zip`), die eine Ebene
  * höher im Einsatzordner liegt und **nie** inline, sondern nur als Download
- * ausgeliefert wird. Der Pfad kommt aus der Anfrage und wird
+ * ausgeliefert wird. Additiv (N3): die Vordrucke je Nachricht im Unterordner
+ * `ausgaben/nachrichten/<datei>.pdf` (KONZEPT-NACHRICHTEN.md §7) — der
+ * erste PDF-Weg, den die Web-Schale selbst hat (ADR-008). Der Pfad kommt aus der Anfrage und wird
  * aufgelöst (`..`, Schrägstriche, Symlinks) und erst danach gegen diese Form
  * geprüft; alles andere ist 404, ohne zu verraten, was es sonst gäbe.
  */
@@ -24,6 +26,7 @@ import { bildschirmtauglich } from "@s1/ausgaben";
 
 const ORDNER_EINSAETZE = "einsaetze";
 const ORDNER_AUSGABEN = "ausgaben";
+const ORDNER_NACHRICHTEN = "nachrichten";
 
 const TYPEN: Readonly<Record<string, string>> = {
   ".html": "text/html; charset=utf-8",
@@ -47,7 +50,8 @@ export async function loeseAusgabePfad(sharePfad: string, gewuenscht: string): P
   // liegt dagegen unmittelbar im Einsatzordner: <einsatz>/<datei>.zip.
   const alsAusgabe = teile.length === 3 && teile[1] === ORDNER_AUSGABEN;
   const alsAkte = teile.length === 2 && path.extname(datei).toLowerCase() === ".zip";
-  if (!alsAusgabe && !alsAkte) return undefined;
+  const alsVordruck = teile.length === 4 && teile[1] === ORDNER_AUSGABEN && teile[2] === ORDNER_NACHRICHTEN && path.extname(datei).toLowerCase() === ".pdf";
+  if (!alsAusgabe && !alsAkte && !alsVordruck) return undefined;
   try {
     // Ein Symlink im Ausgabeordner darf nicht aus dem Share hinausführen.
     const echt = await fsp.realpath(datei);
