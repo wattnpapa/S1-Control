@@ -138,10 +138,10 @@ dieses Gerät, nicht für den Einsatz:
 
 | Profil | Reiter im Band | unter „Mehr“ |
 |---|---|---|
-| Führungsstelle (S1), Vorgabe | Lage · Eingang · Führungsstelle · Ausgaben · Einsatztagebuch | Funkplan, Versorgung, Kosten |
-| Vermeldezentrale | Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
-| Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
-| Alle Blätter | alle acht Blätter | — |
+| Führungsstelle (S1), Vorgabe | Lage · Eingang · Nachrichten · Führungsstelle · Ausgaben · Einsatztagebuch | Funkplan, Versorgung, Kosten |
+| Vermeldezentrale | Nachrichten · Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
+| Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
+| Alle Blätter | alle neun Blätter | — |
 
 Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt
 unter „Mehr“ erreichbar. Wer dort ein Blatt aufschlägt, sieht es, solange es
@@ -159,7 +159,7 @@ Unterblatts (etwa Strg+N) gelten nur, solange es zu sehen ist.
 
 Im Fenstermenü steht, was zum Fenster gehört und selten gebraucht wird: Hilfe
 und Tastenkarte (Strg+H), das Erscheinungsbild (Standard, Dunkel, Feld,
-Nacht), „Stärke-Monitor öffnen …“, die Diagnose, in der Web-Schale
+Nacht), „Stärke-Monitor öffnen …“, „Stelle und Handzeichen …“, die Diagnose, in der Web-Schale
 „Abmelden“ und „Einsatz schließen“, der Weg zurück zur Liste der Einsätze.
 
 Unter dem Kopfband steht beim ersten Aufschlagen eines Blatts eine
@@ -275,6 +275,79 @@ offen „Zusagen …“, zugesagt „Eingetroffen …“ und „Zusage zurück�
 eingetroffen „Einheit anlegen …“ (wenn noch keine verknüpft ist) und
 „Eintreffen zurück“, storniert „Storno zurück“; „Stornieren …“ steht
 abgesetzt in Warnfarbe und fragt den Grund.
+
+## Nachrichten
+
+Das Blatt **Nachrichten** führt den Nachrichtenvordruck (4-fach-Vordruck)
+zwischen den Stellen der Führungsstelle. Jede Nachricht hat die drei Teile
+des Papiervordrucks: oben die Vermerke der Fernmeldezentrale, in der Mitte
+die Nachricht, unten den Laufzettel des Sichters mit Quittung, Verteiler
+und Vermerken. Papier bleibt die Rückfallebene; was auf Papier weiterläuft,
+lässt sich später so nacherfassen, wie es auf dem Blatt steht.
+
+**Stelle und Handzeichen.** Nach dem Öffnen eines Einsatzes fragt das
+Programm, welche Position dieser Arbeitsplatz im Stab hat (Leiter, S1 bis S6,
+Fachberater, Verbindungsstelle, Sichter, FmZ, auch mehrere zugleich oder ein
+freier Name wie „Polizei“), und das Handzeichen mit zwei bis vier Zeichen.
+Die Wahl gilt, bis der Einsatz geschlossen wird, die anderen Arbeitsplätze
+sehen sie als besetzte Stelle, und beim nächsten Öffnen desselben Einsatzes
+ist sie vorbelegt. Ändern lässt sie sich im Fenstermenü unter „Stelle und
+Handzeichen …“. Die Stelle ist ein Zuschnitt, kein Recht: Sie bestimmt,
+welcher Posteingang zuerst erscheint. Im Meldekopf fragt das Programm nicht.
+
+**Das Blatt.** Oben stehen fünf Zahlen: neu für meine Stellen, vor der FmZ,
+vor dem Sichter, mit Vorrang offen und länger als die Schwelle in der FmZ;
+die letzten beiden werden ab eins bernsteinfarben. Darunter der Umschalter
+„Posteingang | Ausgang | Sichter“, der Hauptknopf „Nachricht verfassen“
+(Strg+N) und die Suche über Betreff, Inhalt, Absender und Anschrift
+(Strg+F). Jede Zeile trägt links die Farbe ihrer Kopie: grün für den
+Hauptempfänger, blau für Mitleser, rot für S2. Blitz steht rot, Sofort
+bernsteinfarben, und Blitz steht vor Sofort vor einfach. Der Posteingang
+zeigt die Nachrichten, in deren Verteiler eine eigene Stelle steht, mit den
+Marken „neu“ oder „gelesen“ und „erledigt“; die Chips filtern danach, und
+„Posteingang von“ schlägt den Posteingang einer anderen Stelle auf. Der
+Ausgang zeigt, was dieser Arbeitsplatz oder seine Stellen verfasst haben,
+mit dem Stand auf dem Weg.
+
+**Eine Nachricht verfassen.** Die Maske ist der Vordruck. Absender, Zeichen
+und Funktion kommen aus Stelle und Handzeichen, die Abfassungszeit steht als
+Datum-Zeit-Gruppe auf „jetzt“ („161045nov26“; Strg+D setzt sie neu, „1045“
+geht auch). Die Anschrift bietet Abschnitte, Einheiten und die besetzten
+Stellen an und nimmt jeden anderen Namen. Der Inhalt zählt seine Zeilen
+gegen die zwölf des Vordrucks; ab der dreizehnten sagt die Maske, dass der
+Ausdruck ein Folgeblatt bekommt, gekürzt wird nichts. „Aufgeben“ geht, sobald
+Anschrift, Betreff oder Inhalt und eine lesbare Abfassungszeit da sind. Bis
+dahin ist die Nachricht nur in diesem Fenster; wer die Seite verlässt, wird
+gefragt.
+
+**Lesen, erledigen, antworten.** Ein Klick wählt eine Nachricht, die Leiste
+darunter bietet „Lesen“ (auch Doppelklick), „Erledigt“ oder „Erledigung
+zurück“, „Antworten“, „Weiterleiten“, „Im Tagebuch zeigen“ und abgesetzt
+„Zurückziehen …“; dasselbe öffnet ein Rechtsklick. „Lesen“ schlägt den
+Vordruck mit Laufzettel auf und vermerkt für jede eigene Stelle im Verteiler
+die Kenntnisnahme mit Zeit und Handzeichen; alle Arbeitsplätze sehen sie.
+Gelesen und erledigt gelten je Stelle, nicht je Person. „Antworten“ öffnet
+die Maske mit getauschter Anschrift und Absender und dem Betreff „Antwort:
+…“, „Weiterleiten“ mit demselben Inhalt. Eine falsch aufgegebene Nachricht
+wird mit Grund zurückgezogen; sie bleibt sichtbar und steht im Tagebuch.
+
+**Sichten.** Die Sicht „Sichter“ zeigt die Eingänge, die noch niemand
+gesichtet hat, die mit Vorrang oben. Mit der Wahl erscheint darunter der
+Laufzettel: Quittung mit Uhrzeit und Handzeichen, die Stellen des Verteilers
+als Kästchen mit Kopiefarbe je Eintrag, weitere Stellen mit freiem Namen und
+die Vermerke. S2 ist mit der roten Kopie vorbelegt, lässt sich aber
+abwählen. „Sichten“ verteilt die Nachricht in die Posteingänge. Solange ein
+Laufzettel offen ist, sehen andere Sichter „wird von … bearbeitet“; hat
+inzwischen ein anderer gesichtet, nimmt das Programm die zweite Sichtung
+nicht still an, sondern meldet es.
+
+**Vorrang.** Trifft eine gesichtete Nachricht mit Sofort oder Blitz für eine
+eigene Stelle ein, steht ein Hinweis in der Leiste („Blitz-Nachricht E 26
+für S4: …“); bei Blitz spielt das Programm zwei kurze Töne. Der Ton lässt
+sich unter „Dieser Arbeitsplatz“ auf der Einsatzauswahl abschalten.
+
+Die Fernmeldezentrale mit Annahme, Beförderung und Nachweisung und der
+Ausdruck des Vordrucks folgen mit dem nächsten Ausbauschritt.
 
 ## Was ein Zurücknehmen tut
 
