@@ -33,9 +33,27 @@ export interface TagebuchEigenschaften {
   readonly abschnittId: string | undefined;
 }
 
+/**
+ * Eine Suche, mit der das Tagebuch beim nächsten Aufschlagen beginnt — für
+ * „Im Tagebuch zeigen" an einer Nachricht (KONZEPT-NACHRICHTEN.md §9): Die
+ * Tagebuchzeile trägt Nummer, Absender und Betreff der Nachricht. Einmalig;
+ * das Aufschlagen verbraucht sie.
+ */
+let anfangssuche = "";
+
+export function tagebuchMitSuche(text: string): void {
+  anfangssuche = text.trim();
+}
+
+function nimmAnfangssuche(): string {
+  const text = anfangssuche;
+  anfangssuche = "";
+  return text;
+}
+
 export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: TagebuchEigenschaften): React.JSX.Element {
   const laden = useLaden();
-  const [suche, setzeSuche] = useState("");
+  const [suche, setzeSuche] = useState(nimmAnfangssuche);
   const [nurRuecknahmen, setzeNurRuecknahmen] = useState(false);
   // Standard „Alle“: Wer das Tagebuch aufschlägt, soll das ganze Tagebuch sehen,
   // nicht unbemerkt einen Ausschnitt (zwei statt elf Einträge).

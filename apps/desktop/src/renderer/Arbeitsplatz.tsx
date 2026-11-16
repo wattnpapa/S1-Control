@@ -21,12 +21,14 @@ import { gehoertZurLage, type Blatt } from "./blaetter.js";
 import { Lage } from "./Lage.js";
 import { Einstiegszeile } from "./Einstiegszeile.js";
 import { Meldekopf } from "./Meldekopf.js";
+import { Nachrichten } from "./Nachrichten.js";
 import { Programmstand } from "./Programmstand.js";
 import { Eingangsblatt, Fuehrungsblatt } from "./Sammelblaetter.js";
 import { useLaden } from "./laden.js";
 import { Statuszeile } from "./Statuszeile.js";
 import { Verbindungsbanner } from "./Verbindungsbanner.js";
 import { Versorgung } from "./Versorgung.js";
+import { useSitzungsabfrage } from "./useSitzungsabfrage.js";
 import { useVerbindungsstatus } from "./useVerbindungsstatus.js";
 import { useBrowserNavigation } from "./navigation.js";
 import { ladeMerker, loescheMerker, merkeStand, speichereMerker } from "./sitzung.js";
@@ -90,6 +92,8 @@ export function Arbeitsplatz(): React.JSX.Element {
   const jetzt = useJetzt();
   const verbindung = useVerbindungsstatus();
   const [hilfeOffen, setzeHilfeOffen] = useState(false);
+  // Stelle und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md Entscheidung 3).
+  const sitzungsabfrage = useSitzungsabfrage();
   // Welches Blatt aufgeschlagen ist, ist eine Sache **dieses Fensters**: Zwei
   // Arbeitsplätze am selben Einsatz sehen verschiedene Blätter, und beim
   // Schließen der Akte ist die Frage hinfällig.
@@ -178,6 +182,7 @@ export function Arbeitsplatz(): React.JSX.Element {
           laden.akteId === undefined ? undefined : zurueckZurAuswahl
         }
         angemeldet={laden.umgebung?.anmeldung === true}
+        aufStelle={sitzungsabfrage.oeffne}
         {...(laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf"
           ? {
               blatt,
@@ -212,6 +217,7 @@ export function Arbeitsplatz(): React.JSX.Element {
           />
         )}
         <Programmstand />
+        {sitzungsabfrage.maske}
 
         {/* Die Betriebsart entscheidet, was hier steht (M6.4). Ein Meldekopf
             nimmt Bögen auf und quittiert sie; ein Lagebild führt er nicht.
@@ -247,6 +253,7 @@ export function Arbeitsplatz(): React.JSX.Element {
                 }}
               />
             )}
+            {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} />}
             {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}

@@ -4173,6 +4173,201 @@
         }
       }
 
+      /* ---- Das Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md §6) ---------
+         Die Kopiefarbe des Vordrucks steht am linken Rand der Zeile: grün
+         Hauptempfänger, blau Mitleser, rot S2. Sie hängt an den Marken des
+         Themes, damit sie im Nacht- und Feldbild mitgeht; das Wort steht
+         immer daneben (Vorleser, Titel), nie die Farbe allein. */
+      :root {
+        --kopie-gruen: var(--ok-text);
+        --kopie-blau: var(--navy-600);
+        --kopie-rot: var(--err-text);
+      }
+      main > section.nachrichten {
+        background: transparent;
+        border: 0;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .nachrichten h2 {
+        margin: 0;
+      }
+      .nachrichtenband {
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+      }
+      .nachrichten .leise,
+      .vordruck .leise {
+        color: var(--text-leise);
+        font-weight: 400;
+      }
+      .nurvorlesen {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip-path: inset(50%);
+        white-space: nowrap;
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+      .nachrichtentabelle {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+        background: var(--karte);
+      }
+      .nachrichtentabelle th,
+      .nachrichtentabelle td {
+        border: 1px solid var(--rahmen);
+        padding: 0.15rem 0.4rem;
+        text-align: left;
+        font-weight: 400;
+      }
+      .nachrichtentabelle thead th {
+        font-weight: 700;
+      }
+      .nachrichtentabelle tbody tr {
+        cursor: pointer;
+      }
+      .nachrichtentabelle tr.gewaehlt th,
+      .nachrichtentabelle tr.gewaehlt td {
+        background: var(--zeile-gewaehlt);
+      }
+      .nachrichtentabelle tr.abgelehnt th,
+      .nachrichtentabelle tr.abgelehnt td {
+        opacity: 0.6;
+        text-decoration: line-through;
+      }
+      .nachrichtentabelle .kopierand {
+        width: 6px;
+        padding: 0;
+      }
+      tr.kopie-gruen > .kopierand {
+        background: var(--kopie-gruen);
+      }
+      tr.kopie-blau > .kopierand {
+        background: var(--kopie-blau);
+      }
+      tr.kopie-rot > .kopierand {
+        background: var(--kopie-rot);
+      }
+      .verteileranzeige li,
+      .verteilermatrix li {
+        border-left: 6px solid transparent;
+        list-style: none;
+        padding: 2px 6px;
+      }
+      .verteileranzeige li.kopie-gruen,
+      .verteilermatrix li.kopie-gruen {
+        border-left-color: var(--kopie-gruen);
+      }
+      .verteileranzeige li.kopie-blau,
+      .verteilermatrix li.kopie-blau {
+        border-left-color: var(--kopie-blau);
+      }
+      .verteileranzeige li.kopie-rot,
+      .verteilermatrix li.kopie-rot {
+        border-left-color: var(--kopie-rot);
+      }
+      .verteileranzeige,
+      .verteilermatrix ul {
+        margin: 4px 0;
+        padding: 0;
+      }
+      .marke-zustand.vorrang-blitz {
+        font-weight: 700;
+      }
+      /* Der Vordruck: drei Teile untereinander, oben und unten grau. */
+      .maske:has(.vordruck),
+      .maske.vordruck {
+        max-width: min(46rem, 96vw);
+      }
+      .vordruckteil {
+        border: var(--rahmenbreite) solid var(--rahmen);
+        margin: 0 0 8px;
+        padding: 6px 10px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+      }
+      .vordruckteil.grau {
+        background: var(--gesperrt-bg);
+        color: var(--gesperrt-text);
+      }
+      .vordruckteil > legend {
+        font: 600 0.78em/1.2 var(--mono);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+      .vordruckteil > label,
+      .vordruckteil > .vordruckinhalt,
+      .vordruckteil > .verteilermatrix,
+      .vordruckteil > ul {
+        flex: 1 1 100%;
+      }
+      .vordruckzeile {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 14px;
+        flex: 1 1 100%;
+      }
+      .vordruckzeile > label,
+      .vordruckzeile > .dtgfeld {
+        flex: 1 1 12rem;
+      }
+      .dtgfeld {
+        display: flex;
+        flex-direction: column;
+      }
+      .vordrucktitel {
+        font: 600 0.78em/1.2 var(--mono);
+        color: var(--text-leise);
+      }
+      pre.vordruckinhalt {
+        white-space: pre-wrap;
+        font: inherit;
+        margin: 0;
+        min-height: 3em;
+      }
+      .vordruckinhalt textarea {
+        font-family: var(--mono);
+      }
+      .kaestchenzeile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 14px;
+        flex: 1 1 100%;
+      }
+      label.kaestchen {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      label.kaestchen input {
+        width: auto;
+        min-height: 0;
+      }
+      .zeilenzaehler {
+        display: block;
+        font-size: 0.85em;
+        color: var(--text-leise);
+      }
+      .zeilenzaehler.warn {
+        color: var(--warn-text);
+        font-weight: 700;
+      }
+      .laufzettel {
+        background: var(--karte);
+        flex-direction: column;
+      }
+      .laufzettel h3 {
+        margin: 0;
+      }
+
     </style>
   </head>
   <body>

@@ -24,6 +24,7 @@ import { create } from "zustand";
 
 import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
 
+import { spieleBlitzton } from "./blitzton.js";
 import { rufe } from "./bruecke.js";
 import { VERBINDUNGSMELDUNGEN } from "./verbindung.js";
 import { meldungsklartext } from "./Ereignisnamen.js";
@@ -51,6 +52,7 @@ import type {
   Mitteilung,
   Programmbefund,
   Ruf,
+  Sitzungsstellen,
   Tabellenansicht,
   Tagebuchansicht,
   Theme,
@@ -166,7 +168,12 @@ export interface Laden {
    * FüSt, Beginn jetzt, zwei Schichten.
    */
   legeEinsatzAn(name: string, datum: string, anlage?: Einsatzanlagedaten): Promise<string | undefined>;
-  oeffneEinsatz(ordner: string): Promise<void>;
+  /**
+   * Öffnet einen Einsatz; additiv mit Stelle und Handzeichen der Sitzung
+   * (KONZEPT-NACHRICHTEN.md Entscheidung 3), wie die Abfrage beim Öffnen sie
+   * erhoben hat.
+   */
+  oeffneEinsatz(ordner: string, sitzung?: Sitzungsstellen): Promise<void>;
   schliesseEinsatz(): Promise<void>;
   /** Die drei Ansichten. `undefined` heißt: noch nie geholt (M3.7). */
   readonly baum: Baumansicht | undefined;
@@ -500,9 +507,14 @@ export const useLaden = create<Laden>((setze, hole) => {
       });
     },
 
-    async oeffneEinsatz(ordner) {
+    async oeffneEinsatz(ordner, sitzung) {
       await mitFehlerbild(async () => {
-        const geoeffnet = await rufe({ art: "einsatzOeffnen", ordner });
+        const geoeffnet = await rufe({
+          art: "einsatzOeffnen",
+          ordner,
+          ...(sitzung === undefined ? {} : { stellen: [...sitzung.stellen] }),
+          ...(sitzung?.handzeichen === undefined ? {} : { handzeichen: sitzung.handzeichen }),
+        });
         setze({ akteId: geoeffnet.akteId, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
       });
     },
@@ -934,6 +946,8 @@ export const useLaden = create<Laden>((setze, hole) => {
       const zustand = hole();
       if (mitteilung.art === "hinweis") {
         merkeHinweis(mitteilung.stufe, mitteilung.text);
+        // Entscheidung 6: Ton bei Blitz, abschaltbar je Arbeitsplatz (Vorbelegung an).
+        if (mitteilung.ton === "blitz" && zustand.einstellungen.tonBeiBlitz !== false) spieleBlitzton();
         return;
       }
       if (mitteilung.art === "eebFortschritt") {

@@ -1,0 +1,85 @@
+/**
+ * Was die gewählte Nachricht kann — als Auswahlleiste am Fuß der Liste und
+ * als Kontextmenü an der Zeile (KONZEPT-NACHRICHTEN.md §5, §6; Entwurf
+ * „Entlastung", 3.7).
+ *
+ * „Lesen" ist der Hauptweg: Es schlägt die Nachricht als Vordruck auf und
+ * schreibt die Kenntnisnahme für die Stellen der Sitzung, die im Verteiler
+ * stehen. „Erledigt" gilt je Stelle und lässt sich zurücknehmen; es steht
+ * nur da, wo eine eigene Stelle im Verteiler steht. „Antworten" und
+ * „Weiterleiten" sind Komfortwege zur selben Maske, keine eigenen
+ * Ereignisarten. „Zurückziehen" ist folgenreich und fragt nach dem Grund.
+ */
+
+import type { Nachrichtenzeile } from "@s1/domaene";
+
+import { Auswahlkontextmenue, Auswahlleiste, type Leistenknopf } from "./Auswahlleiste.js";
+import type { Kontextort } from "./Klappmenue.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { eigeneMarken } from "./nachrichtenformate.js";
+
+export interface NachrichtenauswahlEigenschaften {
+  readonly zeile: Nachrichtenzeile;
+  readonly stellen: readonly string[];
+  readonly nurLesen: boolean;
+  /** Steht grau da, solange geschrieben wird oder die Verbindung fehlt. */
+  readonly sperre: string | undefined;
+  readonly aufLesen: () => void;
+  readonly aufErledigt: () => void;
+  readonly aufErledigungZurueck: () => void;
+  readonly aufAntworten: () => void;
+  readonly aufWeiterleiten: () => void;
+  readonly aufZurueckziehen: () => void;
+  readonly aufTagebuch: () => void;
+}
+
+/** „1 gewählt · E 26 Pumpen eingetroffen". */
+export function nachrichtenauswahltitel(zeile: Nachrichtenzeile): string {
+  const nummer = zeile.nummer === undefined ? zeile.richtungKurz : `${zeile.richtungKurz} ${String(zeile.nummer)}`;
+  return `1 gewählt · ${nummer} ${zeile.betreff === "" ? zeile.absender : zeile.betreff}`;
+}
+
+function erledigungsknopf(p: NachrichtenauswahlEigenschaften): Leistenknopf | undefined {
+  if (!p.zeile.verteiler.some((m) => p.stellen.includes(m.stelle))) return undefined;
+  if (eigeneMarken(p.zeile, p.stellen).erledigt) {
+    return { schluessel: "zurueck", text: "Erledigung zurück", titel: "Die Erledigung für die eigenen Stellen zurücknehmen", sperre: p.sperre, aufWahl: p.aufErledigungZurueck };
+  }
+  return { schluessel: "erledigt", text: "Erledigt", titel: "Für die eigenen Stellen des Verteilers als erledigt markieren", sperre: p.sperre, aufWahl: p.aufErledigt };
+}
+
+/** Die Schritte für die gewählte Nachricht, in der Reihenfolge der Leiste. */
+export function nachrichtenknoepfe(p: NachrichtenauswahlEigenschaften): readonly Leistenknopf[] {
+  const lesen: Leistenknopf = {
+    schluessel: "lesen",
+    text: "Lesen",
+    titel: "Als Vordruck aufschlagen; nimmt für die eigenen Stellen des Verteilers Kenntnis",
+    haupt: true,
+    aufWahl: p.aufLesen,
+  };
+  const tagebuch: Leistenknopf = { schluessel: "tagebuch", text: "Im Tagebuch zeigen", titel: "Das Einsatztagebuch mit den Zeilen dieser Nachricht", aufWahl: p.aufTagebuch };
+  if (p.nurLesen) return [lesen, tagebuch];
+  const erledigung = erledigungsknopf(p);
+  return [
+    lesen,
+    ...(erledigung === undefined ? [] : [erledigung]),
+    { schluessel: "antworten", text: "Antworten", menuetext: "Antworten …", titel: "Neue Nachricht mit getauschter Anschrift und Absender", aufWahl: p.aufAntworten },
+    { schluessel: "weiterleiten", text: "Weiterleiten", menuetext: "Weiterleiten …", titel: "Neue Nachricht mit demselben Inhalt", aufWahl: p.aufWeiterleiten },
+    tagebuch,
+    {
+      schluessel: "zurueckziehen",
+      text: "Zurückziehen …",
+      titel: "Eine Fehlanlage zurückziehen; fragt nach dem Grund, die Nachricht bleibt sichtbar",
+      rot: true,
+      ...(p.zeile.zurueckgezogen ? { sperre: "Bereits zurückgezogen" } : p.sperre === undefined ? {} : { sperre: p.sperre }),
+      aufWahl: p.aufZurueckziehen,
+    },
+  ];
+}
+
+export function Nachrichtenleiste(p: NachrichtenauswahlEigenschaften): React.JSX.Element {
+  return <Auswahlleiste titel={nachrichtenauswahltitel(p.zeile)} knoepfe={nachrichtenknoepfe(p)} sperrtext={undefined} {...(p.nurLesen ? { dazu: <span className="auswahlsperre">{TEXT_NUR_LESEN}</span> } : {})} />;
+}
+
+export function Nachrichtenkontextmenue(p: NachrichtenauswahlEigenschaften & { readonly ort: Kontextort; readonly aufSchliessen: () => void }): React.JSX.Element {
+  return <Auswahlkontextmenue ort={p.ort} titel={nachrichtenauswahltitel(p.zeile)} knoepfe={nachrichtenknoepfe(p)} aufSchliessen={p.aufSchliessen} />;
+}

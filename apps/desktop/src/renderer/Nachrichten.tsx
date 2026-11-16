@@ -1,0 +1,274 @@
+/**
+ * Das Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md §6, Schnitt N1) — der
+ * 4-fach-Vordruck in der Führungsstelle.
+ *
+ * Oben das Band mit den fünf Zahlen aus `Lagebild.nachrichten` (neu für meine
+ * Stellen, vor der FmZ, vor dem Sichter, mit Vorrang offen, über der
+ * Schwelle; die letzten beiden bernstein ab eins). Darunter die Werkzeugzeile:
+ * Umschalter der Sichten Posteingang, Ausgang und Sichter, der Hauptknopf
+ * „Nachricht verfassen" (Strg+N) und die Suche über Betreff, Inhalt, Absender
+ * und Anschrift (Strg+F). Der Posteingang filtert nach Zustand mit Chips wie
+ * der Eingangskorb und lässt sich auf eine andere Stelle umstellen — die
+ * Stelle ist ein Zuschnitt, kein Recht (§4). Die Sichten Fernmeldezentrale
+ * und Nachweisung kommen mit Schnitt N2.
+ *
+ * **Nichts wird hier gerechnet.** Ordnung, Filter, Laufzustand und Zahlen
+ * kommen aus Ring 2 über den Ruf `nachrichtenAnfordern` und das Lagebild.
+ */
+
+import { useMemo, useState } from "react";
+
+import type { Nachrichtenzeile } from "@s1/domaene";
+
+import type { Nachrichtenlage, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import { Filterchips } from "./Filterchips.js";
+import type { Kontextort } from "./Klappmenue.js";
+import { Laufzettel } from "./Laufzettel.js";
+import { useLaden } from "./laden.js";
+import { TEXT_NUR_LESEN } from "./Maske.js";
+import { Nachrichtenkontextmenue, Nachrichtenleiste } from "./Nachrichtenauswahl.js";
+import { stellenname } from "./nachrichtenformate.js";
+import { Nachrichtenliste } from "./Nachrichtenliste.js";
+import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
+import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
+import { useNachrichtenansicht, type Nachrichtenabruf } from "./useNachrichtenansicht.js";
+import { useNachrichtenschritte } from "./useNachrichtenschritte.js";
+
+export type Nachrichtensicht = "posteingang" | "ausgang" | "sichter";
+type Posteingangsstand = NonNullable<Extract<Ruf, { art: "nachrichtenAnfordern" }>["zustaende"]>[number];
+
+/** Die Sichten dieses Schnitts; FmZ und Nachweisung kommen mit N2. */
+export const NACHRICHTENSICHTEN: readonly { readonly schluessel: Nachrichtensicht; readonly titel: string }[] = [
+  { schluessel: "posteingang", titel: "Posteingang" },
+  { schluessel: "ausgang", titel: "Ausgang" },
+  { schluessel: "sichter", titel: "Sichter" },
+];
+
+/** Die erste Sicht nach der Stelle (§6): Sichter sieht den Sichter, alle anderen den Posteingang. */
+export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
+  return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || s === "FMZ") ? "sichter" : "posteingang";
+}
+
+function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefined; readonly titel: string; readonly warn?: boolean }): React.JSX.Element {
+  return (
+    <div className={warn ? "kpi warn" : "kpi"}>
+      <dd>{wert ?? "—"}</dd>
+      <dt>{titel}</dt>
+    </div>
+  );
+}
+
+/** Die fünf Zahlen des Bandes (§6); „mit Vorrang offen" und „über der Schwelle" bernstein ab eins. */
+export function Nachrichtenband({ lage }: { readonly lage: Nachrichtenlage | undefined }): React.JSX.Element {
+  return (
+    <dl className="kpiband nachrichtenband" aria-label="Zahlen der Nachrichten">
+      <Kachel wert={lage?.neuFuerStellen} titel="neu für meine Stellen" />
+      <Kachel wert={lage?.vorFmz} titel="vor der FmZ" />
+      <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
+      <Kachel wert={lage?.mitVorrangOffen} titel="mit Vorrang offen" warn={(lage?.mitVorrangOffen ?? 0) > 0} />
+      <Kachel wert={lage?.ueberSchwelle} titel="über der Schwelle" warn={(lage?.ueberSchwelle ?? 0) > 0} />
+    </dl>
+  );
+}
+
+interface WerkzeugEigenschaften {
+  readonly sicht: Nachrichtensicht;
+  readonly aufSicht: (sicht: Nachrichtensicht) => void;
+  readonly suche: string;
+  readonly aufSuche: (suche: string) => void;
+  readonly nurLesen: boolean;
+  readonly aufVerfassen: () => void;
+}
+
+function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfassen }: WerkzeugEigenschaften): React.JSX.Element {
+  return (
+    <div className="werkzeugzeile">
+      <div className="umschalter" role="group" aria-label="Sicht">
+        {NACHRICHTENSICHTEN.map((eintrag) => (
+          <button key={eintrag.schluessel} type="button" aria-pressed={sicht === eintrag.schluessel} onClick={() => aufSicht(eintrag.schluessel)}>
+            {eintrag.titel}
+          </button>
+        ))}
+      </div>
+      <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : `Den Vordruck ausfüllen und aufgeben (${kuerzelText(kuerzel("anlegen") as never)})`} onClick={aufVerfassen}>
+        Nachricht verfassen
+      </button>
+      <span className="werkzeugrechts">
+        <input
+          id="nachrichtensuche"
+          type="search"
+          aria-label="Suche über Betreff, Inhalt, Absender und Anschrift"
+          placeholder={`Suchen … ${kuerzelText(kuerzel("suchen") as never)}`}
+          value={suche}
+          onChange={(e) => aufSuche(e.target.value)}
+        />
+      </span>
+    </div>
+  );
+}
+
+const CHIPS = [
+  { wert: "NEU", titel: "neu", ton: "warn" },
+  { wert: "GELESEN", titel: "gelesen", ton: "" },
+  { wert: "ERLEDIGT", titel: "erledigt", ton: "ok" },
+] as const;
+
+interface PostfilterEigenschaften {
+  readonly lage: Nachrichtenlage | undefined;
+  readonly wahl: readonly Posteingangsstand[];
+  readonly aufWahl: (wahl: readonly Posteingangsstand[]) => void;
+  readonly sitzung: Sitzungsstellen | undefined;
+  readonly fuer: string;
+  readonly aufFuer: (fuer: string) => void;
+}
+
+/** Die Chips des Posteingangs und die Wahl, wessen Posteingang gezeigt wird. */
+function Postfilter({ lage, wahl, aufWahl, sitzung, fuer, aufFuer }: PostfilterEigenschaften): React.JSX.Element {
+  const eigene = sitzung?.stellen ?? [];
+  const chips = CHIPS.map((c) => ({ ...c, anzahl: c.wert === "NEU" && fuer === "" ? lage?.neuFuerStellen : undefined }));
+  const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "FMZ"].filter((s) => !eigene.includes(s));
+  return (
+    <Filterchips
+      beschriftung="Filter nach Zustand"
+      chips={chips}
+      wahl={wahl}
+      aufWahl={(neu) => aufWahl(neu as readonly Posteingangsstand[])}
+      dazu={
+        <label className="filterschalter">
+          Posteingang von
+          <select value={fuer} onChange={(e) => aufFuer(e.target.value)}>
+            <option value="">{eigene.length === 0 ? "— keine Stelle gewählt —" : `meinen Stellen (${eigene.map(stellenname).join(", ")})`}</option>
+            {andere.map((s) => (
+              <option key={s} value={s}>
+                {stellenname(s)}
+              </option>
+            ))}
+          </select>
+        </label>
+      }
+    />
+  );
+}
+
+interface ListenEigenschaften {
+  readonly abruf: Nachrichtenabruf;
+  readonly sicht: Nachrichtensicht;
+  readonly stellen: readonly string[];
+  readonly gewaehltId: string | undefined;
+  readonly aufWahl: (id: string) => void;
+  readonly aufLesen: (zeile: Nachrichtenzeile) => void;
+  readonly aufKontext: (ort: Kontextort) => void;
+}
+
+/** Die Liste der Sicht, mit Ladezustand, leerer Sicht und Hinweis auf weitere Zeilen. */
+function Listenflaeche({ abruf, sicht, stellen, gewaehltId, aufWahl, aufLesen, aufKontext }: ListenEigenschaften): React.JSX.Element {
+  const titel = NACHRICHTENSICHTEN.find((s) => s.schluessel === sicht)?.titel ?? sicht;
+  const zeilen = abruf.ansicht?.zeilen ?? [];
+  if (abruf.ansicht === undefined) {
+    return <p className="hinweistext">{abruf.fehler ?? "Wird geladen …"}</p>;
+  }
+  if (zeilen.length === 0) {
+    const ohneStelle = sicht === "posteingang" && stellen.length === 0;
+    return (
+      <p className="hinweistext">
+        {ohneStelle ? "Keine Stelle gewählt — über das Fenstermenü „Stelle und Handzeichen …“ angeben oder oben eine Stelle wählen." : `Keine Nachricht in „${titel}“.`}
+      </p>
+    );
+  }
+  return (
+    <>
+      {abruf.fehler !== undefined && <p className="hinweistext fehler">{abruf.fehler}</p>}
+      <Nachrichtenliste
+        zeilen={zeilen}
+        beschriftung={`Nachrichten: ${titel}`}
+        stellen={stellen}
+        posteingang={sicht === "posteingang"}
+        gewaehltId={gewaehltId}
+        aufWahl={aufWahl}
+        aufLesen={(id) => {
+          const zeile = zeilen.find((z) => z.id === id);
+          if (zeile !== undefined) aufLesen(zeile);
+        }}
+        aufKontext={aufKontext}
+      />
+      {abruf.ansicht.gesamtzahl > zeilen.length && (
+        <p className="hinweistext">
+          {zeilen.length} von {abruf.ansicht.gesamtzahl} Nachrichten; die Suche grenzt ein.
+        </p>
+      )}
+    </>
+  );
+}
+
+export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void }): React.JSX.Element {
+  const akteId = useLaden((z) => z.akteId);
+  const lageZeiger = useLaden((z) => z.lagebild?.lageZeiger);
+  const lage = useLaden((z) => z.lagebild?.nachrichten);
+  const sitzung = useLaden((z) => z.lagebild?.sitzung);
+  const nurLesen = useNurLesen();
+  const [sicht, setzeSicht] = useState<Nachrichtensicht>(() => ersteSicht(sitzung?.stellen ?? []));
+  const [suche, setzeSuche] = useState("");
+  const [zustaende, setzeZustaende] = useState<readonly Posteingangsstand[]>([]);
+  const [fuer, setzeFuer] = useState("");
+  const [gewaehltId, setzeGewaehltId] = useState<string | undefined>(undefined);
+  const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const stellen = fuer === "" ? (sitzung?.stellen ?? []) : [fuer];
+  const abruf = useNachrichtenansicht(akteId, lageZeiger, {
+    sicht,
+    stellen: [...stellen],
+    ...(sicht === "posteingang" && zustaende.length > 0 ? { zustaende: [...zustaende] } : {}),
+    ...(suche.trim() === "" ? {} : { suche: suche.trim() }),
+  });
+  const zeilen = abruf.ansicht?.zeilen ?? [];
+  const gewaehlt = zeilen.find((z) => z.id === gewaehltId);
+  const schritte = useNachrichtenschritte({ zeile: gewaehlt, sitzung, stellen, nurLesen, anschriften: abruf.ansicht?.anschriften ?? [], aufTagebuch });
+  const { verfassen } = schritte;
+
+  useKuerzel(
+    useMemo(
+      () => ({
+        anlegen: () => {
+          if (!nurLesen) verfassen();
+        },
+        suchen: () => document.getElementById("nachrichtensuche")?.focus(),
+        abbrechen: () => setzeGewaehltId(undefined),
+      }),
+      [nurLesen, verfassen],
+    ),
+  );
+
+  return (
+    <section aria-label="Nachrichten" className="nachrichten">
+      <h2>Nachrichten</h2>
+      <NurLesenHinweis />
+      <Nachrichtenband lage={lage} />
+      <Werkzeugzeile
+        sicht={sicht}
+        aufSicht={(neu) => {
+          setzeSicht(neu);
+          setzeGewaehltId(undefined);
+        }}
+        suche={suche}
+        aufSuche={setzeSuche}
+        nurLesen={nurLesen}
+        aufVerfassen={verfassen}
+      />
+      {sicht === "posteingang" && <Postfilter lage={lage} wahl={zustaende} aufWahl={setzeZustaende} sitzung={sitzung} fuer={fuer} aufFuer={setzeFuer} />}
+      <Listenflaeche
+        abruf={abruf}
+        sicht={sicht}
+        stellen={stellen}
+        gewaehltId={gewaehltId}
+        aufWahl={setzeGewaehltId}
+        aufLesen={schritte.lesen}
+        aufKontext={setzeKontext}
+      />
+      {schritte.auswahl !== undefined && <Nachrichtenleiste {...schritte.auswahl} />}
+      {schritte.auswahl !== undefined && kontext !== undefined && <Nachrichtenkontextmenue {...schritte.auswahl} ort={kontext} aufSchliessen={() => setzeKontext(undefined)} />}
+      {sicht === "sichter" && gewaehlt !== undefined && (
+        <Laufzettel key={gewaehlt.id} zeile={gewaehlt} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufGesichtet={() => setzeGewaehltId(undefined)} />
+      )}
+      {schritte.masken}
+    </section>
+  );
+}

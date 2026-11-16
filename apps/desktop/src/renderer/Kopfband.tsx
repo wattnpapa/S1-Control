@@ -51,6 +51,8 @@ export interface KopfbandEigenschaften {
   angemeldet?: boolean | undefined;
   /** Das Profil des Arbeitsplatzes — es wählt die Reiter im Band; ohne Angabe Führungsstelle. */
   profil?: Profil | undefined;
+  /** Öffnet die Abfrage von Stelle und Handzeichen (Nachrichten, Entscheidung 3). */
+  aufStelle?: (() => void) | undefined;
 }
 
 /** „FüSt OV Oldenburg · S1-Control“ — der Name aus den Stammdaten, wenn es ihn gibt. */
@@ -104,6 +106,7 @@ export function Kopfband({
   offeneMeldungen = 0,
   angemeldet = false,
   profil,
+  aufStelle,
 }: KopfbandEigenschaften): React.JSX.Element {
   return (
     <header className="kopfband">
@@ -128,6 +131,7 @@ export function Kopfband({
           aufHilfe={aufHilfe}
           zurueckZurAuswahl={zurueckZurAuswahl}
           aufDiagnose={waehleBlatt === undefined ? undefined : () => waehleBlatt("diagnose")}
+          aufStelle={aufStelle}
           angemeldet={angemeldet}
         />
       </div>

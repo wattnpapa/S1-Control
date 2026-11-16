@@ -24,6 +24,7 @@ export interface Reiter {
   readonly schluessel:
     | "lage"
     | "eingang"
+    | "nachrichten"
     | "fuest"
     | "funkplan"
     | "versorgung"
@@ -45,6 +46,9 @@ export const BLAETTER: readonly Reiter[] = [
   // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
   // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
   { schluessel: "eingang", titel: "Eingang" },
+  // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §6, Entscheidung 10): zwischen
+  // Eingang und Führungsstelle — der Vordruck läuft zwischen den Stellen.
+  { schluessel: "nachrichten", titel: "Nachrichten" },
   // Ebenso Stammdaten mit Schichtplan und die Führungsorganisation: Beide
   // beschreiben die Struktur der Führung.
   { schluessel: "fuest", titel: "Führungsstelle" },
@@ -86,8 +90,9 @@ export function blatttitel(blatt: Blatt): string {
  * der Versorgung. „alle" fehlt hier — das ist das Band, wie es bis E3 war.
  */
 const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
-  fuehrungsstelle: ["lage", "eingang", "fuest", "ausgaben", "tagebuch"],
-  vermeldezentrale: ["funkplan", "lage", "tagebuch"],
+  fuehrungsstelle: ["lage", "eingang", "nachrichten", "fuest", "ausgaben", "tagebuch"],
+  // Die Vermeldezentrale ist auch die FmZ: Nachrichten vor dem Funkplan (§6).
+  vermeldezentrale: ["nachrichten", "funkplan", "lage", "tagebuch"],
   versorgung: ["versorgung", "lage", "ausgaben"],
 };
 

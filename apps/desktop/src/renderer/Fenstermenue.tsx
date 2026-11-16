@@ -43,6 +43,8 @@ export interface FenstermenueEigenschaften {
   zurueckZurAuswahl?: (() => void) | undefined;
   /** Nur mit offenem Einsatz in der Betriebsart Führungsstelle. */
   aufDiagnose?: (() => void) | undefined;
+  /** Stelle und Handzeichen der Sitzung ändern (KONZEPT-NACHRICHTEN.md Entscheidung 3). */
+  aufStelle?: (() => void) | undefined;
   /** Läuft die Web-Schale hinter der Anmeldung (ADR-006)? Dann steht „Abmelden“ da. */
   readonly angemeldet: boolean;
 }
@@ -93,6 +95,7 @@ function Menueinhalt({
   aufHilfe,
   zurueckZurAuswahl,
   aufDiagnose,
+  aufStelle,
   angemeldet,
   waehle,
   aufMonitor,
@@ -141,6 +144,11 @@ function Menueinhalt({
           onClick={waehle(monitor.imBrowser ? monitor.oeffneImBrowser : aufMonitor)}
         >
           Stärke-Monitor öffnen …
+        </button>
+      )}
+      {aufStelle !== undefined && (
+        <button type="button" role="menuitem" title="Welche Position dieser Arbeitsplatz im Stab hat, und das Handzeichen" onClick={waehle(aufStelle)}>
+          Stelle und Handzeichen …
         </button>
       )}
       {aufDiagnose !== undefined && (

@@ -1,0 +1,105 @@
+/**
+ * Die Teile des Nachrichtenvordrucks, die Maske und Ansicht teilen
+ * (KONZEPT-NACHRICHTEN.md §3, §6).
+ *
+ * Der Vordruck ist in drei Teile geteilt: oben die Vermerke der FmZ (Feld 1
+ * bis 6), in der Mitte die Nachricht (Feld 7 bis 17), unten der Laufzettel
+ * mit Quittung, Verteiler und Vermerken (Feld 18 bis 20). Maske und Ansicht
+ * zeigen ihn in dieser Anordnung, nicht als Formular mit zwanzig Feldern
+ * untereinander; wer den Papiervordruck kennt, findet jedes Feld dort, wo er
+ * es sucht. Die Teile, die an diesem Platz niemand ausfüllt, stehen grau und
+ * schreibgeschützt.
+ */
+
+import { projektion, type Nachrichtenzeile } from "@s1/domaene";
+
+import { dtg, kopieklasse, stellenname } from "./nachrichtenformate.js";
+
+/** Ein Kästchen des Vordrucks als Anzeige — Kreuz und Wort, nicht nur Farbe. */
+export function Kaestchen({ an, text }: { readonly an: boolean; readonly text: string }): React.JSX.Element {
+  return (
+    <span className={an ? "kaestchen an" : "kaestchen"} aria-label={`${text}: ${an ? "angekreuzt" : "leer"}`}>
+      <span aria-hidden="true">{an ? "☒" : "☐"}</span> {text}
+    </span>
+  );
+}
+
+function Wert({ titel, wert }: { readonly titel: string; readonly wert: string | undefined }): React.JSX.Element {
+  return (
+    <span className="vordruckwert">
+      <span className="vordrucktitel">{titel}</span> {wert === undefined || wert === "" ? "—" : wert}
+    </span>
+  );
+}
+
+function vermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string } | undefined): string | undefined {
+  return v === undefined ? undefined : `${dtg(v.zeitpunkt)} ${v.handzeichen}`.trim();
+}
+
+/** Der obere Teil (Feld 1 bis 6): grau und schreibgeschützt, solange dieser Platz nicht FmZ ist. */
+export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefined }): React.JSX.Element {
+  const mittel = zeile?.aufnahme?.mittel ?? zeile?.befoerderung?.mittel;
+  return (
+    <fieldset className="vordruckteil grau" disabled aria-label="Vermerke der Fernmeldezentrale">
+      <legend>Fernmeldezentrale</legend>
+      <Wert titel="Mittel" wert={mittel === undefined ? undefined : projektion.mittelWort(mittel)} />
+      <Wert titel="Aufnahme" wert={vermerk(zeile?.aufnahme)} />
+      <Wert titel="Annahme" wert={vermerk(zeile?.annahme)} />
+      <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
+      <Wert titel={zeile === undefined ? "Nr." : `Nr. (${zeile.richtungKurz})`} wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
+      <Wert titel="Gegenstelle" wert={zeile?.gegenstelle} />
+    </fieldset>
+  );
+}
+
+/** Der untere Teil (Feld 18 bis 20) zum Lesen: Quittung, Verteiler mit Kopiefarbe und Marken, Vermerke. */
+export function LaufzettelAnzeige({ zeile }: { readonly zeile?: Nachrichtenzeile | undefined }): React.JSX.Element {
+  const sichtung = zeile?.sichtung;
+  return (
+    <fieldset className="vordruckteil grau" disabled aria-label="Laufzettel">
+      <legend>Laufzettel</legend>
+      <Wert titel="Quittung" wert={vermerk(sichtung)} />
+      {zeile === undefined || zeile.verteiler.length === 0 ? (
+        <Wert titel="Verteiler" wert={sichtung === undefined ? "noch nicht gesichtet" : "ohne Verteiler"} />
+      ) : (
+        <ul className="verteileranzeige" aria-label="Verteiler">
+          {zeile.verteiler.map((m) => (
+            <li key={m.stelle} className={kopieklasse(m.kopie)}>
+              {stellenname(m.stelle)} · {projektion.kopieWort(m.kopie)}
+              {m.gelesen ? ` · gelesen${m.kenntnis === undefined ? "" : ` ${dtg(m.kenntnis.zeitpunkt)} ${m.kenntnis.handzeichen}`}` : " · neu"}
+              {m.erledigt && " · erledigt"}
+            </li>
+          ))}
+        </ul>
+      )}
+      <Wert titel="Vermerke" wert={zeile?.vermerke} />
+    </fieldset>
+  );
+}
+
+/** Der mittlere Teil zum Lesen (Feld 7 bis 17). */
+export function NachrichtenteilAnzeige({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
+  return (
+    <fieldset className="vordruckteil" aria-label="Nachricht">
+      <legend>Nachricht</legend>
+      <div className="kaestchenzeile">
+        <Kaestchen an={zeile.uebermittlungswunsch !== undefined} text={zeile.uebermittlungswunsch === undefined ? "Übermittlung" : projektion.mittelWort(zeile.uebermittlungswunsch)} />
+        <Kaestchen an={zeile.art === "SPRUCH"} text="Spruch" />
+        <Kaestchen an={zeile.art === "DURCHSAGE"} text="Durchsage" />
+        <Kaestchen an={zeile.vorrang === "SOFORT"} text="Sofort" />
+        <Kaestchen an={zeile.vorrang === "BLITZ"} text="Blitz" />
+        <Kaestchen an={zeile.gespraechsnotiz} text="Gesprächsnotiz" />
+      </div>
+      <Wert titel="Anschrift" wert={zeile.anschrift} />
+      <Wert titel="Ruf-Nr." wert={zeile.rufnummer} />
+      <Wert titel="Betreff" wert={zeile.betreff} />
+      <pre className="vordruckinhalt" aria-label="Inhalt">
+        {zeile.inhalt}
+      </pre>
+      <Wert titel="Absender" wert={zeile.absender} />
+      <Wert titel="Abfassungszeit" wert={dtg(zeile.abfassungszeit)} />
+      <Wert titel="Zeichen" wert={zeile.zeichen} />
+      <Wert titel="Funktion" wert={zeile.funktion} />
+    </fieldset>
+  );
+}

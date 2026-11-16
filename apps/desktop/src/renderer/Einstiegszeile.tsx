@@ -27,7 +27,9 @@ import { istGemerkt, merke } from "./geraetemerker.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { orttitel, type Blattort } from "./unterblaetter.js";
 
-const KENNUNG: Readonly<Record<Blattort, Ansichtskennung>> = {
+// Partiell: Ein Blatt ohne Text in `ANSICHTEN` (Nachrichten, bis Ring 2 ihn
+// führt) zeigt keine Einstiegszeile, statt einen Satz hier zu erfinden.
+const KENNUNG: Readonly<Partial<Record<Blattort, Ansichtskennung>>> = {
   lage: "einheiten",
   "eingang.eingangskorb": "eingangskorb",
   "eingang.anforderungen": "anforderungen",
@@ -56,9 +58,10 @@ export function Einstiegszeile({ ort }: { readonly ort: Blattort }): React.JSX.E
   // Auch ohne Speicher bleibt die Zeile weg, nachdem sie in dieser Sitzung
   // bestätigt wurde; erst das nächste Öffnen zeigt sie wieder.
   const [bestaetigt, setzeBestaetigt] = useState<readonly Blattort[]>([]);
-  if (bestaetigt.includes(ort) || istGemerkt(einstiegsschluessel(ort))) return null;
+  const kennung = KENNUNG[ort];
+  if (kennung === undefined || bestaetigt.includes(ort) || istGemerkt(einstiegsschluessel(ort))) return null;
   const titel = orttitel(ort);
-  const satz = ersterSatz(ansichtshilfe(KENNUNG[ort]).wozu);
+  const satz = ersterSatz(ansichtshilfe(kennung).wozu);
   return (
     <aside className="einstiegszeile" aria-label={`Einstieg: ${titel}`}>
       <p>

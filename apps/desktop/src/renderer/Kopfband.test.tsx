@@ -262,9 +262,9 @@ describe("Kopfband", () => {
     const reiter = (): string[] => screen.getAllByRole("tab").map((knopf) => knopf.textContent);
 
     zeige(undefined);
-    expect(reiter()).toEqual(["Lage", "Eingang", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
+    expect(reiter()).toEqual(["Lage", "Eingang", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
     zeige("vermeldezentrale");
-    expect(reiter()).toEqual(["Funkplan", "Lage", "Einsatztagebuch"]);
+    expect(reiter()).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
       "Eingang",
@@ -276,7 +276,7 @@ describe("Kopfband", () => {
     zeige("versorgung");
     expect(reiter()).toEqual(["Versorgung", "Lage", "Ausgaben"]);
     zeige("alle");
-    expect(reiter()).toHaveLength(8);
+    expect(reiter()).toHaveLength(9);
     expect(screen.queryByRole("button", { name: "Mehr ▾" })).toBeNull();
   });
 
@@ -304,7 +304,7 @@ describe("Kopfband", () => {
     rerender(<Kopfband {...eigenschaften} blatt="kosten" />);
     const kosten = screen.getByRole("tab", { name: "Kosten", selected: true });
     expect(kosten.className).toBe("aus-mehr");
-    expect(screen.getAllByRole("tab").map((knopf) => knopf.textContent)).toEqual(["Funkplan", "Lage", "Einsatztagebuch", "Kosten"]);
+    expect(screen.getAllByRole("tab").map((knopf) => knopf.textContent)).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch", "Kosten"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(screen.getByRole("menuitemradio", { name: "Kosten" }).getAttribute("aria-checked")).toBe("true");
     expect(screen.getByRole("menuitemradio", { name: "Versorgung" }).getAttribute("aria-checked")).toBe("false");

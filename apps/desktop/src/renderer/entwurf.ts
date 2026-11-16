@@ -35,9 +35,23 @@ export function istLeer(eingabe: Anforderungseingabe): boolean {
   return Object.values(eingabe).every((wert) => wert.trim() === "");
 }
 
+/**
+ * Masken, die bis zum Aufgeben ein Entwurf dieses Fensters sind und keinen
+ * eigenen Speicher haben — die Nachricht (KONZEPT-NACHRICHTEN.md §5: „Bis
+ * zum Knopf ‚Aufgeben' ist sie ein Entwurf dieses Fensters, kein Ereignis").
+ * Sie melden sich hier an, damit `beforeunload` auch für sie warnt.
+ */
+const offeneEingaben = new Set<string>();
+
+/** Meldet eine Maske mit getipptem, nicht aufgegebenem Inhalt an oder ab. */
+export function merkeOffeneEingabe(schluessel: string, offen: boolean): void {
+  if (offen) offeneEingaben.add(schluessel);
+  else offeneEingaben.delete(schluessel);
+}
+
 /** Gibt es einen Entwurf mit Inhalt, der bei einem Verlassen der Seite verloren ginge? */
 export function hatOffenenEntwurf(): boolean {
-  return !istLeer(useEntwurf.getState().eingabe);
+  return !istLeer(useEntwurf.getState().eingabe) || offeneEingaben.size > 0;
 }
 
 /** Setzt den Entwurf zurück (für Tests und den Wechsel des Einsatzes). */

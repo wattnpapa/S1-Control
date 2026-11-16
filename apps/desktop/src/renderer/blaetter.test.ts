@@ -14,23 +14,23 @@ import { BLAETTER, reiterFuer } from "./blaetter.js";
 const titel = (liste: readonly { readonly titel: string }[]): string[] => liste.map((eintrag) => eintrag.titel);
 
 describe("Reiter je Profil", () => {
-  it("stellt der Führungsstelle (Vorgabe) Lage, Eingang, Führungsstelle, Ausgaben und Tagebuch ins Band", () => {
+  it("stellt der Führungsstelle (Vorgabe) Lage, Eingang, Nachrichten, Führungsstelle, Ausgaben und Tagebuch ins Band", () => {
     const zuschnitt = reiterFuer("fuehrungsstelle");
-    expect(titel(zuschnitt.imBand)).toEqual(["Lage", "Eingang", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
+    expect(titel(zuschnitt.imBand)).toEqual(["Lage", "Eingang", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
     expect(titel(zuschnitt.unterMehr)).toEqual(["Funkplan", "Versorgung", "Kosten"]);
     expect(reiterFuer()).toEqual(zuschnitt);
   });
 
-  it("stellt der Vermeldezentrale den Funkplan voran", () => {
+  it("stellt der Vermeldezentrale Nachrichten und Funkplan voran", () => {
     const zuschnitt = reiterFuer("vermeldezentrale");
-    expect(titel(zuschnitt.imBand)).toEqual(["Funkplan", "Lage", "Einsatztagebuch"]);
+    expect(titel(zuschnitt.imBand)).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch"]);
     expect(titel(zuschnitt.unterMehr)).toEqual(["Eingang", "Führungsstelle", "Versorgung", "Kosten", "Ausgaben"]);
   });
 
   it("stellt der Versorgung (S4) die Versorgung voran", () => {
     const zuschnitt = reiterFuer("versorgung");
     expect(titel(zuschnitt.imBand)).toEqual(["Versorgung", "Lage", "Ausgaben"]);
-    expect(titel(zuschnitt.unterMehr)).toEqual(["Eingang", "Führungsstelle", "Funkplan", "Kosten", "Einsatztagebuch"]);
+    expect(titel(zuschnitt.unterMehr)).toEqual(["Eingang", "Nachrichten", "Führungsstelle", "Funkplan", "Kosten", "Einsatztagebuch"]);
   });
 
   it("zeigt bei „Alle Blätter“ jedes Blatt in der bisherigen Reihenfolge und kein „Mehr“", () => {
@@ -38,6 +38,7 @@ describe("Reiter je Profil", () => {
     expect(titel(zuschnitt.imBand)).toEqual([
       "Lage",
       "Eingang",
+      "Nachrichten",
       "Führungsstelle",
       "Funkplan",
       "Versorgung",

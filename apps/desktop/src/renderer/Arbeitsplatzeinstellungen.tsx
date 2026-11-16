@@ -24,14 +24,16 @@ function useEinstellungsfelder() {
   const [name, setzeName] = useState(einstellungen.anzeigename);
   const [betriebsart, setzeBetriebsart] = useState<Betriebsart>(einstellungen.betriebsart ?? "fuehrungsstelle");
   const [profil, setzeProfil] = useState<Profil>(einstellungen.profil ?? "fuehrungsstelle");
+  const [ton, setzeTon] = useState(einstellungen.tonBeiBlitz !== false);
   // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
   useEffect(() => {
     setzeShare(einstellungen.sharePfad);
     setzeName(einstellungen.anzeigename);
     setzeBetriebsart(einstellungen.betriebsart ?? "fuehrungsstelle");
     setzeProfil(einstellungen.profil ?? "fuehrungsstelle");
+    setzeTon(einstellungen.tonBeiBlitz !== false);
   }, [einstellungen]);
-  return { einstellungen, share, setzeShare, name, setzeName, betriebsart, setzeBetriebsart, profil, setzeProfil };
+  return { einstellungen, share, setzeShare, name, setzeName, betriebsart, setzeBetriebsart, profil, setzeProfil, ton, setzeTon };
 }
 
 /** Die aufgeklappte Maske. */
@@ -45,11 +47,15 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
   const shareFest = useLaden((z) => z.umgebung?.plattform === "web");
   const uebernimm = (): void => {
     void setzeEinstellungen({
+      // Was diese Maske nicht zeigt, bleibt (Handzeichen und Stellen je
+      // Einsatz aus der Abfrage beim Öffnen, Monitorwahl).
+      ...f.einstellungen,
       sharePfad: f.share,
       anzeigename: f.name,
       betriebsart: f.betriebsart,
       // Auch im Meldekopf: Das Profil bleibt gemerkt, es gilt nur nicht.
       profil: f.profil,
+      tonBeiBlitz: f.ton,
       // Das Erscheinungsbild gehört dem Fenstermenü; diese Maske reicht es
       // durch, statt es auf den Stand beim Öffnen zurückzudrehen.
       ...(f.einstellungen.theme === undefined ? {} : { theme: f.einstellungen.theme }),
@@ -84,6 +90,13 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
           : "Die Führungsstelle führt das Lagebild. Ein Meldekopf am Bereitstellungsraum nimmt nur Bögen auf und quittiert sie."}
       </p>
       <Profilwahl profil={f.profil} aufWahl={f.setzeProfil} gesperrt={f.betriebsart === "meldekopf"} />
+      <label className="kaestchen">
+        <input type="checkbox" checked={f.ton} aria-describedby="erklaerung-ton" onChange={(e) => f.setzeTon(e.target.checked)} />
+        Ton bei Blitz-Nachricht
+      </label>
+      <p id="erklaerung-ton" className="hinweistext">
+        Zwei kurze Töne, wenn eine gesichtete Blitz-Nachricht für eine Stelle dieses Arbeitsplatzes eintrifft. Der Hinweis in der Leiste steht auch ohne Ton.
+      </p>
       <button type="button" className="haupt" disabled={beschaeftigt} onClick={uebernimm}>
         Übernehmen
       </button>
