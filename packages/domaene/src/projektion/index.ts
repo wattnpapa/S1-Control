@@ -276,6 +276,7 @@ export {
   type Nachrichtensicht,
   type Posteingangsstand,
 } from "./nachrichten.js";
+export { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 export {
   fmzSchwelle,
   vergleicheNachNummer,

@@ -503,6 +503,16 @@ Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.
 
 **Kürzel:** Strg+Q · Strg+F
 
+### Nachrichten
+
+Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vorrang, Nummer, Absender, Anschrift und Betreff. Fünf Sichten, eine Zeile je Nachricht. „Posteingang“ zeigt, was an eine Stelle dieses Arbeitsplatzes verteilt ist, mit Kopiefarbe und den Marken neu, gelesen und erledigt. „Ausgang“ zeigt, was dieser Arbeitsplatz verfasst hat, mit dem Stand in der Fernmeldezentrale. „Sichter“ zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang. „Fernmeldezentrale“ zeigt die Ausgangswarteschlange mit Annahme und Beförderung und nimmt Eingänge auf. „Nachweisung“ zeigt alle Nachrichten nach Nummer und lässt sich als Liste ausgeben.
+
+**Zuerst:** Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.
+
+**Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht.
+
+**Kürzel:** Strg+N · Strg+F · Strg+D
+
 ### Anforderungen
 
 Was angefordert, zugesagt, eingetroffen oder storniert ist.

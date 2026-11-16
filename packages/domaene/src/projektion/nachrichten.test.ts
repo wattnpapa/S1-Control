@@ -10,6 +10,7 @@ import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } fr
 import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "../pruefhilfen/ereignisbau.js";
 import type { Zustand } from "../zustand.js";
 import { nachrichtenausschnitt, nachrichtenlage, nachrichtNach, naechsteNachweisnummer } from "./nachrichten.js";
+import { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 import { tagebuchzeile } from "./tagebuch.js";
 
 let n = 0;
@@ -215,5 +216,23 @@ describe("Die Nachrichten im Tagebuch", () => {
     const z = zustand([...basis, schwelle, sichtung]);
     expect(tagebuchzeile(z, schwelle).satz).toBe("Hochwasser: Nachrichtenparameter gesetzt (Schwelle FmZ): 20 → 30 min");
     expect(tagebuchzeile(z, sichtung).satz).toBe("Hochwasser: Nachrichtenparameter gesetzt (Sichtung auch für Ausgänge): nein → ja");
+  });
+});
+
+describe("Die Zahlen hinter den Chips", () => {
+  it("zählt den Posteingang je Stand wie die Sicht ihn filtert", () => {
+    const z = zustand([...lage(), vermerk("NachrichtErledigt", "E1", true, { stelle: "S3" })]);
+    expect(nachrichtenZaehlung(z, ["S2"])).toEqual({ NEU: 2, GELESEN: 0, ERLEDIGT: 0 });
+    expect(nachrichtenZaehlung(z, ["S4"])).toEqual({ NEU: 0, GELESEN: 1, ERLEDIGT: 0 });
+    expect(nachrichtenZaehlung(z, ["S3"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 1 });
+    for (const stand of ["NEU", "GELESEN", "ERLEDIGT"] as const) {
+      const gesamt = nachrichtenausschnitt(z, { sicht: "posteingang", stellen: ["S2", "S3", "S4"], zustaende: [stand] }).gesamtzahl;
+      expect(nachrichtenZaehlung(z, ["S2", "S3", "S4"])[stand]).toBe(gesamt);
+    }
+  });
+
+  it("zählt nichts für eine Stelle ohne Verteiler und für einen leeren Einsatz", () => {
+    expect(nachrichtenZaehlung(zustand(lage()), ["S9"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0 });
+    expect(nachrichtenZaehlung(zustand([]), ["S2"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0 });
   });
 });
