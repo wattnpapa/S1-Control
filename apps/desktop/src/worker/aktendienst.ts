@@ -108,6 +108,8 @@ import {
   type Kostenansicht,
   type Versorgungsansicht,
   type Funkplanansicht,
+  type Nachrichtenansicht,
+  type Sitzungsstellen,
   type Staerketafelansicht,
   type Bedienergebnis,
   type Lagebild,
@@ -145,6 +147,8 @@ import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { pruefeFunk } from "./funkpruefung.js";
+import { Vorrangwaechter, nachrichtenansicht, nachrichtenFuerLagebild, peerStellen, sitzungAus } from "./nachrichtendienst.js";
+import { pruefeNachricht } from "./nachrichtenpruefung.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
 
@@ -374,6 +378,18 @@ export class Aktendienst {
   #monitor: { mitStatus: boolean; organisation?: string } | undefined;
   #letzterMonitor = Number.NEGATIVE_INFINITY;
 
+  /**
+   * Stellen und Handzeichen dieses Arbeitsplatzes für die Sitzung dieser Akte
+   * (KONZEPT-NACHRICHTEN.md Entscheidung 3). Sie gehören zur Sitzung und
+   * nicht zur Akte: Sie stehen in der Präsenz, im Lagebild und im Zuschnitt
+   * des Blattes „Nachrichten", nie in einem Ereignis (§4: Stelle und
+   * Handzeichen gehen in die Nutzlast der Ereignisse, die sie brauchen).
+   * Fehlt, solange niemand sie angegeben hat.
+   */
+  #sitzung: Sitzungsstellen | undefined;
+  /** Meldet eintreffende Nachrichten mit Vorrang für die Stellen der Sitzung (Entscheidung 6). */
+  readonly #vorrang = new Vorrangwaechter();
+
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
     this.#takte = { ...TAKTE_VORBELEGUNG, ...optionen.takte };
@@ -461,10 +477,30 @@ export class Aktendienst {
     this.#shareErreichbar = ergebnis.reaktion?.art !== "shareNichtErreichbar";
     if (this.#shareErreichbar) this.#letzterShareKontakt = this.#jetztText();
 
+    // Was beim Öffnen schon da war, ist kein Eintreffen (Entscheidung 6).
+    this.#vorrang.grundlinie(this.#zustand, this.#sitzung?.stellen ?? []);
+
     this.#folge = 0;
     this.#gesendet = this.#projiziere();
     this.#o.sende({ art: "stand", akteId: this.#o.akteId, folge: 0, voll: this.#gesendet });
     return ergebnis;
+  }
+
+  /**
+   * Setzt Stelle und Handzeichen der Sitzung (Entscheidung 3) — beim Öffnen
+   * vor dem ersten Lagebild, danach aus dem Fenstermenü. Die Präsenz wird im
+   * nächsten Takt geschrieben, damit die Kollegen die besetzten Stellen
+   * sehen. Was für die neuen Stellen schon vorliegt, meldet sich nicht als
+   * Vorrang: Es ist nicht eingetroffen, man hat nur die Stelle gewechselt.
+   */
+  stellenSetzen(stellen: readonly string[] | undefined, handzeichen: string | undefined): void {
+    this.#sitzung = sitzungAus(stellen, handzeichen);
+    this.#letztePraesenz = Number.NEGATIVE_INFINITY;
+    // Vor dem Öffnen setzt `oeffne` die Grundlinie nach der Wiederaufnahme;
+    // hier gesetzt, meldete die Wiederaufnahme jede alte Vorrangnachricht.
+    if (this.#akte === undefined) return;
+    this.#vorrang.grundlinie(this.#zustand, this.#sitzung.stellen);
+    this.#sendeDelta();
   }
 
   /**
@@ -608,6 +644,8 @@ export class Aktendienst {
       anzeigename: this.#o.anzeigename,
       rechnername: this.#o.rechnername,
       programmversion: this.#o.programmversion,
+      ...(this.#sitzung === undefined ? {} : { stellen: this.#sitzung.stellen }),
+      ...(this.#sitzung?.handzeichen === undefined ? {} : { handzeichen: this.#sitzung.handzeichen }),
     };
     try {
       await schreibePraesenz(
@@ -652,6 +690,7 @@ export class Aktendienst {
             ),
             quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
             ...(fremd.veraltet || fremd.praesenz.bearbeitet === undefined ? {} : { bearbeitet: fremd.praesenz.bearbeitet }),
+            ...peerStellen(fremd.praesenz),
           };
         },
       );
@@ -917,6 +956,16 @@ export class Aktendienst {
   /** Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5), mit Suche zugeschnitten und gegen die Uhr dieses Workers gerechnet. */
   funkplan(ruf: Extract<Ruf, { art: "funkplanAnfordern" }>): Funkplanansicht {
     return funkplanansicht(this.#zustand, ruf, { lageZeiger: this.#lageZeiger, jetztMs: this.#o.zeit(), ereignisse: this.#ereignisse });
+  }
+
+  /** Das Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md §6), zugeschnitten auf die Stellen der Anfrage oder der Sitzung. */
+  nachrichten(ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }>): Nachrichtenansicht {
+    return nachrichtenansicht(this.#zustand, ruf, {
+      lageZeiger: this.#lageZeiger,
+      jetztMs: this.#o.zeit(),
+      clientId: this.#clientId,
+      sitzung: this.#sitzung,
+    });
   }
 
   /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
@@ -1812,6 +1861,22 @@ export class Aktendienst {
         this.#letzteWanduhr = ereignis.wanduhr;
       }
     }
+    this.#meldeVorrang();
+  }
+
+  /** Entscheidung 6: der Hinweis bei Vorrang für eine Stelle der Sitzung, bei Blitz mit Ton. */
+  #meldeVorrang(): void {
+    const stellen = this.#sitzung?.stellen ?? [];
+    if (stellen.length === 0) return;
+    for (const hinweis of this.#vorrang.neue(this.#zustand, stellen, this.#clientId)) {
+      this.#o.sende({
+        art: "hinweis",
+        akteId: this.#o.akteId,
+        stufe: "warnung",
+        text: hinweis.text,
+        ...(hinweis.blitz ? { ton: "blitz" as const } : {}),
+      });
+    }
   }
 
   /** Das Lagebild aus dem aktuellen Zustand — die einzige Stelle, die es baut. */
@@ -1869,6 +1934,8 @@ export class Aktendienst {
       lageZeiger: this.#lageZeiger,
       versorgung: versorgungFuerLagebild(zustand, this.#o.zeit()),
       funk: funkFuerLagebild(zustand, this.#o.zeit()),
+      nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit()),
+      ...(this.#sitzung === undefined ? {} : { sitzung: this.#sitzung }),
     };
   }
 
@@ -1945,5 +2012,5 @@ function pruefeNeu(entwurf: Ereignisentwurf): string | undefined {
       return "Der Zeitpunkt ist keine lesbare Zeitangabe.";
     }
   }
-  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf) ?? pruefeVersorgung(entwurf) ?? pruefeFunk(entwurf);
+  return pruefeEinheitsteil(entwurf) ?? pruefeAnforderung(entwurf) ?? pruefeAnlagenamen(entwurf) ?? pruefeVersorgung(entwurf) ?? pruefeFunk(entwurf) ?? pruefeNachricht(entwurf);
 }

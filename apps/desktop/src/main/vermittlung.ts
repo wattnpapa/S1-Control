@@ -77,6 +77,21 @@ export interface Fenstersteuerung {
   monitorSchliessen(): void;
 }
 
+/** Stelle und Handzeichen der Sitzung, wie Ruf und Auftrag sie tragen (KONZEPT-NACHRICHTEN.md Entscheidung 3). */
+interface Sitzungsangaben {
+  readonly stellen?: readonly string[];
+  readonly handzeichen?: string;
+}
+
+/** Die Angaben eines Rufs, oder `undefined`, wenn er keine trägt (dann fragt das Fenster selbst). */
+function sitzungsangaben(ruf: { readonly stellen?: readonly string[] | undefined; readonly handzeichen?: string | undefined }): Sitzungsangaben | undefined {
+  if (ruf.stellen === undefined && ruf.handzeichen === undefined) return undefined;
+  return {
+    ...(ruf.stellen === undefined ? {} : { stellen: ruf.stellen }),
+    ...(ruf.handzeichen === undefined ? {} : { handzeichen: ruf.handzeichen }),
+  };
+}
+
 /** Die Seitenausgaben, deren Vorlage quer gedruckt wird. */
 const QUERFORMAT: ReadonlySet<Seitenausgabe> = new Set(["druck", "einheitenliste", "anforderungen"]);
 
@@ -220,7 +235,11 @@ export class Vermittlung {
       case "einsatzAnlegen":
         return this.#legeEinsatzAn(ruf);
       case "einsatzOeffnen":
-        return this.#oeffneEinsatz(ruf.ordner);
+        return this.#oeffneEinsatz(ruf.ordner, sitzungsangaben(ruf));
+      // Stelle und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md
+      // Entscheidung 3): Der Main reicht sie durch und merkt sich nichts.
+      case "stellenSetzen":
+        return this.#o.hof.frage(ruf.akteId, { art: "stellenSetzen", ...sitzungsangaben(ruf) });
       case "einsatzSchliessen":
         await this.#o.hof.schliesse(ruf.akteId);
         this.#ordnerJeAkte.delete(ruf.akteId);
@@ -267,6 +286,7 @@ export class Vermittlung {
       case "tabelleAnfordern":
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":
+      case "nachrichtenAnfordern":
       case "eebScan":
       case "eebDatei":
       case "eebUeberspringen":
@@ -521,6 +541,9 @@ export class Vermittlung {
       ...(platz.theme === undefined ? {} : { theme: platz.theme }),
       ...(platz.profil === undefined ? {} : { profil: platz.profil }),
       ...(platz.monitor === undefined ? {} : { monitor: platz.monitor }),
+      ...(platz.handzeichen === undefined ? {} : { handzeichen: platz.handzeichen }),
+      ...(platz.stellenJeEinsatz === undefined ? {} : { stellenJeEinsatz: platz.stellenJeEinsatz }),
+      ...(platz.tonBeiBlitz === undefined ? {} : { tonBeiBlitz: platz.tonBeiBlitz }),
     };
   }
 
@@ -728,7 +751,7 @@ export class Vermittlung {
     return { akteId, einsatzId: kennung.ordner, ordner: kennung.ordner };
   }
 
-  async #oeffneEinsatz(ordner: string): Promise<unknown> {
+  async #oeffneEinsatz(ordner: string, sitzung: Sitzungsangaben | undefined): Promise<unknown> {
     const platz = await this.arbeitsplatz();
     if (platz.sharePfad.length === 0) throw new Error("Es ist kein Share-Pfad eingestellt.");
     const bereits = [...this.#ordnerJeAkte.entries()].find(([, o]) => o === ordner);
@@ -736,6 +759,8 @@ export class Vermittlung {
       // Zweimal dieselbe Akte zu oeffnen hiesse zwei Schreiber mit derselben
       // Kennung auf demselben Segment — genau der Fall, den §4.4 mit dem
       // Single-Instance-Lock ausschliesst, hier nur innerhalb eines Prozesses.
+      // Die Angaben der Abfrage gelten trotzdem: Wer neu öffnet, hat neu gesagt, wer er ist.
+      if (sitzung !== undefined) await this.#o.hof.frage(bereits[0], { art: "stellenSetzen", ...sitzung });
       return { akteId: bereits[0], einsatzId: ordner, ordner };
     }
     const anker = await liesEinsatzanker(
@@ -743,11 +768,11 @@ export class Vermittlung {
       path.join(platz.sharePfad, ORDNER_EINSAETZE, ordner, "einsatz.json"),
     );
     if (anker === undefined) throw new Error(`Unter ${ordner} liegt kein Einsatz.`);
-    const akteId = await this.#starteUndOeffne(platz, ordner);
+    const akteId = await this.#starteUndOeffne(platz, ordner, sitzung);
     return { akteId, einsatzId: anker.einsatzId, ordner };
   }
 
-  async #starteUndOeffne(platz: Arbeitsplatz, ordner: string): Promise<string> {
+  async #starteUndOeffne(platz: Arbeitsplatz, ordner: string, sitzung?: Sitzungsangaben): Promise<string> {
     const start: Omit<Startdaten, "akteId"> = {
       shareEinsatzOrdner: path.join(platz.sharePfad, ORDNER_EINSAETZE, ordner),
       lokalerEinsatzOrdner: path.join(this.#o.spiegelwurzel, ordner),
@@ -760,6 +785,9 @@ export class Vermittlung {
     const akteId = this.#o.hof.starte(start);
     this.#ordnerJeAkte.set(akteId, ordner);
     try {
+      // Vor dem Öffnen: Dann trägt schon das erste volle Lagebild die Sitzung,
+      // und das Fenster fragt nicht ein zweites Mal.
+      if (sitzung !== undefined) await this.#o.hof.frage(akteId, { art: "stellenSetzen", ...sitzung });
       await this.#o.hof.frage(akteId, { art: "oeffne" });
     } catch (fehler) {
       // Ein Worker, der nicht oeffnen konnte, bleibt sonst als Karteileiche

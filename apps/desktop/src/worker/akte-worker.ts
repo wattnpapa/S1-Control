@@ -78,6 +78,9 @@ export type Auftrag =
   | { readonly art: "eebAlleUebernehmen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebAlleUebernehmen" }> }
   | { readonly art: "eebAbbrechen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "eebAbbrechen" }> }
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
+  // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9): das Blatt und Stelle/Handzeichen der Sitzung.
+  | { readonly art: "nachrichtenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }> }
+  | { readonly art: "stellenSetzen"; readonly nummer: number; readonly stellen?: readonly string[]; readonly handzeichen?: string }
   | { readonly art: "einsatzArchivieren"; readonly nummer: number; readonly zeitpunkt: string }
   | { readonly art: "akteErzeugen"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };

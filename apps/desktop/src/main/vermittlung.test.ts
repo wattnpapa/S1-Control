@@ -269,6 +269,39 @@ describe("Einsatz anlegen und öffnen (M2.3)", () => {
   });
 });
 
+describe("Stelle und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md Entscheidung 3)", () => {
+  it("reicht die Angaben beim Öffnen vor dem ersten Lagebild an den Worker", async () => {
+    const werkstatt = await mitShare();
+    const angelegt = await ruf<{ akteId: string }>(werkstatt, ANLEGEN);
+    await ruf(werkstatt, { art: "einsatzSchliessen", akteId: angelegt.akteId });
+    werkstatt.mitteilungen.length = 0;
+    const wieder = await ruf<{ akteId: string }>(werkstatt, { art: "einsatzOeffnen", ordner: ORDNER, stellen: ["S1", "S4"], handzeichen: "Mü" });
+    const erstes = werkstatt.mitteilungen.find((m) => m.art === "stand" && m.akteId === wieder.akteId);
+    expect(erstes?.art === "stand" ? erstes.voll?.sitzung : undefined).toEqual({ stellen: ["S1", "S4"], handzeichen: "Mü" });
+  });
+
+  it("ändert sie während der Sitzung mit `stellenSetzen`", async () => {
+    const werkstatt = await mitShare();
+    const angelegt = await ruf<{ akteId: string }>(werkstatt, ANLEGEN);
+    await ruf(werkstatt, { art: "stellenSetzen", akteId: angelegt.akteId, stellen: ["SICHTER"] });
+    const letzter = werkstatt.mitteilungen.filter((m) => m.art === "stand").at(-1);
+    expect(letzter?.art === "stand" ? letzter.geaendert?.sitzung : undefined).toEqual({ stellen: ["SICHTER"] });
+  });
+
+  it("reicht Handzeichen, Stellen je Einsatz und den Ton beim Lesen und Schreiben durch", async () => {
+    const werkstatt = await mitShare();
+    const einstellungen = {
+      sharePfad: werkstatt.sharePfad,
+      anzeigename: "Führungsstelle 1",
+      handzeichen: "Mü",
+      stellenJeEinsatz: { [ORDNER]: ["S4"] },
+      tonBeiBlitz: false,
+    };
+    await ruf(werkstatt, { art: "einstellungenSetzen", einstellungen });
+    expect(await ruf(werkstatt, { art: "einstellungenLesen" })).toEqual(einstellungen);
+  });
+});
+
 describe("Bedienen über die Vermittlung", () => {
   it("reicht einen Bedienschritt durch und meldet den neuen Stand", async () => {
     const werkstatt = await mitShare();

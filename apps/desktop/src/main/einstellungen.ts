@@ -81,6 +81,11 @@ function geraetefelder(gelesen: Einstellungen): Partial<Einstellungen> {
     ...(gelesen.betriebsart === undefined ? {} : { betriebsart: gelesen.betriebsart }),
     ...(gelesen.theme === undefined ? {} : { theme: gelesen.theme }),
     ...(gelesen.monitor === undefined ? {} : { monitor: gelesen.monitor }),
+    // Nachrichten N1 (Entscheidung 3, 6): Handzeichen, Stellen je Einsatz als
+    // Vorbelegung der Abfrage beim Öffnen, Ton bei Blitz.
+    ...(gelesen.handzeichen === undefined ? {} : { handzeichen: gelesen.handzeichen }),
+    ...(gelesen.stellenJeEinsatz === undefined ? {} : { stellenJeEinsatz: gelesen.stellenJeEinsatz }),
+    ...(gelesen.tonBeiBlitz === undefined ? {} : { tonBeiBlitz: gelesen.tonBeiBlitz }),
   };
 }
 

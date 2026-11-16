@@ -1,0 +1,162 @@
+/**
+ * Die Nachrichten im Worker (KONZEPT-NACHRICHTEN.md §4, §6, §9) — die Naht
+ * zwischen Ruf, Lagebild, Präsenz und Ring 2.
+ *
+ * Gerechnet wird in `projektion.nachrichtenausschnitt` und
+ * `projektion.nachrichtenlage`; hier stehen nur die Dinge, die der Worker
+ * weiß und Ring 2 nicht: die Stellen und das Handzeichen der Sitzung
+ * (Entscheidung 3), die Uhr, die eigene Kennung und die Anschriften zur
+ * Auswahl in der Maske.
+ *
+ * Dazu der Hinweis bei Vorrang (Entscheidung 6, §6 „Benachrichtigung"): Trifft
+ * eine gesichtete Nachricht mit Sofort oder Blitz für eine Stelle der Sitzung
+ * ein, schickt der Worker die Mitteilung `hinweis` mit Stufe „warnung"; ohne
+ * Vorrang steigt nur die Zahl im Band. Was beim Öffnen schon da war, ist kein
+ * Eintreffen und meldet sich nicht.
+ */
+
+import { kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
+
+import type { Nachrichtenansicht, Nachrichtenlage, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import { funkplanbereiche } from "./funkplanprojektion.js";
+
+const MINUTE_MS = 60_000;
+
+/** Was der Worker neben dem Zustand mitgibt. */
+export interface Nachrichtenumfeld {
+  readonly lageZeiger: number;
+  readonly jetztMs: number;
+  readonly clientId: string;
+  readonly sitzung: Sitzungsstellen | undefined;
+}
+
+/** Stellen aus einer Eingabe: geputzt, ohne Leere und ohne Doppelte, in der gegebenen Folge. */
+export function geputzteStellen(stellen: readonly string[] | undefined): readonly string[] {
+  return [...new Set((stellen ?? []).map((s) => s.trim()).filter((s) => s !== "" && !s.includes("/")))];
+}
+
+/** Stellen und Handzeichen der Sitzung aus den Angaben eines Rufs. */
+export function sitzungAus(stellen: readonly string[] | undefined, handzeichen: string | undefined): Sitzungsstellen {
+  const hz = handzeichen?.trim() ?? "";
+  return { stellen: geputzteStellen(stellen), ...(hz === "" ? {} : { handzeichen: hz }) };
+}
+
+/**
+ * Die Anschriften zur Auswahl (§6): geltende Abschnitte in der Ordnung des
+ * Baums, dann die Einheiten der Lage nach Namen. Freitext bleibt in der Maske
+ * erlaubt — die Gegenstelle draußen steht in keiner Liste.
+ */
+export function anschriften(zustand: Zustand): readonly string[] {
+  const abschnitte = funkplanbereiche(zustand).map((b) => b.name);
+  const einheiten = kennzahlen
+    .einheitenDerLage(zustand)
+    .map((e) => (typeof e.bezeichnung.wert === "string" ? e.bezeichnung.wert : ""))
+    .filter((name) => name !== "")
+    .sort((a, b) => a.localeCompare(b, "de"));
+  return [...new Set([...abschnitte, ...einheiten])];
+}
+
+/** Das Blatt „Nachrichten" für den Ruf `nachrichtenAnfordern`. */
+export function nachrichtenansicht(
+  zustand: Zustand,
+  ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }>,
+  umfeld: Nachrichtenumfeld,
+): Nachrichtenansicht {
+  const jetzt = new Date(umfeld.jetztMs).toISOString();
+  const stellen = ruf.stellen === undefined ? (umfeld.sitzung?.stellen ?? []) : geputzteStellen(ruf.stellen);
+  const ausschnitt = projektion.nachrichtenausschnitt(zustand, {
+    sicht: ruf.sicht,
+    stellen,
+    clientId: umfeld.clientId,
+    jetzt,
+    ...(ruf.zustaende === undefined ? {} : { zustaende: ruf.zustaende }),
+    ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
+    ...(ruf.von === undefined ? {} : { von: ruf.von }),
+    ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
+  });
+  return { lageZeiger: umfeld.lageZeiger, ...ausschnitt, jetzt, anschriften: anschriften(zustand) };
+}
+
+let gemerkt: { zustand: Zustand; minute: number; stellen: string; zahlen: Nachrichtenlage } | undefined;
+
+/**
+ * Die fünf Zahlen fürs Lagebild. Das Lagebild wird in jedem Takt gebaut; die
+ * Zahl „über der Schwelle" hängt an der Uhr, eine Minute Auflösung genügt —
+ * gemerkt wird deshalb je Zustand, Minute und Stellen wie beim Funk.
+ */
+export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly string[], jetztMs: number): Nachrichtenlage {
+  const minute = Math.floor(jetztMs / MINUTE_MS);
+  const schluessel = stellen.join("\u0000");
+  if (gemerkt?.zustand === zustand && gemerkt.minute === minute && gemerkt.stellen === schluessel) return gemerkt.zahlen;
+  const zahlen = projektion.nachrichtenlage(zustand, stellen, new Date(minute * MINUTE_MS).toISOString());
+  gemerkt = { zustand, minute, stellen: schluessel, zahlen: { ...zahlen } };
+  return gemerkt.zahlen;
+}
+
+/** Stellen und Handzeichen aus einer fremden Präsenzdatei — nur, was die Form hat. */
+export function peerStellen(praesenz: { readonly stellen?: unknown; readonly handzeichen?: unknown }): Pick<Peer, "stellen" | "handzeichen"> {
+  const stellen = Array.isArray(praesenz.stellen) ? praesenz.stellen.filter((s): s is string => typeof s === "string") : undefined;
+  const handzeichen = typeof praesenz.handzeichen === "string" && praesenz.handzeichen !== "" ? praesenz.handzeichen : undefined;
+  return {
+    ...(stellen === undefined || stellen.length === 0 ? {} : { stellen }),
+    ...(handzeichen === undefined ? {} : { handzeichen }),
+  };
+}
+
+/** Ein Hinweis bei Vorrang, wie ihn die Mitteilung `hinweis` trägt. */
+export interface Vorranghinweis {
+  readonly text: string;
+  readonly blitz: boolean;
+}
+
+/** „Blitz-Nachricht E 26 für S4: Pumpen eingetroffen". */
+export function vorrangtext(zeile: Nachrichtenzeile, stelle: string): string {
+  const wort = zeile.vorrangstufe === 0 ? "Blitz" : "Sofort";
+  const nummer = zeile.nummer === undefined ? zeile.richtungKurz : `${zeile.richtungKurz} ${String(zeile.nummer)}`;
+  const betreff = zeile.betreff.trim() === "" ? zeile.absender : zeile.betreff;
+  return `${wort}-Nachricht ${nummer} für ${projektion.stellenWort(stelle)}: ${betreff}`;
+}
+
+/** Gesichtet, mit Vorrang, nicht zurückgezogen: je eigener Stelle des Verteilers ein Treffer. */
+function treffer(zustand: Zustand, stellen: readonly string[]): { schluessel: string; zeile: Nachrichtenzeile; stelle: string }[] {
+  if (stellen.length === 0) return [];
+  const ergebnis: { schluessel: string; zeile: Nachrichtenzeile; stelle: string }[] = [];
+  if (zustand.nachrichten === undefined) return [];
+  // Die Nachweisung ist die Sicht ohne Filter: alle Zeilen in einem Durchgang.
+  for (const zeile of projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen) {
+    if (zeile.sichtung === undefined || zeile.vorrangstufe === 2 || zeile.zurueckgezogen) continue;
+    for (const marke of zeile.verteiler) {
+      if (stellen.includes(marke.stelle)) ergebnis.push({ schluessel: `${zeile.id}/${marke.stelle}`, zeile, stelle: marke.stelle });
+    }
+  }
+  return ergebnis;
+}
+
+/**
+ * Merkt sich, welche Vorrangnachrichten für die Stellen der Sitzung schon da
+ * waren, und meldet nur, was neu dazukommt. Vor der ersten
+ * {@link Vorrangwaechter.grundlinie} meldet er nichts — die Wiederaufnahme
+ * beim Öffnen ist kein Eintreffen. Eine Sichtung dieses Arbeitsplatzes
+ * meldet sich ebenfalls nicht: Wer selbst verteilt, weiß es.
+ */
+export class Vorrangwaechter {
+  #bekannt: Set<string> | undefined;
+
+  grundlinie(zustand: Zustand, stellen: readonly string[]): void {
+    this.#bekannt = new Set(treffer(zustand, stellen).map((t) => t.schluessel));
+  }
+
+  neue(zustand: Zustand, stellen: readonly string[], eigeneClientId: string): readonly Vorranghinweis[] {
+    const bekannt = this.#bekannt;
+    if (bekannt === undefined) return [];
+    const hinweise: Vorranghinweis[] = [];
+    for (const t of treffer(zustand, stellen)) {
+      if (bekannt.has(t.schluessel)) continue;
+      bekannt.add(t.schluessel);
+      const sichter = zustand.nachrichten?.[t.zeile.id]?.sichtung?.hlc.clientId;
+      if (sichter === eigeneClientId) continue;
+      hinweise.push({ text: vorrangtext(t.zeile, t.stelle), blitz: t.zeile.vorrangstufe === 0 });
+    }
+    return hinweise;
+  }
+}

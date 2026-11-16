@@ -38,6 +38,10 @@ const SAMMLUNGEN: Readonly<Record<string, keyof Zustand>> = {
   anforderung: "anforderungen",
   // Funkplan F1: Die Sammlung fehlt im Zustand, solange es keine Rufgruppe gibt.
   rufgruppe: "rufgruppen",
+  // Nachrichten N1: Die zweite Sichtung (KONZEPT-NACHRICHTEN.md §5) schickt
+  // die Sichtung, die ihr Laufzettel sah; ein anderer Sichter dazwischen wird
+  // nicht still überschrieben. Die Sammlung fehlt, solange es keine Nachricht gibt.
+  nachricht: "nachrichten",
 };
 
 interface Beobachtet {

@@ -59,6 +59,22 @@ describe("liesArbeitsplatz", () => {
     expect((await liesArbeitsplatz(ziel)).monitor).toEqual({ ansicht: "funkplan", wechsel: false });
   });
 
+  it("findet Handzeichen, Stellen je Einsatz und den Ton bei Blitz wieder (Nachrichten N1)", async () => {
+    const ziel = datei();
+    await schreibeArbeitsplatz(ziel, {
+      sharePfad: "/share",
+      anzeigename: "Führungsstelle 1",
+      handzeichen: "Mü",
+      stellenJeEinsatz: { "2026-11-16-hochwasser": ["S1", "Polizei"] },
+      tonBeiBlitz: false,
+      clientId: "aabbccddeeff00112233445566778899",
+    });
+    const gelesen = await liesArbeitsplatz(ziel);
+    expect(gelesen.handzeichen).toBe("Mü");
+    expect(gelesen.stellenJeEinsatz).toEqual({ "2026-11-16-hochwasser": ["S1", "Polizei"] });
+    expect(gelesen.tonBeiBlitz).toBe(false);
+  });
+
   it("lässt beides weg, wenn die Datei nichts dazu sagt", async () => {
     const ziel = datei();
     await fsp.mkdir(path.dirname(ziel), { recursive: true });
