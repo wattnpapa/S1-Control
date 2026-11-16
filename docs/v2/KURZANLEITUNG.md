@@ -1,6 +1,6 @@
 # Kurzanleitung S1-Control
 
-Zwei Seiten zum Danebenlegen. Seite 1 ist der Betrieb, Seite 2 sind die sechs
+Zwei Seiten zum Danebenlegen. Seite 1 ist der Betrieb, Seite 2 sind die sieben
 Störfälle. Seite 2 ist erzeugt: Sie stammt aus derselben Liste, die die
 Diagnoseansicht im Programm zeigt (`packages/domaene/src/stoerfaelle.ts`). Wer
 einen Fall ändert, ändert ihn dort und erneuert diese Datei mit
@@ -50,6 +50,17 @@ bleibt im Tagebuch sichtbar (§5.9.1). Das ist gewollt.
 nach fester Regel und merkt sich, was es verdrängt hat. Der Hinweis steht in
 der Diagnose; geklärt wird fachlich (§2.2a, §3.8).
 
+## Nachrichten
+
+Beim Öffnen eines Einsatzes fragt das Programm nach der Stelle (zum Beispiel
+S2 oder Fernmeldezentrale) und dem Handzeichen. Im Blatt **Nachrichten** wird
+mit „Nachricht verfassen“ der Vordruck 1103.1 ausgefüllt; er läuft von der
+Fernmeldezentrale zum Sichter. Eingegangene Nachrichten stehen im
+**Posteingang** der Stelle, der Sichter sichtet und verteilt, die
+**Fernmeldezentrale** nimmt Eingänge auf, befördert und weist nach. Fällt der
+Rechner aus, gilt der leere Vordruck aus „Ausgaben → Papier-Vordruck“; die
+Nummer vom Blatt wird beim Nacherfassen übernommen.
+
 ## Wo etwas steht, wenn es klemmt
 
 Im Programm: **Nebenblätter → Diagnose.** Dort stehen die Arbeitsplätze mit
@@ -58,7 +69,7 @@ letzten Meldungen dieser Sitzung. Alles Weitere: [BETRIEB.md](BETRIEB.md).
 
 ---
 
-# Seite 2 — Die sechs Störfälle
+# Seite 2 — Die sieben Störfälle
 
 <!-- STÖRFALLMATRIX ANFANG — erzeugt, nicht von Hand ändern -->
 
@@ -148,5 +159,20 @@ Grundlage: KONZEPT-SPEICHER.md §1.3, §1.4
 **Nicht:** Den Bogen wegwerfen, bevor die Werte erfasst sind. Er ist bis dahin die einzige Fassung.
 
 Grundlage: KONZEPT-EREIGNISSE.md §5.8, EXH C159–C172
+
+### Rechner oder Netz fällt aus, Nachrichten laufen auf Papier weiter
+
+**Woran es auffällt:** Das Blatt „Nachrichten“ lässt sich nicht öffnen oder nimmt nichts mehr an, der Posteingang füllt sich nicht, und Nachrichten kommen per Funk, Telefon oder Zettel herein.
+
+**Was dahintersteckt:** Der Arbeitsplatz oder das Netz ist ausgefallen, und der Dienst ist nicht erreichbar. Der Vordruck 1103.1 kommt ohne Rechner aus; die Nachweisung ist dann ein Blatt Papier.
+
+1. Leere Vordrucke nehmen: im Reiter „Ausgaben“ unter „Papier-Vordruck“ den leeren Nachrichtenvordruck als PDF ausdrucken, am besten schon vorab und in Reserve.
+2. Nachrichten von Hand auf dem Vordruck schreiben, die Nummer fortlaufend auf dem Blatt vergeben und die Nachweisung auf Papier weiterführen, mit Uhrzeit und Handzeichen für Aufnahme, Annahme und Beförderung.
+3. Läuft der Rechner wieder, die Blätter nacherfassen: im Blatt „Nachrichten“ die Nachricht verfassen beziehungsweise in der Fernmeldezentrale den Eingang aufnehmen, die Zeiten und die Nummer vom Blatt übernehmen und nicht die Uhrzeit des Nacherfassens.
+4. Die Nummer nie zurücksetzen und keine Lücke füllen. Eine Nummer, die auf Papier steht, bleibt; kommt sie doppelt vor, markiert die Nachweisung beide Zeilen, und es wird mit neuer Nummer berichtigt.
+
+**Nicht:** Die Nummernfolge nach dem Ausfall neu beginnen oder Nachrichten ohne die Zeiten vom Blatt eintragen. Die Zeiten auf dem Papier sind die Zeiten der Nachricht.
+
+Grundlage: KONZEPT-NACHRICHTEN.md §5, §7, Entscheidung 2
 
 <!-- STÖRFALLMATRIX ENDE -->

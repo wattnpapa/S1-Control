@@ -608,7 +608,7 @@ Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vor
 
 **Zuerst:** Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.
 
-**Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht.
+**Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht. „Als Vordruck drucken“ legt die Nachricht als PDF im Vordrucklayout unter ausgaben/nachrichten ab, mit der Nummer im Dateinamen; ohne Nummer trägt der Name die Kennung der Nachricht. Die Vorschau zeigt das Blatt vor dem Druck mit der Schrift des Browsers, sie weicht leicht von der des PDF ab. Der Automatikdruck ist nur an, wenn in den Druckeinstellungen ein Drucker oder ein Verzeichnis gewählt ist, und druckt dann jede an eine Stelle dieses Arbeitsplatzes verteilte Nachricht beim Eintreffen, auch die eigene Sichtung.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 
@@ -802,6 +802,21 @@ Grundlage: KONZEPT-SPEICHER.md §1.3, §1.4
 **Nicht:** Den Bogen wegwerfen, bevor die Werte erfasst sind. Er ist bis dahin die einzige Fassung.
 
 Grundlage: KONZEPT-EREIGNISSE.md §5.8, EXH C159–C172
+
+### Rechner oder Netz fällt aus, Nachrichten laufen auf Papier weiter
+
+**Woran es auffällt:** Das Blatt „Nachrichten“ lässt sich nicht öffnen oder nimmt nichts mehr an, der Posteingang füllt sich nicht, und Nachrichten kommen per Funk, Telefon oder Zettel herein.
+
+**Was dahintersteckt:** Der Arbeitsplatz oder das Netz ist ausgefallen, und der Dienst ist nicht erreichbar. Der Vordruck 1103.1 kommt ohne Rechner aus; die Nachweisung ist dann ein Blatt Papier.
+
+1. Leere Vordrucke nehmen: im Reiter „Ausgaben“ unter „Papier-Vordruck“ den leeren Nachrichtenvordruck als PDF ausdrucken, am besten schon vorab und in Reserve.
+2. Nachrichten von Hand auf dem Vordruck schreiben, die Nummer fortlaufend auf dem Blatt vergeben und die Nachweisung auf Papier weiterführen, mit Uhrzeit und Handzeichen für Aufnahme, Annahme und Beförderung.
+3. Läuft der Rechner wieder, die Blätter nacherfassen: im Blatt „Nachrichten“ die Nachricht verfassen beziehungsweise in der Fernmeldezentrale den Eingang aufnehmen, die Zeiten und die Nummer vom Blatt übernehmen und nicht die Uhrzeit des Nacherfassens.
+4. Die Nummer nie zurücksetzen und keine Lücke füllen. Eine Nummer, die auf Papier steht, bleibt; kommt sie doppelt vor, markiert die Nachweisung beide Zeilen, und es wird mit neuer Nummer berichtigt.
+
+**Nicht:** Die Nummernfolge nach dem Ausfall neu beginnen oder Nachrichten ohne die Zeiten vom Blatt eintragen. Die Zeiten auf dem Papier sind die Zeiten der Nachricht.
+
+Grundlage: KONZEPT-NACHRICHTEN.md §5, §7, Entscheidung 2
 
 <!-- STÖRFALLMATRIX ENDE -->
 

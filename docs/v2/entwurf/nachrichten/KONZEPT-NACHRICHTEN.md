@@ -1,8 +1,10 @@
 # Nachrichten: der 4-fach-Vordruck in der Führungsstelle
 
-Entwurf vom 2026-11-16. Status: beschlossen am 2026-11-16 (Johannes), die
-Entscheidungen stehen in Abschnitt 11 und gehen den Abschnitten 4 bis 10
-vor, wo diese noch den Vorschlag beschreiben.
+Entwurf vom 2026-11-16. Status: umgesetzt in den Schnitten N1 bis N3
+(Abschnitt 10); Abweichungen in UMSETZUNGSBERICHT.md, Aufnahmen unter stand/.
+Beschlossen am 2026-11-16 (Johannes), die Entscheidungen stehen in Abschnitt 11
+und gehen den Abschnitten 4 bis 10 vor, wo diese noch den Vorschlag
+beschreiben.
 
 Begriffe: Der Nachrichtenvordruck (THW-Vordruck 1103.1, im Sprachgebrauch
 „4-fach-Vordruck") ist der Satz aus vier selbstdurchschreibenden Blättern
@@ -506,6 +508,9 @@ Kenntnis je Stelle; Projektion der drei Sichten; Maske in jsdom; Adapter
 gegen Prüfdaten (eine Nachricht je Richtung, eine mit dreizehn Zeilen, eine
 mit Zeichen außerhalb Windows-1252); Goldfile der PDF-Bytes ist nicht
 sinnvoll, geprüft wird die `VordruckDaten`-Struktur.
+Umgesetzt: Domäne mit Fold, Projektionen und Tagebuchsätzen, der Adapter
+auf den Vordruck als PDF, Rufe, Stelle und Handzeichen in der Sitzung und
+die Schale mit Posteingang, Ausgang, Sichter und der Maske als Vordruck.
 
 N2 Fernmeldezentrale: `NachrichtAngenommen`, `NachrichtBefoerdert`,
 `NachrichtNachgewiesen`; Sicht FmZ mit Warteschlange und „Eingang
@@ -513,15 +518,26 @@ aufnehmen"; Nummernvorbelegung und `nachweisnummerDoppelt`; Sicht und
 Ausgabe Nachweisung; Zwanzig-Minuten-Marke; Sperre. Tests: Nummernkollision
 zweier Arbeitsplätze in der Simulation; Papier-Nacherfassung mit Nummer aus
 der Zukunft; Nachweisung gegen Prüfdaten.
+Umgesetzt: dazu die Gesprächsnotiz, der Ersatzsichter über die Präsenz,
+die Parameter je Einsatz, die FmZ-Sicht mit Eingangsaufnahme, die
+Nachweisung als Sicht und Ausgabe sowie die Zwanzig-Minuten-Marke; die
+Gesprächsnotiz und der Ersatzsichter, hier unter N3 geplant, kamen mit N2.
 
 N3 Gesprächsnotiz, Ersatzsichter über die Präsenz, Antwort und
 Weiterleitung, `NachrichtZurueckgezogen`, Vermerke nach der Sichtung,
 Anhänge über `AnhangHinzugefuegt` mit Bezug. Tests: Folgeschritt ohne
 Sichter in der Präsenz; Antwortbezug im Tagebuch.
+Umgesetzt: statt der hier genannten Folgen der Druck, nämlich der Vordruck
+als PDF unter ausgaben/nachrichten, die Vorschau, der Automatikdruck mit
+Probedruck, der leere Vordruck im Papier-Vordruck und ADR-008 (zweiter
+PDF-Weg).
 
 N4 Lagebildzahlen und Band, Hinweis bei Vorrang, leerer Vordruck im Papier,
 Handbuch und Kurzanleitung, ADR zum zweiten PDF-Weg. Tests: Lagebild gegen
 die Projektion; Mitteilung nur bei Vorrang und nur für die eigene Stelle.
+Umgesetzt: die Dokumentation (Handbuch, Kurzanleitung, Störfall „Nachrichten
+auf Papier“, Bedienhilfe); Band und Hinweis bei Vorrang kamen schon mit N1,
+der leere Vordruck und das ADR mit N3.
 
 Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei N1 und N2
 (Katalog, Fold, Einstellungen) der volle Lauf und die Simulation.
