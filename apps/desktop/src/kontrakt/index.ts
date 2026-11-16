@@ -26,6 +26,7 @@
 
 import { z } from "zod";
 
+import { NACHRICHTEN_SICHTEN_LISTE } from "./nachrichtenwerte.js";
 import type {
   Anforderungsausschnitt,
   Auswahlwert,
@@ -36,6 +37,7 @@ import type {
   Fassungsvergleich,
   Logistikblatt,
   Meldungsausschnitt,
+  Nachrichtenausschnitt,
   Schichtplanblatt,
   Staerketafel,
   Tabellenausschnitt,
@@ -151,6 +153,18 @@ export const zEinstellungen = z.object({
    * hängen an derselben Einsatzdatei. Ohne Angabe Stärke, ohne Wechsel.
    */
   monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean() }).optional(),
+  /**
+   * Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): das Handzeichen dieses
+   * Arbeitsplatzes, gemerkt als Vorbelegung der Abfrage beim Öffnen. Die
+   * Stelle selbst wird je Sitzung abgefragt; hier steht nur, was beim
+   * nächsten Öffnen desselben Einsatzes vorgeschlagen wird
+   * (`stellenJeEinsatz`, Schlüssel ist der Einsatzordner). Großzügig
+   * geprüft: Ein zu langer Wert soll nicht die ganzen Einstellungen kosten.
+   */
+  handzeichen: z.string().max(20).optional(),
+  stellenJeEinsatz: z.record(z.string(), z.array(z.string().max(80)).max(20)).optional(),
+  /** Additiv (Entscheidung 6): Ton bei einer Blitz-Nachricht; fehlt = an. */
+  tonBeiBlitz: z.boolean().optional(),
 });
 export type Einstellungen = z.infer<typeof zEinstellungen>;
 
@@ -233,6 +247,13 @@ export const zPeer = z.object({
   uhrAbweichungMs: z.number().int(),
   /** Dateien, die **er** in Quarantaene gemeldet hat (§8.2, §4.6.1). */
   quarantaene: z.number().int().min(0),
+  /**
+   * Additiv (KONZEPT-NACHRICHTEN.md §4): die Stellen, die er für seine
+   * Sitzung angegeben hat, und sein Handzeichen — die „besetzten Stellen",
+   * die die Nachrichtenmaske als Anschrift anbietet.
+   */
+  stellen: z.array(z.string()).readonly().optional(),
+  handzeichen: z.string().optional(),
 });
 export type Peer = z.infer<typeof zPeer>;
 
@@ -328,6 +349,30 @@ export const zFunklage = z.object({
 });
 export type Funklage = z.infer<typeof zFunklage>;
 
+/**
+ * Die fünf Zahlen des Bandes im Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md
+ * §6, §9) — `projektion.nachrichtenlage` mit den Stellen der Sitzung.
+ */
+export const zNachrichtenlage = z.object({
+  neuFuerStellen: zZahl,
+  vorFmz: zZahl,
+  vorSichter: zZahl,
+  mitVorrangOffen: zZahl,
+  ueberSchwelle: zZahl,
+});
+export type Nachrichtenlage = z.infer<typeof zNachrichtenlage>;
+
+/**
+ * Stelle und Handzeichen dieses Arbeitsplatzes für die Sitzung dieser Akte
+ * (Entscheidung 3). Sie reisen im Lagebild, damit ein neu geladenes Fenster
+ * weiß, was der Worker hält, und nicht erneut fragt.
+ */
+export const zSitzungsstellen = z.object({
+  stellen: z.array(z.string()).readonly(),
+  handzeichen: z.string().optional(),
+});
+export type Sitzungsstellen = z.infer<typeof zSitzungsstellen>;
+
 export const zLagebild = z.object({
   einsatzId: z.string(),
   einsatzName: z.string(),
@@ -419,6 +464,10 @@ export const zLagebild = z.object({
    * `funkplanAnfordern`, wie die Versorgungstafel mit `versorgungAnfordern`.
    */
   funk: zFunklage.optional(),
+  /** Additiv (Nachrichten N1): die fünf Zahlen des Bandes, je Stelle der Sitzung gerechnet. */
+  nachrichten: zNachrichtenlage.optional(),
+  /** Additiv (Nachrichten N1): Stellen und Handzeichen der Sitzung; fehlt, solange nicht angegeben. */
+  sitzung: zSitzungsstellen.optional(),
 });
 export type Lagebild = z.infer<typeof zLagebild>;
 
@@ -462,6 +511,18 @@ export const AUSSCHNITT_MAX = 500;
  */
 export const EEB_DATEITEXTE_MAX = 500;
 
+/**
+ * Eine Stelle, wie sie in Präsenz und Feldpfad steht (KONZEPT-NACHRICHTEN.md
+ * §4, §9): Text ohne Schrägstrich — dieselbe Regel wie `zStelle` der Domäne.
+ */
+const zStellenname = z.string().min(1).max(80).regex(/^[^/]+$/);
+
+/** Stelle und Handzeichen der Sitzung (Entscheidung 3), beide optional. */
+const zSitzungsangaben = {
+  stellen: z.array(zStellenname).max(20).optional(),
+  handzeichen: z.string().max(20).optional(),
+};
+
 export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("umgebung") }),
   z.object({ art: z.literal("einstellungenLesen") }),
@@ -476,7 +537,11 @@ export const zRuf = z.discriminatedUnion("art", [
     beginn: z.string(),
     schichtmodell: zText,
   }),
-  z.object({ art: z.literal("einsatzOeffnen"), ordner: zText }),
+  // Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): Stelle und Handzeichen
+  // der Sitzung, wie die Abfrage beim Öffnen sie erhoben hat.
+  z.object({ art: z.literal("einsatzOeffnen"), ordner: zText, ...zSitzungsangaben }),
+  // Stelle und Handzeichen während der Sitzung ändern (Fenstermenü).
+  z.object({ art: z.literal("stellenSetzen"), akteId: zAkteId, ...zSitzungsangaben }),
   z.object({ art: z.literal("einsatzSchliessen"), akteId: zAkteId }),
   z.object({ art: z.literal("standAnfordern"), akteId: zAkteId }),
   /**
@@ -765,6 +830,19 @@ export const zRuf = z.discriminatedUnion("art", [
     pfad: zText,
     wie: z.enum(["oeffnen", "ordner", "drucken"]),
   }),
+  // Das Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md §9, additiv) nach dem
+  // Muster von `tagebuchAnfordern`: Sicht, Stellen, Zustandsfilter, Suche,
+  // Zeigerstand und Seitenlänge. Ohne `stellen` gelten die der Sitzung.
+  z.object({
+    art: z.literal("nachrichtenAnfordern"),
+    akteId: zAkteId,
+    sicht: z.enum(NACHRICHTEN_SICHTEN_LISTE),
+    stellen: z.array(zStellenname).max(20).optional(),
+    zustaende: z.array(z.enum(["NEU", "GELESEN", "ERLEDIGT"])).optional(),
+    suche: z.string().max(200).optional(),
+    von: z.number().int().min(0).optional(),
+    anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+  }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -857,6 +935,7 @@ export interface Antworten {
   einsaetzeAuflisten: readonly EinsatzEintrag[];
   einsatzAnlegen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   einsatzOeffnen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
+  stellenSetzen: null;
   einsatzSchliessen: null;
   standAnfordern: null;
   sperre: null;
@@ -896,6 +975,7 @@ export interface Antworten {
   monitorOeffnen: null;
   monitorSchliessen: null;
   tagebuchAnfordern: Tagebuchansicht;
+  nachrichtenAnfordern: Nachrichtenansicht;
   einsatzArchivieren: Bedienergebnis;
   akteErzeugen: Akteergebnis;
   ausgabeZeigen: null;
@@ -1257,6 +1337,18 @@ export interface Sammeluebernahme {
   readonly naechster?: EebStand;
 }
 
+/**
+ * Das Blatt „Nachrichten" (KONZEPT-NACHRICHTEN.md §6, §9): der Ausschnitt
+ * einer Sicht mit Gesamtzahl, wie `projektion.nachrichtenausschnitt` ihn
+ * liefert, dazu die Uhr des Workers und die Anschriften zur Auswahl in der
+ * Maske (Abschnitte und Einheiten des Einsatzes; die besetzten Stellen stehen
+ * an den Peers).
+ */
+export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt {
+  readonly jetzt: string;
+  readonly anschriften: readonly string[];
+}
+
 export interface Tagebuchansicht extends Ansichtsstand {
   readonly zeilen: readonly Tagebuchzeile[];
   /** Wie viele Zeilen der Filter insgesamt trifft — die Zahl unter der Liste. */
@@ -1294,6 +1386,12 @@ export const zMitteilung = z.discriminatedUnion("art", [
     akteId: zAkteId.optional(),
     stufe: z.enum(["info", "warnung", "fehler"]),
     text: z.string(),
+    /**
+     * Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 6): Der Hinweis gilt einer
+     * Blitz-Nachricht; der Renderer spielt dann einen kurzen Ton, sofern er
+     * in den Einstellungen nicht abgeschaltet ist.
+     */
+    ton: z.literal("blitz").optional(),
   }),
   /** Die Akte hat sich geschlossen — Ordner fort (§5.7) oder Bediener. */
   z.object({ art: z.literal("akteGeschlossen"), akteId: zAkteId, meldung: z.string() }),

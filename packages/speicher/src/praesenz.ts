@@ -67,6 +67,15 @@ export interface Praesenz {
    * daran (die Vorwert-Prüfung des Workers fängt den Rest).
    */
   readonly bearbeitet?: readonly string[];
+  /**
+   * Additiv (KONZEPT-NACHRICHTEN.md §4, Entscheidung 3): die Stellen im Stab,
+   * die dieser Arbeitsplatz für die Sitzung angegeben hat, und sein
+   * Handzeichen. Ein Zuschnitt wie das Profil, kein Recht; die anderen
+   * Arbeitsplätze sehen daran, welche Stellen besetzt sind. Fehlt bei einem
+   * Arbeitsplatz älterer Fassung.
+   */
+  readonly stellen?: readonly string[];
+  readonly handzeichen?: string;
 }
 
 export interface PraesenzOptionen {
@@ -77,6 +86,9 @@ export interface PraesenzOptionen {
   readonly anzeigename: string;
   readonly rechnername: string;
   readonly programmversion: string;
+  /** Additiv: Stellen und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md §4); nur beim Schreiben gelesen. */
+  readonly stellen?: readonly string[];
+  readonly handzeichen?: string;
 }
 
 /** Schreibt die eigene Präsenzdatei (§6.4). Kein Rename, kein `fsync`. */
@@ -97,6 +109,8 @@ export async function schreibePraesenz(
     offset: stand.offset,
     ...(quarantaene.length === 0 ? {} : { quarantaene }),
     ...(bearbeitet.length === 0 ? {} : { bearbeitet }),
+    ...(optionen.stellen === undefined ? {} : { stellen: optionen.stellen }),
+    ...(optionen.handzeichen === undefined || optionen.handzeichen === "" ? {} : { handzeichen: optionen.handzeichen }),
   };
   await optionen.dateisystem.legeVerzeichnisAn(optionen.ablage.sharePraesenz);
   await optionen.dateisystem.schreibeUeberOhneSync(
