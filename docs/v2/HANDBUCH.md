@@ -298,13 +298,14 @@ welcher Posteingang zuerst erscheint. Im Meldekopf fragt das Programm nicht.
 **Das Blatt.** Oben stehen fünf Zahlen: neu für meine Stellen, vor der FmZ,
 vor dem Sichter, mit Vorrang offen und länger als die Schwelle in der FmZ;
 die letzten beiden werden ab eins bernsteinfarben. Darunter der Umschalter
-„Posteingang | Ausgang | Sichter“, der Hauptknopf „Nachricht verfassen“
+„Posteingang | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“, der Hauptknopf „Nachricht verfassen“
 (Strg+N) und die Suche über Betreff, Inhalt, Absender und Anschrift
 (Strg+F). Jede Zeile trägt links die Farbe ihrer Kopie: grün für den
 Hauptempfänger, blau für Mitleser, rot für S2. Blitz steht rot, Sofort
 bernsteinfarben, und Blitz steht vor Sofort vor einfach. Der Posteingang
 zeigt die Nachrichten, in deren Verteiler eine eigene Stelle steht, mit den
-Marken „neu“ oder „gelesen“ und „erledigt“; die Chips filtern danach, und
+Marken „neu“ oder „gelesen“ und „erledigt“; die Chips filtern danach und
+nennen die Zahl je Zustand, und
 „Posteingang von“ schlägt den Posteingang einer anderen Stelle auf. Der
 Ausgang zeigt, was dieser Arbeitsplatz oder seine Stellen verfasst haben,
 mit dem Stand auf dem Weg.
@@ -346,8 +347,60 @@ eigene Stelle ein, steht ein Hinweis in der Leiste („Blitz-Nachricht E 26
 für S4: …“); bei Blitz spielt das Programm zwei kurze Töne. Der Ton lässt
 sich unter „Dieser Arbeitsplatz“ auf der Einsatzauswahl abschalten.
 
-Die Fernmeldezentrale mit Annahme, Beförderung und Nachweisung und der
-Ausdruck des Vordrucks folgen mit dem nächsten Ausbauschritt.
+**Fernmeldezentrale.** Wer die Stelle FmZ hat, landet in der Sicht
+„Fernmeldezentrale“. Links steht die Ausgangswarteschlange: alles, was
+aufgegeben und noch nicht befördert ist, Vorrang oben. Jede Zeile hat drei
+Knöpfe. „Annehmen“ setzt den Annahmevermerk, „Befördern“ den
+Beförderungsvermerk mit Mittel und Gegenstelle (vorbelegt aus dem
+Übermittlungswunsch und der Anschrift), „Nachweisen“ trägt die Nachricht in
+die Nachweisung ein. Uhrzeit und Handzeichen sind mit „jetzt“ und dem eigenen
+Handzeichen vorbelegt und lassen sich ändern, damit ein Papiervordruck mit
+den Zeiten nacherfasst werden kann, die auf ihm stehen. Liegt eine
+angenommene Nachricht länger als die Schwelle unbefördert, wird ihre Zeile
+bernsteinfarben und nennt die Minuten seit der Annahme; nach der Beförderung
+verlässt sie die Warteschlange, und der Verfasser sieht im Ausgang Zeit und
+Handzeichen. Rechts steht der Hauptknopf „Eingang aufnehmen“: Er öffnet den
+Vordruck als Eingang mit freigeschaltetem oberem Teil (Mittel, Zeit und
+Handzeichen der Aufnahme, Gegenstelle, Nummer). Die Anschrift ist mit dem
+Namen der eigenen Führungsstelle aus den Stammdaten vorbelegt, der Absender
+bleibt frei. „Aufnehmen“ legt die Nachricht an und trägt sie, wenn eine
+Nummer eingetragen ist, im selben Zug in die Nachweisung ein; danach läuft
+sie zum Sichter.
+
+**Nachweisung.** Die Sicht „Nachweisung“ zeigt alle Nachrichten nach Nummer,
+Eingang und Ausgang mit einem gemeinsamen Zähler, die ohne Nummer zuletzt,
+mit den Zeiten von Aufnahme, Annahme und Beförderung. Die Nummer ist mit
+„höchste bekannte plus eins“ vorbelegt und darf höher eingetragen werden.
+Ist sie schon vergeben, warnt die Maske vor dem Schreiben, hält aber nicht
+auf: Haben zwei Arbeitsplätze ohne Verbindung dieselbe Nummer vergeben,
+stehen beide Zeilen mit der Marke „doppelt“ da und werden mit „Berichtigen“
+neu nummeriert. Nachrichten ohne Nummer bekommen sie hier mit „Nachweisen“;
+ohne besetzte FmZ bleibt die Nummer leer, bis die FmZ nachweist. „Nachweisung
+ausgeben“ legt die Liste als PDF (nur in der Desktop-App) oder HTML mit
+Zeitstempel im Ordner „ausgaben“ des Einsatzes ab.
+
+**Gesprächsnotiz.** Wer telefoniert oder persönlich spricht, hält das
+Gespräch mit dem Kästchen „Gesprächsnotiz“ in der Verfassen-Maske fest. Die
+Nachricht wird damit ein Eingang, geht nicht über die FmZ und wird nicht
+befördert. Der Laufzettel erscheint in der Maske: Der Verfasser bestimmt
+selbst, welche Stellen Kenntnis bekommen (S2 rot vorbelegt), und „Aufgeben“
+verteilt sie gleich. Mit dem Schalter „An den Sichter“ läuft sie stattdessen
+zum Sichter wie ein Eingang.
+
+**Ersatzsichter.** Steht in der Anwesenheit kein Arbeitsplatz mit der Stelle
+Sichter, verteilt, wer aufnimmt: Die Eingangsmaske der FmZ zeigt dann den
+Laufzettel mit, und „Aufnehmen“ verteilt die Nachricht im selben Zug („Kein
+Sichter besetzt: Nachricht beim Aufnehmen verteilt“). Dasselbe gilt für die
+Gesprächsnotiz; „An den Sichter“ ist dann gesperrt. Ein Sichter, der doch da
+war, sieht die Nachricht trotzdem und kann nachsichten.
+
+**Parameter des Einsatzes.** In den Stammdaten im Blatt Führungsstelle
+stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
+ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
+nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20).
+
+Der Ausdruck des Vordrucks je Nachricht folgt mit dem nächsten
+Ausbauschritt.
 
 ## Was ein Zurücknehmen tut
 
