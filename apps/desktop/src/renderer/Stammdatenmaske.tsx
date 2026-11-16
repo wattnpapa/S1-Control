@@ -18,6 +18,14 @@ import { useState, type ReactNode } from "react";
 import { einsatzArtTitel, schichtmodellTitel, zeitpunktText, type Einsatzstammdaten } from "@s1/domaene";
 
 import { Maske } from "./Maske.js";
+import {
+  Nachrichtenparameterfelder,
+  parameterEntwuerfe,
+  parametereingabeAus,
+  parameterfehler,
+  type Nachrichtenparametereingabe,
+  type Nachrichtenparameterstand,
+} from "./Nachrichtenparameter.js";
 import { useLaden } from "./laden.js";
 import {
   eingabeAus,
@@ -111,7 +119,8 @@ function Textfeld(props: { readonly titel: string; readonly wert: string; readon
 
 export interface StammdatenmaskeEigenschaften {
   readonly einsatzId: string;
-  readonly stammdaten: Einsatzstammdaten;
+  /** Additiv (Nachrichten N2): mit den Parametern des Nachrichtenwegs, wie das Lagebild sie trägt. */
+  readonly stammdaten: Einsatzstammdaten & Nachrichtenparameterstand;
   aufSchliessen(): void;
 }
 
@@ -122,14 +131,16 @@ export function Stammdatenmaske({
 }: StammdatenmaskeEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [eingabe, setzeEingabe] = useState<Stammdateneingabe>(() => eingabeAus(stammdaten));
-  const fehler = eingabeFehler(eingabe);
+  const [parameter, setzeParameter] = useState<Nachrichtenparametereingabe>(() => parametereingabeAus(stammdaten));
+  const fehler = eingabeFehler(eingabe) ?? parameterfehler(parameter);
 
   function aendere(feld: keyof Stammdateneingabe, wert: string): void {
     setzeEingabe((bisher) => ({ ...bisher, [feld]: wert }));
   }
 
   async function uebernimm(): Promise<void> {
-    for (const entwurf of stammdatenEntwuerfe(einsatzId, stammdaten, eingabe)) {
+    const entwuerfe = [...stammdatenEntwuerfe(einsatzId, stammdaten, eingabe), ...parameterEntwuerfe(einsatzId, stammdaten, parameter)];
+    for (const entwurf of entwuerfe) {
       const ergebnis = await laden.bediene(entwurf);
       // §8.8 Punkt 1: Geht ein Schritt nicht durch, bleibt die Maske offen
       // und die Eingabe stehen; was schon geschrieben ist, zeigt das Tagebuch.
@@ -146,6 +157,7 @@ export function Stammdatenmaske({
       aufBestaetigen={uebernimm}
     >
       <Stammdatenfelder eingabe={eingabe} aufAendern={aendere} />
+      <Nachrichtenparameterfelder eingabe={parameter} aufAendern={setzeParameter} />
       {fehler !== undefined && (
         <p className="hinweistext" role="status">
           {fehler}

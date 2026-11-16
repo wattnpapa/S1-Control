@@ -17,7 +17,8 @@ import { Ausgabedatei } from "./Ausgabedatei.js";
 import { Menueeintrag, type Waehle } from "./Klappmenue.js";
 import { useLaden } from "./laden.js";
 
-export type Versorgungsausgabeart = "belegung" | "bestellliste" | "vorausschau" | "kraftstoff" | "funkplan";
+// Die Nachweisung (KONZEPT-NACHRICHTEN.md §7) nimmt denselben Weg wie der Funkplan.
+export type Versorgungsausgabeart = "belegung" | "bestellliste" | "vorausschau" | "kraftstoff" | "funkplan" | "nachweisung";
 
 export interface Ausgabebedienung {
   readonly erzeuge: (format: "pdf" | "html") => void;

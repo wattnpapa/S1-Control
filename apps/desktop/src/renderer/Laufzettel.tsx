@@ -60,7 +60,7 @@ function Verteilerzeile({ eintrag, aufKopie, aufWeg }: { readonly eintrag: Verte
   );
 }
 
-function Verteilermatrix({ verteiler, aufAenderung }: { readonly verteiler: readonly Verteilerwahl[]; readonly aufAenderung: (neu: readonly Verteilerwahl[]) => void }): React.JSX.Element {
+export function Verteilermatrix({ verteiler, aufAenderung }: { readonly verteiler: readonly Verteilerwahl[]; readonly aufAenderung: (neu: readonly Verteilerwahl[]) => void }): React.JSX.Element {
   const [frei, setzeFrei] = useState("");
   const ohneGewaehlte = VERTEILERSTELLEN.filter((s) => !verteiler.some((e) => e.stelle === s));
   const freiDazu = (): void => {

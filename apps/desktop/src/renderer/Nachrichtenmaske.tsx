@@ -16,8 +16,15 @@
  * dreizehnten, dass der Ausdruck ein Folgeblatt bekommt; gekürzt wird nichts.
  *
  * Bis „Aufgeben" ist die Maske ein Entwurf dieses Fensters (§5), kein
- * Ereignis; beim Verlassen der Seite warnt der Browser (`entwurf.ts`). Die
- * Richtung ist in N1 immer Ausgang; den Eingang nimmt die FmZ auf (N2).
+ * Ereignis; beim Verlassen der Seite warnt der Browser (`entwurf.ts`).
+ *
+ * Schnitt N2: Nimmt die FmZ einen Eingang auf, ist der obere Teil frei
+ * (Aufnahmevermerk, Gegenstelle, Nummer), und „Aufnehmen" schreibt die
+ * Nummer als Folgeschritt mit. Das Kästchen Gesprächsnotiz macht die
+ * Nachricht zum Eingang ohne Beförderung; ihr Verfasser verteilt sie selbst
+ * oder schickt sie an den Sichter. Steht kein Sichter in der Präsenz, zeigt
+ * die Maske den Laufzettel mit, und die Sichtung geht im selben Zug mit
+ * (§5 „Ersatzsichter").
  * Vorrang ist nicht vorbelegt: Die Lehrunterlage mahnt, ihn restriktiv zu nutzen.
  */
 
@@ -25,14 +32,17 @@ import { useEffect, useState } from "react";
 
 import { NACHRICHT_MITTEL, projektion } from "@s1/domaene";
 
-import { nachrichtenentwurfFehler, nachrichtVerfassen } from "../kontrakt/nachrichtenschritte.js";
+import { nachrichtAufnehmen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { merkeOffeneEingabe } from "./entwurf.js";
+import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, type Aufnahmewerte } from "./fmzformate.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { ZEILEN_VORDRUCK, anlageAus, inhaltszeilen, maskenfehler, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
 
 export interface NachrichtenmaskeEigenschaften {
@@ -40,6 +50,8 @@ export interface NachrichtenmaskeEigenschaften {
   readonly vorlage: Maskenwerte;
   /** Abschnitte und Einheiten des Einsatzes, aus der Ansicht des Blattes. */
   readonly anschriften: readonly string[];
+  /** Additiv (N2): gesetzt, wenn die FmZ einen Eingang aufnimmt — schaltet den oberen Teil frei. */
+  readonly aufnahme?: Aufnahmeumfeld;
   readonly aufSchliessen: () => void;
 }
 
@@ -140,13 +152,44 @@ function Mittelteil({ werte, setze, anschriften }: { readonly werte: Maskenwerte
   );
 }
 
-export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufSchliessen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
+/**
+ * Was die Maske über Aufnahme und Verteilung weiß (Schnitt N2): `aufnahme`
+ * schaltet den oberen Teil frei (die FmZ nimmt einen Eingang auf), die
+ * Nummern belegen ihn vor und warnen vor einer doppelten.
+ */
+export interface Aufnahmeumfeld {
+  readonly naechsteNummer?: number | undefined;
+  readonly vergebeneNummern?: readonly number[] | undefined;
+}
+
+/** Der Grund über dem Laufzettel der Maske — oder `undefined`, wenn hier nicht verteilt wird (§5). */
+export function verteilgrund(aufnahme: boolean, gespraechsnotiz: boolean, selbst: boolean, sichterDa: boolean): string | undefined {
+  if (gespraechsnotiz && (selbst || !sichterDa)) {
+    return sichterDa ? "Gesprächsnotiz: Der Verfasser bestimmt die Stellen, die Kenntnis bekommen (S2 rot vorbelegt)." : "Kein Sichter besetzt: Die Gesprächsnotiz wird beim Aufgeben verteilt.";
+  }
+  if (aufnahme && !gespraechsnotiz && !sichterDa) return "Kein Sichter besetzt: Die Nachricht wird beim Aufnehmen verteilt (S2 rot vorbelegt).";
+  return undefined;
+}
+
+export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
   const [werte, setzeWerte] = useState<Maskenwerte>(vorlage);
+  const sitzung = useLaden((z) => z.lagebild?.sitzung);
+  const [aufnahmewerte, setzeAufnahmewerte] = useState<Aufnahmewerte>(() => aufnahmeVorlage(sitzung, aufnahme?.naechsteNummer));
+  const [verteilwerte, setzeVerteilwerte] = useState<Verteilwerte>(() => verteilVorlage(sitzung?.handzeichen ?? ""));
+  const [selbst, setzeSelbst] = useState(true);
   const versuch = useAnlegeversuch();
   const peers = useLaden((z) => z.lagebild?.peers);
   const setze: Setze = (feld, wert) => setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
   const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage);
-  const fehler = maskenfehler(werte);
+  const fmz = aufnahme !== undefined && werte.richtung === "EINGANG";
+  const sichterDa = sichterBesetzt(sitzung?.stellen, peers ?? []);
+  const grund = verteilgrund(fmz, werte.gespraechsnotiz, selbst, sichterDa);
+  const sichtung = grund === undefined ? undefined : sichtungAus(verteilwerte);
+  const fehler = [
+    ...maskenfehler(werte),
+    ...(fmz ? aufnahmefehler(aufnahmewerte) : []),
+    ...(grund !== undefined && sichtung === undefined ? ["Quittung und Handzeichen im Laufzettel eintragen"] : []),
+  ];
 
   useEffect(() => {
     merkeOffeneEingabe("nachricht", geaendert);
@@ -155,21 +198,27 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
 
   async function aufgeben(): Promise<void> {
     const nachrichtId = versuch.kennung(() => neueId("N"));
-    const entwurf = nachrichtVerfassen(anlageAus(werte, nachrichtId));
+    const anlage = anlageAus(werte, nachrichtId);
+    const vermerk = fmz ? aufnahmeAus(aufnahmewerte) : undefined;
+    const gegenstelle = aufnahmewerte.gegenstelle.trim();
+    const mitAufnahme = vermerk === undefined ? anlage : { ...anlage, aufnahme: vermerk, ...(gegenstelle === "" ? {} : { gegenstelle }) };
+    const entwurf = nachrichtAufnehmen(mitAufnahme, folgeAus(fmz ? nachweisAus(aufnahmewerte) : undefined, sichtung));
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
       return;
     }
     const ergebnis = await versuch.schreibe(entwurf);
-    if (ergebnis?.art === "geschrieben") aufSchliessen();
+    if (ergebnis?.art !== "geschrieben") return;
+    for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
+    aufSchliessen();
   }
 
   const alleAnschriften = [...new Set([...besetzteStellen(peers ?? []), ...anschriften])];
   return (
     <Maske
       titel={titel}
-      bestaetigungstext="Aufgeben"
+      bestaetigungstext={fmz ? "Aufnehmen" : "Aufgeben"}
       nurKnopf
       bereit={fehler.length === 0 && !versuch.gesperrt}
       bereitGrund={fehler[0] ?? versuch.sperre}
@@ -177,9 +226,10 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
       aufBestaetigen={aufgeben}
     >
       <div className="vordruck">
-        <FmzTeil />
+        {fmz ? <Aufnahmeteil werte={aufnahmewerte} aufAenderung={setzeAufnahmewerte} vergebeneNummern={aufnahme.vergebeneNummern} /> : <FmzTeil />}
         <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} />
-        <LaufzettelAnzeige />
+        {werte.gespraechsnotiz && <Verteilschalter selbst={selbst || !sichterDa} aufSelbst={setzeSelbst} sichterDa={sichterDa} />}
+        {grund === undefined ? <LaufzettelAnzeige /> : <Verteilteil werte={verteilwerte} aufAenderung={setzeVerteilwerte} grund={grund} />}
       </div>
       {versuch.anzeige}
     </Maske>

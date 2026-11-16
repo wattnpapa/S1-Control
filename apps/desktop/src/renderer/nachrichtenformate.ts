@@ -126,6 +126,11 @@ export interface Maskenwerte {
   readonly gespraechsnotiz: boolean;
   readonly antwortAuf?: string;
   readonly weitergeleitetVon?: string;
+  /**
+   * Additiv (N2): Eingang, wenn die FmZ aufnimmt. Die Gesprächsnotiz ist
+   * immer ein Eingang (§5), gleich, was hier steht; ohne Angabe Ausgang.
+   */
+  readonly richtung?: "EINGANG" | "AUSGANG";
 }
 
 /** Die erste Stelle der Sitzung als Wort — Absender und Funktion der Vorbelegung. */
@@ -189,12 +194,17 @@ export function maskenfehler(werte: Maskenwerte, jetzt: Date = new Date()): read
   return fehler;
 }
 
-/** Die Anlage aus den Feldern; die Richtung ist im Schnitt N1 immer Ausgang. */
+/** Die Richtung der Anlage: Gesprächsnotiz und Aufnahme der FmZ sind Eingänge (§5), sonst Ausgang. */
+export function richtungAus(werte: Pick<Maskenwerte, "richtung" | "gespraechsnotiz">): "EINGANG" | "AUSGANG" {
+  return werte.gespraechsnotiz || werte.richtung === "EINGANG" ? "EINGANG" : "AUSGANG";
+}
+
+/** Die Anlage aus den Feldern; die Richtung nach {@link richtungAus}. */
 export function anlageAus(werte: Maskenwerte, nachrichtId: string, jetzt: Date = new Date()): Nachrichtenanlage {
   const abfassungszeit = zeitAusEingabe(werte.abfassungszeit, jetzt);
   return {
     nachrichtId,
-    richtung: "AUSGANG",
+    richtung: richtungAus(werte),
     art: werte.art,
     vorrang: werte.vorrang,
     gespraechsnotiz: werte.gespraechsnotiz,

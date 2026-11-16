@@ -4367,6 +4367,39 @@
       .laufzettel h3 {
         margin: 0;
       }
+      /* Nachrichten N2: die Fernmeldezentrale als zwei Karten, die
+         Warteschlange breit, der Eingang schmal; unter 900 px untereinander. */
+      .fmzkarten {
+        display: grid;
+        grid-template-columns: minmax(0, 3fr) minmax(220px, 1fr);
+        gap: 12px;
+        align-items: start;
+      }
+      @media (max-width: 900px) {
+        .fmzkarten {
+          grid-template-columns: 1fr;
+        }
+      }
+      .fmzkarte h3 {
+        margin: 0 0 8px;
+      }
+      /* Über der Schwelle angenommen und unbefördert: bernstein wie die Statusmarken (§5). */
+      .nachrichtentabelle tr.ueberschwelle th,
+      .nachrichtentabelle tr.ueberschwelle td,
+      .nachrichtentabelle tr.doppelt td.zahl {
+        background: var(--warn-bg);
+      }
+      .zeilenknoepfe {
+        display: inline-flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .nachweisungsausgabe {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        margin-left: 8px;
+      }
 
     </style>
   </head>

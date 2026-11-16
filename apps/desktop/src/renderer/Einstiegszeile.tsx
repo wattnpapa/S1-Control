@@ -27,8 +27,8 @@ import { istGemerkt, merke } from "./geraetemerker.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { orttitel, type Blattort } from "./unterblaetter.js";
 
-// Partiell: Ein Blatt ohne Text in `ANSICHTEN` (Nachrichten, bis Ring 2 ihn
-// führt) zeigt keine Einstiegszeile, statt einen Satz hier zu erfinden.
+// Partiell: Ein Blatt ohne Text in `ANSICHTEN` zeigt keine Einstiegszeile,
+// statt einen Satz hier zu erfinden. Die Nachrichten führt Ring 2 seit N2.
 const KENNUNG: Readonly<Partial<Record<Blattort, Ansichtskennung>>> = {
   lage: "einheiten",
   "eingang.eingangskorb": "eingangskorb",
@@ -38,6 +38,7 @@ const KENNUNG: Readonly<Partial<Record<Blattort, Ansichtskennung>>> = {
   // Abschnitte, und deren Text sagt genau das.
   "fuest.fueorg": "abschnitte",
   funkplan: "funkplan",
+  nachrichten: "nachrichten",
   versorgung: "versorgung",
   kosten: "kosten",
   ausgaben: "ausgaben",

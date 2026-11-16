@@ -9,8 +9,12 @@
  * „Nachricht verfassen" (Strg+N) und die Suche über Betreff, Inhalt, Absender
  * und Anschrift (Strg+F). Der Posteingang filtert nach Zustand mit Chips wie
  * der Eingangskorb und lässt sich auf eine andere Stelle umstellen — die
- * Stelle ist ein Zuschnitt, kein Recht (§4). Die Sichten Fernmeldezentrale
- * und Nachweisung kommen mit Schnitt N2.
+ * Stelle ist ein Zuschnitt, kein Recht (§4).
+ *
+ * Schnitt N2: die Sichten „Fernmeldezentrale" (Ausgangswarteschlange und
+ * „Eingang aufnehmen", `Fernmeldezentrale.tsx`) und „Nachweisung" (alle
+ * Nachrichten nach Nummer, mit Ausgabe, `Nachweisung.tsx`); die Chips des
+ * Posteingangs tragen die Zahlen je Zustand aus der Ansicht.
  *
  * **Nichts wird hier gerechnet.** Ordnung, Filter, Laufzustand und Zahlen
  * kommen aus Ring 2 über den Ruf `nachrichtenAnfordern` und das Lagebild.
@@ -21,6 +25,7 @@ import { useMemo, useState } from "react";
 import type { Nachrichtenzeile } from "@s1/domaene";
 
 import type { Nachrichtenlage, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import { Eingangskarte, Warteschlange } from "./Fernmeldezentrale.js";
 import { Filterchips } from "./Filterchips.js";
 import type { Kontextort } from "./Klappmenue.js";
 import { Laufzettel } from "./Laufzettel.js";
@@ -29,23 +34,31 @@ import { TEXT_NUR_LESEN } from "./Maske.js";
 import { Nachrichtenkontextmenue, Nachrichtenleiste } from "./Nachrichtenauswahl.js";
 import { stellenname } from "./nachrichtenformate.js";
 import { Nachrichtenliste } from "./Nachrichtenliste.js";
+import { Nachweisung, Nachweisungsausgabe } from "./Nachweisung.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { useNachrichtenansicht, type Nachrichtenabruf } from "./useNachrichtenansicht.js";
+import { useFmzschritte } from "./useFmzschritte.js";
 import { useNachrichtenschritte } from "./useNachrichtenschritte.js";
 
-export type Nachrichtensicht = "posteingang" | "ausgang" | "sichter";
+export type Nachrichtensicht = "posteingang" | "ausgang" | "sichter" | "fmz" | "nachweisung";
 type Posteingangsstand = NonNullable<Extract<Ruf, { art: "nachrichtenAnfordern" }>["zustaende"]>[number];
 
-/** Die Sichten dieses Schnitts; FmZ und Nachweisung kommen mit N2. */
+/** Die fünf Sichten des Umschalters (§6). */
 export const NACHRICHTENSICHTEN: readonly { readonly schluessel: Nachrichtensicht; readonly titel: string }[] = [
   { schluessel: "posteingang", titel: "Posteingang" },
   { schluessel: "ausgang", titel: "Ausgang" },
   { schluessel: "sichter", titel: "Sichter" },
+  { schluessel: "fmz", titel: "Fernmeldezentrale" },
+  { schluessel: "nachweisung", titel: "Nachweisung" },
 ];
 
-/** Die erste Sicht nach der Stelle (§6): Sichter sieht den Sichter, alle anderen den Posteingang. */
+/**
+ * Die erste Sicht nach der Stelle (§6): FmZ sieht die Fernmeldezentrale,
+ * Sichter den Sichter, alle anderen den Posteingang.
+ */
 export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
+  if (stellen.includes("FMZ")) return "fmz";
   return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || s === "FMZ") ? "sichter" : "posteingang";
 }
 
@@ -78,9 +91,11 @@ interface WerkzeugEigenschaften {
   readonly aufSuche: (suche: string) => void;
   readonly nurLesen: boolean;
   readonly aufVerfassen: () => void;
+  /** Additiv (N2): rechts neben der Suche, etwa „Nachweisung ausgeben". */
+  readonly rechts?: React.ReactNode;
 }
 
-function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfassen }: WerkzeugEigenschaften): React.JSX.Element {
+function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfassen, rechts }: WerkzeugEigenschaften): React.JSX.Element {
   return (
     <div className="werkzeugzeile">
       <div className="umschalter" role="group" aria-label="Sicht">
@@ -102,6 +117,7 @@ function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfasse
           value={suche}
           onChange={(e) => aufSuche(e.target.value)}
         />
+        {rechts}
       </span>
     </div>
   );
@@ -115,6 +131,8 @@ const CHIPS = [
 
 interface PostfilterEigenschaften {
   readonly lage: Nachrichtenlage | undefined;
+  /** Additiv (N2): die Zahlen je Zustand aus der Ansicht, für die gezeigten Stellen. */
+  readonly zaehlung: Readonly<Record<Posteingangsstand, number>> | undefined;
   readonly wahl: readonly Posteingangsstand[];
   readonly aufWahl: (wahl: readonly Posteingangsstand[]) => void;
   readonly sitzung: Sitzungsstellen | undefined;
@@ -123,9 +141,10 @@ interface PostfilterEigenschaften {
 }
 
 /** Die Chips des Posteingangs und die Wahl, wessen Posteingang gezeigt wird. */
-function Postfilter({ lage, wahl, aufWahl, sitzung, fuer, aufFuer }: PostfilterEigenschaften): React.JSX.Element {
+function Postfilter({ lage, zaehlung, wahl, aufWahl, sitzung, fuer, aufFuer }: PostfilterEigenschaften): React.JSX.Element {
   const eigene = sitzung?.stellen ?? [];
-  const chips = CHIPS.map((c) => ({ ...c, anzahl: c.wert === "NEU" && fuer === "" ? lage?.neuFuerStellen : undefined }));
+  // Mit der Zählung aus der Ansicht trägt jeder Chip seine Zahl; ohne (älterer Dienst) nur „neu" aus dem Band.
+  const chips = CHIPS.map((c) => ({ ...c, anzahl: zaehlung !== undefined ? zaehlung[c.wert] : c.wert === "NEU" && fuer === "" ? lage?.neuFuerStellen : undefined }));
   const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "FMZ"].filter((s) => !eigene.includes(s));
   return (
     <Filterchips
@@ -222,6 +241,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
   const zeilen = abruf.ansicht?.zeilen ?? [];
   const gewaehlt = zeilen.find((z) => z.id === gewaehltId);
   const schritte = useNachrichtenschritte({ zeile: gewaehlt, sitzung, stellen, nurLesen, anschriften: abruf.ansicht?.anschriften ?? [], aufTagebuch });
+  const fmz = useFmzschritte(abruf.ansicht, sitzung);
   const { verfassen } = schritte;
 
   useKuerzel(
@@ -252,23 +272,34 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
         aufSuche={setzeSuche}
         nurLesen={nurLesen}
         aufVerfassen={verfassen}
+        {...(sicht === "nachweisung" ? { rechts: <Nachweisungsausgabe /> } : {})}
       />
-      {sicht === "posteingang" && <Postfilter lage={lage} wahl={zustaende} aufWahl={setzeZustaende} sitzung={sitzung} fuer={fuer} aufFuer={setzeFuer} />}
-      <Listenflaeche
-        abruf={abruf}
-        sicht={sicht}
-        stellen={stellen}
-        gewaehltId={gewaehltId}
-        aufWahl={setzeGewaehltId}
-        aufLesen={schritte.lesen}
-        aufKontext={setzeKontext}
-      />
+      {sicht === "posteingang" && <Postfilter lage={lage} zaehlung={abruf.ansicht?.zaehlung} wahl={zustaende} aufWahl={setzeZustaende} sitzung={sitzung} fuer={fuer} aufFuer={setzeFuer} />}
+      {sicht === "fmz" && abruf.ansicht !== undefined ? (
+        <div className="fmzkarten">
+          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} />
+          <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
+        </div>
+      ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
+        <Nachweisung zeilen={zeilen} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} />
+      ) : (
+        <Listenflaeche
+          abruf={abruf}
+          sicht={sicht}
+          stellen={stellen}
+          gewaehltId={gewaehltId}
+          aufWahl={setzeGewaehltId}
+          aufLesen={schritte.lesen}
+          aufKontext={setzeKontext}
+        />
+      )}
       {schritte.auswahl !== undefined && <Nachrichtenleiste {...schritte.auswahl} />}
       {schritte.auswahl !== undefined && kontext !== undefined && <Nachrichtenkontextmenue {...schritte.auswahl} ort={kontext} aufSchliessen={() => setzeKontext(undefined)} />}
       {sicht === "sichter" && gewaehlt !== undefined && (
         <Laufzettel key={gewaehlt.id} zeile={gewaehlt} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufGesichtet={() => setzeGewaehltId(undefined)} />
       )}
       {schritte.masken}
+      {fmz.masken}
     </section>
   );
 }
