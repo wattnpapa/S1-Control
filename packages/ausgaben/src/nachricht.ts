@@ -12,11 +12,11 @@
  * Vektorausgabe weder das eine noch das andere. Die Bytes legt die Schale ab.
  *
  * Was die Bibliothek nicht exportiert und deshalb hier steht: der Zeichenfilter
- * fuer Windows-1252 (`druckbar`) und die Datum-Zeit-Gruppe. Beide folgen
- * `web/src/spalten.ts` der Bibliothek (`druckbar`, `datumZeitGruppe`), rechnen
- * hier aber auf ISO-Zeitpunkten in Berliner Zeit statt auf lokalen `Date`.
+ * fuer Windows-1252 (`druckbar`; folgt `web/src/spalten.ts` der Bibliothek).
+ * Die Datum-Zeit-Gruppe kommt aus `@s1/domaene`.
  */
 
+import { datumZeitGruppe } from "@s1/domaene";
 import { jsPDF } from "jspdf";
 import {
   VordruckDaten,
@@ -94,8 +94,6 @@ export interface Vordruckoptionen {
 /** Versatz der rechten Haelfte auf A4 quer (Bibliothek, README). */
 const VERSATZ_RECHTS = 148.5;
 
-const MONATE = ["jan", "feb", "mrz", "apr", "mai", "jun", "jul", "aug", "sep", "okt", "nov", "dez"];
-
 // --- Zeichenfilter
 /** Die Zeichen von Windows-1252 oberhalb von U+007F, die nicht in Latin-1 stehen. */
 const CP1252_SONDER = new Set("€‚ƒ„…†‡ˆ‰Š‹ŒŽ‘’“”•–—˜™š›œžŸ");
@@ -155,13 +153,8 @@ function berlinTeile(iso: string): { jahr: string; monat: string; tag: string; s
   };
 }
 
-/** Die Datum-Zeit-Gruppe, z. B. „171045nov26“ (Tag, Uhrzeit, Monat, Jahr). Leer bei ungueltiger Eingabe. */
-export function datumZeitGruppe(iso: string): string {
-  const t = berlinTeile(iso);
-  if (!t) return "";
-  const monat = MONATE[Number(t.monat) - 1] ?? "";
-  return `${t.tag}${t.stunde}${t.minute}${monat}${t.jahr}`;
-}
+/** Die Datum-Zeit-Gruppe kommt aus `@s1/domaene` (eine Quelle, Berliner Zeit); hier nur durchgereicht. */
+export { datumZeitGruppe };
 
 /** Der Vermerk im Kopf: Tag zweistellig, Uhrzeit vierstellig. Leer, wenn nichts gesetzt ist. */
 function vermerkAus(vermerk: Nachrichtenvermerk | undefined): VordruckVermerk {
