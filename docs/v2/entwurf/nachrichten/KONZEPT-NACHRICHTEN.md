@@ -1,7 +1,8 @@
 # Nachrichten: der 4-fach-Vordruck in der Führungsstelle
 
-Entwurf vom 2026-11-16. Status: Vorschlag, noch nicht beschlossen; die
-offenen Fragen stehen in Abschnitt 11.
+Entwurf vom 2026-11-16. Status: beschlossen am 2026-11-16 (Johannes), die
+Entscheidungen stehen in Abschnitt 11 und gehen den Abschnitten 4 bis 10
+vor, wo diese noch den Vorschlag beschreiben.
 
 Begriffe: Der Nachrichtenvordruck (THW-Vordruck 1103.1, im Sprachgebrauch
 „4-fach-Vordruck") ist der Satz aus vier selbstdurchschreibenden Blättern
@@ -522,7 +523,43 @@ die Projektion; Mitteilung nur bei Vorrang und nur für die eigene Stelle.
 Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei N1 und N2
 (Katalog, Fold, Einstellungen) der volle Lauf und die Simulation.
 
-## 11. Entscheidungen (offen)
+## 11. Entscheidungen (getroffen)
+
+Getroffen am 2026-11-16 mit dem Umsetzungsauftrag; die Fragen, wie sie
+standen, folgen darunter.
+
+1. Die Nachweisung zählt Eingang und Ausgang gemeinsam.
+2. Ohne besetzte FmZ bleibt die Nummer leer, bis die FmZ nachweist. Die
+   Maske des Verfassers vergibt keine Nummer.
+3. Die Stelle wird beim Öffnen des Einsatzes abgefragt, nicht in den
+   Geräteeinstellungen hinterlegt: Wer einen Einsatz aufschlägt, sagt, welche
+   Position er im Stab hat. Die Wahl gilt für diese Sitzung an diesem
+   Arbeitsplatz, steht in der Präsenz und wird beim nächsten Öffnen desselben
+   Einsatzes als Vorbelegung angeboten. Das Handzeichen wird an derselben
+   Stelle abgefragt und bleibt je Arbeitsplatz gemerkt.
+4. Vorschau ja: Die Maske zeigt neben dem Formular den Vordruck, wie er
+   gedruckt wird, nach dem Muster der Canvas-Vorschau der Web-App des
+   Submoduls (Aufrufe einer Wegwerf-jsPDF nachzeichnen). jsPDF kommt damit
+   in das Renderer-Bündel; die Vorschau wird erst geladen, wenn die Maske
+   offen ist.
+5. Einbindung zunächst als `file:`-Abhängigkeit mit Bau in
+   `bau/kern-bauen.mjs` wie die drei anderen Kerne. Zieht npm dabei die
+   devDependencies der Web-App mit, wird die Web-App upstream in ein eigenes
+   Workspace-Paket getrennt. Keine Entscheidung gegen das eine oder andere;
+   die Umsetzung berichtet, was npm tut.
+6. Ton bei Blitz-Nachricht, abschaltbar je Arbeitsplatz, nur bei Blitz.
+7. Automatischer Druck je Nachricht gibt es, und er braucht ein Ziel: einen
+   fest eingestellten Drucker oder ein festes Verzeichnis, in das die PDFs
+   fallen, damit sie später gedruckt werden können. Beides steht in den
+   Einstellungen des Arbeitsplatzes; ohne Ziel ist der automatische Druck aus.
+   Ein Drucker ist nur in der Desktop-Schale möglich (Electron `print`), das
+   Verzeichnis in beiden Schalen.
+8. Ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen, ist ein
+   Parameter je Einsatz (`sichtungAuchAusgang`, Vorbelegung nein).
+9. Kein Meldevordruck.
+10. Der Reiter heißt „Nachrichten".
+
+### Die Fragen, wie sie standen
 
 1. Nachweisung gemeinsam oder getrennt für Eingang und Ausgang. eStab kann
    beides; der Vordruck hat ein Feld „Nr." mit Kreuz E oder A, was auf einen

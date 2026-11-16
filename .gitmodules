@@ -7,3 +7,6 @@
 [submodule "vendor/bos-vokabulare"]
 	path = vendor/bos-vokabulare
 	url = https://github.com/wattnpapa/bos-vokabulare.git
+[submodule "vendor/bos-nachrichtenvordruck"]
+	path = vendor/bos-nachrichtenvordruck
+	url = https://github.com/wattnpapa/bos-nachrichtenvordruck.git
