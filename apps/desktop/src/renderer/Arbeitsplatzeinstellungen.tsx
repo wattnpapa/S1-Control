@@ -7,11 +7,15 @@
  * Anzeigename, Betriebsart, Profil, „Übernehmen" —, jedes Feld mit einem
  * Satz, was es bewirkt. Ohne Share-Pfad oder ohne Anzeigenamen ist die Maske
  * von Anfang an offen: Ohne beides lässt sich kein Einsatz öffnen.
+ *
+ * Schnitt N3: dazu Blatt und Automatikdruck des Nachrichtenvordrucks
+ * (`Druckeinstellungen.tsx`, KONZEPT-NACHRICHTEN.md Entscheidung 7).
  */
 
 import { useEffect, useState } from "react";
 
 import type { Profil } from "../kontrakt/index.js";
+import { Druckeinstellungen, druckeinstellungenAus, druckwerteAus, type Druckwerte } from "./Druckeinstellungen.js";
 import { useLaden } from "./laden.js";
 import { PROFILNAME, Profilwahl } from "./Profilwahl.js";
 
@@ -25,6 +29,7 @@ function useEinstellungsfelder() {
   const [betriebsart, setzeBetriebsart] = useState<Betriebsart>(einstellungen.betriebsart ?? "fuehrungsstelle");
   const [profil, setzeProfil] = useState<Profil>(einstellungen.profil ?? "fuehrungsstelle");
   const [ton, setzeTon] = useState(einstellungen.tonBeiBlitz !== false);
+  const [druck, setzeDruck] = useState<Druckwerte>(() => druckwerteAus(einstellungen));
   // Die Felder folgen den geladenen Einstellungen, solange niemand tippt.
   useEffect(() => {
     setzeShare(einstellungen.sharePfad);
@@ -32,8 +37,9 @@ function useEinstellungsfelder() {
     setzeBetriebsart(einstellungen.betriebsart ?? "fuehrungsstelle");
     setzeProfil(einstellungen.profil ?? "fuehrungsstelle");
     setzeTon(einstellungen.tonBeiBlitz !== false);
+    setzeDruck(druckwerteAus(einstellungen));
   }, [einstellungen]);
-  return { einstellungen, share, setzeShare, name, setzeName, betriebsart, setzeBetriebsart, profil, setzeProfil, ton, setzeTon };
+  return { einstellungen, share, setzeShare, name, setzeName, betriebsart, setzeBetriebsart, profil, setzeProfil, ton, setzeTon, druck, setzeDruck };
 }
 
 /** Die aufgeklappte Maske. */
@@ -56,6 +62,7 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
       // Auch im Meldekopf: Das Profil bleibt gemerkt, es gilt nur nicht.
       profil: f.profil,
       tonBeiBlitz: f.ton,
+      ...druckeinstellungenAus(f.druck, f.einstellungen),
       // Das Erscheinungsbild gehört dem Fenstermenü; diese Maske reicht es
       // durch, statt es auf den Stand beim Öffnen zurückzudrehen.
       ...(f.einstellungen.theme === undefined ? {} : { theme: f.einstellungen.theme }),
@@ -97,6 +104,7 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
       <p id="erklaerung-ton" className="hinweistext">
         Zwei kurze Töne, wenn eine gesichtete Blitz-Nachricht für eine Stelle dieses Arbeitsplatzes eintrifft. Der Hinweis in der Leiste steht auch ohne Ton.
       </p>
+      <Druckeinstellungen werte={f.druck} aufAenderung={f.setzeDruck} />
       <button type="button" className="haupt" disabled={beschaeftigt} onClick={uebernimm}>
         Übernehmen
       </button>

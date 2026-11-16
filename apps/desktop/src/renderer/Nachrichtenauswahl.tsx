@@ -9,6 +9,10 @@
  * nur da, wo eine eigene Stelle im Verteiler steht. „Antworten" und
  * „Weiterleiten" sind Komfortwege zur selben Maske, keine eigenen
  * Ereignisarten. „Zurückziehen" ist folgenreich und fragt nach dem Grund.
+ *
+ * Schnitt N3 (§7): „Als Vordruck drucken" legt den Vordruck der Nachricht
+ * als PDF ab — auch im beendeten Einsatz, denn Drucken schreibt nichts in
+ * die Akte.
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
@@ -31,6 +35,8 @@ export interface NachrichtenauswahlEigenschaften {
   readonly aufWeiterleiten: () => void;
   readonly aufZurueckziehen: () => void;
   readonly aufTagebuch: () => void;
+  /** Additiv (N3): „Als Vordruck drucken"; fehlt er, steht der Knopf nicht da. */
+  readonly aufVordruck?: (() => void) | undefined;
 }
 
 /** „1 gewählt · E 26 Pumpen eingetroffen". */
@@ -57,13 +63,18 @@ export function nachrichtenknoepfe(p: NachrichtenauswahlEigenschaften): readonly
     aufWahl: p.aufLesen,
   };
   const tagebuch: Leistenknopf = { schluessel: "tagebuch", text: "Im Tagebuch zeigen", titel: "Das Einsatztagebuch mit den Zeilen dieser Nachricht", aufWahl: p.aufTagebuch };
-  if (p.nurLesen) return [lesen, tagebuch];
+  const vordruck: Leistenknopf[] =
+    p.aufVordruck === undefined
+      ? []
+      : [{ schluessel: "vordruck", text: "Als Vordruck drucken", titel: "Den Nachrichtenvordruck als PDF im Ordner „ausgaben“ ablegen", aufWahl: p.aufVordruck }];
+  if (p.nurLesen) return [lesen, ...vordruck, tagebuch];
   const erledigung = erledigungsknopf(p);
   return [
     lesen,
     ...(erledigung === undefined ? [] : [erledigung]),
     { schluessel: "antworten", text: "Antworten", menuetext: "Antworten …", titel: "Neue Nachricht mit getauschter Anschrift und Absender", aufWahl: p.aufAntworten },
     { schluessel: "weiterleiten", text: "Weiterleiten", menuetext: "Weiterleiten …", titel: "Neue Nachricht mit demselben Inhalt", aufWahl: p.aufWeiterleiten },
+    ...vordruck,
     tagebuch,
     {
       schluessel: "zurueckziehen",

@@ -8,6 +8,8 @@
  * Handzeichen, je Stelle ein Ereignis (§5: Der Posteingang gehört dem
  * Sachgebiet, nicht der Person). Im beendeten Einsatz schlägt es nur auf.
  * „Erledigt" und „Erledigung zurück" schreiben ebenso je eigener Stelle.
+ * „Als Vordruck drucken" (N3) legt das PDF ab und zeigt die Datei — in der
+ * offenen Ansicht dort, sonst unter dem Blatt.
  */
 
 import { useState } from "react";
@@ -25,6 +27,7 @@ import { antwortVorlage, leereMaske, weiterleitenVorlage, type Maskenwerte } fro
 import { Nachrichtenmaske } from "./Nachrichtenmaske.js";
 import { tagebuchMitSuche } from "./Tagebuch.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
+import { useVordruckausgabe } from "./Vordruckausgabe.js";
 
 /** Schreibt Entwürfe nacheinander; der erste Fehlschlag steht als Hinweis in der Leiste. */
 async function schreibeAlle(entwuerfe: readonly Entwurf[], was: string): Promise<void> {
@@ -68,6 +71,7 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
   const [gelesen, setzeGelesen] = useState<Nachrichtenzeile | undefined>(undefined);
   const grundabfrage = useGrundabfrage();
   const verbindung = useSchreibsperre();
+  const vordruck = useVordruckausgabe();
 
   const lesen = (ziel: Nachrichtenzeile): void => {
     setzeGelesen(ziel);
@@ -102,6 +106,7 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
             tagebuchMitSuche(suchtextFuer(zeile));
             umfeld.aufTagebuch();
           },
+          aufVordruck: () => vordruck.erzeuge(zeile.id),
         };
 
   const offen = gelesen !== undefined && zeile?.id === gelesen.id ? zeile : gelesen;
@@ -110,7 +115,10 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
       {vorlage !== undefined && (
         <Nachrichtenmaske titel={vorlage.titel} vorlage={vorlage.werte} anschriften={umfeld.anschriften} aufSchliessen={() => setzeVorlage(undefined)} />
       )}
-      {offen !== undefined && <Nachrichtenansicht zeile={offen} aufSchliessen={() => setzeGelesen(undefined)} />}
+      {offen !== undefined && (
+        <Nachrichtenansicht zeile={offen} aufSchliessen={() => setzeGelesen(undefined)} aufVordruck={() => vordruck.erzeuge(offen.id)} vordruckanzeige={vordruck.anzeige} />
+      )}
+      {offen === undefined && vordruck.anzeige}
       {grundabfrage.maske}
     </>
   );

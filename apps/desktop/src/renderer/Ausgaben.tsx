@@ -18,6 +18,7 @@ import { useState } from "react";
 
 import { ORGANISATIONEN } from "@s1/domaene";
 
+import type { Ausgabeergebnis } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
 import { Ausgabedatei } from "./Ausgabedatei.js";
 import { Einsatzabschluss } from "./Einsatzabschluss.js";
@@ -25,7 +26,7 @@ import { Einsatzabschluss } from "./Einsatzabschluss.js";
 export function Ausgaben(): React.JSX.Element {
   const laden = useLaden();
   const [organisation, setzeOrganisation] = useState("THW");
-  const [erzeugt, setzeErzeugt] = useState<{ pfad: string; bytes: number } | undefined>(undefined);
+  const [erzeugt, setzeErzeugt] = useState<Ausgabeergebnis | undefined>(undefined);
 
   function erzeuge(
     ausgabe:
@@ -162,7 +163,8 @@ export function Ausgaben(): React.JSX.Element {
       </button>
       {/* Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste,
           Funkprotokoll, Funkplan. Sie hängen an keinem Datenstand und lassen sich vorab
-          ausdrucken und kopieren. */}
+          ausdrucken und kopieren. Dazu der leere Nachrichtenvordruck als eigenes PDF
+          (A4 quer, zwei Vordrucke; N3, Entscheidung 9), das daneben genannt wird. */}
       <button type="button" onClick={() => { erzeuge("papier", "pdf"); }}>
         Papier-Vordruck als PDF
       </button>
@@ -205,6 +207,9 @@ export function Ausgaben(): React.JSX.Element {
       {erzeugt !== undefined && (
         <Ausgabedatei pfad={erzeugt.pfad} vorsatz="Geschrieben" zusatz={`${String(erzeugt.bytes)} Bytes`} />
       )}
+      {erzeugt?.weitere?.map((datei) => (
+        <Ausgabedatei key={datei.pfad} pfad={datei.pfad} vorsatz="Dazu geschrieben" zusatz={`${String(datei.bytes)} Bytes`} />
+      ))}
       <Einsatzabschluss />
     </section>
   );

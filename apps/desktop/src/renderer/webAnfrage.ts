@@ -37,6 +37,9 @@ const SCHREIBENDE_ARTEN: ReadonlySet<Ruf["art"]> = new Set<Ruf["art"]>([
   "htmlMonitorSchalten",
   "einsatzArchivieren",
   "akteErzeugen",
+  // N3: Beide schreiben eine Datei; eine Wiederholung soll sie nicht zweimal anstoßen.
+  "nachrichtVordruckErzeugen",
+  "probedruck",
 ]);
 
 export function istSchreibend(art: Ruf["art"]): boolean {

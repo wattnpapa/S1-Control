@@ -9,6 +9,7 @@
  * „Nachricht verfassen", „Antworten" und „Weiterleiten".
  */
 
+import type { Nachrichtenentwurf } from "@s1/ausgaben/vordruck";
 import { NACHRICHT_STELLEN, datumZeitGruppe, datumZeitGruppeLesen, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
@@ -219,5 +220,46 @@ export function anlageAus(werte: Maskenwerte, nachrichtId: string, jetzt: Date =
     ...(abfassungszeit === undefined ? {} : { abfassungszeit }),
     ...(werte.antwortAuf === undefined ? {} : { antwortAuf: werte.antwortAuf }),
     ...(werte.weitergeleitetVon === undefined ? {} : { weitergeleitetVon: werte.weitergeleitetVon }),
+  };
+}
+
+/** Was die Maske über Aufnahme und Laufzettel zur Vorschau beisteuert (N2-Teile der Maske). */
+export interface Entwurfszusatz {
+  readonly aufnahme?: { readonly mittel: string; readonly zeitpunkt: string; readonly handzeichen: string } | undefined;
+  readonly gegenstelle?: string | undefined;
+  readonly nummer?: string | undefined;
+  readonly sichtung?: { readonly zeitpunkt: string; readonly handzeichen: string; readonly verteiler: readonly { readonly stelle: string; readonly kopie?: string | undefined }[]; readonly vermerke?: string | undefined } | undefined;
+}
+
+/**
+ * Die Felder der Maske als Entwurf für die Vorschau des Vordrucks
+ * (Entscheidung 4, N3): Richtung wie beim Aufgeben, die Abfassungszeit als
+ * ISO, sobald sie lesbar ist. Die Abbildung auf die Felder des Vordrucks
+ * macht `@s1/ausgaben` (`entwurfsdruck`), dieselbe wie beim Druck. Im
+ * Laufzettel heißt nur die blaue Kopie „nur Kopie" — wie in `nachrichtendruckAus`.
+ */
+export function entwurfAus(werte: Maskenwerte, zusatz: Entwurfszusatz = {}, jetzt: Date = new Date()): Nachrichtenentwurf {
+  const abfassungszeit = zeitAusEingabe(werte.abfassungszeit, jetzt);
+  const s = zusatz.sichtung;
+  return {
+    richtung: richtungAus(werte),
+    art: werte.art,
+    vorrang: werte.vorrang,
+    gespraechsnotiz: werte.gespraechsnotiz,
+    uebermittlungswunsch: werte.uebermittlungswunsch,
+    anschrift: werte.anschrift,
+    rufnummer: werte.rufnummer,
+    betreff: werte.betreff,
+    inhalt: werte.inhalt,
+    absender: werte.absender,
+    zeichen: werte.zeichen,
+    funktion: werte.funktion,
+    ...(abfassungszeit === undefined ? {} : { abfassungszeit }),
+    ...(zusatz.aufnahme === undefined ? {} : { aufnahme: zusatz.aufnahme }),
+    ...(zusatz.gegenstelle === undefined ? {} : { gegenstelle: zusatz.gegenstelle }),
+    ...(zusatz.nummer === undefined ? {} : { nummer: zusatz.nummer }),
+    ...(s === undefined
+      ? {}
+      : { sichtung: { zeitpunkt: s.zeitpunkt, handzeichen: s.handzeichen, verteiler: s.verteiler.map((v) => ({ stelle: v.stelle, kopie: v.kopie === "BLAU" })), vermerke: s.vermerke ?? "" } }),
   };
 }

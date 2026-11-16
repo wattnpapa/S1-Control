@@ -26,6 +26,9 @@
  * die Maske den Laufzettel mit, und die Sichtung geht im selben Zug mit
  * (§5 „Ersatzsichter").
  * Vorrang ist nicht vorbelegt: Die Lehrunterlage mahnt, ihn restriktiv zu nutzen.
+ *
+ * Schnitt N3 (Entscheidung 4): Unter dem Vordruck steht die „Vorschau", der
+ * Vordruck, wie er gedruckt wird — zugeklappt, bis jemand sie aufklappt.
  */
 
 import { useEffect, useState } from "react";
@@ -41,9 +44,10 @@ import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, ty
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
-import { ZEILEN_VORDRUCK, anlageAus, inhaltszeilen, maskenfehler, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { ZEILEN_VORDRUCK, anlageAus, entwurfAus, inhaltszeilen, maskenfehler, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
 import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
+import { Vordruckvorschau } from "./Vordruckvorschau.js";
 
 export interface NachrichtenmaskeEigenschaften {
   readonly titel?: string;
@@ -215,6 +219,10 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   }
 
   const alleAnschriften = [...new Set([...besetzteStellen(peers ?? []), ...anschriften])];
+  const entwurf = entwurfAus(werte, {
+    ...(fmz ? { aufnahme: aufnahmeAus(aufnahmewerte), gegenstelle: aufnahmewerte.gegenstelle.trim(), nummer: aufnahmewerte.nummer } : {}),
+    sichtung,
+  });
   return (
     <Maske
       titel={titel}
@@ -231,6 +239,7 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
         {werte.gespraechsnotiz && <Verteilschalter selbst={selbst || !sichterDa} aufSelbst={setzeSelbst} sichterDa={sichterDa} />}
         {grund === undefined ? <LaufzettelAnzeige /> : <Verteilteil werte={verteilwerte} aufAenderung={setzeVerteilwerte} grund={grund} />}
       </div>
+      <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />
       {versuch.anzeige}
     </Maske>
   );

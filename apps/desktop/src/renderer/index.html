@@ -4335,6 +4335,41 @@
       .vordruckinhalt textarea {
         font-family: var(--mono);
       }
+      /* N3: Vorschau des Vordrucks, wie er gedruckt wird (Entscheidung 4). */
+      .vordruckvorschau {
+        margin: 0 0 8px;
+      }
+      .vorschaubild {
+        max-width: 30rem;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        background: #fff;
+      }
+      .vorschaubild canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+      /* N3: Blatt und Automatikdruck in „Dieser Arbeitsplatz" (Entscheidung 7). */
+      .druckeinstellungen {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        border: var(--rahmenbreite) solid var(--rahmen);
+        padding: 6px 10px;
+      }
+      .feldmitknopf {
+        display: flex;
+        gap: 6px;
+      }
+      .feldmitknopf > input {
+        flex: 1 1 auto;
+      }
+      .probedruck {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 6px 10px;
+      }
       .kaestchenzeile {
         display: flex;
         flex-wrap: wrap;
