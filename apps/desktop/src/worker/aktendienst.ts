@@ -128,7 +128,7 @@ import {
 import { einheitWiederhergestellt, verschiebung } from "../kontrakt/bedienschritte.js";
 import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
-import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
+import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, nachweisungsausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
 import { funkFuerLagebild, funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
 import {
   archivierungsentwurf,
@@ -139,6 +139,7 @@ import {
 import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
+import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { schreibhinweise } from "./schreibhinweise.js";
 import { offeneVokabelkorrekturen, vokabelnKorrigieren } from "./vokabelkorrektur.js";
 import { Bearbeitungssperren } from "./bearbeitungssperren.js";
@@ -147,7 +148,7 @@ import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { pruefeFunk } from "./funkpruefung.js";
-import { Vorrangwaechter, nachrichtenansicht, nachrichtenFuerLagebild, peerStellen, sitzungAus } from "./nachrichtendienst.js";
+import { Vorrangwaechter, mitNachrichtenparametern, nachrichtenansicht, nachrichtenFuerLagebild, peerStellen, sitzungAus } from "./nachrichtendienst.js";
 import { pruefeNachricht } from "./nachrichtenpruefung.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
@@ -173,6 +174,7 @@ export type Seitenausgabe =
   | "fueorg"
   | "einheitenliste"
   | "funkplan"
+  | "nachweisung"
   | Listenausgabe
   | Versorgungsausgabe;
 
@@ -720,7 +722,7 @@ export class Aktendienst {
 
   /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
   async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
-    const plan = planeFolgen(this.#zustand, entwurf);
+    const plan = planeFolgen(this.#zustand, entwurf, { sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers) });
     const ergebnis = await this.#schreibe(entwurf);
     if (ergebnis.art !== "geschrieben") return ergebnis;
     const vorab = [...plan.hinweise];
@@ -1137,6 +1139,9 @@ export class Aktendienst {
     }
     if (VERSORGUNGSAUSGABEN.has(ausgabe)) {
       return versorgungsausgabe(ausgabe as Versorgungsausgabe, this.#zustand, jetzt.getTime(), { ...kopf, marke });
+    }
+    if (ausgabe === "nachweisung") {
+      return nachweisungsausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke);
     }
     if (ausgabe === "funkplan") {
       return funkplanausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke, jetzt.toISOString());
@@ -1889,7 +1894,7 @@ export class Aktendienst {
     }
     const ausserhalb = kennzahlen.staerkeAusserhalbDerGesamtstaerke(zustand);
     const oberster = this.#stapel.oberster();
-    const stammdaten = projektion.einsatzstammdaten(zustand);
+    const stammdaten = mitNachrichtenparametern(zustand, projektion.einsatzstammdaten(zustand));
     const offeneAbloesungen = projektion.offeneAbloesungen(zustand);
     return {
       einsatzId: this.#o.einsatzId,

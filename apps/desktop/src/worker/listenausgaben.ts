@@ -1,6 +1,6 @@
 /**
- * Die Listenausgaben des Workers: Anforderungen, Tagebuch, Papier-Vordruck
- * und der Funkplan.
+ * Die Listenausgaben des Workers: Anforderungen, Tagebuch, Papier-Vordruck,
+ * der Funkplan und die Nachweisung.
  *
  * Aus `aktendienst.ts` herausgehalten, damit die Datei nicht mit jeder Seite
  * wächst: Hier steht, welche Zeilen in die Seite kommen; wie sie aussieht,
@@ -10,6 +10,7 @@
 import {
   anforderungenAlsHtml,
   funkplanAlsHtml,
+  nachweisungAlsHtml,
   papierVordruckAlsHtml,
   tagebuchAlsHtml,
   type Ausgabekopf,
@@ -76,4 +77,22 @@ export function funkplanausgabe(
     ...(uebergeordneteFuestName === undefined ? {} : { uebergeordneteFuestName }),
   };
   return { dateiname, html: funkplanAlsHtml(projektion.funkplan(zustand, jetzt), funkkopf, dateiname) };
+}
+
+/**
+ * Die Nachweisung als Seite (KONZEPT-NACHRICHTEN.md §7, Schnitt N2): alle
+ * Nachrichten nach Nummer, ohne Nummer zuletzt — dieselbe Ordnung wie die
+ * Sicht im Blatt (`projektion.nachrichtenausschnitt`, Sicht „nachweisung").
+ * Unten stehen Zeit und Akteur; der Name der Führungsstelle kommt aus den
+ * Stammdaten, wie im Funkplan.
+ */
+export function nachweisungsausgabe(
+  zustand: Zustand,
+  kopf: Ausgabekopf & { readonly erstelltVon: string },
+  marke: string,
+): { dateiname: string; html: string } {
+  const { erstelltVon, ...seitenkopf } = kopf;
+  const zeilen = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen;
+  const fuestName = text(zustand.einsatz?.fuestName.wert) ?? "";
+  return { dateiname: `nachweisung_${marke}`, html: nachweisungAlsHtml({ kopf: seitenkopf, fuestName, akteur: erstelltVon, zeilen }) };
 }

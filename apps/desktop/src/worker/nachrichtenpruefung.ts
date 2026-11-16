@@ -31,8 +31,28 @@ const ARTEN = new Set([
   "NachrichtZurueckgezogen",
 ]);
 
+/**
+ * Die Parameter des Nachrichtenwegs (N2, Entscheidung 8, §5): ein Schalter
+ * und eine Schwelle in ganzen Minuten ab 1. Der Fold prüft `neu` nicht; eine
+ * Schwelle „abc" legte sonst die Zwanzig-Minuten-Marke still.
+ */
+function pruefeParameter(entwurf: Ereignisentwurf): string | undefined {
+  const feld = (entwurf.nutzlast as { feld?: unknown } | null | undefined)?.feld;
+  const neu = entwurf.neu;
+  if (entwurf.undoOf !== undefined && neu === null) return undefined;
+  if (feld === "sichtungAuchAusgang") return typeof neu === "boolean" ? undefined : "„Ausgänge nach der Beförderung zum Sichter“ ist ein Ja oder Nein.";
+  if (feld === "fmzSchwelleMinuten") {
+    return typeof neu === "number" && Number.isInteger(neu) && neu >= 1 ? undefined : "Die Schwelle der FmZ muss eine ganze Zahl ab 1 (Minuten) sein.";
+  }
+  return undefined;
+}
+
 /** Der erste Fehler eines Nachrichtenentwurfs als Satz; `undefined` für jede andere Art. */
 export function pruefeNachricht(entwurf: Ereignisentwurf): string | undefined {
+  if (entwurf.typ === "NachrichtenParameterGesetzt") {
+    const nutzlast = nachrichtenentwurfFehler({ typ: entwurf.typ, nutzlast: entwurf.nutzlast ?? {} });
+    return nutzlast ?? pruefeParameter(entwurf);
+  }
   if (!ARTEN.has(entwurf.typ)) return undefined;
   if (entwurf.typ === "NachrichtVermerkt") {
     return entwurf.neu === null || typeof entwurf.neu === "string" ? undefined : "Ein Vermerk ist Text.";

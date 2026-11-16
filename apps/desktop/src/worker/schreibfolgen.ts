@@ -18,6 +18,9 @@
  *   einsatzbereit gesetzt, wenn sie bisher nur erwartet war. Verschoben wird
  *   nichts — den Zielabschnitt kennt nur die Führung; steht die Einheit noch
  *   im Eingang oder im Bereich „Angefordert“, sagt der Hinweis es.
+ * - **Nachrichten** (KONZEPT-NACHRICHTEN.md §5, N2): Nachweis und Sichtung
+ *   beim Aufnehmen, der Ersatzsichter, die Warnung bei doppelter Nummer —
+ *   in `nachrichtenfolgen.ts`.
  */
 
 import { einheitIdAus, kennzahlen, type Zustand } from "@s1/domaene";
@@ -25,6 +28,7 @@ import type { Ereignisentwurf } from "@s1/speicher";
 
 import { entfernung } from "../kontrakt/bedienschritte.js";
 import { STATUS_EINGETROFFEN } from "../kontrakt/anforderungsschritte.js";
+import { planeNachrichtenfolgen, type Nachrichtenfolgeumfeld } from "./nachrichtenfolgen.js";
 
 /** Ein Folgeschritt samt dem Satz, der ihn dem Bediener erklärt. */
 export interface Folgeschritt {
@@ -118,8 +122,15 @@ function planeAnwesend(zustand: Zustand, meldungId: string): Folgeplan {
   };
 }
 
-/** Plant die Folgeschritte zu einem Entwurf — gegen den Zustand **vor** dem Schreiben. */
-export function planeFolgen(zustand: Zustand, entwurf: Ereignisentwurf): Folgeplan {
+/**
+ * Plant die Folgeschritte zu einem Entwurf — gegen den Zustand **vor** dem Schreiben.
+ *
+ * `umfeld` (additiv, Nachrichten N2) sagt, ob ein Sichter in der Präsenz
+ * steht; ohne Angabe gilt „kein Sichter da" wie bei veralteter Präsenz (§5).
+ */
+export function planeFolgen(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld = { sichterBesetzt: false }): Folgeplan {
+  const nachricht = planeNachrichtenfolgen(zustand, entwurf, umfeld);
+  if (nachricht !== undefined) return nachricht;
   const nutzlast = (entwurf.nutzlast ?? {}) as Record<string, unknown>;
   if (entwurf.typ === "ErledigungZurueckgenommen" && typeof nutzlast["anforderungId"] === "string") {
     return planeEintreffenZurueck(zustand, nutzlast["anforderungId"]);

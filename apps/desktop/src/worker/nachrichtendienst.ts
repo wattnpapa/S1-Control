@@ -74,7 +74,39 @@ export function nachrichtenansicht(
     ...(ruf.von === undefined ? {} : { von: ruf.von }),
     ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
   });
-  return { lageZeiger: umfeld.lageZeiger, ...ausschnitt, jetzt, anschriften: anschriften(zustand) };
+  return {
+    lageZeiger: umfeld.lageZeiger,
+    ...ausschnitt,
+    jetzt,
+    anschriften: anschriften(zustand),
+    // N2: Vorbelegung und Warnung der Nachweisungsnummer (§6, §9), die Zahlen der Chips (§6).
+    naechsteNummer: projektion.naechsteNachweisnummer(zustand),
+    vergebeneNummern: vergebeneNummern(zustand),
+    zaehlung: projektion.nachrichtenZaehlung(zustand, stellen, jetzt),
+  };
+}
+
+/** Die Nummern, die eine Nachricht schon trägt — aufsteigend, ohne Doppelte. */
+export function vergebeneNummern(zustand: Zustand): readonly number[] {
+  if (zustand.nachrichten === undefined) return [];
+  const nummern = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen.flatMap((z) => (z.nummer === undefined ? [] : [z.nummer]));
+  return [...new Set(nummern)].sort((a, b) => a - b);
+}
+
+/**
+ * Die Stammdaten des Lagebilds mit den Parametern des Nachrichtenwegs
+ * (additiv, N2, Entscheidung 8): nur, was im Zustand gesetzt ist — die
+ * Maske zeigt sonst die Vorbelegung und schreibt sie nicht ungefragt.
+ */
+export function mitNachrichtenparametern<T extends object>(zustand: Zustand, stammdaten: T | undefined): (T & { sichtungAuchAusgang?: boolean; fmzSchwelleMinuten?: number }) | undefined {
+  if (stammdaten === undefined) return undefined;
+  const sichtung = zustand.einsatz?.sichtungAuchAusgang?.wert;
+  const schwelle = zustand.einsatz?.fmzSchwelleMinuten?.wert;
+  return {
+    ...stammdaten,
+    ...(typeof sichtung === "boolean" ? { sichtungAuchAusgang: sichtung } : {}),
+    ...(typeof schwelle === "number" ? { fmzSchwelleMinuten: schwelle } : {}),
+  };
 }
 
 let gemerkt: { zustand: Zustand; minute: number; stellen: string; zahlen: Nachrichtenlage } | undefined;
