@@ -113,7 +113,9 @@ Eingaben offen und nennt den Grund.
 Darunter steht in einer Zeile **„Dieser Arbeitsplatz“**: Anzeigename, Profil
 (im Meldekopf die Betriebsart) und Share, rechts „Ändern“. „Ändern“ klappt die
 Einstellungen auf — Share-Pfad, Anzeigename, Betriebsart, Profil und
-„Übernehmen“ —, unter jedem Feld ein Satz, was es bewirkt. Ohne Share-Pfad
+„Übernehmen“ —, unter jedem Feld ein Satz, was es bewirkt; dazu Ton bei
+Blitz-Nachricht sowie Blatt und Automatikdruck des Nachrichtenvordrucks
+(siehe „Nachrichten“). Ohne Share-Pfad
 oder ohne Anzeigenamen sind die Einstellungen von Anfang an offen. In der
 Web-Schale gibt der Dienst den Share vor; dort steht er nur zum Lesen.
 
@@ -399,8 +401,52 @@ stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
 ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
 nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20).
 
-Der Ausdruck des Vordrucks je Nachricht folgt mit dem nächsten
-Ausbauschritt.
+**Als Vordruck drucken.** An jeder gewählten Nachricht steht in der Leiste,
+im Rechtsklickmenü und in der aufgeschlagenen Nachricht „Als Vordruck
+drucken“. Das Programm legt den Nachrichtenvordruck als PDF im Ordner
+„ausgaben\nachrichten“ des Einsatzes ab, mit Namen wie
+„nachricht-E26-171045nov26.pdf“ (Richtung, Nummer, Abfassungszeit; ohne
+Nummer steht „ohne“ und ein Stück der Kennung dabei), und nennt die Datei mit
+„Öffnen“ und „Ordner zeigen“; gedruckt wird aus dem PDF-Programm. Im Browser
+stehen „Öffnen“ und „Herunterladen“ — der Vordruck entsteht auch dort, ohne
+Desktop-App. Das Blatt stellt „Dieser Arbeitsplatz“ auf der Einsatzauswahl
+ein: A5 hoch, ein Vordruck je Blatt (Vorgabe), oder A4 quer mit zwei
+Vordrucken nebeneinander. Ein Inhalt über zwölf Zeilen bekommt Folgeblätter
+mit „Blatt n von m“. In einer Übung trägt jeder Vordruck das Wasserzeichen
+„ÜBUNG“. Drucken schreibt nichts in die Akte und geht deshalb auch im
+beendeten Einsatz.
+
+**Vorschau.** Unter der aufgeschlagenen Nachricht und unter der Maske
+„Nachricht verfassen“ steht der Bereich „Vorschau“: der Vordruck, wie er
+gedruckt wird, mit Umbruch und Folgeblättern. In der aufgeschlagenen
+Nachricht ist er offen, in der Maske zugeklappt; ein Klick auf „Vorschau“
+klappt ihn auf oder zu, und dieser Arbeitsplatz merkt sich die Wahl. In der
+Maske zeichnet die Vorschau neu, sobald eine Drittelsekunde nichts getippt
+wurde. Die Schrift am Bildschirm weicht leicht von der des Ausdrucks ab. Kann
+das Fenster nicht zeichnen (etwa bei abgeschalteter Grafik), steht dort
+„Keine Vorschau möglich“; der Ausdruck geht trotzdem.
+
+**Automatikdruck.** Unter „Dieser Arbeitsplatz“ steht beim
+Nachrichtenvordruck der Umschalter „Automatikdruck: Aus | Verzeichnis |
+Drucker“. Ist er nicht aus und ein Ziel eingetragen, geht jede Nachricht, die
+gesichtet für eine Stelle dieses Arbeitsplatzes eintrifft, von selbst als
+Vordruck an das Ziel — auch eine, die man selbst verteilt hat, denn das Papier
+braucht die Stelle trotzdem. Was beim Öffnen des Einsatzes oder beim
+Einschalten schon verteilt war, wird nicht nachgedruckt. „Verzeichnis“ legt
+die PDFs in einen festen Ordner, aus dem sie später oder von einem anderen
+Rechner gedruckt werden; „Wählen …“ öffnet den Ordnerdialog. Im Browser
+liegt das Verzeichnis auf dem Rechner des Dienstes, einen Dialog gibt es
+dort nicht. „Drucker“ gibt es nur in der Desktop-App: Die Liste zeigt die
+Drucker des Rechners, und der Vordruck geht ohne Rückfrage dorthin.
+„Probedruck“ schickt einen leeren Vordruck an das eingetragene Ziel, auch
+bevor „Übernehmen“ gedrückt ist. Scheitert ein Ausdruck (Verzeichnis nicht
+erreichbar, Drucker ohne Papier), steht einmal je Sitzung ein Hinweis in der
+Leiste; die Nachricht steht weiter im Blatt und lässt sich von Hand drucken.
+
+**Leerer Vordruck.** „Papier-Vordruck“ unter Ausgaben legt neben die
+Papier-Vordrucke den leeren Nachrichtenvordruck als eigenes PDF
+(„vordruck-nachricht-leer.pdf“, A4 quer, zwei Vordrucke) und nennt beide
+Dateien. So liegt der Block im Schrank, bevor der Rechner steht.
 
 ## Was ein Zurücknehmen tut
 

@@ -372,7 +372,8 @@ Keine Vorschau mit jsPDF im Renderer. Die Maske ist selbst der Vordruck
 (Abschnitt 6), und die Vorschau der Web-App (Canvas-Nachzeichnung einer
 Wegwerf-jsPDF) ist ein Kunstgriff, der im Renderer nichts verbessert. Wer das
 PDF sehen will, öffnet die Datei. Damit bleibt jsPDF aus dem Renderer-Bündel
-heraus (Entscheidung 4).
+heraus (Entscheidung 4). — Überholt: Entscheidung 4 lautet „Vorschau ja";
+umgesetzt in N3 als nachgeladenes Teilbündel (ADR-008).
 
 Die Zuordnung Nachricht nach `VordruckDaten` ist eine Tabelle, keine Logik:
 `richtung` auf `richtung`, `aufnahme` auf `aufnahmevermerk` (Datum
@@ -490,7 +491,9 @@ Einstellungen); Bedienschritte in `kontrakt/nachrichtenschritte.ts`; Renderer
 als Vordruck, alle unter 400 Zeilen; der Worker erweitert
 `bearbeitungssperren.ts` um die Entität Nachricht und `schreibfolgen.ts` um
 den Ersatzsichter. Der Main bekommt nichts Neues. Die Web-Schale bekommt
-die PDF-Ausgabe geschenkt.
+die PDF-Ausgabe geschenkt. (Mit dem Automatikdruck an einen Drucker,
+Entscheidung 7, bekam der Main in N3 doch einen Druckausgang:
+`main/druckausgang.ts`, `main/elektronDruckausgang.ts`; ADR-008.)
 
 Senkrecht geschnitten:
 

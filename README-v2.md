@@ -192,8 +192,11 @@ Drei Wege, mehr nicht: `POST /ruf` (ein Ruf, eine Antwort), `GET
 Renderer). Keine Anmeldung — wer den Dienst im Netz der Fuehrungsstelle
 erreicht, arbeitet mit, wie auf dem Share jeder schreibt, der das Verzeichnis
 sieht; Rufe werden nur aus derselben Herkunft angenommen. Was im Browser
-fehlt: PDF-Ausgaben (sie brauchen `printToPDF` aus Electron; HTML und XLSX
-gehen), die Kamera und das Oeffnen des Monitors als eigenes Fenster.
+fehlt: PDF-Ausgaben der Listen (sie brauchen `printToPDF` aus Electron; HTML
+und XLSX gehen), die Kamera und das Oeffnen des Monitors als eigenes Fenster.
+Der Nachrichtenvordruck ist die Ausnahme: Er entsteht mit jsPDF im Worker und
+damit auch im Browser als PDF (ADR-008); der Automatikdruck geht dort nur in
+ein Verzeichnis, nicht an einen Drucker.
 
 Fuer die zentrale Bereitstellung im Internet gibt es eine zuschaltbare
 Anmeldung mit einem gemeinsamen Zugang (`S1_WEB_ZUGANG=anmeldung`, ADR-006);
