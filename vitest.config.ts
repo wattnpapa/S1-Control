@@ -52,6 +52,7 @@ const alias = {
   "@bos/eeb-format": quelle("./vendor/eeb-format/src/index.ts"),
   "@bos/vokabulare": quelle("./vendor/bos-vokabulare/src/index.ts"),
   "@bos/meldekopf": quelle("./vendor/bos-meldekopf/src/index.ts"),
+  "bos-nachrichtenvordruck": quelle("./vendor/bos-nachrichtenvordruck/src/index.ts"),
   "@s1/domaene": quelle("./packages/domaene/src/index.ts"),
   "@s1/speicher": quelle("./packages/speicher/src/index.ts"),
   "@s1/netz": quelle("./packages/netz/src/index.ts"),

@@ -23,8 +23,15 @@ import { describe, expect, it } from "vitest";
 
 const WURZEL = path.resolve(import.meta.dirname, "..", "..");
 
-/** Die drei Pakete, die S1-Control aufnimmt (ADR-003, Nachtrag vom 2026-09-10). */
-const KERNPAKETE = ["eeb-format", "bos-vokabulare", "bos-meldekopf"] as const;
+/** Die Pakete, die S1-Control aufnimmt (ADR-003, Nachtrag vom 2026-09-10; dazu der Nachrichtenvordruck). */
+const KERNPAKETE = ["eeb-format", "bos-vokabulare", "bos-meldekopf", "bos-nachrichtenvordruck"] as const;
+
+/**
+ * Pakete, die nur als `file:`-Abhaengigkeit hängen, nicht als Workspace: Ihre
+ * devDependencies (Vitest 5, TypeScript 5) wuerden sonst neben die der Wurzel
+ * gehoben (KONZEPT-NACHRICHTEN.md, Entscheidung 5).
+ */
+const NUR_DATEIABHAENGIGKEIT: ReadonlySet<string> = new Set(["bos-nachrichtenvordruck"]);
 
 /**
  * `bos-taktische-zeichen` steht bewusst **nicht** in der Liste: M1.4 hat die
@@ -144,7 +151,7 @@ describe.each(KERNPAKETE)("vendor/%s haelt die Aufnahmeregeln", (paket) => {
 });
 
 describe("Der Zuschnitt der Aufnahme (ADR-003, Nachtrag)", () => {
-  it("nimmt genau drei Pakete auf", () => {
+  it("fuehrt jedes aufgenommene Paket in .gitmodules", () => {
     const gemodult = readFileSync(path.join(WURZEL, ".gitmodules"), "utf8");
     for (const paket of KERNPAKETE) {
       expect(gemodult, `vendor/${paket} fehlt in .gitmodules`).toContain(`vendor/${paket}`);
@@ -174,8 +181,11 @@ describe("Der Zuschnitt der Aufnahme (ADR-003, Nachtrag)", () => {
     const wurzelPaket = JSON.parse(
       readFileSync(path.join(WURZEL, "package.json"), "utf8"),
     ) as { workspaces: string[] };
-    for (const paket of KERNPAKETE) {
+    for (const paket of KERNPAKETE.filter((p) => !NUR_DATEIABHAENGIGKEIT.has(p))) {
       expect(wurzelPaket.workspaces).toContain(`vendor/${paket}`);
+    }
+    for (const paket of NUR_DATEIABHAENGIGKEIT) {
+      expect(wurzelPaket.workspaces).not.toContain(`vendor/${paket}`);
     }
   });
 });

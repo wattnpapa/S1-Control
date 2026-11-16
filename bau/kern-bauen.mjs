@@ -25,7 +25,7 @@ import path from "node:path";
 const wurzel = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
 /** Die Kernpakete in Abhaengigkeitsreihenfolge (ADR-003, Nachtrag). */
-const KERNPAKETE = ["eeb-format", "bos-vokabulare", "bos-meldekopf"];
+const KERNPAKETE = ["eeb-format", "bos-vokabulare", "bos-meldekopf", "bos-nachrichtenvordruck"];
 
 const tscSkript = path.join(wurzel, "node_modules", "@typescript", "native", "bin", "tsc");
 
