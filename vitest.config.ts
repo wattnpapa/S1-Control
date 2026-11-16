@@ -56,6 +56,8 @@ const alias = {
   "@s1/domaene": quelle("./packages/domaene/src/index.ts"),
   "@s1/speicher": quelle("./packages/speicher/src/index.ts"),
   "@s1/netz": quelle("./packages/netz/src/index.ts"),
+  // Der Teileinstieg vor dem Paket: Ein Alias greift auch auf „@s1/ausgaben/…“.
+  "@s1/ausgaben/vordruck": quelle("./packages/ausgaben/src/vordruck.ts"),
   "@s1/ausgaben": quelle("./packages/ausgaben/src/index.ts"),
   "@s1/cli": quelle("./packages/cli/src/index.ts"),
 };

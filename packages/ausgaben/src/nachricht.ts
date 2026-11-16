@@ -306,8 +306,12 @@ export function vordruckBlaetterAus(nachricht: Nachrichtendruck, uebung: boolean
 }
 
 // --- PDF
-/** Zeichnet einen Block auf die aktuelle Seite. */
-function blattZeichnen(pdf: jsPDF, daten: VordruckDaten, versatz: number): void {
+/**
+ * Zeichnet einen Block auf die aktuelle Seite. Exportiert (N3), damit die
+ * Vorschau im Renderer (Entscheidung 4) mit genau diesem Aufruf zeichnet und
+ * nicht mit einer zweiten Fassung, die irgendwann anders aussieht.
+ */
+export function blattZeichnen(pdf: jsPDF, daten: VordruckDaten, versatz: number): void {
   pdf.setFont("helvetica", "normal");
   zeichneNachrichtenvordruck(pdf, daten, versatz > 0 ? { offsetX: versatz } : {});
 }

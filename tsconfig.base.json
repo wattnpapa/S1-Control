@@ -33,6 +33,7 @@
       "@s1/speicher": ["./packages/speicher/src/index.ts"],
       "@s1/netz": ["./packages/netz/src/index.ts"],
       "@s1/ausgaben": ["./packages/ausgaben/src/index.ts"],
+      "@s1/ausgaben/vordruck": ["./packages/ausgaben/src/vordruck.ts"],
       "@s1/cli": ["./packages/cli/src/index.ts"]
     }
   }

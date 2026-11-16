@@ -153,4 +153,4 @@ export {
 
 // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7) und die Naht von der Projektionszeile zum Vordruck.
 export { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml, nachweisungMarken, type Nachweisungsdaten } from "./nachweisung.js";
-export { nachrichtendruckAus } from "./nachrichtendruck.js";
+export { entwurfsdruck, nachrichtendateiname, nachrichtendruckAus, type Nachrichtenentwurf } from "./nachrichtendruck.js";

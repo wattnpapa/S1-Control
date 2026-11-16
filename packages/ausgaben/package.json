@@ -2,10 +2,13 @@
   "name": "@s1/ausgaben",
   "version": "0.0.0",
   "private": true,
-  "description": "Ring 3: HTML-Vorlagen der Ausgabeprodukte. Das PDF entsteht in der Schale, nicht hier.",
+  "description": "Ring 3: HTML-Vorlagen der Ausgabeprodukte; das PDF der Listen entsteht in der Schale. Ausnahme: der Nachrichtenvordruck als PDF mit jsPDF (ADR-008).",
   "license": "EUPL-1.2",
   "type": "module",
-  "exports": { ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" } },
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "default": "./dist/index.js" },
+    "./vordruck": { "types": "./dist/vordruck.d.ts", "default": "./dist/vordruck.js" }
+  },
   "types": "./dist/index.d.ts",
   "main": "./dist/index.js",
   "dependencies": {

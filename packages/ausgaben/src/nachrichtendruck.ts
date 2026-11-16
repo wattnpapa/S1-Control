@@ -8,7 +8,7 @@
  * Nachweisnummer wird zum Text, weil der Vordruck sie als Feld schreibt.
  */
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { datumZeitGruppe, type Nachrichtenzeile } from "@s1/domaene";
 
 import type {
   Nachrichtendruck,
@@ -75,4 +75,78 @@ export function nachrichtendruckAus(zeile: Nachrichtenzeile, uebung: boolean): N
     ...(sichtung === undefined ? {} : { sichtung }),
     uebung,
   };
+}
+
+// --- Schnitt N3: der Entwurf in der Vorschau und der Dateiname des Ausdrucks
+
+/**
+ * Was die Maske „Nachricht verfassen" für die Vorschau hergibt
+ * (KONZEPT-NACHRICHTEN.md Entscheidung 4): die Felder wie getippt, Zeiten
+ * bereits als ISO. Eine eigene, flache Form und nicht die Maskenwerte des
+ * Renderers, damit Ring 3 nichts über die Oberfläche weiß; die Abbildung
+ * Maske → Vordruck gibt es so nur einmal, für Vorschau und Druck.
+ */
+export interface Nachrichtenentwurf {
+  readonly richtung: "EINGANG" | "AUSGANG";
+  readonly art: string;
+  readonly vorrang: string;
+  readonly gespraechsnotiz: boolean;
+  readonly uebermittlungswunsch: string;
+  readonly anschrift: string;
+  readonly rufnummer: string;
+  readonly betreff: string;
+  readonly inhalt: string;
+  readonly absender: string;
+  readonly zeichen: string;
+  readonly funktion: string;
+  /** ISO; fehlt, solange die Abfassungszeit nicht lesbar ist. */
+  readonly abfassungszeit?: string;
+  /** Nur bei der Aufnahme durch die FmZ (Schnitt N2). */
+  readonly aufnahme?: Nachrichtenvermerk;
+  readonly gegenstelle?: string;
+  readonly nummer?: string;
+  /** Der Laufzettel, wenn die Maske im selben Zug verteilt (Ersatzsichter, Gesprächsnotiz). */
+  readonly sichtung?: Nachrichtensichtung;
+}
+
+/** Der Entwurf als Eingabe für Vordruck und Vorschau — dieselbe Form, die auch der Druck einer Zeile nimmt. */
+export function entwurfsdruck(entwurf: Nachrichtenentwurf, uebung: boolean): Nachrichtendruck {
+  const nummer = entwurf.nummer?.trim() ?? "";
+  return {
+    richtung: entwurf.richtung,
+    art: entwurf.art,
+    vorrang: entwurf.vorrang,
+    gespraechsnotiz: entwurf.gespraechsnotiz,
+    uebermittlungswunsch: entwurf.uebermittlungswunsch,
+    anschrift: entwurf.anschrift,
+    rufnummer: entwurf.rufnummer,
+    betreff: entwurf.betreff,
+    inhalt: entwurf.inhalt,
+    absender: entwurf.absender,
+    abfassungszeit: entwurf.abfassungszeit ?? "",
+    zeichen: entwurf.zeichen,
+    funktion: entwurf.funktion,
+    gegenstelle: entwurf.gegenstelle ?? "",
+    ...(entwurf.aufnahme === undefined ? {} : { aufnahme: entwurf.aufnahme }),
+    ...(nummer === "" ? {} : { nachweis: { nummer, zeitpunkt: entwurf.aufnahme?.zeitpunkt ?? "", handzeichen: entwurf.aufnahme?.handzeichen ?? "" } }),
+    ...(entwurf.sichtung === undefined ? {} : { sichtung: entwurf.sichtung }),
+    uebung,
+  };
+}
+
+/**
+ * Der Dateiname des Vordrucks einer Nachricht (KONZEPT-NACHRICHTEN.md §7):
+ * `nachricht-<E|A><nummer>-<datumzeitgruppe>.pdf`, ohne Nummer „ohne".
+ *
+ * Die Zeit ist die Abfassungszeit (sonst die Aufnahme): Sie steht auf dem
+ * Blatt, und derselbe Ausdruck zweimal überschreibt sich, statt zwei Dateien
+ * zu hinterlassen. Ohne Nummer hängt ein Stück der Kennung an — zwei
+ * unnummerierte Nachrichten derselben Minute fielen sonst im Verzeichnis
+ * des Automatikdrucks (Entscheidung 7) übereinander.
+ */
+export function nachrichtendateiname(zeile: Pick<Nachrichtenzeile, "id" | "richtungKurz" | "nummer" | "abfassungszeit" | "aufnahme">): string {
+  const zeit = datumZeitGruppe(zeile.abfassungszeit ?? zeile.aufnahme?.zeitpunkt ?? "") || "ohnezeit";
+  if (zeile.nummer !== undefined) return `nachricht-${zeile.richtungKurz}${String(zeile.nummer)}-${zeit}.pdf`;
+  const kennung = String(zeile.id).replace(/[^A-Za-z0-9]/g, "").slice(-8);
+  return `nachricht-${zeile.richtungKurz}ohne-${zeit}-${kennung}.pdf`;
 }
