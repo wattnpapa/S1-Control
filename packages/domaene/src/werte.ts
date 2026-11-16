@@ -154,6 +154,14 @@ export const KOSTEN_VORBELEGUNG = {
  */
 export const FUNK_KONTAKT_SCHWELLE_VORBELEGUNG = 60;
 
+/**
+ * Nachrichten (KONZEPT-NACHRICHTEN.md §5, Folie 14 der Lehrunterlage): Liegt
+ * eine angenommene Nachricht länger als so viele Minuten unbefördert, wird
+ * ihre Zeile in der Warteschlange der FmZ bernstein. Der Einsatz setzt eine
+ * eigene Schwelle über `NachrichtenParameterGesetzt`.
+ */
+export const FMZ_SCHWELLE_VORBELEGUNG = 20;
+
 /** Die vier Mahlzeiten der Versorgung (S4, KONZEPT-S4.md §5.1). */
 export const MAHLZEITEN = ["FRUEHSTUECK", "MITTAG", "ABEND", "NACHT"] as const;
 export type Mahlzeit = (typeof MAHLZEITEN)[number];

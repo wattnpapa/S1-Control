@@ -43,6 +43,12 @@ export {
   EINHEIT_STATUS,
   EINSATZ_ARTEN,
   ERSTE_LAUFNUMMER,
+  NACHRICHT_ARTEN,
+  NACHRICHT_KOPIEN,
+  NACHRICHT_MITTEL,
+  NACHRICHT_RICHTUNGEN,
+  NACHRICHT_STELLEN,
+  NACHRICHT_VORRANGE,
   ORGANISATIONEN,
   PERSONAL_ERFASSUNGEN,
   RUFGRUPPE_BETRIEBSARTEN,
@@ -59,6 +65,7 @@ export {
   type EinheitStatus,
   type EinsatzArt,
   type EreignisId,
+  type Nachrichtenrichtung,
   type Organisation,
   type PersonalErfassung,
   type Rahmen,
@@ -206,6 +213,14 @@ export type {
   LetzterKontakt,
   Staerketafel,
   Staerketafelzeile,
+  Nachrichtenanfrage,
+  Nachrichtenausschnitt,
+  Nachrichtenlage,
+  Nachrichtenmarke,
+  Nachrichtensicht,
+  Nachrichtenzeile,
+  Posteingangsstand,
+  Vorrangstufe,
 } from "./projektion/index.js";
 
 // Die abgeleiteten Kennzahlen K1 bis K30 (Zieldatenmodell §3.3) und K31 (Funkrufname).
@@ -237,6 +252,7 @@ export {
 
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
+  FMZ_SCHWELLE_VORBELEGUNG,
   FUNK_KONTAKT_SCHWELLE_VORBELEGUNG,
   KOSTEN_VORBELEGUNG,
   MAHLZEITEN,
@@ -294,6 +310,22 @@ export {
   type Wirkungslosgrund,
   type Zustand,
 } from "./zustand.js";
+
+// Die Nachricht im Zustand (KONZEPT-NACHRICHTEN.md §9).
+export {
+  LAUFZUSTAENDE,
+  type Laufzustand,
+  type Mittelvermerk,
+  type NachrichtZustand,
+  type Nachrichtenbezug,
+  type Nachweisvermerk,
+  type Sichtungsvermerk,
+  type Verteilereintrag,
+  type Zeitvermerk,
+} from "./zustand-nachricht.js";
+
+// Die Datum-Zeit-Gruppe des Nachrichtenvordrucks („171045nov26"), Europe/Berlin.
+export { DTG_MONATE, datumZeitGruppe, datumZeitGruppeLesen } from "./zeit/datumZeitGruppe.js";
 
 // Der Minimalfold als Mengenfunktion mit Rebase (Auflage 4).
 export {

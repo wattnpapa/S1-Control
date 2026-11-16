@@ -508,3 +508,7 @@ export * from "./schemata-versorgung.js";
 // --- Funkplan (KONZEPT-FUNKPLAN.md §8) ----------------------------------------
 
 export * from "./schemata-funk.js";
+
+// --- Nachrichten (KONZEPT-NACHRICHTEN.md §9) ------------------------------------
+
+export * from "./schemata-nachrichten.js";

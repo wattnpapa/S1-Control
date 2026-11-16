@@ -20,7 +20,7 @@ import {
 } from "./index.js";
 
 describe("Der Katalog bildet §5 vollstaendig ab", () => {
-  it("kennt die dreizehn Anlagearten aus §3.11, die der Versorgung (S4.2, S4.3) und die Rufgruppe (Funkplan)", () => {
+  it("kennt die dreizehn Anlagearten aus §3.11, die der Versorgung (S4.2, S4.3), die Rufgruppe (Funkplan) und die Nachricht (N1)", () => {
     expect(ANLAGEARTEN).toEqual([
       "AbschnittAngelegt",
       "AnforderungAngelegt",
@@ -36,14 +36,15 @@ describe("Der Katalog bildet §5 vollstaendig ab", () => {
       "EtbEintragErfasst",
       "FahrzeugAngelegt",
       "MahlzeitBestellt",
+      "NachrichtVerfasst",
       "PersonHinzugefuegt",
       "RufgruppeAngelegt",
       "UnterkunftAngelegt",
     ]);
-    expect(ANLAGEARTEN).toHaveLength(17);
+    expect(ANLAGEARTEN).toHaveLength(18);
   });
 
-  it("kennt die neun Arten mit Pflicht-grund aus §2.4, die der Versorgung (S4.2, S4.3) und die Auflösung einer Rufgruppe (Funkplan)", () => {
+  it("kennt die neun Arten mit Pflicht-grund aus §2.4, die der Versorgung (S4.2, S4.3), die Auflösung einer Rufgruppe (Funkplan) und das Zurückziehen einer Nachricht (N1)", () => {
     expect(GRUND_PFLICHT).toEqual([
       "AbschnittTypGeaendert",
       "AnforderungStorniert",
@@ -54,11 +55,12 @@ describe("Der Katalog bildet §5 vollstaendig ab", () => {
       "FahrzeugEntfernt",
       "KorrekturVon",
       "MahlzeitStorniert",
+      "NachrichtZurueckgezogen",
       "PersonEntfernt",
       "RufgruppeAufgeloest",
       "UnterkunftAufgeloest",
     ]);
-    expect(GRUND_PFLICHT).toHaveLength(12);
+    expect(GRUND_PFLICHT).toHaveLength(13);
   });
 
   it("nennt DienstpostenEntfernt und AnhangEntfernt ausdruecklich nicht (§2.4)", () => {

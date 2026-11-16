@@ -46,6 +46,7 @@ export type Entitaetsart =
   | "ausgabestelle"
   | "bestellung"
   | "rufgruppe"
+  | "nachricht"
   | "archivierungen";
 
 /**
@@ -407,6 +408,49 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "FunkParameterGesetzt", form: "a", schema: S.FunkParameterGesetzt, nutzlastVersion: 1,
       entitaet: "einsatz", idFeld: "einsatzId", feld: fest("funkKontaktSchwelleMinuten"),
       klasse: "LWW_FELD", gegenereignis: "FunkParameterGesetzt" }),
+
+  // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9). Die Vermerke der FmZ und des
+  // Sichters sind Strukturwerte (LWW_ENTITAET, §3.4); ihre Rücknahme ist
+  // dieselbe Art mit dem Vorher-Wert. Kenntnis und Erledigung wählen den Pfad
+  // nach der Stelle aus der Nutzlast, wie `SofortbedarfErledigt` nach dem Feld.
+  e({ typ: "NachrichtVerfasst", form: "b", schema: S.NachrichtVerfasst, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "NachrichtAngenommen", form: "a", schema: S.NachrichtAngenommen, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("annahme"), klasse: "LWW_ENTITAET",
+      gegenereignis: "NachrichtAngenommen" }),
+  e({ typ: "NachrichtBefoerdert", form: "a", schema: S.NachrichtBefoerdert, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("befoerderung"),
+      klasse: "LWW_ENTITAET", gegenereignis: "NachrichtBefoerdert" }),
+  e({ typ: "NachrichtNachgewiesen", form: "a", schema: S.NachrichtNachgewiesen, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("nachweis"), klasse: "LWW_ENTITAET",
+      gegenereignis: "NachrichtNachgewiesen" }),
+  e({ typ: "NachrichtGesichtet", form: "a", schema: S.NachrichtGesichtet, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("sichtung"), klasse: "LWW_ENTITAET",
+      gegenereignis: "NachrichtGesichtet" }),
+  // Eigenes Feld `vermerke` statt `sichtung/vermerke`: `sichtung` ist ein
+  // Feld<T>, und ein Pfad darunter schriebe in dessen Beobachtung hinein.
+  e({ typ: "NachrichtVermerkt", form: "a", schema: S.NachrichtVermerkt, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("vermerke"), klasse: "LWW_FELD",
+      gegenereignis: "NachrichtVermerkt" }),
+  // Gelesen ist gelesen: keine Rücknahme (§9).
+  e({ typ: "NachrichtKenntnisGenommen", form: "a", schema: S.NachrichtKenntnisGenommen,
+      nutzlastVersion: 1, entitaet: "nachricht", idFeld: "nachrichtId",
+      feld: ausNutzlast("stelle", "kenntnis"), klasse: "LWW_ENTITAET", ohneUndo: true }),
+  e({ typ: "NachrichtErledigt", form: "a", schema: S.NachrichtErledigt, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: ausNutzlast("stelle", "erledigt"),
+      festerWert: true, klasse: "LWW_FELD", gegenereignis: "ErledigungDerNachrichtZurueckgenommen" }),
+  e({ typ: "ErledigungDerNachrichtZurueckgenommen", form: "a",
+      schema: S.ErledigungDerNachrichtZurueckgenommen, nutzlastVersion: 1, entitaet: "nachricht",
+      idFeld: "nachrichtId", feld: ausNutzlast("stelle", "erledigt"), festerWert: false,
+      klasse: "LWW_FELD", gegenereignis: "NachrichtErledigt" }),
+  // Die Rücknahme einer Fehlanlage; ein Wiederherstellen gibt es nicht (N3),
+  // und dieselbe Art mit `festerWert: true` noch einmal nähme nichts zurück.
+  e({ typ: "NachrichtZurueckgezogen", form: "a", schema: S.NachrichtZurueckgezogen,
+      nutzlastVersion: 1, entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("entfernt"),
+      festerWert: true, klasse: "LWW_FELD", grundPflicht: true, ohneUndo: true }),
+  e({ typ: "NachrichtenParameterGesetzt", form: "a", schema: S.NachrichtenParameterGesetzt,
+      nutzlastVersion: 1, entitaet: "einsatz", idFeld: "einsatzId", feld: ausNutzlast("feld"),
+      klasse: "LWW_FELD", gegenereignis: "NachrichtenParameterGesetzt" }),
 
   // §5.9 Einsatztagebuch und Korrekturen
   e({ typ: "EtbEintragErfasst", form: "b", schema: S.EtbEintragErfasst, nutzlastVersion: 1,

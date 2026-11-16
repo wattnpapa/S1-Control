@@ -58,8 +58,8 @@ const UM_1305 = "2026-09-10T13:05:00+02:00";
 const UM_1431 = "2026-09-10T14:31:00+02:00";
 
 describe("Funkprobe im Fold", () => {
-  it("steht auf Fassung 9; die Probe wählt den Pfad nach dem Ergebnis (LWW_ENTITAET), die Schwelle hat ein Gegenereignis", () => {
-    expect(FOLD_VERSION).toBe(9);
+  it("steht mindestens auf Fassung 9; die Probe wählt den Pfad nach dem Ergebnis (LWW_ENTITAET), die Schwelle hat ein Gegenereignis", () => {
+    expect(FOLD_VERSION).toBeGreaterThanOrEqual(9);
     expect(KATALOG.get("FunkprobeDurchgefuehrt")).toMatchObject({
       form: "a",
       entitaet: "einheit",

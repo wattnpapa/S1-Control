@@ -19,6 +19,7 @@
  */
 
 import type { EreignisId } from "./ereignis.js";
+import type { NachrichtZustand } from "./zustand-nachricht.js";
 import type { Hlc } from "./hlc.js";
 import type { KanonischerWert } from "./kanonisch.js";
 import type {
@@ -54,9 +55,12 @@ import type {
  * `letzteFunkprobe/<ergebnis>` der Einheit mit der Funkzeit als Ist-Zeit,
  * `FunkParameterGesetzt` auf `funkKontaktSchwelleMinuten` des Einsatzes und
  * die Funkzeit `ereignisZeit` einer Statusmeldung als `fachlicheZeit` am
- * Statusfeld.
+ * Statusfeld. **10** mit den Nachrichten (N1, KONZEPT-NACHRICHTEN.md §9): die
+ * Entität `nachricht` mit abgeleitetem `laufzustand`, die Hinweisart
+ * `nachweisnummerDoppelt`, fünf neue offene Bereiche und die Parameter
+ * `sichtungAuchAusgang` und `fmzSchwelleMinuten` des Einsatzes.
  */
-export const FOLD_VERSION = 9;
+export const FOLD_VERSION = 10;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -182,6 +186,10 @@ export interface EinsatzZustand extends Anlage {
   readonly mahlzeitenregel?: Feld<KanonischerWert>;
   /** Funkplan F3: die Schwelle „kein Kontakt" in Minuten; fehlt sie, gilt die Vorbelegung (60). */
   readonly funkKontaktSchwelleMinuten?: Feld<number>;
+  /** Nachrichten (Entscheidung 8): Ausgänge laufen nach der Beförderung zum Sichter; fehlt = nein. */
+  readonly sichtungAuchAusgang?: Feld<boolean>;
+  /** Nachrichten (§5): angenommen, aber unbefördert länger als diese Minuten; fehlt = 20. */
+  readonly fmzSchwelleMinuten?: Feld<number>;
   readonly kosten: {
     readonly psaKostenProSatz?: Feld<number>;
     readonly vdaProTag?: Feld<number>;
@@ -689,6 +697,21 @@ export type Konflikthinweis =
       readonly betroffeneFelder: readonly string[];
     }
   | {
+      /**
+       * Zwei nicht zurückgezogene Nachrichten tragen dieselbe
+       * Nachweisungsnummer (KONZEPT-NACHRICHTEN.md §9). Je Nummer ein Hinweis
+       * wie bei `moeglicheDublette`; `feldpfad` ist der Nachweis der kleinsten
+       * Nachrichten-Id.
+       */
+      readonly art: "nachweisnummerDoppelt";
+      readonly feldpfad: string;
+      readonly nummer: number;
+      /** Die Nachrichten, nach Id geordnet. */
+      readonly ids: readonly Id[];
+      /** Die Ereignisse, die die Nummer gesetzt haben, nach Id geordnet. */
+      readonly ereignisse: readonly EreignisId[];
+    }
+  | {
       readonly art: "undoTrifftFremdenStand";
       readonly feldpfad: string;
       /** Die Kompensation. */
@@ -699,7 +722,7 @@ export type Konflikthinweis =
       readonly verdraengterWert: KanonischerWert;
     };
 
-/** Die 21 Hinweisarten aus §3.8 — geschlossene Liste. */
+/** Die 21 Hinweisarten aus §3.8 und `nachweisnummerDoppelt` — geschlossene Liste. */
 export type Hinweisart = Konflikthinweis["art"];
 
 // ---------------------------------------------------------------------------
@@ -776,6 +799,8 @@ export interface Zustand {
   readonly bestellungen?: { readonly [bestellungId: string]: BestellungZustand };
   /** Funkplan F1: die Rufgruppen. Fehlt, solange es keine gibt — wie `unterkuenfte`. */
   readonly rufgruppen?: { readonly [rufgruppeId: string]: RufgruppeZustand };
+  /** Nachrichten N1: die Vordrucke. Fehlt, solange es keine gibt — wie `rufgruppen`. */
+  readonly nachrichten?: { readonly [nachrichtId: string]: NachrichtZustand };
   /** Deterministisch geordnet, und eine **Menge**: bytegleiche Eintraege fallen zusammen (§3.8). */
   readonly hinweise: readonly Konflikthinweis[];
   /** Nach `id` geordnet (§3.7). */

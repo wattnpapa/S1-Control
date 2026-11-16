@@ -40,6 +40,7 @@ import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuc
 import { klartextsatz } from "./tagebuch-klartext.js";
 import { rufgruppenname } from "./tagebuch-funk.js";
 import { bestellungsname } from "./tagebuch-versorgung.js";
+import { nachrichtenname, nachrichtenzeit } from "./tagebuch-nachrichten.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -162,6 +163,18 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   // Funkplan F3
   FunkprobeDurchgefuehrt: "Funkprobe",
   FunkParameterGesetzt: "Schwelle „kein Kontakt“",
+  // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9); die Sätze in `tagebuch-nachrichten.ts`
+  NachrichtVerfasst: "Nachricht verfasst",
+  NachrichtAngenommen: "Nachricht angenommen",
+  NachrichtBefoerdert: "Nachricht befördert",
+  NachrichtNachgewiesen: "Nachricht nachgewiesen",
+  NachrichtGesichtet: "Nachricht gesichtet",
+  NachrichtVermerkt: "Vermerk zur Nachricht",
+  NachrichtKenntnisGenommen: "Nachricht zur Kenntnis genommen",
+  NachrichtErledigt: "Nachricht erledigt",
+  ErledigungDerNachrichtZurueckgenommen: "Erledigung der Nachricht zurückgenommen",
+  NachrichtZurueckgezogen: "Nachricht zurückgezogen",
+  NachrichtenParameterGesetzt: "Nachrichtenparameter gesetzt",
   // §5.9 Einsatztagebuch
   EtbEintragErfasst: "Tagebucheintrag",
   EtbEintragBerichtigt: "Tagebucheintrag berichtigt",
@@ -334,6 +347,8 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       return bestellungsname(zustand, id);
     case "rufgruppe":
       return rufgruppenname(zustand, id);
+    case "nachricht":
+      return nachrichtenname(zustand, id);
     default:
       return id;
   }
@@ -523,6 +538,9 @@ function fachlicheZeit(ereignis: EingehendesEreignis): string | undefined {
     const wert = nutzlastfeld(ereignis, feld);
     if (typeof wert === "string") return wert;
   }
+  // Die Vermerke einer Nachricht tragen ihre Zeit im Wert, die Anlage die Aufnahme.
+  const nachrichtenZeit = nachrichtenzeit(ereignis);
+  if (nachrichtenZeit !== undefined) return nachrichtenZeit;
   // Die Funkprobe trägt ihre Funkzeit im Wert; eine Rücknahme ist keine Probe
   // und steht zur Zeit ihres Schreibens.
   if (ereignis.typ === "FunkprobeDurchgefuehrt") {

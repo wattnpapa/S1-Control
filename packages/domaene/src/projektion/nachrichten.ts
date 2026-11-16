@@ -1,0 +1,176 @@
+/**
+ * Das Blatt „Nachrichten" als Projektion (KONZEPT-NACHRICHTEN.md §6, §9, §10):
+ * die fünf Sichten, der Ausschnitt mit Gesamtzahl, die Nummernvorbelegung
+ * und die fünf Zahlen des Bandes.
+ *
+ * **Die Stelle ist ein Zuschnitt, kein Recht** (§4). Jede Sicht nimmt die
+ * Stellen des Arbeitsplatzes als Liste entgegen; wer eine andere Liste
+ * übergibt, sieht den Posteingang einer anderen Stelle — so wie jedes Blatt
+ * unter „Mehr" erreichbar bleibt.
+ *
+ * Gerechnet wird aus dem Zustand und nicht aus dem Ereignisstrom: Die
+ * Nachricht ist eine Entität mit Feldern, und jede Sicht fragt nach dem
+ * geltenden Stand, nicht nach dem Verlauf. Der Verlauf steht im Tagebuch.
+ */
+
+import type { Id } from "../werte.js";
+import type { Zustand } from "../zustand.js";
+import {
+  alleNachrichtenzeilen,
+  vergleicheNachNummer,
+  vergleicheNachrichten,
+  zeilenkontext,
+  type Nachrichtenzeile,
+} from "./nachrichtenzeile.js";
+
+/** Die fünf Sichten des Umschalters (§6). */
+export const NACHRICHTEN_SICHTEN = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung"] as const;
+export type Nachrichtensicht = (typeof NACHRICHTEN_SICHTEN)[number];
+
+/** Der Stand einer Nachricht im Posteingang, bezogen auf die eigenen Stellen. */
+export type Posteingangsstand = "NEU" | "GELESEN" | "ERLEDIGT";
+
+export interface Nachrichtenanfrage {
+  readonly sicht: Nachrichtensicht;
+  /** Die Stellen dieses Arbeitsplatzes; Posteingang und Ausgang schneiden danach zu. */
+  readonly stellen?: readonly string[];
+  /** Ausgang: auch, was dieser Arbeitsplatz verfasst hat, unabhängig von der Stelle. */
+  readonly clientId?: string;
+  /** Nur im Posteingang: die Chips „neu", „gelesen", „erledigt". */
+  readonly zustaende?: readonly Posteingangsstand[];
+  /** Volltext über Betreff, Inhalt, Absender und Anschrift. */
+  readonly suche?: string;
+  /** Zeigerstand und Seitenlänge wie beim Tagebuch. */
+  readonly von?: number;
+  readonly anzahl?: number;
+  /** Für die Zwanzig-Minuten-Marke; Ring 2 liest keine Uhr. */
+  readonly jetzt?: string;
+}
+
+export interface Nachrichtenausschnitt {
+  readonly zeilen: readonly Nachrichtenzeile[];
+  readonly gesamtzahl: number;
+  readonly von: number;
+}
+
+/** Die fünf Zahlen des Bandes (§6). */
+export interface Nachrichtenlage {
+  /** Gesichtet, eine eigene Stelle im Verteiler hat weder Kenntnis genommen noch erledigt. */
+  readonly neuFuerStellen: number;
+  readonly vorFmz: number;
+  readonly vorSichter: number;
+  /** Sofort oder Blitz, weder erledigt noch zurückgezogen. */
+  readonly mitVorrangOffen: number;
+  /** Angenommen, unbefördert, länger als die Schwelle in der FmZ. */
+  readonly ueberSchwelle: number;
+}
+
+function eigeneMarken(zeile: Nachrichtenzeile, stellen: readonly string[]): Nachrichtenzeile["verteiler"] {
+  return zeile.verteiler.filter((marke) => stellen.includes(marke.stelle));
+}
+
+/**
+ * NEU, solange eine eigene Stelle des Verteilers weder gelesen noch erledigt
+ * hat; ERLEDIGT, wenn alle eigenen erledigt sind; sonst GELESEN. `undefined`,
+ * wenn keine eigene Stelle im Verteiler steht.
+ */
+export function posteingangsstand(zeile: Nachrichtenzeile, stellen: readonly string[]): Posteingangsstand | undefined {
+  const eigene = eigeneMarken(zeile, stellen);
+  if (eigene.length === 0) return undefined;
+  if (eigene.every((marke) => marke.erledigt)) return "ERLEDIGT";
+  return eigene.some((marke) => !marke.gelesen && !marke.erledigt) ? "NEU" : "GELESEN";
+}
+
+function trifftSuche(zeile: Nachrichtenzeile, suche: string | undefined): boolean {
+  const nadel = suche?.trim().toLocaleLowerCase("de-DE") ?? "";
+  if (nadel === "") return true;
+  return [zeile.betreff, zeile.inhalt, zeile.absender, zeile.anschrift]
+    .join("\n")
+    .toLocaleLowerCase("de-DE")
+    .includes(nadel);
+}
+
+/** Ausgang: Richtung Ausgang oder Gesprächsnotiz, von diesem Platz oder diesen Stellen verfasst. */
+function istEigenerAusgang(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
+  if (zeile.richtung !== "AUSGANG" && !zeile.gespraechsnotiz) return false;
+  const stellen = anfrage.stellen ?? [];
+  if (stellen.length === 0 && anfrage.clientId === undefined) return true;
+  return (
+    zeile.clientId === anfrage.clientId ||
+    stellen.includes(zeile.absender) ||
+    (zeile.funktion !== undefined && stellen.includes(zeile.funktion))
+  );
+}
+
+function inPosteingang(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
+  const stand = posteingangsstand(zeile, anfrage.stellen ?? []);
+  if (stand === undefined) return false;
+  return anfrage.zustaende === undefined || anfrage.zustaende.length === 0 || anfrage.zustaende.includes(stand);
+}
+
+/** Gehört die Zeile in die angefragte Sicht? */
+export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
+  switch (anfrage.sicht) {
+    case "posteingang":
+      return inPosteingang(zeile, anfrage);
+    case "ausgang":
+      return istEigenerAusgang(zeile, anfrage);
+    case "sichter":
+      return zeile.laufzustand === "VOR_SICHTER";
+    case "fmz":
+      return zeile.laufzustand === "VOR_FMZ";
+    case "nachweisung":
+      return true;
+  }
+}
+
+/**
+ * Der Ausschnitt einer Sicht, mit Gesamtzahl wie `tagebuchausschnitt`.
+ *
+ * Geordnet wird Blitz vor Sofort vor einfach, dann nach Eingang (§5); die
+ * Nachweisung allein nach Nummer, ohne Nummer zuletzt.
+ */
+export function nachrichtenausschnitt(zustand: Zustand, anfrage: Nachrichtenanfrage): Nachrichtenausschnitt {
+  const kontext = zeilenkontext(zustand, anfrage.jetzt);
+  const passend = alleNachrichtenzeilen(zustand, kontext).filter(
+    (zeile) => inSicht(zeile, anfrage) && trifftSuche(zeile, anfrage.suche),
+  );
+  passend.sort(anfrage.sicht === "nachweisung" ? vergleicheNachNummer : vergleicheNachrichten);
+  const von = Math.max(0, anfrage.von ?? 0);
+  const bis = anfrage.anzahl === undefined ? undefined : von + anfrage.anzahl;
+  return { zeilen: passend.slice(von, bis), gesamtzahl: passend.length, von };
+}
+
+/** Die Zeile einer einzelnen Nachricht, etwa für die Maske oder den Vordruck. */
+export function nachrichtNach(zustand: Zustand, id: Id, jetzt?: string): Nachrichtenzeile | undefined {
+  const kontext = zeilenkontext(zustand, jetzt);
+  return alleNachrichtenzeilen(zustand, kontext).find((zeile) => zeile.id === id);
+}
+
+/**
+ * Die Vorbelegung der Nachweisungsnummer: höchste bekannte plus eins (§6
+ * „Papier-Rückfall"). Zurückgezogene zählen mit — ihre Nummer steht auf
+ * Papier und bleibt vergeben. Eine höhere Nummer darf jederzeit eingetragen
+ * werden; doppelt meldet der Fold (`nachweisnummerDoppelt`).
+ */
+export function naechsteNachweisnummer(zustand: Zustand): number {
+  let hoechste = 0;
+  for (const zeile of alleNachrichtenzeilen(zustand, zeilenkontext(zustand))) {
+    if (zeile.nummer !== undefined && zeile.nummer > hoechste) hoechste = zeile.nummer;
+  }
+  return hoechste + 1;
+}
+
+/** Die fünf Zahlen des Bandes, je Stelle dieses Arbeitsplatzes gerechnet (§6, §9). */
+export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], jetzt?: string): Nachrichtenlage {
+  const lage = { neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, mitVorrangOffen: 0, ueberSchwelle: 0 };
+  for (const zeile of alleNachrichtenzeilen(zustand, zeilenkontext(zustand, jetzt))) {
+    if (zeile.zurueckgezogen) continue;
+    if (posteingangsstand(zeile, stellen) === "NEU") lage.neuFuerStellen += 1;
+    if (zeile.laufzustand === "VOR_FMZ") lage.vorFmz += 1;
+    if (zeile.laufzustand === "VOR_SICHTER") lage.vorSichter += 1;
+    if (zeile.vorrangstufe < 2 && zeile.laufzustand !== "ERLEDIGT") lage.mitVorrangOffen += 1;
+    if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
+  }
+  return lage;
+}

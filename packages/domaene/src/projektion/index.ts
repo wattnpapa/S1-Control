@@ -260,3 +260,29 @@ export { FUNKPROBEN_GRENZE, funkprobenfolge, type Funkprobenzeile } from "./funk
 
 // Stärketafeln des Sachgebiets 1 für den Monitor (je Abschnitt, je Organisation)
 export { OHNE_ORGANISATION, organisationszeilen, staerketafel, type Staerketafel, type Staerketafelzeile } from "./staerketafel.js";
+
+// Nachrichten N1 (KONZEPT-NACHRICHTEN.md §6, §9): Sichten, Zahlen, Nummernvorbelegung
+export {
+  NACHRICHTEN_SICHTEN,
+  inSicht,
+  nachrichtenausschnitt,
+  nachrichtenlage,
+  nachrichtNach,
+  naechsteNachweisnummer,
+  posteingangsstand,
+  type Nachrichtenanfrage,
+  type Nachrichtenausschnitt,
+  type Nachrichtenlage,
+  type Nachrichtensicht,
+  type Posteingangsstand,
+} from "./nachrichten.js";
+export {
+  fmzSchwelle,
+  vergleicheNachNummer,
+  vergleicheNachrichten,
+  vorrangstufe,
+  type Nachrichtenmarke,
+  type Nachrichtenzeile,
+  type Vorrangstufe,
+} from "./nachrichtenzeile.js";
+export { kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";

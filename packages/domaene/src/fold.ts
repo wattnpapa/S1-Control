@@ -44,6 +44,9 @@
 import {
   ABSCHNITTSTYPEN,
   EINHEIT_STATUS,
+  NACHRICHT_ARTEN,
+  NACHRICHT_MITTEL,
+  NACHRICHT_VORRANGE,
   ORGANISATIONEN,
   RUFGRUPPE_BETRIEBSARTEN,
   SCHICHTEN,
@@ -51,6 +54,7 @@ import {
   type Akteur,
   type EreignisId,
 } from "./ereignis.js";
+import { baueNachrichten } from "./fold-nachricht.js";
 import { hlcAlsText, vergleicheHlc, type Hlc } from "./hlc.js";
 import { KATALOG, grundPasst, type Katalogeintrag } from "./katalog/index.js";
 import {
@@ -947,6 +951,10 @@ const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["einheit.ebene", new Set<string>(TAKTISCHE_EBENEN)],
   ["abschnitt.typ", new Set<string>(ABSCHNITTSTYPEN)],
   ["rufgruppe.betriebsart", new Set<string>(RUFGRUPPE_BETRIEBSARTEN)],
+  // Nachrichten N1; Mittel und Verteiler in den Vermerken prüft `fold-nachricht.ts`.
+  ["nachricht.art", new Set<string>(NACHRICHT_ARTEN)],
+  ["nachricht.vorrang", new Set<string>(NACHRICHT_VORRANGE)],
+  ["nachricht.uebermittlungswunsch", new Set<string>(NACHRICHT_MITTEL)],
 ]);
 
 /**
@@ -981,6 +989,14 @@ const ZEITEN: ReadonlyMap<string, { klasse: "IST" | "PLAN"; schluessel?: string 
   // Funkplan F3: die Funkzeit einer Probe steht im Wert, damit die Rücknahme sie mitbringt.
   ["einheit.letzteFunkprobe/KONTAKT", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
   ["einheit.letzteFunkprobe/KEIN_KONTAKT", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  // Nachrichten N1: die Vermerke der FmZ und des Sichters sind Ist-Zeiten. Die
+  // Abfassungszeit ist beim Eingang die Uhr des fremden Absenders — Fremdzeit,
+  // ungeprüft wie `meldung.stand`; die Kenntnisnahme ist immer „jetzt“.
+  ["nachricht.aufnahme", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["nachricht.annahme", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["nachricht.befoerderung", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["nachricht.nachweis", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["nachricht.sichtung", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
 ]);
 
 /** Startwert S1: Abweichung einer Ist-Zeit von der Wanduhr in eine der beiden Richtungen. */
@@ -2123,6 +2139,15 @@ export function materialisiere(faltung: Faltung): Zustand {
             : { archiviertDurch: massgeblich.id, archiviertMit: massgeblich.hlc }),
         };
 
+  // --- Nachrichten (KONZEPT-NACHRICHTEN.md §9) ----------------------------
+  // Laufzustand und Nummernkollision in `fold-nachricht.ts`; der Parameter
+  // `sichtungAuchAusgang` ist ein Feld des Einsatzes und steht im Zustand.
+  const nachrichten = baueNachrichten(
+    gebaut.get("nachricht") ?? new Map<string, GebauteEntitaet>(),
+    einsatzGebaut?.felder.get("sichtungAuchAusgang")?.wert === true,
+    hinweise,
+  );
+
   // --- Kappung (§3.2, Startwert S12) --------------------------------------
   const gekappt = <T extends { readonly id: string }>(werte: readonly T[]): T[] =>
     [...werte].sort((a, b) => vergleicheNachCodepunkt(a.id, b.id)).slice(0, KAPPUNG_MAX);
@@ -2193,6 +2218,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     ...(ausgabestellen.size === 0 ? {} : { ausgabestellen: alsDatensammlung(ausgabestellen) as Zustand["ausgabestellen"] }),
     ...(bestellungen.size === 0 ? {} : { bestellungen: alsDatensammlung(bestellungen) as Zustand["bestellungen"] }),
     ...(rufgruppen.size === 0 ? {} : { rufgruppen: alsDatensammlung(rufgruppen) as Zustand["rufgruppen"] }),
+    ...(nachrichten.size === 0 ? {} : { nachrichten: alsDatensammlung(nachrichten) as Zustand["nachrichten"] }),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),

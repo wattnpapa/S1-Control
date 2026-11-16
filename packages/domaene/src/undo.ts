@@ -209,6 +209,7 @@ const SAMMLUNG: Readonly<Record<string, keyof Zustand>> = {
   ausgabestelle: "ausgabestellen",
   bestellung: "bestellungen",
   rufgruppe: "rufgruppen",
+  nachricht: "nachrichten",
   archivierungen: "archivierungen",
 };
 

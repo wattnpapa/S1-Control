@@ -8,7 +8,7 @@
  * M0.2 sind mit ihm entfallen.
  *
  * Die Wertelisten hier sind die **bekannten** Werte der offenen Bereiche
- * (§3.7; seit dem Funkplan sechs). Sie schliessen nichts aus: Ein unbekannter Wert wird
+ * (§3.7; seit dem Funkplan sechs, mit den Nachrichten elf). Sie schliessen nichts aus: Ein unbekannter Wert wird
  * gefaltet, gespeichert und unveraendert weitergespiegelt, und der Fold
  * erzeugt `unbekannterWert`. Jede Aenderung an ihnen erhoeht `foldVersion`
  * (§3.9) — zwei Clients mit verschiedenen Listen fuehren verschiedene
@@ -154,6 +154,48 @@ export type EinheitStatus = (typeof EINHEIT_STATUS)[number];
  */
 export const RUFGRUPPE_BETRIEBSARTEN = ["TMO", "DMO", "ANALOG"] as const;
 export type Betriebsart = (typeof RUFGRUPPE_BETRIEBSARTEN)[number];
+
+/**
+ * Die Richtung einer Nachricht (KONZEPT-NACHRICHTEN.md §3, §9). **Geschlossen**:
+ * An ihr hängt der Laufweg (Eingang zum Sichter, Ausgang zur FmZ), und eine
+ * dritte Richtung wüsste dieser Client keinem Weg zuzuordnen.
+ */
+export const NACHRICHT_RICHTUNGEN = ["EINGANG", "AUSGANG"] as const;
+export type Nachrichtenrichtung = (typeof NACHRICHT_RICHTUNGEN)[number];
+
+/** Feld 8 des Vordrucks: Spruch oder Durchsage. Offen (§3.7). */
+export const NACHRICHT_ARTEN = ["SPRUCH", "DURCHSAGE"] as const;
+
+/**
+ * Feld 9: die Vorrangstufen. Ohne Wert ist die Nachricht „einfach“; „Staatsnot“
+ * fehlt auf dem THW-Vordruck und bleibt weg (KONZEPT-NACHRICHTEN.md §2). Offen.
+ */
+export const NACHRICHT_VORRANGE = ["SOFORT", "BLITZ"] as const;
+
+/** Feld 1 und 7: die Fernmeldemittel. Offen. */
+export const NACHRICHT_MITTEL = ["FUNK", "TELEFON", "TELEFAX", "DFUE", "KURIER"] as const;
+
+/**
+ * Die Stellen des Verteilers und der Arbeitsplätze (KONZEPT-NACHRICHTEN.md §4).
+ * Offen, und anders als die übrigen Listen **nur** für Vorbelegung und
+ * Beschriftung: Ein freier Name („Polizei“ als Verbindungsstelle) ist der
+ * Normalfall, der Fold meldet ihn nicht als `unbekannterWert`.
+ */
+export const NACHRICHT_STELLEN = [
+  "LEITER",
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+  "S6",
+  "FACHBERATER",
+  "VERBINDUNGSSTELLE",
+  "SICHTER",
+  "FMZ",
+] as const;
+
+/** Die Kopiefarben des Verteilers: grün Hauptempfänger, blau Mitleser, rot S2 (§2). Offen. */
+export const NACHRICHT_KOPIEN = ["ROT", "GRUEN", "BLAU"] as const;
 
 /** Zieldatenmodell §2.3. */
 export const SCHICHTEN = ["TAG", "NACHT", "FRUEH", "SPAET"] as const;
