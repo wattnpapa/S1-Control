@@ -61,9 +61,13 @@ klappt er die Vorschau auf und vergleicht sie mit dem Papiervordruck. Dann
 aufgeben. Der Beobachter stoppt die Zeit, bis Platz 2 die Nachricht in der
 Warteschlange sieht und den Hinweis mit Ton bekommt. Platz 2 nimmt an.
 Platz 3 schlägt den Weg vor (Funk, Fernmelder „Ha"). Platz 2 befördert über
-Funk an die Gegenstelle, trägt deren Quittungszeit ein und weist mit Nummer
-1 nach. *Prüfen: Platz 1 sieht im Ausgang „angenommen … befördert … (Funk)"
-mit Nummer A 1; Platz 5 hat die rote Kopie im Posteingang; die Gegenstelle
+Funk an die Gegenstelle. Das Feld „Quittung der Gegenstelle" ist beim
+Befördern leer und Pflicht: Platz 2 wartet, bis die Gegenstelle den Empfang
+quittiert hat, und trägt deren Uhrzeit ein (Strg+D setzt „jetzt"); vorher
+geht „Befördern" nicht. Dann weist er mit Nummer 1 nach. *Prüfen: Das Feld
+war leer und trug nicht die Zeit des Öffnens; Platz 1 sieht im Ausgang
+„angenommen (FmZ) … · Quittung der Gegenstelle … (Funk)", vorher „… · noch
+nicht übermittelt", mit Nummer A 1; Platz 5 hat die rote Kopie im Posteingang; die Gegenstelle
 hat die Nachricht wörtlich mitgeschrieben, und der Beobachter vergleicht
 sie mit dem Vordruck.*
 
@@ -71,6 +75,13 @@ sie mit dem Vordruck.*
 durch: „Pumpen eingetroffen, Einsatzstelle Deich Nord, 0 Verletzte" an
 „FüSt OV Oldenburg", mit Abfassungszeit. Platz 2 nimmt sie während des
 Funkspruchs in der Maske auf, nicht danach, und weist mit Nummer 2 nach.
+Wer die Stelle FmZ nicht hat, bekommt beim Aufnehmen den Hinweis „Dieser
+Teil ist der Fernmeldezentrale vorbehalten … Trotzdem eintragen?"; dasselbe
+gilt für den Papier-Nachtrag mit Annahme, Beförderung oder Nummer und für
+„Sichten" ohne die Stelle Sichter. „Trotzdem" gibt frei, das Tagebuch
+vermerkt den Grund. Platz 2 hat die Stelle FmZ und sieht keinen Hinweis.
+Platz 2 öffnet die Maske in der Sicht „Fernmeldezentrale" mit Strg+N, ohne
+die Maus; die Tabulatortaste führt durch alle Felder bis zum Knopf.
 Platz 3 gibt an den Sichter weiter. Platz 4 quittiert und verteilt: S2 rot,
 S3 grün, Leiter blau. *Prüfen: Platz 1 bekommt die Nachricht als „grün:
 bearbeiten", nimmt Kenntnis und erledigt; Platz 5 sieht sie rot; die Zeit
@@ -92,7 +103,9 @@ Reihenfolge, die das Blatt vorgibt, und sagt laut, welche er zuerst
 aufschlägt. *Prüfen: Blitz zuerst, dann Sofort, dann einfach; der Ton beim
 Blitz; das Band zeigt „mit Vorrang offen". Platz 4 kreuzt bei der
 Blitz-Nachricht absichtlich nur S2 an: Die Warnung „Kein Hauptempfänger"
-muss kommen, und er korrigiert.*
+muss kommen, und er korrigiert. Die Hinweise zu den drei Meldungen stehen
+oben rechts über dem Blatt und schieben es nicht nach unten; jede Zeile hat
+ein eigenes „×", mit dem Platz 4 nur sie schließt, „Löschen" räumt alle.*
 
 **Minute 45 — Zwei Sichter.** Platz 5 übernimmt zusätzlich die Stelle
 SICHTER (Fenstermenü, Stelle und Handzeichen). Beide Sichter öffnen dieselbe
@@ -139,9 +152,12 @@ Nachricht trägt im Vordruck den Stempel; die Nachweisung nennt den Grund.*
 
 **Minute 100 — Übergabe.** Platz 1 wird abgelöst: Ein neuer Bedienender
 setzt sich an Platz 1, beantwortet die Stellenabfrage mit S3 und eigenem
-Handzeichen und soll ohne Erklärung sagen, was für S3 offen ist. *Prüfen:
-Die Sicht „offen" genügt dafür; wenn er ins Tagebuch muss, aufschreiben,
-wonach er gesucht hat.*
+Handzeichen und soll ohne Erklärung sagen, was für S3 offen ist. Die Sicht „Offen" steht im
+Umschalter gleich nach dem Posteingang; die Einstiegszeile des Blatts nennt
+sie für die Übergabe. *Prüfen: Die Sicht „Offen" (oder der Chip „offen") zeigt
+die Kopien für S3 ohne „erledigt", die eigenen Ausgänge vor der Beförderung
+und nichts, was schon erledigt ist; sie genügt für die Übergabe. Wenn der
+Nachfolger ins Tagebuch muss, aufschreiben, wonach er gesucht hat.*
 
 **Minute 110 — Abschluss.** Platz 1 beendet den Einsatz. *Prüfen: Die
 Rückfrage nennt die offenen Nachrichten (vor der FmZ, ohne Nummer, mit

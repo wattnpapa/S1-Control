@@ -1,6 +1,6 @@
 # Nachrichten: Befunde der Rollen-Audits (Runde 1 und Runde 2) und ihr Stand
 
-Stand der zweiten Runde: Prüfung gegen main a0e53b5 (mit den ungebuchten Durchläufen), 2026-11-17; Arbeitsstand dieses Dokuments main 5aa8088. Die Befunde der ersten Runde stehen weiter unten (ab „Runde 1“), ihre Statusspalte ist um die Nachprüfung ergänzt.
+Stand der zweiten Runde: Prüfung gegen main a0e53b5 (mit den ungebuchten Durchläufen), 2026-11-17; Arbeitsstand dieses Dokuments main f6fd4c0 mit den Änderungen dieses Arbeitsstands (Spalte „Commit“: „Arbeitsstand (ungebucht)“). Die Statusspalte der 73 neuen Befunde ist nach den fünf Behebungs-Commits ae8c1f3, de966e5, bb5b36a, f608e96 und f6fd4c0 nachgezogen. Die Befunde der ersten Runde stehen weiter unten (ab „Runde 1“), ihre Statusspalte ist um die Nachprüfung ergänzt.
 
 ## Runde 2
 
@@ -16,7 +16,7 @@ Sechs Reviewer haben die Nachrichten-Funktion am 17.11.2026 ein zweites Mal gege
 | runde2-reviewer-fachberater.md | – | – | – | – | 3 | 6 | 9 | 5 | 23 |
 | Summe | 96 | 77 | 9 | 10 | 3 | 17 | 43 | 35 | 98 |
 
-Zur Zählung: Das Sichter-Audit hat 14 der 17 Befunde der ersten Runde bewertet (P2-2 und P2-3 gehörten nicht zum Auftrag, P3-3 ist bewusst nicht gebaut); die Zahl „bestätigt“ enthält P1-3 mit dem schon im README genannten Rest. Von den neun nicht behobenen Befunden standen drei schon als „offen“ in der Liste (SGL P2-9, P2-12, P2-13); sechs wurden von „behoben“ oder „teilweise behoben“ auf „offen“ zurückgesetzt (SGL P1-7, LdF P1-2, FM P2-3, FM P2-5, Sichter P3-2, ETB P1-7). Die 98 neuen Meldungen enthalten Doppelfunde; nach dem Zusammenführen bleiben 73 Befunde: P0 3, P1 13, P2 36, P3 21. Alle 73 sind „offen“. Kennungen heißen `R2-<Rolle> P<Stufe>-<Nr>` wie im jeweiligen Einzelaudit (`Sichter` statt `Si`); bei zusammengeführten Befunden gilt die Kennung des ersten Fundes, die übrigen stehen unter „Auch gefunden von“.
+Zur Zählung: Das Sichter-Audit hat 14 der 17 Befunde der ersten Runde bewertet (P2-2 und P2-3 gehörten nicht zum Auftrag, P3-3 ist bewusst nicht gebaut); die Zahl „bestätigt“ enthält P1-3 mit dem schon im README genannten Rest. Von den neun nicht behobenen Befunden standen drei schon als „offen“ in der Liste (SGL P2-9, P2-12, P2-13); sechs wurden von „behoben“ oder „teilweise behoben“ auf „offen“ zurückgesetzt (SGL P1-7, LdF P1-2, FM P2-3, FM P2-5, Sichter P3-2, ETB P1-7). Die 98 neuen Meldungen enthalten Doppelfunde; nach dem Zusammenführen bleiben 73 Befunde: P0 3, P1 13, P2 36, P3 21. Stand nach den fünf Behebungs-Commits: **26 behoben, 5 teilweise behoben, 42 offen, 0 bewusst nicht gebaut** (P0 3 behoben; P1 10 behoben, 1 teilweise, 2 offen; P2 11 behoben, 4 teilweise, 21 offen; P3 2 behoben, 19 offen). Belegt ist der Status, wo die Spalte „Beleg und Anmerkung“ „Code und Test“ nennt, durch die Kennung `R2-…` in Quelltext und Tests und durch einen Blick in den betroffenen Code; wo dort „Handbuch“ oder „Commit-Text“ steht, stammt er nur aus der Dokumentation oder dem Commit-Text. Die Kennungen in Code und Tests folgen den Einzelaudits; `R2-Si` heißt dort `R2-Sichter`, und `R2-FM P2-3`, `R2-FM P2-5` und `R2-LdF P1-2 alt` im Code meinen Befunde der ersten Runde, nicht die gleichnamigen der zweiten. Kein Befund ist im Browser nachgeprüft, die Reviewer haben nicht erneut gegen die Anwendung gespielt; Layoutbefunde (R2-LdF P1-1, R2-SGL P2-4) sind nur über Struktur und Stylesheet-Regeln in jsdom belegt. Kennungen heißen `R2-<Rolle> P<Stufe>-<Nr>` wie im jeweiligen Einzelaudit (`Sichter` statt `Si`); bei zusammengeführten Befunden gilt die Kennung des ersten Fundes, die übrigen stehen unter „Auch gefunden von“.
 
 Gemessen an der ersten Runde sagen alle sechs Reviewer dasselbe: Die Kernwege tragen (Ausgang mit Annahme, Beförderung und Nummer, Nachsichtung, Ersatzsichter, Stau vor dem Sichter, Papier-Nachtrag, Druckverzeichnis mit Rückfrage), die alten P0 sind weg, und kein Reviewer hat ein neues P0 an einer der fünf Fachrollen gefunden. Die drei neuen P0 stammen alle vom Fachberater und betreffen Stellen, an denen die Anwendung ohne Rückfrage oder ohne Auskunft etwas Falsches zulässt.
 
@@ -55,96 +55,96 @@ Je Stufe nach Zusammenführen der Doppelfunde. Die Fundstellen im Quelltext und 
 
 ### P0 – einsatzkritisch (3)
 
-| Kennung | Kurztitel | Auch gefunden von | Status |
-| --- | --- | --- | --- |
-| R2-FaBe P0-1 | Vorbehaltshinweis fehlt beim Sichten, im Papier-Nachtrag und beim Eingang aufnehmen | SGL P1-2, FM P3-2 | offen |
-| R2-FaBe P0-2 | „Quittung der Gegenstelle“ ist die Beförderungszeit (vorbelegt, eingefroren, als Quittung gelesen) | SGL P3-4, FM P2-6 | offen |
-| R2-FaBe P0-3 | Nicht erkennbar, ob die Fernmeldezentrale besetzt ist, Nachricht kann unbemerkt liegen | – | offen |
+| Kennung | Kurztitel | Auch gefunden von | Status | Commit | Beleg und Anmerkung |
+| --- | --- | --- | --- | --- | --- |
+| R2-FaBe P0-1 | Vorbehaltshinweis fehlt beim Sichten, im Papier-Nachtrag und beim Eingang aufnehmen | SGL P1-2, FM P3-2 | behoben | bb5b36a, f608e96 | Code und Test (`stellenvorbehalt.test.ts`, `szenarien-runde2-vorbehalt.test.ts`, `Runde2.vorbehalt.test.tsx`): Sichten, Eingang aufnehmen und Papier-Nachtrag ohne die zuständige Stelle verlangen einen Grund; der Renderer zeigt den Hinweis mit „Trotzdem“, der Worker prüft zusätzlich (`brauchtGrund`). Ersatzregeln (kein Sichter besetzt) sind ausgenommen. |
+| R2-FaBe P0-2 | „Quittung der Gegenstelle“ ist die Beförderungszeit (vorbelegt, eingefroren, als Quittung gelesen) | SGL P3-4, FM P2-6 | behoben | f608e96, Arbeitsstand (ungebucht) | Code und Test (`Runde2.masken.test.tsx`, `Fernmeldezentrale.test.tsx`): Die Quittung der Gegenstelle ist beim Befördern leer, Pflicht und mit Platzhalter versehen; Ausgang, Lese-Ansicht und Vorschau sagen „Quittung der Gegenstelle“ oder „noch nicht übermittelt“. Im Arbeitsstand kommt der Wortlaut aus Ring 2 (`fmzVermerkText`), und der gedruckte Vordruck trägt am Fuß dieselbe Zeile (`nachrichtstempel.ts`; die Bibliothek hat kein Beschriftungsfeld). Ein eigener Stand „befördert, noch nicht quittiert“ entfällt, weil die Beförderung die Quittung voraussetzt. |
+| R2-FaBe P0-3 | Nicht erkennbar, ob die Fernmeldezentrale besetzt ist, Nachricht kann unbemerkt liegen | – | behoben | bb5b36a, f608e96 | Code und Test (`szenarien-runde2-vorbehalt.test.ts`: Hinweis beim Aufgeben ohne besetzte FmZ, Lagebild mit `besetzteStellen`; `Runde2.masken.test.tsx`: Band bernstein). |
 
 ### P1 – hoch (13)
 
-| Kennung | Kurztitel | Auch gefunden von | Status |
-| --- | --- | --- | --- |
-| R2-SGL P1-1 | Sicht „offen“ für die Übergabe fehlt (dazu nachgeprüft SGL P1-7) | FaBe P1-6 | offen |
-| R2-LdF P1-1 | Karten der Sicht LdF und „Vor dem Sichter“ über den Rand bei 1320 px | Sichter P2-4 | offen |
-| R2-LdF P1-3 | Ohne Sichter läuft der Eingang an der Station LdF vorbei | – | offen |
-| R2-FM P1-1 | Tabfolge der Aufnahme überspringt Handzeichen, Nr. und Abfassungszeit; Papier-Nachtrag ohne Maus nicht bedienbar | – | offen |
-| R2-FM P1-2 | „Ich sichte jetzt selbst“ öffnet Laufzettel unter der Falz; blind „Sichten“ schickt Blitz nur an S2 | – | offen |
-| R2-Sichter P1-1 | Blitz beim LdF ohne Hinweis und ohne Uhr | LdF P1-2 | offen |
-| R2-Sichter P1-2 | Bei zwei Sichtungen geht der Vermerk des Ersten verloren | – | offen |
-| R2-ETB P1-1 | Tagebuch führt falsche Stelle als Akteur | LdF P3-2, FaBe P3-5 | offen |
-| R2-ETB P1-2 | ETB-Nr. steht auf Papier, ist am Bildschirm nicht auffindbar | – | offen |
-| R2-FaBe P1-2 | Vokabular des Stabs nirgends erklärt (Handzeichen, FmZ, Sichter, Vorrang, Wunsch) | FaBe P1-1, FaBe P2-3, FaBe P2-6 | offen |
-| R2-FaBe P1-3 | Antwort läuft als Funkspruch durch die FmZ, Absender ist die Stelle oder beide | SGL P3-3 | offen |
-| R2-FaBe P1-4 | Eigene beförderte Nachricht kommt als „neu, grün: bearbeiten“ in den eigenen Posteingang | – | offen |
-| R2-FaBe P1-5 | Gesprächsnotiz: Kästchen mit großen Folgen, ohne Erklärung | – | offen |
+| Kennung | Kurztitel | Auch gefunden von | Status | Commit | Beleg und Anmerkung |
+| --- | --- | --- | --- | --- | --- |
+| R2-SGL P1-1 | Sicht „offen“ für die Übergabe fehlt (dazu nachgeprüft SGL P1-7) | FaBe P1-6 | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: Sicht und Chip „offen“, Einstiegszeile). Schließt auch SGL P1-7 der ersten Runde. |
+| R2-LdF P1-1 | Karten der Sicht LdF und „Vor dem Sichter“ über den Rand bei 1320 px | Sichter P2-4 | behoben | f608e96 | Code und Test mit Einschränkung: Der Test prüft Struktur und Stylesheet-Regeln (`Runde2.blatt.test.tsx`) in jsdom, nicht die gerenderte Breite bei 1320 px; eine Messung im Browser steht aus. |
+| R2-LdF P1-3 | Ohne Sichter läuft der Eingang an der Station LdF vorbei | – | behoben | bb5b36a | Code und Test (`szenarien-runde2-ldf.test.ts`: ohne Sichter sichtet der LdF beim Weitergeben, die FmZ lässt den Laufzettel beim Aufnehmen weg). |
+| R2-FM P1-1 | Tabfolge der Aufnahme überspringt Handzeichen, Nr. und Abfassungszeit; Papier-Nachtrag ohne Maus nicht bedienbar | – | behoben | f608e96 | Code und Test (`Runde2.masken.test.tsx`, `Nachrichtenaudit.test.tsx`: Handzeichen, Nr. und Abfassungszeit in der Tabfolge; Papier-Nachtrag über `aufnahmefolge.ts`). |
+| R2-FM P1-2 | „Ich sichte jetzt selbst“ öffnet Laufzettel unter der Falz; blind „Sichten“ schickt Blitz nur an S2 | – | behoben | f608e96 | Code und Test (`Runde2.vorbehalt.test.tsx`: Laufzettel rollt in den Blick, Fokus auf der Quittung, bei Vorrang ohne Hauptempfänger hält der erste Klick an, der zweite heißt „Trotzdem nur an S2“). |
+| R2-Sichter P1-1 | Blitz beim LdF ohne Hinweis und ohne Uhr | LdF P1-2 | behoben | ae8c1f3, bb5b36a | Code und Test (`nachrichten-runde2.test.ts`, `szenarien-runde2-ldf.test.ts`: Meldung an den LdF mit Ton bei Blitz, zählt als offen, Uhr `wartetSeitLdf`). Der Ton selbst ist nicht gehört, nur die Meldungsart geprüft. |
+| R2-Sichter P1-2 | Bei zwei Sichtungen geht der Vermerk des Ersten verloren | – | behoben | ae8c1f3, bb5b36a | Code und Test (`nachrichten-runde2.test.ts`, `szenarien-runde2-ldf.test.ts`: beide Vermerke mit Handzeichen, der zweite Sichter liest den ersten). |
+| R2-ETB P1-1 | Tagebuch führt falsche Stelle als Akteur | LdF P3-2, FaBe P3-5 | behoben | ae8c1f3, bb5b36a | Code und Test (`nachrichten-runde2.test.ts`, `szenarien-runde2-vorbehalt.test.ts`: Stelle der Sitzung in der Nutzlast, Aufnahme unter FmZ, Kopien nach Beförderung unter FmZ). Nicht gebaut: das eigene Handzeichen der Sitzung als Akteur beim Nachtrag (Umsetzungsbericht). Dazu ETB P1-7 (Runde 1), teilweise. |
+| R2-ETB P1-2 | ETB-Nr. steht auf Papier, ist am Bildschirm nicht auffindbar | – | behoben | ae8c1f3, f608e96 | Code und Test (`Tagebuch.test.tsx`, `szenarien-runde2-vorbehalt.test.ts`: laufende Nummer wie im Druck, Spalten „Nr.“ und „Nachricht“). |
+| R2-FaBe P1-2 | Vokabular des Stabs nirgends erklärt (Handzeichen, FmZ, Sichter, Vorrang, Wunsch) | FaBe P1-1, FaBe P2-3, FaBe P2-6 | behoben | ae8c1f3, de966e5, f608e96, f6fd4c0 | Code und Test (`akueli.test.ts`, `Runde2.blatt.test.tsx`, `Runde2.masken.test.tsx`: 16 Begriffe in Abkürzungsliste und Bedienhilfe, Tooltips an Spruch, Sofort, Blitz, Abfassungszeit; Stellenabfrage erklärt das Handzeichen); Handbuch „Wörterverzeichnis Nachrichten“, Kurzanleitung. |
+| R2-FaBe P1-3 | Antwort läuft als Funkspruch durch die FmZ, Absender ist die Stelle oder beide | SGL P3-3 | offen | – | Kein Treffer auf die Kennung in Code und Tests. „Antworten“ tauscht Anschrift und Absender weiter wie bisher; die Zeile „Geht an die Fernmeldezentrale“ gibt es nicht. |
+| R2-FaBe P1-4 | Eigene beförderte Nachricht kommt als „neu, grün: bearbeiten“ in den eigenen Posteingang | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Eigene beförderte Ausgänge zählen weiter als „neu“ im Posteingang. |
+| R2-FaBe P1-5 | Gesprächsnotiz: Kästchen mit großen Folgen, ohne Erklärung | – | teilweise | f608e96 | Code und Test (`Runde2.masken.test.tsx` „Tooltips“): Ein Tooltip erklärt die Gesprächsnotiz. Nicht gebaut: eine sichtbare Zeile in der Maske, die Beschriftung „Gesprächspartner“ statt „Anschrift“. |
 
 ### P2 – mittel (36)
 
-| Kennung | Kurztitel | Auch gefunden von | Status |
-| --- | --- | --- | --- |
-| R2-SGL P2-1 | Papier-Nachtrag prüft nichts und belegt die Nummer vor | LdF P3-7 | offen |
-| R2-SGL P2-2 | Konflikthinweis bei doppelter Nummer erklärt Anderes und liegt außerhalb des Bildes | – | offen |
-| R2-SGL P2-3 | Erster Fokus der Maske liegt auf „Vom Papier nachtragen“ | FM P2-2 | offen |
-| R2-SGL P2-4 | Hinweiskasten verschiebt die Seite | Sichter P3-1 | offen |
-| R2-SGL P2-5 | Ausgang zeigt nach Beförderung ohne Nummer weiter „folgt (FmZ)“ | – | offen |
-| R2-SGL P2-6 | Stellenabfrage lädt Handzeichen des Vorgängers vor, Hauptknopf bestätigt es | – | offen |
-| R2-LdF P2-1 | Befördern vor dem Vorschlag: Hinweis erst danach, Funk als stille Vorgabe, keine Spur im Betriebsbuch | – | offen |
-| R2-LdF P2-2 | Abweichung vom Vorschlag des LdF wird nicht markiert | – | offen |
-| R2-LdF P2-3 | Weitergabe an den Sichter prüft nichts, Eingang ohne Nummer geht durch | – | offen |
-| R2-LdF P2-4 | Sicht LdF zeigt nicht, was zum Entscheiden nötig ist; Schwellenzahl mischt LdF und FmZ | – | offen |
-| R2-LdF P2-5 | Ausdruck der Nachweisung ohne Gegenstelle, andere Spaltenfolge, gemischtes Zeitformat | – | offen |
-| R2-LdF P2-6 | Zeitraum der Nachweisungsausgabe nicht wählbar | – | offen |
-| R2-LdF P2-7 | Nummernlücken nur im Ausdruck, nicht am Bildschirm (dazu nachgeprüft ETB P2-2) | – | offen |
-| R2-LdF P2-8 | „Rückgängig“ nennt nach Befördern, Aufnehmen, Aufgeben den falschen Schritt | FM P3-1, FaBe P2-8 | offen |
-| R2-FM P2-1 | Kein Kürzel für „Eingang aufnehmen“, 20 Tab bis zum Knopf | – | offen |
-| R2-FM P2-3 | Enter in einer Zeile speichert halben Funkspruch, Gegenstelle keine Pflicht | – | offen |
-| R2-FM P2-4 | Karte „Vor dem Sichter“ nicht nach Vorrang sortiert | Sichter P3-7 | offen |
-| R2-FM P2-5 | Säumiger, aber besetzter Sichter: Schwelle gilt für Blitz wie Einfach, Knopf fehlt | Sichter P2-2 | offen |
-| R2-FM P2-7 | Zwei Befördern kurz nacheinander: einmal ohne Meldung überschrieben (einmalig, Annahme) | – | offen |
-| R2-Sichter P2-1 | Ersatzsichtung der FmZ trägt keine Marke, der heimkehrende Sichter sieht nichts | – | offen |
-| R2-Sichter P2-3 | Lesen-Fenster ohne Fokusführung, Escape nimmt die Auswahl mit | – | offen |
-| R2-Sichter P2-5 | Reiter „Nachrichten“ zählt beim Sichter nichts | – | offen |
-| R2-ETB P2-1 | Akte: alte und neue Stände nebeneinander, zurückgezogene Nachricht ohne Stempel und ohne Vordruck | – | offen |
-| R2-ETB P2-2 | Offene Nachrichten nur im Dialog, Abschluss ohne Stelle und Handzeichen | – | offen |
-| R2-ETB P2-3 | Nachweisung zeigt die Weitergabe des LdF nicht | – | offen |
-| R2-ETB P2-4 | Doppelsichtung: Konflikt in der Diagnose ohne Nachricht und Wert | – | offen |
-| R2-ETB P2-5 | Tagebuchzeile ohne Vorrang, Mittel, Gegenstelle und Vermerk | – | offen |
-| R2-ETB P2-6 | Nachricht und Lagekarte sind nicht verbunden | – | offen |
-| R2-ETB P2-7 | Handzeichen nicht auf Personen und Stellen zurückführbar | – | offen |
-| R2-ETB P2-8 | ETB-Nr. ist berechnet und kann sich verschieben (Annahme) | – | offen |
-| R2-FaBe P2-1 | Reiter „Eingang“ ist nicht der Posteingang | – | offen |
-| R2-FaBe P2-2 | Einstiegszeile sagt nicht, was zu tun ist | – | offen |
-| R2-FaBe P2-4 | „Lesen“ ist auch Kenntnisnahme, „Erledigt“ meldet nichts zurück | – | offen |
-| R2-FaBe P2-5 | Abfassungszeit „171534“ wird kommentarlos als vor fünf Stunden gelesen | – | offen |
-| R2-FaBe P2-7 | Wortlaut des Stellenvorbehalts trifft Rolle und Leser nicht | LdF P3-1 | offen |
-| R2-FaBe P2-9 | Ausgangsliste mischt E und A, Reihenfolge unklar | – | offen |
+| Kennung | Kurztitel | Auch gefunden von | Status | Commit | Beleg und Anmerkung |
+| --- | --- | --- | --- | --- | --- |
+| R2-SGL P2-1 | Papier-Nachtrag prüft nichts und belegt die Nummer vor | LdF P3-7 | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-SGL P2-2 | Konflikthinweis bei doppelter Nummer erklärt Anderes und liegt außerhalb des Bildes | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-SGL P2-3 | Erster Fokus der Maske liegt auf „Vom Papier nachtragen“ | FM P2-2 | behoben | f608e96 | Code und Test (`Runde2.masken.test.tsx`: Startfokus über `data-startfokus` in Anschrift bzw. Mittel). |
+| R2-SGL P2-4 | Hinweiskasten verschiebt die Seite | Sichter P3-1 | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: Anker ohne Höhe, Überlagerung, „×“ je Zeile). Die Überlagerung ist nicht im Browser gemessen. |
+| R2-SGL P2-5 | Ausgang zeigt nach Beförderung ohne Nummer weiter „folgt (FmZ)“ | – | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: „folgt (FmZ)“ nur bis zur Beförderung, danach „ohne Nummer“). |
+| R2-SGL P2-6 | Stellenabfrage lädt Handzeichen des Vorgängers vor, Hauptknopf bestätigt es | – | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`, `stellenmerker.ts`: Handzeichen aus dem Merker nur unter demselben Anzeigenamen). |
+| R2-LdF P2-1 | Befördern vor dem Vorschlag: Hinweis erst danach, Funk als stille Vorgabe, keine Spur im Betriebsbuch | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-LdF P2-2 | Abweichung vom Vorschlag des LdF wird nicht markiert | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-LdF P2-3 | Weitergabe an den Sichter prüft nichts, Eingang ohne Nummer geht durch | – | teilweise | bb5b36a | Code und Test (`nachrichten-runde2.test.ts`, `szenarien-runde2-vorbehalt.test.ts`): Warnung „Eingang ohne Nachweisungsnummer“, Karte „Ohne Nummer“ führt Eingänge und Ausgänge. Nicht gebaut: Aufnahmevermerk in der Weitergabemaske, Rückfrage ohne Nummer, Prüfung der Zeitfolge. Dazu LdF P1-2 (Runde 1), teilweise. |
+| R2-LdF P2-4 | Sicht LdF zeigt nicht, was zum Entscheiden nötig ist; Schwellenzahl mischt LdF und FmZ | – | offen | f608e96 (nur Layout) | Die Karten liegen jetzt untereinander (siehe R2-LdF P1-1); Absender, Wartezeit und die getrennte Schwellenzahl fehlen weiter. Kein Treffer auf die Kennung. |
+| R2-LdF P2-5 | Ausdruck der Nachweisung ohne Gegenstelle, andere Spaltenfolge, gemischtes Zeitformat | – | behoben | de966e5 | Code und Test (`nachweisung.test.ts`: nach Nummer, Spalten wie am Bildschirm, Gegenstelle, einheitliche Zeitformate). |
+| R2-LdF P2-6 | Zeitraum der Nachweisungsausgabe nicht wählbar | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Die Ausgabe nimmt `von`/`bis`, die Oberfläche bietet sie nicht an. |
+| R2-LdF P2-7 | Nummernlücken nur im Ausdruck, nicht am Bildschirm (dazu nachgeprüft ETB P2-2) | – | offen | – | Die Daten (`nummernluecken`) liefert der Worker, der Test `szenarien-runde2-ldf.test.ts` trägt die Kennung und belegt nur sie; der Renderer zeigt keine Lücke und fragt bei einem Sprung nicht zurück. |
+| R2-LdF P2-8 | „Rückgängig“ nennt nach Befördern, Aufnehmen, Aufgeben den falschen Schritt | FM P3-1, FaBe P2-8 | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FM P2-1 | Kein Kürzel für „Eingang aufnehmen“, 20 Tab bis zum Knopf | – | behoben | f608e96 | Code und Test (`Runde2.masken.test.tsx`: Strg+N öffnet in der Sicht Fernmeldezentrale „Eingang aufnehmen“; die Tabfolge kürzt den Weg zum Knopf, siehe R2-FM P1-1). |
+| R2-FM P2-3 | Enter in einer Zeile speichert halben Funkspruch, Gegenstelle keine Pflicht | – | offen | – | Die Kennung R2-FM P2-3 im Code meint FM P2-3 der ersten Runde (Abfassungszeit im Eingang, jetzt behoben). Enter in einer Zeile und die Pflicht der Gegenstelle sind nicht angefasst. |
+| R2-FM P2-4 | Karte „Vor dem Sichter“ nicht nach Vorrang sortiert | Sichter P3-7 | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: „Vor dem Sichter“ mit Blitz zuoberst, Sortierung nach Vorrang). |
+| R2-FM P2-5 | Säumiger, aber besetzter Sichter: Schwelle gilt für Blitz wie Einfach, Knopf fehlt | Sichter P2-2 | offen | – | Die Kennung R2-FM P2-5 im Code meint FM P2-5 der ersten Runde (Sperrhinweis mit Stelle, jetzt behoben). Die Schwelle für Blitz und der Knopf bei säumigem, besetztem Sichter sind nicht angefasst. |
+| R2-FM P2-7 | Zwei Befördern kurz nacheinander: einmal ohne Meldung überschrieben (einmalig, Annahme) | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-Sichter P2-1 | Ersatzsichtung der FmZ trägt keine Marke, der heimkehrende Sichter sieht nichts | – | teilweise | bb5b36a | Code und Test (`szenarien-runde2-vorbehalt.test.ts`): Jede Ersatzsichtung trägt den Grund, das Tagebuch sagt „als Ersatzsichter gesichtet“. Nicht gebaut: eine Marke in der Zeile für den heimkehrenden Sichter (im Renderer kein Treffer). |
+| R2-Sichter P2-3 | Lesen-Fenster ohne Fokusführung, Escape nimmt die Auswahl mit | – | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: Escape schließt nur das Fenster, Tab bleibt im Fenster, Fokus kehrt zurück). Schließt auch Sichter P3-2 (Runde 1). |
+| R2-Sichter P2-5 | Reiter „Nachrichten“ zählt beim Sichter nichts | – | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`: der Reiter zählt für Sichter und FmZ die eigene Warteschlange). |
+| R2-ETB P2-1 | Akte: alte und neue Stände nebeneinander, zurückgezogene Nachricht ohne Stempel und ohne Vordruck | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P2-2 | Offene Nachrichten nur im Dialog, Abschluss ohne Stelle und Handzeichen | – | offen | – | Der Test `szenarien-runde2-ldf.test.ts` trägt die Kennung, belegt aber nur die Nummernlücken; Tagebuch und Akte zeigen die offenen Nachrichten weiter nicht, der Abschluss trägt keine Stelle. |
+| R2-ETB P2-3 | Nachweisung zeigt die Weitergabe des LdF nicht | – | behoben | de966e5 | Code und Test (`nachweisung.test.ts`: Weitergabe des LdF und „wartet beim LdF“ als Marke). |
+| R2-ETB P2-4 | Doppelsichtung: Konflikt in der Diagnose ohne Nachricht und Wert | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P2-5 | Tagebuchzeile ohne Vorrang, Mittel, Gegenstelle und Vermerk | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Das Tagebuch führt seit f608e96 Nr. und Nachricht, nicht Vorrang, Mittel, Gegenstelle und Vermerk. |
+| R2-ETB P2-6 | Nachricht und Lagekarte sind nicht verbunden | – | offen | – | Die Kennung R2-ETB P2-6 in `nachweisung.ts` meint den Befund der ersten Runde zu den Spalten der Nachweisung; die Verbindung von Nachricht und Lagekarte ist nicht gebaut. |
+| R2-ETB P2-7 | Handzeichen nicht auf Personen und Stellen zurückführbar | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P2-8 | ETB-Nr. ist berechnet und kann sich verschieben (Annahme) | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FaBe P2-1 | Reiter „Eingang“ ist nicht der Posteingang | – | teilweise | f608e96 | Code und Test (`Runde2.blatt.test.tsx`): Die Einstiegszeile nennt den Posteingang. Der Reiter „Eingang“ heißt weiter so. |
+| R2-FaBe P2-2 | Einstiegszeile sagt nicht, was zu tun ist | – | behoben | f608e96 | Code und Test (`Runde2.blatt.test.tsx`, `einstiegszusatz.ts`: Posteingang, Kopie, „erledigt“ und die Sicht „Offen“ in der Einstiegszeile). |
+| R2-FaBe P2-4 | „Lesen“ ist auch Kenntnisnahme, „Erledigt“ meldet nichts zurück | – | teilweise | f608e96 | Code und Test (`einstiegszusatz.ts`): Die Einstiegszeile sagt, dass „erledigt“ dem Absender nichts meldet. „Lesen“ heißt weiter so; die Kenntnisnahme steht nur im Tooltip. |
+| R2-FaBe P2-5 | Abfassungszeit „171534“ wird kommentarlos als vor fünf Stunden gelesen | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Eine weit zurückliegende Abfassungszeit wird weiter ohne Rückfrage angenommen; die Kennung R2-FM P2-3 im Code (Abfassungszeit „laut Spruch“) ist ein anderer Befund. |
+| R2-FaBe P2-7 | Wortlaut des Stellenvorbehalts trifft Rolle und Leser nicht | LdF P3-1 | offen | – | Kein Treffer auf die Kennung in Code und Tests. Der Satz „Dieser Teil ist der Fernmeldezentrale vorbehalten …“ ist unverändert; hinzugekommen ist nur der Satz zum Sichten. |
+| R2-FaBe P2-9 | Ausgangsliste mischt E und A, Reihenfolge unklar | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
 
 ### P3 – gering (21)
 
-| Kennung | Kurztitel | Auch gefunden von | Status |
-| --- | --- | --- | --- |
-| R2-SGL P3-1 | Rückfrage bei doppeltem Ausgang steht hinter der Fußleiste | – | offen |
-| R2-SGL P3-2 | Zweites Esc verwirft den Entwurf endgültig | – | offen |
-| R2-SGL P3-5 | Fußleiste „Sichten“ und Laufzettelhöhe verdecken das Verteilerraster | Sichter P3-3 | offen |
-| R2-SGL P3-6 | Handbuch kennt den Papier-Nachtrag nicht | FM P3-4 | offen |
-| R2-LdF P3-3 | Marke „beim LdF“ und Zahl „Vor dem LdF“ bleiben bei unbesetztem LdF stehen | – | offen |
-| R2-LdF P3-4 | Fernmelder fest Fm1 bis Fm3, Vorschlag nur über FmZ-Sicht änderbar, Sicht nach Neuladen | – | offen |
-| R2-LdF P3-5 | Vordruck zeichnet Wunsch und tatsächlichen Weg nicht getrennt | – | offen |
-| R2-LdF P3-6 | Sichtungszeile der Nachweisung in schmaler Spalte | Sichter P3-4 | offen |
-| R2-FM P3-3 | Marke „Wartet“ sitzt versetzt, „seit 0 min“ im ersten Takt | – | offen |
-| R2-FM P3-5 | „Übernehmen“ in den Druckeinstellungen schweigt bei fehlendem Verzeichnis | – | offen |
-| R2-FM P3-6 | „⚠ Konflikthinweis“ zählt im frischen Einsatz | Sichter P3-6 | offen |
-| R2-Sichter P3-2 | Leere Sicht „Sichter“ schweigt zur Station LdF | – | offen |
-| R2-Sichter P3-5 | „Stelle abgeben“ ist in der Web-Schale kein Bedienelement | – | offen |
-| R2-ETB P3-1 | Warnung zur doppelten Nummer verschwindet nach 20 Sekunden | – | offen |
-| R2-ETB P3-2 | Druckkopf „@bos/eeb-format 0.0.0“, Beschriftungen Druck gegen Bildschirm | – | offen |
-| R2-ETB P3-3 | Lese-Ansicht einer zurückgezogenen Nachricht ohne Grund im Kopf | – | offen |
-| R2-ETB P3-4 | Zurückziehen nach Verteilung sagt nicht, wer die Nachricht schon hat | – | offen |
-| R2-FaBe P3-1 | „Löschen“ im Hinweiskasten wird als „Nachricht löschen“ gelesen | – | offen |
-| R2-FaBe P3-2 | Sofort-Hinweis ohne Ton, leicht zu übersehen | – | offen |
-| R2-FaBe P3-3 | Statuszeile nennt keine Stellen der weiteren Arbeitsplätze | – | offen |
-| R2-FaBe P3-4 | „Abbrechen“ wird beim Verwerfen still zu „Verwerfen“ | – | offen |
+| Kennung | Kurztitel | Auch gefunden von | Status | Commit | Beleg und Anmerkung |
+| --- | --- | --- | --- | --- | --- |
+| R2-SGL P3-1 | Rückfrage bei doppeltem Ausgang steht hinter der Fußleiste | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-SGL P3-2 | Zweites Esc verwirft den Entwurf endgültig | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-SGL P3-5 | Fußleiste „Sichten“ und Laufzettelhöhe verdecken das Verteilerraster | Sichter P3-3 | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-SGL P3-6 | Handbuch kennt den Papier-Nachtrag nicht | FM P3-4 | behoben | f6fd4c0 | Handbuch (Commit-Text und `HANDBUCH.md`, Abschnitt „Vom Papier nachtragen“; kein Test). Die Zeitzonenmeldung, die nach dem Neuladen wiederkehrt, ist nicht geändert. Dazu FM P3-4. |
+| R2-LdF P3-3 | Marke „beim LdF“ und Zahl „Vor dem LdF“ bleiben bei unbesetztem LdF stehen | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-LdF P3-4 | Fernmelder fest Fm1 bis Fm3, Vorschlag nur über FmZ-Sicht änderbar, Sicht nach Neuladen | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-LdF P3-5 | Vordruck zeichnet Wunsch und tatsächlichen Weg nicht getrennt | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-LdF P3-6 | Sichtungszeile der Nachweisung in schmaler Spalte | Sichter P3-4 | offen | – | Kein Treffer auf die Kennung in Code und Tests. (de966e5 betrifft den Ausdruck, nicht die Bildschirmspalte.) |
+| R2-FM P3-3 | Marke „Wartet“ sitzt versetzt, „seit 0 min“ im ersten Takt | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FM P3-5 | „Übernehmen“ in den Druckeinstellungen schweigt bei fehlendem Verzeichnis | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FM P3-6 | „⚠ Konflikthinweis“ zählt im frischen Einsatz | Sichter P3-6 | behoben | ae8c1f3 | Code und Test (`fold-einsatzbeginn.test.ts`, `szenarien-runde2-vorbehalt.test.ts`: Einsatzbeginn bis sieben Tage zurück ohne Hinweis; `FOLD_VERSION` 13). |
+| R2-Sichter P3-2 | Leere Sicht „Sichter“ schweigt zur Station LdF | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-Sichter P3-5 | „Stelle abgeben“ ist in der Web-Schale kein Bedienelement | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P3-1 | Warnung zur doppelten Nummer verschwindet nach 20 Sekunden | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P3-2 | Druckkopf „@bos/eeb-format 0.0.0“, Beschriftungen Druck gegen Bildschirm | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Der Druckkopf „@bos/eeb-format“ steht weiter in `packages/ausgaben/src/index.ts`. |
+| R2-ETB P3-3 | Lese-Ansicht einer zurückgezogenen Nachricht ohne Grund im Kopf | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-ETB P3-4 | Zurückziehen nach Verteilung sagt nicht, wer die Nachricht schon hat | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FaBe P3-1 | „Löschen“ im Hinweiskasten wird als „Nachricht löschen“ gelesen | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. Der Knopf heißt weiter „Löschen“. |
+| R2-FaBe P3-2 | Sofort-Hinweis ohne Ton, leicht zu übersehen | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FaBe P3-3 | Statuszeile nennt keine Stellen der weiteren Arbeitsplätze | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
+| R2-FaBe P3-4 | „Abbrechen“ wird beim Verwerfen still zu „Verwerfen“ | – | offen | – | Kein Treffer auf die Kennung in Code und Tests. |
 
 
 ## Runde 1: Vorgehen, Zahlen und Stand
@@ -170,16 +170,16 @@ Das ETB-Audit nennt im Kopf vier P3-Befunde, führt aber fünf aus; gezählt sin
 
 ## Stand je Audit nach Runde 2
 
-Die Zahlen berücksichtigen die Nachprüfung der zweiten Runde: Sechs Befunde, die als behoben oder teilweise behoben geführt wurden, hat ein Reviewer als nicht behoben festgestellt (SGL P1-7, LdF P1-2, FM P2-3, FM P2-5, Sichter P3-2, ETB P1-7) und stehen jetzt als „offen“. Vor der Nachprüfung waren es behoben 78, teilweise behoben 12, offen 5, bewusst nicht 4.
+Die Zahlen berücksichtigen die Nachprüfung der zweiten Runde und die fünf Behebungs-Commits danach: Sechs Befunde, die als behoben oder teilweise behoben geführt wurden, hat ein Reviewer als nicht behoben festgestellt (SGL P1-7, LdF P1-2, FM P2-3, FM P2-5, Sichter P3-2, ETB P1-7). Seit ae8c1f3 bis f608e96 sind vier davon wieder behoben (SGL P1-7, FM P2-3, FM P2-5, Sichter P3-2) und zwei teilweise behoben (LdF P1-2, ETB P1-7). Vor der Nachprüfung waren es behoben 78, teilweise behoben 12, offen 5, bewusst nicht 4; nach der Nachprüfung 73, 11, 11, 4.
 
 | Rolle | behoben | teilweise | offen | bewusst nicht | nicht prüfbar |
 | --- | --- | --- | --- | --- | --- |
-| SGL | 13 | 1 | 4 | 2 | 0 |
-| LdF | 14 | 1 | 1 | 0 | 0 |
-| FM | 19 | 3 | 2 | 0 | 0 |
-| Sichter | 12 | 1 | 3 | 1 | 0 |
-| ETB | 15 | 5 | 1 | 1 | 0 |
-| Summe | 73 | 11 | 11 | 4 | 0 |
+| SGL | 14 | 1 | 3 | 2 | 0 |
+| LdF | 14 | 2 | 0 | 0 | 0 |
+| FM | 21 | 3 | 0 | 0 | 0 |
+| Sichter | 13 | 1 | 2 | 1 | 0 |
+| ETB | 15 | 6 | 0 | 1 | 0 |
+| Summe | 77 | 13 | 5 | 4 | 0 |
 
 Stand nach dem dritten Durchlauf und den Entscheidungen der Fachseite vom 2026-11-17 (ungebucht, Spalte „Commit“: „3. Durchlauf (ungebucht)“ und „Entscheidung 11 bis 14 (ungebucht)“), vor der Nachprüfung der zweiten Runde. Die damals fünf offenen Befunde waren SGL P2-9, P2-12, P2-13 und Sichter P2-2, P2-3; keiner wartet mehr auf die Fachseite. Johannes entschied am 2026-11-17: „Die Lehrunterlage ist Maßstab. S5 wie im Vordruck.“ Daraus folgen die Entscheidungen 11 bis 14 im Konzept (§11): SGL P1-2 und Sichter P3-3 sind bewusst nicht gebaut, LdF P2-3 ist als Hinweis statt Recht umgesetzt (teilweise, weil die Marke „Verfasser = Nachweiser“ fehlt), SGL P2-14 ist behoben.
 
@@ -235,16 +235,16 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | SGL P1-4 | Handzeichen und Absender keine Pflicht, eigene Stelle unsichtbar | behoben | d36d287 | Code und Test (Pflichtfelder, „ohne Stelle“ in der Statuszeile). Auch ETB P1-4. |
 | SGL P1-5 | Esc verwirft angefangenen Vordruck ohne Rückfrage | behoben | d36d287 | Code und Test. Auch FM P1-3. |
 | SGL P1-6 | Nachrichten verlassen die FmZ-Warteschlange ohne Nummer | behoben | 9bbe3fe, d36d287 | Code und Test: Befördern trägt Annahme und Nummer nach, Karte „Ohne Nummer“. Auch LdF P0-1, P1-2, FM P2-10. |
-| SGL P1-7 | Keine Sicht „offen“, Zähler zählt Erledigtes mit | offen (Runde 2: nicht behoben) | 57699bb, d36d287 | Code und Test (offenFuerStellen, Sichten „offen“ und „gesichtet“). Auch Sichter P1-5, ETB P1-6. Runde 2: nicht behoben: Der Zähler „mit Vorrang offen“ zählt je Stelle, im Blatt gibt es aber weder Sicht noch Chip „offen“, das Übungsdrehbuch (Minute 100) setzt sie voraus (R2-SGL P1-1, auch R2-FaBe P1-6). Die frühere Angabe „Code und Test“ trug den Status nicht. |
+| SGL P1-7 | Keine Sicht „offen“, Zähler zählt Erledigtes mit | behoben (Runde 2: erst nicht behoben, dann behoben) | 57699bb, d36d287, f608e96 | Code und Test (offenFuerStellen, Sichten „offen“ und „gesichtet“). Auch Sichter P1-5, ETB P1-6. Runde 2: nicht behoben: Der Zähler „mit Vorrang offen“ zählt je Stelle, im Blatt gibt es aber weder Sicht noch Chip „offen“, das Übungsdrehbuch (Minute 100) setzt sie voraus (R2-SGL P1-1, auch R2-FaBe P1-6). Die frühere Angabe „Code und Test“ trug den Status nicht. Danach behoben mit f608e96: Sicht und Chip „offen“ im Umschalter (`Runde2.blatt.test.tsx`, R2-SGL P1-1). |
 | ETB P1-1 | Ausgang: rote Kopie fehlt bei S2 | behoben | fa7abbb (vor den sieben Commits) | Im Befund „in Arbeit“; Kopien nach der Beförderung in worker/laufwegfolgen.ts gesehen, eigener Test nicht geprüft. |
 | ETB P1-2 | Nachsichten und Vermerke nach Sichtung nicht erreichbar, Feld 20 | behoben | d36d287, 2. Durchlauf (ungebucht) | Nachsichtung (d36d287); dazu `etbNummer` an der Zeile und „ETB-Nr.“ in Feld 20 des Vordrucks (nachrichtstempel.test.ts, szenarien-durchlauf2.test.ts). |
 | ETB P1-3 | Berichtigen nur bei doppelter Nummer, Zurückziehen ohne Grund im Blatt | teilweise behoben | d36d287, 2. Durchlauf (ungebucht) | Berichtigen bei jeder Nummer (d36d287); Grund und Zeit des Zurückziehens in Zeile (`zurueckgezogenMit`), Nachweisung und Stempel im Vordruck. Berichtigung anderer Felder und „ersetzt durch Nr.“ nicht gebaut. |
 | ETB P1-4 | Absender kann leer bleiben | behoben | d36d287 | Code und Test (Absender Pflicht). |
 | ETB P1-5 | Akte nimmt Nachrichten-PDFs nur nach manueller Erzeugung mit | behoben | 9bbe3fe | Code und Test (aktenbeilagen.ts); PDF der Listen bleibt Desktop-Sache. |
 | ETB P1-6 | „Einsatz beenden“ nennt offene Nachrichten nicht | behoben | 46c65ac, 9bbe3fe, d36d287 | Code und Test (offeneNachrichten im Lagebild, Abschlussmaske). |
-| ETB P1-7 | Akteur „Arbeitsplatz“, Handzeichen nur im Satz | offen (Runde 2: nicht behoben) | 57699bb, 5418687, 2. Durchlauf (ungebucht) | Handzeichen je Ereignis (57699bb); Stelle aus der Nutzlast (`stelle`, Funktion, Sichter, LdF) in Tagebuchansicht und Druck statt des Anzeigenamens. Die Präsenz zur Zeit des Ereignisses ist nicht aufbewahrt und fließt nicht ein. Runde 2: nicht behoben: „erledigt“ und „zurückgezogen“ tragen weiter weder Handzeichen noch Fachzeit, das Zurückziehen und „Einsatz beendet“ zeigen „Arbeitsplatz“, die FmZ-Schritte nur „Fm“, beim Aufnehmen steht die Funktion des Absenders als Akteur (R2-ETB P1-1, P2-2). |
+| ETB P1-7 | Akteur „Arbeitsplatz“, Handzeichen nur im Satz | teilweise behoben (Runde 2: nicht behoben, danach teilweise) | 57699bb, 5418687, 2. Durchlauf (ungebucht), ae8c1f3, bb5b36a | Handzeichen je Ereignis (57699bb); Stelle aus der Nutzlast (`stelle`, Funktion, Sichter, LdF) in Tagebuchansicht und Druck statt des Anzeigenamens. Die Präsenz zur Zeit des Ereignisses ist nicht aufbewahrt und fließt nicht ein. Runde 2: nicht behoben: „erledigt“ und „zurückgezogen“ tragen weiter weder Handzeichen noch Fachzeit, das Zurückziehen und „Einsatz beendet“ zeigen „Arbeitsplatz“, die FmZ-Schritte nur „Fm“, beim Aufnehmen steht die Funktion des Absenders als Akteur (R2-ETB P1-1, P2-2). Danach mit ae8c1f3 und bb5b36a: Die Stelle der Sitzung steht in der Nutzlast der Nachrichtenereignisse, die Aufnahme steht unter FmZ (Code und Test, R2-ETB P1-1); „erledigt“ und „zurückgezogen“ ohne Handzeichen und das Zurückziehen als „Arbeitsplatz“ sind nicht belegt behoben. |
 | LdF P1-1 | Station LdF fehlt | behoben | e32c39b, fa7abbb (vor den sieben Commits) | Im Befund „in Arbeit“; Sicht „ldf“ und Laufwegfolgen im Code gesehen, nicht im Einzelnen geprüft. Runde 2: anders gelöst; „Mittel festlegen“ ist ein Vorschlag, den die FmZ ohne Rückfrage umgeht, Funk bleibt stille Vorgabe (R2-LdF P2-1, P2-2); Eingangskarte bei 1320 px über dem Rand (R2-LdF P1-1). |
-| LdF P1-2 | Eingang ohne Nummer läuft zum Sichter, Lücke fällt nicht auf | offen (Runde 2: nicht behoben) | 57699bb, d36d287 | Marke „ohne Nummer“, Zähler und Karte (Code); Rückfrage beim Aufnehmen ohne Nummer nicht belegt. Runde 2: nicht behoben: Ein Eingang ohne Nummer wird ohne Rückfrage aufgenommen und ohne Hinweis weitergegeben, die Karte „Ohne Nummer“ führt nur beförderte Ausgänge (R2-LdF P2-3). |
+| LdF P1-2 | Eingang ohne Nummer läuft zum Sichter, Lücke fällt nicht auf | teilweise behoben (Runde 2: nicht behoben, danach teilweise) | 57699bb, d36d287, bb5b36a | Marke „ohne Nummer“, Zähler und Karte (Code); Rückfrage beim Aufnehmen ohne Nummer nicht belegt. Runde 2: nicht behoben: Ein Eingang ohne Nummer wird ohne Rückfrage aufgenommen und ohne Hinweis weitergegeben, die Karte „Ohne Nummer“ führt nur beförderte Ausgänge (R2-LdF P2-3). Danach mit bb5b36a: Warnung „Eingang ohne Nachweisungsnummer“ beim Aufnehmen, und die Karte führt Eingänge und Ausgänge (Code und Test); die Rückfrage vor dem Aufnehmen ohne Nummer fehlt weiter. |
 | LdF P1-3 | Nachweisung ohne Mittel und Gegenstelle | behoben | d36d287, 5418687 | Code und Test. Auch FM P2-7, ETB P2-6. |
 | LdF P1-4 | Ohne Wartezeit und Zähler keine Beurteilung der Belastung | behoben | 57699bb, d36d287 | Code und Test (Schwelle im Kopf der Warteschlange, Wartezeit, weitere Zahlen im Band). |
 | FM P1-1 | Getippte Funkzeit hängt sich an die Vorbelegung an | behoben | d36d287 | Code und Test (select() beim Fokus). |
@@ -286,9 +286,9 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | LdF P2-6 | Absender nicht in der Warteschlange | behoben | d36d287 | Code (Fernmeldezentrale.tsx, Kommentar „P2-6“). |
 | FM P2-1 | Zeitzone: Funkzeit in Browserzeit gelesen, Gruppe in Berlin | behoben | 2. Durchlauf (ungebucht) | Siehe SGL P3-16; Funkzeit und Datum-Zeit-Gruppe in derselben Zone, Monatskürzel im Kopf wie im Vordruck (groß). |
 | FM P2-2 | Keine Plausibilitätsprüfung der Zeiten | behoben | d36d287 | Code und Test (weiche Warnung bei Zukunft und älter als ein Tag). |
-| FM P2-3 | Abfassungszeit und Quittung mit „jetzt“ vorbelegt | offen (Runde 2: nicht behoben) | – | Kein Treffer. Runde 2: nicht behoben: Im Eingang stehen Abfassungszeit und Quittung weiter auf „jetzt“, nur der Schalter „Vom Papier nachtragen“ leert sie (R2-FM P1-1). Die frühere Angabe „Kein Treffer“ war kein Beleg für die Behebung. |
+| FM P2-3 | Abfassungszeit und Quittung mit „jetzt“ vorbelegt | behoben (Runde 2: erst nicht behoben, dann behoben) | f608e96 | Kein Treffer. Runde 2: nicht behoben: Im Eingang stehen Abfassungszeit und Quittung weiter auf „jetzt“, nur der Schalter „Vom Papier nachtragen“ leert sie (R2-FM P1-1). Die frühere Angabe „Kein Treffer“ war kein Beleg für die Behebung. Danach mit f608e96: Die Abfassungszeit im Eingang ist leer („laut Spruch“), die Quittung der Gegenstelle beim Befördern leer und Pflicht (Code und Test, `Runde2.masken.test.tsx`). |
 | FM P2-4 | Befördern: Feld nennt die Quittung nicht, stille Vorbelegungen | behoben | d36d287 | Code (Beschriftung „Quittung der Gegenstelle“). |
-| FM P2-5 | Weiche Sperre nennt Arbeitsplatz, nicht Person | offen (Runde 2: nicht behoben) | d36d287 | Code und Test (Stelle und Handzeichen im Sperrhinweis). = Sichter P2-4. Runde 2: nicht behoben: Die Befördern-Maske zeigt weiter „wird von Arbeitsplatz bearbeitet“ ohne Stelle und Handzeichen (`Fmzmasken.tsx:297`), nur der Laufzettel nennt die Person; Sichter P2-4 ist damit nur im Laufzettel behoben. |
+| FM P2-5 | Weiche Sperre nennt Arbeitsplatz, nicht Person | behoben (Runde 2: erst nicht behoben, dann behoben) | d36d287, f608e96 | Code und Test (Stelle und Handzeichen im Sperrhinweis). = Sichter P2-4. Runde 2: nicht behoben: Die Befördern-Maske zeigt weiter „wird von Arbeitsplatz bearbeitet“ ohne Stelle und Handzeichen (`Fmzmasken.tsx:297`), nur der Laufzettel nennt die Person; Sichter P2-4 ist damit nur im Laufzettel behoben. Danach mit f608e96: Der Sperrhinweis der Befördern-Maske nennt Name, Stelle und Handzeichen (Code und Test, `Runde2.masken.test.tsx`). |
 | FM P2-6 | Konfliktmeldung zeigt Rohdaten, „Neu laden?“ ohne Knopf | behoben | – | Kein Treffer. |
 | FM P2-7 | Nachweisung ohne Mittel und Gegenstelle, Aufnahme nicht korrigierbar | teilweise behoben | d36d287 | Spalten ergänzt (Code und Test); „Aufnahme ändern“ nicht belegt. |
 | FM P2-8 | Maske fängt den Fokus nicht ein, Fokus nach Schließen verloren | behoben | – | Bekannt offen (Fokusrücksprung); Tabfolge ist neu, Fokusfalle und Rückgabe nicht. |
@@ -327,7 +327,7 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | FM P3-6 | Verbindungsband ohne Hinweis auf Papier-Rückfall | teilweise behoben | 3. Durchlauf (ungebucht) | Code und Test: das Verbindungsband sagt „Notfalls auf Papier weiterführen (Nachrichten: leerer Papier-Vordruck), später nacherfassen.“; die Vorbelegung der Nummer als „unbestätigt“ zu kennzeichnen entfällt, solange die Masken bei fehlender Verbindung gesperrt sind. |
 | FM P3-7 | Hinweiskasten bleibt stehen | behoben | 3. Durchlauf (ungebucht) | Siehe LdF P3-4. |
 | Sichter P3-1 | Quittungszeit beim Öffnen eingefroren | behoben | 3. Durchlauf (ungebucht) | Code und Test: die Quittungszeit läuft mit, solange niemand sie getippt hat, und gilt beim Drücken von „Sichten“ (`quittungszeitpunkt`, Sichteraudit.test.tsx). |
-| Sichter P3-2 | Escape hebt Auswahl und Laufzettel zugleich auf | offen (Runde 2: nicht behoben) | d36d287 | Code und Test. Runde 2: nicht behoben (nur zur Hälfte): Im Laufzettel hält Esc die Auswahl, im Lesen-Dialog schließt Esc zugleich den Dialog und hebt Auswahl samt Laufzettel auf, ohne Rückfrage (R2-Sichter P2-3). |
+| Sichter P3-2 | Escape hebt Auswahl und Laufzettel zugleich auf | behoben (Runde 2: erst nur zur Hälfte, dann behoben) | d36d287, f608e96 | Code und Test. Runde 2: nicht behoben (nur zur Hälfte): Im Laufzettel hält Esc die Auswahl, im Lesen-Dialog schließt Esc zugleich den Dialog und hebt Auswahl samt Laufzettel auf, ohne Rückfrage (R2-Sichter P2-3). Danach mit f608e96: Escape schließt nur das Fenster (Code und Test, `Runde2.blatt.test.tsx`). |
 | Sichter P3-3 | S5 fehlt im Verteiler | bewusst nicht (Lehrunterlage, Vordruck) | Entscheidung 12 (ungebucht) | Konzept §11 Entscheidung 12: S5 bleibt ohne Kästchen, nur Freitext; geprüft mit Tests für Verteilerraster (Verteilerraster.s5.test.tsx) und Vordruck-`verteilerText` (nachricht.test.ts). |
 | Sichter P3-4 | Zählung „n weitere Arbeitsplätze“ läuft auf | behoben | 2. Durchlauf (ungebucht) | Abgemeldete Arbeitsplätze zählen sofort nicht mehr mit (Sichter P1-4); harter Absturz bleibt an der Präsenzfrist. |
 
@@ -335,12 +335,12 @@ Zahl der Befunde je Status nach Runde 2 (Nachprüfung der Reviewer eingerechnet)
 
 ## Was offen bleibt
 
-Stand nach der zweiten Runde: Alle 73 neuen Befunde und die sechs zurückgesetzten Befunde der ersten Runde sind offen; dazu kommen die teilweise behobenen und die vier bewusst nicht gebauten aus Runde 1. Die folgende Reihenfolge ist ein Vorschlag für die vierte Behebungsrunde. Sie ordnet nach der Schwere der Folge im Einsatz und danach nach der Häufung, also danach, wie viele Rollen unabhängig dasselbe gefunden haben, nicht nach Aufwand.
+Stand nach den fünf Behebungs-Commits ae8c1f3, de966e5, bb5b36a, f608e96 und f6fd4c0 und dem Arbeitsstand danach: Von den 73 neuen Befunden der zweiten Runde sind 26 behoben, 5 teilweise behoben und 42 offen (P0: 0 offen; P1: 2 offen, 1 teilweise; P2: 21 offen, 4 teilweise; P3: 19 offen). Alle drei P0 sind behoben. Von den sechs zurückgesetzten Befunden der ersten Runde sind vier wieder behoben und zwei teilweise behoben (Tabelle „Stand je Audit nach Runde 2“). Die folgende Reihenfolge ist ein Vorschlag für die nächste Behebungsrunde: zuerst die verbliebenen P1, dann die P2 nach Häufung, dann die P3. Nichts davon ist im Browser nachgespielt; vor der nächsten Runde der Reviewer lohnt eine Messung der Layoutbefunde (R2-LdF P1-1, R2-SGL P2-4) bei 1320 px, weil dafür nur Struktur und Stylesheet-Regeln in jsdom belegt sind.
 
-Zuerst kommt, was still etwas Falsches tut, ohne dass der Bediener es merkt: die drei P0 des Fachberaters. Das Sichten ist für jede Stelle ohne Rückfrage möglich und nimmt die Nachricht aus der Warteschlange des Sichters (R2-FaBe P0-1); derselbe Vorbehaltshinweis gehört auch an den Papier-Nachtrag (R2-SGL P1-2) und an das Aufnehmen eines Eingangs (R2-FM P3-2), und wo keine Stelle die grüne Kopie hat, sollte „Sichten“ erst nach einem zweiten Klick gehen. Zweitens das Feld „Quittung der Gegenstelle“: Es darf nicht mit der Beförderungszeit gefüllt in den Vordruck laufen, solange niemand quittiert hat; es muss mitlaufen, bis jemand tippt, und der Ausgang braucht einen Stand „befördert, noch nicht quittiert“ (R2-FaBe P0-2, R2-FM P2-6, R2-SGL P3-4). Drittens muss der Verfasser nach dem Aufgeben erfahren, ob die Fernmeldezentrale besetzt ist (R2-FaBe P0-3).
+**Verbliebene P1.** Zwei sind offen, einer ist teilweise behoben, und alle drei treffen den Neuling: die Antwort, die als Funkspruch durch die FmZ läuft, mit getauschter Anschrift, dem Aufnahmemittel als Wunsch und der ganzen Führungsstelle als Absender (R2-FaBe P1-3, auch SGL P3-3); der eigene beförderte Ausgang, der im eigenen Posteingang als „neu, grün: bearbeiten“ zählt und den Zähler als Alarm entwertet (R2-FaBe P1-4); und die Gesprächsnotiz, bei der es zwar einen Tooltip gibt, aber keine sichtbare Zeile, die sagt, dass sie nicht an die FmZ geht, und eine Anschrift, die als „Gesprächspartner“ gemeint ist (R2-FaBe P1-5, teilweise).
 
-Danach die P1 aller Rollen, zuerst die, die ebenfalls still etwas verlieren oder falsch zuordnen. Dazu zählen der Vermerk des ersten Sichters, der bei zwei Sichtungen verschwindet (R2-Sichter P1-2); das blinde „Sichten“ nach „Ich sichte jetzt selbst“, das einen Blitz nur an S2 schickt (R2-FM P1-2); das Tagebuch, das beim Aufnehmen die Funktion des Absenders und bei Kopien nach der Beförderung „Sichter“ als Akteur führt (R2-ETB P1-1, mit R2-LdF P3-2, R2-FaBe P3-5; damit auch der zurückgesetzte Befund ETB P1-7); der Eingang, der ohne Sichter an der Station LdF vorbeiläuft (R2-LdF P1-3); die ETB-Nr., die am Bildschirm nicht zu finden ist (R2-ETB P1-2). Dann die Lücken in der Aufsicht und in der Übergabe: ein Blitz, der beim LdF liegt, ohne Hinweis und ohne Uhr (R2-Sichter P1-1, R2-LdF P1-2), die Karten, die bei 1320 Pixeln über den Rand ragen (R2-LdF P1-1, R2-Sichter P2-4; das ist eine CSS-Frage und schnell erledigt), die Sicht „offen“ für die Übergabe (R2-SGL P1-1, R2-FaBe P1-6, zurückgesetzt SGL P1-7), die Tabfolge der Aufnahme, die Handzeichen, Nr. und Abfassungszeit auslässt und den Papier-Nachtrag ohne Maus unbedienbar macht (R2-FM P1-1, damit auch FM P2-3). Schließlich die P1 des Fachberaters, die ein Stabsneuling sofort trifft: das Vokabular, das nirgends erklärt wird (R2-FaBe P1-2, P1-1 und die P2-Befunde zu Hilfe und Tooltips, die gruppiert sind), die Antwort, die als Funkspruch durch die FmZ läuft (R2-FaBe P1-3, R2-SGL P3-3), die eigenen Ausgänge, die im eigenen Posteingang als „neu“ zählen (R2-FaBe P1-4, R2-SGL P2-4) und die Gesprächsnotiz ohne Erklärung (R2-FaBe P1-5).
+**P2 nach Häufung.** Zuerst, was mehrere Rollen trifft: die Rücknahme, die nach Befördern, Aufnehmen und Aufgeben den falschen Schritt nennt (R2-LdF P2-8, auch FM P3-1, FaBe P2-8; drei Rollen), der Papier-Nachtrag ohne Prüfung von Zeitfolge, Zukunft und Nummer, der die Nummer vorbelegt (R2-SGL P2-1, auch LdF P3-7), der säumige, aber besetzte Sichter, für den die Schwelle bei Blitz wie bei Einfach gilt und der Knopf fehlt (R2-FM P2-5, auch Sichter P2-2), die Nummernlücken, die nur der Ausdruck nennt, samt Rückfrage beim Sprung, Lücken am Bildschirm und der Zahl offener Nachrichten in Tagebuch und Akte (R2-LdF P2-7, R2-ETB P2-2) und der Wortlaut des Stellenvorbehalts, der Rolle und Leser nicht trifft (R2-FaBe P2-7, auch LdF P3-1). Danach die Station LdF (Befördern vor dem Vorschlag ohne Spur im Betriebsbuch, die Abweichung vom Vorschlag, die Sicht ohne Absender und Wartezeit mit der gemischten Schwellenzahl, der Zeitraum der Nachweisungsausgabe; R2-LdF P2-1, P2-2, P2-4, P2-6), dann der Nachweis nach dem Einsatz (Akte mit alten Ständen, Konflikt der Doppelsichtung ohne Nachricht und Wert, Tagebuchzeile ohne Vorrang, Mittel, Gegenstelle und Vermerk, Nachricht und Lagekarte, Handzeichenverzeichnis, die berechnete ETB-Nr.; R2-ETB P2-1, P2-4 bis P2-8), die Einzelbefunde des Fernmelders (Enter speichert einen halben Funkspruch und die Gegenstelle ist keine Pflicht, die einmalige Überschreibung bei zwei Befördern; R2-FM P2-3, P2-7) und des Sachgebietsleiters (Konflikthinweis bei doppelter Nummer; R2-SGL P2-2) sowie die Lese- und Bedienhilfen des Fachberaters (Rückfrage bei weit zurückliegender Abfassungszeit, Ausgangsliste mit gemischtem E und A; R2-FaBe P2-5, P2-9). Die vier teilweise behobenen P2 haben jeweils einen benannten Rest: der Aufnahmevermerk in der Weitergabemaske und die Rückfrage ohne Nummer (R2-LdF P2-3), die Marke der Ersatzsichtung in der Zeile (R2-Sichter P2-1), der Reiter „Eingang“, der nicht der Posteingang ist (R2-FaBe P2-1), und die Umbenennung von „Lesen“ (R2-FaBe P2-4).
 
-Bei den P2 gilt die Häufung. Zuerst, was mehrere Rollen trifft: die Rücknahme, die nach Befördern, Aufnehmen und Aufgeben den falschen Schritt nennt (R2-LdF P2-8, R2-FM P3-1, R2-FaBe P2-8), der Papier-Nachtrag mit Fokus auf dem Schalter und ohne Prüfung von Zeitfolge und Nummer (R2-SGL P2-3, P2-1, R2-FM P2-2, R2-LdF P3-7), der Stau vor dem Sichter bei besetztem, säumigem Sichter und die Sortierung nach Vorrang (R2-FM P2-4, P2-5, R2-Sichter P2-2, P3-7), der Hinweiskasten, der die Seite verschiebt (R2-SGL P2-4, R2-Sichter P3-1), die Nummernlücken, die nur der Ausdruck nennt, samt Rückfrage beim Sprung (R2-LdF P2-7), und der Wortlaut des Stellenvorbehalts (R2-FaBe P2-7, R2-LdF P3-1). Danach die Station LdF als Ganzes (Befördern vor dem Vorschlag ohne Spur und die Abweichung vom Vorschlag, die Weitergabe ohne Prüfung, die Sicht ohne Absender und Wartezeit, der Ausdruck ohne Gegenstelle, der Zeitraum der Nachweisung; R2-LdF P2-1 bis P2-6), dann der Nachweis nach dem Einsatz (Akte mit alten Ständen, offene Nachrichten nur im Dialog, Weitergabe des LdF in der Nachweisung, Konflikt der Doppelsichtung, Tagebuchzeile ohne Vorrang, Anbindung an die Lagekarte, Handzeichenverzeichnis, ETB-Nr. festschreiben; R2-ETB P2-1 bis P2-8), die Sichter-Einzelbefunde (Marke Ersatzsichtung, Lesen-Fenster mit Fokusführung und Escape, Reiterzähler; R2-Sichter P2-1, P2-3, P2-5; damit der zurückgesetzte Befund Sichter P3-2), die Einzelbefunde des Fernmelders (Kürzel für „Eingang aufnehmen“, Enter speichert halben Funkspruch, die einmalige Überschreibung bei zwei Befördern; R2-FM P2-1, P2-3, P2-7) und des Sachgebietsleiters (Konflikthinweis bei doppelter Nummer, „folgt (FmZ)“, vorbelegtes Handzeichen; R2-SGL P2-2, P2-5, P2-6) sowie die übrigen Lese- und Bedienhilfen des Fachberaters (R2-FaBe P2-1 bis P2-6, P2-9). Der Sperrhinweis mit Person in der Befördern-Maske (FM P2-5) gehört zu diesem Block, weil er den Streit zweier Fernmelder um dieselbe Nachricht betrifft, den R2-FM P2-7 beschreibt.
+**P3.** Zuletzt Beschriftungen, Hinweistexte und kleine Layoutfehler. Mehrfach genannt und noch offen sind die Fußleiste, die das Verteilerraster verdeckt (R2-SGL P3-5, R2-Sichter P3-3), und die Sichtungszeile der Nachweisung in schmaler Spalte (R2-LdF P3-6, R2-Sichter P3-4); beide lassen sich gemeinsam erledigen. Behoben sind der Konflikthinweis-Zähler im frischen Einsatz (R2-FM P3-6, R2-Sichter P3-6) und das Handbuch zum Papier-Nachtrag (R2-SGL P3-6, R2-FM P3-4). Der Rest steht in den Einzelaudits: „Löschen“ im Hinweiskasten, der Sofort-Hinweis ohne Ton, die Statuszeile ohne Stellen der weiteren Arbeitsplätze, „Abbrechen“ und „Verwerfen“, das zweite Esc, die Rückfrage hinter der Fußleiste, die Druckkopfzeile „@bos/eeb-format 0.0.0“ und die Befunde zu zurückgezogenen Nachrichten (R2-FaBe P3-1 bis P3-4, R2-SGL P3-1, P3-2, R2-ETB P3-1 bis P3-4, R2-LdF P3-3 bis P3-5, R2-FM P3-3, P3-5, R2-Sichter P3-2, P3-5).
 
-Zuletzt die P3: Beschriftungen, Hinweistexte, kleine Layoutfehler und Handbuchsätze. Mehrfach genannt sind der Konflikthinweis-Zähler im frischen Einsatz (R2-FM P3-6, R2-Sichter P3-6), das fehlende Handbuch zum Papier-Nachtrag (R2-SGL P3-6, R2-FM P3-4), die Fußleiste, die das Verteilerraster verdeckt (R2-SGL P3-5, R2-Sichter P3-3), und die Sichtungszeile der Nachweisung in schmaler Spalte (R2-LdF P3-6, R2-Sichter P3-4); sie lassen sich gemeinsam erledigen. Der Rest steht in den Einzelaudits. Davon unabhängig bleiben die Teilbefunde der ersten Runde offen (LdF P2-3 Marke „Verfasser = Nachweiser“, Sichter P1-3 Empfängerzahl und Vorschlag, FM P2-7 „Aufnahme ändern“, ETB P1-3, P2-1, P2-4, P2-5, P2-7) sowie SGL P2-9, P2-12, P2-13 und Sichter P2-2, P2-3; bewusst nicht gebaut bleiben S5 im Verteiler, ein stabsinterner Weg ohne FmZ, Anlagen an Nachrichten und das PDF der Listen in der Web-Schale. Nicht nachgewiesen sind weiterhin der stille Druck an einen echten Drucker, der Mischbetrieb mehrerer Rechner auf dem Share und der Ton bei Blitz in einem Browser mit Audioausgabe.
+Davon unabhängig bleiben die Teilbefunde der ersten Runde offen (LdF P1-2 ohne Rückfrage beim Aufnehmen, ETB P1-7 für „erledigt“ und „zurückgezogen“ ohne Handzeichen, LdF P2-3 Marke „Verfasser = Nachweiser“, Sichter P1-3 Empfängerzahl und Vorschlag, FM P2-7 „Aufnahme ändern“, ETB P1-3, P2-1, P2-4, P2-5, P2-7) sowie SGL P2-9, P2-12, P2-13 und Sichter P2-2, P2-3; bewusst nicht gebaut bleiben S5 im Verteiler, ein stabsinterner Weg ohne FmZ, Anlagen an Nachrichten und das PDF der Listen in der Web-Schale. Nicht nachgewiesen sind weiterhin der stille Druck an einen echten Drucker, der Mischbetrieb mehrerer Rechner auf dem Share und der Ton bei Blitz in einem Browser mit Audioausgabe.

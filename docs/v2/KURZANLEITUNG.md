@@ -61,6 +61,18 @@ Fernmeldezentrale zum Sichter. Eingegangene Nachrichten stehen im
 Rechner aus, gilt der leere Vordruck aus „Ausgaben → Papier-Vordruck“; die
 Nummer vom Blatt wird beim Nacherfassen übernommen.
 
+* **Strg + N** legt im Blatt Nachrichten eine Nachricht an; in der Sicht
+  **Fernmeldezentrale** öffnet es stattdessen „Eingang aufnehmen“.
+* Die Sicht **Offen** zeigt, was für die eigenen Stellen noch zu tun ist; sie
+  ist die Übergabe an die Ablösung.
+* Beim **Befördern** ist die „Quittung der Gegenstelle“ leer und Pflicht: die
+  Uhrzeit, zu der die Gegenstelle den Empfang quittiert hat, nicht die eigene.
+  Im Ausgang steht bis dahin „noch nicht übermittelt“.
+* Sichten, Eingang aufnehmen und der Papier-Nachtrag sind Sache von Sichter
+  und FmZ. Wer die Stelle nicht hat, liest den Vorbehalt und kann mit
+  **„Trotzdem“** freigeben; das Tagebuch vermerkt es.
+* Jeder Hinweis oben rechts hat ein eigenes **„×“**; „Löschen“ räumt alle.
+
 ## Wo etwas steht, wenn es klemmt
 
 Im Programm: **Nebenblätter → Diagnose.** Dort stehen die Arbeitsplätze mit

@@ -300,10 +300,12 @@ welcher Posteingang zuerst erscheint. Im Meldekopf fragt das Programm nicht.
 **Das Blatt.** Oben stehen fünf Zahlen: neu für meine Stellen, vor der FmZ,
 vor dem Sichter, mit Vorrang offen und länger als die Schwelle in der FmZ;
 die letzten beiden werden ab eins bernsteinfarben. Darunter der Umschalter
-„Posteingang | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“ (mit
-LdF als Station auch „LdF“), der Hauptknopf „Nachricht verfassen“
+„Posteingang | Offen | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“
+(mit LdF als Station auch „LdF“), der Hauptknopf „Nachricht verfassen“
 (Strg+N) und die Suche über Betreff, Inhalt, Absender und Anschrift
-(Strg+F). Jede Zeile trägt links die Farbe ihrer Kopie: grün für den
+(Strg+F). In der Sicht „Fernmeldezentrale“ gehört Strg+N der Aufnahme: Dort
+öffnet es „Eingang aufnehmen“, und dessen Knopf trägt das Kürzel; „Nachricht
+verfassen“ nennt es dort nicht. Jede Zeile trägt links die Farbe ihrer Kopie: grün für den
 Hauptempfänger, blau für Mitleser, rot für S2. Blitz steht rot, Sofort
 bernsteinfarben, und Blitz steht vor Sofort vor einfach. Der Posteingang
 zeigt die Nachrichten, in deren Verteiler eine eigene Stelle steht, mit den
@@ -313,7 +315,23 @@ nennen die Zahl je Zustand, und
 Ausgang zeigt, was dieser Arbeitsplatz oder eine Stelle dieser Sitzung
 verfasst hat, mit dem Stand auf dem Weg; maßgeblich ist die Stelle im Feld
 „Funktion“ der Nachricht, nicht der Text im Absender. Wer beim Schichtwechsel
-die Stelle S4 übernimmt, sieht damit auch den Ausgang des Vorgängers.
+die Stelle S4 übernimmt, sieht damit auch den Ausgang des Vorgängers. Der
+Stand steht in Worten da, mit dem, was die FmZ getan hat: „angenommen (FmZ)
+1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“, bei einer Nachricht,
+die die FmZ noch nicht befördert hat, „… · noch nicht übermittelt“. Die
+Annahme ist die der eigenen FmZ, nicht die des Empfängers; erst die
+Quittung der Gegenstelle sagt, dass die Nachricht angekommen ist. Dieselben
+Worte stehen in der aufgeschlagenen Nachricht und in der Vorschau; auf dem
+gedruckten Vordruck steht die Zeile am Fuß, weil das Feld „Ausgang“ der
+Vorlage keine eigene Beschriftung hat und ohne Beförderung die Annahme zeigt.
+
+**Offen — die Sicht für die Übergabe.** Die Sicht „Offen“ (der Chip „offen“
+im Posteingang schaltet sie ein) zeigt, was für die eigenen Stellen noch zu
+tun ist: die Kopien für die eigenen Stellen, die noch nicht erledigt sind,
+die eigenen Ausgänge vor der Beförderung und, wer eine Station hat, deren
+Warteschlange. Wer abgelöst wird, geht sie mit dem Nachfolger durch; der
+Nachfolger braucht dafür das Tagebuch nicht. Die Einstiegszeile des Blatts
+sagt das auch.
 
 **Eine Nachricht verfassen.** Die Maske ist der Vordruck. Absender, Zeichen
 und Funktion kommen aus Stelle und Handzeichen, die Abfassungszeit steht als
@@ -360,7 +378,12 @@ Beförderungsvermerk mit Mittel und Gegenstelle (vorbelegt aus dem
 Übermittlungswunsch und der Anschrift), „Nachweisen“ trägt die Nachricht in
 die Nachweisung ein. Uhrzeit und Handzeichen sind mit „jetzt“ und dem eigenen
 Handzeichen vorbelegt und lassen sich ändern, damit ein Papiervordruck mit
-den Zeiten nacherfasst werden kann, die auf ihm stehen. Der obere Teil des
+den Zeiten nacherfasst werden kann, die auf ihm stehen. Beim Befördern ist
+die **Quittung der Gegenstelle** die Ausnahme: Das Feld ist leer und Pflicht,
+„Befördern“ geht erst, wenn die Uhrzeit eingetragen ist, zu der die
+Gegenstelle den Empfang quittiert hat. Die Zeit des Öffnens der Maske wäre
+nur die eigene Zeit und würde vom Absender als Bestätigung gelesen; Strg+D
+setzt „jetzt“, wenn die Gegenstelle gerade quittiert hat. Der obere Teil des
 Vordrucks (Felder 1 bis 6) ist den Fernmeldern vorbehalten: Wer ohne die Stelle
 FmZ annimmt, befördert oder nachweist (beim Vorschlag und bei der Weitergabe
 an den Sichter ohne die Stelle LdF), sieht „Dieser Teil ist der
@@ -379,7 +402,7 @@ Eintreffen, nicht erst ab der Annahme —, wird ihre Zeile bernsteinfarben und
 nennt die Minuten seit dem Eintreffen; nach der Beförderung
 verlässt sie die Warteschlange, der Verfasser sieht im Ausgang Zeit und
 Handzeichen, und die Kopien gehen an S2 und die Verfasserstelle (siehe
-unten). Rechts steht der Hauptknopf „Eingang aufnehmen“: Er öffnet den
+unten). Rechts steht der Hauptknopf „Eingang aufnehmen“ (Strg+N in dieser Sicht): Er öffnet den
 Vordruck als Eingang mit freigeschaltetem oberem Teil (Mittel, Zeit und
 Handzeichen der Aufnahme, Gegenstelle, Nummer). Die Anschrift ist mit dem
 Namen der eigenen Führungsstelle aus den Stammdaten vorbelegt, der Absender
@@ -396,6 +419,15 @@ Selbst befördern über die Sicht Fernmeldezentrale.“ Dann ruft man die FmZ
 an oder befördert selbst (mit „Trotzdem“). Eine Gesprächsnotiz „An den
 Sichter“ ohne Sichter sagt entsprechend „Sichter nicht besetzt: Die
 Gesprächsnotiz wartet.“
+
+**Hinweise in der Leiste.** Meldungen des Programms stehen im Hinweiskasten
+oben rechts über dem Blatt; er überlagert es und schiebt es nicht nach unten,
+damit niemand die nächste Zeile trifft, wenn er gerade auf eine zielt. Jede
+Zeile trägt Uhrzeit und ein eigenes „×“, mit dem man genau diesen Hinweis
+schließt; „Löschen“ räumt alle auf einmal. Auskünfte verlöschen nach
+20 Sekunden von selbst, Warnungen und Fehler bleiben, bis jemand sie
+schließt. Der Hinweis zum Stellenvorbehalt („Trotzdem“, siehe oben) ist keine
+Zeile des Kastens, sondern steht in der Maske, in der man gerade arbeitet.
 
 **Nachweisung.** Die Sicht „Nachweisung“ zeigt alle Nachrichten nach Nummer,
 Eingang und Ausgang mit einem gemeinsamen Zähler, die ohne Nummer zuletzt,
