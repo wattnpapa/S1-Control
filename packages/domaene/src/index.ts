@@ -328,6 +328,22 @@ export {
 
 // Die Datum-Zeit-Gruppe des Nachrichtenvordrucks („171045nov26"), Europe/Berlin.
 export { DTG_MONATE, datumZeitGruppe, datumZeitGruppeLesen } from "./zeit/datumZeitGruppe.js";
+// Die eine Anzeigezone (Audits Nachrichten SGL P3-16, ETB P2-1, LdF P2-4, FM P2-1).
+export {
+  ANZEIGEZONE,
+  anzeigezone,
+  datumText,
+  rechnerzone,
+  rechnerzoneHinweis,
+  rechnerzoneWeichtAb,
+  standText,
+  uhrzeitText,
+  uhrzeitVierstellig,
+  versatzMinuten as anzeigezoneVersatzMinuten,
+  wandzeit as anzeigezoneWandzeit,
+  zeitpunktAusWandzeit,
+  type Wandzeit,
+} from "./zeit/anzeigezone.js";
 
 // Der Minimalfold als Mengenfunktion mit Rebase (Auflage 4).
 export {

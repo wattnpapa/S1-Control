@@ -37,7 +37,8 @@ import type {
   Zeitvermerk,
 } from "../zustand-nachricht.js";
 import type { Feld, Zustand } from "../zustand.js";
-import { eintreffenMs, fmzVermerkTextAus, laufstandAus, ohneNummerAus, wartetSeitAus, type Laufstand } from "./nachrichtenstand.js";
+import { fmzVermerkTextAus, laufstandAus, ohneNummerAus, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
+import { wartegrundlage, wartezeitMinuten, wartezeitVorSichterMinuten, zurueckziehungAus, type Zurueckziehung } from "./nachrichtenzusatz.js";
 
 /** Eine Stelle des Verteilers mit ihrer Kopiefarbe und den beiden Marken. */
 export interface Nachrichtenmarke {
@@ -125,6 +126,25 @@ export interface Nachrichtenzeile {
   readonly fmzVermerkText?: string;
   /** Additiv: der Arbeitsplatz, dessen Sichtung gilt — für „meine Sichtungen" (Sichter-Audit). */
   readonly gesichtetVon?: string;
+  /**
+   * Additiv (zweiter Durchlauf): seit wann der Ausgang bei der FmZ liegt (ISO).
+   * Die Spalte „Wartet“ rechnet daraus mit `wartezeitMinuten(zeile, jetzt)`
+   * gegen dieselbe Zeit wie das Band, statt eine beim Abruf eingefrorene Zahl
+   * zu zeigen.
+   */
+  readonly eintreffenBeiFmz?: string;
+  /** Additiv (Sichter P1-4): seit wann der Eingang vor dem Sichter liegt (ISO). */
+  readonly vorSichterSeit?: string;
+  /** Additiv (Sichter P1-4): Minuten vor dem Sichter, solange ungesichtet; nur mit `jetzt`. */
+  readonly wartetSeitSichter?: number;
+  /** Additiv (ETB P1-3, P2-7): Zeit und Grund des Zurückziehens — für Ansicht, Nachweisung und Stempel im Vordruck. */
+  readonly zurueckgezogenMit?: Zurueckziehung;
+  /**
+   * Additiv (ETB P1-2): die laufende Nummer der Tagebuchzeile
+   * „aufgegeben/aufgenommen“, wie im gedruckten Tagebuch. Setzt der Worker
+   * (`mitEtbNummern`), denn nur er kennt die Ereignisse; Ring 2 lässt sie weg.
+   */
+  readonly etbNummer?: number;
 }
 
 /** Was jede Zeile über den Einsatz wissen muss; einmal je Anfrage gebaut. */
@@ -190,14 +210,13 @@ function vermerkeDer(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined
 
 /**
  * Über der Schwelle: ein Ausgang vor der FmZ oder beim LdF, unbefördert,
- * länger als die Schwelle **seit dem Eintreffen** (LdF P0-2: vorher zählte
- * nur, was angenommen war — ein Blitz im Fach blieb unbemerkt).
+ * mindestens die Schwelle lang **seit dem Eintreffen** (LdF P0-2: vorher zählte
+ * nur, was angenommen war — ein Blitz im Fach blieb unbemerkt). Gerechnet in
+ * ganzen Minuten über `wartezeitMinuten`, damit Spalte und Band nie
+ * auseinanderlaufen (zweiter Durchlauf: „Wartet 0 min“ neben „über der Schwelle“).
  */
-function ueberSchwelle(n: NachrichtZustand, annahme: Zeitvermerk | undefined, kontext: Zeilenkontext): boolean {
-  if (kontext.jetzt === undefined || text(n.richtung) !== "AUSGANG" || n.gespraechsnotiz?.wert === true) return false;
-  if (n.laufzustand !== "VOR_FMZ" && n.laufzustand !== "VOR_LDF") return false;
-  const seit = Date.parse(kontext.jetzt) - eintreffenMs(n.angelegtMit.millisekunden, annahme);
-  return Number.isFinite(seit) && seit > kontext.schwelleMinuten * 60000;
+function ueberSchwelle(grundlage: Wartegrundlage, kontext: Zeilenkontext): boolean {
+  return ueberWarteschwelle(wartezeitMinuten(grundlage, kontext.jetzt), kontext.schwelleMinuten);
 }
 
 /** Die additiven Felder des Standes (SGL P0-1, LdF P0-2); eigene Funktion wegen der Länge des Zeilenbaus. */
@@ -211,12 +230,14 @@ function standfelder(
     readonly sichtung: Sichtungsvermerk | undefined;
   },
   kontext: Zeilenkontext,
-): Pick<Nachrichtenzeile, "laufstand" | "ohneNummer" | "wartetSeit" | "fmzVermerkText" | "gesichtetVon"> {
+): Pick<Nachrichtenzeile, "laufstand" | "ohneNummer" | "wartetSeit" | "fmzVermerkText" | "gesichtetVon" | "eintreffenBeiFmz" | "vorSichterSeit" | "wartetSeitSichter"> {
   const richtung = text(n.richtung) ?? "";
   const gespraechsnotiz = n.gespraechsnotiz?.wert === true;
   const nummer = vermerke.nachweis?.nummer;
   const laufstand = laufstandAus({ laufzustand: n.laufzustand, richtung, gespraechsnotiz, nummer, annahme: vermerke.annahme, sichtung: vermerke.sichtung });
-  const wartetSeit = wartetSeitAus({ richtung, gespraechsnotiz, laufzustand: n.laufzustand }, eintreffenMs(n.angelegtMit.millisekunden, vermerke.annahme), kontext.jetzt);
+  const grundlage = wartegrundlage(n, vermerke.annahme);
+  const wartetSeit = wartezeitMinuten(grundlage, kontext.jetzt);
+  const wartetSeitSichter = wartezeitVorSichterMinuten(grundlage, kontext.jetzt);
   const fmzVermerkText = fmzVermerkTextAus(vermerke.aufnahme, vermerke.annahme, vermerke.befoerderung);
   const gesichtetVon = vermerke.sichtung === undefined ? undefined : n.sichtung?.hlc.clientId;
   return {
@@ -225,6 +246,9 @@ function standfelder(
     ...(wartetSeit === undefined ? {} : { wartetSeit }),
     ...(fmzVermerkText === undefined ? {} : { fmzVermerkText }),
     ...(gesichtetVon === undefined ? {} : { gesichtetVon }),
+    ...(grundlage.eintreffenBeiFmz === undefined ? {} : { eintreffenBeiFmz: grundlage.eintreffenBeiFmz }),
+    ...(grundlage.vorSichterSeit === undefined ? {} : { vorSichterSeit: grundlage.vorSichterSeit }),
+    ...(wartetSeitSichter === undefined ? {} : { wartetSeitSichter }),
   };
 }
 
@@ -263,6 +287,12 @@ function zweiteSichtungDer(n: NachrichtZustand): Sichtungsvermerk | undefined {
   if (wert === undefined) return undefined;
   const ergebnis = zSichtung.safeParse(wert);
   return ergebnis.success ? ergebnis.data : undefined;
+}
+
+/** Zeit und Grund des Zurückziehens, nur wenn zurückgezogen (ETB P1-3). */
+function zurueckgezogenFeld(n: NachrichtZustand): Pick<Nachrichtenzeile, "zurueckgezogenMit"> {
+  const mit = zurueckziehungAus(n);
+  return mit === undefined ? {} : { zurueckgezogenMit: mit };
 }
 
 /** Baut die Zeile einer Nachricht. */
@@ -308,8 +338,9 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
     angelegtMit: n.angelegtMit,
     clientId: clientDer(n.angelegtDurch),
     // Auch die Zeit beim LdF zählt, und sie läuft ab dem Eintreffen (LdF P0-2).
-    fmzUeberSchwelle: ueberSchwelle(n, annahme, kontext),
+    fmzUeberSchwelle: ueberSchwelle(wartegrundlage(n, annahme), kontext),
     ...standfelder(n, { aufnahme, annahme, befoerderung, nachweis, sichtung }, kontext),
+    ...zurueckgezogenFeld(n),
   };
 }
 

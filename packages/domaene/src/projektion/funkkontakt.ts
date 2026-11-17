@@ -22,6 +22,7 @@
  * Minutenuhr ({@link kontaktmarke}).
  */
 
+import { uhrzeitVierstellig } from "../zeit/anzeigezone.js";
 import { FUNK_KONTAKT_SCHWELLE_VORBELEGUNG, type Id, type Zeitpunkt } from "../werte.js";
 import type { EinheitZustand, Feld, Funkprobenwert, Zustand } from "../zustand.js";
 import type { Markenton } from "./abloesung.js";
@@ -159,12 +160,9 @@ export function kontaktstand(zustand: Zustand, einheit: EinheitZustand): Kontakt
 // Schreibweisen
 // ---------------------------------------------------------------------------
 
-/** „1431" — die Uhrzeit der Ortszeit, wie sie der Sprechfunker sagt. */
+/** „1431" — die Uhrzeit in der Anzeigezone (SGL P3-16, FM P2-1), wie sie der Sprechfunker sagt. */
 export function uhrzeitKurz(zeitpunkt: Zeitpunkt): string {
-  const zeit = new Date(zeitpunkt);
-  if (Number.isNaN(zeit.getTime())) return "—";
-  const zwei = (n: number): string => String(n).padStart(2, "0");
-  return `${zwei(zeit.getHours())}${zwei(zeit.getMinutes())}`;
+  return uhrzeitVierstellig(zeitpunkt) || "—";
 }
 
 /** „1 h 53 min", „12 min" — das Alter eines Kontakts, abgerundet auf die Minute. */

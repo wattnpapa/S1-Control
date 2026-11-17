@@ -19,6 +19,7 @@
  * sichtbar bleiben statt leer.
  */
 
+import { datumText, uhrzeitText } from "./zeit/anzeigezone.js";
 import type { Abschnittstyp, EinheitStatus, Organisation, Schicht, TaktischeEbene } from "./ereignis.js";
 import type { Vorlagenkatalog } from "./vorlagen/katalog.js";
 
@@ -152,16 +153,19 @@ export function hierarchieArtTitel(wert: string): string {
 }
 
 /**
- * Ein Zeitpunkt (ISO 8601) als „TT.MM.JJJJ HH:MM“ in der Ortszeit des Rechners —
- * die Schreibweise der Excel-Spalten „Dat. / Zeit“. Was kein Zeitpunkt ist,
- * bleibt, wie es ist; leer bleibt leer.
+ * Ein Zeitpunkt (ISO 8601) als „TT.MM.JJJJ HH:MM“ in der Anzeigezone
+ * Europe/Berlin — die Schreibweise der Excel-Spalten „Dat. / Zeit“. Was kein
+ * Zeitpunkt ist, bleibt, wie es ist; leer bleibt leer.
+ *
+ * Nicht mehr in der Ortszeit des Rechners (Audits Nachrichten SGL P3-16,
+ * ETB P2-1, LdF P2-4, FM P2-1): Die Datum-Zeit-Gruppe stand schon in Berliner
+ * Zeit, und zwei Uhren nebeneinander auf einem falsch eingestellten Notebook
+ * sind schlimmer als eine.
  */
 export function zeitpunktText(wert: string | null | undefined): string {
   if (wert === null || wert === undefined || wert === "") return "";
-  const zeit = new Date(wert);
-  if (Number.isNaN(zeit.getTime())) return wert;
-  const zwei = (n: number): string => String(n).padStart(2, "0");
-  return `${zwei(zeit.getDate())}.${zwei(zeit.getMonth() + 1)}.${String(zeit.getFullYear())} ${zwei(zeit.getHours())}:${zwei(zeit.getMinutes())}`;
+  const datum = datumText(wert);
+  return datum === "" ? wert : `${datum} ${uhrzeitText(wert)}`;
 }
 
 function titel<K extends string>(liste: Readonly<Record<K, string>>, wert: string): string {

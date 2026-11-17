@@ -286,6 +286,8 @@ export interface Tagebuchzeile {
   readonly berichtigung?: boolean;
   /** Additiv (ETB P0-3, P1-7): das Handzeichen, das das Ereignis trägt; fehlt, wo es keines kennt. */
   readonly handzeichen?: string;
+  /** Additiv (ETB P1-7): die Stelle, die das Ereignis nennt; fehlt, wo es keine nennt. Anzeige über `akteurText`. */
+  readonly stelle?: string;
 }
 
 function alsSatzwert(wert: unknown): string {

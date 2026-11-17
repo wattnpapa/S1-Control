@@ -23,7 +23,7 @@ import type { EingehendesEreignis } from "../fold.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "../kanonisch.js";
 import type { Id } from "../werte.js";
 import type { Zustand } from "../zustand.js";
-import { NACHRICHTENARTEN, nummernkurz, type Zeitstand } from "./tagebuch-nachrichten.js";
+import { GRUND_ERSATZSICHTER, NACHRICHTENARTEN, nummernkurz, stellenWort, type Zeitstand } from "./tagebuch-nachrichten.js";
 
 function objekt(wert: unknown): Record<string, unknown> | undefined {
   return typeof wert === "object" && wert !== null && !Array.isArray(wert) ? (wert as Record<string, unknown>) : undefined;
@@ -96,6 +96,34 @@ export function handzeichenDer(ereignis: EingehendesEreignis): string | undefine
   );
 }
 
+/**
+ * Die Stelle, die das Ereignis selbst nennt (ETB P1-7): `stelle` in der
+ * Nutzlast (Kenntnis, Erledigung), die Funktion der Abfassung (Feld 15), und
+ * bei Arten, die nur eine Station schreibt, diese Station — Sichtung (nicht
+ * die Ersatzsichtung, die die FmZ schreibt) und Weitergabe/Vorschlag des LdF.
+ * Die Präsenz zur Zeit des Ereignisses ist nicht aufbewahrt; ohne Angabe im
+ * Ereignis fehlt die Stelle, statt geraten zu werden.
+ */
+export function stelleDer(ereignis: EingehendesEreignis): string | undefined {
+  if (!NACHRICHTENARTEN.has(ereignis.typ)) return undefined;
+  const nutzlast = objekt(ereignis.nutzlast);
+  const genannt = text(nutzlast?.["stelle"]) ?? (ereignis.typ === "NachrichtVerfasst" ? text(nutzlast?.["funktion"]) : undefined);
+  if (genannt !== undefined) return genannt;
+  if (ereignis.typ === "NachrichtGesichtet" && ereignis.grund !== GRUND_ERSATZSICHTER && objekt(ereignis.neu) !== undefined) return "SICHTER";
+  if (ereignis.typ === "NachrichtWeitergegeben" || ereignis.typ === "NachrichtUebermittlungVorgeschlagen") return "LDF";
+  return undefined;
+}
+
+/**
+ * Der Akteur einer Tagebuchzeile für Bildschirm und Druck (ETB P1-7):
+ * Stelle und Handzeichen, wo das Ereignis sie trägt („S4 · Ru“), sonst der
+ * Anzeigename des Arbeitsplatzes aus dem Rahmen.
+ */
+export function akteurText(zeile: { readonly akteur: string; readonly stelle?: string | undefined; readonly handzeichen?: string | undefined }): string {
+  const teile = [zeile.stelle === undefined ? "" : stellenWort(zeile.stelle), zeile.handzeichen ?? ""].filter((t) => t !== "");
+  return teile.length === 0 ? zeile.akteur : teile.join(" · ");
+}
+
 interface Verlaufsstand {
   nummer: number | undefined;
   gesichtet: boolean;
@@ -134,6 +162,8 @@ export interface Nachrichtenzeilenfelder {
   readonly nachrichtNummer?: string;
   readonly berichtigung?: boolean;
   readonly handzeichen?: string;
+  /** Additiv (ETB P1-7): die Stelle, die das Ereignis nennt (`stelleDer`). */
+  readonly stelle?: string;
 }
 
 /** Die Felder für eine Zeile; die Nummer zur Zeit des Ereignisses, wo der Verlauf sie kennt. */
@@ -143,8 +173,9 @@ export function nachrichtenzeilenfelder(
   zeitstand: Zeitstand | undefined,
 ): Nachrichtenzeilenfelder {
   const handzeichen = handzeichenDer(ereignis);
+  const stelle = stelleDer(ereignis);
   const nachrichtId = nachrichtIdDer(ereignis);
-  const ergebnis = { ...(handzeichen === undefined ? {} : { handzeichen }) };
+  const ergebnis = { ...(handzeichen === undefined ? {} : { handzeichen }), ...(stelle === undefined ? {} : { stelle }) };
   if (nachrichtId === undefined) return ergebnis;
   const nachricht = zustand.nachrichten?.[nachrichtId];
   const heute = objekt(nachricht?.nachweis?.wert)?.["nummer"];

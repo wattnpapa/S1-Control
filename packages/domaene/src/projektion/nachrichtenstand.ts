@@ -136,18 +136,70 @@ export function eintreffenMs(angelegtMs: number, annahme: Zeitvermerk | undefine
 }
 
 /**
+ * Was die Wartezeit braucht. Die Zeile trägt es (`eintreffenBeiFmz`,
+ * `vorSichterSeit`), der Zustand liefert es über `wartegrundlage` in
+ * `nachrichtenzeile.ts` — eine Rechnung für Spalte und Band.
+ */
+export interface Wartegrundlage {
+  readonly richtung: string;
+  readonly gespraechsnotiz: boolean;
+  readonly laufzustand: Laufzustand;
+  /** ISO: seit wann der Ausgang bei der FmZ liegt (siehe {@link eintreffenMs}). */
+  readonly eintreffenBeiFmz?: string | undefined;
+  /** ISO: seit wann der Eingang vor dem Sichter liegt (Aufnahme oder Weitergabe des LdF). */
+  readonly vorSichterSeit?: string | undefined;
+}
+
+/** Ganze Minuten von `seit` bis `jetzt`, nie negativ; `undefined`, wenn eines fehlt. */
+function minutenZwischen(seit: string | undefined, jetzt: string | number | undefined): number | undefined {
+  if (seit === undefined || jetzt === undefined) return undefined;
+  const dauer = (typeof jetzt === "number" ? jetzt : Date.parse(jetzt)) - Date.parse(seit);
+  return Number.isFinite(dauer) ? Math.max(0, Math.floor(dauer / 60000)) : undefined;
+}
+
+/**
  * Die Wartezeit eines Ausgangs bei der FmZ in ganzen Minuten — nur, solange
- * er nicht befördert ist, und nur mit `jetzt` (LdF P0-2).
+ * er nicht befördert ist (LdF P0-2).
+ *
+ * **Die eine Rechnung für Spalte „Wartet“ und Band** (zweiter Durchlauf der
+ * Audits): Die Spalte zeigte 0 Minuten, während das Band dieselbe Nachricht
+ * über der Schwelle zählte. Ursache: Die Zeile trug eine beim Abruf
+ * gerechnete Minutenzahl, und das Blatt holt seine Zeilen nur neu, wenn sich
+ * der Lagezeiger bewegt — die Zahl blieb bei 0 stehen, während das Lagebild
+ * jede Minute gegen die Uhr des Workers neu zählte (dazu noch auf die Minute
+ * abgerundet). Seitdem trägt die Zeile den Zeitpunkt des Eintreffens, und
+ * Spalte wie Band rechnen mit dieser Funktion gegen dieselbe Zeit
+ * (`Nachrichtenlage.gerechnetUm`).
+ */
+export function wartezeitAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
+  if (grundlage.richtung !== "AUSGANG" || grundlage.gespraechsnotiz) return undefined;
+  if (grundlage.laufzustand !== "VOR_FMZ" && grundlage.laufzustand !== "VOR_LDF") return undefined;
+  return minutenZwischen(grundlage.eintreffenBeiFmz, jetzt);
+}
+
+/** Die Wartezeit eines Eingangs vor dem Sichter in ganzen Minuten (Sichter P1-4); sonst `undefined`. */
+export function vorSichterAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
+  if (grundlage.richtung !== "EINGANG" || grundlage.laufzustand !== "VOR_SICHTER") return undefined;
+  return minutenZwischen(grundlage.vorSichterSeit, jetzt);
+}
+
+/** Über der Schwelle: mindestens so viele ganze Minuten, wie die Schwelle nennt. */
+export function ueberWarteschwelle(minuten: number | undefined, schwelleMinuten: number): boolean {
+  return minuten !== undefined && minuten >= schwelleMinuten;
+}
+
+/**
+ * Die Wartezeit eines Ausgangs bei der FmZ in ganzen Minuten — nur, solange
+ * er nicht befördert ist, und nur mit `jetzt` (LdF P0-2). Bestand; rechnet
+ * über {@link wartezeitAusGrundlage}.
  */
 export function wartetSeitAus(
   angaben: { readonly richtung: string; readonly gespraechsnotiz: boolean; readonly laufzustand: Laufzustand },
   seitMs: number,
   jetzt: string | undefined,
 ): number | undefined {
-  if (jetzt === undefined || angaben.richtung !== "AUSGANG" || angaben.gespraechsnotiz) return undefined;
-  if (angaben.laufzustand !== "VOR_FMZ" && angaben.laufzustand !== "VOR_LDF") return undefined;
-  const dauer = Date.parse(jetzt) - seitMs;
-  return Number.isFinite(dauer) ? Math.max(0, Math.floor(dauer / 60000)) : undefined;
+  const eintreffenBeiFmz = Number.isFinite(seitMs) ? new Date(seitMs).toISOString() : undefined;
+  return wartezeitAusGrundlage({ ...angaben, eintreffenBeiFmz }, jetzt);
 }
 
 /** Stand und Marke einer Zeile — gesetzt aus der Projektion, sonst nachgerechnet. */

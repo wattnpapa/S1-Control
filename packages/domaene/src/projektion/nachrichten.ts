@@ -24,6 +24,7 @@ import {
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
 import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
+import { ueberWarteschwelle } from "./nachrichtenstand.js";
 
 /**
  * Die Sichten des Umschalters (§6); „ldf" additiv (2026-11-17): Ausgänge vor
@@ -84,6 +85,18 @@ export interface Nachrichtenlage {
   readonly vorLdf?: number;
   /** Additiv: fehlende Nummern zwischen 1 und der höchsten (LdF P2-2, ETB P2-2). */
   readonly nummernluecken?: readonly number[];
+  /**
+   * Additiv (Sichter P1-4): Eingänge, die mindestens die Schwelle der FmZ lang
+   * vor dem Sichter liegen — der Stau, der ohne besetzten Sichter niemandem
+   * auffiel. Nur mit `jetzt`.
+   */
+  readonly vorSichterUeberSchwelle?: number;
+  /**
+   * Additiv (zweiter Durchlauf, Wartezeit): die Zeit, gegen die die Zahlen
+   * gerechnet sind (ISO). Die Spalte „Wartet“ rechnet mit
+   * `wartezeitMinuten(zeile, gerechnetUm)` gegen dieselbe Zeit.
+   */
+  readonly gerechnetUm?: string;
 }
 
 function eigeneMarken(zeile: Nachrichtenzeile, stellen: readonly string[]): Nachrichtenzeile["verteiler"] {
@@ -233,7 +246,9 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
   };
   // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
   if (zustand.einsatz?.ldfStation?.wert === true) lage.vorLdf = 0;
-  const zeilen = alleNachrichtenzeilen(zustand, zeilenkontext(zustand, jetzt));
+  const kontext = zeilenkontext(zustand, jetzt);
+  const schwelle = kontext.schwelleMinuten;
+  const zeilen = alleNachrichtenzeilen(zustand, kontext);
   for (const zeile of zeilen) {
     if (zeile.zurueckgezogen) continue;
     if (posteingangsstand(zeile, stellen) === "NEU") lage.neuFuerStellen += 1;
@@ -242,6 +257,11 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     if (zeile.laufzustand === "VOR_LDF" && lage.vorLdf !== undefined) lage.vorLdf += 1;
     if (zeile.vorrangstufe < 2 && offenFuerStellen(zeile, stellen, umfeld)) lage.mitVorrangOffen += 1;
     if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
+    if (jetzt !== undefined && ueberWarteschwelle(zeile.wartetSeitSichter, schwelle)) lage.vorSichterUeberSchwelle = (lage.vorSichterUeberSchwelle ?? 0) + 1;
+  }
+  if (jetzt !== undefined) {
+    lage.vorSichterUeberSchwelle ??= 0;
+    lage.gerechnetUm = jetzt;
   }
   const luecken = nummernluecken(zeilen);
   if (luecken.length > 0) lage.nummernluecken = luecken;

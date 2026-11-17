@@ -8,6 +8,7 @@
  * Millisekunden der HLC; die Funkzeiten unten sind auf diesen Morgen gelegt.
  */
 
+import { zeitpunktAusWandzeit } from "../zeit/anzeigezone.js";
 import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../fold.js";
@@ -28,7 +29,8 @@ function h(client = "a"): ReturnType<typeof hlc> {
  * Eine Funkzeit am Einsatzmorgen in der Ortszeit des Rechners — „1250" in der
  * Marke ist Ortszeit. Die Wanduhr der Anlagen liegt davor.
  */
-const UHR = (hhmm: string): string => new Date(2026, 8, 8, Number(hhmm.slice(0, 2)), Number(hhmm.slice(2))).toISOString();
+// Die Uhrzeit in der Anzeigezone (SGL P3-16): „1250“ heißt 12:50 in Berlin, gleich wie der Rechner steht.
+const UHR = (hhmm: string): string => zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 8, stunde: Number(hhmm.slice(0, 2)), minute: Number(hhmm.slice(2)) }) ?? "";
 
 /** Eine Einheit als `[Kennung, Status]`; ohne Status im Einsatz. */
 type Einheitangabe = readonly [string, string?];

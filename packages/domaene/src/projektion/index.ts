@@ -278,7 +278,22 @@ export {
 } from "./nachrichten.js";
 export { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 // Additiv (Audits 2026-11-17): Stand der Listen, offene Nachrichten, Nummernlücken
-export { LAUFSTAENDE, fmzVermerkTextAus, laufstandWort, standDerZeile, type Laufstand } from "./nachrichtenstand.js";
+export { LAUFSTAENDE, fmzVermerkTextAus, laufstandWort, standDerZeile, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
+// Additiv (zweiter Durchlauf): Wartezeit aus einer Quelle, Zurückziehen, Mittel und Zeitraum der Nachweisung, ETB-Nummer
+export {
+  etbNummern,
+  mitTagebuchbezug,
+  nachweisungImZeitraum,
+  nachweisungsmittel,
+  nachweisungszeit,
+  nachweisungszeitraum,
+  tagebuchbezug,
+  wartegrundlage,
+  wartezeitMinuten,
+  wartezeitVorSichterMinuten,
+  type Tagebuchbezug,
+  type Zurueckziehung,
+} from "./nachrichtenzusatz.js";
 export {
   nummernluecken,
   nummernlueckenText,
@@ -297,3 +312,5 @@ export {
   type Vorrangstufe,
 } from "./nachrichtenzeile.js";
 export { GRUND_ERSATZSICHTER, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
+// Additiv (ETB P1-7): Stelle und Handzeichen statt „Arbeitsplatz“ in der Spalte Akteur.
+export { akteurText, stelleDer } from "./tagebuch-nachrichtenbezug.js";

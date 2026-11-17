@@ -187,7 +187,8 @@ describe("Nummernvorbelegung und Zahlen", () => {
     const z = zustand(lage());
     const luecken = Array.from({ length: 25 }, (_, i) => i + 1);
     // Mit Vorrang offen je Stelle (SGL P1-7): E 27 (Sofort) für S2 und S4; der Blitz vor dem Sichter nur für den Sichter.
-    expect(nachrichtenlage(z, ["S2"], um(24))).toEqual({ neuFuerStellen: 2, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 1, ueberSchwelle: 1, nummernluecken: luecken });
+    // Mit `jetzt` dazu der Stau vor dem Sichter (Sichter P1-4) und die Rechenzeit (zweiter Durchlauf).
+    expect(nachrichtenlage(z, ["S2"], um(24))).toEqual({ neuFuerStellen: 2, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 1, ueberSchwelle: 1, nummernluecken: luecken, vorSichterUeberSchwelle: 2, gerechnetUm: um(24) });
     expect(nachrichtenlage(z, ["S4"])).toEqual({ neuFuerStellen: 0, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 1, ueberSchwelle: 0, nummernluecken: luecken });
   });
 });
