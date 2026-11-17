@@ -23,12 +23,12 @@ Das ETB-Audit nennt im Kopf vier P3-Befunde, führt aber fünf aus; gezählt sin
 
 | Rolle | behoben | teilweise | offen | bewusst nicht | nicht prüfbar |
 | --- | --- | --- | --- | --- | --- |
-| SGL | 7 | 1 | 11 | 1 | 0 |
-| LdF | 8 | 1 | 7 | 0 | 0 |
-| FM | 10 | 2 | 12 | 0 | 0 |
-| Sichter | 10 | 1 | 6 | 0 | 0 |
-| ETB | 9 | 5 | 7 | 1 | 0 |
-| Summe | 44 | 10 | 43 | 2 | 0 |
+| SGL | 8 | 2 | 9 | 1 | 0 |
+| LdF | 9 | 2 | 5 | 0 | 0 |
+| FM | 17 | 1 | 6 | 0 | 0 |
+| Sichter | 12 | 1 | 4 | 0 | 0 |
+| ETB | 12 | 5 | 4 | 1 | 0 |
+| Summe | 58 | 11 | 28 | 2 | 0 |
 
 Auf die P0-Befunde bezogen: Alle neun P0-Befunde sind behoben (SGL P0-1, LdF P0-1 und P0-2, Sichter P0-1 bis P0-3, ETB P0-1 bis P0-3). Das Fernmelder-Audit hat keinen P0.
 
@@ -84,12 +84,12 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | SGL P1-6 | Nachrichten verlassen die FmZ-Warteschlange ohne Nummer | behoben | 9bbe3fe, d36d287 | Code und Test: Befördern trägt Annahme und Nummer nach, Karte „Ohne Nummer“. Auch LdF P0-1, P1-2, FM P2-10. |
 | SGL P1-7 | Keine Sicht „offen“, Zähler zählt Erledigtes mit | behoben | 57699bb, d36d287 | Code und Test (offenFuerStellen, Sichten „offen“ und „gesichtet“). Auch Sichter P1-5, ETB P1-6. |
 | ETB P1-1 | Ausgang: rote Kopie fehlt bei S2 | behoben | fa7abbb (vor den sieben Commits) | Im Befund „in Arbeit“; Kopien nach der Beförderung in worker/laufwegfolgen.ts gesehen, eigener Test nicht geprüft. |
-| ETB P1-2 | Nachsichten und Vermerke nach Sichtung nicht erreichbar, Feld 20 | teilweise behoben | d36d287 | Nachsichtung in der Oberfläche (Code und Test, = Sichter P0-1); ETB-Nummer in Feld 20 nicht belegt. |
-| ETB P1-3 | Berichtigen nur bei doppelter Nummer, Zurückziehen ohne Grund im Blatt | teilweise behoben | d36d287 | Knopf „Berichtigen“ bei jeder vergebenen Nummer (Code); Grund steht im Tagebuch. Berichtigung anderer Felder und Stempel im Vordruck nicht belegt. |
+| ETB P1-2 | Nachsichten und Vermerke nach Sichtung nicht erreichbar, Feld 20 | behoben | d36d287, 2. Durchlauf (ungebucht) | Nachsichtung (d36d287); dazu `etbNummer` an der Zeile und „ETB-Nr.“ in Feld 20 des Vordrucks (nachrichtstempel.test.ts, szenarien-durchlauf2.test.ts). |
+| ETB P1-3 | Berichtigen nur bei doppelter Nummer, Zurückziehen ohne Grund im Blatt | teilweise behoben | d36d287, 2. Durchlauf (ungebucht) | Berichtigen bei jeder Nummer (d36d287); Grund und Zeit des Zurückziehens in Zeile (`zurueckgezogenMit`), Nachweisung und Stempel im Vordruck. Berichtigung anderer Felder und „ersetzt durch Nr.“ nicht gebaut. |
 | ETB P1-4 | Absender kann leer bleiben | behoben | d36d287 | Code und Test (Absender Pflicht). |
 | ETB P1-5 | Akte nimmt Nachrichten-PDFs nur nach manueller Erzeugung mit | behoben | 9bbe3fe | Code und Test (aktenbeilagen.ts); PDF der Listen bleibt Desktop-Sache. |
 | ETB P1-6 | „Einsatz beenden“ nennt offene Nachrichten nicht | behoben | 46c65ac, 9bbe3fe, d36d287 | Code und Test (offeneNachrichten im Lagebild, Abschlussmaske). |
-| ETB P1-7 | Akteur „Arbeitsplatz“, Handzeichen nur im Satz | teilweise behoben | 57699bb, 5418687 | Handzeichen je Ereignis, im Druck Akteur, Hz. und Rechner (Commit-Text, tagebuch.ts); Anzeigename „Arbeitsplatz“ unverändert. |
+| ETB P1-7 | Akteur „Arbeitsplatz“, Handzeichen nur im Satz | behoben | 57699bb, 5418687, 2. Durchlauf (ungebucht) | Handzeichen je Ereignis (57699bb); Stelle aus der Nutzlast (`stelle`, Funktion, Sichter, LdF) in Tagebuchansicht und Druck statt des Anzeigenamens. Die Präsenz zur Zeit des Ereignisses ist nicht aufbewahrt und fließt nicht ein. |
 | LdF P1-1 | Station LdF fehlt | behoben | e32c39b, fa7abbb (vor den sieben Commits) | Im Befund „in Arbeit“; Sicht „ldf“ und Laufwegfolgen im Code gesehen, nicht im Einzelnen geprüft. |
 | LdF P1-2 | Eingang ohne Nummer läuft zum Sichter, Lücke fällt nicht auf | teilweise behoben | 57699bb, d36d287 | Marke „ohne Nummer“, Zähler und Karte (Code); Rückfrage beim Aufnehmen ohne Nummer nicht belegt. |
 | LdF P1-3 | Nachweisung ohne Mittel und Gegenstelle | behoben | d36d287, 5418687 | Code und Test. Auch FM P2-7, ETB P2-6. |
@@ -99,11 +99,11 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | FM P1-3 | Esc verwirft halb getippten Funkspruch | behoben | d36d287 | Code und Test. Auch SGL P1-5. |
 | FM P1-4 | Ersatzsichter verteilt nur an S2, Anschrift keine Kopie | behoben | d36d287 | Code und Test (grün vorbelegt, Warnung ohne Hauptempfänger). Auch SGL P1-3. |
 | FM P1-5 | Blitz oder Sofort im Ausgang ohne Signal, Marke erst ab Annahme | behoben | 57699bb, 9bbe3fe | Code und Test (Ton bei der FmZ, Schwelle ab Eintreffen). Auch LdF P0-2. |
-| FM P1-6 | Papier-Rückfall in der Web-Schale: leerer Vordruck nur als HTML | offen | – | Kein Treffer; der leere Nachrichtenvordruck als PDF entsteht im Main (druckausgang.ts). |
+| FM P1-6 | Papier-Rückfall in der Web-Schale: leerer Vordruck nur als HTML | behoben | 2. Durchlauf (ungebucht) | Code und Test: „Papier-Vordruck als PDF“ liefert in der Web-Schale `vordruck-nachricht-leer.pdf` (jsPDF), das HTML daneben in `weitere`. |
 | Sichter P1-1 | Eingang mit Vorrang wird dem Sichter nicht gemeldet | behoben | 9bbe3fe | Code und Test (szenarien-fmz-audit.test.ts). |
 | Sichter P1-2 | Inhalt beim Sichten nicht lesbar | behoben | d36d287 | Code und Test (Eingangszeit und Inhalt im Laufzettel). |
 | Sichter P1-3 | Mahnung „Nicht jeder alles“ nicht unterstützt | teilweise behoben | d36d287 | Warnung ohne Hauptempfänger (Code und Test); Vorschlag „zuletzt gleiche Absender“ und Empfängerzahl nicht belegt. |
-| Sichter P1-4 | Wechsel zum Ersatzsichter dauert über zwei Minuten, Stau unsichtbar | offen | – | Bekannt offen: hängt an PRAESENZ_VERALTET_MS (Bericht „Zur Kenntnis, nicht geändert“). Auch ETB P3-3, Sichter P3-4. |
+| Sichter P1-4 | Wechsel zum Ersatzsichter dauert über zwei Minuten, Stau unsichtbar | behoben | 2. Durchlauf (ungebucht) | Code und Test: „Stelle abgeben“ (Präsenz sofort ohne Stellen, `abgemeldet`, beim Schließen der Akte, Wechsel des Einsatzes und `pagehide` der Web-Schale), Hinweis „n Eingänge warten seit m Minuten vor dem Sichter“ an FMZ/LDF, `vorSichterUeberSchwelle`, `wartetSeitSichter` (szenarien-durchlauf2.test.ts, praesenz.test.ts, arbeitsplaetze.test.ts). Knopf „Ich sichte jetzt selbst“ ist Renderer-Sache. Auch ETB P3-3, Sichter P3-4. |
 | Sichter P1-5 | Keine Ablage „heute gesichtet“ | behoben | 57699bb, 5418687 | Code und Test (Sicht „gesichtet“, Sichtung und Verteiler in der Nachweisung). Auch SGL P1-7. |
 
 ### P2 – mittel
@@ -112,36 +112,36 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | --- | --- | --- | --- | --- |
 | SGL P2-8 | Kopiefarbe nur als Rand, kein Wort | behoben | d36d287 | Code und Test (Kopiefarbe als Wort im Stand). |
 | SGL P2-9 | Im Ausgang nicht sichtbar, wer gelesen hat | offen | – | Kein Treffer; gesichtetVon nennt den Sichter, nicht die Lesenden. |
-| SGL P2-10 | Hinweis nur bei Vorrang, kein Zähler am Reiter, liegt am Seitenende | offen | – | Kein Treffer für einen Reiterzähler; der Hinweis für den Sichter kam mit 9bbe3fe (Sichter P1-1). |
+| SGL P2-10 | Hinweis nur bei Vorrang, kein Zähler am Reiter, liegt am Seitenende | teilweise behoben | – | Kein Treffer für einen Reiterzähler; der Hinweis für den Sichter kam mit 9bbe3fe (Sichter P1-1). |
 | SGL P2-11 | Sichten auf 860 px zu lang, Verteilermatrix gestreckt | teilweise behoben | d36d287 | Verteilerraster kompakter (Code, Kommentar); Höhe bei 860 px nicht nachgemessen. Auch Sichter P2-1. |
 | SGL P2-12 | „Lesen“ setzt Kenntnisnahme sofort, ohne Rücknahme | offen | – | Kenntnis gilt jetzt nur für eigene Stellen (Sichter P0-2); Doppelklick und fehlende Rücknahme unverändert. |
 | SGL P2-13 | „Erledigt“ ohne Vermerk, Antwort nicht mit Original verknüpft | offen | – | Kein Treffer; Bezug gibt es nur im Tagebuch (ETB P0-1). |
 | SGL P2-14 | Ausgang hängt am Absendertext oder Rechner, nicht an der Stelle | offen | – | Annahme des Audits; istEigenerAusgang nicht als geändert erkennbar. |
 | SGL P2-15 | Nachweisung im Browser nur als HTML | bewusst nicht | – | Bericht: PDF der Listen bleibt Sache der Desktop-Schale; die Akte legt die Nachweisung als HTML bei (9bbe3fe). Audit selbst: kein Mangel bei Desktop-Einsatz. |
-| ETB P2-1 | Zeit im Tagebuch ohne Jahr, Browserzone, nicht Datum-Zeit-Gruppe | offen | – | Bekannt offen, siehe SGL P3-16. |
+| ETB P2-1 | Zeit im Tagebuch ohne Jahr, Browserzone, nicht Datum-Zeit-Gruppe | teilweise behoben | 2. Durchlauf (ungebucht) | Zone wie SGL P3-16 behoben; Jahr am Bildschirm und Option Datum-Zeit-Gruppe im Tagebuch nicht gebaut. |
 | ETB P2-2 | Vollständigkeit der Nummernfolge nicht geprüft | behoben | 57699bb, 5418687 | Code und Test (nummernluecken, Fuß der Nachweisung). Auch LdF P2-2. |
 | ETB P2-3 | Anlagen fehlen | bewusst nicht | – | Bericht: Anhänge nicht gebaut, Audit selbst „später“. |
 | ETB P2-4 | Tagebuch: 100 Zeilen, keine Nachrichtenfilter, Druck ohne Filter | teilweise behoben | 46c65ac, d36d287 | Filter je Nachricht (Code und Test); Ausschnitt und ungefilterter Druck nicht belegt. |
 | ETB P2-5 | Kenntnisnahme durch Öffnen, „erledigt“ ohne Handzeichen | teilweise behoben | d36d287 | Kenntnis nur für eigene Stellen (Code und Test); Öffnen gleich Kenntnis bleibt, Handbuch nicht angepasst. |
 | ETB P2-6 | Nachweisung und Tagebuch decken sich nicht in allen Angaben | behoben | d36d287, 5418687 | Code und Test (Mittel, Gegenstelle, Sichtung, Zeitschreibweise). Auch LdF P1-3, FM P2-7. |
-| ETB P2-7 | Vordruck-PDF ist Stand zum Druckzeitpunkt | offen | – | Kein Treffer. |
+| ETB P2-7 | Vordruck-PDF ist Stand zum Druckzeitpunkt | teilweise behoben | 2. Durchlauf (ungebucht) | Stempel „ZURÜCKGEZOGEN <DTG>: <Grund>“ im PDF (Prüfvermerk, Hinweiszeile, Schriftzug); Stand im Fußfeld und Umbenennen alter Dateien nicht gebaut. |
 | LdF P2-1 | Berichtigung beginnt mit der falschen Nummer | behoben | d36d287 | Code und Test (nächste freie Nummer vorbelegt). |
 | LdF P2-2 | Lücken und Sprünge in der Nummernfolge | behoben | 57699bb, 5418687 | Code und Test; die Rückfrage bei großem Sprung ist nicht belegt. Auch ETB P2-2. |
 | LdF P2-3 | Stelle ist Zuschnitt, kein Recht | offen | – | Im Konzept §4 so gewollt; der vorgeschlagene Hinweis in der Maske nicht gebaut. |
-| LdF P2-4 | Uhrzeit in vier Zeitzonen-Darstellungen | offen | – | Bekannt offen, siehe SGL P3-16. |
-| LdF P2-5 | Betriebsbuch am Schichtende ohne Schicht und Abschluss, Rohtext im Kopf | offen | – | Nachweisung.ts: Fußzeile unverändert; Fuß mit Nummernlücken ist neu, die Schichtabgrenzung nicht. |
+| LdF P2-4 | Uhrzeit in vier Zeitzonen-Darstellungen | behoben | 2. Durchlauf (ungebucht) | Siehe SGL P3-16; Kopf, Maske und Ausdruck in derselben Zone, Hinweis bei abweichender Rechnerzeit. |
+| LdF P2-5 | Betriebsbuch am Schichtende ohne Schicht und Abschluss, Rohtext im Kopf | teilweise behoben | 2. Durchlauf (ungebucht) | Schichtausdruck über `von`/`bis`, Zeitraum im Kopf, Abschlusszeile, „Erstellt Stand“ entdoppelt; Unterschriftszeile LdF und Kopf ohne Tech-Kennungen nicht gebaut. |
 | LdF P2-6 | Absender nicht in der Warteschlange | behoben | d36d287 | Code (Fernmeldezentrale.tsx, Kommentar „P2-6“). |
-| FM P2-1 | Zeitzone: Funkzeit in Browserzeit gelesen, Gruppe in Berlin | offen | – | Bekannt offen, siehe SGL P3-16. |
+| FM P2-1 | Zeitzone: Funkzeit in Browserzeit gelesen, Gruppe in Berlin | behoben | 2. Durchlauf (ungebucht) | Siehe SGL P3-16; Funkzeit und Datum-Zeit-Gruppe in derselben Zone, Monatskürzel im Kopf wie im Vordruck (groß). |
 | FM P2-2 | Keine Plausibilitätsprüfung der Zeiten | behoben | d36d287 | Code und Test (weiche Warnung bei Zukunft und älter als ein Tag). |
-| FM P2-3 | Abfassungszeit und Quittung mit „jetzt“ vorbelegt | offen | – | Kein Treffer. |
+| FM P2-3 | Abfassungszeit und Quittung mit „jetzt“ vorbelegt | behoben | – | Kein Treffer. |
 | FM P2-4 | Befördern: Feld nennt die Quittung nicht, stille Vorbelegungen | behoben | d36d287 | Code (Beschriftung „Quittung der Gegenstelle“). |
 | FM P2-5 | Weiche Sperre nennt Arbeitsplatz, nicht Person | behoben | d36d287 | Code und Test (Stelle und Handzeichen im Sperrhinweis). = Sichter P2-4. |
-| FM P2-6 | Konfliktmeldung zeigt Rohdaten, „Neu laden?“ ohne Knopf | offen | – | Kein Treffer. |
+| FM P2-6 | Konfliktmeldung zeigt Rohdaten, „Neu laden?“ ohne Knopf | behoben | – | Kein Treffer. |
 | FM P2-7 | Nachweisung ohne Mittel und Gegenstelle, Aufnahme nicht korrigierbar | teilweise behoben | d36d287 | Spalten ergänzt (Code und Test); „Aufnahme ändern“ nicht belegt. |
-| FM P2-8 | Maske fängt den Fokus nicht ein, Fokus nach Schließen verloren | offen | – | Bekannt offen (Fokusrücksprung); Tabfolge ist neu, Fokusfalle und Rückgabe nicht. |
-| FM P2-9 | Nachtrag eines Ausgangs braucht vier Masken | teilweise behoben | 9bbe3fe | Befördern trägt Annahme und Nummer nach (Test); Nachtragsmodus in einer Maske nicht gebaut. |
+| FM P2-8 | Maske fängt den Fokus nicht ein, Fokus nach Schließen verloren | behoben | – | Bekannt offen (Fokusrücksprung); Tabfolge ist neu, Fokusfalle und Rückgabe nicht. |
+| FM P2-9 | Nachtrag eines Ausgangs braucht vier Masken | behoben | 9bbe3fe | Befördern trägt Annahme und Nummer nach (Test); Nachtragsmodus in einer Maske nicht gebaut. |
 | FM P2-10 | „Befördert, aber nicht nachgewiesen“ nirgends sichtbar | behoben | d36d287, 57699bb | Code und Test (Karte „Ohne Nummer“, Marke ohneNummer). |
-| FM P2-11 | Falsch getipptes Druckverzeichnis wird still angelegt | offen | – | Bekannt offen: Ruf verzeichnisPruefen existiert nicht (Suche im Code ohne Treffer). |
+| FM P2-11 | Falsch getipptes Druckverzeichnis wird still angelegt | behoben | 2. Durchlauf (ungebucht) | Code und Test: Ruf `verzeichnisPruefen`, Probedruck meldet `verzeichnisFehlt` und legt erst mit `anlegen: true` an, Automatikdruck schreibt bei fehlendem Verzeichnis nach ausgaben/nachrichten mit einmaligem Hinweis, Druckeinstellungen fragen „anlegen?“ (vermittlung-druck.test.ts, szenarien-nachrichtendruck.test.ts). |
 | Sichter P2-1 | Verteilermatrix entspricht nicht dem Vordruck, wird lang | behoben | d36d287 | Code und Test (Verteilerraster). Auch SGL P2-11. |
 | Sichter P2-2 | Druck bildet Farben nicht ab, kein Hinweis auf zu wenig Blätter | offen | – | Kein Treffer. |
 | Sichter P2-3 | Gesprächsnotiz: Voreinstellung „Selbst verteilen“ umgeht den Sichter | offen | – | Kein Treffer. |
@@ -152,14 +152,14 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 
 | Kennung | Kurztitel | Status | Commit | Beleg und Anmerkung |
 | --- | --- | --- | --- | --- |
-| SGL P3-16 | Datum-Zeit-Gruppe in Berliner Zeit, Uhr im Kopf in Browserzeit | offen | – | Bekannt offen. Auch ETB P2-1, LdF P2-4, FM P2-1. |
+| SGL P3-16 | Datum-Zeit-Gruppe in Berliner Zeit, Uhr im Kopf in Browserzeit | behoben | 2. Durchlauf (ungebucht) | Code und Test: eine Anzeigezone Europe/Berlin (`@s1/domaene` anzeigezone.ts) für zeitpunktText, Kopfband, Tagebuch, Druck, Funkzeit und getippte Zeiten; Statuszeile nennt eine abweichende Rechnerzone (anzeigezone-tz.test.ts unter UTC, New York, Berlin). Auch ETB P2-1, LdF P2-4, FM P2-1. |
 | SGL P3-17 | „Antworten“ und „Weiterleiten“ ohne Ruf-Nr. und Bezug | offen | – | Kein Treffer. |
 | SGL P3-18 | Ausgang zeigt Laufzettel „noch nicht gesichtet“ | offen | – | Kein Treffer. |
 | SGL P3-19 | Hinweistext der Gesprächsnotiz sagt „beim Aufnehmen“ | offen | – | Text in worker/nachrichtenfolgen.ts unverändert. |
 | SGL P3-20 | Zwei gleiche Nachrichten werden nicht erkannt | offen | – | Kein Treffer. |
 | ETB P3-1 | Beschriftung „Zeit der Meldung“ | offen | – | Bildschirm unverändert (Tagebuch.tsx); nur der Druck trennt zwei Zeiten. |
 | ETB P3-2 | „Nr. (E)“ bei gemeinsamer Zählung | offen | – | Beschriftung in Vordruckteile.tsx unverändert. Auch LdF P3-1. |
-| ETB P3-3 | Präsenz bleibt nach Schließen des Browsers sichtbar | offen | – | Gleiche Ursache wie Sichter P1-4. |
+| ETB P3-3 | Präsenz bleibt nach Schließen des Browsers sichtbar | behoben | 2. Durchlauf (ungebucht) | Abgemeldete Präsenz zählt sofort als veraltet (Sichter P1-4). |
 | ETB P3-4 | „Zurückgezogen“ nur durch Durchstreichen | offen | – | Kein Treffer. |
 | ETB P3-5 | „Nachweisen“ bei zurückgezogenen Zeilen | offen | – | Kein Treffer. |
 | LdF P3-1 | „Nr. (E)“ bei gemeinsamer Zählung | offen | – | Siehe ETB P3-2. |
@@ -176,11 +176,13 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | Sichter P3-1 | Quittungszeit beim Öffnen eingefroren | offen | – | Kein Treffer. |
 | Sichter P3-2 | Escape hebt Auswahl und Laufzettel zugleich auf | behoben | d36d287 | Code und Test. |
 | Sichter P3-3 | S5 fehlt im Verteiler | offen | – | Bekannt offen; S5 nur als Freitext (ausgaben/nachricht.ts). |
-| Sichter P3-4 | Zählung „n weitere Arbeitsplätze“ läuft auf | offen | – | Gleiche Ursache wie Sichter P1-4. |
+| Sichter P3-4 | Zählung „n weitere Arbeitsplätze“ läuft auf | behoben | 2. Durchlauf (ungebucht) | Abgemeldete Arbeitsplätze zählen sofort nicht mehr mit (Sichter P1-4); harter Absturz bleibt an der Präsenzfrist. |
 
-Zahl der Befunde je Status: behoben 44, teilweise behoben 10, offen 43, bewusst nicht 2, nicht prüfbar 0; zusammen 99. Als „nicht prüfbar“ habe ich keinen Befund eingestuft, weil jeder entweder im Code eine Spur hinterlassen hat oder keine hat. Die Tests habe ich nicht ausgeführt; der Bericht nennt für den Stand 331 Testdateien und 3354 Tests, grün, bei typecheck und lint ohne Befund. Das habe ich nur übernommen.
+Zahl der Befunde je Status nach dem zweiten Durchlauf (Domäne, Ausgaben, Kontrakt, Worker, Main, Web-Schale und Renderer, noch nicht gebucht; in der Spalte „Commit“ als „2. Durchlauf (ungebucht)“): behoben 58, teilweise behoben 11, offen 28, bewusst nicht 2, nicht prüfbar 0; zusammen 99. Vor dem zweiten Durchlauf waren es behoben 44, teilweise behoben 10, offen 43. Als „nicht prüfbar“ habe ich keinen Befund eingestuft, weil jeder entweder im Code eine Spur hinterlassen hat oder keine hat. Die Tests habe ich nicht ausgeführt; der Bericht nennt für den Stand 331 Testdateien und 3354 Tests, grün, bei typecheck und lint ohne Befund. Das habe ich nur übernommen.
 
 ## Was offen bleibt
+
+Nachtrag zweiter Durchlauf: Die beiden Punkte, die vor dem nächsten Einsatz erledigt sein sollten, sind gebaut — der Druckordner wird geprüft statt still angelegt (FM P2-11), und der Sichter gibt seine Stelle beim Schließen, beim Einsatzwechsel und beim Verlassen der Seite sofort ab; die FmZ hört vom Stau vor dem Sichter (Sichter P1-4, ETB P3-3, Sichter P3-4). Ebenso die Zeit (eine Anzeigezone Europe/Berlin, SGL P3-16, ETB P2-1, LdF P2-4, FM P2-1), der leere Vordruck als PDF in der Web-Schale (FM P1-6), ETB-Nummer und Stempel „zurückgezogen“ im Vordruck (ETB P1-2, P1-3, P2-7), Stelle und Handzeichen im Tagebuch (ETB P1-7) und der Schichtausdruck der Nachweisung (LdF P2-5). Die folgenden Absätze beschreiben den Stand davor; was dort noch zutrifft, steht in der Tabelle als „offen“ oder „teilweise behoben“. Weiter nicht nachgewiesen sind der stille Druck an einen echten Drucker und die Höhen bei 860 und 1320 Pixeln.
 
 Am dringendsten ist das, was im Einsatz still etwas Falsches tut. Das ist der Druckordner der Fernmeldezentrale (FM P2-11): Ein falsch getipptes Verzeichnis wird angelegt und als „geschrieben“ gemeldet, der Ausdruck landet dann in einem Ordner, in den niemand schaut. Dafür braucht es einen Ruf `verzeichnisPruefen`, der vor dem Schreiben prüft, ob der Ordner vorhanden ist, und im Probedruck sagt, wo die Datei liegt. Im Code gibt es diesen Ruf noch nicht. Gleich danach kommt der Ersatzsichter (Sichter P1-4, ETB P3-3, Sichter P3-4): Er schaltet erst um, wenn die Präsenz des Sichters verfällt, also nach rund zwei Minuten. Bis dahin liegt ein Blitz im Eingang, und niemand sieht den Stau. Der Weg ist ein bewusstes „Stelle abgeben“ beim Schließen des Sichter-Arbeitsplatzes, das die Präsenz sofort ohne SICHTER schreibt; dazu eine Warnung auf der FmZ („Eingänge warten seit n Minuten“) mit dem Knopf „Ich sichte jetzt selbst“. Diese beiden Punkte sollten vor dem nächsten Einsatz erledigt sein.
 
