@@ -34,6 +34,8 @@ import { planeNachrichtenfolgen, type Nachrichtenfolgeumfeld } from "./nachricht
 export interface Folgeschritt {
   readonly entwurf: Ereignisentwurf;
   readonly hinweis: string;
+  /** Additiv (Fernmelder P2-9): nach dem Schreiben die eigenen Folgen dieses Schritts planen. */
+  readonly mitFolgen?: boolean;
 }
 
 export interface Folgeplan {

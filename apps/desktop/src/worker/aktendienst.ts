@@ -49,6 +49,7 @@ import {
   uebernahmeEntwuerfe,
   materialisiere,
   projektion,
+  standText,
   vergleicheHlc,
   type Akteur,
   type EingehendesEreignis,
@@ -99,6 +100,7 @@ import {
 } from "@s1/ausgaben";
 
 import {
+  KONFLIKTHINWEISE_MAX,
   lagebildDelta,
   type Akteergebnis,
   type Baumansicht,
@@ -141,6 +143,7 @@ import {
 } from "./einsatzabschluss.js";
 import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
+import type { Nachrichtenfolgeumfeld } from "./nachrichtenfolgen.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
@@ -165,6 +168,7 @@ import {
 import { pruefeNachricht } from "./nachrichtenpruefung.js";
 import { Automatikdruck, type Automatikdruckeinstellung, type Druckauftrag } from "./automatikdruck.js";
 import { ORDNER_NACHRICHTEN, vordruckDerNachricht } from "./nachrichtenvordruck.js";
+import { Sichterstauwaechter } from "./sichterstau.js";
 import { versorgungFuerLagebild, versorgungsansicht } from "./versorgungsprojektion.js";
 import { VERSORGUNGSAUSGABEN, versorgungsausgabe, type Versorgungsausgabe } from "./versorgungsausgaben.js";
 
@@ -414,6 +418,12 @@ export class Aktendienst {
   readonly #vorrang = new Vorrangwaechter();
   /** Druckt jede eintreffende Nachricht, wenn ein Ziel gesetzt ist (N3, Entscheidung 7). */
   readonly #automatik: Automatikdruck;
+  /** Meldet der FmZ den Stau vor dem Sichter, wenn keiner besetzt ist (Sichter P1-4). */
+  readonly #sichterstau = new Sichterstauwaechter();
+  /** ETB-Nummern und Rückzugsgründe, gemerkt je Lagezeiger (ETB P1-2, P1-3). */
+  #bezugGemerkt: { readonly zeiger: number; readonly bezug: projektion.Tagebuchbezug } | undefined;
+  /** Die Stelle ist abgegeben (Sichter P1-4): Die Präsenz trägt `abgemeldet`, bis `stellenSetzen` sie wieder setzt. */
+  #abgemeldet = false;
 
   constructor(optionen: AktendienstOptionen) {
     this.#o = optionen;
@@ -422,6 +432,9 @@ export class Aktendienst {
       dateisystem: optionen.dateisystem,
       sende: (mitteilung) => optionen.sende(mitteilung),
       sendeDruck: optionen.sendeDruck,
+      // FM P2-11, ETB P1-2: Ersatzordner statt stillem Anlegen, ETB-Nummern für Feld 20.
+      ersatzOrdner: path.join(optionen.ablage.shareAusgaben, ORDNER_NACHRICHTEN),
+      bezug: () => this.#tagebuchbezug(),
     });
     this.#takte = { ...TAKTE_VORBELEGUNG, ...optionen.takte };
     this.#clientId = optionen.clientId;
@@ -527,6 +540,7 @@ export class Aktendienst {
    */
   stellenSetzen(stellen: readonly string[] | undefined, handzeichen: string | undefined): void {
     this.#sitzung = sitzungAus(stellen, handzeichen);
+    this.#abgemeldet = false;
     this.#letztePraesenz = Number.NEGATIVE_INFINITY;
     // Vor dem Öffnen setzt `oeffne` die Grundlinie nach der Wiederaufnahme;
     // hier gesetzt, meldete die Wiederaufnahme jede alte Vorrangnachricht.
@@ -562,8 +576,31 @@ export class Aktendienst {
     if (geaendert) this.#letztePraesenz = Number.NEGATIVE_INFINITY;
   }
 
-  /** Der Arbeitsplatz geht fort: eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
+  /**
+   * Die Stelle abgeben (Sichter P1-4, ETB P3-3): Stellen und Handzeichen der
+   * Sitzung fallen weg, und die Präsenz steht **sofort** mit `abgemeldet`
+   * auf dem Share — nicht erst nach dem Verfall von rund zwei Minuten. Ein
+   * Sichter-Arbeitsplatz, der schließt, gilt damit gleich als nicht besetzt,
+   * und der Ersatzsichter der FmZ greift. `stellenSetzen` hebt es wieder auf.
+   */
+  async stelleAbgeben(): Promise<void> {
+    this.#sitzung = undefined;
+    this.#abgemeldet = true;
+    if (this.#akte === undefined) return;
+    this.#letztePraesenz = this.#o.zeit();
+    await this.#praesenz();
+    this.#sendeDelta();
+  }
+
+  /** Der Arbeitsplatz geht fort: Stelle abgeben, dann eigene Präsenzdatei weg, damit Kollegen ihn nicht mehr zählen. */
   async meldeAb(): Promise<void> {
+    // Erst abgemeldet schreiben: Scheitert das Löschen am Share (SMB), steht
+    // wenigstens keine Stelle mehr darin (Sichter P1-4).
+    try {
+      await this.stelleAbgeben();
+    } catch {
+      // Best effort wie das Löschen selbst.
+    }
     await entfernePraesenz({
       dateisystem: this.#o.dateisystem,
       zeit: this.#o.zeit,
@@ -617,6 +654,7 @@ export class Aktendienst {
       this.#letztePraesenz = jetzt;
       await this.#praesenz();
     }
+    this.#meldeSichterstau(jetzt);
     if (this.#monitor !== undefined && jetzt - this.#letzterMonitor >= this.#takte.monitorMs) {
       this.#letzterMonitor = jetzt;
       await this.#schreibeMonitor();
@@ -694,6 +732,7 @@ export class Aktendienst {
       programmversion: this.#o.programmversion,
       ...(this.#sitzung === undefined ? {} : { stellen: this.#sitzung.stellen }),
       ...(this.#sitzung?.handzeichen === undefined ? {} : { handzeichen: this.#sitzung.handzeichen }),
+      ...(this.#abgemeldet ? { abgemeldet: true } : {}),
     };
     try {
       await schreibePraesenz(
@@ -726,7 +765,9 @@ export class Aktendienst {
             clientId: fremd.praesenz.clientId,
             anzeigename: fremd.praesenz.anzeigename,
             rechnername: fremd.praesenz.rechnername,
-            veraltet: fremd.veraltet,
+            // Sichter P3-4: Wer seine Stelle abgegeben hat, zählt sofort nicht mehr mit.
+            veraltet: fremd.veraltet || fremd.praesenz.abgemeldet === true,
+            ...(fremd.praesenz.abgemeldet === true ? { abgemeldet: true } : {}),
             wanduhr: fremd.praesenz.wanduhr,
             programmversion: fremd.praesenz.programmversion,
             segment: fremd.praesenz.segment,
@@ -738,7 +779,7 @@ export class Aktendienst {
             ),
             quarantaene: fremd.praesenz.quarantaene?.length ?? 0,
             ...(fremd.veraltet || fremd.praesenz.bearbeitet === undefined ? {} : { bearbeitet: fremd.praesenz.bearbeitet }),
-            ...peerStellen(fremd.praesenz),
+            ...(fremd.praesenz.abgemeldet === true ? {} : peerStellen(fremd.praesenz)),
           };
         },
       );
@@ -768,22 +809,35 @@ export class Aktendienst {
 
   /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
   async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
-    const plan = planeFolgen(this.#zustand, entwurf, {
-      sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
-      // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
-      ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
-      s2Besetzt: stelleBesetzt("S2", this.#sitzung?.stellen, this.#peers),
-    });
+    const plan = planeFolgen(this.#zustand, entwurf, this.#folgeumfeld());
     const ergebnis = await this.#schreibe(entwurf);
     if (ergebnis.art !== "geschrieben") return ergebnis;
     const vorab = [...plan.hinweise];
     for (const folge of plan.folgen) {
+      // Fernmelder P2-9: Die Beförderung des Papier-Nachtrags plant ihre eigenen Folgen gegen den jetzt geltenden Zustand.
+      const nachplan = folge.mitFolgen === true ? planeFolgen(this.#zustand, folge.entwurf, this.#folgeumfeld()) : undefined;
       const folgeErgebnis = await this.#schreibe(folge.entwurf);
       vorab.push(folgeErgebnis.art === "geschrieben" ? folge.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(folgeErgebnis)}`);
+      if (folgeErgebnis.art !== "geschrieben" || nachplan === undefined) continue;
+      vorab.push(...nachplan.hinweise);
+      for (const weitere of nachplan.folgen) {
+        const ergebnisWeitere = await this.#schreibe(weitere.entwurf);
+        vorab.push(ergebnisWeitere.art === "geschrieben" ? weitere.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(ergebnisWeitere)}`);
+      }
     }
     const bereich = anwesendBereichshinweis(this.#zustand, entwurf);
     if (bereich !== undefined) vorab.push(bereich);
     return { ...ergebnis, ...schreibhinweise(this.#zustand, entwurf, vorab) };
+  }
+
+  /** Was die Folgeplanung über die Präsenz wissen muss. */
+  #folgeumfeld(): Nachrichtenfolgeumfeld {
+    return {
+      sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
+      // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
+      ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
+      s2Besetzt: stelleBesetzt("S2", this.#sitzung?.stellen, this.#peers),
+    };
   }
 
   #meldungVon(ergebnis: Bedienergebnis): string {
@@ -957,11 +1011,11 @@ export class Aktendienst {
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
-      stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+      stand: `Stand: ${standText(jetzt)}`,
       erstelltVon: this.#erstellerText(),
     };
-    const vordrucke = await legeFehlendeVordrucke(ziel, this.#zustand);
-    const nachweisung = await legeNachweisungBei(ziel, this.#zustand, kopf, dateimarke(jetzt));
+    const vordrucke = await legeFehlendeVordrucke(ziel, this.#zustand, this.#tagebuchbezug());
+    const nachweisung = await legeNachweisungBei(ziel, this.#zustand, kopf, dateimarke(jetzt), this.#ereignisse);
     return { ...vordrucke, fehlgeschlagen: vordrucke.fehlgeschlagen + (nachweisung ? 0 : 1) };
   }
 
@@ -977,7 +1031,7 @@ export class Aktendienst {
       const kopf = {
         datum: this.#o.einsatzId.slice(0, 10),
         einsatzName: alsText(this.#zustand.einsatz?.name.wert),
-        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        stand: `Stand: ${standText(jetzt)}`,
       };
       const html = bildschirmtauglich(tagebuchHtml(this.#zustand, this.#ereignisse, kopf));
       await this.ausgabeSchreiben(`tagebuch_${dateimarke(jetzt)}.html`, new TextEncoder().encode(html));
@@ -1038,6 +1092,7 @@ export class Aktendienst {
       clientId: this.#clientId,
       sitzung: this.#sitzung,
       sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
+      bezug: this.#tagebuchbezug(),
     });
   }
 
@@ -1046,7 +1101,9 @@ export class Aktendienst {
    * Tagebuchzeile holt sie über die Kennung, nicht über eine Suche.
    */
   nachricht(nachrichtId: string): Nachrichtenzeile | null {
-    return projektion.nachrichtNach(this.#zustand, nachrichtId, new Date(this.#o.zeit()).toISOString()) ?? null;
+    const zeile = projektion.nachrichtNach(this.#zustand, nachrichtId, new Date(this.#o.zeit()).toISOString());
+    // ETB P1-2, P1-3: mit ETB-Nummer und Grund des Zurückziehens für die Nachrichtenansicht.
+    return zeile === undefined ? null : (projektion.mitTagebuchbezug([zeile], this.#tagebuchbezug())[0] ?? zeile);
   }
 
   /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
@@ -1197,8 +1254,9 @@ export class Aktendienst {
   ausgabeHtml(
     ausgabe: Seitenausgabe,
     organisation?: string,
+    zeitraum?: { readonly von?: string; readonly bis?: string },
   ): { dateiname: string; html: string } {
-    const gerendert = this.#rendereSeite(ausgabe, organisation);
+    const gerendert = this.#rendereSeite(ausgabe, organisation, zeitraum);
     // Bildschirmhülle (viewport, scrollbare Tabellen): wirkt nur am Bildschirm, nicht im Druck.
     return { dateiname: gerendert.dateiname, html: bildschirmtauglich(gerendert.html) };
   }
@@ -1206,12 +1264,13 @@ export class Aktendienst {
   #rendereSeite(
     ausgabe: Seitenausgabe,
     organisation?: string,
+    zeitraum?: { readonly von?: string; readonly bis?: string },
   ): { dateiname: string; html: string } {
     const jetzt = new Date(this.#o.zeit());
     const kopf = {
       datum: this.#o.einsatzId.slice(0, 10),
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
-      stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+      stand: `Stand: ${standText(jetzt)}`,
     };
     const marke = dateimarke(jetzt);
     if (LISTENAUSGABEN.has(ausgabe)) {
@@ -1221,7 +1280,8 @@ export class Aktendienst {
       return versorgungsausgabe(ausgabe as Versorgungsausgabe, this.#zustand, jetzt.getTime(), { ...kopf, marke });
     }
     if (ausgabe === "nachweisung") {
-      return nachweisungsausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke);
+      // LdF P2-5: Schichtausschnitt, Zeitraum und Abschlusszeile; ETB P1-3: Grund des Zurückziehens.
+      return nachweisungsausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke, { zeitraum, ereignisse: this.#ereignisse });
     }
     if (ausgabe === "funkplan") {
       return funkplanausgabe(this.#zustand, { ...kopf, erstelltVon: this.#erstellerText() }, marke, jetzt.toISOString());
@@ -1307,14 +1367,14 @@ export class Aktendienst {
       {
         datum: this.#o.einsatzId.slice(0, 10),
         einsatzName: alsText(this.#zustand.einsatz?.name.wert),
-        stand: `Stand der Lage: ${this.#letzteWanduhr === "" ? "noch keine Meldung" : new Date(this.#letzteWanduhr).toLocaleString("de-DE")}`,
+        stand: `Stand der Lage: ${this.#letzteWanduhr === "" ? "noch keine Meldung" : standText(this.#letzteWanduhr)}`,
       },
       {
         mitStatus: wahl.mitStatus,
         // Der fachliche Stand ist der der juengsten Meldung; das
         // Lebenszeichen ist die Uhr dieses Rechners. Zwei Zeiten, und sie
         // werden nicht vermischt (§2.6).
-        geschriebenUm: jetzt.toLocaleString("de-DE"),
+        geschriebenUm: standText(jetzt),
         ...(wahl.organisation === undefined ? {} : { organisation: wahl.organisation }),
       },
     );
@@ -1333,7 +1393,7 @@ export class Aktendienst {
     return {
       dateiname: `auswertung_${dateimarke(jetzt)}`,
       bytes: auswertungAlsXlsx(this.#zustand, {
-        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        stand: `Stand: ${standText(jetzt)}`,
         zeitpunkt: jetzt,
       }),
     };
@@ -1351,7 +1411,7 @@ export class Aktendienst {
     return {
       dateiname: `logfrei_${dateimarke(jetzt)}`,
       bytes: logFreiAlsXlsx(this.#zustand, {
-        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        stand: `Stand: ${standText(jetzt)}`,
         zeitpunkt: jetzt,
       }),
     };
@@ -1370,7 +1430,7 @@ export class Aktendienst {
     return {
       dateiname: `oldenburg_${dateimarke(jetzt)}`,
       bytes: oldenburgAlsXlsx(this.#zustand, {
-        stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+        stand: `Stand: ${standText(jetzt)}`,
         zeitpunkt: jetzt,
       }),
     };
@@ -1392,7 +1452,7 @@ export class Aktendienst {
    * untergingen; derselbe Weg ohne `fsync` wie jede Ausgabe.
    */
   async nachrichtVordruck(nachrichtId: string, blatt: "a5" | "a4quer"): Promise<{ pfad: string; bytes: number }> {
-    const { dateiname, bytes } = vordruckDerNachricht(this.#zustand, nachrichtId, blatt);
+    const { dateiname, bytes } = vordruckDerNachricht(this.#zustand, nachrichtId, blatt, this.#tagebuchbezug());
     const ordner = path.join(this.#o.ablage.shareAusgaben, ORDNER_NACHRICHTEN);
     const pfad = path.join(ordner, dateiname);
     await this.#o.dateisystem.legeVerzeichnisAn(ordner);
@@ -1964,6 +2024,21 @@ export class Aktendienst {
     this.#meldeVorrang();
   }
 
+  /** Sichter P1-4: der Stau vor dem Sichter an FMZ und LDF, je Nachricht einmal (`sichterstau.ts`). */
+  #meldeSichterstau(jetztMs: number): void {
+    const stellen = this.#sitzung?.stellen ?? [];
+    const text = this.#sichterstau.pruefe({ zustand: this.#zustand, stellen, jetztMs, sichterBesetzt: sichterBesetzt(stellen, this.#peers) });
+    if (text !== undefined) this.#o.sende({ art: "hinweis", akteId: this.#o.akteId, stufe: "warnung", text });
+  }
+
+  /** ETB-Nummern und Rückzugsgründe aus den Ereignissen, je Lagezeiger einmal gerechnet (ETB P1-2, P1-3). */
+  #tagebuchbezug(): projektion.Tagebuchbezug {
+    if (this.#bezugGemerkt?.zeiger !== this.#lageZeiger) {
+      this.#bezugGemerkt = { zeiger: this.#lageZeiger, bezug: projektion.tagebuchbezug(this.#ereignisse) };
+    }
+    return this.#bezugGemerkt.bezug;
+  }
+
   /** Entscheidung 6: der Hinweis bei Vorrang für eine Stelle der Sitzung, bei Blitz mit Ton. */
   #meldeVorrang(): void {
     const stellen = this.#sitzung?.stellen ?? [];
@@ -2021,6 +2096,8 @@ export class Aktendienst {
       staerkeErwartet: ausserhalb.erwartet,
       staerkeBeendet: ausserhalb.beendet,
       hinweise: zustand.hinweise.length,
+      // Additiv (FM P2-6): Art und Pfad der ersten Hinweise, für „Nachricht öffnen“ in der Diagnose.
+      ...(zustand.hinweise.length === 0 ? {} : { konflikthinweise: zustand.hinweise.slice(0, KONFLIKTHINWEISE_MAX).map((h) => ({ art: h.art, feldpfad: h.feldpfad })) }),
       vokabelkorrekturen: offeneVokabelkorrekturen(zustand),
       unbekannteEreignisse: zustand.unbekannt.length,
       undoTiefe: this.#stapel.eintraege.length,

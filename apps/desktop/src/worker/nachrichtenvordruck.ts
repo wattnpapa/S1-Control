@@ -40,8 +40,15 @@ export function vordruckDerZeile(zeile: Nachrichtenzeile, zustand: Zustand, blat
 }
 
 /** Wie {@link vordruckDerZeile}, aber nach Kennung; wirft mit einem Satz für den Bediener, wenn es sie nicht gibt. */
-export function vordruckDerNachricht(zustand: Zustand, nachrichtId: string, blatt: VordruckBlatt): { dateiname: string; bytes: Uint8Array } {
+export function vordruckDerNachricht(
+  zustand: Zustand,
+  nachrichtId: string,
+  blatt: VordruckBlatt,
+  bezug?: projektion.Tagebuchbezug,
+): { dateiname: string; bytes: Uint8Array } {
   const zeile = nachrichtenzeile(zustand, nachrichtId);
   if (zeile === undefined) throw new Error("Diese Nachricht gibt es in diesem Einsatz nicht.");
-  return vordruckDerZeile(zeile, zustand, blatt);
+  // Additiv (ETB P1-2, P1-3): ETB-Nummer in Feld 20 und Stempel mit Grund.
+  const mitBezug = bezug === undefined ? zeile : (projektion.mitTagebuchbezug([zeile], bezug)[0] ?? zeile);
+  return vordruckDerZeile(mitBezug, zustand, blatt);
 }

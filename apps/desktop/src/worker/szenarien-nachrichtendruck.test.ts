@@ -9,7 +9,7 @@
  * Fehler meldet sich einmal je Sitzung.
  */
 
-import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -28,6 +28,8 @@ afterEach(() => {
 function zielordner(): string {
   const ordner = mkdtempSync(path.join(os.tmpdir(), "s1-automatikdruck-"));
   wegwerf.push(ordner);
+  // Ein Druckziel ist ein vorhandener Ordner (FM P2-11: nichts wird still angelegt).
+  mkdirSync(path.join(ordner, "drucke"));
   return path.join(ordner, "drucke");
 }
 
@@ -112,11 +114,11 @@ describe("Funktionalität: Automatikdruck ins Verzeichnis (N3, Entscheidung 7)",
     platz.dienst.automatikdruckSetzen(undefined);
     await verteile(platz, "N-2", ["S4"]);
     await platz.dienst.automatikdruckFertig();
-    expect(existsSync(ziel)).toBe(false);
+    expect(readdirSync(ziel)).toEqual([]);
     expect(existsSync(path.join(platz.share, "ausgaben", "nachrichten"))).toBe(false);
   });
 
-  it("Szenario: ein nicht beschreibbares Verzeichnis meldet sich einmal je Sitzung als Warnung", async () => {
+  it("Szenario: ein fehlendes Verzeichnis wird nicht angelegt; der Vordruck liegt unter ausgaben/nachrichten, der Hinweis kommt einmal (FM P2-11)", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
     platz.dienst.stellenSetzen(["S4"], "Mü");
@@ -132,7 +134,10 @@ describe("Funktionalität: Automatikdruck ins Verzeichnis (N3, Entscheidung 7)",
     expect(hinweise).toHaveLength(1);
     expect(hinweise[0]).toMatchObject({ stufe: "warnung", akteId: "akte-1" });
     expect(hinweise[0]?.text).toContain(kaputt);
+    expect(hinweise[0]?.text).toContain("nicht vorhanden, Vordruck liegt unter ausgaben/nachrichten");
     expect(hinweise[0]?.text).toContain("einmal je Sitzung");
+    expect(existsSync(kaputt)).toBe(false);
+    expect(readdirSync(path.join(platz.share, "ausgaben", "nachrichten")).sort()).toEqual(["nachricht-Eohne-171045nov26-N1.pdf", "nachricht-Eohne-171045nov26-N2.pdf"]);
   });
 
   it("Szenario: das Ziel Drucker ohne Druckausgang (Web-Schale, Werkstatt) meldet sich als Warnung statt still", async () => {

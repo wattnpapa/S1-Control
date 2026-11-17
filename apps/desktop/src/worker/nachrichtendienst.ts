@@ -40,6 +40,11 @@ export interface Nachrichtenumfeld {
    * Sichter nur dann als offen, wenn keiner da ist (Sichter-Audit). Fehlt = ja.
    */
   readonly sichterBesetzt?: boolean;
+  /**
+   * Additiv (ETB P1-2, P1-3): ETB-Nummern und Gründe des Zurückziehens aus
+   * den Ereignissen — Ring 2 kennt nur den Zustand.
+   */
+  readonly bezug?: projektion.Tagebuchbezug;
 }
 
 /** Stellen aus einer Eingabe: geputzt, ohne Leere und ohne Doppelte, in der gegebenen Folge. */
@@ -82,7 +87,9 @@ export function nachrichtenansicht(
   ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }>,
   umfeld: Nachrichtenumfeld,
 ): Nachrichtenansicht {
-  const jetzt = new Date(umfeld.jetztMs).toISOString();
+  // Auf die Minute abgerundet wie im Lagebild (zweiter Durchlauf, Wartezeit):
+  // Spalte „Wartet“ und Band rechnen gegen dieselbe Zeit.
+  const jetzt = new Date(Math.floor(umfeld.jetztMs / MINUTE_MS) * MINUTE_MS).toISOString();
   const stellen = ruf.stellen === undefined ? (umfeld.sitzung?.stellen ?? []) : geputzteStellen(ruf.stellen);
   const offenumfeld = umfeld.sichterBesetzt === undefined ? {} : { sichterBesetzt: umfeld.sichterBesetzt };
   const ausschnitt = projektion.nachrichtenausschnitt(zustand, {
@@ -103,6 +110,7 @@ export function nachrichtenansicht(
   return {
     lageZeiger: umfeld.lageZeiger,
     ...ausschnitt,
+    ...(umfeld.bezug === undefined ? {} : { zeilen: projektion.mitTagebuchbezug(ausschnitt.zeilen, umfeld.bezug) }),
     jetzt,
     anschriften: anschriften(zustand),
     gegenstellen: gegenstellen(zustand),

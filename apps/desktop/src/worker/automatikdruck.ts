@@ -82,6 +82,14 @@ export interface AutomatikdruckOptionen {
   readonly sende: (mitteilung: Mitteilung) => void;
   /** Fehlt in der Werkstatt und in der Web-Schale: Dann gibt es kein Druckerziel. */
   readonly sendeDruck?: ((auftrag: Druckauftrag) => void) | undefined;
+  /**
+   * Additiv (FM P2-11): `ausgaben/nachrichten` des Einsatzes. Fehlt das
+   * eingestellte Verzeichnis, liegt der Vordruck hier, statt dass ein falsch
+   * getippter Ordner still angelegt wird. Fehlt die Angabe, bleibt nur der Hinweis.
+   */
+  readonly ersatzOrdner?: string | undefined;
+  /** Additiv (ETB P1-2): ETB-Nummern aus den Ereignissen, für Feld 20 des Vordrucks. */
+  readonly bezug?: (() => projektion.Tagebuchbezug) | undefined;
 }
 
 export class Automatikdruck {
@@ -89,6 +97,8 @@ export class Automatikdruck {
   readonly #waechter = new Eintreffwaechter();
   #einstellung: Automatikdruckeinstellung | undefined;
   #fehlerGemeldet = false;
+  /** FM P2-11: Der Hinweis „Druckverzeichnis nicht vorhanden“ kommt einmal je Sitzung. */
+  #fehltGemeldet = false;
   /** Die Ausdrucke laufen nacheinander; die Kette ist zugleich der Haken für die Tests. */
   #kette: Promise<void> = Promise.resolve();
 
@@ -111,7 +121,10 @@ export class Automatikdruck {
    * Ein neues Ziel darf seinen Fehler wieder einmal melden.
    */
   setze(einstellung: Automatikdruckeinstellung | undefined, offen: { zustand: Zustand; stellen: readonly string[] } | undefined): void {
-    if (JSON.stringify(einstellung?.ziel) !== JSON.stringify(this.#einstellung?.ziel)) this.#fehlerGemeldet = false;
+    if (JSON.stringify(einstellung?.ziel) !== JSON.stringify(this.#einstellung?.ziel)) {
+      this.#fehlerGemeldet = false;
+      this.#fehltGemeldet = false;
+    }
     const vorher = this.#einstellung;
     this.#einstellung = einstellung;
     if (einstellung === undefined) this.#waechter.vergiss();
@@ -135,17 +148,37 @@ export class Automatikdruck {
   async #drucke(zeile: Nachrichtenzeile, zustand: Zustand, einstellung: Automatikdruckeinstellung): Promise<void> {
     const ziel = einstellung.ziel;
     try {
-      const { dateiname, bytes } = vordruckDerZeile(zeile, zustand, einstellung.blatt);
+      const mitBezug = this.#o.bezug === undefined ? zeile : (projektion.mitTagebuchbezug([zeile], this.#o.bezug())[0] ?? zeile);
+      const { dateiname, bytes } = vordruckDerZeile(mitBezug, zustand, einstellung.blatt);
       if (ziel.ziel === "drucker") {
         if (this.#o.sendeDruck === undefined) throw new Error("Auf diesem Arbeitsplatz gibt es keinen Drucker.");
         this.#o.sendeDruck({ bytes, drucker: ziel.name, dateiname });
         return;
       }
-      await this.#o.dateisystem.legeVerzeichnisAn(ziel.pfad);
-      await this.#o.dateisystem.schreibeUeberOhneSync(path.join(ziel.pfad, dateiname), bytes);
+      // FM P2-11: kein stilles Anlegen. Fehlt das Verzeichnis, geht der
+      // Vordruck nach ausgaben/nachrichten, und der Arbeitsplatz erfährt es einmal.
+      const ordner = (await this.#o.dateisystem.existiert(ziel.pfad)) ? ziel.pfad : await this.#ersatz(ziel.pfad);
+      await this.#o.dateisystem.schreibeUeberOhneSync(path.join(ordner, dateiname), bytes);
     } catch (fehler) {
       this.#meldeFehler(ziel, fehler);
     }
+  }
+
+  /** Der Ersatzordner nach einem fehlenden Druckverzeichnis; wirft ohne Ersatz (dann meldet `#meldeFehler`). */
+  async #ersatz(pfad: string): Promise<string> {
+    const ersatz = this.#o.ersatzOrdner;
+    if (ersatz === undefined) throw new Error(`Das Druckverzeichnis „${pfad}“ gibt es nicht`);
+    await this.#o.dateisystem.legeVerzeichnisAn(ersatz);
+    if (!this.#fehltGemeldet) {
+      this.#fehltGemeldet = true;
+      this.#o.sende({
+        art: "hinweis",
+        akteId: this.#o.akteId,
+        stufe: "warnung",
+        text: `Automatikdruck: Druckverzeichnis „${pfad}“ nicht vorhanden, Vordruck liegt unter ausgaben/nachrichten. Bitte das Ziel in den Druckeinstellungen prüfen; dieser Hinweis kommt einmal je Sitzung.`,
+      });
+    }
+    return ersatz;
   }
 
   #meldeFehler(ziel: Automatikdruckziel, fehler: unknown): void {

@@ -23,7 +23,7 @@
 import path from "node:path";
 
 import { nachrichtendateiname, type Ausgabekopf } from "@s1/ausgaben";
-import { projektion, type Zustand } from "@s1/domaene";
+import { projektion, type EingehendesEreignis, type Zustand } from "@s1/domaene";
 import type { Dateisystem } from "@s1/speicher";
 
 import { nachweisungsausgabe } from "./listenausgaben.js";
@@ -45,9 +45,11 @@ export interface Beilagenergebnis {
 }
 
 /** Legt die fehlenden Vordruck-PDFs aller nicht zurückgezogenen Nachrichten ab. */
-export async function legeFehlendeVordrucke(ziel: Beilagenziel, zustand: Zustand): Promise<Beilagenergebnis> {
+export async function legeFehlendeVordrucke(ziel: Beilagenziel, zustand: Zustand, bezug?: projektion.Tagebuchbezug): Promise<Beilagenergebnis> {
   const ordner = path.join(ziel.ausgabenordner, ORDNER_NACHRICHTEN);
-  const zeilen = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen.filter((z) => !z.zurueckgezogen);
+  const alle = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen.filter((z) => !z.zurueckgezogen);
+  // Additiv (ETB P1-2): mit ETB-Nummer in Feld 20, wo der Aufrufer die Ereignisse hat.
+  const zeilen = bezug === undefined ? alle : projektion.mitTagebuchbezug(alle, bezug);
   let erzeugt = 0;
   let vorhanden = 0;
   let fehlgeschlagen = 0;
@@ -77,10 +79,11 @@ export async function legeNachweisungBei(
   zustand: Zustand,
   kopf: Ausgabekopf & { readonly erstelltVon: string },
   marke: string,
+  ereignisse?: readonly EingehendesEreignis[],
 ): Promise<boolean> {
   if (zustand.nachrichten === undefined || Object.keys(zustand.nachrichten).length === 0) return true;
   try {
-    const { dateiname, html } = nachweisungsausgabe(zustand, kopf, marke);
+    const { dateiname, html } = nachweisungsausgabe(zustand, kopf, marke, { ereignisse });
     await ziel.dateisystem.legeVerzeichnisAn(ziel.ausgabenordner);
     await ziel.dateisystem.schreibeUeberOhneSync(path.join(ziel.ausgabenordner, `${dateiname}.html`), new TextEncoder().encode(html));
     return true;

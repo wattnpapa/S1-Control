@@ -15,15 +15,20 @@
  */
 
 import { LOG_FUSSNOTE } from "@s1/ausgaben";
-import { projektion, type Zustand } from "@s1/domaene";
+import { anzeigezoneVersatzMinuten, projektion, type Zustand } from "@s1/domaene";
 
 import type { Ruf, Versorgungsansicht, Versorgungszahlen } from "../kontrakt/index.js";
 
 const MINUTE_MS = 60_000;
 
-/** Ortszeit minus UTC in Minuten — dieselbe Zone, in der Kopfband und Monitor die Uhr zeigen. */
+/**
+ * Wandzeit minus UTC in Minuten — dieselbe Zone, in der Kopfband und Monitor
+ * die Uhr zeigen: die Anzeigezone Europe/Berlin, nicht mehr die Zone des
+ * Rechners (Audits Nachrichten SGL P3-16, LdF P2-4). Sonst begann der
+ * Versorgungstag auf einem Rechner mit UTC eine Stunde später als im Kopfband.
+ */
 export function ortsversatz(ms: number): number {
-  return -new Date(ms).getTimezoneOffset();
+  return anzeigezoneVersatzMinuten(ms);
 }
 
 let gemerkt: { zustand: Zustand; minute: number; zahlen: Versorgungszahlen } | undefined;

@@ -65,7 +65,8 @@ export type Auftrag =
   | { readonly art: "vokabelnKorrigieren"; readonly nummer: number }
   | { readonly art: "tabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tabelleAnfordern" }> }
   | { readonly art: "untertabelleAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "untertabelleAnfordern" }> }
-  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: Seitenausgabe; readonly organisation?: string }
+  // Additiv (LdF P2-5): `zeitraum` schneidet die Nachweisung auf eine Schicht.
+  | { readonly art: "ausgabeHtml"; readonly nummer: number; readonly ausgabe: Seitenausgabe; readonly organisation?: string; readonly zeitraum?: { readonly von?: string; readonly bis?: string } }
   | { readonly art: "auswertungXlsx"; readonly nummer: number }
   | { readonly art: "oldenburgXlsx"; readonly nummer: number }
   | { readonly art: "logFreiXlsx"; readonly nummer: number }
@@ -89,6 +90,8 @@ export type Auftrag =
   | { readonly art: "automatikdruckSetzen"; readonly nummer: number; readonly einstellung?: Automatikdruckeinstellung }
   | { readonly art: "einsatzArchivieren"; readonly nummer: number; readonly zeitpunkt: string }
   | { readonly art: "akteErzeugen"; readonly nummer: number }
+  // Additiv (Sichter P1-4, ETB P3-3): die Stelle abgeben, die Präsenz sofort ohne Stellen.
+  | { readonly art: "stelleAbgeben"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };
 
 /**

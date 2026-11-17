@@ -43,14 +43,20 @@ export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
 }
 
 export interface Nachrichtenfolgeplan {
-  readonly folgen: readonly { readonly entwurf: Ereignisentwurf; readonly hinweis: string }[];
+  /**
+   * `mitFolgen` (additiv, Fernmelder P2-9): Der Worker plant nach dem
+   * Schreiben dieses Folgeschritts dessen eigene Folgen gegen den dann
+   * geltenden Zustand — die Beförderung des Papier-Nachtrags bekommt so ihre
+   * Kopien und den Kontakt im Funkplan wie eine Beförderung aus der Warteschlange.
+   */
+  readonly folgen: readonly { readonly entwurf: Ereignisentwurf; readonly hinweis: string; readonly mitFolgen?: boolean }[];
   readonly hinweise: readonly string[];
 }
 
 /** Der Hinweis, den der Bediener nach dem Aufnehmen ohne Sichter sieht (§5). */
 export const HINWEIS_ERSATZSICHTER = "Kein Sichter besetzt: Nachricht beim Aufnehmen verteilt.";
 
-type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown };
+type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown; readonly befoerderung?: unknown };
 
 function folgewerte(entwurf: Ereignisentwurf): Folgewerte | undefined {
   const wert = (entwurf as { readonly nachrichtenfolge?: unknown }).nachrichtenfolge;
@@ -89,8 +95,12 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
   // Ohne LdF in der Präsenz läuft ein Eingang direkt zum Sichter (additiv, 2026-11-17).
   const weitergabe = planeWeitergabeErsatz(zustand, entwurf, umfeld, werte?.sichtung !== undefined);
   if (werte === undefined || typeof nachrichtId !== "string") return { folgen: weitergabe === undefined ? [] : [weitergabe], hinweise: [] };
-  const folgen: { entwurf: Ereignisentwurf; hinweis: string }[] = [];
+  const folgen: { entwurf: Ereignisentwurf; hinweis: string; mitFolgen?: boolean }[] = [];
   const hinweise: string[] = [];
+  // Fernmelder P2-9: Annahme vor der Nummer, wie die Warteschlange sie schreibt.
+  if (werte.annahme !== undefined) {
+    folgen.push({ entwurf: { typ: "NachrichtAngenommen", nutzlast: { nachrichtId }, vorher: null, neu: werte.annahme }, hinweis: "Annahme vom Papier eingetragen." });
+  }
   if (werte.nachweis !== undefined) {
     const nummer = nummerAus(werte.nachweis);
     folgen.push({
@@ -113,6 +123,9 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
       },
       hinweis: verteilhinweis(umfeld, nutzlast["gespraechsnotiz"] === true),
     });
+  }
+  if (werte.befoerderung !== undefined) {
+    folgen.push({ entwurf: { typ: "NachrichtBefoerdert", nutzlast: { nachrichtId }, vorher: null, neu: werte.befoerderung }, hinweis: "Beförderung vom Papier eingetragen.", mitFolgen: true });
   }
   if (weitergabe !== undefined) folgen.push(weitergabe);
   return { folgen, hinweise };

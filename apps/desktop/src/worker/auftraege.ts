@@ -67,7 +67,7 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
     case "untertabelleAnfordern":
       return dienst.untertabelle(auftrag.ruf);
     case "ausgabeHtml":
-      return dienst.ausgabeHtml(auftrag.ausgabe, auftrag.organisation);
+      return dienst.ausgabeHtml(auftrag.ausgabe, auftrag.organisation, auftrag.zeitraum);
     case "auswertungXlsx":
       return dienst.auswertungXlsx();
     case "oldenburgXlsx":
@@ -113,6 +113,9 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.archiviere(auftrag.zeitpunkt);
     case "akteErzeugen":
       return dienst.erzeugeAkte();
+    case "stelleAbgeben":
+      await dienst.stelleAbgeben();
+      return null;
     case "schliesse":
       // Hier bewusst nicht behandelt: Der Worker-Einstieg faengt ihn ab, weil
       // er neben dem Dienst seinen Zeitgeber abraeumen muss.
