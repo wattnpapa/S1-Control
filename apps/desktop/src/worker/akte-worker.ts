@@ -81,6 +81,8 @@ export type Auftrag =
   | { readonly art: "tagebuchAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "tagebuchAnfordern" }> }
   // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9): das Blatt und Stelle/Handzeichen der Sitzung.
   | { readonly art: "nachrichtenAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtenAnfordern" }> }
+  // Additiv (ETB P0-1): eine einzelne Nachricht für „Nachricht öffnen" an der Tagebuchzeile.
+  | { readonly art: "nachrichtAnfordern"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtAnfordern" }> }
   | { readonly art: "stellenSetzen"; readonly nummer: number; readonly stellen?: readonly string[]; readonly handzeichen?: string }
   // Schnitt N3 (§7, Entscheidung 7): Vordruck je Nachricht und Ziel des Automatikdrucks.
   | { readonly art: "nachrichtVordruckErzeugen"; readonly nummer: number; readonly ruf: Extract<Ruf, { art: "nachrichtVordruckErzeugen" }> }

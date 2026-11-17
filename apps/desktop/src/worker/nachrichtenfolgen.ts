@@ -13,6 +13,12 @@
  * - **Beförderung an eine Einheit**: Ist die Gegenstelle eine Einheit der
  *   Lage, folgt auf `NachrichtBefoerdert` eine Funkprobe „Kontakt“ — der
  *   Funkplan zeigt dann den letzten Kontakt.
+ * - **Befördern verlangt die Annahme** (additiv, Audit LdF P0-1): Trägt der
+ *   Entwurf `nachrichtenfolge.annahme` und hat die Nachricht noch keine
+ *   Annahme, folgt `NachrichtAngenommen` mit Uhrzeit und Handzeichen der
+ *   Beförderung; trägt er `nachweis` und hat sie noch keine Nummer, folgt
+ *   `NachrichtNachgewiesen` — so verlässt keine Nachricht die FmZ still ohne
+ *   Annahmevermerk oder Nummer.
  * - **Doppelte Nummer**: Wer eine schon vergebene Nummer nachweist, wird
  *   nicht aufgehalten (Papier geht vor), aber der Hinweis sagt es sofort; der
  *   Fold hält `nachweisnummerDoppelt` fest (§9 „zeigen, nicht raten").
@@ -44,7 +50,7 @@ export interface Nachrichtenfolgeplan {
 /** Der Hinweis, den der Bediener nach dem Aufnehmen ohne Sichter sieht (§5). */
 export const HINWEIS_ERSATZSICHTER = "Kein Sichter besetzt: Nachricht beim Aufnehmen verteilt.";
 
-type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown };
+type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown };
 
 function folgewerte(entwurf: Ereignisentwurf): Folgewerte | undefined {
   const wert = (entwurf as { readonly nachrichtenfolge?: unknown }).nachrichtenfolge;
@@ -137,6 +143,34 @@ function planeKontakt(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfo
   };
 }
 
+/**
+ * Die Vermerke, die die Beförderungsmaske mitschickt (LdF P0-1): die fehlende
+ * Annahme und die fehlende Nummer. Was der Zustand schon trägt, wird nicht
+ * überschrieben — ein anderer Fernmelder kann inzwischen angenommen oder
+ * nachgewiesen haben.
+ */
+function planeBefoerderungsvermerke(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfolgeplan {
+  const werte = folgewerte(entwurf);
+  const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
+  if (werte === undefined || typeof nachrichtId !== "string") return { folgen: [], hinweise: [] };
+  const n = zustand.nachrichten?.[nachrichtId];
+  const folgen: { entwurf: Ereignisentwurf; hinweis: string }[] = [];
+  const hinweise: string[] = [];
+  if (werte.annahme !== undefined && (n?.annahme?.wert ?? null) === null) {
+    folgen.push({ entwurf: { typ: "NachrichtAngenommen", nutzlast: { nachrichtId }, vorher: null, neu: werte.annahme }, hinweis: "Annahme mit Uhrzeit und Handzeichen der Beförderung eingetragen." });
+  }
+  if (werte.nachweis !== undefined && (n?.nachweis?.wert ?? null) === null) {
+    const nummer = nummerAus(werte.nachweis);
+    folgen.push({
+      entwurf: { typ: "NachrichtNachgewiesen", nutzlast: { nachrichtId }, vorher: null, neu: werte.nachweis },
+      hinweis: `In der Nachweisung unter Nummer ${nummer === undefined ? "?" : String(nummer)} eingetragen.`,
+    });
+    const doppelt = doppelhinweis(zustand, nummer, nachrichtId);
+    if (doppelt !== undefined) hinweise.push(doppelt);
+  }
+  return { folgen, hinweise };
+}
+
 /** Der Satz an den zweiten Sichter (§5 „Sichtung"); der Fold hält dazu `vorherPasstNicht`. */
 export const HINWEIS_ZWEITE_SICHTUNG = "Die Nachricht war inzwischen anders gesichtet: Beide Verteiler gelten, bis eine Nachsichtung bereinigt.";
 
@@ -157,9 +191,11 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
   if (entwurf.typ === "NachrichtVerfasst") return planeAnlage(zustand, entwurf, umfeld);
   if (entwurf.typ === "NachrichtBefoerdert") {
     // Kontakt im Funkplan (main) und die Folgen am Laufweg (LdF-Ersatz, Kopien) in einem Plan.
+    // Additiv (LdF P0-1): zuerst die nachgetragene Annahme und die Nummer.
+    const vermerke = planeBefoerderungsvermerke(zustand, entwurf);
     const kontakt = planeKontakt(zustand, entwurf);
     const laufweg = planeBefoerderungsfolgen(zustand, entwurf, umfeld);
-    return { folgen: [...kontakt.folgen, ...laufweg.folgen], hinweise: [...kontakt.hinweise, ...laufweg.hinweise] };
+    return { folgen: [...vermerke.folgen, ...kontakt.folgen, ...laufweg.folgen], hinweise: [...vermerke.hinweise, ...kontakt.hinweise, ...laufweg.hinweise] };
   }
   if (entwurf.typ === "NachrichtGesichtet") return planeSichtung(zustand, entwurf);
   if (entwurf.typ === "NachrichtNachgewiesen") {

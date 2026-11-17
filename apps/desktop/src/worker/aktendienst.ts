@@ -54,6 +54,7 @@ import {
   type EingehendesEreignis,
   type Faltung,
   type Hlc,
+  type Nachrichtenzeile,
   type Sammelstand,
   type Zustand,
 } from "@s1/domaene";
@@ -151,7 +152,16 @@ import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { pruefeFunk } from "./funkpruefung.js";
-import { Vorrangwaechter, mitNachrichtenparametern, nachrichtenansicht, nachrichtenFuerLagebild, peerStellen, sitzungAus } from "./nachrichtendienst.js";
+import { legeFehlendeVordrucke, legeNachweisungBei } from "./aktenbeilagen.js";
+import {
+  Vorrangwaechter,
+  mitNachrichtenparametern,
+  nachrichtenansicht,
+  nachrichtenFuerLagebild,
+  offeneNachrichtenTeil,
+  peerStellen,
+  sitzungAus,
+} from "./nachrichtendienst.js";
 import { pruefeNachricht } from "./nachrichtenpruefung.js";
 import { Automatikdruck, type Automatikdruckeinstellung, type Druckauftrag } from "./automatikdruck.js";
 import { ORDNER_NACHRICHTEN, vordruckDerNachricht } from "./nachrichtenvordruck.js";
@@ -933,7 +943,26 @@ export class Aktendienst {
   async erzeugeAkte(): Promise<Akteergebnis> {
     await this.#spiegle();
     await this.#legeTagebuchInDieAkte();
-    return erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
+    // ETB P1-5: Vordrucke, die fehlen, und die Nachweisung kommen vor dem Packen dazu.
+    const beilagen = await this.#legeNachrichtenInDieAkte();
+    const akte = await erzeugeEinsatzakte(this.#o.dateisystem, this.#o.ablage.share, this.#o.einsatzId, new Date(this.#o.zeit()));
+    return beilagen === undefined ? akte : { ...akte, nachrichtenbeilagen: beilagen };
+  }
+
+  /** Vordruck-PDFs und Nachweisung (`aktenbeilagen.ts`); `undefined` ohne Nachrichten. */
+  async #legeNachrichtenInDieAkte(): Promise<Akteergebnis["nachrichtenbeilagen"]> {
+    if (this.#zustand.nachrichten === undefined || Object.keys(this.#zustand.nachrichten).length === 0) return undefined;
+    const ziel = { dateisystem: this.#o.dateisystem, ausgabenordner: this.#o.ablage.shareAusgaben };
+    const jetzt = new Date(this.#o.zeit());
+    const kopf = {
+      datum: this.#o.einsatzId.slice(0, 10),
+      einsatzName: alsText(this.#zustand.einsatz?.name.wert),
+      stand: `Stand: ${jetzt.toLocaleString("de-DE")}`,
+      erstelltVon: this.#erstellerText(),
+    };
+    const vordrucke = await legeFehlendeVordrucke(ziel, this.#zustand);
+    const nachweisung = await legeNachweisungBei(ziel, this.#zustand, kopf, dateimarke(jetzt));
+    return { ...vordrucke, fehlgeschlagen: vordrucke.fehlgeschlagen + (nachweisung ? 0 : 1) };
   }
 
   /**
@@ -1008,7 +1037,16 @@ export class Aktendienst {
       jetztMs: this.#o.zeit(),
       clientId: this.#clientId,
       sitzung: this.#sitzung,
+      sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
     });
+  }
+
+  /**
+   * Eine einzelne Nachricht (ETB P0-1): „Nachricht öffnen" an der
+   * Tagebuchzeile holt sie über die Kennung, nicht über eine Suche.
+   */
+  nachricht(nachrichtId: string): Nachrichtenzeile | null {
+    return projektion.nachrichtNach(this.#zustand, nachrichtId, new Date(this.#o.zeit()).toISOString()) ?? null;
   }
 
   /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
@@ -1131,6 +1169,7 @@ export class Aktendienst {
         ...(ruf.abschnittId === undefined ? {} : { abschnittId: ruf.abschnittId }),
         ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
         ...(ruf.nurRuecknahmen === undefined ? {} : { nurRuecknahmen: ruf.nurRuecknahmen }),
+        ...(ruf.nachrichtId === undefined ? {} : { nachrichtId: ruf.nachrichtId }),
       },
       ruf.von,
       ruf.anzahl,
@@ -1997,7 +2036,8 @@ export class Aktendienst {
       lageZeiger: this.#lageZeiger,
       versorgung: versorgungFuerLagebild(zustand, this.#o.zeit()),
       funk: funkFuerLagebild(zustand, this.#o.zeit()),
-      nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit()),
+      nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit(), sichterBesetzt(this.#sitzung?.stellen, this.#peers)),
+      ...offeneNachrichtenTeil(zustand),
       ...(this.#sitzung === undefined ? {} : { sitzung: this.#sitzung }),
     };
   }

@@ -190,6 +190,7 @@ describe("Funktionalität: Fernmeldezentrale (N2)", () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
     await platz.dienst.bediene(nachrichtAufnehmen(anlage({ richtung: "EINGANG" }), { sichtung: verteilung }));
-    expect(sicht(platz, "posteingang", ["S4"]).zaehlung).toEqual({ NEU: 1, GELESEN: 0, ERLEDIGT: 0 });
+    // Additiv OFFEN: die Zahl der Sicht „offen" für dieselben Stellen (SGL P1-7).
+    expect(sicht(platz, "posteingang", ["S4"]).zaehlung).toEqual({ NEU: 1, GELESEN: 0, ERLEDIGT: 0, OFFEN: 1 });
   });
 });

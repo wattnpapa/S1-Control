@@ -99,6 +99,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.tagebuch(auftrag.ruf);
     case "nachrichtenAnfordern":
       return dienst.nachrichten(auftrag.ruf);
+    case "nachrichtAnfordern":
+      return dienst.nachricht(auftrag.ruf.nachrichtId);
     case "stellenSetzen":
       dienst.stellenSetzen(auftrag.stellen, auftrag.handzeichen);
       return null;

@@ -14,12 +14,26 @@ import {
   papierVordruckAlsHtml,
   tagebuchAlsHtml,
   type Ausgabekopf,
+  type Tagebuchabschluss,
 } from "@s1/ausgaben";
 import { projektion, type EingehendesEreignis, type Zustand } from "@s1/domaene";
 
 export type Listenausgabe = "anforderungen" | "tagebuch" | "papier";
 
 export const LISTENAUSGABEN: ReadonlySet<string> = new Set<Listenausgabe>(["anforderungen", "tagebuch", "papier"]);
+
+/**
+ * Wie das gedruckte Tagebuch schließt (ETB P0-3): Ist der Einsatz beendet
+ * oder archiviert, nennt die Schlusszeile Zeit und Akteur der jüngsten Zeile
+ * „Einsatz beendet"; sonst gilt der Stand des Kopfes.
+ */
+export function tagebuchabschluss(zustand: Zustand, zeilen: readonly projektion.Tagebuchzeile[]): Tagebuchabschluss {
+  const status = zustand.einsatz?.status;
+  if (status !== "BEENDET" && status !== "ARCHIVIERT") return {};
+  const ende = zeilen.find((z) => z.typ === "EinsatzBeendet");
+  if (ende === undefined) return {};
+  return { beendet: { zeit: ende.zeitpunkt ?? ende.wanduhr, akteur: ende.akteur } };
+}
 
 /** Das Tagebuch als HTML — auch für die Einsatzakte. */
 export function tagebuchHtml(
@@ -28,7 +42,7 @@ export function tagebuchHtml(
   kopf: Ausgabekopf,
 ): string {
   const ausschnitt = projektion.tagebuchausschnitt(zustand, ereignisse, {});
-  return tagebuchAlsHtml(ausschnitt.zeilen, kopf);
+  return tagebuchAlsHtml(ausschnitt.zeilen, kopf, tagebuchabschluss(zustand, ausschnitt.zeilen));
 }
 
 /** Rendert eine der Listenausgaben; `marke` ist der Zeitstempel für den Dateinamen. */

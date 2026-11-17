@@ -13,11 +13,18 @@
  * ein, schickt der Worker die Mitteilung `hinweis` mit Stufe „warnung"; ohne
  * Vorrang steigt nur die Zahl im Band. Was beim Öffnen schon da war, ist kein
  * Eintreffen und meldet sich nicht.
+ *
+ * Additiv (Audit Fernmelder P1-5, Sichter P1-1): Auch die Warteschlangen
+ * melden sich. Ein Ausgang mit Vorrang, der vor der FmZ oder beim LdF
+ * eintrifft, gibt einem Arbeitsplatz mit Stelle FMZ oder LDF den Hinweis
+ * (und bei Blitz den Ton); ein Eingang mit Vorrang vor dem Sichter ebenso dem
+ * Arbeitsplatz mit Stelle SICHTER. Wer die Nachricht selbst aufgegeben oder
+ * aufgenommen hat, weiß es und wird nicht gemeldet.
  */
 
 import { kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
 
-import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, OffeneNachrichten, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
 import { funkplanbereiche } from "./funkplanprojektion.js";
 
 const MINUTE_MS = 60_000;
@@ -28,6 +35,11 @@ export interface Nachrichtenumfeld {
   readonly jetztMs: number;
   readonly clientId: string;
   readonly sitzung: Sitzungsstellen | undefined;
+  /**
+   * Additiv: Ist ein Sichter in der Präsenz? Die FmZ zählt Eingänge vor dem
+   * Sichter nur dann als offen, wenn keiner da ist (Sichter-Audit). Fehlt = ja.
+   */
+  readonly sichterBesetzt?: boolean;
 }
 
 /** Stellen aus einer Eingabe: geputzt, ohne Leere und ohne Doppelte, in der gegebenen Folge. */
@@ -72,11 +84,17 @@ export function nachrichtenansicht(
 ): Nachrichtenansicht {
   const jetzt = new Date(umfeld.jetztMs).toISOString();
   const stellen = ruf.stellen === undefined ? (umfeld.sitzung?.stellen ?? []) : geputzteStellen(ruf.stellen);
+  const offenumfeld = umfeld.sichterBesetzt === undefined ? {} : { sichterBesetzt: umfeld.sichterBesetzt };
   const ausschnitt = projektion.nachrichtenausschnitt(zustand, {
     sicht: ruf.sicht,
     stellen,
     clientId: umfeld.clientId,
     jetzt,
+    ...offenumfeld,
+    // Additiv: Kennungsfilter (ETB P0-1) und „meine Sichtungen" (Sichter-Audit).
+    ...(ruf.nachrichtId === undefined ? {} : { nachrichtId: ruf.nachrichtId }),
+    ...(ruf.nurEigeneSichtungen === undefined ? {} : { nurEigeneSichtungen: ruf.nurEigeneSichtungen }),
+    ...(umfeld.sitzung?.handzeichen === undefined ? {} : { handzeichen: umfeld.sitzung.handzeichen }),
     ...(ruf.zustaende === undefined ? {} : { zustaende: ruf.zustaende }),
     ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
     ...(ruf.von === undefined ? {} : { von: ruf.von }),
@@ -91,8 +109,21 @@ export function nachrichtenansicht(
     // N2: Vorbelegung und Warnung der Nachweisungsnummer (§6, §9), die Zahlen der Chips (§6).
     naechsteNummer: projektion.naechsteNachweisnummer(zustand),
     vergebeneNummern: vergebeneNummern(zustand),
-    zaehlung: projektion.nachrichtenZaehlung(zustand, stellen, jetzt),
+    zaehlung: projektion.nachrichtenZaehlung(zustand, stellen, jetzt, offenumfeld),
+    // Additiv (LdF P2-2): die Lücken der Nummernfolge für die Nachweisung.
+    nummernluecken: projektion.nummernluecken(ausschnittOhneFilter(zustand)),
   };
+}
+
+/** Alle Zeilen (die Nachweisung ist die Sicht ohne Filter). */
+function ausschnittOhneFilter(zustand: Zustand): readonly Nachrichtenzeile[] {
+  return projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen;
+}
+
+/** Was beim Beenden an Nachrichten offen ist (ETB P1-6); fehlt, solange der Einsatz keine führt. */
+export function offeneNachrichtenFuerLagebild(zustand: Zustand): OffeneNachrichten | undefined {
+  if (zustand.nachrichten === undefined || Object.keys(zustand.nachrichten).length === 0) return undefined;
+  return projektion.offeneNachrichten(ausschnittOhneFilter(zustand));
 }
 
 /** Die Nummern, die eine Nachricht schon trägt — aufsteigend, ohne Doppelte. */
@@ -125,19 +156,32 @@ export function mitNachrichtenparametern<T extends object>(
 }
 
 let gemerkt: { zustand: Zustand; minute: number; stellen: string; zahlen: Nachrichtenlage } | undefined;
+let gemerktOffen: { zustand: Zustand; zahlen: OffeneNachrichten | undefined } | undefined;
+
+/**
+ * Der Teil des Lagebilds mit den offenen Nachrichten (ETB P1-6), gemerkt je
+ * Zustand — das Lagebild entsteht in jedem Takt; leer ohne Nachrichten.
+ */
+export function offeneNachrichtenTeil(zustand: Zustand): { offeneNachrichten?: OffeneNachrichten } {
+  if (gemerktOffen?.zustand !== zustand) gemerktOffen = { zustand, zahlen: offeneNachrichtenFuerLagebild(zustand) };
+  return gemerktOffen.zahlen === undefined ? {} : { offeneNachrichten: gemerktOffen.zahlen };
+}
 
 /**
  * Die fünf Zahlen fürs Lagebild. Das Lagebild wird in jedem Takt gebaut; die
  * Zahl „über der Schwelle" hängt an der Uhr, eine Minute Auflösung genügt —
  * gemerkt wird deshalb je Zustand, Minute und Stellen wie beim Funk.
  */
-export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly string[], jetztMs: number): Nachrichtenlage {
+export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly string[], jetztMs: number, sichterBesetzt = true): Nachrichtenlage {
   const minute = Math.floor(jetztMs / MINUTE_MS);
-  const schluessel = stellen.join("\u0000");
+  const schluessel = `${stellen.join("\u0000")}\u0001${String(sichterBesetzt)}`;
   if (gemerkt?.zustand === zustand && gemerkt.minute === minute && gemerkt.stellen === schluessel) return gemerkt.zahlen;
-  const zahlen = projektion.nachrichtenlage(zustand, stellen, new Date(minute * MINUTE_MS).toISOString());
-  gemerkt = { zustand, minute, stellen: schluessel, zahlen: { ...zahlen } };
-  return gemerkt.zahlen;
+  // Mit Vorrang offen je Stelle der Sitzung (SGL P1-7); die FmZ zählt den Sichter nur ohne Sichter.
+  const zahlen = projektion.nachrichtenlage(zustand, stellen, new Date(minute * MINUTE_MS).toISOString(), { sichterBesetzt });
+  const { nummernluecken, ...zahlenOhneLuecken } = zahlen;
+  const fertig: Nachrichtenlage = { ...zahlenOhneLuecken, ...(nummernluecken === undefined ? {} : { nummernluecken: [...nummernluecken] }) };
+  gemerkt = { zustand, minute, stellen: schluessel, zahlen: fertig };
+  return fertig;
 }
 
 /** Stellen und Handzeichen aus einer fremden Präsenzdatei — nur, was die Form hat. */
@@ -164,16 +208,39 @@ export function vorrangtext(zeile: Nachrichtenzeile, stelle: string): string {
   return `${wort}-Nachricht ${nummer} für ${projektion.stellenWort(stelle)}: ${betreff}`;
 }
 
-/** Gesichtet, mit Vorrang, nicht zurückgezogen: je eigener Stelle des Verteilers ein Treffer. */
-function treffer(zustand: Zustand, stellen: readonly string[]): { schluessel: string; zeile: Nachrichtenzeile; stelle: string }[] {
+interface Treffer {
+  readonly schluessel: string;
+  readonly zeile: Nachrichtenzeile;
+  readonly stelle: string;
+  /** Der Arbeitsplatz, dessen eigene Handlung den Treffer erzeugt hat — er wird nicht gemeldet. */
+  readonly ausloeser: string | undefined;
+}
+
+/**
+ * Die Warteschlange, an der eine Stelle dieses Arbeitsplatzes die Zeile
+ * sieht (Fernmelder P1-5, Sichter P1-1): FMZ und LDF den Ausgang vor der FmZ
+ * oder beim LdF, SICHTER den Eingang vor dem Sichter.
+ */
+function warteschlangenstelle(zeile: Nachrichtenzeile, stellen: readonly string[]): string | undefined {
+  const ausgang = zeile.richtungKurz === "A" && !zeile.gespraechsnotiz && (zeile.laufzustand === "VOR_FMZ" || zeile.laufzustand === "VOR_LDF");
+  if (ausgang) return stellen.find((s) => s === "FMZ" || s === "LDF");
+  return zeile.laufzustand === "VOR_SICHTER" && stellen.includes("SICHTER") ? "SICHTER" : undefined;
+}
+
+/** Mit Vorrang, nicht zurückgezogen: je eigener Stelle des Verteilers und je Warteschlange ein Treffer. */
+function treffer(zustand: Zustand, stellen: readonly string[]): Treffer[] {
   if (stellen.length === 0) return [];
-  const ergebnis: { schluessel: string; zeile: Nachrichtenzeile; stelle: string }[] = [];
+  const ergebnis: Treffer[] = [];
   if (zustand.nachrichten === undefined) return [];
   // Die Nachweisung ist die Sicht ohne Filter: alle Zeilen in einem Durchgang.
   for (const zeile of projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen) {
-    if (zeile.sichtung === undefined || zeile.vorrangstufe === 2 || zeile.zurueckgezogen) continue;
+    if (zeile.vorrangstufe === 2 || zeile.zurueckgezogen) continue;
+    const schlange = warteschlangenstelle(zeile, stellen);
+    if (schlange !== undefined) ergebnis.push({ schluessel: `${zeile.id}/schlange/${schlange}`, zeile, stelle: schlange, ausloeser: zeile.clientId });
+    if (zeile.sichtung === undefined) continue;
+    const sichter = zustand.nachrichten[zeile.id]?.sichtung?.hlc.clientId;
     for (const marke of zeile.verteiler) {
-      if (stellen.includes(marke.stelle)) ergebnis.push({ schluessel: `${zeile.id}/${marke.stelle}`, zeile, stelle: marke.stelle });
+      if (stellen.includes(marke.stelle)) ergebnis.push({ schluessel: `${zeile.id}/${marke.stelle}`, zeile, stelle: marke.stelle, ausloeser: sichter });
     }
   }
   return ergebnis;
@@ -200,8 +267,7 @@ export class Vorrangwaechter {
     for (const t of treffer(zustand, stellen)) {
       if (bekannt.has(t.schluessel)) continue;
       bekannt.add(t.schluessel);
-      const sichter = zustand.nachrichten?.[t.zeile.id]?.sichtung?.hlc.clientId;
-      if (sichter === eigeneClientId) continue;
+      if (t.ausloeser === eigeneClientId) continue;
       hinweise.push({ text: vorrangtext(t.zeile, t.stelle), blitz: t.zeile.vorrangstufe === 0 });
     }
     return hinweise;
