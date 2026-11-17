@@ -16,16 +16,21 @@ const dateisystem = (dateien: readonly string[], wirft = false): Dateisystem =>
     },
   }) as unknown as Dateisystem;
 
+// Die Implementierung baut Pfade mit path.join; unter Windows entstehen
+// Backslashes ("\\e\\einsatz.json"). Die Tabelle der Zeiten führt "/"-Pfade, also
+// wird der Pfad vor dem Nachschlagen angeglichen — sonst findet sie nichts.
+const nachSchraegstrich = (pfad: string): string => pfad.replaceAll("\\", "/");
+
 describe("letzteAenderung", () => {
   it("nimmt die jüngste Zeit über Anker und Ereignisdateien", async () => {
     const zeiten: Record<string, number> = { "/e/einsatz.json": 1000, "/e/ereignisse/a": 5000, "/e/ereignisse/b": 3000 };
-    const ergebnis = await letzteAenderung(dateisystem(["a", "b"]), "/e", async (pfad) => zeiten[pfad]);
+    const ergebnis = await letzteAenderung(dateisystem(["a", "b"]), "/e", async (pfad) => zeiten[nachSchraegstrich(pfad)]);
     expect(ergebnis).toBe(new Date(5000).toISOString());
   });
 
   it("verträgt einen hängenden Ereignisordner und fehlende Zeiten", async () => {
     expect(await letzteAenderung(dateisystem([], true), "/e", async () => undefined)).toBeUndefined();
-    expect(await letzteAenderung(dateisystem([], true), "/e", async (p) => (p.endsWith("einsatz.json") ? 7 : undefined))).toBe(
+    expect(await letzteAenderung(dateisystem([], true), "/e", async (p) => (nachSchraegstrich(p).endsWith("einsatz.json") ? 7 : undefined))).toBe(
       new Date(7).toISOString(),
     );
   });

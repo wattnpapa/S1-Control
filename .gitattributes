@@ -1,0 +1,23 @@
+# Zeilenenden: im Repository und im Arbeitsbaum immer LF.
+# Warum: Die Goldfiles (bau/ausgaben/goldfiles/*.html) werden Byte für Byte
+# verglichen. Git auf Windows wandelt sonst beim Checkout in CRLF um, und die
+# Ausgaben der Kernpakete erzeugen LF.
+* text=auto eol=lf
+
+# Binärdateien: nie umwandeln, nie als Text diffen.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.icns binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.otf binary
+*.s1control binary
+*.sqlite binary
+*.db binary

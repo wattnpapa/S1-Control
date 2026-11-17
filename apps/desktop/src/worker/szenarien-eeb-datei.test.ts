@@ -29,7 +29,11 @@ const TEXTE = ["001-albstadt-ztr-tz.json", "002-biberach-riss-fgr-o-b.json", "00
   readFileSync(path.join(PRUEFDATEN, name), "utf8"),
 );
 
-describe("Funktionalität: Erfassungsbogen aus einer PDF", () => {
+// Jedes Szenario legt eine Werkstatt an und liest mehrere Bögen samt Übernahme
+// ein. Auf dem langsamen windows-latest-Läufer reichen die 5 s von Vitest nicht
+// (Zeitüberschreitung im Massenimport-Szenario); 30 s tragen den Läufer, ohne
+// Fachlogik oder Erwartungen zu ändern.
+describe("Funktionalität: Erfassungsbogen aus einer PDF", { timeout: 30_000 }, () => {
   it("Szenario: der Bogen einer PDF wird angezeigt und als PDF-Import übernommen", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);

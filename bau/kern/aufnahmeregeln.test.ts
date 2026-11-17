@@ -105,7 +105,9 @@ describe.each(KERNPAKETE)("vendor/%s haelt die Aufnahmeregeln", (paket) => {
   it("importiert kein Node-Kernmodul ausser in der benannten Ausnahme (Aufnahmeregel 2)", () => {
     const treffer = dateien
       .filter((datei) => importziele(datei).some((ziel) => ziel.startsWith("node:")))
-      .map((d) => path.relative(WURZEL, d))
+      // Unter Windows liefert path.relative Backslashes; die Ausnahmeliste
+      // führt Pfade mit "/". Darum vor dem Vergleich angleichen.
+      .map((d) => path.relative(WURZEL, d).split(path.sep).join("/"))
       .filter((d) => !NODE_AUSNAHMEN.has(d));
     expect(treffer).toEqual([]);
   });

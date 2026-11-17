@@ -68,8 +68,11 @@ function gegenGoldfile(name: string, inhalt: string): void {
     writeFileSync(datei, inhalt, "utf8");
     return;
   }
-  const erwartet = readFileSync(datei, "utf8");
-  expect(inhalt, `${name} weicht ab. Abnehmen mit S1_GOLD=schreiben`).toBe(erwartet);
+  // Zeilenenden auf beiden Seiten angleichen: Git auf Windows kann das Goldfile
+  // beim Checkout in CRLF umwandeln (.gitattributes erzwingt LF, aber ein
+  // älterer Klon behält CRLF). Verglichen wird der Inhalt, nicht das Zeilenende.
+  const erwartet = readFileSync(datei, "utf8").replace(/\r\n/g, "\n");
+  expect(inhalt.replace(/\r\n/g, "\n"), `${name} weicht ab. Abnehmen mit S1_GOLD=schreiben`).toBe(erwartet);
 }
 
 describe("Der Druck", () => {
