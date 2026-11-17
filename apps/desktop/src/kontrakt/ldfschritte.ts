@@ -15,21 +15,29 @@
  * dieselbe, wie bei `sichterBesetzt`.
  */
 
-import type { Zeitvermerk } from "@s1/domaene";
+import type { Sichtungsvermerk, Zeitvermerk } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
+import { nachrichtSichten } from "./nachrichtenschritte.js";
 
 /** Die bekannte Stelle des LdF (NACHRICHT_STELLEN). */
 export const STELLE_LDF = "LDF";
 
-/** „An den Sichter weitergeben" (Eingang): Zeit und Handzeichen des LdF. */
-export function nachrichtWeitergeben(nachrichtId: string, vorher: Zeitvermerk | null, vermerk: Zeitvermerk): Entwurf {
+/**
+ * „An den Sichter weitergeben" (Eingang): Zeit und Handzeichen des LdF.
+ *
+ * Additiv (R2-LdF P1-3): Ist kein Sichter besetzt, sichtet der LdF als
+ * Ersatzsichter — `sichtung` ist sein Laufzettel; der Worker schreibt danach
+ * im selben Zug `NachrichtGesichtet` mit `GRUND_ERSATZSICHTER`.
+ */
+export function nachrichtWeitergeben(nachrichtId: string, vorher: Zeitvermerk | null, vermerk: Zeitvermerk, sichtung?: Sichtungsvermerk): Entwurf {
   return {
     typ: "NachrichtWeitergegeben",
     nutzlast: { nachrichtId },
     vorher,
     neu: { zeitpunkt: vermerk.zeitpunkt, handzeichen: vermerk.handzeichen.trim() },
     vorwertPruefen: true,
+    ...(sichtung === undefined ? {} : { nachrichtenfolge: { sichtung: nachrichtSichten(nachrichtId, null, sichtung).neu } }),
   };
 }
 

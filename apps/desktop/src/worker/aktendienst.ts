@@ -146,6 +146,8 @@ import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import type { Nachrichtenfolgeumfeld } from "./nachrichtenfolgen.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
+import { eigeneGespraechsnotiz, istNachtrag, mitSitzungsangaben, vorbehaltsergebnis } from "./sitzungsangaben.js";
+import type { Vorbehaltsumfeld } from "../kontrakt/stellenvorbehalt.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
 import { schreibhinweise } from "./schreibhinweise.js";
@@ -159,6 +161,7 @@ import { pruefeFunk } from "./funkpruefung.js";
 import { legeFehlendeVordrucke, legeNachweisungBei } from "./aktenbeilagen.js";
 import {
   Vorrangwaechter,
+  besetzteStellen,
   mitNachrichtenparametern,
   nachrichtenansicht,
   nachrichtenFuerLagebild,
@@ -809,12 +812,20 @@ export class Aktendienst {
   }
 
   /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
-  async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
+  async #bedieneMitFolgen(roh: Ereignisentwurf): Promise<Bedienergebnis> {
+    // Runde 2 der Nachrichten-Audits: Stellenvorbehalt als grund-Pflicht, Stelle der
+    // Sitzung in der Nutzlast, Ersatzsichter- und Nachtragsgrund (`sitzungsangaben.ts`).
+    const sitzungsumfeld = this.#vorbehaltsumfeld(roh);
+    const vorbehalt = vorbehaltsergebnis(roh, sitzungsumfeld);
+    if (vorbehalt !== undefined) return vorbehalt;
+    const nachtrag = istNachtrag(roh);
+    const entwurf = mitSitzungsangaben(roh, sitzungsumfeld, nachtrag);
     const plan = planeFolgen(this.#zustand, entwurf, this.#folgeumfeld());
     const ergebnis = await this.#schreibe(entwurf);
     if (ergebnis.art !== "geschrieben") return ergebnis;
     const vorab = [...plan.hinweise];
-    for (const folge of plan.folgen) {
+    for (const geplant of plan.folgen) {
+      const folge = { ...geplant, entwurf: mitSitzungsangaben(geplant.entwurf, sitzungsumfeld, nachtrag) };
       // Fernmelder P2-9: Die Beförderung des Papier-Nachtrags plant ihre eigenen Folgen gegen den jetzt geltenden Zustand.
       const nachplan = folge.mitFolgen === true ? planeFolgen(this.#zustand, folge.entwurf, this.#folgeumfeld()) : undefined;
       const folgeErgebnis = await this.#schreibe(folge.entwurf);
@@ -822,7 +833,7 @@ export class Aktendienst {
       if (folgeErgebnis.art !== "geschrieben" || nachplan === undefined) continue;
       vorab.push(...nachplan.hinweise);
       for (const weitere of nachplan.folgen) {
-        const ergebnisWeitere = await this.#schreibe(weitere.entwurf);
+        const ergebnisWeitere = await this.#schreibe(mitSitzungsangaben(weitere.entwurf, sitzungsumfeld, nachtrag));
         vorab.push(ergebnisWeitere.art === "geschrieben" ? weitere.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(ergebnisWeitere)}`);
       }
     }
@@ -831,9 +842,22 @@ export class Aktendienst {
     return { ...ergebnis, ...schreibhinweise(this.#zustand, entwurf, vorab) };
   }
 
+  /** Stellen der Sitzung und Sichter in der Präsenz für den Stellenvorbehalt; ohne Sitzung keiner. */
+  #vorbehaltsumfeld(entwurf: Ereignisentwurf): Vorbehaltsumfeld | undefined {
+    if (this.#sitzung === undefined) return undefined;
+    return {
+      stellen: this.#sitzung.stellen,
+      sichterBesetzt: sichterBesetzt(this.#sitzung.stellen, this.#peers),
+      eigeneGespraechsnotiz: eigeneGespraechsnotiz(this.#zustand, entwurf, this.#clientId),
+    };
+  }
+
   /** Was die Folgeplanung über die Präsenz wissen muss. */
   #folgeumfeld(): Nachrichtenfolgeumfeld {
     return {
+      // Additiv (R2-FaBe P0-3, R2-LdF P1-3): FmZ für den Hinweis beim Aufgeben, die Stellen der Sitzung für die Ersatzregel.
+      fmzBesetzt: stelleBesetzt("FMZ", this.#sitzung?.stellen, this.#peers),
+      stellen: this.#sitzung?.stellen ?? [],
       sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
       // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
       ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
@@ -2117,6 +2141,8 @@ export class Aktendienst {
       nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit(), sichterBesetzt(this.#sitzung?.stellen, this.#peers)),
       ...offeneNachrichtenTeil(zustand),
       ...(this.#sitzung === undefined ? {} : { sitzung: this.#sitzung }),
+      // Additiv (R2-FaBe P0-3): wer besetzt ist — FmZ, Sichter, LdF — für die Hinweise der Oberfläche.
+      besetzteStellen: besetzteStellen(this.#sitzung?.stellen, this.#peers),
     };
   }
 

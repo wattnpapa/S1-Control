@@ -560,6 +560,13 @@ export const zLagebild = z.object({
   nachrichten: zNachrichtenlage.optional(),
   /** Additiv (Nachrichten N1): Stellen und Handzeichen der Sitzung; fehlt, solange nicht angegeben. */
   sitzung: zSitzungsstellen.optional(),
+  /**
+   * Additiv (R2-FaBe P0-3, R2-SGL): die besetzten Stellen aus der Präsenz —
+   * die eigene Sitzung und jeder lebende Arbeitsplatz, ohne Doppelte,
+   * geordnet (Schlüssel wie „FMZ“, „SICHTER“, „LDF“, „S3“). Daran sieht die
+   * Oberfläche, ob jemand die FmZ oder den Sichter besetzt.
+   */
+  besetzteStellen: z.array(z.string()).readonly().optional(),
 });
 export type Lagebild = z.infer<typeof zLagebild>;
 
@@ -609,6 +616,13 @@ export const zEntwurf = z.object({
        * Zug `NachrichtBefoerdert` und dessen Folgen (Kopien, Kontakt).
        */
       befoerderung: z.unknown().optional(),
+      /**
+       * Additiv (R2-SGL P1-2, R2-ETB P1-1): Die Anlage kommt vom Papier
+       * („Vom Papier nachtragen“). Der Worker schreibt sie und ihre Folgen mit
+       * dem `grund` „vom Papier nachgetragen“; das Tagebuch sagt dann
+       * „vom Papier nachgetragen durch <Stelle der Sitzung>“.
+       */
+      nachtrag: z.boolean().optional(),
     })
     .optional(),
 });
@@ -1054,7 +1068,19 @@ export const zBedienergebnis = z.discriminatedUnion("art", [
   /** §6 U2: die strukturellen Arten brauchen die Maske ihres Fachvorgangs. */
   z.object({ art: z.literal("strukturell"), inverseArt: z.string(), meldung: z.string() }),
   /** §2.4: die Zielart verlangt einen `grund`; der Renderer fragt nach und ruft erneut. */
-  z.object({ art: z.literal("brauchtGrund"), zielArt: z.string() }),
+  z.object({
+    art: z.literal("brauchtGrund"),
+    zielArt: z.string(),
+    /**
+     * Additiv (R2-FaBe P0-1, R2-SGL P1-2, R2-FM P3-2): Der Schritt ist einer
+     * Stelle vorbehalten, die die Sitzung nicht hat (Stellenvorbehalt,
+     * Entscheidung 13) — „SICHTER“ oder „FMZ“. Der Renderer zeigt `hinweis`
+     * mit „Trotzdem“ und ruft mit `grund` erneut. Bewusst nicht `meldung`:
+     * Aufrufer erkennen Abweisungen an `"meldung" in ergebnis`.
+     */
+    stelle: z.string().optional(),
+    hinweis: z.string().optional(),
+  }),
   z.object({ art: z.literal("nichtMoeglich"), meldung: z.string() }),
 ]);
 export type Bedienergebnis = z.infer<typeof zBedienergebnis>;
@@ -1578,6 +1604,12 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
   readonly zaehlung?: Readonly<Record<"NEU" | "GELESEN" | "ERLEDIGT", number>> & { readonly OFFEN?: number };
   /** Additiv (LdF P2-2): die fehlenden Nummern zwischen 1 und der höchsten, für den Fuß der Nachweisung. */
   readonly nummernluecken?: readonly number[];
+  /**
+   * Additiv (R2-LdF P1-2 alt, P2-3), nur bei der Sicht `fmz`: die Karte
+   * „Ohne Nummer“ — beförderte Ausgänge **und** aufgenommene Eingänge ohne
+   * Nummer der Nachweisung, nicht zurückgezogen (`projektion.ohneNummerZeilen`).
+   */
+  readonly ohneNummer?: readonly Nachrichtenzeile[];
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {

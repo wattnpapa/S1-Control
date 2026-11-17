@@ -27,6 +27,22 @@ export function sichterstauText(anzahl: number, minuten: number): string {
   return `${eingaenge} seit ${zeit} vor dem Sichter, kein Sichter besetzt`;
 }
 
+/**
+ * Additiv (R2-LdF P1-2, R2-Si P1-1): Der LdF ist mit `ldfStation` eine
+ * Station vor dem Sichter. Ein Eingang konnte dort beliebig lange liegen,
+ * ohne dass Band, Zeile oder FmZ es zeigten. Gemessen wird ab der Aufnahme
+ * (`wartetSeitLdf`), gemeldet an FmZ, LdF und Sichter — auch bei besetztem
+ * LdF, denn gerade der säumige LdF ist der Fall.
+ */
+const LDF_MELDESTELLEN: ReadonlySet<string> = new Set(["FMZ", "LDF", "SICHTER"]);
+
+/** „1 Eingang wartet seit 7 Minuten beim LdF“. */
+export function ldfstauText(anzahl: number, minuten: number): string {
+  const eingaenge = anzahl === 1 ? "1 Eingang wartet" : `${String(anzahl)} Eingänge warten`;
+  const zeit = minuten === 1 ? "1 Minute" : `${String(minuten)} Minuten`;
+  return `${eingaenge} seit ${zeit} beim LdF, noch nicht an den Sichter weitergegeben`;
+}
+
 /** Was der Wächter je Durchgang braucht. */
 export interface Staulage {
   readonly zustand: Zustand;
@@ -42,23 +58,46 @@ export interface Staulage {
  */
 export class Sichterstauwaechter {
   readonly #gemeldet = new Set<string>();
+  readonly #gemeldetLdf = new Set<string>();
   #letzteMinute = Number.NEGATIVE_INFINITY;
 
-  /** Liefert den Hinweistext, wenn ein Eingang neu über die Schwelle kam; sonst `undefined`. */
+  /**
+   * Liefert den Hinweistext, wenn ein Eingang neu über die Schwelle kam —
+   * vor dem Sichter, beim LdF oder beides (dann in einem Satz); sonst `undefined`.
+   */
   pruefe(lage: Staulage): string | undefined {
     const minute = Math.floor(lage.jetztMs / MINUTE_MS);
     if (minute === this.#letzteMinute) return undefined;
     this.#letzteMinute = minute;
-    if (lage.sichterBesetzt || !lage.stellen.some((s) => MELDESTELLEN.has(s)) || lage.zustand.nachrichten === undefined) return undefined;
+    if (lage.zustand.nachrichten === undefined) return undefined;
     const jetzt = new Date(minute * MINUTE_MS).toISOString();
+    const texte = [this.#vorSichter(lage, jetzt), this.#beimLdf(lage, jetzt)].filter((t): t is string => t !== undefined);
+    return texte.length === 0 ? undefined : texte.join(". ");
+  }
+
+  #vorSichter(lage: Staulage, jetzt: string): string | undefined {
+    if (lage.sichterBesetzt || !lage.stellen.some((s) => MELDESTELLEN.has(s))) return undefined;
     const schwelle = projektion.fmzSchwelle(lage.zustand);
     const ueber = projektion
       .nachrichtenausschnitt(lage.zustand, { sicht: "sichter", jetzt })
       .zeilen.filter((z) => !z.zurueckgezogen && projektion.ueberWarteschwelle(z.wartetSeitSichter, schwelle));
-    const neu = ueber.filter((z) => !this.#gemeldet.has(z.id));
-    for (const zeile of neu) this.#gemeldet.add(zeile.id);
+    return this.#neueMelden(ueber.map((z) => [z.id, z.wartetSeitSichter ?? 0]), this.#gemeldet, sichterstauText);
+  }
+
+  #beimLdf(lage: Staulage, jetzt: string): string | undefined {
+    if (!lage.stellen.some((s) => LDF_MELDESTELLEN.has(s))) return undefined;
+    const schwelle = projektion.fmzSchwelle(lage.zustand);
+    const ueber = projektion
+      .nachrichtenausschnitt(lage.zustand, { sicht: "ldf", jetzt })
+      .zeilen.filter((z) => z.richtung === "EINGANG" && !z.zurueckgezogen && projektion.ueberWarteschwelle(z.wartetSeitLdf, schwelle));
+    return this.#neueMelden(ueber.map((z) => [z.id, z.wartetSeitLdf ?? 0]), this.#gemeldetLdf, ldfstauText);
+  }
+
+  /** Je Nachricht einmal: nur wenn eine neue dazukam, dann mit allen und der längsten Wartezeit. */
+  #neueMelden(ueber: readonly (readonly [string, number])[], gemeldet: Set<string>, text: (anzahl: number, minuten: number) => string): string | undefined {
+    const neu = ueber.filter(([id]) => !gemeldet.has(id));
+    for (const [id] of neu) gemeldet.add(id);
     if (neu.length === 0) return undefined;
-    const laengste = Math.max(...ueber.map((z) => z.wartetSeitSichter ?? 0));
-    return sichterstauText(ueber.length, laengste);
+    return text(ueber.length, Math.max(...ueber.map(([, minuten]) => minuten)));
   }
 }

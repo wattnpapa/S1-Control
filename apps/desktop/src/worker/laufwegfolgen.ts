@@ -122,6 +122,8 @@ function planeKopien(zustand: Zustand, nachricht: NachrichtZustand, befoerderung
       nutzlast: { nachrichtId: nachricht.id },
       vorher: null,
       neu: { zeitpunkt: befoerderung.zeitpunkt, handzeichen: befoerderung.handzeichen, verteiler, vermerke },
+      // R2-ETB P1-1, R2-SGL P3-4: Das Tagebuch nennt die Zeile „Kopien nach Beförderung“ und die FmZ, nicht einen Sichter.
+      grund: projektion.GRUND_KOPIEN,
     },
     hinweis: `${vermerke}.${fach}`,
   };

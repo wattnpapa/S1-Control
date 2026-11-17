@@ -43,7 +43,9 @@ function anlage(nachrichtId: string, betreff: string): Nachrichtenanlage {
 async function verteile(platz: Platz, nachrichtId: string, stellen: readonly string[], betreff = "Pumpen eingetroffen"): Promise<void> {
   await platz.dienst.bediene(nachrichtVerfassen(anlage(nachrichtId, betreff)));
   const verteiler = stellen.map((stelle) => ({ stelle, kopie: "GRUEN" }));
-  await platz.dienst.bediene(nachrichtSichten(nachrichtId, null, { zeitpunkt: new Date().toISOString(), handzeichen: "Si", verteiler }));
+  // Der Platz ist nicht Sichter: Er sichtet mit „Trotzdem“ (R2-FaBe P0-1, Stellenvorbehalt als grund-Pflicht).
+  const entwurf = nachrichtSichten(nachrichtId, null, { zeitpunkt: new Date().toISOString(), handzeichen: "Si", verteiler });
+  await platz.dienst.bediene({ ...entwurf, grund: "Eintrag durch S4, nicht Sichter" });
 }
 
 function druckhinweise(platz: Platz): Extract<Mitteilung, { art: "hinweis" }>[] {

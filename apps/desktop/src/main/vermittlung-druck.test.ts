@@ -108,7 +108,8 @@ async function verteileAnS4(a: Aufbau, akteId: string, nachrichtId: string): Pro
   const anlage = { nachrichtId, richtung: "EINGANG" as const, anschrift: "FüSt", betreff: "Pumpen", inhalt: "Zwei Pumpen.", absender: "OV", abfassungszeit: "2026-11-17T09:45:00Z" };
   await ruf(a.vermittlung, { art: "bedienen", akteId, entwurf: nachrichtVerfassen(anlage) });
   const sichtung = { zeitpunkt: new Date().toISOString(), handzeichen: "Si", verteiler: [{ stelle: "S4", kopie: "GRUEN" }] };
-  await ruf(a.vermittlung, { art: "bedienen", akteId, entwurf: nachrichtSichten(nachrichtId, null, sichtung) });
+  // S4 sichtet mit „Trotzdem“ (R2-FaBe P0-1: Sichten ist dem Sichter vorbehalten).
+  await ruf(a.vermittlung, { art: "bedienen", akteId, entwurf: { ...nachrichtSichten(nachrichtId, null, sichtung), grund: "Eintrag durch S4, nicht Sichter" } });
   await a.dienste.get(akteId)?.automatikdruckFertig();
 }
 

@@ -70,7 +70,8 @@ describe("Funktionalität: Nachrichten (N1)", () => {
   it("Szenario: Eingang zum Sichter, Sichtung verteilt, Kenntnis und Erledigung je Stelle", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
-    platz.dienst.stellenSetzen(["S4"], "Mü");
+    // Sichter und S4 an einem Platz: Sichten ist dem Sichter vorbehalten (R2-FaBe P0-1).
+    platz.dienst.stellenSetzen(["SICHTER", "S4"], "Mü");
     await platz.dienst.bediene(nachrichtVerfassen(anlage()));
     expect(sicht(platz, "sichter").zeilen.map((z) => z.id)).toEqual(["N-1"]);
     expect(lagebild(platz).nachrichten?.vorSichter).toBe(1);
@@ -130,7 +131,7 @@ describe("Funktionalität: Nachrichten (N1)", () => {
   it("Szenario: eine gesichtete Blitz-Nachricht für die eigene Stelle meldet sich mit Ton, nur einmal", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);
-    a.dienst.stellenSetzen(["S4"], "Si");
+    a.dienst.stellenSetzen(["SICHTER", "S4"], "Si");
     b.dienst.stellenSetzen(["S4"], "Mü");
     await a.dienst.bediene(nachrichtVerfassen(anlage({ vorrang: "BLITZ" })));
     await a.dienst.bediene(nachrichtVerfassen(anlage({ nachrichtId: "N-2", betreff: "Lage ruhig" })));

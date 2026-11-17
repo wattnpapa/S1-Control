@@ -40,6 +40,13 @@ import { planeBefoerderungsfolgen, planeWeitergabeErsatz, type Laufwegumfeld } f
 export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
   /** Ein lebender Arbeitsplatz (dieser oder ein anderer) hat die Stelle SICHTER. */
   readonly sichterBesetzt: boolean;
+  /**
+   * Additiv (R2-FaBe P0-3): Ist die FmZ besetzt? Nur `false` löst den Hinweis
+   * beim Aufgeben aus; fehlt die Angabe, weiß der Aufrufer es nicht.
+   */
+  readonly fmzBesetzt?: boolean;
+  /** Additiv (R2-LdF P1-3): die Stellen der Sitzung — ist sie selbst der LdF? */
+  readonly stellen?: readonly string[];
 }
 
 export interface Nachrichtenfolgeplan {
@@ -61,6 +68,23 @@ export const HINWEIS_ERSATZSICHTER = "Kein Sichter besetzt: Nachricht beim Aufne
  * hat sie „aufgegeben“, nicht „aufgenommen“ — die Maske sagt dort dasselbe Wort.
  */
 export const HINWEIS_ERSATZSICHTER_NOTIZ = "Kein Sichter besetzt: Gesprächsnotiz beim Aufgeben verteilt.";
+
+/**
+ * Die Hinweise beim Aufgeben und Aufnehmen (Audits Nachrichten Runde 2).
+ * R2-FaBe P0-3: Wer aufgibt, erfuhr nicht, ob jemand die FmZ besetzt — die
+ * Nachricht konnte unbemerkt liegen.
+ */
+export const HINWEIS_FMZ_NICHT_BESETZT = "Fernmeldezentrale nicht besetzt: Die Nachricht wartet. Selbst befördern über die Sicht Fernmeldezentrale.";
+/** Dasselbe für die Gesprächsnotiz, die „An den Sichter“ geht, ohne Sichter in der Präsenz. */
+export const HINWEIS_NOTIZ_OHNE_SICHTER = "Sichter nicht besetzt: Die Gesprächsnotiz wartet. Selbst verteilen über die Sicht Sichter.";
+/** R2-LdF P1-2 alt, P2-3: Ein Eingang ohne Nummer lief ohne Spur am LdF und am Sichter vorbei. */
+export const HINWEIS_EINGANG_OHNE_NUMMER = "Eingang ohne Nachweisungsnummer: Er steht bei der FmZ unter „Ohne Nummer“, bis er nachgewiesen ist.";
+/** R2-LdF P1-3: Ohne Sichter, aber mit LdF als Station und besetzt, sichtet der LdF nach der Weitergabe. */
+export const HINWEIS_LDF_SICHTET = "Kein Sichter besetzt: Der Eingang geht zum LdF, der ihn beim Weitergeben selbst verteilt.";
+/** Die Weitergabe mit Laufzettel des LdF als Ersatzsichter. */
+export const HINWEIS_LDF_VERTEILT = "Kein Sichter besetzt: Der LdF hat beim Weitergeben verteilt.";
+/** Die Weitergabe ohne Laufzettel, obwohl kein Sichter da ist. */
+export const HINWEIS_WEITERGABE_OHNE_SICHTER = "Kein Sichter besetzt: Der Eingang wartet vor dem Sichter; der LdF oder die FmZ verteilt ihn selbst.";
 
 type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown; readonly befoerderung?: unknown };
 
@@ -94,15 +118,43 @@ function verteilhinweis(umfeld: Nachrichtenfolgeumfeld, gespraechsnotiz: boolean
   return gespraechsnotiz ? "Gesprächsnotiz vom Verfasser verteilt." : "Nachricht beim Aufnehmen verteilt.";
 }
 
+function ldfStationBesetzt(zustand: Zustand, umfeld: Nachrichtenfolgeumfeld): boolean {
+  return zustand.einsatz?.ldfStation?.wert === true && umfeld.ldfBesetzt === true;
+}
+
+/**
+ * R2-LdF P1-3: Ohne Sichter verteilt beim Aufnehmen sonst die FmZ, und der
+ * Eingang lief am LdF vorbei. Ist der LdF Station und besetzt (und nicht
+ * diese Sitzung), sichtet er — die Sichtung der FmZ entfällt.
+ */
+function ldfIstErsatzsichter(zustand: Zustand, nutzlast: Record<string, unknown>, umfeld: Nachrichtenfolgeumfeld): boolean {
+  if (umfeld.sichterBesetzt || nutzlast["richtung"] !== "EINGANG" || nutzlast["gespraechsnotiz"] === true || nutzlast["aufnahme"] === undefined) return false;
+  return ldfStationBesetzt(zustand, umfeld) && umfeld.stellen?.includes("LDF") !== true;
+}
+
+/** Die Hinweise ohne Schreibschritt beim Aufgeben und Aufnehmen (R2-FaBe P0-3, R2-LdF P2-3). */
+function anlagehinweise(zustand: Zustand, nutzlast: Record<string, unknown>, werte: Folgewerte | undefined, umfeld: Nachrichtenfolgeumfeld): string[] {
+  const hinweise: string[] = [];
+  const notiz = nutzlast["gespraechsnotiz"] === true;
+  const ausgang = nutzlast["richtung"] === "AUSGANG" && !notiz && werte?.befoerderung === undefined;
+  if (ausgang && umfeld.fmzBesetzt === false && !ldfStationBesetzt(zustand, umfeld)) hinweise.push(HINWEIS_FMZ_NICHT_BESETZT);
+  if (notiz && werte?.sichtung === undefined && !umfeld.sichterBesetzt) hinweise.push(HINWEIS_NOTIZ_OHNE_SICHTER);
+  const aufgenommen = nutzlast["richtung"] === "EINGANG" && !notiz && nutzlast["aufnahme"] !== undefined;
+  if (aufgenommen && werte?.nachweis === undefined) hinweise.push(HINWEIS_EINGANG_OHNE_NUMMER);
+  return hinweise;
+}
+
 function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan {
-  const werte = folgewerte(entwurf);
+  const roh = folgewerte(entwurf);
   const nutzlast = (entwurf.nutzlast ?? {}) as Record<string, unknown>;
   const nachrichtId = nutzlast["nachrichtId"];
+  const ldfSichtet = roh?.sichtung !== undefined && ldfIstErsatzsichter(zustand, nutzlast, umfeld);
+  const werte = ldfSichtet && roh !== undefined ? { ...roh, sichtung: undefined } : roh;
   // Ohne LdF in der Präsenz läuft ein Eingang direkt zum Sichter (additiv, 2026-11-17).
   const weitergabe = planeWeitergabeErsatz(zustand, entwurf, umfeld, werte?.sichtung !== undefined);
-  if (werte === undefined || typeof nachrichtId !== "string") return { folgen: weitergabe === undefined ? [] : [weitergabe], hinweise: [] };
+  const hinweise: string[] = [...anlagehinweise(zustand, nutzlast, werte, umfeld), ...(ldfSichtet ? [HINWEIS_LDF_SICHTET] : [])];
+  if (werte === undefined || typeof nachrichtId !== "string") return { folgen: weitergabe === undefined ? [] : [weitergabe], hinweise };
   const folgen: { entwurf: Ereignisentwurf; hinweis: string; mitFolgen?: boolean }[] = [];
-  const hinweise: string[] = [];
   // Fernmelder P2-9: Annahme vor der Nummer, wie die Warteschlange sie schreibt.
   if (werte.annahme !== undefined) {
     folgen.push({ entwurf: { typ: "NachrichtAngenommen", nutzlast: { nachrichtId }, vorher: null, neu: werte.annahme }, hinweis: "Annahme vom Papier eingetragen." });
@@ -194,6 +246,18 @@ function planeBefoerderungsvermerke(zustand: Zustand, entwurf: Ereignisentwurf):
 export const HINWEIS_ZWEITE_SICHTUNG = "Die Nachricht war inzwischen anders gesichtet: Beide Verteiler gelten, bis eine Nachsichtung bereinigt.";
 
 /**
+ * R2-Si P1-2: Der Vermerk ist die Handlungsanweisung des Sichters; der zweite
+ * Sichter erfuhr ihn nicht. „Vermerk von Si: „S3 bearbeitet Sandsäcke.““
+ */
+export function zweiteSichtungHinweis(geltend: unknown): string {
+  const g = (typeof geltend === "object" && geltend !== null ? geltend : {}) as { vermerke?: unknown; handzeichen?: unknown };
+  const vermerk = typeof g.vermerke === "string" ? g.vermerke.trim() : "";
+  if (vermerk === "") return HINWEIS_ZWEITE_SICHTUNG;
+  const hz = typeof g.handzeichen === "string" && g.handzeichen.trim() !== "" ? ` von ${g.handzeichen.trim()}` : "";
+  return `${HINWEIS_ZWEITE_SICHTUNG} Vermerk${hz}: „${vermerk}“ — beide Vermerke gelten.`;
+}
+
+/**
  * Eine Sichtung, deren Vorher-Wert nicht der geltende ist: Sie wird nicht
  * abgewiesen (§5 „die Nachricht steht bei beiden Verteilern"), aber der
  * Sichter erfährt es sofort und nicht erst über den Konflikthinweis.
@@ -202,7 +266,25 @@ function planeSichtung(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenf
   const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
   const geltend = typeof nachrichtId === "string" ? zustand.nachrichten?.[nachrichtId]?.sichtung?.wert : undefined;
   const fremd = geltend !== undefined && geltend !== null && entwurf.vorher !== undefined && kanonischeSerialisierung(entwurf.vorher as KanonischerWert) !== kanonischeSerialisierung(geltend as unknown as KanonischerWert);
-  return { folgen: [], hinweise: fremd && entwurf.undoOf === undefined ? [HINWEIS_ZWEITE_SICHTUNG] : [] };
+  return { folgen: [], hinweise: fremd && entwurf.undoOf === undefined ? [zweiteSichtungHinweis(geltend)] : [] };
+}
+
+/**
+ * Die Weitergabe des LdF (R2-LdF P1-3): Trägt sie einen Laufzettel
+ * (`nachrichtenfolge.sichtung`), folgt die Sichtung — als Ersatzsichter,
+ * wenn kein Sichter besetzt ist. Ohne Laufzettel und ohne Sichter sagt der
+ * Hinweis, dass der Eingang wartet.
+ */
+function planeWeitergabe(entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan {
+  const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
+  const sichtung = folgewerte(entwurf)?.sichtung;
+  if (typeof nachrichtId !== "string" || entwurf.undoOf !== undefined || entwurf.neu === null) return { folgen: [], hinweise: [] };
+  if (sichtung === undefined) return { folgen: [], hinweise: umfeld.sichterBesetzt ? [] : [HINWEIS_WEITERGABE_OHNE_SICHTER] };
+  const grund = umfeld.sichterBesetzt ? {} : { grund: projektion.GRUND_ERSATZSICHTER };
+  return {
+    folgen: [{ entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: sichtung, ...grund }, hinweis: umfeld.sichterBesetzt ? "Beim Weitergeben verteilt." : HINWEIS_LDF_VERTEILT }],
+    hinweise: [],
+  };
 }
 
 /** Plant die Folgen eines Nachrichtenentwurfs — gegen den Zustand **vor** dem Schreiben. */
@@ -217,6 +299,7 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
     return { folgen: [...vermerke.folgen, ...kontakt.folgen, ...laufweg.folgen], hinweise: [...vermerke.hinweise, ...kontakt.hinweise, ...laufweg.hinweise] };
   }
   if (entwurf.typ === "NachrichtGesichtet") return planeSichtung(zustand, entwurf);
+  if (entwurf.typ === "NachrichtWeitergegeben") return planeWeitergabe(entwurf, umfeld);
   if (entwurf.typ === "NachrichtNachgewiesen") {
     const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
     const doppelt = typeof nachrichtId === "string" ? doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId) : undefined;

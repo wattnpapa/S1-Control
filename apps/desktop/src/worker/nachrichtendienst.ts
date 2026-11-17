@@ -120,6 +120,8 @@ export function nachrichtenansicht(
     zaehlung: projektion.nachrichtenZaehlung(zustand, stellen, jetzt, offenumfeld),
     // Additiv (LdF P2-2): die Lücken der Nummernfolge für die Nachweisung.
     nummernluecken: projektion.nummernluecken(ausschnittOhneFilter(zustand)),
+    // Additiv (R2-LdF P1-2 alt, P2-3): die Karte „Ohne Nummer“ der FmZ führt Eingänge und Ausgänge.
+    ...(ruf.sicht === "fmz" ? { ohneNummer: projektion.ohneNummerZeilen(projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung", jetzt }).zeilen) } : {}),
   };
 }
 
@@ -192,6 +194,20 @@ export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly stri
   return fertig;
 }
 
+/**
+ * Die besetzten Stellen (R2-FaBe P0-3): die eigene Sitzung und jeder lebende
+ * Arbeitsplatz der Präsenz, ohne Doppelte, nach Codepunkt geordnet — eine
+ * feste Ordnung, damit das Lagebild-Delta nur bei einer Änderung reist.
+ * Eine veraltete oder abgemeldete Präsenz zählt nicht (§5 „Ersatzsichter“).
+ */
+export function besetzteStellen(
+  eigene: readonly string[] | undefined,
+  peers: readonly { readonly veraltet: boolean; readonly stellen?: readonly string[] | undefined }[],
+): readonly string[] {
+  const alle = [...(eigene ?? []), ...peers.filter((p) => !p.veraltet).flatMap((p) => p.stellen ?? [])];
+  return [...new Set(alle)].sort();
+}
+
 /** Stellen und Handzeichen aus einer fremden Präsenzdatei — nur, was die Form hat. */
 export function peerStellen(praesenz: { readonly stellen?: unknown; readonly handzeichen?: unknown }): Pick<Peer, "stellen" | "handzeichen"> {
   const stellen = Array.isArray(praesenz.stellen) ? praesenz.stellen.filter((s): s is string => typeof s === "string") : undefined;
@@ -232,6 +248,9 @@ interface Treffer {
 function warteschlangenstelle(zeile: Nachrichtenzeile, stellen: readonly string[]): string | undefined {
   const ausgang = zeile.richtungKurz === "A" && !zeile.gespraechsnotiz && (zeile.laufzustand === "VOR_FMZ" || zeile.laufzustand === "VOR_LDF");
   if (ausgang) return stellen.find((s) => s === "FMZ" || s === "LDF");
+  // R2-Si P1-1, R2-LdF P1-2: Ein Eingang mit Vorrang beim LdF meldet sich dem LdF —
+  // bisher erst nach der Weitergabe beim Sichter, und ein Blitz konnte beim LdF liegen.
+  if (zeile.richtungKurz === "E" && zeile.laufzustand === "VOR_LDF") return stellen.includes("LDF") ? "LDF" : undefined;
   return zeile.laufzustand === "VOR_SICHTER" && stellen.includes("SICHTER") ? "SICHTER" : undefined;
 }
 

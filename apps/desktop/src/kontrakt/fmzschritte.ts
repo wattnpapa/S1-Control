@@ -130,6 +130,12 @@ export interface Nachrichtenfolge {
   /** Additiv (Fernmelder P2-9): Annahme und Beförderung eines Ausgangs vom Papier, im selben Zug. */
   readonly annahme?: Zeitvermerk;
   readonly befoerderung?: Befoerderung;
+  /**
+   * Additiv (R2-SGL P1-2, R2-ETB P1-1): Die Anlage kommt vom Papier. Der
+   * Worker schreibt sie und ihre Folgen mit dem `grund` „vom Papier
+   * nachgetragen“, das Tagebuch nennt die Stelle der Sitzung.
+   */
+  readonly nachtrag?: boolean;
 }
 
 /**
@@ -145,7 +151,8 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
   const sichtung = folge.sichtung === undefined ? undefined : nachrichtSichten(anlage.nachrichtId, null, folge.sichtung).neu;
   const annahme = folge.annahme === undefined ? undefined : nachrichtAnnehmen(anlage.nachrichtId, null, folge.annahme).neu;
   const befoerderung = folge.befoerderung === undefined ? undefined : nachrichtBefoerdern(anlage.nachrichtId, null, folge.befoerderung).neu;
-  if (nachweis === undefined && sichtung === undefined && annahme === undefined && befoerderung === undefined) return basis;
+  const nachtrag = folge.nachtrag === true;
+  if (nachweis === undefined && sichtung === undefined && annahme === undefined && befoerderung === undefined && !nachtrag) return basis;
   return {
     ...basis,
     nachrichtenfolge: {
@@ -153,6 +160,7 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
       ...(sichtung === undefined ? {} : { sichtung }),
       ...(annahme === undefined ? {} : { annahme }),
       ...(befoerderung === undefined ? {} : { befoerderung }),
+      ...(nachtrag ? { nachtrag } : {}),
     },
   };
 }
