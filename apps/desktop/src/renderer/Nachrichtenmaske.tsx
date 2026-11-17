@@ -39,13 +39,18 @@
  *   Hauptempfängerkopie im Laufzettel vorbelegt, S2 rot, solange niemand den
  *   Verteiler selbst anfasst (SGL P1-3, Fernmelder P1-4).
  *
+ * Additiv (Fernmelder P2-3, P2-9): Der Schalter „Vom Papier nachtragen“ leert
+ * die Zeiten („vom Blatt“ statt „jetzt“) und zeigt bei einem Ausgang
+ * Annahme, Beförderung und Nummer im selben Vordruck; „Nachtragen“ schreibt
+ * sie in einem Zug (`Papiernachtrag.tsx`).
+ *
  * Schnitt N3 (Entscheidung 4): Unter dem Vordruck steht die „Vorschau", der
  * Vordruck, wie er gedruckt wird — zugeklappt, bis jemand sie aufklappt.
  */
 
 import { useEffect, useState } from "react";
 
-import { NACHRICHT_MITTEL, projektion } from "@s1/domaene";
+import { NACHRICHT_MITTEL, datumZeitGruppe, projektion } from "@s1/domaene";
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
 
@@ -58,7 +63,8 @@ import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, ty
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
-import { ZEILEN_VORDRUCK, anlageAus, entwurfAus, inhaltszeilen, maskenfehler, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { ZEILEN_VORDRUCK, anlageAus, entwurfAus, inhaltszeilen, maskenfehler, richtungAus, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { Nachtragsschalter, Nachtragsteil, PLATZHALTER_VOM_BLATT, nachtragFolge, nachtragVorlage, nachtragfehler, type Nachtragswerte } from "./Papiernachtrag.js";
 import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
 import { verteilerAusAnschrift } from "./Verteilerraster.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
@@ -163,7 +169,16 @@ function Inhaltsfeld({ werte, setze, tabfolge }: { readonly werte: Maskenwerte; 
   );
 }
 
-function Mittelteil({ werte, setze, anschriften, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly anschriften: readonly string[]; readonly tabfolge: boolean }): React.JSX.Element {
+interface MittelteilEigenschaften {
+  readonly werte: Maskenwerte;
+  readonly setze: Setze;
+  readonly anschriften: readonly string[];
+  readonly tabfolge: boolean;
+  /** Additiv (Fernmelder P2-3): Nachtrag vom Papier — „vom Blatt“ statt „jetzt“. */
+  readonly nachtrag?: boolean;
+}
+
+function Mittelteil({ werte, setze, anschriften, tabfolge, nachtrag = false }: MittelteilEigenschaften): React.JSX.Element {
   return (
     <fieldset className="vordruckteil" aria-label="Nachricht">
       <legend>Nachricht</legend>
@@ -181,7 +196,7 @@ function Mittelteil({ werte, setze, anschriften, tabfolge }: { readonly werte: M
       <Inhaltsfeld werte={werte} setze={setze} tabfolge={folge(tabfolge, "inhalt")} />
       <div className="vordruckzeile">
         <Textfeld titel="Absender" feld="absender" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={folge(tabfolge, "absender")} />
-        <Dtgfeld beschriftung="Abfassungszeit" wert={werte.abfassungszeit} aufAenderung={(wert) => setze("abfassungszeit", wert)} />
+        <Dtgfeld beschriftung="Abfassungszeit" wert={werte.abfassungszeit} aufAenderung={(wert) => setze("abfassungszeit", wert)} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} nachtrag={nachtrag} />
       </div>
       <div className="vordruckzeile">
         <Textfeld titel="Zeichen" feld="zeichen" werte={werte} setze={setze} />
@@ -223,6 +238,13 @@ function useTeilwerte(sitzung: Sitzungsstellen | undefined, naechsteNummer: numb
   const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
   const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerAusAnschrift(anschrift, fuestName) };
   return {
+    fuestName,
+    /** Fernmelder P2-3: im Nachtrag Aufnahme und Quittung leer, sonst wieder „jetzt“; zählt nicht als getippt. */
+    zeitenVomBlatt: (an: boolean): void => {
+      const jetzt = an ? "" : datumZeitGruppe(new Date());
+      setzeAufnahmewerte((w) => ({ ...w, zeit: jetzt }));
+      setzeVerteilwerte((w) => ({ ...w, quittung: jetzt }));
+    },
     aufnahmewerte,
     verteilung,
     angefasst: aufnahmeAngefasst || verteilerAngefasst,
@@ -243,16 +265,26 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   const t = useTeilwerte(sitzung, aufnahme?.naechsteNummer, werte.anschrift);
   const { aufnahmewerte, verteilung } = t;
   const [selbst, setzeSelbst] = useState(true);
+  const [nachtrag, setzeNachtrag] = useState(false);
+  const [nachtragswerte, setzeNachtragswerte] = useState<Nachtragswerte>(() => nachtragVorlage());
   const versuch = useAnlegeversuch();
   const peers = useLaden((z) => z.lagebild?.peers);
   const setze: Setze = (feld, wert) => setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
-  const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage) || t.angefasst;
+  const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage) || t.angefasst || JSON.stringify(nachtragswerte) !== JSON.stringify(nachtragVorlage());
   const fmz = aufnahme !== undefined && werte.richtung === "EINGANG";
   const sichterDa = sichterBesetzt(sitzung?.stellen, peers ?? []);
   const grund = verteilgrund(fmz, werte.gespraechsnotiz, selbst, sichterDa);
   const sichtung = grund === undefined ? undefined : sichtungAus(verteilung);
+  // Ein Ausgang vom Blatt trägt Annahme, Beförderung und Nummer gleich mit (Fernmelder P2-9).
+  const ausgangVomBlatt = nachtrag && !fmz && richtungAus(werte) === "AUSGANG";
+  const schalteNachtrag = (an: boolean): void => {
+    setzeNachtrag(an);
+    setze("abfassungszeit", an ? "" : vorlage.abfassungszeit);
+    t.zeitenVomBlatt(an);
+  };
   const fehler = [
     ...maskenfehler(werte),
+    ...(ausgangVomBlatt ? nachtragfehler(nachtragswerte) : []),
     ...(fmz ? aufnahmefehler(aufnahmewerte) : []),
     ...(grund !== undefined && sichtung === undefined ? ["Quittung und Handzeichen im Laufzettel eintragen"] : []),
   ];
@@ -268,7 +300,11 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
     const vermerk = fmz ? aufnahmeAus(aufnahmewerte) : undefined;
     const gegenstelle = aufnahmewerte.gegenstelle.trim();
     const mitAufnahme = vermerk === undefined ? anlage : { ...anlage, aufnahme: vermerk, ...(gegenstelle === "" ? {} : { gegenstelle }) };
-    const entwurf = nachrichtAufnehmen(mitAufnahme, folgeAus(fmz ? nachweisAus(aufnahmewerte) : undefined, sichtung));
+    // Vom Blatt nachgetragen: Annahme, Beförderung und Nummer sind Folgewerte
+    // der Anlage, ein Bedienschritt statt zwei (Fernmelder P2-9).
+    const nachweis = fmz ? nachweisAus(aufnahmewerte) : undefined;
+    const folge = { ...folgeAus(nachweis, sichtung), ...(ausgangVomBlatt ? nachtragFolge(nachtragswerte) : {}) };
+    const entwurf = nachrichtAufnehmen(mitAufnahme, folge);
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
@@ -288,30 +324,25 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   return (
     <Maske
       titel={titel}
-      bestaetigungstext={fmz ? "Aufnehmen" : "Aufgeben"}
+      bestaetigungstext={nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben"}
       geaendert={geaendert}
       bereit={fehler.length === 0 && !versuch.gesperrt}
       bereitGrund={fehler[0] ?? versuch.sperre}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={aufgeben}
     >
+      <Nachtragsschalter an={nachtrag} aufAn={schalteNachtrag} />
       <div className="vordruck">
         {fmz ? (
-          <Aufnahmeteil
-            werte={aufnahmewerte}
-            aufAenderung={t.aufAufnahme}
-            vergebeneNummern={aufnahme.vergebeneNummern}
-          />
-        ) : (
-          <FmzTeil />
-        )}
-        <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} tabfolge={fmz} />
+          <Aufnahmeteil werte={aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme.vergebeneNummern} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} />
+        ) : ausgangVomBlatt ? <Nachtragsteil werte={nachtragswerte} aufAenderung={setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} /> : <FmzTeil />}
+        <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} tabfolge={fmz} nachtrag={nachtrag} />
         {werte.gespraechsnotiz && <Verteilschalter selbst={selbst || !sichterDa} aufSelbst={setzeSelbst} sichterDa={sichterDa} />}
-        {grund === undefined ? <LaufzettelAnzeige /> : <Verteilteil
-            werte={verteilung}
-            aufAenderung={t.aufVerteilung}
-            grund={grund}
-          />}
+        {grund === undefined ? (
+          <LaufzettelAnzeige />
+        ) : (
+          <Verteilteil werte={verteilung} aufAenderung={t.aufVerteilung} grund={grund} anschrift={werte.anschrift} eigeneFuest={t.fuestName} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} />
+        )}
       </div>
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />
       {versuch.anzeige}

@@ -8,6 +8,8 @@
  * wie zwei verschiedene Zahlen.
  */
 
+import { datumZeitGruppe } from "@s1/domaene";
+
 import type { Lagebild } from "../kontrakt/index.js";
 
 type Staerke = Lagebild["gesamtstaerke"];
@@ -29,38 +31,17 @@ export function staerkeText(staerke: Staerke): string {
   return `${String(f)}/${String(u)}/${String(m)} // ${String(gesamt(staerke))}`;
 }
 
-const MONATE = [
-  "JAN",
-  "FEB",
-  "MAR",
-  "APR",
-  "MAY",
-  "JUN",
-  "JUL",
-  "AUG",
-  "SEP",
-  "OCT",
-  "NOV",
-  "DEC",
-] as const;
-
-function zwei(zahl: number): string {
-  return String(zahl).padStart(2, "0");
-}
-
 /**
- * Die taktische Zeit, ohne Zonenbuchstaben: `101443SEP26`.
+ * Die taktische Zeit, ohne Zonenbuchstaben: `101443SEP26` — Kopfband, Monitor
+ * und Ausdrucke.
  *
- * Gelesen wird die **Ortszeit** des Arbeitsplatzes, denn danach richtet sich
- * die Führungsstelle. Der Zonenbuchstabe fehlt bewusst (Entwurf): Er wäre
- * entweder falsch (fest „Z" bei Ortszeit) oder eine Angabe, die niemand
- * pflegt.
+ * In der **Anzeigezone Europe/Berlin** und mit den Monatskürzeln der
+ * Datum-Zeit-Gruppe des Vordrucks, nicht mehr in der Ortszeit des Rechners
+ * (Audits Nachrichten SGL P3-16, LdF P2-4, FM P2-1): Ein Notebook auf UTC
+ * zeigte im Kopf „171221NOV26“ und im Vordruck „171321nov26“. Groß
+ * geschrieben, wie im Kopf vereinbart. Der Zonenbuchstabe fehlt bewusst
+ * (Entwurf): Er wäre eine Angabe, die niemand pflegt.
  */
 export function taktischeZeit(jetzt: number): string {
-  const zeitpunkt = new Date(jetzt);
-  if (Number.isNaN(zeitpunkt.getTime())) return "—";
-  const tag = zwei(zeitpunkt.getDate());
-  const uhr = `${zwei(zeitpunkt.getHours())}${zwei(zeitpunkt.getMinutes())}`;
-  const monat = MONATE[zeitpunkt.getMonth()] ?? "???";
-  return `${tag}${uhr}${monat}${zwei(zeitpunkt.getFullYear() % 100)}`;
+  return datumZeitGruppe(new Date(jetzt)).toUpperCase() || "—";
 }

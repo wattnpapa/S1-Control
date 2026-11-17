@@ -109,7 +109,7 @@ function useLaufzettelwerte(zeile: Nachrichtenzeile, handzeichen: string) {
     setzeAngefasst(true);
     setzer(wert);
   };
-  return { quittung, zeichen, verteiler, vermerke, angefasst, setzeVerteiler, zuruecksetzen, setze: { quittung: fasse(setzeQuittung), zeichen: fasse(setzeZeichen), verteiler: fasse(setzeVerteiler), vermerke: fasse(setzeVermerke) } };
+  return { fuestName, quittung, zeichen, verteiler, vermerke, angefasst, setzeVerteiler, zuruecksetzen, setze: { quittung: fasse(setzeQuittung), zeichen: fasse(setzeZeichen), verteiler: fasse(setzeVerteiler), vermerke: fasse(setzeVermerke) } };
 }
 
 /**
@@ -160,7 +160,8 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
 
   const zeitpunkt = zeitAusEingabe(w.quittung);
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
-  const warnung = hauptempfaengerWarnung(w.verteiler);
+  // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
+  const warnung = hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
 
   const sichten = async (): Promise<void> => {
     if (zeitpunkt === undefined) return;

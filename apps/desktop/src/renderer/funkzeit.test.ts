@@ -1,14 +1,18 @@
+import { anzeigezoneWandzeit } from "@s1/domaene";
 import { describe, expect, it } from "vitest";
 
 import { funkzeitAusEingabe, istFunkzeitForm } from "./funkzeit.js";
 
-const JETZT = new Date(2026, 9, 31, 12, 0);
+// 31.10.2026 12:00 Berliner Zeit (Winterzeit, UTC+1).
+const JETZT = new Date("2026-10-31T11:00:00Z");
 
+/** Die Wandzeit in der Anzeigezone Europe/Berlin (FM P2-1) — nicht in der Rechnerzeit. */
 function lokal(iso: string | undefined): string {
   if (iso === undefined) return "ungültig";
-  const d = new Date(iso);
+  const w = anzeigezoneWandzeit(iso);
+  if (w === undefined) return "ungültig";
   const z = (n: number): string => String(n).padStart(2, "0");
-  return `${String(d.getFullYear())}-${z(d.getMonth() + 1)}-${z(d.getDate())} ${z(d.getHours())}:${z(d.getMinutes())}`;
+  return `${String(w.jahr)}-${z(w.monat)}-${z(w.tag)} ${z(w.stunde)}:${z(w.minute)}`;
 }
 
 describe("Funkzeit", () => {
@@ -39,7 +43,7 @@ describe("Funkzeit", () => {
   });
 
   it("lehnt den 31. in einem Monat mit 30 Tagen ab", () => {
-    expect(funkzeitAusEingabe("310630", new Date(2026, 3, 15))).toBeUndefined();
+    expect(funkzeitAusEingabe("310630", new Date("2026-04-15T10:00:00Z"))).toBeUndefined();
   });
 
   it("erkennt die Funkform", () => {

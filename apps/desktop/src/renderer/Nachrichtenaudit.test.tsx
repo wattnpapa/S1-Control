@@ -8,7 +8,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { anzeigezoneWandzeit, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf, Lagebild } from "../kontrakt/index.js";
 import { TEXT_ANNAHME_MIT } from "./Befoerderungszusatz.js";
@@ -78,7 +78,7 @@ describe("LdF P0-1: Befördern verlangt Annahme und Nummer", () => {
   it("trägt die fehlende Annahme mit derselben Zeit und die vorbelegte Nummer im selben Zug ein", async () => {
     const maske = befoerdern();
     expect(maske.textContent).toContain(TEXT_ANNAHME_MIT);
-    expect(maske.textContent).toContain("Ohne Nachweisungsnummer");
+    expect(maske.textContent).toContain("Nummer ist vorbelegt; leer lassen heißt ohne Nummer befördern");
     expect((within(maske).getByLabelText("Nr.") as HTMLInputElement).value).toBe("8");
     fireEvent.change(within(maske).getByLabelText("Quittung der Gegenstelle (Datum/Uhrzeit)"), { target: { value: "171155nov26" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
@@ -135,8 +135,9 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
     fireEvent.change(zeit, { target: { value: "1155" } });
     fireEvent.submit(maske);
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
-    const zeitpunkt = new Date((entwuerfe()[0]?.neu as { zeitpunkt: string }).zeitpunkt);
-    expect([zeitpunkt.getHours(), zeitpunkt.getMinutes(), zeitpunkt.getDate()]).toEqual([11, 55, new Date().getDate()]);
+    // „1155“ heißt 11:55 in der Anzeigezone Europe/Berlin, heute dort (FM P2-1).
+    const zeitpunkt = anzeigezoneWandzeit((entwuerfe()[0]?.neu as { zeitpunkt: string }).zeitpunkt);
+    expect([zeitpunkt?.stunde, zeitpunkt?.minute, zeitpunkt?.tag]).toEqual([11, 55, anzeigezoneWandzeit(Date.now())?.tag]);
   });
 
   it("warnt bei Zeiten in der Zukunft oder älter als einen Tag, ohne zu sperren", () => {

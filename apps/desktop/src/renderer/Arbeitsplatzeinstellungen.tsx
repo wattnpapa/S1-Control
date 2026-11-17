@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 
 import type { Profil } from "../kontrakt/index.js";
-import { Druckeinstellungen, druckeinstellungenAus, druckwerteAus, type Druckwerte } from "./Druckeinstellungen.js";
+import { Druckeinstellungen, druckeinstellungenAus, druckverzeichnisBestaetigt, druckwerteAus, type Druckwerte } from "./Druckeinstellungen.js";
 import { useLaden } from "./laden.js";
 import { PROFILNAME, Profilwahl } from "./Profilwahl.js";
 
@@ -51,8 +51,10 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
   // und ein Bediener könnte ihn ohnehin nicht auf ein anderes Verzeichnis des
   // Servers umstellen. Das Feld zeigt ihn deshalb nur.
   const shareFest = useLaden((z) => z.umgebung?.plattform === "web");
-  const uebernimm = (): void => {
-    void setzeEinstellungen({
+  const uebernimm = async (): Promise<void> => {
+    // FM P2-11: Ein fehlendes Druckverzeichnis wird nicht still angelegt, sondern erfragt.
+    if (!(await druckverzeichnisBestaetigt(f.druck))) return;
+    await setzeEinstellungen({
       // Was diese Maske nicht zeigt, bleibt (Handzeichen und Stellen je
       // Einsatz aus der Abfrage beim Öffnen, Monitorwahl).
       ...f.einstellungen,
@@ -66,7 +68,8 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
       // Das Erscheinungsbild gehört dem Fenstermenü; diese Maske reicht es
       // durch, statt es auf den Stand beim Öffnen zurückzudrehen.
       ...(f.einstellungen.theme === undefined ? {} : { theme: f.einstellungen.theme }),
-    }).then(aufUebernommen);
+    });
+    aufUebernommen();
   };
   return (
     <section aria-label="Einstellungen" className="karte einstellungen">
@@ -105,7 +108,7 @@ function Einstellungen({ aufUebernommen }: { readonly aufUebernommen: () => void
         Zwei kurze Töne, wenn eine gesichtete Blitz-Nachricht für eine Stelle dieses Arbeitsplatzes eintrifft. Der Hinweis in der Leiste steht auch ohne Ton.
       </p>
       <Druckeinstellungen werte={f.druck} aufAenderung={f.setzeDruck} />
-      <button type="button" className="haupt" disabled={beschaeftigt} onClick={uebernimm}>
+      <button type="button" className="haupt" disabled={beschaeftigt} onClick={() => void uebernimm()}>
         Übernehmen
       </button>
     </section>

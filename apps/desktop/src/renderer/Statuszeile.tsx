@@ -16,6 +16,7 @@
  * Aufrufer gibt die Uhr, und im Betrieb tickt sie im Fenster.
  */
 
+import { rechnerzoneHinweis } from "@s1/domaene";
 import { useState } from "react";
 
 import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
@@ -135,6 +136,26 @@ function Arbeitsplaetze({ lagebild }: { readonly lagebild: Lagebild }): React.JS
   return <span title={hinweis}>{aktiv === 0 ? "allein am Einsatz" : weitereText(aktiv)}</span>;
 }
 
+/**
+ * „Rechnerzeit UTC, Anzeige in Europe/Berlin“ (SGL P3-16, ETB P2-1, LdF P2-4,
+ * FM P2-1): Alle Zeiten stehen in der Anzeigezone; weicht die Uhr des
+ * Rechners ab, sagt die Statuszeile es einmal — wegklickbar, damit der
+ * Hinweis nicht dauernd Platz nimmt.
+ */
+function Zonenhinweis({ jetzt }: { readonly jetzt: number }): React.JSX.Element | null {
+  const [weg, setzeWeg] = useState(false);
+  const text = rechnerzoneHinweis(jetzt);
+  if (weg || text === undefined) return null;
+  return (
+    <span className="warn zonenhinweis" title="Alle Zeiten im Programm stehen in deutscher Zeit, wie die Datum-Zeit-Gruppe des Vordrucks.">
+      {text}{" "}
+      <button type="button" className="alsLink" aria-label="Zeitzonenhinweis ausblenden" onClick={() => setzeWeg(true)}>
+        ×
+      </button>
+    </span>
+  );
+}
+
 export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigenschaften): React.JSX.Element {
   const [offen, setzeOffen] = useState<string | undefined>(undefined);
   if (lagebild === undefined) {
@@ -142,6 +163,7 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
       <footer className="statuszeile" aria-label="Statuszeile">
         {verbindung?.zustand === "unterbrochen" && <Unterbrochen status={verbindung} />}
         <span>Kein Einsatz geöffnet</span>
+        <Zonenhinweis jetzt={jetzt} />
       </footer>
     );
   }
@@ -188,6 +210,7 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
         />
       ))}
 
+      <Zonenhinweis jetzt={jetzt} />
       <Schreibbestaetigung />
       <Ruecknahme />
       {aufgeklappt !== undefined && <Statuserklaerung kennung={aufgeklappt.kennung} text={aufgeklappt.erklaerung} />}

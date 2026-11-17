@@ -29,6 +29,11 @@
  * (Sichter P0-2). Dafür holt das Blatt in den Sichten Sichter und FmZ die
  * Nachweisung als zweite Ansicht mit; gefiltert wird nur für die Anzeige.
  *
+ * Zweiter Durchlauf (Sichter P1-4, `Sichterstau.tsx`): In der Sicht der FmZ
+ * nennt eine Zeile den Stau vor dem Sichter, und Eingänge über der Schwelle
+ * oder ohne besetzten Sichter tragen „Ich sichte jetzt selbst“; der Knopf
+ * öffnet darunter den Laufzettel wie beim Ersatzsichter.
+ *
  * **Nichts wird hier gerechnet.** Ordnung, Filter, Laufzustand und Zahlen
  * kommen aus Ring 2 über den Ruf `nachrichtenAnfordern` und das Lagebild.
  */
@@ -38,6 +43,7 @@ import { useMemo, useState } from "react";
 import { FMZ_SCHWELLE_VORBELEGUNG, type Nachrichtenzeile } from "@s1/domaene";
 
 import { AUSSCHNITT_MAX, type Nachrichtenlage, type Ruf, type Sitzungsstellen } from "../kontrakt/index.js";
+import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { Eingangskarte, OhneNummerKarte, Warteschlange, ohneNummerZeilen } from "./Fernmeldezentrale.js";
 import { Filterchips } from "./Filterchips.js";
 import type { Kontextort } from "./Klappmenue.js";
@@ -51,6 +57,7 @@ import { Nachrichtenliste } from "./Nachrichtenliste.js";
 import { Sichtzusatz, Stellenangabe, gesichteteZeilen, quittierendeStellen, type Sichterstand } from "./Nachrichtenzusatz.js";
 import { Nachweisung, Nachweisungsausgabe } from "./Nachweisung.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
+import { Sichterhinweis, Sichterstaukarte } from "./Sichterstau.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { useNachrichtenansicht, type Nachrichtenabruf } from "./useNachrichtenansicht.js";
 import { useFmzschritte } from "./useFmzschritte.js";
@@ -256,6 +263,12 @@ function useNachweisungDazu(akteId: string | undefined, lageZeiger: number | und
   return { alle, gesichtet: sicht === "sichter" && stand === "gesichtet" ? gesichteteZeilen(alle) : undefined };
 }
 
+/** Der Laufzettel der FmZ, die selbst sichtet (Sichter P1-4) — wie beim Ersatzsichter. */
+function SelbstLaufzettel({ zeile, handzeichen, nurLesen, aufFertig }: { readonly zeile: Nachrichtenzeile | undefined; readonly handzeichen: string; readonly nurLesen: boolean; readonly aufFertig: () => void }): React.JSX.Element | null {
+  if (zeile === undefined) return null;
+  return <Laufzettel key={zeile.id} zeile={zeile} handzeichen={handzeichen} nurLesen={nurLesen} aufGesichtet={aufFertig} />;
+}
+
 export interface NachrichtenEigenschaften {
   readonly aufTagebuch: () => void;
   /** Additiv: öffnet „Stelle und Handzeichen“ (SGL P1-4, Knopf im Band). */
@@ -277,6 +290,9 @@ export function Nachrichten({ aufTagebuch, aufStelle }: NachrichtenEigenschaften
   const [gewaehltId, setzeGewaehltId] = useState<string | undefined>(undefined);
   const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
   const [sichterstand, setzeSichterstand] = useState<Sichterstand>("offen");
+  // Sichter P1-4: der Eingang, den die FmZ selbst sichtet („Ich sichte jetzt selbst“).
+  const [selbstId, setzeSelbstId] = useState<string | undefined>(undefined);
+  const sichterDa = sichterBesetzt(sitzung?.stellen, useLaden((z) => z.lagebild?.peers) ?? []);
   const stellen = fuer === "" ? (sitzung?.stellen ?? []) : [fuer];
   const abruf = useNachrichtenansicht(akteId, lageZeiger, {
     sicht,
@@ -335,11 +351,13 @@ export function Nachrichten({ aufTagebuch, aufStelle }: NachrichtenEigenschaften
           setzeGewaehltId(undefined);
         }}
       />
+      {sicht === "fmz" && <Sichterhinweis lage={lage} />}
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
           <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
           <OhneNummerKarte zeilen={ohneNummerZeilen(alle)} nurLesen={nurLesen} aufSchritt={fmz.aufSchritt} />
+          <Sichterstaukarte zeilen={alle} sichterDa={sichterDa} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} nurLesen={nurLesen} aufSelbst={(zeile) => setzeSelbstId(zeile.id)} />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
         <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} />
@@ -362,6 +380,7 @@ export function Nachrichten({ aufTagebuch, aufStelle }: NachrichtenEigenschaften
       {sicht === "sichter" && gewaehlt !== undefined && (
         <Laufzettel key={gewaehlt.id} zeile={gewaehlt} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufGesichtet={() => setzeGewaehltId(undefined)} />
       )}
+      {sicht === "fmz" && <SelbstLaufzettel zeile={alle.find((z) => z.id === selbstId)} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufFertig={() => setzeSelbstId(undefined)} />}
       {schritte.masken}
       {fmz.masken}
     </section>

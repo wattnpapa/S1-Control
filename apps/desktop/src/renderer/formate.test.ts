@@ -20,14 +20,13 @@ describe("staerkeText", () => {
 
 describe("taktischeZeit", () => {
   it("setzt Tag, Uhrzeit, Monat und Jahr ohne Zonenbuchstaben", () => {
-    // Ortszeit: die Zahl im Kopfband ist die, auf die sich die
-    // Führungsstelle im Raum verständigt.
-    const zeitpunkt = new Date(2026, 8, 10, 14, 43, 12);
-    expect(taktischeZeit(zeitpunkt.getTime())).toBe("101443SEP26");
+    // Anzeigezone Europe/Berlin (SGL P3-16): dieselbe Zahl auf jedem Rechner, wie im Vordruck.
+    expect(taktischeZeit(Date.parse("2026-09-10T12:43:12Z"))).toBe("101443SEP26");
+    expect(taktischeZeit(Date.parse("2026-10-10T12:43:12Z"))).toBe("101443OKT26");
   });
 
   it("füllt einstellige Tage und Stunden auf", () => {
-    expect(taktischeZeit(new Date(2027, 0, 3, 4, 5).getTime())).toBe("030405JAN27");
+    expect(taktischeZeit(Date.parse("2027-01-03T03:05:00Z"))).toBe("030405JAN27");
   });
 
   it("nennt eine unlesbare Zeit nicht als Zahl", () => {

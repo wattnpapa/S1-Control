@@ -119,7 +119,9 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     await waitFor(() => expect(entwuerfe()).toHaveLength(2));
     expect(entwuerfe()[1]).toMatchObject({ typ: "NachrichtBefoerdert", neu: { mittel: "TELEFON", gegenstelle: "OV Wildeshausen", handzeichen: "Fm" } });
 
-    fireEvent.click(within(within(tabelle).getByRole("row", { name: /Sandsäcke/ })).getByRole("button", { name: "Nachweisen" }));
+    // Fernmelder P3-4: Nachweisen liegt im Menü „Weitere Schritte“ der Zeile.
+    fireEvent.click(within(within(tabelle).getByRole("row", { name: /Sandsäcke/ })).getByRole("button", { name: "Weitere Schritte" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "Nachweisen" }));
     maske = screen.getByRole("form", { name: /Nachweisen/ });
     const nummer = within(maske).getByLabelText("Nr.") as HTMLInputElement;
     expect(nummer.value).toBe("8");

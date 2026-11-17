@@ -15,6 +15,11 @@
  *   Die Stellen der Anschrift — bekannte Stellen oder Freitext — sind als
  *   grüne Hauptempfänger vorbelegt, S2 bleibt rot. Der Name der eigenen
  *   Führungsstelle (Anschrift eines Eingangs von außen) ist kein Empfänger.
+ * - **Zweiter Durchlauf, Punkt 3** (Stand be6f9b9, Bild sichter.png): Lautet
+ *   die Anschrift auf S2, bleibt S2 rot und ist der Hauptempfänger — die
+ *   Warnung „Kein Hauptempfänger“ schwieg dort nicht. Beginnt ein Teil der
+ *   Anschrift mit einer bekannten Stelle („S4 Logistik“), gilt diese Stelle;
+ *   „OV Wildeshausen“ bleibt eine grüne Freitextzeile.
  */
 
 import { useState } from "react";
@@ -57,6 +62,22 @@ function istEigeneFuest(teil: string, eigeneFuest: string | undefined): boolean 
   return t === "füst" || t === "führungsstelle" || (eigeneFuest !== undefined && t === normal(eigeneFuest));
 }
 
+const BEKANNT: readonly string[] = [...VERTEILERSTELLEN, "SICHTER", "FMZ", "LDF"];
+
+/** Die bekannte Stelle zu einem Wort („s4“, „Leiter“), sonst `undefined`. */
+function bekannteStelle(wort: string): string | undefined {
+  return BEKANNT.find((s) => normal(s) === normal(wort) || normal(stellenname(s)) === normal(wort));
+}
+
+/**
+ * Die Stelle eines Teils der Anschrift: die ganze Angabe als bekannte Stelle,
+ * sonst ihr erstes Wort („S4 Logistik“ → S4, zweiter Durchlauf Punkt 3), sonst
+ * der Freitext selbst („OV Wildeshausen“).
+ */
+function stelleDesTeils(teil: string): string {
+  return bekannteStelle(teil) ?? bekannteStelle(teil.split(/\s+/u)[0] ?? "") ?? teil;
+}
+
 /**
  * Die Stellen der Anschrift: durch Komma, Semikolon oder „und“ getrennt; eine
  * bekannte Stelle (Schlüssel oder Wort, „S3“, „Leiter“) wird zu ihrem
@@ -64,12 +85,11 @@ function istEigeneFuest(teil: string, eigeneFuest: string | undefined): boolean 
  * Führungsstelle fällt weg.
  */
 export function anschriftStellen(anschrift: string, eigeneFuest?: string): readonly string[] {
-  const bekannt = [...VERTEILERSTELLEN, "SICHTER", "FMZ", "LDF"];
   const ergebnis: string[] = [];
   for (const teil of anschrift.split(/[,;]|\s+und\s+/u)) {
     const t = teil.trim();
     if (t === "" || t.includes("/") || istEigeneFuest(t, eigeneFuest)) continue;
-    const stelle = bekannt.find((s) => normal(s) === normal(t) || normal(stellenname(s)) === normal(t)) ?? t;
+    const stelle = stelleDesTeils(t);
     if (!ergebnis.includes(stelle)) ergebnis.push(stelle);
   }
   return ergebnis;
@@ -83,9 +103,16 @@ export function verteilerAusAnschrift(anschrift: string, eigeneFuest?: string): 
   return [...VERTEILER_VORBELEGUNG, ...gruen];
 }
 
-/** Die Warnung vor dem Sichten, wenn niemand die grüne Kopie hat; sonst `undefined`. */
-export function hauptempfaengerWarnung(verteiler: readonly Verteilerwahl[]): string | undefined {
-  return verteiler.some((e) => e.kopie === "GRUEN") ? undefined : TEXT_KEIN_HAUPTEMPFAENGER;
+/**
+ * Die Warnung vor dem Sichten, wenn niemand die grüne Kopie hat; sonst
+ * `undefined`. Additiv (zweiter Durchlauf, Punkt 3): Lautet die Anschrift auf
+ * S2 und steht S2 im Verteiler, ist S2 der Hauptempfänger — mit der roten
+ * Kopie, denn S2 bekommt immer rot (Lehrunterlage); dann warnt nichts.
+ */
+export function hauptempfaengerWarnung(verteiler: readonly Verteilerwahl[], anschrift?: string, eigeneFuest?: string): string | undefined {
+  if (verteiler.some((e) => e.kopie === "GRUEN")) return undefined;
+  const s2Angeschrieben = anschrift !== undefined && anschriftStellen(anschrift, eigeneFuest).includes("S2");
+  return s2Angeschrieben && verteiler.some((e) => e.stelle === "S2") ? undefined : TEXT_KEIN_HAUPTEMPFAENGER;
 }
 
 const KURZ: Readonly<Record<string, string>> = { GRUEN: "G", BLAU: "B", ROT: "R" };

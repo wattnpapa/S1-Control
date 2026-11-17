@@ -4527,6 +4527,41 @@
         align-items: center;
         margin-left: 8px;
       }
+      /* Zweiter Durchlauf (Fernmelder P3-4, SGL P2-11): In der Warteschlange
+         stehen Hauptknopf und „⋯“ nebeneinander und brechen bei 1320 Pixeln
+         nicht um; die übrigen Schritte liegen im Menü. */
+      .fmzkarte .zeilenknoepfe {
+        flex-wrap: nowrap;
+        white-space: nowrap;
+        align-items: center;
+      }
+      /* Der Laufzettel ist eine Spalte: Ohne festes `flex` dehnten sich Inhalt
+         und Quittungszeile über die Höhe (Bild sichter.png, Lücke unter der
+         Quittung) und schoben „Sichten“ unter den Rand. */
+      .laufzettel > * {
+        flex: 0 0 auto;
+      }
+      /* Das Verteilerraster nimmt höchstens 60 % der Höhe; ist es länger,
+         scrollt nur das Raster, und der Hauptknopf bleibt sichtbar. */
+      .verteilerraster .verteilerzeilen {
+        max-height: 60vh;
+        overflow-y: auto;
+      }
+      /* „Sichten“ im Laufzettel unter der Liste klebt am unteren Rand. */
+      section.laufzettel > .maskenknoepfe {
+        position: sticky;
+        bottom: 0;
+        z-index: 1;
+        padding: 6px 0;
+        background: var(--karte);
+      }
+      .konflikthinweis button {
+        margin-left: 6px;
+      }
+      .unterzeile td.zeilenvermerk {
+        padding-top: 0;
+        border-top: 0;
+      }
 
     </style>
   </head>

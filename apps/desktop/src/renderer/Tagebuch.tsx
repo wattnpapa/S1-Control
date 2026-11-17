@@ -27,12 +27,12 @@
 
 import { useEffect, useRef, useState } from "react";
 
-import type { Nachrichtenzeile, Tagebuchzeile } from "@s1/domaene";
+import { datumText, projektion, uhrzeitText, type Tagebuchzeile } from "@s1/domaene";
 
 import type { Tagebuchansicht } from "../kontrakt/index.js";
 import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
-import { Nachrichtenansicht } from "./Nachrichtenansicht.js";
+import { useNachrichtOeffnen } from "./Nachrichtenhinweise.js";
 import { TagebuchEintrag } from "./TagebuchEintrag.js";
 
 export interface TagebuchEigenschaften {
@@ -121,26 +121,6 @@ function useNachrichtentagebuch(
     };
   }, [akteId, id, suche, nurRuecknahmen, lageZeiger]);
   return ansicht;
-}
-
-/** „Nachricht öffnen" (ETB P0-1): holt die Zeile über die Kennung und zeigt die Ansicht. */
-function useNachrichtOeffnen(): { readonly oeffne: (nachrichtId: string) => void; readonly anzeige: React.ReactNode } {
-  const akteId = useLaden((z) => z.akteId);
-  const melde = useLaden((z) => z.melde);
-  const [offen, setzeOffen] = useState<Nachrichtenzeile | undefined>(undefined);
-  const oeffne = (nachrichtId: string): void => {
-    if (akteId === undefined) return;
-    rufe({ art: "nachrichtAnfordern", akteId, nachrichtId })
-      .then((zeile) => {
-        if (zeile === null) melde("warnung", "Diese Nachricht gibt es in diesem Einsatz nicht.");
-        else setzeOffen(zeile);
-      })
-      .catch((fehler: unknown) => {
-        melde("warnung", fehler instanceof Error ? fehler.message : String(fehler));
-      });
-  };
-  const anzeige = offen === undefined ? null : <Nachrichtenansicht zeile={offen} aufSchliessen={() => setzeOffen(undefined)} />;
-  return { oeffne, anzeige };
 }
 
 export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: TagebuchEigenschaften): React.JSX.Element {
@@ -344,7 +324,8 @@ function Tagebuchreihe({
           </>
         )}
       </td>
-      <td>{zeile.akteur}</td>
+      {/* ETB P1-7: Stelle und Handzeichen, wo das Ereignis sie trägt, statt „Arbeitsplatz“; der Anzeigename im Tooltip. */}
+      <td title={zeile.akteur}>{projektion.akteurText(zeile)}</td>
       <td>{zeile.rechner}</td>
     </tr>
   );
@@ -383,9 +364,8 @@ export function tagebuchfusszeile(
  * Ein unlesbarer Zeitpunkt wird als solcher gezeigt und nicht geraten.
  */
 export function uhrzeit(zeitpunkt: string): string {
-  const wert = Date.parse(zeitpunkt);
-  if (Number.isNaN(wert)) return "unbekannt";
-  const datum = new Date(wert);
-  const zwei = (zahl: number): string => String(zahl).padStart(2, "0");
-  return `${zwei(datum.getDate())}.${zwei(datum.getMonth() + 1)}. ${zwei(datum.getHours())}:${zwei(datum.getMinutes())}:${zwei(datum.getSeconds())}`;
+  // SGL P3-16, ETB P2-1: in der Anzeigezone Europe/Berlin wie die Datum-Zeit-Gruppe, nicht in der Browserzeit.
+  const datum = datumText(zeitpunkt);
+  if (datum === "") return "unbekannt";
+  return `${datum.slice(0, 6)} ${uhrzeitText(zeitpunkt, true)}`;
 }

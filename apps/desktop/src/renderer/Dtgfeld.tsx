@@ -12,6 +12,10 @@
  * getippte Funkzeit „1155" ersetzt die Vorbelegung „jetzt", statt sich an sie
  * zu hängen. Eine Zeit mehr als fünf Minuten in der Zukunft oder älter als
  * einen Tag bekommt einen Hinweis, keine Sperre (Fernmelder P2-2).
+ *
+ * Additiv (Fernmelder P2-3, P2-9): Im Nachtrag vom Papier steht im leeren Feld
+ * „vom Blatt“ statt einer Beispielgruppe, und eine alte Zeit bekommt keinen
+ * Hinweis — sie ist dort die Regel, nicht der Tippfehler.
  */
 
 import { datumZeitGruppe, zeitpunktText } from "@s1/domaene";
@@ -26,11 +30,17 @@ export interface DtgfeldEigenschaften {
   readonly tabfolge?: number;
   /** Additiv: ein Hinweistext unter dem Feld, etwa „Uhrzeit, zu der die Gegenstelle quittiert hat". */
   readonly hilfe?: string;
+  /** Additiv (Fernmelder P2-3): der Platzhalter im leeren Feld, im Nachtrag „vom Blatt“. */
+  readonly platzhalter?: string | undefined;
+  /** Additiv (Fernmelder P2-9): Nachtrag vom Papier — eine Zeit älter als ein Tag ist kein Hinweis wert. */
+  readonly nachtrag?: boolean | undefined;
 }
 
-export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe }: DtgfeldEigenschaften): React.JSX.Element {
+export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe, platzhalter, nachtrag = false }: DtgfeldEigenschaften): React.JSX.Element {
   const gelesen = zeitAusEingabe(wert);
-  const plausibel = zeitHinweis(gelesen);
+  const hinweis = zeitHinweis(gelesen);
+  // Im Nachtrag bleibt nur der Hinweis auf eine Zeit in der Zukunft: Papier ist alt, aber nie voraus.
+  const plausibel = nachtrag && hinweis !== undefined && hinweis.includes("zurück") ? undefined : hinweis;
   return (
     <span className="dtgfeld">
       <label>
@@ -38,7 +48,7 @@ export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe }: D
         <input
           value={wert}
           className="mono"
-          placeholder="171045nov26"
+          placeholder={platzhalter ?? "171045nov26"}
           title={hilfe === undefined ? "Datum-Zeit-Gruppe; Strg+D setzt „jetzt“" : `${hilfe}; Strg+D setzt „jetzt“`}
           data-tabfolge={tabfolge}
           onFocus={(e) => e.currentTarget.select()}

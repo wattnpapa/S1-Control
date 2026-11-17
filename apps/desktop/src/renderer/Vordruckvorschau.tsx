@@ -15,6 +15,7 @@
  * über den Worker.
  */
 
+import { datumZeitGruppe } from "@s1/domaene";
 import { useEffect, useRef, useState } from "react";
 
 import type { Einstellungen } from "../kontrakt/index.js";
@@ -95,6 +96,19 @@ export interface VordruckvorschauEigenschaften {
   readonly quelle: Vordruckquelle;
 }
 
+/**
+ * Der Stempel der zurückgezogenen Nachricht als Zeile über dem Bild (ETB
+ * P1-3, P2-7): Der Druck zeichnet ihn quer über das Formular, die Vorschau
+ * nennt ihn mit Zeit und Grund, damit niemand ein zurückgezogenes Blatt für gültig hält.
+ */
+export function vorschaustempel(quelle: Vordruckquelle): string | undefined {
+  if (quelle.art !== "zeile" || !quelle.zeile.zurueckgezogen) return undefined;
+  const mit = quelle.zeile.zurueckgezogenMit;
+  const zeit = mit === undefined ? "" : ` ${datumZeitGruppe(mit.zeitpunkt)}`;
+  const grund = mit?.grund === undefined || mit.grund === "" ? "" : `: ${mit.grund}`;
+  return `ZURÜCKGEZOGEN${zeit}${grund}`;
+}
+
 export function Vordruckvorschau({ ort, quelle }: VordruckvorschauEigenschaften): React.JSX.Element {
   const offen = useLaden((z) => vorschauOffen(z.einstellungen, ort));
   const uebung = useLaden((z) => z.lagebild?.einsatzArt === "UEBUNG");
@@ -109,6 +123,7 @@ export function Vordruckvorschau({ ort, quelle }: VordruckvorschauEigenschaften)
           <p className="hinweistext" role="status">
             {standtext(stand)}
           </p>
+          {vorschaustempel(quelle) !== undefined && <p className="marke-zustand fehler">{vorschaustempel(quelle)}</p>}
           <div className="vorschaubild" hidden={stand.art === "ohneCanvas" || stand.art === "fehler"}>
             <canvas ref={canvas} aria-label="Vordruck, wie er gedruckt wird" />
           </div>

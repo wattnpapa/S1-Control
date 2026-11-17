@@ -34,10 +34,12 @@ export interface AufnahmeEigenschaften {
   readonly werte: Aufnahmewerte;
   readonly aufAenderung: (werte: Aufnahmewerte) => void;
   readonly vergebeneNummern: readonly number[] | undefined;
+  /** Additiv (Fernmelder P2-3): im Nachtrag vom Papier „vom Blatt“ im leeren Zeitfeld. */
+  readonly platzhalter?: string | undefined;
 }
 
 /** Der obere Teil zum Ausfüllen — nur für die FmZ beim Aufnehmen eines Eingangs. */
-export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern }: AufnahmeEigenschaften): React.JSX.Element {
+export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalter }: AufnahmeEigenschaften): React.JSX.Element {
   const setze = (feld: keyof Aufnahmewerte, wert: string): void => aufAenderung({ ...werte, [feld]: wert });
   const warnung = nummerWarnung(nummerAusEingabe(werte.nummer), vergebeneNummern);
   return (
@@ -54,7 +56,7 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern }: Aufnahme
             ))}
           </select>
         </label>
-        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} tabfolge={2} aufAenderung={(wert) => setze("zeit", wert)} />
+        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} tabfolge={2} aufAenderung={(wert) => setze("zeit", wert)} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
         <label>
           Handzeichen
           <input value={werte.handzeichen} maxLength={4} onChange={(e) => setze("handzeichen", e.target.value)} />
@@ -104,17 +106,22 @@ export interface VerteilEigenschaften {
   readonly aufAenderung: (werte: Verteilwerte) => void;
   /** Der Satz über dem Laufzettel: warum hier verteilt wird. */
   readonly grund: string;
+  /** Additiv: die Anschrift — „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3). */
+  readonly anschrift?: string;
+  readonly eigeneFuest?: string | undefined;
+  /** Additiv (Fernmelder P2-3): im Nachtrag vom Papier „vom Blatt“ im leeren Zeitfeld. */
+  readonly platzhalter?: string | undefined;
 }
 
 /** Der untere Teil zum Ausfüllen — Ersatzsichter und Gesprächsnotiz. */
-export function Verteilteil({ werte, aufAenderung, grund }: VerteilEigenschaften): React.JSX.Element {
-  const warnung = hauptempfaengerWarnung(werte.verteiler);
+export function Verteilteil({ werte, aufAenderung, grund, anschrift, eigeneFuest, platzhalter }: VerteilEigenschaften): React.JSX.Element {
+  const warnung = hauptempfaengerWarnung(werte.verteiler, anschrift, eigeneFuest);
   return (
     <fieldset className="vordruckteil laufzettel" aria-label="Laufzettel">
       <legend>Laufzettel</legend>
       <p className="hinweistext">{grund}</p>
       <div className="vordruckzeile">
-        <Dtgfeld beschriftung="Quittung" wert={werte.quittung} aufAenderung={(quittung) => aufAenderung({ ...werte, quittung })} />
+        <Dtgfeld beschriftung="Quittung" wert={werte.quittung} aufAenderung={(quittung) => aufAenderung({ ...werte, quittung })} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
         <label>
           Handzeichen
           <input value={werte.handzeichen} maxLength={4} onChange={(e) => aufAenderung({ ...werte, handzeichen: e.target.value })} />

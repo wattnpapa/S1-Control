@@ -20,13 +20,16 @@
  * - **Befördern verlangt die Annahme** (LdF P0-1): Fehlt sie, sagt die Maske
  *   „Annahme wird mit eingetragen“, und der Worker trägt sie mit Uhrzeit und
  *   Handzeichen der Beförderung als Folgeschritt nach. Fehlt die Nummer,
- *   warnt die Maske „Ohne Nachweisungsnummer“ und bietet das Nummernfeld
+ *   sagt die Maske „Nummer ist vorbelegt“ und bietet das Nummernfeld
  *   gleich hier an; leer lassen geht nur mit zweitem Klick „Trotzdem ohne Nummer“.
  * - **Enter bestätigt** (Fernmelder P1-2), das Zeitfeld ist beim Öffnen
  *   markiert (P1-1), und die Zeit der Beförderung heißt, was sie ist:
  *   „Quittung der Gegenstelle“ (P2-4).
  * - Das Handzeichen hat zwei bis vier Zeichen (Sachgebietsleiter P1-4).
  * - „Berichtigen“ einer doppelten Nummer belegt die nächste freie vor (LdF P2-1).
+ * - Weist der Worker ab, weil ein anderer Platz inzwischen vermerkt hat, sagt
+ *   die Maske in Worten, was jetzt gilt, und „Neu laden“ öffnet sie mit dem
+ *   neuen Vorher-Wert (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
  */
 
 import { useState } from "react";
@@ -45,6 +48,7 @@ import { Maske } from "./Maske.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
+import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
 
 export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
@@ -210,8 +214,20 @@ function Zusatzfelder({ schritt, e, setze, warnung, wahl }: { readonly schritt: 
   );
 }
 
+/**
+ * Die Maske mit „Neu laden“ (Fernmelder P2-6): Nach einer Abweisung holt sie
+ * die Nachricht neu und zeichnet die Maske frisch — Vorbelegung und
+ * Vorher-Wert sind dann der geltende Stand.
+ */
 export function Fmzmaske(p: FmzmaskeEigenschaften): React.JSX.Element {
+  const [stand, setzeStand] = useState({ zeile: p.zeile, runde: 0 });
+  return <FmzmaskeInnen key={stand.runde} {...p} zeile={stand.zeile} aufNeuLaden={(zeile) => setzeStand((s) => ({ zeile, runde: s.runde + 1 }))} />;
+}
+
+function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile: Nachrichtenzeile) => void }): React.JSX.Element {
   const [e, setzeE] = useState<Eingaben>(() => vorbelegung(p));
+  const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
+  const peers = useLaden((z) => z.lagebild?.peers);
   // Der zweite Klick bei leerer Nummer: „Trotzdem ohne Nummer“ (LdF P0-1).
   const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
   const versuch = useAnlegeversuch();
@@ -243,10 +259,19 @@ export function Fmzmaske(p: FmzmaskeEigenschaften): React.JSX.Element {
       return;
     }
     const ergebnis = await versuch.schreibe(entwurf);
+    if (istVorwertAbweisung(ergebnis)) {
+      setzeKonflikt(konflikttext(entwurf.typ, ergebnis.meldung, peers ?? []));
+      return;
+    }
     if (ergebnis?.art !== "geschrieben") return;
     for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
     p.aufSchliessen();
   }
+
+  const neuLaden = async (): Promise<void> => {
+    const neu = await nachrichtNeuHolen(p.zeile.id);
+    if (neu !== undefined) p.aufNeuLaden(neu);
+  };
 
   const nummer = p.zeile.nummer === undefined ? p.zeile.richtungKurz : `${p.zeile.richtungKurz} ${String(p.zeile.nummer)}`;
   const knopf = ohneNummer && ohneNummerBestaetigt ? "Trotzdem ohne Nummer" : warnung !== undefined && p.schritt === "nachweis" ? "Trotzdem nachweisen" : TITEL[p.schritt];
@@ -285,7 +310,8 @@ export function Fmzmaske(p: FmzmaskeEigenschaften): React.JSX.Element {
       </div>
       <Zusatzfelder schritt={p.schritt} e={e} setze={setze} warnung={p.schritt === "nachweis" ? warnung : undefined} wahl={wahl} />
       {befoerdern && <Befoerderungszusatz zeile={p.zeile} nummer={e.nummer} aufNummer={(wert) => setze("nummer", wert)} warnung={warnung} ohneNummerBestaetigt={ohneNummerBestaetigt} />}
-      {versuch.anzeige}
+      {/* Statt „Nicht gespeichert – … (neu: {…})“ der Satz in Worten mit „Neu laden“ (Fernmelder P2-6). */}
+      {konflikt === undefined ? versuch.anzeige : <Konflikthinweis text={konflikt} aufNeuLaden={() => void neuLaden()} />}
     </Maske>
   );
 }

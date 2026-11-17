@@ -7,15 +7,15 @@
  * fertigen Zahlen macht.
  */
 
-import type { Kost, Logistikzeile } from "@s1/domaene";
+import { zeitpunktAusWandzeit, type Kost, type Logistikzeile } from "@s1/domaene";
 
 import type { Lagebild, Versorgungsansicht, Versorgungszahlen } from "../../kontrakt/index.js";
 
-/** 10.09.2026 1443 Ortszeit des Prüfrechners. */
-export const BEISPIEL_JETZT = new Date(2026, 8, 10, 14, 43).getTime();
+/** 10.09.2026 1443 in der Anzeigezone Europe/Berlin (SGL P3-16), gleich auf jedem Prüfrechner. */
+export const BEISPIEL_JETZT = Date.parse(zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 10, stunde: 14, minute: 43 }) ?? "");
 
 function um(tag: number, stunde: number): string {
-  return new Date(2026, 8, tag, stunde, 0).toISOString();
+  return zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag, stunde, minute: 0 }) ?? "";
 }
 
 const k = (portionen: number, vegetarisch: number, vegan: number): Kost => ({ portionen, vegetarisch, vegan });
@@ -69,7 +69,7 @@ const BESTELLUNG_ABEND = {
   vegan: 6,
   bestelltBei: "JUH Küche",
   bestelltVon: "Meier (S4)",
-  bestelltUm: new Date(2026, 8, 10, 12, 10).toISOString(),
+  bestelltUm: zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 10, stunde: 12, minute: 10 }) ?? "",
   storniert: false,
   ersetzt: false,
 };
@@ -81,7 +81,7 @@ const BESTELLUNG_MITTAG = {
   portionen: 210,
   vegetarisch: 20,
   vegan: 4,
-  bestelltUm: new Date(2026, 8, 10, 6, 12).toISOString(),
+  bestelltUm: zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 10, stunde: 6, minute: 12 }) ?? "",
   geliefert: 210,
 };
 

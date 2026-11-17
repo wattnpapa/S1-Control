@@ -8,14 +8,14 @@
  * Plan macht. Die Rufgruppennamen sind erfunden.
  */
 
-import type { Funkteilnehmer, Rufgruppenkarte } from "@s1/domaene";
+import { zeitpunktAusWandzeit, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
 import { BEISPIEL_JETZT, BEISPIEL_LAGEBILD } from "./versorgungsbeispiel.js";
 import type { Funkplanansicht, Lagebild } from "../../kontrakt/index.js";
 
-/** Eine Uhrzeit am 10.09.2026 in der Ortszeit. */
+/** Eine Uhrzeit am 10.09.2026 in der Anzeigezone Europe/Berlin (SGL P3-16). */
 function um(stunde: number, minute: number): string {
-  return new Date(2026, 8, 10, stunde, minute).toISOString();
+  return zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 10, stunde, minute }) ?? "";
 }
 
 export function teilnehmer(einheitId: string, einheit: string, funkrufname: string, weiteres: Partial<Funkteilnehmer> = {}): Funkteilnehmer {

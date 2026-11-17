@@ -8,6 +8,8 @@
  * Wie die Masken der FmZ: Zeit „jetzt" und Handzeichen der Sitzung
  * vorbelegt und editierbar (Papier-Rückfall, §6), die weiche Sperre auf der
  * Nachricht, solange die Maske offen ist, und der Vorher-Wert vom Öffnen.
+ * Eine Abweisung wegen eines fremden neueren Werts steht in Worten da, mit
+ * „Neu laden“ (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
  */
 
 import { useState } from "react";
@@ -23,6 +25,7 @@ import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { zeitAusEingabe } from "./nachrichtenformate.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
+import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
 
 export interface Weitergabeeingaben {
   readonly zeit: string;
@@ -43,7 +46,15 @@ export interface WeitergabemaskeEigenschaften {
   readonly aufSchliessen: () => void;
 }
 
+/** Mit „Neu laden“ (Fernmelder P2-6): nach einer Abweisung frisch gezeichnet, mit dem geltenden Vorher-Wert. */
 export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Element {
+  const [stand, setzeStand] = useState({ zeile: p.zeile, runde: 0 });
+  return <WeitergabemaskeInnen key={stand.runde} {...p} zeile={stand.zeile} aufNeuLaden={(zeile) => setzeStand((s) => ({ zeile, runde: s.runde + 1 }))} />;
+}
+
+function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNeuLaden: (zeile: Nachrichtenzeile) => void }): React.JSX.Element {
+  const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
+  const peers = useLaden((z) => z.lagebild?.peers);
   const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen }));
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
@@ -58,6 +69,10 @@ export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Elem
       return;
     }
     const ergebnis = await versuch.schreibe(entwurf);
+    if (istVorwertAbweisung(ergebnis)) {
+      setzeKonflikt(konflikttext(entwurf.typ, ergebnis.meldung, peers ?? []));
+      return;
+    }
     if (ergebnis?.art !== "geschrieben") return;
     for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
     p.aufSchliessen();
@@ -82,7 +97,18 @@ export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Elem
           <input value={e.handzeichen} maxLength={20} onChange={(ev) => setzeE((bisher) => ({ ...bisher, handzeichen: ev.target.value }))} />
         </label>
       </div>
-      {versuch.anzeige}
+      {konflikt === undefined ? (
+        versuch.anzeige
+      ) : (
+        <Konflikthinweis
+          text={konflikt}
+          aufNeuLaden={() => {
+            void nachrichtNeuHolen(p.zeile.id).then((neu) => {
+              if (neu !== undefined) p.aufNeuLaden(neu);
+            });
+          }}
+        />
+      )}
     </Maske>
   );
 }

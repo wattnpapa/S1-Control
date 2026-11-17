@@ -30,6 +30,7 @@ import { useEffect } from "react";
 import { STOERFAELLE, UHR_GRENZE_MS, erkannteStoerfaelle } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
+import { Nachrichtenhinweise } from "./Nachrichtenhinweise.js";
 import { zeichensatzHerkunft } from "./zeichensatz.js";
 import { alter, bytes } from "./Statuszeile.js";
 import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
@@ -185,6 +186,8 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
           </li>
         </ul>
       )}
+      {/* Zweiter Durchlauf, Punkt 10: der Weg vom Hinweis an einer Nachricht zur Nachricht. */}
+      <Nachrichtenhinweise lagebild={lagebild} />
       {auskunft === undefined ? (
         <p className="hinweistext">Wird geholt …</p>
       ) : (

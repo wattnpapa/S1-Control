@@ -5,27 +5,27 @@
  * „morgen", „in 3 h 17 min", „+24", „−14". `jetzt` wird übergeben wie im
  * Monitor, damit die Texte in jsdom prüfbar sind.
  *
- * Die Uhrzeit steht in Ortszeit des Rechners, wie die taktische Zeit im
- * Kopfband (`taktischeZeit` in formate.ts): Zwei Uhren an einem Arbeitsplatz,
- * die verschieden gehen, ließen den Bediener raten.
+ * Die Uhrzeit steht in der Anzeigezone Europe/Berlin, wie die taktische Zeit
+ * im Kopfband (`taktischeZeit` in formate.ts): Zwei Uhren an einem
+ * Arbeitsplatz, die verschieden gehen, ließen den Bediener raten (Audits
+ * Nachrichten SGL P3-16, LdF P2-4 — vorher die Ortszeit des Rechners).
  */
 
-import { projektion, type Mahlzeit } from "@s1/domaene";
+import { anzeigezoneWandzeit, projektion, uhrzeitVierstellig, type Mahlzeit } from "@s1/domaene";
 
 function zwei(zahl: number): string {
   return String(zahl).padStart(2, "0");
 }
 
-/** „1800" — die Ausgabezeit in Ortszeit. */
+/** „1800" — die Ausgabezeit in der Anzeigezone. */
 export function uhrzeitText(zeitpunkt: string): string {
-  const datum = new Date(zeitpunkt);
-  if (Number.isNaN(datum.getTime())) return "—";
-  return `${zwei(datum.getHours())}${zwei(datum.getMinutes())}`;
+  return uhrzeitVierstellig(zeitpunkt) || "—";
 }
 
+/** Der Kalendertag in der Anzeigezone als Zahl (Tage seit 1970), für den Abstand zweier Tage. */
 function tagesbeginn(ms: number): number {
-  const d = new Date(ms);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  const w = anzeigezoneWandzeit(ms);
+  return w === undefined ? Number.NaN : Date.UTC(w.jahr, w.monat - 1, w.tag);
 }
 
 /** „heute", „morgen", „übermorgen" — nach Kalendertag in Ortszeit. */
@@ -64,19 +64,20 @@ export function vorzeichen(zahl: number, art: "plus" | "minus"): string {
 
 const MONATE = ["JAN", "FEB", "MRZ", "APR", "MAI", "JUN", "JUL", "AUG", "SEP", "OKT", "NOV", "DEZ"];
 
-/** „Nacht 10./11. SEP" — die kommende Nacht in Ortszeit. */
+/** „Nacht 10./11. SEP" — die kommende Nacht in der Anzeigezone. */
 export function nachtText(jetzt: number): string {
-  const heute = new Date(jetzt);
-  const morgen = new Date(heute.getFullYear(), heute.getMonth(), heute.getDate() + 1);
-  const monat = MONATE[morgen.getMonth()] ?? "";
-  return `Nacht ${String(heute.getDate())}./${String(morgen.getDate())}. ${monat}`;
+  const w = anzeigezoneWandzeit(jetzt);
+  if (w === undefined) return "";
+  const morgen = new Date(Date.UTC(w.jahr, w.monat - 1, w.tag + 1));
+  const monat = MONATE[morgen.getUTCMonth()] ?? "";
+  return `Nacht ${String(w.tag)}./${String(morgen.getUTCDate())}. ${monat}`;
 }
 
-/** „060012SEP26" — eine Zeit für Listen, wie das Tagebuch sie schreibt. */
+/** „060012SEP26" — eine Zeit für Listen, wie das Tagebuch sie schreibt (Anzeigezone). */
 export function kurzzeit(zeitpunkt: string): string {
-  const datum = new Date(zeitpunkt);
-  if (Number.isNaN(datum.getTime())) return "—";
-  return `${zwei(datum.getDate())}${zwei(datum.getHours())}${zwei(datum.getMinutes())}`;
+  const w = anzeigezoneWandzeit(zeitpunkt);
+  if (w === undefined) return "—";
+  return `${zwei(w.tag)}${zwei(w.stunde)}${zwei(w.minute)}`;
 }
 
 const SCHICHTEN: Readonly<Record<string, string>> = { TAG: "Tag", NACHT: "Nacht", FRUEH: "Früh", SPAET: "Spät" };

@@ -37,7 +37,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-const JETZT = new Date(2026, 8, 10, 14, 43).getTime();
+// 14:43 Berliner Zeit (Sommerzeit): Der Kopf zeigt die Anzeigezone, nicht die Rechnerzeit (SGL P3-16).
+const JETZT = Date.parse("2026-09-10T12:43:00Z");
 
 const PEER = {
   clientId: "b",

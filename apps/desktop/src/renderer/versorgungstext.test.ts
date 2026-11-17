@@ -1,14 +1,16 @@
 /** Tests zu den Wörtern und Zeitangaben der Versorgung (S4.1). */
 
+import { zeitpunktAusWandzeit } from "@s1/domaene";
 import { describe, expect, it } from "vitest";
 
 import { kurzzeit, mahlzeitText, nachtText, restzeitText, schichtText, tagText, uhrzeitText, vorzeichen } from "./versorgungstext.js";
 
-const JETZT = new Date(2026, 8, 10, 14, 43).getTime();
-const um = (tag: number, stunde: number, minute = 0): string => new Date(2026, 8, tag, stunde, minute).toISOString();
+// Wandzeit in der Anzeigezone Europe/Berlin (SGL P3-16), gleich auf jedem Prüfrechner.
+const um = (tag: number, stunde: number, minute = 0): string => zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag, stunde, minute }) ?? "";
+const JETZT = Date.parse(um(10, 14, 43));
 
 describe("Die Texte der Versorgung", () => {
-  it("schreibt die Ausgabezeit vierstellig in Ortszeit", () => {
+  it("schreibt die Ausgabezeit vierstellig in der Anzeigezone", () => {
     expect(uhrzeitText(um(10, 18))).toBe("1800");
     expect(uhrzeitText(um(11, 0))).toBe("0000");
     expect(uhrzeitText("kaputt")).toBe("—");

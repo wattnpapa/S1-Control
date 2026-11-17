@@ -10,11 +10,16 @@
  * „Probedruck" schickt den leeren Vordruck an das Ziel, das gerade dasteht —
  * auch vor „Übernehmen", damit ein falsches Ziel nicht erst gespeichert
  * werden muss, um es zu bemerken.
+ *
+ * Audit Fernmelder P2-11: Ein falsch getipptes Verzeichnis wurde still
+ * angelegt. Der Probedruck meldet jetzt „Verzeichnis gibt es nicht“ und bietet
+ * „Anlegen und Probedruck“ an; beim Übernehmen fragt `druckverzeichnisBestaetigt`
+ * „Verzeichnis gibt es nicht, anlegen?“.
  */
 
 import { useEffect, useState } from "react";
 
-import type { Automatikdruckziel, Druckerangabe, Einstellungen, VordruckBlatt } from "../kontrakt/index.js";
+import type { Automatikdruckziel, Druckerangabe, Einstellungen, Probedruckergebnis, VordruckBlatt } from "../kontrakt/index.js";
 import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
 
@@ -84,29 +89,68 @@ function useDruckerliste(aktiv: boolean): readonly Druckerangabe[] | string {
   return liste;
 }
 
+/** Was nach einem Probedruck dasteht (FM P2-11: auch „Verzeichnis gibt es nicht“). */
+export function probedrucktext(e: Probedruckergebnis): string {
+  if (e.art === "verzeichnis") return `Probedruck geschrieben: ${e.pfad}`;
+  if (e.art === "drucker") return `Probedruck an „${e.name}“ gegeben.`;
+  return `Verzeichnis gibt es nicht: ${e.pfad}. Es wurde nichts angelegt.`;
+}
+
 function Probedruck({ werte }: { readonly werte: Druckwerte }): React.JSX.Element {
   const [ergebnis, setzeErgebnis] = useState<string | undefined>(undefined);
+  const [fehlt, setzeFehlt] = useState(false);
   const ziel: Automatikdruckziel | undefined =
     werte.modus === "verzeichnis" && werte.pfad.trim() !== "" ? { ziel: "verzeichnis", pfad: werte.pfad.trim() } : werte.modus === "drucker" && werte.drucker !== "" ? { ziel: "drucker", name: werte.drucker } : undefined;
-  const pruefe = (): void => {
+  const pruefe = (anlegen: boolean): void => {
     if (ziel === undefined) return;
     setzeErgebnis("Probedruck läuft …");
-    rufe({ art: "probedruck", ziel })
-      .then((e) => setzeErgebnis(e.art === "verzeichnis" ? `Probedruck geschrieben: ${e.pfad}` : `Probedruck an „${e.name}“ gegeben.`))
+    setzeFehlt(false);
+    rufe({ art: "probedruck", ziel, ...(anlegen ? { anlegen: true } : {}) })
+      .then((e) => {
+        setzeFehlt(e.art === "verzeichnisFehlt");
+        setzeErgebnis(probedrucktext(e));
+      })
       .catch((fehler: unknown) => setzeErgebnis(`Probedruck gescheitert: ${fehler instanceof Error ? fehler.message : String(fehler)}`));
   };
   return (
     <span className="probedruck">
-      <button type="button" disabled={ziel === undefined} title={ziel === undefined ? "Erst ein Verzeichnis oder einen Drucker angeben" : "Den leeren Vordruck an dieses Ziel geben"} onClick={pruefe}>
+      <button type="button" disabled={ziel === undefined} title={ziel === undefined ? "Erst ein Verzeichnis oder einen Drucker angeben" : "Den leeren Vordruck an dieses Ziel geben"} onClick={() => pruefe(false)}>
         Probedruck
       </button>
+      {fehlt && (
+        <button type="button" title="Das Verzeichnis anlegen und den Probedruck hineinschreiben" onClick={() => pruefe(true)}>
+          Anlegen und Probedruck
+        </button>
+      )}
       {ergebnis !== undefined && (
-        <span className="hinweistext" role="status">
+        <span className={fehlt ? "hinweistext warn" : "hinweistext"} role="status">
           {ergebnis}
         </span>
       )}
     </span>
   );
+}
+
+/**
+ * Vor dem Übernehmen (FM P2-11): Gibt es das Verzeichnis des Automatikdrucks?
+ * Fehlt es, fragt `frage` „Verzeichnis gibt es nicht, anlegen?“; bei Ja wird
+ * es angelegt, bei Nein nichts gespeichert (`false`), damit der Pfad
+ * berichtigt werden kann. Ohne Verzeichnisziel oder bei Fehlern der Prüfung
+ * geht das Speichern weiter — die Prüfung schützt, sie sperrt nicht.
+ */
+export async function druckverzeichnisBestaetigt(werte: Druckwerte, frage: (text: string) => boolean = (text) => globalThis.confirm(text)): Promise<boolean> {
+  const pfad = werte.pfad.trim();
+  if (werte.modus !== "verzeichnis" || pfad === "") return true;
+  try {
+    const pruefung = await rufe({ art: "verzeichnisPruefen", pfad });
+    if (pruefung.vorhanden) return true;
+    if (!frage(`Verzeichnis „${pfad}“ gibt es nicht, anlegen?`)) return false;
+    const angelegt = await rufe({ art: "verzeichnisPruefen", pfad, anlegen: true });
+    if (!angelegt.vorhanden) useLaden.getState().melde("warnung", `Das Verzeichnis „${pfad}“ ließ sich nicht anlegen.`);
+    return angelegt.vorhanden;
+  } catch {
+    return true;
+  }
 }
 
 function Verzeichnisfeld({ werte, setze }: { readonly werte: Druckwerte; readonly setze: (teil: Partial<Druckwerte>) => void }): React.JSX.Element {

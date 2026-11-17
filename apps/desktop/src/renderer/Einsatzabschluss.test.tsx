@@ -11,7 +11,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { zeitpunktText } from "@s1/domaene";
+import { zeitpunktAusWandzeit, zeitpunktText } from "@s1/domaene";
 
 import { CODE_EINSATZ_ABGESCHLOSSEN, type Lagebild } from "../kontrakt/index.js";
 import { Einsatzabschluss, aktenzusatz, zustandstext } from "./Einsatzabschluss.js";
@@ -101,7 +101,7 @@ describe("Einsatz beenden", () => {
         typ: "EinsatzBeendet",
         nutzlast: { einsatzId: LAGEBILD.einsatzId },
         vorher: null,
-        neu: new Date(2026, 9, 30, 17, 0).toISOString(),
+        neu: zeitpunktAusWandzeit({ jahr: 2026, monat: 10, tag: 30, stunde: 17, minute: 0 }),
         grund: "Lage bereinigt",
       });
     });

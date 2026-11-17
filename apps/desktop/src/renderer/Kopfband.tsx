@@ -122,6 +122,8 @@ export function Kopfband({
         {(lagebild !== undefined || zurueckZurAuswahl !== undefined) && <Staerkekennzahl lagebild={lagebild} />}
         <span className="kennzahl">
           <span className="label">Zeit</span>
+          {/* SGL P3-16, LdF P2-4: `taktischeZeit` rechnet in der Anzeigezone Europe/Berlin wie die
+              Datum-Zeit-Gruppe des Vordrucks — nicht mehr in der Rechnerzeit. */}
           <span className="wert">{taktischeZeit(jetzt)}</span>
         </span>
 

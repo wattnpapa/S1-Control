@@ -7,6 +7,7 @@
  */
 
 import { fireEvent, render, screen, cleanup } from "@testing-library/react";
+import { rechnerzoneHinweis } from "@s1/domaene";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { Statuszeile, alter, bytes } from "./Statuszeile.js";
@@ -213,5 +214,18 @@ describe("Verbindung zum Dienst (P0-2)", () => {
       />,
     );
     expect(screen.getByText(/Keine Verbindung zum Dienst seit 12 s/)).toBeDefined();
+  });
+
+  it("nennt eine abweichende Rechnerzone einmal und lässt sich ausblenden (SGL P3-16, ETB P2-1, LdF P2-4, FM P2-1)", () => {
+    const { container } = render(<Statuszeile lagebild={undefined} jetzt={JETZT} />);
+    const hinweis = container.querySelector(".zonenhinweis");
+    // Die Testumgebung läuft in der Rechnerzone des Prüfrechners; nur wenn sie von Berlin abweicht, steht der Hinweis.
+    if (rechnerzoneHinweis(JETZT) === undefined) {
+      expect(hinweis).toBeNull();
+      return;
+    }
+    expect(hinweis?.textContent).toMatch(/^Rechnerzeit .+, Anzeige in Europe\/Berlin/u);
+    fireEvent.click(screen.getByRole("button", { name: "Zeitzonenhinweis ausblenden" }));
+    expect(container.querySelector(".zonenhinweis")).toBeNull();
   });
 });

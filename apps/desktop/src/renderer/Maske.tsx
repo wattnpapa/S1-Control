@@ -10,12 +10,17 @@
  * Enter von sich aus zum Bestätigen, der Bildschirmleser kündigt es als
  * Formular an, und der erste Knopf ist ohne Zutun der Bestätigungsknopf.
  * Escape kommt hinzu, weil ein Formular es nicht kennt.
+ *
+ * Additiv (Audit Fernmelder P2-8): Tab bleibt in der Maske, und beim
+ * Schließen kehrt der Fokus zum auslösenden Element zurück
+ * (`useFokusfalle.ts`).
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 
 import { useLaden } from "./laden.js";
+import { haltTab, useFokusRueckgabe } from "./useFokusfalle.js";
 import { MELDUNG_UNKLAR } from "./verbindung.js";
 
 /** Der Satz, der im Dialog steht, wenn der Einsatz keine Eingaben mehr annimmt. */
@@ -99,6 +104,8 @@ export function Maske({
   children,
 }: MaskeEigenschaften): React.JSX.Element {
   const formular = useRef<HTMLFormElement>(null);
+  // Fernmelder P2-8: das auslösende Element merken und beim Schließen zurückfokussieren.
+  useFokusRueckgabe();
   const [laeuft, setzeLaeuft] = useState(false);
   // Zusätzlich zum Zustand ein Merker, der **sofort** gilt: Zwei Klicks im
   // selben Takt sehen sonst beide `laeuft === false` und lösen zweimal aus.
@@ -177,6 +184,11 @@ export function Maske({
             return;
           }
           if (ereignis.key === "Tab" && springeTabfolge(ereignis.target, ereignis.shiftKey, formular.current)) {
+            ereignis.preventDefault();
+            return;
+          }
+          // Die Fokusfalle (Fernmelder P2-8): Am Rand springt Tab innerhalb der Maske.
+          if (ereignis.key === "Tab" && haltTab(ereignis.target, ereignis.shiftKey, formular.current)) {
             ereignis.preventDefault();
             return;
           }

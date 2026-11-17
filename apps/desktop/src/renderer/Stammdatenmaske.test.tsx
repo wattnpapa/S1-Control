@@ -10,7 +10,7 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { zeitpunktText } from "@s1/domaene";
+import { zeitpunktAusWandzeit, zeitpunktText } from "@s1/domaene";
 
 import { Stammdatenblock } from "./Stammdatenmaske.js";
 import { useLaden } from "./laden.js";
@@ -134,7 +134,8 @@ describe("Die Stammdatenmaske", () => {
     });
     const [art, beginn] = attrappe.rufeDerArt("bedienen").map((ruf) => ruf.entwurf);
     expect(art?.neu).toBe("UEBUNG");
-    expect(beginn?.neu).toBe(new Date(2026, 8, 8, 10, 30).toISOString());
+    // Gelesen in der Anzeigezone Europe/Berlin (FM P2-1), nicht in der Rechnerzeit.
+    expect(beginn?.neu).toBe(zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 8, stunde: 10, minute: 30 }));
   });
 
   it("bleibt offen, wenn der Worker abweist — die Eingabe geht nicht verloren", async () => {

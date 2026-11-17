@@ -11,14 +11,21 @@
  *   und bietet das Nummernfeld gleich hier an, vorbelegt mit der nächsten
  *   Nummer. Leer lassen bleibt erlaubt — bei Blitz kann Papier vorgehen —,
  *   aber erst mit dem zweiten Klick „Trotzdem ohne Nummer“.
+ * - Zweiter Durchlauf (Stand be6f9b9, Bild befoerdern.png): Der Satz
+ *   „Ohne Nachweisungsnummer: Die Nachricht steht noch nicht in der
+ *   Nachweisung“ stand über einem schon vorbelegten Nummernfeld und las sich,
+ *   als ginge die Nachricht ohne Nummer hinaus. Er sagt jetzt, was gilt: Die
+ *   Nummer ist vorbelegt; leer lassen heißt ohne Nummer befördern.
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
 
 /** Der Satz über der nachgetragenen Annahme. */
 export const TEXT_ANNAHME_MIT = "Annahme wird mit eingetragen (Uhrzeit und Handzeichen der Beförderung).";
-/** Die Warnung, solange die Nachricht keine Nummer trägt. */
-export const TEXT_OHNE_NUMMER = "Ohne Nachweisungsnummer: Die Nachricht steht noch nicht in der Nachweisung. Nummer hier eintragen oder leer lassen.";
+/** Der Hinweis am vorbelegten Nummernfeld, solange die Nachricht keine Nummer trägt (zweiter Durchlauf). */
+export const TEXT_OHNE_NUMMER = "Nummer ist vorbelegt; leer lassen heißt ohne Nummer befördern (zweiter Klick).";
+/** Der Hinweis, wenn das Nummernfeld leer ist — es gab keine Vorbelegung, oder sie wurde gelöscht. */
+export const TEXT_NUMMER_LEER = "Keine Nummer eingetragen; leer lassen heißt ohne Nummer befördern (zweiter Klick).";
 /** Der Satz nach dem ersten Klick mit leerer Nummer. */
 export const TEXT_TROTZDEM_OHNE = "Noch einmal „Trotzdem ohne Nummer“ drücken, um ohne Nummer zu befördern; die FmZ zeigt sie dann unter „Ohne Nummer“.";
 
@@ -44,8 +51,8 @@ export function Befoerderungszusatz({ zeile, nummer, aufNummer, warnung, ohneNum
       )}
       {ohneNummer && (
         <>
-          <p className="warnung" role="status">
-            {TEXT_OHNE_NUMMER}
+          <p className="hinweistext" role="status">
+            {nummer.trim() === "" ? TEXT_NUMMER_LEER : TEXT_OHNE_NUMMER}
           </p>
           <label>
             Nr.

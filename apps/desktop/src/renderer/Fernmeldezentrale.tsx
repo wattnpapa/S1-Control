@@ -30,12 +30,17 @@
  * - Eine dritte Karte „Ohne Nummer“ hält beförderte Nachrichten ohne
  *   Nachweisungsnummer sichtbar, mit Knopf „Nachweisen“ (LdF P0-1,
  *   Sachgebietsleiter P1-6) — vorher fielen sie still aus der Sicht.
+ * - Zweiter Durchlauf (Fernmelder P3-4, SGL P2-11): Vier Knöpfe je Zeile
+ *   brachen bei 1320 Pixeln um und machten jede Zeile doppelt hoch. In der
+ *   Zeile steht nur noch der Hauptknopf (der nächste fällige Schritt), die
+ *   übrigen Schritte liegen im Menü „⋯“ daneben.
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
 
 import { minutenSeit } from "./fmzformate.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
+import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
 import { vorschlagText } from "./Vordruckteile.js";
@@ -78,22 +83,43 @@ function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.El
   return zeile.laufzustand === "VOR_LDF" ? <span className="marke-zustand warn"> beim LdF</span> : null;
 }
 
+interface Zeilenschritt {
+  readonly schritt: Fmzschritt;
+  readonly text: string;
+  readonly titel: string;
+}
+
+/**
+ * Die Schritte einer Zeile; der erste ist der Hauptknopf — ohne Annahme
+ * „Annehmen“, sonst „Befördern“ (Fernmelder P3-4) —, die übrigen stehen im Menü.
+ */
+export function zeilenschritte(zeile: Nachrichtenzeile): readonly Zeilenschritt[] {
+  const annehmen: Zeilenschritt = { schritt: "annahme", text: zeile.annahme === undefined ? "Annehmen" : "Annahme ändern", titel: "Annahmevermerk: Uhrzeit und Handzeichen" };
+  const befoerdern: Zeilenschritt = { schritt: "befoerderung", text: "Befördern", titel: "Beförderungsvermerk: Mittel, Gegenstelle, Zeit, Handzeichen" };
+  const rest: readonly Zeilenschritt[] = [
+    { schritt: "vorschlag", text: zeile.vorschlag === undefined ? "Vorschlag" : "Vorschlag ändern", titel: "Übermittlungsvorschlag des LdF: Fernmelder, Mittel, Gegenstelle" },
+    { schritt: "nachweis", text: zeile.nummer === undefined ? "Nachweisen" : `Nr. ${String(zeile.nummer)} ändern`, titel: "In die Nachweisung eintragen" },
+  ];
+  return zeile.annahme === undefined ? [annehmen, befoerdern, ...rest] : [befoerdern, annehmen, ...rest];
+}
+
 function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"] }): React.JSX.Element {
-  const titel = (text: string): string => (nurLesen ? TEXT_NUR_LESEN : text);
+  const [haupt, ...weitere] = zeilenschritte(zeile);
   return (
     <span className="zeilenknoepfe">
-      <button type="button" disabled={nurLesen} title={titel("Übermittlungsvorschlag des LdF: Fernmelder, Mittel, Gegenstelle")} onClick={() => aufSchritt("vorschlag", zeile)}>
-        {zeile.vorschlag === undefined ? "Vorschlag" : "Vorschlag ändern"}
-      </button>
-      <button type="button" className={zeile.annahme === undefined ? "haupt" : undefined} disabled={nurLesen} title={titel("Annahmevermerk: Uhrzeit und Handzeichen")} onClick={() => aufSchritt("annahme", zeile)}>
-        {zeile.annahme === undefined ? "Annehmen" : "Annahme ändern"}
-      </button>
-      <button type="button" className={zeile.annahme === undefined ? undefined : "haupt"} disabled={nurLesen} title={titel("Beförderungsvermerk: Mittel, Gegenstelle, Zeit, Handzeichen")} onClick={() => aufSchritt("befoerderung", zeile)}>
-        Befördern
-      </button>
-      <button type="button" disabled={nurLesen} title={titel("In die Nachweisung eintragen")} onClick={() => aufSchritt("nachweis", zeile)}>
-        {zeile.nummer === undefined ? "Nachweisen" : `Nr. ${String(zeile.nummer)} ändern`}
-      </button>
+      {haupt !== undefined && (
+        <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : haupt.titel} onClick={() => aufSchritt(haupt.schritt, zeile)}>
+          {haupt.text}
+        </button>
+      )}
+      <Klappmenue
+        huelle="rechts"
+        knopf={{ inhalt: "⋯", beschriftung: "Weitere Schritte", titel: "Weitere Schritte: Vorschlag, Annahme, Nachweis", gesperrt: nurLesen }}
+        menue={{ beschriftung: "Weitere Schritte", id: `fmzschritte-${zeile.id}` }}
+        inhalt={(waehle) =>
+          weitere.map((s) => <Menueeintrag key={s.schritt} text={s.text} titel={s.titel} sperre={nurLesen ? TEXT_NUR_LESEN : undefined} aufWahl={waehle(() => aufSchritt(s.schritt, zeile))} />)
+        }
+      />
     </span>
   );
 }

@@ -7,13 +7,13 @@
  * fertigen Plan macht. Die Rufgruppennamen sind erfunden.
  */
 
-import type { Funkprobenzeile, Funkteilnehmer, Rufgruppenkarte } from "@s1/domaene";
+import { zeitpunktAusWandzeit, type Funkprobenzeile, type Funkteilnehmer, type Rufgruppenkarte } from "@s1/domaene";
 
 import type { Funkplanansicht } from "../../kontrakt/index.js";
 
-/** Eine Uhrzeit am 10.09.2026 in der Ortszeit — die Marken zeigen Ortszeit. */
+/** Eine Uhrzeit am 10.09.2026 in der Anzeigezone Europe/Berlin — die Marken zeigen sie, nicht die Rechnerzeit (SGL P3-16). */
 export function um(stunde: number, minute: number): string {
-  return new Date(2026, 8, 10, stunde, minute).toISOString();
+  return zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 10, stunde, minute }) ?? "";
 }
 
 function teilnehmer(einheitId: string, einheit: string, abschnittId: string, bereich: string, weiteres: Partial<Funkteilnehmer> = {}): Funkteilnehmer {
@@ -95,7 +95,7 @@ const R2: Rufgruppenkarte = {
 };
 const R3: Rufgruppenkarte = { rufgruppeId: "R3", betriebsart: "DMO", name: "DMO 310", zweck: "EA 3 Evakuierung", gateway: "Heros Varel 25/10", aufgeloest: false, teilnehmer: [E4], mithoerer: [] };
 const R4: Rufgruppenkarte = { rufgruppeId: "R4", betriebsart: "ANALOG", name: "2 m K 55 G/U", zweck: "Ortsfunk FF Hude", aufgeloest: false, teilnehmer: [], mithoerer: [] };
-const R5: Rufgruppenkarte = { rufgruppeId: "R5", betriebsart: "TMO", name: "THW_OL_BR", aufgeloest: true, aufgeloestAm: new Date(2026, 8, 10, 12, 10).toISOString(), teilnehmer: [], mithoerer: [] };
+const R5: Rufgruppenkarte = { rufgruppeId: "R5", betriebsart: "TMO", name: "THW_OL_BR", aufgeloest: true, aufgeloestAm: um(12, 10), teilnehmer: [], mithoerer: [] };
 
 const FUNKPROBEN: readonly Funkprobenzeile[] = [
   { ereignisId: "a-3", einheitId: "E1", einheit: E1.einheit, rufgruppeId: "R1", rufgruppe: "THW_OL_FUE", ergebnis: "KONTAKT", zeitpunkt: um(14, 31), akteur: "Meier", zurueckgenommen: false },

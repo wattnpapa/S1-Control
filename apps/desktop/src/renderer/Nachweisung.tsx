@@ -22,9 +22,17 @@
  * vierstellige Uhrzeit mit Handzeichen. „Berichtigen“ belegt die nächste
  * freie Nummer vor (LdF P2-1, in `Fmzmasken.tsx`).
  *
+ * Zweiter Durchlauf (ETB P1-3, Sichter-Audit): „Berichtigen“ steht an jeder
+ * nummerierten Zeile, nicht nur bei doppelter Nummer — ein Zahlendreher ist
+ * genauso zu berichtigen. Unter jeder Nachricht steht wie im Ausdruck eine
+ * zweite Zeile mit Sichtung, Verteiler samt Kopiefarbe und Vermerken, bei
+ * einer zurückgezogenen Nachricht mit ihrem Grund.
+ *
  * „Nachweisung ausgeben" erzeugt die Seite über den bestehenden Weg
  * `ausgabeErzeugen` (HTML, in der Desktop-App auch PDF) in `ausgaben\`.
  */
+
+import { Fragment } from "react";
 
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
@@ -32,7 +40,39 @@ import { Ausgabeeintraege, Ausgabepfad, useAusgabe } from "./Versorgungsausgabe.
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
-import { dtg, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
+import { dtg, stellenname, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
+
+/** Die Zahl der Spalten — die zweite Zeile spannt über alle. */
+const SPALTEN = 14;
+
+/**
+ * Der Grund des Zurückziehens. Er kommt aus dem Domänenschnitt des anderen
+ * Arbeitsstrangs (`zurueckgezogenMit.grund`, in einer früheren Absprache
+ * `zurueckgezogenGrund`); bis er da ist, wird er optional gelesen und bleibt
+ * leer — die Vermerke stehen ohnehin in der zweiten Zeile.
+ */
+export function zurueckziehgrund(zeile: Nachrichtenzeile): string | undefined {
+  const z = zeile as { readonly zurueckgezogenGrund?: unknown; readonly zurueckgezogenMit?: { readonly grund?: unknown } };
+  const grund = z.zurueckgezogenMit?.grund ?? z.zurueckgezogenGrund;
+  return typeof grund === "string" && grund.trim() !== "" ? grund.trim() : undefined;
+}
+
+/**
+ * Die zweite Zeile einer Nachricht wie in der Ausgabe (`@s1/ausgaben`,
+ * `nachweisung.ts`): „Sichtung 1045 Si · Verteiler: S4 (grün: bearbeiten) ·
+ * Vermerke: …“, dazu „Zurückgezogen: Grund“. Ohne all das `undefined`.
+ */
+export function unterzeileText(zeile: Nachrichtenzeile): string | undefined {
+  const verteiler = zeile.verteiler.map((m) => `${stellenname(m.stelle)} (${projektion.kopieWort(m.kopie)})`).join(", ");
+  const grund = zurueckziehgrund(zeile);
+  const teile = [
+    zeile.sichtung === undefined ? "" : `Sichtung ${uhrvermerk(zeile.sichtung)}`,
+    verteiler === "" ? "" : `Verteiler: ${verteiler}`,
+    zeile.vermerke === undefined || zeile.vermerke.trim() === "" ? "" : `Vermerke: ${zeile.vermerke.trim()}`,
+    zeile.zurueckgezogen ? `Zurückgezogen${grund === undefined ? "" : `: ${grund}`}` : "",
+  ].filter((t) => t !== "");
+  return teile.length === 0 ? undefined : teile.join(" · ");
+}
 
 /** „171045nov26 Fm" — Datum-Zeit-Gruppe und Handzeichen (Aufnahme, Feld 2). */
 function vermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string } | undefined): string {
@@ -101,6 +141,50 @@ function Nummer({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Elem
   );
 }
 
+/** Die Schaltfläche der Zeile: „Nachweisen“ ohne Nummer, sonst „Berichtigen“ (ETB P1-3: bei jeder Nummer). */
+function Nachweisknopf({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: NachweisungEigenschaften["aufSchritt"] }): React.JSX.Element {
+  const ohne = zeile.nummer === undefined;
+  return (
+    <button type="button" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : ohne ? "Nummer der Nachweisung eintragen" : "Nummer der Nachweisung berichtigen"} onClick={() => aufSchritt("nachweis", zeile)}>
+      {ohne ? "Nachweisen" : "Berichtigen"}
+    </button>
+  );
+}
+
+type Zeileneigenschaften = Omit<NachweisungEigenschaften, "zeilen"> & { readonly zeile: Nachrichtenzeile };
+
+function Nachweiszeile({ zeile, gewaehltId, nurLesen, aufWahl, aufSchritt }: Zeileneigenschaften): React.JSX.Element {
+  return (
+    <tr
+      className={[zeile.id === gewaehltId ? "gewaehlt" : "", zeile.zurueckgezogen ? "abgelehnt" : "", zeile.nummerDoppelt ? "doppelt" : ""].filter((k) => k !== "").join(" ")}
+      aria-selected={zeile.id === gewaehltId}
+      onClick={() => aufWahl(zeile.id)}
+    >
+      <td>{vorrangwort(zeile)}</td>
+      <td>{zeile.richtungKurz}{zeile.gespraechsnotiz ? " (Notiz)" : ""}</td>
+      <td className="zahl">
+        <Nummer zeile={zeile} />
+      </td>
+      <td>{zeile.absender}</td>
+      <td>{zeile.anschrift}</td>
+      <td>{mittelText(zeile)}</td>
+      <td>{zeile.gegenstelle ?? "—"}</td>
+      <td className="mono">{vermerk(zeile.aufnahme)}</td>
+      <td className="mono">{uhrvermerk(zeile.annahme)}</td>
+      <td className="mono">
+        {uhrvermerk(zeile.befoerderung)}
+        <Wegmarke zeile={zeile} />
+      </td>
+      <td className="mono">{uhrvermerk(zeile.sichtung)}</td>
+      <td className="mono">{dtg(zeile.abfassungszeit)}</td>
+      <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
+      <td>
+        <Nachweisknopf zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />
+      </td>
+    </tr>
+  );
+}
+
 export function Nachweisung({ zeilen, gewaehltId, nurLesen, aufWahl, aufSchritt }: NachweisungEigenschaften): React.JSX.Element {
   if (zeilen.length === 0) return <p className="hinweistext">Noch keine Nachricht in der Nachweisung.</p>;
   return (
@@ -127,38 +211,16 @@ export function Nachweisung({ zeilen, gewaehltId, nurLesen, aufWahl, aufSchritt 
       </thead>
       <tbody>
         {zeilen.map((zeile) => (
-          <tr
-            key={zeile.id}
-            className={[zeile.id === gewaehltId ? "gewaehlt" : "", zeile.zurueckgezogen ? "abgelehnt" : "", zeile.nummerDoppelt ? "doppelt" : ""].filter((k) => k !== "").join(" ")}
-            aria-selected={zeile.id === gewaehltId}
-            onClick={() => aufWahl(zeile.id)}
-          >
-            <td>{vorrangwort(zeile)}</td>
-            <td>{zeile.richtungKurz}{zeile.gespraechsnotiz ? " (Notiz)" : ""}</td>
-            <td className="zahl">
-              <Nummer zeile={zeile} />
-            </td>
-            <td>{zeile.absender}</td>
-            <td>{zeile.anschrift}</td>
-            <td>{mittelText(zeile)}</td>
-            <td>{zeile.gegenstelle ?? "—"}</td>
-            <td className="mono">{vermerk(zeile.aufnahme)}</td>
-            <td className="mono">{uhrvermerk(zeile.annahme)}</td>
-            <td className="mono">
-              {uhrvermerk(zeile.befoerderung)}
-              <Wegmarke zeile={zeile} />
-            </td>
-            <td className="mono">{uhrvermerk(zeile.sichtung)}</td>
-            <td className="mono">{dtg(zeile.abfassungszeit)}</td>
-            <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
-            <td>
-              {(zeile.nummer === undefined || zeile.nummerDoppelt) && (
-                <button type="button" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Nummer der Nachweisung eintragen oder berichtigen"} onClick={() => aufSchritt("nachweis", zeile)}>
-                  {zeile.nummer === undefined ? "Nachweisen" : "Berichtigen"}
-                </button>
-              )}
-            </td>
-          </tr>
+          <Fragment key={zeile.id}>
+            <Nachweiszeile zeile={zeile} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={aufWahl} aufSchritt={aufSchritt} />
+            {unterzeileText(zeile) !== undefined && (
+              <tr className={zeile.zurueckgezogen ? "unterzeile abgelehnt" : "unterzeile"}>
+                <td colSpan={SPALTEN} className="zeilenvermerk">
+                  {unterzeileText(zeile)}
+                </td>
+              </tr>
+            )}
+          </Fragment>
         ))}
       </tbody>
     </table>
