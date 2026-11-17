@@ -23,14 +23,14 @@ Das ETB-Audit nennt im Kopf vier P3-Befunde, führt aber fünf aus; gezählt sin
 
 | Rolle | behoben | teilweise | offen | bewusst nicht | nicht prüfbar |
 | --- | --- | --- | --- | --- | --- |
-| SGL | 13 | 1 | 5 | 1 | 0 |
-| LdF | 14 | 1 | 1 | 0 | 0 |
+| SGL | 14 | 1 | 3 | 2 | 0 |
+| LdF | 14 | 2 | 0 | 0 | 0 |
 | FM | 21 | 3 | 0 | 0 | 0 |
-| Sichter | 13 | 1 | 3 | 0 | 0 |
+| Sichter | 13 | 1 | 2 | 1 | 0 |
 | ETB | 16 | 5 | 0 | 1 | 0 |
-| Summe | 77 | 11 | 9 | 2 | 0 |
+| Summe | 78 | 12 | 5 | 4 | 0 |
 
-Stand nach dem dritten Durchlauf (ungebucht, Spalte „Commit“: „3. Durchlauf (ungebucht)“). Die neun offenen Befunde sind SGL P1-2, P2-9, P2-12, P2-13, P2-14, LdF P2-3 und Sichter P2-2, P2-3, P3-3; vier davon warten auf eine Entscheidung der Fachseite (SGL P1-2, SGL P2-14, LdF P2-3, Sichter P3-3).
+Stand nach dem dritten Durchlauf und den Entscheidungen der Fachseite vom 2026-11-17 (ungebucht, Spalte „Commit“: „3. Durchlauf (ungebucht)“ und „Entscheidung 11 bis 14 (ungebucht)“). Die fünf offenen Befunde sind SGL P2-9, P2-12, P2-13 und Sichter P2-2, P2-3; keiner wartet mehr auf die Fachseite. Johannes entschied am 2026-11-17: „Die Lehrunterlage ist Maßstab. S5 wie im Vordruck.“ Daraus folgen die Entscheidungen 11 bis 14 im Konzept (§11): SGL P1-2 und Sichter P3-3 sind bewusst nicht gebaut, LdF P2-3 ist als Hinweis statt Recht umgesetzt (teilweise, weil die Marke „Verfasser = Nachweiser“ fehlt), SGL P2-14 ist behoben.
 
 Auf die P0-Befunde bezogen: Alle neun P0-Befunde sind behoben (SGL P0-1, LdF P0-1 und P0-2, Sichter P0-1 bis P0-3, ETB P0-1 bis P0-3). Das Fernmelder-Audit hat keinen P0.
 
@@ -79,7 +79,7 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 
 | Kennung | Kurztitel | Status | Commit | Beleg und Anmerkung |
 | --- | --- | --- | --- | --- |
-| SGL P1-2 | Kein stabsinterner Weg, S3 an S4 läuft über die FmZ | offen | – | Kein Treffer im Code; „Weiterleiten“ erzeugt weiter einen Ausgang. |
+| SGL P1-2 | Kein stabsinterner Weg, S3 an S4 läuft über die FmZ | bewusst nicht (Lehrunterlage, Folie 31) | Entscheidung 11 (ungebucht) | Konzept §11 Entscheidung 11: Verkehr zwischen Stellen läuft als Gesprächsnotiz über den Sichter oder die eigene Verteilung; ein Weg an FmZ und Sichter vorbei ist nicht gebaut. Ein Satz im Handbuch. |
 | SGL P1-3 | Anschrift wird nicht in den Verteiler übernommen | behoben | d36d287 | Code und Test. Auch FM P1-4. |
 | SGL P1-4 | Handzeichen und Absender keine Pflicht, eigene Stelle unsichtbar | behoben | d36d287 | Code und Test (Pflichtfelder, „ohne Stelle“ in der Statuszeile). Auch ETB P1-4. |
 | SGL P1-5 | Esc verwirft angefangenen Vordruck ohne Rückfrage | behoben | d36d287 | Code und Test. Auch FM P1-3. |
@@ -118,7 +118,7 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | SGL P2-11 | Sichten auf 860 px zu lang, Verteilermatrix gestreckt | behoben | d36d287, 3. Durchlauf (ungebucht) | Gemessen in der Web-Schale bei 1320 x 860: „Sichten“ mit vier Empfängern (S2 rot, S3 grün, S4 blau, Leiter blau) liegt bei 823 bis 854 px ohne Scrollen (klebende Fußleiste), die Zeile Quittung/Handzeichen war 135 px hoch und ist 72 px hoch (CSS, `index.html`), das Raster beginnt bei 740 statt 804 px; Hauptknopf „Aufnehmen“ der Aufnahmemaske 806 bis 837 px. Auch Sichter P2-1. |
 | SGL P2-12 | „Lesen“ setzt Kenntnisnahme sofort, ohne Rücknahme | offen | – | Kenntnis gilt jetzt nur für eigene Stellen (Sichter P0-2); Doppelklick und fehlende Rücknahme unverändert. |
 | SGL P2-13 | „Erledigt“ ohne Vermerk, Antwort nicht mit Original verknüpft | offen | – | Kein Treffer; Bezug gibt es nur im Tagebuch (ETB P0-1). |
-| SGL P2-14 | Ausgang hängt am Absendertext oder Rechner, nicht an der Stelle | offen | – | Annahme des Audits; istEigenerAusgang nicht als geändert erkennbar. |
+| SGL P2-14 | Ausgang hängt am Absendertext oder Rechner, nicht an der Stelle | behoben | Entscheidung 14 (ungebucht) | Code und Test: `inSicht` für `ausgang` schneidet nach `funktion` (Feld 15/17) gegen die Stellen der Sitzung oder nach `clientId`, der Absender-Freitext zählt nicht mehr; die Maske belegt `funktion` aus der Stelle vor. Test in nachrichten.test.ts und als Worker-Szenario „Schichtwechsel“ (szenarien-nachrichten.test.ts). |
 | SGL P2-15 | Nachweisung im Browser nur als HTML | bewusst nicht | – | Bericht: PDF der Listen bleibt Sache der Desktop-Schale; die Akte legt die Nachweisung als HTML bei (9bbe3fe). Audit selbst: kein Mangel bei Desktop-Einsatz. |
 | ETB P2-1 | Zeit im Tagebuch ohne Jahr, Browserzone, nicht Datum-Zeit-Gruppe | teilweise behoben | 2. Durchlauf (ungebucht), 3. Durchlauf (ungebucht) | Zone wie SGL P3-16 behoben, jetzt auch in Einsatzliste, Einsatzanlage, Monitorwarnung und Eingangsrevisionen; Jahr am Bildschirm und Option Datum-Zeit-Gruppe im Tagebuch nicht gebaut. |
 | ETB P2-2 | Vollständigkeit der Nummernfolge nicht geprüft | behoben | 57699bb, 5418687 | Code und Test (nummernluecken, Fuß der Nachweisung). Auch LdF P2-2. |
@@ -129,7 +129,7 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | ETB P2-7 | Vordruck-PDF ist Stand zum Druckzeitpunkt | teilweise behoben | 2. Durchlauf (ungebucht), 3. Durchlauf (ungebucht) | Stempel „ZURÜCKGEZOGEN <DTG>: <Grund>“ im PDF (Prüfvermerk, Hinweiszeile, Schriftzug); die Vorschau zeigt ihn als Zeile und im gezeichneten Vordruck (Vordruckvorschau.test.tsx, dritter Durchlauf). Stand im Fußfeld und Umbenennen alter Dateien nicht gebaut. |
 | LdF P2-1 | Berichtigung beginnt mit der falschen Nummer | behoben | d36d287 | Code und Test (nächste freie Nummer vorbelegt). |
 | LdF P2-2 | Lücken und Sprünge in der Nummernfolge | behoben | 57699bb, 5418687 | Code und Test; die Rückfrage bei großem Sprung ist nicht belegt. Auch ETB P2-2. |
-| LdF P2-3 | Stelle ist Zuschnitt, kein Recht | offen | – | Im Konzept §4 so gewollt; der vorgeschlagene Hinweis in der Maske nicht gebaut. |
+| LdF P2-3 | Stelle ist Zuschnitt, kein Recht | teilweise behoben | Entscheidung 13 (ungebucht) | Code und Test (Stellenvorbehalt.test.tsx): Hinweis „Dieser Teil ist der Fernmeldezentrale vorbehalten …“ mit „Trotzdem“ vor Annehmen, Befördern, Nachweisen, Vorschlag und Weitergabe, `grund` „Eintrag durch <Stelle>, nicht FmZ“ im Tagebuch; kein Recht, keine Sperre. Nicht gebaut: die Marke „Verfasser = Nachweiser“ in der Nachweisung. |
 | LdF P2-4 | Uhrzeit in vier Zeitzonen-Darstellungen | behoben | 2. Durchlauf (ungebucht) | Siehe SGL P3-16; Kopf, Maske und Ausdruck in derselben Zone, Hinweis bei abweichender Rechnerzeit. |
 | LdF P2-5 | Betriebsbuch am Schichtende ohne Schicht und Abschluss, Rohtext im Kopf | behoben | 2. Durchlauf (ungebucht), 3. Durchlauf (ungebucht) | Schichtausdruck über `von`/`bis`, Zeitraum im Kopf, Abschlusszeile, „Erstellt Stand“ entdoppelt; dritter Durchlauf: Unterschriftszeile LdF (Datum/Uhrzeit, Handzeichen, Unterschrift) im Fuß, Kopf ohne Einsatzordner und Kernversion (`schlankerKopf`, nachweisung.test.ts). Filter nach Nummernbereich nicht gebaut. |
 | LdF P2-6 | Absender nicht in der Warteschlange | behoben | d36d287 | Code (Fernmeldezentrale.tsx, Kommentar „P2-6“). |
@@ -177,14 +177,14 @@ Spalte „Commit“: der Commit, der den Befund schließt oder verkleinert. Wo e
 | FM P3-7 | Hinweiskasten bleibt stehen | behoben | 3. Durchlauf (ungebucht) | Siehe LdF P3-4. |
 | Sichter P3-1 | Quittungszeit beim Öffnen eingefroren | behoben | 3. Durchlauf (ungebucht) | Code und Test: die Quittungszeit läuft mit, solange niemand sie getippt hat, und gilt beim Drücken von „Sichten“ (`quittungszeitpunkt`, Sichteraudit.test.tsx). |
 | Sichter P3-2 | Escape hebt Auswahl und Laufzettel zugleich auf | behoben | d36d287 | Code und Test. |
-| Sichter P3-3 | S5 fehlt im Verteiler | offen | – | Bekannt offen; S5 nur als Freitext (ausgaben/nachricht.ts). |
+| Sichter P3-3 | S5 fehlt im Verteiler | bewusst nicht (Lehrunterlage, Vordruck) | Entscheidung 12 (ungebucht) | Konzept §11 Entscheidung 12: S5 bleibt ohne Kästchen, nur Freitext; geprüft mit Tests für Verteilerraster (Verteilerraster.s5.test.tsx) und Vordruck-`verteilerText` (nachricht.test.ts). |
 | Sichter P3-4 | Zählung „n weitere Arbeitsplätze“ läuft auf | behoben | 2. Durchlauf (ungebucht) | Abgemeldete Arbeitsplätze zählen sofort nicht mehr mit (Sichter P1-4); harter Absturz bleibt an der Präsenzfrist. |
 
 Zahl der Befunde je Status nach dem dritten Durchlauf: behoben 77, teilweise behoben 11, offen 9, bewusst nicht 2, nicht prüfbar 0; zusammen 99. Nach dem zweiten Durchlauf waren es behoben 58, teilweise behoben 11, offen 28, bewusst nicht 2. Zahl der Befunde je Status nach dem zweiten Durchlauf (Domäne, Ausgaben, Kontrakt, Worker, Main, Web-Schale und Renderer, noch nicht gebucht; in der Spalte „Commit“ als „2. Durchlauf (ungebucht)“): behoben 58, teilweise behoben 11, offen 28, bewusst nicht 2, nicht prüfbar 0; zusammen 99. Vor dem zweiten Durchlauf waren es behoben 44, teilweise behoben 10, offen 43. Als „nicht prüfbar“ habe ich keinen Befund eingestuft, weil jeder entweder im Code eine Spur hinterlassen hat oder keine hat. Die Tests habe ich nicht ausgeführt; der Bericht nennt für den Stand 331 Testdateien und 3354 Tests, grün, bei typecheck und lint ohne Befund. Das habe ich nur übernommen.
 
 ## Was offen bleibt
 
-Nachtrag dritter Durchlauf: Die Zeitzone ist im Renderer vollständig (Einsatzliste, Einsatzanlage, Monitorwarnung, Eingangsrevisionen, Bezugsjahr der Datum-Zeit-Gruppe), unter UTC und New York geprüft. Die P3-Beschriftungen, Hinweise und Vorbelegungen der fünf Audits sind bis auf SGL P3-3/Sichter P3-3 (S5, Entscheidung der Fachseite) umgesetzt; der Hinweiskasten steht oben und verfällt, die Stellenabfrage wird nach dem Neuöffnen aus einem Merker des Browsers vorbelegt, die Nachweisung trägt die Unterschriftszeile des LdF. Die Höhen sind in der Web-Schale bei 1320 x 860 gemessen (siehe SGL P2-11, FM P3-4). Weiter offen und nicht Gegenstand dieses Durchlaufs: SGL P2-9, P2-12, P2-13, Sichter P2-2, P2-3 sowie die Teilbefunde LdF P1-2, Sichter P1-3, FM P2-7, ETB P1-3, P2-4, P2-5; auf die Fachseite warten SGL P1-2, P2-14, LdF P2-3, Sichter P3-3.
+Nachtrag dritter Durchlauf: Die Zeitzone ist im Renderer vollständig (Einsatzliste, Einsatzanlage, Monitorwarnung, Eingangsrevisionen, Bezugsjahr der Datum-Zeit-Gruppe), unter UTC und New York geprüft. Die P3-Beschriftungen, Hinweise und Vorbelegungen der fünf Audits sind bis auf SGL P3-3/Sichter P3-3 (S5, seit Entscheidung 12 bewusst nicht) umgesetzt; der Hinweiskasten steht oben und verfällt, die Stellenabfrage wird nach dem Neuöffnen aus einem Merker des Browsers vorbelegt, die Nachweisung trägt die Unterschriftszeile des LdF. Die Höhen sind in der Web-Schale bei 1320 x 860 gemessen (siehe SGL P2-11, FM P3-4). Weiter offen und nicht Gegenstand dieses Durchlaufs: SGL P2-9, P2-12, P2-13, Sichter P2-2, P2-3 sowie die Teilbefunde LdF P1-2, Sichter P1-3, FM P2-7, ETB P1-3, P2-4, P2-5; SGL P1-2, P2-14, LdF P2-3 und Sichter P3-3 sind seitdem entschieden (Entscheidungen 11 bis 14, siehe oben).
 
 Nachtrag zweiter Durchlauf: Die beiden Punkte, die vor dem nächsten Einsatz erledigt sein sollten, sind gebaut — der Druckordner wird geprüft statt still angelegt (FM P2-11), und der Sichter gibt seine Stelle beim Schließen, beim Einsatzwechsel und beim Verlassen der Seite sofort ab; die FmZ hört vom Stau vor dem Sichter (Sichter P1-4, ETB P3-3, Sichter P3-4). Ebenso die Zeit (eine Anzeigezone Europe/Berlin, SGL P3-16, ETB P2-1, LdF P2-4, FM P2-1), der leere Vordruck als PDF in der Web-Schale (FM P1-6), ETB-Nummer und Stempel „zurückgezogen“ im Vordruck (ETB P1-2, P1-3, P2-7), Stelle und Handzeichen im Tagebuch (ETB P1-7) und der Schichtausdruck der Nachweisung (LdF P2-5). Die folgenden Absätze beschreiben den Stand davor; was dort noch zutrifft, steht in der Tabelle als „offen“ oder „teilweise behoben“. Weiter nicht nachgewiesen sind der stille Druck an einen echten Drucker und die Höhen bei 860 und 1320 Pixeln.
 
@@ -196,6 +196,6 @@ Als Drittes die Zeit. Die Datum-Zeit-Gruppe ist fest Europe/Berlin, Kopf, Tagebu
 
 Viertens die Bedienung der Masken: Nach dem Schließen einer Maske springt der Fokus nicht auf den auslösenden Knopf zurück, und die Maske fängt den Fokus nicht ein (FM P2-8); die neue Tabfolge hat das nicht ersetzt. Dazu die offenen Fernmelder-Punkte unter Last: Abfassungszeit und Quittung sind mit „jetzt“ vorbelegt (P2-3), die Konfliktmeldung zeigt Rohdaten (P2-6), der leere Nachrichtenvordruck lässt sich in der Web-Schale nur als HTML holen (P1-6), und der Nachtrag eines Ausgangs vom Papier braucht noch mehrere Masken (P2-9).
 
-Fünftens der Verteiler und die Wege im Stab. S5 fehlt im Verteiler (Sichter P3-3), er ist nur als Freitext ohne Kästchen möglich; ob das gewollt ist, muss die Fachseite sagen. Ein stabsinterner Weg ohne FmZ (SGL P1-2) fehlt; er ist ein Funktionsumfang, kein Fehler, und braucht eine Entscheidung im Konzept, bevor jemand baut. Das gilt auch für den Hinweis bei Rollen ohne Befugnis (LdF P2-3) und für die Zuschnitt-Frage des Ausgangs nach Stelle statt Absendertext (SGL P2-14).
+Fünftens der Verteiler und die Wege im Stab, entschieden am 2026-11-17 („Die Lehrunterlage ist Maßstab“): S5 bleibt ohne Kästchen, nur Freitext (Sichter P3-3, Entscheidung 12); einen stabsinternen Weg ohne FmZ gibt es nicht, der Verkehr läuft über den Sichter oder die eigene Verteilung (SGL P1-2, Folie 31, Entscheidung 11); bei Rollen ohne Befugnis gibt es einen Hinweis statt eines Rechts (LdF P2-3, Entscheidung 13, umgesetzt); der Ausgang schneidet nach der Stelle statt nach dem Absendertext (SGL P2-14, Entscheidung 14, umgesetzt).
 
 Zuletzt der Rest, der den Nachweis nach dem Einsatz verbessert, aber nichts verhindert: die ETB-Nummer in Feld 20 und der Stempel „zurückgezogen“ mit Grund im Vordruck (ETB P1-2, P1-3, P2-7), die Berichtigung anderer Felder als der Nummer, der Anzeigename „Arbeitsplatz“ im Tagebuch (ETB P1-7), der Schicht- und Abschlusskopf der Nachweisung (LdF P2-5), der Reiterzähler (SGL P2-10) und die Beschriftungen und Hinweistexte der P3-Gruppe. Bewusst nicht gebaut sind Anlagen an Nachrichten (ETB P2-3) und das PDF der Listen in der Web-Schale (SGL P2-15); beides steht im Umsetzungsbericht.

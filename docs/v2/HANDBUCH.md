@@ -310,8 +310,10 @@ zeigt die Nachrichten, in deren Verteiler eine eigene Stelle steht, mit den
 Marken „neu“ oder „gelesen“ und „erledigt“; die Chips filtern danach und
 nennen die Zahl je Zustand, und
 „Posteingang von“ schlägt den Posteingang einer anderen Stelle auf. Der
-Ausgang zeigt, was dieser Arbeitsplatz oder seine Stellen verfasst haben,
-mit dem Stand auf dem Weg.
+Ausgang zeigt, was dieser Arbeitsplatz oder eine Stelle dieser Sitzung
+verfasst hat, mit dem Stand auf dem Weg; maßgeblich ist die Stelle im Feld
+„Funktion“ der Nachricht, nicht der Text im Absender. Wer beim Schichtwechsel
+die Stelle S4 übernimmt, sieht damit auch den Ausgang des Vorgängers.
 
 **Eine Nachricht verfassen.** Die Maske ist der Vordruck. Absender, Zeichen
 und Funktion kommen aus Stelle und Handzeichen, die Abfassungszeit steht als
@@ -358,7 +360,13 @@ Beförderungsvermerk mit Mittel und Gegenstelle (vorbelegt aus dem
 Übermittlungswunsch und der Anschrift), „Nachweisen“ trägt die Nachricht in
 die Nachweisung ein. Uhrzeit und Handzeichen sind mit „jetzt“ und dem eigenen
 Handzeichen vorbelegt und lassen sich ändern, damit ein Papiervordruck mit
-den Zeiten nacherfasst werden kann, die auf ihm stehen. Liegt eine
+den Zeiten nacherfasst werden kann, die auf ihm stehen. Der obere Teil des
+Vordrucks (Felder 1 bis 6) ist den Fernmeldern vorbehalten: Wer ohne die Stelle
+FmZ annimmt, befördert oder nachweist (beim Vorschlag und bei der Weitergabe
+an den Sichter ohne die Stelle LdF), sieht „Dieser Teil ist der
+Fernmeldezentrale vorbehalten … Trotzdem eintragen?“; „Trotzdem“ gibt den
+Schritt frei, und das Tagebuch vermerkt „Eintrag durch <Stelle>, nicht FmZ“.
+Das ist ein Hinweis, keine Sperre. Liegt eine
 Nachricht länger als die Schwelle unbefördert in der FmZ — gerechnet ab dem
 Eintreffen, nicht erst ab der Annahme —, wird ihre Zeile bernsteinfarben und
 nennt die Minuten seit dem Eintreffen; nach der Beförderung
@@ -390,7 +398,11 @@ Nachricht wird damit ein Eingang, geht nicht über die FmZ und wird nicht
 befördert. Der Laufzettel erscheint in der Maske: Der Verfasser bestimmt
 selbst, welche Stellen Kenntnis bekommen (S2 rot vorbelegt), und „Aufgeben“
 verteilt sie gleich. Mit dem Schalter „An den Sichter“ läuft sie stattdessen
-zum Sichter wie ein Eingang.
+zum Sichter wie ein Eingang. Verkehr zwischen zwei Stellen des Stabs
+läuft wie in der Lehrunterlage (Folie 31) über den Sichter oder die eigene
+Verteilung der Gesprächsnotiz; einen eigenen stabsinternen Weg an FmZ und
+Sichter vorbei gibt es bewusst nicht. S5 hat im Vordruck kein Kästchen; sie
+wird unter „Weitere Stelle“ als Freitext eingetragen.
 
 **Ersatzsichter.** Steht in der Anwesenheit kein Arbeitsplatz mit der Stelle
 Sichter, verteilt, wer aufnimmt: Die Eingangsmaske der FmZ zeigt dann den
@@ -647,7 +659,7 @@ Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.
 
 ### Nachrichten
 
-Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vorrang, Nummer, Absender, Anschrift und Betreff. Fünf Sichten, eine Zeile je Nachricht. „Posteingang“ zeigt, was an eine Stelle dieses Arbeitsplatzes verteilt ist, mit Kopiefarbe und den Marken neu, gelesen und erledigt. „Ausgang“ zeigt, was dieser Arbeitsplatz verfasst hat, mit dem Stand in der Fernmeldezentrale. „Sichter“ zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang. „Fernmeldezentrale“ zeigt die Ausgangswarteschlange mit Annahme und Beförderung und nimmt Eingänge auf. „Nachweisung“ zeigt alle Nachrichten nach Nummer und lässt sich als Liste ausgeben. „LdF“ erscheint nur, wenn der Einsatz den Leiter des Fernmeldebetriebes als Station führt oder dieser Arbeitsplatz LdF ist: Ausgänge vor dem Übermittlungsvorschlag und Eingänge vor der Weitergabe an den Sichter.
+Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vorrang, Nummer, Absender, Anschrift und Betreff. Fünf Sichten, eine Zeile je Nachricht. „Posteingang“ zeigt, was an eine Stelle dieses Arbeitsplatzes verteilt ist, mit Kopiefarbe und den Marken neu, gelesen und erledigt. „Ausgang“ zeigt, was dieser Arbeitsplatz oder eine Stelle dieser Sitzung verfasst hat, mit dem Stand in der Fernmeldezentrale. „Sichter“ zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang. „Fernmeldezentrale“ zeigt die Ausgangswarteschlange mit Annahme und Beförderung und nimmt Eingänge auf. „Nachweisung“ zeigt alle Nachrichten nach Nummer und lässt sich als Liste ausgeben. „LdF“ erscheint nur, wenn der Einsatz den Leiter des Fernmeldebetriebes als Station führt oder dieser Arbeitsplatz LdF ist: Ausgänge vor dem Übermittlungsvorschlag und Eingänge vor der Weitergabe an den Sichter.
 
 **Zuerst:** Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.
 

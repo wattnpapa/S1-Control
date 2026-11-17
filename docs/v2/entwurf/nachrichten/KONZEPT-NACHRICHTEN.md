@@ -150,7 +150,8 @@ der Liste des Vordrucks (Leiter, S1, S2, S3, S4, S6, Fachberater,
 Verbindungsstelle, Sichter, FmZ) oder ein freier Name; das Handzeichen sind
 zwei bis vier Zeichen, wie sie der Vordruck in Feld 2 bis 4, 17 und 18
 verlangt. Beide stehen in der Präsenzdatei, damit die anderen Arbeitsplätze
-sehen, welche Stellen besetzt sind, und beide sind ein Zuschnitt, kein Recht:
+sehen, welche Stellen besetzt sind, und beide sind ein Zuschnitt, kein Recht (beim oberen Teil des Vordrucks
+mit einem Hinweis, Entscheidung 13):
 Wer „S4" einstellt, sieht den Posteingang des S4 zuerst; die übrigen
 Posteingänge bleiben über den Umschalter erreichbar, so wie jedes Blatt unter
 „Mehr" bleibt (Entwurf „Entlastung", Leitsatz fünf). Ein Arbeitsplatz kann
@@ -302,7 +303,9 @@ linken Rand (grün Hauptempfänger, blau Mitleser, rot S2), den Marken gelesen
 und erledigt, Vorrang, Richtung, Nummer, Absender, Anschrift, Abfassungszeit
 und Betreff; Filter nach Zustand (neu, gelesen, erledigt) als Chips wie im
 Eingangskorb, Suche über Betreff, Inhalt und Absender. „Ausgang" zeigt, was
-dieser Arbeitsplatz oder diese Stelle verfasst hat, mit dem Stand in der FmZ.
+dieser Arbeitsplatz (`clientId`) oder eine Stelle der Sitzung verfasst hat — die Stelle ist
+das Feld `funktion` der Nachricht, nicht der Absender-Freitext (Entscheidung
+14) —, mit dem Stand in der FmZ.
 „Sichter" zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang; mit der
 Auswahl erscheint der Laufzettel darunter. „Fernmeldezentrale" zeigt zwei
 Karten, die Ausgangswarteschlange mit Annahme- und Beförderungsknopf und den
@@ -642,6 +645,37 @@ standen, folgen darunter.
    Parameter je Einsatz (`sichtungAuchAusgang`, Vorbelegung nein).
 9. Kein Meldevordruck.
 10. Der Reiter heißt „Nachrichten".
+
+Nachtrag vom 2026-11-17. Johannes entschied: „Die Lehrunterlage ist Maßstab.
+S5 wie im Vordruck.“ Daraus folgen vier Festlegungen zu offenen Befunden der
+Rollen-Audits (`docs/audits/nachrichten/README.md`):
+
+11. **Kein stabsinterner Weg an FmZ und Sichter vorbei** (SGL P1-2). Bewusst
+    nicht gebaut: In der Lehrunterlage läuft der Verkehr zwischen Stellen über
+    die Fernmeldezentrale und den Sichter (Folie 31). Wer eine andere Stelle
+    erreichen will, schreibt eine Gesprächsnotiz, die der Sichter verteilt
+    oder die der Verfasser selbst verteilt (§5 „Gesprächsnotiz“). Ein dritter
+    Weg daneben würde das Betriebsbuch der FmZ umgehen.
+12. **S5 bleibt ohne Kästchen, nur Freitext** (Sichter P3-3). Bewusst nicht
+    als feste Zeile im Verteilerraster: Der Vordruck hat keine Zeile S5. Wer
+    S5 braucht, trägt sie unter „Weitere Stelle“ ein; im Vordruck steht sie im
+    freien Feld der Verteilerzeile (`verteilerText`), nicht in einem Kästchen.
+13. **Hinweis statt Recht beim oberen Teil** (LdF P2-3). Die Lehrunterlage
+    (Folie 7) behält den oberen Teil, Felder 1 bis 6, den Fernmeldern vor. Die
+    Stelle bleibt ein Zuschnitt (§4), aber die Masken Annehmen, Befördern und
+    Nachweisen (Stelle FMZ) sowie Übermittlung vorschlagen und An den Sichter
+    weitergeben (Stelle LDF; die FmZ darf beides, solange kein LdF besetzt ist)
+    zeigen einer Sitzung ohne diese Stelle den Hinweis „Dieser Teil ist der
+    Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6). Trotzdem
+    eintragen?“. „Trotzdem“ gibt den Schritt frei; er wird mit dem `grund`
+    „Eintrag durch <Stelle>, nicht FmZ“ geschrieben (bei den Schritten des LdF
+    „nicht LdF“) und steht so im Tagebuch. Kein Recht, keine Sperre.
+14. **Ausgang nach Stelle** (SGL P2-14). Die Sicht „Ausgang“ zeigt, was eine
+    Stelle der Sitzung verfasst hat — maßgeblich ist die Stelle im Nutzlastfeld
+    `funktion` (Feld 15/17 des Vordrucks, die Maske belegt es aus der Stelle
+    der Sitzung vor) —, und was dieser Arbeitsplatz verfasst hat (`clientId`).
+    Der Absender-Freitext zählt nicht mehr. Beim Schichtwechsel sieht damit ein
+    zweiter Arbeitsplatz mit der Stelle S4 den Ausgang des ersten.
 
 ### Die Fragen, wie sie standen
 
