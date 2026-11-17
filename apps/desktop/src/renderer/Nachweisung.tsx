@@ -15,6 +15,13 @@
  * der Spalte Beförderung die Marke „Weg: Kurier/Melder (Lf)" — wer
  * entschieden hat, wie die Nachricht lief, gehört in den Nachweis.
  *
+ * Additiv (Audit LdF P1-3, Fernmelder P2-7): Mittel (Feld 1) und Gegenstelle
+ * (Feld 6) stehen als Spalten — das Betriebsbuch ist ohne sie nicht gegen das
+ * Papier prüfbar —, und die Zeiten stehen wie im Ausdruck: Aufnahme und
+ * Abfassung als Datum-Zeit-Gruppe, Annahme, Beförderung und Sichtung als
+ * vierstellige Uhrzeit mit Handzeichen. „Berichtigen“ belegt die nächste
+ * freie Nummer vor (LdF P2-1, in `Fmzmasken.tsx`).
+ *
  * „Nachweisung ausgeben" erzeugt die Seite über den bestehenden Weg
  * `ausgabeErzeugen` (HTML, in der Desktop-App auch PDF) in `ausgaben\`.
  */
@@ -25,11 +32,22 @@ import { Ausgabeeintraege, Ausgabepfad, useAusgabe } from "./Versorgungsausgabe.
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
-import { dtg, vorrangwort } from "./nachrichtenformate.js";
+import { dtg, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
 
-/** „1045 Fm" — Uhrzeit und Handzeichen eines Vermerks als Datum-Zeit-Gruppe. */
+/** „171045nov26 Fm" — Datum-Zeit-Gruppe und Handzeichen (Aufnahme, Feld 2). */
 function vermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string } | undefined): string {
   return v === undefined ? "—" : `${dtg(v.zeitpunkt)} ${v.handzeichen}`.trim();
+}
+
+/** „1045 Fm" — vierstellige Uhrzeit und Handzeichen (Annahme, Beförderung, Sichtung), wie im Ausdruck. */
+export function uhrvermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string } | undefined): string {
+  return v === undefined ? "—" : `${uhrzeit(v.zeitpunkt)} ${v.handzeichen}`.trim();
+}
+
+/** Das Mittel der Nachricht: das tatsächliche (Aufnahme oder Beförderung), sonst „—". */
+function mittelText(zeile: Nachrichtenzeile): string {
+  const mittel = zeile.aufnahme?.mittel ?? zeile.befoerderung?.mittel;
+  return mittel === undefined ? "—" : projektion.mittelWort(mittel);
 }
 
 export interface NachweisungEigenschaften {
@@ -94,9 +112,12 @@ export function Nachweisung({ zeilen, gewaehltId, nurLesen, aufWahl, aufSchritt 
           <th scope="col">Nr.</th>
           <th scope="col">Von</th>
           <th scope="col">An</th>
+          <th scope="col">Mittel</th>
+          <th scope="col">Gegenstelle</th>
           <th scope="col">Aufnahme</th>
           <th scope="col">Annahme</th>
           <th scope="col">Beförderung</th>
+          <th scope="col">Sichtung</th>
           <th scope="col">Abfassungszeit</th>
           <th scope="col">Betreff</th>
           <th scope="col">
@@ -119,12 +140,15 @@ export function Nachweisung({ zeilen, gewaehltId, nurLesen, aufWahl, aufSchritt 
             </td>
             <td>{zeile.absender}</td>
             <td>{zeile.anschrift}</td>
+            <td>{mittelText(zeile)}</td>
+            <td>{zeile.gegenstelle ?? "—"}</td>
             <td className="mono">{vermerk(zeile.aufnahme)}</td>
-            <td className="mono">{vermerk(zeile.annahme)}</td>
+            <td className="mono">{uhrvermerk(zeile.annahme)}</td>
             <td className="mono">
-              {vermerk(zeile.befoerderung)}
+              {uhrvermerk(zeile.befoerderung)}
               <Wegmarke zeile={zeile} />
             </td>
+            <td className="mono">{uhrvermerk(zeile.sichtung)}</td>
             <td className="mono">{dtg(zeile.abfassungszeit)}</td>
             <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
             <td>

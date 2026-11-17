@@ -25,7 +25,7 @@ import { Nachrichtenansicht } from "./Nachrichtenansicht.js";
 import type { NachrichtenauswahlEigenschaften } from "./Nachrichtenauswahl.js";
 import { antwortVorlage, leereMaske, weiterleitenVorlage, type Maskenwerte } from "./nachrichtenformate.js";
 import { Nachrichtenmaske } from "./Nachrichtenmaske.js";
-import { tagebuchMitSuche } from "./Tagebuch.js";
+import { tagebuchMitNachricht } from "./Tagebuch.js";
 import { useSchreibsperre } from "./useVerbindungsstatus.js";
 import { useVordruckausgabe } from "./Vordruckausgabe.js";
 
@@ -59,8 +59,14 @@ export interface Schrittumfeld {
   readonly aufTagebuch: () => void;
 }
 
-function suchtextFuer(zeile: Nachrichtenzeile): string {
-  return zeile.betreff.trim() === "" ? zeile.absender : zeile.betreff;
+/**
+ * „Nachricht E 3" — der Name des Tagebuchfilters. Gefiltert wird über die
+ * Kennung, nicht mehr über den Betreff (ETB P0-1: die Textsuche fand auch
+ * fremde Nachrichten mit demselben Wort in der Anschrift).
+ */
+export function tagebuchnameFuer(zeile: Pick<Nachrichtenzeile, "gespraechsnotiz" | "richtungKurz" | "nummer">): string {
+  const wort = zeile.gespraechsnotiz ? "Gesprächsnotiz" : "Nachricht";
+  return zeile.nummer === undefined ? `${wort} ${zeile.richtungKurz}` : `${wort} ${zeile.richtungKurz} ${String(zeile.nummer)}`;
 }
 
 export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschritte {
@@ -103,7 +109,7 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
               aufGrund: (grund) => useLaden.getState().bediene(nachrichtZurueckziehen(zeile.id, grund)),
             }),
           aufTagebuch: () => {
-            tagebuchMitSuche(suchtextFuer(zeile));
+            tagebuchMitNachricht({ id: zeile.id, name: tagebuchnameFuer(zeile) });
             umfeld.aufTagebuch();
           },
           aufVordruck: () => vordruck.erzeuge(zeile.id),

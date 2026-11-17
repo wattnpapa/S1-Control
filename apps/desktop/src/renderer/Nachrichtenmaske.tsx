@@ -27,6 +27,18 @@
  * (§5 „Ersatzsichter").
  * Vorrang ist nicht vorbelegt: Die Lehrunterlage mahnt, ihn restriktiv zu nutzen.
  *
+ * Nach den Audits vom 2026-11-17:
+ * - Enter in einem Feld und Strg+Enter überall (auch im Inhalt) bestätigen;
+ *   der Knopf steht im festen Fuß der Maske, bei 860 Pixel Höhe sichtbar;
+ *   die Aufnahme hat die Tabulatorfolge Mittel, Uhrzeit, Gegenstelle,
+ *   Absender, Anschrift, Vorrang, Betreff, Inhalt, Aufnehmen (Fernmelder P1-2).
+ * - Esc und „Abbrechen“ fragen nach, sobald etwas getippt ist; der Entwurf
+ *   bleibt bis zum ausdrücklichen Verwerfen stehen (Fernmelder P1-3, SGL P1-5).
+ * - Der Absender ist Pflicht (SGL P1-4).
+ * - Beim Ersatzsichter und bei der Gesprächsnotiz ist die Anschrift als grüne
+ *   Hauptempfängerkopie im Laufzettel vorbelegt, S2 rot, solange niemand den
+ *   Verteiler selbst anfasst (SGL P1-3, Fernmelder P1-4).
+ *
  * Schnitt N3 (Entscheidung 4): Unter dem Vordruck steht die „Vorschau", der
  * Vordruck, wie er gedruckt wird — zugeklappt, bis jemand sie aufklappt.
  */
@@ -34,6 +46,8 @@
 import { useEffect, useState } from "react";
 
 import { NACHRICHT_MITTEL, projektion } from "@s1/domaene";
+
+import type { Sitzungsstellen } from "../kontrakt/index.js";
 
 import { nachrichtAufnehmen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
@@ -46,6 +60,7 @@ import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { ZEILEN_VORDRUCK, anlageAus, entwurfAus, inhaltszeilen, maskenfehler, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
 import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
+import { verteilerAusAnschrift } from "./Verteilerraster.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
 import { Vordruckvorschau } from "./Vordruckvorschau.js";
 
@@ -66,10 +81,21 @@ export function besetzteStellen(peers: readonly { readonly veraltet: boolean; re
 
 type Setze = <K extends keyof Maskenwerte>(feld: K, wert: Maskenwerte[K]) => void;
 
-function Kaestchenzeile({ werte, setze }: { readonly werte: Maskenwerte; readonly setze: Setze }): React.JSX.Element {
+/**
+ * Die Tabulatorfolge der Aufnahme (Fernmelder P1-2) für die Felder des
+ * mittleren Teils; Mittel, Uhrzeit und Gegenstelle (1 bis 3) stehen im
+ * Aufnahmeteil. Ohne Aufnahme gilt die Folge des Dokuments.
+ */
+const TABFOLGE = { absender: 4, anschrift: 5, SOFORT: 6, BLITZ: 7, betreff: 8, inhalt: 9 } as const;
+
+function folge(mit: boolean, feld: keyof typeof TABFOLGE): number | undefined {
+  return mit ? TABFOLGE[feld] : undefined;
+}
+
+function Kaestchenzeile({ werte, setze, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly tabfolge: boolean }): React.JSX.Element {
   const vorrang = (stufe: "SOFORT" | "BLITZ"): React.JSX.Element => (
     <label className="kaestchen">
-      <input type="checkbox" checked={werte.vorrang === stufe} onChange={(e) => setze("vorrang", e.target.checked ? stufe : "")} />
+      <input type="checkbox" data-tabfolge={folge(tabfolge, stufe)} checked={werte.vorrang === stufe} onChange={(e) => setze("vorrang", e.target.checked ? stufe : "")} />
       {stufe === "SOFORT" ? "Sofort" : "Blitz"}
     </label>
   );
@@ -102,23 +128,32 @@ function Kaestchenzeile({ werte, setze }: { readonly werte: Maskenwerte; readonl
   );
 }
 
-function Textfeld({ titel, feld, werte, setze, liste }: { readonly titel: string; readonly feld: "anschrift" | "rufnummer" | "betreff" | "absender" | "zeichen" | "funktion"; readonly werte: Maskenwerte; readonly setze: Setze; readonly liste?: string }): React.JSX.Element {
+interface TextfeldEigenschaften {
+  readonly titel: string;
+  readonly feld: "anschrift" | "rufnummer" | "betreff" | "absender" | "zeichen" | "funktion";
+  readonly werte: Maskenwerte;
+  readonly setze: Setze;
+  readonly liste?: string;
+  readonly tabfolge?: number | undefined;
+}
+
+function Textfeld({ titel, feld, werte, setze, liste, tabfolge }: TextfeldEigenschaften): React.JSX.Element {
   return (
     <label>
       {titel}
-      <input value={werte[feld]} list={liste} onChange={(e) => setze(feld, e.target.value)} />
+      <input value={werte[feld]} list={liste} data-tabfolge={tabfolge} onChange={(e) => setze(feld, e.target.value)} />
     </label>
   );
 }
 
-function Inhaltsfeld({ werte, setze }: { readonly werte: Maskenwerte; readonly setze: Setze }): React.JSX.Element {
+function Inhaltsfeld({ werte, setze, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly tabfolge?: number | undefined }): React.JSX.Element {
   const zeilen = inhaltszeilen(werte.inhalt);
   const ueber = zeilen > ZEILEN_VORDRUCK;
   return (
     <div className="vordruckinhalt">
       <label>
         Inhalt
-        <textarea rows={ZEILEN_VORDRUCK} value={werte.inhalt} onChange={(e) => setze("inhalt", e.target.value)} />
+        <textarea rows={ZEILEN_VORDRUCK} value={werte.inhalt} data-tabfolge={tabfolge} title="Strg+Enter bestätigt die Maske" onChange={(e) => setze("inhalt", e.target.value)} />
       </label>
       <span className={ueber ? "zeilenzaehler warn" : "zeilenzaehler"} role="status">
         {zeilen} von {ZEILEN_VORDRUCK} Zeilen
@@ -128,13 +163,13 @@ function Inhaltsfeld({ werte, setze }: { readonly werte: Maskenwerte; readonly s
   );
 }
 
-function Mittelteil({ werte, setze, anschriften }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly anschriften: readonly string[] }): React.JSX.Element {
+function Mittelteil({ werte, setze, anschriften, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly anschriften: readonly string[]; readonly tabfolge: boolean }): React.JSX.Element {
   return (
     <fieldset className="vordruckteil" aria-label="Nachricht">
       <legend>Nachricht</legend>
-      <Kaestchenzeile werte={werte} setze={setze} />
+      <Kaestchenzeile werte={werte} setze={setze} tabfolge={tabfolge} />
       <div className="vordruckzeile">
-        <Textfeld titel="Anschrift" feld="anschrift" werte={werte} setze={setze} liste="nachrichtenanschriften" />
+        <Textfeld titel="Anschrift" feld="anschrift" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={folge(tabfolge, "anschrift")} />
         <Textfeld titel="Ruf-Nr." feld="rufnummer" werte={werte} setze={setze} />
       </div>
       <datalist id="nachrichtenanschriften">
@@ -142,10 +177,10 @@ function Mittelteil({ werte, setze, anschriften }: { readonly werte: Maskenwerte
           <option key={a} value={a} />
         ))}
       </datalist>
-      <Textfeld titel="Betreff" feld="betreff" werte={werte} setze={setze} />
-      <Inhaltsfeld werte={werte} setze={setze} />
+      <Textfeld titel="Betreff" feld="betreff" werte={werte} setze={setze} tabfolge={folge(tabfolge, "betreff")} />
+      <Inhaltsfeld werte={werte} setze={setze} tabfolge={folge(tabfolge, "inhalt")} />
       <div className="vordruckzeile">
-        <Textfeld titel="Absender" feld="absender" werte={werte} setze={setze} liste="nachrichtenanschriften" />
+        <Textfeld titel="Absender" feld="absender" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={folge(tabfolge, "absender")} />
         <Dtgfeld beschriftung="Abfassungszeit" wert={werte.abfassungszeit} aufAenderung={(wert) => setze("abfassungszeit", wert)} />
       </div>
       <div className="vordruckzeile">
@@ -175,20 +210,47 @@ export function verteilgrund(aufnahme: boolean, gespraechsnotiz: boolean, selbst
   return undefined;
 }
 
+/**
+ * Aufnahmevermerk und Laufzettel der Maske, wie getippt. Bis jemand den
+ * Verteiler anfasst, folgt er der Anschrift: S2 rot, die Anschrift grün
+ * (SGL P1-3); `angefasst` zählt für die Rückfrage beim Verwerfen.
+ */
+function useTeilwerte(sitzung: Sitzungsstellen | undefined, naechsteNummer: number | undefined, anschrift: string) {
+  const [aufnahmewerte, setzeAufnahmewerte] = useState<Aufnahmewerte>(() => aufnahmeVorlage(sitzung, naechsteNummer));
+  const [verteilwerte, setzeVerteilwerte] = useState<Verteilwerte>(() => verteilVorlage(sitzung?.handzeichen ?? ""));
+  const [verteilerAngefasst, setzeVerteilerAngefasst] = useState(false);
+  const [aufnahmeAngefasst, setzeAufnahmeAngefasst] = useState(false);
+  const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
+  const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerAusAnschrift(anschrift, fuestName) };
+  return {
+    aufnahmewerte,
+    verteilung,
+    angefasst: aufnahmeAngefasst || verteilerAngefasst,
+    aufAufnahme: (neu: Aufnahmewerte): void => {
+      setzeAufnahmeAngefasst(true);
+      setzeAufnahmewerte(neu);
+    },
+    aufVerteilung: (neu: Verteilwerte): void => {
+      if (neu.verteiler !== verteilung.verteiler) setzeVerteilerAngefasst(true);
+      setzeVerteilwerte(neu);
+    },
+  };
+}
+
 export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
   const [werte, setzeWerte] = useState<Maskenwerte>(vorlage);
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
-  const [aufnahmewerte, setzeAufnahmewerte] = useState<Aufnahmewerte>(() => aufnahmeVorlage(sitzung, aufnahme?.naechsteNummer));
-  const [verteilwerte, setzeVerteilwerte] = useState<Verteilwerte>(() => verteilVorlage(sitzung?.handzeichen ?? ""));
+  const t = useTeilwerte(sitzung, aufnahme?.naechsteNummer, werte.anschrift);
+  const { aufnahmewerte, verteilung } = t;
   const [selbst, setzeSelbst] = useState(true);
   const versuch = useAnlegeversuch();
   const peers = useLaden((z) => z.lagebild?.peers);
   const setze: Setze = (feld, wert) => setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
-  const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage);
+  const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage) || t.angefasst;
   const fmz = aufnahme !== undefined && werte.richtung === "EINGANG";
   const sichterDa = sichterBesetzt(sitzung?.stellen, peers ?? []);
   const grund = verteilgrund(fmz, werte.gespraechsnotiz, selbst, sichterDa);
-  const sichtung = grund === undefined ? undefined : sichtungAus(verteilwerte);
+  const sichtung = grund === undefined ? undefined : sichtungAus(verteilung);
   const fehler = [
     ...maskenfehler(werte),
     ...(fmz ? aufnahmefehler(aufnahmewerte) : []),
@@ -227,17 +289,29 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
     <Maske
       titel={titel}
       bestaetigungstext={fmz ? "Aufnehmen" : "Aufgeben"}
-      nurKnopf
+      geaendert={geaendert}
       bereit={fehler.length === 0 && !versuch.gesperrt}
       bereitGrund={fehler[0] ?? versuch.sperre}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={aufgeben}
     >
       <div className="vordruck">
-        {fmz ? <Aufnahmeteil werte={aufnahmewerte} aufAenderung={setzeAufnahmewerte} vergebeneNummern={aufnahme.vergebeneNummern} /> : <FmzTeil />}
-        <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} />
+        {fmz ? (
+          <Aufnahmeteil
+            werte={aufnahmewerte}
+            aufAenderung={t.aufAufnahme}
+            vergebeneNummern={aufnahme.vergebeneNummern}
+          />
+        ) : (
+          <FmzTeil />
+        )}
+        <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} tabfolge={fmz} />
         {werte.gespraechsnotiz && <Verteilschalter selbst={selbst || !sichterDa} aufSelbst={setzeSelbst} sichterDa={sichterDa} />}
-        {grund === undefined ? <LaufzettelAnzeige /> : <Verteilteil werte={verteilwerte} aufAenderung={setzeVerteilwerte} grund={grund} />}
+        {grund === undefined ? <LaufzettelAnzeige /> : <Verteilteil
+            werte={verteilung}
+            aufAenderung={t.aufVerteilung}
+            grund={grund}
+          />}
       </div>
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />
       {versuch.anzeige}

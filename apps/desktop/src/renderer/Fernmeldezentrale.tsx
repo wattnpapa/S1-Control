@@ -20,6 +20,16 @@
  *
  * **Nichts wird hier gerechnet** außer den Minuten seit Annahme; Ordnung,
  * Schwelle und Nummernvorbelegung kommen aus Ring 2.
+ *
+ * Nach den Audits vom 2026-11-17:
+ * - Die Schlange zeigt den Absender und die Wartezeit seit dem Eintreffen
+ *   (`wartetSeit` aus Ring 2, sobald der Domänenschnitt es liefert) und die
+ *   Schwelle als Text im Kopf (LdF P1-4, P2-6).
+ * - Der Hauptknopf der Zeile ist der nächste fällige Schritt: ohne Annahme
+ *   „Annehmen“, sonst „Befördern“ (Fernmelder P3-4).
+ * - Eine dritte Karte „Ohne Nummer“ hält beförderte Nachrichten ohne
+ *   Nachweisungsnummer sichtbar, mit Knopf „Nachweisen“ (LdF P0-1,
+ *   Sachgebietsleiter P1-6) — vorher fielen sie still aus der Sicht.
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
@@ -38,6 +48,18 @@ export interface WarteschlangenEigenschaften {
   readonly nurLesen: boolean;
   readonly aufWahl: (id: string) => void;
   readonly aufSchritt: (schritt: Fmzschritt, zeile: Nachrichtenzeile) => void;
+  /** Additiv: die Schwelle des Einsatzes in Minuten, als Text im Kopf (LdF P1-4). */
+  readonly schwelleMinuten?: number;
+}
+
+/**
+ * Die Minuten seit dem Eintreffen bei der FmZ. Das Feld `wartetSeit` liefert
+ * der Domänenschnitt (Ring 2, `nachrichtenstand.ts`); solange die Zeile es
+ * nicht trägt, bleibt die Spalte leer — gelesen wird es deshalb optional.
+ */
+export function wartezeit(zeile: Nachrichtenzeile): number | undefined {
+  const wert = (zeile as { readonly wartetSeit?: number }).wartetSeit;
+  return typeof wert === "number" ? wert : undefined;
 }
 
 function Annahmezelle({ zeile, jetzt }: { readonly zeile: Nachrichtenzeile; readonly jetzt: string }): React.JSX.Element {
@@ -63,10 +85,10 @@ function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenz
       <button type="button" disabled={nurLesen} title={titel("Übermittlungsvorschlag des LdF: Fernmelder, Mittel, Gegenstelle")} onClick={() => aufSchritt("vorschlag", zeile)}>
         {zeile.vorschlag === undefined ? "Vorschlag" : "Vorschlag ändern"}
       </button>
-      <button type="button" disabled={nurLesen} title={titel("Annahmevermerk: Uhrzeit und Handzeichen")} onClick={() => aufSchritt("annahme", zeile)}>
+      <button type="button" className={zeile.annahme === undefined ? "haupt" : undefined} disabled={nurLesen} title={titel("Annahmevermerk: Uhrzeit und Handzeichen")} onClick={() => aufSchritt("annahme", zeile)}>
         {zeile.annahme === undefined ? "Annehmen" : "Annahme ändern"}
       </button>
-      <button type="button" className="haupt" disabled={nurLesen} title={titel("Beförderungsvermerk: Mittel, Gegenstelle, Zeit, Handzeichen")} onClick={() => aufSchritt("befoerderung", zeile)}>
+      <button type="button" className={zeile.annahme === undefined ? undefined : "haupt"} disabled={nurLesen} title={titel("Beförderungsvermerk: Mittel, Gegenstelle, Zeit, Handzeichen")} onClick={() => aufSchritt("befoerderung", zeile)}>
         Befördern
       </button>
       <button type="button" disabled={nurLesen} title={titel("In die Nachweisung eintragen")} onClick={() => aufSchritt("nachweis", zeile)}>
@@ -77,10 +99,12 @@ function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenz
 }
 
 /** Die linke Karte: die Ausgangswarteschlange mit den Knöpfen je Zeile. */
-export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt }: WarteschlangenEigenschaften): React.JSX.Element {
+export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20 }: WarteschlangenEigenschaften): React.JSX.Element {
   return (
     <section className="karte fmzkarte" aria-label="Ausgangswarteschlange">
-      <h3>Ausgangswarteschlange</h3>
+      <h3>
+        Ausgangswarteschlange <span className="nebenwert">Schwelle {schwelleMinuten} min</span>
+      </h3>
       {zeilen.length === 0 ? (
         <p className="hinweistext">Keine Nachricht vor der FmZ.</p>
       ) : (
@@ -89,9 +113,11 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
             <tr>
               <th scope="col">Vorrang</th>
               <th scope="col">Nr.</th>
+              <th scope="col">Absender</th>
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Abfassungszeit</th>
+              <th scope="col">Wartet</th>
               <th scope="col">Vorschlag LdF</th>
               <th scope="col">Annahme</th>
               <th scope="col">
@@ -109,9 +135,11 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
               >
                 <td>{vorrangwort(zeile) === "" ? "" : <span className={zeile.vorrangstufe === 0 ? "marke-zustand fehler vorrang-blitz" : "marke-zustand warn"}>{vorrangwort(zeile)}</span>}</td>
                 <td className="zahl">{zeile.nummer ?? "—"}</td>
+                <td>{zeile.absender}</td>
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">{dtg(zeile.abfassungszeit)}</td>
+                <td className={zeile.fmzUeberSchwelle ? "zahl marke-zustand warn" : "zahl"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
                 <td>{vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}</td>
                 <td>
                   <Annahmezelle zeile={zeile} jetzt={jetzt} />
@@ -125,6 +153,44 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
           </tbody>
         </table>
       )}
+    </section>
+  );
+}
+
+/**
+ * Die befördert, aber nicht nachgewiesenen Nachrichten (LdF P0-1, SGL P1-6,
+ * Fernmelder P2-10) — aus der Nachweisung gefiltert, weil die Sicht der FmZ
+ * in Ring 2 nur VOR_FMZ kennt. Das Filtern ist Darstellung, keine Regel.
+ */
+export function ohneNummerZeilen(zeilen: readonly Nachrichtenzeile[]): readonly Nachrichtenzeile[] {
+  return zeilen.filter((z) => z.befoerderung !== undefined && z.nummer === undefined && !z.zurueckgezogen);
+}
+
+/** Die dritte Karte: beförderte Nachrichten ohne Nummer, mit „Nachweisen". */
+export function OhneNummerKarte({ zeilen, nurLesen, aufSchritt }: { readonly zeilen: readonly Nachrichtenzeile[]; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"] }): React.JSX.Element | null {
+  if (zeilen.length === 0) return null;
+  return (
+    <section className="karte fmzkarte" aria-label="Ohne Nummer">
+      <h3>Ohne Nummer</h3>
+      <p className="hinweistext">Befördert, aber noch nicht nachgewiesen — die Nummer gehört ins Betriebsbuch.</p>
+      <table className="nachrichtentabelle" aria-label="Beförderte Nachrichten ohne Nummer">
+        <tbody>
+          {zeilen.map((zeile) => (
+            <tr key={zeile.id}>
+              <td>{vorrangwort(zeile)}</td>
+              <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
+              <td className="mono">
+                {zeile.befoerderung === undefined ? "—" : `${dtg(zeile.befoerderung.zeitpunkt)} ${zeile.befoerderung.handzeichen}`}
+              </td>
+              <td>
+                <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "In die Nachweisung eintragen"} onClick={() => aufSchritt("nachweis", zeile)}>
+                  Nachweisen
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </section>
   );
 }

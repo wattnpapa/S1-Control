@@ -5,6 +5,9 @@
  * Einheitentabelle und in der Excel (`m_makroFunktionen`, `=Now`). Gelesen
  * wird die Eingabe mit `zeitpunktAusEingabe`: „14:30“, „30.10. 14:30“ oder
  * „30.10.2026 14:30“.
+ *
+ * Beim Fokus ist der Inhalt markiert (Audit Fernmelder P1-1): Eine getippte
+ * Zeit ersetzt die Vorbelegung, statt sich anzuhängen.
  */
 
 import { zeitpunktText } from "@s1/domaene";
@@ -21,6 +24,7 @@ export function Zeitfeld({ wert, aufAenderung, platzhalter }: ZeitfeldEigenschaf
       value={wert}
       placeholder={platzhalter}
       title="Strg+D setzt „jetzt“"
+      onFocus={(e) => e.currentTarget.select()}
       onChange={(e) => {
         aufAenderung(e.target.value);
       }}

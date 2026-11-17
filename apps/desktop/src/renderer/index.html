@@ -4275,6 +4275,103 @@
       .marke-zustand.vorrang-blitz {
         font-weight: 700;
       }
+      /* Audits Nachrichten 2026-11-17. Der Hauptknopf einer Vordruckmaske
+         steht im festen Fuß und bleibt bei 860 Pixel Höhe sichtbar; der
+         Inhalt scrollt darüber (Fernmelder P1-2, Sachgebietsleiter P2-11). */
+      .maske:has(.vordruck) > .maskenknoepfe {
+        position: sticky;
+        bottom: -16px;
+        z-index: 1;
+        margin: 1rem -16px -16px;
+        padding: 8px 16px;
+        background: var(--karte);
+        border-top: var(--rahmenbreite) solid var(--rahmen);
+      }
+      /* Der Verteiler als Raster wie auf dem Vordruck: je Stelle eine Zeile
+         mit den drei Kopiefarben, in zwei Spalten (Sichter P2-1). */
+      .verteilerraster .verteilerzeilen {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 2px 12px;
+        margin: 4px 0;
+      }
+      .verteilerzeile {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-left: 6px solid transparent;
+        padding: 0 4px;
+      }
+      .verteilerzeile.kopie-gruen {
+        border-left-color: var(--kopie-gruen);
+      }
+      .verteilerzeile.kopie-blau {
+        border-left-color: var(--kopie-blau);
+      }
+      .verteilerzeile.kopie-rot {
+        border-left-color: var(--kopie-rot);
+      }
+      .verteilername {
+        flex: 1 1 auto;
+        min-width: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .kopiefeld {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+        font: 600 0.8em/1 var(--mono);
+      }
+      .kopiefeld.kopie-gruen {
+        color: var(--kopie-gruen);
+      }
+      .kopiefeld.kopie-blau {
+        color: var(--kopie-blau);
+      }
+      .kopiefeld.kopie-rot {
+        color: var(--kopie-rot);
+      }
+      /* Die Kopiefarbe als Wort im Posteingang (Sachgebietsleiter P2-8). */
+      .nachrichtentabelle td.kopiewort {
+        white-space: nowrap;
+        font-weight: 600;
+      }
+      td.kopiewort.kopie-gruen {
+        color: var(--kopie-gruen);
+      }
+      td.kopiewort.kopie-blau {
+        color: var(--kopie-blau);
+      }
+      td.kopiewort.kopie-rot {
+        color: var(--kopie-rot);
+      }
+      .zeilenvermerk {
+        display: block;
+        font-size: 0.8em;
+        color: var(--text-leise);
+      }
+      .feldwarnung {
+        font-size: 0.8em;
+        color: var(--warn-text, inherit);
+      }
+      .stellenangabe {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        font-weight: 600;
+      }
+      .laufzettelinhalt {
+        flex: 1 1 100%;
+        max-height: 9em;
+        overflow-y: auto;
+      }
+      .laufzettelinhalt summary {
+        cursor: pointer;
+        font-weight: 600;
+      }
       /* Der Vordruck: drei Teile untereinander, oben und unten grau. */
       .maske:has(.vordruck),
       .maske.vordruck {

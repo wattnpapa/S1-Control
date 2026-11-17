@@ -14,7 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { zeitpunktText } from "@s1/domaene";
 
 import { CODE_EINSATZ_ABGESCHLOSSEN, type Lagebild } from "../kontrakt/index.js";
-import { Einsatzabschluss, zustandstext } from "./Einsatzabschluss.js";
+import { Einsatzabschluss, aktenzusatz, zustandstext } from "./Einsatzabschluss.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
@@ -150,6 +150,24 @@ describe("Rückfrage beim Beenden", () => {
     expect(within(maske).getByText(/Schreiben ist nicht mehr\s+möglich/u)).toBeDefined();
     expect(within(maske).getByText(/Wiedereröffnen ist möglich/u)).toBeDefined();
     expect(within(maske).getByText(/3 offene Anforderungen; 7 Einheiten nicht abgeschlossen/u)).toBeDefined();
+  });
+
+  it("nennt offene Nachrichten wie die offenen Anforderungen (ETB P1-6)", async () => {
+    setze({
+      ...lagebildMitPeers([]),
+      offeneNachrichten: { vorFmz: 2, beimLdf: 0, vorSichter: 1, ohneNummer: 3, ungelesenMitVorrang: 1 },
+    });
+    render(<Einsatzabschluss />);
+    await userEvent.click(screen.getByRole("button", { name: "Einsatz beenden" }));
+    const maske = screen.getByRole("form", { name: BEENDEN });
+    expect(
+      within(maske).getByText(/Nachrichten: 2 vor der FmZ, 1 vor dem Sichter, 3 ohne Nummer, 1 mit Vorrang ungelesen\./u),
+    ).toBeDefined();
+  });
+
+  it("nennt die beim Erzeugen der Akte nachgelegten Vordrucke (ETB P1-5)", () => {
+    const akte = { pfad: "x.zip", bytes: 10, ereignisse: 3, befunde: 0, nachrichtenbeilagen: { erzeugt: 2, vorhanden: 1, fehlgeschlagen: 0 } };
+    expect(aktenzusatz(akte)).toBe("10 Bytes, 3 Ereignisse, Nachrichtenvordrucke: 2 neu erzeugt, 1 lagen schon vor");
   });
 
   it("setzt den Fokus beim Öffnen auf „Abbrechen“ (nicht ins Datumsfeld) und betont das Beenden", async () => {

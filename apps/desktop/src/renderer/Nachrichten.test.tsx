@@ -113,8 +113,9 @@ describe("Das Blatt „Nachrichten“", () => {
     fireEvent.click(within(tabelle).getByRole("row", { name: /Lage ruhig/ }));
     const zettel = screen.getByRole("region", { name: "Laufzettel des Sichters" });
     expect((within(zettel).getByLabelText("Handzeichen") as HTMLInputElement).value).toBe("Mü");
-    expect((within(zettel).getByLabelText("Kopie für S2") as HTMLSelectElement).value).toBe("ROT");
-    fireEvent.click(within(zettel).getByRole("checkbox", { name: "S4" }));
+    // Raster wie auf dem Vordruck (Sichter P2-1): je Stelle die drei Kopiefarben als Kästchen.
+    expect((within(zettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(zettel).getByRole("checkbox", { name: "S4 grün" }));
     fireEvent.click(within(zettel).getByRole("button", { name: "Sichten" }));
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({

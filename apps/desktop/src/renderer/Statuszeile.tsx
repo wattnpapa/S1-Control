@@ -170,6 +170,13 @@ export function Statuszeile({ lagebild, jetzt, verbindung }: StatuszeileEigensch
 
       {getrennt !== undefined ? <span>Arbeitsplätze unbekannt</span> : <Arbeitsplaetze lagebild={lagebild} />}
 
+      {/* Additiv (Audit Sachgebietsleiter P1-4): Wer die Stellenabfrage abbricht, arbeitet sichtbar „ohne Stelle“. */}
+      {lagebild.sitzung !== undefined && lagebild.sitzung.stellen.length === 0 && (
+        <span className="warn" title="Stelle und Handzeichen im Fenstermenü „⋯“ angeben">
+          ohne Stelle
+        </span>
+      )}
+
       {liste.map((w) => (
         <Statushinweis
           key={w.kennung}

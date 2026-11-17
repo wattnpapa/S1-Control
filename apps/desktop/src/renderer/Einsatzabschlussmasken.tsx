@@ -40,12 +40,30 @@ export function arbeitsplatzText(anzahl: number): string {
   return anzahl === 1 ? "1 weiteren Arbeitsplatz" : `${String(anzahl)} weitere Arbeitsplätze`;
 }
 
-/** Die Zusammenfassung dessen, was beim Beenden noch offen ist. */
-export function offenText(lagebild: Pick<Lagebild, "einheiten" | "offeneAnforderungen">): string {
+/**
+ * Die offenen Nachrichten in Worten (ETB P1-6): „Nachrichten: 2 vor der FmZ,
+ * 1 ohne Nummer" — nur, was nicht null ist; leer, wenn nichts offen ist.
+ */
+export function nachrichtenOffenText(offen: Lagebild["offeneNachrichten"]): string {
+  if (offen === undefined) return "";
+  const teile = [
+    [offen.vorFmz, "vor der FmZ"],
+    [offen.beimLdf, "beim LdF"],
+    [offen.vorSichter, "vor dem Sichter"],
+    [offen.ohneNummer, "ohne Nummer"],
+    [offen.ungelesenMitVorrang, "mit Vorrang ungelesen"],
+  ] as const;
+  const genannt = teile.filter(([zahl]) => zahl > 0).map(([zahl, wort]) => `${String(zahl)} ${wort}`);
+  return genannt.length === 0 ? "" : `Nachrichten: ${genannt.join(", ")}`;
+}
+
+/** Die Zusammenfassung dessen, was beim Beenden noch offen ist — Anforderungen, Einheiten und Nachrichten. */
+export function offenText(lagebild: Pick<Lagebild, "einheiten" | "offeneAnforderungen" | "offeneNachrichten">): string {
   const anforderungen = lagebild.offeneAnforderungen ?? 0;
   const anf = anforderungen === 1 ? "1 offene Anforderung" : `${String(anforderungen)} offene Anforderungen`;
   const ein = lagebild.einheiten === 1 ? "1 Einheit" : `${String(lagebild.einheiten)} Einheiten`;
-  return `Noch offen: ${anf}; ${ein} nicht abgeschlossen (nicht im Archiv-Abschnitt).`;
+  const nachrichten = nachrichtenOffenText(lagebild.offeneNachrichten);
+  return `Noch offen: ${anf}; ${ein} nicht abgeschlossen (nicht im Archiv-Abschnitt)${nachrichten === "" ? "" : `; ${nachrichten}`}.`;
 }
 
 /** Zeitpunkt (vorbelegt mit jetzt) und Bemerkung; die Bemerkung steht im Tagebuch als Grund. */

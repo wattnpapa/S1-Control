@@ -24,6 +24,13 @@ export const TEXT_NUR_LESEN = "Einsatz beendet – nur lesen";
 /** Die Rückfrage beim Abbrechen, solange unklar ist, ob der letzte Versuch angekommen ist. */
 export const TEXT_UNKLAR_VERWERFEN = "Unklar, ob gespeichert. Trotzdem verwerfen?";
 
+/**
+ * Die Rückfrage beim Abbrechen einer Maske mit getipptem Inhalt (Audit
+ * Fernmelder P1-3, Sachgebietsleiter P1-5): Ein versehentliches Esc darf einen
+ * Funkspruch, der nur einmal durchgegeben wird, nicht vernichten.
+ */
+export const TEXT_ENTWURF_VERWERFEN = "Entwurf verwerfen? Esc oder „Verwerfen“ bestätigt; weitertippen behält ihn.";
+
 export interface MaskeEigenschaften {
   readonly titel: string;
   /**
@@ -63,6 +70,12 @@ export interface MaskeEigenschaften {
    */
   readonly startfokus?: "feld" | "abbrechen";
   /**
+   * Additiv: Die Maske hat getippten Inhalt. Dann fragen Esc und „Abbrechen“
+   * erst nach, und der Entwurf bleibt bis zum ausdrücklichen Verwerfen stehen
+   * (Audit Fernmelder P1-3, Sachgebietsleiter P1-5).
+   */
+  readonly geaendert?: boolean;
+  /**
    * Der Inhalt der Maske.
    *
    * Heißt als einziges Feld dieses Projekts englisch: React vergibt den Namen
@@ -82,6 +95,7 @@ export function Maske({
   nurKnopf = false,
   trotzSperre = false,
   startfokus = "feld",
+  geaendert = false,
   children,
 }: MaskeEigenschaften): React.JSX.Element {
   const formular = useRef<HTMLFormElement>(null);
@@ -120,8 +134,9 @@ export function Maske({
 
   // Nach „Unklar, ob gespeichert“ verwirft Abbrechen nicht still: Erst die
   // Rückfrage, dann bleibt die Warnung als Hinweis in der Leiste stehen.
+  // Mit getipptem Inhalt ebenso: erst fragen, dann verwerfen (Fernmelder P1-3).
   const abbrechen = (): void => {
-    if (unklar && !verwerfenFrage) {
+    if ((unklar || geaendert) && !verwerfenFrage) {
       setzeVerwerfenFrage(true);
       return;
     }
@@ -154,6 +169,17 @@ export function Maske({
           if (!nurKnopf) bestaetigen();
         }}
         onKeyDown={(ereignis) => {
+          // Strg+Enter bestätigt aus jedem Feld, auch aus dem mehrzeiligen
+          // Inhalt, in dem Enter den Zeilenumbruch behält (Fernmelder P1-2).
+          if (ereignis.key === "Enter" && (ereignis.ctrlKey || ereignis.metaKey)) {
+            ereignis.preventDefault();
+            bestaetigen();
+            return;
+          }
+          if (ereignis.key === "Tab" && springeTabfolge(ereignis.target, ereignis.shiftKey, formular.current)) {
+            ereignis.preventDefault();
+            return;
+          }
           if (ereignis.key !== "Escape") return;
           // Der Druck bleibt in der Maske: Ein Escape, das durchfällt, hebt
           // draußen die Auswahl auf — und der Bediener steht danach vor einer
@@ -173,7 +199,7 @@ export function Maske({
         {abweisung !== undefined && !gesperrt && <p className="hinweistext" role="alert">{abweisung}</p>}
         {verwerfenFrage && (
           <p className="warnung" role="alert">
-            {TEXT_UNKLAR_VERWERFEN}
+            {unklar ? TEXT_UNKLAR_VERWERFEN : TEXT_ENTWURF_VERWERFEN}
           </p>
         )}
         <div className="maskenknoepfe">
@@ -187,7 +213,7 @@ export function Maske({
             {laeuft ? "…" : bestaetigungstext}
           </button>
           <button type="button" className="abbrechen" onClick={abbrechen}>
-            {verwerfenFrage ? "Trotzdem verwerfen" : "Abbrechen"}
+            {verwerfenFrage ? (unklar ? "Trotzdem verwerfen" : "Verwerfen") : "Abbrechen"}
           </button>
           {!bereit && !gesperrt && bereitGrund !== undefined && (
             <span className="hinweistext bereitgrund" data-testid="bereitgrund">
@@ -199,6 +225,28 @@ export function Maske({
     </div>,
     document.body,
   );
+}
+
+/**
+ * Eine eigene Tabulatorfolge für Masken, deren Felder auf dem Vordruck in
+ * anderer Ordnung stehen, als der Fernmelder sie füllt (Audit Fernmelder
+ * P1-2): Felder mit `data-tabfolge="n"` springen mit Tab zum nächsten n, das
+ * letzte zum Hauptknopf. Felder ohne die Marke behalten die Folge des
+ * Dokuments; ein positiver `tabIndex` hätte die ganze Seite umsortiert.
+ */
+export function springeTabfolge(ziel: EventTarget, rueckwaerts: boolean, wurzel: HTMLFormElement | null): boolean {
+  if (wurzel === null || !(ziel instanceof HTMLElement)) return false;
+  const glieder = [...wurzel.querySelectorAll<HTMLElement>("[data-tabfolge]")]
+    .filter((e) => !(e as HTMLInputElement).disabled)
+    .sort((a, b) => Number(a.dataset["tabfolge"]) - Number(b.dataset["tabfolge"]));
+  const haupt = wurzel.querySelector<HTMLButtonElement>(".maskenknoepfe button.haupt");
+  const folge: HTMLElement[] = haupt === null || haupt.disabled ? glieder : [...glieder, haupt];
+  const stelle = folge.indexOf(ziel);
+  if (glieder.length === 0 || stelle < 0) return false;
+  const naechstes = folge[stelle + (rueckwaerts ? -1 : 1)];
+  if (naechstes === undefined) return false;
+  naechstes.focus();
+  return true;
 }
 
 function hoechsteHinweisnummer(): number {

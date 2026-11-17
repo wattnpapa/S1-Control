@@ -95,10 +95,19 @@ function Abschlussknoepfe({ status, oeffne, aufAkte }: AbschlussknoepfeEigenscha
   );
 }
 
-/** Größe, Ereignisse und — falls offen — die Befunde der Akte. */
-function aktenzusatz(akte: Akteergebnis): string {
+/**
+ * Größe, Ereignisse, — falls offen — die Befunde der Akte und, additiv
+ * (ETB P1-5), die Vordrucke der Nachrichten, die beim Erzeugen dazukamen.
+ */
+export function aktenzusatz(akte: Akteergebnis): string {
   const befunde = akte.befunde > 0 ? `, ${String(akte.befunde)} Befunde — „s1 akte pruefe“ zeigt sie` : "";
-  return `${String(akte.bytes)} Bytes, ${String(akte.ereignisse)} Ereignisse${befunde}`;
+  const beilagen = akte.nachrichtenbeilagen;
+  const vordrucke =
+    beilagen === undefined
+      ? ""
+      : `, Nachrichtenvordrucke: ${String(beilagen.erzeugt)} neu erzeugt, ${String(beilagen.vorhanden)} lagen schon vor` +
+        (beilagen.fehlgeschlagen > 0 ? `, ${String(beilagen.fehlgeschlagen)} Beilagen nicht geschrieben` : "");
+  return `${String(akte.bytes)} Bytes, ${String(akte.ereignisse)} Ereignisse${befunde}${vordrucke}`;
 }
 
 /** „Einsatzakte erzeugen“ — gesperrt, solange sie entsteht; der Pfad steht beim Aufrufer. */

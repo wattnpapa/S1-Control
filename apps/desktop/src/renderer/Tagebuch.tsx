@@ -16,13 +16,23 @@
  * zeigt die Wanduhr des schreibenden Rechners; wo eine Art eine fachliche
  * Zeit trägt (§2.5), steht sie daneben. Geordnet wird nach keiner von beiden,
  * sondern nach HLC — das entscheidet der Worker.
+ *
+ * **Nachricht und Tagebuch hängen über die Kennung zusammen** (ETB P0-1):
+ * „Im Tagebuch zeigen" an einer Nachricht filtert nach `nachrichtId` statt
+ * nach dem Betreff, und eine Zeile mit Nachricht trägt „Nachricht öffnen".
+ * Den gefilterten Ausschnitt holt diese Ansicht selbst (`tagebuchAnfordern`
+ * mit `nachrichtId`), bei jedem neuen Zeigerstand; der allgemeine Filter des
+ * Blattes bleibt davon unberührt.
  */
 
 import { useEffect, useRef, useState } from "react";
 
-import type { Tagebuchzeile } from "@s1/domaene";
+import type { Nachrichtenzeile, Tagebuchzeile } from "@s1/domaene";
 
+import type { Tagebuchansicht } from "../kontrakt/index.js";
+import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
+import { Nachrichtenansicht } from "./Nachrichtenansicht.js";
 import { TagebuchEintrag } from "./TagebuchEintrag.js";
 
 export interface TagebuchEigenschaften {
@@ -51,6 +61,88 @@ function nimmAnfangssuche(): string {
   return text;
 }
 
+/** Der Nachrichtenfilter des Tagebuchs: Kennung und der Name für die Fußzeile. */
+export interface Tagebuchnachricht {
+  readonly id: string;
+  readonly name: string;
+}
+
+let anfangsnachricht: Tagebuchnachricht | undefined;
+
+/**
+ * „Im Tagebuch zeigen" an einer Nachricht (ETB P0-1): Das Tagebuch beginnt
+ * beim nächsten Aufschlagen auf die Zeilen dieser Nachricht gefiltert —
+ * über die Kennung, nicht über eine Suche. Einmalig wie die Anfangssuche.
+ */
+export function tagebuchMitNachricht(nachricht: Tagebuchnachricht): void {
+  anfangsnachricht = nachricht;
+}
+
+function nimmAnfangsnachricht(): Tagebuchnachricht | undefined {
+  const nachricht = anfangsnachricht;
+  anfangsnachricht = undefined;
+  return nachricht;
+}
+
+const NACHRICHT_SEITE = 100;
+
+/** Der Ausschnitt einer Nachricht — eigener Ruf, frisch zu jedem Zeigerstand. */
+function useNachrichtentagebuch(
+  nachricht: Tagebuchnachricht | undefined,
+  suche: string,
+  nurRuecknahmen: boolean,
+): Tagebuchansicht | undefined {
+  const akteId = useLaden((z) => z.akteId);
+  const lageZeiger = useLaden((z) => z.lagebild?.lageZeiger);
+  const [ansicht, setzeAnsicht] = useState<Tagebuchansicht | undefined>(undefined);
+  const id = nachricht?.id;
+  useEffect(() => {
+    if (akteId === undefined || id === undefined) {
+      setzeAnsicht(undefined);
+      return;
+    }
+    let gilt = true;
+    rufe({
+      art: "tagebuchAnfordern",
+      akteId,
+      nachrichtId: id,
+      anzahl: NACHRICHT_SEITE,
+      ...(suche === "" ? {} : { suche }),
+      ...(nurRuecknahmen ? { nurRuecknahmen: true } : {}),
+    })
+      .then((antwort) => {
+        if (gilt) setzeAnsicht(antwort);
+      })
+      .catch(() => {
+        if (gilt) setzeAnsicht(undefined);
+      });
+    return () => {
+      gilt = false;
+    };
+  }, [akteId, id, suche, nurRuecknahmen, lageZeiger]);
+  return ansicht;
+}
+
+/** „Nachricht öffnen" (ETB P0-1): holt die Zeile über die Kennung und zeigt die Ansicht. */
+function useNachrichtOeffnen(): { readonly oeffne: (nachrichtId: string) => void; readonly anzeige: React.ReactNode } {
+  const akteId = useLaden((z) => z.akteId);
+  const melde = useLaden((z) => z.melde);
+  const [offen, setzeOffen] = useState<Nachrichtenzeile | undefined>(undefined);
+  const oeffne = (nachrichtId: string): void => {
+    if (akteId === undefined) return;
+    rufe({ art: "nachrichtAnfordern", akteId, nachrichtId })
+      .then((zeile) => {
+        if (zeile === null) melde("warnung", "Diese Nachricht gibt es in diesem Einsatz nicht.");
+        else setzeOffen(zeile);
+      })
+      .catch((fehler: unknown) => {
+        melde("warnung", fehler instanceof Error ? fehler.message : String(fehler));
+      });
+  };
+  const anzeige = offen === undefined ? null : <Nachrichtenansicht zeile={offen} aufSchliessen={() => setzeOffen(undefined)} />;
+  return { oeffne, anzeige };
+}
+
 export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: TagebuchEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const [suche, setzeSuche] = useState(nimmAnfangssuche);
@@ -60,6 +152,9 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
   // Ausnahme: „Im Tagebuch zeigen“ an einer Einheit will genau deren Einträge.
   const [aufBezug, setzeAufBezug] = useState(aufAuswahl);
   const [eintragOffen, setzeEintragOffen] = useState(false);
+  const [nachricht, setzeNachricht] = useState(nimmAnfangsnachricht);
+  const nachrichtentagebuch = useNachrichtentagebuch(nachricht, suche, nurRuecknahmen);
+  const nachrichtOeffnen = useNachrichtOeffnen();
   const gesamtOhneFilter = useRef<number | undefined>(undefined);
 
   const setzeTagebuchfilter = laden.setzeTagebuchfilter;
@@ -74,11 +169,14 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
     });
   }, [akteId, einheitId, abschnittId, suche, nurRuecknahmen, aufBezug, setzeTagebuchfilter]);
 
-  const zeilen = laden.tagebuch?.zeilen ?? [];
-  const gesamtzahl = laden.tagebuch?.gesamtzahl ?? 0;
+  // Mit Nachrichtenfilter gilt der eigene Ausschnitt (ETB P0-1), sonst der des Blattes.
+  const quelle = nachricht === undefined ? laden.tagebuch : nachrichtentagebuch;
+  const zeilen = quelle?.zeilen ?? [];
+  const gesamtzahl = quelle?.gesamtzahl ?? 0;
   const bezugGewaehlt = einheitId !== undefined || abschnittId !== undefined;
   const filter = [
-    ...(aufBezug && bezugGewaehlt ? ["Auswahl"] : []),
+    ...(nachricht === undefined ? [] : [nachricht.name]),
+    ...(aufBezug && bezugGewaehlt && nachricht === undefined ? ["Auswahl"] : []),
     ...(suche.trim() === "" ? [] : [`Suche „${suche.trim()}“`]),
     ...(nurRuecknahmen ? ["nur Rücknahmen und Berichtigungen"] : []),
   ];
@@ -88,6 +186,7 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
     setzeSuche("");
     setzeNurRuecknahmen(false);
     setzeAufBezug(false);
+    setzeNachricht(undefined);
   };
 
   return (
@@ -146,7 +245,7 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <Tagebuchreihe key={zeile.ereignisId} zeile={zeile} />
+              <Tagebuchreihe key={zeile.ereignisId} zeile={zeile} aufNachricht={nachrichtOeffnen.oeffne} />
             ))}
           </tbody>
         </table>
@@ -166,23 +265,38 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
 
       {eintragOffen && (
         <TagebuchEintrag
+          nachricht={nachricht}
           aufSchliessen={() => {
             setzeEintragOffen(false);
           }}
         />
       )}
+      {nachrichtOeffnen.anzeige}
     </section>
   );
 }
 
+/** Der Grund, sofern der Satz ihn nicht schon nennt (das Zurückziehen einer Nachricht tut es, ETB P0-2). */
+export function grundzusatz(zeile: Pick<Tagebuchzeile, "satz" | "grund">): string {
+  if (zeile.grund === undefined || zeile.grund === "" || zeile.satz.includes(zeile.grund)) return "";
+  return ` — Grund: ${zeile.grund}`;
+}
+
 /** Eine Zeile des Tagebuchs; Rücknahmen und Berichtigungen sind gekennzeichnet. */
-function Tagebuchreihe({ zeile }: { readonly zeile: Tagebuchzeile }): React.JSX.Element {
+function Tagebuchreihe({
+  zeile,
+  aufNachricht,
+}: {
+  readonly zeile: Tagebuchzeile;
+  readonly aufNachricht: (nachrichtId: string) => void;
+}): React.JSX.Element {
+  const nachrichtId = zeile.nachrichtId;
   return (
     <tr
       className={
         zeile.undoOf !== undefined
           ? "ruecknahme"
-          : zeile.korrekturVon !== undefined
+          : zeile.korrekturVon !== undefined || zeile.berichtigung === true
             ? "berichtigung"
             : ""
       }
@@ -191,7 +305,7 @@ function Tagebuchreihe({ zeile }: { readonly zeile: Tagebuchzeile }): React.JSX.
       <td>{zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}</td>
       <td className="satz">
         {zeile.satz}
-        {zeile.grund === undefined ? "" : ` — Grund: ${zeile.grund}`}
+        {grundzusatz(zeile)}
         {/* §6 U1: Eine Kompensation ist ein gewöhnliches Ereignis.
             Sie ist trotzdem gekennzeichnet, weil im Tagebuch beide
             Zeilen stehen bleiben (U4) und sonst niemand erkennt,
@@ -207,6 +321,27 @@ function Tagebuchreihe({ zeile }: { readonly zeile: Tagebuchzeile }): React.JSX.
             {" "}
             Berichtigung
           </span>
+        )}
+        {/* ETB P0-2: Berichtigung oder Rücknahme an einer Nachricht (neue Nummer, Nachsichtung, zurückgezogen). */}
+        {zeile.berichtigung === true && zeile.korrekturVon === undefined && zeile.undoOf === undefined && (
+          <span className="marke" title="Berichtigung oder Rücknahme an einer Nachricht">
+            {" "}
+            Berichtigung
+          </span>
+        )}
+        {nachrichtId !== undefined && (
+          <>
+            {" "}
+            <button
+              type="button"
+              className="symbolknopf"
+              aria-label="Nachricht öffnen"
+              title={zeile.nachrichtNummer === undefined ? "Nachricht öffnen" : `Nachricht ${zeile.nachrichtNummer} öffnen`}
+              onClick={() => aufNachricht(nachrichtId)}
+            >
+              ✉
+            </button>
+          </>
         )}
       </td>
       <td>{zeile.akteur}</td>

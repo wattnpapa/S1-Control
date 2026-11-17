@@ -21,16 +21,24 @@
  * Sitzung die Stelle LDF hat, und im Band die Zahl „vor dem LdF", wenn der
  * Einsatz ihn als Station führt.
  *
+ * Nach den Audits vom 2026-11-17 (`Nachrichtenzusatz.tsx`): die eigene Stelle
+ * im Band (SGL P1-4), in der Sicht Sichter der Umschalter „vor dem Sichter |
+ * gesichtet“ zum Nachsichten (Sichter P0-1), ein Laufzettel, der nicht
+ * verschwindet, wenn ein anderer Sichter zuvorkommt (Sichter P0-3), die
+ * Karte „Ohne Nummer“ der FmZ (LdF P0-1) und Kenntnis nur für eigene Stellen
+ * (Sichter P0-2). Dafür holt das Blatt in den Sichten Sichter und FmZ die
+ * Nachweisung als zweite Ansicht mit; gefiltert wird nur für die Anzeige.
+ *
  * **Nichts wird hier gerechnet.** Ordnung, Filter, Laufzustand und Zahlen
  * kommen aus Ring 2 über den Ruf `nachrichtenAnfordern` und das Lagebild.
  */
 
 import { useMemo, useState } from "react";
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { FMZ_SCHWELLE_VORBELEGUNG, type Nachrichtenzeile } from "@s1/domaene";
 
-import type { Nachrichtenlage, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
-import { Eingangskarte, Warteschlange } from "./Fernmeldezentrale.js";
+import { AUSSCHNITT_MAX, type Nachrichtenlage, type Ruf, type Sitzungsstellen } from "../kontrakt/index.js";
+import { Eingangskarte, OhneNummerKarte, Warteschlange, ohneNummerZeilen } from "./Fernmeldezentrale.js";
 import { Filterchips } from "./Filterchips.js";
 import type { Kontextort } from "./Klappmenue.js";
 import { Laufzettel } from "./Laufzettel.js";
@@ -40,6 +48,7 @@ import { TEXT_NUR_LESEN } from "./Maske.js";
 import { Nachrichtenkontextmenue, Nachrichtenleiste } from "./Nachrichtenauswahl.js";
 import { stellenname } from "./nachrichtenformate.js";
 import { Nachrichtenliste } from "./Nachrichtenliste.js";
+import { Sichtzusatz, Stellenangabe, gesichteteZeilen, quittierendeStellen, type Sichterstand } from "./Nachrichtenzusatz.js";
 import { Nachweisung, Nachweisungsausgabe } from "./Nachweisung.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
 import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
@@ -184,6 +193,8 @@ function Postfilter({ lage, zaehlung, wahl, aufWahl, sitzung, fuer, aufFuer }: P
 
 interface ListenEigenschaften {
   readonly abruf: Nachrichtenabruf;
+  /** Additiv: die gezeigten Zeilen, wenn sie nicht die der Ansicht sind (Sichter „gesichtet“). */
+  readonly zeilenErsatz?: readonly Nachrichtenzeile[] | undefined;
   readonly sicht: Nachrichtensicht;
   readonly stellen: readonly string[];
   readonly gewaehltId: string | undefined;
@@ -193,9 +204,9 @@ interface ListenEigenschaften {
 }
 
 /** Die Liste der Sicht, mit Ladezustand, leerer Sicht und Hinweis auf weitere Zeilen. */
-function Listenflaeche({ abruf, sicht, stellen, gewaehltId, aufWahl, aufLesen, aufKontext }: ListenEigenschaften): React.JSX.Element {
+function Listenflaeche({ abruf, zeilenErsatz, sicht, stellen, gewaehltId, aufWahl, aufLesen, aufKontext }: ListenEigenschaften): React.JSX.Element {
   const titel = NACHRICHTENSICHTEN.find((s) => s.schluessel === sicht)?.titel ?? sicht;
-  const zeilen = abruf.ansicht?.zeilen ?? [];
+  const zeilen = zeilenErsatz ?? abruf.ansicht?.zeilen ?? [];
   if (abruf.ansicht === undefined) {
     return <p className="hinweistext">{abruf.fehler ?? "Wird geladen …"}</p>;
   }
@@ -215,6 +226,7 @@ function Listenflaeche({ abruf, sicht, stellen, gewaehltId, aufWahl, aufLesen, a
         beschriftung={`Nachrichten: ${titel}`}
         stellen={stellen}
         posteingang={sicht === "posteingang"}
+        eingangsspalte={sicht === "sichter"}
         gewaehltId={gewaehltId}
         aufWahl={aufWahl}
         aufLesen={(id) => {
@@ -223,7 +235,7 @@ function Listenflaeche({ abruf, sicht, stellen, gewaehltId, aufWahl, aufLesen, a
         }}
         aufKontext={aufKontext}
       />
-      {abruf.ansicht.gesamtzahl > zeilen.length && (
+      {zeilenErsatz === undefined && abruf.ansicht.gesamtzahl > zeilen.length && (
         <p className="hinweistext">
           {zeilen.length} von {abruf.ansicht.gesamtzahl} Nachrichten; die Suche grenzt ein.
         </p>
@@ -232,12 +244,31 @@ function Listenflaeche({ abruf, sicht, stellen, gewaehltId, aufWahl, aufLesen, a
   );
 }
 
-export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void }): React.JSX.Element {
+/**
+ * Die Nachweisung als zweite Ansicht, nur in den Sichten Sichter und FmZ:
+ * gesichtete Eingänge zum Nachsichten (Sichter P0-1, P0-3) und beförderte
+ * Nachrichten ohne Nummer (LdF P0-1).
+ */
+function useNachweisungDazu(akteId: string | undefined, lageZeiger: number | undefined, sicht: Nachrichtensicht, stand: Sichterstand) {
+  const mit = sicht === "sichter" || sicht === "fmz";
+  const nachweisung = useNachrichtenansicht(mit ? akteId : undefined, lageZeiger, { sicht: "nachweisung", anzahl: AUSSCHNITT_MAX });
+  const alle = mit ? (nachweisung.ansicht?.zeilen ?? []) : [];
+  return { alle, gesichtet: sicht === "sichter" && stand === "gesichtet" ? gesichteteZeilen(alle) : undefined };
+}
+
+export interface NachrichtenEigenschaften {
+  readonly aufTagebuch: () => void;
+  /** Additiv: öffnet „Stelle und Handzeichen“ (SGL P1-4, Knopf im Band). */
+  readonly aufStelle?: (() => void) | undefined;
+}
+
+export function Nachrichten({ aufTagebuch, aufStelle }: NachrichtenEigenschaften): React.JSX.Element {
   const akteId = useLaden((z) => z.akteId);
   const lageZeiger = useLaden((z) => z.lagebild?.lageZeiger);
   const lage = useLaden((z) => z.lagebild?.nachrichten);
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
   const nurLesen = useNurLesen();
+  const schwelle = useLaden((z) => z.lagebild?.stammdaten?.fmzSchwelleMinuten);
   const mitLdf = ldfSichtbar(useLaden((z) => z.lagebild?.stammdaten?.ldfStation), sitzung?.stellen ?? []);
   const [sicht, setzeSicht] = useState<Nachrichtensicht>(() => ersteSicht(sitzung?.stellen ?? []));
   const [suche, setzeSuche] = useState("");
@@ -245,6 +276,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
   const [fuer, setzeFuer] = useState("");
   const [gewaehltId, setzeGewaehltId] = useState<string | undefined>(undefined);
   const [kontext, setzeKontext] = useState<Kontextort | undefined>(undefined);
+  const [sichterstand, setzeSichterstand] = useState<Sichterstand>("offen");
   const stellen = fuer === "" ? (sitzung?.stellen ?? []) : [fuer];
   const abruf = useNachrichtenansicht(akteId, lageZeiger, {
     sicht,
@@ -252,9 +284,11 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
     ...(sicht === "posteingang" && zustaende.length > 0 ? { zustaende: [...zustaende] } : {}),
     ...(suche.trim() === "" ? {} : { suche: suche.trim() }),
   });
-  const zeilen = abruf.ansicht?.zeilen ?? [];
-  const gewaehlt = zeilen.find((z) => z.id === gewaehltId);
-  const schritte = useNachrichtenschritte({ zeile: gewaehlt, sitzung, stellen, nurLesen, anschriften: abruf.ansicht?.anschriften ?? [], aufTagebuch });
+  const { alle, gesichtet } = useNachweisungDazu(akteId, lageZeiger, sicht, sichterstand);
+  const zeilen = gesichtet ?? abruf.ansicht?.zeilen ?? [];
+  // Fällt die gewählte Nachricht aus der Sicht (ein anderer Sichter war schneller), bleibt sie gewählt (Sichter P0-3).
+  const gewaehlt = zeilen.find((z) => z.id === gewaehltId) ?? (sicht === "sichter" ? alle.find((z) => z.id === gewaehltId) : undefined);
+  const schritte = useNachrichtenschritte({ zeile: gewaehlt, sitzung, stellen: quittierendeStellen(stellen, sitzung), nurLesen, anschriften: abruf.ansicht?.anschriften ?? [], aufTagebuch });
   const fmz = useFmzschritte(abruf.ansicht, sitzung);
   const { verfassen } = schritte;
 
@@ -276,6 +310,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
       <h2>Nachrichten</h2>
       <NurLesenHinweis />
       <Nachrichtenband lage={lage} />
+      <Stellenangabe sitzung={sitzung} aufAendern={aufStelle} />
       <Werkzeugzeile
         sicht={sicht}
         aufSicht={(neu) => {
@@ -290,10 +325,21 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
         {...(sicht === "nachweisung" ? { rechts: <Nachweisungsausgabe /> } : {})}
       />
       {sicht === "posteingang" && <Postfilter lage={lage} zaehlung={abruf.ansicht?.zaehlung} wahl={zustaende} aufWahl={setzeZustaende} sitzung={sitzung} fuer={fuer} aufFuer={setzeFuer} />}
+      <Sichtzusatz
+        sicht={sicht}
+        fuer={fuer}
+        sitzung={sitzung}
+        sichterstand={sichterstand}
+        aufSichterstand={(neu) => {
+          setzeSichterstand(neu);
+          setzeGewaehltId(undefined);
+        }}
+      />
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
-          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} />
+          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
+          <OhneNummerKarte zeilen={ohneNummerZeilen(alle)} nurLesen={nurLesen} aufSchritt={fmz.aufSchritt} />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
         <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} />
@@ -302,6 +348,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
       ) : (
         <Listenflaeche
           abruf={abruf}
+          zeilenErsatz={gesichtet}
           sicht={sicht}
           stellen={stellen}
           gewaehltId={gewaehltId}

@@ -253,7 +253,7 @@ export function Arbeitsplatz(): React.JSX.Element {
                 }}
               />
             )}
-            {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} />}
+            {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} aufStelle={sitzungsabfrage.oeffne} />}
             {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}

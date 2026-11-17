@@ -11,14 +11,17 @@
  *
  * **Ein Zuschnitt, kein Recht** (§4): Die Stelle wählt, welcher Posteingang
  * zuerst kommt; die anderen bleiben erreichbar. Deshalb lässt sich die
- * Abfrage auch ohne Stelle verlassen.
+ * Abfrage auch ohne Stelle verlassen — aber nur mit „Abbrechen“, nicht mit
+ * einem leeren „Übernehmen“ (Audit Sachgebietsleiter P1-4, Fernmelder P1-4):
+ * Wer übernimmt, hat eine Stelle und ein Handzeichen von zwei bis vier
+ * Zeichen; wer abbricht, arbeitet „ohne Stelle“, und die Statuszeile sagt es.
  */
 
 import { useState } from "react";
 
 import type { Einstellungen, Sitzungsstellen } from "../kontrakt/index.js";
 import { Maske } from "./Maske.js";
-import { ARBEITSPLATZSTELLEN, stellenname } from "./nachrichtenformate.js";
+import { ARBEITSPLATZSTELLEN, handzeichenPflicht, stellenname } from "./nachrichtenformate.js";
 
 /** Die freien Stellen aus dem Textfeld: durch Komma getrennt, ohne Schrägstrich. */
 export function freieStellen(text: string): readonly string[] {
@@ -33,6 +36,12 @@ export function handzeichenFehler(handzeichen: string): string | undefined {
   const hz = handzeichen.trim();
   if (hz === "" || (hz.length >= 2 && hz.length <= 4)) return undefined;
   return "Das Handzeichen hat zwei bis vier Zeichen.";
+}
+
+/** Was vor „Übernehmen“ fehlt: mindestens eine Stelle und ein gültiges Handzeichen. */
+export function stellenabfrageFehler(stellen: readonly string[], handzeichen: string): string | undefined {
+  if (stellen.length === 0) return "Mindestens eine Stelle wählen – oder „Abbrechen“ für „ohne Stelle“";
+  return handzeichenPflicht(handzeichen);
 }
 
 /** Die Vorbelegung aus den Einstellungen: Stellen dieses Einsatzes, Handzeichen des Arbeitsplatzes. */
@@ -62,8 +71,8 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
   const [gewaehlt, setzeGewaehlt] = useState<readonly string[]>(vorbelegung.stellen.filter((s) => bekannt.has(s)));
   const [frei, setzeFrei] = useState(vorbelegung.stellen.filter((s) => !bekannt.has(s)).join(", "));
   const [handzeichen, setzeHandzeichen] = useState(vorbelegung.handzeichen ?? "");
-  const fehler = handzeichenFehler(handzeichen);
   const stellen = [...new Set([...ARBEITSPLATZSTELLEN.filter((s) => gewaehlt.includes(s)), ...freieStellen(frei)])];
+  const fehler = stellenabfrageFehler(stellen, handzeichen);
   const hz = handzeichen.trim();
   return (
     <Maske

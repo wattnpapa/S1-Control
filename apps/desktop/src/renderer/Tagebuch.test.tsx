@@ -13,7 +13,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import type { Tagebuchzeile } from "@s1/domaene";
 
-import { Tagebuch, uhrzeit } from "./Tagebuch.js";
+import { Tagebuch, grundzusatz, tagebuchMitNachricht, uhrzeit } from "./Tagebuch.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
@@ -178,5 +178,44 @@ describe("uhrzeit", () => {
 
   it("rät bei einem unlesbaren Zeitpunkt nicht", () => {
     expect(uhrzeit("kein Zeitpunkt")).toBe("unbekannt");
+  });
+});
+
+describe("Nachricht und Tagebuch über die Kennung (ETB P0-1, P0-2)", () => {
+  const NACHRICHTENZEILE = zeile({
+    ereignisId: "a-0000000009",
+    typ: "NachrichtNachgewiesen",
+    satz: "Nachricht E 3 Nachweisnummer berichtigt (E 2 → E 3, Hz. Fm): Polizei an FüSt, ‚Deichlage‘",
+    einheitId: undefined,
+    abschnittId: undefined,
+    nachrichtId: "N-7",
+    nachrichtNummer: "E 3",
+    berichtigung: true,
+  } as Partial<Tagebuchzeile>);
+
+  it("„Im Tagebuch zeigen“ filtert über die Kennung und nennt die Nachricht im Filter", async () => {
+    attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 9, zeilen: [NACHRICHTENZEILE], gesamtzahl: 1, von: 0 });
+    tagebuchMitNachricht({ id: "N-7", name: "Nachricht E 3" });
+    render(<Tagebuch einheitId={undefined} abschnittId={undefined} />);
+    await waitFor(() => {
+      expect(attrappe.rufe.some((r) => r.art === "tagebuchAnfordern" && (r as { nachrichtId?: string }).nachrichtId === "N-7")).toBe(true);
+    });
+    expect(await screen.findByText(/Filter: Nachricht E 3/)).toBeDefined();
+    expect(screen.getByTitle("Berichtigung oder Rücknahme an einer Nachricht")).toBeDefined();
+  });
+
+  it("bietet an der Zeile „Nachricht öffnen“ und holt die Nachricht über `nachrichtAnfordern`", async () => {
+    attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 9, zeilen: [NACHRICHTENZEILE], gesamtzahl: 1, von: 0 });
+    attrappe.antwortet("nachrichtAnfordern", null);
+    render(<Tagebuch einheitId={undefined} abschnittId={undefined} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Nachricht öffnen" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("nachrichtAnfordern")).toEqual({ art: "nachrichtAnfordern", akteId: "akte-1", nachrichtId: "N-7" });
+    });
+  });
+
+  it("doppelt den Grund nicht, wenn der Satz ihn schon nennt", () => {
+    expect(grundzusatz({ satz: "Nachricht A zurückgezogen, Grund: „doppelt“: S4 an OV", grund: "doppelt" })).toBe("");
+    expect(grundzusatz({ satz: "Status gesetzt", grund: "Tippfehler" })).toBe(" — Grund: Tippfehler");
   });
 });

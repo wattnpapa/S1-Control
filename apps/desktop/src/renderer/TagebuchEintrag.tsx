@@ -9,6 +9,10 @@
  *
  * Der Weg steht als Anfang des Textes („Funk: …“): Das Ereignis hat dafür
  * kein eigenes Feld, und ein Vorsatz bleibt auch im Ausdruck lesbar.
+ *
+ * Additiv (ETB P0-1): Ist das Tagebuch auf eine Nachricht gefiltert, trägt
+ * der Eintrag sie als Bezug (`bezug` NACHRICHT) und steht danach in ihrem
+ * Tagebuch — nicht nur über den Text.
  */
 
 import { useState } from "react";
@@ -31,9 +35,11 @@ export function eintragstext(quelle: string, text: string): string {
 
 export interface TagebuchEintragEigenschaften {
   readonly aufSchliessen: () => void;
+  /** Additiv (ETB P0-1): die Nachricht, zu der der Eintrag gehört — Kennung und Name („Nachricht E 3“). */
+  readonly nachricht?: { readonly id: string; readonly name: string } | undefined;
 }
 
-export function TagebuchEintrag({ aufSchliessen }: TagebuchEintragEigenschaften): React.JSX.Element {
+export function TagebuchEintrag({ aufSchliessen, nachricht }: TagebuchEintragEigenschaften): React.JSX.Element {
   const versuch = useAnlegeversuch();
   const [text, setzeText] = useState("");
   const [quelle, setzeQuelle] = useState<string>(QUELLEN[0]);
@@ -47,7 +53,12 @@ export function TagebuchEintrag({ aufSchliessen }: TagebuchEintragEigenschaften)
     const gesetzt = versuch.kennung(() => new Date().toISOString());
     const ergebnis = await versuch.schreibe({
       typ: "EtbEintragErfasst",
-      nutzlast: { etbId, zeitpunkt: zeitpunkt ?? gesetzt, text: eintragstext(quelle, text) },
+      nutzlast: {
+        etbId,
+        zeitpunkt: zeitpunkt ?? gesetzt,
+        text: eintragstext(quelle, text),
+        ...(nachricht === undefined ? {} : { bezug: { entitaet: "NACHRICHT", id: nachricht.id } }),
+      },
     });
     if (ergebnis?.art !== "geschrieben") return;
     aufSchliessen();
@@ -56,7 +67,7 @@ export function TagebuchEintrag({ aufSchliessen }: TagebuchEintragEigenschaften)
 
   return (
     <Maske
-      titel="Eintrag ins Einsatztagebuch"
+      titel={nachricht === undefined ? "Eintrag ins Einsatztagebuch" : `Eintrag ins Einsatztagebuch zu ${nachricht.name}`}
       bestaetigungstext="Eintrag speichern"
       bereit={text.trim() !== "" && !zeitUnlesbar && !versuch.gesperrt}
       bereitGrund={zeitUnlesbar ? "Zeit lesbar eintragen oder leer lassen" : "Text eintragen"}

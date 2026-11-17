@@ -14,7 +14,7 @@ import { datumZeitGruppe, type Nachweisvermerk, type Sichtungsvermerk } from "@s
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
 import type { Nachrichtenfolge } from "../kontrakt/fmzschritte.js";
-import { leereMaske, zeitAusEingabe, type Maskenwerte } from "./nachrichtenformate.js";
+import { handzeichenPflicht, leereMaske, zeitAusEingabe, type Maskenwerte } from "./nachrichtenformate.js";
 
 /** „seit 34 min" — wie lange eine angenommene Nachricht unbefördert in der FmZ liegt (§5 „Zwanzig Minuten"). */
 export function minutenSeit(zeitpunkt: string | undefined, jetzt: string | Date): number | undefined {
@@ -67,7 +67,8 @@ export function eingangVorlage(sitzung: Sitzungsstellen | undefined, fuestName: 
 export function aufnahmefehler(werte: Aufnahmewerte, jetzt: Date = new Date()): readonly string[] {
   const fehler: string[] = [];
   if (zeitAusEingabe(werte.zeit, jetzt) === undefined) fehler.push("Zeit der Aufnahme lesbar eintragen");
-  if (werte.handzeichen.trim() === "") fehler.push("Handzeichen der Aufnahme eintragen");
+  // Zwei bis vier Zeichen wie auf dem Vordruck (Sachgebietsleiter P1-4).
+  if (handzeichenPflicht(werte.handzeichen) !== undefined) fehler.push("Handzeichen der Aufnahme eintragen (zwei bis vier Zeichen)");
   if (werte.nummer.trim() !== "" && nummerAusEingabe(werte.nummer) === undefined) fehler.push("Nummer als ganze Zahl ab 1 eintragen oder leer lassen");
   return fehler;
 }

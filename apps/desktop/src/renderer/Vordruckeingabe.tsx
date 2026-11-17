@@ -12,6 +12,13 @@
  *   Verfasser selbst (§5 „Ersatzsichter", „Gesprächsnotiz"). S2 ist rot
  *   vorbelegt, nicht erzwungen — wie im Laufzettel des Sichters.
  *
+ * Nach den Audits vom 2026-11-17: Die Anschrift ist im Laufzettel als grüne
+ * Hauptempfängerkopie vorbelegt, S2 bleibt rot (Sachgebietsleiter P1-3,
+ * Fernmelder P1-4); ohne grüne Kopie warnt der Laufzettel. Die Felder des
+ * oberen Teils tragen die Tabulatorfolge der Aufnahme (Fernmelder P1-2):
+ * Mittel, Uhrzeit, Gegenstelle, dann Absender, Anschrift, Vorrang, Betreff,
+ * Inhalt und der Knopf.
+ *
  * Geschrieben wird hier nichts: Die Werte gehen mit „Aufnehmen" oder
  * „Aufgeben" als Folgen der Anlage an den Worker (`nachrichtAufnehmen`).
  */
@@ -20,8 +27,8 @@ import { NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Sichtungsvermerk } 
 
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung, type Aufnahmewerte } from "./fmzformate.js";
-import { VERTEILER_VORBELEGUNG, Verteilermatrix, type Verteilerwahl } from "./Laufzettel.js";
-import { zeitAusEingabe } from "./nachrichtenformate.js";
+import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
+import { VERTEILER_VORBELEGUNG, Verteilermatrix, hauptempfaengerWarnung, type Verteilerwahl } from "./Verteilerraster.js";
 
 export interface AufnahmeEigenschaften {
   readonly werte: Aufnahmewerte;
@@ -39,7 +46,7 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern }: Aufnahme
       <div className="vordruckzeile">
         <label>
           Mittel
-          <select value={werte.mittel} onChange={(e) => setze("mittel", e.target.value)}>
+          <select value={werte.mittel} data-tabfolge={1} onChange={(e) => setze("mittel", e.target.value)}>
             {NACHRICHT_MITTEL.map((m) => (
               <option key={m} value={m}>
                 {projektion.mittelWort(m)}
@@ -47,19 +54,19 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern }: Aufnahme
             ))}
           </select>
         </label>
-        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} aufAenderung={(wert) => setze("zeit", wert)} />
+        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} tabfolge={2} aufAenderung={(wert) => setze("zeit", wert)} />
         <label>
           Handzeichen
-          <input value={werte.handzeichen} maxLength={20} onChange={(e) => setze("handzeichen", e.target.value)} />
+          <input value={werte.handzeichen} maxLength={4} onChange={(e) => setze("handzeichen", e.target.value)} />
         </label>
       </div>
       <div className="vordruckzeile">
         <label>
           Gegenstelle
-          <input value={werte.gegenstelle} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
+          <input value={werte.gegenstelle} data-tabfolge={3} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
         </label>
         <label>
-          Nr. (E)
+          Nr.
           <input value={werte.nummer} inputMode="numeric" className="mono" title="Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" onChange={(e) => setze("nummer", e.target.value)} />
         </label>
       </div>
@@ -87,7 +94,7 @@ export function verteilVorlage(handzeichen: string, jetzt: Date = new Date()): V
 /** Die Sichtung aus dem Laufzettel der Maske; `undefined`, solange Zeit oder Handzeichen fehlen. */
 export function sichtungAus(werte: Verteilwerte, jetzt: Date = new Date()): Sichtungsvermerk | undefined {
   const zeitpunkt = zeitAusEingabe(werte.quittung, jetzt);
-  if (zeitpunkt === undefined || werte.handzeichen.trim() === "") return undefined;
+  if (zeitpunkt === undefined || handzeichenPflicht(werte.handzeichen) !== undefined) return undefined;
   const vermerke = werte.vermerke.trim();
   return { zeitpunkt, handzeichen: werte.handzeichen.trim(), verteiler: werte.verteiler.map((e) => ({ ...e })), ...(vermerke === "" ? {} : { vermerke }) };
 }
@@ -101,6 +108,7 @@ export interface VerteilEigenschaften {
 
 /** Der untere Teil zum Ausfüllen — Ersatzsichter und Gesprächsnotiz. */
 export function Verteilteil({ werte, aufAenderung, grund }: VerteilEigenschaften): React.JSX.Element {
+  const warnung = hauptempfaengerWarnung(werte.verteiler);
   return (
     <fieldset className="vordruckteil laufzettel" aria-label="Laufzettel">
       <legend>Laufzettel</legend>
@@ -109,10 +117,11 @@ export function Verteilteil({ werte, aufAenderung, grund }: VerteilEigenschaften
         <Dtgfeld beschriftung="Quittung" wert={werte.quittung} aufAenderung={(quittung) => aufAenderung({ ...werte, quittung })} />
         <label>
           Handzeichen
-          <input value={werte.handzeichen} maxLength={20} onChange={(e) => aufAenderung({ ...werte, handzeichen: e.target.value })} />
+          <input value={werte.handzeichen} maxLength={4} onChange={(e) => aufAenderung({ ...werte, handzeichen: e.target.value })} />
         </label>
       </div>
       <Verteilermatrix verteiler={werte.verteiler} aufAenderung={(verteiler) => aufAenderung({ ...werte, verteiler })} />
+      {warnung !== undefined && <p className="warnung">{warnung}</p>}
       <label>
         Vermerke
         <textarea rows={2} value={werte.vermerke} onChange={(e) => aufAenderung({ ...werte, vermerke: e.target.value })} />

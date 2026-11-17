@@ -11,6 +11,8 @@
 
 import { useCallback, useEffect, useRef } from "react";
 
+import { projektion } from "@s1/domaene";
+
 import type { Peer } from "../kontrakt/index.js";
 import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
@@ -25,6 +27,19 @@ export function sperrenderArbeitsplatz(peers: readonly Peer[], entitaetId: strin
   const halter = peers.find((p) => !p.veraltet && (p.bearbeitet ?? []).includes(entitaetId));
   if (halter === undefined) return undefined;
   return halter.anzeigename === "" ? halter.rechnername : halter.anzeigename;
+}
+
+/**
+ * Additiv (Audit Sichter P2-4, Fernmelder P2-5): der Halter mit Stelle und
+ * Handzeichen aus der Präsenz — „Sichtung (Sichter · Hz. Si)" —, damit der
+ * zweite Bearbeiter weiß, mit wem er sich abspricht.
+ */
+export function sperrerMitStelle(peers: readonly Peer[], entitaetId: string): string | undefined {
+  const name = sperrenderArbeitsplatz(peers, entitaetId);
+  const halter = peers.find((p) => !p.veraltet && (p.bearbeitet ?? []).includes(entitaetId));
+  if (name === undefined || halter === undefined) return name;
+  const teile = [...(halter.stellen ?? []).map((s) => projektion.stellenWort(s)), ...(halter.handzeichen === undefined ? [] : [`Hz. ${halter.handzeichen}`])];
+  return teile.length === 0 ? name : `${name} (${teile.join(" · ")})`;
 }
 
 /** „🔒 wird von Lage 2 bearbeitet" – Symbol und Wort, nicht nur Farbe. */

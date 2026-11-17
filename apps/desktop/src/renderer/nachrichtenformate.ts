@@ -43,6 +43,18 @@ export function stellenname(stelle: string): string {
   return projektion.stellenWort(stelle);
 }
 
+/**
+ * Die Kopiefarbe als Wort mit ihrer Bedeutung (Audit Sachgebietsleiter
+ * P2-8): Der schmale Rand allein ist bei schlechtem Licht, Farbsehschwäche
+ * oder aus zwei Metern nicht zu halten.
+ */
+export function kopiewort(kopie: string | undefined): string {
+  if (kopie === "GRUEN") return "grün: bearbeiten";
+  if (kopie === "BLAU") return "blau: Kenntnis";
+  if (kopie === "ROT") return "rot: S2";
+  return kopie === undefined ? "ohne Kopie" : kopie;
+}
+
 /** Die CSS-Klasse der Kopiefarbe; ein unbekannter Wert steht neutral (§3.7). */
 export function kopieklasse(kopie: string | undefined): string {
   if (kopie === "GRUEN") return "kopie-gruen";
@@ -88,6 +100,42 @@ export function zeitAusEingabe(eingabe: string, jetzt: Date = new Date()): strin
   const alsDtg = datumZeitGruppeLesen(text, jetzt.getFullYear());
   if (alsDtg !== undefined) return new Date(alsDtg).toISOString();
   return funkzeitAusEingabe(text, jetzt);
+}
+
+/**
+ * Das Handzeichen als Pflichtfeld (Audit Sachgebietsleiter P1-4): zwei bis
+ * vier Zeichen, leer nicht erlaubt. Gilt für die Stellenabfrage und jede
+ * Maske des Vordrucks mit Handzeichen (Feld 2 bis 4, 17, 18).
+ */
+export function handzeichenPflicht(handzeichen: string): string | undefined {
+  const hz = handzeichen.trim();
+  if (hz === "") return "Handzeichen eintragen (zwei bis vier Zeichen)";
+  return hz.length >= 2 && hz.length <= 4 ? undefined : "Das Handzeichen hat zwei bis vier Zeichen.";
+}
+
+/** Fünf Minuten Vorlauf: Uhren zweier Rechner gehen nie ganz gleich. */
+const ZUKUNFT_TOLERANZ_MS = 5 * 60_000;
+const TAG_MS = 24 * 60 * 60_000;
+
+/**
+ * Die weiche Plausibilität einer gelesenen Zeit (Audit Fernmelder P2-2): mehr
+ * als fünf Minuten in der Zukunft oder älter als 24 Stunden gibt einen
+ * Hinweis unter dem Feld, aber **keine Sperre** — der Nachtrag vom Papier
+ * muss möglich bleiben (§6 „Papier-Rückfall").
+ */
+export function zeitHinweis(zeitpunkt: string | undefined, jetzt: Date = new Date()): string | undefined {
+  if (zeitpunkt === undefined) return undefined;
+  const abstand = Date.parse(zeitpunkt) - jetzt.getTime();
+  if (!Number.isFinite(abstand)) return undefined;
+  if (abstand > ZUKUNFT_TOLERANZ_MS) return "liegt in der Zukunft – bitte prüfen";
+  if (abstand < -TAG_MS) return "liegt mehr als 24 Stunden zurück – bitte prüfen";
+  return undefined;
+}
+
+/** „1045" aus der Datum-Zeit-Gruppe — die vierstellige Uhrzeit des Vordrucks (Feld 3, 4, 18), in derselben Zone wie die Gruppe. */
+export function uhrzeit(zeitpunkt: string | undefined): string {
+  const gruppe = zeitpunkt === undefined ? "" : datumZeitGruppe(zeitpunkt);
+  return /^\d{6}/u.test(gruppe) ? gruppe.slice(2, 6) : "—";
 }
 
 /** Wie viele Zeilen der Inhalt auf dem Vordruck braucht: harte Umbrüche, lange Zeilen wortweise umbrochen. */
@@ -186,10 +234,16 @@ export function weiterleitenVorlage(zeile: Nachrichtenzeile, sitzung: Sitzungsst
   };
 }
 
-/** Was vor „Aufgeben" fehlt (§6): Anschrift, Betreff oder Inhalt, eine lesbare Abfassungszeit. */
+/**
+ * Was vor „Aufgeben" fehlt (§6): Anschrift, Absender, Betreff oder Inhalt,
+ * eine lesbare Abfassungszeit. Der Absender (Feld 15) ist Pflicht (Audit
+ * Sachgebietsleiter P1-4): Ohne ihn weiß bei der Rückfrage niemand, wer die
+ * Nachricht gegeben hat.
+ */
 export function maskenfehler(werte: Maskenwerte, jetzt: Date = new Date()): readonly string[] {
   const fehler: string[] = [];
   if (werte.anschrift.trim() === "") fehler.push("Anschrift eintragen");
+  if (werte.absender.trim() === "") fehler.push("Absender eintragen");
   if (werte.betreff.trim() === "" && werte.inhalt.trim() === "") fehler.push("Betreff oder Inhalt eintragen");
   if (zeitAusEingabe(werte.abfassungszeit, jetzt) === undefined) fehler.push("Abfassungszeit als „171045nov26“ oder „1045“ eintragen");
   return fehler;

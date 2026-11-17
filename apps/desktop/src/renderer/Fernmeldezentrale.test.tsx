@@ -135,13 +135,13 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     fireEvent.click(await waitFor(() => screen.getByRole("button", { name: "Eingang aufnehmen" })));
     const maske = screen.getByRole("form", { name: "Eingang aufnehmen" });
     const oben = within(maske).getByRole("group", { name: "Aufnahmevermerk der Fernmeldezentrale" });
-    expect((within(oben).getByLabelText("Nr. (E)") as HTMLInputElement).value).toBe("8");
+    expect((within(oben).getByLabelText("Nr.") as HTMLInputElement).value).toBe("8");
     expect((within(maske).getByLabelText("Anschrift") as HTMLInputElement).value).toBe("FüSt Weser");
     expect((within(maske).getByLabelText("Absender") as HTMLInputElement).value).toBe("");
     // Kein Sichter in der Präsenz: Der Laufzettel steht offen, S2 rot vorbelegt.
     const laufzettel = within(maske).getByRole("group", { name: "Laufzettel" });
     expect(laufzettel.textContent).toContain("Kein Sichter besetzt");
-    expect(within(laufzettel).getByLabelText("Kopie für S2")).toBeDefined();
+    expect((within(laufzettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
     fireEvent.change(within(oben).getByLabelText("Gegenstelle"), { target: { value: "Heros Wildeshausen" } });
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "OV Wildeshausen" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Pumpen eingetroffen" } });
@@ -157,8 +157,10 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     render(<Nachrichtenmaske titel="Eingang aufnehmen" vorlage={{ ...leereMaske(undefined, JETZT), richtung: "EINGANG", anschrift: "FüSt" }} anschriften={[]} aufnahme={{ naechsteNummer: 3 }} aufSchliessen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: "Eingang aufnehmen" });
     expect(within(maske).getByRole("group", { name: "Laufzettel" }).className).toContain("grau");
-    fireEvent.change(within(maske).getByLabelText("Nr. (E)"), { target: { value: "" } });
+    fireEvent.change(within(maske).getByLabelText("Nr."), { target: { value: "" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
+    // Der Absender ist Pflicht (Audit Sachgebietsleiter P1-4).
+    fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Polizei" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufnehmen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.nachrichtenfolge).toBeUndefined();
@@ -227,7 +229,8 @@ describe("Nachweisung, Chips und Parameter", () => {
     expect(nummerAusEingabe("0")).toBeUndefined();
     expect(nummerWarnung(7, [7], 7)).toBeUndefined();
     expect(minutenSeit("2026-11-16T09:00:00.000Z", JETZT)).toBe(45);
-    expect(aufnahmefehler({ ...aufnahmeVorlage(undefined, 3, JETZT), handzeichen: "" }, JETZT)).toEqual(["Handzeichen der Aufnahme eintragen"]);
+    expect(aufnahmefehler({ ...aufnahmeVorlage(undefined, 3, JETZT), handzeichen: "" }, JETZT)).toEqual(["Handzeichen der Aufnahme eintragen (zwei bis vier Zeichen)"]);
+    expect(aufnahmefehler({ ...aufnahmeVorlage(undefined, 3, JETZT), handzeichen: "F" }, JETZT)).toEqual(["Handzeichen der Aufnahme eintragen (zwei bis vier Zeichen)"]);
     const stand = {};
     expect(parameterEntwuerfe("E", stand, parametereingabeAus(stand))).toEqual([]);
     expect(parameterEntwuerfe("E", stand, { sichtungAuchAusgang: true, fmzSchwelleMinuten: "30" })).toEqual([
