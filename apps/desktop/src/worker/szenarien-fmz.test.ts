@@ -15,7 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Bedienergebnis, Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtenParameterSetzen } from "../kontrakt/fmzschritte.js";
 import { nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
-import { HINWEIS_ERSATZSICHTER } from "./nachrichtenfolgen.js";
+import { HINWEIS_ERSATZSICHTER, HINWEIS_ERSATZSICHTER_NOTIZ } from "./nachrichtenfolgen.js";
 import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
@@ -145,7 +145,7 @@ describe("Funktionalität: Fernmeldezentrale (N2)", () => {
     platz.dienst.stellenSetzen(["S3"], "Mü");
     const notiz = anlage({ richtung: "EINGANG", gespraechsnotiz: true, absender: "Polizei", anschrift: "S3" });
     const ergebnis = await platz.dienst.bediene(nachrichtAufnehmen(notiz, { sichtung: verteilung }));
-    expect(warnungen(ergebnis)).toEqual([HINWEIS_ERSATZSICHTER]);
+    expect(warnungen(ergebnis)).toEqual([HINWEIS_ERSATZSICHTER_NOTIZ]);
     expect(sicht(platz, "fmz").zeilen).toHaveLength(0);
     expect(sicht(platz, "posteingang", ["S2"]).zeilen[0]).toMatchObject({ gespraechsnotiz: true, laufzustand: "VERTEILT" });
     // Ohne eigene Verteilung läuft sie zum Sichter wie ein Eingang.

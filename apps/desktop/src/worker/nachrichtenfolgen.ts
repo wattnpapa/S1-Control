@@ -56,6 +56,12 @@ export interface Nachrichtenfolgeplan {
 /** Der Hinweis, den der Bediener nach dem Aufnehmen ohne Sichter sieht (§5). */
 export const HINWEIS_ERSATZSICHTER = "Kein Sichter besetzt: Nachricht beim Aufnehmen verteilt.";
 
+/**
+ * Derselbe Hinweis für die Gesprächsnotiz (Audit SGL P3-19): Ihr Verfasser
+ * hat sie „aufgegeben“, nicht „aufgenommen“ — die Maske sagt dort dasselbe Wort.
+ */
+export const HINWEIS_ERSATZSICHTER_NOTIZ = "Kein Sichter besetzt: Gesprächsnotiz beim Aufgeben verteilt.";
+
 type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown; readonly befoerderung?: unknown };
 
 function folgewerte(entwurf: Ereignisentwurf): Folgewerte | undefined {
@@ -84,7 +90,7 @@ function doppelhinweis(zustand: Zustand, nummer: number | undefined, nachrichtId
 }
 
 function verteilhinweis(umfeld: Nachrichtenfolgeumfeld, gespraechsnotiz: boolean): string {
-  if (!umfeld.sichterBesetzt) return HINWEIS_ERSATZSICHTER;
+  if (!umfeld.sichterBesetzt) return gespraechsnotiz ? HINWEIS_ERSATZSICHTER_NOTIZ : HINWEIS_ERSATZSICHTER;
   return gespraechsnotiz ? "Gesprächsnotiz vom Verfasser verteilt." : "Nachricht beim Aufnehmen verteilt.";
 }
 

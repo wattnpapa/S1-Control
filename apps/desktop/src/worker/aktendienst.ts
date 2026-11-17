@@ -135,6 +135,7 @@ import { pruefeAnforderung } from "./anforderungspruefung.js";
 import { dateimarke } from "./dateimarke.js";
 import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, nachweisungsausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
 import { funkFuerLagebild, funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
+import { gegenstandMitBetreff } from "./nachrichtengegenstand.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -2105,7 +2106,7 @@ export class Aktendienst {
         ? {}
         : {
             undoObersteArt: oberster.typ,
-            undoObersteObjekt: projektion.ereignisgegenstand(zustand, oberster.ereignis),
+            undoObersteObjekt: gegenstandMitBetreff(zustand, oberster.ereignis),
           }),
       offeneAnforderungen: Object.values(zustand.anforderungen).filter(
         (a) => a.zustand === "OFFEN" || a.zustand === "ZUGESAGT",
