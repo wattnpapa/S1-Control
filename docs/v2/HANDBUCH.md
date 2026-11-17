@@ -366,6 +366,13 @@ FmZ annimmt, befördert oder nachweist (beim Vorschlag und bei der Weitergabe
 an den Sichter ohne die Stelle LdF), sieht „Dieser Teil ist der
 Fernmeldezentrale vorbehalten … Trotzdem eintragen?“; „Trotzdem“ gibt den
 Schritt frei, und das Tagebuch vermerkt „Eintrag durch <Stelle>, nicht FmZ“.
+Dasselbe gilt für „Eingang aufnehmen“ und für einen Papier-Nachtrag mit
+Annahme, Beförderung oder Nummer ohne die Stelle FmZ, und für „Sichten“ ohne
+die Stelle Sichter („Sichten ist dem Sichter vorbehalten … Trotzdem
+sichten?“, im Tagebuch „Eintrag durch Fachberater, nicht Sichter“); der
+Arbeitsplatz prüft das auch selbst und schreibt ohne „Trotzdem“ nichts.
+Ausgenommen sind die Ersatzregeln unten: Ist kein Sichter besetzt, sichten
+FmZ und LdF ohne Rückfrage.
 Das ist ein Hinweis, keine Sperre. Liegt eine
 Nachricht länger als die Schwelle unbefördert in der FmZ — gerechnet ab dem
 Eintreffen, nicht erst ab der Annahme —, wird ihre Zeile bernsteinfarben und
@@ -378,7 +385,17 @@ Handzeichen der Aufnahme, Gegenstelle, Nummer). Die Anschrift ist mit dem
 Namen der eigenen Führungsstelle aus den Stammdaten vorbelegt, der Absender
 bleibt frei. „Aufnehmen“ legt die Nachricht an und trägt sie, wenn eine
 Nummer eingetragen ist, im selben Zug in die Nachweisung ein; danach läuft
-sie zum Sichter.
+sie zum Sichter. Ohne Nummer sagt das Aufnehmen „Eingang ohne
+Nachweisungsnummer“, und der Eingang steht in der Karte „Ohne Nummer“, bis
+er nachgewiesen ist; die Karte führt Eingänge und beförderte Ausgänge.
+
+**Ist die FmZ besetzt?** Wer einen Ausgang aufgibt, während kein
+Arbeitsplatz die Stelle FmZ hat (mit LdF als Station: auch kein LdF), liest
+nach dem Aufgeben „Fernmeldezentrale nicht besetzt: Die Nachricht wartet.
+Selbst befördern über die Sicht Fernmeldezentrale.“ Dann ruft man die FmZ
+an oder befördert selbst (mit „Trotzdem“). Eine Gesprächsnotiz „An den
+Sichter“ ohne Sichter sagt entsprechend „Sichter nicht besetzt: Die
+Gesprächsnotiz wartet.“
 
 **Nachweisung.** Die Sicht „Nachweisung“ zeigt alle Nachrichten nach Nummer,
 Eingang und Ausgang mit einem gemeinsamen Zähler, die ohne Nummer zuletzt,
@@ -388,9 +405,22 @@ Ist sie schon vergeben, warnt die Maske vor dem Schreiben, hält aber nicht
 auf: Haben zwei Arbeitsplätze ohne Verbindung dieselbe Nummer vergeben,
 stehen beide Zeilen mit der Marke „doppelt“ da und werden mit „Berichtigen“
 neu nummeriert. Nachrichten ohne Nummer bekommen sie hier mit „Nachweisen“;
-ohne besetzte FmZ bleibt die Nummer leer, bis die FmZ nachweist. „Nachweisung
+ohne besetzte FmZ bleibt die Nummer leer, bis die FmZ nachweist. Fehlende
+Nummern zwischen 1 und der höchsten stehen als Lücke am Fuß. „Nachweisung
 ausgeben“ legt die Liste als PDF (nur in der Desktop-App) oder HTML mit
-Zeitstempel im Ordner „ausgaben“ des Einsatzes ab.
+Zeitstempel im Ordner „ausgaben“ des Einsatzes ab, nach Nummer und mit
+denselben Spalten wie am Bildschirm (Vorrang, E/A, Nr., Absender, Anschrift,
+Mittel, Gegenstelle, Aufnahme, Annahme, Beförderung, Sichtung, Abfassung,
+Betreff, Marke). Aufnahme und Abfassung stehen als Datum-Zeit-Gruppe mit
+Tag, Annahme, Beförderung und Sichtung als Uhrzeit mit Handzeichen; die
+Weitergabe des LdF und „wartet beim LdF“ stehen als Marke.
+
+**Vom Papier nachtragen.** Der Schalter „Vom Papier nachtragen“ in den
+Masken „Nachricht verfassen“ und „Eingang aufnehmen“ trägt Zeiten,
+Handzeichen und Nummer so ein, wie sie auf dem Blatt stehen. Das Tagebuch
+nennt jede Zeile dazu „vom Papier nachgetragen durch <Stelle>“ mit der
+Stelle des Arbeitsplatzes, der nachgetragen hat; Annahme, Beförderung und
+Nummer ohne die Stelle FmZ brauchen „Trotzdem“.
 
 **Gesprächsnotiz.** Wer telefoniert oder persönlich spricht, hält das
 Gespräch mit dem Kästchen „Gesprächsnotiz“ in der Verfassen-Maske fest. Die
@@ -408,8 +438,12 @@ wird unter „Weitere Stelle“ als Freitext eingetragen.
 Sichter, verteilt, wer aufnimmt: Die Eingangsmaske der FmZ zeigt dann den
 Laufzettel mit, und „Aufnehmen“ verteilt die Nachricht im selben Zug („Kein
 Sichter besetzt: Nachricht beim Aufnehmen verteilt“). Dasselbe gilt für die
-Gesprächsnotiz; „An den Sichter“ ist dann gesperrt. Ein Sichter, der doch da
-war, sieht die Nachricht trotzdem und kann nachsichten.
+Gesprächsnotiz; „An den Sichter“ ist dann gesperrt. Ist der LdF als Station
+besetzt, sichtet nicht die FmZ, sondern der LdF: Der Eingang geht zu ihm,
+und er verteilt beim Weitergeben („Kein Sichter besetzt: Der LdF hat beim
+Weitergeben verteilt“). Jede Ersatzsichtung heißt im Tagebuch „als
+Ersatzsichter gesichtet“. Ein Sichter, der doch da war, sieht die Nachricht
+trotzdem und kann nachsichten.
 
 **Parameter des Einsatzes.** In den Stammdaten im Blatt Führungsstelle
 stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
@@ -431,7 +465,11 @@ Warteschlange der FmZ trägt ein angenommener Ausgang ohne Vorschlag die
 Marke „beim LdF“; „Befördern“ belegt Mittel und Gegenstelle mit dem
 Vorschlag vor. Der Weg des LdF steht in der Nachweisung als Marke und auf
 dem Vordruck als Übermittlungsweg (Feld 1) und in den Vermerken mit seinem
-Handzeichen. Ist in der Anwesenheit kein LdF, übernimmt der Fernmelder: Ein
+Handzeichen. Ein Eingang mit Sofort oder Blitz meldet sich beim LdF, sobald
+er bei ihm liegt (bei Blitz mit Ton), und zählt bei ihm als „mit Vorrang
+offen“; die Zeile nennt die Minuten beim LdF, und liegt ein Eingang die
+Schwelle der FmZ lang beim LdF, bekommen FmZ, LdF und Sichter einmal den
+Hinweis „… wartet seit … Minuten beim LdF“. Ist in der Anwesenheit kein LdF, übernimmt der Fernmelder: Ein
 aufgenommener Eingang läuft direkt zum Sichter („Kein LdF besetzt:
 Nachricht direkt an den Sichter weitergegeben“), und beim Befördern gilt
 sein Vermerk als Vorschlag. Ohne das Kästchen bleibt der Weg, wie er ist;
@@ -441,15 +479,17 @@ die Sicht „LdF“ erscheint dann nur an einem Arbeitsplatz mit der Stelle LdF.
 ohne die Sichtung des anderen zu sehen, nimmt das Programm beide an: Der
 zweite bekommt den Hinweis „Die Nachricht war inzwischen anders gesichtet“,
 die Nachricht steht bei beiden Verteilern mit der Marke „zwei Sichtungen“,
-und der Laufzettel zeigt beide Quittungen. Eine erneute Sichtung bereinigt
-das. Die Sichtung des Ersatzsichters heißt im Tagebuch „als Ersatzsichter
+und der Laufzettel zeigt beide Quittungen. Beide Vermerke gelten, mit dem
+Handzeichen davor („Si: … / Zw: …“), und der zweite Sichter liest den
+Vermerk des ersten im Hinweis. Eine erneute Sichtung bereinigt das. Die Sichtung des Ersatzsichters heißt im Tagebuch „als Ersatzsichter
 gesichtet“.
 
 **Kopien nach der Beförderung.** Ist ein Ausgang befördert, gehen nach der
 Lehrunterlage die rote Kopie an S2 und die grüne an die Stelle des
 Verfassers. Das Programm trägt beides beim Befördern ein: Der Ausgang steht
 danach im Posteingang von S2 (rot) und der Verfasserstelle (grün), mit dem
-Vermerk „Kopien nach Beförderung: rot S2, grün …“, und gilt als verteilt,
+Vermerk „Kopien nach Beförderung: rot S2, grün …“ (im Tagebuch als
+„Kopien nach Beförderung“ unter der FmZ, nicht als Sichtung), und gilt als verteilt,
 bis beide ihn erledigt haben. Die Verfasserstelle ist die Funktion auf dem
 Vordruck, wenn sie eine Stelle ist, sonst der Absender. Ist S2 nicht
 besetzt, wird die Kopie trotzdem eingetragen und wartet im Fach. Laufen
@@ -502,6 +542,51 @@ Leiste; die Nachricht steht weiter im Blatt und lässt sich von Hand drucken.
 Papier-Vordrucke den leeren Nachrichtenvordruck als eigenes PDF
 („vordruck-nachricht-leer.pdf“, A4 quer, zwei Vordrucke) und nennt beide
 Dateien. So liegt der Block im Schrank, bevor der Rechner steht.
+
+**Im Tagebuch.** Jede Zeile trägt die laufende Nummer („Nr.“, dieselbe wie
+im gedruckten Tagebuch und als ETB-Nr. auf dem Vordruck) und die Nummer der
+Nachricht zur Zeit des Eintrags („Nachricht“, etwa „E 3“). Als Akteur steht
+die Stelle, die den Schritt getan hat: bei der Aufnahme die FmZ, nicht die
+Funktion des Absenders draußen.
+
+### Wörterverzeichnis Nachrichten
+
+Die Wörter des Nachrichtenwegs, für alle, die nicht aus dem Stab kommen;
+dieselben Sätze stehen in der Hilfe unter „Abkürzungen“. Die **FmZ**
+(Fernmeldezentrale) nimmt Nachrichten von außen auf, befördert Ausgänge
+über Funk, Telefon oder Melder und führt die Nachweisung; jede Nachricht der
+Führungsstelle läuft über sie. Der **Sichter** quittiert jeden Eingang mit
+Uhrzeit und Handzeichen und legt fest, welche Stelle ihn bearbeitet und wer
+ihn zur Kenntnis bekommt. Der **LdF** (Leiter des Fernmeldebetriebes) legt
+in der Fernmeldezentrale fest, auf welchem Weg und durch welchen Fernmelder
+eine Nachricht hinausgeht, und prüft Eingänge, bevor er sie an den Sichter
+weitergibt. Die **Nachweisung** ist die fortlaufend nummerierte Liste aller
+Ein- und Ausgänge der Fernmeldezentrale, und eine Nummer, die auf dem
+Vordruck steht, ändert sich nie. Der **Laufzettel** ist der untere Teil des
+Vordrucks, auf dem der Sichter quittiert, den Verteiler ankreuzt und
+Vermerke für die Empfänger schreibt. Das **Handzeichen** ist Ihr Kürzel aus
+zwei bis vier Zeichen, meist die Initialen, und steht wie eine Unterschrift
+auf jedem Vermerk, im Einsatztagebuch und auf dem Vordruck. Der **Vorrang**
+sagt, wie eilig eine Nachricht ist: ohne Kreuz einfach, sonst Sofort oder
+Blitz, und er wird sparsam vergeben. **Sofort** ist die Vorrangstufe für
+eine Nachricht, die vor allen einfachen befördert und bearbeitet wird.
+**Blitz** ist die höchste Vorrangstufe, wenn es um Leben oder unmittelbare
+Gefahr geht; sie geht allem anderen vor und meldet sich mit Ton. Ein
+**Spruch** geht an eine bestimmte Gegenstelle, die ihn Wort für Wort
+aufnimmt und quittiert. Eine **Durchsage** geht an mehrere Empfänger
+zugleich, etwa an alle Teilnehmer eines Funkkreises, ohne dass jeder
+einzeln antwortet. Eine **Gesprächsnotiz** hält ein Telefonat oder Gespräch
+fest, das Sie selbst geführt haben; sie wird nicht übermittelt, sondern
+nachgewiesen und von Ihnen oder vom Sichter verteilt. Die **Kopiefarbe**
+(rot, grün, blau) sagt, was der Empfänger tut: grün bearbeitet die
+Nachricht, blau nimmt sie zur Kenntnis, rot geht an S2 für Lagekarte und
+Einsatztagebuch. Die **Datum-Zeit-Gruppe** schreibt Tag, Stunde, Minute,
+Monat und Jahr in ein Wort, etwa „171045NOV26“ für den 17. November 2026 um
+10:45 Uhr. Der **Übermittlungswunsch** ist der Weg, auf dem der Verfasser
+die Nachricht befördert haben möchte (Funk, Telefon, Telefax, DFÜ,
+Kurier/Melder); die Fernmeldezentrale kann anders entscheiden. Die
+**Abfassungszeit** ist die Zeit, zu der der Verfasser die Nachricht
+geschrieben hat, beim Eingang die Zeit, die der Absender draußen nennt.
 
 ## Was ein Zurücknehmen tut
 
@@ -669,6 +754,8 @@ Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vor
 **Zuerst:** Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.
 
 **Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht. „Als Vordruck drucken“ legt die Nachricht als PDF im Vordrucklayout unter ausgaben/nachrichten ab, mit der Nummer im Dateinamen; ohne Nummer trägt der Name die Kennung der Nachricht. Die Vorschau zeigt das Blatt vor dem Druck mit der Schrift des Browsers, sie weicht leicht von der des PDF ab. Der Automatikdruck ist nur an, wenn in den Druckeinstellungen ein Drucker oder ein Verzeichnis gewählt ist, und druckt dann jede an eine Stelle dieses Arbeitsplatzes verteilte Nachricht beim Eintreffen, auch die eigene Sichtung. Nach der Beförderung eines Ausgangs gehen die rote Kopie an S2 und die grüne an die Stelle des Verfassers; der Ausgang steht dann in beiden Posteingängen.
+
+**Begriffe:** FmZ ist die Fernmeldezentrale, über die jede Nachricht hinein- und hinausgeht. Der Sichter quittiert jeden Eingang und legt den Verteiler fest; der LdF (Leiter des Fernmeldebetriebes) legt den Übermittlungsweg fest und gibt Eingänge an den Sichter weiter. Die Nachweisung ist die nummerierte Liste aller Nachrichten der FmZ, der Laufzettel der untere Teil des Vordrucks mit Quittung, Verteiler und Vermerken. Das Handzeichen ist Ihr Kürzel, das wie eine Unterschrift unter jedem Vermerk steht. Vorrang heißt Sofort (vor allem Einfachen) oder Blitz (Gefahr für Leben, geht allem vor). Ein Spruch geht an eine Gegenstelle, die ihn aufnimmt und quittiert, eine Durchsage an mehrere zugleich. Eine Gesprächsnotiz hält ein Telefonat fest und wird nicht übermittelt. Die Kopiefarbe sagt, was der Empfänger tut: grün bearbeiten, blau zur Kenntnis, rot an S2. Die Datum-Zeit-Gruppe schreibt Tag, Uhrzeit, Monat und Jahr in ein Wort („171045NOV26“); die Abfassungszeit ist die Zeit, zu der die Nachricht geschrieben wurde, der Übermittlungswunsch der Weg, den der Verfasser sich wünscht. Alle Begriffe stehen mit einem Satz in der Abkürzungsliste (Reiter „Abkürzungen“).
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 
@@ -1013,5 +1100,26 @@ Der Funkplan bringt einige Wörter mit, die dort nicht stehen:
 | UslG | Umschlaggerät |
 | WLF | Wechsellader Fahrzeug |
 | ZTrKw | Zugtruppkraftwagen |
+
+### Begriffe der Nachrichten
+
+| Kürzel | Bedeutung |
+|---|---|
+| FmZ | Fernmeldezentrale: nimmt Nachrichten von außen auf, befördert Ausgänge über Funk, Telefon oder Melder und führt die Nachweisung; jede Nachricht der Führungsstelle läuft über sie. |
+| Sichter | Quittiert jeden Eingang mit Uhrzeit und Handzeichen und legt fest, welche Stelle ihn bearbeitet (grün) und wer ihn zur Kenntnis bekommt (blau). |
+| LdF | Leiter des Fernmeldebetriebes: legt in der Fernmeldezentrale fest, auf welchem Weg und durch welchen Fernmelder eine Nachricht hinausgeht, und prüft Eingänge, bevor er sie an den Sichter weitergibt. |
+| Nachweisung | Die fortlaufend nummerierte Liste aller Ein- und Ausgänge der Fernmeldezentrale; die Nummer steht auf dem Vordruck und ändert sich danach nie. |
+| Laufzettel | Der untere Teil des Vordrucks, auf dem der Sichter quittiert, den Verteiler ankreuzt und Vermerke für die Empfänger schreibt. |
+| Handzeichen | Ihr Kürzel aus zwei bis vier Zeichen, meist die Initialen; es steht wie eine Unterschrift auf jedem Vermerk, im Einsatztagebuch und auf dem Vordruck. |
+| Vorrang | Wie eilig eine Nachricht ist: ohne Kreuz einfach, sonst Sofort oder Blitz; Blitz geht vor Sofort vor einfach, und Vorrang wird sparsam vergeben. |
+| Sofort | Vorrangstufe für eine Nachricht, die vor allen einfachen Nachrichten befördert und bearbeitet wird. |
+| Blitz | Höchste Vorrangstufe für eine Nachricht, bei der es um Leben oder unmittelbare Gefahr geht; sie geht allem anderen vor und meldet sich mit Ton. |
+| Spruch | Eine Nachricht an eine bestimmte Gegenstelle, die sie Wort für Wort aufnimmt und quittiert. |
+| Durchsage | Eine Nachricht an mehrere Empfänger zugleich, etwa an alle Teilnehmer eines Funkkreises, ohne dass jeder einzeln antwortet. |
+| Gesprächsnotiz | Ein Telefonat oder Gespräch, das Sie selbst als Nachricht festhalten; es wird nicht übermittelt, sondern nachgewiesen und von Ihnen oder vom Sichter verteilt. |
+| Kopiefarbe (rot/grün/blau) | Die Farbe im Verteiler: grün bearbeitet die Nachricht, blau nimmt sie zur Kenntnis, rot geht an S2 für Lagekarte und Einsatztagebuch. |
+| Datum-Zeit-Gruppe | Zeitangabe als Tag, Stunde, Minute, Monat und Jahr in einem Wort, etwa 171045NOV26 für den 17. November 2026 um 10:45 Uhr. |
+| Übermittlungswunsch | Auf welchem Weg der Verfasser die Nachricht befördert haben möchte (Funk, Telefon, Telefax, DFÜ, Kurier/Melder); die Fernmeldezentrale kann anders entscheiden. |
+| Abfassungszeit | Wann der Verfasser die Nachricht geschrieben hat, als Datum-Zeit-Gruppe; beim Eingang die Zeit, die der Absender draußen nennt. |
 
 <!-- AKÜLI ENDE -->

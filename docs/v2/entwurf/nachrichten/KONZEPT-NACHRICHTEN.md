@@ -217,7 +217,13 @@ geschrieben (Folgeschritt wie in `schreibfolgen.ts`). Das ist die Regel aus
 eStab, nur dass hier die Präsenz entscheidet statt ein Login. Ist die Präsenz
 veraltet oder der Share fort, gilt „kein Sichter da", und wer aufnimmt,
 verteilt selbst; ein Sichter, der dann doch da war, sieht die Nachricht
-trotzdem und kann nachsichten.
+trotzdem und kann nachsichten. Ergänzt 2026-11-17 (Runde 2, R2-LdF P1-3):
+Führt der Einsatz den LdF als Station und ist ein LdF besetzt, ist **er**
+der Ersatzsichter — die FmZ verteilt beim Aufnehmen nicht, der Eingang läuft
+zum LdF, und der LdF sichtet beim Weitergeben (`NachrichtWeitergegeben` mit
+Laufzettel, Folgeschritt `NachrichtGesichtet` mit `GRUND_ERSATZSICHTER`).
+Jede Ersatzsichtung, auch „Ich sichte jetzt selbst“ der FmZ, trägt diesen
+Grund.
 
 Verteilung und Kenntnisnahme. Mit der Sichtung erscheint die Nachricht im
 Posteingang jeder Stelle des Verteilers. Wer sie dort aufschlägt, schreibt
@@ -277,6 +283,19 @@ als Fernmelder und Zeichen) — beides als Folgeschritt im Worker mit Hinweis.
 Ist ein LdF da, aber kein Vorschlag geschrieben, befördert der Fernmelder
 trotzdem; nachgetragen wird nichts, der Hinweis sagt es.
 
+Besetzung und Hinweise (ergänzt 2026-11-17, Runde 2, R2-FaBe P0-3). Das
+Lagebild trägt die besetzten Stellen der Präsenz (`besetzteStellen`). Gibt
+eine Stelle einen Ausgang auf, ohne dass die FmZ (mit LdF als Station: auch
+kein LdF) besetzt ist, sagt das Bedienergebnis „Fernmeldezentrale nicht
+besetzt: Die Nachricht wartet. Selbst befördern über die Sicht
+Fernmeldezentrale.“; eine Gesprächsnotiz „An den Sichter“ ohne Sichter sagt
+dasselbe für den Sichter, ein Eingang ohne Nummer „Eingang ohne
+Nachweisungsnummer“ (kein Blocker, die Karte „Ohne Nummer“ der FmZ führt ihn).
+Ein Eingang mit Vorrang beim LdF meldet sich dem LdF (bei Blitz mit Ton),
+zählt bei ihm als offen und trägt `wartetSeitLdf` (ab der Aufnahme); der
+Stauwächter meldet FmZ, LdF und Sichter einen Eingang, der die Schwelle lang
+beim LdF liegt.
+
 Kopien nach der Beförderung (ergänzt 2026-11-17, Folie 30). Nach der
 Beförderung eines Ausgangs gehen die rote Kopie an S2 und die grüne an die
 Stelle des Verfassers. Der Worker schreibt dazu nach `NachrichtBefoerdert`
@@ -284,7 +303,9 @@ eines ungesichteten Ausgangs `NachrichtGesichtet` mit dem Verteiler S2 rot
 und Verfasserstelle grün (die Funktion der Anlage, wenn sie eine Stelle ist,
 sonst der Absender als freier Name), der Zeit der Beförderung, dem
 Handzeichen des Fernmelders und dem Vermerk „Kopien nach Beförderung: rot
-S2, grün <Stelle>". S2 wird auch eingetragen, wenn niemand die Stelle
+S2, grün <Stelle>" und dem Rahmenfeld `grund` „Kopien nach Beförderung“
+(Runde 2, R2-ETB P1-1: das Tagebuch führt die Zeile so und unter der FmZ,
+nicht als Sichtung eines Sichters). S2 wird auch eingetragen, wenn niemand die Stelle
 besetzt — die Kopie wartet im Fach. Der Ausgang steht damit im Posteingang
 beider Stellen, läuft als VERTEILT und nach der Erledigung als ERLEDIGT. Mit
 `sichtungAuchAusgang` entfällt der Schritt, weil dann der Sichter verteilt.
@@ -523,6 +544,22 @@ Fernmelder nach der Ersatzregel befördern kann. Die Nachrichtenlage trägt
 Rahmenfeld `grund` „Kein Sichter besetzt: Ersatzsichter", damit das
 Tagebuch sie als solche nennt. `FOLD_VERSION` steigt auf 12.
 
+Ergänzt 2026-11-17 (Runde 2, additiv): Die Ereignisse der Nachricht, die
+der Worker schreibt, tragen die Stelle der Sitzung als Nutzlastfeld `stelle`
+(R2-ETB P1-1, R2-LdF P3-2) — bei der Aufnahme die FmZ, nicht die `funktion`
+des Absenders draußen; nach dem Einsatz ist die Präsenz leer, die Stelle
+muss deshalb im Ereignis stehen. Bei `NachrichtVerfasst` wird sie wie jedes
+Feld der Anlage zum Feld `stelle` der Nachricht; bei Kenntnis und Erledigung
+wählt `stelle` wie bisher den Feldpfad. Ein Papier-Nachtrag trägt im Entwurf
+das Kennzeichen `nachrichtenfolge.nachtrag`; der Worker schreibt ihn und
+seine Folgen mit dem `grund` „vom Papier nachgetragen“, das Tagebuch sagt
+„vom Papier nachgetragen durch <Stelle>“. Bei zwei Sichtungen führt die
+Zeile beide Vermerke mit Handzeichen („Si: … / Zw: …“, R2-Si P1-2); das ist
+Projektion, der Fold bleibt. Der Einsatzbeginn darf bis zu sieben Tage vor
+der Wanduhr liegen, ohne `meldezeitUnplausibel` (Konflikthinweis im frisch
+angelegten Einsatz); dafür steigt `FOLD_VERSION` auf 13. Die Tagebuchzeile
+trägt `laufendeNummer`, dieselbe wie im Druck (R2-ETB P1-2).
+
 Das Einsatztagebuch zeigt jedes dieser Ereignisse als Zeile mit Nummer,
 Richtung, Absender, Anschrift und Betreff („Nachricht E 26 aufgenommen: OV
 Wildeshausen an FüSt, ‚Pumpen eingetroffen‘"), die Sichtung mit dem
@@ -670,6 +707,15 @@ Rollen-Audits (`docs/audits/nachrichten/README.md`):
     eintragen?“. „Trotzdem“ gibt den Schritt frei; er wird mit dem `grund`
     „Eintrag durch <Stelle>, nicht FmZ“ geschrieben (bei den Schritten des LdF
     „nicht LdF“) und steht so im Tagebuch. Kein Recht, keine Sperre.
+    Ergänzt 2026-11-17 (Runde 2, R2-FaBe P0-1, R2-SGL P1-2, R2-FM P3-2): Der
+    Worker prüft den Vorbehalt selbst als `grund`-Pflicht (Bedienergebnis
+    `brauchtGrund` mit `stelle` und `hinweis`, Regel in
+    `kontrakt/stellenvorbehalt.ts`) für „Sichten“ ohne die Stelle Sichter
+    („Sichten ist dem Sichter vorbehalten …“) und für „Eingang aufnehmen“
+    oder einen Papier-Nachtrag mit Annahme, Beförderung oder Nummer ohne die
+    Stelle FmZ. Ausgenommen sind die Ersatzregeln (kein Sichter: FmZ oder LdF
+    sichten; kein LdF: die FmZ) und die eigene Gesprächsnotiz, die ihr
+    Verfasser verteilt.
 14. **Ausgang nach Stelle** (SGL P2-14). Die Sicht „Ausgang“ zeigt, was eine
     Stelle der Sitzung verfasst hat — maßgeblich ist die Stelle im Nutzlastfeld
     `funktion` (Feld 15/17 des Vordrucks, die Maske belegt es aus der Stelle
