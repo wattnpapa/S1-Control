@@ -175,8 +175,11 @@ function tagebuch(d: Definiere): void {
       ab = treffer + 1;
     }
   });
+  // ETB P0-2: Eine Zeile nennt die Nummer ihrer Zeit; was vor der Nachweisung
+  // geschah, heißt „Nachricht A (jetzt A 1)". Auch das nennt die Nachricht.
   schritt(d, "nennt jede Tagebuchzeile der Nachricht {string}", (kennung: string) => {
-    const ohne = tagebuchDer(aktuelleNachricht().betreff).filter((z) => !z.satz.includes(kennung));
+    const jetzt = `(jetzt ${kennung.replace(/^\S+\s/u, "")})`;
+    const ohne = tagebuchDer(aktuelleNachricht().betreff).filter((z) => !z.satz.includes(kennung) && !z.satz.includes(jetzt));
     if (ohne.length > 0) throw new Error(`Diese Tagebuchzeilen nennen „${kennung}“ nicht:\n${ohne.map((z) => `  ${z.satz}`).join("\n")}`);
   });
 }
