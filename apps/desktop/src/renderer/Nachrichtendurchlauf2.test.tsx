@@ -173,12 +173,16 @@ describe("FM P2-3, P2-9: Vom Papier nachtragen", () => {
     setze(blatt, "Rufname der Gegenstelle / Spruchkopf", "Heros Wildeshausen");
     setze(blatt, "Nr.", "12");
     expect(maske.textContent).not.toContain("24 Stunden zurück");
+    // R2-SGL P1-2: S3 ist nicht FmZ — der Nachtrag mit FmZ-Teil verlangt „Trotzdem“ und trägt Grund und Kennzeichen.
+    fireEvent.click(within(maske).getByRole("button", { name: "Trotzdem" }));
     fireEvent.click(within(maske).getByRole("button", { name: "Nachtragen" }));
     // Ein Bedienschritt: Annahme, Beförderung und Nummer sind Folgewerte der Anlage (P2-9).
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({
       typ: "NachrichtVerfasst",
+      grund: "Eintrag durch S3, nicht FmZ",
       nachrichtenfolge: {
+        nachtrag: true,
         nachweis: { nummer: 12, handzeichen: "Ha" },
         annahme: { handzeichen: "Ha" },
         befoerderung: { mittel: "FUNK", handzeichen: "Ha", gegenstelle: "Heros Wildeshausen" },

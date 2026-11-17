@@ -20,19 +20,42 @@ import { useState } from "react";
 
 import { projektion } from "@s1/domaene";
 
+import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import { TEXT_VORBEHALT_SICHTER as TEXT_SICHTER_KONTRAKT, istErsatzsichter } from "../kontrakt/stellenvorbehalt.js";
 import { STELLE_LDF, ldfBesetzt } from "../kontrakt/ldfschritte.js";
 import { useLaden } from "./laden.js";
 
 /** Die Stelle der FmZ in der Liste der Stellen (NACHRICHT_STELLEN). */
 export const STELLE_FMZ = "FMZ";
 
-/** Die Schritte des oberen Teils: Annehmen, Befördern, Nachweisen (FMZ), Vorschlag und Weitergabe (LDF). */
-export type Vorbehaltsschritt = "annahme" | "befoerderung" | "nachweis" | "vorschlag" | "weitergabe";
+/** Die Stelle des Sichters (NACHRICHT_STELLEN). */
+export const STELLE_SICHTER = "SICHTER";
+
+/**
+ * Die Schritte des oberen Teils: Annehmen, Befördern, Nachweisen (FMZ), Vorschlag und Weitergabe (LDF).
+ *
+ * Additiv nach der zweiten Audit-Runde (R2-FaBe P0-1, R2-SGL P1-2, R2-FM P3-2):
+ * „sichtung“ (Laufzettel und Nachsichten, Stelle SICHTER; die FmZ darf es
+ * ohne besetzten Sichter, Ersatzregel §5), „aufnahme“ (Eingang aufnehmen,
+ * FMZ) und „nachtrag“ (Papier-Nachtrag mit FmZ-Teil, FMZ). Vorher ging das
+ * Sichten für jede Stelle ohne Hinweis, und der Nachtrag umging den
+ * Hinweis der Annahme- und Beförderungsmaske.
+ */
+export type Vorbehaltsschritt = "annahme" | "befoerderung" | "nachweis" | "vorschlag" | "weitergabe" | "sichtung" | "aufnahme" | "nachtrag";
 
 export const TEXT_VORBEHALT = "Dieser Teil ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6). Trotzdem eintragen?";
 
+/** Der Hinweis beim Sichten ohne Stelle Sichter (R2-FaBe P0-1): derselbe Satz wie im Worker (`kontrakt/stellenvorbehalt.ts`). */
+export const TEXT_VORBEHALT_SICHTER = TEXT_SICHTER_KONTRAKT;
+
+/** Der Satz des Hinweises je Schritt. */
+export function vorbehaltstext(schritt: Vorbehaltsschritt): string {
+  return schritt === "sichtung" ? TEXT_VORBEHALT_SICHTER : TEXT_VORBEHALT;
+}
+
 /** Die Stelle, der der Schritt vorbehalten ist. */
 export function vorbehaltsstelle(schritt: Vorbehaltsschritt): string {
+  if (schritt === "sichtung") return STELLE_SICHTER;
   return schritt === "vorschlag" || schritt === "weitergabe" ? STELLE_LDF : STELLE_FMZ;
 }
 
@@ -47,6 +70,8 @@ export function stelleFehlt(
 ): boolean {
   const gesucht = vorbehaltsstelle(schritt);
   if (eigene.includes(gesucht)) return false;
+  // Ersatzsichter (§5): Ohne besetzten Sichter verteilt die FmZ (oder der LdF) selbst — dieselbe Regel wie im Worker.
+  if (gesucht === STELLE_SICHTER) return !istErsatzsichter({ stellen: eigene, sichterBesetzt: sichterBesetzt(eigene, peers) });
   return !(gesucht === STELLE_LDF && eigene.includes(STELLE_FMZ) && !ldfBesetzt(eigene, peers));
 }
 
@@ -63,20 +88,29 @@ export interface Stellenvorbehalt {
   readonly gesperrt: boolean;
   /** Der Grund für den Entwurf, nur nach „Trotzdem“. */
   readonly grund: string | undefined;
+  /**
+   * Additiv (R2-FaBe P0-1): Der Worker hat mit `brauchtGrund` abgewiesen —
+   * etwa weil die Präsenz dort anders stand als hier. Dann zeigt die Maske
+   * den Hinweis, auch wenn sie selbst keinen erwartet hätte.
+   */
+  readonly erzwinge: () => void;
 }
 
 /** Der Vorbehalt für eine offene Maske; „Trotzdem“ gilt nur für diese Maske. */
-export function useStellenvorbehalt(schritt: Vorbehaltsschritt): Stellenvorbehalt {
+export function useStellenvorbehalt(schritt: Vorbehaltsschritt, aktiv = true): Stellenvorbehalt {
   const eigene = useLaden((z) => z.lagebild?.sitzung?.stellen) ?? [];
   const peers = useLaden((z) => z.lagebild?.peers) ?? [];
   const [frei, setzeFrei] = useState(false);
-  if (!stelleFehlt(schritt, eigene, peers)) return { hinweis: null, gesperrt: false, grund: undefined };
+  const [erzwungen, setzeErzwungen] = useState(false);
+  const erzwinge = (): void => setzeErzwungen(true);
+  // `aktiv` falsch: Der Schritt kommt in dieser Lage der Maske nicht vor (etwa kein Nachtrag gewählt).
+  if (!erzwungen && (!aktiv || !stelleFehlt(schritt, eigene, peers))) return { hinweis: null, gesperrt: false, grund: undefined, erzwinge };
   const grund = eintragsgrund(schritt, eigene);
-  if (frei) return { hinweis: <p className="hinweistext" role="status">Wird vermerkt als: {grund}.</p>, gesperrt: false, grund };
+  if (frei) return { hinweis: <p className="hinweistext" role="status">Wird vermerkt als: {grund}.</p>, gesperrt: false, grund, erzwinge };
   return {
     hinweis: (
       <p className="warnung" role="status">
-        {TEXT_VORBEHALT}{" "}
+        {vorbehaltstext(schritt)}{" "}
         <button type="button" onClick={() => setzeFrei(true)}>
           Trotzdem
         </button>
@@ -84,5 +118,11 @@ export function useStellenvorbehalt(schritt: Vorbehaltsschritt): Stellenvorbehal
     ),
     gesperrt: true,
     grund: undefined,
+    erzwinge,
   };
+}
+
+/** Ob der Worker den Schritt mangels Grund abgewiesen hat (§2.4, `brauchtGrund`). */
+export function brauchtGrund(ergebnis: { readonly art: string } | undefined): boolean {
+  return ergebnis?.art === "brauchtGrund";
 }

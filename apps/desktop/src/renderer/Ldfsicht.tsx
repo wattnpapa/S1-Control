@@ -13,6 +13,12 @@
  *
  * Ob die Sicht im Umschalter steht, entscheidet {@link ldfSichtbar}: nur,
  * wenn der Einsatz den LdF als Station führt oder die Sitzung die Stelle LDF hat.
+ *
+ * Zweite Runde (R2-LdF P1-1, R2-Si P2-4): Bei 1320 Pixeln lag die rechte
+ * Karte über dem Rand, der Knopf „An den Sichter weitergeben“ begann bei
+ * x = 1375. Die beiden Karten stehen jetzt untereinander in voller Breite
+ * (`fmzkarten untereinander`), die Tabellen haben `table-layout: fixed`,
+ * Textzellen brechen um, und die Knopfspalte hat eine feste Breite.
  */
 
 import { useState } from "react";
@@ -55,12 +61,12 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
         <table className="nachrichtentabelle" aria-label="Ausgänge vor dem Übermittlungsvorschlag">
           <thead>
             <tr>
-              <th scope="col">Vorrang</th>
+              <th scope="col" className="schmalspalte">Vorrang</th>
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Wunsch</th>
               <th scope="col">Annahme</th>
-              <th scope="col">
+              <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
               </th>
             </tr>
@@ -99,12 +105,12 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
         <table className="nachrichtentabelle" aria-label="Eingänge vor der Weitergabe an den Sichter">
           <thead>
             <tr>
-              <th scope="col">Vorrang</th>
-              <th scope="col">Nr.</th>
+              <th scope="col" className="schmalspalte">Vorrang</th>
+              <th scope="col" className="schmalspalte">Nr.</th>
               <th scope="col">Absender</th>
               <th scope="col">Betreff</th>
               <th scope="col">Aufnahme</th>
-              <th scope="col">
+              <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
               </th>
             </tr>
@@ -148,7 +154,7 @@ export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag }: Ldfsic
   const [weiter, setzeWeiter] = useState<Nachrichtenzeile | undefined>(undefined);
   return (
     <>
-      <div className="fmzkarten">
+      <div className="fmzkarten untereinander">
         <Ausgangskarte zeilen={zeilen.filter((z) => z.richtung === "AUSGANG")} nurLesen={nurLesen} aufSchritt={aufVorschlag} />
         <Eingangskarte zeilen={zeilen.filter((z) => z.richtung !== "AUSGANG")} nurLesen={nurLesen} aufSchritt={setzeWeiter} />
       </div>

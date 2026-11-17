@@ -32,6 +32,18 @@
  * - Escape verwirft nur getippte Eingaben des Laufzettels, nach Rückfrage,
  *   und hebt die Auswahl nicht auf (Sichter P3-2).
  * - Der Sperrhinweis nennt Name, Stelle und Handzeichen (Sichter P2-4).
+ *
+ * Zweite Runde (2026-11-17):
+ * - Stellenvorbehalt auch beim Sichten (R2-FaBe P0-1, Entscheidung 13): Eine
+ *   Sitzung ohne Stelle Sichter — außer der FmZ ohne besetzten Sichter —
+ *   bekommt den Hinweis mit „Trotzdem“, „Sichten“ bleibt bis dahin gesperrt,
+ *   und der Schritt trägt den `grund`. Weist der Worker mit `brauchtGrund`
+ *   ab, erscheint der Hinweis ebenso.
+ * - Bei Vorrang Blitz oder Sofort ohne grüne Kopie hält der erste Klick an
+ *   (R2-FM P1-2): Der Knopf heißt dann „Trotzdem nur an S2“ (bzw. an die
+ *   gewählten Stellen), erst der zweite Klick sichtet.
+ * - `fokus` (R2-FM P1-2, R2-Si P2): Öffnet „Ich sichte jetzt selbst“ den
+ *   Laufzettel, rollt er in den Blick und setzt den Fokus auf die Quittung.
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -43,6 +55,7 @@ import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { useLaden } from "./laden.js";
 import { dtg, handzeichenPflicht, stellenname, zeitAusEingabe } from "./nachrichtenformate.js";
+import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrtext, sperrerMitStelle, useSperreHalten } from "./useBearbeitungssperre.js";
 import { Verteilermatrix, hauptempfaengerWarnung, verteilerAusAnschrift, type Verteilerwahl } from "./Verteilerraster.js";
 
@@ -62,6 +75,14 @@ export interface LaufzettelEigenschaften {
   readonly handzeichen: string;
   readonly nurLesen: boolean;
   readonly aufGesichtet: () => void;
+  /** Additiv (R2-FM P1-2): beim Öffnen in den Blick rollen und die Quittung fokussieren. */
+  readonly fokus?: boolean;
+}
+
+/** Die Empfänger ohne grüne Kopie für den zweiten Klick: „S2“ oder „S2, S1“ (R2-FM P1-2). */
+export function ohneHauptempfaengerKnopf(verteiler: readonly Verteilerwahl[]): string {
+  const namen = verteiler.map((v) => stellenname(v.stelle));
+  return namen.length === 0 ? "Trotzdem ohne Verteiler" : `Trotzdem nur an ${namen.join(", ")}`;
 }
 
 /** Der Verteiler beim Öffnen: der geltende (bei zwei Sichtungen die Vereinigung), sonst aus der Anschrift. */
@@ -170,8 +191,44 @@ function useEscVerwerfen(angefasst: boolean, zuruecksetzen: () => void) {
   return { frage, beiTaste };
 }
 
-export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: LaufzettelEigenschaften): React.JSX.Element {
+/** In den Blick rollen und den Fokus auf die Quittung setzen (R2-FM P1-2); jsdom kennt `scrollIntoView` nicht immer. */
+function useFokusBeimOeffnen(fokus: boolean): React.RefObject<HTMLElement | null> {
+  const wurzel = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!fokus || wurzel.current === null) return;
+    wurzel.current.scrollIntoView?.({ block: "start" });
+    wurzel.current.querySelector<HTMLInputElement>(".dtgfeld input")?.focus();
+  }, [fokus]);
+  return wurzel;
+}
+
+/**
+ * Die Freigabe des Knopfs: Stellenvorbehalt (R2-FaBe P0-1) und, bei Vorrang
+ * ohne grüne Kopie, der zweite Klick (R2-FM P1-2). Die Bestätigung gilt nur
+ * für den Verteiler, den sie sah; wer ein Kästchen ändert, wird neu gefragt.
+ */
+function useSichtfreigabe(zeile: Nachrichtenzeile, verteiler: readonly Verteilerwahl[], warnung: string | undefined, nurLesen: boolean) {
+  const vorbehalt = useStellenvorbehalt("sichtung", !nurLesen);
+  const [bestaetigtFuer, setzeBestaetigtFuer] = useState<string | undefined>(undefined);
+  const schluessel = JSON.stringify(verteiler);
+  const mitVorrang = warnung !== undefined && zeile.vorrangstufe < 2;
+  const bestaetigt = mitVorrang && bestaetigtFuer === schluessel;
+  return {
+    vorbehalt,
+    mitVorrang,
+    bestaetigt,
+    /** Wahr, wenn dieser Klick nur bestätigt und noch nicht sichtet. */
+    halteAn: (): boolean => {
+      if (!mitVorrang || bestaetigt) return false;
+      setzeBestaetigtFuer(schluessel);
+      return true;
+    },
+  };
+}
+
+export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus = false }: LaufzettelEigenschaften): React.JSX.Element {
   const w = useLaufzettelwerte(zeile, handzeichen);
+  const wurzel = useFokusBeimOeffnen(fokus);
   const versuch = useAnlegeversuch();
   const { vorher, fremd, merkeSelbst } = useVorherSichtung(zeile, w.setzeVerteiler);
   const esc = useEscVerwerfen(w.angefasst, w.zuruecksetzen);
@@ -184,8 +241,12 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
   // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
   const warnung = hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
+  const freigabe = useSichtfreigabe(zeile, w.verteiler, warnung, nurLesen);
+  const { vorbehalt } = freigabe;
+  const grund = fehlt ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined);
 
   const sichten = async (): Promise<void> => {
+    if (freigabe.halteAn()) return;
     // Die Zeit des Drückens, nicht die beim Aufschlagen (Sichter P3-1).
     const gilt = quittungszeitpunkt(w.quittungVonHand, getippt);
     if (gilt === undefined) return;
@@ -195,7 +256,8 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
       useLaden.getState().melde("warnung", ungueltig);
       return;
     }
-    const ergebnis = await versuch.schreibe(entwurf);
+    const ergebnis = await versuch.schreibe(vorbehalt.grund === undefined ? entwurf : { ...entwurf, grund: vorbehalt.grund });
+    if (brauchtGrund(ergebnis)) vorbehalt.erzwinge();
     if (ergebnis?.art !== "geschrieben") return;
     merkeSelbst();
     aufGesichtet();
@@ -203,8 +265,9 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
 
   const nachsichten = vorher !== null;
   return (
-    <section className="laufzettel vordruckteil" aria-label="Laufzettel des Sichters" onKeyDown={esc.beiTaste}>
+    <section ref={wurzel} className="laufzettel vordruckteil" aria-label="Laufzettel des Sichters" onKeyDown={esc.beiTaste}>
       <h3>Laufzettel {nachsichten ? "· Nachsichtung" : ""}</h3>
+      {vorbehalt.hinweis}
       {sperrer !== undefined && <p className="warnung">{sperrtext(sperrer)}</p>}
       {fremd !== undefined && (
         <p className="warnung" role="alert">
@@ -224,7 +287,12 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
         Vermerke
         <textarea rows={2} value={w.vermerke} onChange={(e) => w.setze.vermerke(e.target.value)} />
       </label>
-      {warnung !== undefined && <p className="warnung">{warnung}</p>}
+      {warnung !== undefined && (
+        <p className="warnung" role={freigabe.mitVorrang ? "alert" : undefined}>
+          {warnung}
+          {freigabe.mitVorrang && " Bei Vorrang sichtet erst ein zweiter Klick."}
+        </p>
+      )}
       {esc.frage && (
         <p className="warnung" role="alert">
           {TEXT_LAUFZETTEL_VERWERFEN}
@@ -232,10 +300,10 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
       )}
       {versuch.anzeige}
       <div className="maskenknoepfe">
-        <button type="button" className="haupt" disabled={nurLesen || fehlt !== undefined || versuch.gesperrt} onClick={() => void sichten()}>
-          {nachsichten ? "Nachsichten" : "Sichten"}
+        <button type="button" className="haupt" disabled={nurLesen || grund !== undefined || versuch.gesperrt} onClick={() => void sichten()}>
+          {freigabe.bestaetigt ? ohneHauptempfaengerKnopf(w.verteiler) : nachsichten ? "Nachsichten" : "Sichten"}
         </button>
-        {fehlt !== undefined && <span className="hinweistext bereitgrund">{fehlt}</span>}
+        {grund !== undefined && <span className="hinweistext bereitgrund">{grund}</span>}
       </div>
     </section>
   );

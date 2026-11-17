@@ -46,26 +46,39 @@
  *
  * Schnitt N3 (Entscheidung 4): Unter dem Vordruck steht die „Vorschau", der
  * Vordruck, wie er gedruckt wird — zugeklappt, bis jemand sie aufklappt.
+ *
+ * Zweite Runde (2026-11-17):
+ * - Stellenvorbehalt (Entscheidung 13) auch bei „Eingang aufnehmen“ (R2-FM
+ *   P3-2) und beim Papier-Nachtrag mit FmZ-Teil (R2-SGL P1-2): ohne Stelle
+ *   FMZ der Hinweis mit „Trotzdem“, Bestätigen bis dahin gesperrt, der
+ *   Entwurf trägt den `grund`; `brauchtGrund` des Workers öffnet ihn ebenso.
+ *   Der Nachtrag trägt `nachrichtenfolge.nachtrag: true`.
+ * - Der mittlere Teil steht in `Nachrichtenmittelteil.tsx` (Tabfolge der
+ *   Aufnahme vollständig, Startfokus in der Anschrift, Tooltips).
+ * - Nach dem Aufgeben bleiben die Warnungen des Workers im Hinweiskasten
+ *   (R2-FaBe P0-3), `meldeNachAufgeben`.
  */
 
 import { useEffect, useState } from "react";
 
-import { NACHRICHT_MITTEL, datumZeitGruppe, projektion } from "@s1/domaene";
+import { datumZeitGruppe } from "@s1/domaene";
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
 
 import { nachrichtAufnehmen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
-import { Dtgfeld } from "./Dtgfeld.js";
 import { doppelterAusgangText } from "./doppelterAusgang.js";
 import { merkeOffeneEingabe } from "./entwurf.js";
 import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, type Aufnahmewerte } from "./fmzformate.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
-import { ZEILEN_VORDRUCK, anlageAus, entwurfAus, inhaltszeilen, maskenfehler, richtungAus, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
-import { Nachtragsschalter, Nachtragsteil, PLATZHALTER_VOM_BLATT, nachtragFolge, nachtragVorlage, nachtragfehler, type Nachtragswerte } from "./Papiernachtrag.js";
+import { anlageAus, entwurfAus, maskenfehler, richtungAus, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { TEXT_FMZ_NICHT_BESETZT, fmzBesetzt } from "./Nachrichtenkopf.js";
+import { Mittelteil, type Setze } from "./Nachrichtenmittelteil.js";
+import { Nachtragsschalter, Nachtragsteil, PLATZHALTER_VOM_BLATT, mitGrund, nachtragFolge, nachtragVorlage, nachtragfehler, type Nachtragswerte } from "./Papiernachtrag.js";
+import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
 import { verteilerAusAnschrift } from "./Verteilerraster.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
@@ -84,127 +97,6 @@ export interface NachrichtenmaskeEigenschaften {
 /** Die besetzten Stellen der Präsenz als Wörter — lebende Arbeitsplätze, ohne Doppelte. */
 export function besetzteStellen(peers: readonly { readonly veraltet: boolean; readonly stellen?: readonly string[] | undefined }[]): readonly string[] {
   return [...new Set(peers.filter((p) => !p.veraltet).flatMap((p) => p.stellen ?? []).map(stellenname))];
-}
-
-type Setze = <K extends keyof Maskenwerte>(feld: K, wert: Maskenwerte[K]) => void;
-
-/**
- * Die Tabulatorfolge der Aufnahme (Fernmelder P1-2) für die Felder des
- * mittleren Teils; Mittel, Uhrzeit und Gegenstelle (1 bis 3) stehen im
- * Aufnahmeteil. Ohne Aufnahme gilt die Folge des Dokuments.
- */
-const TABFOLGE = { absender: 4, anschrift: 5, SOFORT: 6, BLITZ: 7, betreff: 8, inhalt: 9 } as const;
-
-function folge(mit: boolean, feld: keyof typeof TABFOLGE): number | undefined {
-  return mit ? TABFOLGE[feld] : undefined;
-}
-
-function Kaestchenzeile({ werte, setze, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly tabfolge: boolean }): React.JSX.Element {
-  const vorrang = (stufe: "SOFORT" | "BLITZ"): React.JSX.Element => (
-    <label className="kaestchen">
-      <input type="checkbox" data-tabfolge={folge(tabfolge, stufe)} checked={werte.vorrang === stufe} onChange={(e) => setze("vorrang", e.target.checked ? stufe : "")} />
-      {stufe === "SOFORT" ? "Sofort" : "Blitz"}
-    </label>
-  );
-  return (
-    <div className="kaestchenzeile" role="group" aria-label="Übermittlungswunsch, Art und Vorrang">
-      <label>
-        Übermittlungswunsch
-        <select value={werte.uebermittlungswunsch} onChange={(e) => setze("uebermittlungswunsch", e.target.value)}>
-          <option value="">—</option>
-          {NACHRICHT_MITTEL.map((m) => (
-            <option key={m} value={m}>
-              {projektion.mittelWort(m)}
-            </option>
-          ))}
-        </select>
-      </label>
-      {(["SPRUCH", "DURCHSAGE"] as const).map((art) => (
-        <label key={art} className="kaestchen">
-          <input type="checkbox" checked={werte.art === art} onChange={(e) => setze("art", e.target.checked ? art : "")} />
-          {art === "SPRUCH" ? "Spruch" : "Durchsage"}
-        </label>
-      ))}
-      {vorrang("SOFORT")}
-      {vorrang("BLITZ")}
-      <label className="kaestchen">
-        <input type="checkbox" checked={werte.gespraechsnotiz} onChange={(e) => setze("gespraechsnotiz", e.target.checked)} />
-        Gesprächsnotiz
-      </label>
-    </div>
-  );
-}
-
-interface TextfeldEigenschaften {
-  readonly titel: string;
-  readonly feld: "anschrift" | "rufnummer" | "betreff" | "absender" | "zeichen" | "funktion";
-  readonly werte: Maskenwerte;
-  readonly setze: Setze;
-  readonly liste?: string;
-  readonly tabfolge?: number | undefined;
-}
-
-function Textfeld({ titel, feld, werte, setze, liste, tabfolge }: TextfeldEigenschaften): React.JSX.Element {
-  return (
-    <label>
-      {titel}
-      <input value={werte[feld]} list={liste} data-tabfolge={tabfolge} onChange={(e) => setze(feld, e.target.value)} />
-    </label>
-  );
-}
-
-function Inhaltsfeld({ werte, setze, tabfolge }: { readonly werte: Maskenwerte; readonly setze: Setze; readonly tabfolge?: number | undefined }): React.JSX.Element {
-  const zeilen = inhaltszeilen(werte.inhalt);
-  const ueber = zeilen > ZEILEN_VORDRUCK;
-  return (
-    <div className="vordruckinhalt">
-      <label>
-        Inhalt
-        <textarea rows={ZEILEN_VORDRUCK} value={werte.inhalt} data-tabfolge={tabfolge} title="Strg+Enter bestätigt die Maske" onChange={(e) => setze("inhalt", e.target.value)} />
-      </label>
-      <span className={ueber ? "zeilenzaehler warn" : "zeilenzaehler"} role="status">
-        {zeilen} von {ZEILEN_VORDRUCK} Zeilen
-        {ueber && " – der Ausdruck bekommt ein Folgeblatt; gekürzt wird nichts."}
-      </span>
-    </div>
-  );
-}
-
-interface MittelteilEigenschaften {
-  readonly werte: Maskenwerte;
-  readonly setze: Setze;
-  readonly anschriften: readonly string[];
-  readonly tabfolge: boolean;
-  /** Additiv (Fernmelder P2-3): Nachtrag vom Papier — „vom Blatt“ statt „jetzt“. */
-  readonly nachtrag?: boolean;
-}
-
-function Mittelteil({ werte, setze, anschriften, tabfolge, nachtrag = false }: MittelteilEigenschaften): React.JSX.Element {
-  return (
-    <fieldset className="vordruckteil" aria-label="Nachricht">
-      <legend>Nachricht</legend>
-      <Kaestchenzeile werte={werte} setze={setze} tabfolge={tabfolge} />
-      <div className="vordruckzeile">
-        <Textfeld titel="Anschrift" feld="anschrift" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={folge(tabfolge, "anschrift")} />
-        <Textfeld titel="Ruf-Nr." feld="rufnummer" werte={werte} setze={setze} />
-      </div>
-      <datalist id="nachrichtenanschriften">
-        {anschriften.map((a) => (
-          <option key={a} value={a} />
-        ))}
-      </datalist>
-      <Textfeld titel="Betreff" feld="betreff" werte={werte} setze={setze} tabfolge={folge(tabfolge, "betreff")} />
-      <Inhaltsfeld werte={werte} setze={setze} tabfolge={folge(tabfolge, "inhalt")} />
-      <div className="vordruckzeile">
-        <Textfeld titel="Absender" feld="absender" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={folge(tabfolge, "absender")} />
-        <Dtgfeld beschriftung="Abfassungszeit" wert={werte.abfassungszeit} aufAenderung={(wert) => setze("abfassungszeit", wert)} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} nachtrag={nachtrag} />
-      </div>
-      <div className="vordruckzeile">
-        <Textfeld titel="Zeichen" feld="zeichen" werte={werte} setze={setze} />
-        <Textfeld titel="Funktion" feld="funktion" werte={werte} setze={setze} />
-      </div>
-    </fieldset>
-  );
 }
 
 /**
@@ -260,6 +152,18 @@ function useTeilwerte(sitzung: Sitzungsstellen | undefined, naechsteNummer: numb
   };
 }
 
+/**
+ * Nach dem Aufgeben (R2-FaBe P0-3): Die Warnungen des Workers (etwa „FmZ
+ * nicht besetzt“) bleiben im Hinweiskasten stehen, bis jemand sie schließt —
+ * die Maske selbst ist dann zu. Schweigt der Worker (älterer Stand), sagt die
+ * Maske es für einen Ausgang selbst, wenn die Präsenz keine FmZ kennt.
+ */
+export function meldeNachAufgeben(warnungen: readonly string[] | undefined, ausgang: boolean): void {
+  const { melde, lagebild } = useLaden.getState();
+  for (const satz of warnungen ?? []) melde("warnung", satz);
+  if ((warnungen ?? []).length === 0 && ausgang && !fmzBesetzt(lagebild)) melde("warnung", `Aufgegeben. ${TEXT_FMZ_NICHT_BESETZT}`);
+}
+
 export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
   const [werte, setzeWerte] = useState<Maskenwerte>(vorlage);
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
@@ -283,6 +187,10 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   const sichtung = grund === undefined ? undefined : sichtungAus(verteilung);
   // Ein Ausgang vom Blatt trägt Annahme, Beförderung und Nummer gleich mit (Fernmelder P2-9).
   const ausgangVomBlatt = nachtrag && !fmz && richtungAus(werte) === "AUSGANG";
+  // R2-FM P3-2, R2-SGL P1-2 (Entscheidung 13): Aufnahme und Nachtrag mit FmZ-Teil sind der FmZ vorbehalten.
+  // Der Nachtrag nur, wenn er Werte der FmZ trägt (Annahme, Beförderung, Nummer) — wie `hatFmzWerte` im Worker.
+  const nachtragMitFmz = ausgangVomBlatt && Object.keys(nachtragFolge(nachtragswerte)).length > 0;
+  const vorbehalt = useStellenvorbehalt(fmz ? "aufnahme" : "nachtrag", fmz || nachtragMitFmz);
   const schalteNachtrag = (an: boolean): void => {
     setzeNachtrag(an);
     setze("abfassungszeit", an ? "" : vorlage.abfassungszeit);
@@ -317,16 +225,18 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
     // Vom Blatt nachgetragen: Annahme, Beförderung und Nummer sind Folgewerte
     // der Anlage, ein Bedienschritt statt zwei (Fernmelder P2-9).
     const nachweis = fmz ? nachweisAus(aufnahmewerte) : undefined;
-    const folge = { ...folgeAus(nachweis, sichtung), ...(ausgangVomBlatt ? nachtragFolge(nachtragswerte) : {}) };
-    const entwurf = nachrichtAufnehmen(mitAufnahme, folge);
+    // R2-SGL P1-2: `nachtrag: true` kennzeichnet den Papier-Nachtrag für Tagebuch und Akte.
+    const folge = { ...folgeAus(nachweis, sichtung), ...(ausgangVomBlatt ? nachtragFolge(nachtragswerte) : {}), ...(nachtrag ? { nachtrag: true } : {}) };
+    const entwurf = mitGrund(nachrichtAufnehmen(mitAufnahme, folge), vorbehalt.grund);
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
       return;
     }
     const ergebnis = await versuch.schreibe(entwurf);
+    if (brauchtGrund(ergebnis)) vorbehalt.erzwinge();
     if (ergebnis?.art !== "geschrieben") return;
-    for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
+    meldeNachAufgeben(ergebnis.warnungen, anlage.richtung === "AUSGANG" && !nachtrag);
     aufSchliessen();
   }
 
@@ -340,12 +250,13 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
       titel={titel}
       bestaetigungstext={doppelt !== undefined ? "Trotzdem aufgeben" : nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben"}
       geaendert={geaendert}
-      bereit={fehler.length === 0 && !versuch.gesperrt}
-      bereitGrund={fehler[0] ?? versuch.sperre}
+      bereit={fehler.length === 0 && !versuch.gesperrt && !vorbehalt.gesperrt}
+      bereitGrund={fehler[0] ?? versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined)}
       aufAbbrechen={aufSchliessen}
       aufBestaetigen={aufgeben}
     >
       <Nachtragsschalter an={nachtrag} aufAn={schalteNachtrag} />
+      {vorbehalt.hinweis}
       <div className="vordruck">
         {fmz ? (
           <Aufnahmeteil werte={aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme.vergebeneNummern} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} />
@@ -355,7 +266,7 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
         {grund === undefined ? (
           <LaufzettelAnzeige />
         ) : (
-          <Verteilteil werte={verteilung} aufAenderung={t.aufVerteilung} grund={grund} anschrift={werte.anschrift} eigeneFuest={t.fuestName} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} />
+          <Verteilteil werte={verteilung} aufAenderung={t.aufVerteilung} grund={grund} anschrift={werte.anschrift} eigeneFuest={t.fuestName} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} tabfolge={fmz} />
         )}
       </div>
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />

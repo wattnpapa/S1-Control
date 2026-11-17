@@ -117,6 +117,12 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     maske = screen.getByRole("form", { name: /Befördern/ });
     expect((within(maske).getByLabelText("Mittel") as HTMLSelectElement).value).toBe("TELEFON");
     expect((within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf") as HTMLInputElement).value).toBe("OV Wildeshausen");
+    // R2-FaBe P0-2: Die Quittung der Gegenstelle ist nicht vorbelegt; erst die getippte Zeit gibt frei.
+    const quittung = within(maske).getByLabelText("Quittung der Gegenstelle (Datum/Uhrzeit)") as HTMLInputElement;
+    expect(quittung.value).toBe("");
+    expect(quittung.placeholder).toBe("Uhrzeit der Quittung durch die Gegenstelle");
+    expect((within(maske).getByRole("button", { name: "Befördern" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.change(quittung, { target: { value: "161040nov26" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(2));
     expect(entwuerfe()[1]).toMatchObject({ typ: "NachrichtBefoerdert", neu: { mittel: "TELEFON", gegenstelle: "OV Wildeshausen", handzeichen: "Fm" } });

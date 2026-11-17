@@ -14,6 +14,7 @@
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { dtg, kopieklasse, stellenname } from "./nachrichtenformate.js";
+import { TEXT_NICHT_UEBERMITTELT, TITEL_QUITTUNG_GEGENSTELLE, istAusgang } from "./nachrichtenvermerke.js";
 
 /** Ein Kästchen des Vordrucks als Anzeige — Kreuz und Wort, nicht nur Farbe. */
 export function Kaestchen({ an, text }: { readonly an: boolean; readonly text: string }): React.JSX.Element {
@@ -53,9 +54,14 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <legend>Fernmeldezentrale</legend>
       <Wert titel="Mittel" wert={mittel === undefined ? undefined : projektion.mittelWort(mittel)} />
       <Wert titel="Aufnahme" wert={vermerk(zeile?.aufnahme)} />
-      <Wert titel="Annahme" wert={vermerk(zeile?.annahme)} />
+      {/* R2-FaBe P0-2: Die Annahme ist die der eigenen FmZ, die Beförderungszeit die Quittung der Gegenstelle. */}
+      <Wert titel="Annahme (FmZ)" wert={vermerk(zeile?.annahme)} />
       <Wert titel="Vorschlag LdF" wert={vorschlagText(zeile)} />
-      <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
+      {zeile !== undefined && istAusgang(zeile) ? (
+        <Wert titel={TITEL_QUITTUNG_GEGENSTELLE} wert={vermerk(zeile.befoerderung) ?? TEXT_NICHT_UEBERMITTELT} />
+      ) : (
+        <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
+      )}
       {/* Eine gemeinsame Zählung für Eingang und Ausgang: „Nr.“ ohne Zusatz, die Richtung steht für sich (Audits ETB P3-2, LdF P3-1). */}
       <Wert titel="Nr." wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
       <Wert titel="Richtung" wert={zeile === undefined ? undefined : zeile.richtungKurz === "A" ? "Ausgang" : "Eingang"} />

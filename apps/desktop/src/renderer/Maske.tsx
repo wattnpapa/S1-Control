@@ -157,7 +157,10 @@ export function Maske({
     // Minutentakt Meldungen aufnimmt, ist das der teuerste Handgriff.
     // „bestaetigen“: eine vollständige Vorbelegung (Stellenabfrage nach dem Neuladen) bestätigt ein Klick oder Enter.
     const ziel = startfokus === "abbrechen" ? "button.abbrechen" : startfokus === "bestaetigen" ? ".maskenknoepfe button.haupt:not(:disabled)" : "input, select, textarea";
-    formular.current?.querySelector<HTMLElement>(ziel)?.focus();
+    // Additiv (R2-FM P2-2, R2-SGL P2-3): Ein Feld mit `data-startfokus` geht vor — in der
+    // Nachrichtenmaske die Anschrift bzw. das Mittel, nicht der Schalter „Vom Papier nachtragen“.
+    const markiert = startfokus === "feld" ? formular.current?.querySelector<HTMLElement>("[data-startfokus]:not(:disabled)") : null;
+    (markiert ?? formular.current?.querySelector<HTMLElement>(ziel))?.focus();
   }, [startfokus]);
 
   // Die Maske wird an `document.body` gehaengt und nicht dort gezeichnet, wo

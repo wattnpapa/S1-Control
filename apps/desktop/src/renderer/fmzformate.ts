@@ -60,7 +60,9 @@ export function aufnahmeVorlage(sitzung: Sitzungsstellen | undefined, naechsteNu
 
 /** Die Eingangsmaske (§5 „Eingang von außen"): Richtung Eingang, Anschrift die eigene Führungsstelle, Absender frei. */
 export function eingangVorlage(sitzung: Sitzungsstellen | undefined, fuestName: string | undefined, jetzt: Date = new Date()): Maskenwerte {
-  return { ...leereMaske(sitzung, jetzt), richtung: "EINGANG", anschrift: fuestName ?? "", absender: "", zeichen: "", funktion: "" };
+  // R2-FM P2-3 (alt FM P2-3, nicht behoben): Die Abfassungszeit ist die des Absenders, nicht „jetzt“;
+  // leer mit Platzhalter „laut Spruch“. Die Aufnahmezeit (oberer Teil) bleibt „jetzt“.
+  return { ...leereMaske(sitzung, jetzt), richtung: "EINGANG", anschrift: fuestName ?? "", absender: "", zeichen: "", funktion: "", abfassungszeit: "" };
 }
 
 /** Was im oberen Teil vor „Aufnehmen" fehlt: eine lesbare Aufnahmezeit, ein Handzeichen, eine lesbare Nummer. */

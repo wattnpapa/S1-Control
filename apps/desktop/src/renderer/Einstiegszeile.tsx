@@ -23,7 +23,9 @@ import { useState } from "react";
 
 import { ansichtshilfe, type Ansichtskennung } from "@s1/domaene";
 
+import { einstiegszusatz } from "./einstiegszusatz.js";
 import { istGemerkt, merke } from "./geraetemerker.js";
+import { useLaden } from "./laden.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { orttitel, type Blattort } from "./unterblaetter.js";
 
@@ -59,6 +61,8 @@ export function Einstiegszeile({ ort }: { readonly ort: Blattort }): React.JSX.E
   // Auch ohne Speicher bleibt die Zeile weg, nachdem sie in dieser Sitzung
   // bestätigt wurde; erst das nächste Öffnen zeigt sie wieder.
   const [bestaetigt, setzeBestaetigt] = useState<readonly Blattort[]>([]);
+  // Additiv (R2-SGL P1-1, R2-FaBe P1-2): zum Blatt Nachrichten die Sicht „Offen“ und, für Fachstellen, Posteingang, Kopie, „erledigt“.
+  const stellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
   const kennung = KENNUNG[ort];
   if (kennung === undefined || bestaetigt.includes(ort) || istGemerkt(einstiegsschluessel(ort))) return null;
   const titel = orttitel(ort);
@@ -66,7 +70,7 @@ export function Einstiegszeile({ ort }: { readonly ort: Blattort }): React.JSX.E
   return (
     <aside className="einstiegszeile" aria-label={`Einstieg: ${titel}`}>
       <p>
-        <strong>{titel}</strong> {satz} <span className="nebenwert">Mehr in der Hilfe ({kuerzelText(kuerzel("hilfe") as never)}).</span>
+        <strong>{titel}</strong> {[satz, ...einstiegszusatz(ort, stellen ?? [])].join(" ")} <span className="nebenwert">Mehr in der Hilfe ({kuerzelText(kuerzel("hilfe") as never)}).</span>
       </p>
       <button
         type="button"

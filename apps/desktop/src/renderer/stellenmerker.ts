@@ -10,6 +10,14 @@
  *
  * Alles hier ist Komfort; ohne Speicher gilt die Vorbelegung aus den
  * Einstellungen wie bisher.
+ *
+ * Zweite Runde (R2-SGL P2-6): Bei der Ablösung am selben Rechner bot der
+ * Merker das Handzeichen des Vorgängers an, und ein Enter genügte. Der
+ * Merker hält deshalb den Anzeigenamen des Arbeitsplatzes mit; ist er beim
+ * Lesen ein anderer (oder unbekannt), gibt {@link gemerkteStelleFuer} nur
+ * die Stellen zurück, das Handzeichen bleibt leer. Eine Person kennt die
+ * Anwendung nicht — der Anzeigename ist das Einzige, was sich ändert, wenn
+ * jemand anderes den Platz einrichtet.
  */
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
@@ -23,13 +31,15 @@ interface Gemerkt {
   readonly stellen: readonly string[];
   readonly handzeichen?: string;
   readonly zeit: number;
+  /** Additiv (R2-SGL P2-6): der Anzeigename beim Merken. */
+  readonly anzeigename?: string;
 }
 
 function alsGemerkt(wert: unknown): Gemerkt | undefined {
   if (typeof wert !== "object" || wert === null) return undefined;
-  const { stellen, handzeichen, zeit } = wert as Record<string, unknown>;
+  const { stellen, handzeichen, zeit, anzeigename } = wert as Record<string, unknown>;
   if (!Array.isArray(stellen) || !stellen.every((s): s is string => typeof s === "string") || typeof zeit !== "number") return undefined;
-  return { stellen, zeit, ...(typeof handzeichen === "string" ? { handzeichen } : {}) };
+  return { stellen, zeit, ...(typeof handzeichen === "string" ? { handzeichen } : {}), ...(typeof anzeigename === "string" ? { anzeigename } : {}) };
 }
 
 function lies(art: "sessionStorage" | "localStorage", schluessel: string): Gemerkt | undefined {
@@ -42,8 +52,13 @@ function lies(art: "sessionStorage" | "localStorage", schluessel: string): Gemer
 }
 
 /** Merkt die bestätigte Wahl dieses Tabs für den Einsatz `ordner`. */
-export function merkeStelle(ordner: string, sitzung: Sitzungsstellen, jetzt: number = Date.now()): void {
-  const wert = JSON.stringify({ stellen: sitzung.stellen, ...(sitzung.handzeichen === undefined ? {} : { handzeichen: sitzung.handzeichen }), zeit: jetzt });
+export function merkeStelle(ordner: string, sitzung: Sitzungsstellen, jetzt: number = Date.now(), anzeigename?: string): void {
+  const wert = JSON.stringify({
+    stellen: sitzung.stellen,
+    ...(sitzung.handzeichen === undefined ? {} : { handzeichen: sitzung.handzeichen }),
+    zeit: jetzt,
+    ...(anzeigename === undefined ? {} : { anzeigename }),
+  });
   for (const art of ["sessionStorage", "localStorage"] as const) {
     try {
       globalThis[art].setItem(PRAEFIX + ordner, wert);
@@ -53,11 +68,27 @@ export function merkeStelle(ordner: string, sitzung: Sitzungsstellen, jetzt: num
   }
 }
 
-/** Die gemerkte Wahl dieses Tabs für `ordner`; der Rückfall im `localStorage` nur, solange er jung ist. */
-export function gemerkteStelle(ordner: string, jetzt: number = Date.now()): Sitzungsstellen | undefined {
+function treffer(ordner: string, jetzt: number): Gemerkt | undefined {
   const tab = lies("sessionStorage", PRAEFIX + ordner);
   const lokal = lies("localStorage", PRAEFIX + ordner);
-  const treffer = tab ?? (lokal !== undefined && jetzt - lokal.zeit <= STELLENMERKER_MAX_ALTER_MS ? lokal : undefined);
-  if (treffer === undefined || treffer.stellen.length === 0) return undefined;
-  return { stellen: treffer.stellen, ...(treffer.handzeichen === undefined ? {} : { handzeichen: treffer.handzeichen }) };
+  const gefunden = tab ?? (lokal !== undefined && jetzt - lokal.zeit <= STELLENMERKER_MAX_ALTER_MS ? lokal : undefined);
+  return gefunden === undefined || gefunden.stellen.length === 0 ? undefined : gefunden;
+}
+
+/** Die gemerkte Wahl dieses Tabs für `ordner`; der Rückfall im `localStorage` nur, solange er jung ist. */
+export function gemerkteStelle(ordner: string, jetzt: number = Date.now()): Sitzungsstellen | undefined {
+  const t = treffer(ordner, jetzt);
+  if (t === undefined) return undefined;
+  return { stellen: t.stellen, ...(t.handzeichen === undefined ? {} : { handzeichen: t.handzeichen }) };
+}
+
+/**
+ * Die gemerkte Wahl für diesen Arbeitsplatz (R2-SGL P2-6): das Handzeichen nur, wenn es unter
+ * demselben Anzeigenamen gemerkt wurde; sonst nur die Stellen.
+ */
+export function gemerkteStelleFuer(ordner: string, anzeigename: string, jetzt: number = Date.now()): Sitzungsstellen | undefined {
+  const t = treffer(ordner, jetzt);
+  if (t === undefined) return undefined;
+  const gleich = t.anzeigename !== undefined && t.anzeigename === anzeigename;
+  return { stellen: t.stellen, ...(gleich && t.handzeichen !== undefined ? { handzeichen: t.handzeichen } : {}) };
 }

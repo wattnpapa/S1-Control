@@ -43,6 +43,7 @@ import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
+import { kuerzel, kuerzelText } from "./tastatur.js";
 import { vorschlagText } from "./Vordruckteile.js";
 
 export interface WarteschlangenEigenschaften {
@@ -226,8 +227,9 @@ export function Eingangskarte({ nurLesen, aufEingang }: { readonly nurLesen: boo
   return (
     <section className="karte fmzkarte" aria-label="Eingang">
       <h3>Eingang von außen</h3>
-      <p className="hinweistext">Nachricht mit Aufnahmevermerk, Gegenstelle und Nummer aufnehmen; sie läuft danach zum Sichter.</p>
-      <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Den Vordruck mit Aufnahmevermerk ausfüllen"} onClick={aufEingang}>
+      {/* R2-FM P2-1: das Kürzel steht dabei; in dieser Sicht öffnet Strg+N die Aufnahme. */}
+      <p className="hinweistext">Nachricht mit Aufnahmevermerk, Gegenstelle und Nummer aufnehmen; sie läuft danach zum Sichter. Kürzel: {kuerzelText(kuerzel("anlegen") as never)}.</p>
+      <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : `Den Vordruck mit Aufnahmevermerk ausfüllen (${kuerzelText(kuerzel("anlegen") as never)})`} onClick={aufEingang}>
         Eingang aufnehmen
       </button>
     </section>

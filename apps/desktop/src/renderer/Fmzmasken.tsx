@@ -31,6 +31,14 @@
  *   (beim Vorschlag LDF) steht oben „Dieser Teil ist der Fernmeldezentrale
  *   vorbehalten …“; „Trotzdem“ gibt frei, der Schritt trägt den `grund`
  *   „Eintrag durch <Stelle>, nicht FmZ“ (`Stellenvorbehalt.tsx`).
+ * - Zweite Runde (R2-FaBe P0-2, R2-FM P2-6): Die Quittungszeit der
+ *   Gegenstelle beim Befördern ist **nicht** vorbelegt — leer, Pflicht, mit
+ *   dem Platzhalter „Uhrzeit der Quittung durch die Gegenstelle“. Vorher
+ *   stand dort die Zeit des Öffnens, und ein bloßes „Befördern“ schrieb eine
+ *   Quittung, die die Gegenstelle nie gegeben hatte; der Absender las sie als
+ *   Bestätigung.
+ * - Der Sperrhinweis nennt Name, Stelle und Handzeichen wie der Laufzettel
+ *   (R2-FM P2-5, alt FM P2-5: `sperrerMitStelle`).
  * - Weist der Worker ab, weil ein anderer Platz inzwischen vermerkt hat, sagt
  *   die Maske in Worten, was jetzt gilt, und „Neu laden“ öffnet sie mit dem
  *   neuen Vorher-Wert (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
@@ -50,8 +58,8 @@ import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
-import { useStellenvorbehalt } from "./Stellenvorbehalt.js";
-import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
+import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
+import { sperrerMitStelle, sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
 import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
@@ -91,7 +99,8 @@ function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
   return {
     // Die Annahme (Feld 3) verlangt auf dem Papier nur die Uhrzeit: vierstellig vorbelegt, nicht als
     // sechsstellige Gruppe im Feld „Uhrzeit“ (Audit Fernmelder P3-2).
-    zeit: p.schritt === "annahme" ? uhrzeitVierstellig(new Date()) : datumZeitGruppe(new Date()),
+    // Die Quittung der Gegenstelle ist nicht „jetzt“, sondern was die Gegenstelle quittiert hat (R2-FaBe P0-2).
+    zeit: p.schritt === "annahme" ? uhrzeitVierstellig(new Date()) : p.schritt === "befoerderung" ? "" : datumZeitGruppe(new Date()),
     handzeichen: p.handzeichen,
     mittel: p.zeile.befoerderung?.mittel ?? p.zeile.vorschlag?.mittel ?? p.zeile.uebermittlungswunsch ?? "FUNK",
     gegenstelle: p.zeile.gegenstelle ?? p.zeile.vorschlag?.gegenstelle ?? p.zeile.anschrift,
@@ -100,6 +109,9 @@ function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
     nummer: String((p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) ?? p.naechsteNummer ?? ""),
   };
 }
+
+/** Der Platzhalter des leeren Quittungsfelds beim Befördern (R2-FaBe P0-2). */
+export const PLATZHALTER_QUITTUNG = "Uhrzeit der Quittung durch die Gegenstelle";
 
 /** Die Beschriftung des Zeitfelds je Schritt; beim Befördern ist es die Quittung der Gegenstelle (Fernmelder P2-4). */
 function zeitbeschriftung(schritt: Fmzschritt): string {
@@ -127,6 +139,7 @@ function befoerderungsentwurf(zeile: Nachrichtenzeile, e: Eingaben, zeitpunkt: s
 /** Der Entwurf des Schritts aus den Eingaben, oder der Satz, was fehlt. */
 export function fmzEntwurf(schritt: Fmzschritt, zeile: Nachrichtenzeile, e: Eingaben, kontaktEinheitId?: string): Entwurf | string {
   const zeitpunkt = zeitAusEingabe(e.zeit);
+  if (zeitpunkt === undefined && schritt === "befoerderung" && e.zeit.trim() === "") return "Uhrzeit der Quittung durch die Gegenstelle eintragen";
   if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
   const hz = handzeichenPflicht(e.handzeichen);
   if (hz !== undefined) return hz;
@@ -240,7 +253,9 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
-  const fremd = useFremdsperren().von(p.zeile.id);
+  // R2-FM P2-5: mit Stelle und Handzeichen wie im Laufzettel, sonst der Name allein.
+  const fremdName = useFremdsperren().von(p.zeile.id);
+  const fremd = sperrerMitStelle(peers ?? [], p.zeile.id) ?? fremdName;
   // Entscheidung 13, LdF P2-3: Hinweis statt Recht beim oberen Teil (Folie 7).
   const vorbehalt = useStellenvorbehalt(p.schritt);
   const setze = (feld: keyof Eingaben, wert: string): void => {
@@ -269,6 +284,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
       return;
     }
     const ergebnis = await versuch.schreibe(vorbehalt.grund === undefined ? entwurf : { ...entwurf, grund: vorbehalt.grund });
+    if (brauchtGrund(ergebnis)) vorbehalt.erzwinge();
     if (istVorwertAbweisung(ergebnis)) {
       setzeKonflikt(konflikttext(entwurf.typ, ergebnis.meldung, peers ?? []));
       return;
@@ -312,7 +328,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
           beschriftung={zeitbeschriftung(p.schritt)}
           wert={e.zeit}
           aufAenderung={(wert) => setze("zeit", wert)}
-          {...(befoerdern ? { hilfe: "Uhrzeit, zu der die Gegenstelle quittiert hat" } : {})}
+          {...(befoerdern ? { hilfe: "Uhrzeit, zu der die Gegenstelle quittiert hat", platzhalter: PLATZHALTER_QUITTUNG } : {})}
         />
         <label>
           Handzeichen

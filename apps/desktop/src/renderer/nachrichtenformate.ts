@@ -268,7 +268,9 @@ export function maskenfehler(werte: Maskenwerte, jetzt: Date = new Date()): read
   if (werte.anschrift.trim() === "") fehler.push("Anschrift eintragen");
   if (werte.absender.trim() === "") fehler.push("Absender eintragen");
   if (werte.betreff.trim() === "" && werte.inhalt.trim() === "") fehler.push("Betreff oder Inhalt eintragen");
-  if (zeitAusEingabe(werte.abfassungszeit, jetzt) === undefined) fehler.push("Abfassungszeit als „171045nov26“ oder „1045“ eintragen");
+  // R2-FM P2-3: Im Eingang ist die Abfassungszeit die des Absenders laut Spruch und darf fehlen; getippt muss sie lesbar sein.
+  const eingangOhneZeit = werte.richtung === "EINGANG" && !werte.gespraechsnotiz && werte.abfassungszeit.trim() === "";
+  if (!eingangOhneZeit && zeitAusEingabe(werte.abfassungszeit, jetzt) === undefined) fehler.push("Abfassungszeit als „171045nov26“ oder „1045“ eintragen");
   return fehler;
 }
 

@@ -216,8 +216,11 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
         <table>
           <thead>
             <tr>
+              {/* R2-ETB P1-2: die laufende Nummer wie im Druck und als ETB-Nr. in Feld 20 des Vordrucks. */}
+              <th scope="col" title="Laufende Nummer der Zeile, wie im gedruckten Tagebuch und als ETB-Nr. auf dem Vordruck">Nr.</th>
               <th scope="col" title="Wann der Eintrag am Rechner geschrieben wurde">Erfasst</th>
               <th scope="col" title="Fachliche Zeit: wann es geschah – bei Funk die Funkzeit, bei Nachrichten die Zeit des Vermerks oder der Abfassung (Audit ETB P3-1)">Fachzeit</th>
+              <th scope="col" title="Nummer der Nachricht zur Zeit des Eintrags (E/A und Nachweisungsnummer)">Nachricht</th>
               <th scope="col">Vorgang</th>
               <th scope="col">Akteur</th>
               <th scope="col">Rechner</th>
@@ -281,8 +284,10 @@ function Tagebuchreihe({
             : ""
       }
     >
+      <td className="zahl">{zeile.laufendeNummer === undefined ? "" : String(zeile.laufendeNummer)}</td>
       <td title={`HLC ${zeile.hlcText}`}>{uhrzeit(zeile.wanduhr)}</td>
       <td>{zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}</td>
+      <td>{zeile.nachrichtNummer ?? ""}</td>
       <td className="satz">
         {zeile.satz}
         {grundzusatz(zeile)}

@@ -21,6 +21,8 @@ import { createPortal } from "react-dom";
 
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
+import { ausgangsvermerk, istAusgang } from "./nachrichtenvermerke.js";
+import { haltTab, useFokusRueckgabe } from "./useFokusfalle.js";
 import { FmzTeil, LaufzettelAnzeige, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Vordruckvorschau } from "./Vordruckvorschau.js";
 
@@ -32,30 +34,51 @@ export interface NachrichtenansichtEigenschaften {
   readonly vordruckanzeige?: React.ReactNode;
 }
 
+/**
+ * Escape und Tab am Dokument (R2-Si P2-3, alt Sichter P3-2): Escape schließt
+ * nur das Fenster — `stopPropagation`, damit der Hörer der Kürzel am Fenster
+ * (`useKuerzel`, „abbrechen“) nicht zugleich die Auswahl aufhebt und den
+ * halbfertigen Laufzettel verwirft. Tab bleibt im Fenster (`haltTab`), auch
+ * wenn ein Klick in den Vordrucktext den Fokus herausgenommen hat.
+ */
+function useFenstertasten(dialog: React.RefObject<HTMLDivElement | null>, aufSchliessen: () => void): void {
+  useEffect(() => {
+    const aufTaste = (ereignis: KeyboardEvent): void => {
+      if (ereignis.key === "Tab") {
+        if (haltTab(ereignis.target ?? document.body, ereignis.shiftKey, dialog.current)) ereignis.preventDefault();
+        return;
+      }
+      if (ereignis.key !== "Escape") return;
+      ereignis.preventDefault();
+      ereignis.stopPropagation();
+      aufSchliessen();
+    };
+    document.addEventListener("keydown", aufTaste);
+    return () => document.removeEventListener("keydown", aufTaste);
+  }, [dialog, aufSchliessen]);
+}
+
 export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruckanzeige }: NachrichtenansichtEigenschaften): React.JSX.Element {
   const knopf = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  // R2-Si P2-3: Der Fokus kehrt beim Schließen zum Auslöser („Lesen“) zurück, wie bei jeder Maske.
+  useFokusRueckgabe();
   useEffect(() => {
     knopf.current?.focus();
   }, []);
   // Escape am Dokument und nicht am Dialog: Ein Klick auf den Vordrucktext
   // nimmt den Fokus aus dem Dialog, und ein Hörer am Dialog hörte dann nichts
   // mehr — Escape täte nach dem ersten Klick ins Leere.
-  useEffect(() => {
-    const aufTaste = (ereignis: KeyboardEvent): void => {
-      if (ereignis.key !== "Escape") return;
-      ereignis.preventDefault();
-      aufSchliessen();
-    };
-    document.addEventListener("keydown", aufTaste);
-    return () => document.removeEventListener("keydown", aufTaste);
-  }, [aufSchliessen]);
+  useFenstertasten(dialog, aufSchliessen);
   const nummer = zeile.nummer === undefined ? zeile.richtungKurz : `${zeile.richtungKurz} ${String(zeile.nummer)}`;
   const stand = projektion.standDerZeile(zeile);
   return createPortal(
     <div className="maskengrund">
       <div
+        ref={dialog}
         className="maske vordruck"
         role="dialog"
+        aria-modal="true"
         aria-label={`Nachricht ${nummer}`}
       >
         {/* Der Schließen-Knopf auch oben: Bei langem Vordruck mit Vorschau stünde
@@ -69,7 +92,8 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
             ×
           </button>
         </div>
-        {zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
+        {/* R2-FaBe P0-2: Beim Ausgang „angenommen (FmZ) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
+        {istAusgang(zeile) ? <p className="leise">FmZ: {ausgangsvermerk(zeile)}</p> : zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
         <FmzTeil zeile={zeile} />
         <NachrichtenteilAnzeige zeile={zeile} />
         <LaufzettelAnzeige zeile={zeile} />

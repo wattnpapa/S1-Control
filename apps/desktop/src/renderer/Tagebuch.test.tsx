@@ -73,6 +73,21 @@ describe("Die Tagebuch-Ansicht", () => {
     expect(screen.getByText("fuest-laptop")).toBeDefined();
   });
 
+  it("zeigt die laufende Nummer und die Nachrichtennummer als Spalten „Nr.“ und „Nachricht“ (R2-ETB P1-2)", async () => {
+    attrappe.antwortet("tagebuchAnfordern", {
+      lageZeiger: 9,
+      zeilen: [zeile({ laufendeNummer: 7, nachrichtNummer: "E 2", nachrichtId: "N1" })],
+      gesamtzahl: 1,
+      von: 0,
+    });
+    await zeigeTagebuch();
+    expect(screen.getByRole("columnheader", { name: "Nr." })).toBeDefined();
+    expect(screen.getByRole("columnheader", { name: "Nachricht" })).toBeDefined();
+    const zellen = screen.getAllByRole("cell").map((z) => z.textContent);
+    expect(zellen[0]).toBe("7");
+    expect(zellen).toContain("E 2");
+  });
+
   it("zeigt standardmäßig alle Einträge und beschränkt sich erst auf Wunsch auf die gewählte Einheit", async () => {
     await zeigeTagebuch("U1");
     await waitFor(() => {

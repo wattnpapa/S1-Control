@@ -19,9 +19,15 @@
  * offenen Meldungen. Ohne sie sah der Sachgebietsleiter eine Nachricht ohne
  * Vorrang erst, wenn er das Blatt zufällig aufschlug. Gelesen wird die Zahl
  * hier aus dem Store, damit das Kopfband (`Kopfband.tsx`) unverändert bleibt.
+ *
+ * Zweite Runde (R2-Si P2-5, R2-SGL P2): Der Sichter hat keinen Posteingang,
+ * und sein Reiter zeigte nichts, obwohl vier Eingänge vor ihm lagen. Die Zahl
+ * zählt jetzt auch die Warteschlange der eigenen Station: „vor dem Sichter“
+ * für die Stelle SICHTER, „vor der FmZ“ für die Stelle FMZ
+ * ({@link nachrichtenzahl}).
  */
 
-import type { Profil } from "../kontrakt/index.js";
+import type { Nachrichtenlage, Profil } from "../kontrakt/index.js";
 import { reiterFuer, type Blatt, type Reiter } from "./blaetter.js";
 import { Klappmenue } from "./Klappmenue.js";
 import { useLaden } from "./laden.js";
@@ -57,9 +63,23 @@ function zahl(eintrag: Reiter, marken: Marken): number | undefined {
   return undefined;
 }
 
+/**
+ * Die Zahl am Reiter „Nachrichten“: neu für die eigenen Stellen, dazu die
+ * Warteschlange der eigenen Station — vor dem Sichter (SICHTER), vor der
+ * FmZ (FMZ). Ohne diese Stellen wie bisher nur „neu“.
+ */
+export function nachrichtenzahl(lage: Nachrichtenlage | undefined, stellen: readonly string[]): number {
+  if (lage === undefined) return 0;
+  const sichter = stellen.includes("SICHTER") ? lage.vorSichter : 0;
+  const fmz = stellen.includes("FMZ") ? lage.vorFmz : 0;
+  return lage.neuFuerStellen + sichter + fmz;
+}
+
 export function Reiterzeile({ blatt, waehleBlatt, offeneMeldungen, profil }: ReiterzeileEigenschaften): React.JSX.Element {
   const { imBand, unterMehr } = reiterFuer(profil);
-  const neueNachrichten = useLaden((z) => z.lagebild?.nachrichten?.neuFuerStellen ?? 0);
+  const lage = useLaden((z) => z.lagebild?.nachrichten);
+  const stellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
+  const neueNachrichten = nachrichtenzahl(lage, stellen ?? []);
   const marken: Marken = { offeneMeldungen, neueNachrichten };
   const ausMehr = unterMehr.find((eintrag) => eintrag.schluessel === blatt);
   const band = ausMehr === undefined ? imBand : [...imBand, ausMehr];

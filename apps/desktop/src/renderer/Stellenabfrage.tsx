@@ -67,6 +67,14 @@ export function abfolge(stellen: readonly string[]): readonly string[] {
   return [...STATIONEN.filter((s) => stellen.includes(s)), ...stellen.filter((s) => !(STATIONEN as readonly string[]).includes(s))];
 }
 
+/**
+ * Die Erklärungen der ersten Maske (R2-FaBe P1-1): Der Fachberater riet, was
+ * ein Handzeichen ist, und hätte „DRK“ oder „xx“ schreiben können; es steht
+ * später auf jedem Vordruck. Als Tooltip und beim Handzeichen als Zeile.
+ */
+export const TITEL_HANDZEICHEN = "Ihr Kürzel, mit dem Sie auf jedem Vordruck, im Laufzettel und im Tagebuch zeichnen – meist die Initialen, z. B. „Mka“.";
+export const TITEL_STELLE = "Ihre Position im Stab, z. B. S3 oder Fachberater: Sie bestimmt, welcher Posteingang zuerst kommt. Mehrere Stellen, wenn Sachgebiete zusammengefasst sind.";
+
 export interface StellenabfrageEigenschaften {
   readonly vorbelegung: Sitzungsstellen;
   readonly einsatzname?: string;
@@ -84,6 +92,7 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
   const hz = handzeichen.trim();
   // Eine vollständige Vorbelegung (nach dem Neuladen) bestätigt ein Klick; der Fokus steht gleich auf „Übernehmen“.
   const [vollstaendig] = useState(() => stellenabfrageFehler(vorbelegung.stellen, vorbelegung.handzeichen ?? "") === undefined);
+  const handzeichenZuerst = !vollstaendig && vorbelegung.stellen.length > 0 && (vorbelegung.handzeichen ?? "") === "";
   return (
     <Maske
       titel={einsatzname === undefined ? "Stelle und Handzeichen" : `Stelle und Handzeichen · ${einsatzname}`}
@@ -97,14 +106,14 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
     >
       {vollstaendig && (
         <p className="hinweistext" role="status">
-          Zuletzt gewählt: {vorbelegung.stellen.map(stellenname).join(", ")} (Hz. {vorbelegung.handzeichen}). „Übernehmen“ bestätigt.
+          Zuletzt gewählt: {vorbelegung.stellen.map(stellenname).join(", ")} (Hz. {vorbelegung.handzeichen}). „Übernehmen“ bestätigt; wer ablöst, trägt sein eigenes Handzeichen ein.
         </p>
       )}
       <p className="hinweistext">
         Welche Position hat dieser Arbeitsplatz im Stab? Die Wahl gilt, bis der Einsatz geschlossen wird, und steht bei den anderen
         Arbeitsplätzen als besetzte Stelle. Sie ist ein Zuschnitt, kein Recht: Jeder Posteingang bleibt erreichbar.
       </p>
-      <div className="kaestchenzeile stellenwahl" role="group" aria-label="Stellen">
+      <div className="kaestchenzeile stellenwahl" role="group" aria-label="Stellen" title={TITEL_STELLE}>
         {abfolge(ARBEITSPLATZSTELLEN).map((stelle) => (
           <label key={stelle} className="kaestchen">
             <input
@@ -120,10 +129,12 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
         Weitere Stelle (frei, mehrere durch Komma)
         <input value={frei} placeholder="z. B. Polizei" onChange={(e) => setzeFrei(e.target.value)} />
       </label>
-      <label>
+      <label title={TITEL_HANDZEICHEN}>
         Handzeichen
-        <input value={handzeichen} maxLength={4} placeholder="2 bis 4 Zeichen" onChange={(e) => setzeHandzeichen(e.target.value)} />
+        {/* R2-SGL P2-6: Stellen vorbelegt, Handzeichen leer — der Fokus steht gleich im Handzeichen. */}
+        <input value={handzeichen} maxLength={4} placeholder="2 bis 4 Zeichen" {...(handzeichenZuerst ? { "data-startfokus": "" } : {})} onChange={(e) => setzeHandzeichen(e.target.value)} />
       </label>
+      <p className="hinweistext">{TITEL_HANDZEICHEN}</p>
     </Maske>
   );
 }

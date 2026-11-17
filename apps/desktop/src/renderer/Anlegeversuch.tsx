@@ -46,6 +46,8 @@ export function hinweisAusFehler(fehler: string | undefined): string {
 export function hinweisAusErgebnis(ergebnis: Bedienergebnis | undefined): string | undefined {
   if (!ergebnis) return hinweisAusFehler(useLaden.getState().fehler);
   if (ergebnis.art === "geschrieben") return undefined;
+  // R2-FaBe P0-1: Der Worker verlangt einen Grund; die Maske zeigt dazu den Hinweis mit „Trotzdem“.
+  if (ergebnis.art === "brauchtGrund") return "Nicht gespeichert – dieser Schritt ist einer anderen Stelle vorbehalten. Mit „Trotzdem“ wird er mit Grund eingetragen.";
   if ("meldung" in ergebnis) return `Nicht gespeichert – ${ergebnis.meldung}`;
   return "Nicht gespeichert.";
 }

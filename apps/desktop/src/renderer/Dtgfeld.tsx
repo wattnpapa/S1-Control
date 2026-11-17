@@ -27,16 +27,21 @@ export interface DtgfeldEigenschaften {
   readonly wert: string;
   readonly aufAenderung: (wert: string) => void;
   /** Additiv: der Platz in der eigenen Tabulatorfolge der Maske (`Maske.tsx`, `springeTabfolge`). */
-  readonly tabfolge?: number;
+  readonly tabfolge?: number | undefined;
   /** Additiv: ein Hinweistext unter dem Feld, etwa „Uhrzeit, zu der die Gegenstelle quittiert hat". */
-  readonly hilfe?: string;
+  readonly hilfe?: string | undefined;
   /** Additiv (Fernmelder P2-3): der Platzhalter im leeren Feld, im Nachtrag „vom Blatt“. */
   readonly platzhalter?: string | undefined;
   /** Additiv (Fernmelder P2-9): Nachtrag vom Papier — eine Zeit älter als ein Tag ist kein Hinweis wert. */
   readonly nachtrag?: boolean | undefined;
+  /**
+   * Additiv (R2-FaBe P1-2): ein erklärender Satz im Tooltip, hinter „Strg+D setzt jetzt“ —
+   * etwa, was eine Datum-Zeit-Gruppe ist. Wer den Vordruck nicht kennt, las nur „171045nov26“.
+   */
+  readonly erklaerung?: string | undefined;
 }
 
-export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe, platzhalter, nachtrag = false }: DtgfeldEigenschaften): React.JSX.Element {
+export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe, platzhalter, nachtrag = false, erklaerung }: DtgfeldEigenschaften): React.JSX.Element {
   const gelesen = zeitAusEingabe(wert);
   const hinweis = zeitHinweis(gelesen);
   // Im Nachtrag bleibt nur der Hinweis auf eine Zeit in der Zukunft: Papier ist alt, aber nie voraus.
@@ -49,7 +54,7 @@ export function Dtgfeld({ beschriftung, wert, aufAenderung, tabfolge, hilfe, pla
           value={wert}
           className="mono"
           placeholder={platzhalter ?? "171045nov26"}
-          title={hilfe === undefined ? "Datum-Zeit-Gruppe; Strg+D setzt „jetzt“" : `${hilfe}; Strg+D setzt „jetzt“`}
+          title={`${hilfe === undefined ? "Datum-Zeit-Gruppe" : hilfe}; Strg+D setzt „jetzt“${erklaerung === undefined ? "" : `. ${erklaerung}`}`}
           data-tabfolge={tabfolge}
           onFocus={(e) => e.currentTarget.select()}
           onChange={(e) => {

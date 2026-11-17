@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import type { Einstellungen } from "../kontrakt/index.js";
 import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
+import { ausgangsvermerk, istAusgang } from "./nachrichtenvermerke.js";
 import { druckAus, ladeVordruckmodule, vordruckseiten, zeichneSeiten, type Vordruckquelle } from "./vordruckzeichner.js";
 
 /** Wie lange die Vorschau nach dem letzten Tastendruck wartet. */
@@ -109,6 +110,16 @@ export function vorschaustempel(quelle: Vordruckquelle): string | undefined {
   return `ZURÜCKGEZOGEN${zeit}${grund}`;
 }
 
+/**
+ * Der Beförderungsvermerk eines Ausgangs in Worten über dem Bild (R2-FaBe P0-2): Das gedruckte
+ * Feld trägt nur Zeit und Handzeichen; die Zeile sagt, dass es die Quittung der Gegenstelle ist
+ * — oder dass die Nachricht noch nicht übermittelt ist.
+ */
+export function vorschauvermerk(quelle: Vordruckquelle): string | undefined {
+  if (quelle.art !== "zeile" || !istAusgang(quelle.zeile) || quelle.zeile.zurueckgezogen) return undefined;
+  return `FmZ: ${ausgangsvermerk(quelle.zeile)}`;
+}
+
 export function Vordruckvorschau({ ort, quelle }: VordruckvorschauEigenschaften): React.JSX.Element {
   const offen = useLaden((z) => vorschauOffen(z.einstellungen, ort));
   const uebung = useLaden((z) => z.lagebild?.einsatzArt === "UEBUNG");
@@ -124,6 +135,7 @@ export function Vordruckvorschau({ ort, quelle }: VordruckvorschauEigenschaften)
             {standtext(stand)}
           </p>
           {vorschaustempel(quelle) !== undefined && <p className="marke-zustand fehler">{vorschaustempel(quelle)}</p>}
+          {vorschauvermerk(quelle) !== undefined && <p className="hinweistext vorschauvermerk">{vorschauvermerk(quelle)}</p>}
           <div className="vorschaubild" hidden={stand.art === "ohneCanvas" || stand.art === "fehler"}>
             <canvas ref={canvas} aria-label="Vordruck, wie er gedruckt wird" />
           </div>

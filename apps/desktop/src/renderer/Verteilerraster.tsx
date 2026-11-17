@@ -117,14 +117,30 @@ export function hauptempfaengerWarnung(verteiler: readonly Verteilerwahl[], ansc
 
 const KURZ: Readonly<Record<string, string>> = { GRUEN: "G", BLAU: "B", ROT: "R" };
 
-function Rasterzeile({ stelle, kopie, aufKopie }: { readonly stelle: string; readonly kopie: string | undefined; readonly aufKopie: (kopie: string) => void }): React.JSX.Element {
+/**
+ * Was die Kästchen G, B, R bedeuten (R2-FaBe P1-1/P1-2): Wer den Vordruck
+ * nicht kennt, las nur Buchstaben. Der Satz steht als Tooltip am Raster und
+ * an jedem Kästchen; das Wort der Farbe davor.
+ */
+export const TITEL_KOPIEN = "grün: bearbeiten, blau: Kenntnis, rot: S2 für Lage und Tagebuch";
+const KOPIE_TUN: Readonly<Record<string, string>> = { GRUEN: "grün – bearbeiten (Hauptempfänger)", BLAU: "blau – zur Kenntnis (Mitleser)", ROT: "rot – S2 für Lage und Tagebuch" };
+
+interface RasterzeileEigenschaften {
+  readonly stelle: string;
+  readonly kopie: string | undefined;
+  readonly aufKopie: (kopie: string) => void;
+  /** Additiv (R2-FM P1-1): der Platz in der Tabulatorfolge der Aufnahme. */
+  readonly tabfolge?: number | undefined;
+}
+
+function Rasterzeile({ stelle, kopie, aufKopie, tabfolge }: RasterzeileEigenschaften): React.JSX.Element {
   const name = stellenname(stelle);
   return (
     <div className={`verteilerzeile ${kopieklasse(kopie)}`} role="group" aria-label={name}>
       <span className="verteilername">{name}</span>
       {KOPIEN.map((k) => (
-        <label key={k.wert} className={`kopiefeld ${kopieklasse(k.wert)}`} title={`${name}: Kopie ${k.titel}`}>
-          <input type="checkbox" aria-label={`${name} ${k.titel.split(" ")[0] ?? k.titel}`} checked={kopie === k.wert} onChange={() => aufKopie(k.wert)} />
+        <label key={k.wert} className={`kopiefeld ${kopieklasse(k.wert)}`} title={`${name}: Kopie ${KOPIE_TUN[k.wert] ?? k.titel}. ${TITEL_KOPIEN}`}>
+          <input type="checkbox" aria-label={`${name} ${k.titel.split(" ")[0] ?? k.titel}`} data-tabfolge={tabfolge} checked={kopie === k.wert} onChange={() => aufKopie(k.wert)} />
           {KURZ[k.wert]}
         </label>
       ))}
@@ -132,7 +148,14 @@ function Rasterzeile({ stelle, kopie, aufKopie }: { readonly stelle: string; rea
   );
 }
 
-export function Verteilermatrix({ verteiler, aufAenderung }: { readonly verteiler: readonly Verteilerwahl[]; readonly aufAenderung: (neu: readonly Verteilerwahl[]) => void }): React.JSX.Element {
+export interface VerteilermatrixEigenschaften {
+  readonly verteiler: readonly Verteilerwahl[];
+  readonly aufAenderung: (neu: readonly Verteilerwahl[]) => void;
+  /** Additiv (R2-FM P1-1): die Kästchen und „Weitere Stelle“ in der Tabulatorfolge der Aufnahme. */
+  readonly tabfolge?: number | undefined;
+}
+
+export function Verteilermatrix({ verteiler, aufAenderung, tabfolge }: VerteilermatrixEigenschaften): React.JSX.Element {
   const [frei, setzeFrei] = useState("");
   const freie = verteiler.map((e) => e.stelle).filter((s) => !(VERTEILERSTELLEN as readonly string[]).includes(s));
   const freiDazu = (): void => {
@@ -142,10 +165,10 @@ export function Verteilermatrix({ verteiler, aufAenderung }: { readonly verteile
     setzeFrei("");
   };
   return (
-    <div className="verteilermatrix verteilerraster" role="group" aria-label="Verteiler">
+    <div className="verteilermatrix verteilerraster" role="group" aria-label="Verteiler" title={`Kopiefarben: ${TITEL_KOPIEN}`}>
       <div className="verteilerzeilen">
         {[...VERTEILERSTELLEN, ...freie].map((stelle) => (
-          <Rasterzeile key={stelle} stelle={stelle} kopie={verteiler.find((e) => e.stelle === stelle)?.kopie} aufKopie={(kopie) => aufAenderung(mitKopie(verteiler, stelle, kopie))} />
+          <Rasterzeile key={stelle} stelle={stelle} tabfolge={tabfolge} kopie={verteiler.find((e) => e.stelle === stelle)?.kopie} aufKopie={(kopie) => aufAenderung(mitKopie(verteiler, stelle, kopie))} />
         ))}
       </div>
       <div className="kaestchenzeile">
@@ -154,6 +177,7 @@ export function Verteilermatrix({ verteiler, aufAenderung }: { readonly verteile
           <input
             value={frei}
             placeholder="z. B. Polizei"
+            data-tabfolge={tabfolge}
             onChange={(e) => setzeFrei(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") {

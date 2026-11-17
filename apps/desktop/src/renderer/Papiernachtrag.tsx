@@ -27,6 +27,7 @@
 
 import { NACHRICHT_MITTEL, projektion, type Nachweisvermerk } from "@s1/domaene";
 
+import type { Entwurf } from "../kontrakt/index.js";
 import type { Nachrichtenfolge } from "../kontrakt/fmzschritte.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
@@ -95,6 +96,15 @@ export function nachtragFolge(werte: Nachtragswerte, jetzt: Date = new Date()): 
     ...(befoerderung === undefined ? {} : { befoerderung: { mittel: werte.mittel, ...befoerderung, ...(gegenstelle === "" ? {} : { gegenstelle }) } }),
     ...(nachweis === undefined ? {} : { nachweis }),
   };
+}
+
+/**
+ * Der `grund` nach „Trotzdem“ am Entwurf (R2-SGL P1-2, Entscheidung 13). Das Kennzeichen des
+ * Papier-Nachtrags (`nachrichtenfolge.nachtrag: true`) setzt `nachrichtAufnehmen` selbst, wenn die
+ * Folge `nachtrag: true` trägt; der Worker schreibt dann „nachgetragen vom Papier“ ins Tagebuch.
+ */
+export function mitGrund(entwurf: Entwurf, grund: string | undefined): Entwurf {
+  return grund === undefined ? entwurf : { ...entwurf, grund };
 }
 
 /** Der Schalter über dem Vordruck — für FmZ und Verfasser (Fernmelder P2-3). */

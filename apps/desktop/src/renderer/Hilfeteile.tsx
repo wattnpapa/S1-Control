@@ -107,6 +107,12 @@ export function Ansichtenteil(): React.JSX.Element {
           <p>
             <em>Gut zu wissen:</em> {ansicht.ueberraschung}
           </p>
+          {/* R2-FaBe P1-2: die Begriffe des Vordrucks (FmZ, Sichter, LdF, Handzeichen …) mit einem Satz je Wort. */}
+          {ansicht.begriffe !== undefined && (
+            <p>
+              <em>Begriffe:</em> {ansicht.begriffe}
+            </p>
+          )}
           {ansicht.kuerzel.length > 0 && (
             <p className="hinweistext">
               {ansicht.kuerzel

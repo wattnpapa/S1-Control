@@ -91,6 +91,7 @@ describe("LdF P0-1: Befördern verlangt Annahme und Nummer", () => {
   it("verlangt bei leerer Nummer einen zweiten Klick „Trotzdem ohne Nummer“", async () => {
     const maske = befoerdern();
     fireEvent.change(within(maske).getByLabelText("Nr."), { target: { value: "" } });
+    fireEvent.change(within(maske).getByLabelText("Quittung der Gegenstelle (Datum/Uhrzeit)"), { target: { value: "171155nov26" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
     await waitFor(() => expect(within(maske).getByRole("button", { name: "Trotzdem ohne Nummer" })).toBeDefined());
     expect(entwuerfe()).toHaveLength(0);
@@ -103,6 +104,7 @@ describe("LdF P0-1: Befördern verlangt Annahme und Nummer", () => {
     const maske = befoerdern({ ...AUSGANG, nummer: 5, annahme: { zeitpunkt: "2026-11-17T10:00:00.000Z", handzeichen: "Ab" } });
     expect(maske.textContent).not.toContain(TEXT_ANNAHME_MIT);
     expect(within(maske).queryByLabelText("Nr.")).toBeNull();
+    fireEvent.change(within(maske).getByLabelText("Quittung der Gegenstelle (Datum/Uhrzeit)"), { target: { value: "171155nov26" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.nachrichtenfolge).toBeUndefined();
@@ -152,7 +154,9 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
   it("bestätigt die Aufnahme mit Strg+Enter im Inhalt und führt Tab in der Folge der Aufnahme", async () => {
     render(<Nachrichtenmaske titel="Eingang aufnehmen" vorlage={{ ...leereMaske(undefined), richtung: "EINGANG", anschrift: "FüSt Weser" }} anschriften={[]} aufnahme={{ naechsteNummer: 3 }} aufSchliessen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: "Eingang aufnehmen" });
-    const folge = ["Mittel", "Aufnahme", "Rufname der Gegenstelle / Spruchkopf", "Absender", "Anschrift", "Sofort", "Blitz", "Betreff", "Inhalt"].map((t) => within(maske).getByLabelText(t));
+    // R2-FM P1-1: Handzeichen und Nr. stehen jetzt in der Folge, hinter dem Inhalt die Abfassungszeit.
+    const hz = within(within(maske).getByRole("group", { name: "Aufnahmevermerk der Fernmeldezentrale" })).getByLabelText("Handzeichen");
+    const folge = [within(maske).getByLabelText("Mittel"), within(maske).getByLabelText("Aufnahme"), hz, ...["Rufname der Gegenstelle / Spruchkopf", "Nr.", "Absender", "Anschrift", "Sofort", "Blitz", "Betreff", "Inhalt"].map((t) => within(maske).getByLabelText(t))];
     for (let i = 0; i < folge.length - 1; i += 1) {
       fireEvent.keyDown(folge[i] as HTMLElement, { key: "Tab" });
       expect(document.activeElement).toBe(folge[i + 1]);
@@ -161,7 +165,7 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
     const inhalt = within(maske).getByLabelText("Inhalt");
     fireEvent.keyDown(inhalt, { key: "Tab" });
-    expect(document.activeElement).toBe(within(maske).getByRole("button", { name: "Aufnehmen" }));
+    expect(document.activeElement).toBe(within(maske).getByLabelText("Abfassungszeit"));
     fireEvent.keyDown(inhalt, { key: "Enter", ctrlKey: true });
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
   });
@@ -272,8 +276,9 @@ describe("LdF P1-3, SGL P0-1, P2-8: Listen", () => {
 
   it("baut den Stand des Ausgangs aus den Vermerken und nennt die Kopiefarbe als Wort", () => {
     const befoerdert = { ...AUSGANG, annahme: { zeitpunkt: "2026-11-17T12:20:00.000Z", handzeichen: "Fm" }, befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-17T12:21:00.000Z", handzeichen: "Fm" } };
-    expect(ausgangsstand(befoerdert)).toBe("angenommen 1320 Fm · befördert 1321 Fm (Funk)");
-    expect(ausgangsstand({ ...befoerdert, fmzVermerkText: "aus Ring 2" } as Nachrichtenzeile)).toBe("aus Ring 2");
+    // R2-FaBe P0-2: Die Annahme ist die der FmZ, die Beförderungszeit die Quittung der Gegenstelle; der Satz gilt auch neben `fmzVermerkText`.
+    expect(ausgangsstand(befoerdert)).toBe("angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)");
+    expect(ausgangsstand({ ...befoerdert, fmzVermerkText: "aus Ring 2" } as Nachrichtenzeile)).toBe("angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)");
     expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ");
     expect(kopiewort("GRUEN")).toBe("grün: bearbeiten");
     expect(kopiewort("BLAU")).toBe("blau: Kenntnis");

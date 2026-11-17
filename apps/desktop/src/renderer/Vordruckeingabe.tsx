@@ -17,7 +17,9 @@
  * Fernmelder P1-4); ohne grüne Kopie warnt der Laufzettel. Die Felder des
  * oberen Teils tragen die Tabulatorfolge der Aufnahme (Fernmelder P1-2):
  * Mittel, Uhrzeit, Gegenstelle, dann Absender, Anschrift, Vorrang, Betreff,
- * Inhalt und der Knopf.
+ * Inhalt und der Knopf. Zweite Runde (R2-FM P1-1): Handzeichen, Nr. und der
+ * Laufzettel gehören dazu (`aufnahmefolge.ts`), das Mittel trägt den
+ * Startfokus statt des Schalters „Vom Papier nachtragen“ (R2-FM P2-2).
  *
  * Geschrieben wird hier nichts: Die Werte gehen mit „Aufnehmen" oder
  * „Aufgeben" als Folgen der Anlage an den Worker (`nachrichtAufnehmen`).
@@ -25,6 +27,7 @@
 
 import { NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Sichtungsvermerk } from "@s1/domaene";
 
+import { AUFNAHMEFOLGE, aufnahmeplatz } from "./aufnahmefolge.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung, type Aufnahmewerte } from "./fmzformate.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
@@ -49,7 +52,7 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalte
       <div className="vordruckzeile">
         <label>
           Mittel
-          <select value={werte.mittel} data-tabfolge={1} onChange={(e) => setze("mittel", e.target.value)}>
+          <select value={werte.mittel} data-tabfolge={AUFNAHMEFOLGE.mittel} data-startfokus="" onChange={(e) => setze("mittel", e.target.value)}>
             {NACHRICHT_MITTEL.map((m) => (
               <option key={m} value={m}>
                 {projektion.mittelWort(m)}
@@ -57,20 +60,21 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalte
             ))}
           </select>
         </label>
-        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} tabfolge={2} aufAenderung={(wert) => setze("zeit", wert)} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
+        <Dtgfeld beschriftung="Aufnahme" wert={werte.zeit} tabfolge={AUFNAHMEFOLGE.zeit} aufAenderung={(wert) => setze("zeit", wert)} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
         <label>
           Handzeichen
-          <input value={werte.handzeichen} maxLength={4} onChange={(e) => setze("handzeichen", e.target.value)} />
+          {/* R2-FM P1-1: Handzeichen und Nr. gehören in die Folge der Aufnahme. */}
+          <input value={werte.handzeichen} maxLength={4} data-tabfolge={AUFNAHMEFOLGE.handzeichen} onChange={(e) => setze("handzeichen", e.target.value)} />
         </label>
       </div>
       <div className="vordruckzeile">
         <label>
           {GEGENSTELLE_BESCHRIFTUNG}
-          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} data-tabfolge={3} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
+          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} data-tabfolge={AUFNAHMEFOLGE.gegenstelle} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
         </label>
         <label>
           Nr.
-          <input value={werte.nummer} inputMode="numeric" className="mono" title="Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" onChange={(e) => setze("nummer", e.target.value)} />
+          <input value={werte.nummer} inputMode="numeric" className="mono" data-tabfolge={AUFNAHMEFOLGE.nummer} title="Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" onChange={(e) => setze("nummer", e.target.value)} />
         </label>
       </div>
       {warnung !== undefined && (
@@ -112,27 +116,29 @@ export interface VerteilEigenschaften {
   readonly eigeneFuest?: string | undefined;
   /** Additiv (Fernmelder P2-3): im Nachtrag vom Papier „vom Blatt“ im leeren Zeitfeld. */
   readonly platzhalter?: string | undefined;
+  /** Additiv (R2-FM P1-1): Quittung, Handzeichen, Raster und Vermerke in der Folge der Aufnahme. */
+  readonly tabfolge?: boolean;
 }
 
 /** Der untere Teil zum Ausfüllen — Ersatzsichter und Gesprächsnotiz. */
-export function Verteilteil({ werte, aufAenderung, grund, anschrift, eigeneFuest, platzhalter }: VerteilEigenschaften): React.JSX.Element {
+export function Verteilteil({ werte, aufAenderung, grund, anschrift, eigeneFuest, platzhalter, tabfolge = false }: VerteilEigenschaften): React.JSX.Element {
   const warnung = hauptempfaengerWarnung(werte.verteiler, anschrift, eigeneFuest);
   return (
     <fieldset className="vordruckteil laufzettel" aria-label="Laufzettel">
       <legend>Laufzettel</legend>
       <p className="hinweistext">{grund}</p>
       <div className="vordruckzeile">
-        <Dtgfeld beschriftung="Quittung" wert={werte.quittung} aufAenderung={(quittung) => aufAenderung({ ...werte, quittung })} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
+        <Dtgfeld beschriftung="Quittung" wert={werte.quittung} tabfolge={aufnahmeplatz(tabfolge, "quittung")} aufAenderung={(quittung) => aufAenderung({ ...werte, quittung })} platzhalter={platzhalter} nachtrag={platzhalter !== undefined} />
         <label>
           Handzeichen
-          <input value={werte.handzeichen} maxLength={4} onChange={(e) => aufAenderung({ ...werte, handzeichen: e.target.value })} />
+          <input value={werte.handzeichen} maxLength={4} data-tabfolge={aufnahmeplatz(tabfolge, "laufzettelHandzeichen")} onChange={(e) => aufAenderung({ ...werte, handzeichen: e.target.value })} />
         </label>
       </div>
-      <Verteilermatrix verteiler={werte.verteiler} aufAenderung={(verteiler) => aufAenderung({ ...werte, verteiler })} />
+      <Verteilermatrix verteiler={werte.verteiler} tabfolge={aufnahmeplatz(tabfolge, "raster")} aufAenderung={(verteiler) => aufAenderung({ ...werte, verteiler })} />
       {warnung !== undefined && <p className="warnung">{warnung}</p>}
       <label>
         Vermerke
-        <textarea rows={2} value={werte.vermerke} onChange={(e) => aufAenderung({ ...werte, vermerke: e.target.value })} />
+        <textarea rows={2} value={werte.vermerke} data-tabfolge={aufnahmeplatz(tabfolge, "vermerke")} onChange={(e) => aufAenderung({ ...werte, vermerke: e.target.value })} />
       </label>
     </fieldset>
   );

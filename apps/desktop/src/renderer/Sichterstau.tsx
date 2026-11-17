@@ -17,6 +17,12 @@
  *   Sichter besetzt ist. Der Knopf öffnet den
  *   Laufzettel wie beim Ersatzsichter, der Verteiler aus der Anschrift
  *   vorbelegt (S2 rot, Anschrift grün).
+ *
+ * Zweite Runde (R2-LdF P1-1, R2-Si P2-4): Die Karte stand in der schmalen
+ * rechten Spalte der FmZ-Sicht und lief bei 1320 Pixeln über den Rand
+ * (`scrollWidth` 1357). Sie spannt jetzt die volle Breite (`breit`), die
+ * Tabelle hat Spaltenköpfe und `table-layout: fixed`, die Knopfspalte eine
+ * feste Breite; Blitz steht oben (R2-FM P2-4).
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
@@ -37,9 +43,13 @@ export function vorSichterUeberSchwelle(lage: Nachrichtenlage | undefined): numb
   return typeof wert === "number" && Number.isFinite(wert) ? wert : undefined;
 }
 
-/** Die Eingänge vor dem Sichter — Darstellung aus der Nachweisung, keine Regel (die steht in Ring 2). */
+/**
+ * Die Eingänge vor dem Sichter — Darstellung aus der Nachweisung, keine Regel (die steht in Ring 2).
+ * Additiv (R2-FM P2-4, R2-Si P3-7): Blitz vor Sofort vor Einfach wie jede Liste (§5); innerhalb der
+ * Stufe bleibt die Folge der Nachweisung (stabile Sortierung).
+ */
 export function vorSichterZeilen(zeilen: readonly Nachrichtenzeile[]): readonly Nachrichtenzeile[] {
-  return zeilen.filter((z) => z.laufzustand === "VOR_SICHTER" && !z.zurueckgezogen);
+  return zeilen.filter((z) => z.laufzustand === "VOR_SICHTER" && !z.zurueckgezogen).sort((a, b) => a.vorrangstufe - b.vorrangstufe);
 }
 
 /** Ob die FmZ diesen Eingang selbst sichten darf: Er wartet die Schwelle lang, oder kein Sichter ist besetzt. */
@@ -79,10 +89,22 @@ export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen,
   const faellig = vorSichterZeilen(zeilen).filter((z) => selbstSichtbar(z, sichterDa, schwelleMinuten));
   if (faellig.length === 0) return null;
   return (
-    <section className="karte fmzkarte" aria-label="Vor dem Sichter">
+    <section className="karte fmzkarte breit" aria-label="Vor dem Sichter">
       <h3>Vor dem Sichter</h3>
       <p className="hinweistext">{sichterDa ? "Diese Eingänge warten über der Schwelle auf den Sichter." : "Kein Sichter besetzt: Wer aufgenommen hat, verteilt selbst."}</p>
       <table className="nachrichtentabelle" aria-label="Eingänge vor dem Sichter">
+        <thead>
+          <tr>
+            <th scope="col" className="schmalspalte">Vorrang</th>
+            <th scope="col" className="schmalspalte">Nr.</th>
+            <th scope="col">Betreff</th>
+            <th scope="col">Eingang</th>
+            <th scope="col" className="schmalspalte">Wartet</th>
+            <th scope="col" className="knopfspalte">
+              <span className="nurvorlesen">Schritte</span>
+            </th>
+          </tr>
+        </thead>
         <tbody>
           {faellig.map((zeile) => (
             <tr key={zeile.id}>

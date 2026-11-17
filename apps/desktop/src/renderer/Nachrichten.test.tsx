@@ -116,9 +116,13 @@ describe("Das Blatt „Nachrichten“", () => {
     // Raster wie auf dem Vordruck (Sichter P2-1): je Stelle die drei Kopiefarben als Kästchen.
     expect((within(zettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(zettel).getByRole("checkbox", { name: "S4 grün" }));
+    // R2-FaBe P0-1: Die Sitzung (S1, S4) ist nicht Sichter — erst „Trotzdem“, dann mit Grund.
+    expect((within(zettel).getByRole("button", { name: "Sichten" }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(within(zettel).getByRole("button", { name: "Trotzdem" }));
     fireEvent.click(within(zettel).getByRole("button", { name: "Sichten" }));
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({
+      grund: "Eintrag durch S1, S4, nicht Sichter",
       typ: "NachrichtGesichtet",
       nutzlast: { nachrichtId: "N-offen" },
       vorher: null,

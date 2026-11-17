@@ -4606,6 +4606,67 @@
         padding: 6px 0;
         background: var(--karte);
       }
+      /* Zweite Runde (R2-LdF P1-1, R2-Si P2-4): Die Karten der Sicht LdF und
+         „Vor dem Sichter“ liefen bei 1320 Pixeln über den Rand (scrollWidth
+         1484 bzw. 1357), weil ihre Tabellen in der schmalen Spalte nicht
+         umbrachen. Jetzt: Karten mit Tabelle über die volle Breite, Tabellen
+         mit festem Layout, Textzellen brechen um, die Knopfspalte hat eine
+         feste Breite, und ein Rest läuft in der Karte, nie über die Seite. */
+      .fmzkarten > * {
+        min-width: 0;
+      }
+      .fmzkarten.untereinander {
+        grid-template-columns: minmax(0, 1fr);
+      }
+      .fmzkarten > .breit {
+        grid-column: 1 / -1;
+      }
+      .fmzkarte.breit,
+      .fmzkarten.untereinander > .fmzkarte {
+        overflow-x: auto;
+      }
+      .fmzkarte.breit .nachrichtentabelle,
+      .fmzkarten.untereinander .nachrichtentabelle {
+        table-layout: fixed;
+      }
+      .fmzkarte.breit .nachrichtentabelle :is(th, td),
+      .fmzkarten.untereinander .nachrichtentabelle :is(th, td) {
+        overflow-wrap: anywhere;
+        white-space: normal;
+      }
+      .fmzkarte .nachrichtentabelle .schmalspalte {
+        width: 5.5rem;
+      }
+      .fmzkarte .nachrichtentabelle .knopfspalte {
+        width: 13rem;
+      }
+      .fmzkarte.breit .nachrichtentabelle td button,
+      .fmzkarten.untereinander .nachrichtentabelle td button {
+        white-space: normal;
+        max-width: 100%;
+      }
+      /* R2-SGL P2-4, R2-Si P3-1: Der Hinweiskasten überlagert das Blatt statt es
+         nach unten zu schieben; der Anker hat keine Höhe. */
+      .hinweisanker {
+        position: relative;
+        height: 0;
+        z-index: 30;
+      }
+      .hinweisanker > .hinweiskasten {
+        position: absolute;
+        top: 0;
+        right: 0;
+        left: auto;
+        width: min(42rem, calc(100vw - 28px));
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
+      }
+      .hinweiskasten li button.hinweiszu {
+        margin-left: 6px;
+        padding: 0 6px;
+      }
+      .besetzungshinweis {
+        margin: 4px 0;
+      }
       .konflikthinweis button {
         margin-left: 6px;
       }

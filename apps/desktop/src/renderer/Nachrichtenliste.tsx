@@ -27,7 +27,8 @@
 import { projektion, type Laufzustand, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Kontextort } from "./Klappmenue.js";
-import { dtg, eigeneMarken, kopieFuer, kopieklasse, kopiewort, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
+import { dtg, eigeneMarken, kopieFuer, kopieklasse, kopiewort, vorrangwort } from "./nachrichtenformate.js";
+import { ausgangsvermerk } from "./nachrichtenvermerke.js";
 
 const LAUFWORT: Readonly<Record<Laufzustand, string>> = {
   VOR_FMZ: "vor der FmZ",
@@ -49,13 +50,11 @@ export function laufwort(zustand: Laufzustand): string {
  */
 export function ausgangsstand(zeile: Nachrichtenzeile): string {
   if (zeile.zurueckgezogen) return laufwort("ZURUECKGEZOGEN");
-  const geliefert = (zeile as { readonly fmzVermerkText?: string }).fmzVermerkText ?? "";
-  if (geliefert !== "") return geliefert;
-  const teile = [
-    ...(zeile.annahme === undefined ? [] : [`angenommen ${uhrzeit(zeile.annahme.zeitpunkt)} ${zeile.annahme.handzeichen}`]),
-    ...(zeile.befoerderung === undefined ? [] : [`befördert ${uhrzeit(zeile.befoerderung.zeitpunkt)} ${zeile.befoerderung.handzeichen} (${projektion.mittelWort(zeile.befoerderung.mittel)})`]),
-  ];
-  return teile.length === 0 ? laufwort(zeile.laufzustand) : teile.join(" · ");
+  // R2-FaBe P0-2: „angenommen (FmZ) …“ und „Quittung der Gegenstelle …“ statt „angenommen …“
+  // und „befördert …“ — der Verfasser las die Annahme der eigenen FmZ als Quittung des
+  // Empfängers. Deshalb gilt hier der eigene Satz, nicht `fmzVermerkText` aus Ring 2.
+  if (zeile.annahme === undefined && zeile.befoerderung === undefined) return laufwort(zeile.laufzustand);
+  return ausgangsvermerk(zeile);
 }
 
 function Marken({ zeile, stellen }: { readonly zeile: Nachrichtenzeile; readonly stellen: readonly string[] }): React.JSX.Element {
@@ -88,8 +87,21 @@ interface ZeilenEigenschaften {
   readonly aufKontext: (ort: Kontextort) => void;
 }
 
+/**
+ * Die Nummernspalte ohne Nummer: „folgt (FmZ)“, solange die FmZ sie noch vergeben kann, nach der
+ * Beförderung „ohne Nummer“ (R2-SGL P2-5) — die FmZ hat sie dann bewusst nicht vergeben, und
+ * „folgt“ versprach dem Verfasser eine Nummer, die nicht kommt.
+ */
+export function nummerOhne(zeile: Pick<Nachrichtenzeile, "befoerderung">, folgt: boolean): string {
+  if (!folgt) return "—";
+  return zeile.befoerderung === undefined ? "folgt (FmZ)" : "ohne Nummer";
+}
+
 function Standzelle({ zeile, stellen, posteingang }: { readonly zeile: Nachrichtenzeile; readonly stellen: readonly string[]; readonly posteingang: boolean }): React.JSX.Element {
-  if (posteingang) return <Marken zeile={zeile} stellen={stellen} />;
+  // Additiv (R2-SGL P1-1): In der Sicht „Offen“ stehen auch eigene Ausgänge und Zeilen der eigenen
+  // Station ohne eigene Kopie; sie zeigen ihren Stand, nicht „neu“.
+  const eigeneKopie = zeile.verteiler.some((m) => stellen.includes(m.stelle));
+  if (posteingang && (eigeneKopie || zeile.zurueckgezogen)) return <Marken zeile={zeile} stellen={stellen} />;
   return <>{zeile.richtungKurz === "A" ? ausgangsstand(zeile) : laufwort(zeile.laufzustand)}</>;
 }
 
@@ -101,7 +113,7 @@ function Zeile({ zeile, stellen, posteingang, eingangsspalte = false, gewaehlt, 
   // dass nichts zu tun ist.
   // Additiv (SGL P0-1): Auch ein beförderter Ausgang ohne Nummer wartet auf die FmZ.
   const folgt = zeile.nummer === undefined && !zeile.zurueckgezogen && (zeile.laufzustand === "VOR_FMZ" || zeile.laufzustand === "VOR_LDF" || zeile.richtungKurz === "A");
-  const nummer = zeile.nummer === undefined ? (folgt ? "folgt (FmZ)" : "—") : String(zeile.nummer);
+  const nummer = zeile.nummer === undefined ? nummerOhne(zeile, folgt) : String(zeile.nummer);
   const kopietext = kopie === undefined ? "ohne Kopie" : `Kopie ${projektion.kopieWort(kopie)}`;
   return (
     <tr

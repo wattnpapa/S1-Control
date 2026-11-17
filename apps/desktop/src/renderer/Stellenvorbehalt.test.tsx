@@ -69,6 +69,8 @@ describe("Die Masken der FmZ", () => {
     const bestaetigen = within(maske).getByRole("button", { name: knopf });
     expect((bestaetigen as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(maske).getByRole("button", { name: "Trotzdem" }));
+    // R2-FaBe P0-2: Die Quittung der Gegenstelle ist beim Befördern leer und Pflicht.
+    if (schritt === "befoerderung") fireEvent.change(within(maske).getByLabelText("Quittung der Gegenstelle (Datum/Uhrzeit)"), { target: { value: "1045" } });
     expect((within(maske).getByRole("button", { name: knopf }) as HTMLButtonElement).disabled).toBe(false);
     expect(within(maske).getByText(/Wird vermerkt als: Eintrag durch S4, nicht FmZ/u)).toBeDefined();
     fireEvent.click(within(maske).getByRole("button", { name: knopf }));
