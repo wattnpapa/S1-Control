@@ -192,7 +192,11 @@ export const NACHRICHT_STELLEN = [
   "VERBINDUNGSSTELLE",
   "SICHTER",
   "FMZ",
+  "LDF",
 ] as const;
+
+/** Die Fernmelder der Fernmeldezentrale im Standard; der LdF teilt eine Nachricht einem von ihnen zu. */
+export const FERNMELDER_STANDARD = ["Fm1", "Fm2", "Fm3"] as const;
 
 /** Die Kopiefarben des Verteilers: grün Hauptempfänger, blau Mitleser, rot S2 (§2). Offen. */
 export const NACHRICHT_KOPIEN = ["ROT", "GRUEN", "BLAU"] as const;

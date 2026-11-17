@@ -994,6 +994,7 @@ const ZEITEN: ReadonlyMap<string, { klasse: "IST" | "PLAN"; schluessel?: string 
   // ungeprüft wie `meldung.stand`; die Kenntnisnahme ist immer „jetzt“.
   ["nachricht.aufnahme", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
   ["nachricht.annahme", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
+  ["nachricht.vorschlag", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
   ["nachricht.befoerderung", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
   ["nachricht.nachweis", { klasse: "IST" as const, schluessel: "zeitpunkt" }],
   ["nachricht.sichtung", { klasse: "IST" as const, schluessel: "zeitpunkt" }],

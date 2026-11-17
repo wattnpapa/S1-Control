@@ -543,6 +543,12 @@ export const zEntwurf = z.object({
     .object({
       nachweis: z.unknown().optional(),
       sichtung: z.unknown().optional(),
+      /**
+       * Additiv: die Einheit, an die befördert wurde. Der Worker vermerkt
+       * dort im Funkplan einen Kontakt (Funkprobe „Kontakt“ zur Zeit der
+       * Beförderung).
+       */
+      kontaktEinheitId: z.string().min(1).optional(),
     })
     .optional(),
 });
@@ -1436,9 +1442,20 @@ export interface Sammeluebernahme {
  * Maske (Abschnitte und Einheiten des Einsatzes; die besetzten Stellen stehen
  * an den Peers).
  */
+/** Eine Einheit der Lage als Gegenstelle der Beförderung. */
+export interface Gegenstelle {
+  readonly einheitId: string;
+  readonly name: string;
+}
+
 export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt {
   readonly jetzt: string;
   readonly anschriften: readonly string[];
+  /**
+   * Additiv: die Einheiten der Lage als mögliche Gegenstellen der
+   * Beförderung — mit Kennung, damit der Funkplan den Kontakt bekommt.
+   */
+  readonly gegenstellen?: readonly Gegenstelle[];
   /**
    * Additiv (Schnitt N2, §6 „Papier-Rückfall"): die Vorbelegung der
    * Nachweisungsnummer, höchste bekannte plus eins (Entscheidung 1: Eingang

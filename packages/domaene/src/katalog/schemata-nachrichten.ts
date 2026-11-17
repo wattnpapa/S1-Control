@@ -39,6 +39,19 @@ export const zNachrichtenbezug = z.object({
 /** Aufnahme- und Beförderungsvermerk: Mittel, Zeit, Handzeichen (Feld 1, 2, 4). */
 export const zMittelvermerk = z.object({ mittel: zMittel, zeitpunkt: zZeitpunkt, handzeichen: zHandzeichen });
 
+/**
+ * Der Übermittlungsvorschlag des LdF: auf welchem Weg, an welche Gegenstelle
+ * und durch welchen Fernmelder eine Nachricht übertragen werden soll. Zeit und
+ * Handzeichen sind die des LdF; die Beförderung bleibt Sache des Fernmelders.
+ */
+export const zVorschlag = z.object({
+  mittel: zMittel,
+  fernmelder: zText,
+  gegenstelle: zText.optional(),
+  zeitpunkt: zZeitpunkt,
+  handzeichen: zHandzeichen,
+});
+
 /** Annahmevermerk (Feld 3) und Kenntnisnahme je Stelle: Zeit und Handzeichen. */
 export const zZeitvermerk = z.object({ zeitpunkt: zZeitpunkt, handzeichen: zHandzeichen });
 
@@ -98,6 +111,7 @@ export const NachrichtVerfasst = z.object({
 /** Die Vermerke der FmZ und des Sichters: je ein Strukturfeld, Wert in `neu`. */
 export const NachrichtAngenommen = z.object({ nachrichtId: zId });
 export const NachrichtBefoerdert = z.object({ nachrichtId: zId });
+export const NachrichtUebermittlungVorgeschlagen = z.object({ nachrichtId: zId });
 export const NachrichtNachgewiesen = z.object({ nachrichtId: zId });
 export const NachrichtGesichtet = z.object({ nachrichtId: zId });
 /** Vermerke nach der Sichtung ohne Neusichtung (Feld 20), Text in `neu`. */

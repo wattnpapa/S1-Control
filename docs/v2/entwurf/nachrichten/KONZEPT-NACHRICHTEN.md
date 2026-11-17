@@ -175,7 +175,11 @@ Ausgang. Eine Stelle verfasst eine Nachricht in der Maske (Abschnitt 6). Bis
 zum Knopf „Aufgeben" ist sie ein Entwurf dieses Fensters (`entwurf.ts`), kein
 Ereignis; eStab kennt ebenfalls keinen gespeicherten Entwurf. „Aufgeben"
 schreibt `NachrichtVerfasst` mit Richtung Ausgang, und die Nachricht erscheint
-in der Ausgangswarteschlange der FmZ. Dort setzt der Fernmelder den
+in der Ausgangswarteschlange der FmZ. Dort sieht der LdF (eigene Stelle `LDF`) die Nachricht und
+bestimmt, welcher Fernmelder (im Standard Fm1 bis Fm3) auf welchem Weg an
+welche Gegenstelle übertragen soll: der Übermittlungsvorschlag
+(`NachrichtUebermittlungVorgeschlagen`). Er steht in der Warteschlange und
+belegt die Maske „Befördern" vor; der Fernmelder kann ihn ändern. Dort setzt der Fernmelder den
 Annahmevermerk (`NachrichtAngenommen`, Uhrzeit und Handzeichen) und nach der
 Übermittlung den Beförderungsvermerk mit Mittel und Gegenstelle
 (`NachrichtBefoerdert`), und er trägt sie in die Nachweisung ein
@@ -412,6 +416,7 @@ getrennt keinen Sinn ergäben.
 | `gegenstelle` | Text | Anlage (Eingang) oder `NachrichtBefoerdert` |
 | `aufnahme` | `{ mittel, zeitpunkt, handzeichen }` | Anlage (Eingang) |
 | `annahme` | `{ zeitpunkt, handzeichen }` | `NachrichtAngenommen` |
+| `vorschlag` | `{ mittel, fernmelder, gegenstelle?, zeitpunkt, handzeichen }` | `NachrichtUebermittlungVorgeschlagen` |
 | `befoerderung` | `{ mittel, zeitpunkt, handzeichen }` | `NachrichtBefoerdert` |
 | `nachweis` | `{ nummer, zeitpunkt, handzeichen }` | `NachrichtNachgewiesen` |
 | `sichtung` | `{ zeitpunkt, handzeichen, verteiler: Verteilereintrag[], vermerke }` | `NachrichtGesichtet` |
@@ -438,7 +443,7 @@ feste Werte `true` und `false` wie `EinheitEntfernt`). `NachrichtVermerkt`
 (Form a auf `sichtung/vermerke`) für Vermerke nach der Sichtung ohne
 Neusichtung. Nichts davon setzt Stärke, Status oder Abschnitt; der Fold
 bekommt keine neue Regel, nur neue Zeilen in der Katalogtabelle.
-`FOLD_VERSION` steigt um eins.
+`FOLD_VERSION` steigt um eins (mit dem Übermittlungsvorschlag des LdF auf 11).
 
 Die Nachweisungsnummer ist Nutzlast, nicht Projektion. Eine Projektion
 (Rang nach HLC) gäbe nach einem verspätet eintreffenden Ereignis jeder

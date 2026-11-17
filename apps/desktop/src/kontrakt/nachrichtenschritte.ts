@@ -132,6 +132,7 @@ const NEU_SCHEMA: Readonly<Record<string, { safeParse: (wert: unknown) => { succ
   NachrichtGesichtet: schemata.zSichtung,
   NachrichtKenntnisGenommen: schemata.zZeitvermerk,
   NachrichtAngenommen: schemata.zZeitvermerk,
+  NachrichtUebermittlungVorgeschlagen: schemata.zVorschlag,
   NachrichtBefoerdert: schemata.zMittelvermerk,
   NachrichtNachgewiesen: schemata.zNachweis,
 };
