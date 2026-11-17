@@ -138,6 +138,16 @@ describe("Zuordnung nach VordruckDaten", () => {
     expect(zuordnung.felder).toContain("verteilerS1Spalte3");
   });
 
+  it("S5 bleibt Freitext wie im Vordruck: kein Kästchen, Name im freien Feld (Sichter P3-3, Entscheidung 12)", () => {
+    const daten = vordruckDatenAus({
+      ...GRUNDLAGE,
+      sichtung: { zeitpunkt: "2026-11-17T10:00:00Z", handzeichen: "S2", vermerke: "", verteiler: [{ stelle: "S5", kopie: false }, { stelle: "S4", kopie: false }] },
+    });
+    expect(daten.verteilerText).toEqual({ S1: { spalte2: "S5" } });
+    expect(daten.weitereAnkreuzfelder).toEqual(["verteilerS1Spalte2", "verteilerS4Spalte1"]);
+    expect(daten.vermerke).toBe("");
+  });
+
   it("Betreff kommt in sein eigenes Feld", () => {
     const daten = vordruckDatenAus({ ...GRUNDLAGE, betreff: " Lage " });
     expect(daten.betreff).toBe("Lage");

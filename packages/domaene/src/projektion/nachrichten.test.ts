@@ -123,6 +123,22 @@ describe("Die Sichten", () => {
     expect(a2).toMatchObject({ laufzustand: "ERLEDIGT", gegenstelle: "Kreis OL", befoerderung: { mittel: "TELEFON", handzeichen: "FM" } });
   });
 
+  it("Ausgang: die Stelle (funktion) entscheidet, nicht der Absender-Freitext (SGL P2-14, Entscheidung 14)", () => {
+    const z = zustand([
+      ...lage(),
+      // Freitext im Absender, Stelle S3 in Feld 15/17, anderer Arbeitsplatz „c“.
+      verfasst("A3", { richtung: "AUSGANG", absender: "OV Wildeshausen, S3", funktion: "S3", betreff: "Freitext" }, "c"),
+      // Absender sagt S3, die verfassende Stelle ist aber S1: gehört nicht zu S3.
+      verfasst("A4", { richtung: "AUSGANG", absender: "S3", funktion: "S1", betreff: "Anderer Verfasser" }, "d"),
+    ]);
+    expect(ids(z, { sicht: "ausgang", stellen: ["S3"], clientId: "x" }).sort()).toEqual(["A1", "A3"]);
+    // Das Wort der Maske („FmZ“) trifft den Schlüssel der Stelle („FMZ“).
+    const zFmz = zustand([...lage(), verfasst("A5", { richtung: "AUSGANG", absender: "FmZ", funktion: "FmZ", betreff: "Aus der FmZ" }, "e")]);
+    expect(ids(zFmz, { sicht: "ausgang", stellen: ["FMZ"], clientId: "x" })).toEqual(["A5"]);
+    // Der eigene Arbeitsplatz sieht seine Ausgänge auch ohne passende Stelle.
+    expect(ids(z, { sicht: "ausgang", stellen: ["S6"], clientId: "d" })).toEqual(["A4"]);
+  });
+
   it("Sichter: die Eingänge ohne Sichtung, Blitz zuoberst", () => {
     expect(ids(zustand(lage()), { sicht: "sichter" })).toEqual(["E4", "E3"]);
   });

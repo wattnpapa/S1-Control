@@ -162,3 +162,18 @@ describe("Funktionalität: Nachrichten (N1)", () => {
     expect(erstes?.voll?.nachrichten?.neuFuerStellen).toBe(1);
   });
 });
+
+describe("Funktionalität: Ausgang nach Stelle (SGL P2-14, Entscheidung 14)", () => {
+  it("Szenario: Schichtwechsel — der zweite Arbeitsplatz mit Stelle S4 sieht den Ausgang des ersten, ein Fremder nicht", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    a.dienst.stellenSetzen(["S4"], "Mü");
+    b.dienst.stellenSetzen(["S4"], "Kl");
+    await a.dienst.bediene(nachrichtVerfassen(anlage({ richtung: "AUSGANG", absender: "OV Wildeshausen, S4", funktion: "S4", zeichen: "Mü" })));
+    await takteBis([a, b], 3);
+    expect(sicht(b, "ausgang").zeilen.map((z) => z.id)).toEqual(["N-1"]);
+    // Ein anderer Arbeitsplatz mit anderer Stelle sieht ihn nicht: weder Freitext noch Rechner zählen.
+    b.dienst.stellenSetzen(["S3"], "Kl");
+    expect(sicht(b, "ausgang").zeilen).toEqual([]);
+  });
+});

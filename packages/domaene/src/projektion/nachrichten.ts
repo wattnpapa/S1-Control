@@ -25,6 +25,7 @@ import {
 } from "./nachrichtenzeile.js";
 import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
 import { ueberWarteschwelle } from "./nachrichtenstand.js";
+import { stellenWort } from "./tagebuch-nachrichten.js";
 
 /**
  * Die Sichten des Umschalters (§6); „ldf" additiv (2026-11-17): Ausgänge vor
@@ -44,7 +45,7 @@ export interface Nachrichtenanfrage {
   readonly sicht: Nachrichtensicht;
   /** Die Stellen dieses Arbeitsplatzes; Posteingang und Ausgang schneiden danach zu. */
   readonly stellen?: readonly string[];
-  /** Ausgang: auch, was dieser Arbeitsplatz verfasst hat, unabhängig von der Stelle. */
+  /** Ausgang: auch, was dieser Arbeitsplatz verfasst hat, unabhängig von der Stelle (Stelle = Nutzlastfeld `funktion`, SGL P2-14). */
   readonly clientId?: string;
   /** Nur im Posteingang: die Chips „neu", „gelesen", „erledigt". */
   readonly zustaende?: readonly Posteingangsstand[];
@@ -124,16 +125,33 @@ function trifftSuche(zeile: Nachrichtenzeile, suche: string | undefined): boolea
     .includes(nadel);
 }
 
-/** Ausgang: Richtung Ausgang oder Gesprächsnotiz, von diesem Platz oder diesen Stellen verfasst. */
+/**
+ * Gehört `funktion` (Feld 15 beziehungsweise 17 des Vordrucks: die verfassende
+ * Stelle) zu einer der Stellen der Sitzung? Verglichen wird mit dem Schlüssel
+ * („FMZ") und mit dem Wort der Maske („FmZ"), weil die Maske die Funktion aus
+ * der Stelle als Wort vorbelegt; Groß- und Kleinschreibung zählt nicht.
+ */
+function funktionGehoertZuStellen(funktion: string | undefined, stellen: readonly string[]): boolean {
+  const gesucht = funktion?.trim().toLocaleLowerCase("de-DE") ?? "";
+  if (gesucht === "") return false;
+  return stellen.some((stelle) => [stelle, stellenWort(stelle)].some((name) => name.toLocaleLowerCase("de-DE") === gesucht));
+}
+
+/**
+ * Ausgang: Richtung Ausgang oder Gesprächsnotiz, verfasst von diesem
+ * Arbeitsplatz (`clientId`) oder von einer Stelle der Sitzung (`funktion`).
+ *
+ * SGL P2-14, Entscheidung 14 vom 2026-11-17 („Die Lehrunterlage ist Maßstab"):
+ * Absender ist die Stelle (Vordruck, Feld 15/17), nicht der Absender-Freitext.
+ * Wer beim Schichtwechsel an einem anderen Rechner die Stelle S4 übernimmt,
+ * sieht den Ausgang des Vorgängers; der Freitext („OV Wildeshausen, S4")
+ * entscheidet nichts mehr.
+ */
 function istEigenerAusgang(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
   if (zeile.richtung !== "AUSGANG" && !zeile.gespraechsnotiz) return false;
   const stellen = anfrage.stellen ?? [];
   if (stellen.length === 0 && anfrage.clientId === undefined) return true;
-  return (
-    zeile.clientId === anfrage.clientId ||
-    stellen.includes(zeile.absender) ||
-    (zeile.funktion !== undefined && stellen.includes(zeile.funktion))
-  );
+  return (anfrage.clientId !== undefined && zeile.clientId === anfrage.clientId) || funktionGehoertZuStellen(zeile.funktion, stellen);
 }
 
 function inPosteingang(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
