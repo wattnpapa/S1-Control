@@ -13,10 +13,11 @@
  * tragen die Marke: Ihre Nummer ist auf Papier vergeben.
  */
 
-import { datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { datumZeitGruppe, projektion, zeitpunktText, type Nachrichtenzeile } from "@s1/domaene";
 
 import { druckseiteAlsHtml, tabellenrahmen } from "./druckseite.js";
 import { htmlMaskieren, type Ausgabekopf } from "./index.js";
+import { rueckzugText } from "./nachrichtstempel.js";
 
 export interface Nachweisungsdaten {
   readonly kopf: Ausgabekopf;
@@ -24,6 +25,13 @@ export interface Nachweisungsdaten {
   /** Wer die Ausgabe erstellt hat, etwa „Meier (FmZ)". */
   readonly akteur: string;
   readonly zeilen: readonly Nachrichtenzeile[];
+  /**
+   * Additiv (LdF P2-5): der gewählte Ausschnitt (Schicht), wie ihn
+   * `ausgabeErzeugen` mit `von`/`bis` bekommt; fehlt, gilt der Zeitraum der Zeilen.
+   */
+  readonly zeitraum?: { readonly von?: string; readonly bis?: string };
+  /** Additiv (LdF P2-5): Zeit und Akteur von „Einsatz beendet“, wie im Tagebuch. */
+  readonly beendet?: { readonly zeit: string; readonly akteur: string };
 }
 
 /** Der Satz unter der Tabelle. */
@@ -33,13 +41,15 @@ const SPALTEN: readonly { readonly kopf: string; readonly breite: string }[] = [
   { kopf: "Nr.", breite: "5%" },
   { kopf: "E/A", breite: "4%" },
   { kopf: "Vorrang", breite: "6%" },
+  // Additiv (Nachweisung, zweiter Durchlauf): Mittel — auch nur vorgeschlagen, dann mit Zusatz.
+  { kopf: "Mittel", breite: "7%" },
   { kopf: "Aufnahme", breite: "9%" },
   { kopf: "Annahme", breite: "7%" },
   { kopf: "Beförderung", breite: "7%" },
   { kopf: "Abfassung", breite: "9%" },
-  { kopf: "Absender", breite: "11%" },
-  { kopf: "Anschrift", breite: "11%" },
-  { kopf: "Betreff", breite: "14%" },
+  { kopf: "Absender", breite: "9%" },
+  { kopf: "Anschrift", breite: "9%" },
+  { kopf: "Betreff", breite: "11%" },
   { kopf: "Sichtung", breite: "7%" },
   { kopf: "Marke", breite: "10%" },
 ];
@@ -84,6 +94,8 @@ function zweiteZeile(zeile: Nachrichtenzeile): string | undefined {
   const teile = [
     zeile.sichtung === undefined ? "" : `Sichtung ${vermerkText(zeile.sichtung)}${verteiler === "" ? "" : ` · Verteiler: ${verteiler}`}`,
     zeile.vermerke === undefined ? "" : `Vermerke: ${zeile.vermerke}`,
+    // Additiv (ETB P1-3): warum und wann zurückgezogen — nicht nur durchgestrichen.
+    zeile.zurueckgezogenMit === undefined ? "" : rueckzugText({ zeitpunkt: zeile.zurueckgezogenMit.zeitpunkt, grund: zeile.zurueckgezogenMit.grund ?? "" }),
   ].filter((t) => t !== "");
   if (teile.length === 0) return undefined;
   return `      <tr class="unterzeile"><td></td><td colspan="${String(SPALTEN.length - 1)}">${htmlMaskieren(teile.join(" · "))}</td></tr>`;
@@ -108,6 +120,7 @@ function zeileAlsHtml(zeile: Nachrichtenzeile): string {
     zeile.nummer === undefined ? "" : String(zeile.nummer),
     zeile.richtungKurz,
     VORRANG[zeile.vorrang ?? ""] ?? "",
+    projektion.nachweisungsmittel(zeile) ?? "",
     zeile.aufnahme === undefined ? "" : datumZeitGruppe(zeile.aufnahme.zeitpunkt),
     vermerkText(zeile.annahme),
     vermerkText(zeile.befoerderung),
@@ -122,11 +135,34 @@ function zeileAlsHtml(zeile: Nachrichtenzeile): string {
   return [`      <tr>${zellen.map((z) => `<td>${htmlMaskieren(z)}</td>`).join("")}</tr>`, ...(unter === undefined ? [] : [unter])].join("\n");
 }
 
+/**
+ * „Zeitraum 08.09.2026 08:01 bis 08.09.2026 09:30“ (LdF P2-5): aus dem
+ * gewählten Ausschnitt, sonst aus den Zeilen. Leer ohne Zeilen und Ausschnitt.
+ */
+export function zeitraumText(daten: Pick<Nachweisungsdaten, "zeilen" | "zeitraum">): string {
+  const ausZeilen = projektion.nachweisungszeitraum(daten.zeilen);
+  const von = daten.zeitraum?.von ?? ausZeilen?.von;
+  const bis = daten.zeitraum?.bis ?? ausZeilen?.bis;
+  if (von === undefined && bis === undefined) return "";
+  const teil = (wort: string, zeit: string | undefined): string => (zeit === undefined ? "" : `${wort} ${zeitpunktText(zeit)}`);
+  const schicht = daten.zeitraum === undefined ? "" : " (Ausschnitt)";
+  return `Zeitraum${schicht} ${[teil("von", von), teil("bis", bis)].filter((t) => t !== "").join(" ")}`;
+}
+
+/** Die Abschlusszeile wie im Tagebuch (LdF P2-5, ETB P0-3); leer, solange der Einsatz läuft. */
+export function abschlusszeile(beendet: Nachweisungsdaten["beendet"], anzahl: number): string {
+  if (beendet === undefined) return "";
+  return `Nachweisung abgeschlossen ${zeitpunktText(beendet.zeit)}, ${beendet.akteur} · ${String(anzahl)} Nachrichten`;
+}
+
 /** Die Nachweisung als druckbare A4-Seite. */
 export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
+  const zeitraum = zeitraumText(daten);
+  const abschluss = abschlusszeile(daten.beendet, daten.zeilen.length);
   const kopfzeile = [
     '  <h2>Nachweisung</h2>',
     `  <p class="hinweis">Führungsstelle ${htmlMaskieren(daten.fuestName)} · ${String(daten.zeilen.length)} Nachrichten</p>`,
+    ...(zeitraum === "" ? [] : [`  <p class="hinweis">${htmlMaskieren(zeitraum)}</p>`]),
   ];
   const tabelle = [
     '  <table class="liste" style="font-size:7.5pt">',
@@ -144,7 +180,9 @@ export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
       ...kopfzeile,
       tabellenrahmen(tabelle),
       `  <p class="hinweis"><strong>${htmlMaskieren(nummernfuss(daten.zeilen))}</strong></p>`,
-      `  <p class="hinweis">Erstellt ${htmlMaskieren(daten.kopf.stand)} · ${htmlMaskieren(daten.akteur)}</p>`,
+      ...(abschluss === "" ? [] : [`  <p class="hinweis"><strong>${htmlMaskieren(abschluss)}</strong></p>`]),
+      // „Erstellt Stand: …“ stand doppelt (LdF P2-5); das Wort „Stand“ fällt hier weg.
+      `  <p class="hinweis">Erstellt ${htmlMaskieren(daten.kopf.stand.replace(/^Stand:?\s*/u, ""))} · ${htmlMaskieren(daten.akteur)}</p>`,
       `  <p class="hinweis">${htmlMaskieren(NACHWEISUNG_FUSSNOTE)}</p>`,
     ],
   });

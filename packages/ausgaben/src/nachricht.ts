@@ -27,6 +27,8 @@ import {
   type VordruckVermerk,
 } from "bos-nachrichtenvordruck";
 
+import { zeichneRueckzugsstempel, zusatzUebernehmen, type Nachrichtenrueckzug } from "./nachrichtstempel.js";
+
 /** Ein Vermerk im Kopf des Vordrucks: wer, wann, mit welchem Mittel. */
 export interface Nachrichtenvermerk {
   readonly mittel?: string;
@@ -89,6 +91,10 @@ export interface Nachrichtendruck {
   readonly nachweis?: Nachrichtennachweis;
   readonly sichtung?: Nachrichtensichtung;
   readonly uebung: boolean;
+  /** Additiv (ETB P1-2): die laufende Nummer der Tagebuchzeile — „ETB-Nr.“ in Feld 20. */
+  readonly etbNummer?: string;
+  /** Additiv (ETB P1-3, P2-7): zurückgezogen — Stempel mit Datum-Zeit-Gruppe und Grund. */
+  readonly zurueckgezogen?: Nachrichtenrueckzug;
 }
 
 /** Die Optionen der Ausgabe. */
@@ -292,6 +298,7 @@ export function vordruckDatenAus(nachricht: Nachrichtendruck): VordruckDaten {
   sichtungUebernehmen(daten, nachricht.sichtung);
   const weg = wegvermerkText(nachricht.vorschlag);
   if (weg !== "") daten.vermerke = druckbar([daten.vermerke, weg].filter(Boolean).join(" "));
+  zusatzUebernehmen(daten, nachricht, druckbar);
   return daten;
 }
 
@@ -360,6 +367,8 @@ export function nachrichtAlsVordruckPdf(nachricht: Nachrichtendruck, optionen: V
   bloecke.forEach((daten, i) => {
     const rechts = quer && i % 2 === 1;
     if (i > 0 && !rechts) pdf.addPage();
+    // Der Stempel vor dem Formular, damit Linien und Eintragungen darüber liegen (ETB P2-7).
+    if (nachricht.zurueckgezogen !== undefined) zeichneRueckzugsstempel(pdf, rechts ? VERSATZ_RECHTS : 0);
     blattZeichnen(pdf, daten, rechts ? VERSATZ_RECHTS : 0);
   });
   return bytes(pdf);

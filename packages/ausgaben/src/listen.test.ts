@@ -91,6 +91,14 @@ describe("Tagebuch als HTML: zwei Zeiten, Nummer, Handzeichen, Abschluss (ETB P0
     expect(html).toContain("[Berichtigung]");
     expect(html).not.toContain("(Grund: doppelt)");
   });
+
+  it("zeigt die Stelle des Ereignisses statt des Anzeigenamens, wo es eine nennt (ETB P1-7)", () => {
+    const html = tagebuchAlsHtml([zeile({ stelle: "SICHTER", handzeichen: "Si" }), zeile({ ereignisId: "a:3" })], KOPF);
+    const reihen = html.split("<tr>").slice(2);
+    expect(reihen[0]).toContain("<td>Arbeitsplatz FmZ</td>");
+    expect(reihen[1]).toContain("<td>Sichter</td>");
+    expect(reihen[1]).not.toContain("Arbeitsplatz FmZ");
+  });
 });
 
 describe("Papier-Vordruck", () => {

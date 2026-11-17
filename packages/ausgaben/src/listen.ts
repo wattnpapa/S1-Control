@@ -11,7 +11,7 @@
  * Neuesten oben.
  */
 
-import type { projektion } from "@s1/domaene";
+import { projektion } from "@s1/domaene";
 
 import { druckseiteAlsHtml, tabellenrahmen, zeitText } from "./druckseite.js";
 import { htmlMaskieren, type Ausgabekopf } from "./index.js";
@@ -107,7 +107,8 @@ function tagebuchZeile(zeile: projektion.Tagebuchzeile, laufendeNummer: number):
     `        ${zelle(zeile.zeitpunkt === undefined ? undefined : zeitText(zeile.zeitpunkt))}`,
     `        ${zelle(zeile.nachrichtNummer)}`,
     `        ${zelle(`${satzMitGrund(zeile)}${marke}`)}`,
-    `        ${zelle(zeile.akteur)}`,
+    // ETB P1-7: die Stelle, die das Ereignis nennt, statt des Anzeigenamens „Arbeitsplatz“; das Handzeichen hat seine Spalte.
+    `        ${zelle(zeile.stelle === undefined ? zeile.akteur : projektion.stellenWort(zeile.stelle))}`,
     `        ${zelle(zeile.handzeichen)}`,
     `        ${zelle(zeile.rechner)}`,
     '        <td class="notiz"></td>',
@@ -131,7 +132,7 @@ const TAGEBUCHSPALTEN = [
   ["Zeit lt. Meldung", "fachliche Zeit: Vermerk, Funkzeit, Abfassung"],
   ["Nachricht", "Nummer der Nachweisung zur Zeit des Eintrags"],
   ["Eintrag", ""],
-  ["Akteur", ""],
+  ["Akteur", "Stelle, wo der Schritt eine nennt, sonst der Arbeitsplatz"],
   ["Hz.", "Handzeichen, wo der Schritt eines trägt"],
   ["Rechner", ""],
   ["Notiz", ""],

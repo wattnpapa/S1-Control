@@ -156,3 +156,5 @@ export {
 // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7) und die Naht von der Projektionszeile zum Vordruck.
 export { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml, nachweisungMarken, nummernfuss, type Nachweisungsdaten } from "./nachweisung.js";
 export { entwurfsdruck, nachrichtendateiname, nachrichtendruckAus, type Nachrichtenentwurf } from "./nachrichtendruck.js";
+// Additiv (ETB P1-2, P1-3, P2-7): ETB-Nummer und Stempel der zurückgezogenen Nachricht.
+export { RUECKZUG_WORT, etbVermerk, rueckzugText, zeichneRueckzugsstempel, type Nachrichtenrueckzug } from "./nachrichtstempel.js";

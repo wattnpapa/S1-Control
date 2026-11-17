@@ -50,7 +50,8 @@ describe("Der Entwurf auf dem Vordruck (Vorschau)", () => {
   });
 
   it("bietet im Teileinstieg nur, was Vorschau und Druck teilen", () => {
-    expect(Object.keys(vordruck).sort()).toEqual(["blattZeichnen", "druckbar", "entwurfsdruck", "nachrichtAlsVordruckPdf", "nachrichtendruckAus", "vordruckBlaetterAus"]);
+    // Additiv (ETB P2-7): der Stempel der zurückgezogenen Nachricht, damit die Vorschau ihn zeichnet wie der Druck.
+    expect(Object.keys(vordruck).sort()).toEqual(["RUECKZUG_WORT", "blattZeichnen", "druckbar", "entwurfsdruck", "nachrichtAlsVordruckPdf", "nachrichtendruckAus", "rueckzugText", "vordruckBlaetterAus", "zeichneRueckzugsstempel"]);
   });
 });
 

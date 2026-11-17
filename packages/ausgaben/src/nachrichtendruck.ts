@@ -75,6 +75,9 @@ export function nachrichtendruckAus(zeile: Nachrichtenzeile, uebung: boolean): N
     ...(nachweis === undefined ? {} : { nachweis }),
     ...(sichtung === undefined ? {} : { sichtung }),
     uebung,
+    // Additiv (ETB P1-2, P1-3, P2-7): ETB-Nummer in Feld 20, Stempel beim Zurückziehen.
+    ...(zeile.etbNummer === undefined ? {} : { etbNummer: String(zeile.etbNummer) }),
+    ...(zeile.zurueckgezogenMit === undefined ? {} : { zurueckgezogen: { zeitpunkt: zeile.zurueckgezogenMit.zeitpunkt, grund: zeile.zurueckgezogenMit.grund ?? "" } }),
   };
 }
 

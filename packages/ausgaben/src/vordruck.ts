@@ -22,3 +22,5 @@ export {
   type Vordruckoptionen,
 } from "./nachricht.js";
 export { entwurfsdruck, nachrichtendruckAus, type Nachrichtenentwurf } from "./nachrichtendruck.js";
+// Additiv (ETB P2-7): der Stempel der zurückgezogenen Nachricht, damit die Vorschau ihn wie der Druck zeichnet.
+export { RUECKZUG_WORT, rueckzugText, zeichneRueckzugsstempel } from "./nachrichtstempel.js";

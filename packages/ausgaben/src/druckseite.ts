@@ -13,6 +13,8 @@
  * Handy nicht aus dem Bild.
  */
 
+import { zeitpunktText } from "@s1/domaene";
+
 import { htmlMaskieren, kopfAlsHtml, type Ausgabekopf } from "./index.js";
 
 export interface Druckseite {
@@ -78,11 +80,13 @@ export function tabellenrahmen(tabelle: string): string {
   return `  <div class="tabellenrahmen">\n${tabelle}\n  </div>`;
 }
 
-/** Zeitangabe „TT.MM.JJJJ HH:MM“ in Ortszeit — ohne `Intl`, damit zwei Rechner gleich drucken. */
+/**
+ * Zeitangabe „TT.MM.JJJJ HH:MM“ in der Anzeigezone Europe/Berlin
+ * (`zeitpunktText`). Früher in der Ortszeit des Rechners — damit druckten zwei
+ * Rechner mit verschiedener Zone dasselbe Tagebuch verschieden (Audits
+ * Nachrichten SGL P3-16, ETB P2-1, LdF P2-4).
+ */
 export function zeitText(iso: string | undefined): string {
   if (iso === undefined || iso === "") return "—";
-  const t = new Date(iso);
-  if (Number.isNaN(t.getTime())) return iso;
-  const z = (n: number): string => String(n).padStart(2, "0");
-  return `${z(t.getDate())}.${z(t.getMonth() + 1)}.${String(t.getFullYear())} ${z(t.getHours())}:${z(t.getMinutes())}`;
+  return zeitpunktText(iso);
 }

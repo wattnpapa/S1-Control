@@ -94,6 +94,18 @@ describe("Präsenz nach §6.4", () => {
     await expect(entfernePraesenz(optionen(platz, "8899aabb"))).resolves.toBeUndefined();
   });
 
+  it("schreibt beim Abgeben der Stelle die Präsenz ohne Stellen und Handzeichen, mit abgemeldet (Sichter P1-4, ETB P3-3)", async () => {
+    await using platz = await arbeitsplatz();
+    const mitStelle = { ...optionen(platz, "8899aabb"), stellen: ["SICHTER"], handzeichen: "Si" };
+    await schreibePraesenz(mitStelle, stand);
+    expect((await liesFremdePraesenz(optionen(platz, "9f3c1a20")))[0]?.praesenz).toMatchObject({ stellen: ["SICHTER"], handzeichen: "Si" });
+    await schreibePraesenz({ ...mitStelle, abgemeldet: true }, stand);
+    const gelesen = (await liesFremdePraesenz(optionen(platz, "9f3c1a20")))[0]?.praesenz;
+    expect(gelesen?.abgemeldet).toBe(true);
+    expect(gelesen?.stellen).toBeUndefined();
+    expect(gelesen?.handzeichen).toBeUndefined();
+  });
+
   it("rechnet die Uhrabweichung gegen den Sehzeitpunkt, nicht gegen das Alter des Lebenszeichens", async () => {
     await using platz = await arbeitsplatz();
     const beobachtung = new Praesenzbeobachtung();

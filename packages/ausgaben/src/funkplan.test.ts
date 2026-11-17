@@ -3,7 +3,7 @@
 import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../../domaene/src/fold.js";
-import { projektion } from "../../domaene/src/index.js";
+import { projektion, zeitpunktAusWandzeit } from "../../domaene/src/index.js";
 import { anlageEreignis, feldEreignis, hlc } from "../../domaene/src/pruefhilfen/ereignisbau.js";
 import { prueflageEreignisse } from "../../domaene/src/pruefhilfen/pruefage.js";
 
@@ -103,7 +103,8 @@ describe("Die Ausgabe Funkplan", () => {
   });
 
   it("führt „Letzter Kontakt“ als letzte Spalte: über der Schwelle in Worten, „kein Kontakt“ dahinter", () => {
-    const um = (stunde: number, minute: number): string => new Date(2026, 8, 8, stunde, minute).toISOString();
+    // Wandzeit der Anzeigezone (SGL P3-16): 12:50 heißt 12:50 in Berlin, gleich wie der Rechner steht.
+    const um = (stunde: number, minute: number): string => zeitpunktAusWandzeit({ jahr: 2026, monat: 9, tag: 8, stunde, minute }) ?? "";
     const proben = [
       feldEreignis(h(), n, "FunkprobeDurchgefuehrt", { einheitId: "E01", ergebnis: "KONTAKT" }, null, { zeitpunkt: um(12, 50), rufgruppeId: "R1" }),
       feldEreignis(h(), n, "FunkprobeDurchgefuehrt", { einheitId: "E01", ergebnis: "KEIN_KONTAKT" }, null, { zeitpunkt: um(13, 5), grund: "Funkloch" }, "Funkloch"),

@@ -76,6 +76,14 @@ export interface Praesenz {
    */
   readonly stellen?: readonly string[];
   readonly handzeichen?: string;
+  /**
+   * Additiv (Audits Nachrichten, Sichter P1-4, ETB P3-3): Der Arbeitsplatz hat
+   * seine Stelle abgegeben — Akte geschlossen, Einsatz gewechselt, Seite
+   * verlassen. Die Datei steht dann ohne Stellen und Handzeichen, und die
+   * Kollegen zählen ihn sofort nicht mehr, statt bis zum Verfall der Präsenz
+   * (rund zwei Minuten) einen Sichter für besetzt zu halten.
+   */
+  readonly abgemeldet?: boolean;
 }
 
 export interface PraesenzOptionen {
@@ -89,6 +97,8 @@ export interface PraesenzOptionen {
   /** Additiv: Stellen und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md §4); nur beim Schreiben gelesen. */
   readonly stellen?: readonly string[];
   readonly handzeichen?: string;
+  /** Additiv: „Stelle abgegeben“ — schreibt `abgemeldet: true` und lässt Stellen und Handzeichen weg. */
+  readonly abgemeldet?: boolean;
 }
 
 /** Schreibt die eigene Präsenzdatei (§6.4). Kein Rename, kein `fsync`. */
@@ -109,8 +119,9 @@ export async function schreibePraesenz(
     offset: stand.offset,
     ...(quarantaene.length === 0 ? {} : { quarantaene }),
     ...(bearbeitet.length === 0 ? {} : { bearbeitet }),
-    ...(optionen.stellen === undefined ? {} : { stellen: optionen.stellen }),
-    ...(optionen.handzeichen === undefined || optionen.handzeichen === "" ? {} : { handzeichen: optionen.handzeichen }),
+    ...(optionen.stellen === undefined || optionen.abgemeldet === true ? {} : { stellen: optionen.stellen }),
+    ...(optionen.handzeichen === undefined || optionen.handzeichen === "" || optionen.abgemeldet === true ? {} : { handzeichen: optionen.handzeichen }),
+    ...(optionen.abgemeldet === true ? { abgemeldet: true } : {}),
   };
   await optionen.dateisystem.legeVerzeichnisAn(optionen.ablage.sharePraesenz);
   await optionen.dateisystem.schreibeUeberOhneSync(

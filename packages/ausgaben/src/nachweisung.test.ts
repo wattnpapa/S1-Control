@@ -79,10 +79,12 @@ describe("Die Ausgabe Nachweisung", () => {
     const zeilenHtml = html.split("\n").filter((z) => z.startsWith("      <tr>"));
     expect(zeilenHtml).toHaveLength(3);
     // E1: Nr. 26, Sofort, Aufnahme als Datum-Zeit-Gruppe, Sichtung vierstellig mit Handzeichen
-    expect(zeilenHtml[0]).toContain("<td>26</td><td>E</td><td>Sofort</td><td>080802sep26</td><td></td><td></td><td>080801sep26</td>");
+    // Additiv: Spalte Mittel nach Vorrang (aus dem Aufnahmevermerk).
+    expect(zeilenHtml[0]).toContain("<td>26</td><td>E</td><td>Sofort</td><td>Funk</td><td>080802sep26</td><td></td><td></td><td>080801sep26</td>");
     expect(zeilenHtml[0]).toContain("<td>0805 SI</td>");
     // A1: Annahme und Beförderung vierstellig mit Handzeichen
-    expect(zeilenHtml[1]).toContain("<td>A</td><td></td><td></td><td>0803 FM</td><td>0804 FM</td>");
+    expect(zeilenHtml[1]).toContain("<td>A</td><td></td>");
+    expect(zeilenHtml[1]).toContain("<td></td><td>0803 FM</td><td>0804 FM</td>");
     // E2: ohne Nummer, ohne Marke
     expect(zeilenHtml[2]).toContain("<td></td><td>E</td>");
   });
@@ -98,7 +100,7 @@ describe("Die Ausgabe Nachweisung", () => {
 
   it("zeigt Sichtung, Verteiler und Vermerke als zweite Zeile und die Nummernfolge im Fuß (Sichter-Audit, LdF P2-2)", () => {
     const html = nachweisungAlsHtml(daten());
-    expect(html).toContain('<tr class="unterzeile"><td></td><td colspan="11">Sichtung 0805 SI · Verteiler: S3 (grün), S2 (blau), S4 (rot) · Vermerke: an S3 weiter</td></tr>');
+    expect(html).toContain('<tr class="unterzeile"><td></td><td colspan="12">Sichtung 0805 SI · Verteiler: S3 (grün), S2 (blau), S4 (rot) · Vermerke: an S3 weiter</td></tr>');
     expect(html).toContain("Nummern 1 bis 26; Fehlende Nummern: 1–25 · ohne Nummer: 1 · zurückgezogen: 0");
     expect(html).toContain("<td>ohne Nummer</td>");
     const lueckenlos = zeilen().map((z) => ({ ...z, nummer: z.id === "E2" ? 2 : 1 }));
@@ -153,5 +155,28 @@ describe("nachrichtendruckAus", () => {
     const vordruck = vordruckDatenAus(druck);
     expect(vordruck.nummer).toBe("26");
     expect(vordruck.weitereAnkreuzfelder).toContain("verteilerS3Spalte1");
+  });
+});
+
+describe("Nachweisung, zweiter Durchlauf (LdF P2-5, ETB P1-3, Mittel vorgeschlagen)", () => {
+  it("zeigt das nur vorgeschlagene Mittel mit Zusatz statt leer", () => {
+    const e2 = zeilen().find((z) => z.id === "E2") as Nachrichtenzeile;
+    const mitVorschlag = { ...e2, vorschlag: { mittel: "KURIER", fernmelder: "Fm2", zeitpunkt: um(6), handzeichen: "Lf" } };
+    expect(nachweisungAlsHtml({ ...daten(), zeilen: [mitVorschlag] })).toContain("<td>Kurier/Melder (vorgeschlagen)</td>");
+  });
+
+  it("nennt den Zeitraum aus den Zeilen oder dem Ausschnitt und die Abschlusszeile des beendeten Einsatzes", () => {
+    const html = nachweisungAlsHtml(daten());
+    expect(html).toMatch(/Zeitraum von \d\d\.\d\d\.\d{4} \d\d:\d\d bis \d\d\.\d\d\.\d{4} \d\d:\d\d/u);
+    expect(html).not.toContain("Nachweisung abgeschlossen");
+    const schicht = nachweisungAlsHtml({ ...daten(), zeitraum: { von: "2026-09-08T06:00:00Z", bis: "2026-09-08T14:00:00Z" }, beendet: { zeit: "2026-09-08T15:00:00Z", akteur: "Meier" } });
+    expect(schicht).toContain("Zeitraum (Ausschnitt) von 08.09.2026 08:00 bis 08.09.2026 16:00");
+    expect(schicht).toContain("Nachweisung abgeschlossen 08.09.2026 17:00, Meier · 3 Nachrichten");
+  });
+
+  it("nennt Zeit und Grund des Zurückziehens in der zweiten Zeile", () => {
+    const e2 = zeilen().find((z) => z.id === "E2") as Nachrichtenzeile;
+    const zurueck = { ...e2, zurueckgezogen: true, zurueckgezogenMit: { zeitpunkt: "2026-09-08T08:30:00+02:00", grund: "Doppelt aufgenommen" } };
+    expect(nachweisungAlsHtml({ ...daten(), zeilen: [zurueck] })).toContain("ZURÜCKGEZOGEN 080830sep26: Doppelt aufgenommen");
   });
 });
