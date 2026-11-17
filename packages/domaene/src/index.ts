@@ -182,6 +182,7 @@ export type {
   Ausgabestellenzeile,
   Unterkunftskarte,
   Bedarfszeile,
+  Ohnebedarfszeile,
   Unterbringungsbedarf,
   Versorgungsbewegung,
   Versorgungsblatt,

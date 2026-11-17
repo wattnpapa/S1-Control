@@ -2,12 +2,14 @@
  * Die Unterkünfte als Karten (S4.2, 4e): Name, Ort, Kapazität, Belegung als
  * Balken in m/w/d, frei, dazu die Marke „frei", „voll" oder „⚠ überbelegt".
  *
- * Ändern und Auflösen stehen an der Karte; das Auflösen fragt einen Grund
+ * Darunter die untergebrachten Einheiten beim Namen und „Einheit zuweisen"
+ * (`EinheitZuweisen.tsx`). Ändern und Auflösen stehen an der Karte; das Auflösen fragt einen Grund
  * (Pflicht, §2.4) — wer eine Unterkunft auflöst, nimmt Leuten ihr Bett.
  */
 
-import type { Unterkunftskarte } from "@s1/domaene";
+import type { Unterbringungsbedarf, Unterkunftskarte } from "@s1/domaene";
 
+import { EinheitZuweisen } from "./EinheitZuweisen.js";
 import { useGrundabfrage } from "./Grundabfrage.js";
 import { useLaden } from "./laden.js";
 import { einheitenText } from "./versorgungstext.js";
@@ -27,6 +29,7 @@ function Marke({ k }: { readonly k: Unterkunftskarte }): React.JSX.Element {
 
 function Karte(props: {
   readonly k: Unterkunftskarte;
+  readonly bedarf: Unterbringungsbedarf;
   readonly nurLesen: boolean;
   readonly aufAendern: (k: Unterkunftskarte) => void;
   readonly aufAufloesen: (k: Unterkunftskarte) => void;
@@ -49,6 +52,10 @@ function Karte(props: {
         <strong>{k.belegt.gesamt}</strong> / {k.kapazitaet} · m {k.belegt.m} · w {k.belegt.w} · d {k.belegt.d} ·{" "}
         {k.einheiten.length === 0 ? "keine Einheit" : einheitenText(k.einheiten.length)}
       </p>
+      {k.einheiten.length > 0 && (
+        <p className="untergebrachte">{k.einheiten.map((e) => e.einheit).join(" · ")}</p>
+      )}
+      {!props.nurLesen && !k.aufgeloest && <EinheitZuweisen unterkunftId={k.unterkunftId} unterkunft={k.name} bedarf={props.bedarf} />}
       {!props.nurLesen && (
         <p className="kartenknoepfe">
           {k.aufgeloest ? (
@@ -73,6 +80,7 @@ function Karte(props: {
 
 export function Unterkunftskarten(props: {
   readonly karten: readonly Unterkunftskarte[];
+  readonly bedarf: Unterbringungsbedarf;
   readonly nurLesen: boolean;
   readonly aufAendern: (k: Unterkunftskarte) => void;
 }): React.JSX.Element {
@@ -90,7 +98,7 @@ export function Unterkunftskarten(props: {
     <div className="unterkunftskarten">
       {props.karten.length === 0 && <p className="hinweistext">Noch keine Unterkunft angelegt.</p>}
       {props.karten.map((k) => (
-        <Karte key={k.unterkunftId} k={k} nurLesen={props.nurLesen} aufAendern={props.aufAendern} aufAufloesen={aufAufloesen} />
+        <Karte key={k.unterkunftId} k={k} bedarf={props.bedarf} nurLesen={props.nurLesen} aufAendern={props.aufAendern} aufAufloesen={aufAufloesen} />
       ))}
       <p className="legende">
         <span className="m" /> männl. <span className="w" /> weibl. <span className="d" /> div.

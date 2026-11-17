@@ -2,8 +2,8 @@
  * Komponententests zur Unteransicht „Unterbringung" (S4.2).
  *
  * Die Belegung rechnet Ring 2; hier steht, was die Oberfläche schreibt:
- * Anlage und Änderung als Maske, Auflösen mit Pflichtgrund, Zuweisung in
- * der Zelle mit Doppelklick, Enter und Esc — und dass „überbelegt" an der
+ * Anlage und Änderung als Maske, Auflösen mit Pflichtgrund, Zuweisung über
+ * die sichtbare Wahl in der Zeile oder an der Karte — und dass „überbelegt" an der
  * Karte steht statt verweigert zu werden.
  */
 
@@ -92,35 +92,69 @@ describe("Die Unteransicht „Unterbringung“", () => {
     });
   });
 
-  it("weist in der Zelle per Doppelklick und Enter zu; Esc verwirft", async () => {
+  it("zeigt die Wahl sichtbar in der Zeile und schreibt erst mit „Zuweisen“; Esc verwirft", async () => {
     zeichne();
     const zeile = screen.getByRole("row", { name: /2\. Zug FF Hude/ });
     expect(within(zeile).getAllByText("Anmarsch").at(-1)?.className).toContain("marke-zustand");
-    fireEvent.doubleClick(within(zeile).getByTitle(/Unterkunft wählen/));
-    let wahl = screen.getByLabelText("Unterkunft für 2. Zug FF Hude");
+    const wahl = within(zeile).getByLabelText("Unterkunft für 2. Zug FF Hude");
     expect(within(wahl).getByRole("option", { name: /Turnhalle BBS Haarentor \(24 frei\)/ })).toBeDefined();
+    expect(within(zeile).queryByRole("button", { name: "Zuweisen" })).toBeNull();
     fireEvent.change(wahl, { target: { value: "U2" } });
     fireEvent.keyDown(wahl, { key: "Escape" });
+    expect((wahl as HTMLSelectElement).value).toBe("");
     expect(bedient()).toEqual([]);
 
-    fireEvent.doubleClick(within(zeile).getByTitle(/Unterkunft wählen/));
-    wahl = screen.getByLabelText("Unterkunft für 2. Zug FF Hude");
     fireEvent.change(wahl, { target: { value: "U1" } });
-    fireEvent.keyDown(wahl, { key: "Enter" });
+    fireEvent.click(within(zeile).getByRole("button", { name: "Zuweisen" }));
     await waitFor(() => {
       expect(bedient()).toEqual([{ typ: "EinheitUntergebracht", nutzlast: { einheitId: "Z1" }, vorher: null, neu: "U1", vorwertPruefen: true }]);
+    });
+  });
+
+  it("schreibt die Wahl auch mit Enter", async () => {
+    zeichne();
+    const wahl = screen.getByLabelText("Unterkunft für 2. Zug FF Hude");
+    fireEvent.change(wahl, { target: { value: "U2" } });
+    fireEvent.keyDown(wahl, { key: "Enter" });
+    await waitFor(() => {
+      expect(bedient()).toEqual([{ typ: "EinheitUntergebracht", nutzlast: { einheitId: "Z1" }, vorher: null, neu: "U2", vorwertPruefen: true }]);
     });
   });
 
   it("hebt eine Zuweisung über „ohne Unterkunft“ auf", async () => {
     zeichne();
     const zeile = screen.getByRole("row", { name: /2\. Zug FF Rastede/ });
-    fireEvent.doubleClick(within(zeile).getByText("Turnhalle BBS Haarentor"));
-    const wahl = screen.getByLabelText("Unterkunft für 2. Zug FF Rastede");
-    fireEvent.change(wahl, { target: { value: "" } });
-    fireEvent.keyDown(wahl, { key: "Enter" });
+    fireEvent.change(within(zeile).getByLabelText("Unterkunft für 2. Zug FF Rastede"), { target: { value: "" } });
+    fireEvent.click(within(zeile).getByRole("button", { name: "Aufheben" }));
     await waitFor(() => {
       expect(bedient()).toEqual([{ typ: "UnterbringungAufgehoben", nutzlast: { einheitId: "E1" }, vorher: "U1", neu: null, vorwertPruefen: true }]);
     });
+  });
+
+  it("nennt an der Karte die untergebrachten Einheiten beim Namen", () => {
+    zeichne();
+    const halle = screen.getByRole("article", { name: "Turnhalle BBS Haarentor" });
+    expect(within(halle).getByText("2. Zug FF Rastede")).toBeDefined();
+  });
+
+  it("weist von der Karte aus zu, auch Einheiten ohne gemeldeten Bedarf", async () => {
+    zeichne();
+    const karte = screen.getByRole("article", { name: "Gerätehaus Rastede" });
+    const wahl = within(karte).getByLabelText("Einheit in Gerätehaus Rastede unterbringen");
+    expect(within(wahl).getByRole("option", { name: /2\. Zug FF Hude/ })).toBeDefined();
+    expect(within(wahl).queryByRole("option", { name: /2\. Zug FF Rastede/ })).toBeNull();
+    const knopf = within(karte).getByRole("button", { name: "Zuweisen" }) as HTMLButtonElement;
+    expect(knopf.disabled).toBe(true);
+    fireEvent.change(wahl, { target: { value: "G1" } });
+    fireEvent.click(knopf);
+    await waitFor(() => {
+      expect(bedient()).toEqual([{ typ: "EinheitUntergebracht", nutzlast: { einheitId: "G1" }, vorher: null, neu: "U2", vorwertPruefen: true }]);
+    });
+  });
+
+  it("zeigt im Nur-Lesen-Modus keine Wahl", () => {
+    useLaden.setState({ lagebild: { ...BEISPIEL_LAGEBILD, einsatzStatus: "ARCHIVIERT" } });
+    zeichne();
+    expect(screen.queryByLabelText("Unterkunft für 2. Zug FF Hude")).toBeNull();
   });
 });

@@ -23,7 +23,7 @@ import type { Zustand } from "../zustand.js";
 
 import { logistikblatt } from "./logistik.js";
 import { sofortbedarfsliste } from "./sofortbedarf.js";
-import { unterbringungsbedarf } from "./unterkunft.js";
+import { unterbringung, unterbringungsbedarf } from "./unterkunft.js";
 import { versorgungseinheiten } from "./versorgung.js";
 import {
   mahlzeitenplan,
@@ -80,6 +80,21 @@ describe("Unterbringung und Sofortbedarf", () => {
     expect(zeilen).toEqual([
       expect.objectContaining({ einheitId: "E1", m: 10, w: 2, d: 0, ruhezeit: true, anmarsch: false, schicht: "NACHT", zustand: "OHNE_UNTERKUNFT" }),
     ]);
+  });
+
+  it("führt Einheiten ohne gemeldeten Bedarf getrennt, damit sie zuweisbar bleiben", () => {
+    let n = 0;
+    const h = (): ReturnType<typeof hlc> => hlc(++n * 1000, 0, "a");
+    const z = materialisiere(
+      falteHinzu(leereFaltung(), [
+        einsatzAngelegt(h(), 1, { einsatzId: "X", name: "Sturm", art: "EINSATZ", fuestName: "FüSt", beginn: "2026-09-08T08:00:00+02:00", schichtmodell: "ZWEI_SCHICHT" }),
+        abschnittAngelegt(h(), 2, { abschnittId: "EA1", name: "EA 1", abschnittstyp: "EINSATZORT", reihenfolge: 1 }),
+        einheitGemeldet(h(), 3, { einheitId: "E2", abschnittId: "EA1", bezeichnung: "FGr B", organisation: "THW", ebene: "GRUPPE", staerke: staerke(1, 1, 6), personalErfassung: "NUR_STAERKE", status: "IM_EINSATZ" }),
+      ]),
+    );
+    const u = unterbringung(z, versorgungseinheiten(z, Date.parse(PRUEFJETZT)));
+    expect(u.zeilen).toEqual([]);
+    expect(u.ohneBedarf).toEqual([expect.objectContaining({ einheitId: "E2", bereich: "EA 1", koepfe: 8, anmarsch: false })]);
   });
 
   it("führt die Erstmeldung des Bogens mit Litersummen", () => {

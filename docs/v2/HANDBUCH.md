@@ -567,7 +567,12 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
 - **Bestellen.** Die Vorausschau ist der Vorschlag, die Bestellung die
   Entscheidung. Liegt die Bestellung darunter, zeigt die Karte die Differenz in
   Bernstein. „Bestellung ändern“ legt eine neue an, die jüngste gilt.
-- **Unterbringen.** In der Zelle „Unterkunft“ doppelklicken, wählen, Enter.
+- **Unterbringen.** Erst links „Unterkunft anlegen“. Dann entweder in der
+  Tabelle rechts in der Spalte „Unterkunft“ die Unterkunft wählen und
+  „Zuweisen“ drücken (oder Enter), oder an der Unterkunftskarte unter
+  „Einheit wählen“ die Einheit nehmen und „Zuweisen“. An der Karte stehen
+  auch Einheiten ohne gemeldeten Übernachtungsbedarf zur Wahl; sie belegen
+  dann ihre Köpfe. Die Karte nennt die untergebrachten Einheiten beim Namen.
   Eine Zuweisung über die Kapazität wird gezeigt („⚠ überbelegt“), nicht
   verweigert.
 - **Sofortbedarf.** Einheiten anhaken, Feld wählen, „Als erledigt melden“ —
@@ -701,7 +706,7 @@ Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür u
 
 Die Ansicht des S4: Mahlzeitenplan je Bereich mit Ausgabestelle und Bestellung der nächsten Mahlzeit, die Vorausschau der nächsten 24 oder 48 Stunden mit Zu- und Abgängen, Unterkünfte mit Belegung und Zuweisung, das Logistikblatt am Bildschirm und die Abarbeitung des Sofortbedarfs aus den Bögen.
 
-**Zuerst:** Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird; „Unterbringung“ zeigt, wer noch kein Bett hat.
+**Zuerst:** Oben im Band die Zahlen des Tages lesen, dann mit dem Umschalter die Unteransicht wählen. „Nächste 24 h“ beantwortet, wie viel Essen zu welcher Mahlzeit gebraucht wird; „Unterbringung“ zeigt, wer noch kein Bett hat: Unterkunft anlegen, dann in der Spalte „Unterkunft“ wählen und „Zuweisen“ drücken oder an der Unterkunftskarte eine Einheit wählen.
 
 **Gut zu wissen:** Gezählt werden alle erfassten Einheiten der Einsatzbereiche, auch in Ruhe — nicht die Ist-Stärke des Kopfbands. Der Anmarsch steht getrennt daneben und geht nur in die Vorausschau ein, und nur mit gemeldeter Eintreffzeit; was keine Zeit trägt, steht als „nicht eingerechnet“ in der Liste. Bestellung, Zuweisung, Mahlzeitenregel und „erledigt“ sind Ereignisse: Sie gelten für alle Arbeitsplätze, stehen im Tagebuch und lassen sich zurücknehmen.
 

@@ -204,12 +204,14 @@ export { mahlzeitenregelDes, regelFehler, regelstand } from "./mahlzeitenregel.j
 
 export {
   belegung,
+  ohneUnterbringungsbedarf,
   unterbringung,
   unterbringungsbedarf,
   type Bedarfszeile,
   type Belegung,
   type Belegungszeile,
   type Bettensumme,
+  type Ohnebedarfszeile,
   type Unterbringungsbedarf,
   type Unterbringungszustand,
   type Unterkunftskarte,

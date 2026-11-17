@@ -43,8 +43,19 @@ export interface Bedarfszeile {
   readonly zustand: Unterbringungszustand;
 }
 
+/** Eine Einheit ohne gemeldeten Bedarf und ohne Zuweisung — zuweisbar, sie belegt dann ihre Köpfe. */
+export interface Ohnebedarfszeile {
+  readonly einheitId: string;
+  readonly einheit: string;
+  readonly bereich: string;
+  readonly koepfe: number;
+  readonly anmarsch: boolean;
+}
+
 export interface Unterbringungsbedarf {
   readonly zeilen: readonly Bedarfszeile[];
+  /** Die übrigen Einheiten: ohne Bedarf aus dem Bogen, aber trotzdem zuweisbar. */
+  readonly ohneBedarf: readonly Ohnebedarfszeile[];
   /** Die Summe der Einsatzbereiche — ohne Anmarsch, wie K6 im Logistikblatt. */
   readonly summe: Bettensumme & { readonly einheiten: number };
   readonly anmarsch: Bettensumme & { readonly einheiten: number };
@@ -102,11 +113,30 @@ export function unterbringungsbedarf(zustand: Zustand, einheiten: readonly Verso
   );
 }
 
+/** Die Einheiten, die weder Bedarf melden noch zugewiesen sind, nach Namen. */
+export function ohneUnterbringungsbedarf(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): readonly Ohnebedarfszeile[] {
+  const zeilen: Ohnebedarfszeile[] = [];
+  for (const eintrag of einheiten) {
+    const bedarf = uebernachtung(zustand, eintrag.einheit);
+    if (bedarf.m + bedarf.w + bedarf.d > 0 || zuweisung(zustand, eintrag).id !== undefined) continue;
+    const k = logistik(zustand, eintrag.einheit);
+    zeilen.push({
+      einheitId: eintrag.einheit.id,
+      einheit: bezeichnung(eintrag),
+      bereich: eintrag.bereich,
+      koepfe: k.maennlich + k.weiblich + k.divers,
+      anmarsch: eintrag.klasse !== "BESTAND",
+    });
+  }
+  return zeilen.sort((a, b) => a.einheit.localeCompare(b.einheit, "de"));
+}
+
 /** Der Übernachtungsbedarf (K6) mit Summen, Anmarsch getrennt. */
 export function unterbringung(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): Unterbringungsbedarf {
   const zeilen = unterbringungsbedarf(zustand, einheiten);
   return {
     zeilen,
+    ohneBedarf: ohneUnterbringungsbedarf(zustand, einheiten),
     summe: zeilen.filter((z) => !z.anmarsch).reduce(plus, BETTEN_NULL),
     anmarsch: zeilen.filter((z) => z.anmarsch).reduce(plus, BETTEN_NULL),
   };
