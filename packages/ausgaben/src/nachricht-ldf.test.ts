@@ -79,6 +79,6 @@ describe("Der Weg des LdF in Druckeingabe und Nachweisung", () => {
 
   it("reicht den Vorschlag an den Vordruck weiter und markiert sie in der Nachweisung", () => {
     expect(nachrichtendruckAus(zeile, false).vorschlag).toEqual(VORSCHLAG);
-    expect(nachweisungMarken(zeile)).toEqual(["Weg Kurier/Melder (LdF Lf)"]);
+    expect(nachweisungMarken(zeile)).toEqual([expect.stringMatching(/^Weg Kurier\/Melder durch Fm2 \(LdF \d{4} Lf\)$/u)]);
   });
 });

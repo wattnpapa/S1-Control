@@ -66,7 +66,7 @@ describe("Die Ausgabe Nachweisung", () => {
     expect(html).toContain("size: A4 portrait");
     expect(html).toContain("<h2>Nachweisung</h2>");
     expect(html).toContain("Führungsstelle FüSt Oldenburg · 3 Nachrichten");
-    for (const kopf of ["Nr.", "E/A", "Vorrang", "Aufnahme", "Annahme", "Beförderung", "Abfassung", "Absender", "Anschrift", "Betreff", "Sichtung"]) {
+    for (const kopf of ["Nr.", "E/A", "Vorrang", "Gegenstelle", "Aufnahme", "Annahme", "Beförderung", "Abfassung", "Absender", "Anschrift", "Betreff", "Sichtung"]) {
       expect(html).toContain(`>${kopf}</th>`);
     }
     expect(html).toContain(NACHWEISUNG_FUSSNOTE);
@@ -84,19 +84,29 @@ describe("Die Ausgabe Nachweisung", () => {
     expect(html).not.toContain('class="kennung"');
   });
 
-  it("schreibt eine Zeile je Nachricht in der übergebenen Ordnung, Zeiten wie der Vordruck", () => {
-    const html = nachweisungAlsHtml(daten());
+  it("schreibt eine Zeile je Nachricht nach Nummer, Spalten wie am Bildschirm, Zeiten einheitlich (R2-LdF P2-5)", () => {
+    const html = nachweisungAlsHtml({ ...daten(), zeilen: [...zeilen()].reverse() });
     const zeilenHtml = html.split("\n").filter((z) => z.startsWith("      <tr>"));
     expect(zeilenHtml).toHaveLength(3);
-    // E1: Nr. 26, Sofort, Aufnahme als Datum-Zeit-Gruppe, Sichtung vierstellig mit Handzeichen
-    // Additiv: Spalte Mittel nach Vorrang (aus dem Aufnahmevermerk).
-    expect(zeilenHtml[0]).toContain("<td>26</td><td>E</td><td>Sofort</td><td>Funk</td><td>080802sep26</td><td></td><td></td><td>080801sep26</td>");
-    expect(zeilenHtml[0]).toContain("<td>0805 SI</td>");
+    // E1: Vorrang, E/A, Nr. wie am Bildschirm; Aufnahme als Datum-Zeit-Gruppe (groß) mit Handzeichen,
+    // Annahme und Beförderung leer, Sichtung vierstellig mit Handzeichen, Abfassung mit Tag.
+    expect(zeilenHtml[0]).toContain("<td>Sofort</td><td>E</td><td>26</td><td>OV Wildeshausen</td><td>FüSt</td><td>Funk</td><td></td><td>080802SEP26 FM</td><td></td><td></td><td>0805 SI</td><td>080801SEP26</td>");
     // A1: Annahme und Beförderung vierstellig mit Handzeichen
-    expect(zeilenHtml[1]).toContain("<td>A</td><td></td>");
-    expect(zeilenHtml[1]).toContain("<td></td><td>0803 FM</td><td>0804 FM</td>");
-    // E2: ohne Nummer, ohne Marke
-    expect(zeilenHtml[2]).toContain("<td></td><td>E</td>");
+    expect(zeilenHtml[1]).toContain("<td></td><td>A</td><td>26</td>");
+    expect(zeilenHtml[1]).toContain("<td>0803 FM</td><td>0804 FM</td>");
+    // E2: ohne Nummer zuletzt, gleich in welcher Ordnung der Aufrufer übergibt
+    expect(zeilenHtml[2]).toContain("<td></td><td>E</td><td></td>");
+  });
+
+  it("führt die Gegenstelle der Beförderung und die Weitergabe des LdF (R2-LdF P2-5, R2-ETB P2-3)", () => {
+    const a1 = zeilen().find((z) => z.id === "A1") as Nachrichtenzeile;
+    const e2 = zeilen().find((z) => z.id === "E2") as Nachrichtenzeile;
+    const mitGegenstelle = { ...a1, gegenstelle: "Kreis OL" };
+    const weitergegeben = { ...e2, weitergabe: { zeitpunkt: um(9), handzeichen: "Ho" } };
+    const html = nachweisungAlsHtml({ ...daten(), zeilen: [mitGegenstelle, weitergegeben] });
+    expect(html).toContain("<td>Telefon</td><td>Kreis OL</td>");
+    expect(html).toContain("Weitergabe 0809 Ho");
+    expect(nachweisungAlsHtml({ ...daten(), zeilen: [{ ...e2, laufzustand: "VOR_LDF" }] })).toContain("wartet beim LdF");
   });
 
   it("markiert doppelte Nummern und Gesprächsnotizen und maskiert HTML", () => {
@@ -110,7 +120,7 @@ describe("Die Ausgabe Nachweisung", () => {
 
   it("zeigt Sichtung, Verteiler und Vermerke als zweite Zeile und die Nummernfolge im Fuß (Sichter-Audit, LdF P2-2)", () => {
     const html = nachweisungAlsHtml(daten());
-    expect(html).toContain('<tr class="unterzeile"><td></td><td colspan="12">Sichtung 0805 SI · Verteiler: S3 (grün), S2 (blau), S4 (rot) · Vermerke: an S3 weiter</td></tr>');
+    expect(html).toContain('<tr class="unterzeile"><td></td><td colspan="13">Sichtung 0805 SI · Verteiler: S3 (grün), S2 (blau), S4 (rot) · Vermerke: an S3 weiter</td></tr>');
     expect(html).toContain("Nummern 1 bis 26; Fehlende Nummern: 1–25 · ohne Nummer: 1 · zurückgezogen: 0");
     expect(html).toContain("<td>ohne Nummer</td>");
     const lueckenlos = zeilen().map((z) => ({ ...z, nummer: z.id === "E2" ? 2 : 1 }));

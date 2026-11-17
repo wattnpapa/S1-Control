@@ -114,6 +114,11 @@ export function ansichtenMarkdown(): string {
     teile.push(`**Zuerst:** ${ansicht.zuerst}`);
     teile.push("");
     teile.push(`**Gut zu wissen:** ${ansicht.ueberraschung}`);
+    if (ansicht.begriffe !== undefined) {
+      // R2-FaBe P1-2: der Absatz „Begriffe“ der Bedienhilfe.
+      teile.push("");
+      teile.push(`**Begriffe:** ${ansicht.begriffe}`);
+    }
     if (ansicht.kuerzel.length > 0) {
       const namen = ansicht.kuerzel
         .map((name) => KUERZEL.find((k) => k.name === name))
@@ -142,6 +147,8 @@ export function akueliMarkdown(): string {
   const titel: Readonly<Record<string, string>> = {
     EINHEITEN: "Einheiten",
     FAHRZEUGE_UND_GERAETE: "Fahrzeuge und Geräte",
+    // R2-FaBe P1-2: die Begriffe des 4-fach-Vordrucks, je mit einem Satz.
+    NACHRICHTEN: "Begriffe der Nachrichten",
   };
   const teile: string[] = [];
   for (const gruppe of gruppen) {

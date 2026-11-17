@@ -1,12 +1,12 @@
 /**
  * Die Nachweisung als Ausgabe (KONZEPT-NACHRICHTEN.md §7): A4 hoch, eine Zeile
- * je Nachricht in der Ordnung, in der der Aufrufer sie übergibt (nach Nummer).
+ * je Nachricht, nach Nummer geordnet wie am Bildschirm (R2-LdF P2-5).
  *
  * Das ist die Liste der Fernmeldezentrale, soweit der Vordruck sie führt
  * (Feld 5 des Vordrucks 1103.1). Sie hängt am Platz und wird auf Papier
  * weitergeführt, wenn der Rechner steht — deshalb stehen die Zeiten so, wie
- * der Vordruck sie schreibt: Uhrzeit vierstellig, die Zeit der Abfassung und
- * der Aufnahme als Datum-Zeit-Gruppe.
+ * der Vordruck sie schreibt: Uhrzeit vierstellig mit Handzeichen, die Zeit der
+ * Abfassung und der Aufnahme als Datum-Zeit-Gruppe (groß wie im Kopfband).
  *
  * Die Rechnung steht in Ring 2 (`projektion.nachrichtenausschnitt`); hier
  * entsteht nur die Seite. Zurückgezogene Nachrichten bleiben stehen und
@@ -44,21 +44,27 @@ export const NACHWEISUNG_UNTERSCHRIFT = ["Datum / Uhrzeit", "Handzeichen LdF", "
 /** Der Satz unter der Tabelle. */
 export const NACHWEISUNG_FUSSNOTE = "Nachweisung nach Vordruck 1103.1, Feld 5";
 
+/**
+ * Die Spalten in der Ordnung des Bildschirms (R2-LdF P2-5, R2-ETB P2-6): Wer
+ * die Nachweisung gegen das Blatt hält, findet dieselbe Folge wieder; die
+ * Gegenstelle steht wie am Bildschirm, die Weitergabe des LdF als Marke.
+ */
 const SPALTEN: readonly { readonly kopf: string; readonly breite: string }[] = [
-  { kopf: "Nr.", breite: "5%" },
-  { kopf: "E/A", breite: "4%" },
-  { kopf: "Vorrang", breite: "6%" },
+  { kopf: "Vorrang", breite: "5%" },
+  { kopf: "E/A", breite: "3%" },
+  { kopf: "Nr.", breite: "4%" },
+  { kopf: "Absender", breite: "8%" },
+  { kopf: "Anschrift", breite: "8%" },
   // Additiv (Nachweisung, zweiter Durchlauf): Mittel — auch nur vorgeschlagen, dann mit Zusatz.
   { kopf: "Mittel", breite: "7%" },
+  { kopf: "Gegenstelle", breite: "8%" },
   { kopf: "Aufnahme", breite: "9%" },
-  { kopf: "Annahme", breite: "7%" },
-  { kopf: "Beförderung", breite: "7%" },
-  { kopf: "Abfassung", breite: "9%" },
-  { kopf: "Absender", breite: "9%" },
-  { kopf: "Anschrift", breite: "9%" },
-  { kopf: "Betreff", breite: "11%" },
-  { kopf: "Sichtung", breite: "7%" },
-  { kopf: "Marke", breite: "10%" },
+  { kopf: "Annahme", breite: "6%" },
+  { kopf: "Beförderung", breite: "6%" },
+  { kopf: "Sichtung", breite: "6%" },
+  { kopf: "Abfassung", breite: "8%" },
+  { kopf: "Betreff", breite: "10%" },
+  { kopf: "Marke", breite: "12%" },
 ];
 
 const VORRANG: Readonly<Record<string, string>> = { SOFORT: "Sofort", BLITZ: "Blitz" };
@@ -66,6 +72,21 @@ const VORRANG: Readonly<Record<string, string>> = { SOFORT: "Sofort", BLITZ: "Bl
 /** Uhrzeit vierstellig in Berliner Zeit, „1045"; leer bei ungültigem Zeitpunkt. */
 function uhrzeit(iso: string): string {
   return datumZeitGruppe(iso).slice(2, 6);
+}
+
+/**
+ * Die Datum-Zeit-Gruppe groß wie im Kopfband und am Bildschirm („080802SEP26“,
+ * R2-LdF P3-2 alt, P2-5): Aufnahme und Abfassung tragen den Tag, weil sie über
+ * Mitternacht sonst nicht eindeutig sind.
+ */
+function dtg(iso: string): string {
+  return datumZeitGruppe(iso).toUpperCase();
+}
+
+/** „080802SEP26 FM“ — der Aufnahmevermerk mit Tag und Handzeichen. */
+function aufnahmeText(aufnahme: Nachrichtenzeile["aufnahme"]): string {
+  if (aufnahme === undefined) return "";
+  return [dtg(aufnahme.zeitpunkt), aufnahme.handzeichen].filter((t) => t !== "").join(" ");
 }
 
 /** „1045 KL" — Uhrzeit und Handzeichen eines Vermerks, leer ohne Vermerk. */
@@ -81,9 +102,14 @@ function vermerkText(vermerk: { readonly zeitpunkt: string; readonly handzeichen
  */
 export function nachweisungMarken(zeile: Nachrichtenzeile): readonly string[] {
   const weg = zeile.vorschlag;
+  const durch = weg === undefined || weg.fernmelder.trim() === "" ? "" : ` durch ${weg.fernmelder.trim()}`;
   return [
     ...(zeile.nummerDoppelt ? ["Nr. doppelt"] : []),
-    ...(weg === undefined ? [] : [`Weg ${projektion.mittelWort(weg.mittel)} (LdF ${weg.handzeichen})`]),
+    // R2-ETB P2-3: der Vorschlag mit Fernmelder, Zeit und Handzeichen des LdF.
+    ...(weg === undefined ? [] : [`Weg ${projektion.mittelWort(weg.mittel)}${durch} (LdF ${vermerkText(weg)})`]),
+    // R2-ETB P2-3, R2-LdF P2-5: die Weitergabe des LdF an den Sichter — und wer noch beim LdF liegt.
+    ...(zeile.weitergabe === undefined ? [] : [`Weitergabe ${vermerkText(zeile.weitergabe)}`]),
+    ...(zeile.richtung === "EINGANG" && zeile.laufzustand === "VOR_LDF" ? ["wartet beim LdF"] : []),
     ...(zeile.gespraechsnotiz ? ["GN"] : []),
     // Additiv (SGL P0-1, LdF P1-2): hinter der FmZ, aber ohne Nummer.
     ...(projektion.standDerZeile(zeile).ohneNummer ? ["ohne Nummer"] : []),
@@ -124,18 +150,20 @@ export function nummernfuss(zeilen: readonly Nachrichtenzeile[]): string {
 
 function zeileAlsHtml(zeile: Nachrichtenzeile): string {
   const zellen = [
-    zeile.nummer === undefined ? "" : String(zeile.nummer),
-    zeile.richtungKurz,
     VORRANG[zeile.vorrang ?? ""] ?? "",
-    projektion.nachweisungsmittel(zeile) ?? "",
-    zeile.aufnahme === undefined ? "" : datumZeitGruppe(zeile.aufnahme.zeitpunkt),
-    vermerkText(zeile.annahme),
-    vermerkText(zeile.befoerderung),
-    zeile.abfassungszeit === undefined ? "" : datumZeitGruppe(zeile.abfassungszeit),
+    zeile.richtungKurz,
+    zeile.nummer === undefined ? "" : String(zeile.nummer),
     zeile.absender,
     zeile.anschrift,
-    zeile.betreff,
+    projektion.nachweisungsmittel(zeile) ?? "",
+    zeile.gegenstelle ?? "",
+    // Einheitlich (R2-LdF P2-5): Aufnahme und Abfassung mit Tag, Annahme, Beförderung, Sichtung als HHMM mit Handzeichen.
+    aufnahmeText(zeile.aufnahme),
+    vermerkText(zeile.annahme),
+    vermerkText(zeile.befoerderung),
     vermerkText(zeile.sichtung),
+    zeile.abfassungszeit === undefined ? "" : dtg(zeile.abfassungszeit),
+    zeile.betreff,
     nachweisungMarken(zeile).join(", "),
   ];
   const unter = zweiteZeile(zeile);
@@ -175,7 +203,8 @@ export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
     '  <table class="liste" style="font-size:7.5pt">',
     `    <thead><tr>${SPALTEN.map((s) => `<th scope="col" style="width:${s.breite}">${htmlMaskieren(s.kopf)}</th>`).join("")}</tr></thead>`,
     "    <tbody>",
-    ...daten.zeilen.map(zeileAlsHtml),
+    // Nach Nummer wie am Bildschirm, ohne Nummer zuletzt (R2-LdF P2-5) — gleich, wie der Aufrufer ordnet.
+    ...[...daten.zeilen].sort(projektion.vergleicheNachNummer).map(zeileAlsHtml),
     "    </tbody>",
     "  </table>",
   ].join("\n");

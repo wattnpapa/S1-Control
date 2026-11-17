@@ -160,7 +160,8 @@ export function tagebuchAlsHtml(
     "      </tr>",
     "    </thead>",
     "    <tbody>",
-    ...aufsteigend.map((zeile, index) => tagebuchZeile(zeile, index + 1)),
+    // R2-ETB P1-2: die Nummer, die auch der Bildschirm zeigt; eine Zeile ohne sie zählt wie bisher.
+    ...aufsteigend.map((zeile, index) => tagebuchZeile(zeile, zeile.laufendeNummer ?? index + 1)),
     ...(aufsteigend.length === 0 ? [`      <tr><td colspan="${String(TAGEBUCHSPALTEN.length)}">Noch keine Einträge.</td></tr>`] : []),
     "    </tbody>",
     "  </table>",
