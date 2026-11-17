@@ -251,7 +251,10 @@ Zwanzig Minuten. Der Vergleich von Annahme- und Beförderungsvermerk zeigt die
 Belastung der FmZ (Folie 14): Liegt eine angenommene Nachricht länger als
 zwanzig Minuten unbefördert, wird ihre Zeile in der Warteschlange bernstein,
 und die Zahl im Band zählt sie. Die Schwelle ist ein Parameter je Einsatz wie
-`funkKontaktSchwelleMinuten`.
+`funkKontaktSchwelleMinuten`. Geändert 2026-11-17 (Audit LdF P0-2): Gemessen
+wird ab dem Eintreffen bei der FmZ (HLC von `NachrichtVerfasst`, eine früher
+nacherfasste Annahme geht vor), denn ein Blitz, den noch niemand angenommen
+hat, blieb sonst unbemerkt; die Zeile trägt die Wartezeit (`wartetSeit`).
 
 Leiter des Fernmeldebetriebes (ergänzt 2026-11-17, mit Johannes bestätigt).
 Nach der Lehrunterlage (Folie 22) legt der LdF in der FmZ das

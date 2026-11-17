@@ -359,8 +359,9 @@ Beförderungsvermerk mit Mittel und Gegenstelle (vorbelegt aus dem
 die Nachweisung ein. Uhrzeit und Handzeichen sind mit „jetzt“ und dem eigenen
 Handzeichen vorbelegt und lassen sich ändern, damit ein Papiervordruck mit
 den Zeiten nacherfasst werden kann, die auf ihm stehen. Liegt eine
-angenommene Nachricht länger als die Schwelle unbefördert, wird ihre Zeile
-bernsteinfarben und nennt die Minuten seit der Annahme; nach der Beförderung
+Nachricht länger als die Schwelle unbefördert in der FmZ — gerechnet ab dem
+Eintreffen, nicht erst ab der Annahme —, wird ihre Zeile bernsteinfarben und
+nennt die Minuten seit dem Eintreffen; nach der Beförderung
 verlässt sie die Warteschlange, der Verfasser sieht im Ausgang Zeit und
 Handzeichen, und die Kopien gehen an S2 und die Verfasserstelle (siehe
 unten). Rechts steht der Hauptknopf „Eingang aufnehmen“: Er öffnet den
@@ -630,7 +631,7 @@ Was wann geschehen ist, aus den Ereignissen abgeleitet.
 
 **Zuerst:** Filtern — nach Einheit, Abschnitt oder Text.
 
-**Gut zu wissen:** Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu.
+**Gut zu wissen:** Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu. Eine Zeile zu einer Nachricht nennt die Nummer, die damals galt, und öffnet die Nachricht mit ✉; „Im Tagebuch zeigen“ an der Nachricht zeigt genau ihre Zeilen. Eine neue Nummer, eine Nachsichtung und das Zurückziehen tragen die Marke „Berichtigung“. Der Ausdruck führt beide Zeiten, Nachricht, Handzeichen und Rechner je Zeile und schließt mit „Einsatztagebuch abgeschlossen“, sobald der Einsatz beendet ist.
 
 **Kürzel:** Strg+F
 
