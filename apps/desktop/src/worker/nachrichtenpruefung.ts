@@ -24,6 +24,7 @@ const ARTEN = new Set([
   "NachrichtUebermittlungVorgeschlagen",
   "NachrichtBefoerdert",
   "NachrichtNachgewiesen",
+  "NachrichtWeitergegeben",
   "NachrichtGesichtet",
   "NachrichtVermerkt",
   "NachrichtKenntnisGenommen",
@@ -42,6 +43,7 @@ function pruefeParameter(entwurf: Ereignisentwurf): string | undefined {
   const neu = entwurf.neu;
   if (entwurf.undoOf !== undefined && neu === null) return undefined;
   if (feld === "sichtungAuchAusgang") return typeof neu === "boolean" ? undefined : "„Ausgänge nach der Beförderung zum Sichter“ ist ein Ja oder Nein.";
+  if (feld === "ldfStation") return typeof neu === "boolean" ? undefined : "„LdF als eigene Station“ ist ein Ja oder Nein.";
   if (feld === "fmzSchwelleMinuten") {
     return typeof neu === "number" && Number.isInteger(neu) && neu >= 1 ? undefined : "Die Schwelle der FmZ muss eine ganze Zahl ab 1 (Minuten) sein.";
   }

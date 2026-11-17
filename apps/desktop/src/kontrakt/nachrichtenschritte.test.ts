@@ -66,14 +66,13 @@ describe("Die Bedienschritte des Nachrichtenvordrucks", () => {
     expect(nachrichtenentwurfFehler({ typ: "NachrichtVerfasst", nutzlast: { nachrichtId: "N-1", richtung: "SEITWAERTS" } })).toMatch(/passen nicht zum Vordruck/);
   });
 
-  it("sichtet mit gesehenem Vorwert und Prüfung, geputzt und ohne leere Vermerke", () => {
+  it("sichtet mit gesehenem Vorwert ohne Vorwert-Prüfung (§5: zwei Sichtungen gelten beide), geputzt und ohne leere Vermerke", () => {
     const entwurf = nachrichtSichten("N-1", null, SICHTUNG);
     expect(entwurf).toEqual({
       typ: "NachrichtGesichtet",
       nutzlast: { nachrichtId: "N-1" },
       vorher: null,
       neu: { zeitpunkt: JETZT, handzeichen: "Mü", verteiler: SICHTUNG.verteiler },
-      vorwertPruefen: true,
     });
     expect(nachrichtenentwurfFehler(entwurf)).toBeUndefined();
   });

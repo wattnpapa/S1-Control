@@ -11,10 +11,13 @@
  * prüft dieselben Schemata noch einmal (`nachrichtenpruefung.ts`): Ein falsch
  * gebauter Vermerk bliebe sonst im append-only-Protokoll stehen (§3.7).
  *
- * Die Sichtung schickt den Wert, den der Laufzettel beim Öffnen sah, und
- * verlangt die Vorwert-Prüfung: Zwei Sichter an derselben Nachricht sollen
- * nicht still übereinander schreiben (§5 „Sichtung"); wer bewusst neu sichtet,
- * tut es mit dem dann geltenden Vorher-Wert („2. Sichtung").
+ * Die Sichtung schickt den Wert, den der Laufzettel beim Öffnen sah — aber
+ * ohne Vorwert-Prüfung (geändert 2026-11-17): Zwei Sichter an derselben
+ * Nachricht sollen nicht still übereinander schreiben, aber auch keiner
+ * soll abgewiesen werden; §5 „Sichtung" verlangt, dass beide Verteiler
+ * gelten und der zweite den Konflikthinweis sieht. Der Fold meldet
+ * `vorherPasstNicht`, die Zeile führt beide Verteiler, bis eine Nachsichtung
+ * mit dem dann geltenden Vorher-Wert („2. Sichtung") bereinigt.
  */
 
 import { KATALOG, schemata, type Nachrichtenzeile, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
@@ -85,7 +88,7 @@ export function nachrichtSichten(nachrichtId: string, vorher: Sichtungsvermerk |
     verteiler: sichtung.verteiler.map((e) => ({ stelle: e.stelle.trim(), kopie: e.kopie })),
     ...(vermerke === "" ? {} : { vermerke }),
   };
-  return { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher, neu, vorwertPruefen: true };
+  return { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher, neu };
 }
 
 /**
@@ -135,6 +138,8 @@ const NEU_SCHEMA: Readonly<Record<string, { safeParse: (wert: unknown) => { succ
   NachrichtUebermittlungVorgeschlagen: schemata.zVorschlag,
   NachrichtBefoerdert: schemata.zMittelvermerk,
   NachrichtNachgewiesen: schemata.zNachweis,
+  // Der Eingangsschritt des LdF (additiv, 2026-11-17).
+  NachrichtWeitergegeben: schemata.zWeitergabe,
 };
 
 /**

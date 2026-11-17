@@ -142,6 +142,7 @@ import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import { ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
 import { schreibhinweise } from "./schreibhinweise.js";
 import { offeneVokabelkorrekturen, vokabelnKorrigieren } from "./vokabelkorrektur.js";
 import { Bearbeitungssperren } from "./bearbeitungssperren.js";
@@ -757,7 +758,12 @@ export class Aktendienst {
 
   /** Schreibt den Entwurf, dann seine Folgeschritte; das Ergebnis trägt die Hinweise. */
   async #bedieneMitFolgen(entwurf: Ereignisentwurf): Promise<Bedienergebnis> {
-    const plan = planeFolgen(this.#zustand, entwurf, { sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers) });
+    const plan = planeFolgen(this.#zustand, entwurf, {
+      sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
+      // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
+      ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
+      s2Besetzt: stelleBesetzt("S2", this.#sitzung?.stellen, this.#peers),
+    });
     const ergebnis = await this.#schreibe(entwurf);
     if (ergebnis.art !== "geschrieben") return ergebnis;
     const vorab = [...plan.hinweise];

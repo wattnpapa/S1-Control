@@ -17,15 +17,21 @@
  *   nicht aufgehalten (Papier geht vor), aber der Hinweis sagt es sofort; der
  *   Fold hält `nachweisnummerDoppelt` fest (§9 „zeigen, nicht raten").
  *
+ * - **LdF und Kopien nach der Beförderung** (additiv, 2026-11-17): die
+ *   Ersatzregel ohne LdF in der Präsenz und die rote und grüne Kopie nach
+ *   der Beförderung eines Ausgangs — in `laufwegfolgen.ts`.
+ *
  * Die Werte der Folgen kommen aus dem Entwurf (`nachrichtenfolge`), geprüft
  * werden sie wie jeder andere Schritt beim Schreiben (`nachrichtenpruefung.ts`).
  */
 
-import { projektion, type Zustand } from "@s1/domaene";
+import { kanonischeSerialisierung, projektion, type KanonischerWert, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
+import { planeBefoerderungsfolgen, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
+
 /** Was der Worker über die Präsenz weiß und der Zustand nicht. */
-export interface Nachrichtenfolgeumfeld {
+export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
   /** Ein lebender Arbeitsplatz (dieser oder ein anderer) hat die Stelle SICHTER. */
   readonly sichterBesetzt: boolean;
 }
@@ -74,7 +80,9 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
   const werte = folgewerte(entwurf);
   const nutzlast = (entwurf.nutzlast ?? {}) as Record<string, unknown>;
   const nachrichtId = nutzlast["nachrichtId"];
-  if (werte === undefined || typeof nachrichtId !== "string") return { folgen: [], hinweise: [] };
+  // Ohne LdF in der Präsenz läuft ein Eingang direkt zum Sichter (additiv, 2026-11-17).
+  const weitergabe = planeWeitergabeErsatz(zustand, entwurf, umfeld, werte?.sichtung !== undefined);
+  if (werte === undefined || typeof nachrichtId !== "string") return { folgen: weitergabe === undefined ? [] : [weitergabe], hinweise: [] };
   const folgen: { entwurf: Ereignisentwurf; hinweis: string }[] = [];
   const hinweise: string[] = [];
   if (werte.nachweis !== undefined) {
@@ -88,10 +96,19 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
   }
   if (werte.sichtung !== undefined) {
     folgen.push({
-      entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: werte.sichtung },
+      entwurf: {
+        typ: "NachrichtGesichtet",
+        nutzlast: { nachrichtId },
+        vorher: null,
+        neu: werte.sichtung,
+        // Das Tagebuch nennt die Sichtung dann „als Ersatzsichter"; die
+        // Gesprächsnotiz verteilt ihr Verfasser aus eigenem Recht (Folie 28).
+        ...(umfeld.sichterBesetzt || nutzlast["gespraechsnotiz"] === true ? {} : { grund: projektion.GRUND_ERSATZSICHTER }),
+      },
       hinweis: verteilhinweis(umfeld, nutzlast["gespraechsnotiz"] === true),
     });
   }
+  if (weitergabe !== undefined) folgen.push(weitergabe);
   return { folgen, hinweise };
 }
 
@@ -120,10 +137,31 @@ function planeKontakt(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfo
   };
 }
 
+/** Der Satz an den zweiten Sichter (§5 „Sichtung"); der Fold hält dazu `vorherPasstNicht`. */
+export const HINWEIS_ZWEITE_SICHTUNG = "Die Nachricht war inzwischen anders gesichtet: Beide Verteiler gelten, bis eine Nachsichtung bereinigt.";
+
+/**
+ * Eine Sichtung, deren Vorher-Wert nicht der geltende ist: Sie wird nicht
+ * abgewiesen (§5 „die Nachricht steht bei beiden Verteilern"), aber der
+ * Sichter erfährt es sofort und nicht erst über den Konflikthinweis.
+ */
+function planeSichtung(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfolgeplan {
+  const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
+  const geltend = typeof nachrichtId === "string" ? zustand.nachrichten?.[nachrichtId]?.sichtung?.wert : undefined;
+  const fremd = geltend !== undefined && geltend !== null && entwurf.vorher !== undefined && kanonischeSerialisierung(entwurf.vorher as KanonischerWert) !== kanonischeSerialisierung(geltend as unknown as KanonischerWert);
+  return { folgen: [], hinweise: fremd && entwurf.undoOf === undefined ? [HINWEIS_ZWEITE_SICHTUNG] : [] };
+}
+
 /** Plant die Folgen eines Nachrichtenentwurfs — gegen den Zustand **vor** dem Schreiben. */
 export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan | undefined {
   if (entwurf.typ === "NachrichtVerfasst") return planeAnlage(zustand, entwurf, umfeld);
-  if (entwurf.typ === "NachrichtBefoerdert") return planeKontakt(zustand, entwurf);
+  if (entwurf.typ === "NachrichtBefoerdert") {
+    // Kontakt im Funkplan (main) und die Folgen am Laufweg (LdF-Ersatz, Kopien) in einem Plan.
+    const kontakt = planeKontakt(zustand, entwurf);
+    const laufweg = planeBefoerderungsfolgen(zustand, entwurf, umfeld);
+    return { folgen: [...kontakt.folgen, ...laufweg.folgen], hinweise: [...kontakt.hinweise, ...laufweg.hinweise] };
+  }
+  if (entwurf.typ === "NachrichtGesichtet") return planeSichtung(zustand, entwurf);
   if (entwurf.typ === "NachrichtNachgewiesen") {
     const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
     const doppelt = typeof nachrichtId === "string" ? doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId) : undefined;

@@ -10,8 +10,9 @@
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { CODE_VORWERT, type Lagebild, type Mitteilung } from "../kontrakt/index.js";
+import type { Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { erledigt, kenntnisGenommen, nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
+import { HINWEIS_ZWEITE_SICHTUNG } from "./nachrichtenfolgen.js";
 import { baueDienst, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
@@ -93,7 +94,7 @@ describe("Funktionalität: Nachrichten (N1)", () => {
     expect(sicht(platz, "posteingang", ["S2"]).zeilen[0]?.verteiler[1]).toMatchObject({ stelle: "S2", gelesen: false });
   });
 
-  it("Szenario: eine zweite Sichtung ohne den neuen Vorwert wird abgewiesen, nicht still überschrieben", async () => {
+  it("Szenario: eine zweite Sichtung ohne den neuen Vorwert wird geschrieben, gemeldet und vereinigt (§5)", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);
     await a.dienst.bediene(nachrichtVerfassen(anlage()));
@@ -101,11 +102,20 @@ describe("Funktionalität: Nachrichten (N1)", () => {
     // Beide Sichter haben den Laufzettel leer geöffnet; A sichtet zuerst.
     expect((await a.dienst.bediene(nachrichtSichten("N-1", null, sichtung(["S4"])))).art).toBe("geschrieben");
     await takteBis([a, b]);
+    // Seit 2026-11-17 nicht mehr abgewiesen: Beide Verteiler gelten, der zweite Sichter sieht den Hinweis.
     const zweite = await b.dienst.bediene(nachrichtSichten("N-1", null, sichtung(["S3"])));
-    expect(zweite).toMatchObject({ art: "abgewiesen", code: CODE_VORWERT });
-    // Mit dem gesehenen Vorwert ist die zweite Sichtung ein bewusster Schritt.
-    const gesehen = sicht(b, "posteingang", ["S4"]).zeilen[0]?.sichtung ?? null;
+    expect(zweite.art).toBe("geschrieben");
+    expect(zweite.art === "geschrieben" ? (zweite.warnungen ?? []).join(" ") : "").toContain(HINWEIS_ZWEITE_SICHTUNG);
+    await takteBis([a, b]);
+    expect(b.dienst.zustand.hinweise).toContainEqual(expect.objectContaining({ art: "vorherPasstNicht", feldpfad: "nachricht/N-1/sichtung" }));
+    const zeile = sicht(b, "posteingang", ["S4"]).zeilen[0];
+    expect(zeile?.verteiler.map((m) => m.stelle).sort()).toEqual(["S3", "S4"]);
+    expect(zeile?.zweiteSichtung).toBeDefined();
+    // Die Nachsichtung mit dem gesehenen Vorwert bereinigt: ein Verteiler, keine Marke.
+    const gesehen = zeile?.sichtung ?? null;
     expect((await b.dienst.bediene(nachrichtSichten("N-1", gesehen, sichtung(["S3"])))).art).toBe("geschrieben");
+    expect(sicht(b, "posteingang", ["S3"]).zeilen[0]).toMatchObject({ verteiler: [expect.objectContaining({ stelle: "S3" })] });
+    expect(sicht(b, "posteingang", ["S3"]).zeilen[0]?.zweiteSichtung).toBeUndefined();
   });
 
   it("Szenario: Stelle und Handzeichen stehen in der Präsenz und erscheinen am Peer", async () => {

@@ -74,7 +74,8 @@ describe("Funktionalität: Fernmeldezentrale (N2)", () => {
     expect(befoerdert.art).toBe("geschrieben");
     expect(sicht(platz, "fmz").zeilen).toHaveLength(0);
     const zeile = sicht(platz, "ausgang").zeilen[0];
-    expect(zeile).toMatchObject({ laufzustand: "ERLEDIGT", gegenstelle: "Heros Wildeshausen", befoerderung: { mittel: "FUNK", handzeichen: "Fm" } });
+    // Seit 2026-11-17 gehen nach der Beförderung die Kopien an S2 und den Verfasser (Folie 30): verteilt.
+    expect(zeile).toMatchObject({ laufzustand: "VERTEILT", gegenstelle: "Heros Wildeshausen", befoerderung: { mittel: "FUNK", handzeichen: "Fm" } });
   });
 
   it("Szenario: Nachweis mit vergebener Nummer schreibt, warnt und markiert beide Zeilen", async () => {

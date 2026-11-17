@@ -107,14 +107,20 @@ export function vergebeneNummern(zustand: Zustand): readonly number[] {
  * (additiv, N2, Entscheidung 8): nur, was im Zustand gesetzt ist — die
  * Maske zeigt sonst die Vorbelegung und schreibt sie nicht ungefragt.
  */
-export function mitNachrichtenparametern<T extends object>(zustand: Zustand, stammdaten: T | undefined): (T & { sichtungAuchAusgang?: boolean; fmzSchwelleMinuten?: number }) | undefined {
+export function mitNachrichtenparametern<T extends object>(
+  zustand: Zustand,
+  stammdaten: T | undefined,
+): (T & { sichtungAuchAusgang?: boolean; fmzSchwelleMinuten?: number; ldfStation?: boolean }) | undefined {
   if (stammdaten === undefined) return undefined;
   const sichtung = zustand.einsatz?.sichtungAuchAusgang?.wert;
   const schwelle = zustand.einsatz?.fmzSchwelleMinuten?.wert;
+  // Additiv (2026-11-17): der LdF als Station; das Blatt zeigt danach die Sicht „LdF".
+  const ldf = zustand.einsatz?.ldfStation?.wert;
   return {
     ...stammdaten,
     ...(typeof sichtung === "boolean" ? { sichtungAuchAusgang: sichtung } : {}),
     ...(typeof schwelle === "number" ? { fmzSchwelleMinuten: schwelle } : {}),
+    ...(typeof ldf === "boolean" ? { ldfStation: ldf } : {}),
   };
 }
 

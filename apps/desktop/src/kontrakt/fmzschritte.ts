@@ -129,8 +129,11 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
   };
 }
 
-/** Die beiden Parameter des Nachrichtenwegs je Einsatz (Entscheidung 8, §5 „Zwanzig Minuten"). */
-export type Nachrichtenparameter = "sichtungAuchAusgang" | "fmzSchwelleMinuten";
+/**
+ * Die Parameter des Nachrichtenwegs je Einsatz (Entscheidung 8, §5 „Zwanzig
+ * Minuten"); `ldfStation` additiv (2026-11-17): der LdF als eigene Station.
+ */
+export type Nachrichtenparameter = "sichtungAuchAusgang" | "fmzSchwelleMinuten" | "ldfStation";
 
 /**
  * Setzt einen Parameter; `vorher` ist der Wert im Zustand (`null`, solange

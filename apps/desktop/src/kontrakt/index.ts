@@ -337,6 +337,8 @@ export const zEinsatzstammdaten = z.object({
    */
   sichtungAuchAusgang: z.boolean().optional(),
   fmzSchwelleMinuten: z.number().optional(),
+  /** Additiv (2026-11-17): der LdF ist eigene Station im Laufweg; fehlt = nein. */
+  ldfStation: z.boolean().optional(),
 });
 export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
 
@@ -404,6 +406,8 @@ export const zNachrichtenlage = z.object({
   vorSichter: zZahl,
   mitVorrangOffen: zZahl,
   ueberSchwelle: zZahl,
+  /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt. */
+  vorLdf: zZahl.optional(),
 });
 export type Nachrichtenlage = z.infer<typeof zNachrichtenlage>;
 
