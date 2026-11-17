@@ -10,6 +10,9 @@
  *   verteilt, wer aufnimmt; die Gesprächsnotiz verteilt ihr Verfasser selbst.
  *   Dann folgt `NachrichtGesichtet` im selben Zug — die Regel aus eStab, nur
  *   dass hier die Präsenz entscheidet statt ein Login (§5 „Ersatzsichter").
+ * - **Beförderung an eine Einheit**: Ist die Gegenstelle eine Einheit der
+ *   Lage, folgt auf `NachrichtBefoerdert` eine Funkprobe „Kontakt“ — der
+ *   Funkplan zeigt dann den letzten Kontakt.
  * - **Doppelte Nummer**: Wer eine schon vergebene Nummer nachweist, wird
  *   nicht aufgehalten (Papier geht vor), aber der Hinweis sagt es sofort; der
  *   Fold hält `nachweisnummerDoppelt` fest (§9 „zeigen, nicht raten").
@@ -35,7 +38,7 @@ export interface Nachrichtenfolgeplan {
 /** Der Hinweis, den der Bediener nach dem Aufnehmen ohne Sichter sieht (§5). */
 export const HINWEIS_ERSATZSICHTER = "Kein Sichter besetzt: Nachricht beim Aufnehmen verteilt.";
 
-type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown };
+type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown };
 
 function folgewerte(entwurf: Ereignisentwurf): Folgewerte | undefined {
   const wert = (entwurf as { readonly nachrichtenfolge?: unknown }).nachrichtenfolge;
@@ -92,9 +95,35 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
   return { folgen, hinweise };
 }
 
+/**
+ * Die Beförderung an eine Einheit der Lage ist ein Funkkontakt: Der Funkplan
+ * zeigt „letzter Kontakt“ aus der jüngsten Funkprobe „Kontakt“. Der Vorwert
+ * ist die Probe, die der Zustand zuletzt sah (Rücknahme setzt sie wieder).
+ */
+function planeKontakt(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfolgeplan {
+  const einheitId = folgewerte(entwurf)?.kontaktEinheitId;
+  const zeitpunkt = (entwurf.neu as { zeitpunkt?: unknown } | null | undefined)?.zeitpunkt;
+  const einheit = typeof einheitId === "string" ? zustand.einheiten[einheitId] : undefined;
+  if (typeof einheitId !== "string" || einheit === undefined || einheit.entfernt?.wert === true || typeof zeitpunkt !== "string") return { folgen: [], hinweise: [] };
+  const rufgruppeId = einheit.rufgruppeId?.wert;
+  const name = typeof einheit.bezeichnung.wert === "string" ? einheit.bezeichnung.wert : einheitId;
+  const vorher = einheit.letzteFunkprobe?.KONTAKT?.wert ?? null;
+  const neu = { zeitpunkt, ...(typeof rufgruppeId === "string" && rufgruppeId !== "" ? { rufgruppeId } : {}) };
+  return {
+    folgen: [
+      {
+        entwurf: { typ: "FunkprobeDurchgefuehrt", nutzlast: { einheitId, ergebnis: "KONTAKT" }, vorher, neu },
+        hinweis: `Funkplan: Kontakt mit „${name}“ vermerkt.`,
+      },
+    ],
+    hinweise: [],
+  };
+}
+
 /** Plant die Folgen eines Nachrichtenentwurfs — gegen den Zustand **vor** dem Schreiben. */
 export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan | undefined {
   if (entwurf.typ === "NachrichtVerfasst") return planeAnlage(zustand, entwurf, umfeld);
+  if (entwurf.typ === "NachrichtBefoerdert") return planeKontakt(zustand, entwurf);
   if (entwurf.typ === "NachrichtNachgewiesen") {
     const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
     const doppelt = typeof nachrichtId === "string" ? doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId) : undefined;

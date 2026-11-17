@@ -36,8 +36,12 @@ export interface Befoerderung extends Mittelvermerk {
   readonly gegenstelle?: string;
 }
 
-/** „Befördern": Mittel, Zeit, Handzeichen und die Gegenstelle, an die übermittelt wurde. */
-export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | null, befoerderung: Befoerderung): Entwurf {
+/**
+ * „Befördern": Mittel, Zeit, Handzeichen und die Gegenstelle, an die übermittelt
+ * wurde. Ist die Gegenstelle eine Einheit der Lage, folgt im selben Zug ein
+ * Kontakt im Funkplan (`kontaktEinheitId`).
+ */
+export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | null, befoerderung: Befoerderung, kontaktEinheitId?: string): Entwurf {
   const gegenstelle = befoerderung.gegenstelle?.trim() ?? "";
   return {
     typ: "NachrichtBefoerdert",
@@ -50,6 +54,7 @@ export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | 
       ...(gegenstelle === "" ? {} : { gegenstelle }),
     },
     vorwertPruefen: true,
+    ...(kontaktEinheitId === undefined ? {} : { nachrichtenfolge: { kontaktEinheitId } }),
   };
 }
 
