@@ -245,7 +245,7 @@ function standfelder(
   const wartetSeit = wartezeitMinuten(grundlage, kontext.jetzt);
   const wartetSeitSichter = wartezeitVorSichterMinuten(grundlage, kontext.jetzt);
   const wartetSeitLdf = wartezeitBeimLdfMinuten(grundlage, kontext.jetzt);
-  const fmzVermerkText = fmzVermerkTextAus(vermerke.aufnahme, vermerke.annahme, vermerke.befoerderung);
+  const fmzVermerkText = fmzVermerkTextAus(vermerke.aufnahme, vermerke.annahme, vermerke.befoerderung, richtung === "AUSGANG");
   const gesichtetVon = vermerke.sichtung === undefined ? undefined : n.sichtung?.hlc.clientId;
   return {
     laufstand,

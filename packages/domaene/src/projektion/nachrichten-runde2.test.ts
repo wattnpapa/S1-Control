@@ -8,6 +8,7 @@
  * - R2-LdF P1-2 alt: Karte „Ohne Nummer“ mit Eingängen.
  * - R2-ETB P1-1: Stelle des Akteurs — Aufnahme nicht unter der Funktion des
  *   Absenders, Kopien nach Beförderung unter FmZ, auch für ältere Ereignisse.
+ * - R2-FaBe P0-2, R2-SGL P3-4: der Vermerk der FmZ in Worten (`fmzVermerkTextAus`).
  */
 
 import { describe, expect, it } from "vitest";
@@ -17,6 +18,7 @@ import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "../pruefhilf
 import type { Zustand } from "../zustand.js";
 import { nachrichtenlage, nachrichtNach } from "./nachrichten.js";
 import { ohneNummerZeilen } from "./nachrichtenoffen.js";
+import { fmzVermerkTextAus } from "./nachrichtenstand.js";
 import { alleNachrichtenzeilen, zeilenkontext } from "./nachrichtenzeile.js";
 import { vereinigteVermerke } from "./nachrichtenzusatz.js";
 import { GRUND_KOPIEN, nachrichtensatz } from "./tagebuch-nachrichten.js";
@@ -127,5 +129,25 @@ describe("R2-ETB P1-1: die Stelle des Akteurs", () => {
     expect(nachrichtensatz(z, alt, "")).toContain("Kopien nach Beförderung (Hz. Fm), verteilt an S2 (rot)");
     // Eine gewöhnliche Sichtung bleibt die des Sichters.
     expect(stelleDer(vermerk(4, "NachrichtGesichtet", "E1", { ...neu, vermerke: "an S3" }))).toBe("SICHTER");
+  });
+});
+
+describe("R2-FaBe P0-2: der Vermerk der FmZ in Worten", () => {
+  const annahme = { zeitpunkt: "2026-11-17T16:10:00.000Z", handzeichen: "Fm" };
+  const befoerderung = { mittel: "TELEFON", zeitpunkt: "2026-11-17T16:20:00.000Z", handzeichen: "Ha" };
+
+  it("nennt beim Ausgang die Annahme der FmZ und die Quittung der Gegenstelle", () => {
+    expect(fmzVermerkTextAus(undefined, annahme, befoerderung, true)).toBe("angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
+  });
+
+  it("sagt ohne Beförderung „noch nicht übermittelt“, auch ganz ohne Vermerk", () => {
+    expect(fmzVermerkTextAus(undefined, annahme, undefined, true)).toBe("angenommen (FmZ) 1710 Fm · noch nicht übermittelt");
+    expect(fmzVermerkTextAus(undefined, undefined, undefined, true)).toBe("noch nicht übermittelt");
+  });
+
+  it("nennt beim Eingang die Aufnahme der FmZ mit dem Mittel und schweigt ohne sie", () => {
+    const aufnahme = { mittel: "FUNK", zeitpunkt: "2026-11-17T16:05:00.000Z", handzeichen: "Fm" };
+    expect(fmzVermerkTextAus(aufnahme, undefined, undefined)).toBe("aufgenommen (FmZ) 1705 Fm (Funk)");
+    expect(fmzVermerkTextAus(undefined, undefined, undefined)).toBeUndefined();
   });
 });

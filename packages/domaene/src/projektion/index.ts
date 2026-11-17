@@ -280,7 +280,7 @@ export {
 } from "./nachrichten.js";
 export { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 // Additiv (Audits 2026-11-17): Stand der Listen, offene Nachrichten, Nummernlücken
-export { LAUFSTAENDE, fmzVermerkTextAus, laufstandWort, standDerZeile, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
+export { LAUFSTAENDE, TEXT_NICHT_UEBERMITTELT, TITEL_QUITTUNG_GEGENSTELLE, fmzVermerkTextAus, laufstandWort, standDerZeile, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
 // Additiv (zweiter Durchlauf): Wartezeit aus einer Quelle, Zurückziehen, Mittel und Zeitraum der Nachweisung, ETB-Nummer
 export {
   etbNummern,

@@ -102,26 +102,41 @@ function uhrzeit(iso: string): string {
   return datumZeitGruppe(iso).slice(2, 6);
 }
 
+/** Der Satz, solange ein Ausgang die FmZ nicht verlassen hat (R2-FaBe P0-2): niemand soll ihn für angekommen halten. */
+export const TEXT_NICHT_UEBERMITTELT = "noch nicht übermittelt";
+
+/** Die Beschriftung der Beförderungszeit eines Ausgangs: Sie ist die Quittung der Gegenstelle, nicht die der FmZ. */
+export const TITEL_QUITTUNG_GEGENSTELLE = "Quittung der Gegenstelle";
+
 function vermerkteil(wort: string, vermerk: Zeitvermerk | undefined, mittel?: string): string | undefined {
   if (vermerk === undefined) return undefined;
   const teile = [wort, uhrzeit(vermerk.zeitpunkt), vermerk.handzeichen].filter((t) => t !== "");
-  return mittel === undefined ? teile.join(" ") : `${teile.join(" ")} (${mittelWort(mittel)})`;
+  return mittel === undefined || mittel === "" ? teile.join(" ") : `${teile.join(" ")} (${mittelWort(mittel)})`;
 }
 
 /**
- * „angenommen 1320 Fm · befördert 1321 Fm (Funk)" — der Vermerk der FmZ für
- * die Spalte „Stand" der Listen (SGL P0-1: Zeit, Handzeichen und Mittel
- * standen nur im aufgeschlagenen Vordruck). Beim Eingang die Aufnahme.
+ * Der Vermerk der FmZ in Worten für die Spalte „Stand" und die Lese-Ansicht
+ * (SGL P0-1; Wortlaut nach R2-FaBe P0-2, R2-SGL P3-4). Annahme und Aufnahme
+ * sind Vermerke der eigenen FmZ und heißen so; die Beförderungszeit ist die
+ * Quittung der Gegenstelle. Ein Fachberater las „angenommen 2040 Fm" als
+ * Bestätigung des Empfängers.
+ *
+ * - Ausgang: „angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha
+ *   (Telefon)"; ohne Beförderung „… · noch nicht übermittelt", ganz ohne
+ *   Vermerk nur „noch nicht übermittelt".
+ * - Eingang: „aufgenommen (FmZ) 1705 Fm (Funk)"; ohne Aufnahme `undefined`.
  */
 export function fmzVermerkTextAus(
   aufnahme: Mittelvermerk | undefined,
   annahme: Zeitvermerk | undefined,
   befoerderung: Mittelvermerk | undefined,
+  ausgang = false,
 ): string | undefined {
+  const quittung = vermerkteil(TITEL_QUITTUNG_GEGENSTELLE, befoerderung, befoerderung?.mittel);
   const teile = [
-    vermerkteil("aufgenommen", aufnahme, aufnahme?.mittel),
-    vermerkteil("angenommen", annahme),
-    vermerkteil("befördert", befoerderung, befoerderung?.mittel),
+    vermerkteil("aufgenommen (FmZ)", aufnahme, aufnahme?.mittel),
+    vermerkteil("angenommen (FmZ)", annahme),
+    quittung ?? (ausgang ? TEXT_NICHT_UEBERMITTELT : undefined),
   ].filter((t): t is string => t !== undefined);
   return teile.length === 0 ? undefined : teile.join(" · ");
 }
