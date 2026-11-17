@@ -296,6 +296,7 @@ export class Vermittlung {
       case "untertabelleAnfordern":
       case "tagebuchAnfordern":
       case "nachrichtenAnfordern":
+      case "nachrichtAnfordern":
       case "eebScan":
       case "eebDatei":
       case "eebUeberspringen":

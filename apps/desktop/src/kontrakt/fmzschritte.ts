@@ -66,12 +66,33 @@ export interface Befoerderung extends Mittelvermerk {
 }
 
 /**
+ * Was beim Befördern in einem Zug mitgeschrieben wird (additiv, Audit LdF
+ * P0-1): der Kontakt im Funkplan, die fehlende Annahme mit Uhrzeit und
+ * Handzeichen der Beförderung und die Nummer der Nachweisung.
+ */
+export interface Befoerderungsfolge {
+  readonly kontaktEinheitId?: string | undefined;
+  readonly annahme?: Zeitvermerk | undefined;
+  readonly nachweis?: Nachweisvermerk | undefined;
+}
+
+/**
  * „Befördern": Mittel, Zeit, Handzeichen und die Gegenstelle, an die übermittelt
  * wurde. Ist die Gegenstelle eine Einheit der Lage, folgt im selben Zug ein
  * Kontakt im Funkplan (`kontaktEinheitId`).
+ *
+ * Additiv (LdF P0-1): Statt der Einheit allein darf `folge` auch die Annahme
+ * tragen — dann trägt der Worker sie mit (Befördern verlangt die Annahme) —
+ * und die Nummer, die die Beförderungsmaske gleich mit abfragt.
  */
-export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | null, befoerderung: Befoerderung, kontaktEinheitId?: string): Entwurf {
+export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | null, befoerderung: Befoerderung, folge?: string | Befoerderungsfolge): Entwurf {
   const gegenstelle = befoerderung.gegenstelle?.trim() ?? "";
+  const f: Befoerderungsfolge = typeof folge === "string" ? { kontaktEinheitId: folge } : (folge ?? {});
+  const nachrichtenfolge = {
+    ...(f.kontaktEinheitId === undefined ? {} : { kontaktEinheitId: f.kontaktEinheitId }),
+    ...(f.annahme === undefined ? {} : { annahme: nachrichtAnnehmen(nachrichtId, null, f.annahme).neu }),
+    ...(f.nachweis === undefined ? {} : { nachweis: nachrichtNachweisen(nachrichtId, null, f.nachweis).neu }),
+  };
   return {
     typ: "NachrichtBefoerdert",
     nutzlast: { nachrichtId },
@@ -83,7 +104,7 @@ export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | 
       ...(gegenstelle === "" ? {} : { gegenstelle }),
     },
     vorwertPruefen: true,
-    ...(kontaktEinheitId === undefined ? {} : { nachrichtenfolge: { kontaktEinheitId } }),
+    ...(Object.keys(nachrichtenfolge).length === 0 ? {} : { nachrichtenfolge }),
   };
 }
 

@@ -8,5 +8,6 @@
  * prüft `nachrichtenschritte.test.ts`.
  */
 
-// „ldf" additiv (2026-11-17): die Sicht des Leiters des Fernmeldebetriebes.
-export const NACHRICHTEN_SICHTEN_LISTE = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung", "ldf"] as const;
+// „ldf" additiv (2026-11-17): die Sicht des Leiters des Fernmeldebetriebes;
+// „offen" (SGL P1-7, Übergabe) und „gesichtet" (Sichter-Audit, Nachsichtung) ebenso.
+export const NACHRICHTEN_SICHTEN_LISTE = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung", "ldf", "offen", "gesichtet"] as const;

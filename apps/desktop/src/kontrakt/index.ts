@@ -38,6 +38,7 @@ import type {
   Logistikblatt,
   Meldungsausschnitt,
   Nachrichtenausschnitt,
+  Nachrichtenzeile,
   Schichtplanblatt,
   Staerketafel,
   Tabellenausschnitt,
@@ -408,8 +409,24 @@ export const zNachrichtenlage = z.object({
   ueberSchwelle: zZahl,
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt. */
   vorLdf: zZahl.optional(),
+  /** Additiv (LdF P2-2): fehlende Nummern zwischen 1 und der höchsten; fehlt = lückenlos. */
+  nummernluecken: z.array(zZahl).optional(),
 });
 export type Nachrichtenlage = z.infer<typeof zNachrichtenlage>;
+
+/**
+ * Was beim Beenden des Einsatzes an Nachrichten offen ist (ETB P1-6) —
+ * `projektion.offeneNachrichten` über alle Stellen, für die Rückfrage wie
+ * `offeneAnforderungen`.
+ */
+export const zOffeneNachrichten = z.object({
+  vorFmz: zZahl,
+  beimLdf: zZahl,
+  vorSichter: zZahl,
+  ohneNummer: zZahl,
+  ungelesenMitVorrang: zZahl,
+});
+export type OffeneNachrichten = z.infer<typeof zOffeneNachrichten>;
 
 /**
  * Stelle und Handzeichen dieses Arbeitsplatzes für die Sitzung dieser Akte
@@ -479,6 +496,8 @@ export const zLagebild = z.object({
   undoObersteObjekt: z.string().optional(),
   /** Anforderungen, die noch nicht eingetroffen oder storniert sind — für die Rückfrage beim Beenden. */
   offeneAnforderungen: z.number().int().min(0).optional(),
+  /** Additiv (ETB P1-6): offene Nachrichten für dieselbe Rückfrage; fehlt, solange der Einsatz keine führt. */
+  offeneNachrichten: zOffeneNachrichten.optional(),
   /**
    * Additiv: Ablösungen, bei denen die ablösende Einheit eingetroffen ist, die
    * abgelöste aber noch zur Ist-Stärke zählt. Leer oder fehlend: nichts offen.
@@ -553,6 +572,12 @@ export const zEntwurf = z.object({
        * Beförderung).
        */
       kontaktEinheitId: z.string().min(1).optional(),
+      /**
+       * Additiv (Audit LdF P0-1): die Annahme, die beim Befördern fehlt. Der
+       * Worker trägt sie mit Uhrzeit und Handzeichen der Beförderung nach,
+       * damit keine Nachricht ohne Annahmevermerk die FmZ verlässt.
+       */
+      annahme: z.unknown().optional(),
     })
     .optional(),
 });
@@ -914,7 +939,15 @@ export const zRuf = z.discriminatedUnion("art", [
     suche: z.string().max(200).optional(),
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
+    // Additiv (ETB P0-1): nur diese Nachricht, über die Kennung statt über Text.
+    nachrichtId: zText.optional(),
+    // Additiv (Sichter-Audit), Sicht „gesichtet": nur die Sichtungen dieses
+    // Arbeitsplatzes oder des Handzeichens der Sitzung.
+    nurEigeneSichtungen: z.boolean().optional(),
   }),
+  // Additiv (ETB P0-1): eine einzelne Nachricht — „Nachricht öffnen" an der
+  // Tagebuchzeile. Antwort: die Zeile oder `null`, wenn es sie nicht gibt.
+  z.object({ art: z.literal("nachrichtAnfordern"), akteId: zAkteId, nachrichtId: zText }),
   // Schnitt N3 (KONZEPT-NACHRICHTEN.md §7, Entscheidung 7, additiv): der
   // Vordruck je Nachricht als PDF in `ausgaben\nachrichten`; die Drucker
   // dieses Rechners und die Ordnerwahl (nur Desktop); der Probedruck des
@@ -930,6 +963,8 @@ export const zRuf = z.discriminatedUnion("art", [
     abschnittId: z.string().optional(),
     suche: z.string().optional(),
     nurRuecknahmen: z.boolean().optional(),
+    // Additiv (ETB P0-1): nur die Zeilen dieser Nachricht — Kennung, kein Teilstring.
+    nachrichtId: z.string().optional(),
     von: z.number().int().min(0).optional(),
     anzahl: z.number().int().min(1).max(AUSSCHNITT_MAX).optional(),
   }),
@@ -1056,6 +1091,8 @@ export interface Antworten {
   monitorSchliessen: null;
   tagebuchAnfordern: Tagebuchansicht;
   nachrichtenAnfordern: Nachrichtenansicht;
+  /** Additiv (ETB P0-1): die Zeile einer Nachricht, oder `null`. */
+  nachrichtAnfordern: Nachrichtenzeile | null;
   einsatzArchivieren: Bedienergebnis;
   akteErzeugen: Akteergebnis;
   ausgabeZeigen: null;
@@ -1379,6 +1416,13 @@ export interface Erfassungsbogenergebnis {
 export interface Akteergebnis extends Ausgabeergebnis {
   readonly ereignisse: number;
   readonly befunde: number;
+  /**
+   * Additiv (ETB P1-5): die Vordruck-PDFs der Nachrichten, die vor dem Packen
+   * fehlten und jetzt erzeugt wurden, die schon lagen, und Beilagen, die
+   * nicht geschrieben werden konnten. Fehlt, wenn der Einsatz keine
+   * Nachrichten führt.
+   */
+  readonly nachrichtenbeilagen?: { readonly erzeugt: number; readonly vorhanden: number; readonly fehlgeschlagen: number };
 }
 
 /**
@@ -1469,7 +1513,9 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
   /** Additiv (N2, §9): die vergebenen Nummern — die Maske warnt vor einer doppelten, sie sperrt nicht. */
   readonly vergebeneNummern?: readonly number[];
   /** Additiv (N2, §6): die Zahlen hinter den Chips des Posteingangs, für die Stellen der Anfrage. */
-  readonly zaehlung?: Readonly<Record<"NEU" | "GELESEN" | "ERLEDIGT", number>>;
+  readonly zaehlung?: Readonly<Record<"NEU" | "GELESEN" | "ERLEDIGT", number>> & { readonly OFFEN?: number };
+  /** Additiv (LdF P2-2): die fehlenden Nummern zwischen 1 und der höchsten, für den Fuß der Nachweisung. */
+  readonly nummernluecken?: readonly number[];
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {
