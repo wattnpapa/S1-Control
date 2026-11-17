@@ -58,7 +58,11 @@ interface ZeilenEigenschaften {
 function Zeile({ zeile, stellen, posteingang, gewaehlt, aufWahl, aufLesen, aufKontext }: ZeilenEigenschaften): React.JSX.Element {
   const kopie = kopieFuer(zeile, stellen);
   const klassen = [kopieklasse(kopie), gewaehlt ? "gewaehlt" : "", zeile.zurueckgezogen ? "abgelehnt" : ""].filter((k) => k !== "").join(" ");
-  const nummer = zeile.nummer === undefined ? "—" : String(zeile.nummer);
+  // Eine aufgegebene Nachricht hat vor der FmZ noch keine Nummer: Die vergibt
+  // die Fernmeldezentrale beim Nachweisen. „—" hieße „fehlt", „folgt" sagt,
+  // dass nichts zu tun ist.
+  const folgt = zeile.nummer === undefined && zeile.laufzustand === "VOR_FMZ";
+  const nummer = zeile.nummer === undefined ? (folgt ? "folgt (FmZ)" : "—") : String(zeile.nummer);
   const kopietext = kopie === undefined ? "ohne Kopie" : `Kopie ${projektion.kopieWort(kopie)}`;
   return (
     <tr
@@ -81,7 +85,9 @@ function Zeile({ zeile, stellen, posteingang, gewaehlt, aufWahl, aufLesen, aufKo
         <Vorrangmarke zeile={zeile} />
       </td>
       <td>{zeile.richtungKurz}</td>
-      <td className="zahl">{nummer}</td>
+      <td className="zahl" title={folgt ? "Die Nachweisungsnummer vergibt die Fernmeldezentrale" : undefined}>
+        {nummer}
+      </td>
       <td>{zeile.absender}</td>
       <td>{zeile.anschrift}</td>
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>

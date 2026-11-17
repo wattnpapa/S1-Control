@@ -33,6 +33,18 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
   useEffect(() => {
     knopf.current?.focus();
   }, []);
+  // Escape am Dokument und nicht am Dialog: Ein Klick auf den Vordrucktext
+  // nimmt den Fokus aus dem Dialog, und ein Hörer am Dialog hörte dann nichts
+  // mehr — Escape täte nach dem ersten Klick ins Leere.
+  useEffect(() => {
+    const aufTaste = (ereignis: KeyboardEvent): void => {
+      if (ereignis.key !== "Escape") return;
+      ereignis.preventDefault();
+      aufSchliessen();
+    };
+    document.addEventListener("keydown", aufTaste);
+    return () => document.removeEventListener("keydown", aufTaste);
+  }, [aufSchliessen]);
   const nummer = zeile.nummer === undefined ? zeile.richtungKurz : `${zeile.richtungKurz} ${String(zeile.nummer)}`;
   return createPortal(
     <div className="maskengrund">
@@ -40,16 +52,17 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
         className="maske vordruck"
         role="dialog"
         aria-label={`Nachricht ${nummer}`}
-        onKeyDown={(ereignis) => {
-          if (ereignis.key !== "Escape") return;
-          ereignis.stopPropagation();
-          ereignis.preventDefault();
-          aufSchliessen();
-        }}
       >
-        <h3>
-          Nachricht {nummer} <small className="leise">· {laufwort(zeile.laufzustand)}</small>
-        </h3>
+        {/* Der Schließen-Knopf auch oben: Bei langem Vordruck mit Vorschau stünde
+            der untere erst nach dem Scrollen im Bild. */}
+        <div className="ansichtkopf" style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
+          <h3>
+            Nachricht {nummer} <small className="leise">· {laufwort(zeile.laufzustand)}</small>
+          </h3>
+          <button type="button" aria-label="Fenster schließen" title="Schließen (Esc)" onClick={aufSchliessen}>
+            ×
+          </button>
+        </div>
         <FmzTeil zeile={zeile} />
         <NachrichtenteilAnzeige zeile={zeile} />
         <LaufzettelAnzeige zeile={zeile} />
