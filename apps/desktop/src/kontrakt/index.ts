@@ -293,8 +293,17 @@ export const zPeer = z.object({
    */
   stellen: z.array(z.string()).readonly().optional(),
   handzeichen: z.string().optional(),
+  /**
+   * Additiv (Sichter P1-4, ETB P3-3, Sichter P3-4): Er hat seine Stelle
+   * abgegeben (Akte geschlossen, Seite verlassen). Er gilt dann zugleich als
+   * `veraltet`, damit Zählung und Ersatzsichter ihn sofort nicht mehr führen.
+   */
+  abgemeldet: z.boolean().optional(),
 });
 export type Peer = z.infer<typeof zPeer>;
+
+/** So viele Konflikthinweise trägt das Lagebild höchstens mit Art und Pfad (`konflikthinweise`). */
+export const KONFLIKTHINWEISE_MAX = 50;
 
 /**
  * Das Lagebild — die Projektion, die der Worker an den Renderer schiebt.
@@ -411,6 +420,14 @@ export const zNachrichtenlage = z.object({
   vorLdf: zZahl.optional(),
   /** Additiv (LdF P2-2): fehlende Nummern zwischen 1 und der höchsten; fehlt = lückenlos. */
   nummernluecken: z.array(zZahl).optional(),
+  /** Additiv (Sichter P1-4): Eingänge, die mindestens die FmZ-Schwelle lang vor dem Sichter liegen. */
+  vorSichterUeberSchwelle: zZahl.optional(),
+  /**
+   * Additiv (zweiter Durchlauf, Wartezeit): die Minute, gegen die die Zahlen
+   * gerechnet sind (ISO). Die Spalte „Wartet“ rechnet mit
+   * `projektion.wartezeitMinuten(zeile, gerechnetUm)` gegen dieselbe Zeit.
+   */
+  gerechnetUm: z.string().optional(),
 });
 export type Nachrichtenlage = z.infer<typeof zNachrichtenlage>;
 
@@ -482,6 +499,13 @@ export const zLagebild = z.object({
   /** Köpfe im Archivbereich „Einsatz beendet“ — zählen ebenfalls nicht. */
   staerkeBeendet: z.number().int().min(0).optional(),
   hinweise: z.number().int().min(0),
+  /**
+   * Additiv (Fernmelder P2-6, Wunsch des Renderers): Art und Feldpfad der
+   * Konflikthinweise, höchstens {@link KONFLIKTHINWEISE_MAX} — damit die
+   * Diagnose an einem Hinweis mit Pfad `nachricht/<id>/…` „Nachricht öffnen“
+   * anbieten kann, statt Rohdaten zu zeigen. `hinweise` bleibt die volle Zahl.
+   */
+  konflikthinweise: z.array(z.object({ art: z.string(), feldpfad: z.string() })).readonly().optional(),
   /**
    * Additiv: Einheiten, die aus einem Erfassungsbogen mit rohen
    * Vokabularcodes („#3") statt Namen übernommen wurden und sich aus dem
@@ -578,6 +602,13 @@ export const zEntwurf = z.object({
        * damit keine Nachricht ohne Annahmevermerk die FmZ verlässt.
        */
       annahme: z.unknown().optional(),
+      /**
+       * Additiv (Fernmelder P2-9, Papier-Nachtrag): die Beförderung eines
+       * Ausgangs, der vom Papier nacherfasst wird — an `NachrichtVerfasst`
+       * wie `annahme` und `nachweis`. Der Worker schreibt danach im selben
+       * Zug `NachrichtBefoerdert` und dessen Folgen (Kopien, Kontakt).
+       */
+      befoerderung: z.unknown().optional(),
     })
     .optional(),
 });
@@ -884,6 +915,12 @@ export const zRuf = z.discriminatedUnion("art", [
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */
     organisation: z.string().optional(),
+    /**
+     * Additiv (LdF P2-5), nur bei `nachweisung`: der Ausschnitt einer Schicht
+     * (ISO, beide einschließlich). Fehlt beides, kommen alle Nachrichten.
+     */
+    von: z.string().max(40).optional(),
+    bis: z.string().max(40).optional(),
   }),
 
   // Der HTML-Monitor (M4.3): eine Datei in `ausgaben\`, die sich alle sechzig
@@ -955,7 +992,17 @@ export const zRuf = z.discriminatedUnion("art", [
   z.object({ art: z.literal("nachrichtVordruckErzeugen"), akteId: zAkteId, nachrichtId: zText, blatt: zVordruckBlatt }),
   z.object({ art: z.literal("druckerAuflisten") }),
   z.object({ art: z.literal("ordnerWaehlen"), titel: z.string().max(200).optional() }),
-  z.object({ art: z.literal("probedruck"), ziel: zAutomatikdruckziel }),
+  // Additiv (FM P2-11): `anlegen` legt ein fehlendes Verzeichnis erst auf
+  // ausdrückliche Rückfrage an; ohne meldet der Probedruck `verzeichnisFehlt`.
+  z.object({ art: z.literal("probedruck"), ziel: zAutomatikdruckziel, anlegen: z.boolean().optional() }),
+  // Additiv (FM P2-11): Gibt es das Druckverzeichnis, und lässt es sich
+  // beschreiben? Für die Rückfrage „anlegen?“ beim Speichern der Druckeinstellungen;
+  // `anlegen: true` legt es nach der Rückfrage an und prüft dann.
+  z.object({ art: z.literal("verzeichnisPruefen"), pfad: z.string().max(1000), anlegen: z.boolean().optional() }),
+  // Additiv (Sichter P1-4, ETB P3-3): Die Stelle abgeben — die Präsenz steht
+  // sofort ohne Stellen und Handzeichen, mit `abgemeldet`. Der Worker tut es
+  // auch selbst beim Schließen der Akte; die Web-Schale beim Verlassen der Seite.
+  z.object({ art: z.literal("stelleAbgeben"), akteId: zAkteId }),
   z.object({
     art: z.literal("tagebuchAnfordern"),
     akteId: zAkteId,
@@ -1101,6 +1148,8 @@ export interface Antworten {
   /** Der gewählte Ordner, oder `null`, wenn der Dialog abgebrochen wurde. */
   ordnerWaehlen: string | null;
   probedruck: Probedruckergebnis;
+  verzeichnisPruefen: Verzeichnispruefung;
+  stelleAbgeben: null;
 }
 
 /**
@@ -1390,7 +1439,20 @@ export interface Druckerangabe {
 /** Wohin der Probedruck ging (Entscheidung 7). */
 export type Probedruckergebnis =
   | { readonly art: "verzeichnis"; readonly pfad: string; readonly bytes: number }
-  | { readonly art: "drucker"; readonly name: string };
+  | { readonly art: "drucker"; readonly name: string }
+  /**
+   * Additiv (FM P2-11): Das Verzeichnis gibt es nicht. Nichts wurde
+   * angelegt; `anlegen: true` sagt, dass ein zweiter Ruf mit `anlegen: true`
+   * es anlegt und dann druckt.
+   */
+  | { readonly art: "verzeichnisFehlt"; readonly pfad: string; readonly meldung: string; readonly anlegen: true };
+
+/** Was `verzeichnisPruefen` über ein Druckverzeichnis weiß (FM P2-11). */
+export interface Verzeichnispruefung {
+  readonly vorhanden: boolean;
+  /** Nur bei einem vorhandenen Verzeichnis: ob eine Probedatei sich schreiben ließ. */
+  readonly beschreibbar?: boolean;
+}
 
 /**
  * Was der Sammel-Download der Erfassungsbögen geschrieben hat.

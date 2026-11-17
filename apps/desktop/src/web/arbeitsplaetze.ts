@@ -33,6 +33,11 @@ export interface Arbeitsplatzschale {
   beantworte(ruf: Ruf): Promise<Antwort<unknown>>;
   /** Schliesst alle offenen Akten geordnet (Upload-Stand, Praesenz). */
   schliesse(): Promise<void>;
+  /**
+   * Additiv (Sichter P1-4, ETB P3-3): gibt in allen offenen Akten sofort die
+   * Stelle ab — beim `pagehide`, bevor die Abmeldefrist den Platz schliesst.
+   */
+  stelleAbgeben?(): Promise<void>;
 }
 
 /**
@@ -128,6 +133,13 @@ export class Arbeitsplaetze {
     const platz = this.#plaetze.get(schluessel);
     if (platz === undefined) return;
     platz.abgemeldet = true;
+    // Sichter P1-4: Die Stelle geht sofort, nicht erst nach der Frist — ein
+    // Sichter, der die Seite verlässt, ist für den Ersatzsichter der FmZ gleich
+    // „nicht besetzt“. Kommt die Seite zurück (Neuladen), setzt die
+    // Stellenabfrage die Stelle wieder.
+    void platz.schale.stelleAbgeben?.().catch((fehler: unknown) => {
+      this.#o.protokolliere?.("warnung", `Stelle abgeben: ${(fehler as Error).message}`);
+    });
     if (platz.zuhoerer.size === 0) this.#gnadenfristStarten(schluessel, platz);
   }
 

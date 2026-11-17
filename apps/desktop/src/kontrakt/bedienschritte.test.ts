@@ -117,10 +117,11 @@ describe("eingabeAlsWert — Stärke und Zeitpunkt", () => {
   });
 
   it("liest Zeitangaben in der Schreibweise der Führungsstelle", () => {
-    const jetzt = new Date(2026, 9, 29, 12, 0);
-    expect(zeitpunktAusEingabe("29.10.2026 14:30", jetzt)).toBe(new Date(2026, 9, 29, 14, 30).toISOString());
-    expect(zeitpunktAusEingabe("5.11. 06:00", jetzt)).toBe(new Date(2026, 10, 5, 6, 0).toISOString());
-    expect(zeitpunktAusEingabe("14:30", jetzt)).toBe(new Date(2026, 9, 29, 14, 30).toISOString());
+    // In der Anzeigezone Europe/Berlin (FM P2-1): 29.10. ist Winterzeit (UTC+1), wie der 5.11.
+    const jetzt = new Date("2026-10-29T11:00:00Z");
+    expect(zeitpunktAusEingabe("29.10.2026 14:30", jetzt)).toBe("2026-10-29T13:30:00.000Z");
+    expect(zeitpunktAusEingabe("5.11. 06:00", jetzt)).toBe("2026-11-05T05:00:00.000Z");
+    expect(zeitpunktAusEingabe("14:30", jetzt)).toBe("2026-10-29T13:30:00.000Z");
     expect(zeitpunktAusEingabe("2026-10-29T12:00:00Z", jetzt)).toBe("2026-10-29T12:00:00.000Z");
     expect(zeitpunktAusEingabe("31.11.2026 10:00", jetzt)).toBeUndefined();
     expect(zeitpunktAusEingabe("morgen", jetzt)).toBeUndefined();

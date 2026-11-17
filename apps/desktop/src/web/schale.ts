@@ -130,6 +130,8 @@ export function webSchalenfabrik(o: SchalenOptionen): Schalenfabrik {
         return vermittlung.beantworte(mitFestemShare(ruf, o.sharePfad));
       },
       schliesse: () => hof.alleSchliessen(),
+      // Additiv (Sichter P1-4): beim Verlassen der Seite die Stelle sofort abgeben.
+      stelleAbgeben: () => vermittlung.alleStellenAbgeben(),
     };
   };
 }

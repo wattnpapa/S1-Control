@@ -25,6 +25,7 @@
  */
 
 import type { EinheitVorlage, Organisation, Spalte, Staerke, Stammdatenfeld, Tabellenzeile } from "@s1/domaene";
+import { anzeigezoneWandzeit, zeitpunktAusWandzeit } from "@s1/domaene";
 
 import { STATUS_VORBELEGUNG, einheitsanlage } from "./einheitsanlage.js";
 import type { Entwurf } from "./index.js";
@@ -107,38 +108,54 @@ export function staerkeAusEingabe(eingabe: string): Staerke | undefined {
 /**
  * Eine Zeitangabe, wie die Führungsstelle sie schreibt, als ISO-Zeitpunkt:
  * „29.10.2026 14:30“, „29.10. 14:30“ (dieses Jahr), „14:30“ (heute) oder ein
- * ISO-Zeitpunkt. Ortszeit des Rechners; was nicht lesbar ist, ist undefined.
+ * ISO-Zeitpunkt. Gelesen in der **Anzeigezone Europe/Berlin**, nicht in der
+ * Ortszeit des Rechners: Sonst las ein Notebook auf UTC „10:45“ als 10:45 UTC,
+ * und Vordruck und Bildschirm zeigten 11:45 (Audits Nachrichten FM P2-1,
+ * LdF P2-4). Was nicht lesbar ist, ist undefined.
  */
 export function zeitpunktAusEingabe(eingabe: string, jetzt: Date = new Date()): string | undefined {
   const text = eingabe.trim();
   if (text === "") return undefined;
   const iso = /^\d{4}-\d{2}-\d{2}T/.test(text) ? new Date(text) : undefined;
   if (iso !== undefined) return Number.isNaN(iso.getTime()) ? undefined : iso.toISOString();
+  const heute = anzeigezoneWandzeit(jetzt);
+  if (heute === undefined) return undefined;
   const voll = /^(\d{1,2})\.(\d{1,2})\.(\d{4})[ T]+(\d{1,2}):(\d{2})$/.exec(text);
   const kurz = /^(\d{1,2})\.(\d{1,2})\.[ T]*(\d{1,2}):(\d{2})$/.exec(text);
   const nurZeit = /^(\d{1,2}):(\d{2})$/.exec(text);
-  let tag: number;
-  let monat: number;
-  let jahr: number;
-  let stunde: number;
-  let minute: number;
+  const zahlen = (treffer: RegExpExecArray): number[] => treffer.slice(1).map(Number);
   if (voll !== null) {
-    [tag, monat, jahr, stunde, minute] = voll.slice(1).map(Number) as [number, number, number, number, number];
-  } else if (kurz !== null) {
-    [tag, monat, stunde, minute] = kurz.slice(1).map(Number) as [number, number, number, number];
-    jahr = jetzt.getFullYear();
-  } else if (nurZeit !== null) {
-    [stunde, minute] = nurZeit.slice(1).map(Number) as [number, number];
-    tag = jetzt.getDate();
-    monat = jetzt.getMonth() + 1;
-    jahr = jetzt.getFullYear();
-  } else {
-    return undefined;
+    const [tag, monat, jahr, stunde, minute] = zahlen(voll) as [number, number, number, number, number];
+    return zeitpunktAusWandzeit({ jahr, monat, tag, stunde, minute });
   }
-  if (monat < 1 || monat > 12 || tag < 1 || tag > 31 || stunde > 23 || minute > 59) return undefined;
-  const zeit = new Date(jahr, monat - 1, tag, stunde, minute);
-  if (zeit.getMonth() !== monat - 1 || zeit.getDate() !== tag) return undefined;
-  return zeit.toISOString();
+  if (kurz !== null) {
+    const [tag, monat, stunde, minute] = zahlen(kurz) as [number, number, number, number];
+    return zeitpunktAusWandzeit({ jahr: heute.jahr, monat, tag, stunde, minute });
+  }
+  if (nurZeit !== null) {
+    const [stunde, minute] = zahlen(nurZeit) as [number, number];
+    return zeitpunktAusWandzeit({ jahr: heute.jahr, monat: heute.monat, tag: heute.tag, stunde, minute });
+  }
+  return undefined;
+}
+
+/**
+ * Die Funkzeit „0630“ (heute) oder „280630“ (Tag des laufenden Monats), sonst
+ * wie {@link zeitpunktAusEingabe} — in der Anzeigezone Europe/Berlin (FM P2-1).
+ *
+ * Für `renderer/funkzeit.ts`: Dort stand dieselbe Regel in der Ortszeit des
+ * Browsers; der Renderer reicht seine Funkzeit hierher weiter, damit Lesen und
+ * Anzeigen (Datum-Zeit-Gruppe) dieselbe Zone haben.
+ */
+export function funkzeitInAnzeigezone(eingabe: string, jetzt: Date = new Date()): string | undefined {
+  const text = eingabe.trim();
+  if (!/^\d{4}$/.test(text) && !/^\d{6}$/.test(text)) return zeitpunktAusEingabe(text, jetzt);
+  const heute = anzeigezoneWandzeit(jetzt);
+  if (heute === undefined) return undefined;
+  const tag = text.length === 6 ? Number.parseInt(text.slice(0, 2), 10) : heute.tag;
+  const stunde = Number.parseInt(text.slice(-4, -2), 10);
+  const minute = Number.parseInt(text.slice(-2), 10);
+  return zeitpunktAusWandzeit({ jahr: heute.jahr, monat: heute.monat, tag, stunde, minute });
 }
 
 /** Die Obergrenze einer Teilstärke in einer Maske — ein Zahlendreher wie 80 statt 8 bleibt drin, 800 nicht. */

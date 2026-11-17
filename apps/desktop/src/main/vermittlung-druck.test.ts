@@ -10,7 +10,7 @@
  * dem Druckauftrag, der vom Worker über den Hof zum Drucker kommt.
  */
 
-import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
@@ -149,8 +149,18 @@ describe("Druckerliste, Ordnerwahl und Probedruck", () => {
     const ausgang = attrappe();
     const a = baue(ausgang);
     const ordner = path.join(a.wurzel, "drucke");
-    const insVerzeichnis = await ruf<{ art: string; pfad: string }>(a.vermittlung, { art: "probedruck", ziel: { ziel: "verzeichnis", pfad: ordner } });
+    // FM P2-11: Fehlt das Verzeichnis, legt der Probedruck nichts an und bietet „anlegen“ an.
+    expect(await ruf(a.vermittlung, { art: "probedruck", ziel: { ziel: "verzeichnis", pfad: ordner } })).toMatchObject({ art: "verzeichnisFehlt", pfad: ordner, anlegen: true });
+    expect(existsSync(ordner)).toBe(false);
+    expect(await ruf(a.vermittlung, { art: "verzeichnisPruefen", pfad: ordner })).toEqual({ vorhanden: false });
+    const insVerzeichnis = await ruf<{ art: string; pfad: string }>(a.vermittlung, { art: "probedruck", ziel: { ziel: "verzeichnis", pfad: ordner }, anlegen: true });
     expect(insVerzeichnis.art).toBe("verzeichnis");
+    expect(await ruf(a.vermittlung, { art: "verzeichnisPruefen", pfad: ordner })).toEqual({ vorhanden: true, beschreibbar: true });
+    expect(readdirSync(ordner)).toHaveLength(1);
+    // Die Rückfrage „anlegen?“ der Druckeinstellungen: erst nach Ja angelegt.
+    const neu = path.join(a.wurzel, "neu");
+    expect(await ruf(a.vermittlung, { art: "verzeichnisPruefen", pfad: neu, anlegen: true })).toEqual({ vorhanden: true, beschreibbar: true });
+    expect(readdirSync(neu)).toEqual([]);
     expect(path.basename(insVerzeichnis.pfad)).toMatch(/^probedruck-vordruck_\d{4}-\d{2}-\d{2}_\d{4}\.pdf$/);
     expect(readFileSync(insVerzeichnis.pfad).subarray(0, 5).toString("latin1")).toBe("%PDF-");
     expect(await ruf(a.vermittlung, { art: "probedruck", ziel: { ziel: "drucker", name: "Lager_S4" } })).toEqual({ art: "drucker", name: "Lager_S4" });
@@ -185,6 +195,11 @@ describe("Vordruck je Nachricht und leerer Vordruck", () => {
     expect(ergebnis.weitere?.map((w) => path.basename(w.pfad))).toEqual(["vordruck-nachricht-leer.pdf"]);
     const leer = readFileSync(ergebnis.weitere?.[0]?.pfad ?? "");
     expect(leer.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    // FM P1-6: Papier-Vordruck als PDF ohne Rendering-Engine (Web-Schale) ist der leere Nachrichtenvordruck, das HTML liegt daneben.
+    const alsPdf = await ruf<{ pfad: string; weitere?: { pfad: string }[] }>(a.vermittlung, { art: "ausgabeErzeugen", akteId, ausgabe: "papier", format: "pdf" });
+    expect(path.basename(alsPdf.pfad)).toBe("vordruck-nachricht-leer.pdf");
+    expect(readFileSync(alsPdf.pfad).subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(alsPdf.weitere?.map((w) => path.basename(w.pfad))).toEqual([expect.stringMatching(/^papier-vordruck_.*\.html$/u)]);
     // Andere Ausgaben bekommen nichts dazu.
     const druck = await ruf<{ weitere?: unknown }>(a.vermittlung, { art: "ausgabeErzeugen", akteId, ausgabe: "status", format: "html" });
     expect(druck.weitere).toBeUndefined();
@@ -195,6 +210,7 @@ describe("Automatikdruck aus den Einstellungen", () => {
   it("bringt das Verzeichnis beim Öffnen in den Worker; was danach eintrifft, fällt hinein", async () => {
     const a = baue(undefined);
     const ziel = path.join(a.wurzel, "automatik");
+    mkdirSync(ziel);
     const akteId = await mitEinsatz(a, { automatikdruckAn: true, automatikdruck: { ziel: "verzeichnis", pfad: ziel } });
     await verteileAnS4(a, akteId, "N-1");
     expect(readdirSync(ziel)).toEqual(["nachricht-Eohne-171045nov26-N1.pdf"]);

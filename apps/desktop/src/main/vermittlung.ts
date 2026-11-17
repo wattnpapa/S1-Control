@@ -34,6 +34,7 @@ import {
 
 import { zeigeAusgabe, type Schreibtisch } from "./ausgabezeiger.js";
 import { LEERER_VORDRUCK_DATEI, automatikdruckAus, druckfelder, probedruck, type Druckausgang } from "./druckausgang.js";
+import { verzeichnisPruefen } from "./druckverzeichnis.js";
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
 import { EINSATZ_DOPPELT, gibtEsDenEinsatz, listeneintrag, ordneEinsaetze } from "./einsatzliste.js";
 import { holePaket, type Netzholer } from "./programmbezug.js";
@@ -62,6 +63,12 @@ import type {
 import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
 import type { Seitenausgabe } from "../worker/aktendienst.js";
 import { dateimarke } from "../worker/dateimarke.js";
+
+/** Additiv (LdF P2-5): der Schichtausschnitt der Nachweisung, nur wenn gesetzt. */
+function zeitraumDes(ruf: Extract<Ruf, { art: "ausgabeErzeugen" }>): { zeitraum?: { von?: string; bis?: string } } {
+  if (ruf.ausgabe !== "nachweisung" || (ruf.von === undefined && ruf.bis === undefined)) return {};
+  return { zeitraum: { ...(ruf.von === undefined ? {} : { von: ruf.von }), ...(ruf.bis === undefined ? {} : { bis: ruf.bis }) } };
+}
 
 /**
  * Was die Vermittlung ueber Fenster wissen muss — und mehr nicht (M3.5).
@@ -338,7 +345,14 @@ export class Vermittlung {
       case "ordnerWaehlen":
         return (await this.#druckausgang().ordnerWaehlen(ruf.titel ?? "Verzeichnis wählen")) ?? null;
       case "probedruck":
-        return probedruck(ruf.ziel, { dateisystem: this.#o.dateisystem, druckausgang: this.#o.druckausgang, marke: dateimarke(new Date()) });
+        return probedruck(ruf.ziel, { dateisystem: this.#o.dateisystem, druckausgang: this.#o.druckausgang, marke: dateimarke(new Date()), anlegen: ruf.anlegen });
+      // Additiv (FM P2-11): Gibt es das Druckverzeichnis? In beiden Schalen dieselbe Prüfung.
+      case "verzeichnisPruefen":
+        return verzeichnisPruefen(ruf.pfad, this.#o.dateisystem, ruf.anlegen === true);
+      // Additiv (Sichter P1-4, ETB P3-3): die Stelle sofort abgeben.
+      case "stelleAbgeben":
+        await this.#o.hof.frage(ruf.akteId, { art: "stelleAbgeben" });
+        return null;
     }
   }
 
@@ -353,6 +367,21 @@ export class Vermittlung {
     const ausgang = this.#o.druckausgang;
     if (ausgang === undefined) throw new Error("Drucker und Ordnerwahl gibt es nur in der Desktop-App.");
     return ausgang;
+  }
+
+  /**
+   * Gibt in jeder offenen Akte die Stelle ab (Sichter P1-4, ETB P3-3) — die
+   * Web-Schale ruft das beim `pagehide`. Ein Fehler an einer Akte hält die
+   * anderen nicht auf; die Präsenz verfällt dort dann wie bisher.
+   */
+  async alleStellenAbgeben(): Promise<void> {
+    for (const akteId of [...this.#ordnerJeAkte.keys()]) {
+      try {
+        await this.#o.hof.frage(akteId, { art: "stelleAbgeben" });
+      } catch (fehler) {
+        this.#o.protokolliere("warnung", `Stelle abgeben (${akteId}): ${(fehler as Error).message}`);
+      }
+    }
   }
 
   /** Das Ziel des Automatikdrucks an jede offene Akte — nach dem Ändern der Einstellungen. */
@@ -404,10 +433,16 @@ export class Vermittlung {
     // oben schon zurueck. Der Zuschnitt steht im Typ und nicht in einer
     // Zusicherung: `ausgabeHtml` kennt genau die Seitenausgaben.
     const seite = ruf.ausgabe as Seitenausgabe;
+    // FM P1-6: Der Papier-Vordruck als PDF ohne Rendering-Engine (Web-Schale)
+    // ist der leere Nachrichtenvordruck aus jsPDF, dazu das HTML der übrigen
+    // Vordrucke — statt einer roten Meldung in genau der Lage, in der niemand
+    // experimentieren kann.
+    if (seite === "papier" && ruf.format === "pdf" && this.#o.drucker === undefined) return this.#papierOhneDrucker(ruf.akteId);
     const gerendert = (await this.#o.hof.frage(ruf.akteId, {
       art: "ausgabeHtml",
       ausgabe: seite,
       ...(ruf.organisation === undefined ? {} : { organisation: ruf.organisation }),
+      ...zeitraumDes(ruf),
     })) as { dateiname: string; html: string };
 
     let bytes: Uint8Array;
@@ -439,6 +474,20 @@ export class Vermittlung {
     this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(bytes.length)} Bytes)`);
     if (seite === "papier") return { pfad, bytes: bytes.length, weitere: [await this.#leererVordruck(ruf.akteId)] };
     return { pfad, bytes: bytes.length };
+  }
+
+  /**
+   * Papier-Vordruck als PDF ohne `printToPDF` (FM P1-6): Haupterzeugnis ist
+   * `vordruck-nachricht-leer.pdf`; die übrigen Vordrucke liegen daneben als
+   * HTML zum Drucken aus dem Browser. Die Ausgabenliste bietet beide an.
+   */
+  async #papierOhneDrucker(akteId: string): Promise<Ausgabeergebnis> {
+    const leer = await this.#leererVordruck(akteId);
+    const gerendert = (await this.#o.hof.frage(akteId, { art: "ausgabeHtml", ausgabe: "papier" })) as { dateiname: string; html: string };
+    const html = new TextEncoder().encode(gerendert.html);
+    const { pfad } = (await this.#o.hof.frage(akteId, { art: "ausgabeSchreiben", dateiname: `${gerendert.dateiname}.html`, bytes: html })) as { pfad: string };
+    this.#o.protokolliere("info", `Ausgabe erzeugt: ${pfad} (${String(html.length)} Bytes)`);
+    return { pfad: leer.pfad, bytes: leer.bytes, weitere: [{ pfad, bytes: html.length }] };
   }
 
   /**

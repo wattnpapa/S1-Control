@@ -18,6 +18,7 @@ import type { Dateisystem } from "@s1/speicher";
 
 import type { Automatikdruckziel, Druckerangabe, Einstellungen, Mitteilung, Probedruckergebnis } from "../kontrakt/index.js";
 import type { Automatikdruckeinstellung } from "../worker/automatikdruck.js";
+import { verzeichnisFehltText } from "./druckverzeichnis.js";
 
 /** Was der Main zum Drucken braucht — im Betrieb Electron (`elektronDruckausgang.ts`), im Test eine Attrappe. */
 export interface Druckausgang {
@@ -69,6 +70,8 @@ export interface Probedruckumfeld {
   readonly druckausgang?: Druckausgang | undefined;
   /** Der Zeitstempel im Dateinamen, damit ein zweiter Probedruck den ersten nicht überschreibt. */
   readonly marke: string;
+  /** Additiv (FM P2-11): ein fehlendes Verzeichnis anlegen — nur nach ausdrücklicher Rückfrage. */
+  readonly anlegen?: boolean | undefined;
 }
 
 /**
@@ -87,7 +90,12 @@ export async function probedruck(ziel: Automatikdruckziel, u: Probedruckumfeld):
   const ordner = ziel.pfad.trim();
   if (ordner === "") throw new Error("Es ist kein Verzeichnis eingetragen.");
   const pfad = path.join(ordner, `probedruck-vordruck_${u.marke}.pdf`);
-  await u.dateisystem.legeVerzeichnisAn(ordner);
+  // FM P2-11: Ein fehlendes Verzeichnis wird nicht still angelegt; der
+  // Renderer fragt „anlegen?“ und ruft dann mit `anlegen: true` erneut.
+  if (!(await u.dateisystem.existiert(ordner))) {
+    if (u.anlegen !== true) return { art: "verzeichnisFehlt", pfad: ordner, meldung: verzeichnisFehltText(ordner), anlegen: true };
+    await u.dateisystem.legeVerzeichnisAn(ordner);
+  }
   await u.dateisystem.schreibeUeberOhneSync(pfad, bytes);
   return { art: "verzeichnis", pfad, bytes: bytes.length };
 }

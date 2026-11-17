@@ -19,6 +19,7 @@ interface Attrappe extends Arbeitsplatzschale {
   readonly rufe: Ruf[];
   readonly sende: (mitteilung: Mitteilung) => void;
   geschlossen: boolean;
+  abgegeben: number;
 }
 
 function baue(): { plaetze: Arbeitsplaetze; attrappen: Map<string, Attrappe> } {
@@ -32,6 +33,10 @@ function baue(): { plaetze: Arbeitsplaetze; attrappen: Map<string, Attrappe> } {
         rufe,
         sende,
         geschlossen: false,
+        abgegeben: 0,
+        async stelleAbgeben() {
+          attrappe.abgegeben += 1;
+        },
         async beantworte(ruf) {
           rufe.push(ruf);
           return { ok: true, wert: schluessel };
@@ -64,6 +69,16 @@ describe("Abmelden", () => {
     expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(false);
     await vi.advanceTimersByTimeAsync(200);
     expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(true);
+  });
+
+  it("gibt beim Abmelden die Stelle sofort ab, vor der Frist (Sichter P1-4, ETB P3-3)", async () => {
+    const { plaetze, attrappen } = baue();
+    const ab = plaetze.hoere(SCHLUESSEL_A, () => undefined);
+    plaetze.abmelde(SCHLUESSEL_A);
+    ab();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(attrappen.get(SCHLUESSEL_A)?.abgegeben).toBe(1);
+    expect(attrappen.get(SCHLUESSEL_A)?.geschlossen).toBe(false);
   });
 
   it("behält einen Platz, der nach dem Abmelden wieder zuhört (Neuladen)", async () => {

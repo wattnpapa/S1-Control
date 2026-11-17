@@ -127,6 +127,9 @@ export function nachrichtNachweisen(nachrichtId: string, vorher: Nachweisvermerk
 export interface Nachrichtenfolge {
   readonly nachweis?: Nachweisvermerk;
   readonly sichtung?: Sichtungsvermerk;
+  /** Additiv (Fernmelder P2-9): Annahme und Beförderung eines Ausgangs vom Papier, im selben Zug. */
+  readonly annahme?: Zeitvermerk;
+  readonly befoerderung?: Befoerderung;
 }
 
 /**
@@ -140,12 +143,16 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
   const basis = nachrichtVerfassen(anlage);
   const nachweis = folge.nachweis === undefined ? undefined : nachrichtNachweisen(anlage.nachrichtId, null, folge.nachweis).neu;
   const sichtung = folge.sichtung === undefined ? undefined : nachrichtSichten(anlage.nachrichtId, null, folge.sichtung).neu;
-  if (nachweis === undefined && sichtung === undefined) return basis;
+  const annahme = folge.annahme === undefined ? undefined : nachrichtAnnehmen(anlage.nachrichtId, null, folge.annahme).neu;
+  const befoerderung = folge.befoerderung === undefined ? undefined : nachrichtBefoerdern(anlage.nachrichtId, null, folge.befoerderung).neu;
+  if (nachweis === undefined && sichtung === undefined && annahme === undefined && befoerderung === undefined) return basis;
   return {
     ...basis,
     nachrichtenfolge: {
       ...(nachweis === undefined ? {} : { nachweis }),
       ...(sichtung === undefined ? {} : { sichtung }),
+      ...(annahme === undefined ? {} : { annahme }),
+      ...(befoerderung === undefined ? {} : { befoerderung }),
     },
   };
 }
