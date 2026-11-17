@@ -21,8 +21,13 @@ export interface Zuweisbare {
   readonly vorher?: string;
 }
 
+/** „· Anmarsch" nur, wenn der Bereich es nicht schon sagt. */
+function anmarschZusatz(z: { readonly bereich: string; readonly anmarsch: boolean }): string {
+  return z.anmarsch && z.bereich !== "Anmarsch" ? " · Anmarsch" : "";
+}
+
 function ohneText(z: Ohnebedarfszeile): string {
-  return `${z.einheit} · ${z.bereich} · ${String(z.koepfe)} Köpfe${z.anmarsch ? " · Anmarsch" : ""}`;
+  return `${z.einheit} · ${z.bereich} · ${String(z.koepfe)} Köpfe${anmarschZusatz(z)}`;
 }
 
 /** Wer noch ohne geltende Unterkunft ist, getrennt nach mit und ohne Bedarf. */
@@ -34,7 +39,7 @@ export function zuweisbareEinheiten(bedarf: Unterbringungsbedarf): {
     .filter((z) => z.zustand !== "ZUGEWIESEN")
     .map((z) => ({
       einheitId: z.einheitId,
-      text: `${z.einheit} · ${z.bereich} · ${String(z.m + z.w + z.d)} Betten${z.anmarsch ? " · Anmarsch" : ""}`,
+      text: `${z.einheit} · ${z.bereich} · ${String(z.m + z.w + z.d)} Betten${anmarschZusatz(z)}`,
       ...(z.unterkunftId === undefined ? {} : { vorher: z.unterkunftId }),
     }));
   const ohneBedarf = bedarf.ohneBedarf.map((z) => ({ einheitId: z.einheitId, text: ohneText(z) }));
