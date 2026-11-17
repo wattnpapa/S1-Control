@@ -1,4 +1,5 @@
 import process from "node:process";
+import { fileURLToPath } from "node:url";
 
 import { defineConfig } from "vitest/config";
 
@@ -51,7 +52,8 @@ import { defineConfig } from "vitest/config";
 // Die Aliase zeigen bewusst auf die Quellen statt auf die gebauten dist/-
 // Ordner: `npm test` soll ohne vorherigen `tsc -b` laufen. Die Auflösung über
 // `exports` und `dist/` prüft im Gegenzug `npm run typecheck`.
-const quelle = (pfad: string) => new URL(pfad, import.meta.url).pathname;
+// `fileURLToPath` statt `URL.pathname`: unter Windows waere das `/D:/…`.
+const quelle = (pfad: string) => fileURLToPath(new URL(pfad, import.meta.url));
 
 /** Die Nachweise, die fremde Programme brauchen (siehe Kopfkommentar). */
 const FREMDLESER = ["bau/**/*-fremdleser.test.ts"] as const;
