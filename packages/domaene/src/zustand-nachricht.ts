@@ -11,6 +11,13 @@ import type { Id, Zeitpunkt } from "./werte.js";
 import type { Anlage, Feld, VerworfeneAnlage } from "./zustand.js";
 
 /** Aufnahme- und Beförderungsvermerk (Feld 1, 2, 4). */
+/** Der Vorschlag des LdF: Weg, Gegenstelle und der Fernmelder, der übertragen soll. */
+export interface Uebermittlungsvorschlag extends Zeitvermerk {
+  readonly mittel: string;
+  readonly fernmelder: string;
+  readonly gegenstelle?: string;
+}
+
 export interface Mittelvermerk {
   readonly mittel: string;
   readonly zeitpunkt: Zeitpunkt;
@@ -89,6 +96,8 @@ export interface NachrichtZustand extends Anlage {
   readonly gegenstelle?: Feld<string>;
   readonly aufnahme?: Feld<Mittelvermerk>;
   readonly annahme?: Feld<Zeitvermerk>;
+  /** Der Übermittlungsvorschlag des LdF (`NachrichtUebermittlungVorgeschlagen`). */
+  readonly vorschlag?: Feld<Uebermittlungsvorschlag>;
   /** Der Wert trägt bei Bedarf die Gegenstelle mit (`gegenstelle`). */
   readonly befoerderung?: Feld<Mittelvermerk & { readonly gegenstelle?: string }>;
   readonly nachweis?: Feld<Nachweisvermerk>;

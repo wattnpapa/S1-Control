@@ -5,7 +5,8 @@
  * Links die Ausgangswarteschlange: was aufgegeben und noch nicht befördert
  * ist (Laufzustand VOR_FMZ), Vorrang zuoberst, wie Ring 2 sie ordnet. Je
  * Zeile die drei Vermerke des oberen Vordruckteils als Knöpfe: Annehmen,
- * Befördern, Nachweisen. Liegt eine angenommene Nachricht länger als die
+ * Befördern, Nachweisen; davor der Vorschlag des LdF (Fernmelder, Mittel,
+ * Gegenstelle), den die Maske „Befördern" vorbelegt. Liegt eine angenommene Nachricht länger als die
  * Schwelle unbefördert, steht ihre Zeile bernstein mit der Zeit seit Annahme
  * — die Belastung der FmZ aus dem Vergleich von Annahme und Beförderung
  * (§5 „Zwanzig Minuten"); die Farbe steht nie allein, die Minuten stehen dabei.
@@ -23,6 +24,7 @@ import { minutenSeit } from "./fmzformate.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
+import { vorschlagText } from "./Vordruckteile.js";
 
 export interface WarteschlangenEigenschaften {
   readonly zeilen: readonly Nachrichtenzeile[];
@@ -49,6 +51,9 @@ function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenz
   const titel = (text: string): string => (nurLesen ? TEXT_NUR_LESEN : text);
   return (
     <span className="zeilenknoepfe">
+      <button type="button" disabled={nurLesen} title={titel("Übermittlungsvorschlag des LdF: Fernmelder, Mittel, Gegenstelle")} onClick={() => aufSchritt("vorschlag", zeile)}>
+        {zeile.vorschlag === undefined ? "Vorschlag" : "Vorschlag ändern"}
+      </button>
       <button type="button" disabled={nurLesen} title={titel("Annahmevermerk: Uhrzeit und Handzeichen")} onClick={() => aufSchritt("annahme", zeile)}>
         {zeile.annahme === undefined ? "Annehmen" : "Annahme ändern"}
       </button>
@@ -78,6 +83,7 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Abfassungszeit</th>
+              <th scope="col">Vorschlag LdF</th>
               <th scope="col">Annahme</th>
               <th scope="col">
                 <span className="nurvorlesen">Schritte</span>
@@ -97,6 +103,7 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">{dtg(zeile.abfassungszeit)}</td>
+                <td>{vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}</td>
                 <td>
                   <Annahmezelle zeile={zeile} jetzt={jetzt} />
                 </td>

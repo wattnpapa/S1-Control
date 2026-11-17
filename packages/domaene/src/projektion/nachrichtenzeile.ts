@@ -21,6 +21,7 @@ import {
   zMittelvermerk,
   zNachweis,
   zSichtung,
+  zVorschlag,
   zZeitvermerk,
 } from "../katalog/schemata-nachrichten.js";
 import { FMZ_SCHWELLE_VORBELEGUNG, type Id } from "../werte.js";
@@ -30,6 +31,7 @@ import type {
   NachrichtZustand,
   Nachweisvermerk,
   Sichtungsvermerk,
+  Uebermittlungsvorschlag,
   Zeitvermerk,
 } from "../zustand-nachricht.js";
 import type { Feld, Zustand } from "../zustand.js";
@@ -74,6 +76,8 @@ export interface Nachrichtenzeile {
   readonly gegenstelle?: string;
   readonly aufnahme?: Mittelvermerk;
   readonly annahme?: Zeitvermerk;
+  /** Der Übermittlungsvorschlag des LdF; fehlt, solange keiner vorliegt. */
+  readonly vorschlag?: Uebermittlungsvorschlag;
   readonly befoerderung?: Mittelvermerk;
   readonly nachweis?: Nachweisvermerk;
   readonly sichtung?: Sichtungsvermerk;
@@ -197,6 +201,7 @@ function freieTexte(n: NachrichtZustand): Partial<Nachrichtenzeile> {
 export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): Nachrichtenzeile {
   const aufnahme = gelesen(zMittelvermerk, n.aufnahme);
   const annahme = gelesen(zZeitvermerk, n.annahme);
+  const vorschlag = gelesen(zVorschlag, n.vorschlag);
   const befoerderung = gelesen(zMittelvermerk, n.befoerderung);
   const nachweis = gelesen(zNachweis, n.nachweis);
   const sichtung = gelesen(zSichtung, n.sichtung);
@@ -220,6 +225,7 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
     ...(gegenstelleText === undefined || gegenstelleText === "" ? {} : { gegenstelle: gegenstelleText }),
     ...(aufnahme === undefined ? {} : { aufnahme }),
     ...(annahme === undefined ? {} : { annahme }),
+    ...(vorschlag === undefined ? {} : { vorschlag }),
     ...(befoerderung === undefined ? {} : { befoerderung }),
     ...(sichtung === undefined ? {} : { sichtung }),
     ...(vermerke === undefined || vermerke === "" ? {} : { vermerke }),

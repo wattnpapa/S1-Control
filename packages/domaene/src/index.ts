@@ -47,6 +47,7 @@ export {
   NACHRICHT_KOPIEN,
   NACHRICHT_MITTEL,
   NACHRICHT_RICHTUNGEN,
+  FERNMELDER_STANDARD,
   NACHRICHT_STELLEN,
   NACHRICHT_VORRANGE,
   ORGANISATIONEN,
@@ -321,6 +322,7 @@ export {
   type Nachweisvermerk,
   type Sichtungsvermerk,
   type Verteilereintrag,
+  type Uebermittlungsvorschlag,
   type Zeitvermerk,
 } from "./zustand-nachricht.js";
 

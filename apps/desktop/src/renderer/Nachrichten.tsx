@@ -58,7 +58,7 @@ export const NACHRICHTENSICHTEN: readonly { readonly schluessel: Nachrichtensich
  * Sichter den Sichter, alle anderen den Posteingang.
  */
 export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
-  if (stellen.includes("FMZ")) return "fmz";
+  if (stellen.includes("FMZ") || stellen.includes("LDF")) return "fmz";
   return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || s === "FMZ") ? "sichter" : "posteingang";
 }
 
@@ -145,7 +145,7 @@ function Postfilter({ lage, zaehlung, wahl, aufWahl, sitzung, fuer, aufFuer }: P
   const eigene = sitzung?.stellen ?? [];
   // Mit der Zählung aus der Ansicht trägt jeder Chip seine Zahl; ohne (älterer Dienst) nur „neu" aus dem Band.
   const chips = CHIPS.map((c) => ({ ...c, anzahl: zaehlung !== undefined ? zaehlung[c.wert] : c.wert === "NEU" && fuer === "" ? lage?.neuFuerStellen : undefined }));
-  const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "FMZ"].filter((s) => !eigene.includes(s));
+  const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "FMZ", "LDF"].filter((s) => !eigene.includes(s));
   return (
     <Filterchips
       beschriftung="Filter nach Zustand"

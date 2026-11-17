@@ -43,6 +43,7 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           handzeichen={sitzung?.handzeichen ?? ""}
           naechsteNummer={ansicht?.naechsteNummer}
           vergebeneNummern={ansicht?.vergebeneNummern}
+          gegenstellen={ansicht?.gegenstellen}
           aufSchliessen={() => setzeOffen(undefined)}
         />
       )}

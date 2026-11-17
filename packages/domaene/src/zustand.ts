@@ -58,9 +58,11 @@ import type {
  * Statusfeld. **10** mit den Nachrichten (N1, KONZEPT-NACHRICHTEN.md §9): die
  * Entität `nachricht` mit abgeleitetem `laufzustand`, die Hinweisart
  * `nachweisnummerDoppelt`, fünf neue offene Bereiche und die Parameter
- * `sichtungAuchAusgang` und `fmzSchwelleMinuten` des Einsatzes.
+ * `sichtungAuchAusgang` und `fmzSchwelleMinuten` des Einsatzes. **11** mit dem
+ * Übermittlungsvorschlag des LdF: `NachrichtUebermittlungVorgeschlagen` auf
+ * das Feld `vorschlag` der Nachricht.
  */
-export const FOLD_VERSION = 10;
+export const FOLD_VERSION = 11;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert

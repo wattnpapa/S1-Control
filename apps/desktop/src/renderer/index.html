@@ -46,7 +46,7 @@
          **einer** Stelle umschaltet: Eine Regel, die ihre Farbe selbst setzt,
          faellt im Nacht- oder Feldbild aus dem Bild. */
       :root {
-        --navy-900: #1c2251;
+        --navy-900: #039;
         --navy-800: #14183a;
         --navy-600: #1a3fb0;
         --navy-300: #a9b0d4;
@@ -374,22 +374,17 @@
         gap: 22px;
         padding: 6px 0 9px;
       }
+      /* Das weisse THW-Emblem steht frei auf dem Navy des Kopfbands. */
       .kopfband .marke {
-        width: 44px;
-        height: 30px;
+        width: 100px;
+        height: 100px;
         display: grid;
         place-items: center;
-        background: var(--navy-600);
-        border: 1px solid #6b74a8;
-        color: #ffffff;
-        font: 700 9px/1 var(--ui);
-        letter-spacing: 0.08em;
+        flex: none;
       }
-      /* Im Nachtbild kein Blau: Die Marke traegt die Farben des Kopfbands. */
-      :root[data-theme="nacht"] .kopfband .marke {
-        background: transparent;
-        border-color: var(--kopfband-leise);
-        color: var(--kopfband-text);
+      .kopfband .marke .emblem {
+        width: 100%;
+        height: 100%;
       }
       /* Der Einsatz ist die Überschrift (Entwurf „Entlastung", 3.1); das
          Wortbild steht klein darunter, neben der Führungsstelle. */

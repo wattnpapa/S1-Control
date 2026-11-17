@@ -21,6 +21,7 @@ import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 const ARTEN = new Set([
   "NachrichtVerfasst",
   "NachrichtAngenommen",
+  "NachrichtUebermittlungVorgeschlagen",
   "NachrichtBefoerdert",
   "NachrichtNachgewiesen",
   "NachrichtGesichtet",
