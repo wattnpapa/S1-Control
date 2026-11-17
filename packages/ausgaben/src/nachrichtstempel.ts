@@ -11,13 +11,19 @@
  *    Hinweiszeile am Blattrand den ganzen Satz, und quer über das Formular
  *    kommt ein Schriftzug wie das Übungswasserzeichen der Bibliothek — ein
  *    früher gedrucktes Blatt ohne Stempel bleibt so von einem neueren
- *    unterscheidbar.
+ *    unterscheidbar;
+ *  * bei einem Ausgang eine Hinweiszeile am Fuß, die das Feld „Ausgang“
+ *    benennt (R2-FaBe P0-2): Die Bibliothek beschriftet es nur mit „Ausgang“
+ *    und nimmt ohne Beförderung die Annahme der FmZ dafür; wer das Blatt las,
+ *    hielt die Zeit für die Quittung des Empfängers. Die Zeile sagt „Quittung
+ *    der Gegenstelle“ oder „noch nicht übermittelt“. Die Geometrie der
+ *    Bibliothek bleibt unberührt, es gibt dort kein Beschriftungsfeld.
  *
  * Eigene Datei, damit `nachricht.ts` (Abbildung auf die Felder) nicht weiter
  * wächst. Ring 3 ohne `node:` und ohne DOM.
  */
 
-import { datumZeitGruppe } from "@s1/domaene";
+import { datumZeitGruppe, projektion } from "@s1/domaene";
 import type { jsPDF } from "jspdf";
 import { VORDRUCK_BREITE, VORDRUCK_HOEHE, type VordruckDaten } from "bos-nachrichtenvordruck";
 
@@ -45,17 +51,39 @@ export function etbVermerk(etbNummer: string | undefined): string {
   return nummer === "" ? "" : `ETB-Nr. ${nummer}`;
 }
 
+/** Die Vermerke eines Ausgangs, soweit die Hinweiszeile sie braucht. */
+export interface Quittungsgrundlage {
+  readonly richtung: "EINGANG" | "AUSGANG";
+  readonly annahme?: { readonly zeitpunkt: string; readonly handzeichen: string } | undefined;
+  readonly befoerderung?: { readonly mittel?: string | undefined; readonly zeitpunkt: string; readonly handzeichen: string } | undefined;
+}
+
+/**
+ * „angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“ —
+ * derselbe Satz wie in Liste, Lese-Ansicht und Vorschau (`fmzVermerkTextAus`
+ * in Ring 2), damit Bildschirm und Papier nicht zwei Wortlaute führen. Leer
+ * bei einem Eingang und bei einem Ausgang, den die FmZ noch nicht angefasst hat.
+ */
+export function quittungshinweis(nachricht: Quittungsgrundlage): string {
+  if (nachricht.richtung !== "AUSGANG" || (nachricht.annahme === undefined && nachricht.befoerderung === undefined)) return "";
+  const befoerderung = nachricht.befoerderung === undefined ? undefined : { ...nachricht.befoerderung, mittel: nachricht.befoerderung.mittel ?? "" };
+  return projektion.fmzVermerkTextAus(undefined, nachricht.annahme, befoerderung, true) ?? "";
+}
+
 /**
  * Setzt ETB-Nummer und Stempeltexte in die Felder. `druckbar` kommt vom
  * Aufrufer, weil der Zeichenfilter in `nachricht.ts` steht.
  */
 export function zusatzUebernehmen(
   daten: VordruckDaten,
-  zusatz: { readonly etbNummer?: string | undefined; readonly zurueckgezogen?: Nachrichtenrueckzug | undefined },
+  zusatz: { readonly etbNummer?: string | undefined; readonly zurueckgezogen?: Nachrichtenrueckzug | undefined } & Quittungsgrundlage,
   druckbar: (text: string) => string,
 ): void {
   const etb = etbVermerk(zusatz.etbNummer);
   if (etb !== "") daten.vermerke = druckbar([etb, daten.vermerke].filter(Boolean).join(" "));
+  // Der Rückzugshinweis geht vor: Er steht in derselben Zeile und ist die wichtigere Auskunft.
+  const quittung = quittungshinweis(zusatz);
+  if (quittung !== "") daten.hinweis = druckbar(quittung);
   if (zusatz.zurueckgezogen === undefined) return;
   daten.pruefvermerk = druckbar(RUECKZUG_WORT);
   daten.hinweis = druckbar(rueckzugText(zusatz.zurueckgezogen));
