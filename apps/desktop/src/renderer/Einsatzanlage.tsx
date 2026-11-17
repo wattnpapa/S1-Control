@@ -16,7 +16,7 @@
 
 import { useState } from "react";
 
-import { zeitpunktText } from "@s1/domaene";
+import { datumText, zeitpunktText } from "@s1/domaene";
 
 import { anlagefehler, legeEinsatzMitStammdatenAn } from "./einsatzanlage.js";
 import { useLaden } from "./laden.js";
@@ -24,10 +24,12 @@ import { Maske } from "./Maske.js";
 import type { Stammdateneingabe } from "./stammdatenformular.js";
 import { Stammdatenfelder } from "./Stammdatenmaske.js";
 
-/** Heute als `TT.MM.JJJJ` in der Ortszeit des Arbeitsplatzes. */
+/**
+ * Heute als `TT.MM.JJJJ` in der Anzeigezone (Audit Nachrichten SGL P3-16:
+ * jede Zeitanzeige liest dieselbe Zone, nicht die des Rechners).
+ */
 export function heute(jetzt: Date = new Date()): string {
-  const zwei = (n: number): string => String(n).padStart(2, "0");
-  return `${zwei(jetzt.getDate())}.${zwei(jetzt.getMonth() + 1)}.${String(jetzt.getFullYear())}`;
+  return datumText(jetzt);
 }
 
 function leereStammdaten(): Stammdateneingabe {

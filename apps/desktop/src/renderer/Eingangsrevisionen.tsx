@@ -6,7 +6,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Fassungsvergleich, Meldungszeile } from "@s1/domaene";
+import { standText, type Fassungsvergleich, type Meldungszeile } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
 
@@ -25,8 +25,10 @@ export function zustandswort(zustand: string): string {
 /** „10.09.2026, 08:00:00" — so steht ein Zeitpunkt im Korb. */
 export function zeit(wert: string): string {
   if (wert === "") return "";
-  const zeitpunkt = new Date(wert);
-  return Number.isNaN(zeitpunkt.getTime()) ? wert : zeitpunkt.toLocaleString("de-DE");
+  // Anzeigezone statt Rechnerzone (Audit Nachrichten SGL P3-16): derselbe Stand
+  // liest an jedem Arbeitsplatz gleich.
+  const text = standText(wert);
+  return text === "" ? wert : text;
 }
 
 /**

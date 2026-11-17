@@ -217,7 +217,7 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
           <thead>
             <tr>
               <th scope="col" title="Wann der Eintrag am Rechner geschrieben wurde">Erfasst</th>
-              <th scope="col" title="Fachliche Zeit: wann es geschah (z. B. die Funkzeit)">Zeit der Meldung</th>
+              <th scope="col" title="Fachliche Zeit: wann es geschah – bei Funk die Funkzeit, bei Nachrichten die Zeit des Vermerks oder der Abfassung (Audit ETB P3-1)">Fachzeit</th>
               <th scope="col">Vorgang</th>
               <th scope="col">Akteur</th>
               <th scope="col">Rechner</th>

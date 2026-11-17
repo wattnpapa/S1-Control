@@ -87,6 +87,12 @@ describe("Die Tagebuch-Ansicht", () => {
     });
   });
 
+  it("nennt die fachliche Zeit „Fachzeit“ statt „Zeit der Meldung“ (ETB P3-1)", async () => {
+    await zeigeTagebuch();
+    expect(screen.getByRole("columnheader", { name: "Fachzeit" })).toBeDefined();
+    expect(screen.queryByRole("columnheader", { name: "Zeit der Meldung" })).toBeNull();
+  });
+
   it("nennt den wirksamen Filter mit Zählung und bietet „Alle anzeigen“ an", async () => {
     await zeigeTagebuch("U1");
     const elf = Array.from({ length: 11 }, (_, nummer) => zeile({ ereignisId: `a-${String(nummer).padStart(10, "0")}` }));

@@ -10,6 +10,7 @@
 
 import { render, screen, cleanup, fireEvent } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { uhrzeitText } from "@s1/domaene";
 
 import { Monitor } from "./Monitor.js";
 import { taktischeZeit } from "./formate.js";
@@ -106,8 +107,8 @@ describe("Monitor", () => {
     const status = { zustand: "unterbrochen", stufe: "gelb", seitMs: 90_000 } as const;
     render(<Monitor lagebild={GRUND} jetzt={JETZT} verbindung={status} />);
     const streifen = screen.getByRole("alert");
-    const stand = new Date(JETZT - 90_000);
-    const hhmm = `${String(stand.getHours()).padStart(2, "0")}:${String(stand.getMinutes()).padStart(2, "0")}`;
+    // Uhrzeit der Anzeigezone, nicht der Rechnerzone (Audit SGL P3-16).
+    const hhmm = uhrzeitText(JETZT - 90_000);
     expect(streifen.textContent).toBe(`⚠ Keine Verbindung – Stand ${hhmm}`);
     expect(screen.getByText("1/2/20 = 23")).toBeDefined();
   });

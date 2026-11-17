@@ -12,11 +12,19 @@
  * jedes Mal da. Das stört weniger als eine Meldung.
  */
 
+/**
+ * Was bei gesperrtem Speicher wenigstens für diese Sitzung gemerkt wird
+ * (Audit LdF P3-4): Ohne Speicher kam das Band „Verstanden“ bei jedem
+ * Blattwechsel wieder. Es wird nur befragt, wenn der Speicher wirft — bei
+ * funktionierendem Speicher gilt allein er.
+ */
+const SITZUNG = new Set<string>();
+
 export function istGemerkt(schluessel: string): boolean {
   try {
     return globalThis.localStorage.getItem(schluessel) === "1";
   } catch {
-    return false;
+    return SITZUNG.has(schluessel);
   }
 }
 
@@ -24,6 +32,7 @@ export function merke(schluessel: string): void {
   try {
     globalThis.localStorage.setItem(schluessel, "1");
   } catch {
-    // Gesperrt oder voll: Die Zeile erscheint beim nächsten Mal wieder.
+    // Gesperrt oder voll: Nur diese Sitzung merkt es sich; beim nächsten Öffnen erscheint die Zeile wieder.
+    SITZUNG.add(schluessel);
   }
 }

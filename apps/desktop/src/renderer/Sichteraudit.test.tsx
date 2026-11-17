@@ -14,6 +14,7 @@ import type { Nachrichtenzeile } from "@s1/domaene";
 
 import type { Lagebild } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
+import { quittungszeitpunkt } from "./Laufzettel.js";
 import { Nachrichten } from "./Nachrichten.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { BLITZ_AN_S4, NACHRICHTEN_LAGEBILD, VOR_SICHTER, nachrichtenansicht } from "./pruefhilfen/nachrichtenbeispiel.js";
@@ -111,6 +112,28 @@ describe("Sicht Sichter nach dem Audit", () => {
     fireEvent.doubleClick(within(neu).getByRole("row", { name: /Pumpen eingetroffen/ }));
     await new Promise((r) => setTimeout(r, 20));
     expect(bedient().filter((e) => e.typ === "NachrichtKenntnisGenommen")).toEqual([]);
+  });
+
+  it("quittiert mit der Zeit des Drückens, solange niemand die Quittung getippt hat (P3-1)", async () => {
+    attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([EINGANG]));
+    render(<Nachrichten aufTagebuch={vi.fn()} />);
+    const zettel = await laufzettelZu(/Lage ruhig/);
+    // Drei Minuten später: Wer so lange verteilt, quittiert nicht mit der Zeit des Aufschlagens.
+    const spaeter = new Date(Date.now() + 3 * 60_000);
+    vi.useFakeTimers({ toFake: ["Date"], now: spaeter });
+    try {
+      fireEvent.click(within(zettel).getByRole("button", { name: "Sichten" }));
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(bedient()).toHaveLength(1));
+    expect(bedient()[0]).toMatchObject({ typ: "NachrichtGesichtet", neu: { zeitpunkt: spaeter.toISOString() } });
+  });
+
+  it("behält eine getippte Quittungszeit (P3-1)", () => {
+    expect(quittungszeitpunkt(true, "2026-11-17T09:00:00.000Z", new Date("2026-11-17T09:30:00Z"))).toBe("2026-11-17T09:00:00.000Z");
+    expect(quittungszeitpunkt(false, "2026-11-17T09:00:00.000Z", new Date("2026-11-17T09:30:00Z"))).toBe("2026-11-17T09:30:00.000Z");
+    expect(quittungszeitpunkt(true, undefined)).toBeUndefined();
   });
 
   it("nennt im Sperrhinweis Stelle und Handzeichen (P2-4)", () => {

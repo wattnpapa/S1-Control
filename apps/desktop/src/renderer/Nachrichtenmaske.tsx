@@ -58,6 +58,7 @@ import { nachrichtAufnehmen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
+import { doppelterAusgangText } from "./doppelterAusgang.js";
 import { merkeOffeneEingabe } from "./entwurf.js";
 import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, type Aufnahmewerte } from "./fmzformate.js";
 import { neueId } from "./kennungen.js";
@@ -269,7 +270,12 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   const [nachtragswerte, setzeNachtragswerte] = useState<Nachtragswerte>(() => nachtragVorlage());
   const versuch = useAnlegeversuch();
   const peers = useLaden((z) => z.lagebild?.peers);
-  const setze: Setze = (feld, wert) => setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
+  // SGL P3-20: die Rückfrage bei gleichem Ausgang; der zweite Klick gibt auf.
+  const [doppelt, setzeDoppelt] = useState<string | undefined>(undefined);
+  const setze: Setze = (feld, wert) => {
+    setzeDoppelt(undefined);
+    setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
+  };
   const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage) || t.angefasst || JSON.stringify(nachtragswerte) !== JSON.stringify(nachtragVorlage());
   const fmz = aufnahme !== undefined && werte.richtung === "EINGANG";
   const sichterDa = sichterBesetzt(sitzung?.stellen, peers ?? []);
@@ -297,6 +303,14 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   async function aufgeben(): Promise<void> {
     const nachrichtId = versuch.kennung(() => neueId("N"));
     const anlage = anlageAus(werte, nachrichtId);
+    const akteId = useLaden.getState().akteId;
+    if (anlage.richtung === "AUSGANG" && doppelt === undefined && akteId !== undefined) {
+      const frage = await doppelterAusgangText(akteId, werte);
+      if (frage !== undefined) {
+        setzeDoppelt(frage);
+        return;
+      }
+    }
     const vermerk = fmz ? aufnahmeAus(aufnahmewerte) : undefined;
     const gegenstelle = aufnahmewerte.gegenstelle.trim();
     const mitAufnahme = vermerk === undefined ? anlage : { ...anlage, aufnahme: vermerk, ...(gegenstelle === "" ? {} : { gegenstelle }) };
@@ -324,7 +338,7 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   return (
     <Maske
       titel={titel}
-      bestaetigungstext={nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben"}
+      bestaetigungstext={doppelt !== undefined ? "Trotzdem aufgeben" : nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben"}
       geaendert={geaendert}
       bereit={fehler.length === 0 && !versuch.gesperrt}
       bereitGrund={fehler[0] ?? versuch.sperre}
@@ -345,6 +359,11 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
         )}
       </div>
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />
+      {doppelt !== undefined && (
+        <p className="warnung" role="alert">
+          {doppelt}
+        </p>
+      )}
       {versuch.anzeige}
     </Maske>
   );

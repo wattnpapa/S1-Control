@@ -46,6 +46,14 @@ import { dtg, handzeichenPflicht, stellenname, zeitAusEingabe } from "./nachrich
 import { sperrtext, sperrerMitStelle, useSperreHalten } from "./useBearbeitungssperre.js";
 import { Verteilermatrix, hauptempfaengerWarnung, verteilerAusAnschrift, type Verteilerwahl } from "./Verteilerraster.js";
 
+/** Wie oft die ungetippte Quittungszeit nachgeführt wird; beim Sichten gilt ohnehin die Zeit des Drückens. */
+const QUITTUNG_TAKT_MS = 15_000;
+
+/** Die Quittungszeit: die getippte, sonst die Zeit des Drückens (Sichter P3-1). */
+export function quittungszeitpunkt(vonHand: boolean, getippt: string | undefined, jetzt: Date = new Date()): string | undefined {
+  return vonHand ? getippt : jetzt.toISOString();
+}
+
 /** Die Rückfrage bei Escape mit getippten Eingaben im Laufzettel. */
 export const TEXT_LAUFZETTEL_VERWERFEN = "Eingaben im Laufzettel verwerfen? Escape noch einmal verwirft sie; die Auswahl bleibt.";
 
@@ -98,7 +106,16 @@ function useLaufzettelwerte(zeile: Nachrichtenzeile, handzeichen: string) {
   const [verteiler, setzeVerteiler] = useState<readonly Verteilerwahl[]>(() => verteilerBeimOeffnen(zeile, fuestName));
   const [vermerke, setzeVermerke] = useState(zeile.sichtung?.vermerke ?? "");
   const [angefasst, setzeAngefasst] = useState(false);
+  // Sichter P3-1: Die Quittungszeit läuft mit, solange niemand sie getippt hat; wer drei Minuten
+  // verteilt, quittiert mit der Zeit des Drückens, nicht der des Aufschlagens.
+  const [quittungVonHand, setzeQuittungVonHand] = useState(false);
+  useEffect(() => {
+    if (quittungVonHand) return undefined;
+    const zeitgeber = setInterval(() => setzeQuittung(datumZeitGruppe(new Date())), QUITTUNG_TAKT_MS);
+    return () => clearInterval(zeitgeber);
+  }, [quittungVonHand]);
   const zuruecksetzen = (): void => {
+    setzeQuittungVonHand(false);
     setzeQuittung(datumZeitGruppe(new Date()));
     setzeZeichen(handzeichen);
     setzeVerteiler(verteilerBeimOeffnen(zeile, fuestName));
@@ -109,7 +126,11 @@ function useLaufzettelwerte(zeile: Nachrichtenzeile, handzeichen: string) {
     setzeAngefasst(true);
     setzer(wert);
   };
-  return { fuestName, quittung, zeichen, verteiler, vermerke, angefasst, setzeVerteiler, zuruecksetzen, setze: { quittung: fasse(setzeQuittung), zeichen: fasse(setzeZeichen), verteiler: fasse(setzeVerteiler), vermerke: fasse(setzeVermerke) } };
+  const quittungSetzen = fasse((wert: string): void => {
+    setzeQuittungVonHand(true);
+    setzeQuittung(wert);
+  });
+  return { fuestName, quittung, quittungVonHand, zeichen, verteiler, vermerke, angefasst, setzeVerteiler, zuruecksetzen, setze: { quittung: quittungSetzen, zeichen: fasse(setzeZeichen), verteiler: fasse(setzeVerteiler), vermerke: fasse(setzeVermerke) } };
 }
 
 /**
@@ -158,14 +179,17 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
   const peers = useLaden((z) => z.lagebild?.peers);
   const sperrer = sperrerMitStelle(peers ?? [], zeile.id);
 
-  const zeitpunkt = zeitAusEingabe(w.quittung);
+  const getippt = zeitAusEingabe(w.quittung);
+  const zeitpunkt = quittungszeitpunkt(w.quittungVonHand, getippt);
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
   // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
   const warnung = hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
 
   const sichten = async (): Promise<void> => {
-    if (zeitpunkt === undefined) return;
-    const entwurf = nachrichtSichten(zeile.id, vorher, { zeitpunkt, handzeichen: w.zeichen, verteiler: w.verteiler, vermerke: w.vermerke });
+    // Die Zeit des Drückens, nicht die beim Aufschlagen (Sichter P3-1).
+    const gilt = quittungszeitpunkt(w.quittungVonHand, getippt);
+    if (gilt === undefined) return;
+    const entwurf = nachrichtSichten(zeile.id, vorher, { zeitpunkt: gilt, handzeichen: w.zeichen, verteiler: w.verteiler, vermerke: w.vermerke });
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
@@ -189,7 +213,7 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet }: Laufz
       )}
       <Inhaltsblick zeile={zeile} />
       <div className="vordruckzeile">
-        <Dtgfeld beschriftung="Quittung" wert={w.quittung} aufAenderung={w.setze.quittung} />
+        <Dtgfeld beschriftung="Quittung" wert={w.quittung} aufAenderung={w.setze.quittung} hilfe="Gilt die Zeit beim Drücken von „Sichten“, solange Sie sie nicht ändern" />
         <label>
           Handzeichen
           <input value={w.zeichen} maxLength={4} onChange={(e) => w.setze.zeichen(e.target.value)} />

@@ -3,6 +3,12 @@ import { describe, expect, it } from "vitest";
 import { ereignisMitObjekt, ereignisname, meldungsklartext } from "./Ereignisnamen.js";
 
 describe("Ereignisnamen", () => {
+  it("setzt eine Nachricht mit Nummer und Betreff vor die Tat (Fernmelder P3-1)", () => {
+    expect(ereignisMitObjekt("NachrichtAngenommen", "Nachricht A 7 ‚Sperrung B212‘")).toBe("Nachricht A 7 ‚Sperrung B212‘ angenommen");
+    expect(ereignisMitObjekt("NachrichtGesichtet", "Nachricht E 3")).toBe("Nachricht E 3 gesichtet");
+    expect(ereignisMitObjekt("NachrichtAngenommen", "Gesprächsnotiz A")).toBe("Gesprächsnotiz A angenommen");
+  });
+
   it("übersetzt interne Vorgangsnamen ins Deutsche", () => {
     expect(ereignisname("EinheitEntfernt")).toBe("Einheit entfernt");
     expect(ereignisname("AbschnittAufgeloest")).toBe("Abschnitt aufgelöst");

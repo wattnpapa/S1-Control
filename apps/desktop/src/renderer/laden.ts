@@ -89,6 +89,8 @@ export interface Hinweis {
   readonly nummer: number;
   readonly stufe: "info" | "warnung" | "fehler";
   readonly text: string;
+  /** Additiv (Audits Fernmelder P3-7, LdF P3-4): wann der Hinweis entstand (Uhr des Rechners, ms) — für Uhrzeit und Verfall. */
+  readonly zeit?: number;
 }
 
 export interface Tabellenfilter {
@@ -311,6 +313,8 @@ export interface Laden {
   /** Trägt einen Hinweis in die Leiste ein — für Antworten, die keine Maske öffnen. */
   melde(stufe: Hinweis["stufe"], text: string): void;
   loescheFehler(): void;
+  /** Additiv (Fernmelder P3-7): nimmt die genannten Hinweise aus der Leiste; ohne Angabe alle. */
+  loescheHinweise(nummern?: readonly number[]): void;
   /** Nimmt Fehlerbild und Hinweise zurück, die nur die Unterbrechung betrafen (Wiederverbindung). */
   entferneVerbindungsmeldungen(): void;
 }
@@ -432,7 +436,7 @@ export const useLaden = create<Laden>((setze, hole) => {
     // Dieselbe Verbindungsmeldung steht nur einmal da, nicht je fehlgeschlagenem Ansichtsruf.
     if (VERBINDUNGSMELDUNGEN.includes(text) && hole().hinweise.some((h) => h.text === text)) return;
     hinweisNummer += 1;
-    const hinweise = [...hole().hinweise, { nummer: hinweisNummer, stufe, text: meldungsklartext(text) }];
+    const hinweise = [...hole().hinweise, { nummer: hinweisNummer, stufe, text: meldungsklartext(text), zeit: Date.now() }];
     setze({ hinweise: hinweise.slice(-HINWEISE_MAX) });
   }
 
@@ -997,6 +1001,10 @@ export const useLaden = create<Laden>((setze, hole) => {
 
     loescheFehler() {
       setze({ fehler: undefined });
+    },
+
+    loescheHinweise(nummern) {
+      setze({ hinweise: nummern === undefined ? [] : hole().hinweise.filter((h) => !nummern.includes(h.nummer)) });
     },
 
     entferneVerbindungsmeldungen() {

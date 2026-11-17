@@ -20,6 +20,7 @@ import type { Sitzungsstellen } from "../kontrakt/index.js";
 import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
 import { Stellenabfrage, mitVorbelegung, vorbelegungAus } from "./Stellenabfrage.js";
+import { gemerkteStelle, merkeStelle } from "./stellenmerker.js";
 
 /** Setzt die Sitzung im Worker und merkt sie in den Einstellungen dieses Geräts. */
 export async function setzeSitzung(akteId: string, ordner: string, sitzung: Sitzungsstellen): Promise<void> {
@@ -29,6 +30,8 @@ export async function setzeSitzung(akteId: string, ordner: string, sitzung: Sitz
 
 /** Merkt die Wahl als Vorbelegung; scheitert das Speichern, gilt sie trotzdem für diese Sitzung. */
 export async function merkeVorbelegung(ordner: string, sitzung: Sitzungsstellen): Promise<void> {
+  // Der Merker dieses Browsers zuerst: Er steht auch da, wenn das Speichern der Einstellungen scheitert (LdF P3-3).
+  merkeStelle(ordner, sitzung);
   const einstellungen = mitVorbelegung(useLaden.getState().einstellungen, ordner, sitzung);
   try {
     useLaden.setState({ einstellungen: await rufe({ art: "einstellungenSetzen", einstellungen }) });
@@ -50,7 +53,8 @@ export function useSitzungsabfrage(): { readonly maske: React.JSX.Element | null
   const vonSelbst = lagebild.sitzung === undefined && lagebild.nachrichten !== undefined;
   const oeffne = (): void => setzeGewuenscht(true);
   if (!vonSelbst && !gewuenscht) return { maske: null, oeffne };
-  const vorbelegung = lagebild.sitzung ?? vorbelegungAus(einstellungen, ordner);
+  // Die eigene Wahl dieses Browsers vor der gemeinsamen Vorbelegung des Dienstes (LdF P3-3).
+  const vorbelegung = lagebild.sitzung ?? gemerkteStelle(ordner) ?? vorbelegungAus(einstellungen, ordner);
   const maske = (
     <Stellenabfrage
       vorbelegung={vorbelegung}

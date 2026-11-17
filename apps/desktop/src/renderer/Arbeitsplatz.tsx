@@ -14,6 +14,7 @@ import { Diagnose } from "./Diagnose.js";
 import { Auswahl } from "./Einsatzauswahl.js";
 import { Funkplan } from "./Funkplan.js";
 import { Hilfe } from "./Hilfe.js";
+import { Hinweiskasten } from "./Hinweiskasten.js";
 import { Kopfband } from "./Kopfband.js";
 import { Kosten } from "./Kosten.js";
 import { Programmversorgung } from "./Programmversorgung.js";
@@ -199,6 +200,9 @@ export function Arbeitsplatz(): React.JSX.Element {
           an jeder Karte (Entwurf „Entlastung", 3.6). */}
       {laden.akteId !== undefined && laden.einstellungen.betriebsart !== "meldekopf" && <Einstiegszeile ort={ort} />}
 
+      {/* Oben am Blatt wie das Fehlerbild, nicht am Seitenende (Audit SGL P2-10). */}
+      <Hinweiskasten />
+
       {laden.fehler !== undefined && (
         <div role="alert" className="fehlerbild">
           <span>{laden.fehler}</span>
@@ -266,18 +270,6 @@ export function Arbeitsplatz(): React.JSX.Element {
           </>
         )}
 
-        {laden.hinweise.length > 0 && (
-          <section aria-label="Hinweise" className="hinweise">
-            <h2>Hinweise</h2>
-            <ul>
-              {laden.hinweise.map((hinweis) => (
-                <li key={hinweis.nummer} className={hinweis.stufe}>
-                  {hinweis.text}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
       </main>
 
       <Statuszeile lagebild={laden.lagebild} jetzt={jetzt} verbindung={verbindung} />

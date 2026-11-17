@@ -170,7 +170,7 @@ describe("FM P2-3, P2-9: Vom Papier nachtragen", () => {
     setze(blatt, "Hdz Annahme", "Ha");
     setze(blatt, "Beförderung", "101040nov26");
     setze(blatt, "Hdz Beförderung", "Ha");
-    setze(blatt, "Gegenstelle", "Heros Wildeshausen");
+    setze(blatt, "Rufname der Gegenstelle / Spruchkopf", "Heros Wildeshausen");
     setze(blatt, "Nr.", "12");
     expect(maske.textContent).not.toContain("24 Stunden zurück");
     fireEvent.click(within(maske).getByRole("button", { name: "Nachtragen" }));

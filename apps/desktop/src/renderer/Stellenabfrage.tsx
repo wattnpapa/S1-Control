@@ -59,6 +59,14 @@ export function mitVorbelegung(einstellungen: Einstellungen, ordner: string, sit
   };
 }
 
+/** Die Stationen des Fernmeldebetriebs (Audit Fernmelder P3-3): wer an ihnen sitzt, soll nicht neunmal tabulieren. */
+const STATIONEN = ["FMZ", "SICHTER", "LDF"] as const;
+
+/** Die Stationen zuerst, dann die Stellen des Verteilers in der Ordnung des Vordrucks. */
+export function abfolge(stellen: readonly string[]): readonly string[] {
+  return [...STATIONEN.filter((s) => stellen.includes(s)), ...stellen.filter((s) => !(STATIONEN as readonly string[]).includes(s))];
+}
+
 export interface StellenabfrageEigenschaften {
   readonly vorbelegung: Sitzungsstellen;
   readonly einsatzname?: string;
@@ -74,22 +82,30 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
   const stellen = [...new Set([...ARBEITSPLATZSTELLEN.filter((s) => gewaehlt.includes(s)), ...freieStellen(frei)])];
   const fehler = stellenabfrageFehler(stellen, handzeichen);
   const hz = handzeichen.trim();
+  // Eine vollständige Vorbelegung (nach dem Neuladen) bestätigt ein Klick; der Fokus steht gleich auf „Übernehmen“.
+  const [vollstaendig] = useState(() => stellenabfrageFehler(vorbelegung.stellen, vorbelegung.handzeichen ?? "") === undefined);
   return (
     <Maske
       titel={einsatzname === undefined ? "Stelle und Handzeichen" : `Stelle und Handzeichen · ${einsatzname}`}
       bestaetigungstext="Übernehmen"
       trotzSperre
+      startfokus={vollstaendig ? "bestaetigen" : "feld"}
       bereit={fehler === undefined}
       {...(fehler === undefined ? {} : { bereitGrund: fehler })}
       aufAbbrechen={aufAbbrechen}
       aufBestaetigen={() => aufBestaetigen({ stellen, ...(hz === "" ? {} : { handzeichen: hz }) })}
     >
+      {vollstaendig && (
+        <p className="hinweistext" role="status">
+          Zuletzt gewählt: {vorbelegung.stellen.map(stellenname).join(", ")} (Hz. {vorbelegung.handzeichen}). „Übernehmen“ bestätigt.
+        </p>
+      )}
       <p className="hinweistext">
         Welche Position hat dieser Arbeitsplatz im Stab? Die Wahl gilt, bis der Einsatz geschlossen wird, und steht bei den anderen
         Arbeitsplätzen als besetzte Stelle. Sie ist ein Zuschnitt, kein Recht: Jeder Posteingang bleibt erreichbar.
       </p>
       <div className="kaestchenzeile stellenwahl" role="group" aria-label="Stellen">
-        {ARBEITSPLATZSTELLEN.map((stelle) => (
+        {abfolge(ARBEITSPLATZSTELLEN).map((stelle) => (
           <label key={stelle} className="kaestchen">
             <input
               type="checkbox"

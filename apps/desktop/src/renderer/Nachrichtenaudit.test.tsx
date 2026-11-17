@@ -152,7 +152,7 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
   it("bestätigt die Aufnahme mit Strg+Enter im Inhalt und führt Tab in der Folge der Aufnahme", async () => {
     render(<Nachrichtenmaske titel="Eingang aufnehmen" vorlage={{ ...leereMaske(undefined), richtung: "EINGANG", anschrift: "FüSt Weser" }} anschriften={[]} aufnahme={{ naechsteNummer: 3 }} aufSchliessen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: "Eingang aufnehmen" });
-    const folge = ["Mittel", "Aufnahme", "Gegenstelle", "Absender", "Anschrift", "Sofort", "Blitz", "Betreff", "Inhalt"].map((t) => within(maske).getByLabelText(t));
+    const folge = ["Mittel", "Aufnahme", "Rufname der Gegenstelle / Spruchkopf", "Absender", "Anschrift", "Sofort", "Blitz", "Betreff", "Inhalt"].map((t) => within(maske).getByLabelText(t));
     for (let i = 0; i < folge.length - 1; i += 1) {
       fireEvent.keyDown(folge[i] as HTMLElement, { key: "Tab" });
       expect(document.activeElement).toBe(folge[i + 1]);

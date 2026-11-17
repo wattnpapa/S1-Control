@@ -10,7 +10,7 @@
  */
 
 import type { Nachrichtenentwurf } from "@s1/ausgaben/vordruck";
-import { NACHRICHT_STELLEN, datumZeitGruppe, datumZeitGruppeLesen, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { NACHRICHT_STELLEN, datumZeitGruppe, datumZeitGruppeLesen, projektion, anzeigezoneWandzeit, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
 import type { Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
@@ -84,9 +84,15 @@ export function vorrangwort(zeile: Pick<Nachrichtenzeile, "vorrangstufe" | "vorr
   return "";
 }
 
-/** Die Datum-Zeit-Gruppe eines Zeitpunkts, „—" ohne. */
+/**
+ * Die Datum-Zeit-Gruppe eines Zeitpunkts zum Anzeigen, „—" ohne. Groß
+ * geschrieben wie im Kopfband, in Monitor und Ausgaben („171221NOV26"): Blatt
+ * und Kopf zeigten sie vorher verschieden (Audit LdF P3-2). Eingabefelder und
+ * der Papiervordruck behalten die Schreibweise der Domäne; gelesen wird sie
+ * ohne Rücksicht auf die Groß- und Kleinschreibung.
+ */
 export function dtg(zeitpunkt: string | undefined): string {
-  return zeitpunkt === undefined ? "—" : datumZeitGruppe(zeitpunkt) || "—";
+  return zeitpunkt === undefined ? "—" : datumZeitGruppe(zeitpunkt).toUpperCase() || "—";
 }
 
 /**
@@ -97,7 +103,9 @@ export function dtg(zeitpunkt: string | undefined): string {
 export function zeitAusEingabe(eingabe: string, jetzt: Date = new Date()): string | undefined {
   const text = eingabe.trim();
   if (text === "") return undefined;
-  const alsDtg = datumZeitGruppeLesen(text, jetzt.getFullYear());
+  // Das Bezugsjahr ist das der Anzeigezone: In der Silvesternacht Berlins steht
+  // eine UTC- oder New-Yorker Uhr noch im alten Jahr (Audit SGL P3-16).
+  const alsDtg = datumZeitGruppeLesen(text, anzeigezoneWandzeit(jetzt)?.jahr ?? jetzt.getUTCFullYear());
   if (alsDtg !== undefined) return new Date(alsDtg).toISOString();
   return funkzeitAusEingabe(text, jetzt);
 }
@@ -125,6 +133,8 @@ const TAG_MS = 24 * 60 * 60_000;
  */
 export function zeitHinweis(zeitpunkt: string | undefined, jetzt: Date = new Date()): string | undefined {
   if (zeitpunkt === undefined) return undefined;
+  // Reine Zeitpunkt-Rechnung (ISO gegen `jetzt`): unabhängig von der Rechnerzone,
+  // die Zone steckt nur im Lesen der Eingabe (`zeitAusEingabe`), Audit SGL P3-16.
   const abstand = Date.parse(zeitpunkt) - jetzt.getTime();
   if (!Number.isFinite(abstand)) return undefined;
   if (abstand > ZUKUNFT_TOLERANZ_MS) return "liegt in der Zukunft – bitte prüfen";
@@ -206,9 +216,20 @@ export function leereMaske(sitzung: Sitzungsstellen | undefined, jetzt: Date = n
   };
 }
 
+/** „E 26" oder „A" — die Kennung einer Nachricht für den Bezug im Betreff (ohne Nummer nur die Richtung). */
+export function bezugskennung(zeile: Pick<Nachrichtenzeile, "richtungKurz" | "nummer">): string {
+  return zeile.nummer === undefined ? zeile.richtungKurz : `${zeile.richtungKurz} ${String(zeile.nummer)}`;
+}
+
 /**
- * „Antworten" (§5): Anschrift und Absender getauscht, Betreff mit „Antwort:",
- * Bezug `antwortAuf`. Der Inhalt wird nicht zitiert — der Vordruck hat zwölf Zeilen.
+ * „Antworten" (§5): Anschrift und Absender getauscht, Betreff mit Bezug
+ * („Antwort auf E 26: …"), Bezug `antwortAuf`. Der Inhalt wird nicht zitiert —
+ * der Vordruck hat zwölf Zeilen.
+ *
+ * Audit Sachgebietsleiter P3-17: Die Nummer steht im Betreff, weil sie für
+ * die Rückfrage am Funk die einzige eindeutige Kennung ist; die Ruf-Nr. der
+ * Gegenstelle (Feld 11) und das Mittel, auf dem die Nachricht kam, sind
+ * vorbelegt — der Antwortende tippt sie sonst ein zweites Mal.
  */
 export function antwortVorlage(zeile: Nachrichtenzeile, sitzung: Sitzungsstellen | undefined, jetzt: Date = new Date()): Maskenwerte {
   const leer = leereMaske(sitzung, jetzt);
@@ -217,7 +238,9 @@ export function antwortVorlage(zeile: Nachrichtenzeile, sitzung: Sitzungsstellen
     ...leer,
     anschrift: zeile.absender,
     absender: zeile.anschrift === "" ? leer.absender : zeile.anschrift,
-    betreff: /^antwort:/iu.test(betreff) ? betreff : `Antwort: ${betreff}`.trim(),
+    betreff: /^antwort(\s+auf\b[^:]*)?:/iu.test(betreff) ? betreff : `Antwort auf ${bezugskennung(zeile)}: ${betreff}`.trim(),
+    rufnummer: zeile.rufnummer ?? "",
+    uebermittlungswunsch: zeile.aufnahme?.mittel ?? zeile.uebermittlungswunsch ?? "",
     antwortAuf: zeile.id,
   };
 }

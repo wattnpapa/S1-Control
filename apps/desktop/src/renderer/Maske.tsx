@@ -73,7 +73,7 @@ export interface MaskeEigenschaften {
    * „Abbrechen“. Für Rückfragen mit vorbelegtem Feld, bei denen die Tastatur
    * nicht aufgehen und nichts Folgenreiches vorgewählt sein soll.
    */
-  readonly startfokus?: "feld" | "abbrechen";
+  readonly startfokus?: "feld" | "abbrechen" | "bestaetigen";
   /**
    * Additiv: Die Maske hat getippten Inhalt. Dann fragen Esc und „Abbrechen“
    * erst nach, und der Entwurf bleibt bis zum ausdrücklichen Verwerfen stehen
@@ -155,7 +155,8 @@ export function Maske({
     // Der Fokus springt in das erste Feld. Ohne das müsste der Bediener nach
     // jedem Öffnen zur Maus greifen — bei einer Führungsstelle, die im
     // Minutentakt Meldungen aufnimmt, ist das der teuerste Handgriff.
-    const ziel = startfokus === "abbrechen" ? "button.abbrechen" : "input, select, textarea";
+    // „bestaetigen“: eine vollständige Vorbelegung (Stellenabfrage nach dem Neuladen) bestätigt ein Klick oder Enter.
+    const ziel = startfokus === "abbrechen" ? "button.abbrechen" : startfokus === "bestaetigen" ? ".maskenknoepfe button.haupt:not(:disabled)" : "input, select, textarea";
     formular.current?.querySelector<HTMLElement>(ziel)?.focus();
   }, [startfokus]);
 

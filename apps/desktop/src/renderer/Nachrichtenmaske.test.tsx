@@ -93,7 +93,7 @@ describe("Die Maske „Nachricht verfassen“", () => {
     expect(zeitAusEingabe("161045nov26", JETZT)).toBe("2026-11-16T09:45:00.000Z");
     expect(zeitAusEingabe("", JETZT)).toBeUndefined();
     const antwort = antwortVorlage(BLITZ_AN_S4, SITZUNG, JETZT);
-    expect(antwort).toMatchObject({ anschrift: "OV Wildeshausen", absender: "FüSt", betreff: "Antwort: Pumpen eingetroffen", antwortAuf: "N-blitz", inhalt: "" });
+    expect(antwort).toMatchObject({ anschrift: "OV Wildeshausen", absender: "FüSt", betreff: "Antwort auf E 26: Pumpen eingetroffen", antwortAuf: "N-blitz", inhalt: "" });
     expect(anlageAus(antwort, "N-1", JETZT)).toMatchObject({ richtung: "AUSGANG", antwortAuf: "N-blitz", abfassungszeit: "2026-11-16T09:45:00.000Z" });
     expect(besetzteStellen([{ veraltet: false, stellen: ["S2", "LEITER"] }, { veraltet: true, stellen: ["S3"] }])).toEqual(["S2", "Leiter"]);
   });

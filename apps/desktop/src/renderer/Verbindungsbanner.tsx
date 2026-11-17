@@ -68,7 +68,9 @@ export function Verbindungsbanner(): React.JSX.Element | null {
       <div ref={meldeHoehe} role="alert" className="verbindungsbanner" style={stil(status.stufe === "rot" ? "err" : "warn")}>
         <strong>{status.stufe === "rot" ? "✖" : "⚠"} {unterbrochenText(status.seitMs)}.</strong>{" "}
         Die Anzeige ist veraltet, Eingaben werden nicht gespeichert und sind gesperrt. Es wird automatisch neu
-        verbunden; offene Formulare behalten ihre Eingaben.
+        verbunden; offene Formulare behalten ihre Eingaben.{" "}
+        {/* Fernmelder P3-6: Der Einsatz hängt nicht am Rechner — der Papier-Rückfall steht im Band. */}
+        <span className="papierrueckfall">Notfalls auf Papier weiterführen (Nachrichten: leerer Papier-Vordruck), später nacherfassen.</span>
       </div>
     );
   }

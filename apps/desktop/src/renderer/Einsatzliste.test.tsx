@@ -6,6 +6,7 @@
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { zeitpunktAusWandzeit } from "@s1/domaene";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Auswahl } from "./Einsatzauswahl.js";
@@ -38,10 +39,13 @@ describe("Ordnung", () => {
   });
 
   it("nennt heute und gestern beim Namen", () => {
-    const jetzt = new Date(2026, 9, 31, 12, 0).getTime();
-    expect(zeitText(new Date(2026, 9, 31, 9, 5).getTime(), jetzt)).toBe("heute, 09:05");
-    expect(zeitText(new Date(2026, 9, 30, 23, 59).getTime(), jetzt)).toBe("gestern, 23:59");
-    expect(zeitText(new Date(2026, 8, 3, 16, 5).getTime(), jetzt)).toBe("03.09.2026, 16:05");
+    // Wandzeit der Anzeigezone, nicht der Rechnerzone (Audit SGL P3-16).
+    const wand = (monat: number, tag: number, stunde: number, minute: number): number =>
+      Date.parse(zeitpunktAusWandzeit({ jahr: 2026, monat, tag, stunde, minute }) ?? "");
+    const jetzt = wand(10, 31, 12, 0);
+    expect(zeitText(wand(10, 31, 9, 5), jetzt)).toBe("heute, 09:05");
+    expect(zeitText(wand(10, 30, 23, 59), jetzt)).toBe("gestern, 23:59");
+    expect(zeitText(wand(9, 3, 16, 5), jetzt)).toBe("03.09.2026, 16:05");
   });
 });
 

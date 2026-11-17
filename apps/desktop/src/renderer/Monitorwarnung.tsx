@@ -8,19 +8,15 @@
  * Monitors bleibt Weiß auf Schwarz, wie er zur Fernlesbarkeit sein soll.
  */
 
+import { uhrzeitText } from "@s1/domaene";
+
 import type { Verbindungsstatus } from "./verbindung.js";
 
 type Unterbrochen = Extract<Verbindungsstatus, { zustand: "unterbrochen" }>;
 
-function zwei(zahl: number): string {
-  return String(zahl).padStart(2, "0");
-}
-
-/** Der letzte Stand als Uhrzeit des Rechners – dieselbe Uhr wie die Zeit des Kopfbands. */
+/** Der letzte Stand als Uhrzeit der Anzeigezone – dieselbe Uhr wie die Zeit des Kopfbands (Audit SGL P3-16). */
 export function standUhrzeit(jetzt: number, seitMs: number): string {
-  const stand = new Date(jetzt - seitMs);
-  if (Number.isNaN(stand.getTime())) return "unbekannt";
-  return `${zwei(stand.getHours())}:${zwei(stand.getMinutes())}`;
+  return uhrzeitText(jetzt - seitMs) || "unbekannt";
 }
 
 export function Verbindungswarnung({ status, jetzt }: { readonly status: Unterbrochen; readonly jetzt: number }): React.JSX.Element {

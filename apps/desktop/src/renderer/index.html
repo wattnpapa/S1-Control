@@ -918,6 +918,31 @@
         margin: 0;
         padding-left: 1.2rem;
       }
+      /* Der Hinweiskasten steht oben am Blatt (Hinweiskasten.tsx), eine Zeile je Hinweis, rechts „Löschen“. */
+      .hinweiskasten {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 4px 14px;
+        margin: 8px 14px 0;
+        padding: 6px 13px;
+        border: var(--rahmenbreite) solid var(--rahmen-weich);
+        background: var(--karte);
+        max-height: 7.5rem;
+        overflow-y: auto;
+      }
+      .hinweiskasten h2 {
+        margin: 0;
+        font-size: 0.96em;
+      }
+      .hinweiskasten ul {
+        flex: 1 1 24rem;
+        list-style: none;
+        padding-left: 0;
+      }
+      .hinweiskasten button {
+        flex: none;
+      }
       /* Die Profile auf der Einsatzauswahl (Profilwahl.tsx): je Profil sein Band. */
       .profilerklaerung {
         max-width: 40rem;
@@ -4540,6 +4565,14 @@
          Quittung) und schoben „Sichten“ unter den Rand. */
       .laufzettel > * {
         flex: 0 0 auto;
+      }
+      /* Quittung und Handzeichen stehen nebeneinander und brechen nicht in zwei Zeilen um: Der
+         Umbruch machte die Zeile 135 statt 72 Pixel hoch und schob das Raster bei 860 Pixel Höhe
+         unter den Rand (Messung Web-Schale, Fernmelder P3-4, Sachgebietsleiter P2-11). */
+      @media (min-width: 700px) {
+        section.laufzettel > .vordruckzeile {
+          flex-wrap: nowrap;
+        }
       }
       /* Das Verteilerraster nimmt höchstens 60 % der Höhe; ist es länger,
          scrollt nur das Raster, und der Hauptknopf bleibt sichtbar. */

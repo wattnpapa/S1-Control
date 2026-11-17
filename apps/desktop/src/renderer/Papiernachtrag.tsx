@@ -31,6 +31,7 @@ import type { Nachrichtenfolge } from "../kontrakt/fmzschritte.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
+import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
 
 /** Der Platzhalter der leeren Zeitfelder im Nachtrag. */
 export const PLATZHALTER_VOM_BLATT = "vom Blatt";
@@ -148,8 +149,8 @@ export function Nachtragsteil({ werte, aufAenderung, vergebeneNummern }: Nachtra
       </div>
       <div className="vordruckzeile">
         <label>
-          Gegenstelle
-          <input value={werte.gegenstelle} placeholder={PLATZHALTER_VOM_BLATT} onChange={(e) => setze("gegenstelle")(e.target.value)} />
+          {GEGENSTELLE_BESCHRIFTUNG}
+          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} placeholder={PLATZHALTER_VOM_BLATT} onChange={(e) => setze("gegenstelle")(e.target.value)} />
         </label>
         <label>
           Nr.

@@ -29,6 +29,7 @@ import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung, type Aufnahmewerte } from "./fmzformate.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
 import { VERTEILER_VORBELEGUNG, Verteilermatrix, hauptempfaengerWarnung, type Verteilerwahl } from "./Verteilerraster.js";
+import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
 
 export interface AufnahmeEigenschaften {
   readonly werte: Aufnahmewerte;
@@ -64,8 +65,8 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalte
       </div>
       <div className="vordruckzeile">
         <label>
-          Gegenstelle
-          <input value={werte.gegenstelle} data-tabfolge={3} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
+          {GEGENSTELLE_BESCHRIFTUNG}
+          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} data-tabfolge={3} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
         </label>
         <label>
           Nr.

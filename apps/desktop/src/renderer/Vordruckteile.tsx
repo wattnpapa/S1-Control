@@ -56,11 +56,23 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <Wert titel="Annahme" wert={vermerk(zeile?.annahme)} />
       <Wert titel="Vorschlag LdF" wert={vorschlagText(zeile)} />
       <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
-      <Wert titel={zeile === undefined ? "Nr." : `Nr. (${zeile.richtungKurz})`} wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
+      {/* Eine gemeinsame Zählung für Eingang und Ausgang: „Nr.“ ohne Zusatz, die Richtung steht für sich (Audits ETB P3-2, LdF P3-1). */}
+      <Wert titel="Nr." wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
+      <Wert titel="Richtung" wert={zeile === undefined ? undefined : zeile.richtungKurz === "A" ? "Ausgang" : "Eingang"} />
       <Wert titel="Gegenstelle" wert={zeile?.gegenstelle} />
       {zeile?.weitergabe !== undefined && <Wert titel="Weitergabe (LdF)" wert={vermerk(zeile.weitergabe)} />}
     </fieldset>
   );
+}
+
+/**
+ * Was bei leerem Verteiler steht. Ein Ausgang läuft nicht zum Sichter (Vorbelegung
+ * nein, Entscheidung 8): „noch nicht gesichtet“ wäre irreführend (Audit SGL P3-18).
+ * Die Kopien kommen bei ihm erst mit der Beförderung.
+ */
+export function verteilerleer(zeile: Nachrichtenzeile | undefined, gesichtet: boolean): string {
+  if (gesichtet) return "ohne Verteiler";
+  return zeile?.richtungKurz === "A" ? "entfällt (Ausgang), Kopien mit der Beförderung" : "noch nicht gesichtet";
 }
 
 /** Der untere Teil (Feld 18 bis 20) zum Lesen: Quittung, Verteiler mit Kopiefarbe und Marken, Vermerke. */
@@ -73,7 +85,7 @@ export function LaufzettelAnzeige({ zeile }: { readonly zeile?: Nachrichtenzeile
       {/* Zwei Sichter ohne Abgleich (§5): beide Quittungen, der Verteiler ist die Vereinigung. */}
       {zeile?.zweiteSichtung !== undefined && <Wert titel="Zweite Sichtung" wert={vermerk(zeile.zweiteSichtung)} />}
       {zeile === undefined || zeile.verteiler.length === 0 ? (
-        <Wert titel="Verteiler" wert={sichtung === undefined ? "noch nicht gesichtet" : "ohne Verteiler"} />
+        <Wert titel="Verteiler" wert={verteilerleer(zeile, sichtung !== undefined)} />
       ) : (
         <ul className="verteileranzeige" aria-label="Verteiler">
           {zeile.verteiler.map((m) => (

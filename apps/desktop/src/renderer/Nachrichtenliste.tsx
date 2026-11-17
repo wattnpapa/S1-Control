@@ -60,6 +60,8 @@ export function ausgangsstand(zeile: Nachrichtenzeile): string {
 
 function Marken({ zeile, stellen }: { readonly zeile: Nachrichtenzeile; readonly stellen: readonly string[] }): React.JSX.Element {
   const { gelesen, erledigt } = eigeneMarken(zeile, stellen);
+  // Audit ETB P3-4: Durchstreichen allein trägt nicht (Schwarzweißdruck, Sehschwäche) — das Wort steht dabei.
+  if (zeile.zurueckgezogen) return <span className="marke-zustand fehler">zurückgezogen</span>;
   return (
     <>
       <span className={gelesen ? "marke-zustand ok" : "marke-zustand warn"}>{gelesen ? "gelesen" : "neu"}</span>{" "}

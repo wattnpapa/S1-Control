@@ -73,6 +73,16 @@ describe("Die Vorschau des Vordrucks", () => {
     expect(screen.getByLabelText("Vordruck, wie er gedruckt wird").closest(".vorschaubild")?.hasAttribute("hidden")).toBe(true);
   });
 
+  it("zeigt den Stempel einer zurückgezogenen Nachricht als Zeile und im gezeichneten Vordruck (ETB P2-7)", async () => {
+    const { texte } = nachgebauterKontext();
+    const zeile = { ...BLITZ_AN_S4, zurueckgezogen: true, zurueckgezogenMit: { zeitpunkt: "2026-11-16T09:50:00.000Z", handzeichen: "Ru", grund: "Doppelt aufgegeben" } };
+    render(<Vordruckvorschau ort="ansicht" quelle={{ art: "zeile", zeile }} />);
+    await screen.findByText("Wie gedruckt", {}, { timeout: 4000 });
+    expect(screen.getByText(/^ZURÜCKGEZOGEN 161050nov26: Doppelt aufgegeben$/u)).toBeDefined();
+    // Der Stempel steht auch im Bild selbst, nicht nur über ihm.
+    expect(texte.some((t) => t.includes("ZURÜCKGEZOGEN"))).toBe(true);
+  });
+
   it("zeichnet die Nachricht wie gedruckt, mit Betreff und Nummer", async () => {
     const { texte } = nachgebauterKontext();
     render(<Vordruckvorschau ort="ansicht" quelle={{ art: "zeile", zeile: BLITZ_AN_S4 }} />);

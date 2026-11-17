@@ -63,7 +63,7 @@ describe("Das Blatt „Nachrichten“", () => {
     expect(within(blitz).getByText("neu")).toBeDefined();
     expect(within(blitz).getByText("Blitz").className).toContain("fehler");
     expect(within(blitz).getByText("26")).toBeDefined();
-    expect(within(blitz).getByText("161045nov26")).toBeDefined();
+    expect(within(blitz).getByText("161045NOV26")).toBeDefined();
     const gelesen = within(tabelle).getByRole("row", { name: /Verpflegung 18 Uhr/ });
     expect(gelesen.className).toContain("kopie-blau");
     expect(within(gelesen).getByText("gelesen")).toBeDefined();
@@ -96,7 +96,7 @@ describe("Das Blatt „Nachrichten“", () => {
     fireEvent.click(within(leiste).getByRole("button", { name: /^Antworten/ }));
     const maske = screen.getByRole("form", { name: "Antworten" });
     expect((within(maske).getByLabelText("Anschrift") as HTMLInputElement).value).toBe("OV Wildeshausen");
-    expect((within(maske).getByLabelText("Betreff") as HTMLInputElement).value).toBe("Antwort: Pumpen eingetroffen");
+    expect((within(maske).getByLabelText("Betreff") as HTMLInputElement).value).toBe("Antwort auf E 26: Pumpen eingetroffen");
   });
 
   it("öffnet mit Strg+N die Maske „Nachricht verfassen“", async () => {

@@ -34,7 +34,7 @@
 
 import { useState } from "react";
 
-import { FERNMELDER_STANDARD, NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { FERNMELDER_STANDARD, NACHRICHT_MITTEL, datumZeitGruppe, projektion, uhrzeitVierstellig, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf, Gegenstelle } from "../kontrakt/index.js";
 import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen } from "../kontrakt/fmzschritte.js";
@@ -49,6 +49,7 @@ import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
+import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
 
 export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
@@ -83,7 +84,9 @@ export interface Eingaben {
 
 function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
   return {
-    zeit: datumZeitGruppe(new Date()),
+    // Die Annahme (Feld 3) verlangt auf dem Papier nur die Uhrzeit: vierstellig vorbelegt, nicht als
+    // sechsstellige Gruppe im Feld „Uhrzeit“ (Audit Fernmelder P3-2).
+    zeit: p.schritt === "annahme" ? uhrzeitVierstellig(new Date()) : datumZeitGruppe(new Date()),
     handzeichen: p.handzeichen,
     mittel: p.zeile.befoerderung?.mittel ?? p.zeile.vorschlag?.mittel ?? p.zeile.uebermittlungswunsch ?? "FUNK",
     gegenstelle: p.zeile.gegenstelle ?? p.zeile.vorschlag?.gegenstelle ?? p.zeile.anschrift,
@@ -177,8 +180,8 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
           </select>
         </label>
         <label>
-          Gegenstelle
-          <input value={e.gegenstelle} list="gegenstellenliste" placeholder="Einheit wählen oder Freitext" onChange={(ev) => setze("gegenstelle", ev.target.value)} />
+          {GEGENSTELLE_BESCHRIFTUNG}
+          <input value={e.gegenstelle} title={GEGENSTELLE_HILFE} list="gegenstellenliste" placeholder="Einheit wählen oder Freitext" onChange={(ev) => setze("gegenstelle", ev.target.value)} />
           <datalist id="gegenstellenliste">
             {wahl.gegenstellen.map((g) => (
               <option key={g.einheitId} value={g.name} />

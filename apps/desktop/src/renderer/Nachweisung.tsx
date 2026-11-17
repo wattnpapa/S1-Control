@@ -177,9 +177,14 @@ function Nachweiszeile({ zeile, gewaehltId, nurLesen, aufWahl, aufSchritt }: Zei
       </td>
       <td className="mono">{uhrvermerk(zeile.sichtung)}</td>
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>
-      <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
+      <th scope="row">
+        {zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}
+        {/* ETB P3-4: das Wort neben dem Durchstreichen, damit es im Schwarzweißdruck und bei Sehschwäche trägt. */}
+        {zeile.zurueckgezogen && <span className="marke-zustand fehler"> zurückgezogen</span>}
+      </th>
       <td>
-        <Nachweisknopf zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />
+        {/* ETB P3-5: Eine zurückgezogene Nachricht ohne Nummer bekommt keine mehr — kein „Nachweisen“. */}
+        {zeile.zurueckgezogen && zeile.nummer === undefined ? null : <Nachweisknopf zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />}
       </td>
     </tr>
   );

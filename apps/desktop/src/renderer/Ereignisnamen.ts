@@ -60,7 +60,11 @@ export function ereignisMitObjekt(typ: string, objekt: string | undefined): stri
   const name = objekt === undefined || objekt === "" ? undefined : objekt;
   if (benennung === undefined) {
     const text = ereignisname(typ);
-    return name === undefined ? text : `${text} (‚${name}‘)`;
+    if (name === undefined) return text;
+    // Eine Nachricht nennt sich selbst („Nachricht A 7 ‚Sperrung‘“): Der Name steht vorn, die Tat
+    // dahinter — nicht „Nachricht angenommen (‚Nachricht A‘)“ (Audit Fernmelder P3-1).
+    const selbst = /^(Nachricht|Gesprächsnotiz) /u.test(name) && text.startsWith("Nachricht ");
+    return selbst ? `${name} ${text.slice("Nachricht ".length)}` : `${text} (‚${name}‘)`;
   }
   return name === undefined
     ? `${benennung.gegenstand} ${benennung.tat}`

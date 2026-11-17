@@ -16,6 +16,8 @@
  * „Ansehen" statt „Öffnen": Sie sind nur zu lesen.
  */
 
+import { datumText as zeitDatumText, uhrzeitText, anzeigezoneWandzeit as wandzeit } from "@s1/domaene";
+
 import type { EinsatzEintrag } from "../kontrakt/index.js";
 import { ladeStaende, type Einsatzstand } from "./sitzung.js";
 
@@ -51,13 +53,16 @@ export function ordneEinsatzliste(
 
 /** „heute, 14:12“, „gestern, 09:30“ oder „03.10.2026, 16:05“. */
 export function zeitText(zeit: number, jetzt: number = Date.now()): string {
-  const t = new Date(zeit);
-  const zwei = (n: number): string => String(n).padStart(2, "0");
-  const uhr = `${zwei(t.getHours())}:${zwei(t.getMinutes())}`;
-  const tag = (d: Date): string => `${String(d.getFullYear())}-${String(d.getMonth())}-${String(d.getDate())}`;
-  if (tag(t) === tag(new Date(jetzt))) return `heute, ${uhr}`;
-  if (tag(t) === tag(new Date(jetzt - 86_400_000))) return `gestern, ${uhr}`;
-  return `${zwei(t.getDate())}.${zwei(t.getMonth() + 1)}.${String(t.getFullYear())}, ${uhr}`;
+  // Anzeigezone statt Rechnerzone (Audit Nachrichten SGL P3-16): „heute“ ist der
+  // Tag der Führungsstelle, auch wenn der Rechner in UTC oder New York läuft.
+  const datum = zeitDatumText(zeit);
+  const uhr = uhrzeitText(zeit);
+  if (datum === "") return "—";
+  const heuteWand = wandzeit(jetzt);
+  const gestern = heuteWand === undefined ? "" : zeitDatumText(Date.UTC(heuteWand.jahr, heuteWand.monat - 1, heuteWand.tag - 1, 12));
+  if (datum === zeitDatumText(jetzt)) return `heute, ${uhr}`;
+  if (datum === gestern) return `gestern, ${uhr}`;
+  return `${datum}, ${uhr}`;
 }
 
 const STATUSTON: Readonly<Record<Einsatzstand["status"], string>> = {

@@ -52,6 +52,7 @@ describe("Verbindungsbanner", () => {
     expect(banner.textContent).toMatch(/Keine Verbindung zum Dienst seit \d+ s/);
     expect(banner.textContent).toContain("Eingaben werden nicht gespeichert");
     expect(banner.textContent).toContain("neu verbunden");
+    expect(banner.textContent).toContain("Papier weiterführen");
   });
 
   it("lädt nach der Wiederverbindung Stand und Ansichten neu und nimmt die Fehlermeldungen zurück", async () => {

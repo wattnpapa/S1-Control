@@ -65,7 +65,7 @@ describe("Die Einstiegszeile", () => {
     expect(screen.getByRole("complementary", { name: "Einstieg: Führungsstelle · Stammdaten und Schichtplan" })).toBeDefined();
   });
 
-  it("erscheint ohne Speicher beim nächsten Mal wieder, ohne zu stören", () => {
+  it("bleibt ohne Speicher wenigstens in dieser Sitzung weg, ohne zu stören (LdF P3-4)", () => {
     vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => {
       throw new Error("gesperrt");
     });
@@ -76,8 +76,12 @@ describe("Die Einstiegszeile", () => {
     fireEvent.click(screen.getByRole("button", { name: "Verstanden" }));
     expect(screen.queryByRole("complementary")).toBeNull();
     unmount();
+    // Blattwechsel und zurück: Je Blatt nur einmal je Sitzung, auch wenn der Speicher gesperrt ist.
     render(<Einstiegszeile ort="lage" />);
-    expect(screen.getByRole("complementary", { name: "Einstieg: Lage" })).toBeDefined();
+    expect(screen.queryByRole("complementary", { name: "Einstieg: Lage" })).toBeNull();
+    // Ein anderes Blatt hat seine eigene Zeile.
+    render(<Einstiegszeile ort="funkplan" />);
+    expect(screen.getByRole("complementary", { name: /Einstieg: Funkplan/u })).toBeDefined();
   });
 
   it("nimmt nur den ersten Satz", () => {

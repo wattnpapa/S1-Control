@@ -106,6 +106,8 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     fireEvent.click(within(sofort).getByRole("button", { name: "Annehmen" }));
     let maske = screen.getByRole("form", { name: /Annehmen/ });
     expect((within(maske).getByLabelText("Handzeichen") as HTMLInputElement).value).toBe("Fm");
+    // Fernmelder P3-2: Die Annahme verlangt wie das Papier nur die Uhrzeit, nicht die sechsstellige Gruppe.
+    expect((within(maske).getByLabelText("Uhrzeit") as HTMLInputElement).value).toMatch(/^\d{4}$/u);
     fireEvent.change(within(maske).getByLabelText("Uhrzeit"), { target: { value: "161030nov26" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Annehmen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
@@ -114,7 +116,7 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     fireEvent.click(within(within(tabelle).getByRole("row", { name: /Sandsäcke/ })).getByRole("button", { name: "Befördern" }));
     maske = screen.getByRole("form", { name: /Befördern/ });
     expect((within(maske).getByLabelText("Mittel") as HTMLSelectElement).value).toBe("TELEFON");
-    expect((within(maske).getByLabelText("Gegenstelle") as HTMLInputElement).value).toBe("OV Wildeshausen");
+    expect((within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf") as HTMLInputElement).value).toBe("OV Wildeshausen");
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(2));
     expect(entwuerfe()[1]).toMatchObject({ typ: "NachrichtBefoerdert", neu: { mittel: "TELEFON", gegenstelle: "OV Wildeshausen", handzeichen: "Fm" } });
@@ -144,7 +146,7 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     const laufzettel = within(maske).getByRole("group", { name: "Laufzettel" });
     expect(laufzettel.textContent).toContain("Kein Sichter besetzt");
     expect((within(laufzettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.change(within(oben).getByLabelText("Gegenstelle"), { target: { value: "Heros Wildeshausen" } });
+    fireEvent.change(within(oben).getByLabelText("Rufname der Gegenstelle / Spruchkopf"), { target: { value: "Heros Wildeshausen" } });
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "OV Wildeshausen" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Pumpen eingetroffen" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufnehmen" }));
