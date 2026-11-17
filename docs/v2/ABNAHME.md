@@ -102,6 +102,9 @@ Was im Baum nachgewiesen ist, steht in den Abschlussberichten unter
       Einsatzakte exportiert und geprüft.
 - [ ] **F4** Die Bediener sagen, was gefehlt hat. Die Liste wird aufgeschrieben
       und nicht sofort beantwortet.
+- [ ] **F5** Die Übung „Nachrichten" nach [UEBUNG-NACHRICHTEN.md](UEBUNG-NACHRICHTEN.md):
+      fünf Stellen, Drucker, Gegenstelle im Nebenraum, Wechsel auf Papier und
+      Nachtrag; Befunde unter `docs/audits/nachrichten/feldtest-<datum>.md`.
 
 ## Was zuerst dran ist
 
