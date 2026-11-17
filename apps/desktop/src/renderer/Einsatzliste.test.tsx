@@ -10,7 +10,7 @@ import { zeitpunktAusWandzeit } from "@s1/domaene";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { Auswahl } from "./Einsatzauswahl.js";
-import { datumAusEingabe } from "./einsatzanlage.js";
+import { datumAusEingabe } from "./einsatzanlageregeln.js";
 import { Einsatzliste, ordneEinsatzliste, zeitText } from "./Einsatzliste.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";

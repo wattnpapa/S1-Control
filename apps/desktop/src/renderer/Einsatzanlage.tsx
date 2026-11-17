@@ -7,7 +7,7 @@
  * sind Datum und Beginn mit jetzt, die Art „Einsatz" und zwei Schichten; die
  * Führungsstelle bleibt leer, bis jemand sie einträgt — ein Platzhalter
  * stünde sonst auf jedem Ausdruck. Geschrieben wird über
- * `legeEinsatzMitStammdatenAn` (`einsatzanlage.ts`).
+ * `legeEinsatzMitStammdatenAn` (`einsatzanlageregeln.ts`).
  *
  * Scheitert die Anlage (gleicher Name am selben Tag, kein Share), bleibt die
  * Maske mit allen Eingaben offen; der Grund steht im Fehlerbild des
@@ -18,7 +18,7 @@ import { useState } from "react";
 
 import { datumText, zeitpunktText } from "@s1/domaene";
 
-import { anlagefehler, legeEinsatzMitStammdatenAn } from "./einsatzanlage.js";
+import { anlagefehler, legeEinsatzMitStammdatenAn } from "./einsatzanlageregeln.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import type { Stammdateneingabe } from "./stammdatenformular.js";
