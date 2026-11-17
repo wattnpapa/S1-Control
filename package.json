@@ -23,6 +23,7 @@
     "typecheck:sauber": "tsc -b --clean",
     "lint": "eslint .",
     "test": "vitest run",
+    "test:bdd": "cross-env S1_BDD=1 vitest run --project bdd",
     "build:renderer": "vite build --config apps/desktop/vite.config.ts",
     "build:schale": "node apps/desktop/bau/schale.mjs",
     "build": "npm run kern:bauen && npm run typecheck && npm run build:renderer && npm run build:schale",
@@ -36,6 +37,7 @@
     "doku:handbuch": "npm run typecheck && node bau/handbuch.mjs"
   },
   "devDependencies": {
+    "@amiceli/vitest-cucumber": "^7.0.0",
     "@eslint/js": "^10.0.1",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/react": "^16.3.3",

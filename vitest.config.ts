@@ -39,6 +39,14 @@ import { defineConfig } from "vitest/config";
 //                                 Hier laeuft der Mehrclient-Nachweis aus
 //                                 M2.3 ueber das echte Dateisystem.
 //   desktop-renderer              der Renderer-Anteil der Schale — jsdom.
+//   bdd                           die deutschen Gherkin-Szenarien unter
+//                                 apps/desktop/features (vitest-cucumber). Sie
+//                                 beschreiben den Soll-Ablauf nach Lehrunterlage
+//                                 und laufen durch den echten Aktendienst wie
+//                                 die Szenarientests des Workers — Node. Ein
+//                                 roter Schritt heißt hier oft „noch nicht
+//                                 gebaut", nicht „kaputt" — deshalb nur mit
+//                                 `npm run test:bdd` und nicht in `npm test`.
 //
 // Die Aliase zeigen bewusst auf die Quellen statt auf die gebauten dist/-
 // Ordner: `npm test` soll ohne vorherigen `tsc -b` laufen. Die Auflösung über
@@ -60,6 +68,21 @@ const alias = {
   "@s1/ausgaben/vordruck": quelle("./packages/ausgaben/src/vordruck.ts"),
   "@s1/ausgaben": quelle("./packages/ausgaben/src/index.ts"),
   "@s1/cli": quelle("./packages/cli/src/index.ts"),
+};
+
+/** Die Gherkin-Szenarien (siehe Kopfkommentar); eingehängt nur mit S1_BDD=1. */
+const bdd = {
+  resolve: { alias },
+  test: {
+    name: "bdd",
+    environment: "node",
+    include: ["apps/desktop/features/**/*.steps.ts"],
+    // Ein Schritt gleicht bis zu sieben Arbeitsplätze über das echte
+    // Dateisystem ab; die Vorgabe von fünf Sekunden misst dort die
+    // Auslastung des Läufers, nicht den Laufweg.
+    testTimeout: 30_000,
+    hookTimeout: 30_000,
+  },
 };
 
 export default defineConfig({
@@ -139,6 +162,11 @@ export default defineConfig({
           include: ["apps/desktop/src/renderer/**/*.test.ts", "apps/desktop/src/renderer/**/*.test.tsx"],
         },
       },
+      // Nur auf Zuruf (`npm run test:bdd` setzt S1_BDD=1): Die Szenarien
+      // beschreiben den Soll-Ablauf, und ein Schritt, den die Software noch
+      // nicht kann, ist dort gewollt rot. In `npm test` machte er den Lauf rot,
+      // der nach AGENTS.md §11 vor jedem Abschluss grün sein muss.
+      ...(process.env["S1_BDD"] === "1" ? [bdd] : []),
     ],
   },
 });

@@ -103,6 +103,7 @@ npm install            # installiert und baut anschließend vendor/eeb-format
 npm run typecheck      # tsc -b über alle Projekte, mit echten Emits
 npm run lint           # die Ringgrenzen
 npm test               # alle Pakete; @s1/domaene unter node und jsdom
+npm run test:bdd       # die deutschen Gherkin-Szenarien (Soll-Ablauf, siehe „Tests“)
 npm run build          # Renderer (Vite) + Main/Preload (esbuild)
 npm start              # leeres Electron-Fenster
 npm run start:rauchprobe   # startet, meldet den Fensterzustand, beendet sich
@@ -122,6 +123,16 @@ gewöhnlichen Weg über `node_modules` und `exports`.
 Paket `dist/index.js` und `dist/index.d.ts`. Die Wurzel-`tsconfig.json` ist
 eine Solution-Datei; sie enthält selbst keine Quellen, baut aber über ihre
 Referenzen alle sechs Projekte in Abhängigkeitsreihenfolge.
+
+### Tests
+
+Neben `npm test` laufen mit `npm run test:bdd` die deutschen Gherkin-Szenarien
+unter `apps/desktop/features/` (Vitest-Projekt `bdd`, Runner
+`@amiceli/vitest-cucumber`) durch den echten Aktendienst mit einem Arbeitsplatz
+je Stelle, so wie die Szenarientests des Workers. Sie beschreiben den
+Soll-Ablauf nach Lehrunterlage und Stabsdienstordnung — ein roter Schritt
+heißt „noch nicht gebaut“ und hält deshalb `npm test` nicht an
+(`S1_BDD_ALLE_SCHRITTE=1` lässt auch die Schritte nach dem ersten roten laufen).
 
 ### Warum zwei TypeScript-Einträge
 

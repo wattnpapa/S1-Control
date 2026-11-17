@@ -1,11 +1,13 @@
 {
   // Loesungsdatei der Schale: Main und Renderer sind zwei getrennte Projekte,
   // weil sie unterschiedliche Plattformen sind. Nur der Main-Prozess bekommt
-  // Node-Typen, nur der Renderer bekommt das DOM.
+  // Node-Typen, nur der Renderer bekommt das DOM. Die BDD-Schritte unter
+  // features/ sind ein viertes Projekt (Node, wie die Worker-Tests).
   "files": [],
   "references": [
     { "path": "./tsconfig.kontrakt.json" },
     { "path": "./tsconfig.main.json" },
-    { "path": "./tsconfig.renderer.json" }
+    { "path": "./tsconfig.renderer.json" },
+    { "path": "./tsconfig.features.json" }
   ]
 }

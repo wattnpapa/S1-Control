@@ -1,0 +1,22 @@
+{
+  // Die Gherkin-Schritte unter features/ (vitest-cucumber, Projekt `bdd`).
+  // Eigenes Projekt, weil sie weder Main noch Renderer sind: Sie greifen wie
+  // die Szenarientests des Workers auf Aktendienst und Werkstatt zu (Node),
+  // liegen aber außerhalb von src/ — ohne dieses Projekt prüfte `tsc -b`
+  // sie gar nicht, und ein Tippfehler in einem Schritt fiele erst im Lauf auf.
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2022"],
+    "types": ["node"],
+    "outDir": "dist/features",
+    "tsBuildInfoFile": "dist/features/.tsbuildinfo",
+    "rootDir": "features"
+  },
+  "include": ["features/**/*.ts"],
+  "references": [
+    { "path": "./tsconfig.kontrakt.json" },
+    { "path": "./tsconfig.main.json" },
+    { "path": "../../packages/domaene" },
+    { "path": "../../packages/speicher" }
+  ]
+}
