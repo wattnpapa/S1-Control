@@ -8,7 +8,7 @@ import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "../../domaen
 
 import { vordruckDatenAus } from "./nachricht.js";
 import { nachrichtendruckAus } from "./nachrichtendruck.js";
-import { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml } from "./nachweisung.js";
+import { NACHWEISUNG_FUSSNOTE, NACHWEISUNG_UNTERSCHRIFT, nachweisungAlsHtml } from "./nachweisung.js";
 
 const KOPF = { datum: "2026-09-08", einsatzName: "Übung <Weser-Ems>", stand: "081443SEP26" };
 
@@ -72,6 +72,16 @@ describe("Die Ausgabe Nachweisung", () => {
     expect(html).toContain(NACHWEISUNG_FUSSNOTE);
     expect(NACHWEISUNG_FUSSNOTE).toBe("Nachweisung nach Vordruck 1103.1, Feld 5");
     expect(html).toContain("Erstellt 081443SEP26 · Meier (FmZ)");
+  });
+
+  it("trägt die Unterschriftszeile des LdF im Fuß und keine technischen Kennungen im Kopf (LdF P2-5)", () => {
+    const html = nachweisungAlsHtml(daten());
+    const fuss = html.slice(html.indexOf(NACHWEISUNG_FUSSNOTE));
+    for (const feld of NACHWEISUNG_UNTERSCHRIFT) expect(fuss).toContain(`<span>${feld}</span>`);
+    expect(fuss).toContain('class="unterschrift"');
+    expect(html).toContain("<h1>Übung &lt;Weser-Ems&gt;</h1>");
+    expect(html).not.toContain("@bos/eeb-format");
+    expect(html).not.toContain('class="kennung"');
   });
 
   it("schreibt eine Zeile je Nachricht in der übergebenen Ordnung, Zeiten wie der Vordruck", () => {

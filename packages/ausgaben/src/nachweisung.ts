@@ -34,6 +34,13 @@ export interface Nachweisungsdaten {
   readonly beendet?: { readonly zeit: string; readonly akteur: string };
 }
 
+/**
+ * Die Unterschriftszeile des LdF im Fuß (Audit LdF P2-5): Wer das Betriebsbuch
+ * am Schichtende abgibt, zeichnet es ab — Datum und Uhrzeit, Handzeichen und
+ * Unterschrift auf drei Linien. Leer gedruckt, ausgefüllt wird auf Papier.
+ */
+export const NACHWEISUNG_UNTERSCHRIFT = ["Datum / Uhrzeit", "Handzeichen LdF", "Unterschrift Leiter des Fernmeldebetriebes"] as const;
+
 /** Der Satz unter der Tabelle. */
 export const NACHWEISUNG_FUSSNOTE = "Nachweisung nach Vordruck 1103.1, Feld 5";
 
@@ -176,6 +183,8 @@ export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
     titel: "Nachweisung",
     kopf: daten.kopf,
     querformat: false,
+    // Der Einsatzordner und die Kernversion gehören nicht auf ein abgezeichnetes Betriebsbuch (LdF P2-5).
+    schlankerKopf: true,
     inhalt: [
       ...kopfzeile,
       tabellenrahmen(tabelle),
@@ -184,6 +193,7 @@ export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
       // „Erstellt Stand: …“ stand doppelt (LdF P2-5); das Wort „Stand“ fällt hier weg.
       `  <p class="hinweis">Erstellt ${htmlMaskieren(daten.kopf.stand.replace(/^Stand:?\s*/u, ""))} · ${htmlMaskieren(daten.akteur)}</p>`,
       `  <p class="hinweis">${htmlMaskieren(NACHWEISUNG_FUSSNOTE)}</p>`,
+      `  <div class="unterschrift">${NACHWEISUNG_UNTERSCHRIFT.map((t) => `<span>${htmlMaskieren(t)}</span>`).join("")}</div>`,
     ],
   });
 }

@@ -22,6 +22,22 @@ export interface Druckseite {
   readonly kopf: Ausgabekopf;
   readonly inhalt: readonly string[];
   readonly querformat?: boolean;
+  /**
+   * Additiv (Audit LdF P2-5): der Kopf nur mit Einsatzname und Stand, ohne den
+   * Einsatzordner und die Kernversion. Ein Betriebsbuch, das der LdF abzeichnet,
+   * trägt keine technischen Kennungen.
+   */
+  readonly schlankerKopf?: boolean;
+}
+
+/** Der Kopf ohne technische Kennungen: Einsatzname und Stand. */
+export function schlankerKopfAlsHtml(kopf: Ausgabekopf): string {
+  return [
+    '<header class="ausgabe-kopf">',
+    `  <h1>${htmlMaskieren(kopf.einsatzName)}</h1>`,
+    `  <p class="stand">${htmlMaskieren(kopf.stand)}</p>`,
+    "</header>",
+  ].join("\n");
 }
 
 /** Macht aus Text eine CSS-Zeichenkette (ohne Anführungszeichen, Umbrüche, Backslash). */
@@ -47,6 +63,8 @@ export function druckseitenstil(querformat: boolean, stand: string): string {
     "    td.notiz { width: 28%; min-height: 8mm; }",
     "    td.leer { height: 9mm; }",
     "    .hinweis { font-size: 9pt; color: #444; }",
+    "    .unterschrift { display: flex; gap: 10mm; margin-top: 14mm; font-size: 9pt; break-inside: avoid; }",
+    "    .unterschrift span { flex: 1; border-top: 0.3mm solid #000; padding-top: 1mm; }",
     "    .tabellenrahmen { max-width: 100%; }",
     "    @media screen { .tabellenrahmen { overflow-x: auto; } body { margin: 8px; max-width: 100vw; } }",
   ].join("\n");
@@ -67,7 +85,7 @@ export function druckseiteAlsHtml(seite: Druckseite): string {
     "  </style>",
     "</head>",
     "<body>",
-    kopfAlsHtml(seite.kopf),
+    seite.schlankerKopf === true ? schlankerKopfAlsHtml(seite.kopf) : kopfAlsHtml(seite.kopf),
     ...seite.inhalt,
     "</body>",
     "</html>",
