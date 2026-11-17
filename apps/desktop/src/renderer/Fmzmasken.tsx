@@ -27,6 +27,10 @@
  *   „Quittung der Gegenstelle“ (P2-4).
  * - Das Handzeichen hat zwei bis vier Zeichen (Sachgebietsleiter P1-4).
  * - „Berichtigen“ einer doppelten Nummer belegt die nächste freie vor (LdF P2-1).
+ * - Hinweis statt Recht (LdF P2-3, Entscheidung 13, Folie 7): Ohne Stelle FMZ
+ *   (beim Vorschlag LDF) steht oben „Dieser Teil ist der Fernmeldezentrale
+ *   vorbehalten …“; „Trotzdem“ gibt frei, der Schritt trägt den `grund`
+ *   „Eintrag durch <Stelle>, nicht FmZ“ (`Stellenvorbehalt.tsx`).
  * - Weist der Worker ab, weil ein anderer Platz inzwischen vermerkt hat, sagt
  *   die Maske in Worten, was jetzt gilt, und „Neu laden“ öffnet sie mit dem
  *   neuen Vorher-Wert (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
@@ -46,6 +50,7 @@ import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
+import { useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
@@ -236,6 +241,8 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
   const fremd = useFremdsperren().von(p.zeile.id);
+  // Entscheidung 13, LdF P2-3: Hinweis statt Recht beim oberen Teil (Folie 7).
+  const vorbehalt = useStellenvorbehalt(p.schritt);
   const setze = (feld: keyof Eingaben, wert: string): void => {
     if (feld === "nummer") setzeOhneNummerBestaetigt(false);
     setzeE((bisher) => ({ ...bisher, [feld]: wert }));
@@ -261,7 +268,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
       useLaden.getState().melde("warnung", ungueltig);
       return;
     }
-    const ergebnis = await versuch.schreibe(entwurf);
+    const ergebnis = await versuch.schreibe(vorbehalt.grund === undefined ? entwurf : { ...entwurf, grund: vorbehalt.grund });
     if (istVorwertAbweisung(ergebnis)) {
       setzeKonflikt(konflikttext(entwurf.typ, ergebnis.meldung, peers ?? []));
       return;
@@ -282,12 +289,13 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
     <Maske
       titel={`${TITEL[p.schritt]} · ${nummer} ${p.zeile.betreff}`}
       bestaetigungstext={knopf}
-      bereit={typeof entwurf !== "string" && !versuch.gesperrt}
-      bereitGrund={typeof entwurf === "string" ? entwurf : versuch.sperre}
+      bereit={typeof entwurf !== "string" && !versuch.gesperrt && !vorbehalt.gesperrt}
+      bereitGrund={typeof entwurf === "string" ? entwurf : (versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined))}
       aufAbbrechen={p.aufSchliessen}
       aufBestaetigen={schreibe}
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
+      {vorbehalt.hinweis}
       {befoerdern && p.zeile.vorschlag === undefined && p.ldfErsatz !== undefined && (
         <p className="hinweistext" role="status">
           {p.ldfErsatz}

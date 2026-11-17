@@ -198,7 +198,7 @@ describe("FM P2-6: Konfliktmeldung ohne Rohdaten, mit „Neu laden“", () => {
 
   it("zeigt Name, Stelle, Feld und Wert; „Neu laden“ öffnet die Maske mit dem neuen Vorher-Wert", async () => {
     const hans = { anzeigename: "Hans", veraltet: false, stellen: ["FMZ"] } as unknown as Peer;
-    useLaden.setState({ lagebild: { ...NACHRICHTEN_LAGEBILD, peers: [hans] } as Lagebild });
+    useLaden.setState({ lagebild: { ...NACHRICHTEN_LAGEBILD, peers: [hans], sitzung: { stellen: ["FMZ"], handzeichen: "Fm" } } as Lagebild });
     attrappe.antwortet("bedienen", { art: "abgewiesen", code: "VORWERT", meldung, dauerhafterHinweis: false });
     const ohneAnnahme: Nachrichtenzeile = { ...AUSGANG, annahme: undefined } as unknown as Nachrichtenzeile;
     render(<Fmzmaske schritt="annahme" zeile={ohneAnnahme} handzeichen="Fm" naechsteNummer={8} vergebeneNummern={[]} aufSchliessen={vi.fn()} />);

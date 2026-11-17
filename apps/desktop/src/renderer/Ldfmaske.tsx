@@ -24,6 +24,7 @@ import { Dtgfeld } from "./Dtgfeld.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
 import { zeitAusEingabe } from "./nachrichtenformate.js";
+import { useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
 
@@ -59,6 +60,8 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
   const fremd = useFremdsperren().von(p.zeile.id);
+  // Entscheidung 13, LdF P2-3: Hinweis statt Recht (Folie 7), `grund` im Tagebuch.
+  const vorbehalt = useStellenvorbehalt("weitergabe");
   const entwurf = weitergabeEntwurf(p.zeile, e);
 
   async function schreibe(): Promise<void> {
@@ -68,7 +71,7 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
       useLaden.getState().melde("warnung", ungueltig);
       return;
     }
-    const ergebnis = await versuch.schreibe(entwurf);
+    const ergebnis = await versuch.schreibe(vorbehalt.grund === undefined ? entwurf : { ...entwurf, grund: vorbehalt.grund });
     if (istVorwertAbweisung(ergebnis)) {
       setzeKonflikt(konflikttext(entwurf.typ, ergebnis.meldung, peers ?? []));
       return;
@@ -84,12 +87,13 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
       titel={`An den Sichter weitergeben · ${nummer} ${p.zeile.betreff}`}
       bestaetigungstext="Weitergeben"
       nurKnopf
-      bereit={typeof entwurf !== "string" && !versuch.gesperrt}
-      bereitGrund={typeof entwurf === "string" ? entwurf : versuch.sperre}
+      bereit={typeof entwurf !== "string" && !versuch.gesperrt && !vorbehalt.gesperrt}
+      bereitGrund={typeof entwurf === "string" ? entwurf : (versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined))}
       aufAbbrechen={p.aufSchliessen}
       aufBestaetigen={schreibe}
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
+      {vorbehalt.hinweis}
       <div className="vordruckzeile">
         <Dtgfeld beschriftung="Uhrzeit" wert={e.zeit} aufAenderung={(wert) => setzeE((bisher) => ({ ...bisher, zeit: wert }))} />
         <label>
