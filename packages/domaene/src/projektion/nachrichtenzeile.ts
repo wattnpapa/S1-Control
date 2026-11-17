@@ -15,6 +15,7 @@
 import type { z } from "zod";
 
 import { zerlegeEreignisId, type EreignisId } from "../ereignis.js";
+import { streitigeSichtung } from "../fold-nachricht.js";
 import { vergleicheHlc, type Hlc } from "../hlc.js";
 import { vergleicheNachCodepunkt } from "../kanonisch.js";
 import {
@@ -22,6 +23,7 @@ import {
   zNachweis,
   zSichtung,
   zVorschlag,
+  zWeitergabe,
   zZeitvermerk,
 } from "../katalog/schemata-nachrichten.js";
 import { FMZ_SCHWELLE_VORBELEGUNG, type Id } from "../werte.js";
@@ -80,7 +82,15 @@ export interface Nachrichtenzeile {
   readonly vorschlag?: Uebermittlungsvorschlag;
   readonly befoerderung?: Mittelvermerk;
   readonly nachweis?: Nachweisvermerk;
+  /** Additiv: die Weitergabe des Eingangs vom LdF an den Sichter. */
+  readonly weitergabe?: Zeitvermerk;
   readonly sichtung?: Sichtungsvermerk;
+  /**
+   * Additiv: die zweite Sichtung, solange zwei Sichter ohne voneinander zu
+   * wissen verteilt haben (§5) — der Verteiler ist dann die Vereinigung, die
+   * Zeile trägt die Marke „zwei Sichtungen", bis eine Nachsichtung bereinigt.
+   */
+  readonly zweiteSichtung?: Sichtungsvermerk;
   /** Der jüngere aus den Vermerken der Sichtung und `NachrichtVermerkt`. */
   readonly vermerke?: string;
   readonly verteiler: readonly Nachrichtenmarke[];
@@ -134,9 +144,9 @@ function gelesen<T>(schema: z.ZodType<T>, feld: Feld<unknown> | undefined): T | 
   return ergebnis.success ? ergebnis.data : undefined;
 }
 
-function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined): Nachrichtenmarke[] {
+function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zweite?: Sichtungsvermerk): Nachrichtenmarke[] {
   const ergebnis: Nachrichtenmarke[] = [];
-  for (const { stelle, kopie } of sichtung?.verteiler ?? []) {
+  for (const { stelle, kopie } of [...(sichtung?.verteiler ?? []), ...(zweite?.verteiler ?? [])]) {
     if (ergebnis.some((m) => m.stelle === stelle)) continue;
     const kenntnis = gelesen(zZeitvermerk, n.kenntnis?.[stelle]);
     ergebnis.push({
@@ -197,6 +207,14 @@ function freieTexte(n: NachrichtZustand): Partial<Nachrichtenzeile> {
   return ergebnis as Partial<Nachrichtenzeile>;
 }
 
+/** Die streitige zweite Sichtung nach der Regel des Folds (`streitigeSichtung`). */
+function zweiteSichtungDer(n: NachrichtZustand): Sichtungsvermerk | undefined {
+  const wert = streitigeSichtung(n.sichtung as Feld<unknown> | undefined);
+  if (wert === undefined) return undefined;
+  const ergebnis = zSichtung.safeParse(wert);
+  return ergebnis.success ? ergebnis.data : undefined;
+}
+
 /** Baut die Zeile einer Nachricht. */
 export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): Nachrichtenzeile {
   const aufnahme = gelesen(zMittelvermerk, n.aufnahme);
@@ -204,7 +222,9 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
   const vorschlag = gelesen(zVorschlag, n.vorschlag);
   const befoerderung = gelesen(zMittelvermerk, n.befoerderung);
   const nachweis = gelesen(zNachweis, n.nachweis);
+  const weitergabe = gelesen(zWeitergabe, n.weitergabe);
   const sichtung = gelesen(zSichtung, n.sichtung);
+  const zweite = zweiteSichtungDer(n);
   const vermerke = vermerkeDer(n, sichtung);
   const gegenstelle = (n.befoerderung?.wert as { gegenstelle?: unknown } | null | undefined)?.gegenstelle;
   const gegenstelleText = typeof gegenstelle === "string" && gegenstelle !== "" ? gegenstelle : text(n.gegenstelle);
@@ -227,15 +247,18 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
     ...(annahme === undefined ? {} : { annahme }),
     ...(vorschlag === undefined ? {} : { vorschlag }),
     ...(befoerderung === undefined ? {} : { befoerderung }),
+    ...(weitergabe === undefined ? {} : { weitergabe }),
     ...(sichtung === undefined ? {} : { sichtung }),
+    ...(zweite === undefined ? {} : { zweiteSichtung: zweite }),
     ...(vermerke === undefined || vermerke === "" ? {} : { vermerke }),
-    verteiler: marken(n, sichtung),
+    verteiler: marken(n, sichtung, zweite),
     laufzustand: n.laufzustand,
     zurueckgezogen: n.laufzustand === "ZURUECKGEZOGEN",
     angelegtDurch: n.angelegtDurch,
     angelegtMit: n.angelegtMit,
     clientId: clientDer(n.angelegtDurch),
-    fmzUeberSchwelle: n.laufzustand === "VOR_FMZ" && ueberSchwelle(annahme, befoerderung, kontext),
+    // Auch die Zeit beim LdF zählt: Die Schwelle misst Annahme bis Beförderung (§5).
+    fmzUeberSchwelle: (n.laufzustand === "VOR_FMZ" || n.laufzustand === "VOR_LDF") && ueberSchwelle(annahme, befoerderung, kontext),
   };
 }
 

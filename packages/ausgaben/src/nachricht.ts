@@ -16,7 +16,7 @@
  * Die Datum-Zeit-Gruppe kommt aus `@s1/domaene`.
  */
 
-import { datumZeitGruppe } from "@s1/domaene";
+import { datumZeitGruppe, projektion } from "@s1/domaene";
 import { jsPDF } from "jspdf";
 import {
   VordruckDaten,
@@ -32,6 +32,12 @@ export interface Nachrichtenvermerk {
   readonly mittel?: string;
   readonly zeitpunkt: string;
   readonly handzeichen: string;
+}
+
+/** Der Übermittlungsvorschlag des LdF (additiv, 2026-11-17): Weg, Fernmelder, Gegenstelle. */
+export interface Nachrichtenvorschlag extends Nachrichtenvermerk {
+  readonly fernmelder: string;
+  readonly gegenstelle?: string;
 }
 
 /** Die Nummer, die die Funkmeldezentrale vergibt. */
@@ -78,6 +84,8 @@ export interface Nachrichtendruck {
   readonly aufnahme?: Nachrichtenvermerk;
   readonly annahme?: Nachrichtenvermerk;
   readonly befoerderung?: Nachrichtenvermerk;
+  /** Additiv: der Übermittlungsvorschlag des LdF — Feld 1 und ein Satz in den Vermerken. */
+  readonly vorschlag?: Nachrichtenvorschlag;
   readonly nachweis?: Nachrichtennachweis;
   readonly sichtung?: Nachrichtensichtung;
   readonly uebung: boolean;
@@ -227,12 +235,27 @@ const WEGE: Readonly<Record<string, Uebermittlungsweg>> = {
   KURIER: "kurier",
 };
 
-/** Der Weg aus dem tatsaechlichen Mittel, sonst aus dem Wunsch; Funk, wenn beides fehlt. */
+/**
+ * Der Weg aus dem tatsaechlichen Mittel, dann aus der Festlegung des LdF
+ * (Feld 1 ist der Kasten der FmZ, und der LdF fuellt ihn, bevor befoerdert
+ * ist), sonst aus dem Wunsch; Funk, wenn alles fehlt.
+ */
 function wegAus(nachricht: Nachrichtendruck): Uebermittlungsweg {
   const vermerk = nachricht.richtung === "EINGANG" ? nachricht.aufnahme : nachricht.befoerderung;
   const mittel = vermerk?.mittel?.trim().toUpperCase() ?? "";
+  const festgelegt = nachricht.vorschlag?.mittel?.trim().toUpperCase() ?? "";
   const wunsch = nachricht.uebermittlungswunsch.trim().toUpperCase();
-  return WEGE[mittel] ?? WEGE[wunsch] ?? "funk";
+  return WEGE[mittel] ?? WEGE[festgelegt] ?? WEGE[wunsch] ?? "funk";
+}
+
+/**
+ * „Weg (LdF): Kurier/Melder, durch Fm2, Hz. Lf" — die Bibliothek hat kein
+ * eigenes Feld fuer das Handzeichen des LdF, deshalb steht es in Feld 20.
+ */
+export function wegvermerkText(weg: Nachrichtenvorschlag | undefined): string {
+  if (weg === undefined) return "";
+  const teile = [weg.mittel === undefined ? "" : projektion.mittelWort(weg.mittel), weg.fernmelder ? `durch ${weg.fernmelder}` : "", weg.handzeichen ? `Hz. ${weg.handzeichen}` : ""];
+  return `Weg (LdF): ${teile.filter((t) => t !== "").join(", ")}`;
 }
 
 /**
@@ -267,6 +290,8 @@ export function vordruckDatenAus(nachricht: Nachrichtendruck): VordruckDaten {
   daten.zeichen = druckbar(nachricht.zeichen);
   daten.funktion = druckbar(nachricht.funktion);
   sichtungUebernehmen(daten, nachricht.sichtung);
+  const weg = wegvermerkText(nachricht.vorschlag);
+  if (weg !== "") daten.vermerke = druckbar([daten.vermerke, weg].filter(Boolean).join(" "));
   return daten;
 }
 

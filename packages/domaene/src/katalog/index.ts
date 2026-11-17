@@ -430,6 +430,11 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "NachrichtGesichtet", form: "a", schema: S.NachrichtGesichtet, nutzlastVersion: 1,
       entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("sichtung"), klasse: "LWW_ENTITAET",
       gegenereignis: "NachrichtGesichtet" }),
+  // Der Eingangsschritt des LdF (additiv, 2026-11-17): Strukturwert wie die
+  // Vermerke der FmZ, Rücknahme dieselbe Art mit dem Vorher-Wert.
+  e({ typ: "NachrichtWeitergegeben", form: "a", schema: S.NachrichtWeitergegeben, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("weitergabe"),
+      klasse: "LWW_ENTITAET", gegenereignis: "NachrichtWeitergegeben" }),
   // Eigenes Feld `vermerke` statt `sichtung/vermerke`: `sichtung` ist ein
   // Feld<T>, und ein Pfad darunter schriebe in dessen Beobachtung hinein.
   e({ typ: "NachrichtVermerkt", form: "a", schema: S.NachrichtVermerkt, nutzlastVersion: 1,

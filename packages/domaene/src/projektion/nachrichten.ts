@@ -23,8 +23,11 @@ import {
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
 
-/** Die fünf Sichten des Umschalters (§6). */
-export const NACHRICHTEN_SICHTEN = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung"] as const;
+/**
+ * Die Sichten des Umschalters (§6); „ldf" additiv (2026-11-17): Ausgänge vor
+ * der Festlegung des Wegs und Eingänge vor der Weitergabe an den Sichter.
+ */
+export const NACHRICHTEN_SICHTEN = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung", "ldf"] as const;
 export type Nachrichtensicht = (typeof NACHRICHTEN_SICHTEN)[number];
 
 /** Der Stand einer Nachricht im Posteingang, bezogen auf die eigenen Stellen. */
@@ -63,6 +66,8 @@ export interface Nachrichtenlage {
   readonly mitVorrangOffen: number;
   /** Angenommen, unbefördert, länger als die Schwelle in der FmZ. */
   readonly ueberSchwelle: number;
+  /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt (`ldfStation`). */
+  readonly vorLdf?: number;
 }
 
 function eigeneMarken(zeile: Nachrichtenzeile, stellen: readonly string[]): Nachrichtenzeile["verteiler"] {
@@ -118,7 +123,11 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
     case "sichter":
       return zeile.laufzustand === "VOR_SICHTER";
     case "fmz":
-      return zeile.laufzustand === "VOR_FMZ";
+      // Ein angenommener Ausgang beim LdF bleibt in der Warteschlange sichtbar:
+      // Ist kein LdF da, befördert der Fernmelder ihn selbst (Ersatzregel).
+      return zeile.laufzustand === "VOR_FMZ" || (zeile.laufzustand === "VOR_LDF" && zeile.richtung === "AUSGANG");
+    case "ldf":
+      return zeile.laufzustand === "VOR_LDF";
     case "nachweisung":
       return true;
   }
@@ -163,12 +172,15 @@ export function naechsteNachweisnummer(zustand: Zustand): number {
 
 /** Die fünf Zahlen des Bandes, je Stelle dieses Arbeitsplatzes gerechnet (§6, §9). */
 export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], jetzt?: string): Nachrichtenlage {
-  const lage = { neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, mitVorrangOffen: 0, ueberSchwelle: 0 };
+  const lage: { -readonly [K in keyof Nachrichtenlage]: number } = { neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, mitVorrangOffen: 0, ueberSchwelle: 0 };
+  // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
+  if (zustand.einsatz?.ldfStation?.wert === true) lage.vorLdf = 0;
   for (const zeile of alleNachrichtenzeilen(zustand, zeilenkontext(zustand, jetzt))) {
     if (zeile.zurueckgezogen) continue;
     if (posteingangsstand(zeile, stellen) === "NEU") lage.neuFuerStellen += 1;
     if (zeile.laufzustand === "VOR_FMZ") lage.vorFmz += 1;
     if (zeile.laufzustand === "VOR_SICHTER") lage.vorSichter += 1;
+    if (zeile.laufzustand === "VOR_LDF" && lage.vorLdf !== undefined) lage.vorLdf += 1;
     if (zeile.vorrangstufe < 2 && zeile.laufzustand !== "ERLEDIGT") lage.mitVorrangOffen += 1;
     if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
   }

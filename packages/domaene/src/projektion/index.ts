@@ -286,4 +286,4 @@ export {
   type Nachrichtenzeile,
   type Vorrangstufe,
 } from "./nachrichtenzeile.js";
-export { kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
+export { GRUND_ERSATZSICHTER, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";

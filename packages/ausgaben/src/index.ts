@@ -142,11 +142,13 @@ export {
   verteilerZuordnen,
   vordruckBlaetterAus,
   vordruckDatenAus,
+  wegvermerkText,
   type Nachrichtendruck,
   type Nachrichtennachweis,
   type Nachrichtensichtung,
   type Nachrichtenverteiler,
   type Nachrichtenvermerk,
+  type Nachrichtenvorschlag,
   type Verteilertexte,
   type Vordruckoptionen,
 } from "./nachricht.js";

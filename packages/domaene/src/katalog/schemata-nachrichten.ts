@@ -77,6 +77,9 @@ export const zSichtung = z.object({
   vermerke: zText.optional(),
 });
 
+/** Die Weitergabe eines Eingangs vom LdF an den Sichter: Zeit und Handzeichen. */
+export const zWeitergabe = zZeitvermerk;
+
 /**
  * Die Anlage einer Nachricht (Form b, ohne Undo wie `EtbEintragErfasst`: Ein
  * aufgegebener Vordruck wird nicht ungeschrieben, sondern zurückgezogen).
@@ -114,6 +117,12 @@ export const NachrichtBefoerdert = z.object({ nachrichtId: zId });
 export const NachrichtUebermittlungVorgeschlagen = z.object({ nachrichtId: zId });
 export const NachrichtNachgewiesen = z.object({ nachrichtId: zId });
 export const NachrichtGesichtet = z.object({ nachrichtId: zId });
+/**
+ * Der Eingangsschritt des LdF (additiv, 2026-11-17): Weitergabe an den
+ * Sichter — ein Strukturfeld. Den Ausgangsschritt führt
+ * `NachrichtUebermittlungVorgeschlagen`.
+ */
+export const NachrichtWeitergegeben = z.object({ nachrichtId: zId });
 /** Vermerke nach der Sichtung ohne Neusichtung (Feld 20), Text in `neu`. */
 export const NachrichtVermerkt = z.object({ nachrichtId: zId });
 
@@ -128,10 +137,13 @@ export const NachrichtZurueckgezogen = z.object({ nachrichtId: zId });
 /**
  * Die Parameter des Einsatzes für den Nachrichtenweg, Wert in `neu`:
  * `sichtungAuchAusgang` (Entscheidung 8, Vorbelegung nein) und
- * `fmzSchwelleMinuten` (§5, Vorbelegung 20). Ein eigenes Ereignis nach dem
- * Muster von `FunkParameterGesetzt`, weil beide keine Stammdaten sind.
+ * `fmzSchwelleMinuten` (§5, Vorbelegung 20) und — additiv — `ldfStation`
+ * (der LdF ist eigene Station im Laufweg, Vorbelegung nein). Ein eigenes
+ * Ereignis nach dem Muster von `FunkParameterGesetzt`, weil alle drei keine
+ * Stammdaten sind. Ein älterer Client, der `ldfStation` nicht kennt, faltet
+ * das Ereignis nach §3.7 als unbekannt und behält den Laufweg ohne LdF.
  */
 export const NachrichtenParameterGesetzt = z.object({
   einsatzId: zId,
-  feld: z.enum(["sichtungAuchAusgang", "fmzSchwelleMinuten"]),
+  feld: z.enum(["sichtungAuchAusgang", "fmzSchwelleMinuten", "ldfStation"]),
 });

@@ -61,8 +61,12 @@ import type {
  * `sichtungAuchAusgang` und `fmzSchwelleMinuten` des Einsatzes. **11** mit dem
  * Übermittlungsvorschlag des LdF: `NachrichtUebermittlungVorgeschlagen` auf
  * das Feld `vorschlag` der Nachricht.
+ * **12** mit dem LdF als eigener Station (2026-11-17): das Feld
+ * `weitergabe` der Nachricht (`NachrichtWeitergegeben`), der Laufzustand
+ * VOR_LDF und der Parameter `ldfStation` des Einsatzes — ein Schnappschuss
+ * der Fassung 11 kennte den Laufzustand nicht.
  */
-export const FOLD_VERSION = 11;
+export const FOLD_VERSION = 12;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -192,6 +196,8 @@ export interface EinsatzZustand extends Anlage {
   readonly sichtungAuchAusgang?: Feld<boolean>;
   /** Nachrichten (§5): angenommen, aber unbefördert länger als diese Minuten; fehlt = 20. */
   readonly fmzSchwelleMinuten?: Feld<number>;
+  /** Nachrichten (additiv): der LdF ist eigene Station im Laufweg; fehlt = nein. */
+  readonly ldfStation?: Feld<boolean>;
   readonly kosten: {
     readonly psaKostenProSatz?: Feld<number>;
     readonly vdaProTag?: Feld<number>;

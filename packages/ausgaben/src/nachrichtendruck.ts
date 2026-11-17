@@ -71,6 +71,7 @@ export function nachrichtendruckAus(zeile: Nachrichtenzeile, uebung: boolean): N
     ...(zeile.befoerderung === undefined
       ? {}
       : { befoerderung: { mittel: zeile.befoerderung.mittel, zeitpunkt: zeile.befoerderung.zeitpunkt, handzeichen: zeile.befoerderung.handzeichen } }),
+    ...(zeile.vorschlag === undefined ? {} : { vorschlag: zeile.vorschlag }),
     ...(nachweis === undefined ? {} : { nachweis }),
     ...(sichtung === undefined ? {} : { sichtung }),
     uebung,

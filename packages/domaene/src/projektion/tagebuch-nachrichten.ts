@@ -140,6 +140,19 @@ function vorschlagsteil(neu: unknown): string {
   return klammer([fm === undefined ? "" : `durch ${fm}`, mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `an ${gegen}`, handzeichenteil(neu)]);
 }
 
+/**
+ * Der Grund, den der Worker an die Sichtung des Ersatzsichters schreibt
+ * (§5 „Ersatzsichter"): Ohne ihn sähe das Tagebuch eine Sichtung der FmZ
+ * wie die eines Sichters, und wer nachliest, wüsste nicht, dass kein Sichter
+ * besetzt war. Ein Rahmenfeld und kein Feld der Nutzlast, damit das Schema
+ * der Sichtung und ältere Fassungen unberührt bleiben.
+ */
+export const GRUND_ERSATZSICHTER = "Kein Sichter besetzt: Ersatzsichter";
+
+function ersatz(e: EingehendesEreignis): boolean {
+  return e.grund === GRUND_ERSATZSICHTER;
+}
+
 /** Ein Vermerk der FmZ oder des Sichters; `null` als Wert ist die Rücknahme auf „leer“. */
 function vermerk(gesetzt: (neu: unknown) => string, geloescht: string): (e: EingehendesEreignis) => string {
   return (e) => (e.neu === null || e.neu === undefined ? geloescht : gesetzt(e.neu));
@@ -156,10 +169,12 @@ const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtUebermittlungVorgeschlagen: vermerk((neu) => `Übermittlung vorgeschlagen${vorschlagsteil(neu)}`, "Übermittlungsvorschlag gelöscht"),
   NachrichtBefoerdert: vermerk((neu) => `befördert${befoerderungsteil(neu)}`, "Beförderungsvermerk gelöscht"),
   NachrichtNachgewiesen: vermerk((neu) => `nachgewiesen${klammer([handzeichenteil(neu)])}`, "Nachweis gelöscht"),
-  NachrichtGesichtet: vermerk(
-    (neu) => `gesichtet${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}`,
-    "Sichtung gelöscht",
-  ),
+  NachrichtWeitergegeben: vermerk((neu) => `an den Sichter weitergegeben${klammer([handzeichenteil(neu)])}`, "Weitergabe gelöscht"),
+  NachrichtGesichtet: (e) =>
+    vermerk(
+      (neu) => `${ersatz(e) ? "als Ersatzsichter gesichtet" : "gesichtet"}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}`,
+      "Sichtung gelöscht",
+    )(e),
   NachrichtVermerkt: (e) => (text(e.neu) === undefined ? "Vermerk gelöscht" : `Vermerk „${String(e.neu)}“`),
   NachrichtKenntnisGenommen: (e) => `von ${stelleAus(e)} zur Kenntnis genommen${klammer([handzeichenteil(e.neu)])}`,
   NachrichtErledigt: (e) => `für ${stelleAus(e)} erledigt`,
@@ -180,7 +195,8 @@ function parametersatz(ereignis: EingehendesEreignis, betreff: string): string {
     return `${betreff} (Schwelle FmZ): ${String(alt)} → ${String(neu)} min`;
   }
   const wort = (wert: unknown): string => (wert === true ? "ja" : "nein");
-  return `${betreff} (Sichtung auch für Ausgänge): ${wort(vorher)} → ${wort(ereignis.neu)}`;
+  const name = feld === "ldfStation" ? "LdF als Station" : "Sichtung auch für Ausgänge";
+  return `${betreff} (${name}): ${wort(vorher)} → ${wort(ereignis.neu)}`;
 }
 
 function vorgangDes(ereignis: EingehendesEreignis): string {

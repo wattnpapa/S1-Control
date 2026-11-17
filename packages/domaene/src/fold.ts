@@ -2142,10 +2142,13 @@ export function materialisiere(faltung: Faltung): Zustand {
 
   // --- Nachrichten (KONZEPT-NACHRICHTEN.md §9) ----------------------------
   // Laufzustand und Nummernkollision in `fold-nachricht.ts`; der Parameter
-  // `sichtungAuchAusgang` ist ein Feld des Einsatzes und steht im Zustand.
+  // `sichtungAuchAusgang` und `ldfStation` sind Felder des Einsatzes und stehen im Zustand.
   const nachrichten = baueNachrichten(
     gebaut.get("nachricht") ?? new Map<string, GebauteEntitaet>(),
-    einsatzGebaut?.felder.get("sichtungAuchAusgang")?.wert === true,
+    {
+      sichtungAuchAusgang: einsatzGebaut?.felder.get("sichtungAuchAusgang")?.wert === true,
+      ldfStation: einsatzGebaut?.felder.get("ldfStation")?.wert === true,
+    },
     hinweise,
   );
 

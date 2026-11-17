@@ -13,7 +13,7 @@
  * tragen die Marke: Ihre Nummer ist auf Papier vergeben.
  */
 
-import { datumZeitGruppe, type Nachrichtenzeile } from "@s1/domaene";
+import { datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { druckseiteAlsHtml, tabellenrahmen } from "./druckseite.js";
 import { htmlMaskieren, type Ausgabekopf } from "./index.js";
@@ -57,10 +57,16 @@ function vermerkText(vermerk: { readonly zeitpunkt: string; readonly handzeichen
   return [uhrzeit(vermerk.zeitpunkt), vermerk.handzeichen].filter((t) => t !== "").join(" ");
 }
 
-/** Die Marken einer Zeile: doppelte Nummer, Gesprächsnotiz, zurückgezogen. */
+/**
+ * Die Marken einer Zeile: doppelte Nummer, Gesprächsnotiz, zurückgezogen und
+ * — additiv, 2026-11-17 — der Weg aus dem Übermittlungsvorschlag des LdF mit
+ * seinem Handzeichen.
+ */
 export function nachweisungMarken(zeile: Nachrichtenzeile): readonly string[] {
+  const weg = zeile.vorschlag;
   return [
     ...(zeile.nummerDoppelt ? ["Nr. doppelt"] : []),
+    ...(weg === undefined ? [] : [`Weg ${projektion.mittelWort(weg.mittel)} (LdF ${weg.handzeichen})`]),
     ...(zeile.gespraechsnotiz ? ["GN"] : []),
     ...(zeile.zurueckgezogen ? ["zurückgezogen"] : []),
   ];

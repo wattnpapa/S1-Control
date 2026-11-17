@@ -62,6 +62,9 @@ export interface Nachrichtenbezug {
  *
  * ```
  * VOR_FMZ         Ausgang ohne Beförderung (keine Gesprächsnotiz)
+ * VOR_LDF         nur mit Parameter `ldfStation`: Ausgang angenommen, ohne
+ *                 Übermittlungsvorschlag, nicht befördert; Eingang aufgenommen,
+ *                 nicht weitergegeben, nicht gesichtet
  * VOR_SICHTER     Eingang oder Gesprächsnotiz ohne Sichtung; Ausgang nach
  *                 der Beförderung, wenn `sichtungAuchAusgang` gesetzt ist
  * VERTEILT        gesichtet, mindestens eine Stelle ohne Erledigung
@@ -70,7 +73,7 @@ export interface Nachrichtenbezug {
  * ZURUECKGEZOGEN  Fehlanlage, mit Grund zurückgezogen
  * ```
  */
-export const LAUFZUSTAENDE = ["VOR_FMZ", "VOR_SICHTER", "VERTEILT", "ERLEDIGT", "ZURUECKGEZOGEN"] as const;
+export const LAUFZUSTAENDE = ["VOR_FMZ", "VOR_SICHTER", "VERTEILT", "ERLEDIGT", "ZURUECKGEZOGEN", "VOR_LDF"] as const;
 export type Laufzustand = (typeof LAUFZUSTAENDE)[number];
 
 export interface NachrichtZustand extends Anlage {
@@ -101,6 +104,8 @@ export interface NachrichtZustand extends Anlage {
   /** Der Wert trägt bei Bedarf die Gegenstelle mit (`gegenstelle`). */
   readonly befoerderung?: Feld<Mittelvermerk & { readonly gegenstelle?: string }>;
   readonly nachweis?: Feld<Nachweisvermerk>;
+  /** Additiv: die Weitergabe des Eingangs vom LdF an den Sichter (`NachrichtWeitergegeben`). */
+  readonly weitergabe?: Feld<Zeitvermerk>;
   readonly sichtung?: Feld<Sichtungsvermerk>;
   /** Vermerke nach der Sichtung ohne Neusichtung (`NachrichtVermerkt`). */
   readonly vermerke?: Feld<string>;
