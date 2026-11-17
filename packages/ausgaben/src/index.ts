@@ -84,7 +84,7 @@ export {
   type Oldenburgoptionen,
 } from "./xlsx.js";
 export { KOSTEN_FUSSNOTE, KOSTEN_STIL, euro, kostenAlsHtml } from "./kosten.js";
-export { anforderungenAlsHtml, tagebuchAlsHtml } from "./listen.js";
+export { anforderungenAlsHtml, tagebuchAlsHtml, type Tagebuchabschluss } from "./listen.js";
 export { papierVordruckAlsHtml } from "./papier.js";
 export { bildschirmtauglich } from "./bildschirm.js";
 export { LOG_FUSSNOTE, LOG_STIL, logAlsHtml, type Logausgabeoptionen } from "./log.js";
@@ -154,5 +154,5 @@ export {
 } from "./nachricht.js";
 
 // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7) und die Naht von der Projektionszeile zum Vordruck.
-export { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml, nachweisungMarken, type Nachweisungsdaten } from "./nachweisung.js";
+export { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml, nachweisungMarken, nummernfuss, type Nachweisungsdaten } from "./nachweisung.js";
 export { entwurfsdruck, nachrichtendateiname, nachrichtendruckAus, type Nachrichtenentwurf } from "./nachrichtendruck.js";

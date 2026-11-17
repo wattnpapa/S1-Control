@@ -96,6 +96,15 @@ describe("Die Ausgabe Nachweisung", () => {
     expect(html).not.toContain("Lage <Deich>");
   });
 
+  it("zeigt Sichtung, Verteiler und Vermerke als zweite Zeile und die Nummernfolge im Fuß (Sichter-Audit, LdF P2-2)", () => {
+    const html = nachweisungAlsHtml(daten());
+    expect(html).toContain('<tr class="unterzeile"><td></td><td colspan="11">Sichtung 0805 SI · Verteiler: S3 (grün), S2 (blau), S4 (rot) · Vermerke: an S3 weiter</td></tr>');
+    expect(html).toContain("Nummern 1 bis 26; Fehlende Nummern: 1–25 · ohne Nummer: 1 · zurückgezogen: 0");
+    expect(html).toContain("<td>ohne Nummer</td>");
+    const lueckenlos = zeilen().map((z) => ({ ...z, nummer: z.id === "E2" ? 2 : 1 }));
+    expect(nachweisungAlsHtml({ ...daten(), zeilen: lueckenlos })).toContain("Nummern 1 bis 2; lückenlos");
+  });
+
   it("gibt bei keiner Nachricht eine leere Tabelle aus", () => {
     const html = nachweisungAlsHtml({ ...daten(), zeilen: [] });
     expect(html).toContain("0 Nachrichten");

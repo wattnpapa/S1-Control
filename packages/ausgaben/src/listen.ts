@@ -76,46 +76,103 @@ export function anforderungenAlsHtml(
   });
 }
 
-function tagebuchZeile(zeile: projektion.Tagebuchzeile): string {
+/**
+ * Wie das Tagebuch endet (ETB P0-3): „Einsatztagebuch abgeschlossen <Zeit>,
+ * <Akteur>", wenn der Einsatz beendet ist; sonst gilt der Stand des Kopfes.
+ */
+export interface Tagebuchabschluss {
+  /** Zeit und Akteur der Zeile „Einsatz beendet"; fehlt, solange der Einsatz läuft. */
+  readonly beendet?: { readonly zeit: string; readonly akteur: string };
+}
+
+/** Der Grund steht schon im Satz, wenn die Zeile ihn selbst nennt (Zurückziehen, ETB P0-2). */
+function satzMitGrund(zeile: projektion.Tagebuchzeile): string {
+  const grund = zeile.grund ?? "";
+  if (grund === "" || zeile.satz.includes(grund)) return zeile.satz;
+  return `${zeile.satz} (Grund: ${grund})`;
+}
+
+/**
+ * Eine Zeile des gedruckten Tagebuchs (ETB P0-3): laufende Nummer, beide
+ * Zeiten getrennt — die Wanduhr des schreibenden Rechners („Erfasst") und
+ * die fachliche Zeit („Zeit lt. Meldung") —, Nachrichtennummer, Eintrag,
+ * Akteur, Handzeichen, Rechner und die Notizspalte.
+ */
+function tagebuchZeile(zeile: projektion.Tagebuchzeile, laufendeNummer: number): string {
+  const marke = zeile.undoOf !== undefined ? " [Rücknahme]" : zeile.korrekturVon !== undefined || zeile.berichtigung === true ? " [Berichtigung]" : "";
   return [
     "      <tr>",
-    `        ${zelle(zeitText(zeile.zeitpunkt ?? zeile.wanduhr))}`,
+    `        ${zelle(String(laufendeNummer))}`,
+    `        ${zelle(zeitText(zeile.wanduhr))}`,
+    `        ${zelle(zeile.zeitpunkt === undefined ? undefined : zeitText(zeile.zeitpunkt))}`,
+    `        ${zelle(zeile.nachrichtNummer)}`,
+    `        ${zelle(`${satzMitGrund(zeile)}${marke}`)}`,
     `        ${zelle(zeile.akteur)}`,
-    `        ${zelle(zeile.grund === undefined || zeile.grund === "" ? zeile.satz : `${zeile.satz} (Grund: ${zeile.grund})`)}`,
+    `        ${zelle(zeile.handzeichen)}`,
+    `        ${zelle(zeile.rechner)}`,
     '        <td class="notiz"></td>',
     "      </tr>",
   ].join("\n");
 }
 
+/** Die Schlusszeile unter der Tabelle (ETB P0-3). */
+function schlusszeile(anzahl: number, kopf: Ausgabekopf, abschluss: Tagebuchabschluss): string {
+  const beendet = abschluss.beendet;
+  const text =
+    beendet === undefined
+      ? `${kopf.stand.startsWith("Stand") ? kopf.stand : `Stand ${kopf.stand}`} · ${String(anzahl)} Einträge`
+      : `Einsatztagebuch abgeschlossen ${zeitText(beendet.zeit)}, ${beendet.akteur} · ${String(anzahl)} Einträge`;
+  return `  <p class="hinweis"><strong>${htmlMaskieren(text)}</strong></p>`;
+}
+
+const TAGEBUCHSPALTEN = [
+  ["Nr.", "laufende Nummer der Zeile"],
+  ["Erfasst", "Wanduhr des schreibenden Rechners"],
+  ["Zeit lt. Meldung", "fachliche Zeit: Vermerk, Funkzeit, Abfassung"],
+  ["Nachricht", "Nummer der Nachweisung zur Zeit des Eintrags"],
+  ["Eintrag", ""],
+  ["Akteur", ""],
+  ["Hz.", "Handzeichen, wo der Schritt eines trägt"],
+  ["Rechner", ""],
+  ["Notiz", ""],
+] as const;
+
 /**
  * Das Einsatztagebuch als druckbare HTML-Seite.
  *
  * `zeilen` kommen in der Reihenfolge der Ansicht (neueste zuerst) und werden
- * hier umgedreht.
+ * hier umgedreht; die Ordnung bleibt die HLC-Ordnung der Ansicht (§2.6) —
+ * die fachliche Zeit darf deshalb springen (Nacherfassung vom Papier), und
+ * die Spalte „Erfasst" daneben zeigt, warum (ETB P0-3).
  */
-export function tagebuchAlsHtml(zeilen: readonly projektion.Tagebuchzeile[], kopf: Ausgabekopf): string {
+export function tagebuchAlsHtml(
+  zeilen: readonly projektion.Tagebuchzeile[],
+  kopf: Ausgabekopf,
+  abschluss: Tagebuchabschluss = {},
+): string {
   const aufsteigend = [...zeilen].reverse();
   const tabelle = [
     '  <table class="liste">',
     "    <thead>",
     "      <tr>",
-    '        <th scope="col">Zeit</th><th scope="col">Wer</th><th scope="col">Eintrag</th><th scope="col">Notiz</th>',
+    `        ${TAGEBUCHSPALTEN.map(([name, titel]) => `<th scope="col"${titel === "" ? "" : ` title="${htmlMaskieren(titel)}"`}>${htmlMaskieren(name)}</th>`).join("")}`,
     "      </tr>",
     "    </thead>",
     "    <tbody>",
-    ...aufsteigend.map(tagebuchZeile),
-    ...(aufsteigend.length === 0 ? ['      <tr><td colspan="4">Noch keine Einträge.</td></tr>'] : []),
+    ...aufsteigend.map((zeile, index) => tagebuchZeile(zeile, index + 1)),
+    ...(aufsteigend.length === 0 ? [`      <tr><td colspan="${String(TAGEBUCHSPALTEN.length)}">Noch keine Einträge.</td></tr>`] : []),
     "    </tbody>",
     "  </table>",
   ].join("\n");
   return druckseiteAlsHtml({
     titel: "Einsatztagebuch",
     kopf,
-    querformat: false,
+    querformat: true,
     inhalt: [
       "  <h2>Einsatztagebuch</h2>",
-      `  <p class="hinweis">${String(aufsteigend.length)} Einträge, älteste zuerst.</p>`,
+      `  <p class="hinweis">${String(aufsteigend.length)} Einträge, älteste zuerst (Ordnung des Schreibens). „Erfasst“ ist die Uhr des schreibenden Rechners, „Zeit lt. Meldung“ die fachliche Zeit des Vorgangs.</p>`,
       tabellenrahmen(tabelle),
+      schlusszeile(aufsteigend.length, kopf, abschluss),
     ],
   });
 }

@@ -68,8 +68,39 @@ export function nachweisungMarken(zeile: Nachrichtenzeile): readonly string[] {
     ...(zeile.nummerDoppelt ? ["Nr. doppelt"] : []),
     ...(weg === undefined ? [] : [`Weg ${projektion.mittelWort(weg.mittel)} (LdF ${weg.handzeichen})`]),
     ...(zeile.gespraechsnotiz ? ["GN"] : []),
+    // Additiv (SGL P0-1, LdF P1-2): hinter der FmZ, aber ohne Nummer.
+    ...(projektion.standDerZeile(zeile).ohneNummer ? ["ohne Nummer"] : []),
     ...(zeile.zurueckgezogen ? ["zurückgezogen"] : []),
   ];
+}
+
+/**
+ * Die zweite Zeile je Nachricht (Sichter-Audit): Verteiler mit Kopiefarbe
+ * und die Vermerke der Sichtung, wie sie auf dem Vordruck in Feld 19 und 20
+ * stehen. Ohne Sichtung und Vermerke entfällt sie.
+ */
+function zweiteZeile(zeile: Nachrichtenzeile): string | undefined {
+  const verteiler = zeile.verteiler.map((m) => `${projektion.stellenWort(m.stelle)} (${projektion.kopieWort(m.kopie)})`).join(", ");
+  const teile = [
+    zeile.sichtung === undefined ? "" : `Sichtung ${vermerkText(zeile.sichtung)}${verteiler === "" ? "" : ` · Verteiler: ${verteiler}`}`,
+    zeile.vermerke === undefined ? "" : `Vermerke: ${zeile.vermerke}`,
+  ].filter((t) => t !== "");
+  if (teile.length === 0) return undefined;
+  return `      <tr class="unterzeile"><td></td><td colspan="${String(SPALTEN.length - 1)}">${htmlMaskieren(teile.join(" · "))}</td></tr>`;
+}
+
+/**
+ * Der Fuß der Folge (LdF P2-2, ETB P2-2): „Nummern 1 bis 4; fehlende Nummern:
+ * 3 · ohne Nummer: 2 · zurückgezogen: 1" — oder „lückenlos".
+ */
+export function nummernfuss(zeilen: readonly Nachrichtenzeile[]): string {
+  const nummern = zeilen.flatMap((z) => (z.nummer === undefined ? [] : [z.nummer]));
+  const ohne = zeilen.filter((z) => z.nummer === undefined && !z.zurueckgezogen).length;
+  const zurueck = zeilen.filter((z) => z.zurueckgezogen).length;
+  const folge = nummern.length === 0 ? "Noch keine Nummer vergeben" : `Nummern 1 bis ${String(Math.max(...nummern))}`;
+  const luecken = projektion.nummernluecken(zeilen);
+  const lueckentext = luecken.length === 0 ? "lückenlos" : `Fehlende Nummern: ${projektion.nummernlueckenText(luecken)}`;
+  return `${folge}; ${lueckentext} · ohne Nummer: ${String(ohne)} · zurückgezogen: ${String(zurueck)}`;
 }
 
 function zeileAlsHtml(zeile: Nachrichtenzeile): string {
@@ -87,7 +118,8 @@ function zeileAlsHtml(zeile: Nachrichtenzeile): string {
     vermerkText(zeile.sichtung),
     nachweisungMarken(zeile).join(", "),
   ];
-  return `      <tr>${zellen.map((z) => `<td>${htmlMaskieren(z)}</td>`).join("")}</tr>`;
+  const unter = zweiteZeile(zeile);
+  return [`      <tr>${zellen.map((z) => `<td>${htmlMaskieren(z)}</td>`).join("")}</tr>`, ...(unter === undefined ? [] : [unter])].join("\n");
 }
 
 /** Die Nachweisung als druckbare A4-Seite. */
@@ -111,6 +143,7 @@ export function nachweisungAlsHtml(daten: Nachweisungsdaten): string {
     inhalt: [
       ...kopfzeile,
       tabellenrahmen(tabelle),
+      `  <p class="hinweis"><strong>${htmlMaskieren(nummernfuss(daten.zeilen))}</strong></p>`,
       `  <p class="hinweis">Erstellt ${htmlMaskieren(daten.kopf.stand)} · ${htmlMaskieren(daten.akteur)}</p>`,
       `  <p class="hinweis">${htmlMaskieren(NACHWEISUNG_FUSSNOTE)}</p>`,
     ],

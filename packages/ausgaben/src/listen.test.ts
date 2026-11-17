@@ -53,6 +53,46 @@ describe("Tagebuch als HTML", () => {
   });
 });
 
+describe("Tagebuch als HTML: zwei Zeiten, Nummer, Handzeichen, Abschluss (ETB P0-3)", () => {
+  const zeile = (teile: Partial<projektion.Tagebuchzeile>): projektion.Tagebuchzeile => ({
+    ereignisId: "a:1",
+    typ: "NachrichtNachgewiesen",
+    hlcText: "0",
+    wanduhr: "2026-09-08T10:33:00Z",
+    akteur: "Arbeitsplatz FmZ",
+    rechner: "pc-fmz",
+    clientId: "a",
+    satz: "Nachricht E 4 nachgewiesen (Hz. Fm): Polizei an FüSt",
+    ...teile,
+  });
+
+  it("führt laufende Nummer, Erfasst und Zeit lt. Meldung getrennt, Nachricht, Akteur, Hz. und Rechner", () => {
+    const html = tagebuchAlsHtml(
+      [zeile({ ereignisId: "a:2", zeitpunkt: "2026-09-08T07:00:00Z", nachrichtNummer: "E 4", handzeichen: "Fm" }), zeile({ satz: "Einsatz angelegt", typ: "EinsatzAngelegt" })],
+      KOPF,
+    );
+    for (const kopf of ["Nr.", "Erfasst", "Zeit lt. Meldung", "Nachricht", "Eintrag", "Akteur", "Hz.", "Rechner", "Notiz"]) expect(html).toContain(`>${kopf}</th>`);
+    const reihen = html.split("<tr>").slice(2);
+    expect(reihen[0]).toContain("<td>1</td>");
+    expect(reihen[1]).toContain("<td>2</td>");
+    expect(reihen[1]).toContain("<td>E 4</td>");
+    expect(reihen[1]).toContain("<td>Fm</td>");
+    expect(reihen[1]).toContain("<td>pc-fmz</td>");
+    expect(html).toContain("<strong>Stand: 08.09.2026, 08:00 · 2 Einträge</strong>");
+  });
+
+  it("schließt mit „Einsatztagebuch abgeschlossen“, markiert Berichtigungen und doppelt den Grund nicht", () => {
+    const html = tagebuchAlsHtml(
+      [zeile({ satz: "Nachricht A zurückgezogen, Grund: „doppelt“: S4 an OV", grund: "doppelt", berichtigung: true })],
+      KOPF,
+      { beendet: { zeit: "2026-09-08T16:00:00Z", akteur: "Meier" } },
+    );
+    expect(html).toMatch(/Einsatztagebuch abgeschlossen \d{2}\.\d{2}\.2026 \d{2}:\d{2}, Meier · 1 Einträge/);
+    expect(html).toContain("[Berichtigung]");
+    expect(html).not.toContain("(Grund: doppelt)");
+  });
+});
+
 describe("Papier-Vordruck", () => {
   it("enthält Meldeblock, Einheitenliste, Funkprotokoll und leeren Funkplan als leere A4-Formulare", () => {
     const html = papierVordruckAlsHtml(KOPF);
