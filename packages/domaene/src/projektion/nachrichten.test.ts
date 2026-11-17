@@ -14,9 +14,11 @@ import { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 import { tagebuchzeile } from "./tagebuch.js";
 
 let n = 0;
+/** Die HLC laufen ab 08:00 des Einsatztages in Sekunden — das Eintreffen bei der FmZ ist ihre Zeit (LdF P0-2). */
+const BEGINN_MS = Date.parse("2026-09-08T08:00:00+02:00");
 function h(client = "a"): ReturnType<typeof hlc> {
   n += 1;
-  return hlc(n * 1000, 0, client);
+  return hlc(BEGINN_MS + n * 1000, 0, client);
 }
 
 const um = (minute: number): string => `2026-09-08T08:${String(minute).padStart(2, "0")}:00+02:00`;
@@ -183,8 +185,10 @@ describe("Nummernvorbelegung und Zahlen", () => {
 
   it("zählt die fünf Zahlen des Bandes für die eigenen Stellen", () => {
     const z = zustand(lage());
-    expect(nachrichtenlage(z, ["S2"], um(24))).toEqual({ neuFuerStellen: 2, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 2, ueberSchwelle: 1 });
-    expect(nachrichtenlage(z, ["S4"])).toEqual({ neuFuerStellen: 0, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 2, ueberSchwelle: 0 });
+    const luecken = Array.from({ length: 25 }, (_, i) => i + 1);
+    // Mit Vorrang offen je Stelle (SGL P1-7): E 27 (Sofort) für S2 und S4; der Blitz vor dem Sichter nur für den Sichter.
+    expect(nachrichtenlage(z, ["S2"], um(24))).toEqual({ neuFuerStellen: 2, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 1, ueberSchwelle: 1, nummernluecken: luecken });
+    expect(nachrichtenlage(z, ["S4"])).toEqual({ neuFuerStellen: 0, vorFmz: 1, vorSichter: 2, mitVorrangOffen: 1, ueberSchwelle: 0, nummernluecken: luecken });
   });
 });
 
@@ -200,7 +204,7 @@ describe("Die Nachrichten im Tagebuch", () => {
     expect(satz(10)).toBe("Nachricht A aufgegeben: S3 an OV Wildeshausen, ‚Sandsäcke anfordern‘");
     expect(satz(14)).toBe("Nachricht A 28 befördert (Telefon, an Kreis OL, Hz. FM): S4 an FüSt, ‚Verpflegung‘");
     const zurueck = tagebuchzeile(z, basis[16] as EingehendesEreignis);
-    expect(zurueck).toMatchObject({ satz: "Nachricht E zurückgezogen: OV Wildeshausen an FüSt, ‚Fehlanlage‘", grund: "doppelt" });
+    expect(zurueck).toMatchObject({ satz: "Nachricht E zurückgezogen, Grund: „doppelt“: OV Wildeshausen an FüSt, ‚Fehlanlage‘", grund: "doppelt", berichtigung: true, nachrichtId: "Z1" });
   });
 
   it("schreibt die Aufnahme als „aufgenommen“, mit der Aufnahmezeit als fachlicher Zeit", () => {
@@ -237,9 +241,10 @@ describe("Die Nachrichten im Tagebuch", () => {
 describe("Die Zahlen hinter den Chips", () => {
   it("zählt den Posteingang je Stand wie die Sicht ihn filtert", () => {
     const z = zustand([...lage(), vermerk("NachrichtErledigt", "E1", true, { stelle: "S3" })]);
-    expect(nachrichtenZaehlung(z, ["S2"])).toEqual({ NEU: 2, GELESEN: 0, ERLEDIGT: 0 });
-    expect(nachrichtenZaehlung(z, ["S4"])).toEqual({ NEU: 0, GELESEN: 1, ERLEDIGT: 0 });
-    expect(nachrichtenZaehlung(z, ["S3"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 1 });
+    expect(nachrichtenZaehlung(z, ["S2"])).toEqual({ NEU: 2, GELESEN: 0, ERLEDIGT: 0, OFFEN: 2 });
+    expect(nachrichtenZaehlung(z, ["S4"])).toEqual({ NEU: 0, GELESEN: 1, ERLEDIGT: 0, OFFEN: 1 });
+    // S3 hat E 26 erledigt; offen bleibt der eigene Ausgang A 1, der noch bei der FmZ liegt.
+    expect(nachrichtenZaehlung(z, ["S3"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 1, OFFEN: 1 });
     for (const stand of ["NEU", "GELESEN", "ERLEDIGT"] as const) {
       const gesamt = nachrichtenausschnitt(z, { sicht: "posteingang", stellen: ["S2", "S3", "S4"], zustaende: [stand] }).gesamtzahl;
       expect(nachrichtenZaehlung(z, ["S2", "S3", "S4"])[stand]).toBe(gesamt);
@@ -247,7 +252,7 @@ describe("Die Zahlen hinter den Chips", () => {
   });
 
   it("zählt nichts für eine Stelle ohne Verteiler und für einen leeren Einsatz", () => {
-    expect(nachrichtenZaehlung(zustand(lage()), ["S9"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0 });
-    expect(nachrichtenZaehlung(zustand([]), ["S2"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0 });
+    expect(nachrichtenZaehlung(zustand(lage()), ["S9"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0, OFFEN: 0 });
+    expect(nachrichtenZaehlung(zustand([]), ["S2"])).toEqual({ NEU: 0, GELESEN: 0, ERLEDIGT: 0, OFFEN: 0 });
   });
 });

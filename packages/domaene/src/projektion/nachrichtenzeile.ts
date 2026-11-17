@@ -37,6 +37,7 @@ import type {
   Zeitvermerk,
 } from "../zustand-nachricht.js";
 import type { Feld, Zustand } from "../zustand.js";
+import { eintreffenMs, fmzVermerkTextAus, laufstandAus, ohneNummerAus, wartetSeitAus, type Laufstand } from "./nachrichtenstand.js";
 
 /** Eine Stelle des Verteilers mit ihrer Kopiefarbe und den beiden Marken. */
 export interface Nachrichtenmarke {
@@ -103,8 +104,27 @@ export interface Nachrichtenzeile {
   readonly angelegtMit: Hlc;
   /** Der Arbeitsplatz, der die Nachricht verfasst oder aufgenommen hat. */
   readonly clientId: string;
-  /** Angenommen, unbefördert, länger als die Schwelle (§5); nur mit `jetzt`. */
+  /**
+   * Ausgang bei der FmZ, unbefördert, länger als die Schwelle (§5); nur mit
+   * `jetzt`. Gemessen ab dem Eintreffen bei der FmZ, nicht erst ab der
+   * Annahme (LdF P0-2, Fernmelder P1-5).
+   */
   readonly fmzUeberSchwelle: boolean;
+  /** Additiv: Minuten seit dem Eintreffen bei der FmZ, solange unbefördert; nur mit `jetzt` (LdF P0-2). */
+  readonly wartetSeit?: number;
+  /**
+   * Additiv: der sichtbare Stand der Listen, feiner als `laufzustand` (SGL
+   * P0-1, `nachrichtenstand.ts`). Die Projektion setzt ihn immer; optional
+   * nur, damit handgebaute Zeilen älterer Prüfhilfen gültig bleiben
+   * (`standDerZeile` rechnet ihn dann nach).
+   */
+  readonly laufstand?: Laufstand;
+  /** Additiv: Marke „ohne Nummer" — hinter der FmZ, aber nicht nachgewiesen (SGL P0-1, LdF P1-2); immer gesetzt wie `laufstand`. */
+  readonly ohneNummer?: boolean;
+  /** Additiv: „angenommen 1320 Fm · befördert 1321 Fm (Funk)" — der Vermerk der FmZ für die Listen (SGL P0-1). */
+  readonly fmzVermerkText?: string;
+  /** Additiv: der Arbeitsplatz, dessen Sichtung gilt — für „meine Sichtungen" (Sichter-Audit). */
+  readonly gesichtetVon?: string;
 }
 
 /** Was jede Zeile über den Einsatz wissen muss; einmal je Anfrage gebaut. */
@@ -168,14 +188,44 @@ function vermerkeDer(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined
   return vergleicheHlc(n.vermerke.hlc, n.sichtung.hlc) > 0 ? nachtrag : (sichtung.vermerke ?? nachtrag);
 }
 
-function ueberSchwelle(
-  annahme: Zeitvermerk | undefined,
-  befoerderung: Mittelvermerk | undefined,
-  kontext: Zeilenkontext,
-): boolean {
-  if (annahme === undefined || befoerderung !== undefined || kontext.jetzt === undefined) return false;
-  const seit = Date.parse(kontext.jetzt) - Date.parse(annahme.zeitpunkt);
+/**
+ * Über der Schwelle: ein Ausgang vor der FmZ oder beim LdF, unbefördert,
+ * länger als die Schwelle **seit dem Eintreffen** (LdF P0-2: vorher zählte
+ * nur, was angenommen war — ein Blitz im Fach blieb unbemerkt).
+ */
+function ueberSchwelle(n: NachrichtZustand, annahme: Zeitvermerk | undefined, kontext: Zeilenkontext): boolean {
+  if (kontext.jetzt === undefined || text(n.richtung) !== "AUSGANG" || n.gespraechsnotiz?.wert === true) return false;
+  if (n.laufzustand !== "VOR_FMZ" && n.laufzustand !== "VOR_LDF") return false;
+  const seit = Date.parse(kontext.jetzt) - eintreffenMs(n.angelegtMit.millisekunden, annahme);
   return Number.isFinite(seit) && seit > kontext.schwelleMinuten * 60000;
+}
+
+/** Die additiven Felder des Standes (SGL P0-1, LdF P0-2); eigene Funktion wegen der Länge des Zeilenbaus. */
+function standfelder(
+  n: NachrichtZustand,
+  vermerke: {
+    readonly aufnahme: Mittelvermerk | undefined;
+    readonly annahme: Zeitvermerk | undefined;
+    readonly befoerderung: Mittelvermerk | undefined;
+    readonly nachweis: Nachweisvermerk | undefined;
+    readonly sichtung: Sichtungsvermerk | undefined;
+  },
+  kontext: Zeilenkontext,
+): Pick<Nachrichtenzeile, "laufstand" | "ohneNummer" | "wartetSeit" | "fmzVermerkText" | "gesichtetVon"> {
+  const richtung = text(n.richtung) ?? "";
+  const gespraechsnotiz = n.gespraechsnotiz?.wert === true;
+  const nummer = vermerke.nachweis?.nummer;
+  const laufstand = laufstandAus({ laufzustand: n.laufzustand, richtung, gespraechsnotiz, nummer, annahme: vermerke.annahme, sichtung: vermerke.sichtung });
+  const wartetSeit = wartetSeitAus({ richtung, gespraechsnotiz, laufzustand: n.laufzustand }, eintreffenMs(n.angelegtMit.millisekunden, vermerke.annahme), kontext.jetzt);
+  const fmzVermerkText = fmzVermerkTextAus(vermerke.aufnahme, vermerke.annahme, vermerke.befoerderung);
+  const gesichtetVon = vermerke.sichtung === undefined ? undefined : n.sichtung?.hlc.clientId;
+  return {
+    laufstand,
+    ohneNummer: ohneNummerAus(laufstand, nummer),
+    ...(wartetSeit === undefined ? {} : { wartetSeit }),
+    ...(fmzVermerkText === undefined ? {} : { fmzVermerkText }),
+    ...(gesichtetVon === undefined ? {} : { gesichtetVon }),
+  };
 }
 
 function clientDer(id: EreignisId): string {
@@ -257,8 +307,9 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
     angelegtDurch: n.angelegtDurch,
     angelegtMit: n.angelegtMit,
     clientId: clientDer(n.angelegtDurch),
-    // Auch die Zeit beim LdF zählt: Die Schwelle misst Annahme bis Beförderung (§5).
-    fmzUeberSchwelle: (n.laufzustand === "VOR_FMZ" || n.laufzustand === "VOR_LDF") && ueberSchwelle(annahme, befoerderung, kontext),
+    // Auch die Zeit beim LdF zählt, und sie läuft ab dem Eintreffen (LdF P0-2).
+    fmzUeberSchwelle: ueberSchwelle(n, annahme, kontext),
+    ...standfelder(n, { aufnahme, annahme, befoerderung, nachweis, sichtung }, kontext),
   };
 }
 

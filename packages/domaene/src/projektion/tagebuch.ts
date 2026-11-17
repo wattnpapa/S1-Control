@@ -40,7 +40,8 @@ import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuc
 import { klartextsatz } from "./tagebuch-klartext.js";
 import { rufgruppenname } from "./tagebuch-funk.js";
 import { bestellungsname } from "./tagebuch-versorgung.js";
-import { nachrichtenname, nachrichtenzeit } from "./tagebuch-nachrichten.js";
+import { NACHRICHTENARTEN, nachrichtenname, nachrichtensatz, nachrichtenzeit, type Zeitstand } from "./tagebuch-nachrichten.js";
+import { nachrichtenverlauf, nachrichtenzeilenfelder } from "./tagebuch-nachrichtenbezug.js";
 
 // ---------------------------------------------------------------------------
 // Die Wortliste
@@ -268,6 +269,23 @@ export interface Tagebuchzeile {
   readonly einheitId?: Id;
   /** Für den Filter „nur dieser Abschnitt". */
   readonly abschnittId?: Id;
+  /**
+   * Additiv (ETB P0-1): die Nachricht, über die die Zeile spricht — auch ein
+   * Tagebucheintrag mit Bezug NACHRICHT. „Im Tagebuch zeigen" filtert danach,
+   * und die Zeile bietet „Nachricht öffnen".
+   */
+  readonly nachrichtId?: Id;
+  /** Additiv (ETB P0-2, P0-3): „E 3" — die Nummer, die zur Zeit des Ereignisses galt. */
+  readonly nachrichtNummer?: string;
+  /**
+   * Additiv (ETB P0-2): eine Berichtigung oder Rücknahme an einer Nachricht
+   * (Vermerk mit verdrängtem Vorwert, Zurückziehen) — ohne `undoOf` und
+   * `korrekturVon`, aber für den Filter „Nur Rücknahmen und Berichtigungen"
+   * dasselbe.
+   */
+  readonly berichtigung?: boolean;
+  /** Additiv (ETB P0-3, P1-7): das Handzeichen, das das Ereignis trägt; fehlt, wo es keines kennt. */
+  readonly handzeichen?: string;
 }
 
 function alsSatzwert(wert: unknown): string {
@@ -578,9 +596,9 @@ export function ereignisgegenstand(zustand: Zustand, ereignis: EingehendesEreign
  * ein „Beschädigter Eintrag“ — das Ereignis bleibt im Protokoll, das
  * Tagebuch der übrigen bleibt lesbar.
  */
-export function tagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tagebuchzeile {
+export function tagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis, zeitstand?: Zeitstand): Tagebuchzeile {
   try {
-    return baueTagebuchzeile(zustand, ereignis);
+    return baueTagebuchzeile(zustand, ereignis, zeitstand);
   } catch {
     return {
       ereignisId: ereignis.id,
@@ -595,7 +613,7 @@ export function tagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): 
   }
 }
 
-function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tagebuchzeile {
+function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis, zeitstand: Zeitstand | undefined): Tagebuchzeile {
   const eintrag = KATALOG.get(ereignis.typ);
   if (eintrag === undefined) {
     // §3.7: Eine unbekannte Art wird nach `unbekannt` gefaltet — und sie
@@ -615,6 +633,8 @@ function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tag
   }
   const zeit = fachlicheZeit(ereignis);
   const feld = eintrag.feld?.art === "ausNutzlast" ? feldname(ereignis, eintrag) : undefined;
+  // Mit Verlauf nennt die Nachricht die Nummer ihrer Zeit (ETB P0-2).
+  const nachrichtSatz = zeitstand !== undefined && NACHRICHTENARTEN.has(ereignis.typ) ? nachrichtensatz(zustand, ereignis, "", zeitstand) : undefined;
   return {
     ereignisId: ereignis.id,
     typ: ereignis.typ,
@@ -624,12 +644,13 @@ function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis): Tag
     akteur: ereignis.akteur.benutzer,
     rechner: ereignis.akteur.host,
     clientId: ereignis.akteur.clientId,
-    satz: tagebuchsatz(zustand, ereignis, eintrag),
+    satz: nachrichtSatz ?? tagebuchsatz(zustand, ereignis, eintrag),
     ...(ereignis.grund === undefined ? {} : { grund: ereignis.grund }),
     ...(ereignis.undoOf === undefined ? {} : { undoOf: ereignis.undoOf }),
     ...(ereignis.korrekturVon === undefined ? {} : { korrekturVon: ereignis.korrekturVon }),
     ...(feld === undefined ? {} : { feld }),
     ...bezug(zustand, ereignis, eintrag),
+    ...nachrichtenzeilenfelder(zustand, ereignis, zeitstand),
   };
 }
 
@@ -638,14 +659,20 @@ export interface Tagebuchfilter {
   readonly abschnittId?: Id;
   /** Volltext über den Satz, den Akteur und den Grund. */
   readonly suche?: string;
-  /** Nur Kompensationen und Berichtigungen — die Spur der Rücknahmen (§6). */
+  /**
+   * Nur Kompensationen und Berichtigungen — die Spur der Rücknahmen (§6);
+   * dazu Berichtigungen und Rücknahmen an Nachrichten (ETB P0-2).
+   */
   readonly nurRuecknahmen?: boolean;
+  /** Additiv (ETB P0-1): nur die Zeilen dieser Nachricht — Kennung, kein Teilstring. */
+  readonly nachrichtId?: Id;
 }
 
 export function trifftFilter(zeile: Tagebuchzeile, filter: Tagebuchfilter): boolean {
   if (filter.einheitId !== undefined && zeile.einheitId !== filter.einheitId) return false;
   if (filter.abschnittId !== undefined && zeile.abschnittId !== filter.abschnittId) return false;
-  if (filter.nurRuecknahmen === true && zeile.undoOf === undefined && zeile.korrekturVon === undefined) {
+  if (filter.nachrichtId !== undefined && zeile.nachrichtId !== filter.nachrichtId) return false;
+  if (filter.nurRuecknahmen === true && zeile.undoOf === undefined && zeile.korrekturVon === undefined && zeile.berichtigung !== true) {
     return false;
   }
   const suche = filter.suche?.trim().toLocaleLowerCase("de-DE") ?? "";
@@ -698,12 +725,15 @@ export function tagebuchausschnitt(
   anzahl?: number,
 ): { readonly zeilen: readonly Tagebuchzeile[]; readonly gesamtzahl: number; readonly von: number } {
   const geordnet = [...ereignisse].sort((a, b) => -vergleicheZeilen(a, b));
+  // Der Verlauf der Nachrichten (ETB P0-2) braucht die aufsteigende Ordnung;
+  // ohne Nachrichten im Einsatz kostet er nichts.
+  const verlauf = zustand.nachrichten === undefined ? undefined : nachrichtenverlauf([...geordnet].reverse());
   const zeilen: Tagebuchzeile[] = [];
   const anfang = Math.max(0, von);
   const ende = anzahl === undefined ? Number.POSITIVE_INFINITY : anfang + anzahl;
   let gesamtzahl = 0;
   for (const ereignis of geordnet) {
-    const zeile = tagebuchzeile(zustand, ereignis);
+    const zeile = tagebuchzeile(zustand, ereignis, verlauf?.get(ereignis.id));
     if (!trifftFilter(zeile, filter)) continue;
     if (gesamtzahl >= anfang && gesamtzahl < ende) zeilen.push(zeile);
     gesamtzahl += 1;

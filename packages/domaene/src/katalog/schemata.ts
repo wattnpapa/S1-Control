@@ -473,9 +473,11 @@ export const EtbEintragErfasst = z.object({
   etbId: zId,
   zeitpunkt: zZeitpunkt,
   text: zPflichttext,
+  // NACHRICHT additiv (ETB P0-1, 2026-11-17): Ein getippter Eintrag zu einer
+  // Nachricht erscheint im Tagebuchfilter dieser Nachricht (`nachrichtId`).
   bezug: z
     .object({
-      entitaet: z.enum(["EINHEIT", "ABSCHNITT", "FAHRZEUG", "ANFORDERUNG"]),
+      entitaet: z.enum(["EINHEIT", "ABSCHNITT", "FAHRZEUG", "ANFORDERUNG", "NACHRICHT"]),
       id: zId,
     })
     .optional(),

@@ -107,7 +107,7 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     wozu: "Was wann geschehen ist, aus den Ereignissen abgeleitet.",
     zuerst: "Filtern — nach Einheit, Abschnitt oder Text.",
     ueberraschung:
-      "Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu.",
+      "Rücknahmen stehen als eigene Zeilen darin und löschen nichts. Das Tagebuch ist eine Projektion und kein Eintragsbuch: Neue Zeilen entstehen durch Arbeiten in der Lage, eigene Notizen kommen über „Eintrag hinzufügen“ dazu. Eine Zeile zu einer Nachricht nennt die Nummer, die damals galt, und öffnet die Nachricht mit ✉; „Im Tagebuch zeigen“ an der Nachricht zeigt genau ihre Zeilen. Eine neue Nummer, eine Nachsichtung und das Zurückziehen tragen die Marke „Berichtigung“. Der Ausdruck führt beide Zeiten, Nachricht, Handzeichen und Rechner je Zeile und schließt mit „Einsatztagebuch abgeschlossen“, sobald der Einsatz beendet ist.",
     kuerzel: ["suchen"],
   },
   {

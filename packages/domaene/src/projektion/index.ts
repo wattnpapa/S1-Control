@@ -277,6 +277,16 @@ export {
   type Posteingangsstand,
 } from "./nachrichten.js";
 export { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
+// Additiv (Audits 2026-11-17): Stand der Listen, offene Nachrichten, Nummernlücken
+export { LAUFSTAENDE, fmzVermerkTextAus, laufstandWort, standDerZeile, type Laufstand } from "./nachrichtenstand.js";
+export {
+  nummernluecken,
+  nummernlueckenText,
+  offeneNachrichten,
+  offenFuerStellen,
+  type OffeneNachrichten,
+  type Offenumfeld,
+} from "./nachrichtenoffen.js";
 export {
   fmzSchwelle,
   vergleicheNachNummer,

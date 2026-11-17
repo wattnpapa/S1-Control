@@ -13,6 +13,7 @@
  * geltenden Stand, nicht nach dem Verlauf. Der Verlauf steht im Tagebuch.
  */
 
+import { vergleicheHlc } from "../hlc.js";
 import type { Id } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 import {
@@ -22,12 +23,17 @@ import {
   zeilenkontext,
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
+import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
 
 /**
  * Die Sichten des Umschalters (§6); „ldf" additiv (2026-11-17): Ausgänge vor
  * der Festlegung des Wegs und Eingänge vor der Weitergabe an den Sichter.
+ * Ebenfalls additiv: „offen" — alles, was für die Stellen der Sitzung noch
+ * nicht erledigt ist, nach Vorrang und Alter, für die Übergabe (SGL P1-7) —
+ * und „gesichtet" — alle Nachrichten mit Sichtung, neueste zuerst, für die
+ * Nachsichtung (Sichter-Audit).
  */
-export const NACHRICHTEN_SICHTEN = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung", "ldf"] as const;
+export const NACHRICHTEN_SICHTEN = ["posteingang", "ausgang", "sichter", "fmz", "nachweisung", "ldf", "offen", "gesichtet"] as const;
 export type Nachrichtensicht = (typeof NACHRICHTEN_SICHTEN)[number];
 
 /** Der Stand einer Nachricht im Posteingang, bezogen auf die eigenen Stellen. */
@@ -48,6 +54,14 @@ export interface Nachrichtenanfrage {
   readonly anzahl?: number;
   /** Für die Zwanzig-Minuten-Marke; Ring 2 liest keine Uhr. */
   readonly jetzt?: string;
+  /** Additiv: nur diese Nachricht — „Nachricht öffnen" an der Tagebuchzeile (ETB P0-1). */
+  readonly nachrichtId?: Id;
+  /** Additiv, Sicht „gesichtet": nur Sichtungen dieses Handzeichens oder Arbeitsplatzes (`clientId`). */
+  readonly nurEigeneSichtungen?: boolean;
+  /** Additiv: das Handzeichen der Sitzung, für „meine Sichtungen". */
+  readonly handzeichen?: string;
+  /** Additiv, Sicht „offen": ob ein Sichter besetzt ist (Präsenz kennt nur der Worker). */
+  readonly sichterBesetzt?: boolean;
 }
 
 export interface Nachrichtenausschnitt {
@@ -68,6 +82,8 @@ export interface Nachrichtenlage {
   readonly ueberSchwelle: number;
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt (`ldfStation`). */
   readonly vorLdf?: number;
+  /** Additiv: fehlende Nummern zwischen 1 und der höchsten (LdF P2-2, ETB P2-2). */
+  readonly nummernluecken?: readonly number[];
 }
 
 function eigeneMarken(zeile: Nachrichtenzeile, stellen: readonly string[]): Nachrichtenzeile["verteiler"] {
@@ -130,7 +146,35 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
       return zeile.laufzustand === "VOR_LDF";
     case "nachweisung":
       return true;
+    case "offen":
+      return offenFuerStellen(zeile, anfrage.stellen ?? [], umfeldDer(anfrage));
+    case "gesichtet":
+      return zeile.sichtung !== undefined && (anfrage.nurEigeneSichtungen !== true || eigeneSichtung(zeile, anfrage));
   }
+}
+
+function umfeldDer(anfrage: Nachrichtenanfrage): Offenumfeld {
+  return anfrage.sichterBesetzt === undefined ? {} : { sichterBesetzt: anfrage.sichterBesetzt };
+}
+
+/** „Meine Sichtungen": vom Arbeitsplatz der Sitzung oder mit ihrem Handzeichen. */
+function eigeneSichtung(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): boolean {
+  const hz = anfrage.handzeichen?.trim() ?? "";
+  if (anfrage.clientId !== undefined && zeile.gesichtetVon === anfrage.clientId) return true;
+  return hz !== "" && zeile.sichtung?.handzeichen.trim().toLocaleLowerCase("de-DE") === hz.toLocaleLowerCase("de-DE");
+}
+
+/** Sicht „gesichtet": die jüngste Sichtung zuerst (fachliche Zeit, dann Eingang). */
+function vergleicheNachSichtung(a: Nachrichtenzeile, b: Nachrichtenzeile): number {
+  const za = Date.parse(a.sichtung?.zeitpunkt ?? "");
+  const zb = Date.parse(b.sichtung?.zeitpunkt ?? "");
+  if (Number.isFinite(za) && Number.isFinite(zb) && za !== zb) return zb - za;
+  return -vergleicheHlc(a.angelegtMit, b.angelegtMit);
+}
+
+function ordnungDer(sicht: Nachrichtensicht): (a: Nachrichtenzeile, b: Nachrichtenzeile) => number {
+  if (sicht === "nachweisung") return vergleicheNachNummer;
+  return sicht === "gesichtet" ? vergleicheNachSichtung : vergleicheNachrichten;
 }
 
 /**
@@ -142,9 +186,10 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
 export function nachrichtenausschnitt(zustand: Zustand, anfrage: Nachrichtenanfrage): Nachrichtenausschnitt {
   const kontext = zeilenkontext(zustand, anfrage.jetzt);
   const passend = alleNachrichtenzeilen(zustand, kontext).filter(
-    (zeile) => inSicht(zeile, anfrage) && trifftSuche(zeile, anfrage.suche),
+    (zeile) =>
+      (anfrage.nachrichtId === undefined || zeile.id === anfrage.nachrichtId) && inSicht(zeile, anfrage) && trifftSuche(zeile, anfrage.suche),
   );
-  passend.sort(anfrage.sicht === "nachweisung" ? vergleicheNachNummer : vergleicheNachrichten);
+  passend.sort(ordnungDer(anfrage.sicht));
   const von = Math.max(0, anfrage.von ?? 0);
   const bis = anfrage.anzahl === undefined ? undefined : von + anfrage.anzahl;
   return { zeilen: passend.slice(von, bis), gesamtzahl: passend.length, von };
@@ -170,19 +215,35 @@ export function naechsteNachweisnummer(zustand: Zustand): number {
   return hoechste + 1;
 }
 
-/** Die fünf Zahlen des Bandes, je Stelle dieses Arbeitsplatzes gerechnet (§6, §9). */
-export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], jetzt?: string): Nachrichtenlage {
-  const lage: { -readonly [K in keyof Nachrichtenlage]: number } = { neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, mitVorrangOffen: 0, ueberSchwelle: 0 };
+/**
+ * Die fünf Zahlen des Bandes, je Stelle dieses Arbeitsplatzes gerechnet (§6, §9).
+ *
+ * „Mit Vorrang offen" zählt nur, was für die Stellen der Sitzung noch offen
+ * ist (`offenFuerStellen`, SGL P1-7 und Sichter-Audit): Eine Sofort-Nachricht,
+ * die S3 erledigt hat, zählt bei S3 nicht mehr, auch wenn S4 noch liest.
+ * Dazu additiv die Lücken der Nummernfolge (LdF P2-2).
+ */
+export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], jetzt?: string, umfeld: Offenumfeld = {}): Nachrichtenlage {
+  const lage: { -readonly [K in keyof Nachrichtenlage]: Nachrichtenlage[K] } & Record<"neuFuerStellen" | "vorFmz" | "vorSichter" | "mitVorrangOffen" | "ueberSchwelle", number> = {
+    neuFuerStellen: 0,
+    vorFmz: 0,
+    vorSichter: 0,
+    mitVorrangOffen: 0,
+    ueberSchwelle: 0,
+  };
   // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
   if (zustand.einsatz?.ldfStation?.wert === true) lage.vorLdf = 0;
-  for (const zeile of alleNachrichtenzeilen(zustand, zeilenkontext(zustand, jetzt))) {
+  const zeilen = alleNachrichtenzeilen(zustand, zeilenkontext(zustand, jetzt));
+  for (const zeile of zeilen) {
     if (zeile.zurueckgezogen) continue;
     if (posteingangsstand(zeile, stellen) === "NEU") lage.neuFuerStellen += 1;
     if (zeile.laufzustand === "VOR_FMZ") lage.vorFmz += 1;
     if (zeile.laufzustand === "VOR_SICHTER") lage.vorSichter += 1;
     if (zeile.laufzustand === "VOR_LDF" && lage.vorLdf !== undefined) lage.vorLdf += 1;
-    if (zeile.vorrangstufe < 2 && zeile.laufzustand !== "ERLEDIGT") lage.mitVorrangOffen += 1;
+    if (zeile.vorrangstufe < 2 && offenFuerStellen(zeile, stellen, umfeld)) lage.mitVorrangOffen += 1;
     if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
   }
+  const luecken = nummernluecken(zeilen);
+  if (luecken.length > 0) lage.nummernluecken = luecken;
   return lage;
 }

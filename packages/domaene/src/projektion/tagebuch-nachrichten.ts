@@ -7,13 +7,20 @@
  * Vordrucks („Vermerke z. B. ETB-Nummer") niemand mehr von Hand zu füllen.
  * Die Sichtung nennt den Verteiler, die Kenntnisnahme Stelle und Handzeichen.
  *
- * Nummer, Richtung und Absender kommen aus dem Zustand **heute** (dieselbe
- * Regel wie im übrigen Tagebuch); die Anlage nennt ihre eigenen Angaben,
- * eine Nachweisung die Nummer, die sie vergibt.
+ * Richtung und Absender kommen aus dem Zustand **heute** (dieselbe Regel wie
+ * im übrigen Tagebuch); die Anlage nennt ihre eigenen Angaben, eine
+ * Nachweisung die Nummer, die sie vergibt. Die **Nummer** einer Zeile ist,
+ * wo der Aufrufer den Verlauf kennt (`Zeitstand`, gebaut in
+ * `tagebuch-nachrichtenbezug.ts`), die zum Zeitpunkt des Ereignisses, mit
+ * „jetzt E 3", wenn sie sich seither geändert hat (ETB P0-2: Wer nur das
+ * Tagebuch las, sah zwei Nachrichten „E 2" und eine „E 3" ohne Zusammenhang).
+ * Berichtigungen heißen als solche: „Nachweisnummer berichtigt (E 2 → E 3)",
+ * „zurückgezogen, Grund: …", „nachgesichtet (zweite Sichtung)".
  */
 
 import type { EingehendesEreignis } from "../fold.js";
 import { FMZ_SCHWELLE_VORBELEGUNG } from "../werte.js";
+import { datumZeitGruppe } from "../zeit/datumZeitGruppe.js";
 import type { NachrichtZustand } from "../zustand-nachricht.js";
 import type { Zustand } from "../zustand.js";
 
@@ -71,11 +78,28 @@ interface Kopf {
   readonly betreff?: unknown;
 }
 
+/**
+ * Was eine Zeile über den Verlauf ihrer Nachricht bis zu ihrem Ereignis
+ * weiß (ETB P0-2) — nur, wenn der Aufrufer die Ereignisse in HLC-Ordnung
+ * durchgegangen ist. Ohne ihn gilt der Zustand heute.
+ */
+export interface Zeitstand {
+  /** Die Nummer der Nachweisung, die zur Zeit des Ereignisses galt; fehlt = keine. */
+  readonly nummer?: number;
+  /** Hatte die Nachricht vor diesem Ereignis schon eine Sichtung? */
+  readonly sichtungVorher: boolean;
+}
+
+/** „E 26" oder „A" — Richtung und, wenn vergeben, Nummer. */
+export function nummernkurz(richtung: unknown, nummer: unknown): string {
+  const kurz = richtung === "AUSGANG" ? "A" : "E";
+  return typeof nummer === "number" ? `${kurz} ${String(nummer)}` : kurz;
+}
+
 /** „Nachricht E 26" oder „Gesprächsnotiz A" — ohne Nummer, solange keine vergeben ist. */
 function kennung(kopf: Kopf): string {
   const wort = kopf.gespraechsnotiz === true ? "Gesprächsnotiz" : "Nachricht";
-  const richtung = kopf.richtung === "AUSGANG" ? "A" : "E";
-  return typeof kopf.nummer === "number" ? `${wort} ${richtung} ${String(kopf.nummer)}` : `${wort} ${richtung}`;
+  return `${wort} ${nummernkurz(kopf.richtung, kopf.nummer)}`;
 }
 
 /** „OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘". */
@@ -209,15 +233,55 @@ function vorgangDes(ereignis: EingehendesEreignis): string {
  * @param betreff „Name: Vorgang“, wie `tagebuchsatz` ihn bildet — gebraucht
  *   nur vom Parameter des Einsatzes; die Nachricht nennt sich selbst.
  */
-export function nachrichtensatz(zustand: Zustand, ereignis: EingehendesEreignis, betreff: string): string | undefined {
+export function nachrichtensatz(
+  zustand: Zustand,
+  ereignis: EingehendesEreignis,
+  betreff: string,
+  zeitstand?: Zeitstand,
+): string | undefined {
   if (ereignis.typ === "NachrichtenParameterGesetzt") return parametersatz(ereignis, betreff);
   if (!NACHRICHTENARTEN.has(ereignis.typ)) return undefined;
-  const kopf = kopfAus(zustand, ereignis);
+  const heute = kopfAus(zustand, ereignis);
+  // Die Nummer zur Zeit des Ereignisses, wo der Verlauf bekannt ist (ETB P0-2).
+  const kopf = zeitstand === undefined ? heute : { ...heute, nummer: zeitstand.nummer };
+  const jetzt = zeitstand !== undefined && typeof heute.nummer === "number" && heute.nummer !== zeitstand.nummer ? ` (jetzt ${nummernkurz(heute.richtung, heute.nummer)})` : "";
   if (ereignis.typ === "NachrichtNachgewiesen") {
     const nummer = objekt(ereignis.neu)?.["nummer"];
-    if (typeof nummer === "number") return `${kennung({ ...kopf, nummer })} ${vorgangDes(ereignis)}: ${inhaltsteil(kopf)}`;
+    if (typeof nummer === "number") return `${kennung({ ...kopf, nummer })}${jetzt} ${nachweisvorgang(ereignis, heute.richtung)}: ${inhaltsteil(kopf)}`;
   }
-  return `${kennung(kopf)} ${vorgangDes(ereignis)}: ${inhaltsteil(kopf)}`;
+  return `${kennung(kopf)}${jetzt} ${besondererVorgang(zustand, ereignis, zeitstand) ?? vorgangDes(ereignis)}: ${inhaltsteil(kopf)}`;
+}
+
+/** „nachgewiesen (Hz. FM)" oder „Nachweisnummer berichtigt (E 2 → E 3, Hz. FM)" aus `vorher`/`neu`. */
+function nachweisvorgang(ereignis: EingehendesEreignis, richtung: unknown): string {
+  const alt = objekt("vorher" in ereignis ? ereignis.vorher : undefined)?.["nummer"];
+  const neu = objekt(ereignis.neu)?.["nummer"];
+  if (ereignis.undoOf !== undefined || typeof alt !== "number" || alt === neu) return vorgangDes(ereignis);
+  const wechsel = `${nummernkurz(richtung, alt)} → ${nummernkurz(richtung, neu)}`;
+  return `Nachweisnummer berichtigt${klammer([wechsel, handzeichenteil(ereignis.neu)])}`;
+}
+
+/**
+ * Die Vorgänge, die eine Berichtigung oder Rücknahme sind (ETB P0-2):
+ * Zurückziehen mit Grund und den Angaben der zurückgezogenen Nachricht
+ * (ETB P0-1: welche von zwei gleichlautenden), die zweite Sichtung.
+ */
+function besondererVorgang(zustand: Zustand, ereignis: EingehendesEreignis, zeitstand: Zeitstand | undefined): string | undefined {
+  if (ereignis.typ === "NachrichtZurueckgezogen") return zurueckziehvorgang(zustand, ereignis);
+  if (ereignis.typ !== "NachrichtGesichtet" || ereignis.undoOf !== undefined || ereignis.neu === null || ereignis.neu === undefined) return undefined;
+  const nachsichtung = objekt("vorher" in ereignis ? ereignis.vorher : undefined) !== undefined;
+  if (!nachsichtung && zeitstand?.sichtungVorher !== true) return undefined;
+  const wort = nachsichtung ? "nachgesichtet" : "ein zweites Mal gesichtet";
+  return `${wort}${klammer(["zweite Sichtung", handzeichenteil(ereignis.neu)])}, ${verteilerteil(ereignis.neu)}`;
+}
+
+function zurueckziehvorgang(zustand: Zustand, ereignis: EingehendesEreignis): string {
+  const nachricht = zustand.nachrichten?.[text(nutzlast(ereignis)["nachrichtId"]) ?? ""];
+  const abfassung = text(nachricht?.abfassungszeit?.wert);
+  const zeichen = text(nachricht?.zeichen?.wert);
+  const angaben = klammer([abfassung === undefined ? "" : `abgefasst ${datumZeitGruppe(abfassung)}`, zeichen === undefined ? "" : `Zeichen ${zeichen}`]);
+  const grund = text(ereignis.grund);
+  return `zurückgezogen${grund === undefined ? "" : `, Grund: „${grund}“`}${angaben}`;
 }
 
 /** „Nachricht E 26" — der Gegenstand, den die Rücknahme vor dem Ausführen nennt. */
