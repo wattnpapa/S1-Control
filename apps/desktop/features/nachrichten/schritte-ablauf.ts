@@ -6,14 +6,14 @@
  * handelnden Stelle und gleicht danach alle Plätze ab — wie der Bediener am
  * Rechner, nicht wie ein Test am Fold vorbei.
  *
- * Die Schritte des LdF (Weg festlegen, an den Sichter weitergeben) und der
- * Parameter `ldfStation` stehen noch nicht im Kontrakt. Sie werden hier mit
- * den vereinbarten Namen (`NachrichtWegFestgelegt`, `NachrichtWeitergegeben`)
- * als roher Entwurf geschrieben: Kennt der Worker sie nicht, weist er ab, und
- * der Schritt wird mit dieser Abweisung rot. Genau das soll sichtbar sein.
+ * Die Schritte des LdF: „als Übertragungsmittel … festlegen" ist der
+ * Übermittlungsvorschlag (`nachrichtVorschlagen`, `NachrichtUebermittlungVorgeschlagen`)
+ * mit dem Fernmelder aus dem Hintergrund (Stelle FMZ); „an den Sichter
+ * weitergeben" ist `NachrichtWeitergegeben`, hier als roher Entwurf mit den
+ * vereinbarten Namen wie der Parameter `ldfStation`.
  */
 
-import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtNachweisen } from "../../src/kontrakt/fmzschritte.js";
+import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen } from "../../src/kontrakt/fmzschritte.js";
 import { erledigt, kenntnisGenommen, nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../../src/kontrakt/nachrichtenschritte.js";
 import { EINSATZ_ID } from "../../src/worker/pruefhilfen/werkstatt.js";
 import { felder, mittelAus, pflicht, schritt, verteilerAus, vorrangAus, type Definiere, type Tabelle } from "./ausdruecke.js";
@@ -136,8 +136,10 @@ function ausgang(d: Definiere): void {
   schritt(d, "{stelle} die Nachricht annimmt", (rolle: Rolle) => annehmen(rolle, jetzt()));
   schritt(d, "{stelle} die Nachricht vor {int} Minuten angenommen hat", (rolle: Rolle, minuten: number) => annehmen(rolle, vorMinuten(minuten)));
   schritt(d, "{stelle} als Übertragungsmittel {string} festlegt", async (rolle: Rolle, mittel: string) => {
-    const neu = { mittel: mittelAus(mittel), zeitpunkt: jetzt(), handzeichen: stuhlVon(rolle).handzeichen };
-    await bediene(rolle, { typ: "NachrichtWegFestgelegt", nutzlast: { nachrichtId: aktuelleNachricht().id }, vorher: null, neu, vorwertPruefen: true });
+    // Der Fernmelder des Vorschlags ist der Arbeitsplatz FMZ aus dem Hintergrund.
+    const fernmelder = stuhlVon({ stelle: "FMZ", nr: 1, wort: "der Fernmelder" }).handzeichen;
+    const { id } = aktuelleNachricht();
+    await bediene(rolle, nachrichtVorschlagen(id, zeileDer(id).vorschlag ?? null, { mittel: mittelAus(mittel), fernmelder, zeitpunkt: jetzt(), handzeichen: stuhlVon(rolle).handzeichen }));
   });
   schritt(d, "{stelle} die Nachricht über {string} an {string} befördert", async (rolle: Rolle, mittel: string, gegenstelle: string) => {
     const { id } = aktuelleNachricht();

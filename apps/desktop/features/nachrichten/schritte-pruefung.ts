@@ -58,9 +58,10 @@ function laufweg(d: Definiere): void {
   schritt(d, "trägt die Nachricht die Wegfestlegung {string} mit Handzeichen {string}", (mittel: string, hz: string) => {
     const platz = leser();
     const nachricht = platz.dienst.zustand.nachrichten?.[aktuelleNachricht().id] as unknown as Record<string, { wert?: unknown } | undefined> | undefined;
-    const weg = nachricht?.["wegfestlegung"]?.wert;
-    if (weg === undefined) throw new Error("Die Nachricht trägt keine Wegfestlegung des LdF (Feld „wegfestlegung“ fehlt im Zustand).");
-    expect(weg, "Wegfestlegung des LdF").toMatchObject({ mittel: mittel.toUpperCase(), handzeichen: hz });
+    // Die Wegfestlegung des LdF ist sein Übermittlungsvorschlag (Feld `vorschlag`).
+    const weg = nachricht?.["vorschlag"]?.wert;
+    if (weg === undefined) throw new Error("Die Nachricht trägt keinen Übermittlungsvorschlag des LdF (Feld „vorschlag“ fehlt im Zustand).");
+    expect(weg, "Übermittlungsvorschlag des LdF").toMatchObject({ mittel: mittel.toUpperCase(), handzeichen: hz });
   });
   schritt(d, "steht die Nachricht im Ausgang von {stelle} als befördert mit Zeit und Handzeichen {string}", (rolle: Rolle, hz: string) => {
     const zeile = inSicht(sicht(leser(), "ausgang", [rolle.stelle]), `im Ausgang von ${rolle.wort}`);
@@ -148,7 +149,7 @@ const VORGANG: Readonly<Record<string, string>> = {
   aufgenommen: "NachrichtVerfasst",
   festgehalten: "NachrichtVerfasst",
   angenommen: "NachrichtAngenommen",
-  "Weg festgelegt": "NachrichtWegFestgelegt",
+  "Weg festgelegt": "NachrichtUebermittlungVorgeschlagen",
   befördert: "NachrichtBefoerdert",
   nachgewiesen: "NachrichtNachgewiesen",
   weitergegeben: "NachrichtWeitergegeben",
