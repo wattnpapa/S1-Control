@@ -289,7 +289,7 @@ lässt sich später so nacherfassen, wie es auf dem Blatt steht.
 
 **Stelle und Handzeichen.** Nach dem Öffnen eines Einsatzes fragt das
 Programm, welche Position dieser Arbeitsplatz im Stab hat (Leiter, S1 bis S6,
-Fachberater, Verbindungsstelle, Sichter, FmZ, auch mehrere zugleich oder ein
+Fachberater, Verbindungsstelle, Sichter, FmZ, LdF, auch mehrere zugleich oder ein
 freier Name wie „Polizei“), und das Handzeichen mit zwei bis vier Zeichen.
 Die Wahl gilt, bis der Einsatz geschlossen wird, die anderen Arbeitsplätze
 sehen sie als besetzte Stelle, und beim nächsten Öffnen desselben Einsatzes
@@ -300,7 +300,8 @@ welcher Posteingang zuerst erscheint. Im Meldekopf fragt das Programm nicht.
 **Das Blatt.** Oben stehen fünf Zahlen: neu für meine Stellen, vor der FmZ,
 vor dem Sichter, mit Vorrang offen und länger als die Schwelle in der FmZ;
 die letzten beiden werden ab eins bernsteinfarben. Darunter der Umschalter
-„Posteingang | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“, der Hauptknopf „Nachricht verfassen“
+„Posteingang | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“ (mit
+LdF als Station auch „LdF“), der Hauptknopf „Nachricht verfassen“
 (Strg+N) und die Suche über Betreff, Inhalt, Absender und Anschrift
 (Strg+F). Jede Zeile trägt links die Farbe ihrer Kopie: grün für den
 Hauptempfänger, blau für Mitleser, rot für S2. Blitz steht rot, Sofort
@@ -360,8 +361,9 @@ Handzeichen vorbelegt und lassen sich ändern, damit ein Papiervordruck mit
 den Zeiten nacherfasst werden kann, die auf ihm stehen. Liegt eine
 angenommene Nachricht länger als die Schwelle unbefördert, wird ihre Zeile
 bernsteinfarben und nennt die Minuten seit der Annahme; nach der Beförderung
-verlässt sie die Warteschlange, und der Verfasser sieht im Ausgang Zeit und
-Handzeichen. Rechts steht der Hauptknopf „Eingang aufnehmen“: Er öffnet den
+verlässt sie die Warteschlange, der Verfasser sieht im Ausgang Zeit und
+Handzeichen, und die Kopien gehen an S2 und die Verfasserstelle (siehe
+unten). Rechts steht der Hauptknopf „Eingang aufnehmen“: Er öffnet den
 Vordruck als Eingang mit freigeschaltetem oberem Teil (Mittel, Zeit und
 Handzeichen der Aufnahme, Gegenstelle, Nummer). Die Anschrift ist mit dem
 Namen der eigenen Führungsstelle aus den Stammdaten vorbelegt, der Absender
@@ -399,7 +401,47 @@ war, sieht die Nachricht trotzdem und kann nachsichten.
 **Parameter des Einsatzes.** In den Stammdaten im Blatt Führungsstelle
 stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
 ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
-nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20).
+nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20). Dazu kommt
+„LdF als eigene Station“ (Vorbelegung nein), siehe unten.
+
+**Leiter des Fernmeldebetriebes (LdF).** Führt der Einsatz den LdF als
+eigene Station (Kästchen „LdF als eigene Station“ unter „Nachrichtenweg“),
+läuft jede Nachricht der FmZ einmal über ihn. Beim Ausgang bestimmt er nach
+der Annahme mit „Übermittlung vorschlagen“ Fernmelder, Mittel und
+Gegenstelle; beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
+Nummer und gibt die Nachricht an den Sichter weiter. Wer die Stelle LdF
+wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor dem
+Vorschlag“ mit dem Knopf „Übermittlung vorschlagen“ und „Eingänge vor der
+Weitergabe“ mit dem Knopf „An den Sichter weitergeben“ (Uhrzeit,
+Handzeichen). Das Band zeigt dann die Zahl „vor dem LdF“. In der
+Warteschlange der FmZ trägt ein angenommener Ausgang ohne Vorschlag die
+Marke „beim LdF“; „Befördern“ belegt Mittel und Gegenstelle mit dem
+Vorschlag vor. Der Weg des LdF steht in der Nachweisung als Marke und auf
+dem Vordruck als Übermittlungsweg (Feld 1) und in den Vermerken mit seinem
+Handzeichen. Ist in der Anwesenheit kein LdF, übernimmt der Fernmelder: Ein
+aufgenommener Eingang läuft direkt zum Sichter („Kein LdF besetzt:
+Nachricht direkt an den Sichter weitergegeben“), und beim Befördern gilt
+sein Vermerk als Vorschlag. Ohne das Kästchen bleibt der Weg, wie er ist;
+die Sicht „LdF“ erscheint dann nur an einem Arbeitsplatz mit der Stelle LdF.
+
+**Zwei Sichter zugleich.** Haben zwei Sichter dieselbe Nachricht gesichtet,
+ohne die Sichtung des anderen zu sehen, nimmt das Programm beide an: Der
+zweite bekommt den Hinweis „Die Nachricht war inzwischen anders gesichtet“,
+die Nachricht steht bei beiden Verteilern mit der Marke „zwei Sichtungen“,
+und der Laufzettel zeigt beide Quittungen. Eine erneute Sichtung bereinigt
+das. Die Sichtung des Ersatzsichters heißt im Tagebuch „als Ersatzsichter
+gesichtet“.
+
+**Kopien nach der Beförderung.** Ist ein Ausgang befördert, gehen nach der
+Lehrunterlage die rote Kopie an S2 und die grüne an die Stelle des
+Verfassers. Das Programm trägt beides beim Befördern ein: Der Ausgang steht
+danach im Posteingang von S2 (rot) und der Verfasserstelle (grün), mit dem
+Vermerk „Kopien nach Beförderung: rot S2, grün …“, und gilt als verteilt,
+bis beide ihn erledigt haben. Die Verfasserstelle ist die Funktion auf dem
+Vordruck, wenn sie eine Stelle ist, sonst der Absender. Ist S2 nicht
+besetzt, wird die Kopie trotzdem eingetragen und wartet im Fach. Laufen
+Ausgänge nach der Beförderung noch einmal zum Sichter (Parameter oben),
+entfällt dieser Schritt, weil dann der Sichter verteilt.
 
 **Als Vordruck drucken.** An jeder gewählten Nachricht steht in der Leiste,
 im Rechtsklickmenü und in der aufgeschlagenen Nachricht „Als Vordruck
@@ -604,11 +646,11 @@ Gemeldete Erfassungsbögen, bevor sie in die Lage übernommen werden.
 
 ### Nachrichten
 
-Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vorrang, Nummer, Absender, Anschrift und Betreff. Fünf Sichten, eine Zeile je Nachricht. „Posteingang“ zeigt, was an eine Stelle dieses Arbeitsplatzes verteilt ist, mit Kopiefarbe und den Marken neu, gelesen und erledigt. „Ausgang“ zeigt, was dieser Arbeitsplatz verfasst hat, mit dem Stand in der Fernmeldezentrale. „Sichter“ zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang. „Fernmeldezentrale“ zeigt die Ausgangswarteschlange mit Annahme und Beförderung und nimmt Eingänge auf. „Nachweisung“ zeigt alle Nachrichten nach Nummer und lässt sich als Liste ausgeben.
+Das Blatt für Nachrichten nach Vordruck 1103.1: Eingänge und Ausgänge mit Vorrang, Nummer, Absender, Anschrift und Betreff. Fünf Sichten, eine Zeile je Nachricht. „Posteingang“ zeigt, was an eine Stelle dieses Arbeitsplatzes verteilt ist, mit Kopiefarbe und den Marken neu, gelesen und erledigt. „Ausgang“ zeigt, was dieser Arbeitsplatz verfasst hat, mit dem Stand in der Fernmeldezentrale. „Sichter“ zeigt die Eingänge ohne Sichtung, zuoberst die mit Vorrang. „Fernmeldezentrale“ zeigt die Ausgangswarteschlange mit Annahme und Beförderung und nimmt Eingänge auf. „Nachweisung“ zeigt alle Nachrichten nach Nummer und lässt sich als Liste ausgeben. „LdF“ erscheint nur, wenn der Einsatz den Leiter des Fernmeldebetriebes als Station führt oder dieser Arbeitsplatz LdF ist: Ausgänge vor dem Übermittlungsvorschlag und Eingänge vor der Weitergabe an den Sichter.
 
 **Zuerst:** Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.
 
-**Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht. „Als Vordruck drucken“ legt die Nachricht als PDF im Vordrucklayout unter ausgaben/nachrichten ab, mit der Nummer im Dateinamen; ohne Nummer trägt der Name die Kennung der Nachricht. Die Vorschau zeigt das Blatt vor dem Druck mit der Schrift des Browsers, sie weicht leicht von der des PDF ab. Der Automatikdruck ist nur an, wenn in den Druckeinstellungen ein Drucker oder ein Verzeichnis gewählt ist, und druckt dann jede an eine Stelle dieses Arbeitsplatzes verteilte Nachricht beim Eintreffen, auch die eigene Sichtung.
+**Gut zu wissen:** Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht. „Als Vordruck drucken“ legt die Nachricht als PDF im Vordrucklayout unter ausgaben/nachrichten ab, mit der Nummer im Dateinamen; ohne Nummer trägt der Name die Kennung der Nachricht. Die Vorschau zeigt das Blatt vor dem Druck mit der Schrift des Browsers, sie weicht leicht von der des PDF ab. Der Automatikdruck ist nur an, wenn in den Druckeinstellungen ein Drucker oder ein Verzeichnis gewählt ist, und druckt dann jede an eine Stelle dieses Arbeitsplatzes verteilte Nachricht beim Eintreffen, auch die eigene Sichtung. Nach der Beförderung eines Ausgangs gehen die rote Kopie an S2 und die grüne an die Stelle des Verfassers; der Ausgang steht dann in beiden Posteingängen.
 
 **Kürzel:** Strg+N · Strg+F · Strg+D
 

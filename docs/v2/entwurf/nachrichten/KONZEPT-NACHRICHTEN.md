@@ -198,7 +198,12 @@ Verteiler an und schreibt Vermerke: ein Ereignis `NachrichtGesichtet`, dessen
 Wert die ganze Sichtung ist. Eine zweite Sichtung (eStab: „2. Sichtung")
 ist dasselbe Ereignis noch einmal, mit gesehenem Vorher-Wert; zwei Sichter an
 derselben Nachricht erzeugen den Konflikthinweis aus §2.2a des
-Ereigniskonzepts, und die Nachricht steht bei beiden Verteilern. Die rote
+Ereigniskonzepts, und die Nachricht steht bei beiden Verteilern
+(umgesetzt 2026-11-17: Die Sichtung schickt ihren Vorher-Wert ohne
+Vorwert-Prüfung, der Worker schreibt die zweite und sagt es dem Sichter, der
+Fold meldet `vorherPasstNicht`, und die Zeile führt die Vereinigung beider
+Verteiler mit der Marke „zwei Sichtungen", bis eine Nachsichtung mit dem
+geltenden Vorher-Wert bereinigt). Die rote
 Kopie geht nach der Lehrunterlage immer an S2 (Lagekarte, Einsatztagebuch);
 die Maske belegt S2 deshalb vor, aber sie erzwingt es nicht, weil eine
 Führungsstelle ohne S2 die Kopie sonst an einen leeren Stuhl schickte.
@@ -247,6 +252,38 @@ Belastung der FmZ (Folie 14): Liegt eine angenommene Nachricht länger als
 zwanzig Minuten unbefördert, wird ihre Zeile in der Warteschlange bernstein,
 und die Zahl im Band zählt sie. Die Schwelle ist ein Parameter je Einsatz wie
 `funkKontaktSchwelleMinuten`.
+
+Leiter des Fernmeldebetriebes (ergänzt 2026-11-17, mit Johannes bestätigt).
+Nach der Lehrunterlage (Folie 22) legt der LdF in der FmZ das
+Übertragungsmittel fest, und in der Stabsdienstordnung der Führungsstelle
+steht er beim Eingang zwischen Fernmelder und Sichter. Führt der Einsatz den
+Parameter `ldfStation` (Vorbelegung nein), läuft ein angenommener Ausgang
+ohne Vorschlag zuerst zum LdF, der mit dem Übermittlungsvorschlag
+(`NachrichtUebermittlungVorgeschlagen`, oben unter „Ausgang") Fernmelder,
+Mittel und Gegenstelle bestimmt; die Beförderungsmaske belegt damit vor.
+Ein eigenes Ereignis für die Festlegung des Wegs gibt es nicht, der
+Vorschlag ist sie. Ein aufgenommener Eingang läuft zum LdF, der Aufnahme und
+Nachweisung prüft und mit `NachrichtWeitergegeben` an den Sichter gibt. Die
+bekannte Stelle heißt LDF („LdF"); wer sie hat, sieht die Sicht „LdF" mit
+zwei Karten zuerst. Ohne den Parameter bleibt der Weg unverändert. Steht in
+der Präsenz kein LdF, gilt die Ersatzregel wie beim Sichter: Beim Aufnehmen
+folgt die Weitergabe mit Zeit und Handzeichen der Aufnahme, und beim
+Befördern gilt der Vermerk des Fernmelders als Vorschlag (sein Handzeichen
+als Fernmelder und Zeichen) — beides als Folgeschritt im Worker mit Hinweis.
+Ist ein LdF da, aber kein Vorschlag geschrieben, befördert der Fernmelder
+trotzdem; nachgetragen wird nichts, der Hinweis sagt es.
+
+Kopien nach der Beförderung (ergänzt 2026-11-17, Folie 30). Nach der
+Beförderung eines Ausgangs gehen die rote Kopie an S2 und die grüne an die
+Stelle des Verfassers. Der Worker schreibt dazu nach `NachrichtBefoerdert`
+eines ungesichteten Ausgangs `NachrichtGesichtet` mit dem Verteiler S2 rot
+und Verfasserstelle grün (die Funktion der Anlage, wenn sie eine Stelle ist,
+sonst der Absender als freier Name), der Zeit der Beförderung, dem
+Handzeichen des Fernmelders und dem Vermerk „Kopien nach Beförderung: rot
+S2, grün <Stelle>". S2 wird auch eingetragen, wenn niemand die Stelle
+besetzt — die Kopie wartet im Fach. Der Ausgang steht damit im Posteingang
+beider Stellen, läuft als VERTEILT und nach der Erledigung als ERLEDIGT. Mit
+`sichtungAuchAusgang` entfällt der Schritt, weil dann der Sichter verteilt.
 
 ## 6. Das Blatt „Nachrichten"
 
@@ -465,6 +502,21 @@ des Verteilers erledigt oder Verteiler leer), ZURUECKGEZOGEN. Eine
 Gesprächsnotiz hat keine Beförderung und springt nach der Sichtung nach
 VERTEILT.
 
+Ergänzt 2026-11-17 für den LdF, additiv: das Feld `weitergabe`
+(`{ zeitpunkt, handzeichen }`, gesetzt von `NachrichtWeitergegeben`, Form a,
+LWW_ENTITAET, Rücknahme dieselbe Art mit dem Vorher-Wert) als Eingangsschritt
+des LdF; der Ausgangsschritt ist der Übermittlungsvorschlag (`vorschlag`)
+aus der Tabelle. Dazu der Parameter `ldfStation` des Einsatzes über
+`NachrichtenParameterGesetzt` und der Laufzustand VOR_LDF, nur mit
+`ldfStation`: ein Ausgang, angenommen, ohne Vorschlag und ohne Beförderung,
+oder ein Eingang mit Aufnahmevermerk, ohne Weitergabe und ohne Sichtung
+(eine Gesprächsnotiz nie). Die Sicht `ldf` zeigt VOR_LDF; die Warteschlange
+der FmZ zeigt angenommene Ausgänge vor dem LdF weiter mit Marke, damit der
+Fernmelder nach der Ersatzregel befördern kann. Die Nachrichtenlage trägt
+`vorLdf` nur mit dem Parameter. Die Sichtung des Ersatzsichters trägt das
+Rahmenfeld `grund` „Kein Sichter besetzt: Ersatzsichter", damit das
+Tagebuch sie als solche nennt. `FOLD_VERSION` steigt auf 12.
+
 Das Einsatztagebuch zeigt jedes dieser Ereignisse als Zeile mit Nummer,
 Richtung, Absender, Anschrift und Betreff („Nachricht E 26 aufgenommen: OV
 Wildeshausen an FüSt, ‚Pumpen eingetroffen‘"), die Sichtung mit dem
@@ -543,6 +595,11 @@ die Projektion; Mitteilung nur bei Vorrang und nur für die eigene Stelle.
 Umgesetzt: die Dokumentation (Handbuch, Kurzanleitung, Störfall „Nachrichten
 auf Papier“, Bedienhilfe); Band und Hinweis bei Vorrang kamen schon mit N1,
 der leere Vordruck und das ADR mit N3.
+Abnahme: Die drei Laufwege stehen als deutsche Gherkin-Szenarien in
+`apps/desktop/features/nachrichten/` (Ausgang mit LdF und grüner und roter
+Kopie, Eingang mit Sichtung, Ersatzsichter und zweitem Sichter,
+Gesprächsnotiz) und laufen mit `npm run test:bdd`; sie beschreiben den
+Soll-Ablauf, ein roter Schritt zeigt, was noch fehlt.
 
 Nach jedem Schnitt `typecheck`, `lint`, betroffene Tests; bei N1 und N2
 (Katalog, Fold, Einstellungen) der volle Lauf und die Simulation.
