@@ -567,7 +567,12 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
 - **Bestellen.** Die Vorausschau ist der Vorschlag, die Bestellung die
   Entscheidung. Liegt die Bestellung darunter, zeigt die Karte die Differenz in
   Bernstein. „Bestellung ändern“ legt eine neue an, die jüngste gilt.
-- **Unterbringen.** In der Zelle „Unterkunft“ doppelklicken, wählen, Enter.
+- **Unterbringen.** Erst links „Unterkunft anlegen“. Dann entweder in der
+  Tabelle rechts in der Spalte „Unterkunft“ die Unterkunft wählen und
+  „Zuweisen“ drücken (oder Enter), oder an der Unterkunftskarte unter
+  „Einheit wählen“ die Einheit nehmen und „Zuweisen“. An der Karte stehen
+  auch Einheiten ohne gemeldeten Übernachtungsbedarf zur Wahl; sie belegen
+  dann ihre Köpfe. Die Karte nennt die untergebrachten Einheiten beim Namen.
   Eine Zuweisung über die Kapazität wird gezeigt („⚠ überbelegt“), nicht
   verweigert.
 - **Sofortbedarf.** Einheiten anhaken, Feld wählen, „Als erledigt melden“ —
