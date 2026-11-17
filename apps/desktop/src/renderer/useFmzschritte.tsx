@@ -15,11 +15,15 @@ import { useState } from "react";
 import type { Nachrichtenzeile } from "@s1/domaene";
 
 import type { Nachrichtenansicht, Sitzungsstellen } from "../kontrakt/index.js";
+import { ldfBesetzt } from "../kontrakt/ldfschritte.js";
 import { eingangVorlage } from "./fmzformate.js";
 import { Fmzmaske, type Fmzschritt } from "./Fmzmasken.js";
 import { useLaden } from "./laden.js";
 import type { Maskenwerte } from "./nachrichtenformate.js";
 import { Nachrichtenmaske } from "./Nachrichtenmaske.js";
+
+/** Der Satz zur Ersatzregel in der Beförderungsmaske. */
+export const TEXT_LDF_ERSATZ = "Kein LdF besetzt: Das gewählte Mittel gilt als Übermittlungsvorschlag.";
 
 export interface Fmzschritte {
   readonly aufSchritt: (schritt: Fmzschritt, zeile: Nachrichtenzeile) => void;
@@ -32,6 +36,10 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
   // Die Vorlage beim Öffnen gemerkt: Die Maske vergleicht mit ihr, ob etwas getippt ist.
   const [eingang, setzeEingang] = useState<Maskenwerte | undefined>(undefined);
   const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
+  // Additiv (2026-11-17): Führt der Einsatz den LdF als Station und ist keiner da, gilt die Ersatzregel.
+  const ldfStation = useLaden((z) => z.lagebild?.stammdaten?.ldfStation === true);
+  const peers = useLaden((z) => z.lagebild?.peers);
+  const ldfErsatz = ldfStation && !ldfBesetzt(sitzung?.stellen, peers ?? []) ? TEXT_LDF_ERSATZ : undefined;
   // Die Zeile bleibt der Stand beim Öffnen: Er ist der Vorwert, den der Schritt mitschickt (§2.2a).
   const masken = (
     <>
@@ -45,6 +53,7 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           vergebeneNummern={ansicht?.vergebeneNummern}
           gegenstellen={ansicht?.gegenstellen}
           aufSchliessen={() => setzeOffen(undefined)}
+          ldfErsatz={ldfErsatz}
         />
       )}
       {eingang !== undefined && (

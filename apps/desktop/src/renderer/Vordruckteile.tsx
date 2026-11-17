@@ -46,7 +46,8 @@ export function vorschlagText(zeile: Nachrichtenzeile | undefined): string | und
 
 /** Der obere Teil (Feld 1 bis 6): grau und schreibgeschützt, solange dieser Platz nicht FmZ ist. */
 export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefined }): React.JSX.Element {
-  const mittel = zeile?.aufnahme?.mittel ?? zeile?.befoerderung?.mittel;
+  // Feld 1: das tatsächliche Mittel, sonst der Vorschlag des LdF (additiv, 2026-11-17).
+  const mittel = zeile?.aufnahme?.mittel ?? zeile?.befoerderung?.mittel ?? zeile?.vorschlag?.mittel;
   return (
     <fieldset className="vordruckteil grau" disabled aria-label="Vermerke der Fernmeldezentrale">
       <legend>Fernmeldezentrale</legend>
@@ -57,6 +58,7 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
       <Wert titel={zeile === undefined ? "Nr." : `Nr. (${zeile.richtungKurz})`} wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
       <Wert titel="Gegenstelle" wert={zeile?.gegenstelle} />
+      {zeile?.weitergabe !== undefined && <Wert titel="Weitergabe (LdF)" wert={vermerk(zeile.weitergabe)} />}
     </fieldset>
   );
 }
@@ -68,6 +70,8 @@ export function LaufzettelAnzeige({ zeile }: { readonly zeile?: Nachrichtenzeile
     <fieldset className="vordruckteil grau" disabled aria-label="Laufzettel">
       <legend>Laufzettel</legend>
       <Wert titel="Quittung" wert={vermerk(sichtung)} />
+      {/* Zwei Sichter ohne Abgleich (§5): beide Quittungen, der Verteiler ist die Vereinigung. */}
+      {zeile?.zweiteSichtung !== undefined && <Wert titel="Zweite Sichtung" wert={vermerk(zeile.zweiteSichtung)} />}
       {zeile === undefined || zeile.verteiler.length === 0 ? (
         <Wert titel="Verteiler" wert={sichtung === undefined ? "noch nicht gesichtet" : "ohne Verteiler"} />
       ) : (

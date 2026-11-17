@@ -1,0 +1,88 @@
+/**
+ * Die Maske „An den Sichter weitergeben" des Leiters des Fernmeldebetriebes
+ * (bestätigt am 2026-11-17, KONZEPT-NACHRICHTEN.md §5): Der LdF hat Aufnahme
+ * und Nachweisung eines Eingangs geprüft und gibt ihn mit Zeit und
+ * Handzeichen an den Sichter. Den Ausgangsschritt des LdF führt die Maske
+ * „Übermittlung vorschlagen" der FmZ (`Fmzmasken.tsx`).
+ *
+ * Wie die Masken der FmZ: Zeit „jetzt" und Handzeichen der Sitzung
+ * vorbelegt und editierbar (Papier-Rückfall, §6), die weiche Sperre auf der
+ * Nachricht, solange die Maske offen ist, und der Vorher-Wert vom Öffnen.
+ */
+
+import { useState } from "react";
+
+import { datumZeitGruppe, type Nachrichtenzeile } from "@s1/domaene";
+
+import type { Entwurf } from "../kontrakt/index.js";
+import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
+import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
+import { useAnlegeversuch } from "./Anlegeversuch.js";
+import { Dtgfeld } from "./Dtgfeld.js";
+import { useLaden } from "./laden.js";
+import { Maske } from "./Maske.js";
+import { zeitAusEingabe } from "./nachrichtenformate.js";
+import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
+
+export interface Weitergabeeingaben {
+  readonly zeit: string;
+  readonly handzeichen: string;
+}
+
+/** Der Entwurf der Weitergabe aus den Eingaben, oder der Satz, was fehlt. */
+export function weitergabeEntwurf(zeile: Nachrichtenzeile, e: Weitergabeeingaben, jetzt: Date = new Date()): Entwurf | string {
+  const zeitpunkt = zeitAusEingabe(e.zeit, jetzt);
+  if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
+  if (e.handzeichen.trim() === "") return "Handzeichen eintragen";
+  return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+}
+
+export interface WeitergabemaskeEigenschaften {
+  readonly zeile: Nachrichtenzeile;
+  readonly handzeichen: string;
+  readonly aufSchliessen: () => void;
+}
+
+export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Element {
+  const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen }));
+  const versuch = useAnlegeversuch();
+  useSperreHalten(p.zeile.id);
+  const fremd = useFremdsperren().von(p.zeile.id);
+  const entwurf = weitergabeEntwurf(p.zeile, e);
+
+  async function schreibe(): Promise<void> {
+    if (typeof entwurf === "string") return;
+    const ungueltig = nachrichtenentwurfFehler(entwurf);
+    if (ungueltig !== undefined) {
+      useLaden.getState().melde("warnung", ungueltig);
+      return;
+    }
+    const ergebnis = await versuch.schreibe(entwurf);
+    if (ergebnis?.art !== "geschrieben") return;
+    for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
+    p.aufSchliessen();
+  }
+
+  const nummer = p.zeile.nummer === undefined ? p.zeile.richtungKurz : `${p.zeile.richtungKurz} ${String(p.zeile.nummer)}`;
+  return (
+    <Maske
+      titel={`An den Sichter weitergeben · ${nummer} ${p.zeile.betreff}`}
+      bestaetigungstext="Weitergeben"
+      nurKnopf
+      bereit={typeof entwurf !== "string" && !versuch.gesperrt}
+      bereitGrund={typeof entwurf === "string" ? entwurf : versuch.sperre}
+      aufAbbrechen={p.aufSchliessen}
+      aufBestaetigen={schreibe}
+    >
+      {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
+      <div className="vordruckzeile">
+        <Dtgfeld beschriftung="Uhrzeit" wert={e.zeit} aufAenderung={(wert) => setzeE((bisher) => ({ ...bisher, zeit: wert }))} />
+        <label>
+          Handzeichen
+          <input value={e.handzeichen} maxLength={20} onChange={(ev) => setzeE((bisher) => ({ ...bisher, handzeichen: ev.target.value }))} />
+        </label>
+      </div>
+      {versuch.anzeige}
+    </Maske>
+  );
+}

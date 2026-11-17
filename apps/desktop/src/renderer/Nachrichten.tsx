@@ -16,6 +16,11 @@
  * Nachrichten nach Nummer, mit Ausgabe, `Nachweisung.tsx`); die Chips des
  * Posteingangs tragen die Zahlen je Zustand aus der Ansicht.
  *
+ * Additiv (2026-11-17): die Sicht „LdF" (`Ldfsicht.tsx`) für den Leiter des
+ * Fernmeldebetriebes, nur wenn der Einsatz ihn als Station führt oder die
+ * Sitzung die Stelle LDF hat, und im Band die Zahl „vor dem LdF", wenn der
+ * Einsatz ihn als Station führt.
+ *
  * **Nichts wird hier gerechnet.** Ordnung, Filter, Laufzustand und Zahlen
  * kommen aus Ring 2 über den Ruf `nachrichtenAnfordern` und das Lagebild.
  */
@@ -29,6 +34,7 @@ import { Eingangskarte, Warteschlange } from "./Fernmeldezentrale.js";
 import { Filterchips } from "./Filterchips.js";
 import type { Kontextort } from "./Klappmenue.js";
 import { Laufzettel } from "./Laufzettel.js";
+import { Ldfsicht, ldfSichtbar } from "./Ldfsicht.js";
 import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { Nachrichtenkontextmenue, Nachrichtenleiste } from "./Nachrichtenauswahl.js";
@@ -41,7 +47,7 @@ import { useNachrichtenansicht, type Nachrichtenabruf } from "./useNachrichtenan
 import { useFmzschritte } from "./useFmzschritte.js";
 import { useNachrichtenschritte } from "./useNachrichtenschritte.js";
 
-export type Nachrichtensicht = "posteingang" | "ausgang" | "sichter" | "fmz" | "nachweisung";
+export type Nachrichtensicht = "posteingang" | "ausgang" | "sichter" | "fmz" | "nachweisung" | "ldf";
 type Posteingangsstand = NonNullable<Extract<Ruf, { art: "nachrichtenAnfordern" }>["zustaende"]>[number];
 
 /** Die fünf Sichten des Umschalters (§6). */
@@ -51,14 +57,18 @@ export const NACHRICHTENSICHTEN: readonly { readonly schluessel: Nachrichtensich
   { schluessel: "sichter", titel: "Sichter" },
   { schluessel: "fmz", titel: "Fernmeldezentrale" },
   { schluessel: "nachweisung", titel: "Nachweisung" },
+  // Nur sichtbar mit LdF als Station oder in der Sitzung des LdF (`ldfSichtbar`).
+  { schluessel: "ldf", titel: "LdF" },
 ];
 
 /**
  * Die erste Sicht nach der Stelle (§6): FmZ sieht die Fernmeldezentrale,
- * Sichter den Sichter, alle anderen den Posteingang.
+ * Sichter den Sichter, alle anderen den Posteingang. Der LdF sieht seine
+ * eigene Sicht zuerst — auch vor der FmZ, deren Arbeit er leitet.
  */
 export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
-  if (stellen.includes("FMZ") || stellen.includes("LDF")) return "fmz";
+  if (stellen.includes("LDF")) return "ldf";
+  if (stellen.includes("FMZ")) return "fmz";
   return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || s === "FMZ") ? "sichter" : "posteingang";
 }
 
@@ -78,6 +88,7 @@ export function Nachrichtenband({ lage }: { readonly lage: Nachrichtenlage | und
       <Kachel wert={lage?.neuFuerStellen} titel="neu für meine Stellen" />
       <Kachel wert={lage?.vorFmz} titel="vor der FmZ" />
       <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
+      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel="vor dem LdF" />}
       <Kachel wert={lage?.mitVorrangOffen} titel="mit Vorrang offen" warn={(lage?.mitVorrangOffen ?? 0) > 0} />
       <Kachel wert={lage?.ueberSchwelle} titel="über der Schwelle" warn={(lage?.ueberSchwelle ?? 0) > 0} />
     </dl>
@@ -93,13 +104,15 @@ interface WerkzeugEigenschaften {
   readonly aufVerfassen: () => void;
   /** Additiv (N2): rechts neben der Suche, etwa „Nachweisung ausgeben". */
   readonly rechts?: React.ReactNode;
+  /** Additiv: die Sicht „LdF" im Umschalter zeigen. */
+  readonly mitLdf?: boolean;
 }
 
-function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfassen, rechts }: WerkzeugEigenschaften): React.JSX.Element {
+function Werkzeugzeile({ sicht, aufSicht, suche, aufSuche, nurLesen, aufVerfassen, rechts, mitLdf = false }: WerkzeugEigenschaften): React.JSX.Element {
   return (
     <div className="werkzeugzeile">
       <div className="umschalter" role="group" aria-label="Sicht">
-        {NACHRICHTENSICHTEN.map((eintrag) => (
+        {NACHRICHTENSICHTEN.filter((eintrag) => mitLdf || eintrag.schluessel !== "ldf").map((eintrag) => (
           <button key={eintrag.schluessel} type="button" aria-pressed={sicht === eintrag.schluessel} onClick={() => aufSicht(eintrag.schluessel)}>
             {eintrag.titel}
           </button>
@@ -225,6 +238,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
   const lage = useLaden((z) => z.lagebild?.nachrichten);
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
   const nurLesen = useNurLesen();
+  const mitLdf = ldfSichtbar(useLaden((z) => z.lagebild?.stammdaten?.ldfStation), sitzung?.stellen ?? []);
   const [sicht, setzeSicht] = useState<Nachrichtensicht>(() => ersteSicht(sitzung?.stellen ?? []));
   const [suche, setzeSuche] = useState("");
   const [zustaende, setzeZustaende] = useState<readonly Posteingangsstand[]>([]);
@@ -272,6 +286,7 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
         aufSuche={setzeSuche}
         nurLesen={nurLesen}
         aufVerfassen={verfassen}
+        mitLdf={mitLdf}
         {...(sicht === "nachweisung" ? { rechts: <Nachweisungsausgabe /> } : {})}
       />
       {sicht === "posteingang" && <Postfilter lage={lage} zaehlung={abruf.ansicht?.zaehlung} wahl={zustaende} aufWahl={setzeZustaende} sitzung={sitzung} fuer={fuer} aufFuer={setzeFuer} />}
@@ -280,6 +295,8 @@ export function Nachrichten({ aufTagebuch }: { readonly aufTagebuch: () => void 
           <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
         </div>
+      ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
+        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} />
       ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
         <Nachweisung zeilen={zeilen} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} />
       ) : (

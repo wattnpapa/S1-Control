@@ -105,7 +105,7 @@ describe("Das Blatt „Nachrichten“", () => {
     expect(screen.getByRole("form", { name: "Nachricht verfassen" })).toBeDefined();
   });
 
-  it("zeigt im Sichter den Laufzettel mit S2 rot vorbelegt und sichtet mit Vorwert-Prüfung", async () => {
+  it("zeigt im Sichter den Laufzettel mit S2 rot vorbelegt und sichtet mit gesehenem Vorwert", async () => {
     attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([VOR_SICHTER]));
     render(<Nachrichten aufTagebuch={aufTagebuch} />);
     fireEvent.click(screen.getByRole("button", { name: "Sichter" }));
@@ -121,7 +121,6 @@ describe("Das Blatt „Nachrichten“", () => {
       typ: "NachrichtGesichtet",
       nutzlast: { nachrichtId: "N-offen" },
       vorher: null,
-      vorwertPruefen: true,
       neu: { handzeichen: "Mü", verteiler: [{ stelle: "S2", kopie: "ROT" }, { stelle: "S4", kopie: "GRUEN" }] },
     });
     expect(attrappe.rufeDerArt("sperre")[0]).toMatchObject({ entitaetId: "N-offen" });

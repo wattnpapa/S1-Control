@@ -11,11 +11,15 @@
  * aufgenommen hat, oder eine Gesprächsnotiz (Entscheidung 2) — bekommt
  * hier ihre Nummer.
  *
+ * Additiv (2026-11-17): Hat der LdF die Übermittlung vorgeschlagen, steht in
+ * der Spalte Beförderung die Marke „Weg: Kurier/Melder (Lf)" — wer
+ * entschieden hat, wie die Nachricht lief, gehört in den Nachweis.
+ *
  * „Nachweisung ausgeben" erzeugt die Seite über den bestehenden Weg
  * `ausgabeErzeugen` (HTML, in der Desktop-App auch PDF) in `ausgaben\`.
  */
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { Ausgabeeintraege, Ausgabepfad, useAusgabe } from "./Versorgungsausgabe.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
@@ -48,6 +52,18 @@ export function Nachweisungsausgabe(): React.JSX.Element {
         inhalt={(waehle) => <Ausgabeeintraege titel="Nachweisung" bedienung={ausgabe} waehle={waehle} />}
       />
       <Ausgabepfad bedienung={ausgabe} />
+    </span>
+  );
+}
+
+/** Die Marke des Übermittlungsvorschlags des LdF an der Beförderung. */
+function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
+  const w = zeile.vorschlag;
+  if (w === undefined) return null;
+  return (
+    <span className="nebenwert" title={`Vom LdF vorgeschlagen, durch ${w.fernmelder}`}>
+      {" "}
+      Weg: {projektion.mittelWort(w.mittel)} ({w.handzeichen})
     </span>
   );
 }
@@ -105,7 +121,10 @@ export function Nachweisung({ zeilen, gewaehltId, nurLesen, aufWahl, aufSchritt 
             <td>{zeile.anschrift}</td>
             <td className="mono">{vermerk(zeile.aufnahme)}</td>
             <td className="mono">{vermerk(zeile.annahme)}</td>
-            <td className="mono">{vermerk(zeile.befoerderung)}</td>
+            <td className="mono">
+              {vermerk(zeile.befoerderung)}
+              <Wegmarke zeile={zeile} />
+            </td>
             <td className="mono">{dtg(zeile.abfassungszeit)}</td>
             <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
             <td>

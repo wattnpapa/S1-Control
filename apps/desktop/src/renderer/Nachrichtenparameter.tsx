@@ -9,6 +9,10 @@
  * in den Einstellungen des Arbeitsplatzes. Geschrieben wird nur, was sich
  * gegenüber dem Gezeigten geändert hat, mit dem Wert aus dem Zustand als
  * Vorwert (`null`, solange die Vorbelegung gilt).
+ *
+ * Additiv (2026-11-17): „LdF als eigene Station" (`ldfStation`, Vorbelegung
+ * nein) — der Leiter des Fernmeldebetriebes legt beim Ausgang den Weg fest
+ * und gibt Eingänge an den Sichter weiter.
  */
 
 import { FMZ_SCHWELLE_VORBELEGUNG } from "@s1/domaene";
@@ -20,18 +24,22 @@ import { nachrichtenParameterSetzen } from "../kontrakt/fmzschritte.js";
 export interface Nachrichtenparameterstand {
   readonly sichtungAuchAusgang?: boolean | undefined;
   readonly fmzSchwelleMinuten?: number | undefined;
+  readonly ldfStation?: boolean | undefined;
 }
 
 /** Die Eingabe der Maske, wie getippt. */
 export interface Nachrichtenparametereingabe {
   readonly sichtungAuchAusgang: boolean;
   readonly fmzSchwelleMinuten: string;
+  /** Additiv: der LdF als eigene Station im Laufweg; fehlt = unverändert. */
+  readonly ldfStation?: boolean;
 }
 
 export function parametereingabeAus(stand: Nachrichtenparameterstand): Nachrichtenparametereingabe {
   return {
     sichtungAuchAusgang: stand.sichtungAuchAusgang ?? false,
     fmzSchwelleMinuten: String(stand.fmzSchwelleMinuten ?? FMZ_SCHWELLE_VORBELEGUNG),
+    ldfStation: stand.ldfStation ?? false,
   };
 }
 
@@ -50,6 +58,10 @@ export function parameterEntwuerfe(einsatzId: string, stand: Nachrichtenparamete
     const e = nachrichtenParameterSetzen(einsatzId, "sichtungAuchAusgang", stand.sichtungAuchAusgang ?? null, eingabe.sichtungAuchAusgang);
     if (e !== undefined) entwuerfe.push(e);
   }
+  if (eingabe.ldfStation !== undefined && eingabe.ldfStation !== gezeigt.ldfStation) {
+    const e = nachrichtenParameterSetzen(einsatzId, "ldfStation", stand.ldfStation ?? null, eingabe.ldfStation);
+    if (e !== undefined) entwuerfe.push(e);
+  }
   const schwelle = Number(eingabe.fmzSchwelleMinuten.trim());
   if (parameterfehler(eingabe) === undefined && schwelle !== Number(gezeigt.fmzSchwelleMinuten)) {
     const e = nachrichtenParameterSetzen(einsatzId, "fmzSchwelleMinuten", stand.fmzSchwelleMinuten ?? null, schwelle);
@@ -65,6 +77,10 @@ export function Nachrichtenparameterfelder({ eingabe, aufAendern }: { readonly e
       <label className="kaestchen">
         <input type="checkbox" checked={eingabe.sichtungAuchAusgang} onChange={(e) => aufAendern({ ...eingabe, sichtungAuchAusgang: e.target.checked })} />
         Ausgänge nach der Beförderung zum Sichter
+      </label>
+      <label className="kaestchen">
+        <input type="checkbox" checked={eingabe.ldfStation ?? false} onChange={(e) => aufAendern({ ...eingabe, ldfStation: e.target.checked })} />
+        LdF als eigene Station (Weg festlegen, an den Sichter weitergeben)
       </label>
       <label>
         Schwelle der FmZ (Minuten bis zur Marke)

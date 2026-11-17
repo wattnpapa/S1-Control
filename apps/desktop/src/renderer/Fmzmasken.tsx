@@ -46,6 +46,12 @@ export interface FmzmaskeEigenschaften {
   /** Die Einheiten der Lage — mögliche Gegenstellen mit Kontakt im Funkplan. */
   readonly gegenstellen?: readonly Gegenstelle[] | undefined;
   readonly aufSchliessen: () => void;
+  /**
+   * Additiv (2026-11-17): der Satz zur Ersatzregel, wenn der Einsatz den LdF
+   * als Station führt, aber keiner besetzt ist — dann gilt das Mittel der
+   * Beförderung als Übermittlungsvorschlag.
+   */
+  readonly ldfErsatz?: string | undefined;
 }
 
 interface Eingaben {
@@ -207,6 +213,11 @@ export function Fmzmaske(p: FmzmaskeEigenschaften): React.JSX.Element {
       aufBestaetigen={schreibe}
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
+      {p.schritt === "befoerderung" && p.zeile.vorschlag === undefined && p.ldfErsatz !== undefined && (
+        <p className="hinweistext" role="status">
+          {p.ldfErsatz}
+        </p>
+      )}
       {(p.schritt === "befoerderung" || p.schritt === "vorschlag") && (
         <div className="vordruck">
           <FmzTeil zeile={p.zeile} />

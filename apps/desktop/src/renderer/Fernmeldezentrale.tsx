@@ -11,6 +11,10 @@
  * — die Belastung der FmZ aus dem Vergleich von Annahme und Beförderung
  * (§5 „Zwanzig Minuten"); die Farbe steht nie allein, die Minuten stehen dabei.
  *
+ * Führt der Einsatz den LdF als Station (additiv, 2026-11-17), stehen
+ * angenommene Ausgänge ohne Übermittlungsvorschlag mit der Marke „beim LdF"
+ * in der Schlange — ist kein LdF da, befördert der Fernmelder sie selbst.
+ *
  * Rechts der Hauptknopf „Eingang aufnehmen": die Nachrichtenmaske mit
  * Richtung Eingang und freigeschaltetem oberem Teil.
  *
@@ -45,6 +49,11 @@ function Annahmezelle({ zeile, jetzt }: { readonly zeile: Nachrichtenzeile; read
       {seit !== undefined && <span className={zeile.fmzUeberSchwelle ? "marke-zustand warn" : "nebenwert"}> seit {seit} min</span>}
     </>
   );
+}
+
+/** „beim LdF" — der Ausgang wartet auf den Übermittlungsvorschlag des LdF. */
+function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
+  return zeile.laufzustand === "VOR_LDF" ? <span className="marke-zustand warn"> beim LdF</span> : null;
 }
 
 function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"] }): React.JSX.Element {
@@ -106,6 +115,7 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
                 <td>{vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}</td>
                 <td>
                   <Annahmezelle zeile={zeile} jetzt={jetzt} />
+                  <Wegmarke zeile={zeile} />
                 </td>
                 <td>
                   <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />

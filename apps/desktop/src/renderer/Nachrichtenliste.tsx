@@ -23,6 +23,7 @@ const LAUFWORT: Readonly<Record<Laufzustand, string>> = {
   VERTEILT: "verteilt",
   ERLEDIGT: "erledigt",
   ZURUECKGEZOGEN: "zurückgezogen",
+  VOR_LDF: "vor dem LdF",
 };
 
 export function laufwort(zustand: Laufzustand): string {
@@ -80,7 +81,15 @@ function Zeile({ zeile, stellen, posteingang, gewaehlt, aufWahl, aufLesen, aufKo
       <td className="kopierand">
         <span className="nurvorlesen">{kopietext}</span>
       </td>
-      <td>{posteingang ? <Marken zeile={zeile} stellen={stellen} /> : laufwort(zeile.laufzustand)}</td>
+      <td>
+        {posteingang ? <Marken zeile={zeile} stellen={stellen} /> : laufwort(zeile.laufzustand)}
+        {zeile.zweiteSichtung !== undefined && (
+          <span className="marke-zustand warn" title="Zwei Sichter haben ohne Abgleich verteilt; beide Verteiler gelten, bis eine Nachsichtung bereinigt">
+            {" "}
+            zwei Sichtungen
+          </span>
+        )}
+      </td>
       <td>
         <Vorrangmarke zeile={zeile} />
       </td>
