@@ -12,9 +12,23 @@ import { AKUELI, sucheAkueli } from "./akueli.js";
 
 describe("die Abkürzungsliste", () => {
   it("führt die Einträge des Blatts „AküLi“", () => {
-    expect(AKUELI).toHaveLength(108);
+    expect(AKUELI).toHaveLength(124);
     expect(AKUELI.filter((eintrag) => eintrag.gruppe === "EINHEITEN")).toHaveLength(42);
     expect(AKUELI.filter((eintrag) => eintrag.gruppe === "FAHRZEUGE_UND_GERAETE")).toHaveLength(66);
+    expect(AKUELI.filter((eintrag) => eintrag.gruppe === "NACHRICHTEN")).toHaveLength(16);
+  });
+
+  it("erklärt die Begriffe des Nachrichtenwegs mit je einem Satz (R2-FaBe P1-1, P1-2)", () => {
+    const begriffe = ["FmZ", "Sichter", "LdF", "Nachweisung", "Laufzettel", "Handzeichen", "Vorrang", "Sofort", "Blitz", "Spruch", "Durchsage", "Gesprächsnotiz", "Kopiefarbe (rot/grün/blau)", "Datum-Zeit-Gruppe", "Übermittlungswunsch", "Abfassungszeit"];
+    const nachrichten = AKUELI.filter((eintrag) => eintrag.gruppe === "NACHRICHTEN");
+    expect(nachrichten.map((eintrag) => eintrag.kuerzel)).toEqual(begriffe);
+    // Ein Satz: endet mit Punkt und enthält keinen zweiten.
+    for (const eintrag of nachrichten) {
+      expect(eintrag.bedeutung.endsWith(".")).toBe(true);
+      expect(eintrag.bedeutung.slice(0, -1)).not.toMatch(/[a-zäöüß)][.!?]\s/u);
+    }
+    // Was der Fachberater vergeblich suchte, findet die Suche der Hilfe jetzt.
+    for (const wort of ["fmz", "Sichter", "LdF", "Nachweisung", "Blitz", "Spruch"]) expect(sucheAkueli(wort).length).toBeGreaterThan(0);
   });
 
   it("vergibt jedes Kürzel je Gruppe nur einmal", () => {

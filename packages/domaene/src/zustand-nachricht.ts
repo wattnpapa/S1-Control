@@ -95,6 +95,8 @@ export interface NachrichtZustand extends Anlage {
   readonly abfassungszeit?: Feld<Zeitpunkt>;
   readonly zeichen?: Feld<string>;
   readonly funktion?: Feld<string>;
+  /** Additiv (R2-ETB P1-1): die Stelle der Sitzung, die angelegt oder aufgenommen hat. */
+  readonly stelle?: Feld<string>;
   /** Aus der Anlage (Eingang) oder aus `NachrichtBefoerdert` (Ausgang). */
   readonly gegenstelle?: Feld<string>;
   readonly aufnahme?: Feld<Mittelvermerk>;

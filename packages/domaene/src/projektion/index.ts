@@ -293,6 +293,9 @@ export {
   wartegrundlage,
   wartezeitMinuten,
   wartezeitVorSichterMinuten,
+  // Additiv (R2-LdF P1-2, R2-Si P1-2): Uhr beim LdF, beide Vermerke bei zwei Sichtungen.
+  vereinigteVermerke,
+  wartezeitBeimLdfMinuten,
   type Tagebuchbezug,
   type Zurueckziehung,
 } from "./nachrichtenzusatz.js";
@@ -301,6 +304,7 @@ export {
   nummernlueckenText,
   offeneNachrichten,
   offenFuerStellen,
+  ohneNummerZeilen,
   type OffeneNachrichten,
   type Offenumfeld,
 } from "./nachrichtenoffen.js";
@@ -314,5 +318,7 @@ export {
   type Vorrangstufe,
 } from "./nachrichtenzeile.js";
 export { GRUND_ERSATZSICHTER, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
+// Additiv (R2-ETB P1-1, R2-SGL P1-2): Kopien nach der Beförderung und der Papier-Nachtrag als Grund.
+export { GRUND_KOPIEN, GRUND_NACHTRAG, istKopienNachBefoerderung } from "./tagebuch-nachrichten.js";
 // Additiv (ETB P1-7): Stelle und Handzeichen statt „Arbeitsplatz“ in der Spalte Akteur.
 export { akteurText, stelleDer } from "./tagebuch-nachrichtenbezug.js";

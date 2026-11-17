@@ -11,7 +11,7 @@ import type { EreignisId } from "../ereignis.js";
 import type { EingehendesEreignis } from "../fold.js";
 import { vergleicheHlc } from "../hlc.js";
 import type { NachrichtZustand, Zeitvermerk } from "../zustand-nachricht.js";
-import { eintreffenMs, vorSichterAusGrundlage, wartezeitAusGrundlage, type Wartegrundlage } from "./nachrichtenstand.js";
+import { eintreffenMs, vorLdfAusGrundlage, vorSichterAusGrundlage, wartezeitAusGrundlage, type Wartegrundlage } from "./nachrichtenstand.js";
 import type { Nachrichtenzeile } from "./nachrichtenzeile.js";
 import { mittelWort } from "./tagebuch-nachrichten.js";
 
@@ -41,7 +41,54 @@ export function wartegrundlage(n: NachrichtZustand, annahme?: Zeitvermerk): Wart
     laufzustand: n.laufzustand,
     ...(ausgang ? { eintreffenBeiFmz: iso(eintreffenMs(angelegt, typeof annahmeWert?.zeitpunkt === "string" ? annahmeWert : undefined)) } : {}),
     ...(richtung === "EINGANG" ? { vorSichterSeit: iso(n.weitergabe?.hlc.millisekunden ?? angelegt) } : {}),
+    ...(n.laufzustand === "VOR_LDF" ? { vorLdfSeit: vorLdfSeit(n, richtung, annahmeWert) } : {}),
   };
+}
+
+/**
+ * Seit wann die Nachricht beim LdF liegt (R2-LdF P1-2, R2-Si P1-1): der
+ * Eingang ab der Aufnahme (Eintreffen, eine frühere nacherfasste Aufnahme
+ * geht vor), der Ausgang ab der Annahme.
+ */
+function vorLdfSeit(n: NachrichtZustand, richtung: string, annahme: Zeitvermerk | null | undefined): string | undefined {
+  if (richtung === "EINGANG") {
+    const aufnahme = n.aufnahme?.wert as Zeitvermerk | null | undefined;
+    return iso(eintreffenMs(n.angelegtMit.millisekunden, typeof aufnahme?.zeitpunkt === "string" ? aufnahme : undefined));
+  }
+  const angenommen = n.annahme?.hlc.millisekunden;
+  if (angenommen === undefined) return undefined;
+  return iso(eintreffenMs(angenommen, typeof annahme?.zeitpunkt === "string" ? annahme : undefined));
+}
+
+/** Minuten beim LdF, solange VOR_LDF (`wartetSeitLdf` der Zeile). */
+export function wartezeitBeimLdfMinuten(quelle: Wartegrundlage | NachrichtZustand, jetzt: string | number | undefined): number | undefined {
+  return vorLdfAusGrundlage(istZustand(quelle) ? wartegrundlage(quelle) : quelle, jetzt);
+}
+
+/**
+ * Die geltenden Vermerke bei zwei Sichtungen (R2-Si P1-2): Der Vermerk ist
+ * die Handlungsanweisung des Sichters, und die Vereinigung der Verteiler
+ * verlor den des Ersten still. Beide Texte stehen, je mit dem Handzeichen
+ * davor, getrennt durch „ / “ — der ältere zuerst. Ein Text, der schon mit
+ * „Hz:“ beginnt, bekommt es nicht doppelt.
+ */
+export function vereinigteVermerke(
+  sichtung: { readonly zeitpunkt: string; readonly handzeichen: string; readonly vermerke?: string | undefined } | undefined,
+  zweite: { readonly zeitpunkt: string; readonly handzeichen: string; readonly vermerke?: string | undefined } | undefined,
+): string | undefined {
+  if (zweite === undefined) return sichtung?.vermerke;
+  const teile = [zweite, sichtung]
+    .filter((s): s is NonNullable<typeof s> => s !== undefined && (s.vermerke ?? "").trim() !== "")
+    .sort((a, b) => Date.parse(a.zeitpunkt) - Date.parse(b.zeitpunkt))
+    .map((s) => mitHandzeichen(s.handzeichen, (s.vermerke ?? "").trim()));
+  const einzig = [...new Set(teile)];
+  return einzig.length === 0 ? undefined : einzig.join(" / ");
+}
+
+function mitHandzeichen(handzeichen: string, text: string): string {
+  const hz = handzeichen.trim();
+  if (hz === "" || text.toLocaleLowerCase("de-DE").startsWith(`${hz.toLocaleLowerCase("de-DE")}:`)) return text;
+  return `${hz}: ${text}`;
 }
 
 function istZustand(quelle: Wartegrundlage | NachrichtZustand): quelle is NachrichtZustand {

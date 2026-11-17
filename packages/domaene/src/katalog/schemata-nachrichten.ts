@@ -109,22 +109,34 @@ export const NachrichtVerfasst = z.object({
   aufnahme: zMittelvermerk.optional(),
   antwortAuf: zId.optional(),
   weitergeleitetVon: zId.optional(),
+  /**
+   * Additiv (R2-ETB P1-1): die Stelle der Sitzung, die schreibt — bei der
+   * Aufnahme die FmZ, nicht die `funktion` des Absenders draußen. Der Worker
+   * setzt sie, damit das Tagebuch sie nach dem Einsatz nicht aus der Präsenz
+   * rekonstruieren muss (die Präsenz ist dann leer).
+   */
+  stelle: zStelle.optional(),
 });
 
-/** Die Vermerke der FmZ und des Sichters: je ein Strukturfeld, Wert in `neu`. */
-export const NachrichtAngenommen = z.object({ nachrichtId: zId });
-export const NachrichtBefoerdert = z.object({ nachrichtId: zId });
-export const NachrichtUebermittlungVorgeschlagen = z.object({ nachrichtId: zId });
-export const NachrichtNachgewiesen = z.object({ nachrichtId: zId });
-export const NachrichtGesichtet = z.object({ nachrichtId: zId });
+/**
+ * Die Vermerke der FmZ und des Sichters: je ein Strukturfeld, Wert in `neu`.
+ * Additiv (R2-ETB P1-1, R2-LdF P3-2): `stelle` — die Stelle der Sitzung, die
+ * den Vermerk schreibt (FmZ für die Kopien nach der Beförderung, nicht
+ * „Sichter“). Sie wählt keinen Feldpfad; der Fold liest sie nicht.
+ */
+export const NachrichtAngenommen = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
+export const NachrichtBefoerdert = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
+export const NachrichtUebermittlungVorgeschlagen = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
+export const NachrichtNachgewiesen = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
+export const NachrichtGesichtet = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
 /**
  * Der Eingangsschritt des LdF (additiv, 2026-11-17): Weitergabe an den
  * Sichter — ein Strukturfeld. Den Ausgangsschritt führt
  * `NachrichtUebermittlungVorgeschlagen`.
  */
-export const NachrichtWeitergegeben = z.object({ nachrichtId: zId });
+export const NachrichtWeitergegeben = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
 /** Vermerke nach der Sichtung ohne Neusichtung (Feld 20), Text in `neu`. */
-export const NachrichtVermerkt = z.object({ nachrichtId: zId });
+export const NachrichtVermerkt = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
 
 /** Die Stelle wählt den Feldpfad `kenntnis/<stelle>` bzw. `erledigt/<stelle>`. */
 export const NachrichtKenntnisGenommen = z.object({ nachrichtId: zId, stelle: zStelle });
@@ -132,7 +144,7 @@ export const NachrichtErledigt = z.object({ nachrichtId: zId, stelle: zStelle })
 export const ErledigungDerNachrichtZurueckgenommen = z.object({ nachrichtId: zId, stelle: zStelle });
 
 /** Rücknahme einer Fehlanlage; `grund` ist Pflicht, die Nachricht bleibt sichtbar. */
-export const NachrichtZurueckgezogen = z.object({ nachrichtId: zId });
+export const NachrichtZurueckgezogen = z.object({ nachrichtId: zId, stelle: zStelle.optional() });
 
 /**
  * Die Parameter des Einsatzes für den Nachrichtenweg, Wert in `neu`:

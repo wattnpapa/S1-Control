@@ -177,6 +177,41 @@ function ersatz(e: EingehendesEreignis): boolean {
   return e.grund === GRUND_ERSATZSICHTER;
 }
 
+/**
+ * Der Grund an der Sichtung, die der Worker nach der Beförderung eines
+ * Ausgangs schreibt (Folie 30; R2-ETB P1-1, R2-SGL P3-4): Sie ist keine
+ * Sichtung eines Sichters, sondern die rote und grüne Kopie, die die FmZ
+ * verteilt. Ohne ihn stand im Tagebuch „gesichtet … Akteur Sichter · Fm“.
+ */
+export const GRUND_KOPIEN = "Kopien nach Beförderung";
+
+/** Kopien nach der Beförderung — am Grund, bei älteren Ereignissen am Vermerk, den der Worker schrieb. */
+export function istKopienNachBefoerderung(e: EingehendesEreignis): boolean {
+  if (e.typ !== "NachrichtGesichtet") return false;
+  if (e.grund === GRUND_KOPIEN) return true;
+  return e.grund === undefined && text(objekt(e.neu)?.["vermerke"])?.startsWith(GRUND_KOPIEN) === true;
+}
+
+/**
+ * Der Grund an Ereignissen eines Papier-Nachtrags (R2-SGL P1-2, R2-ETB
+ * P1-1): Sie tragen Zeiten und Handzeichen vom Blatt; wer sie eingegeben hat,
+ * nennt die Stelle der Sitzung in der Nutzlast. Klein geschrieben, damit der
+ * Satz ihn wörtlich enthält und der Druck ihn nicht zweimal nennt.
+ */
+export const GRUND_NACHTRAG = "vom Papier nachgetragen";
+
+/** „, vom Papier nachgetragen durch S3“ — leer, wenn das Ereignis kein Nachtrag ist. */
+function nachtragsteil(e: EingehendesEreignis): string {
+  if (e.grund?.startsWith(GRUND_NACHTRAG) !== true) return "";
+  const stelle = text(nutzlast(e)["stelle"]);
+  return `, ${GRUND_NACHTRAG}${stelle === undefined ? "" : ` durch ${stellenWort(stelle)}`}`;
+}
+
+function sichtungswort(e: EingehendesEreignis): string {
+  if (istKopienNachBefoerderung(e)) return "Kopien nach Beförderung";
+  return ersatz(e) ? "als Ersatzsichter gesichtet" : "gesichtet";
+}
+
 /** Ein Vermerk der FmZ oder des Sichters; `null` als Wert ist die Rücknahme auf „leer“. */
 function vermerk(gesetzt: (neu: unknown) => string, geloescht: string): (e: EingehendesEreignis) => string {
   return (e) => (e.neu === null || e.neu === undefined ? geloescht : gesetzt(e.neu));
@@ -196,7 +231,7 @@ const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtWeitergegeben: vermerk((neu) => `an den Sichter weitergegeben${klammer([handzeichenteil(neu)])}`, "Weitergabe gelöscht"),
   NachrichtGesichtet: (e) =>
     vermerk(
-      (neu) => `${ersatz(e) ? "als Ersatzsichter gesichtet" : "gesichtet"}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}`,
+      (neu) => `${sichtungswort(e)}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}`,
       "Sichtung gelöscht",
     )(e),
   NachrichtVermerkt: (e) => (text(e.neu) === undefined ? "Vermerk gelöscht" : `Vermerk „${String(e.neu)}“`),
@@ -247,9 +282,9 @@ export function nachrichtensatz(
   const jetzt = zeitstand !== undefined && typeof heute.nummer === "number" && heute.nummer !== zeitstand.nummer ? ` (jetzt ${nummernkurz(heute.richtung, heute.nummer)})` : "";
   if (ereignis.typ === "NachrichtNachgewiesen") {
     const nummer = objekt(ereignis.neu)?.["nummer"];
-    if (typeof nummer === "number") return `${kennung({ ...kopf, nummer })}${jetzt} ${nachweisvorgang(ereignis, heute.richtung)}: ${inhaltsteil(kopf)}`;
+    if (typeof nummer === "number") return `${kennung({ ...kopf, nummer })}${jetzt} ${nachweisvorgang(ereignis, heute.richtung)}${nachtragsteil(ereignis)}: ${inhaltsteil(kopf)}`;
   }
-  return `${kennung(kopf)}${jetzt} ${besondererVorgang(zustand, ereignis, zeitstand) ?? vorgangDes(ereignis)}: ${inhaltsteil(kopf)}`;
+  return `${kennung(kopf)}${jetzt} ${besondererVorgang(zustand, ereignis, zeitstand) ?? vorgangDes(ereignis)}${nachtragsteil(ereignis)}: ${inhaltsteil(kopf)}`;
 }
 
 /** „nachgewiesen (Hz. FM)" oder „Nachweisnummer berichtigt (E 2 → E 3, Hz. FM)" aus `vorher`/`neu`. */

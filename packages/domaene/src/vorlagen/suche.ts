@@ -37,7 +37,8 @@ function vergleichbar(text: string): string {
 
 /** Kürzel → Bedeutung aus der Abkürzungsliste: „ZTr“ findet auch „Zugtrupp“. */
 const BEDEUTUNG_JE_KUERZEL: ReadonlyMap<string, string> = new Map(
-  AKUELI.map((eintrag) => [vergleichbar(eintrag.kuerzel), vergleichbar(eintrag.bedeutung)]),
+  // Die Begriffe der Nachrichten (R2-FaBe P1-2) sind keine Kürzel von Einheiten.
+  AKUELI.filter((eintrag) => eintrag.gruppe !== "NACHRICHTEN").map((eintrag) => [vergleichbar(eintrag.kuerzel), vergleichbar(eintrag.bedeutung)]),
 );
 
 function worte(text: string): string[] {

@@ -60,8 +60,8 @@ function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
 }
 
 describe("Die Nachricht im Katalog", () => {
-  it("steht auf Fassung 12 und führt die Arten nach §9", () => {
-    expect(FOLD_VERSION).toBe(12);
+  it("steht auf Fassung 13 und führt die Arten nach §9", () => {
+    expect(FOLD_VERSION).toBe(13);
     expect(KATALOG.get("NachrichtVerfasst")).toMatchObject({ form: "b", entitaet: "nachricht", idFeld: "nachrichtId", ohneUndo: true });
     for (const [typ, pfad] of [["NachrichtAngenommen", "annahme"], ["NachrichtUebermittlungVorgeschlagen", "vorschlag"], ["NachrichtBefoerdert", "befoerderung"], ["NachrichtNachgewiesen", "nachweis"], ["NachrichtGesichtet", "sichtung"], ["NachrichtVermerkt", "vermerke"]] as const) {
       expect(KATALOG.get(typ)).toMatchObject({ form: "a", feld: { art: "fest", pfad }, gegenereignis: typ });

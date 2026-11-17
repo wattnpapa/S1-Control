@@ -60,6 +60,11 @@ export interface Ansichtshilfe {
   readonly zuerst: string;
   /** Was überrascht, wenn es niemand sagt. */
   readonly ueberraschung: string;
+  /**
+   * Additiv (R2-FaBe P1-2): die Wörter der Ansicht, je mit einem halben Satz
+   * — wer nicht aus dem Stab kommt, kennt sie nicht. Fehlt, wo es keine gibt.
+   */
+  readonly begriffe?: string;
   /** Die Namen der Kürzel aus der Tastenkarte, die hier greifen. */
   readonly kuerzel: readonly string[];
 }
@@ -127,6 +132,8 @@ export const ANSICHTEN: readonly Ansichtshilfe[] = [
     zuerst: "Oben die Zahlen des Bandes lesen, dann mit dem Umschalter die Sicht wählen; mit „Nachricht verfassen“ entsteht eine neue Nachricht im Aufbau des Vordrucks.",
     ueberraschung:
       "Die Stelle des Arbeitsplatzes wählt nur die erste Sicht und schneidet den Posteingang zu; sie ist kein Recht, jede Sicht bleibt erreichbar. Die Uhrzeiten stehen vierstellig und die Zeit der Abfassung als Datum-Zeit-Gruppe („171045nov26“), so wie sie auf dem Papier steht. Eine doppelt vergebene Nummer wird nicht verhindert, sondern in der Nachweisung markiert; beim Nacherfassen vom Papier gilt, was auf dem Blatt steht. „Als Vordruck drucken“ legt die Nachricht als PDF im Vordrucklayout unter ausgaben/nachrichten ab, mit der Nummer im Dateinamen; ohne Nummer trägt der Name die Kennung der Nachricht. Die Vorschau zeigt das Blatt vor dem Druck mit der Schrift des Browsers, sie weicht leicht von der des PDF ab. Der Automatikdruck ist nur an, wenn in den Druckeinstellungen ein Drucker oder ein Verzeichnis gewählt ist, und druckt dann jede an eine Stelle dieses Arbeitsplatzes verteilte Nachricht beim Eintreffen, auch die eigene Sichtung. Nach der Beförderung eines Ausgangs gehen die rote Kopie an S2 und die grüne an die Stelle des Verfassers; der Ausgang steht dann in beiden Posteingängen.",
+    begriffe:
+      "FmZ ist die Fernmeldezentrale, über die jede Nachricht hinein- und hinausgeht. Der Sichter quittiert jeden Eingang und legt den Verteiler fest; der LdF (Leiter des Fernmeldebetriebes) legt den Übermittlungsweg fest und gibt Eingänge an den Sichter weiter. Die Nachweisung ist die nummerierte Liste aller Nachrichten der FmZ, der Laufzettel der untere Teil des Vordrucks mit Quittung, Verteiler und Vermerken. Das Handzeichen ist Ihr Kürzel, das wie eine Unterschrift unter jedem Vermerk steht. Vorrang heißt Sofort (vor allem Einfachen) oder Blitz (Gefahr für Leben, geht allem vor). Ein Spruch geht an eine Gegenstelle, die ihn aufnimmt und quittiert, eine Durchsage an mehrere zugleich. Eine Gesprächsnotiz hält ein Telefonat fest und wird nicht übermittelt. Die Kopiefarbe sagt, was der Empfänger tut: grün bearbeiten, blau zur Kenntnis, rot an S2. Die Datum-Zeit-Gruppe schreibt Tag, Uhrzeit, Monat und Jahr in ein Wort („171045NOV26“); die Abfassungszeit ist die Zeit, zu der die Nachricht geschrieben wurde, der Übermittlungswunsch der Weg, den der Verfasser sich wünscht. Alle Begriffe stehen mit einem Satz in der Abkürzungsliste (Reiter „Abkürzungen“).",
     kuerzel: ["anlegen", "suchen", "jetzt"],
   },
   {

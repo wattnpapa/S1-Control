@@ -148,6 +148,11 @@ export interface Wartegrundlage {
   readonly eintreffenBeiFmz?: string | undefined;
   /** ISO: seit wann der Eingang vor dem Sichter liegt (Aufnahme oder Weitergabe des LdF). */
   readonly vorSichterSeit?: string | undefined;
+  /**
+   * Additiv (R2-LdF P1-2, R2-Si P1-1): seit wann die Nachricht beim LdF liegt
+   * — der Eingang ab der Aufnahme, der Ausgang ab der Annahme (ISO).
+   */
+  readonly vorLdfSeit?: string | undefined;
 }
 
 /** Ganze Minuten von `seit` bis `jetzt`, nie negativ; `undefined`, wenn eines fehlt. */
@@ -181,6 +186,16 @@ export function wartezeitAusGrundlage(grundlage: Wartegrundlage, jetzt: string |
 export function vorSichterAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
   if (grundlage.richtung !== "EINGANG" || grundlage.laufzustand !== "VOR_SICHTER") return undefined;
   return minutenZwischen(grundlage.vorSichterSeit, jetzt);
+}
+
+/**
+ * Die Wartezeit beim LdF in ganzen Minuten (R2-LdF P1-2): Ein Eingang hatte
+ * dort keine Uhr, die Stau-Warnung begann erst mit der Weitergabe. Nur im
+ * Laufzustand VOR_LDF; sonst `undefined`.
+ */
+export function vorLdfAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
+  if (grundlage.laufzustand !== "VOR_LDF") return undefined;
+  return minutenZwischen(grundlage.vorLdfSeit, jetzt);
 }
 
 /** Über der Schwelle: mindestens so viele ganze Minuten, wie die Schwelle nennt. */

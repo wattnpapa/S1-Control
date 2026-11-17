@@ -20,8 +20,11 @@
  * Stelle zu brechen, an der niemand ihn sucht.
  */
 
-/** Die beiden Abschnitte des Blatts (§6.1 und §6.2). */
-export type Akuegruppe = "EINHEITEN" | "FAHRZEUGE_UND_GERAETE";
+/**
+ * Die beiden Abschnitte des Blatts (§6.1 und §6.2) und — additiv, Audit
+ * Nachrichten Runde 2 (R2-FaBe P1-1, P1-2) — die Begriffe des Nachrichtenwegs.
+ */
+export type Akuegruppe = "EINHEITEN" | "FAHRZEUGE_UND_GERAETE" | "NACHRICHTEN";
 
 export interface Akueeintrag {
   readonly kuerzel: string;
@@ -145,7 +148,38 @@ export const AKUELI: readonly Akueeintrag[] = [
   e("UslG", "Umschlaggerät", "FAHRZEUGE_UND_GERAETE"),
   e("WLF", "Wechsellader Fahrzeug", "FAHRZEUGE_UND_GERAETE"),
   e("ZTrKw", "Zugtruppkraftwagen", "FAHRZEUGE_UND_GERAETE"),
+  ...begriffeNachrichten(),
 ];
+
+/**
+ * Die Begriffe des 4-fach-Vordrucks, je mit einem Satz (Audit Nachrichten
+ * Runde 2, R2-FaBe P1-1, P1-2). Ein Fachberater einer anderen Organisation
+ * fand in der Hilfe für FmZ, Sichter, LdF, Nachweisung, Blitz und Spruch
+ * „0 von 108 Einträgen“ und musste bei fast jedem Feld raten. Sie stehen in
+ * derselben Liste, damit die Suche der Hilfe sie findet; keine Abkürzung aus
+ * der Excel, deshalb eine eigene Gruppe am Ende.
+ */
+function begriffeNachrichten(): Akueeintrag[] {
+  const n = (begriff: string, satz: string): Akueeintrag => e(begriff, satz, "NACHRICHTEN");
+  return [
+    n("FmZ", "Fernmeldezentrale: nimmt Nachrichten von außen auf, befördert Ausgänge über Funk, Telefon oder Melder und führt die Nachweisung; jede Nachricht der Führungsstelle läuft über sie."),
+    n("Sichter", "Quittiert jeden Eingang mit Uhrzeit und Handzeichen und legt fest, welche Stelle ihn bearbeitet (grün) und wer ihn zur Kenntnis bekommt (blau)."),
+    n("LdF", "Leiter des Fernmeldebetriebes: legt in der Fernmeldezentrale fest, auf welchem Weg und durch welchen Fernmelder eine Nachricht hinausgeht, und prüft Eingänge, bevor er sie an den Sichter weitergibt."),
+    n("Nachweisung", "Die fortlaufend nummerierte Liste aller Ein- und Ausgänge der Fernmeldezentrale; die Nummer steht auf dem Vordruck und ändert sich danach nie."),
+    n("Laufzettel", "Der untere Teil des Vordrucks, auf dem der Sichter quittiert, den Verteiler ankreuzt und Vermerke für die Empfänger schreibt."),
+    n("Handzeichen", "Ihr Kürzel aus zwei bis vier Zeichen, meist die Initialen; es steht wie eine Unterschrift auf jedem Vermerk, im Einsatztagebuch und auf dem Vordruck."),
+    n("Vorrang", "Wie eilig eine Nachricht ist: ohne Kreuz einfach, sonst Sofort oder Blitz; Blitz geht vor Sofort vor einfach, und Vorrang wird sparsam vergeben."),
+    n("Sofort", "Vorrangstufe für eine Nachricht, die vor allen einfachen Nachrichten befördert und bearbeitet wird."),
+    n("Blitz", "Höchste Vorrangstufe für eine Nachricht, bei der es um Leben oder unmittelbare Gefahr geht; sie geht allem anderen vor und meldet sich mit Ton."),
+    n("Spruch", "Eine Nachricht an eine bestimmte Gegenstelle, die sie Wort für Wort aufnimmt und quittiert."),
+    n("Durchsage", "Eine Nachricht an mehrere Empfänger zugleich, etwa an alle Teilnehmer eines Funkkreises, ohne dass jeder einzeln antwortet."),
+    n("Gesprächsnotiz", "Ein Telefonat oder Gespräch, das Sie selbst als Nachricht festhalten; es wird nicht übermittelt, sondern nachgewiesen und von Ihnen oder vom Sichter verteilt."),
+    n("Kopiefarbe (rot/grün/blau)", "Die Farbe im Verteiler: grün bearbeitet die Nachricht, blau nimmt sie zur Kenntnis, rot geht an S2 für Lagekarte und Einsatztagebuch."),
+    n("Datum-Zeit-Gruppe", "Zeitangabe als Tag, Stunde, Minute, Monat und Jahr in einem Wort, etwa 171045NOV26 für den 17. November 2026 um 10:45 Uhr."),
+    n("Übermittlungswunsch", "Auf welchem Weg der Verfasser die Nachricht befördert haben möchte (Funk, Telefon, Telefax, DFÜ, Kurier/Melder); die Fernmeldezentrale kann anders entscheiden."),
+    n("Abfassungszeit", "Wann der Verfasser die Nachricht geschrieben hat, als Datum-Zeit-Gruppe; beim Eingang die Zeit, die der Absender draußen nennt."),
+  ];
+}
 
 /**
  * Sucht in Kürzel und Bedeutung, ohne Rücksicht auf Groß- und

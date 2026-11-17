@@ -23,7 +23,7 @@ import type { EingehendesEreignis } from "../fold.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "../kanonisch.js";
 import type { Id } from "../werte.js";
 import type { Zustand } from "../zustand.js";
-import { GRUND_ERSATZSICHTER, NACHRICHTENARTEN, nummernkurz, stellenWort, type Zeitstand } from "./tagebuch-nachrichten.js";
+import { GRUND_ERSATZSICHTER, NACHRICHTENARTEN, istKopienNachBefoerderung, nummernkurz, stellenWort, type Zeitstand } from "./tagebuch-nachrichten.js";
 
 function objekt(wert: unknown): Record<string, unknown> | undefined {
   return typeof wert === "object" && wert !== null && !Array.isArray(wert) ? (wert as Record<string, unknown>) : undefined;
@@ -107,8 +107,16 @@ export function handzeichenDer(ereignis: EingehendesEreignis): string | undefine
 export function stelleDer(ereignis: EingehendesEreignis): string | undefined {
   if (!NACHRICHTENARTEN.has(ereignis.typ)) return undefined;
   const nutzlast = objekt(ereignis.nutzlast);
-  const genannt = text(nutzlast?.["stelle"]) ?? (ereignis.typ === "NachrichtVerfasst" ? text(nutzlast?.["funktion"]) : undefined);
+  // R2-ETB P1-1: die Stelle der Sitzung, die der Worker seit dem zweiten Durchlauf mitschreibt.
+  const genannt = text(nutzlast?.["stelle"]);
   if (genannt !== undefined) return genannt;
+  if (ereignis.typ === "NachrichtVerfasst") {
+    // Beim Eingang mit Aufnahmevermerk ist `funktion` die des Absenders draußen
+    // („EL“, „Zugführer“), nicht die Stelle, die aufgenommen hat (R2-ETB P1-1).
+    return objekt(nutzlast?.["aufnahme"]) === undefined ? text(nutzlast?.["funktion"]) : undefined;
+  }
+  // Die Kopien nach der Beförderung verteilt die FmZ, kein Sichter (R2-ETB P1-1, R2-SGL P3-4).
+  if (istKopienNachBefoerderung(ereignis)) return "FMZ";
   if (ereignis.typ === "NachrichtGesichtet" && ereignis.grund !== GRUND_ERSATZSICHTER && objekt(ereignis.neu) !== undefined) return "SICHTER";
   if (ereignis.typ === "NachrichtWeitergegeben" || ereignis.typ === "NachrichtUebermittlungVorgeschlagen") return "LDF";
   return undefined;

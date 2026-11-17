@@ -288,6 +288,13 @@ export interface Tagebuchzeile {
   readonly handzeichen?: string;
   /** Additiv (ETB P1-7): die Stelle, die das Ereignis nennt; fehlt, wo es keine nennt. Anzeige über `akteurText`. */
   readonly stelle?: string;
+  /**
+   * Additiv (R2-ETB P1-2): die laufende Nummer der Zeile in HLC-Ordnung über
+   * **alle** Ereignisse — dieselbe wie im gedruckten Tagebuch und als ETB-Nr.
+   * in Feld 20 des Vordrucks, auch wenn ein Filter wirkt. Setzt
+   * `tagebuchausschnitt`; eine einzeln gebaute Zeile kennt sie nicht.
+   */
+  readonly laufendeNummer?: number;
 }
 
 function alsSatzwert(wert: unknown): string {
@@ -734,8 +741,9 @@ export function tagebuchausschnitt(
   const anfang = Math.max(0, von);
   const ende = anzahl === undefined ? Number.POSITIVE_INFINITY : anfang + anzahl;
   let gesamtzahl = 0;
-  for (const ereignis of geordnet) {
-    const zeile = tagebuchzeile(zustand, ereignis, verlauf?.get(ereignis.id));
+  for (const [index, ereignis] of geordnet.entries()) {
+    // R2-ETB P1-2: absteigend geordnet, die älteste Zeile trägt die 1 — wie der Druck und `etbNummern`.
+    const zeile = { ...tagebuchzeile(zustand, ereignis, verlauf?.get(ereignis.id)), laufendeNummer: geordnet.length - index };
     if (!trifftFilter(zeile, filter)) continue;
     if (gesamtzahl >= anfang && gesamtzahl < ende) zeilen.push(zeile);
     gesamtzahl += 1;

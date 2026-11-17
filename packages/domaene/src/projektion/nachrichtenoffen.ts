@@ -16,7 +16,7 @@
  */
 
 import { standDerZeile } from "./nachrichtenstand.js";
-import type { Nachrichtenzeile } from "./nachrichtenzeile.js";
+import { vergleicheNachrichten, type Nachrichtenzeile } from "./nachrichtenzeile.js";
 
 /** Die bekannten Stellen der Stationen im Laufweg (§4). */
 const FMZ = "FMZ";
@@ -66,6 +66,19 @@ export function offenFuerStellen(zeile: Nachrichtenzeile, stellen: readonly stri
   if (zeile.verteiler.some((marke) => stellen.includes(marke.stelle) && !marke.erledigt)) return true;
   if (eigenerAusgang(zeile, stellen) && (laufstand === "vorFmz" || laufstand === "angenommen" || laufstand === "beimLdf")) return true;
   return inEigenerWarteschlange(zeile, stellen, umfeld);
+}
+
+/**
+ * Die Karte „Ohne Nummer“ der FmZ (R2-LdF P1-2 alt, P2-3): beförderte
+ * Ausgänge **und** aufgenommene Eingänge ohne Nummer der Nachweisung, nicht
+ * zurückgezogen. Ein Eingang ohne Nummer ging bisher ohne Spur am LdF und am
+ * Sichter vorbei; die Karte führte nur Ausgänge. Geordnet nach Vorrang und
+ * Eingang wie jede Liste (§5).
+ */
+export function ohneNummerZeilen(zeilen: readonly Nachrichtenzeile[]): Nachrichtenzeile[] {
+  return zeilen
+    .filter((z) => !z.zurueckgezogen && z.nummer === undefined && (z.befoerderung !== undefined || (z.richtung === "EINGANG" && z.aufnahme !== undefined)))
+    .sort(vergleicheNachrichten);
 }
 
 /**

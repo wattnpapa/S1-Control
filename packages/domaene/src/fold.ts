@@ -958,6 +958,19 @@ const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
 ]);
 
 /**
+ * Klasse einer fachlichen Zeit; `rueckwaertsMs` (additiv, FOLD_VERSION 13)
+ * erlaubt einer Ist-Zeit, weiter als die Schwelle S1 vor der Wanduhr zu liegen.
+ */
+interface Zeitregel {
+  readonly klasse: "IST" | "PLAN";
+  readonly schluessel?: string;
+  readonly rueckwaertsMs?: number;
+}
+
+/** So weit darf der Einsatzbeginn vor dem Anlegen liegen, ohne Hinweis: sieben Tage. */
+const BEGINN_RUECKWAERTS_MS = 7 * 24 * 60 * 60 * 1000;
+
+/**
  * Die fachlichen Zeiten des Katalogs und ihre Klasse (§2.5, Auflage 12).
  *
  * **Jede** fachliche Zeit ist einer von drei Klassen zugeordnet; es gibt keine
@@ -971,8 +984,12 @@ const OFFENE_BEREICHE: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  * ein Schluesselbestandteil (§5.7): Ein Dienstplan fuer uebermorgen ist der
  * Normalfall.
  */
-const ZEITEN: ReadonlyMap<string, { klasse: "IST" | "PLAN"; schluessel?: string }> = new Map([
-  ["einsatz.beginn", { klasse: "IST" as const }],
+const ZEITEN: ReadonlyMap<string, Zeitregel> = new Map<string, Zeitregel>([
+  // Der Beginn darf weiter zurückliegen als zwölf Stunden: Ein Einsatz, der um
+  // 08:00 begann und abends angelegt wird, ist der Normalfall (Audits
+  // Nachrichten Runde 2, R2-Si P3-6, R2-FM P3-6 — „⚠ 1 Konflikthinweis“ im
+  // frisch angelegten Einsatz). Nach vorn bleibt die Schwelle der Ist-Zeit.
+  ["einsatz.beginn", { klasse: "IST" as const, rueckwaertsMs: BEGINN_RUECKWAERTS_MS }],
   ["einsatz.ende", { klasse: "IST" as const }],
   ["abschnitt.aufgeloest", { klasse: "IST" as const, schluessel: "aufgeloestAm" }],
   ["einheit.eingetroffenAm", { klasse: "IST" as const }],
@@ -1017,7 +1034,7 @@ function zeitHinweis(
   feldpfad: string,
   fachlicheZeit: string,
   wanduhr: string | undefined,
-  klasse: "IST" | "PLAN",
+  regel: Pick<Zeitregel, "klasse" | "rueckwaertsMs">,
   ereignis: EreignisId | undefined,
 ): Konflikthinweis | undefined {
   if (wanduhr === undefined || ereignis === undefined) return undefined;
@@ -1025,9 +1042,10 @@ function zeitHinweis(
   const uhr = Date.parse(wanduhr);
   if (Number.isNaN(zeit) || Number.isNaN(uhr)) return undefined;
   const abstand = zeit - uhr;
+  const klasse = regel.klasse;
   const unplausibel =
     klasse === "IST"
-      ? Math.abs(abstand) > IST_SCHWELLE_MS
+      ? abstand > IST_SCHWELLE_MS || -abstand > (regel.rueckwaertsMs ?? IST_SCHWELLE_MS)
       : abstand < 0 || abstand > PLAN_SCHWELLE_MS;
   if (!unplausibel) return undefined;
   return { art: "meldezeitUnplausibel", feldpfad, ereignis, fachlicheZeit, wanduhr, zeitklasse: klasse };
@@ -1325,7 +1343,7 @@ function baueEntitaet(
           ? feld.wert
           : (feld.wert as Record<string, unknown> | null)?.[zeit.schluessel];
       if (typeof roh === "string") {
-        const hinweis = zeitHinweis(feldpfad, roh, feld.wanduhr, zeit.klasse, feld.durch);
+        const hinweis = zeitHinweis(feldpfad, roh, feld.wanduhr, zeit, feld.durch);
         if (hinweis !== undefined) hinweise.push(hinweis);
       }
     }
@@ -1337,7 +1355,7 @@ function baueEntitaet(
         feldpfad,
         feld.fachlicheZeit,
         feld.wanduhr,
-        feld.zeitklasse,
+        { klasse: feld.zeitklasse },
         feld.durch,
       );
       if (hinweis !== undefined) hinweise.push(hinweis);

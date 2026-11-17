@@ -38,7 +38,7 @@ import type {
 } from "../zustand-nachricht.js";
 import type { Feld, Zustand } from "../zustand.js";
 import { fmzVermerkTextAus, laufstandAus, ohneNummerAus, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
-import { wartegrundlage, wartezeitMinuten, wartezeitVorSichterMinuten, zurueckziehungAus, type Zurueckziehung } from "./nachrichtenzusatz.js";
+import { vereinigteVermerke, wartegrundlage, wartezeitBeimLdfMinuten, wartezeitMinuten, wartezeitVorSichterMinuten, zurueckziehungAus, type Zurueckziehung } from "./nachrichtenzusatz.js";
 
 /** Eine Stelle des Verteilers mit ihrer Kopiefarbe und den beiden Marken. */
 export interface Nachrichtenmarke {
@@ -137,6 +137,10 @@ export interface Nachrichtenzeile {
   readonly vorSichterSeit?: string;
   /** Additiv (Sichter P1-4): Minuten vor dem Sichter, solange ungesichtet; nur mit `jetzt`. */
   readonly wartetSeitSichter?: number;
+  /** Additiv (R2-LdF P1-2): seit wann die Nachricht beim LdF liegt (ISO) — Eingang ab Aufnahme, Ausgang ab Annahme. */
+  readonly vorLdfSeit?: string;
+  /** Additiv (R2-LdF P1-2, R2-Si P1-1): Minuten beim LdF, solange VOR_LDF; nur mit `jetzt`. */
+  readonly wartetSeitLdf?: number;
   /** Additiv (ETB P1-3, P2-7): Zeit und Grund des Zurückziehens — für Ansicht, Nachweisung und Stempel im Vordruck. */
   readonly zurueckgezogenMit?: Zurueckziehung;
   /**
@@ -201,11 +205,13 @@ function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zwe
 }
 
 /** Die geltenden Vermerke: wer zuletzt geschrieben hat, Sichtung oder Nachtrag (§9). */
-function vermerkeDer(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined): string | undefined {
+function vermerkeDer(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zweite?: Sichtungsvermerk): string | undefined {
+  // R2-Si P1-2: Bei zwei Sichtungen gelten beide Vermerke, mit Handzeichen getrennt.
+  const ausSichtung = vereinigteVermerke(sichtung, zweite);
   const nachtrag = text(n.vermerke);
-  if (nachtrag === undefined || n.vermerke === undefined) return sichtung?.vermerke;
+  if (nachtrag === undefined || n.vermerke === undefined) return ausSichtung;
   if (sichtung === undefined || n.sichtung === undefined) return nachtrag;
-  return vergleicheHlc(n.vermerke.hlc, n.sichtung.hlc) > 0 ? nachtrag : (sichtung.vermerke ?? nachtrag);
+  return vergleicheHlc(n.vermerke.hlc, n.sichtung.hlc) > 0 ? nachtrag : (ausSichtung ?? nachtrag);
 }
 
 /**
@@ -230,7 +236,7 @@ function standfelder(
     readonly sichtung: Sichtungsvermerk | undefined;
   },
   kontext: Zeilenkontext,
-): Pick<Nachrichtenzeile, "laufstand" | "ohneNummer" | "wartetSeit" | "fmzVermerkText" | "gesichtetVon" | "eintreffenBeiFmz" | "vorSichterSeit" | "wartetSeitSichter"> {
+): Pick<Nachrichtenzeile, "laufstand" | "ohneNummer" | "wartetSeit" | "fmzVermerkText" | "gesichtetVon" | "eintreffenBeiFmz" | "vorSichterSeit" | "wartetSeitSichter" | "vorLdfSeit" | "wartetSeitLdf"> {
   const richtung = text(n.richtung) ?? "";
   const gespraechsnotiz = n.gespraechsnotiz?.wert === true;
   const nummer = vermerke.nachweis?.nummer;
@@ -238,6 +244,7 @@ function standfelder(
   const grundlage = wartegrundlage(n, vermerke.annahme);
   const wartetSeit = wartezeitMinuten(grundlage, kontext.jetzt);
   const wartetSeitSichter = wartezeitVorSichterMinuten(grundlage, kontext.jetzt);
+  const wartetSeitLdf = wartezeitBeimLdfMinuten(grundlage, kontext.jetzt);
   const fmzVermerkText = fmzVermerkTextAus(vermerke.aufnahme, vermerke.annahme, vermerke.befoerderung);
   const gesichtetVon = vermerke.sichtung === undefined ? undefined : n.sichtung?.hlc.clientId;
   return {
@@ -249,6 +256,8 @@ function standfelder(
     ...(grundlage.eintreffenBeiFmz === undefined ? {} : { eintreffenBeiFmz: grundlage.eintreffenBeiFmz }),
     ...(grundlage.vorSichterSeit === undefined ? {} : { vorSichterSeit: grundlage.vorSichterSeit }),
     ...(wartetSeitSichter === undefined ? {} : { wartetSeitSichter }),
+    ...(grundlage.vorLdfSeit === undefined ? {} : { vorLdfSeit: grundlage.vorLdfSeit }),
+    ...(wartetSeitLdf === undefined ? {} : { wartetSeitLdf }),
   };
 }
 
@@ -305,7 +314,7 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
   const weitergabe = gelesen(zWeitergabe, n.weitergabe);
   const sichtung = gelesen(zSichtung, n.sichtung);
   const zweite = zweiteSichtungDer(n);
-  const vermerke = vermerkeDer(n, sichtung);
+  const vermerke = vermerkeDer(n, sichtung, zweite);
   const gegenstelle = (n.befoerderung?.wert as { gegenstelle?: unknown } | null | undefined)?.gegenstelle;
   const gegenstelleText = typeof gegenstelle === "string" && gegenstelle !== "" ? gegenstelle : text(n.gegenstelle);
   const richtung = text(n.richtung) ?? "";

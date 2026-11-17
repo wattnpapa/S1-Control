@@ -65,8 +65,12 @@ import type {
  * `weitergabe` der Nachricht (`NachrichtWeitergegeben`), der Laufzustand
  * VOR_LDF und der Parameter `ldfStation` des Einsatzes — ein Schnappschuss
  * der Fassung 11 kennte den Laufzustand nicht.
+ * **13** (Audits Nachrichten Runde 2, Konflikthinweis im frischen Einsatz):
+ * Der Einsatzbeginn darf bis zu sieben Tage vor der Wanduhr liegen, ohne
+ * `meldezeitUnplausibel` — ein Schnappschuss der Fassung 12 trüge den
+ * Hinweis noch.
  */
-export const FOLD_VERSION = 12;
+export const FOLD_VERSION = 13;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
