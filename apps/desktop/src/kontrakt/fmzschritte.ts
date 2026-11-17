@@ -31,6 +31,35 @@ export function nachrichtAnnehmen(nachrichtId: string, vorher: Zeitvermerk | nul
   };
 }
 
+/** Der Übermittlungsvorschlag des LdF (zwischen Feld 3 und 4): Weg, Gegenstelle, Fernmelder. */
+export interface Vorschlag extends Mittelvermerk {
+  readonly fernmelder: string;
+  readonly gegenstelle?: string;
+}
+
+/**
+ * „Übermittlung vorschlagen": Der LdF sieht die Nachricht und bestimmt, welcher
+ * Fernmelder auf welchem Weg an welche Gegenstelle übertragen soll. Der
+ * Fernmelder findet den Vorschlag in der Warteschlange und in der Maske
+ * „Befördern" vorbelegt; befördert wird erst mit dessen eigenem Vermerk.
+ */
+export function nachrichtVorschlagen(nachrichtId: string, vorher: Vorschlag | null, vorschlag: Vorschlag): Entwurf {
+  const gegenstelle = vorschlag.gegenstelle?.trim() ?? "";
+  return {
+    typ: "NachrichtUebermittlungVorgeschlagen",
+    nutzlast: { nachrichtId },
+    vorher,
+    neu: {
+      mittel: vorschlag.mittel,
+      fernmelder: vorschlag.fernmelder.trim(),
+      zeitpunkt: vorschlag.zeitpunkt,
+      handzeichen: vorschlag.handzeichen.trim(),
+      ...(gegenstelle === "" ? {} : { gegenstelle }),
+    },
+    vorwertPruefen: true,
+  };
+}
+
 /** Der Beförderungsvermerk (Feld 4) samt Gegenstelle — sie steht auf Papier im selben Kasten. */
 export interface Befoerderung extends Mittelvermerk {
   readonly gegenstelle?: string;

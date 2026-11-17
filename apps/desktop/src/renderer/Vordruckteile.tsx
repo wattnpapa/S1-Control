@@ -36,6 +36,14 @@ function vermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string }
   return v === undefined ? undefined : `${dtg(v.zeitpunkt)} ${v.handzeichen}`.trim();
 }
 
+/** „Fm2 · Funk an HK · 1030 LdF" — der Vorschlag des LdF in einer Zeile. */
+export function vorschlagText(zeile: Nachrichtenzeile | undefined): string | undefined {
+  const v = zeile?.vorschlag;
+  if (v === undefined) return undefined;
+  const gegen = v.gegenstelle === undefined ? "" : ` an ${v.gegenstelle}`;
+  return `${v.fernmelder} · ${projektion.mittelWort(v.mittel)}${gegen} · ${vermerk(v) ?? ""}`;
+}
+
 /** Der obere Teil (Feld 1 bis 6): grau und schreibgeschützt, solange dieser Platz nicht FmZ ist. */
 export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefined }): React.JSX.Element {
   const mittel = zeile?.aufnahme?.mittel ?? zeile?.befoerderung?.mittel;
@@ -45,6 +53,7 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <Wert titel="Mittel" wert={mittel === undefined ? undefined : projektion.mittelWort(mittel)} />
       <Wert titel="Aufnahme" wert={vermerk(zeile?.aufnahme)} />
       <Wert titel="Annahme" wert={vermerk(zeile?.annahme)} />
+      <Wert titel="Vorschlag LdF" wert={vorschlagText(zeile)} />
       <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
       <Wert titel={zeile === undefined ? "Nr." : `Nr. (${zeile.richtungKurz})`} wert={zeile?.nummer === undefined ? undefined : String(zeile.nummer)} />
       <Wert titel="Gegenstelle" wert={zeile?.gegenstelle} />

@@ -19,10 +19,10 @@
 
 import { useState } from "react";
 
-import { NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { FERNMELDER_STANDARD, NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf, Gegenstelle } from "../kontrakt/index.js";
-import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen } from "../kontrakt/fmzschritte.js";
+import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
@@ -33,9 +33,9 @@ import { zeitAusEingabe } from "./nachrichtenformate.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 
-export type Fmzschritt = "annahme" | "befoerderung" | "nachweis";
+export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
-const TITEL: Readonly<Record<Fmzschritt, string>> = { annahme: "Annehmen", befoerderung: "Befördern", nachweis: "Nachweisen" };
+const TITEL: Readonly<Record<Fmzschritt, string>> = { annahme: "Annehmen", vorschlag: "Übermittlung vorschlagen", befoerderung: "Befördern", nachweis: "Nachweisen" };
 
 export interface FmzmaskeEigenschaften {
   readonly schritt: Fmzschritt;
@@ -54,14 +54,17 @@ interface Eingaben {
   readonly mittel: string;
   readonly gegenstelle: string;
   readonly nummer: string;
+  /** Der Fernmelder, den der LdF mit der Übermittlung beauftragt. */
+  readonly fernmelder: string;
 }
 
 function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
   return {
     zeit: datumZeitGruppe(new Date()),
     handzeichen: p.handzeichen,
-    mittel: p.zeile.befoerderung?.mittel ?? p.zeile.uebermittlungswunsch ?? "FUNK",
-    gegenstelle: p.zeile.gegenstelle ?? p.zeile.anschrift,
+    mittel: p.zeile.befoerderung?.mittel ?? p.zeile.vorschlag?.mittel ?? p.zeile.uebermittlungswunsch ?? "FUNK",
+    gegenstelle: p.zeile.gegenstelle ?? p.zeile.vorschlag?.gegenstelle ?? p.zeile.anschrift,
+    fernmelder: p.zeile.vorschlag?.fernmelder ?? "",
     nummer: String(p.zeile.nummer ?? p.naechsteNummer ?? ""),
   };
 }
@@ -72,6 +75,10 @@ export function fmzEntwurf(schritt: Fmzschritt, zeile: Nachrichtenzeile, e: Eing
   if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
   if (e.handzeichen.trim() === "") return "Handzeichen eintragen";
   if (schritt === "annahme") return nachrichtAnnehmen(zeile.id, zeile.annahme ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+  if (schritt === "vorschlag") {
+    if (e.fernmelder.trim() === "") return "Fernmelder wählen";
+    return nachrichtVorschlagen(zeile.id, zeile.vorschlag ?? null, { mittel: e.mittel, zeitpunkt, handzeichen: e.handzeichen, fernmelder: e.fernmelder, gegenstelle: e.gegenstelle });
+  }
   if (schritt === "befoerderung") {
     const vorher = zeile.befoerderung === undefined ? null : { ...zeile.befoerderung, ...(zeile.gegenstelle === undefined ? {} : { gegenstelle: zeile.gegenstelle }) };
     return nachrichtBefoerdern(zeile.id, vorher, { mittel: e.mittel, zeitpunkt, handzeichen: e.handzeichen, gegenstelle: e.gegenstelle }, kontaktEinheitId);
@@ -95,9 +102,24 @@ export function gegenstelleTreffer(gegenstellen: readonly Gegenstelle[], eingabe
   return gesucht === "" ? undefined : gegenstellen.find((g) => g.name.toLocaleLowerCase("de") === gesucht);
 }
 
-function Beforderungsfelder({ e, setze, wahl }: { readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly wahl: Gegenstellenwahl }): React.JSX.Element {
+function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmzschritt; readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly wahl: Gegenstellenwahl }): React.JSX.Element {
   return (
     <>
+      {schritt === "vorschlag" && (
+        <div className="vordruckzeile">
+          <label>
+            Fernmelder
+            <select value={e.fernmelder} onChange={(ev) => setze("fernmelder", ev.target.value)}>
+              <option value="">— wählen —</option>
+              {FERNMELDER_STANDARD.map((fm) => (
+                <option key={fm} value={fm}>
+                  {fm}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <div className="vordruckzeile">
         <label>
           Mittel
@@ -119,7 +141,7 @@ function Beforderungsfelder({ e, setze, wahl }: { readonly e: Eingaben; readonly
           </datalist>
         </label>
       </div>
-      {wahl.treffer !== undefined && e.mittel === "FUNK" && (
+      {schritt === "befoerderung" && wahl.treffer !== undefined && e.mittel === "FUNK" && (
         <label className="kaestchen">
           <input type="checkbox" checked={wahl.kontakt} onChange={(ev) => wahl.aufKontakt(ev.target.checked)} />
           Kontakt mit „{wahl.treffer.name}“ im Funkplan vermerken
@@ -130,7 +152,7 @@ function Beforderungsfelder({ e, setze, wahl }: { readonly e: Eingaben; readonly
 }
 
 function Zusatzfelder({ schritt, e, setze, warnung, wahl }: { readonly schritt: Fmzschritt; readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly warnung: string | undefined; readonly wahl: Gegenstellenwahl }): React.JSX.Element | null {
-  if (schritt === "befoerderung") return <Beforderungsfelder e={e} setze={setze} wahl={wahl} />;
+  if (schritt === "befoerderung" || schritt === "vorschlag") return <Beforderungsfelder schritt={schritt} e={e} setze={setze} wahl={wahl} />;
   if (schritt !== "nachweis") return null;
   return (
     <>
@@ -185,14 +207,14 @@ export function Fmzmaske(p: FmzmaskeEigenschaften): React.JSX.Element {
       aufBestaetigen={schreibe}
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
-      {p.schritt === "befoerderung" && (
+      {(p.schritt === "befoerderung" || p.schritt === "vorschlag") && (
         <div className="vordruck">
           <FmzTeil zeile={p.zeile} />
           <NachrichtenteilAnzeige zeile={p.zeile} />
         </div>
       )}
       <div className="vordruckzeile">
-        <Dtgfeld beschriftung={p.schritt === "befoerderung" ? "Datum/Uhrzeit" : "Uhrzeit"} wert={e.zeit} aufAenderung={(wert) => setze("zeit", wert)} />
+        <Dtgfeld beschriftung={p.schritt === "befoerderung" || p.schritt === "vorschlag" ? "Datum/Uhrzeit" : "Uhrzeit"} wert={e.zeit} aufAenderung={(wert) => setze("zeit", wert)} />
         <label>
           Handzeichen
           <input value={e.handzeichen} maxLength={20} onChange={(ev) => setze("handzeichen", ev.target.value)} />

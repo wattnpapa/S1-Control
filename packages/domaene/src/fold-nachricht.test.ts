@@ -60,10 +60,10 @@ function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
 }
 
 describe("Die Nachricht im Katalog", () => {
-  it("steht auf Fassung 10 und führt die Arten nach §9", () => {
-    expect(FOLD_VERSION).toBe(10);
+  it("steht auf Fassung 11 und führt die Arten nach §9", () => {
+    expect(FOLD_VERSION).toBe(11);
     expect(KATALOG.get("NachrichtVerfasst")).toMatchObject({ form: "b", entitaet: "nachricht", idFeld: "nachrichtId", ohneUndo: true });
-    for (const [typ, pfad] of [["NachrichtAngenommen", "annahme"], ["NachrichtBefoerdert", "befoerderung"], ["NachrichtNachgewiesen", "nachweis"], ["NachrichtGesichtet", "sichtung"], ["NachrichtVermerkt", "vermerke"]] as const) {
+    for (const [typ, pfad] of [["NachrichtAngenommen", "annahme"], ["NachrichtUebermittlungVorgeschlagen", "vorschlag"], ["NachrichtBefoerdert", "befoerderung"], ["NachrichtNachgewiesen", "nachweis"], ["NachrichtGesichtet", "sichtung"], ["NachrichtVermerkt", "vermerke"]] as const) {
       expect(KATALOG.get(typ)).toMatchObject({ form: "a", feld: { art: "fest", pfad }, gegenereignis: typ });
     }
     expect(KATALOG.get("NachrichtKenntnisGenommen")).toMatchObject({ feld: { art: "ausNutzlast", schluessel: "stelle", praefix: "kenntnis" }, ohneUndo: true });

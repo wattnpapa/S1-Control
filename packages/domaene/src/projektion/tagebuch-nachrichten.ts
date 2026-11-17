@@ -23,6 +23,7 @@ const STELLE_WORT: Readonly<Record<string, string>> = {
   VERBINDUNGSSTELLE: "Verbindungsstelle",
   SICHTER: "Sichter",
   FMZ: "FmZ",
+  LDF: "LdF",
 };
 const KOPIE_WORT: Readonly<Record<string, string>> = { ROT: "rot", GRUEN: "grün", BLAU: "blau" };
 const MITTEL_WORT: Readonly<Record<string, string>> = {
@@ -132,6 +133,13 @@ function befoerderungsteil(neu: unknown): string {
   return klammer([mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `an ${gegen}`, handzeichenteil(neu)]);
 }
 
+function vorschlagsteil(neu: unknown): string {
+  const fm = text(objekt(neu)?.["fernmelder"]);
+  const mittel = text(objekt(neu)?.["mittel"]);
+  const gegen = text(objekt(neu)?.["gegenstelle"]);
+  return klammer([fm === undefined ? "" : `durch ${fm}`, mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `an ${gegen}`, handzeichenteil(neu)]);
+}
+
 /** Ein Vermerk der FmZ oder des Sichters; `null` als Wert ist die Rücknahme auf „leer“. */
 function vermerk(gesetzt: (neu: unknown) => string, geloescht: string): (e: EingehendesEreignis) => string {
   return (e) => (e.neu === null || e.neu === undefined ? geloescht : gesetzt(e.neu));
@@ -145,6 +153,7 @@ function stelleAus(e: EingehendesEreignis): string {
 const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtVerfasst: (e) => verfasstVerb(nutzlast(e)),
   NachrichtAngenommen: vermerk((neu) => `angenommen${klammer([handzeichenteil(neu)])}`, "Annahmevermerk gelöscht"),
+  NachrichtUebermittlungVorgeschlagen: vermerk((neu) => `Übermittlung vorgeschlagen${vorschlagsteil(neu)}`, "Übermittlungsvorschlag gelöscht"),
   NachrichtBefoerdert: vermerk((neu) => `befördert${befoerderungsteil(neu)}`, "Beförderungsvermerk gelöscht"),
   NachrichtNachgewiesen: vermerk((neu) => `nachgewiesen${klammer([handzeichenteil(neu)])}`, "Nachweis gelöscht"),
   NachrichtGesichtet: vermerk(

@@ -77,6 +77,21 @@ function lage(): EingehendesEreignis[] {
 const ids = (zustandDerLage: Zustand, anfrage: Parameters<typeof nachrichtenausschnitt>[1]): string[] =>
   nachrichtenausschnitt(zustandDerLage, anfrage).zeilen.map((z) => z.id);
 
+describe("Der Übermittlungsvorschlag des LdF", () => {
+  it("steht an der Zeile, im Tagebuch und ändert den Laufzustand nicht", () => {
+    const vorschlag = { mittel: "FUNK", fernmelder: "Fm2", gegenstelle: "Kreis OL", zeitpunkt: um(2), handzeichen: "LDF" };
+    const z = zustand([...lage(), vermerk("NachrichtUebermittlungVorgeschlagen", "A1", vorschlag)]);
+    const zeile = nachrichtenausschnitt(z, { sicht: "fmz" }).zeilen.find((r) => r.id === "A1");
+    expect(zeile?.vorschlag).toEqual(vorschlag);
+    expect(zeile?.laufzustand).toBe("VOR_FMZ");
+  });
+
+  it("fehlt in der Zeile, wenn der Wert nicht zum Schema passt", () => {
+    const z = zustand([...lage(), vermerk("NachrichtUebermittlungVorgeschlagen", "A1", { mittel: "FUNK" })]);
+    expect(nachrichtenausschnitt(z, { sicht: "fmz" }).zeilen.find((r) => r.id === "A1")?.vorschlag).toBeUndefined();
+  });
+});
+
 describe("Die Sichten", () => {
   it("Posteingang: nur, was eine eigene Stelle im Verteiler hat, Sofort vor einfach, mit Kopiefarbe und Marken", () => {
     const z = zustand(lage());
