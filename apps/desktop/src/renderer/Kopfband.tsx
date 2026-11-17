@@ -31,6 +31,7 @@ import { Fenstermenue } from "./Fenstermenue.js";
 import { taktischeZeit } from "./formate.js";
 import { Reiterzeile } from "./Reiterzeile.js";
 import { Staerkekennzahl } from "./Staerkekennzahl.js";
+import { ThwEmblem } from "./ThwEmblem.js";
 import { Zustandsmarke, abschlussText } from "./Zustandsmarke.js";
 
 export interface KopfbandEigenschaften {
@@ -112,7 +113,7 @@ export function Kopfband({
     <header className="kopfband">
       <div className="zeile">
         <span className="marke" aria-hidden="true">
-          THW
+          <ThwEmblem />
         </span>
         <Einsatztitel lagebild={lagebild} />
 
