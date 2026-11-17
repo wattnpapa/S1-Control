@@ -14,7 +14,7 @@
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { dtg, kopieklasse, stellenname } from "./nachrichtenformate.js";
-import { TEXT_NICHT_UEBERMITTELT, TITEL_QUITTUNG_GEGENSTELLE, istAusgang } from "./nachrichtenvermerke.js";
+import { istAusgang } from "./nachrichtenvermerke.js";
 
 /** Ein Kästchen des Vordrucks als Anzeige — Kreuz und Wort, nicht nur Farbe. */
 export function Kaestchen({ an, text }: { readonly an: boolean; readonly text: string }): React.JSX.Element {
@@ -58,7 +58,7 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <Wert titel="Annahme (FmZ)" wert={vermerk(zeile?.annahme)} />
       <Wert titel="Vorschlag LdF" wert={vorschlagText(zeile)} />
       {zeile !== undefined && istAusgang(zeile) ? (
-        <Wert titel={TITEL_QUITTUNG_GEGENSTELLE} wert={vermerk(zeile.befoerderung) ?? TEXT_NICHT_UEBERMITTELT} />
+        <Wert titel={projektion.TITEL_QUITTUNG_GEGENSTELLE} wert={vermerk(zeile.befoerderung) ?? projektion.TEXT_NICHT_UEBERMITTELT} />
       ) : (
         <Wert titel="Beförderung" wert={vermerk(zeile?.befoerderung)} />
       )}

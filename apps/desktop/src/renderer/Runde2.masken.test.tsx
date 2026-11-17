@@ -17,7 +17,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf, Lagebild } from "../kontrakt/index.js";
 import { eingangVorlage } from "./fmzformate.js";
@@ -50,8 +50,15 @@ const AUSGANG: Nachrichtenzeile = {
   laufzustand: "VOR_FMZ",
   verteiler: [],
   annahme: { zeitpunkt: "2026-11-17T16:10:00.000Z", handzeichen: "Fm" },
+  // Der Wortlaut kommt aus Ring 2 (`fmzVermerkText`), nicht aus dem Renderer.
+  fmzVermerkText: projektion.fmzVermerkTextAus(undefined, { zeitpunkt: "2026-11-17T16:10:00.000Z", handzeichen: "Fm" }, undefined, true) as string,
 };
-const BEFOERDERT: Nachrichtenzeile = { ...AUSGANG, befoerderung: { mittel: "TELEFON", zeitpunkt: "2026-11-17T16:20:00.000Z", handzeichen: "Ha" } };
+const BEFOERDERUNG = { mittel: "TELEFON", zeitpunkt: "2026-11-17T16:20:00.000Z", handzeichen: "Ha" };
+const BEFOERDERT: Nachrichtenzeile = {
+  ...AUSGANG,
+  befoerderung: BEFOERDERUNG,
+  fmzVermerkText: projektion.fmzVermerkTextAus(undefined, AUSGANG.annahme, BEFOERDERUNG, true) as string,
+};
 
 function sitzung(stellen: readonly string[], teile: Partial<Lagebild> = {}): void {
   useLaden.setState({ lagebild: { ...NACHRICHTEN_LAGEBILD, peers: [], sitzung: { stellen: [...stellen], handzeichen: "Fm" }, ...teile } });

@@ -8,7 +8,7 @@
 import { cleanup, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { anzeigezoneWandzeit, type Nachrichtenzeile } from "@s1/domaene";
+import { anzeigezoneWandzeit, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf, Lagebild } from "../kontrakt/index.js";
 import { TEXT_ANNAHME_MIT } from "./Befoerderungszusatz.js";
@@ -276,9 +276,12 @@ describe("LdF P1-3, SGL P0-1, P2-8: Listen", () => {
 
   it("baut den Stand des Ausgangs aus den Vermerken und nennt die Kopiefarbe als Wort", () => {
     const befoerdert = { ...AUSGANG, annahme: { zeitpunkt: "2026-11-17T12:20:00.000Z", handzeichen: "Fm" }, befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-17T12:21:00.000Z", handzeichen: "Fm" } };
-    // R2-FaBe P0-2: Die Annahme ist die der FmZ, die Beförderungszeit die Quittung der Gegenstelle; der Satz gilt auch neben `fmzVermerkText`.
-    expect(ausgangsstand(befoerdert)).toBe("angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)");
-    expect(ausgangsstand({ ...befoerdert, fmzVermerkText: "aus Ring 2" } as Nachrichtenzeile)).toBe("angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)");
+    // R2-FaBe P0-2: Die Annahme ist die der FmZ, die Beförderungszeit die Quittung der Gegenstelle; der Satz stammt aus `fmzVermerkText` (Ring 2).
+    expect(ausgangsstand(befoerdert)).toBe("noch nicht übermittelt");
+    // Der Satz kommt aus Ring 2; ohne ihn fiele die Liste auf „noch nicht übermittelt“ zurück.
+    expect(ausgangsstand({ ...befoerdert, fmzVermerkText: projektion.fmzVermerkTextAus(undefined, befoerdert.annahme, befoerdert.befoerderung, true) } as Nachrichtenzeile)).toBe(
+      "angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)",
+    );
     expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ");
     expect(kopiewort("GRUEN")).toBe("grün: bearbeiten");
     expect(kopiewort("BLAU")).toBe("blau: Kenntnis");
