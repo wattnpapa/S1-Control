@@ -87,6 +87,11 @@ linux:
     - deb
     - AppImage
   category: Utility
+  # Das deb-Paket verlangt einen Maintainer mit E-Mail und eine Homepage
+  # (electron-builder FpmTarget); ohne beides brach „Tor 5 — Pakete bauen“
+  # auf Linux ab. Die Homepage steht in package.json.
+  maintainer: Johannes Rudolph <johannes.rudolph@thw-oldenburg.de>
+  vendor: THW Ortsverband Oldenburg
   desktop:
     entry:
       Name: S1-Control
