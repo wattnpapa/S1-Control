@@ -32,7 +32,14 @@ function Bedarfstabelle(props: {
   readonly nurLesen: boolean;
 }): React.JSX.Element {
   const { bedarf } = props;
-  if (bedarf.zeilen.length === 0) return <p className="hinweistext">Keine Einheit meldet Übernachtungsbedarf.</p>;
+  if (bedarf.zeilen.length === 0) {
+    return (
+      <p className="hinweistext">
+        Keine Einheit meldet Übernachtungsbedarf. Einheiten ohne gemeldeten Bedarf lassen sich an der Unterkunftskarte
+        über „Einheit zuweisen“ unterbringen.
+      </p>
+    );
+  }
   return (
     <table className="versorgungstabelle" aria-label="Übernachtungsbedarf">
       <thead>
@@ -58,7 +65,7 @@ function Bedarfstabelle(props: {
             <td className="zahl">{z.w}</td>
             <td className="zahl">{z.d}</td>
             <td className="trenner">{z.ruhezeit ? "ja" : "—"}</td>
-            <Zuweisungszelle zeile={z} karten={props.karten} nurLesen={props.nurLesen} />
+            <Zuweisungszelle key={z.unterkunftId ?? ""} zeile={z} karten={props.karten} nurLesen={props.nurLesen} />
             <td>
               <Zustandsmarke z={z} />
             </td>
@@ -106,7 +113,7 @@ export function VersorgungUnterbringung({
             </button>
           </p>
         )}
-        <Unterkunftskarten karten={belegung.unterkuenfte} nurLesen={nurLesen} aufAendern={(k) => setzeMaske({ unterkunft: k })} />
+        <Unterkunftskarten karten={belegung.unterkuenfte} bedarf={bedarf} nurLesen={nurLesen} aufAendern={(k) => setzeMaske({ unterkunft: k })} />
         <p className="hinweistext">
           Eine Zuweisung über die Kapazität wird nicht verweigert, sondern an der Karte mit „⚠ überbelegt“ gezeigt.
           Kapazität ist eine Zahl für alle (Entscheidung 2).
@@ -123,8 +130,9 @@ export function VersorgungUnterbringung({
         <Bedarfstabelle bedarf={bedarf} karten={belegung.unterkuenfte} nurLesen={nurLesen} />
         <p className="hinweistext">
           Bedarf (K6): „Unterbringung ja“ aus dem Bogen, Köpfe nach m/w/d aus den Personen oder dem Override der
-          Einheit. Doppelklick auf „Unterkunft“ wählt die Unterkunft, Enter schreibt, Esc verwirft. Rückgängig nimmt
-          die Zuweisung zurück.
+          Einheit. Unterkunft in der Spalte „Unterkunft“ wählen und mit „Zuweisen“ (oder Enter) übernehmen, Esc
+          verwirft die Wahl. Rückgängig nimmt die Zuweisung zurück.
+          {belegung.unterkuenfte.every((k) => k.aufgeloest) && " Zuerst links eine Unterkunft anlegen."}
         </p>
       </section>
       {maske !== undefined && (

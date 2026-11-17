@@ -147,6 +147,7 @@ export const BEISPIEL_ANSICHT: Versorgungsansicht = {
         { einheitId: "E1", einheit: "2. Zug FF Rastede", bereich: "EA 1 Deich Nord", schicht: "NACHT", m: 14, w: 2, d: 0, ruhezeit: true, anmarsch: false, zustand: "ZUGEWIESEN", unterkunftId: "U1", unterkunft: "Turnhalle BBS Haarentor" },
         { einheitId: "Z1", einheit: "2. Zug FF Hude", bereich: "Anmarsch", schicht: "TAG", m: 18, w: 4, d: 0, ruhezeit: false, anmarsch: true, zustand: "OHNE_UNTERKUNFT" },
       ],
+      ohneBedarf: [{ einheitId: "G1", einheit: "FGr WP Cloppenburg", bereich: "EA 2 Pumpen Süd", koepfe: 14, anmarsch: false }],
       summe: { m: 14, w: 2, d: 0, gesamt: 16, einheiten: 1 },
       anmarsch: { m: 18, w: 4, d: 0, gesamt: 22, einheiten: 1 },
     },
