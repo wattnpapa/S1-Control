@@ -22,7 +22,7 @@
 
 import path from "node:path";
 
-import { nachrichtendateiname, type Ausgabekopf } from "@s1/ausgaben";
+import { handzeichenverzeichnisAlsHtml, nachrichtendateiname, type Ausgabekopf } from "@s1/ausgaben";
 import { projektion, type EingehendesEreignis, type Zustand } from "@s1/domaene";
 import type { Dateisystem } from "@s1/speicher";
 
@@ -42,17 +42,30 @@ export interface Beilagenergebnis {
   readonly vorhanden: number;
   /** Beilagen, die nicht geschrieben werden konnten. */
   readonly fehlgeschlagen: number;
+  /**
+   * Additiv (R2-ETB P2-1): Vordrucke zurückgezogener Nachrichten, die vor dem
+   * Packen mit Stempel neu geschrieben wurden — auch wenn schon ein PDF lag.
+   */
+  readonly gestempelt?: number;
 }
 
-/** Legt die fehlenden Vordruck-PDFs aller nicht zurückgezogenen Nachrichten ab. */
+/**
+ * Legt die fehlenden Vordruck-PDFs aller nicht zurückgezogenen Nachrichten ab.
+ *
+ * Additiv (R2-ETB P2-1): Eine zurückgezogene Nachricht bekommt ihren Vordruck
+ * **immer neu**, mit dem Stempel „ZURÜCKGEZOGEN“, Zeit und Grund — auch wenn
+ * schon ein PDF unter demselben Namen lag. Die Akte übernahm sonst das PDF
+ * von vor dem Zurückziehen, ohne Stempel, als gültigen Vordruck.
+ */
 export async function legeFehlendeVordrucke(ziel: Beilagenziel, zustand: Zustand, bezug?: projektion.Tagebuchbezug): Promise<Beilagenergebnis> {
   const ordner = path.join(ziel.ausgabenordner, ORDNER_NACHRICHTEN);
-  const alle = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen.filter((z) => !z.zurueckgezogen);
+  const alle = projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen;
   // Additiv (ETB P1-2): mit ETB-Nummer in Feld 20, wo der Aufrufer die Ereignisse hat.
   const zeilen = bezug === undefined ? alle : projektion.mitTagebuchbezug(alle, bezug);
   let erzeugt = 0;
   let vorhanden = 0;
   let fehlgeschlagen = 0;
+  let gestempelt = 0;
   if (zeilen.length === 0) return { erzeugt, vorhanden, fehlgeschlagen };
   await ziel.dateisystem.legeVerzeichnisAn(ordner);
   // `existiert` fragt nach Verzeichnissen; die Dateien stehen in der Liste des Ordners.
@@ -60,17 +73,18 @@ export async function legeFehlendeVordrucke(ziel: Beilagenziel, zustand: Zustand
   for (const zeile of zeilen) {
     const name = nachrichtendateiname(zeile);
     try {
-      if (liegen.has(name)) {
+      if (liegen.has(name) && !zeile.zurueckgezogen) {
         vorhanden += 1;
         continue;
       }
       await ziel.dateisystem.schreibeUeberOhneSync(path.join(ordner, name), vordruckDerZeile(zeile, zustand, "a5").bytes);
-      erzeugt += 1;
+      if (zeile.zurueckgezogen) gestempelt += 1;
+      else erzeugt += 1;
     } catch {
       fehlgeschlagen += 1;
     }
   }
-  return { erzeugt, vorhanden, fehlgeschlagen };
+  return { erzeugt, vorhanden, fehlgeschlagen, ...(gestempelt === 0 ? {} : { gestempelt }) };
 }
 
 /** Legt die Nachweisung als HTML in `ausgaben`; `false`, wenn das Schreiben scheiterte. */
@@ -86,6 +100,25 @@ export async function legeNachweisungBei(
     const { dateiname, html } = nachweisungsausgabe(zustand, kopf, marke, { ereignisse });
     await ziel.dateisystem.legeVerzeichnisAn(ziel.ausgabenordner);
     await ziel.dateisystem.schreibeUeberOhneSync(path.join(ziel.ausgabenordner, `${dateiname}.html`), new TextEncoder().encode(html));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Legt das Handzeichenverzeichnis als HTML in `ausgaben` (R2-ETB P2-7):
+ * Handzeichen → Arbeitsplatz, Stelle, erster und letzter Eintrag, aus den
+ * Ereignissen. `false`, wenn das Schreiben scheiterte; ohne Handzeichen im
+ * Einsatz wird nichts gelegt (`true`).
+ */
+export async function legeHandzeichenverzeichnisBei(ziel: Beilagenziel, kopf: Ausgabekopf, marke: string, ereignisse: readonly EingehendesEreignis[]): Promise<boolean> {
+  const eintraege = projektion.handzeichenverzeichnis(ereignisse);
+  if (eintraege.length === 0) return true;
+  try {
+    await ziel.dateisystem.legeVerzeichnisAn(ziel.ausgabenordner);
+    const html = handzeichenverzeichnisAlsHtml(kopf, eintraege);
+    await ziel.dateisystem.schreibeUeberOhneSync(path.join(ziel.ausgabenordner, `handzeichen_${marke}.html`), new TextEncoder().encode(html));
     return true;
   } catch {
     return false;

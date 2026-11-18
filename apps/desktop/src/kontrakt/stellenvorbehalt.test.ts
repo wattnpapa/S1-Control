@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 
 import { nachrichtAufnehmen } from "./fmzschritte.js";
 import { nachrichtSichten, nachrichtVerfassen } from "./nachrichtenschritte.js";
-import { STELLE_FMZ, STELLE_SICHTER, istErsatzsichter, stellenvorbehalt, vorbehaltsgrund } from "./stellenvorbehalt.js";
+import { STELLE_FMZ, STELLE_SICHTER, TEXT_VORBEHALT_NACHTRAG, istErsatzsichter, stelleDesSchritts, stellenvorbehalt, vorbehaltsgrund, vorbehaltstextFuer } from "./stellenvorbehalt.js";
 
 const sichten = nachrichtSichten("N1", null, { zeitpunkt: "2026-11-17T19:00:00Z", handzeichen: "X", verteiler: [] });
 const ausgang = { nachrichtId: "N1", richtung: "AUSGANG" as const, anschrift: "OV", betreff: "B", inhalt: "I", absender: "S3" };
@@ -39,5 +39,27 @@ describe("stellenvorbehalt", () => {
     expect(vorbehaltsgrund({ stelle: STELLE_FMZ }, ["S3", "S4"])).toBe("Eintrag durch S3, S4, nicht FmZ");
     expect(vorbehaltsgrund({ stelle: STELLE_SICHTER }, [])).toBe("Eintrag durch Arbeitsplatz ohne Stelle, nicht Sichter");
     expect(istErsatzsichter({ stellen: ["FMZ", "SICHTER"], sichterBesetzt: false })).toBe(false);
+  });
+
+  it("nennt je Schritt Stelle, Felder und Ausweg (R2-FaBe P2-7, R2-LdF P3-1)", () => {
+    expect(vorbehaltstextFuer("sichtung")).toMatch(/^Das Sichten ist dem Sichter vorbehalten \(Vordruck, Felder 18 bis 20\)\. Dieser Arbeitsplatz ist nicht als Sichter eingetragen\./u);
+    for (const schritt of ["annahme", "befoerderung", "nachweis", "aufnahme"] as const) {
+      expect(vorbehaltstextFuer(schritt)).toContain("der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6)");
+    }
+    for (const schritt of ["vorschlag", "weitergabe"] as const) {
+      expect(vorbehaltstextFuer(schritt)).toContain("dem Leiter des Fernmeldebetriebes vorbehalten");
+      expect(stelleDesSchritts(schritt)).toBe("LDF");
+    }
+    expect(vorbehaltstextFuer("annahme")).toContain("„Trotzdem“");
+    const nachtrag = nachrichtAufnehmen(ausgang, { nachweis: { nummer: 3, zeitpunkt: "2026-11-17T19:00:00Z", handzeichen: "Fm" }, nachtrag: true });
+    expect(stellenvorbehalt(nachtrag, { stellen: ["S3"], sichterBesetzt: true })?.meldung).toBe(TEXT_VORBEHALT_NACHTRAG);
+  });
+
+  it("lässt FmZ und LdF am besetzten, aber säumigen Sichter vorbei sichten (R2-FM P2-5, R2-Si P2-2)", () => {
+    expect(istErsatzsichter({ stellen: ["FMZ"], sichterBesetzt: true })).toBe(false);
+    expect(istErsatzsichter({ stellen: ["FMZ"], sichterBesetzt: true, sichterSaeumig: true })).toBe(true);
+    expect(stellenvorbehalt(sichten, { stellen: ["LDF"], sichterBesetzt: true, sichterSaeumig: true })).toBeUndefined();
+    // Eine Stelle ohne FmZ und LdF bleibt beim Vorbehalt, auch wenn der Sichter säumig ist.
+    expect(stellenvorbehalt(sichten, { stellen: ["S3"], sichterBesetzt: true, sichterSaeumig: true })?.stelle).toBe(STELLE_SICHTER);
   });
 });

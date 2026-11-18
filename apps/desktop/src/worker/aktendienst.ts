@@ -32,6 +32,7 @@ import {
   KATALOG,
   grundPasst,
   Undostapel,
+  obersteGruppe,
   falteHinzu,
   hlcAlsText,
   kennzahlen,
@@ -136,6 +137,9 @@ import { dateimarke } from "./dateimarke.js";
 import { LISTENAUSGABEN, funkplanausgabe, listenausgabe, nachweisungsausgabe, tagebuchHtml, type Listenausgabe } from "./listenausgaben.js";
 import { funkFuerLagebild, funkplanansicht, tabellenauswahl } from "./funkplanprojektion.js";
 import { gegenstandMitBetreff } from "./nachrichtengegenstand.js";
+import { Undoanzeige, alsFolgeschritt, istGruppe, nimmGruppeZurueck, undoTiefe } from "./undogruppe.js";
+import { abweichungshinweis, mitWegmarken } from "./wegmarken.js";
+import { abschlussvermerkEntwurf, mitAbschlussangaben } from "./abschlussvermerk.js";
 import {
   archivierungsentwurf,
   archivierungszeitFehler,
@@ -146,7 +150,7 @@ import { pruefeAnlagenamen } from "./anlagenamenpruefung.js";
 import { buendelUrsachen } from "./buendelablehnung.js";
 import type { Nachrichtenfolgeumfeld } from "./nachrichtenfolgen.js";
 import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
-import { eigeneGespraechsnotiz, istNachtrag, mitSitzungsangaben, vorbehaltsergebnis } from "./sitzungsangaben.js";
+import { eigeneGespraechsnotiz, istNachtrag, mitSitzungsangaben, sichterSaeumig, vorbehaltsergebnis } from "./sitzungsangaben.js";
 import type { Vorbehaltsumfeld } from "../kontrakt/stellenvorbehalt.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
@@ -158,10 +162,12 @@ import { pruefeGegenZustand } from "./zustandspruefung.js";
 import { pruefeEinheitsteil } from "./einheitsteilpruefung.js";
 import { pruefeVersorgung } from "./versorgungspruefung.js";
 import { pruefeFunk } from "./funkpruefung.js";
-import { legeFehlendeVordrucke, legeNachweisungBei } from "./aktenbeilagen.js";
+import { legeFehlendeVordrucke, legeHandzeichenverzeichnisBei, legeNachweisungBei } from "./aktenbeilagen.js";
 import {
   Vorrangwaechter,
   besetzteStellen,
+  fernmelderAusPraesenz,
+  konflikthinweiseFuerLagebild,
   mitNachrichtenparametern,
   nachrichtenansicht,
   nachrichtenFuerLagebild,
@@ -313,6 +319,7 @@ export class Aktendienst {
   #faltung: Faltung = leereFaltung();
   #zustand: Zustand = materialisiere(leereFaltung());
   #stapel: Undostapel;
+  readonly #undoanzeige = new Undoanzeige();
 
   /** Die hoechste gesehene HLC — der „Stand“, den die Statuszeile nennt. */
   #hoechsteHlc: Hlc | undefined;
@@ -819,13 +826,19 @@ export class Aktendienst {
     const vorbehalt = vorbehaltsergebnis(roh, sitzungsumfeld);
     if (vorbehalt !== undefined) return vorbehalt;
     const nachtrag = istNachtrag(roh);
-    const entwurf = mitSitzungsangaben(roh, sitzungsumfeld, nachtrag);
+    // R2-LdF P2-1, P2-2: Beförderung ohne Vorschlag des besetzten LdF oder abweichend davon — Marke in der Nutzlast.
+    const ldf = ldfBesetzt(this.#sitzung?.stellen, this.#peers);
+    const entwurf = mitAbschlussangaben(mitWegmarken(this.#zustand, mitSitzungsangaben(roh, sitzungsumfeld, nachtrag), ldf), this.#sitzung);
     const plan = planeFolgen(this.#zustand, entwurf, this.#folgeumfeld());
+    // R2-LdF P2-7, R2-ETB P2-2: die offenen Nachrichten ins Tagebuch, unmittelbar vor dem Einsatzende.
+    const vorschritt = await this.#schreibeAbschlussvermerk(entwurf);
     const ergebnis = await this.#schreibe(entwurf);
     if (ergebnis.art !== "geschrieben") return ergebnis;
-    const vorab = [...plan.hinweise];
+    const vorab = [...vorschritt, ...plan.hinweise, ...[abweichungshinweis(entwurf)].filter((t): t is string => t !== undefined)];
+    // R2-LdF P2-8: Folgeschritte tragen den Hauptschritt (`folgeVon`), „Rückgängig“ nimmt sie mit ihm zurück.
+    const alsFolge = <T extends Ereignisentwurf>(e: T): T => alsFolgeschritt(e, entwurf, ergebnis.ereignisId);
     for (const geplant of plan.folgen) {
-      const folge = { ...geplant, entwurf: mitSitzungsangaben(geplant.entwurf, sitzungsumfeld, nachtrag) };
+      const folge = { ...geplant, entwurf: alsFolge(mitWegmarken(this.#zustand, mitSitzungsangaben(geplant.entwurf, sitzungsumfeld, nachtrag), ldf)) };
       // Fernmelder P2-9: Die Beförderung des Papier-Nachtrags plant ihre eigenen Folgen gegen den jetzt geltenden Zustand.
       const nachplan = folge.mitFolgen === true ? planeFolgen(this.#zustand, folge.entwurf, this.#folgeumfeld()) : undefined;
       const folgeErgebnis = await this.#schreibe(folge.entwurf);
@@ -833,13 +846,22 @@ export class Aktendienst {
       if (folgeErgebnis.art !== "geschrieben" || nachplan === undefined) continue;
       vorab.push(...nachplan.hinweise);
       for (const weitere of nachplan.folgen) {
-        const ergebnisWeitere = await this.#schreibe(mitSitzungsangaben(weitere.entwurf, sitzungsumfeld, nachtrag));
+        const ergebnisWeitere = await this.#schreibe(alsFolge(mitSitzungsangaben(weitere.entwurf, sitzungsumfeld, nachtrag)));
         vorab.push(ergebnisWeitere.art === "geschrieben" ? weitere.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(ergebnisWeitere)}`);
       }
     }
     const bereich = anwesendBereichshinweis(this.#zustand, entwurf);
     if (bereich !== undefined) vorab.push(bereich);
     return { ...ergebnis, ...schreibhinweise(this.#zustand, entwurf, vorab) };
+  }
+
+  /** Der Abschlussvermerk vor `EinsatzBeendet` (`abschlussvermerk.ts`) — nur, wenn das Einsatzende die Prüfung besteht. */
+  async #schreibeAbschlussvermerk(entwurf: Ereignisentwurf): Promise<readonly string[]> {
+    if (entwurf.typ !== "EinsatzBeendet" || pruefeAbschluss(this.#zustand, entwurf) !== undefined) return [];
+    const vermerk = abschlussvermerkEntwurf(this.#zustand, entwurf, this.#sitzung);
+    if (vermerk === undefined) return [];
+    const ergebnis = await this.#schreibe(vermerk);
+    return ergebnis.art === "geschrieben" ? ["Offene Nachrichten im Tagebuch vermerkt."] : [`Vermerk der offenen Nachrichten nicht möglich: ${this.#meldungVon(ergebnis)}`];
   }
 
   /** Stellen der Sitzung und Sichter in der Präsenz für den Stellenvorbehalt; ohne Sitzung keiner. */
@@ -849,6 +871,10 @@ export class Aktendienst {
       stellen: this.#sitzung.stellen,
       sichterBesetzt: sichterBesetzt(this.#sitzung.stellen, this.#peers),
       eigeneGespraechsnotiz: eigeneGespraechsnotiz(this.#zustand, entwurf, this.#clientId),
+      // Additiv (R2-FM P2-5): über der Schwelle des Vorrangs gilt die Ersatzregel auch bei besetztem Sichter.
+      sichterSaeumig: sichterSaeumig(this.#zustand, entwurf, this.#o.zeit()),
+      // Additiv (ETB P1-7): das Handzeichen für Erledigung und Zurückziehen.
+      ...(this.#sitzung.handzeichen === undefined ? {} : { handzeichen: this.#sitzung.handzeichen }),
     };
   }
 
@@ -862,6 +888,8 @@ export class Aktendienst {
       // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
       ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
       s2Besetzt: stelleBesetzt("S2", this.#sitzung?.stellen, this.#peers),
+      // Additiv (R2-SGL P2-1): die Uhr für die Prüfung des Papier-Nachtrags.
+      jetztMs: this.#o.zeit(),
     };
   }
 
@@ -980,6 +1008,11 @@ export class Aktendienst {
     if (oberster === undefined) {
       return { art: "nichtMoeglich", meldung: "Es ist nichts zurückzunehmen." };
     }
+    // R2-LdF P2-8, R2-FM P3-1: ein Bedienschritt mit Folgeschritten als Ganzes, neuestes zuerst.
+    const gruppe = obersteGruppe(this.#stapel.eintraege);
+    if (istGruppe(gruppe)) {
+      return nimmGruppeZurueck(gruppe, { zustand: () => this.#zustand, schreibe: (e) => this.#bedieneMitFolgen(e), ereignis: (id) => this.#ereignisNach(id) }, grund);
+    }
     const kompensation = kompensationFuer(oberster.ereignis, this.#zustand, grund);
     if (kompensation.art === "nichtMoeglich") {
       return { art: "nichtMoeglich", meldung: kompensation.meldung };
@@ -1037,11 +1070,15 @@ export class Aktendienst {
       datum: this.#o.einsatzId.slice(0, 10),
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
       stand: `Stand: ${standText(jetzt)}`,
+      // R2-ETB P3-2: die Programmfassung im Druckkopf.
+      programmversion: this.#o.programmversion,
       erstelltVon: this.#erstellerText(),
     };
     const vordrucke = await legeFehlendeVordrucke(ziel, this.#zustand, this.#tagebuchbezug());
     const nachweisung = await legeNachweisungBei(ziel, this.#zustand, kopf, dateimarke(jetzt), this.#ereignisse);
-    return { ...vordrucke, fehlgeschlagen: vordrucke.fehlgeschlagen + (nachweisung ? 0 : 1) };
+    // R2-ETB P2-7: Handzeichen → Arbeitsplatz und Stelle, damit die Zeichen der Akte zurückführbar bleiben.
+    const handzeichen = await legeHandzeichenverzeichnisBei(ziel, kopf, dateimarke(jetzt), this.#ereignisse);
+    return { ...vordrucke, fehlgeschlagen: vordrucke.fehlgeschlagen + (nachweisung ? 0 : 1) + (handzeichen ? 0 : 1), handzeichenverzeichnis: handzeichen };
   }
 
   /**
@@ -1057,6 +1094,8 @@ export class Aktendienst {
         datum: this.#o.einsatzId.slice(0, 10),
         einsatzName: alsText(this.#zustand.einsatz?.name.wert),
         stand: `Stand: ${standText(jetzt)}`,
+        // R2-ETB P3-2: die Programmfassung im Druckkopf.
+        programmversion: this.#o.programmversion,
       };
       const html = bildschirmtauglich(tagebuchHtml(this.#zustand, this.#ereignisse, kopf));
       await this.ausgabeSchreiben(`tagebuch_${dateimarke(jetzt)}.html`, new TextEncoder().encode(html));
@@ -1118,6 +1157,9 @@ export class Aktendienst {
       sitzung: this.#sitzung,
       sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
       bezug: this.#tagebuchbezug(),
+      // Additiv (R2-LdF P3-3, P3-4): LdF besetzt? und die Fernmelder aus der Präsenz.
+      ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
+      fernmelder: fernmelderAusPraesenz(this.#sitzung?.stellen, this.#o.anzeigename, this.#peers),
     });
   }
 
@@ -1296,6 +1338,8 @@ export class Aktendienst {
       datum: this.#o.einsatzId.slice(0, 10),
       einsatzName: alsText(this.#zustand.einsatz?.name.wert),
       stand: `Stand: ${standText(jetzt)}`,
+      // R2-ETB P3-2: die Programmfassung im Druckkopf.
+      programmversion: this.#o.programmversion,
     };
     const marke = dateimarke(jetzt);
     if (LISTENAUSGABEN.has(ausgabe)) {
@@ -1393,6 +1437,8 @@ export class Aktendienst {
         datum: this.#o.einsatzId.slice(0, 10),
         einsatzName: alsText(this.#zustand.einsatz?.name.wert),
         stand: `Stand der Lage: ${this.#letzteWanduhr === "" ? "noch keine Meldung" : standText(this.#letzteWanduhr)}`,
+        // R2-ETB P3-2: die Programmfassung im Druckkopf.
+        programmversion: this.#o.programmversion,
       },
       {
         mitStatus: wahl.mitStatus,
@@ -1970,6 +2016,15 @@ export class Aktendienst {
     };
   }
 
+  /** Ein Ereignis nach Id — für den Hauptschritt einer Undo-Gruppe (R2-LdF P2-8). */
+  #ereignisNach(id: string): EingehendesEreignis | undefined {
+    for (let i = this.#ereignisse.length - 1; i >= 0; i -= 1) {
+      const e = this.#ereignisse[i];
+      if (e?.id === id) return e;
+    }
+    return undefined;
+  }
+
   /** Der Stapel, wie die Oberflaeche ihn zeigt (§6 U3). */
   undoStapel(): readonly { id: string; typ: string; wanduhr: string }[] {
     return this.#stapel.eintraege.map((e) => ({ id: e.id, typ: e.typ, wanduhr: e.wanduhr }));
@@ -2122,16 +2177,20 @@ export class Aktendienst {
       staerkeBeendet: ausserhalb.beendet,
       hinweise: zustand.hinweise.length,
       // Additiv (FM P2-6): Art und Pfad der ersten Hinweise, für „Nachricht öffnen“ in der Diagnose.
-      ...(zustand.hinweise.length === 0 ? {} : { konflikthinweise: zustand.hinweise.slice(0, KONFLIKTHINWEISE_MAX).map((h) => ({ art: h.art, feldpfad: h.feldpfad })) }),
+      // Additiv (R2-ETB P2-4, R2-SGL P2-2): an Nachrichten mit Satz (Nummer, Betreff, die beiden Werte).
+      ...(zustand.hinweise.length === 0 ? {} : { konflikthinweise: konflikthinweiseFuerLagebild(zustand, KONFLIKTHINWEISE_MAX) }),
       vokabelkorrekturen: offeneVokabelkorrekturen(zustand),
       unbekannteEreignisse: zustand.unbekannt.length,
-      undoTiefe: this.#stapel.eintraege.length,
+      // R2-LdF P2-8: Bedienschritte, nicht Ereignisse — ein Schritt mit Folgeschritten zählt einmal.
+      undoTiefe: undoTiefe(this.#stapel),
       ...(oberster === undefined
         ? {}
         : {
             undoObersteArt: oberster.typ,
             undoObersteObjekt: gegenstandMitBetreff(zustand, oberster.ereignis),
           }),
+      // Additiv (R2-LdF P2-8, R2-FaBe P2-8): der Schritt als Ganzes und der jüngste nicht rücknehmbare.
+      ...this.#undoanzeige.teil(this.#stapel, { ereignis: (id) => this.#ereignisNach(id) }, (e) => gegenstandMitBetreff(zustand, e)),
       offeneAnforderungen: Object.values(zustand.anforderungen).filter(
         (a) => a.zustand === "OFFEN" || a.zustand === "ZUGESAGT",
       ).length,

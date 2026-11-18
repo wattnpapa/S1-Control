@@ -87,8 +87,8 @@ describe("Funktionalität: Stau vor dem Sichter (Sichter P1-4)", () => {
     expect(waechter.pruefe({ ...lage, jetztMs: jetzt + 25 * 60_000 })).toMatch(/^2 Eingänge warten seit 2[45] Minuten vor dem Sichter, kein Sichter besetzt$/u);
     // Dieselben Nachrichten melden sich nicht noch einmal.
     expect(waechter.pruefe({ ...lage, jetztMs: jetzt + 26 * 60_000 })).toBeUndefined();
-    // Mit Sichter oder ohne Stelle FMZ/LDF: nichts.
-    expect(new Sichterstauwaechter().pruefe({ ...lage, sichterBesetzt: true, jetztMs: jetzt + 25 * 60_000 })).toBeUndefined();
+    // Mit besetztem, aber säumigem Sichter (R2-FM P2-5): ein anderer Satz; ohne Stelle FMZ/LDF: nichts.
+    expect(new Sichterstauwaechter().pruefe({ ...lage, sichterBesetzt: true, jetztMs: jetzt + 25 * 60_000 })).toMatch(/obwohl ein Sichter besetzt ist/u);
     expect(new Sichterstauwaechter().pruefe({ ...lage, stellen: ["S4"], jetztMs: jetzt + 25 * 60_000 })).toBeUndefined();
     expect(new Sichterstauwaechter().pruefe({ ...lage, stellen: ["LDF"], jetztMs: jetzt + 25 * 60_000 })).toMatch(/^2 Eingänge warten seit 2[45] Minuten/u);
     expect(sichterstauText(1, 1)).toBe("1 Eingang wartet seit 1 Minute vor dem Sichter, kein Sichter besetzt");

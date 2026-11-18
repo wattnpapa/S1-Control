@@ -32,7 +32,8 @@ export function tagebuchabschluss(zustand: Zustand, zeilen: readonly projektion.
   if (status !== "BEENDET" && status !== "ARCHIVIERT") return {};
   const ende = zeilen.find((z) => z.typ === "EinsatzBeendet");
   if (ende === undefined) return {};
-  return { beendet: { zeit: ende.zeitpunkt ?? ende.wanduhr, akteur: ende.akteur } };
+  // R2-ETB P2-2: Stelle und Handzeichen der Sitzung, die beendet hat, statt „Arbeitsplatz“.
+  return { beendet: { zeit: ende.zeitpunkt ?? ende.wanduhr, akteur: projektion.akteurText(ende) } };
 }
 
 /** Das Tagebuch als HTML — auch für die Einsatzakte. */
@@ -113,7 +114,7 @@ function nachweisungsabschluss(zustand: Zustand, ereignisse: readonly Eingehende
   const ende = ereignisse.filter((e) => e.typ === "EinsatzBeendet").sort((a, b) => projektion.vergleicheZeilen(b, a))[0];
   if (ende === undefined) return undefined;
   const zeile = projektion.tagebuchzeile(zustand, ende);
-  return { zeit: zeile.zeitpunkt ?? zeile.wanduhr, akteur: zeile.akteur };
+  return { zeit: zeile.zeitpunkt ?? zeile.wanduhr, akteur: projektion.akteurText(zeile) };
 }
 
 /**

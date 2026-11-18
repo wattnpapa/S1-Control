@@ -123,6 +123,24 @@ export function nachrichtNachweisen(nachrichtId: string, vorher: Nachweisvermerk
   };
 }
 
+/**
+ * „Aufnahme berichtigen“ (FM P2-7, Runde 1): Mittel, Zeit und Handzeichen der
+ * Aufnahme eines Eingangs (Feld 1, 2, 6) neu — nach einem Zahlendreher in der
+ * Aufnahmezeit oder dem falschen Mittel. `vorher` ist der Aufnahmevermerk, den
+ * die Maske beim Öffnen sah (Vorwert-Prüfung wie Annehmen und Befördern);
+ * `grund` ist Pflicht, weil der Vermerk auf Papier schon stehen kann.
+ */
+export function aufnahmeBerichtigen(nachrichtId: string, vorher: Mittelvermerk | null, aufnahme: Mittelvermerk, grund: string): Entwurf {
+  return {
+    typ: "NachrichtAufnahmeBerichtigt",
+    nutzlast: { nachrichtId },
+    vorher,
+    neu: { mittel: aufnahme.mittel, zeitpunkt: aufnahme.zeitpunkt, handzeichen: aufnahme.handzeichen.trim() },
+    grund: grund.trim(),
+    vorwertPruefen: true,
+  };
+}
+
 /** Was beim Aufnehmen oder Aufgeben in einem Zug mitgeschrieben wird. */
 export interface Nachrichtenfolge {
   readonly nachweis?: Nachweisvermerk;
@@ -167,9 +185,11 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
 
 /**
  * Die Parameter des Nachrichtenwegs je Einsatz (Entscheidung 8, §5 „Zwanzig
- * Minuten"); `ldfStation` additiv (2026-11-17): der LdF als eigene Station.
+ * Minuten"); `ldfStation` additiv (2026-11-17): der LdF als eigene Station;
+ * additiv (R2-FM P2-5, R2-Si P2-2): die Schwellen vor dem Sichter bei Blitz
+ * und Sofort (Vorbelegung 5 und 10 Minuten).
  */
-export type Nachrichtenparameter = "sichtungAuchAusgang" | "fmzSchwelleMinuten" | "ldfStation";
+export type Nachrichtenparameter = "sichtungAuchAusgang" | "fmzSchwelleMinuten" | "ldfStation" | "sichterSchwelleBlitzMinuten" | "sichterSchwelleSofortMinuten";
 
 /**
  * Setzt einen Parameter; `vorher` ist der Wert im Zustand (`null`, solange

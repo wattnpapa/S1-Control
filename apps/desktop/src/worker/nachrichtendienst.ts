@@ -45,6 +45,35 @@ export interface Nachrichtenumfeld {
    * den Ereignissen — Ring 2 kennt nur den Zustand.
    */
   readonly bezug?: projektion.Tagebuchbezug;
+  /** Additiv (R2-LdF P3-3): Ist ein LdF besetzt? Nur `false` setzt an Zeilen beim LdF `ldfNichtBesetzt`. */
+  readonly ldfBesetzt?: boolean;
+  /** Additiv (R2-LdF P3-4): die Anzeigenamen der Arbeitsplätze mit Stelle FMZ (`fernmelderAusPraesenz`). */
+  readonly fernmelder?: readonly string[];
+}
+
+/**
+ * Die Fernmelder aus der Präsenz (R2-LdF P3-4): die Anzeigenamen der lebenden
+ * Arbeitsplätze mit Stelle FMZ, die eigene Sitzung eingeschlossen, ohne
+ * Doppelte und nach Namen geordnet. Die Auswahl im Vorschlag des LdF kannte
+ * nur „Fm1“ bis „Fm3“; eine Zentrale mit anderen Namen oder mehr Fernmeldern
+ * ließ sich nicht abbilden. Freitext bleibt in der Maske erlaubt.
+ */
+export function fernmelderAusPraesenz(
+  eigeneStellen: readonly string[] | undefined,
+  eigenerName: string,
+  peers: readonly { readonly veraltet: boolean; readonly anzeigename: string; readonly stellen?: readonly string[] | undefined }[],
+): readonly string[] {
+  const namen = [
+    ...(eigeneStellen?.includes("FMZ") === true ? [eigenerName] : []),
+    ...peers.filter((p) => !p.veraltet && p.stellen?.includes("FMZ") === true).map((p) => p.anzeigename),
+  ].map((n) => n.trim()).filter((n) => n !== "");
+  return [...new Set(namen)].sort((a, b) => a.localeCompare(b, "de"));
+}
+
+/** R2-LdF P3-3: Zeilen beim LdF tragen „LdF nicht besetzt“, wenn die Präsenz keinen kennt. */
+function mitLdfBesetzung(zeilen: readonly Nachrichtenzeile[], ldfBesetzt: boolean | undefined): readonly Nachrichtenzeile[] {
+  if (ldfBesetzt !== false) return zeilen;
+  return zeilen.map((z) => (z.laufzustand === "VOR_LDF" ? { ...z, ldfNichtBesetzt: true } : z));
 }
 
 /** Stellen aus einer Eingabe: geputzt, ohne Leere und ohne Doppelte, in der gegebenen Folge. */
@@ -107,10 +136,12 @@ export function nachrichtenansicht(
     ...(ruf.von === undefined ? {} : { von: ruf.von }),
     ...(ruf.anzahl === undefined ? {} : { anzahl: ruf.anzahl }),
   });
+  const zeilen = umfeld.bezug === undefined ? ausschnitt.zeilen : projektion.mitTagebuchbezug(ausschnitt.zeilen, umfeld.bezug);
   return {
     lageZeiger: umfeld.lageZeiger,
     ...ausschnitt,
-    ...(umfeld.bezug === undefined ? {} : { zeilen: projektion.mitTagebuchbezug(ausschnitt.zeilen, umfeld.bezug) }),
+    zeilen: mitLdfBesetzung(zeilen, umfeld.ldfBesetzt),
+    ...(umfeld.fernmelder === undefined ? {} : { fernmelder: umfeld.fernmelder }),
     jetzt,
     anschriften: anschriften(zustand),
     gegenstellen: gegenstellen(zustand),
@@ -151,21 +182,45 @@ export function vergebeneNummern(zustand: Zustand): readonly number[] {
 export function mitNachrichtenparametern<T extends object>(
   zustand: Zustand,
   stammdaten: T | undefined,
-): (T & { sichtungAuchAusgang?: boolean; fmzSchwelleMinuten?: number; ldfStation?: boolean }) | undefined {
+): (T & { sichtungAuchAusgang?: boolean; fmzSchwelleMinuten?: number; ldfStation?: boolean; sichterSchwelleBlitzMinuten?: number; sichterSchwelleSofortMinuten?: number }) | undefined {
   if (stammdaten === undefined) return undefined;
   const sichtung = zustand.einsatz?.sichtungAuchAusgang?.wert;
   const schwelle = zustand.einsatz?.fmzSchwelleMinuten?.wert;
   // Additiv (2026-11-17): der LdF als Station; das Blatt zeigt danach die Sicht „LdF".
   const ldf = zustand.einsatz?.ldfStation?.wert;
+  // Additiv (R2-FM P2-5, R2-Si P2-2): die Schwellen vor dem Sichter je Vorrang.
+  const blitz = zustand.einsatz?.sichterSchwelleBlitzMinuten?.wert;
+  const sofort = zustand.einsatz?.sichterSchwelleSofortMinuten?.wert;
   return {
     ...stammdaten,
     ...(typeof sichtung === "boolean" ? { sichtungAuchAusgang: sichtung } : {}),
     ...(typeof schwelle === "number" ? { fmzSchwelleMinuten: schwelle } : {}),
     ...(typeof ldf === "boolean" ? { ldfStation: ldf } : {}),
+    ...(typeof blitz === "number" ? { sichterSchwelleBlitzMinuten: blitz } : {}),
+    ...(typeof sofort === "number" ? { sichterSchwelleSofortMinuten: sofort } : {}),
   };
 }
 
 let gemerkt: { zustand: Zustand; minute: number; stellen: string; zahlen: Nachrichtenlage } | undefined;
+let gemerkteHinweise: { zustand: Zustand; hinweise: readonly { art: string; feldpfad: string; text?: string }[] } | undefined;
+
+/**
+ * Art, Pfad und — an Nachrichten — der Satz der ersten Konflikthinweise
+ * (FM P2-6, R2-ETB P2-4, R2-SGL P2-2), gemerkt je Zustand: Das Lagebild
+ * entsteht in jedem Takt, die Zeilen der Nachrichten nur bei Bedarf.
+ */
+export function konflikthinweiseFuerLagebild(zustand: Zustand, hoechstens: number): readonly { art: string; feldpfad: string; text?: string }[] {
+  if (gemerkteHinweise?.zustand === zustand) return gemerkteHinweise.hinweise;
+  const erste = zustand.hinweise.slice(0, hoechstens);
+  const anNachricht = erste.some((h) => h.feldpfad.startsWith("nachricht/"));
+  const zeilen = anNachricht ? new Map(ausschnittOhneFilter(zustand).map((z) => [z.id, z])) : new Map<string, Nachrichtenzeile>();
+  const hinweise = erste.map((h) => {
+    const text = anNachricht ? projektion.konflikthinweisText(h, zeilen) : undefined;
+    return { art: h.art, feldpfad: h.feldpfad, ...(text === undefined ? {} : { text }) };
+  });
+  gemerkteHinweise = { zustand, hinweise };
+  return hinweise;
+}
 let gemerktOffen: { zustand: Zustand; zahlen: OffeneNachrichten | undefined } | undefined;
 
 /**
@@ -267,6 +322,8 @@ function treffer(zustand: Zustand, stellen: readonly string[]): Treffer[] {
     if (zeile.sichtung === undefined) continue;
     const sichter = zustand.nachrichten[zeile.id]?.sichtung?.hlc.clientId;
     for (const marke of zeile.verteiler) {
+      // R2-FaBe P1-4: Der Verfasser bekommt zu seinem eigenen Ausgang keinen Vorranghinweis.
+      if (marke.eigenerAusgang === true) continue;
       if (stellen.includes(marke.stelle)) ergebnis.push({ schluessel: `${zeile.id}/${marke.stelle}`, zeile, stelle: marke.stelle, ausloeser: sichter });
     }
   }

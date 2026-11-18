@@ -23,6 +23,7 @@ const ARTEN = new Set([
   "NachrichtAngenommen",
   "NachrichtUebermittlungVorgeschlagen",
   "NachrichtBefoerdert",
+  "NachrichtAufnahmeBerichtigt",
   "NachrichtNachgewiesen",
   "NachrichtWeitergegeben",
   "NachrichtGesichtet",
@@ -46,6 +47,11 @@ function pruefeParameter(entwurf: Ereignisentwurf): string | undefined {
   if (feld === "ldfStation") return typeof neu === "boolean" ? undefined : "„LdF als eigene Station“ ist ein Ja oder Nein.";
   if (feld === "fmzSchwelleMinuten") {
     return typeof neu === "number" && Number.isInteger(neu) && neu >= 1 ? undefined : "Die Schwelle der FmZ muss eine ganze Zahl ab 1 (Minuten) sein.";
+  }
+  // R2-FM P2-5, R2-Si P2-2: die Schwelle vor dem Sichter je Vorrang, ebenfalls ganze Minuten ab 1.
+  if (feld === "sichterSchwelleBlitzMinuten" || feld === "sichterSchwelleSofortMinuten") {
+    const wort = feld === "sichterSchwelleBlitzMinuten" ? "Blitz" : "Sofort";
+    return typeof neu === "number" && Number.isInteger(neu) && neu >= 1 ? undefined : `Die Schwelle vor dem Sichter bei ${wort} muss eine ganze Zahl ab 1 (Minuten) sein.`;
   }
   return undefined;
 }

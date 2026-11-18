@@ -29,10 +29,51 @@ import type { Entwurf } from "./index.js";
 /** Die Stellen, denen der Vordruck Teile vorbehält. */
 export const STELLE_SICHTER = "SICHTER";
 export const STELLE_FMZ = "FMZ";
-const STELLE_LDF = "LDF";
+export const STELLE_LDF = "LDF";
 
-export const TEXT_VORBEHALT_SICHTER = "Sichten ist dem Sichter vorbehalten (Vordruck, Felder 18 bis 20). Trotzdem sichten?";
-export const TEXT_VORBEHALT_FMZ = "Dieser Teil ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6). Trotzdem eintragen?";
+/**
+ * Die Schritte, die der Vordruck einer Stelle vorbehält (R2-FaBe P2-7,
+ * R2-LdF P3-1): Der eine Satz „Dieser Teil ist der Fernmeldezentrale
+ * vorbehalten“ traf beim Sichten, beim Vorschlag und bei der Weitergabe die
+ * falsche Stelle, und ein Neuling verstand nicht, wen er stattdessen ruft und
+ * was „Trotzdem“ tut. Der Satz nennt jetzt je Schritt die Stelle, das Feld
+ * des Vordrucks und den Ausweg. Der Renderer liest ihn hier
+ * ({@link vorbehaltstextFuer}), damit Maske und Worker dasselbe sagen.
+ */
+export type Vorbehaltsschritt = "annahme" | "befoerderung" | "nachweis" | "vorschlag" | "weitergabe" | "sichtung" | "aufnahme" | "nachtrag";
+
+const VORBEHALT_SATZ: Readonly<Record<Vorbehaltsschritt, string>> = {
+  sichtung: "Das Sichten ist dem Sichter vorbehalten (Vordruck, Felder 18 bis 20).",
+  annahme: "Das Annehmen ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6).",
+  befoerderung: "Das Befördern ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6).",
+  nachweis: "Das Nachweisen ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6).",
+  aufnahme: "Das Aufnehmen eines Eingangs ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6).",
+  nachtrag: "Annahme, Beförderung und Nummer sind der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6).",
+  vorschlag: "Der Übermittlungsvorschlag ist dem Leiter des Fernmeldebetriebes vorbehalten.",
+  weitergabe: "Die Weitergabe an den Sichter ist dem Leiter des Fernmeldebetriebes vorbehalten.",
+};
+
+const STELLE_WORT_LANG: Readonly<Record<string, string>> = { SICHTER: "Sichter", FMZ: "Fernmeldezentrale (FmZ)", LDF: "Leiter des Fernmeldebetriebes (LdF)" };
+
+/** Die Stelle, der der Schritt vorbehalten ist. */
+export function stelleDesSchritts(schritt: Vorbehaltsschritt): string {
+  if (schritt === "sichtung") return STELLE_SICHTER;
+  return schritt === "vorschlag" || schritt === "weitergabe" ? STELLE_LDF : STELLE_FMZ;
+}
+
+/**
+ * Der ganze Hinweis je Schritt: wem er vorbehalten ist, dass die Sitzung die
+ * Stelle nicht führt, und was „Trotzdem“ tut (R2-FaBe P2-7).
+ */
+export function vorbehaltstextFuer(schritt: Vorbehaltsschritt): string {
+  const stelle = STELLE_WORT_LANG[stelleDesSchritts(schritt)] ?? stelleDesSchritts(schritt);
+  return `${VORBEHALT_SATZ[schritt]} Dieser Arbeitsplatz ist nicht als ${stelle} eingetragen. Bitte dort Bescheid geben — oder mit „Trotzdem“ selbst eintragen; der Grund steht dann im Tagebuch.`;
+}
+
+export const TEXT_VORBEHALT_SICHTER = vorbehaltstextFuer("sichtung");
+/** Der Hinweis beim Aufnehmen eines Eingangs ohne FmZ; der Papier-Nachtrag hat {@link TEXT_VORBEHALT_NACHTRAG}. */
+export const TEXT_VORBEHALT_FMZ = vorbehaltstextFuer("aufnahme");
+export const TEXT_VORBEHALT_NACHTRAG = vorbehaltstextFuer("nachtrag");
 
 /** Was die Regel über Sitzung und Präsenz wissen muss. */
 export interface Vorbehaltsumfeld {
@@ -45,6 +86,14 @@ export interface Vorbehaltsumfeld {
    * Ihr Verfasser verteilt sie aus eigenem Recht (§5, Folie 28) — kein Vorbehalt.
    */
   readonly eigeneGespraechsnotiz?: boolean;
+  /**
+   * Additiv (R2-FM P2-5, R2-Si P2-2): Der Sichter ist besetzt, die Nachricht
+   * liegt aber länger als die Schwelle ihres Vorrangs vor ihm. Dann gilt die
+   * Ersatzregel auch bei besetztem Sichter: FmZ oder LdF sichten ohne Rückfrage.
+   */
+  readonly sichterSaeumig?: boolean;
+  /** Additiv (ETB P1-7): das Handzeichen der Sitzung — der Worker schreibt es an Erledigung und Zurückziehen. */
+  readonly handzeichen?: string;
 }
 
 /** Ein Vorbehalt, den die Sitzung nicht erfüllt: die Stelle und der Satz mit „Trotzdem“. */
@@ -63,7 +112,7 @@ function objekt(wert: unknown): Record<string, unknown> | undefined {
  * der LdF (R2-LdF P1-3). Dann braucht die Sichtung keinen weiteren Grund.
  */
 export function istErsatzsichter(umfeld: Vorbehaltsumfeld): boolean {
-  if (umfeld.stellen.includes(STELLE_SICHTER) || umfeld.sichterBesetzt) return false;
+  if (umfeld.stellen.includes(STELLE_SICHTER) || (umfeld.sichterBesetzt && umfeld.sichterSaeumig !== true)) return false;
   return umfeld.stellen.includes(STELLE_FMZ) || umfeld.stellen.includes(STELLE_LDF);
 }
 
@@ -87,7 +136,9 @@ export function stellenvorbehalt(entwurf: Pick<Entwurf, "typ" | "nutzlast" | "ne
     return { stelle: STELLE_SICHTER, meldung: TEXT_VORBEHALT_SICHTER };
   }
   if (entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) && !umfeld.stellen.includes(STELLE_FMZ)) {
-    return { stelle: STELLE_FMZ, meldung: TEXT_VORBEHALT_FMZ };
+    // R2-FaBe P2-7: der Satz des Schritts — Aufnahme eines Eingangs oder Papier-Nachtrag.
+    const aufnahme = objekt(objekt(entwurf.nutzlast)?.["aufnahme"]) !== undefined;
+    return { stelle: STELLE_FMZ, meldung: aufnahme ? TEXT_VORBEHALT_FMZ : TEXT_VORBEHALT_NACHTRAG };
   }
   return undefined;
 }

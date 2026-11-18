@@ -37,12 +37,21 @@ const MIT_STELLE: ReadonlySet<string> = new Set([
   "NachrichtAngenommen",
   "NachrichtUebermittlungVorgeschlagen",
   "NachrichtBefoerdert",
+  "NachrichtAufnahmeBerichtigt",
   "NachrichtNachgewiesen",
   "NachrichtWeitergegeben",
   "NachrichtGesichtet",
   "NachrichtVermerkt",
   "NachrichtZurueckgezogen",
 ]);
+
+/**
+ * Additiv (ETB P1-7, Runde 1): Erledigung, ihre Rücknahme und das
+ * Zurückziehen trugen weder Handzeichen noch (bei der Erledigung) eine
+ * andere Stelle als die des Feldpfads — im Tagebuch stand „Arbeitsplatz“.
+ * Der Worker schreibt das Handzeichen der Sitzung in die Nutzlast.
+ */
+const MIT_HANDZEICHEN: ReadonlySet<string> = new Set(["NachrichtErledigt", "ErledigungDerNachrichtZurueckgenommen", "NachrichtZurueckgezogen"]);
 
 /** Welche Stelle der Sitzung den Schritt tut, wenn sie mehrere führt — die Station zuerst. */
 const STATION: Readonly<Record<string, readonly string[]>> = {
@@ -51,6 +60,7 @@ const STATION: Readonly<Record<string, readonly string[]>> = {
   NachrichtUebermittlungVorgeschlagen: [STELLE_LDF, STELLE_FMZ],
   NachrichtAngenommen: [STELLE_FMZ, STELLE_LDF],
   NachrichtBefoerdert: [STELLE_FMZ, STELLE_LDF],
+  NachrichtAufnahmeBerichtigt: [STELLE_FMZ, STELLE_LDF],
   NachrichtNachgewiesen: [STELLE_FMZ, STELLE_LDF],
 };
 
@@ -83,12 +93,14 @@ function eigenerGrund(entwurf: Folgeentwurf, umfeld: Vorbehaltsumfeld | undefine
   if (entwurf.grund !== undefined) {
     // Nachtrag mit „Trotzdem“: beide Angaben, der Nachtrag zuerst (der Satz erkennt ihn am Anfang).
     // Ersatzsichtung und Kopien behalten ihren Grund — an ihm erkennt das Tagebuch sie.
-    const eigen = [projektion.GRUND_ERSATZSICHTER, projektion.GRUND_KOPIEN].includes(entwurf.grund) || entwurf.grund.startsWith(projektion.GRUND_NACHTRAG);
+    const eigen = [projektion.GRUND_ERSATZSICHTER, projektion.GRUND_SICHTER_SAEUMIG, projektion.GRUND_KOPIEN].includes(entwurf.grund) || entwurf.grund.startsWith(projektion.GRUND_NACHTRAG);
     return nachtrag && !eigen ? `${projektion.GRUND_NACHTRAG}; ${entwurf.grund}` : undefined;
   }
   if (nachtrag) return projektion.GRUND_NACHTRAG;
   const ersatz = entwurf.typ === "NachrichtGesichtet" && objekt(entwurf.neu) !== undefined && umfeld !== undefined && istErsatzsichter(umfeld);
-  return ersatz ? projektion.GRUND_ERSATZSICHTER : undefined;
+  if (!ersatz) return undefined;
+  // R2-FM P2-5: am besetzten, aber säumigen Sichter vorbei — ein anderer Satz im Tagebuch.
+  return umfeld.sichterBesetzt ? projektion.GRUND_SICHTER_SAEUMIG : projektion.GRUND_ERSATZSICHTER;
 }
 
 /**
@@ -97,7 +109,20 @@ function eigenerGrund(entwurf: Folgeentwurf, umfeld: Vorbehaltsumfeld | undefine
  * (der Entwurf selbst oder eine Folge davon).
  */
 export function mitSitzungsangaben<T extends Folgeentwurf>(entwurf: T, umfeld: Vorbehaltsumfeld | undefined, nachtrag = false): T {
-  if (!MIT_STELLE.has(entwurf.typ) || entwurf.undoOf !== undefined) return entwurf;
+  const mitHz = mitHandzeichen(entwurf, umfeld);
+  if (!MIT_STELLE.has(entwurf.typ) || entwurf.undoOf !== undefined) return mitHz;
+  return mitStelleUndGrund(mitHz, umfeld, nachtrag);
+}
+
+/** Das Handzeichen der Sitzung an Erledigung und Zurückziehen (ETB P1-7); nur, wo die Nutzlast keines trägt. */
+function mitHandzeichen<T extends Folgeentwurf>(entwurf: T, umfeld: Vorbehaltsumfeld | undefined): T {
+  const nutzlast = objekt(entwurf.nutzlast);
+  const hz = umfeld?.handzeichen?.trim() ?? "";
+  if (!MIT_HANDZEICHEN.has(entwurf.typ) || nutzlast === undefined || hz === "" || typeof nutzlast["handzeichen"] === "string") return entwurf;
+  return { ...entwurf, nutzlast: { ...nutzlast, handzeichen: hz } };
+}
+
+function mitStelleUndGrund<T extends Folgeentwurf>(entwurf: T, umfeld: Vorbehaltsumfeld | undefined, nachtrag: boolean): T {
   const nutzlast = objekt(entwurf.nutzlast);
   const stelle = umfeld === undefined || nutzlast === undefined || typeof nutzlast["stelle"] === "string" ? undefined : stelleFuer(entwurf, umfeld.stellen);
   const grund = eigenerGrund(entwurf, umfeld, nachtrag);
@@ -114,6 +139,16 @@ export function mitSitzungsangaben<T extends Folgeentwurf>(entwurf: T, umfeld: V
  * hat? Ihr Verfasser verteilt sie selbst (§5 „Gesprächsnotiz“, Folie 28) —
  * auch nachträglich, ohne Stelle Sichter.
  */
+/**
+ * Ist die Nachricht des Entwurfs über der Schwelle ihres Vorrangs vor dem
+ * Sichter (R2-FM P2-5, R2-Si P2-2)? Gerechnet gegen die Uhr des Workers.
+ */
+export function sichterSaeumig(zustand: Zustand, entwurf: Folgeentwurf, jetztMs: number): boolean {
+  const nachrichtId = objekt(entwurf.nutzlast)?.["nachrichtId"];
+  if (entwurf.typ !== "NachrichtGesichtet" || typeof nachrichtId !== "string" || zustand.nachrichten?.[nachrichtId] === undefined) return false;
+  return projektion.nachrichtNach(zustand, nachrichtId, new Date(jetztMs).toISOString())?.sichterSchwelleUeberschritten === true;
+}
+
 export function eigeneGespraechsnotiz(zustand: Zustand, entwurf: Folgeentwurf, clientId: string): boolean {
   const nachrichtId = objekt(entwurf.nutzlast)?.["nachrichtId"];
   const nachricht = typeof nachrichtId === "string" ? zustand.nachrichten?.[nachrichtId] : undefined;

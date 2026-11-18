@@ -15,7 +15,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { STOERFAELLE, UHR_GRENZE_MS } from "@s1/domaene";
 
-import { Diagnose, abweichung, befundAus } from "./Diagnose.js";
+import { Diagnose, abweichung, befundAus, konflikthinweisSatz } from "./Diagnose.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { peer } from "../kontrakt/pruefhilfen.js";
@@ -168,5 +168,24 @@ describe("Die Ansicht", () => {
     await waitFor(() => {
       expect(screen.getByText("Wird geholt …")).toBeDefined();
     });
+  });
+});
+
+describe("R2-ETB P2-4, R2-SGL P2-2: Konflikthinweise an Nachrichten in Worten", () => {
+  it("zeigt den Satz aus dem Lagebild mit Nummer, Betreff und Werten, sonst den bisherigen", async () => {
+    expect(konflikthinweisSatz({ art: "vorherPasstNicht", feldpfad: "nachricht/N1/sichtung" })).toBe("Sichtung: zwei Arbeitsplätze haben verschieden vermerkt");
+    useLaden.setState({
+      lagebild: lagebild({
+        hinweise: 2,
+        konflikthinweise: [
+          { art: "nachweisnummerDoppelt", feldpfad: "nachricht/A1/nachweis", text: "Nummer 7 zweimal: A 7 ‚Sandsäcke‘ und E 7 ‚Pumpen‘" },
+          { art: "vorherPasstNicht", feldpfad: "nachricht/E1/sichtung", text: "E 7 ‚Pumpen‘: Sichtung von Si 1420 und Zw 1421, Verteiler S2, S3 gegen S2, S4" },
+        ],
+      }),
+    });
+    render(<Diagnose jetzt={JETZT} />);
+    expect(await screen.findByText(/Nummer 7 zweimal: A 7 ‚Sandsäcke‘ und E 7 ‚Pumpen‘/u)).toBeDefined();
+    expect(screen.getByText(/Sichtung von Si 1420 und Zw 1421/u)).toBeDefined();
+    expect(screen.getAllByRole("button", { name: "Nachricht öffnen" })).toHaveLength(2);
   });
 });

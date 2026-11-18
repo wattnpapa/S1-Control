@@ -30,11 +30,53 @@ import { useEffect } from "react";
 import { STOERFAELLE, UHR_GRENZE_MS, erkannteStoerfaelle } from "@s1/domaene";
 
 import { useLaden } from "./laden.js";
-import { Nachrichtenhinweise } from "./Nachrichtenhinweise.js";
+import { hinweistext, konflikthinweiseAus, nachrichtIdAusPfad, useNachrichtOeffnen } from "./Nachrichtenhinweise.js";
 import { zeichensatzHerkunft } from "./zeichensatz.js";
 import { alter, bytes } from "./Statuszeile.js";
 import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
 import type { Lagebild, Peer } from "../kontrakt/index.js";
+
+/**
+ * Der Satz eines Konflikthinweises an einer Nachricht (R2-ETB P2-4, R2-SGL
+ * P2-2): der Satz aus dem Lagebild (`konflikthinweise[].text` — „Nummer 7
+ * zweimal: E 7 ‚…‘ und A 7 ‚…‘“, „E 8 ‚…‘: Sichtung von Si 1420 und Zw 1421,
+ * Verteiler …“), sonst wie bisher Feld und Art.
+ */
+export function konflikthinweisSatz(h: { readonly art: string; readonly feldpfad: string; readonly text?: string | undefined }): string {
+  return h.text !== undefined && h.text.trim() !== "" ? h.text : hinweistext(h);
+}
+
+/**
+ * Konflikthinweise an Nachrichten mit „Nachricht öffnen“ (zweiter Durchlauf,
+ * Punkt 10). Bisher stand dort „Sichtung: zwei Arbeitsplätze haben
+ * verschieden vermerkt“ — ohne Nachricht und Werte; wer die Akte prüfte,
+ * musste jeden Eintrag öffnen.
+ */
+function Konflikthinweise({ lagebild }: { readonly lagebild: Lagebild | undefined }): React.JSX.Element | null {
+  const oeffnen = useNachrichtOeffnen();
+  const texte = new Map((lagebild?.konflikthinweise ?? []).map((h) => [`${h.art}|${h.feldpfad}`, h.text]));
+  const eintraege = konflikthinweiseAus(lagebild).flatMap((h) => {
+    const id = nachrichtIdAusPfad(h.feldpfad);
+    return id === undefined ? [] : [{ h, id, satz: konflikthinweisSatz({ ...h, text: texte.get(`${h.art}|${h.feldpfad}`) }) }];
+  });
+  if (eintraege.length === 0) return null;
+  return (
+    <>
+      <h3>Konflikthinweise an Nachrichten</h3>
+      <ul className="nachrichtenhinweise">
+        {eintraege.map(({ h, id, satz }, nummer) => (
+          <li key={`${h.feldpfad}-${String(nummer)}`}>
+            {satz}{" "}
+            <button type="button" aria-label="Nachricht öffnen" title={`Nachricht ${id} öffnen`} onClick={() => oeffnen.oeffne(id)}>
+              ✉ Nachricht öffnen
+            </button>
+          </li>
+        ))}
+      </ul>
+      {oeffnen.anzeige}
+    </>
+  );
+}
 
 /** Eine Abweichung in Sekunden oder Minuten, mit Vorzeichen und in Worten. */
 export function abweichung(ms: number): string {
@@ -187,7 +229,8 @@ export function Diagnose({ jetzt = Date.now() }: DiagnoseEigenschaften = {}): Re
         </ul>
       )}
       {/* Zweiter Durchlauf, Punkt 10: der Weg vom Hinweis an einer Nachricht zur Nachricht. */}
-      <Nachrichtenhinweise lagebild={lagebild} />
+      {/* R2-ETB P2-4, R2-SGL P2-2: mit Nummer, Betreff und den beiden Werten, wo das Lagebild den Satz liefert. */}
+      <Konflikthinweise lagebild={lagebild} />
       {auskunft === undefined ? (
         <p className="hinweistext">Wird geholt …</p>
       ) : (

@@ -23,7 +23,7 @@
  *   entfällt der Schritt: Dann verteilt der Sichter.
  */
 
-import { NACHRICHT_STELLEN, projektion, type NachrichtZustand, type Zustand } from "@s1/domaene";
+import { projektion, type NachrichtZustand, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 /** Ein geplanter Folgeschritt mit dem Satz für den Bediener. */
@@ -95,13 +95,8 @@ export function planeWeitergabeErsatz(zustand: Zustand, entwurf: Ereignisentwurf
  * `kenntnis/<stelle>` zerlegen und wird deshalb ersetzt.
  */
 export function verfasserstelle(nachricht: Pick<NachrichtZustand, "funktion" | "absender">): string | undefined {
-  const funktion = text(nachricht.funktion?.wert);
-  if (funktion !== undefined) {
-    const bekannt = NACHRICHT_STELLEN.find((s) => s === funktion.toUpperCase() || projektion.stellenWort(s).toLowerCase() === funktion.toLowerCase());
-    if (bekannt !== undefined) return bekannt;
-  }
-  const frei = text(nachricht.absender.wert)?.replaceAll("/", "-").slice(0, 80);
-  return frei === undefined || frei === "" ? undefined : frei;
+  // Die Regel steht seit R2-FaBe P1-4 in Ring 2: Auch die Projektion braucht sie (eigene Kopie gilt als gelesen).
+  return projektion.verfasserstelleAus(nachricht.funktion?.wert, nachricht.absender.wert);
 }
 
 /** „Kopien nach Beförderung: rot S2, grün S4". */

@@ -28,6 +28,17 @@ export function sichterstauText(anzahl: number, minuten: number): string {
 }
 
 /**
+ * Additiv (R2-FM P2-5, R2-Si P2-2): Der Sichter ist besetzt, reagiert aber
+ * nicht (Funkgerät, Telefon, Tür) — der häufigere Fall als der geschlossene
+ * Arbeitsplatz. Über der Schwelle des Vorrangs darf die FmZ selbst sichten.
+ */
+export function saeumigerSichterText(anzahl: number, minuten: number): string {
+  const eingaenge = anzahl === 1 ? "1 Eingang wartet" : `${String(anzahl)} Eingänge warten`;
+  const zeit = minuten === 1 ? "1 Minute" : `${String(minuten)} Minuten`;
+  return `${eingaenge} seit ${zeit} vor dem Sichter, obwohl ein Sichter besetzt ist — „Ich sichte jetzt selbst“ ist frei`;
+}
+
+/**
  * Additiv (R2-LdF P1-2, R2-Si P1-1): Der LdF ist mit `ldfStation` eine
  * Station vor dem Sichter. Ein Eingang konnte dort beliebig lange liegen,
  * ohne dass Band, Zeile oder FmZ es zeigten. Gemessen wird ab der Aufnahme
@@ -76,12 +87,12 @@ export class Sichterstauwaechter {
   }
 
   #vorSichter(lage: Staulage, jetzt: string): string | undefined {
-    if (lage.sichterBesetzt || !lage.stellen.some((s) => MELDESTELLEN.has(s))) return undefined;
-    const schwelle = projektion.fmzSchwelle(lage.zustand);
+    if (!lage.stellen.some((s) => MELDESTELLEN.has(s)) || lage.stellen.includes("SICHTER")) return undefined;
+    // R2-FM P2-5, R2-Si P2-2: die Schwelle je Vorrang; auch bei besetztem, aber säumigem Sichter.
     const ueber = projektion
       .nachrichtenausschnitt(lage.zustand, { sicht: "sichter", jetzt })
-      .zeilen.filter((z) => !z.zurueckgezogen && projektion.ueberWarteschwelle(z.wartetSeitSichter, schwelle));
-    return this.#neueMelden(ueber.map((z) => [z.id, z.wartetSeitSichter ?? 0]), this.#gemeldet, sichterstauText);
+      .zeilen.filter((z) => !z.zurueckgezogen && z.sichterSchwelleUeberschritten === true);
+    return this.#neueMelden(ueber.map((z) => [z.id, z.wartetSeitSichter ?? 0]), this.#gemeldet, lage.sichterBesetzt ? saeumigerSichterText : sichterstauText);
   }
 
   #beimLdf(lage: Staulage, jetzt: string): string | undefined {

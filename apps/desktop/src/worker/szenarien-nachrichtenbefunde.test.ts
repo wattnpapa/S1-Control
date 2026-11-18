@@ -86,7 +86,8 @@ describe("Szenario: Nachricht und Tagebuch über die Kennung (ETB P0-1, P0-2)", 
     const platz = await einsatzMitNachrichten();
     const zeilen = platz.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-1", nurRuecknahmen: true }).zeilen;
     expect(zeilen.map((z) => z.nachrichtId)).toEqual(["N-2", "N-1"]);
-    expect(zeilen[0]?.satz).toMatch(/^Nachricht A zurückgezogen, Grund: „Doppelt aufgegeben“ \(abgefasst \d{6}[a-z]{3}\d{2}, Zeichen Ru\)/u);
+    // ETB P1-7: das Handzeichen der Sitzung steht seit der dritten Behebung der Runde 2 im Satz.
+    expect(zeilen[0]?.satz).toMatch(/^Nachricht A zurückgezogen \(Hz\. Ru\), Grund: „Doppelt aufgegeben“ \(abgefasst \d{6}[a-z]{3}\d{2}, Zeichen Ru\)/u);
   });
 
   it("liefert eine einzelne Nachricht über `nachrichtAnfordern`, sonst null", async () => {
@@ -113,15 +114,15 @@ describe("Szenario: Einsatzakte und gedrucktes Tagebuch (ETB P0-3, P1-5)", () =>
     const platz = await einsatzMitNachrichten();
     expect((await platz.dienst.bediene(einsatzBeendet(EINSATZ_ID, null, jetzt(), "Lage bereinigt"))).art).toBe("geschrieben");
     const akte = await platz.dienst.erzeugeAkte();
-    // N-2 ist zurückgezogen: zwei Vordrucke, beide neu.
-    expect(akte.nachrichtenbeilagen).toEqual({ erzeugt: 2, vorhanden: 0, fehlgeschlagen: 0 });
+    // Zwei Vordrucke neu; N-2 ist zurückgezogen und bekommt seinen mit Stempel (R2-ETB P2-1), dazu das Handzeichenverzeichnis (R2-ETB P2-7).
+    expect(akte.nachrichtenbeilagen).toEqual({ erzeugt: 2, vorhanden: 0, fehlgeschlagen: 0, gestempelt: 1, handzeichenverzeichnis: true });
     const pfade = liesZip(new Uint8Array(readFileSync(akte.pfad))).map((e) => e.pfad);
-    expect(pfade.filter((p) => p.startsWith("ausgaben/nachrichten/") && p.endsWith(".pdf"))).toHaveLength(2);
+    expect(pfade.filter((p) => p.startsWith("ausgaben/nachrichten/") && p.endsWith(".pdf"))).toHaveLength(3);
     expect(pfade.some((p) => /^ausgaben\/nachweisung_.*\.html$/u.test(p))).toBe(true);
     const tagebuch = readdirSync(path.join(platz.share, "ausgaben")).find((name) => name.startsWith("tagebuch_"));
     expect(readFileSync(path.join(platz.share, "ausgaben", tagebuch ?? ""), "utf8")).toMatch(/Einsatztagebuch abgeschlossen \d{2}\.\d{2}\.\d{4} \d{2}:\d{2}, /u);
 
-    // Ein zweites Mal: Die Vordrucke liegen schon und bleiben, wie sie sind.
-    expect((await platz.dienst.erzeugeAkte()).nachrichtenbeilagen).toEqual({ erzeugt: 0, vorhanden: 2, fehlgeschlagen: 0 });
+    // Ein zweites Mal: Die Vordrucke liegen schon und bleiben, wie sie sind; der zurückgezogene wird wieder gestempelt.
+    expect((await platz.dienst.erzeugeAkte()).nachrichtenbeilagen).toEqual({ erzeugt: 0, vorhanden: 2, fehlgeschlagen: 0, gestempelt: 1, handzeichenverzeichnis: true });
   });
 });

@@ -34,6 +34,8 @@
 import { kanonischeSerialisierung, projektion, type KanonischerWert, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
+import { nachtragswarnungen } from "./nachtragspruefung.js";
+import { rueckzugshinweis } from "./rueckzugshinweis.js";
 import { planeBefoerderungsfolgen, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
 
 /** Was der Worker über die Präsenz weiß und der Zustand nicht. */
@@ -47,6 +49,8 @@ export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
   readonly fmzBesetzt?: boolean;
   /** Additiv (R2-LdF P1-3): die Stellen der Sitzung — ist sie selbst der LdF? */
   readonly stellen?: readonly string[];
+  /** Additiv (R2-SGL P2-1, R2-LdF P3-7): die Uhr des Workers für die Prüfung des Papier-Nachtrags; fehlt = keine Zukunftsprüfung. */
+  readonly jetztMs?: number;
 }
 
 export interface Nachrichtenfolgeplan {
@@ -153,6 +157,11 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
   // Ohne LdF in der Präsenz läuft ein Eingang direkt zum Sichter (additiv, 2026-11-17).
   const weitergabe = planeWeitergabeErsatz(zustand, entwurf, umfeld, werte?.sichtung !== undefined);
   const hinweise: string[] = [...anlagehinweise(zustand, nutzlast, werte, umfeld), ...(ldfSichtet ? [HINWEIS_LDF_SICHTET] : [])];
+  // R2-SGL P2-1, R2-LdF P3-7: Der Papier-Nachtrag prüft die Zeitfolge — als Warnung, Papier geht vor.
+  if ((entwurf as { readonly nachrichtenfolge?: { readonly nachtrag?: unknown } }).nachrichtenfolge?.nachtrag === true) {
+    const zeiten = { abfassungszeit: nutzlast["abfassungszeit"], aufnahme: nutzlast["aufnahme"], annahme: werte?.annahme, befoerderung: werte?.befoerderung };
+    hinweise.push(...nachtragswarnungen(zeiten, umfeld.jetztMs ?? Number.POSITIVE_INFINITY));
+  }
   if (werte === undefined || typeof nachrichtId !== "string") return { folgen: weitergabe === undefined ? [] : [weitergabe], hinweise };
   const folgen: { entwurf: Ereignisentwurf; hinweis: string; mitFolgen?: boolean }[] = [];
   // Fernmelder P2-9: Annahme vor der Nummer, wie die Warteschlange sie schreibt.
@@ -299,6 +308,11 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
     return { folgen: [...vermerke.folgen, ...kontakt.folgen, ...laufweg.folgen], hinweise: [...vermerke.hinweise, ...kontakt.hinweise, ...laufweg.hinweise] };
   }
   if (entwurf.typ === "NachrichtGesichtet") return planeSichtung(zustand, entwurf);
+  // R2-ETB P3-4: Zurückziehen nach der Verteilung nennt, wer die Nachricht schon hat.
+  if (entwurf.typ === "NachrichtZurueckgezogen") {
+    const hinweis = rueckzugshinweis(zustand, entwurf);
+    return { folgen: [], hinweise: hinweis === undefined ? [] : [hinweis] };
+  }
   if (entwurf.typ === "NachrichtWeitergegeben") return planeWeitergabe(entwurf, umfeld);
   if (entwurf.typ === "NachrichtNachgewiesen") {
     const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;

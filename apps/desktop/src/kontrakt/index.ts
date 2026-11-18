@@ -349,6 +349,9 @@ export const zEinsatzstammdaten = z.object({
   fmzSchwelleMinuten: z.number().optional(),
   /** Additiv (2026-11-17): der LdF ist eigene Station im Laufweg; fehlt = nein. */
   ldfStation: z.boolean().optional(),
+  /** Additiv (R2-FM P2-5, R2-Si P2-2): Minuten vor dem Sichter bei Blitz und Sofort; fehlen = 5 und 10. */
+  sichterSchwelleBlitzMinuten: z.number().optional(),
+  sichterSchwelleSofortMinuten: z.number().optional(),
 });
 export type Einsatzstammdaten = z.infer<typeof zEinsatzstammdaten>;
 
@@ -418,6 +421,13 @@ export const zNachrichtenlage = z.object({
   ueberSchwelle: zZahl,
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt. */
   vorLdf: zZahl.optional(),
+  /**
+   * Additiv (R2-LdF P2-4): der Teil von `ueberSchwelle`, der beim LdF liegt
+   * (Ausgang VOR_LDF über der Schwelle); `ueberSchwelleFmz` der Rest vor der
+   * FmZ. Beide nur, wenn der Einsatz den LdF als Station führt.
+   */
+  ueberSchwelleLdf: zZahl.optional(),
+  ueberSchwelleFmz: zZahl.optional(),
   /** Additiv (LdF P2-2): fehlende Nummern zwischen 1 und der höchsten; fehlt = lückenlos. */
   nummernluecken: z.array(zZahl).optional(),
   /** Additiv (Sichter P1-4): Eingänge, die mindestens die FmZ-Schwelle lang vor dem Sichter liegen. */
@@ -505,7 +515,22 @@ export const zLagebild = z.object({
    * Diagnose an einem Hinweis mit Pfad `nachricht/<id>/…` „Nachricht öffnen“
    * anbieten kann, statt Rohdaten zu zeigen. `hinweise` bleibt die volle Zahl.
    */
-  konflikthinweise: z.array(z.object({ art: z.string(), feldpfad: z.string() })).readonly().optional(),
+  konflikthinweise: z
+    .array(
+      z.object({
+        art: z.string(),
+        feldpfad: z.string(),
+        /**
+         * Additiv (R2-ETB P2-4, R2-SGL P2-2): der Satz zu einem Hinweis an
+         * einer Nachricht — „Nummer 7 zweimal: E 7 ‚…‘ und A 7 ‚…‘“, „E 8 ‚…‘:
+         * Sichtung von Si 1420 und Zw 1421, Verteiler S2, S4 gegen S2, S3“.
+         * Fehlt bei Hinweisen an anderen Entitäten.
+         */
+        text: z.string().optional(),
+      }),
+    )
+    .readonly()
+    .optional(),
   /**
    * Additiv: Einheiten, die aus einem Erfassungsbogen mit rohen
    * Vokabularcodes („#3") statt Namen übernommen wurden und sich aus dem
@@ -513,11 +538,30 @@ export const zLagebild = z.object({
    */
   vokabelkorrekturen: z.number().int().min(0).optional(),
   unbekannteEreignisse: z.number().int().min(0),
-  /** Wie viele Schritte „rueckgaengig“ noch gehen (§6 U3). */
+  /**
+   * Wie viele Schritte „rueckgaengig“ noch gehen (§6 U3). Seit der
+   * Undo-Gruppe (R2-LdF P2-8) zählt ein Bedienschritt mit Folgeschritten als einer.
+   */
   undoTiefe: z.number().int().min(0),
   undoObersteArt: z.string().optional(),
   /** Der Name des Gegenstands des obersten Schritts („TZ“) — leer, wenn die Art keinen nennt. */
   undoObersteObjekt: z.string().optional(),
+  /**
+   * Additiv (R2-LdF P2-8, R2-FM P3-1, R2-FaBe P2-8): Der oberste Schritt ist
+   * ein Bedienschritt mit Folgeschritten — „Eingang aufnehmen (mit Nummer und
+   * Sichtung)“, „Befördern (mit Annahme, Nummer und Kopien)“. „Rückgängig“
+   * nimmt alle `undoObersteTeile` Ereignisse zurück. Fehlt bei einem
+   * einzelnen Schritt; dann gelten `undoObersteArt` und `undoObersteObjekt`.
+   */
+  undoObersteSchritt: z.string().optional(),
+  undoObersteTeile: z.number().int().min(1).optional(),
+  /**
+   * Additiv (R2-FaBe P2-8): Der jüngste eigene Schritt lässt sich nicht
+   * zurücknehmen (etwa „Nachricht aufgegeben“) und ist jünger als der
+   * oberste Eintrag des Stapels — „Rückgängig“ nennt dann einen älteren
+   * Schritt. `hinweis` sagt, was stattdessen gilt (zurückziehen, berichtigen).
+   */
+  undoOhneRuecknahme: z.object({ art: z.string(), objekt: z.string(), hinweis: z.string() }).optional(),
   /** Anforderungen, die noch nicht eingetroffen oder storniert sind — für die Rückfrage beim Beenden. */
   offeneAnforderungen: z.number().int().min(0).optional(),
   /** Additiv (ETB P1-6): offene Nachrichten für dieselbe Rückfrage; fehlt, solange der Einsatz keine führt. */
@@ -1052,6 +1096,14 @@ export const zBedienergebnis = z.discriminatedUnion("art", [
      */
     warnungen: z.array(z.string()).optional(),
     /**
+     * Additiv (R2-ETB P3-1): die Stufe je Satz in `warnungen`, gleich lang und
+     * in derselben Folge. „warnung“ heißt: bleibt im Hinweiskasten stehen,
+     * bis jemand ihn schließt (doppelte Nummer, Prüfungen des Papier-Nachtrags,
+     * Zurückziehen einer verteilten Nachricht); „info“ darf verfallen. Fehlt
+     * das Feld, gilt für alle die bisherige Anzeige.
+     */
+    warnungStufen: z.array(z.enum(["info", "warnung"])).optional(),
+    /**
      * Additiv: Nach „Eingetroffen“ zählt die abgelöste Einheit noch zur
      * Ist-Stärke. Der Worker ändert nichts; die Oberfläche kann fragen, ob
      * sie zurückgeführt wird.
@@ -1510,7 +1562,15 @@ export interface Akteergebnis extends Ausgabeergebnis {
    * nicht geschrieben werden konnten. Fehlt, wenn der Einsatz keine
    * Nachrichten führt.
    */
-  readonly nachrichtenbeilagen?: { readonly erzeugt: number; readonly vorhanden: number; readonly fehlgeschlagen: number };
+  readonly nachrichtenbeilagen?: {
+    readonly erzeugt: number;
+    readonly vorhanden: number;
+    readonly fehlgeschlagen: number;
+    /** Additiv (R2-ETB P2-1): Vordrucke zurückgezogener Nachrichten, mit Stempel neu geschrieben. */
+    readonly gestempelt?: number;
+    /** Additiv (R2-ETB P2-7): das Handzeichenverzeichnis liegt der Akte bei. */
+    readonly handzeichenverzeichnis?: boolean;
+  };
 }
 
 /**
@@ -1610,6 +1670,12 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
    * Nummer der Nachweisung, nicht zurückgezogen (`projektion.ohneNummerZeilen`).
    */
   readonly ohneNummer?: readonly Nachrichtenzeile[];
+  /**
+   * Additiv (R2-LdF P3-4): die Anzeigenamen der lebenden Arbeitsplätze mit
+   * Stelle FMZ (die eigene Sitzung eingeschlossen) — die Auswahl „Fernmelder“
+   * im Vorschlag des LdF statt fest „Fm1“ bis „Fm3“.
+   */
+  readonly fernmelder?: readonly string[];
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {

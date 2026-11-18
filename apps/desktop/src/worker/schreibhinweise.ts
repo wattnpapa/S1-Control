@@ -17,7 +17,18 @@ import type { Ereignisentwurf } from "@s1/speicher";
 import type { Bedienergebnis } from "../kontrakt/index.js";
 
 type Geschrieben = Extract<Bedienergebnis, { art: "geschrieben" }>;
-export type Schreibhinweise = Pick<Geschrieben, "warnungen" | "abloesungOffen">;
+export type Schreibhinweise = Pick<Geschrieben, "warnungen" | "warnungStufen" | "abloesungOffen">;
+
+/**
+ * Die Stufe eines Satzes (R2-ETB P3-1): Die Warnung zur doppelten Nummer
+ * verschwand nach 20 Sekunden aus dem Hinweiskasten; wer gerade woanders
+ * hinsah, las sie nie. Was der Bediener berichtigen muss, ist „warnung“.
+ */
+export function warnstufe(satz: string): "info" | "warnung" {
+  if (satz.startsWith("Die Nummer ") && satz.includes("bereits vergeben")) return "warnung";
+  if (satz.startsWith("Nachtrag:") || satz.includes("war schon verteilt")) return "warnung";
+  return "info";
+}
 
 function norm(wert: unknown): string {
   return typeof wert === "string" ? wert.trim().toLowerCase() : "";
@@ -106,7 +117,7 @@ export function schreibhinweise(zustand: Zustand, entwurf: Ereignisentwurf, vora
         ]),
   ];
   return {
-    ...(warnungen.length === 0 ? {} : { warnungen }),
+    ...(warnungen.length === 0 ? {} : { warnungen, warnungStufen: warnungen.map(warnstufe) }),
     ...(offen === undefined ? {} : { abloesungOffen: offen }),
   };
 }

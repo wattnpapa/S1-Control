@@ -20,7 +20,7 @@
  * mit dem dann geltenden Vorher-Wert („2. Sichtung") bereinigt.
  */
 
-import { KATALOG, schemata, type Nachrichtenzeile, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
+import { KATALOG, schemata, type Nachrichtenbezug, type Nachrichtenzeile, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
 
@@ -46,6 +46,13 @@ export interface Nachrichtenanlage {
   readonly gegenstelle?: string;
   /** Additiv (N2): der Aufnahmevermerk der FmZ (Feld 1 und 2) — Mittel, Zeit, Handzeichen. */
   readonly aufnahme?: { readonly mittel: string; readonly zeitpunkt: string; readonly handzeichen: string };
+  /**
+   * Additiv (R2-ETB P2-6): Anschrift und Absender als Bezug auf eine Entität
+   * des Einsatzes, wenn die Maske sie aus der Liste gewählt hat — Schema und
+   * Zustand kennen sie seit N1 (`zNachrichtenbezug`).
+   */
+  readonly anschriftBezug?: Nachrichtenbezug;
+  readonly absenderBezug?: Nachrichtenbezug;
 }
 
 /** Leere optionale Texte fallen weg: Ein leeres Feld ist auf dem Vordruck kein Wert. */
@@ -137,6 +144,8 @@ const NEU_SCHEMA: Readonly<Record<string, { safeParse: (wert: unknown) => { succ
   NachrichtAngenommen: schemata.zZeitvermerk,
   NachrichtUebermittlungVorgeschlagen: schemata.zVorschlag,
   NachrichtBefoerdert: schemata.zMittelvermerk,
+  // Additiv (FM P2-7): „Aufnahme berichtigen“ trägt denselben Vermerk wie die Aufnahme.
+  NachrichtAufnahmeBerichtigt: schemata.zMittelvermerk,
   NachrichtNachgewiesen: schemata.zNachweis,
   // Der Eingangsschritt des LdF (additiv, 2026-11-17).
   NachrichtWeitergegeben: schemata.zWeitergabe,
