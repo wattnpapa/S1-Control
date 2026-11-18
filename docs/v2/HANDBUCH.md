@@ -391,8 +391,13 @@ Fernmeldezentrale vorbehalten … Trotzdem eintragen?“; „Trotzdem“ gibt de
 Schritt frei, und das Tagebuch vermerkt „Eintrag durch <Stelle>, nicht FmZ“.
 Dasselbe gilt für „Eingang aufnehmen“ und für einen Papier-Nachtrag mit
 Annahme, Beförderung oder Nummer ohne die Stelle FmZ, und für „Sichten“ ohne
-die Stelle Sichter („Sichten ist dem Sichter vorbehalten … Trotzdem
-sichten?“, im Tagebuch „Eintrag durch Fachberater, nicht Sichter“); der
+die Stelle Sichter („Das Sichten ist dem Sichter vorbehalten (Vordruck,
+Felder 18 bis 20). Dieser Arbeitsplatz ist nicht als Sichter eingetragen …“,
+im Tagebuch „Eintrag durch Fachberater, nicht Sichter“). Der Satz nennt je
+Schritt die Stelle, der er vorbehalten ist — der Fernmeldezentrale beim
+Aufnehmen, Annehmen, Befördern und Nachweisen, dem Leiter des
+Fernmeldebetriebes beim Vorschlag und bei der Weitergabe — und dass
+„Trotzdem“ den Schritt mit Grund im Tagebuch einträgt; der
 Arbeitsplatz prüft das auch selbst und schreibt ohne „Trotzdem“ nichts.
 Ausgenommen sind die Ersatzregeln unten: Ist kein Sichter besetzt, sichten
 FmZ und LdF ohne Rückfrage.
@@ -452,7 +457,19 @@ Masken „Nachricht verfassen“ und „Eingang aufnehmen“ trägt Zeiten,
 Handzeichen und Nummer so ein, wie sie auf dem Blatt stehen. Das Tagebuch
 nennt jede Zeile dazu „vom Papier nachgetragen durch <Stelle>“ mit der
 Stelle des Arbeitsplatzes, der nachgetragen hat; Annahme, Beförderung und
-Nummer ohne die Stelle FmZ brauchen „Trotzdem“.
+Nummer ohne die Stelle FmZ brauchen „Trotzdem“. Geschrieben wird, was auf
+dem Blatt steht; passt die Zeitfolge nicht, sagt eine Warnung es sofort, die
+im Hinweiskasten stehen bleibt: Die Annahme liegt vor der Abfassung, die
+Beförderung vor der Annahme, eine Zeit liegt in der Zukunft (Zahlendreher)
+oder die Nummer ist schon vergeben. Berichtigt wird danach mit „Annehmen“,
+„Befördern“, „Nachweisen“ oder „Aufnahme berichtigen“.
+
+**Aufnahme berichtigen.** Hat die FmZ einen Eingang mit falscher
+Aufnahmezeit oder falschem Mittel aufgenommen, berichtigt „Aufnahme
+berichtigen“ Mittel, Zeit und Handzeichen der Aufnahme (Feld 1, 2 und 6).
+Ein Grund ist Pflicht, weil der Vermerk auf Papier schon stehen kann; das
+Tagebuch führt die Zeile als Berichtigung mit altem und neuem Wert
+(„Aufnahme berichtigt (Funk 1705 → Telefon 1750, Hz. Fm)“).
 
 **Gesprächsnotiz.** Wer telefoniert oder persönlich spricht, hält das
 Gespräch mit dem Kästchen „Gesprächsnotiz“ in der Verfassen-Maske fest. Die
@@ -477,11 +494,24 @@ Weitergeben verteilt“). Jede Ersatzsichtung heißt im Tagebuch „als
 Ersatzsichter gesichtet“. Ein Sichter, der doch da war, sieht die Nachricht
 trotzdem und kann nachsichten.
 
+**Säumiger Sichter.** Ist ein Sichter besetzt, reagiert aber nicht
+(Funkgerät, Telefon, Tür), gilt eine Schwelle je Vorrang: Liegt ein Blitz 5
+Minuten, ein Sofort 10 Minuten oder eine einfache Nachricht die Schwelle der
+FmZ lang vor dem Sichter, bekommen FmZ und LdF einmal den Hinweis „… wartet
+seit … Minuten vor dem Sichter, obwohl ein Sichter besetzt ist“, die Zeile
+trägt die Marke, und „Ich sichte jetzt selbst“ ist ohne Rückfrage frei. Im
+Tagebuch steht die Sichtung dann als Ersatzsichtung („Sichter besetzt,
+Schwelle überschritten“). Die beiden Schwellen für Blitz und Sofort sind
+Parameter des Einsatzes; eine Vorrangschwelle über der Schwelle der FmZ
+gilt nicht, ein Blitz wartet nie länger als eine einfache Nachricht.
+
 **Parameter des Einsatzes.** In den Stammdaten im Blatt Führungsstelle
 stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
 ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
-nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20). Dazu kommt
-„LdF als eigene Station“ (Vorbelegung nein), siehe unten.
+nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20). Dazu kommen
+„LdF als eigene Station“ (Vorbelegung nein), siehe unten, und die Schwellen
+vor dem Sichter bei Blitz und Sofort (Vorbelegung 5 und 10 Minuten, siehe
+„Säumiger Sichter“).
 
 **Leiter des Fernmeldebetriebes (LdF).** Führt der Einsatz den LdF als
 eigene Station (Kästchen „LdF als eigene Station“ unter „Nachrichtenweg“),
@@ -506,6 +536,12 @@ aufgenommener Eingang läuft direkt zum Sichter („Kein LdF besetzt:
 Nachricht direkt an den Sichter weitergegeben“), und beim Befördern gilt
 sein Vermerk als Vorschlag. Ohne das Kästchen bleibt der Weg, wie er ist;
 die Sicht „LdF“ erscheint dann nur an einem Arbeitsplatz mit der Stelle LdF.
+Befördert die FmZ, bevor der besetzte LdF einen Weg vorgeschlagen hat,
+tragen Nachweisung und Tagebuch die Marke „ohne Vorschlag des LdF“; nimmt
+sie ein anderes Mittel als vorgeschlagen, steht „abweichend vom Vorschlag
+(Telefon → Funk)“ dort und als Hinweis beim Befördern. Ist kein LdF besetzt,
+tragen die Zeilen beim LdF das als Angabe („LdF nicht besetzt“); die
+Auswahl der Fernmelder im Vorschlag nennt die Arbeitsplätze mit der Stelle FmZ.
 
 **Zwei Sichter zugleich.** Haben zwei Sichter dieselbe Nachricht gesichtet,
 ohne die Sichtung des anderen zu sehen, nimmt das Programm beide an: Der
@@ -526,7 +562,10 @@ bis beide ihn erledigt haben. Die Verfasserstelle ist die Funktion auf dem
 Vordruck, wenn sie eine Stelle ist, sonst der Absender. Ist S2 nicht
 besetzt, wird die Kopie trotzdem eingetragen und wartet im Fach. Laufen
 Ausgänge nach der Beförderung noch einmal zum Sichter (Parameter oben),
-entfällt dieser Schritt, weil dann der Sichter verteilt.
+entfällt dieser Schritt, weil dann der Sichter verteilt. Die grüne Kopie
+des eigenen Ausgangs gilt für die Verfasserstelle als gelesen: Sie zählt dort
+nicht als „neu“, und ein Blitz meldet sich seinem Verfasser nicht noch einmal.
+Im Tagebuch steht dafür keine Kenntnisnahme — der Verfasser kennt den Inhalt.
 
 **Als Vordruck drucken.** An jeder gewählten Nachricht steht in der Leiste,
 im Rechtsklickmenü und in der aufgeschlagenen Nachricht „Als Vordruck
@@ -579,7 +618,32 @@ Dateien. So liegt der Block im Schrank, bevor der Rechner steht.
 im gedruckten Tagebuch und als ETB-Nr. auf dem Vordruck) und die Nummer der
 Nachricht zur Zeit des Eintrags („Nachricht“, etwa „E 3“). Als Akteur steht
 die Stelle, die den Schritt getan hat: bei der Aufnahme die FmZ, nicht die
-Funktion des Absenders draußen.
+Funktion des Absenders draußen. Der Satz nennt den Vorrang („Blitz-Nachricht
+E 8“), bei der Aufnahme Mittel und Gegenstelle, bei der Sichtung den Vermerk
+des Sichters; Erledigen und Zurückziehen tragen das Handzeichen. Beim
+Beenden des Einsatzes schreibt das Programm, wenn etwas offen ist, einen
+Eintrag „Einsatz beendet, offene Nachrichten: …; fehlende Nummern: …“, und
+die Abschlusszeile des gedruckten Tagebuchs nennt Stelle und Handzeichen
+dessen, der beendet hat. Die Spalte der fachlichen Zeit heißt im Druck wie
+am Bildschirm „Fachzeit“.
+
+**Zurückziehen.** Eine zurückgezogene Nachricht trägt den Satz mit Zeit,
+Stelle und Grund („Zurückgezogen 17.11.2026 20:41 von S3 · Mü, Grund: …“).
+War sie schon verteilt, sagt der Hinweis nach dem Zurückziehen, welche
+Stellen sie haben und ob sie gelesen oder erledigt ist — diese Stellen sehen
+nur die Marke, jemand muss ihnen Bescheid geben.
+
+**Einsatzakte und Handzeichenverzeichnis.** Die Einsatzakte legt von Tagebuch
+und Nachweisung nur den jüngsten Stand obenauf; ältere Ausgaben stehen im
+Unterordner „ausgaben/fruehere“ des Archivs (auf dem Share bleibt jede
+Datei). Der Vordruck einer zurückgezogenen Nachricht wird vor dem Packen mit
+dem Stempel „Zurückgezogen“ neu geschrieben. Dazu kommt das
+Handzeichenverzeichnis: je Handzeichen die Arbeitsplätze und Stellen, unter
+denen es vorkam, mit erstem und letztem Eintrag — so bleibt ein Handzeichen
+nach dem Einsatz einer Person und Stelle zuzuordnen. Jeder Ausdruck nennt im
+Kopf die Programmfassung. Konflikthinweise an Nachrichten nennt die Diagnose
+mit Nummer, Betreff und den beiden Werten („Nummer 7 zweimal: E 7 ‚…‘ und
+A 7 ‚…‘“, „E 8 ‚…‘: Sichtung von Si 1420 und Zw 1421, Verteiler …“).
 
 ### Wörterverzeichnis Nachrichten
 
@@ -632,6 +696,19 @@ zurückzunehmen“. Links daneben steht nach jedem eigenen Schritt zehn Sekunden
 lang die Bestätigung „✓ … · gespeichert“, nach einer Rücknahme
 „✓ Zurückgenommen: …“. Die Ist-Stärke steht nicht in der Statuszeile, sondern
 nur im Kopfband.
+
+**Ein Schritt mit Folgeschritten ist ein Rückgängig.** Manche Bedienschritte
+schreiben mehr als einen Eintrag: „Befördern“ trägt fehlende Annahme und
+Nummer nach und verteilt die Kopien an S2 und den Verfasser, „Aufnehmen“
+trägt Nummer und Sichtung mit ein. „Rückgängig“ nimmt dann den ganzen
+Schritt zurück, den jüngsten Teil zuerst, und sagt danach, was es
+zurückgenommen hat („Zurückgenommen: Befördern (mit Annahme, Nummer und
+Kopien)“); jeder Teil steht als eigene Rücknahme im Tagebuch. Die Anlage
+einer Nachricht selbst lässt sich nicht rückgängig machen: Nach „Eingang
+aufnehmen (mit Nummer und Sichtung)“ gehen Nummer und Sichtung, der Eingang
+bleibt; eine aufgegebene Nachricht wird mit Grund zurückgezogen. War der
+letzte eigene Schritt ein solcher, kennt das Programm das und kann es
+nennen, statt still einen älteren Schritt anzubieten.
 
 Zwei Grenzen gehören dazu. Hat ein anderer Arbeitsplatz dieselbe Handlung
 bereits zurückgenommen, ist der alte Stand schon wiederhergestellt — ein

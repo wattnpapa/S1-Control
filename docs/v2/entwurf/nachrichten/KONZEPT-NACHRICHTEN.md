@@ -722,6 +722,28 @@ Rollen-Audits (`docs/audits/nachrichten/README.md`):
     der Sitzung vor) —, und was dieser Arbeitsplatz verfasst hat (`clientId`).
     Der Absender-Freitext zählt nicht mehr. Beim Schichtwechsel sieht damit ein
     zweiter Arbeitsplatz mit der Stelle S4 den Ausgang des ersten.
+15. **Die eigene Kopie gilt als gelesen** (2026-11-18, R2-FaBe P1-4). Die
+    grüne Kopie an die Stelle des Verfassers nach der Beförderung (Folie 30)
+    zählt im Posteingang dieser Stelle nicht als „neu“ und löst keinen
+    Vorranghinweis aus. Abgeleitet in der Projektion
+    (`projektion/verfasserstelle.ts`, Marke `eigenerAusgang`), nicht als
+    geschriebenes `NachrichtKenntnisGenommen`: Das Ereignis schriebe der
+    Arbeitsplatz der FmZ mit dem Handzeichen des Verfassers — eine
+    Kenntnisnahme, die niemand gegeben hat. Erledigt wird die Kopie wie jede.
+16. **Schwelle vor dem Sichter je Vorrang** (2026-11-18, R2-FM P2-5, R2-Si
+    P2-2). Blitz 5, Sofort 10, einfach die Schwelle der FmZ, je als Parameter
+    des Einsatzes (`sichterSchwelleBlitzMinuten`,
+    `sichterSchwelleSofortMinuten` über `NachrichtenParameterGesetzt`); eine
+    Vorrangschwelle über der Schwelle der FmZ gilt nicht. Über der Schwelle
+    gilt die Ersatzregel auch bei **besetztem** Sichter: FmZ und LdF sichten
+    ohne Rückfrage, die Sichtung trägt `grund` „Sichter besetzt, Schwelle
+    überschritten: Ersatzsichter“, und der Stauwächter meldet es der FmZ.
+17. **Aufnahme berichtigen** (2026-11-18, FM P2-7). Neue Ereignisart
+    `NachrichtAufnahmeBerichtigt` (Form a auf `aufnahme`, LWW, Pflichtgrund,
+    Rücknahme dieselbe Art), `FOLD_VERSION` 14. Die Wortlaute des
+    Stellenvorbehalts stehen seit diesem Tag je Schritt im Kontrakt
+    (`vorbehaltstextFuer`, R2-FaBe P2-7): Sichter, Fernmeldezentrale (Felder 1
+    bis 6) oder Leiter des Fernmeldebetriebes, mit dem Satz, was „Trotzdem“ tut.
 
 ### Die Fragen, wie sie standen
 

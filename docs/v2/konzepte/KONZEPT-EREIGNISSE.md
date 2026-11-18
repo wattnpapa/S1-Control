@@ -1436,6 +1436,22 @@ Der Hinweis wird nach §3.8 bei jeder Materialisierung neu gerechnet. Er steht g
 
 **T64:** A schreibt `StatusGesetzt` (5), B setzt anders (7), A nimmt zurück (9) ⇒ der Wert von A gilt, `undoTrifftFremdenStand`. **T65:** Ein viertes `StatusGesetzt` (11) ⇒ der Hinweis fällt weg. **T66:** Zwei Clients kompensieren dasselbe Ereignis mit demselben Wert ⇒ ein Wert, **kein Hinweis überhaupt** — weder `undoTrifftFremdenStand` (die Werte sind gleich) noch `vorherPasstNicht` (der Vorbehalt aus §2.2a). **T67:** Dieselben mit verschiedenen Werten ⇒ LWW, Hinweis.
 
+
+### Nachtrag (2026-11-18): Die Undo-Gruppe — ein Bedienschritt, mehrere Ereignisse
+
+Anlass sind drei Befunde der zweiten Audit-Runde zu den Nachrichten (R2-LdF P2-8, R2-FM P3-1, R2-FaBe P2-8): Ein Bedienschritt wie „Befördern“ schreibt mehr als ein Ereignis — die Beförderung und die Folgeschritte des Workers (Annahme und Nummer, wenn sie fehlten, der Kontakt im Funkplan, die Kopien an S2 und den Verfasser). „Rückgängig“ nannte danach das zuletzt geschriebene Folgeereignis („Nachricht A 3 gesichtet“) und nahm nur dieses zurück; nach „Aufgeben“ nannte es einen älteren Schritt, weil die Anlage selbst nicht rücknehmbar ist.
+
+**Was der Nachtrag ändert, ist die Bedienung, nicht die Regeln U1 bis U6.**
+
+* Ein Folgeschritt trägt in der Nutzlast `folgeVon` mit der Ereignis-Id des Hauptschritts (additiv, nur an Folgeschritten der Nachrichtenschritte; der Fold liest es nicht). Damit steht die Zugehörigkeit **in den Ereignissen**: Der Stapel bleibt abgeleitet und liegt nirgends (U3).
+* Der Stapel fasst die eigenen, nicht kompensierten Ereignisse mit derselben Gruppenkennung (`folgeVon` oder die eigene Id) zu einem Eintrag zusammen. „Rückgängig“ nimmt die oberste Gruppe zurück, **neuestes Ereignis zuerst**, und jedes Ereignis mit seinem eigenen Gegenereignis aus dem Katalog — U1 gilt je Ereignis unverändert, der Fold hat weiter keinen Sonderpfad. Die Kompensation trägt kein `folgeVon`.
+* Hält ein Teil an (etwa ein Gegenereignis mit Pflichtgrund oder eine Abweisung), bleiben die übrigen stehen; die Meldung sagt, wie viele Teile zurückgenommen sind. Eine halbe Rücknahme ist damit sichtbar, nicht still.
+* Ist der Hauptschritt selbst nicht rücknehmbar (die Anlage einer Nachricht, U2 „nicht rückgängig“ im Katalog), nimmt die Gruppe nur die Folgeschritte zurück und sagt, dass die Anlage bleibt und mit Grund zurückgezogen wird.
+* Ist der jüngste eigene Schritt nicht rücknehmbar und jünger als die oberste Gruppe, nennt das Lagebild ihn (`undoOhneRuecknahme`) mit dem Weg, der stattdessen gilt — „Rückgängig“ nennt dann sichtbar einen älteren Schritt.
+* U5 (kein Redo) und U6 (Undo gegen Fremdänderung) gelten je Ereignis: Die Folgen einer Kompensation gehören zu keiner Gruppe, und ein `undoTrifftFremdenStand` entsteht an dem Feld, an dem die Rücknahme fremde Arbeit verdrängt.
+
+Prüffälle: `packages/domaene/src/undogruppe.test.ts`, `apps/desktop/src/worker/szenarien-runde3.test.ts`. Das Lagebild trägt `undoObersteSchritt` („Befördern (mit Annahme, Nummer und Kopien)“) und `undoObersteTeile`; die bisherigen Felder `undoObersteArt` und `undoObersteObjekt` bleiben.
+
 ---
 
 ## §7 Die Barriere `EinsatzArchiviert` (Auflage 13)
