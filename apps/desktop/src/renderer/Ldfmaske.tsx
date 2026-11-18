@@ -10,11 +10,17 @@
  * Nachricht, solange die Maske offen ist, und der Vorher-Wert vom Öffnen.
  * Eine Abweisung wegen eines fremden neueren Werts steht in Worten da, mit
  * „Neu laden“ (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
+ *
+ * Nachzug (R2-LdF P2-3 teilweise): Die Maske zeigt den Aufnahmevermerk, den
+ * der LdF prüfen soll — Mittel, Zeit, Handzeichen, Gegenstelle, Nummer —, und
+ * fragt bei einem Eingang ohne Nummer einmal nach („Trotzdem ohne Nummer
+ * weitergeben“), wie die Beförderung. Vorher stand dort nur die Überschrift,
+ * und der Knopf versprach eine Prüfung, die er nicht machte.
  */
 
 import { useState } from "react";
 
-import { datumZeitGruppe, type Nachrichtenzeile } from "@s1/domaene";
+import { datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf } from "../kontrakt/index.js";
 import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
@@ -22,8 +28,9 @@ import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { useLaden } from "./laden.js";
+import { meldeWarnungen } from "./warnungsstufen.js";
 import { Maske } from "./Maske.js";
-import { zeitAusEingabe } from "./nachrichtenformate.js";
+import { dtg, zeitAusEingabe } from "./nachrichtenformate.js";
 import { useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
@@ -39,6 +46,17 @@ export function weitergabeEntwurf(zeile: Nachrichtenzeile, e: Weitergabeeingaben
   if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
   if (e.handzeichen.trim() === "") return "Handzeichen eintragen";
   return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+}
+
+/** „Funk 171045NOV26 Fm · von Heros Wildeshausen 10 · Nr. 7“ — der Aufnahmevermerk zum Prüfen (R2-LdF P2-3). */
+export function aufnahmevermerkText(zeile: Nachrichtenzeile): string {
+  const a = zeile.aufnahme;
+  const teile = [
+    a === undefined ? "ohne Aufnahmevermerk" : `${projektion.mittelWort(a.mittel)} ${dtg(a.zeitpunkt)} ${a.handzeichen}`,
+    zeile.gegenstelle === undefined ? "ohne Gegenstelle" : `von ${zeile.gegenstelle}`,
+    zeile.nummer === undefined ? "ohne Nummer" : `Nr. ${String(zeile.nummer)}`,
+  ];
+  return teile.join(" · ");
 }
 
 export interface WeitergabemaskeEigenschaften {
@@ -63,9 +81,16 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   // Entscheidung 13, LdF P2-3: Hinweis statt Recht (Folie 7), `grund` im Tagebuch.
   const vorbehalt = useStellenvorbehalt("weitergabe");
   const entwurf = weitergabeEntwurf(p.zeile, e);
+  // R2-LdF P2-3: Ohne Nummer fragt der erste Klick, der zweite gibt weiter.
+  const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
+  const ohneNummer = p.zeile.nummer === undefined;
 
   async function schreibe(): Promise<void> {
     if (typeof entwurf === "string") return;
+    if (ohneNummer && !ohneNummerBestaetigt) {
+      setzeOhneNummerBestaetigt(true);
+      return;
+    }
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
@@ -77,7 +102,8 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
       return;
     }
     if (ergebnis?.art !== "geschrieben") return;
-    for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
+    // R2-ETB P3-1: „Nummer bereits vergeben“ bleibt stehen, wenn der Worker es als Warnung führt.
+    meldeWarnungen(ergebnis, "info");
     p.aufSchliessen();
   }
 
@@ -85,14 +111,24 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   return (
     <Maske
       titel={`An den Sichter weitergeben · ${nummer} ${p.zeile.betreff}`}
-      bestaetigungstext="Weitergeben"
+      bestaetigungstext={ohneNummer && ohneNummerBestaetigt ? "Trotzdem ohne Nummer weitergeben" : "Weitergeben"}
       nurKnopf
       bereit={typeof entwurf !== "string" && !versuch.gesperrt && !vorbehalt.gesperrt}
       bereitGrund={typeof entwurf === "string" ? entwurf : (versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined))}
       aufAbbrechen={p.aufSchliessen}
       aufBestaetigen={schreibe}
+      fusszeile={
+        ohneNummer && ohneNummerBestaetigt ? (
+          <p className="warnung fussfrage" role="alert">
+            Dieser Eingang hat keine Nachweisungsnummer. Ohne Nummer an den Sichter weitergeben?
+          </p>
+        ) : undefined
+      }
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
+      <p className="aufnahmevermerk">
+        <strong>Aufnahme:</strong> {aufnahmevermerkText(p.zeile)}
+      </p>
       {vorbehalt.hinweis}
       <div className="vordruckzeile">
         <Dtgfeld beschriftung="Uhrzeit" wert={e.zeit} aufAenderung={(wert) => setzeE((bisher) => ({ ...bisher, zeit: wert }))} />

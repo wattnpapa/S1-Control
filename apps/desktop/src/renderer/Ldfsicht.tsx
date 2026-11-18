@@ -19,6 +19,13 @@
  * x = 1375. Die beiden Karten stehen jetzt untereinander in voller Breite
  * (`fmzkarten untereinander`), die Tabellen haben `table-layout: fixed`,
  * Textzellen brechen um, und die Knopfspalte hat eine feste Breite.
+ *
+ * Nachzug (R2-LdF P2-4): Die Ausgangskarte führt Nummer, Absender und die
+ * Wartezeit beim LdF (`wartetSeitLdf`, Ring 2); über der Schwelle steht die
+ * Zeile bernstein mit der Marke „über der Schwelle“ — vorher zählte das Band
+ * „über der Schwelle 1“, und die Zeile war unmarkiert. Die Eingangskarte
+ * zeigt die Wartezeit und die Gegenstelle. Wer am Stau schuld ist, FmZ oder
+ * LdF, ist damit ablesbar.
  */
 
 import { useState } from "react";
@@ -45,13 +52,34 @@ function vermerk(v: { readonly zeitpunkt: string; readonly handzeichen: string }
   return v === undefined ? "—" : `${dtg(v.zeitpunkt)} ${v.handzeichen}`;
 }
 
+/** Die Vorbelegung der Schwelle, wenn das Blatt keine nennt (wie `FMZ_SCHWELLE_VORBELEGUNG`). */
+const SCHWELLE_VORGABE = 20;
+
+/** Ob die Zeile beim LdF über der Schwelle liegt: `wartetSeitLdf` gegen die Schwelle des Einsatzes (R2-LdF P2-4). */
+export function ldfUeberSchwelle(zeile: Nachrichtenzeile, schwelleMinuten: number): boolean {
+  return zeile.wartetSeitLdf !== undefined && zeile.wartetSeitLdf >= schwelleMinuten;
+}
+
+/** „12 min“ und die Marke „über der Schwelle“ — die Zelle „Wartet“ (R2-LdF P2-4). */
+function Wartezelle({ zeile, schwelleMinuten }: { readonly zeile: Nachrichtenzeile; readonly schwelleMinuten: number }): React.JSX.Element {
+  if (zeile.wartetSeitLdf === undefined) return <td className="zahl">—</td>;
+  const ueber = ldfUeberSchwelle(zeile, schwelleMinuten);
+  return (
+    <td className="zahl wartezelle">
+      {zeile.wartetSeitLdf} min
+      {ueber && <span className="marke-zustand warn"> über der Schwelle</span>}
+    </td>
+  );
+}
+
 interface KartenEigenschaften {
   readonly zeilen: readonly Nachrichtenzeile[];
   readonly nurLesen: boolean;
   readonly aufSchritt: (zeile: Nachrichtenzeile) => void;
+  readonly schwelleMinuten: number;
 }
 
-function Ausgangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): React.JSX.Element {
+function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: KartenEigenschaften): React.JSX.Element {
   return (
     <section className="karte fmzkarte" aria-label="Ausgänge vor dem Vorschlag">
       <h3>Ausgänge vor dem Vorschlag</h3>
@@ -62,10 +90,13 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
           <thead>
             <tr>
               <th scope="col" className="schmalspalte">Vorrang</th>
+              <th scope="col" className="schmalspalte">Nr.</th>
+              <th scope="col">Absender</th>
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Wunsch</th>
               <th scope="col">Annahme</th>
+              <th scope="col" className="schmalspalte">Wartet</th>
               <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
               </th>
@@ -73,14 +104,17 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <tr key={zeile.id}>
+              <tr key={zeile.id} className={ldfUeberSchwelle(zeile, schwelleMinuten) ? "ueberschwelle" : undefined}>
                 <td>
                   <Vorrang zeile={zeile} />
                 </td>
+                <td className="zahl">{zeile.nummer ?? "—"}</td>
+                <td>{zeile.absender}</td>
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td>{zeile.uebermittlungswunsch === undefined ? "—" : projektion.mittelWort(zeile.uebermittlungswunsch)}</td>
                 <td className="mono">{vermerk(zeile.annahme)}</td>
+                <Wartezelle zeile={zeile} schwelleMinuten={schwelleMinuten} />
                 <td>
                   <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Fernmelder, Mittel und Gegenstelle bestimmen"} onClick={() => aufSchritt(zeile)}>
                     Übermittlung vorschlagen
@@ -95,7 +129,7 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
   );
 }
 
-function Eingangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): React.JSX.Element {
+function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: KartenEigenschaften): React.JSX.Element {
   return (
     <section className="karte fmzkarte" aria-label="Eingänge vor der Weitergabe">
       <h3>Eingänge vor der Weitergabe</h3>
@@ -110,6 +144,7 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
               <th scope="col">Absender</th>
               <th scope="col">Betreff</th>
               <th scope="col">Aufnahme</th>
+              <th scope="col" className="schmalspalte">Wartet</th>
               <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
               </th>
@@ -117,7 +152,7 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <tr key={zeile.id}>
+              <tr key={zeile.id} className={ldfUeberSchwelle(zeile, schwelleMinuten) ? "ueberschwelle" : undefined}>
                 <td>
                   <Vorrang zeile={zeile} />
                 </td>
@@ -126,7 +161,9 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt }: KartenEigenschaften): R
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">
                   {zeile.aufnahme === undefined ? "—" : `${projektion.mittelWort(zeile.aufnahme.mittel)} ${vermerk(zeile.aufnahme)}`}
+                  {zeile.gegenstelle !== undefined && <span className="nebenwert"> von {zeile.gegenstelle}</span>}
                 </td>
+                <Wartezelle zeile={zeile} schwelleMinuten={schwelleMinuten} />
                 <td>
                   <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Aufnahme und Nachweisung geprüft: an den Sichter"} onClick={() => aufSchritt(zeile)}>
                     An den Sichter weitergeben
@@ -147,16 +184,18 @@ export interface LdfsichtEigenschaften {
   readonly nurLesen: boolean;
   /** Öffnet die Maske „Übermittlung vorschlagen" der FmZ (`useFmzschritte`). */
   readonly aufVorschlag: (zeile: Nachrichtenzeile) => void;
+  /** Additiv (R2-LdF P2-4): die Schwelle des Einsatzes für die Marke an der Wartezeit. */
+  readonly schwelleMinuten?: number | undefined;
 }
 
 /** Die beiden Karten mit der Weitergabemaske; die Zeile bleibt der Stand beim Öffnen (Vorher-Wert). */
-export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag }: LdfsichtEigenschaften): React.JSX.Element {
+export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE }: LdfsichtEigenschaften): React.JSX.Element {
   const [weiter, setzeWeiter] = useState<Nachrichtenzeile | undefined>(undefined);
   return (
     <>
       <div className="fmzkarten untereinander">
-        <Ausgangskarte zeilen={zeilen.filter((z) => z.richtung === "AUSGANG")} nurLesen={nurLesen} aufSchritt={aufVorschlag} />
-        <Eingangskarte zeilen={zeilen.filter((z) => z.richtung !== "AUSGANG")} nurLesen={nurLesen} aufSchritt={setzeWeiter} />
+        <Ausgangskarte zeilen={zeilen.filter((z) => z.richtung === "AUSGANG")} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
+        <Eingangskarte zeilen={zeilen.filter((z) => z.richtung !== "AUSGANG")} nurLesen={nurLesen} aufSchritt={setzeWeiter} schwelleMinuten={schwelleMinuten} />
       </div>
       {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} aufSchliessen={() => setzeWeiter(undefined)} />}
     </>

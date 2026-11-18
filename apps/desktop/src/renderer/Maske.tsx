@@ -14,6 +14,21 @@
  * Additiv (Audit Fernmelder P2-8): Tab bleibt in der Maske, und beim
  * Schließen kehrt der Fokus zum auslösenden Element zurück
  * (`useFokusfalle.ts`).
+ *
+ * Additiv (Runde 2, R2-FaBe P3-4, R2-SGL P3-1, P3-2):
+ * - Die Rückfrage beim Verwerfen steht **im festen Fuß** neben den Knöpfen
+ *   (`fussfrage`), nicht darüber: Bei langem Vordruck lag sie hinter der
+ *   Fußleiste, und nur der Knopftext wechselte still von „Abbrechen“ zu
+ *   „Verwerfen“. Ebenso jede Rückfrage des Aufrufers (`fusszeile`), etwa
+ *   „Dieselbe Nachricht … noch einmal aufgeben?“.
+ * - Ein zweites Esc verwirft nicht mehr: Es nimmt die Frage zurück — oder
+ *   schließt die Maske, wenn sie den Entwurf aufheben kann
+ *   (`aufZurueckstellen`). Verworfen wird nur mit dem Knopf „Verwerfen“.
+ * - Mit `aufZurueckstellen` sind „Abbrechen“ und „Verwerfen“ zwei Knöpfe:
+ *   „Abbrechen“ schließt und behält den Entwurf, „Verwerfen“ löscht ihn nach
+ *   Rückfrage.
+ * - `enterBereit` (R2-FM P2-3): Ist es falsch, bestätigt Enter in einem
+ *   einzeiligen Feld nicht; Knopf und Strg+Enter bleiben.
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
@@ -34,7 +49,13 @@ export const TEXT_UNKLAR_VERWERFEN = "Unklar, ob gespeichert. Trotzdem verwerfen
  * Fernmelder P1-3, Sachgebietsleiter P1-5): Ein versehentliches Esc darf einen
  * Funkspruch, der nur einmal durchgegeben wird, nicht vernichten.
  */
-export const TEXT_ENTWURF_VERWERFEN = "Entwurf verwerfen? Esc oder „Verwerfen“ bestätigt; weitertippen behält ihn.";
+export const TEXT_ENTWURF_VERWERFEN = "Entwurf verwerfen? „Verwerfen“ bestätigt; Esc oder Weitertippen behält ihn.";
+
+/** Die Rückfrage, wenn die Maske den Entwurf aufheben kann (R2-FaBe P3-4): verworfen wird nur ausdrücklich. */
+export const TEXT_ENTWURF_ENDGUELTIG = "Entwurf endgültig verwerfen? „Endgültig verwerfen“ löscht ihn; „Abbrechen“ oder Esc schließt und behält ihn.";
+
+/** Der Satz, wenn Enter in einem Feld nicht bestätigt (R2-FM P2-3). */
+export const TEXT_ENTER_GESPERRT = "Enter speichert erst, wenn alles Nötige eingetragen ist – sonst den Knopf oder Strg+Enter.";
 
 export interface MaskeEigenschaften {
   readonly titel: string;
@@ -81,6 +102,16 @@ export interface MaskeEigenschaften {
    */
   readonly geaendert?: boolean;
   /**
+   * Additiv (R2-FaBe P3-4, R2-SGL P3-2): schließt die Maske und behält den
+   * Entwurf. Ist er gesetzt, schließt „Abbrechen“ mit getipptem Inhalt ohne
+   * zu verwerfen, und ein eigener Knopf „Verwerfen“ löscht nach Rückfrage.
+   */
+  readonly aufZurueckstellen?: (() => void) | undefined;
+  /** Additiv (R2-SGL P3-1): eine Rückfrage des Aufrufers im festen Fuß neben den Knöpfen. */
+  readonly fusszeile?: ReactNode;
+  /** Additiv (R2-FM P2-3): falsch, solange Enter in einem einzeiligen Feld nicht bestätigen soll. */
+  readonly enterBereit?: boolean;
+  /**
    * Der Inhalt der Maske.
    *
    * Heißt als einziges Feld dieses Projekts englisch: React vergibt den Namen
@@ -101,6 +132,9 @@ export function Maske({
   trotzSperre = false,
   startfokus = "feld",
   geaendert = false,
+  aufZurueckstellen,
+  fusszeile,
+  enterBereit = true,
   children,
 }: MaskeEigenschaften): React.JSX.Element {
   const formular = useRef<HTMLFormElement>(null);
@@ -113,6 +147,7 @@ export function Maske({
   const [abweisung, setzeAbweisung] = useState<string | undefined>(undefined);
   const [unklar, setzeUnklar] = useState(false);
   const [verwerfenFrage, setzeVerwerfenFrage] = useState(false);
+  const [enterHinweis, setzeEnterHinweis] = useState(false);
   const status = useLaden((zustand) => zustand.lagebild?.einsatzStatus ?? "AKTIV");
   const gesperrt = status !== "AKTIV" && !trotzSperre;
 
@@ -142,13 +177,32 @@ export function Maske({
   // Nach „Unklar, ob gespeichert“ verwirft Abbrechen nicht still: Erst die
   // Rückfrage, dann bleibt die Warnung als Hinweis in der Leiste stehen.
   // Mit getipptem Inhalt ebenso: erst fragen, dann verwerfen (Fernmelder P1-3).
-  const abbrechen = (): void => {
+  const verwerfen = (): void => {
     if ((unklar || geaendert) && !verwerfenFrage) {
       setzeVerwerfenFrage(true);
       return;
     }
     if (unklar) useLaden.getState().melde("warnung", `${titel}: Unklar, ob gespeichert – bitte Liste prüfen.`);
     aufAbbrechen();
+  };
+  // R2-FaBe P3-4: Mit Entwurfsspeicher schließt „Abbrechen“, ohne zu verwerfen.
+  const zurueckstellbar = aufZurueckstellen !== undefined && geaendert && !unklar;
+  const abbrechen = (): void => {
+    if (zurueckstellbar) aufZurueckstellen();
+    else verwerfen();
+  };
+  // R2-SGL P3-2: Das erste Esc fragt, das zweite verwirft nicht, sondern schließt (mit Entwurf) oder nimmt die Frage zurück.
+  const escape = (): void => {
+    if (!(unklar || geaendert)) {
+      aufAbbrechen();
+      return;
+    }
+    if (!verwerfenFrage) {
+      setzeVerwerfenFrage(true);
+      return;
+    }
+    setzeVerwerfenFrage(false);
+    if (zurueckstellbar) aufZurueckstellen();
   };
 
   useEffect(() => {
@@ -187,6 +241,13 @@ export function Maske({
             bestaetigen();
             return;
           }
+          // R2-FM P2-3: Ein Enter im Betreff schrieb einen halben Funkspruch. Ohne `enterBereit`
+          // löst Enter in einem einzeiligen Feld nichts aus; der Satz steht im Fuß.
+          if (ereignis.key === "Enter" && !enterBereit && enterImFeld(ereignis.target)) {
+            ereignis.preventDefault();
+            setzeEnterHinweis(true);
+            return;
+          }
           if (ereignis.key === "Tab" && springeTabfolge(ereignis.target, ereignis.shiftKey, formular.current)) {
             ereignis.preventDefault();
             return;
@@ -202,7 +263,7 @@ export function Maske({
           // geschlossenen Maske und einer leeren Tabelle.
           ereignis.stopPropagation();
           ereignis.preventDefault();
-          abbrechen();
+          escape();
         }}
       >
         <h3>{titel}</h3>
@@ -213,12 +274,15 @@ export function Maske({
           </p>
         )}
         {abweisung !== undefined && !gesperrt && <p className="hinweistext" role="alert">{abweisung}</p>}
-        {verwerfenFrage && (
-          <p className="warnung" role="alert">
-            {unklar ? TEXT_UNKLAR_VERWERFEN : TEXT_ENTWURF_VERWERFEN}
-          </p>
-        )}
         <div className="maskenknoepfe">
+          {/* R2-SGL P3-1, R2-FaBe P3-4: Rückfragen im festen Fuß, neben den Knöpfen, die sie beantworten. */}
+          {fusszeile}
+          {verwerfenFrage && (
+            <p className="warnung fussfrage" role="alert">
+              {unklar ? TEXT_UNKLAR_VERWERFEN : zurueckstellbar ? TEXT_ENTWURF_ENDGUELTIG : TEXT_ENTWURF_VERWERFEN}
+            </p>
+          )}
+          {enterHinweis && !enterBereit && <p className="hinweistext fussfrage">{TEXT_ENTER_GESPERRT}</p>}
           <button
             type={nurKnopf ? "button" : "submit"}
             className="haupt"
@@ -228,9 +292,14 @@ export function Maske({
           >
             {laeuft ? "…" : bestaetigungstext}
           </button>
-          <button type="button" className="abbrechen" onClick={abbrechen}>
-            {verwerfenFrage ? (unklar ? "Trotzdem verwerfen" : "Verwerfen") : "Abbrechen"}
+          <button type="button" className="abbrechen" title={zurueckstellbar ? "Schließen; der Entwurf bleibt bis zum nächsten Öffnen" : undefined} onClick={abbrechen}>
+            {zurueckstellbar ? "Abbrechen" : verwerfenFrage ? (unklar ? "Trotzdem verwerfen" : "Verwerfen") : "Abbrechen"}
           </button>
+          {zurueckstellbar && (
+            <button type="button" className="verwerfen" title="Den Entwurf löschen; fragt einmal nach" onClick={verwerfen}>
+              {verwerfenFrage ? "Endgültig verwerfen" : "Verwerfen"}
+            </button>
+          )}
           {!bereit && !gesperrt && bereitGrund !== undefined && (
             <span className="hinweistext bereitgrund" data-testid="bereitgrund">
               {bereitGrund}
@@ -263,6 +332,11 @@ export function springeTabfolge(ziel: EventTarget, rueckwaerts: boolean, wurzel:
   if (naechstes === undefined) return false;
   naechstes.focus();
   return true;
+}
+
+/** Ein einzeiliges Eingabefeld (kein Kästchen, kein Knopf, kein Textbereich): Dort löst Enter das Formular aus. */
+function enterImFeld(ziel: EventTarget): boolean {
+  return ziel instanceof HTMLInputElement && !["checkbox", "radio", "button", "submit"].includes(ziel.type);
 }
 
 function hoechsteHinweisnummer(): number {

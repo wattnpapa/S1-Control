@@ -13,6 +13,10 @@
  *   Runde fand seine Post erst, nachdem er alle Reiter angeklickt hatte.
  *
  * Reine Funktion; der Satz aus Ring 2 bleibt unverändert davor.
+ *
+ * Nachzug (R2-FaBe P2-1): Der Reiter „Eingang“ heißt jetzt „Eingangskorb“;
+ * seine Einstiegszeile sagt, dass Nachrichten nach Vordruck nicht hier,
+ * sondern im Blatt „Nachrichten“ unter „Posteingang“ ankommen.
  */
 
 import type { Blattort } from "./unterblaetter.js";
@@ -25,8 +29,11 @@ export const SATZ_OFFEN = "Zur Übergabe an die Ablösung zeigt die Sicht „Off
 export const SATZ_POSTEINGANG =
   "Was für Sie ankommt, steht im Posteingang; die Kopie sagt, was zu tun ist (grün: bearbeiten, blau: zur Kenntnis, rot: S2 für Lage und Tagebuch), und „erledigt“ ist Ihr eigener Vermerk – er meldet dem Absender nichts, antworten Sie, wenn er etwas wissen muss.";
 
-/** Die Sätze nach dem Satz aus Ring 2; leer für alle Blätter außer „Nachrichten“. */
+export const SATZ_EINGANGSKORB = "Hier kommen Erfassungsbögen und Anforderungen an; Nachrichten nach Vordruck stehen im Blatt „Nachrichten“ unter „Posteingang“.";
+
+/** Die Sätze nach dem Satz aus Ring 2; leer für alle Blätter außer „Nachrichten“ und dem Eingangskorb. */
 export function einstiegszusatz(ort: Blattort, stellen: readonly string[]): readonly string[] {
+  if (ort === "eingang.eingangskorb" || ort === "eingang.anforderungen") return [SATZ_EINGANGSKORB];
   if (ort !== "nachrichten") return [];
   const fachstelle = stellen.some((s) => !STATIONEN.includes(s));
   return fachstelle ? [SATZ_POSTEINGANG, SATZ_OFFEN] : [SATZ_OFFEN];

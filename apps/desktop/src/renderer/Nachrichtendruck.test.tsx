@@ -57,13 +57,14 @@ describe("„Als Vordruck drucken“", () => {
     fireEvent.click(within(leiste).getByRole("button", { name: /Als Vordruck drucken/ }));
     await waitFor(() => expect(attrappe.letzterRuf("nachrichtVordruckErzeugen")).toEqual({ art: "nachrichtVordruckErzeugen", akteId: "akte-1", nachrichtId: "N-blitz", blatt: "a5" }));
     expect(await screen.findByText(/Vordruck \(A5\) geschrieben: .*nachricht-E26-161045nov26\.pdf/)).toBeDefined();
-    expect(screen.getByRole("button", { name: "Öffnen" })).toBeDefined();
+    // Der Knopf der Datei neben dem Knopf „Öffnen“ der Leiste (R2-FaBe P2-4: „Lesen“ heißt jetzt „Öffnen“).
+    expect(screen.getAllByRole("button", { name: "Öffnen" }).length).toBeGreaterThanOrEqual(2);
   });
 
   it("nimmt A4 quer, wenn der Arbeitsplatz es eingestellt hat, und steht auch in der Ansicht", async () => {
     useLaden.setState({ einstellungen: { ...GRUND, vordruckBlatt: "a4quer" } });
     const leiste = await gewaehlt();
-    fireEvent.click(within(leiste).getByRole("button", { name: /^Lesen/ }));
+    fireEvent.click(within(leiste).getByRole("button", { name: /^Öffnen/ }));
     const ansicht = screen.getByRole("dialog", { name: "Nachricht E 26" });
     expect(within(ansicht).getByRole("region", { name: "Vorschau" })).toBeDefined();
     fireEvent.click(within(ansicht).getByRole("button", { name: "Als Vordruck drucken" }));

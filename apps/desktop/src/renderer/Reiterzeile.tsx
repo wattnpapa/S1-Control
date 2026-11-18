@@ -95,7 +95,7 @@ export function Reiterzeile({ blatt, waehleBlatt, offeneMeldungen, profil }: Rei
               role="tab"
               aria-selected={blatt === eintrag.schluessel}
               className={eintrag === ausMehr ? "aus-mehr" : undefined}
-              title={eintrag === ausMehr ? "Aus „Mehr“ aufgeschlagen" : undefined}
+              title={eintrag === ausMehr ? "Aus „Mehr“ aufgeschlagen" : eintrag.erklaerung}
               {...zaehlname(eintrag, marken)}
               onClick={() => {
                 waehleBlatt(eintrag.schluessel);

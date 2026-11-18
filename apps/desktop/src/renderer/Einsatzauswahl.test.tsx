@@ -61,7 +61,7 @@ describe("Die Profilwahl", () => {
     ]);
     const erklaerung = document.getElementById("profilerklaerung");
     expect(profilfeld().getAttribute("aria-describedby")).toBe("profilerklaerung");
-    expect(erklaerung?.textContent).toContain("Führungsstelle (S1): Lage · Eingang · Nachrichten · Führungsstelle · Ausgaben · Einsatztagebuch");
+    expect(erklaerung?.textContent).toContain("Führungsstelle (S1): Lage · Eingangskorb · Nachrichten · Führungsstelle · Ausgaben · Einsatztagebuch");
     expect(erklaerung?.textContent).toContain("Vermeldezentrale: Nachrichten · Funkplan · Lage · Einsatztagebuch");
     expect(erklaerung?.textContent).toContain("Versorgung (S4): Versorgung · Lage · Ausgaben");
     expect(erklaerung?.textContent).toContain("Alle Blätter: alle Reiter");

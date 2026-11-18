@@ -62,13 +62,14 @@ function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefin
 }
 
 /** Die fünf Zahlen des Bandes (§6); „mit Vorrang offen" und „über der Schwelle" bernstein ab eins. */
-export function Nachrichtenband({ lage }: { readonly lage: Nachrichtenlage | undefined }): React.JSX.Element {
+export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Nachrichtenlage | undefined; readonly ldfBesetzt?: boolean }): React.JSX.Element {
   return (
     <dl className="kpiband nachrichtenband" aria-label="Zahlen der Nachrichten">
       <Kachel wert={lage?.neuFuerStellen} titel="neu für meine Stellen" />
       <Kachel wert={lage?.vorFmz} titel="vor der FmZ" />
       <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
-      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel="vor dem LdF" />}
+      {/* R2-LdF P3-3: Ist kein LdF besetzt, befördert die FmZ selbst — die Kachel sagt es. */}
+      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfBesetzt ? "vor dem LdF" : "vor dem LdF (nicht besetzt)"} />}
       <Kachel wert={lage?.mitVorrangOffen} titel="mit Vorrang offen" warn={(lage?.mitVorrangOffen ?? 0) > 0} />
       <Kachel wert={lage?.ueberSchwelle} titel="über der Schwelle" warn={(lage?.ueberSchwelle ?? 0) > 0} />
     </dl>

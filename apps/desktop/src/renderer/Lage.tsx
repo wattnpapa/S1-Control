@@ -14,6 +14,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Abschnittsbaum } from "./Abschnittsbaum.js";
 import { Einheitentabelle } from "./Einheitentabelle.js";
 import { Ausgaben } from "./Ausgaben.js";
+import { useLagesprung } from "./nachrichtenbezug.js";
 import { Scanner } from "./Scanner.js";
 import { Tagebuch } from "./Tagebuch.js";
 import { useKuerzel } from "./tastatur.js";
@@ -35,6 +36,13 @@ export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element 
   useEffect(() => {
     if (blatt !== "tagebuch") setzeTagebuchAufEinheit(false);
   }, [blatt]);
+  // R2-ETB P2-6: „In der Lage zeigen“ an einer Nachricht wählt Abschnitt oder Einheit ihres Bezugs.
+  const sprung = useLagesprung();
+  useEffect(() => {
+    if (sprung.folge === 0) return;
+    setzeAbschnittId(sprung.abschnittId);
+    setzeEinheitId(sprung.einheitId);
+  }, [sprung]);
 
   // Strg+Q öffnet den Scanner — der Buchstabe der Excel für „digitalen EEB in
   // neue Zeile" (m_makroFunktionen). Er wird hier angemeldet und nicht in der

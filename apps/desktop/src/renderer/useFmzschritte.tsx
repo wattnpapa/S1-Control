@@ -39,7 +39,8 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
   // Additiv (2026-11-17): Führt der Einsatz den LdF als Station und ist keiner da, gilt die Ersatzregel.
   const ldfStation = useLaden((z) => z.lagebild?.stammdaten?.ldfStation === true);
   const peers = useLaden((z) => z.lagebild?.peers);
-  const ldfErsatz = ldfStation && !ldfBesetzt(sitzung?.stellen, peers ?? []) ? TEXT_LDF_ERSATZ : undefined;
+  const ldfDa = ldfBesetzt(sitzung?.stellen, peers ?? []);
+  const ldfErsatz = ldfStation && !ldfDa ? TEXT_LDF_ERSATZ : undefined;
   // Die Zeile bleibt der Stand beim Öffnen: Er ist der Vorwert, den der Schritt mitschickt (§2.2a).
   const masken = (
     <>
@@ -54,6 +55,8 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           gegenstellen={ansicht?.gegenstellen}
           aufSchliessen={() => setzeOffen(undefined)}
           ldfErsatz={ldfErsatz}
+          fernmelder={ansicht?.fernmelder}
+          ldfWartet={ldfStation && ldfDa && !(sitzung?.stellen ?? []).includes("LDF")}
         />
       )}
       {eingang !== undefined && (
@@ -62,6 +65,8 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           vorlage={eingang}
           anschriften={ansicht?.anschriften ?? []}
           aufnahme={{ naechsteNummer: ansicht?.naechsteNummer, vergebeneNummern: ansicht?.vergebeneNummern }}
+          gegenstellen={ansicht?.gegenstellen}
+          entwurfsschluessel="eingang"
           aufSchliessen={() => setzeEingang(undefined)}
         />
       )}

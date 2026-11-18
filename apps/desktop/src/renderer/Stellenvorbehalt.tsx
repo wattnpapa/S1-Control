@@ -21,7 +21,7 @@ import { useState } from "react";
 import { projektion } from "@s1/domaene";
 
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
-import { TEXT_VORBEHALT_SICHTER as TEXT_SICHTER_KONTRAKT, istErsatzsichter } from "../kontrakt/stellenvorbehalt.js";
+import { TEXT_VORBEHALT_SICHTER as TEXT_SICHTER_KONTRAKT, istErsatzsichter, vorbehaltstextFuer } from "../kontrakt/stellenvorbehalt.js";
 import { STELLE_LDF, ldfBesetzt } from "../kontrakt/ldfschritte.js";
 import { useLaden } from "./laden.js";
 
@@ -43,14 +43,20 @@ export const STELLE_SICHTER = "SICHTER";
  */
 export type Vorbehaltsschritt = "annahme" | "befoerderung" | "nachweis" | "vorschlag" | "weitergabe" | "sichtung" | "aufnahme" | "nachtrag";
 
-export const TEXT_VORBEHALT = "Dieser Teil ist der Fernmeldezentrale vorbehalten (Vordruck, Felder 1 bis 6). Trotzdem eintragen?";
+/**
+ * Die Sätze kommen vollständig aus dem Kontrakt (`vorbehaltstextFuer`, R2-FaBe
+ * P2-7, R2-LdF P3-1): je Schritt die Stelle, das Feld, wen man ruft und was
+ * „Trotzdem“ tut — derselbe Wortlaut wie im Worker. Der eigene Satz des
+ * Renderers für die FmZ-Schritte ist entfallen.
+ */
+export { vorbehaltstextFuer } from "../kontrakt/stellenvorbehalt.js";
 
 /** Der Hinweis beim Sichten ohne Stelle Sichter (R2-FaBe P0-1): derselbe Satz wie im Worker (`kontrakt/stellenvorbehalt.ts`). */
 export const TEXT_VORBEHALT_SICHTER = TEXT_SICHTER_KONTRAKT;
 
 /** Der Satz des Hinweises je Schritt. */
 export function vorbehaltstext(schritt: Vorbehaltsschritt): string {
-  return schritt === "sichtung" ? TEXT_VORBEHALT_SICHTER : TEXT_VORBEHALT;
+  return vorbehaltstextFuer(schritt);
 }
 
 /** Die Stelle, der der Schritt vorbehalten ist. */
@@ -67,11 +73,13 @@ export function stelleFehlt(
   schritt: Vorbehaltsschritt,
   eigene: readonly string[],
   peers: Parameters<typeof ldfBesetzt>[1],
+  saeumig = false,
 ): boolean {
   const gesucht = vorbehaltsstelle(schritt);
   if (eigene.includes(gesucht)) return false;
   // Ersatzsichter (§5): Ohne besetzten Sichter verteilt die FmZ (oder der LdF) selbst — dieselbe Regel wie im Worker.
-  if (gesucht === STELLE_SICHTER) return !istErsatzsichter({ stellen: eigene, sichterBesetzt: sichterBesetzt(eigene, peers) });
+  // R2-FM P2-5, R2-Si P2-2: ebenso bei besetztem, säumigem Sichter („Ich sichte jetzt selbst“).
+  if (gesucht === STELLE_SICHTER) return !istErsatzsichter({ stellen: eigene, sichterBesetzt: sichterBesetzt(eigene, peers), sichterSaeumig: saeumig });
   return !(gesucht === STELLE_LDF && eigene.includes(STELLE_FMZ) && !ldfBesetzt(eigene, peers));
 }
 
@@ -97,14 +105,14 @@ export interface Stellenvorbehalt {
 }
 
 /** Der Vorbehalt für eine offene Maske; „Trotzdem“ gilt nur für diese Maske. */
-export function useStellenvorbehalt(schritt: Vorbehaltsschritt, aktiv = true): Stellenvorbehalt {
+export function useStellenvorbehalt(schritt: Vorbehaltsschritt, aktiv = true, saeumig = false): Stellenvorbehalt {
   const eigene = useLaden((z) => z.lagebild?.sitzung?.stellen) ?? [];
   const peers = useLaden((z) => z.lagebild?.peers) ?? [];
   const [frei, setzeFrei] = useState(false);
   const [erzwungen, setzeErzwungen] = useState(false);
   const erzwinge = (): void => setzeErzwungen(true);
   // `aktiv` falsch: Der Schritt kommt in dieser Lage der Maske nicht vor (etwa kein Nachtrag gewählt).
-  if (!erzwungen && (!aktiv || !stelleFehlt(schritt, eigene, peers))) return { hinweis: null, gesperrt: false, grund: undefined, erzwinge };
+  if (!erzwungen && (!aktiv || !stelleFehlt(schritt, eigene, peers, saeumig))) return { hinweis: null, gesperrt: false, grund: undefined, erzwinge };
   const grund = eintragsgrund(schritt, eigene);
   if (frei) return { hinweis: <p className="hinweistext" role="status">Wird vermerkt als: {grund}.</p>, gesperrt: false, grund, erzwinge };
   return {

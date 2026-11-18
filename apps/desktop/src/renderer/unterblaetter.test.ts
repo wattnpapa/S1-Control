@@ -37,7 +37,7 @@ describe("Der Ort eines Blatts", () => {
   });
 
   it("nennt Blatt und Unteransicht", () => {
-    expect(orttitel("eingang.anforderungen")).toBe("Eingang · Anforderungen");
+    expect(orttitel("eingang.anforderungen")).toBe("Eingangskorb · Anforderungen");
     expect(orttitel("fuest.stammdaten")).toBe("Führungsstelle · Stammdaten und Schichtplan");
     expect(orttitel("tagebuch")).toBe("Einsatztagebuch");
   });

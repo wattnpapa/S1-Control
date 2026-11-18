@@ -70,6 +70,12 @@ export function useSitzungsabfrage(): { readonly maske: React.JSX.Element | null
         // Von selbst gefragt und abgebrochen: ohne Stelle weiter, nicht erneut fragen.
         if (vonSelbst) void rufe({ art: "stellenSetzen", akteId, stellen: [] }).catch(() => undefined);
       }}
+      // R2-Si P3-5: die Stelle abgeben, ohne den Einsatz zu schließen.
+      aufAbgeben={async () => {
+        await rufe({ art: "stellenSetzen", akteId, stellen: [] }).catch(() => undefined);
+        useLaden.getState().melde("info", "Stelle abgegeben – dieser Arbeitsplatz steht ohne Stelle.");
+        setzeGewuenscht(false);
+      }}
     />
   );
   return { maske, oeffne };

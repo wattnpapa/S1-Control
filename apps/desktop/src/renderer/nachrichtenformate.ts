@@ -234,15 +234,30 @@ export function bezugskennung(zeile: Pick<Nachrichtenzeile, "richtungKurz" | "nu
 export function antwortVorlage(zeile: Nachrichtenzeile, sitzung: Sitzungsstellen | undefined, jetzt: Date = new Date()): Maskenwerte {
   const leer = leereMaske(sitzung, jetzt);
   const betreff = zeile.betreff.trim();
+  // R2-FaBe P1-3, R2-SGL P3-3: Absender und Funktion sind die eigene Stelle wie bei einer neuen
+  // Nachricht — nicht die Anschrift des Eingangs („FüSt …“ oder „S3, S4“ bei mehreren Stellen).
+  const eigene = antwortStelle(zeile, sitzung);
   return {
     ...leer,
     anschrift: zeile.absender,
-    absender: zeile.anschrift === "" ? leer.absender : zeile.anschrift,
+    absender: eigene,
+    funktion: eigene,
     betreff: /^antwort(\s+auf\b[^:]*)?:/iu.test(betreff) ? betreff : `Antwort auf ${bezugskennung(zeile)}: ${betreff}`.trim(),
     rufnummer: zeile.rufnummer ?? "",
     uebermittlungswunsch: zeile.aufnahme?.mittel ?? zeile.uebermittlungswunsch ?? "",
     antwortAuf: zeile.id,
   };
+}
+
+/**
+ * Die eigene Stelle, die antwortet: die erste Stelle der Sitzung mit grüner
+ * Kopie dieser Nachricht, sonst die erste im Verteiler, sonst die erste der
+ * Sitzung (R2-SGL P3-3).
+ */
+export function antwortStelle(zeile: Pick<Nachrichtenzeile, "verteiler">, sitzung: Sitzungsstellen | undefined): string {
+  const eigene = sitzung?.stellen ?? [];
+  const marke = zeile.verteiler.find((m) => eigene.includes(m.stelle) && m.kopie === "GRUEN") ?? zeile.verteiler.find((m) => eigene.includes(m.stelle));
+  return marke === undefined ? eigeneStelle(sitzung) : stellenname(marke.stelle);
 }
 
 /** „Weiterleiten" (§5): derselbe Inhalt, neue Anschrift, Bezug `weitergeleitetVon`. */
@@ -265,7 +280,8 @@ export function weiterleitenVorlage(zeile: Nachrichtenzeile, sitzung: Sitzungsst
  */
 export function maskenfehler(werte: Maskenwerte, jetzt: Date = new Date()): readonly string[] {
   const fehler: string[] = [];
-  if (werte.anschrift.trim() === "") fehler.push("Anschrift eintragen");
+  // R2-FaBe P1-5: Bei der Gesprächsnotiz heißt das Feld „Gesprächspartner“.
+  if (werte.anschrift.trim() === "") fehler.push(werte.gespraechsnotiz ? "Gesprächspartner eintragen" : "Anschrift eintragen");
   if (werte.absender.trim() === "") fehler.push("Absender eintragen");
   if (werte.betreff.trim() === "" && werte.inhalt.trim() === "") fehler.push("Betreff oder Inhalt eintragen");
   // R2-FM P2-3: Im Eingang ist die Abfassungszeit die des Absenders laut Spruch und darf fehlen; getippt muss sie lesbar sein.

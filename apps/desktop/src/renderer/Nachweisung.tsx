@@ -29,16 +29,28 @@
  * einer zurückgezogenen Nachricht mit ihrem Grund.
  *
  * „Nachweisung ausgeben" erzeugt die Seite über den bestehenden Weg
- * `ausgabeErzeugen` (HTML, in der Desktop-App auch PDF) in `ausgaben\`.
+ * `ausgabeErzeugen` (HTML, in der Desktop-App auch PDF) in `ausgaben\`;
+ * seit dem Nachzug der zweiten Runde mit Zeitraum (`Nachweisungsausgabe.tsx`,
+ * R2-LdF P2-6).
+ *
+ * Nachzug der zweiten Runde:
+ * - Eine zurückgezogene Nachricht trägt keinen Knopf mehr, weder
+ *   „Nachweisen“ noch „Berichtigen“ (R2-ETB P3-3 und Umfeld): Sie verlangt
+ *   nichts mehr, und eine neue Nummer an ihr verwirrte das Betriebsbuch.
+ * - Weicht die Beförderung vom Vorschlag des LdF ab, steht neben „Weg: …“ die
+ *   Marke „abweichend“ (R2-LdF P2-2): aus `abweichungVomVorschlag` (Ring 2,
+ *   optional gelesen), sonst aus dem Vergleich der Mittel.
+ * - Die Sichtungszeile spannt wirklich über alle Spalten: `.zeilenvermerk`
+ *   war `display: block`, und eine Zelle mit `display: block` ist keine
+ *   Tabellenzelle mehr — `colSpan` griff nicht (R2-LdF P3-6, R2-Si P3-4;
+ *   Regel `.unterzeile td.zeilenvermerk` im Stylesheet).
  */
 
 import { Fragment } from "react";
 
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
-import { Ausgabeeintraege, Ausgabepfad, useAusgabe } from "./Versorgungsausgabe.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
-import { Klappmenue } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, stellenname, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
 
@@ -98,18 +110,56 @@ export interface NachweisungEigenschaften {
   readonly aufSchritt: (schritt: Fmzschritt, zeile: Nachrichtenzeile) => void;
 }
 
-/** Das Menü „⋯" mit „Nachweisung als PDF/HTML", daneben die erzeugte Datei. */
-export function Nachweisungsausgabe(): React.JSX.Element {
-  const ausgabe = useAusgabe("nachweisung");
+/**
+ * Ob die Beförderung vom Vorschlag des LdF abweicht (R2-LdF P2-2): was Ring 2
+ * sagt (`abweichungVomVorschlag`, Wahrheitswert oder Satz), sonst ein
+ * anderes Mittel als vorgeschlagen. Ohne Vorschlag oder Beförderung nie.
+ */
+export function abweichung(zeile: Nachrichtenzeile): string | undefined {
+  const geliefert = (zeile as { readonly abweichungVomVorschlag?: unknown }).abweichungVomVorschlag;
+  if (typeof geliefert === "string" && geliefert.trim() !== "") return geliefert.trim();
+  if (geliefert === false) return undefined;
+  const v = zeile.vorschlag;
+  const b = zeile.befoerderung;
+  if (geliefert === true && v !== undefined) return `Vorschlag des LdF: ${projektion.mittelWort(v.mittel)}`;
+  if (v === undefined || b === undefined || v.mittel === b.mittel) return undefined;
+  return `Vorschlag des LdF: ${projektion.mittelWort(v.mittel)}, befördert: ${projektion.mittelWort(b.mittel)}`;
+}
+
+/**
+ * Weitere Marken am Weg, sofern Ring 2 sie liefert (optional gelesen):
+ * „ohne Vorschlag“ — befördert, bevor der LdF einen Weg vorschlug (R2-LdF
+ * P2-1) — und „Verfasser = Nachweiser“ (LdF P2-3, Runde 1).
+ */
+export function Wegzusatz({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
+  const z = zeile as { readonly ohneVorschlag?: unknown; readonly verfasserGleichNachweiser?: unknown };
+  if (z.ohneVorschlag !== true && z.verfasserGleichNachweiser !== true) return null;
   return (
-    <span className="nachweisungsausgabe">
-      <Klappmenue
-        huelle="rechts"
-        knopf={{ inhalt: "Nachweisung ausgeben", klasse: "", beschriftung: "Nachweisung ausgeben", titel: "Die Nachweisung als Ausdruck (A4 hoch) in den Ordner „ausgaben“" }}
-        menue={{ beschriftung: "Nachweisung ausgeben", id: "nachweisungsmenue" }}
-        inhalt={(waehle) => <Ausgabeeintraege titel="Nachweisung" bedienung={ausgabe} waehle={waehle} />}
-      />
-      <Ausgabepfad bedienung={ausgabe} />
+    <>
+      {z.ohneVorschlag === true && (
+        <span className="marke-zustand warn" title="Befördert, bevor der LdF einen Weg vorgeschlagen hatte">
+          {" "}
+          ohne Vorschlag
+        </span>
+      )}
+      {z.verfasserGleichNachweiser === true && (
+        <span className="marke-zustand warn" title="Das Zeichen des Verfassers ist das Handzeichen des Nachweises — Vier-Augen-Prinzip prüfen">
+          {" "}
+          Verfasser = Nachweiser
+        </span>
+      )}
+    </>
+  );
+}
+
+/** Die Marke „abweichend“ mit dem Vergleich im Titel; für Nachweisung und Warteschlange. */
+export function Abweichungsmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
+  const text = abweichung(zeile);
+  if (text === undefined) return null;
+  return (
+    <span className="marke-zustand warn" title={text}>
+      {" "}
+      abweichend
     </span>
   );
 }
@@ -174,6 +224,8 @@ function Nachweiszeile({ zeile, gewaehltId, nurLesen, aufWahl, aufSchritt }: Zei
       <td className="mono">
         {uhrvermerk(zeile.befoerderung)}
         <Wegmarke zeile={zeile} />
+        <Abweichungsmarke zeile={zeile} />
+        <Wegzusatz zeile={zeile} />
       </td>
       <td className="mono">{uhrvermerk(zeile.sichtung)}</td>
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>
@@ -183,8 +235,8 @@ function Nachweiszeile({ zeile, gewaehltId, nurLesen, aufWahl, aufSchritt }: Zei
         {zeile.zurueckgezogen && <span className="marke-zustand fehler"> zurückgezogen</span>}
       </th>
       <td>
-        {/* ETB P3-5: Eine zurückgezogene Nachricht ohne Nummer bekommt keine mehr — kein „Nachweisen“. */}
-        {zeile.zurueckgezogen && zeile.nummer === undefined ? null : <Nachweisknopf zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />}
+        {/* ETB P3-5, R2-FaBe P3: Eine zurückgezogene Nachricht bekommt keine Nummer mehr und keine neue — weder „Nachweisen“ noch „Berichtigen“. */}
+        {zeile.zurueckgezogen ? null : <Nachweisknopf zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />}
       </td>
     </tr>
   );

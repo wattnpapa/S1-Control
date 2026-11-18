@@ -30,7 +30,7 @@ describe("Lesen: Knopf und Doppelklick", () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Posteingang" }));
     await benutzer.click(within(tabelle).getByRole("row", { name: /Pumpen eingetroffen/ }));
-    await benutzer.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Lesen/ }));
+    await benutzer.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Öffnen/ }));
     expect(screen.getByRole("dialog", { name: "Nachricht E 26" })).toBeDefined();
     await waitFor(() => expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1));
   });
@@ -40,7 +40,7 @@ describe("Lesen: Knopf und Doppelklick", () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Posteingang" }));
     await benutzer.click(within(tabelle).getByRole("row", { name: /Pumpen eingetroffen/ }));
-    within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Lesen/ }).focus();
+    within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Öffnen/ }).focus();
     await benutzer.keyboard(" ");
     expect(screen.queryByRole("dialog", { name: "Nachricht E 26" })).not.toBeNull();
   });
@@ -50,7 +50,7 @@ describe("Lesen: Knopf und Doppelklick", () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Posteingang" }));
     await benutzer.click(within(tabelle).getByRole("row", { name: /Pumpen eingetroffen/ }));
-    await benutzer.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Lesen/ }));
+    await benutzer.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Öffnen/ }));
     attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([GELESEN_AN_S1]));
     useLaden.setState({ lagebild: { ...NACHRICHTEN_LAGEBILD, lageZeiger: 99 } });
     await waitFor(() => expect(within(screen.getByRole("table", { name: "Nachrichten: Posteingang" })).queryByText("Pumpen eingetroffen")).toBeNull());

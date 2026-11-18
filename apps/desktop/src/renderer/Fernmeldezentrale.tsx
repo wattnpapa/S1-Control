@@ -34,6 +34,10 @@
  *   brachen bei 1320 Pixeln um und machten jede Zeile doppelt hoch. In der
  *   Zeile steht nur noch der Hauptknopf (der nächste fällige Schritt), die
  *   übrigen Schritte liegen im Menü „⋯“ daneben.
+ * - Nachzug der zweiten Runde: Die Marke „abweichend“ steht neben dem
+ *   Vorschlag, wenn die Beförderung vom Vorschlag des LdF abweicht (R2-LdF
+ *   P2-2), und die Minuten seit Annahme brechen nicht unter die Zeile um
+ *   (R2-FM P3-3, `wartezelle`).
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
@@ -43,6 +47,7 @@ import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
+import { Abweichungsmarke } from "./Nachweisung.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 import { vorschlagText } from "./Vordruckteile.js";
 
@@ -74,14 +79,17 @@ function Annahmezelle({ zeile, jetzt }: { readonly zeile: Nachrichtenzeile; read
   return (
     <>
       {dtg(zeile.annahme.zeitpunkt)} {zeile.annahme.handzeichen}
-      {seit !== undefined && <span className={zeile.fmzUeberSchwelle ? "marke-zustand warn" : "nebenwert"}> seit {seit} min</span>}
+      {seit !== undefined && <span className={zeile.fmzUeberSchwelle ? "marke-zustand warn wartezelle" : "nebenwert wartezelle"}> seit {seit} min</span>}
     </>
   );
 }
 
 /** „beim LdF" — der Ausgang wartet auf den Übermittlungsvorschlag des LdF. */
 function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
-  return zeile.laufzustand === "VOR_LDF" ? <span className="marke-zustand warn"> beim LdF</span> : null;
+  if (zeile.laufzustand !== "VOR_LDF") return null;
+  // R2-LdF P3-3: Ist kein LdF besetzt (`ldfNichtBesetzt`, Ring 2, optional gelesen), befördert die FmZ selbst.
+  const ohneLdf = (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt === true;
+  return <span className="marke-zustand warn">{ohneLdf ? " beim LdF (nicht besetzt – selbst befördern)" : " beim LdF"}</span>;
 }
 
 interface Zeilenschritt {
@@ -166,8 +174,11 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">{dtg(zeile.abfassungszeit)}</td>
-                <td className={zeile.fmzUeberSchwelle ? "zahl marke-zustand warn" : "zahl"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
-                <td>{vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}</td>
+                <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
+                <td>
+                  {vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}
+                  <Abweichungsmarke zeile={zeile} />
+                </td>
                 <td>
                   <Annahmezelle zeile={zeile} jetzt={jetzt} />
                   <Wegmarke zeile={zeile} />

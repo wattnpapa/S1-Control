@@ -81,7 +81,7 @@ describe("Das Blatt „Nachrichten“", () => {
   it("„Lesen“ schlägt den Vordruck auf und nimmt nur für eigene Stellen Kenntnis", async () => {
     const tabelle = await geladen();
     fireEvent.click(within(tabelle).getByRole("row", { name: /Pumpen eingetroffen/ }));
-    fireEvent.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Lesen/ }));
+    fireEvent.click(within(screen.getByRole("toolbar", { name: "Auswahl" })).getByRole("button", { name: /^Öffnen/ }));
     expect(screen.getByRole("dialog", { name: "Nachricht E 26" })).toBeDefined();
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({ typ: "NachrichtKenntnisGenommen", nutzlast: { nachrichtId: "N-blitz", stelle: "S4" }, neu: { handzeichen: "Mü" } });
@@ -117,9 +117,9 @@ describe("Das Blatt „Nachrichten“", () => {
     expect((within(zettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(zettel).getByRole("checkbox", { name: "S4 grün" }));
     // R2-FaBe P0-1: Die Sitzung (S1, S4) ist nicht Sichter — erst „Trotzdem“, dann mit Grund.
-    expect((within(zettel).getByRole("button", { name: "Sichten" }) as HTMLButtonElement).disabled).toBe(true);
+    expect((within(zettel).getByRole("button", { name: /^Sichten \(/u }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(zettel).getByRole("button", { name: "Trotzdem" }));
-    fireEvent.click(within(zettel).getByRole("button", { name: "Sichten" }));
+    fireEvent.click(within(zettel).getByRole("button", { name: /^Sichten \(/u }));
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({
       grund: "Eintrag durch S1, S4, nicht Sichter",

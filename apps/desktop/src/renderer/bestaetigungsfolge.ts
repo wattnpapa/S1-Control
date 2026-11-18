@@ -52,6 +52,10 @@ function gleich(a: Verlaufsstand | undefined, b: Verlaufsstand | undefined): boo
 
 /** „Einheit ‚TZ‘ entfernt“ — der Schritt, den „Rückgängig“ jetzt zurücknähme; leer ohne Verlauf. */
 export function obersterSchritt(lagebild: Lagebild | undefined): string {
+  // R2-LdF P2-8, R2-FM P3-1: Ein Bedienschritt mit Folgen („Eingang aufnehmen (mit Nummer und Sichtung)“)
+  // heißt so, nicht nach seinem letzten Teilereignis; optional gelesen (Kontrakt, anderer Strang).
+  const gruppe = (lagebild as { readonly undoObersteSchritt?: unknown } | undefined)?.undoObersteSchritt;
+  if (typeof gruppe === "string" && gruppe.trim() !== "") return gruppe.trim();
   const art = lagebild?.undoObersteArt;
   return art === undefined ? "" : ereignisMitObjekt(art, lagebild?.undoObersteObjekt);
 }

@@ -4675,6 +4675,62 @@
         border-top: 0;
       }
 
+      /* Nachzug der zweiten Runde (2026-11-18). */
+      /* R2-SGL P3-1, R2-FaBe P3-4: Rückfragen stehen im festen Fuß über den Knöpfen, nicht dahinter. */
+      .maskenknoepfe {
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .maskenknoepfe > .fussfrage {
+        flex: 1 1 100%;
+        margin: 0;
+      }
+      /* R2-LdF P3-6, R2-Si P3-4: Eine Zelle mit `display: block` ist keine Tabellenzelle mehr —
+         `colspan` griff nicht, die Sichtungszeile stand in der ersten, schmalen Spalte. */
+      .unterzeile td.zeilenvermerk {
+        display: table-cell;
+      }
+      /* R2-SGL P3-5, R2-Si P3-3: Das Raster scrollt in sich und hält unten die Höhe der
+         klebenden Fußleiste frei; ein Kästchen, das den Fokus bekommt, rollt über die Leiste. */
+      section.laufzettel {
+        --fussleiste-hoehe: 3.25rem;
+        padding-bottom: var(--fussleiste-hoehe);
+      }
+      section.laufzettel .verteilerraster .verteilerzeilen {
+        max-height: min(40vh, 18rem);
+        overflow-y: auto;
+        padding-bottom: var(--fussleiste-hoehe);
+      }
+      section.laufzettel .verteilerraster :is(input, button) {
+        scroll-margin-bottom: var(--fussleiste-hoehe);
+      }
+      section.laufzettel > .maskenknoepfe {
+        min-height: var(--fussleiste-hoehe);
+        box-sizing: border-box;
+      }
+      /* R2-FM P3-3: „seit 4 min“ bleibt in der Zeile, statt unter den Text zu rutschen. */
+      .wartezelle {
+        white-space: nowrap;
+      }
+      /* R2-ETB P2-6: „In der Lage zeigen“ als Verweis. */
+      button.link {
+        background: none;
+        border: 0;
+        padding: 0;
+        color: var(--text);
+        text-decoration: underline;
+        cursor: pointer;
+      }
+      .zurueckgezogene > summary {
+        cursor: pointer;
+        margin: 6px 0;
+      }
+      .nachweisungsausgabe label {
+        display: inline-flex;
+        gap: 4px;
+        align-items: center;
+      }
+
     </style>
   </head>
   <body>

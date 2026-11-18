@@ -157,6 +157,8 @@ describe("R2-FM P1-1, P2-2: Tabfolge und Startfokus", () => {
     if (nachtrag) fireEvent.click(within(maske).getByRole("checkbox", { name: "Vom Papier nachtragen" }));
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Heros" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
+    // R2-FM P2-3: Die Gegenstelle ist beim Eingang Pflicht.
+    fireEvent.change(within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf"), { target: { value: "Heros 10" } });
     if (nachtrag) {
       fireEvent.change(within(maske).getByLabelText("Aufnahme"), { target: { value: "1010" } });
       fireEvent.change(within(maske).getByLabelText("Quittung"), { target: { value: "1012" } });
@@ -220,6 +222,7 @@ describe("R2-FM P2-3, P2-5 (alt): Abfassungszeit im Eingang, Sperrhinweis", () =
     expect((within(maske).getByLabelText("Aufnahme") as HTMLInputElement).value).not.toBe("");
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Heros" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
+    fireEvent.change(within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf"), { target: { value: "Heros 10" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufnehmen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect((entwuerfe()[0]?.nutzlast as { abfassungszeit?: string }).abfassungszeit).toBeUndefined();

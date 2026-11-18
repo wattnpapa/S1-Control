@@ -14,6 +14,14 @@
  * „befördert"), die Marke „ohne Nummer" und den Vermerk der FmZ mit Zeit,
  * Handzeichen und Mittel. Die Ansicht öffnet auch aus dem Tagebuch
  * („Nachricht öffnen", ETB P0-1).
+ *
+ * Nachzug der zweiten Runde:
+ * - Eine zurückgezogene Nachricht nennt oben, in Rot, Zeit und Grund
+ *   (R2-ETB P3-3): Sonst las man sie wie jede andere. Der Satz kommt aus
+ *   Ring 2 (`zurueckgezogenText`, optional gelesen), sonst aus
+ *   `zurueckgezogenMit` oder den Vermerken.
+ * - Trägt die Nachricht einen Bezug zur Lage (Einheit, Abschnitt), steht er
+ *   als „In der Lage zeigen“ da (R2-ETB P2-6).
  */
 
 import { useEffect, useRef } from "react";
@@ -21,7 +29,10 @@ import { createPortal } from "react-dom";
 
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
+import { bezugDerZeile, zeigeInLage } from "./nachrichtenbezug.js";
+import { dtg } from "./nachrichtenformate.js";
 import { ausgangsvermerk, istAusgang } from "./nachrichtenvermerke.js";
+import { zurueckziehgrund } from "./Nachweisung.js";
 import { haltTab, useFokusRueckgabe } from "./useFokusfalle.js";
 import { FmzTeil, LaufzettelAnzeige, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Vordruckvorschau } from "./Vordruckvorschau.js";
@@ -32,6 +43,49 @@ export interface NachrichtenansichtEigenschaften {
   /** Additiv (N3): „Als Vordruck drucken" und die Zeile mit der erzeugten Datei. */
   readonly aufVordruck?: (() => void) | undefined;
   readonly vordruckanzeige?: React.ReactNode;
+  /** Additiv (R2-ETB P2-6): schlägt das Blatt Lage auf, nachdem der Bezug gewählt ist. */
+  readonly aufLage?: (() => void) | undefined;
+  /** Additiv (FM P2-7, Runde 1): „Aufnahme berichtigen“, nur an einem Platz der FmZ. */
+  readonly aufBerichtigen?: (() => void) | undefined;
+}
+
+/**
+ * „Zurückgezogen 1745 · Grund: doppelt aufgegeben“ (R2-ETB P3-3) — der Satz
+ * aus Ring 2, wenn er da ist, sonst aus Zeit und Grund, sonst aus den
+ * Vermerken; `undefined` bei einer gültigen Nachricht.
+ */
+export function zurueckgezogenSatz(zeile: Nachrichtenzeile): string | undefined {
+  if (!zeile.zurueckgezogen) return undefined;
+  const text = (zeile as { readonly zurueckgezogenText?: unknown }).zurueckgezogenText;
+  if (typeof text === "string" && text.trim() !== "") return text.trim();
+  const grund = zurueckziehgrund(zeile) ?? (zeile.vermerke?.trim() || undefined);
+  const zeit = zeile.zurueckgezogenMit?.zeitpunkt;
+  return `Zurückgezogen${zeit === undefined ? "" : ` ${dtg(zeit)}`}${grund === undefined ? "" : ` · Grund: ${grund}`}`;
+}
+
+/** Die Bezüge als „In der Lage zeigen“; ohne Bezug oder ohne Sprungziel nichts. */
+function Lagebezug({ zeile, aufLage, aufSchliessen }: { readonly zeile: Nachrichtenzeile; readonly aufLage: (() => void) | undefined; readonly aufSchliessen: () => void }): React.JSX.Element | null {
+  const bezuege = bezugDerZeile(zeile);
+  if (bezuege.length === 0 || aufLage === undefined) return null;
+  return (
+    <p className="lagebezug">
+      {bezuege.map(({ rolle, bezug }) => (
+        <button
+          key={rolle}
+          type="button"
+          className="link"
+          title={`${rolle}: ${bezug.entitaet === "EINHEIT" ? "die Einheit" : "den Abschnitt"} im Blatt Lage wählen`}
+          onClick={() => {
+            zeigeInLage(bezug);
+            aufSchliessen();
+            aufLage();
+          }}
+        >
+          In der Lage zeigen ({rolle})
+        </button>
+      ))}
+    </p>
+  );
 }
 
 /**
@@ -58,7 +112,7 @@ function useFenstertasten(dialog: React.RefObject<HTMLDivElement | null>, aufSch
   }, [dialog, aufSchliessen]);
 }
 
-export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruckanzeige }: NachrichtenansichtEigenschaften): React.JSX.Element {
+export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruckanzeige, aufLage, aufBerichtigen }: NachrichtenansichtEigenschaften): React.JSX.Element {
   const knopf = useRef<HTMLButtonElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
   // R2-Si P2-3: Der Fokus kehrt beim Schließen zum Auslöser („Lesen“) zurück, wie bei jeder Maske.
@@ -92,6 +146,12 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
             ×
           </button>
         </div>
+        {zurueckgezogenSatz(zeile) !== undefined && (
+          <p className="warnung zurueckgezogen" role="note">
+            {zurueckgezogenSatz(zeile)}
+          </p>
+        )}
+        <Lagebezug zeile={zeile} aufLage={aufLage} aufSchliessen={aufSchliessen} />
         {/* R2-FaBe P0-2: Beim Ausgang „angenommen (FmZ) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
         {istAusgang(zeile) ? <p className="leise">FmZ: {ausgangsvermerk(zeile)}</p> : zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
         <FmzTeil zeile={zeile} />
@@ -100,6 +160,11 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
         <Vordruckvorschau ort="ansicht" quelle={{ art: "zeile", zeile }} />
         {vordruckanzeige}
         <div className="maskenknoepfe">
+          {aufBerichtigen !== undefined && (
+            <button type="button" title="Mittel, Zeit und Handzeichen der Aufnahme berichtigen; fragt nach dem Grund" onClick={aufBerichtigen}>
+              Aufnahme berichtigen
+            </button>
+          )}
           {aufVordruck !== undefined && (
             <button type="button" title="Den Nachrichtenvordruck als PDF im Ordner „ausgaben“ ablegen" onClick={aufVordruck}>
               Als Vordruck drucken

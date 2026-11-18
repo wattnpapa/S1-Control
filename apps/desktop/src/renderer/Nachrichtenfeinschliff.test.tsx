@@ -108,8 +108,8 @@ describe("ETB P3-4 und P3-5: zurückgezogen mit Wort, kein „Nachweisen“", ()
     const tabelle = screen.getByRole("table", { name: "Nachweisung" });
     expect(within(tabelle).getAllByText("zurückgezogen").length).toBeGreaterThanOrEqual(2);
     expect(within(tabelle).queryByRole("button", { name: "Nachweisen" })).toBeNull();
-    // Mit Nummer bleibt „Berichtigen“: Die Nummer der Nachweisung darf stimmen.
-    expect(within(tabelle).getAllByRole("button", { name: "Berichtigen" })).toHaveLength(1);
+    // R2-FaBe P3 (Nachzug): Auch mit Nummer kein „Berichtigen“ mehr an der zurückgezogenen Nachricht.
+    expect(within(tabelle).queryByRole("button", { name: "Berichtigen" })).toBeNull();
   });
 
   it("schreibt im Posteingang „zurückgezogen“ statt „neu“", () => {
@@ -138,7 +138,10 @@ describe("Fernmelder P3-7, LdF P3-4: der Hinweiskasten", () => {
     render(<Hinweiskasten />);
     const kasten = screen.getByRole("region", { name: "Hinweise" });
     expect(kasten.textContent).toContain("11:00 Frisch.");
-    fireEvent.click(within(kasten).getByRole("button", { name: "Löschen" }));
+    // R2-FaBe P3-1: „Alle schließen“ fragt bei Warnungen einmal nach.
+    fireEvent.click(within(kasten).getByRole("button", { name: "Alle schließen" }));
+    expect(useLaden.getState().hinweise).toHaveLength(4);
+    fireEvent.click(within(kasten).getByRole("button", { name: "Ja, alle schließen" }));
     expect(useLaden.getState().hinweise).toEqual([]);
     expect(screen.queryByRole("region", { name: "Hinweise" })).toBeNull();
   });

@@ -42,6 +42,11 @@
  * - Weist der Worker ab, weil ein anderer Platz inzwischen vermerkt hat, sagt
  *   die Maske in Worten, was jetzt gilt, und „Neu laden“ öffnet sie mit dem
  *   neuen Vorher-Wert (Fernmelder P2-6, `Vorwertkonflikt.tsx`).
+ * - Nachzug: Vor dem Befördern holt die Maske die Nachricht neu und zeigt
+ *   die Konfliktmeldung, wenn inzwischen befördert wurde (R2-FM P2-7); ein
+ *   anderes Mittel als vorgeschlagen sagt sie vorher (R2-LdF P2-2); ein
+ *   Sprung über die nächste freie Nummer fragt einmal (R2-LdF P2-7,
+ *   `maskenrueckfragen.ts`). Die Rückfragen stehen im festen Fuß.
  */
 
 import { useState } from "react";
@@ -52,11 +57,14 @@ import type { Entwurf, Gegenstelle } from "../kontrakt/index.js";
 import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { Befoerderungszusatz } from "./Befoerderungszusatz.js";
+import { abweichungshinweis, befoerderungInzwischen, ohneVorschlagFrage } from "./befoerderungspruefung.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
+import { meldeWarnungen } from "./warnungsstufen.js";
 import { Maske } from "./Maske.js";
+import { nummernsprungFrage, useRueckfragen } from "./maskenrueckfragen.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
 import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrerMitStelle, sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
@@ -83,6 +91,10 @@ export interface FmzmaskeEigenschaften {
    * Beförderung als Übermittlungsvorschlag.
    */
   readonly ldfErsatz?: string | undefined;
+  /** Additiv (R2-LdF P2-1): Der Einsatz führt den LdF als Station, und er ist besetzt — Befördern ohne Vorschlag fragt. */
+  readonly ldfWartet?: boolean | undefined;
+  /** Additiv (R2-LdF P3-4): die Anzeigenamen der besetzten FmZ-Plätze als Wahl „Fernmelder“; ohne sie Fm1 bis Fm3. */
+  readonly fernmelder?: readonly string[] | undefined;
 }
 
 export interface Eingaben {
@@ -160,6 +172,14 @@ interface Gegenstellenwahl {
   readonly treffer: Gegenstelle | undefined;
   readonly kontakt: boolean;
   readonly aufKontakt: (an: boolean) => void;
+  /** Die Wahl „Fernmelder“ im Vorschlag des LdF (R2-LdF P3-4). */
+  readonly fernmelder: readonly string[];
+}
+
+/** Die Fernmelder zur Wahl: die besetzten Plätze der FmZ, sonst Fm1 bis Fm3; der schon gewählte bleibt dabei. */
+export function fernmelderwahl(besetzt: readonly string[] | undefined, gewaehlt: string): readonly string[] {
+  const liste = besetzt !== undefined && besetzt.length > 0 ? besetzt : FERNMELDER_STANDARD;
+  return gewaehlt === "" || liste.includes(gewaehlt) ? liste : [gewaehlt, ...liste];
 }
 
 /** Die Einheit, deren Name der Gegenstelle gleicht (ohne Groß-/Kleinschreibung); sonst keine. */
@@ -177,7 +197,7 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
             Fernmelder
             <select value={e.fernmelder} onChange={(ev) => setze("fernmelder", ev.target.value)}>
               <option value="">— wählen —</option>
-              {FERNMELDER_STANDARD.map((fm) => (
+              {wahl.fernmelder.map((fm) => (
                 <option key={fm} value={fm}>
                   {fm}
                 </option>
@@ -264,18 +284,32 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   };
   const [kontakt, setzeKontakt] = useState(true);
   const treffer = gegenstelleTreffer(p.gegenstellen ?? [], e.gegenstelle);
-  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, aufKontakt: setzeKontakt };
+  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, aufKontakt: setzeKontakt, fernmelder: fernmelderwahl(p.fernmelder, e.fernmelder) };
   const befoerdern = p.schritt === "befoerderung";
   const kontaktEinheitId = befoerdern && kontakt && e.mittel === "FUNK" ? treffer?.einheitId : undefined;
   const entwurf = fmzEntwurf(p.schritt, p.zeile, e, kontaktEinheitId);
   const mitNummernfeld = p.schritt === "nachweis" || (befoerdern && p.zeile.nummer === undefined);
   const warnung = mitNummernfeld ? nummerWarnung(nummerAusEingabe(e.nummer), p.vergebeneNummern, p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) : undefined;
   const ohneNummer = befoerdern && p.zeile.nummer === undefined && e.nummer.trim() === "";
+  // R2-LdF P2-7: Ein Sprung über die nächste freie Nummer fragt einmal (nicht beim Berichtigen auf die eigene).
+  const eigeneNummer = p.zeile.nummerDoppelt ? undefined : p.zeile.nummer;
+  const neueNummer = nummerAusEingabe(e.nummer);
+  const rueckfragen = useRueckfragen([
+    befoerdern ? ohneVorschlagFrage(p.zeile, p.ldfWartet === true) : undefined,
+    mitNummernfeld && neueNummer !== eigeneNummer ? nummernsprungFrage(neueNummer, p.naechsteNummer) : undefined,
+  ]);
 
   async function schreibe(): Promise<void> {
     if (typeof entwurf === "string") return;
     if (ohneNummer && !ohneNummerBestaetigt) {
       setzeOhneNummerBestaetigt(true);
+      return;
+    }
+    if (rueckfragen.halteAn()) return;
+    // R2-FM P2-7: Unmittelbar vor dem Schreiben nachsehen, ob ein anderer Platz schon befördert hat.
+    const inzwischen = befoerdern ? await befoerderungInzwischen(p.zeile) : undefined;
+    if (inzwischen !== undefined) {
+      setzeKonflikt(inzwischen);
       return;
     }
     const ungueltig = nachrichtenentwurfFehler(entwurf);
@@ -290,7 +324,8 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
       return;
     }
     if (ergebnis?.art !== "geschrieben") return;
-    for (const satz of ergebnis.warnungen ?? []) useLaden.getState().melde("info", satz);
+    // R2-ETB P3-1: „Nummer bereits vergeben“ bleibt stehen, wenn der Worker es als Warnung führt.
+    meldeWarnungen(ergebnis, "info");
     p.aufSchliessen();
   }
 
@@ -300,7 +335,8 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   };
 
   const nummer = p.zeile.nummer === undefined ? p.zeile.richtungKurz : `${p.zeile.richtungKurz} ${String(p.zeile.nummer)}`;
-  const knopf = ohneNummer && ohneNummerBestaetigt ? "Trotzdem ohne Nummer" : warnung !== undefined && p.schritt === "nachweis" ? "Trotzdem nachweisen" : TITEL[p.schritt];
+  const abweichend = befoerdern ? abweichungshinweis(p.zeile, e.mittel) : undefined;
+  const knopf = rueckfragen.sichtbar?.knopf ?? (ohneNummer && ohneNummerBestaetigt ? "Trotzdem ohne Nummer" : undefined) ?? (warnung !== undefined && p.schritt === "nachweis" ? "Trotzdem nachweisen" : TITEL[p.schritt]);
   return (
     <Maske
       titel={`${TITEL[p.schritt]} · ${nummer} ${p.zeile.betreff}`}
@@ -309,9 +345,21 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
       bereitGrund={typeof entwurf === "string" ? entwurf : (versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined))}
       aufAbbrechen={p.aufSchliessen}
       aufBestaetigen={schreibe}
+      fusszeile={
+        rueckfragen.sichtbar === undefined ? undefined : (
+          <p className="warnung fussfrage" role="alert">
+            {rueckfragen.sichtbar.frage}
+          </p>
+        )
+      }
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
       {vorbehalt.hinweis}
+      {abweichend !== undefined && (
+        <p className="warnung" role="status">
+          {abweichend}
+        </p>
+      )}
       {befoerdern && p.zeile.vorschlag === undefined && p.ldfErsatz !== undefined && (
         <p className="hinweistext" role="status">
           {p.ldfErsatz}

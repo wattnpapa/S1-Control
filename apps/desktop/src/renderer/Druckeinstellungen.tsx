@@ -14,7 +14,8 @@
  * Audit Fernmelder P2-11: Ein falsch getipptes Verzeichnis wurde still
  * angelegt. Der Probedruck meldet jetzt „Verzeichnis gibt es nicht“ und bietet
  * „Anlegen und Probedruck“ an; beim Übernehmen fragt `druckverzeichnisBestaetigt`
- * „Verzeichnis gibt es nicht, anlegen?“.
+ * „Verzeichnis gibt es nicht, anlegen?“. Lässt sich das Verzeichnis nicht
+ * prüfen, sagt „Übernehmen“ es, statt zu schweigen (R2-FM P3-5).
  */
 
 import { useEffect, useState } from "react";
@@ -149,6 +150,8 @@ export async function druckverzeichnisBestaetigt(werte: Druckwerte, frage: (text
     if (!angelegt.vorhanden) useLaden.getState().melde("warnung", `Das Verzeichnis „${pfad}“ ließ sich nicht anlegen.`);
     return angelegt.vorhanden;
   } catch {
+    // R2-FM P3-5: „Übernehmen“ schwieg, wenn die Prüfung nicht ging (etwa in der Web-Schale); jetzt sagt es das.
+    useLaden.getState().melde("warnung", `Das Verzeichnis „${pfad}“ ließ sich nicht prüfen; gespeichert. Mit „Probedruck“ prüfen, ob es das Verzeichnis gibt.`);
     return true;
   }
 }

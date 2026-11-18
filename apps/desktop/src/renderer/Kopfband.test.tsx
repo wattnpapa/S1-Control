@@ -238,7 +238,7 @@ describe("Kopfband", () => {
     expect(screen.getByRole("tab", { name: "Lage", selected: true })).toBeDefined();
     // Der Zähler steht am Reiter, weil dort die Entscheidung fällt, ob man
     // hinsieht — nicht erst im Blatt.
-    expect(screen.getByRole("tab", { name: "Eingang 7 offen" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Eingangskorb 7 offen" })).toBeDefined();
 
     await userEvent.click(screen.getByRole("tab", { name: /Eingang/ }));
     expect(waehleBlatt).toHaveBeenCalledWith("eingang");
@@ -263,12 +263,12 @@ describe("Kopfband", () => {
     const reiter = (): string[] => screen.getAllByRole("tab").map((knopf) => knopf.textContent);
 
     zeige(undefined);
-    expect(reiter()).toEqual(["Lage", "Eingang", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
+    expect(reiter()).toEqual(["Lage", "Eingangskorb", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
     zeige("vermeldezentrale");
     expect(reiter()).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
-      "Eingang",
+      "Eingangskorb",
       "Führungsstelle",
       "Versorgung",
       "Kosten",
@@ -297,7 +297,7 @@ describe("Kopfband", () => {
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     const menue = screen.getByRole("menu", { name: "Weitere Blätter" });
     // Der Zähler offener Meldungen steht auch im Menü, als Zahl und im Namen.
-    expect(within(menue).getByRole("menuitemradio", { name: "Eingang 4 offen" }).textContent).toBe("Eingang4");
+    expect(within(menue).getByRole("menuitemradio", { name: "Eingangskorb 4 offen" }).textContent).toBe("Eingangskorb4");
     await userEvent.click(within(menue).getByRole("menuitemradio", { name: "Kosten" }));
     expect(waehleBlatt).toHaveBeenCalledWith("kosten");
     expect(screen.queryByRole("menu")).toBeNull();
@@ -340,7 +340,7 @@ describe("Kopfband", () => {
         waehleBlatt={() => undefined}
       />,
     );
-    expect(screen.getByRole("tab", { name: "Eingang" })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "Eingangskorb" })).toBeDefined();
     expect(screen.getByRole("tab", { name: "Kosten", selected: true })).toBeDefined();
   });
 

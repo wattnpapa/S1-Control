@@ -19,7 +19,7 @@
 import { rechnerzoneHinweis } from "@s1/domaene";
 import { useState } from "react";
 
-import { aktiveArbeitsplaetze, weitereText } from "./arbeitsplatzzahl.js";
+import { aktiveArbeitsplaetze, weitereMitStellen } from "./arbeitsplatzzahl.js";
 import { Ruecknahme } from "./Ruecknahme.js";
 import { Schreibbestaetigung } from "./Schreibbestaetigung.js";
 import { Statuserklaerung, Statushinweis } from "./Statushinweis.js";
@@ -133,7 +133,8 @@ function Arbeitsplaetze({ lagebild }: { readonly lagebild: Lagebild }): React.JS
   const aktiv = aktiveArbeitsplaetze(lagebild);
   const inaktiv = lagebild.peers.length - aktiv;
   const hinweis = inaktiv > 0 ? `${String(inaktiv)} weitere nicht mehr aktiv (seit Kurzem kein Lebenszeichen)` : undefined;
-  return <span title={hinweis}>{aktiv === 0 ? "allein am Einsatz" : weitereText(aktiv)}</span>;
+  // R2-FaBe P3-3: mit den Stellen der weiteren Arbeitsplätze („4 weitere: FmZ, LdF, Sichter, S2“).
+  return <span title={hinweis}>{aktiv === 0 ? "allein am Einsatz" : weitereMitStellen(lagebild)}</span>;
 }
 
 /**

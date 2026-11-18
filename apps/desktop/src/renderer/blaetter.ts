@@ -33,6 +33,8 @@ export interface Reiter {
     | "tagebuch"
     | "diagnose";
   readonly titel: string;
+  /** Additiv (R2-FaBe P2-1): ein Satz als Tooltip am Reiter. */
+  readonly erklaerung?: string;
   /**
    * Steht nicht in der Reiterzeile, sondern im Fenstermenü „⋯" (Entwurf
    * „Entlastung", 3.2). Das Blatt bleibt ein Blatt: Der Arbeitsplatz schlägt
@@ -45,7 +47,9 @@ export const BLAETTER: readonly Reiter[] = [
   { schluessel: "lage", titel: "Lage" },
   // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
   // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
-  { schluessel: "eingang", titel: "Eingang" },
+  // R2-FaBe P2-1: „Eingangskorb“ statt „Eingang“ — der Fachberater suchte hier seine Nachricht;
+  // die Post nach Vordruck steht im Blatt „Nachrichten“ unter „Posteingang“.
+  { schluessel: "eingang", titel: "Eingangskorb", erklaerung: "Erfassungsbögen und Anforderungen; Nachrichten stehen unter „Nachrichten“ im Posteingang" },
   // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §6, Entscheidung 10): zwischen
   // Eingang und Führungsstelle — der Vordruck läuft zwischen den Stellen.
   { schluessel: "nachrichten", titel: "Nachrichten" },

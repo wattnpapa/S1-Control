@@ -16,9 +16,10 @@ import { useState } from "react";
 
 import type { Nachrichtenzeile } from "@s1/domaene";
 
-import type { Entwurf, Sitzungsstellen } from "../kontrakt/index.js";
+import type { Entwurf, Gegenstelle, Sitzungsstellen } from "../kontrakt/index.js";
 import { erledigt, erledigungZurueck, kenntnisFuerStellen, nachrichtZurueckziehen } from "../kontrakt/nachrichtenschritte.js";
 import { hinweisAusErgebnis } from "./Anlegeversuch.js";
+import { Aufnahmeberichtigung, berichtigbar } from "./Aufnahmeberichtigung.js";
 import { useGrundabfrage } from "./Grundabfrage.js";
 import { useLaden } from "./laden.js";
 import { Nachrichtenansicht } from "./Nachrichtenansicht.js";
@@ -57,6 +58,10 @@ export interface Schrittumfeld {
   readonly nurLesen: boolean;
   readonly anschriften: readonly string[];
   readonly aufTagebuch: () => void;
+  /** Additiv (R2-ETB P2-6): die Einheiten der Lage mit Kennung, für den Bezug der Anschrift. */
+  readonly gegenstellen?: readonly Gegenstelle[] | undefined;
+  /** Additiv (R2-ETB P2-6): schlägt das Blatt Lage auf; „In der Lage zeigen“ in der Lese-Ansicht. */
+  readonly aufLage?: (() => void) | undefined;
 }
 
 /**
@@ -71,10 +76,13 @@ export function tagebuchnameFuer(zeile: Pick<Nachrichtenzeile, "gespraechsnotiz"
 
 export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschritte {
   const { zeile, sitzung, stellen, nurLesen } = umfeld;
-  const [vorlage, setzeVorlage] = useState<{ readonly werte: Maskenwerte; readonly titel: string } | undefined>(undefined);
+  // R2-FaBe P3-4: Der Schlüssel, unter dem „Abbrechen“ den Entwurf zurückstellt.
+  const [vorlage, setzeVorlage] = useState<{ readonly werte: Maskenwerte; readonly titel: string; readonly schluessel: string } | undefined>(undefined);
   // Die aufgeschlagene Nachricht als Abzug: Fällt sie nach dem Lesen aus
   // dem Filter („neu"), bleibt die Ansicht trotzdem offen.
   const [gelesen, setzeGelesen] = useState<Nachrichtenzeile | undefined>(undefined);
+  // FM P2-7 (Runde 1): „Aufnahme berichtigen“ aus der Lese-Ansicht der FmZ; die Ansicht schließt dafür.
+  const [berichtigen, setzeBerichtigen] = useState<Nachrichtenzeile | undefined>(undefined);
   const grundabfrage = useGrundabfrage();
   const verbindung = useSchreibsperre();
   const vordruck = useVordruckausgabe();
@@ -99,8 +107,8 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
           aufLesen: () => lesen(zeile),
           aufErledigt: () => void schreibeAlle(eigeneOffen(zeile, true).map((s) => erledigt(zeile.id, s)), "Erledigt"),
           aufErledigungZurueck: () => void schreibeAlle(eigeneOffen(zeile, false).map((s) => erledigungZurueck(zeile.id, s)), "Erledigung zurück"),
-          aufAntworten: () => setzeVorlage({ werte: antwortVorlage(zeile, sitzung), titel: "Antworten" }),
-          aufWeiterleiten: () => setzeVorlage({ werte: weiterleitenVorlage(zeile, sitzung), titel: "Weiterleiten" }),
+          aufAntworten: () => setzeVorlage({ werte: antwortVorlage(zeile, sitzung), titel: "Antworten", schluessel: `antwort:${zeile.id}` }),
+          aufWeiterleiten: () => setzeVorlage({ werte: weiterleitenVorlage(zeile, sitzung), titel: "Weiterleiten", schluessel: `weiter:${zeile.id}` }),
           aufZurueckziehen: () =>
             grundabfrage.frage({
               titel: "Nachricht zurückziehen",
@@ -119,18 +127,41 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
   const masken = (
     <>
       {vorlage !== undefined && (
-        <Nachrichtenmaske titel={vorlage.titel} vorlage={vorlage.werte} anschriften={umfeld.anschriften} aufSchliessen={() => setzeVorlage(undefined)} />
+        <Nachrichtenmaske
+          key={vorlage.schluessel}
+          titel={vorlage.titel}
+          vorlage={vorlage.werte}
+          anschriften={umfeld.anschriften}
+          gegenstellen={umfeld.gegenstellen}
+          entwurfsschluessel={vorlage.schluessel}
+          aufSchliessen={() => setzeVorlage(undefined)}
+        />
       )}
       {offen !== undefined && (
-        <Nachrichtenansicht zeile={offen} aufSchliessen={() => setzeGelesen(undefined)} aufVordruck={() => vordruck.erzeuge(offen.id)} vordruckanzeige={vordruck.anzeige} />
+        <Nachrichtenansicht
+          zeile={offen}
+          aufSchliessen={() => setzeGelesen(undefined)}
+          aufVordruck={() => vordruck.erzeuge(offen.id)}
+          vordruckanzeige={vordruck.anzeige}
+          {...(umfeld.aufLage === undefined ? {} : { aufLage: umfeld.aufLage })}
+          {...(berichtigbar(offen, sitzung?.stellen ?? [], nurLesen)
+            ? {
+                aufBerichtigen: () => {
+                  setzeGelesen(undefined);
+                  setzeBerichtigen(offen);
+                },
+              }
+            : {})}
+        />
       )}
+      {berichtigen !== undefined && <Aufnahmeberichtigung key={berichtigen.id} zeile={berichtigen} aufSchliessen={() => setzeBerichtigen(undefined)} />}
       {offen === undefined && vordruck.anzeige}
       {grundabfrage.maske}
     </>
   );
   return {
     auswahl,
-    verfassen: () => setzeVorlage({ werte: leereMaske(sitzung), titel: "Nachricht verfassen" }),
+    verfassen: () => setzeVorlage({ werte: leereMaske(sitzung), titel: "Nachricht verfassen", schluessel: "verfassen" }),
     lesen,
     masken,
   };

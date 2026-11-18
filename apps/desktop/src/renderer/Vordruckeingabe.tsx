@@ -74,7 +74,7 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalte
         </label>
         <label>
           Nr.
-          <input value={werte.nummer} inputMode="numeric" className="mono" data-tabfolge={AUFNAHMEFOLGE.nummer} title="Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" onChange={(e) => setze("nummer", e.target.value)} />
+          <input value={werte.nummer} inputMode="numeric" className="mono" data-tabfolge={AUFNAHMEFOLGE.nummer} placeholder={platzhalter} title={platzhalter === undefined ? "Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" : "Die Nummer vom Blatt; im Nachtrag nicht vorbelegt (R2-LdF P3-7)"} onChange={(e) => setze("nummer", e.target.value)} />
         </label>
       </div>
       {warnung !== undefined && (

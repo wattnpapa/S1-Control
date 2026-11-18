@@ -163,6 +163,8 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
     }
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Polizei" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
+    // R2-FM P2-3: Die Gegenstelle ist beim Eingang Pflicht.
+    fireEvent.change(within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf"), { target: { value: "Florian 1" } });
     const inhalt = within(maske).getByLabelText("Inhalt");
     fireEvent.keyDown(inhalt, { key: "Tab" });
     expect(document.activeElement).toBe(within(maske).getByLabelText("Abfassungszeit"));
@@ -172,7 +174,7 @@ describe("Fernmelder P1-1, P1-2, P2-2: Zeitfelder und Tastatur", () => {
 });
 
 describe("Fernmelder P1-3, SGL P1-5: Esc fragt vor dem Verwerfen", () => {
-  it("fragt bei getipptem Inhalt nach, behält den Entwurf und verwirft erst beim zweiten Esc", () => {
+  it("fragt bei getipptem Inhalt nach, behält den Entwurf und verwirft erst mit „Verwerfen“", () => {
     const aufSchliessen = vi.fn();
     render(<Nachrichtenmaske vorlage={leereMaske({ stellen: ["S4"], handzeichen: "Ru" })} anschriften={[]} aufSchliessen={aufSchliessen} />);
     const maske = screen.getByRole("form", { name: "Nachricht verfassen" });
@@ -240,7 +242,7 @@ describe("SGL P1-3: die Anschrift im Verteiler", () => {
     render(<Nachrichtenmaske vorlage={leereMaske({ stellen: ["S3"], handzeichen: "Mü" })} anschriften={[]} aufSchliessen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: "Nachricht verfassen" });
     fireEvent.click(within(maske).getByRole("checkbox", { name: "Gesprächsnotiz" }));
-    fireEvent.change(within(maske).getByLabelText("Anschrift"), { target: { value: "S4" } });
+    fireEvent.change(within(maske).getByLabelText("Gesprächspartner"), { target: { value: "S4" } });
     const laufzettel = within(maske).getByRole("group", { name: "Laufzettel" });
     expect((within(laufzettel).getByRole("checkbox", { name: "S4 grün" }) as HTMLInputElement).checked).toBe(true);
     expect((within(laufzettel).getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);

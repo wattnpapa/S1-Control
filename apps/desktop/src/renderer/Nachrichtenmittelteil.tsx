@@ -16,6 +16,8 @@
  *   Satz, was sie bedeuten. Wer den Vordruck nicht kennt, riet bisher.
  * - **Abfassungszeit im Eingang** (R2-FM P2-3, alt FM P2-3): Sie ist die
  *   Zeit des Absenders; das Feld ist leer mit Platzhalter „laut Spruch“.
+ * - **Gesprächspartner** (R2-FaBe P1-5): Bei gesetzter Gesprächsnotiz heißt
+ *   die Anschrift so — man hält ein Gespräch fest, man schreibt niemandem.
  */
 
 import { NACHRICHT_MITTEL, projektion } from "@s1/domaene";
@@ -140,7 +142,7 @@ export function Mittelteil({ werte, setze, anschriften, tabfolge, nachtrag = fal
       <Kaestchenzeile werte={werte} setze={setze} tabfolge={tabfolge} />
       <div className="vordruckzeile">
         {/* Beim Verfassen beginnt die Maske in der Anschrift (R2-SGL P2-3); bei der Aufnahme im Mittel. */}
-        <Textfeld titel="Anschrift" feld="anschrift" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={aufnahmeplatz(tabfolge, "anschrift")} startfokus={!tabfolge} />
+        <Textfeld titel={werte.gespraechsnotiz ? "Gesprächspartner" : "Anschrift"} feld="anschrift" werte={werte} setze={setze} liste="nachrichtenanschriften" tabfolge={aufnahmeplatz(tabfolge, "anschrift")} startfokus={!tabfolge} />
         <Textfeld titel="Ruf-Nr." feld="rufnummer" werte={werte} setze={setze} />
       </div>
       <datalist id="nachrichtenanschriften">

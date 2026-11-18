@@ -171,7 +171,13 @@ describe("Die Sicht „Fernmeldezentrale“", () => {
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
     // Der Absender ist Pflicht (Audit Sachgebietsleiter P1-4).
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Polizei" } });
+    // R2-FM P2-3: Gegenstelle Pflicht; R2-LdF P1-2 alt: ohne Nummer fragt der erste Klick.
+    fireEvent.change(within(maske).getByLabelText("Rufname der Gegenstelle / Spruchkopf"), { target: { value: "Florian Wildeshausen" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufnehmen" }));
+    // R2-FaBe P2-5: Die Abfassungszeit der Vorlage (JETZT) liegt weit zurück — erst diese Frage, dann die Nummer.
+    fireEvent.click(await within(maske).findByRole("button", { name: "Zeit stimmt" }));
+    await waitFor(() => expect(within(maske).getByRole("alert").textContent).toContain("Ohne Nachweisungsnummer aufnehmen?"));
+    fireEvent.click(await within(maske).findByRole("button", { name: "Ohne Nummer aufnehmen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.nachrichtenfolge).toBeUndefined();
   });
@@ -188,9 +194,10 @@ describe("Die Gesprächsnotiz in der Verfassen-Maske", () => {
     expect(laufzettel.className).not.toContain("grau");
     // Ohne Sichter in der Präsenz gibt es „an den Sichter" nicht.
     expect((within(maske).getByRole("button", { name: "An den Sichter" }) as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.change(within(maske).getByLabelText("Anschrift"), { target: { value: "S3" } });
+    fireEvent.change(within(maske).getByLabelText("Gesprächspartner"), { target: { value: "S3" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Telefonat Polizei" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufgeben" }));
+    fireEvent.click(await within(maske).findByRole("button", { name: "Zeit stimmt" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({ nutzlast: { richtung: "EINGANG", gespraechsnotiz: true }, nachrichtenfolge: { sichtung: { handzeichen: "Mü" } } });
   });
@@ -202,9 +209,10 @@ describe("Die Gesprächsnotiz in der Verfassen-Maske", () => {
     fireEvent.click(within(maske).getByRole("checkbox", { name: "Gesprächsnotiz" }));
     fireEvent.click(within(maske).getByRole("button", { name: "An den Sichter" }));
     expect(within(maske).getByRole("group", { name: "Laufzettel" }).className).toContain("grau");
-    fireEvent.change(within(maske).getByLabelText("Anschrift"), { target: { value: "S3" } });
+    fireEvent.change(within(maske).getByLabelText("Gesprächspartner"), { target: { value: "S3" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Telefonat" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Aufgeben" }));
+    fireEvent.click(await within(maske).findByRole("button", { name: "Zeit stimmt" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({ nutzlast: { richtung: "EINGANG", gespraechsnotiz: true } });
     expect(entwuerfe()[0]?.nachrichtenfolge).toBeUndefined();

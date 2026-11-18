@@ -15,9 +15,15 @@
  * (`hinweisanker`) und überlagert das Blatt oben rechts. Jede Zeile hat ein
  * eigenes „×“: Eine Warnung bleibt, bis sie geschlossen wird, ohne dass man
  * mit „Löschen“ alle anderen mitnimmt.
+ *
+ * Nachzug (R2-FaBe P3-1, P3-2): „Löschen“ wurde als „Nachricht löschen“
+ * gelesen; der Knopf heißt jetzt „Alle schließen“ und fragt einmal nach,
+ * wenn Warnungen oder Fehler dabei sind — sie sollen nicht mit den
+ * Auskünften verschwinden. Ein Sofort-Hinweis sagt, dass er ohne Ton kommt:
+ * Der Ton gilt nur Blitz (Entscheidung 6), wer nicht hinsieht, übersieht ihn.
  */
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 import { uhrzeitText } from "@s1/domaene";
 
@@ -31,7 +37,14 @@ export function abgelaufeneInfos(hinweise: readonly Hinweis[], jetzt: number): r
   return hinweise.filter((h) => h.stufe === "info" && h.zeit !== undefined && jetzt - h.zeit >= INFO_VERFALL_MS).map((h) => h.nummer);
 }
 
+/** Der Zusatz an einem Sofort-Hinweis: Er kommt ohne Ton (Entscheidung 6, R2-FaBe P3-2). */
+export const TEXT_SOFORT_OHNE_TON = "ohne Ton – den Ton gibt es nur bei Blitz";
+
+/** Die Rückfrage, wenn „Alle schließen“ auch Warnungen nähme (R2-FaBe P3-1). */
+export const TEXT_ALLE_SCHLIESSEN = "Auch Warnungen schließen? Noch einmal klicken schließt alle.";
+
 export function Hinweiskasten(): React.JSX.Element | null {
+  const [frage, setzeFrage] = useState(false);
   const hinweise = useLaden((z) => z.hinweise);
   const loesche = useLaden((z) => z.loescheHinweise);
   const hatInfo = hinweise.some((h) => h.stufe === "info" && h.zeit !== undefined);
@@ -53,14 +66,31 @@ export function Hinweiskasten(): React.JSX.Element | null {
             <li key={hinweis.nummer} className={hinweis.stufe}>
               {hinweis.zeit === undefined ? "" : <span className="nebenwert mono">{uhrzeitText(hinweis.zeit)} </span>}
               {hinweis.text}
+              {hinweis.text.startsWith("Sofort-Nachricht") && <span className="nebenwert"> ({TEXT_SOFORT_OHNE_TON})</span>}
               <button type="button" className="hinweiszu" aria-label={`Hinweis schließen: ${hinweis.text}`} title="Diesen Hinweis schließen" onClick={() => loesche([hinweis.nummer])}>
                 ×
               </button>
             </li>
           ))}
         </ul>
-        <button type="button" title="Alle Hinweise aus der Leiste nehmen" onClick={() => loesche(undefined)}>
-          Löschen
+        {frage && (
+          <p className="warnung" role="alert">
+            {TEXT_ALLE_SCHLIESSEN}
+          </p>
+        )}
+        <button
+          type="button"
+          title="Alle Hinweise aus der Leiste nehmen; Nachrichten bleiben, wie sie sind"
+          onClick={() => {
+            if (!frage && hinweise.some((h) => h.stufe !== "info")) {
+              setzeFrage(true);
+              return;
+            }
+            setzeFrage(false);
+            loesche(undefined);
+          }}
+        >
+          {frage ? "Ja, alle schließen" : "Alle schließen"}
         </button>
       </section>
     </div>

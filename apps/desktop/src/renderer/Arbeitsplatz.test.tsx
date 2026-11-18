@@ -226,21 +226,21 @@ describe("Der Arbeitsplatz", () => {
     expect(screen.queryByRole("button", { name: /^Hilfe zu / })).toBeNull();
   });
 
-  it("trägt Eingangskorb und Anforderungen als Umschalter im Blatt „Eingang“ (E3)", async () => {
+  it("trägt Eingangskorb und Anforderungen als Umschalter im Blatt „Eingangskorb“ (E3, R2-FaBe P2-1)", async () => {
     render(<Arbeitsplatz />);
-    await userEvent.click(await screen.findByRole("tab", { name: "Eingang" }));
-    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingang" });
+    await userEvent.click(await screen.findByRole("tab", { name: "Eingangskorb" }));
+    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingangskorb" });
     const korb = await within(umschalter).findByRole("button", { name: "Eingangskorb (3 offen)" });
     expect(korb.getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("region", { name: "Eingangskorb" })).toBeDefined();
     // Nur die gewählte Unteransicht ist eingehängt — ihre Kürzel gelten allein.
     expect(screen.queryByRole("region", { name: "Anforderungen" })).toBeNull();
-    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Eingangskorb" })).toBeDefined();
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingangskorb" })).toBeDefined();
 
     await userEvent.click(within(umschalter).getByRole("button", { name: "Anforderungen" }));
     expect(screen.getByRole("region", { name: "Anforderungen" })).toBeDefined();
     expect(screen.queryByRole("region", { name: "Eingangskorb" })).toBeNull();
-    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Anforderungen" })).toBeDefined();
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingangskorb · Anforderungen" })).toBeDefined();
     await waitFor(() => {
       expect(ladeMerker()?.blatt).toBe("eingang.anforderungen");
     });
@@ -376,7 +376,7 @@ describe("Der Arbeitsplatz nach einem Reload", () => {
       expect(useLaden.getState().akteId).toBe("akte-neu");
     });
     expect(screen.getByRole("tab", { name: /^Eingang/ }).getAttribute("aria-selected")).toBe("true");
-    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingang" });
+    const umschalter = screen.getByRole("group", { name: "Unteransicht Eingangskorb" });
     expect(within(umschalter).getByRole("button", { name: "Anforderungen" }).getAttribute("aria-pressed")).toBe("true");
   });
 

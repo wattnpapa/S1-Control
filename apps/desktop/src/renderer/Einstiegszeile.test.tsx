@@ -25,7 +25,7 @@ beforeEach(() => {
 describe("Die Einstiegszeile", () => {
   it("nennt Blatt und ersten Satz aus den Ansichtstexten und verschwindet mit „Verstanden“", () => {
     const { unmount } = render(<Einstiegszeile ort="eingang.eingangskorb" />);
-    const zeile = screen.getByRole("complementary", { name: "Einstieg: Eingang · Eingangskorb" });
+    const zeile = screen.getByRole("complementary", { name: "Einstieg: Eingangskorb" });
     const wozu = ANSICHTEN.find((a) => a.kennung === "eingangskorb")?.wozu ?? "";
     expect(zeile.textContent).toContain(ersterSatz(wozu));
     expect(zeile.textContent).toContain("Strg+H");
@@ -49,13 +49,13 @@ describe("Die Einstiegszeile", () => {
   it("hat je Unteransicht eines Sammelblatts eine eigene Zeile und einen eigenen Merker (E3)", () => {
     const { rerender } = render(<Einstiegszeile ort="eingang.anforderungen" />);
     const wozu = ANSICHTEN.find((a) => a.kennung === "anforderungen")?.wozu ?? "";
-    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Anforderungen" }).textContent).toContain(ersterSatz(wozu));
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingangskorb · Anforderungen" }).textContent).toContain(ersterSatz(wozu));
     fireEvent.click(screen.getByRole("button", { name: "Verstanden" }));
     expect(localStorage.getItem("s1.einstieg.eingang.anforderungen")).toBe("1");
 
     // Der Eingangskorb im selben Blatt ist davon unberührt.
     rerender(<Einstiegszeile ort="eingang.eingangskorb" />);
-    expect(screen.getByRole("complementary", { name: "Einstieg: Eingang · Eingangskorb" })).toBeDefined();
+    expect(screen.getByRole("complementary", { name: "Einstieg: Eingangskorb" })).toBeDefined();
     rerender(<Einstiegszeile ort="fuest.fueorg" />);
     const harke = ANSICHTEN.find((a) => a.kennung === "abschnitte")?.wozu ?? "";
     expect(screen.getByRole("complementary", { name: "Einstieg: Führungsstelle · Führungsorganisation" }).textContent).toContain(

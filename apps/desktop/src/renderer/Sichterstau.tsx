@@ -23,11 +23,22 @@
  * (`scrollWidth` 1357). Sie spannt jetzt die volle Breite (`breit`), die
  * Tabelle hat Spaltenköpfe und `table-layout: fixed`, die Knopfspalte eine
  * feste Breite; Blitz steht oben (R2-FM P2-4).
+ *
+ * Nachzug (R2-FM P2-5, R2-Si P2-2, R2-FM P3-3): Der häufigere Fall ist der
+ * besetzte, aber säumige Sichter (Funkgerät, Telefon, Tür). Die Karte
+ * erscheint jetzt auch dann, sobald ein Eingang die Schwelle seiner
+ * Vorrangstufe überschreitet: Ring 2 sagt es mit `sichterSchwelleUeberschritten`
+ * (optional gelesen); bis dahin gilt hier Blitz ab 5, Sofort ab 10 Minuten,
+ * sonst die Schwelle des Einsatzes — jeweils höchstens die Einsatzschwelle.
+ * Der Satz nennt den Sichter und die längste Wartezeit. Die Minuten rechnet
+ * die Karte aus `vorSichterSeit` gegen die Uhr der Ansicht, nicht aus der
+ * beim Abruf eingefrorenen Zahl („seit 0 min“ im ersten Takt).
  */
 
 import type { Nachrichtenzeile } from "@s1/domaene";
 
-import type { Nachrichtenlage } from "../kontrakt/index.js";
+import type { Nachrichtenlage, Peer } from "../kontrakt/index.js";
+import { minutenSeit } from "./fmzformate.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
 
@@ -52,10 +63,56 @@ export function vorSichterZeilen(zeilen: readonly Nachrichtenzeile[]): readonly 
   return zeilen.filter((z) => z.laufzustand === "VOR_SICHTER" && !z.zurueckgezogen).sort((a, b) => a.vorrangstufe - b.vorrangstufe);
 }
 
-/** Ob die FmZ diesen Eingang selbst sichten darf: Er wartet die Schwelle lang, oder kein Sichter ist besetzt. */
-export function selbstSichtbar(zeile: Nachrichtenzeile, sichterDa: boolean, schwelleMinuten: number): boolean {
-  const seit = wartetSeitSichter(zeile);
-  return !sichterDa || (seit !== undefined && seit >= schwelleMinuten);
+/**
+ * Die Schwellen vor dem Sichter: die des Einsatzes und je Vorrang, sofern die
+ * Stammdaten sie führen (`sichterSchwelleBlitzMinuten`, `…SofortMinuten`).
+ */
+export interface Sichterschwellen {
+  readonly einsatz: number;
+  readonly blitz?: number | undefined;
+  readonly sofort?: number | undefined;
+}
+
+/** Die Schwelle der Vorrangstufe vor dem Sichter (R2-Si P2-2): Blitz 5, Sofort 10 Minuten (oder aus den Stammdaten), höchstens die Einsatzschwelle. */
+export function sichterschwelle(vorrangstufe: number, schwellen: number | Sichterschwellen): number {
+  const s = typeof schwellen === "number" ? { einsatz: schwellen } : schwellen;
+  if (vorrangstufe === 0) return Math.min(s.blitz ?? 5, s.einsatz);
+  if (vorrangstufe === 1) return Math.min(s.sofort ?? 10, s.einsatz);
+  return s.einsatz;
+}
+
+/** Die Minuten vor dem Sichter: aus `vorSichterSeit` gegen die Uhr der Ansicht, sonst die gelieferte Zahl (R2-FM P3-3). */
+export function wartetMinuten(zeile: Nachrichtenzeile, jetzt: string | undefined): number | undefined {
+  const seit = jetzt === undefined ? undefined : minutenSeit(zeile.vorSichterSeit, jetzt);
+  return seit ?? wartetSeitSichter(zeile);
+}
+
+/**
+ * Ob die FmZ diesen Eingang selbst sichten darf: kein Sichter besetzt, oder
+ * er wartet über der Schwelle seiner Stufe — so sagt es Ring 2
+ * (`sichterSchwelleUeberschritten`), sonst die Regel {@link sichterschwelle}.
+ */
+export function selbstSichtbar(zeile: Nachrichtenzeile, sichterDa: boolean, schwelleMinuten: number | Sichterschwellen, jetzt?: string): boolean {
+  if (!sichterDa) return true;
+  const geliefert = (zeile as { readonly sichterSchwelleUeberschritten?: unknown }).sichterSchwelleUeberschritten;
+  if (typeof geliefert === "boolean") return geliefert;
+  const seit = wartetMinuten(zeile, jetzt);
+  return seit !== undefined && seit >= sichterschwelle(zeile.vorrangstufe, schwelleMinuten);
+}
+
+/** „Si (Hz. Si)“ — der besetzte Sichter aus der Präsenz, sonst `undefined`. */
+export function sichtername(peers: readonly Peer[]): string | undefined {
+  const p = peers.find((x) => !x.veraltet && x.stellen?.includes("SICHTER") === true);
+  if (p === undefined) return undefined;
+  return p.handzeichen === undefined || p.handzeichen === "" ? p.anzeigename : `${p.anzeigename} (Hz. ${p.handzeichen})`;
+}
+
+/** Der Satz über der Karte bei besetztem, säumigem Sichter: wer, wie lange (R2-FM P2-5). */
+export function saeumigText(sichter: string | undefined, anzahl: number, laengste: number | undefined): string {
+  const wer = sichter === undefined ? "Der Sichter ist besetzt" : `Der Sichter ${sichter} ist besetzt`;
+  const wie = anzahl === 1 ? "1 Eingang wartet über der Schwelle" : `${String(anzahl)} Eingänge warten über der Schwelle`;
+  const seit = laengste === undefined ? "" : `, der älteste seit ${String(laengste)} min`;
+  return `${wer}, reagiert aber nicht: ${wie}${seit}. Wer aufgenommen hat, kann selbst sichten (Blitz ab 5, Sofort ab 10 min).`;
 }
 
 /** „2 Eingänge warten vor dem Sichter“ — oder nichts, solange keiner über der Schwelle liegt. */
@@ -78,20 +135,25 @@ export function Sichterhinweis({ lage }: { readonly lage: Nachrichtenlage | unde
 export interface SichterstaukarteEigenschaften {
   readonly zeilen: readonly Nachrichtenzeile[];
   readonly sichterDa: boolean;
-  /** Die Schwelle der FmZ in Minuten (`fmzSchwelleMinuten`). */
-  readonly schwelleMinuten: number;
+  /** Die Schwelle der FmZ in Minuten (`fmzSchwelleMinuten`), additiv mit den Schwellen je Vorrang. */
+  readonly schwelleMinuten: number | Sichterschwellen;
   readonly nurLesen: boolean;
   readonly aufSelbst: (zeile: Nachrichtenzeile) => void;
+  /** Additiv (R2-FM P2-5): der besetzte Sichter mit Handzeichen, für den Satz über der Karte. */
+  readonly sichter?: string | undefined;
+  /** Additiv (R2-FM P3-3): die Uhr der Ansicht, gegen die die Wartezeit gerechnet wird. */
+  readonly jetzt?: string | undefined;
 }
 
 /** Die Karte der Eingänge, die die FmZ selbst sichten darf; leer entfällt sie. */
-export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen, aufSelbst }: SichterstaukarteEigenschaften): React.JSX.Element | null {
-  const faellig = vorSichterZeilen(zeilen).filter((z) => selbstSichtbar(z, sichterDa, schwelleMinuten));
+export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen, aufSelbst, sichter, jetzt }: SichterstaukarteEigenschaften): React.JSX.Element | null {
+  const faellig = vorSichterZeilen(zeilen).filter((z) => selbstSichtbar(z, sichterDa, schwelleMinuten, jetzt));
   if (faellig.length === 0) return null;
+  const minuten = faellig.map((z) => wartetMinuten(z, jetzt)).filter((m): m is number => m !== undefined);
   return (
     <section className="karte fmzkarte breit" aria-label="Vor dem Sichter">
       <h3>Vor dem Sichter</h3>
-      <p className="hinweistext">{sichterDa ? "Diese Eingänge warten über der Schwelle auf den Sichter." : "Kein Sichter besetzt: Wer aufgenommen hat, verteilt selbst."}</p>
+      <p className={sichterDa ? "warnung" : "hinweistext"}>{sichterDa ? saeumigText(sichter, faellig.length, minuten.length === 0 ? undefined : Math.max(...minuten)) : "Kein Sichter besetzt: Wer aufgenommen hat, verteilt selbst."}</p>
       <table className="nachrichtentabelle" aria-label="Eingänge vor dem Sichter">
         <thead>
           <tr>
@@ -112,7 +174,7 @@ export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen,
               <td className="zahl">{zeile.nummer ?? "—"}</td>
               <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
               <td className="mono">{zeile.aufnahme === undefined ? "—" : `${dtg(zeile.aufnahme.zeitpunkt)} ${zeile.aufnahme.handzeichen}`}</td>
-              <td className="zahl">{wartetSeitSichter(zeile) === undefined ? "" : `seit ${String(wartetSeitSichter(zeile))} min`}</td>
+              <td className="zahl wartezelle">{wartetMinuten(zeile, jetzt) === undefined ? "" : `seit ${String(wartetMinuten(zeile, jetzt))} min`}</td>
               <td>
                 <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Den Laufzettel öffnen und selbst verteilen (Verteiler aus der Anschrift vorbelegt)"} onClick={() => aufSelbst(zeile)}>
                   Ich sichte jetzt selbst

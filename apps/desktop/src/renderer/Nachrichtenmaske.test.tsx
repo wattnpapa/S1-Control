@@ -82,6 +82,8 @@ describe("Die Maske „Nachricht verfassen“", () => {
     fireEvent.click(within(maske).getByRole("checkbox", { name: "Sofort" }));
     expect(hatOffenenEntwurf()).toBe(true);
     fireEvent.click(within(maske).getByRole("button", { name: "Aufgeben" }));
+    // R2-FaBe P2-5: Die Abfassungszeit JETZT liegt mehr als 24 Stunden zurück — der erste Klick fragt.
+    fireEvent.click(await within(maske).findByRole("button", { name: "Zeit stimmt" }));
     await waitFor(() => expect(aufSchliessen).toHaveBeenCalled());
     const entwurf = attrappe.letzterRuf("bedienen")?.entwurf;
     expect(entwurf).toMatchObject({ typ: "NachrichtVerfasst", nutzlast: { richtung: "AUSGANG", anschrift: "Deich Nord", betreff: "Sandsäcke", vorrang: "SOFORT", absender: "S4", zeichen: "Mü", abfassungszeit: "2026-11-16T09:45:00.000Z" } });
@@ -93,7 +95,8 @@ describe("Die Maske „Nachricht verfassen“", () => {
     expect(zeitAusEingabe("161045nov26", JETZT)).toBe("2026-11-16T09:45:00.000Z");
     expect(zeitAusEingabe("", JETZT)).toBeUndefined();
     const antwort = antwortVorlage(BLITZ_AN_S4, SITZUNG, JETZT);
-    expect(antwort).toMatchObject({ anschrift: "OV Wildeshausen", absender: "FüSt", betreff: "Antwort auf E 26: Pumpen eingetroffen", antwortAuf: "N-blitz", inhalt: "" });
+    // R2-FaBe P1-3: Absender und Funktion sind die eigene Stelle (S4 hat die grüne Kopie), nicht die Anschrift „FüSt“.
+    expect(antwort).toMatchObject({ anschrift: "OV Wildeshausen", absender: "S4", funktion: "S4", betreff: "Antwort auf E 26: Pumpen eingetroffen", antwortAuf: "N-blitz", inhalt: "" });
     expect(anlageAus(antwort, "N-1", JETZT)).toMatchObject({ richtung: "AUSGANG", antwortAuf: "N-blitz", abfassungszeit: "2026-11-16T09:45:00.000Z" });
     expect(besetzteStellen([{ veraltet: false, stellen: ["S2", "LEITER"] }, { veraltet: true, stellen: ["S3"] }])).toEqual(["S2", "Leiter"]);
   });

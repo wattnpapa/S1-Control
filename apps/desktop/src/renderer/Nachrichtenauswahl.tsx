@@ -3,7 +3,7 @@
  * als Kontextmenü an der Zeile (KONZEPT-NACHRICHTEN.md §5, §6; Entwurf
  * „Entlastung", 3.7).
  *
- * „Lesen" ist der Hauptweg: Es schlägt die Nachricht als Vordruck auf und
+ * „Öffnen" (früher „Lesen“, R2-FaBe P2-4: „Lesen“ klang nach „nur ansehen“) ist der Hauptweg: Es schlägt die Nachricht als Vordruck auf und
  * schreibt die Kenntnisnahme für die Stellen der Sitzung, die im Verteiler
  * stehen. „Erledigt" gilt je Stelle und lässt sich zurücknehmen; es steht
  * nur da, wo eine eigene Stelle im Verteiler steht. „Antworten" und
@@ -57,8 +57,9 @@ function erledigungsknopf(p: NachrichtenauswahlEigenschaften): Leistenknopf | un
 export function nachrichtenknoepfe(p: NachrichtenauswahlEigenschaften): readonly Leistenknopf[] {
   const lesen: Leistenknopf = {
     schluessel: "lesen",
-    text: "Lesen",
-    titel: "Als Vordruck aufschlagen; nimmt für die eigenen Stellen des Verteilers Kenntnis",
+    // R2-FaBe P2-4: „Öffnen“ statt „Lesen“; die Kenntnisnahme bleibt daran und steht im Titel.
+    text: "Öffnen",
+    titel: "Als Vordruck aufschlagen; nimmt für die eigenen Stellen des Verteilers Kenntnis (Handzeichen und Zeit)",
     haupt: true,
     aufWahl: p.aufLesen,
   };
@@ -72,7 +73,7 @@ export function nachrichtenknoepfe(p: NachrichtenauswahlEigenschaften): readonly
   return [
     lesen,
     ...(erledigung === undefined ? [] : [erledigung]),
-    { schluessel: "antworten", text: "Antworten", menuetext: "Antworten …", titel: "Neue Nachricht mit getauschter Anschrift und Absender", aufWahl: p.aufAntworten },
+    { schluessel: "antworten", text: "Antworten", menuetext: "Antworten …", titel: "Neue Nachricht an den Absender; sie geht über die Fernmeldezentrale", aufWahl: p.aufAntworten },
     { schluessel: "weiterleiten", text: "Weiterleiten", menuetext: "Weiterleiten …", titel: "Neue Nachricht mit demselben Inhalt", aufWahl: p.aufWeiterleiten },
     ...vordruck,
     tagebuch,

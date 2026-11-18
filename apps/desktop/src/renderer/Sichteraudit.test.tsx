@@ -76,7 +76,7 @@ describe("Sicht Sichter nach dem Audit", () => {
     const zettel = await laufzettelZu(/Pumpen eingetroffen/);
     expect((within(zettel).getByRole("checkbox", { name: "S4 grün" }) as HTMLInputElement).checked).toBe(true);
     fireEvent.click(within(zettel).getByRole("checkbox", { name: "Leiter blau" }));
-    fireEvent.click(within(zettel).getByRole("button", { name: "Nachsichten" }));
+    fireEvent.click(within(zettel).getByRole("button", { name: /^Nachsichten \(/u }));
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({ typ: "NachrichtGesichtet", vorher: BLITZ_AN_S4.sichtung, neu: { verteiler: expect.arrayContaining([{ stelle: "LEITER", kopie: "BLAU" }]) } });
   });
@@ -93,7 +93,7 @@ describe("Sicht Sichter nach dem Audit", () => {
     const offen = screen.getByRole("region", { name: "Laufzettel des Sichters" });
     expect((within(offen).getByRole("checkbox", { name: "S6 blau" }) as HTMLInputElement).checked).toBe(true);
     expect((within(offen).getByRole("checkbox", { name: "S1 grün" }) as HTMLInputElement).checked).toBe(true);
-    fireEvent.click(within(offen).getByRole("button", { name: "Nachsichten" }));
+    fireEvent.click(within(offen).getByRole("button", { name: /^Nachsichten \(/u }));
     await waitFor(() => expect(bedient()).toHaveLength(1));
     expect(bedient()[0]).toMatchObject({ vorher: fremd });
   });
@@ -122,7 +122,7 @@ describe("Sicht Sichter nach dem Audit", () => {
     const spaeter = new Date(Date.now() + 3 * 60_000);
     vi.useFakeTimers({ toFake: ["Date"], now: spaeter });
     try {
-      fireEvent.click(within(zettel).getByRole("button", { name: "Sichten" }));
+      fireEvent.click(within(zettel).getByRole("button", { name: /^Sichten \(/u }));
     } finally {
       vi.useRealTimers();
     }

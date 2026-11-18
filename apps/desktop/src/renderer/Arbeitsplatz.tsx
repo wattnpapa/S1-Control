@@ -257,7 +257,8 @@ export function Arbeitsplatz(): React.JSX.Element {
                 }}
               />
             )}
-            {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} aufStelle={sitzungsabfrage.oeffne} />}
+            {/* R2-ETB P2-6: „In der Lage zeigen“ aus der Lese-Ansicht schlägt die Lage auf. */}
+            {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} aufStelle={sitzungsabfrage.oeffne} aufLage={() => setzeBlatt("lage")} />}
             {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}

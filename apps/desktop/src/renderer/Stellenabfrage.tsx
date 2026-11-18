@@ -80,9 +80,16 @@ export interface StellenabfrageEigenschaften {
   readonly einsatzname?: string;
   readonly aufBestaetigen: (sitzung: Sitzungsstellen) => void | Promise<unknown>;
   readonly aufAbbrechen: () => void;
+  /**
+   * Additiv (R2-Si P3-5): „Stelle abgeben“ für den Schichtwechsel am selben
+   * Rechner — der Arbeitsplatz steht danach ohne Stelle, die anderen sehen
+   * die Stelle als unbesetzt (der Ersatzsichter greift). Vorher ging das nur
+   * über „Einsatz schließen“.
+   */
+  readonly aufAbgeben?: (() => void) | undefined;
 }
 
-export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAbbrechen }: StellenabfrageEigenschaften): React.JSX.Element {
+export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAbbrechen, aufAbgeben }: StellenabfrageEigenschaften): React.JSX.Element {
   const bekannt = new Set(ARBEITSPLATZSTELLEN);
   const [gewaehlt, setzeGewaehlt] = useState<readonly string[]>(vorbelegung.stellen.filter((s) => bekannt.has(s)));
   const [frei, setzeFrei] = useState(vorbelegung.stellen.filter((s) => !bekannt.has(s)).join(", "));
@@ -135,6 +142,14 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
         <input value={handzeichen} maxLength={4} placeholder="2 bis 4 Zeichen" {...(handzeichenZuerst ? { "data-startfokus": "" } : {})} onChange={(e) => setzeHandzeichen(e.target.value)} />
       </label>
       <p className="hinweistext">{TITEL_HANDZEICHEN}</p>
+      {aufAbgeben !== undefined && vorbelegung.stellen.length > 0 && (
+        <p className="hinweistext">
+          Schichtwechsel am selben Rechner:{" "}
+          <button type="button" title="Die Stelle freigeben; die anderen Arbeitsplätze sehen sie als unbesetzt" onClick={aufAbgeben}>
+            Stelle abgeben
+          </button>
+        </p>
+      )}
     </Maske>
   );
 }

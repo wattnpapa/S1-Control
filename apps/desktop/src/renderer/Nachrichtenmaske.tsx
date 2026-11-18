@@ -57,30 +57,48 @@
  *   Aufnahme vollständig, Startfokus in der Anschrift, Tooltips).
  * - Nach dem Aufgeben bleiben die Warnungen des Workers im Hinweiskasten
  *   (R2-FaBe P0-3), `meldeNachAufgeben`.
+ *
+ * Nachzug der zweiten Runde (2026-11-18):
+ * - Zustände in `useMaskenteile.ts`, der Entwurf in `maskenentwurf.ts`,
+ *   die sichtbaren Sätze in `Maskenzusatz.tsx` (Strukturgrenze).
+ * - „Abbrechen“ stellt den Entwurf zurück, „Verwerfen“ löscht ihn nach
+ *   Rückfrage (R2-FaBe P3-4, R2-SGL P3-2); Rückfragen stehen im festen Fuß
+ *   (R2-SGL P3-1).
+ * - Rückfragen mit zweitem Klick (`maskenrueckfragen.ts`): Abfassungszeit
+ *   weit weg (R2-FaBe P2-5), Aufnahme ohne Nummer (R2-LdF P1-2 alt),
+ *   Nummernsprung (R2-LdF P2-7); keine Nummer vorbelegt im Nachtrag
+ *   (R2-SGL P2-1, R2-LdF P3-7).
+ * - Aufnahme: Gegenstelle ist Pflicht (außer im Nachtrag vom Blatt), und
+ *   Enter in einem Feld speichert erst mit Betreff, Inhalt und Gegenstelle
+ *   (R2-FM P2-3).
+ * - Antwort und Gesprächsnotiz sagen sichtbar, was sie sind (R2-FaBe P1-3,
+ *   P1-5); Anschrift und Absender mit Bezug zur Lage (R2-ETB P2-6).
  */
 
 import { useEffect, useState } from "react";
 
-import { datumZeitGruppe } from "@s1/domaene";
+import type { Gegenstelle } from "../kontrakt/index.js";
 
-import type { Sitzungsstellen } from "../kontrakt/index.js";
-
-import { nachrichtAufnehmen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { doppelterAusgangText } from "./doppelterAusgang.js";
 import { merkeOffeneEingabe } from "./entwurf.js";
-import { aufnahmeAus, aufnahmefehler, aufnahmeVorlage, folgeAus, nachweisAus, type Aufnahmewerte } from "./fmzformate.js";
+import { aufnahmeAus, aufnahmefehler, nummerAusEingabe } from "./fmzformate.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
-import { anlageAus, entwurfAus, maskenfehler, richtungAus, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
+import { aufgabeAus } from "./maskenentwurf.js";
+import { abfassungsfrage, nummernsprungFrage, ohneNummerFrage, useRueckfragen } from "./maskenrueckfragen.js";
+import { Entwurfszeile, Maskenhinweis, Verteilerklaerung } from "./Maskenzusatz.js";
+import { bezugsziele } from "./nachrichtenbezug.js";
+import { entwurfAus, maskenfehler, richtungAus, stellenname, type Maskenwerte } from "./nachrichtenformate.js";
 import { TEXT_FMZ_NICHT_BESETZT, fmzBesetzt } from "./Nachrichtenkopf.js";
 import { Mittelteil, type Setze } from "./Nachrichtenmittelteil.js";
-import { Nachtragsschalter, Nachtragsteil, PLATZHALTER_VOM_BLATT, mitGrund, nachtragFolge, nachtragVorlage, nachtragfehler, type Nachtragswerte } from "./Papiernachtrag.js";
+import { Nachtragsschalter, Nachtragsteil, PLATZHALTER_VOM_BLATT, nachtragFolge, nachtragfehler } from "./Papiernachtrag.js";
 import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
-import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus, verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
-import { verteilerAusAnschrift } from "./Verteilerraster.js";
+import { useMaskenteile } from "./useMaskenteile.js";
+import { Aufnahmeteil, Verteilschalter, Verteilteil, sichtungAus } from "./Vordruckeingabe.js";
 import { FmzTeil, LaufzettelAnzeige } from "./Vordruckteile.js";
 import { Vordruckvorschau } from "./Vordruckvorschau.js";
 
@@ -92,6 +110,10 @@ export interface NachrichtenmaskeEigenschaften {
   /** Additiv (N2): gesetzt, wenn die FmZ einen Eingang aufnimmt — schaltet den oberen Teil frei. */
   readonly aufnahme?: Aufnahmeumfeld;
   readonly aufSchliessen: () => void;
+  /** Additiv (R2-FaBe P3-4): unter diesem Schlüssel stellt „Abbrechen“ den Entwurf zurück. */
+  readonly entwurfsschluessel?: string | undefined;
+  /** Additiv (R2-ETB P2-6): die Einheiten der Lage mit Kennung, für den Bezug von Anschrift und Absender. */
+  readonly gegenstellen?: readonly Gegenstelle[] | undefined;
 }
 
 /** Die besetzten Stellen der Präsenz als Wörter — lebende Arbeitsplätze, ohne Doppelte. */
@@ -119,40 +141,6 @@ export function verteilgrund(aufnahme: boolean, gespraechsnotiz: boolean, selbst
 }
 
 /**
- * Aufnahmevermerk und Laufzettel der Maske, wie getippt. Bis jemand den
- * Verteiler anfasst, folgt er der Anschrift: S2 rot, die Anschrift grün
- * (SGL P1-3); `angefasst` zählt für die Rückfrage beim Verwerfen.
- */
-function useTeilwerte(sitzung: Sitzungsstellen | undefined, naechsteNummer: number | undefined, anschrift: string) {
-  const [aufnahmewerte, setzeAufnahmewerte] = useState<Aufnahmewerte>(() => aufnahmeVorlage(sitzung, naechsteNummer));
-  const [verteilwerte, setzeVerteilwerte] = useState<Verteilwerte>(() => verteilVorlage(sitzung?.handzeichen ?? ""));
-  const [verteilerAngefasst, setzeVerteilerAngefasst] = useState(false);
-  const [aufnahmeAngefasst, setzeAufnahmeAngefasst] = useState(false);
-  const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
-  const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerAusAnschrift(anschrift, fuestName) };
-  return {
-    fuestName,
-    /** Fernmelder P2-3: im Nachtrag Aufnahme und Quittung leer, sonst wieder „jetzt“; zählt nicht als getippt. */
-    zeitenVomBlatt: (an: boolean): void => {
-      const jetzt = an ? "" : datumZeitGruppe(new Date());
-      setzeAufnahmewerte((w) => ({ ...w, zeit: jetzt }));
-      setzeVerteilwerte((w) => ({ ...w, quittung: jetzt }));
-    },
-    aufnahmewerte,
-    verteilung,
-    angefasst: aufnahmeAngefasst || verteilerAngefasst,
-    aufAufnahme: (neu: Aufnahmewerte): void => {
-      setzeAufnahmeAngefasst(true);
-      setzeAufnahmewerte(neu);
-    },
-    aufVerteilung: (neu: Verteilwerte): void => {
-      if (neu.verteiler !== verteilung.verteiler) setzeVerteilerAngefasst(true);
-      setzeVerteilwerte(neu);
-    },
-  };
-}
-
-/**
  * Nach dem Aufgeben (R2-FaBe P0-3): Die Warnungen des Workers (etwa „FmZ
  * nicht besetzt“) bleiben im Hinweiskasten stehen, bis jemand sie schließt —
  * die Maske selbst ist dann zu. Schweigt der Worker (älterer Stand), sagt die
@@ -164,25 +152,27 @@ export function meldeNachAufgeben(warnungen: readonly string[] | undefined, ausg
   if ((warnungen ?? []).length === 0 && ausgang && !fmzBesetzt(lagebild)) melde("warnung", `Aufgegeben. ${TEXT_FMZ_NICHT_BESETZT}`);
 }
 
-export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
-  const [werte, setzeWerte] = useState<Maskenwerte>(vorlage);
+/** Aufnahme: Enter in einem Feld schreibt erst mit Betreff, Inhalt und Gegenstelle (R2-FM P2-3). */
+export function enterBereitBeiAufnahme(werte: Pick<Maskenwerte, "betreff" | "inhalt">, gegenstelle: string): boolean {
+  return werte.betreff.trim() !== "" && werte.inhalt.trim() !== "" && gegenstelle.trim() !== "";
+}
+
+/** Was die Maske über Lage, Sitzung und Präsenz liest — die Ziele des Bezugs und ob ein Sichter da ist. */
+function useMaskenumfeld(gegenstellen: readonly Gegenstelle[] | undefined) {
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
-  const t = useTeilwerte(sitzung, aufnahme?.naechsteNummer, werte.anschrift);
-  const { aufnahmewerte, verteilung } = t;
-  const [selbst, setzeSelbst] = useState(true);
-  const [nachtrag, setzeNachtrag] = useState(false);
-  const [nachtragswerte, setzeNachtragswerte] = useState<Nachtragswerte>(() => nachtragVorlage());
-  const versuch = useAnlegeversuch();
   const peers = useLaden((z) => z.lagebild?.peers);
-  // SGL P3-20: die Rückfrage bei gleichem Ausgang; der zweite Klick gibt auf.
-  const [doppelt, setzeDoppelt] = useState<string | undefined>(undefined);
-  const setze: Setze = (feld, wert) => {
-    setzeDoppelt(undefined);
-    setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
+  const baum = useLaden((z) => z.baum?.baum);
+  return {
+    peers: peers ?? [],
+    sichterDa: sichterBesetzt(sitzung?.stellen, peers ?? []),
+    ziele: bezugsziele(gegenstellen ?? [], baum ?? []),
   };
-  const geaendert = JSON.stringify(werte) !== JSON.stringify(vorlage) || t.angefasst || JSON.stringify(nachtragswerte) !== JSON.stringify(nachtragVorlage());
+}
+
+/** Was die Lage der Maske festlegt und was vor dem Schreiben fehlt oder zu fragen ist. */
+function useMaskenpruefung(t: ReturnType<typeof useMaskenteile>, aufnahme: Aufnahmeumfeld | undefined, sichterDa: boolean) {
+  const { werte, aufnahmewerte, verteilung, nachtrag, nachtragswerte, selbst } = t;
   const fmz = aufnahme !== undefined && werte.richtung === "EINGANG";
-  const sichterDa = sichterBesetzt(sitzung?.stellen, peers ?? []);
   const grund = verteilgrund(fmz, werte.gespraechsnotiz, selbst, sichterDa);
   const sichtung = grund === undefined ? undefined : sichtungAus(verteilung);
   // Ein Ausgang vom Blatt trägt Annahme, Beförderung und Nummer gleich mit (Fernmelder P2-9).
@@ -191,43 +181,90 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
   // Der Nachtrag nur, wenn er Werte der FmZ trägt (Annahme, Beförderung, Nummer) — wie `hatFmzWerte` im Worker.
   const nachtragMitFmz = ausgangVomBlatt && Object.keys(nachtragFolge(nachtragswerte)).length > 0;
   const vorbehalt = useStellenvorbehalt(fmz ? "aufnahme" : "nachtrag", fmz || nachtragMitFmz);
-  const schalteNachtrag = (an: boolean): void => {
-    setzeNachtrag(an);
-    setze("abfassungszeit", an ? "" : vorlage.abfassungszeit);
-    t.zeitenVomBlatt(an);
-  };
   const fehler = [
     ...maskenfehler(werte),
     ...(ausgangVomBlatt ? nachtragfehler(nachtragswerte) : []),
     ...(fmz ? aufnahmefehler(aufnahmewerte) : []),
+    // R2-FM P2-3: Wer den Spruch gegeben hat, gehört in den Aufnahmevermerk; vom Blatt gilt, was dort steht.
+    ...(fmz && !nachtrag && aufnahmewerte.gegenstelle.trim() === "" ? ["Gegenstelle (Rufname) eintragen"] : []),
     ...(grund !== undefined && sichtung === undefined ? ["Quittung und Handzeichen im Laufzettel eintragen"] : []),
   ];
+  const nummer = fmz ? aufnahmewerte.nummer : ausgangVomBlatt ? nachtragswerte.nummer : "";
+  const rueckfragen = useRueckfragen([
+    abfassungsfrage(werte.abfassungszeit, nachtrag),
+    fmz ? ohneNummerFrage(aufnahmewerte.nummer, nachtrag) : undefined,
+    nummernsprungFrage(nummerAusEingabe(nummer), aufnahme?.naechsteNummer),
+  ]);
+  return { fmz, grund, sichtung, ausgangVomBlatt, vorbehalt, fehler, rueckfragen };
+}
+
+interface VordruckEigenschaften {
+  readonly t: ReturnType<typeof useMaskenteile>;
+  readonly p: ReturnType<typeof useMaskenpruefung>;
+  readonly aufnahme: Aufnahmeumfeld | undefined;
+  readonly umfeld: { readonly sichterDa: boolean; readonly anschriften: readonly string[]; readonly setze: Setze };
+}
+
+/** Die drei Teile des Vordrucks, je nach Lage: Aufnahme oder Nachtrag oben, Laufzettel unten. */
+function Vordruck({ t, p, aufnahme, umfeld }: VordruckEigenschaften): React.JSX.Element {
+  const { werte, nachtrag } = t;
+  const platzhalter = nachtrag ? PLATZHALTER_VOM_BLATT : undefined;
+  return (
+    <div className="vordruck">
+      {p.fmz ? (
+        <Aufnahmeteil werte={t.aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme?.vergebeneNummern} platzhalter={platzhalter} />
+      ) : p.ausgangVomBlatt ? (
+        <Nachtragsteil werte={t.nachtragswerte} aufAenderung={t.setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} />
+      ) : (
+        <FmzTeil />
+      )}
+      <Mittelteil werte={werte} setze={umfeld.setze} anschriften={umfeld.anschriften} tabfolge={p.fmz} nachtrag={nachtrag} />
+      {werte.gespraechsnotiz && (
+        <>
+          <Verteilschalter selbst={t.selbst || !umfeld.sichterDa} aufSelbst={t.setzeSelbst} sichterDa={umfeld.sichterDa} />
+          <Verteilerklaerung selbst={t.selbst || !umfeld.sichterDa} />
+        </>
+      )}
+      {p.grund === undefined ? (
+        <LaufzettelAnzeige />
+      ) : (
+        <Verteilteil werte={t.verteilung} aufAenderung={t.aufVerteilung} grund={p.grund} anschrift={werte.anschrift} eigeneFuest={t.fuestName} platzhalter={platzhalter} tabfolge={p.fmz} />
+      )}
+    </div>
+  );
+}
+
+export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen, entwurfsschluessel, gegenstellen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
+  const t = useMaskenteile(vorlage, aufnahme?.naechsteNummer, entwurfsschluessel);
+  const { werte, aufnahmewerte, nachtrag, nachtragswerte } = t;
+  const umfeld = useMaskenumfeld(gegenstellen);
+  const p = useMaskenpruefung(t, aufnahme, umfeld.sichterDa);
+  const { fmz, vorbehalt, fehler, rueckfragen } = p;
+  const versuch = useAnlegeversuch();
+  // SGL P3-20: die Rückfrage bei gleichem Ausgang; der zweite Klick gibt auf.
+  const [doppelt, setzeDoppelt] = useState<string | undefined>(undefined);
+  const setze: Setze = (feld, wert) => {
+    setzeDoppelt(undefined);
+    t.setzeWerte((bisher) => ({ ...bisher, [feld]: wert }));
+  };
 
   useEffect(() => {
-    merkeOffeneEingabe("nachricht", geaendert);
+    merkeOffeneEingabe("nachricht", t.geaendert);
     return () => merkeOffeneEingabe("nachricht", false);
-  }, [geaendert]);
+  }, [t.geaendert]);
 
   async function aufgeben(): Promise<void> {
+    if (rueckfragen.halteAn()) return;
     const nachrichtId = versuch.kennung(() => neueId("N"));
-    const anlage = anlageAus(werte, nachrichtId);
     const akteId = useLaden.getState().akteId;
-    if (anlage.richtung === "AUSGANG" && doppelt === undefined && akteId !== undefined) {
+    if (richtungAus(werte) === "AUSGANG" && doppelt === undefined && akteId !== undefined) {
       const frage = await doppelterAusgangText(akteId, werte);
       if (frage !== undefined) {
         setzeDoppelt(frage);
         return;
       }
     }
-    const vermerk = fmz ? aufnahmeAus(aufnahmewerte) : undefined;
-    const gegenstelle = aufnahmewerte.gegenstelle.trim();
-    const mitAufnahme = vermerk === undefined ? anlage : { ...anlage, aufnahme: vermerk, ...(gegenstelle === "" ? {} : { gegenstelle }) };
-    // Vom Blatt nachgetragen: Annahme, Beförderung und Nummer sind Folgewerte
-    // der Anlage, ein Bedienschritt statt zwei (Fernmelder P2-9).
-    const nachweis = fmz ? nachweisAus(aufnahmewerte) : undefined;
-    // R2-SGL P1-2: `nachtrag: true` kennzeichnet den Papier-Nachtrag für Tagebuch und Akte.
-    const folge = { ...folgeAus(nachweis, sichtung), ...(ausgangVomBlatt ? nachtragFolge(nachtragswerte) : {}), ...(nachtrag ? { nachtrag: true } : {}) };
-    const entwurf = mitGrund(nachrichtAufnehmen(mitAufnahme, folge), vorbehalt.grund);
+    const entwurf = aufgabeAus({ nachrichtId, werte, aufnahmewerte, nachtragswerte, nachtrag, fmz, ausgangVomBlatt: p.ausgangVomBlatt, sichtung: p.sichtung, grund: vorbehalt.grund, ziele: umfeld.ziele });
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
@@ -236,45 +273,46 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
     const ergebnis = await versuch.schreibe(entwurf);
     if (brauchtGrund(ergebnis)) vorbehalt.erzwinge();
     if (ergebnis?.art !== "geschrieben") return;
-    meldeNachAufgeben(ergebnis.warnungen, anlage.richtung === "AUSGANG" && !nachtrag);
+    t.vergiss();
+    meldeNachAufgeben(ergebnis.warnungen, richtungAus(werte) === "AUSGANG" && !nachtrag);
     aufSchliessen();
   }
 
-  const alleAnschriften = [...new Set([...besetzteStellen(peers ?? []), ...anschriften])];
-  const entwurf = entwurfAus(werte, {
+  const vorschau = entwurfAus(werte, {
     ...(fmz ? { aufnahme: aufnahmeAus(aufnahmewerte), gegenstelle: aufnahmewerte.gegenstelle.trim(), nummer: aufnahmewerte.nummer } : {}),
-    sichtung,
+    sichtung: p.sichtung,
   });
+  const frage = rueckfragen.sichtbar ?? (doppelt === undefined ? undefined : { frage: doppelt, knopf: "Trotzdem aufgeben" });
+  const zurueckstellen = t.zurueckstellen;
   return (
     <Maske
       titel={titel}
-      bestaetigungstext={doppelt !== undefined ? "Trotzdem aufgeben" : nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben"}
-      geaendert={geaendert}
+      bestaetigungstext={frage?.knopf ?? (nachtrag ? "Nachtragen" : fmz ? "Aufnehmen" : "Aufgeben")}
+      geaendert={t.geaendert}
       bereit={fehler.length === 0 && !versuch.gesperrt && !vorbehalt.gesperrt}
       bereitGrund={fehler[0] ?? versuch.sperre ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined)}
-      aufAbbrechen={aufSchliessen}
+      aufAbbrechen={() => {
+        t.vergiss();
+        aufSchliessen();
+      }}
+      aufZurueckstellen={
+        zurueckstellen === undefined
+          ? undefined
+          : () => {
+              zurueckstellen();
+              aufSchliessen();
+            }
+      }
+      enterBereit={!fmz || enterBereitBeiAufnahme(werte, aufnahmewerte.gegenstelle)}
+      fusszeile={frage === undefined ? undefined : <p className="warnung fussfrage" role="alert">{frage.frage}</p>}
       aufBestaetigen={aufgeben}
     >
-      <Nachtragsschalter an={nachtrag} aufAn={schalteNachtrag} />
+      <Entwurfszeile zeit={t.wiederhergestellt} />
+      <Nachtragsschalter an={nachtrag} aufAn={t.schalteNachtrag} />
       {vorbehalt.hinweis}
-      <div className="vordruck">
-        {fmz ? (
-          <Aufnahmeteil werte={aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme.vergebeneNummern} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} />
-        ) : ausgangVomBlatt ? <Nachtragsteil werte={nachtragswerte} aufAenderung={setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} /> : <FmzTeil />}
-        <Mittelteil werte={werte} setze={setze} anschriften={alleAnschriften} tabfolge={fmz} nachtrag={nachtrag} />
-        {werte.gespraechsnotiz && <Verteilschalter selbst={selbst || !sichterDa} aufSelbst={setzeSelbst} sichterDa={sichterDa} />}
-        {grund === undefined ? (
-          <LaufzettelAnzeige />
-        ) : (
-          <Verteilteil werte={verteilung} aufAenderung={t.aufVerteilung} grund={grund} anschrift={werte.anschrift} eigeneFuest={t.fuestName} platzhalter={nachtrag ? PLATZHALTER_VOM_BLATT : undefined} tabfolge={fmz} />
-        )}
-      </div>
-      <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf }} />
-      {doppelt !== undefined && (
-        <p className="warnung" role="alert">
-          {doppelt}
-        </p>
-      )}
+      <Maskenhinweis werte={werte} />
+      <Vordruck t={t} p={p} aufnahme={aufnahme} umfeld={{ sichterDa: umfeld.sichterDa, anschriften: [...new Set([...besetzteStellen(umfeld.peers), ...anschriften])], setze }} />
+      <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf: vorschau }} />
       {versuch.anzeige}
     </Maske>
   );

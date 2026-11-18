@@ -27,7 +27,7 @@ import { Nachrichten } from "./Nachrichten.js";
 import { Nachrichtenmaske } from "./Nachrichtenmaske.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { BLITZ_AN_S4, NACHRICHTEN_LAGEBILD, VOR_SICHTER, nachrichtenansicht } from "./pruefhilfen/nachrichtenbeispiel.js";
-import { TEXT_VORBEHALT, TEXT_VORBEHALT_SICHTER, stelleFehlt } from "./Stellenvorbehalt.js";
+import { TEXT_VORBEHALT_SICHTER, stelleFehlt, vorbehaltstextFuer } from "./Stellenvorbehalt.js";
 
 afterEach(cleanup);
 
@@ -73,11 +73,11 @@ describe("R2-FaBe P0-1: Sichten ist dem Sichter vorbehalten", () => {
     const zettel = laufzettel();
     expect(zettel.textContent).toContain(TEXT_VORBEHALT_SICHTER);
     expect(zettel.textContent).toContain("vorbehalten");
-    expect(knopf(zettel, "Sichten").disabled).toBe(true);
+    expect(knopf(zettel, /^Sichten \(/u).disabled).toBe(true);
     expect(zettel.textContent).toContain("Erst „Trotzdem“ wählen");
     fireEvent.click(knopf(zettel, "Trotzdem"));
-    expect(knopf(zettel, "Sichten").disabled).toBe(false);
-    fireEvent.click(knopf(zettel, "Sichten"));
+    expect(knopf(zettel, /^Sichten \(/u).disabled).toBe(false);
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({ typ: "NachrichtGesichtet", grund: "Eintrag durch Fachberater, nicht Sichter" });
   });
@@ -85,9 +85,9 @@ describe("R2-FaBe P0-1: Sichten ist dem Sichter vorbehalten", () => {
   it("ohne Stelle ebenso, auch beim Nachsichten", async () => {
     sitzung([]);
     const zettel = laufzettel(BLITZ_AN_S4);
-    expect(knopf(zettel, "Nachsichten").disabled).toBe(true);
+    expect(knopf(zettel, /^Nachsichten \(/u).disabled).toBe(true);
     fireEvent.click(knopf(zettel, "Trotzdem"));
-    fireEvent.click(knopf(zettel, "Nachsichten"));
+    fireEvent.click(knopf(zettel, /^Nachsichten \(/u));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.grund).toBe("Eintrag durch Arbeitsplatz ohne Stelle, nicht Sichter");
   });
@@ -96,7 +96,7 @@ describe("R2-FaBe P0-1: Sichten ist dem Sichter vorbehalten", () => {
     sitzung(["FMZ"]);
     const zettel = laufzettel();
     expect(within(zettel).queryByRole("button", { name: "Trotzdem" })).toBeNull();
-    fireEvent.click(knopf(zettel, "Sichten"));
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.grund).toBeUndefined();
     cleanup();
@@ -109,12 +109,12 @@ describe("R2-FaBe P0-1: Sichten ist dem Sichter vorbehalten", () => {
     attrappe.antwortet("bedienen", { art: "brauchtGrund", zielArt: "NachrichtGesichtet" });
     const zettel = laufzettel();
     expect(within(zettel).queryByRole("button", { name: "Trotzdem" })).toBeNull();
-    fireEvent.click(knopf(zettel, "Sichten"));
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     await waitFor(() => expect(within(zettel).getByRole("button", { name: "Trotzdem" })).toBeDefined());
-    expect(knopf(zettel, "Sichten").disabled).toBe(true);
+    expect(knopf(zettel, /^Sichten \(/u).disabled).toBe(true);
     attrappe.antwortet("bedienen", { art: "geschrieben", ereignisId: "a-0000000002" });
     fireEvent.click(knopf(zettel, "Trotzdem"));
-    fireEvent.click(knopf(zettel, "Sichten"));
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     await waitFor(() => expect(entwuerfe()).toHaveLength(2));
     expect(entwuerfe()[1]?.grund).toBe("Eintrag durch Sichter, nicht Sichter");
   });
@@ -125,9 +125,11 @@ describe("R2-FM P3-2, R2-SGL P1-2: Aufnahme und Nachtrag ohne Stelle FMZ", () =>
     sitzung(["S4"], [SICHTER_PEER]);
     render(<Nachrichtenmaske titel="Eingang aufnehmen" vorlage={eingangVorlage({ stellen: ["S4"], handzeichen: "Ru" }, "FüSt Weser")} anschriften={[]} aufnahme={{ naechsteNummer: 3 }} aufSchliessen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: "Eingang aufnehmen" });
-    expect(maske.textContent).toContain(TEXT_VORBEHALT);
+    expect(maske.textContent).toContain(vorbehaltstextFuer("aufnahme"));
     fireEvent.change(within(maske).getByLabelText("Absender"), { target: { value: "Heros Wildeshausen" } });
     fireEvent.change(within(maske).getByLabelText("Betreff"), { target: { value: "Lage" } });
+    // R2-FM P2-3: Die Gegenstelle ist beim Eingang Pflicht.
+    fireEvent.change(within(maske).getByLabelText(/Rufname der Gegenstelle/u), { target: { value: "Heros Wildeshausen 10" } });
     expect(knopf(maske, "Aufnehmen").disabled).toBe(true);
     fireEvent.click(knopf(maske, "Trotzdem"));
     fireEvent.click(knopf(maske, "Aufnehmen"));
@@ -173,7 +175,7 @@ describe("R2-FM P1-2, R2-Si P2: Ersatzsichter und Vorrang ohne Hauptempfänger",
     sitzung(["SICHTER"]);
     const zettel = laufzettel(BLITZ_OHNE_STELLE);
     expect(within(zettel).getByRole("alert").textContent).toContain("Kein Hauptempfänger");
-    fireEvent.click(knopf(zettel, "Sichten"));
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     expect(entwuerfe()).toHaveLength(0);
     fireEvent.click(knopf(zettel, "Trotzdem nur an S2"));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
@@ -183,12 +185,12 @@ describe("R2-FM P1-2, R2-Si P2: Ersatzsichter und Vorrang ohne Hauptempfänger",
   it("ein grünes Kreuz nimmt die Rückfrage zurück; ohne Vorrang genügt ein Klick", async () => {
     sitzung(["SICHTER"]);
     const zettel = laufzettel(BLITZ_OHNE_STELLE);
-    fireEvent.click(knopf(zettel, "Sichten"));
+    fireEvent.click(knopf(zettel, /^Sichten \(/u));
     fireEvent.click(within(zettel).getByRole("checkbox", { name: "S3 grün" }));
-    expect(knopf(zettel, "Sichten")).toBeDefined();
+    expect(knopf(zettel, /^Sichten \(/u)).toBeDefined();
     cleanup();
     const einfach = laufzettel({ ...BLITZ_OHNE_STELLE, vorrang: undefined, vorrangstufe: 2 } as Nachrichtenzeile);
-    fireEvent.click(knopf(einfach, "Sichten"));
+    fireEvent.click(knopf(einfach, /^Sichten \(/u));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
   });
 

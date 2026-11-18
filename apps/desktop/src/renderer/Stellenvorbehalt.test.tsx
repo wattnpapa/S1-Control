@@ -17,7 +17,7 @@ import { useLaden } from "./laden.js";
 import { Weitergabemaske } from "./Ldfmaske.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { BLITZ_AN_S4, NACHRICHTEN_LAGEBILD } from "./pruefhilfen/nachrichtenbeispiel.js";
-import { TEXT_VORBEHALT, eintragsgrund, stelleFehlt } from "./Stellenvorbehalt.js";
+import { eintragsgrund, stelleFehlt, vorbehaltstextFuer } from "./Stellenvorbehalt.js";
 
 afterEach(cleanup);
 
@@ -65,7 +65,7 @@ describe("Die Masken der FmZ", () => {
   ])("%s ohne Stelle FMZ: Hinweis, erst „Trotzdem“ gibt frei, der Entwurf trägt den Grund", async (schritt, knopf) => {
     sitzung(["S4"]);
     const maske = fmzmaske(schritt);
-    expect(within(maske).getByText(TEXT_VORBEHALT, { exact: false })).toBeDefined();
+    expect(within(maske).getByText(vorbehaltstextFuer(schritt), { exact: false })).toBeDefined();
     const bestaetigen = within(maske).getByRole("button", { name: knopf });
     expect((bestaetigen as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(maske).getByRole("button", { name: "Trotzdem" }));
@@ -104,6 +104,8 @@ describe("Die Weitergabe an den Sichter", () => {
     expect((within(maske).getByRole("button", { name: "Weitergeben" }) as HTMLButtonElement).disabled).toBe(true);
     fireEvent.click(within(maske).getByRole("button", { name: "Trotzdem" }));
     fireEvent.click(within(maske).getByRole("button", { name: "Weitergeben" }));
+    // R2-LdF P2-3: Der Eingang hat keine Nummer — der zweite Klick gibt weiter.
+    if (ZEILE.nummer === undefined) fireEvent.click(await within(maske).findByRole("button", { name: "Trotzdem ohne Nummer weitergeben" }));
     await vi.waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({ typ: "NachrichtWeitergegeben", grund: "Eintrag durch S4, nicht LdF" });
   });

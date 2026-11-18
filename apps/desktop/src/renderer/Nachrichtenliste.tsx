@@ -26,6 +26,7 @@
 import { projektion, type Laufzustand, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Kontextort } from "./Klappmenue.js";
+import { Ersatzmarke } from "./Laufzettelzusatz.js";
 import { dtg, eigeneMarken, kopieFuer, kopieklasse, kopiewort, vorrangwort } from "./nachrichtenformate.js";
 import { ausgangsvermerk } from "./nachrichtenvermerke.js";
 
@@ -96,6 +97,15 @@ export function nummerOhne(zeile: Pick<Nachrichtenzeile, "befoerderung">, folgt:
   return zeile.befoerderung === undefined ? "folgt (FmZ)" : "ohne Nummer";
 }
 
+/**
+ * Die Kopie des eigenen Ausgangs (R2-FaBe P1-4): Ring 2 markiert sie mit
+ * `eigenerAusgang` (optional gelesen) und führt sie als gelesen; hier heißt sie
+ * „eigene Nachricht“ statt „grün: bearbeiten“ — sie ist kein Auftrag.
+ */
+export function eigenerAusgang(zeile: Nachrichtenzeile, stellen: readonly string[]): boolean {
+  return zeile.verteiler.some((m) => stellen.includes(m.stelle) && (m as { readonly eigenerAusgang?: unknown }).eigenerAusgang === true);
+}
+
 function Standzelle({ zeile, stellen, posteingang }: { readonly zeile: Nachrichtenzeile; readonly stellen: readonly string[]; readonly posteingang: boolean }): React.JSX.Element {
   // Additiv (R2-SGL P1-1): In der Sicht „Offen“ stehen auch eigene Ausgänge und Zeilen der eigenen
   // Station ohne eigene Kopie; sie zeigen ihren Stand, nicht „neu“.
@@ -130,7 +140,7 @@ function Zeile({ zeile, stellen, posteingang, eingangsspalte = false, gewaehlt, 
       <td className="kopierand">
         <span className="nurvorlesen">{kopietext}</span>
       </td>
-      {posteingang && <td className={`kopiewort ${kopieklasse(kopie)}`}>{kopiewort(kopie)}</td>}
+      {posteingang && <td className={`kopiewort ${kopieklasse(kopie)}`}>{eigenerAusgang(zeile, stellen) ? "eigene Nachricht" : kopiewort(kopie)}</td>}
       <td>
         <Standzelle zeile={zeile} stellen={stellen} posteingang={posteingang} />
         {zeile.zweiteSichtung !== undefined && (
@@ -139,11 +149,14 @@ function Zeile({ zeile, stellen, posteingang, eingangsspalte = false, gewaehlt, 
             zwei Sichtungen
           </span>
         )}
+        {/* R2-Si P2-1: Die Ersatzsichtung der FmZ trägt eine Marke; der heimkehrende Sichter sieht sie. */}
+        <Ersatzmarke zeile={zeile} />
       </td>
       <td>
         <Vorrangmarke zeile={zeile} />
       </td>
-      <td>{zeile.richtungKurz}</td>
+      {/* R2-FaBe P2-9: Die Gesprächsnotiz heißt „Notiz“, nicht „E“ — sie kam nicht von außen. */}
+      <td>{zeile.gespraechsnotiz ? "Notiz" : zeile.richtungKurz}</td>
       <td className="zahl" title={folgt ? "Die Nachweisungsnummer vergibt die Fernmeldezentrale" : undefined}>
         {nummer}
       </td>

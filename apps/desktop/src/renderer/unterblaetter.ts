@@ -78,10 +78,11 @@ export function aufschlagAus(wert: unknown): Aufschlag | undefined {
   return { blatt, unterwahl: { [blatt]: unter } };
 }
 
-/** „Eingang · Anforderungen" — der Name des Orts, wie ihn die Einstiegszeile nennt. */
+/** „Eingangskorb · Anforderungen" — der Name des Orts, wie ihn die Einstiegszeile nennt. */
 export function orttitel(ort: Blattort): string {
   const [blatt, unter] = ort.split(".", 2) as [Blatt, string | undefined];
   if (unter === undefined || !istSammelblatt(blatt)) return blatttitel(blatt);
   const titel = UNTERBLAETTER[blatt].find((eintrag) => eintrag.schluessel === unter)?.titel ?? unter;
-  return `${blatttitel(blatt)} · ${titel}`;
+  // R2-FaBe P2-1: Seit der Reiter „Eingangskorb“ heißt, stünde sonst „Eingangskorb · Eingangskorb“.
+  return titel === blatttitel(blatt) ? titel : `${blatttitel(blatt)} · ${titel}`;
 }

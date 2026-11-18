@@ -44,6 +44,11 @@
  *   gewählten Stellen), erst der zweite Klick sichtet.
  * - `fokus` (R2-FM P1-2, R2-Si P2): Öffnet „Ich sichte jetzt selbst“ den
  *   Laufzettel, rollt er in den Blick und setzt den Fokus auf die Quittung.
+ *
+ * Nachzug (`Laufzettelzusatz.tsx`): „Sichten (3)“ mit dem Verteiler in Worten
+ * neben dem Knopf (Sichter P1-3, R2-Si P3-3, R2-SGL P3-5), der Vorschlag
+ * „wie zuletzt bei diesem Absender“ aus `verlauf` (Sichter P1-3) und die
+ * Marke „Ersatzsichtung“ im Kopf (R2-Si P2-1).
  */
 
 import { useEffect, useRef, useState } from "react";
@@ -52,6 +57,7 @@ import { datumZeitGruppe, kanonischeSerialisierung, type KanonischerWert, type N
 
 import { nachrichtenentwurfFehler, nachrichtSichten } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
+import { Absendervorschlag, Ersatzmarke, sichtknopftext, verteilerkurz, zuletztBeiAbsender } from "./Laufzettelzusatz.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { useLaden } from "./laden.js";
 import { dtg, handzeichenPflicht, stellenname, zeitAusEingabe } from "./nachrichtenformate.js";
@@ -77,6 +83,10 @@ export interface LaufzettelEigenschaften {
   readonly aufGesichtet: () => void;
   /** Additiv (R2-FM P1-2): beim Öffnen in den Blick rollen und die Quittung fokussieren. */
   readonly fokus?: boolean;
+  /** Additiv (Sichter P1-3): die Nachweisung, aus der „wie zuletzt bei diesem Absender“ kommt. */
+  readonly verlauf?: readonly Nachrichtenzeile[];
+  /** Additiv (R2-FM P2-5): Der Sichter ist besetzt, aber säumig — die FmZ sichtet als Ersatzsichter ohne „Trotzdem“. */
+  readonly saeumig?: boolean;
 }
 
 /** Die Empfänger ohne grüne Kopie für den zweiten Klick: „S2“ oder „S2, S1“ (R2-FM P1-2). */
@@ -207,8 +217,8 @@ function useFokusBeimOeffnen(fokus: boolean): React.RefObject<HTMLElement | null
  * ohne grüne Kopie, der zweite Klick (R2-FM P1-2). Die Bestätigung gilt nur
  * für den Verteiler, den sie sah; wer ein Kästchen ändert, wird neu gefragt.
  */
-function useSichtfreigabe(zeile: Nachrichtenzeile, verteiler: readonly Verteilerwahl[], warnung: string | undefined, nurLesen: boolean) {
-  const vorbehalt = useStellenvorbehalt("sichtung", !nurLesen);
+function useSichtfreigabe(zeile: Nachrichtenzeile, verteiler: readonly Verteilerwahl[], warnung: string | undefined, nurLesen: boolean, saeumig = false) {
+  const vorbehalt = useStellenvorbehalt("sichtung", !nurLesen, saeumig);
   const [bestaetigtFuer, setzeBestaetigtFuer] = useState<string | undefined>(undefined);
   const schluessel = JSON.stringify(verteiler);
   const mitVorrang = warnung !== undefined && zeile.vorrangstufe < 2;
@@ -226,7 +236,7 @@ function useSichtfreigabe(zeile: Nachrichtenzeile, verteiler: readonly Verteiler
   };
 }
 
-export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus = false }: LaufzettelEigenschaften): React.JSX.Element {
+export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus = false, verlauf = [], saeumig = false }: LaufzettelEigenschaften): React.JSX.Element {
   const w = useLaufzettelwerte(zeile, handzeichen);
   const wurzel = useFokusBeimOeffnen(fokus);
   const versuch = useAnlegeversuch();
@@ -241,7 +251,7 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
   // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
   const warnung = hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
-  const freigabe = useSichtfreigabe(zeile, w.verteiler, warnung, nurLesen);
+  const freigabe = useSichtfreigabe(zeile, w.verteiler, warnung, nurLesen, saeumig);
   const { vorbehalt } = freigabe;
   const grund = fehlt ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined);
 
@@ -266,7 +276,10 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
   const nachsichten = vorher !== null;
   return (
     <section ref={wurzel} className="laufzettel vordruckteil" aria-label="Laufzettel des Sichters" onKeyDown={esc.beiTaste}>
-      <h3>Laufzettel {nachsichten ? "· Nachsichtung" : ""}</h3>
+      <h3>
+        Laufzettel {nachsichten ? "· Nachsichtung" : ""}
+        <Ersatzmarke zeile={zeile} />
+      </h3>
       {vorbehalt.hinweis}
       {sperrer !== undefined && <p className="warnung">{sperrtext(sperrer)}</p>}
       {fremd !== undefined && (
@@ -282,6 +295,7 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
           <input value={w.zeichen} maxLength={4} onChange={(e) => w.setze.zeichen(e.target.value)} />
         </label>
       </div>
+      {zeile.sichtung === undefined && <Absendervorschlag vorschlag={zuletztBeiAbsender(verlauf, zeile)} aufUebernehmen={w.setze.verteiler} gesperrt={nurLesen} />}
       <Verteilermatrix verteiler={w.verteiler} aufAenderung={w.setze.verteiler} />
       <label>
         Vermerke
@@ -301,8 +315,10 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
       {versuch.anzeige}
       <div className="maskenknoepfe">
         <button type="button" className="haupt" disabled={nurLesen || grund !== undefined || versuch.gesperrt} onClick={() => void sichten()}>
-          {freigabe.bestaetigt ? ohneHauptempfaengerKnopf(w.verteiler) : nachsichten ? "Nachsichten" : "Sichten"}
+          {freigabe.bestaetigt ? ohneHauptempfaengerKnopf(w.verteiler) : sichtknopftext(nachsichten, w.verteiler)}
         </button>
+        {/* R2-Si P3-3, R2-SGL P3-5: der Verteiler in Worten neben dem Knopf — das Raster kann unter ihm liegen. */}
+        <span className="nebenwert verteilerkurz">{w.verteiler.length === 0 ? "kein Empfänger" : verteilerkurz(w.verteiler)}</span>
         {grund !== undefined && <span className="hinweistext bereitgrund">{grund}</span>}
       </div>
     </section>
