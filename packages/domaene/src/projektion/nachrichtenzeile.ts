@@ -20,6 +20,7 @@ import { vergleicheHlc, type Hlc } from "../hlc.js";
 import { vergleicheNachCodepunkt } from "../kanonisch.js";
 import {
   zMittelvermerk,
+  zNachrichtenbezug,
   zNachweis,
   zSichtung,
   zVorschlag,
@@ -38,6 +39,11 @@ import type {
 } from "../zustand-nachricht.js";
 import type { Feld, Zustand } from "../zustand.js";
 import { fmzVermerkTextAus, laufstandAus, ohneNummerAus, ueberWarteschwelle, type Laufstand, type Wartegrundlage } from "./nachrichtenstand.js";
+import { istEigeneKopie } from "./verfasserstelle.js";
+import { sichterschwellen, type Sichterschwellen } from "./sichterschwelle.js";
+import { wegfelder } from "./vorschlagsabweichung.js";
+import type { Nachrichtenzeilenmarken } from "./nachrichtenzeilenmarken.js";
+import { zurueckgezogenSatz } from "./nachrichtenzusatz.js";
 import { vereinigteVermerke, wartegrundlage, wartezeitBeimLdfMinuten, wartezeitMinuten, wartezeitVorSichterMinuten, zurueckziehungAus, type Zurueckziehung } from "./nachrichtenzusatz.js";
 
 /** Eine Stelle des Verteilers mit ihrer Kopiefarbe und den beiden Marken. */
@@ -49,12 +55,19 @@ export interface Nachrichtenmarke {
   /** Wer wann Kenntnis genommen hat; fehlt, solange niemand. */
   readonly kenntnis?: Zeitvermerk;
   readonly erledigt: boolean;
+  /**
+   * Additiv (R2-FaBe P1-4): die Kopie an die Stelle, die den Ausgang selbst
+   * verfasst hat. Sie gilt als gelesen (`gelesen: true`, ohne `kenntnis`) —
+   * der Verfasser kennt den Inhalt; siehe `verfasserstelle.ts`.
+   */
+  readonly eigenerAusgang?: boolean;
 }
 
 /** 0 Blitz, 1 Sofort (und ein unbekannter Vorrang), 2 einfach. */
 export type Vorrangstufe = 0 | 1 | 2;
 
-export interface Nachrichtenzeile {
+/** Die Marken der dritten Behebung der Runde 2 stehen in `nachrichtenzeilenmarken.ts`. */
+export interface Nachrichtenzeile extends Nachrichtenzeilenmarken {
   readonly id: Id;
   /** EINGANG oder AUSGANG. */
   readonly richtung: string;
@@ -155,6 +168,8 @@ export interface Nachrichtenzeile {
 export interface Zeilenkontext {
   readonly doppelt: ReadonlySet<Id>;
   readonly schwelleMinuten: number;
+  /** Additiv (R2-FM P2-5, R2-Si P2-2): die Schwellen vor dem Sichter je Vorrang; fehlt = überall `schwelleMinuten`. */
+  readonly sichterschwellen?: Sichterschwellen;
   /** Ring 2 liest keine Uhr: ohne `jetzt` ist nichts über der Schwelle. */
   readonly jetzt?: string;
 }
@@ -170,7 +185,8 @@ export function zeilenkontext(zustand: Zustand, jetzt?: string): Zeilenkontext {
   for (const hinweis of zustand.hinweise) {
     if (hinweis.art === "nachweisnummerDoppelt") for (const id of hinweis.ids) doppelt.add(id);
   }
-  return { doppelt, schwelleMinuten: fmzSchwelle(zustand), ...(jetzt === undefined ? {} : { jetzt }) };
+  const schwelleMinuten = fmzSchwelle(zustand);
+  return { doppelt, schwelleMinuten, sichterschwellen: sichterschwellen(zustand, schwelleMinuten), ...(jetzt === undefined ? {} : { jetzt }) };
 }
 
 export function vorrangstufe(vorrang: string | undefined): Vorrangstufe {
@@ -190,15 +206,19 @@ function gelesen<T>(schema: z.ZodType<T>, feld: Feld<unknown> | undefined): T | 
 
 function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zweite?: Sichtungsvermerk): Nachrichtenmarke[] {
   const ergebnis: Nachrichtenmarke[] = [];
+  const angaben = { richtung: n.richtung.wert, gespraechsnotiz: n.gespraechsnotiz?.wert, funktion: n.funktion?.wert, absender: n.absender.wert };
   for (const { stelle, kopie } of [...(sichtung?.verteiler ?? []), ...(zweite?.verteiler ?? [])]) {
     if (ergebnis.some((m) => m.stelle === stelle)) continue;
     const kenntnis = gelesen(zZeitvermerk, n.kenntnis?.[stelle]);
+    // R2-FaBe P1-4: Die Kopie des eigenen Ausgangs ist nicht „neu“ für den Verfasser.
+    const eigen = istEigeneKopie(angaben, stelle);
     ergebnis.push({
       stelle,
       kopie,
-      gelesen: kenntnis !== undefined,
+      gelesen: kenntnis !== undefined || eigen,
       ...(kenntnis === undefined ? {} : { kenntnis }),
       erledigt: n.erledigt?.[stelle]?.wert === true,
+      ...(eigen ? { eigenerAusgang: true } : {}),
     });
   }
   return ergebnis;
@@ -290,6 +310,13 @@ function freieTexte(n: NachrichtZustand): Partial<Nachrichtenzeile> {
   return ergebnis as Partial<Nachrichtenzeile>;
 }
 
+/** R2-ETB P2-6: Anschrift- und Absenderbezug als Wert, nur wenn er zum Schema passt. */
+function bezugsfelder(n: NachrichtZustand): Pick<Nachrichtenzeile, "anschriftBezug" | "absenderBezug"> {
+  const an = gelesen(zNachrichtenbezug, n.anschriftBezug);
+  const von = gelesen(zNachrichtenbezug, n.absenderBezug);
+  return { ...(an === undefined ? {} : { anschriftBezug: an }), ...(von === undefined ? {} : { absenderBezug: von }) };
+}
+
 /** Die streitige zweite Sichtung nach der Regel des Folds (`streitigeSichtung`). */
 function zweiteSichtungDer(n: NachrichtZustand): Sichtungsvermerk | undefined {
   const wert = streitigeSichtung(n.sichtung as Feld<unknown> | undefined);
@@ -299,9 +326,9 @@ function zweiteSichtungDer(n: NachrichtZustand): Sichtungsvermerk | undefined {
 }
 
 /** Zeit und Grund des Zurückziehens, nur wenn zurückgezogen (ETB P1-3). */
-function zurueckgezogenFeld(n: NachrichtZustand): Pick<Nachrichtenzeile, "zurueckgezogenMit"> {
+function zurueckgezogenFeld(n: NachrichtZustand): Pick<Nachrichtenzeile, "zurueckgezogenMit" | "zurueckgezogenText"> {
   const mit = zurueckziehungAus(n);
-  return mit === undefined ? {} : { zurueckgezogenMit: mit };
+  return mit === undefined ? {} : { zurueckgezogenMit: mit, zurueckgezogenText: zurueckgezogenSatz(mit) };
 }
 
 /** Baut die Zeile einer Nachricht. */
@@ -350,6 +377,8 @@ export function nachrichtenzeile(n: NachrichtZustand, kontext: Zeilenkontext): N
     fmzUeberSchwelle: ueberSchwelle(wartegrundlage(n, annahme), kontext),
     ...standfelder(n, { aufnahme, annahme, befoerderung, nachweis, sichtung }, kontext),
     ...zurueckgezogenFeld(n),
+    ...bezugsfelder(n),
+    ...wegfelder({ richtung, vorrangstufe: vorrangstufe(text(n.vorrang)), zeichen: text(n.zeichen), vorschlag, befoerderung, nachweis }, kontext, wartezeitVorSichterMinuten(wartegrundlage(n, annahme), kontext.jetzt)),
   };
 }
 

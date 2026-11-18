@@ -182,7 +182,7 @@ describe("ETB P0-1 und P0-2: die Nachricht im Tagebuch", () => {
       "Nachricht E 3 gesichtet (Hz. Si), verteilt an S2 (rot): Polizei an OV Brake, ‚Deichlage Brake‘",
       "Nachricht E 3 Nachweisnummer berichtigt (E 2 → E 3, Hz. Fm): Polizei an OV Brake, ‚Deichlage Brake‘",
       "Nachricht E 2 (jetzt E 3) nachgewiesen (Hz. Fm): Polizei an OV Brake, ‚Deichlage Brake‘",
-      "Nachricht E (jetzt E 3) aufgenommen: Polizei an OV Brake, ‚Deichlage Brake‘",
+      "Nachricht E (jetzt E 3) aufgenommen (Funk): Polizei an OV Brake, ‚Deichlage Brake‘",
     ]);
     expect(zeilen.map((x) => x.nachrichtNummer)).toEqual(["E 3", "E 3", "E 3", "E 3", "E 2", "E"]);
     expect(zeilen.every((x) => x.nachrichtId === "E")).toBe(true);

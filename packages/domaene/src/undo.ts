@@ -138,6 +138,12 @@ export class Undostapel {
    * mit einer HLC ueber allem, was zwischenzeitlich geschrieben wurde.
    */
   readonly #kompensiert = new Set<EreignisId>();
+  /**
+   * Additiv (R2-FaBe P2-8): das jüngste eigene Ereignis überhaupt, auch eines,
+   * das nicht auf den Stapel darf (die Anlage einer Nachricht). Ohne es nannte
+   * „Rückgängig“ nach dem Aufgeben einen älteren Schritt, als wäre er der letzte.
+   */
+  #juengster: EingehendesEreignis | undefined;
 
   constructor(clientId: string, tiefe: number = UNDO_TIEFE) {
     this.#clientId = clientId;
@@ -148,6 +154,7 @@ export class Undostapel {
   nimmAuf(ereignis: EingehendesEreignis): void {
     if (ereignis.undoOf !== undefined) this.#kompensiert.add(ereignis.undoOf);
     if (ereignis.akteur.clientId !== this.#clientId) return;
+    if (ereignis.undoOf === undefined && (this.#juengster === undefined || vergleicheHlc(ereignis.hlc, this.#juengster.hlc) > 0)) this.#juengster = ereignis;
     if (!darfAufDenStapel(ereignis)) return;
     this.#eigene.set(ereignis.id, ereignis);
   }
@@ -185,6 +192,17 @@ export class Undostapel {
   /** „Letzte Aktion rueckgaengig" (U3) — oder nichts, wenn der Stapel leer ist. */
   oberster(): StapelEintrag | undefined {
     return this.eintraege[0];
+  }
+
+  /**
+   * Das jüngste eigene Ereignis, wenn es **nicht** zurückgenommen werden kann
+   * und noch nicht kompensiert ist (R2-FaBe P2-8) — sonst nichts. Die
+   * Oberfläche sagt dann, warum „Rückgängig“ einen älteren Schritt nennt.
+   */
+  juengsterOhneRuecknahme(): EingehendesEreignis | undefined {
+    const juengster = this.#juengster;
+    if (juengster === undefined || this.#kompensiert.has(juengster.id) || darfAufDenStapel(juengster)) return undefined;
+    return juengster;
   }
 }
 
@@ -404,6 +422,8 @@ export function kompensationFuer(
   // wird. Der Schnitt entlang der Schlüssel der Zielart trifft beides.
   const nutzlast: Record<string, unknown> = {};
   for (const schluessel of schluesselDerArt(ziel)) {
+    // R2-LdF P2-8: Die Kompensation ist kein Folgeschritt — `folgeVon` gehört nur dem Original.
+    if (schluessel === "folgeVon") continue;
     if (quelle[schluessel] !== undefined) nutzlast[schluessel] = quelle[schluessel];
   }
   nutzlast[ziel.idFeld] ??= id;

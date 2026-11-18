@@ -11,7 +11,7 @@
  * Neuesten oben.
  */
 
-import { projektion } from "@s1/domaene";
+import { projektion, uhrzeitText } from "@s1/domaene";
 
 import { druckseiteAlsHtml, tabellenrahmen, zeitText } from "./druckseite.js";
 import { htmlMaskieren, type Ausgabekopf } from "./index.js";
@@ -92,10 +92,17 @@ function satzMitGrund(zeile: projektion.Tagebuchzeile): string {
   return `${zeile.satz} (Grund: ${grund})`;
 }
 
+/** „17.11.2026 20:39:12“ — Datum wie `zeitText`, Uhrzeit mit Sekunden; „—“ ohne Zeit. */
+function erfasstText(iso: string): string {
+  const text = zeitText(iso);
+  const uhr = uhrzeitText(iso, true);
+  return text === "—" || uhr === "" ? text : `${text.slice(0, -5)}${uhr}`;
+}
+
 /**
  * Eine Zeile des gedruckten Tagebuchs (ETB P0-3): laufende Nummer, beide
  * Zeiten getrennt — die Wanduhr des schreibenden Rechners („Erfasst") und
- * die fachliche Zeit („Zeit lt. Meldung") —, Nachrichtennummer, Eintrag,
+ * die fachliche Zeit („Fachzeit“, wie am Bildschirm, R2-ETB P3-2) —, Nachrichtennummer, Eintrag,
  * Akteur, Handzeichen, Rechner und die Notizspalte.
  */
 function tagebuchZeile(zeile: projektion.Tagebuchzeile, laufendeNummer: number): string {
@@ -103,7 +110,8 @@ function tagebuchZeile(zeile: projektion.Tagebuchzeile, laufendeNummer: number):
   return [
     "      <tr>",
     `        ${zelle(String(laufendeNummer))}`,
-    `        ${zelle(zeitText(zeile.wanduhr))}`,
+    // R2-ETB P3-2: „Erfasst“ mit Sekunden wie am Bildschirm — die Zeit des Rechners, auf die Sekunde.
+    `        ${zelle(erfasstText(zeile.wanduhr))}`,
     `        ${zelle(zeile.zeitpunkt === undefined ? undefined : zeitText(zeile.zeitpunkt))}`,
     `        ${zelle(zeile.nachrichtNummer)}`,
     `        ${zelle(`${satzMitGrund(zeile)}${marke}`)}`,
@@ -129,7 +137,8 @@ function schlusszeile(anzahl: number, kopf: Ausgabekopf, abschluss: Tagebuchabsc
 const TAGEBUCHSPALTEN = [
   ["Nr.", "laufende Nummer der Zeile"],
   ["Erfasst", "Wanduhr des schreibenden Rechners"],
-  ["Zeit lt. Meldung", "fachliche Zeit: Vermerk, Funkzeit, Abfassung"],
+  // R2-ETB P3-2: dieselbe Beschriftung wie am Bildschirm.
+  ["Fachzeit", "fachliche Zeit: Vermerk, Funkzeit, Abfassung"],
   ["Nachricht", "Nummer der Nachweisung zur Zeit des Eintrags"],
   ["Eintrag", ""],
   ["Akteur", "Stelle, wo der Schritt eine nennt, sonst der Arbeitsplatz"],
@@ -172,7 +181,7 @@ export function tagebuchAlsHtml(
     querformat: true,
     inhalt: [
       "  <h2>Einsatztagebuch</h2>",
-      `  <p class="hinweis">${String(aufsteigend.length)} Einträge, älteste zuerst (Ordnung des Schreibens). „Erfasst“ ist die Uhr des schreibenden Rechners, „Zeit lt. Meldung“ die fachliche Zeit des Vorgangs.</p>`,
+      `  <p class="hinweis">${String(aufsteigend.length)} Einträge, älteste zuerst (Ordnung des Schreibens). „Erfasst“ ist die Uhr des schreibenden Rechners, „Fachzeit“ die fachliche Zeit des Vorgangs.</p>`,
       tabellenrahmen(tabelle),
       schlusszeile(aufsteigend.length, kopf, abschluss),
     ],

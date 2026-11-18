@@ -66,18 +66,21 @@ describe("Tagebuch als HTML: zwei Zeiten, Nummer, Handzeichen, Abschluss (ETB P0
     ...teile,
   });
 
-  it("führt laufende Nummer, Erfasst und Zeit lt. Meldung getrennt, Nachricht, Akteur, Hz. und Rechner", () => {
+  it("führt laufende Nummer, Erfasst und Fachzeit getrennt (R2-ETB P3-2), Nachricht, Akteur, Hz. und Rechner", () => {
     const html = tagebuchAlsHtml(
       [zeile({ ereignisId: "a:2", zeitpunkt: "2026-09-08T07:00:00Z", nachrichtNummer: "E 4", handzeichen: "Fm" }), zeile({ satz: "Einsatz angelegt", typ: "EinsatzAngelegt" })],
       KOPF,
     );
-    for (const kopf of ["Nr.", "Erfasst", "Zeit lt. Meldung", "Nachricht", "Eintrag", "Akteur", "Hz.", "Rechner", "Notiz"]) expect(html).toContain(`>${kopf}</th>`);
+    for (const kopf of ["Nr.", "Erfasst", "Fachzeit", "Nachricht", "Eintrag", "Akteur", "Hz.", "Rechner", "Notiz"]) expect(html).toContain(`>${kopf}</th>`);
     const reihen = html.split("<tr>").slice(2);
     expect(reihen[0]).toContain("<td>1</td>");
     expect(reihen[1]).toContain("<td>2</td>");
     expect(reihen[1]).toContain("<td>E 4</td>");
     expect(reihen[1]).toContain("<td>Fm</td>");
     expect(reihen[1]).toContain("<td>pc-fmz</td>");
+    // R2-ETB P3-2: „Erfasst“ mit Sekunden wie am Bildschirm, die Fachzeit ohne.
+    expect(reihen[1]).toContain("<td>08.09.2026 12:33:00</td>");
+    expect(reihen[1]).toContain("<td>08.09.2026 09:00</td>");
     expect(html).toContain("<strong>Stand: 08.09.2026, 08:00 · 2 Einträge</strong>");
   });
 

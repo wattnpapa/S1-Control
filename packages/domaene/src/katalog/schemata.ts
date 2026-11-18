@@ -79,7 +79,12 @@ export const KostenParameterGeaendert = z.object({
   feld: z.enum(["psaKostenProSatz", "vdaProTag", "ukVerpflegungProTag", "geplanteEinsatztage"]),
 });
 
-export const EinsatzBeendet = z.object({ einsatzId: zId });
+/**
+ * Additiv (R2-ETB P2-2): Stelle und Handzeichen der Sitzung, die beendet —
+ * die Abschlusszeile von Tagebuch und Nachweisung nannte sonst nur
+ * „Arbeitsplatz“, und die Verantwortung für den Abschluss hatte kein Gesicht.
+ */
+export const EinsatzBeendet = z.object({ einsatzId: zId, stelle: zText.max(80).optional(), handzeichen: zText.max(20).optional() });
 export const EinsatzWiedereroeffnet = z.object({ einsatzId: zId });
 
 export const EinsatzArchiviert = z.object({
@@ -473,6 +478,9 @@ export const EtbEintragErfasst = z.object({
   etbId: zId,
   zeitpunkt: zZeitpunkt,
   text: zPflichttext,
+  // Additiv (R2-ETB P2-2): Stelle und Handzeichen, wo der Worker den Eintrag schreibt (Abschlussvermerk).
+  stelle: zText.max(80).optional(),
+  handzeichen: zText.max(20).optional(),
   // NACHRICHT additiv (ETB P0-1, 2026-11-17): Ein getippter Eintrag zu einer
   // Nachricht erscheint im Tagebuchfilter dieser Nachricht (`nachrichtId`).
   bezug: z

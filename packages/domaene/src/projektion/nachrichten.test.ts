@@ -217,7 +217,7 @@ describe("Die Nachrichten im Tagebuch", () => {
     expect(satz(1)).toBe("Nachricht E 26 erfasst: OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
     expect(satz(2)).toBe("Nachricht E 26 nachgewiesen (Hz. FM): OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
     expect(satz(3)).toBe("Nachricht E 26 gesichtet (Hz. SI), verteilt an S3 (grün), S2 (rot): OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
-    expect(satz(7)).toBe("Nachricht E 27 von S4 zur Kenntnis genommen (Hz. KL): EA Nord an FüSt, ‚Lage Deich‘");
+    expect(satz(7)).toBe("Sofort-Nachricht E 27 von S4 zur Kenntnis genommen (Hz. KL): EA Nord an FüSt, ‚Lage Deich‘");
     expect(satz(10)).toBe("Nachricht A aufgegeben: S3 an OV Wildeshausen, ‚Sandsäcke anfordern‘");
     expect(satz(14)).toBe("Nachricht A 28 befördert (Telefon, an Kreis OL, Hz. FM): S4 an FüSt, ‚Verpflegung‘");
     const zurueck = tagebuchzeile(z, basis[16] as EingehendesEreignis);
@@ -228,7 +228,7 @@ describe("Die Nachrichten im Tagebuch", () => {
     const basis = lage();
     const aufnahme = verfasst("E9", { aufnahme: { mittel: "FUNK", zeitpunkt: um(9), handzeichen: "FM" } });
     const zeile = tagebuchzeile(zustand([...basis, aufnahme]), aufnahme);
-    expect(zeile.satz).toBe("Nachricht E aufgenommen: OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
+    expect(zeile.satz).toBe("Nachricht E aufgenommen (Funk): OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
     expect(zeile.zeitpunkt).toBe(um(9));
   });
 

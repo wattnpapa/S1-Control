@@ -14,7 +14,6 @@
  * Kommandozeile.
  */
 
-import { kernVersion } from "@bos/eeb-format";
 import { einsatzKennung } from "@s1/domaene";
 
 /** Kopfzeile jeder Ausgabe: welcher Einsatz, welcher Stand, welche Kernfassung. */
@@ -23,6 +22,12 @@ export interface Ausgabekopf {
   readonly einsatzName: string;
   /** Frei formulierte Standangabe, etwa „Stand: 08.09.2026, 14:12“. */
   readonly stand: string;
+  /**
+   * Additiv (R2-ETB P3-2): die Programmfassung, die die Ausgabe erzeugt hat
+   * (`S1_APP_VERSION`, im Worker `programmversion`). Sie ersetzt im Kopf die
+   * Zeile „@bos/eeb-format 0.0.0“, die auf einem Beweisstück nichts bedeutete.
+   */
+  readonly programmversion?: string;
 }
 
 /** Maskiert die fuenf in HTML bedeutsamen Zeichen. */
@@ -33,6 +38,12 @@ export function htmlMaskieren(text: string): string {
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
+}
+
+/** „S1-Control 2026.11.18“ — ohne bekannte Fassung nur der Name. */
+export function programmzeile(programmversion: string | undefined): string {
+  const fassung = programmversion?.trim() ?? "";
+  return fassung === "" ? "S1-Control" : `S1-Control ${fassung}`;
 }
 
 /**
@@ -49,7 +60,8 @@ export function kopfAlsHtml(kopf: Ausgabekopf): string {
     `  <h1>${htmlMaskieren(kopf.einsatzName)}</h1>`,
     `  <p class="kennung">${htmlMaskieren(kennung.ordner)}</p>`,
     `  <p class="stand">${htmlMaskieren(kopf.stand)}</p>`,
-    `  <p class="kern">@bos/eeb-format ${htmlMaskieren(kernVersion())}</p>`,
+    // R2-ETB P3-2: die Programmfassung statt der Fassung des geteilten Kerns.
+    `  <p class="kern">${htmlMaskieren(programmzeile(kopf.programmversion))}</p>`,
     "</header>",
   ].join("\n");
 }
@@ -156,5 +168,7 @@ export {
 // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7) und die Naht von der Projektionszeile zum Vordruck.
 export { NACHWEISUNG_FUSSNOTE, nachweisungAlsHtml, nachweisungMarken, nummernfuss, type Nachweisungsdaten } from "./nachweisung.js";
 export { entwurfsdruck, nachrichtendateiname, nachrichtendruckAus, type Nachrichtenentwurf } from "./nachrichtendruck.js";
+// Additiv (R2-ETB P2-7): das Handzeichenverzeichnis der Einsatzakte.
+export { HANDZEICHEN_FUSSNOTE, handzeichenverzeichnisAlsHtml } from "./handzeichenverzeichnis.js";
 // Additiv (ETB P1-2, P1-3, P2-7): ETB-Nummer und Stempel der zurückgezogenen Nachricht.
 export { RUECKZUG_WORT, etbVermerk, rueckzugText, zeichneRueckzugsstempel, type Nachrichtenrueckzug } from "./nachrichtstempel.js";

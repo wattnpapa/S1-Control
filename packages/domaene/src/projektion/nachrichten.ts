@@ -24,7 +24,6 @@ import {
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
 import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
-import { ueberWarteschwelle } from "./nachrichtenstand.js";
 import { stellenWort } from "./tagebuch-nachrichten.js";
 
 /**
@@ -84,6 +83,9 @@ export interface Nachrichtenlage {
   readonly ueberSchwelle: number;
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt (`ldfStation`). */
   readonly vorLdf?: number;
+  /** Additiv (R2-LdF P2-4): `ueberSchwelle` getrennt nach LdF und FmZ, nur mit `ldfStation`. */
+  readonly ueberSchwelleLdf?: number;
+  readonly ueberSchwelleFmz?: number;
   /** Additiv: fehlende Nummern zwischen 1 und der höchsten (LdF P2-2, ETB P2-2). */
   readonly nummernluecken?: readonly number[];
   /**
@@ -263,9 +265,8 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     ueberSchwelle: 0,
   };
   // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
-  if (zustand.einsatz?.ldfStation?.wert === true) lage.vorLdf = 0;
+  if (zustand.einsatz?.ldfStation?.wert === true) Object.assign(lage, { vorLdf: 0, ueberSchwelleLdf: 0, ueberSchwelleFmz: 0 });
   const kontext = zeilenkontext(zustand, jetzt);
-  const schwelle = kontext.schwelleMinuten;
   const zeilen = alleNachrichtenzeilen(zustand, kontext);
   for (const zeile of zeilen) {
     if (zeile.zurueckgezogen) continue;
@@ -275,7 +276,13 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     if (zeile.laufzustand === "VOR_LDF" && lage.vorLdf !== undefined) lage.vorLdf += 1;
     if (zeile.vorrangstufe < 2 && offenFuerStellen(zeile, stellen, umfeld)) lage.mitVorrangOffen += 1;
     if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
-    if (jetzt !== undefined && ueberWarteschwelle(zeile.wartetSeitSichter, schwelle)) lage.vorSichterUeberSchwelle = (lage.vorSichterUeberSchwelle ?? 0) + 1;
+    // R2-LdF P2-4: die Schwellenzahl mischte LdF und FmZ.
+    if (zeile.fmzUeberSchwelle && lage.ueberSchwelleLdf !== undefined && lage.ueberSchwelleFmz !== undefined) {
+      if (zeile.laufzustand === "VOR_LDF") lage.ueberSchwelleLdf += 1;
+      else lage.ueberSchwelleFmz += 1;
+    }
+    // R2-FM P2-5, R2-Si P2-2: die Schwelle je Vorrang (Blitz 5, Sofort 10, einfach die der FmZ).
+    if (jetzt !== undefined && zeile.sichterSchwelleUeberschritten === true) lage.vorSichterUeberSchwelle = (lage.vorSichterUeberSchwelle ?? 0) + 1;
   }
   if (jetzt !== undefined) {
     lage.vorSichterUeberSchwelle ??= 0;

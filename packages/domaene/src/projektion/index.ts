@@ -320,5 +320,17 @@ export {
 export { GRUND_ERSATZSICHTER, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
 // Additiv (R2-ETB P1-1, R2-SGL P1-2): Kopien nach der Beförderung und der Papier-Nachtrag als Grund.
 export { GRUND_KOPIEN, GRUND_NACHTRAG, istKopienNachBefoerderung } from "./tagebuch-nachrichten.js";
+// Additiv (R2-FM P2-5, R2-Si P2-2): Schwelle vor dem Sichter je Vorrang und die Ersatzsichtung am säumigen Sichter vorbei.
+export { GRUND_SICHTER_SAEUMIG, istErsatzsichtung } from "./tagebuch-nachrichten.js";
+export { sichterschwelleFuer, sichterschwellen, type Sichterschwellen } from "./sichterschwelle.js";
+export { verfasserIstNachweiser, vorschlagsabweichung } from "./vorschlagsabweichung.js";
+// Additiv (R2-LdF P2-7, R2-ETB P2-2): der Abschlussvermerk beim Beenden.
+export { abschlussvermerk } from "./nachrichtenoffen.js";
+// Additiv (R2-ETB P2-7): Handzeichen → Namen, Stellen, erster und letzter Eintrag.
+export { handzeichenverzeichnis, type Handzeicheneintrag } from "./handzeichenverzeichnis.js";
+// Additiv (R2-ETB P2-4, R2-SGL P2-2): Konflikthinweise an Nachrichten mit Nummer, Betreff und Werten.
+export { konflikthinweisText, nachrichtKurzname } from "./konflikthinweistext.js";
 // Additiv (ETB P1-7): Stelle und Handzeichen statt „Arbeitsplatz“ in der Spalte Akteur.
 export { akteurText, stelleDer } from "./tagebuch-nachrichtenbezug.js";
+// Additiv (Audits Nachrichten Runde 2, dritte Behebung): eigene Kopie des Verfassers (R2-FaBe P1-4).
+export { istEigeneKopie, verfasserstelleAus } from "./verfasserstelle.js";

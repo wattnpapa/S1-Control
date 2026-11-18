@@ -19,9 +19,9 @@
  */
 
 import type { EingehendesEreignis } from "../fold.js";
-import { FMZ_SCHWELLE_VORBELEGUNG } from "../werte.js";
 import { datumZeitGruppe } from "../zeit/datumZeitGruppe.js";
 import type { NachrichtZustand } from "../zustand-nachricht.js";
+import { parametersatz } from "./tagebuch-nachrichtenparameter.js";
 import type { Zustand } from "../zustand.js";
 
 const STELLE_WORT: Readonly<Record<string, string>> = {
@@ -70,6 +70,8 @@ function nutzlast(ereignis: EingehendesEreignis): Record<string, unknown> {
 
 
 interface Kopf {
+  /** Additiv (R2-ETB P2-5): der Vorrang, damit ein Blitz in der Zeile auffällt. */
+  readonly vorrang?: unknown;
   readonly richtung?: unknown;
   readonly gespraechsnotiz?: unknown;
   readonly nummer?: unknown;
@@ -99,7 +101,9 @@ export function nummernkurz(richtung: unknown, nummer: unknown): string {
 /** „Nachricht E 26" oder „Gesprächsnotiz A" — ohne Nummer, solange keine vergeben ist. */
 function kennung(kopf: Kopf): string {
   const wort = kopf.gespraechsnotiz === true ? "Gesprächsnotiz" : "Nachricht";
-  return `${wort} ${nummernkurz(kopf.richtung, kopf.nummer)}`;
+  // R2-ETB P2-5: „Blitz-Nachricht E 8“ — ein Blitz stand im Tagebuch wie jede andere Zeile.
+  const vorrang = kopf.vorrang === "BLITZ" ? "Blitz-" : kopf.vorrang === "SOFORT" ? "Sofort-" : "";
+  return `${vorrang}${wort} ${nummernkurz(kopf.richtung, kopf.nummer)}`;
 }
 
 /** „OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘". */
@@ -117,6 +121,7 @@ function kopfAus(zustand: Zustand, ereignis: EingehendesEreignis): Kopf {
   const nachricht: NachrichtZustand | undefined = id === undefined ? undefined : zustand.nachrichten?.[id];
   const anlage = ereignis.typ === "NachrichtVerfasst" ? n : undefined;
   return {
+    vorrang: anlage?.["vorrang"] ?? nachricht?.vorrang?.wert,
     richtung: anlage?.["richtung"] ?? nachricht?.richtung.wert,
     gespraechsnotiz: anlage?.["gespraechsnotiz"] ?? nachricht?.gespraechsnotiz?.wert,
     nummer: objekt(nachricht?.nachweis?.wert)?.["nummer"],
@@ -139,7 +144,40 @@ function klammer(teile: readonly string[]): string {
 function verfasstVerb(n: Record<string, unknown>): string {
   if (n["gespraechsnotiz"] === true) return "festgehalten";
   if (n["richtung"] === "AUSGANG") return "aufgegeben";
-  return objekt(n["aufnahme"]) === undefined ? "erfasst" : "aufgenommen";
+  const aufnahme = objekt(n["aufnahme"]);
+  if (aufnahme === undefined) return "erfasst";
+  // R2-ETB P2-5: Mittel und Gegenstelle schon bei der Aufnahme, nicht erst beim Befördern.
+  const mittel = text(aufnahme["mittel"]);
+  const gegen = text(n["gegenstelle"]);
+  return `aufgenommen${klammer([mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `von ${gegen}`])}`;
+}
+
+/** R2-ETB P2-5: der Vermerk des Sichters im Satz; die Kopien nach Beförderung tragen ihn schon im Wort. */
+function sichtervermerk(e: EingehendesEreignis): string {
+  const vermerk = text(objekt(e.neu)?.["vermerke"])?.trim();
+  return vermerk === undefined || vermerk === "" || istKopienNachBefoerderung(e) ? "" : `, Vermerk „${vermerk}“`;
+}
+
+/** R2-LdF P2-1, P2-2: die Wegmarken, die der Worker beim Befördern in die Nutzlast schreibt. */
+function wegmarke(e: EingehendesEreignis): string {
+  const n = nutzlast(e);
+  const abweichung = text(n["abweichungVomVorschlag"]);
+  if (abweichung !== undefined) return `, abweichend vom Vorschlag (${abweichung})`;
+  return n["ohneVorschlag"] === true ? ", ohne Vorschlag des LdF" : "";
+}
+
+/** FM P2-7: „Aufnahme berichtigt (Funk 1705 → Telefon 1750, Hz. Fm)“. */
+function aufnahmeberichtigung(e: EingehendesEreignis): string {
+  const teil = (wert: unknown): string => {
+    const o = objekt(wert);
+    const mittel = text(o?.["mittel"]);
+    const zeit = text(o?.["zeitpunkt"]);
+    return [mittel === undefined ? "" : mittelWort(mittel), zeit === undefined ? "" : datumZeitGruppe(zeit).slice(2, 6)].filter((t) => t !== "").join(" ");
+  };
+  if (e.neu === null || e.neu === undefined) return "Aufnahmevermerk gelöscht";
+  const vorher = "vorher" in e ? teil(e.vorher) : "";
+  const wechsel = vorher === "" ? teil(e.neu) : `${vorher} → ${teil(e.neu)}`;
+  return `Aufnahme berichtigt${klammer([wechsel, handzeichenteil(e.neu)])}`;
 }
 
 function verteilerteil(wert: unknown): string {
@@ -173,8 +211,20 @@ function vorschlagsteil(neu: unknown): string {
  */
 export const GRUND_ERSATZSICHTER = "Kein Sichter besetzt: Ersatzsichter";
 
+/**
+ * Additiv (R2-FM P2-5, R2-Si P2-2): Der Sichter war besetzt, die Nachricht lag
+ * aber länger als die Schwelle ihres Vorrangs vor ihm; die FmZ oder der LdF
+ * hat selbst gesichtet. Das Tagebuch nennt die Sichtung wie die des Ersatzsichters.
+ */
+export const GRUND_SICHTER_SAEUMIG = "Sichter besetzt, Schwelle überschritten: Ersatzsichter";
+
+/** Eine Sichtung nach der Ersatzregel — ohne Sichter oder an einem säumigen vorbei. */
+export function istErsatzsichtung(e: Pick<EingehendesEreignis, "grund">): boolean {
+  return e.grund === GRUND_ERSATZSICHTER || e.grund === GRUND_SICHTER_SAEUMIG;
+}
+
 function ersatz(e: EingehendesEreignis): boolean {
-  return e.grund === GRUND_ERSATZSICHTER;
+  return istErsatzsichtung(e);
 }
 
 /**
@@ -226,37 +276,25 @@ const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtVerfasst: (e) => verfasstVerb(nutzlast(e)),
   NachrichtAngenommen: vermerk((neu) => `angenommen${klammer([handzeichenteil(neu)])}`, "Annahmevermerk gelöscht"),
   NachrichtUebermittlungVorgeschlagen: vermerk((neu) => `Übermittlung vorgeschlagen${vorschlagsteil(neu)}`, "Übermittlungsvorschlag gelöscht"),
-  NachrichtBefoerdert: vermerk((neu) => `befördert${befoerderungsteil(neu)}`, "Beförderungsvermerk gelöscht"),
+  NachrichtBefoerdert: (e) => vermerk((neu) => `befördert${befoerderungsteil(neu)}${wegmarke(e)}`, "Beförderungsvermerk gelöscht")(e),
+  NachrichtAufnahmeBerichtigt: aufnahmeberichtigung,
   NachrichtNachgewiesen: vermerk((neu) => `nachgewiesen${klammer([handzeichenteil(neu)])}`, "Nachweis gelöscht"),
   NachrichtWeitergegeben: vermerk((neu) => `an den Sichter weitergegeben${klammer([handzeichenteil(neu)])}`, "Weitergabe gelöscht"),
   NachrichtGesichtet: (e) =>
     vermerk(
-      (neu) => `${sichtungswort(e)}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}`,
+      (neu) => `${sichtungswort(e)}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}${sichtervermerk(e)}`,
       "Sichtung gelöscht",
     )(e),
   NachrichtVermerkt: (e) => (text(e.neu) === undefined ? "Vermerk gelöscht" : `Vermerk „${String(e.neu)}“`),
   NachrichtKenntnisGenommen: (e) => `von ${stelleAus(e)} zur Kenntnis genommen${klammer([handzeichenteil(e.neu)])}`,
-  NachrichtErledigt: (e) => `für ${stelleAus(e)} erledigt`,
-  ErledigungDerNachrichtZurueckgenommen: (e) => `Erledigung für ${stelleAus(e)} zurückgenommen`,
+  // ETB P1-7: das Handzeichen der Sitzung aus der Nutzlast, wo der Worker es schreibt.
+  NachrichtErledigt: (e) => `für ${stelleAus(e)} erledigt${klammer([handzeichenteil(nutzlast(e))])}`,
+  ErledigungDerNachrichtZurueckgenommen: (e) => `Erledigung für ${stelleAus(e)} zurückgenommen${klammer([handzeichenteil(nutzlast(e))])}`,
   NachrichtZurueckgezogen: () => "zurückgezogen",
 };
 
 /** Die Arten dieses Moduls — `klartextsatz` reicht nur sie weiter. */
 export const NACHRICHTENARTEN: ReadonlySet<string> = new Set(Object.keys(VORGANG));
-
-/** „Nachrichtenparameter gesetzt (Schwelle FmZ): 20 → 30 min". */
-function parametersatz(ereignis: EingehendesEreignis, betreff: string): string {
-  const feld = nutzlast(ereignis)["feld"];
-  const vorher = "vorher" in ereignis ? ereignis.vorher : undefined;
-  if (feld === "fmzSchwelleMinuten") {
-    const alt = typeof vorher === "number" ? vorher : FMZ_SCHWELLE_VORBELEGUNG;
-    const neu = typeof ereignis.neu === "number" ? ereignis.neu : FMZ_SCHWELLE_VORBELEGUNG;
-    return `${betreff} (Schwelle FmZ): ${String(alt)} → ${String(neu)} min`;
-  }
-  const wort = (wert: unknown): string => (wert === true ? "ja" : "nein");
-  const name = feld === "ldfStation" ? "LdF als Station" : "Sichtung auch für Ausgänge";
-  return `${betreff} (${name}): ${wort(vorher)} → ${wort(ereignis.neu)}`;
-}
 
 function vorgangDes(ereignis: EingehendesEreignis): string {
   return VORGANG[ereignis.typ]?.(ereignis) ?? ereignis.typ;
@@ -307,7 +345,7 @@ function besondererVorgang(zustand: Zustand, ereignis: EingehendesEreignis, zeit
   const nachsichtung = objekt("vorher" in ereignis ? ereignis.vorher : undefined) !== undefined;
   if (!nachsichtung && zeitstand?.sichtungVorher !== true) return undefined;
   const wort = nachsichtung ? "nachgesichtet" : "ein zweites Mal gesichtet";
-  return `${wort}${klammer(["zweite Sichtung", handzeichenteil(ereignis.neu)])}, ${verteilerteil(ereignis.neu)}`;
+  return `${wort}${klammer(["zweite Sichtung", handzeichenteil(ereignis.neu)])}, ${verteilerteil(ereignis.neu)}${sichtervermerk(ereignis)}`;
 }
 
 function zurueckziehvorgang(zustand: Zustand, ereignis: EingehendesEreignis): string {
@@ -316,7 +354,9 @@ function zurueckziehvorgang(zustand: Zustand, ereignis: EingehendesEreignis): st
   const zeichen = text(nachricht?.zeichen?.wert);
   const angaben = klammer([abfassung === undefined ? "" : `abgefasst ${datumZeitGruppe(abfassung)}`, zeichen === undefined ? "" : `Zeichen ${zeichen}`]);
   const grund = text(ereignis.grund);
-  return `zurückgezogen${grund === undefined ? "" : `, Grund: „${grund}“`}${angaben}`;
+  // ETB P1-7: wer zurückgezogen hat — Handzeichen der Sitzung aus der Nutzlast.
+  const hz = handzeichenteil(nutzlast(ereignis));
+  return `zurückgezogen${hz === "" ? "" : ` (${hz})`}${grund === undefined ? "" : `, Grund: „${grund}“`}${angaben}`;
 }
 
 /** „Nachricht E 26" — der Gegenstand, den die Rücknahme vor dem Ausführen nennt. */

@@ -218,6 +218,7 @@ export type {
   Nachrichtenanfrage,
   Nachrichtenausschnitt,
   Nachrichtenlage,
+  Handzeicheneintrag,
   Nachrichtenmarke,
   Nachrichtensicht,
   Nachrichtenzeile,
@@ -255,6 +256,8 @@ export {
 // Fachliche Werttypen, die Katalog und Zustand teilen.
 export {
   FMZ_SCHWELLE_VORBELEGUNG,
+  SICHTER_SCHWELLE_BLITZ_VORBELEGUNG,
+  SICHTER_SCHWELLE_SOFORT_VORBELEGUNG,
   FUNK_KONTAKT_SCHWELLE_VORBELEGUNG,
   KOSTEN_VORBELEGUNG,
   MAHLZEITEN,
@@ -367,6 +370,8 @@ export {
   type Kompensationsentwurf,
   type StapelEintrag,
 } from "./undo.js";
+// Additiv (R2-LdF P2-8, R2-FM P3-1, R2-FaBe P2-8): Bedienschritt mit Folgeschritten als ein Eintrag.
+export { FOLGE_VON, gruppenbezeichnung, gruppenkennung, gruppenrest, obersteGruppe, ohneRuecknahmeHinweis, ruecknehmbar } from "./undogruppe.js";
 
 // Zeichen-Inferenz und Zeichenkatalog aus v1 (M1.4). Vorschlaege fuer die
 // Maske, kein Bestandteil des Folds.

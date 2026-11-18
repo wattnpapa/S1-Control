@@ -169,6 +169,7 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   NachrichtAngenommen: "Nachricht angenommen",
   NachrichtUebermittlungVorgeschlagen: "Übermittlung vorgeschlagen",
   NachrichtBefoerdert: "Nachricht befördert",
+  NachrichtAufnahmeBerichtigt: "Aufnahme berichtigt",
   NachrichtNachgewiesen: "Nachricht nachgewiesen",
   NachrichtWeitergegeben: "Nachricht an den Sichter weitergegeben",
   NachrichtGesichtet: "Nachricht gesichtet",

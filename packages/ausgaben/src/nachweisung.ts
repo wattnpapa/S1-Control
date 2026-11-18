@@ -110,6 +110,11 @@ export function nachweisungMarken(zeile: Nachrichtenzeile): readonly string[] {
     // R2-ETB P2-3, R2-LdF P2-5: die Weitergabe des LdF an den Sichter — und wer noch beim LdF liegt.
     ...(zeile.weitergabe === undefined ? [] : [`Weitergabe ${vermerkText(zeile.weitergabe)}`]),
     ...(zeile.richtung === "EINGANG" && zeile.laufzustand === "VOR_LDF" ? ["wartet beim LdF"] : []),
+    // Additiv (R2-LdF P2-1, P2-2): Beförderung ohne Vorschlag des LdF oder abweichend davon.
+    ...(zeile.ohneVorschlag === true ? ["ohne Vorschlag des LdF"] : []),
+    ...(zeile.abweichungVomVorschlag === undefined ? [] : [`abweichend vom Vorschlag (${zeile.abweichungVomVorschlag})`]),
+    // Additiv (LdF P2-3, Runde 1): Wer den Ausgang verfasst hat, hat ihn auch nachgewiesen.
+    ...(zeile.verfasserGleichNachweiser === true ? ["Verfasser = Nachweiser"] : []),
     ...(zeile.gespraechsnotiz ? ["GN"] : []),
     // Additiv (SGL P0-1, LdF P1-2): hinter der FmZ, aber ohne Nummer.
     ...(projektion.standDerZeile(zeile).ohneNummer ? ["ohne Nummer"] : []),

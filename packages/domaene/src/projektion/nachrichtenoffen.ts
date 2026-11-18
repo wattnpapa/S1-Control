@@ -146,3 +146,26 @@ export function offeneNachrichten(zeilen: readonly Nachrichtenzeile[]): OffeneNa
   }
   return zahlen;
 }
+
+/**
+ * Der Abschlussvermerk beim Beenden des Einsatzes (R2-LdF P2-7, R2-ETB P2-2):
+ * „Einsatz beendet mit offenen Nachrichten: 1 vor der FmZ, 2 ohne Nummer,
+ * 1 mit Vorrang ungelesen; fehlende Nummern: 3, 7“. Die Zahlen standen nur im
+ * Dialog „Einsatz beenden“; wer die Akte später liest, erfuhr nicht, was offen
+ * blieb. `undefined`, wenn nichts offen ist — dann braucht es keinen Vermerk.
+ */
+export function abschlussvermerk(offen: OffeneNachrichten, luecken: readonly number[]): string | undefined {
+  const teile = [
+    [offen.vorFmz, "vor der FmZ"],
+    [offen.beimLdf, "beim LdF"],
+    [offen.vorSichter, "vor dem Sichter"],
+    [offen.ohneNummer, "ohne Nummer"],
+    [offen.ungelesenMitVorrang, "mit Vorrang ungelesen"],
+  ]
+    .filter(([anzahl]) => (anzahl as number) > 0)
+    .map(([anzahl, wort]) => `${String(anzahl)} ${String(wort)}`);
+  if (teile.length === 0 && luecken.length === 0) return undefined;
+  const offenTeil = teile.length === 0 ? "keine Nachricht offen" : `offene Nachrichten: ${teile.join(", ")}`;
+  const lueckenTeil = luecken.length === 0 ? "" : `; fehlende Nummern: ${nummernlueckenText(luecken)}`;
+  return `Einsatz beendet, ${offenTeil}${lueckenTeil}`;
+}

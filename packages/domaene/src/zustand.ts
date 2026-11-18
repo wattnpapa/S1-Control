@@ -69,8 +69,13 @@ import type {
  * Der Einsatzbeginn darf bis zu sieben Tage vor der Wanduhr liegen, ohne
  * `meldezeitUnplausibel` — ein Schnappschuss der Fassung 12 trüge den
  * Hinweis noch.
+ * **14** (Audits Nachrichten Runde 2, dritte Behebung): die Ereignisart
+ * `NachrichtAufnahmeBerichtigt` auf dem Feld `aufnahme` (FM P2-7) und die
+ * Parameter `sichterSchwelleBlitzMinuten`/`sichterSchwelleSofortMinuten` des
+ * Einsatzes (R2-FM P2-5, R2-Si P2-2) — ein Schnappschuss der Fassung 13
+ * hätte die Berichtigung als unbekannte Art gefaltet.
  */
-export const FOLD_VERSION = 13;
+export const FOLD_VERSION = 14;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
@@ -202,6 +207,10 @@ export interface EinsatzZustand extends Anlage {
   readonly fmzSchwelleMinuten?: Feld<number>;
   /** Nachrichten (additiv): der LdF ist eigene Station im Laufweg; fehlt = nein. */
   readonly ldfStation?: Feld<boolean>;
+  /** Nachrichten (R2-FM P2-5, R2-Si P2-2): Minuten vor dem Sichter bei Blitz; fehlt = 5. */
+  readonly sichterSchwelleBlitzMinuten?: Feld<number>;
+  /** Nachrichten (R2-FM P2-5, R2-Si P2-2): Minuten vor dem Sichter bei Sofort; fehlt = 10. */
+  readonly sichterSchwelleSofortMinuten?: Feld<number>;
   readonly kosten: {
     readonly psaKostenProSatz?: Feld<number>;
     readonly vdaProTag?: Feld<number>;

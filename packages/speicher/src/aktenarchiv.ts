@@ -33,6 +33,7 @@ import {
   ORDNER_SCHNAPPSCHUESSE,
 } from "./pfade.js";
 import { sha256HexBytes } from "./pruefsummen.js";
+import { mitFrueherenAusgaben } from "./fruehereausgaben.js";
 
 /**
  * Die Ordner, die mitfahren — in dieser Reihenfolge, damit zwei Exporte
@@ -152,7 +153,8 @@ export async function packeAkte(
   packe: Aktenpacker,
 ): Promise<{ readonly bytes: Uint8Array; readonly manifest: Manifest }> {
   const ergebnis = await pruefeOrdner(dateisystem, ordner);
-  const inhalte = await sammleInhalte(dateisystem, ordner);
+  // R2-ETB P2-1: von Tagebuch und Nachweisung nur der jüngste Stand obenauf, ältere unter `ausgaben/fruehere/`.
+  const inhalte = mitFrueherenAusgaben(await sammleInhalte(dateisystem, ordner));
   const manifest: Manifest = {
     fassung: EXPORT_FASSUNG,
     erzeugt: zeitpunkt.toISOString(),

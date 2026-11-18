@@ -13,7 +13,9 @@ import { vergleicheHlc } from "../hlc.js";
 import type { NachrichtZustand, Zeitvermerk } from "../zustand-nachricht.js";
 import { eintreffenMs, vorLdfAusGrundlage, vorSichterAusGrundlage, wartezeitAusGrundlage, type Wartegrundlage } from "./nachrichtenstand.js";
 import type { Nachrichtenzeile } from "./nachrichtenzeile.js";
-import { mittelWort } from "./tagebuch-nachrichten.js";
+import { istErsatzsichtung, mittelWort } from "./tagebuch-nachrichten.js";
+import { akteurText, handzeichenDer, stelleDer } from "./tagebuch-nachrichtenbezug.js";
+import { zeitpunktText } from "../beschriftungen.js";
 
 function textwert(wert: unknown): string | undefined {
   return typeof wert === "string" ? wert : undefined;
@@ -121,6 +123,15 @@ export interface Zurueckziehung {
    * (`mitTagebuchbezug`). Fehlt in Ring 2 ohne Ereignisse.
    */
   readonly grund?: string;
+  /** Additiv (R2-ETB P3-3): „S3 · Mü“ — Stelle und Handzeichen aus der Nutzlast des Zurückziehens; setzt der Worker. */
+  readonly durch?: string;
+}
+
+/** „Zurückgezogen 17.11.2026 20:41 von S3 · Mü, Grund: „Fehlanlage““ (R2-ETB P3-3). */
+export function zurueckgezogenSatz(mit: Zurueckziehung): string {
+  const durch = mit.durch === undefined || mit.durch === "" ? "" : ` von ${mit.durch}`;
+  const grund = mit.grund === undefined || mit.grund === "" ? "" : `, Grund: „${mit.grund}“`;
+  return `Zurückgezogen ${zeitpunktText(mit.zeitpunkt)}${durch}${grund}`;
 }
 
 /** Aus dem Feld `entfernt`: die Wanduhr der zurückziehenden Beobachtung. */
@@ -187,20 +198,51 @@ export interface Tagebuchbezug {
   readonly etbNummern: ReadonlyMap<EreignisId, number>;
   /** Je Nachricht der Grund des geltenden (jüngsten) Zurückziehens. */
   readonly rueckzugsgruende: ReadonlyMap<string, string>;
+  /** Additiv (R2-ETB P3-3): je Nachricht Stelle und Handzeichen des geltenden Zurückziehens („S3 · Mü“). */
+  readonly rueckzugDurch?: ReadonlyMap<string, string>;
+  /**
+   * Additiv (R2-LdF P2-1): die Nachrichten, deren geltende (jüngste)
+   * Beförderung ohne Vorschlag des besetzten LdF geschah (`ohneVorschlag` in
+   * der Nutzlast) — die Zeile trägt dann die Marke.
+   */
+  readonly ohneVorschlag?: ReadonlySet<string>;
+  /** Additiv (R2-Si P2-1): die Nachrichten, deren geltende (jüngste) Sichtung eine Ersatzsichtung war. */
+  readonly ersatzsichtungen?: ReadonlySet<string>;
 }
 
 /** Baut den {@link Tagebuchbezug} in einem Durchgang über die Ereignisse. */
 export function tagebuchbezug(ereignisse: readonly EingehendesEreignis[]): Tagebuchbezug {
   const etb = etbNummern(ereignisse);
-  const gruende = new Map<string, { grund: string; nummer: number }>();
+  const gruende = new Map<string, { grund: string; nummer: number; durch: string }>();
+  const befoerderungen = new Map<string, { ohne: boolean; nummer: number }>();
+  const sichtungen = new Map<string, { ohne: boolean; nummer: number }>();
   for (const e of ereignisse) {
+    if (e.typ === "NachrichtBefoerdert") merkeBefoerderung(e, etb.get(e.id) ?? 0, befoerderungen);
+    if (e.typ === "NachrichtGesichtet") merkeSichtung(e, etb.get(e.id) ?? 0, sichtungen);
     if (e.typ !== "NachrichtZurueckgezogen") continue;
     const id = (e.nutzlast as { nachrichtId?: unknown } | undefined)?.nachrichtId;
     const nummer = etb.get(e.id) ?? 0;
     if (typeof id !== "string" || (gruende.get(id)?.nummer ?? -1) > nummer) continue;
-    gruende.set(id, { grund: e.grund ?? "", nummer });
+    gruende.set(id, { grund: e.grund ?? "", nummer, durch: akteurText({ akteur: "", stelle: stelleDer(e), handzeichen: handzeichenDer(e) }) });
   }
-  return { etbNummern: etb, rueckzugsgruende: new Map([...gruende].map(([id, g]) => [id, g.grund])) };
+  const ohneVorschlag = new Set([...befoerderungen].filter(([, b]) => b.ohne).map(([id]) => id));
+  const rueckzugDurch = new Map([...gruende].filter(([, g]) => g.durch !== "").map(([id, g]) => [id, g.durch]));
+  const ersatzsichtungen = new Set([...sichtungen].filter(([, b]) => b.ohne).map(([id]) => id));
+  return { etbNummern: etb, rueckzugsgruende: new Map([...gruende].map(([id, g]) => [id, g.grund])), ohneVorschlag, rueckzugDurch, ersatzsichtungen };
+}
+
+/** R2-Si P2-1: die jüngste Sichtung je Nachricht — Ersatzsichtung, wenn ihr Grund es sagt (eine Rücknahme ist keine). */
+function merkeSichtung(e: EingehendesEreignis, nummer: number, sichtungen: Map<string, { ohne: boolean; nummer: number }>): void {
+  const id = (e.nutzlast as { nachrichtId?: unknown } | undefined)?.nachrichtId;
+  if (typeof id !== "string" || (sichtungen.get(id)?.nummer ?? -1) > nummer) return;
+  sichtungen.set(id, { ohne: e.undoOf === undefined && istErsatzsichtung(e), nummer });
+}
+
+/** Die jüngste Beförderung je Nachricht in HLC-Ordnung (die ETB-Nummer), eine Rücknahme eingeschlossen. */
+function merkeBefoerderung(e: EingehendesEreignis, nummer: number, befoerderungen: Map<string, { ohne: boolean; nummer: number }>): void {
+  const nutzlast = (e.nutzlast ?? {}) as { nachrichtId?: unknown; ohneVorschlag?: unknown };
+  if (typeof nutzlast.nachrichtId !== "string" || (befoerderungen.get(nutzlast.nachrichtId)?.nummer ?? -1) > nummer) return;
+  befoerderungen.set(nutzlast.nachrichtId, { ohne: e.undoOf === undefined && nutzlast.ohneVorschlag === true, nummer });
 }
 
 /**
@@ -212,10 +254,18 @@ export function mitTagebuchbezug<T extends Pick<Nachrichtenzeile, "id" | "angele
     const etbNummer = bezug.etbNummern.get(zeile.angelegtDurch);
     const grund = bezug.rueckzugsgruende.get(zeile.id);
     const mit = zeile.zurueckgezogenMit;
+    // R2-LdF P2-1: nur, solange die Zeile eine Beförderung trägt.
+    const ohne = bezug.ohneVorschlag?.has(zeile.id) === true && (zeile as { befoerderung?: unknown }).befoerderung !== undefined;
+    const ersatz = bezug.ersatzsichtungen?.has(zeile.id) === true && (zeile as { sichtung?: unknown }).sichtung !== undefined;
+    const durch = bezug.rueckzugDurch?.get(zeile.id);
+    const neuMit = mit === undefined ? undefined : { ...mit, ...(grund === undefined || grund === "" ? {} : { grund }), ...(durch === undefined ? {} : { durch }) };
     return {
       ...zeile,
+      ...(ohne ? { ohneVorschlag: true } : {}),
+      ...(ersatz ? { ersatzsichtung: true } : {}),
       ...(etbNummer === undefined ? {} : { etbNummer }),
-      ...(mit === undefined || grund === undefined || grund === "" ? {} : { zurueckgezogenMit: { ...mit, grund } }),
+      // R2-ETB P3-3: Grund und Stelle auch im Satz für den Kopf der Lese-Ansicht.
+      ...(neuMit === undefined ? {} : { zurueckgezogenMit: neuMit, zurueckgezogenText: zurueckgezogenSatz(neuMit) }),
     };
   });
 }

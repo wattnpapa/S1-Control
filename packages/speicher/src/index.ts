@@ -262,6 +262,8 @@ export {
   type Manifest,
   type Manifesteintrag,
 } from "./aktenarchiv.js";
+// Additiv (R2-ETB P2-1): ältere Stände von Tagebuch und Nachweisung in der Akte unter `ausgaben/fruehere/`.
+export { NUR_JUENGSTER_STAND, ORDNER_FRUEHERE, mitFrueherenAusgaben } from "./fruehereausgaben.js";
 
 /** Unterordner eines Einsatzes auf dem Share (02-ZIELBILD.md, Dateilayout). */
 export const EINSATZ_UNTERORDNER = [

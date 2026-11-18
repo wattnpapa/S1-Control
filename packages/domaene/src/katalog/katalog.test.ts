@@ -44,7 +44,7 @@ describe("Der Katalog bildet §5 vollstaendig ab", () => {
     expect(ANLAGEARTEN).toHaveLength(18);
   });
 
-  it("kennt die neun Arten mit Pflicht-grund aus §2.4, die der Versorgung (S4.2, S4.3), die Auflösung einer Rufgruppe (Funkplan) und das Zurückziehen einer Nachricht (N1)", () => {
+  it("kennt die neun Arten mit Pflicht-grund aus §2.4, die der Versorgung (S4.2, S4.3), die Auflösung einer Rufgruppe (Funkplan), das Zurückziehen einer Nachricht (N1) und die Berichtigung ihrer Aufnahme", () => {
     expect(GRUND_PFLICHT).toEqual([
       "AbschnittTypGeaendert",
       "AnforderungStorniert",
@@ -55,12 +55,14 @@ describe("Der Katalog bildet §5 vollstaendig ab", () => {
       "FahrzeugEntfernt",
       "KorrekturVon",
       "MahlzeitStorniert",
+      // FM P2-7 (Runde 1): „Aufnahme berichtigen“ braucht einen Grund.
+      "NachrichtAufnahmeBerichtigt",
       "NachrichtZurueckgezogen",
       "PersonEntfernt",
       "RufgruppeAufgeloest",
       "UnterkunftAufgeloest",
     ]);
-    expect(GRUND_PFLICHT).toHaveLength(13);
+    expect(GRUND_PFLICHT).toHaveLength(14);
   });
 
   it("nennt DienstpostenEntfernt und AnhangEntfernt ausdruecklich nicht (§2.4)", () => {

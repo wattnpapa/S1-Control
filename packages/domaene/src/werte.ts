@@ -162,6 +162,15 @@ export const FUNK_KONTAKT_SCHWELLE_VORBELEGUNG = 60;
  */
 export const FMZ_SCHWELLE_VORBELEGUNG = 20;
 
+/**
+ * Nachrichten (R2-FM P2-5, R2-Si P2-2): Ein Blitz wartete bis zur Schwelle der
+ * FmZ (20 Minuten) vor einem besetzten, aber säumigen Sichter, bevor die FmZ
+ * selbst sichten durfte. Für Blitz und Sofort gelten kürzere Schwellen; der
+ * Einsatz setzt eigene über `NachrichtenParameterGesetzt`.
+ */
+export const SICHTER_SCHWELLE_BLITZ_VORBELEGUNG = 5;
+export const SICHTER_SCHWELLE_SOFORT_VORBELEGUNG = 10;
+
 /** Die vier Mahlzeiten der Versorgung (S4, KONZEPT-S4.md §5.1). */
 export const MAHLZEITEN = ["FRUEHSTUECK", "MITTAG", "ABEND", "NACHT"] as const;
 export type Mahlzeit = (typeof MAHLZEITEN)[number];

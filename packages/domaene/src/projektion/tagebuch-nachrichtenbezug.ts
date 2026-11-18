@@ -23,7 +23,7 @@ import type { EingehendesEreignis } from "../fold.js";
 import { kanonischeSerialisierung, type KanonischerWert } from "../kanonisch.js";
 import type { Id } from "../werte.js";
 import type { Zustand } from "../zustand.js";
-import { GRUND_ERSATZSICHTER, NACHRICHTENARTEN, istKopienNachBefoerderung, nummernkurz, stellenWort, type Zeitstand } from "./tagebuch-nachrichten.js";
+import { NACHRICHTENARTEN, istErsatzsichtung, istKopienNachBefoerderung, nummernkurz, stellenWort, type Zeitstand } from "./tagebuch-nachrichten.js";
 
 function objekt(wert: unknown): Record<string, unknown> | undefined {
   return typeof wert === "object" && wert !== null && !Array.isArray(wert) ? (wert as Record<string, unknown>) : undefined;
@@ -39,6 +39,8 @@ function text(wert: unknown): string | undefined {
  * gewöhnlichen Lauf (erledigt, zurückgenommen, erledigt).
  */
 const VERMERKARTEN: ReadonlySet<string> = new Set([
+  // Additiv (FM P2-7): die Berichtigung der Aufnahme ersetzt den Aufnahmevermerk der Anlage.
+  "NachrichtAufnahmeBerichtigt",
   "NachrichtAngenommen",
   "NachrichtUebermittlungVorgeschlagen",
   "NachrichtBefoerdert",
@@ -47,6 +49,9 @@ const VERMERKARTEN: ReadonlySet<string> = new Set([
   "NachrichtGesichtet",
   "NachrichtVermerkt",
 ]);
+
+/** Arten außerhalb der Nachrichten, die eine Stelle in der Nutzlast tragen können (R2-ETB P2-2). */
+const MIT_STELLE_AUSSERHALB: ReadonlySet<string> = new Set(["EinsatzBeendet", "EtbEintragErfasst"]);
 
 /** Die Kennung der Nachricht, über die das Ereignis spricht — auch ein Tagebucheintrag mit Bezug NACHRICHT. */
 export function nachrichtIdDer(ereignis: EingehendesEreignis): Id | undefined {
@@ -105,8 +110,10 @@ export function handzeichenDer(ereignis: EingehendesEreignis): string | undefine
  * Ereignis fehlt die Stelle, statt geraten zu werden.
  */
 export function stelleDer(ereignis: EingehendesEreignis): string | undefined {
-  if (!NACHRICHTENARTEN.has(ereignis.typ)) return undefined;
   const nutzlast = objekt(ereignis.nutzlast);
+  // R2-ETB P2-2: Einsatzende und Abschlussvermerk tragen die Stelle der Sitzung, die beendet.
+  if (MIT_STELLE_AUSSERHALB.has(ereignis.typ)) return text(nutzlast?.["stelle"]);
+  if (!NACHRICHTENARTEN.has(ereignis.typ)) return undefined;
   // R2-ETB P1-1: die Stelle der Sitzung, die der Worker seit dem zweiten Durchlauf mitschreibt.
   const genannt = text(nutzlast?.["stelle"]);
   if (genannt !== undefined) return genannt;
@@ -117,7 +124,7 @@ export function stelleDer(ereignis: EingehendesEreignis): string | undefined {
   }
   // Die Kopien nach der Beförderung verteilt die FmZ, kein Sichter (R2-ETB P1-1, R2-SGL P3-4).
   if (istKopienNachBefoerderung(ereignis)) return "FMZ";
-  if (ereignis.typ === "NachrichtGesichtet" && ereignis.grund !== GRUND_ERSATZSICHTER && objekt(ereignis.neu) !== undefined) return "SICHTER";
+  if (ereignis.typ === "NachrichtGesichtet" && !istErsatzsichtung(ereignis) && objekt(ereignis.neu) !== undefined) return "SICHTER";
   if (ereignis.typ === "NachrichtWeitergegeben" || ereignis.typ === "NachrichtUebermittlungVorgeschlagen") return "LDF";
   return undefined;
 }

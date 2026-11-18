@@ -7,7 +7,7 @@ describe("Ausgabekopf", () => {
     expect(htmlMaskieren('<b>"A" & \'B\'</b>')).toBe("&lt;b&gt;&quot;A&quot; &amp; &#39;B&#39;&lt;/b&gt;");
   });
 
-  it("nennt Einsatz, Kennung und Kernfassung", () => {
+  it("nennt Einsatz, Kennung und Programmfassung", () => {
     const html = kopfAlsHtml({
       datum: "2026-09-08",
       einsatzName: "Hochwasser Süd",
@@ -16,6 +16,9 @@ describe("Ausgabekopf", () => {
 
     expect(html).toContain("<h1>Hochwasser Süd</h1>");
     expect(html).toMatch(/2026-09-08_hochwasser-sued_[0-9a-f]{6}/);
-    expect(html).toContain("@bos/eeb-format");
+    // R2-ETB P3-2: die Programmfassung statt „@bos/eeb-format 0.0.0“.
+    expect(html).toContain('<p class="kern">S1-Control</p>');
+    expect(html).not.toContain("@bos/eeb-format");
+    expect(kopfAlsHtml({ datum: "2026-09-08", einsatzName: "X", stand: "S", programmversion: "2026.11.18" })).toContain('<p class="kern">S1-Control 2026.11.18</p>');
   });
 });

@@ -424,6 +424,11 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "NachrichtBefoerdert", form: "a", schema: S.NachrichtBefoerdert, nutzlastVersion: 1,
       entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("befoerderung"),
       klasse: "LWW_ENTITAET", gegenereignis: "NachrichtBefoerdert" }),
+  // Additiv (FM P2-7, Runde 1): „Aufnahme berichtigen“ — derselbe Strukturwert wie die
+  // Aufnahme der Anlage (Form a auf `aufnahme`, LWW), mit Pflichtgrund; Rücknahme dieselbe Art.
+  e({ typ: "NachrichtAufnahmeBerichtigt", form: "a", schema: S.NachrichtAufnahmeBerichtigt, nutzlastVersion: 1,
+      entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("aufnahme"), klasse: "LWW_ENTITAET",
+      grundPflicht: true, gegenereignis: "NachrichtAufnahmeBerichtigt" }),
   e({ typ: "NachrichtNachgewiesen", form: "a", schema: S.NachrichtNachgewiesen, nutzlastVersion: 1,
       entitaet: "nachricht", idFeld: "nachrichtId", feld: fest("nachweis"), klasse: "LWW_ENTITAET",
       gegenereignis: "NachrichtNachgewiesen" }),

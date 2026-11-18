@@ -79,7 +79,12 @@ export type Funkprobenergebnis = (typeof FUNKPROBE_ERGEBNISSE)[number];
  * Pflicht hängt am Ergebnis und nicht an der Art, deshalb prüft sie der
  * Worker und nicht der Katalog.
  */
-export const FunkprobeDurchgefuehrt = z.object({ einheitId: zId, ergebnis: z.enum(FUNKPROBE_ERGEBNISSE) });
+export const FunkprobeDurchgefuehrt = z.object({
+  einheitId: zId,
+  ergebnis: z.enum(FUNKPROBE_ERGEBNISSE),
+  // Additiv (R2-LdF P2-8): der Kontakt im Funkplan als Folgeschritt einer Beförderung (`undogruppe.ts`).
+  folgeVon: zId.optional(),
+});
 
 /**
  * Die Schwelle „kein Kontakt" des Einsatzes in Minuten (Entscheidung 4), Wert
