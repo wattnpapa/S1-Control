@@ -1651,6 +1651,8 @@ export interface Gegenstelle {
   readonly name: string;
   /** Additiv: die geltende Hauptrufgruppe der Einheit — Vorbelegung der Rufgruppe beim Kontakt. */
   readonly rufgruppeId?: string;
+  /** Additiv: der Funkrufname (K31), damit die Gegenstelle „Heros Oldenburg 22“ die Einheit findet. */
+  readonly funkrufname?: string;
 }
 
 /** Additiv: eine geltende Rufgruppe zur Wahl beim Kontakt einer Nachricht. */

@@ -18,7 +18,7 @@
 import type { Sichtungsvermerk } from "@s1/domaene";
 
 import type { Entwurf } from "../kontrakt/index.js";
-import { nachrichtAufnehmen } from "../kontrakt/fmzschritte.js";
+import { nachrichtAufnehmen, type Funkkontakt } from "../kontrakt/fmzschritte.js";
 import type { Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { aufnahmeAus, folgeAus, nachweisAus, type Aufnahmewerte } from "./fmzformate.js";
 import { bezuegeAus, type Bezugsziel } from "./nachrichtenbezug.js";
@@ -38,6 +38,8 @@ export interface Aufgabeteile {
   readonly sichtung: Sichtungsvermerk | undefined;
   readonly grund: string | undefined;
   readonly ziele: readonly Bezugsziel[];
+  /** Additiv: der Kontakt im Funkplan beim Aufnehmen per Funk (Einheit und Rufgruppe). */
+  readonly kontakt?: Funkkontakt | undefined;
 }
 
 /** Die Anlage mit Aufnahmevermerk, Gegenstelle und den Bezügen zur Lage. */
@@ -59,6 +61,7 @@ export function aufgabeAus(t: Aufgabeteile): Entwurf {
     ...(t.ausgangVomBlatt ? nachtragFolge(t.nachtragswerte) : {}),
     // R2-SGL P1-2: `nachtrag: true` kennzeichnet den Papier-Nachtrag für Tagebuch und Akte.
     ...(t.nachtrag ? { nachtrag: true } : {}),
+    ...(t.fmz && t.kontakt !== undefined ? { kontakt: t.kontakt } : {}),
   };
   return mitGrund(nachrichtAufnehmen(anlageMitAufnahme(t), folge), t.grund);
 }

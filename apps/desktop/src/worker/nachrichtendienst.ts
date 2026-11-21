@@ -104,7 +104,8 @@ export function anschriften(zustand: Zustand): readonly string[] {
 
 /**
  * Die Einheiten der Lage nach Namen — die Gegenstellen, die der Funkplan als
- * Kontakt kennt; mit ihrer geltenden Hauptrufgruppe als Vorbelegung.
+ * Kontakt kennt; mit ihrer geltenden Hauptrufgruppe als Vorbelegung und
+ * ihrem Funkrufnamen.
  */
 export function gegenstellen(zustand: Zustand): readonly Gegenstelle[] {
   return kennzahlen
@@ -113,7 +114,8 @@ export function gegenstellen(zustand: Zustand): readonly Gegenstelle[] {
       if (typeof e.bezeichnung.wert !== "string" || e.bezeichnung.wert === "") return [];
       const gruppe = e.rufgruppeId?.wert;
       const gilt = typeof gruppe === "string" && projektion.rufgruppeGilt(zustand.rufgruppen?.[gruppe]);
-      return [{ einheitId: e.id, name: e.bezeichnung.wert, ...(gilt ? { rufgruppeId: gruppe } : {}) }];
+      const funkrufname = kennzahlen.funkrufnameDerEinheit(zustand, e);
+      return [{ einheitId: e.id, name: e.bezeichnung.wert, ...(gilt ? { rufgruppeId: gruppe } : {}), ...(funkrufname === "" ? {} : { funkrufname }) }];
     })
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
 }
