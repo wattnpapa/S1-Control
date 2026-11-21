@@ -10,9 +10,10 @@
  *   verteilt, wer aufnimmt; die Gesprächsnotiz verteilt ihr Verfasser selbst.
  *   Dann folgt `NachrichtGesichtet` im selben Zug — die Regel aus eStab, nur
  *   dass hier die Präsenz entscheidet statt ein Login (§5 „Ersatzsichter").
- * - **Beförderung an eine Einheit**: Ist die Gegenstelle eine Einheit der
- *   Lage, folgt auf `NachrichtBefoerdert` eine Funkprobe „Kontakt“ — der
- *   Funkplan zeigt dann den letzten Kontakt.
+ * - **Funkkontakt mit einer Einheit**: Ist die Gegenstelle einer Beförderung
+ *   oder einer Aufnahme eine Einheit der Lage, folgt eine Funkprobe „Kontakt“
+ *   über die gewählte Rufgruppe, und eine Einheit ohne Rufgruppe wird ihr
+ *   zugeordnet — in `funkkontaktfolge.ts`.
  * - **Befördern verlangt die Annahme** (additiv, Audit LdF P0-1): Trägt der
  *   Entwurf `nachrichtenfolge.annahme` und hat die Nachricht noch keine
  *   Annahme, folgt `NachrichtAngenommen` mit Uhrzeit und Handzeichen der
@@ -34,6 +35,7 @@
 import { kanonischeSerialisierung, projektion, type KanonischerWert, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
+import { kontaktwunsch, planeFunkkontakt } from "./funkkontaktfolge.js";
 import { nachtragswarnungen } from "./nachtragspruefung.js";
 import { rueckzugshinweis } from "./rueckzugshinweis.js";
 import { planeBefoerderungsfolgen, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
@@ -90,7 +92,7 @@ export const HINWEIS_LDF_VERTEILT = "Kein Sichter besetzt: Der LdF hat beim Weit
 /** Die Weitergabe ohne Laufzettel, obwohl kein Sichter da ist. */
 export const HINWEIS_WEITERGABE_OHNE_SICHTER = "Kein Sichter besetzt: Der Eingang wartet vor dem Sichter; der LdF oder die FmZ verteilt ihn selbst.";
 
-type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly kontaktEinheitId?: unknown; readonly annahme?: unknown; readonly befoerderung?: unknown };
+type Folgewerte = { readonly nachweis?: unknown; readonly sichtung?: unknown; readonly annahme?: unknown; readonly befoerderung?: unknown };
 
 function folgewerte(entwurf: Ereignisentwurf): Folgewerte | undefined {
   const wert = (entwurf as { readonly nachrichtenfolge?: unknown }).nachrichtenfolge;
@@ -195,32 +197,16 @@ function planeAnlage(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachric
     folgen.push({ entwurf: { typ: "NachrichtBefoerdert", nutzlast: { nachrichtId }, vorher: null, neu: werte.befoerderung }, hinweis: "Beförderung vom Papier eingetragen.", mitFolgen: true });
   }
   if (weitergabe !== undefined) folgen.push(weitergabe);
-  return { folgen, hinweise };
+  // Additiv: Ein über Funk aufgenommener Eingang einer Einheit ist ein Kontakt im Funkplan (Zeit der Aufnahme).
+  const kontakt = planeFunkkontakt(zustand, eingangskontakt(entwurf, nutzlast));
+  return { folgen: [...folgen, ...kontakt.folgen], hinweise: [...hinweise, ...kontakt.hinweise] };
 }
 
-/**
- * Die Beförderung an eine Einheit der Lage ist ein Funkkontakt: Der Funkplan
- * zeigt „letzter Kontakt“ aus der jüngsten Funkprobe „Kontakt“. Der Vorwert
- * ist die Probe, die der Zustand zuletzt sah (Rücknahme setzt sie wieder).
- */
-function planeKontakt(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfolgeplan {
-  const einheitId = folgewerte(entwurf)?.kontaktEinheitId;
-  const zeitpunkt = (entwurf.neu as { zeitpunkt?: unknown } | null | undefined)?.zeitpunkt;
-  const einheit = typeof einheitId === "string" ? zustand.einheiten[einheitId] : undefined;
-  if (typeof einheitId !== "string" || einheit === undefined || einheit.entfernt?.wert === true || typeof zeitpunkt !== "string") return { folgen: [], hinweise: [] };
-  const rufgruppeId = einheit.rufgruppeId?.wert;
-  const name = typeof einheit.bezeichnung.wert === "string" ? einheit.bezeichnung.wert : einheitId;
-  const vorher = einheit.letzteFunkprobe?.KONTAKT?.wert ?? null;
-  const neu = { zeitpunkt, ...(typeof rufgruppeId === "string" && rufgruppeId !== "" ? { rufgruppeId } : {}) };
-  return {
-    folgen: [
-      {
-        entwurf: { typ: "FunkprobeDurchgefuehrt", nutzlast: { einheitId, ergebnis: "KONTAKT" }, vorher, neu },
-        hinweis: `Funkplan: Kontakt mit „${name}“ vermerkt.`,
-      },
-    ],
-    hinweise: [],
-  };
+/** Der Kontakt eines aufgenommenen Eingangs zur Uhrzeit der Aufnahme; ob er per Funk lief, entscheidet die Maske. */
+function eingangskontakt(entwurf: Ereignisentwurf, nutzlast: Record<string, unknown>): ReturnType<typeof kontaktwunsch> {
+  const aufnahme = nutzlast["aufnahme"] as { zeitpunkt?: unknown } | undefined;
+  if (nutzlast["richtung"] !== "EINGANG" || aufnahme === undefined) return undefined;
+  return kontaktwunsch(entwurf, aufnahme.zeitpunkt);
 }
 
 /**
@@ -303,7 +289,7 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
     // Kontakt im Funkplan (main) und die Folgen am Laufweg (LdF-Ersatz, Kopien) in einem Plan.
     // Additiv (LdF P0-1): zuerst die nachgetragene Annahme und die Nummer.
     const vermerke = planeBefoerderungsvermerke(zustand, entwurf);
-    const kontakt = planeKontakt(zustand, entwurf);
+    const kontakt = planeFunkkontakt(zustand, kontaktwunsch(entwurf, (entwurf.neu as { zeitpunkt?: unknown } | null | undefined)?.zeitpunkt));
     const laufweg = planeBefoerderungsfolgen(zustand, entwurf, umfeld);
     return { folgen: [...vermerke.folgen, ...kontakt.folgen, ...laufweg.folgen], hinweise: [...vermerke.hinweise, ...kontakt.hinweise, ...laufweg.hinweise] };
   }

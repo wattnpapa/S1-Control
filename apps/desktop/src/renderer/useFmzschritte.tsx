@@ -53,6 +53,7 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           naechsteNummer={ansicht?.naechsteNummer}
           vergebeneNummern={ansicht?.vergebeneNummern}
           gegenstellen={ansicht?.gegenstellen}
+          rufgruppen={ansicht?.rufgruppen}
           aufSchliessen={() => setzeOffen(undefined)}
           ldfErsatz={ldfErsatz}
           fernmelder={ansicht?.fernmelder}
@@ -67,6 +68,7 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           anschriften={ansicht?.anschriften ?? []}
           aufnahme={{ naechsteNummer: ansicht?.naechsteNummer, vergebeneNummern: ansicht?.vergebeneNummern }}
           gegenstellen={ansicht?.gegenstellen}
+          rufgruppen={ansicht?.rufgruppen}
           entwurfsschluessel="eingang"
           aufSchliessen={() => setzeEingang(undefined)}
         />

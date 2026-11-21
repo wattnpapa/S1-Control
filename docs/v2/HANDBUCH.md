@@ -420,6 +420,21 @@ sie zum Sichter. Ohne Nummer sagt das Aufnehmen „Eingang ohne
 Nachweisungsnummer“, und der Eingang steht in der Karte „Ohne Nummer“, bis
 er nachgewiesen ist; die Karte führt Eingänge und beförderte Ausgänge.
 
+**Kontakt im Funkplan.** Läuft eine Nachricht per Funk mit einer Einheit
+der Lage, ist sie ein Kontakt: beim Befördern eines Ausgangs zur Quittung
+der Gegenstelle, beim Aufnehmen eines Eingangs zur Uhrzeit der Aufnahme.
+Beide Masken zeigen dann „Kontakt mit „…“ im Funkplan vermerken“ (gesetzt)
+und daneben die Rufgruppe, vorbelegt mit der Rufgruppe, der die Einheit im
+Funkplan zugeordnet ist. Wurde auf einer anderen Gruppe gesprochen, wird sie
+hier gewählt; die Einheit bleibt trotzdem auf ihrer bisherigen Gruppe. Die
+Einheit erkennt die Maske am Namen oder am Funkrufnamen der Gegenstelle, beim
+Eingang auch am Absender. Hat die Einheit noch keine Rufgruppe (oder nur eine
+aufgelöste), sagt die Maske „„FGr N Oldenburg“ hat noch keine Rufgruppe und
+wird „THW_OL_EA2“ zugeordnet.“, und nach dem Schreiben steht sie im Funkplan
+unter dieser Gruppe. Der Funkplan zeigt danach den letzten Kontakt;
+„Rückgängig“ nimmt Kontakt und Zuordnung mit dem Befördern oder Aufnehmen
+zurück; der aufgenommene Eingang selbst bleibt.
+
 **Ist die FmZ besetzt?** Wer einen Ausgang aufgibt, während kein
 Arbeitsplatz die Stelle FmZ hat (mit LdF als Station: auch kein LdF), liest
 nach dem Aufgeben „Fernmeldezentrale nicht besetzt: Die Nachricht wartet.

@@ -55,6 +55,7 @@ const TEILWORT: Readonly<Record<string, string>> = {
   NachrichtUebermittlungVorgeschlagen: "Vorschlag",
   NachrichtBefoerdert: "Beförderung",
   FunkprobeDurchgefuehrt: "Kontakt im Funkplan",
+  EinheitRufgruppeGesetzt: "Rufgruppe der Einheit",
 };
 
 /** Der Bedienschritt in Worten, wie die Maske ihn nennt. */

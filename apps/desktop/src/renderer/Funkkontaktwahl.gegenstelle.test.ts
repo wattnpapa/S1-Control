@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { gegenstelleTreffer } from "./Fmzmasken.js";
+import { gegenstelleTreffer } from "./Funkkontaktwahl.js";
 
 const einheiten = [
   { einheitId: "E1", name: "A Test 2" },

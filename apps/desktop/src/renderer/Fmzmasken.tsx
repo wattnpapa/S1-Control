@@ -16,6 +16,10 @@
  * Jeder Schritt schickt den Wert, den die Maske beim Öffnen sah: Hat ein
  * anderer Platz inzwischen vermerkt, weist der Worker ab.
  *
+ * Additiv: Beim Befördern per Funk an eine Einheit wählt die Maske die
+ * Rufgruppe des Kontakts im Funkplan, vorbelegt mit der Hauptrufgruppe der
+ * Einheit (`Funkkontaktwahl.tsx`).
+ *
  * Nach den Audits vom 2026-11-17:
  * - **Befördern verlangt die Annahme** (LdF P0-1): Fehlt sie, sagt die Maske
  *   „Annahme wird mit eingetragen“, und der Worker trägt sie mit Uhrzeit und
@@ -53,14 +57,15 @@ import { useState } from "react";
 
 import { FERNMELDER_STANDARD, NACHRICHT_MITTEL, datumZeitGruppe, projektion, uhrzeitVierstellig, type Nachrichtenzeile } from "@s1/domaene";
 
-import type { Entwurf, Gegenstelle } from "../kontrakt/index.js";
-import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen } from "../kontrakt/fmzschritte.js";
+import type { Entwurf, Gegenstelle, Rufgruppenwahl } from "../kontrakt/index.js";
+import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen, type Funkkontakt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { Befoerderungszusatz } from "./Befoerderungszusatz.js";
 import { abweichungshinweis, befoerderungInzwischen, ohneVorschlagFrage } from "./befoerderungspruefung.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { fernmelderbeschriftung } from "./fernmelderzuteilung.js";
+import { Funkkontaktwahl, gegenstelleTreffer, kontaktAus, useKontaktstand, type Kontaktstand } from "./Funkkontaktwahl.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
 import { meldeWarnungen } from "./warnungsstufen.js";
@@ -71,7 +76,7 @@ import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrerMitStelle, sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
-import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
+import { Gegenstellenfeld } from "./Gegenstellenfeld.js";
 
 export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
@@ -85,6 +90,8 @@ export interface FmzmaskeEigenschaften {
   readonly vergebeneNummern: readonly number[] | undefined;
   /** Die Einheiten der Lage — mögliche Gegenstellen mit Kontakt im Funkplan. */
   readonly gegenstellen?: readonly Gegenstelle[] | undefined;
+  /** Additiv: die geltenden Rufgruppen zur Wahl beim Kontakt im Funkplan. */
+  readonly rufgruppen?: readonly Rufgruppenwahl[] | undefined;
   readonly aufSchliessen: () => void;
   /**
    * Additiv (2026-11-17): der Satz zur Ersatzregel, wenn der Einsatz den LdF
@@ -138,21 +145,22 @@ function zeitbeschriftung(schritt: Fmzschritt): string {
  * Der Beförderungsentwurf samt Folgen (LdF P0-1): die fehlende Annahme mit
  * derselben Zeit und demselben Handzeichen, die Nummer, wenn eingetragen.
  */
-function befoerderungsentwurf(zeile: Nachrichtenzeile, e: Eingaben, zeitpunkt: string, kontaktEinheitId: string | undefined): Entwurf | string {
+function befoerderungsentwurf(zeile: Nachrichtenzeile, e: Eingaben, zeitpunkt: string, kontakt: Funkkontakt | undefined): Entwurf | string {
   const vermerk = { zeitpunkt, handzeichen: e.handzeichen };
   const mitNummer = zeile.nummer === undefined && e.nummer.trim() !== "";
   const nummer = mitNummer ? nummerAusEingabe(e.nummer) : undefined;
   if (mitNummer && nummer === undefined) return "Nummer als ganze Zahl ab 1 eintragen oder leer lassen";
   const vorher = zeile.befoerderung === undefined ? null : { ...zeile.befoerderung, ...(zeile.gegenstelle === undefined ? {} : { gegenstelle: zeile.gegenstelle }) };
   return nachrichtBefoerdern(zeile.id, vorher, { mittel: e.mittel, ...vermerk, gegenstelle: e.gegenstelle }, {
-    kontaktEinheitId,
+    kontaktEinheitId: kontakt?.einheitId,
+    kontaktRufgruppeId: kontakt?.rufgruppeId,
     annahme: zeile.annahme === undefined ? vermerk : undefined,
     nachweis: nummer === undefined ? undefined : { nummer, ...vermerk },
   });
 }
 
 /** Der Entwurf des Schritts aus den Eingaben, oder der Satz, was fehlt. */
-export function fmzEntwurf(schritt: Fmzschritt, zeile: Nachrichtenzeile, e: Eingaben, kontaktEinheitId?: string): Entwurf | string {
+export function fmzEntwurf(schritt: Fmzschritt, zeile: Nachrichtenzeile, e: Eingaben, kontakt?: Funkkontakt): Entwurf | string {
   const zeitpunkt = zeitAusEingabe(e.zeit);
   if (zeitpunkt === undefined && schritt === "befoerderung" && e.zeit.trim() === "") return "Uhrzeit der Quittung durch die Gegenstelle eintragen";
   if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
@@ -163,7 +171,7 @@ export function fmzEntwurf(schritt: Fmzschritt, zeile: Nachrichtenzeile, e: Eing
     if (e.fernmelder.trim() === "") return "Fernmelder wählen";
     return nachrichtVorschlagen(zeile.id, zeile.vorschlag ?? null, { mittel: e.mittel, zeitpunkt, handzeichen: e.handzeichen, fernmelder: e.fernmelder, gegenstelle: e.gegenstelle });
   }
-  if (schritt === "befoerderung") return befoerderungsentwurf(zeile, e, zeitpunkt, kontaktEinheitId);
+  if (schritt === "befoerderung") return befoerderungsentwurf(zeile, e, zeitpunkt, kontakt);
   const nummer = nummerAusEingabe(e.nummer);
   if (nummer === undefined) return "Nummer als ganze Zahl ab 1 eintragen";
   return nachrichtNachweisen(zeile.id, zeile.nachweis ?? null, { nummer, zeitpunkt, handzeichen: e.handzeichen });
@@ -173,8 +181,9 @@ interface Gegenstellenwahl {
   readonly gegenstellen: readonly Gegenstelle[];
   /** Die Einheit, die zur eingegebenen Gegenstelle passt — nur dann gibt es einen Kontakt im Funkplan. */
   readonly treffer: Gegenstelle | undefined;
-  readonly kontakt: boolean;
-  readonly aufKontakt: (an: boolean) => void;
+  /** Kästchen und Rufgruppe des Kontakts (`Funkkontaktwahl.tsx`). */
+  readonly kontakt: Kontaktstand;
+  readonly rufgruppen: readonly Rufgruppenwahl[];
   /** Die Wahl „Fernmelder“ im Vorschlag des LdF (R2-LdF P3-4). */
   readonly fernmelder: readonly string[];
   /** Additiv (2026-11-21): wer die Fernmelder besetzt. */
@@ -185,12 +194,6 @@ interface Gegenstellenwahl {
 export function fernmelderwahl(besetzt: readonly string[] | undefined, gewaehlt: string): readonly string[] {
   const liste = besetzt !== undefined && besetzt.length > 0 ? besetzt : FERNMELDER_STANDARD;
   return gewaehlt === "" || liste.includes(gewaehlt) ? liste : [gewaehlt, ...liste];
-}
-
-/** Die Einheit, deren Name der Gegenstelle gleicht (ohne Groß-/Kleinschreibung); sonst keine. */
-export function gegenstelleTreffer(gegenstellen: readonly Gegenstelle[], eingabe: string): Gegenstelle | undefined {
-  const gesucht = eingabe.trim().toLocaleLowerCase("de");
-  return gesucht === "" ? undefined : gegenstellen.find((g) => g.name.toLocaleLowerCase("de") === gesucht);
 }
 
 function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmzschritt; readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly wahl: Gegenstellenwahl }): React.JSX.Element {
@@ -222,22 +225,9 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
             ))}
           </select>
         </label>
-        <label>
-          {GEGENSTELLE_BESCHRIFTUNG}
-          <input value={e.gegenstelle} title={GEGENSTELLE_HILFE} list="gegenstellenliste" placeholder="Einheit wählen oder Freitext" onChange={(ev) => setze("gegenstelle", ev.target.value)} />
-          <datalist id="gegenstellenliste">
-            {wahl.gegenstellen.map((g) => (
-              <option key={g.einheitId} value={g.name} />
-            ))}
-          </datalist>
-        </label>
+        <Gegenstellenfeld wert={e.gegenstelle} aufAenderung={(wert) => setze("gegenstelle", wert)} gegenstellen={wahl.gegenstellen} />
       </div>
-      {schritt === "befoerderung" && wahl.treffer !== undefined && e.mittel === "FUNK" && (
-        <label className="kaestchen">
-          <input type="checkbox" checked={wahl.kontakt} onChange={(ev) => wahl.aufKontakt(ev.target.checked)} />
-          Kontakt mit „{wahl.treffer.name}“ im Funkplan vermerken
-        </label>
-      )}
+      {schritt === "befoerderung" && <Funkkontaktwahl treffer={wahl.treffer} mittel={e.mittel} rufgruppen={wahl.rufgruppen} stand={wahl.kontakt} />}
     </>
   );
 }
@@ -287,12 +277,11 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
     if (feld === "nummer") setzeOhneNummerBestaetigt(false);
     setzeE((bisher) => ({ ...bisher, [feld]: wert }));
   };
-  const [kontakt, setzeKontakt] = useState(true);
   const treffer = gegenstelleTreffer(p.gegenstellen ?? [], e.gegenstelle);
-  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, aufKontakt: setzeKontakt, fernmelder: fernmelderwahl(p.fernmelder, e.fernmelder), besetzung: p.fernmelderbesetzung };
+  const kontakt = useKontaktstand(treffer);
+  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, rufgruppen: p.rufgruppen ?? [], fernmelder: fernmelderwahl(p.fernmelder, e.fernmelder), besetzung: p.fernmelderbesetzung };
   const befoerdern = p.schritt === "befoerderung";
-  const kontaktEinheitId = befoerdern && kontakt && e.mittel === "FUNK" ? treffer?.einheitId : undefined;
-  const entwurf = fmzEntwurf(p.schritt, p.zeile, e, kontaktEinheitId);
+  const entwurf = fmzEntwurf(p.schritt, p.zeile, e, befoerdern ? kontaktAus(treffer, e.mittel, kontakt) : undefined);
   const mitNummernfeld = p.schritt === "nachweis" || (befoerdern && p.zeile.nummer === undefined);
   const warnung = mitNummernfeld ? nummerWarnung(nummerAusEingabe(e.nummer), p.vergebeneNummern, p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) : undefined;
   const ohneNummer = befoerdern && p.zeile.nummer === undefined && e.nummer.trim() === "";

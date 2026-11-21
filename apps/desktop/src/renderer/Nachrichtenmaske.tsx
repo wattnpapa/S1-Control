@@ -44,6 +44,11 @@
  * Annahme, Beförderung und Nummer im selben Vordruck; „Nachtragen“ schreibt
  * sie in einem Zug (`Papiernachtrag.tsx`).
  *
+ * Additiv: Nimmt die FmZ per Funk einen Eingang einer Einheit auf (Gegenstelle
+ * oder Absender nennt sie), vermerkt „Aufnehmen“ den Kontakt im Funkplan über
+ * die gewählte Rufgruppe, vorbelegt mit der Hauptrufgruppe der Einheit; eine
+ * Einheit ohne Rufgruppe wird ihr zugeordnet (`Funkkontaktwahl.tsx`).
+ *
  * Schnitt N3 (Entscheidung 4): Unter dem Vordruck steht die „Vorschau", der
  * Vordruck, wie er gedruckt wird — zugeklappt, bis jemand sie aufklappt.
  *
@@ -77,7 +82,7 @@
 
 import { useEffect, useState } from "react";
 
-import type { Gegenstelle } from "../kontrakt/index.js";
+import type { Gegenstelle, Rufgruppenwahl } from "../kontrakt/index.js";
 
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
@@ -85,6 +90,7 @@ import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { doppelterAusgangText } from "./doppelterAusgang.js";
 import { merkeOffeneEingabe } from "./entwurf.js";
 import { aufnahmeAus, aufnahmefehler, nummerAusEingabe } from "./fmzformate.js";
+import { Funkkontaktwahl, useFunkkontakt } from "./Funkkontaktwahl.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
@@ -114,6 +120,8 @@ export interface NachrichtenmaskeEigenschaften {
   readonly entwurfsschluessel?: string | undefined;
   /** Additiv (R2-ETB P2-6): die Einheiten der Lage mit Kennung, für den Bezug von Anschrift und Absender. */
   readonly gegenstellen?: readonly Gegenstelle[] | undefined;
+  /** Additiv: die geltenden Rufgruppen zur Wahl beim Kontakt im Funkplan (Aufnahme per Funk). */
+  readonly rufgruppen?: readonly Rufgruppenwahl[] | undefined;
 }
 
 /** Die besetzten Stellen der Präsenz als Wörter — lebende Arbeitsplätze, ohne Doppelte. */
@@ -202,7 +210,7 @@ interface VordruckEigenschaften {
   readonly t: ReturnType<typeof useMaskenteile>;
   readonly p: ReturnType<typeof useMaskenpruefung>;
   readonly aufnahme: Aufnahmeumfeld | undefined;
-  readonly umfeld: { readonly sichterDa: boolean; readonly anschriften: readonly string[]; readonly setze: Setze };
+  readonly umfeld: { readonly sichterDa: boolean; readonly anschriften: readonly string[]; readonly gegenstellen: readonly Gegenstelle[] | undefined; readonly setze: Setze };
 }
 
 /** Die drei Teile des Vordrucks, je nach Lage: Aufnahme oder Nachtrag oben, Laufzettel unten. */
@@ -212,9 +220,9 @@ function Vordruck({ t, p, aufnahme, umfeld }: VordruckEigenschaften): React.JSX.
   return (
     <div className="vordruck">
       {p.fmz ? (
-        <Aufnahmeteil werte={t.aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme?.vergebeneNummern} platzhalter={platzhalter} />
+        <Aufnahmeteil werte={t.aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme?.vergebeneNummern} platzhalter={platzhalter} gegenstellen={umfeld.gegenstellen} />
       ) : p.ausgangVomBlatt ? (
-        <Nachtragsteil werte={t.nachtragswerte} aufAenderung={t.setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} />
+        <Nachtragsteil werte={t.nachtragswerte} aufAenderung={t.setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} gegenstellen={umfeld.gegenstellen} />
       ) : (
         <FmzTeil />
       )}
@@ -234,12 +242,14 @@ function Vordruck({ t, p, aufnahme, umfeld }: VordruckEigenschaften): React.JSX.
   );
 }
 
-export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen, entwurfsschluessel, gegenstellen }: NachrichtenmaskeEigenschaften): React.JSX.Element {
+export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, anschriften, aufnahme, aufSchliessen, entwurfsschluessel, gegenstellen, rufgruppen = [] }: NachrichtenmaskeEigenschaften): React.JSX.Element {
   const t = useMaskenteile(vorlage, aufnahme?.naechsteNummer, entwurfsschluessel);
   const { werte, aufnahmewerte, nachtrag, nachtragswerte } = t;
   const umfeld = useMaskenumfeld(gegenstellen);
   const p = useMaskenpruefung(t, aufnahme, umfeld.sichterDa);
   const { fmz, vorbehalt, fehler, rueckfragen } = p;
+  // Additiv: Ein per Funk aufgenommener Eingang einer Einheit ist ein Kontakt im Funkplan (Gegenstelle, sonst Absender).
+  const funk = useFunkkontakt(fmz ? (gegenstellen ?? []) : [], [aufnahmewerte.gegenstelle, werte.absender], aufnahmewerte.mittel);
   const versuch = useAnlegeversuch();
   // SGL P3-20: die Rückfrage bei gleichem Ausgang; der zweite Klick gibt auf.
   const [doppelt, setzeDoppelt] = useState<string | undefined>(undefined);
@@ -264,7 +274,7 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
         return;
       }
     }
-    const entwurf = aufgabeAus({ nachrichtId, werte, aufnahmewerte, nachtragswerte, nachtrag, fmz, ausgangVomBlatt: p.ausgangVomBlatt, sichtung: p.sichtung, grund: vorbehalt.grund, ziele: umfeld.ziele });
+    const entwurf = aufgabeAus({ nachrichtId, werte, aufnahmewerte, nachtragswerte, nachtrag, fmz, ausgangVomBlatt: p.ausgangVomBlatt, sichtung: p.sichtung, grund: vorbehalt.grund, ziele: umfeld.ziele, kontakt: funk.kontakt });
     const ungueltig = nachrichtenentwurfFehler(entwurf);
     if (ungueltig !== undefined) {
       useLaden.getState().melde("warnung", ungueltig);
@@ -311,7 +321,8 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
       <Nachtragsschalter an={nachtrag} aufAn={t.schalteNachtrag} />
       {vorbehalt.hinweis}
       <Maskenhinweis werte={werte} />
-      <Vordruck t={t} p={p} aufnahme={aufnahme} umfeld={{ sichterDa: umfeld.sichterDa, anschriften: [...new Set([...besetzteStellen(umfeld.peers), ...anschriften])], setze }} />
+      <Vordruck t={t} p={p} aufnahme={aufnahme} umfeld={{ sichterDa: umfeld.sichterDa, anschriften: [...new Set([...besetzteStellen(umfeld.peers), ...anschriften])], gegenstellen, setze }} />
+      {fmz && <Funkkontaktwahl treffer={funk.treffer} mittel={aufnahmewerte.mittel} rufgruppen={rufgruppen} stand={funk.stand} />}
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf: vorschau }} />
       {versuch.anzeige}
     </Maske>
