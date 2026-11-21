@@ -205,8 +205,9 @@ describe("R2-LdF P2-4: die Schwellenzahl getrennt nach LdF und FmZ", () => {
     const ereignisse = [
       ...anfang(["ldfStation", true]),
       ausgang(0, "A1"),
-      vermerk(0, "NachrichtAngenommen", { nachrichtId: "A1" }, { zeitpunkt: um(0), handzeichen: "Fm" }),
       ausgang(0, "A2"),
+      // Seit FOLD_VERSION 15 steht ein Ausgang bis zur Zuteilung beim LdF; A2 ist zugeteilt und liegt vor der FmZ.
+      vermerk(0, "NachrichtUebermittlungVorgeschlagen", { nachrichtId: "A2" }, { mittel: "FUNK", fernmelder: "Fm1", zeitpunkt: um(0), handzeichen: "Ld" }),
     ];
     const lage = nachrichtenlage(zustand(ereignisse), ["FMZ"], um(25));
     expect(lage).toMatchObject({ ueberSchwelle: 2, ueberSchwelleLdf: 1, ueberSchwelleFmz: 1 });

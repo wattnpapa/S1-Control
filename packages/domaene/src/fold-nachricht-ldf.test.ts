@@ -78,18 +78,20 @@ describe("LdF im Katalog", () => {
 });
 
 describe("LdF im Fold: Ausgang", () => {
-  it("mit Parameter: angenommen vor dem LdF, mit Vorschlag wieder vor der FmZ, befördert erledigt", () => {
+  it("mit Parameter: aufgegeben gleich beim LdF, mit Zuteilung vor der FmZ, befördert erledigt (FOLD_VERSION 15)", () => {
     const angelegt = [...grundlage(true), ausgang("A1")];
-    expect(lauf(zustand(angelegt), "A1")).toBe("VOR_FMZ");
-    const angenommen = [...angelegt, vermerk("NachrichtAngenommen", "A1", annahme)];
-    const z = zustand(angenommen);
+    const z = zustand(angelegt);
     expect(z.einsatz?.ldfStation?.wert).toBe(true);
+    // Der LdF sichtet den Ausgang vor jedem Fernmelder — auch ohne Annahme.
     expect(lauf(z, "A1")).toBe("VOR_LDF");
-    const festgelegt = [...angenommen, vermerk("NachrichtUebermittlungVorgeschlagen", "A1", festlegung)];
+    expect(lauf(zustand([...angelegt, vermerk("NachrichtAngenommen", "A1", annahme)]), "A1")).toBe("VOR_LDF");
+    const festgelegt = [...angelegt, vermerk("NachrichtUebermittlungVorgeschlagen", "A1", festlegung)];
     const zf = zustand(festgelegt);
     expect(zf.nachrichten?.["A1"]?.vorschlag?.wert).toEqual(festlegung);
     expect(lauf(zf, "A1")).toBe("VOR_FMZ");
-    expect(lauf(zustand([...festgelegt, vermerk("NachrichtBefoerdert", "A1", befoerderung)]), "A1")).toBe("ERLEDIGT");
+    const angenommen = [...festgelegt, vermerk("NachrichtAngenommen", "A1", annahme)];
+    expect(lauf(zustand(angenommen), "A1")).toBe("VOR_FMZ");
+    expect(lauf(zustand([...angenommen, vermerk("NachrichtBefoerdert", "A1", befoerderung)]), "A1")).toBe("ERLEDIGT");
   });
 
   it("ohne Parameter bleibt der angenommene Ausgang vor der FmZ — auch mit Vorschlag", () => {

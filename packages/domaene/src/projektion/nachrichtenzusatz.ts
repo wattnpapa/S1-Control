@@ -50,16 +50,16 @@ export function wartegrundlage(n: NachrichtZustand, annahme?: Zeitvermerk): Wart
 /**
  * Seit wann die Nachricht beim LdF liegt (R2-LdF P1-2, R2-Si P1-1): der
  * Eingang ab der Aufnahme (Eintreffen, eine frühere nacherfasste Aufnahme
- * geht vor), der Ausgang ab der Annahme.
+ * geht vor), der Ausgang ab der Annahme oder, seit er vor der Annahme beim
+ * LdF steht (FOLD_VERSION 15), ab dem Eintreffen.
  */
 function vorLdfSeit(n: NachrichtZustand, richtung: string, annahme: Zeitvermerk | null | undefined): string | undefined {
   if (richtung === "EINGANG") {
     const aufnahme = n.aufnahme?.wert as Zeitvermerk | null | undefined;
     return iso(eintreffenMs(n.angelegtMit.millisekunden, typeof aufnahme?.zeitpunkt === "string" ? aufnahme : undefined));
   }
-  const angenommen = n.annahme?.hlc.millisekunden;
-  if (angenommen === undefined) return undefined;
-  return iso(eintreffenMs(angenommen, typeof annahme?.zeitpunkt === "string" ? annahme : undefined));
+  const seit = n.annahme?.hlc.millisekunden ?? n.angelegtMit.millisekunden;
+  return iso(eintreffenMs(seit, typeof annahme?.zeitpunkt === "string" ? annahme : undefined));
 }
 
 /** Minuten beim LdF, solange VOR_LDF (`wartetSeitLdf` der Zeile). */

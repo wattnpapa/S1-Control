@@ -31,6 +31,9 @@ const STELLE_WORT: Readonly<Record<string, string>> = {
   SICHTER: "Sichter",
   FMZ: "FmZ",
   LDF: "LdF",
+  FM1: "Fm1",
+  FM2: "Fm2",
+  FM3: "Fm3",
 };
 const KOPIE_WORT: Readonly<Record<string, string>> = { ROT: "rot", GRUEN: "grün", BLAU: "blau" };
 const MITTEL_WORT: Readonly<Record<string, string>> = {

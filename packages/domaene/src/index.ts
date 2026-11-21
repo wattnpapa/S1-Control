@@ -76,6 +76,17 @@ export {
   type TaktischeEbene,
 } from "./ereignis.js";
 
+// Die Fernmelder als eigene Stellen (KONZEPT-NACHRICHTEN.md §4, §5); `FMZ` bleibt Altwert.
+export {
+  FERNMELDERSTELLEN,
+  STELLE_FMZ,
+  eigeneFernmelder,
+  fernmeldername,
+  hatFernmelderstelle,
+  istFernmelderstelle,
+  istZugeteilt,
+} from "./fernmelderstellen.js";
+
 // Vorab-Check fuer das Aufteilen (§5.4.2) — Maske und Worker teilen die Regel.
 export { aufteilungPruefen, type Aufteilungsbefund } from "./aufteilung.js";
 

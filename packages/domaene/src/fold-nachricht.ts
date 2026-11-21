@@ -101,15 +101,21 @@ function hat(felder: ReadonlyMap<string, Feld<unknown>>, name: string): boolean 
 
 /**
  * Steht die Nachricht beim LdF? Nur mit dem Parameter: ein Ausgang, der
- * angenommen ist, aber weder einen Übermittlungsvorschlag trägt noch
- * befördert ist (Folie 22: der LdF legt das Mittel fest, bevor der
- * Fernmelder übermittelt — `NachrichtUebermittlungVorgeschlagen`); ein Eingang
- * der FmZ (mit Aufnahmevermerk), der weder weitergegeben noch gesichtet ist
- * (Stabsdienstordnung: Fernmelder → LdF → Sichter). Ohne Annahme steht der
- * Ausgang noch vor der FmZ, ohne Aufnahme lief der Eingang nicht über sie.
+ * weder einen Übermittlungsvorschlag trägt noch befördert ist (Folie 22: der
+ * LdF legt das Mittel fest, bevor der Fernmelder übermittelt —
+ * `NachrichtUebermittlungVorgeschlagen`); ein Eingang der FmZ (mit
+ * Aufnahmevermerk), der weder weitergegeben noch gesichtet ist
+ * (Stabsdienstordnung: Fernmelder → LdF → Sichter). Ohne Aufnahme lief der
+ * Eingang nicht über die FmZ.
+ *
+ * Geändert 2026-11-21 (FOLD_VERSION 15, Fernmelder als eigene Stellen): Der
+ * Ausgang kommt **gleich nach dem Aufgeben** zum LdF, nicht erst nach der
+ * Annahme. Der LdF sichtet ihn und teilt ihn einem Fernmelder zu, der ihn
+ * dann annimmt und überträgt; vorher nahm ein beliebiger Fernmelder ihn an,
+ * bevor der LdF ihn sah.
  */
 function vorLdf(felder: ReadonlyMap<string, Feld<unknown>>, ausgang: boolean): boolean {
-  if (ausgang) return hat(felder, "annahme") && !hat(felder, "vorschlag") && !hat(felder, "befoerderung");
+  if (ausgang) return !hat(felder, "vorschlag") && !hat(felder, "befoerderung");
   return hat(felder, "aufnahme") && !hat(felder, "weitergabe") && !hat(felder, "sichtung");
 }
 

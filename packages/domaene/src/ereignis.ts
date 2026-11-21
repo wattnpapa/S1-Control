@@ -193,9 +193,13 @@ export const NACHRICHT_STELLEN = [
   "SICHTER",
   "FMZ",
   "LDF",
+  // Ergänzt 2026-11-21: die Fernmelder als eigene Stellen; `FMZ` bleibt als Altwert lesbar (fernmelderstellen.ts).
+  "FM1",
+  "FM2",
+  "FM3",
 ] as const;
 
-/** Die Fernmelder der Fernmeldezentrale im Standard; der LdF teilt eine Nachricht einem von ihnen zu. */
+/** Die Fernmelder der Fernmeldezentrale im Standard — die Namen der Stellen FM1 bis FM3; der LdF teilt eine Nachricht einem von ihnen zu. */
 export const FERNMELDER_STANDARD = ["Fm1", "Fm2", "Fm3"] as const;
 
 /** Die Kopiefarben des Verteilers: grün Hauptempfänger, blau Mitleser, rot S2 (§2). Offen. */

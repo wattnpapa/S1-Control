@@ -74,8 +74,11 @@ import type {
  * Parameter `sichterSchwelleBlitzMinuten`/`sichterSchwelleSofortMinuten` des
  * Einsatzes (R2-FM P2-5, R2-Si P2-2) — ein Schnappschuss der Fassung 13
  * hätte die Berichtigung als unbekannte Art gefaltet.
+ * **15** (2026-11-21, Fernmelder als eigene Stellen): Mit `ldfStation` steht
+ * ein Ausgang schon vor der Annahme beim LdF (VOR_LDF), bis der LdF ihn einem
+ * Fernmelder zuteilt — ein Schnappschuss der Fassung 14 führte ihn VOR_FMZ.
  */
-export const FOLD_VERSION = 14;
+export const FOLD_VERSION = 15;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert

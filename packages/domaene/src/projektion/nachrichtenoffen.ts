@@ -15,11 +15,11 @@
  *  * LdF P2-2 / ETB P2-2: Lücken in der Nummernfolge fielen nicht auf.
  */
 
+import { hatFernmelderstelle } from "../fernmelderstellen.js";
 import { standDerZeile } from "./nachrichtenstand.js";
 import { vergleicheNachrichten, type Nachrichtenzeile } from "./nachrichtenzeile.js";
 
-/** Die bekannten Stellen der Stationen im Laufweg (§4). */
-const FMZ = "FMZ";
+/** Die bekannten Stellen der Stationen im Laufweg (§4); die Fernmelder erkennt `hatFernmelderstelle`. */
 const LDF = "LDF";
 const SICHTER = "SICHTER";
 
@@ -37,7 +37,7 @@ function eigenerAusgang(zeile: Nachrichtenzeile, stellen: readonly string[]): bo
 
 /** Liegt die Zeile in einer Warteschlange, die eine der Stellen bedient? */
 function inEigenerWarteschlange(zeile: Nachrichtenzeile, stellen: readonly string[], umfeld: Offenumfeld): boolean {
-  const fmz = stellen.includes(FMZ);
+  const fmz = hatFernmelderstelle(stellen);
   const { laufstand, ohneNummer } = standDerZeile(zeile);
   switch (laufstand) {
     case "vorFmz":
