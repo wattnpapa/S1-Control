@@ -147,7 +147,10 @@ Abschnitt 5.
 Jeder Arbeitsplatz bekommt in den Einstellungen neben Anzeigename und Profil
 zwei Angaben: die Stelle und das Handzeichen. Die Stelle ist ein Wert aus
 der Liste des Vordrucks (Leiter, S1, S2, S3, S4, S6, Fachberater,
-Verbindungsstelle, Sichter, FmZ) oder ein freier Name; das Handzeichen sind
+Verbindungsstelle, Sichter, LdF, Fm1, Fm2, Fm3; ergänzt 2026-11-21: die
+Stelle FmZ ist auf den LdF und die Fernmelder Fm1 bis Fm3 aufgeteilt, der
+Wert `FMZ` bleibt als Fernmelder ohne Nummer lesbar, `fernmelderstellen.ts`)
+oder ein freier Name; das Handzeichen sind
 zwei bis vier Zeichen, wie sie der Vordruck in Feld 2 bis 4, 17 und 18
 verlangt. Beide stehen in der Präsenzdatei, damit die anderen Arbeitsplätze
 sehen, welche Stellen besetzt sind, und beide sind ein Zuschnitt, kein Recht (beim oberen Teil des Vordrucks
@@ -177,10 +180,13 @@ zum Knopf „Aufgeben" ist sie ein Entwurf dieses Fensters (`entwurf.ts`), kein
 Ereignis; eStab kennt ebenfalls keinen gespeicherten Entwurf. „Aufgeben"
 schreibt `NachrichtVerfasst` mit Richtung Ausgang, und die Nachricht erscheint
 in der Ausgangswarteschlange der FmZ. Dort sieht der LdF (eigene Stelle `LDF`) die Nachricht und
-bestimmt, welcher Fernmelder (im Standard Fm1 bis Fm3) auf welchem Weg an
+bestimmt, welcher Fernmelder (Stellen `FM1` bis `FM3`, Name „Fm1“ bis „Fm3“) auf welchem Weg an
 welche Gegenstelle übertragen soll: der Übermittlungsvorschlag
-(`NachrichtUebermittlungVorgeschlagen`). Er steht in der Warteschlange und
-belegt die Maske „Befördern" vor; der Fernmelder kann ihn ändern. Dort setzt der Fernmelder den
+(`NachrichtUebermittlungVorgeschlagen`, in der Oberfläche „Fernmelder zuteilen“). Er steht in der Warteschlange und
+belegt die Maske „Befördern" vor; der Fernmelder kann ihn ändern. Ergänzt
+2026-11-21: Mit `ldfStation` kommt der Ausgang schon vor der Annahme zum LdF
+(FOLD_VERSION 15), und die Warteschlange des zugeteilten Fernmelders zeigt
+ihn zuoberst mit „für Sie“; die übrigen bleiben sichtbar. Dort setzt der Fernmelder den
 Annahmevermerk (`NachrichtAngenommen`, Uhrzeit und Handzeichen) und nach der
 Übermittlung den Beförderungsvermerk mit Mittel und Gegenstelle
 (`NachrichtBefoerdert`), und er trägt sie in die Nachweisung ein
@@ -267,8 +273,9 @@ Leiter des Fernmeldebetriebes (ergänzt 2026-11-17, mit Johannes bestätigt).
 Nach der Lehrunterlage (Folie 22) legt der LdF in der FmZ das
 Übertragungsmittel fest, und in der Stabsdienstordnung der Führungsstelle
 steht er beim Eingang zwischen Fernmelder und Sichter. Führt der Einsatz den
-Parameter `ldfStation` (Vorbelegung nein), läuft ein angenommener Ausgang
-ohne Vorschlag zuerst zum LdF, der mit dem Übermittlungsvorschlag
+Parameter `ldfStation` (ein neu angelegter Einsatz schreibt ihn seit
+2026-11-21 mit ja; ältere Einsätze ohne den Parameter bleiben ohne LdF),
+läuft ein Ausgang ohne Vorschlag zuerst zum LdF, der mit dem Übermittlungsvorschlag
 (`NachrichtUebermittlungVorgeschlagen`, oben unter „Ausgang") Fernmelder,
 Mittel und Gegenstelle bestimmt; die Beförderungsmaske belegt damit vor.
 Ein eigenes Ereignis für die Festlegung des Wegs gibt es nicht, der

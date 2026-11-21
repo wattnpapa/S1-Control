@@ -289,7 +289,7 @@ lässt sich später so nacherfassen, wie es auf dem Blatt steht.
 
 **Stelle und Handzeichen.** Nach dem Öffnen eines Einsatzes fragt das
 Programm, welche Position dieser Arbeitsplatz im Stab hat (Leiter, S1 bis S6,
-Fachberater, Verbindungsstelle, Sichter, FmZ, LdF, auch mehrere zugleich oder ein
+Fachberater, Verbindungsstelle, Sichter, LdF, Fm1, Fm2, Fm3, auch mehrere zugleich oder ein
 freier Name wie „Polizei“), und das Handzeichen mit zwei bis vier Zeichen.
 Die Wahl gilt, bis der Einsatz geschlossen wird, die anderen Arbeitsplätze
 sehen sie als besetzte Stelle, und beim nächsten Öffnen desselben Einsatzes
@@ -370,7 +370,10 @@ eigene Stelle ein, steht ein Hinweis in der Leiste („Blitz-Nachricht E 26
 für S4: …“); bei Blitz spielt das Programm zwei kurze Töne. Der Ton lässt
 sich unter „Dieser Arbeitsplatz“ auf der Einsatzauswahl abschalten.
 
-**Fernmeldezentrale.** Wer die Stelle FmZ hat, landet in der Sicht
+**Fernmeldezentrale.** Die Fernmeldezentrale besetzen der LdF und die
+Fernmelder Fm1 bis Fm3; die frühere Sammelstelle „FmZ“ gibt es nicht mehr
+zur Wahl (ein älterer Arbeitsplatz, der sie noch führt, gilt als Fernmelder
+ohne Nummer). Wer einen der Fernmelder Fm1 bis Fm3 hat, landet in der Sicht
 „Fernmeldezentrale“. Links steht die Ausgangswarteschlange: alles, was
 aufgegeben und noch nicht befördert ist, Vorrang oben. Jede Zeile hat drei
 Knöpfe. „Annehmen“ setzt den Annahmevermerk, „Befördern“ den
@@ -509,22 +512,29 @@ gilt nicht, ein Blitz wartet nie länger als eine einfache Nachricht.
 stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
 ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
 nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20). Dazu kommen
-„LdF als eigene Station“ (Vorbelegung nein), siehe unten, und die Schwellen
+„LdF als eigene Station“ (bei neu angelegten Einsätzen eingeschaltet, bei älteren Einsätzen aus), siehe unten, und die Schwellen
 vor dem Sichter bei Blitz und Sofort (Vorbelegung 5 und 10 Minuten, siehe
 „Säumiger Sichter“).
 
 **Leiter des Fernmeldebetriebes (LdF).** Führt der Einsatz den LdF als
 eigene Station (Kästchen „LdF als eigene Station“ unter „Nachrichtenweg“),
-läuft jede Nachricht der FmZ einmal über ihn. Beim Ausgang bestimmt er nach
-der Annahme mit „Übermittlung vorschlagen“ Fernmelder, Mittel und
-Gegenstelle; beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
+läuft jede Nachricht der FmZ einmal über ihn. Ein Ausgang kommt gleich nach
+dem Aufgeben zu ihm, noch vor der Annahme: Er sichtet ihn und teilt ihn mit
+„Fernmelder zuteilen“ einem der Fernmelder Fm1, Fm2 oder Fm3 zu, mit Mittel
+und Gegenstelle; die Auswahl nennt, wer den Fernmelder gerade besetzt
+(„Fm2 · Meyer“). Der zugeteilte Fernmelder nimmt die Nachricht an und
+überträgt sie. Beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
 Nummer und gibt die Nachricht an den Sichter weiter. Wer die Stelle LdF
-wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor dem
-Vorschlag“ mit dem Knopf „Übermittlung vorschlagen“ und „Eingänge vor der
+wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor der
+Zuteilung“ mit dem Knopf „Fernmelder zuteilen“ und „Eingänge vor der
 Weitergabe“ mit dem Knopf „An den Sichter weitergeben“ (Uhrzeit,
 Handzeichen). Das Band zeigt dann die Zahl „vor dem LdF“. In der
-Warteschlange der FmZ trägt ein angenommener Ausgang ohne Vorschlag die
-Marke „beim LdF“; „Befördern“ belegt Mittel und Gegenstelle mit dem
+Warteschlange der FmZ trägt ein Ausgang ohne Zuteilung die
+Marke „beim LdF“. Wer als Fm1, Fm2 oder Fm3 eingetragen ist, sieht die ihm
+zugeteilten Nachrichten zuoberst mit der Marke „für Sie“, darunter die ohne
+Zuteilung und die der anderen; „nur meine“ blendet die übrigen aus. Jeder
+Fernmelder kann trotzdem jede Nachricht befördern, etwa wenn ein Platz
+ausfällt; „Befördern“ belegt Mittel und Gegenstelle mit dem
 Vorschlag vor. Der Weg des LdF steht in der Nachweisung als Marke und auf
 dem Vordruck als Übermittlungsweg (Feld 1) und in den Vermerken mit seinem
 Handzeichen. Ein Eingang mit Sofort oder Blitz meldet sich beim LdF, sobald
@@ -541,7 +551,7 @@ tragen Nachweisung und Tagebuch die Marke „ohne Vorschlag des LdF“; nimmt
 sie ein anderes Mittel als vorgeschlagen, steht „abweichend vom Vorschlag
 (Telefon → Funk)“ dort und als Hinweis beim Befördern. Ist kein LdF besetzt,
 tragen die Zeilen beim LdF das als Angabe („LdF nicht besetzt“); die
-Auswahl der Fernmelder im Vorschlag nennt die Arbeitsplätze mit der Stelle FmZ.
+Auswahl der Fernmelder in der Zuteilung nennt Fm1 bis Fm3 mit den Arbeitsplätzen, die sie besetzen.
 
 **Zwei Sichter zugleich.** Haben zwei Sichter dieselbe Nachricht gesichtet,
 ohne die Sichtung des anderen zu sehen, nimmt das Programm beide an: Der
