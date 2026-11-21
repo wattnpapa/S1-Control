@@ -202,7 +202,7 @@ interface VordruckEigenschaften {
   readonly t: ReturnType<typeof useMaskenteile>;
   readonly p: ReturnType<typeof useMaskenpruefung>;
   readonly aufnahme: Aufnahmeumfeld | undefined;
-  readonly umfeld: { readonly sichterDa: boolean; readonly anschriften: readonly string[]; readonly setze: Setze };
+  readonly umfeld: { readonly sichterDa: boolean; readonly anschriften: readonly string[]; readonly gegenstellen: readonly Gegenstelle[] | undefined; readonly setze: Setze };
 }
 
 /** Die drei Teile des Vordrucks, je nach Lage: Aufnahme oder Nachtrag oben, Laufzettel unten. */
@@ -212,9 +212,9 @@ function Vordruck({ t, p, aufnahme, umfeld }: VordruckEigenschaften): React.JSX.
   return (
     <div className="vordruck">
       {p.fmz ? (
-        <Aufnahmeteil werte={t.aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme?.vergebeneNummern} platzhalter={platzhalter} />
+        <Aufnahmeteil werte={t.aufnahmewerte} aufAenderung={t.aufAufnahme} vergebeneNummern={aufnahme?.vergebeneNummern} platzhalter={platzhalter} gegenstellen={umfeld.gegenstellen} />
       ) : p.ausgangVomBlatt ? (
-        <Nachtragsteil werte={t.nachtragswerte} aufAenderung={t.setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} />
+        <Nachtragsteil werte={t.nachtragswerte} aufAenderung={t.setzeNachtragswerte} vergebeneNummern={aufnahme?.vergebeneNummern} gegenstellen={umfeld.gegenstellen} />
       ) : (
         <FmzTeil />
       )}
@@ -311,7 +311,7 @@ export function Nachrichtenmaske({ titel = "Nachricht verfassen", vorlage, ansch
       <Nachtragsschalter an={nachtrag} aufAn={t.schalteNachtrag} />
       {vorbehalt.hinweis}
       <Maskenhinweis werte={werte} />
-      <Vordruck t={t} p={p} aufnahme={aufnahme} umfeld={{ sichterDa: umfeld.sichterDa, anschriften: [...new Set([...besetzteStellen(umfeld.peers), ...anschriften])], setze }} />
+      <Vordruck t={t} p={p} aufnahme={aufnahme} umfeld={{ sichterDa: umfeld.sichterDa, anschriften: [...new Set([...besetzteStellen(umfeld.peers), ...anschriften])], gegenstellen, setze }} />
       <Vordruckvorschau ort="maske" quelle={{ art: "entwurf", entwurf: vorschau }} />
       {versuch.anzeige}
     </Maske>
