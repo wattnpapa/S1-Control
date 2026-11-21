@@ -317,6 +317,20 @@ besetzt — die Kopie wartet im Fach. Der Ausgang steht damit im Posteingang
 beider Stellen, läuft als VERTEILT und nach der Erledigung als ERLEDIGT. Mit
 `sichtungAuchAusgang` entfällt der Schritt, weil dann der Sichter verteilt.
 
+Geändert 2026-11-21 (mit Johannes abgestimmt, FOLD_VERSION 16): Mit
+`ldfStation` lautet der Weg eines Ausgangs Verfasser → LdF (Zuteilung an
+einen Fernmelder) → Fernmelder (Annahme, Beförderung) → LdF (Nachweisung im
+Technischen Betriebsbuch, `NachrichtWeitergegeben`) → Sichter (Verteilung
+S2 rot, Verfasser grün). Nach `NachrichtBefoerdert` steht der Ausgang
+deshalb wieder VOR_LDF, nach der Weitergabe VOR_SICHTER; der Worker
+schreibt die Kopien nicht mehr. Die Weitergabemaske nimmt die Nummer auf,
+wenn sie fehlt (`nachrichtenfolge.nachweis`, Folge `NachrichtNachgewiesen`),
+der Laufzettel belegt beim Ausgang S2 rot und die Verfasserstelle grün vor.
+Ersatzregeln: Ohne LdF folgt auf die Beförderung die Weitergabe mit Zeit
+und Handzeichen der Beförderung; ohne Sichter folgen auf die Weitergabe
+(oder ohne LdF auf die Beförderung) die Kopien wie oben. Ohne `ldfStation`
+bleibt alles wie oben beschrieben.
+
 ## 6. Das Blatt „Nachrichten"
 
 Ein eigener Reiter im Kopfband, bei der Führungsstelle zwischen Eingang und
