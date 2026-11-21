@@ -27,12 +27,12 @@
 
 import { NACHRICHT_MITTEL, projektion, type Nachweisvermerk } from "@s1/domaene";
 
-import type { Entwurf } from "../kontrakt/index.js";
+import type { Entwurf, Gegenstelle } from "../kontrakt/index.js";
 import type { Nachrichtenfolge } from "../kontrakt/fmzschritte.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
-import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
+import { Gegenstellenfeld } from "./Gegenstellenfeld.js";
 
 /** Der Platzhalter der leeren Zeitfelder im Nachtrag. */
 export const PLATZHALTER_VOM_BLATT = "vom Blatt";
@@ -121,6 +121,8 @@ export interface NachtragsteilEigenschaften {
   readonly werte: Nachtragswerte;
   readonly aufAenderung: (werte: Nachtragswerte) => void;
   readonly vergebeneNummern?: readonly number[] | undefined;
+  /** Additiv: die Einheiten der Lage als Vorschläge für die Gegenstelle; Freitext bleibt erlaubt. */
+  readonly gegenstellen?: readonly Gegenstelle[] | undefined;
 }
 
 function Hdzfeld({ wert, aufAenderung, name }: { readonly wert: string; readonly aufAenderung: (wert: string) => void; readonly name: string }): React.JSX.Element {
@@ -133,7 +135,7 @@ function Hdzfeld({ wert, aufAenderung, name }: { readonly wert: string; readonly
 }
 
 /** Der obere Teil eines Ausgangs vom Blatt: Annahme, Beförderung, Nummer in einem Zug (Fernmelder P2-9). */
-export function Nachtragsteil({ werte, aufAenderung, vergebeneNummern }: NachtragsteilEigenschaften): React.JSX.Element {
+export function Nachtragsteil({ werte, aufAenderung, vergebeneNummern, gegenstellen }: NachtragsteilEigenschaften): React.JSX.Element {
   const setze = (feld: keyof Nachtragswerte) => (wert: string): void => aufAenderung({ ...werte, [feld]: wert });
   const warnung = nummerWarnung(nummerAusEingabe(werte.nummer), vergebeneNummern);
   return (
@@ -158,10 +160,7 @@ export function Nachtragsteil({ werte, aufAenderung, vergebeneNummern }: Nachtra
         <Hdzfeld name="Beförderung" wert={werte.befoerderungHz} aufAenderung={setze("befoerderungHz")} />
       </div>
       <div className="vordruckzeile">
-        <label>
-          {GEGENSTELLE_BESCHRIFTUNG}
-          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} placeholder={PLATZHALTER_VOM_BLATT} onChange={(e) => setze("gegenstelle")(e.target.value)} />
-        </label>
+        <Gegenstellenfeld wert={werte.gegenstelle} aufAenderung={setze("gegenstelle")} gegenstellen={gegenstellen} platzhalter={PLATZHALTER_VOM_BLATT} />
         <label>
           Nr.
           <input value={werte.nummer} inputMode="numeric" className="mono" placeholder={PLATZHALTER_VOM_BLATT} onChange={(e) => setze("nummer")(e.target.value)} />

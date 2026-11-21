@@ -75,7 +75,7 @@ import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrerMitStelle, sperrtext, useFremdsperren, useSperreHalten } from "./useBearbeitungssperre.js";
 import { FmzTeil, NachrichtenteilAnzeige } from "./Vordruckteile.js";
 import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen } from "./Vorwertkonflikt.js";
-import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
+import { Gegenstellenfeld } from "./Gegenstellenfeld.js";
 
 export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
@@ -220,15 +220,7 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
             ))}
           </select>
         </label>
-        <label>
-          {GEGENSTELLE_BESCHRIFTUNG}
-          <input value={e.gegenstelle} title={GEGENSTELLE_HILFE} list="gegenstellenliste" placeholder="Einheit wählen oder Freitext" onChange={(ev) => setze("gegenstelle", ev.target.value)} />
-          <datalist id="gegenstellenliste">
-            {wahl.gegenstellen.map((g) => (
-              <option key={g.einheitId} value={g.name} />
-            ))}
-          </datalist>
-        </label>
+        <Gegenstellenfeld wert={e.gegenstelle} aufAenderung={(wert) => setze("gegenstelle", wert)} gegenstellen={wahl.gegenstellen} />
       </div>
       {schritt === "befoerderung" && <Funkkontaktwahl treffer={wahl.treffer} mittel={e.mittel} rufgruppen={wahl.rufgruppen} stand={wahl.kontakt} />}
     </>

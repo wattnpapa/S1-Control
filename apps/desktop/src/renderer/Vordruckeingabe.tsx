@@ -27,12 +27,14 @@
 
 import { NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Sichtungsvermerk } from "@s1/domaene";
 
+import type { Gegenstelle } from "../kontrakt/index.js";
+
 import { AUFNAHMEFOLGE, aufnahmeplatz } from "./aufnahmefolge.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung, type Aufnahmewerte } from "./fmzformate.js";
 import { handzeichenPflicht, zeitAusEingabe } from "./nachrichtenformate.js";
 import { VERTEILER_VORBELEGUNG, Verteilermatrix, hauptempfaengerWarnung, type Verteilerwahl } from "./Verteilerraster.js";
-import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.js";
+import { Gegenstellenfeld } from "./Gegenstellenfeld.js";
 
 export interface AufnahmeEigenschaften {
   readonly werte: Aufnahmewerte;
@@ -40,10 +42,12 @@ export interface AufnahmeEigenschaften {
   readonly vergebeneNummern: readonly number[] | undefined;
   /** Additiv (Fernmelder P2-3): im Nachtrag vom Papier „vom Blatt“ im leeren Zeitfeld. */
   readonly platzhalter?: string | undefined;
+  /** Additiv: die Einheiten der Lage als Vorschläge für die Gegenstelle; Freitext bleibt erlaubt. */
+  readonly gegenstellen?: readonly Gegenstelle[] | undefined;
 }
 
 /** Der obere Teil zum Ausfüllen — nur für die FmZ beim Aufnehmen eines Eingangs. */
-export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalter }: AufnahmeEigenschaften): React.JSX.Element {
+export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalter, gegenstellen }: AufnahmeEigenschaften): React.JSX.Element {
   const setze = (feld: keyof Aufnahmewerte, wert: string): void => aufAenderung({ ...werte, [feld]: wert });
   const warnung = nummerWarnung(nummerAusEingabe(werte.nummer), vergebeneNummern);
   return (
@@ -68,10 +72,7 @@ export function Aufnahmeteil({ werte, aufAenderung, vergebeneNummern, platzhalte
         </label>
       </div>
       <div className="vordruckzeile">
-        <label>
-          {GEGENSTELLE_BESCHRIFTUNG}
-          <input value={werte.gegenstelle} title={GEGENSTELLE_HILFE} data-tabfolge={AUFNAHMEFOLGE.gegenstelle} placeholder="z. B. Heros Wildeshausen" onChange={(e) => setze("gegenstelle", e.target.value)} />
-        </label>
+        <Gegenstellenfeld wert={werte.gegenstelle} aufAenderung={(wert) => setze("gegenstelle", wert)} gegenstellen={gegenstellen} tabfolge={AUFNAHMEFOLGE.gegenstelle} />
         <label>
           Nr.
           <input value={werte.nummer} inputMode="numeric" className="mono" data-tabfolge={AUFNAHMEFOLGE.nummer} placeholder={platzhalter} title={platzhalter === undefined ? "Vorbelegt mit der nächsten Nummer; leer lassen, wenn die Nummer später vergeben wird" : "Die Nummer vom Blatt; im Nachtrag nicht vorbelegt (R2-LdF P3-7)"} onChange={(e) => setze("nummer", e.target.value)} />
