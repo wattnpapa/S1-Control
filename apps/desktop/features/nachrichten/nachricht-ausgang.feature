@@ -15,10 +15,11 @@ Funktionalität: Ausgang über den Nachrichtenvordruck
       | S4     | Ru          |
       | FMZ    | Ha          |
       | LDF    | Sch         |
+      | SICHTER | Si         |
       | S2     | Mü          |
     Und die Station LdF ist für den Einsatz eingeschaltet
 
-  Szenario: S4 verfasst eine Nachricht an den OV Wildeshausen und sie wird übermittelt
+  Szenario: S4 verfasst eine Nachricht an den OV Wildeshausen, LdF teilt zu, Fernmelder überträgt, LdF weist nach, Sichter verteilt
     Wenn S4 eine Nachricht mit diesen Angaben verfasst
       | Feld           | Wert                                   |
       | Anschrift      | OV Wildeshausen                        |
@@ -33,7 +34,11 @@ Funktionalität: Ausgang über den Nachrichtenvordruck
     Wenn die FmZ die Nachricht annimmt
     Dann trägt die Nachricht den Annahmevermerk mit Uhrzeit und Handzeichen "Ha"
     Wenn der Fernmelder die Nachricht über "Funk" an "Heros Wildeshausen 10" befördert
-    Und die FmZ die Nachricht unter Nummer 1 nachweist
+    Dann hat die Nachricht den Laufzustand "beim LdF"
+    Wenn der LdF die Nachricht unter Nummer 1 nachweist
+    Und der LdF die Nachricht an den Sichter weitergibt
+    Dann hat die Nachricht den Laufzustand "vor dem Sichter"
+    Wenn der Sichter die Nachricht quittiert und an "S2 rot, S4 grün" verteilt
     Dann steht die Nachricht in der Nachweisung als "A 1"
     Und steht die Nachricht im Ausgang von S4 als befördert mit Zeit und Handzeichen "Ha"
     Und ist die grüne Kopie an S4 zurück

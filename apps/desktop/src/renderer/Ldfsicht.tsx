@@ -3,6 +3,11 @@
  * KONZEPT-NACHRICHTEN.md §5, §6) — zwei Karten für den Leiter des
  * Fernmeldebetriebes.
  *
+ * Zweite Karte (2026-11-21): Eingänge **und beförderte Ausgänge** vor der
+ * Weitergabe. Der LdF trägt die Nummer der Nachweisung ein, wenn sie fehlt,
+ * und gibt an den Sichter, der beim Ausgang S2 rot und den Verfasser grün
+ * verteilt.
+ *
  * Links die Ausgänge vor der Zuteilung: aufgegeben, ohne Übermittlungs-
  * vorschlag — seit 2026-11-21 schon vor der Annahme, denn der LdF sichtet
  * jeden Ausgang zuerst; „Fernmelder zuteilen" öffnet die Maske der FmZ mit
@@ -130,21 +135,35 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
   );
 }
 
+/** Beim Eingang der Aufnahmevermerk („von …“), beim beförderten Ausgang der Beförderungsvermerk („an …“). */
+function Wegvermerk({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
+  const ausgang = zeile.richtung === "AUSGANG";
+  const v = ausgang ? zeile.befoerderung : zeile.aufnahme;
+  return (
+    <>
+      <span className="nebenwert">{ausgang ? "A " : "E "}</span>
+      {v === undefined ? "—" : `${projektion.mittelWort(v.mittel)} ${vermerk(v)}`}
+      {zeile.gegenstelle !== undefined && <span className="nebenwert"> {ausgang ? "an" : "von"} {zeile.gegenstelle}</span>}
+    </>
+  );
+}
+
 function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: KartenEigenschaften): React.JSX.Element {
   return (
-    <section className="karte fmzkarte" aria-label="Eingänge vor der Weitergabe">
-      <h3>Eingänge vor der Weitergabe</h3>
+    <section className="karte fmzkarte" aria-label="Vor der Weitergabe">
+      <h3>Vor der Weitergabe an den Sichter</h3>
+      <p className="hinweistext">Aufgenommene Eingänge und beförderte Ausgänge: Nachweisung prüfen oder eintragen, dann an den Sichter.</p>
       {zeilen.length === 0 ? (
-        <p className="hinweistext">Kein Eingang wartet auf die Weitergabe an den Sichter.</p>
+        <p className="hinweistext">Keine Nachricht wartet auf die Weitergabe an den Sichter.</p>
       ) : (
-        <table className="nachrichtentabelle" aria-label="Eingänge vor der Weitergabe an den Sichter">
+        <table className="nachrichtentabelle" aria-label="Nachrichten vor der Weitergabe an den Sichter">
           <thead>
             <tr>
               <th scope="col" className="schmalspalte">Vorrang</th>
               <th scope="col" className="schmalspalte">Nr.</th>
               <th scope="col">Absender</th>
               <th scope="col">Betreff</th>
-              <th scope="col">Aufnahme</th>
+              <th scope="col">Aufnahme / Beförderung</th>
               <th scope="col" className="schmalspalte">Wartet</th>
               <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
@@ -161,13 +180,12 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td>{zeile.absender}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">
-                  {zeile.aufnahme === undefined ? "—" : `${projektion.mittelWort(zeile.aufnahme.mittel)} ${vermerk(zeile.aufnahme)}`}
-                  {zeile.gegenstelle !== undefined && <span className="nebenwert"> von {zeile.gegenstelle}</span>}
+                  <Wegvermerk zeile={zeile} />
                 </td>
                 <Wartezelle zeile={zeile} schwelleMinuten={schwelleMinuten} />
                 <td>
-                  <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Aufnahme und Nachweisung geprüft: an den Sichter"} onClick={() => aufSchritt(zeile)}>
-                    An den Sichter weitergeben
+                  <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Nachweisung geprüft oder eingetragen: an den Sichter"} onClick={() => aufSchritt(zeile)}>
+                    {zeile.nummer === undefined ? "Nachweisen und weitergeben" : "An den Sichter weitergeben"}
                   </button>
                 </td>
               </tr>
@@ -187,18 +205,21 @@ export interface LdfsichtEigenschaften {
   readonly aufVorschlag: (zeile: Nachrichtenzeile) => void;
   /** Additiv (R2-LdF P2-4): die Schwelle des Einsatzes für die Marke an der Wartezeit. */
   readonly schwelleMinuten?: number | undefined;
+  /** Additiv (2026-11-21): die nächste freie Nummer — Vorbelegung, wenn der LdF beim Weitergeben nachweist. */
+  readonly naechsteNummer?: number | undefined;
 }
 
 /** Die beiden Karten mit der Weitergabemaske; die Zeile bleibt der Stand beim Öffnen (Vorher-Wert). */
-export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE }: LdfsichtEigenschaften): React.JSX.Element {
+export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE, naechsteNummer }: LdfsichtEigenschaften): React.JSX.Element {
   const [weiter, setzeWeiter] = useState<Nachrichtenzeile | undefined>(undefined);
   return (
     <>
       <div className="fmzkarten untereinander">
-        <Ausgangskarte zeilen={zeilen.filter((z) => z.richtung === "AUSGANG")} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
-        <Eingangskarte zeilen={zeilen.filter((z) => z.richtung !== "AUSGANG")} nurLesen={nurLesen} aufSchritt={setzeWeiter} schwelleMinuten={schwelleMinuten} />
+        {/* 2026-11-21: der Ausgang vor der Beförderung zur Zuteilung, danach mit den Eingängen zur Nachweisung und Weitergabe. */}
+        <Ausgangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "zuteilung")} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
+        <Eingangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "weitergabe")} nurLesen={nurLesen} aufSchritt={setzeWeiter} schwelleMinuten={schwelleMinuten} />
       </div>
-      {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} aufSchliessen={() => setzeWeiter(undefined)} />}
+      {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} naechsteNummer={naechsteNummer} aufSchliessen={() => setzeWeiter(undefined)} />}
     </>
   );
 }

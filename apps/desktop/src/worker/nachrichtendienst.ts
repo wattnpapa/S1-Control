@@ -331,11 +331,13 @@ interface Treffer {
  * oder beim LdF, SICHTER den Eingang vor dem Sichter.
  */
 function warteschlangenstelle(zeile: Nachrichtenzeile, stellen: readonly string[]): string | undefined {
-  const ausgang = zeile.richtungKurz === "A" && !zeile.gespraechsnotiz && (zeile.laufzustand === "VOR_FMZ" || zeile.laufzustand === "VOR_LDF");
+  const schritt = projektion.ldfSchrittDer(zeile);
+  const ausgang = zeile.richtungKurz === "A" && !zeile.gespraechsnotiz && (zeile.laufzustand === "VOR_FMZ" || schritt === "zuteilung");
   if (ausgang) return stellen.find((s) => istFernmelderstelle(s) || s === "LDF");
   // R2-Si P1-1, R2-LdF P1-2: Ein Eingang mit Vorrang beim LdF meldet sich dem LdF —
   // bisher erst nach der Weitergabe beim Sichter, und ein Blitz konnte beim LdF liegen.
-  if (zeile.richtungKurz === "E" && zeile.laufzustand === "VOR_LDF") return stellen.includes("LDF") ? "LDF" : undefined;
+  // 2026-11-21: ebenso der beförderte Ausgang, der zur Nachweisung und Weitergabe beim LdF liegt.
+  if (schritt === "weitergabe") return stellen.includes("LDF") ? "LDF" : undefined;
   return zeile.laufzustand === "VOR_SICHTER" && stellen.includes("SICHTER") ? "SICHTER" : undefined;
 }
 

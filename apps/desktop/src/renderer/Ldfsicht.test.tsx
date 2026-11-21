@@ -99,7 +99,7 @@ describe("Die Sicht „LdF“", () => {
     expect(screen.getByLabelText("Zahlen der Nachrichten").textContent).toContain("vor dem LdF");
     const ausgaenge = await waitFor(() => screen.getByRole("table", { name: "Ausgänge vor der Zuteilung an einen Fernmelder" }));
     expect(attrappe.rufeDerArt("nachrichtenAnfordern")[0]).toMatchObject({ sicht: "ldf" });
-    const eingaenge = screen.getByRole("table", { name: "Eingänge vor der Weitergabe an den Sichter" });
+    const eingaenge = screen.getByRole("table", { name: "Nachrichten vor der Weitergabe an den Sichter" });
     expect(within(eingaenge).getByRole("row", { name: /Pumpen eingetroffen/ }).textContent).toContain("12");
 
     // Der Ausgangsschritt des LdF ist die Maske „Fernmelder zuteilen“ der FmZ.

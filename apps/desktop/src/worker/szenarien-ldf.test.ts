@@ -16,7 +16,7 @@ import type { Bedienergebnis, Lagebild, Mitteilung } from "../kontrakt/index.js"
 import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtenParameterSetzen, nachrichtVorschlagen, type Nachrichtenparameter } from "../kontrakt/fmzschritte.js";
 import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
 import { nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
-import { HINWEIS_ERSATZ_LDF_AUSGANG, HINWEIS_ERSATZ_LDF_EINGANG, HINWEIS_OHNE_VORSCHLAG } from "./laufwegfolgen.js";
+import { HINWEIS_ERSATZ_LDF_AUSGANG, HINWEIS_ERSATZ_LDF_EINGANG, HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG, HINWEIS_OHNE_VORSCHLAG, HINWEIS_ZURUECK_ZUM_LDF } from "./laufwegfolgen.js";
 import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
@@ -102,16 +102,18 @@ describe("Funktionalität: LdF als Station", () => {
 
     await takteBis([a, b]);
     const ergebnis = await a.dienst.bediene(nachrichtBefoerdern("A-1", null, befoerderung));
-    // Mit LdF in der Präsenz und Vorschlag wird nichts nachgetragen; nur die Kopien folgen.
+    // Mit LdF in der Präsenz und Vorschlag wird nichts nachgetragen; der Ausgang geht zurück zum LdF (FOLD_VERSION 16).
     expect(warnungen(ergebnis)).not.toContain(HINWEIS_ERSATZ_LDF_AUSGANG);
-    expect(zeile(a, "A-1")).toMatchObject({ laufzustand: "VERTEILT", vorschlag: { handzeichen: "Lf", fernmelder: "Fm2" } });
+    expect(warnungen(ergebnis)).toContain(HINWEIS_ZURUECK_ZUM_LDF);
+    expect(zeile(a, "A-1")).toMatchObject({ laufzustand: "VOR_LDF", vorschlag: { handzeichen: "Lf", fernmelder: "Fm2" } });
+    expect(zeile(a, "A-1")?.sichtung).toBeUndefined();
   });
 
   it("Szenario: Fernmelder Fm1 bis Fm3 — der LdF sieht den Ausgang vor jeder Annahme und teilt ihn Fm2 zu (2026-11-21)", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);
     a.dienst.stellenSetzen(["FM2"], "Ka");
-    b.dienst.stellenSetzen(["LDF"], "Lf");
+    b.dienst.stellenSetzen(["LDF", "SICHTER"], "Lf");
     await parameter(a, "ldfStation", true);
     await takteBis([a, b]);
     await a.dienst.bediene(nachrichtVerfassen(anlage()));
@@ -123,6 +125,7 @@ describe("Funktionalität: LdF als Station", () => {
     const ldf = sicht(b, "ldf");
     expect(ldf.fernmelder).toEqual(["Fm1", "Fm2", "Fm3"]);
     expect(ldf.fernmelderbesetzung).toEqual({ Fm2: "Arbeitsplatz 1" });
+    expect(sicht(b, "fmz").zeilen.map((z) => z.id)).toEqual(["A-1"]);
 
     const vorschlag = { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: jetzt(), handzeichen: "Lf" };
     expect((await b.dienst.bediene(nachrichtVorschlagen("A-1", null, vorschlag))).art).toBe("geschrieben");
@@ -134,7 +137,60 @@ describe("Funktionalität: LdF als Station", () => {
     const ergebnis = await a.dienst.bediene(nachrichtBefoerdern("A-1", null, { ...befoerderung, mittel: "FUNK", handzeichen: "Ka" }));
     expect(ergebnis.art).toBe("geschrieben");
     expect(warnungen(ergebnis)).not.toContain(HINWEIS_OHNE_VORSCHLAG);
-    expect(zeile(a, "A-1")).toMatchObject({ laufzustand: "VERTEILT", befoerderung: { handzeichen: "Ka" } });
+    await takteBis([a, b]);
+
+    // Zurück beim LdF: nicht mehr in der Schlange der FmZ, keine Kopien vom Worker.
+    expect(zeile(b, "A-1")).toMatchObject({ laufzustand: "VOR_LDF", befoerderung: { handzeichen: "Ka" } });
+    expect(zeile(b, "A-1")?.sichtung).toBeUndefined();
+    expect(sicht(a, "fmz", ["FM2"]).zeilen).toHaveLength(0);
+    expect(sicht(a, "fmz", ["FM2"]).ohneNummer ?? []).toHaveLength(0);
+
+    // Der LdF trägt die Nummer ins Betriebsbuch ein und gibt an den Sichter.
+    const weiter = { ...nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Lf" }), nachrichtenfolge: { nachweis: { nummer: 1, zeitpunkt: jetzt(), handzeichen: "Lf" } } };
+    expect((await b.dienst.bediene(weiter)).art).toBe("geschrieben");
+    expect(zeile(b, "A-1")).toMatchObject({ laufzustand: "VOR_SICHTER", nummer: 1 });
+    expect(sicht(b, "sichter").zeilen.map((z) => z.id)).toEqual(["A-1"]);
+
+    // Der Sichter verteilt: rot an S2 (Lage, Tagebuch), grün zurück an den Verfasser S4.
+    const verteilung = { zeitpunkt: jetzt(), handzeichen: "Lf", verteiler: [{ stelle: "S2", kopie: "ROT" }, { stelle: "S4", kopie: "GRUEN" }] };
+    expect((await b.dienst.bediene(nachrichtSichten("A-1", null, verteilung))).art).toBe("geschrieben");
+    expect(zeile(b, "A-1")?.laufzustand).toBe("VERTEILT");
+    expect(sicht(b, "posteingang", ["S2"]).zeilen.map((z) => z.id)).toContain("A-1");
+    expect(sicht(b, "posteingang", ["S4"]).zeilen.map((z) => z.id)).toContain("A-1");
+  });
+
+  it("Szenario: LdF da, kein Sichter — der LdF verteilt beim Weitergeben S2 rot und den Verfasser grün (2026-11-21)", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    a.dienst.stellenSetzen(["FM1"], "Ka");
+    b.dienst.stellenSetzen(["LDF"], "Lf");
+    await parameter(a, "ldfStation", true);
+    await takteBis([a, b]);
+    await a.dienst.bediene(nachrichtVerfassen(anlage()));
+    await takteBis([a, b]);
+    await b.dienst.bediene(nachrichtVorschlagen("A-1", null, { mittel: "KURIER", fernmelder: "Fm1", zeitpunkt: jetzt(), handzeichen: "Lf" }));
+    await takteBis([a, b]);
+    await a.dienst.bediene(nachrichtBefoerdern("A-1", null, { ...befoerderung, handzeichen: "Ka" }));
+    await takteBis([a, b]);
+    expect(zeile(b, "A-1")?.laufzustand).toBe("VOR_LDF");
+    expect((await b.dienst.bediene(nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Lf" }))).art).toBe("geschrieben");
+    const z = zeile(b, "A-1");
+    expect(z?.laufzustand).toBe("VERTEILT");
+    expect(z?.verteiler.map((m) => [m.stelle, m.kopie])).toEqual(expect.arrayContaining([["S2", "ROT"], ["S4", "GRUEN"]]));
+  });
+
+  it("Szenario: ohne LdF und ohne Sichter verteilt die Beförderung selbst — Weitergabe und Kopien als Ersatz (2026-11-21)", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["FM1"], "Ka");
+    await parameter(platz, "ldfStation", true);
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    const ergebnis = await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, { ...befoerderung, handzeichen: "Ka" }));
+    expect(warnungen(ergebnis)).toContain(HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG);
+    const z = zeile(platz, "A-1");
+    expect(z?.weitergabe).toMatchObject({ handzeichen: "Ka" });
+    expect(z?.laufzustand).toBe("VERTEILT");
+    expect(z?.verteiler.map((m) => [m.stelle, m.kopie])).toEqual(expect.arrayContaining([["S2", "ROT"], ["S4", "GRUEN"]]));
   });
 
   it("Szenario: Eingang über den LdF bis zur Sichtung", async () => {

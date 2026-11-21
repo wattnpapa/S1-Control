@@ -38,7 +38,7 @@ import type { Ereignisentwurf } from "@s1/speicher";
 import { kontaktwunsch, planeFunkkontakt } from "./funkkontaktfolge.js";
 import { nachtragswarnungen } from "./nachtragspruefung.js";
 import { rueckzugshinweis } from "./rueckzugshinweis.js";
-import { planeBefoerderungsfolgen, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
+import { planeBefoerderungsfolgen, planeKopienNachWeitergabe, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
 
 /** Was der Worker über die Präsenz weiß und der Zustand nicht. */
 export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
@@ -270,15 +270,34 @@ function planeSichtung(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenf
  * wenn kein Sichter besetzt ist. Ohne Laufzettel und ohne Sichter sagt der
  * Hinweis, dass der Eingang wartet.
  */
-function planeWeitergabe(entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan {
+function planeWeitergabe(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nachrichtenfolgeumfeld): Nachrichtenfolgeplan {
   const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
   const sichtung = folgewerte(entwurf)?.sichtung;
   if (typeof nachrichtId !== "string" || entwurf.undoOf !== undefined || entwurf.neu === null) return { folgen: [], hinweise: [] };
-  if (sichtung === undefined) return { folgen: [], hinweise: umfeld.sichterBesetzt ? [] : [HINWEIS_WEITERGABE_OHNE_SICHTER] };
+  // 2026-11-21: Der LdF trägt beim Weitergeben die Nummer ins Betriebsbuch ein, vor der Verteilung.
+  const nachweis = planeWeitergabeNachweis(zustand, entwurf, nachrichtId);
+  if (sichtung === undefined) {
+    const kopien = planeKopienNachWeitergabe(zustand, nachrichtId, entwurf.neu, umfeld);
+    if (kopien !== undefined) return { folgen: [...nachweis.folgen, kopien], hinweise: nachweis.hinweise };
+    const ausgang = zustand.nachrichten?.[nachrichtId]?.richtung.wert === "AUSGANG";
+    return { folgen: nachweis.folgen, hinweise: [...nachweis.hinweise, ...(umfeld.sichterBesetzt || ausgang ? [] : [HINWEIS_WEITERGABE_OHNE_SICHTER])] };
+  }
   const grund = umfeld.sichterBesetzt ? {} : { grund: projektion.GRUND_ERSATZSICHTER };
   return {
-    folgen: [{ entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: sichtung, ...grund }, hinweis: umfeld.sichterBesetzt ? "Beim Weitergeben verteilt." : HINWEIS_LDF_VERTEILT }],
-    hinweise: [],
+    folgen: [...nachweis.folgen, { entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: sichtung, ...grund }, hinweis: umfeld.sichterBesetzt ? "Beim Weitergeben verteilt." : HINWEIS_LDF_VERTEILT }],
+    hinweise: nachweis.hinweise,
+  };
+}
+
+/** Die Nummer, die der LdF in der Weitergabemaske einträgt (`nachrichtenfolge.nachweis`), mit Warnung bei doppelter Nummer. */
+function planeWeitergabeNachweis(zustand: Zustand, entwurf: Ereignisentwurf, nachrichtId: string): Nachrichtenfolgeplan {
+  const nachweis = folgewerte(entwurf)?.nachweis;
+  if (nachweis === undefined) return { folgen: [], hinweise: [] };
+  const nummer = nummerAus(nachweis);
+  const doppelt = doppelhinweis(zustand, nummer, nachrichtId);
+  return {
+    folgen: [{ entwurf: { typ: "NachrichtNachgewiesen", nutzlast: { nachrichtId }, vorher: null, neu: nachweis }, hinweis: `In der Nachweisung unter Nummer ${nummer === undefined ? "?" : String(nummer)} eingetragen.` }],
+    hinweise: doppelt === undefined ? [] : [doppelt],
   };
 }
 
@@ -299,7 +318,7 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
     const hinweis = rueckzugshinweis(zustand, entwurf);
     return { folgen: [], hinweise: hinweis === undefined ? [] : [hinweis] };
   }
-  if (entwurf.typ === "NachrichtWeitergegeben") return planeWeitergabe(entwurf, umfeld);
+  if (entwurf.typ === "NachrichtWeitergegeben") return planeWeitergabe(zustand, entwurf, umfeld);
   if (entwurf.typ === "NachrichtNachgewiesen") {
     const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
     const doppelt = typeof nachrichtId === "string" ? doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId) : undefined;

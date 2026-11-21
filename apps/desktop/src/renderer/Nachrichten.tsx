@@ -194,7 +194,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
           />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
-        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} />
+        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} />
       ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
         <>
           <Lueckenzeile luecken={abruf.ansicht.nummernluecken} />

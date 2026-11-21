@@ -105,6 +105,15 @@ export function verteilerAusAnschrift(anschrift: string, eigeneFuest?: string): 
 }
 
 /**
+ * Der Verteiler eines beförderten Ausgangs (2026-11-21, Folie 30): rot an S2
+ * für Lage und Tagebuch, grün zurück an die Stelle des Verfassers.
+ */
+export function verteilerDesAusgangs(verfasserstelle: string | undefined): readonly Verteilerwahl[] {
+  const gruen = verfasserstelle === undefined || verfasserstelle === "S2" ? [] : [{ stelle: verfasserstelle, kopie: "GRUEN" }];
+  return [...VERTEILER_VORBELEGUNG, ...gruen];
+}
+
+/**
  * Die Warnung vor dem Sichten, wenn niemand die grüne Kopie hat; sonst
  * `undefined`. Additiv (zweiter Durchlauf, Punkt 3): Lautet die Anschrift auf
  * S2 und steht S2 im Verteiler, ist S2 der Hauptempfänger — mit der roten

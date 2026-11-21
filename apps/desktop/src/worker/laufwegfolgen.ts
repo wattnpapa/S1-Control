@@ -21,6 +21,13 @@
  *   bis zur Erledigung läuft. S2 wird auch eingetragen, wenn niemand die
  *   Stelle besetzt — die Kopie wartet im Fach. Mit `sichtungAuchAusgang`
  *   entfällt der Schritt: Dann verteilt der Sichter.
+ * - **Mit LdF als Station** (geändert 2026-11-21, FOLD_VERSION 16): Der
+ *   beförderte Ausgang geht zurück zum LdF, der die Nachweisung einträgt und
+ *   an den Sichter weitergibt; der Sichter verteilt S2 rot und den Verfasser
+ *   grün. Die Kopien schreibt der Worker dann nicht mehr. Ist kein LdF
+ *   besetzt, folgt auf die Beförderung die Weitergabe (Ersatzregel); ist
+ *   auch kein Sichter besetzt, folgen die Kopien als Ersatzsichtung — nach
+ *   der Weitergabe des LdF ebenso ({@link planeKopienNachWeitergabe}).
  */
 
 import { projektion, type NachrichtZustand, type Zustand } from "@s1/domaene";
@@ -41,11 +48,15 @@ export interface Laufwegplan {
 export interface Laufwegumfeld {
   readonly ldfBesetzt?: boolean;
   readonly s2Besetzt?: boolean;
+  /** Additiv (2026-11-21): Ist ein Sichter besetzt? Fehlt = nein. */
+  readonly sichterBesetzt?: boolean;
 }
 
 export const HINWEIS_ERSATZ_LDF_EINGANG = "Kein LdF besetzt: Nachricht direkt an den Sichter weitergegeben.";
 export const HINWEIS_ERSATZ_LDF_AUSGANG = "Kein LdF besetzt: Die Beförderung gilt als Übermittlungsvorschlag.";
-export const HINWEIS_OHNE_VORSCHLAG = "Befördert, bevor der LdF die Übermittlung vorgeschlagen hat.";
+export const HINWEIS_OHNE_VORSCHLAG = "Befördert, bevor der LdF einen Fernmelder zugeteilt hat.";
+export const HINWEIS_ZURUECK_ZUM_LDF = "Befördert: Die Nachricht liegt jetzt beim LdF zur Nachweisung und Weitergabe an den Sichter.";
+export const HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG = "Kein LdF besetzt: Nachricht nach der Beförderung direkt an den Sichter weitergegeben.";
 
 type Werte = Record<string, unknown>;
 
@@ -107,6 +118,23 @@ export function kopienvermerk(stelle: string | undefined): string {
 
 function planeKopien(zustand: Zustand, nachricht: NachrichtZustand, befoerderung: { zeitpunkt: string; handzeichen: string }, umfeld: Laufwegumfeld): Laufwegfolge | undefined {
   if (zustand.einsatz?.sichtungAuchAusgang?.wert === true || objekt(nachricht.sichtung?.wert) !== undefined) return undefined;
+  return kopienfolge(nachricht, befoerderung, umfeld);
+}
+
+/**
+ * Die Kopien nach der Weitergabe des LdF, wenn kein Sichter besetzt ist
+ * (2026-11-21): Der LdF ist Ersatzsichter und verteilt S2 rot und den
+ * Verfasser grün; mit Sichter verteilt der Sichter selbst.
+ */
+export function planeKopienNachWeitergabe(zustand: Zustand, nachrichtId: string, weitergabe: unknown, umfeld: Laufwegumfeld): Laufwegfolge | undefined {
+  const nachricht = zustand.nachrichten?.[nachrichtId];
+  const vermerk = vermerkAus(weitergabe);
+  if (nachricht === undefined || vermerk === undefined || umfeld.sichterBesetzt === true) return undefined;
+  if (nachricht.richtung.wert !== "AUSGANG" || nachricht.gespraechsnotiz?.wert === true || objekt(nachricht.sichtung?.wert) !== undefined) return undefined;
+  return kopienfolge(nachricht, vermerk, umfeld);
+}
+
+function kopienfolge(nachricht: NachrichtZustand, befoerderung: { zeitpunkt: string; handzeichen: string }, umfeld: Laufwegumfeld): Laufwegfolge {
   const stelle = verfasserstelle(nachricht);
   const verteiler = [{ stelle: "S2", kopie: "ROT" }, ...(stelle === undefined || stelle === "S2" ? [] : [{ stelle, kopie: "GRUEN" }])];
   const vermerke = kopienvermerk(stelle);
@@ -145,7 +173,22 @@ export function planeBefoerderungsfolgen(zustand: Zustand, entwurf: Ereignisentw
       });
     }
   }
+  if (ldfStation(zustand)) {
+    folgen.push(...weitergabeNachBefoerderung(nachricht, befoerderung, umfeld));
+    if (umfeld.ldfBesetzt === true) hinweise.push(HINWEIS_ZURUECK_ZUM_LDF);
+    return { folgen, hinweise };
+  }
   const kopien = planeKopien(zustand, nachricht, befoerderung, umfeld);
   if (kopien !== undefined) folgen.push(kopien);
   return { folgen, hinweise };
+}
+
+/** Ohne LdF in der Präsenz: die Weitergabe mit Zeit und Handzeichen der Beförderung, ohne Sichter dazu die Kopien. */
+function weitergabeNachBefoerderung(nachricht: NachrichtZustand, befoerderung: { zeitpunkt: string; handzeichen: string }, umfeld: Laufwegumfeld): readonly Laufwegfolge[] {
+  if (umfeld.ldfBesetzt === true || objekt(nachricht.sichtung?.wert) !== undefined) return [];
+  const weitergabe: Laufwegfolge = {
+    entwurf: { typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId: nachricht.id }, vorher: null, neu: { zeitpunkt: befoerderung.zeitpunkt, handzeichen: befoerderung.handzeichen } },
+    hinweis: HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG,
+  };
+  return umfeld.sichterBesetzt === true ? [weitergabe] : [weitergabe, kopienfolge(nachricht, befoerderung, umfeld)];
 }

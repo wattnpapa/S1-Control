@@ -16,6 +16,11 @@
  * fragt bei einem Eingang ohne Nummer einmal nach („Trotzdem ohne Nummer
  * weitergeben“), wie die Beförderung. Vorher stand dort nur die Überschrift,
  * und der Knopf versprach eine Prüfung, die er nicht machte.
+ *
+ * Ergänzt 2026-11-21: Auch der beförderte Ausgang kommt hierher. Der LdF
+ * trägt die Nummer der Nachweisung (Technisches Betriebsbuch) gleich in
+ * dieser Maske ein, wenn sie fehlt — der Worker schreibt sie als Folge der
+ * Weitergabe —, und gibt an den Sichter, der S2 und den Verfasser verteilt.
  */
 
 import { useState } from "react";
@@ -27,6 +32,7 @@ import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
+import { nummerAusEingabe } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
 import { meldeWarnungen } from "./warnungsstufen.js";
 import { Maske } from "./Maske.js";
@@ -38,6 +44,8 @@ import { Konflikthinweis, istVorwertAbweisung, konflikttext, nachrichtNeuHolen }
 export interface Weitergabeeingaben {
   readonly zeit: string;
   readonly handzeichen: string;
+  /** Additiv (2026-11-21): die Nummer der Nachweisung, wenn die Nachricht noch keine trägt; leer = ohne. */
+  readonly nummer?: string;
 }
 
 /** Der Entwurf der Weitergabe aus den Eingaben, oder der Satz, was fehlt. */
@@ -45,7 +53,12 @@ export function weitergabeEntwurf(zeile: Nachrichtenzeile, e: Weitergabeeingaben
   const zeitpunkt = zeitAusEingabe(e.zeit, jetzt);
   if (zeitpunkt === undefined) return "Zeit lesbar eintragen, etwa „1045“";
   if (e.handzeichen.trim() === "") return "Handzeichen eintragen";
-  return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+  const eingabe = zeile.nummer === undefined ? (e.nummer ?? "").trim() : "";
+  const nummer = nummerAusEingabe(eingabe);
+  if (eingabe !== "" && nummer === undefined) return "Nummer als ganze Zahl eintragen";
+  const weitergabe = nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+  if (nummer === undefined) return weitergabe;
+  return { ...weitergabe, nachrichtenfolge: { ...weitergabe.nachrichtenfolge, nachweis: { nummer, zeitpunkt, handzeichen: e.handzeichen.trim() } } };
 }
 
 /** „Funk 171045NOV26 Fm · von Heros Wildeshausen 10 · Nr. 7“ — der Aufnahmevermerk zum Prüfen (R2-LdF P2-3). */
@@ -59,10 +72,23 @@ export function aufnahmevermerkText(zeile: Nachrichtenzeile): string {
   return teile.join(" · ");
 }
 
+/** „Funk 171045NOV26 Ka · an Heros Wildeshausen 10 · ohne Nummer“ — der Beförderungsvermerk eines Ausgangs (2026-11-21). */
+export function befoerderungsvermerkText(zeile: Nachrichtenzeile): string {
+  const b = zeile.befoerderung;
+  const teile = [
+    b === undefined ? "nicht befördert" : `${projektion.mittelWort(b.mittel)} ${dtg(b.zeitpunkt)} ${b.handzeichen}`,
+    zeile.gegenstelle === undefined ? "ohne Gegenstelle" : `an ${zeile.gegenstelle}`,
+    zeile.nummer === undefined ? "ohne Nummer" : `Nr. ${String(zeile.nummer)}`,
+  ];
+  return teile.join(" · ");
+}
+
 export interface WeitergabemaskeEigenschaften {
   readonly zeile: Nachrichtenzeile;
   readonly handzeichen: string;
   readonly aufSchliessen: () => void;
+  /** Additiv (2026-11-21): die nächste freie Nummer der Nachweisung als Vorbelegung. */
+  readonly naechsteNummer?: number | undefined;
 }
 
 /** Mit „Neu laden“ (Fernmelder P2-6): nach einer Abweisung frisch gezeichnet, mit dem geltenden Vorher-Wert. */
@@ -74,7 +100,7 @@ export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Elem
 function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNeuLaden: (zeile: Nachrichtenzeile) => void }): React.JSX.Element {
   const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
   const peers = useLaden((z) => z.lagebild?.peers);
-  const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen }));
+  const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen, nummer: p.naechsteNummer === undefined ? "" : String(p.naechsteNummer) }));
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
   const fremd = useFremdsperren().von(p.zeile.id);
@@ -83,7 +109,8 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   const entwurf = weitergabeEntwurf(p.zeile, e);
   // R2-LdF P2-3: Ohne Nummer fragt der erste Klick, der zweite gibt weiter.
   const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
-  const ohneNummer = p.zeile.nummer === undefined;
+  const ohneNummer = p.zeile.nummer === undefined && (e.nummer ?? "").trim() === "";
+  const ausgang = p.zeile.richtung === "AUSGANG";
 
   async function schreibe(): Promise<void> {
     if (typeof entwurf === "string") return;
@@ -120,14 +147,14 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
       fusszeile={
         ohneNummer && ohneNummerBestaetigt ? (
           <p className="warnung fussfrage" role="alert">
-            Dieser Eingang hat keine Nachweisungsnummer. Ohne Nummer an den Sichter weitergeben?
+            {ausgang ? "Dieser Ausgang" : "Dieser Eingang"} hat keine Nachweisungsnummer. Ohne Nummer an den Sichter weitergeben?
           </p>
         ) : undefined
       }
     >
       {fremd !== undefined && <p className="warnung">{sperrtext(fremd)}</p>}
       <p className="aufnahmevermerk">
-        <strong>Aufnahme:</strong> {aufnahmevermerkText(p.zeile)}
+        {ausgang ? <strong>Beförderung:</strong> : <strong>Aufnahme:</strong>} {ausgang ? befoerderungsvermerkText(p.zeile) : aufnahmevermerkText(p.zeile)}
       </p>
       {vorbehalt.hinweis}
       <div className="vordruckzeile">
@@ -136,6 +163,12 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
           Handzeichen
           <input value={e.handzeichen} maxLength={20} onChange={(ev) => setzeE((bisher) => ({ ...bisher, handzeichen: ev.target.value }))} />
         </label>
+        {p.zeile.nummer === undefined && (
+          <label title="Die Nummer im Technischen Betriebsbuch (Nachweisung). Leer lassen, wenn sie später kommt.">
+            Nummer (Nachweisung)
+            <input inputMode="numeric" value={e.nummer ?? ""} maxLength={6} onChange={(ev) => setzeE((bisher) => ({ ...bisher, nummer: ev.target.value }))} />
+          </label>
+        )}
       </div>
       {konflikt === undefined ? (
         versuch.anzeige

@@ -97,7 +97,7 @@ describe("R2-LdF P1-1, R2-Si P2-4: Karten passen in den Rahmen", () => {
 
   it("stellt die Karten der Sicht LdF untereinander, mit Spaltenköpfen fester Breite", () => {
     render(<Ldfsicht zeilen={[EINGANG_LDF]} handzeichen="Ld" nurLesen={false} aufVorschlag={vi.fn()} />);
-    const karte = screen.getByRole("region", { name: "Eingänge vor der Weitergabe" });
+    const karte = screen.getByRole("region", { name: "Vor der Weitergabe" });
     expect(karte.parentElement?.className).toBe("fmzkarten untereinander");
     expect(karte.querySelector("th.knopfspalte")).not.toBeNull();
   });
