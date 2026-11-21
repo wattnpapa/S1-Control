@@ -19,8 +19,9 @@
  *   das Kürzel dort deshalb nicht.
  */
 
+import { FERNMELDERSTELLEN, hatFernmelderstelle, istFernmelderstelle } from "@s1/domaene";
 import type { Lagebild, Nachrichtenlage, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
-import { stelleBesetzt } from "../kontrakt/ldfschritte.js";
+import { fernmelderBesetzt } from "../kontrakt/ldfschritte.js";
 import { Filterchips } from "./Filterchips.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { stellenname } from "./nachrichtenformate.js";
@@ -48,8 +49,8 @@ export const NACHRICHTENSICHTEN: readonly { readonly schluessel: Nachrichtensich
  */
 export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
   if (stellen.includes("LDF")) return "ldf";
-  if (stellen.includes("FMZ")) return "fmz";
-  return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || s === "FMZ") ? "sichter" : "posteingang";
+  if (hatFernmelderstelle(stellen)) return "fmz";
+  return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || istFernmelderstelle(s)) ? "sichter" : "posteingang";
 }
 
 function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefined; readonly titel: string; readonly warn?: boolean }): React.JSX.Element {
@@ -77,17 +78,17 @@ export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Na
 }
 
 /** Der Satz im Band, solange keine FmZ besetzt ist (R2-FaBe P0-3). */
-export const TEXT_FMZ_NICHT_BESETZT = "FmZ nicht besetzt: Aufgegebene Nachrichten bleiben liegen, bis jemand die Fernmeldezentrale übernimmt – bitte Bescheid geben oder anrufen.";
+export const TEXT_FMZ_NICHT_BESETZT = "Kein Fernmelder besetzt (Fm1 bis Fm3): Aufgegebene Nachrichten bleiben liegen, bis jemand die Fernmeldezentrale übernimmt – bitte Bescheid geben oder anrufen.";
 
 /**
  * Ob eine FmZ besetzt ist: aus `Lagebild.besetzteStellen` (Präsenz im
  * Worker); liefert ein älterer Worker es nicht, gilt dieselbe Regel aus
- * Sitzung und Präsenz wie beim LdF (`stelleBesetzt`).
+ * Sitzung und Präsenz wie beim LdF (`fernmelderBesetzt`).
  */
 export function fmzBesetzt(lagebild: Lagebild | undefined): boolean {
   const geliefert = lagebild?.besetzteStellen;
-  if (Array.isArray(geliefert)) return geliefert.includes("FMZ");
-  return stelleBesetzt("FMZ", lagebild?.sitzung?.stellen, lagebild?.peers ?? []);
+  if (Array.isArray(geliefert)) return hatFernmelderstelle(geliefert);
+  return fernmelderBesetzt(lagebild?.sitzung?.stellen, lagebild?.peers ?? []);
 }
 
 /** Bernstein im Band, solange keine FmZ in der Präsenz steht (R2-FaBe P0-3); sonst nichts. */
@@ -181,7 +182,7 @@ export function Postfilter({ lage, zaehlung, wahl, aufWahl, sitzung, fuer, aufFu
   const eigene = sitzung?.stellen ?? [];
   // Mit der Zählung aus der Ansicht trägt jeder Chip seine Zahl; ohne (älterer Dienst) nur „neu" aus dem Band.
   const chips = CHIPS.filter((c) => c.wert !== CHIP_OFFEN || aufOffen !== undefined).map((c) => ({ ...c, anzahl: chipzahl(c.wert, zaehlung, lage, fuer) }));
-  const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "FMZ", "LDF"].filter((s) => !eigene.includes(s));
+  const andere = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE", "SICHTER", "LDF", ...FERNMELDERSTELLEN].filter((s) => !eigene.includes(s));
   return (
     <Filterchips
       beschriftung="Filter nach Zustand"

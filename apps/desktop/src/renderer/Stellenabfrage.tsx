@@ -21,6 +21,8 @@ import { useState } from "react";
 
 import type { Einstellungen, Sitzungsstellen } from "../kontrakt/index.js";
 import { Maske } from "./Maske.js";
+import { STELLE_FMZ } from "@s1/domaene";
+
 import { ARBEITSPLATZSTELLEN, handzeichenPflicht, stellenname } from "./nachrichtenformate.js";
 
 /** Die freien Stellen aus dem Textfeld: durch Komma getrennt, ohne Schrägstrich. */
@@ -59,8 +61,20 @@ export function mitVorbelegung(einstellungen: Einstellungen, ordner: string, sit
   };
 }
 
-/** Die Stationen des Fernmeldebetriebs (Audit Fernmelder P3-3): wer an ihnen sitzt, soll nicht neunmal tabulieren. */
-const STATIONEN = ["FMZ", "SICHTER", "LDF"] as const;
+/**
+ * Die Stationen des Fernmeldebetriebs (Audit Fernmelder P3-3): wer an ihnen
+ * sitzt, soll nicht neunmal tabulieren. Seit 2026-11-21 LdF und die
+ * Fernmelder Fm1 bis Fm3 statt der einen FmZ.
+ */
+const STATIONEN = ["LDF", "FM1", "FM2", "FM3", "SICHTER"] as const;
+
+/** Der Satz, wenn die Vorbelegung noch die alte Stelle FmZ trägt. */
+export const TEXT_FMZ_AUFGETEILT = "Die Stelle FmZ ist aufgeteilt: Bitte LdF oder einen der Fernmelder Fm1, Fm2, Fm3 wählen.";
+
+/** Die Vorbelegung ohne den Altwert FMZ — wer Fernmelder war, wählt einmal seine Nummer. */
+export function ohneAltstelle(stellen: readonly string[]): readonly string[] {
+  return stellen.filter((s) => s !== STELLE_FMZ);
+}
 
 /** Die Stationen zuerst, dann die Stellen des Verteilers in der Ordnung des Vordrucks. */
 export function abfolge(stellen: readonly string[]): readonly string[] {
@@ -91,15 +105,18 @@ export interface StellenabfrageEigenschaften {
 
 export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAbbrechen, aufAbgeben }: StellenabfrageEigenschaften): React.JSX.Element {
   const bekannt = new Set(ARBEITSPLATZSTELLEN);
-  const [gewaehlt, setzeGewaehlt] = useState<readonly string[]>(vorbelegung.stellen.filter((s) => bekannt.has(s)));
-  const [frei, setzeFrei] = useState(vorbelegung.stellen.filter((s) => !bekannt.has(s)).join(", "));
+  // 2026-11-21: Der Altwert FMZ wird nicht vorbelegt; wer Fernmelder war, wählt einmal LdF oder Fm1 bis Fm3.
+  const vorbelegt = ohneAltstelle(vorbelegung.stellen);
+  const altFmz = vorbelegung.stellen.includes(STELLE_FMZ);
+  const [gewaehlt, setzeGewaehlt] = useState<readonly string[]>(vorbelegt.filter((s) => bekannt.has(s)));
+  const [frei, setzeFrei] = useState(vorbelegt.filter((s) => !bekannt.has(s)).join(", "));
   const [handzeichen, setzeHandzeichen] = useState(vorbelegung.handzeichen ?? "");
   const stellen = [...new Set([...ARBEITSPLATZSTELLEN.filter((s) => gewaehlt.includes(s)), ...freieStellen(frei)])];
   const fehler = stellenabfrageFehler(stellen, handzeichen);
   const hz = handzeichen.trim();
   // Eine vollständige Vorbelegung (nach dem Neuladen) bestätigt ein Klick; der Fokus steht gleich auf „Übernehmen“.
-  const [vollstaendig] = useState(() => stellenabfrageFehler(vorbelegung.stellen, vorbelegung.handzeichen ?? "") === undefined);
-  const handzeichenZuerst = !vollstaendig && vorbelegung.stellen.length > 0 && (vorbelegung.handzeichen ?? "") === "";
+  const [vollstaendig] = useState(() => stellenabfrageFehler(vorbelegt, vorbelegung.handzeichen ?? "") === undefined);
+  const handzeichenZuerst = !vollstaendig && vorbelegt.length > 0 && (vorbelegung.handzeichen ?? "") === "";
   return (
     <Maske
       titel={einsatzname === undefined ? "Stelle und Handzeichen" : `Stelle und Handzeichen · ${einsatzname}`}
@@ -113,7 +130,12 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
     >
       {vollstaendig && (
         <p className="hinweistext" role="status">
-          Zuletzt gewählt: {vorbelegung.stellen.map(stellenname).join(", ")} (Hz. {vorbelegung.handzeichen}). „Übernehmen“ bestätigt; wer ablöst, trägt sein eigenes Handzeichen ein.
+          Zuletzt gewählt: {vorbelegt.map(stellenname).join(", ")} (Hz. {vorbelegung.handzeichen}). „Übernehmen“ bestätigt; wer ablöst, trägt sein eigenes Handzeichen ein.
+        </p>
+      )}
+      {altFmz && (
+        <p className="warnung" role="status">
+          {TEXT_FMZ_AUFGETEILT}
         </p>
       )}
       <p className="hinweistext">

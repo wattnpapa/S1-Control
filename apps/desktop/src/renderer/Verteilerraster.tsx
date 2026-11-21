@@ -22,6 +22,7 @@
  *   „OV Wildeshausen“ bleibt eine grüne Freitextzeile.
  */
 
+import { FERNMELDERSTELLEN } from "@s1/domaene";
 import { useState } from "react";
 
 import { KOPIEN, VERTEILERSTELLEN, kopieklasse, stellenname } from "./nachrichtenformate.js";
@@ -62,7 +63,7 @@ function istEigeneFuest(teil: string, eigeneFuest: string | undefined): boolean 
   return t === "füst" || t === "führungsstelle" || (eigeneFuest !== undefined && t === normal(eigeneFuest));
 }
 
-const BEKANNT: readonly string[] = [...VERTEILERSTELLEN, "SICHTER", "FMZ", "LDF"];
+const BEKANNT: readonly string[] = [...VERTEILERSTELLEN, "SICHTER", "FMZ", "LDF", ...FERNMELDERSTELLEN];
 
 /** Die bekannte Stelle zu einem Wort („s4“, „Leiter“), sonst `undefined`. */
 function bekannteStelle(wort: string): string | undefined {

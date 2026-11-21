@@ -180,7 +180,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       {sicht === "fmz" && <Sichterhinweis lage={lage} />}
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
-          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} />
+          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
           <OhneNummerKarte zeilen={abruf.ansicht.ohneNummer ?? ohneNummerZeilen(alle)} nurLesen={nurLesen} aufSchritt={fmz.aufSchritt} />
           <Sichterstaukarte

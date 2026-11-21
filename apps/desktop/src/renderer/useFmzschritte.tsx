@@ -56,6 +56,7 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
           aufSchliessen={() => setzeOffen(undefined)}
           ldfErsatz={ldfErsatz}
           fernmelder={ansicht?.fernmelder}
+          fernmelderbesetzung={ansicht?.fernmelderbesetzung}
           ldfWartet={ldfStation && ldfDa && !(sitzung?.stellen ?? []).includes("LDF")}
         />
       )}

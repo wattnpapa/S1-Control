@@ -26,12 +26,12 @@ Funktionalität: Ausgang über den Nachrichtenvordruck
       | Inhalt         | Erbitten 500 Sandsäcke an Deich Nord.  |
       | Vorrang        | Sofort                                 |
       | Abfassungszeit | vor 2 Minuten                          |
-    Dann steht die Nachricht im Ausgang von S4 als "vor der FmZ"
-    Wenn die FmZ die Nachricht annimmt
-    Dann trägt die Nachricht den Annahmevermerk mit Uhrzeit und Handzeichen "Ha"
-    Und hat die Nachricht den Laufzustand "beim LdF"
+    Dann steht die Nachricht im Ausgang von S4 als "beim LdF"
     Wenn der LdF als Übertragungsmittel "Funk" festlegt
     Dann trägt die Nachricht die Wegfestlegung "Funk" mit Handzeichen "Sch"
+    Und hat die Nachricht den Laufzustand "vor der FmZ"
+    Wenn die FmZ die Nachricht annimmt
+    Dann trägt die Nachricht den Annahmevermerk mit Uhrzeit und Handzeichen "Ha"
     Wenn der Fernmelder die Nachricht über "Funk" an "Heros Wildeshausen 10" befördert
     Und die FmZ die Nachricht unter Nummer 1 nachweist
     Dann steht die Nachricht in der Nachweisung als "A 1"
@@ -41,8 +41,8 @@ Funktionalität: Ausgang über den Nachrichtenvordruck
     Und zeigt das Einsatztagebuch zur Nachricht diese Zeilen in dieser Reihenfolge
       | Vorgang        | enthält                 |
       | verfasst       | aufgegeben              |
-      | angenommen     | Hz. Ha                  |
       | Weg festgelegt | Funk                    |
+      | angenommen     | Hz. Ha                  |
       | befördert      | Heros Wildeshausen 10   |
       | nachgewiesen   | Nachricht A 1           |
     Und nennt jede Tagebuchzeile der Nachricht "Nachricht A 1"

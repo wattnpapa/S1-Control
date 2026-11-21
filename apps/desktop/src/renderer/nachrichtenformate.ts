@@ -10,7 +10,7 @@
  */
 
 import type { Nachrichtenentwurf } from "@s1/ausgaben/vordruck";
-import { NACHRICHT_STELLEN, datumZeitGruppe, datumZeitGruppeLesen, projektion, anzeigezoneWandzeit, type Nachrichtenzeile } from "@s1/domaene";
+import { NACHRICHT_STELLEN, STELLE_FMZ, datumZeitGruppe, datumZeitGruppeLesen, projektion, anzeigezoneWandzeit, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Sitzungsstellen } from "../kontrakt/index.js";
 import type { Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
@@ -29,8 +29,12 @@ export const ZEICHEN_JE_ZEILE = 55;
 /** Die Stellen des Verteilers (Feld 19) in der Reihenfolge des Vordrucks — ohne Sichter und FmZ. */
 export const VERTEILERSTELLEN = ["LEITER", "S1", "S2", "S3", "S4", "S6", "FACHBERATER", "VERBINDUNGSSTELLE"] as const;
 
-/** Alle Stellen eines Arbeitsplatzes zur Wahl (Entscheidung 3). */
-export const ARBEITSPLATZSTELLEN: readonly string[] = NACHRICHT_STELLEN;
+/**
+ * Alle Stellen eines Arbeitsplatzes zur Wahl (Entscheidung 3) — ohne den
+ * Altwert FMZ: Seit 2026-11-21 wählt der Fernmeldebetrieb LdF oder einen der
+ * Fernmelder Fm1 bis Fm3.
+ */
+export const ARBEITSPLATZSTELLEN: readonly string[] = NACHRICHT_STELLEN.filter((s) => s !== STELLE_FMZ);
 
 /** Die Kopiefarben mit Wort: grün Hauptempfänger, blau Mitleser, rot S2 (§2). */
 export const KOPIEN = [

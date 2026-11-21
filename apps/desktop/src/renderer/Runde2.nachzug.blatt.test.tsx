@@ -124,7 +124,7 @@ describe("R2-LdF P2-4: Sicht LdF", () => {
     const wartend = { ...AUSGANG, wartetSeitLdf: 25 } as Nachrichtenzeile;
     expect(ldfUeberSchwelle(wartend, 20)).toBe(true);
     render(<Ldfsicht zeilen={[wartend]} handzeichen="Ld" nurLesen={false} aufVorschlag={vi.fn()} schwelleMinuten={20} />);
-    const karte = screen.getByRole("region", { name: "Ausgänge vor dem Vorschlag" });
+    const karte = screen.getByRole("region", { name: "Ausgänge vor der Zuteilung" });
     expect(within(karte).getAllByRole("columnheader").map((k) => k.textContent)).toEqual(expect.arrayContaining(["Nr.", "Absender", "Wartet"]));
     const zeile = within(karte).getByRole("row", { name: /Sandsäcke/u });
     expect(zeile.className).toBe("ueberschwelle");

@@ -108,16 +108,16 @@ describe("R2-FaBe P0-3: FmZ nicht besetzt", () => {
     attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([]));
     sitzung(["FACHBERATER"]);
     render(<Nachrichten aufTagebuch={vi.fn()} />);
-    expect(screen.getByText(/FmZ nicht besetzt/u).className).toContain("warnung");
+    expect(screen.getByText(/Kein Fernmelder besetzt/u).className).toContain("warnung");
     cleanup();
     sitzung(["FACHBERATER"], { peers: [FMZ_PEER] });
     render(<Nachrichten aufTagebuch={vi.fn()} />);
-    expect(screen.queryByText(/FmZ nicht besetzt/u)).toBeNull();
+    expect(screen.queryByText(/Kein Fernmelder besetzt/u)).toBeNull();
     cleanup();
     // `besetzteStellen` aus dem Lagebild geht vor (optional gelesen, anderer Arbeitsstrang).
     sitzung(["FACHBERATER"], { peers: [FMZ_PEER], besetzteStellen: ["SICHTER"] } as Partial<Lagebild>);
     render(<Nachrichten aufTagebuch={vi.fn()} />);
-    expect(screen.getByText(/FmZ nicht besetzt/u)).toBeDefined();
+    expect(screen.getByText(/Kein Fernmelder besetzt/u)).toBeDefined();
     await waitFor(() => expect(attrappe.rufeDerArt("nachrichtenAnfordern").length).toBeGreaterThan(0));
   });
 
@@ -131,7 +131,7 @@ describe("R2-FaBe P0-3: FmZ nicht besetzt", () => {
     expect(useLaden.getState().hinweise.map((h) => [h.stufe, h.text])).toEqual([["warnung", "FmZ nicht besetzt: Die Nachricht liegt."]]);
     useLaden.setState({ hinweise: [] });
     meldeNachAufgeben([], true);
-    expect(useLaden.getState().hinweise[0]?.text).toContain("FmZ nicht besetzt");
+    expect(useLaden.getState().hinweise[0]?.text).toContain("Kein Fernmelder besetzt");
     expect(useLaden.getState().hinweise[0]?.stufe).toBe("warnung");
   });
 });

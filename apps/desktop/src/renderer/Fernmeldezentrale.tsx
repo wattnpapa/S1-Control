@@ -38,10 +38,18 @@
  *   Vorschlag, wenn die Beförderung vom Vorschlag des LdF abweicht (R2-LdF
  *   P2-2), und die Minuten seit Annahme brechen nicht unter die Zeile um
  *   (R2-FM P3-3, `wartezelle`).
+ * - Fernmelder als eigene Stellen (2026-11-21): Führt die Sitzung einen der
+ *   Fernmelder Fm1 bis Fm3, stehen die Nachrichten, die der LdF ihm
+ *   zugeteilt hat, zuoberst mit der Marke „für Sie“, darunter die ohne
+ *   Zuteilung und die der anderen. „Nur meine“ blendet die übrigen aus —
+ *   ein Zuschnitt, kein Recht (`fernmelderzuteilung.ts`).
  */
 
-import type { Nachrichtenzeile } from "@s1/domaene";
+import { useState } from "react";
 
+import { eigeneFernmelder, type Nachrichtenzeile } from "@s1/domaene";
+
+import { eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
 import { minutenSeit } from "./fmzformate.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
@@ -61,6 +69,8 @@ export interface WarteschlangenEigenschaften {
   readonly aufSchritt: (schritt: Fmzschritt, zeile: Nachrichtenzeile) => void;
   /** Additiv: die Schwelle des Einsatzes in Minuten, als Text im Kopf (LdF P1-4). */
   readonly schwelleMinuten?: number;
+  /** Additiv (2026-11-21): die Stellen der Sitzung — ein Fernmelder Fm1 bis Fm3 sieht seine Zuteilungen zuoberst. */
+  readonly stellen?: readonly string[];
 }
 
 /**
@@ -133,15 +143,31 @@ function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenz
   );
 }
 
+/** „nur meine (Fm2)“: blendet aus, was nicht dem eigenen Fernmelder zugeteilt ist; nur für eine Sitzung mit Fm1 bis Fm3. */
+function Nurmeine({ namen, an, aufAendern }: { readonly namen: readonly string[]; readonly an: boolean; readonly aufAendern: (an: boolean) => void }): React.JSX.Element | null {
+  if (namen.length === 0) return null;
+  return (
+    <label className="kaestchen" title="Nur die Nachrichten, die der LdF Ihnen zugeteilt hat. Die übrigen bleiben erreichbar.">
+      <input type="checkbox" checked={an} onChange={(e) => aufAendern(e.target.checked)} />
+      nur meine ({namen.join(", ")})
+    </label>
+  );
+}
+
 /** Die linke Karte: die Ausgangswarteschlange mit den Knöpfen je Zeile. */
-export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20 }: WarteschlangenEigenschaften): React.JSX.Element {
+export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [] }: WarteschlangenEigenschaften): React.JSX.Element {
+  const [nurMeine, setzeNurMeine] = useState(false);
+  const namen = eigeneFernmelder(stellen);
+  const geordnet = eigeneZuerst(alle, stellen);
+  const zeilen = nurMeine && namen.length > 0 ? nurZugeteilte(geordnet, stellen) : geordnet;
   return (
     <section className="karte fmzkarte" aria-label="Ausgangswarteschlange">
       <h3>
         Ausgangswarteschlange <span className="nebenwert">Schwelle {schwelleMinuten} min</span>
       </h3>
+      <Nurmeine namen={namen} an={nurMeine} aufAendern={setzeNurMeine} />
       {zeilen.length === 0 ? (
-        <p className="hinweistext">Keine Nachricht vor der FmZ.</p>
+        <p className="hinweistext">{nurMeine && alle.length > 0 ? "Ihnen ist keine Nachricht zugeteilt." : "Keine Nachricht vor der FmZ."}</p>
       ) : (
         <table className="nachrichtentabelle" aria-label="Nachrichten vor der FmZ">
           <thead>
@@ -164,7 +190,7 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
             {zeilen.map((zeile) => (
               <tr
                 key={zeile.id}
-                className={[zeile.fmzUeberSchwelle ? "ueberschwelle" : "", zeile.id === gewaehltId ? "gewaehlt" : ""].filter((k) => k !== "").join(" ")}
+                className={[zeile.fmzUeberSchwelle ? "ueberschwelle" : "", zeile.id === gewaehltId ? "gewaehlt" : "", mirZugeteilt(zeile, stellen) ? "zugeteilt" : ""].filter((k) => k !== "").join(" ")}
                 aria-selected={zeile.id === gewaehltId}
                 onClick={() => aufWahl(zeile.id)}
               >
@@ -176,6 +202,7 @@ export function Warteschlange({ zeilen, jetzt, gewaehltId, nurLesen, aufWahl, au
                 <td className="mono">{dtg(zeile.abfassungszeit)}</td>
                 <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
                 <td>
+                  {mirZugeteilt(zeile, stellen) && <span className="marke-zustand ok">für Sie </span>}
                   {vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}
                   <Abweichungsmarke zeile={zeile} />
                 </td>

@@ -27,6 +27,7 @@
  * ({@link nachrichtenzahl}).
  */
 
+import { hatFernmelderstelle } from "@s1/domaene";
 import type { Nachrichtenlage, Profil } from "../kontrakt/index.js";
 import { reiterFuer, type Blatt, type Reiter } from "./blaetter.js";
 import { Klappmenue } from "./Klappmenue.js";
@@ -66,12 +67,12 @@ function zahl(eintrag: Reiter, marken: Marken): number | undefined {
 /**
  * Die Zahl am Reiter „Nachrichten“: neu für die eigenen Stellen, dazu die
  * Warteschlange der eigenen Station — vor dem Sichter (SICHTER), vor der
- * FmZ (FMZ). Ohne diese Stellen wie bisher nur „neu“.
+ * FmZ (ein Fernmelder, FM1 bis FM3 oder Altwert FMZ). Ohne diese Stellen wie bisher nur „neu“.
  */
 export function nachrichtenzahl(lage: Nachrichtenlage | undefined, stellen: readonly string[]): number {
   if (lage === undefined) return 0;
   const sichter = stellen.includes("SICHTER") ? lage.vorSichter : 0;
-  const fmz = stellen.includes("FMZ") ? lage.vorFmz : 0;
+  const fmz = hatFernmelderstelle(stellen) ? lage.vorFmz : 0;
   return lage.neuFuerStellen + sichter + fmz;
 }
 

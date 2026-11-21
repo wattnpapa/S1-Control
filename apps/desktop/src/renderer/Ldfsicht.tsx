@@ -3,9 +3,10 @@
  * KONZEPT-NACHRICHTEN.md §5, §6) — zwei Karten für den Leiter des
  * Fernmeldebetriebes.
  *
- * Links die Ausgänge vor dem Vorschlag: angenommen, ohne Übermittlungs-
- * vorschlag; „Übermittlung vorschlagen" öffnet die Maske der FmZ mit
- * Fernmelder, Mittel, Gegenstelle, Zeit und Handzeichen
+ * Links die Ausgänge vor der Zuteilung: aufgegeben, ohne Übermittlungs-
+ * vorschlag — seit 2026-11-21 schon vor der Annahme, denn der LdF sichtet
+ * jeden Ausgang zuerst; „Fernmelder zuteilen" öffnet die Maske der FmZ mit
+ * Fernmelder (Fm1 bis Fm3), Mittel, Gegenstelle, Zeit und Handzeichen
  * (`NachrichtUebermittlungVorgeschlagen`). Rechts die Eingänge vor der Weitergabe: aufgenommen und
  * nachgewiesen, der LdF prüft beides und gibt mit „An den Sichter
  * weitergeben" weiter. Beide Listen kommen aus einem Ruf (Laufzustand
@@ -81,12 +82,12 @@ interface KartenEigenschaften {
 
 function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: KartenEigenschaften): React.JSX.Element {
   return (
-    <section className="karte fmzkarte" aria-label="Ausgänge vor dem Vorschlag">
-      <h3>Ausgänge vor dem Vorschlag</h3>
+    <section className="karte fmzkarte" aria-label="Ausgänge vor der Zuteilung">
+      <h3>Ausgänge vor der Zuteilung</h3>
       {zeilen.length === 0 ? (
-        <p className="hinweistext">Kein Ausgang wartet auf den Übermittlungsvorschlag.</p>
+        <p className="hinweistext">Kein Ausgang wartet auf die Zuteilung an einen Fernmelder.</p>
       ) : (
-        <table className="nachrichtentabelle" aria-label="Ausgänge vor dem Übermittlungsvorschlag">
+        <table className="nachrichtentabelle" aria-label="Ausgänge vor der Zuteilung an einen Fernmelder">
           <thead>
             <tr>
               <th scope="col" className="schmalspalte">Vorrang</th>
@@ -116,8 +117,8 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td className="mono">{vermerk(zeile.annahme)}</td>
                 <Wartezelle zeile={zeile} schwelleMinuten={schwelleMinuten} />
                 <td>
-                  <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Fernmelder, Mittel und Gegenstelle bestimmen"} onClick={() => aufSchritt(zeile)}>
-                    Übermittlung vorschlagen
+                  <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Einem Fernmelder (Fm1 bis Fm3) zuteilen, Mittel und Gegenstelle bestimmen"} onClick={() => aufSchritt(zeile)}>
+                    Fernmelder zuteilen
                   </button>
                 </td>
               </tr>
@@ -182,7 +183,7 @@ export interface LdfsichtEigenschaften {
   readonly zeilen: readonly Nachrichtenzeile[];
   readonly handzeichen: string;
   readonly nurLesen: boolean;
-  /** Öffnet die Maske „Übermittlung vorschlagen" der FmZ (`useFmzschritte`). */
+  /** Öffnet die Maske „Fernmelder zuteilen" der FmZ (`useFmzschritte`). */
   readonly aufVorschlag: (zeile: Nachrichtenzeile) => void;
   /** Additiv (R2-LdF P2-4): die Schwelle des Einsatzes für die Marke an der Wartezeit. */
   readonly schwelleMinuten?: number | undefined;

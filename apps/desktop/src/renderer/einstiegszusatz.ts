@@ -19,10 +19,11 @@
  * sondern im Blatt „Nachrichten“ unter „Posteingang“ ankommen.
  */
 
+import { FERNMELDERSTELLEN } from "@s1/domaene";
 import type { Blattort } from "./unterblaetter.js";
 
 /** Die Stationen des Fernmeldebetriebs: Sie haben ihre eigene erste Sicht und brauchen den Satz zum Posteingang nicht. */
-const STATIONEN: readonly string[] = ["FMZ", "LDF", "SICHTER"];
+const STATIONEN: readonly string[] = ["FMZ", "LDF", "SICHTER", ...FERNMELDERSTELLEN];
 
 export const SATZ_OFFEN = "Zur Übergabe an die Ablösung zeigt die Sicht „Offen“, was für Ihre Stellen noch zu tun ist.";
 

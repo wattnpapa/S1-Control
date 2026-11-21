@@ -18,14 +18,14 @@
 
 import { useState } from "react";
 
-import { projektion } from "@s1/domaene";
+import { hatFernmelderstelle, projektion } from "@s1/domaene";
 
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { TEXT_VORBEHALT_SICHTER as TEXT_SICHTER_KONTRAKT, istErsatzsichter, vorbehaltstextFuer } from "../kontrakt/stellenvorbehalt.js";
 import { STELLE_LDF, ldfBesetzt } from "../kontrakt/ldfschritte.js";
 import { useLaden } from "./laden.js";
 
-/** Die Stelle der FmZ in der Liste der Stellen (NACHRICHT_STELLEN). */
+/** Die Stelle der FmZ in der Liste der Stellen (NACHRICHT_STELLEN); erfüllt von jedem Fernmelder FM1 bis FM3 (`hatFernmelderstelle`). */
 export const STELLE_FMZ = "FMZ";
 
 /** Die Stelle des Sichters (NACHRICHT_STELLEN). */
@@ -76,11 +76,11 @@ export function stelleFehlt(
   saeumig = false,
 ): boolean {
   const gesucht = vorbehaltsstelle(schritt);
-  if (eigene.includes(gesucht)) return false;
+  if (gesucht === STELLE_FMZ ? hatFernmelderstelle(eigene) : eigene.includes(gesucht)) return false;
   // Ersatzsichter (§5): Ohne besetzten Sichter verteilt die FmZ (oder der LdF) selbst — dieselbe Regel wie im Worker.
   // R2-FM P2-5, R2-Si P2-2: ebenso bei besetztem, säumigem Sichter („Ich sichte jetzt selbst“).
   if (gesucht === STELLE_SICHTER) return !istErsatzsichter({ stellen: eigene, sichterBesetzt: sichterBesetzt(eigene, peers), sichterSaeumig: saeumig });
-  return !(gesucht === STELLE_LDF && eigene.includes(STELLE_FMZ) && !ldfBesetzt(eigene, peers));
+  return !(gesucht === STELLE_LDF && hatFernmelderstelle(eigene) && !ldfBesetzt(eigene, peers));
 }
 
 /** Der `grund` des Schritts: „Eintrag durch S4, nicht FmZ“ (für Schritte des LdF „nicht LdF“). */

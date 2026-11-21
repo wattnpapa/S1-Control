@@ -60,6 +60,7 @@ import { Befoerderungszusatz } from "./Befoerderungszusatz.js";
 import { abweichungshinweis, befoerderungInzwischen, ohneVorschlagFrage } from "./befoerderungspruefung.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
+import { fernmelderbeschriftung } from "./fernmelderzuteilung.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
 import { useLaden } from "./laden.js";
 import { meldeWarnungen } from "./warnungsstufen.js";
@@ -74,7 +75,7 @@ import { GEGENSTELLE_BESCHRIFTUNG, GEGENSTELLE_HILFE } from "./gegenstellentext.
 
 export type Fmzschritt = "annahme" | "vorschlag" | "befoerderung" | "nachweis";
 
-const TITEL: Readonly<Record<Fmzschritt, string>> = { annahme: "Annehmen", vorschlag: "Übermittlung vorschlagen", befoerderung: "Befördern", nachweis: "Nachweisen" };
+const TITEL: Readonly<Record<Fmzschritt, string>> = { annahme: "Annehmen", vorschlag: "Fernmelder zuteilen", befoerderung: "Befördern", nachweis: "Nachweisen" };
 
 export interface FmzmaskeEigenschaften {
   readonly schritt: Fmzschritt;
@@ -93,8 +94,10 @@ export interface FmzmaskeEigenschaften {
   readonly ldfErsatz?: string | undefined;
   /** Additiv (R2-LdF P2-1): Der Einsatz führt den LdF als Station, und er ist besetzt — Befördern ohne Vorschlag fragt. */
   readonly ldfWartet?: boolean | undefined;
-  /** Additiv (R2-LdF P3-4): die Anzeigenamen der besetzten FmZ-Plätze als Wahl „Fernmelder“; ohne sie Fm1 bis Fm3. */
+  /** Additiv (R2-LdF P3-4): die Wahl „Fernmelder“ (seit 2026-11-21 Fm1 bis Fm3, dahinter Altnamen); ohne sie Fm1 bis Fm3. */
   readonly fernmelder?: readonly string[] | undefined;
+  /** Additiv (2026-11-21): wer Fm1 bis Fm3 besetzt — die Wahl zeigt „Fm2 · Meyer“. */
+  readonly fernmelderbesetzung?: Readonly<Record<string, string>> | undefined;
 }
 
 export interface Eingaben {
@@ -174,6 +177,8 @@ interface Gegenstellenwahl {
   readonly aufKontakt: (an: boolean) => void;
   /** Die Wahl „Fernmelder“ im Vorschlag des LdF (R2-LdF P3-4). */
   readonly fernmelder: readonly string[];
+  /** Additiv (2026-11-21): wer die Fernmelder besetzt. */
+  readonly besetzung?: Readonly<Record<string, string>> | undefined;
 }
 
 /** Die Fernmelder zur Wahl: die besetzten Plätze der FmZ, sonst Fm1 bis Fm3; der schon gewählte bleibt dabei. */
@@ -199,7 +204,7 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
               <option value="">— wählen —</option>
               {wahl.fernmelder.map((fm) => (
                 <option key={fm} value={fm}>
-                  {fm}
+                  {fernmelderbeschriftung(fm, wahl.besetzung)}
                 </option>
               ))}
             </select>
@@ -284,7 +289,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   };
   const [kontakt, setzeKontakt] = useState(true);
   const treffer = gegenstelleTreffer(p.gegenstellen ?? [], e.gegenstelle);
-  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, aufKontakt: setzeKontakt, fernmelder: fernmelderwahl(p.fernmelder, e.fernmelder) };
+  const wahl: Gegenstellenwahl = { gegenstellen: p.gegenstellen ?? [], treffer, kontakt, aufKontakt: setzeKontakt, fernmelder: fernmelderwahl(p.fernmelder, e.fernmelder), besetzung: p.fernmelderbesetzung };
   const befoerdern = p.schritt === "befoerderung";
   const kontaktEinheitId = befoerdern && kontakt && e.mittel === "FUNK" ? treffer?.einheitId : undefined;
   const entwurf = fmzEntwurf(p.schritt, p.zeile, e, kontaktEinheitId);

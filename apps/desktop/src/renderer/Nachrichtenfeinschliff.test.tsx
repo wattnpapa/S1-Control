@@ -176,16 +176,17 @@ describe("LdF P3-3, Fernmelder P3-3: die Stellenabfrage nach dem Neuladen", () =
   });
 
   it("stellt die Stationen voran und setzt den Fokus bei vollständiger Vorbelegung auf „Übernehmen“", () => {
-    expect(abfolge(["LEITER", "S1", "SICHTER", "FMZ", "LDF"])).toEqual(["FMZ", "SICHTER", "LDF", "LEITER", "S1"]);
+    // 2026-11-21: LdF und Fm1 bis Fm3 statt der einen FmZ.
+    expect(abfolge(["LEITER", "S1", "SICHTER", "FM2", "LDF"])).toEqual(["LDF", "FM2", "SICHTER", "LEITER", "S1"]);
     const bestaetigen = vi.fn();
-    render(<Stellenabfrage vorbelegung={{ stellen: ["FMZ"], handzeichen: "Ha" }} aufBestaetigen={bestaetigen} aufAbbrechen={vi.fn()} />);
+    render(<Stellenabfrage vorbelegung={{ stellen: ["FM2"], handzeichen: "Ha" }} aufBestaetigen={bestaetigen} aufAbbrechen={vi.fn()} />);
     const maske = screen.getByRole("form", { name: /Stelle und Handzeichen/ });
-    expect(within(maske).getByRole("status").textContent).toContain("Zuletzt gewählt: FmZ (Hz. Ha)");
+    expect(within(maske).getByRole("status").textContent).toContain("Zuletzt gewählt: Fm2 (Hz. Ha)");
     expect(document.activeElement?.textContent).toBe("Übernehmen");
     const kaestchen = within(maske).getAllByRole("checkbox").map((k) => k.parentElement?.textContent);
-    expect(kaestchen.slice(0, 3)).toEqual(["FmZ", "Sichter", "LdF"]);
+    expect(kaestchen.slice(0, 5)).toEqual(["LdF", "Fm1", "Fm2", "Fm3", "Sichter"]);
     fireEvent.click(within(maske).getByRole("button", { name: "Übernehmen" }));
-    expect(bestaetigen).toHaveBeenCalledWith({ stellen: ["FMZ"], handzeichen: "Ha" });
+    expect(bestaetigen).toHaveBeenCalledWith({ stellen: ["FM2"], handzeichen: "Ha" });
   });
 
   it("öffnet ohne Vorbelegung im ersten Feld und ohne Zuletzt-Satz", () => {

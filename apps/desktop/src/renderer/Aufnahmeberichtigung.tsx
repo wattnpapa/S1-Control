@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 
-import { NACHRICHT_MITTEL, datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { datumZeitGruppe, hatFernmelderstelle, NACHRICHT_MITTEL, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { aufnahmeBerichtigen } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
@@ -33,7 +33,7 @@ export interface Berichtigungseingaben {
 
 /** Ob die Lese-Ansicht „Aufnahme berichtigen“ anbietet: ein aufgenommener, gültiger Eingang an einem Platz der FmZ. */
 export function berichtigbar(zeile: Nachrichtenzeile, stellen: readonly string[], nurLesen: boolean): boolean {
-  return !nurLesen && stellen.includes("FMZ") && zeile.richtungKurz === "E" && zeile.aufnahme !== undefined && !zeile.zurueckgezogen;
+  return !nurLesen && hatFernmelderstelle(stellen) && zeile.richtungKurz === "E" && zeile.aufnahme !== undefined && !zeile.zurueckgezogen;
 }
 
 /** Der Entwurf aus den Eingaben, oder der Satz, was fehlt. */

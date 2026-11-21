@@ -97,20 +97,20 @@ describe("Die Sicht „LdF“", () => {
   it("zeigt zwei Karten und die Zahl „vor dem LdF“; Vorschlagen und Weitergeben schreiben je einen Vermerk", async () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     expect(screen.getByLabelText("Zahlen der Nachrichten").textContent).toContain("vor dem LdF");
-    const ausgaenge = await waitFor(() => screen.getByRole("table", { name: "Ausgänge vor dem Übermittlungsvorschlag" }));
+    const ausgaenge = await waitFor(() => screen.getByRole("table", { name: "Ausgänge vor der Zuteilung an einen Fernmelder" }));
     expect(attrappe.rufeDerArt("nachrichtenAnfordern")[0]).toMatchObject({ sicht: "ldf" });
     const eingaenge = screen.getByRole("table", { name: "Eingänge vor der Weitergabe an den Sichter" });
     expect(within(eingaenge).getByRole("row", { name: /Pumpen eingetroffen/ }).textContent).toContain("12");
 
-    // Der Ausgangsschritt des LdF ist die Maske „Übermittlung vorschlagen“ der FmZ.
-    fireEvent.click(within(ausgaenge).getByRole("button", { name: "Übermittlung vorschlagen" }));
-    let maske = screen.getByRole("form", { name: /Übermittlung vorschlagen/ });
+    // Der Ausgangsschritt des LdF ist die Maske „Fernmelder zuteilen“ der FmZ.
+    fireEvent.click(within(ausgaenge).getByRole("button", { name: "Fernmelder zuteilen" }));
+    let maske = screen.getByRole("form", { name: /Fernmelder zuteilen/ });
     expect((within(maske).getByLabelText("Mittel") as HTMLSelectElement).value).toBe("TELEFON");
     expect((within(maske).getByLabelText("Handzeichen") as HTMLInputElement).value).toBe("Lf");
     fireEvent.change(within(maske).getByLabelText("Fernmelder"), { target: { value: "Fm2" } });
     fireEvent.change(within(maske).getByLabelText("Mittel"), { target: { value: "KURIER" } });
     fireEvent.change(within(maske).getByLabelText("Datum/Uhrzeit"), { target: { value: "161040nov26" } });
-    fireEvent.click(within(maske).getByRole("button", { name: "Übermittlung vorschlagen" }));
+    fireEvent.click(within(maske).getByRole("button", { name: "Fernmelder zuteilen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]).toMatchObject({
       typ: "NachrichtUebermittlungVorgeschlagen",
