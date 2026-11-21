@@ -44,6 +44,7 @@ export function wartegrundlage(n: NachrichtZustand, annahme?: Zeitvermerk): Wart
     ...(ausgang ? { eintreffenBeiFmz: iso(eintreffenMs(angelegt, typeof annahmeWert?.zeitpunkt === "string" ? annahmeWert : undefined)) } : {}),
     ...(richtung === "EINGANG" ? { vorSichterSeit: iso(n.weitergabe?.hlc.millisekunden ?? angelegt) } : {}),
     ...(n.laufzustand === "VOR_LDF" ? { vorLdfSeit: vorLdfSeit(n, richtung, annahmeWert) } : {}),
+    ...(ausgang && n.befoerderung?.wert !== undefined && n.befoerderung.wert !== null ? { befoerdert: true } : {}),
   };
 }
 
@@ -58,6 +59,9 @@ function vorLdfSeit(n: NachrichtZustand, richtung: string, annahme: Zeitvermerk 
     const aufnahme = n.aufnahme?.wert as Zeitvermerk | null | undefined;
     return iso(eintreffenMs(n.angelegtMit.millisekunden, typeof aufnahme?.zeitpunkt === "string" ? aufnahme : undefined));
   }
+  // FOLD_VERSION 16: Der beförderte Ausgang liegt ab der Beförderung zur Nachweisung beim LdF.
+  const befoerdert = n.befoerderung?.wert !== undefined && n.befoerderung.wert !== null ? n.befoerderung.hlc.millisekunden : undefined;
+  if (befoerdert !== undefined) return iso(befoerdert);
   const seit = n.annahme?.hlc.millisekunden ?? n.angelegtMit.millisekunden;
   return iso(eintreffenMs(seit, typeof annahme?.zeitpunkt === "string" ? annahme : undefined));
 }

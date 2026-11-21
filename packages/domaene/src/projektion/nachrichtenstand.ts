@@ -168,6 +168,21 @@ export interface Wartegrundlage {
    * — der Eingang ab der Aufnahme, der Ausgang ab der Annahme (ISO).
    */
   readonly vorLdfSeit?: string | undefined;
+  /** Additiv (FOLD_VERSION 16): der Ausgang ist befördert — beim LdF zählt die Zeit ab der Beförderung. */
+  readonly befoerdert?: boolean | undefined;
+}
+
+/**
+ * Der Schritt, auf den eine Nachricht beim LdF wartet (2026-11-21):
+ * „zuteilung“ — ein Ausgang vor der Beförderung, der LdF teilt ihn einem
+ * Fernmelder zu; „weitergabe“ — ein Eingang oder ein beförderter Ausgang,
+ * der LdF trägt die Nachweisung ein und gibt an den Sichter.
+ */
+export type Ldfschritt = "zuteilung" | "weitergabe";
+
+export function ldfSchrittDer(zeile: { readonly laufzustand: Laufzustand; readonly richtung: string; readonly befoerderung?: unknown }): Ldfschritt | undefined {
+  if (zeile.laufzustand !== "VOR_LDF") return undefined;
+  return zeile.richtung === "AUSGANG" && zeile.befoerderung === undefined ? "zuteilung" : "weitergabe";
 }
 
 /** Ganze Minuten von `seit` bis `jetzt`, nie negativ; `undefined`, wenn eines fehlt. */
@@ -194,6 +209,8 @@ function minutenZwischen(seit: string | undefined, jetzt: string | number | unde
 export function wartezeitAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
   if (grundlage.richtung !== "AUSGANG" || grundlage.gespraechsnotiz) return undefined;
   if (grundlage.laufzustand !== "VOR_FMZ" && grundlage.laufzustand !== "VOR_LDF") return undefined;
+  // FOLD_VERSION 16: Befördert und wieder beim LdF zählt die Zeit seit der Beförderung, nicht seit der Aufgabe.
+  if (grundlage.befoerdert === true) return minutenZwischen(grundlage.vorLdfSeit, jetzt);
   return minutenZwischen(grundlage.eintreffenBeiFmz, jetzt);
 }
 

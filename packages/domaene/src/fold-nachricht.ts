@@ -113,9 +113,16 @@ function hat(felder: ReadonlyMap<string, Feld<unknown>>, name: string): boolean 
  * Annahme. Der LdF sichtet ihn und teilt ihn einem Fernmelder zu, der ihn
  * dann annimmt und überträgt; vorher nahm ein beliebiger Fernmelder ihn an,
  * bevor der LdF ihn sah.
+ *
+ * Ergänzt 2026-11-21 (FOLD_VERSION 16): Nach der Beförderung kommt der
+ * Ausgang **ein zweites Mal** zum LdF. Er trägt die Nachweisung ins
+ * Technische Betriebsbuch ein und gibt die Nachricht mit
+ * `NachrichtWeitergegeben` an den Sichter, der S2 (rot) und den Verfasser
+ * (grün) verteilt. Vorher schrieb der Worker diese Kopien selbst.
  */
 function vorLdf(felder: ReadonlyMap<string, Feld<unknown>>, ausgang: boolean): boolean {
-  if (ausgang) return !hat(felder, "vorschlag") && !hat(felder, "befoerderung");
+  if (ausgang && !hat(felder, "befoerderung")) return !hat(felder, "vorschlag");
+  if (ausgang) return !hat(felder, "weitergabe") && !hat(felder, "sichtung");
   return hat(felder, "aufnahme") && !hat(felder, "weitergabe") && !hat(felder, "sichtung");
 }
 
@@ -139,7 +146,8 @@ export function laufzustandAus(
   if (ausgang && !notiz && !hat(felder, "befoerderung")) return "VOR_FMZ";
   const sichtung = alsObjekt(felder.get("sichtung")?.wert);
   if (sichtung === undefined) {
-    if (ausgang && !notiz) return sichtungAuchAusgang ? "VOR_SICHTER" : "ERLEDIGT";
+    // FOLD_VERSION 16: Mit LdF als Station gibt der LdF den beförderten Ausgang an den Sichter weiter.
+    if (ausgang && !notiz) return sichtungAuchAusgang || (ldfStation === true && hat(felder, "weitergabe")) ? "VOR_SICHTER" : "ERLEDIGT";
     return "VOR_SICHTER";
   }
   const offen = verteilerstellen(sichtung, streitigeSichtung(felder.get("sichtung"))).some((stelle) => felder.get(`erledigt/${stelle}`)?.wert !== true);

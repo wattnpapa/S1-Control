@@ -78,7 +78,7 @@ describe("LdF im Katalog", () => {
 });
 
 describe("LdF im Fold: Ausgang", () => {
-  it("mit Parameter: aufgegeben gleich beim LdF, mit Zuteilung vor der FmZ, befördert erledigt (FOLD_VERSION 15)", () => {
+  it("mit Parameter: aufgegeben beim LdF, zugeteilt vor der FmZ, befördert wieder beim LdF, weitergegeben vor dem Sichter (FOLD_VERSION 16)", () => {
     const angelegt = [...grundlage(true), ausgang("A1")];
     const z = zustand(angelegt);
     expect(z.einsatz?.ldfStation?.wert).toBe(true);
@@ -91,7 +91,18 @@ describe("LdF im Fold: Ausgang", () => {
     expect(lauf(zf, "A1")).toBe("VOR_FMZ");
     const angenommen = [...festgelegt, vermerk("NachrichtAngenommen", "A1", annahme)];
     expect(lauf(zustand(angenommen), "A1")).toBe("VOR_FMZ");
-    expect(lauf(zustand([...angenommen, vermerk("NachrichtBefoerdert", "A1", befoerderung)]), "A1")).toBe("ERLEDIGT");
+    const befoerdert = [...angenommen, vermerk("NachrichtBefoerdert", "A1", befoerderung)];
+    // Nach der Beförderung trägt der LdF die Nachweisung ein und gibt an den Sichter.
+    expect(lauf(zustand(befoerdert), "A1")).toBe("VOR_LDF");
+    const weiter = [...befoerdert, vermerk("NachrichtWeitergegeben", "A1", { zeitpunkt: um(9), handzeichen: "LF" })];
+    expect(lauf(zustand(weiter), "A1")).toBe("VOR_SICHTER");
+    const gesichtet = [...weiter, vermerk("NachrichtGesichtet", "A1", { zeitpunkt: um(10), handzeichen: "Si", verteiler: [{ stelle: "S2", kopie: "ROT" }, { stelle: "S4", kopie: "GRUEN" }] })];
+    expect(lauf(zustand(gesichtet), "A1")).toBe("VERTEILT");
+  });
+
+  it("ohne Parameter bleibt der beförderte Ausgang erledigt — der LdF sieht ihn kein zweites Mal", () => {
+    const befoerdert = [...grundlage(false), ausgang("A1"), vermerk("NachrichtBefoerdert", "A1", befoerderung)];
+    expect(lauf(zustand(befoerdert), "A1")).toBe("ERLEDIGT");
   });
 
   it("ohne Parameter bleibt der angenommene Ausgang vor der FmZ — auch mit Vorschlag", () => {

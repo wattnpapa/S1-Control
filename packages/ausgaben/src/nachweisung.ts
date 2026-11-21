@@ -109,7 +109,7 @@ export function nachweisungMarken(zeile: Nachrichtenzeile): readonly string[] {
     ...(weg === undefined ? [] : [`Weg ${projektion.mittelWort(weg.mittel)}${durch} (LdF ${vermerkText(weg)})`]),
     // R2-ETB P2-3, R2-LdF P2-5: die Weitergabe des LdF an den Sichter — und wer noch beim LdF liegt.
     ...(zeile.weitergabe === undefined ? [] : [`Weitergabe ${vermerkText(zeile.weitergabe)}`]),
-    ...(zeile.richtung === "EINGANG" && zeile.laufzustand === "VOR_LDF" ? ["wartet beim LdF"] : []),
+    ...(projektion.ldfSchrittDer(zeile) === "weitergabe" ? ["wartet beim LdF"] : []),
     // Additiv (R2-LdF P2-1, P2-2): Beförderung ohne Vorschlag des LdF oder abweichend davon.
     ...(zeile.ohneVorschlag === true ? ["ohne Vorschlag des LdF"] : []),
     ...(zeile.abweichungVomVorschlag === undefined ? [] : [`abweichend vom Vorschlag (${zeile.abweichungVomVorschlag})`]),

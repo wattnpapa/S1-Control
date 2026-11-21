@@ -62,11 +62,14 @@ export interface Nachrichtenbezug {
  *
  * ```
  * VOR_FMZ         Ausgang ohne Beförderung (keine Gesprächsnotiz)
- * VOR_LDF         nur mit Parameter `ldfStation`: Ausgang angenommen, ohne
- *                 Übermittlungsvorschlag, nicht befördert; Eingang aufgenommen,
+ * VOR_LDF         nur mit Parameter `ldfStation`: Ausgang ohne
+ *                 Übermittlungsvorschlag, nicht befördert (Zuteilung);
+ *                 Ausgang befördert, nicht weitergegeben, nicht gesichtet
+ *                 (Nachweisung und Weitergabe); Eingang aufgenommen,
  *                 nicht weitergegeben, nicht gesichtet
  * VOR_SICHTER     Eingang oder Gesprächsnotiz ohne Sichtung; Ausgang nach
  *                 der Beförderung, wenn `sichtungAuchAusgang` gesetzt ist
+ *                 oder der LdF ihn weitergegeben hat
  * VERTEILT        gesichtet, mindestens eine Stelle ohne Erledigung
  * ERLEDIGT        alle Stellen erledigt, Verteiler leer, oder Ausgang
  *                 befördert ohne Sichtung für Ausgänge

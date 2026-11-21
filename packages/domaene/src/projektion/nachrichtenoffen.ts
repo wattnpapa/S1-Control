@@ -16,7 +16,7 @@
  */
 
 import { hatFernmelderstelle } from "../fernmelderstellen.js";
-import { standDerZeile } from "./nachrichtenstand.js";
+import { ldfSchrittDer, standDerZeile } from "./nachrichtenstand.js";
 import { vergleicheNachrichten, type Nachrichtenzeile } from "./nachrichtenzeile.js";
 
 /** Die bekannten Stellen der Stationen im Laufweg (§4); die Fernmelder erkennt `hatFernmelderstelle`. */
@@ -44,8 +44,8 @@ function inEigenerWarteschlange(zeile: Nachrichtenzeile, stellen: readonly strin
     case "angenommen":
       return fmz;
     case "beimLdf":
-      // Einen Ausgang beim LdF befördert die FmZ nach der Ersatzregel selbst (§5).
-      return stellen.includes(LDF) || (fmz && zeile.richtung === "AUSGANG");
+      // Einen Ausgang vor der Zuteilung befördert die FmZ nach der Ersatzregel selbst (§5).
+      return stellen.includes(LDF) || (fmz && ldfSchrittDer(zeile) === "zuteilung");
     case "vorSichter":
       return stellen.includes(SICHTER) || (fmz && umfeld.sichterBesetzt === false);
     default:
@@ -77,7 +77,8 @@ export function offenFuerStellen(zeile: Nachrichtenzeile, stellen: readonly stri
  */
 export function ohneNummerZeilen(zeilen: readonly Nachrichtenzeile[]): Nachrichtenzeile[] {
   return zeilen
-    .filter((z) => !z.zurueckgezogen && z.nummer === undefined && (z.befoerderung !== undefined || (z.richtung === "EINGANG" && z.aufnahme !== undefined)))
+    // Den beförderten Ausgang beim LdF weist der LdF bei der Weitergabe nach (2026-11-21), nicht die FmZ.
+    .filter((z) => !z.zurueckgezogen && z.nummer === undefined && !(z.richtung === "AUSGANG" && ldfSchrittDer(z) === "weitergabe") && (z.befoerderung !== undefined || (z.richtung === "EINGANG" && z.aufnahme !== undefined)))
     .sort(vergleicheNachrichten);
 }
 

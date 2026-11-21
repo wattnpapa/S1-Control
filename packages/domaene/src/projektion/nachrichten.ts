@@ -24,6 +24,7 @@ import {
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
 import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
+import { ldfSchrittDer } from "./nachrichtenstand.js";
 import { stellenWort } from "./tagebuch-nachrichten.js";
 
 /**
@@ -174,7 +175,8 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
     case "fmz":
       // Ein angenommener Ausgang beim LdF bleibt in der Warteschlange sichtbar:
       // Ist kein LdF da, befördert der Fernmelder ihn selbst (Ersatzregel).
-      return zeile.laufzustand === "VOR_FMZ" || (zeile.laufzustand === "VOR_LDF" && zeile.richtung === "AUSGANG");
+      // Der beförderte Ausgang beim LdF (Nachweisung, Weitergabe) gehört nicht mehr in die Schlange.
+      return zeile.laufzustand === "VOR_FMZ" || ldfSchrittDer(zeile) === "zuteilung";
     case "ldf":
       return zeile.laufzustand === "VOR_LDF";
     case "nachweisung":

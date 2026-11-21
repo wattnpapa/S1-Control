@@ -77,8 +77,11 @@ import type {
  * **15** (2026-11-21, Fernmelder als eigene Stellen): Mit `ldfStation` steht
  * ein Ausgang schon vor der Annahme beim LdF (VOR_LDF), bis der LdF ihn einem
  * Fernmelder zuteilt — ein Schnappschuss der Fassung 14 führte ihn VOR_FMZ.
+ * **16** (2026-11-21): Mit `ldfStation` steht ein beförderter Ausgang noch
+ * einmal beim LdF (Nachweisung, Weitergabe) und nach der Weitergabe vor dem
+ * Sichter — ein Schnappschuss der Fassung 15 führte ihn ERLEDIGT.
  */
-export const FOLD_VERSION = 15;
+export const FOLD_VERSION = 16;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert
