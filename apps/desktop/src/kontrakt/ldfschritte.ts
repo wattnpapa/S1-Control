@@ -15,7 +15,7 @@
  * dieselbe, wie bei `sichterBesetzt`.
  */
 
-import type { Sichtungsvermerk, Zeitvermerk } from "@s1/domaene";
+import { istFernmelderstelle, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
 import { nachrichtSichten } from "./nachrichtenschritte.js";
@@ -60,4 +60,14 @@ export function stelleBesetzt(stelle: string, eigene: readonly string[] | undefi
  */
 export function ldfBesetzt(eigene: readonly string[] | undefined, peers: Praesenzstellen): boolean {
   return stelleBesetzt(STELLE_LDF, eigene, peers);
+}
+
+/**
+ * Ob ein Fernmelder besetzt ist (2026-11-21): eine der Stellen FM1 bis FM3
+ * oder der Altwert FMZ, in der eigenen Sitzung oder bei einem lebenden
+ * Arbeitsplatz der Präsenz.
+ */
+export function fernmelderBesetzt(eigene: readonly string[] | undefined, peers: Praesenzstellen): boolean {
+  if (eigene?.some(istFernmelderstelle) === true) return true;
+  return peers.some((p) => !p.veraltet && p.stellen?.some(istFernmelderstelle) === true);
 }

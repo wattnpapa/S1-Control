@@ -19,7 +19,7 @@
  *   an ihm und an seinen Folgen der `grund` „vom Papier nachgetragen“.
  */
 
-import { projektion, type Zustand } from "@s1/domaene";
+import { istFernmelderstelle, projektion, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 import type { Bedienergebnis, Entwurf } from "../kontrakt/index.js";
@@ -53,7 +53,11 @@ const MIT_STELLE: ReadonlySet<string> = new Set([
  */
 const MIT_HANDZEICHEN: ReadonlySet<string> = new Set(["NachrichtErledigt", "ErledigungDerNachrichtZurueckgenommen", "NachrichtZurueckgezogen"]);
 
-/** Welche Stelle der Sitzung den Schritt tut, wenn sie mehrere führt — die Station zuerst. */
+/**
+ * Welche Stelle der Sitzung den Schritt tut, wenn sie mehrere führt — die
+ * Station zuerst. `STELLE_FMZ` steht hier für jeden Fernmelder: die Stellen
+ * FM1 bis FM3 der Sitzung oder den Altwert FMZ (2026-11-21).
+ */
 const STATION: Readonly<Record<string, readonly string[]>> = {
   NachrichtGesichtet: [STELLE_SICHTER, STELLE_FMZ, STELLE_LDF],
   NachrichtWeitergegeben: [STELLE_LDF, STELLE_FMZ],
@@ -74,7 +78,8 @@ function objekt(wert: unknown): Record<string, unknown> | undefined {
 export function stelleFuer(entwurf: Folgeentwurf, stellen: readonly string[]): string | undefined {
   if (stellen.length === 0) return undefined;
   const bevorzugt = entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) ? [STELLE_FMZ, STELLE_LDF] : (STATION[entwurf.typ] ?? []);
-  return bevorzugt.find((s) => stellen.includes(s)) ?? stellen[0];
+  const passend = bevorzugt.flatMap((s) => (s === STELLE_FMZ ? stellen.filter(istFernmelderstelle) : stellen.filter((eigene) => eigene === s)));
+  return passend[0] ?? stellen[0];
 }
 
 /**

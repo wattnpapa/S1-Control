@@ -153,7 +153,7 @@ import { planeFolgen, anwesendBereichshinweis } from "./schreibfolgen.js";
 import { eigeneGespraechsnotiz, istNachtrag, mitSitzungsangaben, sichterSaeumig, vorbehaltsergebnis } from "./sitzungsangaben.js";
 import type { Vorbehaltsumfeld } from "../kontrakt/stellenvorbehalt.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
-import { ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
+import { fernmelderBesetzt, ldfBesetzt, stelleBesetzt } from "../kontrakt/ldfschritte.js";
 import { schreibhinweise } from "./schreibhinweise.js";
 import { offeneVokabelkorrekturen, vokabelnKorrigieren } from "./vokabelkorrektur.js";
 import { Bearbeitungssperren } from "./bearbeitungssperren.js";
@@ -166,7 +166,7 @@ import { legeFehlendeVordrucke, legeHandzeichenverzeichnisBei, legeNachweisungBe
 import {
   Vorrangwaechter,
   besetzteStellen,
-  fernmelderAusPraesenz,
+  fernmelderwahlAusPraesenz,
   konflikthinweiseFuerLagebild,
   mitNachrichtenparametern,
   nachrichtenansicht,
@@ -882,7 +882,7 @@ export class Aktendienst {
   #folgeumfeld(): Nachrichtenfolgeumfeld {
     return {
       // Additiv (R2-FaBe P0-3, R2-LdF P1-3): FmZ für den Hinweis beim Aufgeben, die Stellen der Sitzung für die Ersatzregel.
-      fmzBesetzt: stelleBesetzt("FMZ", this.#sitzung?.stellen, this.#peers),
+      fmzBesetzt: fernmelderBesetzt(this.#sitzung?.stellen, this.#peers),
       stellen: this.#sitzung?.stellen ?? [],
       sichterBesetzt: sichterBesetzt(this.#sitzung?.stellen, this.#peers),
       // Additiv (2026-11-17): LdF für die Ersatzregel, S2 für den Hinweis zur roten Kopie.
@@ -1159,7 +1159,7 @@ export class Aktendienst {
       bezug: this.#tagebuchbezug(),
       // Additiv (R2-LdF P3-3, P3-4): LdF besetzt? und die Fernmelder aus der Präsenz.
       ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
-      fernmelder: fernmelderAusPraesenz(this.#sitzung?.stellen, this.#o.anzeigename, this.#peers),
+      fernmelder: fernmelderwahlAusPraesenz(this.#sitzung?.stellen, this.#o.anzeigename, this.#peers),
     });
   }
 

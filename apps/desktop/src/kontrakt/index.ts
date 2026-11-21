@@ -1671,11 +1671,13 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
    */
   readonly ohneNummer?: readonly Nachrichtenzeile[];
   /**
-   * Additiv (R2-LdF P3-4): die Anzeigenamen der lebenden Arbeitsplätze mit
-   * Stelle FMZ (die eigene Sitzung eingeschlossen) — die Auswahl „Fernmelder“
-   * im Vorschlag des LdF statt fest „Fm1“ bis „Fm3“.
+   * Additiv (R2-LdF P3-4): die Auswahl „Fernmelder“ im Vorschlag des LdF.
+   * Seit 2026-11-21 Fm1 bis Fm3 (die Stellen FM1 bis FM3), danach die
+   * Anzeigenamen der Plätze mit dem Altwert FMZ.
    */
   readonly fernmelder?: readonly string[];
+  /** Additiv (2026-11-21): je Fernmelder („Fm2“) die Anzeigenamen der Plätze, die die Stelle besetzen. */
+  readonly fernmelderbesetzung?: Readonly<Record<string, string>>;
 }
 
 export interface Tagebuchansicht extends Ansichtsstand {

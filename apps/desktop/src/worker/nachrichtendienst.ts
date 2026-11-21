@@ -22,7 +22,7 @@
  * aufgenommen hat, weiß es und wird nicht gemeldet.
  */
 
-import { kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
+import { FERNMELDER_STANDARD, STELLE_FMZ, eigeneFernmelder, istFernmelderstelle, kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
 
 import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, OffeneNachrichten, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
 import { funkplanbereiche } from "./funkplanprojektion.js";
@@ -47,27 +47,41 @@ export interface Nachrichtenumfeld {
   readonly bezug?: projektion.Tagebuchbezug;
   /** Additiv (R2-LdF P3-3): Ist ein LdF besetzt? Nur `false` setzt an Zeilen beim LdF `ldfNichtBesetzt`. */
   readonly ldfBesetzt?: boolean;
-  /** Additiv (R2-LdF P3-4): die Anzeigenamen der Arbeitsplätze mit Stelle FMZ (`fernmelderAusPraesenz`). */
-  readonly fernmelder?: readonly string[];
+  /** Additiv (R2-LdF P3-4, 2026-11-21): die Wahl „Fernmelder“ im Vorschlag des LdF (`fernmelderwahlAusPraesenz`). */
+  readonly fernmelder?: Fernmelderwahl;
+}
+
+/** Ein Platz der Präsenz, soweit die Wahl der Fernmelder ihn braucht. */
+type Fernmelderplatz = { readonly veraltet: boolean; readonly anzeigename: string; readonly stellen?: readonly string[] | undefined };
+
+/** Die Wahl „Fernmelder“ im Vorschlag des LdF und wer die Fernmelder gerade besetzt. */
+export interface Fernmelderwahl {
+  /** Fm1 bis Fm3, danach die Anzeigenamen der Plätze, die noch den Altwert FMZ führen. */
+  readonly fernmelder: readonly string[];
+  /** Je Fernmelder („Fm2“) die Anzeigenamen der lebenden Plätze mit dieser Stelle. */
+  readonly besetzung: Readonly<Record<string, string>>;
 }
 
 /**
- * Die Fernmelder aus der Präsenz (R2-LdF P3-4): die Anzeigenamen der lebenden
- * Arbeitsplätze mit Stelle FMZ, die eigene Sitzung eingeschlossen, ohne
- * Doppelte und nach Namen geordnet. Die Auswahl im Vorschlag des LdF kannte
- * nur „Fm1“ bis „Fm3“; eine Zentrale mit anderen Namen oder mehr Fernmeldern
- * ließ sich nicht abbilden. Freitext bleibt in der Maske erlaubt.
+ * Die Fernmelder zur Wahl (R2-LdF P3-4, geändert 2026-11-21): Der LdF teilt
+ * eine Nachricht einem der Fernmelder Fm1 bis Fm3 zu, und der Name ist die
+ * Stelle des Platzes, nicht sein Anzeigename — nur so findet der Fernmelder
+ * „seine“ Nachricht in der Warteschlange. Wer die Stelle besetzt, steht dabei.
+ * Plätze mit dem Altwert FMZ (ein älterer Client) kommen mit ihrem
+ * Anzeigenamen dazu, wie bisher. Freitext bleibt in der Maske erlaubt.
  */
-export function fernmelderAusPraesenz(
-  eigeneStellen: readonly string[] | undefined,
-  eigenerName: string,
-  peers: readonly { readonly veraltet: boolean; readonly anzeigename: string; readonly stellen?: readonly string[] | undefined }[],
-): readonly string[] {
-  const namen = [
-    ...(eigeneStellen?.includes("FMZ") === true ? [eigenerName] : []),
-    ...peers.filter((p) => !p.veraltet && p.stellen?.includes("FMZ") === true).map((p) => p.anzeigename),
-  ].map((n) => n.trim()).filter((n) => n !== "");
-  return [...new Set(namen)].sort((a, b) => a.localeCompare(b, "de"));
+export function fernmelderwahlAusPraesenz(eigeneStellen: readonly string[] | undefined, eigenerName: string, peers: readonly Fernmelderplatz[]): Fernmelderwahl {
+  const plaetze: readonly Fernmelderplatz[] = [{ veraltet: false, anzeigename: eigenerName, stellen: eigeneStellen }, ...peers].filter((p) => !p.veraltet && p.anzeigename.trim() !== "");
+  const besetzung: Record<string, string> = {};
+  for (const platz of plaetze) {
+    for (const name of eigeneFernmelder(platz.stellen)) {
+      const bisher = besetzung[name];
+      besetzung[name] = bisher === undefined ? platz.anzeigename.trim() : `${bisher}, ${platz.anzeigename.trim()}`;
+    }
+  }
+  const alt = plaetze.filter((p) => p.stellen?.includes(STELLE_FMZ) === true).map((p) => p.anzeigename.trim());
+  const altSortiert = [...new Set(alt)].sort((a, b) => a.localeCompare(b, "de"));
+  return { fernmelder: [...FERNMELDER_STANDARD, ...altSortiert.filter((n) => !(FERNMELDER_STANDARD as readonly string[]).includes(n))], besetzung };
 }
 
 /** R2-LdF P3-3: Zeilen beim LdF tragen „LdF nicht besetzt“, wenn die Präsenz keinen kennt. */
@@ -141,7 +155,7 @@ export function nachrichtenansicht(
     lageZeiger: umfeld.lageZeiger,
     ...ausschnitt,
     zeilen: mitLdfBesetzung(zeilen, umfeld.ldfBesetzt),
-    ...(umfeld.fernmelder === undefined ? {} : { fernmelder: umfeld.fernmelder }),
+    ...(umfeld.fernmelder === undefined ? {} : { fernmelder: umfeld.fernmelder.fernmelder, fernmelderbesetzung: umfeld.fernmelder.besetzung }),
     jetzt,
     anschriften: anschriften(zustand),
     gegenstellen: gegenstellen(zustand),
@@ -302,7 +316,7 @@ interface Treffer {
  */
 function warteschlangenstelle(zeile: Nachrichtenzeile, stellen: readonly string[]): string | undefined {
   const ausgang = zeile.richtungKurz === "A" && !zeile.gespraechsnotiz && (zeile.laufzustand === "VOR_FMZ" || zeile.laufzustand === "VOR_LDF");
-  if (ausgang) return stellen.find((s) => s === "FMZ" || s === "LDF");
+  if (ausgang) return stellen.find((s) => istFernmelderstelle(s) || s === "LDF");
   // R2-Si P1-1, R2-LdF P1-2: Ein Eingang mit Vorrang beim LdF meldet sich dem LdF —
   // bisher erst nach der Weitergabe beim Sichter, und ein Blitz konnte beim LdF liegen.
   if (zeile.richtungKurz === "E" && zeile.laufzustand === "VOR_LDF") return stellen.includes("LDF") ? "LDF" : undefined;

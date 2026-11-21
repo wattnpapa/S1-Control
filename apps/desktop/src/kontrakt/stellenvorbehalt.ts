@@ -22,11 +22,15 @@
  * `GRUND_ERSATZSICHTER` an die Sichtung.
  */
 
-import { projektion } from "@s1/domaene";
+import { hatFernmelderstelle, projektion } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
 
-/** Die Stellen, denen der Vordruck Teile vorbehält. */
+/**
+ * Die Stellen, denen der Vordruck Teile vorbehält. `STELLE_FMZ` steht für
+ * die Fernmelder insgesamt: Den Vorbehalt erfüllt jede der Stellen FM1 bis
+ * FM3 und der Altwert FMZ (`hatFernmelderstelle`, 2026-11-21).
+ */
 export const STELLE_SICHTER = "SICHTER";
 export const STELLE_FMZ = "FMZ";
 export const STELLE_LDF = "LDF";
@@ -53,7 +57,7 @@ const VORBEHALT_SATZ: Readonly<Record<Vorbehaltsschritt, string>> = {
   weitergabe: "Die Weitergabe an den Sichter ist dem Leiter des Fernmeldebetriebes vorbehalten.",
 };
 
-const STELLE_WORT_LANG: Readonly<Record<string, string>> = { SICHTER: "Sichter", FMZ: "Fernmeldezentrale (FmZ)", LDF: "Leiter des Fernmeldebetriebes (LdF)" };
+const STELLE_WORT_LANG: Readonly<Record<string, string>> = { SICHTER: "Sichter", FMZ: "Fernmelder (Fm1, Fm2 oder Fm3)", LDF: "Leiter des Fernmeldebetriebes (LdF)" };
 
 /** Die Stelle, der der Schritt vorbehalten ist. */
 export function stelleDesSchritts(schritt: Vorbehaltsschritt): string {
@@ -113,7 +117,7 @@ function objekt(wert: unknown): Record<string, unknown> | undefined {
  */
 export function istErsatzsichter(umfeld: Vorbehaltsumfeld): boolean {
   if (umfeld.stellen.includes(STELLE_SICHTER) || (umfeld.sichterBesetzt && umfeld.sichterSaeumig !== true)) return false;
-  return umfeld.stellen.includes(STELLE_FMZ) || umfeld.stellen.includes(STELLE_LDF);
+  return hatFernmelderstelle(umfeld.stellen) || umfeld.stellen.includes(STELLE_LDF);
 }
 
 /** Trägt die Anlage Werte des oberen Teils, die die FmZ schreibt (Aufnahme, Annahme, Beförderung, Nummer)? */
@@ -135,7 +139,7 @@ export function stellenvorbehalt(entwurf: Pick<Entwurf, "typ" | "nutzlast" | "ne
     if (umfeld.eigeneGespraechsnotiz === true) return undefined;
     return { stelle: STELLE_SICHTER, meldung: TEXT_VORBEHALT_SICHTER };
   }
-  if (entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) && !umfeld.stellen.includes(STELLE_FMZ)) {
+  if (entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) && !hatFernmelderstelle(umfeld.stellen)) {
     // R2-FaBe P2-7: der Satz des Schritts — Aufnahme eines Eingangs oder Papier-Nachtrag.
     const aufnahme = objekt(objekt(entwurf.nutzlast)?.["aufnahme"]) !== undefined;
     return { stelle: STELLE_FMZ, meldung: aufnahme ? TEXT_VORBEHALT_FMZ : TEXT_VORBEHALT_NACHTRAG };

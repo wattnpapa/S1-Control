@@ -13,12 +13,14 @@
  * Workers, je Minute einmal genügt.
  */
 
-import { projektion, type Zustand } from "@s1/domaene";
+import { istFernmelderstelle, projektion, type Zustand } from "@s1/domaene";
 
 const MINUTE_MS = 60_000;
 
-/** Die Stellen, an die der Hinweis geht: die FmZ, die den Eingang aufnimmt, und der LdF. */
-const MELDESTELLEN: ReadonlySet<string> = new Set(["FMZ", "LDF"]);
+/** Die Stellen, an die der Hinweis geht: die Fernmelder (FM1 bis FM3, Altwert FMZ), die den Eingang aufnehmen, und der LdF. */
+function istMeldestelle(stelle: string): boolean {
+  return stelle === "LDF" || istFernmelderstelle(stelle);
+}
 
 /** „2 Eingänge warten seit 23 Minuten vor dem Sichter, kein Sichter besetzt“. */
 export function sichterstauText(anzahl: number, minuten: number): string {
@@ -45,7 +47,9 @@ export function saeumigerSichterText(anzahl: number, minuten: number): string {
  * (`wartetSeitLdf`), gemeldet an FmZ, LdF und Sichter — auch bei besetztem
  * LdF, denn gerade der säumige LdF ist der Fall.
  */
-const LDF_MELDESTELLEN: ReadonlySet<string> = new Set(["FMZ", "LDF", "SICHTER"]);
+function istLdfMeldestelle(stelle: string): boolean {
+  return stelle === "SICHTER" || istMeldestelle(stelle);
+}
 
 /** „1 Eingang wartet seit 7 Minuten beim LdF“. */
 export function ldfstauText(anzahl: number, minuten: number): string {
@@ -87,7 +91,7 @@ export class Sichterstauwaechter {
   }
 
   #vorSichter(lage: Staulage, jetzt: string): string | undefined {
-    if (!lage.stellen.some((s) => MELDESTELLEN.has(s)) || lage.stellen.includes("SICHTER")) return undefined;
+    if (!lage.stellen.some(istMeldestelle) || lage.stellen.includes("SICHTER")) return undefined;
     // R2-FM P2-5, R2-Si P2-2: die Schwelle je Vorrang; auch bei besetztem, aber säumigem Sichter.
     const ueber = projektion
       .nachrichtenausschnitt(lage.zustand, { sicht: "sichter", jetzt })
@@ -96,7 +100,7 @@ export class Sichterstauwaechter {
   }
 
   #beimLdf(lage: Staulage, jetzt: string): string | undefined {
-    if (!lage.stellen.some((s) => LDF_MELDESTELLEN.has(s))) return undefined;
+    if (!lage.stellen.some(istLdfMeldestelle)) return undefined;
     const schwelle = projektion.fmzSchwelle(lage.zustand);
     const ueber = projektion
       .nachrichtenausschnitt(lage.zustand, { sicht: "ldf", jetzt })

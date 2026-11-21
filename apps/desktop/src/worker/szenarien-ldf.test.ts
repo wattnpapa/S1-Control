@@ -107,6 +107,36 @@ describe("Funktionalität: LdF als Station", () => {
     expect(zeile(a, "A-1")).toMatchObject({ laufzustand: "VERTEILT", vorschlag: { handzeichen: "Lf", fernmelder: "Fm2" } });
   });
 
+  it("Szenario: Fernmelder Fm1 bis Fm3 — der LdF sieht den Ausgang vor jeder Annahme und teilt ihn Fm2 zu (2026-11-21)", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    a.dienst.stellenSetzen(["FM2"], "Ka");
+    b.dienst.stellenSetzen(["LDF"], "Lf");
+    await parameter(a, "ldfStation", true);
+    await takteBis([a, b]);
+    await a.dienst.bediene(nachrichtVerfassen(anlage()));
+    await takteBis([a, b]);
+    // Gleich nach dem Aufgeben beim LdF, ohne dass ein Fernmelder ihn angenommen hat.
+    expect(sicht(b, "ldf").zeilen.map((z) => [z.id, z.laufzustand])).toEqual([["A-1", "VOR_LDF"]]);
+    expect(lagebild(b).nachrichten).toMatchObject({ vorLdf: 1, vorFmz: 0 });
+    // Die Wahl des LdF nennt Fm1 bis Fm3 und wer Fm2 besetzt.
+    const ldf = sicht(b, "ldf");
+    expect(ldf.fernmelder).toEqual(["Fm1", "Fm2", "Fm3"]);
+    expect(ldf.fernmelderbesetzung).toEqual({ Fm2: "Arbeitsplatz 1" });
+
+    const vorschlag = { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: jetzt(), handzeichen: "Lf" };
+    expect((await b.dienst.bediene(nachrichtVorschlagen("A-1", null, vorschlag))).art).toBe("geschrieben");
+    await takteBis([a, b]);
+    expect(sicht(a, "fmz", ["FM2"]).zeilen.map((z) => [z.id, z.laufzustand, z.vorschlag?.fernmelder])).toEqual([["A-1", "VOR_FMZ", "Fm2"]]);
+
+    // Fm2 nimmt an und überträgt — ohne Hinweis auf den Stellenvorbehalt.
+    expect((await a.dienst.bediene(nachrichtAnnehmen("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Ka" }))).art).toBe("geschrieben");
+    const ergebnis = await a.dienst.bediene(nachrichtBefoerdern("A-1", null, { ...befoerderung, mittel: "FUNK", handzeichen: "Ka" }));
+    expect(ergebnis.art).toBe("geschrieben");
+    expect(warnungen(ergebnis)).not.toContain(HINWEIS_OHNE_VORSCHLAG);
+    expect(zeile(a, "A-1")).toMatchObject({ laufzustand: "VERTEILT", befoerderung: { handzeichen: "Ka" } });
+  });
+
   it("Szenario: Eingang über den LdF bis zur Sichtung", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);

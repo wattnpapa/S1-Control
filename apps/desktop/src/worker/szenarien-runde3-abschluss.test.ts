@@ -25,7 +25,7 @@ import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichten
 import type { Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { nachrichtSichten, nachrichtVerfassen, nachrichtZurueckziehen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { TEXT_VORBEHALT_SICHTER } from "../kontrakt/stellenvorbehalt.js";
-import { fernmelderAusPraesenz } from "./nachrichtendienst.js";
+import { fernmelderwahlAusPraesenz } from "./nachrichtendienst.js";
 import { nachtragswarnungen } from "./nachtragspruefung.js";
 import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
 import { sichterSaeumig } from "./sitzungsangaben.js";
@@ -149,10 +149,11 @@ describe("R2-LdF P3-3, P3-4, LdF P1-2: Angaben der Nachrichtenansicht", () => {
     await a.dienst.bediene(nachrichtVerfassen(anlage()));
     await a.dienst.bediene(nachrichtAnnehmen("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Fm" }));
     const fmz = a.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-1", sicht: "ldf" });
-    expect(fmz.fernmelder).toEqual(["Arbeitsplatz 1", "Arbeitsplatz 2"]);
+    // Seit 2026-11-21: Fm1 bis Fm3 zuerst, die Plätze mit dem Altwert FMZ mit Anzeigenamen dahinter.
+    expect(fmz.fernmelder).toEqual(["Fm1", "Fm2", "Fm3", "Arbeitsplatz 1", "Arbeitsplatz 2"]);
     expect(fmz.zeilen[0]).toMatchObject({ laufzustand: "VOR_LDF", ldfNichtBesetzt: true });
     for (const sicht of ["sichter", "ldf"] as const) expect(a.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-1", sicht }).naechsteNummer).toBe(10);
-    expect(fernmelderAusPraesenz(["S3"], "Ich", [{ veraltet: true, anzeigename: "Alt", stellen: ["FMZ"] }])).toEqual([]);
+    expect(fernmelderwahlAusPraesenz(["S3"], "Ich", [{ veraltet: true, anzeigename: "Alt", stellen: ["FMZ"] }])).toEqual({ fernmelder: ["Fm1", "Fm2", "Fm3"], besetzung: {} });
   });
 });
 
@@ -192,5 +193,18 @@ describe("R2-SGL P2-1: nachtragswarnungen", () => {
     const t = (min: number) => new Date(Date.UTC(2026, 10, 17, 19, min)).toISOString();
     expect(nachtragswarnungen({ abfassungszeit: t(0), annahme: t(5), befoerderung: { zeitpunkt: t(10) } }, Date.UTC(2026, 10, 17, 20))).toEqual([]);
     expect(nachtragswarnungen({ abfassungszeit: t(10), annahme: t(5) }, Date.UTC(2026, 10, 17, 20))[0]).toMatch(/^Nachtrag: Annahme \(\d{4}\) liegt vor der Abfassung/u);
+  });
+});
+
+describe("Fernmelder als eigene Stellen (2026-11-21)", () => {
+  it("die Wahl nennt Fm1 bis Fm3 mit den Plätzen, die sie besetzen; veraltete zählen nicht", () => {
+    const wahl = fernmelderwahlAusPraesenz(["FM2"], "Meyer", [
+      { veraltet: false, anzeigename: "Schulz", stellen: ["FM1", "S6"] },
+      { veraltet: false, anzeigename: "Kaya", stellen: ["FM2"] },
+      { veraltet: true, anzeigename: "Alt", stellen: ["FM3"] },
+      { veraltet: false, anzeigename: "Altclient", stellen: ["FMZ"] },
+    ]);
+    expect(wahl.fernmelder).toEqual(["Fm1", "Fm2", "Fm3", "Altclient"]);
+    expect(wahl.besetzung).toEqual({ Fm1: "Schulz", Fm2: "Meyer, Kaya" });
   });
 });

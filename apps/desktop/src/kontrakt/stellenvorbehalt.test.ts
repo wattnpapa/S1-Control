@@ -63,3 +63,18 @@ describe("stellenvorbehalt", () => {
     expect(stellenvorbehalt(sichten, { stellen: ["S3"], sichterBesetzt: true, sichterSaeumig: true })?.stelle).toBe(STELLE_SICHTER);
   });
 });
+
+describe("Fernmelder Fm1 bis Fm3 statt FmZ (2026-11-21)", () => {
+  it("jeder Fernmelder erfüllt den Vorbehalt der FmZ und gilt als Ersatzsichter", () => {
+    const aufnahme = nachrichtVerfassen({ ...ausgang, richtung: "EINGANG", aufnahme: { mittel: "FUNK", zeitpunkt: "2026-11-17T19:00:00Z", handzeichen: "Fm" } });
+    for (const stelle of ["FM1", "FM2", "FM3", "FMZ"]) {
+      expect(stellenvorbehalt(aufnahme, { stellen: [stelle], sichterBesetzt: true })).toBeUndefined();
+      expect(istErsatzsichter({ stellen: [stelle], sichterBesetzt: false })).toBe(true);
+    }
+    expect(stellenvorbehalt(aufnahme, { stellen: ["LDF"], sichterBesetzt: true })?.stelle).toBe(STELLE_FMZ);
+  });
+
+  it("nennt im Hinweis die Fernmelder, nicht die alte Sammelstelle", () => {
+    expect(vorbehaltstextFuer("befoerderung")).toContain("nicht als Fernmelder (Fm1, Fm2 oder Fm3) eingetragen");
+  });
+});

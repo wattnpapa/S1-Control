@@ -363,7 +363,8 @@ describe("Bedienen über die Vermittlung", () => {
       art: "undoStapel",
       akteId: angelegt.akteId,
     });
-    expect(stapel.map((e) => e.typ)).toEqual(["AbschnittUmbenannt", "AbschnittAngelegt"]);
+    // Die Vorbelegung „LdF als Station“ der Anlage (2026-11-21) liegt zuunterst.
+    expect(stapel.map((e) => e.typ)).toEqual(["AbschnittUmbenannt", "AbschnittAngelegt", "NachrichtenParameterGesetzt"]);
 
     const ergebnis = await ruf<Bedienergebnis>(werkstatt, {
       art: "zurueck",
@@ -373,6 +374,12 @@ describe("Bedienen über die Vermittlung", () => {
     expect(werkstatt.dienste.get(angelegt.akteId)?.zustand.abschnitte["EO"]?.name.wert).toBe(
       "Deich Nord",
     );
+  });
+
+  it("legt einen neuen Einsatz mit dem LdF als Station an (2026-11-21)", async () => {
+    const werkstatt = await mitShare();
+    const angelegt = await ruf<{ akteId: string }>(werkstatt, ANLEGEN);
+    expect(werkstatt.dienste.get(angelegt.akteId)?.zustand.einsatz?.ldfStation?.wert).toBe(true);
   });
 
   it("meldet die Rücknahme einer Anlage als strukturellen Fachvorgang (§6 U2)", async () => {

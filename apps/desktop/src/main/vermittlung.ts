@@ -63,6 +63,7 @@ import type {
 import type { Auftragsentwurf, Startdaten } from "../worker/akte-worker.js";
 import type { Seitenausgabe } from "../worker/aktendienst.js";
 import { dateimarke } from "../worker/dateimarke.js";
+import { nachrichtenParameterSetzen } from "../kontrakt/fmzschritte.js";
 
 /** Additiv (LdF P2-5): der Schichtausschnitt der Nachweisung, nur wenn gesetzt. */
 function zeitraumDes(ruf: Extract<Ruf, { art: "ausgabeErzeugen" }>): { zeitraum?: { von?: string; bis?: string } } {
@@ -856,7 +857,23 @@ export class Vermittlung {
         `Der Einsatz wurde angelegt, aber das erste Ereignis nicht geschrieben: ${JSON.stringify(ergebnis)}`,
       );
     }
+    await this.#belegeLdfStationVor(akteId, kennung.ordner);
     return { akteId, einsatzId: kennung.ordner, ordner: kennung.ordner };
+  }
+
+  /**
+   * Vorbelegung „LdF als Station“ für einen neuen Einsatz (2026-11-21): Der
+   * LdF sichtet jeden Ausgang und teilt ihn einem Fernmelder zu. Als
+   * Ereignis statt als Vorbelegung im Fold, damit ältere Einsätze ihren Weg
+   * behalten und ältere Clients denselben Laufzustand falten. Scheitert der
+   * Schritt, bleibt der Einsatz nutzbar; der Parameter lässt sich in den
+   * Stammdaten setzen.
+   */
+  async #belegeLdfStationVor(akteId: string, einsatzId: string): Promise<void> {
+    const entwurf = nachrichtenParameterSetzen(einsatzId, "ldfStation", null, true);
+    if (entwurf === undefined) return;
+    const ergebnis = (await this.#o.hof.frage(akteId, { art: "bediene", entwurf })) as Bedienergebnis;
+    if (ergebnis.art !== "geschrieben") this.#o.protokolliere("warnung", `LdF als Station nicht vorbelegt: ${ergebnis.art}`);
   }
 
   async #oeffneEinsatz(ordner: string, sitzung: Sitzungsangaben | undefined): Promise<unknown> {
