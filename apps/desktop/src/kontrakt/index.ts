@@ -642,11 +642,18 @@ export const zEntwurf = z.object({
       nachweis: z.unknown().optional(),
       sichtung: z.unknown().optional(),
       /**
-       * Additiv: die Einheit, an die befördert wurde. Der Worker vermerkt
-       * dort im Funkplan einen Kontakt (Funkprobe „Kontakt“ zur Zeit der
-       * Beförderung).
+       * Additiv: die Einheit, an die befördert oder von der aufgenommen
+       * wurde. Der Worker vermerkt dort im Funkplan einen Kontakt
+       * (Funkprobe „Kontakt“ zur Zeit der Beförderung bzw. der Aufnahme).
        */
       kontaktEinheitId: z.string().min(1).optional(),
+      /**
+       * Additiv: die Rufgruppe, über die der Kontakt lief — vorbelegt mit der
+       * Hauptrufgruppe der Einheit. Steht die Einheit ohne geltende
+       * Rufgruppe, ordnet der Worker sie dieser Gruppe zu. Gilt für die
+       * Beförderung eines Ausgangs und die Aufnahme eines Eingangs.
+       */
+      kontaktRufgruppeId: z.string().min(1).optional(),
       /**
        * Additiv (Audit LdF P0-1): die Annahme, die beim Befördern fehlt. Der
        * Worker trägt sie mit Uhrzeit und Handzeichen der Beförderung nach,
@@ -1642,6 +1649,14 @@ export interface Sammeluebernahme {
 export interface Gegenstelle {
   readonly einheitId: string;
   readonly name: string;
+  /** Additiv: die geltende Hauptrufgruppe der Einheit — Vorbelegung der Rufgruppe beim Kontakt. */
+  readonly rufgruppeId?: string;
+}
+
+/** Additiv: eine geltende Rufgruppe zur Wahl beim Kontakt einer Nachricht. */
+export interface Rufgruppenwahl {
+  readonly rufgruppeId: string;
+  readonly name: string;
 }
 
 export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt {
@@ -1652,6 +1667,8 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
    * Beförderung — mit Kennung, damit der Funkplan den Kontakt bekommt.
    */
   readonly gegenstellen?: readonly Gegenstelle[];
+  /** Additiv: die geltenden Rufgruppen in der Ordnung des Funkplans, für den Kontakt beim Aufnehmen und Befördern. */
+  readonly rufgruppen?: readonly Rufgruppenwahl[];
   /**
    * Additiv (Schnitt N2, §6 „Papier-Rückfall"): die Vorbelegung der
    * Nachweisungsnummer, höchste bekannte plus eins (Entscheidung 1: Eingang

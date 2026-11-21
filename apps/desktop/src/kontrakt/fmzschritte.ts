@@ -60,6 +60,19 @@ export function nachrichtVorschlagen(nachrichtId: string, vorher: Vorschlag | nu
   };
 }
 
+/** Der Kontakt im Funkplan: die Einheit der Gegenstelle und die Rufgruppe, über die gesprochen wurde. */
+export interface Funkkontakt {
+  readonly einheitId: string;
+  readonly rufgruppeId?: string | undefined;
+}
+
+/** Die Schlüssel des Kontakts in `nachrichtenfolge`; ohne Einheit keine. */
+function kontaktfolge(kontakt: Funkkontakt | undefined): { kontaktEinheitId?: string; kontaktRufgruppeId?: string } {
+  if (kontakt === undefined) return {};
+  const rufgruppe = kontakt.rufgruppeId?.trim() ?? "";
+  return { kontaktEinheitId: kontakt.einheitId, ...(rufgruppe === "" ? {} : { kontaktRufgruppeId: rufgruppe }) };
+}
+
 /** Der Beförderungsvermerk (Feld 4) samt Gegenstelle — sie steht auf Papier im selben Kasten. */
 export interface Befoerderung extends Mittelvermerk {
   readonly gegenstelle?: string;
@@ -72,6 +85,8 @@ export interface Befoerderung extends Mittelvermerk {
  */
 export interface Befoerderungsfolge {
   readonly kontaktEinheitId?: string | undefined;
+  /** Additiv: die Rufgruppe des Kontakts; die Einheit ohne Rufgruppe wird ihr zugeordnet. */
+  readonly kontaktRufgruppeId?: string | undefined;
   readonly annahme?: Zeitvermerk | undefined;
   readonly nachweis?: Nachweisvermerk | undefined;
 }
@@ -89,7 +104,7 @@ export function nachrichtBefoerdern(nachrichtId: string, vorher: Befoerderung | 
   const gegenstelle = befoerderung.gegenstelle?.trim() ?? "";
   const f: Befoerderungsfolge = typeof folge === "string" ? { kontaktEinheitId: folge } : (folge ?? {});
   const nachrichtenfolge = {
-    ...(f.kontaktEinheitId === undefined ? {} : { kontaktEinheitId: f.kontaktEinheitId }),
+    ...kontaktfolge(f.kontaktEinheitId === undefined ? undefined : { einheitId: f.kontaktEinheitId, rufgruppeId: f.kontaktRufgruppeId }),
     ...(f.annahme === undefined ? {} : { annahme: nachrichtAnnehmen(nachrichtId, null, f.annahme).neu }),
     ...(f.nachweis === undefined ? {} : { nachweis: nachrichtNachweisen(nachrichtId, null, f.nachweis).neu }),
   };
@@ -154,6 +169,8 @@ export interface Nachrichtenfolge {
    * nachgetragen“, das Tagebuch nennt die Stelle der Sitzung.
    */
   readonly nachtrag?: boolean;
+  /** Additiv: Ein über Funk aufgenommener Eingang einer Einheit ist ein Kontakt im Funkplan. */
+  readonly kontakt?: Funkkontakt | undefined;
 }
 
 /**
@@ -169,18 +186,15 @@ export function nachrichtAufnehmen(anlage: Nachrichtenanlage, folge: Nachrichten
   const sichtung = folge.sichtung === undefined ? undefined : nachrichtSichten(anlage.nachrichtId, null, folge.sichtung).neu;
   const annahme = folge.annahme === undefined ? undefined : nachrichtAnnehmen(anlage.nachrichtId, null, folge.annahme).neu;
   const befoerderung = folge.befoerderung === undefined ? undefined : nachrichtBefoerdern(anlage.nachrichtId, null, folge.befoerderung).neu;
-  const nachtrag = folge.nachtrag === true;
-  if (nachweis === undefined && sichtung === undefined && annahme === undefined && befoerderung === undefined && !nachtrag) return basis;
-  return {
-    ...basis,
-    nachrichtenfolge: {
-      ...(nachweis === undefined ? {} : { nachweis }),
-      ...(sichtung === undefined ? {} : { sichtung }),
-      ...(annahme === undefined ? {} : { annahme }),
-      ...(befoerderung === undefined ? {} : { befoerderung }),
-      ...(nachtrag ? { nachtrag } : {}),
-    },
+  const nachrichtenfolge = {
+    ...(nachweis === undefined ? {} : { nachweis }),
+    ...(sichtung === undefined ? {} : { sichtung }),
+    ...(annahme === undefined ? {} : { annahme }),
+    ...(befoerderung === undefined ? {} : { befoerderung }),
+    ...(folge.nachtrag === true ? { nachtrag: true } : {}),
+    ...kontaktfolge(folge.kontakt),
   };
+  return Object.keys(nachrichtenfolge).length === 0 ? basis : { ...basis, nachrichtenfolge };
 }
 
 /**

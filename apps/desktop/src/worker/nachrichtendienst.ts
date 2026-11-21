@@ -24,7 +24,7 @@
 
 import { kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
 
-import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, OffeneNachrichten, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, OffeneNachrichten, Peer, Ruf, Rufgruppenwahl, Sitzungsstellen } from "../kontrakt/index.js";
 import { funkplanbereiche } from "./funkplanprojektion.js";
 
 const MINUTE_MS = 60_000;
@@ -102,12 +102,25 @@ export function anschriften(zustand: Zustand): readonly string[] {
   return [...new Set([...abschnitte, ...einheiten])];
 }
 
-/** Die Einheiten der Lage nach Namen — die Gegenstellen, die der Funkplan als Kontakt kennt. */
+/**
+ * Die Einheiten der Lage nach Namen — die Gegenstellen, die der Funkplan als
+ * Kontakt kennt; mit ihrer geltenden Hauptrufgruppe als Vorbelegung.
+ */
 export function gegenstellen(zustand: Zustand): readonly Gegenstelle[] {
   return kennzahlen
     .einheitenDerLage(zustand)
-    .flatMap((e) => (typeof e.bezeichnung.wert === "string" && e.bezeichnung.wert !== "" ? [{ einheitId: e.id, name: e.bezeichnung.wert }] : []))
+    .flatMap((e) => {
+      if (typeof e.bezeichnung.wert !== "string" || e.bezeichnung.wert === "") return [];
+      const gruppe = e.rufgruppeId?.wert;
+      const gilt = typeof gruppe === "string" && projektion.rufgruppeGilt(zustand.rufgruppen?.[gruppe]);
+      return [{ einheitId: e.id, name: e.bezeichnung.wert, ...(gilt ? { rufgruppeId: gruppe } : {}) }];
+    })
     .sort((a, b) => a.name.localeCompare(b.name, "de"));
+}
+
+/** Die geltenden Rufgruppen zur Wahl, in der Ordnung des Funkplans. */
+export function rufgruppenwahl(zustand: Zustand): readonly Rufgruppenwahl[] {
+  return projektion.rufgruppenAuswahl(zustand).map((r) => ({ rufgruppeId: r.wert, name: r.titel }));
 }
 
 /** Das Blatt „Nachrichten" für den Ruf `nachrichtenAnfordern`. */
@@ -145,6 +158,7 @@ export function nachrichtenansicht(
     jetzt,
     anschriften: anschriften(zustand),
     gegenstellen: gegenstellen(zustand),
+    rufgruppen: rufgruppenwahl(zustand),
     // N2: Vorbelegung und Warnung der Nachweisungsnummer (§6, §9), die Zahlen der Chips (§6).
     naechsteNummer: projektion.naechsteNachweisnummer(zustand),
     vergebeneNummern: vergebeneNummern(zustand),
