@@ -63,7 +63,7 @@ import { useLaden } from "./laden.js";
 import { dtg, handzeichenPflicht, stellenname, zeitAusEingabe } from "./nachrichtenformate.js";
 import { brauchtGrund, useStellenvorbehalt } from "./Stellenvorbehalt.js";
 import { sperrtext, sperrerMitStelle, useSperreHalten } from "./useBearbeitungssperre.js";
-import { Verteilermatrix, hauptempfaengerWarnung, verteilerAusAnschrift, verteilerDesAusgangs, type Verteilerwahl } from "./Verteilerraster.js";
+import { Verteilermatrix, hauptempfaengerWarnung, verteilerDesAusgangs, verteilerVorbelegung, type Verteilerwahl } from "./Verteilerraster.js";
 
 /** Wie oft die ungetippte Quittungszeit nachgeführt wird; beim Sichten gilt ohnehin die Zeit des Drückens. */
 const QUITTUNG_TAKT_MS = 15_000;
@@ -99,7 +99,7 @@ export function ohneHauptempfaengerKnopf(verteiler: readonly Verteilerwahl[]): s
 function verteilerBeimOeffnen(zeile: Nachrichtenzeile, fuestName: string | undefined): readonly Verteilerwahl[] {
   // 2026-11-21: Den beförderten Ausgang verteilt der Sichter an S2 (rot) und den Verfasser (grün).
   if (zeile.sichtung === undefined && zeile.richtung === "AUSGANG" && !zeile.gespraechsnotiz) return verteilerDesAusgangs(projektion.verfasserstelleAus(zeile.funktion, zeile.absender));
-  if (zeile.sichtung === undefined) return verteilerAusAnschrift(zeile.anschrift, fuestName);
+  if (zeile.sichtung === undefined) return verteilerVorbelegung(zeile, fuestName);
   return zeile.verteiler.length > 0 ? zeile.verteiler.map((m) => ({ stelle: m.stelle, kopie: m.kopie })) : zeile.sichtung.verteiler.map((v) => ({ stelle: v.stelle, kopie: v.kopie ?? "BLAU" }));
 }
 

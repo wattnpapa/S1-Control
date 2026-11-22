@@ -22,7 +22,7 @@
  *   „OV Wildeshausen“ bleibt eine grüne Freitextzeile.
  */
 
-import { FERNMELDERSTELLEN } from "@s1/domaene";
+import { FERNMELDERSTELLEN, projektion } from "@s1/domaene";
 import { useState } from "react";
 
 import { KOPIEN, VERTEILERSTELLEN, kopieklasse, stellenname } from "./nachrichtenformate.js";
@@ -111,6 +111,23 @@ export function verteilerAusAnschrift(anschrift: string, eigeneFuest?: string): 
 export function verteilerDesAusgangs(verfasserstelle: string | undefined): readonly Verteilerwahl[] {
   const gruen = verfasserstelle === undefined || verfasserstelle === "S2" ? [] : [{ stelle: verfasserstelle, kopie: "GRUEN" }];
   return [...VERTEILER_VORBELEGUNG, ...gruen];
+}
+
+/**
+ * Der vorbelegte Verteiler einer neuen Nachricht. Bei der Gesprächsnotiz ist
+ * die Anschrift der Gesprächspartner. Ist er eine eigene Stelle („S4“), bekommt
+ * sie die grüne Kopie (Fernmelder P1-4). Ein Gesprächspartner von außen
+ * („NDR 1, Hr. Petersen“) ist keine Stelle und bekommt nichts; dann gilt wie
+ * beim Ausgang S2 rot und die verfassende Stelle grün (Stab-Review S5-1).
+ */
+export function verteilerVorbelegung(
+  nachricht: { readonly anschrift: string; readonly gespraechsnotiz: boolean; readonly funktion?: string | undefined; readonly absender?: string | undefined },
+  eigeneFuest?: string,
+): readonly Verteilerwahl[] {
+  if (!nachricht.gespraechsnotiz) return verteilerAusAnschrift(nachricht.anschrift, eigeneFuest);
+  const eigene = verteilerAusAnschrift(nachricht.anschrift, eigeneFuest).filter((v) => v.kopie !== "GRUEN" || bekannteStelle(v.stelle) !== undefined);
+  if (eigene.some((v) => v.kopie === "GRUEN")) return eigene;
+  return verteilerDesAusgangs(projektion.verfasserstelleAus(nachricht.funktion, nachricht.absender));
 }
 
 /**

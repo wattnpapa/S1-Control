@@ -31,7 +31,7 @@ import { useLaden } from "./laden.js";
 import { stelleZurueck, vergiss, zurueckgestellt } from "./nachrichtenentwuerfe.js";
 import type { Maskenwerte } from "./nachrichtenformate.js";
 import { nachtragVorlage, type Nachtragswerte } from "./Papiernachtrag.js";
-import { verteilerAusAnschrift } from "./Verteilerraster.js";
+import { verteilerVorbelegung } from "./Verteilerraster.js";
 import { verteilVorlage, type Verteilwerte } from "./Vordruckeingabe.js";
 
 /** Alles, was die Maske beim Zurückstellen ablegt. */
@@ -87,7 +87,7 @@ export function useMaskenteile(vorlage: Maskenwerte, naechsteNummer: number | un
   const [nachtragswerte, setzeNachtragswerte] = useState<Nachtragswerte>(start.nachtragswerte);
   const [selbst, setzeSelbst] = useState(start.selbst);
   const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
-  const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerAusAnschrift(werte.anschrift, fuestName) };
+  const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerVorbelegung(werte, fuestName) };
   const geaendert =
     gemerkt !== undefined || JSON.stringify(werte) !== JSON.stringify(vorlage) || aufnahmeAngefasst || verteilerAngefasst || JSON.stringify(nachtragswerte) !== JSON.stringify(nachtragVorlage());
   const teile: Maskenteile = { werte, aufnahmewerte: wirksameAufnahme, verteilwerte, verteilerAngefasst, nachtrag, nachtragswerte, selbst };
