@@ -42,6 +42,7 @@ import type {
   Schichtplanblatt,
   Staerketafel,
   Stabsuebersicht,
+  Fachlage,
   Fmzplatz,
   Tabellenausschnitt,
   Tagebuchzeile,
@@ -870,6 +871,8 @@ export const zRuf = z.discriminatedUnion("art", [
   // Die Stabsübersicht (additiv, Stab-Review 2026-11-22): Kräfte nach Status
   // je Teilbaum und alle Aufträge in einem Ruf, kein Ausschnitt.
   z.object({ art: z.literal("stabsuebersichtAnfordern"), akteId: zAkteId }),
+  // Die Fachlage (additiv, Stab-Review 2026-11-22): alle Bereiche in einem Ruf.
+  z.object({ art: z.literal("fachlageAnfordern"), akteId: zAkteId }),
   // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
@@ -1263,6 +1266,7 @@ export interface Antworten {
   funkplanAnfordern: Funkplanansicht;
   staerketafelAnfordern: Staerketafelansicht;
   stabsuebersichtAnfordern: Stabsuebersichtansicht;
+  fachlageAnfordern: Fachlageansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
@@ -1510,6 +1514,11 @@ export interface Versorgungsansicht extends Ansichtsstand {
 /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
 export interface Staerketafelansicht extends Ansichtsstand {
   readonly tafel: Staerketafel;
+}
+
+/** Die Fachlage: Lage je Abschnitt, Pegel, Deich, Patienten, Amtshilfe, Material, Presse, Störungen. */
+export interface Fachlageansicht extends Ansichtsstand {
+  readonly fachlage: Fachlage;
 }
 
 /** Die Stabsübersicht: Kräfte nach Status je Abschnitt (Teilbaum) und alle Aufträge. */
