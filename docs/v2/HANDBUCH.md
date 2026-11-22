@@ -299,7 +299,11 @@ welcher Posteingang zuerst erscheint. Im Meldekopf fragt das Programm nicht.
 
 **Das Blatt.** Oben stehen fünf Zahlen: neu für meine Stellen, vor der FmZ,
 vor dem Sichter, mit Vorrang offen und länger als die Schwelle in der FmZ;
-die letzten beiden werden ab eins bernsteinfarben. Darunter der Umschalter
+die letzten beiden werden ab eins bernsteinfarben. Mit LdF als Station kommt
+eine sechste dazu, „vor dem LdF“, aufgeteilt in Zuteilung und Weitergabe.
+Arbeitet ein anderer Arbeitsplatz mit einer anderen Programmfassung, steht
+darüber eine Warnung: Der Nachrichtenweg kann dort anders stehen, bitte alle
+Arbeitsplätze aktualisieren. Darunter der Umschalter
 „Posteingang | Offen | Ausgang | Sichter | Fernmeldezentrale | Nachweisung“
 (mit LdF als Station auch „LdF“), der Hauptknopf „Nachricht verfassen“
 (Strg+N) und die Suche über Betreff, Inhalt, Absender und Anschrift
@@ -436,7 +440,7 @@ unter dieser Gruppe. Der Funkplan zeigt danach den letzten Kontakt;
 zurück; der aufgenommene Eingang selbst bleibt.
 
 **Ist die FmZ besetzt?** Wer einen Ausgang aufgibt, während kein
-Arbeitsplatz die Stelle FmZ hat (mit LdF als Station: auch kein LdF), liest
+Arbeitsplatz einen der Fernmelder Fm1 bis Fm3 führt (mit LdF als Station: auch kein LdF), liest
 nach dem Aufgeben „Fernmeldezentrale nicht besetzt: Die Nachricht wartet.
 Selbst befördern über die Sicht Fernmeldezentrale.“ Dann ruft man die FmZ
 an oder befördert selbst (mit „Trotzdem“). Eine Gesprächsnotiz „An den

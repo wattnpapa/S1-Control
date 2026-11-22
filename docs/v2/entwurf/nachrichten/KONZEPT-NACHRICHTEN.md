@@ -331,6 +331,22 @@ und Handzeichen der Beförderung; ohne Sichter folgen auf die Weitergabe
 (oder ohne LdF auf die Beförderung) die Kopien wie oben. Ohne `ldfStation`
 bleibt alles wie oben beschrieben.
 
+Nachgezogen nach dem Rollen-Review vom 2026-11-21 (Verfasser, LdF,
+Fernmelder, Sichter, S2/ETB): Mit `sichtungAuchAusgang` läuft der beförderte
+Ausgang weiter direkt zum Sichter. Wird `ldfStation` abgeschaltet, schreibt
+der Worker die Kopien für beförderte, ungesichtete Ausgänge nach. Die
+Vorbelegung bei der Anlage trägt `GRUND_VORBELEGUNG_ANLAGE` und liegt nicht im
+Rückgängig-Stapel. Ist der LdF nach der Beförderung nicht mehr besetzt, gibt
+ein Fernmelder den Ausgang mit „Selbst weitergeben“ weiter. „Nachweisen und
+weitergeben“ schreibt den Nachweis als Hauptschritt mit Vorwert-Prüfung und
+die Weitergabe als Folge, damit keine vergebene Nummer überschrieben wird und
+das Tagebuch die Nummer zuerst nennt. Mit besetztem LdF belegt die
+Beförderung keine Nummer vor. Der Ausgang vor dem Sichter hat eine Uhr
+(Schwellen, säumiger Sichter), und ohne Sichter verteilt der LdF als
+Ersatzsichter. Ersatzschritte ohne LdF tragen `GRUND_ERSATZ_LDF`, die
+Zuteilung heißt im Tagebuch „an Fm2 zugeteilt“. Die Präsenz trägt
+`foldVersion`; das Blatt warnt vor Arbeitsplätzen mit anderer Fassung.
+
 ## 6. Das Blatt „Nachrichten"
 
 Ein eigener Reiter im Kopfband, bei der Führungsstelle zwischen Eingang und
