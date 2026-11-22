@@ -39,13 +39,13 @@ export const RG = {
 } as const;
 
 const RUFGRUPPEN: readonly Rufgruppenanlage[] = [
-  { rufgruppeId: RG.fuehrung, betriebsart: "TMO", name: "THW_OL_FUE", zweck: "Führung: Führungsstelle und Abschnittsleiter", hoert: "FmZ der Führungsstelle" },
+  { rufgruppeId: RG.fuehrung, betriebsart: "TMO", name: "THW_OL_FUE", zweck: "Führung: Führungsstelle und Abschnittsleiter", hoert: "FmZ der Führungsstelle: Fm1 und LdF" },
   { rufgruppeId: RG.ea1, betriebsart: "TMO", name: "THW_OL_EA1", zweck: "Einsatzabschnitt 1 Deich Nord", hoert: "Abschnittsleiter EA 1", abschnittId: AB.ea1 },
   { rufgruppeId: RG.ea2, betriebsart: "TMO", name: "THW_OL_EA2", zweck: "Einsatzabschnitt 2 Deich Süd", hoert: "Abschnittsleiter EA 2", abschnittId: AB.ea2 },
   { rufgruppeId: RG.ea3, betriebsart: "TMO", name: "THW_OL_EA3", zweck: "Einsatzabschnitt 3 Pumpen", hoert: "Abschnittsleiter EA 3", abschnittId: AB.ea3 },
-  { rufgruppeId: RG.logistik, betriebsart: "TMO", name: "THW_OL_LOG", zweck: "Logistik, Verpflegung, Transporte", abschnittId: AB.logistik },
+  { rufgruppeId: RG.logistik, betriebsart: "TMO", name: "THW_OL_LOG", zweck: "Logistik, Verpflegung, Transporte", hoert: "Fm2", abschnittId: AB.logistik },
   { rufgruppeId: RG.dmo, betriebsart: "DMO", name: "307_F*", zweck: "Einsatzstellenfunk am Deichfuß (kein Netz)", gateway: "GKW OV Oldenburg", bemerkung: "Reichweite nur innerhalb des Abschnitts" },
-  { rufgruppeId: RG.analog, betriebsart: "ANALOG", name: "Kanal 50 W/U", zweck: "2-m-Band Feuerwehr, Rückfallebene" },
+  { rufgruppeId: RG.analog, betriebsart: "ANALOG", name: "Kanal 50 W/U", zweck: "2-m-Band Feuerwehr, Rückfallebene", hoert: "Fm3" },
   { rufgruppeId: RG.erkundung, betriebsart: "TMO", name: "THW_OL_ERK", zweck: "Erkundung Hunte-Niederung", abschnittId: AB.erkundung },
 ];
 

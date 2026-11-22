@@ -66,6 +66,7 @@ import { Sichtzusatz, Stellenangabe, quittierendeStellen, type Sichterstand } fr
 import { Nachweisung } from "./Nachweisung.js";
 import { Nachweisungsausgabe } from "./Nachweisungsausgabe.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
+import { Fmzplaetzekarte } from "./Fmzplaetzekarte.js";
 import { Ruecklaufkarte } from "./Ruecklaufkarte.js";
 import { Sichterhinweis, Sichterstaukarte, sichtername } from "./Sichterstau.js";
 import { useKuerzel } from "./tastatur.js";
@@ -213,7 +214,10 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
           />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
-        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} aufStationEinschalten={stationEinschalten(lagebild)} />
+        <>
+          {abruf.ansicht.plaetze !== undefined && <Fmzplaetzekarte plaetze={abruf.ansicht.plaetze} jetzt={abruf.ansicht.jetzt} />}
+          <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} aufStationEinschalten={stationEinschalten(lagebild)} />
+        </>
       ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
         <>
           <Lueckenzeile luecken={abruf.ansicht.nummernluecken} />

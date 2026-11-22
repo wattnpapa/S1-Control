@@ -580,7 +580,12 @@ Nummer und gibt die Nachricht an den Sichter weiter. Wer die Stelle LdF
 wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor der
 Zuteilung“ mit dem Knopf „Fernmelder zuteilen“ und „Eingänge vor der
 Weitergabe“ mit dem Knopf „An den Sichter weitergeben“ (Uhrzeit,
-Handzeichen). Das Band zeigt dann die Zahl „vor dem LdF“. In der
+Handzeichen). Darüber steht „Arbeitsplätze der Fernmeldezentrale“: je Platz
+(LdF, Sichter, Fm1 bis Fm3), wer ihn besetzt hält und wann er zuletzt zu sehen
+war, was ihm zugeteilt und noch nicht befördert ist (angenommen oder nicht,
+mit der ältesten Wartezeit) und welche Rufgruppen er abhört. Abgehört heißt:
+Im Funkplan steht der Name des Platzes im Feld „hört“. Liegt eine Zuteilung
+bei einem unbesetzten Platz, steht dort „niemand da“. Das Band zeigt dann die Zahl „vor dem LdF“. In der
 Warteschlange der FmZ trägt ein Ausgang ohne Zuteilung die
 Marke „beim LdF“. Wer als Fm1, Fm2 oder Fm3 eingetragen ist, sieht die ihm
 zugeteilten Nachrichten zuoberst mit der Marke „für Sie“, darunter die ohne

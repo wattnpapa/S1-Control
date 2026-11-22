@@ -156,6 +156,11 @@ describe("Funktionalität: Demo-Einsatz", () => {
     const relevant = platz.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-demo", von: 0, anzahl: 500, nurTagebuchrelevant: true });
     expect(voll.zeilen.some((z) => z.nachtrag === true)).toBe(true);
     expect(relevant.gesamtzahl).toBeLessThan(voll.gesamtzahl);
+    // Arbeitsplätze der FmZ beim LdF: alle Plätze, Rufgruppen nach „hört“, eine offene Zuteilung.
+    const plaetze = platz.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-demo", sicht: "ldf" }).plaetze ?? [];
+    expect(plaetze.map((p) => p.name)).toEqual(["LdF", "Sichter", "Fm1", "Fm2", "Fm3"]);
+    expect(plaetze.find((p) => p.name === "Fm1")?.rufgruppen).toContain("THW_OL_FUE");
+    expect(plaetze.some((p) => p.zugeteilt > 0)).toBe(true);
   });
 
   it("Szenario: der Demo-Einsatz füllt die Monitoransichten aller Stabsfunktionen", () => {
