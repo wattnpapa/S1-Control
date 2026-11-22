@@ -2200,7 +2200,7 @@ export class Aktendienst {
       lageZeiger: this.#lageZeiger,
       versorgung: versorgungFuerLagebild(zustand, this.#o.zeit()),
       funk: funkFuerLagebild(zustand, this.#o.zeit()),
-      nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit(), sichterBesetzt(this.#sitzung?.stellen, this.#peers)),
+      nachrichten: nachrichtenFuerLagebild(zustand, this.#sitzung?.stellen ?? [], this.#o.zeit(), sichterBesetzt(this.#sitzung?.stellen, this.#peers), ldfBesetzt(this.#sitzung?.stellen, this.#peers)),
       ...offeneNachrichtenTeil(zustand),
       ...(this.#sitzung === undefined ? {} : { sitzung: this.#sitzung }),
       // Additiv (R2-FaBe P0-3): wer besetzt ist — FmZ, Sichter, LdF — für die Hinweise der Oberfläche.

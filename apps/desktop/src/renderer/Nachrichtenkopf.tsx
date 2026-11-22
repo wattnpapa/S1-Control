@@ -74,7 +74,8 @@ export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Na
   return (
     <dl className="kpiband nachrichtenband" aria-label="Zahlen der Nachrichten">
       <Kachel wert={lage?.neuFuerStellen} titel="neu für meine Stellen" />
-      <Kachel wert={lage?.vorFmz} titel="vor der FmZ" />
+      {/* Review Runde 2: Ohne LdF befördert die FmZ auch, was beim LdF liegt — die Kachel zählt es mit. */}
+      <Kachel wert={lage === undefined ? undefined : lage.vorFmz + (ldfBesetzt ? 0 : (lage.vorLdf ?? 0))} titel="vor der FmZ" />
       <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
       {/* R2-LdF P3-3: Ist kein LdF besetzt, befördert die FmZ selbst — die Kachel sagt es. */}
       {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfkacheltitel(lage, ldfBesetzt)} />}

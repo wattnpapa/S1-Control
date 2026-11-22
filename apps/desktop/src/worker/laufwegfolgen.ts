@@ -60,6 +60,7 @@ export const HINWEIS_OHNE_VORSCHLAG = "Befördert, bevor der LdF einen Fernmelde
 export const HINWEIS_ZURUECK_ZUM_LDF = "Befördert: Die Nachricht liegt jetzt beim LdF zur Nachweisung und Weitergabe an den Sichter.";
 export const HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG = "Kein LdF besetzt: Nachricht nach der Beförderung direkt an den Sichter weitergegeben.";
 export const HINWEIS_LDF_VERTEILT_AUSGANG = "Kein Sichter besetzt: Der LdF hat S2 rot und den Verfasser grün verteilt.";
+export const HINWEIS_SELBST_VERTEILT_AUSGANG = "Kein LdF und kein Sichter besetzt: S2 rot und der Verfasser grün sind verteilt.";
 
 type Werte = Record<string, unknown>;
 
@@ -169,7 +170,9 @@ export function planeKopienNachWeitergabe(zustand: Zustand, nachrichtId: string,
   if (nachricht.richtung.wert !== "AUSGANG" || nachricht.gespraechsnotiz?.wert === true || objekt(nachricht.sichtung?.wert) !== undefined) return undefined;
   // Review 2026-11-21: Der LdF verteilt hier als Ersatzsichter — so steht es im Tagebuch, nicht als „Kopien nach Beförderung“.
   const folge = kopienfolge(nachricht, vermerk, umfeld, projektion.GRUND_ERSATZSICHTER);
-  return { ...folge, hinweis: `${HINWEIS_LDF_VERTEILT_AUSGANG}${fachhinweis(umfeld)}` };
+  // Review Runde 2: Gibt ein Fernmelder weiter (kein LdF besetzt), hat er verteilt, nicht der LdF.
+  const durchLdf = umfeld.stellen?.includes("LDF") === true;
+  return { ...folge, hinweis: `${durchLdf ? HINWEIS_LDF_VERTEILT_AUSGANG : HINWEIS_SELBST_VERTEILT_AUSGANG}${fachhinweis(umfeld)}` };
 }
 
 function fachhinweis(umfeld: Laufwegumfeld): string {

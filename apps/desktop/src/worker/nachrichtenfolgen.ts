@@ -80,6 +80,7 @@ export const HINWEIS_ERSATZSICHTER_NOTIZ = "Kein Sichter besetzt: Gesprächsnoti
  * R2-FaBe P0-3: Wer aufgibt, erfuhr nicht, ob jemand die FmZ besetzt — die
  * Nachricht konnte unbemerkt liegen.
  */
+export const HINWEIS_KEIN_FERNMELDER = "Kein Fernmelder besetzt (Fm1 bis Fm3): Der LdF kann zuteilen, aber niemand überträgt. Die Nachricht wartet.";
 export const HINWEIS_FMZ_NICHT_BESETZT = "Fernmeldezentrale nicht besetzt: Die Nachricht wartet. Selbst befördern über die Sicht Fernmeldezentrale.";
 /** Dasselbe für die Gesprächsnotiz, die „An den Sichter“ geht, ohne Sichter in der Präsenz. */
 export const HINWEIS_NOTIZ_OHNE_SICHTER = "Sichter nicht besetzt: Die Gesprächsnotiz wartet. Selbst verteilen über die Sicht Sichter.";
@@ -143,7 +144,8 @@ function anlagehinweise(zustand: Zustand, nutzlast: Record<string, unknown>, wer
   const hinweise: string[] = [];
   const notiz = nutzlast["gespraechsnotiz"] === true;
   const ausgang = nutzlast["richtung"] === "AUSGANG" && !notiz && werte?.befoerderung === undefined;
-  if (ausgang && umfeld.fmzBesetzt === false && !ldfStationBesetzt(zustand, umfeld)) hinweise.push(HINWEIS_FMZ_NICHT_BESETZT);
+  // Review Runde 2: Auch mit besetztem LdF wartet die Nachricht, wenn kein Fernmelder sie übertragen kann.
+  if (ausgang && umfeld.fmzBesetzt === false) hinweise.push(ldfStationBesetzt(zustand, umfeld) ? HINWEIS_KEIN_FERNMELDER : HINWEIS_FMZ_NICHT_BESETZT);
   if (notiz && werte?.sichtung === undefined && !umfeld.sichterBesetzt) hinweise.push(HINWEIS_NOTIZ_OHNE_SICHTER);
   const aufgenommen = nutzlast["richtung"] === "EINGANG" && !notiz && nutzlast["aufnahme"] !== undefined;
   if (aufgenommen && werte?.nachweis === undefined) hinweise.push(HINWEIS_EINGANG_OHNE_NUMMER);

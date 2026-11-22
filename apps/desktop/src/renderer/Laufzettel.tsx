@@ -137,6 +137,19 @@ export function ausgangskopf(zeile: Nachrichtenzeile): string {
   return teile.join(" · ");
 }
 
+/**
+ * Review Runde 2: Beim Ausgang gehören S2 (rot, Lage und Tagebuch) und der
+ * Verfasser (grün) in den Verteiler — fehlt einer, warnt der Laufzettel; mit
+ * dem zweiten Klick geht es trotzdem.
+ */
+export function ausgangsverteilerWarnung(zeile: Nachrichtenzeile, verteiler: readonly Verteilerwahl[]): string | undefined {
+  const fehlt: string[] = [];
+  if (!verteiler.some((v) => v.stelle === "S2")) fehlt.push("S2 (rot, Lage und Tagebuch)");
+  const verfasser = projektion.verfasserstelleAus(zeile.funktion, zeile.absender);
+  if (verfasser !== undefined && verfasser !== "S2" && !verteiler.some((v) => v.stelle === verfasser)) fehlt.push(`${stellenname(verfasser)} (grün, Verfasser)`);
+  return fehlt.length === 0 ? undefined : `Beim Ausgang fehlt im Verteiler: ${fehlt.join(", ")}.`;
+}
+
 /** Betreff, Inhalt und Aufnahmevermerk über dem Verteiler (Sichter P1-2). */
 function Inhaltsblick({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
   return (
@@ -273,7 +286,7 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
   // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
   // Review 2026-11-21: Ein beförderter Ausgang braucht keinen Hauptempfänger — er ist erledigt, die Kopien sind Rückmeldung.
-  const warnung = istVerteilterAusgang(zeile) ? undefined : hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
+  const warnung = istVerteilterAusgang(zeile) ? ausgangsverteilerWarnung(zeile, w.verteiler) : hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
   const freigabe = useSichtfreigabe(zeile, w.verteiler, warnung, nurLesen, saeumig);
   const { vorbehalt } = freigabe;
   const grund = fehlt ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined);

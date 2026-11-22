@@ -21,6 +21,7 @@
  */
 
 import { NACHRICHT_KOPIEN, NACHRICHT_MITTEL } from "./ereignis.js";
+import { vergleicheHlc } from "./hlc.js";
 import { kanonischeSerialisierung, vergleicheNachCodepunkt, type KanonischerWert } from "./kanonisch.js";
 import type { Laufzustand } from "./zustand-nachricht.js";
 import type { Feld, Konflikthinweis } from "./zustand.js";
@@ -131,6 +132,19 @@ function vorLdf(felder: ReadonlyMap<string, Feld<unknown>>, ausgang: boolean, si
 }
 
 /**
+ * Gilt ein Vermerk einer Stelle (Kenntnis, Erledigung) für die geltende
+ * Sichtung? Review Runde 2: Wurde die Sichtung zurückgenommen und neu
+ * geschrieben (gesehener Vorher-Wert leer), zählen nur Vermerke nach ihr —
+ * sonst stand die berichtigte Kopie bei S2 gleich als „erledigt“. Eine
+ * Nachsichtung mit Vorher-Wert lässt die Vermerke stehen.
+ */
+export function giltFuerSichtung(vermerk: Pick<Feld<unknown>, "hlc"> | undefined, sichtung: Pick<Feld<unknown>, "hlc" | "gesehenerVorher"> | undefined): boolean {
+  if (vermerk === undefined) return false;
+  if (sichtung === undefined || sichtung.gesehenerVorher?.wert !== null) return true;
+  return vergleicheHlc(vermerk.hlc, sichtung.hlc) > 0;
+}
+
+/**
  * Der Laufzustand aus §9. Die Reihenfolge der Prüfungen ist die Regel:
  * zurückgezogen schlägt alles; mit `ldfStation` steht eine Nachricht vor
  * dem LdF, solange er sie nicht bearbeitet hat; ein Ausgang (keine
@@ -154,7 +168,11 @@ export function laufzustandAus(
     if (ausgang && !notiz) return sichtungAuchAusgang || (ldfStation === true && hat(felder, "weitergabe")) ? "VOR_SICHTER" : "ERLEDIGT";
     return "VOR_SICHTER";
   }
-  const offen = verteilerstellen(sichtung, streitigeSichtung(felder.get("sichtung"))).some((stelle) => felder.get(`erledigt/${stelle}`)?.wert !== true);
+  const sichtungsfeld = felder.get("sichtung");
+  const offen = verteilerstellen(sichtung, streitigeSichtung(sichtungsfeld)).some((stelle) => {
+    const erledigt = felder.get(`erledigt/${stelle}`);
+    return erledigt?.wert !== true || !giltFuerSichtung(erledigt, sichtungsfeld);
+  });
   return offen ? "VERTEILT" : "ERLEDIGT";
 }
 
