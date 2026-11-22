@@ -529,8 +529,38 @@
         position: relative;
         margin-left: auto;
       }
-      .kopfband .zustandsmarke + .fenstermenue {
+      .kopfband .zustandsmarke ~ .fenstermenue,
+      .kopfband .zustandsmarke ~ .monitorknopfhuelle {
         margin-left: 0;
+      }
+      /* Der Lagemonitor (Monitorknopf.tsx): ein Symbol links neben „⋯",
+         gleich gross und gleich gerahmt. Ohne Zustandsmarke schiebt er
+         sich selbst nach rechts. */
+      .kopfband .monitorknopfhuelle {
+        position: relative;
+        margin-left: auto;
+      }
+      .kopfband .monitorknopfhuelle + .fenstermenue {
+        margin-left: 0;
+      }
+      .kopfband .monitorknopf {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--knopfhoehe);
+        height: var(--knopfhoehe);
+        padding: 0;
+        border: var(--rahmenbreite) solid var(--kopfband-text);
+        background: transparent;
+        color: var(--kopfband-text);
+      }
+      .kopfband .monitorknopf .symbol {
+        width: 20px;
+        height: 20px;
+      }
+      .kopfband .monitorknopf[aria-expanded="true"] {
+        background: var(--kopfband-text);
+        color: var(--kopfband-bg);
       }
       .kopfband .fenstermenueknopf {
         width: var(--knopfhoehe);
@@ -3841,7 +3871,8 @@
           min-height: 44px;
           min-width: 44px;
         }
-        .kopfband .fenstermenueknopf {
+        .kopfband .fenstermenueknopf,
+        .kopfband .monitorknopf {
           width: 44px;
           height: 44px;
         }
@@ -3888,7 +3919,8 @@
         }
         /* Das Menü haengt am Kopfband und nutzt dessen Breite, damit es nie
            links oder rechts aus dem Bild laeuft (wie die Zaehlregel). */
-        .kopfband .fenstermenue {
+        .kopfband .fenstermenue,
+        .kopfband .monitorknopfhuelle {
           position: static;
         }
         .fenstermenue > .klappmenueliste,

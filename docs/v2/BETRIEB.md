@@ -224,9 +224,9 @@ Was der Bediener wissen muss:
 * **Der Arbeitsplatz hängt am Browser.** Cookies löschen oder ein anderer
   Browser heißt: ein neuer Arbeitsplatz mit neuer Kennung. Der alte bleibt
   auf dem Share als das, was er war.
-* **Der Stärke-Monitor** ist dieselbe Adresse mit `#monitor`. Der Eintrag
-  „Stärke-Monitor öffnen …“ im Fenstermenü „⋯“ öffnet sie in einem neuen
-  Fenster, das sich auf das Anzeigegerät ziehen lässt; auf einem Fernseher
+* **Der Lagemonitor** (früher „Stärke-Monitor“) ist dieselbe Adresse mit
+  `#monitor`. Das Bildschirm-Symbol im Kopfband links neben „⋯“ öffnet sie
+  in einem neuen Fenster, das sich auf das Anzeigegerät ziehen lässt; auf einem Fernseher
   mit Browser wird die Adresse direkt eingegeben. Blockiert der Browser das
   Fenster, Pop-ups für die Seite erlauben.
 * **Was fehlt:** PDF-Ausgaben (HTML und XLSX gehen; das PDF entsteht auf einem

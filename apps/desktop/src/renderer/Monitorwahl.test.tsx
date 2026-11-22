@@ -1,8 +1,8 @@
 /**
  * Die Monitorwahl (M3.5) — in der Electron-Schale und im Browser.
  *
- * Seit Runde 6 („Entlastung") öffnet sie der Eintrag „Stärke-Monitor öffnen …"
- * im Fenstermenü (Fenstermenue.test.tsx prüft den Weg dorthin). Hier steht,
+ * Sie öffnet der Knopf „Lagemonitor" im Kopfband (Fenstermenue.test.tsx
+ * prüft den Weg dorthin). Hier steht,
  * was dahinter liegt: die Bildschirmwahl der Electron-Schale und das neue
  * Fenster im Browser. Im Browser gibt es kein zweites `BrowserWindow`: Der
  * Eintrag muss die Monitorseite selbst öffnen, statt einen Ruf zu schicken,
@@ -40,7 +40,7 @@ describe("Die Bildschirmwahl in der Electron-Schale", () => {
   it("holt die Bildschirme beim Aufgehen und ruft die Schale zum Öffnen", async () => {
     const zu = vi.fn();
     render(<Monitorauswahl aufSchliessen={zu} />);
-    expect(screen.getByRole("dialog", { name: "Stärke-Monitor öffnen" })).toBeDefined();
+    expect(screen.getByRole("dialog", { name: "Lagemonitor öffnen" })).toBeDefined();
     await userEvent.click(await screen.findByRole("button", { name: /Beamer \(1920×1080\)/ }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("monitorOeffnen")).toEqual({ art: "monitorOeffnen", bildschirmId: "2" });
