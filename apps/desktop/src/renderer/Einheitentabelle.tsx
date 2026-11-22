@@ -58,6 +58,7 @@ export type Einheitenmaske =
   | "kopieren"
   | "funk"
   | "erfassungsboegen"
+  | "status"
   | undefined;
 
 export interface EinheitentabelleEigenschaften {

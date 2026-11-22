@@ -29,6 +29,7 @@ import { Erfassungsboegen } from "./Erfassungsboegen.js";
 import { FunkUndErreichbarkeitAusLage } from "./FunkUndErreichbarkeit.js";
 import { kopieVorbelegung } from "./einheitKopie.js";
 import { Maske } from "./Maske.js";
+import { Statusmaske } from "./Statusmaske.js";
 import { Abschnittswahl, Staerkefelder, zahl, type Staerkeeingabe } from "./Maskenfelder.js";
 import type { Einheitenmaske } from "./Einheitentabelle.js";
 import { aufteilung, entfernung, istStaerkeEingabe, verschiebung, zusammenfuehrung } from "../kontrakt/bedienschritte.js";
@@ -102,6 +103,11 @@ export function Einheitenmasken({
   // Funk und Erreichbarkeit (Funkplan F2) ebenso: eigene Maske, hier die Weiche.
   if (maske === "funk" && erste !== undefined) {
     return <FunkUndErreichbarkeitAusLage key={erste.einheitId} einheitId={erste.einheitId} aufSchliessen={aufSchliessen} />;
+  }
+
+  // Status und Einbuchen, auch für mehrere Einheiten (Stab-Review FüGeh S1).
+  if (maske === "status") {
+    return gewaehlte.length === 0 ? null : <Statusmaske gewaehlte={gewaehlte} aufSchliessen={aufSchliessen} aufGeschrieben={aufGeschrieben} />;
   }
 
   // Der Sammel-Download der Erfassungsbögen liest nur; auch er hat seine eigene Maske.

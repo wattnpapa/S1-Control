@@ -361,6 +361,7 @@ describe("Die Einheitentabelle", () => {
     expect(leiste.textContent).toContain("1 gewählt · Bergungsgruppe 1");
     expect(leiste.textContent).toContain("Esc hebt die Auswahl auf");
     expect(within(leiste).getAllByRole("button").map((k) => k.textContent)).toEqual([
+      "Status …",
       "VerschiebenStrg+M",
       "Aufteilen",
       "Zusammenführen",
@@ -387,6 +388,7 @@ describe("Die Einheitentabelle", () => {
     const leiste = screen.getByRole("toolbar", { name: "Auswahl" });
     expect(leiste.textContent).toContain("2 gewählt");
     expect(within(leiste).getAllByRole("button").map((k) => k.getAttribute("aria-disabled") ?? k.textContent)).toEqual([
+      "Status …",
       "VerschiebenStrg+M",
       "Zusammenführen",
       "Erfassungsbögen",
@@ -421,6 +423,7 @@ describe("Die Einheitentabelle", () => {
     });
     const menue = screen.getByRole("menu", { name: "1 gewählt · Fachgruppe N" });
     expect(within(menue).getAllByRole("menuitem").map((e) => e.textContent)).toEqual([
+      "Status und Einbuchen …",
       "Verschieben …Strg+M",
       "Aufteilen …",
       "Zusammenführen …",

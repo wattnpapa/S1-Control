@@ -52,6 +52,13 @@ export function auswahlschritte(anzahl: number): readonly Auswahlschritt[] {
   if (anzahl === 0) return [];
   const eine = anzahl === 1;
   const schritte: (Auswahlschritt | false)[] = [
+    // Stab-Review FüGeh S1 FA-FG-1/2: einbuchen und Sammelwechsel in einem Zug.
+    {
+      maske: "status",
+      text: "Status …",
+      menuetext: "Status und Einbuchen …",
+      titel: "Status, Abschnitt, Schicht und Eintreffzeit für die markierten Einheiten in einem Schritt",
+    },
     { maske: "verschieben", text: "Verschieben", menuetext: "Verschieben …", kurz: kurz("verschieben") },
     eine && { maske: "aufteilen", text: "Aufteilen", menuetext: "Aufteilen …" },
     { maske: "zusammenfuehren", text: "Zusammenführen", menuetext: "Zusammenführen …", ...(eine ? { sperre: "Zwei Einheiten wählen" } : {}) },
