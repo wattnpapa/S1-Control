@@ -531,7 +531,7 @@ gilt nicht, ein Blitz wartet nie länger als eine einfache Nachricht.
 stehen unter „Nachrichtenweg“ zwei Einstellungen für alle Arbeitsplätze:
 ob Ausgänge nach der Beförderung noch einmal zum Sichter laufen (Vorbelegung
 nein) und die Schwelle der FmZ in Minuten (Vorbelegung 20). Dazu kommen
-„LdF als eigene Station“ (bei neu angelegten Einsätzen eingeschaltet, bei älteren Einsätzen aus), siehe unten, und die Schwellen
+„LdF als eigene Station“ (Vorbelegung ja, in jedem Einsatz; ausgeschaltet nur, wenn jemand das Häkchen herausnimmt), siehe unten, und die Schwellen
 vor dem Sichter bei Blitz und Sofort (Vorbelegung 5 und 10 Minuten, siehe
 „Säumiger Sichter“).
 

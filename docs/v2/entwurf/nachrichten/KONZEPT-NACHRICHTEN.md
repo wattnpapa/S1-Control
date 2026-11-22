@@ -273,8 +273,9 @@ Leiter des Fernmeldebetriebes (ergänzt 2026-11-17, mit Johannes bestätigt).
 Nach der Lehrunterlage (Folie 22) legt der LdF in der FmZ das
 Übertragungsmittel fest, und in der Stabsdienstordnung der Führungsstelle
 steht er beim Eingang zwischen Fernmelder und Sichter. Führt der Einsatz den
-Parameter `ldfStation` (ein neu angelegter Einsatz schreibt ihn seit
-2026-11-21 mit ja; ältere Einsätze ohne den Parameter bleiben ohne LdF),
+Parameter `ldfStation` (geändert 2026-11-22, FOLD_VERSION 17: der LdF ist
+Standard — fehlt der Parameter, gilt ja, auch in älteren Einsätzen; nur ein
+ausdrückliches Nein schaltet ab, `ldfstation.ts`),
 läuft ein Ausgang ohne Vorschlag zuerst zum LdF, der mit dem Übermittlungsvorschlag
 (`NachrichtUebermittlungVorgeschlagen`, oben unter „Ausgang") Fernmelder,
 Mittel und Gegenstelle bestimmt; die Beförderungsmaske belegt damit vor.
