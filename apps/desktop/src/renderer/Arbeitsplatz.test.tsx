@@ -196,21 +196,20 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
-    const lage = screen.getByLabelText("Lagebild");
+    const lage = screen.getByLabelText("S1");
     // Die Werkzeugzeile der Lage ist ganz weg; der Bogen steckt im Hauptknopf der Einheitenkarte.
     expect(document.querySelector(".lagekopf")).toBeNull();
     expect(within(lage).queryByRole("button", { name: "Erfassungsbogen einlesen" })).toBeNull();
     await userEvent.click(within(lage).getByRole("button", { name: "Einheit anlegen" }));
     await userEvent.click(screen.getByRole("menuitem", { name: "Erfassungsbogen einlesen …" }));
     expect(screen.getByRole("region", { name: "Erfassungsbogen einlesen" })).toBeDefined();
-    expect(within(lage).queryByRole("button", { name: /Stärke-Monitor/ })).toBeNull();
+    expect(within(lage).queryByRole("button", { name: /Lagemonitor/ })).toBeNull();
     expect(within(lage).queryByRole("button", { name: /Rückgängig/ })).toBeNull();
     const ruecknahmen = screen.getAllByRole("button", { name: /Rückgängig/ });
     expect(ruecknahmen).toHaveLength(1);
     expect(ruecknahmen[0]?.closest("footer")?.getAttribute("aria-label")).toBe("Statuszeile");
-    // Der Monitor ist über das Fenstermenü erreichbar.
-    await userEvent.click(screen.getByRole("button", { name: "Fenstermenü" }));
-    expect(screen.getByRole("menuitem", { name: "Stärke-Monitor öffnen …" })).toBeDefined();
+    // Der Lagemonitor hat sein Symbol im Kopfband.
+    expect(screen.getByRole("button", { name: "Lagemonitor öffnen" }).closest("header")).not.toBeNull();
   });
 
   it("zeigt unter dem Kopfband die Einstiegszeile des aufgeschlagenen Blatts", async () => {

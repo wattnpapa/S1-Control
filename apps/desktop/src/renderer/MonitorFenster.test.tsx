@@ -1,5 +1,5 @@
 /**
- * Prüffälle zum Zweitfenster des Stärke-Monitors (M3.5).
+ * Prüffälle zum Zweitfenster des Lagemonitors (M3.5).
  *
  * Das **Bild** prüft `Monitor.test.tsx`; hier steht die Verdrahtung: dass der
  * Monitor die Akte der ersten Standmitteilung übernimmt, dass er Deltas
@@ -52,7 +52,7 @@ function stand(folge: number, teil: Partial<Mitteilung> = {}): Mitteilung {
 describe("Das Monitorfenster", () => {
   it("zeigt vor der ersten Mitteilung keine erfundene Zahl", () => {
     render(<MonitorFenster />);
-    expect(screen.getByLabelText("Stärke-Monitor")).toBeDefined();
+    expect(screen.getByLabelText("Lagemonitor")).toBeDefined();
     // Eine „0/0/0 = 0“ ohne Akte wäre eine Behauptung über die Lage, die
     // niemand deckt.
     expect(screen.queryByText(/2\/5\/40/)).toBeNull();

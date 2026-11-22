@@ -3,7 +3,8 @@
  * Option 6e).
  *
  * Hier steht, was zum **Fenster** gehört und selten gebraucht wird: Hilfe,
- * Erscheinungsbild, Stärke-Monitor, Diagnose, Abmelden, Einsatz schließen.
+ * Erscheinungsbild, Stelle, Diagnose, Abmelden, Einsatz schließen. Der
+ * Lagemonitor hat ein eigenes Symbol im Kopfband (`Monitorknopf.tsx`).
  * Bis Runde 6 standen Hilfeknopf, vier Themenknöpfe, Abmelden und der Weg zur
  * Einsatzauswahl in der prominentesten Zeile des Fensters; ein
  * Erscheinungsbild wird aber einmal je Gerät gewählt, der Monitor einmal je
@@ -21,11 +22,8 @@
  * erklärt.
  */
 
-import { useState } from "react";
-
 import { THEMEN, type Theme } from "../kontrakt/index.js";
 import { Klappmenue, type Waehle } from "./Klappmenue.js";
-import { Monitorauswahl, useMonitorstart } from "./Monitorwahl.js";
 import { kuerzel, kuerzelText } from "./tastatur.js";
 
 const BESCHRIFTUNG: Record<Theme, string> = {
@@ -39,7 +37,7 @@ export interface FenstermenueEigenschaften {
   readonly theme: Theme;
   waehleTheme(theme: Theme): void;
   aufHilfe(): void;
-  /** Mit offenem Einsatz: Stärke-Monitor und „Einsatz schließen“. */
+  /** Mit offenem Einsatz: „Einsatz schließen“. */
   zurueckZurAuswahl?: (() => void) | undefined;
   /** Nur mit offenem Einsatz in der Betriebsart Führungsstelle. */
   aufDiagnose?: (() => void) | undefined;
@@ -50,7 +48,6 @@ export interface FenstermenueEigenschaften {
 }
 
 export function Fenstermenue(eigenschaften: FenstermenueEigenschaften): React.JSX.Element {
-  const [monitorwahl, setzeMonitorwahl] = useState(false);
   return (
     <Klappmenue
       huelle="fenstermenue"
@@ -58,35 +55,16 @@ export function Fenstermenue(eigenschaften: FenstermenueEigenschaften): React.JS
         inhalt: "⋯",
         klasse: "fenstermenueknopf",
         beschriftung: "Fenstermenü",
-        titel: "Hilfe, Erscheinungsbild, Stärke-Monitor, Diagnose, Einsatz schließen",
+        titel: "Hilfe, Erscheinungsbild, Diagnose, Einsatz schließen",
       }}
       menue={{ beschriftung: "Fenstermenü", id: "fenstermenue", klasse: "fenstermenueliste" }}
-      inhalt={(waehle) => (
-        <Menueinhalt
-          {...eigenschaften}
-          waehle={waehle}
-          aufMonitor={() => {
-            setzeMonitorwahl(true);
-          }}
-        />
-      )}
-      dazu={
-        monitorwahl && (
-          <Monitorauswahl
-            aufSchliessen={() => {
-              setzeMonitorwahl(false);
-            }}
-          />
-        )
-      }
+      inhalt={(waehle) => <Menueinhalt {...eigenschaften} waehle={waehle} />}
     />
   );
 }
 
 interface Menueinhaltseigenschaften extends FenstermenueEigenschaften {
   readonly waehle: Waehle;
-  /** Öffnet die Bildschirmwahl der Electron-Schale. */
-  aufMonitor(): void;
 }
 
 function Menueinhalt({
@@ -98,9 +76,7 @@ function Menueinhalt({
   aufStelle,
   angemeldet,
   waehle,
-  aufMonitor,
 }: Menueinhaltseigenschaften): React.JSX.Element {
-  const monitor = useMonitorstart();
   const hilfekuerzel = kuerzelText(kuerzel("hilfe") as never);
   const einsatzOffen = zurueckZurAuswahl !== undefined;
   return (
@@ -131,21 +107,7 @@ function Menueinhalt({
         ))}
       </div>
 
-      {einsatzOffen && <hr />}
-      {einsatzOffen && (
-        <button
-          type="button"
-          role="menuitem"
-          title={
-            monitor.imBrowser
-              ? "Öffnet den Stärke-Monitor in einem neuen Fenster; von dort auf das Anzeigegerät ziehen"
-              : "Wählt den Bildschirm, auf dem der Stärke-Monitor aufgeht"
-          }
-          onClick={waehle(monitor.imBrowser ? monitor.oeffneImBrowser : aufMonitor)}
-        >
-          Stärke-Monitor öffnen …
-        </button>
-      )}
+      {(aufStelle !== undefined || aufDiagnose !== undefined) && <hr />}
       {aufStelle !== undefined && (
         <button type="button" role="menuitem" title="Welche Position dieser Arbeitsplatz im Stab hat, und das Handzeichen" onClick={waehle(aufStelle)}>
           Stelle und Handzeichen …

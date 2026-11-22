@@ -188,7 +188,7 @@ export function Ausgaben(): React.JSX.Element {
       </span>
       {/* Der HTML-Monitor (M4.3) ist keine einmalige Ausgabe, sondern eine
           Datei, die sich fortschreibt — deshalb ein Schalter und kein Knopf.
-          Nicht zu verwechseln mit dem Stärke-Monitor aus M3.5: Der ist ein
+          Nicht zu verwechseln mit dem Lagemonitor aus M3.5: Der ist ein
           Fenster dieser Anwendung, dieser hier eine Datei für ein fremdes
           Gerät. */}
       <label className="schalter">

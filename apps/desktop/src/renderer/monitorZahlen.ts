@@ -1,5 +1,5 @@
 /**
- * Die Zahlen des Stärke-Monitors (M3.5).
+ * Die Zahlen des Lagemonitors (M3.5).
  *
  * Hier steht alles, was der Monitor **rechnet**, und sonst nichts: die
  * NATO-Datum-Zeit-Gruppe, die Schriftgröße und der Stärketext. Kein React,
@@ -12,7 +12,7 @@
  * lässt sich mit Randfällen belegen. Der Monitor selbst zeichnet dann nur
  * noch.
  *
- * Zum Auftrag: 05-UMSETZUNGSPLAN.md, M3.5 — „Stärke-Monitor: Zweitfenster,
+ * Zum Auftrag: 05-UMSETZUNGSPLAN.md, M3.5 — „Lagemonitor: Zweitfenster,
  * Monitorwahl, dynamische Schrift, Gesamtstärke und NATO-Zeit, Push aus dem
  * Worker“.
  */

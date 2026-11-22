@@ -4,7 +4,8 @@
  * **Zwei Zeilen statt vier.** Zeile 1 trägt links die Marke und den
  * **Einsatznamen** mit der Führungsstelle darunter, in der Mitte Ist-Stärke
  * und taktische Zeit in der Größe, die man aus zwei Metern liest, rechts die
- * Zustandsmarke und das Fenstermenü „⋯". Zeile 2 trägt die Reiter.
+ * Zustandsmarke, den Knopf „Lagemonitor" und das Fenstermenü „⋯". Zeile 2
+ * trägt die Reiter.
  *
  * Was bis Runde 6 hier stand und jetzt woanders steht:
  *
@@ -28,6 +29,7 @@
 import type { Lagebild, Profil, Theme } from "../kontrakt/index.js";
 import type { Blatt } from "./blaetter.js";
 import { Fenstermenue } from "./Fenstermenue.js";
+import { Monitorknopf } from "./Monitorknopf.js";
 import { taktischeZeit } from "./formate.js";
 import { Reiterzeile } from "./Reiterzeile.js";
 import { Staerkekennzahl } from "./Staerkekennzahl.js";
@@ -128,6 +130,8 @@ export function Kopfband({
         </span>
 
         <Zustandsmarke lagebild={lagebild} jetzt={jetzt} />
+        {/* Der Lagemonitor nur mit offenem Einsatz: ohne Einsatz hat er nichts zu zeigen. */}
+        {zurueckZurAuswahl !== undefined && <Monitorknopf />}
         <Fenstermenue
           theme={theme}
           waehleTheme={waehleTheme}

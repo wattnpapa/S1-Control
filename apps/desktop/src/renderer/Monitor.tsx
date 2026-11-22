@@ -1,5 +1,5 @@
 /**
- * Der Stärke-Monitor (M3.5) — das Zweitfenster.
+ * Der Lagemonitor (M3.5) — das Zweitfenster.
  *
  * 05-UMSETZUNGSPLAN.md nennt für M3.5 fünf Stücke: „Zweitfenster,
  * Monitorwahl, dynamische Schrift, Gesamtstärke und NATO-Zeit, Push aus dem
@@ -99,7 +99,7 @@ export function Monitor({ lagebild, jetzt, zone, verbindung }: MonitorEigenschaf
     // das ist ein Unterschied, und er gehört ausgesprochen. Die Uhr bleibt
     // stehen: Sie ist die einzige Auskunft, die auch ohne Akte gilt.
     return (
-      <section className="monitor monitorruhig" aria-label="Stärke-Monitor">
+      <section className="monitor monitorruhig" aria-label="Lagemonitor">
         {warnung}
         <p className="monitorhinweis">Kein Einsatz geöffnet</p>
         <p className="monitorzeit">{zeit}</p>
@@ -111,7 +111,7 @@ export function Monitor({ lagebild, jetzt, zone, verbindung }: MonitorEigenschaf
   const grad = schriftgroesse(text.length, mass.breite, mass.hoehe);
 
   return (
-    <section className="monitor" aria-label="Stärke-Monitor">
+    <section className="monitor" aria-label="Lagemonitor">
       {warnung}
       {/* Die Beschriftung steht über der Zahl und in der Reihenfolge der
           Spalten AJ/AK/AL/AM des Blatts Stärke: Wer aus fünf Metern liest,

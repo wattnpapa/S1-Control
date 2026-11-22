@@ -1,11 +1,11 @@
 /**
  * Die Monitorwahl (M3.5).
  *
- * Ein Menüeintrag und eine Liste — mehr ist es nicht, und mehr soll es nicht
- * sein: Der Stärke-Monitor wird einmal zu Beginn eines Einsatzes aufgezogen
- * und danach nicht mehr angefasst. Deshalb steht er seit Runde 6
- * („Entlastung", 3.3) im Fenstermenü „⋯" und nicht mehr als Knopf in der
- * Werkzeugzeile der Lage; diese Datei liefert, was der Eintrag braucht.
+ * Ein Knopf und eine Liste — mehr ist es nicht, und mehr soll es nicht
+ * sein: Der Lagemonitor wird einmal zu Beginn eines Einsatzes aufgezogen
+ * und danach selten angefasst. Seit Runde 6 („Entlastung", 3.3) steht er
+ * nicht mehr in der Werkzeugzeile der Lage, sondern als Symbol im Kopfband
+ * (`Monitorknopf.tsx`); diese Datei liefert, was der Knopf braucht.
  *
  * **Die Bildschirme werden erst beim Aufklappen geholt.** Ein Kabel wird
  * mitten im Einsatz umgesteckt; eine Liste, die beim Start geladen wurde,
@@ -51,7 +51,7 @@ export interface Monitorstart {
   oeffneImBrowser(): void;
 }
 
-/** Wie der Stärke-Monitor in dieser Schale aufgeht — für jeden Knopf und Menüeintrag dazu. */
+/** Wie der Lagemonitor in dieser Schale aufgeht — für den Knopf im Kopfband. */
 export function useMonitorstart(): Monitorstart {
   const imBrowser = useLaden((zustand) => zustand.umgebung?.plattform === "web");
   const melde = useLaden((zustand) => zustand.melde);
@@ -79,8 +79,8 @@ export function Monitorauswahl({ aufSchliessen }: { readonly aufSchliessen: () =
   }, [ladeBildschirme]);
 
   return (
-    <div ref={huelle} role="dialog" aria-label="Stärke-Monitor öffnen" className="monitorauswahl">
-      <p className="titel">Stärke-Monitor auf …</p>
+    <div ref={huelle} role="dialog" aria-label="Lagemonitor öffnen" className="monitorauswahl">
+      <p className="titel">Lagemonitor auf …</p>
       <button
         type="button"
         onClick={() => {

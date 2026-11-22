@@ -3,7 +3,7 @@
  *
  * Vier Bilder neben der unveränderten Stärke: Verpflegung (4a), Nächste 24 h
  * (4h), Unterbringung (4b) und die Tafel „Bereiche · Schichten" (4c). Jedes
- * folgt den Regeln des Stärke-Monitors: eine große Zahl, wenige Worte,
+ * folgt den Regeln des Lagemonitors: eine große Zahl, wenige Worte,
  * Beschriftung über der Zahl, taktische Zeit darunter, Einsatz und Stand im
  * Fuß. Die Schrift kommt aus `schriftgroesse` — keine zweite Heuristik.
  *
