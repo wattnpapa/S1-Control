@@ -110,6 +110,12 @@ erst, wenn Name, Datum und Führungsstelle dastehen; was fehlt, steht neben
 dem Knopf. Gibt es den Namen am selben Tag schon, bleibt die Maske mit allen
 Eingaben offen und nennt den Grund.
 
+Daneben legt **„Demo-Einsatz“** mit einem Klick einen Übungseinsatz mit
+Beispieldaten an und öffnet ihn: Beginn vor zwölf Stunden, mit Abschnitten,
+Einheiten, Funkplan, Nachrichten, Versorgung und Tagebuch. Er ist zum Zeigen
+und Ausprobieren gedacht und lässt sich bearbeiten wie jeder Einsatz; ein
+zweiter am selben Tag bekommt eine laufende Nummer.
+
 Darunter steht in einer Zeile **„Dieser Arbeitsplatz“**: Anzeigename, Profil
 (im Meldekopf die Betriebsart) und Share, rechts „Ändern“. „Ändern“ klappt die
 Einstellungen auf — Share-Pfad, Anzeigename, Betriebsart, Profil und
