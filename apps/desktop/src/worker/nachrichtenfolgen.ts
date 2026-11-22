@@ -296,8 +296,16 @@ function planeNachweis(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenf
   const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
   if (typeof nachrichtId !== "string") return { folgen: [], hinweise: [] };
   const doppelt = doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId);
-  const weitergabe = (folgewerte(entwurf) as { weitergabe?: unknown } | undefined)?.weitergabe;
-  const folgen = weitergabe === undefined || entwurf.undoOf !== undefined ? [] : [{ entwurf: { typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId }, vorher: null, neu: weitergabe }, hinweis: "An den Sichter weitergegeben.", mitFolgen: true }];
+  const werte = folgewerte(entwurf) as { weitergabe?: unknown; sichtung?: unknown } | undefined;
+  const weitergabe = werte?.weitergabe;
+  // Review Runde 2: Ist sie inzwischen weitergegeben oder gesichtet, bleibt es bei der Nummer.
+  const n = zustand.nachrichten?.[nachrichtId];
+  const schonWeiter = n?.weitergabe?.wert !== undefined && n.weitergabe.wert !== null;
+  const schonGesichtet = n?.sichtung?.wert !== undefined && n.sichtung.wert !== null;
+  const ohne = weitergabe === undefined || entwurf.undoOf !== undefined || schonWeiter || schonGesichtet;
+  // Der Laufzettel (ohne Sichter) reist an der Weitergabe mit; ihre Folgen schreiben die Sichtung.
+  const folgeEntwurf = { typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId }, vorher: null, neu: weitergabe, ...(werte?.sichtung === undefined ? {} : { nachrichtenfolge: { sichtung: werte.sichtung } }) };
+  const folgen = ohne ? [] : [{ entwurf: folgeEntwurf, hinweis: "An den Sichter weitergegeben.", mitFolgen: true }];
   return { folgen, hinweise: doppelt === undefined ? [] : [doppelt] };
 }
 
