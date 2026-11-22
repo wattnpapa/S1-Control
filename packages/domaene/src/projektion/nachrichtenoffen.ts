@@ -61,7 +61,8 @@ function inEigenerWarteschlange(zeile: Nachrichtenzeile, stellen: readonly strin
       return fmz;
     case "beimLdf":
       // Einen Ausgang vor der Zuteilung befördert die FmZ nach der Ersatzregel selbst (§5).
-      return stellen.includes(LDF) || (fmz && (ldfSchrittDer(zeile) === "zuteilung" || haengtBeimLdf(zeile, umfeld.ldfBesetzt)));
+      // Review Runde 2: Die Zuteilung zählt für den Fernmelder nur, wenn kein LdF sie macht.
+      return stellen.includes(LDF) || (fmz && ((ldfSchrittDer(zeile) === "zuteilung" && umfeld.ldfBesetzt === false) || haengtBeimLdf(zeile, umfeld.ldfBesetzt)));
     case "vorSichter":
       return stellen.includes(SICHTER) || (fmz && umfeld.sichterBesetzt === false);
     default:

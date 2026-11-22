@@ -15,7 +15,7 @@
 import type { z } from "zod";
 
 import { zerlegeEreignisId, type EreignisId } from "../ereignis.js";
-import { streitigeSichtung } from "../fold-nachricht.js";
+import { giltFuerSichtung, streitigeSichtung } from "../fold-nachricht.js";
 import { vergleicheHlc, type Hlc } from "../hlc.js";
 import { vergleicheNachCodepunkt } from "../kanonisch.js";
 import {
@@ -209,7 +209,9 @@ function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zwe
   const angaben = { richtung: n.richtung.wert, gespraechsnotiz: n.gespraechsnotiz?.wert, funktion: n.funktion?.wert, absender: n.absender.wert };
   for (const { stelle, kopie } of [...(sichtung?.verteiler ?? []), ...(zweite?.verteiler ?? [])]) {
     if (ergebnis.some((m) => m.stelle === stelle)) continue;
-    const kenntnis = gelesen(zZeitvermerk, n.kenntnis?.[stelle]);
+    // Review Runde 2: Vermerke einer zurückgenommenen Sichtung gelten nicht für die neue.
+    const kenntnisFeld = giltFuerSichtung(n.kenntnis?.[stelle], n.sichtung) ? n.kenntnis?.[stelle] : undefined;
+    const kenntnis = gelesen(zZeitvermerk, kenntnisFeld);
     // R2-FaBe P1-4: Die Kopie des eigenen Ausgangs ist nicht „neu“ für den Verfasser.
     const eigen = istEigeneKopie(angaben, stelle);
     ergebnis.push({
@@ -217,7 +219,7 @@ function marken(n: NachrichtZustand, sichtung: Sichtungsvermerk | undefined, zwe
       kopie,
       gelesen: kenntnis !== undefined || eigen,
       ...(kenntnis === undefined ? {} : { kenntnis }),
-      erledigt: n.erledigt?.[stelle]?.wert === true,
+      erledigt: n.erledigt?.[stelle]?.wert === true && giltFuerSichtung(n.erledigt[stelle], n.sichtung),
       ...(eigen ? { eigenerAusgang: true } : {}),
     });
   }
