@@ -274,6 +274,16 @@ export {
 } from "./stabsuebersicht.js";
 export { einsatzzeiten, type Einsatzzeitzeile } from "./einsatzzeiten.js";
 export { ruecklauf, type Ruecklaufkopie, type Ruecklaufzeile } from "./ruecklauf.js";
+export {
+  FACHLAGE_BEREICHE,
+  VORGABESTAND,
+  fachlage,
+  type Fachlage,
+  type Fachlagebereich,
+  type Fachlagewert,
+  type Fachlagezeile,
+  type Pegelstand,
+} from "./fachlage.js";
 export { LAGEVORTRAG_EINTRAEGE, lagevortrag, type Lagevortrag } from "./lagevortrag.js";
 export { fmzPlaetze, hoertPlatz, type Fmzlage, type Fmzplatz, type Praesenzplatz } from "./fmzplaetze.js";
 export { NACHTRAG_MINUTEN, VERWALTUNGSSCHRITTE, istNachtrag, istVerwaltungsschritt } from "./tagebuch-relevanz.js";

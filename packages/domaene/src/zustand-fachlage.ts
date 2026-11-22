@@ -34,7 +34,7 @@ export interface PegelmessungZustand extends Fachlageanlage {
 export interface DeichschadenZustand extends Fachlageanlage {
   readonly deichKm: Feld<string>;
   readonly art: Feld<string>;
-  readonly beschreibung: Feld<string>;
+  readonly beschreibung?: Feld<string>;
   readonly abschnittId?: Feld<Id>;
   readonly stand?: Feld<string>;
   readonly massnahme?: Feld<string>;

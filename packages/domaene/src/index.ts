@@ -238,6 +238,9 @@ export type {
   Ruecklaufkopie,
   Ruecklaufzeile,
   Fmzplatz,
+  Fachlage,
+  Fachlagebereich,
+  Fachlagezeile,
   Statusspalte,
   Statustafel,
   Statuszeile,
@@ -580,3 +583,6 @@ export {
   einheitsteilTitel,
   type Auswahlwert,
 } from "./beschriftungen-einheitsteile.js";
+
+// Fachlage (Stab-Review 2026-11-22): Wertelisten und ihre Wörter.
+export * from "./fachlage-werte.js";

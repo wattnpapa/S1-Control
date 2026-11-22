@@ -48,7 +48,7 @@ export const DeichschadenGemeldet = z.object({
   schadenId: zId,
   deichKm: zPflichttext,
   art: z.enum(DEICHSCHADEN_ARTEN),
-  beschreibung: zText,
+  beschreibung: zText.optional(),
   zeitpunkt: zZeitpunkt,
   abschnittId: zId.optional(),
 });
