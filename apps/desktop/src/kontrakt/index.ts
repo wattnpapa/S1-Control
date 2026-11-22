@@ -82,30 +82,60 @@ export type Theme = z.infer<typeof zTheme>;
  * kein Recht — wie die Betriebsart. Nur anhängen: Der Wert steht als Name in
  * den Einstellungen des Geräts.
  */
-export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle", "leitung"] as const;
+export const PROFILE = ["fuehrungsstelle", "fernmeldezentrale", "versorgung", "alle", "leitung"] as const;
 export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
- * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 9: Stärke,
- * die vier Versorgungsbilder (KONZEPT-S4.md §4), additiv der Funkplan
- * (KONZEPT-FUNKPLAN.md §4) und die beiden Stärketafeln des Sachgebiets 1
- * (je Abschnitt, je Organisation, Abschnitt × Organisation). Nur anhängen — die gemerkte Wahl eines
- * Geräts steht als Name in den Einstellungen, und die Tasten sind eingeübt.
+ * Die Ansichten des Monitors, nach Sachgebiet in der Ordnung des Stabes:
+ * Führung, S1, S3, S4, S6, zuletzt die FmZ. Die Tasten 1 bis 9 und 0 wählen
+ * die ersten zehn, Pfeil links/rechts blättert durch alle. Die gemerkte
+ * Wahl eines Geräts steht als Name in den Einstellungen und übersteht
+ * deshalb ein Umsortieren; eine neue Ansicht kommt ans Ende ihrer Gruppe.
  */
 export const MONITOR_ANSICHTEN = [
+  "offen",
   "staerke",
+  "status",
+  "abschnitte",
+  "organisationen",
+  "kreuz",
+  "kommen",
+  "einsatzmittel",
   "verpflegung",
   "vorausschau",
   "unterbringung",
   "tafel",
+  "iuk",
   "funkplan",
-  "abschnitte",
-  "organisationen",
-  "kreuz",
+  "nachrichtenweg",
 ] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
+
+/** Die Sachgebiete, nach denen der Monitor seine Ansichten gruppiert. */
+export const MONITOR_GRUPPEN = ["fuehrung", "s1", "s3", "s4", "s6", "fmz"] as const;
+export const zMonitorGruppe = z.enum(MONITOR_GRUPPEN);
+export type MonitorGruppe = z.infer<typeof zMonitorGruppe>;
+
+/** Welche Ansicht zu welchem Sachgebiet gehört; die Reihenfolge gibt `MONITOR_ANSICHTEN`. */
+export const MONITOR_GRUPPE_DER_ANSICHT: Readonly<Record<MonitorAnsicht, MonitorGruppe>> = {
+  offen: "fuehrung",
+  staerke: "s1",
+  abschnitte: "s1",
+  organisationen: "s1",
+  kreuz: "s1",
+  status: "s1",
+  kommen: "s1",
+  einsatzmittel: "s3",
+  verpflegung: "s4",
+  vorausschau: "s4",
+  unterbringung: "s4",
+  tafel: "s4",
+  iuk: "s6",
+  funkplan: "fmz",
+  nachrichtenweg: "fmz",
+};
 
 /**
  * Das Ziel des Automatikdrucks (KONZEPT-NACHRICHTEN.md Entscheidung 7): ein
@@ -159,7 +189,7 @@ export const zEinstellungen = z.object({
    *
    * Es bestimmt nur, welche Reiter im Kopfband stehen; jedes Blatt bleibt
    * unter „Mehr" erreichbar. Geräteeinstellung wie `betriebsart` und
-   * `theme`, nicht in der Akte: Die Vermeldezentrale und die S4 führen
+   * `theme`, nicht in der Akte: Die Fernmeldezentrale und die S4 führen
    * denselben Einsatz. Ohne Angabe `fuehrungsstelle`.
    */
   profil: zProfil.optional(),
@@ -169,8 +199,11 @@ export const zEinstellungen = z.object({
    * Fensterzustand dieses Geräts wie `theme` und nicht in der Akte: Der
    * Monitor im Zelt zeigt Verpflegung, der im Fahrzeug Stärke, und beide
    * hängen an derselben Einsatzdatei. Ohne Angabe Stärke, ohne Wechsel.
+   *
+   * Additiv: `wechselgruppe` beschränkt den Wechsel auf ein Sachgebiet; ohne
+   * Angabe wechselt der Monitor durch alle Ansichten.
    */
-  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean() }).optional(),
+  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean(), wechselgruppe: zMonitorGruppe.optional() }).optional(),
   /**
    * Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): das Handzeichen dieses
    * Arbeitsplatzes, gemerkt als Vorbelegung der Abfrage beim Öffnen. Die
@@ -736,6 +769,10 @@ export const zRuf = z.discriminatedUnion("art", [
     beginn: z.string(),
     schichtmodell: zText,
   }),
+  // Additiv (Demo-Einsatz): legt einen Einsatz an, der zwölf Stunden vor jetzt
+  // beginnt, und spielt das Demo-Drehbuch ein (`worker/demo/demoeinsatz.ts`).
+  // Ohne Angaben: Name, Beginn und Inhalt stehen im Drehbuch.
+  z.object({ art: z.literal("demoEinsatzAnlegen") }),
   // Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): Stelle und Handzeichen
   // der Sitzung, wie die Abfrage beim Öffnen sie erhoben hat.
   z.object({ art: z.literal("einsatzOeffnen"), ordner: zText, ...zSitzungsangaben }),
@@ -1193,6 +1230,7 @@ export interface Antworten {
   einstellungenSetzen: Einstellungen;
   einsaetzeAuflisten: readonly EinsatzEintrag[];
   einsatzAnlegen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
+  demoEinsatzAnlegen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   einsatzOeffnen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   stellenSetzen: null;
   einsatzSchliessen: null;

@@ -114,7 +114,7 @@ describe("R2-FM P2-5, R2-Si P2-2, R2-FM P3-3: säumiger Sichter", () => {
     render(<Sichterstaukarte zeilen={[{ ...wartet(0, 7), betreff: "Deich bricht" }]} sichterDa sichter="Sichtung (Hz. Si)" schwelleMinuten={20} nurLesen={false} aufSelbst={vi.fn()} />);
     const karte = screen.getByRole("region", { name: "Vor dem Sichter" });
     expect(karte.textContent).toContain(saeumigText("Sichtung (Hz. Si)", 1, 7));
-    expect(karte.textContent).toContain("der älteste seit 7 min");
+    expect(karte.textContent).toContain("die älteste seit 7 min");
     expect(within(karte).getByRole("button", { name: "Ich sichte jetzt selbst" })).toBeDefined();
   });
 });
@@ -125,7 +125,7 @@ describe("R2-LdF P2-4: Sicht LdF", () => {
     expect(ldfUeberSchwelle(wartend, 20)).toBe(true);
     render(<Ldfsicht zeilen={[wartend]} handzeichen="Ld" nurLesen={false} aufVorschlag={vi.fn()} schwelleMinuten={20} />);
     const karte = screen.getByRole("region", { name: "Ausgänge vor der Zuteilung" });
-    expect(within(karte).getAllByRole("columnheader").map((k) => k.textContent)).toEqual(expect.arrayContaining(["Nr.", "Absender", "Wartet"]));
+    expect(within(karte).getAllByRole("columnheader").map((k) => k.textContent)).toEqual(expect.arrayContaining(["Absender", "Wartet"]));
     const zeile = within(karte).getByRole("row", { name: /Sandsäcke/u });
     expect(zeile.className).toBe("ueberschwelle");
     expect(zeile.textContent).toContain("25 min über der Schwelle");
@@ -162,7 +162,7 @@ describe("Nachweisung: Abweichung, zurückgezogen, volle Breite", () => {
   const eigenschaften = { gewaehltId: undefined, nurLesen: false, aufWahl: vi.fn(), aufSchritt: vi.fn() };
 
   it("markiert die Abweichung vom Vorschlag des LdF (R2-LdF P2-2)", () => {
-    expect(abweichung(befoerdert)).toContain("Vorschlag des LdF: Telefon");
+    expect(abweichung(befoerdert)).toContain("Zuteilung des LdF: Telefon");
     expect(abweichung({ ...befoerdert, abweichungVomVorschlag: false } as unknown as Nachrichtenzeile)).toBeUndefined();
     expect(abweichung({ ...befoerdert, abweichungVomVorschlag: "Funk statt Telefon (Fm statt Fm2)" } as Nachrichtenzeile)).toBe("Funk statt Telefon (Fm statt Fm2)");
     render(<Nachweisung zeilen={[befoerdert]} {...eigenschaften} />);

@@ -15,7 +15,7 @@ import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
 afterEach(cleanup);
 
-const NULL = { IM_EINSATZ: 0, EINSATZBEREIT: 0, RUHE: 0, NICHT_EINSATZBEREIT: 0, OHNE: 0 };
+const NULL = { IM_EINSATZ: 0, EINSATZBEREIT: 0, RUHE: 0, NICHT_EINSATZBEREIT: 0, SONSTIGE: 0 };
 
 const UEBERSICHT: Uebersicht = {
   kraefte: [

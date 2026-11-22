@@ -167,7 +167,7 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §9); die Sätze in `tagebuch-nachrichten.ts`
   NachrichtVerfasst: "Nachricht verfasst",
   NachrichtAngenommen: "Nachricht angenommen",
-  NachrichtUebermittlungVorgeschlagen: "Übermittlung vorgeschlagen",
+  NachrichtUebermittlungVorgeschlagen: "Nachricht einem Fernmelder zugeteilt",
   NachrichtBefoerdert: "Nachricht befördert",
   NachrichtAufnahmeBerichtigt: "Aufnahme berichtigt",
   NachrichtNachgewiesen: "Nachricht nachgewiesen",

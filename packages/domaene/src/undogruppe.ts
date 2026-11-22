@@ -71,6 +71,9 @@ function hauptwort(haupt: EingehendesEreignis | undefined): string | undefined {
   if (haupt.typ === "NachrichtBefoerdert") return "Befördern";
   if (haupt.typ === "NachrichtWeitergegeben") return "An den Sichter weitergeben";
   if (haupt.typ === "NachrichtGesichtet") return "Sichten";
+  // Review Runde 2: Sonst hieß der Schritt nur „Bedienschritt“ — gerade dieser holt Kopien bei S2 zurück.
+  if (haupt.typ === "NachrichtNachgewiesen") return "Nachweisen und weitergeben";
+  if (haupt.typ === "NachrichtenParameterGesetzt") return n["feld"] === "ldfStation" ? "LdF als Station umschalten" : "Nachrichtenweg umschalten";
   return undefined;
 }
 
@@ -116,6 +119,7 @@ export function gruppenrest(haupt: EingehendesEreignis | undefined, teile: reado
  */
 export function ohneRuecknahmeHinweis(typ: string): string {
   if (typ === "NachrichtVerfasst") return "Die Nachricht selbst bleibt: Eine aufgegebene oder aufgenommene Nachricht wird nicht rückgängig gemacht, sondern mit Grund zurückgezogen.";
+  if (typ === "NachrichtUebermittlungVorgeschlagen") return "Die Zuteilung bleibt stehen, der Fernmelder hat die Nachricht schon befördert.";
   if (typ === "NachrichtKenntnisGenommen") return "Gelesen ist gelesen: Die Kenntnisnahme bleibt stehen.";
   if (typ === "NachrichtZurueckgezogen") return "Das Zurückziehen bleibt stehen; die Nachricht wird neu aufgegeben, wenn sie doch gilt.";
   if (typ === "EtbEintragErfasst" || typ === "EtbEintragBerichtigt") return "Ein Tagebucheintrag wird berichtigt, nicht rückgängig gemacht.";

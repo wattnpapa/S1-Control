@@ -112,11 +112,11 @@ export function sichtername(peers: readonly Peer[]): string | undefined {
 export function saeumigText(sichter: string | undefined, anzahl: number, laengste: number | undefined): string {
   const wer = sichter === undefined ? "Der Sichter ist besetzt" : `Der Sichter ${sichter} ist besetzt`;
   const wie = anzahl === 1 ? "1 Nachricht wartet über der Schwelle" : `${String(anzahl)} Nachrichten warten über der Schwelle`;
-  const seit = laengste === undefined ? "" : `, der älteste seit ${String(laengste)} min`;
-  return `${wer}, reagiert aber nicht: ${wie}${seit}. Wer aufgenommen hat, kann selbst sichten (Blitz ab 5, Sofort ab 10 min).`;
+  const seit = laengste === undefined ? "" : `, die älteste seit ${String(laengste)} min`;
+  return `${wer}, reagiert aber nicht: ${wie}${seit}. Wer aufgenommen oder weitergegeben hat, kann selbst sichten (Blitz ab 5, Sofort ab 10 min).`;
 }
 
-/** „2 Eingänge warten vor dem Sichter“ — oder nichts, solange keiner über der Schwelle liegt. */
+/** „2 Nachrichten warten vor dem Sichter“ — oder nichts, solange keiner über der Schwelle liegt. */
 export function sichterstauText(anzahl: number | undefined): string | undefined {
   if (anzahl === undefined || anzahl <= 0) return undefined;
   return anzahl === 1 ? "1 Nachricht wartet vor dem Sichter" : `${String(anzahl)} Nachrichten warten vor dem Sichter`;
@@ -149,7 +149,8 @@ export interface SichterstaukarteEigenschaften {
 /** Beim Eingang die Aufnahme, beim beförderten Ausgang die Beförderung (Review 2026-11-21). */
 function stauvermerk(zeile: Nachrichtenzeile): string {
   const v = zeile.richtung === "AUSGANG" ? zeile.befoerderung : zeile.aufnahme;
-  return v === undefined ? "—" : `${zeile.richtung === "AUSGANG" ? "A befördert " : "E "}${dtg(v.zeitpunkt)} ${v.handzeichen}`;
+  // Review Runde 2: dieselbe Schreibweise wie die Liste des Sichters.
+  return v === undefined ? "—" : `${zeile.richtung === "AUSGANG" ? "befördert " : ""}${dtg(v.zeitpunkt)} ${v.handzeichen}`;
 }
 
 /** Die Karte der Nachrichten, die die FmZ selbst sichten darf; leer entfällt sie. */

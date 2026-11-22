@@ -177,7 +177,7 @@ import {
   peerStellen,
   sitzungAus,
 } from "./nachrichtendienst.js";
-import { pruefeNachricht } from "./nachrichtenpruefung.js";
+import { pruefeNachricht, unbekannteNachricht } from "./nachrichtenpruefung.js";
 import { Automatikdruck, type Automatikdruckeinstellung, type Druckauftrag } from "./automatikdruck.js";
 import { ORDNER_NACHRICHTEN, vordruckDerNachricht } from "./nachrichtenvordruck.js";
 import { Sichterstauwaechter } from "./sichterstau.js";
@@ -462,6 +462,11 @@ export class Aktendienst {
 
   get zustand(): Zustand {
     return this.#zustand;
+  }
+
+  /** Der Einsatz dieser Akte — der Ordnername auf dem Share. */
+  get einsatzId(): string {
+    return this.#o.einsatzId;
   }
 
   get akte(): Akte {
@@ -846,7 +851,8 @@ export class Aktendienst {
       // Fernmelder P2-9: Die Beförderung des Papier-Nachtrags plant ihre eigenen Folgen gegen den jetzt geltenden Zustand.
       const nachplan = folge.mitFolgen === true ? planeFolgen(this.#zustand, folge.entwurf, this.#folgeumfeld()) : undefined;
       const folgeErgebnis = await this.#schreibe(folge.entwurf);
-      vorab.push(folgeErgebnis.art === "geschrieben" ? folge.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(folgeErgebnis)}`);
+      // Review Runde 2: Ein Folgeschritt ohne eigenen Satz (sein Nachfolger sagt es) meldet nichts.
+      if (folgeErgebnis.art !== "geschrieben" || folge.hinweis !== "") vorab.push(folgeErgebnis.art === "geschrieben" ? folge.hinweis : `Folgeschritt nicht möglich: ${this.#meldungVon(folgeErgebnis)}`);
       if (folgeErgebnis.art !== "geschrieben" || nachplan === undefined) continue;
       vorab.push(...nachplan.hinweise);
       for (const weitere of nachplan.folgen) {
@@ -953,6 +959,9 @@ export class Aktendienst {
     // allen anderen Prüfungen, damit die Meldung den Grund nennt, der zählt.
     const gesperrt = pruefeAbschluss(this.#zustand, entwurf);
     if (gesperrt !== undefined) return gesperrt;
+    // Review Runde 2: kein Schritt auf eine Nachricht, die es nicht gibt.
+    const unbekannt = unbekannteNachricht(this.#zustand, entwurf);
+    if (unbekannt !== undefined) return { art: "abgewiesen", meldung: unbekannt, code: "NACHRICHT", dauerhafterHinweis: false };
     // Bestand und Funkzeit gegen den Zustand (Aufteilen darf nicht mehr
     // abziehen, als da ist).
     const unstimmig = pruefeGegenZustand(this.#zustand, entwurf, this.#o.zeit());

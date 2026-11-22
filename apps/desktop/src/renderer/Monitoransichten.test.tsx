@@ -77,7 +77,17 @@ describe("Monitor „Unterbringung“ (4b)", () => {
     expect(screen.getByText("142")).toBeDefined();
     expect(screen.getByText("m 118 · w 22 · d 2")).toBeDefined();
     // Belegt/frei kommen erst mit den Unterkünften (S4.2).
-    expect(screen.queryByText(/belegt/)).toBeNull();
+    expect(screen.queryByText(/belegt \d+ · frei/)).toBeNull();
+  });
+
+  it("schreibt Überbelegung als Wort mit ⚠ dazu, nicht nur als Farbe", () => {
+    render(<MonitorUnterbringung {...E} />);
+    const zeilen = [...document.querySelectorAll(".monitorunterkuenfte tr.monitorwarn")];
+    expect(zeilen.length).toBeGreaterThan(0);
+    for (const z of zeilen) {
+      expect(z.textContent).toMatch(/^⚠ /);
+      expect(z.textContent).toMatch(/überbelegt \+\d+/);
+    }
   });
 
   it("zeigt belegt, frei und ohne Zuweisung in Bernstein, sobald es Unterkünfte gibt", () => {

@@ -166,7 +166,7 @@ function wegmarke(e: EingehendesEreignis): string {
   const n = nutzlast(e);
   const abweichung = text(n["abweichungVomVorschlag"]);
   if (abweichung !== undefined) return `, abweichend vom Vorschlag (${abweichung})`;
-  return n["ohneVorschlag"] === true ? ", ohne Vorschlag des LdF" : "";
+  return n["ohneVorschlag"] === true ? ", ohne Zuteilung des LdF" : "";
 }
 
 /** FM P2-7: „Aufnahme berichtigt (Funk 1705 → Telefon 1750, Hz. Fm)“. */
@@ -222,7 +222,7 @@ function zuteilungssatz(neu: unknown): string {
 export const GRUND_ERSATZ_LDF = "Kein LdF besetzt: Ersatzregel";
 
 function ersatzLdfTeil(e: EingehendesEreignis): string {
-  return e.grund === GRUND_ERSATZ_LDF ? ", Ersatzregel: kein LdF besetzt" : "";
+  return e.grund === GRUND_ERSATZ_LDF ? " (Ersatzregel, kein LdF besetzt)" : "";
 }
 
 /**
@@ -298,7 +298,8 @@ function stelleAus(e: EingehendesEreignis): string {
 const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtVerfasst: (e) => verfasstVerb(nutzlast(e)),
   NachrichtAngenommen: vermerk((neu) => `angenommen${klammer([handzeichenteil(neu)])}`, "Annahmevermerk gelöscht"),
-  NachrichtUebermittlungVorgeschlagen: (e) => vermerk((neu) => `${zuteilungssatz(neu)}${ersatzLdfTeil(e)}`, "Zuteilung gelöscht")(e),
+  // Review Runde 2: Nach der Ersatzregel ist es die Beförderung selbst, die als Zuteilung vermerkt wird.
+  NachrichtUebermittlungVorgeschlagen: (e) => vermerk((neu) => (e.grund === GRUND_ERSATZ_LDF ? `Beförderung als Zuteilung vermerkt${vorschlagsteil(neu)}${ersatzLdfTeil(e)}` : zuteilungssatz(neu)), "Zuteilung gelöscht")(e),
   NachrichtBefoerdert: (e) => vermerk((neu) => `befördert${befoerderungsteil(neu)}${wegmarke(e)}`, "Beförderungsvermerk gelöscht")(e),
   NachrichtAufnahmeBerichtigt: aufnahmeberichtigung,
   NachrichtNachgewiesen: vermerk((neu) => `nachgewiesen${klammer([handzeichenteil(neu)])}`, "Nachweis gelöscht"),

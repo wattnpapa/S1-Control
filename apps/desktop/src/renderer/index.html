@@ -3284,6 +3284,11 @@
         min-height: 100vh;
         background: var(--monitor-grund);
       }
+      /* Unten rechts stehen die Punkte der Ansichten; der Fuß einer vollen
+         Tafel darf nicht unter sie laufen (Review: DTG war verdeckt). */
+      .monitorrahmen > .monitor {
+        padding-bottom: 34px;
+      }
       .monitor .monitorunterzeile {
         font-size: clamp(1rem, 3.6vw, 2.6rem);
       }
@@ -3295,6 +3300,44 @@
         color: var(--monitor-warn);
       }
       .monitor .monitorleise {
+        color: var(--monitor-leise);
+      }
+      /* Kachelbilder (Offene Punkte, IuK-Lage, Nachrichtenweg): eine Zahl je
+         Kachel, Bernstein nur mit ⚠ und Wort, gedämpft bei null. */
+      .monitorkacheln .kachelraster {
+        display: grid;
+        gap: 1.2vw;
+        width: 92vw;
+        margin: 1.5vh 0;
+        padding: 0;
+        list-style: none;
+      }
+      .monitorkacheln .kachel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4vh;
+        padding: 1.2vh 0.8vw;
+        border: 2px solid var(--monitor-linie);
+        min-width: 0;
+      }
+      .monitorkacheln .kachelwert {
+        line-height: 1;
+        font-weight: 700;
+      }
+      .monitorkacheln .kachelunter {
+        color: var(--monitor-leise);
+        overflow-wrap: anywhere;
+      }
+      .monitorkacheln .kachel.warn {
+        border: 4px solid var(--monitor-warn);
+        color: var(--monitor-warn);
+      }
+      .monitorkacheln .kachel.warn .kachelunter {
+        color: var(--monitor-warn);
+      }
+      .monitorkacheln .kachel.leise {
         color: var(--monitor-leise);
       }
       /* Die Tafeln (4c, 4h): Zeilen statt einer Zahl, die Größe setzt die
@@ -3321,6 +3364,10 @@
         letter-spacing: 0.14em;
         text-transform: uppercase;
         color: var(--monitor-leise);
+      }
+      .monitortafel td.text,
+      .monitortafel th.text {
+        text-align: left;
       }
       .monitortafel .trenner {
         border-left: 1px solid var(--monitor-linie);
@@ -3481,6 +3528,7 @@
         right: 0;
         z-index: 10;
         display: flex;
+        flex-wrap: wrap;
         background: var(--monitor-leiste);
         border-bottom: 1px solid var(--monitor-linie);
       }
@@ -3496,6 +3544,24 @@
         background: var(--monitor-text);
         color: var(--monitor-grund);
         font-weight: 700;
+      }
+      /* Je Sachgebiet ein Block mit Kürzel davor, getrennt durch eine Linie. */
+      .monitorleistegruppe {
+        display: flex;
+        align-items: stretch;
+        border-right: 2px solid var(--monitor-leise);
+      }
+      .monitorleistegruppe button:last-child {
+        border-right: 0;
+      }
+      .monitorleistekuerzel {
+        display: flex;
+        align-items: center;
+        padding: 0 8px 0 12px;
+        font: 600 12px/1 var(--mono);
+        letter-spacing: 0.1em;
+        color: var(--monitor-leise);
+        opacity: 0.7;
       }
       .monitorleistefrei {
         flex: 1;
@@ -3522,6 +3588,9 @@
       .monitorpunkte li.naechste {
         border: 2px solid var(--monitor-warn);
       }
+      .monitorpunkte li.gruppenanfang {
+        margin-left: 10px;
+      }
       /* Das Kontextmenü ist ein Renderer-Element und sieht in Electron und
          im Browser gleich aus; seine Farben folgen dem Erscheinungsbild. */
       .monitormenuegrund {
@@ -3538,6 +3607,8 @@
         border: var(--rahmenbreite) solid var(--rahmen);
         box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
         text-align: left;
+        max-height: calc(100vh - 12px);
+        overflow-y: auto;
       }
       .monitormenuetitel {
         margin: 4px 14px 6px;
@@ -4719,6 +4790,11 @@
       .nachrichtentabelle tr.zugeteilt th[scope="row"] {
         font-weight: 700;
       }
+      .zuteilungszelle {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
       .marke-zustand.fuer-sie {
         background: var(--ok-bg);
         border-color: var(--ok-text);
@@ -4818,12 +4894,19 @@
         height: 0;
         z-index: 30;
       }
+      /* Durchlauf 2026-11-22: Oben rechts verdeckte der Kasten die Kacheln
+         „Beim LdF“ und „Mit Vorrang offen“ — genau die Zahlen, die nach einer
+         Sofort-Nachricht zählen. Jetzt unten rechts über der Statuszeile,
+         unabhängig vom Scrollen; ein langer Kasten scrollt in sich. */
       .hinweisanker > .hinweiskasten {
-        position: absolute;
-        top: 0;
-        right: 0;
+        position: fixed;
+        top: auto;
+        bottom: 4.5rem;
+        right: 14px;
         left: auto;
-        width: min(42rem, calc(100vw - 28px));
+        width: min(36rem, calc(100vw - 28px));
+        max-height: 40vh;
+        overflow-y: auto;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       }
       .hinweiskasten li button.hinweiszu {

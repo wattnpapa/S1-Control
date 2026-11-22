@@ -1,6 +1,6 @@
 /**
  * Die Kreuztabelle Abschnitt × Organisation der Stärketafeln (Sachgebiet 1,
- * Monitor Taste 9): je Zelle die Ist-Köpfe nach der einen Zählregel
+ * Monitor, Gruppe S1): je Zelle die Ist-Köpfe nach der einen Zählregel
  * (`kennzahlen.zaehlklasse`). Zeilen und Spalten liefert `staerketafel`
  * (`abschnitte`, `organisationen`); hier stehen nur die Zellen, damit die
  * Ordnung an einer Stelle bleibt. Je Abschnitt zählt die **eigene** Stärke,

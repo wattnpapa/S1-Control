@@ -21,6 +21,7 @@ import { Einsatzablage, knotenDateisystem, systemZeit } from "@s1/speicher";
 
 import { Aktendienst, type Seitenausgabe, type Takte } from "./aktendienst.js";
 import { bearbeiteAuftrag } from "./auftraege.js";
+import { uhrFuer } from "./demo/stelluhr.js";
 import { klartextFehler } from "./klartextfehler.js";
 import type { Automatikdruckeinstellung } from "./automatikdruck.js";
 import type { Entwurf, Mitteilung, Ruf } from "../kontrakt/index.js";
@@ -36,6 +37,13 @@ export interface Startdaten {
   readonly anzeigename: string;
   readonly programmversion: string;
   readonly takte?: Partial<Takte>;
+  /**
+   * Additiv (Demo-Einsatz): Der Arbeiter spielt das Demo-Drehbuch ein. Seine
+   * Uhr ist dann gestellt und beginnt hier (Unix-Millisekunden), statt der
+   * Uhr des Rechners zu folgen; einen Takt hat er nicht. Der Main schließt
+   * ihn nach dem Einspielen und öffnet den Einsatz mit einem gewöhnlichen.
+   */
+  readonly demoBeginnMs?: number;
 }
 
 /** Was der Main dem Worker sagt. `nummer` ordnet Antwort und Auftrag einander zu. */
@@ -93,6 +101,8 @@ export type Auftrag =
   | { readonly art: "akteErzeugen"; readonly nummer: number }
   // Additiv (Sichter P1-4, ETB P3-3): die Stelle abgeben, die Präsenz sofort ohne Stellen.
   | { readonly art: "stelleAbgeben"; readonly nummer: number }
+  // Additiv (Demo-Einsatz): spielt das Drehbuch ein — nur in einem Arbeiter mit `demoBeginnMs`.
+  | { readonly art: "demoEinspielen"; readonly nummer: number }
   | { readonly art: "schliesse"; readonly nummer: number };
 
 /**
@@ -130,11 +140,13 @@ function neueKennung(): string {
 if (parentPort !== null) {
   const start = workerData as Startdaten;
   const port = parentPort;
+  // Der Demo-Arbeiter läuft mit gestellter Uhr (`demo/stelluhr.ts`); jeder andere mit der des Rechners.
+  const uhr = uhrFuer(start.demoBeginnMs, systemZeit);
 
   const dienst = new Aktendienst({
     akteId: start.akteId,
     dateisystem: knotenDateisystem(),
-    zeit: systemZeit,
+    zeit: uhr.zeit,
     ablage: new Einsatzablage(start.shareEinsatzOrdner, start.lokalerEinsatzOrdner),
     clientId: start.clientId,
     einsatzId: start.einsatzId,
@@ -172,7 +184,9 @@ if (parentPort !== null) {
    */
   let laeuft = false;
   const zeitgeber = setInterval(() => {
-    if (laeuft) return;
+    // Der Demo-Arbeiter taktet nicht: Seine Uhr steht zwischen den Schritten, und
+    // eine Präsenz mit der Zeit von vor zwölf Stunden hülfe niemandem.
+    if (laeuft || uhr.stelluhr !== undefined) return;
     laeuft = true;
     void dienst
       .takt()
@@ -225,6 +239,6 @@ if (parentPort !== null) {
       await dienst.meldeAb();
       return null;
     }
-    return bearbeiteAuftrag(dienst, auftrag);
+    return bearbeiteAuftrag(dienst, auftrag, uhr.stelluhr);
   }
 }

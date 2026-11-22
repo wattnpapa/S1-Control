@@ -11,9 +11,9 @@
  * — die Belastung der FmZ aus dem Vergleich von Annahme und Beförderung
  * (§5 „Zwanzig Minuten"); die Farbe steht nie allein, die Minuten stehen dabei.
  *
- * Führt der Einsatz den LdF als Station (additiv, 2026-11-17), stehen
- * angenommene Ausgänge ohne Übermittlungsvorschlag mit der Marke „beim LdF"
- * in der Schlange — ist kein LdF da, befördert der Fernmelder sie selbst.
+ * Mit dem LdF als Station (Standard seit 2026-11-22) stehen Ausgänge vor der
+ * Zuteilung mit „wartet auf Zuteilung“ in der Schlange — ist kein LdF da,
+ * befördern die Fernmelder sie selbst (ein Satz über der Tabelle sagt es).
  *
  * Rechts der Hauptknopf „Eingang aufnehmen": die Nachrichtenmaske mit
  * Richtung Eingang und freigeschaltetem oberem Teil.
@@ -47,7 +47,7 @@
 
 import { useState } from "react";
 
-import { eigeneFernmelder, projektion, type Nachrichtenzeile } from "@s1/domaene";
+import { eigeneFernmelder, hatFernmelderstelle, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { ausgeblendetText, eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
 import { Nachweisnummer } from "./Nachweisnummer.js";
@@ -77,6 +77,8 @@ export interface WarteschlangenEigenschaften {
    * keiner besetzt ist — der Fernmelder gibt ihn selbst an den Sichter weiter.
    */
   readonly aufWeitergabe?: (zeile: Nachrichtenzeile) => void;
+  /** Additiv (Review Runde 2): Ist ein LdF besetzt? Ohne ihn befördert die FmZ selbst — ein Satz statt Spalte und Marken. */
+  readonly ldfBesetzt?: boolean;
 }
 
 /**
@@ -100,13 +102,13 @@ function Annahmezelle({ zeile, jetzt }: { readonly zeile: Nachrichtenzeile; read
   );
 }
 
-/** „beim LdF" — der Ausgang wartet auf den Übermittlungsvorschlag des LdF. */
+/** Die Marke einer Nachricht, die ohne besetzten LdF beim LdF hängt: „selbst weitergeben“. */
 function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
   if (zeile.laufzustand !== "VOR_LDF") return null;
-  // R2-LdF P3-3: Ist kein LdF besetzt (`ldfNichtBesetzt`, Ring 2, optional gelesen), befördert die FmZ selbst.
-  const ohneLdf = (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt === true;
   if (projektion.ldfSchrittDer(zeile) === "weitergabe") return <span className="marke-zustand warn"> {zeile.richtung === "AUSGANG" ? "befördert" : "Eingang aufgenommen"}, LdF nicht besetzt – selbst weitergeben</span>;
-  return <span className="marke-zustand warn">{ohneLdf ? " beim LdF (nicht besetzt – selbst befördern)" : " beim LdF"}</span>;
+  // Review Runde 2: Vor der Zuteilung sagen Spalte „Zugeteilt“ und „wartet auf Zuteilung“ schon alles;
+  // ohne LdF steht ein Satz über der Tabelle statt einer Warnmarke in jeder Zeile.
+  return null;
 }
 
 interface Zeilenschritt {
@@ -127,8 +129,9 @@ export function zeilenschritte(zeile: Nachrichtenzeile, ldf = false): readonly Z
   ];
   // 2026-11-22: „Vorschlag“ hieß für den LdF nichts — es ist die Zuteilung an einen Fernmelder.
   const zuteilen: Zeilenschritt = { schritt: "vorschlag", text: zeile.vorschlag === undefined ? "Fernmelder zuteilen" : "Zuteilung ändern", titel: "Einem Fernmelder (Fm1 bis Fm3) zuteilen, Mittel und Gegenstelle bestimmen" };
-  // Der LdF teilt zuerst zu; erst danach ist Befördern sein Schritt.
-  if (ldf && zeile.vorschlag === undefined) return [zuteilen, befoerdern, annehmen, ...rest];
+  // Der LdF (ohne eigene Fernmelderstelle) teilt zu oder ändert die Zuteilung; Annehmen und Befördern
+  // sind Sache der Fernmelder und stehen im Menü (Review Runde 2).
+  if (ldf) return [zuteilen, befoerdern, annehmen, ...rest];
   return zeile.annahme === undefined ? [annehmen, befoerdern, zuteilen, ...rest] : [befoerdern, annehmen, zuteilen, ...rest];
 }
 
@@ -149,7 +152,11 @@ function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe, ldf = false }: { 
   const weitere = wartet && erster !== undefined ? [erster, ...rest] : rest;
   return (
     <span className="zeilenknoepfe">
-      {wartet && <span className="leise">wartet auf Zuteilung</span>}
+      {wartet && (
+        <span className="leise" title="Der LdF teilt zu. Im Notfall (LdF reagiert nicht, Blitz) über „⋯“ selbst befördern.">
+          wartet auf Zuteilung
+        </span>
+      )}
       {haupt !== undefined && (
         <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : haupt.titel} onClick={() => aufSchritt(haupt.schritt, zeile)}>
           {haupt.text}
@@ -182,14 +189,36 @@ type Zeileneigenschaften = Pick<WarteschlangenEigenschaften, "jetzt" | "nurLesen
   readonly zeile: Nachrichtenzeile;
   readonly gewaehlt: boolean;
   readonly stellen: readonly string[];
+  readonly mitZuteilung: boolean;
 };
+
+/** Der Satz über der Schlange, solange kein LdF besetzt ist (Review Runde 2). */
+export const TEXT_OHNE_LDF = "Kein LdF besetzt: Die Fernmelder befördern selbst; was sie befördern, gilt als zugeteilt.";
 
 /**
  * Eine Zeile der Schlange. Review 2026-11-21: Die eigene Zuteilung steht als
  * Marke „für Sie“ in der ersten Spalte und die Zeile mit Randleiste und
  * fettem Betreff (`tr.zugeteilt`) — nicht nur als Farbe weit rechts.
  */
-function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, aufSchritt, aufWeitergabe }: Zeileneigenschaften): React.JSX.Element {
+/**
+ * Die Zuteilung kompakt (Durchlauf 2026-11-22): In der schmalen Spalte brach
+ * „Fm1 · Funk an OV Wildeshausen · 221724NOV26 Sch“ auf sechs Zeilen um, mit
+ * einem einzelnen „·“. Jetzt der Fernmelder fett, darunter der Weg; Zeit und
+ * Handzeichen des LdF stehen im Tooltip und auf dem Vordruck.
+ */
+function Zuteilungszelle({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
+  const v = zeile.vorschlag;
+  if (v === undefined) return <span className="leise">noch nicht zugeteilt</span>;
+  const weg = `${projektion.mittelWort(v.mittel)}${v.gegenstelle === undefined ? "" : ` an ${v.gegenstelle}`}`;
+  return (
+    <span className="zuteilungszelle" title={vorschlagText(zeile)}>
+      <strong>{v.fernmelder}</strong>
+      <span className="nebenwert">{weg}</span>
+    </span>
+  );
+}
+
+function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, aufSchritt, aufWeitergabe, mitZuteilung }: Zeileneigenschaften): React.JSX.Element {
   const meins = mirZugeteilt(zeile, stellen);
   return (
     <tr className={[zeile.fmzUeberSchwelle ? "ueberschwelle" : "", gewaehlt ? "gewaehlt" : "", meins ? "zugeteilt" : ""].filter((k) => k !== "").join(" ")} aria-selected={gewaehlt} onClick={() => aufWahl(zeile.id)}>
@@ -203,32 +232,37 @@ function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, au
       <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>
       <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
-      <td>
-        {vorschlagText(zeile) ?? <span className="leise">noch nicht zugeteilt</span>}
-        <Abweichungsmarke zeile={zeile} />
-      </td>
+      {mitZuteilung && (
+        <td>
+          <Zuteilungszelle zeile={zeile} />
+          <Abweichungsmarke zeile={zeile} />
+        </td>
+      )}
       <td>
         <Annahmezelle zeile={zeile} jetzt={jetzt} />
         <Wegmarke zeile={zeile} />
       </td>
       <td>
-        <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} ldf={stellen.includes("LDF")} />
+        <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} ldf={stellen.includes("LDF") && !hatFernmelderstelle(stellen)} />
       </td>
     </tr>
   );
 }
 
 /** Die linke Karte: die Ausgangswarteschlange mit den Knöpfen je Zeile. */
-export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [], aufWeitergabe }: WarteschlangenEigenschaften): React.JSX.Element {
+export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [], aufWeitergabe, ldfBesetzt = true }: WarteschlangenEigenschaften): React.JSX.Element {
   const [nurMeine, setzeNurMeine] = useState(false);
   const namen = eigeneFernmelder(stellen);
   const geordnet = eigeneZuerst(alle, stellen);
   const zeilen = nurMeine && namen.length > 0 ? nurZugeteilte(geordnet, stellen) : geordnet;
+  // Die Spalte „Zugeteilt“ bleibt, solange ein LdF besetzt ist oder eine Zeile schon eine Zuteilung trägt.
+  const mitZuteilung = ldfBesetzt || alle.some((z) => z.vorschlag !== undefined);
   return (
     <section className="karte fmzkarte" aria-label="Ausgangswarteschlange">
       <h3>
         Ausgangswarteschlange <span className="nebenwert">Schwelle {schwelleMinuten} min</span>
       </h3>
+      {!ldfBesetzt && <p className="hinweistext">{TEXT_OHNE_LDF}</p>}
       <Nurmeine namen={namen} an={nurMeine} aufAendern={setzeNurMeine} />
       {nurMeine && namen.length > 0 && <p className="hinweistext">{ausgeblendetText(alle, stellen)}</p>}
       {zeilen.length === 0 ? (
@@ -237,23 +271,24 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
         <table className="nachrichtentabelle" aria-label="Nachrichten vor der FmZ">
           <thead>
             <tr>
-              <th scope="col">Vorrang</th>
-              <th scope="col">Nr.</th>
+              {/* Review Runde 2: dieselben Breitenregeln wie die Sicht LdF. */}
+              <th scope="col" className="schmalspalte">Vorrang</th>
+              <th scope="col" className="schmalspalte">Nr.</th>
               <th scope="col">Absender</th>
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Abfassungszeit</th>
-              <th scope="col">Wartet</th>
-              <th scope="col">Zugeteilt (LdF)</th>
+              <th scope="col" className="schmalspalte">Wartet</th>
+              {mitZuteilung && <th scope="col">Zugeteilt (LdF)</th>}
               <th scope="col">Annahme</th>
-              <th scope="col">
+              <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
               </th>
             </tr>
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <Schlangenzeile key={zeile.id} zeile={zeile} jetzt={jetzt} gewaehlt={zeile.id === gewaehltId} nurLesen={nurLesen} stellen={stellen} aufWahl={aufWahl} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
+              <Schlangenzeile key={zeile.id} zeile={zeile} jetzt={jetzt} gewaehlt={zeile.id === gewaehltId} nurLesen={nurLesen} stellen={stellen} aufWahl={aufWahl} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} mitZuteilung={mitZuteilung} />
             ))}
           </tbody>
         </table>

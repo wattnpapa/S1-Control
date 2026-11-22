@@ -18,7 +18,7 @@ import { reiterFuer } from "./blaetter.js";
 
 export const PROFILNAME: Readonly<Record<Profil, string>> = {
   fuehrungsstelle: "Führungsstelle (S1)",
-  vermeldezentrale: "Vermeldezentrale",
+  fernmeldezentrale: "Fernmeldezentrale",
   versorgung: "Versorgung (S4)",
   alle: "Alle Blätter",
   leitung: "Leitung / Stab",
@@ -29,7 +29,7 @@ export const PROFILNAME: Readonly<Record<Profil, string>> = {
  * (die Namen stehen in den Geräteeinstellungen); angezeigt wird „Alle
  * Blätter“ trotzdem zuletzt.
  */
-export const PROFILREIHENFOLGE: readonly Profil[] = ["fuehrungsstelle", "leitung", "vermeldezentrale", "versorgung", "alle"];
+export const PROFILREIHENFOLGE: readonly Profil[] = ["fuehrungsstelle", "leitung", "fernmeldezentrale", "versorgung", "alle"];
 
 export const TEXT_PROFIL_KEIN_RECHT =
   "Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt unter „Mehr“ erreichbar.";

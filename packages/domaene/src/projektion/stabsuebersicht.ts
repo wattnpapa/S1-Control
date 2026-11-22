@@ -11,6 +11,11 @@
  * Lagevortrag „Stärke EA 2“ abliest, soll die Unterabschnitte mitbekommen
  * (Stab-Review LtrStab, LS-1). Die Gesamtzeile ist dieselbe Zahl wie im
  * Kopfband (`zaehlklasse`).
+ *
+ * **Eine Statusregel.** Spalten und Zählung je Abschnitt kommen aus
+ * `statustafel` (einsatzstatus.ts), die auch die Monitoransichten „Status“
+ * und „Einsatzmittel“ speist. Hier kommen nur der Teilbaum und die
+ * Erwarteten dazu.
  */
 
 import { statusTitel } from "../beschriftungen.js";
@@ -18,13 +23,14 @@ import { ANGEFORDERT, zaehlklasse } from "../kennzahlen.js";
 import type { Id } from "../werte.js";
 import { EINGANG_ABSCHNITT_ID, type EinheitZustand, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
+import { STATUSSPALTEN, statustafel, type Statusspalte } from "./einsatzstatus.js";
 
-/** Die Spalten der Kräfteübersicht; „erwartet“ zählt nicht in „gesamt“. */
-export const KRAEFTESPALTEN = ["IM_EINSATZ", "EINSATZBEREIT", "RUHE", "NICHT_EINSATZBEREIT", "OHNE"] as const;
-export type Kraeftespalte = (typeof KRAEFTESPALTEN)[number];
+/** Die Spalten der Kräfteübersicht — die der Statustafel; „erwartet“ zählt nicht in „gesamt“. */
+export const KRAEFTESPALTEN = STATUSSPALTEN;
+export type Kraeftespalte = Statusspalte;
 
 export function kraeftespaltenTitel(spalte: Kraeftespalte): string {
-  return spalte === "OHNE" ? "ohne Status" : statusTitel(spalte);
+  return spalte === "SONSTIGE" ? "sonstige" : statusTitel(spalte);
 }
 
 export interface Kraeftezeile {
@@ -62,17 +68,12 @@ export interface Stabsuebersicht {
 type Zaehler = Record<Kraeftespalte, number>;
 
 function leer(): Zaehler {
-  return { IM_EINSATZ: 0, EINSATZBEREIT: 0, RUHE: 0, NICHT_EINSATZBEREIT: 0, OHNE: 0 };
+  return { IM_EINSATZ: 0, EINSATZBEREIT: 0, RUHE: 0, NICHT_EINSATZBEREIT: 0, SONSTIGE: 0 };
 }
 
 function koepfe(einheit: EinheitZustand): number {
   const s = einheit.wirksameStaerke;
   return s.fuehrer + s.unterfuehrer + s.mannschaft;
-}
-
-function spalteDer(einheit: EinheitZustand): Kraeftespalte {
-  const status = einheit.status.wert;
-  return (KRAEFTESPALTEN as readonly unknown[]).includes(status) ? (status as Kraeftespalte) : "OHNE";
 }
 
 function istWarteschlange(knoten: Baumknoten): boolean {
@@ -84,19 +85,24 @@ interface Eigenstand {
   erwartet: number;
 }
 
-/** Ist und erwartet je Abschnitt, nur die unmittelbar dort stehenden Einheiten. */
+function standDes(staende: Map<Id, Eigenstand>, abschnittId: Id): Eigenstand {
+  let stand = staende.get(abschnittId);
+  if (stand === undefined) {
+    stand = { je: leer(), erwartet: 0 };
+    staende.set(abschnittId, stand);
+  }
+  return stand;
+}
+
+/** Ist (aus der Statustafel) und erwartet je Abschnitt, nur die unmittelbar dort stehenden Einheiten. */
 function eigenstaende(zustand: Zustand): Map<Id, Eigenstand> {
   const staende = new Map<Id, Eigenstand>();
+  for (const [abschnittId, zeile] of Object.entries(statustafel(zustand).jeAbschnitt)) {
+    const stand = standDes(staende, abschnittId);
+    for (const spalte of KRAEFTESPALTEN) stand.je[spalte] += zeile[spalte].koepfe;
+  }
   for (const einheit of Object.values(zustand.einheiten)) {
-    const klasse = zaehlklasse(zustand, einheit);
-    if (klasse !== "ist" && klasse !== "erwartet") continue;
-    let stand = staende.get(einheit.wirksamerAbschnittId);
-    if (stand === undefined) {
-      stand = { je: leer(), erwartet: 0 };
-      staende.set(einheit.wirksamerAbschnittId, stand);
-    }
-    if (klasse === "erwartet") stand.erwartet += koepfe(einheit);
-    else stand.je[spalteDer(einheit)] += koepfe(einheit);
+    if (zaehlklasse(zustand, einheit) === "erwartet") standDes(staende, einheit.wirksamerAbschnittId).erwartet += koepfe(einheit);
   }
   return staende;
 }

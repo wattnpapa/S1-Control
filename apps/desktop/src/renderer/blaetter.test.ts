@@ -21,8 +21,8 @@ describe("Reiter je Profil", () => {
     expect(reiterFuer()).toEqual(zuschnitt);
   });
 
-  it("stellt der Vermeldezentrale Nachrichten und Funkplan voran", () => {
-    const zuschnitt = reiterFuer("vermeldezentrale");
+  it("stellt der Fernmeldezentrale Nachrichten und Funkplan voran", () => {
+    const zuschnitt = reiterFuer("fernmeldezentrale");
     expect(titel(zuschnitt.imBand)).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch"]);
     expect(titel(zuschnitt.unterMehr)).toEqual(["Übersicht", "Eingangskorb", "Führungsstelle", "S4", "Kosten", "Exporte"]);
   });

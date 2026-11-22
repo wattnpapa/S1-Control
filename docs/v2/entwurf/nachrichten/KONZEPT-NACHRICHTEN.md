@@ -162,7 +162,7 @@ mehrere Stellen führen (S1 und S4 in Doppelfunktion, DV 1-100 4.3.1: „können
 Sachgebiete zusammengefaßt werden"), deshalb ist es eine Liste.
 
 Das Profil des Arbeitsplatzes bleibt, was es ist. Das Profil „Führungsstelle"
-bekommt den Reiter „Nachrichten" ins Band, das Profil „Vermeldezentrale"
+bekommt den Reiter „Nachrichten" ins Band, das Profil „Fernmeldezentrale"
 ebenfalls, dort mit der Sicht der FmZ als erster. Ob ein eigenes Profil
 „Sichter" nötig ist oder die Stelle genügt, ist Entscheidung 3.
 
@@ -348,10 +348,20 @@ Ersatzsichter. Ersatzschritte ohne LdF tragen `GRUND_ERSATZ_LDF`, die
 Zuteilung heißt im Tagebuch „an Fm2 zugeteilt“. Die Präsenz trägt
 `foldVersion`; das Blatt warnt vor Arbeitsplätzen mit anderer Fassung.
 
+Zweite Review-Runde (2026-11-22): Auch ein aufgenommener Eingang, der beim
+nicht besetzten LdF hängt, steht bei den Fernmeldern mit „Selbst
+weitergeben“. Ist kein Sichter besetzt, verteilt der LdF einen Eingang mit
+dem Laufzettel der Weitergabemaske (`nachrichtenfolge.sichtung`, auch über
+„Nachweisen und weitergeben“). Abschalten von `sichtungAuchAusgang` ohne LdF
+schreibt die ausstehenden Kopien. Nach Rücknahme und Neusichtung gelten
+Kenntnis und Erledigung nur, wenn sie nach der neuen Sichtung kamen
+(FOLD_VERSION 18). Schritte auf eine unbekannte Nachricht weist der Worker ab.
+In der Oberfläche heißt der Vorschlag des LdF durchgehend „Zuteilung“.
+
 ## 6. Das Blatt „Nachrichten"
 
 Ein eigener Reiter im Kopfband, bei der Führungsstelle zwischen Eingang und
-Führungsstelle, bei der Vermeldezentrale vor dem Funkplan. Das Band darüber
+Führungsstelle, bei der Fernmeldezentrale vor dem Funkplan. Das Band darüber
 nennt fünf Zahlen: neu für meine Stelle, vor der FmZ, vor dem Sichter, mit
 Vorrang offen, länger als zwanzig Minuten in der FmZ (die letzten beiden
 bernstein ab eins).

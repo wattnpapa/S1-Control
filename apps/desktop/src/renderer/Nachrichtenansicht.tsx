@@ -10,7 +10,7 @@
  * (Entscheidung 4, Vorbelegung aufgeklappt), und „Als Vordruck drucken", das
  * das PDF aus `@s1/ausgaben` im Ordner „ausgaben\nachrichten" ablegt (§7).
  *
- * Additiv (SGL P0-1): Der Kopf nennt den feinen Stand („angenommen (FmZ)",
+ * Additiv (SGL P0-1): Der Kopf nennt den feinen Stand („angenommen (Fm)",
  * „befördert"), die Marke „ohne Nummer" und den Vermerk der FmZ mit Zeit,
  * Handzeichen und Mittel. Die Ansicht öffnet auch aus dem Tagebuch
  * („Nachricht öffnen", ETB P0-1).
@@ -35,7 +35,8 @@ import { ausgangsvermerk, istAusgang } from "./nachrichtenvermerke.js";
 import { zurueckziehgrund } from "./Nachweisung.js";
 import { haltTab, useFokusRueckgabe } from "./useFokusfalle.js";
 import { FmzTeil, LaufzettelAnzeige, NachrichtenteilAnzeige } from "./Vordruckteile.js";
-import { Vordruckvorschau } from "./Vordruckvorschau.js";
+import { Vordruckvorschau, vorschauvermerk } from "./Vordruckvorschau.js";
+import { wegwort } from "./Nachrichtenliste.js";
 
 export interface NachrichtenansichtEigenschaften {
   readonly zeile: Nachrichtenzeile;
@@ -139,7 +140,8 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
             der untere erst nach dem Scrollen im Bild. */}
         <div className="ansichtkopf" style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: "8px" }}>
           <h3>
-            Nachricht {nummer} <small className="leise">· {projektion.laufstandWort(stand.laufstand)}</small>
+            {/* Review Runde 2: derselbe Satz wie die Spalte „Stand“ der Liste. */}
+            Nachricht {nummer} <small className="leise">· {istAusgang(zeile) ? wegwort(zeile) : projektion.laufstandWort(stand.laufstand)}</small>
             {stand.ohneNummer && <span className="marke"> ohne Nummer</span>}
           </h3>
           <button type="button" aria-label="Fenster schließen" title="Schließen (Esc)" onClick={aufSchliessen}>
@@ -152,8 +154,8 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
           </p>
         )}
         <Lagebezug zeile={zeile} aufLage={aufLage} aufSchliessen={aufSchliessen} />
-        {/* R2-FaBe P0-2: Beim Ausgang „angenommen (FmZ) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
-        {istAusgang(zeile) ? <p className="leise">FmZ: {ausgangsvermerk(zeile)}</p> : zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
+        {/* R2-FaBe P0-2: Beim Ausgang „angenommen (Fm) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
+        {istAusgang(zeile) ? <p className="leise">{vorschauvermerk({ art: "zeile", zeile }) ?? `FmZ: ${ausgangsvermerk(zeile)}`}</p> : zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
         <FmzTeil zeile={zeile} />
         <NachrichtenteilAnzeige zeile={zeile} />
         <LaufzettelAnzeige zeile={zeile} />

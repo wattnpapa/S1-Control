@@ -44,7 +44,7 @@ describe("ETB P3-2, LdF P3-1: „Nr.“ ohne (E) bei gemeinsamer Zählung", () =
 
 describe("SGL P3-18: Ausgang zeigt keinen Laufzettel „noch nicht gesichtet“", () => {
   it("sagt „entfällt“ beim Ausgang und „noch nicht gesichtet“ beim Eingang", () => {
-    expect(verteilerleer({ ...BLITZ_AN_S4, richtungKurz: "A", befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-17T12:21:00.000Z", handzeichen: "Fm" }, laufzustand: "ERLEDIGT" }, false)).toMatch(/^entfällt \(Ausgang\)/u);
+    expect(verteilerleer({ ...BLITZ_AN_S4, richtungKurz: "A", befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-17T12:21:00.000Z", handzeichen: "Fm" }, laufzustand: "ERLEDIGT" }, false)).toBe("ohne Kopien verteilt");
     // Review 2026-11-21: vor der Beförderung, beim LdF und vor dem Sichter sagt der Satz, wann die Kopien kommen.
     expect(verteilerleer({ ...BLITZ_AN_S4, richtungKurz: "A" }, false)).toBe("Kopien nach der Beförderung");
     expect(verteilerleer(BLITZ_AN_S4, false)).toBe("noch nicht gesichtet");

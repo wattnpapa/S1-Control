@@ -67,7 +67,7 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
-   seit wann, wie lange noch. Daneben führt die Vermeldezentrale im Blatt
+   seit wann, wie lange noch. Daneben führt die Fernmeldezentrale im Blatt
    **Funkplan**, über welche Rufgruppe jede Einheit gerufen wird und wann sie
    sich zuletzt gemeldet hat; wer länger schweigt als die Schwelle, wird
    Bernstein, und dann ist eine Funkprobe fällig.
@@ -110,6 +110,12 @@ erst, wenn Name, Datum und Führungsstelle dastehen; was fehlt, steht neben
 dem Knopf. Gibt es den Namen am selben Tag schon, bleibt die Maske mit allen
 Eingaben offen und nennt den Grund.
 
+Daneben legt **„Demo-Einsatz“** mit einem Klick einen Übungseinsatz mit
+Beispieldaten an und öffnet ihn: Beginn vor zwölf Stunden, mit Abschnitten,
+Einheiten, Funkplan, Nachrichten, Versorgung und Tagebuch. Er ist zum Zeigen
+und Ausprobieren gedacht und lässt sich bearbeiten wie jeder Einsatz; ein
+zweiter am selben Tag bekommt eine laufende Nummer.
+
 Darunter steht in einer Zeile **„Dieser Arbeitsplatz“**: Anzeigename, Profil
 (im Meldekopf die Betriebsart) und Share, rechts „Ändern“. „Ändern“ klappt die
 Einstellungen auf — Share-Pfad, Anzeigename, Betriebsart, Profil und
@@ -142,13 +148,13 @@ dieses Gerät, nicht für den Einsatz:
 |---|---|---|
 | Führungsstelle (S1), Vorgabe | S1 · Nachrichten · Funkplan · S4 · Exporte | Übersicht, Eingangskorb, Führungsstelle, Kosten, Einsatztagebuch |
 | Leitung / Stab | Übersicht · Nachrichten · S1 · Eingangskorb · Einsatztagebuch · Exporte | Führungsstelle, Funkplan, S4, Kosten |
-| Vermeldezentrale | Nachrichten · Funkplan · S1 · Einsatztagebuch | Übersicht, Eingangskorb, Führungsstelle, S4, Kosten, Exporte |
+| Fernmeldezentrale | Nachrichten · Funkplan · S1 · Einsatztagebuch | Übersicht, Eingangskorb, Führungsstelle, S4, Kosten, Exporte |
 | Versorgung (S4) | S4 · S1 · Exporte | Übersicht, Eingangskorb, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
 | Alle Blätter | alle zehn Blätter | — |
 
 Das Blatt **Übersicht** fasst zusammen, was sonst auf mehreren Blättern
 steht. Oben „Kräfte nach Status“: je Abschnitt die Köpfe im Einsatz,
-einsatzbereit, in Ruhe, nicht einsatzbereit und ohne Status. Jede Zeile
+einsatzbereit, in Ruhe, nicht einsatzbereit und sonstige (vor Ort, anderer oder kein Status), dieselbe Einteilung wie die Monitoransicht „Status“. Jede Zeile
 zählt ihre Unterabschnitte mit, wie der Abschnittsbaum, und die Gesamtzeile
 ist dieselbe Zahl wie die Ist-Stärke im Kopfband. Was angefordert oder im
 Anmarsch ist, steht in der Spalte „erwartet“ und nicht in der Summe.
@@ -331,7 +337,7 @@ Ausgang zeigt, was dieser Arbeitsplatz oder eine Stelle dieser Sitzung
 verfasst hat, mit dem Stand auf dem Weg; maßgeblich ist die Stelle im Feld
 „Funktion“ der Nachricht, nicht der Text im Absender. Wer beim Schichtwechsel
 die Stelle S4 übernimmt, sieht damit auch den Ausgang des Vorgängers. Der
-Stand steht in Worten da, mit dem, was die FmZ getan hat: „angenommen (FmZ)
+Stand steht in Worten da, mit dem, was die FmZ getan hat: „angenommen (Fm)
 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“, bei einer Nachricht,
 die die FmZ noch nicht befördert hat, „… · noch nicht übermittelt“. Die
 Annahme ist die der eigenen FmZ, nicht die des Empfängers; erst die
@@ -552,8 +558,11 @@ läuft jede Nachricht der FmZ einmal über ihn. Ein Ausgang kommt gleich nach
 dem Aufgeben zu ihm, noch vor der Annahme: Er sichtet ihn und teilt ihn mit
 „Fernmelder zuteilen“ einem der Fernmelder Fm1, Fm2 oder Fm3 zu, mit Mittel
 und Gegenstelle; die Auswahl nennt, wer den Fernmelder gerade besetzt
-(„Fm2 · Meyer“). Der zugeteilte Fernmelder nimmt die Nachricht an und
-überträgt sie. Beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
+(„Fm2 · Meyer“); ist nur ein Fernmelder besetzt, steht er schon im Feld.
+Der zugeteilte Fernmelder nimmt die Nachricht an und überträgt sie. Seine
+Zuteilung kann der LdF mit „Rückgängig“ zurücknehmen, solange die Nachricht
+nicht befördert ist; danach bleibt sie stehen, und der Knopf sagt im
+Tooltip, warum. Beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
 Nummer und gibt die Nachricht an den Sichter weiter. Wer die Stelle LdF
 wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor der
 Zuteilung“ mit dem Knopf „Fernmelder zuteilen“ und „Eingänge vor der
@@ -833,9 +842,15 @@ die Mahlzeitenregel des Einsatzes und was vom Sofortbedarf erledigt ist.
   Vorausschau, Belegungsliste, Kraftstoffliste. Die erzeugte Datei steht
   danach neben dem Menü mit „Öffnen“.
 
-Der **Monitor** zeigt neben der Stärke acht weitere Ansichten: Verpflegung,
-Nächste 24 h, Unterbringung, die Tafel „Bereiche · Schichten“, den
-Funkplan und für das Sachgebiet 1 die Stärke je Abschnitt, je
+Der **Monitor** ordnet seine Ansichten nach dem Stab. Führung: „Offene
+Punkte“ mit je einer Kachel für offene Anforderungen und Ablösungen,
+ungelesene Blitz- und Sofort-Nachrichten, Nachrichten über der Schwelle, Funk
+ohne Kontakt, Kräfte ohne Bett, die nächste Mahlzeit (nicht bestellt oder
+Fehlmenge) und Konflikthinweise. S1: die Stärke mit Erwarteten und Beendeten
+darunter, „Status“ je Organisation (im Einsatz, einsatzbereit, Ruhe, nicht
+einsatzbereit, ab zwei Sanitätsorganisationen mit „davon Sanitätsdienst“),
+„Kommen und Gehen“ mit Anforderungen, Zusagen, Anmarsch und ablaufender
+Verfügbarkeit in Zeitfolge, dazu die Stärke je Abschnitt, je
 Organisation und als Kreuztabelle „Abschnitt × Organisation“ mit den
 Köpfen vor Ort je Zelle und den Erwarteten je Organisation darunter. Die beiden Stärketafeln nennen je Zeile Fü / UFü / He und
 Gesamt nach derselben Regel wie die Kopfzahl, die Gesamtzeile ist die
@@ -848,10 +863,20 @@ Kontakts, wenn er älter ist als die Schwelle, Mithörer gestrichelt mit „hör
 mit“. Der Fuß nennt in Bernstein die Einheiten ohne Rufgruppe und die Zahl
 ohne Kontakt. Die Schrift wird so groß, wie das Fenster es zulässt; viele
 Rufgruppen verkleinern sie, statt zu blättern, aufgelöste stehen nicht an der
-Wand.
+Wand. S3: „Einsatzmittel“ mit den Einheiten je Abschnitt nach Status. S4:
+Verpflegung, Nächste 24 h, Unterbringung (eine überbelegte Unterkunft mit ⚠
+und „überbelegt +N“) und die Tafel „Bereiche · Schichten“. S6: „IuK-Lage“ mit
+Share, erreichbaren Arbeitsplätzen, Programmfassungen, nicht übertragenen Daten
+und Quarantäne. FmZ: der Funkplan und der „Nachrichtenweg“, der zeigt, was
+beim LdF, vor der FmZ und vor dem Sichter wartet und was davon über der
+Schwelle liegt, dazu Vorrang ungelesen, Nachrichten ohne Nummer,
+Nummernlücken und im Fuß, ob LdF, Fernmelder und Sichter besetzt sind. Eine
+Kachel in Bernstein trägt immer ⚠ und ein Wort; eine Null steht gedämpft.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
-Mausbewegung oben erscheint, oder mit den Tasten 1 bis 9; R schaltet den
-Wechsel alle 20 Sekunden ein und aus, die Leertaste hält ihn an, F11 schaltet
+Mausbewegung oben erscheint, mit den Tasten 1 bis 9 und 0 für die ersten zehn
+Ansichten oder mit Pfeil links und rechts durch alle. R schaltet den Wechsel
+alle 20 Sekunden ein und aus; über Leiste und Menü läuft er auf Wunsch nur
+durch ein Sachgebiet, das mehr als eine Ansicht hat. Die Leertaste hält ihn an, F11 schaltet
 Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —
 der Monitor im Zelt kann Verpflegung zeigen, der im Fahrzeug Stärke.
 
@@ -943,7 +968,7 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 ### Funkplan
 
-Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen; der Monitor zeigt ihn als sechste Ansicht (Taste 6) mit einer Zeile je Rufgruppe und den Teilnehmern als Kacheln.
+Die Ansicht der Fernmeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen; der Monitor zeigt ihn in der Gruppe „FmZ“ mit einer Zeile je Rufgruppe und den Teilnehmern als Kacheln, daneben den Nachrichtenweg: was beim LdF, vor der FmZ und vor dem Sichter wartet.
 
 **Zuerst:** Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen (beim Tippen des Namens schlägt die Maske Gruppen aus dem THW-Standard-Fleetmapping vor, Stand 06/2024; Pfeil ab und Enter oder Klick übernehmen, jeder andere Name bleibt als eigene Rufgruppe möglich), dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Der Funkhinweis wird ebenso in seiner Zelle geschrieben. Doppelklick auf den Namen einer Einheit (oder ✎) öffnet „Funk und Erreichbarkeit“: weitere Rufgruppen, Funkrufname und Erreichbarkeit überschreiben, Funkprobe eintragen, Funkauszug des Tagebuchs. Strg+E bearbeitet die links gewählte Rufgruppe. Für die Funkprobe eine Einheit in der Zuordnung anklicken, dann Strg+P (Kontakt, Funkzeit jetzt) oder „kein Kontakt …“ (fragt nach dem Grund).
 
@@ -1134,8 +1159,8 @@ Grundlage: KONZEPT-NACHRICHTEN.md §5, §7, Entscheidung 2
 Dieselbe Liste zeigt Strg+H. Sie stammt aus dem Blatt „AküLi“ der Excel.
 Der Funkplan bringt einige Wörter mit, die dort nicht stehen:
 
-- **FmZ** — Fernmeldezentrale, die Vermeldezentrale der Führungsstelle; dort
-  sitzen die Sprechfunker (SprFu).
+- **FmZ** — Fernmeldezentrale der Führungsstelle; dort sitzen die
+  Sprechfunker (SprFu).
 - **Rufgruppe** — die Gruppe im Digitalfunk, über die gerufen wird; im
   Analogfunk der Kanal. Jede Einheit hat eine Hauptrufgruppe und kann weitere
   mithören.

@@ -48,6 +48,17 @@ export interface MonitorEigenschaften {
 }
 
 /** Die Fenstermasse in Pixeln — die einzige Grösse, die der Monitor selbst misst. */
+/**
+ * „+66 erwartet · 12 beendet" unter der Ist-Stärke (Review der Stabsfunktionen:
+ * ohne sie fehlt dem S1 der Trend). Beide zählen nicht in der Summe; fehlt
+ * beides, bleibt die Zeile weg.
+ */
+export function Nebenstaerke({ erwartet, beendet }: { readonly erwartet: number; readonly beendet: number }): React.JSX.Element | null {
+  const teile = [erwartet > 0 ? `+${String(erwartet)} erwartet` : "", beendet > 0 ? `${String(beendet)} beendet` : ""].filter((t) => t !== "");
+  if (teile.length === 0) return null;
+  return <p className="monitorunterzeile">{teile.join(" · ")} — nicht in der Summe</p>;
+}
+
 export interface Fenstermass {
   readonly breite: number;
   readonly hoehe: number;
@@ -122,6 +133,7 @@ export function Monitor({ lagebild, jetzt, zone, verbindung }: MonitorEigenschaf
       <p className="monitorstaerke" style={{ fontSize: `${String(grad)}px` }}>
         {text}
       </p>
+      <Nebenstaerke erwartet={lagebild.staerkeErwartet ?? 0} beendet={lagebild.staerkeBeendet ?? 0} />
       <p className="monitorzeit">{zeit}</p>
       <p className="monitorfuss">
         <span className="monitoreinsatz">{lagebild.einsatzName}</span>

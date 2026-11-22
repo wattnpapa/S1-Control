@@ -1,6 +1,6 @@
 /**
  * Das Blatt „Funkplan" (KONZEPT-FUNKPLAN.md §5, Option 5b) — der Arbeitsplatz
- * der Vermeldezentrale.
+ * der Fernmeldezentrale.
  *
  * Oben das KPI-Band mit den sechs Zahlen des Plans, darunter die
  * Werkzeugzeile (`Funkwerkzeuge.tsx`, seit Runde 6 nach Option 6f):

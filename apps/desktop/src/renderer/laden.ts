@@ -171,6 +171,11 @@ export interface Laden {
    */
   legeEinsatzAn(name: string, datum: string, anlage?: Einsatzanlagedaten): Promise<string | undefined>;
   /**
+   * Legt den Demo-Einsatz an und öffnet ihn: zwölf Stunden Lage mit Einheiten,
+   * Abschnitten, Funkplan, Nachrichten und Versorgung. `true`, wenn er steht.
+   */
+  legeDemoEinsatzAn(): Promise<boolean>;
+  /**
    * Öffnet einen Einsatz; additiv mit Stelle und Handzeichen der Sitzung
    * (KONZEPT-NACHRICHTEN.md Entscheidung 3), wie die Abfrage beim Öffnen sie
    * erhoben hat.
@@ -510,6 +515,16 @@ export const useLaden = create<Laden>((setze, hole) => {
         await hole().ladeEinsaetze();
         return angelegt.einsatzId;
       });
+    },
+
+    async legeDemoEinsatzAn() {
+      const angelegt = await mitFehlerbild(async () => {
+        const demo = await rufe({ art: "demoEinsatzAnlegen" });
+        setze({ akteId: demo.akteId, lagebild: undefined, folge: -1, ...LEERE_ANSICHTEN });
+        await hole().ladeEinsaetze();
+        return true;
+      });
+      return angelegt === true;
     },
 
     async oeffneEinsatz(ordner, sitzung) {

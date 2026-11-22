@@ -12,7 +12,7 @@ import { cleanup, render, screen, waitFor, within } from "@testing-library/react
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { Auswahl } from "./Einsatzauswahl.js";
+import { Auswahl, TEXT_DEMO } from "./Einsatzauswahl.js";
 import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { TEXT_PROFIL_KEIN_RECHT, TEXT_PROFIL_MELDEKOPF, profilband } from "./Profilwahl.js";
@@ -56,14 +56,14 @@ describe("Die Profilwahl", () => {
     expect(Array.from(profilfeld().options).map((option) => option.text)).toEqual([
       "Führungsstelle (S1)",
       "Leitung / Stab",
-      "Vermeldezentrale",
+      "Fernmeldezentrale",
       "Versorgung (S4)",
       "Alle Blätter",
     ]);
     const erklaerung = document.getElementById("profilerklaerung");
     expect(profilfeld().getAttribute("aria-describedby")).toBe("profilerklaerung");
     expect(erklaerung?.textContent).toContain("Führungsstelle (S1): S1 · Nachrichten · Funkplan · S4 · Exporte");
-    expect(erklaerung?.textContent).toContain("Vermeldezentrale: Nachrichten · Funkplan · S1 · Einsatztagebuch");
+    expect(erklaerung?.textContent).toContain("Fernmeldezentrale: Nachrichten · Funkplan · S1 · Einsatztagebuch");
     expect(erklaerung?.textContent).toContain("Versorgung (S4): S4 · S1 · Exporte");
     expect(erklaerung?.textContent).toContain("Alle Blätter: alle Reiter");
     expect(erklaerung?.textContent).toContain(TEXT_PROFIL_KEIN_RECHT);
@@ -72,9 +72,9 @@ describe("Die Profilwahl", () => {
 
   it("zeigt das gespeicherte Profil und speichert die Wahl neben der Betriebsart", async () => {
     attrappe.antwortet("einstellungenSetzen", { sharePfad: "/share", anzeigename: "Meier", profil: "versorgung" });
-    zeige({ profil: "vermeldezentrale" });
+    zeige({ profil: "fernmeldezentrale" });
     await aendern();
-    expect(profilfeld().value).toBe("vermeldezentrale");
+    expect(profilfeld().value).toBe("fernmeldezentrale");
     await userEvent.selectOptions(profilfeld(), "versorgung");
     expect(screen.getByText(/^Versorgung \(S4\):/u).className).toBe("gewaehlt");
     await userEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
@@ -96,9 +96,9 @@ describe("Die Profilwahl", () => {
       sharePfad: "/share",
       anzeigename: "Meier",
       betriebsart: "meldekopf",
-      profil: "vermeldezentrale",
+      profil: "fernmeldezentrale",
     });
-    zeige({ profil: "vermeldezentrale" });
+    zeige({ profil: "fernmeldezentrale" });
     await aendern();
     expect(profilfeld().disabled).toBe(false);
     await userEvent.selectOptions(screen.getByLabelText("Betriebsart"), "meldekopf");
@@ -108,7 +108,7 @@ describe("Die Profilwahl", () => {
     await waitFor(() => {
       expect(attrappe.letzterRuf("einstellungenSetzen")?.einstellungen).toMatchObject({
         betriebsart: "meldekopf",
-        profil: "vermeldezentrale",
+        profil: "fernmeldezentrale",
       });
     });
   });
@@ -153,5 +153,39 @@ describe("Dieser Arbeitsplatz", () => {
     cleanup();
     zeige({ anzeigename: "" });
     expect(screen.getByRole("region", { name: "Einstellungen" })).toBeDefined();
+  });
+});
+
+describe("Der Knopf „Demo-Einsatz“", () => {
+  it("steht neben „Neuer Einsatz …“ und sagt im Tooltip, was entsteht", () => {
+    zeige();
+    const knopf = screen.getByRole("button", { name: "Demo-Einsatz" }) as HTMLButtonElement;
+    expect(knopf.disabled).toBe(false);
+    expect(knopf.title).toBe(TEXT_DEMO);
+    expect(knopf.title).toMatch(/Beginn vor zwölf Stunden/);
+  });
+
+  it("legt mit einem Klick den Demo-Einsatz an, ohne Maske, und öffnet ihn", async () => {
+    attrappe.antwortet("demoEinsatzAnlegen", { akteId: "akte-7", einsatzId: "2026-11-22-demo", ordner: "2026-11-22-demo" });
+    zeige();
+    await userEvent.click(screen.getByRole("button", { name: "Demo-Einsatz" }));
+    await waitFor(() => expect(useLaden.getState().akteId).toBe("akte-7"));
+    expect(attrappe.rufeDerArt("demoEinsatzAnlegen")).toHaveLength(1);
+    expect(screen.queryByRole("dialog")).toBeNull();
+    // Die Liste wird neu geholt: Der Demo-Einsatz steht danach in der Auswahl.
+    expect(attrappe.rufeDerArt("einsaetzeAuflisten").length).toBeGreaterThan(0);
+  });
+
+  it("zeigt den Grund, wenn das Anlegen scheitert, und bleibt in der Auswahl", async () => {
+    attrappe.scheitert("demoEinsatzAnlegen", "Es ist kein Share-Pfad eingestellt.");
+    zeige();
+    await userEvent.click(screen.getByRole("button", { name: "Demo-Einsatz" }));
+    await waitFor(() => expect(useLaden.getState().fehler).toBe("Es ist kein Share-Pfad eingestellt."));
+    expect(useLaden.getState().akteId).toBeUndefined();
+  });
+
+  it("ist ohne Share-Pfad gesperrt", () => {
+    zeige({ sharePfad: "" });
+    expect((screen.getByRole("button", { name: "Demo-Einsatz" }) as HTMLButtonElement).disabled).toBe(true);
   });
 });

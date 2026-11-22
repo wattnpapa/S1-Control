@@ -2,9 +2,12 @@
  * Die Steuerung des Monitors (S4.1, KONZEPT-S4.md §4) — alles im Renderer.
  *
  * Drei Wege schalten die Ansicht um: Kontextmenü, Hover-Leiste und Tastatur
- * (1 bis 9 wählen, R schaltet den Wechsel, Leertaste hält ihn an, F11
+ * (1 bis 9 und 0 wählen die ersten zehn, Pfeil links/rechts blättert,
+ * R schaltet den Wechsel, Leertaste hält ihn an, F11
  * Vollbild, Esc verlässt Menü oder Vollbild). Keiner davon braucht den Main:
  * Der Monitor läuft auch als Browsertab in der Web-Schale (ADR-005).
+ * Der Wechsel läuft durch alle Ansichten oder nur durch die eines
+ * Sachgebiets (S1, S4, …); Leiste und Menü wählen den Modus.
  *
  * Die gewählte Ansicht und der Wechselschalter sind Fensterzustand und
  * stehen in den Einstellungen **dieses Geräts** (wie `theme`), nicht in der
@@ -16,6 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rufe } from "./bruecke.js";
 import { MONITOR_ANSICHTEN, type Einstellungen, type MonitorAnsicht } from "../kontrakt/index.js";
+import { ansichtFuerModus, einstellungAusModus, modusAusEinstellung, naechsteAnsicht, vorherigeAnsicht, type Wechselmodus } from "./monitorWechsel.js";
 
 /** Takt des Wechsels — 20 s, lang genug, um eine Zahl zu lesen. */
 export const WECHSEL_MS = 20_000;
@@ -23,6 +27,12 @@ export const WECHSEL_MS = 20_000;
 export const LEISTE_MS = 3_000;
 
 export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
+  offen: "Offene Punkte",
+  status: "Status",
+  kommen: "Kommen und Gehen",
+  einsatzmittel: "Einsatzmittel",
+  iuk: "IuK-Lage",
+  nachrichtenweg: "Nachrichtenweg",
   staerke: "Stärke",
   verpflegung: "Verpflegung",
   vorausschau: "Nächste 24 h",
@@ -34,26 +44,25 @@ export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
   kreuz: "Abschnitt × Organisation",
 };
 
-/** Die Ansicht, die im Wechsel als nächste kommt. */
-export function naechsteAnsicht(ansicht: MonitorAnsicht): MonitorAnsicht {
-  const stelle = MONITOR_ANSICHTEN.indexOf(ansicht);
-  return MONITOR_ANSICHTEN[(stelle + 1) % MONITOR_ANSICHTEN.length] ?? "staerke";
-}
-
-/** Taste „1" bis „9" → Ansicht; sonst `undefined`. */
+/** Taste „1" bis „9" → erste bis neunte Ansicht, „0" → zehnte; sonst `undefined`. */
 export function ansichtAusTaste(taste: string): MonitorAnsicht | undefined {
-  const zahl = Number(taste);
-  return Number.isInteger(zahl) && zahl >= 1 ? MONITOR_ANSICHTEN[zahl - 1] : undefined;
+  if (!/^[0-9]$/.test(taste)) return undefined;
+  const zahl = taste === "0" ? 10 : Number(taste);
+  return MONITOR_ANSICHTEN[zahl - 1];
 }
 
 export interface Monitorsteuerung {
   readonly ansicht: MonitorAnsicht;
+  /** Ob der Wechsel läuft, gleich welcher Modus. */
   readonly wechsel: boolean;
+  readonly modus: Wechselmodus;
   readonly gehalten: boolean;
   readonly leiste: boolean;
   readonly menue: { readonly x: number; readonly y: number } | undefined;
   waehle(ansicht: MonitorAnsicht): void;
+  /** Taste R: aus ↔ durch alle Ansichten. */
   schalteWechsel(): void;
+  setzeModus(modus: Wechselmodus): void;
   oeffneMenue(x: number, y: number): void;
   schliesseMenue(): void;
   zeigeLeiste(): void;
@@ -71,11 +80,11 @@ async function liesEinstellungen(): Promise<Einstellungen | undefined> {
 }
 
 /** Merkt die Wahl in den Geräteeinstellungen — frisch gelesen, damit nichts anderes verloren geht. */
-async function merke(ansicht: MonitorAnsicht, wechsel: boolean): Promise<void> {
+async function merke(ansicht: MonitorAnsicht, modus: Wechselmodus): Promise<void> {
   const gelesen = await liesEinstellungen();
   if (gelesen === undefined) return;
   try {
-    await rufe({ art: "einstellungenSetzen", einstellungen: { ...gelesen, monitor: { ansicht, wechsel } } });
+    await rufe({ art: "einstellungenSetzen", einstellungen: { ...gelesen, monitor: einstellungAusModus(ansicht, modus) } });
   } catch {
     // Nicht gemerkt ist kein Fehlerbild an der Wand: Die Wahl gilt für dieses Fenster.
   }
@@ -116,7 +125,7 @@ function useLeiste(): { readonly sichtbar: boolean; readonly zeige: () => void }
 
 export function useMonitorsteuerung(): Monitorsteuerung {
   const [ansicht, setzeAnsicht] = useState<MonitorAnsicht>("staerke");
-  const [wechsel, setzeWechsel] = useState(false);
+  const [modus, setzeModusZustand] = useState<Wechselmodus>("aus");
   const [gehalten, setzeGehalten] = useState(false);
   const [menue, setzeMenue] = useState<Monitorsteuerung["menue"]>(undefined);
   const leiste = useLeiste();
@@ -126,39 +135,49 @@ export function useMonitorsteuerung(): Monitorsteuerung {
       if (e?.theme !== undefined) document.documentElement.dataset["theme"] = e.theme;
       if (e?.monitor === undefined) return;
       setzeAnsicht(e.monitor.ansicht);
-      setzeWechsel(e.monitor.wechsel);
+      setzeModusZustand(modusAusEinstellung(e.monitor));
     });
   }, []);
 
+  const wechsel = modus !== "aus";
   const weiter = useCallback(() => {
-    setzeAnsicht((bisher) => naechsteAnsicht(bisher));
-  }, []);
+    setzeAnsicht((bisher) => naechsteAnsicht(bisher, modus));
+  }, [modus]);
   useWechsel(wechsel && !gehalten, weiter);
 
   const waehle = useCallback(
     (neu: MonitorAnsicht) => {
       setzeAnsicht(neu);
       setzeMenue(undefined);
-      void merke(neu, wechsel);
+      void merke(neu, modus);
     },
-    [wechsel],
+    [modus],
+  );
+  const setzeModus = useCallback(
+    (neu: Wechselmodus) => {
+      const start = ansichtFuerModus(ansicht, neu);
+      setzeModusZustand(neu);
+      setzeAnsicht(start);
+      setzeGehalten(false);
+      setzeMenue(undefined);
+      void merke(start, neu);
+    },
+    [ansicht],
   );
   const schalteWechsel = useCallback(() => {
-    const neu = !wechsel;
-    setzeWechsel(neu);
-    setzeGehalten(false);
-    setzeMenue(undefined);
-    void merke(ansicht, neu);
-  }, [ansicht, wechsel]);
+    setzeModus(wechsel ? "aus" : "alle");
+  }, [setzeModus, wechsel]);
 
   const steuerung: Monitorsteuerung = {
     ansicht,
     wechsel,
+    modus,
     gehalten,
     leiste: leiste.sichtbar,
     menue,
     waehle,
     schalteWechsel,
+    setzeModus,
     oeffneMenue: (x, y) => setzeMenue({ x, y }),
     schliesseMenue: () => setzeMenue(undefined),
     zeigeLeiste: leiste.zeige,
@@ -182,6 +201,8 @@ function useMonitortasten(steuerung: Monitorsteuerung, halte: () => void): void 
       const s = aktuell.current;
       const gewaehlt = ansichtAusTaste(ereignis.key);
       if (gewaehlt !== undefined) s.waehle(gewaehlt);
+      else if (ereignis.key === "ArrowRight") s.waehle(naechsteAnsicht(s.ansicht));
+      else if (ereignis.key === "ArrowLeft") s.waehle(vorherigeAnsicht(s.ansicht));
       else if (ereignis.key === "r" || ereignis.key === "R") s.schalteWechsel();
       else if (ereignis.key === " " && s.wechsel) halte();
       else if (ereignis.key === "F11") s.schalteVollbild();

@@ -223,6 +223,24 @@ vorgesehen** — Datenintegrität geht vor Funktionsumfang; Begründung und
 Grenzen in ADR-007. Schreibrufe tragen eine Anfrage-ID, damit eine Wiederholung
 nach verlorener Antwort nichts doppelt anlegt.
 
+### Der Demo-Einsatz
+
+In der Einsatzauswahl legt „Demo-Einsatz" ohne Maske einen Übungseinsatz an
+und öffnet ihn. Er beginnt zwölf Stunden vor dem Klick und trägt, was die
+Anwendung kann: zwölf Abschnitte, rund 20 Einheiten mit Fahrzeugen und Personen,
+die Führungsstelle mit Schichtplan, acht Rufgruppen mit Funkproben, 21
+Nachrichten in allen Stationen des Wegs, Unterkünfte, Verpflegung und
+Sofortbedarf, sechs Anforderungen, einen übernommenen Erfassungsbogen und das
+Einsatztagebuch dazu. Ein zweiter Demo-Einsatz am selben Tag heißt „… 2".
+
+Das Drehbuch liegt in `apps/desktop/src/worker/demo/` und besteht aus rund 570
+Bedienschritten, gebaut mit den Schrittbauern der Oberfläche. Ein kurzlebiger
+Arbeiter mit gestellter Uhr spielt sie über `Aktendienst.bediene` ein, sodass
+jedes Ereignis die Wanduhr seines Schritts trägt; danach öffnet der Einsatz
+wie jeder andere. Wer ein Feature baut, erweitert das Drehbuch mit
+(`AGENTS.md` §13); `demoeinsatz.test.ts` scheitert, wenn eine Ereignisart des
+Katalogs im Demo-Einsatz fehlt. Andere Einheiten: `demoeinheiten.ts` ändern.
+
 ### Die Rauchprobe
 
 `S1_SMOKE=1` lässt die Schale sich selbst beenden, sobald das Fenster sichtbar

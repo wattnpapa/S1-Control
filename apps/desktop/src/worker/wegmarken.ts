@@ -45,5 +45,5 @@ export function mitWegmarken<T extends Ereignisentwurf>(zustand: Zustand, entwur
 /** Der Hinweis zur Abweichung für den Bediener; `undefined` ohne Abweichung. */
 export function abweichungshinweis(entwurf: Ereignisentwurf): string | undefined {
   const abweichung = objekt(entwurf.nutzlast)?.["abweichungVomVorschlag"];
-  return typeof abweichung === "string" ? `Befördert abweichend vom Vorschlag des LdF (${abweichung}); Nachweisung und Tagebuch tragen die Marke.` : undefined;
+  return typeof abweichung === "string" ? `Befördert abweichend von der Zuteilung des LdF (${abweichung}); Nachweisung und Tagebuch tragen die Marke.` : undefined;
 }

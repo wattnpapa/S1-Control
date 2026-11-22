@@ -78,7 +78,9 @@ function objekt(wert: unknown): Record<string, unknown> | undefined {
 /** Die Stelle, die der Schritt in der Nutzlast trägt; `undefined` ohne Stellen. */
 export function stelleFuer(entwurf: Folgeentwurf, stellen: readonly string[]): string | undefined {
   if (stellen.length === 0) return undefined;
-  const bevorzugt = entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) ? [STELLE_FMZ, STELLE_LDF] : (STATION[entwurf.typ] ?? []);
+  // Review Runde 2: Die Ersatzsichtung des LdF steht unter LDF, nicht unter der Fernmelderstelle desselben Platzes.
+  const ersatz = entwurf.typ === "NachrichtGesichtet" && (entwurf.grund === projektion.GRUND_ERSATZSICHTER || entwurf.grund === projektion.GRUND_SICHTER_SAEUMIG);
+  const bevorzugt = entwurf.typ === "NachrichtVerfasst" && hatFmzWerte(entwurf) ? [STELLE_FMZ, STELLE_LDF] : ersatz ? [STELLE_LDF, STELLE_FMZ] : (STATION[entwurf.typ] ?? []);
   const passend = bevorzugt.flatMap((s) => (s === STELLE_FMZ ? stellen.filter(istFernmelderstelle) : stellen.filter((eigene) => eigene === s)));
   return passend[0] ?? stellen[0];
 }

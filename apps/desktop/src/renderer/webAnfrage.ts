@@ -18,6 +18,7 @@ import type { Ruf } from "../kontrakt/index.js";
 const SCHREIBENDE_ARTEN: ReadonlySet<Ruf["art"]> = new Set<Ruf["art"]>([
   "einstellungenSetzen",
   "einsatzAnlegen",
+  "demoEinsatzAnlegen",
   "einsatzOeffnen",
   "einsatzSchliessen",
   "bedienen",
