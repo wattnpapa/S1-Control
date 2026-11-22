@@ -25,6 +25,8 @@ import { ANGEFORDERT, zaehlklasse, zaehlstand } from "../kennzahlen.js";
 import { STAERKE_NULL, staerkePlus, type Staerke } from "../werte.js";
 import { EINGANG_ABSCHNITT_ID, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
+import { statustafel, type Statustafel } from "./einsatzstatus.js";
+import { kommenUndGehen, type Bewegung } from "./kommengehen.js";
 import { kreuzzellen, organisationsschluessel } from "./staerkematrix.js";
 
 export interface Staerketafelzeile {
@@ -53,6 +55,10 @@ export interface Staerketafel {
    * {@link abschnitte} und {@link organisationen}. Fehlt ein Paar, ist es 0.
    */
   readonly kreuz: Readonly<Record<string, Readonly<Record<string, number>>>>;
+  /** Additiv: Einsatzwert je Organisation und Abschnitt (Monitor „Status", „Einsatzmittel"). */
+  readonly status?: Statustafel;
+  /** Additiv: Anforderungen, Anmarsch und „verfügbar bis" in Zeitfolge (Monitor „Kommen und Gehen"). */
+  readonly kommenGehen?: readonly Bewegung[];
 }
 
 /** Der Name einer Einheit ohne Organisation. */
@@ -126,5 +132,7 @@ export function staerketafel(zustand: Zustand): Staerketafel {
     organisationen: organisationszeilen(zustand),
     gesamt: zeile("GESAMT", "Gesamt", gesamt.ist, koepfe(gesamt.erwartet)),
     kreuz: kreuzzellen(zustand),
+    status: statustafel(zustand),
+    kommenGehen: kommenUndGehen(zustand),
   };
 }

@@ -69,6 +69,17 @@ describe("Monitor", () => {
     expect(screen.getByText(/Fü \/ UFü \/ He = Gesamt/)).toBeDefined();
   });
 
+  it("nennt Erwartete und Beendete unter der Zahl, nie in der Summe", () => {
+    zeige({ staerkeErwartet: 66, staerkeBeendet: 12 });
+    expect(screen.getByText("+66 erwartet · 12 beendet — nicht in der Summe")).toBeDefined();
+    expect(screen.getByText("1/2/20 = 23")).toBeDefined();
+  });
+
+  it("lässt die Zeile der Erwarteten ohne Erwartete und Beendete weg", () => {
+    zeige({ staerkeErwartet: 0 });
+    expect(screen.queryByText(/erwartet/)).toBeNull();
+  });
+
   it("beschriftet die Zahl als Ist-Stärke", () => {
     zeige();
     expect(screen.getByText("Ist-Stärke")).toBeDefined();

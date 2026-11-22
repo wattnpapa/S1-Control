@@ -43,6 +43,16 @@ export const TEXT_SOFORT_OHNE_TON = "ohne Ton – den Ton gibt es nur bei Blitz"
 /** Die Rückfrage, wenn „Alle schließen“ auch Warnungen nähme (R2-FaBe P3-1). */
 export const TEXT_ALLE_SCHLIESSEN = "Auch Warnungen schließen? Noch einmal klicken schließt alle.";
 
+/**
+ * Fragt „Alle schließen“ nach? Nur, wenn eine Warnung **mit anderen** Hinweisen
+ * verschwände (Durchlauf 2026-11-22): Steht nur ein Hinweis im Kasten, nimmt
+ * „Alle schließen“ genau ihn, wie sein „×“ — der Sofort-Hinweis (Stufe Warnung)
+ * verlangte sonst bei jeder Sofort-Nachricht zwei Klicks.
+ */
+export function mussNachfragen(hinweise: readonly Pick<Hinweis, "stufe">[]): boolean {
+  return hinweise.length > 1 && hinweise.some((h) => h.stufe !== "info");
+}
+
 export function Hinweiskasten(): React.JSX.Element | null {
   const [frage, setzeFrage] = useState(false);
   const hinweise = useLaden((z) => z.hinweise);
@@ -82,7 +92,7 @@ export function Hinweiskasten(): React.JSX.Element | null {
           type="button"
           title="Alle Hinweise aus der Leiste nehmen; Nachrichten bleiben, wie sie sind"
           onClick={() => {
-            if (!frage && hinweise.some((h) => h.stufe !== "info")) {
+            if (!frage && mussNachfragen(hinweise)) {
               setzeFrage(true);
               return;
             }

@@ -4,7 +4,7 @@
  *
  * - R2-FaBe P0-2: Die Quittungszeit der Gegenstelle ist beim Befördern leer,
  *   Pflicht, mit Platzhalter; Lese-Ansicht, Ausgang und Vorschau nennen
- *   „Quittung der Gegenstelle 1720 Ha“ und „angenommen (FmZ)“, ohne
+ *   „Quittung der Gegenstelle 1720 Ha“ und „angenommen (Fm)“, ohne
  *   Beförderung „noch nicht übermittelt“.
  * - R2-FaBe P0-3: Nach dem Aufgeben bleibt die Warnung des Workers stehen.
  * - R2-FM P1-1, P2-1, P2-2, R2-SGL P2-3: vollständige Tabfolge der Aufnahme,
@@ -88,15 +88,15 @@ describe("R2-FaBe P0-2: Quittung der Gegenstelle", () => {
   });
 
   it("heißt in Ausgang, Lese-Ansicht und Vorschau „Quittung der Gegenstelle“, sonst „noch nicht übermittelt“", () => {
-    expect(ausgangsvermerk(BEFOERDERT)).toBe("angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
-    expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ · angenommen (FmZ) 1710 Fm · noch nicht übermittelt");
+    expect(ausgangsvermerk(BEFOERDERT)).toBe("angenommen (Fm) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
+    expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ · angenommen (Fm) 1710 Fm · noch nicht übermittelt");
     expect(vorschauvermerk({ art: "zeile", zeile: BEFOERDERT })).toContain("Quittung der Gegenstelle 1720 Ha");
     expect(vorschauvermerk({ art: "zeile", zeile: BLITZ_AN_S4 })).toBeUndefined();
     sitzung(["S3"]);
     render(<Nachrichtenansicht zeile={AUSGANG} aufSchliessen={vi.fn()} />);
     const dialog = screen.getByRole("dialog");
     expect(dialog.textContent).toContain("Quittung der Gegenstelle noch nicht übermittelt");
-    expect(dialog.textContent).toContain("Annahme (FmZ)");
+    expect(dialog.textContent).toContain("Annahme (Fm)");
     cleanup();
     render(<Nachrichtenansicht zeile={BEFOERDERT} aufSchliessen={vi.fn()} />);
     expect(screen.getByRole("dialog").textContent).toContain("Quittung der Gegenstelle 1720 Ha");

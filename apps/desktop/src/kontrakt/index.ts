@@ -86,43 +86,54 @@ export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
- * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 9, nach
- * Sachgebiet geordnet: erst S1 (Stärke, dann je Abschnitt, je Organisation,
- * Abschnitt × Organisation), dann S4 (KONZEPT-S4.md §4), zuletzt die FmZ mit
- * dem Funkplan (KONZEPT-FUNKPLAN.md §4). Die gemerkte Wahl eines Geräts
- * steht als Name in den Einstellungen und übersteht deshalb ein Umsortieren;
- * eine neue Ansicht kommt ans Ende ihrer Gruppe.
+ * Die Ansichten des Monitors, nach Sachgebiet in der Ordnung des Stabes:
+ * Führung, S1, S3, S4, S6, zuletzt die FmZ. Die Tasten 1 bis 9 und 0 wählen
+ * die ersten zehn, Pfeil links/rechts blättert durch alle. Die gemerkte
+ * Wahl eines Geräts steht als Name in den Einstellungen und übersteht
+ * deshalb ein Umsortieren; eine neue Ansicht kommt ans Ende ihrer Gruppe.
  */
 export const MONITOR_ANSICHTEN = [
+  "offen",
   "staerke",
+  "status",
   "abschnitte",
   "organisationen",
   "kreuz",
+  "kommen",
+  "einsatzmittel",
   "verpflegung",
   "vorausschau",
   "unterbringung",
   "tafel",
+  "iuk",
   "funkplan",
+  "nachrichtenweg",
 ] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 
 /** Die Sachgebiete, nach denen der Monitor seine Ansichten gruppiert. */
-export const MONITOR_GRUPPEN = ["s1", "s4", "fmz"] as const;
+export const MONITOR_GRUPPEN = ["fuehrung", "s1", "s3", "s4", "s6", "fmz"] as const;
 export const zMonitorGruppe = z.enum(MONITOR_GRUPPEN);
 export type MonitorGruppe = z.infer<typeof zMonitorGruppe>;
 
-/** Welche Ansicht zu welchem Sachgebiet gehört, in der Reihenfolge von `MONITOR_ANSICHTEN`. */
+/** Welche Ansicht zu welchem Sachgebiet gehört; die Reihenfolge gibt `MONITOR_ANSICHTEN`. */
 export const MONITOR_GRUPPE_DER_ANSICHT: Readonly<Record<MonitorAnsicht, MonitorGruppe>> = {
+  offen: "fuehrung",
   staerke: "s1",
   abschnitte: "s1",
   organisationen: "s1",
   kreuz: "s1",
+  status: "s1",
+  kommen: "s1",
+  einsatzmittel: "s3",
   verpflegung: "s4",
   vorausschau: "s4",
   unterbringung: "s4",
   tafel: "s4",
+  iuk: "s6",
   funkplan: "fmz",
+  nachrichtenweg: "fmz",
 };
 
 /**

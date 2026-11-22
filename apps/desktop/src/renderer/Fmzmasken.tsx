@@ -126,7 +126,7 @@ function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
     handzeichen: p.handzeichen,
     mittel: p.zeile.befoerderung?.mittel ?? p.zeile.vorschlag?.mittel ?? p.zeile.uebermittlungswunsch ?? "FUNK",
     gegenstelle: p.zeile.gegenstelle ?? p.zeile.vorschlag?.gegenstelle ?? p.zeile.anschrift,
-    fernmelder: p.zeile.vorschlag?.fernmelder ?? "",
+    fernmelder: p.zeile.vorschlag?.fernmelder ?? (p.schritt === "vorschlag" ? einzigerFernmelder(p.fernmelderbesetzung) : undefined) ?? "",
     // Eine doppelte Nummer wird mit der nächsten freien berichtigt, nicht mit sich selbst (LdF P2-1).
     // Review 2026-11-21: Mit besetztem LdF trägt er die Nummer bei der Weitergabe ein — beim Befördern nicht vorbelegt.
     nummer: p.schritt === "befoerderung" && p.ldfWartet === true ? "" : String((p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) ?? p.naechsteNummer ?? ""),
@@ -197,23 +197,36 @@ export function fernmelderwahl(besetzt: readonly string[] | undefined, gewaehlt:
   return gewaehlt === "" || liste.includes(gewaehlt) ? liste : [gewaehlt, ...liste];
 }
 
+/**
+ * Die Wahl des Fernmelders (Durchlauf 2026-11-22): zuerst in der Maske und mit
+ * dem Fokus — sie ist die Entscheidung des LdF; Zeit und Handzeichen sind vorbelegt.
+ */
+function Fernmelderfeld({ e, setze, wahl }: { readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly wahl: Gegenstellenwahl }): React.JSX.Element {
+  return (
+    <div className="vordruckzeile">
+      <label>
+        Fernmelder
+        {/* Review Runde 2: Auswahl Fm1 bis Fm3 mit Besetzung, Freitext erlaubt (andere Namen, Melder). */}
+        <input value={e.fernmelder} list="fernmelderwahl" placeholder="Fm1, Fm2, Fm3 …" data-startfokus onChange={(ev) => setze("fernmelder", ev.target.value)} />
+        <datalist id="fernmelderwahl">
+          {wahl.fernmelder.map((fm) => (
+            <option key={fm} value={fm} label={fernmelderbeschriftung(fm, wahl.besetzung)} />
+          ))}
+        </datalist>
+      </label>
+    </div>
+  );
+}
+
+/** Ist genau ein Fernmelder besetzt, ist er die Vorbelegung der Zuteilung (Durchlauf 2026-11-22). */
+export function einzigerFernmelder(besetzung: Readonly<Record<string, string>> | undefined): string | undefined {
+  const namen = Object.keys(besetzung ?? {});
+  return namen.length === 1 ? namen[0] : undefined;
+}
+
 function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmzschritt; readonly e: Eingaben; readonly setze: (feld: keyof Eingaben, wert: string) => void; readonly wahl: Gegenstellenwahl }): React.JSX.Element {
   return (
     <>
-      {schritt === "vorschlag" && (
-        <div className="vordruckzeile">
-          <label>
-            Fernmelder
-            {/* Review Runde 2: Auswahl Fm1 bis Fm3 mit Besetzung, Freitext erlaubt (andere Namen, Melder). */}
-            <input value={e.fernmelder} list="fernmelderwahl" placeholder="Fm1, Fm2, Fm3 …" onChange={(ev) => setze("fernmelder", ev.target.value)} />
-            <datalist id="fernmelderwahl">
-              {wahl.fernmelder.map((fm) => (
-                <option key={fm} value={fm} label={fernmelderbeschriftung(fm, wahl.besetzung)} />
-              ))}
-            </datalist>
-          </label>
-        </div>
-      )}
       <div className="vordruckzeile">
         <label>
           Mittel
@@ -368,6 +381,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
           <NachrichtenteilAnzeige zeile={p.zeile} />
         </div>
       )}
+      {p.schritt === "vorschlag" && <Fernmelderfeld e={e} setze={setze} wahl={wahl} />}
       <div className="vordruckzeile">
         <Dtgfeld
           beschriftung={zeitbeschriftung(p.schritt)}

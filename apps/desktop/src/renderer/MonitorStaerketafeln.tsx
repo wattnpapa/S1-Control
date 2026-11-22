@@ -1,6 +1,6 @@
 /**
  * Die Stärketafeln des Sachgebiets 1 auf dem Monitor: Ist-Stärke je
- * Abschnitt (Taste 7) und je Organisation (Taste 8).
+ * Abschnitt und je Organisation (Gruppe S1).
  *
  * Gleiche Regeln wie die Tafel „Bereiche · Schichten": Schrift aus
  * `tafelgrad`, Beschriftung oben, Gesamtzeile fett, Einsatz und Stand im
@@ -98,12 +98,12 @@ const ORGANISATIONEN: Tafelangaben = {
   leer: "Noch keine Kräfte erfasst",
 };
 
-/** Taste 7 — Ist-Stärke je Abschnitt, Unterabschnitte eingerückt, Anmarsch abgesetzt. */
+/** S1 — Ist-Stärke je Abschnitt, Unterabschnitte eingerückt, Anmarsch abgesetzt. */
 export function MonitorAbschnitte(e: Ansichtseigenschaften): React.JSX.Element {
   return <Staerkebild e={e} a={ABSCHNITTE} />;
 }
 
-/** Taste 8 — Ist-Stärke je Organisation, Erwartete daneben. */
+/** S1 — Ist-Stärke je Organisation, Erwartete daneben. */
 export function MonitorOrganisationen(e: Ansichtseigenschaften): React.JSX.Element {
   return <Staerkebild e={e} a={ORGANISATIONEN} />;
 }

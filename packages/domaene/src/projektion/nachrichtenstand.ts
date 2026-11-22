@@ -40,7 +40,7 @@ export type Laufstand = (typeof LAUFSTAENDE)[number];
 const LAUFSTAND_WORT: Readonly<Record<Laufstand, string>> = {
   vorFmz: "vor der FmZ",
   beimLdf: "beim LdF",
-  angenommen: "angenommen (FmZ)",
+  angenommen: "angenommen (Fm)",
   befoerdert: "befördert",
   vorSichter: "vor dem Sichter",
   verteilt: "verteilt",
@@ -121,10 +121,10 @@ function vermerkteil(wort: string, vermerk: Zeitvermerk | undefined, mittel?: st
  * Quittung der Gegenstelle. Ein Fachberater las „angenommen 2040 Fm" als
  * Bestätigung des Empfängers.
  *
- * - Ausgang: „angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha
+ * - Ausgang: „angenommen (Fm) 1710 Fm · Quittung der Gegenstelle 1720 Ha
  *   (Telefon)"; ohne Beförderung „… · noch nicht übermittelt", ganz ohne
  *   Vermerk nur „noch nicht übermittelt".
- * - Eingang: „aufgenommen (FmZ) 1705 Fm (Funk)"; ohne Aufnahme `undefined`.
+ * - Eingang: „aufgenommen (Fm) 1705 Fm (Funk)"; ohne Aufnahme `undefined`.
  */
 export function fmzVermerkTextAus(
   aufnahme: Mittelvermerk | undefined,
@@ -134,8 +134,8 @@ export function fmzVermerkTextAus(
 ): string | undefined {
   const quittung = vermerkteil(TITEL_QUITTUNG_GEGENSTELLE, befoerderung, befoerderung?.mittel);
   const teile = [
-    vermerkteil("aufgenommen (FmZ)", aufnahme, aufnahme?.mittel),
-    vermerkteil("angenommen (FmZ)", annahme),
+    vermerkteil("aufgenommen (Fm)", aufnahme, aufnahme?.mittel),
+    vermerkteil("angenommen (Fm)", annahme),
     quittung ?? (ausgang ? TEXT_NICHT_UEBERMITTELT : undefined),
   ].filter((t): t is string => t !== undefined);
   return teile.length === 0 ? undefined : teile.join(" · ");

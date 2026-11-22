@@ -61,14 +61,14 @@ describe("Quittung der Gegenstelle im Vordruck (R2-FaBe P0-2)", () => {
 
   it("benennt am Fuß die Beförderungszeit als Quittung der Gegenstelle, wie Liste und Vorschau", () => {
     const daten = vordruckDatenAus({ ...GRUNDLAGE, annahme, befoerderung });
-    expect(daten.hinweis).toBe("angenommen (FmZ) 1010 Fm · Quittung der Gegenstelle 1020 Ha (Telefon)");
+    expect(daten.hinweis).toBe("angenommen (Fm) 1010 Fm · Quittung der Gegenstelle 1020 Ha (Telefon)");
     // Eine Zeile am Fuß des A5-Blatts: kürzer als die Blattbreite von 148 mm bei 8 pt.
     expect(daten.hinweis.length).toBeLessThan(100);
   });
 
   it("sagt ohne Beförderung, dass die Nachricht noch nicht übermittelt ist — das Feld „Ausgang“ zeigt dann die Annahme", () => {
     const daten = vordruckDatenAus({ ...GRUNDLAGE, annahme });
-    expect(daten.hinweis).toBe("angenommen (FmZ) 1010 Fm · noch nicht übermittelt");
+    expect(daten.hinweis).toBe("angenommen (Fm) 1010 Fm · noch nicht übermittelt");
     expect(daten.befoerderungsvermerk).toEqual({});
   });
 

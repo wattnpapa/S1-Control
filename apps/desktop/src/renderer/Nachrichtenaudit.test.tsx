@@ -283,7 +283,7 @@ describe("LdF P1-3, SGL P0-1, P2-8: Listen", () => {
     expect(ausgangsstand(befoerdert)).toBe("vor der FmZ · noch nicht übermittelt");
     // Der Satz kommt aus Ring 2; ohne ihn fiele die Liste auf „noch nicht übermittelt“ zurück.
     expect(ausgangsstand({ ...befoerdert, fmzVermerkText: projektion.fmzVermerkTextAus(undefined, befoerdert.annahme, befoerdert.befoerderung, true) } as Nachrichtenzeile)).toBe(
-      "vor der FmZ · angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)",
+      "vor der FmZ · angenommen (Fm) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)",
     );
     expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ");
     expect(kopiewort("GRUEN")).toBe("grün: bearbeiten");

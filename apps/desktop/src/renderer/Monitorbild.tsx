@@ -21,6 +21,9 @@ import { useEffect } from "react";
 
 import { Monitor, useFenstermass } from "./Monitor.js";
 import { MonitorFunkplan } from "./MonitorFunkplan.js";
+import { MonitorIukLage, MonitorNachrichtenweg, MonitorOffenePunkte } from "./MonitorKacheln.js";
+import { MonitorKommenGehen } from "./MonitorKommenGehen.js";
+import { MonitorEinsatzmittel, MonitorStatus } from "./MonitorStatustafel.js";
 import { MonitorKreuztafel } from "./MonitorKreuztafel.js";
 import { MonitorAbschnitte, MonitorOrganisationen } from "./MonitorStaerketafeln.js";
 import { MonitorTafel, MonitorUnterbringung, MonitorVerpflegung, MonitorVorausschau, type Ansichtseigenschaften } from "./Monitoransichten.js";
@@ -61,6 +64,18 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
       return <MonitorOrganisationen {...e} />;
     case "kreuz":
       return <MonitorKreuztafel {...e} />;
+    case "offen":
+      return <MonitorOffenePunkte {...e} />;
+    case "iuk":
+      return <MonitorIukLage {...e} />;
+    case "nachrichtenweg":
+      return <MonitorNachrichtenweg {...e} />;
+    case "status":
+      return <MonitorStatus {...e} />;
+    case "einsatzmittel":
+      return <MonitorEinsatzmittel {...e} />;
+    case "kommen":
+      return <MonitorKommenGehen {...e} />;
   }
 }
 
@@ -71,7 +86,7 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
   const abruf = useVersorgungsansicht(akteId, lagebild?.lageZeiger, 24, braucheAnsicht);
   const braucheFunkplan = lagebild !== undefined && steuerung.ansicht === "funkplan";
   const funk = useFunkplanansicht(braucheFunkplan ? akteId : undefined, lagebild?.lageZeiger, "", braucheFunkplan);
-  const braucheStaerke = lagebild !== undefined && ["abschnitte", "organisationen", "kreuz"].includes(steuerung.ansicht);
+  const braucheStaerke = lagebild !== undefined && ["abschnitte", "organisationen", "kreuz", "status", "kommen", "einsatzmittel"].includes(steuerung.ansicht);
   const staerketafel = useStaerketafel(akteId, lagebild?.lageZeiger, braucheStaerke);
 
   useEffect(() => {

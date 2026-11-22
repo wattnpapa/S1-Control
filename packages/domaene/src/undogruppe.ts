@@ -119,6 +119,7 @@ export function gruppenrest(haupt: EingehendesEreignis | undefined, teile: reado
  */
 export function ohneRuecknahmeHinweis(typ: string): string {
   if (typ === "NachrichtVerfasst") return "Die Nachricht selbst bleibt: Eine aufgegebene oder aufgenommene Nachricht wird nicht rückgängig gemacht, sondern mit Grund zurückgezogen.";
+  if (typ === "NachrichtUebermittlungVorgeschlagen") return "Die Zuteilung bleibt stehen, der Fernmelder hat die Nachricht schon befördert.";
   if (typ === "NachrichtKenntnisGenommen") return "Gelesen ist gelesen: Die Kenntnisnahme bleibt stehen.";
   if (typ === "NachrichtZurueckgezogen") return "Das Zurückziehen bleibt stehen; die Nachricht wird neu aufgegeben, wenn sie doch gilt.";
   if (typ === "EtbEintragErfasst" || typ === "EtbEintragBerichtigt") return "Ein Tagebucheintrag wird berichtigt, nicht rückgängig gemacht.";

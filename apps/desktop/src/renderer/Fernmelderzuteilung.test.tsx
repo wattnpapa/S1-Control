@@ -145,3 +145,34 @@ describe("Review 2026-11-21: Stellenabfrage und Zählung", () => {
     expect(istZugeteilt("Fm 2", ["FM2"])).toBe(true);
   });
 });
+
+describe("Durchlauf 2026-11-22: Zuteilungsmaske und Hinweiskasten", () => {
+  it("belegt den einzigen besetzten Fernmelder vor, bei mehreren keinen", async () => {
+    const { einzigerFernmelder } = await import("./Fmzmasken.js");
+    expect(einzigerFernmelder({ Fm1: "Kaya (Fm1)" })).toBe("Fm1");
+    expect(einzigerFernmelder({ Fm1: "Kaya", Fm2: "Meyer" })).toBeUndefined();
+    expect(einzigerFernmelder(undefined)).toBeUndefined();
+  });
+
+  it("schließt einen einzelnen Hinweis ohne Nachfrage, fragt bei Warnung neben anderen", async () => {
+    const { mussNachfragen } = await import("./Hinweiskasten.js");
+    expect(mussNachfragen([{ stufe: "warnung" }])).toBe(false);
+    expect(mussNachfragen([{ stufe: "warnung" }, { stufe: "info" }])).toBe(true);
+    expect(mussNachfragen([{ stufe: "info" }, { stufe: "info" }])).toBe(false);
+  });
+
+  it("zeigt die Zuteilung in der Warteschlange knapp: Fernmelder fett, darunter der Weg", () => {
+    render(<Warteschlange zeilen={[ausgang("A1", "Fm1")]} jetzt="2026-11-21T09:30:00.000Z" gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={vi.fn()} stellen={["FM1"]} />);
+    const zelle = document.querySelector(".zuteilungszelle");
+    expect(zelle?.querySelector("strong")?.textContent).toBe("Fm1");
+    expect(zelle?.textContent).toBe("Fm1Funk");
+  });
+});
+
+describe("Durchlauf 2026-11-22: Rückgängig nach der Beförderung", () => {
+  it("nennt den nicht rücknehmbaren Schritt mit Gegenstand und Grund", async () => {
+    const { ohneRuecknahmeSatz } = await import("./Ruecknahme.js");
+    expect(ohneRuecknahmeSatz({ art: "NachrichtUebermittlungVorgeschlagen", objekt: "Nachricht A ‚Pumpen‘", hinweis: "Die Zuteilung bleibt stehen." })).toBe("Nachricht A ‚Pumpen‘ einem Fernmelder zugeteilt: Die Zuteilung bleibt stehen.");
+    expect(ohneRuecknahmeSatz(undefined)).toBeUndefined();
+  });
+});

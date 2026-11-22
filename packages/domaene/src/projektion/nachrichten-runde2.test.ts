@@ -138,17 +138,17 @@ describe("R2-FaBe P0-2: der Vermerk der FmZ in Worten", () => {
   const befoerderung = { mittel: "TELEFON", zeitpunkt: "2026-11-17T16:20:00.000Z", handzeichen: "Ha" };
 
   it("nennt beim Ausgang die Annahme der FmZ und die Quittung der Gegenstelle", () => {
-    expect(fmzVermerkTextAus(undefined, annahme, befoerderung, true)).toBe("angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
+    expect(fmzVermerkTextAus(undefined, annahme, befoerderung, true)).toBe("angenommen (Fm) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
   });
 
   it("sagt ohne Beförderung „noch nicht übermittelt“, auch ganz ohne Vermerk", () => {
-    expect(fmzVermerkTextAus(undefined, annahme, undefined, true)).toBe("angenommen (FmZ) 1710 Fm · noch nicht übermittelt");
+    expect(fmzVermerkTextAus(undefined, annahme, undefined, true)).toBe("angenommen (Fm) 1710 Fm · noch nicht übermittelt");
     expect(fmzVermerkTextAus(undefined, undefined, undefined, true)).toBe("noch nicht übermittelt");
   });
 
   it("nennt beim Eingang die Aufnahme der FmZ mit dem Mittel und schweigt ohne sie", () => {
     const aufnahme = { mittel: "FUNK", zeitpunkt: "2026-11-17T16:05:00.000Z", handzeichen: "Fm" };
-    expect(fmzVermerkTextAus(aufnahme, undefined, undefined)).toBe("aufgenommen (FmZ) 1705 Fm (Funk)");
+    expect(fmzVermerkTextAus(aufnahme, undefined, undefined)).toBe("aufgenommen (Fm) 1705 Fm (Funk)");
     expect(fmzVermerkTextAus(undefined, undefined, undefined)).toBeUndefined();
   });
 });
