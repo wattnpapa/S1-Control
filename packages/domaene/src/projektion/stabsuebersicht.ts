@@ -24,6 +24,8 @@ import type { Id } from "../werte.js";
 import { EINGANG_ABSCHNITT_ID, type EinheitZustand, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
 import { STATUSSPALTEN, statustafel, type Statusspalte } from "./einsatzstatus.js";
+import { einsatzzeiten, type Einsatzzeitzeile } from "./einsatzzeiten.js";
+import { kommenUndGehen, type Bewegung } from "./kommengehen.js";
 
 /** Die Spalten der Kräfteübersicht — die der Statustafel; „erwartet“ zählt nicht in „gesamt“. */
 export const KRAEFTESPALTEN = STATUSSPALTEN;
@@ -63,6 +65,10 @@ export interface Stabsuebersicht {
   readonly gesamt: Kraeftezeile;
   /** Offene Aufträge zuerst (ältester Beginn oben), dann erledigte (jüngstes Ende oben). */
   readonly auftraege: readonly Auftragsuebersichtzeile[];
+  /** Additiv: Einheiten vor Ort mit Eintreffzeit, „verfügbar bis“ und Ablösung (`einsatzzeiten.ts`). */
+  readonly einsatzzeiten: readonly Einsatzzeitzeile[];
+  /** Additiv: was kommt — angefordert, zugesagt, im Anmarsch, früheste zuerst (`kommenUndGehen`). */
+  readonly kommen: readonly Bewegung[];
 }
 
 type Zaehler = Record<Kraeftespalte, number>;
@@ -195,5 +201,10 @@ function ms(zeitpunkt: string | undefined): number {
 }
 
 export function stabsuebersicht(zustand: Zustand): Stabsuebersicht {
-  return { ...kraefte(zustand), auftraege: auftragszeilen(zustand) };
+  return {
+    ...kraefte(zustand),
+    auftraege: auftragszeilen(zustand),
+    einsatzzeiten: einsatzzeiten(zustand),
+    kommen: kommenUndGehen(zustand).filter((b) => b.art !== "verfuegbarBis"),
+  };
 }

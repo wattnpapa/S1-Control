@@ -234,6 +234,7 @@ export type {
   Kraeftezeile,
   Kraeftespalte,
   Auftragsuebersichtzeile,
+  Einsatzzeitzeile,
   Statusspalte,
   Statustafel,
   Statuszeile,
