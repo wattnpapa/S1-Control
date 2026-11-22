@@ -71,6 +71,9 @@ function hauptwort(haupt: EingehendesEreignis | undefined): string | undefined {
   if (haupt.typ === "NachrichtBefoerdert") return "Befördern";
   if (haupt.typ === "NachrichtWeitergegeben") return "An den Sichter weitergeben";
   if (haupt.typ === "NachrichtGesichtet") return "Sichten";
+  // Review Runde 2: Sonst hieß der Schritt nur „Bedienschritt“ — gerade dieser holt Kopien bei S2 zurück.
+  if (haupt.typ === "NachrichtNachgewiesen") return "Nachweisen und weitergeben";
+  if (haupt.typ === "NachrichtenParameterGesetzt") return n["feld"] === "ldfStation" ? "LdF als Station umschalten" : "Nachrichtenweg umschalten";
   return undefined;
 }
 
