@@ -140,10 +140,21 @@ dieses Gerät, nicht für den Einsatz:
 
 | Profil | Reiter im Band | unter „Mehr“ |
 |---|---|---|
-| Führungsstelle (S1), Vorgabe | Lage · Eingang · Nachrichten · Führungsstelle · Ausgaben · Einsatztagebuch | Funkplan, Versorgung, Kosten |
-| Vermeldezentrale | Nachrichten · Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
-| Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
-| Alle Blätter | alle neun Blätter | — |
+| Führungsstelle (S1), Vorgabe | S1 · Nachrichten · Funkplan · S4 · Exporte | Übersicht, Eingangskorb, Führungsstelle, Kosten, Einsatztagebuch |
+| Leitung / Stab | Übersicht · Nachrichten · S1 · Eingangskorb · Einsatztagebuch · Exporte | Führungsstelle, Funkplan, S4, Kosten |
+| Vermeldezentrale | Nachrichten · Funkplan · S1 · Einsatztagebuch | Übersicht, Eingangskorb, Führungsstelle, S4, Kosten, Exporte |
+| Versorgung (S4) | S4 · S1 · Exporte | Übersicht, Eingangskorb, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
+| Alle Blätter | alle zehn Blätter | — |
+
+Das Blatt **Übersicht** fasst zusammen, was sonst auf mehreren Blättern
+steht. Oben „Kräfte nach Status“: je Abschnitt die Köpfe im Einsatz,
+einsatzbereit, in Ruhe, nicht einsatzbereit und ohne Status. Jede Zeile
+zählt ihre Unterabschnitte mit, wie der Abschnittsbaum, und die Gesamtzeile
+ist dieselbe Zahl wie die Ist-Stärke im Kopfband. Was angefordert oder im
+Anmarsch ist, steht in der Spalte „erwartet“ und nicht in der Summe.
+Darunter „Aufträge“: die offenen Aufträge aller Einheiten mit Einheit,
+Abschnitt und Beginn, die ältesten oben; „Erledigte zeigen“ nimmt die
+beendeten dazu. Bearbeitet wird weiter im Blatt S1.
 
 Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt
 unter „Mehr“ erreichbar. Wer dort ein Blatt aufschlägt, sieht es, solange es

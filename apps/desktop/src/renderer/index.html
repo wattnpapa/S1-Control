@@ -3798,6 +3798,47 @@
         overflow-y: auto;
       }
 
+      /* ---- Übersicht (Stab-Review 2026-11-22) ----------------------------
+         Kräfte nach Status je Abschnitt und alle Aufträge; Zahlen rechts
+         bündig und tabellarisch, damit Spalten sich lesen lassen. */
+      .stabsuebersicht {
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+      }
+      .stabsuebersicht h2,
+      .stabsuebersicht h3 {
+        margin: 0 0 6px;
+      }
+      .stabsuebersicht table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .stabsuebersicht th,
+      .stabsuebersicht td {
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--rahmen-weich);
+        text-align: left;
+      }
+      .stabsuebersicht thead th {
+        background: var(--kopf-bg);
+      }
+      .stabsuebersicht td.zahl {
+        text-align: right;
+        font-variant-numeric: tabular-nums;
+      }
+      .stabsuebersicht .zahlentabelle thead th:not(:first-child) {
+        text-align: right;
+      }
+      .stabsuebersicht tr.summenzeile th,
+      .stabsuebersicht tr.summenzeile td {
+        font-weight: 700;
+        border-top: 2px solid var(--kartenkante-farbe);
+      }
+      .stabsuebersicht tr.erledigt td {
+        color: var(--text-leise);
+      }
+
       /* ---- Die Kernausgaben (M4.1) -------------------------------------- */
 
       .ausgaben {

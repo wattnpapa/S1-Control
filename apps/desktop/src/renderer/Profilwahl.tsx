@@ -13,7 +13,7 @@
  * wieder Führungsstelle ist.
  */
 
-import { PROFILE, type Profil } from "../kontrakt/index.js";
+import type { Profil } from "../kontrakt/index.js";
 import { reiterFuer } from "./blaetter.js";
 
 export const PROFILNAME: Readonly<Record<Profil, string>> = {
@@ -21,7 +21,15 @@ export const PROFILNAME: Readonly<Record<Profil, string>> = {
   vermeldezentrale: "Vermeldezentrale",
   versorgung: "Versorgung (S4)",
   alle: "Alle Blätter",
+  leitung: "Leitung / Stab",
 };
+
+/**
+ * Die Reihenfolge in der Auswahl. `PROFILE` im Kontrakt wächst nur hinten an
+ * (die Namen stehen in den Geräteeinstellungen); angezeigt wird „Alle
+ * Blätter“ trotzdem zuletzt.
+ */
+export const PROFILREIHENFOLGE: readonly Profil[] = ["fuehrungsstelle", "leitung", "vermeldezentrale", "versorgung", "alle"];
 
 export const TEXT_PROFIL_KEIN_RECHT =
   "Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt unter „Mehr“ erreichbar.";
@@ -56,7 +64,7 @@ export function Profilwahl({ profil, aufWahl, gesperrt }: ProfilwahlEigenschafte
             aufWahl(e.target.value as Profil);
           }}
         >
-          {PROFILE.map((kennung) => (
+          {PROFILREIHENFOLGE.map((kennung) => (
             <option key={kennung} value={kennung}>
               {PROFILNAME[kennung]}
             </option>
@@ -69,7 +77,7 @@ export function Profilwahl({ profil, aufWahl, gesperrt }: ProfilwahlEigenschafte
         ) : (
           <>
             <ul>
-              {PROFILE.map((kennung) => (
+              {PROFILREIHENFOLGE.map((kennung) => (
                 <li key={kennung} className={kennung === profil ? "gewaehlt" : undefined}>
                   {PROFILNAME[kennung]}: {profilband(kennung)}
                 </li>

@@ -49,12 +49,13 @@ beforeEach(() => {
 });
 
 describe("Die Profilwahl", () => {
-  it("bietet die vier Profile an, Vorgabe Führungsstelle, und erklärt je Profil das Band", async () => {
+  it("bietet die Profile an, Vorgabe Führungsstelle, und erklärt je Profil das Band", async () => {
     zeige();
     await aendern();
     expect(profilfeld().value).toBe("fuehrungsstelle");
     expect(Array.from(profilfeld().options).map((option) => option.text)).toEqual([
       "Führungsstelle (S1)",
+      "Leitung / Stab",
       "Vermeldezentrale",
       "Versorgung (S4)",
       "Alle Blätter",

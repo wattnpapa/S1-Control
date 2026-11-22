@@ -246,7 +246,7 @@ describe("Kopfband", () => {
   });
 
   it("stellt je Profil andere Reiter ins Band und den Rest unter „Mehr“ (E3)", async () => {
-    const zeige = (profil: "fuehrungsstelle" | "vermeldezentrale" | "versorgung" | "alle" | undefined): void => {
+    const zeige = (profil: "fuehrungsstelle" | "vermeldezentrale" | "versorgung" | "alle" | "leitung" | undefined): void => {
       cleanup();
       render(
         <Kopfband
@@ -267,6 +267,7 @@ describe("Kopfband", () => {
     expect(reiter()).toEqual(["S1", "Nachrichten", "Funkplan", "S4", "Exporte"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
+      "Übersicht",
       "Eingangskorb",
       "Führungsstelle",
       "Kosten",
@@ -276,6 +277,7 @@ describe("Kopfband", () => {
     expect(reiter()).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
+      "Übersicht",
       "Eingangskorb",
       "Führungsstelle",
       "S4",
@@ -284,8 +286,10 @@ describe("Kopfband", () => {
     ]);
     zeige("versorgung");
     expect(reiter()).toEqual(["S4", "S1", "Exporte"]);
+    zeige("leitung");
+    expect(reiter()).toEqual(["Übersicht", "Nachrichten", "S1", "Eingangskorb", "Einsatztagebuch", "Exporte"]);
     zeige("alle");
-    expect(reiter()).toHaveLength(9);
+    expect(reiter()).toHaveLength(10);
     expect(screen.queryByRole("button", { name: "Mehr ▾" })).toBeNull();
   });
 

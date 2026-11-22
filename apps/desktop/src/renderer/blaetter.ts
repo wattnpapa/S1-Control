@@ -23,6 +23,7 @@ import type { Profil } from "../kontrakt/index.js";
 export interface Reiter {
   readonly schluessel:
     | "lage"
+    | "uebersicht"
     | "eingang"
     | "nachrichten"
     | "fuest"
@@ -46,6 +47,9 @@ export interface Reiter {
 export const BLAETTER: readonly Reiter[] = [
   // Umbenannt 2026-11-22: „S1“ statt „Lage“, „S4“ statt „Versorgung“, „Exporte“ statt „Ausgaben“.
   { schluessel: "lage", titel: "S1" },
+  // Stab-Review 2026-11-22 (docs/audits/stab): Kräfte nach Status je
+  // Abschnitt und alle Aufträge auf einer Seite, zum Lesen und für den Lagevortrag.
+  { schluessel: "uebersicht", titel: "Übersicht", erklaerung: "Kräfte nach Status je Abschnitt und alle Aufträge aller Einheiten" },
   // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
   // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
   // R2-FaBe P2-1: „Eingangskorb“ statt „Eingang“ — der Fachberater suchte hier seine Nachricht;
@@ -101,6 +105,9 @@ const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
   // Die Vermeldezentrale ist auch die FmZ: Nachrichten vor dem Funkplan (§6).
   vermeldezentrale: ["nachrichten", "funkplan", "lage", "tagebuch"],
   versorgung: ["versorgung", "lage", "ausgaben"],
+  // Stab-Review 2026-11-22: Leitung, ETB-Führer und Sachgebiete lesen zuerst
+  // die Übersicht; Anforderungen (Eingangskorb) und Tagebuch stehen im Band.
+  leitung: ["uebersicht", "nachrichten", "lage", "eingang", "tagebuch", "ausgaben"],
 };
 
 export interface Reiterzuschnitt {

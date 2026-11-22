@@ -13,6 +13,7 @@ import { bruecke } from "./bruecke.js";
 import { Diagnose } from "./Diagnose.js";
 import { Auswahl } from "./Einsatzauswahl.js";
 import { Funkplan } from "./Funkplan.js";
+import { Stabsuebersicht } from "./Stabsuebersicht.js";
 import { Hilfe } from "./Hilfe.js";
 import { Hinweiskasten } from "./Hinweiskasten.js";
 import { Kopfband } from "./Kopfband.js";
@@ -259,6 +260,7 @@ export function Arbeitsplatz(): React.JSX.Element {
             )}
             {/* R2-ETB P2-6: „In der Lage zeigen“ aus der Lese-Ansicht schlägt die Lage auf. */}
             {blatt === "nachrichten" && <Nachrichten aufTagebuch={() => setzeBlatt("tagebuch")} aufStelle={sitzungsabfrage.oeffne} aufLage={() => setzeBlatt("lage")} />}
+            {blatt === "uebersicht" && <Stabsuebersicht />}
             {blatt === "funkplan" && <Funkplan />}
             {blatt === "versorgung" && <Versorgung />}
             {blatt === "kosten" && <Kosten />}
