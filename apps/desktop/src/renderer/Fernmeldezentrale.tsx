@@ -104,7 +104,7 @@ function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.El
   if (zeile.laufzustand !== "VOR_LDF") return null;
   // R2-LdF P3-3: Ist kein LdF besetzt (`ldfNichtBesetzt`, Ring 2, optional gelesen), befördert die FmZ selbst.
   const ohneLdf = (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt === true;
-  if (projektion.ldfSchrittDer(zeile) === "weitergabe") return <span className="marke-zustand warn"> befördert, LdF nicht besetzt – selbst weitergeben</span>;
+  if (projektion.ldfSchrittDer(zeile) === "weitergabe") return <span className="marke-zustand warn"> {zeile.richtung === "AUSGANG" ? "befördert" : "Eingang aufgenommen"}, LdF nicht besetzt – selbst weitergeben</span>;
   return <span className="marke-zustand warn">{ohneLdf ? " beim LdF (nicht besetzt – selbst befördern)" : " beim LdF"}</span>;
 }
 

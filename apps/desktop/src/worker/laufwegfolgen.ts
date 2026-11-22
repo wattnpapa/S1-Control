@@ -139,15 +139,22 @@ function wartetAufKopien(n: NachrichtZustand): boolean {
  */
 export function planeKopienBeimAbschalten(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Laufwegumfeld): Laufwegplan {
   const feld = objekt(entwurf.nutzlast)?.["feld"];
-  if (entwurf.typ !== "NachrichtenParameterGesetzt" || feld !== "ldfStation" || entwurf.neu === true || !ldfStation(zustand)) return { folgen: [], hinweise: [] };
-  if (zustand.einsatz?.sichtungAuchAusgang?.wert === true) return { folgen: [], hinweise: [] };
+  if (entwurf.typ !== "NachrichtenParameterGesetzt" || entwurf.neu !== false) return { folgen: [], hinweise: [] };
+  const sichtungAuch = zustand.einsatz?.sichtungAuchAusgang?.wert === true;
+  // LdF als Station aus: Was beim LdF oder vor dem Sichter wartet, ginge auf ERLEDIGT — außer mit „Ausgänge zum Sichter“.
+  const ldfAus = feld === "ldfStation" && ldfStation(zustand) && !sichtungAuch;
+  // Review Runde 2: „Ausgänge zum Sichter“ aus ohne LdF: Was vor dem Sichter wartet, ginge ebenso auf ERLEDIGT.
+  const sichterAus = feld === "sichtungAuchAusgang" && sichtungAuch && !ldfStation(zustand);
+  if (!ldfAus && !sichterAus) return { folgen: [], hinweise: [] };
   const folgen = Object.values(zustand.nachrichten ?? {})
     .filter(wartetAufKopien)
     .flatMap((n) => {
-      const vermerk = vermerkAus(n.befoerderung?.wert);
+      // Review Runde 2: Zeit und Handzeichen der Weitergabe, sonst der Beförderung — die Kopien folgen dem letzten Schritt.
+      const vermerk = vermerkAus(n.weitergabe?.wert) ?? vermerkAus(n.befoerderung?.wert);
       return vermerk === undefined ? [] : [kopienfolge(n, vermerk, umfeld)];
     });
-  return { folgen, hinweise: folgen.length === 0 ? [] : [`LdF als Station abgeschaltet: Kopien für ${String(folgen.length)} beförderte Ausgänge an S2 und den Verfasser verteilt.`] };
+  const was = ldfAus ? "LdF als Station" : "„Ausgänge zum Sichter“";
+  return { folgen, hinweise: folgen.length === 0 ? [] : [`${was} abgeschaltet: Kopien für ${String(folgen.length)} beförderte Ausgänge an S2 und den Verfasser verteilt.`] };
 }
 
 /**

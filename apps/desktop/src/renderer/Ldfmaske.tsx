@@ -33,6 +33,7 @@ import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
+import { Verteilermatrix, verteilerAusAnschrift, type Verteilerwahl } from "./Verteilerraster.js";
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { useLaden } from "./laden.js";
 import { meldeWarnungen } from "./warnungsstufen.js";
@@ -47,6 +48,8 @@ export interface Weitergabeeingaben {
   readonly handzeichen: string;
   /** Additiv (2026-11-21): die Nummer der Nachweisung, wenn die Nachricht noch keine trägt; leer = ohne. */
   readonly nummer?: string;
+  /** Additiv (Review Runde 2): der Verteiler, wenn kein Sichter besetzt ist und der LdF einen Eingang selbst verteilt. */
+  readonly verteiler?: readonly Verteilerwahl[];
 }
 
 /** Der Entwurf der Weitergabe aus den Eingaben, oder der Satz, was fehlt. */
@@ -57,9 +60,12 @@ export function weitergabeEntwurf(zeile: Nachrichtenzeile, e: Weitergabeeingaben
   const eingabe = zeile.nummer === undefined ? (e.nummer ?? "").trim() : "";
   const nummer = nummerAusEingabe(eingabe);
   if (eingabe !== "" && nummer === undefined) return "Nummer als ganze Zahl eintragen";
-  if (nummer === undefined) return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+  // Review Runde 2: Ohne Sichter verteilt der LdF einen Eingang mit dem Weitergeben (Laufzettel der Maske).
+  const sichtung = e.verteiler === undefined ? undefined : { zeitpunkt, handzeichen: e.handzeichen.trim(), verteiler: e.verteiler.map((v) => ({ stelle: v.stelle, kopie: v.kopie })) };
+  if (sichtung !== undefined && sichtung.verteiler.length === 0) return "Mindestens eine Stelle im Verteiler ankreuzen";
+  if (nummer === undefined) return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen }, sichtung);
   // Review 2026-11-21: erst die Nummer (mit Vorwert-Prüfung), dann die Weitergabe als Folge.
-  return nachrichtNachweisenUndWeitergeben(zeile.id, { nummer, zeitpunkt, handzeichen: e.handzeichen }, { zeitpunkt, handzeichen: e.handzeichen });
+  return nachrichtNachweisenUndWeitergeben(zeile.id, { nummer, zeitpunkt, handzeichen: e.handzeichen }, { zeitpunkt, handzeichen: e.handzeichen }, sichtung);
 }
 
 /** „Funk 171045NOV26 Fm · von Heros Wildeshausen 10 · Nr. 7“ — der Aufnahmevermerk zum Prüfen (R2-LdF P2-3). */
@@ -112,7 +118,15 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
   const peers = useLaden((z) => z.lagebild?.peers);
   const eigeneStellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
-  const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen, nummer: p.naechsteNummer === undefined ? "" : String(p.naechsteNummer) }));
+  const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
+  // Review Runde 2: Ohne Sichter verteilt der LdF einen Eingang selbst — der Laufzettel ist vorbelegt wie beim Sichter.
+  const selbstVerteilen = p.zeile.richtung !== "AUSGANG" && !sichterBesetzt(eigeneStellen, peers ?? []);
+  const [e, setzeE] = useState<Weitergabeeingaben>(() => ({
+    zeit: datumZeitGruppe(new Date()),
+    handzeichen: p.handzeichen,
+    nummer: p.naechsteNummer === undefined ? "" : String(p.naechsteNummer),
+    ...(selbstVerteilen ? { verteiler: verteilerAusAnschrift(p.zeile.anschrift, fuestName) } : {}),
+  }));
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
   const fremd = useFremdsperren().von(p.zeile.id);
@@ -184,6 +198,12 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
           </label>
         )}
       </div>
+      {e.verteiler !== undefined && (
+        <>
+          <p className="hinweistext">Kein Sichter besetzt: Sie verteilen mit dem Weitergeben selbst (als Ersatzsichter).</p>
+          <Verteilermatrix verteiler={e.verteiler} aufAenderung={(verteiler) => setzeE((bisher) => ({ ...bisher, verteiler }))} />
+        </>
+      )}
       {doppelt !== undefined && (
         <p className="warnung" role="alert">
           {doppelt}

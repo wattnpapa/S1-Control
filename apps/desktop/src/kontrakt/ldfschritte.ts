@@ -49,8 +49,9 @@ export function nachrichtWeitergeben(nachrichtId: string, vorher: Zeitvermerk | 
  * inzwischen ein Fernmelder nachgewiesen, wird er abgewiesen, statt dessen
  * Nummer zu überschreiben. Im Tagebuch steht die Nummer vor der Weitergabe.
  */
-export function nachrichtNachweisenUndWeitergeben(nachrichtId: string, nachweis: Nachweisvermerk, weitergabe: Zeitvermerk): Entwurf {
-  return { ...nachrichtNachweisen(nachrichtId, null, nachweis), nachrichtenfolge: { weitergabe: { zeitpunkt: weitergabe.zeitpunkt, handzeichen: weitergabe.handzeichen.trim() } } };
+export function nachrichtNachweisenUndWeitergeben(nachrichtId: string, nachweis: Nachweisvermerk, weitergabe: Zeitvermerk, sichtung?: Sichtungsvermerk): Entwurf {
+  const folge = { weitergabe: { zeitpunkt: weitergabe.zeitpunkt, handzeichen: weitergabe.handzeichen.trim() }, ...(sichtung === undefined ? {} : { sichtung: nachrichtSichten(nachrichtId, null, sichtung).neu }) };
+  return { ...nachrichtNachweisen(nachrichtId, null, nachweis), nachrichtenfolge: folge as Entwurf["nachrichtenfolge"] };
 }
 
 /** Was die Regel von einem Peer der Präsenz braucht. */
