@@ -757,6 +757,10 @@ export const zRuf = z.discriminatedUnion("art", [
     beginn: z.string(),
     schichtmodell: zText,
   }),
+  // Additiv (Demo-Einsatz): legt einen Einsatz an, der zwölf Stunden vor jetzt
+  // beginnt, und spielt das Demo-Drehbuch ein (`worker/demo/demoeinsatz.ts`).
+  // Ohne Angaben: Name, Beginn und Inhalt stehen im Drehbuch.
+  z.object({ art: z.literal("demoEinsatzAnlegen") }),
   // Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): Stelle und Handzeichen
   // der Sitzung, wie die Abfrage beim Öffnen sie erhoben hat.
   z.object({ art: z.literal("einsatzOeffnen"), ordner: zText, ...zSitzungsangaben }),
@@ -1211,6 +1215,7 @@ export interface Antworten {
   einstellungenSetzen: Einstellungen;
   einsaetzeAuflisten: readonly EinsatzEintrag[];
   einsatzAnlegen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
+  demoEinsatzAnlegen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   einsatzOeffnen: { readonly akteId: string; readonly einsatzId: string; readonly ordner: string };
   stellenSetzen: null;
   einsatzSchliessen: null;

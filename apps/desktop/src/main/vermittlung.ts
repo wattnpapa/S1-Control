@@ -35,6 +35,7 @@ import {
 
 import { zeigeAusgabe, type Schreibtisch } from "./ausgabezeiger.js";
 import { LEERER_VORDRUCK_DATEI, automatikdruckAus, druckfelder, probedruck, type Druckausgang } from "./druckausgang.js";
+import { legeDemoEinsatzAn } from "./demoanlage.js";
 import { verzeichnisPruefen } from "./druckverzeichnis.js";
 import { liesArbeitsplatz, schreibeArbeitsplatz, type Arbeitsplatz } from "./einstellungen.js";
 import { EINSATZ_DOPPELT, gibtEsDenEinsatz, listeneintrag, ordneEinsaetze } from "./einsatzliste.js";
@@ -252,6 +253,8 @@ export class Vermittlung {
         return this.#listeEinsaetze();
       case "einsatzAnlegen":
         return this.#legeEinsatzAn(ruf);
+      case "demoEinsatzAnlegen":
+        return this.#legeDemoEinsatzAn();
       case "einsatzOeffnen":
         return this.#oeffneEinsatz(ruf.ordner, sitzungsangaben(ruf));
       // Stelle und Handzeichen der Sitzung (KONZEPT-NACHRICHTEN.md
@@ -794,16 +797,19 @@ export class Vermittlung {
     return ordneEinsaetze(eintraege);
   }
 
-  async #legeEinsatzAn(ruf: Extract<Ruf, { art: "einsatzAnlegen" }>): Promise<unknown> {
-    const platz = await this.arbeitsplatz();
+  /**
+   * Legt den Einsatzordner auf dem Share an — ohne fachliches Ereignis.
+   * Scheitert mit {@link EINSATZ_DOPPELT}, wenn es den Einsatz schon gibt.
+   */
+  async #legeEinsatzordnerAn(platz: Arbeitsplatz, name: string, datum: string): Promise<string> {
     if (platz.sharePfad.length === 0) throw new Error("Es ist kein Share-Pfad eingestellt.");
-    const kennung = einsatzKennung(ruf.datum, ruf.name);
+    const kennung = einsatzKennung(datum, name);
     const ablage = this.#ablage(platz.sharePfad, kennung.ordner);
     // Vor dem Anlegen pruefen: Der Bediener bekommt einen Satz, nicht den
     // Dateisystemfehler samt Serverpfad.
     if (
       (await this.#o.dateisystem.existiert(ablage.shareEinsatzDatei)) ||
-      gibtEsDenEinsatz(await this.#listeEinsaetze(), ruf.datum, ruf.name)
+      gibtEsDenEinsatz(await this.#listeEinsaetze(), datum, name)
     ) {
       throw new Error(EINSATZ_DOPPELT);
     }
@@ -814,8 +820,8 @@ export class Vermittlung {
         ablage,
         {
           einsatzId: kennung.ordner,
-          name: ruf.name,
-          datum: ruf.datum,
+          name,
+          datum,
           angelegtAm: new Date().toISOString(),
           angelegtVon: this.#benutzer(platz),
         },
@@ -829,8 +835,13 @@ export class Vermittlung {
       throw fehler;
     }
     this.#o.protokolliere("info", `Einsatz angelegt: ${kennung.ordner}`);
+    return kennung.ordner;
+  }
 
-    const akteId = await this.#starteUndOeffne(platz, kennung.ordner);
+  async #legeEinsatzAn(ruf: Extract<Ruf, { art: "einsatzAnlegen" }>): Promise<unknown> {
+    const platz = await this.arbeitsplatz();
+    const ordner = await this.#legeEinsatzordnerAn(platz, ruf.name, ruf.datum);
+    const akteId = await this.#starteUndOeffne(platz, ordner);
     // Das erste fachliche Ereignis schreibt der Worker, nicht der Main —
     // sonst haette der Main eine HLC-Uhr und damit Fachzustand.
     const ergebnis = (await this.#o.hof.frage(akteId, {
@@ -838,7 +849,7 @@ export class Vermittlung {
       entwurf: {
         typ: "EinsatzAngelegt",
         nutzlast: {
-          einsatzId: kennung.ordner,
+          einsatzId: ordner,
           name: ruf.name,
           art: ruf.einsatzArt,
           fuestName: ruf.fuestName,
@@ -858,8 +869,22 @@ export class Vermittlung {
         `Der Einsatz wurde angelegt, aber das erste Ereignis nicht geschrieben: ${JSON.stringify(ergebnis)}`,
       );
     }
-    await this.#belegeLdfStationVor(akteId, kennung.ordner);
-    return { akteId, einsatzId: kennung.ordner, ordner: kennung.ordner };
+    await this.#belegeLdfStationVor(akteId, ordner);
+    return { akteId, einsatzId: ordner, ordner };
+  }
+
+  /** Der Demo-Einsatz (`demoanlage.ts`): einspielen lassen, dann öffnen wie jeden anderen. */
+  async #legeDemoEinsatzAn(): Promise<unknown> {
+    const platz = await this.arbeitsplatz();
+    const ordner = await legeDemoEinsatzAn({
+      hof: this.#o.hof,
+      legeOrdnerAn: (name, datum) => this.#legeEinsatzordnerAn(platz, name, datum),
+      startdaten: (einsatzordner) => this.#startdaten(platz, einsatzordner),
+      protokolliere: (stufe, text) => this.#o.protokolliere(stufe, text),
+      jetztMs: () => Date.now(),
+    });
+    const akteId = await this.#starteUndOeffne(platz, ordner);
+    return { akteId, einsatzId: ordner, ordner };
   }
 
   /**
@@ -900,16 +925,7 @@ export class Vermittlung {
   }
 
   async #starteUndOeffne(platz: Arbeitsplatz, ordner: string, sitzung?: Sitzungsangaben): Promise<string> {
-    const start: Omit<Startdaten, "akteId"> = {
-      shareEinsatzOrdner: path.join(platz.sharePfad, ORDNER_EINSAETZE, ordner),
-      lokalerEinsatzOrdner: path.join(this.#o.spiegelwurzel, ordner),
-      clientId: platz.clientId,
-      einsatzId: ordner,
-      benutzer: this.#benutzer(platz),
-      anzeigename: platz.anzeigename,
-      programmversion: this.#o.programmversion,
-    };
-    const akteId = this.#o.hof.starte(start);
+    const akteId = this.#o.hof.starte(this.#startdaten(platz, ordner));
     this.#ordnerJeAkte.set(akteId, ordner);
     try {
       // Vor dem Öffnen: Dann trägt schon das erste volle Lagebild die Sitzung,
@@ -928,6 +944,18 @@ export class Vermittlung {
     }
     this.#o.protokolliere("info", `Einsatz geöffnet: ${ordner} als ${akteId}`);
     return akteId;
+  }
+
+  #startdaten(platz: Arbeitsplatz, ordner: string): Omit<Startdaten, "akteId"> {
+    return {
+      shareEinsatzOrdner: path.join(platz.sharePfad, ORDNER_EINSAETZE, ordner),
+      lokalerEinsatzOrdner: path.join(this.#o.spiegelwurzel, ordner),
+      clientId: platz.clientId,
+      einsatzId: ordner,
+      benutzer: this.#benutzer(platz),
+      anzeigename: platz.anzeigename,
+      programmversion: this.#o.programmversion,
+    };
   }
 
   #benutzer(platz: Arbeitsplatz): string {
