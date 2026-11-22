@@ -138,7 +138,7 @@ describe("Die Beförderungsmaske mit LdF", () => {
     useLaden.setState({ lagebild: lagebild({ sitzung: { stellen: ["FMZ"], handzeichen: "Fm" } }) });
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten vor der FmZ" }));
-    expect(within(tabelle).getByRole("row", { name: /Sandsäcke/ }).textContent).toContain("Fm2 · Kurier/Melder");
+    expect(within(tabelle).getByRole("row", { name: /Sandsäcke/ }).textContent).toContain("Fm2Kurier/Melder");
     fireEvent.click(within(tabelle).getByRole("button", { name: "Befördern" }));
     const maske = screen.getByRole("form", { name: /Befördern/ });
     expect((within(maske).getByLabelText("Mittel") as HTMLSelectElement).value).toBe("KURIER");

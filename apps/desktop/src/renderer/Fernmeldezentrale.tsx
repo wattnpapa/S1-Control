@@ -199,6 +199,24 @@ export const TEXT_OHNE_LDF = "Kein LdF besetzt: Die Fernmelder befördern selbst
  * Marke „für Sie“ in der ersten Spalte und die Zeile mit Randleiste und
  * fettem Betreff (`tr.zugeteilt`) — nicht nur als Farbe weit rechts.
  */
+/**
+ * Die Zuteilung kompakt (Durchlauf 2026-11-22): In der schmalen Spalte brach
+ * „Fm1 · Funk an OV Wildeshausen · 221724NOV26 Sch“ auf sechs Zeilen um, mit
+ * einem einzelnen „·“. Jetzt der Fernmelder fett, darunter der Weg; Zeit und
+ * Handzeichen des LdF stehen im Tooltip und auf dem Vordruck.
+ */
+function Zuteilungszelle({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
+  const v = zeile.vorschlag;
+  if (v === undefined) return <span className="leise">noch nicht zugeteilt</span>;
+  const weg = `${projektion.mittelWort(v.mittel)}${v.gegenstelle === undefined ? "" : ` an ${v.gegenstelle}`}`;
+  return (
+    <span className="zuteilungszelle" title={vorschlagText(zeile)}>
+      <strong>{v.fernmelder}</strong>
+      <span className="nebenwert">{weg}</span>
+    </span>
+  );
+}
+
 function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, aufSchritt, aufWeitergabe, mitZuteilung }: Zeileneigenschaften): React.JSX.Element {
   const meins = mirZugeteilt(zeile, stellen);
   return (
@@ -215,7 +233,7 @@ function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, au
       <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
       {mitZuteilung && (
         <td>
-          {vorschlagText(zeile) ?? <span className="leise">noch nicht zugeteilt</span>}
+          <Zuteilungszelle zeile={zeile} />
           <Abweichungsmarke zeile={zeile} />
         </td>
       )}
