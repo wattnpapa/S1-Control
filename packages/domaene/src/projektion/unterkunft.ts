@@ -41,6 +41,11 @@ export interface Bedarfszeile {
   readonly unterkunftId?: string;
   readonly unterkunft?: string;
   readonly zustand: Unterbringungszustand;
+  /**
+   * Additiv (Stab-Review S4-1): Die Einheit meldet keinen Bedarf, ist aber
+   * zugewiesen; m/w/d sind ihre Köpfe, wie in der Belegung der Karte.
+   */
+  readonly ausKoepfen?: true;
 }
 
 /** Eine Einheit ohne gemeldeten Bedarf und ohne Zuweisung — zuweisbar, sie belegt dann ihre Köpfe. */
@@ -91,9 +96,14 @@ const REIHENFOLGE: Readonly<Record<Unterbringungszustand, number>> = { OHNE_UNTE
 export function unterbringungsbedarf(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): readonly Bedarfszeile[] {
   const zeilen: Bedarfszeile[] = [];
   for (const eintrag of einheiten) {
-    const bedarf = uebernachtung(zustand, eintrag.einheit);
+    const gemeldet = uebernachtung(zustand, eintrag.einheit);
     const { id, u } = zuweisung(zustand, eintrag);
-    if (bedarf.m + bedarf.w + bedarf.d === 0 && id === undefined) continue;
+    const ohneMeldung = gemeldet.m + gemeldet.w + gemeldet.d === 0;
+    if (ohneMeldung && id === undefined) continue;
+    // Zugewiesen ohne gemeldeten Bedarf: dieselben Köpfe wie die Karte, sonst
+    // nannte das Band „0 Betten“ bei belegten, überbelegten Hallen (S4-1).
+    const ausKoepfen = ohneMeldung && gueltig(u);
+    const bedarf = ausKoepfen ? belegtVon(zustand, eintrag) : gemeldet;
     const name = u?.name.wert;
     zeilen.push({
       einheitId: eintrag.einheit.id,
@@ -106,6 +116,7 @@ export function unterbringungsbedarf(zustand: Zustand, einheiten: readonly Verso
       ...(id === undefined ? {} : { unterkunftId: id }),
       ...(typeof name === "string" ? { unterkunft: name } : {}),
       zustand: zustandDer(u, id),
+      ...(ausKoepfen ? { ausKoepfen: true as const } : {}),
     });
   }
   return zeilen.sort(

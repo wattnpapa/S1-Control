@@ -11,6 +11,7 @@ import { falteHinzu, leereFaltung, materialisiere } from "../fold.js";
 import type { EingehendesEreignis } from "../fold.js";
 import {
   abschnittAngelegt,
+  anlageEreignis,
   einheitGemeldet,
   einsatzAngelegt,
   feldEreignis,
@@ -130,5 +131,25 @@ describe("Die Zahlen des Monitors (Lagebild.versorgung)", () => {
     expect(blatt.plan.summe.koepfe).toBe(logistikblatt(lage()).gesamt.gesamt);
     expect(blatt.regeltext).toContain("Nacht →");
     expect(blatt.unterbringung.summe.gesamt).toBe(blatt.unterbringung.zeilen.filter((z) => !z.anmarsch).reduce((s, z) => s + z.m + z.w + z.d, 0));
+  });
+});
+
+describe("Stab-Review S4-1: Betten und Belegung widersprechen sich nicht", () => {
+  it("zählt eine zugewiesene Einheit ohne gemeldeten Bedarf mit ihren Köpfen, in Tabelle und Band", () => {
+    let n = 0;
+    const h = (): ReturnType<typeof hlc> => hlc(++n * 1000, 0, "a");
+    const zustand = materialisiere(falteHinzu(leereFaltung(), [
+      einsatzAngelegt(h(), 1, { einsatzId: "X", name: "Sturm", art: "EINSATZ", fuestName: "FüSt", beginn: "2026-09-08T08:00:00+02:00", schichtmodell: "ZWEI_SCHICHT" }),
+      abschnittAngelegt(h(), 2, { abschnittId: "EA1", name: "EA 1", abschnittstyp: "EINSATZORT", reihenfolge: 1 }),
+      einheitGemeldet(h(), 3, { einheitId: "E1", abschnittId: "EA1", bezeichnung: "FGr N", organisation: "THW", ebene: "GRUPPE", staerke: staerke(0, 1, 8), personalErfassung: "NUR_STAERKE", status: "IM_EINSATZ" }),
+      anlageEreignis(h(), 4, "UnterkunftAngelegt", { unterkunftId: "U1", name: "Turnhalle", kapazitaet: 5 }),
+      feldEreignis(h(), 5, "EinheitUntergebracht", { einheitId: "E1" }, null, "U1"),
+    ]));
+    const einheiten = versorgungseinheiten(zustand, Date.parse(PRUEFJETZT));
+    const zeile = unterbringungsbedarf(zustand, einheiten).find((z) => z.einheitId === "E1");
+    expect(zeile).toMatchObject({ m: 9, ausKoepfen: true });
+    const zahlen = versorgungszahlen(zustand, { jetzt: PRUEFJETZT });
+    expect(zahlen.betten.gesamt).toBe(9);
+    expect(zahlen.belegt).toBe(9);
   });
 });

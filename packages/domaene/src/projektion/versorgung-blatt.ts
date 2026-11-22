@@ -170,7 +170,11 @@ export interface Versorgungszahlen {
   readonly mahlzeiten: readonly Mahlzeitzahlen[];
   /** Köpfe im Anmarsch — stehen daneben, nie darin. */
   readonly anmarsch: number;
-  /** Übernachtungsbedarf der Einsatzbereiche nach m/w/d (K6) und zusammen. */
+  /**
+   * Übernachtungsbedarf der Einsatzbereiche nach m/w/d (K6) und zusammen —
+   * oder, wenn mehr, was in den Unterkünften belegt ist (Stab-Review S4-1:
+   * Band und Monitor nannten „0 Betten“ bei belegten, überbelegten Hallen).
+   */
   readonly betten: Bettensumme;
   /** S4.2: belegt und frei über die geltenden Unterkünfte — nur, wenn es welche gibt. */
   readonly belegt?: number;
@@ -192,6 +196,13 @@ function bestelltFuer(
 
 function bettenAus(un: { readonly m: number; readonly w: number; readonly d: number }): Bettensumme {
   return { ...un, gesamt: un.m + un.w + un.d };
+}
+
+/** K6 aus dem Logistikblatt; liegt die Belegung der Bestandseinheiten darüber, gilt sie. */
+function bettenbedarf(zustand: Zustand, einheiten: readonly Versorgungseinheit[]): Bettensumme {
+  const k6 = bettenAus(logistikblatt(zustand).gesamt.uebernachtung);
+  const untergebracht = bettenAus(unterbringung(zustand, einheiten).summe);
+  return untergebracht.gesamt > k6.gesamt ? untergebracht : k6;
 }
 
 /** Die kleine Zusammenfassung fürs Lagebild — aus derselben Vorausschau wie das Blatt. */
@@ -217,7 +228,7 @@ export function versorgungszahlen(zustand: Zustand, optionen: Versorgungsoptione
       ...bestelltFuer(verlauf, m.datum, m.mahlzeit, m.vorausschau.portionen),
     })),
     anmarsch,
-    betten: bettenAus(logistikblatt(zustand).gesamt.uebernachtung),
+    betten: bettenbedarf(zustand, einheiten),
     ...(b.unterkuenfte.length === 0 ? {} : { belegt: b.belegt, frei: b.frei }),
     ohneZuweisung: b.ohneZuweisung.koepfe,
     ohneZuweisungEinheiten: b.ohneZuweisung.einheiten,
