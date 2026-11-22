@@ -26,13 +26,13 @@
  */
 export const ERSTE_SCHRITTE: readonly string[] = [
   "Einsatz anlegen oder öffnen: Auf der Startseite steht die Liste der Einsätze; ein neuer Einsatz braucht nur einen Namen.",
-  "Abschnitte anlegen: Im Reiter „Lage“ links mit „Abschnitt anlegen“ die Einsatzabschnitte aufbauen, zum Beispiel „Einsatzort“ oder „Bereitstellungsraum“.",
+  "Abschnitte anlegen: Im Reiter „S1“ links mit „Abschnitt anlegen“ die Einsatzabschnitte aufbauen, zum Beispiel „Einsatzort“ oder „Bereitstellungsraum“.",
   "Einheiten melden: Mit „Aus Vorlage“ eine Einheit aus der Vorlage anlegen (Tippen sucht, Enter wählt) oder ohne Vorlage frei eintragen. Die Einheit kommt in den gewählten Abschnitt.",
   "Status pflegen: In der Spalte „Status“ eine Einheit antippen oder anklicken, den neuen Status wählen und mit „Übernehmen“ bestätigen. Erst dann gilt er für alle Arbeitsplätze.",
   "Kräfte anfordern: Im Reiter „Anforderungen“ eine Anforderung anlegen, die Zusage erfassen und beim Eintreffen „Eingetroffen“ wählen.",
   "Nachlesen: Der Reiter „Einsatztagebuch“ zeigt, wer wann was getan hat. Eigene Notizen und Funkmeldungen trägt man dort mit „Eintrag hinzufügen“ ein.",
   "Fehler zurücknehmen: Der Knopf „Rückgängig“ nimmt den letzten eigenen Schritt zurück. Die Rücknahme steht im Tagebuch.",
-  "Ausgaben und Abschluss: Im Reiter „Ausgaben“ stehen Druck, Listen und Auswertungen; ganz unten wird der Einsatz beendet.",
+  "Exporte und Abschluss: Im Reiter „Exporte“ stehen Druck, Listen und Auswertungen; ganz unten wird der Einsatz beendet.",
 ];
 
 /** Kennung einer Ansicht — die Ansicht meldet sich damit an ihrem Text an. */
