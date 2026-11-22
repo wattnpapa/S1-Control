@@ -101,6 +101,14 @@ beforeEach(() => {
   });
 });
 
+/**
+ * Strg+N gehört dem Abschnittsbaum nur, wenn der Fokus in ihm steht; sonst
+ * legt es eine Einheit an (Stab-Review S1, tastatur.ts).
+ */
+function imBaum(): void {
+  screen.getByRole("button", { name: "Abschnitt anlegen" }).focus();
+}
+
 describe("Funktionalität: Tastaturbedienung", () => {
   it("Szenario: Strg+N öffnet die Anlagemaske des Abschnittsbaums", async () => {
     render(<Abschnittsbaum gewaehlt={undefined} aufWahl={() => undefined} />);
@@ -108,6 +116,7 @@ describe("Funktionalität: Tastaturbedienung", () => {
       expect(screen.getByText("Deich Nord")).toBeDefined();
     });
 
+    imBaum();
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     expect(screen.getByLabelText("Abschnitt anlegen")).toBeDefined();
   });
@@ -121,6 +130,7 @@ describe("Funktionalität: Tastaturbedienung", () => {
     await waitFor(() => {
       expect(screen.getByText("Deich Nord")).toBeDefined();
     });
+    imBaum();
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     expect(screen.queryByLabelText("Abschnitt anlegen")).toBeNull();
   });
@@ -130,6 +140,7 @@ describe("Funktionalität: Tastaturbedienung", () => {
     await waitFor(() => {
       expect(screen.getByText("Deich Nord")).toBeDefined();
     });
+    imBaum();
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     const feld = screen.getByLabelText("Name");
     fireEvent.change(feld, { target: { value: "EA Nord" } });
@@ -144,6 +155,7 @@ describe("Funktionalität: Tastaturbedienung", () => {
     await waitFor(() => {
       expect(screen.getByText("Deich Nord")).toBeDefined();
     });
+    imBaum();
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     const feld = screen.getByLabelText("Name");
     fireEvent.change(feld, { target: { value: "EA Nord" } });
@@ -159,6 +171,7 @@ describe("Funktionalität: Tastaturbedienung", () => {
     await waitFor(() => {
       expect(screen.getByText("Deich Nord")).toBeDefined();
     });
+    imBaum();
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     const feld = screen.getByLabelText("Name");
 
