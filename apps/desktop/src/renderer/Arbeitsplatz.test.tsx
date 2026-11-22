@@ -78,9 +78,9 @@ function sichtbar(name: string): boolean {
   return knoten !== null && knoten.closest("[hidden]") === null;
 }
 
-/** Schlägt ein Blatt auf, das das Profil Führungsstelle unter „Mehr“ führt. */
-async function ausMehr(name: string): Promise<void> {
-  await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+/** Schlägt ein Blatt auf, das das Profil unter „Mehr“ führt (Führungsstelle: Eingangskorb, Führungsstelle, Kosten, Einsatztagebuch). */
+async function ausMehr(name: string | RegExp): Promise<void> {
+  await userEvent.click(await screen.findByRole("button", { name: "Mehr ▾" }));
   await userEvent.click(screen.getByRole("menuitemradio", { name }));
 }
 
@@ -165,14 +165,14 @@ describe("Der Arbeitsplatz", () => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
 
-    await userEvent.click(screen.getByRole("tab", { name: "Einsatztagebuch" }));
+    await ausMehr("Einsatztagebuch");
     await waitFor(() => {
       expect(sichtbar("Einsatztagebuch")).toBe(true);
     });
     // Die Lage bleibt eingehängt — sie hält die Auswahl —, ist aber weg.
     expect(sichtbar("Abschnitte")).toBe(false);
 
-    await userEvent.click(screen.getByRole("tab", { name: "Lage" }));
+    await userEvent.click(screen.getByRole("tab", { name: "S1" }));
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
@@ -219,7 +219,7 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
-    expect(screen.getByRole("complementary", { name: "Einstieg: Lage" })).toBeDefined();
+    expect(screen.getByRole("complementary", { name: "Einstieg: S1" })).toBeDefined();
     await ausMehr("Kosten");
     expect(screen.getByRole("complementary", { name: "Einstieg: Kosten" })).toBeDefined();
     // Keine Hilfemarke „?“ mehr an den Karten (3.6).
@@ -228,7 +228,7 @@ describe("Der Arbeitsplatz", () => {
 
   it("trägt Eingangskorb und Anforderungen als Umschalter im Blatt „Eingangskorb“ (E3, R2-FaBe P2-1)", async () => {
     render(<Arbeitsplatz />);
-    await userEvent.click(await screen.findByRole("tab", { name: "Eingangskorb" }));
+    await ausMehr(/^Eingangskorb/);
     const umschalter = screen.getByRole("group", { name: "Unteransicht Eingangskorb" });
     const korb = await within(umschalter).findByRole("button", { name: "Eingangskorb (3 offen)" });
     expect(korb.getAttribute("aria-pressed")).toBe("true");
@@ -246,14 +246,14 @@ describe("Der Arbeitsplatz", () => {
     });
 
     // Die Unteransicht bleibt, solange das Fenster offen ist.
-    await userEvent.click(screen.getByRole("tab", { name: "Lage" }));
-    await userEvent.click(screen.getByRole("tab", { name: /^Eingang/ }));
+    await userEvent.click(screen.getByRole("tab", { name: "S1" }));
+    await ausMehr(/^Eingangskorb/);
     expect(screen.getByRole("region", { name: "Anforderungen" })).toBeDefined();
   });
 
   it("trägt Stammdaten und Führungsorganisation als Umschalter im Blatt „Führungsstelle“ (E3)", async () => {
     render(<Arbeitsplatz />);
-    await userEvent.click(await screen.findByRole("tab", { name: "Führungsstelle" }));
+    await ausMehr("Führungsstelle");
     const umschalter = screen.getByRole("group", { name: "Unteransicht Führungsstelle" });
     expect(within(umschalter).getByRole("button", { name: "Stammdaten und Schichtplan" }).getAttribute("aria-pressed")).toBe("true");
     expect(screen.getByRole("region", { name: "Führungsstelle" })).toBeDefined();
@@ -310,7 +310,7 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
-    expect(screen.getAllByRole("tab").map((reiter) => reiter.textContent)).toEqual(["Versorgung", "Lage", "Ausgaben"]);
+    expect(screen.getAllByRole("tab").map((reiter) => reiter.textContent)).toEqual(["S4", "S1", "Exporte"]);
     await ausMehr("Einsatztagebuch");
     await waitFor(() => {
       expect(sichtbar("Einsatztagebuch")).toBe(true);
@@ -336,7 +336,7 @@ describe("Der Arbeitsplatz", () => {
 
   it("merkt Einsatz und Blatt für den Reload und löscht den Merker beim ausdrücklichen Zurück", async () => {
     render(<Arbeitsplatz />);
-    await userEvent.click(await screen.findByRole("tab", { name: "Einsatztagebuch" }));
+    await ausMehr("Einsatztagebuch");
     await waitFor(() => {
       expect(ladeMerker()).toMatchObject({ ordner: LAGEBILD.einsatzId, blatt: "tagebuch" });
     });
@@ -396,7 +396,7 @@ describe("Der Arbeitsplatz nach einem Reload", () => {
     await waitFor(() => {
       expect(useLaden.getState().akteId).toBe("akte-neu");
     });
-    expect(screen.getByRole("tab", { name: "Lage" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "S1" }).getAttribute("aria-selected")).toBe("true");
   });
 
   it("landet ohne Merker in der Einsatzliste", async () => {

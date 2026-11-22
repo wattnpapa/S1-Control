@@ -28,7 +28,7 @@ export const TEXT_PROFIL_KEIN_RECHT =
 
 export const TEXT_PROFIL_MELDEKOPF = "Der Meldekopf hat seinen eigenen Zuschnitt.";
 
-/** „Lage · Eingang · Führungsstelle · Ausgaben · Einsatztagebuch" — das Band des Profils. */
+/** „S1 · Nachrichten · Funkplan · S4 · Exporte" — das Band des Profils. */
 export function profilband(profil: Profil): string {
   if (profil === "alle") return "alle Reiter";
   return reiterFuer(profil)
