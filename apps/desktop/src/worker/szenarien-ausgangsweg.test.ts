@@ -180,3 +180,39 @@ describe("Funktionalität: Eingang und zweiter Schalter (Review Runde 2)", () =>
     expect(zeile(platz)?.laufzustand).toBe("VERTEILT");
   });
 });
+
+describe("Funktionalität: Hinweise und Zählung (Review Runde 2, Block 2)", () => {
+  it("Szenario: Gibt ein Fernmelder ohne LdF und Sichter weiter, sagt der Hinweis nicht „der LdF hat verteilt“", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await befoerdertBeimLdf(a, b);
+    b.dienst.stellenSetzen(["S6"], "Lf");
+    await takteBis([a, b]);
+    const ergebnis = await a.dienst.bediene(nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Ka" }));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.some((w) => w.startsWith("Kein LdF und kein Sichter besetzt"))).toBe(true);
+    expect(warnungen.some((w) => w.includes("Der LdF hat"))).toBe(false);
+  });
+
+  it("Szenario: Mit LdF, aber ohne Fernmelder sagt das Aufgeben, dass niemand überträgt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["LDF", "S4"], "Lf");
+    const ergebnis = await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.some((w) => w.startsWith("Kein Fernmelder besetzt"))).toBe(true);
+  });
+
+  it("Szenario: Zurückziehen nach Beförderung und Verteilung nennt die Stellen und die Gegenstelle", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["FM1"], "Ka");
+    await setze(platz, "ldfStation", false);
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, BEFOERDERUNG));
+    const { nachrichtZurueckziehen } = await import("../kontrakt/nachrichtenschritte.js");
+    const ergebnis = await platz.dienst.bediene(nachrichtZurueckziehen("A-1", "Fehlanlage"));
+    const text = (ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : []).join(" ");
+    expect(text).toContain("war schon verteilt");
+    expect(text).toContain("ist schon an OV Wildeshausen übermittelt");
+  });
+});

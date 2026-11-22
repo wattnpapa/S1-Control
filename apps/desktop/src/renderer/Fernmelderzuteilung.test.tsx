@@ -118,7 +118,7 @@ describe("Review 2026-11-21: Vorrang, Rückfragen, Reiterzahl", () => {
   });
 
   it("zählt am Reiter ohne LdF auch die Ausgänge vor der Zuteilung", () => {
-    const lage = { neuFuerStellen: 0, vorFmz: 1, vorSichter: 0, vorLdfZuteilung: 2 } as never;
+    const lage = { neuFuerStellen: 0, vorFmz: 1, vorSichter: 0, vorLdf: 2, vorLdfZuteilung: 2 } as never;
     expect(nachrichtenzahl(lage, ["FM1"], true)).toBe(1);
     expect(nachrichtenzahl(lage, ["FM1"], false)).toBe(3);
   });

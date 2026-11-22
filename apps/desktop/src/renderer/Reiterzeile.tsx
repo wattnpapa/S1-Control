@@ -74,8 +74,11 @@ export function nachrichtenzahl(lage: Nachrichtenlage | undefined, stellen: read
   if (lage === undefined) return 0;
   const sichter = stellen.includes("SICHTER") ? lage.vorSichter : 0;
   // Review 2026-11-21: Ohne LdF befördert der Fernmelder auch die Ausgänge vor der Zuteilung selbst.
-  const fmz = hatFernmelderstelle(stellen) ? lage.vorFmz + (ldfBesetzt ? 0 : (lage.vorLdfZuteilung ?? 0)) : 0;
-  return lage.neuFuerStellen + sichter + fmz;
+  // Review Runde 2: ohne LdF auch die hängenden Nachrichten („Selbst weitergeben“), also alles beim LdF.
+  const fmz = hatFernmelderstelle(stellen) ? lage.vorFmz + (ldfBesetzt ? 0 : (lage.vorLdf ?? 0)) : 0;
+  // Review Runde 2: Der LdF sieht am Reiter, was bei ihm liegt.
+  const ldf = stellen.includes("LDF") ? (lage.vorLdf ?? 0) : 0;
+  return lage.neuFuerStellen + sichter + fmz + ldf;
 }
 
 export function Reiterzeile({ blatt, waehleBlatt, offeneMeldungen, profil }: ReiterzeileEigenschaften): React.JSX.Element {

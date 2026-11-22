@@ -91,6 +91,19 @@ function mitLdfBesetzung(zeilen: readonly Nachrichtenzeile[], ldfBesetzt: boolea
   return zeilen.map((z) => (z.laufzustand === "VOR_LDF" ? { ...z, ldfNichtBesetzt: true } : z));
 }
 
+/**
+ * Review Runde 2: Zeilen, die einem Fernmelder zugeteilt sind, den gerade
+ * niemand besetzt, tragen `fernmelderNichtBesetzt` — der Verfasser las sonst
+ * „bei Fm2“ und glaubte, es werde übertragen.
+ */
+function mitFernmelderBesetzung(zeilen: readonly Nachrichtenzeile[], besetzung: Readonly<Record<string, string>> | undefined): readonly Nachrichtenzeile[] {
+  if (besetzung === undefined) return zeilen;
+  return zeilen.map((z) => {
+    const fm = z.vorschlag?.fernmelder.trim() ?? "";
+    return z.laufzustand === "VOR_FMZ" && /^Fm\d$/u.test(fm) && besetzung[fm] === undefined ? { ...z, fernmelderNichtBesetzt: true } : z;
+  });
+}
+
 /** Stellen aus einer Eingabe: geputzt, ohne Leere und ohne Doppelte, in der gegebenen Folge. */
 export function geputzteStellen(stellen: readonly string[] | undefined): readonly string[] {
   return [...new Set((stellen ?? []).map((s) => s.trim()).filter((s) => s !== "" && !s.includes("/")))];
@@ -170,7 +183,7 @@ export function nachrichtenansicht(
   return {
     lageZeiger: umfeld.lageZeiger,
     ...ausschnitt,
-    zeilen: mitLdfBesetzung(zeilen, umfeld.ldfBesetzt),
+    zeilen: mitFernmelderBesetzung(mitLdfBesetzung(zeilen, umfeld.ldfBesetzt), umfeld.fernmelder?.besetzung),
     ...(umfeld.fernmelder === undefined ? {} : { fernmelder: umfeld.fernmelder.fernmelder, fernmelderbesetzung: umfeld.fernmelder.besetzung }),
     jetzt,
     anschriften: anschriften(zustand),
@@ -269,12 +282,12 @@ export function offeneNachrichtenTeil(zustand: Zustand): { offeneNachrichten?: O
  * Zahl „über der Schwelle" hängt an der Uhr, eine Minute Auflösung genügt —
  * gemerkt wird deshalb je Zustand, Minute und Stellen wie beim Funk.
  */
-export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly string[], jetztMs: number, sichterBesetzt = true): Nachrichtenlage {
+export function nachrichtenFuerLagebild(zustand: Zustand, stellen: readonly string[], jetztMs: number, sichterBesetzt = true, ldfBesetzt = true): Nachrichtenlage {
   const minute = Math.floor(jetztMs / MINUTE_MS);
-  const schluessel = `${stellen.join("\u0000")}\u0001${String(sichterBesetzt)}`;
+  const schluessel = `${stellen.join("\u0000")}\u0001${String(sichterBesetzt)}\u0001${String(ldfBesetzt)}`;
   if (gemerkt?.zustand === zustand && gemerkt.minute === minute && gemerkt.stellen === schluessel) return gemerkt.zahlen;
   // Mit Vorrang offen je Stelle der Sitzung (SGL P1-7); die FmZ zählt den Sichter nur ohne Sichter.
-  const zahlen = projektion.nachrichtenlage(zustand, stellen, new Date(minute * MINUTE_MS).toISOString(), { sichterBesetzt });
+  const zahlen = projektion.nachrichtenlage(zustand, stellen, new Date(minute * MINUTE_MS).toISOString(), { sichterBesetzt, ldfBesetzt });
   const { nummernluecken, ...zahlenOhneLuecken } = zahlen;
   const fertig: Nachrichtenlage = { ...zahlenOhneLuecken, ...(nummernluecken === undefined ? {} : { nummernluecken: [...nummernluecken] }) };
   gemerkt = { zustand, minute, stellen: schluessel, zahlen: fertig };

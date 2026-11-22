@@ -180,3 +180,20 @@ describe("Weitergabe eines Eingangs ohne Sichter (Review Runde 2)", () => {
     expect(entwurf).toMatchObject({ typ: "NachrichtWeitergegeben", nachrichtenfolge: { sichtung: { handzeichen: "Lf" } } });
   });
 });
+
+describe("Review Runde 2, Block 2: Ablauf", () => {
+  it("warnt im Laufzettel des Ausgangs, wenn S2 oder der Verfasser fehlt", async () => {
+    const { ausgangsverteilerWarnung } = await import("./Laufzettel.js");
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S2", kopie: "ROT" }, { stelle: "S4", kopie: "GRUEN" }])).toBeUndefined();
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S4", kopie: "GRUEN" }])).toBe("Beim Ausgang fehlt im Verteiler: S2 (rot, Lage und Tagebuch).");
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S2", kopie: "ROT" }])).toContain("S4 (grün, Verfasser)");
+  });
+
+  it("sagt „bei Fm2 (nicht besetzt)“ und zählt am Reiter für den LdF, was bei ihm liegt", async () => {
+    const { wegwort } = await import("./Nachrichtenliste.js");
+    const { nachrichtenzahl } = await import("./Reiterzeile.js");
+    const zugeteilt = { ...ZUR_ZUTEILUNG, laufzustand: "VOR_FMZ" as const, vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" }, fernmelderNichtBesetzt: true } as Nachrichtenzeile;
+    expect(wegwort(zugeteilt)).toBe("bei Fm2 (nicht besetzt)");
+    expect(nachrichtenzahl({ neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, vorLdf: 3 } as never, ["LDF"])).toBe(3);
+  });
+});
