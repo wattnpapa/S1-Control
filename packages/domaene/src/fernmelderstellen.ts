@@ -49,8 +49,10 @@ export function eigeneFernmelder(stellen: readonly string[] | undefined): readon
   });
 }
 
+/** Ohne Groß- und Kleinschreibung und ohne Leerzeichen: „Fm 2“ ist „fm2“ (Review 2026-11-21). */
 function gleich(a: string, b: string): boolean {
-  return a.trim().toLocaleLowerCase("de-DE") === b.trim().toLocaleLowerCase("de-DE");
+  const norm = (t: string): string => t.replace(/\s+/gu, "").toLocaleLowerCase("de-DE");
+  return norm(a) === norm(b);
 }
 
 /**

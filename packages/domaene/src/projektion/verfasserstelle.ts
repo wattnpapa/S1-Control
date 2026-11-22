@@ -2,8 +2,10 @@
  * Die Stelle des Verfassers eines Ausgangs und seine eigene Kopie
  * (Audits Nachrichten Runde 2, R2-FaBe P1-4).
  *
- * Nach der Beförderung verteilt die FmZ die rote Kopie an S2 und die grüne an
- * die Stelle des Verfassers (Folie 30; `laufwegfolgen.ts` im Worker). Diese
+ * Nach der Beförderung gehen die rote Kopie an S2 und die grüne an die Stelle
+ * des Verfassers (Folie 30) — mit LdF als Station verteilt sie der Sichter
+ * nach der Weitergabe des LdF, sonst schreibt sie der Worker
+ * (`laufwegfolgen.ts`). Diese
  * grüne Kopie kam als „neu, grün: bearbeiten“ in den Posteingang der Stelle,
  * die die Nachricht selbst geschrieben hatte — der Zähler „neu“ wurde zum
  * Fehlalarm, und ein Blitz meldete sich dem eigenen Verfasser.

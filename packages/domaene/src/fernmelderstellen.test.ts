@@ -31,3 +31,13 @@ describe("Fernmelder als eigene Stellen", () => {
     expect(istZugeteilt("", ["FM1"])).toBe(false);
   });
 });
+
+describe("Offen für den Verfasser (Review 2026-11-21)", () => {
+  it("bleibt offen, bis die grüne Kopie zurück ist, und erkennt „Leiter“ als Stelle LEITER", async () => {
+    const { offenFuerStellen } = await import("./projektion/nachrichtenoffen.js");
+    const basis = { zurueckgezogen: false, richtung: "AUSGANG", gespraechsnotiz: false, absender: "Leiter", funktion: "Leiter", verteiler: [], laufzustand: "VOR_SICHTER", befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Ka" }, nummer: 1 } as never;
+    expect(offenFuerStellen(basis, ["LEITER"])).toBe(true);
+    const zurueck = { ...(basis as object), laufzustand: "VERTEILT", verteiler: [{ stelle: "LEITER", kopie: "GRUEN", gelesen: true, erledigt: false, eigenerAusgang: true }] } as never;
+    expect(offenFuerStellen(zurueck, ["LEITER"])).toBe(false);
+  });
+});

@@ -7,8 +7,9 @@
  *  * SGL P1-7 / Sichter-Audit: „mit Vorrang offen" zählte jede Nachricht,
  *    deren Laufzustand nicht ERLEDIGT war — auch die, die die eigene Stelle
  *    längst erledigt hatte. Gezählt wird jetzt je Stelle der Sitzung: eine
- *    eigene Kopie, die nicht erledigt ist; ein eigener Ausgang, der die FmZ
- *    noch nicht verlassen hat; die Warteschlange der FmZ für die FmZ, die des
+ *    eigene Kopie, die nicht erledigt ist; ein eigener Ausgang, bis seine
+ *    grüne Kopie zurück ist (Review 2026-11-21; die Kopie selbst ist kein
+ *    Auftrag); die Warteschlange der FmZ für die FmZ, die des
  *    LdF für den LdF und die des Sichters für den Sichter (die FmZ nur,
  *    solange kein Sichter besetzt ist — sie verteilt dann selbst).
  *  * ETB P1-6: „Einsatz beenden" nannte offene Nachrichten nicht.
@@ -17,6 +18,7 @@
 
 import { hatFernmelderstelle } from "../fernmelderstellen.js";
 import { haengtBeimLdf, ldfSchrittDer, standDerZeile } from "./nachrichtenstand.js";
+import { stellenWort } from "./tagebuch-nachrichten.js";
 import { vergleicheNachrichten, type Nachrichtenzeile } from "./nachrichtenzeile.js";
 
 /** Die bekannten Stellen der Stationen im Laufweg (§4); die Fernmelder erkennt `hatFernmelderstelle`. */
@@ -31,10 +33,22 @@ export interface Offenumfeld {
   readonly ldfBesetzt?: boolean;
 }
 
+/** Stelle oder ihr Wort, ohne Groß- und Kleinschreibung („Leiter“ zu LEITER, Review 2026-11-21). */
+function gehoertZu(text: string | undefined, stellen: readonly string[]): boolean {
+  if (text === undefined || text.trim() === "") return false;
+  const gesucht = text.trim().toLocaleLowerCase("de-DE");
+  return stellen.some((s) => [s, stellenWort(s)].some((name) => name.toLocaleLowerCase("de-DE") === gesucht));
+}
+
 /** Ein Ausgang oder eine Gesprächsnotiz, die eine der Stellen verfasst hat. */
 function eigenerAusgang(zeile: Nachrichtenzeile, stellen: readonly string[]): boolean {
   if (zeile.richtung !== "AUSGANG" && !zeile.gespraechsnotiz) return false;
-  return stellen.includes(zeile.absender) || (zeile.funktion !== undefined && stellen.includes(zeile.funktion));
+  return gehoertZu(zeile.absender, stellen) || gehoertZu(zeile.funktion, stellen);
+}
+
+/** Die eigene grüne Kopie des eigenen Ausgangs gilt als gelesen und ist kein Auftrag (R2-FaBe P1-4). */
+function istEigeneRueckkopie(marke: Nachrichtenzeile["verteiler"][number]): boolean {
+  return (marke as { readonly eigenerAusgang?: unknown }).eigenerAusgang === true;
 }
 
 /** Liegt die Zeile in einer Warteschlange, die eine der Stellen bedient? */
@@ -65,8 +79,9 @@ export function offenFuerStellen(zeile: Nachrichtenzeile, stellen: readonly stri
   if (zeile.zurueckgezogen) return false;
   const { laufstand, ohneNummer } = standDerZeile(zeile);
   if (stellen.length === 0) return laufstand !== "erledigt" && !(laufstand === "befoerdert" && !ohneNummer);
-  if (zeile.verteiler.some((marke) => stellen.includes(marke.stelle) && !marke.erledigt)) return true;
-  if (eigenerAusgang(zeile, stellen) && (laufstand === "vorFmz" || laufstand === "angenommen" || laufstand === "beimLdf")) return true;
+  if (zeile.verteiler.some((marke) => stellen.includes(marke.stelle) && !marke.erledigt && !istEigeneRueckkopie(marke))) return true;
+  // Review 2026-11-21: Der eigene Ausgang ist offen, bis die grüne Kopie zurück ist — auch beim LdF und vor dem Sichter.
+  if (eigenerAusgang(zeile, stellen) && (laufstand === "vorFmz" || laufstand === "angenommen" || laufstand === "beimLdf" || laufstand === "vorSichter")) return true;
   return inEigenerWarteschlange(zeile, stellen, umfeld);
 }
 
@@ -128,6 +143,8 @@ export function nummernlueckenText(luecken: readonly number[]): string {
 export interface OffeneNachrichten {
   readonly vorFmz: number;
   readonly beimLdf: number;
+  /** Additiv (Review 2026-11-21): davon schon beförderte Ausgänge, denen Nummer und Verteilung fehlen. */
+  readonly beimLdfNachBefoerderung?: number;
   readonly vorSichter: number;
   /** Hinter der FmZ, aber ohne Nummer der Nachweisung. */
   readonly ohneNummer: number;
@@ -137,12 +154,13 @@ export interface OffeneNachrichten {
 
 /** Die fünf Zahlen für die Rückfrage „Einsatz beenden" — für alle Stellen, nicht nur die der Sitzung. */
 export function offeneNachrichten(zeilen: readonly Nachrichtenzeile[]): OffeneNachrichten {
-  const zahlen = { vorFmz: 0, beimLdf: 0, vorSichter: 0, ohneNummer: 0, ungelesenMitVorrang: 0 };
+  const zahlen = { vorFmz: 0, beimLdf: 0, beimLdfNachBefoerderung: 0, vorSichter: 0, ohneNummer: 0, ungelesenMitVorrang: 0 };
   for (const zeile of zeilen) {
     if (zeile.zurueckgezogen) continue;
     const { laufstand, ohneNummer } = standDerZeile(zeile);
     if (laufstand === "vorFmz" || laufstand === "angenommen") zahlen.vorFmz += 1;
     if (laufstand === "beimLdf") zahlen.beimLdf += 1;
+    if (laufstand === "beimLdf" && zeile.richtung === "AUSGANG" && ldfSchrittDer(zeile) === "weitergabe") zahlen.beimLdfNachBefoerderung += 1;
     if (laufstand === "vorSichter") zahlen.vorSichter += 1;
     if (ohneNummer) zahlen.ohneNummer += 1;
     if (zeile.vorrangstufe < 2 && zeile.verteiler.some((m) => !m.gelesen && !m.erledigt)) zahlen.ungelesenMitVorrang += 1;
@@ -160,7 +178,8 @@ export function offeneNachrichten(zeilen: readonly Nachrichtenzeile[]): OffeneNa
 export function abschlussvermerk(offen: OffeneNachrichten, luecken: readonly number[]): string | undefined {
   const teile = [
     [offen.vorFmz, "vor der FmZ"],
-    [offen.beimLdf, "beim LdF"],
+    [offen.beimLdf - (offen.beimLdfNachBefoerderung ?? 0), "beim LdF"],
+    [offen.beimLdfNachBefoerderung ?? 0, "beim LdF nach der Beförderung (ohne Nummer und Kopien)"],
     [offen.vorSichter, "vor dem Sichter"],
     [offen.ohneNummer, "ohne Nummer"],
     [offen.ungelesenMitVorrang, "mit Vorrang ungelesen"],

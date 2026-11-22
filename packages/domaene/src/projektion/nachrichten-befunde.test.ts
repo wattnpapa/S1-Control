@@ -153,7 +153,7 @@ describe("LdF P2-2 und ETB P1-6: Nummernlücken und offene Nachrichten", () => {
       feldEreignis(h(6), n, "NachrichtZurueckgezogen", { nachrichtId: "A2" }, null, true, "doppelt"),
     ]);
     const zeilen = alleNachrichtenzeilen(z, zeilenkontext(z));
-    expect(offeneNachrichten(zeilen)).toEqual({ vorFmz: 1, beimLdf: 0, vorSichter: 1, ohneNummer: 2, ungelesenMitVorrang: 1 });
+    expect(offeneNachrichten(zeilen)).toEqual({ vorFmz: 1, beimLdf: 0, beimLdfNachBefoerderung: 0, vorSichter: 1, ohneNummer: 2, ungelesenMitVorrang: 1 });
   });
 });
 
