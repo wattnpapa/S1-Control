@@ -14,7 +14,8 @@ import { BEISPIEL_LAGEBILD } from "./versorgungsbeispiel.js";
 
 const JETZT = "2026-11-16T09:45:00.000Z";
 
-function zeile(teile: Partial<Nachrichtenzeile> & Pick<Nachrichtenzeile, "id">): Nachrichtenzeile {
+/** Eine Nachrichtenzeile mit Vorbelegung — auch für die Monitorlisten. */
+export function zeile(teile: Partial<Nachrichtenzeile> & Pick<Nachrichtenzeile, "id">): Nachrichtenzeile {
   return {
     richtung: "EINGANG",
     richtungKurz: "E",

@@ -16,21 +16,21 @@
  * hinsieht, weiß, was kommt. Zwischen den Sachgebieten steht eine Lücke.
  */
 
-import { MONITOR_ANSICHTEN, MONITOR_GRUPPE_DER_ANSICHT } from "../kontrakt/index.js";
+import { MONITOR_GRUPPE_DER_ANSICHT } from "../kontrakt/index.js";
 import { ANSICHT_TITEL, type Monitorsteuerung } from "./monitorSteuerung.js";
-import { GRUPPE_KURZ, GRUPPE_TITEL, ansichtenDerGruppe, belegteGruppen, modusKurz, naechsteAnsicht, naechsterModus } from "./monitorWechsel.js";
+import { GRUPPE_KURZ, GRUPPE_TITEL, ansichtenDerGruppe, belegteGruppen, modusKurz, naechsteAnsicht, naechsterModus, sichtbareAnsichten } from "./monitorWechsel.js";
 
 export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element | null {
   if (!steuerung.leiste) return null;
   const angehalten = steuerung.wechsel && steuerung.gehalten;
   return (
     <nav className="monitorleiste" aria-label="Monitoransichten">
-      {belegteGruppen().map((gruppe) => (
+      {belegteGruppen(steuerung.besucher).map((gruppe) => (
         <div key={gruppe} className="monitorleistegruppe" role="group" aria-label={GRUPPE_TITEL[gruppe]}>
           <span className="monitorleistekuerzel" aria-hidden="true">
             {GRUPPE_KURZ[gruppe]}
           </span>
-          {ansichtenDerGruppe(gruppe).map((ansicht) => (
+          {ansichtenDerGruppe(gruppe, steuerung.besucher).map((ansicht) => (
             <button
               key={ansicht}
               type="button"
@@ -50,10 +50,13 @@ export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuer
         aria-pressed={steuerung.wechsel}
         title="Reihum: aus, alle Ansichten, je Sachgebiet"
         onClick={() => {
-          steuerung.setzeModus(naechsterModus(steuerung.modus));
+          steuerung.setzeModus(naechsterModus(steuerung.modus, steuerung.besucher));
         }}
       >
         Wechsel: {angehalten ? `${modusKurz(steuerung.modus)}, gehalten` : modusKurz(steuerung.modus)}
+      </button>
+      <button type="button" aria-pressed={steuerung.besucher} title="Nur Kräftezahlen, keine Funk-, Nachrichten- oder Personendaten (Taste B)" onClick={steuerung.schalteBesucher}>
+        Besucher: {steuerung.besucher ? "an" : "aus"}
       </button>
       <button
         type="button"
@@ -69,10 +72,11 @@ export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuer
 }
 
 function punktklasse(steuerung: Monitorsteuerung, i: number): string | undefined {
-  const ansicht = MONITOR_ANSICHTEN[i];
+  const folge = sichtbareAnsichten(steuerung.besucher);
+  const ansicht = folge[i];
   if (ansicht === undefined) return undefined;
-  const vorher = MONITOR_ANSICHTEN[i - 1];
-  const naechste = steuerung.wechsel ? naechsteAnsicht(steuerung.ansicht, steuerung.modus) : undefined;
+  const vorher = folge[i - 1];
+  const naechste = steuerung.wechsel ? naechsteAnsicht(steuerung.ansicht, steuerung.modus, steuerung.besucher) : undefined;
   const klassen = [
     ansicht === steuerung.ansicht ? "aktiv" : ansicht === naechste ? "naechste" : "",
     vorher !== undefined && MONITOR_GRUPPE_DER_ANSICHT[vorher] !== MONITOR_GRUPPE_DER_ANSICHT[ansicht] ? "gruppenanfang" : "",
@@ -83,7 +87,7 @@ function punktklasse(steuerung: Monitorsteuerung, i: number): string | undefined
 export function Monitorpunkte({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element {
   return (
     <ol className="monitorpunkte" aria-label="Ansichten">
-      {MONITOR_ANSICHTEN.map((ansicht, i) => (
+      {sichtbareAnsichten(steuerung.besucher).map((ansicht, i) => (
         <li
           key={ansicht}
           title={ANSICHT_TITEL[ansicht]}
