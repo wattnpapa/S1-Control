@@ -58,7 +58,7 @@ export const BLAETTER: readonly Reiter[] = [
   // beschreiben die Struktur der Führung.
   { schluessel: "fuest", titel: "Führungsstelle" },
   // Funkplan F1: zwischen Führungsstelle und Versorgung, für alle sichtbar
-  // (KONZEPT-FUNKPLAN.md Entscheidung 1) — die Vermeldezentrale arbeitet den
+  // (KONZEPT-FUNKPLAN.md Entscheidung 1) — die Fernmeldezentrale arbeitet den
   // ganzen Einsatz in diesem Blatt.
   { schluessel: "funkplan", titel: "Funkplan" },
   // S4.1: zwischen Führungsstelle und Kosten, für alle sichtbar (Entscheidung 1).
@@ -91,15 +91,15 @@ export function blatttitel(blatt: Blatt): string {
 
 /**
  * Die Reiter im Band je Profil, in der Reihenfolge des Bands. Das erste Blatt
- * ist das der Rolle: Die Vermeldezentrale arbeitet im Funkplan, die S4 in
+ * ist das der Rolle: Die Fernmeldezentrale arbeitet im Funkplan, die S4 in
  * der Versorgung. „alle" fehlt hier — das ist das Band, wie es bis E3 war.
  */
 const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
   // 2026-11-22: Funkplan und S4 ins Band; Eingangskorb, Führungsstelle und
   // Einsatztagebuch unter „Mehr“ (ebenso weiterhin die Kosten).
   fuehrungsstelle: ["lage", "nachrichten", "funkplan", "versorgung", "ausgaben"],
-  // Die Vermeldezentrale ist auch die FmZ: Nachrichten vor dem Funkplan (§6).
-  vermeldezentrale: ["nachrichten", "funkplan", "lage", "tagebuch"],
+  // Die Fernmeldezentrale (FmZ): Nachrichten vor dem Funkplan (§6).
+  fernmeldezentrale: ["nachrichten", "funkplan", "lage", "tagebuch"],
   versorgung: ["versorgung", "lage", "ausgaben"],
 };
 

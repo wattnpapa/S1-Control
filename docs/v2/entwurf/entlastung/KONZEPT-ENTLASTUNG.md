@@ -43,7 +43,7 @@ Die Ursache ist kein einzelner Fehler, sondern eine Regel, die sich über
 fünf Entwurfsrunden summiert hat: Alles, was es gibt, steht immer da, und was
 gerade nicht geht, steht grau da. Jede Runde (Anforderungen, S4, Funkplan)
 brachte einen Reiter und zwei bis vier Knöpfe mit, jeder für sich begründet.
-Elf Reiter bedienen inzwischen vier Rollen, S1, Vermeldezentrale, S4 und
+Elf Reiter bedienen inzwischen vier Rollen, S1, Fernmeldezentrale, S4 und
 Abrechnung, dazu den Meldekopf als eigene Betriebsart. Wer S1 ist, sieht
 sechs Reiter, die ihn nicht betreffen, und sucht die eigenen dazwischen.
 
@@ -76,7 +76,7 @@ Kontextmenü oder Kürzel. Die Kürzel ändern sich nicht. Wer die Anwendung
 heute kann, findet alles wieder, nur nicht mehr alles gleichzeitig.
 
 Sechstens, die Rolle wählt den Zuschnitt. Ein Arbeitsplatzprofil
-(Führungsstelle S1, Vermeldezentrale, Versorgung S4, alle Blätter) bestimmt,
+(Führungsstelle S1, Fernmeldezentrale, Versorgung S4, alle Blätter) bestimmt,
 welche Reiter im Kopfband stehen; die übrigen stehen unter „Mehr". Kein
 Expertenmodus und kein zweiter Bedienweg: dieselbe Oberfläche, anders
 beschnitten.
@@ -113,7 +113,7 @@ kein Recht: Jedes Blatt bleibt unter „Mehr" erreichbar.
 | Profil | Reiter im Kopfband | unter „Mehr" |
 |---|---|---|
 | Führungsstelle (S1), Vorgabe | Lage · Eingang · Führungsstelle · Ausgaben · Tagebuch | Funkplan, Versorgung, Kosten |
-| Vermeldezentrale | Funkplan · Lage · Tagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
+| Fernmeldezentrale | Funkplan · Lage · Tagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
 | Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Führungsstelle, Funkplan, Kosten, Tagebuch |
 | Alle Blätter | wie heute, elf Reiter | keine |
 
@@ -187,7 +187,7 @@ wie sie ist.
 ### 3.7 Fachblätter nach demselben Muster (6f)
 
 Funkplan: Das Band mit den Kennzahlen bleibt, es ist die Arbeit der
-Vermeldezentrale in Zahlen. Die Werkzeugzeile schrumpft auf den Umschalter
+Fernmeldezentrale in Zahlen. Die Werkzeugzeile schrumpft auf den Umschalter
 (Je Rufgruppe, Je Bereich, Funkproben), den Hauptknopf „Rufgruppe anlegen",
 die Suche und „⋯" (Schwelle, Ausdruck). Funkprobe eintragen und „kein
 Kontakt" stehen in der Auswahlleiste der gewählten Einheit, wo sie
@@ -287,7 +287,7 @@ Auf dem Handy ersetzt langes Drücken den Rechtsklick, und die Auswahlleiste
 trägt dort ohnehin jeden Schritt.
 
 Soll das Profil die Monitoransicht vorbelegen (S4 zu Versorgung,
-Vermeldezentrale zu Funkplan)? Naheliegend, nicht im Entwurf.
+Fernmeldezentrale zu Funkplan)? Naheliegend, nicht im Entwurf.
 
 Die Einstiegszeile je Blatt: je Gerät gemerkt oder je Arbeitsplatz in den
 Einstellungen? Der Entwurf nimmt das Gerät, weil die Zeile keinen Einsatz

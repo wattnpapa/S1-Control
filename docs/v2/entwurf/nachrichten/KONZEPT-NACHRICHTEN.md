@@ -162,7 +162,7 @@ mehrere Stellen führen (S1 und S4 in Doppelfunktion, DV 1-100 4.3.1: „können
 Sachgebiete zusammengefaßt werden"), deshalb ist es eine Liste.
 
 Das Profil des Arbeitsplatzes bleibt, was es ist. Das Profil „Führungsstelle"
-bekommt den Reiter „Nachrichten" ins Band, das Profil „Vermeldezentrale"
+bekommt den Reiter „Nachrichten" ins Band, das Profil „Fernmeldezentrale"
 ebenfalls, dort mit der Sicht der FmZ als erster. Ob ein eigenes Profil
 „Sichter" nötig ist oder die Stelle genügt, ist Entscheidung 3.
 
@@ -361,7 +361,7 @@ In der Oberfläche heißt der Vorschlag des LdF durchgehend „Zuteilung“.
 ## 6. Das Blatt „Nachrichten"
 
 Ein eigener Reiter im Kopfband, bei der Führungsstelle zwischen Eingang und
-Führungsstelle, bei der Vermeldezentrale vor dem Funkplan. Das Band darüber
+Führungsstelle, bei der Fernmeldezentrale vor dem Funkplan. Das Band darüber
 nennt fünf Zahlen: neu für meine Stelle, vor der FmZ, vor dem Sichter, mit
 Vorrang offen, länger als zwanzig Minuten in der FmZ (die letzten beiden
 bernstein ab eins).

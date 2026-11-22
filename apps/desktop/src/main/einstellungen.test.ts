@@ -6,7 +6,7 @@
  * Einstellung, die nur bis zum Beenden hält, ist keine.
  */
 
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import * as fsp from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -28,6 +28,19 @@ function datei(): string {
 }
 
 describe("liesArbeitsplatz", () => {
+  it("liest das Profil auch unter der alten, falsch geschriebenen Kennung", async () => {
+    const ziel = datei();
+    mkdirSync(path.dirname(ziel), { recursive: true });
+    writeFileSync(ziel, JSON.stringify({
+      sharePfad: "/share",
+      anzeigename: "FmZ",
+      profil: "vermeldezentrale",
+      clientId: "aabbccddeeff00112233445566778899",
+    }));
+
+    expect((await liesArbeitsplatz(ziel)).profil).toBe("fernmeldezentrale");
+  });
+
   it("findet Betriebsart und Erscheinungsbild nach einem Neustart wieder", async () => {
     const ziel = datei();
     await schreibeArbeitsplatz(ziel, {
@@ -35,13 +48,13 @@ describe("liesArbeitsplatz", () => {
       anzeigename: "Führungsstelle 1",
       betriebsart: "meldekopf",
       theme: "nacht",
-      profil: "vermeldezentrale",
+      profil: "fernmeldezentrale",
       monitor: { ansicht: "tafel", wechsel: true },
       clientId: "aabbccddeeff00112233445566778899",
     });
 
     const gelesen = await liesArbeitsplatz(ziel);
-    expect(gelesen.profil).toBe("vermeldezentrale");
+    expect(gelesen.profil).toBe("fernmeldezentrale");
     expect(gelesen.monitor).toEqual({ ansicht: "tafel", wechsel: true });
     expect(gelesen.betriebsart).toBe("meldekopf");
     expect(gelesen.theme).toBe("nacht");

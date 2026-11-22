@@ -81,7 +81,7 @@ export type Theme = z.infer<typeof zTheme>;
  * kein Recht — wie die Betriebsart. Nur anhängen: Der Wert steht als Name in
  * den Einstellungen des Geräts.
  */
-export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle"] as const;
+export const PROFILE = ["fuehrungsstelle", "fernmeldezentrale", "versorgung", "alle"] as const;
 export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
@@ -198,7 +198,7 @@ export const zEinstellungen = z.object({
    *
    * Es bestimmt nur, welche Reiter im Kopfband stehen; jedes Blatt bleibt
    * unter „Mehr" erreichbar. Geräteeinstellung wie `betriebsart` und
-   * `theme`, nicht in der Akte: Die Vermeldezentrale und die S4 führen
+   * `theme`, nicht in der Akte: Die Fernmeldezentrale und die S4 führen
    * denselben Einsatz. Ohne Angabe `fuehrungsstelle`.
    */
   profil: zProfil.optional(),
