@@ -61,7 +61,7 @@ export function Lage({ blatt, aufBlatt }: LageEigenschaften): React.JSX.Element 
   );
 
   return (
-    <section aria-label="Lagebild" className="lage">
+    <section aria-label="S1" className="lage">
       <div className="lagespalten" hidden={blatt !== "lage"}>
         <Abschnittsbaum
           gewaehlt={abschnittId}

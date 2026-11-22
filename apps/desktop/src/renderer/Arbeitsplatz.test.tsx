@@ -196,7 +196,7 @@ describe("Der Arbeitsplatz", () => {
     await waitFor(() => {
       expect(sichtbar("Abschnitte")).toBe(true);
     });
-    const lage = screen.getByLabelText("Lagebild");
+    const lage = screen.getByLabelText("S1");
     // Die Werkzeugzeile der Lage ist ganz weg; der Bogen steckt im Hauptknopf der Einheitenkarte.
     expect(document.querySelector(".lagekopf")).toBeNull();
     expect(within(lage).queryByRole("button", { name: "Erfassungsbogen einlesen" })).toBeNull();
