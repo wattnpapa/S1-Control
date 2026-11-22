@@ -24,8 +24,9 @@ S1-Control unterstützt dich bei der Lageführung im Einsatz:
 - Live-Anzeige der Gesamtstärke und NATO-Zeit im separaten Vollbildfenster (Monitoransicht)
 - Funkplan für die Vermeldezentrale: Rufgruppen, Zuordnung der Einheiten, Funkproben und letzter Kontakt, als Ausdruck und als Monitoransicht
 - Monitoransichten für das Sachgebiet 1: Ist-Stärke (Fü / UFü / He = Gesamt, Erwartete und Beendete darunter), Status je Organisation (im Einsatz, einsatzbereit, Ruhe, nicht einsatzbereit; Zwischensumme Sanitätsdienst), je Abschnitt, je Organisation, Kreuztabelle Abschnitt × Organisation und „Kommen und Gehen“ (Anforderungen, Zusagen, Anmarsch, ablaufende Verfügbarkeit)
-- Monitoransichten für Führung (Offene Punkte), S3 (Einsatzmittel je Abschnitt nach Status), S6 (IuK-Lage: Share, Arbeitsplätze, Programmfassungen, Rückstau) und FmZ (Funkplan, Nachrichtenweg mit Stau und Besetzung)
-- Monitoransichten nach Stab gruppiert (Führung, S1, S3, S4, S6, FmZ); Tasten 1–9 und 0 für die ersten zehn, Pfeil links/rechts blättert durch alle; der automatische Wechsel läuft durch alle Ansichten oder nur durch ein Sachgebiet mit mehreren Ansichten
+- Monitoransichten für Führung (Offene Punkte), S2 (Lageticker aus dem Einsatztagebuch), S3 (Einsatzmittel je Abschnitt nach Status, laufende Aufträge je Abschnitt), S4 (zusätzlich offener Sofortbedarf), S6 (IuK-Lage: Share, Arbeitsplätze, Programmfassungen, Rückstau) und FmZ (Funkplan, Nachrichtenweg, Warteschlange ohne Inhalte, „Funk still“)
+- Monitoransichten nach Stab gruppiert (Führung, S1, S2, S3, S4, S6, FmZ); Tasten 1–9 und 0 für die ersten zehn, Pfeil links/rechts blättert durch alle; der automatische Wechsel läuft durch alle Ansichten oder nur durch ein Sachgebiet mit mehreren Ansichten
+- Besucheransicht am Monitor (Taste B): nur Kräftezahlen, keine Funk-, Nachrichten-, Tagebuch- oder Personenlisten
 
 ### Offline- und Fileshare-Betrieb
 
