@@ -45,13 +45,16 @@ Das gemeinsame Urteil: Fast alle Rollen kommen ans Ziel, aber mit Umwegen. Die D
 | Strg+N öffnet Abschnitt- und Einheitenmaske zugleich (S1, FüGeh S1 B-FG-1) | b9c9884, 089722c |
 | Tagebuch und Anforderungsliste zeigen Zeiten als UTC-ISO (S1 B-S1-1, LtrStab LS-2) | 5c50cb1 |
 
-## Offene Fehler mit Datenrisiko (Auswahl)
+## Fehler mit Datenrisiko, behoben am 22.11.2026
 
-Diese Befunde gefährden Nachweise oder Zahlen und sollten vor neuen Ansichten behoben werden:
+| Befund | Commit |
+| --- | --- |
+| Doppelte Nachrichtennummern bei gleichzeitiger Aufnahme: Vorbelegung folgt dem Stand, Marke „doppelt“ bei LdF, Sichter und FmZ (LdF-1, Fm-1). Gleichzeitiges Schreiben an zwei Rechnern lässt sich auf dem Fileshare nicht sperren, nur zeigen | b08bb80 |
+| „Eingetroffen → verknüpfen“ bucht die Einheit ein: Abschnitt, Einsatzbereit, Eintreffzeit; gleichnamige Einheit im Anmarsch vorgewählt (S1 B-S1-2) | bbbcf64 |
+| Gesprächsnotiz verteilt keinen externen Gesprächspartner (S5-1) | 32aef60 |
+| Betten und Belegung aus derselben Zahl in Tabelle, Band und Monitor 4 (S4-1); „männlich als Rest“ bleibt wie in der Vorlage | ff61f3e |
+| Verteiler bietet die Stellen besetzter Arbeitsplätze an, Hinweis bei geteilter Stelle „Fachberater“ (FW-B1) | 6af33ba |
 
-- Doppelte Nachrichtennummern, wenn zwei Fernmelder gleichzeitig aufnehmen; keine Warnung (Fernmelder, P1).
-- „Eingetroffen → bestehende Einheit verknüpfen“ bucht die Einheit nicht ein (S1 B-S1-2).
-- Gesprächsnotiz verteilt den Gesprächspartner als Stelle mit grüner Kopie (S5-1).
-- Unterbringung: Belegung, Bedarf und Band widersprechen sich (S4-1).
-- Mehrere Fachberater teilen eine Stelle; der Falsche kann erledigen (FW-B1), ebenso zwei Plätze mit Stelle S2 (FüGeh S2 B-FG-1).
-- Monitor 7 und Ausdruck „Druck“ zählen Unterabschnitte nicht in den Einsatzabschnitt (LtrStab LS-1); das Blatt „Übersicht“ zählt richtig, Monitor und Ausdruck sind unverändert.
+Weiter offen aus dieser Gruppe: Zwei Plätze mit derselben Stelle (etwa S2 und Führungsgehilfe S2) teilen „gelesen/erledigt“ ohne Personenbezug (FüGeh S2 B-FG-1). Monitor 7 und Ausdruck „Druck“ zählen Unterabschnitte nicht in den Einsatzabschnitt (LtrStab LS-1); das Blatt „Übersicht“ zählt richtig.
+
+Außerhalb des Reviews, auf Rückmeldung: PDF-Ausgaben gehen jetzt auch im Browser (Chromium auf dem Server, 0207d9b, e64e7ba).
