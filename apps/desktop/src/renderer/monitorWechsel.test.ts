@@ -16,7 +16,8 @@ import {
 
 describe("Gruppen und Wechsel des Monitors", () => {
   it("kennt die Ansichten je Sachgebiet in Tastenreihenfolge", () => {
-    expect(ansichtenDerGruppe("s1")).toEqual(["staerke", "abschnitte", "organisationen", "kreuz"]);
+    expect(ansichtenDerGruppe("s1")).toEqual(["staerke", "status", "abschnitte", "organisationen", "kreuz", "kommen"]);
+    expect(ansichtenDerGruppe("s3")).toEqual(["einsatzmittel"]);
     expect(ansichtenDerGruppe("s4")).toEqual(["verpflegung", "vorausschau", "unterbringung", "tafel"]);
     expect(ansichtenDerGruppe("fmz")).toEqual(["funkplan", "nachrichtenweg"]);
     expect(ansichtenDerGruppe("fuehrung")).toEqual(["offen"]);
@@ -30,8 +31,8 @@ describe("Gruppen und Wechsel des Monitors", () => {
 
   it("wechselt innerhalb des Sachgebiets im Kreis", () => {
     expect(naechsteAnsicht("tafel", "s4")).toBe("verpflegung");
-    expect(naechsteAnsicht("kreuz", "s1")).toBe("staerke");
-    expect(naechsteAnsicht("kreuz", "alle")).toBe("verpflegung");
+    expect(naechsteAnsicht("kommen", "s1")).toBe("staerke");
+    expect(naechsteAnsicht("kommen", "alle")).toBe("einsatzmittel");
   });
 
   it("geht von einer Ansicht außerhalb des Sachgebiets zu dessen erster", () => {

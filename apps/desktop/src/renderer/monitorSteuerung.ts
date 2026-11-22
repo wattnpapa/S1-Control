@@ -28,6 +28,9 @@ export const LEISTE_MS = 3_000;
 
 export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
   offen: "Offene Punkte",
+  status: "Status",
+  kommen: "Kommen und Gehen",
+  einsatzmittel: "Einsatzmittel",
   iuk: "IuK-Lage",
   nachrichtenweg: "Nachrichtenweg",
   staerke: "Stärke",
