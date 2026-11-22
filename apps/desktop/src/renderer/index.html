@@ -3284,6 +3284,11 @@
         min-height: 100vh;
         background: var(--monitor-grund);
       }
+      /* Unten rechts stehen die Punkte der Ansichten; der Fuß einer vollen
+         Tafel darf nicht unter sie laufen (Review: DTG war verdeckt). */
+      .monitorrahmen > .monitor {
+        padding-bottom: 34px;
+      }
       .monitor .monitorunterzeile {
         font-size: clamp(1rem, 3.6vw, 2.6rem);
       }

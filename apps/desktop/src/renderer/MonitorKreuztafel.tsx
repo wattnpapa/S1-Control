@@ -1,6 +1,6 @@
 /**
  * Die Kreuztabelle Abschnitt × Organisation auf dem Monitor (Sachgebiet 1,
- * Taste 9): je Abschnitt eine Zeile, je Organisation eine Spalte, in der
+ * Gruppe S1): je Abschnitt eine Zeile, je Organisation eine Spalte, in der
  * Zelle die Ist-Köpfe. Darunter die Gesamtzeile (Spaltensummen = Tafel
  * „Organisationen", Gesamt = Kopfband) und abgesetzt die Erwarteten je
  * Organisation — nie in der Summe.
@@ -38,7 +38,7 @@ function Abschnittszeile({ z, tafel }: { readonly z: Staerketafelzeile; readonly
   );
 }
 
-/** Taste 9 — Ist-Köpfe je Abschnitt und Organisation. */
+/** S1 — Ist-Köpfe je Abschnitt und Organisation. */
 export function MonitorKreuztafel(e: Ansichtseigenschaften): React.JSX.Element {
   const titel = "Abschnitt × Organisation";
   const tafel = e.staerketafel?.tafel;

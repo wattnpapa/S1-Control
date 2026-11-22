@@ -162,9 +162,13 @@ function Unterkunftszeilen({ e }: { readonly e: Ansichtseigenschaften }): React.
       <tbody>
         {karten.map((k) => (
           <tr key={k.unterkunftId} className={k.ueberbelegt ? "monitorwarn" : undefined}>
-            <th scope="row">{k.name}</th>
+            <th scope="row">
+              {k.ueberbelegt ? "⚠ " : ""}
+              {k.name}
+            </th>
             <td>
-              {k.belegt.gesamt} / {k.kapazitaet}
+              {k.belegt.gesamt} / {k.kapazitaet} Plätze
+              {k.ueberbelegt ? ` · überbelegt +${String(k.belegt.gesamt - k.kapazitaet)}` : ""}
             </td>
             <td className="trenner">{k.belegt.gesamt === 0 ? "—" : `m ${String(k.belegt.m)} · w ${String(k.belegt.w)} · d ${String(k.belegt.d)}`}</td>
           </tr>
