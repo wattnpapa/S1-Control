@@ -130,3 +130,18 @@ describe("Review 2026-11-21: Vorrang, Rückfragen, Reiterzahl", () => {
     expect(screen.queryByRole("button", { name: "Annehmen" })).toBeNull();
   });
 });
+
+describe("Review 2026-11-21: Stellenabfrage und Zählung", () => {
+  it("belegt mit dem Altwert FMZ den Fokus nicht auf „Übernehmen“ und warnt vor einer schon besetzten Fm-Nummer", async () => {
+    const { doppelteFernmelder } = await import("./Stellenabfrage.js");
+    render(<Stellenabfrage vorbelegung={{ stellen: ["FMZ", "S6"], handzeichen: "Ka" }} aufBestaetigen={vi.fn()} aufAbbrechen={vi.fn()} />);
+    expect(document.activeElement?.textContent).not.toBe("Übernehmen");
+    expect(doppelteFernmelder(["FM2"], [{ veraltet: false, anzeigename: "Meyer", stellen: ["FM2"] }])).toBe("Fm2 ist schon besetzt (Meyer). Bitte eine andere Nummer wählen oder absprechen.");
+    expect(doppelteFernmelder(["FM2"], [{ veraltet: true, anzeigename: "Alt", stellen: ["FM2"] }])).toBeUndefined();
+  });
+
+  it("erkennt die Zuteilung auch mit Leerzeichen im Namen", async () => {
+    const { istZugeteilt } = await import("@s1/domaene");
+    expect(istZugeteilt("Fm 2", ["FM2"])).toBe(true);
+  });
+});

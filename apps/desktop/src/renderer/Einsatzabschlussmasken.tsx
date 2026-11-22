@@ -48,7 +48,8 @@ export function nachrichtenOffenText(offen: Lagebild["offeneNachrichten"]): stri
   if (offen === undefined) return "";
   const teile = [
     [offen.vorFmz, "vor der FmZ"],
-    [offen.beimLdf, "beim LdF"],
+    [offen.beimLdf - (offen.beimLdfNachBefoerderung ?? 0), "beim LdF"],
+    [offen.beimLdfNachBefoerderung ?? 0, "beim LdF nach der Beförderung (ohne Nummer und Kopien)"],
     [offen.vorSichter, "vor dem Sichter"],
     [offen.ohneNummer, "ohne Nummer"],
     [offen.ungelesenMitVorrang, "mit Vorrang ungelesen"],

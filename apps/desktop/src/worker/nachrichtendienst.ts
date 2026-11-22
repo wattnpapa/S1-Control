@@ -68,7 +68,8 @@ export interface Fernmelderwahl {
  * Stelle des Platzes, nicht sein Anzeigename — nur so findet der Fernmelder
  * „seine“ Nachricht in der Warteschlange. Wer die Stelle besetzt, steht dabei.
  * Plätze mit dem Altwert FMZ (ein älterer Client) kommen mit ihrem
- * Anzeigenamen dazu, wie bisher. Freitext bleibt in der Maske erlaubt.
+ * Anzeigenamen dazu, wie bisher. Ein schon gespeicherter anderer Name bleibt
+ * in der Auswahl der Maske stehen (`fernmelderwahl`).
  */
 export function fernmelderwahlAusPraesenz(eigeneStellen: readonly string[] | undefined, eigenerName: string, peers: readonly Fernmelderplatz[]): Fernmelderwahl {
   const plaetze: readonly Fernmelderplatz[] = [{ veraltet: false, anzeigename: eigenerName, stellen: eigeneStellen }, ...peers].filter((p) => !p.veraltet && p.anzeigename.trim() !== "");

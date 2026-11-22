@@ -20,8 +20,9 @@
 import { useState } from "react";
 
 import type { Einstellungen, Sitzungsstellen } from "../kontrakt/index.js";
+import { useLaden } from "./laden.js";
 import { Maske } from "./Maske.js";
-import { STELLE_FMZ } from "@s1/domaene";
+import { FERNMELDERSTELLEN, STELLE_FMZ } from "@s1/domaene";
 
 import { ARBEITSPLATZSTELLEN, handzeichenPflicht, stellenname } from "./nachrichtenformate.js";
 
@@ -71,6 +72,19 @@ const STATIONEN = ["LDF", "FM1", "FM2", "FM3", "SICHTER"] as const;
 /** Der Satz, wenn die Vorbelegung noch die alte Stelle FmZ trägt. */
 export const TEXT_FMZ_AUFGETEILT = "Die Stelle FmZ ist aufgeteilt: Bitte LdF oder einen der Fernmelder Fm1, Fm2, Fm3 wählen.";
 
+/**
+ * „Fm2 ist schon besetzt (Meyer).“ — wenn ein lebender Arbeitsplatz dieselbe
+ * Fernmeldernummer führt (Review 2026-11-21): Beide sähen dieselben
+ * Zuteilungen als „für Sie“. Ein Hinweis, keine Sperre.
+ */
+export function doppelteFernmelder(stellen: readonly string[], peers: readonly { readonly veraltet: boolean; readonly anzeigename: string; readonly stellen?: readonly string[] | undefined }[]): string | undefined {
+  const treffer = FERNMELDERSTELLEN.filter((s) => stellen.includes(s)).flatMap((s) => {
+    const andere = peers.filter((p) => !p.veraltet && p.stellen?.includes(s) === true).map((p) => p.anzeigename);
+    return andere.length === 0 ? [] : [`${stellenname(s)} ist schon besetzt (${andere.join(", ")})`];
+  });
+  return treffer.length === 0 ? undefined : `${treffer.join("; ")}. Bitte eine andere Nummer wählen oder absprechen.`;
+}
+
 /** Die Vorbelegung ohne den Altwert FMZ — wer Fernmelder war, wählt einmal seine Nummer. */
 export function ohneAltstelle(stellen: readonly string[]): readonly string[] {
   return stellen.filter((s) => s !== STELLE_FMZ);
@@ -115,7 +129,10 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
   const fehler = stellenabfrageFehler(stellen, handzeichen);
   const hz = handzeichen.trim();
   // Eine vollständige Vorbelegung (nach dem Neuladen) bestätigt ein Klick; der Fokus steht gleich auf „Übernehmen“.
-  const [vollstaendig] = useState(() => stellenabfrageFehler(vorbelegt, vorbelegung.handzeichen ?? "") === undefined);
+  // Review 2026-11-21: Mit dem Altwert FMZ nie „vollständig“ — ein Enter übernähme sonst nur die übrigen Stellen.
+  const [vollstaendig] = useState(() => !altFmz && stellenabfrageFehler(vorbelegt, vorbelegung.handzeichen ?? "") === undefined);
+  const peers = useLaden((z) => z.lagebild?.peers);
+  const doppelt = doppelteFernmelder(stellen, peers ?? []);
   const handzeichenZuerst = !vollstaendig && vorbelegt.length > 0 && (vorbelegung.handzeichen ?? "") === "";
   return (
     <Maske
@@ -136,6 +153,11 @@ export function Stellenabfrage({ vorbelegung, einsatzname, aufBestaetigen, aufAb
       {altFmz && (
         <p className="warnung" role="status">
           {TEXT_FMZ_AUFGETEILT}
+        </p>
+      )}
+      {doppelt !== undefined && (
+        <p className="warnung" role="status">
+          {doppelt}
         </p>
       )}
       <p className="hinweistext">

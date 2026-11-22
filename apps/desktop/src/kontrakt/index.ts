@@ -453,6 +453,8 @@ export type Nachrichtenlage = z.infer<typeof zNachrichtenlage>;
 export const zOffeneNachrichten = z.object({
   vorFmz: zZahl,
   beimLdf: zZahl,
+  /** Additiv (Review 2026-11-21): davon beförderte Ausgänge, denen Nummer und Verteilung fehlen. */
+  beimLdfNachBefoerderung: zZahl.optional(),
   vorSichter: zZahl,
   ohneNummer: zZahl,
   ungelesenMitVorrang: zZahl,

@@ -3,7 +3,7 @@
  * (bestätigt am 2026-11-17, KONZEPT-NACHRICHTEN.md §5): Der LdF hat Aufnahme
  * und Nachweisung eines Eingangs geprüft und gibt ihn mit Zeit und
  * Handzeichen an den Sichter. Den Ausgangsschritt des LdF führt die Maske
- * „Übermittlung vorschlagen" der FmZ (`Fmzmasken.tsx`).
+ * „Fernmelder zuteilen" der FmZ (`Fmzmasken.tsx`).
  *
  * Wie die Masken der FmZ: Zeit „jetzt" und Handzeichen der Sitzung
  * vorbelegt und editierbar (Papier-Rückfall, §6), die weiche Sperre auf der

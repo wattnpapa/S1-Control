@@ -104,7 +104,7 @@ describe("Szenario: Lagebild beim Beenden und Nummernlücken (ETB P1-6, LdF P2-2
   it("nennt offene Nachrichten und die fehlenden Nummern", async () => {
     const platz = await einsatzMitNachrichten();
     const bild = lagebild(platz);
-    expect(bild.offeneNachrichten).toEqual({ vorFmz: 1, beimLdf: 0, vorSichter: 1, ohneNummer: 1, ungelesenMitVorrang: 0 });
+    expect(bild.offeneNachrichten).toEqual({ vorFmz: 1, beimLdf: 0, beimLdfNachBefoerderung: 0, vorSichter: 1, ohneNummer: 1, ungelesenMitVorrang: 0 });
     expect(bild.nachrichten?.nummernluecken).toEqual([1, 2]);
   });
 });

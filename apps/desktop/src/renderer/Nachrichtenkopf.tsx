@@ -11,7 +11,7 @@
  *   der Beförderung und die Warteschlangen der eigenen Station. Das
  *   Übungsdrehbuch (Minute 100) setzt sie für die Übergabe voraus.
  * - **FmZ nicht besetzt** (R2-FaBe P0-3): ein bernsteinfarbener Satz im Band,
- *   solange kein Arbeitsplatz mit der Stelle FMZ in der Präsenz steht. Wer
+ *   solange kein Arbeitsplatz mit einem Fernmelder (FM1 bis FM3, Altwert FMZ) in der Präsenz steht. Wer
  *   eine Nachricht aufgibt, erfuhr sonst nicht, dass sie liegen bleibt.
  * - **Strg+N** in der Sicht Fernmeldezentrale öffnet „Eingang aufnehmen“
  *   (R2-FM P2-1, P1-1): „Neuen Eintrag anlegen — je nach gewählter Ansicht“,
