@@ -1,5 +1,5 @@
 /**
- * Der Warnstreifen des Stärke-Monitors bei Verbindungsverlust.
+ * Der Warnstreifen des Lagemonitors bei Verbindungsverlust.
  *
  * Der Monitor hängt an der Wand und wird aus Metern gelesen; eine stehengebliebene
  * Zahl sieht aus wie eine aktuelle. Der Streifen sagt deshalb, **seit wann die

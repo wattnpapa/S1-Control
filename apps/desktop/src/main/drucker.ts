@@ -8,7 +8,7 @@
  *
  * **Ein eigenes, unsichtbares Fenster je Ausdruck.** Nicht das
  * Arbeitsplatzfenster: Es zeigt die Lage, und wer darin druckt, druckt die
- * Lage und nicht den Ausdruck. Nicht der Stärke-Monitor: Er hängt an der Wand
+ * Lage und nicht den Ausdruck. Nicht der Lagemonitor: Er hängt an der Wand
  * und soll nicht flackern. Ein Wegwerf-Fenster kostet einige zehn
  * Millisekunden und ist danach fort.
  *

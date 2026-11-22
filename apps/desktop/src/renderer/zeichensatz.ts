@@ -9,7 +9,7 @@
  *
  * **Geladen wird einzeln, nicht alles.** Der Satz hat knapp tausend Zeichen
  * und rund vier Megabyte. Ins Bündel gelegt (`eager`) läge das alles in jedem
- * Fenster, auch im Stärke-Monitor, der kein einziges Zeichen zeigt. Geladen
+ * Fenster, auch im Lagemonitor, der kein einziges Zeichen zeigt. Geladen
  * wird deshalb je Kennung und einmal: `import.meta.glob` ohne `eager` macht
  * aus jeder Datei ein eigenes Stück, der Bündler schneidet sie auseinander,
  * und was einmal da war, bleibt im Zwischenspeicher.
