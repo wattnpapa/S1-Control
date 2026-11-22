@@ -6,7 +6,7 @@
 import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere } from "../../domaene/src/fold.js";
-import { projektion } from "../../domaene/src/index.js";
+import { projektion, zeitpunktText } from "../../domaene/src/index.js";
 import { prueflageEreignisse } from "../../domaene/src/pruefhilfen/pruefage.js";
 
 import { bildschirmtauglich } from "./bildschirm.js";
@@ -31,6 +31,17 @@ describe("Anforderungen als HTML", () => {
     expect(html).toContain("Übung &lt;Weser&gt;");
     expect(html).toContain('name="viewport"');
     expect(html).toContain('class="tabellenrahmen"');
+  });
+
+  it("nennt die Zusage in Ortszeit und nicht als ISO in UTC (Stab-Review S1, B-S1-1)", () => {
+    const zeile = {
+      id: "AN1", kennung: "A 1", zustand: "ZUGESAGT", angefordertAm: "2026-11-22T15:00:00.000Z",
+      vorgeseheneEinheitText: "B-Gr", vorgesehenerAuftrag: "", bemerkung: "", storniert: false, hinweise: [],
+      zugesagtFuer: "2026-11-22T18:30:00.000Z", zugesagtVon: "B-Gr OV Hannover",
+    } as unknown as projektion.Anforderungszeile;
+    const html = anforderungenAlsHtml([zeile], { ZUGESAGT: 1 }, KOPF);
+    expect(html).toContain(`${zeitpunktText("2026-11-22T18:30:00.000Z")} / B-Gr OV Hannover`);
+    expect(html).not.toContain("T18:30");
   });
 
   it("sagt, wenn nichts angefordert ist", () => {

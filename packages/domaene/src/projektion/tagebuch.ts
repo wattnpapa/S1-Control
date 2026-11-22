@@ -516,8 +516,14 @@ function satzwertMitWort(typ: string, wert: unknown, feld: string | undefined): 
   if (typ === "AuftragBeendet" || typ === "EinsatzBeendet" || typ === "EinsatzWiedereroeffnet") {
     return zeitpunktText(wert);
   }
+  // Jeder übrige Zeitpunkt (ZeitpunktGesetzt: Eintreffen, Einsatzende,
+  // „verfügbar bis“ …) ebenso als Ortszeit statt als ISO in UTC (Stab-Review S1, B-S1-1).
+  if (ISO_ZEITPUNKT.test(wert)) return zeitpunktText(wert);
   return alsSatzwert(wert);
 }
+
+/** Ein vollständiger ISO-Zeitpunkt in UTC, wie die Ereignisse ihn tragen. */
+const ISO_ZEITPUNKT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?Z$/;
 
 function stammdatenwortFuer(feld: string | undefined, wert: string): string {
   if (feld === "art") return einsatzArtTitel(wert);

@@ -94,4 +94,11 @@ describe("Das Tagebuch zu Auftrag, Fahrzeug und Person", () => {
     const weg = feldEreignis(hlc(8, 0, "a"), 8, "FahrzeugEntfernt", { fahrzeugId: "F1" }, null, true, "defekt");
     expect(zeile(weg)).toBe("GKW 1: Fahrzeug entfernt: (leer) → ja");
   });
+
+  it("schreibt gesetzte Zeitpunkte als Ortszeit und nicht als ISO in UTC (Stab-Review S1, B-S1-1)", () => {
+    const ende = feldEreignis(hlc(9, 0, "a"), 9, "ZeitpunktGesetzt", { einheitId: "U1", feld: "einsatzende" }, null, "2026-11-22T16:30:00.000Z");
+    const satz = zeile(ende);
+    expect(satz).toContain(zeitpunktText("2026-11-22T16:30:00.000Z"));
+    expect(satz).not.toMatch(/\d{4}-\d{2}-\d{2}T/);
+  });
 });

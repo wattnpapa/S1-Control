@@ -22,7 +22,9 @@ function zelle(text: string | undefined, klasse = ""): string {
 }
 
 function anforderungsZeile(zeile: projektion.Anforderungszeile): string {
-  const zusage = [zeile.zugesagtFuer, zeile.zugesagtVon].filter((t) => t !== undefined && t !== "").join(" / ");
+  // Die Zusage ist ein Zeitpunkt (ISO, UTC): als Ortszeit, nicht als „…T18:30:00.000Z“ (Stab-Review S1, B-S1-1).
+  const zugesagtFuer = zeile.zugesagtFuer === undefined || zeile.zugesagtFuer === "" ? undefined : zeitText(zeile.zugesagtFuer);
+  const zusage = [zugesagtFuer, zeile.zugesagtVon].filter((t) => t !== undefined && t !== "").join(" / ");
   return [
     "      <tr>",
     `        ${zelle(zeile.kennung)}`,
