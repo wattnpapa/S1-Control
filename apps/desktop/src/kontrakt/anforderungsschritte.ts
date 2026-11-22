@@ -14,6 +14,7 @@
 
 import type { Einheitenwahl, Staerke } from "@s1/domaene";
 
+import { einbuchungsschritte } from "./einbuchungsschritte.js";
 import { auftragErfassen } from "./einheitsteile.js";
 import type { Entwurf } from "./index.js";
 
@@ -108,15 +109,6 @@ export function abloesungNachtragen(geltend: GeltendeErledigung, einheitId: stri
  * (Stab-Review S1, B-S1-2). Nur was sich ändert, wird geschrieben.
  */
 export function einbuchung(einheit: Einheitenwahl, nachAbschnittId: string, zeit: string): readonly Entwurf[] {
-  const schritte: Entwurf[] = [];
-  if (nachAbschnittId !== "" && einheit.abschnittId !== undefined && einheit.abschnittId !== nachAbschnittId) {
-    schritte.push({ typ: "EinheitVerschoben", nutzlast: { einheitId: einheit.id }, vorher: einheit.abschnittId, neu: nachAbschnittId });
-  }
-  if (einheit.status !== STATUS_EINGETROFFEN) {
-    schritte.push({ typ: "StatusGesetzt", nutzlast: { einheitId: einheit.id }, vorher: einheit.status ?? null, neu: STATUS_EINGETROFFEN });
-  }
-  if (einheit.eingetroffenAm === undefined) {
-    schritte.push({ typ: "ZeitpunktGesetzt", nutzlast: { einheitId: einheit.id, feld: "eingetroffenAm" }, vorher: null, neu: zeit });
-  }
-  return schritte;
+  const stand = { einheitId: einheit.id, abschnittId: einheit.abschnittId, status: einheit.status, eingetroffenAm: einheit.eingetroffenAm };
+  return einbuchungsschritte(stand, { abschnittId: nachAbschnittId, status: STATUS_EINGETROFFEN, eingetroffenAm: zeit });
 }
