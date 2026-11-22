@@ -90,6 +90,8 @@ export interface Nachrichtenlage {
   readonly ueberSchwelle: number;
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt (`ldfStation`). */
   readonly vorLdf?: number;
+  /** Additiv (Review 2026-11-21): davon Ausgänge vor der Zuteilung — ohne LdF befördert sie ein Fernmelder selbst. */
+  readonly vorLdfZuteilung?: number;
   /** Additiv (R2-LdF P2-4): `ueberSchwelle` getrennt nach LdF und FmZ, nur mit `ldfStation`. */
   readonly ueberSchwelleLdf?: number;
   readonly ueberSchwelleFmz?: number;
@@ -273,7 +275,7 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     ueberSchwelle: 0,
   };
   // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
-  if (zustand.einsatz?.ldfStation?.wert === true) Object.assign(lage, { vorLdf: 0, ueberSchwelleLdf: 0, ueberSchwelleFmz: 0 });
+  if (zustand.einsatz?.ldfStation?.wert === true) Object.assign(lage, { vorLdf: 0, vorLdfZuteilung: 0, ueberSchwelleLdf: 0, ueberSchwelleFmz: 0 });
   const kontext = zeilenkontext(zustand, jetzt);
   const zeilen = alleNachrichtenzeilen(zustand, kontext);
   for (const zeile of zeilen) {
@@ -282,6 +284,7 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     if (zeile.laufzustand === "VOR_FMZ") lage.vorFmz += 1;
     if (zeile.laufzustand === "VOR_SICHTER") lage.vorSichter += 1;
     if (zeile.laufzustand === "VOR_LDF" && lage.vorLdf !== undefined) lage.vorLdf += 1;
+    if (ldfSchrittDer(zeile) === "zuteilung" && lage.vorLdfZuteilung !== undefined) lage.vorLdfZuteilung += 1;
     if (zeile.vorrangstufe < 2 && offenFuerStellen(zeile, stellen, umfeld)) lage.mitVorrangOffen += 1;
     if (zeile.fmzUeberSchwelle) lage.ueberSchwelle += 1;
     // R2-LdF P2-4: die Schwellenzahl mischte LdF und FmZ.
