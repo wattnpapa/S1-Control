@@ -28,6 +28,14 @@ const UEBERSICHT: Uebersicht = {
     { auftragId: "A1", text: "Pumpen Marktplatz", einheitId: "U1", einheit: "B-Gr 1", abschnitt: "UA 2.1 Pumpstelle", von: "2026-11-22T15:00:00.000Z", offen: true },
     { auftragId: "A3", text: "Erkunden", einheitId: "U2", einheit: "ZTr", abschnitt: "EA 2 Innenstadt", von: "2026-11-22T13:00:00.000Z", bis: "2026-11-22T13:30:00.000Z", offen: false },
   ],
+  einsatzzeiten: [
+    {
+      einheitId: "U1", einheit: "B-Gr 1", organisation: "THW", abschnitt: "UA 2.1 Pumpstelle", status: "Einsatz",
+      eingetroffenAm: "2026-11-22T06:00:00.000Z", verfuegbarBis: "2000-01-01T00:00:00.000Z",
+      abloesung: { marke: { text: "Ablösung zugesagt", ton: "warn" }, durch: "B-Gr Westerstede", zugesagtFuer: "22.11.2026 18:30" },
+    },
+  ],
+  kommen: [{ schluessel: "anmarsch/U9", art: "anmarsch", name: "FGr N Varel" }],
 };
 
 let attrappe: Attrappe;
@@ -39,6 +47,17 @@ beforeEach(() => {
 });
 
 describe("Das Blatt „Übersicht“", () => {
+  it("zeigt Einsatzzeiten mit abgelaufener Frist und zugesagter Ablösung, darunter wer kommt", async () => {
+    render(<Stabsuebersicht />);
+    const teil = await screen.findByRole("region", { name: "Einsatzzeiten und Ablösung" });
+    const zeile = within(teil).getByRole("rowheader", { name: "B-Gr 1" }).closest("tr") as HTMLElement;
+    expect(zeile.textContent).toContain("abgelaufen");
+    expect(zeile.textContent).toContain("Ablösung zugesagt · B-Gr Westerstede · für 22.11.2026 18:30");
+    expect(within(teil).getByText(/FGr N Varel/).textContent).toContain("FGr N Varel");
+    expect(within(teil).getByText("im Anmarsch")).toBeDefined();
+  });
+
+
   it("holt die Übersicht eigens und zeigt Köpfe je Abschnitt mit Unterabschnitten", async () => {
     render(<Stabsuebersicht />);
     const kraefte = await screen.findByRole("region", { name: "Kräfte nach Status" });

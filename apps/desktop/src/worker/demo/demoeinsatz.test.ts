@@ -143,6 +143,11 @@ describe("Funktionalität: Demo-Einsatz", () => {
     expect(uebersicht.gesamt.gesamt).toBe(ist.fuehrer + ist.unterfuehrer + ist.mannschaft);
     expect(uebersicht.auftraege.some((a) => a.offen)).toBe(true);
     expect(uebersicht.auftraege.some((a) => !a.offen)).toBe(true);
+    // Einsatzzeiten: Eintreffzeiten, eine Frist „verfügbar bis“, eine Ablösung; dazu wer kommt.
+    expect(uebersicht.einsatzzeiten.some((z) => z.eingetroffenAm !== undefined)).toBe(true);
+    expect(uebersicht.einsatzzeiten.some((z) => z.verfuegbarBis !== undefined)).toBe(true);
+    expect(uebersicht.einsatzzeiten.some((z) => z.abloesung !== undefined)).toBe(true);
+    expect(uebersicht.kommen.length).toBeGreaterThan(0);
   });
 
   it("Szenario: der Demo-Einsatz füllt die Monitoransichten aller Stabsfunktionen", () => {

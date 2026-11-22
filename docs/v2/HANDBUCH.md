@@ -162,7 +162,11 @@ ist dieselbe Zahl wie die Ist-Stärke im Kopfband. Was angefordert oder im
 Anmarsch ist, steht in der Spalte „erwartet“ und nicht in der Summe.
 Darunter „Aufträge“: die offenen Aufträge aller Einheiten mit Einheit,
 Abschnitt und Beginn, die ältesten oben; „Erledigte zeigen“ nimmt die
-beendeten dazu. Bearbeitet wird weiter im Blatt S1.
+beendeten dazu. Ganz unten „Einsatzzeiten und Ablösung“: je Einheit vor Ort
+Eintreffzeit, Dauer im Einsatz, „verfügbar bis“ mit der Marke „läuft ab“ oder
+„abgelaufen“ und der Stand der Ablösung mit wer und wann; wer zuerst gehen
+muss, steht oben. Darunter „Es kommen“: was angefordert, zugesagt oder im
+Anmarsch ist. Bearbeitet wird weiter im Blatt S1.
 
 Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt
 unter „Mehr“ erreichbar. Wer dort ein Blatt aufschlägt, sieht es, solange es

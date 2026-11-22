@@ -16,6 +16,7 @@ import { useState } from "react";
 
 import { projektion, zeitpunktText, type Auftragsuebersichtzeile, type Kraeftezeile } from "@s1/domaene";
 
+import { Einsatzzeitentabelle } from "./Einsatzzeitentabelle.js";
 import { useLaden } from "./laden.js";
 import { useStabsuebersicht } from "./useStabsuebersicht.js";
 
@@ -39,6 +40,7 @@ export function Stabsuebersicht(): React.JSX.Element {
             anmarsch={ansicht.uebersicht.anmarsch}
           />
           <Auftragstabelle zeilen={ansicht.uebersicht.auftraege} />
+          <Einsatzzeitentabelle zeilen={ansicht.uebersicht.einsatzzeiten} kommen={ansicht.uebersicht.kommen} />
         </>
       )}
     </section>
