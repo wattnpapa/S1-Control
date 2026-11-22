@@ -83,8 +83,10 @@ import type {
  * **17** (2026-11-22): Ohne Parameter `ldfStation` ist der LdF Station
  * (`ldfstation.ts`); ein Schnappschuss der Fassung 16 faltete solche Einsätze
  * ohne LdF.
+ * **18** (Review Runde 2): Nach Rücknahme und Neusichtung zählen Kenntnis und
+ * Erledigung einer Stelle nur, wenn sie nach der neuen Sichtung kamen.
  */
-export const FOLD_VERSION = 17;
+export const FOLD_VERSION = 18;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert

@@ -92,7 +92,7 @@ letzten Meldungen dieser Sitzung. Alles Weitere: [BETRIEB.md](BETRIEB.md).
 **Was dahintersteckt:** Netzwerk, NAS oder Freigabe sind weg. Der eigene Rechner schreibt weiter — in den Zwischenspeicher.
 
 1. Weiterarbeiten, solange das Fenster den Dienst erreicht. Alles Eingetippte bleibt erhalten und wird übertragen, sobald der Share wieder da ist.
-2. Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Ausgaben“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.
+2. Antwortet im Browser der Dienst selbst nicht („Dienst nicht erreichbar“), sperrt die Seite die Eingabe und speichert nichts: dann auf Papier weiterarbeiten und später nachtragen. Die Vordrucke (Meldeblock, Einheitenliste, Funkprotokoll) stehen im Reiter „Exporte“ unter „Papier-Vordruck“ — am besten schon vorab ausdrucken.
 3. Jemanden zum NAS schicken: Strom, Netzwerkkabel, Freigabe.
 4. Kommt der Share nicht wieder: An **einem** Rechner weiterführen und den anderen sagen, dass sie nur noch mitlesen.
 5. Ist der Share wieder da, gleicht sich der Stand von selbst ab; die Statuszeile zeigt es.
@@ -178,7 +178,7 @@ Grundlage: KONZEPT-EREIGNISSE.md §5.8, EXH C159–C172
 
 **Was dahintersteckt:** Der Arbeitsplatz oder das Netz ist ausgefallen, und der Dienst ist nicht erreichbar. Der Vordruck 1103.1 kommt ohne Rechner aus; die Nachweisung ist dann ein Blatt Papier.
 
-1. Leere Vordrucke nehmen: im Reiter „Ausgaben“ unter „Papier-Vordruck“ den leeren Nachrichtenvordruck als PDF ausdrucken, am besten schon vorab und in Reserve.
+1. Leere Vordrucke nehmen: im Reiter „Exporte“ unter „Papier-Vordruck“ den leeren Nachrichtenvordruck als PDF ausdrucken, am besten schon vorab und in Reserve.
 2. Nachrichten von Hand auf dem Vordruck schreiben, die Nummer fortlaufend auf dem Blatt vergeben und die Nachweisung auf Papier weiterführen, mit Uhrzeit und Handzeichen für Aufnahme, Annahme und Beförderung.
 3. Läuft der Rechner wieder, die Blätter nacherfassen: im Blatt „Nachrichten“ die Nachricht verfassen beziehungsweise in der Fernmeldezentrale den Eingang aufnehmen, die Zeiten und die Nummer vom Blatt übernehmen und nicht die Uhrzeit des Nacherfassens.
 4. Die Nummer nie zurücksetzen und keine Lücke füllen. Eine Nummer, die auf Papier steht, bleibt; kommt sie doppelt vor, markiert die Nachweisung beide Zeilen, und es wird mit neuer Nummer berichtigt.

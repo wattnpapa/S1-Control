@@ -164,3 +164,36 @@ describe("Zuteilen als LdF ohne „LdF als Station“ (2026-11-22)", () => {
     expect(einschalten).toHaveBeenCalled();
   });
 });
+
+describe("Weitergabe eines Eingangs ohne Sichter (Review Runde 2)", () => {
+  it("zeigt dem LdF den Laufzettel, vorbelegt aus der Anschrift, und schickt ihn mit", async () => {
+    useLaden.setState({ akteId: "akte-1", lagebild: { ...NACHRICHTEN_LAGEBILD, peers: [], sitzung: { stellen: ["LDF"], handzeichen: "Lf" } }, hinweise: [] });
+    const { Weitergabemaske } = await import("./Ldfmaske.js");
+    const eingang = { ...VOR_SICHTER, id: "E-x", richtung: "EINGANG", richtungKurz: "E", laufzustand: "VOR_LDF", anschrift: "S3", nummer: 4 } as Nachrichtenzeile;
+    render(<Weitergabemaske zeile={eingang} handzeichen="Lf" aufSchliessen={vi.fn()} />);
+    const maske = screen.getByRole("form", { name: /An den Sichter weitergeben/ });
+    expect(maske.textContent).toContain("Sie verteilen mit dem Weitergeben selbst");
+    expect((within(maske).getByRole("checkbox", { name: "S3 grün" }) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(within(maske).getByRole("button", { name: "Weitergeben" }));
+    await waitFor(() => expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1));
+    const entwurf = (attrappe.rufeDerArt("bedienen")[0] as { entwurf: Entwurf }).entwurf;
+    expect(entwurf).toMatchObject({ typ: "NachrichtWeitergegeben", nachrichtenfolge: { sichtung: { handzeichen: "Lf" } } });
+  });
+});
+
+describe("Review Runde 2, Block 2: Ablauf", () => {
+  it("warnt im Laufzettel des Ausgangs, wenn S2 oder der Verfasser fehlt", async () => {
+    const { ausgangsverteilerWarnung } = await import("./Laufzettel.js");
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S2", kopie: "ROT" }, { stelle: "S4", kopie: "GRUEN" }])).toBeUndefined();
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S4", kopie: "GRUEN" }])).toBe("Beim Ausgang fehlt im Verteiler: S2 (rot, Lage und Tagebuch).");
+    expect(ausgangsverteilerWarnung(BEFOERDERT, [{ stelle: "S2", kopie: "ROT" }])).toContain("S4 (grün, Verfasser)");
+  });
+
+  it("sagt „bei Fm2 (nicht besetzt)“ und zählt am Reiter für den LdF, was bei ihm liegt", async () => {
+    const { wegwort } = await import("./Nachrichtenliste.js");
+    const { nachrichtenzahl } = await import("./Reiterzeile.js");
+    const zugeteilt = { ...ZUR_ZUTEILUNG, laufzustand: "VOR_FMZ" as const, vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" }, fernmelderNichtBesetzt: true } as Nachrichtenzeile;
+    expect(wegwort(zugeteilt)).toBe("bei Fm2 (nicht besetzt)");
+    expect(nachrichtenzahl({ neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, vorLdf: 3 } as never, ["LDF"])).toBe(3);
+  });
+});

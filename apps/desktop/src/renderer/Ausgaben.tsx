@@ -58,8 +58,8 @@ export function Ausgaben(): React.JSX.Element {
   }
 
   return (
-    <section aria-label="Ausgaben" className="ausgaben">
-      <h2>Ausgaben</h2>
+    <section aria-label="Exporte" className="ausgaben">
+      <h2>Exporte</h2>
       <label className="schalter" title="Die Ausgaben weisen zusätzlich die Stärke dieser Organisation aus">
         Davon Stärke der Organisation
         <select

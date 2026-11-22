@@ -62,7 +62,7 @@ function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
 
 describe("Die Nachricht im Katalog", () => {
   it("steht auf Fassung 13 und führt die Arten nach §9", () => {
-    expect(FOLD_VERSION).toBe(17);
+    expect(FOLD_VERSION).toBe(18);
     expect(KATALOG.get("NachrichtVerfasst")).toMatchObject({ form: "b", entitaet: "nachricht", idFeld: "nachrichtId", ohneUndo: true });
     for (const [typ, pfad] of [["NachrichtAngenommen", "annahme"], ["NachrichtUebermittlungVorgeschlagen", "vorschlag"], ["NachrichtBefoerdert", "befoerderung"], ["NachrichtNachgewiesen", "nachweis"], ["NachrichtGesichtet", "sichtung"], ["NachrichtVermerkt", "vermerke"]] as const) {
       expect(KATALOG.get(typ)).toMatchObject({ form: "a", feld: { art: "fest", pfad }, gegenereignis: typ });
@@ -168,8 +168,10 @@ describe("Die Nachricht im Fold", () => {
 
   it("erledigt je Stelle, nimmt die Erledigung zurück und wird erledigt, wenn alle Stellen es sind", () => {
     const basis = grundlage();
+    // Die Erledigung kommt nach der Sichtung (HLC), wie im Betrieb.
+    const anfang = [...basis, verfasst("N1"), vermerk("NachrichtGesichtet", "N1", sichtung([["S3", "GRUEN"], ["S4", "BLAU"]]))];
     const s3 = vermerk("NachrichtErledigt", "N1", true, null, { stelle: "S3" });
-    const vorher = [...basis, verfasst("N1"), vermerk("NachrichtGesichtet", "N1", sichtung([["S3", "GRUEN"], ["S4", "BLAU"]])), s3];
+    const vorher = [...anfang, s3];
     const z = zustand(vorher);
     expect(z.nachrichten?.["N1"]?.erledigt?.["S3"]?.wert).toBe(true);
     expect(z.nachrichten?.["N1"]?.laufzustand).toBe("VERTEILT");
@@ -275,5 +277,20 @@ describe("Der Laufzustand je Pfad (§9)", () => {
     const basis = [...grundlage(), verfasst("G1", { richtung: "AUSGANG", gespraechsnotiz: true, aufnahme: undefined })];
     expect(zustand(basis).nachrichten?.["G1"]?.laufzustand).toBe("VOR_SICHTER");
     expect(zustand([...basis, vermerk("NachrichtGesichtet", "G1", sichtung([["S4", "GRUEN"]]))]).nachrichten?.["G1"]?.laufzustand).toBe("VERTEILT");
+  });
+});
+
+describe("Kenntnis und Erledigung nach Rücknahme der Sichtung (Review Runde 2)", () => {
+  it("zählen nicht für eine neue Sichtung nach der Rücknahme, wohl aber nach einer Nachsichtung", () => {
+    const basis = grundlage();
+    const erste = vermerk("NachrichtGesichtet", "N1", sichtung([["S2", "ROT"]]));
+    const anfang = [...basis, verfasst("N1"), erste, vermerk("NachrichtErledigt", "N1", true, null, { stelle: "S2" })];
+    expect(zustand(anfang).nachrichten?.["N1"]?.laufzustand).toBe("ERLEDIGT");
+    const zurueck = { ...vermerk("NachrichtGesichtet", "N1", null, sichtung([["S2", "ROT"]])), undoOf: erste.id };
+    const neu = vermerk("NachrichtGesichtet", "N1", sichtung([["S2", "ROT"]]));
+    expect(zustand([...anfang, zurueck, neu]).nachrichten?.["N1"]?.laufzustand).toBe("VERTEILT");
+    // Eine Nachsichtung mit Vorher-Wert lässt die Erledigung von S2 stehen.
+    const nach = vermerk("NachrichtGesichtet", "N1", sichtung([["S2", "ROT"]], "SX"), sichtung([["S2", "ROT"]]));
+    expect(zustand([...anfang, nach]).nachrichten?.["N1"]?.laufzustand).toBe("ERLEDIGT");
   });
 });

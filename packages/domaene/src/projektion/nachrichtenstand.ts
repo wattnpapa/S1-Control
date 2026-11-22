@@ -186,13 +186,14 @@ export function ldfSchrittDer(zeile: { readonly laufzustand: Laufzustand; readon
 }
 
 /**
- * Ein beförderter Ausgang, der beim LdF auf Nachweisung und Weitergabe
- * wartet, obwohl kein LdF besetzt ist (Review 2026-11-21): Die Ersatzregel
+ * Eine Nachricht (beförderter Ausgang oder aufgenommener Eingang), die beim
+ * LdF auf Nachweisung und Weitergabe wartet, obwohl kein LdF besetzt ist (Review 2026-11-21): Die Ersatzregel
  * greift nur im Augenblick der Beförderung; ging der LdF danach, gibt ein
  * Fernmelder ihn selbst weiter. Nur `false` zählt — ohne Angabe gilt besetzt.
  */
 export function haengtBeimLdf(zeile: { readonly laufzustand: Laufzustand; readonly richtung: string; readonly befoerderung?: unknown }, ldfBesetzt: boolean | undefined): boolean {
-  return ldfBesetzt === false && zeile.richtung === "AUSGANG" && ldfSchrittDer(zeile) === "weitergabe";
+  // Review Runde 2: auch der aufgenommene Eingang — er hing sonst unsichtbar beim LdF.
+  return ldfBesetzt === false && ldfSchrittDer(zeile) === "weitergabe";
 }
 
 /** Ganze Minuten von `seit` bis `jetzt`, nie negativ; `undefined`, wenn eines fehlt. */

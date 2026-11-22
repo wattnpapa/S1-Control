@@ -130,3 +130,89 @@ describe("Funktionalität: Zurückziehen eines schon beförderten Ausgangs (Revi
     expect(warnungen.some((w) => w.includes("ist schon an OV Wildeshausen übermittelt"))).toBe(true);
   });
 });
+
+describe("Funktionalität: Eingang und zweiter Schalter (Review Runde 2)", () => {
+  const eingang = (): Nachrichtenanlage => anlage({ nachrichtId: "E-1", richtung: "EINGANG", absender: "OV Wildeshausen", anschrift: "S3", funktion: "", aufnahme: { mittel: "FUNK", zeitpunkt: jetzt(), handzeichen: "Ka" } });
+
+  it("Szenario: Geht der LdF nach der Aufnahme, gibt ein Fernmelder den Eingang selbst weiter", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    a.dienst.stellenSetzen(["FM1"], "Ka");
+    b.dienst.stellenSetzen(["LDF", "SICHTER"], "Lf");
+    await takteBis([a, b]);
+    await a.dienst.bediene(nachrichtVerfassen(eingang()));
+    await takteBis([a, b]);
+    expect(zeile(a, "E-1")?.laufzustand).toBe("VOR_LDF");
+    b.dienst.stellenSetzen(["S6"], "Lf");
+    await takteBis([a, b]);
+    const schlange = a.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-1", sicht: "fmz" });
+    expect(schlange.zeilen.map((z) => z.id)).toContain("E-1");
+    expect((await a.dienst.bediene(nachrichtWeitergeben("E-1", null, { zeitpunkt: jetzt(), handzeichen: "Ka" }))).art).toBe("geschrieben");
+    expect(zeile(a, "E-1")?.laufzustand).toBe("VOR_SICHTER");
+  });
+
+  it("Szenario: Ohne Sichter verteilt der LdF einen Eingang mit dem Laufzettel der Weitergabe — auch mit Nummer", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await grundlage(a);
+    a.dienst.stellenSetzen(["FM1"], "Ka");
+    b.dienst.stellenSetzen(["LDF"], "Lf");
+    await takteBis([a, b]);
+    await a.dienst.bediene(nachrichtVerfassen(eingang()));
+    await takteBis([a, b]);
+    const laufzettel = { zeitpunkt: jetzt(), handzeichen: "Lf", verteiler: [{ stelle: "S2", kopie: "ROT" }, { stelle: "S3", kopie: "GRUEN" }] };
+    const ergebnis = await b.dienst.bediene(nachrichtNachweisenUndWeitergeben("E-1", { nummer: 2, zeitpunkt: jetzt(), handzeichen: "Lf" }, { zeitpunkt: jetzt(), handzeichen: "Lf" }, laufzettel));
+    expect(ergebnis.art).toBe("geschrieben");
+    const z = zeile(b, "E-1");
+    expect(z).toMatchObject({ laufzustand: "VERTEILT", nummer: 2 });
+    expect(z?.verteiler.map((m) => [m.stelle, m.kopie])).toEqual(expect.arrayContaining([["S2", "ROT"], ["S3", "GRUEN"]]));
+  });
+
+  it("Szenario: „Ausgänge zum Sichter“ abschalten ohne LdF schreibt die Kopien des wartenden Ausgangs", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["FM1"], "Ka");
+    await setze(platz, "ldfStation", false);
+    await setze(platz, "sichtungAuchAusgang", true);
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, BEFOERDERUNG));
+    expect(zeile(platz)?.laufzustand).toBe("VOR_SICHTER");
+    await setze(platz, "sichtungAuchAusgang", false, true);
+    expect(zeile(platz)?.laufzustand).toBe("VERTEILT");
+  });
+});
+
+describe("Funktionalität: Hinweise und Zählung (Review Runde 2, Block 2)", () => {
+  it("Szenario: Gibt ein Fernmelder ohne LdF und Sichter weiter, sagt der Hinweis nicht „der LdF hat verteilt“", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await befoerdertBeimLdf(a, b);
+    b.dienst.stellenSetzen(["S6"], "Lf");
+    await takteBis([a, b]);
+    const ergebnis = await a.dienst.bediene(nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Ka" }));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.some((w) => w.startsWith("Kein LdF und kein Sichter besetzt"))).toBe(true);
+    expect(warnungen.some((w) => w.includes("Der LdF hat"))).toBe(false);
+  });
+
+  it("Szenario: Mit LdF, aber ohne Fernmelder sagt das Aufgeben, dass niemand überträgt", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["LDF", "S4"], "Lf");
+    const ergebnis = await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.some((w) => w.startsWith("Kein Fernmelder besetzt"))).toBe(true);
+  });
+
+  it("Szenario: Zurückziehen nach Beförderung und Verteilung nennt die Stellen und die Gegenstelle", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["FM1"], "Ka");
+    await setze(platz, "ldfStation", false);
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, BEFOERDERUNG));
+    const { nachrichtZurueckziehen } = await import("../kontrakt/nachrichtenschritte.js");
+    const ergebnis = await platz.dienst.bediene(nachrichtZurueckziehen("A-1", "Fehlanlage"));
+    const text = (ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : []).join(" ");
+    expect(text).toContain("war schon verteilt");
+    expect(text).toContain("ist schon an OV Wildeshausen übermittelt");
+  });
+});

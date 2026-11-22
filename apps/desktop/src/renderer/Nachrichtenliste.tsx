@@ -70,7 +70,9 @@ export function wegwort(zeile: Nachrichtenzeile): string {
   if (schritt === "zuteilung") return ohneLdf ? "vor der FmZ (kein LdF)" : "beim LdF (Zuteilung)";
   if (schritt === "weitergabe") return zeile.richtung === "AUSGANG" ? (ohneLdf ? "befördert, kein LdF – FmZ gibt weiter" : "beim LdF (Nachweisung)") : laufwort("VOR_LDF");
   const fm = zeile.vorschlag?.fernmelder.trim() ?? "";
-  if (zeile.laufzustand === "VOR_FMZ" && fm !== "") return `bei ${fm}`;
+  // Review Runde 2: Den zugeteilten Fernmelder besetzt gerade niemand (Präsenz, vom Worker markiert).
+  const fmFrei = (zeile as { readonly fernmelderNichtBesetzt?: unknown }).fernmelderNichtBesetzt === true;
+  if (zeile.laufzustand === "VOR_FMZ" && fm !== "") return fmFrei ? `bei ${fm} (nicht besetzt)` : `bei ${fm}`;
   return laufwort(zeile.laufzustand);
 }
 

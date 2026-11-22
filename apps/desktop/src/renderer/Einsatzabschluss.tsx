@@ -1,7 +1,7 @@
 /**
  * „Einsatz abschließen“: beenden, wiedereröffnen, Einsatzakte, archivieren.
  *
- * **Warum im Blatt „Ausgaben“ und nicht in der Führungsstelle.** Die Excel
+ * **Warum im Blatt „Exporte“ und nicht in der Führungsstelle.** Die Excel
  * führt „Speichern mit Einsatzname und Datum“ im selben Menü wie den
  * Druck und den HTML-Export — der Abschluss ist dort ein Ausgang des
  * Einsatzes, kein Teil der Stammdaten. Wer am Ende die letzten Ausdrucke

@@ -44,7 +44,8 @@ export interface Reiter {
 }
 
 export const BLAETTER: readonly Reiter[] = [
-  { schluessel: "lage", titel: "Lage" },
+  // Umbenannt 2026-11-22: „S1“ statt „Lage“, „S4“ statt „Versorgung“, „Exporte“ statt „Ausgaben“.
+  { schluessel: "lage", titel: "S1" },
   // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
   // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
   // R2-FaBe P2-1: „Eingangskorb“ statt „Eingang“ — der Fachberater suchte hier seine Nachricht;
@@ -61,9 +62,9 @@ export const BLAETTER: readonly Reiter[] = [
   // ganzen Einsatz in diesem Blatt.
   { schluessel: "funkplan", titel: "Funkplan" },
   // S4.1: zwischen Führungsstelle und Kosten, für alle sichtbar (Entscheidung 1).
-  { schluessel: "versorgung", titel: "Versorgung" },
+  { schluessel: "versorgung", titel: "S4" },
   { schluessel: "kosten", titel: "Kosten" },
-  { schluessel: "ausgaben", titel: "Ausgaben" },
+  { schluessel: "ausgaben", titel: "Exporte" },
   { schluessel: "tagebuch", titel: "Einsatztagebuch" },
   // Die Diagnose wird nicht im Betrieb gelesen, sondern wenn etwas klemmt
   // (M7.3). Sie steht deshalb nicht in der Reiterzeile, sondern im
@@ -94,7 +95,9 @@ export function blatttitel(blatt: Blatt): string {
  * der Versorgung. „alle" fehlt hier — das ist das Band, wie es bis E3 war.
  */
 const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
-  fuehrungsstelle: ["lage", "eingang", "nachrichten", "fuest", "ausgaben", "tagebuch"],
+  // 2026-11-22: Funkplan und S4 ins Band; Eingangskorb, Führungsstelle und
+  // Einsatztagebuch unter „Mehr“ (ebenso weiterhin die Kosten).
+  fuehrungsstelle: ["lage", "nachrichten", "funkplan", "versorgung", "ausgaben"],
   // Die Vermeldezentrale ist auch die FmZ: Nachrichten vor dem Funkplan (§6).
   vermeldezentrale: ["nachrichten", "funkplan", "lage", "tagebuch"],
   versorgung: ["versorgung", "lage", "ausgaben"],

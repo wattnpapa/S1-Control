@@ -60,6 +60,7 @@ export const HINWEIS_OHNE_VORSCHLAG = "Befördert, bevor der LdF einen Fernmelde
 export const HINWEIS_ZURUECK_ZUM_LDF = "Befördert: Die Nachricht liegt jetzt beim LdF zur Nachweisung und Weitergabe an den Sichter.";
 export const HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG = "Kein LdF besetzt: Nachricht nach der Beförderung direkt an den Sichter weitergegeben.";
 export const HINWEIS_LDF_VERTEILT_AUSGANG = "Kein Sichter besetzt: Der LdF hat S2 rot und den Verfasser grün verteilt.";
+export const HINWEIS_SELBST_VERTEILT_AUSGANG = "Kein LdF und kein Sichter besetzt: S2 rot und der Verfasser grün sind verteilt.";
 
 type Werte = Record<string, unknown>;
 
@@ -139,15 +140,22 @@ function wartetAufKopien(n: NachrichtZustand): boolean {
  */
 export function planeKopienBeimAbschalten(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Laufwegumfeld): Laufwegplan {
   const feld = objekt(entwurf.nutzlast)?.["feld"];
-  if (entwurf.typ !== "NachrichtenParameterGesetzt" || feld !== "ldfStation" || entwurf.neu === true || !ldfStation(zustand)) return { folgen: [], hinweise: [] };
-  if (zustand.einsatz?.sichtungAuchAusgang?.wert === true) return { folgen: [], hinweise: [] };
+  if (entwurf.typ !== "NachrichtenParameterGesetzt" || entwurf.neu !== false) return { folgen: [], hinweise: [] };
+  const sichtungAuch = zustand.einsatz?.sichtungAuchAusgang?.wert === true;
+  // LdF als Station aus: Was beim LdF oder vor dem Sichter wartet, ginge auf ERLEDIGT — außer mit „Ausgänge zum Sichter“.
+  const ldfAus = feld === "ldfStation" && ldfStation(zustand) && !sichtungAuch;
+  // Review Runde 2: „Ausgänge zum Sichter“ aus ohne LdF: Was vor dem Sichter wartet, ginge ebenso auf ERLEDIGT.
+  const sichterAus = feld === "sichtungAuchAusgang" && sichtungAuch && !ldfStation(zustand);
+  if (!ldfAus && !sichterAus) return { folgen: [], hinweise: [] };
   const folgen = Object.values(zustand.nachrichten ?? {})
     .filter(wartetAufKopien)
     .flatMap((n) => {
-      const vermerk = vermerkAus(n.befoerderung?.wert);
+      // Review Runde 2: Zeit und Handzeichen der Weitergabe, sonst der Beförderung — die Kopien folgen dem letzten Schritt.
+      const vermerk = vermerkAus(n.weitergabe?.wert) ?? vermerkAus(n.befoerderung?.wert);
       return vermerk === undefined ? [] : [kopienfolge(n, vermerk, umfeld)];
     });
-  return { folgen, hinweise: folgen.length === 0 ? [] : [`LdF als Station abgeschaltet: Kopien für ${String(folgen.length)} beförderte Ausgänge an S2 und den Verfasser verteilt.`] };
+  const was = ldfAus ? "LdF als Station" : "„Ausgänge zum Sichter“";
+  return { folgen, hinweise: folgen.length === 0 ? [] : [`${was} abgeschaltet: Kopien für ${String(folgen.length)} beförderte Ausgänge an S2 und den Verfasser verteilt.`] };
 }
 
 /**
@@ -162,7 +170,9 @@ export function planeKopienNachWeitergabe(zustand: Zustand, nachrichtId: string,
   if (nachricht.richtung.wert !== "AUSGANG" || nachricht.gespraechsnotiz?.wert === true || objekt(nachricht.sichtung?.wert) !== undefined) return undefined;
   // Review 2026-11-21: Der LdF verteilt hier als Ersatzsichter — so steht es im Tagebuch, nicht als „Kopien nach Beförderung“.
   const folge = kopienfolge(nachricht, vermerk, umfeld, projektion.GRUND_ERSATZSICHTER);
-  return { ...folge, hinweis: `${HINWEIS_LDF_VERTEILT_AUSGANG}${fachhinweis(umfeld)}` };
+  // Review Runde 2: Gibt ein Fernmelder weiter (kein LdF besetzt), hat er verteilt, nicht der LdF.
+  const durchLdf = umfeld.stellen?.includes("LDF") === true;
+  return { ...folge, hinweis: `${durchLdf ? HINWEIS_LDF_VERTEILT_AUSGANG : HINWEIS_SELBST_VERTEILT_AUSGANG}${fachhinweis(umfeld)}` };
 }
 
 function fachhinweis(umfeld: Laufwegumfeld): string {
