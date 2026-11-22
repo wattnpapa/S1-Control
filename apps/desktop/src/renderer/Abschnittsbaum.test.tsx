@@ -287,7 +287,7 @@ describe("Der Abschnittsbaum mit einem Knopf (Entlastung, 3.4)", () => {
     await zeigeBaum();
     const kopf = screen.getByRole("heading", { name: "Abschnitte" }).parentElement as HTMLElement;
     expect(within(kopf).getAllByRole("button").map((k) => k.textContent)).toEqual(["Abschnitt anlegen"]);
-    expect(within(kopf).getByRole("button").getAttribute("title")).toBe("Neuen Abschnitt anlegen (Strg+N)");
+    expect(within(kopf).getByRole("button").getAttribute("title")).toBe("Neuen Abschnitt anlegen (Strg+N, wenn der Abschnittsbaum den Fokus hat)");
     expect(screen.queryByRole("button", { name: /^Weitere Schritte für / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Hilfe zu/ })).toBeNull();
   });
@@ -397,5 +397,18 @@ describe("Der Abschnittsbaum mit einem Knopf (Entlastung, 3.4)", () => {
     expect(screen.getByRole("menuitem", { name: "Umbenennen …" }).getAttribute("title")).toBe("Einsatz beendet – nur lesen");
     fireEvent.keyDown(window, { key: "n", ctrlKey: true });
     expect(screen.queryByLabelText("Abschnitt anlegen")).toBeNull();
+  });
+
+});
+
+describe("Strg+N im Abschnittsbaum (Regression Stab-Review S1)", () => {
+  it("öffnet „Abschnitt anlegen“ nur, wenn der Fokus im Baum steht", async () => {
+    await zeigeBaum();
+    // Fokus außerhalb: Strg+N gehört der Einheitentabelle.
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    expect(screen.queryByLabelText("Abschnitt anlegen")).toBeNull();
+    screen.getByRole("button", { name: "Abschnitt anlegen" }).focus();
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    expect(await screen.findByLabelText("Abschnitt anlegen")).toBeDefined();
   });
 });

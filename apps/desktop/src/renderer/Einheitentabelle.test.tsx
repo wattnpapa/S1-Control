@@ -698,3 +698,21 @@ describe("Die Einheitentabelle", () => {
     });
   });
 });
+
+describe("Strg+N an der Einheitentabelle (Regression Stab-Review S1)", () => {
+  it("öffnet „Einheit anlegen“, aber nicht, solange der Fokus im Abschnittsbaum steht", async () => {
+    const baum = document.createElement("section");
+    baum.dataset["kuerzelbereich"] = "abschnitte";
+    const knopf = document.createElement("button");
+    baum.append(knopf);
+    document.body.append(baum);
+    await zeigeTabelle();
+    knopf.focus();
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    expect(screen.queryByRole("button", { name: "Aus Vorlage" })).toBeNull();
+    knopf.blur();
+    fireEvent.keyDown(window, { key: "n", ctrlKey: true });
+    expect((await screen.findByRole("button", { name: "Aus Vorlage" })).getAttribute("aria-pressed")).toBe("true");
+    baum.remove();
+  });
+});

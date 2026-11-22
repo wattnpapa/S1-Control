@@ -49,6 +49,22 @@ export function inEingabefeld(ziel: EventTarget | null): boolean {
 export type Kuerzelhandlungen = Partial<Record<string, () => void>>;
 
 /**
+ * Ein Bereich, in dem ein Kürzel etwas anderes heißt als im übrigen Blatt.
+ *
+ * Im Blatt „S1“ melden Abschnittsbaum und Einheitentabelle beide „anlegen“
+ * an. Strg+N öffnete deshalb beide Masken übereinander, und wer einen
+ * Einheitennamen tippte, legte einen Abschnitt an (Stab-Review S1). Jetzt
+ * entscheidet der Fokus: im Baum ein Abschnitt, sonst eine Einheit.
+ */
+export const KUERZELBEREICH_ABSCHNITTE = "abschnitte";
+
+/** Steht der Fokus in dem mit `data-kuerzelbereich` markierten Bereich? */
+export function fokusImKuerzelbereich(bereich: string): boolean {
+  const fokus = document.activeElement;
+  return fokus instanceof Element && fokus.closest(`[data-kuerzelbereich="${bereich}"]`) !== null;
+}
+
+/**
  * Ob die Ansichten darunter ihre Kürzel anmelden dürfen.
  *
  * Die Lage bleibt eingehängt, wenn ein anderes Blatt oben liegt (sie hält die

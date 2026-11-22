@@ -180,7 +180,7 @@ geht, steht grau da und nennt im Tooltip den Grund.
 Links der **Abschnittsbaum**, rechts die **Einheiten**. Jede Karte hat einen
 Hauptknopf; was einer gewählten Zeile gilt, erscheint erst mit der Wahl.
 
-Der Baum trägt oben „Abschnitt anlegen“ (Strg+N) und darunter einmal die
+Der Baum trägt oben „Abschnitt anlegen“ (Strg+N, solange der Fokus im Baum steht; sonst legt Strg+N eine Einheit an) und darunter einmal die
 Spaltenköpfe „Einh. · Fü/UFü/He“. Die Zeile **„Alle Bereiche“** nennt
 Einheiten und Ist-Stärke des Einsatzes und hebt die Wahl eines Abschnitts
 auf, ebenso Esc. Die gewählte Zeile trägt rechts **„⋯“** mit Umbenennen, Typ

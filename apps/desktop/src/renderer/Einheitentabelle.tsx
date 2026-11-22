@@ -27,7 +27,7 @@ import { Einheitenmasken } from "./Einheitenmasken.js";
 import { Untertabellen } from "./Untertabellen.js";
 import type { Tabellenansicht } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
-import { kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
+import { KUERZELBEREICH_ABSCHNITTE, fokusImKuerzelbereich, kuerzel, kuerzelText, useKuerzel } from "./tastatur.js";
 import { Einheitenkopf } from "./Einheitenkopf.js";
 import { Vokabelhinweis } from "./Vokabelhinweis.js";
 import { Einheitenzeile, type Zeilenumgebung } from "./Einheitenzeile.js";
@@ -152,8 +152,9 @@ function useTabellenkuerzel({ markiert, maske, nurLesen, zellen, setzeMaske, heb
   useKuerzel(
     useMemo(
       () => ({
+        // Im Abschnittsbaum gehört Strg+N dem Baum (tastatur.ts, KUERZELBEREICH_ABSCHNITTE).
         anlegen: () => {
-          if (!nurLesen) setzeMaske("anlegen");
+          if (!nurLesen && !fokusImKuerzelbereich(KUERZELBEREICH_ABSCHNITTE)) setzeMaske("anlegen");
         },
         verschieben: () => {
           if (!nurLesen && markiert > 0) setzeMaske("verschieben");

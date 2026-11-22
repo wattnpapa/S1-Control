@@ -29,7 +29,7 @@ import { abschnittszeichen, langform } from "./harke.js";
 import type { Kontextort } from "./Klappmenue.js";
 import { useLaden } from "./laden.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
-import { kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
+import { KUERZELBEREICH_ABSCHNITTE, fokusImKuerzelbereich, kuerzelText, kuerzel, useKuerzel } from "./tastatur.js";
 import { Zeichen } from "./zeichen.js";
 
 export interface AbschnittsbaumEigenschaften {
@@ -113,8 +113,9 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
   useKuerzel(
     useMemo(
       () => ({
+        // Strg+N gehört dem Baum nur, wenn der Fokus in ihm steht; sonst der Einheitentabelle.
         anlegen: () => {
-          if (!nurLesen) setzeMaske("anlegen");
+          if (!nurLesen && fokusImKuerzelbereich(KUERZELBEREICH_ABSCHNITTE)) setzeMaske("anlegen");
         },
         abbrechen: () => {
           if (maske !== undefined) schliesse();
@@ -133,7 +134,7 @@ export function Abschnittsbaum({ gewaehlt, aufWahl }: AbschnittsbaumEigenschafte
   };
 
   return (
-    <section aria-label="Abschnitte" className="baum">
+    <section aria-label="Abschnitte" className="baum" data-kuerzelbereich={KUERZELBEREICH_ABSCHNITTE}>
       <Baumkopf
         nurLesen={nurLesen}
         aufAnlegen={() => {
@@ -178,7 +179,7 @@ function Baumkopf({ nurLesen, aufAnlegen }: { readonly nurLesen: boolean; readon
           className="haupt"
           disabled={nurLesen}
           onClick={aufAnlegen}
-          title={nurLesen ? TEXT_NUR_LESEN : `Neuen Abschnitt anlegen (${kuerzelText(kuerzel("anlegen") as never)})`}
+          title={nurLesen ? TEXT_NUR_LESEN : `Neuen Abschnitt anlegen (${kuerzelText(kuerzel("anlegen") as never)}, wenn der Abschnittsbaum den Fokus hat)`}
         >
           Abschnitt anlegen
         </button>
