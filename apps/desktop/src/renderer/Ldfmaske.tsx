@@ -165,7 +165,7 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   const nummer = p.zeile.nummer === undefined ? p.zeile.richtungKurz : `${p.zeile.richtungKurz} ${String(p.zeile.nummer)}`;
   return (
     <Maske
-      titel={`An den Sichter weitergeben · ${nummer} ${p.zeile.betreff}`}
+      titel={`${p.zeile.nummer === undefined ? "Nachweisen und weitergeben" : "An den Sichter weitergeben"} · ${nummer} ${p.zeile.betreff}`}
       bestaetigungstext={ohneNummer && ohneNummerBestaetigt ? "Trotzdem ohne Nummer weitergeben" : "Weitergeben"}
       nurKnopf
       bereit={typeof entwurf !== "string" && !versuch.gesperrt && !vorbehalt.gesperrt}

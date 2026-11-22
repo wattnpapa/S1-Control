@@ -10,7 +10,7 @@
  * (Entscheidung 4, Vorbelegung aufgeklappt), und „Als Vordruck drucken", das
  * das PDF aus `@s1/ausgaben` im Ordner „ausgaben\nachrichten" ablegt (§7).
  *
- * Additiv (SGL P0-1): Der Kopf nennt den feinen Stand („angenommen (FmZ)",
+ * Additiv (SGL P0-1): Der Kopf nennt den feinen Stand („angenommen (Fm)",
  * „befördert"), die Marke „ohne Nummer" und den Vermerk der FmZ mit Zeit,
  * Handzeichen und Mittel. Die Ansicht öffnet auch aus dem Tagebuch
  * („Nachricht öffnen", ETB P0-1).
@@ -154,7 +154,7 @@ export function Nachrichtenansicht({ zeile, aufSchliessen, aufVordruck, vordruck
           </p>
         )}
         <Lagebezug zeile={zeile} aufLage={aufLage} aufSchliessen={aufSchliessen} />
-        {/* R2-FaBe P0-2: Beim Ausgang „angenommen (FmZ) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
+        {/* R2-FaBe P0-2: Beim Ausgang „angenommen (Fm) … · Quittung der Gegenstelle …“ bzw. „noch nicht übermittelt“. */}
         {istAusgang(zeile) ? <p className="leise">{vorschauvermerk({ art: "zeile", zeile }) ?? `FmZ: ${ausgangsvermerk(zeile)}`}</p> : zeile.fmzVermerkText !== undefined && <p className="leise">FmZ: {zeile.fmzVermerkText}</p>}
         <FmzTeil zeile={zeile} />
         <NachrichtenteilAnzeige zeile={zeile} />

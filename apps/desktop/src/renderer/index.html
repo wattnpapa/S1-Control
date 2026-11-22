@@ -4749,6 +4749,11 @@
       .nachrichtentabelle tr.zugeteilt th[scope="row"] {
         font-weight: 700;
       }
+      .zuteilungszelle {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
       .marke-zustand.fuer-sie {
         background: var(--ok-bg);
         border-color: var(--ok-text);
@@ -4848,12 +4853,19 @@
         height: 0;
         z-index: 30;
       }
+      /* Durchlauf 2026-11-22: Oben rechts verdeckte der Kasten die Kacheln
+         „Beim LdF“ und „Mit Vorrang offen“ — genau die Zahlen, die nach einer
+         Sofort-Nachricht zählen. Jetzt unten rechts über der Statuszeile,
+         unabhängig vom Scrollen; ein langer Kasten scrollt in sich. */
       .hinweisanker > .hinweiskasten {
-        position: absolute;
-        top: 0;
-        right: 0;
+        position: fixed;
+        top: auto;
+        bottom: 4.5rem;
+        right: 14px;
         left: auto;
-        width: min(42rem, calc(100vw - 28px));
+        width: min(36rem, calc(100vw - 28px));
+        max-height: 40vh;
+        overflow-y: auto;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
       }
       .hinweiskasten li button.hinweiszu {

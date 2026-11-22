@@ -86,7 +86,7 @@ describe("SGL P0-1: Stand und Vermerk der FmZ in der Zeile", () => {
     const befoerdert = [...angenommen, vermerk(3, "NachrichtBefoerdert", "A1", { mittel: "FUNK", ...zeit(3) })];
     // Der Laufzustand des Folds bleibt ERLEDIGT, die Zeile sagt „befördert" mit der Marke „ohne Nummer".
     expect(stand(befoerdert)).toMatchObject({ laufzustand: "ERLEDIGT", laufstand: "befoerdert", ohneNummer: true });
-    expect(stand(befoerdert)?.fmzVermerkText).toMatch(/^angenommen \(FmZ\) \d{4} Fm · Quittung der Gegenstelle \d{4} Fm \(Funk\)$/);
+    expect(stand(befoerdert)?.fmzVermerkText).toMatch(/^angenommen \(Fm\) \d{4} Fm · Quittung der Gegenstelle \d{4} Fm \(Funk\)$/);
     const kopien = [...befoerdert, vermerk(4, "NachrichtGesichtet", "A1", { ...zeit(4), verteiler: verteiler(["S2", "ROT"], ["S4", "GRUEN"]) })];
     expect(stand(kopien)).toMatchObject({ laufstand: "verteilt", ohneNummer: true });
     const alleErledigt = [

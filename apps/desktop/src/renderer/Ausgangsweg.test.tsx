@@ -50,7 +50,7 @@ describe("LdF: Zuteilung vor der Beförderung, Nachweisung und Weitergabe danach
   it("trägt beim Weitergeben die Nummer der Nachweisung ein, vorbelegt mit der nächsten freien", async () => {
     render(<Ldfsicht zeilen={[OHNE_NUMMER]} handzeichen="Lf" nurLesen={false} aufVorschlag={vi.fn()} naechsteNummer={7} />);
     fireEvent.click(screen.getByRole("button", { name: "Nachweisen und weitergeben" }));
-    const maske = screen.getByRole("form", { name: /An den Sichter weitergeben/ });
+    const maske = screen.getByRole("form", { name: /Nachweisen und weitergeben/ });
     expect(maske.textContent).toContain("Beförderung:");
     expect((within(maske).getByLabelText("Nummer (Nachweisung)") as HTMLInputElement).value).toBe("7");
     fireEvent.click(within(maske).getByRole("button", { name: "Weitergeben" }));

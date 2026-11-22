@@ -320,7 +320,7 @@ Ausgang zeigt, was dieser Arbeitsplatz oder eine Stelle dieser Sitzung
 verfasst hat, mit dem Stand auf dem Weg; maßgeblich ist die Stelle im Feld
 „Funktion“ der Nachricht, nicht der Text im Absender. Wer beim Schichtwechsel
 die Stelle S4 übernimmt, sieht damit auch den Ausgang des Vorgängers. Der
-Stand steht in Worten da, mit dem, was die FmZ getan hat: „angenommen (FmZ)
+Stand steht in Worten da, mit dem, was die FmZ getan hat: „angenommen (Fm)
 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“, bei einer Nachricht,
 die die FmZ noch nicht befördert hat, „… · noch nicht übermittelt“. Die
 Annahme ist die der eigenen FmZ, nicht die des Empfängers; erst die
@@ -541,8 +541,11 @@ läuft jede Nachricht der FmZ einmal über ihn. Ein Ausgang kommt gleich nach
 dem Aufgeben zu ihm, noch vor der Annahme: Er sichtet ihn und teilt ihn mit
 „Fernmelder zuteilen“ einem der Fernmelder Fm1, Fm2 oder Fm3 zu, mit Mittel
 und Gegenstelle; die Auswahl nennt, wer den Fernmelder gerade besetzt
-(„Fm2 · Meyer“). Der zugeteilte Fernmelder nimmt die Nachricht an und
-überträgt sie. Beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
+(„Fm2 · Meyer“); ist nur ein Fernmelder besetzt, steht er schon im Feld.
+Der zugeteilte Fernmelder nimmt die Nachricht an und überträgt sie. Seine
+Zuteilung kann der LdF mit „Rückgängig“ zurücknehmen, solange die Nachricht
+nicht befördert ist; danach bleibt sie stehen, und der Knopf sagt im
+Tooltip, warum. Beim Eingang prüft er nach der Aufnahme Aufnahmevermerk und
 Nummer und gibt die Nachricht an den Sichter weiter. Wer die Stelle LdF
 wählt, landet in der Sicht „LdF“ mit zwei Karten: „Ausgänge vor der
 Zuteilung“ mit dem Knopf „Fernmelder zuteilen“ und „Eingänge vor der

@@ -2,7 +2,7 @@
  * Der Vermerk der FmZ an einem Ausgang für Ausgang, Lese-Ansicht und Vorschau
  * (Audit zweite Runde R2-FaBe P0-2, R2-SGL P3-4).
  *
- * Den Wortlaut („angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha
+ * Den Wortlaut („angenommen (Fm) 1710 Fm · Quittung der Gegenstelle 1720 Ha
  * (Telefon)", ohne Beförderung „… · noch nicht übermittelt") liefert Ring 2
  * als `fmzVermerkText` (`projektion.fmzVermerkTextAus`); hier steht nur der
  * Rückgriff für eine Zeile ohne diesen Text, damit Ausgang, Ansicht und

@@ -59,7 +59,7 @@ export interface Quittungsgrundlage {
 }
 
 /**
- * „angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“ —
+ * „angenommen (Fm) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)“ —
  * derselbe Satz wie in Liste, Lese-Ansicht und Vorschau (`fmzVermerkTextAus`
  * in Ring 2), damit Bildschirm und Papier nicht zwei Wortlaute führen. Leer
  * bei einem Eingang und bei einem Ausgang, den die FmZ noch nicht angefasst hat.

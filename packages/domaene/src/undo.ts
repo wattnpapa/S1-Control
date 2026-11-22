@@ -152,6 +152,12 @@ export class Undostapel {
    * „Rückgängig“ nach dem Aufgeben einen älteren Schritt, als wäre er der letzte.
    */
   #juengster: EingehendesEreignis | undefined;
+  /**
+   * Durchlauf 2026-11-22: die Beförderungen je Nachricht, von **jedem** Client.
+   * Eine Zuteilung des LdF, nach der der Fernmelder befördert hat, ist überholt
+   * und fällt aus dem Stapel (siehe {@link ueberholt}).
+   */
+  readonly #befoerderungen = new Map<string, { readonly id: EreignisId; readonly hlc: Hlc }[]>();
 
   constructor(clientId: string, tiefe: number = UNDO_TIEFE) {
     this.#clientId = clientId;
@@ -161,10 +167,34 @@ export class Undostapel {
   /** Meldet ein gesehenes Ereignis — gleich, ob eigen oder fremd, gelesen oder geschrieben. */
   nimmAuf(ereignis: EingehendesEreignis): void {
     if (ereignis.undoOf !== undefined) this.#kompensiert.add(ereignis.undoOf);
+    this.#merkeBefoerderung(ereignis);
     if (ereignis.akteur.clientId !== this.#clientId) return;
     if (ereignis.undoOf === undefined && (this.#juengster === undefined || vergleicheHlc(ereignis.hlc, this.#juengster.hlc) > 0)) this.#juengster = ereignis;
     if (!darfAufDenStapel(ereignis)) return;
     this.#eigene.set(ereignis.id, ereignis);
+  }
+
+  #merkeBefoerderung(ereignis: EingehendesEreignis): void {
+    if (ereignis.typ !== "NachrichtBefoerdert" || ereignis.undoOf !== undefined) return;
+    const nachrichtId = nachrichtIdVon(ereignis);
+    if (nachrichtId === undefined) return;
+    const liste = this.#befoerderungen.get(nachrichtId) ?? [];
+    liste.push({ id: ereignis.id, hlc: ereignis.hlc });
+    this.#befoerderungen.set(nachrichtId, liste);
+  }
+
+  /**
+   * Ist das Ereignis eine Zuteilung (`NachrichtUebermittlungVorgeschlagen`),
+   * nach der die Nachricht befördert wurde? Dann nähme „Rückgängig“ dem
+   * Fernmelder den Auftrag weg, den er schon ausgeführt hat — die Zuteilung
+   * bleibt stehen. Wird die Beförderung zurückgenommen, gilt sie wieder.
+   * Abgeleitet allein aus Ereignissen (U3), wie der übrige Stapel.
+   */
+  ueberholt(ereignis: EingehendesEreignis): boolean {
+    if (ereignis.typ !== "NachrichtUebermittlungVorgeschlagen") return false;
+    const nachrichtId = nachrichtIdVon(ereignis);
+    const spaeter = nachrichtId === undefined ? undefined : this.#befoerderungen.get(nachrichtId);
+    return spaeter?.some((b) => !this.#kompensiert.has(b.id) && vergleicheHlc(b.hlc, ereignis.hlc) > 0) === true;
   }
 
   nimmAlleAuf(ereignisse: Iterable<EingehendesEreignis>): void {
@@ -181,7 +211,7 @@ export class Undostapel {
   get eintraege(): readonly StapelEintrag[] {
     const offen: EingehendesEreignis[] = [];
     for (const ereignis of this.#eigene.values()) {
-      if (this.#kompensiert.has(ereignis.id)) continue;
+      if (this.#kompensiert.has(ereignis.id) || this.ueberholt(ereignis)) continue;
       offen.push(ereignis);
     }
     offen.sort((a, b) => {
@@ -209,9 +239,14 @@ export class Undostapel {
    */
   juengsterOhneRuecknahme(): EingehendesEreignis | undefined {
     const juengster = this.#juengster;
-    if (juengster === undefined || this.#kompensiert.has(juengster.id) || darfAufDenStapel(juengster)) return undefined;
-    return juengster;
+    if (juengster === undefined || this.#kompensiert.has(juengster.id)) return undefined;
+    return darfAufDenStapel(juengster) && !this.ueberholt(juengster) ? undefined : juengster;
   }
+}
+
+function nachrichtIdVon(ereignis: EingehendesEreignis): string | undefined {
+  const id = nutzlastAls(ereignis)["nachrichtId"];
+  return typeof id === "string" ? id : undefined;
 }
 
 // ---------------------------------------------------------------------------

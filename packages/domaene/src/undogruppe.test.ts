@@ -76,3 +76,31 @@ describe("Undo-Gruppe", () => {
     expect(gruppenbezeichnung(obersteGruppe(einzeln.eintraege), ereignisse[0])).toBeUndefined();
   });
 });
+
+describe("Durchlauf 2026-11-22: Zuteilung nach der Beförderung", () => {
+  const zuteilung = feldEreignis(hlc(2_000_000, 1, "ldf"), 1, "NachrichtUebermittlungVorgeschlagen", { nachrichtId: "A7" }, null, { mittel: "FUNK", fernmelder: "Fm1", zeitpunkt: "2026-11-22T17:24:00Z", handzeichen: "Sch" });
+  const befoerderung = feldEreignis(hlc(2_100_000, 1, "fm1"), 1, "NachrichtBefoerdert", { nachrichtId: "A7" }, null, { mittel: "FUNK", zeitpunkt: "2026-11-22T17:26:00Z", handzeichen: "Ka" });
+
+  it("nimmt die Zuteilung des LdF aus dem Stapel, sobald der Fernmelder befördert hat, und sagt warum", () => {
+    const stapel = new Undostapel("ldf");
+    stapel.nimmAuf(zuteilung);
+    expect(stapel.oberster()?.typ).toBe("NachrichtUebermittlungVorgeschlagen");
+    stapel.nimmAuf(befoerderung);
+    expect(stapel.oberster()).toBeUndefined();
+    expect(stapel.juengsterOhneRuecknahme()?.id).toBe(zuteilung.id);
+    expect(ohneRuecknahmeHinweis("NachrichtUebermittlungVorgeschlagen")).toContain("schon befördert");
+  });
+
+  it("gibt die Zuteilung wieder frei, wenn die Beförderung zurückgenommen ist", () => {
+    const stapel = new Undostapel("ldf");
+    const ruecknahme = { ...feldEreignis(hlc(2_200_000, 2, "fm1"), 2, "NachrichtBefoerdert", { nachrichtId: "A7" }, null, null), undoOf: befoerderung.id };
+    stapel.nimmAlleAuf([zuteilung, befoerderung, ruecknahme]);
+    expect(stapel.oberster()?.typ).toBe("NachrichtUebermittlungVorgeschlagen");
+  });
+
+  it("lässt eine Zuteilung einer anderen Nachricht stehen", () => {
+    const stapel = new Undostapel("ldf");
+    stapel.nimmAlleAuf([zuteilung, feldEreignis(hlc(2_100_000, 3, "fm1"), 3, "NachrichtBefoerdert", { nachrichtId: "A8" }, null, { mittel: "FUNK", zeitpunkt: "2026-11-22T17:26:00Z", handzeichen: "Ka" })]);
+    expect(stapel.oberster()?.id).toBe(zuteilung.id);
+  });
+});
