@@ -1,5 +1,5 @@
 /**
- * Das Zweitfenster des Stärke-Monitors — die Verdrahtung (M3.5).
+ * Das Zweitfenster des Lagemonitors — die Verdrahtung (M3.5).
  *
  * {@link Monitor} ist das Bild; diese Datei besorgt ihm sein Lagebild und
  * seine Uhr. Sie ist bewusst **nicht** der Store aus `laden.ts`:

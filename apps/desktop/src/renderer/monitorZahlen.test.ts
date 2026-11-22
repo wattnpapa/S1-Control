@@ -1,5 +1,5 @@
 /**
- * Die Zahlen des Stärke-Monitors (M3.5).
+ * Die Zahlen des Lagemonitors (M3.5).
  *
  * Geprüft wird jede der drei Funktionen an ihren Rändern, denn dort sitzen
  * die Fehler, die auf einem Monitor an der Wand niemandem auffallen: ein

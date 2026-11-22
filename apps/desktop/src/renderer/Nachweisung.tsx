@@ -124,9 +124,9 @@ export function abweichung(zeile: Nachrichtenzeile): string | undefined {
   if (geliefert === false) return undefined;
   const v = zeile.vorschlag;
   const b = zeile.befoerderung;
-  if (geliefert === true && v !== undefined) return `Vorschlag des LdF: ${projektion.mittelWort(v.mittel)}`;
+  if (geliefert === true && v !== undefined) return `Zuteilung des LdF: ${projektion.mittelWort(v.mittel)}`;
   if (v === undefined || b === undefined || v.mittel === b.mittel) return undefined;
-  return `Vorschlag des LdF: ${projektion.mittelWort(v.mittel)}, befördert: ${projektion.mittelWort(b.mittel)}`;
+  return `Zuteilung des LdF: ${projektion.mittelWort(v.mittel)}, befördert: ${projektion.mittelWort(b.mittel)}`;
 }
 
 /**

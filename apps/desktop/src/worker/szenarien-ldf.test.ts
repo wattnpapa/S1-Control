@@ -229,7 +229,9 @@ describe("Funktionalität: LdF als Station", () => {
     await platz.dienst.bediene(nachrichtAnnehmen("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Fm" }));
     expect(zeile(platz, "A-1")?.laufzustand).toBe("VOR_LDF");
     const befoerdert = await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, befoerderung));
-    expect(warnungen(befoerdert)).toContain(HINWEIS_ERSATZ_LDF_AUSGANG);
+    // Review Runde 2: eine Meldung — die Weitergabe sagt, dass die Beförderung als Zuteilung gilt.
+    expect(warnungen(befoerdert)).toContain(HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG);
+    expect(warnungen(befoerdert)).not.toContain(HINWEIS_ERSATZ_LDF_AUSGANG);
     expect(zeile(platz, "A-1")?.vorschlag).toEqual({ mittel: "KURIER", fernmelder: "Fm", gegenstelle: "OV Wildeshausen", zeitpunkt: befoerderung.zeitpunkt, handzeichen: "Fm" });
   });
 

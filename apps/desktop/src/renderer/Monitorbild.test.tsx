@@ -78,7 +78,7 @@ describe("Reine Helfer der Steuerung", () => {
 describe("Der Monitor mit Ansichten", () => {
   it("beginnt mit der Stärke und übernimmt das Theme des Geräts", async () => {
     await zeichne();
-    expect(screen.getByLabelText("Stärke-Monitor")).toBeDefined();
+    expect(screen.getByLabelText("Lagemonitor")).toBeDefined();
     expect(document.documentElement.dataset["theme"]).toBe("nacht");
     expect(document.title).toBe("S1-Control — Stärke");
   });
@@ -109,7 +109,7 @@ describe("Der Monitor mit Ansichten", () => {
   it("öffnet per Rechtsklick ein eigenes Menü mit Haken an der aktiven Ansicht", async () => {
     await zeichne();
     act(() => {
-      fireEvent.contextMenu(screen.getByLabelText("Stärke-Monitor"), { clientX: 100, clientY: 80 });
+      fireEvent.contextMenu(screen.getByLabelText("Lagemonitor"), { clientX: 100, clientY: 80 });
     });
     const menue = screen.getByRole("menu", { name: "Monitor" });
     expect(screen.getByRole("menuitemradio", { name: /Stärke/ }).getAttribute("aria-checked")).toBe("true");
@@ -288,7 +288,7 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
       "Monitor Unterbringung",
       "Monitor Bereiche · Schichten",
       "Monitor Funkplan",
-      "Stärke-Monitor",
+      "Lagemonitor",
     ];
     for (const name of folge) {
       act(() => {
@@ -403,7 +403,7 @@ describe("Der Wechsel je Sachgebiet", () => {
     act(() => {
       vi.advanceTimersByTime(WECHSEL_MS);
     });
-    expect(screen.getByLabelText("Stärke-Monitor")).toBeDefined();
+    expect(screen.getByLabelText("Lagemonitor")).toBeDefined();
   });
 
   it("bietet die FmZ mit nur einer Ansicht nicht zum Wechsel an", async () => {

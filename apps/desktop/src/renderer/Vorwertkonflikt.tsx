@@ -30,7 +30,7 @@ const FELDNAME: Readonly<Record<string, string>> = {
   NachrichtBefoerdert: "Beförderung",
   NachrichtNachgewiesen: "Nummer",
   NachrichtGesichtet: "Sichtung",
-  NachrichtUebermittlungVorgeschlagen: "Übermittlungsvorschlag",
+  NachrichtUebermittlungVorgeschlagen: "Zuteilung",
   NachrichtWeitergegeben: "Weitergabe",
 };
 

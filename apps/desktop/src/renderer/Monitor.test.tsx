@@ -1,5 +1,5 @@
 /**
- * Der Stärke-Monitor als Komponente (M3.5).
+ * Der Lagemonitor als Komponente (M3.5).
  *
  * Geprüft wird, was jemand aus fünf Metern liest, und nicht, welche Elemente
  * dabei entstehen — dieselbe Linie wie in `Statuszeile.test.tsx`. Vier
@@ -126,7 +126,7 @@ describe("Monitor", () => {
 
   it("trägt seine Beschriftung für die Fensterwahl", () => {
     zeige();
-    expect(screen.getByLabelText("Stärke-Monitor")).toBeDefined();
+    expect(screen.getByLabelText("Lagemonitor")).toBeDefined();
   });
 
   it("setzt die Zahl grösser, wenn das Fenster wächst", () => {

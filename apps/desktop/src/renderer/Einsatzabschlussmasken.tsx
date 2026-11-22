@@ -49,7 +49,7 @@ export function nachrichtenOffenText(offen: Lagebild["offeneNachrichten"]): stri
   const teile = [
     [offen.vorFmz, "vor der FmZ"],
     [offen.beimLdf - (offen.beimLdfNachBefoerderung ?? 0), "beim LdF"],
-    [offen.beimLdfNachBefoerderung ?? 0, "beim LdF nach der Beförderung (ohne Nummer und Kopien)"],
+    [offen.beimLdfNachBefoerderung ?? 0, "beim LdF nach der Beförderung (Kopien noch nicht verteilt)"],
     [offen.vorSichter, "vor dem Sichter"],
     [offen.ohneNummer, "ohne Nummer"],
     [offen.ungelesenMitVorrang, "mit Vorrang ungelesen"],

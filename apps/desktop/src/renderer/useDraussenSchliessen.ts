@@ -2,7 +2,7 @@
  * Schließen bei Esc und bei einem Tipp daneben — für alles, was aufklappt.
  *
  * Gebraucht wird es an drei Stellen: der Zählregel unter der Ist-Stärke, dem
- * Fenstermenü „⋯" und der Bildschirmwahl des Stärke-Monitors. Alle drei
+ * Fenstermenü „⋯" und der Bildschirmwahl des Lagemonitors. Alle drei
  * hängen am Kopfband und sollen sich gleich verhalten; dreimal von Hand
  * gebaut, verhielte sich nach der zweiten Änderung eines davon anders.
  *

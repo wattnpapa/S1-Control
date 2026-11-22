@@ -114,7 +114,9 @@ interface ZeilenEigenschaften {
 export function nummerOhne(zeile: Pick<Nachrichtenzeile, "befoerderung"> & Partial<Pick<Nachrichtenzeile, "laufzustand" | "richtung">>, folgt: boolean): string {
   if (!folgt) return "—";
   // Review 2026-11-21: Beim LdF zur Nachweisung kommt die Nummer im nächsten Schritt.
-  if (zeile.laufzustand !== undefined && projektion.ldfSchrittDer({ ...zeile, laufzustand: zeile.laufzustand, richtung: zeile.richtung ?? "" }) === "weitergabe") return "folgt (LdF)";
+  // Review Runde 2: Läuft die Nachricht über den LdF (Zuteilung, zugeteilt, Nachweisung), trägt er die Nummer ein.
+  if (zeile.laufzustand !== undefined && projektion.ldfSchrittDer({ ...zeile, laufzustand: zeile.laufzustand, richtung: zeile.richtung ?? "" }) !== undefined) return "folgt (LdF)";
+  if (zeile.laufzustand === "VOR_FMZ" && (zeile as { readonly vorschlag?: unknown }).vorschlag !== undefined) return "folgt (LdF)";
   return zeile.befoerderung === undefined ? "folgt (FmZ)" : "ohne Nummer";
 }
 
@@ -191,6 +193,10 @@ function Zeile({ zeile, stellen, posteingang, eingangsspalte = false, gewaehlt, 
       <td>{zeile.absender}</td>
       <td>{zeile.anschrift}</td>
       {eingangsspalte && <td className="mono">{wegvermerk(zeile)}</td>}
+      {/* Review Runde 2: die Wartezeit vor dem Sichter, bernstein über der Schwelle des Vorrangs. */}
+      {eingangsspalte && (
+        <td className={zeile.sichterSchwelleUeberschritten === true ? "zahl marke-zustand warn" : "zahl"}>{zeile.wartetSeitSichter === undefined ? "—" : `${String(zeile.wartetSeitSichter)} min`}</td>
+      )}
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>
       <th scope="row" title={zeile.vermerke === undefined ? undefined : `Vermerk: ${zeile.vermerke}`}>
         {zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}
@@ -222,6 +228,7 @@ export function Nachrichtenliste({ zeilen, beschriftung, gewaehltId, ...rest }: 
           <th scope="col">Absender</th>
           <th scope="col">Anschrift</th>
           {rest.eingangsspalte === true && <th scope="col">Eingang / Beförderung</th>}
+          {rest.eingangsspalte === true && <th scope="col" className="schmalspalte">Wartet</th>}
           <th scope="col">Abfassungszeit</th>
           <th scope="col">Betreff</th>
         </tr>

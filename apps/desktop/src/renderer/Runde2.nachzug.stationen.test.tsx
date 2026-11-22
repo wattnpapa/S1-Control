@@ -160,7 +160,7 @@ describe("Fernmeldezentrale: Befördern und Nachweisen", () => {
     const maske = screen.getByRole("form");
     // R2-LdF P2-2: Das Mittel weicht vom Vorschlag ab — die Maske sagt es vorher.
     fireEvent.change(within(maske).getByLabelText("Mittel"), { target: { value: "FUNK" } });
-    expect(maske.textContent).toContain("Weicht vom Vorschlag des LdF ab: Telefon (Fm2)");
+    expect(maske.textContent).toContain("Weicht von der Zuteilung des LdF ab: Telefon (Fm2)");
     fireEvent.change(within(maske).getByLabelText(/Quittung der Gegenstelle/u), { target: { value: "1046" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
     expect((await within(maske).findByRole("alert")).textContent).toContain("Inzwischen von einem anderen Arbeitsplatz befördert: Beförderung ist jetzt 1045 Zw (Funk)");
@@ -183,8 +183,9 @@ describe("Fernmeldezentrale: Befördern und Nachweisen", () => {
     expect(document.body.textContent).toContain("ohne Vorschlag");
     expect(document.body.textContent).toContain("Verfasser = Nachweiser");
     cleanup();
-    render(<Warteschlange zeilen={[{ ...AUSGANG, laufzustand: "VOR_LDF", ldfNichtBesetzt: true } as Nachrichtenzeile]} jetzt={JETZT} gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={vi.fn()} />);
-    expect(screen.getByRole("row", { name: /Pumpen/u }).textContent).toContain("beim LdF (nicht besetzt – selbst befördern)");
+    render(<Warteschlange zeilen={[{ ...AUSGANG, laufzustand: "VOR_LDF", ldfNichtBesetzt: true } as Nachrichtenzeile]} jetzt={JETZT} gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={vi.fn()} ldfBesetzt={false} />);
+    // Review Runde 2: ein Satz über der Schlange statt einer Marke je Zeile.
+    expect(document.body.textContent).toContain("Kein LdF besetzt: Die Fernmelder befördern selbst");
   });
 
   it("fragt vor dem Befördern ohne Vorschlag des besetzten LdF (R2-LdF P2-1)", async () => {
@@ -196,7 +197,7 @@ describe("Fernmeldezentrale: Befördern und Nachweisen", () => {
     fireEvent.change(within(maske).getByLabelText(/Quittung der Gegenstelle/u), { target: { value: "1046" } });
     fireEvent.change(within(maske).getByLabelText("Nr."), { target: { value: "5" } });
     fireEvent.click(within(maske).getByRole("button", { name: "Befördern" }));
-    fireEvent.click(await within(maske).findByRole("button", { name: "Ohne Vorschlag befördern" }));
+    fireEvent.click(await within(maske).findByRole("button", { name: "Ohne Zuteilung befördern" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
     expect(entwuerfe()[0]?.typ).toBe("NachrichtBefoerdert");
   });
@@ -246,7 +247,7 @@ describe("Am Rand: Hinweiskasten, Statuszeile, Stelle, Druck, Rückgängig", () 
   it("nimmt den Wortlaut des Vorbehalts aus dem Kontrakt (R2-FaBe P2-7) und nennt den unbesetzten LdF im Band (R2-LdF P3-3)", () => {
     expect(vorbehaltstext("befoerderung")).toBe(vorbehaltstextFuer("befoerderung"));
     render(<Nachrichtenband lage={{ neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, vorLdf: 2, mitVorrangOffen: 0, ueberSchwelle: 0 }} ldfBesetzt={false} />);
-    expect(screen.getByText("vor dem LdF (nicht besetzt)")).toBeDefined();
+    expect(screen.getByText("beim LdF (nicht besetzt)")).toBeDefined();
   });
 
   it("nennt „Rückgängig“ nach dem Bedienschritt mit Folgen (R2-LdF P2-8)", () => {

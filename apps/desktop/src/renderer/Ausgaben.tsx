@@ -1,17 +1,20 @@
 /**
  * Die Kernausgaben in der Oberfläche (M4.1).
  *
- * Die Ausgaben der Meilensteine M4 und M5: Druck, Status und Einheitenliste
- * je als HTML und als PDF, die Auswertung und der Oldenburger Block als XLSX,
- * das Logistikblatt als PDF und als Wertekopie. Jede entspricht einem Blatt der
- * Vorlage; keine rechnet selbst.
+ * Druck, Status, Einheitenliste und die übrigen Blätter der Vorlage, je als
+ * PDF, HTML oder XLSX. Keine rechnet selbst. Welche es gibt und in welcher
+ * Gruppe sie stehen, steht in `Ausgabenkatalog.ts`; hier wird nur gezeichnet.
+ *
+ * **Aufbau.** Oben die zuletzt erzeugte Datei, damit sie nach dem Klick ohne
+ * Scrollen sichtbar ist. Darunter je Anlass eine Tabelle: eine Zeile je
+ * Ausgabe mit kurzem Zweck, die Formate in festen Spalten. Dann der
+ * HTML-Monitor, der kein einmaliger Export ist, sondern sich fortschreibt.
+ * Ganz unten und deutlich abgesetzt der Abschluss des Einsatzes.
  *
  * **Der Pfad wird genannt.** Ein „fertig“ ohne Pfad zwingt den Bediener, die
  * Datei zu suchen; sie liegt im Ordner `ausgaben\` des Einsatzes auf dem
- * Share (KONZEPT-SPEICHER.md §1.4), und der ist im Zweifel drei Klicks weit
- * weg. Daneben stehen „Öffnen“, „Ordner zeigen“ und bei HTML „Drucken“
- * (`Ausgabedatei.tsx`); darunter der Abschluss des Einsatzes
- * (`Einsatzabschluss.tsx`).
+ * Share (KONZEPT-SPEICHER.md §1.4). Daneben stehen „Öffnen“, „Ordner zeigen“
+ * und bei HTML „Drucken“ (`Ausgabedatei.tsx`).
  */
 
 import { useState } from "react";
@@ -21,196 +24,164 @@ import { ORGANISATIONEN } from "@s1/domaene";
 import type { Ausgabeergebnis } from "../kontrakt/index.js";
 import { useLaden } from "./laden.js";
 import { Ausgabedatei } from "./Ausgabedatei.js";
+import {
+  AUSGABEGRUPPEN,
+  FORMATSPALTEN,
+  knopfname,
+  type Ausgabeart,
+  type Ausgabeformat,
+  type Ausgabegruppe,
+  type Ausgabezeile,
+} from "./Ausgabenkatalog.js";
 import { Einsatzabschluss } from "./Einsatzabschluss.js";
+
+type Erzeuge = (ausgabe: Ausgabeart, format: Ausgabeformat) => void;
 
 export function Ausgaben(): React.JSX.Element {
   const laden = useLaden();
   const [organisation, setzeOrganisation] = useState("THW");
   const [erzeugt, setzeErzeugt] = useState<Ausgabeergebnis | undefined>(undefined);
 
-  function erzeuge(
-    ausgabe:
-      | "druck"
-      | "status"
-      | "auswertung"
-      | "oldenburg"
-      | "log"
-      | "logfrei"
-      | "kosten"
-      | "fueorg"
-      | "einheitenliste"
-      | "anforderungen"
-      | "tagebuch"
-      | "funkplan"
-      | "papier",
-    format: "html" | "pdf" | "xlsx",
-  ): void {
+  const erzeuge: Erzeuge = (ausgabe, format) => {
     setzeErzeugt(undefined);
     void (async () => {
-      const ergebnis = await laden.erzeugeAusgabe(
-        ausgabe,
-        format,
-        ausgabe === "druck" ? organisation : undefined,
-      );
+      const ergebnis = await laden.erzeugeAusgabe(ausgabe, format, ausgabe === "druck" ? organisation : undefined);
       if (ergebnis === undefined) return;
       setzeErzeugt(ergebnis);
     })();
-  }
+  };
 
   return (
     <section aria-label="Exporte" className="ausgaben">
-      <h2>Exporte</h2>
-      <label className="schalter" title="Die Ausgaben weisen zusätzlich die Stärke dieser Organisation aus">
-        Davon Stärke der Organisation
-        <select
-          value={organisation}
-          onChange={(e) => {
-            setzeOrganisation(e.target.value);
-          }}
-        >
-          {ORGANISATIONEN.map((eintrag) => (
-            <option key={eintrag} value={eintrag}>
-              {eintrag}
-            </option>
+      <div className="ausgabenkopf">
+        <h2>Exporte</h2>
+        <span className="hinweistext">Jede Datei wird im Ordner „ausgaben“ des Einsatzes abgelegt.</span>
+      </div>
+      <div className="ausgabeergebnis" aria-live="polite">
+        {erzeugt !== undefined && (
+          <Ausgabedatei pfad={erzeugt.pfad} vorsatz="Geschrieben" zusatz={`${String(erzeugt.bytes)} Bytes`} />
+        )}
+        {erzeugt?.weitere?.map((datei) => (
+          <Ausgabedatei key={datei.pfad} pfad={datei.pfad} vorsatz="Dazu geschrieben" zusatz={`${String(datei.bytes)} Bytes`} />
+        ))}
+      </div>
+      <div className="ausgabegruppen">
+        {AUSGABEGRUPPEN.map((gruppe) => (
+          <Gruppentabelle
+            key={gruppe.titel}
+            gruppe={gruppe}
+            erzeuge={erzeuge}
+            organisationswahl={<Organisationswahl wert={organisation} setze={setzeOrganisation} />}
+          />
+        ))}
+      </div>
+      <HtmlMonitor organisation={organisation} />
+      <Einsatzabschluss />
+    </section>
+  );
+}
+
+interface GruppentabelleEigenschaften {
+  readonly gruppe: Ausgabegruppe;
+  readonly erzeuge: Erzeuge;
+  readonly organisationswahl: React.JSX.Element;
+}
+
+function Gruppentabelle({ gruppe, erzeuge, organisationswahl }: GruppentabelleEigenschaften): React.JSX.Element {
+  return (
+    <section className="ausgabegruppe" aria-label={gruppe.titel}>
+      <table className="ausgabetabelle">
+        <caption>{gruppe.titel}</caption>
+        <tbody>
+          {gruppe.zeilen.map((zeile) => (
+            <tr key={zeile.ausgabe}>
+              <th scope="row">
+                <span className="ausgabename">{zeile.name}</span>
+                <span className="hinweistext">{zeile.zweck}</span>
+                {zeile.mitOrganisation === true && organisationswahl}
+              </th>
+              {FORMATSPALTEN.map((format) => (
+                <td key={format} className="ausgabeformat">
+                  <Formatknopf zeile={zeile} format={format} erzeuge={erzeuge} />
+                </td>
+              ))}
+            </tr>
           ))}
-        </select>
-      </label>
-      <button type="button" onClick={() => { erzeuge("druck", "pdf"); }}>
-        Druck als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("druck", "html"); }}>
-        Druck als HTML
-      </button>
-      <button type="button" onClick={() => { erzeuge("status", "pdf"); }}>
-        Status als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("status", "html"); }}>
-        Status als HTML
-      </button>
-      {/* Die Einheitenliste ist das Blatt „Stärke“ auf Papier: alle Bereiche
-          mit Zwischensumme, darunter jede Einheit. Der Druck sagt „wie viele
-          wo“, sie sagt „wer genau“ — die Rückfallebene, wenn der Rechner
-          ausfällt, und die Unterlage für die Lagebesprechung. */}
-      <button type="button" onClick={() => { erzeuge("einheitenliste", "pdf"); }}>
-        Einheitenliste als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("einheitenliste", "html"); }}>
-        Einheitenliste als HTML
-      </button>
-      {/* Die Auswertung ist die einzige Ausgabe, die die Bereichszugehörigkeit
-          als Attribut führt — erst damit lässt sich filtern und
-          weiterrechnen (M4.2, `excel-domaenenmodell.md` §4.4). */}
-      <button type="button" onClick={() => { erzeuge("auswertung", "xlsx"); }}>
-        Auswertung als XLSX
-      </button>
-      {/* Das Logistikblatt (M5.1) beantwortet eine Frage, die die
-          Einheitenliste nicht beantwortet: wie viele wo. Deshalb eine Zeile je
-          Bereich (`excel-domaenenmodell.md` §4.3). Die Wertekopie daneben ist
-          die Fassung zum Weiterschicken — die Vorlage lässt sie ungeschützt. */}
-      <button type="button" onClick={() => { erzeuge("log", "pdf"); }}>
-        Logistik als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("log", "html"); }}>
-        Logistik als HTML
-      </button>
-      <button
-        type="button"
-        title="Wertekopie der Logistik ohne Blattschutz, zum Weiterschicken und Weiterrechnen"
-        onClick={() => { erzeuge("logfrei", "xlsx"); }}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+interface FormatknopfEigenschaften {
+  readonly zeile: Ausgabezeile;
+  readonly format: Ausgabeformat;
+  readonly erzeuge: Erzeuge;
+}
+
+/** Der Knopf zeigt nur das Format; der zugängliche Name nennt die ganze Ausgabe. */
+function Formatknopf({ zeile, format, erzeuge }: FormatknopfEigenschaften): React.JSX.Element | null {
+  const angebot = zeile.formate.find((eintrag) => eintrag.format === format);
+  if (angebot === undefined) return null;
+  const name = knopfname(zeile, angebot);
+  return (
+    <button
+      type="button"
+      aria-label={name}
+      title={angebot.titel ?? name}
+      onClick={() => { erzeuge(angebot.ausgabe ?? zeile.ausgabe, format); }}
+    >
+      {format.toUpperCase()}
+      {angebot.zusatz !== undefined && <span className="formatzusatz">{angebot.zusatz}</span>}
+    </button>
+  );
+}
+
+function Organisationswahl({ wert, setze }: { wert: string; setze(wert: string): void }): React.JSX.Element {
+  return (
+    <label className="schalter" title="Der Druck weist zusätzlich die Stärke dieser Organisation aus">
+      Davon-Stärke
+      <select
+        value={wert}
+        onChange={(e) => {
+          setze(e.target.value);
+        }}
       >
-        Logistik als XLSX (ungeschützt)
-      </button>
-      {/* Die Führungsharke (M8.3) ist das Gegenstück zum Blatt „FüOrg“ der
-          Excel — und dort ein reines Zeichenblatt. Gezeichnet wird hier, was
-          im Abschnittsbaum bedient wird; einen zweiten Editor gibt es nicht,
-          weil die Ereignisse nur eine Struktur kennen (§5.3). */}
-      <button type="button" onClick={() => { erzeuge("fueorg", "pdf"); }}>
-        Führungsorganisation als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("fueorg", "html"); }}>
-        Führungsorganisation als HTML
-      </button>
-      {/* Die Kostenübersicht (M5.2) ist der einzige Ausdruck, der nicht an
-          die Wand gehört, sondern in die Abrechnung. */}
-      <button type="button" onClick={() => { erzeuge("kosten", "pdf"); }}>
-        Kosten als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("kosten", "html"); }}>
-        Kosten als HTML
-      </button>
-      {/* Anforderungen und Tagebuch auf Papier: mit Seitenzahl, Stand und freier
-          Notizspalte — die Übergabe an die nächste Schicht und die Rückfallebene. */}
-      <button type="button" onClick={() => { erzeuge("anforderungen", "pdf"); }}>
-        Anforderungen als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("anforderungen", "html"); }}>
-        Anforderungen als HTML
-      </button>
-      <button type="button" onClick={() => { erzeuge("tagebuch", "pdf"); }}>
-        Tagebuch als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("tagebuch", "html"); }}>
-        Tagebuch als HTML
-      </button>
-      {/* Der Funkplan hängt am Platz der Sprechfunker: je Rufgruppe die
-          Teilnehmer, darunter leere Zeilen zum Weiterführen mit Stift, wenn
-          der Rechner steht. Bedient wird er im Blatt „Funkplan“. */}
-      <button type="button" onClick={() => { erzeuge("funkplan", "pdf"); }}>
-        Funkplan als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("funkplan", "html"); }}>
-        Funkplan als HTML
-      </button>
-      {/* Leere Vordrucke für den Betrieb ohne Rechner: Meldeblock, Einheitenliste,
-          Funkprotokoll, Funkplan. Sie hängen an keinem Datenstand und lassen sich vorab
-          ausdrucken und kopieren. Dazu der leere Nachrichtenvordruck als eigenes PDF
-          (A4 quer, zwei Vordrucke; N3, Entscheidung 9), das daneben genannt wird. */}
-      <button type="button" onClick={() => { erzeuge("papier", "pdf"); }}>
-        Papier-Vordruck als PDF
-      </button>
-      <button type="button" onClick={() => { erzeuge("papier", "html"); }}>
-        Papier-Vordruck als HTML
-      </button>
-      {/* Der Oldenburger Block (M4.2) ist derselbe Bestand in der
-          Spaltenordnung der Vorlage — zum Einfügen in die gewohnte Excel.
-          Er steht neben der Auswertung und nicht an ihrer Stelle: Die eine
-          ist unsere Ausgabe, der andere der Übergabeweg. */}
-      <button
-        type="button"
-        title="Alle Einheiten in der Spaltenordnung der bisherigen Excel-Vorlage, zum Einfügen dort"
-        onClick={() => { erzeuge("oldenburg", "xlsx"); }}
-      >
-        Oldenburger Block als XLSX
-      </button>
-      <span className="hinweistext">
-        „Oldenburger Block“: alle Einheiten in der Spaltenreihenfolge der bisherigen Excel-Vorlage. „Ungeschützt“:
-        Logistik als reine Wertetabelle zum Weitergeben.
-      </span>
-      {/* Der HTML-Monitor (M4.3) ist keine einmalige Ausgabe, sondern eine
-          Datei, die sich fortschreibt — deshalb ein Schalter und kein Knopf.
-          Nicht zu verwechseln mit dem Stärke-Monitor aus M3.5: Der ist ein
-          Fenster dieser Anwendung, dieser hier eine Datei für ein fremdes
-          Gerät. */}
+        {ORGANISATIONEN.map((eintrag) => (
+          <option key={eintrag} value={eintrag}>
+            {eintrag}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+/**
+ * Der HTML-Monitor (M4.3) ist keine einmalige Ausgabe, sondern eine Datei,
+ * die sich fortschreibt — deshalb ein Schalter und kein Knopf. Nicht zu
+ * verwechseln mit dem Lagemonitor aus M3.5: Der ist ein Fenster dieser
+ * Anwendung, dieser hier eine Datei für ein fremdes Gerät.
+ */
+function HtmlMonitor({ organisation }: { organisation: string }): React.JSX.Element {
+  const htmlMonitor = useLaden((zustand) => zustand.htmlMonitor);
+  const schalteHtmlMonitor = useLaden((zustand) => zustand.schalteHtmlMonitor);
+  return (
+    <section className="ausgabemonitor" aria-label="Fortlaufende Ausgabe">
+      <h3>Fortlaufend</h3>
       <label className="schalter">
         <input
           type="checkbox"
-          checked={laden.htmlMonitor !== undefined}
+          checked={htmlMonitor !== undefined}
           onChange={(e) => {
-            void laden.schalteHtmlMonitor(e.target.checked, false, organisation);
+            void schalteHtmlMonitor(e.target.checked, false, organisation);
           }}
         />
         HTML-Monitor für ein zweites Gerät
       </label>
-      {laden.htmlMonitor !== undefined && (
-        <p className="hinweistext">Monitorseite: {laden.htmlMonitor}</p>
-      )}
-      {erzeugt !== undefined && (
-        <Ausgabedatei pfad={erzeugt.pfad} vorsatz="Geschrieben" zusatz={`${String(erzeugt.bytes)} Bytes`} />
-      )}
-      {erzeugt?.weitere?.map((datei) => (
-        <Ausgabedatei key={datei.pfad} pfad={datei.pfad} vorsatz="Dazu geschrieben" zusatz={`${String(datei.bytes)} Bytes`} />
-      ))}
-      <Einsatzabschluss />
+      <span className="hinweistext">
+        {htmlMonitor === undefined ? "Schreibt die Stärke laufend in eine Datei, die ein anderes Gerät anzeigen kann." : `Monitorseite: ${htmlMonitor}`}
+      </span>
     </section>
   );
 }

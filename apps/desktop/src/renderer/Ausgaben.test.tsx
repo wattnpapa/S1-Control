@@ -6,7 +6,7 @@
  * in der Datei steht, prüfen die Ausgaben selbst und ihr Goldfile.
  */
 
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
@@ -15,6 +15,11 @@ import { useLaden } from "./laden.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 
 afterEach(cleanup);
+
+/** Die zugänglichen Namen aller Knöpfe in Dokumentreihenfolge. */
+function knopfnamen(): (string | null)[] {
+  return screen.getAllByRole("button").map((knopf) => knopf.getAttribute("aria-label") ?? knopf.textContent);
+}
 
 let attrappe: Attrappe;
 
@@ -27,7 +32,7 @@ beforeEach(() => {
 describe("Die Einheitenliste in den Ausgaben", () => {
   it("steht als PDF und als HTML in der Reihe der anderen Ausgaben", () => {
     render(<Ausgaben />);
-    const knoepfe = screen.getAllByRole("button").map((knopf) => knopf.textContent);
+    const knoepfe = knopfnamen();
     expect(knoepfe).toContain("Einheitenliste als PDF");
     expect(knoepfe).toContain("Einheitenliste als HTML");
     // Neben Druck und Status, nicht irgendwo hinten: Es sind die drei
@@ -58,7 +63,7 @@ describe("Die Einheitenliste in den Ausgaben", () => {
 describe("Der Funkplan in den Ausgaben", () => {
   it("steht als PDF und als HTML vor dem Papier-Vordruck und ruft die Ausgabe „funkplan“", async () => {
     render(<Ausgaben />);
-    const knoepfe = screen.getAllByRole("button").map((knopf) => knopf.textContent);
+    const knoepfe = knopfnamen();
     expect(knoepfe.indexOf("Funkplan als HTML")).toBe(knoepfe.indexOf("Papier-Vordruck als PDF") - 1);
     await userEvent.click(screen.getByRole("button", { name: "Funkplan als HTML" }));
     await waitFor(() => {
@@ -130,6 +135,42 @@ describe("Öffnen, Ordner zeigen und Drucken an der erzeugten Ausgabe", () => {
     await userEvent.click(await screen.findByRole("button", { name: "Öffnen" }));
     await waitFor(() => {
       expect(useLaden.getState().hinweise.map((h) => h.text)).toContain("Die Datei ließ sich nicht öffnen: kein Programm");
+    });
+  });
+});
+
+describe("Die Gliederung der Exporte", () => {
+  it("ordnet die Ausgaben nach Anlass in benannte Gruppen", () => {
+    render(<Ausgaben />);
+    for (const titel of ["Lagebesprechung", "Logistik und Abrechnung", "Protokolle und Funk", "Betrieb ohne Rechner"]) {
+      expect(screen.getByRole("region", { name: titel })).toBeDefined();
+    }
+    const lage = screen.getByRole("region", { name: "Lagebesprechung" });
+    expect(within(lage).getByRole("button", { name: "Druck als PDF" })).toBeDefined();
+    expect(within(lage).queryByRole("button", { name: "Kosten als PDF" })).toBeNull();
+  });
+
+  it("zeigt am Knopf nur das Format und nennt die Ausgabe im zugänglichen Namen", () => {
+    render(<Ausgaben />);
+    expect(screen.getByRole("button", { name: "Tagebuch als PDF" }).textContent).toBe("PDF");
+    expect(screen.getByRole("button", { name: "Oldenburger Block als XLSX" }).textContent).toBe("XLSX");
+  });
+
+  it("ruft für die ungeschützte Logistik die Wertekopie", async () => {
+    render(<Ausgaben />);
+    await userEvent.click(screen.getByRole("button", { name: "Logistik als XLSX (ungeschützt)" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("ausgabeErzeugen")).toMatchObject({ ausgabe: "logfrei", format: "xlsx" });
+    });
+  });
+
+  it("gibt die gewählte Davon-Stärke nur dem Druck mit", async () => {
+    render(<Ausgaben />);
+    const lage = screen.getByRole("region", { name: "Lagebesprechung" });
+    await userEvent.selectOptions(within(lage).getByRole("combobox"), "FEUERWEHR");
+    await userEvent.click(screen.getByRole("button", { name: "Druck als HTML" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("ausgabeErzeugen")).toMatchObject({ ausgabe: "druck", organisation: "FEUERWEHR" });
     });
   });
 });

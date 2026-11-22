@@ -60,7 +60,7 @@ export function Befoerderungszusatz({ zeile, nummer, aufNummer, warnung, ohneNum
           </p>
           <label>
             Nr.
-            <input value={nummer} inputMode="numeric" className="mono" title="Vorbelegt mit der nächsten Nummer; leer lassen nur, wenn die Nummer später vergeben wird" onChange={(ev) => aufNummer(ev.target.value)} />
+            <input value={nummer} inputMode="numeric" className="mono" title={durchLdf ? "Die Nummer trägt der LdF bei der Weitergabe ein; nur eintragen, wenn sie schon feststeht" : "Vorbelegt mit der nächsten Nummer; leer lassen nur, wenn die Nummer später vergeben wird"} onChange={(ev) => aufNummer(ev.target.value)} />
           </label>
         </>
       )}

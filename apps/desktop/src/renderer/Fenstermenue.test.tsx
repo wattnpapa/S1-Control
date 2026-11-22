@@ -3,8 +3,9 @@
  *
  * Geprüft wird es dort, wo es steht — im Kopfband —, weil es seine Einträge
  * davon abhängig macht, ob ein Einsatz offen ist. Was früher als Knopf im
- * Band stand (Hilfe, Themenschalter, Abmelden, Einsatzauswahl, Stärke-Monitor,
- * Reiter Diagnose), wird hier über das Menü gefunden.
+ * Band stand (Hilfe, Themenschalter, Abmelden, Einsatzauswahl, Reiter
+ * Diagnose), wird hier über das Menü gefunden. Der Lagemonitor hat dagegen
+ * ein eigenes Symbol im Band und steht nicht mehr im Menü.
  */
 
 import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
@@ -151,10 +152,10 @@ describe("Das Fenstermenü", () => {
     expect(waehleTheme).toHaveBeenCalledWith("feld");
   });
 
-  it("führt Monitor, Diagnose und „Einsatz schließen“ nur mit offenem Einsatz", async () => {
+  it("führt Diagnose und „Einsatz schließen“ nur mit offenem Einsatz", async () => {
     zeige({ lagebild: undefined });
     const menue = await oeffneMenue();
-    expect(within(menue).queryByRole("menuitem", { name: /Stärke-Monitor/ })).toBeNull();
+    expect(within(menue).queryByRole("menuitem", { name: /Lagemonitor/ })).toBeNull();
     expect(within(menue).queryByRole("menuitem", { name: "Diagnose" })).toBeNull();
     expect(within(menue).queryByRole("menuitem", { name: "Einsatz schließen" })).toBeNull();
   });
@@ -183,13 +184,44 @@ describe("Das Fenstermenü", () => {
     expect(formular?.getAttribute("action")).toBe("abmeldung");
   });
 
-  it("öffnet den Stärke-Monitor in Electron über die Bildschirmwahl", async () => {
-    attrappe.antwortet("bildschirmeAuflisten", [{ id: "2", name: "Beamer", breite: 1920, hoehe: 1080, primaer: false }]);
+  it("führt den Lagemonitor nicht mehr im Menü", async () => {
     zeige({ zurueckZurAuswahl: () => undefined });
     const menue = await oeffneMenue();
-    await userEvent.click(within(menue).getByRole("menuitem", { name: "Stärke-Monitor öffnen …" }));
-    expect(screen.queryByRole("menu")).toBeNull();
-    const wahl = screen.getByRole("dialog", { name: "Stärke-Monitor öffnen" });
+    expect(within(menue).queryByRole("menuitem", { name: /monitor/i })).toBeNull();
+  });
+});
+
+describe("Der Knopf „Lagemonitor“ im Kopfband", () => {
+  function zeige(teil: Partial<Parameters<typeof Kopfband>[0]> = {}): void {
+    render(
+      <Kopfband
+        lagebild={LAGEBILD}
+        jetzt={JETZT}
+        theme="standard"
+        waehleTheme={() => undefined}
+        aufHilfe={() => undefined}
+        {...teil}
+      />,
+    );
+  }
+
+  it("steht nur mit offenem Einsatz da, links neben dem Fenstermenü", () => {
+    zeige();
+    expect(screen.queryByRole("button", { name: "Lagemonitor öffnen" })).toBeNull();
+    cleanup();
+    zeige({ zurueckZurAuswahl: () => undefined });
+    const knopf = screen.getByRole("button", { name: "Lagemonitor öffnen" });
+    const menueknopf = screen.getByRole("button", { name: "Fenstermenü" });
+    expect(knopf.compareDocumentPosition(menueknopf) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it("öffnet in Electron die Bildschirmwahl und dort den Monitor", async () => {
+    attrappe.antwortet("bildschirmeAuflisten", [{ id: "2", name: "Beamer", breite: 1920, hoehe: 1080, primaer: false }]);
+    zeige({ zurueckZurAuswahl: () => undefined });
+    const knopf = screen.getByRole("button", { name: "Lagemonitor öffnen" });
+    await userEvent.click(knopf);
+    expect(knopf.getAttribute("aria-expanded")).toBe("true");
+    const wahl = screen.getByRole("dialog", { name: "Lagemonitor öffnen" });
     await userEvent.click(await within(wahl).findByRole("button", { name: /Beamer/ }));
     await waitFor(() => {
       expect(attrappe.letzterRuf("monitorOeffnen")).toEqual({ art: "monitorOeffnen", bildschirmId: "2" });
@@ -197,12 +229,20 @@ describe("Das Fenstermenü", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
-  it("öffnet den Stärke-Monitor im Browser direkt in einem neuen Fenster", async () => {
+  it("schließt die Bildschirmwahl mit einem zweiten Klick auf den Knopf", async () => {
+    zeige({ zurueckZurAuswahl: () => undefined });
+    const knopf = screen.getByRole("button", { name: "Lagemonitor öffnen" });
+    await userEvent.click(knopf);
+    expect(screen.getByRole("dialog", { name: "Lagemonitor öffnen" })).toBeDefined();
+    await userEvent.click(knopf);
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("öffnet im Browser direkt ein neues Fenster", async () => {
     useLaden.setState({ umgebung: { ...UMGEBUNG, plattform: "web", electron: "keine" } });
     const auf = vi.spyOn(window, "open").mockReturnValue({ closed: false, focus: vi.fn() } as unknown as Window);
     zeige({ zurueckZurAuswahl: () => undefined });
-    const menue = await oeffneMenue();
-    await userEvent.click(within(menue).getByRole("menuitem", { name: "Stärke-Monitor öffnen …" }));
+    await userEvent.click(screen.getByRole("button", { name: "Lagemonitor öffnen" }));
     expect(auf).toHaveBeenCalledWith("#monitor", "s1control-monitor");
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(attrappe.rufeDerArt("bildschirmeAuflisten")).toHaveLength(0);

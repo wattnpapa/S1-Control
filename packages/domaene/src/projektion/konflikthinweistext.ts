@@ -86,7 +86,7 @@ export function konflikthinweisText(hinweis: Konflikthinweis, zeilen: ReadonlyMa
 const FELD_WORT: Readonly<Record<string, string>> = {
   aufnahme: "Aufnahme",
   annahme: "Annahme",
-  vorschlag: "Vorschlag",
+  vorschlag: "Zuteilung",
   befoerderung: "Beförderung",
   nachweis: "Nummer",
   weitergabe: "Weitergabe",

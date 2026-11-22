@@ -14,6 +14,7 @@
  * arbeiten, und der Fold hält sie dann als wartende Beobachtung (§3.11).
  */
 
+import type { Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
@@ -71,4 +72,17 @@ export function pruefeNachricht(entwurf: Ereignisentwurf): string | undefined {
     ...(entwurf.nutzlast === undefined ? {} : { nutzlast: entwurf.nutzlast }),
     ...(entwurf.neu === undefined ? {} : { neu: entwurf.neu }),
   });
+}
+
+/**
+ * Review Runde 2: Ein Schritt auf eine Nachricht, die es (in diesem Zustand)
+ * nicht gibt — etwa nach einer abgewiesenen Aufnahme — stand sonst als
+ * „Nachricht E 1 nachgewiesen …: ? an ?“ im Tagebuch. Nur die Anlage selbst
+ * darf eine neue Kennung bringen.
+ */
+export function unbekannteNachricht(zustand: Pick<Zustand, "nachrichten">, entwurf: Ereignisentwurf): string | undefined {
+  if (!ARTEN.has(entwurf.typ) || entwurf.typ === "NachrichtVerfasst" || entwurf.undoOf !== undefined) return undefined;
+  const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
+  if (typeof nachrichtId !== "string" || zustand.nachrichten?.[nachrichtId] !== undefined) return undefined;
+  return `Die Nachricht ${nachrichtId} gibt es in diesem Einsatz nicht (mehr) — bitte die Ansicht neu laden.`;
 }

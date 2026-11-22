@@ -529,8 +529,38 @@
         position: relative;
         margin-left: auto;
       }
-      .kopfband .zustandsmarke + .fenstermenue {
+      .kopfband .zustandsmarke ~ .fenstermenue,
+      .kopfband .zustandsmarke ~ .monitorknopfhuelle {
         margin-left: 0;
+      }
+      /* Der Lagemonitor (Monitorknopf.tsx): ein Symbol links neben „⋯",
+         gleich gross und gleich gerahmt. Ohne Zustandsmarke schiebt er
+         sich selbst nach rechts. */
+      .kopfband .monitorknopfhuelle {
+        position: relative;
+        margin-left: auto;
+      }
+      .kopfband .monitorknopfhuelle + .fenstermenue {
+        margin-left: 0;
+      }
+      .kopfband .monitorknopf {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--knopfhoehe);
+        height: var(--knopfhoehe);
+        padding: 0;
+        border: var(--rahmenbreite) solid var(--kopfband-text);
+        background: transparent;
+        color: var(--kopfband-text);
+      }
+      .kopfband .monitorknopf .symbol {
+        width: 20px;
+        height: 20px;
+      }
+      .kopfband .monitorknopf[aria-expanded="true"] {
+        background: var(--kopfband-text);
+        color: var(--kopfband-bg);
       }
       .kopfband .fenstermenueknopf {
         width: var(--knopfhoehe);
@@ -3795,48 +3825,128 @@
 
       .ausgaben {
         display: flex;
-        align-items: baseline;
-        flex-wrap: wrap;
-        gap: 0.5rem;
+        flex-direction: column;
+        gap: 0.75rem;
         margin-top: 1.5rem;
         padding-top: 0.5rem;
         border-top: 1px solid var(--rahmen);
       }
+      .ausgabenkopf {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.75rem;
+      }
       .ausgaben h2 {
-        margin: 0 0.5rem 0 0;
+        margin: 0;
       }
       .ausgaben select {
         display: inline;
         width: auto;
       }
-      /* Der Pfad steht in voller Breite unter den Knoepfen und bricht um:
-         Er ist lang, und abgeschnitten hilft er niemandem. */
       .ausgaben p {
-        flex-basis: 100%;
         margin: 0.3rem 0 0;
         word-break: break-all;
       }
-      /* Die erzeugte Datei: Pfad und Knoepfe auf einer Zeile, ebenfalls in
-         voller Breite (Ausgabedatei.tsx). */
+      /* Die erzeugte Datei steht oben, damit sie nach dem Klick ohne Scrollen
+         sichtbar ist (Ausgabedatei.tsx). */
+      .ausgabeergebnis:empty {
+        display: none;
+      }
       .ausgaben .ausgabedatei {
-        flex-basis: 100%;
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
         gap: 0.5rem;
+        padding: 6px 10px;
+        background: var(--ok-bg);
+        border: 1px solid var(--ok-linie);
         word-break: break-all;
       }
-      /* Der Abschluss des Einsatzes steht als eigener Block unter den
-         Ausgaben (Einsatzabschluss.tsx). */
+      /* Je Anlass eine Tabelle; nebeneinander, solange Platz ist. */
+      .ausgabegruppen {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(min(100%, 30rem), 1fr));
+        gap: 0.75rem 1.5rem;
+        align-items: start;
+      }
+      .ausgabetabelle {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .ausgabetabelle caption {
+        caption-side: top;
+        text-align: left;
+        font-weight: 700;
+        padding: 0 0 4px;
+        border-bottom: 2px solid var(--kartenkante-farbe);
+      }
+      .ausgabetabelle th,
+      .ausgabetabelle td {
+        padding: 5px 4px;
+        border-bottom: 1px solid var(--rahmen-weich);
+        vertical-align: middle;
+      }
+      .ausgabetabelle th {
+        text-align: left;
+        font-weight: normal;
+        width: 100%;
+      }
+      .ausgabetabelle .ausgabename {
+        display: block;
+        font-weight: 600;
+      }
+      .ausgabetabelle th .hinweistext {
+        display: block;
+      }
+      .ausgabetabelle th .schalter {
+        margin-top: 3px;
+        font-size: inherit;
+      }
+      /* Feste Formatspalten: PDF, HTML, XLSX stehen in jeder Zeile an derselben
+         Stelle, das Auge muss nicht suchen. */
+      .ausgabeformat {
+        white-space: nowrap;
+        text-align: center;
+        min-width: 3.6rem;
+      }
+      .ausgabeformat button {
+        min-width: 3.4rem;
+      }
+      /* „ungeschützt“ steht unter dem Format, damit die Spalte schmal bleibt. */
+      .formatzusatz {
+        display: block;
+        font-size: 0.8em;
+        line-height: 1.1;
+      }
+      .ausgabemonitor {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 0.5rem 0.75rem;
+        padding-top: 0.5rem;
+        border-top: 1px solid var(--rahmen);
+      }
+      .ausgabemonitor h3 {
+        margin: 0;
+      }
+      .ausgabemonitor .hinweistext {
+        overflow-wrap: anywhere;
+      }
+      /* Der Abschluss des Einsatzes steht deutlich abgesetzt unter den
+         Ausgaben (Einsatzabschluss.tsx): Er ist kein Export. */
       .ausgaben .einsatzabschluss {
-        flex-basis: 100%;
         display: flex;
         flex-wrap: wrap;
         align-items: baseline;
         gap: 0.5rem;
-        margin-top: 0.75rem;
-        padding-top: 0.5rem;
-        border-top: 1px solid var(--rahmen);
+        margin-top: 1rem;
+        padding-top: 0.75rem;
+        border-top: 3px solid var(--kartenkante-farbe);
+      }
+      .ausgaben .einsatzabschluss .ausgabedatei,
+      .ausgaben .einsatzabschluss [role="group"] {
+        flex-basis: 100%;
       }
       .ausgaben .einsatzabschluss h3 {
         margin: 0 0.5rem 0 0;
@@ -3864,7 +3974,8 @@
           min-height: 44px;
           min-width: 44px;
         }
-        .kopfband .fenstermenueknopf {
+        .kopfband .fenstermenueknopf,
+        .kopfband .monitorknopf {
           width: 44px;
           height: 44px;
         }
@@ -3911,7 +4022,8 @@
         }
         /* Das Menü haengt am Kopfband und nutzt dessen Breite, damit es nie
            links oder rechts aus dem Bild laeuft (wie die Zaehlregel). */
-        .kopfband .fenstermenue {
+        .kopfband .fenstermenue,
+        .kopfband .monitorknopfhuelle {
           position: static;
         }
         .fenstermenue > .klappmenueliste,

@@ -157,14 +157,14 @@ describe("R2-LdF P2-1, P2-2: Wegmarken der Beförderung", () => {
     await platz.dienst.bediene(nachrichtVerfassen(anlage()));
     await platz.dienst.bediene(nachrichtVorschlagen("A-1", null, { mittel: "TELEFON", fernmelder: "Fm2", zeitpunkt: jetzt(), handzeichen: "Ld" }));
     const abweichend = await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, { mittel: "FUNK", zeitpunkt: jetzt(), handzeichen: "Fm" }));
-    expect(warnungen(abweichend).some((w) => w.includes("abweichend vom Vorschlag des LdF (Telefon → Funk)"))).toBe(true);
+    expect(warnungen(abweichend).some((w) => w.includes("abweichend von der Zuteilung des LdF (Telefon → Funk)"))).toBe(true);
     await platz.dienst.bediene(nachrichtVerfassen(anlage({ nachrichtId: "A-2" })));
     await platz.dienst.bediene(nachrichtBefoerdern("A-2", null, { mittel: "FUNK", zeitpunkt: jetzt(), handzeichen: "Fm" }));
     const zeilen = new Map(nachweisung(platz).map((z) => [z.id, z]));
     expect(zeilen.get("A-1")?.abweichungVomVorschlag).toBe("Telefon → Funk");
     expect(zeilen.get("A-2")?.ohneVorschlag).toBe(true);
     expect(tagebuch(platz, "A-1").find((z) => z.typ === "NachrichtBefoerdert")?.satz).toContain("abweichend vom Vorschlag (Telefon → Funk)");
-    expect(tagebuch(platz, "A-2").find((z) => z.typ === "NachrichtBefoerdert")?.satz).toContain("ohne Vorschlag des LdF");
+    expect(tagebuch(platz, "A-2").find((z) => z.typ === "NachrichtBefoerdert")?.satz).toContain("ohne Zuteilung des LdF");
   });
 });
 

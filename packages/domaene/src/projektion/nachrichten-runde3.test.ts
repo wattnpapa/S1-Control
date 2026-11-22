@@ -123,7 +123,7 @@ describe("R2-LdF P2-1, P2-2, LdF P2-3: Wegmarken", () => {
     const zeilen = mitTagebuchbezug(nachrichtenausschnitt(zustand(ereignisse), { sicht: "nachweisung" }).zeilen, tagebuchbezug(ereignisse));
     expect(zeilen[0]?.ohneVorschlag).toBe(true);
     const satz = nachrichtensatz(zustand(ereignisse), befoerdert, "");
-    expect(satz).toContain("befördert (Funk, Hz. Fm), ohne Vorschlag des LdF");
+    expect(satz).toContain("befördert (Funk, Hz. Fm), ohne Zuteilung des LdF");
   });
 });
 
