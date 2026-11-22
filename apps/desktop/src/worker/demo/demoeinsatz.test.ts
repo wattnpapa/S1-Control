@@ -127,6 +127,33 @@ describe("Funktionalität: Demo-Einsatz", () => {
     expect(JSON.stringify(versorgung.blatt)).toContain("Sporthalle BBS Wechloy");
   });
 
+  it("Szenario: der Demo-Einsatz füllt die Monitoransichten aller Stabsfunktionen", () => {
+    const tafel = platz.dienst.staerketafel().tafel;
+    const status = tafel.status?.gesamt;
+    // S1 „Status“ und S3 „Einsatzmittel“: Kräfte im Einsatz, in Reserve und in Ruhe.
+    expect(status?.IM_EINSATZ.einheiten ?? 0).toBeGreaterThan(0);
+    expect(status?.EINSATZBEREIT.einheiten ?? 0).toBeGreaterThan(0);
+    expect(status?.RUHE.einheiten ?? 0).toBeGreaterThan(0);
+    // S1 „Kommen und Gehen“: offene oder zugesagte Anforderung und eine Verfügbarkeitsfrist.
+    const arten = new Set((tafel.kommenGehen ?? []).map((b) => b.art));
+    expect(arten.has("angefordert") || arten.has("zugesagt")).toBe(true);
+    expect(arten.has("verfuegbarBis")).toBe(true);
+    // S3 „Aufträge“: laufende Aufträge in mehr als einem Abschnitt.
+    expect(new Set((tafel.auftraege ?? []).map((a) => a.abschnittId)).size).toBeGreaterThanOrEqual(2);
+    // S4 „Sofortbedarf“: mindestens eine Einheit mit offenem Bedarf.
+    const versorgung = platz.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-demo" });
+    expect(versorgung.blatt.sofortbedarf.offen.zeilen).toBeGreaterThan(0);
+    // FmZ „Funk still“: eine Einheit ohne Kontakt oder über der Schwelle still.
+    const funk = platz.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-demo" }).plan;
+    const teilnehmer = [...funk.rufgruppen.flatMap((r) => r.teilnehmer), ...funk.jeBereich.flatMap((b) => b.teilnehmer)];
+    expect(teilnehmer.some((t) => !t.erwartet && (t.keinKontaktGemeldet !== undefined || t.letzterKontakt?.ueberSchwelle === true))).toBe(true);
+    // FmZ „Warteschlange“: Nachrichten warten an einer Station.
+    const wartend = (["ldf", "fmz", "sichter"] as const).flatMap(
+      (sicht) => platz.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-demo", sicht }).zeilen,
+    );
+    expect(wartend.some((z) => (z.wartetSeit ?? z.wartetSeitSichter ?? z.wartetSeitLdf) !== undefined)).toBe(true);
+  });
+
   it("Szenario: die Ausgaben entstehen aus der Demo-Lage", () => {
     for (const ausgabe of ["druck", "status", "log", "kosten", "fueorg", "nachweisung"] as const) {
       expect(platz.dienst.ausgabeHtml(ausgabe).html.length, ausgabe).toBeGreaterThan(500);
