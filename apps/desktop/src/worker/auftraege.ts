@@ -19,9 +19,19 @@
 
 import type { Aktendienst } from "./aktendienst.js";
 import type { Auftrag } from "./akte-worker.js";
+import { spieleDemoEin } from "./demo/demoeinsatz.js";
+import type { Stelluhr } from "./demo/stelluhr.js";
 
-export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): Promise<unknown> {
+/**
+ * `stelluhr` ist die gestellte Uhr eines Demo-Arbeiters (`demo/stelluhr.ts`);
+ * ohne sie gibt es kein `demoEinspielen` — ein gewöhnlicher Arbeiter schreibt
+ * keine rückdatierten Ereignisse.
+ */
+export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag, stelluhr?: Stelluhr): Promise<unknown> {
   switch (auftrag.art) {
+    case "demoEinspielen":
+      if (stelluhr === undefined) throw new Error("Dieser Arbeiter ist kein Demo-Arbeiter.");
+      return spieleDemoEin(dienst, stelluhr, dienst.einsatzId);
     case "oeffne":
       return { befund: (await dienst.oeffne()).befund.art };
     case "bediene":
