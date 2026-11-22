@@ -295,6 +295,7 @@ export class Vermittlung {
       case "versorgungAnfordern":
       case "funkplanAnfordern":
       case "staerketafelAnfordern":
+      case "stabsuebersichtAnfordern":
       case "anforderungenAnfordern":
       case "fuestAnfordern":
       case "eingangskorbAnfordern":

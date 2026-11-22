@@ -41,6 +41,7 @@ import type {
   Nachrichtenzeile,
   Schichtplanblatt,
   Staerketafel,
+  Stabsuebersicht,
   Tabellenausschnitt,
   Tagebuchzeile,
   Teilbereichsblock,
@@ -81,7 +82,7 @@ export type Theme = z.infer<typeof zTheme>;
  * kein Recht — wie die Betriebsart. Nur anhängen: Der Wert steht als Name in
  * den Einstellungen des Geräts.
  */
-export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle"] as const;
+export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle", "leitung"] as const;
 export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
@@ -815,6 +816,9 @@ export const zRuf = z.discriminatedUnion("art", [
   // je Abschnitt und je Organisation in einem Ruf — eine Zeile je Abschnitt
   // bzw. Organisation, kein Ausschnitt.
   z.object({ art: z.literal("staerketafelAnfordern"), akteId: zAkteId }),
+  // Die Stabsübersicht (additiv, Stab-Review 2026-11-22): Kräfte nach Status
+  // je Teilbaum und alle Aufträge in einem Ruf, kein Ausschnitt.
+  z.object({ art: z.literal("stabsuebersichtAnfordern"), akteId: zAkteId }),
   // Das Blatt der Fuehrungsstelle (M5.4) traegt beides in **einem** Ruf: das
   // Dienstpostenblatt und den Schichtplan. Sie sind zwei Ansichten derselben
   // Menge — jede Planzeile haengt an einem Dienstposten (§5.7) —, und zwei
@@ -1202,6 +1206,7 @@ export interface Antworten {
   versorgungAnfordern: Versorgungsansicht;
   funkplanAnfordern: Funkplanansicht;
   staerketafelAnfordern: Staerketafelansicht;
+  stabsuebersichtAnfordern: Stabsuebersichtansicht;
   anforderungenAnfordern: Anforderungsansicht;
   fuestAnfordern: Fuestansicht;
   eingangskorbAnfordern: Eingangskorbansicht;
@@ -1449,6 +1454,11 @@ export interface Versorgungsansicht extends Ansichtsstand {
 /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
 export interface Staerketafelansicht extends Ansichtsstand {
   readonly tafel: Staerketafel;
+}
+
+/** Die Stabsübersicht: Kräfte nach Status je Abschnitt (Teilbaum) und alle Aufträge. */
+export interface Stabsuebersichtansicht extends Ansichtsstand {
+  readonly uebersicht: Stabsuebersicht;
 }
 
 export interface Untertabellenansicht extends Ansichtsstand, Untertabelle {

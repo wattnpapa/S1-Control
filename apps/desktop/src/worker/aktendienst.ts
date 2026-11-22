@@ -118,6 +118,7 @@ import {
   type Nachrichtenansicht,
   type Sitzungsstellen,
   type Staerketafelansicht,
+  type Stabsuebersichtansicht,
   type Bedienergebnis,
   type Lagebild,
   type Mitteilung,
@@ -1179,6 +1180,11 @@ export class Aktendienst {
   /** Die Stärketafeln des Sachgebiets 1 (Monitor: Abschnitte, Organisationen). */
   staerketafel(): Staerketafelansicht {
     return { lageZeiger: this.#lageZeiger, tafel: projektion.staerketafel(this.#zustand) };
+  }
+
+  /** Die Stabsübersicht: Kräfte nach Status je Teilbaum und alle Aufträge (Stab-Review 2026-11-22). */
+  stabsuebersicht(): Stabsuebersichtansicht {
+    return { lageZeiger: this.#lageZeiger, uebersicht: projektion.stabsuebersicht(this.#zustand) };
   }
 
   /**

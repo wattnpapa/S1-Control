@@ -44,6 +44,8 @@ export async function bearbeiteAuftrag(dienst: Aktendienst, auftrag: Auftrag): P
       return dienst.funkplan(auftrag.ruf);
     case "staerketafelAnfordern":
       return dienst.staerketafel();
+    case "stabsuebersichtAnfordern":
+      return dienst.stabsuebersicht();
     case "anforderungenAnfordern":
       return dienst.anforderungen(auftrag.ruf);
     case "fuestAnfordern":
