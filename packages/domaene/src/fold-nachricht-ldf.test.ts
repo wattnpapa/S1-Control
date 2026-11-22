@@ -166,7 +166,7 @@ describe("LdF in Projektion und Tagebuch", () => {
     const zeilen = nachrichtenausschnitt(z, { sicht: "nachweisung" }).zeilen;
     expect(zeilen.find((zeile) => zeile.id === "A1")?.vorschlag).toEqual(festlegung);
     expect(zeilen.find((zeile) => zeile.id === "E1")?.weitergabe).toEqual(weitergabe);
-    expect(nachrichtensatz(z, fest, "")).toBe("Nachricht A Übermittlung vorgeschlagen (durch Fm2, Kurier/Melder, an OV, Hz. LF): S4 an OV, ‚Sandsäcke‘");
+    expect(nachrichtensatz(z, fest, "")).toBe("Nachricht A an Fm2 zugeteilt (Kurier/Melder, an OV, Hz. LF): S4 an OV, ‚Sandsäcke‘");
     expect(nachrichtensatz(z, weiter, "")).toBe("Nachricht E an den Sichter weitergegeben (Hz. LF): OV Wildeshausen an FüSt, ‚Pumpen eingetroffen‘");
     const parameter = feldEreignis(h(), n, "NachrichtenParameterGesetzt", { einsatzId: "X", feld: "ldfStation" }, null, true);
     expect(nachrichtensatz(z, parameter, "Nachrichtenparameter gesetzt")).toBe("Nachrichtenparameter gesetzt (LdF als Station): nein → ja");

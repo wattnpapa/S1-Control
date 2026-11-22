@@ -374,6 +374,7 @@ export {
 // Der Undo-Stapel je Client (M2.3) — KONZEPT-EREIGNISSE.md §6, U1 bis U6.
 export {
   UNDO_TIEFE,
+  GRUND_VORBELEGUNG_ANLAGE,
   Undostapel,
   geltenderFeldwert,
   kompensationFuer,

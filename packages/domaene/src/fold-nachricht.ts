@@ -119,10 +119,14 @@ function hat(felder: ReadonlyMap<string, Feld<unknown>>, name: string): boolean 
  * Technische Betriebsbuch ein und gibt die Nachricht mit
  * `NachrichtWeitergegeben` an den Sichter, der S2 (rot) und den Verfasser
  * (grün) verteilt. Vorher schrieb der Worker diese Kopien selbst.
+ *
+ * Mit `sichtungAuchAusgang` läuft der beförderte Ausgang wie vor Fassung 16
+ * direkt zum Sichter, ohne zweiten Halt beim LdF: Ältere Einsätze mit beiden
+ * Parametern hatten ihn dort, und er soll nach dem Neuaufbau nicht zurückspringen.
  */
-function vorLdf(felder: ReadonlyMap<string, Feld<unknown>>, ausgang: boolean): boolean {
+function vorLdf(felder: ReadonlyMap<string, Feld<unknown>>, ausgang: boolean, sichtungAuchAusgang: boolean): boolean {
   if (ausgang && !hat(felder, "befoerderung")) return !hat(felder, "vorschlag");
-  if (ausgang) return !hat(felder, "weitergabe") && !hat(felder, "sichtung");
+  if (ausgang) return !sichtungAuchAusgang && !hat(felder, "weitergabe") && !hat(felder, "sichtung");
   return hat(felder, "aufnahme") && !hat(felder, "weitergabe") && !hat(felder, "sichtung");
 }
 
@@ -142,7 +146,7 @@ export function laufzustandAus(
   if (felder.get("entfernt")?.wert === true) return "ZURUECKGEZOGEN";
   const ausgang = felder.get("richtung")?.wert === "AUSGANG";
   const notiz = felder.get("gespraechsnotiz")?.wert === true;
-  if (ldfStation === true && !notiz && vorLdf(felder, ausgang)) return "VOR_LDF";
+  if (ldfStation === true && !notiz && vorLdf(felder, ausgang, sichtungAuchAusgang)) return "VOR_LDF";
   if (ausgang && !notiz && !hat(felder, "befoerderung")) return "VOR_FMZ";
   const sichtung = alsObjekt(felder.get("sichtung")?.wert);
   if (sichtung === undefined) {

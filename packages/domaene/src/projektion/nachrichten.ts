@@ -24,7 +24,7 @@ import {
   type Nachrichtenzeile,
 } from "./nachrichtenzeile.js";
 import { nummernluecken, offenFuerStellen, type Offenumfeld } from "./nachrichtenoffen.js";
-import { ldfSchrittDer } from "./nachrichtenstand.js";
+import { haengtBeimLdf, ldfSchrittDer } from "./nachrichtenstand.js";
 import { stellenWort } from "./tagebuch-nachrichten.js";
 
 /**
@@ -64,6 +64,12 @@ export interface Nachrichtenanfrage {
   readonly handzeichen?: string;
   /** Additiv, Sicht „offen": ob ein Sichter besetzt ist (Präsenz kennt nur der Worker). */
   readonly sichterBesetzt?: boolean;
+  /**
+   * Additiv (Review 2026-11-21): Ist ein LdF besetzt? Nur `false` führt den
+   * beförderten Ausgang, der beim LdF auf die Weitergabe wartet, auch in der
+   * Schlange der FmZ — dort gibt ihn dann ein Fernmelder selbst weiter.
+   */
+  readonly ldfBesetzt?: boolean;
 }
 
 export interface Nachrichtenausschnitt {
@@ -176,7 +182,7 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
       // Ein angenommener Ausgang beim LdF bleibt in der Warteschlange sichtbar:
       // Ist kein LdF da, befördert der Fernmelder ihn selbst (Ersatzregel).
       // Der beförderte Ausgang beim LdF (Nachweisung, Weitergabe) gehört nicht mehr in die Schlange.
-      return zeile.laufzustand === "VOR_FMZ" || ldfSchrittDer(zeile) === "zuteilung";
+      return zeile.laufzustand === "VOR_FMZ" || ldfSchrittDer(zeile) === "zuteilung" || haengtBeimLdf(zeile, anfrage.ldfBesetzt);
     case "ldf":
       return zeile.laufzustand === "VOR_LDF";
     case "nachweisung":
@@ -189,7 +195,7 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
 }
 
 function umfeldDer(anfrage: Nachrichtenanfrage): Offenumfeld {
-  return anfrage.sichterBesetzt === undefined ? {} : { sichterBesetzt: anfrage.sichterBesetzt };
+  return { ...(anfrage.sichterBesetzt === undefined ? {} : { sichterBesetzt: anfrage.sichterBesetzt }), ...(anfrage.ldfBesetzt === undefined ? {} : { ldfBesetzt: anfrage.ldfBesetzt }) };
 }
 
 /** „Meine Sichtungen": vom Arbeitsplatz der Sitzung oder mit ihrem Handzeichen. */

@@ -43,6 +43,8 @@ export function wartegrundlage(n: NachrichtZustand, annahme?: Zeitvermerk): Wart
     laufzustand: n.laufzustand,
     ...(ausgang ? { eintreffenBeiFmz: iso(eintreffenMs(angelegt, typeof annahmeWert?.zeitpunkt === "string" ? annahmeWert : undefined)) } : {}),
     ...(richtung === "EINGANG" ? { vorSichterSeit: iso(n.weitergabe?.hlc.millisekunden ?? angelegt) } : {}),
+    // 2026-11-21: Auch der beförderte Ausgang wartet vor dem Sichter — ab der Weitergabe des LdF, sonst ab der Beförderung.
+    ...(ausgang && n.laufzustand === "VOR_SICHTER" ? { vorSichterSeit: iso(n.weitergabe?.hlc.millisekunden ?? n.befoerderung?.hlc.millisekunden ?? angelegt) } : {}),
     ...(n.laufzustand === "VOR_LDF" ? { vorLdfSeit: vorLdfSeit(n, richtung, annahmeWert) } : {}),
     ...(ausgang && n.befoerderung?.wert !== undefined && n.befoerderung.wert !== null ? { befoerdert: true } : {}),
   };

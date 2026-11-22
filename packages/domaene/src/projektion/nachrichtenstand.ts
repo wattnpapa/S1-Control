@@ -185,6 +185,16 @@ export function ldfSchrittDer(zeile: { readonly laufzustand: Laufzustand; readon
   return zeile.richtung === "AUSGANG" && zeile.befoerderung === undefined ? "zuteilung" : "weitergabe";
 }
 
+/**
+ * Ein beförderter Ausgang, der beim LdF auf Nachweisung und Weitergabe
+ * wartet, obwohl kein LdF besetzt ist (Review 2026-11-21): Die Ersatzregel
+ * greift nur im Augenblick der Beförderung; ging der LdF danach, gibt ein
+ * Fernmelder ihn selbst weiter. Nur `false` zählt — ohne Angabe gilt besetzt.
+ */
+export function haengtBeimLdf(zeile: { readonly laufzustand: Laufzustand; readonly richtung: string; readonly befoerderung?: unknown }, ldfBesetzt: boolean | undefined): boolean {
+  return ldfBesetzt === false && zeile.richtung === "AUSGANG" && ldfSchrittDer(zeile) === "weitergabe";
+}
+
 /** Ganze Minuten von `seit` bis `jetzt`, nie negativ; `undefined`, wenn eines fehlt. */
 function minutenZwischen(seit: string | undefined, jetzt: string | number | undefined): number | undefined {
   if (seit === undefined || jetzt === undefined) return undefined;
@@ -216,7 +226,9 @@ export function wartezeitAusGrundlage(grundlage: Wartegrundlage, jetzt: string |
 
 /** Die Wartezeit eines Eingangs vor dem Sichter in ganzen Minuten (Sichter P1-4); sonst `undefined`. */
 export function vorSichterAusGrundlage(grundlage: Wartegrundlage, jetzt: string | number | undefined): number | undefined {
-  if (grundlage.richtung !== "EINGANG" || grundlage.laufzustand !== "VOR_SICHTER") return undefined;
+  // 2026-11-21: auch der beförderte Ausgang (nicht die Gesprächsnotiz), der vor dem Sichter wartet.
+  const ausgang = grundlage.richtung === "AUSGANG" && !grundlage.gespraechsnotiz;
+  if ((grundlage.richtung !== "EINGANG" && !ausgang) || grundlage.laufzustand !== "VOR_SICHTER") return undefined;
   return minutenZwischen(grundlage.vorSichterSeit, jetzt);
 }
 

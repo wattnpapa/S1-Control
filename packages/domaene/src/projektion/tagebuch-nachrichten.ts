@@ -199,10 +199,30 @@ function befoerderungsteil(neu: unknown): string {
 }
 
 function vorschlagsteil(neu: unknown): string {
-  const fm = text(objekt(neu)?.["fernmelder"]);
   const mittel = text(objekt(neu)?.["mittel"]);
   const gegen = text(objekt(neu)?.["gegenstelle"]);
-  return klammer([fm === undefined ? "" : `durch ${fm}`, mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `an ${gegen}`, handzeichenteil(neu)]);
+  return klammer([mittel === undefined ? "" : mittelWort(mittel), gegen === undefined ? "" : `an ${gegen}`, handzeichenteil(neu)]);
+}
+
+/**
+ * „an Fm2 zugeteilt (Funk, an OV …, Hz. Lf)“ (2026-11-21): Der Vorschlag des
+ * LdF ist die Zuteilung an einen Fernmelder. Vorher stand „Übermittlung
+ * vorgeschlagen (durch Fm2 …)“, das las sich, als habe Fm2 vorgeschlagen.
+ */
+function zuteilungssatz(neu: unknown): string {
+  const fm = text(objekt(neu)?.["fernmelder"]);
+  return `${fm === undefined ? "Übermittlung vorgeschlagen" : `an ${fm} zugeteilt`}${vorschlagsteil(neu)}`;
+}
+
+/**
+ * Der Grund an den Schritten, die der Worker nach der Ersatzregel für einen
+ * fehlenden LdF schreibt (2026-11-21): Zuteilung und Weitergabe, die kein
+ * LdF getan hat. Ohne ihn lasen sie sich wie Schritte eines LdF.
+ */
+export const GRUND_ERSATZ_LDF = "Kein LdF besetzt: Ersatzregel";
+
+function ersatzLdfTeil(e: EingehendesEreignis): string {
+  return e.grund === GRUND_ERSATZ_LDF ? ", Ersatzregel: kein LdF besetzt" : "";
 }
 
 /**
@@ -278,11 +298,11 @@ function stelleAus(e: EingehendesEreignis): string {
 const VORGANG: Readonly<Record<string, (e: EingehendesEreignis) => string>> = {
   NachrichtVerfasst: (e) => verfasstVerb(nutzlast(e)),
   NachrichtAngenommen: vermerk((neu) => `angenommen${klammer([handzeichenteil(neu)])}`, "Annahmevermerk gelöscht"),
-  NachrichtUebermittlungVorgeschlagen: vermerk((neu) => `Übermittlung vorgeschlagen${vorschlagsteil(neu)}`, "Übermittlungsvorschlag gelöscht"),
+  NachrichtUebermittlungVorgeschlagen: (e) => vermerk((neu) => `${zuteilungssatz(neu)}${ersatzLdfTeil(e)}`, "Zuteilung gelöscht")(e),
   NachrichtBefoerdert: (e) => vermerk((neu) => `befördert${befoerderungsteil(neu)}${wegmarke(e)}`, "Beförderungsvermerk gelöscht")(e),
   NachrichtAufnahmeBerichtigt: aufnahmeberichtigung,
   NachrichtNachgewiesen: vermerk((neu) => `nachgewiesen${klammer([handzeichenteil(neu)])}`, "Nachweis gelöscht"),
-  NachrichtWeitergegeben: vermerk((neu) => `an den Sichter weitergegeben${klammer([handzeichenteil(neu)])}`, "Weitergabe gelöscht"),
+  NachrichtWeitergegeben: (e) => vermerk((neu) => `an den Sichter weitergegeben${klammer([handzeichenteil(neu)])}${ersatzLdfTeil(e)}`, "Weitergabe gelöscht")(e),
   NachrichtGesichtet: (e) =>
     vermerk(
       (neu) => `${sichtungswort(e)}${klammer([handzeichenteil(neu)])}, ${verteilerteil(neu)}${sichtervermerk(e)}`,

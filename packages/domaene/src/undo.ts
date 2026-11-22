@@ -103,8 +103,16 @@ export type Kompensation =
  *  * ein Ereignis, das selbst ein `undoOf` traegt — es zurueckzunehmen waere
  *    ein Redo, und U5 sagt, das gibt es nicht.
  */
+/**
+ * Der Grund an einer Vorbelegung, die das Programm beim Anlegen eines
+ * Einsatzes schreibt (Review 2026-11-21): „LdF als Station“. Sie ist kein
+ * Bedienschritt; das erste „Rückgängig“ eines neuen Einsatzes nahm sonst
+ * genau sie zurück. Geändert wird sie in den Stammdaten.
+ */
+export const GRUND_VORBELEGUNG_ANLAGE = "Vorbelegung beim Anlegen des Einsatzes";
+
 function darfAufDenStapel(ereignis: EingehendesEreignis): boolean {
-  if (ereignis.undoOf !== undefined) return false;
+  if (ereignis.undoOf !== undefined || ereignis.grund === GRUND_VORBELEGUNG_ANLAGE) return false;
   const eintrag = KATALOG.get(ereignis.typ);
   return eintrag !== undefined && eintrag.ohneUndo !== true;
 }

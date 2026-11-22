@@ -280,7 +280,7 @@ export {
 } from "./nachrichten.js";
 export { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
 // Additiv (Audits 2026-11-17): Stand der Listen, offene Nachrichten, Nummernlücken
-export { LAUFSTAENDE, TEXT_NICHT_UEBERMITTELT, TITEL_QUITTUNG_GEGENSTELLE, fmzVermerkTextAus, laufstandWort, ldfSchrittDer, standDerZeile, ueberWarteschwelle, type Laufstand, type Ldfschritt, type Wartegrundlage } from "./nachrichtenstand.js";
+export { LAUFSTAENDE, TEXT_NICHT_UEBERMITTELT, TITEL_QUITTUNG_GEGENSTELLE, fmzVermerkTextAus, haengtBeimLdf, laufstandWort, ldfSchrittDer, standDerZeile, ueberWarteschwelle, type Laufstand, type Ldfschritt, type Wartegrundlage } from "./nachrichtenstand.js";
 // Additiv (zweiter Durchlauf): Wartezeit aus einer Quelle, Zurückziehen, Mittel und Zeitraum der Nachweisung, ETB-Nummer
 export {
   etbNummern,
@@ -317,7 +317,7 @@ export {
   type Nachrichtenzeile,
   type Vorrangstufe,
 } from "./nachrichtenzeile.js";
-export { GRUND_ERSATZSICHTER, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
+export { GRUND_ERSATZSICHTER, GRUND_ERSATZ_LDF, kopieWort, mittelWort, nachrichtenname, stellenWort } from "./tagebuch-nachrichten.js";
 // Additiv (R2-ETB P1-1, R2-SGL P1-2): Kopien nach der Beförderung und der Papier-Nachtrag als Grund.
 export { GRUND_KOPIEN, GRUND_NACHTRAG, istKopienNachBefoerderung } from "./tagebuch-nachrichten.js";
 // Additiv (R2-FM P2-5, R2-Si P2-2): Schwelle vor dem Sichter je Vorrang und die Ersatzsichtung am säumigen Sichter vorbei.

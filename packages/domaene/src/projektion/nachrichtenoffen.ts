@@ -16,7 +16,7 @@
  */
 
 import { hatFernmelderstelle } from "../fernmelderstellen.js";
-import { ldfSchrittDer, standDerZeile } from "./nachrichtenstand.js";
+import { haengtBeimLdf, ldfSchrittDer, standDerZeile } from "./nachrichtenstand.js";
 import { vergleicheNachrichten, type Nachrichtenzeile } from "./nachrichtenzeile.js";
 
 /** Die bekannten Stellen der Stationen im Laufweg (§4); die Fernmelder erkennt `hatFernmelderstelle`. */
@@ -27,6 +27,8 @@ const SICHTER = "SICHTER";
 export interface Offenumfeld {
   /** Ist ein Sichter besetzt? Fehlt = ja (die FmZ zählt dann den Sichter nicht mit). */
   readonly sichterBesetzt?: boolean;
+  /** Additiv (Review 2026-11-21): Ist ein LdF besetzt? Nur `false` zählt den hängenden Ausgang beim LdF für die FmZ. */
+  readonly ldfBesetzt?: boolean;
 }
 
 /** Ein Ausgang oder eine Gesprächsnotiz, die eine der Stellen verfasst hat. */
@@ -45,7 +47,7 @@ function inEigenerWarteschlange(zeile: Nachrichtenzeile, stellen: readonly strin
       return fmz;
     case "beimLdf":
       // Einen Ausgang vor der Zuteilung befördert die FmZ nach der Ersatzregel selbst (§5).
-      return stellen.includes(LDF) || (fmz && ldfSchrittDer(zeile) === "zuteilung");
+      return stellen.includes(LDF) || (fmz && (ldfSchrittDer(zeile) === "zuteilung" || haengtBeimLdf(zeile, umfeld.ldfBesetzt)));
     case "vorSichter":
       return stellen.includes(SICHTER) || (fmz && umfeld.sichterBesetzt === false);
     default:
