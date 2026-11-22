@@ -175,6 +175,28 @@ describe("Der Knopf „Demo-Einsatz“", () => {
     expect(attrappe.rufeDerArt("einsaetzeAuflisten").length).toBeGreaterThan(0);
   });
 
+  it("sagt, dass er arbeitet, solange das Drehbuch eingespielt wird", async () => {
+    zeige();
+    const knopf = screen.getByRole("button", { name: "Demo-Einsatz" });
+    expect(knopf.textContent).toBe("Demo-Einsatz");
+    // Der Laden meldet „beschäftigt", solange der Ruf läuft; der Knopf sagt es mit.
+    let fertig: (wert: boolean) => void = () => undefined;
+    const echt = useLaden.getState().legeDemoEinsatzAn;
+    useLaden.setState({ legeDemoEinsatzAn: () => new Promise<boolean>((loese) => { fertig = loese; }) });
+    try {
+      cleanup();
+      render(<Auswahl />);
+      await userEvent.click(screen.getByRole("button", { name: "Demo-Einsatz" }));
+      expect(screen.getByRole("button", { name: "Demo-Einsatz" }).textContent).toBe("Wird angelegt …");
+      expect(screen.getByRole("button", { name: "Demo-Einsatz" }).getAttribute("aria-busy")).toBe("true");
+      fertig(true);
+      await waitFor(() => expect(screen.getByRole("button", { name: "Demo-Einsatz" }).textContent).toBe("Demo-Einsatz"));
+    } finally {
+      // Der Laden ist ein Singleton: Die übrigen Szenarien brauchen wieder die echte Aktion.
+      useLaden.setState({ legeDemoEinsatzAn: echt });
+    }
+  });
+
   it("zeigt den Grund, wenn das Anlegen scheitert, und bleibt in der Auswahl", async () => {
     attrappe.scheitert("demoEinsatzAnlegen", "Es ist kein Share-Pfad eingestellt.");
     zeige();
