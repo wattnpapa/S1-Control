@@ -11,12 +11,15 @@
  * (`../../web/schale.test.ts`, ADR-005).
  */
 
+import { deflateRawSync, inflateRawSync } from "node:zlib";
+
 import { Einsatzablage, knotenDateisystem } from "@s1/speicher";
 
 import type { Arbeiter } from "../arbeiterhof.js";
 import { Aktendienst } from "../../worker/aktendienst.js";
 import type { Auftrag, Startdaten, WorkerBotschaft } from "../../worker/akte-worker.js";
 import { bearbeiteAuftrag } from "../../worker/auftraege.js";
+import { uhrFuer, type Stelluhr } from "../../worker/demo/stelluhr.js";
 
 /**
  * `queueMicrotask` fuer die Antwort ist kein Zierrat: Ein echter Worker
@@ -29,10 +32,12 @@ export function baueDirektenArbeiter(
   dienste: Map<string, Aktendienst>,
 ): Arbeiter {
   let botschaft: ((b: WorkerBotschaft) => void) | undefined;
+  // Wie im Worker: Der Demo-Arbeiter läuft mit gestellter Uhr.
+  const uhr = uhrFuer(start.demoBeginnMs, () => Date.now());
   const dienst = new Aktendienst({
     akteId: start.akteId,
     dateisystem: knotenDateisystem(),
-    zeit: () => Date.now(),
+    zeit: uhr.zeit,
     ablage: new Einsatzablage(start.shareEinsatzOrdner, start.lokalerEinsatzOrdner),
     clientId: start.clientId,
     einsatzId: start.einsatzId,
@@ -41,6 +46,11 @@ export function baueDirektenArbeiter(
     rechnername: "pruefrechner",
     programmversion: start.programmversion,
     neueKennung: () => "9".repeat(32),
+    // Derselbe Entpacker wie im Betrieb: Das Demo-Drehbuch liest einen Erfassungsbogen ein.
+    kompressor: {
+      deflateRaw: (daten) => new Uint8Array(deflateRawSync(daten)),
+      inflateRaw: (daten) => new Uint8Array(inflateRawSync(daten)),
+    },
     sende: (mitteilung) => botschaft?.({ art: "mitteilung", mitteilung }),
     // Wie im Worker (N3): Druckaufträge gehen als Botschaft an den Hof.
     sendeDruck: (auftrag) => botschaft?.({ art: "druckauftrag", akteId: start.akteId, ...auftrag }),
@@ -52,7 +62,7 @@ export function baueDirektenArbeiter(
     sende(auftrag: Auftrag) {
       void (async () => {
         try {
-          const wert = await bearbeite(dienst, auftrag);
+          const wert = await bearbeite(dienst, auftrag, uhr.stelluhr);
           queueMicrotask(() => botschaft?.({ art: "antwort", nummer: auftrag.nummer, wert }));
         } catch (fehler) {
           queueMicrotask(() =>
@@ -88,10 +98,10 @@ export function baueDirektenArbeiter(
  * kannte den Auftrag gar nicht. Jetzt ruft er `bearbeiteAuftrag`, und ein
  * neuer Ansichtsruf ist hier ohne Zutun abgedeckt.
  */
-async function bearbeite(dienst: Aktendienst, auftrag: Auftrag): Promise<unknown> {
+async function bearbeite(dienst: Aktendienst, auftrag: Auftrag, stelluhr: Stelluhr | undefined): Promise<unknown> {
   if (auftrag.art === "schliesse") {
     dienst.schliesse();
     return null;
   }
-  return bearbeiteAuftrag(dienst, auftrag);
+  return bearbeiteAuftrag(dienst, auftrag, stelluhr);
 }

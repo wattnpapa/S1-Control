@@ -463,6 +463,11 @@ export class Aktendienst {
     return this.#zustand;
   }
 
+  /** Der Einsatz dieser Akte — der Ordnername auf dem Share. */
+  get einsatzId(): string {
+    return this.#o.einsatzId;
+  }
+
   get akte(): Akte {
     if (this.#akte === undefined) throw new Error("Die Akte ist nicht geöffnet.");
     return this.#akte;
