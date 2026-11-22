@@ -107,11 +107,19 @@ describe("Funktionalität: Demo-Einsatz", () => {
     const zustand = platz.dienst.zustand;
     expect(kennzahlen.einheitenDerLage(zustand).length).toBeGreaterThanOrEqual(DEMO_EINHEITEN.length);
     expect(Object.keys(zustand.abschnitte).length).toBeGreaterThanOrEqual(9);
-    expect(Object.keys(zustand.fahrzeuge).length).toBeGreaterThanOrEqual(20);
-    expect(Object.keys(zustand.personen).length).toBeGreaterThanOrEqual(9);
+    expect(Object.keys(zustand.fahrzeuge).length).toBeGreaterThanOrEqual(50);
+    expect(Object.keys(zustand.personen).length).toBeGreaterThanOrEqual(150);
     expect(Object.keys(zustand.dienstposten).length).toBeGreaterThanOrEqual(10);
     expect(Object.keys(zustand.anforderungen).length).toBeGreaterThanOrEqual(5);
-    expect(Object.keys(zustand.meldungen)).toHaveLength(1);
+    // Jede Einheit mit Übungsbogen hat sich am Meldekopf angemeldet: eine Meldung im Eingangskorb je Bogen.
+    const mitBogen = DEMO_EINHEITEN.filter((e) => e.bogen !== undefined);
+    expect(mitBogen.length).toBeGreaterThanOrEqual(20);
+    expect(Object.keys(zustand.meldungen)).toHaveLength(mitBogen.length);
+    for (const einheit of mitBogen) expect(zustand.einheiten[einheit.id]?.bezeichnung.wert, einheit.bogen).toBeTruthy();
+    // Eine bunte Mischung: THW und mindestens sechs weitere Organisationen.
+    const organisationen = new Set(kennzahlen.einheitenDerLage(zustand).map((e) => e.organisation.wert));
+    expect(organisationen.has("THW")).toBe(true);
+    expect(organisationen.size).toBeGreaterThanOrEqual(7);
     expect(Object.keys(zustand.etbEintraege).length).toBeGreaterThanOrEqual(8);
 
     const funkplan = platz.dienst.funkplan({ art: "funkplanAnfordern", akteId: "akte-demo" });

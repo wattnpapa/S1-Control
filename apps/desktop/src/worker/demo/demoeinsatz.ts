@@ -13,18 +13,17 @@
  * Die Teile:
  * - `demostruktur.ts`   Stammdaten, Abschnitte, Führungsstelle
  * - `demoeinheiten.ts`  die Einheitenliste (Daten, zum Austauschen)
- * - `demokraefte.ts`    Anlage, Eintreffen und Verlauf je Einheit
+ * - `boegen/`           die Übungsbögen, aus denen die Einheiten entstehen
+ * - `demokraefte.ts`    Anmeldung mit Erfassungsbogen, Eintreffen und Verlauf je Einheit
  * - `demofunk.ts`       Rufgruppen, Zuordnung, Funkproben
  * - `demoversorgung.ts` Unterbringung, Verpflegung, Sofortbedarf
  * - `demoverlauf.ts`    Anforderungen, Aufteilung, Änderungen, Tagebuch
  * - `demonachrichten.ts` die Nachrichten, `demonachrichtenweg.ts` ihr Weg durch die Stationen
- * - `demoerfassungsbogen.ts` eine Einheit, die sich per Erfassungsbogen anmeldet
  * - `demokorrekturen.ts` Korrekturen und Rücknahmen
  */
 
 import type { Bedienergebnis } from "../../kontrakt/index.js";
 import type { Aktendienst } from "../aktendienst.js";
-import { erfassungsbogenschritte } from "./demoerfassungsbogen.js";
 import { funkschritte } from "./demofunk.js";
 import { korrekturschritte } from "./demokorrekturen.js";
 import { kraefteschritte } from "./demokraefte.js";
@@ -55,7 +54,6 @@ export function demoDrehbuch(einsatzId: string, beginnMs: number): Demoschritt[]
     ...versorgungsschritte(einsatzId, zeit),
     ...verlaufsschritte(zeit),
     ...nachrichtenschritte(einsatzId, zeit),
-    ...erfassungsbogenschritte(zeit),
     ...korrekturschritte(zeit),
   ];
   return schritte

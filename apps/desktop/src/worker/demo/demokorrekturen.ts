@@ -9,6 +9,8 @@
  * sie als das, was sie sind — mit Grund.
  */
 
+import type { PersonZustand } from "@s1/domaene";
+
 import {
   abloesungZugesagt,
   anforderungAnlegen,
@@ -22,8 +24,11 @@ import {
 } from "../../kontrakt/bedienschritte.js";
 import { auftragErfassen, auftragZuruecknehmen, fahrzeugEntfernen, fahrzeugWiederherstellen, personEntfernen, personWiederherstellen } from "../../kontrakt/einheitsteile.js";
 import { ausgabestelleAnlegen, mahlzeitBestellt, mahlzeitStorniert, unterkunftWiederhergestellt } from "../../kontrakt/versorgungsschritte.js";
+import type { Entwurf } from "../../kontrakt/index.js";
+import { EH } from "./demoeinheiten.js";
 import { AB } from "./demostruktur.js";
-import { STELLE, schrittAls, type Demoschritt, type Demozeit, type Schrittentwurf } from "./drehbuch.js";
+import { fahrzeugeDer, personenDer } from "./demoteile.js";
+import { STELLE, schrittAls, type Demoschritt, type Demozeit, type Entwurfsbauer, type Schrittentwurf } from "./drehbuch.js";
 
 const s1 = (minute: number, entwurf: Schrittentwurf): Demoschritt => schrittAls(STELLE.s1, minute, entwurf);
 const s3 = (minute: number, entwurf: Schrittentwurf): Demoschritt => schrittAls(STELLE.s3, minute, entwurf);
@@ -51,25 +56,46 @@ function abschnitte(zeit: Demozeit): Demoschritt[] {
   ];
 }
 
+/** Ein Schritt an einem Fahrzeug der Einheit, das beim Abspielen gesucht wird. */
+function amFahrzeug(einheitId: string, typ: string, bau: (fahrzeugId: string) => Entwurf): Entwurfsbauer {
+  return (zustand) => {
+    const fahrzeug = fahrzeugeDer(zustand, einheitId, typ)[0];
+    return fahrzeug === undefined ? undefined : bau(fahrzeug.id);
+  };
+}
+
+/** Ein Schritt an der letzten Person der Einheit (in der Reihenfolge der Kennungen). */
+function anPerson(einheitId: string, bau: (person: PersonZustand) => Entwurf): Entwurfsbauer {
+  return (zustand) => {
+    const person = personenDer(zustand, einheitId).at(-1);
+    return person === undefined ? undefined : bau(person);
+  };
+}
+
 function einheitsteile(zeit: Demozeit): Demoschritt[] {
-  const mtw = "demo-eh-b-wa-fz-2";
-  const person = "demo-eh-b1-ol-p-9";
+  const auftrag = `${EH.fwEmd.id}-auftrag-2`;
   return [
-    // Der MTW fährt für die Führungsstelle: erst der Einheit, dann dem Abschnitt zugeordnet.
-    s1(140, { typ: "FahrzeugEinheitGewechselt", nutzlast: { fahrzeugId: mtw }, vorher: "demo-eh-b-wa", neu: "demo-eh-ztr-ol" }),
-    s1(141, { typ: "FahrzeugVerschoben", nutzlast: { fahrzeugId: mtw }, vorher: null, neu: AB.fuest }),
+    // Der Anhänger der Bergungsgruppe fährt für die Abschnittsleitung: erst der Einheit, dann dem Abschnitt zugeordnet.
+    s1(140, amFahrzeug(EH.bNh.id, "Anh", (fahrzeugId) => ({ typ: "FahrzeugEinheitGewechselt", nutzlast: { fahrzeugId }, vorher: EH.bNh.id, neu: EH.ztrTz.id }))),
+    s1(141, amFahrzeug(EH.ztrTz.id, "Anh", (fahrzeugId) => ({ typ: "FahrzeugVerschoben", nutzlast: { fahrzeugId }, vorher: null, neu: AB.ea1 }))),
     // Ein Fahrzeug irrtümlich entfernt.
-    s1(70, fahrzeugEntfernen("demo-eh-wp-ol-fz-2", "Falsche Einheit angeklickt")),
-    s1(71, fahrzeugWiederherstellen("demo-eh-wp-ol-fz-2")),
+    s1(70, amFahrzeug(EH.wpVa.id, "SwPu", (fahrzeugId) => fahrzeugEntfernen(fahrzeugId, "Falsche Einheit angeklickt"))),
+    s1(71, (zustand) => {
+      const entfernt = Object.values(zustand.fahrzeuge).find((f) => f.einheitId?.wert === EH.wpVa.id && f.entfernt?.wert === true);
+      return entfernt === undefined ? undefined : fahrzeugWiederherstellen(entfernt.id);
+    }),
     // Eine Person: Funktion nachgetragen, abgemeldet und zurückgekehrt.
-    s1(60, { typ: "PersonGeaendert", nutzlast: { personId: person, feld: "funktionen" }, vorher: ["Helfer"], neu: ["Helfer", "Sprechfunker"] }),
-    s1(340, personEntfernen(person, "Aus persönlichen Gründen vorzeitig entlassen")),
-    s1(350, personWiederherstellen(person)),
+    s1(60, anPerson(EH.bOl.id, (p) => ({ typ: "PersonGeaendert", nutzlast: { personId: p.id, feld: "funktionen" }, vorher: p.funktionen?.wert ?? null, neu: [...(p.funktionen?.wert ?? []), "Sprechfunker"] }))),
+    s1(340, anPerson(EH.bOl.id, (p) => personEntfernen(p.id, "Aus persönlichen Gründen vorzeitig entlassen"))),
+    s1(350, anPerson(EH.bOl.id, (p) => personWiederherstellen(p.id))),
     // Die Einheit rückt in der Liste nach vorn.
-    s1(150, { typ: "EinheitUmsortiert", nutzlast: { einheitId: "demo-eh-dlrg" }, vorher: 6, neu: 3 }),
+    s1(150, (zustand) => {
+      const einheit = zustand.einheiten[EH.dlrg.id];
+      return einheit === undefined ? undefined : { typ: "EinheitUmsortiert", nutzlast: { einheitId: EH.dlrg.id }, vorher: einheit.reihenfolge.wert, neu: 3 };
+    }),
     // Ein Auftrag, der zurückgenommen wird, bevor er begonnen hat.
-    s3(270, auftragErfassen({ auftragId: "demo-eh-ff-ol-auftrag-2", einheitId: "demo-eh-ff-ol", text: "Deichkrone Sandkrug ausleuchten", von: zeit.um(270), abschnittId: AB.ea2 })),
-    s3(275, auftragZuruecknehmen("demo-eh-ff-ol-auftrag-2", "Übernimmt die FGr N mit ihrem Lichtmast")),
+    s3(270, auftragErfassen({ auftragId: auftrag, einheitId: EH.fwEmd.id, text: "Deichkrone Sandkrug ausleuchten", von: zeit.um(270), abschnittId: AB.ea2 })),
+    s3(275, auftragZuruecknehmen(auftrag, "Übernimmt die FGr N mit ihrem Lichtmast")),
   ];
 }
 
@@ -108,7 +134,7 @@ function versorgung(zeit: Demozeit): Demoschritt[] {
     s4(44, ausgabestelleAnlegen({ ausgabestelleId: ausgabe, name: "Ausgabe Bauhof", ort: "Sandsackfüllplatz" })),
     s4(46, { typ: "AusgabestelleEntfernt", nutzlast: { ausgabestelleId: ausgabe }, vorher: null, neu: true }),
     s4(48, { typ: "AusgabestelleWiederhergestellt", nutzlast: { ausgabestelleId: ausgabe }, vorher: true, neu: false }),
-    s4(305, mahlzeitBestellt({ bestellungId: bestellung, datum: zeit.tag(600), mahlzeit: "ABEND", ausgabestelleId: ausgabe, portionen: 25, vegetarisch: 3, vegan: 0, bestelltBei: "FGr Log-V OV Wilhelmshaven", bestelltVon: "S4 Klaassen" })),
+    s4(305, mahlzeitBestellt({ bestellungId: bestellung, datum: zeit.tag(600), mahlzeit: "ABEND", ausgabestelleId: ausgabe, portionen: 25, vegetarisch: 3, vegan: 0, bestelltBei: "FGr Log-V OV Aurich", bestelltVon: "S4 Klaassen" })),
     s4(310, mahlzeitStorniert(bestellung, "Füllplatz wird von den Hallen mitversorgt")),
     s4(315, { typ: "MahlzeitStornoZurueckgenommen", nutzlast: { bestellungId: bestellung }, vorher: true, neu: false }),
     // Das Zeltlager war aufgelöst, der Sportplatz ist wieder trocken.
