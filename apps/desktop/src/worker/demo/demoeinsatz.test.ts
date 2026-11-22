@@ -133,6 +133,15 @@ describe("Funktionalität: Demo-Einsatz", () => {
 
     const versorgung = platz.dienst.versorgung({ art: "versorgungAnfordern", akteId: "akte-demo" });
     expect(JSON.stringify(versorgung.blatt)).toContain("Sporthalle BBS Wechloy");
+
+    // Fachlage (Stab-Review 2026-11-22): jeder Bereich trägt Einträge, offene und erledigte.
+    const fachlage = platz.dienst.fachlage().fachlage;
+    for (const bereich of projektion.FACHLAGE_BEREICHE) {
+      expect(fachlage.zeilen[bereich].length, bereich).toBeGreaterThan(0);
+    }
+    expect(Object.values(fachlage.zeilen).flat().some((z) => z.erledigt)).toBe(true);
+    expect(Object.values(fachlage.zeilen).flat().some((z) => !z.erledigt)).toBe(true);
+    expect(fachlage.pegelstaende[0]?.tendenzCm).toBeDefined();
   });
 
   it("Szenario: die Übersicht zeigt Kräfte nach Status und offene Aufträge (Stab-Review 2026-11-22)", () => {

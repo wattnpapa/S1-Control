@@ -103,4 +103,8 @@ export const STELLE = {
   ldf: { stellen: ["LDF"], handzeichen: "Ld" },
   fm1: { stellen: ["FM1"], handzeichen: "Mo" },
   fm2: { stellen: ["FM2"], handzeichen: "Ts" },
+  // Fachlage (Stab-Review 2026-11-22): Presse, IuK und Fachberater.
+  s5: { stellen: ["S5"], handzeichen: "Pr" },
+  s6: { stellen: ["S6"], handzeichen: "Ik" },
+  fachberater: { stellen: ["FACHBERATER"], handzeichen: "Fb" },
 } as const satisfies Readonly<Record<string, Demostelle>>;

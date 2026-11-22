@@ -24,6 +24,7 @@
 
 import type { Bedienergebnis } from "../../kontrakt/index.js";
 import type { Aktendienst } from "../aktendienst.js";
+import { fachlageschritte } from "./demofachlage.js";
 import { funkschritte } from "./demofunk.js";
 import { korrekturschritte } from "./demokorrekturen.js";
 import { kraefteschritte } from "./demokraefte.js";
@@ -55,6 +56,7 @@ export function demoDrehbuch(einsatzId: string, beginnMs: number): Demoschritt[]
     ...verlaufsschritte(zeit),
     ...nachrichtenschritte(einsatzId, zeit),
     ...korrekturschritte(zeit),
+    ...fachlageschritte(zeit),
   ];
   return schritte
     .map((schritt, stelle) => ({ schritt, stelle }))
