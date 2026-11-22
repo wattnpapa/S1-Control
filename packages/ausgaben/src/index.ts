@@ -97,6 +97,7 @@ export {
 } from "./xlsx.js";
 export { KOSTEN_FUSSNOTE, KOSTEN_STIL, euro, kostenAlsHtml } from "./kosten.js";
 export { anforderungenAlsHtml, tagebuchAlsHtml, type Tagebuchabschluss } from "./listen.js";
+export { lagevortragAlsHtml } from "./lagevortrag.js";
 export { papierVordruckAlsHtml } from "./papier.js";
 export { bildschirmtauglich } from "./bildschirm.js";
 export { LOG_FUSSNOTE, LOG_STIL, logAlsHtml, type Logausgabeoptionen } from "./log.js";
