@@ -143,6 +143,23 @@ export const ART_TEXT: Readonly<Record<string, string>> = {
   UnterkunftWiederhergestellt: "Unterkunft wiederhergestellt",
   EinheitUntergebracht: "Einheit untergebracht",
   UnterbringungAufgehoben: "Unterbringung aufgehoben",
+  // Fachlage (Stab-Review 2026-11-22)
+  AbschnittslageGemeldet: "Lage gemeldet",
+  AbschnittslageGeaendert: "Lagemeldung geändert",
+  PegelstandGemessen: "Pegelstand gemessen",
+  PegelstandGeaendert: "Pegelstand geändert",
+  DeichschadenGemeldet: "Deichschaden gemeldet",
+  DeichschadenGeaendert: "Deichschaden geändert",
+  PatientErfasst: "Patient erfasst",
+  PatientGeaendert: "Patient geändert",
+  AmtshilfeBeantragt: "Amtshilfe beantragt",
+  AmtshilfeGeaendert: "Amtshilfeantrag geändert",
+  MaterialAngefordert: "Material angefordert",
+  MaterialGeaendert: "Materialanforderung geändert",
+  PressemitteilungVerfasst: "Pressemitteilung verfasst",
+  PressemitteilungGeaendert: "Pressemitteilung geändert",
+  StoerungGemeldet: "Störung gemeldet",
+  StoerungGeaendert: "Störung geändert",
   // S4.3 Verpflegung
   MahlzeitenregelGesetzt: "Mahlzeitenregel gesetzt",
   AusgabestelleAngelegt: "Ausgabestelle angelegt",
@@ -372,6 +389,16 @@ function gegenstand(zustand: Zustand, eintrag: Katalogeintrag, id: Id | undefine
       return feldtext(zustand.einsatz?.name) ?? id;
     case "anforderung":
       return anforderungsname(zustand, id);
+    // Fachlage (Stab-Review 2026-11-22): Der Satz nennt seinen Bezug selbst (`tagebuch-fachlage.ts`).
+    case "abschnittslage":
+    case "pegelmessung":
+    case "deichschaden":
+    case "patient":
+    case "amtshilfe":
+    case "material":
+    case "pressemitteilung":
+    case "stoerung":
+      return "";
     case "unterkunft":
       return feldtext(zustand.unterkuenfte?.[id]?.name) ?? id;
     case "ausgabestelle":

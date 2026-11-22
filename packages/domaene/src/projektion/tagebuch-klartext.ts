@@ -13,6 +13,7 @@ import { zeitpunktText } from "../beschriftungen.js";
 import type { EingehendesEreignis } from "../fold.js";
 import type { Zustand } from "../zustand.js";
 
+import { fachlagesatz, istFachlageart } from "./tagebuch-fachlage.js";
 import { funksatz } from "./tagebuch-funk.js";
 import { nachrichtensatz } from "./tagebuch-nachrichten.js";
 import { verpflegungssatz } from "./tagebuch-versorgung.js";
@@ -132,6 +133,8 @@ export function klartextsatz(
       return ziel === undefined ? betreff : `${betreff} — Einheiten gehen nach ${ziel}`;
     }
     default:
+      // Fachlage (Stab-Review 2026-11-22): nennt Bezug, Inhalt und bei Änderungen den neuen Wert.
+      if (istFachlageart(ereignis.typ)) return fachlagesatz(zustand, ereignis, betreff);
       // Nachrichten N1: die Nachricht nennt sich selbst, mit Nummer und Betreff.
       return nachrichtensatz(zustand, ereignis, betreff);
   }

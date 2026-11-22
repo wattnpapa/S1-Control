@@ -20,13 +20,16 @@ import {
 } from "./index.js";
 
 describe("Der Katalog bildet §5 vollstaendig ab", () => {
-  it("kennt die dreizehn Anlagearten aus §3.11, die der Versorgung (S4.2, S4.3), die Rufgruppe (Funkplan) und die Nachricht (N1)", () => {
+  it("kennt die dreizehn Anlagearten aus §3.11, die der Versorgung (S4.2, S4.3), die Rufgruppe (Funkplan), die Nachricht (N1) und die acht der Fachlage", () => {
     expect(ANLAGEARTEN).toEqual([
       "AbschnittAngelegt",
+      "AbschnittslageGemeldet",
+      "AmtshilfeBeantragt",
       "AnforderungAngelegt",
       "AnhangHinzugefuegt",
       "AuftragErfasst",
       "AusgabestelleAngelegt",
+      "DeichschadenGemeldet",
       "DienstpostenAngelegt",
       "EebMeldungEmpfangen",
       "EinheitAufgeteilt",
@@ -36,12 +39,17 @@ describe("Der Katalog bildet §5 vollstaendig ab", () => {
       "EtbEintragErfasst",
       "FahrzeugAngelegt",
       "MahlzeitBestellt",
+      "MaterialAngefordert",
       "NachrichtVerfasst",
+      "PatientErfasst",
+      "PegelstandGemessen",
       "PersonHinzugefuegt",
+      "PressemitteilungVerfasst",
       "RufgruppeAngelegt",
+      "StoerungGemeldet",
       "UnterkunftAngelegt",
     ]);
-    expect(ANLAGEARTEN).toHaveLength(18);
+    expect(ANLAGEARTEN).toHaveLength(26);
   });
 
   it("kennt die neun Arten mit Pflicht-grund aus §2.4, die der Versorgung (S4.2, S4.3), die Auflösung einer Rufgruppe (Funkplan), das Zurückziehen einer Nachricht (N1) und die Berichtigung ihrer Aufnahme", () => {

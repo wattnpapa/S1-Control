@@ -19,6 +19,7 @@
  */
 
 import type { EreignisId } from "./ereignis.js";
+import type { Fachlagesammlungen } from "./zustand-fachlage.js";
 import type { NachrichtZustand } from "./zustand-nachricht.js";
 import type { Hlc } from "./hlc.js";
 import type { KanonischerWert } from "./kanonisch.js";
@@ -804,7 +805,7 @@ export interface VerworfenerSchluessel {
 export const KAPPUNG_MAX = 50;
 
 /** Das Ergebnis des Folds (§3.2). */
-export interface Zustand {
+export interface Zustand extends Fachlagesammlungen {
   readonly foldVersion: number;
   readonly einsatz?: EinsatzZustand;
   readonly abschnitte: { readonly [id: string]: AbschnittZustand };

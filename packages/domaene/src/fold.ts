@@ -42,6 +42,7 @@
  */
 
 import { ldfStationWert } from "./ldfstation.js";
+import { FACHLAGE_SAMMLUNGEN, type Fachlagesammlungen } from "./zustand-fachlage.js";
 import {
   ABSCHNITTSTYPEN,
   EINHEIT_STATUS,
@@ -1072,6 +1073,11 @@ const FREMDREFERENZEN: ReadonlyMap<string, string> = new Map([
   // Funkplan F2: eine Liste — jede Kennung wird für sich geprüft.
   ["einheit.weitereRufgruppenIds", "rufgruppe"],
   ["rufgruppe.abschnittId", "abschnitt"],
+  // Fachlage (Stab-Review 2026-11-22).
+  ["abschnittslage.abschnittId", "abschnitt"],
+  ["deichschaden.abschnittId", "abschnitt"],
+  ["patient.abschnittId", "abschnitt"],
+  ["material.abschnittId", "abschnitt"],
 ]);
 
 /**
@@ -2222,6 +2228,12 @@ export function materialisiere(faltung: Faltung): Zustand {
   const ausgabestellen = sammlung("ausgabestelle");
   const bestellungen = sammlung("bestellung");
   const rufgruppen = sammlung("rufgruppe");
+  // Fachlage (Stab-Review 2026-11-22): jede Sammlung nur, wenn es Einträge gibt.
+  const fachlage: Record<string, unknown> = {};
+  for (const [entitaet, name] of Object.entries(FACHLAGE_SAMMLUNGEN)) {
+    const eintraege = sammlung(entitaet as keyof typeof FACHLAGE_SAMMLUNGEN);
+    if (eintraege.size > 0) fachlage[name] = alsDatensammlung(eintraege);
+  }
 
   return {
     foldVersion: faltung.foldVersion,
@@ -2243,6 +2255,7 @@ export function materialisiere(faltung: Faltung): Zustand {
     ...(bestellungen.size === 0 ? {} : { bestellungen: alsDatensammlung(bestellungen) as Zustand["bestellungen"] }),
     ...(rufgruppen.size === 0 ? {} : { rufgruppen: alsDatensammlung(rufgruppen) as Zustand["rufgruppen"] }),
     ...(nachrichten.size === 0 ? {} : { nachrichten: alsDatensammlung(nachrichten) as Zustand["nachrichten"] }),
+    ...(fachlage as Fachlagesammlungen),
     hinweise: geordnet,
     unbekannt,
     wartend: alsDatensammlung(wartend),

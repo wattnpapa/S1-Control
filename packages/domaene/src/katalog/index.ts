@@ -47,6 +47,15 @@ export type Entitaetsart =
   | "bestellung"
   | "rufgruppe"
   | "nachricht"
+  // Fachlage (Stab-Review 2026-11-22, `schemata-fachlage.ts`).
+  | "abschnittslage"
+  | "pegelmessung"
+  | "deichschaden"
+  | "patient"
+  | "amtshilfe"
+  | "material"
+  | "pressemitteilung"
+  | "stoerung"
   | "archivierungen";
 
 /**
@@ -471,6 +480,40 @@ export const KATALOG_EINTRAEGE: readonly Katalogeintrag[] = [
   e({ typ: "EtbEintragBerichtigt", form: "b", schema: S.EtbEintragBerichtigt, nutzlastVersion: 1,
       entitaet: "etbEintrag", idFeld: "etbId", klasse: "ADDITIV", grundPflicht: true,
       ohneUndo: true }),
+  // Fachlage (Stab-Review 2026-11-22): je Bereich die Anlage (Form b, ohne Undo wie
+  // ein Tagebucheintrag) und die Feldänderung (Form a, LWW, rücknehmbar).
+  e({ typ: "AbschnittslageGemeldet", form: "b", schema: S.AbschnittslageGemeldet, nutzlastVersion: 1,
+      entitaet: "abschnittslage", idFeld: "lageId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "AbschnittslageGeaendert", form: "a", schema: S.AbschnittslageGeaendert, nutzlastVersion: 1,
+      entitaet: "abschnittslage", idFeld: "lageId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "PegelstandGemessen", form: "b", schema: S.PegelstandGemessen, nutzlastVersion: 1,
+      entitaet: "pegelmessung", idFeld: "messungId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "PegelstandGeaendert", form: "a", schema: S.PegelstandGeaendert, nutzlastVersion: 1,
+      entitaet: "pegelmessung", idFeld: "messungId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "DeichschadenGemeldet", form: "b", schema: S.DeichschadenGemeldet, nutzlastVersion: 1,
+      entitaet: "deichschaden", idFeld: "schadenId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "DeichschadenGeaendert", form: "a", schema: S.DeichschadenGeaendert, nutzlastVersion: 1,
+      entitaet: "deichschaden", idFeld: "schadenId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "PatientErfasst", form: "b", schema: S.PatientErfasst, nutzlastVersion: 1,
+      entitaet: "patient", idFeld: "patientId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "PatientGeaendert", form: "a", schema: S.PatientGeaendert, nutzlastVersion: 1,
+      entitaet: "patient", idFeld: "patientId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "AmtshilfeBeantragt", form: "b", schema: S.AmtshilfeBeantragt, nutzlastVersion: 1,
+      entitaet: "amtshilfe", idFeld: "antragId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "AmtshilfeGeaendert", form: "a", schema: S.AmtshilfeGeaendert, nutzlastVersion: 1,
+      entitaet: "amtshilfe", idFeld: "antragId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "MaterialAngefordert", form: "b", schema: S.MaterialAngefordert, nutzlastVersion: 1,
+      entitaet: "material", idFeld: "materialId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "MaterialGeaendert", form: "a", schema: S.MaterialGeaendert, nutzlastVersion: 1,
+      entitaet: "material", idFeld: "materialId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "PressemitteilungVerfasst", form: "b", schema: S.PressemitteilungVerfasst, nutzlastVersion: 1,
+      entitaet: "pressemitteilung", idFeld: "mitteilungId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "PressemitteilungGeaendert", form: "a", schema: S.PressemitteilungGeaendert, nutzlastVersion: 1,
+      entitaet: "pressemitteilung", idFeld: "mitteilungId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
+  e({ typ: "StoerungGemeldet", form: "b", schema: S.StoerungGemeldet, nutzlastVersion: 1,
+      entitaet: "stoerung", idFeld: "stoerungId", klasse: "ADDITIV", ohneUndo: true }),
+  e({ typ: "StoerungGeaendert", form: "a", schema: S.StoerungGeaendert, nutzlastVersion: 1,
+      entitaet: "stoerung", idFeld: "stoerungId", feld: ausNutzlast("feld"), klasse: "LWW_FELD" }),
 ];
 
 /**

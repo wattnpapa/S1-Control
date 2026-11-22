@@ -522,3 +522,5 @@ export * from "./schemata-funk.js";
 // --- Nachrichten (KONZEPT-NACHRICHTEN.md §9) ------------------------------------
 
 export * from "./schemata-nachrichten.js";
+// Fachlage (Stab-Review 2026-11-22): Lage je Abschnitt, Pegel, Deich, Patienten, Amtshilfe, Material, Presse, Störungen.
+export * from "./schemata-fachlage.js";
