@@ -13,7 +13,7 @@
  *
  * Nach den Audits vom 2026-11-17:
  * - Im Ausgang steht je Zeile der Stand mit dem Vermerk der FmZ
- *   („angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)“),
+ *   („angenommen (Fm) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)“),
  *   statt nur „erledigt“, wo die Nachricht bloß befördert ist (Sachgebietsleiter
  *   P0-1). Den Text liefert der Domänenschnitt als `fmzVermerkText`.
  * - Im Posteingang steht die Kopiefarbe als Wort in einer eigenen Spalte
@@ -51,7 +51,7 @@ export function laufwort(zustand: Laufzustand): string {
  */
 export function ausgangsstand(zeile: Nachrichtenzeile): string {
   if (zeile.zurueckgezogen) return laufwort("ZURUECKGEZOGEN");
-  // R2-FaBe P0-2: „angenommen (FmZ) …“ und „Quittung der Gegenstelle …“ statt „angenommen …“
+  // R2-FaBe P0-2: „angenommen (Fm) …“ und „Quittung der Gegenstelle …“ statt „angenommen …“
   // und „befördert …“ — der Verfasser las die Annahme der eigenen FmZ als Quittung des
   // Empfängers. Der Satz kommt aus Ring 2 (`fmzVermerkText`), derselbe wie in Ansicht und Vorschau.
   // Review 2026-11-21: Davor steht immer, wo die Nachricht jetzt ist und wer dran ist.
