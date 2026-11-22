@@ -8,6 +8,7 @@
  * Anforderung gewählt wird. Beides ist Ableitung, kein Zustand.
  */
 
+import { zaehlklasse } from "../kennzahlen.js";
 import type { Id, Staerke } from "../werte.js";
 import type { AnforderungZustand, EinheitZustand, Zustand } from "../zustand.js";
 
@@ -74,10 +75,19 @@ export function einheitsvorschlag(zustand: Zustand, anforderung: AnforderungZust
   };
 }
 
-/** Eine Einheit zur Auswahl — Id und Name, mehr braucht die Liste nicht. */
+/** Eine Einheit zur Auswahl — Id und Name, dazu, was das Einbuchen beim Verknüpfen braucht. */
 export interface Einheitenwahl {
   readonly id: Id;
   readonly name: string;
+  /**
+   * Additiv (Stab-Review S1, B-S1-2): Abschnitt und Status, wie sie im Zustand
+   * stehen, die Eintreffzeit, und ob die Einheit noch erwartet wird
+   * (angefordert, Anmarsch). „Verknüpfen“ an der Anforderung bucht sie damit ein.
+   */
+  readonly abschnittId?: Id;
+  readonly status?: string;
+  readonly eingetroffenAm?: string;
+  readonly erwartet?: boolean;
 }
 
 /**
@@ -86,9 +96,23 @@ export interface Einheitenwahl {
  * Anforderungen und nicht zur Tabelle, weil die Tabelle nur einen Ausschnitt
  * trägt (M3.7) — und eine Auswahl aus einem Ausschnitt verschwiege Einheiten.
  */
+function wahlAus(zustand: Zustand, einheit: EinheitZustand): Einheitenwahl {
+  const abschnittId = einheit.abschnittId.wert;
+  const status = einheit.status.wert;
+  const eingetroffenAm = einheit.eingetroffenAm?.wert;
+  return {
+    id: einheit.id,
+    name: feldtext(einheit.bezeichnung, einheit.id),
+    ...(typeof abschnittId === "string" ? { abschnittId } : {}),
+    ...(typeof status === "string" ? { status } : {}),
+    ...(typeof eingetroffenAm === "string" ? { eingetroffenAm } : {}),
+    erwartet: zaehlklasse(zustand, einheit) === "erwartet",
+  };
+}
+
 export function einheitenwahl(zustand: Zustand): readonly Einheitenwahl[] {
   return Object.values(zustand.einheiten)
     .filter((einheit) => einheit.entfernt?.wert !== true && !einheit.wirksamAufgegangen)
-    .map((einheit) => ({ id: einheit.id, name: feldtext(einheit.bezeichnung, einheit.id) }))
+    .map((einheit) => wahlAus(zustand, einheit))
     .sort((a, b) => a.name.localeCompare(b.name, "de-DE") || (a.id < b.id ? -1 : 1));
 }

@@ -165,6 +165,15 @@ describe("Die Einheit aus einer Anforderung", () => {
     expect(wahl.some((eintrag) => eintrag.id === "E12")).toBe(true);
     expect(anforderungsliste(zustand).einheitenwahl).toEqual(wahl);
   });
+
+  it("nennt je Einheit Abschnitt, Status und ob sie noch erwartet wird (Stab-Review S1, B-S1-2)", () => {
+    const zustand = lage();
+    for (const eintrag of einheitenwahl(zustand)) {
+      const einheit = zustand.einheiten[eintrag.id];
+      expect(eintrag.abschnittId).toBe(einheit?.abschnittId.wert);
+      expect(typeof eintrag.erwartet).toBe("boolean");
+    }
+  });
 });
 
 describe("Das Tagebuch der Ablösung", () => {

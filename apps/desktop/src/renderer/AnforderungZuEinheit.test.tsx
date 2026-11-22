@@ -210,3 +210,33 @@ describe("Anforderung und Einheit", () => {
     expect(screen.getByText(/angelegt: BGr Varel/)).toBeDefined();
   });
 });
+
+describe("Stab-Review S1, B-S1-2: verknüpfte Einheit einbuchen", () => {
+  it("wählt die gleichnamige Einheit im Anmarsch vor und bucht sie in Abschnitt, Status und Eintreffzeit ein", async () => {
+    attrappe.antwortet("anforderungenAnfordern", {
+      lageZeiger: 9,
+      zeilen: [zeile()],
+      von: 0,
+      gesamtzahl: 1,
+      jeZustand: { OFFEN: 0, ZUGESAGT: 1, EINGETROFFEN: 0, STORNIERT: 0 },
+      einheitenwahl: [
+        { id: "E12", name: "BGr 1 Oldenburg", abschnittId: "EO", status: "IM_EINSATZ", erwartet: false },
+        { id: "E30", name: "BGr THW OV Varel", abschnittId: "ANF", status: "ANMARSCH", erwartet: true },
+      ],
+    });
+    await zeige();
+    fireEvent.click(screen.getByText("ANF-001"));
+    fireEvent.click(screen.getByText("Eingetroffen …"));
+    expect((screen.getByLabelText("Bestehende Einheit verknüpfen") as HTMLInputElement).checked).toBe(true);
+    expect((screen.getByLabelText("Bestehende Einheit") as HTMLSelectElement).value).toBe("E30");
+    expect((screen.getByLabelText(/In den Abschnitt verschieben/) as HTMLInputElement).checked).toBe(true);
+    fireEvent.click(screen.getByText("Verknüpfen", { selector: "button[type=submit]" }));
+    await waitFor(() => {
+      expect(entwuerfe()).toHaveLength(4);
+    });
+    expect(entwuerfe().map((e) => e.typ)).toEqual(["AnforderungErledigt", "EinheitVerschoben", "StatusGesetzt", "ZeitpunktGesetzt"]);
+    expect(entwuerfe()[1]).toMatchObject({ vorher: "ANF", neu: "EO" });
+    expect(entwuerfe()[2]).toMatchObject({ vorher: "ANMARSCH", neu: "EINSATZBEREIT" });
+    expect(entwuerfe()[3]).toMatchObject({ nutzlast: { einheitId: "E30", feld: "eingetroffenAm" }, vorher: null });
+  });
+});

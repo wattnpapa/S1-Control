@@ -33,10 +33,11 @@ import {
   type Einheitsvorschlag,
 } from "@s1/domaene";
 
-import { abloesungNachtragen, anlageAusAnforderung, auftragAusAnforderung } from "../kontrakt/anforderungsschritte.js";
+import { abloesungNachtragen, anlageAusAnforderung, auftragAusAnforderung, einbuchung } from "../kontrakt/anforderungsschritte.js";
 import { anforderungErledigt, istStaerkeEingabe } from "../kontrakt/bedienschritte.js";
 import type { Entwurf } from "../kontrakt/index.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
+import { Einbuchen, NICHT_ZAEHLEND, gleichnamigeErwartete } from "./Einbuchen.js";
 import { Maske } from "./Maske.js";
 import { neueId } from "./kennungen.js";
 import { useLaden } from "./laden.js";
@@ -64,8 +65,6 @@ export interface Einheitseingabe {
   readonly abschnittId: string;
 }
 
-/** Bereiche, in denen eine eingetroffene Einheit nicht in die Ist-Stärke zählt. */
-const NICHT_ZAEHLEND: ReadonlySet<string> = new Set(["ANGEFORDERT", "EINGANG", "ARCHIV"]);
 
 function ausVorschlag(vorschlag: Einheitsvorschlag | undefined): Einheitseingabe {
   return {
@@ -139,13 +138,18 @@ function anlageEntwurf(eingabe: Einheitseingabe, k: Kennungen): Entwurf {
 export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZuEinheitEigenschaften): React.JSX.Element {
   const laden = useLaden();
   const versuch = useAnlegeversuch();
-  const [weg, setzeWeg] = useState<Weg>("anlegen");
-  const [bestehende, setzeBestehende] = useState("");
-  const [eingabe, setzeEingabe] = useState(() => ausVorschlag(zeile.vorschlag));
-  const abschnitte = projektion.baumZeilen(laden.baum?.baum ?? []);
-  const grund = sperrgrund(weg, bestehende, eingabe);
   // Die abzulösende Einheit löst sich nicht selbst ab.
   const einheiten = (laden.anforderungen?.einheitenwahl ?? []).filter((e) => e.id !== zeile.abzuloesendeEinheitId);
+  const [vorwahl] = useState(() => gleichnamigeErwartete(einheiten, zeile.vorschlag));
+  const [weg, setzeWeg] = useState<Weg>(vorwahl === undefined ? "anlegen" : "verknuepfen");
+  const [bestehende, setzeBestehende] = useState(vorwahl?.id ?? "");
+  const [eingabe, setzeEingabe] = useState(() => ausVorschlag(zeile.vorschlag));
+  // Vorgewählt nur, solange die gewählte Einheit noch erwartet wird (Anmarsch).
+  const [einbuchenWahl, setzeEinbuchen] = useState<boolean | undefined>(undefined);
+  const abschnitte = projektion.baumZeilen(laden.baum?.baum ?? []);
+  const grund = sperrgrund(weg, bestehende, eingabe);
+  const gewaehlte = einheiten.find((e) => e.id === bestehende);
+  const einbuchen = einbuchenWahl ?? gewaehlte?.erwartet === true;
 
   async function bestaetige(): Promise<void> {
     // Kennungen und Zeit gelten für die Dialoginstanz: Eine Wiederholung nach
@@ -163,7 +167,14 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
     }
     if (weg === "verknuepfen") {
       const ergebnis = await versuch.schreibe(verknuepfung(zeile, art, bestehende));
-      if (ergebnis?.art === "geschrieben") aufSchliessen();
+      if (ergebnis?.art !== "geschrieben") return;
+      // Einbuchen wie bei der Anlage: Abschnitt, „Einsatzbereit“, Eintreffzeit.
+      const schritte = einbuchen && gewaehlte !== undefined ? einbuchung(gewaehlte, eingabe.abschnittId, k.zeit) : [];
+      for (const schritt of schritte) {
+        const folge = await versuch.schreibe(schritt);
+        if (folge?.art !== "geschrieben") return;
+      }
+      aufSchliessen();
       return;
     }
     const anlage = await versuch.schreibe(anlageEntwurf(eingabe, k));
@@ -202,10 +213,21 @@ export function AnforderungZuEinheit({ zeile, art, aufSchliessen }: AnforderungZ
           >
             <option value="">— bitte wählen —</option>
             {einheiten.map((e) => (
-              <option key={e.id} value={e.id}>{e.name}</option>
+              <option key={e.id} value={e.id}>{e.erwartet === true ? `${e.name} (im Anmarsch)` : e.name}</option>
             ))}
           </select>
         </label>
+      )}
+      {weg === "verknuepfen" && gewaehlte !== undefined && (
+        <Einbuchen
+          an={einbuchen}
+          aufAn={setzeEinbuchen}
+          abschnittId={eingabe.abschnittId}
+          aufAbschnitt={(abschnittId) => {
+            setzeEingabe((bisher) => ({ ...bisher, abschnittId }));
+          }}
+          abschnitte={abschnitte}
+        />
       )}
       {weg === "anlegen" && (
         <Einheitsfelder
@@ -327,3 +349,4 @@ function Einheitsfelder({ eingabe, aufEingabe, abschnitte, nachVorbildVon }: Ein
     </>
   );
 }
+
