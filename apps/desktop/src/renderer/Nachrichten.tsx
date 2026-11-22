@@ -197,7 +197,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       {sicht === "fmz" && <Sichterhinweis lage={lage} />}
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
-          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} aufWeitergabe={setzeWeiterZeile} />
+          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} aufWeitergabe={setzeWeiterZeile} ldfBesetzt={stelleBesetzt("LDF", sitzung?.stellen, peers ?? [])} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
           <OhneNummerKarte zeilen={abruf.ansicht.ohneNummer ?? ohneNummerZeilen(alle)} nurLesen={nurLesen} aufSchritt={fmz.aufSchritt} />
           <Sichterstaukarte
@@ -229,6 +229,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
           aufKontext={setzeKontext}
           lage={lage}
           aufLdf={mitLdf ? () => waehleSicht("ldf") : undefined}
+          ldfBesetzt={stelleBesetzt("LDF", sitzung?.stellen, peers ?? [])}
         />
       )}
       {schritte.auswahl !== undefined && <Nachrichtenleiste {...schritte.auswahl} />}

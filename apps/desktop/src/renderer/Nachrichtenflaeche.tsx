@@ -86,27 +86,39 @@ export interface ListenEigenschaften {
   /** Additiv (R2-Si P3-2): die Lage der Nachrichten für „liegt noch beim LdF“, und der Sprung dorthin. */
   readonly lage?: Nachrichtenlage | undefined;
   readonly aufLdf?: (() => void) | undefined;
+  /** Additiv (Review Runde 2): Ist ein LdF besetzt? Für den Satz „liegt noch beim LdF“. */
+  readonly ldfBesetzt?: boolean | undefined;
 }
 
-function LeereSicht({ sicht, stellen, lage, aufLdf }: Pick<ListenEigenschaften, "sicht" | "stellen" | "lage" | "aufLdf">): React.JSX.Element {
+/**
+ * „1 Nachricht liegt noch beim LdF.“ in der Sicht Sichter — Review Runde 2:
+ * immer, nicht nur bei leerer Sicht, und ohne besetzten LdF mit dem Satz,
+ * wer stattdessen weitergibt. Nur die Weitergabe zählt, nicht die Zuteilung.
+ */
+function BeimLdf({ lage, aufLdf, ldfBesetzt }: Pick<ListenEigenschaften, "lage" | "aufLdf" | "ldfBesetzt">): React.JSX.Element | null {
+  const text = beimLdfText(lage?.vorLdf === undefined ? undefined : lage.vorLdf - (lage.vorLdfZuteilung ?? 0));
+  if (text === undefined) return null;
+  return (
+    <>
+      {" "}
+      {text}
+      {ldfBesetzt === false && " Kein LdF besetzt – ein Fernmelder gibt sie weiter."}{" "}
+      {aufLdf !== undefined && (
+        <button type="button" className="link" onClick={aufLdf}>
+          Sicht LdF ansehen
+        </button>
+      )}
+    </>
+  );
+}
+
+function LeereSicht({ sicht, stellen, lage, aufLdf, ldfBesetzt }: Pick<ListenEigenschaften, "sicht" | "stellen" | "lage" | "aufLdf" | "ldfBesetzt">): React.JSX.Element {
   const titel = NACHRICHTENSICHTEN.find((s) => s.schluessel === sicht)?.titel ?? sicht;
   const ohneStelle = (sicht === "posteingang" || sicht === "offen") && stellen.length === 0;
-  // Review 2026-11-21: nur, was der LdF als Nächstes an den Sichter gibt — nicht die Ausgänge vor der Zuteilung.
-  const beimLdf = sicht === "sichter" ? beimLdfText(lage?.vorLdf === undefined ? undefined : lage.vorLdf - (lage.vorLdfZuteilung ?? 0)) : undefined;
   return (
     <p className="hinweistext">
       {ohneStelle ? "Keine Stelle gewählt — über das Fenstermenü „Stelle und Handzeichen …“ angeben oder oben eine Stelle wählen." : `Keine Nachricht in „${titel}“.`}
-      {beimLdf !== undefined && (
-        <>
-          {" "}
-          {beimLdf}{" "}
-          {aufLdf !== undefined && (
-            <button type="button" className="link" onClick={aufLdf}>
-              Sicht LdF ansehen
-            </button>
-          )}
-        </>
-      )}
+      {sicht === "sichter" && <BeimLdf lage={lage} aufLdf={aufLdf} ldfBesetzt={ldfBesetzt} />}
     </p>
   );
 }
@@ -117,7 +129,7 @@ export function Listenflaeche(p: ListenEigenschaften): React.JSX.Element {
   const titel = NACHRICHTENSICHTEN.find((s) => s.schluessel === sicht)?.titel ?? sicht;
   const zeilen = sichtzeilen(sicht, zeilenErsatz ?? abruf.ansicht?.zeilen ?? []);
   if (abruf.ansicht === undefined) return <p className="hinweistext">{abruf.fehler ?? "Wird geladen …"}</p>;
-  if (zeilen.length === 0) return <LeereSicht sicht={sicht} stellen={stellen} lage={p.lage} aufLdf={p.aufLdf} />;
+  if (zeilen.length === 0) return <LeereSicht sicht={sicht} stellen={stellen} lage={p.lage} aufLdf={p.aufLdf} ldfBesetzt={p.ldfBesetzt} />;
   const { gueltig, zurueck } = getrennt(sicht, zeilen);
   const liste = (teil: readonly Nachrichtenzeile[], beschriftung: string): React.JSX.Element => (
     <Nachrichtenliste
@@ -138,6 +150,11 @@ export function Listenflaeche(p: ListenEigenschaften): React.JSX.Element {
   return (
     <>
       {abruf.fehler !== undefined && <p className="hinweistext fehler">{abruf.fehler}</p>}
+      {sicht === "sichter" && beimLdfText(p.lage?.vorLdf === undefined ? undefined : p.lage.vorLdf - (p.lage.vorLdfZuteilung ?? 0)) !== undefined && (
+        <p className="hinweistext">
+          <BeimLdf lage={p.lage} aufLdf={p.aufLdf} ldfBesetzt={p.ldfBesetzt} />
+        </p>
+      )}
       {gueltig.length > 0 && liste(gueltig, `Nachrichten: ${titel}`)}
       {zurueck.length > 0 && (
         <details className="zurueckgezogene">

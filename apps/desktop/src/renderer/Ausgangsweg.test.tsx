@@ -136,10 +136,11 @@ describe("Darstellung je Rolle (Review 2026-11-21)", () => {
 
   it("S2: Lese-Ansicht und Band sagen, wann die Kopien kommen und wie sich der LdF-Stand teilt", async () => {
     const { verteilerleer } = await import("./Vordruckteile.js");
-    const { ldfkacheltitel } = await import("./Nachrichtenkopf.js");
+    const { ldfkacheltitel, ldfkachelhinweis } = await import("./Nachrichtenkopf.js");
     expect(verteilerleer(BEFOERDERT, false)).toMatch(/^wartet beim LdF \(Nachweisung\)/u);
-    expect(verteilerleer({ ...BEFOERDERT, laufzustand: "VOR_SICHTER" }, false)).toBe("wartet beim Sichter, die rote Kopie an S2 folgt");
-    expect(ldfkacheltitel({ vorLdf: 3, vorLdfZuteilung: 2 } as never, true)).toBe("vor dem LdF · 2 Zuteilung, 1 Weitergabe");
+    expect(verteilerleer({ ...BEFOERDERT, laufzustand: "VOR_SICHTER" }, false)).toBe("wartet beim Sichter, danach rot S2 und grün der Verfasser");
+    expect(ldfkacheltitel({ vorLdf: 3, vorLdfZuteilung: 2 } as never, true)).toBe("beim LdF");
+    expect(ldfkachelhinweis({ vorLdf: 3, vorLdfZuteilung: 2 } as never)).toBe("2 zum Zuteilen, 1 zur Nachweisung und Weitergabe");
   });
 });
 
@@ -195,5 +196,30 @@ describe("Review Runde 2, Block 2: Ablauf", () => {
     const zugeteilt = { ...ZUR_ZUTEILUNG, laufzustand: "VOR_FMZ" as const, vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" }, fernmelderNichtBesetzt: true } as Nachrichtenzeile;
     expect(wegwort(zugeteilt)).toBe("bei Fm2 (nicht besetzt)");
     expect(nachrichtenzahl({ neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, vorLdf: 3 } as never, ["LDF"])).toBe(3);
+  });
+});
+
+describe("Review Runde 2, Block 3: Darstellung", () => {
+  it("zeigt dem LdF in der FmZ bei zugeteilten Zeilen „Zuteilung ändern“ als Hauptknopf", async () => {
+    const { Warteschlange } = await import("./Fernmeldezentrale.js");
+    const zugeteilt = { ...ZUR_ZUTEILUNG, id: "A-z", laufzustand: "VOR_FMZ" as const, betreff: "Zugeteilt", vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-22T09:00:00.000Z", handzeichen: "Lf" } };
+    render(<Warteschlange zeilen={[zugeteilt]} jetzt="2026-11-22T09:10:00.000Z" gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={vi.fn()} stellen={["LDF"]} />);
+    expect(screen.getByRole("button", { name: "Zuteilung ändern" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Annehmen" })).toBeNull();
+  });
+
+  it("nennt Rückgängig nach „Nachweisen und weitergeben“ beim Namen", async () => {
+    const { gruppenbezeichnung } = await import("@s1/domaene");
+    const haupt = { id: "h-1", typ: "NachrichtNachgewiesen", nutzlast: { nachrichtId: "A" } };
+    const folge = { id: "f-1", ereignis: { id: "f-1", typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId: "A", folgeVon: "h-1" } } };
+    expect(gruppenbezeichnung([folge] as never, haupt as never)).toMatch(/^Nachweisen und weitergeben/u);
+  });
+
+  it("zeigt in der Liste des Sichters die Wartezeit", async () => {
+    const { Nachrichtenliste } = await import("./Nachrichtenliste.js");
+    const wartend = { ...BEFOERDERT, laufzustand: "VOR_SICHTER" as const, wartetSeitSichter: 12, sichterSchwelleUeberschritten: true } as Nachrichtenzeile;
+    render(<Nachrichtenliste zeilen={[wartend]} beschriftung="Sichter" stellen={["SICHTER"]} posteingang={false} eingangsspalte gewaehltId={undefined} aufWahl={vi.fn()} aufLesen={vi.fn()} aufKontext={vi.fn()} />);
+    expect(screen.getByRole("columnheader", { name: "Wartet" })).toBeTruthy();
+    expect(screen.getByText("12 min").className).toContain("warn");
   });
 });

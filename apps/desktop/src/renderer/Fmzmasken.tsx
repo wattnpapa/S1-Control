@@ -204,14 +204,13 @@ function Beforderungsfelder({ schritt, e, setze, wahl }: { readonly schritt: Fmz
         <div className="vordruckzeile">
           <label>
             Fernmelder
-            <select value={e.fernmelder} onChange={(ev) => setze("fernmelder", ev.target.value)}>
-              <option value="">— wählen —</option>
+            {/* Review Runde 2: Auswahl Fm1 bis Fm3 mit Besetzung, Freitext erlaubt (andere Namen, Melder). */}
+            <input value={e.fernmelder} list="fernmelderwahl" placeholder="Fm1, Fm2, Fm3 …" onChange={(ev) => setze("fernmelder", ev.target.value)} />
+            <datalist id="fernmelderwahl">
               {wahl.fernmelder.map((fm) => (
-                <option key={fm} value={fm}>
-                  {fernmelderbeschriftung(fm, wahl.besetzung)}
-                </option>
+                <option key={fm} value={fm} label={fernmelderbeschriftung(fm, wahl.besetzung)} />
               ))}
-            </select>
+            </datalist>
           </label>
         </div>
       )}
@@ -363,7 +362,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
           {p.ldfErsatz}
         </p>
       )}
-      {(befoerdern || p.schritt === "vorschlag") && (
+      {befoerdern && (
         <div className="vordruck">
           <FmzTeil zeile={p.zeile} />
           <NachrichtenteilAnzeige zeile={p.zeile} />
@@ -382,6 +381,13 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
         </label>
       </div>
       <Zusatzfelder schritt={p.schritt} e={e} setze={setze} warnung={p.schritt === "nachweis" ? warnung : undefined} wahl={wahl} />
+      {/* Review Runde 2: Für die Zuteilung genügt der Inhalt — eingeklappt unter den Feldern. */}
+      {p.schritt === "vorschlag" && (
+        <details className="vordruck">
+          <summary>Nachricht ansehen</summary>
+          <NachrichtenteilAnzeige zeile={p.zeile} />
+        </details>
+      )}
       {befoerdern && <Befoerderungszusatz zeile={p.zeile} nummer={e.nummer} aufNummer={(wert) => setze("nummer", wert)} warnung={warnung} ohneNummerBestaetigt={ohneNummerBestaetigt} durchLdf={p.ldfWartet === true} />}
       {/* Statt „Nicht gespeichert – … (neu: {…})“ der Satz in Worten mit „Neu laden“ (Fernmelder P2-6). */}
       {konflikt === undefined ? versuch.anzeige : <Konflikthinweis text={konflikt} aufNeuLaden={() => void neuLaden()} />}

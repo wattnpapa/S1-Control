@@ -81,8 +81,11 @@ export function verteilerleer(zeile: Nachrichtenzeile | undefined, gesichtet: bo
   if (zeile?.richtungKurz !== "A") return "noch nicht gesichtet";
   // Review 2026-11-21: Mit LdF als Station kommen die Kopien über LdF und Sichter, nicht mit der Beförderung.
   if (projektion.ldfSchrittDer(zeile) === "weitergabe") return "wartet beim LdF (Nachweisung), danach verteilt der Sichter an S2 rot und den Verfasser grün";
-  if (zeile.laufzustand === "VOR_SICHTER") return "wartet beim Sichter, die rote Kopie an S2 folgt";
-  return zeile.befoerderung === undefined ? "Kopien nach der Beförderung" : "entfällt (Ausgang)";
+  if (zeile.laufzustand === "VOR_SICHTER") return "wartet beim Sichter, danach rot S2 und grün der Verfasser";
+  // Review Runde 2: Mit LdF (Zuteilung, zugeteilt) kommen die Kopien über Nachweisung und Sichter.
+  const ueberLdf = projektion.ldfSchrittDer(zeile) === "zuteilung" || (zeile.laufzustand === "VOR_FMZ" && zeile.vorschlag !== undefined);
+  if (ueberLdf) return "Kopien nach Nachweisung durch den LdF und Sichtung (rot S2, grün der Verfasser)";
+  return zeile.befoerderung === undefined ? "Kopien nach der Beförderung" : "ohne Kopien verteilt";
 }
 
 /** Der untere Teil (Feld 18 bis 20) zum Lesen: Quittung, Verteiler mit Kopiefarbe und Marken, Vermerke. */

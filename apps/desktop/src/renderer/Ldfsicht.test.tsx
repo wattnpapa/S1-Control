@@ -13,6 +13,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Nachrichtenzeile } from "@s1/domaene";
 
 import type { Einsatzstammdaten, Entwurf, Lagebild } from "../kontrakt/index.js";
+import { TEXT_OHNE_LDF } from "./Fernmeldezentrale.js";
 import { useLaden } from "./laden.js";
 import { ldfSichtbar } from "./Ldfsicht.js";
 import { Nachrichten, ersteSicht } from "./Nachrichten.js";
@@ -98,7 +99,7 @@ describe("Die Sicht „LdF“", () => {
 
   it("zeigt zwei Karten und die Zahl „vor dem LdF“; Vorschlagen und Weitergeben schreiben je einen Vermerk", async () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
-    expect(screen.getByLabelText("Zahlen der Nachrichten").textContent).toContain("vor dem LdF");
+    expect(screen.getByLabelText("Zahlen der Nachrichten").textContent).toContain("beim LdF");
     const ausgaenge = await waitFor(() => screen.getByRole("table", { name: "Ausgänge vor der Zuteilung an einen Fernmelder" }));
     expect(attrappe.rufeDerArt("nachrichtenAnfordern")[0]).toMatchObject({ sicht: "ldf" });
     const eingaenge = screen.getByRole("table", { name: "Nachrichten vor der Weitergabe an den Sichter" });
@@ -150,7 +151,8 @@ describe("Die Beförderungsmaske mit LdF", () => {
     attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([{ ...AUSGANG_VOR_LDF, ldfNichtBesetzt: true } as Nachrichtenzeile]));
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten vor der FmZ" }));
-    expect(within(tabelle).getByRole("row", { name: /Sandsäcke/ }).textContent).toContain("beim LdF");
+    // Review Runde 2: statt einer Warnmarke je Zeile ein Satz über der Schlange.
+    expect(screen.getByText(TEXT_OHNE_LDF)).toBeDefined();
     fireEvent.click(within(tabelle).getByRole("button", { name: "Befördern" }));
     const maske = screen.getByRole("form", { name: /Befördern/ });
     expect((within(maske).getByLabelText("Mittel") as HTMLSelectElement).value).toBe("TELEFON");

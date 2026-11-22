@@ -96,7 +96,6 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
           <thead>
             <tr>
               <th scope="col" className="schmalspalte">Vorrang</th>
-              <th scope="col" className="schmalspalte">Nr.</th>
               <th scope="col">Absender</th>
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
@@ -114,7 +113,6 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td>
                   <Vorrang zeile={zeile} />
                 </td>
-                <td className="zahl">{zeile.nummer ?? "—"}</td>
                 <td>{zeile.absender}</td>
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>

@@ -53,9 +53,9 @@ export function ersteSicht(stellen: readonly string[]): Nachrichtensicht {
   return stellen.includes("SICHTER") && stellen.every((s) => s === "SICHTER" || istFernmelderstelle(s)) ? "sichter" : "posteingang";
 }
 
-function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefined; readonly titel: string; readonly warn?: boolean }): React.JSX.Element {
+function Kachel({ wert, titel, warn = false, hinweis }: { readonly wert: number | undefined; readonly titel: string; readonly warn?: boolean; readonly hinweis?: string | undefined }): React.JSX.Element {
   return (
-    <div className={warn ? "kpi warn" : "kpi"}>
+    <div className={warn ? "kpi warn" : "kpi"} title={hinweis}>
       <dd>{wert ?? "—"}</dd>
       <dt>{titel}</dt>
     </div>
@@ -64,9 +64,14 @@ function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefin
 
 /** „vor dem LdF · 2 Zuteilung, 1 Weitergabe“ — die beiden Phasen beim LdF getrennt (Review 2026-11-21). */
 export function ldfkacheltitel(lage: Nachrichtenlage, ldfBesetzt: boolean): string {
-  const kopf = ldfBesetzt ? "vor dem LdF" : "vor dem LdF (nicht besetzt)";
-  if (lage.vorLdf === undefined || lage.vorLdfZuteilung === undefined || lage.vorLdf === 0) return kopf;
-  return `${kopf} · ${String(lage.vorLdfZuteilung)} Zuteilung, ${String(lage.vorLdf - lage.vorLdfZuteilung)} Weitergabe`;
+  // Review Runde 2: dasselbe Wort wie Liste und Ansicht, kurz für das Band; die Aufteilung steht im Tooltip.
+  return ldfBesetzt ? "beim LdF" : "beim LdF (nicht besetzt)";
+}
+
+/** „2 zum Zuteilen, 1 zur Nachweisung und Weitergabe“ — der Tooltip der Kachel. */
+export function ldfkachelhinweis(lage: Nachrichtenlage): string | undefined {
+  if (lage.vorLdf === undefined || lage.vorLdfZuteilung === undefined || lage.vorLdf === 0) return undefined;
+  return `${String(lage.vorLdfZuteilung)} zum Zuteilen, ${String(lage.vorLdf - lage.vorLdfZuteilung)} zur Nachweisung und Weitergabe`;
 }
 
 /** Die fünf Zahlen des Bandes (§6); „mit Vorrang offen" und „über der Schwelle" bernstein ab eins. */
@@ -78,7 +83,7 @@ export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Na
       <Kachel wert={lage === undefined ? undefined : lage.vorFmz + (ldfBesetzt ? 0 : (lage.vorLdf ?? 0))} titel="vor der FmZ" />
       <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
       {/* R2-LdF P3-3: Ist kein LdF besetzt, befördert die FmZ selbst — die Kachel sagt es. */}
-      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfkacheltitel(lage, ldfBesetzt)} />}
+      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfkacheltitel(lage, ldfBesetzt)} hinweis={ldfkachelhinweis(lage)} />}
       <Kachel wert={lage?.mitVorrangOffen} titel="mit Vorrang offen" warn={(lage?.mitVorrangOffen ?? 0) > 0} />
       <Kachel wert={lage?.ueberSchwelle} titel="über der Schwelle" warn={(lage?.ueberSchwelle ?? 0) > 0} />
     </dl>
