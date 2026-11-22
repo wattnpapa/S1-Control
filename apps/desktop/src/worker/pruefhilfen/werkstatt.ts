@@ -184,3 +184,12 @@ export async function grundlage(a: Platz): Promise<void> {
     },
   });
 }
+
+/**
+ * „LdF als Station“ ausdrücklich abschalten (2026-11-22): Seit FOLD_VERSION 17
+ * ist der LdF ohne Parameter Station. Szenarien des Wegs ohne LdF rufen dies
+ * nach `grundlage`.
+ */
+export async function ohneLdf(a: Platz): Promise<void> {
+  await a.dienst.bediene({ typ: "NachrichtenParameterGesetzt", nutzlast: { einsatzId: EINSATZ_ID, feld: "ldfStation" }, vorher: null, neu: false });
+}

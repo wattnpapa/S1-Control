@@ -23,7 +23,7 @@ import { einsatzBeendet } from "../kontrakt/bedienschritte.js";
 import { nachrichtNachweisen } from "../kontrakt/fmzschritte.js";
 import type { Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { nachrichtVerfassen, nachrichtZurueckziehen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
-import { EINSATZ_ID, grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz } from "./pruefhilfen/werkstatt.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, werkstattMitEinemPlatz, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -48,6 +48,7 @@ const nachweis = (nummer: number) => ({ nummer, zeitpunkt: jetzt(), handzeichen:
 async function einsatzMitNachrichten(): Promise<Platz> {
   const platz = await werkstattMitEinemPlatz();
   await grundlage(platz);
+  await ohneLdf(platz); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
   platz.dienst.stellenSetzen(["S4"], "Ru");
   for (const entwurf of [
     nachrichtVerfassen(anlage("N-1")),

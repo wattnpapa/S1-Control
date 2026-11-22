@@ -17,7 +17,7 @@
  * Präsenz von damals kennt nach dem Einsatz niemand mehr.
  */
 
-import { projektion, type Zustand } from "@s1/domaene";
+import { ldfStationAn, projektion, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 function objekt(wert: unknown): Record<string, unknown> | undefined {
@@ -38,7 +38,7 @@ export function mitWegmarken<T extends Ereignisentwurf>(zustand: Zustand, entwur
     const abweichung = projektion.vorschlagsabweichung({ mittel: vorschlag["mittel"] }, { mittel: neu["mittel"] });
     return abweichung === undefined ? entwurf : { ...entwurf, nutzlast: { ...nutzlast, abweichungVomVorschlag: abweichung } };
   }
-  const ohne = zustand.einsatz?.ldfStation?.wert === true && ldfBesetzt;
+  const ohne = ldfStationAn(zustand) && ldfBesetzt;
   return ohne ? { ...entwurf, nutzlast: { ...nutzlast, ohneVorschlag: true } } : entwurf;
 }
 

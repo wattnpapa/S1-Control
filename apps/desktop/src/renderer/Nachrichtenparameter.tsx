@@ -10,8 +10,8 @@
  * gegenüber dem Gezeigten geändert hat, mit dem Wert aus dem Zustand als
  * Vorwert (`null`, solange die Vorbelegung gilt).
  *
- * Additiv (2026-11-17): „LdF als eigene Station" (`ldfStation`, Vorbelegung
- * nein) — der Leiter des Fernmeldebetriebes legt beim Ausgang den Weg fest
+ * Additiv (2026-11-17): „LdF als eigene Station" (`ldfStation`, seit
+ * 2026-11-22 Vorbelegung ja) — der Leiter des Fernmeldebetriebes legt beim Ausgang den Weg fest
  * und gibt Eingänge an den Sichter weiter.
  */
 
@@ -39,7 +39,8 @@ export function parametereingabeAus(stand: Nachrichtenparameterstand): Nachricht
   return {
     sichtungAuchAusgang: stand.sichtungAuchAusgang ?? false,
     fmzSchwelleMinuten: String(stand.fmzSchwelleMinuten ?? FMZ_SCHWELLE_VORBELEGUNG),
-    ldfStation: stand.ldfStation ?? false,
+    // 2026-11-22: Der LdF ist Standard — ohne Angabe gilt ja.
+    ldfStation: stand.ldfStation ?? true,
   };
 }
 
@@ -79,7 +80,7 @@ export function Nachrichtenparameterfelder({ eingabe, aufAendern }: { readonly e
         Ausgänge nach der Beförderung zum Sichter
       </label>
       <label className="kaestchen">
-        <input type="checkbox" checked={eingabe.ldfStation ?? false} onChange={(e) => aufAendern({ ...eingabe, ldfStation: e.target.checked })} />
+        <input type="checkbox" checked={eingabe.ldfStation ?? true} onChange={(e) => aufAendern({ ...eingabe, ldfStation: e.target.checked })} />
         LdF als eigene Station (Weg festlegen, an den Sichter weitergeben)
       </label>
       <label>

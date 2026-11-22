@@ -119,6 +119,12 @@ function einrichtung(d: Definiere): void {
     const rolle = { stelle: erste.stelle, nr: 1, wort: `Der Arbeitsplatz ${erste.stelle}` };
     await bediene(rolle, { typ: "NachrichtenParameterGesetzt", nutzlast: { einsatzId: EINSATZ_ID, feld: "ldfStation" }, vorher: null, neu: true });
   });
+  // 2026-11-22: Der LdF ist Standard; der Weg ohne ihn braucht das ausdrückliche Abschalten.
+  schritt(d, "die Station LdF ist für den Einsatz abgeschaltet", async () => {
+    const erste = aktuelleWelt().stuehle[0]!;
+    const rolle = { stelle: erste.stelle, nr: 1, wort: `Der Arbeitsplatz ${erste.stelle}` };
+    await bediene(rolle, { typ: "NachrichtenParameterGesetzt", nutzlast: { einsatzId: EINSATZ_ID, feld: "ldfStation" }, vorher: null, neu: false });
+  });
 }
 
 function ausgang(d: Definiere): void {

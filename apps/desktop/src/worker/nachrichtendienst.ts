@@ -22,7 +22,7 @@
  * aufgenommen hat, weiß es und wird nicht gemeldet.
  */
 
-import { FERNMELDER_STANDARD, STELLE_FMZ, eigeneFernmelder, istFernmelderstelle, kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
+import { FERNMELDER_STANDARD, STELLE_FMZ, eigeneFernmelder, istFernmelderstelle, ldfStationAn, kennzahlen, projektion, type Nachrichtenzeile, type Zustand } from "@s1/domaene";
 
 import type { Gegenstelle, Nachrichtenansicht, Nachrichtenlage, OffeneNachrichten, Peer, Ruf, Rufgruppenwahl, Sitzungsstellen } from "../kontrakt/index.js";
 import { funkplanbereiche } from "./funkplanprojektion.js";
@@ -218,7 +218,8 @@ export function mitNachrichtenparametern<T extends object>(
   const sichtung = zustand.einsatz?.sichtungAuchAusgang?.wert;
   const schwelle = zustand.einsatz?.fmzSchwelleMinuten?.wert;
   // Additiv (2026-11-17): der LdF als Station; das Blatt zeigt danach die Sicht „LdF".
-  const ldf = zustand.einsatz?.ldfStation?.wert;
+  // 2026-11-22: der geltende Wert — ohne Parameter ist der LdF Station.
+  const ldf = ldfStationAn(zustand);
   // Additiv (R2-FM P2-5, R2-Si P2-2): die Schwellen vor dem Sichter je Vorrang.
   const blitz = zustand.einsatz?.sichterSchwelleBlitzMinuten?.wert;
   const sofort = zustand.einsatz?.sichterSchwelleSofortMinuten?.wert;
@@ -226,7 +227,7 @@ export function mitNachrichtenparametern<T extends object>(
     ...stammdaten,
     ...(typeof sichtung === "boolean" ? { sichtungAuchAusgang: sichtung } : {}),
     ...(typeof schwelle === "number" ? { fmzSchwelleMinuten: schwelle } : {}),
-    ...(typeof ldf === "boolean" ? { ldfStation: ldf } : {}),
+    ldfStation: ldf,
     ...(typeof blitz === "number" ? { sichterSchwelleBlitzMinuten: blitz } : {}),
     ...(typeof sofort === "number" ? { sichterSchwelleSofortMinuten: sofort } : {}),
   };

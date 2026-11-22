@@ -45,7 +45,7 @@ import { dtg, vorrangwort } from "./nachrichtenformate.js";
 
 /** Die Sicht gibt es, wenn der Einsatz den LdF als Station führt oder diese Sitzung LdF ist. */
 export function ldfSichtbar(ldfStation: boolean | undefined, stellen: readonly string[]): boolean {
-  return ldfStation === true || stellen.includes(STELLE_LDF);
+  return ldfStation !== false || stellen.includes(STELLE_LDF);
 }
 
 function Vorrang({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {

@@ -57,6 +57,7 @@ Funktionalität: Eingang über den Nachrichtenvordruck
       | erledigt      | für S3 erledigt                           |
 
   Szenario: Kein Sichter besetzt — der Fernmelder verteilt beim Aufnehmen selbst
+    Angenommen die Station LdF ist für den Einsatz abgeschaltet
     Wenn der Fernmelder eine Nachricht mit diesen Angaben aufnimmt
       | Feld        | Wert                              |
       | Mittel      | Telefon                           |

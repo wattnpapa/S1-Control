@@ -13,7 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { erledigt, kenntnisGenommen, nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { HINWEIS_ZWEITE_SICHTUNG } from "./nachrichtenfolgen.js";
-import { baueDienst, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
+import { baueDienst, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -56,6 +56,7 @@ describe("Funktionalität: Nachrichten (N1)", () => {
   it("Szenario: Verfassen legt einen Ausgang an, der vor der FmZ steht", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
+    await ohneLdf(platz); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
     platz.dienst.stellenSetzen(["S1"], "Mü");
     const ergebnis = await platz.dienst.bediene(nachrichtVerfassen(anlage({ richtung: "AUSGANG", absender: "S1", zeichen: "Mü" })));
     expect(ergebnis.art).toBe("geschrieben");

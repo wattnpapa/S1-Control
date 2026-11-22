@@ -82,13 +82,15 @@ function entwuerfe(): Entwurf[] {
 }
 
 describe("Die Sicht „LdF“", () => {
-  it("ist nur mit Parameter oder Stelle LDF da und für den LdF die erste Sicht", () => {
+  it("ist da, solange die Station nicht abgeschaltet ist oder die Sitzung LdF ist; für den LdF die erste Sicht", () => {
     expect(ersteSicht(["LDF"])).toBe("ldf");
     expect(ersteSicht(["LDF", "FMZ"])).toBe("ldf");
-    expect(ldfSichtbar(undefined, ["FMZ"])).toBe(false);
+    // 2026-11-22: ohne Angabe ist der LdF Station.
+    expect(ldfSichtbar(undefined, ["FMZ"])).toBe(true);
+    expect(ldfSichtbar(false, ["FMZ"])).toBe(false);
     expect(ldfSichtbar(true, [])).toBe(true);
     expect(ldfSichtbar(false, ["LDF"])).toBe(true);
-    useLaden.setState({ lagebild: lagebild({ sitzung: { stellen: ["S4"], handzeichen: "Mü" }, stammdaten: STAMMDATEN }) });
+    useLaden.setState({ lagebild: lagebild({ sitzung: { stellen: ["S4"], handzeichen: "Mü" }, stammdaten: { ...STAMMDATEN, ldfStation: false } }) });
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const umschalter = screen.getByRole("group", { name: "Sicht" });
     expect(within(umschalter).queryByRole("button", { name: "LdF" })).toBeNull();
@@ -157,15 +159,15 @@ describe("Die Beförderungsmaske mit LdF", () => {
 });
 
 describe("Das Parameterfeld in der Stammdatenmaske", () => {
-  it("schreibt „LdF als eigene Station“ mit dem gesehenen Vorher-Wert", async () => {
+  it("schreibt „LdF als eigene Station“ mit dem gesehenen Vorher-Wert; ohne Angabe ist es angehakt", async () => {
     useLaden.setState({ lagebild: { einsatzId: "E-1", stammdaten: STAMMDATEN } as never });
     render(<Stammdatenblock />);
     fireEvent.click(screen.getByRole("button", { name: "Stammdaten bearbeiten" }));
     const feld = screen.getByRole("checkbox", { name: /LdF als eigene Station/ }) as HTMLInputElement;
-    expect(feld.checked).toBe(false);
+    expect(feld.checked).toBe(true);
     fireEvent.click(feld);
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
     await waitFor(() => expect(entwuerfe()).toHaveLength(1));
-    expect(entwuerfe()[0]).toMatchObject({ typ: "NachrichtenParameterGesetzt", nutzlast: { einsatzId: "E-1", feld: "ldfStation" }, vorher: null, neu: true });
+    expect(entwuerfe()[0]).toMatchObject({ typ: "NachrichtenParameterGesetzt", nutzlast: { einsatzId: "E-1", feld: "ldfStation" }, vorher: null, neu: false });
   });
 });

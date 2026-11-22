@@ -90,7 +90,7 @@ export interface NachrichtenEigenschaften {
 function stationEinschalten(lagebild: Lagebild | undefined): (() => void) | undefined {
   const einsatzId = lagebild?.einsatzId;
   const stand = lagebild?.stammdaten?.ldfStation;
-  if (einsatzId === undefined || stand === true) return undefined;
+  if (einsatzId === undefined || stand !== false) return undefined;
   const entwurf = nachrichtenParameterSetzen(einsatzId, "ldfStation", stand ?? null, true);
   return entwurf === undefined ? undefined : () => void useLaden.getState().bediene(entwurf);
 }

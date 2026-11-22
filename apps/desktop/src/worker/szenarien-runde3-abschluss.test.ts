@@ -27,7 +27,7 @@ import { nachrichtSichten, nachrichtVerfassen, nachrichtZurueckziehen, type Nach
 import { TEXT_VORBEHALT_SICHTER } from "../kontrakt/stellenvorbehalt.js";
 import { fernmelderwahlAusPraesenz } from "./nachrichtendienst.js";
 import { nachtragswarnungen } from "./nachtragspruefung.js";
-import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 import { sichterSaeumig } from "./sitzungsangaben.js";
 
 afterEach(raeumeAuf);
@@ -52,6 +52,7 @@ describe("R2-LdF P2-7, R2-ETB P2-2: Einsatz beenden", () => {
   it("Szenario: offene Nachrichten stehen im Tagebuch, die Abschlusszeile nennt Stelle und Handzeichen", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
+    await ohneLdf(platz); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
     platz.dienst.stellenSetzen(["S1"], "Mü");
     await platz.dienst.bediene(nachrichtVerfassen(anlage()));
     expect((await platz.dienst.bediene(einsatzBeendet(EINSATZ_ID, null, jetzt()))).art).toBe("geschrieben");

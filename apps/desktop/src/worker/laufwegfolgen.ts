@@ -30,7 +30,7 @@
  *   der Weitergabe des LdF ebenso ({@link planeKopienNachWeitergabe}).
  */
 
-import { eigeneFernmelder, projektion, type NachrichtZustand, type Zustand } from "@s1/domaene";
+import { eigeneFernmelder, ldfStationAn, projektion, type NachrichtZustand, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 /** Ein geplanter Folgeschritt mit dem Satz für den Bediener. */
@@ -72,7 +72,7 @@ function text(wert: unknown): string | undefined {
 }
 
 function ldfStation(zustand: Zustand): boolean {
-  return zustand.einsatz?.ldfStation?.wert === true;
+  return ldfStationAn(zustand);
 }
 
 /** Mittel, Zeit und Handzeichen aus einem Vermerk — oder nichts, wenn er unvollständig ist. */

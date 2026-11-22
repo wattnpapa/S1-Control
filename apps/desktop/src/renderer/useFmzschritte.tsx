@@ -37,7 +37,8 @@ export function useFmzschritte(ansicht: Nachrichtenansicht | undefined, sitzung:
   const [eingang, setzeEingang] = useState<Maskenwerte | undefined>(undefined);
   const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
   // Additiv (2026-11-17): Führt der Einsatz den LdF als Station und ist keiner da, gilt die Ersatzregel.
-  const ldfStation = useLaden((z) => z.lagebild?.stammdaten?.ldfStation === true);
+  // 2026-11-22: ohne Angabe ist der LdF Station.
+  const ldfStation = useLaden((z) => z.lagebild?.stammdaten?.ldfStation !== false);
   const peers = useLaden((z) => z.lagebild?.peers);
   const ldfDa = ldfBesetzt(sitzung?.stellen, peers ?? []);
   const ldfErsatz = ldfStation && !ldfDa ? TEXT_LDF_ERSATZ : undefined;

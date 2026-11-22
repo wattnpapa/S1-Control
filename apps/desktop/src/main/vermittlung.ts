@@ -864,9 +864,9 @@ export class Vermittlung {
 
   /**
    * Vorbelegung „LdF als Station“ für einen neuen Einsatz (2026-11-21): Der
-   * LdF sichtet jeden Ausgang und teilt ihn einem Fernmelder zu. Als
-   * Ereignis statt als Vorbelegung im Fold, damit ältere Einsätze ihren Weg
-   * behalten und ältere Clients denselben Laufzustand falten. Scheitert der
+   * LdF sichtet jeden Ausgang und teilt ihn einem Fernmelder zu. Seit
+   * FOLD_VERSION 17 gilt das ohne Parameter ohnehin; das Ereignis bleibt,
+   * damit Arbeitsplätze älterer Fassung (bis 16) denselben Weg falten. Scheitert der
    * Schritt, bleibt der Einsatz nutzbar; der Parameter lässt sich in den
    * Stammdaten setzen.
    */

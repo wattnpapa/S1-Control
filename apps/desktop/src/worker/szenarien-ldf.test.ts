@@ -17,7 +17,7 @@ import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichten
 import { nachrichtNachweisenUndWeitergeben, nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
 import { nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { HINWEIS_ERSATZ_LDF_AUSGANG, HINWEIS_ERSATZ_LDF_EINGANG, HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG, HINWEIS_OHNE_VORSCHLAG, HINWEIS_ZURUECK_ZUM_LDF } from "./laufwegfolgen.js";
-import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -246,9 +246,10 @@ describe("Funktionalität: LdF als Station", () => {
     expect(zeile(a, "A-1")?.vorschlag).toBeUndefined();
   });
 
-  it("Szenario: ohne den Parameter gibt es weder VOR_LDF noch eine Weitergabe", async () => {
+  it("Szenario: abgeschaltet gibt es weder VOR_LDF noch eine Weitergabe", async () => {
     const platz = await werkstattMitEinemPlatz();
     await grundlage(platz);
+    await ohneLdf(platz); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
     platz.dienst.stellenSetzen(["FMZ"], "Fm");
     await platz.dienst.bediene(nachrichtVerfassen(eingang()));
     await platz.dienst.bediene(nachrichtVerfassen(anlage()));
@@ -257,7 +258,19 @@ describe("Funktionalität: LdF als Station", () => {
     expect(zeile(platz, "E-1")?.weitergabe).toBeUndefined();
     expect(zeile(platz, "A-1")?.laufzustand).toBe("VOR_FMZ");
     expect(lagebild(platz).nachrichten).not.toHaveProperty("vorLdf");
-    expect(lagebild(platz).stammdaten).not.toHaveProperty("ldfStation");
+    expect(lagebild(platz).stammdaten?.ldfStation).toBe(false);
+  });
+});
+
+describe("Funktionalität: LdF als Standard (2026-11-22)", () => {
+  it("Szenario: Ein Einsatz ohne Parameter führt den LdF als Station", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["S4"], "Ru");
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    expect(zeile(platz, "A-1")?.laufzustand).toBe("VOR_LDF");
+    expect(lagebild(platz).stammdaten?.ldfStation).toBe(true);
+    expect(lagebild(platz).nachrichten).toHaveProperty("vorLdf", 1);
   });
 });
 

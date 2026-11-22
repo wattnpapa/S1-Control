@@ -16,7 +16,7 @@ import type { Bedienergebnis, Lagebild, Mitteilung } from "../kontrakt/index.js"
 import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtenParameterSetzen } from "../kontrakt/fmzschritte.js";
 import { nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { HINWEIS_ERSATZSICHTER, HINWEIS_ERSATZSICHTER_NOTIZ } from "./nachrichtenfolgen.js";
-import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -103,6 +103,7 @@ describe("Funktionalität: Fernmeldezentrale (N2)", () => {
   it("Szenario: ein aufgenommener Eingang mit Nummer wird im selben Zug nachgewiesen", async () => {
     const { a, b } = await werkstattMitZweiPlaetzen();
     await grundlage(a);
+    await ohneLdf(a); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
     b.dienst.stellenSetzen(["SICHTER"], "Si");
     a.dienst.stellenSetzen(["FMZ"], "Fm");
     await takteBis([a, b]);

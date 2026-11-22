@@ -16,7 +16,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import type { Bedienergebnis, Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { aufnahmeBerichtigen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtenParameterSetzen, nachrichtVorschlagen } from "../kontrakt/fmzschritte.js";
 import { erledigt, nachrichtSichten, nachrichtVerfassen, nachrichtZurueckziehen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
-import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
+import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz, ohneLdf } from "./pruefhilfen/werkstatt.js";
 
 afterEach(raeumeAuf);
 
@@ -44,6 +44,7 @@ const tagebuch = (platz: Platz, nachrichtId: string) => platz.dienst.tagebuch({ 
 async function fmzAllein(): Promise<Platz> {
   const platz = await werkstattMitEinemPlatz();
   await grundlage(platz);
+  await ohneLdf(platz); // der Weg ohne LdF (seit FOLD_VERSION 17 ausdrücklich)
   platz.dienst.stellenSetzen(["FMZ"], "Fm");
   return platz;
 }

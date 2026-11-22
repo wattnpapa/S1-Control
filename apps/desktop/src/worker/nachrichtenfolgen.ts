@@ -32,7 +32,7 @@
  * werden sie wie jeder andere Schritt beim Schreiben (`nachrichtenpruefung.ts`).
  */
 
-import { kanonischeSerialisierung, projektion, type KanonischerWert, type Zustand } from "@s1/domaene";
+import { kanonischeSerialisierung, ldfStationAn, projektion, type KanonischerWert, type Zustand } from "@s1/domaene";
 import type { Ereignisentwurf } from "@s1/speicher";
 
 import { kontaktwunsch, planeFunkkontakt } from "./funkkontaktfolge.js";
@@ -125,7 +125,7 @@ function verteilhinweis(umfeld: Nachrichtenfolgeumfeld, gespraechsnotiz: boolean
 }
 
 function ldfStationBesetzt(zustand: Zustand, umfeld: Nachrichtenfolgeumfeld): boolean {
-  return zustand.einsatz?.ldfStation?.wert === true && umfeld.ldfBesetzt === true;
+  return ldfStationAn(zustand) && umfeld.ldfBesetzt === true;
 }
 
 /**
