@@ -273,6 +273,7 @@ export {
   type Stabsuebersicht,
 } from "./stabsuebersicht.js";
 export { einsatzzeiten, type Einsatzzeitzeile } from "./einsatzzeiten.js";
+export { ruecklauf, type Ruecklaufkopie, type Ruecklaufzeile } from "./ruecklauf.js";
 export { STATUSSPALTEN, statusspalte, statustafel, type Statusspalte, type Statustafel, type Statuszeile, type Statuszelle } from "./einsatzstatus.js";
 export { kommenUndGehen, type Bewegung, type Bewegungsart } from "./kommengehen.js";
 export { laufendeAuftraege, type Auftragszeile } from "./auftragslage.js";
