@@ -186,7 +186,8 @@ export function inSicht(zeile: Nachrichtenzeile, anfrage: Nachrichtenanfrage): b
       // Der beförderte Ausgang beim LdF (Nachweisung, Weitergabe) gehört nicht mehr in die Schlange.
       return zeile.laufzustand === "VOR_FMZ" || ldfSchrittDer(zeile) === "zuteilung" || haengtBeimLdf(zeile, anfrage.ldfBesetzt);
     case "ldf":
-      return zeile.laufzustand === "VOR_LDF";
+      // Review 2026-11-21: dazu die zugeteilten, noch nicht beförderten Ausgänge — der LdF behält sie im Blick.
+      return zeile.laufzustand === "VOR_LDF" || (zeile.laufzustand === "VOR_FMZ" && zeile.richtung === "AUSGANG" && zeile.vorschlag !== undefined);
     case "nachweisung":
       return true;
     case "offen":
