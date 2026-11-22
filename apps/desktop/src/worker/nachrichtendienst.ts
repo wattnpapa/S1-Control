@@ -49,6 +49,8 @@ export interface Nachrichtenumfeld {
   readonly ldfBesetzt?: boolean;
   /** Additiv (R2-LdF P3-4, 2026-11-21): die Wahl „Fernmelder“ im Vorschlag des LdF (`fernmelderwahlAusPraesenz`). */
   readonly fernmelder?: Fernmelderwahl;
+  /** Additiv (Stab-Review LdF-A1): dieser und die fremden Arbeitsplätze, für die Platzübersicht des LdF. */
+  readonly praesenz?: readonly projektion.Praesenzplatz[];
 }
 
 /** Ein Platz der Präsenz, soweit die Wahl der Fernmelder ihn braucht. */
@@ -196,8 +198,18 @@ export function nachrichtenansicht(
     // Additiv (LdF P2-2): die Lücken der Nummernfolge für die Nachweisung.
     nummernluecken: projektion.nummernluecken(ausschnittOhneFilter(zustand)),
     // Additiv (R2-LdF P1-2 alt, P2-3): die Karte „Ohne Nummer“ der FmZ führt Eingänge und Ausgänge.
+    ...(ruf.sicht === "ldf" && umfeld.praesenz !== undefined ? { plaetze: fmzPlaetzeAus(zustand, umfeld.praesenz) } : {}),
     ...(ruf.sicht === "fmz" ? { ohneNummer: projektion.ohneNummerZeilen(projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung", jetzt }).zeilen) } : {}),
   };
+}
+
+/** Die Platzübersicht des LdF: alle Nachrichten, die geltenden Rufgruppen mit „hört“. */
+function fmzPlaetzeAus(zustand: Zustand, praesenz: readonly projektion.Praesenzplatz[]): readonly projektion.Fmzplatz[] {
+  const rufgruppen = projektion.rufgruppenAuswahl(zustand).map((r) => {
+    const hoert = zustand.rufgruppen?.[r.wert]?.hoert?.wert;
+    return { name: r.titel, ...(typeof hoert === "string" ? { hoert } : {}) };
+  });
+  return projektion.fmzPlaetze({ praesenz, zeilen: ausschnittOhneFilter(zustand), rufgruppen });
 }
 
 /** Alle Zeilen (die Nachweisung ist die Sicht ohne Filter). */

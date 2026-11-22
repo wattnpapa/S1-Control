@@ -1173,6 +1173,11 @@ export class Aktendienst {
       // Additiv (R2-LdF P3-3, P3-4): LdF besetzt? und die Fernmelder aus der Präsenz.
       ldfBesetzt: ldfBesetzt(this.#sitzung?.stellen, this.#peers),
       fernmelder: fernmelderwahlAusPraesenz(this.#sitzung?.stellen, this.#o.anzeigename, this.#peers),
+      // Additiv (Stab-Review LdF-A1): dieser Platz und die fremden, für die Platzübersicht.
+      praesenz: [
+        { anzeigename: this.#o.anzeigename, stellen: this.#sitzung?.stellen, handzeichen: this.#sitzung?.handzeichen, wanduhr: new Date(this.#o.zeit()).toISOString(), veraltet: false },
+        ...this.#peers,
+      ],
     });
   }
 

@@ -42,6 +42,7 @@ import type {
   Schichtplanblatt,
   Staerketafel,
   Stabsuebersicht,
+  Fmzplatz,
   Tabellenausschnitt,
   Tagebuchzeile,
   Teilbereichsblock,
@@ -1760,6 +1761,11 @@ export interface Nachrichtenansicht extends Ansichtsstand, Nachrichtenausschnitt
    * Nummer der Nachweisung, nicht zurückgezogen (`projektion.ohneNummerZeilen`).
    */
   readonly ohneNummer?: readonly Nachrichtenzeile[];
+  /**
+   * Additiv (Stab-Review LdF-A1), nur bei der Sicht `ldf`: die Arbeitsplätze
+   * der FmZ — besetzt von wem, Zuteilungen, abgehörte Rufgruppen.
+   */
+  readonly plaetze?: readonly Fmzplatz[];
   /**
    * Additiv (R2-LdF P3-4): die Auswahl „Fernmelder“ im Vorschlag des LdF.
    * Seit 2026-11-21 Fm1 bis Fm3 (die Stellen FM1 bis FM3), danach die
