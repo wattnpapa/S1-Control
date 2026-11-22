@@ -1039,6 +1039,8 @@ export const zRuf = z.discriminatedUnion("art", [
       // Die Nachweisung (KONZEPT-NACHRICHTEN.md §7, additiv): A4 hoch, eine
       // Zeile je Nachricht nach Nummer — das Technische Betriebsbuch.
       "nachweisung",
+      // Die Mappe für die Lagebesprechung (Stab-Review 2026-11-22, additiv).
+      "lagevortrag",
     ]),
     format: z.enum(["html", "pdf", "xlsx"]),
     /** Nur beim Druck: der Organisationsfilter „Davon Staerke“ (`Druck!S4`). */

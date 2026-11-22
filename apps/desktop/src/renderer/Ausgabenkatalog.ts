@@ -48,6 +48,13 @@ export const AUSGABEGRUPPEN: readonly Ausgabegruppe[] = [
   {
     titel: "Lagebesprechung",
     zeilen: [
+      // Stab-Review 2026-11-22 (LtrStab A2): die Mappe für den Vortrag auf einem Blatt.
+      {
+        ausgabe: "lagevortrag",
+        name: "Lagevortrag",
+        zweck: "Kräfte, Kommen und Gehen, Aufträge, Anforderungen, Rücklauf und letzte Einträge auf einem Blatt",
+        formate: PDF_HTML,
+      },
       { ausgabe: "druck", name: "Druck", zweck: "Stärke je Bereich für die Lagekarte", formate: PDF_HTML, mitOrganisation: true },
       { ausgabe: "status", name: "Status", zweck: "Kräftebilanz nach Organisation, Status und Schicht", formate: PDF_HTML },
       // Der Druck sagt „wie viele wo“, die Einheitenliste „wer genau“ — auch

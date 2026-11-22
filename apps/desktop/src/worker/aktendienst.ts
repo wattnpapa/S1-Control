@@ -88,6 +88,7 @@ import {
   auswertungAlsXlsx,
   harkeAlsHtml,
   kostenAlsHtml,
+  lagevortragAlsHtml,
   logAlsHtml,
   logFreiAlsXlsx,
   oldenburgAlsXlsx,
@@ -206,6 +207,7 @@ export type Seitenausgabe =
   | "einheitenliste"
   | "funkplan"
   | "nachweisung"
+  | "lagevortrag"
   | Listenausgabe
   | Versorgungsausgabe;
 
@@ -1387,6 +1389,10 @@ export class Aktendienst {
     }
     if (ausgabe === "kosten") {
       return { dateiname: `kosten_${marke}`, html: kostenAlsHtml(this.#zustand, kopf) };
+    }
+    if (ausgabe === "lagevortrag") {
+      const vortrag = projektion.lagevortrag(this.#zustand, this.#ereignisse, jetzt.toISOString());
+      return { dateiname: `lagevortrag_${marke}`, html: lagevortragAlsHtml(vortrag, kopf) };
     }
     if (ausgabe === "fueorg") {
       return { dateiname: `fueorg_${marke}`, html: harkeAlsHtml(this.#zustand, kopf) };

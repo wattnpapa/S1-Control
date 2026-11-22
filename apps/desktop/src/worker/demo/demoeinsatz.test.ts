@@ -191,7 +191,7 @@ describe("Funktionalität: Demo-Einsatz", () => {
   });
 
   it("Szenario: die Ausgaben entstehen aus der Demo-Lage", () => {
-    for (const ausgabe of ["druck", "status", "log", "kosten", "fueorg", "nachweisung"] as const) {
+    for (const ausgabe of ["druck", "status", "log", "kosten", "fueorg", "nachweisung", "lagevortrag"] as const) {
       expect(platz.dienst.ausgabeHtml(ausgabe).html.length, ausgabe).toBeGreaterThan(500);
     }
   });

@@ -276,7 +276,8 @@ export interface Laden {
       | "vorausschau"
       | "kraftstoff"
       | "funkplan"
-      | "nachweisung",
+      | "nachweisung"
+      | "lagevortrag",
     format: "html" | "pdf" | "xlsx",
     organisation?: string,
   ): Promise<Ausgabeergebnis | undefined>;

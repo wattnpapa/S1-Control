@@ -168,6 +168,13 @@ Eintreffzeit, Dauer im Einsatz, „verfügbar bis“ mit der Marke „läuft ab�
 muss, steht oben. Darunter „Es kommen“: was angefordert, zugesagt oder im
 Anmarsch ist. Bearbeitet wird weiter im Blatt S1.
 
+Für die Lagebesprechung steht im Reiter „Exporte“ in der Gruppe
+„Lagebesprechung“ ganz oben der **Lagevortrag** als PDF oder HTML: auf einem
+Blatt die Kräfte nach Status je Abschnitt, was kommt und wessen „verfügbar
+bis“ abläuft, die offenen Aufträge und Anforderungen, die Nachrichten im
+Rücklauf, die letzten zehn eigenen Einträge im Einsatztagebuch und ein freies
+Feld für Notizen.
+
 Das Profil ist ein Zuschnitt der Oberfläche, kein Recht: Jedes Blatt bleibt
 unter „Mehr“ erreichbar. Wer dort ein Blatt aufschlägt, sieht es, solange es
 offen ist, als letzten Reiter im Band; im Menü trägt es ein Häkchen. Die
