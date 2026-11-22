@@ -144,7 +144,7 @@ describe("Die Einheitenliste als Ausgabe", () => {
       const meldung = antwort.ok ? "" : antwort.meldung;
       expect(meldung).not.toMatch(/Drucker/u);
       expect(meldung).toMatch(/HTML/u);
-      if (plattform === "web") expect(meldung).toMatch(/nur in der Desktop-App/u);
+      if (plattform === "web") expect(meldung).toMatch(/Chromium fehlt/u);
     }
   });
 });

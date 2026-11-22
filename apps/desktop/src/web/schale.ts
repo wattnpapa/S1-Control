@@ -29,7 +29,7 @@ import { knotenDateisystem } from "@s1/speicher";
 
 import { Arbeiterhof, type ArbeiterFabrik } from "../main/arbeiterhof.js";
 import type { Netzholer } from "../main/programmbezug.js";
-import { Vermittlung, type Fenstersteuerung } from "../main/vermittlung.js";
+import { type Drucker, Vermittlung, type Fenstersteuerung } from "../main/vermittlung.js";
 import type { Antwort, Einstellungen, Protokollzeile, Ruf } from "../kontrakt/index.js";
 import type { Arbeitsplatzschale, Schalenfabrik } from "./arbeitsplaetze.js";
 
@@ -47,6 +47,8 @@ export interface SchalenOptionen {
   readonly letzteMeldungen?: () => readonly Protokollzeile[];
   /** Der Griff ins Netz fuer das Programmpaket (M9.1); im Container meist vorhanden. */
   readonly netz?: Netzholer;
+  /** Additiv (2026-11-22): PDF ueber Chromium auf dem Server (`chromdrucker.ts`); fehlt es, kein PDF. */
+  readonly drucker?: Drucker;
 }
 
 /**
@@ -98,8 +100,10 @@ export function webSchalenfabrik(o: SchalenOptionen): Schalenfabrik {
       vorbelegterShare: o.sharePfad,
       protokolliere: o.protokolliere,
       fenstersteuerung: BROWSER_FENSTER,
-      // Kein `drucker`: Ein PDF entsteht ueber `printToPDF`, also in Electron.
-      // Die Vermittlung meldet das je Ruf; HTML und XLSX gehen auch hier.
+      // Der `drucker` ist Chromium auf dem Server, sofern es dort eins gibt
+      // (`chromdrucker.ts`); ohne meldet die Vermittlung je Ruf, dass PDF hier
+      // nicht geht. HTML und XLSX gehen immer.
+      ...(o.drucker === undefined ? {} : { drucker: o.drucker }),
       // Kein `druckausgang` (N3): Der Automatikdruck geht hier nur in ein
       // Verzeichnis; der Vordruck je Nachricht entsteht im Worker mit jsPDF
       // und braucht keine Schale (ADR-008).

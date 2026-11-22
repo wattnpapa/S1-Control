@@ -16,6 +16,7 @@
  *   S1_WEB_PORT            Port, Vorgabe 8080
  *   S1_WEB_GNADENFRIST_S   wie lange ein Arbeitsplatz ohne Browser offen bleibt
  *   S1_APP_VERSION         Programmversion fuer Praesenz und Statuszeile
+ *   S1_CHROMIUM            Pfad zu Chromium fuer PDF-Ausgaben; ohne wird im PATH gesucht
  *
  * Fuer die Bereitstellung im Internet (ADR-006), sonst ohne Bedeutung:
  *
@@ -36,6 +37,7 @@ import { knotenArbeiterFabrik } from "../main/knotenArbeiter.js";
 import { knotenNetzholer } from "../main/netzholer.js";
 import { Protokoll } from "../main/protokoll.js";
 import { Anmeldung } from "./anmeldung.js";
+import { chromDrucker, findeChromium } from "./chromdrucker.js";
 import { Arbeitsplaetze } from "./arbeitsplaetze.js";
 import { Bremse } from "./bremse.js";
 import { Webdienst } from "./dienst.js";
@@ -173,6 +175,12 @@ async function starte(): Promise<void> {
     protokoll.schreibe(stufe, text);
     process.stderr.write(`${stufe.toUpperCase()}\t${text}\n`);
   };
+  const chromium = await findeChromium(process.env);
+  const drucker = chromium === undefined ? undefined : chromDrucker(chromium);
+  protokolliere(
+    chromium === undefined ? "warnung" : "info",
+    chromium === undefined ? "Kein Chromium gefunden (S1_CHROMIUM oder PATH): PDF-Ausgaben gehen nur als HTML." : `PDF-Ausgaben über ${chromium}.`,
+  );
 
   const arbeitsplaetze = new Arbeitsplaetze({
     fabrik: webSchalenfabrik({
@@ -185,6 +193,7 @@ async function starte(): Promise<void> {
       protokolldatei: protokoll.datei,
       letzteMeldungen: () => protokoll.letzteMeldungen,
       netz: knotenNetzholer(),
+      ...(drucker === undefined ? {} : { drucker }),
     }),
     gnadenfristMs: u.gnadenfristMs,
     protokolliere,

@@ -455,7 +455,7 @@ export class Vermittlung {
       if (drucker === undefined) {
         throw new Error(
           this.#o.plattform === "web"
-            ? "PDF gibt es nur in der Desktop-App. Im Browser die Ausgabe als HTML erzeugen und mit „Drucken“ ausgeben."
+            ? "PDF ist auf diesem Server nicht eingerichtet (Chromium fehlt, siehe BETRIEB.md). Bis dahin die Ausgabe als HTML erzeugen und mit „Drucken“ ausgeben."
             : "PDF lässt sich auf diesem Arbeitsplatz nicht erzeugen. Die Ausgabe als HTML erzeugen und aus dem Browser drucken.",
         );
       }
