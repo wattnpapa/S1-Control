@@ -25,6 +25,7 @@
 import { FERNMELDERSTELLEN, projektion } from "@s1/domaene";
 import { useState } from "react";
 
+import { useLaden } from "./laden.js";
 import { KOPIEN, VERTEILERSTELLEN, kopieklasse, stellenname } from "./nachrichtenformate.js";
 
 /** Ein Eintrag der Verteilermatrix, wie der Laufzettel ihn hält. */
@@ -182,9 +183,40 @@ export interface VerteilermatrixEigenschaften {
   readonly tabfolge?: number | undefined;
 }
 
+/** Stellen des Fernmeldebetriebs: Sie verteilen, sie empfangen keine Kopie. */
+const KEIN_VERTEILZIEL: ReadonlySet<string> = new Set(["SICHTER", "LDF", "FMZ", ...FERNMELDERSTELLEN]);
+
+type Platz = { readonly veraltet?: boolean; readonly stellen?: readonly string[] | undefined };
+
+/**
+ * Die freien Stellen der besetzten Arbeitsplätze („FaBe FW“, „VB Bw“), die
+ * nicht schon in der Matrix stehen. Stab-Review FW-B1: Die Matrix bot nur
+ * „Fachberater“ an, und bei vier Fachberatern bekam jeder alles Grüne der
+ * anderen; der Falsche erledigte.
+ */
+export function besetzteFreieStellen(plaetze: readonly Platz[]): readonly string[] {
+  const fest = VERTEILERSTELLEN as readonly string[];
+  const alle = plaetze.filter((p) => p.veraltet !== true).flatMap((p) => p.stellen ?? []);
+  return [...new Set(alle.filter((s) => !fest.includes(s) && !KEIN_VERTEILZIEL.has(s)))];
+}
+
+/** Wie viele lebende Arbeitsplätze die Stelle tragen. */
+export function plaetzeMitStelle(plaetze: readonly Platz[], stelle: string): number {
+  return plaetze.filter((p) => p.veraltet !== true && (p.stellen ?? []).includes(stelle)).length;
+}
+
+function usePlaetze(): readonly Platz[] {
+  const peers = useLaden((z) => z.lagebild?.peers);
+  const eigene = useLaden((z) => z.lagebild?.sitzung?.stellen);
+  return [...(peers ?? []), ...(eigene === undefined ? [] : [{ stellen: eigene }])];
+}
+
 export function Verteilermatrix({ verteiler, aufAenderung, tabfolge }: VerteilermatrixEigenschaften): React.JSX.Element {
   const [frei, setzeFrei] = useState("");
-  const freie = verteiler.map((e) => e.stelle).filter((s) => !(VERTEILERSTELLEN as readonly string[]).includes(s));
+  const plaetze = usePlaetze();
+  const gewaehlteFreie = verteiler.map((e) => e.stelle).filter((s) => !(VERTEILERSTELLEN as readonly string[]).includes(s));
+  const freie = [...new Set([...besetzteFreieStellen(plaetze), ...gewaehlteFreie])];
+  const fachberaterGeteilt = verteiler.some((e) => e.stelle === "FACHBERATER") && plaetzeMitStelle(plaetze, "FACHBERATER") > 1;
   const freiDazu = (): void => {
     const name = frei.trim();
     if (name === "" || name.includes("/")) return;
@@ -198,6 +230,11 @@ export function Verteilermatrix({ verteiler, aufAenderung, tabfolge }: Verteiler
           <Rasterzeile key={stelle} stelle={stelle} tabfolge={tabfolge} kopie={verteiler.find((e) => e.stelle === stelle)?.kopie} aufKopie={(kopie) => aufAenderung(mitKopie(verteiler, stelle, kopie))} />
         ))}
       </div>
+      {fachberaterGeteilt && (
+        <p className="hinweistext" role="note">
+          „Fachberater“ ist an {plaetzeMitStelle(plaetze, "FACHBERATER")} Arbeitsplätzen besetzt; die Kopie erreicht alle, und wer zuerst erledigt, erledigt für alle. Für einen bestimmten Fachberater seine eigene Stelle wählen.
+        </p>
+      )}
       <div className="kaestchenzeile">
         <label>
           Weitere Stelle
