@@ -50,7 +50,8 @@ import { useMemo, useState } from "react";
 
 import { FMZ_SCHWELLE_VORBELEGUNG, type Nachrichtenzeile } from "@s1/domaene";
 
-import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import { nachrichtenParameterSetzen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
+import type { Lagebild } from "../kontrakt/index.js";
 import { stelleBesetzt } from "../kontrakt/ldfschritte.js";
 import { Eingangskarte, OhneNummerKarte, Warteschlange, ohneNummerZeilen } from "./Fernmeldezentrale.js";
 import type { Kontextort } from "./Klappmenue.js";
@@ -80,6 +81,18 @@ export interface NachrichtenEigenschaften {
   readonly aufStelle?: (() => void) | undefined;
   /** Additiv (R2-ETB P2-6): schlägt das Blatt Lage auf — „In der Lage zeigen“. */
   readonly aufLage?: (() => void) | undefined;
+}
+
+/**
+ * „LdF als Station einschalten“ aus der Sicht LdF (2026-11-22) — nur, solange
+ * die Station aus ist; derselbe Entwurf wie in den Stammdaten.
+ */
+function stationEinschalten(lagebild: Lagebild | undefined): (() => void) | undefined {
+  const einsatzId = lagebild?.einsatzId;
+  const stand = lagebild?.stammdaten?.ldfStation;
+  if (einsatzId === undefined || stand === true) return undefined;
+  const entwurf = nachrichtenParameterSetzen(einsatzId, "ldfStation", stand ?? null, true);
+  return entwurf === undefined ? undefined : () => void useLaden.getState().bediene(entwurf);
 }
 
 export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEigenschaften): React.JSX.Element {
@@ -198,7 +211,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
           />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
-        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} />
+        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} aufStationEinschalten={stationEinschalten(lagebild)} />
       ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
         <>
           <Lueckenzeile luecken={abruf.ansicht.nummernluecken} />

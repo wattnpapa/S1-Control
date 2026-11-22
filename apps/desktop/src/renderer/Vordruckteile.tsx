@@ -56,7 +56,7 @@ export function FmzTeil({ zeile }: { readonly zeile?: Nachrichtenzeile | undefin
       <Wert titel="Aufnahme" wert={vermerk(zeile?.aufnahme)} />
       {/* R2-FaBe P0-2: Die Annahme ist die der eigenen FmZ, die Beförderungszeit die Quittung der Gegenstelle. */}
       <Wert titel="Annahme (FmZ)" wert={vermerk(zeile?.annahme)} />
-      <Wert titel="Vorschlag LdF" wert={vorschlagText(zeile)} />
+      <Wert titel="Zugeteilt (LdF)" wert={vorschlagText(zeile)} />
       {zeile !== undefined && istAusgang(zeile) ? (
         <Wert titel={projektion.TITEL_QUITTUNG_GEGENSTELLE} wert={vermerk(zeile.befoerderung) ?? projektion.TEXT_NICHT_UEBERMITTELT} />
       ) : (

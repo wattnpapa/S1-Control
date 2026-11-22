@@ -142,3 +142,25 @@ describe("Darstellung je Rolle (Review 2026-11-21)", () => {
     expect(ldfkacheltitel({ vorLdf: 3, vorLdfZuteilung: 2 } as never, true)).toBe("vor dem LdF · 2 Zuteilung, 1 Weitergabe");
   });
 });
+
+describe("Zuteilen als LdF ohne „LdF als Station“ (2026-11-22)", () => {
+  const vorFmz = { ...ZUR_ZUTEILUNG, id: "A-fmz", laufzustand: "VOR_FMZ" as const, betreff: "Ohne Station" };
+
+  it("macht in der Fernmeldezentrale „Fernmelder zuteilen“ zum Hauptknopf des LdF", async () => {
+    const { Warteschlange } = await import("./Fernmeldezentrale.js");
+    const aufSchritt = vi.fn();
+    render(<Warteschlange zeilen={[vorFmz]} jetzt="2026-11-22T09:00:00.000Z" gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={aufSchritt} stellen={["LDF"]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Fernmelder zuteilen" }));
+    expect(aufSchritt).toHaveBeenCalledWith("vorschlag", vorFmz);
+  });
+
+  it("führt den Ausgang in der Sicht LdF zur Zuteilung und bietet das Einschalten der Station an", async () => {
+    const { TEXT_STATION_AUS } = await import("./Ldfsicht.js");
+    const einschalten = vi.fn();
+    render(<Ldfsicht zeilen={[vorFmz]} handzeichen="Lf" nurLesen={false} aufVorschlag={vi.fn()} aufStationEinschalten={einschalten} />);
+    expect(within(screen.getByRole("table", { name: "Ausgänge vor der Zuteilung an einen Fernmelder" })).getByRole("row", { name: /Ohne Station/ })).toBeTruthy();
+    expect(screen.getByText(TEXT_STATION_AUS, { exact: false })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "LdF als Station einschalten" }));
+    expect(einschalten).toHaveBeenCalled();
+  });
+});

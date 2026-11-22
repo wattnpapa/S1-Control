@@ -258,8 +258,8 @@ describe("FM P3-4, SGL P2-11: Warteschlange und Laufzettel bei 1320 x 860", () =
     const knoepfe = within(zeile).getAllByRole("button");
     expect(knoepfe.map((k) => k.getAttribute("aria-label") ?? k.textContent)).toEqual(["Befördern", "Weitere Schritte"]);
     fireEvent.click(within(zeile).getByRole("button", { name: "Weitere Schritte" }));
-    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Annahme ändern", "Vorschlag", "Nachweisen"]);
-    fireEvent.click(screen.getByRole("menuitem", { name: "Vorschlag" }));
+    expect(screen.getAllByRole("menuitem").map((m) => m.textContent)).toEqual(["Annahme ändern", "Fernmelder zuteilen", "Nachweisen"]);
+    fireEvent.click(screen.getByRole("menuitem", { name: "Fernmelder zuteilen" }));
     expect(aufSchritt).toHaveBeenCalledWith("vorschlag", AUSGANG);
   });
 

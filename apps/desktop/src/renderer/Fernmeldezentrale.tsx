@@ -118,17 +118,20 @@ interface Zeilenschritt {
  * Die Schritte einer Zeile; der erste ist der Hauptknopf — ohne Annahme
  * „Annehmen“, sonst „Befördern“ (Fernmelder P3-4) —, die übrigen stehen im Menü.
  */
-export function zeilenschritte(zeile: Nachrichtenzeile): readonly Zeilenschritt[] {
+export function zeilenschritte(zeile: Nachrichtenzeile, ldf = false): readonly Zeilenschritt[] {
   const annehmen: Zeilenschritt = { schritt: "annahme", text: zeile.annahme === undefined ? "Annehmen" : "Annahme ändern", titel: "Annahmevermerk: Uhrzeit und Handzeichen" };
   const befoerdern: Zeilenschritt = { schritt: "befoerderung", text: "Befördern", titel: "Beförderungsvermerk: Mittel, Gegenstelle, Zeit, Handzeichen" };
   const rest: readonly Zeilenschritt[] = [
-    { schritt: "vorschlag", text: zeile.vorschlag === undefined ? "Vorschlag" : "Vorschlag ändern", titel: "Übermittlungsvorschlag des LdF: Fernmelder, Mittel, Gegenstelle" },
     { schritt: "nachweis", text: zeile.nummer === undefined ? "Nachweisen" : `Nr. ${String(zeile.nummer)} ändern`, titel: "In die Nachweisung eintragen" },
   ];
-  return zeile.annahme === undefined ? [annehmen, befoerdern, ...rest] : [befoerdern, annehmen, ...rest];
+  // 2026-11-22: „Vorschlag“ hieß für den LdF nichts — es ist die Zuteilung an einen Fernmelder.
+  const zuteilen: Zeilenschritt = { schritt: "vorschlag", text: zeile.vorschlag === undefined ? "Fernmelder zuteilen" : "Zuteilung ändern", titel: "Einem Fernmelder (Fm1 bis Fm3) zuteilen, Mittel und Gegenstelle bestimmen" };
+  // Der LdF teilt zuerst zu; erst danach ist Befördern sein Schritt.
+  if (ldf && zeile.vorschlag === undefined) return [zuteilen, befoerdern, annehmen, ...rest];
+  return zeile.annahme === undefined ? [annehmen, befoerdern, zuteilen, ...rest] : [befoerdern, annehmen, zuteilen, ...rest];
 }
 
-function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"]; readonly aufWeitergabe?: ((zeile: Nachrichtenzeile) => void) | undefined }): React.JSX.Element {
+function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe, ldf = false }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"]; readonly aufWeitergabe?: ((zeile: Nachrichtenzeile) => void) | undefined; readonly ldf?: boolean }): React.JSX.Element {
   if (projektion.ldfSchrittDer(zeile) === "weitergabe") {
     return (
       <span className="zeilenknoepfe">
@@ -139,8 +142,8 @@ function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe }: { readonly zeil
     );
   }
   // Review 2026-11-21: Solange der besetzte LdF noch nicht zugeteilt hat, ist nichts zu tun — die Schritte bleiben im Menü.
-  const wartet = projektion.ldfSchrittDer(zeile) === "zuteilung" && (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt !== true;
-  const [erster, ...rest] = zeilenschritte(zeile);
+  const wartet = !ldf && projektion.ldfSchrittDer(zeile) === "zuteilung" && (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt !== true;
+  const [erster, ...rest] = zeilenschritte(zeile, ldf);
   const haupt = wartet ? undefined : erster;
   const weitere = wartet && erster !== undefined ? [erster, ...rest] : rest;
   return (
@@ -153,7 +156,7 @@ function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe }: { readonly zeil
       )}
       <Klappmenue
         huelle="rechts"
-        knopf={{ inhalt: "⋯", beschriftung: "Weitere Schritte", titel: "Weitere Schritte: Vorschlag, Annahme, Nachweis", gesperrt: nurLesen }}
+        knopf={{ inhalt: "⋯", beschriftung: "Weitere Schritte", titel: "Weitere Schritte: Annahme, Zuteilung, Nachweis", gesperrt: nurLesen }}
         menue={{ beschriftung: "Weitere Schritte", id: `fmzschritte-${zeile.id}` }}
         inhalt={(waehle) =>
           weitere.map((s) => <Menueeintrag key={s.schritt} text={s.text} titel={s.titel} sperre={nurLesen ? TEXT_NUR_LESEN : undefined} aufWahl={waehle(() => aufSchritt(s.schritt, zeile))} />)
@@ -208,7 +211,7 @@ function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, au
         <Wegmarke zeile={zeile} />
       </td>
       <td>
-        <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
+        <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} ldf={stellen.includes("LDF")} />
       </td>
     </tr>
   );
@@ -240,7 +243,7 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
               <th scope="col">Betreff</th>
               <th scope="col">Abfassungszeit</th>
               <th scope="col">Wartet</th>
-              <th scope="col">Vorschlag LdF</th>
+              <th scope="col">Zugeteilt (LdF)</th>
               <th scope="col">Annahme</th>
               <th scope="col">
                 <span className="nurvorlesen">Schritte</span>

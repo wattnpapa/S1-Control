@@ -211,6 +211,8 @@ export interface LdfsichtEigenschaften {
   readonly naechsteNummer?: number | undefined;
   /** Additiv (Review 2026-11-21): die vergebenen Nummern für die Warnung in der Weitergabemaske. */
   readonly vergebeneNummern?: readonly number[] | undefined;
+  /** Additiv (2026-11-22): Ist die Station aus, schaltet dies sie ein; sonst fehlt es. */
+  readonly aufStationEinschalten?: (() => void) | undefined;
 }
 
 /**
@@ -264,16 +266,43 @@ function Zugeteiltkarte({ zeilen, nurLesen, aufSchritt }: Omit<KartenEigenschaft
   );
 }
 
+/**
+ * Ein Ausgang, den der LdF zuteilen kann: beim LdF zur Zuteilung, oder —
+ * ohne `ldfStation` (2026-11-22) — vor der FmZ und noch niemandem zugeteilt.
+ */
+export function zurZuteilung(zeile: Nachrichtenzeile): boolean {
+  if (projektion.ldfSchrittDer(zeile) === "zuteilung") return true;
+  return zeile.laufzustand === "VOR_FMZ" && zeile.richtung === "AUSGANG" && zeile.vorschlag === undefined;
+}
+
+/** Der Satz, solange der Einsatz den LdF nicht als Station führt (2026-11-22). */
+export const TEXT_STATION_AUS =
+  "In diesem Einsatz ist „LdF als eigene Station“ aus: Ausgänge gehen ohne Ihre Zuteilung an die Fernmelder, und beförderte Ausgänge kommen nicht zur Nachweisung zu Ihnen zurück. Zuteilen können Sie trotzdem.";
+
+/** Der Hinweis mit „Einschalten“ über den Karten; ohne `aufEinschalten` nichts. */
+function Stationshinweis({ aufEinschalten, nurLesen }: { readonly aufEinschalten: (() => void) | undefined; readonly nurLesen: boolean }): React.JSX.Element | null {
+  if (aufEinschalten === undefined) return null;
+  return (
+    <p className="warnung" role="status">
+      {TEXT_STATION_AUS}{" "}
+      <button type="button" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Für alle Arbeitsplätze dieses Einsatzes einschalten (auch in den Stammdaten unter „Nachrichtenweg“)"} onClick={aufEinschalten}>
+        LdF als Station einschalten
+      </button>
+    </p>
+  );
+}
+
 /** Die drei Karten mit der Weitergabemaske; die Zeile bleibt der Stand beim Öffnen (Vorher-Wert). */
-export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE, naechsteNummer, vergebeneNummern }: LdfsichtEigenschaften): React.JSX.Element {
+export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE, naechsteNummer, vergebeneNummern, aufStationEinschalten }: LdfsichtEigenschaften): React.JSX.Element {
   const [weiter, setzeWeiter] = useState<Nachrichtenzeile | undefined>(undefined);
   return (
     <>
+      <Stationshinweis aufEinschalten={aufStationEinschalten} nurLesen={nurLesen} />
       <div className="fmzkarten untereinander">
         {/* 2026-11-21: der Ausgang vor der Beförderung zur Zuteilung, danach mit den Eingängen zur Nachweisung und Weitergabe. */}
-        <Ausgangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "zuteilung")} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
+        <Ausgangskarte zeilen={zeilen.filter(zurZuteilung)} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
         <Eingangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "weitergabe")} nurLesen={nurLesen} aufSchritt={setzeWeiter} schwelleMinuten={schwelleMinuten} />
-        <Zugeteiltkarte zeilen={zeilen.filter((z) => z.laufzustand === "VOR_FMZ")} nurLesen={nurLesen} aufSchritt={aufVorschlag} />
+        <Zugeteiltkarte zeilen={zeilen.filter((z) => z.laufzustand === "VOR_FMZ" && z.vorschlag !== undefined)} nurLesen={nurLesen} aufSchritt={aufVorschlag} />
       </div>
       {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} naechsteNummer={naechsteNummer} vergebeneNummern={vergebeneNummern} aufSchliessen={() => setzeWeiter(undefined)} />}
     </>
