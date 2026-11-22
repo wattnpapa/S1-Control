@@ -229,8 +229,14 @@ Was der Bediener wissen muss:
   in einem neuen Fenster, das sich auf das Anzeigegerät ziehen lässt; auf einem Fernseher
   mit Browser wird die Adresse direkt eingegeben. Blockiert der Browser das
   Fenster, Pop-ups für die Seite erlauben.
-* **Was fehlt:** PDF-Ausgaben (HTML und XLSX gehen; das PDF entsteht auf einem
-  Desktop-Arbeitsplatz), die Kamera, und das Programmpaket wird nicht über den
+* **PDF-Ausgaben** entstehen auf dem Server mit Chromium ohne Fenster, aus
+  derselben Seite wie in der Desktop-App. Das Bild aus dem `Dockerfile`
+  bringt Chromium mit (`S1_CHROMIUM=/usr/bin/chromium`). Läuft der Dienst
+  ohne Container, sucht er `chromium`, `chromium-browser` oder
+  `google-chrome` im `PATH`, oder `S1_CHROMIUM` nennt den Pfad. Findet er
+  keins, steht beim Start im Protokoll „Kein Chromium gefunden“, und PDF
+  geht nur als HTML mit „Drucken“.
+* **Was fehlt:** die Kamera, und das Programmpaket wird nicht über den
   Share eingespielt — ein Container wird durch ein neues Bild aktualisiert.
 * **Keine Anmeldung im Netz der Führungsstelle.** Wer den Dienst dort
   erreicht, arbeitet mit — wie auf dem Share jeder schreibt, der das

@@ -32,6 +32,11 @@ RUN npm run typecheck && npm run build:renderer && npm run build:schale
 
 # ---------------------------------------------------------------------------
 FROM node:24-bookworm-slim
+# PDF-Ausgaben der Web-Schale: Chromium ohne Fenster (web/chromdrucker.ts,
+# ADR-008 Nachtrag). Die Schrift DejaVu deckt Umlaute und ß ab.
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends chromium fonts-dejavu-core \
+ && rm -rf /var/lib/apt/lists/*
 
 ARG S1_APP_VERSION=0.0.0
 ENV NODE_ENV=production \
@@ -39,7 +44,8 @@ ENV NODE_ENV=production \
     S1_WEB_HOST=0.0.0.0 \
     S1_WEB_PORT=8080 \
     S1_SHARE=/share \
-    S1_DATEN=/daten
+    S1_DATEN=/daten \
+    S1_CHROMIUM=/usr/bin/chromium
 
 WORKDIR /app
 COPY --from=bau /quelle/apps/desktop/out/web.mjs /quelle/apps/desktop/out/akte-worker.mjs ./

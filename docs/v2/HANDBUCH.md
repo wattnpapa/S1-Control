@@ -477,7 +477,7 @@ stehen beide Zeilen mit der Marke „doppelt“ da und werden mit „Berichtigen
 neu nummeriert. Nachrichten ohne Nummer bekommen sie hier mit „Nachweisen“;
 ohne besetzte FmZ bleibt die Nummer leer, bis die FmZ nachweist. Fehlende
 Nummern zwischen 1 und der höchsten stehen als Lücke am Fuß. „Nachweisung
-ausgeben“ legt die Liste als PDF (nur in der Desktop-App) oder HTML mit
+ausgeben“ legt die Liste als PDF oder HTML mit
 Zeitstempel im Ordner „ausgaben“ des Einsatzes ab, nach Nummer und mit
 denselben Spalten wie am Bildschirm (Vorrang, E/A, Nr., Absender, Anschrift,
 Mittel, Gegenstelle, Aufnahme, Annahme, Beförderung, Sichtung, Abfassung,

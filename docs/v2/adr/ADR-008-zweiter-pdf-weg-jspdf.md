@@ -22,3 +22,12 @@ Der Nachrichtenvordruck (KONZEPT-NACHRICHTEN.md §7, §8) ist keine Liste, sonde
 - Der stille Druck an einen Drucker (Automatikdruck, Entscheidung 7) lädt das PDF in ein unsichtbares Fenster mit Chromiums PDF-Betrachter und ruft `webContents.print`. Dass das PDF dort mit allen Seiten in der Druckpipeline ankommt, ist unter Electron 43.6.0 gemessen; der Druck an einen echten Windows-Drucker ist am Arbeitsplatz nachzuweisen. Das Verzeichnis als Ziel geht ohne Electron und in beiden Schalen.
 - Das Submodul `vendor/bos-nachrichtenvordruck` ist Abhängigkeit von `@s1/ausgaben` und `apps/desktop` (`file:`). Seine Web-App zieht beim Install devDependencies mit (Konzept, Entscheidung 5); die Trennung upstream steht aus.
 - Zwei PDF-Wege heißt zwei Fehlerbilder: Ein Listen-PDF scheitert im Browser mit dem Hinweis auf HTML, der Vordruck nicht.
+
+## Nachtrag 2026-11-22: Listen-PDF auch in der Web-Schale
+
+Die Folge „Ein Listen-PDF scheitert im Browser mit dem Hinweis auf HTML“ trug im Einsatz nicht: Wer im Browser arbeitet, braucht die Datei zum Ablegen und Weiterschicken, nicht nur einen Druckdialog. Die Web-Schale füllt deshalb die Naht `Drucker` der Vermittlung mit Chromium ohne Fenster auf dem Server (`apps/desktop/src/web/chromdrucker.ts`): HTML in ein Wegwerf-Verzeichnis, `chromium --headless --print-to-pdf`, Bytes zurück, Verzeichnis weg.
+
+- Entscheidung 2 gilt weiter: Es bleibt eine Vorlage je Liste. Chromium rendert dieselbe Seite wie `printToPDF` in der Desktop-App und beachtet wie dort die `@page`-Regel der Vorlage.
+- Keine neue npm-Abhängigkeit. Das Container-Bild installiert `chromium` und `fonts-dejavu-core` per `apt` und setzt `S1_CHROMIUM`; ohne Container sucht die Schale im `PATH`.
+- Fehlt Chromium, bleibt das Verhalten von vorher: Die Vermittlung meldet je Ruf, dass PDF hier nicht eingerichtet ist, und verweist auf HTML.
+- Das Bild wird größer (Chromium mit Abhängigkeiten, grob 300 MB). Das ist der Preis dafür, dass ein Browser-Arbeitsplatz dieselben Ausgaben hat wie ein Desktop-Arbeitsplatz.
