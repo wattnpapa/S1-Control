@@ -69,5 +69,10 @@ export const BEISPIEL_STAERKETAFEL: Staerketafelansicht = {
       { schluessel: "anforderung/A1", art: "angefordert", name: "SEG Betreuung", zeitpunkt: "2026-09-10T12:10:00+02:00", zusatz: "Betreuungsplatz Rastede" },
       { schluessel: "anmarsch/E3", art: "anmarsch", name: "FGr WP OV Vechta" },
     ],
+    auftraege: [
+      { schluessel: "A1", abschnittId: "FRI", abschnitt: "LK Friesland", einheit: "FGr WP 1 OV Oldenburg", status: "IM_EINSATZ", text: "Pumpen am Deich Nord", von: "2026-09-10T09:00:00+02:00" },
+      { schluessel: "A2", abschnittId: "WHV", abschnitt: "Stadt Wilhelmshaven", einheit: "BGr OV Varel", status: "NICHT_EINSATZBEREIT", text: "Sandsäcke füllen, Halle 3", von: "2026-09-10T10:30:00+02:00" },
+      { schluessel: "A3", abschnittId: "FRI", abschnitt: "LK Friesland", einheit: "2. Zug FF Hude", status: "IM_EINSATZ", text: "Deich sichern km 4–6", von: "2026-09-10T11:15:00+02:00" },
+    ],
   },
 };

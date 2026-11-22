@@ -11,7 +11,7 @@
  * Tafel und die Zeile der Zu- und Abgänge in der Versorgungsansicht.
  */
 
-import { projektion, type Logistikzeile } from "@s1/domaene";
+import { projektion, type Logistikzeile, type Nachrichtenzeile, type Tagebuchzeile } from "@s1/domaene";
 
 import { alter } from "./Statuszeile.js";
 import { schriftgroesse } from "./monitorZahlen.js";
@@ -29,6 +29,10 @@ export interface Ansichtseigenschaften {
   readonly funkplan?: Funkplanansicht | undefined;
   /** Sachgebiet 1: die Stärketafeln für `MonitorAbschnitte` und `MonitorOrganisationen`. */
   readonly staerketafel?: Staerketafelansicht | undefined;
+  /** FmZ: die wartenden Nachrichten (beim LdF, vor FmZ, vor Sichter) für „Warteschlange". */
+  readonly warteschlange?: readonly Nachrichtenzeile[] | undefined;
+  /** S2: die jüngsten Tagebuchzeilen für den „Lageticker". */
+  readonly ticker?: readonly Tagebuchzeile[] | undefined;
   readonly fusszusatz?: string;
 }
 

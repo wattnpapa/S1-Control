@@ -226,20 +226,29 @@ nach verlorener Antwort nichts doppelt anlegt.
 ### Der Demo-Einsatz
 
 In der Einsatzauswahl legt „Demo-Einsatz" ohne Maske einen Übungseinsatz an
-und öffnet ihn. Er beginnt zwölf Stunden vor dem Klick und trägt, was die
-Anwendung kann: zwölf Abschnitte, rund 20 Einheiten mit Fahrzeugen und Personen,
-die Führungsstelle mit Schichtplan, acht Rufgruppen mit Funkproben, 21
-Nachrichten in allen Stationen des Wegs, Unterkünfte, Verpflegung und
-Sofortbedarf, sechs Anforderungen, einen übernommenen Erfassungsbogen und das
-Einsatztagebuch dazu. Ein zweiter Demo-Einsatz am selben Tag heißt „… 2".
+und öffnet ihn; das dauert etwa eine Viertelminute. Er beginnt zwölf Stunden
+vor dem Klick und trägt, was die Anwendung kann: zwölf Abschnitte, 28
+Einheiten mit rund 195 Kräften aus neun Organisationen, die Führungsstelle mit
+Schichtplan, acht Rufgruppen mit Funkproben, 21 Nachrichten in allen Stationen
+des Wegs, Unterkünfte, Verpflegung und Sofortbedarf, sechs Anforderungen und
+das Einsatztagebuch dazu. Ein zweiter Demo-Einsatz am selben Tag heißt „… 2".
 
-Das Drehbuch liegt in `apps/desktop/src/worker/demo/` und besteht aus rund 570
-Bedienschritten, gebaut mit den Schrittbauern der Oberfläche. Ein kurzlebiger
-Arbeiter mit gestellter Uhr spielt sie über `Aktendienst.bediene` ein, sodass
-jedes Ereignis die Wanduhr seines Schritts trägt; danach öffnet der Einsatz
-wie jeder andere. Wer ein Feature baut, erweitert das Drehbuch mit
-(`AGENTS.md` §13); `demoeinsatz.test.ts` scheitert, wenn eine Ereignisart des
-Katalogs im Demo-Einsatz fehlt. Andere Einheiten: `demoeinheiten.ts` ändern.
+25 der Einheiten melden sich mit einem **Übungsbogen** an: vierzehn THW-Bögen
+der Regionalstelle Oldenburg (acht davon OV Oldenburg), dazu Feuerwehr,
+Katastrophenschutz Niedersachsen, DLRG, DRK, JUH, MHD, ASB und Bundeswehr. Die
+Bögen stammen aus `wattnpapa/erfassungsbogen` und liegen unter
+`apps/desktop/src/worker/demo/boegen/` (`HERKUNFT.md` dort). Die Übernahme legt
+jede Einheit mit Personen, Fahrzeugen, Funkrufnamen und Sofortbedarf an, wie am
+Meldekopf.
+
+Das Drehbuch liegt in `apps/desktop/src/worker/demo/` und besteht aus rund 590
+Schritten, gebaut mit den Schrittbauern der Oberfläche. Ein kurzlebiger
+Arbeiter mit gestellter Uhr spielt sie über den Aktendienst ein, sodass jedes
+Ereignis die Wanduhr seines Schritts trägt; danach öffnet der Einsatz wie
+jeder andere. Wer ein Feature baut, erweitert das Drehbuch mit (`AGENTS.md`
+§13); `demoeinsatz.test.ts` scheitert, wenn eine Ereignisart des Katalogs im
+Demo-Einsatz fehlt. Andere Einheiten: Bogen nach `boegen/` legen und in
+`demoeinheiten.ts` eintragen.
 
 ### Die Rauchprobe
 

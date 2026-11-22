@@ -111,8 +111,10 @@ dem Knopf. Gibt es den Namen am selben Tag schon, bleibt die Maske mit allen
 Eingaben offen und nennt den Grund.
 
 Daneben legt **„Demo-Einsatz“** mit einem Klick einen Übungseinsatz mit
-Beispieldaten an und öffnet ihn: Beginn vor zwölf Stunden, mit Abschnitten,
-Einheiten, Funkplan, Nachrichten, Versorgung und Tagebuch. Er ist zum Zeigen
+Beispieldaten an und öffnet ihn; das dauert etwa eine Viertelminute. Beginn
+vor zwölf Stunden, mit Abschnitten, Funkplan, Nachrichten, Versorgung und
+Tagebuch. Die Einheiten sind ein THW-Einsatz mit Kräften anderer
+Organisationen und haben sich mit Übungs-Erfassungsbögen angemeldet. Er ist zum Zeigen
 und Ausprobieren gedacht und lässt sich bearbeiten wie jeder Einsatz; ein
 zweiter am selben Tag bekommt eine laufende Nummer.
 
@@ -863,18 +865,28 @@ Kontakts, wenn er älter ist als die Schwelle, Mithörer gestrichelt mit „hör
 mit“. Der Fuß nennt in Bernstein die Einheiten ohne Rufgruppe und die Zahl
 ohne Kontakt. Die Schrift wird so groß, wie das Fenster es zulässt; viele
 Rufgruppen verkleinern sie, statt zu blättern, aufgelöste stehen nicht an der
-Wand. S3: „Einsatzmittel“ mit den Einheiten je Abschnitt nach Status. S4:
-Verpflegung, Nächste 24 h, Unterbringung (eine überbelegte Unterkunft mit ⚠
-und „überbelegt +N“) und die Tafel „Bereiche · Schichten“. S6: „IuK-Lage“ mit
+Wand. S2: der „Lageticker“ mit den jüngsten Einträgen des Einsatztagebuchs
+ohne Stammdatenpflege, Rücknahmen mit ⚠. S3: „Einsatzmittel“ mit den
+Einheiten je Abschnitt nach Status und „Aufträge“ mit den laufenden Aufträgen
+je Abschnitt (Beginn, Einheit, Auftrag, Status). S4: Verpflegung, Nächste
+24 h, Unterbringung (eine überbelegte Unterkunft mit ⚠ und „überbelegt +N“),
+die Tafel „Bereiche · Schichten“ und „Sofortbedarf“ mit dem, was beim
+Eintreffen gemeldet und noch nicht erledigt ist, die offene Summe im Fuß. S6: „IuK-Lage“ mit
 Share, erreichbaren Arbeitsplätzen, Programmfassungen, nicht übertragenen Daten
 und Quarantäne. FmZ: der Funkplan und der „Nachrichtenweg“, der zeigt, was
 beim LdF, vor der FmZ und vor dem Sichter wartet und was davon über der
 Schwelle liegt, dazu Vorrang ungelesen, Nachrichten ohne Nummer,
-Nummernlücken und im Fuß, ob LdF, Fernmelder und Sichter besetzt sind. Eine
+Nummernlücken und im Fuß, ob LdF, Fernmelder und Sichter besetzt sind; die
+„Warteschlange“ mit jeder wartenden Nachricht (Vorrang, Richtung, Nummer,
+Gegenstelle, Stand, Wartezeit), Blitz vor Sofort, nie mit Betreff oder Inhalt;
+„Funk still“ mit den Einheiten ohne Kontakt, länger als die Schwelle still
+oder ohne Rufgruppe, älteste zuerst. Eine
 Kachel in Bernstein trägt immer ⚠ und ein Wort; eine Null steht gedämpft.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
 Mausbewegung oben erscheint, mit den Tasten 1 bis 9 und 0 für die ersten zehn
-Ansichten oder mit Pfeil links und rechts durch alle. R schaltet den Wechsel
+Ansichten oder mit Pfeil links und rechts durch alle. Taste B (oder Leiste
+und Menü) schaltet die Besucheransicht: Dann sind nur Stärke, Status,
+Abschnitte, Organisationen und die Kreuztabelle zu sehen und im Wechsel. R schaltet den Wechsel
 alle 20 Sekunden ein und aus; über Leiste und Menü läuft er auf Wunsch nur
 durch ein Sachgebiet, das mehr als eine Ansicht hat. Die Leertaste hält ihn an, F11 schaltet
 Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —

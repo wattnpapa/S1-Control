@@ -22,7 +22,7 @@ import {
   weitereRufgruppenDerEinheit,
   type Rufgruppenanlage,
 } from "../../kontrakt/funkschritte.js";
-import { DEMO_EINHEITEN, type Demoeinheit } from "./demoeinheiten.js";
+import { DEMO_EINHEITEN, EH, type Demoeinheit } from "./demoeinheiten.js";
 import { AB } from "./demostruktur.js";
 import { STELLE, schrittAls, vorhandene, type Demoschritt, type Schrittentwurf, type Demozeit } from "./drehbuch.js";
 
@@ -49,9 +49,14 @@ const RUFGRUPPEN: readonly Rufgruppenanlage[] = [
   { rufgruppeId: RG.erkundung, betriebsart: "TMO", name: "THW_OL_ERK", zweck: "Erkundung Hunte-Niederung", abschnittId: AB.erkundung },
 ];
 
+/** Der Trupp, den das Drehbuch von der Bergungsgruppe OV Oldenburg abteilt (`demoverlauf.ts`). */
+export const TRUPP_FUELLPLATZ = "demo-eh-bol-trupp";
+
 const GRUPPE_JE_ABSCHNITT: Readonly<Record<string, string>> = {
   [AB.fuest]: RG.fuehrung,
   [AB.ea1]: RG.ea1,
+  [AB.fuellplatz]: RG.ea1,
+  [AB.erkundung]: RG.erkundung,
   [AB.ea2]: RG.ea2,
   [AB.ea3]: RG.ea3,
   [AB.logistik]: RG.logistik,
@@ -87,14 +92,13 @@ function zuordnungsschritte(): Demoschritt[] {
   const zusatz = (minute: number, entwurf: Schrittentwurf | undefined): Demoschritt | undefined =>
     entwurf === undefined ? undefined : schrittAls(STELLE.ldf, minute, entwurf);
   schritte.push(
-    zusatz(30, funkrufnameUeberschreiben("demo-eh-ztr-ol", undefined, "Heros Oldenburg 21/10")),
-    zusatz(45, funkrufnameUeberschreiben("demo-eh-b1-ol", undefined, "Heros Oldenburg 22/51")),
-    zusatz(46, weitereRufgruppenDerEinheit("demo-eh-b1-ol", [], [RG.dmo])),
-    zusatz(47, funkhinweisDerEinheit("demo-eh-b1-ol", undefined, "Am Deichfuß nur DMO, Gateway am GKW")),
-    zusatz(70, weitereRufgruppenDerEinheit("demo-eh-ff-wa", [], [RG.analog])),
-    zusatz(202, rufgruppeDerEinheit("demo-eh-b1-ol-tr", null, RG.ea1)),
-    zusatz(601, rufgruppeDerEinheit("demo-eh-b-we", RG.fuehrung, RG.ea1)),
-    zusatz(140, funkhinweisDerEinheit("demo-eh-dlrg", undefined, "Auf dem Boot nur Handfunkgerät, schlechte Verständigung")),
+    zusatz(46, weitereRufgruppenDerEinheit(EH.bOl.id, [], [RG.dmo])),
+    zusatz(47, funkhinweisDerEinheit(EH.bOl.id, undefined, "Am Deichfuß nur DMO, Gateway am GKW")),
+    zusatz(70, weitereRufgruppenDerEinheit(EH.fwAmm.id, [], [RG.analog])),
+    zusatz(105, funkrufnameUeberschreiben(EH.fwEmd.id, undefined, "Florian Emden 7/44/1")),
+    zusatz(140, funkhinweisDerEinheit(EH.dlrg.id, undefined, "Auf dem Boot nur Handfunkgerät, schlechte Verständigung")),
+    zusatz(202, rufgruppeDerEinheit(TRUPP_FUELLPLATZ, null, RG.ea1)),
+    zusatz(601, rufgruppeDerEinheit(EH.bWe.id, RG.fuehrung, RG.ea1)),
   );
   return vorhandene(schritte);
 }
@@ -102,9 +106,9 @@ function zuordnungsschritte(): Demoschritt[] {
 /** Wann geprobt wird und wer dabei nicht antwortet. */
 const PROBENRUNDEN: readonly { readonly minute: number; readonly ohneKontakt: Readonly<Record<string, string>> }[] = [
   { minute: 180, ohneKontakt: {} },
-  { minute: 360, ohneKontakt: { "demo-eh-dlrg": "Boot auf dem Wasser, keine Antwort" } },
+  { minute: 360, ohneKontakt: { [EH.dlrg.id]: "Boot auf dem Wasser, keine Antwort" } },
   { minute: 540, ohneKontakt: {} },
-  { minute: 700, ohneKontakt: { "demo-eh-n-ol": "Funkgerät im MzKW ohne Strom, Netzersatzanlage ausgefallen" } },
+  { minute: 700, ohneKontakt: { [EH.nOl.id]: "Funkgerät im MzGW ohne Strom, Netzersatzanlage ausgefallen" } },
 ];
 
 function probenschritte(zeit: Demozeit): Demoschritt[] {

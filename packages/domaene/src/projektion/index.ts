@@ -274,6 +274,7 @@ export {
 } from "./stabsuebersicht.js";
 export { STATUSSPALTEN, statusspalte, statustafel, type Statusspalte, type Statustafel, type Statuszeile, type Statuszelle } from "./einsatzstatus.js";
 export { kommenUndGehen, type Bewegung, type Bewegungsart } from "./kommengehen.js";
+export { laufendeAuftraege, type Auftragszeile } from "./auftragslage.js";
 
 // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §6, §9): Sichten, Zahlen, Nummernvorbelegung
 export {

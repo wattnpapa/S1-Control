@@ -12,6 +12,7 @@ import { FMZ_SCHWELLE_VORBELEGUNG } from "@s1/domaene";
 
 import { aufnahmeBerichtigen, nachrichtAufnehmen, nachrichtNachweisen, nachrichtenParameterSetzen } from "../../kontrakt/fmzschritte.js";
 import { erledigt, erledigungZurueck, nachrichtZurueckziehen } from "../../kontrakt/nachrichtenschritte.js";
+import { EH } from "./demoeinheiten.js";
 import { RG } from "./demofunk.js";
 import { ausgangsschritte, eingangsschritte, type Demoausgang, type Demoeingang } from "./demonachrichtenweg.js";
 import { DEMO_FUEST } from "./demostruktur.js";
@@ -31,47 +32,47 @@ const AUSGAENGE: readonly Demoausgang[] = [
   },
   {
     id: "demo-n-a2", minute: 44, verfasser: STELLE.s3, mittel: "FUNK", gegenstelle: "Heros Oldenburg 22/51", nummer: 3, vorrang: "SOFORT",
-    anschrift: "1. Bergungsgruppe OV Oldenburg", anschriftBezug: einheit("demo-eh-b1-ol"), absender: "S3", betreff: "Einsatzauftrag Deich Achterdiek",
+    anschrift: "Bergungsgruppe OV Oldenburg", anschriftBezug: einheit(EH.bOl.id), absender: "S3", betreff: "Einsatzauftrag Deich Achterdiek",
     inhalt: "Lage: Deich Achterdiek durchweicht zwischen km 3,2 und 3,6.\nAuftrag: Deichfuß mit Sandsäcken sichern, Material am Füllplatz Bauhof.\nMeldung bei Arbeitsbeginn und alle 60 Minuten.",
-    kontakt: { einheitId: "demo-eh-b1-ol", rufgruppeId: RG.ea1 },
+    kontakt: { einheitId: EH.bOl.id, rufgruppeId: RG.ea1 },
   },
   {
     id: "demo-n-a3", minute: 186, verfasser: STELLE.s3, mittel: "TELEFAX", gegenstelle: TEL, nummer: 6,
-    anschrift: TEL, absender: "S3", betreff: "Anforderung zusätzlicher Pumpen",
-    inhalt: "Klärwerk Wehnen droht vollzulaufen, Zulauf übersteigt die Förderleistung.\nBenötigt: eine weitere Fachgruppe Wasserschaden/Pumpen mit mindestens 5.000 l/min.\nEintreffen am Meldekopf Weser-Ems-Hallen.",
+    anschrift: TEL, absender: "S3", betreff: "Anforderung Fachgruppe Wassergefahren",
+    inhalt: "Klärwerk Wehnen droht vollzulaufen, Zulauf übersteigt die Förderleistung.\nBenötigt: eine Fachgruppe Wassergefahren mit Booten und Pumpen für das Regenrückhaltebecken.\nEintreffen am Meldekopf Weser-Ems-Hallen.",
   },
   {
-    id: "demo-n-a4", minute: 212, verfasser: STELLE.s3, mittel: "FUNK", gegenstelle: "Heros Oldenburg 24/61", nummer: 8, weitergeleitetVon: "demo-n-e3",
-    anschrift: "Fachgruppe Wasserschaden/Pumpen OV Oldenburg", anschriftBezug: einheit("demo-eh-wp-ol"), absender: "S3", betreff: "Verstärkung Pumpen zugesagt",
-    inhalt: "FGr WP OV Nordenham trifft in etwa 90 Minuten ein und übernimmt das Regenrückhaltebecken.\nEinweisung durch Abschnittsleiter EA 3.",
-    kontakt: { einheitId: "demo-eh-wp-ol", rufgruppeId: RG.ea3 },
+    id: "demo-n-a4", minute: 212, verfasser: STELLE.s3, mittel: "FUNK", gegenstelle: "Heros Varel 48/43", nummer: 8, weitergeleitetVon: "demo-n-e3",
+    anschrift: "Fachgruppe Wasserschaden/Pumpen OV Varel", anschriftBezug: einheit(EH.wpVa.id), absender: "S3", betreff: "Verstärkung zugesagt",
+    inhalt: "FGr W OV Leer trifft in etwa 90 Minuten ein und übernimmt das Regenrückhaltebecken.\nEinweisung durch Abschnittsleiter EA 3.",
+    kontakt: { einheitId: EH.wpVa.id, rufgruppeId: RG.ea3 },
   },
   {
     id: "demo-n-a5", minute: 385, verfasser: STELLE.s1, mittel: "TELEFON", gegenstelle: "Regionalstelle Oldenburg", nummer: 10,
     anschrift: "Regionalstelle Oldenburg", absender: "S1", betreff: "Unfallmeldung",
-    inhalt: "Ein Helfer OV Wardenburg mit Schnittverletzung an der Hand, Transport ins Klinikum Oldenburg.\nUnfallanzeige folgt, Angehörige sind durch den Ortsbeauftragten verständigt.",
+    inhalt: "Ein Helfer OV Nordenham mit Schnittverletzung an der Hand, Transport ins Klinikum Oldenburg.\nUnfallanzeige folgt, Angehörige sind durch den Ortsbeauftragten verständigt.",
   },
   {
     id: "demo-n-a6", minute: 672, verfasser: STELLE.s3, mittel: "TELEFON", gegenstelle: TEL, nummer: 13, vorrang: "SOFORT",
     anschrift: TEL, absender: "S3", betreff: "Anforderung Fachgruppe Elektroversorgung",
-    inhalt: "Netzersatzanlage 50 kVA der FGr N ausgefallen, Einsatzstelle Sandkrug ohne Licht.\nBenötigt: Fachgruppe Elektroversorgung mit Netzersatzanlage.",
+    inhalt: "Netzersatzanlage der FGr N ausgefallen, Einsatzstelle Sandkrug ohne Licht.\nBenötigt: Fachgruppe Elektroversorgung mit Netzersatzanlage.",
   },
   {
     id: "demo-n-a7", minute: 690, verfasser: STELLE.s2, mittel: "DFUE", gegenstelle: TEL, nummer: 14,
     anschrift: TEL, absender: "S2", betreff: "Lagemeldung zum Schichtwechsel",
-    inhalt: "Kräfte: 15 Einheiten, 148 Einsatzkräfte.\nEA 1 und EA 2 halten, EA 3 fördert 20.000 l/min.\nEin Verletzter (leicht), Ausfall einer Netzersatzanlage, Ersatz ist angefordert.",
+    inhalt: "Kräfte: 25 Einheiten, rund 190 Einsatzkräfte aus neun Organisationen.\nEA 1 und EA 2 halten, EA 3 fördert 20.000 l/min.\nEin Verletzter (leicht), Ausfall einer Netzersatzanlage, Ersatz ist angefordert.",
   },
   // --- unterwegs: in der FmZ angenommen, noch nicht befördert ---
   {
     id: "demo-n-a8", minute: 706, verfasser: STELLE.s3, mittel: "FUNK", gegenstelle: "Heros Westerstede 22/51", nummer: 0, bis: "angenommen",
-    anschrift: "Bergungsgruppe OV Westerstede", anschriftBezug: einheit("demo-eh-b-we"), absender: "S3", betreff: "Kontrollgang Deichkrone",
+    anschrift: "Bergungsgruppe OV Westerstede", anschriftBezug: einheit(EH.bWe.id), absender: "S3", betreff: "Kontrollgang Deichkrone",
     inhalt: "Deichkrone zwischen km 3,2 und 4,1 stündlich abgehen.\nSickerstellen sofort melden.",
-    kontakt: { einheitId: "demo-eh-b-we", rufgruppeId: RG.ea1 },
+    kontakt: { einheitId: EH.bWe.id, rufgruppeId: RG.ea1 },
   },
   // --- unterwegs: aufgegeben, liegt beim LdF ---
   {
-    id: "demo-n-a9", minute: 714, verfasser: STELLE.s4, mittel: "FUNK", gegenstelle: "Heros Wilhelmshaven 31/40", nummer: 0, bis: "aufgegeben",
-    anschrift: "Fachgruppe Logistik-Verpflegung OV Wilhelmshaven", anschriftBezug: einheit("demo-eh-logv"), absender: "S4", betreff: "Nachtverpflegung Sandkrug",
+    id: "demo-n-a9", minute: 714, verfasser: STELLE.s4, mittel: "FUNK", gegenstelle: "Heros Aurich 64/43", nummer: 0, bis: "aufgegeben",
+    anschrift: "Fachgruppe Logistik-Verpflegung OV Aurich", anschriftBezug: einheit(EH.logV.id), absender: "S4", betreff: "Nachtverpflegung Sandkrug",
     inhalt: "60 Portionen Nachtverpflegung innerhalb von zwei Stunden an die Ausgabe Feuerwehrhaus Sandkrug.\nDavon 6 vegetarisch, 1 vegan.",
   },
 ];
@@ -87,22 +88,22 @@ const EINGAENGE: readonly Demoeingang[] = [
   },
   {
     id: "demo-n-e2", minute: 92, mittel: "FUNK", gegenstelle: "Heros Oldenburg 22/51", nummer: 4, vorrang: "SOFORT",
-    anschrift: FUEST, absender: "1. Bergungsgruppe OV Oldenburg", absenderBezug: einheit("demo-eh-b1-ol"), betreff: "Sickerstelle Deich-km 3,4",
+    anschrift: FUEST, absender: "Bergungsgruppe OV Oldenburg", absenderBezug: einheit(EH.bOl.id), betreff: "Sickerstelle Deich-km 3,4",
     inhalt: "Sickerstelle am Deichfuß bei km 3,4, etwa zwei Meter breit, Wasser trüb.\nBenötigen 800 Sandsäcke und Vlies.",
-    kontakt: { einheitId: "demo-eh-b1-ol", rufgruppeId: RG.ea1 },
+    kontakt: { einheitId: EH.bOl.id, rufgruppeId: RG.ea1 },
     verteiler: [ROT_S2, gruen("S3"), blau("S4")], vermerke: "S4: Sandsäcke vom Füllplatz zuführen", kenntnis: [STELLE.s3, STELLE.s4, STELLE.s2], erledigtVon: STELLE.s3,
   },
   {
     id: "demo-n-e3", minute: 204, mittel: "TELEFAX", gegenstelle: TEL, nummer: 7, antwortAuf: "demo-n-a3",
-    anschrift: FUEST, absender: TEL, betreff: "Zusage Pumpen",
-    inhalt: "Fachgruppe Wasserschaden/Pumpen OV Nordenham ist alarmiert.\nEintreffen am Meldekopf in etwa 90 Minuten.",
+    anschrift: FUEST, absender: TEL, betreff: "Zusage Fachgruppe Wassergefahren",
+    inhalt: "Fachgruppe Wassergefahren OV Leer ist alarmiert.\nEintreffen am Meldekopf in etwa 90 Minuten.",
     verteiler: [ROT_S2, gruen("S3"), blau("S1")], kenntnis: [STELLE.s3, STELLE.s1], erledigtVon: STELLE.s3,
   },
   {
-    id: "demo-n-e4", minute: 370, mittel: "FUNK", gegenstelle: "Heros Wardenburg 22/51", nummer: 9, vorrang: "BLITZ",
-    anschrift: FUEST, absender: "Bergungsgruppe OV Wardenburg", absenderBezug: einheit("demo-eh-b-wa"), betreff: "Verletzter Helfer",
+    id: "demo-n-e4", minute: 370, mittel: "FUNK", gegenstelle: "Heros Nordenham 22/51", nummer: 9, vorrang: "BLITZ",
+    anschrift: FUEST, absender: "Bergungsgruppe OV Nordenham", absenderBezug: einheit(EH.bNh.id), betreff: "Verletzter Helfer",
     inhalt: "Ein Helfer mit stark blutender Schnittverletzung an der Hand.\nRettungsdienst an die Zufahrt Achterdiek, Einweiser steht an der Straße.",
-    kontakt: { einheitId: "demo-eh-b-wa", rufgruppeId: RG.ea1 },
+    kontakt: { einheitId: EH.bNh.id, rufgruppeId: RG.ea1 },
     verteiler: [ROT_S2, gruen("S1"), blau("LEITER"), blau("S3")], kenntnis: [STELLE.s1, STELLE.leiter, STELLE.s3, STELLE.s2], erledigtVon: STELLE.s1,
   },
   {
@@ -112,10 +113,10 @@ const EINGAENGE: readonly Demoeingang[] = [
     verteiler: [ROT_S2, gruen("S3"), blau("LEITER")], kenntnis: [STELLE.s3, STELLE.s2],
   },
   {
-    id: "demo-n-e6", minute: 660, mittel: "FUNK", gegenstelle: "Heros Oldenburg 23/61", nummer: 12, vorrang: "SOFORT",
-    anschrift: FUEST, absender: "FGr N OV Oldenburg", absenderBezug: einheit("demo-eh-n-ol"), betreff: "Ausfall Netzersatzanlage",
-    inhalt: "Netzersatzanlage 50 kVA mit Motorschaden ausgefallen.\nEinsatzstelle Sandkrug ohne Licht, Arbeiten am Deichfuß eingestellt.",
-    kontakt: { einheitId: "demo-eh-n-ol", rufgruppeId: RG.ea2 },
+    id: "demo-n-e6", minute: 660, mittel: "FUNK", gegenstelle: "Heros Oldenburg 24/55", nummer: 12, vorrang: "SOFORT",
+    anschrift: FUEST, absender: "FGr N OV Oldenburg", absenderBezug: einheit(EH.nOl.id), betreff: "Ausfall Netzersatzanlage",
+    inhalt: "Netzersatzanlage mit Motorschaden ausgefallen.\nEinsatzstelle Sandkrug ohne Licht, Arbeiten am Deichfuß eingestellt.",
+    kontakt: { einheitId: EH.nOl.id, rufgruppeId: RG.ea2 },
     verteiler: [ROT_S2, gruen("S3"), blau("S4")], kenntnis: [STELLE.s3, STELLE.s4],
   },
   // --- gesichtet und verteilt, aber noch von niemandem gelesen ---
@@ -127,16 +128,16 @@ const EINGAENGE: readonly Demoeingang[] = [
   },
   // --- unterwegs: vom LdF weitergegeben, liegt vor dem Sichter ---
   {
-    id: "demo-n-e8", minute: 703, mittel: "FUNK", gegenstelle: "Heros Oldenburg 24/61", nummer: 16, bis: "weitergegeben",
-    anschrift: FUEST, absender: "FGr WP OV Oldenburg", absenderBezug: einheit("demo-eh-wp-ol"), betreff: "Wasserstand Klärwerk fällt",
+    id: "demo-n-e8", minute: 703, mittel: "FUNK", gegenstelle: "Heros Varel 48/43", nummer: 16, bis: "weitergegeben",
+    anschrift: FUEST, absender: "FGr WP OV Varel", absenderBezug: einheit(EH.wpVa.id), betreff: "Wasserstand Klärwerk fällt",
     inhalt: "Wasserstand im Zulauf des Klärwerks seit einer Stunde um 12 cm gefallen.\nFörderleistung wird beibehalten.",
-    kontakt: { einheitId: "demo-eh-wp-ol", rufgruppeId: RG.ea3 }, verteiler: [],
+    kontakt: { einheitId: EH.wpVa.id, rufgruppeId: RG.ea3 }, verteiler: [],
   },
   {
-    id: "demo-n-e9", minute: 711, mittel: "FUNK", gegenstelle: "Heros Delmenhorst 22/51", nummer: 17, vorrang: "SOFORT", bis: "weitergegeben",
-    anschrift: FUEST, absender: "Bergungsgruppe OV Delmenhorst", absenderBezug: einheit("demo-eh-b-de"), betreff: "Deichfuß rutscht",
+    id: "demo-n-e9", minute: 711, mittel: "FUNK", gegenstelle: "Heros Varel 22/51", nummer: 17, vorrang: "SOFORT", bis: "weitergegeben",
+    anschrift: FUEST, absender: "Bergungsgruppe OV Varel", absenderBezug: einheit(EH.bVa.id), betreff: "Deichfuß rutscht",
     inhalt: "Deichfuß bei Sandkrug rutscht auf etwa zehn Metern Länge.\nBenötigen sofort Licht und weitere 20 Einsatzkräfte.",
-    kontakt: { einheitId: "demo-eh-b-de", rufgruppeId: RG.ea2 }, verteiler: [],
+    kontakt: { einheitId: EH.bVa.id, rufgruppeId: RG.ea2 }, verteiler: [],
   },
   // --- unterwegs: aufgenommen, liegt beim LdF ---
   {

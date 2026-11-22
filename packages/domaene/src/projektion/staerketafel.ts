@@ -27,6 +27,7 @@ import { EINGANG_ABSCHNITT_ID, type Zustand } from "../zustand.js";
 import { abschnittsbaum, type Baumknoten } from "./baum.js";
 import { statustafel, type Statustafel } from "./einsatzstatus.js";
 import { kommenUndGehen, type Bewegung } from "./kommengehen.js";
+import { laufendeAuftraege, type Auftragszeile } from "./auftragslage.js";
 import { kreuzzellen, organisationsschluessel } from "./staerkematrix.js";
 
 export interface Staerketafelzeile {
@@ -59,6 +60,8 @@ export interface Staerketafel {
   readonly status?: Statustafel;
   /** Additiv: Anforderungen, Anmarsch und „verfügbar bis" in Zeitfolge (Monitor „Kommen und Gehen"). */
   readonly kommenGehen?: readonly Bewegung[];
+  /** Additiv: laufende Aufträge, älteste zuerst (Monitor „Aufträge"). */
+  readonly auftraege?: readonly Auftragszeile[];
 }
 
 /** Der Name einer Einheit ohne Organisation. */
@@ -134,5 +137,6 @@ export function staerketafel(zustand: Zustand): Staerketafel {
     kreuz: kreuzzellen(zustand),
     status: statustafel(zustand),
     kommenGehen: kommenUndGehen(zustand),
+    auftraege: laufendeAuftraege(zustand),
   };
 }

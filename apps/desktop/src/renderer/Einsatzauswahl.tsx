@@ -37,6 +37,16 @@ function Einsatzkarte(): React.JSX.Element {
   const oeffneEinsatz = useLaden((z) => z.oeffneEinsatz);
   const legeDemoEinsatzAn = useLaden((z) => z.legeDemoEinsatzAn);
   const [anlage, setzeAnlage] = useState(false);
+  // Das Einspielen dauert einige Sekunden: Der Knopf sagt, dass er arbeitet.
+  const [demoLaeuft, setzeDemoLaeuft] = useState(false);
+  const legeDemoAn = async (): Promise<void> => {
+    setzeDemoLaeuft(true);
+    try {
+      await legeDemoEinsatzAn();
+    } finally {
+      setzeDemoLaeuft(false);
+    }
+  };
   const ohneShare = share === "";
   return (
     <section aria-label="Einsätze" className="karte einsatzkarte">
@@ -49,9 +59,11 @@ function Einsatzkarte(): React.JSX.Element {
           className="rechts"
           disabled={ohneShare || beschaeftigt}
           title={ohneShare ? TEXT_OHNE_SHARE : TEXT_DEMO}
-          onClick={() => void legeDemoEinsatzAn()}
+          aria-busy={demoLaeuft}
+          aria-label="Demo-Einsatz"
+          onClick={() => void legeDemoAn()}
         >
-          Demo-Einsatz
+          {demoLaeuft ? "Wird angelegt …" : "Demo-Einsatz"}
         </button>
         <button
           type="button"

@@ -19,11 +19,16 @@ describe("Die Monitoransichten", () => {
     expect(MONITOR_ANSICHTEN.slice(0, 2)).toEqual(["offen", "staerke"]);
   });
 
+  it("nimmt die Besucheransicht additiv an", () => {
+    const grund = { sharePfad: "/share", anzeigename: "Zelt" };
+    expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "staerke", wechsel: true, besucher: true } }).success).toBe(true);
+  });
+
   it("nimmt eine Wechselgruppe additiv an und keine unbekannte", () => {
     const grund = { sharePfad: "/share", anzeigename: "Zelt" };
     expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "organisationen", wechsel: false } }).success).toBe(true);
     expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "tafel", wechsel: true, wechselgruppe: "s4" } }).success).toBe(true);
-    expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "tafel", wechsel: true, wechselgruppe: "s2" } }).success).toBe(false);
+    expect(zEinstellungen.safeParse({ ...grund, monitor: { ansicht: "tafel", wechsel: true, wechselgruppe: "s5" } }).success).toBe(false);
   });
 
   it("nimmt den Funkplan als gemerkte Wahl an und keine unbekannte Ansicht", () => {

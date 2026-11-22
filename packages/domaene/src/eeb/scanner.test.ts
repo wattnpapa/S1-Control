@@ -23,7 +23,7 @@ import { deflateRaw, inflateRaw } from "pako";
 import { describe, expect, it } from "vitest";
 
 import { pruefbogen } from "../pruefhilfen/pruefbogen.js";
-import { LEERER_STAND, liesBogen, nimmScan } from "./scanner.js";
+import { LEERER_STAND, einheitIdDesBogens, liesBogen, nimmScan } from "./scanner.js";
 
 const KOMPRESSOR: Kompressor = {
   deflateRaw: (daten) => deflateRaw(daten, { level: 9 }),
@@ -105,5 +105,19 @@ describe("Ein Bogen der Schema-Version 13 durch den ganzen Scanweg", () => {
     );
     expect(morgen.meldungId).not.toBe(heute.meldungId);
     expect(morgen.einheitId).toBe(heute.einheitId);
+  });
+});
+
+describe("Die Kennung der Einheit aus dem Bogen als Objekt", () => {
+  it("ist dieselbe, die der Scanweg für denselben Bogen bildet", async () => {
+    const bogen = einzelperson("Meyer");
+    const befund = await gescannt(encodePayloadUrl(bogen, KOMPRESSOR));
+    expect(einheitIdDesBogens(bogen)).toBe(befund.einheitId);
+  });
+
+  it("hängt an Einheit und Personal, nicht am Stand der Meldung", () => {
+    const bogen = einzelperson("Meyer");
+    expect(einheitIdDesBogens({ ...bogen, stand: bogen.stand + 24 * 60 })).toBe(einheitIdDesBogens(bogen));
+    expect(einheitIdDesBogens(einzelperson("Schulz"))).not.toBe(einheitIdDesBogens(bogen));
   });
 });

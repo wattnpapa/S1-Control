@@ -12,7 +12,8 @@
     "tsBuildInfoFile": "dist/main/.tsbuildinfo",
     "rootDir": "src"
   },
-  "include": ["src/main/**/*.ts", "src/worker/**/*.ts", "src/web/**/*.ts"],
+  // Die JSON-Dateien sind die Übungsbögen des Demo-Einsatzes (`worker/demo/boegen`).
+  "include": ["src/main/**/*.ts", "src/worker/**/*.ts", "src/worker/demo/boegen/*.json", "src/web/**/*.ts"],
   "references": [
     { "path": "./tsconfig.kontrakt.json" },
     { "path": "../../packages/domaene" },

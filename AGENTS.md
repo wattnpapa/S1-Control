@@ -131,6 +131,7 @@ Ein Task gilt erst als fertig, wenn:
 - Der Knopf „Demo-Einsatz" der Einsatzauswahl legt einen Einsatz an, der zwölf Stunden vor jetzt beginnt und alle Funktionen mit Beispieldaten zeigt.
 - **Jedes neue Feature erweitert das Demo-Drehbuch im selben Zug** (`apps/desktop/src/worker/demo/`, Einstieg `demoeinsatz.ts`). Ein Feature ohne Daten im Demo-Einsatz ist nicht fertig.
 - Das Drehbuch besteht aus Bedienschritten der Schrittbauer unter `apps/desktop/src/kontrakt/` und läuft über `Aktendienst.bediene`; es schreibt nichts am Dienst vorbei.
+- Die Einheiten kommen aus Übungsbögen (`apps/desktop/src/worker/demo/boegen/`) und melden sich mit Erfassungsbogen an; die Mischung bleibt ein THW-Einsatz mit Einheiten anderer Organisationen.
 - Zeiten sind Minuten seit Einsatzbeginn, nie feste Uhrzeiten oder Daten.
 - Der Demo-Einsatz bleibt ohne abgewiesenen Schritt und ohne Konflikthinweis; ein Teil der Lage bleibt offen (Nachricht vor dem Sichter, offene Anforderung).
 - `demoeinsatz.test.ts` erzwingt die Abdeckung: Jede Ereignisart des Katalogs kommt im Demo-Einsatz vor oder steht dort begründet in `AUSNAHMEN`.
