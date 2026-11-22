@@ -17,7 +17,7 @@
 
 import { useMemo, useState } from "react";
 import { obersterSchritt } from "./bestaetigungsfolge.js";
-import { ereignisname } from "./Ereignisnamen.js";
+import { ereignisMitObjekt, ereignisname } from "./Ereignisnamen.js";
 import { Maske, TEXT_NUR_LESEN } from "./Maske.js";
 import { useLaden } from "./laden.js";
 import { useKuerzel } from "./tastatur.js";
@@ -28,6 +28,15 @@ const OEFFNENDE_SCHRITTE: ReadonlySet<string> = new Set(["EinsatzBeendet"]);
 const TEXT_LEER =
   "Nichts zum Rückgängigmachen. Der Verlauf gilt nur für diese Sitzung und ist nach dem Neuladen oder " +
   "Neustart leer — bereits Eingetragenes bleibt im Einsatztagebuch.";
+
+/**
+ * Der jüngste eigene Schritt, der nicht zurückgeht, in einem Satz (Durchlauf
+ * 2026-11-22): „Nachricht A einem Fernmelder zugeteilt: Die Zuteilung bleibt
+ * stehen …“. Der Worker lieferte ihn seit R2-FaBe P2-8, angezeigt wurde er nicht.
+ */
+export function ohneRuecknahmeSatz(ohne: { readonly art: string; readonly objekt: string; readonly hinweis: string } | undefined): string | undefined {
+  return ohne === undefined ? undefined : `${ereignisMitObjekt(ohne.art, ohne.objekt)}: ${ohne.hinweis}`;
+}
 
 export function Ruecknahme(): React.JSX.Element {
   const laden = useLaden();
@@ -67,11 +76,13 @@ export function Ruecknahme(): React.JSX.Element {
   const schreibsperre = status !== "AKTIV" && !(status === "BEENDET" && OEFFNENDE_SCHRITTE.has(oberste ?? ""));
   const schritt = obersterSchritt(laden.lagebild);
   const leer = laden.lagebild !== undefined && tiefe === 0;
-  const hinweis = schreibsperre
+  const ohne = ohneRuecknahmeSatz(laden.lagebild?.undoOhneRuecknahme);
+  const grundhinweis = schreibsperre
     ? TEXT_NUR_LESEN
     : leer
       ? TEXT_LEER
       : `Nimmt Ihren letzten Schritt zurück: ${schritt} (Strg+Z)`;
+  const hinweis = ohne === undefined || schreibsperre ? grundhinweis : `${ohne} ${grundhinweis}`;
   const gesperrt = laden.lagebild === undefined || tiefe === 0 || schreibsperre;
 
   // Strg+Z steht seit M3.6 in der Tastenkarte, war aber an keinen Knopf
@@ -121,6 +132,7 @@ export function Ruecknahme(): React.JSX.Element {
           <p>
             <strong>{schritt}</strong> rückgängig machen?
           </p>
+          {ohne !== undefined && <p className="hinweistext">{ohne}</p>}
           <p className="hinweistext">
             Das gilt für alle Arbeitsplätze. Es nimmt nur Ihren letzten eigenen Schritt zurück, nicht den eines
             anderen Arbeitsplatzes. Die Rücknahme steht im Einsatztagebuch.
