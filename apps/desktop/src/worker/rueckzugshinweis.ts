@@ -26,6 +26,16 @@ export function rueckzugshinweis(zustand: Zustand, entwurf: Ereignisentwurf): st
   const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
   if (typeof nachrichtId !== "string") return undefined;
   const zeile = projektion.nachrichtNach(zustand, nachrichtId);
-  if (zeile === undefined || zeile.zurueckgezogen || zeile.verteiler.length === 0) return undefined;
+  if (zeile === undefined || zeile.zurueckgezogen) return undefined;
+  // Review 2026-11-21: Mit LdF als Station ist der Verteiler nach der Beförderung noch leer — die Gegenstelle hat sie trotzdem.
+  if (zeile.verteiler.length === 0) return zeile.befoerderung === undefined ? undefined : schonUebermitteltText(zeile);
   return `Die Nachricht ${projektion.nachrichtKurzname(zeile)} war schon verteilt: ${stellenMitStand(zeile)}. Diese Stellen sehen nur die Marke „zurückgezogen“ — bitte ihnen Bescheid geben.`;
+}
+
+/** „… ist schon an OV Wildeshausen übermittelt (Funk, 1603 Ka) …“ — der Ausgang ist draußen, auch wenn noch niemand verteilt hat. */
+export function schonUebermitteltText(zeile: Pick<projektion.Nachrichtenzeile, "befoerderung" | "gegenstelle" | "betreff">): string {
+  const b = zeile.befoerderung;
+  const an = zeile.gegenstelle === undefined ? "" : ` an ${zeile.gegenstelle}`;
+  const wie = b === undefined ? "" : ` (${projektion.mittelWort(b.mittel)}, Hz. ${b.handzeichen})`;
+  return `Die Nachricht „${zeile.betreff}“ ist schon${an} übermittelt${wie}. Zurückziehen hält sie nicht auf — bitte die Gegenstelle verständigen.`;
 }

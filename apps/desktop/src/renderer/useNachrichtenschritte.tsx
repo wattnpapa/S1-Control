@@ -112,7 +112,7 @@ export function useNachrichtenschritte(umfeld: Schrittumfeld): Nachrichtenschrit
           aufZurueckziehen: () =>
             grundabfrage.frage({
               titel: "Nachricht zurückziehen",
-              erlaeuterung: "Eine Fehlanlage wird zurückgezogen, nicht gelöscht: Sie bleibt mit diesem Grund sichtbar und steht im Einsatztagebuch.",
+              erlaeuterung: `${zeile.befoerderung === undefined ? "" : "Achtung: Die Nachricht ist schon übermittelt, Zurückziehen hält sie nicht auf — bitte die Gegenstelle verständigen. "}Eine Fehlanlage wird zurückgezogen, nicht gelöscht: Sie bleibt mit diesem Grund sichtbar und steht im Einsatztagebuch.`,
               bestaetigungstext: "Zurückziehen",
               aufGrund: (grund) => useLaden.getState().bediene(nachrichtZurueckziehen(zeile.id, grund)),
             }),

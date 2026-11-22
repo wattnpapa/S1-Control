@@ -49,7 +49,7 @@ import { useState } from "react";
 
 import { eigeneFernmelder, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
-import { eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
+import { ausgeblendetText, eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
 import { minutenSeit } from "./fmzformate.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
@@ -138,9 +138,14 @@ function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe }: { readonly zeil
       </span>
     );
   }
-  const [haupt, ...weitere] = zeilenschritte(zeile);
+  // Review 2026-11-21: Solange der besetzte LdF noch nicht zugeteilt hat, ist nichts zu tun — die Schritte bleiben im Menü.
+  const wartet = projektion.ldfSchrittDer(zeile) === "zuteilung" && (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt !== true;
+  const [erster, ...rest] = zeilenschritte(zeile);
+  const haupt = wartet ? undefined : erster;
+  const weitere = wartet && erster !== undefined ? [erster, ...rest] : rest;
   return (
     <span className="zeilenknoepfe">
+      {wartet && <span className="leise">wartet auf Zuteilung</span>}
       {haupt !== undefined && (
         <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : haupt.titel} onClick={() => aufSchritt(haupt.schritt, zeile)}>
           {haupt.text}
@@ -169,6 +174,46 @@ function Nurmeine({ namen, an, aufAendern }: { readonly namen: readonly string[]
   );
 }
 
+type Zeileneigenschaften = Pick<WarteschlangenEigenschaften, "jetzt" | "nurLesen" | "aufWahl" | "aufSchritt" | "aufWeitergabe"> & {
+  readonly zeile: Nachrichtenzeile;
+  readonly gewaehlt: boolean;
+  readonly stellen: readonly string[];
+};
+
+/**
+ * Eine Zeile der Schlange. Review 2026-11-21: Die eigene Zuteilung steht als
+ * Marke „für Sie“ in der ersten Spalte und die Zeile mit Randleiste und
+ * fettem Betreff (`tr.zugeteilt`) — nicht nur als Farbe weit rechts.
+ */
+function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, aufSchritt, aufWeitergabe }: Zeileneigenschaften): React.JSX.Element {
+  const meins = mirZugeteilt(zeile, stellen);
+  return (
+    <tr className={[zeile.fmzUeberSchwelle ? "ueberschwelle" : "", gewaehlt ? "gewaehlt" : "", meins ? "zugeteilt" : ""].filter((k) => k !== "").join(" ")} aria-selected={gewaehlt} onClick={() => aufWahl(zeile.id)}>
+      <td>
+        {meins && <span className="marke-zustand fuer-sie">für Sie</span>}
+        {vorrangwort(zeile) === "" ? "" : <span className={zeile.vorrangstufe === 0 ? "marke-zustand fehler vorrang-blitz" : "marke-zustand warn"}>{vorrangwort(zeile)}</span>}
+      </td>
+      <td className="zahl">{zeile.nummer ?? "—"}</td>
+      <td>{zeile.absender}</td>
+      <td>{zeile.anschrift}</td>
+      <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
+      <td className="mono">{dtg(zeile.abfassungszeit)}</td>
+      <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
+      <td>
+        {vorschlagText(zeile) ?? <span className="leise">noch nicht zugeteilt</span>}
+        <Abweichungsmarke zeile={zeile} />
+      </td>
+      <td>
+        <Annahmezelle zeile={zeile} jetzt={jetzt} />
+        <Wegmarke zeile={zeile} />
+      </td>
+      <td>
+        <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
+      </td>
+    </tr>
+  );
+}
+
 /** Die linke Karte: die Ausgangswarteschlange mit den Knöpfen je Zeile. */
 export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [], aufWeitergabe }: WarteschlangenEigenschaften): React.JSX.Element {
   const [nurMeine, setzeNurMeine] = useState(false);
@@ -181,6 +226,7 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
         Ausgangswarteschlange <span className="nebenwert">Schwelle {schwelleMinuten} min</span>
       </h3>
       <Nurmeine namen={namen} an={nurMeine} aufAendern={setzeNurMeine} />
+      {nurMeine && namen.length > 0 && <p className="hinweistext">{ausgeblendetText(alle, stellen)}</p>}
       {zeilen.length === 0 ? (
         <p className="hinweistext">{nurMeine && alle.length > 0 ? "Ihnen ist keine Nachricht zugeteilt." : "Keine Nachricht vor der FmZ."}</p>
       ) : (
@@ -203,32 +249,7 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
           </thead>
           <tbody>
             {zeilen.map((zeile) => (
-              <tr
-                key={zeile.id}
-                className={[zeile.fmzUeberSchwelle ? "ueberschwelle" : "", zeile.id === gewaehltId ? "gewaehlt" : "", mirZugeteilt(zeile, stellen) ? "zugeteilt" : ""].filter((k) => k !== "").join(" ")}
-                aria-selected={zeile.id === gewaehltId}
-                onClick={() => aufWahl(zeile.id)}
-              >
-                <td>{vorrangwort(zeile) === "" ? "" : <span className={zeile.vorrangstufe === 0 ? "marke-zustand fehler vorrang-blitz" : "marke-zustand warn"}>{vorrangwort(zeile)}</span>}</td>
-                <td className="zahl">{zeile.nummer ?? "—"}</td>
-                <td>{zeile.absender}</td>
-                <td>{zeile.anschrift}</td>
-                <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
-                <td className="mono">{dtg(zeile.abfassungszeit)}</td>
-                <td className={zeile.fmzUeberSchwelle ? "zahl wartezelle marke-zustand warn" : "zahl wartezelle"}>{wartezeit(zeile) === undefined ? "—" : `${String(wartezeit(zeile))} min`}</td>
-                <td>
-                  {mirZugeteilt(zeile, stellen) && <span className="marke-zustand ok">für Sie </span>}
-                  {vorschlagText(zeile) ?? <span className="leise">kein Vorschlag</span>}
-                  <Abweichungsmarke zeile={zeile} />
-                </td>
-                <td>
-                  <Annahmezelle zeile={zeile} jetzt={jetzt} />
-                  <Wegmarke zeile={zeile} />
-                </td>
-                <td>
-                  <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
-                </td>
-              </tr>
+              <Schlangenzeile key={zeile.id} zeile={zeile} jetzt={jetzt} gewaehlt={zeile.id === gewaehltId} nurLesen={nurLesen} stellen={stellen} aufWahl={aufWahl} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
             ))}
           </tbody>
         </table>
@@ -243,7 +264,8 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
  * in Ring 2 nur VOR_FMZ kennt. Das Filtern ist Darstellung, keine Regel.
  */
 export function ohneNummerZeilen(zeilen: readonly Nachrichtenzeile[]): readonly Nachrichtenzeile[] {
-  return zeilen.filter((z) => z.befoerderung !== undefined && z.nummer === undefined && !z.zurueckgezogen);
+  // Review 2026-11-21: dieselbe Regel wie Ring 2 — der beförderte Ausgang beim LdF gehört nicht hierher.
+  return projektion.ohneNummerZeilen(zeilen);
 }
 
 /** Die dritte Karte: beförderte Nachrichten ohne Nummer, mit „Nachweisen". */

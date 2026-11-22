@@ -423,6 +423,8 @@ export const zNachrichtenlage = z.object({
   ueberSchwelle: zZahl,
   /** Additiv: vor dem LdF — nur, wenn der Einsatz den LdF als Station führt. */
   vorLdf: zZahl.optional(),
+  /** Additiv (Review 2026-11-21): davon Ausgänge vor der Zuteilung. */
+  vorLdfZuteilung: zZahl.optional(),
   /**
    * Additiv (R2-LdF P2-4): der Teil von `ueberSchwelle`, der beim LdF liegt
    * (Ausgang VOR_LDF über der Schwelle); `ueberSchwelleFmz` der Rest vor der

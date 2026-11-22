@@ -26,6 +26,8 @@ export const TEXT_ANNAHME_MIT = "Annahme wird mit eingetragen (Uhrzeit und Handz
 export const TEXT_OHNE_NUMMER = "Nummer ist vorbelegt; leer lassen heißt ohne Nummer befördern (zweiter Klick).";
 /** Der Hinweis, wenn das Nummernfeld leer ist — es gab keine Vorbelegung, oder sie wurde gelöscht. */
 export const TEXT_NUMMER_LEER = "Keine Nummer eingetragen; leer lassen heißt ohne Nummer befördern (zweiter Klick).";
+/** Review 2026-11-21: Mit besetztem LdF vergibt er die Nummer bei der Weitergabe. */
+export const TEXT_NUMMER_DURCH_LDF = "Die Nummer trägt der LdF bei der Weitergabe ein; nur eintragen, wenn sie schon feststeht.";
 /** Der Satz nach dem ersten Klick mit leerer Nummer. */
 export const TEXT_TROTZDEM_OHNE = "Noch einmal „Trotzdem ohne Nummer“ drücken, um ohne Nummer zu befördern; die FmZ zeigt sie dann unter „Ohne Nummer“.";
 
@@ -36,9 +38,11 @@ export interface BefoerderungszusatzEigenschaften {
   /** Die Warnung vor einer schon vergebenen Nummer (§9), sonst `undefined`. */
   readonly warnung: string | undefined;
   readonly ohneNummerBestaetigt: boolean;
+  /** Additiv (Review 2026-11-21): Der LdF ist besetzt und vergibt die Nummer — leer ohne zweiten Klick. */
+  readonly durchLdf?: boolean;
 }
 
-export function Befoerderungszusatz({ zeile, nummer, aufNummer, warnung, ohneNummerBestaetigt }: BefoerderungszusatzEigenschaften): React.JSX.Element | null {
+export function Befoerderungszusatz({ zeile, nummer, aufNummer, warnung, ohneNummerBestaetigt, durchLdf = false }: BefoerderungszusatzEigenschaften): React.JSX.Element | null {
   const ohneAnnahme = zeile.annahme === undefined;
   const ohneNummer = zeile.nummer === undefined;
   if (!ohneAnnahme && !ohneNummer) return null;
@@ -52,7 +56,7 @@ export function Befoerderungszusatz({ zeile, nummer, aufNummer, warnung, ohneNum
       {ohneNummer && (
         <>
           <p className="hinweistext" role="status">
-            {nummer.trim() === "" ? TEXT_NUMMER_LEER : TEXT_OHNE_NUMMER}
+            {durchLdf ? TEXT_NUMMER_DURCH_LDF : nummer.trim() === "" ? TEXT_NUMMER_LEER : TEXT_OHNE_NUMMER}
           </p>
           <label>
             Nr.

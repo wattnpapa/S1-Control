@@ -4559,6 +4559,19 @@
       .nachrichtentabelle tr.doppelt td.zahl {
         background: var(--warn-bg);
       }
+      /* Review 2026-11-21: die dem eigenen Fernmelder zugeteilte Zeile — Randleiste und fetter Betreff, nicht nur Farbe. */
+      .nachrichtentabelle tr.zugeteilt > :first-child {
+        box-shadow: inset 4px 0 0 var(--ok-text);
+      }
+      .nachrichtentabelle tr.zugeteilt th[scope="row"] {
+        font-weight: 700;
+      }
+      .marke-zustand.fuer-sie {
+        background: var(--ok-bg);
+        border-color: var(--ok-text);
+        color: var(--ok-text);
+        margin-right: 4px;
+      }
       .zeilenknoepfe {
         display: inline-flex;
         gap: 4px;

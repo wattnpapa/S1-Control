@@ -28,16 +28,32 @@ function rang(zeile: Nachrichtenzeile, stellen: readonly string[]): number {
 }
 
 /**
- * Die Warteschlange mit den eigenen Nachrichten zuoberst. Ohne eigene
- * Fernmelderstelle (LdF, Altwert FMZ, andere Stellen) bleibt die Ordnung
- * von Ring 2 unverändert; innerhalb jeder Gruppe ebenso (Vorrang, Eingang).
+ * Die Warteschlange mit den eigenen Nachrichten zuoberst — **innerhalb
+ * derselben Vorrangstufe** (Review 2026-11-21): Ein Blitz eines anderen
+ * Fernmelders oder ohne Zuteilung steht nie unter einer einfachen eigenen
+ * Nachricht. Ohne eigene Fernmelderstelle (LdF, Altwert FMZ, andere Stellen)
+ * bleibt die Ordnung von Ring 2 unverändert; innerhalb jeder Gruppe ebenso.
  */
 export function eigeneZuerst(zeilen: readonly Nachrichtenzeile[], stellen: readonly string[]): readonly Nachrichtenzeile[] {
   if (eigeneFernmelder(stellen).length === 0) return zeilen;
   return zeilen
     .map((zeile, index) => ({ zeile, index, rang: rang(zeile, stellen) }))
-    .sort((a, b) => a.rang - b.rang || a.index - b.index)
+    .sort((a, b) => a.zeile.vorrangstufe - b.zeile.vorrangstufe || a.rang - b.rang || a.index - b.index)
     .map((e) => e.zeile);
+}
+
+/** „für Sie“, „ohne Zuteilung“, „andere Fernmelder“ — die Gruppe der Zeile für die Zwischenzeilen der Schlange. */
+export function zuteilungsgruppe(zeile: Nachrichtenzeile, stellen: readonly string[]): "eigene" | "frei" | "andere" {
+  const r = rang(zeile, stellen);
+  return r === 0 ? "eigene" : r === 1 ? "frei" : "andere";
+}
+
+/** Was „nur meine“ ausblendet: die Zahl und wie viele davon Vorrang haben (Review 2026-11-21). */
+export function ausgeblendetText(alle: readonly Nachrichtenzeile[], stellen: readonly string[]): string | undefined {
+  const weg = alle.filter((z) => rang(z, stellen) !== 0);
+  if (weg.length === 0) return undefined;
+  const vorrang = weg.filter((z) => z.vorrangstufe < 2).length;
+  return `${String(weg.length)} weitere ausgeblendet${vorrang > 0 ? `, davon ${String(vorrang)} mit Vorrang` : ""}.`;
 }
 
 /** Nur die Nachrichten, die einem der eigenen Fernmelder zugeteilt sind. */

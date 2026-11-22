@@ -21,7 +21,7 @@
  *   seinen Vorschlag befördert — vorher kam der Hinweis erst danach.
  */
 
-import { kanonischeSerialisierung, projektion, type KanonischerWert, type Nachrichtenzeile } from "@s1/domaene";
+import { eigeneFernmelder, istZugeteilt, kanonischeSerialisierung, projektion, type KanonischerWert, type Nachrichtenzeile } from "@s1/domaene";
 
 import { rufe } from "./bruecke.js";
 import type { Rueckfrage } from "./maskenrueckfragen.js";
@@ -63,4 +63,22 @@ export function abweichungshinweis(zeile: Pick<Nachrichtenzeile, "vorschlag">, m
 export function ohneVorschlagFrage(zeile: Pick<Nachrichtenzeile, "vorschlag">, ldfWartet: boolean): Rueckfrage | undefined {
   if (!ldfWartet || zeile.vorschlag !== undefined) return undefined;
   return { id: "ohneVorschlag", frage: "Der LdF ist besetzt, hat für diese Nachricht aber noch keinen Weg vorgeschlagen. Ohne seinen Vorschlag befördern?", knopf: "Ohne Vorschlag befördern" };
+}
+
+/**
+ * Review 2026-11-21: Befördern einer Nachricht, die der LdF einem anderen
+ * Fernmelder zugeteilt hat — eine Rückfrage, keine Sperre: Fällt Fm1 aus,
+ * darf Fm2 übernehmen, aber nicht aus Versehen doppelt übertragen.
+ */
+export function fremdeZuteilungFrage(zeile: Pick<Nachrichtenzeile, "vorschlag">, stellen: readonly string[], besetzung: Readonly<Record<string, string>> | undefined): Rueckfrage | undefined {
+  const fm = zeile.vorschlag?.fernmelder.trim() ?? "";
+  if (fm === "" || eigeneFernmelder(stellen).length === 0 || istZugeteilt(fm, stellen)) return undefined;
+  const wer = besetzung?.[fm] === undefined ? fm : `${fm} · ${besetzung[fm]}`;
+  return { id: "fremdeZuteilung", frage: `Der LdF hat diese Nachricht ${wer} zugeteilt. Trotzdem selbst befördern? Bitte vorher absprechen, sonst geht sie doppelt hinaus.`, knopf: "Trotzdem selbst befördern" };
+}
+
+/** Review 2026-11-21: Zuteilung an einen Fernmelder, den gerade niemand besetzt. */
+export function unbesetztFrage(fernmelder: string, besetzung: Readonly<Record<string, string>> | undefined): Rueckfrage | undefined {
+  if (besetzung === undefined || !/^Fm\d$/u.test(fernmelder) || besetzung[fernmelder] !== undefined) return undefined;
+  return { id: "unbesetzt", frage: `${fernmelder} ist nicht besetzt. Trotzdem ${fernmelder} zuteilen? Die Nachricht wartet dann, bis jemand ${fernmelder} übernimmt.`, knopf: `Trotzdem ${fernmelder} zuteilen` };
 }

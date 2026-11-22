@@ -61,7 +61,7 @@ import type { Entwurf, Gegenstelle, Rufgruppenwahl } from "../kontrakt/index.js"
 import { nachrichtAnnehmen, nachrichtBefoerdern, nachrichtNachweisen, nachrichtVorschlagen, type Funkkontakt } from "../kontrakt/fmzschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { Befoerderungszusatz } from "./Befoerderungszusatz.js";
-import { abweichungshinweis, befoerderungInzwischen, ohneVorschlagFrage } from "./befoerderungspruefung.js";
+import { abweichungshinweis, befoerderungInzwischen, fremdeZuteilungFrage, ohneVorschlagFrage, unbesetztFrage } from "./befoerderungspruefung.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
 import { fernmelderbeschriftung } from "./fernmelderzuteilung.js";
@@ -128,7 +128,8 @@ function vorbelegung(p: FmzmaskeEigenschaften): Eingaben {
     gegenstelle: p.zeile.gegenstelle ?? p.zeile.vorschlag?.gegenstelle ?? p.zeile.anschrift,
     fernmelder: p.zeile.vorschlag?.fernmelder ?? "",
     // Eine doppelte Nummer wird mit der nächsten freien berichtigt, nicht mit sich selbst (LdF P2-1).
-    nummer: String((p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) ?? p.naechsteNummer ?? ""),
+    // Review 2026-11-21: Mit besetztem LdF trägt er die Nummer bei der Weitergabe ein — beim Befördern nicht vorbelegt.
+    nummer: p.schritt === "befoerderung" && p.ldfWartet === true ? "" : String((p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) ?? p.naechsteNummer ?? ""),
   };
 }
 
@@ -264,6 +265,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   const [e, setzeE] = useState<Eingaben>(() => vorbelegung(p));
   const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
   const peers = useLaden((z) => z.lagebild?.peers);
+  const eigeneStellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
   // Der zweite Klick bei leerer Nummer: „Trotzdem ohne Nummer“ (LdF P0-1).
   const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
   const versuch = useAnlegeversuch();
@@ -284,12 +286,14 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
   const entwurf = fmzEntwurf(p.schritt, p.zeile, e, befoerdern ? kontaktAus(treffer, e.mittel, kontakt) : undefined);
   const mitNummernfeld = p.schritt === "nachweis" || (befoerdern && p.zeile.nummer === undefined);
   const warnung = mitNummernfeld ? nummerWarnung(nummerAusEingabe(e.nummer), p.vergebeneNummern, p.zeile.nummerDoppelt ? undefined : p.zeile.nummer) : undefined;
-  const ohneNummer = befoerdern && p.zeile.nummer === undefined && e.nummer.trim() === "";
+  const ohneNummer = befoerdern && p.ldfWartet !== true && p.zeile.nummer === undefined && e.nummer.trim() === "";
   // R2-LdF P2-7: Ein Sprung über die nächste freie Nummer fragt einmal (nicht beim Berichtigen auf die eigene).
   const eigeneNummer = p.zeile.nummerDoppelt ? undefined : p.zeile.nummer;
   const neueNummer = nummerAusEingabe(e.nummer);
   const rueckfragen = useRueckfragen([
     befoerdern ? ohneVorschlagFrage(p.zeile, p.ldfWartet === true) : undefined,
+    befoerdern ? fremdeZuteilungFrage(p.zeile, eigeneStellen ?? [], p.fernmelderbesetzung) : undefined,
+    p.schritt === "vorschlag" ? unbesetztFrage(e.fernmelder, p.fernmelderbesetzung) : undefined,
     mitNummernfeld && neueNummer !== eigeneNummer ? nummernsprungFrage(neueNummer, p.naechsteNummer) : undefined,
   ]);
 
@@ -378,7 +382,7 @@ function FmzmaskeInnen(p: FmzmaskeEigenschaften & { readonly aufNeuLaden: (zeile
         </label>
       </div>
       <Zusatzfelder schritt={p.schritt} e={e} setze={setze} warnung={p.schritt === "nachweis" ? warnung : undefined} wahl={wahl} />
-      {befoerdern && <Befoerderungszusatz zeile={p.zeile} nummer={e.nummer} aufNummer={(wert) => setze("nummer", wert)} warnung={warnung} ohneNummerBestaetigt={ohneNummerBestaetigt} />}
+      {befoerdern && <Befoerderungszusatz zeile={p.zeile} nummer={e.nummer} aufNummer={(wert) => setze("nummer", wert)} warnung={warnung} ohneNummerBestaetigt={ohneNummerBestaetigt} durchLdf={p.ldfWartet === true} />}
       {/* Statt „Nicht gespeichert – … (neu: {…})“ der Satz in Worten mit „Neu laden“ (Fernmelder P2-6). */}
       {konflikt === undefined ? versuch.anzeige : <Konflikthinweis text={konflikt} aufNeuLaden={() => void neuLaden()} />}
     </Maske>

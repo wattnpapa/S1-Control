@@ -93,3 +93,11 @@ describe("Andere Programmfassung in der Präsenz (Review 2026-11-21)", () => {
     expect(fassungstext(["LdF-Platz"])).toContain("Kopien können ausbleiben");
   });
 });
+
+describe("Befördern mit besetztem LdF (Review 2026-11-21)", () => {
+  it("sagt beim leeren Nummernfeld, dass der LdF die Nummer einträgt", async () => {
+    const { Befoerderungszusatz, TEXT_NUMMER_DURCH_LDF } = await import("./Befoerderungszusatz.js");
+    render(<Befoerderungszusatz zeile={OHNE_NUMMER} nummer="" aufNummer={vi.fn()} warnung={undefined} ohneNummerBestaetigt={false} durchLdf />);
+    expect(screen.getByText(TEXT_NUMMER_DURCH_LDF)).toBeTruthy();
+  });
+});

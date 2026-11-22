@@ -97,3 +97,36 @@ describe("Stellen LdF und Fm1 bis Fm3 statt FmZ", () => {
     expect(stelleFehlt("vorschlag", ["FM1"], [{ veraltet: false, stellen: ["LDF"] }])).toBe(true);
   });
 });
+
+describe("Review 2026-11-21: Vorrang, Rückfragen, Reiterzahl", () => {
+  it("hält einen Blitz eines anderen Fernmelders über der eigenen einfachen Nachricht", async () => {
+    const { ausgeblendetText } = await import("./fernmelderzuteilung.js");
+    const blitzFremd = { ...ausgang("B1", "Fm1"), vorrangstufe: 0 as const };
+    const einfachEigen = { ...ausgang("E1", "Fm2"), vorrangstufe: 2 as const };
+    expect(eigeneZuerst([einfachEigen, blitzFremd], ["FM2"]).map((z) => z.id)).toEqual(["B1", "E1"]);
+    expect(ausgeblendetText([einfachEigen, blitzFremd], ["FM2"])).toBe("1 weitere ausgeblendet, davon 1 mit Vorrang.");
+  });
+
+  it("fragt vor dem Befördern fremder Zuteilung und vor der Zuteilung an einen unbesetzten Fernmelder", async () => {
+    const { fremdeZuteilungFrage, unbesetztFrage } = await import("./befoerderungspruefung.js");
+    const fremd = ausgang("A1", "Fm1");
+    expect(fremdeZuteilungFrage(fremd, ["FM2"], { Fm1: "Meyer" })?.frage).toContain("Fm1 · Meyer");
+    expect(fremdeZuteilungFrage(fremd, ["FM1"], {})).toBeUndefined();
+    expect(fremdeZuteilungFrage(ausgang("A2"), ["FM2"], {})).toBeUndefined();
+    expect(unbesetztFrage("Fm3", { Fm1: "Meyer" })?.knopf).toBe("Trotzdem Fm3 zuteilen");
+    expect(unbesetztFrage("Fm1", { Fm1: "Meyer" })).toBeUndefined();
+  });
+
+  it("zählt am Reiter ohne LdF auch die Ausgänge vor der Zuteilung", () => {
+    const lage = { neuFuerStellen: 0, vorFmz: 1, vorSichter: 0, vorLdfZuteilung: 2 } as never;
+    expect(nachrichtenzahl(lage, ["FM1"], true)).toBe(1);
+    expect(nachrichtenzahl(lage, ["FM1"], false)).toBe(3);
+  });
+
+  it("bietet bei besetztem LdF vor der Zuteilung keinen Hauptknopf an", () => {
+    const vorLdf = { ...ausgang("A9"), laufzustand: "VOR_LDF" as const };
+    render(<Warteschlange zeilen={[vorLdf]} jetzt="2026-11-21T09:30:00.000Z" gewaehltId={undefined} nurLesen={false} aufWahl={vi.fn()} aufSchritt={vi.fn()} stellen={["FM2"]} />);
+    expect(screen.getByText("wartet auf Zuteilung")).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Annehmen" })).toBeNull();
+  });
+});

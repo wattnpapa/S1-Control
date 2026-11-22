@@ -29,6 +29,7 @@
 
 import { hatFernmelderstelle } from "@s1/domaene";
 import type { Nachrichtenlage, Profil } from "../kontrakt/index.js";
+import { ldfBesetzt } from "../kontrakt/ldfschritte.js";
 import { reiterFuer, type Blatt, type Reiter } from "./blaetter.js";
 import { Klappmenue } from "./Klappmenue.js";
 import { useLaden } from "./laden.js";
@@ -69,10 +70,11 @@ function zahl(eintrag: Reiter, marken: Marken): number | undefined {
  * Warteschlange der eigenen Station — vor dem Sichter (SICHTER), vor der
  * FmZ (ein Fernmelder, FM1 bis FM3 oder Altwert FMZ). Ohne diese Stellen wie bisher nur „neu“.
  */
-export function nachrichtenzahl(lage: Nachrichtenlage | undefined, stellen: readonly string[]): number {
+export function nachrichtenzahl(lage: Nachrichtenlage | undefined, stellen: readonly string[], ldfBesetzt = true): number {
   if (lage === undefined) return 0;
   const sichter = stellen.includes("SICHTER") ? lage.vorSichter : 0;
-  const fmz = hatFernmelderstelle(stellen) ? lage.vorFmz : 0;
+  // Review 2026-11-21: Ohne LdF befördert der Fernmelder auch die Ausgänge vor der Zuteilung selbst.
+  const fmz = hatFernmelderstelle(stellen) ? lage.vorFmz + (ldfBesetzt ? 0 : (lage.vorLdfZuteilung ?? 0)) : 0;
   return lage.neuFuerStellen + sichter + fmz;
 }
 
@@ -80,7 +82,8 @@ export function Reiterzeile({ blatt, waehleBlatt, offeneMeldungen, profil }: Rei
   const { imBand, unterMehr } = reiterFuer(profil);
   const lage = useLaden((z) => z.lagebild?.nachrichten);
   const stellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
-  const neueNachrichten = nachrichtenzahl(lage, stellen ?? []);
+  const peers = useLaden((z) => z.lagebild?.peers);
+  const neueNachrichten = nachrichtenzahl(lage, stellen ?? [], ldfBesetzt(stellen, peers ?? []));
   const marken: Marken = { offeneMeldungen, neueNachrichten };
   const ausMehr = unterMehr.find((eintrag) => eintrag.schluessel === blatt);
   const band = ausMehr === undefined ? imBand : [...imBand, ausMehr];

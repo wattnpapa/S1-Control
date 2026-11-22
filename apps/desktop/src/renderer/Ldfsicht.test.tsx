@@ -144,7 +144,8 @@ describe("Die Beförderungsmaske mit LdF", () => {
 
   it("ohne LdF in der Präsenz: Marke „beim LdF“ und der Satz zur Ersatzregel", async () => {
     useLaden.setState({ lagebild: lagebild({ sitzung: { stellen: ["FMZ"], handzeichen: "Fm" }, peers: [] }) });
-    attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([AUSGANG_VOR_LDF]));
+    // Der Worker markiert die Zeile, wenn die Präsenz keinen LdF kennt (`ldfNichtBesetzt`).
+    attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([{ ...AUSGANG_VOR_LDF, ldfNichtBesetzt: true } as Nachrichtenzeile]));
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten vor der FmZ" }));
     expect(within(tabelle).getByRole("row", { name: /Sandsäcke/ }).textContent).toContain("beim LdF");

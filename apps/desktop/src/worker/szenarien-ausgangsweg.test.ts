@@ -119,3 +119,14 @@ describe("Funktionalität: Ausgangsweg mit LdF — Absicherungen (Review 2026-11
     expect(sichter.zeilen[0]?.wartetSeitSichter).toBeTypeOf("number");
   });
 });
+
+describe("Funktionalität: Zurückziehen eines schon beförderten Ausgangs (Review 2026-11-21)", () => {
+  it("Szenario: Der Verfasser zieht nach der Beförderung zurück und erfährt, dass die Gegenstelle sie schon hat", async () => {
+    const { a, b } = await werkstattMitZweiPlaetzen();
+    await befoerdertBeimLdf(a, b);
+    const { nachrichtZurueckziehen } = await import("../kontrakt/nachrichtenschritte.js");
+    const ergebnis = await a.dienst.bediene(nachrichtZurueckziehen("A-1", "Fehlanlage"));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.some((w) => w.includes("ist schon an OV Wildeshausen übermittelt"))).toBe(true);
+  });
+});
