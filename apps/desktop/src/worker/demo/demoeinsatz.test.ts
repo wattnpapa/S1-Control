@@ -127,6 +127,16 @@ describe("Funktionalität: Demo-Einsatz", () => {
     expect(JSON.stringify(versorgung.blatt)).toContain("Sporthalle BBS Wechloy");
   });
 
+  it("Szenario: die Übersicht zeigt Kräfte nach Status und offene Aufträge (Stab-Review 2026-11-22)", () => {
+    const { uebersicht } = platz.dienst.stabsuebersicht();
+    expect(uebersicht.kraefte.length).toBeGreaterThanOrEqual(3);
+    // Die Gesamtzeile ist die Ist-Stärke des Kopfbands.
+    const ist = kennzahlen.zaehlstand(platz.dienst.zustand).ist;
+    expect(uebersicht.gesamt.gesamt).toBe(ist.fuehrer + ist.unterfuehrer + ist.mannschaft);
+    expect(uebersicht.auftraege.some((a) => a.offen)).toBe(true);
+    expect(uebersicht.auftraege.some((a) => !a.offen)).toBe(true);
+  });
+
   it("Szenario: die Ausgaben entstehen aus der Demo-Lage", () => {
     for (const ausgabe of ["druck", "status", "log", "kosten", "fueorg", "nachweisung"] as const) {
       expect(platz.dienst.ausgabeHtml(ausgabe).html.length, ausgabe).toBeGreaterThan(500);
