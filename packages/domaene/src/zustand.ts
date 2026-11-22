@@ -80,8 +80,11 @@ import type {
  * **16** (2026-11-21): Mit `ldfStation` steht ein beförderter Ausgang noch
  * einmal beim LdF (Nachweisung, Weitergabe) und nach der Weitergabe vor dem
  * Sichter — ein Schnappschuss der Fassung 15 führte ihn ERLEDIGT.
+ * **17** (2026-11-22): Ohne Parameter `ldfStation` ist der LdF Station
+ * (`ldfstation.ts`); ein Schnappschuss der Fassung 16 faltete solche Einsätze
+ * ohne LdF.
  */
-export const FOLD_VERSION = 16;
+export const FOLD_VERSION = 17;
 
 /**
  * Eingangsabschnitt fuer Einheiten, deren Abschnitt (noch) nicht existiert

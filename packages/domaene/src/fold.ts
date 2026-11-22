@@ -41,6 +41,7 @@
  * steht es an der Stelle.
  */
 
+import { ldfStationWert } from "./ldfstation.js";
 import {
   ABSCHNITTSTYPEN,
   EINHEIT_STATUS,
@@ -2165,7 +2166,8 @@ export function materialisiere(faltung: Faltung): Zustand {
     gebaut.get("nachricht") ?? new Map<string, GebauteEntitaet>(),
     {
       sichtungAuchAusgang: einsatzGebaut?.felder.get("sichtungAuchAusgang")?.wert === true,
-      ldfStation: einsatzGebaut?.felder.get("ldfStation")?.wert === true,
+      // FOLD_VERSION 17 (2026-11-22): ohne Parameter ist der LdF Station.
+      ldfStation: ldfStationWert(einsatzGebaut?.felder.get("ldfStation")?.wert),
     },
     hinweise,
   );

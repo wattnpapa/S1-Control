@@ -11,7 +11,7 @@ import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "./fold.js";
 import { KATALOG } from "./katalog/index.js";
-import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "./pruefhilfen/ereignisbau.js";
+import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc, ldfAus } from "./pruefhilfen/ereignisbau.js";
 import { kompensationFuer } from "./undo.js";
 import { FOLD_VERSION, type Zustand } from "./zustand.js";
 
@@ -56,12 +56,13 @@ const sichtung = (verteiler: readonly [string, string][], hz = "SI") => ({
 });
 
 function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
-  return materialisiere(falteHinzu(leereFaltung(), ereignisse));
+  // Der Weg ohne LdF ist hier der Gegenstand; seit FOLD_VERSION 17 muss er ausdrücklich abgeschaltet sein.
+  return materialisiere(falteHinzu(leereFaltung(), [ldfAus(), ...ereignisse]));
 }
 
 describe("Die Nachricht im Katalog", () => {
   it("steht auf Fassung 13 und führt die Arten nach §9", () => {
-    expect(FOLD_VERSION).toBe(16);
+    expect(FOLD_VERSION).toBe(17);
     expect(KATALOG.get("NachrichtVerfasst")).toMatchObject({ form: "b", entitaet: "nachricht", idFeld: "nachrichtId", ohneUndo: true });
     for (const [typ, pfad] of [["NachrichtAngenommen", "annahme"], ["NachrichtUebermittlungVorgeschlagen", "vorschlag"], ["NachrichtBefoerdert", "befoerderung"], ["NachrichtNachgewiesen", "nachweis"], ["NachrichtGesichtet", "sichtung"], ["NachrichtVermerkt", "vermerke"]] as const) {
       expect(KATALOG.get(typ)).toMatchObject({ form: "a", feld: { art: "fest", pfad }, gegenereignis: typ });

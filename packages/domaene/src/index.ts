@@ -76,6 +76,9 @@ export {
   type TaktischeEbene,
 } from "./ereignis.js";
 
+// Der LdF als Station ist der Standard (2026-11-22): fehlt der Parameter, gilt ja.
+export { ldfStationAn, ldfStationWert } from "./ldfstation.js";
+
 // Die Fernmelder als eigene Stellen (KONZEPT-NACHRICHTEN.md §4, §5); `FMZ` bleibt Altwert.
 export {
   FERNMELDERSTELLEN,

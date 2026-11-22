@@ -246,3 +246,13 @@ export function funkprobeDurchgefuehrt(
   const neu = { zeitpunkt, ...(rufgruppeId === undefined ? {} : { rufgruppeId }), ...(grund === undefined ? {} : { grund }) };
   return feldEreignis(h, laufnummer, "FunkprobeDurchgefuehrt", { einheitId, ergebnis }, vorher, neu, grund);
 }
+
+/**
+ * „LdF als Station“ ausdrücklich aus (2026-11-22): Seit FOLD_VERSION 17 ist der
+ * LdF ohne Parameter Station. Tests des Wegs ohne LdF stellen dieses Ereignis
+ * voran — mit der frühesten HLC eines eigenen Clients, damit ein im Test
+ * gesetztes `true` es überschreibt.
+ */
+export function ldfAus(einsatzId = "X"): EingehendesEreignis {
+  return feldEreignis(hlc(0, 0, "ldf-aus"), 1, "NachrichtenParameterGesetzt", { einsatzId, feld: "ldfStation" }, null, false);
+}

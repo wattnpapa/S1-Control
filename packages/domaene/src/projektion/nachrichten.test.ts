@@ -7,7 +7,7 @@
 import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../fold.js";
-import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "../pruefhilfen/ereignisbau.js";
+import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc, ldfAus } from "../pruefhilfen/ereignisbau.js";
 import type { Zustand } from "../zustand.js";
 import { nachrichtenausschnitt, nachrichtenlage, nachrichtNach, naechsteNachweisnummer } from "./nachrichten.js";
 import { nachrichtenZaehlung } from "./nachrichtenzaehlung.js";
@@ -45,7 +45,8 @@ const nachgewiesen = (id: string, nummer: number): EingehendesEreignis =>
   vermerk("NachrichtNachgewiesen", id, { nummer, zeitpunkt: um(2), handzeichen: "FM" });
 
 function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
-  return materialisiere(falteHinzu(leereFaltung(), ereignisse));
+  // Der Weg ohne LdF ist hier der Gegenstand; seit FOLD_VERSION 17 muss er ausdrücklich abgeschaltet sein.
+  return materialisiere(falteHinzu(leereFaltung(), [ldfAus(), ...ereignisse]));
 }
 
 /**

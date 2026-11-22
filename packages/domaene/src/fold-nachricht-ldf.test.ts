@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "./fold.js";
 import { KATALOG } from "./katalog/index.js";
-import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "./pruefhilfen/ereignisbau.js";
+import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc, ldfAus } from "./pruefhilfen/ereignisbau.js";
 import { nachrichtenausschnitt, nachrichtenlage } from "./projektion/nachrichten.js";
 import { GRUND_ERSATZSICHTER, nachrichtensatz, stellenWort } from "./projektion/tagebuch-nachrichten.js";
 import type { Zustand } from "./zustand.js";
@@ -62,7 +62,8 @@ const befoerderung = { mittel: "KURIER", zeitpunkt: um(4), handzeichen: "FM" };
 const weitergabe = { zeitpunkt: um(3), handzeichen: "LF" };
 
 function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
-  return materialisiere(falteHinzu(leereFaltung(), ereignisse));
+  // Der Weg ohne LdF ist hier der Gegenstand; seit FOLD_VERSION 17 muss er ausdrücklich abgeschaltet sein.
+  return materialisiere(falteHinzu(leereFaltung(), [ldfAus(), ...ereignisse]));
 }
 
 function lauf(z: Zustand, id: string): string | undefined {
@@ -100,12 +101,12 @@ describe("LdF im Fold: Ausgang", () => {
     expect(lauf(zustand(gesichtet), "A1")).toBe("VERTEILT");
   });
 
-  it("ohne Parameter bleibt der beförderte Ausgang erledigt — der LdF sieht ihn kein zweites Mal", () => {
+  it("abgeschaltet bleibt der beförderte Ausgang erledigt — der LdF sieht ihn kein zweites Mal", () => {
     const befoerdert = [...grundlage(false), ausgang("A1"), vermerk("NachrichtBefoerdert", "A1", befoerderung)];
     expect(lauf(zustand(befoerdert), "A1")).toBe("ERLEDIGT");
   });
 
-  it("ohne Parameter bleibt der angenommene Ausgang vor der FmZ — auch mit Vorschlag", () => {
+  it("abgeschaltet bleibt der angenommene Ausgang vor der FmZ — auch mit Vorschlag", () => {
     const angenommen = [...grundlage(false), ausgang("A1"), vermerk("NachrichtAngenommen", "A1", annahme)];
     expect(lauf(zustand(angenommen), "A1")).toBe("VOR_FMZ");
     expect(lauf(zustand([...angenommen, vermerk("NachrichtUebermittlungVorgeschlagen", "A1", festlegung)]), "A1")).toBe("VOR_FMZ");
@@ -133,7 +134,7 @@ describe("LdF im Fold: Eingang", () => {
     expect(lauf(zustand([...basis, gesichtet]), "E1")).toBe("VERTEILT");
   });
 
-  it("ohne Parameter oder ohne Aufnahme, und die Gesprächsnotiz: nie vor dem LdF", () => {
+  it("abgeschaltet oder ohne Aufnahme, und die Gesprächsnotiz: nie vor dem LdF", () => {
     expect(lauf(zustand([...grundlage(false), eingang("E1")]), "E1")).toBe("VOR_SICHTER");
     const basis = grundlage(true);
     const ohneAufnahme = anlageEreignis(h(), n, "NachrichtVerfasst", { nachrichtId: "E2", richtung: "EINGANG", anschrift: "S3", absender: "Polizei", betreff: "", inhalt: "x" });

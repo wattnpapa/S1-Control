@@ -14,6 +14,7 @@
  */
 
 import { vergleicheHlc } from "../hlc.js";
+import { ldfStationAn } from "../ldfstation.js";
 import type { Id } from "../werte.js";
 import type { Zustand } from "../zustand.js";
 import {
@@ -277,7 +278,7 @@ export function nachrichtenlage(zustand: Zustand, stellen: readonly string[], je
     ueberSchwelle: 0,
   };
   // Die sechste Zahl gibt es nur, wenn der Einsatz den LdF als Station führt.
-  if (zustand.einsatz?.ldfStation?.wert === true) Object.assign(lage, { vorLdf: 0, vorLdfZuteilung: 0, ueberSchwelleLdf: 0, ueberSchwelleFmz: 0 });
+  if (ldfStationAn(zustand)) Object.assign(lage, { vorLdf: 0, vorLdfZuteilung: 0, ueberSchwelleLdf: 0, ueberSchwelleFmz: 0 });
   const kontext = zeilenkontext(zustand, jetzt);
   const zeilen = alleNachrichtenzeilen(zustand, kontext);
   for (const zeile of zeilen) {

@@ -15,7 +15,7 @@
 import { describe, expect, it } from "vitest";
 
 import { falteHinzu, leereFaltung, materialisiere, type EingehendesEreignis } from "../fold.js";
-import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc } from "../pruefhilfen/ereignisbau.js";
+import { anlageEreignis, einsatzAngelegt, feldEreignis, hlc, ldfAus } from "../pruefhilfen/ereignisbau.js";
 import type { Zustand } from "../zustand.js";
 import { handzeichenverzeichnis } from "./handzeichenverzeichnis.js";
 import { konflikthinweisText } from "./konflikthinweistext.js";
@@ -59,7 +59,8 @@ function vermerk(minute: number, typ: string, nutzlast: Record<string, unknown>,
 }
 
 function zustand(ereignisse: readonly EingehendesEreignis[]): Zustand {
-  return materialisiere(falteHinzu(leereFaltung(), ereignisse));
+  // Der Weg ohne LdF ist hier der Gegenstand; seit FOLD_VERSION 17 muss er ausdrücklich abgeschaltet sein.
+  return materialisiere(falteHinzu(leereFaltung(), [ldfAus(), ...ereignisse]));
 }
 
 const ausgang = (minute: number, id: string, angaben: Record<string, unknown> = {}): EingehendesEreignis =>
