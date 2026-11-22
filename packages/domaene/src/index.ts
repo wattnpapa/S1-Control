@@ -125,6 +125,7 @@ export { AKUELI, sucheAkueli, type Akueeintrag, type Akuegruppe } from "./akueli
 // Der Handscanner-Weg (M3.4): Segmente sammeln, Signatur pruefen, uebernehmen.
 export {
   einheitIdAus,
+  einheitIdDesBogens,
   LEERER_STAND,
   TEILE_MAX,
   liesBogen,

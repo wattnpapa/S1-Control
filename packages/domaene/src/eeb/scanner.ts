@@ -211,6 +211,17 @@ export function einheitIdAus(einheitSchluessel: string): string {
   return `E-${inhaltsHash(einheitSchluessel).slice(0, 12)}`;
 }
 
+/**
+ * Die Kennung, unter der ein Bogen seine Einheit anlegt — dieselbe, die
+ * {@link liesBogen} für den gescannten Bogen bildet, hier für einen Bogen,
+ * der schon als Objekt vorliegt (Bogendatei, Demo-Einsatz). Wer vor der
+ * Übernahme wissen muss, welche Einheit entsteht, fragt hier.
+ */
+export function einheitIdDesBogens(roh: Erfassungsbogen): string {
+  const bogen = migriereBogen({ ...roh });
+  return einheitIdAus(fingerabdruck(bogen.einheit, bogen.personal));
+}
+
 export interface UebernahmeAuftrag extends UebersetzungsAuftrag {
   readonly meldungId: string;
   /** Der rohe Scan-Text, unverändert mitgeführt (§5.8.1: der Bogen bleibt erhalten). */
