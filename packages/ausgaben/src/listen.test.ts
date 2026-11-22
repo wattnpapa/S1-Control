@@ -20,6 +20,16 @@ function lage() {
   return { ereignisse, zustand: materialisiere(falteHinzu(leereFaltung(), ereignisse)) };
 }
 
+describe("Das Tagebuch als HTML, Nachtrag (Stab-Review ETB E2)", () => {
+  it("markiert einen Nachtrag an der Fachzeit", () => {
+    const zeile = {
+      ereignisId: "e-1", typ: "EtbEintragErfasst", hlcText: "1", wanduhr: "2026-11-22T17:27:00.000Z", zeitpunkt: "2026-11-22T17:05:00.000Z",
+      nachtrag: true, akteur: "S2", rechner: "r", clientId: "c", satz: "Telefonat",
+    } as unknown as projektion.Tagebuchzeile;
+    expect(tagebuchAlsHtml([zeile], KOPF)).toContain("(Nachtrag)");
+  });
+});
+
 describe("Anforderungen als HTML", () => {
   it("trägt Seitenzahl, Stand, Notizspalte und maskiert Freitext", () => {
     const { zustand } = lage();

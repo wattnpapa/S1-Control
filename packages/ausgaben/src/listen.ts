@@ -114,7 +114,8 @@ function tagebuchZeile(zeile: projektion.Tagebuchzeile, laufendeNummer: number):
     `        ${zelle(String(laufendeNummer))}`,
     // R2-ETB P3-2: „Erfasst“ mit Sekunden wie am Bildschirm — die Zeit des Rechners, auf die Sekunde.
     `        ${zelle(erfasstText(zeile.wanduhr))}`,
-    `        ${zelle(zeile.zeitpunkt === undefined ? undefined : zeitText(zeile.zeitpunkt))}`,
+    // Stab-Review ETB E2: ein Nachtrag trägt auch auf Papier seine Marke.
+    `        ${zelle(zeile.zeitpunkt === undefined ? undefined : `${zeitText(zeile.zeitpunkt)}${zeile.nachtrag === true ? " (Nachtrag)" : ""}`)}`,
     `        ${zelle(zeile.nachrichtNummer)}`,
     `        ${zelle(`${satzMitGrund(zeile)}${marke}`)}`,
     // ETB P1-7: die Stelle, die das Ereignis nennt, statt des Anzeigenamens „Arbeitsplatz“; das Handzeichen hat seine Spalte.

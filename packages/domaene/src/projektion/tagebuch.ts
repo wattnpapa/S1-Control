@@ -36,6 +36,7 @@ import {
   zeitpunktText,
 } from "../beschriftungen.js";
 import { auftragsname, einheitsteilAnlagesatz, fahrzeugname } from "./tagebuch-einheitsteile.js";
+import { istNachtrag, istVerwaltungsschritt } from "./tagebuch-relevanz.js";
 import { anforderungsbezug, anforderungsname, anforderungssatz } from "./tagebuch-anforderung.js";
 import { klartextsatz } from "./tagebuch-klartext.js";
 import { rufgruppenname } from "./tagebuch-funk.js";
@@ -250,6 +251,8 @@ export interface Tagebuchzeile {
   readonly wanduhr: string;
   /** Die fachliche Zeit, wo die Art eine trägt (§2.5); sonst abwesend. */
   readonly zeitpunkt?: string;
+  /** Additiv (Stab-Review ETB E2): fachliche Zeit deutlich vor der Erfassung (`tagebuch-relevanz.ts`). */
+  readonly nachtrag?: true;
   readonly akteur: string;
   readonly rechner: string;
   readonly clientId: string;
@@ -657,6 +660,7 @@ function baueTagebuchzeile(zustand: Zustand, ereignis: EingehendesEreignis, zeit
     hlcText: hlcAlsText(ereignis.hlc),
     wanduhr: ereignis.wanduhr,
     ...(zeit === undefined ? {} : { zeitpunkt: zeit }),
+    ...(istNachtrag(zeit, ereignis.wanduhr) ? { nachtrag: true as const } : {}),
     akteur: ereignis.akteur.benutzer,
     rechner: ereignis.akteur.host,
     clientId: ereignis.akteur.clientId,
@@ -682,12 +686,15 @@ export interface Tagebuchfilter {
   readonly nurRuecknahmen?: boolean;
   /** Additiv (ETB P0-1): nur die Zeilen dieser Nachricht — Kennung, kein Teilstring. */
   readonly nachrichtId?: Id;
+  /** Additiv (Stab-Review ETB E1): ohne Verwaltungsschritte (`tagebuch-relevanz.ts`). */
+  readonly nurTagebuchrelevant?: boolean;
 }
 
 export function trifftFilter(zeile: Tagebuchzeile, filter: Tagebuchfilter): boolean {
   if (filter.einheitId !== undefined && zeile.einheitId !== filter.einheitId) return false;
   if (filter.abschnittId !== undefined && zeile.abschnittId !== filter.abschnittId) return false;
   if (filter.nachrichtId !== undefined && zeile.nachrichtId !== filter.nachrichtId) return false;
+  if (filter.nurTagebuchrelevant === true && istVerwaltungsschritt(zeile.typ)) return false;
   if (filter.nurRuecknahmen === true && zeile.undoOf === undefined && zeile.korrekturVon === undefined && zeile.berichtigung !== true) {
     return false;
   }
