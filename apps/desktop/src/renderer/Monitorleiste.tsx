@@ -6,33 +6,53 @@
  * Wand ist die Maus meist nicht da; die Leiste ist für den Moment, in dem
  * jemand mit dem Laptop danebensteht.
  *
+ * Die Reiter stehen nach Sachgebiet gruppiert (S1, S4, FmZ), jede Gruppe mit
+ * ihrem Kürzel davor. Der Schalter „Wechsel" geht reihum durch aus, alle und
+ * die Sachgebiete mit mehr als einer Ansicht.
+ *
  * Die Punkte rechts unten nennen die Ansichten, die aktive gefüllt; bei
  * eingeschaltetem Wechsel ist die nächste umrandet hervorgehoben — wer
- * hinsieht, weiß, was kommt.
+ * hinsieht, weiß, was kommt. Zwischen den Sachgebieten steht eine Lücke.
  */
 
-import { MONITOR_ANSICHTEN } from "../kontrakt/index.js";
-import { ANSICHT_TITEL, naechsteAnsicht, type Monitorsteuerung } from "./monitorSteuerung.js";
+import { MONITOR_ANSICHTEN, MONITOR_GRUPPEN, MONITOR_GRUPPE_DER_ANSICHT } from "../kontrakt/index.js";
+import { ANSICHT_TITEL, type Monitorsteuerung } from "./monitorSteuerung.js";
+import { GRUPPE_KURZ, GRUPPE_TITEL, ansichtenDerGruppe, modusKurz, naechsteAnsicht, naechsterModus } from "./monitorWechsel.js";
 
 export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element | null {
   if (!steuerung.leiste) return null;
+  const angehalten = steuerung.wechsel && steuerung.gehalten;
   return (
     <nav className="monitorleiste" aria-label="Monitoransichten">
-      {MONITOR_ANSICHTEN.map((ansicht) => (
-        <button
-          key={ansicht}
-          type="button"
-          aria-pressed={steuerung.ansicht === ansicht}
-          onClick={() => {
-            steuerung.waehle(ansicht);
-          }}
-        >
-          {ANSICHT_TITEL[ansicht]}
-        </button>
+      {MONITOR_GRUPPEN.map((gruppe) => (
+        <div key={gruppe} className="monitorleistegruppe" role="group" aria-label={GRUPPE_TITEL[gruppe]}>
+          <span className="monitorleistekuerzel" aria-hidden="true">
+            {GRUPPE_KURZ[gruppe]}
+          </span>
+          {ansichtenDerGruppe(gruppe).map((ansicht) => (
+            <button
+              key={ansicht}
+              type="button"
+              aria-pressed={steuerung.ansicht === ansicht}
+              onClick={() => {
+                steuerung.waehle(ansicht);
+              }}
+            >
+              {ANSICHT_TITEL[ansicht]}
+            </button>
+          ))}
+        </div>
       ))}
       <span className="monitorleistefrei" />
-      <button type="button" aria-pressed={steuerung.wechsel} onClick={steuerung.schalteWechsel}>
-        Wechsel: {steuerung.wechsel ? (steuerung.gehalten ? "gehalten" : "an") : "aus"}
+      <button
+        type="button"
+        aria-pressed={steuerung.wechsel}
+        title="Reihum: aus, alle Ansichten, je Sachgebiet"
+        onClick={() => {
+          steuerung.setzeModus(naechsterModus(steuerung.modus));
+        }}
+      >
+        Wechsel: {angehalten ? `${modusKurz(steuerung.modus)}, gehalten` : modusKurz(steuerung.modus)}
       </button>
       <button
         type="button"
@@ -47,15 +67,26 @@ export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuer
   );
 }
 
+function punktklasse(steuerung: Monitorsteuerung, i: number): string | undefined {
+  const ansicht = MONITOR_ANSICHTEN[i];
+  if (ansicht === undefined) return undefined;
+  const vorher = MONITOR_ANSICHTEN[i - 1];
+  const naechste = steuerung.wechsel ? naechsteAnsicht(steuerung.ansicht, steuerung.modus) : undefined;
+  const klassen = [
+    ansicht === steuerung.ansicht ? "aktiv" : ansicht === naechste ? "naechste" : "",
+    vorher !== undefined && MONITOR_GRUPPE_DER_ANSICHT[vorher] !== MONITOR_GRUPPE_DER_ANSICHT[ansicht] ? "gruppenanfang" : "",
+  ].filter((k) => k !== "");
+  return klassen.length > 0 ? klassen.join(" ") : undefined;
+}
+
 export function Monitorpunkte({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element {
-  const naechste = steuerung.wechsel ? naechsteAnsicht(steuerung.ansicht) : undefined;
   return (
     <ol className="monitorpunkte" aria-label="Ansichten">
-      {MONITOR_ANSICHTEN.map((ansicht) => (
+      {MONITOR_ANSICHTEN.map((ansicht, i) => (
         <li
           key={ansicht}
           title={ANSICHT_TITEL[ansicht]}
-          className={ansicht === steuerung.ansicht ? "aktiv" : ansicht === naechste ? "naechste" : undefined}
+          className={punktklasse(steuerung, i)}
           aria-current={ansicht === steuerung.ansicht ? "true" : undefined}
         />
       ))}

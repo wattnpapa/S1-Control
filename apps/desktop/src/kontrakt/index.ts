@@ -86,25 +86,44 @@ export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
- * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 9: Stärke,
- * die vier Versorgungsbilder (KONZEPT-S4.md §4), additiv der Funkplan
- * (KONZEPT-FUNKPLAN.md §4) und die beiden Stärketafeln des Sachgebiets 1
- * (je Abschnitt, je Organisation, Abschnitt × Organisation). Nur anhängen — die gemerkte Wahl eines
- * Geräts steht als Name in den Einstellungen, und die Tasten sind eingeübt.
+ * Die Ansichten des Monitors in der Reihenfolge der Tasten 1 bis 9, nach
+ * Sachgebiet geordnet: erst S1 (Stärke, dann je Abschnitt, je Organisation,
+ * Abschnitt × Organisation), dann S4 (KONZEPT-S4.md §4), zuletzt die FmZ mit
+ * dem Funkplan (KONZEPT-FUNKPLAN.md §4). Die gemerkte Wahl eines Geräts
+ * steht als Name in den Einstellungen und übersteht deshalb ein Umsortieren;
+ * eine neue Ansicht kommt ans Ende ihrer Gruppe.
  */
 export const MONITOR_ANSICHTEN = [
   "staerke",
+  "abschnitte",
+  "organisationen",
+  "kreuz",
   "verpflegung",
   "vorausschau",
   "unterbringung",
   "tafel",
   "funkplan",
-  "abschnitte",
-  "organisationen",
-  "kreuz",
 ] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
+
+/** Die Sachgebiete, nach denen der Monitor seine Ansichten gruppiert. */
+export const MONITOR_GRUPPEN = ["s1", "s4", "fmz"] as const;
+export const zMonitorGruppe = z.enum(MONITOR_GRUPPEN);
+export type MonitorGruppe = z.infer<typeof zMonitorGruppe>;
+
+/** Welche Ansicht zu welchem Sachgebiet gehört, in der Reihenfolge von `MONITOR_ANSICHTEN`. */
+export const MONITOR_GRUPPE_DER_ANSICHT: Readonly<Record<MonitorAnsicht, MonitorGruppe>> = {
+  staerke: "s1",
+  abschnitte: "s1",
+  organisationen: "s1",
+  kreuz: "s1",
+  verpflegung: "s4",
+  vorausschau: "s4",
+  unterbringung: "s4",
+  tafel: "s4",
+  funkplan: "fmz",
+};
 
 /**
  * Das Ziel des Automatikdrucks (KONZEPT-NACHRICHTEN.md Entscheidung 7): ein
@@ -168,8 +187,11 @@ export const zEinstellungen = z.object({
    * Fensterzustand dieses Geräts wie `theme` und nicht in der Akte: Der
    * Monitor im Zelt zeigt Verpflegung, der im Fahrzeug Stärke, und beide
    * hängen an derselben Einsatzdatei. Ohne Angabe Stärke, ohne Wechsel.
+   *
+   * Additiv: `wechselgruppe` beschränkt den Wechsel auf ein Sachgebiet; ohne
+   * Angabe wechselt der Monitor durch alle Ansichten.
    */
-  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean() }).optional(),
+  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean(), wechselgruppe: zMonitorGruppe.optional() }).optional(),
   /**
    * Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): das Handzeichen dieses
    * Arbeitsplatzes, gemerkt als Vorbelegung der Abfrage beim Öffnen. Die
