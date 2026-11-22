@@ -1,19 +1,22 @@
 /**
  * Die Ansichten des Monitors im Kontrakt (KONZEPT-S4.md §4, Funkplan F4).
  *
- * Die Liste legt die Tasten 1 bis 9 fest und ist nach Sachgebiet geordnet:
- * S1, S4, FmZ. Die gemerkte Wahl steht als Name in den Einstellungen des
+ * Die Liste legt die Tasten 1 bis 9 und 0 fest und ist nach Sachgebiet in
+ * der Ordnung des Stabes geordnet. Die gemerkte Wahl steht als Name in den Einstellungen des
  * Geräts und übersteht deshalb das Umsortieren.
  */
 
 import { describe, expect, it } from "vitest";
 
-import { MONITOR_ANSICHTEN, MONITOR_GRUPPE_DER_ANSICHT, zEinstellungen, zLagebild } from "./index.js";
+import { MONITOR_ANSICHTEN, MONITOR_GRUPPEN, MONITOR_GRUPPE_DER_ANSICHT, zEinstellungen, zLagebild } from "./index.js";
 
 describe("Die Monitoransichten", () => {
-  it("ordnet die Tasten nach Sachgebiet: S1, dann S4, dann FmZ", () => {
-    expect(MONITOR_ANSICHTEN).toEqual(["staerke", "abschnitte", "organisationen", "kreuz", "verpflegung", "vorausschau", "unterbringung", "tafel", "funkplan"]);
-    expect(MONITOR_ANSICHTEN.map((a) => MONITOR_GRUPPE_DER_ANSICHT[a])).toEqual(["s1", "s1", "s1", "s1", "s4", "s4", "s4", "s4", "fmz"]);
+  it("ordnet die Ansichten nach Stab: Führung, S1, S3, S4, S6, FmZ — jede Gruppe zusammenhängend", () => {
+    const gruppen = MONITOR_ANSICHTEN.map((a) => MONITOR_GRUPPE_DER_ANSICHT[a]);
+    const folge = gruppen.filter((g, i) => g !== gruppen[i - 1]);
+    expect(folge).toEqual(MONITOR_GRUPPEN.filter((g) => gruppen.includes(g)));
+    expect(new Set(folge).size).toBe(folge.length);
+    expect(MONITOR_ANSICHTEN.slice(0, 2)).toEqual(["offen", "staerke"]);
   });
 
   it("nimmt eine Wechselgruppe additiv an und keine unbekannte", () => {

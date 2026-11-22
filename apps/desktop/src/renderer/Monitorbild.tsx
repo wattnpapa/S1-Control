@@ -21,6 +21,7 @@ import { useEffect } from "react";
 
 import { Monitor, useFenstermass } from "./Monitor.js";
 import { MonitorFunkplan } from "./MonitorFunkplan.js";
+import { MonitorIukLage, MonitorNachrichtenweg, MonitorOffenePunkte } from "./MonitorKacheln.js";
 import { MonitorKreuztafel } from "./MonitorKreuztafel.js";
 import { MonitorAbschnitte, MonitorOrganisationen } from "./MonitorStaerketafeln.js";
 import { MonitorTafel, MonitorUnterbringung, MonitorVerpflegung, MonitorVorausschau, type Ansichtseigenschaften } from "./Monitoransichten.js";
@@ -61,6 +62,12 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
       return <MonitorOrganisationen {...e} />;
     case "kreuz":
       return <MonitorKreuztafel {...e} />;
+    case "offen":
+      return <MonitorOffenePunkte {...e} />;
+    case "iuk":
+      return <MonitorIukLage {...e} />;
+    case "nachrichtenweg":
+      return <MonitorNachrichtenweg {...e} />;
   }
 }
 

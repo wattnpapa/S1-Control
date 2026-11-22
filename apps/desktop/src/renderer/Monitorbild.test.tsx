@@ -12,13 +12,13 @@ import { act, cleanup, fireEvent, render, screen, within } from "@testing-librar
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { Monitorbild } from "./Monitorbild.js";
-import { LEISTE_MS, WECHSEL_MS, ansichtAusTaste } from "./monitorSteuerung.js";
-import { naechsteAnsicht } from "./monitorWechsel.js";
+import { ANSICHT_TITEL, LEISTE_MS, WECHSEL_MS, ansichtAusTaste } from "./monitorSteuerung.js";
+import { GRUPPE_TITEL, ansichtenDerGruppe, belegteGruppen, modusKurz, naechsteAnsicht, naechsterModus, tasteDerAnsicht, vorherigeAnsicht, wechselmodi } from "./monitorWechsel.js";
 import { baueAttrappe, type Attrappe } from "./pruefhilfen/attrappe.js";
 import { monitorFunkansicht } from "./pruefhilfen/monitorfunkbeispiel.js";
 import { BEISPIEL_STAERKETAFEL } from "./pruefhilfen/staerketafelbeispiel.js";
 import { BEISPIEL_ANSICHT, BEISPIEL_JETZT, BEISPIEL_LAGEBILD } from "./pruefhilfen/versorgungsbeispiel.js";
-import type { Einstellungen } from "../kontrakt/index.js";
+import { MONITOR_ANSICHTEN, type Einstellungen, type MonitorAnsicht } from "../kontrakt/index.js";
 
 let attrappe: Attrappe;
 const GRUND: Einstellungen = { sharePfad: "/share", anzeigename: "Zelt", theme: "nacht" };
@@ -52,26 +52,48 @@ function taste(key: string): void {
   });
 }
 
+/** Wählt eine Ansicht über ihre Taste, ohne Taste (ab der elften) über das Menü. */
+function zeige(ansicht: MonitorAnsicht): void {
+  const t = tasteDerAnsicht(ansicht);
+  if (t !== undefined) {
+    taste(t);
+    return;
+  }
+  taste("ContextMenu");
+  act(() => {
+    fireEvent.click(within(screen.getByRole("group", { name: "Ansicht" })).getByRole("menuitemradio", { name: new RegExp(`^${ANSICHT_TITEL[ansicht]}`) }));
+  });
+}
+
+/** Wie sich eine Ansicht im Bild nennt: die Stärke ist der Lagemonitor. */
+function bildname(ansicht: MonitorAnsicht): string {
+  return ansicht === "staerke" ? "Lagemonitor" : `Monitor ${ANSICHT_TITEL[ansicht]}`;
+}
+
 function gemerkt(): Einstellungen["monitor"][] {
   return attrappe.rufeDerArt("einstellungenSetzen").map((r) => r.einstellungen.monitor);
 }
 
 describe("Reine Helfer der Steuerung", () => {
-  it("geht im Kreis durch die neun Ansichten und kennt die Tasten 1 bis 9 nach Sachgebiet", () => {
-    expect(naechsteAnsicht("staerke")).toBe("abschnitte");
-    expect(naechsteAnsicht("kreuz")).toBe("verpflegung");
-    expect(naechsteAnsicht("tafel")).toBe("funkplan");
-    expect(naechsteAnsicht("funkplan")).toBe("staerke");
-    expect(ansichtAusTaste("1")).toBe("staerke");
-    expect(ansichtAusTaste("2")).toBe("abschnitte");
-    expect(ansichtAusTaste("3")).toBe("organisationen");
-    expect(ansichtAusTaste("4")).toBe("kreuz");
-    expect(ansichtAusTaste("5")).toBe("verpflegung");
-    expect(ansichtAusTaste("6")).toBe("vorausschau");
-    expect(ansichtAusTaste("8")).toBe("tafel");
-    expect(ansichtAusTaste("9")).toBe("funkplan");
-    expect(ansichtAusTaste("0")).toBeUndefined();
+  it("geht im Kreis durch alle Ansichten, blättert zurück und kennt die Tasten 1 bis 9 und 0", () => {
+    const n = MONITOR_ANSICHTEN.length;
+    MONITOR_ANSICHTEN.forEach((a, i) => {
+      expect(naechsteAnsicht(a)).toBe(MONITOR_ANSICHTEN[(i + 1) % n]);
+      expect(vorherigeAnsicht(a)).toBe(MONITOR_ANSICHTEN[(i - 1 + n) % n]);
+    });
+    expect(ansichtAusTaste("1")).toBe(MONITOR_ANSICHTEN[0]);
+    expect(ansichtAusTaste("9")).toBe(MONITOR_ANSICHTEN[8]);
+    expect(ansichtAusTaste("0")).toBe(MONITOR_ANSICHTEN[9]);
+    expect(tasteDerAnsicht(MONITOR_ANSICHTEN[9] ?? "staerke")).toBe("0");
+    expect(MONITOR_ANSICHTEN.slice(10).every((a) => tasteDerAnsicht(a) === undefined)).toBe(true);
     expect(ansichtAusTaste("x")).toBeUndefined();
+    expect(ansichtAusTaste("12")).toBeUndefined();
+  });
+
+  it("ordnet die Ansichten nach Stab: Führung zuerst, FmZ zuletzt, Stärke vor den Tafeln", () => {
+    expect(MONITOR_ANSICHTEN[0]).toBe("offen");
+    expect(MONITOR_ANSICHTEN[1]).toBe("staerke");
+    expect(MONITOR_ANSICHTEN.at(-1)).toBe("nachrichtenweg");
   });
 });
 
@@ -92,9 +114,9 @@ describe("Der Monitor mit Ansichten", () => {
 
   it("wählt mit den Tasten und merkt die Wahl im Gerät, nicht in der Akte", async () => {
     await zeichne();
-    taste("5");
+    zeige("verpflegung");
     expect(screen.getByLabelText("Monitor Verpflegung")).toBeDefined();
-    taste("8");
+    zeige("tafel");
     expect(screen.getByLabelText("Monitor Bereiche · Schichten")).toBeDefined();
     await act(async () => {
       await Promise.resolve();
@@ -137,7 +159,7 @@ describe("Der Monitor mit Ansichten", () => {
 
   it("wechselt mit R alle 20 s, hält mit der Leertaste und läuft danach weiter", async () => {
     await zeichne();
-    taste("5");
+    zeige("verpflegung");
     taste("r");
     act(() => {
       vi.advanceTimersByTime(WECHSEL_MS);
@@ -180,9 +202,9 @@ describe("Der Monitor mit Ansichten", () => {
 
   it("holt die Versorgungsansicht nur für Tafel und Vorausschau", async () => {
     await zeichne();
-    taste("5");
+    zeige("verpflegung");
     expect(attrappe.rufeDerArt("versorgungAnfordern")).toHaveLength(0);
-    taste("8");
+    zeige("tafel");
     await act(async () => {
       await Promise.resolve();
     });
@@ -205,7 +227,7 @@ describe("Der Monitor mit Ansichten", () => {
   });
 });
 
-describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
+describe("Der Funkplan unter FmZ (F4)", () => {
   async function warte(): Promise<void> {
     await act(async () => {
       await Promise.resolve();
@@ -213,10 +235,10 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
     });
   }
 
-  it("wählt den Funkplan mit Taste 9, holt sein Blatt und merkt die Wahl", async () => {
+  it("wählt den Funkplan, holt sein Blatt und merkt die Wahl", async () => {
     await zeichne();
     expect(attrappe.rufeDerArt("funkplanAnfordern")).toHaveLength(0);
-    taste("9");
+    zeige("funkplan");
     await warte();
     expect(screen.getByLabelText("Monitor Funkplan")).toBeDefined();
     expect(screen.getByText("THW_OL_FUE")).toBeDefined();
@@ -227,14 +249,14 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
 
   it("holt die Tafel einmal je Minute nach, solange sie zu sehen ist", async () => {
     await zeichne();
-    taste("9");
+    zeige("funkplan");
     await warte();
     act(() => {
       vi.advanceTimersByTime(60_000);
     });
     await warte();
     expect(attrappe.rufeDerArt("funkplanAnfordern")).toHaveLength(2);
-    taste("1");
+    zeige("staerke");
     act(() => {
       vi.advanceTimersByTime(180_000);
     });
@@ -252,16 +274,16 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
     expect(attrappe.rufeDerArt("funkplanAnfordern")).toHaveLength(2);
   });
 
-  it("steht im Menü unter FmZ als neunter Eintrag mit Taste 9, in der Leiste und bei den Punkten", async () => {
+  it("steht im Menü unter FmZ, in der Leiste und bei den Punkten", async () => {
     await zeichne();
     taste("ContextMenu");
     const eintraege = within(screen.getByRole("group", { name: "Ansicht" })).getAllByRole("menuitemradio");
-    expect(eintraege).toHaveLength(9);
-    expect(eintraege[2]?.textContent).toBe("Organisationen3");
-    expect(eintraege[8]?.textContent).toBe("Funkplan9");
-    expect(within(screen.getByRole("group", { name: "FmZ · Fernmelde" })).getAllByRole("menuitemradio")).toHaveLength(1);
+    expect(eintraege).toHaveLength(MONITOR_ANSICHTEN.length);
+    const stelle = MONITOR_ANSICHTEN.indexOf("funkplan");
+    const fmz = within(screen.getByRole("group", { name: "FmZ · Fernmelde" })).getAllByRole("menuitemradio");
+    expect(fmz.map((e) => e.textContent)).toEqual(ansichtenDerGruppe("fmz").map((a) => `${ANSICHT_TITEL[a]}${tasteDerAnsicht(a) ?? ""}`));
     act(() => {
-      fireEvent.click(eintraege[8] as Element);
+      fireEvent.click(eintraege[stelle] as Element);
     });
     await warte();
     expect(screen.getByLabelText("Monitor Funkplan")).toBeDefined();
@@ -270,26 +292,17 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
     });
     expect(screen.getByRole("button", { name: "Funkplan" }).getAttribute("aria-pressed")).toBe("true");
     const punkte = screen.getByRole("list", { name: "Ansichten" }).querySelectorAll("li");
-    expect(punkte).toHaveLength(9);
-    expect(punkte[8]?.getAttribute("aria-current")).toBe("true");
-    expect(punkte[4]?.className).toBe("gruppenanfang");
-    expect(punkte[8]?.className).toBe("aktiv gruppenanfang");
+    expect(punkte).toHaveLength(MONITOR_ANSICHTEN.length);
+    expect(punkte[stelle]?.getAttribute("aria-current")).toBe("true");
+    expect(punkte[stelle]?.className).toBe("aktiv gruppenanfang");
+    expect(punkte[MONITOR_ANSICHTEN.indexOf("verpflegung")]?.className).toBe("gruppenanfang");
   });
 
-  it("wechselt über alle neun Ansichten und kommt zur Stärke zurück", async () => {
+  it("wechselt über alle Ansichten und kommt zur Stärke zurück", async () => {
     await zeichne();
     taste("r");
-    const folge = [
-      "Monitor Abschnitte",
-      "Monitor Organisationen",
-      "Monitor Abschnitt × Organisation",
-      "Monitor Verpflegung",
-      "Monitor Nächste 24 h",
-      "Monitor Unterbringung",
-      "Monitor Bereiche · Schichten",
-      "Monitor Funkplan",
-      "Lagemonitor",
-    ];
+    const start = MONITOR_ANSICHTEN.indexOf("staerke");
+    const folge = MONITOR_ANSICHTEN.map((_, i) => bildname(MONITOR_ANSICHTEN[(start + 1 + i) % MONITOR_ANSICHTEN.length] ?? "staerke"));
     for (const name of folge) {
       act(() => {
         vi.advanceTimersByTime(WECHSEL_MS);
@@ -301,7 +314,7 @@ describe("Der Funkplan als neunte Ansicht unter FmZ (F4)", () => {
 });
 
 
-describe("Die Stärketafeln des Sachgebiets 1 (Tasten 2 bis 4)", () => {
+describe("Die Stärketafeln des Sachgebiets 1", () => {
   async function warte(): Promise<void> {
     await act(async () => {
       await Promise.resolve();
@@ -309,10 +322,10 @@ describe("Die Stärketafeln des Sachgebiets 1 (Tasten 2 bis 4)", () => {
     });
   }
 
-  it("holt die Tafel erst bei Taste 2, zeigt die Abschnitte und merkt die Wahl", async () => {
+  it("holt die Tafel erst mit den Abschnitten, zeigt sie und merkt die Wahl", async () => {
     await zeichne();
     expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(0);
-    taste("2");
+    zeige("abschnitte");
     await warte();
     expect(screen.getByLabelText("Monitor Abschnitte")).toBeDefined();
     expect(screen.getByText("LK Friesland")).toBeDefined();
@@ -321,7 +334,7 @@ describe("Die Stärketafeln des Sachgebiets 1 (Tasten 2 bis 4)", () => {
     expect(document.title).toBe("S1-Control — Abschnitte");
   });
 
-  it("zeigt mit Taste 3 die Organisationen und holt bei neuem Lagezeiger neu", async () => {
+  it("zeigt die Organisationen und holt bei neuem Lagezeiger neu", async () => {
     attrappe.antwortet("einstellungenLesen", { ...GRUND, monitor: { ansicht: "organisationen", wechsel: false } });
     const { rerender } = render(<Monitorbild lagebild={BEISPIEL_LAGEBILD} akteId="akte-1" jetzt={BEISPIEL_JETZT} />);
     await warte();
@@ -332,9 +345,9 @@ describe("Die Stärketafeln des Sachgebiets 1 (Tasten 2 bis 4)", () => {
     expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(2);
   });
 
-  it("zeigt mit Taste 4 die Kreuztabelle aus derselben Tafel", async () => {
+  it("zeigt die Kreuztabelle aus derselben Tafel", async () => {
     await zeichne();
-    taste("4");
+    zeige("kreuz");
     await warte();
     expect(screen.getByLabelText("Monitor Abschnitt × Organisation")).toBeDefined();
     expect(attrappe.rufeDerArt("staerketafelAnfordern")).toHaveLength(1);
@@ -350,24 +363,28 @@ describe("Der Wechsel je Sachgebiet", () => {
     });
   }
 
-  it("zeigt die Leiste nach Sachgebiet gruppiert", async () => {
+  it("zeigt die Leiste nach Sachgebiet gruppiert, nur belegte Gruppen", async () => {
     await zeichne();
     act(() => {
       fireEvent.mouseMove(document.querySelector(".monitorrahmen") as Element);
     });
-    const s1 = screen.getByRole("group", { name: "S1 · Personal" });
-    expect(within(s1).getAllByRole("button").map((b) => b.textContent)).toEqual(["Stärke", "Abschnitte", "Organisationen", "Abschnitt × Organisation"]);
+    for (const gruppe of belegteGruppen()) {
+      const block = screen.getByRole("group", { name: GRUPPE_TITEL[gruppe] });
+      expect(within(block).getAllByRole("button").map((b) => b.textContent)).toEqual(ansichtenDerGruppe(gruppe).map((a) => ANSICHT_TITEL[a]));
+    }
     const s4 = screen.getByRole("group", { name: "S4 · Versorgung" });
     expect(within(s4).getAllByRole("button").map((b) => b.textContent)).toEqual(["Verpflegung", "Nächste 24 h", "Unterbringung", "Bereiche · Schichten"]);
-    expect(within(screen.getByRole("group", { name: "FmZ · Fernmelde" })).getAllByRole("button").map((b) => b.textContent)).toEqual(["Funkplan"]);
+    expect(screen.queryByRole("group", { name: "S2 · Lage" })).toBeNull();
   });
 
-  it("schaltet den Wechsel in der Leiste reihum: aus, alle, S1, S4 und wieder aus", async () => {
+  it("schaltet den Wechsel in der Leiste reihum durch alle angebotenen Modi und wieder aus", async () => {
     await zeichne();
     act(() => {
       fireEvent.mouseMove(document.querySelector(".monitorrahmen") as Element);
     });
-    const folge = ["Wechsel: alle", "Wechsel: S1", "Wechsel: S4", "Wechsel: aus"];
+    const folge = wechselmodi().map((_, i, alle) => `Wechsel: ${modusKurz(alle[(i + 1) % alle.length] ?? "aus")}`);
+    expect(folge.slice(0, 2)).toEqual(["Wechsel: alle", "Wechsel: S1"]);
+    expect(naechsterModus("aus")).toBe("alle");
     for (const text of folge) {
       act(() => {
         fireEvent.click(screen.getByRole("button", { name: /^Wechsel:/ }));
@@ -396,7 +413,8 @@ describe("Der Wechsel je Sachgebiet", () => {
   });
 
   it("stellt einen gemerkten Wechsel S1 wieder her und nennt ihn im Fuß", async () => {
-    attrappe.antwortet("einstellungenLesen", { ...GRUND, monitor: { ansicht: "kreuz", wechsel: true, wechselgruppe: "s1" } });
+    const letzte = ansichtenDerGruppe("s1").at(-1) ?? "staerke";
+    attrappe.antwortet("einstellungenLesen", { ...GRUND, monitor: { ansicht: letzte, wechsel: true, wechselgruppe: "s1" } });
     await zeichne();
     await warte();
     expect(screen.getByText(/Wechsel S1 alle 20 s, weiter: Stärke/)).toBeDefined();
@@ -406,10 +424,24 @@ describe("Der Wechsel je Sachgebiet", () => {
     expect(screen.getByLabelText("Lagemonitor")).toBeDefined();
   });
 
-  it("bietet die FmZ mit nur einer Ansicht nicht zum Wechsel an", async () => {
+  it("bietet nur Sachgebiete mit mehr als einer Ansicht zum Wechsel an", async () => {
     await zeichne();
     taste("ContextMenu");
-    const wahl = within(screen.getByRole("group", { name: "Wechsel" })).getAllByRole("menuitemradio");
-    expect(wahl.map((w) => w.textContent)).toEqual(["✓Kein Wechsel", "Alle AnsichtenR", "Nur S1 · Personal", "Nur S4 · Versorgung"]);
+    const wahl = within(screen.getByRole("group", { name: "Wechsel" })).getAllByRole("menuitemradio").map((w) => w.textContent);
+    expect(wahl.slice(0, 2)).toEqual(["✓Kein Wechsel", "Alle AnsichtenR"]);
+    expect(wahl).toContain("Nur S1 · Personal");
+    expect(wahl).toContain("Nur S4 · Versorgung");
+    expect(wahl).toContain("Nur FmZ · Fernmelde");
+    expect(wahl).not.toContain("Nur S6 · IuK");
+    expect(wahl).not.toContain("Nur Führung");
+  });
+
+  it("blättert mit Pfeil rechts und links durch alle Ansichten", async () => {
+    await zeichne();
+    taste("ArrowRight");
+    expect(screen.getByLabelText(bildname(naechsteAnsicht("staerke")))).toBeDefined();
+    taste("ArrowLeft");
+    taste("ArrowLeft");
+    expect(screen.getByLabelText(bildname(vorherigeAnsicht("staerke")))).toBeDefined();
   });
 });

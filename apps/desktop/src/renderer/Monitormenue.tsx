@@ -6,17 +6,16 @@
  * Menü aus dem Main nicht. Ein Menü, das in beiden Hüllen gleich aussieht,
  * ist auch in beiden gleich zu prüfen (jsdom).
  *
- * Darin: die neun Ansichten nach Sachgebiet (S1, S4, FmZ) mit Haken an der
- * aktiven und ihrer Taste, die Wahl des Wechsels (aus, alle, je Sachgebiet),
+ * Darin: die Ansichten nach Sachgebiet mit Haken an der aktiven und ihrer
+ * Taste (1–9, 0; weitere über Pfeil links/rechts), die Wahl des Wechsels (aus, alle, je Sachgebiet),
  * „Vollbild" und „Monitor schließen". Ein Klick daneben oder Esc schließt es.
  */
 
-import { MONITOR_ANSICHTEN, MONITOR_GRUPPEN } from "../kontrakt/index.js";
 import { ANSICHT_TITEL, type Monitorsteuerung } from "./monitorSteuerung.js";
-import { GRUPPE_TITEL, ansichtenDerGruppe, wechselmodi, type Wechselmodus } from "./monitorWechsel.js";
+import { GRUPPE_TITEL, ansichtenDerGruppe, belegteGruppen, tasteDerAnsicht, wechselmodi, type Wechselmodus } from "./monitorWechsel.js";
 
 /** So hoch wird das Menü im Feldbild (größere Knöpfe); weiter unten geöffnet, rutscht es hoch. */
-const MENUEHOEHE = 760;
+const MENUEHOEHE = 900;
 
 function moduseintrag(modus: Wechselmodus): string {
   if (modus === "aus") return "Kein Wechsel";
@@ -35,7 +34,7 @@ function Haken({ an }: { readonly an: boolean }): React.JSX.Element {
 function Ansichtswahl({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element {
   return (
     <div role="group" aria-label="Ansicht">
-      {MONITOR_GRUPPEN.map((gruppe) => (
+      {belegteGruppen().map((gruppe) => (
         <div key={gruppe} role="group" aria-label={GRUPPE_TITEL[gruppe]}>
           <p className="monitormenuetitel">{GRUPPE_TITEL[gruppe]}</p>
           {ansichtenDerGruppe(gruppe).map((ansicht) => (
@@ -50,7 +49,7 @@ function Ansichtswahl({ steuerung }: { readonly steuerung: Monitorsteuerung }): 
             >
               <Haken an={steuerung.ansicht === ansicht} />
               {ANSICHT_TITEL[ansicht]}
-              <kbd>{MONITOR_ANSICHTEN.indexOf(ansicht) + 1}</kbd>
+              {tasteDerAnsicht(ansicht) !== undefined && <kbd>{tasteDerAnsicht(ansicht)}</kbd>}
             </button>
           ))}
         </div>

@@ -2,7 +2,8 @@
  * Die Steuerung des Monitors (S4.1, KONZEPT-S4.md §4) — alles im Renderer.
  *
  * Drei Wege schalten die Ansicht um: Kontextmenü, Hover-Leiste und Tastatur
- * (1 bis 9 wählen, R schaltet den Wechsel, Leertaste hält ihn an, F11
+ * (1 bis 9 und 0 wählen die ersten zehn, Pfeil links/rechts blättert,
+ * R schaltet den Wechsel, Leertaste hält ihn an, F11
  * Vollbild, Esc verlässt Menü oder Vollbild). Keiner davon braucht den Main:
  * Der Monitor läuft auch als Browsertab in der Web-Schale (ADR-005).
  * Der Wechsel läuft durch alle Ansichten oder nur durch die eines
@@ -18,7 +19,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { rufe } from "./bruecke.js";
 import { MONITOR_ANSICHTEN, type Einstellungen, type MonitorAnsicht } from "../kontrakt/index.js";
-import { ansichtFuerModus, einstellungAusModus, modusAusEinstellung, naechsteAnsicht, type Wechselmodus } from "./monitorWechsel.js";
+import { ansichtFuerModus, einstellungAusModus, modusAusEinstellung, naechsteAnsicht, vorherigeAnsicht, type Wechselmodus } from "./monitorWechsel.js";
 
 /** Takt des Wechsels — 20 s, lang genug, um eine Zahl zu lesen. */
 export const WECHSEL_MS = 20_000;
@@ -26,6 +27,9 @@ export const WECHSEL_MS = 20_000;
 export const LEISTE_MS = 3_000;
 
 export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
+  offen: "Offene Punkte",
+  iuk: "IuK-Lage",
+  nachrichtenweg: "Nachrichtenweg",
   staerke: "Stärke",
   verpflegung: "Verpflegung",
   vorausschau: "Nächste 24 h",
@@ -37,10 +41,11 @@ export const ANSICHT_TITEL: Readonly<Record<MonitorAnsicht, string>> = {
   kreuz: "Abschnitt × Organisation",
 };
 
-/** Taste „1" bis „9" → Ansicht; sonst `undefined`. */
+/** Taste „1" bis „9" → erste bis neunte Ansicht, „0" → zehnte; sonst `undefined`. */
 export function ansichtAusTaste(taste: string): MonitorAnsicht | undefined {
-  const zahl = Number(taste);
-  return Number.isInteger(zahl) && zahl >= 1 ? MONITOR_ANSICHTEN[zahl - 1] : undefined;
+  if (!/^[0-9]$/.test(taste)) return undefined;
+  const zahl = taste === "0" ? 10 : Number(taste);
+  return MONITOR_ANSICHTEN[zahl - 1];
 }
 
 export interface Monitorsteuerung {
@@ -193,6 +198,8 @@ function useMonitortasten(steuerung: Monitorsteuerung, halte: () => void): void 
       const s = aktuell.current;
       const gewaehlt = ansichtAusTaste(ereignis.key);
       if (gewaehlt !== undefined) s.waehle(gewaehlt);
+      else if (ereignis.key === "ArrowRight") s.waehle(naechsteAnsicht(s.ansicht));
+      else if (ereignis.key === "ArrowLeft") s.waehle(vorherigeAnsicht(s.ansicht));
       else if (ereignis.key === "r" || ereignis.key === "R") s.schalteWechsel();
       else if (ereignis.key === " " && s.wechsel) halte();
       else if (ereignis.key === "F11") s.schalteVollbild();

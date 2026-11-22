@@ -6,8 +6,9 @@
  * Wand ist die Maus meist nicht da; die Leiste ist für den Moment, in dem
  * jemand mit dem Laptop danebensteht.
  *
- * Die Reiter stehen nach Sachgebiet gruppiert (S1, S4, FmZ), jede Gruppe mit
- * ihrem Kürzel davor. Der Schalter „Wechsel" geht reihum durch aus, alle und
+ * Die Reiter stehen nach Sachgebiet gruppiert (Führung, S1, S4, S6, FmZ),
+ * jede Gruppe mit ihrem Kürzel davor; passen sie nicht in eine Zeile, bricht
+ * die Leiste um. Der Schalter „Wechsel" geht reihum durch aus, alle und
  * die Sachgebiete mit mehr als einer Ansicht.
  *
  * Die Punkte rechts unten nennen die Ansichten, die aktive gefüllt; bei
@@ -15,16 +16,16 @@
  * hinsieht, weiß, was kommt. Zwischen den Sachgebieten steht eine Lücke.
  */
 
-import { MONITOR_ANSICHTEN, MONITOR_GRUPPEN, MONITOR_GRUPPE_DER_ANSICHT } from "../kontrakt/index.js";
+import { MONITOR_ANSICHTEN, MONITOR_GRUPPE_DER_ANSICHT } from "../kontrakt/index.js";
 import { ANSICHT_TITEL, type Monitorsteuerung } from "./monitorSteuerung.js";
-import { GRUPPE_KURZ, GRUPPE_TITEL, ansichtenDerGruppe, modusKurz, naechsteAnsicht, naechsterModus } from "./monitorWechsel.js";
+import { GRUPPE_KURZ, GRUPPE_TITEL, ansichtenDerGruppe, belegteGruppen, modusKurz, naechsteAnsicht, naechsterModus } from "./monitorWechsel.js";
 
 export function Monitorleiste({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element | null {
   if (!steuerung.leiste) return null;
   const angehalten = steuerung.wechsel && steuerung.gehalten;
   return (
     <nav className="monitorleiste" aria-label="Monitoransichten">
-      {MONITOR_GRUPPEN.map((gruppe) => (
+      {belegteGruppen().map((gruppe) => (
         <div key={gruppe} className="monitorleistegruppe" role="group" aria-label={GRUPPE_TITEL[gruppe]}>
           <span className="monitorleistekuerzel" aria-hidden="true">
             {GRUPPE_KURZ[gruppe]}

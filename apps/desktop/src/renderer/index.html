@@ -3297,6 +3297,44 @@
       .monitor .monitorleise {
         color: var(--monitor-leise);
       }
+      /* Kachelbilder (Offene Punkte, IuK-Lage, Nachrichtenweg): eine Zahl je
+         Kachel, Bernstein nur mit ⚠ und Wort, gedämpft bei null. */
+      .monitorkacheln .kachelraster {
+        display: grid;
+        gap: 1.2vw;
+        width: 92vw;
+        margin: 1.5vh 0;
+        padding: 0;
+        list-style: none;
+      }
+      .monitorkacheln .kachel {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4vh;
+        padding: 1.2vh 0.8vw;
+        border: 2px solid var(--monitor-linie);
+        min-width: 0;
+      }
+      .monitorkacheln .kachelwert {
+        line-height: 1;
+        font-weight: 700;
+      }
+      .monitorkacheln .kachelunter {
+        color: var(--monitor-leise);
+        overflow-wrap: anywhere;
+      }
+      .monitorkacheln .kachel.warn {
+        border: 4px solid var(--monitor-warn);
+        color: var(--monitor-warn);
+      }
+      .monitorkacheln .kachel.warn .kachelunter {
+        color: var(--monitor-warn);
+      }
+      .monitorkacheln .kachel.leise {
+        color: var(--monitor-leise);
+      }
       /* Die Tafeln (4c, 4h): Zeilen statt einer Zahl, die Größe setzt die
          Komponente aus `schriftgroesse`. */
       .monitortafel table {
@@ -3481,6 +3519,7 @@
         right: 0;
         z-index: 10;
         display: flex;
+        flex-wrap: wrap;
         background: var(--monitor-leiste);
         border-bottom: 1px solid var(--monitor-linie);
       }

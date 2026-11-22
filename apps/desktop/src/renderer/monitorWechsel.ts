@@ -20,12 +20,20 @@ import {
 /** Aus, durch alle Ansichten oder nur durch die eines Sachgebiets. */
 export type Wechselmodus = "aus" | "alle" | MonitorGruppe;
 
-export const GRUPPE_KURZ: Readonly<Record<MonitorGruppe, string>> = { s1: "S1", s4: "S4", fmz: "FmZ" };
+export const GRUPPE_KURZ: Readonly<Record<MonitorGruppe, string>> = { fuehrung: "Fü", s1: "S1", s3: "S3", s4: "S4", s6: "S6", fmz: "FmZ" };
 export const GRUPPE_TITEL: Readonly<Record<MonitorGruppe, string>> = {
+  fuehrung: "Führung",
   s1: "S1 · Personal",
+  s3: "S3 · Einsatz",
   s4: "S4 · Versorgung",
+  s6: "S6 · IuK",
   fmz: "FmZ · Fernmelde",
 };
+
+/** Sachgebiete, die schon Ansichten haben — eine leere Gruppe erscheint nirgends. */
+export function belegteGruppen(): readonly MonitorGruppe[] {
+  return MONITOR_GRUPPEN.filter((g) => ansichtenDerGruppe(g).length > 0);
+}
 
 /** Die Ansichten eines Sachgebiets in Tastenreihenfolge. */
 export function ansichtenDerGruppe(gruppe: MonitorGruppe): readonly MonitorAnsicht[] {
@@ -56,6 +64,19 @@ export function naechsteAnsicht(ansicht: MonitorAnsicht, modus: Wechselmodus = "
   const folge = wechselfolge(modus);
   const stelle = folge.indexOf(ansicht);
   return folge[(stelle + 1) % folge.length] ?? "staerke";
+}
+
+/** Die Ansicht davor in der Gesamtfolge (Pfeil links). */
+export function vorherigeAnsicht(ansicht: MonitorAnsicht): MonitorAnsicht {
+  const stelle = MONITOR_ANSICHTEN.indexOf(ansicht);
+  return MONITOR_ANSICHTEN[(stelle - 1 + MONITOR_ANSICHTEN.length) % MONITOR_ANSICHTEN.length] ?? "staerke";
+}
+
+/** Die Taste einer Ansicht: „1" bis „9", die zehnte „0", danach keine. */
+export function tasteDerAnsicht(ansicht: MonitorAnsicht): string | undefined {
+  const stelle = MONITOR_ANSICHTEN.indexOf(ansicht);
+  if (stelle < 9) return String(stelle + 1);
+  return stelle === 9 ? "0" : undefined;
 }
 
 /** Die Ansicht, mit der ein neu gewählter Modus beginnt: die aktuelle, wenn sie dazugehört. */
