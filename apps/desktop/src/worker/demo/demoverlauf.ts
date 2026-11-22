@@ -162,6 +162,12 @@ function tagebuch(zeit: Demozeit): Demoschritt[] {
     eintrag(185, "4", "Lagebesprechung: Klärwerk Wehnen droht vollzulaufen, zusätzliche Pumpen angefordert.", { entitaet: "ABSCHNITT", id: AB.ea3 }),
     eintrag(372, "5", "Funk: Bergungsgruppe OV Nordenham meldet einen verletzten Helfer, Schnittverletzung an der Hand, Transport durch Rettungsdienst.", { entitaet: "EINHEIT", id: EH.bNh.id }),
     eintrag(420, "6", "Telefon: Pegel Oldenburg-Drielake 4,05 m, weiter steigend."),
+    // Ein Nachtrag (Stab-Review ETB E2): geschehen bei Minute 270, erfasst erst bei 300 —
+    // das Tagebuch markiert ihn, weil die Fachzeit deutlich vor der Erfassung liegt.
+    schrittAls(STELLE.s2, 300, {
+      typ: "EtbEintragErfasst",
+      nutzlast: { etbId: "demo-etb-nachtrag", zeitpunkt: zeit.um(270), text: "Telefon: Deichverband meldet Kontrollgang Deich-km 2 bis 4 ohne Befund." },
+    }),
     schrittAls(STELLE.s2, 426, {
       typ: "EtbEintragBerichtigt",
       nutzlast: { etbId: "demo-etb-6b", berichtigtEintragId: "demo-etb-6", zeitpunkt: zeit.um(420), text: "Telefon: Pegel Oldenburg-Drielake 4,15 m, weiter steigend." },

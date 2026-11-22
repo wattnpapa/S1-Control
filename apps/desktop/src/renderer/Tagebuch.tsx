@@ -34,6 +34,7 @@ import { rufe } from "./bruecke.js";
 import { useLaden } from "./laden.js";
 import { useNachrichtOeffnen } from "./Nachrichtenhinweise.js";
 import { TagebuchEintrag } from "./TagebuchEintrag.js";
+import { Tagebuchschalter } from "./Tagebuchschalter.js";
 
 export interface TagebuchEigenschaften {
   /** Filter „nur diese Einheit“ — kommt aus der Auswahl in der Tabelle. */
@@ -127,6 +128,7 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
   const laden = useLaden();
   const [suche, setzeSuche] = useState(nimmAnfangssuche);
   const [nurRuecknahmen, setzeNurRuecknahmen] = useState(false);
+  const [nurRelevant, setzeNurRelevant] = useState(false);
   // Standard „Alle“: Wer das Tagebuch aufschlägt, soll das ganze Tagebuch sehen,
   // nicht unbemerkt einen Ausschnitt (zwei statt elf Einträge).
   // Ausnahme: „Im Tagebuch zeigen“ an einer Einheit will genau deren Einträge.
@@ -146,8 +148,9 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
       ...(aufBezug && einheitId === undefined && abschnittId !== undefined ? { abschnittId } : {}),
       ...(suche === "" ? {} : { suche }),
       ...(nurRuecknahmen ? { nurRuecknahmen: true } : {}),
+      ...(nurRelevant ? { nurTagebuchrelevant: true } : {}),
     });
-  }, [akteId, einheitId, abschnittId, suche, nurRuecknahmen, aufBezug, setzeTagebuchfilter]);
+  }, [akteId, einheitId, abschnittId, suche, nurRuecknahmen, nurRelevant, aufBezug, setzeTagebuchfilter]);
 
   // Mit Nachrichtenfilter gilt der eigene Ausschnitt (ETB P0-1), sonst der des Blattes.
   const quelle = nachricht === undefined ? laden.tagebuch : nachrichtentagebuch;
@@ -159,12 +162,14 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
     ...(aufBezug && bezugGewaehlt && nachricht === undefined ? ["Auswahl"] : []),
     ...(suche.trim() === "" ? [] : [`Suche „${suche.trim()}“`]),
     ...(nurRuecknahmen ? ["nur Rücknahmen und Berichtigungen"] : []),
+    ...(nurRelevant ? ["nur Tagebuchrelevantes"] : []),
   ];
   if (filter.length === 0 && laden.tagebuch !== undefined) gesamtOhneFilter.current = gesamtzahl;
   const fusszeile = tagebuchfusszeile(zeilen.length, gesamtzahl, filter, gesamtOhneFilter.current);
   const alleAnzeigen = (): void => {
     setzeSuche("");
     setzeNurRuecknahmen(false);
+    setzeNurRelevant(false);
     setzeAufBezug(false);
     setzeNachricht(undefined);
   };
@@ -190,26 +195,14 @@ export function Tagebuch({ einheitId, abschnittId, aufAuswahl = false }: Tagebuc
         >
           Eintrag hinzufügen
         </button>
-        <label className="schalter">
-          <input
-            type="checkbox"
-            checked={aufBezug}
-            onChange={(e) => {
-              setzeAufBezug(e.target.checked);
-            }}
-          />
-          Auf die Auswahl beschränken
-        </label>
-        <label className="schalter">
-          <input
-            type="checkbox"
-            checked={nurRuecknahmen}
-            onChange={(e) => {
-              setzeNurRuecknahmen(e.target.checked);
-            }}
-          />
-          Nur Rücknahmen und Berichtigungen
-        </label>
+        <Tagebuchschalter
+          werte={{ aufBezug, nurRuecknahmen, nurRelevant }}
+          aufAenderung={(neu) => {
+            if (neu.aufBezug !== undefined) setzeAufBezug(neu.aufBezug);
+            if (neu.nurRuecknahmen !== undefined) setzeNurRuecknahmen(neu.nurRuecknahmen);
+            if (neu.nurRelevant !== undefined) setzeNurRelevant(neu.nurRelevant);
+          }}
+        />
       </div>
 
       <div className="tabellenrahmen">
@@ -286,7 +279,11 @@ function Tagebuchreihe({
     >
       <td className="zahl">{zeile.laufendeNummer === undefined ? "" : String(zeile.laufendeNummer)}</td>
       <td title={`HLC ${zeile.hlcText}`}>{uhrzeit(zeile.wanduhr)}</td>
-      <td>{zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}</td>
+      <td>
+        {zeile.zeitpunkt === undefined ? "" : uhrzeit(zeile.zeitpunkt)}
+        {/* Stab-Review ETB E2: Fachzeit deutlich vor der Erfassung. */}
+        {zeile.nachtrag === true && <span className="marke" title="Fachliche Zeit deutlich vor der Erfassung"> Nachtrag</span>}
+      </td>
       <td>{zeile.nachrichtNummer ?? ""}</td>
       <td className="satz">
         {zeile.satz}

@@ -255,4 +255,15 @@ describe("Nachricht und Tagebuch über die Kennung (ETB P0-1, P0-2)", () => {
     expect(grundzusatz({ satz: "Nachricht A zurückgezogen, Grund: „doppelt“: S4 an OV", grund: "doppelt" })).toBe("");
     expect(grundzusatz({ satz: "Status gesetzt", grund: "Tippfehler" })).toBe(" — Grund: Tippfehler");
   });
+
+  it("blendet mit „Nur Tagebuchrelevantes“ Verwaltungsschritte aus und markiert Nachträge (Stab-Review ETB E1, E2)", async () => {
+    attrappe.antwortet("tagebuchAnfordern", { lageZeiger: 9, zeilen: [zeile({ nachtrag: true, zeitpunkt: "2026-09-10T14:05:00+02:00" })], gesamtzahl: 1, von: 0 });
+    await zeigeTagebuch();
+    expect(screen.getByRole("row", { name: /Nachtrag/ })).toBeDefined();
+    fireEvent.click(screen.getByLabelText("Nur Tagebuchrelevantes"));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("tagebuchAnfordern")?.nurTagebuchrelevant).toBe(true);
+    });
+    expect(screen.getByText(/Filter: .*nur Tagebuchrelevantes/)).toBeDefined();
+  });
 });

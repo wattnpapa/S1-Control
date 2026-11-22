@@ -151,6 +151,11 @@ describe("Funktionalität: Demo-Einsatz", () => {
     // Rücklauf des Sichters: mindestens eine verteilte grüne Kopie ist noch offen.
     const nachweisung = platz.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-demo", sicht: "nachweisung" });
     expect(projektion.ruecklauf(nachweisung.zeilen).length).toBeGreaterThan(0);
+    // Tagebuch: ein markierter Nachtrag; „Nur Tagebuchrelevantes“ blendet Verwaltungsschritte aus.
+    const voll = platz.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-demo", von: 0, anzahl: 500 });
+    const relevant = platz.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-demo", von: 0, anzahl: 500, nurTagebuchrelevant: true });
+    expect(voll.zeilen.some((z) => z.nachtrag === true)).toBe(true);
+    expect(relevant.gesamtzahl).toBeLessThan(voll.gesamtzahl);
   });
 
   it("Szenario: der Demo-Einsatz füllt die Monitoransichten aller Stabsfunktionen", () => {

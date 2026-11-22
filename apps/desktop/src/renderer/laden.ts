@@ -111,6 +111,8 @@ export interface Tagebuchfilterwahl {
   readonly abschnittId?: string;
   readonly suche?: string;
   readonly nurRuecknahmen?: boolean;
+  /** Additiv (Stab-Review ETB E1): ohne Verwaltungsschritte. */
+  readonly nurTagebuchrelevant?: boolean;
   readonly von?: number;
 }
 
@@ -703,6 +705,7 @@ export const useLaden = create<Laden>((setze, hole) => {
         ...(filter.abschnittId === undefined ? {} : { abschnittId: filter.abschnittId }),
         ...(filter.suche === undefined ? {} : { suche: filter.suche }),
         ...(filter.nurRuecknahmen === undefined ? {} : { nurRuecknahmen: filter.nurRuecknahmen }),
+        ...(filter.nurTagebuchrelevant === undefined ? {} : { nurTagebuchrelevant: filter.nurTagebuchrelevant }),
       }));
     },
 
