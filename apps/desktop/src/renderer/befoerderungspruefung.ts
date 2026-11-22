@@ -56,13 +56,13 @@ export async function befoerderungInzwischen(zeile: Nachrichtenzeile): Promise<s
 export function abweichungshinweis(zeile: Pick<Nachrichtenzeile, "vorschlag">, mittel: string): string | undefined {
   const v = zeile.vorschlag;
   if (v === undefined || v.mittel === mittel) return undefined;
-  return `Weicht vom Vorschlag des LdF ab: ${projektion.mittelWort(v.mittel)} (${v.fernmelder}). Erlaubt, die Nachweisung markiert es.`;
+  return `Weicht von der Zuteilung des LdF ab: ${projektion.mittelWort(v.mittel)} (${v.fernmelder}). Erlaubt, die Nachweisung markiert es.`;
 }
 
 /** Die Rückfrage vor dem Befördern ohne Vorschlag des besetzten LdF (R2-LdF P2-1); sonst keine. */
 export function ohneVorschlagFrage(zeile: Pick<Nachrichtenzeile, "vorschlag">, ldfWartet: boolean): Rueckfrage | undefined {
   if (!ldfWartet || zeile.vorschlag !== undefined) return undefined;
-  return { id: "ohneVorschlag", frage: "Der LdF ist besetzt, hat für diese Nachricht aber noch keinen Weg vorgeschlagen. Ohne seinen Vorschlag befördern?", knopf: "Ohne Vorschlag befördern" };
+  return { id: "ohneVorschlag", frage: "Der LdF ist besetzt, hat diese Nachricht aber noch keinem Fernmelder zugeteilt. Ohne Zuteilung befördern?", knopf: "Ohne Zuteilung befördern" };
 }
 
 /**

@@ -11,9 +11,9 @@
  * — die Belastung der FmZ aus dem Vergleich von Annahme und Beförderung
  * (§5 „Zwanzig Minuten"); die Farbe steht nie allein, die Minuten stehen dabei.
  *
- * Führt der Einsatz den LdF als Station (additiv, 2026-11-17), stehen
- * angenommene Ausgänge ohne Übermittlungsvorschlag mit der Marke „beim LdF"
- * in der Schlange — ist kein LdF da, befördert der Fernmelder sie selbst.
+ * Mit dem LdF als Station (Standard seit 2026-11-22) stehen Ausgänge vor der
+ * Zuteilung mit „wartet auf Zuteilung“ in der Schlange — ist kein LdF da,
+ * befördern die Fernmelder sie selbst (ein Satz über der Tabelle sagt es).
  *
  * Rechts der Hauptknopf „Eingang aufnehmen": die Nachrichtenmaske mit
  * Richtung Eingang und freigeschaltetem oberem Teil.
@@ -101,7 +101,7 @@ function Annahmezelle({ zeile, jetzt }: { readonly zeile: Nachrichtenzeile; read
   );
 }
 
-/** „beim LdF" — der Ausgang wartet auf den Übermittlungsvorschlag des LdF. */
+/** Die Marke einer Nachricht, die ohne besetzten LdF beim LdF hängt: „selbst weitergeben“. */
 function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element | null {
   if (zeile.laufzustand !== "VOR_LDF") return null;
   if (projektion.ldfSchrittDer(zeile) === "weitergabe") return <span className="marke-zustand warn"> {zeile.richtung === "AUSGANG" ? "befördert" : "Eingang aufgenommen"}, LdF nicht besetzt – selbst weitergeben</span>;

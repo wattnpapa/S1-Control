@@ -162,7 +162,7 @@ describe("Nachweisung: Abweichung, zurückgezogen, volle Breite", () => {
   const eigenschaften = { gewaehltId: undefined, nurLesen: false, aufWahl: vi.fn(), aufSchritt: vi.fn() };
 
   it("markiert die Abweichung vom Vorschlag des LdF (R2-LdF P2-2)", () => {
-    expect(abweichung(befoerdert)).toContain("Vorschlag des LdF: Telefon");
+    expect(abweichung(befoerdert)).toContain("Zuteilung des LdF: Telefon");
     expect(abweichung({ ...befoerdert, abweichungVomVorschlag: false } as unknown as Nachrichtenzeile)).toBeUndefined();
     expect(abweichung({ ...befoerdert, abweichungVomVorschlag: "Funk statt Telefon (Fm statt Fm2)" } as Nachrichtenzeile)).toBe("Funk statt Telefon (Fm statt Fm2)");
     render(<Nachweisung zeilen={[befoerdert]} {...eigenschaften} />);

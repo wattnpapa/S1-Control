@@ -23,7 +23,7 @@ import type { Maskenwerte } from "./nachrichtenformate.js";
 import { Nachrichtenmaske } from "./Nachrichtenmaske.js";
 
 /** Der Satz zur Ersatzregel in der Beförderungsmaske. */
-export const TEXT_LDF_ERSATZ = "Kein LdF besetzt: Das gewählte Mittel gilt als Übermittlungsvorschlag.";
+export const TEXT_LDF_ERSATZ = "Kein LdF besetzt: Ihre Beförderung gilt als Zuteilung, die Nachricht geht danach direkt an den Sichter.";
 
 export interface Fmzschritte {
   readonly aufSchritt: (schritt: Fmzschritt, zeile: Nachrichtenzeile) => void;

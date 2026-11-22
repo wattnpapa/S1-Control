@@ -216,3 +216,36 @@ describe("Funktionalität: Hinweise und Zählung (Review Runde 2, Block 2)", () 
     expect(text).toContain("ist schon an OV Wildeshausen übermittelt");
   });
 });
+
+describe("Funktionalität: Ränder (Review Runde 2, Block 4)", () => {
+  it("Szenario: Ein Schritt auf eine Nachricht, die es nicht gibt, wird abgewiesen", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["LDF"], "Lf");
+    const ergebnis = await platz.dienst.bediene(nachrichtNachweisen("X-9", null, { nummer: 1, zeitpunkt: jetzt(), handzeichen: "Lf" }));
+    expect(ergebnis.art).toBe("abgewiesen");
+  });
+
+  it("Szenario: Ohne LdF eine Meldung beim Befördern; das Tagebuch nennt die Ersatzregel in Klammern, die Ersatzsichtung des LdF steht unter LdF", async () => {
+    const platz = await werkstattMitEinemPlatz();
+    await grundlage(platz);
+    platz.dienst.stellenSetzen(["FM1"], "Ka");
+    await platz.dienst.bediene(nachrichtVerfassen(anlage()));
+    const ergebnis = await platz.dienst.bediene(nachrichtBefoerdern("A-1", null, BEFOERDERUNG));
+    const warnungen = ergebnis.art === "geschrieben" ? ergebnis.warnungen ?? [] : [];
+    expect(warnungen.filter((w) => w.startsWith("Kein LdF besetzt"))).toHaveLength(1);
+    const saetze = platz.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-1" }).zeilen.map((t) => t.satz);
+    expect(saetze.some((s) => s.includes("Beförderung als Zuteilung vermerkt") && s.includes("(Ersatzregel, kein LdF besetzt)"))).toBe(true);
+
+    const zwei = await werkstattMitEinemPlatz();
+    await grundlage(zwei);
+    zwei.dienst.stellenSetzen(["LDF", "FM1"], "Lf");
+    await zwei.dienst.bediene(nachrichtVerfassen(anlage()));
+    await zwei.dienst.bediene(nachrichtVorschlagen("A-1", null, { mittel: "FUNK", fernmelder: "Fm1", zeitpunkt: jetzt(), handzeichen: "Lf" }));
+    await zwei.dienst.bediene(nachrichtBefoerdern("A-1", null, BEFOERDERUNG));
+    await zwei.dienst.bediene(nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Lf" }));
+    const sichtung = zwei.dienst.tagebuch({ art: "tagebuchAnfordern", akteId: "akte-1" }).zeilen.find((t) => t.typ === "NachrichtGesichtet");
+    expect(sichtung?.satz).toContain("als Ersatzsichter gesichtet");
+    expect(sichtung?.satz).toContain("Kopien ohne Sichter");
+  });
+});
