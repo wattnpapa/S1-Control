@@ -1,4 +1,4 @@
-# Funkplan: die Vermeldezentrale der Führungsstelle aus der S1-Übersicht versorgen
+# Funkplan: die Fernmeldezentrale der Führungsstelle aus der S1-Übersicht versorgen
 
 Stand 2026-11-02: **umgesetzt** in den Schnitten F1 bis F4 (Abschnitt 9).
 Der Text legt fest, was gebaut ist und aus welchen Daten; `mockups-funkplan.html`
@@ -7,10 +7,9 @@ im selben Ordner zeigt den Entwurf (Runde 5, Optionen 5a bis 5e, Beispiellage
 `stand/` die Aufnahmen des gebauten Renderers. Was bewusst vom Entwurf abweicht
 und was offen bleibt, steht in `UMSETZUNGSBERICHT.md`.
 
-Begriffe: Die Vermeldezentrale ist der Platz in der Führungsstelle, an dem
-die Sprechfunker sitzen. Im THW heißt sie meist Fernmeldezentrale (FmZ) und
-wird von der Fachgruppe Kommunikation gestellt; der Dienstposten „SprFu" aus
-der Excel-Vorlage (`FüSt!B74`) ist ihr Platz im Blatt „Führungsstelle". Der
+Begriffe: Die Fernmeldezentrale (FmZ) ist der Platz in der Führungsstelle,
+an dem die Sprechfunker sitzen. Sie wird im THW von der Fachgruppe
+Kommunikation gestellt; der Dienstposten „SprFu" aus der Excel-Vorlage (`FüSt!B74`) ist ihr Platz im Blatt „Führungsstelle". Der
 Funkplan ist die Übersicht, welche Einheit über welche Rufgruppe oder welchen
 Kanal erreichbar ist und wer dort mithört. In der Papierwelt hängt er als
 Blatt am Platz der Sprechfunker; die Fernmeldeskizze ist seine gezeichnete
@@ -58,7 +57,7 @@ Datensatz, die Ausgaben in den Ordner `ausgaben\` und den Papier-Vordruck
 „Funkprotokoll" (`packages/ausgaben/src/papier.ts`), der mit dem Feld
 „Funkkreis / Kanal" genau die Namen meint, die der Funkplan führt.
 
-## 2. Was die Vermeldezentrale wissen muss und woher es kommt
+## 2. Was die Fernmeldezentrale wissen muss und woher es kommt
 
 | Frage der Sprechfunker | Quelle im Modell | Stand |
 |---|---|---|
@@ -359,7 +358,7 @@ Fragen stehen darunter zum Nachlesen.
 ### Die Fragen, wie sie standen
 
 1. Eigener Reiter „Funkplan" im Kopfband oder Unteransicht des Blattes
-   „Führungsstelle"? Der Entwurf zeigt den Reiter: Die Vermeldezentrale
+   „Führungsstelle"? Der Entwurf zeigt den Reiter: Die Fernmeldezentrale
    arbeitet den ganzen Einsatz in dieser Ansicht, und ein Reiter mehr kostet
    nichts. Dagegen spricht, dass das Kopfband mit elf Reitern eng wird.
 2. Eine Hauptrufgruppe je Einheit plus Liste weiterer Gruppen, oder nur eine

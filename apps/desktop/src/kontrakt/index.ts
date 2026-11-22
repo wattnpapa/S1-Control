@@ -81,13 +81,13 @@ export type Theme = z.infer<typeof zTheme>;
  * kein Recht — wie die Betriebsart. Nur anhängen: Der Wert steht als Name in
  * den Einstellungen des Geräts.
  */
-export const PROFILE = ["fuehrungsstelle", "vermeldezentrale", "versorgung", "alle"] as const;
+export const PROFILE = ["fuehrungsstelle", "fernmeldezentrale", "versorgung", "alle"] as const;
 export const zProfil = z.enum(PROFILE);
 export type Profil = z.infer<typeof zProfil>;
 
 /**
  * Die Ansichten des Monitors, nach Sachgebiet in der Ordnung des Stabes:
- * Führung, S1, S3, S4, S6, zuletzt die FmZ. Die Tasten 1 bis 9 und 0 wählen
+ * Führung, S1, S2, S3, S4, S6, zuletzt die FmZ. Die Tasten 1 bis 9 und 0 wählen
  * die ersten zehn, Pfeil links/rechts blättert durch alle. Die gemerkte
  * Wahl eines Geräts steht als Name in den Einstellungen und übersteht
  * deshalb ein Umsortieren; eine neue Ansicht kommt ans Ende ihrer Gruppe.
@@ -100,20 +100,25 @@ export const MONITOR_ANSICHTEN = [
   "organisationen",
   "kreuz",
   "kommen",
+  "ticker",
   "einsatzmittel",
+  "auftraege",
   "verpflegung",
   "vorausschau",
   "unterbringung",
   "tafel",
+  "sofortbedarf",
   "iuk",
   "funkplan",
   "nachrichtenweg",
+  "warteschlange",
+  "still",
 ] as const;
 export const zMonitorAnsicht = z.enum(MONITOR_ANSICHTEN);
 export type MonitorAnsicht = z.infer<typeof zMonitorAnsicht>;
 
 /** Die Sachgebiete, nach denen der Monitor seine Ansichten gruppiert. */
-export const MONITOR_GRUPPEN = ["fuehrung", "s1", "s3", "s4", "s6", "fmz"] as const;
+export const MONITOR_GRUPPEN = ["fuehrung", "s1", "s2", "s3", "s4", "s6", "fmz"] as const;
 export const zMonitorGruppe = z.enum(MONITOR_GRUPPEN);
 export type MonitorGruppe = z.infer<typeof zMonitorGruppe>;
 
@@ -127,6 +132,11 @@ export const MONITOR_GRUPPE_DER_ANSICHT: Readonly<Record<MonitorAnsicht, Monitor
   status: "s1",
   kommen: "s1",
   einsatzmittel: "s3",
+  auftraege: "s3",
+  ticker: "s2",
+  sofortbedarf: "s4",
+  warteschlange: "fmz",
+  still: "fmz",
   verpflegung: "s4",
   vorausschau: "s4",
   unterbringung: "s4",
@@ -188,7 +198,7 @@ export const zEinstellungen = z.object({
    *
    * Es bestimmt nur, welche Reiter im Kopfband stehen; jedes Blatt bleibt
    * unter „Mehr" erreichbar. Geräteeinstellung wie `betriebsart` und
-   * `theme`, nicht in der Akte: Die Vermeldezentrale und die S4 führen
+   * `theme`, nicht in der Akte: Die Fernmeldezentrale und die S4 führen
    * denselben Einsatz. Ohne Angabe `fuehrungsstelle`.
    */
   profil: zProfil.optional(),
@@ -200,9 +210,12 @@ export const zEinstellungen = z.object({
    * hängen an derselben Einsatzdatei. Ohne Angabe Stärke, ohne Wechsel.
    *
    * Additiv: `wechselgruppe` beschränkt den Wechsel auf ein Sachgebiet; ohne
-   * Angabe wechselt der Monitor durch alle Ansichten.
+   * Angabe wechselt der Monitor durch alle Ansichten. `besucher` zeigt nur
+   * Kräftezahlen, keine Funk-, Nachrichten- oder Personendaten.
    */
-  monitor: z.object({ ansicht: zMonitorAnsicht, wechsel: z.boolean(), wechselgruppe: zMonitorGruppe.optional() }).optional(),
+  monitor: z
+    .object({ ansicht: zMonitorAnsicht, wechsel: z.boolean(), wechselgruppe: zMonitorGruppe.optional(), besucher: z.boolean().optional() })
+    .optional(),
   /**
    * Additiv (KONZEPT-NACHRICHTEN.md Entscheidung 3): das Handzeichen dieses
    * Arbeitsplatzes, gemerkt als Vorbelegung der Abfrage beim Öffnen. Die

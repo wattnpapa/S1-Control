@@ -18,7 +18,7 @@ import { reiterFuer } from "./blaetter.js";
 
 export const PROFILNAME: Readonly<Record<Profil, string>> = {
   fuehrungsstelle: "Führungsstelle (S1)",
-  vermeldezentrale: "Vermeldezentrale",
+  fernmeldezentrale: "Fernmeldezentrale",
   versorgung: "Versorgung (S4)",
   alle: "Alle Blätter",
 };

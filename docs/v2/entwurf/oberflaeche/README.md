@@ -136,7 +136,7 @@ Abweichungen nennt `../s4/UMSETZUNGSBERICHT.md`.
 
 Runde 5 liegt ebenfalls in einem eigenen Ordner: `../funkplan/KONZEPT-FUNKPLAN.md`
 und `../funkplan/mockups-funkplan.html` entwerfen den Funkplan für die
-Vermeldezentrale der Führungsstelle (Rufgruppen als Entität, Hauptrufgruppe je
+Fernmeldezentrale der Führungsstelle (Rufgruppen als Entität, Hauptrufgruppe je
 Einheit, Funkhinweis, Funkprobe und letzter Kontakt; Monitoransicht „Funkplan"
 als Tafel je Rufgruppe mit Teilnehmerkacheln, Blatt „Funkplan", Spaltengruppe
 „Funk" in der Einheitentabelle, Reiter „Funk und Erreichbarkeit" in der

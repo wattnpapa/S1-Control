@@ -246,7 +246,7 @@ describe("Kopfband", () => {
   });
 
   it("stellt je Profil andere Reiter ins Band und den Rest unter „Mehr“ (E3)", async () => {
-    const zeige = (profil: "fuehrungsstelle" | "vermeldezentrale" | "versorgung" | "alle" | undefined): void => {
+    const zeige = (profil: "fuehrungsstelle" | "fernmeldezentrale" | "versorgung" | "alle" | undefined): void => {
       cleanup();
       render(
         <Kopfband
@@ -272,7 +272,7 @@ describe("Kopfband", () => {
       "Kosten",
       "Einsatztagebuch",
     ]);
-    zeige("vermeldezentrale");
+    zeige("fernmeldezentrale");
     expect(reiter()).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
@@ -299,7 +299,7 @@ describe("Kopfband", () => {
       aufHilfe: () => undefined,
       waehleBlatt,
       offeneMeldungen: 4,
-      profil: "vermeldezentrale",
+      profil: "fernmeldezentrale",
     } as const;
     const { rerender } = render(<Kopfband {...eigenschaften} blatt="funkplan" />);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));

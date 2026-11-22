@@ -50,7 +50,9 @@ export async function liesArbeitsplatz(datei: string, vorbelegterShare = ""): Pr
   // Programm kennt, soll das Profil verlieren und nicht Share und Namen.
   const { profil: rohesProfil, ...ohneProfil } = wert;
   const geprueft = zEinstellungen.safeParse(ohneProfil);
-  const profil = zProfil.safeParse(rohesProfil);
+  // Bis zur Korrektur des Tippfehlers hieß das Profil „vermeldezentrale“;
+  // gespeicherte Einstellungen behalten ihr Profil.
+  const profil = zProfil.safeParse(rohesProfil === "vermeldezentrale" ? "fernmeldezentrale" : rohesProfil);
   const clientId = typeof wert["clientId"] === "string" && wert["clientId"].length >= 8
     ? wert["clientId"]
     : neueClientId();

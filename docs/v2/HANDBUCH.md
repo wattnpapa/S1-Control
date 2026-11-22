@@ -67,7 +67,7 @@ Fällt er aus, geht nichts verloren — es dauert nur, bis die anderen es sehen.
    Bündeldatei. Eine zweite Teileinheit
    gleicher Bauart entsteht mit „Kopieren“ (Strg+K) aus der markierten Zeile.
 6. **Status führen.** Das ist die eigentliche Arbeit der Schicht: Wer ist wo,
-   seit wann, wie lange noch. Daneben führt die Vermeldezentrale im Blatt
+   seit wann, wie lange noch. Daneben führt die Fernmeldezentrale im Blatt
    **Funkplan**, über welche Rufgruppe jede Einheit gerufen wird und wann sie
    sich zuletzt gemeldet hat; wer länger schweigt als die Schwelle, wird
    Bernstein, und dann ist eine Funkprobe fällig.
@@ -149,7 +149,7 @@ dieses Gerät, nicht für den Einsatz:
 | Profil | Reiter im Band | unter „Mehr“ |
 |---|---|---|
 | Führungsstelle (S1), Vorgabe | Lage · Eingang · Nachrichten · Führungsstelle · Ausgaben · Einsatztagebuch | Funkplan, Versorgung, Kosten |
-| Vermeldezentrale | Nachrichten · Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
+| Fernmeldezentrale | Nachrichten · Funkplan · Lage · Einsatztagebuch | Eingang, Führungsstelle, Versorgung, Kosten, Ausgaben |
 | Versorgung (S4) | Versorgung · Lage · Ausgaben | Eingang, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
 | Alle Blätter | alle neun Blätter | — |
 
@@ -854,18 +854,28 @@ Kontakts, wenn er älter ist als die Schwelle, Mithörer gestrichelt mit „hör
 mit“. Der Fuß nennt in Bernstein die Einheiten ohne Rufgruppe und die Zahl
 ohne Kontakt. Die Schrift wird so groß, wie das Fenster es zulässt; viele
 Rufgruppen verkleinern sie, statt zu blättern, aufgelöste stehen nicht an der
-Wand. S3: „Einsatzmittel“ mit den Einheiten je Abschnitt nach Status. S4:
-Verpflegung, Nächste 24 h, Unterbringung (eine überbelegte Unterkunft mit ⚠
-und „überbelegt +N“) und die Tafel „Bereiche · Schichten“. S6: „IuK-Lage“ mit
+Wand. S2: der „Lageticker“ mit den jüngsten Einträgen des Einsatztagebuchs
+ohne Stammdatenpflege, Rücknahmen mit ⚠. S3: „Einsatzmittel“ mit den
+Einheiten je Abschnitt nach Status und „Aufträge“ mit den laufenden Aufträgen
+je Abschnitt (Beginn, Einheit, Auftrag, Status). S4: Verpflegung, Nächste
+24 h, Unterbringung (eine überbelegte Unterkunft mit ⚠ und „überbelegt +N“),
+die Tafel „Bereiche · Schichten“ und „Sofortbedarf“ mit dem, was beim
+Eintreffen gemeldet und noch nicht erledigt ist, die offene Summe im Fuß. S6: „IuK-Lage“ mit
 Share, erreichbaren Arbeitsplätzen, Programmfassungen, nicht übertragenen Daten
 und Quarantäne. FmZ: der Funkplan und der „Nachrichtenweg“, der zeigt, was
 beim LdF, vor der FmZ und vor dem Sichter wartet und was davon über der
 Schwelle liegt, dazu Vorrang ungelesen, Nachrichten ohne Nummer,
-Nummernlücken und im Fuß, ob LdF, Fernmelder und Sichter besetzt sind. Eine
+Nummernlücken und im Fuß, ob LdF, Fernmelder und Sichter besetzt sind; die
+„Warteschlange“ mit jeder wartenden Nachricht (Vorrang, Richtung, Nummer,
+Gegenstelle, Stand, Wartezeit), Blitz vor Sofort, nie mit Betreff oder Inhalt;
+„Funk still“ mit den Einheiten ohne Kontakt, länger als die Schwelle still
+oder ohne Rufgruppe, älteste zuerst. Eine
 Kachel in Bernstein trägt immer ⚠ und ein Wort; eine Null steht gedämpft.
 Umgeschaltet wird mit Rechtsklick (Menü), über die Leiste, die bei
 Mausbewegung oben erscheint, mit den Tasten 1 bis 9 und 0 für die ersten zehn
-Ansichten oder mit Pfeil links und rechts durch alle. R schaltet den Wechsel
+Ansichten oder mit Pfeil links und rechts durch alle. Taste B (oder Leiste
+und Menü) schaltet die Besucheransicht: Dann sind nur Stärke, Status,
+Abschnitte, Organisationen und die Kreuztabelle zu sehen und im Wechsel. R schaltet den Wechsel
 alle 20 Sekunden ein und aus; über Leiste und Menü läuft er auf Wunsch nur
 durch ein Sachgebiet, das mehr als eine Ansicht hat. Die Leertaste hält ihn an, F11 schaltet
 Vollbild, Esc verlässt es. Die Wahl merkt sich das Gerät, nicht der Einsatz —
@@ -959,7 +969,7 @@ Stammdaten des Einsatzes, Dienstposten der eigenen Führungsstelle und der Schic
 
 ### Funkplan
 
-Die Ansicht der Vermeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen; der Monitor zeigt ihn in der Gruppe „FmZ“ mit einer Zeile je Rufgruppe und den Teilnehmern als Kacheln, daneben den Nachrichtenweg: was beim LdF, vor der FmZ und vor dem Sichter wartet.
+Die Ansicht der Fernmeldezentrale: welche Rufgruppen es im Einsatz gibt, wofür und in welcher Betriebsart (TMO, DMO, Analog), wer sie abhört, und welche Einheit über welche Rufgruppe gerufen wird — mit Funkrufname, Erreichbarkeit, Funkhinweis und letztem Kontakt, je Rufgruppe oder je Bereich. Wer eine Gruppe als weitere trägt, steht dort als „hört mit“. Die Sicht „Funkproben“ zeigt alle Funkproben als Zeitfolge. Der Funkplan lässt sich als Ausdruck für den Platz der Sprechfunker erzeugen; der Monitor zeigt ihn in der Gruppe „FmZ“ mit einer Zeile je Rufgruppe und den Teilnehmern als Kacheln, daneben den Nachrichtenweg: was beim LdF, vor der FmZ und vor dem Sichter wartet.
 
 **Zuerst:** Mit „Rufgruppe anlegen“ die Gruppen des Einsatzes eintragen (beim Tippen des Namens schlägt die Maske Gruppen aus dem THW-Standard-Fleetmapping vor, Stand 06/2024; Pfeil ab und Enter oder Klick übernehmen, jeder andere Name bleibt als eigene Rufgruppe möglich), dann in der Zuordnung die Gruppe „ohne Rufgruppe“ abarbeiten: Doppelklick auf die Zelle „Rufgruppe“, Gruppe wählen, Enter. Der Funkhinweis wird ebenso in seiner Zelle geschrieben. Doppelklick auf den Namen einer Einheit (oder ✎) öffnet „Funk und Erreichbarkeit“: weitere Rufgruppen, Funkrufname und Erreichbarkeit überschreiben, Funkprobe eintragen, Funkauszug des Tagebuchs. Strg+E bearbeitet die links gewählte Rufgruppe. Für die Funkprobe eine Einheit in der Zuordnung anklicken, dann Strg+P (Kontakt, Funkzeit jetzt) oder „kein Kontakt …“ (fragt nach dem Grund).
 
@@ -1150,8 +1160,8 @@ Grundlage: KONZEPT-NACHRICHTEN.md §5, §7, Entscheidung 2
 Dieselbe Liste zeigt Strg+H. Sie stammt aus dem Blatt „AküLi“ der Excel.
 Der Funkplan bringt einige Wörter mit, die dort nicht stehen:
 
-- **FmZ** — Fernmeldezentrale, die Vermeldezentrale der Führungsstelle; dort
-  sitzen die Sprechfunker (SprFu).
+- **FmZ** — Fernmeldezentrale der Führungsstelle; dort sitzen die
+  Sprechfunker (SprFu).
 - **Rufgruppe** — die Gruppe im Digitalfunk, über die gerufen wird; im
   Analogfunk der Kanal. Jede Einheit hat eine Hauptrufgruppe und kann weitere
   mithören.

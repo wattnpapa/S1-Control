@@ -34,10 +34,10 @@ function Haken({ an }: { readonly an: boolean }): React.JSX.Element {
 function Ansichtswahl({ steuerung }: { readonly steuerung: Monitorsteuerung }): React.JSX.Element {
   return (
     <div role="group" aria-label="Ansicht">
-      {belegteGruppen().map((gruppe) => (
+      {belegteGruppen(steuerung.besucher).map((gruppe) => (
         <div key={gruppe} role="group" aria-label={GRUPPE_TITEL[gruppe]}>
           <p className="monitormenuetitel">{GRUPPE_TITEL[gruppe]}</p>
-          {ansichtenDerGruppe(gruppe).map((ansicht) => (
+          {ansichtenDerGruppe(gruppe, steuerung.besucher).map((ansicht) => (
             <button
               key={ansicht}
               type="button"
@@ -62,7 +62,7 @@ function Wechselwahl({ steuerung }: { readonly steuerung: Monitorsteuerung }): R
   return (
     <div role="group" aria-label="Wechsel">
       <p className="monitormenuetitel">Ansichten wechseln alle 20 s</p>
-      {wechselmodi().map((modus) => (
+      {wechselmodi(steuerung.besucher).map((modus) => (
         <button
           key={modus}
           type="button"
@@ -106,6 +106,10 @@ export function Monitormenue({ steuerung }: { readonly steuerung: Monitorsteueru
         <hr />
         <Wechselwahl steuerung={steuerung} />
         <hr />
+        <button type="button" role="menuitemcheckbox" aria-checked={steuerung.besucher} onClick={steuerung.schalteBesucher}>
+          <Haken an={steuerung.besucher} />
+          Besucheransicht · nur Kräftezahlen<kbd>B</kbd>
+        </button>
         <button
           type="button"
           role="menuitem"

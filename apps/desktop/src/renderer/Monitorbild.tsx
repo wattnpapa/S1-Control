@@ -23,6 +23,7 @@ import { Monitor, useFenstermass } from "./Monitor.js";
 import { MonitorFunkplan } from "./MonitorFunkplan.js";
 import { MonitorIukLage, MonitorNachrichtenweg, MonitorOffenePunkte } from "./MonitorKacheln.js";
 import { MonitorKommenGehen } from "./MonitorKommenGehen.js";
+import { MonitorAuftraege, MonitorFunkStill, MonitorLageticker, MonitorSofortbedarf, MonitorWarteschlange } from "./MonitorListen.js";
 import { MonitorEinsatzmittel, MonitorStatus } from "./MonitorStatustafel.js";
 import { MonitorKreuztafel } from "./MonitorKreuztafel.js";
 import { MonitorAbschnitte, MonitorOrganisationen } from "./MonitorStaerketafeln.js";
@@ -33,9 +34,7 @@ import { Verbindungswarnung } from "./Monitorwarnung.js";
 import { taktischeZeit } from "./formate.js";
 import { ANSICHT_TITEL, useMonitorsteuerung } from "./monitorSteuerung.js";
 import { modusKurz, naechsteAnsicht } from "./monitorWechsel.js";
-import { useFunkplanansicht } from "./useFunkplanansicht.js";
-import { useStaerketafel } from "./useStaerketafel.js";
-import { useVersorgungsansicht } from "./useVersorgungsansicht.js";
+import { useMonitordaten } from "./useMonitordaten.js";
 import type { Verbindungsstatus } from "./verbindung.js";
 import type { Lagebild, MonitorAnsicht } from "../kontrakt/index.js";
 
@@ -76,18 +75,23 @@ function Ansicht({ welche, e }: { readonly welche: Exclude<MonitorAnsicht, "stae
       return <MonitorEinsatzmittel {...e} />;
     case "kommen":
       return <MonitorKommenGehen {...e} />;
+    case "ticker":
+      return <MonitorLageticker {...e} />;
+    case "auftraege":
+      return <MonitorAuftraege {...e} />;
+    case "sofortbedarf":
+      return <MonitorSofortbedarf {...e} />;
+    case "warteschlange":
+      return <MonitorWarteschlange {...e} />;
+    case "still":
+      return <MonitorFunkStill {...e} />;
   }
 }
 
 export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: MonitorbildEigenschaften): React.JSX.Element {
   const steuerung = useMonitorsteuerung();
   const mass = useFenstermass();
-  const braucheAnsicht = lagebild !== undefined && ["tafel", "vorausschau", "unterbringung"].includes(steuerung.ansicht);
-  const abruf = useVersorgungsansicht(akteId, lagebild?.lageZeiger, 24, braucheAnsicht);
-  const braucheFunkplan = lagebild !== undefined && steuerung.ansicht === "funkplan";
-  const funk = useFunkplanansicht(braucheFunkplan ? akteId : undefined, lagebild?.lageZeiger, "", braucheFunkplan);
-  const braucheStaerke = lagebild !== undefined && ["abschnitte", "organisationen", "kreuz", "status", "kommen", "einsatzmittel"].includes(steuerung.ansicht);
-  const staerketafel = useStaerketafel(akteId, lagebild?.lageZeiger, braucheStaerke);
+  const daten = useMonitordaten(steuerung.ansicht, akteId, lagebild?.lageZeiger);
 
   useEffect(() => {
     // Der Titel nennt die Ansicht: Auf einer Taskleiste mit zwei Einträgen
@@ -96,7 +100,7 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
   }, [steuerung.ansicht]);
 
   const wechseltext = steuerung.wechsel
-    ? ` · Wechsel${steuerung.modus === "alle" ? "" : ` ${modusKurz(steuerung.modus)}`} alle 20 s, weiter: ${ANSICHT_TITEL[naechsteAnsicht(steuerung.ansicht, steuerung.modus)]}`
+    ? ` · Wechsel${steuerung.modus === "alle" ? "" : ` ${modusKurz(steuerung.modus)}`} alle 20 s, weiter: ${ANSICHT_TITEL[naechsteAnsicht(steuerung.ansicht, steuerung.modus, steuerung.besucher)]}`
     : "";
 
   return (
@@ -116,7 +120,7 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
           {verbindung?.zustand === "unterbrochen" && <Verbindungswarnung status={verbindung} jetzt={jetzt} />}
           <Ansicht
             welche={steuerung.ansicht}
-            e={{ lagebild, jetzt, zeit: taktischeZeit(jetzt), mass, ansicht: abruf.ansicht, funkplan: funk.ansicht, staerketafel, fusszusatz: wechseltext }}
+            e={{ lagebild, jetzt, zeit: taktischeZeit(jetzt), mass, ...daten, fusszusatz: wechseltext }}
           />
         </>
       )}
