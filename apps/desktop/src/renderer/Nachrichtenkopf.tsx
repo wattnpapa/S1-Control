@@ -19,8 +19,8 @@
  *   das Kürzel dort deshalb nicht.
  */
 
-import { FERNMELDERSTELLEN, hatFernmelderstelle, istFernmelderstelle } from "@s1/domaene";
-import type { Lagebild, Nachrichtenlage, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
+import { FERNMELDERSTELLEN, FOLD_VERSION, hatFernmelderstelle, istFernmelderstelle } from "@s1/domaene";
+import type { Lagebild, Nachrichtenlage, Peer, Ruf, Sitzungsstellen } from "../kontrakt/index.js";
 import { fernmelderBesetzt } from "../kontrakt/ldfschritte.js";
 import { Filterchips } from "./Filterchips.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
@@ -89,6 +89,31 @@ export function fmzBesetzt(lagebild: Lagebild | undefined): boolean {
   const geliefert = lagebild?.besetzteStellen;
   if (Array.isArray(geliefert)) return hatFernmelderstelle(geliefert);
   return fernmelderBesetzt(lagebild?.sitzung?.stellen, lagebild?.peers ?? []);
+}
+
+/**
+ * Die lebenden Arbeitsplätze, die mit einer anderen Fold-Fassung arbeiten
+ * (2026-11-21). Ein Platz ohne Angabe ist älter als diese. Verschiedene
+ * Fassungen können denselben Nachrichtenweg verschieden lesen — etwa ob ein
+ * beförderter Ausgang beim LdF liegt oder erledigt ist.
+ */
+export function andereFassungen(peers: readonly Pick<Peer, "veraltet" | "anzeigename" | "foldVersion">[] | undefined): readonly string[] {
+  return (peers ?? []).filter((p) => !p.veraltet && p.foldVersion !== FOLD_VERSION).map((p) => p.anzeigename);
+}
+
+export function fassungstext(namen: readonly string[]): string {
+  return `Andere Programmfassung bei ${namen.join(", ")}: Der Nachrichtenweg kann dort anders stehen, Kopien können ausbleiben. Bitte alle Arbeitsplätze aktualisieren.`;
+}
+
+/** Bernstein im Band, solange ein lebender Arbeitsplatz eine andere Fassung fährt; sonst nichts. */
+export function Fassungshinweis({ lagebild }: { readonly lagebild: Lagebild | undefined }): React.JSX.Element | null {
+  const namen = andereFassungen(lagebild?.peers);
+  if (namen.length === 0) return null;
+  return (
+    <p className="warnung besetzungshinweis" role="status">
+      {fassungstext(namen)}
+    </p>
+  );
 }
 
 /** Bernstein im Band, solange keine FmZ in der Präsenz steht (R2-FaBe P0-3); sonst nichts. */

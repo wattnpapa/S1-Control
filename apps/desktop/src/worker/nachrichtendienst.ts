@@ -149,7 +149,7 @@ export function nachrichtenansicht(
   // Spalte „Wartet“ und Band rechnen gegen dieselbe Zeit.
   const jetzt = new Date(Math.floor(umfeld.jetztMs / MINUTE_MS) * MINUTE_MS).toISOString();
   const stellen = ruf.stellen === undefined ? (umfeld.sitzung?.stellen ?? []) : geputzteStellen(ruf.stellen);
-  const offenumfeld = umfeld.sichterBesetzt === undefined ? {} : { sichterBesetzt: umfeld.sichterBesetzt };
+  const offenumfeld = { ...(umfeld.sichterBesetzt === undefined ? {} : { sichterBesetzt: umfeld.sichterBesetzt }), ...(umfeld.ldfBesetzt === undefined ? {} : { ldfBesetzt: umfeld.ldfBesetzt }) };
   const ausschnitt = projektion.nachrichtenausschnitt(zustand, {
     sicht: ruf.sicht,
     stellen,
@@ -350,7 +350,9 @@ function treffer(zustand: Zustand, stellen: readonly string[]): Treffer[] {
   for (const zeile of projektion.nachrichtenausschnitt(zustand, { sicht: "nachweisung" }).zeilen) {
     if (zeile.vorrangstufe === 2 || zeile.zurueckgezogen) continue;
     const schlange = warteschlangenstelle(zeile, stellen);
-    if (schlange !== undefined) ergebnis.push({ schluessel: `${zeile.id}/schlange/${schlange}`, zeile, stelle: schlange, ausloeser: zeile.clientId });
+    // Review 2026-11-21: Der beförderte Ausgang meldet sich beim LdF ein zweites Mal — eigener Schlüssel je Phase.
+    const phase = projektion.ldfSchrittDer(zeile) === "weitergabe" && zeile.richtung === "AUSGANG" ? "/weitergabe" : "";
+    if (schlange !== undefined) ergebnis.push({ schluessel: `${zeile.id}/schlange/${schlange}${phase}`, zeile, stelle: schlange, ausloeser: zeile.clientId });
     if (zeile.sichtung === undefined) continue;
     const sichter = zustand.nachrichten[zeile.id]?.sichtung?.hlc.clientId;
     for (const marke of zeile.verteiler) {

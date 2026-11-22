@@ -48,7 +48,7 @@
 
 import { useMemo, useState } from "react";
 
-import { FMZ_SCHWELLE_VORBELEGUNG } from "@s1/domaene";
+import { FMZ_SCHWELLE_VORBELEGUNG, type Nachrichtenzeile } from "@s1/domaene";
 
 import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { stelleBesetzt } from "../kontrakt/ldfschritte.js";
@@ -56,9 +56,10 @@ import { Eingangskarte, OhneNummerKarte, Warteschlange, ohneNummerZeilen } from 
 import type { Kontextort } from "./Klappmenue.js";
 import { Laufzettel } from "./Laufzettel.js";
 import { Ldfsicht, ldfSichtbar } from "./Ldfsicht.js";
+import { Weitergabemaske } from "./Ldfmaske.js";
 import { useLaden } from "./laden.js";
 import { Nachrichtenkontextmenue, Nachrichtenleiste } from "./Nachrichtenauswahl.js";
-import { Besetzungshinweis, Nachrichtenband, Postfilter, Werkzeugzeile, ersteSicht, type Nachrichtensicht, type Posteingangsstand } from "./Nachrichtenkopf.js";
+import { Besetzungshinweis, Fassungshinweis, Nachrichtenband, Postfilter, Werkzeugzeile, ersteSicht, type Nachrichtensicht, type Posteingangsstand } from "./Nachrichtenkopf.js";
 import { Listenflaeche, Lueckenzeile, SelbstLaufzettel, useNachweisungDazu } from "./Nachrichtenflaeche.js";
 import { Sichtzusatz, Stellenangabe, quittierendeStellen, type Sichterstand } from "./Nachrichtenzusatz.js";
 import { Nachweisung } from "./Nachweisung.js";
@@ -99,6 +100,8 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
   const [sichterstand, setzeSichterstand] = useState<Sichterstand>("offen");
   // Sichter P1-4: der Eingang, den die FmZ selbst sichtet („Ich sichte jetzt selbst“).
   const [selbstId, setzeSelbstId] = useState<string | undefined>(undefined);
+  // Review 2026-11-21: ein beim fehlenden LdF hängender Ausgang, den die FmZ selbst weitergibt.
+  const [weiterZeile, setzeWeiterZeile] = useState<Nachrichtenzeile | undefined>(undefined);
   const peers = useLaden((z) => z.lagebild?.peers);
   // R2-FM P2-5, R2-Si P2-2: die Schwellen vor dem Sichter je Vorrang aus den Stammdaten, optional gelesen.
   const vorrangschwellen = useLaden((z) => z.lagebild?.stammdaten) as { readonly sichterSchwelleBlitzMinuten?: number; readonly sichterSchwelleSofortMinuten?: number } | undefined;
@@ -143,6 +146,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       <NurLesenHinweis />
       <Nachrichtenband lage={lage} ldfBesetzt={stelleBesetzt("LDF", sitzung?.stellen, peers ?? [])} />
       <Besetzungshinweis lagebild={lagebild} />
+      <Fassungshinweis lagebild={lagebild} />
       <Stellenangabe sitzung={sitzung} aufAendern={aufStelle} />
       <Werkzeugzeile
         sicht={sicht}
@@ -180,7 +184,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       {sicht === "fmz" && <Sichterhinweis lage={lage} />}
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
-          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} />
+          <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} aufWeitergabe={setzeWeiterZeile} />
           <Eingangskarte nurLesen={nurLesen} aufEingang={fmz.aufEingang} />
           <OhneNummerKarte zeilen={abruf.ansicht.ohneNummer ?? ohneNummerZeilen(alle)} nurLesen={nurLesen} aufSchritt={fmz.aufSchritt} />
           <Sichterstaukarte
@@ -222,6 +226,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       {sicht === "fmz" && <SelbstLaufzettel zeile={alle.find((z) => z.id === selbstId)} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufFertig={() => setzeSelbstId(undefined)} verlauf={alle} saeumig={sichterDa} />}
       {schritte.masken}
       {fmz.masken}
+      {weiterZeile !== undefined && <Weitergabemaske key={weiterZeile.id} zeile={weiterZeile} handzeichen={sitzung?.handzeichen ?? ""} naechsteNummer={abruf.ansicht?.naechsteNummer} aufSchliessen={() => setzeWeiterZeile(undefined)} />}
     </section>
   );
 }

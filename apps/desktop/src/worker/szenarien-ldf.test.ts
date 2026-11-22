@@ -14,7 +14,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import type { Bedienergebnis, Lagebild, Mitteilung } from "../kontrakt/index.js";
 import { nachrichtAnnehmen, nachrichtAufnehmen, nachrichtBefoerdern, nachrichtenParameterSetzen, nachrichtVorschlagen, type Nachrichtenparameter } from "../kontrakt/fmzschritte.js";
-import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
+import { nachrichtNachweisenUndWeitergeben, nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
 import { nachrichtSichten, nachrichtVerfassen, type Nachrichtenanlage } from "../kontrakt/nachrichtenschritte.js";
 import { HINWEIS_ERSATZ_LDF_AUSGANG, HINWEIS_ERSATZ_LDF_EINGANG, HINWEIS_ERSATZ_LDF_NACH_BEFOERDERUNG, HINWEIS_OHNE_VORSCHLAG, HINWEIS_ZURUECK_ZUM_LDF } from "./laufwegfolgen.js";
 import { EINSATZ_ID, grundlage, raeumeAuf, takteBis, werkstattMitEinemPlatz, werkstattMitZweiPlaetzen, type Platz } from "./pruefhilfen/werkstatt.js";
@@ -146,7 +146,7 @@ describe("Funktionalität: LdF als Station", () => {
     expect(sicht(a, "fmz", ["FM2"]).ohneNummer ?? []).toHaveLength(0);
 
     // Der LdF trägt die Nummer ins Betriebsbuch ein und gibt an den Sichter.
-    const weiter = { ...nachrichtWeitergeben("A-1", null, { zeitpunkt: jetzt(), handzeichen: "Lf" }), nachrichtenfolge: { nachweis: { nummer: 1, zeitpunkt: jetzt(), handzeichen: "Lf" } } };
+    const weiter = nachrichtNachweisenUndWeitergeben("A-1", { nummer: 1, zeitpunkt: jetzt(), handzeichen: "Lf" }, { zeitpunkt: jetzt(), handzeichen: "Lf" });
     expect((await b.dienst.bediene(weiter)).art).toBe("geschrieben");
     expect(zeile(b, "A-1")).toMatchObject({ laufzustand: "VOR_SICHTER", nummer: 1 });
     expect(sicht(b, "sichter").zeilen.map((z) => z.id)).toEqual(["A-1"]);

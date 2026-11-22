@@ -56,16 +56,17 @@ describe("LdF: Zuteilung vor der Beförderung, Nachweisung und Weitergabe danach
     fireEvent.click(within(maske).getByRole("button", { name: "Weitergeben" }));
     await waitFor(() => expect(attrappe.rufeDerArt("bedienen")).toHaveLength(1));
     const entwurf = (attrappe.rufeDerArt("bedienen")[0] as { entwurf: Entwurf }).entwurf;
-    expect(entwurf).toMatchObject({ typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId: "A-bef" }, nachrichtenfolge: { nachweis: { nummer: 7, handzeichen: "Lf" } } });
+    // Erst die Nummer mit Vorwert-Prüfung, die Weitergabe folgt im Worker.
+    expect(entwurf).toMatchObject({ typ: "NachrichtNachgewiesen", nutzlast: { nachrichtId: "A-bef" }, vorher: null, vorwertPruefen: true, neu: { nummer: 7, handzeichen: "Lf" }, nachrichtenfolge: { weitergabe: { handzeichen: "Lf" } } });
   });
 
   it("schreibt ohne Nummer keinen Nachweis und lehnt eine unlesbare Nummer ab", () => {
     const ohne = weitergabeEntwurf(OHNE_NUMMER, { zeit: "1015", handzeichen: "Lf", nummer: "" });
-    expect(typeof ohne === "string" ? ohne : ohne.nachrichtenfolge?.nachweis).toBeUndefined();
+    expect(typeof ohne === "string" ? ohne : ohne.typ).toBe("NachrichtWeitergegeben");
     expect(weitergabeEntwurf(OHNE_NUMMER, { zeit: "1015", handzeichen: "Lf", nummer: "x7" })).toBe("Nummer als ganze Zahl eintragen");
     // Trägt die Nachricht schon eine Nummer, bleibt sie, wie sie ist.
     const mit = weitergabeEntwurf({ ...BEFOERDERT, nummer: 3 }, { zeit: "1015", handzeichen: "Lf", nummer: "9" });
-    expect(typeof mit === "string" ? mit : mit.nachrichtenfolge?.nachweis).toBeUndefined();
+    expect(typeof mit === "string" ? mit : mit.typ).toBe("NachrichtWeitergegeben");
   });
 });
 
@@ -75,5 +76,20 @@ describe("Sichter: Verteilung eines beförderten Ausgangs", () => {
     expect((screen.getByRole("checkbox", { name: "S2 rot" }) as HTMLInputElement).checked).toBe(true);
     expect((screen.getByRole("checkbox", { name: "S4 grün" }) as HTMLInputElement).checked).toBe(true);
     expect(screen.queryByRole("checkbox", { name: "OV Wildeshausen grün" })).toBeNull();
+  });
+});
+
+describe("Andere Programmfassung in der Präsenz (Review 2026-11-21)", () => {
+  it("nennt lebende Arbeitsplätze mit anderer oder ohne Fold-Fassung, nicht die veralteten", async () => {
+    const { andereFassungen, fassungstext } = await import("./Nachrichtenkopf.js");
+    const { FOLD_VERSION } = await import("@s1/domaene");
+    const peers = [
+      { veraltet: false, anzeigename: "LdF-Platz", foldVersion: FOLD_VERSION - 1 },
+      { veraltet: false, anzeigename: "Altclient" },
+      { veraltet: true, anzeigename: "Weg", foldVersion: 1 },
+      { veraltet: false, anzeigename: "Aktuell", foldVersion: FOLD_VERSION },
+    ];
+    expect(andereFassungen(peers)).toEqual(["LdF-Platz", "Altclient"]);
+    expect(fassungstext(["LdF-Platz"])).toContain("Kopien können ausbleiben");
   });
 });

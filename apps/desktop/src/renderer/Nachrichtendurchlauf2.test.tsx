@@ -234,7 +234,7 @@ describe("Sichter P1-4: Stau vor dem Sichter in der FmZ", () => {
     useLaden.setState({ lagebild: { ...NACHRICHTEN_LAGEBILD, peers: [], nachrichten: lage, sitzung: { stellen: ["FMZ"], handzeichen: "Fm" } } });
     attrappe.antwortet("nachrichtenAnfordern", nachrichtenansicht([{ ...VOR_SICHTER, anschrift: "S4" }]));
     render(<Nachrichten aufTagebuch={vi.fn()} />);
-    expect(await screen.findByText(/2 Eingänge warten vor dem Sichter/u)).toBeDefined();
+    expect(await screen.findByText(/2 Nachrichten warten vor dem Sichter/u)).toBeDefined();
     fireEvent.click(await screen.findByRole("button", { name: "Ich sichte jetzt selbst" }));
     const laufzettel = screen.getByRole("region", { name: "Laufzettel des Sichters" });
     expect((within(laufzettel).getByRole("checkbox", { name: "S4 grün" }) as HTMLInputElement).checked).toBe(true);
@@ -245,7 +245,7 @@ describe("Sichter P1-4: Stau vor dem Sichter in der FmZ", () => {
     expect(selbstSichtbar(wartet(25), true, 20)).toBe(true);
     expect(selbstSichtbar(wartet(5), true, 20)).toBe(false);
     expect(selbstSichtbar(VOR_SICHTER, false, 20)).toBe(true);
-    expect(sichterstauText(1)).toBe("1 Eingang wartet vor dem Sichter");
+    expect(sichterstauText(1)).toBe("1 Nachricht wartet vor dem Sichter");
     expect(sichterstauText(0)).toBeUndefined();
   });
 });

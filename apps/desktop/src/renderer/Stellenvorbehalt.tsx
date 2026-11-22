@@ -77,6 +77,8 @@ export function stelleFehlt(
 ): boolean {
   const gesucht = vorbehaltsstelle(schritt);
   if (gesucht === STELLE_FMZ ? hatFernmelderstelle(eigene) : eigene.includes(gesucht)) return false;
+  // Review 2026-11-21: Mit LdF als Station weist der LdF nach — kein „Trotzdem“ für ihn.
+  if (schritt === "nachweis" && eigene.includes(STELLE_LDF)) return false;
   // Ersatzsichter (§5): Ohne besetzten Sichter verteilt die FmZ (oder der LdF) selbst — dieselbe Regel wie im Worker.
   // R2-FM P2-5, R2-Si P2-2: ebenso bei besetztem, säumigem Sichter („Ich sichte jetzt selbst“).
   if (gesucht === STELLE_SICHTER) return !istErsatzsichter({ stellen: eigene, sichterBesetzt: sichterBesetzt(eigene, peers), sichterSaeumig: saeumig });

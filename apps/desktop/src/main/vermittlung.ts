@@ -16,6 +16,7 @@ import path from "node:path";
 
 import {
   DATEI_MANIFEST,
+  GRUND_VORBELEGUNG_ANLAGE,
   KOSTEN_VORBELEGUNG,
   ORDNER_PROGRAMM,
   einsatzKennung,
@@ -872,7 +873,8 @@ export class Vermittlung {
   async #belegeLdfStationVor(akteId: string, einsatzId: string): Promise<void> {
     const entwurf = nachrichtenParameterSetzen(einsatzId, "ldfStation", null, true);
     if (entwurf === undefined) return;
-    const ergebnis = (await this.#o.hof.frage(akteId, { art: "bediene", entwurf })) as Bedienergebnis;
+    // Review 2026-11-21: als Vorbelegung gekennzeichnet — nicht im Rückgängig-Stapel, im Tagebuch mit Grund.
+    const ergebnis = (await this.#o.hof.frage(akteId, { art: "bediene", entwurf: { ...entwurf, grund: GRUND_VORBELEGUNG_ANLAGE } })) as Bedienergebnis;
     if (ergebnis.art !== "geschrieben") this.#o.protokolliere("warnung", `LdF als Station nicht vorbelegt: ${ergebnis.art}`);
   }
 

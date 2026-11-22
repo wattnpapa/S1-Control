@@ -46,7 +46,8 @@ describe("Die Regel", () => {
   it("FMZ für Annehmen, Befördern, Nachweisen; LDF für Vorschlag und Weitergabe; FmZ vertritt den LdF nur ohne LdF", () => {
     expect(stelleFehlt("annahme", ["S4"], [])).toBe(true);
     expect(stelleFehlt("annahme", ["FMZ"], [])).toBe(false);
-    expect(stelleFehlt("nachweis", ["LDF"], [])).toBe(true);
+    // Review 2026-11-21: Mit LdF als Station weist der LdF nach.
+    expect(stelleFehlt("nachweis", ["LDF"], [])).toBe(false);
     expect(stelleFehlt("vorschlag", ["S4"], [])).toBe(true);
     expect(stelleFehlt("vorschlag", ["LDF"], [])).toBe(false);
     expect(stelleFehlt("vorschlag", ["FMZ"], [])).toBe(false);

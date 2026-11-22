@@ -28,7 +28,7 @@ import { useState } from "react";
 import { datumZeitGruppe, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Entwurf } from "../kontrakt/index.js";
-import { nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
+import { nachrichtNachweisenUndWeitergeben, nachrichtWeitergeben } from "../kontrakt/ldfschritte.js";
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
@@ -56,9 +56,9 @@ export function weitergabeEntwurf(zeile: Nachrichtenzeile, e: Weitergabeeingaben
   const eingabe = zeile.nummer === undefined ? (e.nummer ?? "").trim() : "";
   const nummer = nummerAusEingabe(eingabe);
   if (eingabe !== "" && nummer === undefined) return "Nummer als ganze Zahl eintragen";
-  const weitergabe = nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
-  if (nummer === undefined) return weitergabe;
-  return { ...weitergabe, nachrichtenfolge: { ...weitergabe.nachrichtenfolge, nachweis: { nummer, zeitpunkt, handzeichen: e.handzeichen.trim() } } };
+  if (nummer === undefined) return nachrichtWeitergeben(zeile.id, zeile.weitergabe ?? null, { zeitpunkt, handzeichen: e.handzeichen });
+  // Review 2026-11-21: erst die Nummer (mit Vorwert-Prüfung), dann die Weitergabe als Folge.
+  return nachrichtNachweisenUndWeitergeben(zeile.id, { nummer, zeitpunkt, handzeichen: e.handzeichen }, { zeitpunkt, handzeichen: e.handzeichen });
 }
 
 /** „Funk 171045NOV26 Fm · von Heros Wildeshausen 10 · Nr. 7“ — der Aufnahmevermerk zum Prüfen (R2-LdF P2-3). */

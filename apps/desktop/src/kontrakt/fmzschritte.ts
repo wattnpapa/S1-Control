@@ -171,6 +171,8 @@ export interface Nachrichtenfolge {
   readonly nachtrag?: boolean;
   /** Additiv: Ein über Funk aufgenommener Eingang einer Einheit ist ein Kontakt im Funkplan. */
   readonly kontakt?: Funkkontakt | undefined;
+  /** Additiv (2026-11-21): Nach dem Nachweis des LdF gibt der Worker an den Sichter weiter. */
+  readonly weitergabe?: Zeitvermerk;
 }
 
 /**

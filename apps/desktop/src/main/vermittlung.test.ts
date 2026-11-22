@@ -363,8 +363,8 @@ describe("Bedienen über die Vermittlung", () => {
       art: "undoStapel",
       akteId: angelegt.akteId,
     });
-    // Die Vorbelegung „LdF als Station“ der Anlage (2026-11-21) liegt zuunterst.
-    expect(stapel.map((e) => e.typ)).toEqual(["AbschnittUmbenannt", "AbschnittAngelegt", "NachrichtenParameterGesetzt"]);
+    // Die Vorbelegung „LdF als Station“ der Anlage liegt nicht im Stapel (Review 2026-11-21).
+    expect(stapel.map((e) => e.typ)).toEqual(["AbschnittUmbenannt", "AbschnittAngelegt"]);
 
     const ergebnis = await ruf<Bedienergebnis>(werkstatt, {
       art: "zurueck",

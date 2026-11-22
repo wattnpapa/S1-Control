@@ -299,6 +299,8 @@ export const zPeer = z.object({
    * `veraltet`, damit Zählung und Ersatzsichter ihn sofort nicht mehr führen.
    */
   abgemeldet: z.boolean().optional(),
+  /** Additiv (2026-11-21): die Fold-Fassung des anderen Platzes; fehlt bei älteren Fassungen. */
+  foldVersion: z.number().int().optional(),
 });
 export type Peer = z.infer<typeof zPeer>;
 
@@ -641,6 +643,8 @@ export const zEntwurf = z.object({
     .object({
       nachweis: z.unknown().optional(),
       sichtung: z.unknown().optional(),
+      /** Additiv (2026-11-21): die Weitergabe des LdF an den Sichter, die dem Nachweis folgt. */
+      weitergabe: z.unknown().optional(),
       /**
        * Additiv: die Einheit, an die befördert oder von der aufgenommen
        * wurde. Der Worker vermerkt dort im Funkplan einen Kontakt

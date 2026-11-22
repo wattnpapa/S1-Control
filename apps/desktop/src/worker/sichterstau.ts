@@ -24,7 +24,7 @@ function istMeldestelle(stelle: string): boolean {
 
 /** „2 Eingänge warten seit 23 Minuten vor dem Sichter, kein Sichter besetzt“. */
 export function sichterstauText(anzahl: number, minuten: number): string {
-  const eingaenge = anzahl === 1 ? "1 Eingang wartet" : `${String(anzahl)} Eingänge warten`;
+  const eingaenge = anzahl === 1 ? "1 Nachricht wartet" : `${String(anzahl)} Nachrichten warten`;
   const zeit = minuten === 1 ? "1 Minute" : `${String(minuten)} Minuten`;
   return `${eingaenge} seit ${zeit} vor dem Sichter, kein Sichter besetzt`;
 }
@@ -35,7 +35,7 @@ export function sichterstauText(anzahl: number, minuten: number): string {
  * Arbeitsplatz. Über der Schwelle des Vorrangs darf die FmZ selbst sichten.
  */
 export function saeumigerSichterText(anzahl: number, minuten: number): string {
-  const eingaenge = anzahl === 1 ? "1 Eingang wartet" : `${String(anzahl)} Eingänge warten`;
+  const eingaenge = anzahl === 1 ? "1 Nachricht wartet" : `${String(anzahl)} Nachrichten warten`;
   const zeit = minuten === 1 ? "1 Minute" : `${String(minuten)} Minuten`;
   return `${eingaenge} seit ${zeit} vor dem Sichter, obwohl ein Sichter besetzt ist — „Ich sichte jetzt selbst“ ist frei`;
 }
@@ -53,7 +53,7 @@ function istLdfMeldestelle(stelle: string): boolean {
 
 /** „1 Eingang wartet seit 7 Minuten beim LdF“. */
 export function ldfstauText(anzahl: number, minuten: number): string {
-  const eingaenge = anzahl === 1 ? "1 Eingang wartet" : `${String(anzahl)} Eingänge warten`;
+  const eingaenge = anzahl === 1 ? "1 Nachricht wartet" : `${String(anzahl)} Nachrichten warten`;
   const zeit = minuten === 1 ? "1 Minute" : `${String(minuten)} Minuten`;
   return `${eingaenge} seit ${zeit} beim LdF, noch nicht an den Sichter weitergegeben`;
 }
@@ -104,7 +104,8 @@ export class Sichterstauwaechter {
     const schwelle = projektion.fmzSchwelle(lage.zustand);
     const ueber = projektion
       .nachrichtenausschnitt(lage.zustand, { sicht: "ldf", jetzt })
-      .zeilen.filter((z) => z.richtung === "EINGANG" && !z.zurueckgezogen && projektion.ueberWarteschwelle(z.wartetSeitLdf, schwelle));
+      // 2026-11-21: auch der beförderte Ausgang, der zur Nachweisung und Weitergabe beim LdF liegt.
+      .zeilen.filter((z) => projektion.ldfSchrittDer(z) === "weitergabe" && !z.zurueckgezogen && projektion.ueberWarteschwelle(z.wartetSeitLdf, schwelle));
     return this.#neueMelden(ueber.map((z) => [z.id, z.wartetSeitLdf ?? 0]), this.#gemeldetLdf, ldfstauText);
   }
 

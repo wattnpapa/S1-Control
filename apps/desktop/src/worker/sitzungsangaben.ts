@@ -65,7 +65,8 @@ const STATION: Readonly<Record<string, readonly string[]>> = {
   NachrichtAngenommen: [STELLE_FMZ, STELLE_LDF],
   NachrichtBefoerdert: [STELLE_FMZ, STELLE_LDF],
   NachrichtAufnahmeBerichtigt: [STELLE_FMZ, STELLE_LDF],
-  NachrichtNachgewiesen: [STELLE_FMZ, STELLE_LDF],
+  // 2026-11-21: Mit LdF als Station weist der LdF nach; ein Platz mit beiden Stellen trägt LDF.
+  NachrichtNachgewiesen: [STELLE_LDF, STELLE_FMZ],
 };
 
 type Folgeentwurf = Ereignisentwurf & Pick<Entwurf, "nachrichtenfolge">;

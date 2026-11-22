@@ -84,6 +84,13 @@ export interface Praesenz {
    * (rund zwei Minuten) einen Sichter für besetzt zu halten.
    */
   readonly abgemeldet?: boolean;
+  /**
+   * Additiv (2026-11-21): die Fassung des Folds (`FOLD_VERSION`), mit der
+   * dieser Arbeitsplatz faltet. Arbeitsplätze verschiedener Fassung können
+   * denselben Nachrichtenweg verschieden lesen; die Kollegen warnen dann.
+   * Fehlt bei einem Arbeitsplatz älterer Fassung.
+   */
+  readonly foldVersion?: number;
 }
 
 export interface PraesenzOptionen {
@@ -99,6 +106,8 @@ export interface PraesenzOptionen {
   readonly handzeichen?: string;
   /** Additiv: „Stelle abgegeben“ — schreibt `abgemeldet: true` und lässt Stellen und Handzeichen weg. */
   readonly abgemeldet?: boolean;
+  /** Additiv (2026-11-21): die Fold-Fassung des Arbeitsplatzes. */
+  readonly foldVersion?: number;
 }
 
 /** Schreibt die eigene Präsenzdatei (§6.4). Kein Rename, kein `fsync`. */
@@ -122,6 +131,7 @@ export async function schreibePraesenz(
     ...(optionen.stellen === undefined || optionen.abgemeldet === true ? {} : { stellen: optionen.stellen }),
     ...(optionen.handzeichen === undefined || optionen.handzeichen === "" || optionen.abgemeldet === true ? {} : { handzeichen: optionen.handzeichen }),
     ...(optionen.abgemeldet === true ? { abgemeldet: true } : {}),
+    ...(optionen.foldVersion === undefined ? {} : { foldVersion: optionen.foldVersion }),
   };
   await optionen.dateisystem.legeVerzeichnisAn(optionen.ablage.sharePraesenz);
   await optionen.dateisystem.schreibeUeberOhneSync(

@@ -47,7 +47,7 @@
 
 import { useState } from "react";
 
-import { eigeneFernmelder, type Nachrichtenzeile } from "@s1/domaene";
+import { eigeneFernmelder, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
 import { minutenSeit } from "./fmzformate.js";
@@ -71,6 +71,11 @@ export interface WarteschlangenEigenschaften {
   readonly schwelleMinuten?: number;
   /** Additiv (2026-11-21): die Stellen der Sitzung — ein Fernmelder Fm1 bis Fm3 sieht seine Zuteilungen zuoberst. */
   readonly stellen?: readonly string[];
+  /**
+   * Additiv (Review 2026-11-21): Ein beförderter Ausgang hängt beim LdF, weil
+   * keiner besetzt ist — der Fernmelder gibt ihn selbst an den Sichter weiter.
+   */
+  readonly aufWeitergabe?: (zeile: Nachrichtenzeile) => void;
 }
 
 /**
@@ -99,6 +104,7 @@ function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.El
   if (zeile.laufzustand !== "VOR_LDF") return null;
   // R2-LdF P3-3: Ist kein LdF besetzt (`ldfNichtBesetzt`, Ring 2, optional gelesen), befördert die FmZ selbst.
   const ohneLdf = (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt === true;
+  if (projektion.ldfSchrittDer(zeile) === "weitergabe") return <span className="marke-zustand warn"> befördert, LdF nicht besetzt – selbst weitergeben</span>;
   return <span className="marke-zustand warn">{ohneLdf ? " beim LdF (nicht besetzt – selbst befördern)" : " beim LdF"}</span>;
 }
 
@@ -122,7 +128,16 @@ export function zeilenschritte(zeile: Nachrichtenzeile): readonly Zeilenschritt[
   return zeile.annahme === undefined ? [annehmen, befoerdern, ...rest] : [befoerdern, annehmen, ...rest];
 }
 
-function Knoepfe({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"] }): React.JSX.Element {
+function Knoepfe({ zeile, nurLesen, aufSchritt, aufWeitergabe }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: WarteschlangenEigenschaften["aufSchritt"]; readonly aufWeitergabe?: ((zeile: Nachrichtenzeile) => void) | undefined }): React.JSX.Element {
+  if (projektion.ldfSchrittDer(zeile) === "weitergabe") {
+    return (
+      <span className="zeilenknoepfe">
+        <button type="button" className="haupt" disabled={nurLesen || aufWeitergabe === undefined} title={nurLesen ? TEXT_NUR_LESEN : "Kein LdF besetzt: Nummer eintragen und selbst an den Sichter weitergeben"} onClick={() => aufWeitergabe?.(zeile)}>
+          Selbst weitergeben
+        </button>
+      </span>
+    );
+  }
   const [haupt, ...weitere] = zeilenschritte(zeile);
   return (
     <span className="zeilenknoepfe">
@@ -155,7 +170,7 @@ function Nurmeine({ namen, an, aufAendern }: { readonly namen: readonly string[]
 }
 
 /** Die linke Karte: die Ausgangswarteschlange mit den Knöpfen je Zeile. */
-export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [] }: WarteschlangenEigenschaften): React.JSX.Element {
+export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWahl, aufSchritt, schwelleMinuten = 20, stellen = [], aufWeitergabe }: WarteschlangenEigenschaften): React.JSX.Element {
   const [nurMeine, setzeNurMeine] = useState(false);
   const namen = eigeneFernmelder(stellen);
   const geordnet = eigeneZuerst(alle, stellen);
@@ -211,7 +226,7 @@ export function Warteschlange({ zeilen: alle, jetzt, gewaehltId, nurLesen, aufWa
                   <Wegmarke zeile={zeile} />
                 </td>
                 <td>
-                  <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} />
+                  <Knoepfe zeile={zeile} nurLesen={nurLesen} aufSchritt={aufSchritt} aufWeitergabe={aufWeitergabe} />
                 </td>
               </tr>
             ))}

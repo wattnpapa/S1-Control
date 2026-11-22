@@ -110,7 +110,7 @@ export function sichtername(peers: readonly Peer[]): string | undefined {
 /** Der Satz über der Karte bei besetztem, säumigem Sichter: wer, wie lange (R2-FM P2-5). */
 export function saeumigText(sichter: string | undefined, anzahl: number, laengste: number | undefined): string {
   const wer = sichter === undefined ? "Der Sichter ist besetzt" : `Der Sichter ${sichter} ist besetzt`;
-  const wie = anzahl === 1 ? "1 Eingang wartet über der Schwelle" : `${String(anzahl)} Eingänge warten über der Schwelle`;
+  const wie = anzahl === 1 ? "1 Nachricht wartet über der Schwelle" : `${String(anzahl)} Nachrichten warten über der Schwelle`;
   const seit = laengste === undefined ? "" : `, der älteste seit ${String(laengste)} min`;
   return `${wer}, reagiert aber nicht: ${wie}${seit}. Wer aufgenommen hat, kann selbst sichten (Blitz ab 5, Sofort ab 10 min).`;
 }
@@ -118,7 +118,7 @@ export function saeumigText(sichter: string | undefined, anzahl: number, laengst
 /** „2 Eingänge warten vor dem Sichter“ — oder nichts, solange keiner über der Schwelle liegt. */
 export function sichterstauText(anzahl: number | undefined): string | undefined {
   if (anzahl === undefined || anzahl <= 0) return undefined;
-  return anzahl === 1 ? "1 Eingang wartet vor dem Sichter" : `${String(anzahl)} Eingänge warten vor dem Sichter`;
+  return anzahl === 1 ? "1 Nachricht wartet vor dem Sichter" : `${String(anzahl)} Nachrichten warten vor dem Sichter`;
 }
 
 /** Die Hinweiszeile im Kopf der FmZ-Sicht. */

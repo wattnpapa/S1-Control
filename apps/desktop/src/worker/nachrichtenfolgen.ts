@@ -38,7 +38,7 @@ import type { Ereignisentwurf } from "@s1/speicher";
 import { kontaktwunsch, planeFunkkontakt } from "./funkkontaktfolge.js";
 import { nachtragswarnungen } from "./nachtragspruefung.js";
 import { rueckzugshinweis } from "./rueckzugshinweis.js";
-import { planeBefoerderungsfolgen, planeKopienNachWeitergabe, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
+import { planeBefoerderungsfolgen, planeKopienBeimAbschalten, planeKopienNachWeitergabe, planeWeitergabeErsatz, type Laufwegumfeld } from "./laufwegfolgen.js";
 
 /** Was der Worker über die Präsenz weiß und der Zustand nicht. */
 export interface Nachrichtenfolgeumfeld extends Laufwegumfeld {
@@ -274,31 +274,31 @@ function planeWeitergabe(zustand: Zustand, entwurf: Ereignisentwurf, umfeld: Nac
   const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
   const sichtung = folgewerte(entwurf)?.sichtung;
   if (typeof nachrichtId !== "string" || entwurf.undoOf !== undefined || entwurf.neu === null) return { folgen: [], hinweise: [] };
-  // 2026-11-21: Der LdF trägt beim Weitergeben die Nummer ins Betriebsbuch ein, vor der Verteilung.
-  const nachweis = planeWeitergabeNachweis(zustand, entwurf, nachrichtId);
   if (sichtung === undefined) {
     const kopien = planeKopienNachWeitergabe(zustand, nachrichtId, entwurf.neu, umfeld);
-    if (kopien !== undefined) return { folgen: [...nachweis.folgen, kopien], hinweise: nachweis.hinweise };
+    if (kopien !== undefined) return { folgen: [kopien], hinweise: [] };
     const ausgang = zustand.nachrichten?.[nachrichtId]?.richtung.wert === "AUSGANG";
-    return { folgen: nachweis.folgen, hinweise: [...nachweis.hinweise, ...(umfeld.sichterBesetzt || ausgang ? [] : [HINWEIS_WEITERGABE_OHNE_SICHTER])] };
+    return { folgen: [], hinweise: umfeld.sichterBesetzt || ausgang ? [] : [HINWEIS_WEITERGABE_OHNE_SICHTER] };
   }
   const grund = umfeld.sichterBesetzt ? {} : { grund: projektion.GRUND_ERSATZSICHTER };
   return {
-    folgen: [...nachweis.folgen, { entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: sichtung, ...grund }, hinweis: umfeld.sichterBesetzt ? "Beim Weitergeben verteilt." : HINWEIS_LDF_VERTEILT }],
-    hinweise: nachweis.hinweise,
+    folgen: [{ entwurf: { typ: "NachrichtGesichtet", nutzlast: { nachrichtId }, vorher: null, neu: sichtung, ...grund }, hinweis: umfeld.sichterBesetzt ? "Beim Weitergeben verteilt." : HINWEIS_LDF_VERTEILT }],
+    hinweise: [],
   };
 }
 
-/** Die Nummer, die der LdF in der Weitergabemaske einträgt (`nachrichtenfolge.nachweis`), mit Warnung bei doppelter Nummer. */
-function planeWeitergabeNachweis(zustand: Zustand, entwurf: Ereignisentwurf, nachrichtId: string): Nachrichtenfolgeplan {
-  const nachweis = folgewerte(entwurf)?.nachweis;
-  if (nachweis === undefined) return { folgen: [], hinweise: [] };
-  const nummer = nummerAus(nachweis);
-  const doppelt = doppelhinweis(zustand, nummer, nachrichtId);
-  return {
-    folgen: [{ entwurf: { typ: "NachrichtNachgewiesen", nutzlast: { nachrichtId }, vorher: null, neu: nachweis }, hinweis: `In der Nachweisung unter Nummer ${nummer === undefined ? "?" : String(nummer)} eingetragen.` }],
-    hinweise: doppelt === undefined ? [] : [doppelt],
-  };
+/**
+ * Der Nachweis des LdF mit anschließender Weitergabe (2026-11-21,
+ * `nachrichtNachweisenUndWeitergeben`): Die Weitergabe folgt als Schritt mit
+ * eigenen Folgen — ohne Sichter verteilt der LdF dann als Ersatzsichter.
+ */
+function planeNachweis(zustand: Zustand, entwurf: Ereignisentwurf): Nachrichtenfolgeplan {
+  const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
+  if (typeof nachrichtId !== "string") return { folgen: [], hinweise: [] };
+  const doppelt = doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId);
+  const weitergabe = (folgewerte(entwurf) as { weitergabe?: unknown } | undefined)?.weitergabe;
+  const folgen = weitergabe === undefined || entwurf.undoOf !== undefined ? [] : [{ entwurf: { typ: "NachrichtWeitergegeben", nutzlast: { nachrichtId }, vorher: null, neu: weitergabe }, hinweis: "An den Sichter weitergegeben.", mitFolgen: true }];
+  return { folgen, hinweise: doppelt === undefined ? [] : [doppelt] };
 }
 
 /** Plant die Folgen eines Nachrichtenentwurfs — gegen den Zustand **vor** dem Schreiben. */
@@ -319,10 +319,8 @@ export function planeNachrichtenfolgen(zustand: Zustand, entwurf: Ereignisentwur
     return { folgen: [], hinweise: hinweis === undefined ? [] : [hinweis] };
   }
   if (entwurf.typ === "NachrichtWeitergegeben") return planeWeitergabe(zustand, entwurf, umfeld);
-  if (entwurf.typ === "NachrichtNachgewiesen") {
-    const nachrichtId = (entwurf.nutzlast as { nachrichtId?: unknown } | null | undefined)?.nachrichtId;
-    const doppelt = typeof nachrichtId === "string" ? doppelhinweis(zustand, nummerAus(entwurf.neu), nachrichtId) : undefined;
-    return { folgen: [], hinweise: doppelt === undefined ? [] : [doppelt] };
-  }
+  if (entwurf.typ === "NachrichtNachgewiesen") return planeNachweis(zustand, entwurf);
+  // Review 2026-11-21: Abschalten von „LdF als Station“ schreibt die ausstehenden Kopien nach.
+  if (entwurf.typ === "NachrichtenParameterGesetzt") return planeKopienBeimAbschalten(zustand, entwurf, umfeld);
   return undefined;
 }

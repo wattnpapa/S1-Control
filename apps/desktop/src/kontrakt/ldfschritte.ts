@@ -15,9 +15,10 @@
  * dieselbe, wie bei `sichterBesetzt`.
  */
 
-import { istFernmelderstelle, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
+import { istFernmelderstelle, type Nachweisvermerk, type Sichtungsvermerk, type Zeitvermerk } from "@s1/domaene";
 
 import type { Entwurf } from "./index.js";
+import { nachrichtNachweisen } from "./fmzschritte.js";
 import { nachrichtSichten } from "./nachrichtenschritte.js";
 
 /** Die bekannte Stelle des LdF (NACHRICHT_STELLEN). */
@@ -39,6 +40,17 @@ export function nachrichtWeitergeben(nachrichtId: string, vorher: Zeitvermerk | 
     vorwertPruefen: true,
     ...(sichtung === undefined ? {} : { nachrichtenfolge: { sichtung: nachrichtSichten(nachrichtId, null, sichtung).neu } }),
   };
+}
+
+/**
+ * „Nachweisen und weitergeben“ (2026-11-21): Der LdF trägt die Nummer ins
+ * Technische Betriebsbuch ein, danach folgt die Weitergabe an den Sichter.
+ * Der Nachweis ist der Hauptschritt mit Vorwert-Prüfung (`vorher` leer): Hat
+ * inzwischen ein Fernmelder nachgewiesen, wird er abgewiesen, statt dessen
+ * Nummer zu überschreiben. Im Tagebuch steht die Nummer vor der Weitergabe.
+ */
+export function nachrichtNachweisenUndWeitergeben(nachrichtId: string, nachweis: Nachweisvermerk, weitergabe: Zeitvermerk): Entwurf {
+  return { ...nachrichtNachweisen(nachrichtId, null, nachweis), nachrichtenfolge: { weitergabe: { zeitpunkt: weitergabe.zeitpunkt, handzeichen: weitergabe.handzeichen.trim() } } };
 }
 
 /** Was die Regel von einem Peer der Präsenz braucht. */

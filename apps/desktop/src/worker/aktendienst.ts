@@ -37,6 +37,7 @@ import {
   hlcAlsText,
   kennzahlen,
   LEERER_STAND,
+  FOLD_VERSION,
   kompensationFuer,
   leereFaltung,
   liesBogen,
@@ -744,6 +745,7 @@ export class Aktendienst {
       ...(this.#sitzung === undefined ? {} : { stellen: this.#sitzung.stellen }),
       ...(this.#sitzung?.handzeichen === undefined ? {} : { handzeichen: this.#sitzung.handzeichen }),
       ...(this.#abgemeldet ? { abgemeldet: true } : {}),
+      foldVersion: FOLD_VERSION,
     };
     try {
       await schreibePraesenz(
@@ -781,6 +783,7 @@ export class Aktendienst {
             ...(fremd.praesenz.abgemeldet === true ? { abgemeldet: true } : {}),
             wanduhr: fremd.praesenz.wanduhr,
             programmversion: fremd.praesenz.programmversion,
+            ...(typeof fremd.praesenz.foldVersion === "number" ? { foldVersion: fremd.praesenz.foldVersion } : {}),
             segment: fremd.praesenz.segment,
             offset: fremd.praesenz.offset,
             gelesenerOffset: gelesen,
