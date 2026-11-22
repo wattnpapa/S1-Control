@@ -235,6 +235,7 @@ export type {
   Statuszelle,
   Bewegung,
   Bewegungsart,
+  Auftragszeile,
   Nachrichtenanfrage,
   Nachrichtenausschnitt,
   Nachrichtenlage,
