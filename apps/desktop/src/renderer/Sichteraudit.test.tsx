@@ -67,6 +67,17 @@ describe("Sicht Sichter nach dem Audit", () => {
     expect((within(zettel).getByRole("checkbox", { name: "S3 grün" }) as HTMLInputElement).checked).toBe(true);
   });
 
+  it("zeigt bei „gesichtet“ den Rücklauf: die grüne Kopie an S4 ist offen und ungelesen (Stab-Review)", async () => {
+    render(<Nachrichten aufTagebuch={vi.fn()} />);
+    await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Sichter" }));
+    expect(screen.queryByRole("region", { name: "Rücklauf" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "gesichtet" }));
+    const ruecklauf = await screen.findByRole("region", { name: "Rücklauf" });
+    const zeile = within(ruecklauf).getByRole("rowheader", { name: "S4" }).closest("tr") as HTMLElement;
+    expect(zeile.textContent).toContain("Pumpen eingetroffen");
+    expect(zeile.textContent).toContain("ungelesen");
+  });
+
   it("lässt eine gesichtete Nachricht nachsichten, mit der bisherigen Sichtung als Vorher-Wert (P0-1)", async () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Sichter" }));

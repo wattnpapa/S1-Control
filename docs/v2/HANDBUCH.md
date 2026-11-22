@@ -392,6 +392,13 @@ Laufzettel offen ist, sehen andere Sichter „wird von … bearbeitet“; hat
 inzwischen ein anderer gesichtet, nimmt das Programm die zweite Sichtung
 nicht still an, sondern meldet es.
 
+**Rücklauf.** Schaltet der Sichter auf „gesichtet“, steht oben die Karte „Rücklauf“: je
+Stelle, was grün verteilt und dort noch nicht erledigt ist, wie viel davon
+ungelesen, und die dringendsten Nachrichten mit der Zeit seit der Sichtung.
+Ein Blitz, der bei einer Stelle liegen bleibt, steht damit ganz oben. Ein
+Klick auf die Nachricht wählt sie aus. Kopien zum Mitlesen (blau, rot) und
+die eigene Kopie des Verfassers zählen nicht.
+
 **Vorrang.** Trifft eine gesichtete Nachricht mit Sofort oder Blitz für eine
 eigene Stelle ein, steht ein Hinweis in der Leiste („Blitz-Nachricht E 26
 für S4: …“); bei Blitz spielt das Programm zwei kurze Töne. Der Ton lässt

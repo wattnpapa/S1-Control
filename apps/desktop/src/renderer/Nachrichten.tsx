@@ -48,7 +48,7 @@
 
 import { useMemo, useState } from "react";
 
-import { FMZ_SCHWELLE_VORBELEGUNG, type Nachrichtenzeile } from "@s1/domaene";
+import { FMZ_SCHWELLE_VORBELEGUNG, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { nachrichtenParameterSetzen, sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import type { Lagebild } from "../kontrakt/index.js";
@@ -66,6 +66,7 @@ import { Sichtzusatz, Stellenangabe, quittierendeStellen, type Sichterstand } fr
 import { Nachweisung } from "./Nachweisung.js";
 import { Nachweisungsausgabe } from "./Nachweisungsausgabe.js";
 import { NurLesenHinweis, useNurLesen } from "./Nurlesen.js";
+import { Ruecklaufkarte } from "./Ruecklaufkarte.js";
 import { Sichterhinweis, Sichterstaukarte, sichtername } from "./Sichterstau.js";
 import { useKuerzel } from "./tastatur.js";
 import { useNachrichtenansicht } from "./useNachrichtenansicht.js";
@@ -195,6 +196,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
         }}
       />
       {sicht === "fmz" && <Sichterhinweis lage={lage} />}
+      {gesichtet !== undefined && <Ruecklaufkarte zeilen={projektion.ruecklauf(alle)} jetzt={abruf.ansicht?.jetzt} aufWahl={setzeGewaehltId} />}
       {sicht === "fmz" && abruf.ansicht !== undefined ? (
         <div className="fmzkarten">
           <Warteschlange zeilen={zeilen} jetzt={abruf.ansicht.jetzt} gewaehltId={gewaehltId} nurLesen={nurLesen} aufWahl={setzeGewaehltId} aufSchritt={fmz.aufSchritt} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} stellen={sitzung?.stellen ?? []} aufWeitergabe={setzeWeiterZeile} ldfBesetzt={stelleBesetzt("LDF", sitzung?.stellen, peers ?? [])} />

@@ -16,7 +16,7 @@
 
 import { afterAll, beforeAll, describe, expect, it } from "vitest";
 
-import { KATALOG, kennzahlen } from "@s1/domaene";
+import { KATALOG, kennzahlen, projektion } from "@s1/domaene";
 
 import { DEMO_EINHEITEN } from "./demoeinheiten.js";
 import { demoBeginnMs, demoDrehbuch, spieleDemoEin, type Demoergebnis } from "./demoeinsatz.js";
@@ -148,6 +148,9 @@ describe("Funktionalität: Demo-Einsatz", () => {
     expect(uebersicht.einsatzzeiten.some((z) => z.verfuegbarBis !== undefined)).toBe(true);
     expect(uebersicht.einsatzzeiten.some((z) => z.abloesung !== undefined)).toBe(true);
     expect(uebersicht.kommen.length).toBeGreaterThan(0);
+    // Rücklauf des Sichters: mindestens eine verteilte grüne Kopie ist noch offen.
+    const nachweisung = platz.dienst.nachrichten({ art: "nachrichtenAnfordern", akteId: "akte-demo", sicht: "nachweisung" });
+    expect(projektion.ruecklauf(nachweisung.zeilen).length).toBeGreaterThan(0);
   });
 
   it("Szenario: der Demo-Einsatz füllt die Monitoransichten aller Stabsfunktionen", () => {
