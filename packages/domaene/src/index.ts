@@ -237,6 +237,7 @@ export type {
   Einsatzzeitzeile,
   Ruecklaufkopie,
   Ruecklaufzeile,
+  Fmzplatz,
   Statusspalte,
   Statustafel,
   Statuszeile,

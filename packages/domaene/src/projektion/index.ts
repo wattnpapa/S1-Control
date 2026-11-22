@@ -274,6 +274,7 @@ export {
 } from "./stabsuebersicht.js";
 export { einsatzzeiten, type Einsatzzeitzeile } from "./einsatzzeiten.js";
 export { ruecklauf, type Ruecklaufkopie, type Ruecklaufzeile } from "./ruecklauf.js";
+export { fmzPlaetze, hoertPlatz, type Fmzlage, type Fmzplatz, type Praesenzplatz } from "./fmzplaetze.js";
 export { NACHTRAG_MINUTEN, VERWALTUNGSSCHRITTE, istNachtrag, istVerwaltungsschritt } from "./tagebuch-relevanz.js";
 export { STATUSSPALTEN, statusspalte, statustafel, type Statusspalte, type Statustafel, type Statuszeile, type Statuszelle } from "./einsatzstatus.js";
 export { kommenUndGehen, type Bewegung, type Bewegungsart } from "./kommengehen.js";
