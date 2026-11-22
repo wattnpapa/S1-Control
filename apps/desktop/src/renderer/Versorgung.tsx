@@ -78,8 +78,8 @@ export function Versorgung(): React.JSX.Element {
   const daten = abruf.ansicht;
 
   return (
-    <section aria-label="Versorgung" className="versorgung">
-      <h2>Versorgung</h2>
+    <section aria-label="S4" className="versorgung">
+      <h2>S4</h2>
       <Kpiband zahlen={lagebild?.versorgung} />
 
       <div className="werkzeugzeile">

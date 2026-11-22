@@ -1,5 +1,5 @@
 /**
- * Der Abschluss des Einsatzes im Blatt „Ausgaben“.
+ * Der Abschluss des Einsatzes im Blatt „Exporte“.
  *
  * Geprüft wird, was die Ansicht je Zustand anbietet, welche Entwürfe und Rufe
  * ihre Masken abschicken und dass eine Abweisung lesbar ankommt. Ob der

@@ -155,7 +155,7 @@ describe("Der Arbeitsplatz", () => {
     });
     expect(sichtbar("Einheiten")).toBe(true);
     expect(sichtbar("Einsatztagebuch")).toBe(false);
-    expect(screen.queryByLabelText("Ausgaben")).toBeNull();
+    expect(screen.queryByLabelText("Exporte")).toBeNull();
     expect(screen.queryByLabelText("Kostenübersicht")).toBeNull();
   });
 

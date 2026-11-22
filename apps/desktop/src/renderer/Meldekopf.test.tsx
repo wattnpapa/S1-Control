@@ -133,7 +133,7 @@ describe("Der Meldekopf-Modus", () => {
     // Was die Führungsstelle entscheidet, steht hier nicht.
     expect(screen.queryByLabelText("Abschnittsbaum")).toBeNull();
     expect(screen.queryByLabelText("Einheitentabelle")).toBeNull();
-    expect(screen.queryByLabelText("Ausgaben")).toBeNull();
+    expect(screen.queryByLabelText("Exporte")).toBeNull();
   });
 
   it("zeigt in der Führungsstelle weiterhin das Lagebild", async () => {
