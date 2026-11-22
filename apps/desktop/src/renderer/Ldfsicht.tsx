@@ -40,6 +40,7 @@ import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { STELLE_LDF } from "../kontrakt/ldfschritte.js";
 import { Weitergabemaske } from "./Ldfmaske.js";
+import { Nachweisnummer } from "./Nachweisnummer.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
 
@@ -114,7 +115,7 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td>
                   <Vorrang zeile={zeile} />
                 </td>
-                <td className="zahl">{zeile.nummer ?? "—"}</td>
+                <td className="zahl"><Nachweisnummer zeile={zeile} /></td>
                 <td>{zeile.absender}</td>
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
@@ -178,7 +179,7 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                   <Vorrang zeile={zeile} />
                 </td>
                 <td>{zeile.richtung === "AUSGANG" ? <span className="marke-zustand ruhe">A</span> : "E"}</td>
-                <td className="zahl">{zeile.nummer ?? "—"}</td>
+                <td className="zahl"><Nachweisnummer zeile={zeile} /></td>
                 <td>{zeile.absender}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td className="mono">

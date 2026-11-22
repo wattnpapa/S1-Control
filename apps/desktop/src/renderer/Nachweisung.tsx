@@ -51,6 +51,7 @@ import { Fragment } from "react";
 import { projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import type { Fmzschritt } from "./Fmzmasken.js";
+import { Nachweisnummer } from "./Nachweisnummer.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, stellenname, uhrzeit, vorrangwort } from "./nachrichtenformate.js";
 
@@ -179,21 +180,6 @@ function Wegmarke({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.El
   );
 }
 
-function Nummer({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
-  if (zeile.nummer === undefined) return <span className="leise">—</span>;
-  return (
-    <>
-      {zeile.nummer}
-      {zeile.nummerDoppelt && (
-        <span className="marke-zustand warn" title="Diese Nummer ist mehrfach vergeben; mit „Nachweisen“ berichtigen">
-          {" "}
-          doppelt
-        </span>
-      )}
-    </>
-  );
-}
-
 /** Die Schaltfläche der Zeile: „Nachweisen“ ohne Nummer, sonst „Berichtigen“ (ETB P1-3: bei jeder Nummer). */
 function Nachweisknopf({ zeile, nurLesen, aufSchritt }: { readonly zeile: Nachrichtenzeile; readonly nurLesen: boolean; readonly aufSchritt: NachweisungEigenschaften["aufSchritt"] }): React.JSX.Element {
   const ohne = zeile.nummer === undefined;
@@ -216,7 +202,7 @@ function Nachweiszeile({ zeile, gewaehltId, nurLesen, aufWahl, aufSchritt }: Zei
       <td>{vorrangwort(zeile)}</td>
       <td>{zeile.richtungKurz}{zeile.gespraechsnotiz ? " (Notiz)" : ""}</td>
       <td className="zahl">
-        <Nummer zeile={zeile} />
+        <Nachweisnummer zeile={zeile} />
       </td>
       <td>{zeile.absender}</td>
       <td>{zeile.anschrift}</td>

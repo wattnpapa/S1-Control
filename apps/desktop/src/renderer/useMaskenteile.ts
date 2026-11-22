@@ -15,6 +15,11 @@
  *   Nachtrag ein, leert er auch die vorbelegte Nummer der Aufnahme — auf
  *   dem Blatt steht die Nummer, die gilt, nicht „höchste plus eins“. Eine
  *   getippte Nummer bleibt.
+ *
+ * Stab-Review (LdF-1, Fm-1): Die vorbelegte Nummer wurde beim Öffnen
+ * festgehalten. Nahm ein zweiter Platz inzwischen auf, schrieb diese Maske
+ * dieselbe Nummer. Jetzt folgt die Vorbelegung dem aktuellen Stand, bis
+ * jemand die Nummer selbst ändert; dann gilt das Getippte.
  */
 
 import { useState } from "react";
@@ -47,6 +52,12 @@ export function nummerBeimNachtrag(nummer: string, an: boolean, naechsteNummer: 
   return nummer.trim() === "" ? vorbelegt : nummer;
 }
 
+/** Die Aufnahmewerte mit der aktuellen Vorbelegung, solange die Nummer nicht angefasst ist. */
+export function folgendeNummer(werte: Aufnahmewerte, folgt: boolean, naechsteNummer: number | undefined): Aufnahmewerte {
+  if (!folgt || naechsteNummer === undefined) return werte;
+  return { ...werte, nummer: String(naechsteNummer) };
+}
+
 function useStart(vorlage: Maskenwerte, naechsteNummer: number | undefined, schluessel: string | undefined) {
   const sitzung = useLaden((z) => z.lagebild?.sitzung);
   const [gemerkt] = useState(() => zurueckgestellt<Maskenteile>(schluessel));
@@ -70,18 +81,21 @@ export function useMaskenteile(vorlage: Maskenwerte, naechsteNummer: number | un
   const [verteilerAngefasst, setzeVerteilerAngefasst] = useState(start.verteilerAngefasst);
   const [aufnahmeAngefasst, setzeAufnahmeAngefasst] = useState(false);
   const [nachtrag, setzeNachtrag] = useState(start.nachtrag);
+  // Ein zurückgestellter Entwurf trägt seine Nummer; sie folgt nicht.
+  const [nummerFolgt, setzeNummerFolgt] = useState(gemerkt === undefined);
+  const wirksameAufnahme = folgendeNummer(aufnahmewerte, nummerFolgt && !nachtrag, naechsteNummer);
   const [nachtragswerte, setzeNachtragswerte] = useState<Nachtragswerte>(start.nachtragswerte);
   const [selbst, setzeSelbst] = useState(start.selbst);
   const fuestName = useLaden((z) => z.lagebild?.stammdaten?.fuestName);
   const verteilung: Verteilwerte = verteilerAngefasst ? verteilwerte : { ...verteilwerte, verteiler: verteilerAusAnschrift(werte.anschrift, fuestName) };
   const geaendert =
     gemerkt !== undefined || JSON.stringify(werte) !== JSON.stringify(vorlage) || aufnahmeAngefasst || verteilerAngefasst || JSON.stringify(nachtragswerte) !== JSON.stringify(nachtragVorlage());
-  const teile: Maskenteile = { werte, aufnahmewerte, verteilwerte, verteilerAngefasst, nachtrag, nachtragswerte, selbst };
+  const teile: Maskenteile = { werte, aufnahmewerte: wirksameAufnahme, verteilwerte, verteilerAngefasst, nachtrag, nachtragswerte, selbst };
   return {
     fuestName,
     werte,
     setzeWerte,
-    aufnahmewerte,
+    aufnahmewerte: wirksameAufnahme,
     verteilung,
     nachtrag,
     nachtragswerte,
@@ -96,10 +110,11 @@ export function useMaskenteile(vorlage: Maskenwerte, naechsteNummer: number | un
       const jetzt = an ? "" : datumZeitGruppe(new Date());
       setzeNachtrag(an);
       setzeWerte((w) => ({ ...w, abfassungszeit: an ? "" : vorlage.abfassungszeit }));
-      setzeAufnahmewerte((w) => ({ ...w, zeit: jetzt, nummer: nummerBeimNachtrag(w.nummer, an, naechsteNummer) }));
+      setzeAufnahmewerte((w) => ({ ...w, zeit: jetzt, nummer: nummerFolgt ? "" : nummerBeimNachtrag(w.nummer, an, naechsteNummer) }));
       setzeVerteilwerte((w) => ({ ...w, quittung: jetzt }));
     },
     aufAufnahme: (neu: Aufnahmewerte): void => {
+      if (neu.nummer !== wirksameAufnahme.nummer) setzeNummerFolgt(false);
       setzeAufnahmeAngefasst(true);
       setzeAufnahmewerte(neu);
     },

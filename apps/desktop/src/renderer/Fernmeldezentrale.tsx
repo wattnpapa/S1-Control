@@ -50,6 +50,7 @@ import { useState } from "react";
 import { eigeneFernmelder, projektion, type Nachrichtenzeile } from "@s1/domaene";
 
 import { ausgeblendetText, eigeneZuerst, mirZugeteilt, nurZugeteilte } from "./fernmelderzuteilung.js";
+import { Nachweisnummer } from "./Nachweisnummer.js";
 import { minutenSeit } from "./fmzformate.js";
 import type { Fmzschritt } from "./Fmzmasken.js";
 import { Klappmenue, Menueeintrag } from "./Klappmenue.js";
@@ -196,7 +197,7 @@ function Schlangenzeile({ zeile, jetzt, gewaehlt, nurLesen, stellen, aufWahl, au
         {meins && <span className="marke-zustand fuer-sie">für Sie</span>}
         {vorrangwort(zeile) === "" ? "" : <span className={zeile.vorrangstufe === 0 ? "marke-zustand fehler vorrang-blitz" : "marke-zustand warn"}>{vorrangwort(zeile)}</span>}
       </td>
-      <td className="zahl">{zeile.nummer ?? "—"}</td>
+      <td className="zahl"><Nachweisnummer zeile={zeile} /></td>
       <td>{zeile.absender}</td>
       <td>{zeile.anschrift}</td>
       <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>

@@ -197,3 +197,13 @@ describe("Review Runde 2, Block 2: Ablauf", () => {
     expect(nachrichtenzahl({ neuFuerStellen: 0, vorFmz: 0, vorSichter: 0, vorLdf: 3 } as never, ["LDF"])).toBe(3);
   });
 });
+
+describe("Stab-Review LdF-1: doppelte Nummern in der Karte des LdF", () => {
+  it("markiert eine mehrfach vergebene Nummer vor der Weitergabe an den Sichter", () => {
+    const doppelt: Nachrichtenzeile = { ...BEFOERDERT, id: "A-doppelt", nummer: 16, nummerDoppelt: true };
+    render(<Ldfsicht zeilen={[doppelt]} handzeichen="Lf" nurLesen={false} aufVorschlag={vi.fn()} naechsteNummer={17} />);
+    const weitergabe = screen.getByRole("table", { name: "Nachrichten vor der Weitergabe an den Sichter" });
+    const zeile = within(weitergabe).getByRole("row", { name: /Pumpe anfordern/ });
+    expect(zeile.textContent).toContain("16 doppelt");
+  });
+});

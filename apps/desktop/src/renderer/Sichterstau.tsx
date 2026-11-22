@@ -39,6 +39,7 @@ import type { Nachrichtenzeile } from "@s1/domaene";
 
 import type { Nachrichtenlage, Peer } from "../kontrakt/index.js";
 import { minutenSeit } from "./fmzformate.js";
+import { Nachweisnummer } from "./Nachweisnummer.js";
 import { TEXT_NUR_LESEN } from "./Maske.js";
 import { dtg, vorrangwort } from "./nachrichtenformate.js";
 
@@ -177,7 +178,7 @@ export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen,
           {faellig.map((zeile) => (
             <tr key={zeile.id}>
               <td>{vorrangwort(zeile)}</td>
-              <td className="zahl">{zeile.nummer ?? "—"}</td>
+              <td className="zahl"><Nachweisnummer zeile={zeile} /></td>
               <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
               <td className="mono">{stauvermerk(zeile)}</td>
               <td className="zahl wartezelle">{wartetMinuten(zeile, jetzt) === undefined ? "" : `seit ${String(wartetMinuten(zeile, jetzt))} min`}</td>

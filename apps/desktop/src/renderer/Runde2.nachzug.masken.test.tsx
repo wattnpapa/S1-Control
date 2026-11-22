@@ -261,3 +261,27 @@ describe("R2-ETB P2-6: Bezug zur Lage", () => {
     expect(entwuerfe()[0]?.nutzlast).toMatchObject({ anschriftBezug: { entitaet: "EINHEIT", id: "E-1" }, absenderBezug: { entitaet: "ABSCHNITT", id: "A-1" } });
   });
 });
+
+describe("Stab-Review LdF-1/Fm-1: die vorbelegte Nummer folgt dem Stand", () => {
+  function maskeMit(naechste: number): React.JSX.Element {
+    return <Nachrichtenmaske titel="Eingang aufnehmen" vorlage={eingangVorlage({ stellen: ["FMZ"], handzeichen: "Fm" }, "FüSt Weser")} anschriften={[]} aufnahme={{ naechsteNummer: naechste }} aufSchliessen={vi.fn()} />;
+  }
+  const nummernfeld = (): HTMLInputElement => within(screen.getByRole("group", { name: "Aufnahmevermerk der Fernmeldezentrale" })).getByLabelText("Nr.") as HTMLInputElement;
+
+  it("nimmt die neue nächste Nummer, wenn ein anderer Platz inzwischen aufgenommen hat", () => {
+    sitzung(["FMZ"]);
+    const { rerender } = render(maskeMit(16));
+    expect(nummernfeld().value).toBe("16");
+    // Fm2 hat Nr. 16 geschrieben; der Abgleich meldet als nächste die 17.
+    rerender(maskeMit(17));
+    expect(nummernfeld().value).toBe("17");
+  });
+
+  it("lässt eine selbst getippte Nummer stehen", () => {
+    sitzung(["FMZ"]);
+    const { rerender } = render(maskeMit(16));
+    fireEvent.change(nummernfeld(), { target: { value: "20" } });
+    rerender(maskeMit(17));
+    expect(nummernfeld().value).toBe("20");
+  });
+});
