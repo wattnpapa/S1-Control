@@ -28,7 +28,8 @@ import { Monitorleiste, Monitorpunkte } from "./Monitorleiste.js";
 import { Monitormenue } from "./Monitormenue.js";
 import { Verbindungswarnung } from "./Monitorwarnung.js";
 import { taktischeZeit } from "./formate.js";
-import { ANSICHT_TITEL, naechsteAnsicht, useMonitorsteuerung } from "./monitorSteuerung.js";
+import { ANSICHT_TITEL, useMonitorsteuerung } from "./monitorSteuerung.js";
+import { modusKurz, naechsteAnsicht } from "./monitorWechsel.js";
 import { useFunkplanansicht } from "./useFunkplanansicht.js";
 import { useStaerketafel } from "./useStaerketafel.js";
 import { useVersorgungsansicht } from "./useVersorgungsansicht.js";
@@ -79,7 +80,9 @@ export function Monitorbild({ lagebild, akteId, jetzt, verbindung }: Monitorbild
     document.title = `S1-Control — ${ANSICHT_TITEL[steuerung.ansicht]}`;
   }, [steuerung.ansicht]);
 
-  const wechseltext = steuerung.wechsel ? ` · Wechsel alle 20 s, weiter: ${ANSICHT_TITEL[naechsteAnsicht(steuerung.ansicht)]}` : "";
+  const wechseltext = steuerung.wechsel
+    ? ` · Wechsel${steuerung.modus === "alle" ? "" : ` ${modusKurz(steuerung.modus)}`} alle 20 s, weiter: ${ANSICHT_TITEL[naechsteAnsicht(steuerung.ansicht, steuerung.modus)]}`
+    : "";
 
   return (
     <div

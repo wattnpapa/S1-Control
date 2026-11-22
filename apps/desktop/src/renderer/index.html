@@ -3467,6 +3467,24 @@
         color: var(--monitor-grund);
         font-weight: 700;
       }
+      /* Je Sachgebiet ein Block mit Kürzel davor, getrennt durch eine Linie. */
+      .monitorleistegruppe {
+        display: flex;
+        align-items: stretch;
+        border-right: 2px solid var(--monitor-leise);
+      }
+      .monitorleistegruppe button:last-child {
+        border-right: 0;
+      }
+      .monitorleistekuerzel {
+        display: flex;
+        align-items: center;
+        padding: 0 8px 0 12px;
+        font: 600 12px/1 var(--mono);
+        letter-spacing: 0.1em;
+        color: var(--monitor-leise);
+        opacity: 0.7;
+      }
       .monitorleistefrei {
         flex: 1;
       }
@@ -3492,6 +3510,9 @@
       .monitorpunkte li.naechste {
         border: 2px solid var(--monitor-warn);
       }
+      .monitorpunkte li.gruppenanfang {
+        margin-left: 10px;
+      }
       /* Das Kontextmenü ist ein Renderer-Element und sieht in Electron und
          im Browser gleich aus; seine Farben folgen dem Erscheinungsbild. */
       .monitormenuegrund {
@@ -3508,6 +3529,8 @@
         border: var(--rahmenbreite) solid var(--rahmen);
         box-shadow: 0 6px 24px rgba(0, 0, 0, 0.45);
         text-align: left;
+        max-height: calc(100vh - 12px);
+        overflow-y: auto;
       }
       .monitormenuetitel {
         margin: 4px 14px 6px;
