@@ -1137,6 +1137,8 @@ export const zRuf = z.discriminatedUnion("art", [
     abschnittId: z.string().optional(),
     suche: z.string().optional(),
     nurRuecknahmen: z.boolean().optional(),
+    // Additiv (Stab-Review ETB E1): ohne Verwaltungsschritte (`tagebuch-relevanz.ts`).
+    nurTagebuchrelevant: z.boolean().optional(),
     // Additiv (ETB P0-1): nur die Zeilen dieser Nachricht — Kennung, kein Teilstring.
     nachrichtId: z.string().optional(),
     von: z.number().int().min(0).optional(),

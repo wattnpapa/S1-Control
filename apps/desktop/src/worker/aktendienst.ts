@@ -1311,6 +1311,7 @@ export class Aktendienst {
         ...(ruf.abschnittId === undefined ? {} : { abschnittId: ruf.abschnittId }),
         ...(ruf.suche === undefined ? {} : { suche: ruf.suche }),
         ...(ruf.nurRuecknahmen === undefined ? {} : { nurRuecknahmen: ruf.nurRuecknahmen }),
+        ...(ruf.nurTagebuchrelevant === undefined ? {} : { nurTagebuchrelevant: ruf.nurTagebuchrelevant }),
         ...(ruf.nachrichtId === undefined ? {} : { nachrichtId: ruf.nachrichtId }),
       },
       ruf.von,
