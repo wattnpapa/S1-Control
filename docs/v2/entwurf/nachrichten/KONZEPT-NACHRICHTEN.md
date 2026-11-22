@@ -348,6 +348,16 @@ Ersatzsichter. Ersatzschritte ohne LdF tragen `GRUND_ERSATZ_LDF`, die
 Zuteilung heißt im Tagebuch „an Fm2 zugeteilt“. Die Präsenz trägt
 `foldVersion`; das Blatt warnt vor Arbeitsplätzen mit anderer Fassung.
 
+Zweite Review-Runde (2026-11-22): Auch ein aufgenommener Eingang, der beim
+nicht besetzten LdF hängt, steht bei den Fernmeldern mit „Selbst
+weitergeben“. Ist kein Sichter besetzt, verteilt der LdF einen Eingang mit
+dem Laufzettel der Weitergabemaske (`nachrichtenfolge.sichtung`, auch über
+„Nachweisen und weitergeben“). Abschalten von `sichtungAuchAusgang` ohne LdF
+schreibt die ausstehenden Kopien. Nach Rücknahme und Neusichtung gelten
+Kenntnis und Erledigung nur, wenn sie nach der neuen Sichtung kamen
+(FOLD_VERSION 18). Schritte auf eine unbekannte Nachricht weist der Worker ab.
+In der Oberfläche heißt der Vorschlag des LdF durchgehend „Zuteilung“.
+
 ## 6. Das Blatt „Nachrichten"
 
 Ein eigener Reiter im Kopfband, bei der Führungsstelle zwischen Eingang und
