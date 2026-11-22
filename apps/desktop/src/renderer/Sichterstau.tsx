@@ -127,7 +127,7 @@ export function Sichterhinweis({ lage }: { readonly lage: Nachrichtenlage | unde
   if (text === undefined) return null;
   return (
     <p className="warnung sichterhinweis" role="status">
-      {text} — wer aufgenommen hat, kann selbst sichten.
+      {text} — wer aufgenommen oder weitergegeben hat, kann selbst sichten.
     </p>
   );
 }
@@ -145,7 +145,13 @@ export interface SichterstaukarteEigenschaften {
   readonly jetzt?: string | undefined;
 }
 
-/** Die Karte der Eingänge, die die FmZ selbst sichten darf; leer entfällt sie. */
+/** Beim Eingang die Aufnahme, beim beförderten Ausgang die Beförderung (Review 2026-11-21). */
+function stauvermerk(zeile: Nachrichtenzeile): string {
+  const v = zeile.richtung === "AUSGANG" ? zeile.befoerderung : zeile.aufnahme;
+  return v === undefined ? "—" : `${zeile.richtung === "AUSGANG" ? "A befördert " : "E "}${dtg(v.zeitpunkt)} ${v.handzeichen}`;
+}
+
+/** Die Karte der Nachrichten, die die FmZ selbst sichten darf; leer entfällt sie. */
 export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen, aufSelbst, sichter, jetzt }: SichterstaukarteEigenschaften): React.JSX.Element | null {
   const faellig = vorSichterZeilen(zeilen).filter((z) => selbstSichtbar(z, sichterDa, schwelleMinuten, jetzt));
   if (faellig.length === 0) return null;
@@ -153,14 +159,14 @@ export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen,
   return (
     <section className="karte fmzkarte breit" aria-label="Vor dem Sichter">
       <h3>Vor dem Sichter</h3>
-      <p className={sichterDa ? "warnung" : "hinweistext"}>{sichterDa ? saeumigText(sichter, faellig.length, minuten.length === 0 ? undefined : Math.max(...minuten)) : "Kein Sichter besetzt: Wer aufgenommen hat, verteilt selbst."}</p>
-      <table className="nachrichtentabelle" aria-label="Eingänge vor dem Sichter">
+      <p className={sichterDa ? "warnung" : "hinweistext"}>{sichterDa ? saeumigText(sichter, faellig.length, minuten.length === 0 ? undefined : Math.max(...minuten)) : "Kein Sichter besetzt: Wer aufgenommen oder weitergegeben hat, verteilt selbst."}</p>
+      <table className="nachrichtentabelle" aria-label="Nachrichten vor dem Sichter">
         <thead>
           <tr>
             <th scope="col" className="schmalspalte">Vorrang</th>
             <th scope="col" className="schmalspalte">Nr.</th>
             <th scope="col">Betreff</th>
-            <th scope="col">Eingang</th>
+            <th scope="col">Eingang / Beförderung</th>
             <th scope="col" className="schmalspalte">Wartet</th>
             <th scope="col" className="knopfspalte">
               <span className="nurvorlesen">Schritte</span>
@@ -173,10 +179,10 @@ export function Sichterstaukarte({ zeilen, sichterDa, schwelleMinuten, nurLesen,
               <td>{vorrangwort(zeile)}</td>
               <td className="zahl">{zeile.nummer ?? "—"}</td>
               <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
-              <td className="mono">{zeile.aufnahme === undefined ? "—" : `${dtg(zeile.aufnahme.zeitpunkt)} ${zeile.aufnahme.handzeichen}`}</td>
+              <td className="mono">{stauvermerk(zeile)}</td>
               <td className="zahl wartezelle">{wartetMinuten(zeile, jetzt) === undefined ? "" : `seit ${String(wartetMinuten(zeile, jetzt))} min`}</td>
               <td>
-                <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Den Laufzettel öffnen und selbst verteilen (Verteiler aus der Anschrift vorbelegt)"} onClick={() => aufSelbst(zeile)}>
+                <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : zeile.richtung === "AUSGANG" ? "Den Laufzettel öffnen und selbst verteilen (S2 rot und der Verfasser grün vorbelegt)" : "Den Laufzettel öffnen und selbst verteilen (Verteiler aus der Anschrift vorbelegt)"} onClick={() => aufSelbst(zeile)}>
                   Ich sichte jetzt selbst
                 </button>
               </td>

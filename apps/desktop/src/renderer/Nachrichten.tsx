@@ -198,7 +198,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
           />
         </div>
       ) : sicht === "ldf" && abruf.ansicht !== undefined ? (
-        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} />
+        <Ldfsicht zeilen={zeilen} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufVorschlag={(zeile) => fmz.aufSchritt("vorschlag", zeile)} schwelleMinuten={schwelle ?? FMZ_SCHWELLE_VORBELEGUNG} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} />
       ) : sicht === "nachweisung" && abruf.ansicht !== undefined ? (
         <>
           <Lueckenzeile luecken={abruf.ansicht.nummernluecken} />
@@ -226,7 +226,7 @@ export function Nachrichten({ aufTagebuch, aufStelle, aufLage }: NachrichtenEige
       {sicht === "fmz" && <SelbstLaufzettel zeile={alle.find((z) => z.id === selbstId)} handzeichen={sitzung?.handzeichen ?? ""} nurLesen={nurLesen} aufFertig={() => setzeSelbstId(undefined)} verlauf={alle} saeumig={sichterDa} />}
       {schritte.masken}
       {fmz.masken}
-      {weiterZeile !== undefined && <Weitergabemaske key={weiterZeile.id} zeile={weiterZeile} handzeichen={sitzung?.handzeichen ?? ""} naechsteNummer={abruf.ansicht?.naechsteNummer} aufSchliessen={() => setzeWeiterZeile(undefined)} />}
+      {weiterZeile !== undefined && <Weitergabemaske key={weiterZeile.id} zeile={weiterZeile} handzeichen={sitzung?.handzeichen ?? ""} naechsteNummer={abruf.ansicht?.naechsteNummer} vergebeneNummern={abruf.ansicht?.vergebeneNummern} aufSchliessen={() => setzeWeiterZeile(undefined)} />}
     </section>
   );
 }

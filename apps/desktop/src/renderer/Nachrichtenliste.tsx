@@ -36,7 +36,8 @@ const LAUFWORT: Readonly<Record<Laufzustand, string>> = {
   VERTEILT: "verteilt",
   ERLEDIGT: "erledigt",
   ZURUECKGEZOGEN: "zurückgezogen",
-  VOR_LDF: "vor dem LdF",
+  // Review 2026-11-21: dasselbe Wort wie Lese-Ansicht, Abschlussvermerk und Band.
+  VOR_LDF: "beim LdF",
 };
 
 export function laufwort(zustand: Laufzustand): string {
@@ -53,8 +54,24 @@ export function ausgangsstand(zeile: Nachrichtenzeile): string {
   // R2-FaBe P0-2: „angenommen (FmZ) …“ und „Quittung der Gegenstelle …“ statt „angenommen …“
   // und „befördert …“ — der Verfasser las die Annahme der eigenen FmZ als Quittung des
   // Empfängers. Der Satz kommt aus Ring 2 (`fmzVermerkText`), derselbe wie in Ansicht und Vorschau.
-  if (zeile.annahme === undefined && zeile.befoerderung === undefined) return laufwort(zeile.laufzustand);
-  return ausgangsvermerk(zeile);
+  // Review 2026-11-21: Davor steht immer, wo die Nachricht jetzt ist und wer dran ist.
+  if (zeile.annahme === undefined && zeile.befoerderung === undefined) return wegwort(zeile);
+  return `${wegwort(zeile)} · ${ausgangsvermerk(zeile)}`;
+}
+
+/**
+ * Wo der Ausgang steht und wer dran ist (Review 2026-11-21): „beim LdF
+ * (Zuteilung)“, „bei Fm2“, „beim LdF (Nachweisung)“, „vor dem Sichter“ —
+ * vorher stand nach der Annahme in drei Zuständen derselbe Vermerk.
+ */
+export function wegwort(zeile: Nachrichtenzeile): string {
+  const schritt = projektion.ldfSchrittDer(zeile);
+  const ohneLdf = (zeile as { readonly ldfNichtBesetzt?: unknown }).ldfNichtBesetzt === true;
+  if (schritt === "zuteilung") return ohneLdf ? "vor der FmZ (kein LdF)" : "beim LdF (Zuteilung)";
+  if (schritt === "weitergabe") return zeile.richtung === "AUSGANG" ? (ohneLdf ? "befördert, kein LdF – FmZ gibt weiter" : "beim LdF (Nachweisung)") : laufwort("VOR_LDF");
+  const fm = zeile.vorschlag?.fernmelder.trim() ?? "";
+  if (zeile.laufzustand === "VOR_FMZ" && fm !== "") return `bei ${fm}`;
+  return laufwort(zeile.laufzustand);
 }
 
 function Marken({ zeile, stellen }: { readonly zeile: Nachrichtenzeile; readonly stellen: readonly string[] }): React.JSX.Element {
@@ -92,9 +109,18 @@ interface ZeilenEigenschaften {
  * Beförderung „ohne Nummer“ (R2-SGL P2-5) — die FmZ hat sie dann bewusst nicht vergeben, und
  * „folgt“ versprach dem Verfasser eine Nummer, die nicht kommt.
  */
-export function nummerOhne(zeile: Pick<Nachrichtenzeile, "befoerderung">, folgt: boolean): string {
+export function nummerOhne(zeile: Pick<Nachrichtenzeile, "befoerderung"> & Partial<Pick<Nachrichtenzeile, "laufzustand" | "richtung">>, folgt: boolean): string {
   if (!folgt) return "—";
+  // Review 2026-11-21: Beim LdF zur Nachweisung kommt die Nummer im nächsten Schritt.
+  if (zeile.laufzustand !== undefined && projektion.ldfSchrittDer({ ...zeile, laufzustand: zeile.laufzustand, richtung: zeile.richtung ?? "" }) === "weitergabe") return "folgt (LdF)";
   return zeile.befoerderung === undefined ? "folgt (FmZ)" : "ohne Nummer";
+}
+
+/** Der Vermerk der Spalte „Eingang / Beförderung“: beim Eingang die Aufnahme, beim Ausgang die Beförderung. */
+function wegvermerk(zeile: Nachrichtenzeile): string {
+  const v = zeile.richtung === "AUSGANG" ? zeile.befoerderung : zeile.aufnahme;
+  if (v === undefined) return "—";
+  return `${zeile.richtung === "AUSGANG" ? "befördert " : ""}${dtg(v.zeitpunkt)} ${v.handzeichen}`;
 }
 
 /**
@@ -157,12 +183,12 @@ function Zeile({ zeile, stellen, posteingang, eingangsspalte = false, gewaehlt, 
       </td>
       {/* R2-FaBe P2-9: Die Gesprächsnotiz heißt „Notiz“, nicht „E“ — sie kam nicht von außen. */}
       <td>{zeile.gespraechsnotiz ? "Notiz" : zeile.richtungKurz}</td>
-      <td className="zahl" title={folgt ? "Die Nachweisungsnummer vergibt die Fernmeldezentrale" : undefined}>
+      <td className="zahl" title={folgt ? (nummer === "folgt (LdF)" ? "Die Nachweisungsnummer trägt der LdF ein" : "Die Nachweisungsnummer vergibt die Fernmeldezentrale") : undefined}>
         {nummer}
       </td>
       <td>{zeile.absender}</td>
       <td>{zeile.anschrift}</td>
-      {eingangsspalte && <td className="mono">{zeile.aufnahme === undefined ? "—" : `${dtg(zeile.aufnahme.zeitpunkt)} ${zeile.aufnahme.handzeichen}`}</td>}
+      {eingangsspalte && <td className="mono">{wegvermerk(zeile)}</td>}
       <td className="mono">{dtg(zeile.abfassungszeit)}</td>
       <th scope="row" title={zeile.vermerke === undefined ? undefined : `Vermerk: ${zeile.vermerke}`}>
         {zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}
@@ -193,7 +219,7 @@ export function Nachrichtenliste({ zeilen, beschriftung, gewaehltId, ...rest }: 
           <th scope="col">Nr.</th>
           <th scope="col">Absender</th>
           <th scope="col">Anschrift</th>
-          {rest.eingangsspalte === true && <th scope="col">Eingang</th>}
+          {rest.eingangsspalte === true && <th scope="col">Eingang / Beförderung</th>}
           <th scope="col">Abfassungszeit</th>
           <th scope="col">Betreff</th>
         </tr>

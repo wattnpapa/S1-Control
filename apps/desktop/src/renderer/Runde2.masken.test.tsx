@@ -89,7 +89,7 @@ describe("R2-FaBe P0-2: Quittung der Gegenstelle", () => {
 
   it("heißt in Ausgang, Lese-Ansicht und Vorschau „Quittung der Gegenstelle“, sonst „noch nicht übermittelt“", () => {
     expect(ausgangsvermerk(BEFOERDERT)).toBe("angenommen (FmZ) 1710 Fm · Quittung der Gegenstelle 1720 Ha (Telefon)");
-    expect(ausgangsstand(AUSGANG)).toBe("angenommen (FmZ) 1710 Fm · noch nicht übermittelt");
+    expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ · angenommen (FmZ) 1710 Fm · noch nicht übermittelt");
     expect(vorschauvermerk({ art: "zeile", zeile: BEFOERDERT })).toContain("Quittung der Gegenstelle 1720 Ha");
     expect(vorschauvermerk({ art: "zeile", zeile: BLITZ_AN_S4 })).toBeUndefined();
     sitzung(["S3"]);

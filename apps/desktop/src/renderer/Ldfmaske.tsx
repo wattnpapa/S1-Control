@@ -32,7 +32,8 @@ import { nachrichtNachweisenUndWeitergeben, nachrichtWeitergeben } from "../kont
 import { nachrichtenentwurfFehler } from "../kontrakt/nachrichtenschritte.js";
 import { useAnlegeversuch } from "./Anlegeversuch.js";
 import { Dtgfeld } from "./Dtgfeld.js";
-import { nummerAusEingabe } from "./fmzformate.js";
+import { nummerAusEingabe, nummerWarnung } from "./fmzformate.js";
+import { sichterBesetzt } from "../kontrakt/fmzschritte.js";
 import { useLaden } from "./laden.js";
 import { meldeWarnungen } from "./warnungsstufen.js";
 import { Maske } from "./Maske.js";
@@ -89,6 +90,16 @@ export interface WeitergabemaskeEigenschaften {
   readonly aufSchliessen: () => void;
   /** Additiv (2026-11-21): die nächste freie Nummer der Nachweisung als Vorbelegung. */
   readonly naechsteNummer?: number | undefined;
+  /** Additiv (Review 2026-11-21): die vergebenen Nummern — Warnung vor einer doppelten. */
+  readonly vergebeneNummern?: readonly number[] | undefined;
+}
+
+/** „Danach verteilt der Sichter: S2 rot, S4 grün.“ — was beim Ausgang nach dem Klick geschieht (Review 2026-11-21). */
+export function danachText(zeile: Nachrichtenzeile, sichterDa: boolean): string | undefined {
+  if (zeile.richtung !== "AUSGANG" || zeile.gespraechsnotiz) return undefined;
+  const verfasser = projektion.verfasserstelleAus(zeile.funktion, zeile.absender);
+  const gruen = verfasser === undefined || verfasser === "S2" ? "" : `, ${projektion.stellenWort(verfasser)} grün`;
+  return sichterDa ? `Danach verteilt der Sichter: S2 rot${gruen}.` : `Kein Sichter besetzt: Mit dem Weitergeben gehen die Kopien gleich hinaus (S2 rot${gruen}).`;
 }
 
 /** Mit „Neu laden“ (Fernmelder P2-6): nach einer Abweisung frisch gezeichnet, mit dem geltenden Vorher-Wert. */
@@ -100,6 +111,7 @@ export function Weitergabemaske(p: WeitergabemaskeEigenschaften): React.JSX.Elem
 function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNeuLaden: (zeile: Nachrichtenzeile) => void }): React.JSX.Element {
   const [konflikt, setzeKonflikt] = useState<string | undefined>(undefined);
   const peers = useLaden((z) => z.lagebild?.peers);
+  const eigeneStellen = useLaden((z) => z.lagebild?.sitzung?.stellen);
   const [e, setzeE] = useState<Weitergabeeingaben>(() => ({ zeit: datumZeitGruppe(new Date()), handzeichen: p.handzeichen, nummer: p.naechsteNummer === undefined ? "" : String(p.naechsteNummer) }));
   const versuch = useAnlegeversuch();
   useSperreHalten(p.zeile.id);
@@ -111,6 +123,8 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
   const [ohneNummerBestaetigt, setzeOhneNummerBestaetigt] = useState(false);
   const ohneNummer = p.zeile.nummer === undefined && (e.nummer ?? "").trim() === "";
   const ausgang = p.zeile.richtung === "AUSGANG";
+  const doppelt = p.zeile.nummer === undefined ? nummerWarnung(nummerAusEingabe(e.nummer ?? ""), p.vergebeneNummern) : undefined;
+  const danach = danachText(p.zeile, sichterBesetzt(eigeneStellen, peers ?? []));
 
   async function schreibe(): Promise<void> {
     if (typeof entwurf === "string") return;
@@ -170,6 +184,12 @@ function WeitergabemaskeInnen(p: WeitergabemaskeEigenschaften & { readonly aufNe
           </label>
         )}
       </div>
+      {doppelt !== undefined && (
+        <p className="warnung" role="alert">
+          {doppelt}
+        </p>
+      )}
+      {danach !== undefined && <p className="hinweistext">{danach}</p>}
       {konflikt === undefined ? (
         versuch.anzeige
       ) : (

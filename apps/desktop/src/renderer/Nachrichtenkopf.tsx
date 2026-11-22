@@ -62,6 +62,13 @@ function Kachel({ wert, titel, warn = false }: { readonly wert: number | undefin
   );
 }
 
+/** „vor dem LdF · 2 Zuteilung, 1 Weitergabe“ — die beiden Phasen beim LdF getrennt (Review 2026-11-21). */
+export function ldfkacheltitel(lage: Nachrichtenlage, ldfBesetzt: boolean): string {
+  const kopf = ldfBesetzt ? "vor dem LdF" : "vor dem LdF (nicht besetzt)";
+  if (lage.vorLdf === undefined || lage.vorLdfZuteilung === undefined || lage.vorLdf === 0) return kopf;
+  return `${kopf} · ${String(lage.vorLdfZuteilung)} Zuteilung, ${String(lage.vorLdf - lage.vorLdfZuteilung)} Weitergabe`;
+}
+
 /** Die fünf Zahlen des Bandes (§6); „mit Vorrang offen" und „über der Schwelle" bernstein ab eins. */
 export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Nachrichtenlage | undefined; readonly ldfBesetzt?: boolean }): React.JSX.Element {
   return (
@@ -70,7 +77,7 @@ export function Nachrichtenband({ lage, ldfBesetzt = true }: { readonly lage: Na
       <Kachel wert={lage?.vorFmz} titel="vor der FmZ" />
       <Kachel wert={lage?.vorSichter} titel="vor dem Sichter" />
       {/* R2-LdF P3-3: Ist kein LdF besetzt, befördert die FmZ selbst — die Kachel sagt es. */}
-      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfBesetzt ? "vor dem LdF" : "vor dem LdF (nicht besetzt)"} />}
+      {lage?.vorLdf !== undefined && <Kachel wert={lage.vorLdf} titel={ldfkacheltitel(lage, ldfBesetzt)} />}
       <Kachel wert={lage?.mitVorrangOffen} titel="mit Vorrang offen" warn={(lage?.mitVorrangOffen ?? 0) > 0} />
       <Kachel wert={lage?.ueberSchwelle} titel="über der Schwelle" warn={(lage?.ueberSchwelle ?? 0) > 0} />
     </dl>

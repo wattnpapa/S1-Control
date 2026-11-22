@@ -78,6 +78,9 @@ export function unterzeileText(zeile: Nachrichtenzeile): string | undefined {
   const verteiler = zeile.verteiler.map((m) => `${stellenname(m.stelle)} (${projektion.kopieWort(m.kopie)})`).join(", ");
   const grund = zurueckziehgrund(zeile);
   const teile = [
+    // Review 2026-11-21: wie im Druck — die Weitergabe des LdF und wer noch beim LdF liegt.
+    zeile.weitergabe === undefined ? "" : `Weitergabe ${uhrvermerk(zeile.weitergabe)}`,
+    projektion.ldfSchrittDer(zeile) === "weitergabe" ? "wartet beim LdF" : "",
     zeile.sichtung === undefined ? "" : `Sichtung ${uhrvermerk(zeile.sichtung)}`,
     verteiler === "" ? "" : `Verteiler: ${verteiler}`,
     zeile.vermerke === undefined || zeile.vermerke.trim() === "" ? "" : `Vermerke: ${zeile.vermerke.trim()}`,

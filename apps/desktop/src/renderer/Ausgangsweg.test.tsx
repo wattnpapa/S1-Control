@@ -101,3 +101,44 @@ describe("Befördern mit besetztem LdF (Review 2026-11-21)", () => {
     expect(screen.getByText(TEXT_NUMMER_DURCH_LDF)).toBeTruthy();
   });
 });
+
+describe("Darstellung je Rolle (Review 2026-11-21)", () => {
+  it("Verfasser: Die Spalte „Stand“ sagt, wo der Ausgang steht und wer dran ist", async () => {
+    const { wegwort, ausgangsstand, nummerOhne } = await import("./Nachrichtenliste.js");
+    expect(wegwort(ZUR_ZUTEILUNG)).toBe("beim LdF (Zuteilung)");
+    expect(wegwort({ ...ZUR_ZUTEILUNG, ldfNichtBesetzt: true } as Nachrichtenzeile)).toBe("vor der FmZ (kein LdF)");
+    const zugeteilt = { ...ZUR_ZUTEILUNG, laufzustand: "VOR_FMZ" as const, vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" } };
+    expect(wegwort(zugeteilt)).toBe("bei Fm2");
+    expect(ausgangsstand(BEFOERDERT)).toMatch(/^beim LdF \(Nachweisung\) · /u);
+    expect(wegwort({ ...BEFOERDERT, laufzustand: "VOR_SICHTER" })).toBe("vor dem Sichter");
+    expect(nummerOhne(OHNE_NUMMER, true)).toBe("folgt (LdF)");
+  });
+
+  it("Sichter: Der Laufzettel nennt beim Ausgang Beförderung, Fernmelder und Nummer und warnt nicht vor fehlendem Hauptempfänger", async () => {
+    const { ausgangskopf } = await import("./Laufzettel.js");
+    const zeile = { ...BEFOERDERT, laufzustand: "VOR_SICHTER" as const, nummer: 7, vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" }, weitergabe: { zeitpunkt: "2026-11-21T09:20:00.000Z", handzeichen: "Lf" } };
+    expect(ausgangskopf(zeile)).toMatch(/^Ausgang · befördert Funk .* Ka \(Fm2\) an Heros Wildeshausen 10 · Nr\. 7 · weitergegeben Lf$/u);
+    render(<Laufzettel zeile={{ ...zeile, absender: "S2", funktion: "S2" }} handzeichen="Si" nurLesen={false} aufGesichtet={vi.fn()} />);
+    expect(screen.queryByText(/Kein Hauptempfänger/u)).toBeNull();
+  });
+
+  it("LdF: Die Sicht zeigt zugeteilte, noch nicht beförderte Ausgänge mit „Zuteilung ändern“", () => {
+    const zugeteilt = { ...ZUR_ZUTEILUNG, id: "A-zu", laufzustand: "VOR_FMZ" as const, betreff: "Zugeteilt", vorschlag: { mittel: "FUNK", fernmelder: "Fm2", zeitpunkt: "2026-11-21T09:00:00.000Z", handzeichen: "Lf" } };
+    const aufVorschlag = vi.fn();
+    render(<Ldfsicht zeilen={[zugeteilt, OHNE_NUMMER]} handzeichen="Lf" nurLesen={false} aufVorschlag={aufVorschlag} />);
+    const karte = screen.getByRole("table", { name: "Zugeteilte Ausgänge vor der Beförderung" });
+    expect(within(karte).getByRole("row", { name: /Zugeteilt/ }).textContent).toContain("Fm2");
+    fireEvent.click(within(karte).getByRole("button", { name: "Zuteilung ändern" }));
+    expect(aufVorschlag).toHaveBeenCalledWith(zugeteilt);
+    const weitergabe = screen.getByRole("table", { name: "Nachrichten vor der Weitergabe an den Sichter" });
+    expect(within(weitergabe).getByRole("row", { name: /Pumpe anfordern/ }).textContent).toMatch(/^A—S4/u);
+  });
+
+  it("S2: Lese-Ansicht und Band sagen, wann die Kopien kommen und wie sich der LdF-Stand teilt", async () => {
+    const { verteilerleer } = await import("./Vordruckteile.js");
+    const { ldfkacheltitel } = await import("./Nachrichtenkopf.js");
+    expect(verteilerleer(BEFOERDERT, false)).toMatch(/^wartet beim LdF \(Nachweisung\)/u);
+    expect(verteilerleer({ ...BEFOERDERT, laufzustand: "VOR_SICHTER" }, false)).toBe("wartet beim Sichter, die rote Kopie an S2 folgt");
+    expect(ldfkacheltitel({ vorLdf: 3, vorLdfZuteilung: 2 } as never, true)).toBe("vor dem LdF · 2 Zuteilung, 1 Weitergabe");
+  });
+});

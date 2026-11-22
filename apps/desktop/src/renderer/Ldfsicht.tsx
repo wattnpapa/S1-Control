@@ -101,7 +101,7 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
               <th scope="col">Anschrift</th>
               <th scope="col">Betreff</th>
               <th scope="col">Wunsch</th>
-              <th scope="col">Annahme</th>
+              <th scope="col">Aufgegeben</th>
               <th scope="col" className="schmalspalte">Wartet</th>
               <th scope="col" className="knopfspalte">
                 <span className="nurvorlesen">Schritte</span>
@@ -119,7 +119,7 @@ function Ausgangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td>{zeile.anschrift}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
                 <td>{zeile.uebermittlungswunsch === undefined ? "—" : projektion.mittelWort(zeile.uebermittlungswunsch)}</td>
-                <td className="mono">{vermerk(zeile.annahme)}</td>
+                <td className="mono">{dtg(zeile.abfassungszeit)}</td>
                 <Wartezelle zeile={zeile} schwelleMinuten={schwelleMinuten} />
                 <td>
                   <button type="button" className="haupt" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Einem Fernmelder (Fm1 bis Fm3) zuteilen, Mittel und Gegenstelle bestimmen"} onClick={() => aufSchritt(zeile)}>
@@ -141,8 +141,8 @@ function Wegvermerk({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.
   const v = ausgang ? zeile.befoerderung : zeile.aufnahme;
   return (
     <>
-      <span className="nebenwert">{ausgang ? "A " : "E "}</span>
       {v === undefined ? "—" : `${projektion.mittelWort(v.mittel)} ${vermerk(v)}`}
+      {ausgang && zeile.vorschlag !== undefined && <span className="nebenwert"> ({zeile.vorschlag.fernmelder})</span>}
       {zeile.gegenstelle !== undefined && <span className="nebenwert"> {ausgang ? "an" : "von"} {zeile.gegenstelle}</span>}
     </>
   );
@@ -160,6 +160,7 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
           <thead>
             <tr>
               <th scope="col" className="schmalspalte">Vorrang</th>
+              <th scope="col" className="schmalspalte" title="Eingang oder Ausgang">E/A</th>
               <th scope="col" className="schmalspalte">Nr.</th>
               <th scope="col">Absender</th>
               <th scope="col">Betreff</th>
@@ -176,6 +177,7 @@ function Eingangskarte({ zeilen, nurLesen, aufSchritt, schwelleMinuten }: Karten
                 <td>
                   <Vorrang zeile={zeile} />
                 </td>
+                <td>{zeile.richtung === "AUSGANG" ? <span className="marke-zustand ruhe">A</span> : "E"}</td>
                 <td className="zahl">{zeile.nummer ?? "—"}</td>
                 <td>{zeile.absender}</td>
                 <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
@@ -207,10 +209,63 @@ export interface LdfsichtEigenschaften {
   readonly schwelleMinuten?: number | undefined;
   /** Additiv (2026-11-21): die nächste freie Nummer — Vorbelegung, wenn der LdF beim Weitergeben nachweist. */
   readonly naechsteNummer?: number | undefined;
+  /** Additiv (Review 2026-11-21): die vergebenen Nummern für die Warnung in der Weitergabemaske. */
+  readonly vergebeneNummern?: readonly number[] | undefined;
 }
 
-/** Die beiden Karten mit der Weitergabemaske; die Zeile bleibt der Stand beim Öffnen (Vorher-Wert). */
-export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE, naechsteNummer }: LdfsichtEigenschaften): React.JSX.Element {
+/**
+ * Die dritte Karte (Review 2026-11-21): zugeteilt, noch nicht befördert. Nach
+ * der Zuteilung verschwand der Ausgang aus der Sicht des LdF; er sah nicht
+ * mehr, welcher Fernmelder was hat und wie lange es dort liegt.
+ */
+function Zugeteiltkarte({ zeilen, nurLesen, aufSchritt }: Omit<KartenEigenschaften, "schwelleMinuten">): React.JSX.Element | null {
+  if (zeilen.length === 0) return null;
+  return (
+    <section className="karte fmzkarte" aria-label="Zugeteilt, noch nicht befördert">
+      <h3>Zugeteilt, noch nicht befördert</h3>
+      <table className="nachrichtentabelle" aria-label="Zugeteilte Ausgänge vor der Beförderung">
+        <thead>
+          <tr>
+            <th scope="col" className="schmalspalte">Vorrang</th>
+            <th scope="col">Betreff</th>
+            <th scope="col">Fernmelder</th>
+            <th scope="col">Weg</th>
+            <th scope="col">Annahme</th>
+            <th scope="col" className="schmalspalte">Wartet</th>
+            <th scope="col" className="knopfspalte">
+              <span className="nurvorlesen">Schritte</span>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          {zeilen.map((zeile) => (
+            <tr key={zeile.id} className={zeile.fmzUeberSchwelle ? "ueberschwelle" : undefined}>
+              <td>
+                <Vorrang zeile={zeile} />
+              </td>
+              <th scope="row">{zeile.betreff === "" ? <span className="leise">(ohne Betreff)</span> : zeile.betreff}</th>
+              <td>{zeile.vorschlag?.fernmelder ?? "—"}</td>
+              <td>
+                {zeile.vorschlag === undefined ? "—" : projektion.mittelWort(zeile.vorschlag.mittel)}
+                {zeile.vorschlag?.gegenstelle !== undefined && <span className="nebenwert"> an {zeile.vorschlag.gegenstelle}</span>}
+              </td>
+              <td className="mono">{vermerk(zeile.annahme)}</td>
+              <td className="zahl">{zeile.wartetSeit === undefined ? "—" : `${String(zeile.wartetSeit)} min`}</td>
+              <td>
+                <button type="button" disabled={nurLesen} title={nurLesen ? TEXT_NUR_LESEN : "Einem anderen Fernmelder zuteilen oder den Weg ändern"} onClick={() => aufSchritt(zeile)}>
+                  Zuteilung ändern
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+/** Die drei Karten mit der Weitergabemaske; die Zeile bleibt der Stand beim Öffnen (Vorher-Wert). */
+export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelleMinuten = SCHWELLE_VORGABE, naechsteNummer, vergebeneNummern }: LdfsichtEigenschaften): React.JSX.Element {
   const [weiter, setzeWeiter] = useState<Nachrichtenzeile | undefined>(undefined);
   return (
     <>
@@ -218,8 +273,9 @@ export function Ldfsicht({ zeilen, handzeichen, nurLesen, aufVorschlag, schwelle
         {/* 2026-11-21: der Ausgang vor der Beförderung zur Zuteilung, danach mit den Eingängen zur Nachweisung und Weitergabe. */}
         <Ausgangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "zuteilung")} nurLesen={nurLesen} aufSchritt={aufVorschlag} schwelleMinuten={schwelleMinuten} />
         <Eingangskarte zeilen={zeilen.filter((z) => projektion.ldfSchrittDer(z) === "weitergabe")} nurLesen={nurLesen} aufSchritt={setzeWeiter} schwelleMinuten={schwelleMinuten} />
+        <Zugeteiltkarte zeilen={zeilen.filter((z) => z.laufzustand === "VOR_FMZ")} nurLesen={nurLesen} aufSchritt={aufVorschlag} />
       </div>
-      {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} naechsteNummer={naechsteNummer} aufSchliessen={() => setzeWeiter(undefined)} />}
+      {weiter !== undefined && <Weitergabemaske key={weiter.id} zeile={weiter} handzeichen={handzeichen} naechsteNummer={naechsteNummer} vergebeneNummern={vergebeneNummern} aufSchliessen={() => setzeWeiter(undefined)} />}
     </>
   );
 }

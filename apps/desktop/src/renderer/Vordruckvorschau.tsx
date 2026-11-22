@@ -117,7 +117,8 @@ export function vorschaustempel(quelle: Vordruckquelle): string | undefined {
  */
 export function vorschauvermerk(quelle: Vordruckquelle): string | undefined {
   if (quelle.art !== "zeile" || !istAusgang(quelle.zeile) || quelle.zeile.zurueckgezogen) return undefined;
-  return `FmZ: ${ausgangsvermerk(quelle.zeile)}`;
+  // Review 2026-11-21: der zugeteilte Fernmelder statt der früheren Sammelstelle FmZ.
+  return `${quelle.zeile.vorschlag?.fernmelder.trim() || "FmZ"}: ${ausgangsvermerk(quelle.zeile)}`;
 }
 
 export function Vordruckvorschau({ ort, quelle }: VordruckvorschauEigenschaften): React.JSX.Element {

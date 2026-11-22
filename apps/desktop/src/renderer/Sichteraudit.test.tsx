@@ -52,7 +52,7 @@ describe("Sicht Sichter nach dem Audit", () => {
   it("zeigt Eingangszeit und Inhalt, belegt die Anschrift grün vor und hält Escape im Laufzettel", async () => {
     render(<Nachrichten aufTagebuch={vi.fn()} />);
     const tabelle = await waitFor(() => screen.getByRole("table", { name: "Nachrichten: Sichter" }));
-    expect(within(tabelle).getByRole("columnheader", { name: "Eingang" })).toBeDefined();
+    expect(within(tabelle).getByRole("columnheader", { name: "Eingang / Beförderung" })).toBeDefined();
     const zettel = await laufzettelZu(/Lage ruhig/);
     expect(zettel.textContent).toContain("Pegel steigt um 20 cm.");
     expect((within(zettel).getByRole("checkbox", { name: "S3 grün" }) as HTMLInputElement).checked).toBe(true);

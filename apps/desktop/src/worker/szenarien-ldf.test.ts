@@ -97,7 +97,8 @@ describe("Funktionalität: LdF als Station", () => {
     await takteBis([a, b]);
     const vorschlag = { mittel: "KURIER", fernmelder: "Fm2", zeitpunkt: jetzt(), handzeichen: "Lf" };
     expect((await b.dienst.bediene(nachrichtVorschlagen("A-1", null, vorschlag))).art).toBe("geschrieben");
-    expect(sicht(b, "ldf").zeilen).toHaveLength(0);
+    // Review 2026-11-21: Der zugeteilte Ausgang bleibt in der Sicht des LdF (Karte „Zugeteilt, noch nicht befördert“).
+    expect(sicht(b, "ldf").zeilen.map((z) => z.laufzustand)).toEqual(["VOR_FMZ"]);
     expect(zeile(b, "A-1")).toMatchObject({ laufzustand: "VOR_FMZ", vorschlag });
 
     await takteBis([a, b]);

@@ -119,6 +119,24 @@ function gleich(a: unknown, b: unknown): boolean {
   return kanonischeSerialisierung(a as KanonischerWert) === kanonischeSerialisierung(b as KanonischerWert);
 }
 
+/** Ein beförderter Ausgang (keine Gesprächsnotiz) — ihn verteilt der Sichter an S2 und den Verfasser. */
+function istVerteilterAusgang(zeile: Nachrichtenzeile): boolean {
+  return zeile.richtung === "AUSGANG" && !zeile.gespraechsnotiz;
+}
+
+/** „Ausgang · befördert Funk 211005NOV26 Ka (Fm2) an OV Wildeshausen · Nr. 7 · weitergegeben Lf“. */
+export function ausgangskopf(zeile: Nachrichtenzeile): string {
+  const b = zeile.befoerderung;
+  const fm = zeile.vorschlag?.fernmelder.trim() ?? "";
+  const teile = [
+    "Ausgang",
+    b === undefined ? "nicht befördert" : `befördert ${projektion.mittelWort(b.mittel)} ${dtg(b.zeitpunkt)} ${b.handzeichen}${fm === "" ? "" : ` (${fm})`}${zeile.gegenstelle === undefined ? "" : ` an ${zeile.gegenstelle}`}`,
+    zeile.nummer === undefined ? "ohne Nummer" : `Nr. ${String(zeile.nummer)}`,
+    ...(zeile.weitergabe === undefined ? [] : [`weitergegeben ${zeile.weitergabe.handzeichen}`]),
+  ];
+  return teile.join(" · ");
+}
+
 /** Betreff, Inhalt und Aufnahmevermerk über dem Verteiler (Sichter P1-2). */
 function Inhaltsblick({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JSX.Element {
   return (
@@ -126,6 +144,8 @@ function Inhaltsblick({ zeile }: { readonly zeile: Nachrichtenzeile }): React.JS
       <summary>
         {zeile.betreff === "" ? "(ohne Betreff)" : zeile.betreff}
         {zeile.aufnahme !== undefined && <span className="nebenwert"> · Eingang {dtg(zeile.aufnahme.zeitpunkt)} {zeile.aufnahme.handzeichen}</span>}
+        {/* Review 2026-11-21: Beim Ausgang sieht der Sichter, dass und wie er übermittelt ist. */}
+        {istVerteilterAusgang(zeile) && <span className="nebenwert"> · {ausgangskopf(zeile)}</span>}
       </summary>
       <pre className="vordruckinhalt">{zeile.inhalt}</pre>
     </details>
@@ -252,7 +272,8 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
   const zeitpunkt = quittungszeitpunkt(w.quittungVonHand, getippt);
   const fehlt = zeitpunkt === undefined ? "Uhrzeit der Quittung lesbar eintragen" : handzeichenPflicht(w.zeichen);
   // Die Anschrift zählt mit: „S2“ als Anschrift ist ein Hauptempfänger (zweiter Durchlauf, Punkt 3).
-  const warnung = hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
+  // Review 2026-11-21: Ein beförderter Ausgang braucht keinen Hauptempfänger — er ist erledigt, die Kopien sind Rückmeldung.
+  const warnung = istVerteilterAusgang(zeile) ? undefined : hauptempfaengerWarnung(w.verteiler, zeile.anschrift, w.fuestName);
   const freigabe = useSichtfreigabe(zeile, w.verteiler, warnung, nurLesen, saeumig);
   const { vorbehalt } = freigabe;
   const grund = fehlt ?? (vorbehalt.gesperrt ? "Erst „Trotzdem“ wählen" : undefined);
@@ -297,7 +318,7 @@ export function Laufzettel({ zeile, handzeichen, nurLesen, aufGesichtet, fokus =
           <input value={w.zeichen} maxLength={4} onChange={(e) => w.setze.zeichen(e.target.value)} />
         </label>
       </div>
-      {zeile.sichtung === undefined && <Absendervorschlag vorschlag={zuletztBeiAbsender(verlauf, zeile)} aufUebernehmen={w.setze.verteiler} gesperrt={nurLesen} />}
+      {zeile.sichtung === undefined && !istVerteilterAusgang(zeile) && <Absendervorschlag vorschlag={zuletztBeiAbsender(verlauf, zeile)} aufUebernehmen={w.setze.verteiler} gesperrt={nurLesen} />}
       <Verteilermatrix verteiler={w.verteiler} aufAenderung={w.setze.verteiler} />
       <label>
         Vermerke

@@ -279,10 +279,11 @@ describe("LdF P1-3, SGL P0-1, P2-8: Listen", () => {
   it("baut den Stand des Ausgangs aus den Vermerken und nennt die Kopiefarbe als Wort", () => {
     const befoerdert = { ...AUSGANG, annahme: { zeitpunkt: "2026-11-17T12:20:00.000Z", handzeichen: "Fm" }, befoerderung: { mittel: "FUNK", zeitpunkt: "2026-11-17T12:21:00.000Z", handzeichen: "Fm" } };
     // R2-FaBe P0-2: Die Annahme ist die der FmZ, die Beförderungszeit die Quittung der Gegenstelle; der Satz stammt aus `fmzVermerkText` (Ring 2).
-    expect(ausgangsstand(befoerdert)).toBe("noch nicht übermittelt");
+    // Review 2026-11-21: davor steht, wo der Ausgang steht.
+    expect(ausgangsstand(befoerdert)).toBe("vor der FmZ · noch nicht übermittelt");
     // Der Satz kommt aus Ring 2; ohne ihn fiele die Liste auf „noch nicht übermittelt“ zurück.
     expect(ausgangsstand({ ...befoerdert, fmzVermerkText: projektion.fmzVermerkTextAus(undefined, befoerdert.annahme, befoerdert.befoerderung, true) } as Nachrichtenzeile)).toBe(
-      "angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)",
+      "vor der FmZ · angenommen (FmZ) 1320 Fm · Quittung der Gegenstelle 1321 Fm (Funk)",
     );
     expect(ausgangsstand(AUSGANG)).toBe("vor der FmZ");
     expect(kopiewort("GRUEN")).toBe("grün: bearbeiten");

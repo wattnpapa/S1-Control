@@ -91,7 +91,8 @@ export interface ListenEigenschaften {
 function LeereSicht({ sicht, stellen, lage, aufLdf }: Pick<ListenEigenschaften, "sicht" | "stellen" | "lage" | "aufLdf">): React.JSX.Element {
   const titel = NACHRICHTENSICHTEN.find((s) => s.schluessel === sicht)?.titel ?? sicht;
   const ohneStelle = (sicht === "posteingang" || sicht === "offen") && stellen.length === 0;
-  const beimLdf = sicht === "sichter" ? beimLdfText(lage?.vorLdf) : undefined;
+  // Review 2026-11-21: nur, was der LdF als Nächstes an den Sichter gibt — nicht die Ausgänge vor der Zuteilung.
+  const beimLdf = sicht === "sichter" ? beimLdfText(lage?.vorLdf === undefined ? undefined : lage.vorLdf - (lage.vorLdfZuteilung ?? 0)) : undefined;
   return (
     <p className="hinweistext">
       {ohneStelle ? "Keine Stelle gewählt — über das Fenstermenü „Stelle und Handzeichen …“ angeben oder oben eine Stelle wählen." : `Keine Nachricht in „${titel}“.`}
