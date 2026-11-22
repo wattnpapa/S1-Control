@@ -55,14 +55,14 @@ describe("Die Profilwahl", () => {
     expect(profilfeld().value).toBe("fuehrungsstelle");
     expect(Array.from(profilfeld().options).map((option) => option.text)).toEqual([
       "Führungsstelle (S1)",
-      "Vermeldezentrale",
+      "Fernmeldezentrale",
       "Versorgung (S4)",
       "Alle Blätter",
     ]);
     const erklaerung = document.getElementById("profilerklaerung");
     expect(profilfeld().getAttribute("aria-describedby")).toBe("profilerklaerung");
     expect(erklaerung?.textContent).toContain("Führungsstelle (S1): S1 · Nachrichten · Funkplan · S4 · Exporte");
-    expect(erklaerung?.textContent).toContain("Vermeldezentrale: Nachrichten · Funkplan · S1 · Einsatztagebuch");
+    expect(erklaerung?.textContent).toContain("Fernmeldezentrale: Nachrichten · Funkplan · S1 · Einsatztagebuch");
     expect(erklaerung?.textContent).toContain("Versorgung (S4): S4 · S1 · Exporte");
     expect(erklaerung?.textContent).toContain("Alle Blätter: alle Reiter");
     expect(erklaerung?.textContent).toContain(TEXT_PROFIL_KEIN_RECHT);
@@ -71,9 +71,9 @@ describe("Die Profilwahl", () => {
 
   it("zeigt das gespeicherte Profil und speichert die Wahl neben der Betriebsart", async () => {
     attrappe.antwortet("einstellungenSetzen", { sharePfad: "/share", anzeigename: "Meier", profil: "versorgung" });
-    zeige({ profil: "vermeldezentrale" });
+    zeige({ profil: "fernmeldezentrale" });
     await aendern();
-    expect(profilfeld().value).toBe("vermeldezentrale");
+    expect(profilfeld().value).toBe("fernmeldezentrale");
     await userEvent.selectOptions(profilfeld(), "versorgung");
     expect(screen.getByText(/^Versorgung \(S4\):/u).className).toBe("gewaehlt");
     await userEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
@@ -95,9 +95,9 @@ describe("Die Profilwahl", () => {
       sharePfad: "/share",
       anzeigename: "Meier",
       betriebsart: "meldekopf",
-      profil: "vermeldezentrale",
+      profil: "fernmeldezentrale",
     });
-    zeige({ profil: "vermeldezentrale" });
+    zeige({ profil: "fernmeldezentrale" });
     await aendern();
     expect(profilfeld().disabled).toBe(false);
     await userEvent.selectOptions(screen.getByLabelText("Betriebsart"), "meldekopf");
@@ -107,7 +107,7 @@ describe("Die Profilwahl", () => {
     await waitFor(() => {
       expect(attrappe.letzterRuf("einstellungenSetzen")?.einstellungen).toMatchObject({
         betriebsart: "meldekopf",
-        profil: "vermeldezentrale",
+        profil: "fernmeldezentrale",
       });
     });
   });
