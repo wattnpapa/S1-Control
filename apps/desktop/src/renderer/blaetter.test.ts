@@ -14,36 +14,36 @@ import { BLAETTER, reiterFuer } from "./blaetter.js";
 const titel = (liste: readonly { readonly titel: string }[]): string[] => liste.map((eintrag) => eintrag.titel);
 
 describe("Reiter je Profil", () => {
-  it("stellt der Führungsstelle (Vorgabe) Lage, Eingangskorb, Nachrichten, Führungsstelle, Ausgaben und Tagebuch ins Band", () => {
+  it("stellt der Führungsstelle (Vorgabe) S1, Nachrichten, Funkplan, S4 und Exporte ins Band, den Rest unter „Mehr“", () => {
     const zuschnitt = reiterFuer("fuehrungsstelle");
-    expect(titel(zuschnitt.imBand)).toEqual(["Lage", "Eingangskorb", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
-    expect(titel(zuschnitt.unterMehr)).toEqual(["Funkplan", "Versorgung", "Kosten"]);
+    expect(titel(zuschnitt.imBand)).toEqual(["S1", "Nachrichten", "Funkplan", "S4", "Exporte"]);
+    expect(titel(zuschnitt.unterMehr)).toEqual(["Eingangskorb", "Führungsstelle", "Kosten", "Einsatztagebuch"]);
     expect(reiterFuer()).toEqual(zuschnitt);
   });
 
   it("stellt der Vermeldezentrale Nachrichten und Funkplan voran", () => {
     const zuschnitt = reiterFuer("vermeldezentrale");
-    expect(titel(zuschnitt.imBand)).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch"]);
-    expect(titel(zuschnitt.unterMehr)).toEqual(["Eingangskorb", "Führungsstelle", "Versorgung", "Kosten", "Ausgaben"]);
+    expect(titel(zuschnitt.imBand)).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch"]);
+    expect(titel(zuschnitt.unterMehr)).toEqual(["Eingangskorb", "Führungsstelle", "S4", "Kosten", "Exporte"]);
   });
 
   it("stellt der Versorgung (S4) die Versorgung voran", () => {
     const zuschnitt = reiterFuer("versorgung");
-    expect(titel(zuschnitt.imBand)).toEqual(["Versorgung", "Lage", "Ausgaben"]);
+    expect(titel(zuschnitt.imBand)).toEqual(["S4", "S1", "Exporte"]);
     expect(titel(zuschnitt.unterMehr)).toEqual(["Eingangskorb", "Nachrichten", "Führungsstelle", "Funkplan", "Kosten", "Einsatztagebuch"]);
   });
 
   it("zeigt bei „Alle Blätter“ jedes Blatt in der bisherigen Reihenfolge und kein „Mehr“", () => {
     const zuschnitt = reiterFuer("alle");
     expect(titel(zuschnitt.imBand)).toEqual([
-      "Lage",
+      "S1",
       "Eingangskorb",
       "Nachrichten",
       "Führungsstelle",
       "Funkplan",
-      "Versorgung",
+      "S4",
       "Kosten",
-      "Ausgaben",
+      "Exporte",
       "Einsatztagebuch",
     ]);
     expect(zuschnitt.unterMehr).toEqual([]);

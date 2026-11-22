@@ -233,9 +233,10 @@ describe("Kopfband", () => {
         blatt="lage"
         waehleBlatt={waehleBlatt}
         offeneMeldungen={7}
+        profil="alle"
       />,
     );
-    expect(screen.getByRole("tab", { name: "Lage", selected: true })).toBeDefined();
+    expect(screen.getByRole("tab", { name: "S1", selected: true })).toBeDefined();
     // Der Zähler steht am Reiter, weil dort die Entscheidung fällt, ob man
     // hinsieht — nicht erst im Blatt.
     expect(screen.getByRole("tab", { name: "Eingangskorb 7 offen" })).toBeDefined();
@@ -263,19 +264,26 @@ describe("Kopfband", () => {
     const reiter = (): string[] => screen.getAllByRole("tab").map((knopf) => knopf.textContent);
 
     zeige(undefined);
-    expect(reiter()).toEqual(["Lage", "Eingangskorb", "Nachrichten", "Führungsstelle", "Ausgaben", "Einsatztagebuch"]);
-    zeige("vermeldezentrale");
-    expect(reiter()).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch"]);
+    expect(reiter()).toEqual(["S1", "Nachrichten", "Funkplan", "S4", "Exporte"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
       "Eingangskorb",
       "Führungsstelle",
-      "Versorgung",
       "Kosten",
-      "Ausgaben",
+      "Einsatztagebuch",
+    ]);
+    zeige("vermeldezentrale");
+    expect(reiter()).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch"]);
+    await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
+    expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
+      "Eingangskorb",
+      "Führungsstelle",
+      "S4",
+      "Kosten",
+      "Exporte",
     ]);
     zeige("versorgung");
-    expect(reiter()).toEqual(["Versorgung", "Lage", "Ausgaben"]);
+    expect(reiter()).toEqual(["S4", "S1", "Exporte"]);
     zeige("alle");
     expect(reiter()).toHaveLength(9);
     expect(screen.queryByRole("button", { name: "Mehr ▾" })).toBeNull();
@@ -305,10 +313,10 @@ describe("Kopfband", () => {
     rerender(<Kopfband {...eigenschaften} blatt="kosten" />);
     const kosten = screen.getByRole("tab", { name: "Kosten", selected: true });
     expect(kosten.className).toBe("aus-mehr");
-    expect(screen.getAllByRole("tab").map((knopf) => knopf.textContent)).toEqual(["Nachrichten", "Funkplan", "Lage", "Einsatztagebuch", "Kosten"]);
+    expect(screen.getAllByRole("tab").map((knopf) => knopf.textContent)).toEqual(["Nachrichten", "Funkplan", "S1", "Einsatztagebuch", "Kosten"]);
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(screen.getByRole("menuitemradio", { name: "Kosten" }).getAttribute("aria-checked")).toBe("true");
-    expect(screen.getByRole("menuitemradio", { name: "Versorgung" }).getAttribute("aria-checked")).toBe("false");
+    expect(screen.getByRole("menuitemradio", { name: "S4" }).getAttribute("aria-checked")).toBe("false");
 
     // Zurück in ein Blatt des Bands: Der vorübergehende Reiter geht wieder.
     rerender(<Kopfband {...eigenschaften} blatt="lage" />);
@@ -338,6 +346,7 @@ describe("Kopfband", () => {
         aufHilfe={() => undefined}
         blatt="kosten"
         waehleBlatt={() => undefined}
+        profil="alle"
       />,
     );
     expect(screen.getByRole("tab", { name: "Eingangskorb" })).toBeDefined();
