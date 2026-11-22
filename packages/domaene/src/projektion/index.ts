@@ -262,6 +262,16 @@ export { FUNKPROBEN_GRENZE, funkprobenfolge, type Funkprobenzeile } from "./funk
 
 // Stärketafeln des Sachgebiets 1 für den Monitor (je Abschnitt, je Organisation)
 export { OHNE_ORGANISATION, organisationszeilen, staerketafel, type Staerketafel, type Staerketafelzeile } from "./staerketafel.js";
+export {
+  KRAEFTESPALTEN,
+  kraeftespaltenTitel,
+  stabsuebersicht,
+  vergleicheAuftraege,
+  type Auftragsuebersichtzeile,
+  type Kraeftespalte,
+  type Kraeftezeile,
+  type Stabsuebersicht,
+} from "./stabsuebersicht.js";
 
 // Nachrichten N1 (KONZEPT-NACHRICHTEN.md §6, §9): Sichten, Zahlen, Nummernvorbelegung
 export {
