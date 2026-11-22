@@ -16,6 +16,7 @@ import type { EingehendesEreignis } from "../fold.js";
 import type { Zustand } from "../zustand.js";
 import { verfuegbarkeitsmarke } from "./abloesung.js";
 import { anforderungsliste, type Anforderungszeile } from "./anforderung.js";
+import { fachlage, type Fachlage } from "./fachlage.js";
 import type { Einsatzzeitzeile } from "./einsatzzeiten.js";
 import { nachrichtenausschnitt } from "./nachrichten.js";
 import { ruecklauf, type Ruecklaufzeile } from "./ruecklauf.js";
@@ -34,6 +35,8 @@ export interface Lagevortrag {
   readonly ablaufend: readonly Einsatzzeitzeile[];
   /** Die jüngsten eigenen Einträge (Meldungen, Entscheidungen, Lagebesprechungen). */
   readonly eintraege: readonly { readonly zeitpunkt?: string; readonly satz: string }[];
+  /** Additiv: die Fachlage (Lage je Abschnitt, Pegel, Deich, Patienten, Störungen …). */
+  readonly fachlage: Fachlage;
 }
 
 export function lagevortrag(zustand: Zustand, ereignisse: readonly EingehendesEreignis[], jetzt: string): Lagevortrag {
@@ -44,6 +47,7 @@ export function lagevortrag(zustand: Zustand, ereignisse: readonly EingehendesEr
     anforderungen: anforderungsliste(zustand, { zustaende: ["OFFEN", "ZUGESAGT"] }).zeilen,
     ruecklauf: ruecklauf(nachrichtenausschnitt(zustand, { sicht: "nachweisung", jetzt }).zeilen),
     ablaufend: uebersicht.einsatzzeiten.filter((z) => verfuegbarkeitsmarke(z.verfuegbarBis, jetzt) !== undefined),
+    fachlage: fachlage(zustand),
     eintraege: eigene.slice(0, LAGEVORTRAG_EINTRAEGE).map((z) => ({ ...(z.zeitpunkt === undefined ? {} : { zeitpunkt: z.zeitpunkt }), satz: z.satz })),
   };
 }

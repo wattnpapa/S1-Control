@@ -188,8 +188,10 @@ gelöscht: Falsch erfasste Lagemeldungen und Pegelstände werden mit
 die Zahl der offenen Einträge.
 
 Für die Lagebesprechung steht im Reiter „Exporte“ in der Gruppe
-„Lagebesprechung“ ganz oben der **Lagevortrag** als PDF oder HTML: auf einem
-Blatt die Kräfte nach Status je Abschnitt, was kommt und wessen „verfügbar
+„Lagebesprechung“ ganz oben der **Lagevortrag** als PDF oder HTML: zuerst die
+Fachlage (Lage je Abschnitt, Pegel mit Tendenz, offene Schadstellen am Deich,
+Patienten je Sichtungskategorie, offene Amtshilfeanträge, Material und
+Störungen), dann die Kräfte nach Status je Abschnitt, was kommt und wessen „verfügbar
 bis“ abläuft, die offenen Aufträge und Anforderungen, die Nachrichten im
 Rücklauf, die letzten zehn eigenen Einträge im Einsatztagebuch und ein freies
 Feld für Notizen.

@@ -14,7 +14,7 @@ describe("Der Lagevortrag als HTML", () => {
     const ereignisse = prueflageEreignisse();
     const zustand = materialisiere(falteHinzu(leereFaltung(), ereignisse));
     const html = lagevortragAlsHtml(projektion.lagevortrag(zustand, ereignisse, "2026-09-08T12:00:00+02:00"), KOPF);
-    for (const titel of ["Kräfte nach Status", "Kommen und Gehen", "Offene Aufträge", "Anforderungen", "Nachrichten im Rücklauf", "Letzte Einträge im Einsatztagebuch", "Notizen"]) {
+    for (const titel of ["Lage je Abschnitt", "Pegel und Deich", "Patienten, Amtshilfe, Material, Störungen", "Kräfte nach Status", "Kommen und Gehen", "Offene Aufträge", "Anforderungen", "Nachrichten im Rücklauf", "Letzte Einträge im Einsatztagebuch", "Notizen"]) {
       expect(html, titel).toContain(`<h2>${titel}</h2>`);
     }
     expect(html).toContain("Übung &lt;Weser&gt;");

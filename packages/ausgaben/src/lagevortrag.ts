@@ -9,7 +9,7 @@
  * dazu. Gerechnet wird nichts hier, alles kommt aus `projektion.lagevortrag`.
  */
 
-import { projektion } from "@s1/domaene";
+import { fachlagewort, projektion } from "@s1/domaene";
 
 import { druckseiteAlsHtml, tabellenrahmen, zeitText } from "./druckseite.js";
 import { htmlMaskieren, type Ausgabekopf } from "./index.js";
@@ -72,6 +72,33 @@ function ruecklauf(v: projektion.Lagevortrag): string {
   );
 }
 
+function wort(wert: unknown): string {
+  return typeof wert === "string" ? fachlagewort(wert) : wert === undefined ? "" : String(wert);
+}
+
+/** Lage je Abschnitt, Pegel und die offenen Einträge der übrigen Bereiche. */
+function fachlageTeil(v: projektion.Lagevortrag): string[] {
+  const f = v.fachlage;
+  const offen = (b: projektion.Fachlagebereich): projektion.Fachlagezeile[] => f.zeilen[b].filter((z) => !z.erledigt);
+  const p = f.patientensumme;
+  return [
+    "  <h2>Lage je Abschnitt</h2>",
+    tabelle(["Abschnitt", "Lage", "Ort", "Bedarf", "Stand"], f.lageJeAbschnitt.map((z) => [zelle(z.abschnitt), zelle(wort(z.werte["lage"])), zelle(wort(z.werte["ort"])), zelle(wort(z.werte["bedarf"])), zelle(zeitText(z.zeitpunkt))]), "Keine Lagemeldungen."),
+    "  <h2>Pegel und Deich</h2>",
+    tabelle(["Pegel / Deich-km", "Wert / Art", "Tendenz / Maßnahme", "Prognose / Stand"], [
+      ...f.pegelstaende.map((s) => [zelle(s.pegel), zelle(`${String(s.wertCm)} cm`), zelle(s.tendenzCm === undefined ? "" : `${s.tendenzCm >= 0 ? "+" : ""}${String(s.tendenzCm)} cm`), zelle(s.prognoseCm === undefined ? "" : `${String(s.prognoseCm)} cm`)]),
+      ...offen("deich").map((z) => [zelle(`Deich-km ${wort(z.werte["deichKm"])}`), zelle(wort(z.werte["art"])), zelle(wort(z.werte["massnahme"])), zelle(wort(z.stand))]),
+    ], "Keine Pegel und keine offenen Schadstellen."),
+    "  <h2>Patienten, Amtshilfe, Material, Störungen</h2>",
+    `  <p>${htmlMaskieren(`Patienten: ${String(p.gesamt)} (SK 1: ${String(p["SK1"])}, SK 2: ${String(p["SK2"])}, SK 3: ${String(p["SK3"])}, SK 4: ${String(p["SK4"])}), davon Einsatzkräfte: ${String(p.einsatzkraefte)}`)}</p>`,
+    tabelle(["Bereich", "Eintrag", "Stand"], [
+      ...offen("amtshilfe").map((z) => [zelle("Amtshilfe"), zelle(`${wort(z.werte["kennung"])}: ${wort(z.werte["leistung"])}`), zelle(wort(z.stand))]),
+      ...offen("material").map((z) => [zelle("Material"), zelle(`${wort(z.werte["menge"])} ${wort(z.werte["mengeneinheit"])} ${wort(z.werte["bezeichnung"])}`), zelle(wort(z.stand))]),
+      ...offen("stoerungen").map((z) => [zelle("Störung"), zelle(`${wort(z.werte["bereich"])}: ${wort(z.werte["beschreibung"])}`), zelle(wort(z.stand))]),
+    ], "Nichts offen."),
+  ];
+}
+
 function eintraege(v: projektion.Lagevortrag): string {
   return tabelle(["Zeit", "Eintrag"], v.eintraege.map((e) => [zelle(zeitText(e.zeitpunkt)), zelle(e.satz)]), "Noch keine eigenen Einträge.");
 }
@@ -82,6 +109,7 @@ export function lagevortragAlsHtml(v: projektion.Lagevortrag, kopf: Ausgabekopf)
     kopf,
     querformat: false,
     inhalt: [
+      ...fachlageTeil(v),
       "  <h2>Kräfte nach Status</h2>",
       kraefte(v),
       "  <h2>Kommen und Gehen</h2>",
