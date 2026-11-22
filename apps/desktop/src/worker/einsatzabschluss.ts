@@ -59,7 +59,7 @@ function sperre(status: Einsatzstatus, typ: string): Bedienergebnis | undefined 
   }
   if (status === "BEENDET" && !NACH_DEM_ENDE.has(typ)) {
     return abgewiesen(
-      "Der Einsatz ist beendet. Zum Weiterschreiben im Blatt „Ausgaben“ zuerst „Einsatz wiedereröffnen“ wählen.",
+      "Der Einsatz ist beendet. Zum Weiterschreiben im Blatt „Exporte“ zuerst „Einsatz wiedereröffnen“ wählen.",
     );
   }
   return undefined;
