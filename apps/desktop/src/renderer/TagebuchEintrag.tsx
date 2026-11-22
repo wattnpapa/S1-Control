@@ -49,8 +49,9 @@ export function TagebuchEintrag({ aufSchliessen, nachricht }: TagebuchEintragEig
   const zeitUnlesbar = zeit.trim() !== "" && zeitpunkt === undefined;
 
   async function schreibe(): Promise<void> {
-    const etbId = versuch.kennung(() => neueId("ETB"));
-    const gesetzt = versuch.kennung(() => new Date().toISOString());
+    // Kennung und „jetzt“ in einem gehaltenen Wert: `kennung` merkt sich nur
+    // einen, ein zweiter Aufruf gäbe die ETB-Kennung als Zeitpunkt zurück.
+    const { etbId, gesetzt } = versuch.kennung(() => ({ etbId: neueId("ETB"), gesetzt: new Date().toISOString() }));
     const ergebnis = await versuch.schreibe({
       typ: "EtbEintragErfasst",
       nutzlast: {

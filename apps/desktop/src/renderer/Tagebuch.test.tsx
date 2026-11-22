@@ -129,6 +129,22 @@ describe("Die Tagebuch-Ansicht", () => {
     expect((screen.getByLabelText("Auf die Auswahl beschränken") as HTMLInputElement).checked).toBe(false);
   });
 
+  it("setzt ohne eingetragene Zeit „jetzt“ als Zeitpunkt und nicht die Kennung (Regression Stab-Review San-B1)", async () => {
+    await zeigeTagebuch();
+    attrappe.antwortet("bedienen", { art: "geschrieben", ereignisse: 1 } as never);
+    fireEvent.click(screen.getByRole("button", { name: "Eintrag hinzufügen" }));
+    fireEvent.change(screen.getByLabelText("Was wurde gemeldet?"), { target: { value: "Lagebesprechung beendet" } });
+    const vorher = Date.now();
+    fireEvent.click(screen.getByRole("button", { name: "Eintrag speichern" }));
+    await waitFor(() => {
+      expect(attrappe.letzterRuf("bedienen")?.entwurf.typ).toBe("EtbEintragErfasst");
+    });
+    const nutzlast = attrappe.letzterRuf("bedienen")?.entwurf.nutzlast as Record<string, string>;
+    expect(nutzlast["etbId"]).toMatch(/^ETB-/);
+    expect(nutzlast["zeitpunkt"]).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(Math.abs(new Date(nutzlast["zeitpunkt"] ?? "").getTime() - vorher)).toBeLessThan(60_000);
+  });
+
   it("trägt eine freie Meldung mit Quelle und Zeit als Tagebucheintrag ein", async () => {
     await zeigeTagebuch();
     attrappe.antwortet("bedienen", { art: "geschrieben", ereignisse: 1 } as never);
