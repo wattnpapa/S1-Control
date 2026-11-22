@@ -148,11 +148,11 @@ dieses Gerät, nicht für den Einsatz:
 
 | Profil | Reiter im Band | unter „Mehr“ |
 |---|---|---|
-| Führungsstelle (S1), Vorgabe | S1 · Nachrichten · Funkplan · S4 · Exporte | Übersicht, Eingangskorb, Führungsstelle, Kosten, Einsatztagebuch |
-| Leitung / Stab | Übersicht · Nachrichten · S1 · Eingangskorb · Einsatztagebuch · Exporte | Führungsstelle, Funkplan, S4, Kosten |
-| Fernmeldezentrale | Nachrichten · Funkplan · S1 · Einsatztagebuch | Übersicht, Eingangskorb, Führungsstelle, S4, Kosten, Exporte |
-| Versorgung (S4) | S4 · S1 · Exporte | Übersicht, Eingangskorb, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
-| Alle Blätter | alle zehn Blätter | — |
+| Führungsstelle (S1), Vorgabe | S1 · Nachrichten · Funkplan · S4 · Exporte | Übersicht, Fachlage, Eingangskorb, Führungsstelle, Kosten, Einsatztagebuch |
+| Leitung / Stab | Übersicht · Fachlage · Nachrichten · S1 · Eingangskorb · Einsatztagebuch · Exporte | Führungsstelle, Funkplan, S4, Kosten |
+| Fernmeldezentrale | Nachrichten · Funkplan · S1 · Einsatztagebuch | Übersicht, Fachlage, Eingangskorb, Führungsstelle, S4, Kosten, Exporte |
+| Versorgung (S4) | S4 · S1 · Exporte | Übersicht, Fachlage, Eingangskorb, Nachrichten, Führungsstelle, Funkplan, Kosten, Einsatztagebuch |
+| Alle Blätter | alle elf Blätter | — |
 
 Das Blatt **Übersicht** fasst zusammen, was sonst auf mehreren Blättern
 steht. Oben „Kräfte nach Status“: je Abschnitt die Köpfe im Einsatz,
@@ -167,6 +167,25 @@ Eintreffzeit, Dauer im Einsatz, „verfügbar bis“ mit der Marke „läuft ab�
 „abgelaufen“ und der Stand der Ablösung mit wer und wann; wer zuerst gehen
 muss, steht oben. Darunter „Es kommen“: was angefordert, zugesagt oder im
 Anmarsch ist. Bearbeitet wird weiter im Blatt S1.
+
+Das Blatt **Fachlage** führt, was nicht an einer Einheit hängt, mit einem
+Umschalter je Bereich: **Lage je Abschnitt** (Lage, Ort, Bedarf; oben je
+Abschnitt die jüngste Meldung), **Pegel** (Wasserstand und Prognose in cm,
+oben je Pegel der letzte Wert mit Tendenz), **Deich** (Schadstellen nach
+Deich-km mit Art, Maßnahme und Stand), **Patienten** (Kennung der
+Anhängekarte, kein Name; Sichtungskategorie SK 1 bis SK 4, eigene
+Einsatzkräfte gekennzeichnet, Verbleib und Transportziel; oben die Summen je
+Kategorie), **Amtshilfe** (Anträge etwa an die Bundeswehr mit
+Bearbeitungsstand von „beantragt“ bis „beendet“), **Material** (Menge,
+Einheit, Lieferant, Stand von „angefordert“ bis „geliefert“), **Presse**
+(Mitteilungen vom Entwurf über die Freigabe durch die Leitung bis
+„veröffentlicht“, ohne Umweg über die Fernmeldezentrale) und **Störungen**
+(Funk, Telefon, Netz, IT, Drucker, Strom mit Ersatzweg bis „behoben“). Jeder
+Bereich hat „Neu …“; an jeder Zeile ändert „Ändern …“ ein Feld, mit Vorher-
+und Nachher-Wert im Tagebuch und rücknehmbar. Eine Meldung selbst wird nicht
+gelöscht: Falsch erfasste Lagemeldungen und Pegelstände werden mit
+„Zurückgezogen“ markiert, die übrigen über ihren Stand. Am Umschalter steht
+die Zahl der offenen Einträge.
 
 Für die Lagebesprechung steht im Reiter „Exporte“ in der Gruppe
 „Lagebesprechung“ ganz oben der **Lagevortrag** als PDF oder HTML: auf einem

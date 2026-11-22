@@ -268,6 +268,7 @@ describe("Kopfband", () => {
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
       "Übersicht",
+      "Fachlage",
       "Eingangskorb",
       "Führungsstelle",
       "Kosten",
@@ -278,6 +279,7 @@ describe("Kopfband", () => {
     await userEvent.click(screen.getByRole("button", { name: "Mehr ▾" }));
     expect(within(screen.getByRole("menu", { name: "Weitere Blätter" })).getAllByRole("menuitemradio").map((e) => e.textContent)).toEqual([
       "Übersicht",
+      "Fachlage",
       "Eingangskorb",
       "Führungsstelle",
       "S4",
@@ -287,9 +289,9 @@ describe("Kopfband", () => {
     zeige("versorgung");
     expect(reiter()).toEqual(["S4", "S1", "Exporte"]);
     zeige("leitung");
-    expect(reiter()).toEqual(["Übersicht", "Nachrichten", "S1", "Eingangskorb", "Einsatztagebuch", "Exporte"]);
+    expect(reiter()).toEqual(["Übersicht", "Fachlage", "Nachrichten", "S1", "Eingangskorb", "Einsatztagebuch", "Exporte"]);
     zeige("alle");
-    expect(reiter()).toHaveLength(10);
+    expect(reiter()).toHaveLength(11);
     expect(screen.queryByRole("button", { name: "Mehr ▾" })).toBeNull();
   });
 

@@ -3869,6 +3869,44 @@
         overflow-y: auto;
       }
 
+      /* ---- Fachlage (Stab-Review 2026-11-22) ----------------------------- */
+      .fachlage {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .fachlagekopfzeile {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px 14px;
+      }
+      .fachlage h2,
+      .fachlage h3 {
+        margin: 0;
+      }
+      .fachlage table {
+        border-collapse: collapse;
+        width: 100%;
+      }
+      .fachlage th,
+      .fachlage td {
+        padding: 4px 8px;
+        border-bottom: 1px solid var(--rahmen-weich);
+        text-align: left;
+        vertical-align: top;
+      }
+      .fachlage thead th {
+        background: var(--kopf-bg);
+      }
+      .fachlage tr.erledigt td {
+        color: var(--text-leise);
+      }
+      .fachlagekopf {
+        margin: 6px 0;
+        padding-left: 1.1rem;
+      }
+
       /* ---- Rücklauf und Arbeitsplätze der FmZ (Stab-Review 2026-11-22) ---- */
       .fmzplaetze table,
       .ruecklauf table {

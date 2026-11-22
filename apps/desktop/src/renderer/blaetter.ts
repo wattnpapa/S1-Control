@@ -24,6 +24,7 @@ export interface Reiter {
   readonly schluessel:
     | "lage"
     | "uebersicht"
+    | "fachlage"
     | "eingang"
     | "nachrichten"
     | "fuest"
@@ -50,6 +51,8 @@ export const BLAETTER: readonly Reiter[] = [
   // Stab-Review 2026-11-22 (docs/audits/stab): Kräfte nach Status je
   // Abschnitt und alle Aufträge auf einer Seite, zum Lesen und für den Lagevortrag.
   { schluessel: "uebersicht", titel: "Übersicht", erklaerung: "Kräfte nach Status je Abschnitt und alle Aufträge aller Einheiten" },
+  // Stab-Review 2026-11-22: Lage je Abschnitt, Pegel, Deich, Patienten, Amtshilfe, Material, Presse, Störungen.
+  { schluessel: "fachlage", titel: "Fachlage", erklaerung: "Lage je Abschnitt, Pegel, Deich, Patienten, Amtshilfe, Material, Presse und Störungen" },
   // Entlastung E3: Eingangskorb und Anforderungen sind ein Blatt mit
   // Umschalter — beides ist, was von außen hereinkommt (`unterblaetter.ts`).
   // R2-FaBe P2-1: „Eingangskorb“ statt „Eingang“ — der Fachberater suchte hier seine Nachricht;
@@ -107,7 +110,7 @@ const BAND: Readonly<Record<Exclude<Profil, "alle">, readonly Blatt[]>> = {
   versorgung: ["versorgung", "lage", "ausgaben"],
   // Stab-Review 2026-11-22: Leitung, ETB-Führer und Sachgebiete lesen zuerst
   // die Übersicht; Anforderungen (Eingangskorb) und Tagebuch stehen im Band.
-  leitung: ["uebersicht", "nachrichten", "lage", "eingang", "tagebuch", "ausgaben"],
+  leitung: ["uebersicht", "fachlage", "nachrichten", "lage", "eingang", "tagebuch", "ausgaben"],
 };
 
 export interface Reiterzuschnitt {
